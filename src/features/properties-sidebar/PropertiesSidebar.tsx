@@ -24,7 +24,8 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 
 import { usePropertiesSidebar } from './hooks/usePropertiesSidebar';
 import { PropertyDetailsHeader } from './components/PropertyDetailsHeader';
-import { PropertyShowcaseDialog } from './components/PropertyShowcaseDialog';
+import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
+import { useAuth } from '@/auth/hooks/useAuth';
 import type { PropertiesSidebarProps } from './types';
 import '@/lib/design-system';
 
@@ -61,9 +62,34 @@ export function PropertiesSidebar({
     ImpactDialog,
   } = usePropertiesSidebar(floors, viewerProps, selectedProperty);
 
+  const { user } = useAuth();
   const [isEditMode, setIsEditMode] = useState(false);
   const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
   const properties = units;
+
+  const showcasePdfPreSubmit = useCallback(async () => {
+    if (!selectedProperty) throw new Error('No property selected');
+    const res = await fetch(
+      `/api/properties/${encodeURIComponent(selectedProperty.id)}/showcase/pdf`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale: 'el' }),
+      },
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(body?.error || `HTTP ${res.status}`);
+    }
+    const payload = await res.json();
+    const data = payload?.data ?? payload;
+    return {
+      showcaseMeta: {
+        pdfStoragePath: data.pdfStoragePath as string,
+        pdfRegeneratedAt: data.pdfRegeneratedAt as string,
+      },
+    };
+  }, [selectedProperty]);
   const effectiveEditMode = isEditMode || isCreatingNewUnit;
   const handleToggleEditMode = useCallback(() => setIsEditMode((prev) => !prev), []);
   const handleExitEditMode = useCallback(() => {
@@ -195,12 +221,17 @@ export function PropertiesSidebar({
 
       {ImpactDialog}
 
-      {selectedProperty && (
-        <PropertyShowcaseDialog
+      {selectedProperty && user?.uid && user?.companyId && (
+        <UnifiedShareDialog
           open={showcaseDialogOpen}
           onOpenChange={setShowcaseDialogOpen}
-          propertyId={selectedProperty.id}
-          propertyName={selectedProperty.name ?? ''}
+          entityType="property_showcase"
+          entityId={selectedProperty.id}
+          entityTitle={t('properties-detail:showcase.title')}
+          entitySubtitle={selectedProperty.name ?? ''}
+          userId={user.uid}
+          companyId={user.companyId}
+          preSubmit={showcasePdfPreSubmit}
         />
       )}
     </>

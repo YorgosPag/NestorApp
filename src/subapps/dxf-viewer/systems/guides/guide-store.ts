@@ -42,6 +42,7 @@ import {
   setGroupVisible as setGroupVisibleOp,
   setGroupColor as setGroupColorOp,
 } from './guide-store-group-ops';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -160,7 +161,7 @@ export class GuideStore implements IGridHeadlessAPI {
       style: null,
       visible: true,
       locked: false,
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
       parentId,
       groupId,
       ...(temporary ? { temporary: true } : {}),
@@ -190,7 +191,7 @@ export class GuideStore implements IGridHeadlessAPI {
       style: null,
       visible: true,
       locked: false,
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
       parentId: null,
       groupId: null,
       startPoint: { x: startPoint.x, y: startPoint.y },

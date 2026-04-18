@@ -30,6 +30,7 @@ import type { SceneModel } from '../../types/entities';
 import { executeDxfAiToolCalls } from '../dxf-ai-tool-executor';
 import { generateEntityId } from '../../systems/entity-creation/utils';
 import { DXF_AI_API, DXF_AI_LIMITS, DXF_AI_DEFAULTS } from '../../config/ai-assistant-config';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -133,7 +134,7 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
       id: generateEntityId(),
       role: 'user',
       content: trimmed,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       status: 'success',
     };
 
@@ -202,7 +203,7 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
         id: generateEntityId(),
         role: 'assistant',
         content: assistantContent || 'Η εντολή εκτελέστηκε.',
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         status: 'success',
         toolCalls: data.toolCalls.length > 0 ? data.toolCalls : undefined,
       };
@@ -220,7 +221,7 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
         id: generateEntityId(),
         role: 'assistant',
         content: `Σφάλμα: ${errorMsg}`,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         status: 'error',
       };
 

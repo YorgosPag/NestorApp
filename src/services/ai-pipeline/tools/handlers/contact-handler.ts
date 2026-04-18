@@ -19,6 +19,7 @@ import {
   buildAttribution,
   logger,
 } from '../executor-shared';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // ENTITY-AWARE TYPE MAPS — Different types per contact entity (individual/company/service)
@@ -369,7 +370,7 @@ export class ContactHandler implements ToolHandler {
     const entity = getContactEntity(contactData);
 
     const updatePayload: Record<string, unknown> = {
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowISO(),
       lastModifiedBy: buildAttribution(ctx),
     };
 

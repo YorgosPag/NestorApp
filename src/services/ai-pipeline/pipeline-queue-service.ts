@@ -32,6 +32,7 @@ import type {
   ContactMeta,
 } from '@/types/ai-pipeline';
 import { PipelineState } from '@/types/ai-pipeline';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // HELPER: GENERATE REQUEST ID
@@ -75,7 +76,7 @@ export async function enqueuePipelineItem(
 ): Promise<{ queueId: string; requestId: string }> {
   const adminDb = getAdminFirestore();
   const requestId = generateRequestId();
-  const now = new Date().toISOString();
+  const now = nowISO();
   const intakeMessageId = params.intakeMessage.id;
 
   const context: PipelineContext = {
@@ -160,7 +161,7 @@ export async function claimNextPipelineItems(
   if (pendingSnapshot.empty) return [];
 
   const claimed: PipelineQueueItem[] = [];
-  const now = new Date().toISOString();
+  const now = nowISO();
 
   // Claim each item atomically
   for (const doc of pendingSnapshot.docs) {
@@ -219,7 +220,7 @@ export async function claimRetryablePipelineItems(
   if (failedSnapshot.empty) return [];
 
   const claimed: PipelineQueueItem[] = [];
-  const now = new Date().toISOString();
+  const now = nowISO();
 
   for (const doc of failedSnapshot.docs) {
     try {
@@ -281,7 +282,7 @@ export async function markPipelineItemCompleted(
       status: QUEUE_STATUS.COMPLETED satisfies PipelineQueueStatus,
       pipelineState: finalContext.state,
       context: finalContext,
-      completedAt: new Date().toISOString(),
+      completedAt: nowISO(),
     });
 }
 
@@ -304,7 +305,7 @@ export async function markPipelineItemFailed(
   context?: PipelineContext
 ): Promise<void> {
   const adminDb = getAdminFirestore();
-  const now = new Date().toISOString();
+  const now = nowISO();
 
   const updateData: Record<string, unknown> = {
     status: QUEUE_STATUS.FAILED satisfies PipelineQueueStatus,
@@ -360,7 +361,7 @@ export async function recoverStalePipelineItems(): Promise<number> {
       lastError: {
         message: 'Stale processing recovery — item exceeded processing timeout',
         step: 'recovery',
-        occurredAt: new Date().toISOString(),
+        occurredAt: nowISO(),
       },
     });
     recovered++;

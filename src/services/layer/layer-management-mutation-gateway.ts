@@ -1,5 +1,6 @@
 import { firestoreQueryService } from '@/services/firestore';
 import type { Layer, LayerGroup } from '@/types/layers';
+import { nowISO } from '@/lib/date-local';
 
 interface PersistedLayerUpdate {
   id: string;
@@ -18,7 +19,7 @@ function toLayerUpdate(layer: Layer): PersistedLayerUpdate {
     id,
     payload: {
       ...rest,
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowISO(),
     },
   };
 }

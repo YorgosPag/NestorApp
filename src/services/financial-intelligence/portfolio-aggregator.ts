@@ -21,6 +21,7 @@ import type {
   PortfolioSummary,
   ProjectFinancialSummary,
 } from '@/types/interest-calculator';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('PortfolioAggregator');
 
@@ -264,7 +265,7 @@ export async function aggregatePortfolio(companyId: string): Promise<PortfolioAg
     weightedAvgCollectionDays,
     totalNPV: Math.round(totalNPV * 100) / 100,
     totalTimeCost: Math.round(totalTimeCost * 100) / 100,
-    calculatedAt: new Date().toISOString(),
+    calculatedAt: nowISO(),
   };
 
   const duration = Date.now() - startTime;

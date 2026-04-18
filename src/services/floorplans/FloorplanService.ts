@@ -8,6 +8,7 @@ import { RealtimeService } from '@/services/realtime';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FloorplanService');
 
@@ -338,7 +339,7 @@ export class FloorplanService {
       // Note: We could use deleteDoc here, but for now just mark as deleted
       await setDoc(doc(db, this.COLLECTION, docId), {
         deleted: true,
-        deletedAt: new Date().toISOString()
+        deletedAt: nowISO()
       });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)

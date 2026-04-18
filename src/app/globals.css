@@ -120,6 +120,13 @@
     --report-chart-6: 20 100% 42%;    /* #D55E00 Vermillion */
     --report-chart-7: 56 90% 60%;     /* #F0E442 Yellow */
     --report-chart-8: 0 0% 0%;        /* #000000 Black */
+
+    /* 🏢 ENTERPRISE: Property Showcase brand surface — fixed in both modes (ADR-312 Phase 3.8) */
+    --showcase-bg: 217 33% 17%;       /* #1D283A navy — brand surface */
+    --showcase-fg: 210 40% 98%;       /* near-white text on navy */
+    --showcase-surface: 217 28% 22%;  /* slightly lighter navy for cards on top of --showcase-bg */
+    --showcase-border: 217 20% 30%;   /* subtle navy border */
+    --showcase-muted-fg: 215 20% 75%; /* muted foreground on navy */
   }
 
   .dark {
@@ -210,6 +217,13 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 25%;
     --sidebar-ring: 210 40% 98%;
+
+    /* 🏢 Property Showcase brand surface — fixed value across modes (ADR-312 Phase 3.8) */
+    --showcase-bg: 217 33% 17%;
+    --showcase-fg: 210 40% 98%;
+    --showcase-surface: 217 28% 22%;
+    --showcase-border: 217 20% 30%;
+    --showcase-muted-fg: 215 20% 75%;
 
     /* ✅ ENTERPRISE: Dropdown positioning variables - Dark Mode (same values) */
     /* 🏢 NOTE: z-index comes from design-tokens.json via var(--z-index-dropdown) */

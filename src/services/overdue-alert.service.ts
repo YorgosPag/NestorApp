@@ -15,6 +15,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { generateNotificationId } from '@/services/enterprise-id.service';
 import { PaymentReportService } from '@/services/payment-report.service';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('OverdueAlertService');
 
@@ -51,7 +52,7 @@ export class OverdueAlertService {
       }
 
       const db = getAdminFirestore();
-      const todayISO = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const todayISO = nowISO().slice(0, 10); // YYYY-MM-DD
       const batch = db.batch();
       let batchCount = 0;
 
@@ -101,7 +102,7 @@ export class OverdueAlertService {
             channel: 'in_app',
             delivery: { state: 'pending', attempts: 0 },
 
-            createdAt: new Date().toISOString(),
+            createdAt: nowISO(),
             meta: {
               propertyId: unit.propertyId,
               projectId: unit.projectId,

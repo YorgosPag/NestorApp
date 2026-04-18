@@ -17,6 +17,8 @@
  */
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
+
 const logger = createModuleLogger('seed-data-config');
 
 // ============================================================================
@@ -115,7 +117,7 @@ export const logSeedDataStatus = (): void => {
  */
 export const trackSeedDataUsage = (action: 'seeded' | 'skipped' | 'error') => {
   if (SEED_DATA_CONFIG.DEBUG) {
-    logger.info(`Seed Data Analytics: ${action} at ${new Date().toISOString()}`);
+    logger.info(`Seed Data Analytics: ${action} at ${nowISO()}`);
   }
 
   // Future: Send to analytics service

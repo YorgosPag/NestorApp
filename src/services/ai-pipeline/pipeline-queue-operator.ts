@@ -22,6 +22,7 @@ import type {
   ApprovalDecision,
 } from '@/types/ai-pipeline';
 import { PipelineState } from '@/types/ai-pipeline';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // OPERATOR INBOX: QUERY PROPOSED ITEMS
@@ -124,7 +125,7 @@ export async function updateApprovalDecision(
 
     if (approval.decision !== 'rejected') {
       updatePayload.status = QUEUE_STATUS.PROCESSING satisfies PipelineQueueStatus;
-      updatePayload.processingStartedAt = new Date().toISOString();
+      updatePayload.processingStartedAt = nowISO();
     }
 
     transaction.update(docRef, updatePayload);

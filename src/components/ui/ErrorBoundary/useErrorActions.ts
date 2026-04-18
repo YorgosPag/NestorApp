@@ -15,6 +15,7 @@ import { openEmailCompose } from './email-compose';
 import { getUserId, getErrorSeverity, formatErrorForEmail, goHome, goBack } from './error-helpers';
 import type { EmailProvider, EmailComposeOptions, ErrorActionState, ErrorActionHandlers } from './types';
 import { reportErrorNotificationWithPolicy } from '@/services/notification/notification-mutation-gateway';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('useErrorActions');
 
@@ -43,7 +44,7 @@ export function useErrorActions(params: UseErrorActionsParams): ErrorActionState
     message: error.message,
     stack: error.stack,
     componentStack: componentStack ?? undefined,
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     url: typeof window !== 'undefined' ? window.location.href : 'SSR',
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
     userId: getUserId(),
@@ -79,7 +80,7 @@ export function useErrorActions(params: UseErrorActionsParams): ErrorActionState
         componentStack: componentStack ?? undefined,
         component: componentName,
         severity: getErrorSeverity(error),
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         url: typeof window !== 'undefined' ? window.location.href : 'SSR',
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
         digest,

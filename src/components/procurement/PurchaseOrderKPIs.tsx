@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { PurchaseOrder } from '@/types/procurement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { nowISO } from '@/lib/date-local';
 
 interface KPICardProps {
   label: string;
@@ -69,7 +70,7 @@ interface PurchaseOrderKPIsProps {
 export function PurchaseOrderKPIs({ purchaseOrders }: PurchaseOrderKPIsProps) {
   const { t } = useTranslation('procurement');
   const kpis = useMemo(() => {
-    const now = new Date().toISOString();
+    const now = nowISO();
     const currentMonth = now.substring(0, 7); // YYYY-MM
 
     const active = purchaseOrders.filter((po) =>

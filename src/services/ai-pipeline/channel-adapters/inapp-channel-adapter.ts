@@ -22,6 +22,7 @@ import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
 import { isSuperAdminFirebaseUid, isSuperAdminEmail } from '../shared/super-admin-resolver';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -150,7 +151,7 @@ export class InAppChannelAdapter {
         recipients: [],
         contentText: params.transcript,
         attachments: [],
-        timestampIso: new Date().toISOString(),
+        timestampIso: nowISO(),
       },
       metadata: {
         providerMessageId: params.commandId,

@@ -233,11 +233,19 @@ export const COLLECTIONS = {
   // 📄 FILE AUDIT LOG (ADR-191: Enterprise Document Management — Phase 3.1)
   FILE_AUDIT_LOG: process.env.NEXT_PUBLIC_FILE_AUDIT_LOG_COLLECTION || 'file_audit_log',
 
-  // 🔗 FILE SHARES (ADR-191: Enterprise Document Management — Phase 4.2)
+  /**
+   * 🔗 FILE SHARES (ADR-191: Enterprise Document Management — Phase 4.2)
+   * @deprecated ADR-315 Phase M5: will be replaced by SHARES. Legacy reads during M1–M4 migration window.
+   */
   FILE_SHARES: process.env.NEXT_PUBLIC_FILE_SHARES_COLLECTION || 'file_shares',
 
   // 📸 PHOTO SHARES — CRM Contact Channel Share History
   PHOTO_SHARES: process.env.NEXT_PUBLIC_PHOTO_SHARES_COLLECTION || 'photo_shares',
+
+  // 🔗 UNIFIED SHARES (ADR-315: Polymorphic sharing SSoT — file + contact + property_showcase)
+  SHARES: process.env.NEXT_PUBLIC_SHARES_COLLECTION || 'shares',
+  // 📤 SHARE DISPATCHES (ADR-315: One record per channel send — email / telegram / whatsapp / messenger / instagram)
+  SHARE_DISPATCHES: process.env.NEXT_PUBLIC_SHARE_DISPATCHES_COLLECTION || 'share_dispatches',
 
   // 💬 FILE COMMENTS (ADR-191: Enterprise Document Management — Phase 4.3)
   FILE_COMMENTS: process.env.NEXT_PUBLIC_FILE_COMMENTS_COLLECTION || 'file_comments',

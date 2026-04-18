@@ -15,6 +15,7 @@
 import { safeJsonParse } from '@/lib/json-utils';
 import { isNonEmptyString } from '@/lib/type-guards';
 import type { AIAnalysisResult } from '@/schemas/ai-analysis';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -319,7 +320,7 @@ export function mapToolCallToAnalysisResult(
     entities.statsType = 'properties';
   }
 
-  const timestamp = new Date().toISOString();
+  const timestamp = nowISO();
 
   return {
     kind: 'multi_intent',
@@ -374,7 +375,7 @@ export function buildConversationalFallbackResult(
   textReply: string,
   model: string
 ): AIAnalysisResult {
-  const timestamp = new Date().toISOString();
+  const timestamp = nowISO();
   const cleanedReply = cleanTextReply(textReply);
 
   return {

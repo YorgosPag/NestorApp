@@ -53,6 +53,7 @@ import type {
   AcknowledgmentResult,
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('UC_016_ADMIN_UPDATE_CONTACT');
 
@@ -383,7 +384,7 @@ export class AdminUpdateContactModule implements IUCModule {
         type: 'update_contact',
         contactId,
         contactName: contactName ?? 'Χωρίς όνομα',
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
       });
 
       return { success: true, sideEffects };

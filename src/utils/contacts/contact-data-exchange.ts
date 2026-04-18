@@ -14,6 +14,7 @@ import DataImportService from '@/services/data-exchange/DataImportService';
 import type { Contact, ContactType } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('contact-data-exchange');
 
@@ -100,7 +101,7 @@ export async function exportContacts(
 
   const exportService = DataExportService.getInstance();
   const data = contacts.map(contactToExportRecord);
-  const timestamp = new Date().toISOString().slice(0, 10);
+  const timestamp = nowISO().slice(0, 10);
   const filename = `${filenamePrefix}_${timestamp}.${exportService.getFileExtension(format)}`;
 
   logger.info('Exporting contacts', { count: contacts.length, format, filename });

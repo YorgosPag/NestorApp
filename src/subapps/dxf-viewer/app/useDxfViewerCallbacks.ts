@@ -19,6 +19,7 @@ import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import type { NotificationContextValue } from '@/types/notifications';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { nowISO } from '@/lib/date-local';
 
 /** Structural overlay entry shape used by callbacks */
 interface OverlayEntry {
@@ -222,7 +223,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
         handleFileImport(file, undefined, saveContext);
       } else {
         console.warn('⚠️ [Enhanced Import] No current level found, creating default level');
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '');
+        const timestamp = nowISO().slice(0, 19).replace(/[-:]/g, '');
         const newLevelName = `${file.name.replace('.dxf', '')}_${timestamp}`;
         const newLevelId = await levelManager.addLevel(newLevelName, true);
         if (newLevelId) {

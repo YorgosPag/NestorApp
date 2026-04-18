@@ -1,3 +1,5 @@
+import { nowISO } from '@/lib/date-local';
+
 /**
  * =============================================================================
  * Cheque Registry Types — ADR-234 Phase 3 (SPEC-234A)
@@ -272,7 +274,7 @@ export function createDefaultChequeRecord(
   propertyId: string,
   createdBy: string
 ): ChequeRecord {
-  const now = new Date().toISOString();
+  const now = nowISO();
   const postDated = input.maturityDate > input.issueDate;
 
   return {

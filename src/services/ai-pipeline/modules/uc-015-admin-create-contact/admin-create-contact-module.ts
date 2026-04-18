@@ -34,6 +34,7 @@ import type {
   AcknowledgmentResult,
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('UC_015_ADMIN_CREATE_CONTACT');
 
@@ -282,7 +283,7 @@ export class AdminCreateContactModule implements IUCModule {
         type: 'create_contact',
         contactId: result.contactId,
         contactName: result.displayName,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
       });
 
       return { success: true, sideEffects };

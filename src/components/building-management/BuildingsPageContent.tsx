@@ -41,6 +41,7 @@ import { useBuildingsTrashState } from '@/hooks/useBuildingsTrashState';
 import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BuildingsPageContent');
 
@@ -110,7 +111,7 @@ export function BuildingsPageContent() {
       totalValue: 0,
       progress: 0,
       projectId: '',
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
     };
     setSelectedBuilding(tempBuilding);
     setStartInEditMode(true);

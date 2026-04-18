@@ -1,3 +1,5 @@
+import { nowISO } from '@/lib/date-local';
+
 /**
  * =============================================================================
  * TELEGRAM ALERT SERVICE — Production Error Monitoring
@@ -127,7 +129,7 @@ function formatAlertMessage(
   };
   const emoji = emojiMap[level];
   const label = labelMap[level];
-  const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+  const timestamp = nowISO().replace('T', ' ').substring(0, 19) + ' UTC';
 
   const lines: string[] = [
     `${emoji} ${label} \u2014 ${module}`,

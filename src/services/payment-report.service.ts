@@ -15,6 +15,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { formatOwnerNames } from '@/lib/ownership/owner-utils';
 import type { PaymentReportData, PaymentReportRow } from '@/services/payment-export/types';
 import type { PaymentSummary } from '@/types/payment-plan';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('PaymentReportService');
 
@@ -128,7 +129,7 @@ export class PaymentReportService {
     return {
       projectId,
       projectName,
-      generatedAt: new Date().toISOString(),
+      generatedAt: nowISO(),
       currency: 'EUR',
       rows,
       summary: {

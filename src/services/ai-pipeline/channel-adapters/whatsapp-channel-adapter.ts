@@ -23,6 +23,7 @@ import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { getErrorMessage } from '@/lib/error-utils';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
 import { isSuperAdminWhatsApp } from '../shared/super-admin-resolver';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -141,7 +142,7 @@ export class WhatsAppChannelAdapter {
         recipients: [],
         contentText: params.messageText,
         attachments: [],
-        timestampIso: new Date().toISOString(),
+        timestampIso: nowISO(),
       },
       metadata: {
         providerMessageId: params.messageId,

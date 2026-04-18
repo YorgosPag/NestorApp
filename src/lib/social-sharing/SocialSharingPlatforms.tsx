@@ -15,6 +15,7 @@ import { Mail } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
 import { HOVER_SHADOWS, GROUP_HOVER_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { borders } from '@/styles/design-tokens';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -376,7 +377,7 @@ export const getPlatformAnalyticsData = (platformId: string) => {
     platform_name: platform?.name,
     supports_media: platform?.config?.supportsMedia || false,
     mobile_optimized: platform?.config?.mobileOptimized || false,
-    timestamp: new Date().toISOString()
+    timestamp: nowISO()
   };
 };
 

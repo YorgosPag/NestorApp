@@ -45,6 +45,7 @@ import type {
   AcknowledgmentResult,
   PipelineIntentTypeValue,
 } from '@/types/ai-pipeline';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // LOGGER
@@ -323,7 +324,7 @@ export class DocumentRequestModule implements IUCModule {
         status: 'pending_preparation',
         approvedBy: ctx.approval?.approvedBy ?? null,
         approvedAt: ctx.approval?.decidedAt ?? null,
-        createdAt: new Date().toISOString(),
+        createdAt: nowISO(),
       };
 
       const auditId = generatePipelineAuditId();

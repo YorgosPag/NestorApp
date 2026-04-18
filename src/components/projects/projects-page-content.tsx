@@ -35,6 +35,7 @@ import { useProjectsTrashState } from '@/hooks/useProjectsTrashState';
 import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ProjectsPageContent');
 
@@ -113,7 +114,7 @@ export function ProjectsPageContent() {
       progress: 0,
       totalValue: 0,
       totalArea: 0,
-      lastUpdate: new Date().toISOString(),
+      lastUpdate: nowISO(),
     };
     setSelectedProject(tempProject);
     setStartInEditMode(true);

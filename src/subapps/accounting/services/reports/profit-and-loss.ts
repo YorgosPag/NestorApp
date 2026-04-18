@@ -17,6 +17,7 @@ import type {
 } from '../../types/reports';
 import { getCategoryDisplayLabel } from '../../config/account-categories';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
+import { nowISO } from '@/lib/date-local';
 
 const REPORT_PAGE_SIZE = 10000;
 
@@ -33,7 +34,7 @@ export async function generateProfitAndLoss(
 
   return {
     reportType: 'profit_and_loss',
-    generatedAt: new Date().toISOString(),
+    generatedAt: nowISO(),
     period: periods,
     data: buildPnLData(current, previous, yoy),
   };

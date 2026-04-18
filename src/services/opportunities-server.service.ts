@@ -12,6 +12,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { indexEntityForSearch } from '@/lib/search/search-indexer';
 import { SEARCH_ENTITY_TYPES } from '@/types/search';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('OpportunitiesServerService');
 
@@ -72,7 +73,7 @@ export class OpportunitiesServerService {
 
       const db = getDb();
       const id = generateOpportunityId();
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       const opportunity: Record<string, unknown> = {
         id,
@@ -145,7 +146,7 @@ export class OpportunitiesServerService {
       }
 
       const updates: Record<string, unknown> = {
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
         updatedBy,
       };
 

@@ -44,6 +44,7 @@ import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 import { ManualInputTab, MANUAL_INPUT_INITIAL } from './ManualInputTab';
 import type { ManualInputState } from './ManualInputTab';
 import { ControlPointsList } from './ControlPointsList';
+import { nowISO } from '@/lib/date-local';
 
 /**
  * Component props
@@ -238,13 +239,13 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
     const dataStr = JSON.stringify({
       points,
       transformation: transformation.result,
-      exportedAt: new Date().toISOString()
+      exportedAt: nowISO()
     }, null, 2);
 
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     triggerExportDownload({
       blob: dataBlob,
-      filename: `control-points-${new Date().toISOString().split('T')[0]}.json`,
+      filename: `control-points-${nowISO().split('T')[0]}.json`,
     });
     success(t('toastMessages.pointsSaved'));
   };

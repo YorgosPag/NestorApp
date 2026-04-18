@@ -41,6 +41,7 @@ import type {
   ParsedAddress,
   InboundEmailAttachment,
 } from './types';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('EMAIL_INBOUND_ATTACHMENTS');
 
@@ -209,7 +210,7 @@ async function ingestAttachment(params: {
     messageId: params.messageId,
     fromUserId: params.sender.email,
     senderName: params.sender.name || params.sender.email,
-    receivedAt: params.receivedAt || new Date().toISOString(),
+    receivedAt: params.receivedAt || nowISO(),
     fileUniqueId: params.messageId,
   };
 
@@ -245,7 +246,7 @@ async function ingestAttachment(params: {
       ingestion: {
         ...recordBase.ingestion,
         analysis: classification,
-        stateChangedAt: new Date().toISOString(),
+        stateChangedAt: nowISO(),
       },
       updatedAt: new Date(),
     });

@@ -42,6 +42,7 @@ import type {
   LinkResult,
   ContactWithLinks,
 } from '@/types/associations';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ContactLinkService');
 
@@ -107,7 +108,7 @@ export async function linkContactToEntity(input: CreateContactLinkInput): Promis
       reason,
       role,
       status: 'active',
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
       createdBy,
       metadata,
     };

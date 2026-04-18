@@ -41,7 +41,7 @@ import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
 import { VersionHistory } from '@/components/shared/files/VersionHistory';
 import { AuditLogPanel } from '@/components/shared/files/AuditLogPanel';
-import { ShareDialog } from '@/components/shared/files/ShareDialog';
+import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import { CommentsPanel } from '@/components/shared/files/CommentsPanel';
 import { ApprovalPanel } from '@/components/shared/files/ApprovalPanel';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
@@ -338,15 +338,20 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
         onDownload={handleDownload}
       />
 
-      {/* Share dialog */}
-      {currentUserId && (
-        <ShareDialog
+      {/* ADR-315: Unified share dialog (file entityType) */}
+      {currentUserId && companyId && (
+        <UnifiedShareDialog
           open={showShare}
           onOpenChange={setShowShare}
-          fileId={file.id}
-          fileName={displayName}
+          entityType="file"
+          entityId={file.id}
+          entityTitle={displayName}
           userId={currentUserId}
           companyId={companyId}
+          fileMeta={{
+            mimeType: file.contentType ?? 'application/octet-stream',
+            sizeBytes: file.sizeBytes ?? 0,
+          }}
         />
       )}
     </section>

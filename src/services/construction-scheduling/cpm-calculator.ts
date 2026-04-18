@@ -10,6 +10,7 @@
 
 import type { ConstructionPhase, ConstructionTask } from '@/types/building/construction';
 import type { CPMResult, CPMTaskResult } from './cpm-types';
+import { nowISO } from '@/lib/date-local';
 
 // ─── Constants ──────────────────────────────────────────────────────────
 
@@ -329,7 +330,7 @@ function emptyResult(cyclicIds: string[] = []): CPMResult {
     tasks: [],
     criticalPath: [],
     criticalPathLength: 0,
-    projectEarlyFinish: new Date().toISOString().slice(0, 10),
+    projectEarlyFinish: nowISO().slice(0, 10),
     cyclicTaskIds: cyclicIds,
     isValid: false,
   };

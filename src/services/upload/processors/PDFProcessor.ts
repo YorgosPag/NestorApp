@@ -49,6 +49,8 @@ import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { Logger, LogLevel, ConsoleOutput } from '@/subapps/dxf-viewer/settings/telemetry';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
+
 const pdfLogger = createModuleLogger('PDFProcessor');
 
 // ============================================================================
@@ -413,7 +415,7 @@ export class PDFProcessor implements FileProcessor {
         storagePath,
         pdfMetadata: {
           originalName: file.name,
-          uploadedAt: new Date().toISOString(),
+          uploadedAt: nowISO(),
           floorId: options.entityId,
           buildingId: options.entityId, // For compatibility
         },

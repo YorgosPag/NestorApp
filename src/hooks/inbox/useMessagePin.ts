@@ -16,6 +16,7 @@
 import { useState, useCallback } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleMessagePinWithPolicy } from '@/services/messages/message-mutation-gateway';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('useMessagePin');
 
@@ -118,7 +119,7 @@ export function useMessagePin(): UseMessagePinReturn {
           id: messageId,
           text,
           senderName,
-          pinnedAt: new Date().toISOString(),
+          pinnedAt: nowISO(),
           pinnedBy: 'current_user', // Will be replaced by actual user from API
         },
       ]);

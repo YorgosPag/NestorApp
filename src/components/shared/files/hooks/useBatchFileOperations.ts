@@ -26,6 +26,7 @@ import { useFileClassification, isAIClassifiable } from './useFileClassification
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
 import type { FileClassification } from '@/config/domain-constants';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('useBatchFileOperations');
 
@@ -166,7 +167,7 @@ export function useBatchFileOperations({
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `files_${new Date().toISOString().slice(0, 10)}.zip`;
+      link.download = `files_${nowISO().slice(0, 10)}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

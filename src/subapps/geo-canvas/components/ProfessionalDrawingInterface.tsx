@@ -31,6 +31,7 @@ import { generateLayerId } from '@/services/enterprise-id.service';
 import type { ParserResult } from '../floor-plan-system/types';
 import type { EnhancedPropertyStatus as PropertyStatus } from '@/constants/property-statuses-enterprise';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
+import { nowISO } from '@/lib/date-local';
 
 // TODO: Implement real estate monitoring integration
 type RealEstatePolygon = {
@@ -79,7 +80,7 @@ export function ProfessionalDrawingInterface({
   const { addRealEstatePolygon, getRealEstateAlerts, getStatistics, exportMatches } = {
     addRealEstatePolygon: (_polygon: RealEstatePolygon) => {},
     getRealEstateAlerts: () => [] as RealEstatePolygon[],
-    getStatistics: () => ({ totalPolygons: 0, totalAlerts: 0, activeAlerts: 0, totalMatches: 0, averageConfidence: 0.85, lastCheck: new Date().toISOString() }),
+    getStatistics: () => ({ totalPolygons: 0, totalAlerts: 0, activeAlerts: 0, totalMatches: 0, averageConfidence: 0.85, lastCheck: nowISO() }),
     exportMatches: () => Promise.resolve('')
   };
   const realEstateStats = getStatistics();
@@ -99,7 +100,7 @@ export function ProfessionalDrawingInterface({
         id: polygonId,
         polygon: Array.isArray(polygon.polygon) ? polygon.polygon : [],
         settings: polygon.settings ?? {},
-        createdAt: typeof polygon.createdAt === 'string' ? polygon.createdAt : new Date().toISOString(),
+        createdAt: typeof polygon.createdAt === 'string' ? polygon.createdAt : nowISO(),
         type: 'real-estate',
         alertSettings: { enabled: true, priceRange: { min: 100000, max: 1000000 }, propertyTypes: ['apartment', 'house', 'commercial'], includeExclude: 'include' }
       };

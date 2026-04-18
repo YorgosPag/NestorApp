@@ -40,6 +40,7 @@ export type {
   RelationshipImportRow,
 } from './import-export-types';
 import type { ImportResult, ExportResult, ImportOptions, CSVRow } from './import-export-types';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // IMPORT/EXPORT SERVICE
@@ -380,7 +381,7 @@ export class ImportExportService {
       relationshipType: row.relationshipType as RelationshipType,
       position: row.position,
       department: row.department,
-      startDate: row.startDate || new Date().toISOString(),
+      startDate: row.startDate || nowISO(),
       endDate: row.endDate,
       status: (row.status as 'active' | 'inactive' | 'pending') || 'active',
       relationshipNotes: row.notes

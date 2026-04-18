@@ -31,6 +31,7 @@ import { CompaniesService } from "@/services/companies.service";
 import { getNavigationCompanyIds } from "@/services/navigation-companies.service";
 import type { CompanyContact } from "@/types/contacts";
 import type { Project } from "@/types/project";
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('NewObligationPage');
 
@@ -220,7 +221,7 @@ export function useNewObligationPage() {
           totalValue: project.totalValue || 0,
           startDate: project.startDate,
           completionDate: project.completionDate,
-          lastUpdate: new Date().toISOString(),
+          lastUpdate: nowISO(),
           totalArea: 0,
         } as Project));
 

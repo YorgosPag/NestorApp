@@ -39,6 +39,8 @@ import { truncateText } from '@/lib/text-utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
+import { nowISO } from '@/lib/date-local';
+
 const logger = createModuleLogger('FloorPlanViewer');
 
 export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
@@ -114,7 +116,7 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
           floorPlanUrl: url,
           metadata: {
             ...floor.metadata,
-            lastPDFUpdate: new Date().toISOString(),
+            lastPDFUpdate: nowISO(),
             pdfFileName: file.name,
             pdfFileSize: file.size
           }

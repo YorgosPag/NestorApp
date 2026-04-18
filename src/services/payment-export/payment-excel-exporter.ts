@@ -15,6 +15,7 @@ import { designTokens } from '@/styles/design-tokens';
 import { triggerBlobDownload } from '@/services/gantt-export/gantt-export-utils';
 import { formatDateShort } from '@/lib/intl-utils';
 import type { PaymentReportData } from '@/services/payment-export/types';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // STYLE HELPERS
@@ -231,7 +232,7 @@ export async function exportPaymentReportToExcel(data: PaymentReportData): Promi
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
 
-  const dateStr = new Date().toISOString().slice(0, 10);
+  const dateStr = nowISO().slice(0, 10);
   const safeProjectName = data.projectName.replace(/[^a-zA-Zα-ωΑ-Ω0-9\s-]/g, '').trim();
   const filename = `Πληρωμές_${safeProjectName}_${dateStr}.xlsx`;
 

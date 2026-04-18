@@ -24,6 +24,7 @@ import type { Installment, InstallmentStatus } from '@/types/payment-plan';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // STATUS DISPLAY CONFIG
@@ -65,7 +66,7 @@ export function InstallmentSchedule({
   const canAdd = planStatus === 'negotiation' || planStatus === 'draft';
   const { t } = useTranslation(['payments', 'payments-cost-calc', 'payments-loans']);
 
-  const now = new Date().toISOString();
+  const now = nowISO();
 
   // Compute effective status (pending → due if overdue)
   function getEffectiveStatus(inst: Installment): InstallmentStatus {

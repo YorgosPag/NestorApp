@@ -33,6 +33,7 @@ import {
   DEFAULT_QUERY_LIMIT,
 } from '../executor-shared';
 import { filterContactByTab, resolveContactType } from '../contact-tab-filter';
+import { nowISO } from '@/lib/date-local';
 
 export class FirestoreHandler implements ToolHandler {
   readonly toolNames = [
@@ -267,12 +268,12 @@ export class FirestoreHandler implements ToolHandler {
     const writeData: Record<string, unknown> = {
       ...data,
       companyId: ctx.companyId,
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowISO(),
       lastModifiedBy: buildAttribution(ctx),
     };
 
     if (mode === 'create') {
-      writeData.createdAt = new Date().toISOString();
+      writeData.createdAt = nowISO();
       writeData.createdBy = buildAttribution(ctx);
     }
 

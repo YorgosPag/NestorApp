@@ -6,6 +6,7 @@ import { NotificationClient } from '@/api/notificationClient';
 import { useNotificationCenter } from '@/stores/notificationCenter';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { Notification } from '@/types/notification';
+import { nowISO } from '@/lib/date-local';
 
 export type StreamOptions = {
   baseUrl: string;
@@ -74,7 +75,7 @@ export function useNotificationStream(opts: StreamOptions) {
 
   const markReadRemote = async (ids?: string[]) => {
     if (!client) return; // SSR-safe
-    const seenAt = new Date().toISOString();
+    const seenAt = nowISO();
     center.markRead(ids);
     try { await client.ack({ ids: ids ?? useNotificationCenter.getState().order, seenAt }); } catch {/* best-effort */ }
   };

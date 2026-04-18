@@ -22,6 +22,7 @@ import { resumeFromApproval } from './approval-resume';
 import type { PipelineExecutionResult } from './pipeline-types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 export type { PipelineExecutionResult } from './pipeline-types';
 
@@ -59,7 +60,7 @@ export class PipelineOrchestrator {
       ctx.errors.push({
         step: 'orchestrator',
         error: errorMessage,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         retryable: true,
       });
 
@@ -269,7 +270,7 @@ export class PipelineOrchestrator {
       ctx.errors.push({
         step: 'understand',
         error: errorMessage,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         retryable: true,
       });
       throw error;
@@ -288,7 +289,7 @@ export class PipelineOrchestrator {
       ctx.errors.push({
         step: 'acknowledge',
         error: errorMessage,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         retryable: true,
       });
       ctx.acknowledgment = {
@@ -320,7 +321,7 @@ export class PipelineOrchestrator {
       ctx.errors.push({
         step: 'state_transition',
         error: `Invalid transition: ${ctx.state} \u2192 ${to}`,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         retryable: false,
       });
       return ctx;

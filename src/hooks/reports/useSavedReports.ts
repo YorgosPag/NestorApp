@@ -28,6 +28,7 @@ import type {
   UpdateSavedReportInput,
   SavedReportsTab,
 } from '@/types/reports/saved-report';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // Types
@@ -179,7 +180,7 @@ export function useSavedReports(): UseSavedReportsReturn {
       setReports(prev =>
         prev.map(r =>
           r.id === id
-            ? { ...r, lastRunAt: new Date().toISOString(), runCount: r.runCount + 1 }
+            ? { ...r, lastRunAt: nowISO(), runCount: r.runCount + 1 }
             : r,
         ),
       );

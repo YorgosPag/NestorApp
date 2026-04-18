@@ -63,6 +63,8 @@ import { EntityLinkingCache } from './utils/cache';
 import { AuditLogger } from './utils/audit';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
+
 const logger = createModuleLogger('EntityLinkingService');
 
 // ============================================================================
@@ -149,7 +151,7 @@ export class EntityLinkingService {
       // Update entity with new parent ID
       await updateDoc(entityRef, {
         [config.foreignKey]: parentId,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
       });
 
       return { previousParentId };
@@ -288,7 +290,7 @@ export class EntityLinkingService {
       // Set parent to null
       await updateDoc(entityRef, {
         [config.foreignKey]: null,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
       });
 
       return { previousParentId };

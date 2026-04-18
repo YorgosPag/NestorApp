@@ -19,6 +19,7 @@ import type {
   UrlGenerationOptions,
   AnalyticsSummary,
 } from './analytics-types';
+import { nowISO } from '@/lib/date-local';
 
 // Re-export types for backward compatibility
 export type {
@@ -196,7 +197,7 @@ export class AnalyticsService {
     metadata?: Record<string, unknown>
   ): void {
     const event: ShareAnalyticsEvent = {
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       contentType,
       contentId,
       platform,

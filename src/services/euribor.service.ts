@@ -20,6 +20,7 @@ import type {
   BankSpreadConfig,
 } from '@/types/interest-calculator';
 import { DEFAULT_BANK_SPREADS } from '@/types/interest-calculator';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // LOGGER
@@ -129,7 +130,7 @@ export class EuriborService {
       await db.doc(SPREADS_DOC_PATH).set({
         banks: config.banks,
         defaultSpread: config.defaultSpread,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
         updatedBy: userId,
       }, { merge: true });
 
@@ -217,7 +218,7 @@ export class EuriborService {
     );
 
     const rates: Record<string, number> = {};
-    let rateDate = new Date().toISOString().split('T')[0];
+    let rateDate = nowISO().split('T')[0];
 
     for (const r of results) {
       if (r.status === 'fulfilled') {
@@ -235,7 +236,7 @@ export class EuriborService {
       euribor12M: rates['12M'] ?? 0,
       ecbMainRate: rates['ECB_MAIN'] ?? 0,
       rateDate,
-      lastFetchedAt: new Date().toISOString(),
+      lastFetchedAt: nowISO(),
       source: 'ecb_api',
     };
   }
@@ -274,8 +275,8 @@ export class EuriborService {
       euribor6M: 0,
       euribor12M: 0,
       ecbMainRate: 0,
-      rateDate: new Date().toISOString().split('T')[0],
-      lastFetchedAt: new Date().toISOString(),
+      rateDate: nowISO().split('T')[0],
+      lastFetchedAt: nowISO(),
       source: 'fallback',
     };
   }

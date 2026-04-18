@@ -1,11 +1,12 @@
 import { generateElementId, generateLayerId } from '@/services/enterprise-id.service';
 import type { AnyLayerElement, Layer } from '@/types/layers';
+import { nowISO } from '@/lib/date-local';
 
 export function createLayerRecord(
   layerData: Omit<Layer, 'id' | 'createdAt' | 'updatedAt' | 'floorId' | 'buildingId' | 'createdBy'>,
   context: { floorId: string; buildingId: string; userId: string }
 ): Layer {
-  const now = new Date().toISOString();
+  const now = nowISO();
 
   return {
     ...layerData,
@@ -22,14 +23,14 @@ export function updateLayerRecord(layer: Layer, updates: Partial<Layer>): Layer 
   return {
     ...layer,
     ...updates,
-    updatedAt: new Date().toISOString()
+    updatedAt: nowISO()
   };
 }
 
 export function createElementRecord(
   elementData: Omit<AnyLayerElement, 'id' | 'createdAt' | 'updatedAt'>
 ): AnyLayerElement {
-  const now = new Date().toISOString();
+  const now = nowISO();
 
   return {
     ...elementData,

@@ -1,6 +1,7 @@
 import { ObligationDocument, ObligationSection, ObligationArticle } from '@/types/obligations';
 import { calculateWordCount } from './text-utils';
 import { groupByKey } from '@/utils/collection-utils';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 export type SortField = 'title' | 'createdAt' | 'updatedAt' | 'status' | 'projectName' | 'wordCount' | 'completionPercentage';
 export type SortOrder = 'asc' | 'desc';
@@ -23,10 +24,10 @@ export function sortObligationDocuments(
 function compareDocuments(a: ObligationDocument, b: ObligationDocument, field: SortField): number {
   switch (field) {
     case 'title':
-      return a.title.localeCompare(b.title, 'el-GR');
+      return compareByLocale(a.title, b.title);
 
     case 'projectName':
-      return a.projectName.localeCompare(b.projectName, 'el-GR');
+      return compareByLocale(a.projectName, b.projectName);
 
     case 'status':
       const statusOrder: Record<ObligationDocument['status'], number> = {
@@ -75,10 +76,10 @@ export function sortSections(
         result = a.order - b.order;
         break;
       case 'title':
-        result = a.title.localeCompare(b.title, 'el-GR');
+        result = compareByLocale(a.title, b.title);
         break;
       case 'category':
-        result = a.category.localeCompare(b.category, 'el-GR');
+        result = compareByLocale(a.category, b.category);
         break;
       case 'wordCount':
         const wordCountA = calculateWordCount(a.content);
@@ -104,7 +105,7 @@ export function sortArticles(
         result = a.order - b.order;
         break;
       case 'title':
-        result = a.title.localeCompare(b.title, 'el-GR');
+        result = compareByLocale(a.title, b.title);
         break;
       case 'wordCount':
         const wordCountA = calculateWordCount(a.content);

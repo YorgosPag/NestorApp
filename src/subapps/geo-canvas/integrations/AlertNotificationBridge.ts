@@ -7,6 +7,7 @@ import { useNotificationCenter } from '@/stores/notificationCenter';
 import type { Alert } from '@geo-alert/core/alert-engine';
 import type { Notification, Severity } from '@/types/notification';
 import type { NotificationAction } from '@/types/notification';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // SEVERITY MAPPING
@@ -73,7 +74,7 @@ export class AlertNotificationBridge {
    */
   alertToNotification(alert: Alert): Notification {
     const alertData = alert as unknown as Record<string, unknown>;
-    const nowIso = new Date().toISOString();
+    const nowIso = nowISO();
     const alertTimestamp = alertData.timestamp instanceof Date
       ? alertData.timestamp
       : typeof alertData.timestamp === 'string'

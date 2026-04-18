@@ -17,6 +17,7 @@ import type {
   FilterOperator,
   FieldDefinition,
 } from '@/config/report-builder/report-builder-types';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // Export Configuration Types
@@ -98,6 +99,6 @@ export function buildExportFilename(
   extension: 'pdf' | 'xlsx',
 ): string {
   const domainLabel = domainId.charAt(0).toUpperCase() + domainId.slice(1);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = nowISO().slice(0, 10);
   return `Nestor_${domainLabel}_Report_${today}.${extension}`;
 }

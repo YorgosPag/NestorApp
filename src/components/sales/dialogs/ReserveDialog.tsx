@@ -40,6 +40,7 @@ import {
   dispatchSalesAccountingEventWithPolicy,
   syncSalesAppurtenancesWithPolicy,
 } from '@/services/sales-mutation-gateway';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ReserveDialog');
 
@@ -95,10 +96,10 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           finalPrice: unit.commercial?.finalPrice ?? null,
           reservationDeposit: deposit ? Number(deposit) : null,
           ...buildOwnerFields(owners),
-          reservationDate: new Date().toISOString(),
+          reservationDate: nowISO(),
           saleDate: unit.commercial?.saleDate ?? null,
           cancellationDate: unit.commercial?.cancellationDate ?? null,
-          listedDate: unit.commercial?.listedDate ?? new Date().toISOString(),
+          listedDate: unit.commercial?.listedDate ?? nowISO(),
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       };

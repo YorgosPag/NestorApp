@@ -21,6 +21,7 @@ import type {
   AuditDecision,
 } from '@/types/ai-pipeline';
 import { PipelineIntentType } from '@/types/ai-pipeline';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // AUDIT SERVICE
@@ -48,7 +49,7 @@ export class PipelineAuditService {
 
     const entry: PipelineAuditEntry = {
       requestId: ctx.requestId,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       actionType: ctx.understanding?.intent ?? PipelineIntentType.UNKNOWN,
       useCase: moduleId ?? 'unrouted',
       companyId: ctx.companyId,

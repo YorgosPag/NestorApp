@@ -34,6 +34,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { FileShareService, type FileShareRecord } from '@/services/file-share.service';
+import { UnifiedSharingService } from '@/services/sharing/unified-sharing.service';
+// Side-effect import: registers resolvers with ShareEntityRegistry
+import {
+  contactShareResolver,
+  propertyShowcaseShareResolver,
+  type ContactShareResolvedData,
+  type PropertyShowcaseResolvedData,
+} from '@/services/sharing/resolvers';
+import { SharedContactPageContent } from '@/components/shared/pages/SharedContactPageContent';
+import { SharedShowcasePageContent } from '@/components/shared/pages/SharedShowcasePageContent';
 import { formatFileSize } from '@/utils/file-validation';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
 import { getFileCategory, getFileCategoryI18nKey } from '@/lib/file-types/preview-registry';
@@ -53,7 +63,14 @@ interface FileInfo {
   ext: string;
 }
 
-type PageState = 'loading' | 'password' | 'ready' | 'error' | 'expired';
+type PageState =
+  | 'loading'
+  | 'password'
+  | 'ready'
+  | 'error'
+  | 'expired'
+  | 'contact'
+  | 'showcase';
 
 // ============================================================================
 // COMPONENT
@@ -72,6 +89,15 @@ export function SharedFilePageContent() {
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  // ADR-315: unified contact share data (null unless entityType=contact)
+  const [contactData, setContactData] = useState<ContactShareResolvedData | null>(null);
+  const [contactExpiresAt, setContactExpiresAt] = useState<string>('');
+  // ADR-315: unified showcase share data (null unless entityType=property_showcase)
+  const [showcaseData, setShowcaseData] = useState<PropertyShowcaseResolvedData | null>(null);
+  const [showcaseExpiresAt, setShowcaseExpiresAt] = useState<string>('');
+  // ADR-315: when non-null, share was resolved via unified `shares` collection
+  // and access/revoke operations must go through UnifiedSharingService.
+  const [unifiedShareId, setUnifiedShareId] = useState<string | null>(null);
 
   // Load file metadata from Firestore
   const loadFileInfo = useCallback(async (fileId: string) => {
@@ -102,6 +128,55 @@ export function SharedFilePageContent() {
   useEffect(() => {
     async function validate() {
       try {
+        // ADR-315: unified dispatcher — try new `shares` collection first
+        const unified = await UnifiedSharingService.validateShare(token);
+        if (unified.valid && unified.share) {
+          const u = unified.share;
+          if (u.entityType === 'property_showcase') {
+            setShowcaseExpiresAt(u.expiresAt);
+            const data = await propertyShowcaseShareResolver.resolve(u);
+            setShowcaseData(data);
+            await UnifiedSharingService.incrementAccessCount(u.id);
+            setState('showcase');
+            return;
+          }
+          if (u.entityType === 'contact') {
+            setContactExpiresAt(u.expiresAt);
+            // Resolve contact via registered resolver (respects includedFields)
+            const data = await contactShareResolver.resolve(u);
+            setContactData(data);
+            await UnifiedSharingService.incrementAccessCount(u.id);
+            setState('contact');
+            return;
+          }
+          // entityType === 'file' — adapt unified ShareRecord → FileShareRecord shape
+          const adapted: FileShareRecord = {
+            id: u.id,
+            fileId: u.entityId,
+            token: u.token,
+            createdBy: u.createdBy,
+            createdAt: u.createdAt as string,
+            expiresAt: u.expiresAt,
+            isActive: u.isActive,
+            passwordHash: u.passwordHash ?? undefined,
+            requiresPassword: u.requiresPassword,
+            downloadCount: u.accessCount,
+            maxDownloads: u.maxAccesses,
+            note: u.note ?? undefined,
+            companyId: u.companyId,
+          };
+          setShare(adapted);
+          setUnifiedShareId(u.id);
+          if (u.requiresPassword) {
+            setState('password');
+            return;
+          }
+          await loadFileInfo(u.entityId);
+          await UnifiedSharingService.incrementAccessCount(u.id);
+          return;
+        }
+
+        // Legacy fallback — `file_shares` collection (FileShareService)
         const validation = await FileShareService.validateShare(token);
 
         if (!validation.valid || !validation.share) {
@@ -148,12 +223,17 @@ export function SharedFilePageContent() {
 
     setDownloading(true);
     try {
-      await FileShareService.incrementDownloadCount(share.id);
+      // ADR-315: route counter write to the collection the share actually lives in
+      if (unifiedShareId) {
+        await UnifiedSharingService.incrementAccessCount(unifiedShareId);
+      } else {
+        await FileShareService.incrementDownloadCount(share.id);
+      }
       openRemoteUrlInNewTab(fileInfo.downloadUrl);
     } finally {
       setDownloading(false);
     }
-  }, [fileInfo, share]);
+  }, [fileInfo, share, unifiedShareId]);
 
   // Format expiration
   const expiresLabel = share?.expiresAt
@@ -170,6 +250,27 @@ export function SharedFilePageContent() {
   const fileTypeLabel = fileInfo
     ? t(getFileCategoryI18nKey(getFileCategory(fileInfo.contentType, fileInfo.originalFilename)))
     : '';
+
+  // ADR-315: Contact public view bypasses the file-centric chrome entirely.
+  if (state === 'contact' && contactData) {
+    return (
+      <SharedContactPageContent
+        data={contactData}
+        expiresAt={contactExpiresAt}
+      />
+    );
+  }
+
+  // ADR-315: Property Showcase public view — replaces legacy /shared/po redirect.
+  if (state === 'showcase' && showcaseData) {
+    return (
+      <SharedShowcasePageContent
+        token={token}
+        data={showcaseData}
+        expiresAt={showcaseExpiresAt}
+      />
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-muted/50 to-background flex items-center justify-center p-4">

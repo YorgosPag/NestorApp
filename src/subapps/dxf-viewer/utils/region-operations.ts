@@ -6,6 +6,7 @@ import { getStatusColors } from '../config/color-mapping';
 import { UI_COLORS, OPACITY } from '../config/color-config';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
 import { GEOMETRY_PRECISION } from '../config/tolerance-config';
+import { nowISO } from '@/lib/date-local';
 
 // Local interface for layer management (different from the centralized OverlayLayer union type)
 export interface RegionLayerObject {
@@ -109,7 +110,7 @@ export class RegionOperations {
     }
 
     const id = RegionOperations.generateRegionId();
-    const now = new Date().toISOString();
+    const now = nowISO();
 
     return {
       id,
@@ -133,7 +134,7 @@ export class RegionOperations {
     const updated: Region = { 
       ...region, 
       ...updates, 
-      updatedAt: new Date().toISOString() 
+      updatedAt: nowISO() 
     };
 
     // Recalculate geometry if vertices changed

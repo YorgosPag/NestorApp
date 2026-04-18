@@ -103,6 +103,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   ATTACHMENT: 'att',
   FILE: 'file',
   SHARE: 'share',
+  DISPATCH: 'dispatch',
   PENDING: 'pending',
   SUBSCRIPTION: 'sub',
   FOLDER: 'fldr',

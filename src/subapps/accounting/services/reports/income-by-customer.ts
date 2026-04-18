@@ -16,6 +16,7 @@ import type {
   CustomerIncomeRow,
 } from '../../types/reports';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
+import { nowISO } from '@/lib/date-local';
 
 const REPORT_PAGE_SIZE = 10000;
 
@@ -35,7 +36,7 @@ export async function generateIncomeByCustomer(
 
   return {
     reportType: 'income_by_customer',
-    generatedAt: new Date().toISOString(),
+    generatedAt: nowISO(),
     period: periods,
     data: {
       customers: buildComparative(current, previous, yoy, totalExtractor),

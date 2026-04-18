@@ -22,6 +22,7 @@ import { AI_COST_CONFIG } from '@/config/ai-analysis-config';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import type { OpenAIUsage } from './agentic-loop';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('AI_USAGE');
 
@@ -59,11 +60,11 @@ export interface DailyCapCheck {
 // ============================================================================
 
 function getTodayKey(): string {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  return nowISO().slice(0, 10); // YYYY-MM-DD
 }
 
 function getCurrentMonth(): string {
-  return new Date().toISOString().slice(0, 7); // YYYY-MM
+  return nowISO().slice(0, 7); // YYYY-MM
 }
 
 /**

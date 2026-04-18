@@ -40,6 +40,7 @@ import {
   useMockRealEstateService,
 } from './citizen-drawing-types';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
+import { nowISO } from '@/lib/date-local';
 
 interface CitizenDrawingInterfaceProps {
   mapRef: React.RefObject<MapboxMap | null>;
@@ -140,7 +141,7 @@ export function CitizenDrawingInterface({
         id: polygon.id,
         polygon: polygon.points.map((p: PolygonPoint) => [p.lat ?? p.x ?? 0, p.lng ?? p.y ?? 0] as [number, number]),
         settings: {},
-        createdAt: new Date().toISOString(),
+        createdAt: nowISO(),
         ...(selectedTool === 'real-estate' ? { type: 'real-estate' } : {})
       };
       if (selectedTool === 'real-estate') handleRealEstateAlertComplete(converted);

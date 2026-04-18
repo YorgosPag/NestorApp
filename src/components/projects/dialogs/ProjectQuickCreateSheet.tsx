@@ -30,6 +30,7 @@ import { ProjectDetails } from '@/components/projects/project-details';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Project } from '@/types/project';
 import { DIALOG_SCROLL } from '@/styles/design-tokens';
+import { nowISO } from '@/lib/date-local';
 
 const TEMP_PROJECT_ID = '__new__';
 
@@ -61,7 +62,7 @@ function buildTempProject(): Project & { companyName: string } {
     progress: 0,
     totalValue: 0,
     totalArea: 0,
-    lastUpdate: new Date().toISOString(),
+    lastUpdate: nowISO(),
   };
 }
 

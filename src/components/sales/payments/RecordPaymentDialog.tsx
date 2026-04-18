@@ -37,6 +37,7 @@ import type {
   PaymentMethodDetails,
 } from '@/types/payment-plan';
 import '@/lib/design-system';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -76,7 +77,7 @@ export function RecordPaymentDialog({
   const remaining = installment.amount - installment.paidAmount;
   const [amount, setAmount] = useState(remaining.toString());
   const [method, setMethod] = useState<PaymentMethod>('bank_transfer');
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentDate, setPaymentDate] = useState(nowISO().split('T')[0]);
   const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');

@@ -29,7 +29,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { fieldToISO } from '@/lib/date-local';
+import { fieldToISO, nowISO } from '@/lib/date-local';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import {
   type EntityType,
@@ -161,7 +161,7 @@ export class FileRecordService {
 
     const fileRecord: FileRecord = {
       ...recordBase,
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
     };
 
     const docRef = doc(db, COLLECTIONS.FILES, fileId);

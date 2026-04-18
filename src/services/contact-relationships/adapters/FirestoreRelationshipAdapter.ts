@@ -28,6 +28,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { normalizeToMillis } from '@/lib/date-local';
+import { compareByLocale } from '@/lib/intl-formatting';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -292,9 +293,9 @@ export class FirestoreRelationshipAdapter {
       relationships.sort((a, b) => {
         // Sort by relationship type first, then by position
         if (a.relationshipType !== b.relationshipType) {
-          return a.relationshipType.localeCompare(b.relationshipType);
+          return compareByLocale(a.relationshipType, b.relationshipType);
         }
-        return (a.position || '').localeCompare(b.position || '');
+        return compareByLocale(a.position || '', b.position || '');
       });
 
       logger.info('✅ FIRESTORE: Organization employees query returned', relationships.length, 'relationships');

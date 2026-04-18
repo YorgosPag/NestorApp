@@ -16,6 +16,7 @@ import type {
   UpdateSavedReportInput,
   SavedReportVisibility,
 } from '@/types/reports/saved-report';
+import { nowISO } from '@/lib/date-local';
 
 const idService = new EnterpriseIdService();
 
@@ -31,7 +32,7 @@ export async function createSavedReport(
 ): Promise<SavedReport> {
   const db = getAdminFirestore();
   const id = idService.generateSavedReportId();
-  const now = new Date().toISOString();
+  const now = nowISO();
 
   const report: SavedReport = {
     id,
@@ -148,7 +149,7 @@ export async function updateSavedReport(
   if (data.createdBy !== userId && data.visibility !== 'system') return null;
 
   const updates: Record<string, unknown> = {
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowISO(),
   };
 
   if (input.name !== undefined) updates.name = input.name.trim();
@@ -208,7 +209,7 @@ export async function trackReportRun(
 
   const currentCount = (snap.data()?.runCount as number) ?? 0;
   await ref.update({
-    lastRunAt: new Date().toISOString(),
+    lastRunAt: nowISO(),
     runCount: currentCount + 1,
   });
 }

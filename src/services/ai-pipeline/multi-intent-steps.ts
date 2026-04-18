@@ -22,6 +22,7 @@ import { PipelineState } from '@/types/ai-pipeline';
 import type { MultiRoutingResult } from './intent-router';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 /** Callback type for state transitions (injected from orchestrator) */
 export type TransitionStateFn = (ctx: PipelineContext, to: PipelineStateValue) => PipelineContext;
@@ -51,7 +52,7 @@ export async function stepMultiLookup(
         ctx.errors.push({
           step: `lookup_${module.moduleId}`,
           error: errorMessage,
-          timestamp: new Date().toISOString(),
+          timestamp: nowISO(),
           retryable: true,
         });
         throw error;
@@ -61,7 +62,7 @@ export async function stepMultiLookup(
       ctx.errors.push({
         step: `lookup_${module.moduleId}`,
         error: `Secondary module lookup failed: ${errorMessage}`,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         retryable: false,
       });
     }
@@ -104,7 +105,7 @@ export async function stepMultiPropose(
         ctx.errors.push({
           step: `propose_${module.moduleId}`,
           error: errorMessage,
-          timestamp: new Date().toISOString(),
+          timestamp: nowISO(),
           retryable: true,
         });
         throw error;
@@ -114,7 +115,7 @@ export async function stepMultiPropose(
       ctx.errors.push({
         step: `propose_${module.moduleId}`,
         error: `Secondary module propose failed: ${errorMessage}`,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         retryable: false,
       });
     }
@@ -175,7 +176,7 @@ export function stepApproveMulti(
     ctx.approval = {
       decision: 'approved',
       approvedBy: `super_admin:${ctx.adminCommandMeta.adminIdentity.displayName}`,
-      decidedAt: new Date().toISOString(),
+      decidedAt: nowISO(),
     };
     ctx = transitionState(ctx, PipelineState.APPROVED);
     return ctx;
@@ -189,7 +190,7 @@ export function stepApproveMulti(
     ctx.approval = {
       decision: 'approved',
       approvedBy: 'AI-auto',
-      decidedAt: new Date().toISOString(),
+      decidedAt: nowISO(),
     };
     ctx = transitionState(ctx, PipelineState.APPROVED);
   }
@@ -244,7 +245,7 @@ export async function stepMultiExecute(
       ctx.errors.push({
         step: `execute_${module.moduleId}`,
         error: errorMessage,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         retryable: false,
       });
       ctx.executionResult = {

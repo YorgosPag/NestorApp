@@ -12,6 +12,7 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 // ============================================================================
 // TYPES
@@ -140,7 +141,7 @@ export async function searchEscoOccupations(
         score: computeScore(normalizedLabel, normalizedQuery),
       };
     })
-    .sort((a, b) => b.score - a.score || a.labelEl.localeCompare(b.labelEl))
+    .sort((a, b) => b.score - a.score || compareByLocale(a.labelEl, b.labelEl))
     .slice(0, limit);
 }
 
@@ -175,7 +176,7 @@ export async function searchEscoSkills(
         score: computeScore(normalizedLabel, normalizedQuery),
       };
     })
-    .sort((a, b) => b.score - a.score || a.labelEl.localeCompare(b.labelEl))
+    .sort((a, b) => b.score - a.score || compareByLocale(a.labelEl, b.labelEl))
     .slice(0, limit);
 }
 

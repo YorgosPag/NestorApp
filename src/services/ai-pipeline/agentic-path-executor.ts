@@ -48,6 +48,7 @@ import {
 import { extractInvoiceEntitiesFromHistory } from './invoice-auto-enrichment';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const agenticLogger = createModuleLogger('AGENTIC_PATH');
 
@@ -224,7 +225,7 @@ export async function executeAgenticPath(
     }
 
     // 4. Save to chat history — ONLY if the agentic loop succeeded
-    const now = new Date().toISOString();
+    const now = nowISO();
     const maxIter = agenticCtx.isAdmin
       ? AI_COST_CONFIG.LIMITS.ADMIN_MAX_ITERATIONS
       : AI_COST_CONFIG.LIMITS.CUSTOMER_MAX_ITERATIONS;
@@ -311,7 +312,7 @@ export async function executeAgenticPath(
     ctx.errors.push({
       step: 'agentic_path',
       error: errorMessage,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       retryable: false,
     });
     ctx = deps.transitionState(ctx, PipelineState.FAILED);

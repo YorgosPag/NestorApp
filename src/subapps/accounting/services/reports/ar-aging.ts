@@ -16,6 +16,7 @@ import type {
   ARAgingCustomerRow,
 } from '../../types/reports';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
+import { nowISO } from '@/lib/date-local';
 
 /** Generate AR Aging report with comparative analysis */
 export async function generateARAgingReport(
@@ -41,7 +42,7 @@ export async function generateARAgingReport(
 
   return {
     reportType: 'ar_aging',
-    generatedAt: new Date().toISOString(),
+    generatedAt: nowISO(),
     period: periods,
     data: {
       customers: buildComparative(current, previous, yoy, sumOutstanding),

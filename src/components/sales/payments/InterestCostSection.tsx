@@ -20,6 +20,7 @@ import type { CostCalculationInput } from '@/types/interest-calculator';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // TYPES
@@ -77,7 +78,7 @@ export function InterestCostSection({
   const autoCalculate = useCallback(async () => {
     if (!rates || !planInstallments || planInstallments.length === 0 || salePrice <= 0) return;
 
-    const referenceDate = new Date().toISOString().split('T')[0];
+    const referenceDate = nowISO().split('T')[0];
     const bankSpread = spreads?.defaultSpread ?? 2.40;
 
     const input: CostCalculationInput = {

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 📋 Proposed |
+| **Status** | ✅ Phase M3 + M4 COMPLETE (all 3 entity types unified: file + contact + property_showcase — single dialog, single public route) — 2026-04-18 |
 | **Date** | 2026-04-18 |
 | **Category** | Sharing / Access Control / Public Surfaces |
 | **Canonical Location** (target) | `src/services/sharing/`, `src/components/sharing/`, `src/app/shared/[token]/`, Firestore `shares` collection |
@@ -94,7 +94,7 @@ The `file_shares` collection is **renamed to `shares`** with a dual-read alias d
 export type ShareEntityType = 'file' | 'contact' | 'property_showcase';
 
 export interface ShareRecord {
-  id: string;                            // enterprise ID, prefix `shr_`
+  id: string;                            // enterprise ID, prefix `share_` (aligned with existing SSoT — enterprise-id-prefixes.ts)
   token: string;                         // 32-char URL-safe random
   entityType: ShareEntityType;
   entityId: string;                      // fileId | contactId | propertyId
@@ -133,7 +133,7 @@ export interface ShareRecord {
 }
 
 export interface ShareDispatchLog {
-  id: string;                            // `dsp_` prefix
+  id: string;                            // enterprise ID, prefix `dispatch_` (new DISPATCH prefix added in M1)
   shareId?: string;                      // nullable — "direct send without link"
   token?: string;                        // denormalized for analytics
   companyId: string;
@@ -280,14 +280,23 @@ Anonymous visitor → /shared/{token}
 
 ### 5.1 Phases
 
-**Phase M1 — Schema rename + alias** (zero user-visible change)
-1. Add Firestore collection `shares` (new writes go there, gated by feature flag).
-2. Backfill `file_shares` → `shares` with inferred `entityType`:
+**Phase M1 — Skeleton** (zero user-visible change — ✅ COMMITTED 2026-04-18)
+1. Types: `src/types/sharing/share-record.ts` + barrel.
+2. Collections: `COLLECTIONS.SHARES`, `COLLECTIONS.SHARE_DISPATCHES`; `FILE_SHARES` marked `@deprecated`.
+3. Enterprise ID: `DISPATCH: 'dispatch'` prefix + `generateDispatchId()`.
+4. Service SSoT skeleton: `src/services/sharing/unified-sharing.service.ts` — token lifecycle (`createShare`/`validateShare`/`verifyPassword`/`incrementAccessCount`/`revoke`/`listSharesForEntity`/`listSharesForCompany`/`canShare`).
+5. Entity registry: `src/services/sharing/share-entity-registry.ts` (empty — resolvers registered in M3).
+6. SSoT ratchet: `unified-sharing-service` Tier 2 module in `.ssot-registry.json`; baseline regenerated.
+7. Firestore indexes: 3 composite indexes for `shares` declared (not yet deployed).
+8. Tests: unit tests for token lifecycle (all paths).
+
+**Phase M1b — Migration + dual-write** (deferred to next PR)
+1. Backfill `file_shares` → `shares` with inferred `entityType`:
    - `doc.showcaseMode === true` → `entityType: 'property_showcase'`, `entityId: doc.showcasePropertyId`, `showcaseMeta: { pdfStoragePath: doc.pdfStoragePath, pdfRegeneratedAt: doc.pdfRegeneratedAt }`
    - otherwise → `entityType: 'file'`, `entityId: doc.fileId`, `fileMeta: { mimeType, sizeBytes }` (looked up from `files`)
    - rename `maxDownloads` → `maxAccesses`, `downloadCount` → `accessCount` (keep original fields as deprecated aliases in the doc for one release cycle)
-3. Dual-write (`file_shares` + `shares`) for one release cycle to allow rollback.
-4. Migrate reads: `FileShareService.validateShare` reads `shares` first, falls back to `file_shares`.
+2. Dual-write (`file_shares` + `shares`) for one release cycle to allow rollback.
+3. Migrate reads: `FileShareService.validateShare` reads `shares` first, falls back to `file_shares`.
 
 **Phase M2 — Password migration to bcrypt**
 1. Deploy Cloud Function `validatePasswordedShare`.
@@ -310,6 +319,23 @@ Anonymous visitor → /shared/{token}
 3. Remove `file_shares` alias reads; drop collection (Firestore doesn't require deletion — abandon reads).
 4. Remove legacy fields (`maxDownloads`, `downloadCount`, `showcaseMode`, `showcasePropertyId`, `pdfStoragePath`, `pdfRegeneratedAt` at root) from `ShareRecord`.
 5. Update `firestore-rules` tests and `seed-helpers` to reference `shares` / `share_dispatches` only.
+
+### 5.4 Scope reduction (2026-04-18)
+
+The original §5.1 phase plan modeled a **production-grade migration** with dual-write windows, bcrypt Cloud Function + 90-day re-hash cycle, 301 redirects, and feature flags — estimating **2–3 weeks** of focused work (§6.2 original). Giorgio challenged the estimate during implementation; the honest answer is that almost all of that cost is **amortization against real production data and real users**, neither of which exists in this project yet (per `.claude-rules` memory: all Firestore data is test, dropped before go-live; no live password-protected shares).
+
+Reduced plan (this PR):
+
+| Phase | Original intent | What shipped | Why deferred |
+|-------|-----------------|--------------|--------------|
+| M1 | Skeleton | ✅ Full | — |
+| M1b | Backfill + dual-write | ⏸ Skipped | No data to migrate; `file_shares` wiped pre-prod |
+| M2 | bcrypt Cloud Function + re-hash | ⏸ Deferred | SHA-256 parity retained via `hashPasswordLegacy`; revisit before first production user |
+| M3 | `UnifiedShareDialog` + resolvers + `ChannelDispatchService` + legacy wrappers | ✅ Dialog, resolvers, public dispatcher, channel dispatch service, 2/3 entry points migrated (contact + file). Showcase still on legacy `PropertyShowcaseDialog` (requires splitting `POST /api/properties/[id]/showcase/generate` — not in scope this pass) | Entry-point migration is opportunistic |
+| M4 | Public route consolidation + 301 redirects | ~ Partial | `/shared/[token]` dispatches unified+legacy; `/shared/po/[token]` kept for PDF render; redirect path added but consolidation deferred |
+| M5 | Cleanup legacy | ⏸ Deferred | `ShareModal` / `ShareDialog` / `FileShareService` still used by other callers |
+
+Total actual time: **~4 hours**, not 2–3 weeks. The SSoT skeleton (M1) + the user-visible unification (most of M3) are what Giorgio actually asked for; the rest was enterprise-migration ceremony designed for a production with real users. It will be revisited when the data stops being test data.
 
 ### 5.2 Rollback strategy
 
@@ -378,17 +404,18 @@ Anonymous visitor → /shared/{token}
 
 ## 9. Implementation checklist (for future execution PR)
 
-- [ ] Phase M1 — schema rename + backfill script + dual-write
-- [ ] Phase M2 — Cloud Function `validatePasswordedShare` + bcrypt migration
-- [ ] Phase M3 — `UnifiedShareDialog` + `ChannelDispatchService` + legacy API wrappers
-- [ ] Phase M4 — Public route consolidation + 301 redirects
-- [ ] Phase M5 — Cleanup legacy surface + drop feature flags
-- [ ] `.ssot-registry.json` entry `unified-sharing-service` (Tier 2)
-- [ ] `firestore.indexes.json` composite indexes declared
-- [ ] `firestore.rules` + rules-test suite updated for `shares` and `share_dispatches`
-- [ ] i18n keys consolidated under `sharing` namespace (`sharing.dialog.*`, `sharing.public.*`); deprecate `files.share.*` and `common.shareContact`
-- [ ] Seed helpers updated
-- [ ] ADR-147 and ADR-312 updated with pointer to this ADR
+- [x] Phase M1 — skeleton (types + service SSoT + registry + tests) ✅ 2026-04-18
+- [~] Phase M1b — backfill script + dual-write — **SKIPPED** (test data pre-production; no real records to migrate — see §5.4)
+- [~] Phase M2 — bcrypt migration — **DEFERRED** (no real users; SHA-256 parity retained until first production users)
+- [x] Phase M3 — `UnifiedShareDialog` + resolvers + `ChannelDispatchService` + showcase unification ✅ 2026-04-18
+- [x] Phase M4 — Public route consolidation ✅ 2026-04-18 — `/shared/[token]` now dispatches all 3 entity types (file inline + contact via `SharedContactPageContent` + showcase via `SharedShowcasePageContent`). Legacy `/shared/po/[token]` retained read-only for ADR-312 legacy `file_shares`-persisted shares.
+- [ ] Phase M5 — Cleanup legacy surface (FileShareService, ShareModal, ShareDialog) — deferred
+- [x] `.ssot-registry.json` entry `unified-sharing-service` (Tier 2) ✅ 2026-04-18
+- [x] `firestore.indexes.json` composite indexes declared + deployed ✅ 2026-04-18
+- [ ] `firestore.rules` + rules-test suite updated for `shares` and `share_dispatches` — deferred
+- [ ] i18n keys consolidated under `sharing` namespace — deferred (existing `files.share.*` keys reused)
+- [ ] Seed helpers updated — deferred
+- [ ] ADR-147 and ADR-312 updated with pointer to this ADR — deferred
 
 ---
 
@@ -397,3 +424,6 @@ Anonymous visitor → /shared/{token}
 | Date | Change |
 |------|--------|
 | 2026-04-18 | Initial proposal authored — Claude + Giorgio, derived from three-flow mapping (contact / file / showcase) |
+| 2026-04-18 | Phase M1 skeleton implemented (code-truth reconciliation). `ShareRecord.id` prefix aligned to existing SSoT `share_` (was proposed `shr_`). `ShareDispatchLog.id` prefix `dispatch_` added to enterprise-id SSoT (was proposed `dsp_`). Files: `src/types/sharing/*`, `src/services/sharing/unified-sharing.service.ts`, `src/services/sharing/share-entity-registry.ts`, `src/config/firestore-collections.ts` (SHARES + SHARE_DISPATCHES), `.ssot-registry.json` (Tier 2 `unified-sharing-service`), `firestore.indexes.json` (3 composite indexes). Firestore rules + UI + dispatch + bcrypt deferred to M2–M4. Legacy `FileShareService` + `file_shares` unchanged — single operational path until M3. |
+| 2026-04-18 | **Phase M3 + M4 COMPLETE — showcase fully unified**. Split `POST /api/properties/[id]/showcase/generate` into a new standalone PDF endpoint `POST /api/properties/[id]/showcase/pdf` (PDF-only, no Firestore record — consumed by `UnifiedShareDialog.preSubmit` hook). `UnifiedShareDialog` gained a `preSubmit?: () => Promise<Partial<CreateShareInput>>` prop so entity-specific metadata (showcase `pdfStoragePath`) can be produced at submit time. **New files**: `src/app/api/properties/[id]/showcase/pdf/route.ts` (standalone PDF gen), `src/app/api/shared/[token]/pdf/route.ts` (public PDF proxy streaming from `shares` collection — counterpart of legacy `/api/showcase/[token]/pdf`), `src/components/shared/pages/SharedShowcasePageContent.tsx` (public showcase view rendered inside `/shared/[token]`). **Modified**: `src/features/properties-sidebar/PropertiesSidebar.tsx` (replaces `PropertyShowcaseDialog` with `UnifiedShareDialog` entityType=property_showcase + preSubmit hook calling the new PDF endpoint); `src/components/sharing/UnifiedShareDialog.tsx` (adds `preSubmit` prop + result-stage "Κατέβασμα PDF" button for property_showcase); `src/components/shared/pages/SharedFilePageContent.tsx` (showcase branch now renders `SharedShowcasePageContent` inline — the `/shared/po/[token]` redirect is gone). **Deleted**: `src/features/properties-sidebar/components/PropertyShowcaseDialog.tsx` (legacy entry — superseded). Legacy `POST /api/properties/[id]/showcase/generate` kept for retro-compat (no new callers in tree) — removable in M5. User-visible result: identical 4-field dialog (expiration / password / max accesses / note) for file, contact, and property_showcase. |
+| 2026-04-18 | Phase M3 implemented (mostly complete). Scope-reduced after Giorgio push-back that the original 3-week plan was over-engineered for a pre-production test-dataset project. **New files**: `src/services/sharing/resolvers/{file,contact,property-showcase}.resolver.ts` + `index.ts` (auto-registering barrel); `src/components/sharing/UnifiedShareDialog.tsx` (single adaptive dialog — 4 canonical fields + contact-only channel-dispatch stage); `src/components/shared/pages/SharedContactPageContent.tsx` (anonymous contact card with `includedFields` enforcement); `src/services/sharing/channel-dispatch.service.ts` (writes `share_dispatches` audit log + delegates to existing `/api/communications/*` outbound routes). **Modified**: `src/components/contacts/list/ContactsList.tsx` (replaces `ShareModal` with `UnifiedShareDialog` entityType=contact → fixes the copy-link bug and gains λήξη/κωδικός/μέγιστες προσβάσεις/σημείωση); `src/components/file-manager/FilePreviewPanel.tsx` (replaces `ShareDialog` with `UnifiedShareDialog` entityType=file); `src/components/shared/pages/SharedFilePageContent.tsx` (unified-first dispatcher with legacy fallback — handles unified file via adapter + contact via resolver + redirects showcase to `/shared/po/[token]`). **Deferred** (honest scope): M1b backfill (no data to migrate), M2 bcrypt (no real users), M4 `/shared/po` redirect (showcase UX still on legacy generate API), M5 cleanup. `ShareDialog` and `ShareModal` remain exported because other callers (`ShareButton`, `projects-list`) still use them — migration is opportunistic. Property Showcase entry (`PropertyShowcaseDialog`) left unchanged: full unification requires splitting the showcase PDF-generate API, deferred. |

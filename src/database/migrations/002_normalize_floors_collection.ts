@@ -21,6 +21,8 @@ import { collection, getDocs, doc, updateDoc, getDoc, writeBatch } from 'firebas
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
+
 const logger = createModuleLogger('Migration002');
 
 interface BuildingRecord {
@@ -166,10 +168,10 @@ class FloorsNormalizationMigrationSteps {
               units: embeddedFloor.units || 0,
 
               // Enterprise audit trail
-              createdAt: new Date().toISOString(),
+              createdAt: nowISO(),
               migrationInfo: {
                 migrationId: '002_normalize_floors_collection',
-                migratedAt: new Date().toISOString(),
+                migratedAt: nowISO(),
                 sourceType: 'buildingFloors_embedded_array',
                 originalBuildingId: building.id
               },
@@ -275,7 +277,7 @@ class FloorsNormalizationMigrationSteps {
         for (const floor of this.migrationData.floorsToCreate) {
           try {
             const floorRef = doc(db, COLLECTIONS.FLOORS, floor.id);
-            await updateDoc(floorRef, { deleted: true, deletedAt: new Date().toISOString() });
+            await updateDoc(floorRef, { deleted: true, deletedAt: nowISO() });
             logger.info('Marked floor as deleted', { floorName: floor.name });
           } catch (error) {
             logger.error('Failed to rollback floor', { floorName: floor.name, error });

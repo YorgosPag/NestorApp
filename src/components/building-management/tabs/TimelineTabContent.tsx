@@ -40,6 +40,7 @@ import type { Milestone } from './TimelineTabContent/MilestoneItem';
 import type { BuildingMilestone } from '@/types/building/milestone';
 import { Plus } from 'lucide-react';
 import '@/lib/design-system';
+import { nowISO } from '@/lib/date-local';
 
 // Lazy load GanttView (ADR-034) — only loaded when user switches to Gantt view
 const LazyGanttView = lazy(() =>
@@ -162,7 +163,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
     if (isExporting) return;
     setIsExporting(true);
     try {
-      const timestamp = new Date().toISOString().slice(0, 10);
+      const timestamp = nowISO().slice(0, 10);
       const buildingName = (building.name as string) ?? '';
       const baseName = `Milestones_${buildingName}_${timestamp}`;
       const ext = format === 'excel' ? 'xlsx' : format;

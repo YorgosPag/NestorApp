@@ -20,6 +20,7 @@
  */
 
 import type { Guide } from './guide-types';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -159,7 +160,7 @@ function generateIFCSPF(
   xGuides: readonly Guide[],
   yGuides: readonly Guide[],
 ): string {
-  const timestamp = new Date().toISOString().slice(0, 19);
+  const timestamp = nowISO().slice(0, 19);
   const lines: string[] = [];
 
   // === HEADER ===

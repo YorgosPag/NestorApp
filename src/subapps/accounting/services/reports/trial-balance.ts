@@ -17,6 +17,7 @@ import type {
 } from '../../types/reports';
 import { getCategoryDisplayLabel } from '../../config/account-categories';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
+import { nowISO } from '@/lib/date-local';
 
 const REPORT_PAGE_SIZE = 10000;
 
@@ -38,7 +39,7 @@ export async function generateTrialBalance(
 
   return {
     reportType: 'trial_balance',
-    generatedAt: new Date().toISOString(),
+    generatedAt: nowISO(),
     period: periods,
     data: {
       rows: buildComparative(current, previous, yoy, (r) =>

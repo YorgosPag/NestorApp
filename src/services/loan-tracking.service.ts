@@ -38,6 +38,7 @@ import {
   recordDisbursement as recordDisbursementOp,
   addCommunicationLog as addCommunicationLogOp,
 } from './loan-tracking-operations';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('LoanTrackingService');
 
@@ -134,7 +135,7 @@ export class LoanTrackingService {
       const isPrimary = input.isPrimary ?? loans.length === 0;
 
       const updatedLoans = isPrimary
-        ? loans.map(l => ({ ...l, isPrimary: false, updatedAt: new Date().toISOString() }))
+        ? loans.map(l => ({ ...l, isPrimary: false, updatedAt: nowISO() }))
         : [...loans];
 
       const newLoan = createDefaultLoanTracking(loanId, input.bankName.trim(), isPrimary, input.disbursementType ?? 'lump_sum');
@@ -146,7 +147,7 @@ export class LoanTrackingService {
 
       const db = getDb();
       await db.collection(planCollectionPath(propertyId)).doc(planId).update({
-        loans: updatedLoans, updatedAt: new Date().toISOString(), updatedBy: createdBy,
+        loans: updatedLoans, updatedAt: nowISO(), updatedBy: createdBy,
       });
 
       await PaymentPlanService.syncPaymentSummary(propertyId, planId);
@@ -172,7 +173,7 @@ export class LoanTrackingService {
       if (loanIndex === -1) return { success: false, error: `Loan ${loanId} not found` };
 
       const loan = { ...loans[loanIndex] };
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       if (input.bankName !== undefined) loan.bankName = input.bankName;
       if (input.bankBranch !== undefined) loan.bankBranch = input.bankBranch ?? null;
@@ -241,7 +242,7 @@ export class LoanTrackingService {
         return { success: false, error: `Μη έγκυρη μετάβαση: ${loan.status} → ${input.targetStatus}` };
       }
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       loan.status = input.targetStatus;
       loan.updatedAt = now;
 

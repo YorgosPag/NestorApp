@@ -6,6 +6,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { nowISO } from '@/lib/date-local';
 
 /**
  * 📁 DIRECTORY UTILITIES
@@ -169,7 +170,7 @@ export function generateSuiteReport(
   results: VisualTestResult[],
   startTime: number
 ): TestSuiteReport {
-  const timestamp = new Date().toISOString();
+  const timestamp = nowISO();
   const duration = Date.now() - startTime;
 
   const passed = results.filter(r => r.passed).length;
@@ -299,7 +300,7 @@ export function getCIArtifactPaths(): string[] {
 export function createCIArtifactManifest(): void {
   const artifacts = getCIArtifactPaths();
   const manifest = {
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     totalFiles: artifacts.length,
     artifacts: artifacts.map(filePath => ({
       path: path.relative(process.cwd(), filePath),

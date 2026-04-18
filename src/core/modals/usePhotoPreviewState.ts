@@ -15,6 +15,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import type { PhotoPreviewModalProps } from '@/core/modals/photo-preview-helpers';
 import { generatePhotoTitle, getPhotoTypeIcon, buildPhotoShareText } from '@/core/modals/photo-preview-helpers';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('usePhotoPreviewState');
 
@@ -387,7 +388,7 @@ export function usePhotoPreviewState(params: UsePhotoPreviewStateParams) {
         ? `Φωτογραφία από ${getContactDisplayName(contact)}`
         : `Φωτογραφία από ${title}`,
       contact: contact ? { name: getContactDisplayName(contact), type: contact.type } : undefined,
-      metadata: { uploadedAt: new Date().toISOString(), photoType }
+      metadata: { uploadedAt: nowISO(), photoType }
     };
 
     if (typeof window !== 'undefined') {

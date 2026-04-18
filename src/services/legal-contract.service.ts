@@ -39,6 +39,7 @@ import {
   computeLegalPhase,
   CONTRACT_PHASE_ORDER,
 } from '@/types/legal-contracts';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('LegalContractService');
 
@@ -95,7 +96,7 @@ export class LegalContractService {
       const notary = snapshots.find((s) => s.role === 'notary') ?? null;
 
       const id = generateContractId();
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       const contract: LegalContract = {
         id,
@@ -205,7 +206,7 @@ export class LegalContractService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const updates: Record<string, unknown> = {
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
       };
 
       if (input.contractAmount !== undefined) updates.contractAmount = input.contractAmount;
@@ -253,7 +254,7 @@ export class LegalContractService {
         };
       }
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       const updates: Record<string, unknown> = {
         status: input.targetStatus,
         updatedAt: now,
@@ -342,7 +343,7 @@ export class LegalContractService {
               roleSpecificData: role === 'notary'
                 ? { type: 'notary' as const, notaryRegistryNumber: null, notaryDistrict: null }
                 : { type: 'lawyer' as const, barAssociationNumber: null, barAssociation: null },
-              snapshotAt: new Date().toISOString(),
+              snapshotAt: nowISO(),
             };
           }
         }
@@ -358,7 +359,7 @@ export class LegalContractService {
       const db = getDb();
       await db.collection(COLLECTIONS.LEGAL_CONTRACTS).doc(contractId).update({
         [fieldMap[role]]: snapshot,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
       });
 
       logger.info(

@@ -46,6 +46,7 @@ import type {
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // TYPES
@@ -66,7 +67,7 @@ function formatPercent(value: number): string {
 }
 
 function todayISO(): string {
-  return new Date().toISOString().split('T')[0];
+  return nowISO().split('T')[0];
 }
 
 function addMonthsISO(isoDate: string, months: number): string {

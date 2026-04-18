@@ -31,6 +31,7 @@ import {
   getPaymentPlan,
   getPaymentPlans,
 } from './payment-plan-core';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // PAYMENT RECORDING
@@ -113,7 +114,7 @@ export async function recordPayment(
 
       if (remainingPayment > 0) overpaymentAmount = remainingPayment;
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       const record: PaymentRecord = {
         id: paymentId, paymentPlanId: input.paymentPlanId,
         installmentIndex: targetIdx, amount: input.amount,
@@ -223,7 +224,7 @@ export async function updateLoanInfo(
     const db = getDb();
     await db.collection(planCollectionPath(propertyId)).doc(planId).update({
       loan: updatedLoan,
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowISO(),
       updatedBy,
     });
 

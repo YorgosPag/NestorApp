@@ -57,6 +57,7 @@ import {
 import { storageGet, storageSet, storageRemove, STORAGE_KEYS } from '../utils/storage-utils';
 // 🏢 ADR-098: Centralized Timing Constants
 import { STORAGE_TIMING } from '../config/timing-config';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // STORE STATE TYPE
@@ -336,7 +337,7 @@ export const useDxfSettingsStore = create<DxfSettingsState & DxfSettingsActions>
             const dataToSave = {
               general: state.general,
               overrides: state.overrides,
-              savedAt: new Date().toISOString()
+              savedAt: nowISO()
             };
 
             const success = storageSet(STORAGE_KEYS.DXF_SETTINGS, dataToSave);

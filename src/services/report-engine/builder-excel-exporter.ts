@@ -24,6 +24,7 @@ import { buildAnalysisSheet } from './builder-excel-analysis';
 import type {
   FieldDefinition,
 } from '@/config/report-builder/report-builder-types';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // STYLE CONSTANTS
@@ -243,7 +244,7 @@ function buildDataSheet(
   }
 
   // Data rows
-  const today = new Date().toISOString().slice(0, 10);
+  const today = nowISO().slice(0, 10);
 
   for (const dataRow of params.results.rows) {
     const rowData: Record<string, string | number> = {};

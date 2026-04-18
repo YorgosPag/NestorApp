@@ -29,6 +29,7 @@ import {
   getNestedValue,
   chunkArray,
 } from './report-query-transforms';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ReportQueryExecutor');
 
@@ -125,7 +126,7 @@ export async function executeBuilderQuery(
     totalMatched,
     truncated,
     resolvedRefs,
-    generatedAt: new Date().toISOString(),
+    generatedAt: nowISO(),
   };
 }
 

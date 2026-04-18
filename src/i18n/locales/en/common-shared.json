@@ -706,5 +706,9 @@
       "dialogLabel": "Share",
       "statusRegion": "Share status"
     }
+  },
+  "share": {
+    "expires": "Expires",
+    "publicReadOnlyNotice": "Public read-only page. Do not share sensitive data."
   }
 }

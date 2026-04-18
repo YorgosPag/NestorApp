@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { PartnerRow } from './PartnerRow';
 import type { Partner } from '../../types/entity';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -51,7 +52,7 @@ function createEmptyPartner(index: number): Partner {
       notes: null,
     },
     isFirstFiveYears: false,
-    joinDate: new Date().toISOString().split('T')[0],
+    joinDate: nowISO().split('T')[0],
     exitDate: null,
     isActive: true,
   };

@@ -41,6 +41,7 @@ import { formatDateShort } from "@/lib/intl-utils";
 import { cn } from "@/lib/utils";
 import "@/lib/design-system";
 import type { UseBaselineComparisonReturn } from "./useBaselineComparison";
+import { nowISO } from '@/lib/date-local';
 
 // ─── Props ───────────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ export function BaselineSection({ baseline, loading }: BaselineSectionProps) {
       baseline.baselines.length > 0
         ? Math.max(...baseline.baselines.map((b) => b.version)) + 1
         : 1;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = nowISO().slice(0, 10);
     setSaveName(`Baseline ${nextVersion} - ${today}`);
     setSaveDescription("");
     setSaveDialogOpen(true);

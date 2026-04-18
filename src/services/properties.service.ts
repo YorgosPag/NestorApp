@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import type { DocumentData, QueryConstraint } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { normalizeToISO } from '@/lib/date-local';
+import { normalizeToISO, nowISO } from '@/lib/date-local';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyDoc, PropertyModel } from '@/types/property';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
@@ -171,7 +171,7 @@ export async function updateProperty(propertyId: string, updates: Partial<Proper
 
 // NEW: Update multiple properties' owner
 export async function updateMultiplePropertiesOwner(propertyIds: string[], contactId: string): Promise<{ success: boolean }> {
-  const saleDate = new Date().toISOString();
+  const saleDate = nowISO();
 
   await Promise.all(
     propertyIds.map(async (propertyId) => {
@@ -339,7 +339,7 @@ export async function updatePropertyCoverage(
     'propertyCoverage.hasPhotos': coverage.hasPhotos,
     'propertyCoverage.hasFloorplans': coverage.hasFloorplans,
     'propertyCoverage.hasDocuments': coverage.hasDocuments,
-    'propertyCoverage.updatedAt': new Date().toISOString(),
+    'propertyCoverage.updatedAt': nowISO(),
   });
   return { success: true };
 }

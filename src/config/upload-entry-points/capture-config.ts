@@ -9,6 +9,7 @@
 
 import type { FileCategory } from '../domain-constants';
 import type { CaptureSource, CaptureMode, CaptureMetadata, UploadEntryPoint } from './types';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // Category Capture Capabilities
@@ -77,6 +78,6 @@ export function createCaptureMetadata(
     durationMs: options?.durationMs,
     mimeType: options?.mimeType,
     originalFilename: options?.originalFilename,
-    capturedAt: new Date().toISOString(),
+    capturedAt: nowISO(),
   };
 }

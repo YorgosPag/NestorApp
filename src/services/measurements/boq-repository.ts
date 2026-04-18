@@ -27,7 +27,7 @@ import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateBoqItemId } from '@/services/enterprise-id.service';
-import { normalizeToISO } from '@/lib/date-local';
+import { normalizeToISO, nowISO } from '@/lib/date-local';
 import type {
   BOQItem,
   BOQCategory,
@@ -46,7 +46,7 @@ const logger = createModuleLogger('FirestoreBOQRepository');
 
 // ADR-218: Delegates to centralized normalizeToISO
 const toDateString = (value: unknown): string =>
-  normalizeToISO(value) ?? new Date().toISOString();
+  normalizeToISO(value) ?? nowISO();
 
 /**
  * Normalize Firestore document → BOQItem
@@ -176,7 +176,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
   }
 
   async create(data: CreateBOQItemInput, userId: string, companyId: string): Promise<BOQItem> {
-    const now = new Date().toISOString();
+    const now = nowISO();
 
     const newItem: Omit<BOQItem, 'id'> = {
       companyId,
@@ -228,7 +228,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
 
       const updatePayload: Record<string, unknown> = {
         ...data,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
       };
 
       // Ensure no undefined values reach Firestore
@@ -273,7 +273,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
       const original = await this.getById(id);
       if (!original) return null;
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       const duplicateData: Omit<BOQItem, 'id'> = {
         ...original,
         title: `${original.title} — Αντίγραφο`,
@@ -305,7 +305,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
       const docRef = doc(db, COLLECTIONS.BOQ_ITEMS, id);
       const updateData: Record<string, unknown> = {
         status,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
       };
 
       if (status === 'approved') {
@@ -416,7 +416,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
 
       // Fallback: αν δεν υπάρχουν στο Firestore, χρησιμοποίησε static ΑΤΟΕ
       if (firestoreCategories.length === 0) {
-        const now = new Date().toISOString();
+        const now = nowISO();
         return ATOE_MASTER_CATEGORIES.map((cat) => ({
           id: `static_${cat.code}`,
           companyId,
@@ -439,7 +439,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
     } catch (error) {
       logger.error('Error fetching BOQ categories', { error, companyId });
       // Fallback to static categories on error
-      const now = new Date().toISOString();
+      const now = nowISO();
       return ATOE_MASTER_CATEGORIES.map((cat) => ({
         id: `static_${cat.code}`,
         companyId,

@@ -8,6 +8,7 @@
 
 import { errorTracker, type MetadataRecord } from '@/services/ErrorTracker';
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('useErrorReporting');
 
@@ -34,7 +35,7 @@ export function useErrorReporting() {
         message: error.message,
         stack: error.stack,
         context,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         url: window.location.href,
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
       };

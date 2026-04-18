@@ -58,7 +58,7 @@ export function ShowcaseClient({ token }: ShowcaseClientProps) {
 
   if (state.kind === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--showcase-bg))]">
         <Spinner />
       </div>
     );
@@ -94,16 +94,16 @@ export function ShowcaseClient({ token }: ShowcaseClientProps) {
 
   const { data } = state;
   return (
-    <main className="min-h-screen bg-gray-50 pb-12">
+    <main className="min-h-screen bg-[hsl(var(--showcase-bg))] text-[hsl(var(--showcase-fg))] pb-12">
       <div className="max-w-4xl mx-auto px-4 pt-6 space-y-4">
         <ShowcaseHeader company={data.company} />
-        <section className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900">{data.property.name}</h2>
+        <section className="bg-[hsl(var(--showcase-surface))] rounded-xl shadow-sm p-5 border border-[hsl(var(--showcase-border))]">
+          <h2 className="text-2xl font-bold text-[hsl(var(--showcase-fg))]">{data.property.name}</h2>
           {data.property.code && (
-            <p className="text-sm text-gray-500 mt-1">{t('property.code')}: {data.property.code}</p>
+            <p className="text-sm text-[hsl(var(--showcase-muted-fg))] mt-1">{t('property.code')}: {data.property.code}</p>
           )}
           {data.property.description && (
-            <p className="text-gray-700 mt-3 whitespace-pre-line">{data.property.description}</p>
+            <p className="text-[hsl(var(--showcase-fg))]/90 mt-3 whitespace-pre-line">{data.property.description}</p>
           )}
         </section>
         <ShowcasePhotoGrid photos={data.photos} />
@@ -131,11 +131,11 @@ function MessageScreen({
   icon, title, description,
 }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="bg-white rounded-xl shadow-sm p-8 max-w-md text-center border border-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--showcase-bg))] px-4">
+      <div className="bg-[hsl(var(--showcase-surface))] rounded-xl shadow-sm p-8 max-w-md text-center border border-[hsl(var(--showcase-border))]">
         <div className="flex justify-center mb-4">{icon}</div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">{title}</h1>
-        <p className="text-gray-600">{description}</p>
+        <h1 className="text-xl font-bold text-[hsl(var(--showcase-fg))] mb-2">{title}</h1>
+        <p className="text-[hsl(var(--showcase-muted-fg))]">{description}</p>
       </div>
     </div>
   );
@@ -145,7 +145,7 @@ function ShowcaseFooter({ company }: { company: { name: string; phone?: string; 
   const contact = [company.phone, company.email, company.website].filter(Boolean).join(' · ');
   if (!contact) return null;
   return (
-    <footer className="text-center text-sm text-gray-500 py-4">
+    <footer className="text-center text-sm text-[hsl(var(--showcase-muted-fg))] py-4">
       {company.name} · {contact}
     </footer>
   );

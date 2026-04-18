@@ -12,6 +12,7 @@ import type {
   ActualVsForecast,
   CashFlowConfig,
 } from './cash-flow.types';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // EXPORT PARAMS
@@ -88,7 +89,7 @@ function buildSummarySheet(
   ws.addRow(['Cash Runway (months)', projection.cashRunwayMonths]);
 
   ws.addRow([]);
-  ws.addRow(['Generated', new Date().toISOString()]);
+  ws.addRow(['Generated', nowISO()]);
   ws.addRow(['User', wb.creator]);
 
   // Format currency cells
@@ -248,7 +249,7 @@ function styleHeader(row: ExcelJS.Row): void {
 // =============================================================================
 
 function downloadBuffer(buffer: ExcelJS.Buffer, scenario: string): void {
-  const dateStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+  const dateStr = nowISO().substring(0, 10).replace(/-/g, '');
   const filename = `Nestor_CashFlow_${scenario}_${dateStr}.xlsx`;
 
   const blob = new Blob([buffer], {

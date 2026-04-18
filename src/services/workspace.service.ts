@@ -44,7 +44,7 @@ import type { DocumentData } from 'firebase/firestore';
 import { RealtimeService } from '@/services/realtime';
 import { generateWorkspaceId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
-import { normalizeToISO } from '@/lib/date-local';
+import { normalizeToISO, nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('WorkspaceService');
 
@@ -57,7 +57,7 @@ const logger = createModuleLogger('WorkspaceService');
  * Handles Timestamp → ISO string conversion for date fields.
  */
 function toWorkspace(raw: DocumentData): Workspace {
-  const createdAt = normalizeToISO(raw.createdAt) ?? new Date().toISOString();
+  const createdAt = normalizeToISO(raw.createdAt) ?? nowISO();
   const updatedAt = normalizeToISO(raw.updatedAt) ?? undefined;
 
   return {
@@ -111,7 +111,7 @@ export class WorkspaceService {
       companyId,
       status: 'active',
       settings: settings || DEFAULT_WORKSPACE_SETTINGS,
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
       createdBy,
       metadata,
     };

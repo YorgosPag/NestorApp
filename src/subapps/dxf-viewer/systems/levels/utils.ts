@@ -6,6 +6,7 @@
 import type { Level, FloorplanDoc, CalibrationData } from './config';
 // 🏢 ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
 import { generateLayerId, generateFloorId } from '@/services/enterprise-id.service';
+import { nowISO } from '@/lib/date-local';
 
 export class LevelOperations {
   static createDefaultLevels(): Level[] {
@@ -143,7 +144,7 @@ export class FloorplanOperations {
     const doc: FloorplanDoc = {
       ...floorplan,
       id,
-      importedAt: new Date().toISOString()
+      importedAt: nowISO()
     };
 
     return {

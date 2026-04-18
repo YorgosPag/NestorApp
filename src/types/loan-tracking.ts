@@ -11,6 +11,7 @@
  */
 
 import type { LoanInfo, LoanStatus } from './payment-plan';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // 🏦 LOAN TRACKING STATUS — 15-stage FSM
@@ -325,7 +326,7 @@ export function createDefaultLoanTracking(
   isPrimary: boolean = true,
   disbursementType: DisbursementType = 'lump_sum'
 ): LoanTracking {
-  const now = new Date().toISOString();
+  const now = nowISO();
   return {
     loanId,
     isPrimary,
@@ -428,7 +429,7 @@ export function migrateLoanInfoToTracking(
   oldLoan: LoanInfo,
   loanId: string = 'migrated_loan'
 ): LoanTracking {
-  const now = new Date().toISOString();
+  const now = nowISO();
   return {
     loanId,
     isPrimary: true,

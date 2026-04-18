@@ -12,6 +12,7 @@ import type { VATRate, VATDeductibilityRule } from '../../types/vat';
 import type { ExpenseCategory, AccountCategory } from '../../types/common';
 import { ACCOUNT_CATEGORIES } from '../../config/account-categories';
 import { isCustomCategoryCode } from '../../types/custom-category';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // GREEK VAT RATES (Ν.2859/2000 — Κώδικας ΦΠΑ)
@@ -155,7 +156,7 @@ export function getDeductibilityPercent(
  * @returns VATRate ή null αν δεν βρεθεί
  */
 export function getVatRateForDate(rate: number, date?: string): VATRate | null {
-  const refDate = date ?? new Date().toISOString().split('T')[0];
+  const refDate = date ?? nowISO().split('T')[0];
 
   return (
     GREEK_VAT_RATES.find(

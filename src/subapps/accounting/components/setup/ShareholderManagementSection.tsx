@@ -23,6 +23,7 @@ import type { Shareholder } from '../../types/entity';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { cn } from '@/lib/utils';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -64,7 +65,7 @@ function createEmptyShareholder(index: number): Shareholder {
     efkaMode: 'none',
     efkaConfig: null,
     isFirstFiveYears: false,
-    joinDate: new Date().toISOString().split('T')[0],
+    joinDate: nowISO().split('T')[0],
     exitDate: null,
     isActive: true,
   };

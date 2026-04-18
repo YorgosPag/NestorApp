@@ -18,6 +18,7 @@ import {
   buildAttribution,
   logger,
 } from '../executor-shared';
+import { nowISO } from '@/lib/date-local';
 
 /**
  * Execute set_contact_esco — Write ESCO occupation and/or skills to a contact.
@@ -44,7 +45,7 @@ export async function executeSetContactEsco(
   }
 
   const updateData: Record<string, unknown> = {
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowISO(),
     lastModifiedBy: buildAttribution(ctx),
   };
   const changes: string[] = [];

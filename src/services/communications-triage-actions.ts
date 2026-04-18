@@ -22,7 +22,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getCompanyWidePolicyAdmin, getProjectPolicyAdmin } from '@/services/assignment/AssignmentPolicyRepository';
 import { resolveTaskDueInHours } from '@/services/assignment/AssignmentPolicyService';
 import { logCommunicationApproved, logCommunicationRejected } from '@/lib/auth/audit';
-import { normalizeToISO } from '@/lib/date-local';
+import { normalizeToISO, nowISO } from '@/lib/date-local';
 import type { AuthContext } from '@/lib/auth/types';
 
 const logger = createModuleLogger('COMMUNICATIONS_TRIAGE_ACTIONS');
@@ -177,7 +177,7 @@ export async function approveCommunication(
         taskId,
         {
           assignedTo: adminUid,
-          dueDate: normalizeToISO(dueDate) ?? new Date().toISOString(),
+          dueDate: normalizeToISO(dueDate) ?? nowISO(),
           priority: comm.intentAnalysis?.needsTriage ? 'high' : 'medium',
           contactId: comm.contactId,
           projectId: comm.projectId,

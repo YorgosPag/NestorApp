@@ -32,6 +32,7 @@ import type { FileRecord } from '@/types/file-record';
 import type { FileClassification } from '@/config/domain-constants';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { useFileManagerState } from './useFileManagerState';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FileManagerHandlers');
 
@@ -110,7 +111,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `files_${new Date().toISOString().slice(0, 10)}.zip`;
+      link.download = `files_${nowISO().slice(0, 10)}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

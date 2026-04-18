@@ -36,6 +36,7 @@ import {
   dispatchSalesAccountingEventWithPolicy,
   syncSalesAppurtenancesWithPolicy,
 } from '@/services/sales-mutation-gateway';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('RevertDialog');
 
@@ -75,7 +76,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           reservationDate: unit.commercial?.reservationDate ?? null,
           saleDate: null,
           listedDate: unit.commercial?.listedDate ?? null,
-          cancellationDate: new Date().toISOString(),
+          cancellationDate: nowISO(),
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       };

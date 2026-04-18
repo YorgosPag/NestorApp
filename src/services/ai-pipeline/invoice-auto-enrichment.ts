@@ -29,6 +29,7 @@ import type {
 import type { AgenticContext } from './tools/executor-shared';
 import { buildAttribution, auditWrite } from './tools/executor-shared';
 import type { ChatHistoryMessage } from './chat-history-service';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('INVOICE_ENRICH');
 
@@ -178,7 +179,7 @@ export async function autoEnrichFromInvoice(
   }
 
   // Apply update
-  updatePayload.updatedAt = new Date().toISOString();
+  updatePayload.updatedAt = nowISO();
   updatePayload.lastModifiedBy = buildAttribution(ctx);
 
   await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updatePayload);

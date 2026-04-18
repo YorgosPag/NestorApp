@@ -25,6 +25,7 @@ import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { sanitizeForPromptInjection, containsPromptInjection } from './shared/prompt-sanitizer';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FEEDBACK_SERVICE');
 
@@ -141,7 +142,7 @@ export class FeedbackService {
         channel,
         tokenEstimate,
         suggestedActions: params.suggestedActions ?? [],
-        createdAt: new Date().toISOString(),
+        createdAt: nowISO(),
       };
 
       const db = getAdminFirestore();

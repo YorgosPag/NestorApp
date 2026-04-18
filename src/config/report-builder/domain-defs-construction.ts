@@ -16,6 +16,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DomainDefinition, FieldDefinition } from './report-builder-types';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // Enum Constants (SSoT — match Firestore data & construction.ts types)
@@ -60,7 +61,7 @@ function computeDelayDays(doc: Record<string, unknown>): number | null {
   const planned = doc['plannedEndDate'] as string | undefined;
   const actual = doc['actualEndDate'] as string | undefined;
   if (!planned) return null;
-  const endRef = actual ?? new Date().toISOString();
+  const endRef = actual ?? nowISO();
   const ms = new Date(endRef).getTime() - new Date(planned).getTime();
   return Math.round(ms / 86_400_000);
 }

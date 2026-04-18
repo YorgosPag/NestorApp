@@ -25,13 +25,14 @@ import type {
   CreatePurchaseOrderDTO,
   RecordDeliveryDTO,
 } from '@/types/procurement';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
 function isoNow(): string {
-  return new Date().toISOString();
+  return nowISO();
 }
 
 // ============================================================================

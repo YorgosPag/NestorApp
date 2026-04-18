@@ -40,6 +40,7 @@ import type {
   ApprovalDecision,
 } from '@/types/ai-pipeline';
 import { PipelineState } from '@/types/ai-pipeline';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('OPERATOR_INBOX_SERVICE');
 
@@ -105,7 +106,7 @@ export async function processOperatorDecision(
       approvedBy: params.approvedBy ?? null,
       reason: params.reason ?? null,
       modifiedActions: params.modifiedActions ?? null,
-      decidedAt: new Date().toISOString(),
+      decidedAt: nowISO(),
     };
 
     // Step 2: Update queue item with approval decision

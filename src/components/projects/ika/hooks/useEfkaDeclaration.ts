@@ -21,6 +21,7 @@ import { createDefaultEfkaDeclaration } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createStaleCache } from '@/lib/stale-cache';
 import { updateEfkaDeclarationWithPolicy } from '@/services/ika/ika-mutation-gateway';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('useEfkaDeclaration');
 
@@ -146,7 +147,7 @@ export function useEfkaDeclaration(projectId: string | undefined): UseEfkaDeclar
       const mergedDeclaration: EfkaDeclarationData = result.data ?? {
         ...currentDeclaration,
         ...updates,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
       };
 
       setDeclaration(mergedDeclaration);

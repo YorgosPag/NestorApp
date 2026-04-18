@@ -24,6 +24,7 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { AuditFieldChange } from '@/types/audit-trail';
 
 import type { CompanyDocument, CompanySettings, CompanyStatus, CompanyPlan } from '@/types/company';
+import { resolveCompanyDisplayName } from '@/services/company/company-name-resolver';
 
 const logger = createModuleLogger('CompanyDocumentService');
 
@@ -147,7 +148,10 @@ export async function ensureCompanyDocument(
   // Create new document
   const now = FieldValue.serverTimestamp();
   const docData = {
-    name: contactData?.name ?? 'Unknown Company',
+    name: resolveCompanyDisplayName({
+      id: companyId,
+      name: contactData?.name,
+    }),
     contactId: contactData?.contactId ?? companyId,
     status: 'active' as CompanyStatus,
     plan: 'free' as CompanyPlan,

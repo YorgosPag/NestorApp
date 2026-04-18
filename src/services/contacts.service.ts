@@ -28,6 +28,7 @@ import { RealtimeService } from '@/services/realtime';
 import { mapActivePersonas } from '@/utils/contactForm/mappers/individual';
 import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { resolveCompanyDisplayName } from '@/services/company/company-name-resolver';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
@@ -137,7 +138,13 @@ export class ContactsService {
   static getDisplayName(contactData: Partial<Contact>): string {
     switch (contactData.type) {
       case 'individual': return `${contactData.firstName || ''} ${contactData.lastName || ''}`.trim();
-      case 'company': return contactData.companyName || 'Unknown Company';
+      case 'company':
+        return resolveCompanyDisplayName({
+          id: (contactData as { id?: string }).id,
+          companyName: contactData.companyName,
+          tradeName: (contactData as { tradeName?: string }).tradeName,
+          legalName: (contactData as { legalName?: string }).legalName,
+        });
       case 'service': return contactData.serviceName || 'Unknown Service';
       default: return 'Unknown Contact';
     }

@@ -121,6 +121,7 @@ export const generatePhotoId = () => enterpriseIdService.generatePhotoId();
 export const generateAttachmentId = () => enterpriseIdService.generateAttachmentId();
 export const generateFileId = () => enterpriseIdService.generateFileId();
 export const generateShareId = () => enterpriseIdService.generateShareId();
+export const generateDispatchId = () => enterpriseIdService.generateDispatchId();
 export const generatePendingId = () => enterpriseIdService.generatePendingId();
 export const generateSubscriptionId = () => enterpriseIdService.generateSubscriptionId();
 

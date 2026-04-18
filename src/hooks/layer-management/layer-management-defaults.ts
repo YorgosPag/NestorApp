@@ -1,5 +1,6 @@
 import type { Layer, LayerFilter, LayerState } from '@/types/layers';
 import { DEFAULT_LAYER_STYLES, SYSTEM_LAYER_COLORS, SYSTEM_LAYERS } from '@/types/layers';
+import { nowISO } from '@/lib/date-local';
 
 export interface SystemLayerContext {
   floorId: string;
@@ -67,7 +68,7 @@ export function createInitialLayerState(maxHistorySize: number): LayerState {
 }
 
 export function createMissingSystemLayers(existingLayers: Layer[], context: SystemLayerContext): Layer[] {
-  const now = new Date().toISOString();
+  const now = nowISO();
 
   return SYSTEM_LAYER_DEFINITIONS
     .filter((definition) => !existingLayers.some((layer) => layer.id === definition.id))

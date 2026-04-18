@@ -25,6 +25,7 @@ import {
   Timestamp,
   writeBatch
 } from 'firebase/firestore';
+import { nowTimestamp } from '@/lib/firestore-now';
 import type { Firestore } from 'firebase/firestore';
 import { SUBCOLLECTIONS, COLLECTIONS } from '@/config/firestore-collections';
 import type {
@@ -221,7 +222,7 @@ export class EnterpriseSessionService {
 
     try {
       await updateDoc(sessionRef, {
-        'timestamps.lastActiveAt': Timestamp.fromDate(new Date())
+        'timestamps.lastActiveAt': nowTimestamp()
       });
     } catch (error) {
       logger.warn('Failed to update session activity:', error);
@@ -244,7 +245,7 @@ export class EnterpriseSessionService {
 
       await updateDoc(sessionRef, {
         status: 'revoked' as SessionStatus,
-        'timestamps.revokedAt': Timestamp.fromDate(new Date()),
+        'timestamps.revokedAt': nowTimestamp(),
         revocationReason: reason || 'user_requested'
       });
 
@@ -289,7 +290,7 @@ export class EnterpriseSessionService {
         const sessionRef = doc(sessionsRef, session.id);
         batch.update(sessionRef, {
           status: 'revoked' as SessionStatus,
-          'timestamps.revokedAt': Timestamp.fromDate(new Date()),
+          'timestamps.revokedAt': nowTimestamp(),
           revocationReason: 'revoked_all_other'
         });
       }

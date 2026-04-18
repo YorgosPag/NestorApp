@@ -26,6 +26,7 @@ import {
 import { notificationConfig } from '@/config/error-reporting';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/styles/design-tokens';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -55,7 +56,7 @@ export function FileManagerErrorView({ error, onRetry, t }: FileManagerErrorView
 
   const emailData = {
     to: notificationConfig.channels.adminEmail,
-    subject: `🚨 File Manager Error - ${new Date().toISOString()}`,
+    subject: `🚨 File Manager Error - ${nowISO()}`,
     body: `
 📋 ERROR REPORT - File Manager
 ================================
@@ -64,7 +65,7 @@ export function FileManagerErrorView({ error, onRetry, t }: FileManagerErrorView
 
 📌 Error ID: ${errorId}
 
-⏰ Timestamp: ${new Date().toISOString()}
+⏰ Timestamp: ${nowISO()}
 
 🌐 URL: ${window.location.href}
 

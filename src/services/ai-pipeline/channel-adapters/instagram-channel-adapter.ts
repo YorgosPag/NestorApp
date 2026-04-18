@@ -23,6 +23,7 @@ import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { getErrorMessage } from '@/lib/error-utils';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
 import { isSuperAdminInstagram } from '../shared/super-admin-resolver';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -128,7 +129,7 @@ export class InstagramChannelAdapter {
         recipients: [],
         contentText: params.messageText,
         attachments: [],
-        timestampIso: new Date().toISOString(),
+        timestampIso: nowISO(),
       },
       metadata: {
         providerMessageId: params.messageId,

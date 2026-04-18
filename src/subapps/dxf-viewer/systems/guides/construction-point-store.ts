@@ -18,6 +18,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ConstructionPoint } from './guide-types';
 import { CONSTRUCTION_POINT_LIMITS } from './guide-types';
 import { generateEntityId } from '../entity-creation/utils';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -129,7 +130,7 @@ export class ConstructionPointStore {
       label,
       visible: true,
       locked: false,
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
       groupId,
     };
 
@@ -155,7 +156,7 @@ export class ConstructionPointStore {
     }
 
     const toAdd = pointDefs.slice(0, remaining);
-    const timestamp = new Date().toISOString();
+    const timestamp = nowISO();
     const newPoints: ConstructionPoint[] = toAdd.map(def => ({
       id: `cpt_${generateEntityId()}`,
       point: { x: def.point.x, y: def.point.y },

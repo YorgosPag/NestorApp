@@ -21,6 +21,7 @@ import { EMAIL_PROVIDERS } from './email-compose';
 import { ERROR_DIALOG_BUTTON_IDS } from './errorDialogTour';
 import { translateErrorMessage } from './error-message-translator';
 import type { ErrorFallbackUIProps } from './types';
+import { nowISO } from '@/lib/date-local';
 
 export function ErrorFallbackUI({
   error,
@@ -309,7 +310,7 @@ export function ErrorFallbackUI({
                 <div className={`${typography.body.xs} text-muted-foreground ${spacingTokens.spaceBetween.xs}`}>
                   <p><strong>{t('boundary.errorId')}:</strong> {errorId}</p>
                   {digest && <p><strong>{t('boundary.digest')}:</strong> {digest}</p>}
-                  <p><strong>{t('boundary.timestamp')}:</strong> {new Date().toISOString()}</p>
+                  <p><strong>{t('boundary.timestamp')}:</strong> {nowISO()}</p>
                   <p><strong>{t('boundary.url')}:</strong> {typeof window !== 'undefined' ? window.location.href : 'SSR'}</p>
                 </div>
               </div>

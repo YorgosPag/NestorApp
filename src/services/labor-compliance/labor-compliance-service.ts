@@ -24,6 +24,7 @@ import {
 } from '@/components/projects/ika/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('LaborComplianceService');
 
@@ -200,7 +201,7 @@ export const LaborComplianceService = {
       activeYear: metadata.year,
       insuranceClasses: classes,
       contributionRates: rates,
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: nowISO(),
       updatedBy: metadata.userId,
       sourceCircular: metadata.sourceCircular ?? null,
       effectiveDate: metadata.effectiveDate,

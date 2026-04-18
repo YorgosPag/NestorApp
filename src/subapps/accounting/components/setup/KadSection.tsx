@@ -30,6 +30,7 @@ const kadSectionCache = createStaleCache<ComboboxOption[]>('accounting-kad-optio
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { cn } from '@/lib/utils';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -50,7 +51,7 @@ function createEmptyKad(): KadEntry {
     code: '',
     description: '',
     type: 'secondary',
-    activeFrom: new Date().toISOString().split('T')[0],
+    activeFrom: nowISO().split('T')[0],
   };
 }
 

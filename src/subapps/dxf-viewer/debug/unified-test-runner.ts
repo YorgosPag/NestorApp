@@ -1,3 +1,5 @@
+import { nowISO } from '@/lib/date-local';
+
 /**
  * 🧪 UNIFIED TEST RUNNER
  *
@@ -49,7 +51,7 @@ async function safeExecuteTest(
   testFunction: () => Promise<Record<string, unknown>>
 ): Promise<TestResult> {
   const startTime = performance.now();
-  const timestamp = new Date().toISOString();
+  const timestamp = nowISO();
 
   try {
     const result = await Promise.race([
@@ -310,7 +312,7 @@ async function runSystemInfoTest(): Promise<TestResult> {
         width: rect.width,
         height: rect.height
       } : null,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       summary: `Browser: ${navigator.userAgent.match(/Chrome|Firefox|Safari|Edge/)?.[0] || 'Unknown'}, Viewport: ${window.innerWidth}×${window.innerHeight}`
     };
   });
@@ -331,7 +333,7 @@ export async function runAllTests(): Promise<UnifiedTestReport> {
   console.log('🧪 ============================================');
 
   const startTime = performance.now();
-  const timestamp = new Date().toISOString();
+  const timestamp = nowISO();
 
   // Εκτέλεση όλων των tests σειριακά
   const tests: TestResult[] = [];

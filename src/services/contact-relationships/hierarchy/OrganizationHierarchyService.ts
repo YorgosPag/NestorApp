@@ -39,6 +39,7 @@ import {
   buildHierarchyLevelsList,
   generateRecommendations,
 } from './organization-hierarchy-helpers';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('OrganizationHierarchyService');
 
@@ -80,7 +81,7 @@ export class OrganizationHierarchyService {
             hierarchyDepth: 0
           },
           departments: {},
-          lastUpdated: new Date().toISOString()
+          lastUpdated: nowISO()
         };
       }
 
@@ -104,7 +105,7 @@ export class OrganizationHierarchyService {
 
       logger.info('Created children array with', children.length, 'employees');
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       const result: OrganizationTree = {
         organization,
         topLevel,

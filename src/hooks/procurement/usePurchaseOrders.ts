@@ -15,6 +15,7 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
 import { createStaleCache } from '@/lib/stale-cache';
+import { nowISO } from '@/lib/date-local';
 
 // ADR-300: Cache only the default (no-filter) list — state on re-navigation
 const purchaseOrdersCache = createStaleCache<PurchaseOrder[]>('procurement');
@@ -93,7 +94,7 @@ export function usePurchaseOrders() {
   // "Requires Action" section — pinned POs
   const actionRequired = useMemo(() => {
     if (!filteredPOs) return [];
-    const now = new Date().toISOString();
+    const now = nowISO();
 
     return filteredPOs.filter((po) => {
       if (po.status === 'draft') return true;

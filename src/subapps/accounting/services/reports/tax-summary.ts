@@ -16,6 +16,7 @@ import type {
   VATSummaryRow,
 } from '../../types/reports';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
+import { nowISO } from '@/lib/date-local';
 
 const REPORT_PAGE_SIZE = 10000;
 
@@ -36,7 +37,7 @@ export async function generateTaxSummary(
 
   return {
     reportType: 'tax_summary',
-    generatedAt: new Date().toISOString(),
+    generatedAt: nowISO(),
     period: periods,
     data: buildTaxData(current, previous, yoy, installments),
   };

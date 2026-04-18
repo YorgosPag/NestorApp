@@ -20,6 +20,7 @@ import type {
 } from '../../types/vat';
 import type { ExpenseCategory, FiscalQuarter, PeriodRange } from '../../types/common';
 import { getVatDeductibilityRules } from '../config/vat-config';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // VAT ENGINE IMPLEMENTATION
@@ -211,7 +212,7 @@ export class VATEngine implements IVATEngine {
       totalDeductibleInputVat,
       vatPayable,
       vatCredit,
-      calculatedAt: new Date().toISOString(),
+      calculatedAt: nowISO(),
       submittedAt: null,
     };
   }

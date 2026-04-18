@@ -20,6 +20,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('TOOL_ANALYTICS_SERVICE');
 
@@ -73,8 +74,8 @@ export class ToolAnalyticsService {
 
       const updates: Record<string, unknown> = {
         [`tools.${toolName}.totalCalls`]: FieldValue.increment(1),
-        [`tools.${toolName}.lastUpdated`]: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
+        [`tools.${toolName}.lastUpdated`]: nowISO(),
+        lastUpdated: nowISO(),
       };
 
       if (success) {

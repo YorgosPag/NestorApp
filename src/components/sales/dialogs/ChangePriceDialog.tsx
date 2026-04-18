@@ -29,6 +29,7 @@ import type { BaseDialogProps } from './sales-dialog-utils';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
+import { nowISO } from '@/lib/date-local';
 
 export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
   const colors = useSemanticColors();
@@ -65,7 +66,7 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
           reservationDate: unit.commercial?.reservationDate ?? null,
           saleDate: unit.commercial?.saleDate ?? null,
           cancellationDate: unit.commercial?.cancellationDate ?? null,
-          listedDate: unit.commercial?.listedDate ?? new Date().toISOString(),
+          listedDate: unit.commercial?.listedDate ?? nowISO(),
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       };

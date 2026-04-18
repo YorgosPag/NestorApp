@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { ExportDomainCard, ExportDomain, ExportJob } from '@/components/reports/sections/export/types';
 import type { ExportFormat } from '@/components/reports/core/ReportExportBar';
+import { nowISO } from '@/lib/date-local';
 
 // ---------------------------------------------------------------------------
 // Domain catalog
@@ -144,7 +145,7 @@ export function useExportCenter(): UseExportCenterReturn {
         await exportReportToPdf({
           title: domain.charAt(0).toUpperCase() + domain.slice(1) + ' Report',
           orientation: 'portrait',
-          filename: `report-${domain}-${new Date().toISOString().slice(0, 10)}.pdf`,
+          filename: `report-${domain}-${nowISO().slice(0, 10)}.pdf`,
           kpiCards: [],
           tables: [{
             title: 'Report Data',
@@ -158,7 +159,7 @@ export function useExportCenter(): UseExportCenterReturn {
         const { exportReportToExcel } = await import('@/services/report-engine/report-excel-exporter');
         await exportReportToExcel({
           title: domain.charAt(0).toUpperCase() + domain.slice(1) + ' Report',
-          filename: `report-${domain}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+          filename: `report-${domain}-${nowISO().slice(0, 10)}.xlsx`,
           summaryRows: Object.entries(data as Record<string, unknown>)
             .filter(([k]) => k !== 'generatedAt' && typeof (data as Record<string, unknown>)[k] !== 'object')
             .map(([k, v]) => ({ metric: k, value: typeof v === 'number' ? v : String(v) })),

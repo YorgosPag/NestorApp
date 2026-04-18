@@ -2,6 +2,7 @@ import type { ContactRelationship } from '@/types/contacts/relationships';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { RECIPROCAL_MAPPINGS } from './relationship-helpers';
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('RelationshipReciprocalOps');
 
@@ -50,7 +51,7 @@ export async function terminateReciprocalRelationship(
   }
 
   const reciprocalChangeEntry = {
-    changeDate: new Date().toISOString(),
+    changeDate: nowISO(),
     changeType: 'status_change' as const,
     changedBy: terminatedBy,
     notes: 'Reciprocal relationship terminated automatically'

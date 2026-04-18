@@ -24,6 +24,7 @@ import type {
   SalesAccountingResult,
   SaleLineItem,
 } from './types';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // CONSTANTS
@@ -313,7 +314,7 @@ export function buildLineDescription(
 export function buildInvoiceInput(params: BuildInvoiceInputParams): CreateInvoiceInput {
   const category = getCategoryByCode(INCOME_CATEGORY);
   const mydataCode = (category?.mydataCode ?? 'category1_1') as MyDataIncomeType;
-  const now = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const now = nowISO().slice(0, 10); // YYYY-MM-DD
   const fiscalYear = new Date().getFullYear();
 
   // ADR-199: Multi-line invoices for appurtenances

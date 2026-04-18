@@ -8,6 +8,7 @@
  */
 
 import type { ExclusivityType, CommissionType } from '@/types/brokerage';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // TYPES
@@ -45,7 +46,7 @@ export const EMPTY_FORM: InlineFormState = {
   commissionType: 'percentage',
   commissionPercentage: '',
   commissionFixedAmount: '',
-  startDate: new Date().toISOString().split('T')[0],
+  startDate: nowISO().split('T')[0],
   endDate: '',
   notes: '',
 };

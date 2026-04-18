@@ -29,6 +29,7 @@ import {
   isLawyerPersona,
   isNotaryPersona,
 } from '@/types/contacts/personas';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ProfessionalSnapshotService');
 
@@ -80,7 +81,7 @@ export async function snapshotProfessionals(
         email: contactData.email ?? null,
         taxId: contactData.taxId ?? null,
         roleSpecificData,
-        snapshotAt: new Date().toISOString(),
+        snapshotAt: nowISO(),
       });
     }
 

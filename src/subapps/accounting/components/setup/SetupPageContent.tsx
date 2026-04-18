@@ -37,6 +37,7 @@ import { PartnerManagementSection } from './PartnerManagementSection';
 import { MemberManagementSection } from './MemberManagementSection';
 import { ShareholderManagementSection } from './ShareholderManagementSection';
 import { CustomCategoriesSection } from './CustomCategoriesSection';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // DEFAULTS
@@ -47,7 +48,7 @@ function createDefaultData(): CompanySetupInput {
     code: '',
     description: '',
     type: 'primary',
-    activeFrom: new Date().toISOString().split('T')[0],
+    activeFrom: nowISO().split('T')[0],
   };
 
   return {

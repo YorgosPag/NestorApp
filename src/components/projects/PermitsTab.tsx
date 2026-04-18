@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectFormData } from './general-tab/types';
 import '@/lib/design-system';
+import { nowISO } from '@/lib/date-local';
 
 interface PermitsTabProps {
     data: ProjectFormData;
@@ -28,7 +29,7 @@ export const PermitsTab = React.memo(function PermitsTab({ data, setData, isEdit
     // 🏢 Google-level: `YYYY-MM-DD` for the native date input's `max` attribute.
     // Recomputed per render — cheap, and the boundary only matters at interaction
     // time, so a once-per-mount memo would drift across midnight.
-    const todayISO = new Date().toISOString().slice(0, 10);
+    const todayISO = nowISO().slice(0, 10);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));

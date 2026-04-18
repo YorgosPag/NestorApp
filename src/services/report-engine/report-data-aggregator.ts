@@ -26,6 +26,7 @@ import {
   buildPricePerSqm, buildBOQVariance, buildTopBuyers, computeCompleteness,
   buildOverdueInstallments,
 } from './report-aggregator.helpers';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ReportDataAggregator');
 
@@ -77,7 +78,7 @@ export class ReportDataAggregator {
       newInPeriod: inPeriod.length,
       topBuyers,
       completenessRate: completeness,
-      generatedAt: new Date().toISOString(),
+      generatedAt: nowISO(),
     };
   }
 
@@ -135,7 +136,7 @@ export class ReportDataAggregator {
       boqVarianceByBuilding: buildBOQVariance(boqItems, buildingNames),
       energyClassDistribution: tallyBy(units, u => u.energy?.class ?? 'unknown'),
       unitsByType: tallyBy(units, u => u.type ?? 'unknown'),
-      generatedAt: new Date().toISOString(),
+      generatedAt: nowISO(),
     };
   }
 
@@ -192,7 +193,7 @@ export class ReportDataAggregator {
       chequesByStatus: tallyBy(cheques, c => c.status ?? 'unknown'),
       legalPhases,
       agingBuckets: computeAgingBuckets(fakeInstallments),
-      generatedAt: new Date().toISOString(),
+      generatedAt: nowISO(),
     };
   }
 
@@ -218,7 +219,7 @@ export class ReportDataAggregator {
       ? avg(sumBy(wonOpps, o => o.estimatedValue ?? 0), wonOpps.length)
       : 0;
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = nowISO().slice(0, 10);
     const overdue = countBy(tasks, t =>
       t.status !== 'completed' && t.dueDate !== undefined && t.dueDate < today,
     );
@@ -242,7 +243,7 @@ export class ReportDataAggregator {
       totalCommunications: comms.length,
       communicationsByChannel: tallyBy(comms, c => c.type ?? 'unknown'),
       communicationsByDirection: tallyBy(comms, c => c.direction ?? 'unknown'),
-      generatedAt: new Date().toISOString(),
+      generatedAt: nowISO(),
     };
   }
 
@@ -300,7 +301,7 @@ export class ReportDataAggregator {
       },
       linkedSpaces,
       unlinkedSpaces: totalSpaces - linkedSpaces,
-      generatedAt: new Date().toISOString(),
+      generatedAt: nowISO(),
     };
   }
 
@@ -376,7 +377,7 @@ export class ReportDataAggregator {
       boqEstimatedTotal: boqEstimated,
       boqActualTotal: boqActual,
       boqVariance: boqActual - boqEstimated,
-      generatedAt: new Date().toISOString(),
+      generatedAt: nowISO(),
     };
   }
 
@@ -413,7 +414,7 @@ export class ReportDataAggregator {
       attendanceRate,
       checkInsByMethod: tallyBy(checkIns, a => a.method ?? 'unknown'),
       workersByInsuranceClass: tallyBy(employment, e => String(e.insuranceClassNumber ?? 0)),
-      generatedAt: new Date().toISOString(),
+      generatedAt: nowISO(),
     };
   }
 
@@ -475,7 +476,7 @@ export class ReportDataAggregator {
       collectionRate: rate(totalCollected, totalReceivables),
       agingBuckets: computeAgingBuckets(installmentsForAging),
       portfolioEVM,
-      generatedAt: new Date().toISOString(),
+      generatedAt: nowISO(),
     };
   }
 }

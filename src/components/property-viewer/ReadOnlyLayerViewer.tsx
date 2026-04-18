@@ -43,6 +43,7 @@ import {
   type ReadOnlyLayerState,
   type LayerVisibilityState,
 } from './ReadOnlyLayerItem';
+import { nowISO } from '@/lib/date-local';
 
 // Re-export for backward compatibility
 export { ReadOnlyLayerItem } from './ReadOnlyLayerItem';
@@ -123,7 +124,7 @@ export function ReadOnlyLayerViewer({
           isLoading: false,
           isConnected: true,
           error: null,
-          lastUpdated: new Date().toISOString()
+          lastUpdated: nowISO()
         });
         setVisibilityState(newVisibilityState);
       },

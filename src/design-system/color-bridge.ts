@@ -117,6 +117,10 @@ export const COLOR_BRIDGE = {
     // ✅ ENTERPRISE FIX: Missing bg colors for BuildingCardUtils, SafePDFLoader
     mutedLight: 'bg-muted/30',           // Light muted background
     dangerSubtle: 'bg-red-100',          // Subtle danger background
+
+    // 🏢 Property Showcase brand surfaces (ADR-312 Phase 3.8) — fixed in both modes
+    showcase: 'bg-[hsl(var(--showcase-bg))]',          // Navy brand surface (#1D283A)
+    showcaseSurface: 'bg-[hsl(var(--showcase-surface))]', // Slightly lighter navy card
   },
 
   /** 📝 Text Color Mappings */
@@ -193,6 +197,10 @@ export const COLOR_BRIDGE = {
     onError: 'text-red-800',              // Text on error backgrounds
     onInfo: 'text-blue-800',              // Text on info backgrounds
     onWarning: 'text-yellow-800',         // Text on warning backgrounds
+
+    // 🏢 Property Showcase brand text (ADR-312 Phase 3.8) — fixed in both modes
+    onShowcase: 'text-[hsl(var(--showcase-fg))]',         // Primary text on showcase navy
+    onShowcaseMuted: 'text-[hsl(var(--showcase-muted-fg))]', // Muted text on showcase navy
   },
 
   /** 🔲 Border Color Mappings */
@@ -216,6 +224,9 @@ export const COLOR_BRIDGE = {
     error: 'border-red-300',              // Error border
     warning: 'border-yellow-300',         // Warning border
     info: 'border-blue-300',              // Info border
+
+    // 🏢 Property Showcase border (ADR-312 Phase 3.8)
+    showcase: 'border-[hsl(var(--showcase-border))]',
   },
 
   /** 💍 Ring Color Mappings (Focus States) */

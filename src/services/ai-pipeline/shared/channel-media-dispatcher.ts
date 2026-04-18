@@ -21,6 +21,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { ChannelMediaReplyParams, ChannelReplyResult } from './channel-reply-types';
 import { sendChannelReply } from './channel-reply-dispatcher';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('CHANNEL_MEDIA_DISPATCHER');
 
@@ -227,7 +228,7 @@ async function dispatchInAppMedia(
         status: 'completed',
         aiResponse: caption ?? 'Αρχείο',
         fileUrl: mediaUrl,
-        completedAt: new Date().toISOString(),
+        completedAt: nowISO(),
       });
 
     return { success: true, messageId: inAppCommandId, channel: PipelineChannel.IN_APP };

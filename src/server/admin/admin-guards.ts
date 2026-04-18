@@ -64,6 +64,7 @@ import type {
 } from './admin-guards-types';
 
 import { ADMIN_ROLES, roleRequiresMfa } from './admin-guards-types';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // FIREBASE ADMIN — DELEGATED TO CANONICAL MODULE
@@ -401,7 +402,7 @@ export function audit(
   context?: AdminContext
 ): void {
   const entry: AuditEntry = {
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     operationId,
     operation,
     environment: context?.environment || process.env.NODE_ENV || 'unknown',

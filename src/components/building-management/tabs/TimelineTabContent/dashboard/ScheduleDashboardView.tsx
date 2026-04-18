@@ -45,6 +45,7 @@ import { ResourceUtilizationKPIs } from './ResourceUtilizationKPIs';
 import { useResourceHistogram } from './useResourceHistogram';
 import { useResourceAssignments } from '@/hooks/useResourceAssignments';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
+import { nowISO } from '@/lib/date-local';
 
 // ─── Props ───────────────────────────────────────────────────────────────
 
@@ -110,7 +111,7 @@ export function ScheduleDashboardView({
 
   const handleExport = useCallback(async (format: ExportFormat) => {
     setIsExporting(true);
-    const dateStr = new Date().toISOString().slice(0, 10);
+    const dateStr = nowISO().slice(0, 10);
     try {
       if (format === 'pdf') {
         const { exportReportToPdf } = await import('@/services/report-engine/report-pdf-exporter');
@@ -179,7 +180,7 @@ export function ScheduleDashboardView({
       } else if (format === 'owner-pdf') {
         const { exportOwnerReportToPdf } = await import('@/services/report-engine/owner-report-pdf-exporter');
         const ends = phases.map(p => new Date(p.plannedEndDate).getTime());
-        const latestEnd = ends.length > 0 ? new Date(Math.max(...ends)).toISOString() : new Date().toISOString();
+        const latestEnd = ends.length > 0 ? new Date(Math.max(...ends)).toISOString() : nowISO();
         const daysRem = ends.length > 0 ? Math.max(0, Math.ceil((Math.max(...ends) - Date.now()) / 86_400_000)) : 0;
 
         await exportOwnerReportToPdf({

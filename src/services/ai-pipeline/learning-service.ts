@@ -23,6 +23,7 @@ import type { FeedbackSnapshot, ToolChainDetailEntry } from './feedback-service'
 import { getFeedbackService } from './feedback-service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('LEARNING_SERVICE');
 
@@ -205,8 +206,8 @@ export class LearningService {
         successCount: newSuccess,
         failureCount: newFailure,
         score: newScore,
-        lastFeedbackAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        lastFeedbackAt: nowISO(),
+        updatedAt: nowISO(),
       });
     } catch (error) {
       logger.warn('Failed to update pattern score', {
@@ -290,8 +291,8 @@ export class LearningService {
         successCount: newSuccess,
         failureCount: newFailure,
         score: total > 0 ? newSuccess / total : 0,
-        lastFeedbackAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        lastFeedbackAt: nowISO(),
+        updatedAt: nowISO(),
         // Update example if this is a positive feedback (better example)
         ...(isPositive ? {
           exampleQuery: feedback.userQuery.substring(0, MAX_EXAMPLE_QUERY_LENGTH),
@@ -303,7 +304,7 @@ export class LearningService {
     }
 
     // Create new pattern
-    const now = new Date().toISOString();
+    const now = nowISO();
     const pattern: LearnedPattern = {
       patternType,
       keywords,
@@ -377,7 +378,7 @@ export class LearningService {
   private async touchPatterns(patternIds: string[]): Promise<void> {
     const db = getAdminFirestore();
     const batch = db.batch();
-    const now = new Date().toISOString();
+    const now = nowISO();
 
     for (const id of patternIds) {
       const ref = db.collection(COLLECTIONS.AI_LEARNED_PATTERNS).doc(id);

@@ -16,6 +16,7 @@ import type {
   BankReconciliationItem,
 } from '../../types/reports';
 import { buildNumericComparative } from './comparative-engine';
+import { nowISO } from '@/lib/date-local';
 
 const REPORT_PAGE_SIZE = 10000;
 
@@ -32,7 +33,7 @@ export async function generateBankReconciliation(
 
   return {
     reportType: 'bank_reconciliation',
-    generatedAt: new Date().toISOString(),
+    generatedAt: nowISO(),
     period: periods,
     data: {
       totalTransactions: buildNumericComparative(

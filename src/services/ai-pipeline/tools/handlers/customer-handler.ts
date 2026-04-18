@@ -31,6 +31,7 @@ import {
   buildAttribution,
   logger,
 } from '../executor-shared';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // HANDLER
@@ -102,7 +103,7 @@ export class CustomerHandler implements ToolHandler {
 
     const { generateTaskId } = await import('@/services/enterprise-id.service');
     const taskId = generateTaskId();
-    const now = new Date().toISOString();
+    const now = nowISO();
 
     const taskData: Record<string, unknown> = {
       companyId: ctx.companyId,

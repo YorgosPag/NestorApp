@@ -32,6 +32,7 @@ import type {
   PaymentMethod,
   MyDataIncomeType,
 } from '@/subapps/accounting/types';
+import { nowISO } from '@/lib/date-local';
 
 interface InvoiceFormProps {
   onSuccess: (invoiceId: string) => void;
@@ -169,7 +170,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
       : {
           type: 'service_invoice',
           series: 'A',
-          issueDate: new Date().toISOString().split('T')[0],
+          issueDate: nowISO().split('T')[0],
           dueDate: '',
           customer: { ...DEFAULT_CUSTOMER },
           lineItems: [{ ...DEFAULT_LINE_ITEM }],
@@ -212,7 +213,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
 
     try {
       const token = await user.getIdToken();
-      const today = new Date().toISOString().split('T')[0];
+      const today = nowISO().split('T')[0];
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth() + 1;
       const quarter = currentMonth <= 3 ? 1 : currentMonth <= 6 ? 2 : currentMonth <= 9 ? 3 : 4;

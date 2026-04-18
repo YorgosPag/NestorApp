@@ -12,6 +12,7 @@
 
 import { create } from 'zustand';
 import type { VoiceCommandStatus } from '@/types/voice-command';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -78,7 +79,7 @@ export const useVoiceCommandStore = create<VoiceCommandState>((set) => ({
         aiResponse: null,
         intent: null,
         error: null,
-        createdAt: new Date().toISOString(),
+        createdAt: nowISO(),
       };
 
       return {

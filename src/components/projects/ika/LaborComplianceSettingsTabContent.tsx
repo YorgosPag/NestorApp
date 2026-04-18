@@ -47,6 +47,7 @@ import {
 } from './contracts';
 import { InsuranceClassesTable } from './components/InsuranceClassesTable';
 import { ContributionRatesCard } from './components/ContributionRatesCard';
+import { nowISO } from '@/lib/date-local';
 
 interface LaborComplianceSettingsTabContentProps {
   /** Project ID from parent IKA tab */
@@ -155,7 +156,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
             year: activeYear,
             userId: user.uid,
             sourceCircular: sourceCircular || null,
-            effectiveDate: effectiveDate || new Date().toISOString().split('T')[0],
+            effectiveDate: effectiveDate || nowISO().split('T')[0],
           },
         });
         notifications.success(t('ika.efkaSettingsTab.saveSuccess'));

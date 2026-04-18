@@ -55,6 +55,8 @@ export {
 } from '@geo-alert/core/polygon-system';
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
+
 const logger = createModuleLogger('geo-alert-unified');
 
 // ============================================================================
@@ -145,7 +147,7 @@ export {
 // ============================================================================
 
 export const GEO_ALERT_UNIFIED_VERSION = '0.1.0';
-export const GEO_ALERT_UNIFIED_BUILD_DATE = new Date().toISOString();
+export const GEO_ALERT_UNIFIED_BUILD_DATE = nowISO();
 
 export const SYSTEM_INFO = {
   name: 'Geo-Alert Unified System',
@@ -195,7 +197,7 @@ export function checkUnifiedSystemHealth() {
     databaseTypes: true, // Extracted successfully
     integrationBridge: true, // Created successfully
     overallHealth: 'HEALTHY' as const,
-    timestamp: new Date().toISOString()
+    timestamp: nowISO()
   };
 }
 

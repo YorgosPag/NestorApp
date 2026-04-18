@@ -14,7 +14,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Layers } from 'lucide-react';
+import { HelpCircle, Layers } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import '@/lib/design-system';
@@ -28,12 +29,32 @@ import type { TFunction } from 'i18next';
 // =============================================================================
 
 /** Single label:value row for compact view */
-export function CompactField({ label, value }: { label: string; value: string | number | undefined }) {
+export function CompactField({
+  label,
+  value,
+  tooltip,
+}: {
+  label: string;
+  value: string | number | undefined;
+  tooltip?: string;
+}) {
   const colors = useSemanticColors();
   if (!value && value !== 0) return null;
   return (
     <dl className="flex items-baseline gap-1.5">
-      <dt className={cn("text-xs whitespace-nowrap", colors.text.muted)}>{label}:</dt>
+      <dt className={cn("text-xs whitespace-nowrap inline-flex items-center gap-1", colors.text.muted)}>
+        <span>{label}:</span>
+        {tooltip && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <HelpCircle className={cn("h-3 w-3 cursor-help shrink-0", colors.text.muted)} />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs">
+              {tooltip}
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </dt>
       <dd className="text-xs font-medium truncate">{String(value)}</dd>
     </dl>
   );
@@ -99,7 +120,18 @@ export function ReadOnlyCompactView({ property, t }: { property: Property; t: TF
         <CompactField label={t('fields.areas.net')} value={`${property.areas.net} m²`} />
       ) : null}
       {property.areas?.balcony ? (
-        <CompactField label={t('fields.areas.balcony')} value={`${property.areas.balcony} m²`} />
+        <CompactField
+          label={t('fields.areas.balcony')}
+          value={`${property.areas.balcony} m²`}
+          tooltip={t('fields.areas.balconyTooltip')}
+        />
+      ) : null}
+      {(property.areas as { terrace?: number } | undefined)?.terrace ? (
+        <CompactField
+          label={t('fields.areas.terrace')}
+          value={`${(property.areas as { terrace?: number }).terrace} m²`}
+          tooltip={t('fields.areas.terraceTooltip')}
+        />
       ) : null}
 
       {/* Layout */}

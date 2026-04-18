@@ -34,6 +34,7 @@ import {
   EXISTING_CONTACT_IDS, NEW_CONTACTS,
   CONTACT_ASSIGNMENTS, STATUS_ASSIGNMENTS
 } from './database-update-data';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('DatabaseUpdatePage');
 
@@ -118,7 +119,7 @@ export function DatabaseUpdatePageContent() {
           const assignment = CONTACT_ASSIGNMENTS[contactId as keyof typeof CONTACT_ASSIGNMENTS];
           const newStatus = STATUS_ASSIGNMENTS[assignment.role];
           const updateData: Record<string, unknown> = { status: newStatus, updatedAt: serverTimestamp() };
-          if (assignment.role === 'buyer') { updateData.soldTo = contactId; updateData.saleDate = new Date().toISOString(); }
+          if (assignment.role === 'buyer') { updateData.soldTo = contactId; updateData.saleDate = nowISO(); }
           else if (assignment.role === 'landowner') { updateData.ownerId = contactId; }
           else if (assignment.role.includes('renter')) { updateData.tenantId = contactId; }
           else if (assignment.role === 'corporate') { updateData.companyId = contactId; }

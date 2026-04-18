@@ -20,10 +20,13 @@ import {
 } from '@/services/contact-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { EntityListColumn } from '@/core/containers';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { matchesSearchTerm } from '@/lib/search/search';
-// 🏢 ENTERPRISE: Centralized sharing system (SSoT)
-import { ShareModal } from '@/components/ui/ShareModal';
+// 🏢 ENTERPRISE: Unified sharing system — ADR-315 (SSoT)
+import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
+import type { ContactShareMeta } from '@/types/sharing';
+import { useAuth } from '@/auth/hooks/useAuth';
 // 🏢 ENTERPRISE: Centralized data exchange (SSoT - DataExportService/DataImportService)
 import { exportContacts } from '@/utils/contacts/contact-data-exchange';
 import { ImportContactsDialog } from '@/components/contacts/dialogs/ImportContactsDialog';
@@ -62,6 +65,7 @@ export function ContactsList({
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const { success, error } = useNotifications();
+  const { user } = useAuth();
   // 🏢 ENTERPRISE: Sort state via centralized hook (ADR-205 Phase 4)
   const { sortBy, sortOrder, onSortChange } = useSortState<'name' | 'date' | 'status' | 'type'>('name');
   const [togglingFavorites, setTogglingFavorites] = useState<Set<string>>(new Set());
@@ -74,9 +78,11 @@ export function ContactsList({
 
   // 🏢 ENTERPRISE: Quick filter state for contact types
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  // 🏢 ENTERPRISE: Centralized share modal state (SSoT - ShareModal)
+  // 🏢 ENTERPRISE: Unified share dialog state (ADR-315 SSoT)
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareData, setShareData] = useState<ShareData | null>(null);
+  const [shareContactId, setShareContactId] = useState<string | null>(null);
+  const [shareContactMeta, setShareContactMeta] = useState<ContactShareMeta | null>(null);
   // 🏢 ENTERPRISE: Import dialog state (SSoT - DataImportService)
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
@@ -275,11 +281,25 @@ export function ContactsList({
 
     const contactText = lines.join('\n');
 
+    // ADR-315: derive includedFields from the data we surfaced into the text
+    const includedFields: ContactShareMeta['includedFields'] = ['name'];
+    if (primaryEmail) includedFields.push('emails');
+    if (primaryPhone) includedFields.push('phones');
+    if (primaryAddress) includedFields.push('address');
+    if (
+      (selectedContact.type === 'company' && selectedContact.companyName) ||
+      (selectedContact.type === 'service' && selectedContact.serviceName)
+    ) {
+      includedFields.push('company');
+    }
+
     setShareData({
       title: t('list.share.modalTitle'),
       text: contactText,
-      url: '', // No URL — share pure text content
+      url: '', // UnifiedShareDialog generates the real URL on submit
     });
+    setShareContactId(selectedContact.id ?? null);
+    setShareContactMeta({ includedFields });
     setShareModalOpen(true);
   };
 
@@ -395,13 +415,25 @@ export function ContactsList({
         </div>
       </ScrollArea>
 
-      {/* 🏢 ENTERPRISE: Centralized ShareModal (SSoT - share-utils + ShareModal) */}
-      {shareData && (
-        <ShareModal
-          isOpen={shareModalOpen}
-          onClose={() => setShareModalOpen(false)}
-          shareData={shareData}
-          modalTitle={t('list.share.modalTitle')}
+      {/* 🏢 ENTERPRISE: Unified share dialog — ADR-315 SSoT */}
+      {shareData && shareContactId && shareContactMeta && user?.companyId && user?.uid && (
+        <UnifiedShareDialog
+          open={shareModalOpen}
+          onOpenChange={setShareModalOpen}
+          entityType={ENTITY_TYPES.CONTACT}
+          entityId={shareContactId}
+          entityTitle={t('list.share.modalTitle')}
+          entitySubtitle={shareData.title}
+          userId={user.uid}
+          companyId={user.companyId}
+          contactMeta={shareContactMeta}
+          contactShareContent={{
+            title: shareData.title,
+            text: shareData.text,
+            isPhoto: shareData.isPhoto,
+            photoUrl: shareData.photoUrl,
+            galleryPhotos: shareData.galleryPhotos,
+          }}
           onCopySuccess={() => success(t('list.share.copied'))}
           onShareSuccess={(platform) => success(t('list.share.success', { platform }))}
         />

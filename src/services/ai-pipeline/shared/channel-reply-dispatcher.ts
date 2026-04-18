@@ -28,6 +28,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { ChannelReplyParams, ChannelReplyResult } from './channel-reply-types';
+import { nowISO } from '@/lib/date-local';
 
 // Re-export everything from types + media for backward compatibility
 export type { ChannelReplyParams, ChannelMediaReplyParams, ChannelReplyResult, ChannelIds } from './channel-reply-types';
@@ -396,7 +397,7 @@ async function dispatchInApp(params: ChannelReplyParams): Promise<ChannelReplyRe
       .update({
         status: 'completed',
         aiResponse: textBody,
-        completedAt: new Date().toISOString(),
+        completedAt: nowISO(),
       });
 
     logger.info('In-app reply dispatched', {

@@ -35,6 +35,7 @@ import type {
   LinkResult,
   FileWithLinks,
 } from '@/types/associations';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FileLinkService');
 
@@ -64,7 +65,7 @@ export async function linkFileToEntity(input: CreateFileLinkInput): Promise<Link
       targetWorkspaceId,
       reason,
       status: 'active',
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
       createdBy,
       metadata,
     };

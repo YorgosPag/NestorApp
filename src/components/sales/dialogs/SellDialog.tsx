@@ -51,6 +51,7 @@ import {
   dispatchSalesAccountingEventWithPolicy,
   syncSalesAppurtenancesWithPolicy,
 } from '@/services/sales-mutation-gateway';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('SellDialog');
 
@@ -126,7 +127,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           reservationDeposit: unit.commercial?.reservationDeposit ?? null,
           ...buildOwnerFields(owners),
           reservationDate: unit.commercial?.reservationDate ?? null,
-          saleDate: new Date().toISOString(),
+          saleDate: nowISO(),
           cancellationDate: unit.commercial?.cancellationDate ?? null,
           listedDate: unit.commercial?.listedDate ?? null,
           transactionChainId: unit.commercial?.transactionChainId ?? null,

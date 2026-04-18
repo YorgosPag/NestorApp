@@ -23,6 +23,7 @@ import type { Member } from '../../types/entity';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { cn } from '@/lib/utils';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -54,7 +55,7 @@ function createEmptyMember(index: number): Member {
     isManager: false,
     efkaConfig: null,
     isFirstFiveYears: false,
-    joinDate: new Date().toISOString().split('T')[0],
+    joinDate: nowISO().split('T')[0],
     exitDate: null,
     isActive: true,
   };

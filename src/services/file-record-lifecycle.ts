@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { fieldToISO } from '@/lib/date-local';
+import { fieldToISO, nowISO } from '@/lib/date-local';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import {
   type EntityType,
@@ -237,7 +237,7 @@ export async function getArchivedFiles(options: {
  * 🏢 ADR-214 Phase 3: tenantOverride: 'skip' — server-side, sees ALL files
  */
 export async function getFilesEligibleForPurge(): Promise<FileRecord[]> {
-  const now = new Date().toISOString();
+  const now = nowISO();
 
   const constraints = [
     where('isDeleted', '==', true),

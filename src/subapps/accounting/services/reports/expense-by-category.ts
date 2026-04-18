@@ -17,6 +17,7 @@ import type {
 } from '../../types/reports';
 import { getCategoryByCode, getCategoryDisplayLabel } from '../../config/account-categories';
 import { buildComparative, buildNumericComparative } from './comparative-engine';
+import { nowISO } from '@/lib/date-local';
 
 const REPORT_PAGE_SIZE = 10000;
 
@@ -36,7 +37,7 @@ export async function generateExpenseByCategory(
 
   return {
     reportType: 'expense_by_category',
-    generatedAt: new Date().toISOString(),
+    generatedAt: nowISO(),
     period: periods,
     data: {
       categories: buildComparative(current, previous, yoy, totalExtractor),

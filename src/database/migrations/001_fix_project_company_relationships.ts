@@ -17,6 +17,8 @@ import { collection, query, getDocs, doc, updateDoc, getDoc } from 'firebase/fir
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
+
 const logger = createModuleLogger('Migration001');
 
 interface ProjectRecord {
@@ -202,10 +204,10 @@ class ProjectCompanyMigrationSteps {
 
             await updateDoc(projectRef, {
               companyId: mapping.newCompanyId,
-              updatedAt: new Date().toISOString(),
+              updatedAt: nowISO(),
               migrationInfo: {
                 migrationId: '001_fix_project_company_relationships',
-                migratedAt: new Date().toISOString(),
+                migratedAt: nowISO(),
                 oldCompanyId: mapping.oldCompanyId,
                 newCompanyId: mapping.newCompanyId
               }
@@ -242,7 +244,7 @@ class ProjectCompanyMigrationSteps {
 
             await updateDoc(projectRef, {
               companyId: mapping.oldCompanyId === '<empty>' ? '' : mapping.oldCompanyId,
-              updatedAt: new Date().toISOString()
+              updatedAt: nowISO()
             });
 
             logger.info('Rolled back project', { projectName: mapping.projectName });

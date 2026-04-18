@@ -10,6 +10,7 @@
 
 import type { BOQItem, BOQSummary, BOQCategorySummary } from '@/types/boq';
 import type { CostBreakdown, VarianceResult } from '@/types/boq';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // GROSS QUANTITY
@@ -176,6 +177,6 @@ export function computeBuildingSummary(
     totalEstimatedCost,
     totalActualCost,
     categories,
-    lastUpdated: new Date().toISOString(),
+    lastUpdated: nowISO(),
   };
 }

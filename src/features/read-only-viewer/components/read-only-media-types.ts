@@ -7,6 +7,7 @@
 
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
+import { nowISO } from '@/lib/date-local';
 
 // ── Types ──
 
@@ -118,7 +119,7 @@ export function adaptFloorFloorplanToFileRecord(
     domain: 'construction',
     category: 'floorplans',
     createdBy: SYSTEM_IDENTITY.ID,
-    createdAt: floorplan.timestamp ? new Date(floorplan.timestamp).toISOString() : new Date().toISOString(),
+    createdAt: floorplan.timestamp ? new Date(floorplan.timestamp).toISOString() : nowISO(),
     processedData,
   };
 }

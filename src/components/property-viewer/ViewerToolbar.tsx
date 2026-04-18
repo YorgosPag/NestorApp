@@ -19,6 +19,7 @@ import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ViewerToolbar');
 
@@ -88,7 +89,7 @@ export function ViewerToolbar({
           floorPlanUrl: pdfUrl,
           metadata: {
             ...currentFloor.metadata,
-            lastPDFUpdate: new Date().toISOString(),
+            lastPDFUpdate: nowISO(),
             pdfFileName: file.name
           }
         });

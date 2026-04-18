@@ -35,6 +35,7 @@ import { InfoLabel, InfoDt } from './financial-intelligence';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // FORMATTING UTILITIES
@@ -197,7 +198,7 @@ export function WhatIfTab({
   const [months, setMonths] = useState(12);
 
   const whatIfResult = useMemo(() => {
-    const referenceDate = new Date().toISOString().split('T')[0];
+    const referenceDate = nowISO().split('T')[0];
     const upfrontAmount = salePrice * (upfrontPercent / 100);
     const remainingAmount = salePrice - upfrontAmount;
     const refDate = new Date(referenceDate);

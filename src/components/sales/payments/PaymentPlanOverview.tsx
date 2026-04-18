@@ -15,6 +15,7 @@ import type { PaymentPlan } from '@/types/payment-plan';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // STATUS BADGE CONFIG
@@ -48,7 +49,7 @@ export function PaymentPlanOverview({ plan }: PaymentPlanOverviewProps) {
     (i) => i.status === 'paid' || i.status === 'waived'
   ).length;
 
-  const now = new Date().toISOString();
+  const now = nowISO();
   const overdueCount = plan.installments.filter((i) => {
     if (i.status === 'paid' || i.status === 'waived') return false;
     return i.dueDate < now && i.paidAmount < i.amount;

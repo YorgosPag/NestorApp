@@ -26,6 +26,7 @@ import {
   getTestResultsInteractiveAutoStyles
 } from '../ui/DxfViewerComponents.styles';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -125,7 +126,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
     triggerExportDownload({
       blob,
-      filename: `unified-test-report-${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
+      filename: `unified-test-report-${nowISO().replace(/[:.]/g, '-')}.json`,
     });
   };
 

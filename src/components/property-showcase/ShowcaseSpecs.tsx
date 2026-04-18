@@ -12,13 +12,13 @@ export function ShowcaseSpecs({ property }: ShowcaseSpecsProps) {
   const { t } = useTranslation('showcase');
   const rows = buildRows(property, t);
   return (
-    <section className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('specs.title')}</h2>
+    <section className="bg-[hsl(var(--showcase-surface))] rounded-xl shadow-sm p-5 border border-[hsl(var(--showcase-border))]">
+      <h2 className="text-lg font-semibold text-[hsl(var(--showcase-fg))] mb-4">{t('specs.title')}</h2>
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
         {rows.map(([label, value]) => (
-          <div key={label} className="flex justify-between gap-3 border-b border-gray-100 pb-2">
-            <dt className="text-gray-500">{label}</dt>
-            <dd className="text-gray-900 font-medium text-right">{value}</dd>
+          <div key={label} className="flex justify-between gap-3 border-b border-[hsl(var(--showcase-border))] pb-2">
+            <dt className="text-[hsl(var(--showcase-muted-fg))]">{label}</dt>
+            <dd className="text-[hsl(var(--showcase-fg))] font-medium text-right">{value}</dd>
           </div>
         ))}
       </dl>

@@ -28,6 +28,7 @@ import {
   getPaymentPlan,
 } from './payment-plan-core';
 import { syncPaymentSummary } from './payment-plan-recording.service';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // RESYNC TOTAL AMOUNT
@@ -108,7 +109,7 @@ export async function resyncTotalAmount(
         installments: reindexed,
         totalAmount: newTotal,
         remainingAmount: newTotal - plan.paidAmount,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
         updatedBy,
       });
       tx.update(propertyRef, { 'commercial.paymentSummary': summary });
@@ -170,7 +171,7 @@ export async function deletePlan(
     await db.collection(planCollectionPath(propertyId)).doc(planId).delete();
     await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).update({
       'commercial.paymentSummary': null,
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowISO(),
     });
 
     logger.info(`[PaymentPlanService] Deleted plan ${planId} by ${deletedBy}`);
@@ -207,7 +208,7 @@ async function transitionPlanStatus(
     const db = getDb();
     await db.collection(planCollectionPath(propertyId)).doc(planId).update({
       status: targetStatus,
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowISO(),
       updatedBy,
     });
 
@@ -294,7 +295,7 @@ export async function addInstallment(
       const updatedPlan: PaymentPlan = { ...plan, installments: updatedInstallments, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount };
       const summary = computeSummaryFromPlan(updatedPlan, planId);
 
-      tx.update(planRef, { installments: updatedInstallments, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount, updatedAt: new Date().toISOString(), updatedBy });
+      tx.update(planRef, { installments: updatedInstallments, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount, updatedAt: nowISO(), updatedBy });
       tx.update(propertyRef, { 'commercial.paymentSummary': summary });
     });
 
@@ -383,7 +384,7 @@ export async function updateInstallment(
       const updatedPlan: PaymentPlan = { ...plan, installments: updated, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount };
       const summary = computeSummaryFromPlan(updatedPlan, planId);
 
-      tx.update(planRef, { installments: updated, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount, updatedAt: new Date().toISOString(), updatedBy });
+      tx.update(planRef, { installments: updated, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount, updatedAt: nowISO(), updatedBy });
       tx.update(propertyRef, { 'commercial.paymentSummary': summary });
     });
 
@@ -456,7 +457,7 @@ export async function removeInstallment(
       const updatedPlan: PaymentPlan = { ...plan, installments: updated, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount };
       const summary = computeSummaryFromPlan(updatedPlan, planId);
 
-      tx.update(planRef, { installments: updated, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount, updatedAt: new Date().toISOString(), updatedBy });
+      tx.update(planRef, { installments: updated, totalAmount: newTotal, remainingAmount: newTotal - plan.paidAmount, updatedAt: nowISO(), updatedBy });
       tx.update(propertyRef, { 'commercial.paymentSummary': summary });
     });
 

@@ -1,3 +1,5 @@
+import { nowISO } from '@/lib/date-local';
+
 /**
  * @fileoverview Cash Flow Forecast Types — ADR-268 Phase 8
  * @description All interfaces for the Cash Flow Forecast standalone module.
@@ -64,7 +66,7 @@ export interface CashFlowConfig {
 /** Default config για νέες εταιρείες */
 export const DEFAULT_CASH_FLOW_CONFIG: CashFlowConfig = {
   initialBalance: 0,
-  updatedAt: new Date().toISOString(),
+  updatedAt: nowISO(),
   recurringPayments: [],
 };
 

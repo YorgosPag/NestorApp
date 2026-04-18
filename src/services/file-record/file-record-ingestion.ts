@@ -26,6 +26,7 @@ import type {
   FileRecordBase,
   BuildPendingFileRecordResult,
 } from './file-record-core';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // INGESTION STORAGE PATH
@@ -103,7 +104,7 @@ export function buildIngestionFileRecordData(input: {
   // Build ingestion state
   const ingestion: IngestionState = {
     state: 'received',
-    stateChangedAt: new Date().toISOString(),
+    stateChangedAt: nowISO(),
   };
 
   // Build base record

@@ -45,6 +45,7 @@ import {
   MAX_RESULT_JSON_LENGTH,
   AI_ERRORS,
 } from './executor-shared-types';
+import { nowISO } from '@/lib/date-local';
 
 export const logger = createModuleLogger('AGENTIC_TOOL_EXECUTOR');
 
@@ -380,7 +381,7 @@ export async function auditWrite(
       documentId,
       mode,
       fieldsWritten: Object.keys(data),
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
     });
   } catch (error) {
     logger.warn('Failed to audit write operation', {

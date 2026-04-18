@@ -41,6 +41,7 @@ import {
   queryAvailableUnits,
   buildDraftReply,
 } from './property-search-query';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('UC_003_PROPERTY_SEARCH');
 
@@ -239,7 +240,7 @@ export class PropertySearchModule implements IUCModule {
         replyError: replyResult.error ?? null,
         approvedBy: ctx.approval?.approvedBy ?? null,
         approvedAt: ctx.approval?.decidedAt ?? null,
-        createdAt: new Date().toISOString(),
+        createdAt: nowISO(),
       };
 
       const auditId = generatePipelineAuditId();

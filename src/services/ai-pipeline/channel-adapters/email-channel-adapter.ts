@@ -22,6 +22,7 @@ import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
 import { isSuperAdminEmail } from '../shared/super-admin-resolver';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // EMAIL CHANNEL ADAPTER
@@ -153,7 +154,7 @@ export class EmailChannelAdapter {
         attachments,
         timestampIso: queueItem.createdAt instanceof Date
           ? queueItem.createdAt.toISOString()
-          : new Date().toISOString(),
+          : nowISO(),
       },
       metadata: {
         providerMessageId: queueItem.providerMessageId,

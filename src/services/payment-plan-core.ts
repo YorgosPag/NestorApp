@@ -20,6 +20,7 @@ import type {
 } from '@/types/payment-plan';
 import type { LoanTracking } from '@/types/loan-tracking';
 import { migrateLoanInfoToTracking } from '@/types/loan-tracking';
+import { nowISO } from '@/lib/date-local';
 
 export const ppLogger = createModuleLogger('PaymentPlanService');
 
@@ -54,7 +55,7 @@ export function computeInstallmentStatus(installment: Installment): InstallmentS
 
 /** Pure function: compute PaymentSummary from a plan snapshot (no I/O). */
 export function computeSummaryFromPlan(plan: PaymentPlan, planId: string): PaymentSummary {
-  const now = new Date().toISOString();
+  const now = nowISO();
   const paidInstallments = plan.installments.filter(
     (i) => i.status === 'paid' || i.status === 'waived'
   ).length;

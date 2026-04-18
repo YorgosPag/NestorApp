@@ -33,6 +33,7 @@ import {
   validateCommissionFields,
   validateExclusivityServer,
 } from './brokerage-exclusivity.helper';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BrokerageServerService');
 
@@ -92,7 +93,7 @@ export class BrokerageServerService {
       }
 
       const id = generateBrokerageId();
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       const agreement: BrokerageAgreement = {
         id,
@@ -200,7 +201,7 @@ export class BrokerageServerService {
         }
       }
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       await docRef.update({
         ...updates,
         updatedAt: now,
@@ -241,7 +242,7 @@ export class BrokerageServerService {
         return { success: false, error: 'Access denied' };
       }
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       await docRef.update({
         status: 'terminated',
         terminatedAt: now,
@@ -279,7 +280,7 @@ export class BrokerageServerService {
       }
 
       const id = generateCommissionId();
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       // Commission calculation — server-side ONLY
       const commissionAmount = calculateCommission({
@@ -355,7 +356,7 @@ export class BrokerageServerService {
         return { success: false, error: 'Access denied' };
       }
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       const updateData: Record<string, string | null> = {
         paymentStatus,
         updatedAt: now,

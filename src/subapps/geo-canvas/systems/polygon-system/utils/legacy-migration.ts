@@ -8,6 +8,7 @@
 import type { UniversalPolygon } from '@geo-alert/core';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { GEO_COLORS } from '../../../config/color-config';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -75,7 +76,7 @@ export function createPolygonFromLegacy(legacyData: LegacyPolygonData): Universa
       properties: {
         source: 'legacy-migration',
         originalControlPoints: legacyData.controlPoints,
-        migratedAt: new Date().toISOString(),
+        migratedAt: nowISO(),
         isComplete: legacyData.isComplete
       }
     },

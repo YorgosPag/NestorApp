@@ -14,6 +14,7 @@ import type { ICommand, SerializedCommand } from '../interfaces';
 import type { Overlay } from '../../../overlays/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { dlog, derr } from '../../../debug';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 /**
  * Overlay store interface for vertex operations
@@ -240,7 +241,7 @@ export class DeleteMultipleOverlayVerticesCommand implements ICommand {
     if (this.wasExecuted) {
       // Restore in reverse order (ascending indices) to avoid index conflicts
       const sortedForRestore = [...this.removedVertices].sort((a, b) => {
-        if (a.overlayId !== b.overlayId) return a.overlayId.localeCompare(b.overlayId);
+        if (a.overlayId !== b.overlayId) return compareByLocale(a.overlayId, b.overlayId);
         return a.vertexIndex - b.vertexIndex; // Ascending for restore
       });
 
@@ -261,7 +262,7 @@ export class DeleteMultipleOverlayVerticesCommand implements ICommand {
   redo(): void {
     // Delete in descending order to avoid index shifting
     const sortedForDelete = [...this.removedVertices].sort((a, b) => {
-      if (a.overlayId !== b.overlayId) return a.overlayId.localeCompare(b.overlayId);
+      if (a.overlayId !== b.overlayId) return compareByLocale(a.overlayId, b.overlayId);
       return b.vertexIndex - a.vertexIndex; // Descending for delete
     });
 

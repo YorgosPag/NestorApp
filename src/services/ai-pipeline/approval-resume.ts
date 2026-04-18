@@ -22,6 +22,7 @@ import type { PipelineAuditService } from './audit-service';
 import type { PipelineExecutionResult } from './pipeline-types';
 import { stepMultiExecute } from './multi-intent-steps';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -118,7 +119,7 @@ export async function resumeFromApproval(
     ctx.errors.push({
       step: 'resume_from_approval',
       error: errorMessage,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       retryable: false,
     });
 

@@ -24,6 +24,7 @@ import type {
   RecordDisbursementInput,
   AddCommunicationLogInput,
 } from '@/types/loan-tracking';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('LoanTrackingOperations');
 
@@ -99,7 +100,7 @@ export async function recordDisbursement(
       };
     }
 
-    const now = new Date().toISOString();
+    const now = nowISO();
 
     const disbursementEntry: DisbursementEntry = {
       order: loan.disbursements.length + 1,
@@ -205,7 +206,7 @@ export async function addCommunicationLog(
       return { success: false, error: 'Απαιτείται περιγραφή' };
     }
 
-    const now = new Date().toISOString();
+    const now = nowISO();
 
     const entry: BankCommunicationEntry = {
       date: now,

@@ -28,6 +28,7 @@ import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { sanitizeDocumentId } from '@/utils/firestore-helpers';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('CHAT_HISTORY_SERVICE');
 
@@ -120,7 +121,7 @@ export class ChatHistoryService {
 
           transaction.update(docRef, {
             messages,
-            lastUpdated: new Date().toISOString(),
+            lastUpdated: nowISO(),
           });
         } else {
           // Create new document
@@ -128,8 +129,8 @@ export class ChatHistoryService {
             channelSenderId,
             companyId: getCompanyId(),
             messages: [truncatedMessage],
-            lastUpdated: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
+            lastUpdated: nowISO(),
+            createdAt: nowISO(),
           };
           transaction.set(docRef, newDoc);
         }

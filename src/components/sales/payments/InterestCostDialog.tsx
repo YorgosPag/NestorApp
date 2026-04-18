@@ -77,6 +77,7 @@ import {
   WhatIfTab,
   LossAlertBanner,
 } from './interest-cost-helpers';
+import { nowISO } from '@/lib/date-local';
 
 // Re-exports for backward compatibility
 export type { InterestCostDialogProps } from './interest-cost-types';
@@ -120,7 +121,7 @@ export function InterestCostDialog({
   // Load comparison when dialog opens
   useEffect(() => {
     if (open && !comparison && salePrice > 0) {
-      const referenceDate = new Date().toISOString().split('T')[0];
+      const referenceDate = nowISO().split('T')[0];
       onCompare(salePrice, referenceDate, installments);
     }
   }, [open, comparison, salePrice, installments, onCompare]);
@@ -131,7 +132,7 @@ export function InterestCostDialog({
 
   // Build CostCalculationInput for Sensitivity tab
   const sensitivityInput = useMemo(() => {
-    const referenceDate = new Date().toISOString().split('T')[0];
+    const referenceDate = nowISO().split('T')[0];
     const cashFlows: CashFlowEntry[] = installments && installments.length > 0
       ? installments.map((inst) => ({
           label: inst.label,

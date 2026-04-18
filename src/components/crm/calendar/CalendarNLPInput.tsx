@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/providers/NotificationProvider';
 import '@/lib/design-system';
+import { nowISO } from '@/lib/date-local';
 
 interface ParsedEvent {
   title: string;
@@ -46,7 +47,7 @@ export function CalendarNLPInput({ onParsed, locale }: CalendarNLPInputProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: text.trim(),
-          currentDate: new Date().toISOString().split('T')[0],
+          currentDate: nowISO().split('T')[0],
           locale,
         }),
       });

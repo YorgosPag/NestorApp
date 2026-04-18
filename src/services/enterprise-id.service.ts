@@ -41,7 +41,7 @@ export {
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,
   generatePaymentRecordId, generateLoanId, generateChequeId, generatePhotoId,
-  generateAttachmentId, generateFileId, generateShareId, generatePendingId,
+  generateAttachmentId, generateFileId, generateShareId, generateDispatchId, generatePendingId,
   generateSubscriptionId, generateMilestoneId, generateWebhookId,
   generateLearnedPatternId, generateConstructionPhaseId, generateConstructionTaskId,
   generateConstructionBaselineId, generateConstructionResourceAssignmentId,
@@ -247,6 +247,7 @@ export class EnterpriseIdService {
   generateAttachmentId(): string { return this.generateId(P.ATTACHMENT).id; }
   generateFileId(): string { return this.generateId(P.FILE).id; }
   generateShareId(): string { return this.generateId(P.SHARE).id; }
+  generateDispatchId(): string { return this.generateId(P.DISPATCH).id; }
   generatePendingId(): string { return this.generateId(P.PENDING).id; }
   generateSubscriptionId(): string { return this.generateId(P.SUBSCRIPTION).id; }
   generateFolderId(): string { return this.generateId(P.FOLDER).id; }

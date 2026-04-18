@@ -9,6 +9,7 @@
  */
 
 import type { FiscalQuarter } from '../../types/common';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // FIRESTORE SANITIZATION (re-exported from centralized location — ADR-214)
@@ -24,14 +25,14 @@ export { sanitizeForFirestore } from '@/utils/firestore-sanitize';
  * Τρέχον ISO 8601 timestamp
  */
 export function isoNow(): string {
-  return new Date().toISOString();
+  return nowISO();
 }
 
 /**
  * Τρέχουσα ISO 8601 ημερομηνία (date only, χωρίς time)
  */
 export function isoToday(): string {
-  return new Date().toISOString().split('T')[0];
+  return nowISO().split('T')[0];
 }
 
 /**

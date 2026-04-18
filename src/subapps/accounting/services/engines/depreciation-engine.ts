@@ -10,6 +10,7 @@
 
 import type { IDepreciationEngine, IAccountingRepository } from '../../types/interfaces';
 import type { FixedAsset, DepreciationRecord, DisposalResult } from '../../types/assets';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // DEPRECIATION ENGINE IMPLEMENTATION
@@ -81,7 +82,7 @@ export class DepreciationEngine implements IDepreciationEngine {
       appliedRate: asset.depreciationRate,
       monthsApplied,
       journalEntryId: null,
-      calculatedAt: new Date().toISOString(),
+      calculatedAt: nowISO(),
     };
   }
 
@@ -210,7 +211,7 @@ export class DepreciationEngine implements IDepreciationEngine {
         appliedRate: asset.depreciationRate,
         monthsApplied: 12,
         journalEntryId: null,
-        calculatedAt: new Date().toISOString(),
+        calculatedAt: nowISO(),
       });
 
       simulatedAccumulated = closingAccumulated;

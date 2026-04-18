@@ -19,6 +19,7 @@ import {
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { PurchaseOrder } from '@/types/procurement';
 import type { TFunction } from 'i18next';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // HELPERS
@@ -48,7 +49,7 @@ export function buildProcurementDashboardStats(
   pos: PurchaseOrder[],
   t: TFunction,
 ): DashboardStat[] {
-  const now = new Date().toISOString();
+  const now = nowISO();
   const currentMonth = now.substring(0, 7); // YYYY-MM
 
   const active = pos.filter((po) =>

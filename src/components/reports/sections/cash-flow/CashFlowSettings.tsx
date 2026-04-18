@@ -53,6 +53,7 @@ import type {
   RecurringCategory,
 } from '@/services/cash-flow/cash-flow.types';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
+import { nowISO } from '@/lib/date-local';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -241,7 +242,7 @@ function RecurringPaymentDialog({
   const [amount, setAmount] = useState(payment?.amount ?? 0);
   const [frequency, setFrequency] = useState<RecurringFrequency>(payment?.frequency ?? 'monthly');
   const [category, setCategory] = useState<RecurringCategory>(payment?.category ?? 'other');
-  const [startDate, setStartDate] = useState(payment?.startDate ?? new Date().toISOString().substring(0, 10));
+  const [startDate, setStartDate] = useState(payment?.startDate ?? nowISO().substring(0, 10));
 
   // Reset form when payment changes
   const handleOpenChange = (isOpen: boolean) => {
@@ -256,7 +257,7 @@ function RecurringPaymentDialog({
       setAmount(0);
       setFrequency('monthly');
       setCategory('other');
-      setStartDate(new Date().toISOString().substring(0, 10));
+      setStartDate(nowISO().substring(0, 10));
     }
     onOpenChange(isOpen);
   };

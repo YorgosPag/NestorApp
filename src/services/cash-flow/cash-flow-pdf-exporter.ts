@@ -12,6 +12,7 @@ import type {
   CashFlowMonthRow,
   PDCCalendarDay,
 } from './cash-flow.types';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // CONSTANTS
@@ -85,7 +86,7 @@ export async function exportCashFlowToPdf(params: CashFlowPDFParams): Promise<vo
   addPageFooters(doc, userName);
 
   // Save
-  const dateStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+  const dateStr = nowISO().substring(0, 10).replace(/-/g, '');
   const scenario = projection.scenario;
   doc.save(`Nestor_CashFlow_${scenario}_${dateStr}.pdf`);
 }

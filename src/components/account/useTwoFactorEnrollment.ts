@@ -18,6 +18,7 @@ import type { UserTwoFactorState, TotpSecretInfo } from '@/services/two-factor';
 import { AUTH_EVENTS } from '@/config/domain-constants';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import { createModuleLogger } from '@/lib/telemetry';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('TwoFactorEnrollment');
 
@@ -192,7 +193,7 @@ export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorE
 
   // Download backup codes
   const handleDownloadBackupCodes = () => {
-    const content = `Nestor Pagonis - Backup Codes\n${'='.repeat(40)}\n\n${backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}\n\n${t('twoFactor.backupFileNote')}\n\nGenerated: ${new Date().toISOString()}`;
+    const content = `Nestor Pagonis - Backup Codes\n${'='.repeat(40)}\n\n${backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}\n\n${t('twoFactor.backupFileNote')}\n\nGenerated: ${nowISO()}`;
 
     const blob = new Blob([content], { type: 'text/plain' });
     triggerExportDownload({ blob, filename: 'nestor-backup-codes.txt' });

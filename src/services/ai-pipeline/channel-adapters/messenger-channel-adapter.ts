@@ -23,6 +23,7 @@ import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
 import { isSuperAdminMessenger } from '../shared/super-admin-resolver';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -127,7 +128,7 @@ export class MessengerChannelAdapter {
         recipients: [],
         contentText: params.messageText,
         attachments: [],
-        timestampIso: new Date().toISOString(),
+        timestampIso: nowISO(),
       },
       metadata: {
         providerMessageId: params.messageId,

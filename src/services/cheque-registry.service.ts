@@ -34,6 +34,7 @@ import {
   isValidChequeTransition,
   isTerminalChequeStatus,
 } from '@/types/cheque-registry';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ChequeRegistryService');
 
@@ -197,7 +198,7 @@ export class ChequeRegistryService {
         return { success: false, error: 'Δεν μπορεί να τροποποιηθεί επιταγή σε τερματική κατάσταση' };
       }
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       const updates: Record<string, string | boolean | null> = {
         updatedAt: now,
         updatedBy,
@@ -248,7 +249,7 @@ export class ChequeRegistryService {
         };
       }
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       const updates: Record<string, string | null> = {
         status: input.targetStatus,
         updatedAt: now,
@@ -353,7 +354,7 @@ export class ChequeRegistryService {
         return { success: false, error: `Δεν μπορεί να οπισθογραφηθεί σε κατάσταση: ${cheque.status}` };
       }
 
-      const now = new Date().toISOString();
+      const now = nowISO();
       const newEntry: EndorsementEntry = {
         order: cheque.endorsementChain.length + 1,
         endorserName: input.endorserName.trim(),
@@ -405,7 +406,7 @@ export class ChequeRegistryService {
         return { success: false, error: `Δεν μπορεί να σφραγιστεί σε κατάσταση: ${cheque.status}` };
       }
 
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       await docRef.update({
         status: 'bounced',
@@ -463,7 +464,7 @@ export class ChequeRegistryService {
       const newCheque = createDefaultChequeRecord(newChequeId, replacementInput, propertyId, createdBy);
       newCheque.replacesChequeId = chequeId;
 
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       // Batch: create new + mark old as replaced
       const batch = db.batch();

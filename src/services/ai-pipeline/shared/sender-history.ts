@@ -21,7 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { normalizeToISO } from '@/lib/date-local';
+import { normalizeToISO, nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('sender-history');
 
@@ -63,7 +63,7 @@ interface MessageDocPartial {
 
 // ADR-218: Delegates to centralized normalizeToISO
 function extractDateString(createdAt: MessageDocPartial['createdAt']): string {
-  return normalizeToISO(createdAt) ?? new Date().toISOString();
+  return normalizeToISO(createdAt) ?? nowISO();
 }
 
 // ============================================================================

@@ -43,6 +43,7 @@ import { getValidNextChequeStatuses, isTerminalChequeStatus } from '@/types/cheq
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // PROPS
@@ -118,7 +119,7 @@ export function ChequeDetailDialog({
   // --- Endorse form ---
   const [endorserName, setEndorserName] = useState('');
   const [endorseeName, setEndorseeName] = useState('');
-  const [endorseDate, setEndorseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endorseDate, setEndorseDate] = useState(nowISO().split('T')[0]);
 
   // --- Edit form ---
   const [editNotes, setEditNotes] = useState(cheque.notes ?? '');

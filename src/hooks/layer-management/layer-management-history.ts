@@ -1,5 +1,6 @@
 import { generateHistoryId } from '@/services/enterprise-id.service';
 import type { LayerHistoryEntry, LayerState } from '@/types/layers';
+import { nowISO } from '@/lib/date-local';
 
 export type LayerHistoryInput = Omit<LayerHistoryEntry, 'id' | 'timestamp'>;
 
@@ -7,7 +8,7 @@ export function appendHistoryEntry(state: LayerState, entry: LayerHistoryInput):
   const historyEntry: LayerHistoryEntry = {
     ...entry,
     id: generateHistoryId(),
-    timestamp: new Date().toISOString()
+    timestamp: nowISO()
   };
 
   const nextHistory = state.history.slice(0, state.historyIndex + 1);

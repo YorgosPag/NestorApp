@@ -19,6 +19,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateQueryStrategyDocId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('QUERY_STRATEGY_SERVICE');
 
@@ -70,7 +71,7 @@ export async function recordQueryStrategy(params: {
       // Update use count
       await docRef.update({
         useCount: (existing.data()?.useCount ?? 0) + 1,
-        lastUsedAt: new Date().toISOString(),
+        lastUsedAt: nowISO(),
         successfulFilters: params.successfulFilters,
       });
     } else {
@@ -82,8 +83,8 @@ export async function recordQueryStrategy(params: {
         successfulStrategy: `Query ${params.collection} without nested filters (${params.failedFilters.join(', ')}), filter results in response`,
         successfulFilters: params.successfulFilters,
         useCount: 1,
-        lastUsedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
+        lastUsedAt: nowISO(),
+        createdAt: nowISO(),
       };
       await docRef.set(strategy);
     }

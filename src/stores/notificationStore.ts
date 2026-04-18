@@ -1,6 +1,7 @@
 // stores/notificationStore.ts
 import { create } from 'zustand';
 import { generateNotificationId } from '@/services/enterprise-id-convenience';
+import { nowISO } from '@/lib/date-local';
 
 type Notification = {
   id: string;
@@ -23,7 +24,7 @@ export const useNotificationStore = create<State>((set, get) => ({
   items: [],
   unread: 0,
   add: n => set(s => {
-    const item = { id: generateNotificationId(), createdAt: new Date().toISOString(), read: false, ...n };
+    const item = { id: generateNotificationId(), createdAt: nowISO(), read: false, ...n };
     return { items: [item, ...s.items], unread: s.unread + 1 };
   }),
   markRead: ids => set(s => {
@@ -40,7 +41,7 @@ export const useNotificationStore = create<State>((set, get) => ({
       title: `Mock event ${i}`,
       body: `Payload ${i}`,
       kind: 'info' as const,
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
       read: false
     }));
     set({ items: mock, unread: mock.length });

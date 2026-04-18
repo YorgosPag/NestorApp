@@ -40,6 +40,7 @@ import {
 } from '@/services/gantt-export';
 import type { GanttExportFormat } from '@/services/gantt-export';
 import type { TaskGroup } from 'react-modern-gantt';
+import { nowISO } from '@/lib/date-local';
 
 // ─── Export Dropdown ──────────────────────────────────────────────────────
 
@@ -71,7 +72,7 @@ export function GanttExportDropdown({
     if (!ganttChartRef.current || isExporting) return;
     setIsExporting(true);
     try {
-      const timestamp = new Date().toISOString().slice(0, 10);
+      const timestamp = nowISO().slice(0, 10);
       const baseName = `Gantt_${buildingName || 'Chart'}_${timestamp}`;
       const ext = format === 'excel' ? 'xlsx' : format;
 

@@ -20,6 +20,7 @@ import { HOLD_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { generateAuditId } from '@/services/enterprise-id.service';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('FilePurgeHelpers');
 
@@ -97,7 +98,7 @@ export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFil
     }
 
     // Mark FileRecord as purged
-    const now = new Date().toISOString();
+    const now = nowISO();
     await db.collection(COLLECTIONS.FILES).doc(fileId).update({
       lifecycleState: 'purged',
       purgedAt: now,
@@ -109,7 +110,7 @@ export async function purgeFileRecord(params: PurgeFileParams): Promise<PurgeFil
       fileId,
       action: 'delete',
       performedBy,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       metadata: {
         purgeReason,
         storageDeleted,

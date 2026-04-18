@@ -18,6 +18,7 @@ import { RelationshipCRUDService } from '../core/RelationshipCRUDService';
 import { RelationshipValidationService } from '../core/RelationshipValidationService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BulkRelationshipService');
 
@@ -340,7 +341,7 @@ export class BulkRelationshipService {
       relationshipType: emp.relationship.relationshipType,
       position: emp.relationship.position,
       department: emp.relationship.department,
-      startDate: emp.relationship.startDate || new Date().toISOString(),
+      startDate: emp.relationship.startDate || nowISO(),
       status: 'active'
     }));
 

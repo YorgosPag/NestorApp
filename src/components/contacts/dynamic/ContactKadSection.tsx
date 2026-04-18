@@ -28,6 +28,7 @@ import type { KadActivity } from '@/types/ContactFormTypes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { cn } from '@/lib/utils';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -49,7 +50,7 @@ function createEmptySecondary(): KadActivity {
     code: '',
     description: '',
     type: 'secondary',
-    activeFrom: new Date().toISOString().split('T')[0],
+    activeFrom: nowISO().split('T')[0],
   };
 }
 

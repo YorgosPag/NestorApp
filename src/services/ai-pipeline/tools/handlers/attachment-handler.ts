@@ -22,6 +22,7 @@ import {
   logger,
 } from '../executor-shared';
 import { classifyContactDocument } from './contact-document-classifier';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // HANDLER
@@ -199,7 +200,7 @@ export class AttachmentHandler implements ToolHandler {
         confidence: classification.confidence,
         reasoning: classification.reasoning,
         suggestedLabel: classification.suggestedLabel,
-        classifiedAt: new Date().toISOString(),
+        classifiedAt: nowISO(),
       },
     });
 
@@ -312,7 +313,7 @@ async function promoteFileRecord(
     updatedAt: FieldValue.serverTimestamp(),
     lastModifiedBy: attribution,
     'ingestion.state': 'classified',
-    'ingestion.stateChangedAt': new Date().toISOString(),
+    'ingestion.stateChangedAt': nowISO(),
   };
 
   // Multi-contact: only set entityId on FIRST promotion — subsequent contacts use file_links only

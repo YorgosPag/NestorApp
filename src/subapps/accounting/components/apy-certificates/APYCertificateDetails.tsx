@@ -42,6 +42,7 @@ import { createStaleCache } from '@/lib/stale-cache';
 import type { APYCertificate, APYEmailSendRecord } from '../../types';
 import { formatCurrency } from '../../utils/format';
 import { SendReminderEmailDialog } from './SendReminderEmailDialog';
+import { nowISO } from '@/lib/date-local';
 
 // ADR-300: Module-level cache — keyed by certificateId, survives re-navigation
 const apyCertCache = createStaleCache<APYCertificate>('accounting-apy-detail');
@@ -177,7 +178,7 @@ export function APYCertificateDetails({
     setMarkingReceived(true);
     const success = await updateCertificate(cert.certificateId, {
       isReceived: true,
-      receivedAt: new Date().toISOString(),
+      receivedAt: nowISO(),
     });
     setMarkingReceived(false);
     if (success) {

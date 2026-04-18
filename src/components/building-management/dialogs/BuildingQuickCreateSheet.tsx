@@ -27,6 +27,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import type { Building } from '@/types/building/contracts';
 import { DIALOG_SCROLL } from '@/styles/design-tokens';
+import { nowISO } from '@/lib/date-local';
 
 const TEMP_BUILDING_ID = '__new__';
 
@@ -64,7 +65,7 @@ export function BuildingQuickCreateSheet({
       totalValue: 0,
       progress: 0,
       projectId: '',
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
     };
   }, [open, user?.companyId]);
 

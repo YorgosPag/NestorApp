@@ -42,6 +42,7 @@ import { getValidNextStatuses } from '@/types/loan-tracking';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -89,7 +90,7 @@ export function LoanDetailDialog({
   // --- Disbursement State ---
   const [disbAmount, setDisbAmount] = useState('');
   const [disbMilestone, setDisbMilestone] = useState('');
-  const [disbDate, setDisbDate] = useState(new Date().toISOString().split('T')[0]);
+  const [disbDate, setDisbDate] = useState(nowISO().split('T')[0]);
 
   // --- CommLog State ---
   const [commType, setCommType] = useState<CommunicationEntryType>('phone');

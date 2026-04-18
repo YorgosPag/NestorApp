@@ -57,6 +57,7 @@ import {
   syncPaymentSummary,
   syncAggregatedPaymentSummary,
 } from './payment-plan-recording.service';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('PaymentPlanService');
 
@@ -90,7 +91,7 @@ export class PaymentPlanService {
       }));
 
       const id = generatePaymentPlanId();
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       const plan: PaymentPlan = {
         id,
@@ -214,7 +215,7 @@ export class PaymentPlanService {
       }
 
       const updates: Record<string, unknown> = {
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowISO(),
         updatedBy,
       };
       if (input.notes !== undefined) updates.notes = input.notes;

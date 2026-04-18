@@ -14,6 +14,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createStaleCache } from '@/lib/stale-cache';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -139,16 +140,16 @@ export function UsersTab({ canEdit }: UsersTabProps) {
 
       switch (filters.sortBy) {
         case 'name':
-          return direction * (a.displayName ?? '').localeCompare(b.displayName ?? '');
+          return direction * compareByLocale(a.displayName ?? '', b.displayName ?? '');
         case 'email':
-          return direction * a.email.localeCompare(b.email);
+          return direction * compareByLocale(a.email, b.email);
         case 'lastSignIn': {
           const dateA = a.lastSignIn ? new Date(a.lastSignIn).getTime() : 0;
           const dateB = b.lastSignIn ? new Date(b.lastSignIn).getTime() : 0;
           return direction * (dateA - dateB);
         }
         case 'globalRole':
-          return direction * a.globalRole.localeCompare(b.globalRole);
+          return direction * compareByLocale(a.globalRole, b.globalRole);
         default:
           return 0;
       }

@@ -1,3 +1,5 @@
+import { nowISO } from '@/lib/date-local';
+
 /**
  * ============================================================================
  * 🎭 CONTACT PERSONA SYSTEM — Role-Based Dynamic Fields
@@ -337,7 +339,7 @@ export function createDefaultPersonaData(personaType: PersonaType): PersonaData 
   const base: BasePersonaData = {
     personaType,
     status: 'active',
-    activatedAt: new Date().toISOString(),
+    activatedAt: nowISO(),
     deactivatedAt: null,
     notes: null,
   };

@@ -1,6 +1,7 @@
 'use client';
 
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -163,7 +164,7 @@ class DataExportService {
     const exportObject = {
       metadata: {
         ...metadata,
-        exportDate: new Date().toISOString(),
+        exportDate: nowISO(),
         recordCount: data.length
       },
       columns: columns.map(col => ({
@@ -198,7 +199,7 @@ class DataExportService {
       Object.entries(metadata).forEach(([key, value]) => {
         xmlContent += `    <${key}>${this.escapeXML(String(value))}</${key}>\n`;
       });
-      xmlContent += `    <exportDate>${new Date().toISOString()}</exportDate>\n`;
+      xmlContent += `    <exportDate>${nowISO()}</exportDate>\n`;
       xmlContent += `    <recordCount>${data.length}</recordCount>\n`;
       xmlContent += '  </metadata>\n';
     }

@@ -912,7 +912,8 @@
         "Timestamp\\.fromDate\\s*\\(\\s*new\\s+Date\\s*\\("
       ],
       "allowlist": [
-        "src/lib/date-local.ts"
+        "src/lib/date-local.ts",
+        "src/lib/firestore-now.ts"
       ],
       "tier": 3
     },
@@ -943,6 +944,38 @@
         "src/constants/domains/property-status-core.ts"
       ],
       "tier": 3
+    },
+
+    "_comment_tier2_adr315": "=== TIER 2 — ADR-315 (2026-04-18): polymorphic sharing SSoT ===",
+
+    "unified-sharing-service": {
+      "ssotFile": "src/services/sharing/unified-sharing.service.ts",
+      "description": "All sharing logic (token lifecycle, validation, access-count, revocation, listing) MUST route through UnifiedSharingService. Direct reads/writes on COLLECTIONS.SHARES or the literal 'shares' collection from other modules are forbidden. Re-implementation of createShare/validateShare/verifyPassword semantics outside src/services/sharing/ is a SSoT violation. FileShareService on file_shares remains operational (legacy) and is NOT subject to this module. Scheduled retirement in ADR-315 Phase M5. ADR-315 Phase M1.",
+      "forbiddenPatterns": [
+        "collection\\(\\s*db\\s*,\\s*COLLECTIONS\\.SHARES\\b",
+        "collection\\(\\s*db\\s*,\\s*['\"]shares['\"]\\s*\\)",
+        "doc\\(\\s*db\\s*,\\s*COLLECTIONS\\.SHARES\\b"
+      ],
+      "allowlist": [
+        "src/services/sharing/",
+        "src/types/sharing/"
+      ],
+      "tier": 2
+    },
+
+    "channel-dispatch-service": {
+      "ssotFile": "src/services/sharing/channel-dispatch.service.ts",
+      "description": "All outbound share dispatches (email / telegram / whatsapp / messenger / instagram) MUST write an audit record in `share_dispatches` via ChannelDispatchService. Direct reads/writes on COLLECTIONS.SHARE_DISPATCHES from other modules are forbidden. Re-implementing dispatch-logging semantics outside src/services/sharing/ is a SSoT violation. ADR-315 Phase M3.",
+      "forbiddenPatterns": [
+        "collection\\(\\s*db\\s*,\\s*COLLECTIONS\\.SHARE_DISPATCHES\\b",
+        "collection\\(\\s*db\\s*,\\s*['\"]share_dispatches['\"]\\s*\\)",
+        "doc\\(\\s*db\\s*,\\s*COLLECTIONS\\.SHARE_DISPATCHES\\b"
+      ],
+      "allowlist": [
+        "src/services/sharing/",
+        "src/types/sharing/"
+      ],
+      "tier": 2
     }
   }
 }

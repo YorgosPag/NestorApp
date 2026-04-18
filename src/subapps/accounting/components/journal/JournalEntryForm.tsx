@@ -42,6 +42,7 @@ import { getCategoryByCode } from '../../config/account-categories';
 import { formatCurrency } from '../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // TYPES
@@ -89,7 +90,7 @@ export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps)
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<JournalEntryFormState>({
-    date: new Date().toISOString().split('T')[0],
+    date: nowISO().split('T')[0],
     type: 'income',
     category: 'service_income',
     description: '',
