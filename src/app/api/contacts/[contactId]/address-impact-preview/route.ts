@@ -21,7 +21,7 @@ import type { AddressImpactPreview } from '@/lib/firestore/address-impact-previe
 // ============================================================================
 
 export const GET = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<AddressImpactPreview>>(
+  withAuth(
     async (
       _request: NextRequest,
       _ctx: AuthContext,

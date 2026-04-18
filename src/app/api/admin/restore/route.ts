@@ -70,7 +70,7 @@ async function handleRestore(
     );
   }
 
-  logger.info(`Restore triggered by user ${ctx.userId} from backup ${backupId}`);
+  logger.info(`Restore triggered by user ${ctx.uid} from backup ${backupId}`);
 
   try {
     const db = getAdminFirestore();
@@ -89,7 +89,7 @@ async function handleRestore(
 
     const result = await restoreService.executeRestore(
       backupId,
-      ctx.userId,
+      ctx.uid,
       options,
       updateStatus,
     );

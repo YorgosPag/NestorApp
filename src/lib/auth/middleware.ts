@@ -40,11 +40,11 @@ const logger = createModuleLogger('middleware');
  * dynamic segment params (e.g., `{ params: Promise<{ contactId: string }> }`).
  * It is forwarded transparently by withAuth from the Next.js runtime.
  */
-export type AuthenticatedHandler<T = unknown> = (
+export type AuthenticatedHandler<T = unknown, R = unknown> = (
   request: NextRequest,
   context: AuthContext,
   cache: PermissionCache,
-  routeContext?: unknown
+  routeContext?: R
 ) => Promise<NextResponse<T | ErrorResponse>>;
 
 /**
@@ -172,11 +172,11 @@ function createRoleRequiredResponse(requiredRoles: GlobalRole[]): NextResponse<E
  * );
  * ```
  */
-export function withAuth<T = unknown>(
-  handler: AuthenticatedHandler<T>,
+export function withAuth<T = unknown, R = unknown>(
+  handler: AuthenticatedHandler<T, R>,
   options: WithAuthOptions = {}
-): (request: NextRequest, routeContext?: unknown) => Promise<NextResponse<T | ErrorResponse>> {
-  return async (request: NextRequest, routeContext?: unknown): Promise<NextResponse<T | ErrorResponse>> => {
+): (request: NextRequest, routeContext?: R) => Promise<NextResponse<T | ErrorResponse>> {
+  return async (request: NextRequest, routeContext?: R): Promise<NextResponse<T | ErrorResponse>> => {
     // Step 1: Build request context
     const ctx = await buildRequestContext(request);
 
@@ -297,10 +297,10 @@ export function withAuth<T = unknown>(
  * );
  * ```
  */
-export function requirePermissions<T = unknown>(
+export function requirePermissions<T = unknown, R = unknown>(
   permissions: PermissionId | PermissionId[],
-  handler: AuthenticatedHandler<T>
-): (request: NextRequest) => Promise<NextResponse<T | ErrorResponse>> {
+  handler: AuthenticatedHandler<T, R>
+): (request: NextRequest, routeContext?: R) => Promise<NextResponse<T | ErrorResponse>> {
   return withAuth(handler, { permissions });
 }
 

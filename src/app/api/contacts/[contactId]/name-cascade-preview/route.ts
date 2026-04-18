@@ -24,7 +24,7 @@ import type { ContactType } from '@/types/contacts';
 // ============================================================================
 
 export const GET = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<NameCascadePreview>>(
+  withAuth(
     async (
       _request: NextRequest,
       _ctx: AuthContext,

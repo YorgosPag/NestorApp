@@ -21,7 +21,7 @@ import type { CompanyIdentityImpactPreview } from '@/lib/firestore/company-ident
 // ============================================================================
 
 export const GET = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<CompanyIdentityImpactPreview>>(
+  withAuth(
     async (
       _request: NextRequest,
       _ctx: AuthContext,

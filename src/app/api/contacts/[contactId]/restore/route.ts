@@ -22,7 +22,7 @@ interface RestoreResponse {
 }
 
 export const POST = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<RestoreResponse>>(
+  withAuth(
     async (
       _request: NextRequest,
       ctx: AuthContext,

@@ -25,7 +25,7 @@ interface PermanentDeleteResponse {
 }
 
 export const DELETE = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<PermanentDeleteResponse>>(
+  withAuth(
     async (
       _request: NextRequest,
       ctx: AuthContext,

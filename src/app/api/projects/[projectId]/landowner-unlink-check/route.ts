@@ -30,7 +30,7 @@ const logger = createModuleLogger('LandownerUnlinkCheckRoute');
 // ============================================================================
 
 export const GET = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<LandownerUnlinkResult>>(
+  withAuth(
     async (
       request: NextRequest,
       ctx: AuthContext,

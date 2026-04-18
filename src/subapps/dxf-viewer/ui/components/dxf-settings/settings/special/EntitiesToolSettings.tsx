@@ -17,6 +17,7 @@ import { DXF_SETTINGS_TAB_LABELS } from '../../../../../../../constants/property
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { useTranslation } from '@/i18n';
 import { DEFAULT_GRIP_SETTINGS } from '../../../../../types/gripSettings';
+import type { LineSettings, TextSettings, GripSettings } from '../../../../../settings-core/types';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -33,28 +34,28 @@ interface EntitiesToolSettingsProps {
   activeLineTab: string | null;
   setActiveLineTab: (tab: string | null) => void;
   // Draft
-  activeDraftSubTab: string;
-  setActiveDraftSubTab: (tab: string) => void;
-  previewLineDraftSettings: Record<string, unknown>;
+  activeDraftSubTab: string | null;
+  setActiveDraftSubTab: (tab: string | null) => void;
+  previewLineDraftSettings: LineSettings;
   draftOverride: OverrideSetting;
   // Hover
-  activeHoverSubTab: string;
-  setActiveHoverSubTab: (tab: string) => void;
-  previewLineHoverSettings: Record<string, unknown>;
+  activeHoverSubTab: string | null;
+  setActiveHoverSubTab: (tab: string | null) => void;
+  previewLineHoverSettings: LineSettings;
   hoverOverride: OverrideSetting;
   // Selection
-  activeSelectionSubTab: string;
-  setActiveSelectionSubTab: (tab: string) => void;
-  previewLineSelectionSettings: Record<string, unknown>;
+  activeSelectionSubTab: string | null;
+  setActiveSelectionSubTab: (tab: string | null) => void;
+  previewLineSelectionSettings: LineSettings;
   selectionOverride: OverrideSetting;
   // Completion
-  activeCompletionSubTab: string;
-  setActiveCompletionSubTab: (tab: string) => void;
-  previewLineCompletionSettings: Record<string, unknown>;
+  activeCompletionSubTab: string | null;
+  setActiveCompletionSubTab: (tab: string | null) => void;
+  previewLineCompletionSettings: LineSettings;
   completionOverride: OverrideSetting;
   // Shared
-  previewTextSettings: Record<string, unknown>;
-  previewGripSettings: Record<string, unknown>;
+  previewTextSettings: TextSettings;
+  previewGripSettings: GripSettings;
   textOverride: OverrideSetting;
   gripOverride: OverrideSetting;
 }

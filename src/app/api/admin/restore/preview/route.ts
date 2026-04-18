@@ -65,7 +65,7 @@ async function handlePreview(
     );
   }
 
-  logger.info(`Restore preview requested by ${ctx.userId} for backup ${backupId}`);
+  logger.info(`Restore preview requested by ${ctx.uid} for backup ${backupId}`);
 
   try {
     const restoreService = new RestoreService();

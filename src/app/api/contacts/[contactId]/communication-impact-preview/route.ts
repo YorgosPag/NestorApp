@@ -27,7 +27,7 @@ import type { ContactType } from '@/types/contacts';
 // ============================================================================
 
 export const GET = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<CommunicationImpactPreview>>(
+  withAuth(
     async (
       _request: NextRequest,
       _ctx: AuthContext,
