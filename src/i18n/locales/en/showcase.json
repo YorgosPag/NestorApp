@@ -29,7 +29,10 @@
   },
   "floorplans": {
     "title": "Floorplans",
-    "defaultName": "Floorplan"
+    "defaultName": "Floorplan",
+    "defaultAlt": "Floorplan preview",
+    "downloadDxf": "Download DXF file",
+    "previewUnavailable": "Preview not available"
   },
   "video": {
     "title": "Video",

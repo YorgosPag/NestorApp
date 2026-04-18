@@ -40,3 +40,15 @@ export function generateCloudAuditId(): string {
 export function generateEntityAuditId(): string {
   return `${PREFIXES.ENTITY_AUDIT}_${crypto.randomUUID()}`;
 }
+
+/**
+ * Opaque, unprefixed UUID v4 for non-entity tokens (download tokens, nonces).
+ *
+ * Mirrors `generateOpaqueToken()` in `src/services/enterprise-id.service.ts`.
+ * Every randomness source in Cloud Function code routes through this helper
+ * (or a prefixed generator above) to satisfy CLAUDE.md N.6 — inline
+ * `crypto.randomUUID()` at call sites is blocked by the pre-commit hook.
+ */
+export function generateOpaqueToken(): string {
+  return crypto.randomUUID();
+}

@@ -274,6 +274,17 @@
         "src/config/firestore-collections.ts"
       ]
     },
+    "dxf-raster-generator": {
+      "ssotFile": "src/services/dxf-raster/dxf-raster-generator.ts",
+      "description": "Server-side DXF scene → PNG rasterisation (ADR-312 Phase 3). Canonical entry point for every surface that needs a DXF thumbnail: Cloud Function trigger (functions/src/storage/dxf-thumbnail-onfinalize.ts), migration endpoint (/api/admin/migrate-dxf-thumbnails), and any future reader. Uses @resvg/resvg-js (pure WASM) to stay serverless-safe. Inline `new Resvg(...)` outside the allowlist = forbidden: we must not scatter SVG→PNG calls across the codebase, or the thumbnail size/background/padding drift from the browser-side DXF Viewer. The functions/shared mirror is the SSoT mirror kept byte-for-byte in sync.",
+      "forbiddenPatterns": [
+        "new\\s+Resvg\\s*\\("
+      ],
+      "allowlist": [
+        "src/services/dxf-raster/dxf-raster-generator.ts",
+        "functions/src/shared/dxf-raster-generator.ts"
+      ]
+    },
     "property-media-reader": {
       "ssotFile": "src/services/property-media/property-media.service.ts",
       "description": "Reading property-linked media (photos, floorplans) from the `files` collection on the server must go through PropertyMediaService (listPropertyMedia / downloadPropertyMedia / countPropertyMedia). The service centralises the canonical filter set (companyId + entityType=property + entityId + category), active-lifecycle pruning, createdAt sorting, and jsPDF mime allowlisting for server-side PDF embedding. Forbidden: inline `.collection(COLLECTIONS.FILES).where('entityType','==','property')...` pipelines outside the service — each duplicate is a chance for tenant-isolation or lifecycle drift. ADR-312 (Property Showcase), ADR-031 (File Storage).",

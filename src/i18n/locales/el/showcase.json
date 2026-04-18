@@ -29,7 +29,10 @@
   },
   "floorplans": {
     "title": "Κατόψεις",
-    "defaultName": "Κάτοψη"
+    "defaultName": "Κάτοψη",
+    "defaultAlt": "Προεπισκόπηση κάτοψης",
+    "downloadDxf": "Λήψη αρχείου DXF",
+    "previewUnavailable": "Δεν υπάρχει διαθέσιμη προεπισκόπηση"
   },
   "video": {
     "title": "Βίντεο",

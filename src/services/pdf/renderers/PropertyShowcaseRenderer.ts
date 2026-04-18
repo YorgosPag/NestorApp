@@ -17,6 +17,11 @@
 import type { IPDFDoc, Margins } from '../contracts';
 import { TextRenderer } from './TextRenderer';
 import { COLORS, FONT_SIZES, FONTS, LINE_SPACING } from '../layout';
+import {
+  drawMediaGridPage,
+  PHOTO_GRID_CONFIG,
+  FLOORPLAN_GRID_CONFIG,
+} from './PropertyShowcaseMediaGrid';
 
 export interface ShowcasePhotoAsset {
   id: string;
@@ -62,6 +67,7 @@ export interface PropertyShowcasePDFData {
   photoCount?: number;
   floorplanCount?: number;
   photos?: ShowcasePhotoAsset[];
+  floorplans?: ShowcasePhotoAsset[];
   generatedAt: Date;
   labels: PropertyShowcasePDFLabels;
 }
@@ -74,6 +80,7 @@ export interface PropertyShowcasePDFLabels {
   descriptionSection: string;
   mediaSection: string;
   photosSection: string;
+  floorplansSection: string;
   fieldType: string;
   fieldBuilding: string;
   fieldFloor: string;
@@ -140,6 +147,7 @@ export class PropertyShowcaseRenderer {
     y += 4;
     y = this.drawMediaSection(doc, y, margins, pageWidth, contentWidth, data);
     this.drawPhotoGrid(doc, margins, pageWidth, contentWidth, data);
+    this.drawFloorplanGrid(doc, margins, pageWidth, contentWidth, data);
     this.drawFooter(doc, margins, pageWidth, data);
   }
 
@@ -310,11 +318,6 @@ export class PropertyShowcaseRenderer {
     return y;
   }
 
-  /**
-   * Renders up to 6 photos on a dedicated second page, in a 3-cols × 2-rows
-   * grid. Skipped silently when no photos are supplied — keeps the text-only
-   * path of ADR-312 Phase 1 unchanged.
-   */
   private drawPhotoGrid(
     doc: IPDFDoc,
     margins: Margins,
@@ -322,60 +325,29 @@ export class PropertyShowcaseRenderer {
     contentWidth: number,
     data: PropertyShowcasePDFData
   ): void {
-    const photos = data.photos ?? [];
-    if (photos.length === 0) {
-      console.info('[PropertyShowcaseRenderer] drawPhotoGrid skipped — no photos');
-      return;
-    }
-
-    console.info('[PropertyShowcaseRenderer] drawPhotoGrid', {
-      count: photos.length,
-      totalBytes: photos.reduce((sum, p) => sum + p.bytes.byteLength, 0),
-      formats: photos.map((p) => p.format),
+    drawMediaGridPage({
+      doc, margins, pageWidth, contentWidth,
+      assets: data.photos ?? [],
+      sectionTitle: data.labels.photosSection,
+      drawSectionTitle: (d, y, m, pw, cw, t) => this.drawSectionTitle(d, y, m, pw, cw, t),
+      config: PHOTO_GRID_CONFIG,
     });
+  }
 
-    doc.addPage();
-    let y = margins.top;
-    y = this.drawSectionTitle(doc, y, margins, pageWidth, contentWidth, data.labels.photosSection);
-    y += 4;
-
-    const cols = 3;
-    const gap = 4;
-    const cellWidth = (contentWidth - gap * (cols - 1)) / cols;
-    const cellHeight = cellWidth * 0.75;
-    const pageHeight = doc.pageSize.height;
-    const maxBottom = pageHeight - margins.bottom - 10;
-
-    let col = 0;
-    let rowY = y;
-
-    for (const photo of photos) {
-      const x = margins.left + col * (cellWidth + gap);
-      if (rowY + cellHeight > maxBottom) break;
-      try {
-        doc.addImage(photo.bytes, photo.format, x, rowY, cellWidth, cellHeight, photo.id, 'FAST');
-      } catch (err) {
-        // Surface the real jsPDF error in dev stdout (Phase 2.1 diagnostic).
-        // Keep the grey-rect fallback so a single broken image never aborts
-        // the whole PDF — but no more silent failures.
-        console.error('[PropertyShowcaseRenderer] addImage failed', {
-          photoId: photo.id,
-          format: photo.format,
-          bytesLen: photo.bytes.byteLength,
-          magic: Array.from(photo.bytes.slice(0, 8))
-            .map((b) => b.toString(16).padStart(2, '0')).join(' '),
-          error: err instanceof Error ? err.message : String(err),
-          stack: err instanceof Error ? err.stack : undefined,
-        });
-        doc.setDrawColor(...COLORS.GRAY);
-        doc.rect(x, rowY, cellWidth, cellHeight, 'S');
-      }
-      col += 1;
-      if (col >= cols) {
-        col = 0;
-        rowY += cellHeight + gap;
-      }
-    }
+  private drawFloorplanGrid(
+    doc: IPDFDoc,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData
+  ): void {
+    drawMediaGridPage({
+      doc, margins, pageWidth, contentWidth,
+      assets: data.floorplans ?? [],
+      sectionTitle: data.labels.floorplansSection,
+      drawSectionTitle: (d, y, m, pw, cw, t) => this.drawSectionTitle(d, y, m, pw, cw, t),
+      config: FLOORPLAN_GRID_CONFIG,
+    });
   }
 
   private drawFooter(

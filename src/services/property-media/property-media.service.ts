@@ -52,11 +52,19 @@ export interface PropertyMediaItem {
   sizeBytes?: number;
   downloadUrl?: string;
   createdAtMs?: number;
+  /** Lowercased file extension (no dot). e.g. "dxf", "jpg". */
+  ext?: string;
+  /** Raster preview URL — present for DXF after `onDxfProcessedFinalize` ran. */
+  thumbnailUrl?: string;
+  /** Storage path of the raster preview (used for server-side downloads). */
+  thumbnailStoragePath?: string;
 }
 
 export interface PropertyMediaBuffer extends PropertyMediaItem {
   bytes: Uint8Array;
   jsPdfFormat: 'JPEG' | 'PNG';
+  /** `true` when bytes were fetched from the derived `thumbnailStoragePath`. */
+  fromThumbnail: boolean;
 }
 
 export interface ListPropertyMediaOptions {
@@ -93,6 +101,7 @@ function normalizeCreatedAtMs(raw: unknown): number | undefined {
 function toMediaItem(id: string, data: Record<string, unknown>): PropertyMediaItem | null {
   const storagePath = data.storagePath as string | undefined;
   if (!storagePath) return null;
+  const rawExt = (data.ext as string) || storagePath.split('.').pop();
   return {
     id,
     storagePath,
@@ -102,6 +111,9 @@ function toMediaItem(id: string, data: Record<string, unknown>): PropertyMediaIt
     sizeBytes: typeof data.sizeBytes === 'number' ? (data.sizeBytes as number) : undefined,
     downloadUrl: (data.downloadUrl as string) || undefined,
     createdAtMs: normalizeCreatedAtMs(data.createdAt),
+    ext: rawExt ? rawExt.toLowerCase() : undefined,
+    thumbnailUrl: (data.thumbnailUrl as string) || undefined,
+    thumbnailStoragePath: (data.thumbnailStoragePath as string) || undefined,
   };
 }
 
@@ -171,9 +183,17 @@ export async function downloadPropertyMedia(
   const limit = opts.limit ?? DEFAULT_DOWNLOAD_LIMIT;
 
   const metas = await listPropertyMedia({ ...opts, limit: limit * 2 });
-  const candidates = metas.filter((m) =>
-    m.contentType && (allowedMimes as ReadonlyArray<string>).includes(m.contentType)
-  ).slice(0, limit);
+  // Accept two shapes: (a) native raster (JPEG/PNG) served from `storagePath`,
+  // (b) DXF with a generated PNG preview served from `thumbnailStoragePath`.
+  // Path (b) is what makes Κάτοψη DXFs show up in the showcase PDF — see
+  // `functions/src/storage/dxf-thumbnail-onfinalize.ts` (ADR-312 Phase 3).
+  const candidates = metas.filter((m) => {
+    if (m.contentType && (allowedMimes as ReadonlyArray<string>).includes(m.contentType)) {
+      return true;
+    }
+    if (m.ext === 'dxf' && m.thumbnailStoragePath) return true;
+    return false;
+  }).slice(0, limit);
 
   if (candidates.length === 0) return [];
 
@@ -183,8 +203,12 @@ export async function downloadPropertyMedia(
   await Promise.all(
     candidates.map(async (meta) => {
       try {
-        const [buffer] = await bucket.file(meta.storagePath).download();
-        const format = JS_PDF_FORMAT_BY_MIME[(meta.contentType ?? '').toLowerCase()];
+        const useThumbnail = meta.ext === 'dxf' && !!meta.thumbnailStoragePath;
+        const path = useThumbnail ? (meta.thumbnailStoragePath as string) : meta.storagePath;
+        const [buffer] = await bucket.file(path).download();
+        const format: 'JPEG' | 'PNG' = useThumbnail
+          ? 'PNG'
+          : JS_PDF_FORMAT_BY_MIME[(meta.contentType ?? '').toLowerCase()];
         if (!format) return;
         // Copy into a dedicated ArrayBuffer. Node `Buffer` instances (returned
         // by GCS `download()`) share a pooled backing store; a mere view
@@ -198,12 +222,14 @@ export async function downloadPropertyMedia(
           ...meta,
           bytes,
           jsPdfFormat: format,
+          fromThumbnail: useThumbnail,
         });
       } catch (err) {
         logger.warn('Failed to download property media buffer; skipping', {
           propertyId: opts.propertyId,
           mediaId: meta.id,
           storagePath: meta.storagePath,
+          thumbnailStoragePath: meta.thumbnailStoragePath,
           error: err instanceof Error ? err.message : String(err),
         });
       }
@@ -220,6 +246,7 @@ export async function downloadPropertyMedia(
     loaded: buffers.length,
     totalBytes,
     formats: buffers.map((b) => b.jsPdfFormat),
+    fromThumbnailCount: buffers.filter((b) => b.fromThumbnail).length,
   });
 
   return buffers;

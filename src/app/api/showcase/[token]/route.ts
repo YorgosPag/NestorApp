@@ -30,6 +30,8 @@ interface ShowcaseMedia {
   id: string;
   url: string;
   displayName?: string;
+  previewUrl?: string;
+  ext?: string;
 }
 
 interface ShowcasePublicResponse {
@@ -92,6 +94,8 @@ async function loadFilesByCategory(
       id: m.id,
       url: m.downloadUrl,
       displayName: m.displayName || m.originalFilename || undefined,
+      previewUrl: m.thumbnailUrl || undefined,
+      ext: m.ext || undefined,
     });
   }
   return items;

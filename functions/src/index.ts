@@ -36,7 +36,6 @@ const storage = admin.storage();
 // ============================================================================
 // CONSTANTS (mirrored from domain-constants.ts)
 // ============================================================================
-
 const FILE_LIFECYCLE_STATES = {
   ACTIVE: 'active',
   TRASHED: 'trashed',
@@ -58,7 +57,6 @@ import { generateCloudAuditId } from './config/enterprise-id';
 // ============================================================================
 // TYPES
 // ============================================================================
-
 interface FileRecord {
   id: string;
   companyId?: string;
@@ -93,7 +91,6 @@ interface AuditLogEntry {
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
 /**
  * Write audit log entry
  * @enterprise Required for compliance and debugging
@@ -495,6 +492,9 @@ export const getTrashStats = functions
   });
 
 // ============================================================================
-// STORAGE: ORPHAN FILE CLEANUP (onFinalize)
+// STORAGE TRIGGERS (onFinalize)
+//   - onStorageFinalize: orphan cleanup (ADR-032 + ADR-312)
+//   - onDxfProcessedFinalize: DXF → PNG thumbnail (ADR-312 Phase 3)
 // ============================================================================
 export { onStorageFinalize } from './storage/orphan-cleanup';
+export { onDxfProcessedFinalize } from './storage/dxf-thumbnail-onfinalize';
