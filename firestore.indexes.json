@@ -1793,6 +1793,20 @@
       ]
     },
     {
+      "collectionGroup": "file_comments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "fileId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "file_folders",
       "queryScope": "COLLECTION",
       "fields": [
