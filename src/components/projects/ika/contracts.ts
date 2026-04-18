@@ -1,10 +1,15 @@
 /**
  * =============================================================================
- * IKA/EFKA Labor Compliance — TypeScript Interfaces
+ * IKA/EFKA Labor Compliance — TypeScript Interfaces (Barrel)
  * =============================================================================
  *
  * Enterprise-grade types for the IKA tab system.
- * Covers: Workers, EFKA Declaration, Attendance, Employment Records.
+ * Covers: Workers, EFKA Declaration, Employment Records, Stamps.
+ *
+ * Re-exports from sibling modules:
+ * - contracts-attendance.ts → AttendanceEvent + view models
+ * - contracts-qr.ts         → QR token + geofence + photo verification
+ * - contracts-defaults.ts   → default rates/classes + createDefaultEfkaDeclaration
  *
  * @module components/projects/ika/contracts
  * @enterprise ADR-090 — IKA/EFKA Labor Compliance System
@@ -197,163 +202,6 @@ export interface LaborComplianceConfig {
 }
 
 // ============================================================================
-// ATTENDANCE EVENT (Phase 2 — forward-compatible type definitions)
-// ============================================================================
-
-/** Attendance event types */
-export type AttendanceEventType =
-  | 'check_in'
-  | 'check_out'
-  | 'break_start'
-  | 'break_end'
-  | 'left_site'
-  | 'returned'
-  | 'exit_permission';
-
-/** Method of attendance recording */
-export type AttendanceMethod = 'manual' | 'qr' | 'geofence' | 'nfc';
-
-/** Immutable attendance event (append-only, never updated) */
-export interface AttendanceEvent {
-  id: string;
-  projectId: string;
-  contactId: string;
-  eventType: AttendanceEventType;
-  method: AttendanceMethod;
-  /** Server timestamp — immutable */
-  timestamp: string;
-  /** GPS coordinates (for geofence verification) */
-  coordinates: { lat: number; lng: number } | null;
-  /** Device identifier */
-  deviceId: string | null;
-  /** User who recorded the event */
-  recordedBy: string;
-  /** Optional notes */
-  notes: string | null;
-  /** Approval reference (for exit_permission) */
-  approvedBy: string | null;
-  /** Immutable creation timestamp */
-  createdAt: string;
-}
-
-// ============================================================================
-// ATTENDANCE COMPUTED TYPES (Phase 2 — UI view models)
-// ============================================================================
-
-/** View mode for attendance tab */
-export type AttendanceViewMode = 'daily' | 'weekly' | 'monthly';
-
-/** Worker attendance status at a point in time */
-export type WorkerAttendanceStatus =
-  | 'present'         // Στο εργοτάξιο (last event: check_in | returned | break_end)
-  | 'absent'          // Δεν ήρθε (no events today)
-  | 'off_site'        // Εκτός εργοταξίου (last event: left_site)
-  | 'on_break'        // Σε διάλειμμα (last event: break_start)
-  | 'checked_out';    // Αποχώρησε (last event: check_out)
-
-/** Attendance anomaly types for compliance tracking */
-export type AttendanceAnomalyType =
-  | 'missing_checkout'        // Check-in χωρίς check-out
-  | 'missing_checkin'         // Check-out χωρίς check-in
-  | 'unauthorized_absence'    // Αποχώρηση χωρίς άδεια > 30 λεπτά
-  | 'overtime_undeclared'     // Υπερωρία χωρίς δήλωση ΕΡΓΑΝΗ
-  | 'long_break'              // Διάλειμμα > 60 λεπτά
-  | 'late_arrival';           // Καθυστερημένη άφιξη
-
-/** Anomaly record — detected from event analysis */
-export interface AttendanceAnomaly {
-  /** Anomaly classification */
-  type: AttendanceAnomalyType;
-  /** Human-readable description */
-  description: string;
-  /** Severity level for UI display */
-  severity: 'low' | 'medium' | 'high' | 'critical';
-}
-
-/**
- * Daily summary per worker — computed from AttendanceEvent[]
- * Used by DailyTimeline component for table rows
- */
-export interface WorkerDailySummary {
-  /** Worker contact ID */
-  contactId: string;
-  /** Worker display name */
-  workerName: string;
-  /** Company name (for crew grouping) */
-  companyName: string | null;
-  /** Company contact ID (for crew grouping) */
-  companyContactId: string | null;
-  /** Date in ISO format (YYYY-MM-DD) */
-  date: string;
-  /** Current real-time status */
-  currentStatus: WorkerAttendanceStatus;
-  /** First check-in timestamp (ISO) */
-  firstCheckIn: string | null;
-  /** Last check-out timestamp (ISO) */
-  lastCheckOut: string | null;
-  /** Total minutes on-site (check_in → check_out intervals) */
-  totalPresenceMinutes: number;
-  /** Total break minutes (break_start → break_end intervals) */
-  totalBreakMinutes: number;
-  /** Total off-site minutes (left_site → returned intervals) */
-  totalOffSiteMinutes: number;
-  /** Effective work = presence - breaks - offSite */
-  effectiveWorkMinutes: number;
-  /** All events for this worker on this day (ordered by timestamp) */
-  events: AttendanceEvent[];
-  /** Detected anomalies */
-  anomalies: AttendanceAnomaly[];
-  /** Primary recording method used */
-  method: AttendanceMethod;
-}
-
-/**
- * Project-level daily summary — dashboard aggregate data
- * Used by AttendanceDashboard for summary cards
- */
-export interface ProjectDailySummary {
-  /** Date in ISO format (YYYY-MM-DD) */
-  date: string;
-  /** Project ID */
-  projectId: string;
-  /** Total workers linked to project */
-  totalWorkers: number;
-  /** Workers currently on-site */
-  presentCount: number;
-  /** Workers expected but absent */
-  absentCount: number;
-  /** Workers who left site */
-  offSiteCount: number;
-  /** Workers on break */
-  onBreakCount: number;
-  /** Workers who checked out */
-  checkedOutCount: number;
-  /** Sum of effective work hours (all workers) */
-  totalHoursToday: number;
-  /** Total anomalies detected */
-  anomalyCount: number;
-  /** Individual worker summaries */
-  workerSummaries: WorkerDailySummary[];
-}
-
-/**
- * Crew grouping — workers grouped by company (συνεργείο)
- * Used by CrewGroupFilter for filtering
- */
-export interface CrewGroup {
-  /** Company contact ID (null for independent workers) */
-  companyContactId: string | null;
-  /** Company display name */
-  companyName: string;
-  /** Workers in this crew */
-  workers: ProjectWorker[];
-  /** Workers currently present */
-  presentCount: number;
-  /** Total workers in crew */
-  totalCount: number;
-}
-
-// ============================================================================
 // EMPLOYMENT RECORD (Phase 3 — forward-compatible type definitions)
 // ============================================================================
 
@@ -479,70 +327,6 @@ export interface ApdPeriod {
 }
 
 // ============================================================================
-// DEFAULT CONFIGURATION (KPK 781 — Οικοδομοτεχνικά, 01/01/2025)
-// ============================================================================
-
-/**
- * Default contribution rates for KPK 781 (construction workers).
- * Source: ΕΦΚΑ Εγκύκλιος 39/2024 — effective 01/01/2025.
- * Total: Employer 57.427%, Employee 16.820%, Combined 74.247%.
- */
-export const DEFAULT_CONTRIBUTION_RATES: ContributionRates = {
-  mainPension: { employer: 13.33, employee: 6.67 },
-  health: { employer: 4.55, employee: 2.55 },
-  supplementary: { employer: 3.25, employee: 3.25 },
-  unemployment: { employer: 2.43, employee: 2.00 },
-  iek: { employer: 0.837, employee: 2.32 },
-  oncePayment: { employee: 4.00 },
-};
-
-/**
- * Default insurance classes for construction workers (2025).
- * Source: ΕΦΚΑ Εγκύκλιος 39/2024 — adjusted +2.4% from 01/01/2025.
- * Contains representative classes — full 28-class table loaded from config.
- */
-export const DEFAULT_INSURANCE_CLASSES: InsuranceClass[] = [
-  { classNumber: 1, minDailyWage: 0.01, maxDailyWage: 11.45, imputedDailyWage: 8.22, year: 2025 },
-  { classNumber: 2, minDailyWage: 11.46, maxDailyWage: 13.47, imputedDailyWage: 12.46, year: 2025 },
-  { classNumber: 3, minDailyWage: 13.48, maxDailyWage: 15.57, imputedDailyWage: 14.52, year: 2025 },
-  { classNumber: 4, minDailyWage: 15.58, maxDailyWage: 18.57, imputedDailyWage: 17.07, year: 2025 },
-  { classNumber: 5, minDailyWage: 18.58, maxDailyWage: 21.12, imputedDailyWage: 19.85, year: 2025 },
-  { classNumber: 6, minDailyWage: 21.13, maxDailyWage: 24.13, imputedDailyWage: 22.63, year: 2025 },
-  { classNumber: 7, minDailyWage: 24.14, maxDailyWage: 27.14, imputedDailyWage: 25.63, year: 2025 },
-  { classNumber: 8, minDailyWage: 27.15, maxDailyWage: 34.52, imputedDailyWage: 30.83, year: 2025 },
-  { classNumber: 9, minDailyWage: 34.53, maxDailyWage: 37.73, imputedDailyWage: 36.13, year: 2025 },
-  { classNumber: 10, minDailyWage: 37.74, maxDailyWage: 40.49, imputedDailyWage: 39.08, year: 2025 },
-  { classNumber: 11, minDailyWage: 40.50, maxDailyWage: 43.70, imputedDailyWage: 42.10, year: 2025 },
-  { classNumber: 12, minDailyWage: 43.71, maxDailyWage: 46.90, imputedDailyWage: 45.30, year: 2025 },
-  { classNumber: 13, minDailyWage: 46.91, maxDailyWage: 52.96, imputedDailyWage: 49.93, year: 2025 },
-  { classNumber: 14, minDailyWage: 52.97, maxDailyWage: 56.17, imputedDailyWage: 54.57, year: 2025 },
-  { classNumber: 15, minDailyWage: 56.18, maxDailyWage: 59.37, imputedDailyWage: 57.77, year: 2025 },
-  { classNumber: 16, minDailyWage: 59.38, maxDailyWage: 62.57, imputedDailyWage: 60.97, year: 2025 },
-  { classNumber: 17, minDailyWage: 62.58, maxDailyWage: 66.00, imputedDailyWage: 64.29, year: 2025 },
-  { classNumber: 18, minDailyWage: 66.01, maxDailyWage: 69.40, imputedDailyWage: 67.70, year: 2025 },
-  { classNumber: 19, minDailyWage: 69.41, maxDailyWage: 72.61, imputedDailyWage: 71.01, year: 2025 },
-  { classNumber: 20, minDailyWage: 72.62, maxDailyWage: 75.81, imputedDailyWage: 74.21, year: 2025 },
-  { classNumber: 21, minDailyWage: 75.82, maxDailyWage: 79.24, imputedDailyWage: 77.53, year: 2025 },
-  { classNumber: 22, minDailyWage: 79.25, maxDailyWage: 84.04, imputedDailyWage: 81.64, year: 2025 },
-  { classNumber: 23, minDailyWage: 84.05, maxDailyWage: 87.24, imputedDailyWage: 85.64, year: 2025 },
-  { classNumber: 24, minDailyWage: 87.25, maxDailyWage: 90.44, imputedDailyWage: 88.84, year: 2025 },
-  { classNumber: 25, minDailyWage: 90.45, maxDailyWage: 97.04, imputedDailyWage: 93.74, year: 2025 },
-  { classNumber: 26, minDailyWage: 97.05, maxDailyWage: 100.25, imputedDailyWage: 98.65, year: 2025 },
-  { classNumber: 27, minDailyWage: 100.26, maxDailyWage: 106.25, imputedDailyWage: 103.25, year: 2025 },
-  { classNumber: 28, minDailyWage: 106.26, maxDailyWage: 999999, imputedDailyWage: 109.69, year: 2025 },
-];
-
-/**
- * Default labor compliance configuration.
- * Used as fallback when system/settings.laborCompliance is not yet configured.
- */
-export const DEFAULT_LABOR_COMPLIANCE_CONFIG: LaborComplianceConfig = {
-  insuranceClasses: DEFAULT_INSURANCE_CLASSES,
-  contributionRates: DEFAULT_CONTRIBUTION_RATES,
-  lastUpdated: '2025-01-01',
-};
-
-// ============================================================================
 // HELPER TYPES
 // ============================================================================
 
@@ -558,190 +342,37 @@ export interface EfkaChecklistItem {
   completed: boolean;
 }
 
-/** Default EFKA documents template */
-export const DEFAULT_EFKA_DOCUMENTS: EfkaDocument[] = [
-  {
-    type: 'E1',
-    label: 'Ε.1 — Αναγγελία Πρόσληψης',
-    status: 'pending',
-    fileUrl: null,
-    uploadedAt: null,
-    submittedAt: null,
-    notes: null,
-  },
-  {
-    type: 'E3',
-    label: 'Ε.3 — Αναγγελία Οικοδομοτεχνικού Έργου',
-    status: 'pending',
-    fileUrl: null,
-    uploadedAt: null,
-    submittedAt: null,
-    notes: null,
-  },
-  {
-    type: 'E4',
-    label: 'Ε.4 — Πίνακας Προσωπικού',
-    status: 'pending',
-    fileUrl: null,
-    uploadedAt: null,
-    submittedAt: null,
-    notes: null,
-  },
-];
-
-/**
- * Creates a default (empty) EFKA declaration for a new project.
- */
-export function createDefaultEfkaDeclaration(userId: string): EfkaDeclarationData {
-  const now = new Date().toISOString();
-  return {
-    employerVatNumber: null,
-    projectAddress: null,
-    projectDescription: null,
-    startDate: null,
-    estimatedEndDate: null,
-    estimatedWorkerCount: null,
-    projectCategory: null,
-    amoe: null,
-    amoeAssignedDate: null,
-    status: 'draft',
-    documents: [...DEFAULT_EFKA_DOCUMENTS],
-    createdAt: now,
-    createdBy: userId,
-    updatedAt: now,
-    updatedBy: userId,
-    submittedAt: null,
-    submittedBy: null,
-    notes: null,
-  };
-}
-
 // ============================================================================
-// QR CODE ATTENDANCE (ADR-170 — QR + GPS Geofencing + Photo Verification)
+// RE-EXPORTS (C.5.23 SRP split — ADR-314)
 // ============================================================================
 
-/** QR token status lifecycle */
-export type QrTokenStatus = 'active' | 'expired' | 'revoked';
+export type {
+  AttendanceEventType,
+  AttendanceMethod,
+  AttendanceEvent,
+  AttendanceViewMode,
+  WorkerAttendanceStatus,
+  AttendanceAnomalyType,
+  AttendanceAnomaly,
+  WorkerDailySummary,
+  ProjectDailySummary,
+  CrewGroup,
+} from './contracts-attendance';
 
-/**
- * QR token stored in Firestore `attendance_qr_tokens` collection.
- * Tokens rotate daily to prevent fraud (anti-sharing).
- * HMAC-SHA256 signed with ATTENDANCE_QR_SECRET env var.
- */
-export interface AttendanceQrToken {
-  /** Firestore document ID */
-  id: string;
-  /** Associated project */
-  projectId: string;
-  /** Date this token is valid for (YYYY-MM-DD) */
-  validDate: string;
-  /** HMAC-signed token string (base64url encoded) */
-  token: string;
-  /** Token status */
-  status: QrTokenStatus;
-  /** Expiration timestamp (ISO — end of validDate 23:59:59) */
-  expiresAt: string;
-  /** Who generated the token */
-  generatedBy: string;
-  /** When the token was generated (ISO) */
-  generatedAt: string;
-  /** When the token was revoked (ISO), null if not revoked */
-  revokedAt: string | null;
-  /** Who revoked it, null if not revoked */
-  revokedBy: string | null;
-}
+export type {
+  QrTokenStatus,
+  AttendanceQrToken,
+  GeofenceConfig,
+  AttendancePhotoMetadata,
+  GeofenceVerificationResult,
+  QrCheckInPayload,
+  QrCheckInResponse,
+} from './contracts-qr';
 
-/**
- * Geofence configuration for a project site.
- * Stored within the project's primary address or as separate config.
- */
-export interface GeofenceConfig {
-  /** Center point latitude */
-  latitude: number;
-  /** Center point longitude */
-  longitude: number;
-  /** Geofence radius in meters (50-500m typical for construction sites) */
-  radiusMeters: number;
-  /** Whether geofence verification is enabled */
-  enabled: boolean;
-  /** Last updated (ISO) */
-  updatedAt: string;
-  /** Updated by user ID */
-  updatedBy: string;
-}
-
-/**
- * Photo metadata for attendance verification.
- * Photo stored in Firebase Storage, metadata stored alongside event.
- */
-export interface AttendancePhotoMetadata {
-  /** Firebase Storage path */
-  storagePath: string;
-  /** Public download URL */
-  downloadUrl: string;
-  /** File size in bytes */
-  sizeBytes: number;
-  /** MIME type (image/jpeg) */
-  mimeType: string;
-  /** Capture timestamp (ISO) */
-  capturedAt: string;
-}
-
-/** Geofence verification result */
-export interface GeofenceVerificationResult {
-  /** Whether the worker is inside the geofence */
-  inside: boolean;
-  /** Distance from geofence center in meters */
-  distanceMeters: number;
-  /** Geofence radius that was checked against */
-  radiusMeters: number;
-  /** GPS accuracy reported by device (meters) */
-  gpsAccuracyMeters: number | null;
-}
-
-/**
- * Payload sent by the worker's browser when scanning QR and checking in.
- * Public endpoint — no Firebase auth required (worker identified by token + AMKA).
- */
-export interface QrCheckInPayload {
-  /** The scanned QR token string */
-  token: string;
-  /** Worker identifier — AMKA (Social Security Number) */
-  workerIdentifier: string;
-  /** Event type: check_in or check_out */
-  eventType: 'check_in' | 'check_out';
-  /** GPS coordinates from browser */
-  coordinates: {
-    lat: number;
-    lng: number;
-    accuracy: number;
-  } | null;
-  /** Photo as base64 data URL (optional) */
-  photoBase64: string | null;
-  /** Device info for audit trail */
-  deviceInfo: {
-    userAgent: string;
-    platform: string;
-    language: string;
-  };
-}
-
-/**
- * Response from the check-in API endpoint.
- */
-export interface QrCheckInResponse {
-  /** Whether the check-in was successful */
-  success: boolean;
-  /** Error message if not successful */
-  error: string | null;
-  /** Created event ID (if successful) */
-  eventId: string | null;
-  /** Worker name resolved from AMKA */
-  workerName: string | null;
-  /** Geofence verification result */
-  geofence: GeofenceVerificationResult | null;
-  /** Server timestamp of the event (ISO) */
-  timestamp: string | null;
-  /** Photo uploaded successfully */
-  photoUploaded: boolean;
-}
+export {
+  DEFAULT_CONTRIBUTION_RATES,
+  DEFAULT_INSURANCE_CLASSES,
+  DEFAULT_LABOR_COMPLIANCE_CONFIG,
+  DEFAULT_EFKA_DOCUMENTS,
+  createDefaultEfkaDeclaration,
+} from './contracts-defaults';
