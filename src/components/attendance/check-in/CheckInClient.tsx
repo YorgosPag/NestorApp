@@ -37,7 +37,7 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePhotoCapture } from '@/hooks/usePhotoCapture';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { QrCheckInResponse } from '@/components/projects/ika/contracts';
-import { STATUS_CLASSES, formatDateGreek } from './check-in-styles';
+import { STATUS_CLASSES, formatCheckInDateGreek } from './check-in-styles';
 
 // =============================================================================
 // TYPES
@@ -219,7 +219,7 @@ export function CheckInClient({ token }: CheckInClientProps) {
         )}
         {validDate && (
           <p className="text-xs text-muted-foreground/70 mt-0.5">
-            {formatDateGreek(validDate)}
+            {formatCheckInDateGreek(validDate)}
           </p>
         )}
       </header>

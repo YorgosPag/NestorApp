@@ -12,7 +12,7 @@
  * Features:
  * - Sheet-based inspector (shadcn/ui)
  * - Semantic DOM (<section>, <header>, <dl>, <dt>, <dd>)
- * - Centralized utilities (copyToClipboard, formatFileSize, formatDateTime)
+ * - Centralized utilities (copyToClipboard, formatFileSize, formatFileTimestampTime)
  * - i18n labels (zero hardcoded strings)
  * - Enterprise styling (no inline styles)
  *
@@ -117,7 +117,7 @@ export function FileInspector({
   }, [file.storagePath, success, error, t]);
 
   // 🏢 ENTERPRISE: Format timestamp using centralized formatFlexibleDateTime (ADR-208)
-  const formatDate = (timestamp: unknown): string => {
+  const formatFileTimestamp = (timestamp: unknown): string => {
     const result = formatFlexibleDateTime(timestamp);
     return result === '-' ? t('technical.unavailable') : result;
   };
@@ -216,7 +216,7 @@ export function FileInspector({
                     <Calendar className={iconSizes.xs} />
                     {t('inspector.createdAt')}
                   </dt>
-                  <dd className="text-sm">{formatDate(file.createdAt)}</dd>
+                  <dd className="text-sm">{formatFileTimestamp(file.createdAt)}</dd>
                 </div>
               )}
 

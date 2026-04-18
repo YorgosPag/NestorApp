@@ -60,7 +60,7 @@ export const STATUS_CLASSES = {
 // HELPERS
 // =============================================================================
 
-export function formatDateGreek(dateStr: string): string {
+export function formatCheckInDateGreek(dateStr: string): string {
   try {
     const date = new Date(dateStr + 'T00:00:00');
     return formatDate(date, {

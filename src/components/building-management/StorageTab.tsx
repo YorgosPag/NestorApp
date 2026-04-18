@@ -60,7 +60,7 @@ export function StorageTab({ building }: StorageTabProps) {
     { key: 'area', label: s.t('storageTable.columns.area'), width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
     { key: 'price', label: s.t('storageTable.columns.price'), width: 'w-24', sortValue: (u) => u.price || 0, render: (u) => <span className="font-mono text-xs">{formatCurrencyWhole(u.price)}</span> },
     { key: 'status', label: s.t('storageTable.columns.status'), width: 'w-28', sortValue: (u) => u.status, render: (u) => (
-      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClass(u.status)}`}>
+      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStorageBadgeClass(u.status)}`}>
         {s.translatedGetStatusLabel(u.status)}
       </span>
     )},
@@ -173,7 +173,7 @@ export function StorageTab({ building }: StorageTabProps) {
             getKey={(u) => u.id}
             getName={(u) => u.name || u.code}
             renderStatus={(u) => (
-              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBadgeClass(u.status)}`}>
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getStorageBadgeClass(u.status)}`}>
                 {s.translatedGetStatusLabel(u.status)}
               </span>
             )}
@@ -310,7 +310,7 @@ export function StorageTab({ building }: StorageTabProps) {
 
 // ── Status badge class mapping ──
 
-function getStatusBadgeClass(status: StorageStatus): string {
+function getStorageBadgeClass(status: StorageStatus): string {
   const statusMap: Record<string, string> = {
     available: 'available',
     occupied: 'pending',      // info/blue

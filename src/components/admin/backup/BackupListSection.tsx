@@ -50,7 +50,7 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
-function formatDate(iso: string): string {
+function formatBackupTimestamp(iso: string): string {
   return new Date(iso).toLocaleString();
 }
 
@@ -107,7 +107,7 @@ export function BackupListSection({
                 {/* Metadata grid */}
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                   <dt className={cn(colors.text.muted)}>{t('backup.list.createdAt')}</dt>
-                  <dd>{formatDate(backup.createdAt)}</dd>
+                  <dd>{formatBackupTimestamp(backup.createdAt)}</dd>
 
                   <dt className={cn(colors.text.muted)}>{t('backup.list.documents')}</dt>
                   <dd>{backup.totalDocuments.toLocaleString()}</dd>
