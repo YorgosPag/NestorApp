@@ -189,13 +189,16 @@ export function formatEuro(amount: number): string {
 }
 
 /** Server-safe date formatter — Greek locale */
-export function formatDateGreek(date: Date): string {
+export function formatEmailDateGreek(date: Date): string {
   return new Intl.DateTimeFormat('el-GR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   }).format(date);
 }
+
+// Back-compat alias — consumer migration deferred (email templates have pre-existing Greek UI strings, out of scope Boy Scout C.5.13)
+export { formatEmailDateGreek as formatDateGreek };
 
 /** Payment method labels */
 const PAYMENT_LABELS: Record<string, string> = {

@@ -47,7 +47,7 @@ export async function linkFileToEntity(input: CreateFileLinkInput): Promise<Link
   try {
     const { sourceFileId, sourceWorkspaceId, targetEntityType, targetEntityId, targetWorkspaceId, reason, createdBy, metadata } = input;
 
-    const linkId = generateFileLinkId(sourceFileId, targetEntityType, targetEntityId);
+    const linkId = buildFileLinkKey(sourceFileId, targetEntityType, targetEntityId);
 
     // Check duplicate
     const existing = await getFileLinkById(linkId);
@@ -146,6 +146,6 @@ export async function getFileWithLinks(fileId: string): Promise<FileWithLinks | 
 // ID GENERATION
 // =============================================================================
 
-function generateFileLinkId(fileId: string, targetEntityType: string, targetEntityId: string): string {
+function buildFileLinkKey(fileId: string, targetEntityType: string, targetEntityId: string): string {
   return `fl_${fileId}_${targetEntityType}_${targetEntityId}`;
 }

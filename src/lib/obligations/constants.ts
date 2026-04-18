@@ -98,9 +98,13 @@ export const DEFAULT_SECTION_TEMPLATES = {
   }
 } as const;
 
-export function getCategoryLabel(category: SectionCategory): string {
+export function getObligationCategoryLabel(category: SectionCategory): string {
   return SECTION_CATEGORIES[category]?.label || category;
 }
+
+// Back-compat alias — SSoT-distinct from @/lib/intl-domain::getCategoryLabel (building categories);
+// obligations/index.ts barrel + components/obligations/types.ts consumer stay unchanged
+export { getObligationCategoryLabel as getCategoryLabel };
 
 export function getCategoryColor(category: SectionCategory): string {
   return SECTION_CATEGORIES[category]?.color || designTokens.colors.gray['500'];
