@@ -81,6 +81,7 @@
 
 - **2026-03-10** — Initial implementation: unified section order across Storage/Parking/Units (Phase 1).
 - **2026-04-19** — Phase 2 (SSoT): extracted Card 3 to `DescriptionNotesCard` (shared, presentational). Storage refactored to consume it. Parking re-introduced Card 3 via the shared component and gained `description` field on its type/form/save path. Registry entry `description-notes-card` added to `.ssot-registry.json`. Locale keys `general.descriptionNotes` + `general.fields.description` + `general.fields.notes` added to `parking.json` (el + en).
+- **2026-04-19** — Phase 2.1 (backend persistence parity): parking API routes missed `description` on POST create, PATCH update, and the Firestore read-back mapper, while storage had it everywhere. Saved values were silently dropped and reload returned empty textareas. Fix: added `description` to `CreateParkingSchema` + `entitySpecificFields` (`/api/parking`), `UpdateParkingSchema` + `updateData` (`/api/parking/[id]`), and `mapParkingDoc` (`src/lib/firestore-mappers.ts`) — now parity with storage. Description + notes now persist end-to-end on parking spots.
 
 ## Related ADRs
 - ADR-193: Field Display Domain Separation (predecessor — caused metadata card removal)

@@ -121,6 +121,7 @@ export function mapParkingDoc(docId: string, data: Record<string, unknown>): Par
     location: data.location as string | undefined,
     area: typeof data.area === 'number' ? data.area : undefined,
     price: typeof data.price === 'number' ? data.price : undefined,
+    description: data.description as string | undefined,
     notes: data.notes as string | undefined,
     companyId: data.companyId as string | undefined,
     linkedCompanyId: (data.linkedCompanyId as string | null) ?? undefined,

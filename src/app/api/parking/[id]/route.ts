@@ -47,6 +47,7 @@ const UpdateParkingSchema = z.object({
   location: z.string().max(200).nullable().optional(),
   area: z.number().min(0).max(999_999).nullable().optional(),
   price: z.number().min(0).max(999_999_999).nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),
   buildingId: z.string().max(128).nullable().optional(),
   projectId: z.string().max(128).optional(),
@@ -62,6 +63,7 @@ interface ParkingPatchPayload {
   location?: string;
   area?: number;
   price?: number;
+  description?: string;
   notes?: string;
   /** Set to null to unlink from building, or string to link */
   buildingId?: string | null;
@@ -111,6 +113,7 @@ export const PATCH = withStandardRateLimit(
         if (body.location !== undefined) updateData.location = body.location?.trim() || null;
         if (body.area !== undefined) updateData.area = typeof body.area === 'number' ? body.area : null;
         if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : null;
+        if (body.description !== undefined) updateData.description = body.description?.trim() || null;
         if (body.notes !== undefined) updateData.notes = body.notes?.trim() || null;
         if (body.buildingId !== undefined) updateData.buildingId = body.buildingId ?? null;
         if (body.locationZone !== undefined) updateData.locationZone = body.locationZone ?? null;

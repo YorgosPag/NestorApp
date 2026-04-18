@@ -1,5 +1,4 @@
 /** 🅿️ Parking API — GET list, POST create. Admin SDK, standard rate limit. */
-
 import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
@@ -13,14 +12,13 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { mapParkingDoc } from '@/lib/firestore-mappers';
-
-const logger = createModuleLogger('ParkingRoute');
-
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { indexEntityForSearch } from '@/lib/search/search-indexer';
 import { SEARCH_ENTITY_TYPES } from '@/types/search';
+
+const logger = createModuleLogger('ParkingRoute');
 
 const CreateParkingSchema = z.object({
   number: z.string().min(1).max(50),
@@ -35,6 +33,7 @@ const CreateParkingSchema = z.object({
   location: z.string().max(200).optional(),
   area: z.number().min(0).max(999_999).optional(),
   price: z.number().min(0).max(999_999_999).optional(),
+  description: z.string().max(2000).optional(),
   notes: z.string().max(5000).optional(),
 });
 
@@ -81,6 +80,7 @@ interface ParkingCreatePayload {
   location?: string;
   area?: number;
   price?: number;
+  description?: string;
   notes?: string;
 }
 
@@ -128,6 +128,7 @@ export const POST = withStandardRateLimit(
         if (body.location?.trim()) entitySpecificFields.location = body.location.trim();
         if (typeof body.area === 'number' && body.area > 0) entitySpecificFields.area = body.area;
         if (typeof body.price === 'number' && body.price >= 0) entitySpecificFields.price = body.price;
+        if (body.description?.trim()) entitySpecificFields.description = body.description.trim();
         if (body.notes?.trim()) entitySpecificFields.notes = body.notes.trim();
         if (body.code?.trim()) entitySpecificFields.code = body.code.trim();
 
