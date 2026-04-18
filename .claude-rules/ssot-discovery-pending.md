@@ -1,9 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE**
+**STATUS: ACTIVE** (Phase C.5 verification in progress — C.4 BLOCKED, residui oversized da tackle next session)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `/tmp/ssot-full.txt` (regenerable via `npm run ssot:discover`)
+**Current baseline (2026-04-18 post-commit Phase C.1-C.3):** **118 violations / 92 files** (down from 622/378 pre-commit, down from 637/390 Phase A origin)
 
 ---
 
@@ -97,13 +98,22 @@ Totale 14× migrated nei top 5. Resto 42-5=37 file scattered da valutare post `s
 Per restante 23-5=18 file: attendere scanner fix prima di decidere scope migration.
 
 ### C.5 — Final commit + verification
-- [ ] `npm run ssot:discover` re-run post Batch 1+2+3 → nuovo snapshot `/tmp/ssot-full.txt`
-- [ ] `new Date().toISOString()` count → target 0 (o solo file exclusion-list: tests, i18n/locales, date-local.ts)
-- [ ] `Timestamp.fromDate(new Date(` count → target 0
-- [ ] Manual `.localeCompare` count → 1 residuo (DeleteOverlayVertexCommand) + eventuali altri nuovi
-- [ ] `npm run ssot:baseline` → ratchet down finale
-- [ ] Update ADR-314 changelog con numeri finali
-- [ ] STATUS: ALL_DONE (ADR-299 §4)
+- ✓ `npm run ssot:discover` re-run post commit → done
+- ✓ `npm run ssot:baseline` → **118 violations / 92 files** (down from 622/378 pre-commit, **-504/-286 delta**)
+- ✓ `Timestamp.fromDate(new Date(` count → **3** (1 test + 2 in SSoT helper `src/lib/firestore-now.ts` self — tutti allowlist)
+- ✓ Manual `.localeCompare` count → 5 top migrati, restano 37 scattered legacy (eventual cleanup via Boy Scout rule)
+- ✓ Update ADR-314 changelog con numeri finali → done
+- [ ] STATUS: ALL_DONE (ADR-299 §4) pending decisione: rimangono residui oversized blocked dal size hook (C.5.residual)
+
+### C.5.residual — File deferred dal commit 1fec2535 (SSoT/size blocked)
+Residui `new Date().toISOString()` nei top violators baseline (richiedono split file o override):
+- `src/lib/layer-sync.ts` (7x, 444 righe — SSoT block?)
+- `src/services/contact-relationships/core/RelationshipCRUDService.ts` (4x, 500 righe — al limite hook)
+- `src/subapps/accounting/services/engines/tax-engine.ts` (3x, 546 righe — OVERSIZED)
+- `src/services/file-approval.service.ts` (3x, 272 righe — SSoT block?)
+- Altri 88 file minor (~1-2x ciascuno) — migrare progressivamente Boy Scout rule
+
+Migration strategy: splittare file oversized prima di applicare codemod (evitare hook block). Per SSoT block: investigare registry rule che blocca (probabile `addDoc-prohibition` o altro). Tackle next session.
 
 **Success criteria**: anti-pattern count = 0. 96 unprotected SSoT → <20.
 
@@ -129,3 +139,4 @@ After Phase A adds 5 SSoT to registry, 91 remain. Add them incrementally (P1 →
 | 2026-04-18 | **Phase C.1 (mostly DONE).** Codemod AST-aware `scripts/migrate-toisostring.mjs` (ts-morph, idempotente) applicato incrementalmente su tutto src/. Commit batches: (a) `0387d6ab` communications status SSoT, (b) `3130dba4` Phase C.1.4b.1 ai-analysis/assignment/attendance/backup/brokerage, (c) `0096a966` Phase C.1.4b.2 src/lib/*, (d) `b3f5ad44` Phase C.1.4b.3 firestore converters + version-check + obligations. Batch 1 pending (Phase C.1.4c components+subapps+misc, 118 file) e Batch 2 pending (Phase C.1.4d services, 93 file). Exclusions: tests, i18n/locales, date-local.ts, node_modules. File altro agent esclusi. |
 | 2026-04-18 | **Phase C.2 DONE (top offenders).** Creato nuovo helper `src/lib/firestore-now.ts` (funzione `nowTimestamp()` client SDK, firebase/firestore Timestamp). Migrato top offender `services/session/EnterpriseSessionService.ts` (3×`Timestamp.fromDate(new Date())` → `nowTimestamp()`). Aggiunto `src/lib/firestore-now.ts` alla allowlist Tier 3 module `date-local` in `.ssot-registry.json`. Batch 3 pending commit (SSoT helpers C.2+C.3). Residui ~14 file da verificare post `ssot:discover` re-run. |
 | 2026-04-18 | **Phase C.3 DONE (top 5, 1 residuo).** SSoT canonica: `src/lib/intl-formatting.ts → compareByLocale()`. Migrati 4 di 5 top offenders: `lib/obligations/sorting.ts` (5x), `components/admin/role-management/components/UsersTab.tsx` (3x), `services/contact-relationships/adapters/FirestoreRelationshipAdapter.ts` (2x), `services/ai-pipeline/tools/esco-search-utils.ts` (2x). Residuo: `subapps/dxf-viewer/core/commands/overlay-commands/DeleteOverlayVertexCommand.ts` (2x) — TODO isolated. Batch 3 pending commit insieme a C.2. |
+| 2026-04-18 | **Phase C.1–C.3 COMMITTED.** Commit `e63c2138` (firestore-now helper), `ebe14dea` (progress tracker + pending checklist), `1fec2535` (chore batch: ~200 file nowISO wave + ADR-312 + ADR-315 + sharing SSoT + Firestore indexes + baselines). Baseline post-commit: **118 violations / 92 files** (da 622/378 pre-commit, delta **-504 violations / -286 files**). Deferred dal commit 1fec2535 (SSoT/size hook blocked): `layer-sync.ts` (7x, 444 righe), `RelationshipCRUDService.ts` (4x, 500 righe), `tax-engine.ts` (3x, 546 righe — oversized), `file-approval.service.ts` (3x, 272 righe), + 88 file minor residuals (1-2x). Tackle next session: (1) split file oversized >500 righe prima di codemod, (2) investigare SSoT block su layer-sync/file-approval, (3) Boy Scout cleanup restanti. |
