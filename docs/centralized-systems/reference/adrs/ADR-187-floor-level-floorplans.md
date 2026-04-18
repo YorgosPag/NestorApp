@@ -93,6 +93,13 @@ companies/{companyId}/entities/floor/{floorId}/domains/construction/categories/f
   - MODIFIED: `parkingMappings.ts` + `mappings/index.ts` — registered ParkingFloorplanTab component
   - MODIFIED: `tabs.ts` labels — added parkingFloorplan to ParkingTabLabelsConfig
   - Bidirectional: same Firestore path as building's ParkingTabContent expandable row
+- **2026-04-18**: Parking/Storage floorplan tabs now expose 4 drawing-type cards (Κάτοψη/Τομή/Ηλεκτρολογικά/Υδραυλικά), achieving SSoT parity with Property floorplan tab
+  - EXTENDED: `FLOORPLAN_PURPOSES` in `src/config/domain-constants.ts` — added `PARKING_SECTION`, `PARKING_ELECTRICAL`, `PARKING_PLUMBING`, `STORAGE_SECTION`, `STORAGE_ELECTRICAL`, `STORAGE_PLUMBING`
+  - NEW: `src/config/upload-entry-points/entries-parking.ts` — 4 floorplan entry points mirroring PROPERTY_ENTRY_POINTS
+  - NEW: `src/config/upload-entry-points/entries-storage.ts` — 4 floorplan entry points mirroring PROPERTY_ENTRY_POINTS
+  - MODIFIED: `src/config/upload-entry-points/queries.ts` — registered `parking_spot` + `storage` in `UPLOAD_ENTRY_POINTS`
+  - Root cause: registry was missing keys for `parking_spot` and `storage` → `getSortedEntryPoints()` returned `[]` → `UploadEntryPointSelector` rendered empty
+  - Zero UI changes; `ParkingFloorplanTab` and `StorageFloorplanTab` unchanged — `entryPointCategoryFilter="floorplans"` selects the 4 new cards automatically
 - **2026-02-19**: Added wheel zoom, drag pan, fullscreen modal to FloorplanGallery
   - NEW: `useZoomPan` hook (`src/hooks/useZoomPan.ts`) — centralized zoom+pan with wheel, mouse drag, pinch, touch
   - MODIFIED: `FloorplanGallery.tsx` — replaced manual zoom state with useZoomPan, added fullscreen Dialog modal

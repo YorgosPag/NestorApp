@@ -325,10 +325,22 @@ export const FLOORPLAN_PURPOSES = {
   PROJECT: 'project-floorplan',
   /** Building-level floorplan */
   BUILDING: 'building-floorplan',
-  /** Storage-level floorplan */
+  /** Storage architectural plan */
   STORAGE: 'storage-floorplan',
-  /** Parking-level floorplan */
+  /** Storage section drawing */
+  STORAGE_SECTION: 'storage-section',
+  /** Storage electrical plan */
+  STORAGE_ELECTRICAL: 'storage-electrical',
+  /** Storage plumbing plan */
+  STORAGE_PLUMBING: 'storage-plumbing',
+  /** Parking architectural plan */
   PARKING: 'parking-floorplan',
+  /** Parking section drawing */
+  PARKING_SECTION: 'parking-section',
+  /** Parking electrical plan */
+  PARKING_ELECTRICAL: 'parking-electrical',
+  /** Parking plumbing plan */
+  PARKING_PLUMBING: 'parking-plumbing',
   /** Floor architectural plan */
   FLOOR: 'floor-floorplan',
   /** Floor section drawing */
