@@ -44,6 +44,10 @@ import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { nowISO } from '@/lib/date-local';
+import {
+  formatCurrency as formatEUR,
+  formatDate as formatLocaleDate,
+} from '@/lib/intl-utils';
 
 // ============================================================================
 // PROPS
@@ -63,21 +67,17 @@ interface ChequeDetailDialogProps {
 // HELPERS
 // ============================================================================
 
-function formatDate(iso: string | null): string {
+function formatDateOrDash(iso: string | null): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString('el-GR');
+    return formatLocaleDate(iso);
   } catch {
     return iso;
   }
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(amount);
+function formatAmount(amount: number): string {
+  return formatEUR(amount, 'EUR', { minimumFractionDigits: 2 });
 }
 
 const BOUNCED_REASONS: BouncedReason[] = [
@@ -172,7 +172,7 @@ export function ChequeDetailDialog({
               <dd>{t(`paymentMethod.${cheque.chequeType}`)}</dd>
 
               <dt className={colors.text.muted}>{t('chequeRegistry.fields.amount')}</dt>
-              <dd className="font-medium">{formatCurrency(cheque.amount)}</dd>
+              <dd className="font-medium">{formatAmount(cheque.amount)}</dd>
 
               <dt className={colors.text.muted}>{t('chequeRegistry.fields.drawerName')}</dt>
               <dd>{cheque.drawerName}</dd>
@@ -181,10 +181,10 @@ export function ChequeDetailDialog({
               <dd>{cheque.bankName}{cheque.bankBranch ? ` — ${cheque.bankBranch}` : ''}</dd>
 
               <dt className={colors.text.muted}>{t('chequeRegistry.fields.issueDate')}</dt>
-              <dd>{formatDate(cheque.issueDate)}</dd>
+              <dd>{formatDateOrDash(cheque.issueDate)}</dd>
 
               <dt className={colors.text.muted}>{t('chequeRegistry.fields.maturityDate')}</dt>
-              <dd>{formatDate(cheque.maturityDate)}</dd>
+              <dd>{formatDateOrDash(cheque.maturityDate)}</dd>
 
               {cheque.postDated && (
                 <>
@@ -207,14 +207,14 @@ export function ChequeDetailDialog({
               {cheque.depositDate && (
                 <>
                   <dt className={colors.text.muted}>{t('chequeRegistry.fields.depositDate')}</dt>
-                  <dd>{formatDate(cheque.depositDate)}</dd>
+                  <dd>{formatDateOrDash(cheque.depositDate)}</dd>
                 </>
               )}
 
               {cheque.clearingDate && (
                 <>
                   <dt className={colors.text.muted}>{t('chequeRegistry.fields.clearingDate')}</dt>
-                  <dd>{formatDate(cheque.clearingDate)}</dd>
+                  <dd>{formatDateOrDash(cheque.clearingDate)}</dd>
                 </>
               )}
             </dl>
@@ -396,7 +396,7 @@ export function ChequeDetailDialog({
                   <dd>{t(`chequeRegistry.bouncedReason.${cheque.bouncedReason}`)}</dd>
 
                   <dt className={colors.text.muted}>{t('chequeRegistry.fields.bouncedDate')}</dt>
-                  <dd>{formatDate(cheque.bouncedDate)}</dd>
+                  <dd>{formatDateOrDash(cheque.bouncedDate)}</dd>
                 </dl>
 
                 {/* Τειρεσίας / Μήνυση toggles */}
@@ -430,7 +430,7 @@ export function ChequeDetailDialog({
                     >
                       <span className={cn("font-mono", colors.text.muted)}>#{entry.order}</span>
                       <span>{entry.endorserName} → {entry.endorseeName}</span>
-                      <span className={cn("ml-auto", colors.text.muted)}>{formatDate(entry.endorsementDate)}</span>
+                      <span className={cn("ml-auto", colors.text.muted)}>{formatDateOrDash(entry.endorsementDate)}</span>
                     </li>
                   ))}
                 </ol>
@@ -461,8 +461,8 @@ export function ChequeDetailDialog({
 
             {/* Audit */}
             <section className={cn("text-xs border-t pt-2 space-y-1", colors.text.muted)}>
-              <p>{t('chequeRegistry.audit.created')} {formatDate(cheque.createdAt)}</p>
-              <p>{t('chequeRegistry.audit.updated')} {formatDate(cheque.updatedAt)}</p>
+              <p>{t('chequeRegistry.audit.created')} {formatDateOrDash(cheque.createdAt)}</p>
+              <p>{t('chequeRegistry.audit.updated')} {formatDateOrDash(cheque.updatedAt)}</p>
             </section>
           </TabsContent>
         </Tabs>
