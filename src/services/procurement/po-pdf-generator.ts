@@ -148,7 +148,7 @@ function formatEuro(amount: number): string {
   }).format(amount);
 }
 
-function formatDate(isoDate: string | null, lang: 'el' | 'en'): string {
+function formatPoDate(isoDate: string | null, lang: 'el' | 'en'): string {
   if (!isoDate) return '—';
   const locale = lang === 'el' ? 'el-GR' : 'en-GB';
   return new Intl.DateTimeFormat(locale, {
@@ -204,11 +204,11 @@ function drawHeader(
   pdf.setFontSize(10);
   pdf.setTextColor(...COLORS.black);
   pdf.text(`${L.poNumber}: ${po.poNumber}`, ml, y);
-  pdf.text(`${L.date}: ${formatDate(po.dateCreated, language)}`, ml + cw, y, { align: 'right' });
+  pdf.text(`${L.date}: ${formatPoDate(po.dateCreated, language)}`, ml + cw, y, { align: 'right' });
 
   y += 5;
   if (po.dateNeeded) {
-    pdf.text(`${L.dateNeeded}: ${formatDate(po.dateNeeded, language)}`, ml, y);
+    pdf.text(`${L.dateNeeded}: ${formatPoDate(po.dateNeeded, language)}`, ml, y);
     y += 5;
   }
 

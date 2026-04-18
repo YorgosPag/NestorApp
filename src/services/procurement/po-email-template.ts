@@ -42,7 +42,7 @@ function formatEuro(amount: number): string {
   }).format(amount);
 }
 
-function formatDate(isoDate: string | null, lang: 'el' | 'en'): string {
+function formatPoDate(isoDate: string | null, lang: 'el' | 'en'): string {
   if (!isoDate) return '—';
   const locale = lang === 'el' ? 'el-GR' : 'en-GB';
   return new Intl.DateTimeFormat(locale, {
@@ -146,7 +146,7 @@ export function buildPOEmailHtml(config: POEmailTemplateConfig): string {
   const L = LABELS[language];
 
   const dateNeededRow = po.dateNeeded
-    ? `<tr><td style="padding:4px 0;color:${BRAND.grayLight};">${L.dateNeeded}</td><td style="padding:4px 0;font-weight:600;">${formatDate(po.dateNeeded, language)}</td></tr>`
+    ? `<tr><td style="padding:4px 0;color:${BRAND.grayLight};">${L.dateNeeded}</td><td style="padding:4px 0;font-weight:600;">${formatPoDate(po.dateNeeded, language)}</td></tr>`
     : '';
 
   const notesSection = po.supplierNotes
@@ -177,7 +177,7 @@ export function buildPOEmailHtml(config: POEmailTemplateConfig): string {
           </tr>
           <tr>
             <td style="padding:4px 16px 4px 0;color:${BRAND.grayLight};">${L.date}</td>
-            <td style="padding:4px 0;">${formatDate(po.dateCreated, language)}</td>
+            <td style="padding:4px 0;">${formatPoDate(po.dateCreated, language)}</td>
           </tr>
           ${dateNeededRow}
         </table>
