@@ -60,7 +60,7 @@ export function UnifiedDashboard({
   }, []);
 
   // Dynamic grid class based on columns - Mobile-First Responsive
-  const getGridClass = (cols: number) => {
+  const getResponsiveGridClass = (cols: number) => {
     switch (cols) {
       case 4: return "sm:grid-cols-2 lg:grid-cols-4"; // 🔥 MOBILE: 2 on small, 4 on large
       case 5: return "sm:grid-cols-3 lg:grid-cols-5"; // 🔥 MOBILE: 3, then 5
@@ -80,7 +80,7 @@ export function UnifiedDashboard({
   return (
     <div className={className || defaultClassName}>
       <div
-        className={`grid ${getGridClass(columns)} ${layout.dashboardGridGap} w-full min-w-0 overflow-hidden`}
+        className={`grid ${getResponsiveGridClass(columns)} ${layout.dashboardGridGap} w-full min-w-0 overflow-hidden`}
         style={getGridStyle()}
       >
         {stats.map((stat, index) => (

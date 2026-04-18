@@ -29,6 +29,8 @@
  * ============================================================================
  */
 
+import { nowISO } from '@/lib/date-local';
+
 // ============================================================================
 // 🎯 MESSAGE TYPES - FULL TYPE SAFETY
 // ============================================================================
@@ -293,7 +295,7 @@ export const DEFAULT_GREEK_MESSAGES: EnterpriseMessages = {
       info: "Νέες πληροφορίες διαθέσιμες"
     }
   },
-  lastUpdated: new Date().toISOString(),
+  lastUpdated: nowISO(),
   version: "1.0.0"
 } as const;
 

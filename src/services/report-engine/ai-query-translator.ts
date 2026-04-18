@@ -9,11 +9,11 @@
 
 import 'server-only';
 import { generateObject } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateTempId } from '@/services/enterprise-id.service';
+import { getOpenAIProvider } from '@/services/ai/openai-provider';
 import {
   getDomainDefinition,
   getDefaultColumns,
@@ -28,21 +28,6 @@ import {
 } from '@/config/report-builder/report-builder-types';
 
 const logger = createModuleLogger('AIQueryTranslator');
-
-// ============================================================================
-// OpenAI Provider (lazy singleton)
-// ============================================================================
-
-let _provider: ReturnType<typeof createOpenAI> | null = null;
-
-function getProvider(): ReturnType<typeof createOpenAI> {
-  if (!_provider) {
-    _provider = createOpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
-  return _provider;
-}
 
 // ============================================================================
 // Zod Schema for Structured Output
@@ -80,7 +65,7 @@ export async function translateNaturalLanguageQuery(
 
   try {
     const result = await generateObject({
-      model: getProvider()(model),
+      model: getOpenAIProvider()(model),
       schema: translatedQuerySchema,
       system: systemPrompt,
       prompt: query,
