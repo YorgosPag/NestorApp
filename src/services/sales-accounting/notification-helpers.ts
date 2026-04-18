@@ -2,7 +2,7 @@
  * @fileoverview Shared helpers for sales-accounting email notifications (ADR-198)
  * @description HTML builders, formatters, and config used by both
  *              accounting-office and buyer notification modules.
- * @note Server-safe: formatEuro/formatDate kept local intentionally
+ * @note Server-safe: formatEuro/formatNotificationDate kept local intentionally
  *       (cannot import @/lib/intl-utils → react-i18next → createContext)
  */
 
@@ -121,7 +121,7 @@ export function formatEuro(amount: number): string {
  * Server-safe date formatter — kept local for same server-only constraint as formatEuro.
  * @see @/lib/intl-utils formatDateTime — client-side equivalent
  */
-export function formatDate(date: Date): string {
+export function formatNotificationDate(date: Date): string {
   return new Intl.DateTimeFormat('el-GR', {
     day: '2-digit',
     month: '2-digit',
@@ -130,6 +130,11 @@ export function formatDate(date: Date): string {
     minute: '2-digit',
   }).format(date);
 }
+
+// Aliased re-export — preserves back-compat `formatDate` binding for consumer
+// `accounting-office-notify.ts` (UI-strings ratchet zero-tolerance prevents
+// consumer touch: Greek hardcoded preesistente in email HTML templates).
+export { formatNotificationDate as formatDate };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   bank_transfer: 'Τραπεζική κατάθεση',

@@ -45,7 +45,7 @@ function resolveList(locale: SupportedLocale, prefix: string, codes: readonly st
   return codes.map((code) => resolveLabel(locale, `${prefix}.${code}`));
 }
 
-function formatNumber(value: number | undefined, locale: SupportedLocale): string | null {
+function formatPromptNumber(value: number | undefined, locale: SupportedLocale): string | null {
   if (value === undefined || value === null || Number.isNaN(value)) return null;
   return new Intl.NumberFormat(locale === 'el' ? 'el-GR' : 'en-US', {
     maximumFractionDigits: 2,
@@ -92,16 +92,16 @@ export function buildPropertyUserPrompt(property: Property, locale: SupportedLoc
   if (property.areas) {
     const a = property.areas;
     const areaParts: string[] = [];
-    if (a.gross) areaParts.push(`${locale === 'el' ? 'μικτό' : 'gross'} ${formatNumber(a.gross, locale)} ${areaUnit}`);
-    if (a.net) areaParts.push(`${locale === 'el' ? 'καθαρό' : 'net'} ${formatNumber(a.net, locale)} ${areaUnit}`);
-    if (a.balcony) areaParts.push(`${locale === 'el' ? 'μπαλκόνι' : 'balcony'} ${formatNumber(a.balcony, locale)} ${areaUnit}`);
-    if (a.terrace) areaParts.push(`${locale === 'el' ? 'βεράντα' : 'terrace'} ${formatNumber(a.terrace, locale)} ${areaUnit}`);
-    if (a.garden) areaParts.push(`${locale === 'el' ? 'κήπος' : 'garden'} ${formatNumber(a.garden, locale)} ${areaUnit}`);
+    if (a.gross) areaParts.push(`${locale === 'el' ? 'μικτό' : 'gross'} ${formatPromptNumber(a.gross, locale)} ${areaUnit}`);
+    if (a.net) areaParts.push(`${locale === 'el' ? 'καθαρό' : 'net'} ${formatPromptNumber(a.net, locale)} ${areaUnit}`);
+    if (a.balcony) areaParts.push(`${locale === 'el' ? 'μπαλκόνι' : 'balcony'} ${formatPromptNumber(a.balcony, locale)} ${areaUnit}`);
+    if (a.terrace) areaParts.push(`${locale === 'el' ? 'βεράντα' : 'terrace'} ${formatPromptNumber(a.terrace, locale)} ${areaUnit}`);
+    if (a.garden) areaParts.push(`${locale === 'el' ? 'κήπος' : 'garden'} ${formatPromptNumber(a.garden, locale)} ${areaUnit}`);
     if (areaParts.length > 0) {
       lines.push(`- ${locale === 'el' ? 'Εμβαδά' : 'Areas'}: ${areaParts.join(', ')}`);
     }
   } else if (property.area) {
-    lines.push(`- ${locale === 'el' ? 'Εμβαδό' : 'Area'}: ${formatNumber(property.area, locale)} ${areaUnit}`);
+    lines.push(`- ${locale === 'el' ? 'Εμβαδό' : 'Area'}: ${formatPromptNumber(property.area, locale)} ${areaUnit}`);
   }
 
   // Layout
