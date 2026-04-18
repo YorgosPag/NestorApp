@@ -1,12 +1,20 @@
 'use client';
-import { Archive } from 'lucide-react';
+import { Archive, CheckCircle, XCircle, Clock, AlertCircle, Circle, type LucideIcon } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
-  getTypeIcon, getTypeColor, getStatusIcon, getStatusColor,
+  getTypeIcon, getTypeColor,
   getDirectionLabel, getRelativeTime
 } from './communications/utils/formatters';
+import { getStatusColor, getStatusIcon } from '@/lib/status-helpers';
+
+// Icon-name → component lookup for the `communication` status domain.
+// status-helpers SSoT returns icon names (strings); this component resolves
+// them to lucide-react components for rendering.
+const COMMUNICATION_STATUS_ICONS: Record<string, LucideIcon> = {
+  CheckCircle, XCircle, Clock, AlertCircle, Circle,
+};
 import { formatFlexibleDateTime } from '@/lib/intl-utils';
 import { useCommunicationsHistory } from './communications/hooks/useCommunicationsHistory';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -68,7 +76,7 @@ export default function CommunicationsHistory({ contactId }: CommunicationsHisto
       <ul className="space-y-4 list-none" role="feed" aria-label={t('history.aria.timeline')}>
         {communications.map((comm, index) => {
           const TypeIcon = getTypeIcon(comm.type);
-          const StatusIcon = getStatusIcon(comm.status);
+          const StatusIcon = COMMUNICATION_STATUS_ICONS[getStatusIcon('communication', comm.status)] ?? Circle;
           return (
             <li key={comm.id} className="relative">
               {index < communications.length - 1 && (
@@ -98,7 +106,7 @@ export default function CommunicationsHistory({ contactId }: CommunicationsHisto
                         <dd className={`text-xs ${colors.text.muted}`}>{getRelativeTime(comm.createdAt)}</dd>
                       </dl>
                     </div>
-                    <div className={`flex items-center gap-1 ${getStatusColor(comm.status)}`}>
+                    <div className={`flex items-center gap-1 ${getStatusColor('communication', comm.status)}`}>
                       <StatusIcon className={iconSizes.sm} />
                       <span className="text-xs capitalize">{comm.status}</span>
                     </div>
