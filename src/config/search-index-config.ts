@@ -15,7 +15,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 // Server-safe currency formatter (avoids @/lib/intl-utils → react-i18next → createContext)
-const formatCurrency = (amount: number): string =>
+const formatSearchCurrency = (amount: number): string =>
   new Intl.NumberFormat('el', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount);
 import type { PermissionId } from '@/lib/auth/types';
 import {
@@ -338,7 +338,7 @@ export function extractStats(
           break;
         case 'currency':
           // Format as currency (basic)
-          formattedValue = formatCurrency(Number(rawValue));
+          formattedValue = formatSearchCurrency(Number(rawValue));
           break;
         case 'number':
           formattedValue = Number(rawValue).toLocaleString();
