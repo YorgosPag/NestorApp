@@ -15,6 +15,7 @@
 
 ## Pending Work
 - [Ratchet Backlog — ADR-299 live checklist](pending-ratchet-work.md) — **STATUS: ALL_DONE** (2026-04-14). Scenario A+B completati. Nuovo ratchet? Set STATUS: ACTIVE e aggiungi righe.
+- [SSoT Discovery Pending — ADR-314 baseline](ssot-discovery-pending.md) — **STATUS: ACTIVE** (2026-04-18). 74 duplicates, 5 anti-patterns, 96 registry gaps. Phase A/B/C roadmap.
 - [ADR-233 Building Code — 3 Pending Items](project_adr233_building_code_pending.md) — HIGH: uniqueness validation, MEDIUM: BuildingsList.tsx, LOW: unit tests (2026-04-05)
 
 ## Code Architecture

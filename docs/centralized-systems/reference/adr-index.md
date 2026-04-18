@@ -328,6 +328,7 @@
 | **ADR-305** | Project Landowners & Engineers Tab Mutation Impact Guard — SAVE guard + engineer remove guard | ✅ IMPLEMENTED | 2026-04-14 | Data Architecture / UX Safety | [📄](../../../adrs/ADR-305-project-landowners-engineers-mutation-impact.md) |
 | **ADR-311** | Desktop Camera Capture via WebRTC (Photo + Video) — fix: `capture` attribute ignored on desktop | ✅ IMPLEMENTED | 2026-04-17 | File Management / Media Capture / SSoT Enforcement | [📄](../../../adrs/ADR-311-desktop-camera-capture-webrtc.md) |
 | **ADR-313** | Enterprise Backup & Restore System — manifest-driven, schema-evolution-tolerant | Phase 1 IN PROGRESS | 2026-04-17 | Infrastructure / Data Protection / Disaster Recovery | [📄](../../../adrs/ADR-313-enterprise-backup-restore.md) |
+| **ADR-314** | SSoT Discovery Findings & Centralization Roadmap — 74 duplicates, 5 anti-patterns, 96 registry gaps; Phase A/B/C roadmap | 📋 APPROVED — Phase A pending | 2026-04-18 | Governance / SSoT Enforcement / Technical Debt | [📄](../../../adrs/ADR-314-ssot-discovery-findings-roadmap.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
