@@ -59,6 +59,7 @@ interface LinkedGroupColumnProps {
 }
 
 function LinkedGroupColumn({ columnTitle, emptyLabel, unnamedLabel, groups }: LinkedGroupColumnProps) {
+  const { t } = useTranslation('showcase');
   return (
     <article className="space-y-4">
       <h3 className="text-sm font-semibold uppercase tracking-wide text-[hsl(var(--showcase-muted-fg))]">
@@ -68,14 +69,33 @@ function LinkedGroupColumn({ columnTitle, emptyLabel, unnamedLabel, groups }: Li
         <p className="text-sm text-[hsl(var(--showcase-muted-fg))]">{emptyLabel}</p>
       ) : (
         <ul className="space-y-4">
-          {groups.map((group) => (
-            <li key={group.spaceId} className="space-y-2">
-              <p className="text-sm font-medium text-[hsl(var(--showcase-fg))]">
-                {group.allocationCode || unnamedLabel}
-              </p>
-              <ShowcaseFloorplanGrid floorplans={group.media} density="dense" />
-            </li>
-          ))}
+          {groups.map((group) => {
+            const hasFloor = (group.floorFloorplans?.length ?? 0) > 0;
+            const floorSubtitle = group.floorLabel
+              ? `${t('linkedSpacesFloorplans.floorSubtitle')} — ${group.floorLabel}`
+              : t('linkedSpacesFloorplans.floorSubtitle');
+            return (
+              <li key={group.spaceId} className="space-y-2">
+                <p className="text-sm font-medium text-[hsl(var(--showcase-fg))]">
+                  {group.allocationCode || unnamedLabel}
+                </p>
+                {group.media.length > 0 && (
+                  <ShowcaseFloorplanGrid floorplans={group.media} density="dense" />
+                )}
+                {hasFloor && (
+                  <div className="pt-1">
+                    <p className="text-xs uppercase tracking-wide text-[hsl(var(--showcase-muted-fg))] mb-2">
+                      {floorSubtitle}
+                    </p>
+                    <ShowcaseFloorplanGrid
+                      floorplans={group.floorFloorplans!}
+                      density="dense"
+                    />
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </article>

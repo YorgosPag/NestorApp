@@ -47,6 +47,11 @@ export interface ShowcasePhotoAsset {
   displayName?: string;
 }
 
+export interface PropertyFloorFloorplansPdfData {
+  label?: string;
+  assets: ShowcasePhotoAsset[];
+}
+
 export interface PropertyShowcasePDFData {
   snapshot: PropertyShowcaseSnapshot;
   showcaseUrl: string;
@@ -55,6 +60,8 @@ export interface PropertyShowcasePDFData {
   floorplanCount?: number;
   photos?: ShowcasePhotoAsset[];
   floorplans?: ShowcasePhotoAsset[];
+  /** Κάτοψη ορόφου of the property's own floor (ADR-312 Phase 7.5). */
+  propertyFloorFloorplans?: PropertyFloorFloorplansPdfData;
   /** Κατόψεις of linked parking/storage (ADR-312 Phase 7). */
   linkedSpaceFloorplans?: LinkedSpaceFloorplansPdfData;
   generatedAt: Date;
@@ -140,6 +147,21 @@ export class PropertyShowcaseRenderer {
       drawSectionTitle: (d, yy, m, pw, cw, t) => this.drawSectionTitle(d, yy, m, pw, cw, t),
       config: FLOORPLAN_GRID_CONFIG,
     });
+
+    // ── 13a. Κάτοψη ορόφου (property's floor) — ADR-312 Phase 7.5 ──────────
+    const propertyFloor = data.propertyFloorFloorplans;
+    if (propertyFloor && propertyFloor.assets.length > 0) {
+      const floorTitle = propertyFloor.label
+        ? `${data.labels.floorplans.floorSubtitle} — ${propertyFloor.label}`
+        : data.labels.floorplans.floorSubtitle;
+      drawMediaGridPage({
+        doc, margins, pageWidth, contentWidth,
+        assets: propertyFloor.assets,
+        sectionTitle: floorTitle,
+        drawSectionTitle: (d, yy, m, pw, cw, t) => this.drawSectionTitle(d, yy, m, pw, cw, t),
+        config: FLOORPLAN_GRID_CONFIG,
+      });
+    }
 
     // ── 12–14. Systems + Finishes + Features ───────────────────────────────
     this.drawSystemsBlockPage(doc, margins, pageWidth, contentWidth, data);

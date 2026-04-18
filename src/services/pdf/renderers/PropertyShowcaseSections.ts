@@ -34,12 +34,12 @@ export interface SectionContext {
   formatDate: (iso: string) => string;
 }
 
-type SpecRow = [label: string, value: string];
+export type SpecRow = [label: string, value: string];
 
 const LABEL_COLOR: [number, number, number] = [107, 114, 128];
 const ROW_STEP = 6;
 
-function drawKeyValueGrid(
+export function drawKeyValueGrid(
   ctx: SectionContext,
   yStart: number,
   rows: SpecRow[],
@@ -206,40 +206,7 @@ export function drawEnergyExtrasSection(ctx: SectionContext, yStart: number): nu
   return y + 2;
 }
 
-export function drawLinkedSpacesSection(ctx: SectionContext, yStart: number): number {
-  const spaces = ctx.snapshot.property.linkedSpaces;
-  if (!spaces || spaces.length === 0) return yStart;
-  let y = ctx.ensureSpace(yStart, 20);
-  y = ctx.drawSectionTitle(y, ctx.labels.linkedSpaces.sectionTitle);
-  y += 2;
-  const rows: SpecRow[] = [];
-  for (const s of spaces) {
-    const typeLabel =
-      s.spaceType === 'parking' ? ctx.labels.linkedSpaces.parking : ctx.labels.linkedSpaces.storage;
-    const value = buildLinkedSpaceValue(ctx, s);
-    rows.push([typeLabel, value]);
-  }
-  y = drawKeyValueGrid(ctx, y, rows);
-  return y + 2;
-}
-
-function buildLinkedSpaceValue(
-  ctx: SectionContext,
-  s: NonNullable<PropertyShowcaseSnapshot['property']['linkedSpaces']>[number],
-): string {
-  const parts: string[] = [];
-  if (s.allocationCode) parts.push(s.allocationCode);
-  if (s.floor) parts.push(`${ctx.labels.linkedSpaces.floor}: ${s.floor}`);
-  if (s.area !== undefined) parts.push(`${s.area} ${ctx.labels.specs.areaUnit}`);
-  if (s.inclusion) {
-    const inclusionLabel =
-      ctx.labels.linkedSpaces.inclusions[
-        s.inclusion as keyof typeof ctx.labels.linkedSpaces.inclusions
-      ] ?? s.inclusion;
-    parts.push(`(${inclusionLabel})`);
-  }
-  return parts.length > 0 ? parts.join(' · ') : '-';
-}
+export { drawLinkedSpacesSection } from './PropertyShowcaseLinkedSpacesSection';
 
 export function drawOrientationSection(ctx: SectionContext, yStart: number): number {
   const p = ctx.snapshot.property;
@@ -335,6 +302,10 @@ export function drawSpecsSection(ctx: SectionContext, yStart: number): number {
 export interface LinkedSpaceFloorplansGroup {
   allocationCode?: string;
   assets: ShowcasePhotoAsset[];
+  /** Phase 7.5 — κάτοψη ορόφου of the floor this space belongs to. */
+  floorAssets?: ShowcasePhotoAsset[];
+  /** Human floor label ("1ος Όροφος"), resolved via `pickFloorLabel()`. */
+  floorLabel?: string;
 }
 
 export interface LinkedSpaceFloorplansPdfData {
@@ -445,23 +416,49 @@ function drawGroupColumn(args: DrawGroupColumnArgs): void {
     ctx.doc.text(group.allocationCode || unnamedLabel, x, y + 4);
     y += LINKED_GROUP_HEADER_HEIGHT;
 
-    const asset = group.assets[0];
-    if (asset) {
-      try {
-        ctx.doc.addImage(asset.bytes, asset.format, x, y, width, tileHeight, asset.id, 'FAST');
-      } catch (err) {
-        ctx.doc.setDrawColor(...COLORS.GRAY);
-        ctx.doc.rect(x, y, width, tileHeight, 'S');
-        console.error('[PropertyShowcaseRenderer] linked-space floorplan addImage failed', {
-          assetId: asset.id,
-          format: asset.format,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-    } else {
-      ctx.doc.setDrawColor(...COLORS.GRAY);
-      ctx.doc.rect(x, y, width, tileHeight, 'S');
+    y = drawGroupAsset(ctx, group.assets[0], x, y, width, tileHeight);
+    y += LINKED_GROUP_SPACING;
+
+    const floorAsset = group.floorAssets?.[0];
+    if (floorAsset && y + LINKED_GROUP_HEADER_HEIGHT + tileHeight <= maxY) {
+      const floorSubtitle = group.floorLabel
+        ? `${ctx.labels.linkedSpacesFloorplans.floorSubtitle} — ${group.floorLabel}`
+        : ctx.labels.linkedSpacesFloorplans.floorSubtitle;
+      ctx.doc.setFont(FONTS.UNICODE, FONT_STYLES.NORMAL);
+      ctx.doc.setFontSize(FONT_SIZES.SMALL);
+      ctx.doc.setTextColor(107, 114, 128);
+      ctx.doc.text(floorSubtitle, x, y + 4);
+      ctx.doc.setTextColor(...COLORS.BLACK);
+      y += LINKED_GROUP_HEADER_HEIGHT;
+      y = drawGroupAsset(ctx, floorAsset, x, y, width, tileHeight);
+      y += LINKED_GROUP_SPACING;
     }
-    y += tileHeight + LINKED_GROUP_SPACING;
   }
+}
+
+function drawGroupAsset(
+  ctx: SectionContext,
+  asset: ShowcasePhotoAsset | undefined,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): number {
+  if (!asset) {
+    ctx.doc.setDrawColor(...COLORS.GRAY);
+    ctx.doc.rect(x, y, width, height, 'S');
+    return y + height;
+  }
+  try {
+    ctx.doc.addImage(asset.bytes, asset.format, x, y, width, height, asset.id, 'FAST');
+  } catch (err) {
+    ctx.doc.setDrawColor(...COLORS.GRAY);
+    ctx.doc.rect(x, y, width, height, 'S');
+    console.error('[PropertyShowcaseRenderer] linked-space floorplan addImage failed', {
+      assetId: asset.id,
+      format: asset.format,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+  return y + height;
 }

@@ -27,11 +27,14 @@ import { resolveShowcaseCompanyBranding } from '@/services/company/company-brand
 import {
   buildPropertyShowcaseSnapshot,
   loadShowcaseRelations,
+  pickFloorLabel,
+  resolveFloorId,
   type PropertyShowcaseContext,
 } from '@/services/property-showcase/snapshot-builder';
 import { loadShowcasePdfLabels } from '@/services/property-showcase/labels';
 import { PropertyShowcasePDFService } from '@/services/pdf/PropertyShowcasePDFService';
 import type {
+  PropertyFloorFloorplansPdfData,
   PropertyShowcasePDFData,
   ShowcasePhotoAsset,
 } from '@/services/pdf/renderers/PropertyShowcaseRenderer';
@@ -190,58 +193,65 @@ function pickAllocationCode(doc: Record<string, unknown>): string | undefined {
 }
 
 /**
+ * SSoT — download buffers for an entity's floorplan category. Thin wrapper
+ * used by both property-floor and linked-space helpers below so every PDF
+ * consumer goes through one codepath (raster fallback included).
+ */
+async function downloadFloorplanBuffers(
+  companyId: string,
+  entityType: string,
+  entityId: string,
+  limit: number,
+): Promise<ShowcasePhotoAsset[]> {
+  const buffers = await downloadEntityMedia({
+    companyId, entityType, entityId, category: FILE_CATEGORIES.FLOORPLANS, limit,
+  });
+  return buffers.map(toShowcasePhotoAsset);
+}
+
+/**
+ * Load buffers for the property's own κάτοψη ορόφου (Phase 7.5). The floor
+ * is resolved via the SSoT `resolveFloorId()` using the preloaded
+ * `context.floors` map — same rule used by the web showcase route.
+ */
+export async function loadShowcasePropertyFloorFloorplans(
+  context: PropertyShowcaseContext,
+  companyId: string,
+  limit = 2,
+): Promise<PropertyFloorFloorplansPdfData | undefined> {
+  const floorId = resolveFloorId(context.property, context.floors);
+  if (!floorId) return undefined;
+  try {
+    const assets = await downloadFloorplanBuffers(companyId, ENTITY_TYPES.FLOOR, floorId, limit);
+    if (assets.length === 0) return undefined;
+    return { label: pickFloorLabel(context.floors.get(floorId)), assets };
+  } catch (err) {
+    logger.warn('Property floor floorplan buffer load failed; omitting page', {
+      floorId, error: err instanceof Error ? err.message : String(err),
+    });
+    return undefined;
+  }
+}
+
+/**
  * Download rasterised Κατόψεις (PNG thumbnails from DXFs) for every parking
  * spot and storage unit linked to the property. One Firestore + Storage read
  * per linked space; failures on a single space never fail the whole load.
+ *
+ * Phase 7.5 — also downloads each space's floor plan (κάτοψη ορόφου) via
+ * `resolveFloorId()` so the PDF can stack space-κάτοψη + floor-κάτοψη.
  */
 export async function loadShowcaseLinkedSpaceFloorplans(
   context: PropertyShowcaseContext,
   companyId: string,
   perSpaceLimit = 1,
 ): Promise<LinkedSpaceFloorplansPdfData> {
-  const parkingTasks = Array.from(context.parkingSpots.entries()).map(async ([spaceId, doc]) => {
-    try {
-      const buffers = await downloadEntityMedia({
-        companyId,
-        entityType: ENTITY_TYPES.PARKING_SPOT,
-        entityId: spaceId,
-        category: FILE_CATEGORIES.FLOORPLANS,
-        limit: perSpaceLimit,
-      });
-      if (buffers.length === 0) return null;
-      return {
-        allocationCode: pickAllocationCode(doc),
-        assets: buffers.map(toShowcasePhotoAsset),
-      } satisfies LinkedSpaceFloorplansGroup;
-    } catch (err) {
-      logger.warn('Parking floorplan buffer load failed; skipping space', {
-        spaceId, error: err instanceof Error ? err.message : String(err),
-      });
-      return null;
-    }
-  });
-
-  const storageTasks = Array.from(context.storages.entries()).map(async ([spaceId, doc]) => {
-    try {
-      const buffers = await downloadEntityMedia({
-        companyId,
-        entityType: ENTITY_TYPES.STORAGE,
-        entityId: spaceId,
-        category: FILE_CATEGORIES.FLOORPLANS,
-        limit: perSpaceLimit,
-      });
-      if (buffers.length === 0) return null;
-      return {
-        allocationCode: pickAllocationCode(doc),
-        assets: buffers.map(toShowcasePhotoAsset),
-      } satisfies LinkedSpaceFloorplansGroup;
-    } catch (err) {
-      logger.warn('Storage floorplan buffer load failed; skipping space', {
-        spaceId, error: err instanceof Error ? err.message : String(err),
-      });
-      return null;
-    }
-  });
+  const parkingTasks = Array.from(context.parkingSpots.entries()).map((entry) =>
+    loadLinkedSpaceGroupForPdf(context, companyId, entry, ENTITY_TYPES.PARKING_SPOT, perSpaceLimit, 'Parking floorplan buffer load failed; skipping space'),
+  );
+  const storageTasks = Array.from(context.storages.entries()).map((entry) =>
+    loadLinkedSpaceGroupForPdf(context, companyId, entry, ENTITY_TYPES.STORAGE, perSpaceLimit, 'Storage floorplan buffer load failed; skipping space'),
+  );
 
   const [parkingResolved, storageResolved] = await Promise.all([
     Promise.all(parkingTasks),
@@ -259,21 +269,61 @@ export async function loadShowcaseLinkedSpaceFloorplans(
   return { parking, storage };
 }
 
+async function loadLinkedSpaceGroupForPdf(
+  context: PropertyShowcaseContext,
+  companyId: string,
+  [spaceId, doc]: [string, Record<string, unknown>],
+  entityType: string,
+  perSpaceLimit: number,
+  failMessage: string,
+): Promise<LinkedSpaceFloorplansGroup | null> {
+  try {
+    const assets = await downloadFloorplanBuffers(companyId, entityType, spaceId, perSpaceLimit);
+
+    const floorId = resolveFloorId(doc, context.floors);
+    const floorAssets = floorId
+      ? await downloadFloorplanBuffers(companyId, ENTITY_TYPES.FLOOR, floorId, perSpaceLimit).catch(() => [])
+      : [];
+    const floorLabel = floorId ? pickFloorLabel(context.floors.get(floorId)) : undefined;
+
+    if (assets.length === 0 && floorAssets.length === 0) return null;
+    return {
+      allocationCode: pickAllocationCode(doc),
+      assets,
+      floorAssets: floorAssets.length > 0 ? floorAssets : undefined,
+      floorLabel,
+    } satisfies LinkedSpaceFloorplansGroup;
+  } catch (err) {
+    logger.warn(failMessage, {
+      spaceId, error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
+export interface BuildPdfDataExtras {
+  photos?: ShowcasePhotoAsset[];
+  floorplans?: ShowcasePhotoAsset[];
+  linkedSpaceFloorplans?: LinkedSpaceFloorplansPdfData;
+  propertyFloorFloorplans?: PropertyFloorFloorplansPdfData;
+}
+
 export function buildPdfData(
   propertyId: string,
   sources: ShowcaseSources,
   showcaseUrl: string,
   videoUrl: string | undefined,
   locale: 'el' | 'en',
-  photos: ShowcasePhotoAsset[] = [],
-  floorplans: ShowcasePhotoAsset[] = [],
-  linkedSpaceFloorplans?: LinkedSpaceFloorplansPdfData,
+  extras: BuildPdfDataExtras = {},
 ): PropertyShowcasePDFData {
   void propertyId;
   const snapshot = buildPropertyShowcaseSnapshot(sources.context, locale);
+  const { photos = [], floorplans = [], linkedSpaceFloorplans, propertyFloorFloorplans } = extras;
   const hasLinked =
     !!linkedSpaceFloorplans &&
     (linkedSpaceFloorplans.parking.length > 0 || linkedSpaceFloorplans.storage.length > 0);
+  const hasPropertyFloor =
+    !!propertyFloorFloorplans && propertyFloorFloorplans.assets.length > 0;
   return {
     snapshot,
     showcaseUrl,
@@ -282,6 +332,7 @@ export function buildPdfData(
     floorplanCount: sources.floorplanCount,
     photos,
     floorplans,
+    propertyFloorFloorplans: hasPropertyFloor ? propertyFloorFloorplans : undefined,
     linkedSpaceFloorplans: hasLinked ? linkedSpaceFloorplans : undefined,
     generatedAt: new Date(),
     labels: loadShowcasePdfLabels(locale),
@@ -380,7 +431,7 @@ export async function regeneratePdfForShare(params: {
   const showcaseUrl = `${params.baseUrl.replace(/\/$/, '')}/showcase/${token}`;
 
   const sources = await loadShowcaseSources(params.propertyId, params.companyId);
-  const [photos, floorplans, linkedSpaceFloorplans] = await Promise.all([
+  const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans] = await Promise.all([
     loadShowcasePhotos(params.propertyId, params.companyId),
     loadShowcaseFloorplans(params.propertyId, params.companyId),
     loadShowcaseLinkedSpaceFloorplans(sources.context, params.companyId).catch((err) => {
@@ -389,11 +440,17 @@ export async function regeneratePdfForShare(params: {
       });
       return { parking: [], storage: [] } satisfies LinkedSpaceFloorplansPdfData;
     }),
+    loadShowcasePropertyFloorFloorplans(sources.context, params.companyId).catch((err) => {
+      logger.warn('Regenerate: property-floor floorplan load failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return undefined;
+    }),
   ]);
 
   const pdfData = buildPdfData(
-    params.propertyId, sources, showcaseUrl, params.videoUrl, locale, photos, floorplans,
-    linkedSpaceFloorplans,
+    params.propertyId, sources, showcaseUrl, params.videoUrl, locale,
+    { photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans },
   );
 
   let pdfBytes: Uint8Array;

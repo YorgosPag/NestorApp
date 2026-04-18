@@ -46,6 +46,7 @@ import {
   loadShowcaseFloorplans,
   loadShowcaseLinkedSpaceFloorplans,
   loadShowcasePhotos,
+  loadShowcasePropertyFloorFloorplans,
   loadShowcaseSources,
   uploadPdfToStorage,
 } from '../generate/helpers';
@@ -95,7 +96,7 @@ async function handlePdf(
   });
 
   const sources = await loadShowcaseSources(propertyId, ctx.companyId);
-  const [photos, floorplans, linkedSpaceFloorplans] = await Promise.all([
+  const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans] = await Promise.all([
     loadShowcasePhotos(propertyId, ctx.companyId),
     loadShowcaseFloorplans(propertyId, ctx.companyId),
     loadShowcaseLinkedSpaceFloorplans(sources.context, ctx.companyId).catch((err) => {
@@ -103,6 +104,12 @@ async function handlePdf(
         propertyId, error: err instanceof Error ? err.message : String(err),
       });
       return { parking: [], storage: [] };
+    }),
+    loadShowcasePropertyFloorFloorplans(sources.context, ctx.companyId).catch((err) => {
+      logger.warn('Property-floor floorplan load failed; continuing without', {
+        propertyId, error: err instanceof Error ? err.message : String(err),
+      });
+      return undefined;
     }),
   ]);
 
@@ -125,8 +132,8 @@ async function handlePdf(
   const showcaseUrl = `${baseUrl}/shared`;
 
   const pdfData = buildPdfData(
-    propertyId, sources, showcaseUrl, body.videoUrl, locale, photos, floorplans,
-    linkedSpaceFloorplans,
+    propertyId, sources, showcaseUrl, body.videoUrl, locale,
+    { photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans },
   );
 
   let pdfBytes: Uint8Array;

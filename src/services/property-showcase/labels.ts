@@ -112,6 +112,12 @@ export interface ShowcaseLinkedSpacesFloorplansLabels {
   emptyParking: string;
   emptyStorage: string;
   unnamedSpace: string;
+  floorSubtitle: string;
+}
+
+export interface ShowcaseFloorplansLabels {
+  title: string;
+  floorSubtitle: string;
 }
 
 export interface ShowcasePdfChrome {
@@ -135,6 +141,7 @@ export interface PropertyShowcasePDFLabels {
   orientation: ShowcaseOrientationLabels;
   linkedSpaces: ShowcaseLinkedSpacesLabels;
   linkedSpacesFloorplans: ShowcaseLinkedSpacesFloorplansLabels;
+  floorplans: ShowcaseFloorplansLabels;
   chrome: ShowcasePdfChrome;
 }
 
@@ -164,7 +171,19 @@ export function loadShowcasePdfLabels(locale: EnumLocale = 'el'): PropertyShowca
           ? 'Δεν υπάρχουν κατόψεις για τις αποθήκες'
           : 'No storage floorplans available',
         unnamedSpace: locale === 'el' ? 'Χωρίς κωδικό' : 'Unlabeled',
+        floorSubtitle: locale === 'el' ? 'Κάτοψη ορόφου' : 'Floor plan',
       },
+    floorplans: (c as { floorplans?: ShowcaseFloorplansLabels }).floorplans
+      ? {
+          title: (c as { floorplans: ShowcaseFloorplansLabels }).floorplans.title,
+          floorSubtitle:
+            (c as { floorplans: ShowcaseFloorplansLabels }).floorplans.floorSubtitle
+            ?? (locale === 'el' ? 'Κάτοψη ορόφου' : 'Floor plan'),
+        }
+      : {
+          title: locale === 'el' ? 'Κατόψεις' : 'Floorplans',
+          floorSubtitle: locale === 'el' ? 'Κάτοψη ορόφου' : 'Floor plan',
+        },
     chrome: {
       title: (c as { pdf?: { title?: string } }).pdf?.title ?? 'Property Showcase',
       generatedOn: (c as { pdf?: { generatedOn?: string } }).pdf?.generatedOn ?? 'Generated on',

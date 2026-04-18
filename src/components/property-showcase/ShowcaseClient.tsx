@@ -138,7 +138,10 @@ export function ShowcaseClient({ token }: ShowcaseClientProps) {
         )}
         {p.energy && <ShowcaseEnergyExtrasCard energy={p.energy} t={t} />}
         {p.views && p.views.length > 0 && <ShowcaseViewsCard views={p.views} t={t} />}
-        <ShowcaseFloorplans floorplans={data.floorplans} />
+        <ShowcaseFloorplans
+          floorplans={data.floorplans}
+          propertyFloorFloorplans={data.propertyFloorFloorplans}
+        />
         {p.systems && <ShowcaseSystemsCard systems={p.systems} t={t} />}
         {p.finishes && <ShowcaseFinishesCard finishes={p.finishes} t={t} />}
         {p.features && <ShowcaseFeaturesCard features={p.features} t={t} />}

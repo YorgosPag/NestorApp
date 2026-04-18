@@ -35,6 +35,7 @@ import {
   buildBaseUrl,
   loadFilesByCategory,
   loadLinkedSpaceFloorplans,
+  loadPropertyFloorFloorplans,
   loadShareByToken,
 } from './helpers';
 
@@ -99,10 +100,11 @@ export async function GET(
     branding,
   });
 
-  const [photos, floorplans, linkedSpaceFloorplans] = await Promise.all([
+  const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans] = await Promise.all([
     loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.PHOTOS),
     loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.FLOORPLANS),
     loadLinkedSpaceFloorplans(companyId, context),
+    loadPropertyFloorFloorplans(companyId, context),
   ]);
 
   const snapshot = buildPropertyShowcaseSnapshot(context, locale);
@@ -120,6 +122,7 @@ export async function GET(
     },
     photos,
     floorplans,
+    propertyFloorFloorplans,
     linkedSpaceFloorplans: hasLinkedFloorplans ? linkedSpaceFloorplans : undefined,
     videoUrl: (share.note as string | undefined) || undefined,
     pdfUrl: share.pdfStoragePath ? `${buildBaseUrl(request)}/api/showcase/${token}/pdf` : undefined,
@@ -129,8 +132,11 @@ export async function GET(
   logger.info('Showcase resolved', {
     token, propertyId: showcasePropertyId, companyId,
     photoCount: photos.length, floorplanCount: floorplans.length,
-    linkedParkingFloorplans: linkedSpaceFloorplans.parking.reduce((sum, g) => sum + g.media.length, 0),
-    linkedStorageFloorplans: linkedSpaceFloorplans.storage.reduce((sum, g) => sum + g.media.length, 0),
+    propertyFloorFloorplans: propertyFloorFloorplans?.media.length ?? 0,
+    linkedParkingFloorplans: linkedSpaceFloorplans.parking.reduce(
+      (sum, g) => sum + g.media.length + (g.floorFloorplans?.length ?? 0), 0),
+    linkedStorageFloorplans: linkedSpaceFloorplans.storage.reduce(
+      (sum, g) => sum + g.media.length + (g.floorFloorplans?.length ?? 0), 0),
   });
 
   return NextResponse.json(response);

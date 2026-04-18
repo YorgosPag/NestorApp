@@ -62,11 +62,17 @@ export interface ShowcaseCompanyBrand {
  * Floorplan media grouped per linked parking/storage space.
  * Populated server-side by reading `files` for each linked space via
  * `listEntityMedia(entityType='parking'|'storage', entityId=<spaceId>)`.
+ *
+ * Phase 7.5 — each group also carries the κάτοψη ορόφου (floor plan of the
+ * floor the space belongs to) when the space resolves to a floor doc. The
+ * resolver is centralized in `resolveFloorId()` (SSoT).
  */
 export interface ShowcaseLinkedSpaceFloorplanGroup {
   spaceId: string;
   allocationCode?: string;
   media: ShowcaseMedia[];
+  floorFloorplans?: ShowcaseMedia[];
+  floorLabel?: string;
 }
 
 export interface ShowcaseLinkedSpaceFloorplans {
@@ -74,11 +80,21 @@ export interface ShowcaseLinkedSpaceFloorplans {
   storage: ShowcaseLinkedSpaceFloorplanGroup[];
 }
 
+/**
+ * Floor-level floorplans attached to the property card (Phase 7.5). The
+ * property resolves its floor via `resolveFloorId(property, floors)` (SSoT).
+ */
+export interface ShowcasePropertyFloorFloorplans {
+  floorLabel?: string;
+  media: ShowcaseMedia[];
+}
+
 export interface ShowcasePayload {
   property: ShowcasePropertySnapshot;
   company: ShowcaseCompanyBrand;
   photos: ShowcaseMedia[];
   floorplans: ShowcaseMedia[];
+  propertyFloorFloorplans?: ShowcasePropertyFloorFloorplans;
   linkedSpaceFloorplans?: ShowcaseLinkedSpaceFloorplans;
   videoUrl?: string;
   pdfUrl?: string;

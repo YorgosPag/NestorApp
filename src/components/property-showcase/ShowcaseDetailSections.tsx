@@ -202,6 +202,11 @@ export function ShowcaseLinkedSpacesCardView({
             <p className="text-xs text-[hsl(var(--showcase-muted-fg))]">
               {buildSpaceDetail(space, t)}
             </p>
+            {space.description && (
+              <p className="text-xs text-[hsl(var(--showcase-muted-fg))] whitespace-pre-wrap">
+                {space.description}
+              </p>
+            )}
           </li>
         ))}
       </ul>

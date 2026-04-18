@@ -91,7 +91,8 @@
     "storageColumn": "Storage floorplans",
     "emptyParking": "No parking floorplans available",
     "emptyStorage": "No storage floorplans available",
-    "unnamedSpace": "Unlabeled"
+    "unnamedSpace": "Unlabeled",
+    "floorSubtitle": "Floor plan"
   },
   "photos": {
     "title": "Photos",
@@ -102,7 +103,8 @@
     "defaultName": "Floorplan",
     "defaultAlt": "Floorplan preview",
     "downloadDxf": "Download DXF file",
-    "previewUnavailable": "Preview not available"
+    "previewUnavailable": "Preview not available",
+    "floorSubtitle": "Floor plan"
   },
   "video": {
     "title": "Video",

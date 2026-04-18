@@ -279,6 +279,7 @@ export function buildLinkedSpaces(
       type: pickString(doc?.type),
       inclusion: pickString(ls.inclusion),
       quantity: pickNumber(ls.quantity),
+      description: pickString(doc?.description),
     });
   }
   return spaces.length > 0 ? spaces : undefined;

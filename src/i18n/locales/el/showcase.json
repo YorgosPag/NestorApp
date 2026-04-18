@@ -91,7 +91,8 @@
     "storageColumn": "Κατόψεις αποθηκών",
     "emptyParking": "Δεν υπάρχουν κατόψεις για τις θέσεις στάθμευσης",
     "emptyStorage": "Δεν υπάρχουν κατόψεις για τις αποθήκες",
-    "unnamedSpace": "Χωρίς κωδικό"
+    "unnamedSpace": "Χωρίς κωδικό",
+    "floorSubtitle": "Κάτοψη ορόφου"
   },
   "photos": {
     "title": "Φωτογραφίες",
@@ -102,7 +103,8 @@
     "defaultName": "Κάτοψη",
     "defaultAlt": "Προεπισκόπηση κάτοψης",
     "downloadDxf": "Λήψη αρχείου DXF",
-    "previewUnavailable": "Δεν υπάρχει διαθέσιμη προεπισκόπηση"
+    "previewUnavailable": "Δεν υπάρχει διαθέσιμη προεπισκόπηση",
+    "floorSubtitle": "Κάτοψη ορόφου"
   },
   "video": {
     "title": "Βίντεο",
