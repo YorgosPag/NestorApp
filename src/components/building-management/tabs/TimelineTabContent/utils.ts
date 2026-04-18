@@ -4,7 +4,6 @@
 import { Rocket, Zap, Palette, Target, ClipboardList } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
-import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
 
 // 🏢 ENTERPRISE: Type for translate function (from useTranslation hook)
 type TranslateFunction = (key: string) => string;
@@ -54,20 +53,6 @@ export const milestones = milestonesData.map(m => ({
     progress: m.progress,
     type: m.type
 }));
-
-/**
- * 🏢 ENTERPRISE: Get status color classes
- * Uses Dependency Injection pattern - colors passed as parameter
- */
-export const getStatusColor = (status: string, colors: UseSemanticColorsReturn): string => {
-    switch (status) {
-        case 'completed': return `${colors.bg.success} ${colors.border.success}`;
-        case 'in-progress': return `${colors.bg.info} ${colors.border.info}`;
-        case 'pending': return `${colors.bg.muted} ${colors.border.muted}`;
-        case 'delayed': return `${colors.bg.error} ${colors.border.error}`;
-        default: return `${colors.bg.muted} ${colors.border.muted}`;
-    }
-};
 
 // 🏢 ENTERPRISE: i18n-enabled status text function
 // 🌐 i18n: All fallbacks converted to i18n keys - 2026-01-18

@@ -40,53 +40,11 @@ Baseline freezed: 637 violations / 390 files. Module breakdown: date-local 529, 
 
 ---
 
-## Phase B — Resolve SSoT conflicts (medium risk, ~3-4h)
+## Phase B — DONE 2026-04-18
 
-### B.1 — Decide canonical status helpers SSoT
-- [ ] **B.1.1** Choose: new `src/lib/status-helpers.ts` with discriminated union (domain: property/obligation/lead/building/storage) vs keeping separate per-domain modules
-- [ ] **B.1.2** Document decision in ADR-314 (new section "Canonical Status Helpers")
-- [ ] **B.1.3** Implement canonical `getStatusColor(domain, status, colors?)` + `getStatusLabel(domain, status, t?)` + `getStatusIcon(domain, status)`
+**Commit**: `feat(ssot): Phase B — resolve status helper SSoT conflicts (ADR-314 Phase B)`
 
-### B.2 — Migrate callers of `getStatusColor` (9 files)
-- [ ] `components/building-management/BuildingCard/BuildingCardUtils.ts:49`
-- [ ] `components/building-management/StorageTab/utils.ts:11`
-- [ ] `components/building-management/tabs/TimelineTabContent/utils.ts:62`
-- [ ] `components/communications/utils/formatters.ts:21`
-- [ ] `components/leads/utils/formatters.ts:4`
-- [ ] `lib/design-system.ts` (canonical already? verify)
-- [ ] `lib/obligations-utils.ts` (decide: delete or keep as domain-specific wrapper)
-- [ ] `lib/project-utils.ts` (decide: delete or keep)
-
-### B.3 — Migrate callers of `getStatusLabel` (5 files)
-- [ ] `components/building-management/BuildingCard/BuildingCardUtils.ts:18`
-- [ ] `components/building-management/StorageTab/utils.ts:34`
-- [ ] `constants/domains/property-status-core.ts:332`
-- [ ] `lib/intl-domain.ts:157`
-- [ ] `lib/obligations-utils.ts:145`
-- [ ] `lib/project-utils.ts:108`
-
-### B.4 — Resolve `formatDateForDisplay` conflict
-- [ ] Choose between `lib/intl-domain.ts:262` and `utils/validation.ts:326` (circular: each re-imports the other)
-- [ ] Delete duplicate, fix imports
-
-### B.5 — Resolve `getDaysUntilCompletion` conflict
-- [ ] Choose between `lib/intl-domain.ts:326` and `lib/project-utils.ts:21`
-- [ ] Delete duplicate
-
-### B.6 — Add resolved SSoT to registry
-- [ ] `.ssot-registry.json` entry for status helpers module
-- [ ] Ratchet baseline
-
-### B.7 — Document legitimate aliases
-- [ ] `subapps/dxf-viewer/overlays/types.ts:76-83` — `STATUS_COLORS = PROPERTY_STATUS_COLORS` (alias, add comment "legitimate re-export")
-- [ ] `config/navigation.ts:51-65` — `mainMenuItems/toolsMenuItems/settingsMenuItem` from smart-navigation-factory (verify: alias or duplicate)
-- [ ] `services/ai-pipeline/shared/greek-text-utils.ts:23-24` — `stripAccents/normalizeGreekText` (alias, OK)
-
-### B.8 — Commit + ADR update
-- [ ] `feat(ssot): Phase B — resolve status helper SSoT conflicts (ADR-314 Phase B)`
-- [ ] Update ADR-314 changelog
-
-**Success criteria**: zero SSoT conflicts, each exported symbol has exactly one declaring file.
+Created canonical `src/lib/status-helpers.ts` with discriminated-union API (8 domains). Migrated 4 real callers. Deleted 3 dead files (`lib/project-utils.ts`, `leads/utils/formatters.ts`, `projects/structure-tab/utils/status.ts`) and 6 dead export blocks (obligations-utils, intl-domain, validation, BuildingCardUtils, StorageTab/utils, communications/utils/formatters, TimelineTabContent/utils). B.4/B.5 resolved via canonical re-exports. B.7 alias comments added in 3 files. New `status-helpers` Tier 3 registry module with EXPORT-only pattern (component-internal helpers permitted). Baseline ratcheted **637→622 violations**, **390→378 files**. tsc clean. See ADR-314 Phase B changelog entry for full details.
 
 ---
 
@@ -154,3 +112,4 @@ After Phase A adds 5 SSoT to registry, 91 remain. Add them incrementally (P1 →
 |------------|--------|
 | 2026-04-18 | Initial baseline from `npm run ssot:discover`. 74 duplicates, 5 anti-patterns, 96 registry gaps. Phase A/B/C defined. STATUS: ACTIVE. |
 | 2026-04-18 | **Phase A DONE.** 4 obligation ID wrappers deleted, 5 SSoT modules (enterprise-id-convenience, intl-formatting, intl-domain, date-local, design-system) added to `.ssot-registry.json` under new Tier 8. Baseline frozen at 637 violations / 390 files. Pre-commit now blocks new re-declarations + new `new Date().toISOString()` / `Timestamp.fromDate(new Date(` patterns. Phase A items A.1–A.9 removed from checklist. |
+| 2026-04-18 | **Phase B DONE.** Created canonical `src/lib/status-helpers.ts` (discriminated union over 8 status domains: storage/obligation/lead/communication/buildingTimeline/buildingProject/project/property). Migrated 4 real callers (`OpportunityCard`, `useStorageTabState`, `TimelineTabContent.tsx`+`TimelineTabContent/index.tsx`, `LeadsList`). Deleted 3 dead files (`lib/project-utils.ts`, `leads/utils/formatters.ts`, `projects/structure-tab/utils/status.ts`) and 6 dead export blocks. Resolved B.4 (`formatDateForDisplay` re-export in validation.ts) and B.5 (`getDaysUntilCompletion` wrappers). Documented 3 legitimate aliases (B.7). New `status-helpers` Tier 3 registry module with EXPORT-only regex pattern; removed `getStatusColor` from `design-system` pattern (now under status-helpers). Baseline ratcheted **637→622 violations / 390→378 files** (-15/-12). tsc --noEmit exit 0. Phase B items B.1–B.8 removed from checklist. |

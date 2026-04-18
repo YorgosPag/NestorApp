@@ -2,8 +2,8 @@ import { z } from 'zod';
 import i18n from '@/i18n/config';
 // ✅ ENTERPRISE: Import centralized validation messages
 import { getValidationMessages } from '@/subapps/dxf-viewer/config/modal-select';
-import { formatDateForDisplay as formatDateForDisplayCentral } from '@/lib/intl-utils';
 import { PHONE_REGEX } from '@/lib/validation/phone-validation';
+import { parseDate } from './validation/date-validators';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('Validation');
@@ -260,70 +260,15 @@ export const validationRules = {
 };
 
 // 🏢 ENTERPRISE DATE UTILITY FUNCTIONS
-// ========================================
-
-/**
- * Converts date string to Date object safely
- */
-export const parseDate = (dateStr?: string): Date | null => {
-  if (!dateStr || dateStr.trim() === '') return null;
-
-  const trimmed = dateStr.trim();
-  const isoDateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
-  if (isoDateMatch) {
-    const year = Number(isoDateMatch[1]);
-    const monthIndex = Number(isoDateMatch[2]) - 1;
-    const day = Number(isoDateMatch[3]);
-    const localDate = new Date(year, monthIndex, day);
-    return isNaN(localDate.getTime()) ? null : localDate;
-  }
-
-  const date = new Date(trimmed);
-  return isNaN(date.getTime()) ? null : date;
-};
-
-/**
- * Checks if date string is valid
- */
-export const isValidDate = (dateStr?: string): boolean => {
-  return parseDate(dateStr) !== null;
-};
-
-/**
- * Compare two dates for validation (returns true if firstDate <= secondDate)
- */
-export const isDateBeforeOrEqual = (firstDate?: string, secondDate?: string): boolean => {
-  const date1 = parseDate(firstDate);
-  const date2 = parseDate(secondDate);
-  if (!date1 || !date2) return true; // Skip validation if either date is invalid/empty
-  return date1 <= date2;
-};
-
-/**
- * Check if date is in the future (including today)
- */
-export const isDateFutureOrToday = (dateStr?: string): boolean => {
-  const date = parseDate(dateStr);
-  if (!date) return true; // Skip validation if date is empty/invalid
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date >= today;
-};
-
-/**
- * Check if date is in the past or today
- */
-export const isDatePastOrToday = (dateStr?: string): boolean => {
-  const date = parseDate(dateStr);
-  if (!date) return true; // Skip validation if date is empty/invalid
-  return date <= new Date();
-};
-
-/**
- * Format date for user display (ΗΗ/ΜΜ/ΕΕΕΕ)
- */
-// ✅ CENTRALIZED: Re-export from intl-utils (replaced require() wrapper)
-export const formatDateForDisplay = formatDateForDisplayCentral;
+// Extracted to ./validation/date-validators.ts (ADR-314 Phase B — Google SRP file split)
+// formatDateForDisplay alias REMOVED — canonical SSoT: '@/lib/intl-utils'
+export {
+  parseDate,
+  isValidDate,
+  isDateBeforeOrEqual,
+  isDateFutureOrToday,
+  isDatePastOrToday,
+} from './validation/date-validators';
 
 // Common validation schemas
 export const commonSchemas = {

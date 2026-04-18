@@ -25,7 +25,7 @@ import {
   translatePropertyCondition,
   type EnumLocale,
 } from '@/services/property-enum-labels/property-enum-labels.service';
-import { resolveCompanyDisplayName } from '@/services/company/company-name-resolver';
+import { resolveShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('ShowcasePublicApi');
@@ -154,8 +154,12 @@ export async function GET(
     return jsonError(403, 'Tenant mismatch');
   }
 
-  const companySnap = await adminDb.collection(COLLECTIONS.COMPANIES).doc(companyId).get();
-  const c = companySnap.exists ? companySnap.data() ?? {} : {};
+  // Branding via hierarchy Property → Project → Contact (ADR-312 Phase 3.7).
+  const branding = await resolveShowcaseCompanyBranding({
+    adminDb,
+    propertyData: p as Record<string, unknown>,
+    companyId,
+  });
 
   const [photos, floorplans] = await Promise.all([
     loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.PHOTOS),
@@ -206,19 +210,10 @@ export async function GET(
         : undefined,
     },
     company: {
-      name: resolveCompanyDisplayName(
-        {
-          id: companyId,
-          name: (c as Record<string, unknown>).name as string | undefined,
-          companyName: (c as Record<string, unknown>).companyName as string | undefined,
-          tradeName: (c as Record<string, unknown>).tradeName as string | undefined,
-          legalName: (c as Record<string, unknown>).legalName as string | undefined,
-          displayName: (c as Record<string, unknown>).displayName as string | undefined,
-        },
-      ),
-      phone: (c as Record<string, unknown>).phone as string | undefined,
-      email: (c as Record<string, unknown>).email as string | undefined,
-      website: (c as Record<string, unknown>).website as string | undefined,
+      name: branding.name,
+      phone: branding.phone,
+      email: branding.email,
+      website: branding.website,
     },
     photos,
     floorplans,

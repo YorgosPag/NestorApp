@@ -6,7 +6,8 @@ import { OverallProgressCard } from './OverallProgressCard';
 import { TimelineMilestones } from './TimelineMilestones';
 import { CriticalPathCard } from './CriticalPathCard';
 import { CompletionForecastCard } from './CompletionForecastCard';
-import { getStatusColor, getStatusText, getTypeIcon, getMilestones } from './utils';
+import { getStatusColor } from '@/lib/status-helpers';
+import { getStatusText, getTypeIcon, getMilestones } from './utils';
 import type { Building } from '../../BuildingsPageContent';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,7 +30,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
 
   // 🏢 ENTERPRISE: Wrapper for getStatusColor with Dependency Injection
   const wrappedGetStatusColor = useCallback(
-    (status: string) => getStatusColor(status, colors),
+    (status: string) => getStatusColor('buildingTimeline', status, { colors }),
     [colors]
   );
 

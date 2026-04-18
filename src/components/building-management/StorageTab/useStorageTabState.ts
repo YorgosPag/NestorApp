@@ -20,7 +20,8 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { RealtimeService } from '@/services/realtime';
 import type { LinkableItem } from '../shared';
-import { getStatusLabel, getTypeLabel, filterUnits, calculateStats } from './utils';
+import { getStatusLabel } from '@/lib/status-helpers';
+import { getTypeLabel, filterUnits, calculateStats } from './utils';
 
 const logger = createModuleLogger('StorageTab');
 
@@ -95,7 +96,7 @@ export function useStorageTabState(building: Building) {
   // ── Label translators ──
 
   const translatedGetStatusLabel = useCallback(
-    (status: StorageStatus) => getStatusLabel(status, t),
+    (status: StorageStatus) => getStatusLabel('storage', status, { t }),
     [t],
   );
 

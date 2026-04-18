@@ -918,11 +918,27 @@
     },
     "design-system": {
       "ssotFile": "src/lib/design-system.ts",
-      "description": "Design system helpers (getStatusColor/getTypographyClass/getSpacingClass/getComponentSizeClass/getInteractiveStateClass/getGridClass/getShadowClass/getBorderRadiusClass/getResponsiveClass/getStatusBadgeClass/getFormFieldClass) must be declared ONLY in design-system.ts. Phase B will resolve getStatusColor/getStatusLabel SSoT conflicts (3 declaring files — design-system vs obligations-utils vs project-utils). Allowlist covers the canonical re-alias site in property-status-core. ADR-314 Phase A.",
+      "description": "Design system helpers (getTypographyClass/getSpacingClass/getComponentSizeClass/getInteractiveStateClass/getGridClass/getShadowClass/getBorderRadiusClass/getResponsiveClass/getStatusBadgeClass/getFormFieldClass) must be declared ONLY in design-system.ts. NOTE: getStatusColor in design-system is the SEMANTIC-TOKEN variant (success/error/info → CSS vars); the DOMAIN-STATUS variant lives in status-helpers (ADR-314 Phase B) and is enforced separately. Allowlist covers the canonical re-alias site in property-status-core.",
       "forbiddenPatterns": [
-        "(function|const)\\s+(getStatusColor|getTypographyClass|getSpacingClass|getComponentSizeClass|getInteractiveStateClass|getGridClass|getShadowClass|getBorderRadiusClass|getResponsiveClass|getStatusBadgeClass|getFormFieldClass)\\b"
+        "(function|const)\\s+(getTypographyClass|getSpacingClass|getComponentSizeClass|getInteractiveStateClass|getGridClass|getShadowClass|getBorderRadiusClass|getResponsiveClass|getStatusBadgeClass|getFormFieldClass)\\b"
       ],
       "allowlist": [
+        "src/lib/design-system.ts",
+        "src/constants/domains/property-status-core.ts"
+      ],
+      "tier": 3
+    },
+
+    "_comment_tier8_phaseB": "=== TIER 8 cont. — ADR-314 PHASE B (2026-04-18): canonical domain status SSoT ===",
+
+    "status-helpers": {
+      "ssotFile": "src/lib/status-helpers.ts",
+      "description": "Domain-aware status helpers — getStatusColor(domain, status, opts)/getStatusLabel(domain, status, opts)/getStatusIcon(domain, status) — discriminated union over StatusDomain ('storage'|'obligation'|'lead'|'communication'|'buildingTimeline'|'buildingProject'|'project'|'property'). Canonical SSoT for ALL exported domain status helpers; previously scattered across obligations-utils.ts, project-utils.ts (deleted), leads/utils/formatters.ts (deleted), projects/structure-tab/utils/status.ts (deleted), and 4 component-local copies. The semantic-token variant (success/error/info) remains in design-system.ts (orthogonal namespace, allowlisted). Property-status alias in property-status-core.ts is allowlisted (canonical alias for the property domain, ADR-287 precedent). Pattern matches EXPORTED declarations only — local component-internal const/function with same name is permitted (not a SSoT duplicate). ADR-314 Phase B.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(getStatusColor|getStatusLabel|getStatusIcon)\\b"
+      ],
+      "allowlist": [
+        "src/lib/status-helpers.ts",
         "src/lib/design-system.ts",
         "src/constants/domains/property-status-core.ts"
       ],

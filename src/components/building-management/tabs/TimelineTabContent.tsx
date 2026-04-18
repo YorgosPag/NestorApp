@@ -9,7 +9,8 @@ import { OverallProgressCard } from './TimelineTabContent/OverallProgressCard';
 import { TimelineMilestones } from './TimelineTabContent/TimelineMilestones';
 import { CriticalPathCard } from './TimelineTabContent/CriticalPathCard';
 import { CompletionForecastCard } from './TimelineTabContent/CompletionForecastCard';
-import { getStatusColor, getStatusText, getTypeIcon } from './TimelineTabContent/utils';
+import { getStatusColor } from '@/lib/status-helpers';
+import { getStatusText, getTypeIcon } from './TimelineTabContent/utils';
 import { TimelineViewToggle } from './TimelineTabContent/TimelineViewToggle';
 import type { TimelineView } from './TimelineTabContent/TimelineViewToggle';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -139,7 +140,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
 
   // Wrapper functions for component compatibility
   const wrappedGetStatusColor = useCallback(
-    (status: string) => getStatusColor(status, colors),
+    (status: string) => getStatusColor('buildingTimeline', status, { colors }),
     [colors]
   );
 

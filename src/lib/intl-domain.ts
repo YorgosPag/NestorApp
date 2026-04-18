@@ -151,31 +151,9 @@ export const getCategoryLabel = (category: string): string => {
   }
 };
 
-/**
- * Get status label according to locale
- */
-export const getStatusLabel = (status: string): string => {
-  const locale = getCurrentLocale();
-  
-  if (locale.startsWith('el')) {
-    switch (status) {
-      case 'active': return 'Ενεργό';
-      case 'construction': return 'Υπό Κατασκευή';
-      case 'planned': return 'Σχεδιασμένο';
-      case 'completed': return 'Ολοκληρωμένο';
-      default: return status;
-    }
-  }
-  
-  // English fallback
-  switch (status) {
-    case 'active': return 'Active';
-    case 'construction': return 'Under Construction';
-    case 'planned': return 'Planned';
-    case 'completed': return 'Completed';
-    default: return status;
-  }
-};
+// 🏢 ENTERPRISE: getStatusLabel REMOVED 2026-04-18 (ADR-314 Phase B)
+// Canonical SSoT: '@/lib/status-helpers' → getStatusLabel(domain, status, { t })
+// Was hardcoding Greek/English in violation of i18n SSoT (SOS N.11).
 
 /**
  * Get price per square meter unit

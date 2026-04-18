@@ -5,7 +5,7 @@ import { Calendar } from "lucide-react";
 import { cn } from '@/lib/utils';
 import type { Building } from '../BuildingsPageContent';
 import { formatDate } from '@/lib/intl-utils';
-import { getDaysUntilCompletion } from './BuildingCardUtils';
+import { getDaysUntilCompletion } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';

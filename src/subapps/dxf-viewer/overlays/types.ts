@@ -72,6 +72,8 @@ export const OVERLAY_STATUS_KEYS: Status[] = [
  * Σταθερά χρώματα status - χρησιμοποιούμε τα κεντρικά
  * ⚠️ CAUTION: This contains ALL enhanced statuses (27+)
  * For overlay toolbar iteration, use OVERLAY_STATUS_KEYS instead
+ *
+ * SSoT alias of PROPERTY_STATUS_COLORS — ADR-314 Phase B (legitimate re-export).
  */
 export const STATUS_COLORS = PROPERTY_STATUS_COLORS;
 
@@ -79,6 +81,8 @@ export const STATUS_COLORS = PROPERTY_STATUS_COLORS;
  * Display labels για UI - χρησιμοποιούμε τα κεντρικά
  * ⚠️ CAUTION: This contains ALL enhanced statuses (27+)
  * For overlay toolbar iteration, use OVERLAY_STATUS_KEYS instead
+ *
+ * SSoT alias of PROPERTY_STATUS_LABELS — ADR-314 Phase B (legitimate re-export).
  */
 export const STATUS_LABELS = PROPERTY_STATUS_LABELS;
 

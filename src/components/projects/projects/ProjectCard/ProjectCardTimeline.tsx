@@ -5,7 +5,7 @@ import { Calendar } from "lucide-react";
 import { cn } from '@/lib/utils';
 import type { Project } from '@/types/project';
 import { formatDate } from '@/lib/intl-utils';
-import { getDaysUntilCompletion } from '@/lib/project-utils';
+import { getDaysUntilCompletion } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';

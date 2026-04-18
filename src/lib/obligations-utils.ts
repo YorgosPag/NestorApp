@@ -134,53 +134,9 @@ export const convertMarkdownToHtml = (markdown: string): string => {
 };
 
 // ============================================================================
-// 🏢 ENTERPRISE: STATUS & DATE UTILITIES (2026-01-20)
+// 🏢 ENTERPRISE: formatDate/formatShortDate/formatDateTime REMOVED 2026-02-10
+// Use centralized versions from '@/lib/intl-utils' instead.
+// 🏢 ENTERPRISE: getStatusLabel/getStatusColor/getStatusIcon REMOVED 2026-04-18
+// Canonical SSoT: '@/lib/status-helpers' → getStatusLabel('obligation', ...)
+// (ADR-314 Phase B — was dead export, zero callers)
 // ============================================================================
-
-type ObligationStatus = 'draft' | 'completed' | 'approved' | 'in_progress' | 'pending';
-
-/**
- * Get human-readable label for obligation status
- */
-export const getStatusLabel = (status: ObligationStatus | string): string => {
-  const labels: Record<string, string> = {
-    draft: 'Πρόχειρο',
-    completed: 'Ολοκληρωμένο',
-    approved: 'Εγκεκριμένο',
-    in_progress: 'Σε εξέλιξη',
-    pending: 'Εκκρεμεί'
-  };
-  return labels[status] || status;
-};
-
-/**
- * Get color class for obligation status
- */
-export const getStatusColor = (status: ObligationStatus | string): string => {
-  const colors: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-800',
-    completed: 'bg-green-100 text-green-800',
-    approved: 'bg-blue-100 text-blue-800',
-    in_progress: 'bg-yellow-100 text-yellow-800',
-    pending: 'bg-orange-100 text-orange-800'
-  };
-  return colors[status] || 'bg-gray-100 text-gray-800';
-};
-
-/**
- * Get icon name for obligation status
- */
-export const getStatusIcon = (status: ObligationStatus | string): string => {
-  const icons: Record<string, string> = {
-    draft: 'FileEdit',
-    completed: 'CheckCircle',
-    approved: 'ShieldCheck',
-    in_progress: 'Clock',
-    pending: 'AlertCircle'
-  };
-  return icons[status] || 'File';
-};
-
-// 🏢 ENTERPRISE: formatDate, formatShortDate, formatDateTime REMOVED
-// Use centralized versions from '@/lib/intl-utils' instead
-// Removed 2026-02-10 — zero imports were using these functions from this module

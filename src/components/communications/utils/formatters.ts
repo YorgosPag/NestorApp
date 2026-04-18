@@ -1,4 +1,4 @@
-import { Mail, Phone, MessageSquare, Send, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Mail, Phone, MessageSquare, Send } from 'lucide-react';
 import { formatDateTime } from '@/lib/intl-utils';
 import { normalizeToDate } from '@/lib/date-local';
 
@@ -13,18 +13,6 @@ export const getTypeColor = (type: string) => ({
   whatsapp: 'text-green-600 bg-green-100',
   telegram: 'text-blue-600 bg-blue-100',
 }[type] || 'text-slate-600 bg-slate-100');
-
-export const getStatusIcon = (status: string) => ({
-  sent: CheckCircle, delivered: CheckCircle, completed: CheckCircle, failed: XCircle, pending: Clock,
-}[status] || AlertCircle);
-
-export const getStatusColor = (status: string) => ({
-  sent: 'text-green-600',
-  delivered: 'text-green-600',
-  completed: 'text-green-600',
-  failed: 'text-red-600',
-  pending: 'text-yellow-600',
-}[status] || 'text-gray-600');
 
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const getDirectionLabel = (direction: string) =>

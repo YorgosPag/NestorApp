@@ -47,6 +47,9 @@ const defaultUserPermissions: string[] = [];
  * ✅ ENTERPRISE: Main menu items via Smart Factory
  * ✅ BACKWARD COMPATIBLE: Same mainMenuItems export as before
  * ✅ CENTRALIZED: All configuration now comes from smart-navigation-factory.ts
+ *
+ * SSoT computed instance from createMainMenuItems(...) — ADR-314 Phase B
+ * (legitimate: factory in smart-navigation-factory.ts, instance lives here).
  */
 export const mainMenuItems: MenuItem[] = createMainMenuItems(environment, defaultUserPermissions);
 

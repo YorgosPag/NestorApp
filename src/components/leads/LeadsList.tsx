@@ -1,6 +1,8 @@
 
 "use client";
+import { useCallback } from 'react';
 import { User } from "lucide-react";
+import type { Opportunity } from '@/types/crm';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -11,7 +13,7 @@ import SendEmailModal from "@/components/email/SendEmailModal";
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useLeadsList } from "./hooks/useLeadsList";
 import { LeadCard } from "./LeadCard";
-import { getStatusColor } from "./utils/formatters";
+import { getStatusColor } from '@/lib/status-helpers';
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -24,6 +26,10 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const wrappedGetStatusColor = useCallback(
+    (stage?: Opportunity['stage']) => getStatusColor('lead', stage, { colors }),
+    [colors],
+  );
   const {
     leads, loading, error, fetchLeads,
     editingLead, showEditModal, emailingLead, showEmailModal,
@@ -82,7 +88,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
               onView={handleViewProfile}
               onDelete={handleDelete}
               formatDate={formatDate}
-              getStatusColor={getStatusColor}
+              getStatusColor={wrappedGetStatusColor}
             />
           ))}
         </div>

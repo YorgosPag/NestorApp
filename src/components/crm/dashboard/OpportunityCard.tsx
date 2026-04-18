@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { getStatusColor } from '@/components/leads/utils/formatters';
+import { getStatusColor } from '@/lib/status-helpers';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 
@@ -67,7 +67,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                   status="company"
                   customLabel={opportunity.stage || ''}
                   size="sm"
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(opportunity.stage, colors)}`}
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor('lead', opportunity.stage, { colors })}`}
                 />
             </div>
             

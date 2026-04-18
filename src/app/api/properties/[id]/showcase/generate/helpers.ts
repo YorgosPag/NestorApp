@@ -22,6 +22,10 @@ import {
   translateOrientations,
   translatePropertyCondition,
 } from '@/services/property-enum-labels/property-enum-labels.service';
+import {
+  resolveShowcaseCompanyBranding,
+  type ShowcaseCompanyBranding,
+} from '@/services/company/company-branding-resolver';
 import { PropertyShowcasePDFService } from '@/services/pdf/PropertyShowcasePDFService';
 import type {
   PropertyShowcasePDFData,
@@ -97,8 +101,12 @@ export async function loadShowcaseSources(propertyId: string, companyId: string)
     throw new ApiError(403, 'Access denied');
   }
 
-  const companyDoc = await adminDb.collection(COLLECTIONS.COMPANIES).doc(companyId).get();
-  const company = companyDoc.exists ? companyDoc.data() ?? {} : {};
+  // Branding via hierarchy Property → Project → Contact (ADR-312 Phase 3.7).
+  const branding = await resolveShowcaseCompanyBranding({
+    adminDb,
+    propertyData: property as Record<string, unknown>,
+    companyId,
+  });
 
   // Canonical source of photos = `files` coll (ADR-031). Subcoll
   // `properties/{id}/photos` was never populated — the previous count
@@ -128,7 +136,7 @@ export async function loadShowcaseSources(propertyId: string, companyId: string)
 
   const floorplanCount = floorplanCountFromFiles + floorplanCountLegacy;
 
-  return { property, company, photoCount, floorplanCount };
+  return { property, branding, photoCount, floorplanCount };
 }
 
 export type ShowcaseSources = Awaited<ReturnType<typeof loadShowcaseSources>>;
@@ -239,7 +247,7 @@ export function buildPdfData(
   floorplans: ShowcasePhotoAsset[] = []
 ): PropertyShowcasePDFData {
   const p = sources.property as Record<string, unknown>;
-  const c = sources.company as Record<string, unknown>;
+  const branding: ShowcaseCompanyBranding = sources.branding;
   const layout = (p.layout as { bedrooms?: number; bathrooms?: number; wc?: number }) || {};
   const areas = (p.areas as { gross?: number; net?: number; balcony?: number; terrace?: number }) || {};
   const energy = (p.energy as { class?: string }) || {};
@@ -269,10 +277,10 @@ export function buildPdfData(
       features: Array.isArray(p.features) ? (p.features as string[]) : undefined,
     },
     company: {
-      name: (c.name as string) || 'Nestor',
-      phone: (c.phone as string) || undefined,
-      email: (c.email as string) || undefined,
-      website: (c.website as string) || undefined,
+      name: branding.name,
+      phone: branding.phone,
+      email: branding.email,
+      website: branding.website,
     },
     showcaseUrl,
     videoUrl,
