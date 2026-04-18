@@ -20,6 +20,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import type { ConflictResponseBody, VersionCheckOptions, VersionCheckResult } from '@/types/versioning';
 import { VERSION_FIELD, DEFAULT_VERSION, CONFLICT_STATUS, CONFLICT_CODE } from '@/config/versioning-config';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================
 // CONFLICT ERROR
@@ -100,7 +101,7 @@ export async function withVersionCheck(options: VersionCheckOptions): Promise<Ve
       if (updatedAtRaw && typeof updatedAtRaw === 'object' && 'toDate' in updatedAtRaw) {
         updatedAtISO = (updatedAtRaw as { toDate(): Date }).toDate().toISOString();
       } else {
-        updatedAtISO = new Date().toISOString();
+        updatedAtISO = nowISO();
       }
 
       throw new ConflictError({

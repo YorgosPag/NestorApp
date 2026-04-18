@@ -2,6 +2,7 @@ import { ObligationSection, SectionCategory } from '@/types/obligations';
 import { getDefaultTemplate } from './constants';
 import { formatDate, formatRelativeTime } from '@/lib/intl-utils';
 import { generateSectionId } from '@/services/enterprise-id-convenience';
+import { nowISO } from '@/lib/date-local';
 
 /**
  * ============================================================================
@@ -44,7 +45,7 @@ export const generateFileName = (
     .replace(/^_|_$/g, '');
 
   const timeString = timestamp
-    ? `_${new Date().toISOString().slice(0, 19).replace(/[:\-]/g, '')}`
+    ? `_${nowISO().slice(0, 19).replace(/[:\-]/g, '')}`
     : '';
 
   return `${baseFileName}${timeString}.${extension}`;

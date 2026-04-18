@@ -22,7 +22,7 @@ import type {
   WorkspaceMember,
   WorkspaceMemberFirestoreDoc,
 } from '@/types/workspace';
-import { normalizeToISO } from '@/lib/date-local';
+import { normalizeToISO, nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // WORKSPACE CONVERTER
@@ -74,7 +74,7 @@ export const workspaceConverter: FirestoreDataConverter<Workspace> = {
     const data = snapshot.data(options);
 
     // ADR-218: Centralized timestamp conversion
-    const createdAt = normalizeToISO(data.createdAt) ?? new Date().toISOString();
+    const createdAt = normalizeToISO(data.createdAt) ?? nowISO();
     const updatedAt = normalizeToISO(data.updatedAt) ?? undefined;
 
     return {
@@ -139,7 +139,7 @@ export const workspaceMemberConverter: FirestoreDataConverter<WorkspaceMember> =
   ): WorkspaceMember {
     const data = snapshot.data(options);
 
-    const addedAt = normalizeToISO(data.addedAt) ?? new Date().toISOString();
+    const addedAt = normalizeToISO(data.addedAt) ?? nowISO();
     const lastActiveAt = normalizeToISO(data.lastActiveAt) ?? undefined;
 
     return {

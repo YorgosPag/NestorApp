@@ -21,7 +21,7 @@ import type {
   FileLink,
   FileLinkFirestoreDoc,
 } from '@/types/associations';
-import { normalizeToISO } from '@/lib/date-local';
+import { normalizeToISO, nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // CONTACT LINK CONVERTER
@@ -73,7 +73,7 @@ export const contactLinkConverter: FirestoreDataConverter<ContactLink> = {
   ): ContactLink {
     const data = snapshot.data(options);
 
-    const createdAt = normalizeToISO(data.createdAt) ?? new Date().toISOString();
+    const createdAt = normalizeToISO(data.createdAt) ?? nowISO();
     const updatedAt = normalizeToISO(data.updatedAt) ?? undefined;
 
     return {
@@ -144,7 +144,7 @@ export const fileLinkConverter: FirestoreDataConverter<FileLink> = {
   ): FileLink {
     const data = snapshot.data(options);
 
-    const createdAt = normalizeToISO(data.createdAt) ?? new Date().toISOString();
+    const createdAt = normalizeToISO(data.createdAt) ?? nowISO();
     const updatedAt = normalizeToISO(data.updatedAt) ?? undefined;
 
     return {
