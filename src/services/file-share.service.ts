@@ -66,6 +66,8 @@ export interface FileShareRecord {
   showcaseMode?: boolean;
   /** Storage path of the generated showcase PDF (ADR-312) */
   pdfStoragePath?: string;
+  /** Last time the showcase PDF was regenerated in-place (ADR-312 Phase 3.2) */
+  pdfRegeneratedAt?: Date | string;
 }
 
 /** Input for creating a share link */

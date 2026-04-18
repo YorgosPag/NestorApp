@@ -17,6 +17,7 @@ import {
   type PropertyMediaBuffer,
 } from '@/services/property-media/property-media.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { PropertyShowcasePDFService } from '@/services/pdf/PropertyShowcasePDFService';
 import type {
   PropertyShowcasePDFData,
   PropertyShowcasePDFLabels,
@@ -322,6 +323,101 @@ export async function deleteShowcaseShareRecord(shareId: string): Promise<void> 
   const adminDb = getAdminFirestore();
   if (!adminDb) return;
   await adminDb.collection(COLLECTIONS.FILE_SHARES).doc(shareId).delete();
+}
+
+/**
+ * Regenerate the PDF for an existing showcase share IN-PLACE (ADR-312 Phase 3.2).
+ *
+ * Preserves `token`, `shareId`, and `pdfStoragePath` so any previously
+ * distributed public URL keeps working. Only the PDF blob at Storage is
+ * overwritten and `pdfRegeneratedAt` is stamped on the FILE_SHARES doc.
+ *
+ * Ownership is enforced BEFORE any work: share must belong to `companyId`,
+ * reference `propertyId`, be `showcaseMode=true`, `isActive=true`, and have
+ * a `pdfStoragePath` (legacy shares without one cannot be regenerated here).
+ *
+ * Safety: the orphan-cleanup trigger (`onStorageFinalize`) re-fires on
+ * overwrite but `findFileOwner()` resolves the existing FILE_SHARES claim
+ * by shareId — no deletion occurs. No pre-upload write needed.
+ */
+export async function regeneratePdfForShare(params: {
+  shareId: string;
+  propertyId: string;
+  companyId: string;
+  baseUrl: string;
+  locale?: 'el' | 'en';
+  videoUrl?: string;
+}): Promise<{
+  shareId: string;
+  token: string;
+  pdfStoragePath: string;
+  regeneratedAt: Date;
+}> {
+  const adminDb = getAdminFirestore();
+  if (!adminDb) throw new ApiError(503, 'Database connection not available');
+
+  const shareRef = adminDb.collection(COLLECTIONS.FILE_SHARES).doc(params.shareId);
+  const shareSnap = await shareRef.get();
+  if (!shareSnap.exists) throw new ApiError(404, 'Share not found');
+  const share = shareSnap.data() ?? {};
+
+  if ((share as { companyId?: string }).companyId !== params.companyId) {
+    throw new ApiError(403, 'Access denied');
+  }
+  if ((share as { showcaseMode?: boolean }).showcaseMode !== true) {
+    throw new ApiError(400, 'Share is not a Property Showcase');
+  }
+  if ((share as { showcasePropertyId?: string }).showcasePropertyId !== params.propertyId) {
+    throw new ApiError(403, 'Share does not belong to this property');
+  }
+  if ((share as { isActive?: boolean }).isActive !== true) {
+    throw new ApiError(400, 'Share is deactivated');
+  }
+  const pdfStoragePath = (share as { pdfStoragePath?: string }).pdfStoragePath;
+  if (!pdfStoragePath || pdfStoragePath.trim().length === 0) {
+    throw new ApiError(400, 'Legacy share without pdfStoragePath cannot be regenerated');
+  }
+  const token = (share as { token?: string }).token;
+  if (!token || token.trim().length === 0) {
+    throw new ApiError(500, 'Share record is missing token');
+  }
+
+  const locale = params.locale ?? 'el';
+  const showcaseUrl = `${params.baseUrl.replace(/\/$/, '')}/showcase/${token}`;
+
+  const [sources, photos, floorplans] = await Promise.all([
+    loadShowcaseSources(params.propertyId, params.companyId),
+    loadShowcasePhotos(params.propertyId, params.companyId),
+    loadShowcaseFloorplans(params.propertyId, params.companyId),
+  ]);
+
+  const pdfData = buildPdfData(
+    params.propertyId, sources, showcaseUrl, params.videoUrl, locale, photos, floorplans
+  );
+
+  let pdfBytes: Uint8Array;
+  try {
+    pdfBytes = await new PropertyShowcasePDFService().generate(pdfData);
+  } catch (err) {
+    logger.error('Regenerate: PDF generation failed', {
+      shareId: params.shareId, propertyId: params.propertyId,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    throw new ApiError(500, 'PDF generation failed');
+  }
+
+  await uploadPdfToStorage(pdfBytes, pdfStoragePath);
+
+  const regeneratedAt = new Date();
+  await shareRef.update({ pdfRegeneratedAt: regeneratedAt });
+
+  logger.info('Showcase PDF regenerated in-place', {
+    shareId: params.shareId, propertyId: params.propertyId,
+    companyId: params.companyId, pdfStoragePath,
+  });
+
+  return { shareId: params.shareId, token, pdfStoragePath, regeneratedAt };
 }
 
 export async function deactivateShowcaseShares(
