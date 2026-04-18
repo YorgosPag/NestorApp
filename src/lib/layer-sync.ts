@@ -5,7 +5,6 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   collection,
   doc,
-  onSnapshot,
   updateDoc,
   setDoc,
   deleteDoc,
@@ -13,12 +12,12 @@ import {
   where,
   orderBy,
   writeBatch,
-  getDocs,
-  QuerySnapshot,
-  DocumentData
+  getDocs
 } from 'firebase/firestore';
 import type { Layer, LayerEvent } from '@/types/layers';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
+import { RealtimeService } from '@/services/realtime/RealtimeService';
 
 /**
  * Layer Sync Utility για τη διαχείριση real-time συγχρονισμού
@@ -94,18 +93,18 @@ export class LayerSyncManager {
     this.log('Starting layer sync for floor:', this.floorId);
 
     try {
-      // Listen to layer changes in Units collection (tenant-scoped)
-      const layersQuery = query(
-        collection(db, COLLECTIONS.LAYERS),
-        where('companyId', '==', this.companyId),
-        where('floorId', '==', this.floorId),
-        orderBy('zIndex', 'asc')
-      );
-
-      const unsubscribe = onSnapshot(
-        layersQuery,
-        (snapshot) => {
-          this.handleLayerSnapshot(snapshot);
+      // Listen to layer changes via SSoT RealtimeService (tenant-scoped)
+      const unsubscribe = RealtimeService.subscribeToCollection(
+        {
+          collection: COLLECTIONS.LAYERS,
+          constraints: [
+            where('companyId', '==', this.companyId),
+            where('floorId', '==', this.floorId),
+            orderBy('zIndex', 'asc')
+          ]
+        },
+        (docs) => {
+          this.handleLayerData(docs as Layer[]);
         },
         (error) => {
           this.handleError('Layer sync error', error);
@@ -116,7 +115,7 @@ export class LayerSyncManager {
       
       this.updateState({
         isConnected: true,
-        lastSyncTime: new Date().toISOString()
+        lastSyncTime: nowISO()
       });
 
     } catch (error) {
@@ -175,7 +174,7 @@ export class LayerSyncManager {
         // Mark as read-only
         isReadOnly: true,
         // Add sync metadata
-        syncedAt: new Date().toISOString(),
+        syncedAt: nowISO(),
         syncedFrom: 'properties'
       };
 
@@ -185,7 +184,7 @@ export class LayerSyncManager {
       
       this.updateState({
         pendingOperations: this.state.pendingOperations - 1,
-        lastSyncTime: new Date().toISOString(),
+        lastSyncTime: nowISO(),
         syncedLayers: this.state.syncedLayers + 1
       });
 
@@ -212,7 +211,7 @@ export class LayerSyncManager {
             ...layer,
             createdBy: undefined,
             isReadOnly: true,
-            syncedAt: new Date().toISOString(),
+            syncedAt: nowISO(),
             syncedFrom: 'properties'
           };
           
@@ -223,7 +222,7 @@ export class LayerSyncManager {
         
         this.updateState({
           pendingOperations: this.state.pendingOperations - chunk.length,
-          lastSyncTime: new Date().toISOString(),
+          lastSyncTime: nowISO(),
           syncedLayers: this.state.syncedLayers + chunk.length
         });
         
@@ -259,7 +258,7 @@ export class LayerSyncManager {
 
     const fullEvent: LayerEvent = {
       ...event,
-      timestamp: new Date().toISOString()
+      timestamp: nowISO()
     };
 
     // Αποθήκευση στο Firestore για debugging
@@ -275,15 +274,8 @@ export class LayerSyncManager {
 
   // Private methods
 
-  private handleLayerSnapshot(snapshot: QuerySnapshot<DocumentData>): void {
-    const layers: Layer[] = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Layer[];
-
+  private handleLayerData(layers: Layer[]): void {
     this.log('Received layer snapshot:', layers.length, 'layers');
-
-    // Sync all layers to properties collection
     this.syncLayersBatch(layers);
   }
 

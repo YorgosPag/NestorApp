@@ -1,14 +1,13 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-18T16:34:09Z",
-    "totalViolations": 115,
+    "generated": "2026-04-18T17:29:11Z",
+    "totalViolations": 109,
     "totalFiles": 91,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
-    "src/lib/layer-sync.ts": 7,
     "src/services/contact-relationships/core/RelationshipCRUDService.ts": 4,
     "src/services/file-approval.service.ts": 3,
     "src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts": 2,
@@ -62,6 +61,7 @@
     "src/core/configuration/enterprise-config-management.ts": 1,
     "src/contexts/SharedPropertiesProvider.tsx": 1,
     "src/config/search-index-config.ts": 1,
+    "src/components/sharing/UnifiedShareDialog.tsx": 1,
     "src/components/shared/FloorMultiSelectField.tsx": 1,
     "src/components/shared/files/FileInspector.tsx": 1,
     "src/components/shared/AutoSaveStatusIndicator.tsx": 1,
