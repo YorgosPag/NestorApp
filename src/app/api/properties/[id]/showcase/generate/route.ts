@@ -36,6 +36,7 @@ import {
   deactivateShowcaseShares,
   deleteShowcaseShareRecord,
   loadShowcaseFloorplans,
+  loadShowcaseLinkedSpaceFloorplans,
   loadShowcasePhotos,
   loadShowcaseSources,
   uploadPdfToStorage,
@@ -143,10 +144,16 @@ async function handleGenerate(
 
   logger.info('Generating property showcase', { propertyId, uid: ctx.uid, companyId: ctx.companyId });
 
-  const [sources, photos, floorplans] = await Promise.all([
-    loadShowcaseSources(propertyId, ctx.companyId),
+  const sources = await loadShowcaseSources(propertyId, ctx.companyId);
+  const [photos, floorplans, linkedSpaceFloorplans] = await Promise.all([
     loadShowcasePhotos(propertyId, ctx.companyId),
     loadShowcaseFloorplans(propertyId, ctx.companyId),
+    loadShowcaseLinkedSpaceFloorplans(sources.context, ctx.companyId).catch((err) => {
+      logger.warn('Linked-space floorplan load failed; continuing without', {
+        propertyId, error: err instanceof Error ? err.message : String(err),
+      });
+      return { parking: [], storage: [] };
+    }),
   ]);
 
   const token = generateUrlSafeToken();
@@ -163,7 +170,10 @@ async function handleGenerate(
   const baseUrl = buildBaseUrl(req);
   const showcaseUrl = `${baseUrl}/showcase/${token}`;
 
-  const pdfData = buildPdfData(propertyId, sources, showcaseUrl, body.videoUrl, locale, photos, floorplans);
+  const pdfData = buildPdfData(
+    propertyId, sources, showcaseUrl, body.videoUrl, locale, photos, floorplans,
+    linkedSpaceFloorplans,
+  );
   const pdfBytes = await generatePdfOrThrow(propertyId, pdfData);
 
   const expiresAt = new Date();

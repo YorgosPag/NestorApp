@@ -21,7 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-import { designSystem } from '@/lib/design-system';
+import { Button } from '@/components/ui/button';
 import { createModuleLogger } from '@/lib/telemetry';
 import { SharePlatformGrid } from '@/components/ui/social-sharing/SharePlatformGrid';
 import { EmailShareForm } from '@/components/ui/email-sharing/EmailShareForm';
@@ -273,20 +273,16 @@ export function UserAuthPermissionPanel({
         loading={loading}
       />
 
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => setShowChannelPicker(true)}
         disabled={loading}
-        className={designSystem.cn(
-          'w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg',
-          'border-2 border-dashed border-primary/30 hover:border-primary/60',
-          'text-sm font-medium text-primary hover:bg-primary/5',
-          'transition-all disabled:opacity-50',
-        )}
+        className="w-full h-12"
       >
-        <Users className="w-4 h-4" />
+        <Users className="w-4 h-4 mr-2" />
         {t('channelShare.sendToContact')}
-      </button>
+      </Button>
     </>
   );
 }

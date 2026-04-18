@@ -182,6 +182,7 @@
   "share": {
     "loading": "Loading...",
     "invalidLink": "Invalid link",
+    "invalidLinkDescription": "The link was not found or has been deactivated.",
     "expired": "Link has expired",
     "requestNew": "Request a new link from the sender.",
     "protected": "Protected file",
@@ -192,6 +193,7 @@
     "download": "Download file",
     "expires": "Expires:",
     "downloads": "downloads",
+    "unlimitedDownloads": "Unlimited downloads",
     "preview": "Preview",
     "previewUnavailable": "Preview is not available for this file type.",
     "fileType": {

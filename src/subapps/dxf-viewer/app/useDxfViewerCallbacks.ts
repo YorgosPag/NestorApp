@@ -18,13 +18,16 @@ import type { CircleEntity, ArcEntity, PolylineEntity, SceneModel } from '../typ
 import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import type { NotificationContextValue } from '@/types/notifications';
+import type { LevelsHookReturn } from '../systems/levels/useLevels';
+import type { UniversalSelectionHook } from '../systems/selection/SelectionSystem';
+import type { Status, OverlayKind } from '../overlays/types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
 
 /** Structural overlay entry shape used by callbacks */
 interface OverlayEntry {
-  status?: string;
-  kind: string;
+  status?: Status;
+  kind: OverlayKind;
   levelId?: string;
 }
 
@@ -41,27 +44,18 @@ export interface DxfViewerCallbacksParams {
   setAiChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setCanvasTransform: (t: { scale: number; offsetX: number; offsetY: number }) => void;
   contextSetTransformRef: React.MutableRefObject<((t: ViewTransform) => void) | null>;
-  currentScene: SceneModel | undefined;
+  currentScene: SceneModel | null;
   selectedEntityIds: string[];
   handleSceneChange: (scene: SceneModel) => void;
   handleFileImport: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
-  levelManager: {
-    currentLevelId: string | null;
-    getLevelScene: (id: string) => SceneModel | undefined;
-    setLevelScene: (id: string, scene: SceneModel) => void;
-    addLevel: (name: string, setAsCurrent: boolean) => Promise<string | null>;
-    setCurrentLevel: (id: string) => void;
-  };
+  levelManager: LevelsHookReturn;
   overlayStore: {
     overlays: Record<string, OverlayEntry>;
     setCurrentLevel: (id: string | null) => void;
   };
-  universalSelection: {
-    select: (id: string, type: string) => void;
-    clearByType: (type: string) => void;
-  };
-  setOverlayStatus: (s: string) => void;
-  setOverlayKind: (k: string) => void;
+  universalSelection: UniversalSelectionHook;
+  setOverlayStatus: (s: Status) => void;
+  setOverlayKind: (k: OverlayKind) => void;
   showLayers: boolean;
   floatingRef: React.RefObject<FloatingPanelHandle | null>;
 }

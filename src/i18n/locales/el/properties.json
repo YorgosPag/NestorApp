@@ -620,6 +620,7 @@
       "identity": "Αναγνωριστικό",
       "commercial": "Εμπορική",
       "structure": "Δομή",
+      "linkedSpaces": "Συνδεδεμένοι χώροι",
       "features": "Χαρακτηριστικά"
     },
     "dependencies": {

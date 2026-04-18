@@ -55,6 +55,33 @@ function jsonError(status: number, message: string): NextResponse {
 async function loadShareByToken(token: string): Promise<ShareDoc | null> {
   const adminDb = getAdminFirestore();
   if (!adminDb) return null;
+
+  // ADR-315 dual-read: unified `shares` first.
+  const unifiedSnap = await adminDb
+    .collection(COLLECTIONS.SHARES)
+    .where('token', '==', token)
+    .where('isActive', '==', true)
+    .limit(1)
+    .get();
+  if (!unifiedSnap.empty) {
+    const doc = unifiedSnap.docs[0];
+    const d = doc.data() as Record<string, unknown>;
+    if (d.entityType === 'property_showcase') {
+      const showcaseMeta = (d.showcaseMeta ?? {}) as { pdfStoragePath?: string };
+      return {
+        id: doc.id,
+        token: d.token as string,
+        companyId: d.companyId as string,
+        isActive: d.isActive as boolean,
+        expiresAt: d.expiresAt as string,
+        showcaseMode: true,
+        showcasePropertyId: d.entityId as string,
+        pdfStoragePath: showcaseMeta.pdfStoragePath,
+      };
+    }
+  }
+
+  // Legacy fallback — `file_shares`.
   const snap = await adminDb
     .collection(COLLECTIONS.FILE_SHARES)
     .where('token', '==', token)
@@ -100,11 +127,19 @@ function buildAttachmentFilename(property: PropertyHeader): string {
 async function incrementDownloadCount(shareId: string): Promise<void> {
   const adminDb = getAdminFirestore();
   if (!adminDb) return;
-  const ref = adminDb.collection(COLLECTIONS.FILE_SHARES).doc(shareId);
-  const snap = await ref.get();
-  if (!snap.exists) return;
-  const current = (snap.data()?.downloadCount as number | undefined) ?? 0;
-  await ref.update({ downloadCount: current + 1 });
+  // ADR-315 dual-write: probe unified `shares` first, then legacy `file_shares`.
+  const unifiedRef = adminDb.collection(COLLECTIONS.SHARES).doc(shareId);
+  const unifiedSnap = await unifiedRef.get();
+  if (unifiedSnap.exists) {
+    const current = (unifiedSnap.data()?.accessCount as number | undefined) ?? 0;
+    await unifiedRef.update({ accessCount: current + 1, lastAccessedAt: new Date() });
+    return;
+  }
+  const legacyRef = adminDb.collection(COLLECTIONS.FILE_SHARES).doc(shareId);
+  const legacySnap = await legacyRef.get();
+  if (!legacySnap.exists) return;
+  const current = (legacySnap.data()?.downloadCount as number | undefined) ?? 0;
+  await legacyRef.update({ downloadCount: current + 1 });
 }
 
 async function streamPdfFromStorage(

@@ -2419,6 +2419,50 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🔗 SHARES - UNIFIED POLYMORPHIC SHARES (ADR-315 Phase M1+)
+    // =========================================================================
+    // 📅 Added: 2026-04-18 (ADR-315 - Unified Sharing)
+    // 🏢 ENTERPRISE: Polymorphic shares for file / contact / property_showcase
+    // 🔒 READ: Public (token validation on /shared/[token] — any entityType)
+    // ✏️ WRITE: Tenant-scoped (companyId + entityType + createdBy required)
+    match /shares/{shareId} {
+      // 📖 READ: Public — token is 190-bit entropy, acts as capability
+      allow read: if true;
+      // ✍️ CREATE: Authenticated users with tenant enforcement
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasAll(['companyId', 'createdBy', 'entityType', 'entityId', 'token'])
+                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId());
+      // 📝 UPDATE: Authenticated tenant member OR public access counter increment
+      // SECURITY: Public can ONLY bump accessCount + lastAccessedAt (no revoke)
+      allow update: if (isAuthenticated()
+                        && (isSuperAdminOnly()
+                            || belongsToCompany(resource.data.companyId)))
+                    || (
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['accessCount', 'lastAccessedAt'])
+                       );
+      // 🗑️ DELETE: Creator only — prefer revoke (isActive=false) over delete
+      allow delete: if isAuthenticated()
+                    && resource.data.createdBy == request.auth.uid;
+    }
+
+    // =========================================================================
+    // 📮 SHARE_DISPATCHES — Unified Share Dispatch Audit Log (ADR-315)
+    // =========================================================================
+    // 📅 Added: 2026-04-18
+    // 🏢 ENTERPRISE: Append-only audit of one-shot sends (email/telegram/etc.)
+    match /share_dispatches/{dispatchId} {
+      allow read: if isAuthenticated()
+                  && (isSuperAdminOnly()
+                      || belongsToCompany(resource.data.companyId));
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasAll(['companyId', 'createdBy', 'channel'])
+                    && (isSuperAdminOnly() || request.resource.data.companyId == getUserCompanyId());
+      allow update: if false; // Immutable audit
+      allow delete: if isSuperAdminOnly();
+    }
+
+    // =========================================================================
     // 📸 PHOTO_SHARES — CRM Contact Channel Share History
     // =========================================================================
     // 📅 Added: 2026-04-09 — Photo Share History Feature

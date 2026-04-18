@@ -93,6 +93,45 @@ export function formatAddressLine(address: ProjectAddress): string {
 }
 
 /**
+ * Format FULL address for public display (Greek standard)
+ * Pattern: "Οδός Αριθμός, ΤΚ Πόλη, Περιφέρεια, Χώρα"
+ *
+ * Used by customer-facing surfaces (property showcase, share pages, PDFs)
+ * where prospects need to locate the project precisely — includes postalCode,
+ * region and country (when non-default).
+ *
+ * @param address - Project address to format
+ * @returns Fully qualified address string
+ */
+export function formatFullAddressLine(address: ProjectAddress): string {
+  const parts: string[] = [];
+
+  // Street + Number
+  const streetParts = [address.street, address.number].filter(Boolean);
+  if (streetParts.length > 0) {
+    parts.push(streetParts.join(' '));
+  }
+
+  // Postal Code + City (Greek convention: ΤΚ before city)
+  const localityParts = [address.postalCode, address.city].filter(Boolean);
+  if (localityParts.length > 0) {
+    parts.push(localityParts.join(' '));
+  }
+
+  // Region (only when present — most urban addresses omit it)
+  if (address.region) {
+    parts.push(address.region);
+  }
+
+  // Country (skip default — redundant for local prospects)
+  if (address.country && address.country !== GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY) {
+    parts.push(address.country);
+  }
+
+  return parts.join(', ');
+}
+
+/**
  * Format block side for display (Greek)
  *
  * @param side - Block side direction

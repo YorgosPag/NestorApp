@@ -67,6 +67,18 @@ export interface PropertyMediaBuffer extends PropertyMediaItem {
   fromThumbnail: boolean;
 }
 
+export interface ListEntityMediaOptions {
+  companyId: string;
+  entityType: string;
+  entityId: string;
+  category: FileCategory;
+  limit?: number;
+}
+
+export interface DownloadEntityMediaOptions extends ListEntityMediaOptions {
+  mimeTypes?: ReadonlyArray<'image/jpeg' | 'image/png'>;
+}
+
 export interface ListPropertyMediaOptions {
   companyId: string;
   propertyId: string;
@@ -118,20 +130,18 @@ function toMediaItem(id: string, data: Record<string, unknown>): PropertyMediaIt
 }
 
 /**
- * List active media metadata for a property/category. No buffers loaded.
- *
- * Returns only `lifecycleState === 'active'` and `isDeleted !== true`
- * records, sorted by `createdAt desc` client-side (so the query stays on
- * existing `files(companyId, entityType, entityId, category)` composite
- * index and doesn't require a new one).
+ * Generic entity reader — query `files` by (companyId, entityType, entityId,
+ * category). SSoT for any surface that needs to list media owned by a
+ * non-property entity (parking spots, storage units, etc.). The
+ * property-specific wrapper `listPropertyMedia` delegates here.
  */
-export async function listPropertyMedia(
-  opts: ListPropertyMediaOptions
+export async function listEntityMedia(
+  opts: ListEntityMediaOptions,
 ): Promise<PropertyMediaItem[]> {
   const adminDb = getAdminFirestore();
   if (!adminDb) {
     logger.warn('Admin Firestore not available; returning empty media list', {
-      propertyId: opts.propertyId, category: opts.category,
+      entityType: opts.entityType, entityId: opts.entityId, category: opts.category,
     });
     return [];
   }
@@ -141,8 +151,8 @@ export async function listPropertyMedia(
   const snap = await adminDb
     .collection(COLLECTIONS.FILES)
     .where('companyId', '==', opts.companyId)
-    .where('entityType', '==', ENTITY_TYPES.PROPERTY)
-    .where('entityId', '==', opts.propertyId)
+    .where('entityType', '==', opts.entityType)
+    .where('entityId', '==', opts.entityId)
     .where('category', '==', opts.category)
     .limit(limit * 2)
     .get();
@@ -162,11 +172,104 @@ export async function listPropertyMedia(
 }
 
 /**
+ * List active media metadata for a property/category. No buffers loaded.
+ *
+ * Returns only `lifecycleState === 'active'` and `isDeleted !== true`
+ * records, sorted by `createdAt desc` client-side (so the query stays on
+ * existing `files(companyId, entityType, entityId, category)` composite
+ * index and doesn't require a new one).
+ */
+export async function listPropertyMedia(
+  opts: ListPropertyMediaOptions
+): Promise<PropertyMediaItem[]> {
+  return listEntityMedia({
+    companyId: opts.companyId,
+    entityType: ENTITY_TYPES.PROPERTY,
+    entityId: opts.propertyId,
+    category: opts.category,
+    limit: opts.limit,
+  });
+}
+
+/**
  * Count active media for a property/category (cheap metadata, no buffers).
  */
 export async function countPropertyMedia(opts: ListPropertyMediaOptions): Promise<number> {
   const items = await listPropertyMedia({ ...opts, limit: opts.limit ?? 100 });
   return items.length;
+}
+
+/**
+ * Generic entity buffer downloader. See `listEntityMedia` for the metadata
+ * contract; this variant also streams each candidate into `Uint8Array` for
+ * jsPDF embedding (JPEG/PNG native + DXF thumbnail PNG fallback).
+ */
+export async function downloadEntityMedia(
+  opts: DownloadEntityMediaOptions,
+): Promise<PropertyMediaBuffer[]> {
+  const allowedMimes = opts.mimeTypes ?? (['image/jpeg', 'image/png'] as const);
+  const limit = opts.limit ?? DEFAULT_DOWNLOAD_LIMIT;
+
+  const metas = await listEntityMedia({ ...opts, limit: limit * 2 });
+  const candidates = metas.filter((m) => {
+    if (m.contentType && (allowedMimes as ReadonlyArray<string>).includes(m.contentType)) {
+      return true;
+    }
+    if (m.ext === 'dxf' && m.thumbnailStoragePath) return true;
+    return false;
+  }).slice(0, limit);
+
+  if (candidates.length === 0) return [];
+
+  const bucket = getAdminBucket();
+  const buffers: PropertyMediaBuffer[] = [];
+
+  await Promise.all(
+    candidates.map(async (meta) => {
+      try {
+        const useThumbnail = meta.ext === 'dxf' && !!meta.thumbnailStoragePath;
+        const path = useThumbnail ? (meta.thumbnailStoragePath as string) : meta.storagePath;
+        const [buffer] = await bucket.file(path).download();
+        const format: 'JPEG' | 'PNG' = useThumbnail
+          ? 'PNG'
+          : JS_PDF_FORMAT_BY_MIME[(meta.contentType ?? '').toLowerCase()];
+        if (!format) return;
+        const bytes = new Uint8Array(buffer.byteLength);
+        bytes.set(buffer);
+        buffers.push({
+          ...meta,
+          bytes,
+          jsPdfFormat: format,
+          fromThumbnail: useThumbnail,
+        });
+      } catch (err) {
+        logger.warn('Failed to download entity media buffer; skipping', {
+          entityType: opts.entityType,
+          entityId: opts.entityId,
+          mediaId: meta.id,
+          storagePath: meta.storagePath,
+          thumbnailStoragePath: meta.thumbnailStoragePath,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    })
+  );
+
+  buffers.sort((a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0));
+
+  const totalBytes = buffers.reduce((sum, b) => sum + b.bytes.byteLength, 0);
+  logger.info('Entity media buffers loaded', {
+    entityType: opts.entityType,
+    entityId: opts.entityId,
+    category: opts.category,
+    requested: candidates.length,
+    loaded: buffers.length,
+    totalBytes,
+    formats: buffers.map((b) => b.jsPdfFormat),
+    fromThumbnailCount: buffers.filter((b) => b.fromThumbnail).length,
+  });
+
+  return buffers;
 }
 
 /**
@@ -256,4 +359,6 @@ export const PropertyMediaService = {
   listPropertyMedia,
   countPropertyMedia,
   downloadPropertyMedia,
+  listEntityMedia,
+  downloadEntityMedia,
 } as const;

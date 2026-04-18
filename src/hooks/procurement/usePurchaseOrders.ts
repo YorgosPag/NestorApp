@@ -12,7 +12,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useAsyncData } from '@/hooks/useAsyncData';
-import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
+import type { PurchaseOrder, PurchaseOrderStatus, POFilters } from '@/types/procurement';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
 import { createStaleCache } from '@/lib/stale-cache';
 import { nowISO } from '@/lib/date-local';
@@ -24,12 +24,7 @@ const purchaseOrdersCache = createStaleCache<PurchaseOrder[]>('procurement');
 // FILTER STATE
 // ============================================================================
 
-export interface POFilters {
-  search: string;
-  status: PurchaseOrderStatus | null;
-  projectId: string | null;
-  supplierId: string | null;
-}
+export type { POFilters };
 
 const DEFAULT_FILTERS: POFilters = {
   search: '',

@@ -16,12 +16,82 @@
     "netArea": "Net area",
     "balcony": "Balcony",
     "terrace": "Terrace",
+    "garden": "Garden",
+    "millesimalShares": "Ownership shares (per mille)",
     "bedrooms": "Bedrooms",
     "bathrooms": "Bathrooms",
     "wc": "WC",
+    "totalRooms": "Total rooms",
+    "balconies": "Number of balconies",
     "orientation": "Orientation",
     "energyClass": "Energy class",
-    "condition": "Condition"
+    "condition": "Condition",
+    "renovationYear": "Renovation year",
+    "deliveryDate": "Delivery date"
+  },
+  "project": {
+    "sectionTitle": "Project",
+    "name": "Project name",
+    "address": "Project address"
+  },
+  "commercial": {
+    "sectionTitle": "Commercial",
+    "availability": "Availability",
+    "operational": "Operational status",
+    "price": "Asking price"
+  },
+  "systems": {
+    "sectionTitle": "Systems",
+    "heating": "Heating",
+    "heatingFuel": "Heating fuel",
+    "cooling": "Cooling",
+    "waterHeating": "Domestic hot water"
+  },
+  "finishes": {
+    "sectionTitle": "Finishes",
+    "flooring": "Flooring",
+    "frames": "Frames",
+    "glazing": "Glazing"
+  },
+  "features": {
+    "sectionTitle": "Features",
+    "interior": "Interior features",
+    "security": "Security",
+    "amenities": "Common amenities"
+  },
+  "energy": {
+    "sectionTitle": "Energy",
+    "energyClass": "Energy class",
+    "certificateId": "Certificate #",
+    "certificateDate": "Certificate date",
+    "validUntil": "Valid until"
+  },
+  "views": {
+    "sectionTitle": "Views"
+  },
+  "orientation": {
+    "sectionTitle": "Orientation"
+  },
+  "linkedSpaces": {
+    "sectionTitle": "Linked spaces",
+    "parking": "Parking spot",
+    "storage": "Storage unit",
+    "floor": "Floor",
+    "inclusion": "Inclusion",
+    "quantity": "Quantity",
+    "inclusions": {
+      "included": "Included",
+      "optional": "Optional",
+      "rented": "Rented"
+    }
+  },
+  "linkedSpacesFloorplans": {
+    "sectionTitle": "Linked spaces floorplans",
+    "parkingColumn": "Parking floorplans",
+    "storageColumn": "Storage floorplans",
+    "emptyParking": "No parking floorplans available",
+    "emptyStorage": "No storage floorplans available",
+    "unnamedSpace": "Unlabeled"
   },
   "photos": {
     "title": "Photos",
@@ -46,6 +116,13 @@
     "expiredDescription": "This showcase is no longer available. Please contact the sender.",
     "notFoundTitle": "Link not found",
     "notFoundDescription": "The showcase is unavailable or has been revoked.",
-    "errorTitle": "Failed to load"
+    "errorTitle": "Failed to load",
+    "errorDescription": "Something went wrong. Please try again later."
+  },
+  "pdf": {
+    "title": "Property Showcase",
+    "generatedOn": "Generated on",
+    "descriptionSection": "Description",
+    "footerNote": "Property showcase"
   }
 }

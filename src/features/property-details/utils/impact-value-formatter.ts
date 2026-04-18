@@ -165,6 +165,50 @@ function formatCommercialStatus(t: TFunction, raw: string): string {
   return t(`properties-enums:commercialStatus.${raw}`, { defaultValue: raw });
 }
 
+function formatLinkedSpaces(t: TFunction, raw: string): string {
+  const value = parse(raw);
+  if (!Array.isArray(value)) {
+    return raw;
+  }
+  const entries = value.filter(isRecord);
+  if (entries.length === 0) {
+    return t('properties:impactGuard.emptyValue');
+  }
+
+  const segments = entries.map((entry) => {
+    const spaceType = readString(entry, 'spaceType');
+    const inclusion = readString(entry, 'inclusion');
+    const allocationCode = readString(entry, 'allocationCode');
+    const quantity = readNumber(entry, 'quantity');
+
+    const parts: string[] = [];
+
+    if (spaceType) {
+      parts.push(
+        t(`common-shared:search.entityTypes.${spaceType}`, { defaultValue: spaceType }),
+      );
+    }
+
+    if (quantity !== null && quantity > 1) {
+      parts.push(`× ${quantity}`);
+    }
+
+    if (allocationCode) {
+      parts.push(allocationCode);
+    }
+
+    if (inclusion) {
+      parts.push(
+        t(`properties:linkedSpaces.inclusion.${inclusion}`, { defaultValue: inclusion }),
+      );
+    }
+
+    return parts.length > 0 ? parts.join(' · ') : JSON.stringify(entry);
+  });
+
+  return segments.join(LIST_SEPARATOR);
+}
+
 export function formatImpactValue(
   t: TFunction,
   field: string,
@@ -196,6 +240,8 @@ export function formatImpactValue(
     case 'commercial':
     case 'commercialStatus':
       return formatCommercialStatus(t, raw);
+    case 'linkedSpaces':
+      return formatLinkedSpaces(t, raw);
     default:
       return raw;
   }
@@ -213,4 +259,5 @@ export const __testing__ = {
   formatFinishes,
   formatFeatureArray,
   formatCommercialStatus,
+  formatLinkedSpaces,
 };

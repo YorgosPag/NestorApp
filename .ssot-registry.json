@@ -296,6 +296,17 @@
         "functions/src/shared/decode-processed-json.ts"
       ]
     },
+    "dxf-thumbnail-selfheal": {
+      "ssotFile": "src/services/floorplans/dxf-thumbnail-selfheal.ts",
+      "description": "Server-side self-heal orchestrator for the DXF→thumbnail pipeline (ADR-312 Phase 7.3). ensureDxfThumbnail(fileId) is the single entry point for any request-path code that needs to nudge a DXF through the missing pipeline stage (`.processed.json` generation via processDxf + FileRecord patch, or direct rasterize via rasterizeDxfThumbnail). Used fire-and-forget by the public showcase route on each linked parking/storage DXF, and synchronously by the back-fill endpoint helpers. Forbidden elsewhere: inline ensureProcessedDataForDxf / rasterizeDxfThumbnail reimplementations — every new consumer must import from this module.",
+      "forbiddenPatterns": [
+        "async\\s+function\\s+ensureProcessedDataForDxf",
+        "async\\s+function\\s+rasterizeDxfThumbnail"
+      ],
+      "allowlist": [
+        "src/services/floorplans/dxf-thumbnail-selfheal.ts"
+      ]
+    },
     "property-media-reader": {
       "ssotFile": "src/services/property-media/property-media.service.ts",
       "description": "Reading property-linked media (photos, floorplans) from the `files` collection on the server must go through PropertyMediaService (listPropertyMedia / downloadPropertyMedia / countPropertyMedia). The service centralises the canonical filter set (companyId + entityType=property + entityId + category), active-lifecycle pruning, createdAt sorting, and jsPDF mime allowlisting for server-side PDF embedding. Forbidden: inline `.collection(COLLECTIONS.FILES).where('entityType','==','property')...` pipelines outside the service — each duplicate is a chance for tenant-isolation or lifecycle drift. ADR-312 (Property Showcase), ADR-031 (File Storage).",
@@ -581,6 +592,7 @@
         "src/hooks/useEntityAssociations.ts",
         "src/components/projects/tabs/brokerage/useBrokerageAgreements.ts",
         "src/components/shared/files/ShareDialog.tsx",
+        "src/components/sharing/UnifiedShareDialog.tsx",
         "src/app/api/properties/[id]/property-contact-links.ts",
         "src/services/saved-reports/saved-reports-service.ts",
         "src/services/procurement/po-share-service.ts",

@@ -4,6 +4,7 @@ export type PropertyMutationKind =
   | 'identity'
   | 'commercial'
   | 'structure'
+  | 'linkedSpaces'
   | 'features';
 
 export type PropertyMutationDependencyId =

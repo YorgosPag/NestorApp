@@ -96,7 +96,7 @@ export function createInitialRulerSettings(
   return result;
 }
 
-function migrateRulerAxis(axis: RulerSettings['horizontal']) {
+function migrateRulerAxis(axis: RulerSettings['horizontal'] | RulerSettings['vertical']) {
   if (axis.showLabels === undefined) axis.showLabels = true;
   if (axis.showUnits === undefined) axis.showUnits = true;
   if (axis.showBackground === undefined) axis.showBackground = true;

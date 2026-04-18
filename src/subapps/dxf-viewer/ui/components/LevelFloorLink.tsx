@@ -49,7 +49,7 @@ export function LevelFloorLink({ levelId, floorId, onLink }: LevelFloorLinkProps
       onChange={handleChange}
       aria-label={t('panels.levels.linkFloor')}
       title={linkedFloor ? t('panels.levels.linkedFloor', { floorName: linkedFloor.name }) : t('panels.levels.noFloorLinked')}
-      className={PANEL_TOKENS.LEVEL_FLOOR_LINK?.SELECT ?? 'mt-1 w-full text-xs rounded border border-border bg-background text-foreground px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-ring'}
+      className={PANEL_TOKENS.LEVEL_FLOOR_LINK.SELECT}
     >
       <option value="">{t('panels.levels.selectFloorPlaceholder')}</option>
       {floors.map(floor => (

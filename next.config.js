@@ -19,7 +19,14 @@ const nextConfig = {
   devIndicators: false,
 
   // [OK] NEXT.JS 15: Moved from experimental to root level
-  serverExternalPackages: ['@mapbox/node-pre-gyp'],
+  // [ADR-312 Phase 7.4] @resvg/resvg-js ships platform-specific native binaries
+  // (e.g. @resvg/resvg-js-win32-x64-msvc) as optional deps — Turbopack/webpack
+  // cannot resolve them statically. Marking the package external makes Next.js
+  // delegate the require() to Node.js at runtime, which picks the right
+  // binary for the running platform. Without this, the DXF thumbnail
+  // self-heal (services/floorplans/dxf-thumbnail-selfheal.ts) fails with
+  // "could not resolve @resvg/resvg-js-win32-x64-msvc into a module".
+  serverExternalPackages: ['@mapbox/node-pre-gyp', '@resvg/resvg-js'],
 
   // [OK] NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
   outputFileTracingRoot: __dirname,

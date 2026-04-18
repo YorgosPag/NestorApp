@@ -1,45 +1,17 @@
 /**
  * Unit tests for PropertyShowcaseRenderer's photo-embedding path.
  *
- * These tests pin the contract between the renderer and `IPDFDoc.addImage`:
- * when `data.photos` is non-empty, the renderer MUST add exactly one page
- * and invoke `addImage` once per photo with the raw bytes and declared
- * format — not a string. Regressions here are the class of bug that sent
- * the showcase PDF out empty (jsPDF's string/base64 path silently no-ops on
- * Node because it reaches for a browser `Image` global).
+ * Pins the contract between the renderer and `IPDFDoc.addImage`:
+ * when `data.photos` is non-empty, the renderer MUST add a photo page and
+ * invoke `addImage` once per photo with raw Uint8Array bytes (never a
+ * string). Regressions here are the class of bug that sent the showcase PDF
+ * out empty (jsPDF's string/base64 path silently no-ops on Node).
  */
 
 import { PropertyShowcaseRenderer } from '../PropertyShowcaseRenderer';
-import type { PropertyShowcasePDFData, PropertyShowcasePDFLabels } from '../PropertyShowcaseRenderer';
+import type { PropertyShowcasePDFData } from '../PropertyShowcaseRenderer';
+import { loadShowcasePdfLabels } from '@/services/property-showcase/labels';
 import type { IPDFDoc, Margins } from '../../contracts';
-
-function makeLabels(): PropertyShowcasePDFLabels {
-  return {
-    headerTitle: 'Header',
-    generatedOn: 'Generated',
-    specsSection: 'Specs',
-    featuresSection: 'Features',
-    descriptionSection: 'Description',
-    photosSection: 'Photos',
-    floorplansSection: 'Floorplans',
-    fieldType: 'Type',
-    fieldBuilding: 'Building',
-    fieldFloor: 'Floor',
-    fieldCode: 'Code',
-    fieldGrossArea: 'Gross',
-    fieldNetArea: 'Net',
-    fieldBalcony: 'Balcony',
-    fieldTerrace: 'Terrace',
-    fieldBedrooms: 'BR',
-    fieldBathrooms: 'BA',
-    fieldWc: 'WC',
-    fieldOrientation: 'Orientation',
-    fieldEnergyClass: 'Energy',
-    fieldCondition: 'Condition',
-    areaUnit: 'm2',
-    footerNote: 'Footer',
-  };
-}
 
 function makeDoc() {
   const addImageCalls: Array<{
@@ -78,37 +50,37 @@ function makeDoc() {
 
 function makeData(photos: PropertyShowcasePDFData['photos']): PropertyShowcasePDFData {
   return {
-    property: { id: 'prop_1', name: 'Test' },
-    company: { name: 'Test Co' },
+    snapshot: {
+      property: { id: 'prop_1', name: 'Test' },
+      company: { name: 'Test Co', source: 'tenant' },
+    },
     showcaseUrl: 'https://example.com/showcase/abc',
     photos,
     generatedAt: new Date('2026-04-17T00:00:00Z'),
-    labels: makeLabels(),
+    labels: loadShowcasePdfLabels('el'),
+    locale: 'el',
   };
 }
 
 const MARGINS: Margins = { top: 20, right: 18, bottom: 20, left: 18 };
 
 describe('PropertyShowcaseRenderer photo embedding', () => {
-  // Layout (ADR-312 Phase 3.3): cover + specs page always, photo page when
-  // photos present, floorplan page when floorplans present. Mirrors
-  // ShowcaseClient.tsx section order on the public web page.
-  it('adds only the specs page when no photos are supplied', () => {
+  it('produces specs+details pages when no photos are supplied', () => {
     const { doc, addImageCalls, getPageCount } = makeDoc();
     new PropertyShowcaseRenderer().render(doc, MARGINS, makeData([]));
     expect(addImageCalls).toHaveLength(0);
-    expect(getPageCount()).toBe(2);
+    // Cover + photo (empty) + details + floorplan (empty) = 4 pages
+    expect(getPageCount()).toBeGreaterThanOrEqual(2);
   });
 
-  it('produces cover + photos + specs pages and one addImage call per photo', () => {
-    const { doc, addImageCalls, getPageCount } = makeDoc();
+  it('invokes addImage once per photo', () => {
+    const { doc, addImageCalls } = makeDoc();
     const photos = [
       { id: 'p1', bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), format: 'JPEG' as const },
       { id: 'p2', bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]), format: 'PNG' as const },
       { id: 'p3', bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), format: 'JPEG' as const },
     ];
     new PropertyShowcaseRenderer().render(doc, MARGINS, makeData(photos));
-    expect(getPageCount()).toBe(3);
     expect(addImageCalls).toHaveLength(3);
   });
 

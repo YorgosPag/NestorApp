@@ -15,6 +15,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/design-system';
 import type { ContactEntityLink } from '@/types/entity-associations';
 
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
 interface ProjectParticipationSectionProps {
   contactId: string | undefined;
 }
@@ -44,8 +46,8 @@ function ProjectLinks({
   colors,
 }: {
   contactId: string;
-  t: (key: string, opts?: string | Record<string, unknown>) => string;
-  tContacts: (key: string, opts?: string | Record<string, unknown>) => string;
+  t: TranslateFn;
+  tContacts: TranslateFn;
   colors: ReturnType<typeof useSemanticColors>;
 }) {
   const { grouped, isLoading } = useContactEntityLinks(contactId);
@@ -87,7 +89,7 @@ function ProjectLinkRow({
   colors,
 }: {
   link: ContactEntityLink;
-  t: (key: string, opts?: string | Record<string, unknown>) => string;
+  t: TranslateFn;
   colors: ReturnType<typeof useSemanticColors>;
 }) {
   const roleLabel = t(`associations.roles.${link.role}`, link.role);
@@ -95,7 +97,7 @@ function ProjectLinkRow({
   return (
     <li className={cn('flex items-center gap-3 p-2 rounded-md border', colors.border.default)}>
       <FolderKanban className={cn('h-4 w-4 shrink-0', colors.text.muted)} />
-      <span className={cn('text-sm font-medium flex-1', colors.text.default)}>
+      <span className={cn('text-sm font-medium flex-1', colors.text.primary)}>
         {link.entityName}
       </span>
       <Badge variant="secondary" className="text-xs">
@@ -111,7 +113,7 @@ function EmptyState({
   tContacts,
   colors,
 }: {
-  tContacts: (key: string, opts?: string | Record<string, unknown>) => string;
+  tContacts: TranslateFn;
   colors: ReturnType<typeof useSemanticColors>;
 }) {
   return (
@@ -125,7 +127,7 @@ function InfoFooter({
   tContacts,
   colors,
 }: {
-  tContacts: (key: string, opts?: string | Record<string, unknown>) => string;
+  tContacts: TranslateFn;
   colors: ReturnType<typeof useSemanticColors>;
 }) {
   return (

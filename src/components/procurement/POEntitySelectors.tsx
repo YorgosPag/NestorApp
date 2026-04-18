@@ -92,11 +92,13 @@ export function POSupplierSelector({
 
   const options = useMemo<ComboboxOption[]>(
     () =>
-      suppliers.map((c) => ({
-        value: c.id,
-        label: getContactDisplayName(c),
-        secondaryLabel: c.type === 'company' ? c.companyName ?? undefined : undefined,
-      })),
+      suppliers
+        .filter((c): c is typeof c & { id: string } => typeof c.id === 'string')
+        .map((c) => ({
+          value: c.id,
+          label: getContactDisplayName(c),
+          secondaryLabel: c.type === 'company' ? c.companyName ?? undefined : undefined,
+        })),
     [suppliers]
   );
 

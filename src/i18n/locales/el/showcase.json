@@ -16,12 +16,82 @@
     "netArea": "Καθαρή επιφάνεια",
     "balcony": "Μπαλκόνι",
     "terrace": "Βεράντα",
+    "garden": "Κήπος",
+    "millesimalShares": "Χιλιοστά ιδιοκτησίας",
     "bedrooms": "Υπνοδωμάτια",
     "bathrooms": "Μπάνια",
     "wc": "Τουαλέτες",
+    "totalRooms": "Συνολικά δωμάτια",
+    "balconies": "Αριθμός μπαλκονιών",
     "orientation": "Προσανατολισμός",
     "energyClass": "Ενεργειακή κλάση",
-    "condition": "Κατάσταση"
+    "condition": "Κατάσταση",
+    "renovationYear": "Έτος ανακαίνισης",
+    "deliveryDate": "Ημερομηνία παράδοσης"
+  },
+  "project": {
+    "sectionTitle": "Έργο",
+    "name": "Όνομα έργου",
+    "address": "Διεύθυνση έργου"
+  },
+  "commercial": {
+    "sectionTitle": "Εμπορικά στοιχεία",
+    "availability": "Διαθεσιμότητα",
+    "operational": "Λειτουργική κατάσταση",
+    "price": "Ζητούμενη τιμή"
+  },
+  "systems": {
+    "sectionTitle": "Συστήματα",
+    "heating": "Θέρμανση",
+    "heatingFuel": "Καύσιμο θέρμανσης",
+    "cooling": "Ψύξη",
+    "waterHeating": "Ζεστό νερό χρήσης"
+  },
+  "finishes": {
+    "sectionTitle": "Τελειώματα",
+    "flooring": "Δάπεδα",
+    "frames": "Κουφώματα",
+    "glazing": "Υαλοπίνακες"
+  },
+  "features": {
+    "sectionTitle": "Χαρακτηριστικά παροχών",
+    "interior": "Εσωτερικές παροχές",
+    "security": "Ασφάλεια",
+    "amenities": "Κοινόχρηστες παροχές"
+  },
+  "energy": {
+    "sectionTitle": "Ενέργεια",
+    "energyClass": "Ενεργειακή κλάση",
+    "certificateId": "Αρ. ΠΕΑ",
+    "certificateDate": "Ημερομηνία ΠΕΑ",
+    "validUntil": "Ισχύει έως"
+  },
+  "views": {
+    "sectionTitle": "Θέα"
+  },
+  "orientation": {
+    "sectionTitle": "Προσανατολισμός"
+  },
+  "linkedSpaces": {
+    "sectionTitle": "Συνδεδεμένοι χώροι",
+    "parking": "Θέση στάθμευσης",
+    "storage": "Αποθήκη",
+    "floor": "Όροφος",
+    "inclusion": "Συμπερίληψη",
+    "quantity": "Τεμάχια",
+    "inclusions": {
+      "included": "Περιλαμβάνεται",
+      "optional": "Προαιρετικό",
+      "rented": "Ενοικιάζεται"
+    }
+  },
+  "linkedSpacesFloorplans": {
+    "sectionTitle": "Κατόψεις συνδεδεμένων χώρων",
+    "parkingColumn": "Κατόψεις θέσεων στάθμευσης",
+    "storageColumn": "Κατόψεις αποθηκών",
+    "emptyParking": "Δεν υπάρχουν κατόψεις για τις θέσεις στάθμευσης",
+    "emptyStorage": "Δεν υπάρχουν κατόψεις για τις αποθήκες",
+    "unnamedSpace": "Χωρίς κωδικό"
   },
   "photos": {
     "title": "Φωτογραφίες",
@@ -46,6 +116,13 @@
     "expiredDescription": "Η παρουσίαση δεν είναι πλέον διαθέσιμη. Παρακαλούμε επικοινωνήστε με τον αποστολέα.",
     "notFoundTitle": "Ο σύνδεσμος δεν βρέθηκε",
     "notFoundDescription": "Η παρουσίαση δεν είναι διαθέσιμη ή έχει ανακληθεί.",
-    "errorTitle": "Πρόβλημα φόρτωσης"
+    "errorTitle": "Πρόβλημα φόρτωσης",
+    "errorDescription": "Κάτι πήγε στραβά. Δοκιμάστε ξανά αργότερα."
+  },
+  "pdf": {
+    "title": "Παρουσίαση Ακινήτου",
+    "generatedOn": "Δημιουργήθηκε",
+    "descriptionSection": "Περιγραφή",
+    "footerNote": "Παρουσίαση ακινήτου"
   }
 }

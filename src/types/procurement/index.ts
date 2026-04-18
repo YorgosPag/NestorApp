@@ -6,6 +6,7 @@
 
 export type {
   PurchaseOrderStatus,
+  POFilters,
   POCancellationReason,
   POVatRate,
   POAttachment,

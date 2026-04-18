@@ -16,7 +16,7 @@
  * rather than re-implementing.
  *
  * @module services/property-enum-labels/property-enum-labels.service
- * @enterprise ADR-312 (Phase 3.5)
+ * @enterprise ADR-312 (Phase 3.5 + Phase 4 full-field extension)
  */
 
 import elEnums from '@/i18n/locales/el/properties-enums.json';
@@ -35,6 +35,30 @@ function asMap(value: unknown): Record<string, string> {
   return (value ?? {}) as Record<string, string>;
 }
 
+function lookup(
+  locale: EnumLocale,
+  path: readonly string[],
+  key: string | undefined,
+): string | undefined {
+  if (!key) return undefined;
+  let node: unknown = CATALOGS[locale];
+  for (const segment of path) {
+    if (node === null || typeof node !== 'object') return key;
+    node = (node as Record<string, unknown>)[segment];
+  }
+  const map = asMap(node);
+  return map[key] || key;
+}
+
+function lookupList(
+  locale: EnumLocale,
+  path: readonly string[],
+  keys: readonly string[] | undefined,
+): string[] | undefined {
+  if (!keys || keys.length === 0) return undefined;
+  return keys.map((k) => lookup(locale, path, k) ?? k);
+}
+
 export function translatePropertyType(
   key: string | undefined,
   locale: EnumLocale = 'el'
@@ -50,19 +74,75 @@ export function translateOrientations(
   keys: readonly string[] | undefined,
   locale: EnumLocale = 'el'
 ): string[] | undefined {
-  if (!keys || keys.length === 0) return undefined;
-  const catalog = CATALOGS[locale];
-  const units = (catalog as { units?: { orientation?: unknown } }).units;
-  const map = asMap(units?.orientation);
-  return keys.map((k) => map[k] || k);
+  return lookupList(locale, ['units', 'orientation'], keys);
 }
 
 export function translatePropertyCondition(
   key: string | undefined,
   locale: EnumLocale = 'el'
 ): string | undefined {
-  if (!key) return undefined;
-  const catalog = CATALOGS[locale];
-  const condition = asMap((catalog as { condition?: unknown }).condition);
-  return condition[key] || key;
+  return lookup(locale, ['condition'], key);
+}
+
+export function translateCommercialStatus(
+  key: string | undefined,
+  locale: EnumLocale = 'el'
+): string | undefined {
+  return lookup(locale, ['commercialStatus'], key);
+}
+
+export function translateOperationalStatus(
+  key: string | undefined,
+  locale: EnumLocale = 'el'
+): string | undefined {
+  return lookup(locale, ['operationalStatus'], key);
+}
+
+export function translateHeatingType(
+  key: string | undefined,
+  locale: EnumLocale = 'el'
+): string | undefined {
+  return lookup(locale, ['systems', 'heating'], key);
+}
+
+export function translateCoolingType(
+  key: string | undefined,
+  locale: EnumLocale = 'el'
+): string | undefined {
+  return lookup(locale, ['systems', 'cooling'], key);
+}
+
+export function translateFlooring(
+  keys: readonly string[] | undefined,
+  locale: EnumLocale = 'el'
+): string[] | undefined {
+  return lookupList(locale, ['finishes', 'flooring'], keys);
+}
+
+export function translateWindowFrames(
+  key: string | undefined,
+  locale: EnumLocale = 'el'
+): string | undefined {
+  return lookup(locale, ['finishes', 'frames'], key);
+}
+
+export function translateGlazing(
+  key: string | undefined,
+  locale: EnumLocale = 'el'
+): string | undefined {
+  return lookup(locale, ['finishes', 'glazing'], key);
+}
+
+export function translateInteriorFeatures(
+  keys: readonly string[] | undefined,
+  locale: EnumLocale = 'el'
+): string[] | undefined {
+  return lookupList(locale, ['features', 'interior'], keys);
+}
+
+export function translateSecurityFeatures(
+  keys: readonly string[] | undefined,
+  locale: EnumLocale = 'el'
+): string[] | undefined {
+  return lookupList(locale, ['features', 'security'], keys);
 }

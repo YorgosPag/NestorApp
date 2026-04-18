@@ -7,6 +7,7 @@ import type React from 'react';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
+import type { ProSnapResult } from '../../snapping/extended-types';
 
 // Debug flag (2026-02-01): Enable for tracing coordinate flow
 export const DEBUG_MOUSE_HANDLERS = false;
@@ -72,13 +73,8 @@ export interface MouseHandlerRefs {
   hoverThrottleRef: React.MutableRefObject<number>;
 }
 
-/** Snap manager API subset needed by handlers */
+/** Snap manager API subset needed by handlers (SSoT: ProSnapResult) */
 export interface SnapManagerAPI {
   snapEnabled: boolean;
-  findSnapPoint: ((x: number, y: number) => {
-    found: boolean;
-    snappedPoint?: Point2D;
-    activeMode?: string;
-    snapPoint?: { entityId?: string; distance?: number };
-  }) | undefined;
+  findSnapPoint: ((x: number, y: number) => ProSnapResult | null) | undefined;
 }

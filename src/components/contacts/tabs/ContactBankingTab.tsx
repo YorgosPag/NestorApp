@@ -74,6 +74,8 @@ export function ContactBankingTab({
   const { confirm, dialogProps } = useConfirmDialog();
   const disabled = additionalData?.disabled ?? false;
 
+  const contactId = data.id;
+
   const [accounts, setAccounts] = useState<BankAccount[]>(bankAccountsCache.get(contactId) ?? []);
   const [loading, setLoading] = useState(!bankAccountsCache.hasLoaded(contactId));
   const [actionLoading, setActionLoading] = useState(false);
@@ -83,8 +85,6 @@ export function ContactBankingTab({
   const [editingAccount, setEditingAccount] = useState<BankAccount | undefined>();
   const [deletingAccount, setDeletingAccount] = useState<BankAccount | null>(null);
   const [primaryAccountCandidate, setPrimaryAccountCandidate] = useState<BankAccount | null>(null);
-
-  const contactId = data.id;
   const activeAccountsCount = accounts.filter((account) => account.isActive).length;
 
   const loadAccounts = useCallback(async () => {

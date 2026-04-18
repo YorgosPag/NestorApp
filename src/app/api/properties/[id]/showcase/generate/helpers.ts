@@ -1,110 +1,70 @@
 /**
- * Server-only helpers for the Property Showcase generator (ADR-312).
+ * Server-only helpers for the Property Showcase generator (ADR-312 Phase 4).
  *
  * Extracted from `route.ts` so the route file stays within the Google-style
  * API size budget (CLAUDE.md N.7.1, 300 LOC for API routes). Every helper
  * here runs under an authenticated route with Admin SDK; no direct client
  * exposure.
+ *
+ * Phase 4 refactor: every bit of field mapping and label generation is
+ * delegated to the SSoT modules `property-showcase/snapshot-builder` and
+ * `property-showcase/labels`. This file now only orchestrates I/O (Firestore
+ * reads, Storage uploads, share-record lifecycle) — no business logic.
  */
 
 import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FILE_CATEGORIES } from '@/config/domain-constants';
+import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
 import {
   countPropertyMedia,
   downloadPropertyMedia,
+  downloadEntityMedia,
   type PropertyMediaBuffer,
 } from '@/services/property-media/property-media.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { resolveShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
 import {
-  translatePropertyType,
-  translateOrientations,
-  translatePropertyCondition,
-} from '@/services/property-enum-labels/property-enum-labels.service';
-import {
-  resolveShowcaseCompanyBranding,
-  type ShowcaseCompanyBranding,
-} from '@/services/company/company-branding-resolver';
+  buildPropertyShowcaseSnapshot,
+  loadShowcaseRelations,
+  type PropertyShowcaseContext,
+} from '@/services/property-showcase/snapshot-builder';
+import { loadShowcasePdfLabels } from '@/services/property-showcase/labels';
 import { PropertyShowcasePDFService } from '@/services/pdf/PropertyShowcasePDFService';
 import type {
   PropertyShowcasePDFData,
-  PropertyShowcasePDFLabels,
   ShowcasePhotoAsset,
 } from '@/services/pdf/renderers/PropertyShowcaseRenderer';
+import type {
+  LinkedSpaceFloorplansGroup,
+  LinkedSpaceFloorplansPdfData,
+} from '@/services/pdf/renderers/PropertyShowcaseSections';
 
 const logger = createModuleLogger('PropertyShowcaseHelpers');
 
-export function buildShowcaseLabels(locale: 'el' | 'en'): PropertyShowcasePDFLabels {
-  if (locale === 'en') {
-    return {
-      headerTitle: 'Property Showcase',
-      generatedOn: 'Generated on',
-      specsSection: 'Specifications',
-      featuresSection: 'Features',
-      descriptionSection: 'Description',
-      photosSection: 'Photos',
-      floorplansSection: 'Floorplans',
-      fieldType: 'Type',
-      fieldBuilding: 'Building',
-      fieldFloor: 'Floor',
-      fieldCode: 'Code',
-      fieldGrossArea: 'Gross area',
-      fieldNetArea: 'Net area',
-      fieldBalcony: 'Balcony',
-      fieldTerrace: 'Terrace',
-      fieldBedrooms: 'Bedrooms',
-      fieldBathrooms: 'Bathrooms',
-      fieldWc: 'WC',
-      fieldOrientation: 'Orientation',
-      fieldEnergyClass: 'Energy class',
-      fieldCondition: 'Condition',
-      areaUnit: 'sq.m.',
-      footerNote: 'Property showcase',
-    };
-  }
-  return {
-    headerTitle: 'Παρουσίαση Ακινήτου',
-    generatedOn: 'Δημιουργήθηκε',
-    specsSection: 'Χαρακτηριστικά',
-    featuresSection: 'Παροχές',
-    descriptionSection: 'Περιγραφή',
-    photosSection: 'Φωτογραφίες',
-    floorplansSection: 'Κατόψεις',
-    fieldType: 'Τύπος',
-    fieldBuilding: 'Κτίριο',
-    fieldFloor: 'Όροφος',
-    fieldCode: 'Κωδικός',
-    fieldGrossArea: 'Μικτή επιφάνεια',
-    fieldNetArea: 'Καθαρή επιφάνεια',
-    fieldBalcony: 'Μπαλκόνι',
-    fieldTerrace: 'Βεράντα',
-    fieldBedrooms: 'Υπνοδωμάτια',
-    fieldBathrooms: 'Μπάνια',
-    fieldWc: 'Τουαλέτες',
-    fieldOrientation: 'Προσανατολισμός',
-    fieldEnergyClass: 'Ενεργειακή κλάση',
-    fieldCondition: 'Κατάσταση',
-    areaUnit: 'τ.μ.',
-    footerNote: 'Παρουσίαση ακινήτου',
-  };
+export interface ShowcaseSources {
+  context: PropertyShowcaseContext;
+  photoCount: number;
+  floorplanCount: number;
 }
 
-export async function loadShowcaseSources(propertyId: string, companyId: string) {
+export async function loadShowcaseSources(
+  propertyId: string,
+  companyId: string,
+): Promise<ShowcaseSources> {
   const adminDb = getAdminFirestore();
   if (!adminDb) throw new ApiError(503, 'Database connection not available');
 
   const propertyDoc = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
   if (!propertyDoc.exists) throw new ApiError(404, 'Property not found');
-  const property = propertyDoc.data() ?? {};
+  const property = (propertyDoc.data() ?? {}) as Record<string, unknown>;
   if ((property as { companyId?: string }).companyId !== companyId) {
     throw new ApiError(403, 'Access denied');
   }
 
-  // Branding via hierarchy Property → Project → Contact (ADR-312 Phase 3.7).
   const branding = await resolveShowcaseCompanyBranding({
     adminDb,
-    propertyData: property as Record<string, unknown>,
+    propertyData: property,
     companyId,
   });
 
@@ -112,7 +72,8 @@ export async function loadShowcaseSources(propertyId: string, companyId: string)
   // `properties/{id}/photos` was never populated — the previous count
   // always returned 0. `PropertyMediaService` reads the SSoT used by the
   // public showcase surface so PDF counts match what the browser sees.
-  const [photoCount, floorplanCountFromFiles, floorplanCountLegacy] = await Promise.all([
+  const [context, photoCount, floorplanCountFromFiles, floorplanCountLegacy] = await Promise.all([
+    loadShowcaseRelations({ adminDb, propertyId, property, branding }),
     countPropertyMedia({
       companyId, propertyId, category: FILE_CATEGORIES.PHOTOS, limit: 100,
     }).catch((err) => {
@@ -130,19 +91,16 @@ export async function loadShowcaseSources(propertyId: string, companyId: string)
         .where('companyId', '==', companyId)
         .where('propertyId', '==', propertyId)
         .count()
-        .get()
+        .get(),
     ),
   ]);
 
   const floorplanCount = floorplanCountFromFiles + floorplanCountLegacy;
-
-  return { property, branding, photoCount, floorplanCount };
+  return { context, photoCount, floorplanCount };
 }
 
-export type ShowcaseSources = Awaited<ReturnType<typeof loadShowcaseSources>>;
-
 async function safeCount(
-  run: () => Promise<{ data: () => { count?: number } }>
+  run: () => Promise<{ data: () => { count?: number } }>,
 ): Promise<number> {
   try {
     const snap = await run();
@@ -156,24 +114,17 @@ async function safeCount(
 }
 
 /**
- * Fetch up to `limit` property photos as embeddable PDF assets.
- *
- * Delegates filtering (mime allowlist, active-only) + Storage download to
- * `PropertyMediaService` so the PDF generator uses the same SSoT as the
- * public showcase surface. Never throws — a failure here degrades gracefully
- * to a text-only PDF (ADR-312 Phase 1 behaviour).
+ * Fetch up to `limit` property photos as embeddable PDF assets. Never
+ * throws — a failure degrades gracefully to a text-only PDF.
  */
 export async function loadShowcasePhotos(
   propertyId: string,
   companyId: string,
-  limit = 6
+  limit = 6,
 ): Promise<ShowcasePhotoAsset[]> {
   try {
     const buffers = await downloadPropertyMedia({
-      companyId,
-      propertyId,
-      category: FILE_CATEGORIES.PHOTOS,
-      limit,
+      companyId, propertyId, category: FILE_CATEGORIES.PHOTOS, limit,
     });
     const assets = buffers.map(toShowcasePhotoAsset);
     logger.info('Showcase photos ready for PDF embedding', {
@@ -185,8 +136,7 @@ export async function loadShowcasePhotos(
     return assets;
   } catch (err) {
     logger.warn('Showcase photo embedding failed; PDF will render text-only', {
-      propertyId,
-      error: err instanceof Error ? err.message : String(err),
+      propertyId, error: err instanceof Error ? err.message : String(err),
     });
     return [];
   }
@@ -194,21 +144,16 @@ export async function loadShowcasePhotos(
 
 /**
  * Fetch up to `limit` property floorplans (DXF raster thumbnails or native
- * JPEG/PNG) as embeddable PDF assets. DXFs deliver a PNG sourced from
- * `thumbnailStoragePath`, generated by `onDxfProcessedFinalize` (ADR-312
- * Phase 3). Graceful degradation to [] on any failure.
+ * JPEG/PNG) as embeddable PDF assets.
  */
 export async function loadShowcaseFloorplans(
   propertyId: string,
   companyId: string,
-  limit = 4
+  limit = 4,
 ): Promise<ShowcasePhotoAsset[]> {
   try {
     const buffers = await downloadPropertyMedia({
-      companyId,
-      propertyId,
-      category: FILE_CATEGORIES.FLOORPLANS,
-      limit,
+      companyId, propertyId, category: FILE_CATEGORIES.FLOORPLANS, limit,
     });
     const assets = buffers.map(toShowcasePhotoAsset);
     logger.info('Showcase floorplans ready for PDF embedding', {
@@ -221,8 +166,7 @@ export async function loadShowcaseFloorplans(
     return assets;
   } catch (err) {
     logger.warn('Showcase floorplan embedding failed; PDF will omit the plan page', {
-      propertyId,
-      error: err instanceof Error ? err.message : String(err),
+      propertyId, error: err instanceof Error ? err.message : String(err),
     });
     return [];
   }
@@ -237,6 +181,84 @@ function toShowcasePhotoAsset(m: PropertyMediaBuffer): ShowcasePhotoAsset {
   };
 }
 
+function pickAllocationCode(doc: Record<string, unknown>): string | undefined {
+  const candidates = [doc.name, doc.number, doc.code, doc.allocationCode];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim().length > 0) return c.trim();
+  }
+  return undefined;
+}
+
+/**
+ * Download rasterised Κατόψεις (PNG thumbnails from DXFs) for every parking
+ * spot and storage unit linked to the property. One Firestore + Storage read
+ * per linked space; failures on a single space never fail the whole load.
+ */
+export async function loadShowcaseLinkedSpaceFloorplans(
+  context: PropertyShowcaseContext,
+  companyId: string,
+  perSpaceLimit = 1,
+): Promise<LinkedSpaceFloorplansPdfData> {
+  const parkingTasks = Array.from(context.parkingSpots.entries()).map(async ([spaceId, doc]) => {
+    try {
+      const buffers = await downloadEntityMedia({
+        companyId,
+        entityType: ENTITY_TYPES.PARKING_SPOT,
+        entityId: spaceId,
+        category: FILE_CATEGORIES.FLOORPLANS,
+        limit: perSpaceLimit,
+      });
+      if (buffers.length === 0) return null;
+      return {
+        allocationCode: pickAllocationCode(doc),
+        assets: buffers.map(toShowcasePhotoAsset),
+      } satisfies LinkedSpaceFloorplansGroup;
+    } catch (err) {
+      logger.warn('Parking floorplan buffer load failed; skipping space', {
+        spaceId, error: err instanceof Error ? err.message : String(err),
+      });
+      return null;
+    }
+  });
+
+  const storageTasks = Array.from(context.storages.entries()).map(async ([spaceId, doc]) => {
+    try {
+      const buffers = await downloadEntityMedia({
+        companyId,
+        entityType: ENTITY_TYPES.STORAGE,
+        entityId: spaceId,
+        category: FILE_CATEGORIES.FLOORPLANS,
+        limit: perSpaceLimit,
+      });
+      if (buffers.length === 0) return null;
+      return {
+        allocationCode: pickAllocationCode(doc),
+        assets: buffers.map(toShowcasePhotoAsset),
+      } satisfies LinkedSpaceFloorplansGroup;
+    } catch (err) {
+      logger.warn('Storage floorplan buffer load failed; skipping space', {
+        spaceId, error: err instanceof Error ? err.message : String(err),
+      });
+      return null;
+    }
+  });
+
+  const [parkingResolved, storageResolved] = await Promise.all([
+    Promise.all(parkingTasks),
+    Promise.all(storageTasks),
+  ]);
+
+  const parking = parkingResolved.filter((g): g is LinkedSpaceFloorplansGroup => g !== null);
+  const storage = storageResolved.filter((g): g is LinkedSpaceFloorplansGroup => g !== null);
+
+  logger.info('Linked-space floorplans ready for PDF embedding', {
+    parkingGroupCount: parking.length,
+    storageGroupCount: storage.length,
+  });
+
+  return { parking, storage };
+}
+
 export function buildPdfData(
   propertyId: string,
   sources: ShowcaseSources,
@@ -244,58 +266,32 @@ export function buildPdfData(
   videoUrl: string | undefined,
   locale: 'el' | 'en',
   photos: ShowcasePhotoAsset[] = [],
-  floorplans: ShowcasePhotoAsset[] = []
+  floorplans: ShowcasePhotoAsset[] = [],
+  linkedSpaceFloorplans?: LinkedSpaceFloorplansPdfData,
 ): PropertyShowcasePDFData {
-  const p = sources.property as Record<string, unknown>;
-  const branding: ShowcaseCompanyBranding = sources.branding;
-  const layout = (p.layout as { bedrooms?: number; bathrooms?: number; wc?: number }) || {};
-  const areas = (p.areas as { gross?: number; net?: number; balcony?: number; terrace?: number }) || {};
-  const energy = (p.energy as { class?: string }) || {};
-
-  // Enum keys stored in Firestore (`apartment`, `north`, `new`, ...) are
-  // translated here via the server-side SSoT so the PDF renderer receives
-  // human-readable labels identical to what the showcase web page shows.
-  const rawType = (p.type as string) || undefined;
-  const rawOrientations = Array.isArray(p.orientations) ? (p.orientations as string[]) : undefined;
-  const rawCondition = (p.condition as string) || undefined;
-
+  void propertyId;
+  const snapshot = buildPropertyShowcaseSnapshot(sources.context, locale);
+  const hasLinked =
+    !!linkedSpaceFloorplans &&
+    (linkedSpaceFloorplans.parking.length > 0 || linkedSpaceFloorplans.storage.length > 0);
   return {
-    property: {
-      id: propertyId,
-      code: (p.code as string) || undefined,
-      name: (p.name as string) || propertyId,
-      type: rawType,
-      typeLabel: (p.typeLabel as string) || translatePropertyType(rawType, locale) || rawType,
-      building: (p.building as string) || undefined,
-      floor: typeof p.floor === 'number' ? (p.floor as number) : undefined,
-      description: (p.description as string) || undefined,
-      layout: { bedrooms: layout.bedrooms, bathrooms: layout.bathrooms, wc: layout.wc },
-      areas: { gross: areas.gross, net: areas.net, balcony: areas.balcony, terrace: areas.terrace },
-      orientations: translateOrientations(rawOrientations, locale) ?? rawOrientations,
-      energyClass: energy.class,
-      condition: translatePropertyCondition(rawCondition, locale) ?? rawCondition,
-      features: Array.isArray(p.features) ? (p.features as string[]) : undefined,
-    },
-    company: {
-      name: branding.name,
-      phone: branding.phone,
-      email: branding.email,
-      website: branding.website,
-    },
+    snapshot,
     showcaseUrl,
     videoUrl,
     photoCount: sources.photoCount,
     floorplanCount: sources.floorplanCount,
     photos,
     floorplans,
+    linkedSpaceFloorplans: hasLinked ? linkedSpaceFloorplans : undefined,
     generatedAt: new Date(),
-    labels: buildShowcaseLabels(locale),
+    labels: loadShowcasePdfLabels(locale),
+    locale,
   };
 }
 
 export async function uploadPdfToStorage(
   pdfBytes: Uint8Array,
-  storagePath: string
+  storagePath: string,
 ): Promise<void> {
   const bucket = getAdminBucket();
   const fileRef = bucket.file(storagePath);
@@ -337,18 +333,6 @@ export async function deleteShowcaseShareRecord(shareId: string): Promise<void> 
 
 /**
  * Regenerate the PDF for an existing showcase share IN-PLACE (ADR-312 Phase 3.2).
- *
- * Preserves `token`, `shareId`, and `pdfStoragePath` so any previously
- * distributed public URL keeps working. Only the PDF blob at Storage is
- * overwritten and `pdfRegeneratedAt` is stamped on the FILE_SHARES doc.
- *
- * Ownership is enforced BEFORE any work: share must belong to `companyId`,
- * reference `propertyId`, be `showcaseMode=true`, `isActive=true`, and have
- * a `pdfStoragePath` (legacy shares without one cannot be regenerated here).
- *
- * Safety: the orphan-cleanup trigger (`onStorageFinalize`) re-fires on
- * overwrite but `findFileOwner()` resolves the existing FILE_SHARES claim
- * by shareId — no deletion occurs. No pre-upload write needed.
  */
 export async function regeneratePdfForShare(params: {
   shareId: string;
@@ -395,14 +379,21 @@ export async function regeneratePdfForShare(params: {
   const locale = params.locale ?? 'el';
   const showcaseUrl = `${params.baseUrl.replace(/\/$/, '')}/showcase/${token}`;
 
-  const [sources, photos, floorplans] = await Promise.all([
-    loadShowcaseSources(params.propertyId, params.companyId),
+  const sources = await loadShowcaseSources(params.propertyId, params.companyId);
+  const [photos, floorplans, linkedSpaceFloorplans] = await Promise.all([
     loadShowcasePhotos(params.propertyId, params.companyId),
     loadShowcaseFloorplans(params.propertyId, params.companyId),
+    loadShowcaseLinkedSpaceFloorplans(sources.context, params.companyId).catch((err) => {
+      logger.warn('Regenerate: linked-space floorplan load failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return { parking: [], storage: [] } satisfies LinkedSpaceFloorplansPdfData;
+    }),
   ]);
 
   const pdfData = buildPdfData(
-    params.propertyId, sources, showcaseUrl, params.videoUrl, locale, photos, floorplans
+    params.propertyId, sources, showcaseUrl, params.videoUrl, locale, photos, floorplans,
+    linkedSpaceFloorplans,
   );
 
   let pdfBytes: Uint8Array;
@@ -432,7 +423,7 @@ export async function regeneratePdfForShare(params: {
 
 export async function deactivateShowcaseShares(
   propertyId: string,
-  companyId: string
+  companyId: string,
 ): Promise<string[]> {
   const adminDb = getAdminFirestore();
   if (!adminDb) throw new ApiError(503, 'Database connection not available');

@@ -46,6 +46,7 @@ import { useMoveEntities } from './useMoveEntities';
 import { useCommandHistory, MoveVertexCommand } from '../core/commands';
 import { useLevels } from '../systems/levels';
 import { createGripSceneAdapter } from './grip-scene-adapter';
+import { computeDxfEntityGrips } from './grip-computation';
 
 // Re-export types and pure functions for consumers
 export type {

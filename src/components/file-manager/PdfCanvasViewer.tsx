@@ -87,10 +87,16 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
           docRef.current = null;
         }
 
-        // Proxy through /api/download to bypass CORS on Firebase Storage URLs
-        const proxyUrl = `${API_ROUTES.DOWNLOAD}?url=${encodeURIComponent(url)}&filename=preview.pdf`;
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error(`Download proxy: HTTP ${response.status}`);
+        // Same-origin relative URLs (e.g. `/api/shared/[token]/pdf`) are already
+        // public streams — skip the auth-gated `/api/download` proxy which
+        // requires a Firebase Storage URL + auth. External Firebase URLs still
+        // route through the proxy to bypass CORS.
+        const isRelative = url.startsWith('/');
+        const fetchUrl = isRelative
+          ? url
+          : `${API_ROUTES.DOWNLOAD}?url=${encodeURIComponent(url)}&filename=preview.pdf`;
+        const response = await fetch(fetchUrl);
+        if (!response.ok) throw new Error(`PDF fetch: HTTP ${response.status}`);
         const data = new Uint8Array(await response.arrayBuffer());
         if (cancelled) return;
 

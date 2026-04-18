@@ -1547,6 +1547,11 @@ export const PANEL_TOKENS = {
   OVERLAY_PANEL: OVERLAY_PANEL_TOKENS,
   MERGE_PANEL: MERGE_PANEL_TOKENS,
 
+  // SSoT: Level-floor link select tokens (used by LevelFloorLink.tsx)
+  LEVEL_FLOOR_LINK: {
+    SELECT: 'mt-1 w-full text-xs rounded border border-border bg-background text-foreground px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-ring',
+  },
+
   // Integration with existing systems
   INTERACTIVE: INTERACTIVE_PATTERNS,
   HOVER: {

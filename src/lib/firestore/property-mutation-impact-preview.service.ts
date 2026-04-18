@@ -13,7 +13,11 @@ const FIELD_KIND_MAP: Readonly<Record<string, PropertyMutationKind>> = {
   buildingId: 'structure',
   floorId: 'structure',
   floor: 'structure',
-  linkedSpaces: 'structure',
+  // linkedSpaces is its own kind — adding/removing a parking/storage
+  // association does not invalidate files, payments, contracts or invoices.
+  // Treating it as `structure` (and therefore triggering the SOLD-lock blocking
+  // dependency set) was a false positive that blocked legitimate additions.
+  linkedSpaces: 'linkedSpaces',
   areas: 'features',
   layout: 'features',
   orientations: 'features',

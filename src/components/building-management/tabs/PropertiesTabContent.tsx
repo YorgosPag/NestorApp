@@ -249,8 +249,8 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
 
   const fetchUnlinkedUnits = useCallback(async (): Promise<LinkableItem[]> => {
     const result = await apiClient.get<PropertiesApiResponse>(API_ROUTES.PROPERTIES.LIST);
-    if (!result?.units) return [];
-    return result.units
+    if (!result?.properties) return [];
+    return result.properties
       .filter((u) => !u.buildingId)
       .map((u) => ({
         id: u.id,
@@ -291,7 +291,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
 
   const unitCardFields: SpaceCardField<Property>[] = useMemo(() => [
     buildTypeCodeField(tUnits('card.stats.type'), (u) => getPropertyTypeLabel(u.type, tUnits), (u) => u.code),
-    buildFloorField(tUnits('card.stats.floor'), (u) => u.floor),
+    buildFloorField(tUnits('card.stats.floor'), (u) => u.floor != null ? String(u.floor) : undefined),
     buildAreaField((u) => u.area),
     buildPriceField(tUnits('table.price'), (u) => u.price),
   ], [tUnits]);

@@ -325,6 +325,7 @@ const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
 const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens(); // ✅ ENTERPRISE FIX: Add missing border tokens
+  const { t } = useTranslationLazy('dxf-viewer');
   const [expandedTests, setExpandedTests] = React.useState<Set<number>>(new Set());
 
   const toggleExpand = (index: number) => {

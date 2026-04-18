@@ -33,6 +33,8 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { generateShareId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -40,7 +42,9 @@ import { nowISO } from '@/lib/date-local';
 import { PropertyShowcasePDFService } from '@/services/pdf/PropertyShowcasePDFService';
 import {
   buildPdfData,
+  deleteShowcaseShareRecord,
   loadShowcaseFloorplans,
+  loadShowcaseLinkedSpaceFloorplans,
   loadShowcasePhotos,
   loadShowcaseSources,
   uploadPdfToStorage,
@@ -90,10 +94,16 @@ async function handlePdf(
     propertyId, uid: ctx.uid, companyId: ctx.companyId,
   });
 
-  const [sources, photos, floorplans] = await Promise.all([
-    loadShowcaseSources(propertyId, ctx.companyId),
+  const sources = await loadShowcaseSources(propertyId, ctx.companyId);
+  const [photos, floorplans, linkedSpaceFloorplans] = await Promise.all([
     loadShowcasePhotos(propertyId, ctx.companyId),
     loadShowcaseFloorplans(propertyId, ctx.companyId),
+    loadShowcaseLinkedSpaceFloorplans(sources.context, ctx.companyId).catch((err) => {
+      logger.warn('Linked-space floorplan load failed; continuing without', {
+        propertyId, error: err instanceof Error ? err.message : String(err),
+      });
+      return { parking: [], storage: [] };
+    }),
   ]);
 
   const pdfFileId = generateShareId();
@@ -115,7 +125,8 @@ async function handlePdf(
   const showcaseUrl = `${baseUrl}/shared`;
 
   const pdfData = buildPdfData(
-    propertyId, sources, showcaseUrl, body.videoUrl, locale, photos, floorplans
+    propertyId, sources, showcaseUrl, body.videoUrl, locale, photos, floorplans,
+    linkedSpaceFloorplans,
   );
 
   let pdfBytes: Uint8Array;
@@ -128,9 +139,40 @@ async function handlePdf(
     throw new ApiError(500, 'PDF generation failed');
   }
 
+  // Pre-upload ownership claim in FILE_SHARES (inert, isActive=false) so the
+  // `onStorageFinalize` orphan-cleanup trigger finds the PDF via
+  // `findFileOwner()` and skips deletion. Without this, the reaper runs
+  // between upload and the later `shares` record creation (UnifiedSharingService.createShare)
+  // and deletes the just-uploaded PDF. Pattern mirrors ADR-312 §Race.
+  // The claim becomes inert metadata after `shares` creation — acceptable
+  // for test data; a future M5 pass can migrate the resolver to also query
+  // `shares` by `showcaseMeta.pdfStoragePath` and drop this pre-write.
+  const adminDb = getAdminFirestore();
+  if (!adminDb) throw new ApiError(503, 'Database connection not available');
+  await adminDb.collection(COLLECTIONS.FILE_SHARES).doc(pdfFileId).set({
+    fileId: pdfFileId,
+    createdBy: ctx.uid,
+    createdAt: new Date(),
+    isActive: false,
+    requiresPassword: false,
+    downloadCount: 0,
+    maxDownloads: 0,
+    companyId: ctx.companyId,
+    showcasePropertyId: propertyId,
+    showcaseMode: true,
+    pdfStoragePath: storagePath,
+    note: 'ADR-315 M3 pre-upload claim (unified flow)',
+  });
+
   try {
     await uploadPdfToStorage(pdfBytes, storagePath);
   } catch (err) {
+    await deleteShowcaseShareRecord(pdfFileId).catch((cleanupErr) => {
+      logger.error('Failed to compensate orphan pre-upload claim', {
+        pdfFileId, propertyId,
+        error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+      });
+    });
     logger.error('PDF upload failed', {
       propertyId, storagePath, error: err instanceof Error ? err.message : String(err),
     });

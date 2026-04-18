@@ -412,11 +412,13 @@ export function LevelPanel({
           onClose={() => setShowImportWizard(false)}
           onComplete={(file, meta) => {
             setShowImportWizard(false);
+            const entityType = meta.entityType as DxfSaveContext['entityType'];
             const saveContext: DxfSaveContext = {
               companyId: meta.companyId,
               projectId: meta.projectId,
-              entityId: meta.entityId,
-              entityType: meta.entityType as DxfSaveContext['entityType'],
+              ...(entityType === 'building' && meta.entityId ? { buildingId: meta.entityId } : {}),
+              ...(entityType === 'floor' && meta.entityId ? { floorId: meta.entityId } : {}),
+              entityType,
               filesCategory: 'floorplans',
               purpose: meta.purpose || undefined,
               entityLabel: meta.entityLabel,

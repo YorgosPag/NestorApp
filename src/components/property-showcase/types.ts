@@ -1,9 +1,39 @@
 /**
- * Property Showcase — Shared types (ADR-312)
+ * Property Showcase — Shared types (ADR-312 Phase 4)
  *
  * Mirror of the public API response returned from GET /api/showcase/[token].
- * Kept separate so page + sub-components can consume the same shape.
+ * Wire shape is re-exported from the server-side SSoT snapshot builder so the
+ * web page and PDF generator can never drift.
  */
+
+import type {
+  PropertyShowcaseSnapshot,
+  ShowcaseProjectInfo,
+  ShowcaseCommercialInfo,
+  ShowcaseAreas,
+  ShowcaseLayout,
+  ShowcaseConditionInfo,
+  ShowcaseEnergyInfo,
+  ShowcaseSystemsInfo,
+  ShowcaseFinishesInfo,
+  ShowcaseFeaturesInfo,
+  ShowcaseLinkedSpace,
+  ShowcaseViewInfo,
+} from '@/services/property-showcase/snapshot-builder';
+
+export type {
+  ShowcaseProjectInfo,
+  ShowcaseCommercialInfo,
+  ShowcaseAreas,
+  ShowcaseLayout,
+  ShowcaseConditionInfo,
+  ShowcaseEnergyInfo,
+  ShowcaseSystemsInfo,
+  ShowcaseFinishesInfo,
+  ShowcaseFeaturesInfo,
+  ShowcaseLinkedSpace,
+  ShowcaseViewInfo,
+};
 
 export interface ShowcaseMedia {
   id: string;
@@ -19,27 +49,7 @@ export interface ShowcaseMedia {
   ext?: string;
 }
 
-export interface ShowcasePropertySnapshot {
-  id: string;
-  code?: string;
-  name: string;
-  type?: string;
-  /** Locale-resolved label for `type` (e.g. `apartment` → `Διαμέρισμα`). */
-  typeLabel?: string;
-  building?: string;
-  floor?: number;
-  description?: string;
-  layout?: { bedrooms?: number; bathrooms?: number; wc?: number };
-  areas?: { gross?: number; net?: number; balcony?: number; terrace?: number };
-  orientations?: string[];
-  /** Locale-resolved labels parallel to `orientations`. */
-  orientationLabels?: string[];
-  energyClass?: string;
-  condition?: string;
-  /** Locale-resolved label for `condition` (e.g. `new` → `Νέο`). */
-  conditionLabel?: string;
-  features?: string[];
-}
+export type ShowcasePropertySnapshot = PropertyShowcaseSnapshot['property'];
 
 export interface ShowcaseCompanyBrand {
   name: string;
@@ -48,11 +58,28 @@ export interface ShowcaseCompanyBrand {
   website?: string;
 }
 
+/**
+ * Floorplan media grouped per linked parking/storage space.
+ * Populated server-side by reading `files` for each linked space via
+ * `listEntityMedia(entityType='parking'|'storage', entityId=<spaceId>)`.
+ */
+export interface ShowcaseLinkedSpaceFloorplanGroup {
+  spaceId: string;
+  allocationCode?: string;
+  media: ShowcaseMedia[];
+}
+
+export interface ShowcaseLinkedSpaceFloorplans {
+  parking: ShowcaseLinkedSpaceFloorplanGroup[];
+  storage: ShowcaseLinkedSpaceFloorplanGroup[];
+}
+
 export interface ShowcasePayload {
   property: ShowcasePropertySnapshot;
   company: ShowcaseCompanyBrand;
   photos: ShowcaseMedia[];
   floorplans: ShowcaseMedia[];
+  linkedSpaceFloorplans?: ShowcaseLinkedSpaceFloorplans;
   videoUrl?: string;
   pdfUrl?: string;
   expiresAt: string;

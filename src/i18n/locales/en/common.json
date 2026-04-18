@@ -186,6 +186,7 @@
   },
   "share": {
     "share": "Share",
+    "linkSettings": "Link settings",
     "copied": "Copied!",
     "shareSuccess": "Sharing completed successfully!",
     "shareError": "Failed to share via {platform}: {error}",

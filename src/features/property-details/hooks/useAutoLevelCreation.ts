@@ -12,10 +12,8 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import type { QueryConstraint } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { where } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { formatFloorLabel } from '@/lib/intl-utils';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,7 +27,7 @@ import {
   deriveMultiLevelFields,
 } from '@/services/multi-level.service';
 import type { FloorOption } from '@/services/multi-level.service';
-import type { Property } from '@/types/property';
+import type { Property } from '@/types/property-viewer';
 
 // =============================================================================
 // TYPES
@@ -92,36 +90,27 @@ export function useAutoLevelCreation({
   const floorsRef = useRef(buildingFloors);
   floorsRef.current = buildingFloors;
 
-  // ── Firestore subscription: building floors ──
+  // ── Firestore subscription: building floors (SSoT: firestoreQueryService, ADR-214) ──
   useEffect(() => {
     if (!buildingId || !user) {
       setBuildingFloors([]);
       return;
     }
 
-    const floorsCol = collection(db, COLLECTIONS.FLOORS);
-    const constraints: QueryConstraint[] = [
-      where('buildingId', '==', buildingId),
-    ];
-
-    const isSuperAdmin = user.globalRole === 'super_admin';
-    if (!isSuperAdmin && user.companyId) {
-      constraints.push(where('companyId', '==', user.companyId));
-    }
-
-    const q = query(floorsCol, ...constraints);
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const options: FloorOption[] = snapshot.docs
+    const unsubscribe = firestoreQueryService.subscribe<{
+      id: string;
+      number: number;
+      name: string;
+    }>(
+      'FLOORS',
+      (result) => {
+        const options: FloorOption[] = result.documents
           .map((doc) => {
-            const data = doc.data();
-            const num = typeof data.number === 'number' ? data.number : 0;
+            const num = typeof doc.number === 'number' ? doc.number : 0;
             return {
               id: doc.id,
               number: num,
-              name: (data.name as string) || formatFloorLabel(num),
+              name: doc.name || formatFloorLabel(num),
             };
           })
           .sort((a, b) => a.number - b.number);
@@ -130,7 +119,8 @@ export function useAutoLevelCreation({
       },
       () => {
         setBuildingFloors([]);
-      }
+      },
+      { constraints: [where('buildingId', '==', buildingId)] },
     );
 
     return () => unsubscribe();

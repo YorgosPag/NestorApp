@@ -11,7 +11,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { ISceneManager, SceneEntity } from '../core/commands/interfaces';
-import type { AnySceneEntity } from '../types/scene';
+import type { AnySceneEntity, SceneModel } from '../types/scene';
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 import { computeAngleDegrees } from './grip-computation';
 
@@ -21,8 +21,8 @@ import { computeAngleDegrees } from './grip-computation';
 
 interface LevelSceneAccess {
   currentLevelId: string;
-  getLevelScene: (levelId: string) => { entities: AnySceneEntity[] } | null;
-  setLevelScene: (levelId: string, scene: { entities: AnySceneEntity[] }) => void;
+  getLevelScene: (levelId: string) => SceneModel | null;
+  setLevelScene: (levelId: string, scene: SceneModel) => void;
 }
 
 // ============================================================================

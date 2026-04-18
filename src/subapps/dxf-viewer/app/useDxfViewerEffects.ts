@@ -23,6 +23,9 @@ import type { SceneModel } from '../types/scene';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import type { ToolType } from '../ui/toolbar/types';
 import type { NotificationContextValue } from '@/types/notifications';
+import type { LevelsHookReturn } from '../systems/levels/useLevels';
+import type { UniversalSelectionHook } from '../systems/selection/SelectionSystem';
+import type { OverlayEditorMode } from '../overlays/types';
 
 // Types used only by debug keyboard shortcuts
 interface WorkflowStepResult {
@@ -41,15 +44,15 @@ interface WorkflowTestResult {
 
 /** Params for useDxfViewerEffects */
 export interface DxfViewerEffectsParams {
-  activeTool: string;
-  overlayMode: string;
-  currentScene: SceneModel | undefined;
+  activeTool: ToolType;
+  overlayMode: OverlayEditorMode;
+  currentScene: SceneModel | null;
   canvasTransform: { scale: number; offsetX: number; offsetY: number };
   showLayers: boolean;
   selectedEntityIds: string[];
   primarySelectedId: string | null;
 
-  setOverlayMode: (mode: string) => void;
+  setOverlayMode: (mode: OverlayEditorMode) => void;
   setCanvasTransform: (t: { scale: number; offsetX: number; offsetY: number }) => void;
   setSelectedEntityIds: React.Dispatch<React.SetStateAction<string[]>>;
   handleToolChange: (tool: ToolType) => void;
@@ -62,28 +65,20 @@ export interface DxfViewerEffectsParams {
   notifications: NotificationContextValue;
   canvasOps: { getTransform: () => ViewTransform };
 
-  levelManager: {
-    currentLevelId: string | null;
-    getLevelScene: (id: string) => SceneModel | undefined;
-  };
+  levelManager: LevelsHookReturn;
   overlayStore: {
     currentLevelId: string | null;
     setCurrentLevel: (id: string | null) => void;
     update: (id: string, data: Record<string, unknown>) => void;
   };
-  universalSelection: {
-    context: { universalSelection: Map<string, { type: string }> };
-  };
+  universalSelection: UniversalSelectionHook;
 
   floatingRef: React.RefObject<FloatingPanelHandle | null>;
   isInitializedRef: React.MutableRefObject<boolean>;
   canvasTransformRef: React.MutableRefObject<{ scale: number; offsetX: number; offsetY: number }>;
   prevGripStateRef: React.MutableRefObject<{ shouldEnableGrips: boolean } | null>;
   prevPrimarySelectedIdRef: React.MutableRefObject<string | null>;
-  levelManagerRef: React.MutableRefObject<{
-    currentLevelId: string | null;
-    getLevelScene: (id: string) => SceneModel | undefined;
-  }>;
+  levelManagerRef: React.MutableRefObject<LevelsHookReturn>;
   handleSceneChangeRef: React.MutableRefObject<(scene: SceneModel) => void>;
 }
 

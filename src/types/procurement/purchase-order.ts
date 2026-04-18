@@ -37,6 +37,14 @@ export const PO_STATUS_TRANSITIONS: Record<PurchaseOrderStatus, PurchaseOrderSta
   cancelled: [],
 } as const;
 
+/** PO Filter state (SSoT — consumed by usePurchaseOrders + procurementFiltersConfig) */
+export interface POFilters {
+  search: string;
+  status: PurchaseOrderStatus | null;
+  projectId: string | null;
+  supplierId: string | null;
+}
+
 /** Status sets for filtering — SSoT, avoid hardcoding in services */
 export const PO_MATCHABLE_STATUSES: ReadonlySet<PurchaseOrderStatus> = new Set([
   'ordered', 'partially_delivered', 'delivered',

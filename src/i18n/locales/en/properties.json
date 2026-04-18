@@ -620,6 +620,7 @@
       "identity": "Identifier",
       "commercial": "Commercial",
       "structure": "Structure",
+      "linkedSpaces": "Linked spaces",
       "features": "Features"
     },
     "dependencies": {

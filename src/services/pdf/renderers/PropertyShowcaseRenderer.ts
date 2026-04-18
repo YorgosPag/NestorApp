@@ -1,27 +1,44 @@
 /**
- * 🏢 ENTERPRISE: Property Showcase PDF Renderer (ADR-312)
+ * 🏢 ENTERPRISE: Property Showcase PDF Renderer (ADR-312 Phase 4)
  *
- * Renders a branded single-page PDF for a property showcase. Draws:
- * - Branded header (company name, generation date)
- * - Title (property name + code)
- * - Specs table (type, location, areas, layout, energy, condition)
- * - Features list (comma-separated)
- * - Short description
- * - Showcase URL (rich web page with photos/floorplans/video)
- * - Footer (contact + share token note)
+ * Branded multi-page PDF for a property showcase:
+ * - Cover page: brand header, title, description, photo grid
+ * - Specs page: identity/areas/layout/orientation/condition/energy (SSoT SpecsRows)
+ * - Detail page(s): project, commercial, systems, finishes, features, linked spaces,
+ *   energy extras, views — full parity with the Πληροφορίες tab
+ * - Floorplan page: embedded raster plans
+ * - Footer on every page
  *
- * Delegates primitives to TextRenderer. No image embedding — the rich page
- * shows photos/floorplans/video. PDF is the printable summary.
+ * Section drawing lives in `PropertyShowcaseSections` (SRP split — keeps this
+ * orchestrator under the Google 500-LOC budget). All labels come from the
+ * server-side i18n SSoT `labels` module; enum data from `snapshot-builder`.
  */
 
 import type { IPDFDoc, Margins } from '../contracts';
 import { TextRenderer } from './TextRenderer';
-import { COLORS, FONT_SIZES, FONT_STYLES, FONTS, LINE_SPACING } from '../layout';
+import { COLORS, FONT_SIZES, FONTS } from '../layout';
 import {
   drawMediaGridPage,
   PHOTO_GRID_CONFIG,
   FLOORPLAN_GRID_CONFIG,
 } from './PropertyShowcaseMediaGrid';
+import type { PropertyShowcaseSnapshot } from '@/services/property-showcase/snapshot-builder';
+import type { PropertyShowcasePDFLabels } from '@/services/property-showcase/labels';
+import {
+  drawProjectSection,
+  drawCommercialSection,
+  drawSystemsSection,
+  drawFinishesSection,
+  drawFeaturesSection,
+  drawEnergyExtrasSection,
+  drawLinkedSpacesSection,
+  drawLinkedSpacesFloorplansSection,
+  drawViewsSection,
+  drawSpecsSection,
+  drawOrientationSection,
+  type SectionContext,
+  type LinkedSpaceFloorplansPdfData,
+} from './PropertyShowcaseSections';
 
 export interface ShowcasePhotoAsset {
   id: string;
@@ -31,87 +48,47 @@ export interface ShowcasePhotoAsset {
 }
 
 export interface PropertyShowcasePDFData {
-  property: {
-    id: string;
-    code?: string;
-    name: string;
-    type?: string;
-    typeLabel?: string;
-    building?: string;
-    floor?: number;
-    description?: string;
-    layout?: {
-      bedrooms?: number;
-      bathrooms?: number;
-      wc?: number;
-    };
-    areas?: {
-      gross?: number;
-      net?: number;
-      balcony?: number;
-      terrace?: number;
-    };
-    orientations?: string[];
-    energyClass?: string;
-    condition?: string;
-    features?: string[];
-  };
-  company: {
-    name: string;
-    phone?: string;
-    email?: string;
-    website?: string;
-  };
+  snapshot: PropertyShowcaseSnapshot;
   showcaseUrl: string;
   videoUrl?: string;
   photoCount?: number;
   floorplanCount?: number;
   photos?: ShowcasePhotoAsset[];
   floorplans?: ShowcasePhotoAsset[];
+  /** Κατόψεις of linked parking/storage (ADR-312 Phase 7). */
+  linkedSpaceFloorplans?: LinkedSpaceFloorplansPdfData;
   generatedAt: Date;
   labels: PropertyShowcasePDFLabels;
+  locale: 'el' | 'en';
 }
 
-export interface PropertyShowcasePDFLabels {
-  headerTitle: string;
-  generatedOn: string;
-  specsSection: string;
-  featuresSection: string;
-  descriptionSection: string;
-  photosSection: string;
-  floorplansSection: string;
-  fieldType: string;
-  fieldBuilding: string;
-  fieldFloor: string;
-  fieldCode: string;
-  fieldGrossArea: string;
-  fieldNetArea: string;
-  fieldBalcony: string;
-  fieldTerrace: string;
-  fieldBedrooms: string;
-  fieldBathrooms: string;
-  fieldWc: string;
-  fieldOrientation: string;
-  fieldEnergyClass: string;
-  fieldCondition: string;
-  areaUnit: string;
-  footerNote: string;
-}
+// Re-export for downstream consumers that still import from this module.
+export type { PropertyShowcasePDFLabels };
 
 const VIOLET: [number, number, number] = [124, 58, 237];
 
-const safe = (value: string | number | undefined | null): string => {
+function safe(value: string | number | undefined | null): string {
   if (value === undefined || value === null) return '-';
   const normalized = String(value).trim();
   return normalized.length > 0 ? normalized : '-';
-};
+}
 
-const formatDate = (date: Date, locale: 'el' | 'en' = 'el'): string => {
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
+function formatDate(iso: string, locale: 'el' | 'en' = 'el'): string {
+  if (!iso) return '-';
+  const parts = iso.slice(0, 10).split('-');
+  if (parts.length !== 3) return iso;
+  const [year, month, day] = parts;
   return locale === 'el' ? `${day}/${month}/${year}` : `${year}-${month}-${day}`;
-};
+}
+
+function formatPrice(value: number, locale: 'el' | 'en' = 'el'): string {
+  const formatter = new Intl.NumberFormat(locale === 'el' ? 'el-GR' : 'en-US', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  });
+  return formatter.format(value);
+}
 
 export class PropertyShowcaseRenderer {
   // Showcase PDFs must render Greek labels + user content, so the renderer
@@ -121,27 +98,97 @@ export class PropertyShowcaseRenderer {
   // label turns into gibberish (incident 2026-04-17).
   private textRenderer = new TextRenderer({ font: FONTS.UNICODE });
 
-  render(
-    doc: IPDFDoc,
-    margins: Margins,
-    data: PropertyShowcasePDFData
-  ): void {
+  render(doc: IPDFDoc, margins: Margins, data: PropertyShowcasePDFData): void {
     const pageWidth = doc.pageSize.width;
     const contentWidth = pageWidth - margins.left - margins.right;
-    let y = margins.top;
+    const y = margins.top;
 
-    // Section order mirrors the public showcase web page
-    // (src/components/property-showcase/ShowcaseClient.tsx): brand header →
-    // name + description → photos → specs → floorplans. Phase 3.3 (ADR-312).
-    y = this.drawBrandHeader(doc, y, margins, pageWidth, contentWidth, data);
-    y += 8;
+    // ── 1. Cover: brand header only ────────────────────────────────────────
+    this.drawBrandHeader(doc, y, margins, pageWidth, contentWidth, data);
+
+    // ── 2–3. Project + Commercial ──────────────────────────────────────────
+    this.drawOverviewPage(doc, margins, pageWidth, contentWidth, data);
+
+    // ── 4. Description ─────────────────────────────────────────────────────
+    this.drawDescriptionPage(doc, margins, pageWidth, contentWidth, data);
+
+    // ── 5. Photos ──────────────────────────────────────────────────────────
+    drawMediaGridPage({
+      doc, margins, pageWidth, contentWidth,
+      assets: data.photos ?? [],
+      sectionTitle: data.labels.chrome.photosTitle,
+      drawSectionTitle: (d, yy, m, pw, cw, t) => this.drawSectionTitle(d, yy, m, pw, cw, t),
+      config: PHOTO_GRID_CONFIG,
+    });
+
+    // ── 6. Video — not embeddable in PDF, skipped on purpose ───────────────
+
+    // ── 7–9. Specs + Orientation + Linked spaces ───────────────────────────
+    this.drawSpecsBlockPage(doc, margins, pageWidth, contentWidth, data);
+
+    // ── 10. Linked-space Κατόψεις (parking + storage side-by-side) ─────────
+    this.drawLinkedSpacesFloorplansPage(doc, margins, pageWidth, contentWidth, data);
+
+    // ── 11–12. Energy + Views ──────────────────────────────────────────────
+    this.drawEnergyAndViewsPage(doc, margins, pageWidth, contentWidth, data);
+
+    // ── 13. Floorplans (property) ──────────────────────────────────────────
+    drawMediaGridPage({
+      doc, margins, pageWidth, contentWidth,
+      assets: data.floorplans ?? [],
+      sectionTitle: data.labels.chrome.floorplansTitle,
+      drawSectionTitle: (d, yy, m, pw, cw, t) => this.drawSectionTitle(d, yy, m, pw, cw, t),
+      config: FLOORPLAN_GRID_CONFIG,
+    });
+
+    // ── 12–14. Systems + Finishes + Features ───────────────────────────────
+    this.drawSystemsBlockPage(doc, margins, pageWidth, contentWidth, data);
+
+    this.drawFooter(doc, margins, pageWidth, data);
+  }
+
+  private buildSectionContext(
+    doc: IPDFDoc,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData,
+  ): SectionContext {
+    const pageHeight = doc.pageSize.height;
+    const bottomGuard = pageHeight - margins.bottom - 12;
+    const ensureSpace = (y: number, needed: number): number => {
+      if (y + needed <= bottomGuard) return y;
+      doc.addPage();
+      return margins.top;
+    };
+    return {
+      doc,
+      margins,
+      pageWidth,
+      contentWidth,
+      snapshot: data.snapshot,
+      labels: data.labels,
+      textRenderer: this.textRenderer,
+      drawSectionTitle: (y, text) =>
+        this.drawSectionTitle(doc, y, margins, pageWidth, contentWidth, text),
+      ensureSpace,
+      formatPrice: (v) => formatPrice(v, data.locale),
+      formatDate: (iso) => formatDate(iso, data.locale),
+    };
+  }
+
+  private drawDescriptionPage(
+    doc: IPDFDoc,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData,
+  ): void {
+    doc.addPage();
+    let y = margins.top;
     y = this.drawTitle(doc, y, margins, pageWidth, data);
     y += 6;
     this.drawDescription(doc, y, margins, pageWidth, contentWidth, data);
-    this.drawPhotoGrid(doc, margins, pageWidth, contentWidth, data);
-    this.drawSpecsPage(doc, margins, pageWidth, contentWidth, data);
-    this.drawFloorplanGrid(doc, margins, pageWidth, contentWidth, data);
-    this.drawFooter(doc, margins, pageWidth, data);
   }
 
   private drawBrandHeader(
@@ -150,14 +197,14 @@ export class PropertyShowcaseRenderer {
     margins: Margins,
     pageWidth: number,
     contentWidth: number,
-    data: PropertyShowcasePDFData
+    data: PropertyShowcasePDFData,
   ): number {
     doc.setFillColor(...VIOLET);
     doc.rect(margins.left, y - 5, contentWidth, 18, 'F');
 
     let current = this.textRenderer.addText({
       doc,
-      text: safe(data.company.name),
+      text: safe(data.snapshot.company.name),
       y: y + 1,
       align: 'center',
       fontSize: FONT_SIZES.H3,
@@ -169,7 +216,7 @@ export class PropertyShowcaseRenderer {
 
     current = this.textRenderer.addText({
       doc,
-      text: data.labels.headerTitle,
+      text: data.labels.chrome.title,
       y: current + 1,
       align: 'center',
       fontSize: FONT_SIZES.SMALL,
@@ -186,11 +233,12 @@ export class PropertyShowcaseRenderer {
     y: number,
     margins: Margins,
     pageWidth: number,
-    data: PropertyShowcasePDFData
+    data: PropertyShowcasePDFData,
   ): number {
+    const p = data.snapshot.property;
     let current = this.textRenderer.addText({
       doc,
-      text: safe(data.property.name),
+      text: safe(p.name),
       y,
       align: 'center',
       fontSize: FONT_SIZES.H2,
@@ -199,10 +247,10 @@ export class PropertyShowcaseRenderer {
       pageWidth,
     });
 
-    if (data.property.code) {
+    if (p.code) {
       current = this.textRenderer.addText({
         doc,
-        text: `${data.labels.fieldCode}: ${data.property.code}`,
+        text: `${data.labels.specs.code}: ${p.code}`,
         y: current + 1,
         align: 'center',
         fontSize: FONT_SIZES.BODY,
@@ -213,110 +261,22 @@ export class PropertyShowcaseRenderer {
     return current;
   }
 
-  private drawSpecs(
-    doc: IPDFDoc,
-    yStart: number,
-    margins: Margins,
-    pageWidth: number,
-    contentWidth: number,
-    data: PropertyShowcasePDFData
-  ): number {
-    let y = this.drawSectionTitle(doc, yStart, margins, pageWidth, contentWidth, data.labels.specsSection);
-    y += 3;
-    const p = data.property;
-    const unit = data.labels.areaUnit;
-
-    // Row-major pair order mirrors ShowcaseSpecs.tsx `grid sm:grid-cols-2`:
-    // index 0→left col row 1, index 1→right col row 1, index 2→left col
-    // row 2, etc. Same row order as the web component so sales see an
-    // identical layout on paper and on screen.
-    const rows: Array<[string, string]> = [
-      [data.labels.fieldType, safe(p.typeLabel || p.type)],
-      [data.labels.fieldCode, safe(p.code)],
-      [data.labels.fieldBuilding, safe(p.building)],
-      [data.labels.fieldFloor, p.floor !== undefined ? String(p.floor) : '-'],
-      [data.labels.fieldGrossArea, p.areas?.gross ? `${p.areas.gross} ${unit}` : '-'],
-      [data.labels.fieldNetArea, p.areas?.net ? `${p.areas.net} ${unit}` : '-'],
-      [data.labels.fieldBalcony, p.areas?.balcony ? `${p.areas.balcony} ${unit}` : '-'],
-      [data.labels.fieldTerrace, p.areas?.terrace ? `${p.areas.terrace} ${unit}` : '-'],
-      [data.labels.fieldBedrooms, p.layout?.bedrooms !== undefined ? String(p.layout.bedrooms) : '-'],
-      [data.labels.fieldBathrooms, p.layout?.bathrooms !== undefined ? String(p.layout.bathrooms) : '-'],
-      [data.labels.fieldWc, p.layout?.wc !== undefined ? String(p.layout.wc) : '-'],
-      [data.labels.fieldOrientation, p.orientations?.length ? p.orientations.join(', ') : '-'],
-      [data.labels.fieldEnergyClass, safe(p.energyClass)],
-      [data.labels.fieldCondition, safe(p.condition)],
-    ];
-
-    const columnGap = 8;
-    const columnWidth = (contentWidth - columnGap) / 2;
-    const rowStep = 6;
-    const labelColor: [number, number, number] = [107, 114, 128];
-
-    doc.setFont(FONTS.UNICODE, FONT_STYLES.NORMAL);
-    doc.setFontSize(FONT_SIZES.BODY);
-
-    for (let i = 0; i < rows.length; i += 2) {
-      this.drawSpecCell(doc, rows[i], margins.left, columnWidth, y, labelColor);
-      if (i + 1 < rows.length) {
-        this.drawSpecCell(doc, rows[i + 1], margins.left + columnWidth + columnGap, columnWidth, y, labelColor);
-      }
-      y += rowStep;
-    }
-    doc.setTextColor(...COLORS.BLACK);
-    return y;
-  }
-
-  private drawSpecCell(
-    doc: IPDFDoc,
-    [label, value]: [string, string],
-    x: number,
-    width: number,
-    y: number,
-    labelColor: [number, number, number]
-  ): void {
-    doc.setTextColor(...labelColor);
-    doc.text(`${label}:`, x, y);
-    doc.setTextColor(...COLORS.BLACK);
-    doc.text(value || '-', x + width, y, { align: 'right' });
-  }
-
-  private drawFeatures(
-    doc: IPDFDoc,
-    yStart: number,
-    margins: Margins,
-    pageWidth: number,
-    contentWidth: number,
-    data: PropertyShowcasePDFData
-  ): number {
-    if (!data.property.features || data.property.features.length === 0) {
-      return yStart;
-    }
-    let y = this.drawSectionTitle(doc, yStart, margins, pageWidth, contentWidth, data.labels.featuresSection);
-    y = this.textRenderer.addWrappedText({
-      doc,
-      text: data.property.features.join(' • '),
-      y,
-      fontSize: FONT_SIZES.BODY,
-      maxWidth: contentWidth,
-      margins,
-      onPageBreak: () => margins.top,
-    });
-    return y;
-  }
-
   private drawDescription(
     doc: IPDFDoc,
     yStart: number,
     margins: Margins,
     pageWidth: number,
     contentWidth: number,
-    data: PropertyShowcasePDFData
+    data: PropertyShowcasePDFData,
   ): number {
-    if (!data.property.description) return yStart;
-    let y = this.drawSectionTitle(doc, yStart, margins, pageWidth, contentWidth, data.labels.descriptionSection);
+    const description = data.snapshot.property.description;
+    if (!description) return yStart;
+    let y = this.drawSectionTitle(
+      doc, yStart, margins, pageWidth, contentWidth, data.labels.chrome.descriptionSection,
+    );
     y = this.textRenderer.addWrappedText({
       doc,
-      text: data.property.description,
+      text: description,
       y,
       fontSize: FONT_SIZES.BODY,
       maxWidth: contentWidth,
@@ -326,68 +286,100 @@ export class PropertyShowcaseRenderer {
     return y;
   }
 
-  private drawSpecsPage(
+  private drawOverviewPage(
     doc: IPDFDoc,
     margins: Margins,
     pageWidth: number,
     contentWidth: number,
-    data: PropertyShowcasePDFData
+    data: PropertyShowcasePDFData,
   ): void {
     doc.addPage();
+    const ctx = this.buildSectionContext(doc, margins, pageWidth, contentWidth, data);
     let y = margins.top;
-    y = this.drawSpecs(doc, y, margins, pageWidth, contentWidth, data);
-    y += 4;
-    this.drawFeatures(doc, y, margins, pageWidth, contentWidth, data);
+    y = drawProjectSection(ctx, y);
+    drawCommercialSection(ctx, y);
   }
 
-  private drawPhotoGrid(
+  private drawSpecsBlockPage(
     doc: IPDFDoc,
     margins: Margins,
     pageWidth: number,
     contentWidth: number,
-    data: PropertyShowcasePDFData
+    data: PropertyShowcasePDFData,
   ): void {
-    drawMediaGridPage({
-      doc, margins, pageWidth, contentWidth,
-      assets: data.photos ?? [],
-      sectionTitle: data.labels.photosSection,
-      drawSectionTitle: (d, y, m, pw, cw, t) => this.drawSectionTitle(d, y, m, pw, cw, t),
-      config: PHOTO_GRID_CONFIG,
-    });
+    doc.addPage();
+    const ctx = this.buildSectionContext(doc, margins, pageWidth, contentWidth, data);
+    let y = margins.top;
+    y = drawSpecsSection(ctx, y);
+    y = drawOrientationSection(ctx, y);
+    drawLinkedSpacesSection(ctx, y);
   }
 
-  private drawFloorplanGrid(
+  private drawLinkedSpacesFloorplansPage(
     doc: IPDFDoc,
     margins: Margins,
     pageWidth: number,
     contentWidth: number,
-    data: PropertyShowcasePDFData
+    data: PropertyShowcasePDFData,
   ): void {
-    drawMediaGridPage({
-      doc, margins, pageWidth, contentWidth,
-      assets: data.floorplans ?? [],
-      sectionTitle: data.labels.floorplansSection,
-      drawSectionTitle: (d, y, m, pw, cw, t) => this.drawSectionTitle(d, y, m, pw, cw, t),
-      config: FLOORPLAN_GRID_CONFIG,
-    });
+    const linked = data.linkedSpaceFloorplans;
+    if (!linked || (linked.parking.length === 0 && linked.storage.length === 0)) return;
+    const ctx = this.buildSectionContext(doc, margins, pageWidth, contentWidth, data);
+    drawLinkedSpacesFloorplansSection(ctx, linked);
+  }
+
+  private drawEnergyAndViewsPage(
+    doc: IPDFDoc,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData,
+  ): void {
+    const hasEnergy = Boolean(data.snapshot.property.energy);
+    const hasViews = (data.snapshot.property.views ?? []).length > 0;
+    if (!hasEnergy && !hasViews) return;
+    doc.addPage();
+    const ctx = this.buildSectionContext(doc, margins, pageWidth, contentWidth, data);
+    let y = margins.top;
+    y = drawEnergyExtrasSection(ctx, y);
+    drawViewsSection(ctx, y);
+  }
+
+  private drawSystemsBlockPage(
+    doc: IPDFDoc,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData,
+  ): void {
+    doc.addPage();
+    const ctx = this.buildSectionContext(doc, margins, pageWidth, contentWidth, data);
+    let y = margins.top;
+    y = drawSystemsSection(ctx, y);
+    y = drawFinishesSection(ctx, y);
+    drawFeaturesSection(ctx, y);
   }
 
   private drawFooter(
     doc: IPDFDoc,
     margins: Margins,
     pageWidth: number,
-    data: PropertyShowcasePDFData
+    data: PropertyShowcasePDFData,
   ): void {
     const pageHeight = doc.pageSize.height;
     const footerY = pageHeight - margins.bottom;
-    const contact = [data.company.phone, data.company.email, data.company.website]
+    const brand = data.snapshot.company;
+    const contact = [brand.phone, brand.email, brand.website]
       .filter((value): value is string => Boolean(value))
       .join(' · ');
-    const footerLine = `${data.labels.footerNote} · ${data.labels.generatedOn} ${formatDate(data.generatedAt)}`;
+    const footerLine = `${data.labels.chrome.footerNote} · ${data.labels.chrome.generatedOn} ${formatDate(
+      data.generatedAt.toISOString(),
+      data.locale,
+    )}`;
 
-    // Stamp contact + footerLine on EVERY page so the photo-grid page (added
-    // by drawPhotoGrid()) also carries branding/expiry context. Without this
-    // loop jsPDF only writes on the active page.
+    // Stamp contact + footerLine on EVERY page so the photo-grid page also
+    // carries branding/expiry context. Without this loop jsPDF only writes
+    // on the active page.
     const totalPages = doc.getNumberOfPages();
     for (let n = 1; n <= totalPages; n++) {
       doc.setPage(n);
@@ -410,7 +402,7 @@ export class PropertyShowcaseRenderer {
     margins: Margins,
     pageWidth: number,
     contentWidth: number,
-    text: string
+    text: string,
   ): number {
     doc.setFillColor(...COLORS.GRAY);
     doc.rect(margins.left, y - 4, contentWidth, 7, 'F');
@@ -424,26 +416,5 @@ export class PropertyShowcaseRenderer {
       margins,
       pageWidth,
     }) + 1;
-  }
-
-  private drawField(
-    doc: IPDFDoc,
-    y: number,
-    margins: Margins,
-    pageWidth: number,
-    contentWidth: number,
-    label: string,
-    value: string
-  ): number {
-    return this.textRenderer.addWrappedText({
-      doc,
-      text: `${label}: ${value || '-'}`,
-      y,
-      fontSize: FONT_SIZES.BODY,
-      maxWidth: contentWidth,
-      margins,
-      onPageBreak: () => margins.top,
-      lineStep: LINE_SPACING.BODY - 1,
-    });
   }
 }

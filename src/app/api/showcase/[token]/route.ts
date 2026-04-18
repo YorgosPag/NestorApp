@@ -1,15 +1,20 @@
 /**
  * =============================================================================
- * GET /api/showcase/[token] (ADR-312)
+ * GET /api/showcase/[token] (ADR-312 Phase 4)
  * =============================================================================
  *
  * Public endpoint — no authentication required. Resolves a showcase token into
- * a read-only snapshot of the property: core fields, company branding,
- * published photos, floorplans, optional video link, PDF link.
+ * a read-only snapshot of the property: full Πληροφορίες-tab coverage, company
+ * branding, published photos, floorplans, optional video link, PDF link.
+ *
+ * The snapshot payload is produced by the SSoT `buildPropertyShowcaseSnapshot`
+ * so this route and the PDF generator cannot drift.
  *
  * Validation:
  *  - Share exists, is active, has showcaseMode=true
  *  - Share is not expired
+ *
+ * SRP split — media helpers + share lookup live in ./helpers.ts.
  *
  * @module app/api/showcase/[token]/route
  */
@@ -17,106 +22,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FILE_CATEGORIES, type FileCategory } from '@/config/domain-constants';
-import { listPropertyMedia } from '@/services/property-media/property-media.service';
-import {
-  translatePropertyType,
-  translateOrientations,
-  translatePropertyCondition,
-  type EnumLocale,
-} from '@/services/property-enum-labels/property-enum-labels.service';
+import { FILE_CATEGORIES } from '@/config/domain-constants';
 import { resolveShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
+import {
+  buildPropertyShowcaseSnapshot,
+  loadShowcaseRelations,
+} from '@/services/property-showcase/snapshot-builder';
+import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import type { ShowcasePayload } from '@/components/property-showcase/types';
+import {
+  buildBaseUrl,
+  loadFilesByCategory,
+  loadLinkedSpaceFloorplans,
+  loadShareByToken,
+} from './helpers';
 
 const logger = createModuleLogger('ShowcasePublicApi');
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
-interface ShowcaseMedia {
-  id: string;
-  url: string;
-  displayName?: string;
-  previewUrl?: string;
-  ext?: string;
-}
-
-interface ShowcasePublicResponse {
-  property: {
-    id: string;
-    code?: string;
-    name: string;
-    type?: string;
-    typeLabel?: string;
-    building?: string;
-    floor?: number;
-    description?: string;
-    layout?: { bedrooms?: number; bathrooms?: number; wc?: number };
-    areas?: { gross?: number; net?: number; balcony?: number; terrace?: number };
-    orientations?: string[];
-    orientationLabels?: string[];
-    energyClass?: string;
-    condition?: string;
-    conditionLabel?: string;
-    features?: string[];
-  };
-  company: {
-    name: string;
-    phone?: string;
-    email?: string;
-    website?: string;
-  };
-  photos: ShowcaseMedia[];
-  floorplans: ShowcaseMedia[];
-  videoUrl?: string;
-  pdfUrl?: string;
-  expiresAt: string;
-}
-
 function jsonError(status: number, message: string): NextResponse {
   return NextResponse.json({ error: message }, { status });
-}
-
-async function loadShareByToken(token: string) {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) return null;
-  const snap = await adminDb
-    .collection(COLLECTIONS.FILE_SHARES)
-    .where('token', '==', token)
-    .where('isActive', '==', true)
-    .limit(1)
-    .get();
-  if (snap.empty) return null;
-  const doc = snap.docs[0];
-  return { id: doc.id, ...doc.data() } as Record<string, unknown> & { id: string };
-}
-
-async function loadFilesByCategory(
-  companyId: string,
-  propertyId: string,
-  category: FileCategory
-): Promise<ShowcaseMedia[]> {
-  const metas = await listPropertyMedia({ companyId, propertyId, category, limit: 30 });
-  const items: ShowcaseMedia[] = [];
-  for (const m of metas) {
-    if (!m.downloadUrl) continue;
-    items.push({
-      id: m.id,
-      url: m.downloadUrl,
-      displayName: m.displayName || m.originalFilename || undefined,
-      previewUrl: m.thumbnailUrl || undefined,
-      ext: m.ext || undefined,
-    });
-  }
-  return items;
-}
-
-function buildBaseUrl(req: NextRequest): string {
-  const envBase = process.env.NEXT_PUBLIC_APP_URL;
-  if (envBase && envBase.trim().length > 0) return envBase.replace(/\/$/, '');
-  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
-  const proto = req.headers.get('x-forwarded-proto') || 'https';
-  return `${proto}://${host}`;
 }
 
 export async function GET(
@@ -149,74 +77,50 @@ export async function GET(
 
   const propertySnap = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(showcasePropertyId).get();
   if (!propertySnap.exists) return jsonError(404, 'Property not found');
-  const p = propertySnap.data() ?? {};
-  if ((p as { companyId?: string }).companyId !== companyId) {
+  const propertyData = (propertySnap.data() ?? {}) as Record<string, unknown>;
+  if ((propertyData as { companyId?: string }).companyId !== companyId) {
     return jsonError(403, 'Tenant mismatch');
   }
 
   // Branding via hierarchy Property → Project → Contact (ADR-312 Phase 3.7).
   const branding = await resolveShowcaseCompanyBranding({
     adminDb,
-    propertyData: p as Record<string, unknown>,
+    propertyData,
     companyId,
   });
-
-  const [photos, floorplans] = await Promise.all([
-    loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.PHOTOS),
-    loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.FLOORPLANS),
-  ]);
-
-  const layout = (p as { layout?: Record<string, unknown> }).layout || {};
-  const areas = (p as { areas?: Record<string, unknown> }).areas || {};
-  const energy = (p as { energy?: Record<string, unknown> }).energy || {};
 
   const localeParam = request.nextUrl.searchParams.get('locale');
   const locale: EnumLocale = localeParam === 'en' ? 'en' : 'el';
 
-  const rawType = (p as Record<string, unknown>).type as string | undefined;
-  const rawOrientations = Array.isArray((p as Record<string, unknown>).orientations)
-    ? ((p as Record<string, unknown>).orientations as string[])
-    : undefined;
-  const rawCondition = (p as Record<string, unknown>).condition as string | undefined;
+  const context = await loadShowcaseRelations({
+    adminDb,
+    propertyId: showcasePropertyId,
+    property: propertyData,
+    branding,
+  });
 
-  const response: ShowcasePublicResponse = {
-    property: {
-      id: showcasePropertyId,
-      code: (p as Record<string, unknown>).code as string | undefined,
-      name: ((p as Record<string, unknown>).name as string) || showcasePropertyId,
-      type: rawType,
-      typeLabel: translatePropertyType(rawType, locale),
-      building: (p as Record<string, unknown>).building as string | undefined,
-      floor: typeof (p as Record<string, unknown>).floor === 'number' ? ((p as Record<string, unknown>).floor as number) : undefined,
-      description: (p as Record<string, unknown>).description as string | undefined,
-      layout: {
-        bedrooms: layout.bedrooms as number | undefined,
-        bathrooms: layout.bathrooms as number | undefined,
-        wc: layout.wc as number | undefined,
-      },
-      areas: {
-        gross: areas.gross as number | undefined,
-        net: areas.net as number | undefined,
-        balcony: areas.balcony as number | undefined,
-        terrace: areas.terrace as number | undefined,
-      },
-      orientations: rawOrientations,
-      orientationLabels: translateOrientations(rawOrientations, locale),
-      energyClass: energy.class as string | undefined,
-      condition: rawCondition,
-      conditionLabel: translatePropertyCondition(rawCondition, locale),
-      features: Array.isArray((p as Record<string, unknown>).features)
-        ? ((p as Record<string, unknown>).features as string[])
-        : undefined,
-    },
+  const [photos, floorplans, linkedSpaceFloorplans] = await Promise.all([
+    loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.PHOTOS),
+    loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.FLOORPLANS),
+    loadLinkedSpaceFloorplans(companyId, context),
+  ]);
+
+  const snapshot = buildPropertyShowcaseSnapshot(context, locale);
+
+  const hasLinkedFloorplans =
+    linkedSpaceFloorplans.parking.length > 0 || linkedSpaceFloorplans.storage.length > 0;
+
+  const response: ShowcasePayload = {
+    property: snapshot.property,
     company: {
-      name: branding.name,
-      phone: branding.phone,
-      email: branding.email,
-      website: branding.website,
+      name: snapshot.company.name,
+      phone: snapshot.company.phone,
+      email: snapshot.company.email,
+      website: snapshot.company.website,
     },
     photos,
     floorplans,
+    linkedSpaceFloorplans: hasLinkedFloorplans ? linkedSpaceFloorplans : undefined,
     videoUrl: (share.note as string | undefined) || undefined,
     pdfUrl: share.pdfStoragePath ? `${buildBaseUrl(request)}/api/showcase/${token}/pdf` : undefined,
     expiresAt,
@@ -225,6 +129,8 @@ export async function GET(
   logger.info('Showcase resolved', {
     token, propertyId: showcasePropertyId, companyId,
     photoCount: photos.length, floorplanCount: floorplans.length,
+    linkedParkingFloorplans: linkedSpaceFloorplans.parking.reduce((sum, g) => sum + g.media.length, 0),
+    linkedStorageFloorplans: linkedSpaceFloorplans.storage.reduce((sum, g) => sum + g.media.length, 0),
   });
 
   return NextResponse.json(response);

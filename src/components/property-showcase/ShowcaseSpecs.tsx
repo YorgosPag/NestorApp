@@ -11,6 +11,7 @@ interface ShowcaseSpecsProps {
 export function ShowcaseSpecs({ property }: ShowcaseSpecsProps) {
   const { t } = useTranslation('showcase');
   const rows = buildRows(property, t);
+  if (rows.length === 0) return null;
   return (
     <section className="bg-[hsl(var(--showcase-surface))] rounded-xl shadow-sm p-5 border border-[hsl(var(--showcase-border))]">
       <h2 className="text-lg font-semibold text-[hsl(var(--showcase-fg))] mb-4">{t('specs.title')}</h2>
@@ -28,29 +29,37 @@ export function ShowcaseSpecs({ property }: ShowcaseSpecsProps) {
 
 function buildRows(
   p: ShowcasePropertySnapshot,
-  t: (key: string) => string
+  t: (key: string) => string,
 ): Array<[string, string]> {
   const unit = t('specs.areaUnit');
-  const dash = '—';
-  const orientationDisplay = p.orientationLabels?.length
-    ? p.orientationLabels.join(', ')
-    : p.orientations?.length
-      ? p.orientations.join(', ')
-      : dash;
-  return [
-    [t('specs.type'), p.typeLabel || p.type || dash],
-    [t('specs.code'), p.code || dash],
-    [t('specs.building'), p.building || dash],
-    [t('specs.floor'), p.floor !== undefined ? String(p.floor) : dash],
-    [t('specs.grossArea'), p.areas?.gross ? `${p.areas.gross} ${unit}` : dash],
-    [t('specs.netArea'), p.areas?.net ? `${p.areas.net} ${unit}` : dash],
-    [t('specs.balcony'), p.areas?.balcony ? `${p.areas.balcony} ${unit}` : dash],
-    [t('specs.terrace'), p.areas?.terrace ? `${p.areas.terrace} ${unit}` : dash],
-    [t('specs.bedrooms'), p.layout?.bedrooms !== undefined ? String(p.layout.bedrooms) : dash],
-    [t('specs.bathrooms'), p.layout?.bathrooms !== undefined ? String(p.layout.bathrooms) : dash],
-    [t('specs.wc'), p.layout?.wc !== undefined ? String(p.layout.wc) : dash],
-    [t('specs.orientation'), orientationDisplay],
-    [t('specs.energyClass'), p.energyClass || dash],
-    [t('specs.condition'), p.conditionLabel || p.condition || dash],
-  ];
+  const rows: Array<[string, string]> = [];
+  const push = (label: string, value: string | number | undefined) => {
+    if (value === undefined || value === null || value === '') return;
+    rows.push([label, String(value)]);
+  };
+
+  push(t('specs.type'), p.typeLabel || p.type);
+  push(t('specs.code'), p.code);
+  push(t('specs.building'), p.building);
+  push(t('specs.floor'), p.floor !== undefined ? String(p.floor) : undefined);
+
+  if (p.areas?.gross !== undefined) push(t('specs.grossArea'), `${p.areas.gross} ${unit}`);
+  if (p.areas?.net !== undefined) push(t('specs.netArea'), `${p.areas.net} ${unit}`);
+  if (p.areas?.balcony !== undefined) push(t('specs.balcony'), `${p.areas.balcony} ${unit}`);
+  if (p.areas?.terrace !== undefined) push(t('specs.terrace'), `${p.areas.terrace} ${unit}`);
+  if (p.areas?.garden !== undefined) push(t('specs.garden'), `${p.areas.garden} ${unit}`);
+  if (p.areas?.millesimalShares !== undefined)
+    push(t('specs.millesimalShares'), `${p.areas.millesimalShares}‰`);
+
+  push(t('specs.bedrooms'), p.layout?.bedrooms);
+  push(t('specs.bathrooms'), p.layout?.bathrooms);
+  push(t('specs.wc'), p.layout?.wc);
+  push(t('specs.totalRooms'), p.layout?.totalRooms);
+  push(t('specs.balconies'), p.layout?.balconies);
+
+  push(t('specs.condition'), p.condition?.conditionLabel || p.condition?.condition);
+  push(t('specs.renovationYear'), p.condition?.renovationYear);
+  push(t('specs.deliveryDate'), p.condition?.deliveryDate);
+
+  return rows;
 }

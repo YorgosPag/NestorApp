@@ -11,14 +11,15 @@
  * supported file type (PDF, images, video, audio, DOCX) previews identically
  * in both contexts.
  *
+ * SRP split — state/IO flow lives in ./useSharedFilePageState.
+ *
  * @module components/shared/pages/SharedFilePageContent
  * @enterprise ADR-191 — Enterprise Document Management System (Phase 4.3)
  */
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import React from 'react';
 import {
   Download,
   Lock,
@@ -33,207 +34,35 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { FileShareService, type FileShareRecord } from '@/services/file-share.service';
-import { UnifiedSharingService } from '@/services/sharing/unified-sharing.service';
-// Side-effect import: registers resolvers with ShareEntityRegistry
-import {
-  contactShareResolver,
-  propertyShowcaseShareResolver,
-  type ContactShareResolvedData,
-  type PropertyShowcaseResolvedData,
-} from '@/services/sharing/resolvers';
 import { SharedContactPageContent } from '@/components/shared/pages/SharedContactPageContent';
 import { SharedShowcasePageContent } from '@/components/shared/pages/SharedShowcasePageContent';
 import { formatFileSize } from '@/utils/file-validation';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
 import { getFileCategory, getFileCategoryI18nKey } from '@/lib/file-types/preview-registry';
-import { openRemoteUrlInNewTab } from '@/lib/exports/trigger-export-download';
 import '@/lib/design-system';
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface FileInfo {
-  displayName: string;
-  originalFilename: string;
-  contentType: string;
-  sizeBytes: number;
-  downloadUrl: string;
-  ext: string;
-}
-
-type PageState =
-  | 'loading'
-  | 'password'
-  | 'ready'
-  | 'error'
-  | 'expired'
-  | 'contact'
-  | 'showcase';
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
+import { useSharedFilePageState } from './useSharedFilePageState';
 
 export function SharedFilePageContent() {
-  const params = useParams();
-  const token = params.token as string;
   const colors = useSemanticColors();
   const { t } = useTranslation('files-media');
 
-  const [state, setState] = useState<PageState>('loading');
-  const [share, setShare] = useState<FileShareRecord | null>(null);
-  const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordError, setPasswordError] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  // ADR-315: unified contact share data (null unless entityType=contact)
-  const [contactData, setContactData] = useState<ContactShareResolvedData | null>(null);
-  const [contactExpiresAt, setContactExpiresAt] = useState<string>('');
-  // ADR-315: unified showcase share data (null unless entityType=property_showcase)
-  const [showcaseData, setShowcaseData] = useState<PropertyShowcaseResolvedData | null>(null);
-  const [showcaseExpiresAt, setShowcaseExpiresAt] = useState<string>('');
-  // ADR-315: when non-null, share was resolved via unified `shares` collection
-  // and access/revoke operations must go through UnifiedSharingService.
-  const [unifiedShareId, setUnifiedShareId] = useState<string | null>(null);
-
-  // Load file metadata from Firestore
-  const loadFileInfo = useCallback(async (fileId: string) => {
-    const { doc, getDoc } = await import('firebase/firestore');
-    const { db } = await import('@/lib/firebase');
-    const { COLLECTIONS } = await import('@/config/firestore-collections');
-
-    const fileDoc = await getDoc(doc(db, COLLECTIONS.FILES, fileId));
-    if (!fileDoc.exists()) {
-      setState('error');
-      setErrorMessage('File not found');
-      return;
-    }
-
-    const data = fileDoc.data();
-    setFileInfo({
-      displayName: data.displayName ?? data.originalFilename ?? 'File',
-      originalFilename: data.originalFilename ?? 'file',
-      contentType: data.contentType ?? '',
-      sizeBytes: data.sizeBytes ?? 0,
-      downloadUrl: data.downloadUrl ?? '',
-      ext: data.ext ?? '',
-    });
-    setState('ready');
-  }, []);
-
-  // Validate share token
-  useEffect(() => {
-    async function validate() {
-      try {
-        // ADR-315: unified dispatcher — try new `shares` collection first
-        const unified = await UnifiedSharingService.validateShare(token);
-        if (unified.valid && unified.share) {
-          const u = unified.share;
-          if (u.entityType === 'property_showcase') {
-            setShowcaseExpiresAt(u.expiresAt);
-            const data = await propertyShowcaseShareResolver.resolve(u);
-            setShowcaseData(data);
-            await UnifiedSharingService.incrementAccessCount(u.id);
-            setState('showcase');
-            return;
-          }
-          if (u.entityType === 'contact') {
-            setContactExpiresAt(u.expiresAt);
-            // Resolve contact via registered resolver (respects includedFields)
-            const data = await contactShareResolver.resolve(u);
-            setContactData(data);
-            await UnifiedSharingService.incrementAccessCount(u.id);
-            setState('contact');
-            return;
-          }
-          // entityType === 'file' — adapt unified ShareRecord → FileShareRecord shape
-          const adapted: FileShareRecord = {
-            id: u.id,
-            fileId: u.entityId,
-            token: u.token,
-            createdBy: u.createdBy,
-            createdAt: u.createdAt as string,
-            expiresAt: u.expiresAt,
-            isActive: u.isActive,
-            passwordHash: u.passwordHash ?? undefined,
-            requiresPassword: u.requiresPassword,
-            downloadCount: u.accessCount,
-            maxDownloads: u.maxAccesses,
-            note: u.note ?? undefined,
-            companyId: u.companyId,
-          };
-          setShare(adapted);
-          setUnifiedShareId(u.id);
-          if (u.requiresPassword) {
-            setState('password');
-            return;
-          }
-          await loadFileInfo(u.entityId);
-          await UnifiedSharingService.incrementAccessCount(u.id);
-          return;
-        }
-
-        // Legacy fallback — `file_shares` collection (FileShareService)
-        const validation = await FileShareService.validateShare(token);
-
-        if (!validation.valid || !validation.share) {
-          setState(validation.reason?.includes('expired') ? 'expired' : 'error');
-          setErrorMessage(validation.reason ?? 'Invalid share link');
-          return;
-        }
-
-        setShare(validation.share);
-
-        if (validation.share.requiresPassword) {
-          setState('password');
-          return;
-        }
-
-        await loadFileInfo(validation.share.fileId);
-      } catch (err) {
-        setState('error');
-        setErrorMessage(err instanceof Error ? err.message : 'Failed to load');
-      }
-    }
-
-    validate();
-  }, [token, loadFileInfo]);
-
-  // Handle password submit
-  const handlePasswordSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!share) return;
-
-    const valid = await FileShareService.verifyPassword(share, password);
-    if (!valid) {
-      setPasswordError(true);
-      return;
-    }
-
-    setPasswordError(false);
-    await loadFileInfo(share.fileId);
-  }, [share, password, loadFileInfo]);
-
-  // Handle download
-  const handleDownload = useCallback(async () => {
-    if (!fileInfo?.downloadUrl || !share) return;
-
-    setDownloading(true);
-    try {
-      // ADR-315: route counter write to the collection the share actually lives in
-      if (unifiedShareId) {
-        await UnifiedSharingService.incrementAccessCount(unifiedShareId);
-      } else {
-        await FileShareService.incrementDownloadCount(share.id);
-      }
-      openRemoteUrlInNewTab(fileInfo.downloadUrl);
-    } finally {
-      setDownloading(false);
-    }
-  }, [fileInfo, share, unifiedShareId]);
+  const {
+    token,
+    state,
+    share,
+    fileInfo,
+    password,
+    passwordError,
+    downloading,
+    contactData,
+    contactExpiresAt,
+    showcaseData,
+    pendingUnifiedShare,
+    setPassword,
+    setPasswordError,
+    handlePasswordSubmit,
+    handleDownload,
+  } = useSharedFilePageState();
 
   // Format expiration
   const expiresLabel = share?.expiresAt
@@ -263,13 +92,7 @@ export function SharedFilePageContent() {
 
   // ADR-315: Property Showcase public view — replaces legacy /shared/po redirect.
   if (state === 'showcase' && showcaseData) {
-    return (
-      <SharedShowcasePageContent
-        token={token}
-        data={showcaseData}
-        expiresAt={showcaseExpiresAt}
-      />
-    );
+    return <SharedShowcasePageContent token={token} />;
   }
 
   return (
@@ -289,7 +112,7 @@ export function SharedFilePageContent() {
             <section className="text-center py-8">
               <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-destructive" />
               <h2 className="text-lg font-semibold mb-2">{t('share.invalidLink')}</h2>
-              <p className={cn('text-sm', colors.text.muted)}>{errorMessage}</p>
+              <p className={cn('text-sm', colors.text.muted)}>{t('share.invalidLinkDescription')}</p>
             </section>
           )}
 
@@ -303,42 +126,86 @@ export function SharedFilePageContent() {
           )}
 
           {/* Password required */}
-          {state === 'password' && (
-            <section className="py-4">
-              <figure className="flex items-center justify-center mb-6">
-                <Lock className="h-12 w-12 text-amber-500" />
-              </figure>
-              <h2 className="text-lg font-semibold text-center mb-2">
-                {t('share.protected')}
-              </h2>
-              <p className={cn('text-sm text-center mb-6', colors.text.muted)}>
-                {t('share.passwordRequired')}
-              </p>
-              <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-sm mx-auto">
-                <label className="block">
-                  <span className="text-sm font-medium">{t('share.password')}</span>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => { setPassword(e.target.value); setPasswordError(false); }}
-                    className={cn(
-                      'w-full mt-1 px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring',
-                      passwordError && 'border-destructive',
-                    )}
-                    autoFocus
-                    required
-                  />
-                  {passwordError && (
-                    <span className="text-xs text-destructive mt-1">{t('share.wrongPassword')}</span>
+          {state === 'password' && (() => {
+            const gateNote = pendingUnifiedShare?.note ?? share?.note ?? null;
+            const gateExpiresAt = pendingUnifiedShare?.expiresAt ?? share?.expiresAt ?? null;
+            const gateMax = pendingUnifiedShare?.maxAccesses ?? share?.maxDownloads ?? 0;
+            const gateUsed = pendingUnifiedShare?.accessCount ?? share?.downloadCount ?? 0;
+            const gateExpiresLabel = gateExpiresAt
+              ? new Date(gateExpiresAt).toLocaleDateString('el-GR', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : '';
+            return (
+              <section className="py-4">
+                <figure className="flex items-center justify-center mb-6">
+                  <Lock className="h-12 w-12 text-amber-500" />
+                </figure>
+                <h2 className="text-lg font-semibold text-center mb-2">
+                  {t('share.protected')}
+                </h2>
+                <p className={cn('text-sm text-center mb-4', colors.text.muted)}>
+                  {t('share.passwordRequired')}
+                </p>
+
+                {gateNote && (
+                  <p className={cn(
+                    'text-sm bg-muted/50 rounded-md p-3 mb-4 italic text-center max-w-sm mx-auto',
+                    colors.text.muted,
+                  )}>
+                    {gateNote}
+                  </p>
+                )}
+
+                <footer className={cn(
+                  'flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs mb-6',
+                  colors.text.muted,
+                )}>
+                  {gateExpiresLabel && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {t('share.expires')} {gateExpiresLabel}
+                    </span>
                   )}
-                </label>
-                <Button type="submit" className="w-full">
-                  <Shield className="h-4 w-4 mr-2" />
-                  {t('share.access')}
-                </Button>
-              </form>
-            </section>
-          )}
+                  {gateExpiresLabel && <span aria-hidden="true">·</span>}
+                  <span className="flex items-center gap-1">
+                    <Download className="h-3 w-3" />
+                    {gateMax > 0
+                      ? `${gateUsed}/${gateMax} ${t('share.downloads')}`
+                      : t('share.unlimitedDownloads')}
+                  </span>
+                </footer>
+
+                <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-sm mx-auto">
+                  <label className="block">
+                    <span className="text-sm font-medium">{t('share.password')}</span>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setPasswordError(false); }}
+                      className={cn(
+                        'w-full mt-1 px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring',
+                        passwordError && 'border-destructive',
+                      )}
+                      autoFocus
+                      required
+                    />
+                    {passwordError && (
+                      <span className="text-xs text-destructive mt-1">{t('share.wrongPassword')}</span>
+                    )}
+                  </label>
+                  <Button type="submit" className="w-full">
+                    <Shield className="h-4 w-4 mr-2" />
+                    {t('share.access')}
+                  </Button>
+                </form>
+              </section>
+            );
+          })()}
 
           {/* Ready — show file info, preview and download */}
           {state === 'ready' && fileInfo && (

@@ -35,6 +35,7 @@ import {
   type EntityType,
   type FileDomain,
   type FileCategory,
+  FILE_CATEGORIES,
   FILE_LIFECYCLE_STATES,
   FILE_STATUS,
 } from '@/config/domain-constants';
@@ -241,6 +242,27 @@ export class FileRecordService {
 
     // ADR-029: Index for global search after file is ready (fire-and-forget)
     apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: 'file', entityId: input.fileId }).catch(() => {});
+
+    // ADR-312 Phase 7.1: Auto-process DXF floorplans → writes `.dxf.processed.json`
+    // → `onDxfProcessedFinalize` Cloud Function rasterizes PNG thumbnail.
+    // Entity-type agnostic: covers property, floor, building, parking, storage DXFs
+    // through the single SSoT finalize choke-point.
+    const finalizedData = docSnap.data() as { ext?: string; category?: string } | undefined;
+    if (
+      finalizedData?.ext?.toLowerCase() === 'dxf' &&
+      finalizedData?.category === FILE_CATEGORIES.FLOORPLANS
+    ) {
+      import('@/services/floorplans/floorplan-processing-mutation-gateway')
+        .then(({ processFloorplanWithPolicy }) =>
+          processFloorplanWithPolicy({ fileId: input.fileId, forceReprocess: false }),
+        )
+        .catch((err) =>
+          logger.warn('DXF auto-process skipped', {
+            fileId: input.fileId,
+            error: getErrorMessage(err),
+          }),
+        );
+    }
 
     RealtimeService.dispatch('FILE_UPDATED', {
       fileId: input.fileId,
