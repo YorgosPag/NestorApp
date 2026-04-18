@@ -11,6 +11,7 @@
 import type { IDepreciationEngine, IAccountingRepository } from '../../types/interfaces';
 import type { FixedAsset, DepreciationRecord, DisposalResult } from '../../types/assets';
 import { nowISO } from '@/lib/date-local';
+import { roundToTwo } from '../../utils/math';
 
 // ============================================================================
 // DEPRECIATION ENGINE IMPLEMENTATION
@@ -257,6 +258,3 @@ function calculateMonthsInYear(
   return endMonth - startMonth + 1;
 }
 
-function roundToTwo(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}

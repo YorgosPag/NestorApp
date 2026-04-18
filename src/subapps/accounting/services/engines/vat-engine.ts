@@ -21,6 +21,7 @@ import type {
 import type { ExpenseCategory, FiscalQuarter, PeriodRange } from '../../types/common';
 import { getVatDeductibilityRules } from '../config/vat-config';
 import { nowISO } from '@/lib/date-local';
+import { roundToTwo } from '../../utils/math';
 
 // ============================================================================
 // VAT ENGINE IMPLEMENTATION
@@ -48,8 +49,8 @@ export class VATEngine implements IVATEngine {
    * calculateOutputVat(1000, 24) → { netAmount: 1000, vatRate: 24, vatAmount: 240, grossAmount: 1240 }
    */
   calculateOutputVat(netAmount: number, vatRate: number): VATCalculation {
-    const vatAmount = roundToTwoDecimals(netAmount * (vatRate / 100));
-    const grossAmount = roundToTwoDecimals(netAmount + vatAmount);
+    const vatAmount = roundToTwo(netAmount * (vatRate / 100));
+    const grossAmount = roundToTwo(netAmount + vatAmount);
 
     return {
       netAmount,
@@ -72,12 +73,12 @@ export class VATEngine implements IVATEngine {
     vatRate: number,
     category: ExpenseCategory
   ): VATInputCalculation {
-    const vatAmount = roundToTwoDecimals(netAmount * (vatRate / 100));
-    const grossAmount = roundToTwoDecimals(netAmount + vatAmount);
+    const vatAmount = roundToTwo(netAmount * (vatRate / 100));
+    const grossAmount = roundToTwo(netAmount + vatAmount);
     const rule = this.getDeductibilityRule(category);
 
-    const deductibleVatAmount = roundToTwoDecimals(vatAmount * (rule.deductiblePercent / 100));
-    const nonDeductibleVatAmount = roundToTwoDecimals(vatAmount - deductibleVatAmount);
+    const deductibleVatAmount = roundToTwo(vatAmount * (rule.deductiblePercent / 100));
+    const nonDeductibleVatAmount = roundToTwo(vatAmount - deductibleVatAmount);
 
     return {
       netAmount,
@@ -144,8 +145,8 @@ export class VATEngine implements IVATEngine {
         totalVatAmount: 0,
         entryCount: 0,
       };
-      existing.totalNetAmount = roundToTwoDecimals(existing.totalNetAmount + entry.netAmount);
-      existing.totalVatAmount = roundToTwoDecimals(existing.totalVatAmount + entry.vatAmount);
+      existing.totalNetAmount = roundToTwo(existing.totalNetAmount + entry.netAmount);
+      existing.totalVatAmount = roundToTwo(existing.totalVatAmount + entry.vatAmount);
       existing.entryCount += 1;
       outputMap.set(entry.vatRate, existing);
     }
@@ -168,13 +169,13 @@ export class VATEngine implements IVATEngine {
         entry.category as ExpenseCategory
       );
 
-      existing.totalNetAmount = roundToTwoDecimals(existing.totalNetAmount + entry.netAmount);
-      existing.totalVatAmount = roundToTwoDecimals(existing.totalVatAmount + entry.vatAmount);
+      existing.totalNetAmount = roundToTwo(existing.totalNetAmount + entry.netAmount);
+      existing.totalVatAmount = roundToTwo(existing.totalVatAmount + entry.vatAmount);
       existing.entryCount += 1;
-      existing.totalDeductibleVat = roundToTwoDecimals(
+      existing.totalDeductibleVat = roundToTwo(
         existing.totalDeductibleVat + inputCalc.deductibleVatAmount
       );
-      existing.totalNonDeductibleVat = roundToTwoDecimals(
+      existing.totalNonDeductibleVat = roundToTwo(
         existing.totalNonDeductibleVat + inputCalc.nonDeductibleVatAmount
       );
       inputMap.set(entry.vatRate, existing);
@@ -183,20 +184,20 @@ export class VATEngine implements IVATEngine {
     const outputBreakdown = Array.from(outputMap.values());
     const inputBreakdown = Array.from(inputMap.values());
 
-    const totalOutputVat = roundToTwoDecimals(
+    const totalOutputVat = roundToTwo(
       outputBreakdown.reduce((sum, b) => sum + b.totalVatAmount, 0)
     );
-    const totalInputVat = roundToTwoDecimals(
+    const totalInputVat = roundToTwo(
       inputBreakdown.reduce((sum, b) => sum + b.totalVatAmount, 0)
     );
-    const totalDeductibleInputVat = roundToTwoDecimals(
+    const totalDeductibleInputVat = roundToTwo(
       inputBreakdown.reduce((sum, b) => sum + b.totalDeductibleVat, 0)
     );
 
-    const vatPayable = roundToTwoDecimals(
+    const vatPayable = roundToTwo(
       Math.max(0, totalOutputVat - totalDeductibleInputVat)
     );
-    const vatCredit = roundToTwoDecimals(
+    const vatCredit = roundToTwo(
       Math.max(0, totalDeductibleInputVat - totalOutputVat)
     );
 
@@ -231,22 +232,22 @@ export class VATEngine implements IVATEngine {
       quarters.push(summary);
     }
 
-    const annualOutputVat = roundToTwoDecimals(
+    const annualOutputVat = roundToTwo(
       quarters.reduce((sum, q) => sum + q.totalOutputVat, 0)
     );
-    const annualDeductibleInputVat = roundToTwoDecimals(
+    const annualDeductibleInputVat = roundToTwo(
       quarters.reduce((sum, q) => sum + q.totalDeductibleInputVat, 0)
     );
-    const annualVatPayable = roundToTwoDecimals(
+    const annualVatPayable = roundToTwo(
       Math.max(0, annualOutputVat - annualDeductibleInputVat)
     );
-    const annualVatCredit = roundToTwoDecimals(
+    const annualVatCredit = roundToTwo(
       Math.max(0, annualDeductibleInputVat - annualOutputVat)
     );
-    const totalVatPaid = roundToTwoDecimals(
+    const totalVatPaid = roundToTwo(
       quarters.reduce((sum, q) => sum + q.vatPayable, 0)
     );
-    const settlementAmount = roundToTwoDecimals(annualVatPayable - totalVatPaid);
+    const settlementAmount = roundToTwo(annualVatPayable - totalVatPaid);
 
     return {
       fiscalYear,
@@ -264,13 +265,6 @@ export class VATEngine implements IVATEngine {
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
-
-/**
- * Στρογγυλοποίηση σε 2 δεκαδικά (banker's rounding)
- */
-function roundToTwoDecimals(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
 
 /**
  * Λήψη περιόδου τριμήνου

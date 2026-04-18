@@ -109,9 +109,10 @@ Per restante 23-5=18 file: attendere scanner fix prima di decidere scope migrati
 Residui `new Date().toISOString()` nei top violators baseline (richiedono split file o override):
 - `src/lib/layer-sync.ts` (7x, 444 righe — SSoT block?)
 - `src/services/contact-relationships/core/RelationshipCRUDService.ts` (4x, 500 righe — al limite hook)
-- `src/subapps/accounting/services/engines/tax-engine.ts` (3x, 546 righe — OVERSIZED)
 - `src/services/file-approval.service.ts` (3x, 272 righe — SSoT block?)
 - Altri 88 file minor (~1-2x ciascuno) — migrare progressivamente Boy Scout rule
+
+**DONE 2026-04-18 (C.5.1)**: `tax-engine.ts` split SRP 546→398 righe + SSoT math (`utils/math.ts`, `roundToTwo` canonico) + 3 helpers (`tax-brackets`, `tax-installments`, `tax-date-utils`) + nowISO migration (3×). Eliminati 5 duplicati `roundToTwo` + 1 `roundToTwoDecimals`. Tests migrati a SSoT math.
 
 Migration strategy: splittare file oversized prima di applicare codemod (evitare hook block). Per SSoT block: investigare registry rule che blocca (probabile `addDoc-prohibition` o altro). Tackle next session.
 

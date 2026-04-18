@@ -1,16 +1,15 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-18T16:01:22Z",
-    "totalViolations": 118,
-    "totalFiles": 92,
+    "generated": "2026-04-18T16:34:09Z",
+    "totalViolations": 115,
+    "totalFiles": 91,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
     "src/lib/layer-sync.ts": 7,
     "src/services/contact-relationships/core/RelationshipCRUDService.ts": 4,
-    "src/subapps/accounting/services/engines/tax-engine.ts": 3,
     "src/services/file-approval.service.ts": 3,
     "src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts": 2,
     "src/subapps/accounting/utils/format.ts": 2,

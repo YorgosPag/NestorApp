@@ -26,13 +26,7 @@ import type {
 import type { JournalEntry } from '../../../types/journal';
 import type { CompanyProfile } from '../../../types/company';
 
-// ============================================================================
-// HELPERS — roundToTwo replica for expected-value calculations
-// ============================================================================
-
-function roundToTwo(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
+import { roundToTwo } from '../../../utils/math';
 
 // ============================================================================
 // MOCK REPOSITORY FACTORY

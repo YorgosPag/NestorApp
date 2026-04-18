@@ -18,17 +18,7 @@ import type {
   EmployeeBoardMemberEFKA,
 } from '../types/efka';
 import { calculateMonthlyBreakdown } from './config/efka-config';
-
-// ============================================================================
-// HELPER
-// ============================================================================
-
-/**
- * Στρογγυλοποίηση σε 2 δεκαδικά ψηφία (banker-safe με Number.EPSILON).
- */
-export function roundToTwo(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
+import { roundToTwo } from '../utils/math';
 
 // ============================================================================
 // ΟΕ — PARTNERSHIP EFKA SUMMARY

@@ -136,10 +136,7 @@ function createMockRepository(): jest.Mocked<Pick<
   >> & Record<string, jest.Mock>;
 }
 
-/** Utility: rounds to 2 decimals (mirrors engine logic) */
-function roundToTwo(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
+import { roundToTwo } from '../../../utils/math';
 
 // ============================================================================
 // TEST SUITES
