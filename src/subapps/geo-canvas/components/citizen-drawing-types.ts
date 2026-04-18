@@ -71,18 +71,11 @@ export interface RealEstateStats {
 }
 
 // ============================================================================
-// BOUNDARY TYPES
+// BOUNDARY TYPES — SSoT re-export from app/useBoundaryLayers
 // ============================================================================
 
-export type BoundaryLayerStyle = Record<string, string | number | boolean>;
-
-export interface BoundaryLayer {
-  id: string;
-  name: string;
-  visible: boolean;
-  opacity: number;
-  style: BoundaryLayerStyle;
-}
+export type { BoundaryLayer, BoundaryLayerStyle } from '../app/useBoundaryLayers';
+import type { BoundaryLayer, BoundaryLayerStyle } from '../app/useBoundaryLayers';
 
 export interface BoundaryLayerControlPanelProps {
   layers: BoundaryLayer[];

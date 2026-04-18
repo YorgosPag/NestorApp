@@ -191,11 +191,9 @@ const LEGACY_NAMESPACE_ROOT_MAP = {
     businessTypes: 'contacts-form',
     validation: 'contacts-form',
     submission: 'contacts-form',
-    addressesSection: 'contacts-form',
     relationships: 'contacts-relationships',
     communication: 'contacts-relationships',
     service: 'contacts-relationships',
-    individual: 'contacts-relationships',
     esco: 'contacts-relationships',
     employer: 'contacts-relationships',
     persona: 'contacts-relationships',
@@ -273,7 +271,6 @@ const LEGACY_NAMESPACE_ROOT_MAP = {
     navigation: 'properties-detail',
     buildingSelector: 'properties-detail',
     save: 'properties-detail',
-    fieldLocking: 'properties-detail',
     inlineEdit: 'properties-detail',
     viewer: 'properties-viewer',
     statusLegend: 'properties-viewer',
@@ -375,7 +372,7 @@ function remapNamespaceKey<TNamespace extends LegacyNamespace>(legacyNamespace: 
 
   // Fall back to root-level mapping
   const legacyRoot = getLegacyRoot(explicit.bareKey) as NamespaceRootMap<TNamespace>;
-  const targetNamespace = LEGACY_NAMESPACE_ROOT_MAP[legacyNamespace][legacyRoot];
+  const targetNamespace: string | undefined = LEGACY_NAMESPACE_ROOT_MAP[legacyNamespace][legacyRoot];
   if (!targetNamespace) {
     return { key, options };
   }

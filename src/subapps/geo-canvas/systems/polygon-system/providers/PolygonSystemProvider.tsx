@@ -159,11 +159,6 @@ export function PolygonSystemProvider({
 
     let polygon: UniversalPolygon | null = null;
 
-    // ✅ ENTERPRISE: Apply stored configuration to finished polygon
-    if (polygon && state.currentDrawing?.config) {
-      polygon.config = { ...polygon.config, ...state.currentDrawing.config };
-    }
-
     if (!polygon && refPoints.length > 0) {
       const mergedConfig = refConfig as unknown as Record<string, unknown>;
       polygon = {
@@ -181,6 +176,11 @@ export function PolygonSystemProvider({
         config: mergedConfig,
         metadata: { createdAt: new Date(), modifiedAt: new Date() }
       };
+    }
+
+    // ✅ ENTERPRISE: Apply stored configuration to finished polygon
+    if (polygon && state.currentDrawing?.config) {
+      polygon.config = { ...polygon.config, ...state.currentDrawing.config };
     }
 
     liveDrawingPointsRef.current = [];

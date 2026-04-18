@@ -49,9 +49,11 @@ export const useTranslation = (namespace?: string | string[]) => {
 
   // Wrap t to apply compat remapping for split namespaces (ADR-280)
   const t = useMemo(() => {
-    const wrapped = ((key: string, optionsOrDefault?: TOptions | string, ...rest: unknown[]) => {
+    type RawTCall = (key: string, opts?: TOptions | string, ...rest: unknown[]) => string;
+    const rawTCall = rawT as unknown as RawTCall;
+    const wrapped = (key: string, optionsOrDefault?: TOptions | string, ...rest: unknown[]) => {
       // Try original namespace first
-      const result = rawT(key, optionsOrDefault as TOptions, ...rest);
+      const result = rawTCall(key, optionsOrDefault, ...rest);
       if (typeof result === 'string' && result !== key && !result.includes(':')) {
         return result;
       }
@@ -60,15 +62,15 @@ export const useTranslation = (namespace?: string | string[]) => {
       const fullKey = `${primaryNs}:${key}`;
       const remapped = remapLegacyTranslationKey(fullKey, optionsOrDefault);
       if (remapped.key !== fullKey) {
-        const remappedResult = rawT(remapped.key, remapped.options as TOptions, ...rest);
+        const remappedResult = rawTCall(remapped.key, remapped.options as TOptions, ...rest);
         if (typeof remappedResult === 'string' && remappedResult !== remapped.key) {
           return remappedResult;
         }
       }
 
       return result;
-    }) as typeof rawT;
-    return wrapped;
+    };
+    return wrapped as unknown as typeof rawT;
   }, [rawT, primaryNs]);
 
   // 🏢 ENTERPRISE: Track if ALL required namespaces (explicit + compat) are loaded

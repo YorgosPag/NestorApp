@@ -170,7 +170,7 @@ export function CitizenDrawingInterface({
   useEffect(() => {
     const pointPolygon = polygons
       .filter(p => p.config?.pointMode === true && p.points.length === 1)
-      .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))[0];
+      .sort((a, b) => (a.metadata?.createdAt?.getTime() ?? 0) - (b.metadata?.createdAt?.getTime() ?? 0))[0];
     if (pointPolygon && pointPolygon.id !== lastPointPolygonId) {
       setLastPointPolygonId(pointPolygon.id);
     }
@@ -194,7 +194,7 @@ export function CitizenDrawingInterface({
 
   // --- RENDER HELPERS ---
 
-  const toolButton = (tool: 'point' | 'polygon' | 'freehand' | 'real-estate', icon: React.ReactNode, label: string, desc: string, isWarning = false) => (
+  const toolButton = (tool: 'point' | 'polygon' | 'real-estate', icon: React.ReactNode, label: string, desc: string, isWarning = false) => (
     <button
       onClick={() => handleToolSelect(tool)}
       disabled={isDrawing && selectedTool !== tool}

@@ -10,6 +10,8 @@ import { Globe, RefreshCcw } from 'lucide-react';
 import { ComponentErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { UserTypeSelector } from '../components/UserTypeSelector';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import type { UseIconSizesReturn } from '@/hooks/useIconSizes';
+import type { UserType } from '@/auth';
 
 // ============================================================================
 // Shared prop types
@@ -33,7 +35,7 @@ interface SystemStatusPanelProps {
   t: (key: string) => string;
   colors: PanelColors;
   borders: PanelBorders;
-  iconSizes: Record<string, string>;
+  iconSizes: UseIconSizesReturn;
 }
 
 export function SystemStatusPanel({ t, colors, borders, iconSizes }: SystemStatusPanelProps) {
@@ -123,8 +125,8 @@ interface FoundationViewProps {
   t: (key: string) => string;
   isLoading: boolean;
   colors: PanelColors;
-  iconSizes: Record<string, string>;
-  userType?: string;
+  iconSizes: UseIconSizesReturn;
+  userType?: UserType;
   onUserTypeSelect: (type: 'citizen' | 'professional' | 'technical') => void;
 }
 
