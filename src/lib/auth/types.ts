@@ -207,6 +207,9 @@ export const AUDIT_ACTIONS = {
   data_created: true,
   data_updated: true,
   data_deleted: true,
+  // Soft-delete lifecycle (ADR-281)
+  soft_deleted: true,
+  restored: true,
   // Webhooks
   webhook_received: true,
   // Role Management (ADR-244)

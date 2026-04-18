@@ -58,7 +58,7 @@ export function useSupplierMetrics(
     },
     deps: [supplierId, categoryCode],
     enabled: !!supplierId,
-    initialData: cacheKey ? supplierMetricsCache.get(cacheKey) : null,
+    initialData: (cacheKey ? supplierMetricsCache.get(cacheKey) : undefined) ?? undefined,
     silentInitialFetch: !!cacheKey && supplierMetricsCache.hasLoaded(cacheKey),
   });
 
@@ -92,7 +92,7 @@ export function useSupplierComparison() {
       return result;
     },
     deps: [],
-    initialData: supplierComparisonCache.get(),
+    initialData: supplierComparisonCache.get() ?? undefined,
     silentInitialFetch: supplierComparisonCache.hasLoaded(),
   });
 

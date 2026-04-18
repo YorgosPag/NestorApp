@@ -60,6 +60,7 @@ export type {
 // `src/constants/operational-statuses.ts`. Εδώ re-export για backward-compat
 // με existing imports `import type { OperationalStatus } from '@/types/property'`.
 export type { OperationalStatus } from '@/constants/operational-statuses';
+import type { OperationalStatus } from '@/constants/operational-statuses';
 
 // =============================================================================
 // 🏢 LEGACY SALES STATUS (Commercial Truth - DEPRECATED IN UNITS)
@@ -97,6 +98,7 @@ export type LegacySalesStatus = PropertyStatus | 'rented';
 // `src/constants/commercial-statuses.ts`. Εδώ απλά re-export για backward-compat
 // με existing imports `import type { CommercialStatus } from '@/types/property'`.
 export type { CommercialStatus } from '@/constants/commercial-statuses';
+import type { CommercialStatus } from '@/constants/commercial-statuses';
 
 // =============================================================================
 // 🏢 COMMERCIAL DATA (Sales/Rental Pricing — ADR-197)

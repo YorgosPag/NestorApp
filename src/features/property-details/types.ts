@@ -2,8 +2,8 @@ import type { Property, ExtendedPropertyDetails, StorageUnitStub, ParkingSpotStu
 
 export type PropertyDetailsContentProps = {
   property: ExtendedPropertyDetails & { buyerMismatch?: boolean };
-  onSelectFloor: (floorId: string | null) => void;
-  onUpdateProperty: (propertyId: string, updates: Partial<Property>) => void;
+  onSelectFloor?: (floorId: string | null) => void;
+  onUpdateProperty?: (propertyId: string, updates: Partial<Property>) => void;
   isReadOnly?: boolean;
   /** Edit mode state from parent (UnitsSidebar) — Pattern A */
   isEditMode?: boolean;
