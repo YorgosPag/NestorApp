@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { nowISO } from '@/lib/date-local';
 import { FileAuditService } from './file-audit.service';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
@@ -197,7 +198,7 @@ export const FileApprovalService = {
     steps[stepIdx] = {
       ...steps[stepIdx],
       status: 'approved',
-      decidedAt: new Date().toISOString(),
+      decidedAt: nowISO(),
     };
 
     // Check if all steps are approved
@@ -239,7 +240,7 @@ export const FileApprovalService = {
     steps[stepIdx] = {
       ...steps[stepIdx],
       status: 'rejected',
-      decidedAt: new Date().toISOString(),
+      decidedAt: nowISO(),
       reason,
     };
 

@@ -18,6 +18,7 @@ import { Contact } from '@/types/contacts';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { recordRelationshipAudit } from './relationship-audit';
+import { buildUpdateChangeEntry, buildTerminationChangeEntry } from './relationship-change-history';
 import { RelationshipValidationService } from './RelationshipValidationService';
 import {
   getContactById,
@@ -27,6 +28,7 @@ import {
 import { getRelationshipGovernanceInfo } from './relationship-governance';
 import { deleteReciprocalRelationship, terminateReciprocalRelationship } from './relationship-reciprocal-ops';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
+import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('RelationshipCRUDService');
@@ -149,7 +151,7 @@ export class RelationshipCRUDService {
       employmentType: data.employmentType,
 
       // Timeline
-      startDate: data.startDate || new Date().toISOString(),
+      startDate: data.startDate || nowISO(),
       endDate: data.endDate,
       expectedDuration: data.expectedDuration,
 
@@ -317,13 +319,11 @@ export class RelationshipCRUDService {
       const changedFields = Object.keys(updates).filter(
         k => k !== 'lastModifiedBy' && k !== 'updatedAt'
       );
-      const changeEntry = {
-        changeDate: new Date().toISOString(),
-        changeType: 'updated' as const,
+      const changeEntry = buildUpdateChangeEntry({
         changedBy: updates.lastModifiedBy || SYSTEM_IDENTITY.ID,
         changedFields,
-        ...(updates.relationshipNotes ? { notes: updates.relationshipNotes } : {}),
-      };
+        notes: updates.relationshipNotes,
+      });
 
       updated.changeHistory = [...(existing.changeHistory || []), changeEntry];
 
@@ -360,13 +360,8 @@ export class RelationshipCRUDService {
       throw new Error('relationships.form.validation.relationshipNotFound');
     }
 
-    const terminationDate = relationship.endDate || new Date().toISOString();
-    const changeEntry = {
-      changeDate: new Date().toISOString(),
-      changeType: 'status_change' as const,
-      changedBy: terminatedBy,
-      notes: 'Relationship terminated via governed UI flow'
-    };
+    const terminationDate = relationship.endDate || nowISO();
+    const changeEntry = buildTerminationChangeEntry({ changedBy: terminatedBy });
 
     const updates: Partial<ContactRelationship> = {
       status: 'terminated',
