@@ -21,6 +21,7 @@ import { getChatHistoryService } from '@/services/ai-pipeline/chat-history-servi
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { verifyCronAuthorization } from '@/lib/cron-auth';
 
 const logger = createModuleLogger('CRON_AI_LEARNING');
 
@@ -29,16 +30,7 @@ export const maxDuration = 60;
 async function handleGET(request: NextRequest): Promise<NextResponse> {
   const startTime = Date.now();
 
-  // Verify cron authorization (Vercel sets this header)
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret) {
-    logger.error('CRON_SECRET env var not configured — blocking cron execution');
-    return NextResponse.json({ error: 'Cron secret not configured' }, { status: 500 });
-  }
-
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!verifyCronAuthorization(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
