@@ -1,12 +1,7 @@
 import { ObligationSection, SectionCategory } from '@/types/obligations';
 import { getDefaultTemplate } from './constants';
 import { formatDate, formatRelativeTime } from '@/lib/intl-utils';
-import {
-  generateSectionId as generateEnterpriseSectionId,
-  generateArticleId as generateEnterpriseArticleId,
-  generateParagraphId as generateEnterpriseParagraphId,
-  generateObligationId as generateEnterpriseObligationId
-} from '@/services/enterprise-id.service';
+import { generateSectionId } from '@/services/enterprise-id-convenience';
 
 /**
  * ============================================================================
@@ -23,19 +18,6 @@ import {
  *
  * ============================================================================
  */
-
-// ============================================================================
-// 🎯 ID GENERATION
-// ============================================================================
-
-/**
- * 🏢 ENTERPRISE: Using centralized ID generation from enterprise-id.service
- * All IDs are now crypto-secure with 128-bit entropy (UUID v4)
- */
-export const generateSectionId = (): string => generateEnterpriseSectionId();
-export const generateArticleId = (): string => generateEnterpriseArticleId();
-export const generateParagraphId = (): string => generateEnterpriseParagraphId();
-export const generateObligationId = (): string => generateEnterpriseObligationId();
 
 // ============================================================================
 // 📝 TITLE & FILE GENERATION

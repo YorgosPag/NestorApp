@@ -1,7 +1,7 @@
 # ADR-314: SSoT Discovery Findings & Centralization Roadmap
 
 ## Status
-📋 APPROVED — 2026-04-18 — Phase A pending
+📋 APPROVED — 2026-04-18 — **Phase A DONE** (2026-04-18) — Phase B pending
 
 **Related:**
 - ADR-294 (SSoT Ratchet Enforcement) — provides the enforcement infrastructure (`.ssot-registry.json`, ratchet scripts)
@@ -226,3 +226,4 @@ Live checklist: `.claude-rules/ssot-discovery-pending.md`
 | Date | Change |
 |------|--------|
 | 2026-04-18 | Initial findings dump from `npm run ssot:discover`. 74 duplicates, 5 anti-patterns, 96 registry gaps. Phase A/B/C roadmap defined. Baseline file created. |
+| 2026-04-18 | **Phase A DONE.** (a) Deleted 4 trivial wrappers in `src/lib/obligations/utils.ts:35-38` (`generateSectionId`/`generateArticleId`/`generateParagraphId`/`generateObligationId`) — callers migrated to direct import from `@/services/enterprise-id-convenience`. Files updated: `utils.ts` (import + internal caller), `src/lib/obligations/index.ts` (barrel re-export now points to convenience, including `generateRandomId` alias), `src/types/obligations/factories.ts`. (b) 5 new SSoT modules added to `.ssot-registry.json` under new Tier 8 — `enterprise-id-convenience` (Tier 0, regex `(function\|const)\s+generate[A-Z][a-zA-Z]*Id\b`, allowlist covers sealed SSoT set + `useEnterpriseIds.ts` React-hook alias barrel + `server/lib/id-generation.ts` composite-key generators), `intl-formatting` (Tier 3, 12 named formatters), `intl-domain` (Tier 3, 14 named formatters), `date-local` (Tier 3, 7 named normalizers + 2 anti-patterns `new Date().toISOString()` and `Timestamp.fromDate(new Date(` ), `design-system` (Tier 3, 11 named helpers, allowlist covers canonical alias in `constants/domains/property-status-core.ts`). (c) `npm run ssot:baseline` → frozen at **637 violations / 390 files**. Module breakdown: date-local 529, intl-formatting 46, design-system 16, intl-domain 11, enterprise-id-convenience 9 (+ 36 from other pre-existing modules). (d) Pre-commit hook now BLOCKS any new `(function\|const)\s+generate*Id`, `formatDate`/`formatCurrency`/`sortByLocale`, `formatDateGreek`/`getCategoryLabel`/`formatDateForDisplay`, `getStatusColor`/`getStatusLabel` declarations, plus new `new Date().toISOString()` / `Timestamp.fromDate(new Date(` occurrences outside allowlist. Phase C.1 / C.2 codemods will ratchet down the 528 date-local violations. |

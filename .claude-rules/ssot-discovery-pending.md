@@ -32,19 +32,11 @@
 
 ---
 
-## Phase A — Quick wins (zero risk, ~1-2h)
+## Phase A — DONE 2026-04-18
 
-- [ ] **A.1** Delete 4 trivial wrappers in `src/lib/obligations/utils.ts:35-37` (`generateSectionId`/`generateArticleId`/`generateParagraphId`/`generateObligationId`) — replace callers with direct import from `services/enterprise-id-convenience.ts`
-- [ ] **A.2** Add `enterprise-id-convenience.ts` (127 exports) to `.ssot-registry.json` → blocks new `crypto.randomUUID()` scattered patterns
-- [ ] **A.3** Add `intl-formatting.ts` (`formatDate`, `formatCurrency`, `sortByLocale`) to registry → baseline = current 4 + 3 + 42 violations
-- [ ] **A.4** Add `intl-domain.ts` (`formatDateGreek`, `getCategoryLabel`, `formatDateForDisplay`) to registry
-- [ ] **A.5** Add `date-local.ts` to registry → baseline = 309 (`new Date().toISOString()`) + 19 (`Timestamp.fromDate`)
-- [ ] **A.6** Add `design-system.ts` (`getStatusColor` canonical) to registry
-- [ ] **A.7** Run `npm run ssot:baseline` → snapshot current violations as frozen max
-- [ ] **A.8** Commit: `feat(ssot): Phase A — add 5 core SSoT modules to ratchet (ADR-314 Phase A)`
-- [ ] **A.9** Update ADR-314 changelog + this file (remove completed items)
+**Commit**: `feat(ssot): Phase A — add 5 core SSoT modules to ratchet (ADR-314 Phase A)`
 
-**Success criteria**: pre-commit hook blocks new `formatDate`/`formatCurrency`/`generateSectionId` re-declarations.
+Baseline freezed: 637 violations / 390 files. Module breakdown: date-local 529, intl-formatting 46, design-system 16, intl-domain 11, enterprise-id-convenience 9 (+ 36 pre-existing). See ADR-314 changelog for full details.
 
 ---
 
@@ -161,3 +153,4 @@ After Phase A adds 5 SSoT to registry, 91 remain. Add them incrementally (P1 →
 | Date       | Change |
 |------------|--------|
 | 2026-04-18 | Initial baseline from `npm run ssot:discover`. 74 duplicates, 5 anti-patterns, 96 registry gaps. Phase A/B/C defined. STATUS: ACTIVE. |
+| 2026-04-18 | **Phase A DONE.** 4 obligation ID wrappers deleted, 5 SSoT modules (enterprise-id-convenience, intl-formatting, intl-domain, date-local, design-system) added to `.ssot-registry.json` under new Tier 8. Baseline frozen at 637 violations / 390 files. Pre-commit now blocks new re-declarations + new `new Date().toISOString()` / `Timestamp.fromDate(new Date(` patterns. Phase A items A.1–A.9 removed from checklist. |

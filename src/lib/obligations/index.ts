@@ -102,11 +102,6 @@ export {
 
 // ===== UTILITY FUNCTIONS =====
 export {
-  // 🏢 ENTERPRISE: ID generation now from centralized enterprise-id.service
-  generateSectionId,
-  generateArticleId,
-  generateParagraphId,
-  generateObligationId,
   generateObligationTitle,
   generateFileName,
   getRelativeTime,
@@ -120,8 +115,14 @@ export {
   normalizeId
 } from './utils';
 
-// 🏢 ENTERPRISE: Re-export generateTempId as generateRandomId for backward compatibility
-export { generateTempId as generateRandomId } from '@/services/enterprise-id.service';
+// 🏢 ENTERPRISE: ID generation re-exported from canonical SSoT (ADR-314 Phase A)
+export {
+  generateSectionId,
+  generateArticleId,
+  generateParagraphId,
+  generateObligationId,
+  generateTempId as generateRandomId
+} from '@/services/enterprise-id-convenience';
 
 // ===== LEGACY COMPATIBILITY EXPORTS =====
 // Αυτά τα exports διατηρούν backward compatibility με τα existing imports

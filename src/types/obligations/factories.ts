@@ -1,5 +1,5 @@
 import type { ObligationSection, ObligationArticle, ObligationParagraph } from './contracts';
-import { generateSectionId, generateArticleId, generateParagraphId } from '@/services/enterprise-id.service';
+import { generateSectionId, generateArticleId, generateParagraphId } from '@/services/enterprise-id-convenience';
 
 // Enhanced helper functions
 // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
