@@ -21,6 +21,7 @@ import type {
   ExclusivityValidationInput,
   ExclusivityValidationIssue,
 } from '@/types/brokerage';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BrokerageExclusivity');
 
@@ -87,7 +88,7 @@ export async function validateExclusivityServer(
 ): Promise<ExclusivityValidationResult> {
   try {
     const { projectId, propertyId, scope, exclusivity, excludeAgreementId } = input;
-    const today = new Date().toISOString().split('T')[0];
+    const today = nowISO().split('T')[0];
 
     const db = getDb();
     const snapshot = await db

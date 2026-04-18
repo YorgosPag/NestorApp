@@ -32,6 +32,7 @@ import type {
   GeofenceConfig,
   GeofenceVerificationResult,
 } from '@/components/projects/ika/contracts';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // LOGGER
@@ -203,7 +204,7 @@ export async function uploadAttendancePhoto(
         metadata: {
           projectId,
           eventId,
-          capturedAt: new Date().toISOString(),
+          capturedAt: nowISO(),
         },
       },
     });
@@ -217,7 +218,7 @@ export async function uploadAttendancePhoto(
       downloadUrl,
       sizeBytes: buffer.length,
       mimeType,
-      capturedAt: new Date().toISOString(),
+      capturedAt: nowISO(),
     };
   } catch (error) {
     logger.error('Photo upload failed', {
@@ -265,7 +266,7 @@ export async function processQrCheckIn(payload: QrCheckInPayload): Promise<QrChe
   }
 
   const projectId = tokenResult.projectId;
-  const validDate = tokenResult.validDate ?? new Date().toISOString().slice(0, 10);
+  const validDate = tokenResult.validDate ?? nowISO().slice(0, 10);
 
   // S-2 fix: Read project doc ONCE, validate tenant ownership early
   const db0 = getAdminFirestore();
@@ -311,7 +312,7 @@ export async function processQrCheckIn(payload: QrCheckInPayload): Promise<QrChe
 
   // Step 4: Create attendance event (immutable — server timestamp)
   const db = getAdminFirestore();
-  const now = new Date().toISOString();
+  const now = nowISO();
 
   const eventData = {
     companyId: projectCompanyId, // S-2: propagate tenant from validated project

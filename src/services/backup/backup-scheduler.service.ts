@@ -31,6 +31,7 @@ import { IncrementalBackupService } from './incremental-backup.service';
 
 import type { Firestore } from 'firebase-admin/firestore';
 import type { BackupConfig, StatusCallback } from './backup-manifest.types';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BackupScheduler');
 
@@ -208,7 +209,7 @@ export class BackupSchedulerService {
     await this.db.doc(BACKUP_CONFIG_PATH).set(
       {
         lastBackupId: backupId,
-        lastBackupAt: new Date().toISOString(),
+        lastBackupAt: nowISO(),
       },
       { merge: true },
     );
@@ -244,7 +245,7 @@ export class BackupSchedulerService {
     const updateStatus: StatusCallback = async (status) => {
       try {
         await this.db.doc(BACKUP_STATUS_PATH).set(
-          { ...status, updatedAt: new Date().toISOString() },
+          { ...status, updatedAt: nowISO() },
           { merge: true },
         );
       } catch (error) {

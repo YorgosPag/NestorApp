@@ -32,6 +32,7 @@ import type {
   SerializedDocument,
 } from './backup-manifest.types';
 import type { ReconciliationResult } from './schema-reconciler';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('RestoreService');
 
@@ -161,7 +162,7 @@ export class RestoreService {
       totalCollections: 0,
       documentsRestored: 0,
       documentsSkipped: 0,
-      startedAt: new Date().toISOString(),
+      startedAt: nowISO(),
       triggeredBy,
     });
 
@@ -314,7 +315,7 @@ export class RestoreService {
       processedCollections: totalCollections,
       documentsRestored,
       documentsSkipped,
-      completedAt: new Date().toISOString(),
+      completedAt: nowISO(),
     });
 
     logger.info(
@@ -455,7 +456,7 @@ export class RestoreService {
       id: snapshotId,
       restoreId,
       backupId,
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
       collections,
     };
 

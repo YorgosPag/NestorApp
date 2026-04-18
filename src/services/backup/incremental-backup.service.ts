@@ -40,6 +40,7 @@ import type {
   SerializedDocument,
 } from './backup-manifest.types';
 import type { AuditEntityType } from '@/types/audit-trail';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('IncrementalBackupService');
 
@@ -211,7 +212,7 @@ export class IncrementalBackupService {
         totalCollections: 0,
         documentsExported: 0,
         storageFilesExported: 0,
-        startedAt: new Date().toISOString(),
+        startedAt: nowISO(),
         triggeredBy,
       });
     }
@@ -350,7 +351,7 @@ export class IncrementalBackupService {
         totalCollections,
         documentsExported: manifest.totalDocuments,
         storageFilesExported: 0,
-        completedAt: new Date().toISOString(),
+        completedAt: nowISO(),
       });
     }
 
@@ -412,14 +413,14 @@ export class IncrementalBackupService {
       id: backupId,
       version: MANIFEST_VERSION,
       type: 'incremental',
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
       createdBy: triggeredBy,
       projectId: GCP_PROJECT_ID,
       environment: (process.env.NODE_ENV as 'development' | 'staging' | 'production') ?? 'development',
       collections,
       subcollections: [],
       storageFiles: [],
-      firestoreCollectionsVersion: new Date().toISOString(),
+      firestoreCollectionsVersion: nowISO(),
       totalDocuments,
       totalStorageFiles: 0,
       totalStorageBytes: 0,

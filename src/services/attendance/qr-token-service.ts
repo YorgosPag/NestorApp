@@ -26,6 +26,7 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { generateAttendanceQrTokenId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AttendanceQrToken, QrTokenStatus } from '@/components/projects/ika/contracts';
+import { nowISO } from '@/lib/date-local';
 
 // =============================================================================
 // LOGGER
@@ -123,7 +124,7 @@ export async function generateDailyQrToken(
   const payload = `${projectId}:${date}:${nonce}`;
   const hmac = computeHmac(payload);
   const token = toBase64Url(`${payload}:${hmac}`);
-  const now = new Date().toISOString();
+  const now = nowISO();
   const expiresAt = getEndOfDay(date);
 
   const tokenData: Omit<AttendanceQrToken, 'id'> = {
@@ -289,7 +290,7 @@ export async function revokeQrToken(tokenId: string, revokedBy: string): Promise
 
   await docRef.update({
     status: 'revoked' satisfies QrTokenStatus,
-    revokedAt: new Date().toISOString(),
+    revokedAt: nowISO(),
     revokedBy,
   });
 

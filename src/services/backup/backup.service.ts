@@ -43,6 +43,7 @@ import type {
   SerializedDocument,
 } from './backup-manifest.types';
 import type { StorageExportResult } from './storage-backup.service';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BackupService');
 
@@ -274,14 +275,14 @@ export class BackupService {
       id: backupId,
       version: MANIFEST_VERSION,
       type: 'full',
-      createdAt: new Date().toISOString(),
+      createdAt: nowISO(),
       createdBy: triggeredBy,
       projectId: GCP_PROJECT_ID,
       environment: (process.env.NODE_ENV as 'development' | 'staging' | 'production') ?? 'development',
       collections: collectionResults.map(r => r.entry),
       subcollections: subcollectionResults.map(r => r.entry),
       storageFiles: storageResult?.entries ?? [],
-      firestoreCollectionsVersion: new Date().toISOString(),
+      firestoreCollectionsVersion: nowISO(),
       totalDocuments,
       totalStorageFiles: storageResult?.entries.length ?? 0,
       totalStorageBytes: storageResult?.totalBytes ?? 0,
@@ -319,7 +320,7 @@ export class BackupService {
         totalCollections: Object.keys(COLLECTIONS).length,
         documentsExported: 0,
         storageFilesExported: 0,
-        startedAt: new Date().toISOString(),
+        startedAt: nowISO(),
         triggeredBy,
       });
     }
@@ -375,7 +376,7 @@ export class BackupService {
         totalCollections: Object.keys(COLLECTIONS).length,
         documentsExported: manifest.totalDocuments,
         storageFilesExported: manifest.totalStorageFiles,
-        completedAt: new Date().toISOString(),
+        completedAt: nowISO(),
       });
     }
 

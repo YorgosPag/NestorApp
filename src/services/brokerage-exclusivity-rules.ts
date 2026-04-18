@@ -16,6 +16,7 @@ import type {
   ExclusivityValidationInput,
   ExclusivityValidationIssue,
 } from '@/types/brokerage';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('BrokerageExclusivityRules');
 
@@ -29,7 +30,7 @@ export function evaluateExclusivityRules(
 ): ExclusivityValidationResult {
   try {
     const { propertyId, scope, exclusivity, excludeAgreementId } = input;
-    const today = new Date().toISOString().split('T')[0];
+    const today = nowISO().split('T')[0];
 
     const active = allAgreements.filter((a) => {
       if (a.status !== 'active') return false;

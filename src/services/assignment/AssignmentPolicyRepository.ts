@@ -42,6 +42,7 @@ import type {
   UpdateAssignmentPolicyInput,
   AssignmentPolicyQuery,
 } from '@/types/assignment-policy';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // LOGGER
@@ -86,7 +87,7 @@ export async function createAssignmentPolicy(
     id: `rule_${index + 1}`,
   }));
 
-  const createdAt = new Date().toISOString();
+  const createdAt = nowISO();
   const newPolicy: AssignmentPolicy = {
     id: newPolicyRef.id,
     companyId: input.companyId,
@@ -306,7 +307,7 @@ export async function updateAssignmentPolicy(
     }
 
     // Build update data
-    const updatedAt = new Date().toISOString();
+    const updatedAt = nowISO();
     const updateData: Partial<AssignmentPolicy> = {
       ...input,
       updatedBy: input.updatedBy,

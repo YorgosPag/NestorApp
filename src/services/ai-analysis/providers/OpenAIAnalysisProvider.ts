@@ -33,6 +33,7 @@ import type {
   IAIAnalysisProvider,
   ProviderOptions,
 } from './IAIAnalysisProvider';
+import { nowISO } from '@/lib/date-local';
 
 type OpenAIRequestContent =
   | { type: 'input_text'; text: string }
@@ -115,7 +116,7 @@ function extractOutputText(payload: unknown): string | null {
 }
 
 function buildFallbackResult(input: AnalysisInput, model: string): AIAnalysisResult {
-  const timestamp = new Date().toISOString();
+  const timestamp = nowISO();
 
   if (input.kind === 'message_intent') {
     return {
