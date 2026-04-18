@@ -7,22 +7,8 @@
  * - Removed unused utilities: calculateEntityBounds, formatCoordinates, etc.
  * - Single Source of Truth: useUnifiedDrawing.tsx contains all entity creation logic
  *
- * This file now contains ONLY:
- * - generateEntityId() - Re-exported from enterprise-id.service
+ * ADR-314 C.5.28: trivial wrapper collapsed to pure re-export — delegates
+ * directly to SSoT `@/services/enterprise-id.service` (enterprise-id-convenience rule).
  */
 
-import { generateEntityId as generateEnterpriseEntityId } from '@/services/enterprise-id.service';
-
-/**
- * Generate unique entity ID
- * 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
- *
- * @returns Unique entity ID string
- *
- * @example
- * const id = generateEntityId();
- * // Returns: "ent_a1b2c3d4-e5f6-7890-abcd-ef1234567890"
- */
-export function generateEntityId(): string {
-  return generateEnterpriseEntityId();
-}
+export { generateEntityId } from '@/services/enterprise-id.service';
