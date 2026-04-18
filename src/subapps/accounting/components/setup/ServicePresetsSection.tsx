@@ -23,6 +23,7 @@ import { VATRateSelector } from '../shared/VATRateSelector';
 import { useServicePresets } from '../../hooks';
 import type { ServicePreset, MyDataIncomeType } from '../../types';
 import { formatCurrency } from '../../utils/format';
+import { generateServicePresetId } from '@/services/enterprise-id-convenience';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -32,25 +33,18 @@ import { cn } from '@/lib/utils';
 // DEFAULT PRESETS — 10 τυπικές υπηρεσίες μηχανικού
 // ============================================================================
 
-/** Generate a unique service preset ID using timestamp + random suffix */
-function generatePresetId(): string {
-  const ts = Date.now().toString(36);
-  const rand = Math.random().toString(36).substring(2, 8);
-  return `sp_${ts}_${rand}`;
-}
-
 function createDefaultPresets(t: (key: string) => string): ServicePreset[] {
   return [
-    { presetId: generatePresetId(), description: 'ΠΕΑ — Πιστοποιητικό Ενεργειακής Απόδοσης', unit: t('units.pieces'), unitPrice: 250, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 0 },
-    { presetId: generatePresetId(), description: 'Αρχιτεκτονική Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 1 },
-    { presetId: generatePresetId(), description: 'Έκδοση Οικοδομικής Άδειας', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 2 },
-    { presetId: generatePresetId(), description: 'Τοπογραφικό Διάγραμμα', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 3 },
-    { presetId: generatePresetId(), description: 'Επίβλεψη Εργασιών', unit: t('units.hours'), unitPrice: 80, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 4 },
-    { presetId: generatePresetId(), description: 'Στατική Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 5 },
-    { presetId: generatePresetId(), description: 'Μηχανολογική (Η/Μ) Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 6 },
-    { presetId: generatePresetId(), description: 'Ενεργειακή Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 7 },
-    { presetId: generatePresetId(), description: 'Τεχνική Συμβουλευτική', unit: t('units.hours'), unitPrice: 60, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 8 },
-    { presetId: generatePresetId(), description: 'Ηλεκτρολογική Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 9 },
+    { presetId: generateServicePresetId(), description: 'ΠΕΑ — Πιστοποιητικό Ενεργειακής Απόδοσης', unit: t('units.pieces'), unitPrice: 250, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 0 },
+    { presetId: generateServicePresetId(), description: 'Αρχιτεκτονική Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 1 },
+    { presetId: generateServicePresetId(), description: 'Έκδοση Οικοδομικής Άδειας', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 2 },
+    { presetId: generateServicePresetId(), description: 'Τοπογραφικό Διάγραμμα', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 3 },
+    { presetId: generateServicePresetId(), description: 'Επίβλεψη Εργασιών', unit: t('units.hours'), unitPrice: 80, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 4 },
+    { presetId: generateServicePresetId(), description: 'Στατική Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 5 },
+    { presetId: generateServicePresetId(), description: 'Μηχανολογική (Η/Μ) Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 6 },
+    { presetId: generateServicePresetId(), description: 'Ενεργειακή Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 7 },
+    { presetId: generateServicePresetId(), description: 'Τεχνική Συμβουλευτική', unit: t('units.hours'), unitPrice: 60, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 8 },
+    { presetId: generateServicePresetId(), description: 'Ηλεκτρολογική Μελέτη', unit: t('units.pieces'), unitPrice: 0, vatRate: 24, mydataCode: 'category1_3' as MyDataIncomeType, isActive: true, sortOrder: 9 },
   ];
 }
 
@@ -111,7 +105,7 @@ export function ServicePresetsSection() {
     if (!form.description.trim()) return;
 
     const newPreset: ServicePreset = {
-      presetId: generatePresetId(),
+      presetId: generateServicePresetId(),
       description: form.description.trim(),
       unit: form.unit.trim() || t('units.pieces'),
       unitPrice: parseFloat(form.unitPrice) || 0,

@@ -35,7 +35,7 @@ export {
   generateInvoiceAccId, generateBankTransactionId, generateFixedAssetId,
   generateDepreciationId, generateEfkaPaymentId, generateImportBatchId,
   generateMatchGroupId, generateMatchingRuleId, generateExpenseDocId,
-  generateApyCertificateId, generateCustomCategoryId, generateCustomerBalanceId,
+  generateApyCertificateId, generateServicePresetId, generateCustomCategoryId, generateCustomerBalanceId,
   generateFiscalPeriodId, generateAccountingAuditLogId, generateFeedbackId,
   generatePipelineAuditId, generateEntityAuditId, generateContractId,
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId,
@@ -209,6 +209,7 @@ export class EnterpriseIdService {
   generateInvoiceAccId(): string { return this.generateId(P.INVOICE_ACC).id; }
   generateBankTransactionId(): string { return this.generateId(P.BANK_TRANSACTION).id; }
   generateApyCertificateId(): string { return this.generateId(P.APY_CERTIFICATE).id; }
+  generateServicePresetId(): string { return this.generateId(P.SERVICE_PRESET).id; }
   generateCustomCategoryId(): string { return this.generateId(P.CUSTOM_CATEGORY).id; }
   generateCustomerBalanceId(): string { return this.generateId(P.CUSTOMER_BALANCE).id; }
   generateFiscalPeriodId(): string { return this.generateId(P.FISCAL_PERIOD).id; }

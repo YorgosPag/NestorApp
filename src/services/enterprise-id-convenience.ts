@@ -94,6 +94,7 @@ export const generateMatchGroupId = () => enterpriseIdService.generateMatchGroup
 export const generateMatchingRuleId = () => enterpriseIdService.generateMatchingRuleId();
 export const generateExpenseDocId = () => enterpriseIdService.generateExpenseDocId();
 export const generateApyCertificateId = () => enterpriseIdService.generateApyCertificateId();
+export const generateServicePresetId = () => enterpriseIdService.generateServicePresetId();
 export const generateCustomCategoryId = () => enterpriseIdService.generateCustomCategoryId();
 export const generateCustomerBalanceId = () => enterpriseIdService.generateCustomerBalanceId();
 export const generateFiscalPeriodId = () => enterpriseIdService.generateFiscalPeriodId();

@@ -93,6 +93,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   MATCHING_RULE: 'mrule',
   EXPENSE_DOC: 'exdoc',
   APY_CERTIFICATE: 'apy',
+  SERVICE_PRESET: 'sp',
   CUSTOM_CATEGORY: 'custcat',
   CUSTOMER_BALANCE: 'cbal',
   FISCAL_PERIOD: 'fp',
