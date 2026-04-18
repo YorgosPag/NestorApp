@@ -82,6 +82,7 @@ jest.mock('@/lib/firebaseAdmin', () => ({
 
 jest.mock('@/services/enterprise-id.service', () => ({
   generatePipelineQueueId: jest.fn(() => 'pq_test_001'),
+  generateRequestId: jest.fn(() => 'req_test_001'),
 }));
 
 // ── Imports ──

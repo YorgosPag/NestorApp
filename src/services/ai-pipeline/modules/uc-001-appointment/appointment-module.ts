@@ -25,6 +25,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateAppointmentId } from '@/services/enterprise-id.service';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { nowISO } from '@/lib/date-local';
+import { extractDateTimeFromEntities } from './appointment-entity-extractor';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
 import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { checkAvailability, type AvailabilityResult } from '../../shared/availability-check';
@@ -71,42 +73,6 @@ interface AppointmentLookupData {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-/**
- * Extract date/time from AI understanding entities.
- *
- * The AI provider may return entities with various key names:
- * eventDate, requestedDate, date, appointmentDate, etc.
- */
-function extractDateTimeFromEntities(
-  entities?: Record<string, string | undefined>
-): { date: string | null; time: string | null } {
-  if (!entities) {
-    return { date: null, time: null };
-  }
-
-  const dateKeys = ['eventDate', 'requestedDate', 'date', 'appointmentDate', 'preferredDate'];
-  const timeKeys = ['requestedTime', 'time', 'appointmentTime', 'preferredTime', 'eventTime'];
-
-  let date: string | null = null;
-  let time: string | null = null;
-
-  for (const key of dateKeys) {
-    if (entities[key]) {
-      date = entities[key];
-      break;
-    }
-  }
-
-  for (const key of timeKeys) {
-    if (entities[key]) {
-      time = entities[key];
-      break;
-    }
-  }
-
-  return { date, time };
-}
 
 /**
  * Build a confirmation email for an approved appointment request.
@@ -368,7 +334,7 @@ export class AppointmentModule implements IUCModule {
       }
 
       const params = createAction.params;
-      const now = new Date().toISOString();
+      const now = nowISO();
 
       // ── 1. Create appointment document in Firestore ──
       const appointmentDoc: Omit<AppointmentDocument, 'id'> = {

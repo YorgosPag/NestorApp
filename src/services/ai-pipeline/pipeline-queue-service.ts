@@ -18,9 +18,9 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { PIPELINE_QUEUE_CONFIG, PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
+import { PIPELINE_QUEUE_CONFIG } from '@/config/ai-pipeline-config';
 import { QUEUE_STATUS } from '@/constants/entity-status-values';
-import { generatePipelineQueueId } from '@/services/enterprise-id.service';
+import { generatePipelineQueueId, generateRequestId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
 import type {
   PipelineQueueItem,
@@ -33,20 +33,6 @@ import type {
 } from '@/types/ai-pipeline';
 import { PipelineState } from '@/types/ai-pipeline';
 import { nowISO } from '@/lib/date-local';
-
-// ============================================================================
-// HELPER: GENERATE REQUEST ID
-// ============================================================================
-
-/**
- * Generate unique correlation ID for pipeline tracing
- * Format: req_{timestamp}_{random}
- */
-function generateRequestId(): string {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 8);
-  return `${PIPELINE_PROTOCOL_CONFIG.REQUEST_ID_PREFIX}_${timestamp}_${random}`;
-}
 
 // ============================================================================
 // ENQUEUE
