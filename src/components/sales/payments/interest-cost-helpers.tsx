@@ -36,37 +36,24 @@ import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { nowISO } from '@/lib/date-local';
+import { formatCurrency as formatCurrencySSoT } from '@/lib/intl-formatting';
+import { formatCurrencyWhole as formatCurrency, formatDateGreek as formatDate } from '@/lib/intl-domain';
 
 // =============================================================================
-// FORMATTING UTILITIES
+// FORMATTING UTILITIES — SSoT delegation (ADR-314 Phase C.5.8)
 // =============================================================================
 
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+export { formatCurrency, formatDate };
 
 export function formatCurrencyFull(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
+  return formatCurrencySSoT(value, 'EUR', {
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+  });
 }
 
 export function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`;
-}
-
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
 }
 
 // =============================================================================
