@@ -39,6 +39,8 @@ const logger = createModuleLogger('audit');
 // SSoT: Subcollection name from centralized config
 // This writes to /companies/{companyId}/audit_logs/ (subcollection)
 import { SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { nowISO } from '@/lib/date-local';
+
 const AUDIT_COLLECTION = SUBCOLLECTIONS.COMPANY_AUDIT_LOGS;
 
 // =============================================================================
@@ -119,7 +121,7 @@ export async function logAuditEvent(
       actorId: ctx.uid,
       targetId,
       targetType,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
     });
     return;
   }
@@ -226,7 +228,7 @@ export async function logWebhookEvent(
     logger.info('[AUDIT] [WEBHOOK] Firestore not available, logging to console:', {
       source: webhookSource,
       webhookId,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       details,
     });
     return;

@@ -50,6 +50,7 @@ import {
   AuthorizationError,
   QueryExecutionError
 } from './query-middleware-types';
+import { nowISO } from '@/lib/date-local';
 
 // Re-export all types and errors for backward compatibility
 export type {
@@ -323,7 +324,7 @@ export class AuthorizedQueryService {
   ): void {
     if (process.env.NODE_ENV === 'development') {
       logger.info('Query Audit Log', {
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         collection: collectionName,
         user: authContext.uid,
         email: authContext.email,
@@ -340,7 +341,7 @@ export class AuthorizedQueryService {
     authContext: AuthenticationContext
   ): void {
     const errorContext = {
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       collection: collectionName,
       user: authContext.uid,
       error: getErrorMessage(error)

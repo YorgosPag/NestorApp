@@ -23,6 +23,7 @@ export { ApiError } from './api-error-types';
 import type { ApiErrorContext, ApiErrorResponse, ApiSuccessResponse, ErrorMappingRule } from './api-error-types';
 import { ApiError } from './api-error-types';
 import { ERROR_MAPPING_RULES } from './api-error-rules';
+import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ApiErrorHandler');
 
@@ -56,7 +57,7 @@ export class ApiErrorHandler {
           success: false,
           error: error.message,
           errorCode: error.errorCode || `HTTP_${error.statusCode}`,
-          timestamp: new Date().toISOString(),
+          timestamp: nowISO(),
           requestId,
         };
 
@@ -112,7 +113,7 @@ export class ApiErrorHandler {
         error: errorMapping.userMessage || errorMessage,
         errorCode: errorMapping.errorCode,
         errorId: errorId || undefined,
-        timestamp: new Date().toISOString(),
+        timestamp: nowISO(),
         requestId,
         details: this.shouldIncludeDetails(errorMapping) ? this.sanitizeErrorDetails(error) : undefined,
         context: this.shouldIncludeContext() ? {
@@ -138,7 +139,7 @@ export class ApiErrorHandler {
         success: false,
         error: 'Internal server error',
         errorCode: 'HANDLER_FAILURE',
-        timestamp: new Date().toISOString()
+        timestamp: nowISO()
       }, { status: 500 });
     }
   }
@@ -156,7 +157,7 @@ export class ApiErrorHandler {
       success: true,
       data,
       message,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
       requestId,
       metadata
     };

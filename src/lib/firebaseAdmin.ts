@@ -26,6 +26,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 import { initializeWithCredentialChain } from './firebaseAdmin-credentials';
 import { FirebaseAdminInitError, type CredentialSource, type AdminDiagnosticReport } from './firebaseAdmin-types';
+import { nowISO } from '@/lib/date-local';
 
 // Re-export types and errors for backward compatibility
 export { FirebaseAdminInitError } from './firebaseAdmin-types';
@@ -187,7 +188,7 @@ export function getAdminDiagnostics(): AdminDiagnosticReport {
     environment: getCurrentRuntimeEnvironment(),
     projectId: _projectId,
     error: _initError?.message ?? null,
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     envVarsPresent: {
       FIREBASE_SERVICE_ACCOUNT_KEY_B64: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64,
       FIREBASE_SERVICE_ACCOUNT_KEY: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY,

@@ -18,6 +18,8 @@ import type { BaseMessageInput, SendResult, Channel } from '@/types/communicatio
 import { companySettingsService } from '@/services/company/EnterpriseCompanySettingsService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { nowISO } from '@/lib/date-local';
+
 const logger = createModuleLogger('CommunicationsService');
 
 // ============================================================================
@@ -332,7 +334,7 @@ class CommunicationsService {
     const metadata = {
       ...messageData.metadata,
       sentVia: 'CommunicationsService',
-      timestamp: new Date().toISOString()
+      timestamp: nowISO()
     };
 
     try {
