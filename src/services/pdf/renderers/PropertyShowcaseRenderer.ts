@@ -16,7 +16,7 @@
 
 import type { IPDFDoc, Margins } from '../contracts';
 import { TextRenderer } from './TextRenderer';
-import { COLORS, FONT_SIZES, FONTS, LINE_SPACING } from '../layout';
+import { COLORS, FONT_SIZES, FONT_STYLES, FONTS, LINE_SPACING } from '../layout';
 import {
   drawMediaGridPage,
   PHOTO_GRID_CONFIG,
@@ -222,11 +222,17 @@ export class PropertyShowcaseRenderer {
     data: PropertyShowcasePDFData
   ): number {
     let y = this.drawSectionTitle(doc, yStart, margins, pageWidth, contentWidth, data.labels.specsSection);
+    y += 3;
     const p = data.property;
     const unit = data.labels.areaUnit;
 
+    // Row-major pair order mirrors ShowcaseSpecs.tsx `grid sm:grid-cols-2`:
+    // index 0→left col row 1, index 1→right col row 1, index 2→left col
+    // row 2, etc. Same row order as the web component so sales see an
+    // identical layout on paper and on screen.
     const rows: Array<[string, string]> = [
       [data.labels.fieldType, safe(p.typeLabel || p.type)],
+      [data.labels.fieldCode, safe(p.code)],
       [data.labels.fieldBuilding, safe(p.building)],
       [data.labels.fieldFloor, p.floor !== undefined ? String(p.floor) : '-'],
       [data.labels.fieldGrossArea, p.areas?.gross ? `${p.areas.gross} ${unit}` : '-'],
@@ -241,10 +247,37 @@ export class PropertyShowcaseRenderer {
       [data.labels.fieldCondition, safe(p.condition)],
     ];
 
-    for (const [label, value] of rows) {
-      y = this.drawField(doc, y, margins, pageWidth, contentWidth, label, value);
+    const columnGap = 8;
+    const columnWidth = (contentWidth - columnGap) / 2;
+    const rowStep = 6;
+    const labelColor: [number, number, number] = [107, 114, 128];
+
+    doc.setFont(FONTS.UNICODE, FONT_STYLES.NORMAL);
+    doc.setFontSize(FONT_SIZES.BODY);
+
+    for (let i = 0; i < rows.length; i += 2) {
+      this.drawSpecCell(doc, rows[i], margins.left, columnWidth, y, labelColor);
+      if (i + 1 < rows.length) {
+        this.drawSpecCell(doc, rows[i + 1], margins.left + columnWidth + columnGap, columnWidth, y, labelColor);
+      }
+      y += rowStep;
     }
+    doc.setTextColor(...COLORS.BLACK);
     return y;
+  }
+
+  private drawSpecCell(
+    doc: IPDFDoc,
+    [label, value]: [string, string],
+    x: number,
+    width: number,
+    y: number,
+    labelColor: [number, number, number]
+  ): void {
+    doc.setTextColor(...labelColor);
+    doc.text(`${label}:`, x, y);
+    doc.setTextColor(...COLORS.BLACK);
+    doc.text(value || '-', x + width, y, { align: 'right' });
   }
 
   private drawFeatures(

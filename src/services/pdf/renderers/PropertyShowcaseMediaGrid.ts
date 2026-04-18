@@ -19,7 +19,7 @@
 
 import type { IPDFDoc, Margins } from '../contracts';
 import type { ShowcasePhotoAsset } from './PropertyShowcaseRenderer';
-import { COLORS } from '../layout';
+import { COLORS, FONT_SIZES, FONT_STYLES, FONTS } from '../layout';
 
 export interface MediaGridConfig {
   cols: number;
@@ -76,6 +76,10 @@ export function drawMediaGridPage(args: DrawMediaGridArgs): void {
 
   const cellWidth = (contentWidth - config.gap * (config.cols - 1)) / config.cols;
   const cellHeight = cellWidth * config.aspect;
+  // Reserved vertical space under each cell for the displayName caption.
+  // Mirrors the web <figcaption> under every photo/floorplan tile so the PDF
+  // reads the same as ShowcasePhotoGrid.tsx / ShowcaseFloorplans.tsx.
+  const captionHeight = 5;
   const pageHeight = doc.pageSize.height;
   const maxBottom = pageHeight - margins.bottom - 10;
 
@@ -84,7 +88,7 @@ export function drawMediaGridPage(args: DrawMediaGridArgs): void {
 
   for (const asset of assets) {
     const x = margins.left + col * (cellWidth + config.gap);
-    if (rowY + cellHeight > maxBottom) break;
+    if (rowY + cellHeight + captionHeight > maxBottom) break;
     try {
       doc.addImage(asset.bytes, asset.format, x, rowY, cellWidth, cellHeight, asset.id, 'FAST');
     } catch (err) {
@@ -100,10 +104,32 @@ export function drawMediaGridPage(args: DrawMediaGridArgs): void {
       doc.setDrawColor(...COLORS.GRAY);
       doc.rect(x, rowY, cellWidth, cellHeight, 'S');
     }
+
+    if (asset.displayName) {
+      drawAssetCaption(doc, asset.displayName, x, rowY + cellHeight + 3, cellWidth);
+    }
+
     col += 1;
     if (col >= config.cols) {
       col = 0;
-      rowY += cellHeight + config.gap;
+      rowY += cellHeight + captionHeight + config.gap;
     }
   }
+}
+
+function drawAssetCaption(
+  doc: IPDFDoc,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number
+): void {
+  doc.setFont(FONTS.UNICODE, FONT_STYLES.NORMAL);
+  doc.setFontSize(FONT_SIZES.SMALL);
+  doc.setTextColor(90, 90, 90);
+  const split = doc.splitTextToSize(text, maxWidth);
+  const firstLine = Array.isArray(split) ? split[0] : String(split);
+  const textWidth = doc.getTextWidth(firstLine);
+  doc.text(firstLine, x + (maxWidth - textWidth) / 2, y);
+  doc.setTextColor(...COLORS.BLACK);
 }
