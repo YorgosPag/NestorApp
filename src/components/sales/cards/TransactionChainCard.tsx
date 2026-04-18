@@ -51,7 +51,7 @@ interface InvoiceListResponse {
 // HELPERS
 // =============================================================================
 
-function formatDate(isoDate: string): string {
+function formatDateSafe(isoDate: string): string {
   try {
     return formatDateIntl(new Date(isoDate));
   } catch {
@@ -141,7 +141,7 @@ export function TransactionChainCard({ propertyId }: TransactionChainCardProps) 
                     {t(`sales.saleInfo.invoiceType.${inv.type}`)} {inv.series}-{inv.number}
                   </span>
                   <span className={cn("text-xs", colors.text.muted)}>
-                    {formatDate(inv.issueDate)}
+                    {formatDateSafe(inv.issueDate)}
                   </span>
                 </span>
                 <span className="flex items-center gap-2">

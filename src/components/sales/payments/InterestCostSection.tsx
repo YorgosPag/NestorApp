@@ -21,6 +21,7 @@ import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { nowISO } from '@/lib/date-local';
+import { formatCurrencyWhole as formatCurrency } from '@/lib/intl-domain';
 
 // =============================================================================
 // TYPES
@@ -36,13 +37,6 @@ interface InterestCostSectionProps {
 // HELPERS
 // =============================================================================
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`;

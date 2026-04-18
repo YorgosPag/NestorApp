@@ -46,7 +46,7 @@ interface SaleInfoContentProps {
 // 🏢 HELPERS
 // =============================================================================
 
-function formatDate(ts: { toDate?: () => Date } | string | null | undefined): string {
+function formatTsDate(ts: { toDate?: () => Date } | string | null | undefined): string {
   const d = normalizeToDate(ts);
   return d ? formatDateIntl(d) : '—';
 }
@@ -194,14 +194,14 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
             icon={Calendar}
             iconColor={SALES_ICON_COLORS.listedDate}
             label={t('sales.saleInfo.listedDate')}
-            value={formatDate(commercial?.listedDate)}
+            value={formatTsDate(commercial?.listedDate)}
           />
           {commercial?.reservationDate && (
             <InfoRow
               icon={Calendar}
               iconColor={SALES_ICON_COLORS.reservationDate}
               label={t('sales.saleInfo.reservationDate')}
-              value={formatDate(commercial.reservationDate)}
+              value={formatTsDate(commercial.reservationDate)}
             />
           )}
           {commercial?.saleDate && (
@@ -209,7 +209,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
               icon={Calendar}
               iconColor={SALES_ICON_COLORS.saleDate}
               label={t('sales.saleInfo.saleDate')}
-              value={formatDate(commercial.saleDate)}
+              value={formatTsDate(commercial.saleDate)}
             />
           )}
           {commercial?.cancellationDate && (
@@ -217,7 +217,7 @@ export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
               icon={Calendar}
               iconColor={SALES_ICON_COLORS.cancellationDate}
               label={t('sales.saleInfo.cancellationDate')}
-              value={formatDate(commercial.cancellationDate)}
+              value={formatTsDate(commercial.cancellationDate)}
             />
           )}
           <InfoRow

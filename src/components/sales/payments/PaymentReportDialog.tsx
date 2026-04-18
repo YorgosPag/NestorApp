@@ -41,6 +41,7 @@ import { usePaymentReport } from '@/hooks/usePaymentReport';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { formatCurrencyWhole as formatCurrency } from '@/lib/intl-domain';
 
 // =============================================================================
 // PROPS
@@ -56,14 +57,6 @@ interface PaymentReportDialogProps {
 // HELPERS
 // =============================================================================
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 // =============================================================================
 // COMPONENT
