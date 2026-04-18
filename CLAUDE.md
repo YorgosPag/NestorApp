@@ -233,6 +233,7 @@ When you touch a legacy file → clean up as many violations as you can. **ZERO 
 
 ## SOS. SOS. N.12 — SSoT RATCHET ENFORCEMENT (ADR-294)
 - **Pre-commit hook CHECK 3.7** blocks new SSoT violations
+- **Pre-commit hook CHECK 3.18 (ADR-314)** blocks new structural duplicates / anti-patterns / registry gaps. Layer 1 = pre-commit smoke (~0.2s), Layer 2 = `.github/workflows/ssot-discover.yml` full scan on every PR. Baseline: `.ssot-discover-baseline.json` (46 duplicates / 5 anti-patterns / 91 unprotected, 2026-04-19). Local full scan: `SSOT_DISCOVER_FULL=1 git commit …`
 - **Registry**: `.ssot-registry.json` — 62+ modules in 7 tiers
 - **Baseline**: `.ssot-violations-baseline.json` — 7 files, 16 violations (2026-04-11)
 - **Entity audit trail**: Module `entity-audit-trail` (Tier 3, ADR-195) forbids direct writes to `entity_audit_trail`, inline queries, and re-implementations of the `useEntityAudit` hook. Canonical: `src/services/entity-audit.service.ts` + `src/hooks/useEntityAudit.ts`
@@ -241,7 +242,9 @@ When you touch a legacy file → clean up as many violations as you can. **ZERO 
 - **Commands**:
   - `npm run ssot:audit` — progress vs baseline
   - `npm run ssot:baseline` — update baseline
-  - `npm run ssot:discover` — detect duplicates, anti-patterns, registry gaps
+  - `npm run ssot:discover` — detect duplicates, anti-patterns, registry gaps (human report)
+  - `npm run ssot:discover:check` — full scan + baseline compare (CHECK 3.18, ~4 min Win / ~1 min Linux)
+  - `npm run ssot:discover:baseline` — refresh CHECK 3.18 baseline after legit cleanup
 
 ## 🚨🚨🚨 SOS. SOS. N.13 — RATCHET BACKLOG SESSION-START REMINDER (ADR-299)
 

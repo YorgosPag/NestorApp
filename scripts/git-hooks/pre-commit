@@ -516,6 +516,63 @@ if [[ -f "$AUDIT_COVERAGE_SCRIPT" ]]; then
 fi
 
 # =============================================================================
+# CHECK 3.18: SSoT Discover Ratchet (ADR-314 / 2026-04-19)
+# =============================================================================
+# Ratchet gate for *structural* SSoT violations — duplicate exports,
+# scattered anti-patterns, and centralized files not yet in
+# .ssot-registry.json. Complements CHECK 3.7 (per-module registered
+# patterns) which cannot see brand-new symbol duplication.
+#
+# Defense in Depth (ADR-294 pattern):
+#   Layer 1 (this block) — fast smoke check (~0.2s). Validates that
+#     .ssot-discover-baseline.json exists and is well-formed JSON with
+#     the tracked metrics. Catches accidental baseline deletion / merge
+#     conflict corruption. Does NOT run the full scanner (scripts/
+#     ssot-discover.sh takes ~30-60s on Linux but ~4 minutes on Windows
+#     Git Bash due to process-spawn overhead — prohibitive for every
+#     local commit).
+#   Layer 2 — .github/workflows/ssot-discover.yml runs the full scan on
+#     every PR against src/** changes. Authoritative gate, blocks merge
+#     via branch protection. Cannot be bypassed with `git commit
+#     --no-verify`.
+#
+# Scope: triggered only when src/**/*.{ts,tsx} files are staged — the
+#        scanner reads src/, so non-src changes cannot move the needle.
+#
+# Local full-scan override:
+#   SSOT_DISCOVER_FULL=1 git commit -m "…"   (~4 min on Windows)
+# =============================================================================
+
+SSOT_DISCOVER_SCRIPT="scripts/check-ssot-discover-ratchet.js"
+if [[ -f "$SSOT_DISCOVER_SCRIPT" ]]; then
+    SSOT_DISCOVER_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^src/.*\.(ts|tsx)$' || true)
+
+    if [[ -n "$SSOT_DISCOVER_TRIGGERS" ]]; then
+        if [[ "${SSOT_DISCOVER_FULL:-0}" == "1" ]]; then
+            echo -e "${YELLOW}🔍 CHECK 3.18 — SSoT Discover Ratchet (full scan, ADR-314)...${NC}"
+            SSOT_DISCOVER_OUTPUT=$(node "$SSOT_DISCOVER_SCRIPT" --full 2>&1)
+        else
+            echo -e "${YELLOW}🔍 CHECK 3.18 — SSoT Discover Ratchet (smoke, ADR-314)...${NC}"
+            SSOT_DISCOVER_OUTPUT=$(node "$SSOT_DISCOVER_SCRIPT" 2>&1)
+        fi
+        SSOT_DISCOVER_EXIT=$?
+
+        if [[ $SSOT_DISCOVER_EXIT -ne 0 ]]; then
+            echo "$SSOT_DISCOVER_OUTPUT"
+            echo ""
+            echo -e "${RED}✖ CHECK 3.18 failed — centralize the pattern, register it, or refresh the baseline.${NC}"
+            echo -e "${YELLOW}  Tip: run 'npm run ssot:discover' for the full 4-phase diagnostic report.${NC}"
+            echo -e "${YELLOW}  Tip: run 'SSOT_DISCOVER_FULL=1 git commit …' to run the full scan locally before push.${NC}"
+            exit 1
+        fi
+
+        if [[ -n "$SSOT_DISCOVER_OUTPUT" ]]; then
+            echo "$SSOT_DISCOVER_OUTPUT"
+        fi
+    fi
+fi
+
+# =============================================================================
 # CHECK 3.19: Storage Rules Test Coverage (ADR-301 / 2026-04-14)
 # =============================================================================
 # Zero-tolerance gate that ensures every top-level match block in

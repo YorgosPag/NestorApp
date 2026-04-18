@@ -1,0 +1,73 @@
+name: 🧬 SSoT Discover Ratchet (ADR-314)
+
+# =============================================================================
+# Layer 2 of Defense in Depth — CI-authoritative SSoT discover gate.
+#
+# Why this exists
+# ---------------
+# CHECK 3.7 (.ssot-registry.json ratchet) blocks regressions of *already
+# registered* SSoT modules. It cannot detect brand-new duplicate symbols or
+# newly-introduced scattered anti-patterns — the pre-existing
+# `npm run ssot:discover` scanner does, but ran only manually/offline.
+#
+# CHECK 3.18 closes that gap by turning the discover scanner into a
+# presubmit-grade ratchet. The local pre-commit hook (Layer 1) only runs a
+# fast smoke check because the scanner takes ~4 minutes on Windows Git Bash.
+# This workflow re-runs the full 4-phase scan against every PR / push to
+# main so the gate is guaranteed regardless of local hook coverage.
+#
+# Regression it prevents
+# ----------------------
+# Phases C.5.1 → C.5.21 of ADR-314 were retroactive cleanup of duplicates
+# born during earlier sessions with no enforcement. Every cycle of cleanup
+# costs ~30 minutes/file. A CI-time gate prevents that debt from re-accruing.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'scripts/ssot-discover.sh'
+      - 'scripts/check-ssot-discover-ratchet.js'
+      - '.ssot-discover-baseline.json'
+      - '.ssot-registry.json'
+      - '.github/workflows/ssot-discover.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'scripts/ssot-discover.sh'
+      - 'scripts/check-ssot-discover-ratchet.js'
+      - '.ssot-discover-baseline.json'
+      - '.ssot-registry.json'
+
+concurrency:
+  group: ssot-discover-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: 🔒 SSoT Discover Ratchet (CHECK 3.18)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No dependency install required — scanner is pure bash + Node stdlib.
+      # Keeps the workflow under 2 minutes wall-clock on Linux runners.
+
+      - name: 🔍 CHECK 3.18 — SSoT discover ratchet (full 4-phase scan)
+        run: node scripts/check-ssot-discover-ratchet.js --full
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=SSoT Discover Ratchet::No new duplicates / anti-patterns / registry gaps"

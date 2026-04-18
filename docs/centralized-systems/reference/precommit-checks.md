@@ -2,10 +2,14 @@
 
 **Status:** Active
 **Owner:** Γιώργος Παγώνης
-**Last updated:** 2026-04-13
+**Last updated:** 2026-04-19
 **Referenced from:** `CLAUDE.md` SOS N.11
 
-Full details for pre-commit checks CHECK 3.13 – CHECK 3.17. These checks are enforced by the pre-commit hook and block commits that violate the baselines or introduce new violations.
+Full details for pre-commit checks CHECK 3.13 – CHECK 3.18. These checks are enforced by the pre-commit hook and block commits that violate the baselines or introduce new violations.
+
+| CHECK | Goal | Mode | Baseline |
+|-------|------|------|----------|
+| **3.18** | SSoT Discover Ratchet — new duplicate exports / anti-patterns / registry gaps | RATCHET | `.ssot-discover-baseline.json` (46 / 5 / 91) |
 
 Για τα βασικά CHECK 3.8–3.12 (hardcoded strings, missing keys, ICU interpolation, companyId, label resolution) δες το CLAUDE.md SOS N.11 summary και τα corresponding scripts στο `scripts/`.
 
@@ -173,6 +177,57 @@ Dedicated `jest.config.firestore-rules.js` (node env, isolated from main suite).
 
 ### Relationship with entity-audit-trail SSoT
 Το registry entry `entity-audit-trail` απαγορεύει **direct writes** στο `entity_audit_trail` collection από οπουδήποτε εκτός του canonical service (reader-side protection). Το CHECK 3.17 απαιτεί **writes σε tracked entities** να καλούν το canonical service (writer-side coverage). Μαζί εγγυώνται ότι η audit trail είναι complete και untampered.
+
+---
+
+---
+
+## CHECK 3.18 — SSoT Discover Ratchet (ADR-314)
+
+### Rule
+Το συνολικό μέτρημα structural SSoT violations που αναφέρει το `npm run ssot:discover` (Phase 2 `duplicateExports` + Phase 3 `antiPatterns` + Phase 4 `unprotected` centralized files) **δεν επιτρέπεται να ανέβει** πάνω από το baseline. Ratchet down only.
+
+### Why
+Το CHECK 3.7 (`.ssot-registry.json`) μπλοκάρει regressions σε *καταγεγραμμένα* modules (62+ tiers). Δεν βλέπει νέα duplicate symbols ή νέες anti-patterns που δεν υπάρχουν στο registry. Το `scripts/ssot-discover.sh` τα βρίσκει αλλά έτρεχε μόνο manual → duplicate που γεννήθηκε σήμερα περνούσε CI μέχρι να το θυμηθεί κάποιος → retroactive cleanup (Phases C.5.1 → C.5.21 στο ADR-314, ~43h εκτίμηση). Το CHECK 3.18 κλείνει το κενό σε presubmit.
+
+### Enforcement (Defense in Depth, ADR-294 pattern)
+
+| Layer | Where | Mode | Speed |
+|-------|-------|------|-------|
+| **Layer 1 — pre-commit** | `scripts/git-hooks/pre-commit` CHECK 3.18 | **smoke** (baseline file presence + JSON validity) | ~0.2s |
+| **Layer 2 — CI** | `.github/workflows/ssot-discover.yml` | **full** (4-phase scan) | ~1-2 min on Linux |
+| **Layer 3 — local on demand** | `SSOT_DISCOVER_FULL=1 git commit …` or `npm run ssot:discover:check` | **full** | ~4 min on Windows Git Bash, ~30-60s Linux |
+
+**Why not full scan in pre-commit**: το bash scanner κάνει `grep -rnE` σε όλα τα 5.195 `.ts/.tsx` files. Σε Linux τρέχει ~30-60s, σε Windows Git Bash ~4 λεπτά (process-spawn overhead). Αν μπει full στο pre-commit, ο hook πάει από ~3.5min → ~7min — prohibitive για κάθε local commit. Το CI layer είναι authoritative gate (Branch Protection blocks merge).
+
+### Scope (pre-commit)
+- Script: `scripts/check-ssot-discover-ratchet.js`
+- Triggers: staged `src/**/*.{ts,tsx}` — non-src changes δεν μετακινούν τα counts
+- Behaviour: validates `.ssot-discover-baseline.json` exists + parses + has `duplicateExports`/`antiPatterns`/`unprotected` numeric fields. Does **not** re-scan — trusts CI for the full check.
+
+### Scope (CI)
+- Workflow: `.github/workflows/ssot-discover.yml`
+- Triggers: `src/**/*.{ts,tsx}`, `scripts/ssot-discover.sh`, `scripts/check-ssot-discover-ratchet.js`, `.ssot-discover-baseline.json`, `.ssot-registry.json`
+- Ubuntu runner, Node 20, no dependency install (pure bash + Node stdlib)
+- Exits 1 if any tracked metric > baseline
+
+### Baseline
+`.ssot-discover-baseline.json` (46 duplicates / 5 anti-patterns / 91 unprotected, frozen 2026-04-19, ADR-314)
+
+### Commands
+- `npm run ssot:discover` — full human-readable 4-phase report (for diagnostics)
+- `npm run ssot:discover:check` — full scan + baseline compare (exits 1 on raise)
+- `npm run ssot:discover:baseline` — regenerate baseline after legitimate cleanup
+
+### Remediation flow
+1. **Centralize** the new pattern into an existing SSoT module (preferred)
+2. **Register** a new SSoT module in `.ssot-registry.json` (add Tier X, `npm run ssot:baseline`)
+3. **Refresh baseline** only for intentional cleanup debt: `npm run ssot:discover:baseline`
+
+### Relationship with other checks
+- **CHECK 3.7** (SSoT Ratchet) → blocks regressions of *registered* patterns. File-level granularity, per-module.
+- **CHECK 3.18** (this one) → blocks *new duplicate patterns* + anti-patterns not yet registered. Total counts granularity, cross-module.
+- Together: CHECK 3.7 keeps known SSoT modules clean; CHECK 3.18 prevents new fragmentation from escaping undetected.
 
 ---
 
