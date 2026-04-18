@@ -117,9 +117,9 @@ export {
   buildFloorplanDisplayName,
   buildContractDisplayName,
   getDomainLabel,
-  getCategoryLabel,
+  getFileCategoryLabel,
   getEntityTypeLabel,
-  formatDateForDisplay,
+  formatDateForFilename,
   sanitizeForFilename,
   normalizeForSearch,
 } from './utils/file-display-name';
