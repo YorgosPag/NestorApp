@@ -22,7 +22,7 @@
  * @param role - Optional association role ('buyer', 'owner', 'tenant', etc.)
  * @returns Deterministic link ID (e.g. `cl_cont_xyz_unit_unit_abc_buyer`)
  */
-export function generateContactLinkId(
+export function buildContactLinkKey(
   contactId: string,
   targetEntityType?: string,
   targetEntityId?: string,
@@ -31,3 +31,6 @@ export function generateContactLinkId(
   const base = `cl_${contactId}_${targetEntityType}_${targetEntityId}`;
   return role ? `${base}_${role}` : base;
 }
+
+// Back-compat alias — deterministic composite key not entity ID (SSoT enterprise-id generates random prefix+nanoid)
+export { buildContactLinkKey as generateContactLinkId };

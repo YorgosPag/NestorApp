@@ -31,7 +31,7 @@ import '@/lib/design-system';
 // RELATIVE TIME FORMATTER
 // ============================================
 
-function formatRelativeTime(date: Date, now: Date): string {
+function formatSaveAge(date: Date, now: Date): string {
   const diffMs = now.getTime() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);
 
@@ -106,7 +106,7 @@ export function AutoSaveStatusIndicator({
   // Relative timestamp (updates on re-render triggered by parent)
   const timestamp = useMemo(() => {
     if (!lastSaved || !showTimestamp) return null;
-    return formatRelativeTime(lastSaved, new Date());
+    return formatSaveAge(lastSaved, new Date());
   }, [lastSaved, showTimestamp]);
 
   // Status label
