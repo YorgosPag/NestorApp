@@ -97,7 +97,7 @@ export function UserCard({
   const getRoleLabel = (role: string) => t(`roles.${role}`, role);
   const getStatusLabel = (status: string) => t(`status.${status}`, status);
 
-  const formatDate = (date: string | Date | undefined) => {
+  const formatJoinedDate = (date: string | Date | undefined) => {
     if (!date) return t('card.activity.notSet');
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return formatIntlDate(dateObj);
@@ -234,7 +234,7 @@ export function UserCard({
                   <span className={colors.text.muted}>{t('card.activity.joinedDate')}:</span>
                   <span className="flex items-center gap-1">
                     <Calendar className={iconSizes.xs} />
-                    {formatDate(user.joinedDate)}
+                    {formatJoinedDate(user.joinedDate)}
                   </span>
                 </div>
               )}

@@ -16,8 +16,8 @@ const tomorrowLabel = i18n.t('tasks.tomorrow', { ns: 'crm' });
 const overdueLabel = i18n.t('tasks.overdue', { ns: 'crm' });
 const mutedTextClass = COLOR_BRIDGE.text.muted;
 
-// ? ENTERPRISE MIGRATION COMPLETE: formatDate now uses centralized intl-utils
-export const formatDate = (timestamp?: FirestoreishTimestamp) => {
+// ? ENTERPRISE MIGRATION COMPLETE: formatTimestampDate now uses centralized intl-utils
+export const formatTimestampDate = (timestamp?: FirestoreishTimestamp) => {
   const date = normalizeToDate(timestamp);
   return date ? formatDateTime(date) : unknownDateLabel;
 };

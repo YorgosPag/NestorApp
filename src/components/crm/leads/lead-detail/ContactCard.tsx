@@ -7,7 +7,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Opportunity } from '@/types/crm';
-import { formatDate } from './utils/dates';
+import { formatTimestampDate } from './utils/dates';
 import { useStatusColor } from './utils/status';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/design-system';
@@ -69,7 +69,7 @@ export function ContactCard({ lead }: ContactCardProps) {
         <div className={cn('flex items-center', spacing.gap.md)}>
           <Calendar className={cn(iconSizes.md, colors.text.muted)} />
           <div>
-            <p className="font-medium">{formatDate(lead.createdAt)}</p>
+            <p className="font-medium">{formatTimestampDate(lead.createdAt)}</p>
             <p className={cn('text-sm', colors.text.muted)}>{t('contactCard.createdAt')}</p>
           </div>
         </div>

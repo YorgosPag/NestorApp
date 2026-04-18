@@ -27,7 +27,7 @@ interface ContactCardProps {
 
 
 // 🏢 ENTERPRISE: Stage-based styling
-const getStatusBadgeClass = (stage: string): string => {
+const getLeadStageBadgeClass = (stage: string): string => {
   const stageClasses: Record<string, string> = {
     'initial_contact': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
     'qualification': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
@@ -89,7 +89,7 @@ export function ContactCard({
       statusBadges={[
         {
           label: getStageLabel(lead.stage),
-          className: getStatusBadgeClass(lead.stage)
+          className: getLeadStageBadgeClass(lead.stage)
         }
       ]}
       

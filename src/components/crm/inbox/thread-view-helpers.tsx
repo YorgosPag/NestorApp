@@ -41,7 +41,7 @@ export function getSenderIcon(senderType: string, iconSizes: ReturnType<typeof u
   }
 }
 
-export function getStatusIcon(
+export function getMessageStatusIcon(
   status: string,
   iconSizes: ReturnType<typeof useIconSizes>,
   colors: ReturnType<typeof useSemanticColors>

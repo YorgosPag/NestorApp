@@ -35,12 +35,12 @@ import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Extracted helpers + handler hook
 import {
-  getRelativeTime, getSenderIcon, getStatusIcon,
+  getRelativeTime, getSenderIcon, getMessageStatusIcon,
   useThreadMessageHandlers,
 } from './thread-view-helpers';
 
 // Re-exports
-export { getRelativeTime, getSenderIcon, getStatusIcon } from './thread-view-helpers';
+export { getRelativeTime, getSenderIcon, getMessageStatusIcon } from './thread-view-helpers';
 
 // ============================================================================
 // TYPES
@@ -224,7 +224,7 @@ export function ThreadView({
                         {getSenderIcon(message.senderType, iconSizes)}
                         <span className="font-medium">{message.senderName}</span>
                         <time dateTime={message.createdAt} className="text-xs">{relativeTime}</time>
-                        {isOutbound && getStatusIcon(message.deliveryStatus, iconSizes, colors)}
+                        {isOutbound && getMessageStatusIcon(message.deliveryStatus, iconSizes, colors)}
                         {isPinnedFn && isPinnedFn(message.id) && (
                           <Tooltip><TooltipTrigger asChild><span><Pin className={`${iconSizes.xs} text-amber-500`} /></span></TooltipTrigger><TooltipContent>{t('inbox.message.pinned')}</TooltipContent></Tooltip>
                         )}

@@ -44,7 +44,7 @@ const defaultGetTypeIcon = (type: StorageType): React.ElementType => {
 };
 
 // 🏢 ENTERPRISE: Complete status class mapping for all StorageStatus values
-const getStatusBadgeClass = (status: StorageStatus, colors: ReturnType<typeof useSemanticColors>): string => {
+const getStorageStatusBadgeClass = (status: StorageStatus, colors: ReturnType<typeof useSemanticColors>): string => {
   const statusClasses: Record<StorageStatus, string> = {
     'available': `${colors.bg.success} ${colors.text.success}`,
     'occupied': `${colors.bg.error} ${colors.text.error}`,
@@ -120,7 +120,7 @@ export function StorageCard({
       statusBadges={[
         {
           label: localizedGetStatusLabel(unit.status),
-          className: getStatusBadgeClass(unit.status, colors)
+          className: getStorageStatusBadgeClass(unit.status, colors)
         },
         {
           label: localizedGetTypeLabel(unit.type),
