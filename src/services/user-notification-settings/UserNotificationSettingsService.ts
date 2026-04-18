@@ -22,7 +22,6 @@ import {
   getDoc,
   setDoc,
   updateDoc,
-  onSnapshot,
   Timestamp,
   Firestore,
 } from 'firebase/firestore';
@@ -342,13 +341,13 @@ class UserNotificationSettingsService {
       existingUnsubscribe();
     }
 
-    const docRef = doc(this.db, COLLECTION_NAME, userId);
-
-    const unsubscribe = onSnapshot(
-      docRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const settings = this.transformFromFirestore(docSnap.data(), userId);
+    // Route through SSoT RealtimeService (ADR-195 Phase 8) for subscription
+    // tracking + dedup + centralized error handling.
+    const unsubscribe = RealtimeService.subscribeToDocument(
+      { collection: COLLECTION_NAME, documentId: userId },
+      (data) => {
+        if (data) {
+          const settings = this.transformFromFirestore(data, userId);
           callback(settings);
         } else {
           // Return default settings if document doesn't exist
