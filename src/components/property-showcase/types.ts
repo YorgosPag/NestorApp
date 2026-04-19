@@ -51,6 +51,37 @@ export interface ShowcaseMedia {
 
 export type ShowcasePropertySnapshot = PropertyShowcaseSnapshot['property'];
 
+export type ShowcaseSocialPlatform =
+  | 'facebook'
+  | 'instagram'
+  | 'linkedin'
+  | 'twitter'
+  | 'youtube'
+  | 'github'
+  | 'other';
+
+export interface ShowcaseContactPhone {
+  value: string;
+  label?: string;
+}
+
+export interface ShowcaseContactEmail {
+  value: string;
+  label?: string;
+}
+
+export interface ShowcaseContactWebsite {
+  url: string;
+  label?: string;
+}
+
+export interface ShowcaseContactSocial {
+  platform: ShowcaseSocialPlatform;
+  url: string;
+  username?: string;
+  label?: string;
+}
+
 export interface ShowcaseCompanyBrand {
   name: string;
   phone?: string;
@@ -58,6 +89,16 @@ export interface ShowcaseCompanyBrand {
   website?: string;
   /** Absolute logo URL (ADR-312 Phase 8). Undefined → UI falls back to the bundled Pagonis asset. */
   logoUrl?: string;
+  /** Every non-empty phone on the company contact, primary first (ADR-312 Phase 9). */
+  phones?: ShowcaseContactPhone[];
+  /** Every non-empty email on the company contact, primary first (ADR-312 Phase 9). */
+  emails?: ShowcaseContactEmail[];
+  /** Pre-formatted address lines, primary first (ADR-312 Phase 9). */
+  addresses?: string[];
+  /** Every non-empty website on the company contact (ADR-312 Phase 9). */
+  websites?: ShowcaseContactWebsite[];
+  /** Social network links with normalised absolute URLs (ADR-312 Phase 9). */
+  socialMedia?: ShowcaseContactSocial[];
 }
 
 /**

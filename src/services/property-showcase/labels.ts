@@ -141,6 +141,19 @@ export interface ShowcaseEmailLabels {
   ctaLabel: string;
 }
 
+export interface ShowcaseHeaderContactLabels {
+  addressLabel: string;
+  phoneLabel: string;
+  emailLabel: string;
+  websiteLabel: string;
+  socialLabel: string;
+}
+
+export interface ShowcaseHeaderLabels {
+  subtitle: string;
+  contacts: ShowcaseHeaderContactLabels;
+}
+
 export interface PropertyShowcasePDFLabels {
   specs: ShowcaseSpecLabels;
   project: ShowcaseProjectLabels;
@@ -155,6 +168,7 @@ export interface PropertyShowcasePDFLabels {
   floorplans: ShowcaseFloorplansLabels;
   chrome: ShowcasePdfChrome;
   email: ShowcaseEmailLabels;
+  header: ShowcaseHeaderLabels;
 }
 
 export function loadShowcasePdfLabels(locale: EnumLocale = 'el'): PropertyShowcasePDFLabels {
@@ -221,6 +235,28 @@ export function loadShowcasePdfLabels(locale: EnumLocale = 'el'): PropertyShowca
       ctaLabel:
         (c as { email?: { ctaLabel?: string } }).email?.ctaLabel
         ?? (locale === 'el' ? 'Δείτε online' : 'View online'),
+    },
+    header: {
+      subtitle:
+        (c as { header?: { subtitle?: string } }).header?.subtitle
+        ?? (locale === 'el' ? 'Παρουσίαση ακινήτου' : 'Property showcase'),
+      contacts: {
+        addressLabel:
+          (c as { header?: { contacts?: { addressLabel?: string } } }).header?.contacts?.addressLabel
+          ?? (locale === 'el' ? 'Διεύθυνση' : 'Address'),
+        phoneLabel:
+          (c as { header?: { contacts?: { phoneLabel?: string } } }).header?.contacts?.phoneLabel
+          ?? (locale === 'el' ? 'Τηλέφωνο' : 'Phone'),
+        emailLabel:
+          (c as { header?: { contacts?: { emailLabel?: string } } }).header?.contacts?.emailLabel
+          ?? 'Email',
+        websiteLabel:
+          (c as { header?: { contacts?: { websiteLabel?: string } } }).header?.contacts?.websiteLabel
+          ?? (locale === 'el' ? 'Ιστοσελίδα' : 'Website'),
+        socialLabel:
+          (c as { header?: { contacts?: { socialLabel?: string } } }).header?.contacts?.socialLabel
+          ?? (locale === 'el' ? 'Κοινωνικά δίκτυα' : 'Social media'),
+      },
     },
   };
 }

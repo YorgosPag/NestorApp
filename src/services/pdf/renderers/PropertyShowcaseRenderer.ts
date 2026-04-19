@@ -39,6 +39,7 @@ import {
   type SectionContext,
   type LinkedSpaceFloorplansPdfData,
 } from './PropertyShowcaseSections';
+import { drawShowcaseBrandHeader } from './PropertyShowcaseBrandHeader';
 
 export interface ShowcasePhotoAsset {
   id: string;
@@ -75,9 +76,6 @@ export interface PropertyShowcasePDFData {
 
 // Re-export for downstream consumers that still import from this module.
 export type { PropertyShowcasePDFLabels };
-
-/** Brand navy — aligned with email template `BRAND.navy` #1E3A5F (ADR-312 Phase 8). */
-const BRAND_NAVY: [number, number, number] = [30, 58, 95];
 
 function safe(value: string | number | undefined | null): string {
   if (value === undefined || value === null) return '-';
@@ -225,52 +223,17 @@ export class PropertyShowcaseRenderer {
     doc: IPDFDoc,
     y: number,
     margins: Margins,
-    pageWidth: number,
+    _pageWidth: number,
     contentWidth: number,
     data: PropertyShowcasePDFData,
   ): number {
-    const bannerHeight = 34;
-    const bannerTop = y - 5;
-    doc.setFillColor(...BRAND_NAVY);
-    doc.rect(margins.left, bannerTop, contentWidth, bannerHeight, 'F');
-
-    const logo = data.companyLogo;
-    if (logo) {
-      const logoSize = 18;
-      const logoX = (pageWidth - logoSize) / 2;
-      const logoY = bannerTop + 3;
-      try {
-        doc.addImage(logo.bytes, logo.format, logoX, logoY, logoSize, logoSize, logo.id, 'FAST');
-      } catch (err) {
-        console.error('[PropertyShowcaseRenderer] company logo addImage failed', err);
-      }
-    }
-
-    const textStartY = bannerTop + (logo ? 23 : 4);
-    let current = this.textRenderer.addText({
-      doc,
-      text: safe(data.snapshot.company.name),
-      y: textStartY,
-      align: 'center',
-      fontSize: FONT_SIZES.H3,
-      bold: true,
-      color: COLORS.WHITE,
-      margins,
-      pageWidth,
+    return drawShowcaseBrandHeader({
+      doc, y, margins, contentWidth,
+      company: data.snapshot.company,
+      chromeTitle: data.labels.chrome.title,
+      headerLabels: data.labels.header,
+      companyLogo: data.companyLogo,
     });
-
-    current = this.textRenderer.addText({
-      doc,
-      text: data.labels.chrome.title,
-      y: current + 1,
-      align: 'center',
-      fontSize: FONT_SIZES.SMALL,
-      color: COLORS.WHITE,
-      margins,
-      pageWidth,
-    });
-
-    return Math.max(current + 4, bannerTop + bannerHeight + 2);
   }
 
   private drawTitle(

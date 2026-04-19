@@ -1,6 +1,13 @@
 {
   "header": {
-    "subtitle": "Property showcase"
+    "subtitle": "Property showcase",
+    "contacts": {
+      "addressLabel": "Address",
+      "phoneLabel": "Phone",
+      "emailLabel": "Email",
+      "websiteLabel": "Website",
+      "socialLabel": "Social media"
+    }
   },
   "property": {
     "code": "Code"

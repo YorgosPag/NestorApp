@@ -1,6 +1,13 @@
 {
   "header": {
-    "subtitle": "Παρουσίαση ακινήτου"
+    "subtitle": "Παρουσίαση ακινήτου",
+    "contacts": {
+      "addressLabel": "Διεύθυνση",
+      "phoneLabel": "Τηλέφωνο",
+      "emailLabel": "Email",
+      "websiteLabel": "Ιστοσελίδα",
+      "socialLabel": "Κοινωνικά δίκτυα"
+    }
   },
   "property": {
     "code": "Κωδικός"

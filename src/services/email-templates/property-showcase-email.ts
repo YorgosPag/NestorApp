@@ -19,7 +19,13 @@ import type {
   ShowcaseLinkedSpaceFloorplans,
   ShowcasePropertyFloorFloorplans,
 } from '@/components/property-showcase/types';
-import { wrapInBrandedTemplate, BRAND, escapeHtml } from './base-email-template';
+import {
+  wrapInBrandedTemplate,
+  BRAND,
+  escapeHtml,
+  type EmailSocialLink,
+  type EmailSocialPlatform,
+} from './base-email-template';
 import {
   renderEnergy,
   renderFeatures,
@@ -97,6 +103,13 @@ export function buildShowcaseEmail(params: BuildShowcaseEmailParams): BuiltShowc
     cta,
   ].filter((s) => s && s.length > 0);
 
+  const socials: EmailSocialLink[] = (company.socialMedia ?? []).map((s) => ({
+    platform: s.platform as EmailSocialPlatform,
+    url: s.url,
+    username: s.username,
+    label: s.label,
+  }));
+
   const html = wrapInBrandedTemplate({
     contentHtml: sections.join('\n'),
     companyName: company.name,
@@ -104,6 +117,13 @@ export function buildShowcaseEmail(params: BuildShowcaseEmailParams): BuiltShowc
     companyEmail: company.email,
     companyWebsite: company.website,
     companyLogoUrl: company.logoUrl,
+    headerSubtitle: labels.header.subtitle,
+    companyPhones: company.phones,
+    companyEmails: company.emails,
+    companyAddresses: company.addresses,
+    companyWebsites: company.websites,
+    companySocials: socials,
+    contactLabels: labels.header.contacts,
   });
 
   const text = buildTextFallback({ subject, property, shareUrl, intro: labels.email.introText });
