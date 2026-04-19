@@ -102,7 +102,11 @@
     "sold": "Sold",
     "reserved": "Reserved",
     "rented": "Rented",
-    "under-negotiation": "Under Negotiation"
+    "under-negotiation": "Under Negotiation",
+    "landowner": "Landowner",
+    "coming-soon": "Coming Soon",
+    "off-market": "Off Market",
+    "deleted": "Deleted"
   },
   "auditTypes": {
     "apartment": "Apartment",

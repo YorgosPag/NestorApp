@@ -76,6 +76,8 @@ interface FloatingPanelsSectionProps {
     overlays: Record<string, Overlay>;
   };
 
+  isFullscreen?: boolean;
+
   // Test Modal
   testModalOpen: boolean;
   setTestModalOpen: (open: boolean) => void;
@@ -112,6 +114,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   canUndo,
   canRedo,
   overlayStore,
+  isFullscreen = false,
   testModalOpen,
   setTestModalOpen,
   testReport,
@@ -239,19 +242,19 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
         />
       )}
 
-      {/* DRAGGABLE OVERLAY PROPERTIES - Only when overlay is selected */}
-      {/* 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030 */}
-      <DraggableOverlayProperties
-        overlay={selectedOverlay}
-        overlays={overlayStore.overlays}
-        onUpdate={(overlayId, updates) =>
-          overlayStore.update(overlayId, updates)
-        }
-        onClose={() => {
-          // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
-          universalSelection.clearByType('overlay');
-        }}
-      />
+      {/* DRAGGABLE OVERLAY PROPERTIES - Fullscreen only (sidebar panel handles normal mode) */}
+      {isFullscreen && (
+        <DraggableOverlayProperties
+          overlay={selectedOverlay}
+          overlays={overlayStore.overlays}
+          onUpdate={(overlayId, updates) =>
+            overlayStore.update(overlayId, updates)
+          }
+          onClose={() => {
+            universalSelection.clearByType('overlay');
+          }}
+        />
+      )}
 
       {/* PROFESSIONAL LAYOUT DEBUG SYSTEM */}
       {isFeatureEnabled('ENTERPRISE_SETTINGS_SHADOW_MODE') && <LazyFullLayoutDebug />}

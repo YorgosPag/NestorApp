@@ -102,7 +102,11 @@
     "sold": "Πωλήθηκε",
     "reserved": "Κρατημένο",
     "rented": "Ενοικιάστηκε",
-    "under-negotiation": "Υπό Διαπραγμάτευση"
+    "under-negotiation": "Υπό Διαπραγμάτευση",
+    "landowner": "Ιδιοκτήτης Γης",
+    "coming-soon": "Σύντομα Διαθέσιμο",
+    "off-market": "Εκτός Αγοράς",
+    "deleted": "Διαγραμμένο"
   },
   "auditTypes": {
     "apartment": "Διαμέρισμα",

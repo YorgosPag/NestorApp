@@ -1,5 +1,4 @@
 'use client';
-
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 // 🏢 ENTERPRISE (2026-01-27): Disabled to reduce console noise and improve performance
 const DEBUG_ENHANCED_DXF_TOOLBAR = false;
@@ -89,6 +88,8 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
 
   // ADR-241: Fullscreen state
   isFullscreen,
+
+  layeringDisabled = false,
 }) => {
   // 🌐 i18n
   const { t } = useTranslation('dxf-viewer-shell');
@@ -382,6 +383,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
                   onClick={() => handleToolChange(tool.id)}
                   onDropdownSelect={(toolId) => handleToolChange(toolId as ToolType)}
                   activeTool={activeTool ?? 'select'}
+                  disabled={tool.id === 'layering' && layeringDisabled}
                 />
               ))}
               {groupIndex < toolGroups.length - 1 && (

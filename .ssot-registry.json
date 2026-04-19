@@ -1933,6 +1933,129 @@
         "src/config/building-ids-config.ts"
       ],
       "tier": 3
+    },
+
+    "connection-config": {
+      "ssotFile": "src/config/connection-config.ts",
+      "description": "Connection visual configuration — CONNECTION_COLORS, CONNECTION_FALLBACK_COLOR, CONNECTION_DEFAULTS. Canonical SSoT for connection line/panel color and style tokens. ADR-314 Phase D.3l.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(CONNECTION_COLORS|CONNECTION_FALLBACK_COLOR|CONNECTION_DEFAULTS)\\b"
+      ],
+      "allowlist": [
+        "src/config/connection-config.ts"
+      ],
+      "tier": 3
+    },
+
+    "dev-environment": {
+      "ssotFile": "src/config/dev-environment.ts",
+      "description": "Dev environment helpers — getDevCompanyId. Canonical SSoT for development-only company ID resolution. ADR-314 Phase D.3l.",
+      "forbiddenPatterns": [
+        "export\\s+(async\\s+)?function\\s+getDevCompanyId\\b"
+      ],
+      "allowlist": [
+        "src/config/dev-environment.ts"
+      ],
+      "tier": 3
+    },
+
+    "error-reporting": {
+      "ssotFile": "src/config/error-reporting.ts",
+      "description": "Error reporting configuration — errorReportingConfig, getErrorConfig, errorSeverityMapping, shouldReportError, getSamplingRate, hasUserOptedOut. Canonical SSoT for error tracker configuration (privacy, sampling, severity). ADR-314 Phase D.3l.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(errorReportingConfig|errorSeverityMapping|performanceConfig|privacyConfig|notificationConfig)\\b",
+        "export\\s+const\\s+(getErrorConfig|getCurrentConfig|shouldReportError|getSamplingRate|hasUserOptedOut)\\b"
+      ],
+      "allowlist": [
+        "src/config/error-reporting.ts"
+      ],
+      "tier": 3
+    },
+
+    "sentry-config": {
+      "ssotFile": "src/config/sentry-config.ts",
+      "description": "Sentry SDK configuration constants — SENTRY_TRACES_SAMPLE_RATE, SENTRY_ENABLED, SENTRY_REPLAYS_SESSION_SAMPLE_RATE, SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE. Canonical SSoT for Sentry initialization parameters. ADR-314 Phase D.3l.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(SENTRY_TRACES_SAMPLE_RATE|SENTRY_ENABLED|SENTRY_REPLAYS_SESSION_SAMPLE_RATE|SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE)\\b"
+      ],
+      "allowlist": [
+        "src/config/sentry-config.ts"
+      ],
+      "tier": 3
+    },
+
+    "seed-data-config": {
+      "ssotFile": "src/config/seed-data-config.ts",
+      "description": "Seed data configuration — SEED_DATA_CONFIG, ENTERPRISE_SEED_CONTACTS, validateSeedConfig, shouldSeedDatabase, getSeedData. Canonical SSoT for database seeding configuration and guards. ADR-314 Phase D.3l.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(SEED_DATA_CONFIG|ENTERPRISE_SEED_CONTACTS)\\b",
+        "export\\s+const\\s+(validateSeedConfig|shouldSeedDatabase|getSeedData|logSeedDataStatus|trackSeedDataUsage)\\b"
+      ],
+      "allowlist": [
+        "src/config/seed-data-config.ts"
+      ],
+      "tier": 3
+    },
+
+    "async-utils": {
+      "ssotFile": "src/lib/async-utils.ts",
+      "description": "Async utility — sleep. Canonical SSoT for promise-based delay helper. ADR-314 Phase D.3m.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+sleep\\b"
+      ],
+      "allowlist": [
+        "src/lib/async-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "channel-icon-map": {
+      "ssotFile": "src/lib/channel-icon-map.ts",
+      "description": "Channel icon mapping — getChannelIconComponent. Canonical SSoT for communication channel → Lucide icon resolution. ADR-314 Phase D.3m.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+getChannelIconComponent\\b"
+      ],
+      "allowlist": [
+        "src/lib/channel-icon-map.ts"
+      ],
+      "tier": 3
+    },
+
+    "contact-link-id": {
+      "ssotFile": "src/lib/contact-link-id.ts",
+      "description": "Contact link key builder — buildContactLinkKey (alias: generateContactLinkId). Canonical SSoT for deterministic contact-link composite key generation. ADR-314 Phase D.3m.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+buildContactLinkKey\\b"
+      ],
+      "allowlist": [
+        "src/lib/contact-link-id.ts"
+      ],
+      "tier": 3
+    },
+
+    "dev-auth": {
+      "ssotFile": "src/lib/dev-auth.ts",
+      "description": "Dev auth helpers — DEV_MODE, getDevUser, isDevelopment. Canonical SSoT for development-only auth bypass and env detection. ADR-314 Phase D.3m.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(getDevUser|isDevelopment)\\b",
+        "export\\s+const\\s+DEV_MODE\\b"
+      ],
+      "allowlist": [
+        "src/lib/dev-auth.ts"
+      ],
+      "tier": 3
+    },
+
+    "entity-formatters": {
+      "ssotFile": "src/lib/entity-formatters.ts",
+      "description": "Entity label formatters — formatBuildingLabel. Canonical SSoT for display-ready building label formatting. ADR-314 Phase D.3m.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+formatBuildingLabel\\b"
+      ],
+      "allowlist": [
+        "src/lib/entity-formatters.ts"
+      ],
+      "tier": 3
     }
   }
 }

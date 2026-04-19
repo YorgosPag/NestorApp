@@ -131,7 +131,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   return (
     // 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds
     // 🧪 TEST: Removed quick.card to hide outer border
-    <div className={`${PANEL_LAYOUT.WIDTH.PANEL_LG} ${PANEL_LAYOUT.HEIGHT.FULL} flex flex-col ${colors.bg.card} rounded-lg relative`}>
+    <div className={`${PANEL_LAYOUT.WIDTH.PANEL_LG} flex flex-col ${colors.bg.card} rounded-lg relative`}>
       {/* 🏢 ENTERPRISE: Breadcrumb — Ιεραρχία τοποθεσίας σχεδίου (Εταιρεία → Έργο → Κτίριο → Όροφος) */}
       <DxfBreadcrumb />
       {/* 🏢 ENTERPRISE: Only bottom border on tabs container (quick.borderB) */}
@@ -146,7 +146,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
 
       {/* ✅ ENTERPRISE: Centralized spacing from PANEL_LAYOUT (ADR-003) */}
       {/* 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds */}
-      <div className={`flex-1 ${PANEL_LAYOUT.FLEX_UTILS.ALLOW_SCROLL} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${colors.bg.card} ${colors.text.primary} ${PANEL_LAYOUT.CONTAINER.PADDING}`}>
+      <div className={`${colors.bg.card} ${colors.text.primary} ${PANEL_LAYOUT.CONTAINER.PADDING}`}>
         {renderPanelContent()}
       </div>
 

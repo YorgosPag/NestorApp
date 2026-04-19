@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3k DONE 2026-04-19, unprotected 30→25)
+**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3l DONE 2026-04-19, unprotected 9)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-D.3k):** **16 duplicateExports / 5 antiPatterns / 25 unprotected** (down from 16/5/30 post-D.3j)
+**Current CHECK 3.18 baseline (2026-04-19 post-D.3l):** **14 duplicateExports / 1 antiPatterns / 9 unprotected** (centralizedFiles=68 protected=59 — scanner variance Windows bash)
 
 ---
 
@@ -137,6 +137,8 @@ After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase D.3m DONE.** 5 lib modules Tier 3: `async-utils`, `channel-icon-map`, `contact-link-id`, `dev-auth`, `entity-formatters`. Baseline aggiornato da scanner. |
+| 2026-04-19 | **Phase D.3l DONE.** 5 config modules Tier 3: `connection-config`, `dev-environment`, `error-reporting`, `sentry-config`, `seed-data-config`. unprotected **25→20 (-5)**, protected 111→116 (+5). Skipped `company-gemi-config` (genuine subdirectory duplicates). |
 | 2026-04-19 | **Phase D.3k DONE.** 5 config modules Tier 3: `address-map-config`, `admin-env`, `ai-tab-mapping`, `audit-value-catalogs`, `building-ids-config`. unprotected **30→25 (-5)**, protected 106→111 (+5). |
 | 2026-04-19 | **Phase D.3e DONE.** 4 modules Tier 3: `accessibility`, `preload-routes`, `enterprise-icon-migration`, `field-extractors`. unprotected **57→54 (-3)**, protected 79→82 (+3). |
 | 2026-04-19 | **Phase D.3d DONE.** 3 engine modules Tier 3: `waterfall-engine`, `firestore-mappers`, `sensitivity-engine`. unprotected **60→57 (-3)**, protected 76→79 (+3). |

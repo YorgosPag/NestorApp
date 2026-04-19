@@ -310,4 +310,7 @@ export interface EnhancedDXFToolbarPropsExtended {
 
   /** ADR-241: Fullscreen state for toolbar icon toggle */
   isFullscreen?: boolean;
+
+  /** Disable layering tool when overlay count >= property count for current floor */
+  layeringDisabled?: boolean;
 }

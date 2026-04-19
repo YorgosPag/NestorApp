@@ -39,7 +39,7 @@ export function ColorGroupList({
 }: ColorGroupListProps) {
   
   return (
-    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MAX_HEIGHT.LG} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
+    <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
       {Array.from(colorGroups.entries()).map(([colorName, layerNames]) => {
         const colorGroupKey = createColorGroupKey(colorName);
         const isExpanded = expandedColorGroups.has(colorGroupKey);

@@ -350,6 +350,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           canUndo={canUndo}
           canRedo={canRedo}
           overlayStore={overlayStore}
+          isFullscreen={fullscreen.isFullscreen}
           testModalOpen={testModalOpen}
           setTestModalOpen={setTestModalOpen}
           testReport={testReport}

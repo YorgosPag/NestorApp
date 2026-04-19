@@ -198,7 +198,7 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(
     },
     ref,
   ) {
-    const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+    const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell', 'properties-enums']);
 
     // ==========================================================================
     // 🏢 COMPUTED VALUES (Memoized)
@@ -277,7 +277,7 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(
     const badges = useMemo(() => {
       if (!overlay.status) return [];
 
-      const statusLabel = t(`propertyStatus.${overlay.status}`, {
+      const statusLabel = t(`properties-enums:commercialStatus.${overlay.status}`, {
         defaultValue: overlay.status,
       });
       const variant = STATUS_BADGE_VARIANTS[overlay.status] || "default";

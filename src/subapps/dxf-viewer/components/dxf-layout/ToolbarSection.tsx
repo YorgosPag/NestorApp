@@ -6,6 +6,8 @@ import { getGlobalGuideStore } from '../../systems/guides';
 import { useOverlayStore } from '../../overlays/overlay-store';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
+import { useLevelManager } from '../../systems/levels/useLevels';
+import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 // 🏢 ENTERPRISE (2027-01-27): Command Pattern for Undo/Redo - ADR-032
 import { useCommandHistory, DeleteOverlayCommand } from '../../core/commands';
 import type { DXFViewerLayoutProps } from '../../integration/types';
@@ -61,6 +63,20 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
   const universalSelection = useUniversalSelection();
   // 🏢 ENTERPRISE (2027-01-27): Command Pattern for Undo/Redo - ADR-032
   const { execute } = useCommandHistory();
+
+  const levelManager = useLevelManager();
+  const { properties } = useSharedProperties();
+
+  const layeringDisabled = React.useMemo(() => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return false;
+    const level = levelManager.levels.find(l => l.id === levelId);
+    if (!level?.floorId) return false;
+    const floorPropertyCount = properties.filter(p => p.floorId === level.floorId).length;
+    if (floorPropertyCount === 0) return false;
+    const overlayCount = Object.values(overlayStore.overlays).filter(o => o.levelId === levelId).length;
+    return overlayCount >= floorPropertyCount;
+  }, [levelManager.currentLevelId, levelManager.levels, properties, overlayStore.overlays]);
 
   const handleOverlayDuplicate = () => {
     // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
@@ -136,6 +152,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           guidesVisible={guidesVisible}
           // ADR-241: Fullscreen state for toolbar icon toggle
           isFullscreen={dxfProps.isFullscreen}
+          layeringDisabled={layeringDisabled}
           // 🏢 ENTERPRISE: Removed unnecessary empty spread - all required props are passed explicitly
         />
 

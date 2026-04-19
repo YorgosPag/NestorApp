@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { EventBus } from '../../systems/events';
 import { useTranslation } from '@/i18n';
-import { Upload, Download } from 'lucide-react';
+import { Upload, Download, ChevronDown } from 'lucide-react';
 import { FloorplanImportWizard } from '@/features/floorplan-import';
 import { DxfFirestoreService, type DxfSaveContext } from '../../services/dxf-firestore.service';
 import type { FloorplanType } from '../../systems/levels/config';
@@ -160,6 +160,7 @@ export function LevelPanel({
     }
   }, []);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isLevelsCollapsed, setIsLevelsCollapsed] = useState(false);
   const pendingDeleteLevelRef = useRef<string | null>(null);
   const requestDeleteLevel = useCallback((levelId: string) => {
     pendingDeleteLevelRef.current = levelId;
@@ -270,12 +271,21 @@ export function LevelPanel({
           <Download className={iconSizes.sm} />{t('panels.levels.loadFromStorage')}
         </Button>
       )}
-      <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
-        <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
-        {t('panels.levels.projectLevels')}
-      </h3>
+      <button
+        type="button"
+        onClick={() => setIsLevelsCollapsed(prev => !prev)}
+        className={`w-full flex items-center justify-between cursor-pointer rounded ${PANEL_LAYOUT.PADDING.XS} hover:opacity-80 transition-opacity`}
+      >
+        <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
+          <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
+          {t('panels.levels.projectLevels')}
+        </h3>
+        <ChevronDown
+          className={`${iconSizes.sm} transition-transform duration-200 ${isLevelsCollapsed ? '-rotate-90' : ''}`}
+        />
+      </button>
 
-      {isNonEmptyArray(levels) ? (
+      {!isLevelsCollapsed && (isNonEmptyArray(levels) ? (
         <div className={PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}>
           {levels.map((level) => {
             const scene = levelScenes[level.id];
@@ -345,7 +355,7 @@ export function LevelPanel({
           <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.EMPTY_STATE.ICON} />
           <p>{t('panels.levels.noLevels')}</p>
         </div>
-      )}
+      ))}
       {scene && Object.keys(scene.layers).length > 0 && (
         <div className={PANEL_TOKENS.LEVEL_PANEL.SECTIONS_BORDER}>
           <LayersSection
