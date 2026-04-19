@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3b DONE 2026-04-19, unprotected 68→64)
+**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3c DONE 2026-04-19, unprotected 64→60)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-D.3b):** **16 duplicateExports / 5 antiPatterns / 64 unprotected** (down from 16/5/68 post-D.3a)
+**Current CHECK 3.18 baseline (2026-04-19 post-D.3c):** **16 duplicateExports / 5 antiPatterns / 60 unprotected** (down from 16/5/64 post-D.3b)
 
 ---
 
@@ -137,6 +137,7 @@ After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase D.3c DONE.** 4 engine modules Tier 3: `counterproposal-engine`, `dscr-engine`, `forward-curve-engine`, `draw-schedule-engine`. unprotected **64→60 (-4)**, protected 72→76 (+4). Skipped `property-utils` (getPropertyStatusConfig dup documentato). |
 | 2026-04-19 | **Phase D.3b DONE.** 4 SSoT modules Tier 3: `error-mapping` (mapErrorToI18n/getAllErrorMappings/registerErrorMapping/mapHttpStatusToError), `geometry` (getCentroid/distanceToLineSegment), `admin-batch-utils` (BATCH_SIZE_READ/WRITE + processClientBatch/processAdminBatch), `layer-sync` (LayerSyncManager/useLayerSync/createGlobalLayerSync/forceSyncLayers). unprotected **68→64 (-4)**, protected 68→72 (+4). |
 | 2026-04-19 | **Phase D.3a DONE.** 5 utility SSoT modules Tier 3: `array-utils` (chunkArray), `type-guards` (isRecord/isNonEmptyString/isNonEmptyTrimmedString/isNonEmptyArray), `greek-text` (stripAccents/normalizeGreekText/toGreekTitleCase), `json-utils` (safeJsonParse/safeJsonParseWith), `coords` (getZoomFrom/getPanFrom/toSvgPointFromMouse). unprotected **73→68 (-5)**, protected 63→68 (+5). `ssot:audit` 0 new viol. |
 | 2026-04-19 | **Phase D.1b DONE.** D.1 residual: `validation` Tier 3, `share-utils` Tier 3 (allowlist social-platform-system), `smart-navigation-factory` Tier 6. unprotected **76→73 (-3)**, protected 60→63 (+3). D.1 fully complete (9/9). |

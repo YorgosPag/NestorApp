@@ -1238,6 +1238,56 @@
       "tier": 6
     },
 
+    "_comment_adr314_phaseD3c": "=== ADR-314 PHASE D.3c (2026-04-19): registry gap — financial/construction engine SSoT modules ===",
+
+    "counterproposal-engine": {
+      "ssotFile": "src/lib/counterproposal-engine.ts",
+      "description": "Counterproposal financial engine — buildCounterproposalCashFlows, calculateCounterproposalScenario, runCounterproposalAnalysis, calculateSliderScenario. Canonical SSoT for loan counterproposal cash-flow modeling. ADR-314 Phase D.3c.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(buildCounterproposalCashFlows|calculateCounterproposalScenario|runCounterproposalAnalysis|calculateSliderScenario)\\b"
+      ],
+      "allowlist": [
+        "src/lib/counterproposal-engine.ts"
+      ],
+      "tier": 3
+    },
+
+    "dscr-engine": {
+      "ssotFile": "src/lib/dscr-engine.ts",
+      "description": "DSCR (Debt Service Coverage Ratio) engine — getDSCRStatus, calculateDSCR, runStressTest, findMaxRateForDSCR. Canonical SSoT for mortgage stress-test and DSCR calculations. ADR-314 Phase D.3c.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(getDSCRStatus|calculateDSCR|runStressTest|findMaxRateForDSCR)\\b"
+      ],
+      "allowlist": [
+        "src/lib/dscr-engine.ts"
+      ],
+      "tier": 3
+    },
+
+    "forward-curve-engine": {
+      "ssotFile": "src/lib/forward-curve-engine.ts",
+      "description": "Euribor forward-curve engine — extractSpotRates, deriveForwardRates, detectCurveShape, buildForwardCurveResult. Canonical SSoT for interest-rate curve modeling. ADR-314 Phase D.3c.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(extractSpotRates|deriveForwardRates|detectCurveShape|buildForwardCurveResult)\\b"
+      ],
+      "allowlist": [
+        "src/lib/forward-curve-engine.ts"
+      ],
+      "tier": 3
+    },
+
+    "draw-schedule-engine": {
+      "ssotFile": "src/lib/draw-schedule-engine.ts",
+      "description": "Construction draw-schedule engine — analyzeDrawSchedule, getGreekConstructionTemplate. Canonical SSoT for Greek construction phase payment scheduling. ADR-314 Phase D.3c.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(analyzeDrawSchedule|getGreekConstructionTemplate)\\b"
+      ],
+      "allowlist": [
+        "src/lib/draw-schedule-engine.ts"
+      ],
+      "tier": 3
+    },
+
     "_comment_adr314_phaseD3b": "=== ADR-314 PHASE D.3b (2026-04-19): registry gap — error-mapping/geometry/admin-batch-utils/layer-sync ===",
 
     "error-mapping": {
