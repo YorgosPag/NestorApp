@@ -112,6 +112,8 @@ export interface UseOverlayLayersProps {
   hoveredOverlayId?: string | null;
   /** 🏢 ENTERPRISE (2026-02-15): Overlay mode for rubber-band preview in draw mode */
   overlayMode?: 'select' | 'draw' | 'edit';
+  /** Set of overlay IDs hidden by user via eye toggle */
+  hiddenOverlayIds?: Set<string>;
 }
 
 /**
@@ -179,6 +181,7 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
     currentStatus,
     hoveredOverlayId,
     overlayMode,
+    hiddenOverlayIds,
   } = props;
 
   // ============================================================================
@@ -224,7 +227,7 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
           name: overlay.label || `Layer ${index + 1}`,
           color: fillColor,
           opacity: overlay.style?.opacity ?? 0.7,
-          visible: true,
+          visible: !hiddenOverlayIds?.has(overlay.id),
           zIndex: index,
           status: overlay.status as RegionStatus | undefined,
           // Grip visibility
@@ -270,6 +273,7 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
     draggingEdgeMidpoint,
     dragPreviewPosition,
     hoveredOverlayId,
+    hiddenOverlayIds,
   ]);
 
   // ============================================================================

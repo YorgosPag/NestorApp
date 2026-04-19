@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
 // 🏢 ENTERPRISE: i18n for accessibility labels
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // 🏢 CENTRALIZED HOOKS
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -245,22 +246,26 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
 
           {/* Additional actions */}
           {actions.map((action) => (
-            <button
-              key={action.id}
-              type="button"
-              onClick={(e) => handleActionClick(e, action)}
-              disabled={action.disabled}
-              className={cn(
-                `${spacing.padding.sm} rounded-md transition-colors`,
-                colors.text.muted,
-                'hover:text-primary',
-                action.disabled && 'opacity-50 cursor-not-allowed',
-                action.className
-              )}
-              aria-label={action.label}
-            >
-              <action.icon className={iconSizes.sm} />
-            </button>
+            <Tooltip key={action.id}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => handleActionClick(e, action)}
+                  disabled={action.disabled}
+                  className={cn(
+                    `${spacing.padding.sm} rounded-md transition-colors`,
+                    colors.text.muted,
+                    'hover:text-primary',
+                    action.disabled && 'opacity-50 cursor-not-allowed',
+                    action.className
+                  )}
+                  aria-label={action.label}
+                >
+                  <action.icon className={iconSizes.sm} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{action.label}</TooltipContent>
+            </Tooltip>
           ))}
         </div>
       )}

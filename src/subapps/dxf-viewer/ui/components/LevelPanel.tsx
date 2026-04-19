@@ -388,7 +388,6 @@ export function LevelPanel({
             overlays={currentOverlays}
             selectedOverlayId={selectedOverlayId}
             onSelect={handleOverlaySelect}
-            onEdit={handleOverlayEdit}
             onDelete={handleOverlayDelete}
             onToggleLayers={() => {
               // Auto-open layers panel functionality - already integrated

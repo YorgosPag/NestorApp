@@ -2056,6 +2056,121 @@
         "src/lib/entity-formatters.ts"
       ],
       "tier": 3
+    },
+
+    "firebaseAdmin-credentials": {
+      "ssotFile": "src/lib/firebaseAdmin-credentials.ts",
+      "description": "Firebase Admin credential chain helpers — sanitizeEnvJson, maskedPreview, parseServiceAccount, initializeWithCredentialChain. Split module of firebase-admin (ADR-077). ADR-314 Phase D.3n.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(sanitizeEnvJson|maskedPreview|parseServiceAccount|initializeWithCredentialChain)\\b"
+      ],
+      "allowlist": [
+        "src/lib/firebaseAdmin-credentials.ts",
+        "src/lib/firebaseAdmin.ts"
+      ],
+      "tier": 1
+    },
+
+    "firebaseAdmin-types": {
+      "ssotFile": "src/lib/firebaseAdmin-types.ts",
+      "description": "Firebase Admin types — CredentialSource, AdminDiagnosticReport, FirebaseAdminInitError. Split module of firebase-admin (ADR-077). ADR-314 Phase D.3n.",
+      "forbiddenPatterns": [
+        "export\\s+type\\s+CredentialSource\\b",
+        "export\\s+interface\\s+AdminDiagnosticReport\\b",
+        "export\\s+class\\s+FirebaseAdminInitError\\b"
+      ],
+      "allowlist": [
+        "src/lib/firebaseAdmin-types.ts",
+        "src/lib/firebaseAdmin.ts"
+      ],
+      "tier": 1
+    },
+
+    "toast-utils": {
+      "ssotFile": "src/lib/toast-utils.ts",
+      "description": "Toast key generator — nextToastKey (alias: generateToastId). Canonical SSoT for sequential toast ID generation. ADR-314 Phase D.3n.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+nextToastKey\\b"
+      ],
+      "allowlist": [
+        "src/lib/toast-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "lib-utils": {
+      "ssotFile": "src/lib/utils.ts",
+      "description": "Core UI utilities — cn (classnames merger), applyUpdates. Canonical SSoT for Tailwind class merging and immutable state updates. ADR-314 Phase D.3n.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+cn\\b",
+        "export\\s+function\\s+applyUpdates\\b"
+      ],
+      "allowlist": [
+        "src/lib/utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "obligations-utils": {
+      "ssotFile": "src/lib/obligations-utils.ts",
+      "description": "Obligations utility aliases — validateObligation, getDocumentStats, getProgressMetrics, calculateProgress, searchInText. Canonical SSoT barrel for obligation document helpers. ADR-314 Phase D.3n.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(validateObligation|getDocumentStats|getProgressMetrics|getContentSummary|calculateProgress|calculateCompletionPercentage)\\b",
+        "export\\s+const\\s+(searchInText|getTotalWordCount|getDocumentReadingTime)\\b"
+      ],
+      "allowlist": [
+        "src/lib/obligations-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "text-utils": {
+      "ssotFile": "src/lib/text-utils.ts",
+      "description": "Text truncation utility — truncateText. Canonical SSoT for length-bounded string truncation with ellipsis. ADR-314 Phase D.3o.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+truncateText\\b"
+      ],
+      "allowlist": [
+        "src/lib/text-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "property-utils": {
+      "ssotFile": "src/lib/property-utils.ts",
+      "description": "Property status/type config — getPropertyStatusConfig, PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS. Canonical SSoT for property status color+label config and type icon map. ADR-314 Phase D.3o.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(getPropertyStatusConfig|PROPERTY_STATUS_CONFIG|PROPERTY_TYPE_ICONS)\\b"
+      ],
+      "allowlist": [
+        "src/lib/property-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "memory-leak-detector": {
+      "ssotFile": "src/utils/memoryLeakDetector.ts",
+      "description": "Memory leak detection utilities — memoryLeakDetector, useMemoryTracker, withMemoryTracking, useEventListenerCleanup, enableMemoryMonitoring. Canonical SSoT for component memory leak detection hooks. ADR-314 Phase D.3o.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+memoryLeakDetector\\b",
+        "export\\s+function\\s+(useMemoryTracker|withMemoryTracking|useEventListenerCleanup|enableMemoryMonitoring)\\b"
+      ],
+      "allowlist": [
+        "src/utils/memoryLeakDetector.ts"
+      ],
+      "tier": 3
+    },
+
+    "performance-monitor": {
+      "ssotFile": "src/utils/performanceMonitor.ts",
+      "description": "Performance monitoring hooks — usePerformanceTracker, withPerformanceTracking, enablePerformanceLogging. Canonical SSoT for component render performance hooks (excludes geo-canvas PerformanceMonitor singleton). ADR-314 Phase D.3o.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(usePerformanceTracker|withPerformanceTracking|enablePerformanceLogging)\\b"
+      ],
+      "allowlist": [
+        "src/utils/performanceMonitor.ts"
+      ],
+      "tier": 3
     }
   }
 }

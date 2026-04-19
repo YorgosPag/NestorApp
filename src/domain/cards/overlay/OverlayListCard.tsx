@@ -26,7 +26,6 @@ import {
   Footprints,
   Eye,
   EyeOff,
-  Edit,
   Trash2,
 } from "lucide-react";
 // 🏢 ENTERPRISE: Centralized action icon colors
@@ -69,8 +68,6 @@ export interface OverlayListCardProps {
   onSelect?: () => void;
   /** Visibility toggle handler */
   onToggleVisibility?: (event: React.MouseEvent) => void;
-  /** Edit handler */
-  onEdit?: (event: React.MouseEvent) => void;
   /** Delete handler */
   onDelete?: (event: React.MouseEvent) => void;
   /** Compact mode */
@@ -191,7 +188,6 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(
       isVisible = true,
       onSelect,
       onToggleVisibility,
-      onEdit,
       onDelete,
       compact = false,
       className,
@@ -335,17 +331,6 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(
         });
       }
 
-      // Edit action - 🏢 ENTERPRISE: Centralized BLUE color
-      if (onEdit) {
-        items.push({
-          id: "edit",
-          label: t("overlayList.edit"),
-          icon: Edit,
-          onClick: onEdit,
-          className: HOVER_TEXT_EFFECTS.BLUE,
-        });
-      }
-
       // Delete action - 🏢 ENTERPRISE: Centralized RED color
       if (onDelete) {
         items.push({
@@ -358,7 +343,7 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(
       }
 
       return items;
-    }, [onToggleVisibility, onEdit, onDelete, isVisible, t]);
+    }, [onToggleVisibility, onDelete, isVisible, t]);
 
     // ==========================================================================
     // 🏢 RENDER

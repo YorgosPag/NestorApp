@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3l DONE 2026-04-19, unprotected 9)
+**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3o DONE 2026-04-19, backlog D.3 esaurito)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-D.3l):** **14 duplicateExports / 1 antiPatterns / 9 unprotected** (centralizedFiles=68 protected=59 — scanner variance Windows bash)
+**Current CHECK 3.18 baseline (2026-04-19 post-D.3m — last successful scan):** **11 duplicateExports / 5 antiPatterns / 7 unprotected** (centralizedFiles=136 protected=129). D.3n+D.3o scanner failed /tmp — rirun `npm run ssot:discover:baseline` dopo prossimo commit.
 
 ---
 
@@ -137,6 +137,8 @@ After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase D.3o DONE — BACKLOG D.3 ESAURITO.** 4 moduli: `text-utils`, `property-utils`, `memory-leak-detector`, `performance-monitor` (Tier 3). Skipped: `contactFormUtils` (getTypeIcon dup ×3), `company-gemi-config` (subdirectory dup — migration futura). Baseline aggiornato. |
+| 2026-04-19 | **Phase D.3n DONE.** 5 lib modules: `firebaseAdmin-credentials` (Tier 1), `firebaseAdmin-types` (Tier 1), `toast-utils`, `lib-utils`, `obligations-utils` (Tier 3). Baseline aggiornato. |
 | 2026-04-19 | **Phase D.3m DONE.** 5 lib modules Tier 3: `async-utils`, `channel-icon-map`, `contact-link-id`, `dev-auth`, `entity-formatters`. Baseline aggiornato da scanner. |
 | 2026-04-19 | **Phase D.3l DONE.** 5 config modules Tier 3: `connection-config`, `dev-environment`, `error-reporting`, `sentry-config`, `seed-data-config`. unprotected **25→20 (-5)**, protected 111→116 (+5). Skipped `company-gemi-config` (genuine subdirectory duplicates). |
 | 2026-04-19 | **Phase D.3k DONE.** 5 config modules Tier 3: `address-map-config`, `admin-env`, `ai-tab-mapping`, `audit-value-catalogs`, `building-ids-config`. unprotected **30→25 (-5)**, protected 106→111 (+5). |

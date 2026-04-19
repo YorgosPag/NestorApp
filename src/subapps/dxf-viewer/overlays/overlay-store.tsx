@@ -22,6 +22,7 @@ interface OverlayStoreState {
   // Use useUniversalSelection() hook instead
   isLoading: boolean;
   currentLevelId: string | null;
+  hiddenOverlayIds: Set<string>;
 }
 
 interface OverlayStoreActions {
@@ -40,6 +41,7 @@ interface OverlayStoreActions {
   removeVertex: (id: string, vertexIndex: number) => Promise<boolean>;
   // 🏢 ENTERPRISE (2026-01-26): Restore overlay for undo support - ADR-032
   restore: (overlay: Overlay) => Promise<void>;
+  toggleHidden: (id: string) => void;
   // 🏢 ENTERPRISE (2026-01-25): Selection REMOVED - ADR-030
   // Selection is now handled by systems/selection/
   // Use useUniversalSelection() hook for: select, selectMultiple, deselect, toggle, clearAll, clearByType, isSelected, getAll, getByType
@@ -59,6 +61,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     // Use useUniversalSelection() from systems/selection/ instead
     isLoading: false,
     currentLevelId: null,
+    hiddenOverlayIds: new Set<string>(),
   });
 
   // Firestore subscription — requires both authenticated user AND a selected level
@@ -267,6 +270,18 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     return null;
   }, []);
 
+  const toggleHidden = useCallback((id: string) => {
+    setState(prev => {
+      const next = new Set(prev.hiddenOverlayIds);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return { ...prev, hiddenOverlayIds: next };
+    });
+  }, []);
+
   const setCurrentLevel = useCallback((levelId: string | null) => {
     setState(prev => ({
       ...prev,
@@ -274,6 +289,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
       // 🏢 ENTERPRISE (2026-01-25): Selection clearing moved to universal selection system
       // Components should call universalSelection.clearByType('overlay') when level changes
       overlays: {},
+      hiddenOverlayIds: new Set<string>(),
     }));
   }, []);
 
@@ -389,6 +405,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     update,
     remove,
     restore, // 🏢 ENTERPRISE (2026-01-26): Restore for undo support - ADR-032
+    toggleHidden,
     duplicate,
     setStatus,
     setLabel,

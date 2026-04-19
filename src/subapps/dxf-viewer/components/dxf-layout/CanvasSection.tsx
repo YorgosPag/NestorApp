@@ -183,6 +183,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, draggingVertex, draggingVertices,
     draggingEdgeMidpoint, dragPreviewPosition, draftPolygon, mouseWorld,
     transformScale: transform.scale, currentStatus, hoveredOverlayId, overlayMode,
+    hiddenOverlayIds: overlayStore.hiddenOverlayIds,
   });
   const { fitToOverlay } = useFitToView({ dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
 

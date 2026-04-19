@@ -17,12 +17,12 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n';
 // 🏢 ENTERPRISE: Centralized OverlayListCard from domain cards
 import { OverlayListCard } from '@/domain/cards';
+import { useOverlayStore } from '../overlays/overlay-store';
 
 interface OverlayListProps {
   overlays: Overlay[];
   selectedOverlayId: string | null;
   onSelect: (id: string | null) => void;
-  onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onToggleLayers?: () => void;
 }
@@ -31,7 +31,6 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   overlays,
   selectedOverlayId,
   onSelect,
-  onEdit,
   onDelete,
   onToggleLayers,
 }) => {
@@ -40,8 +39,8 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Centralized spacing (same pattern as UnitsList)
   const spacing = useSpacingTokens();
+  const overlayStore = useOverlayStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(new Set());
   const selectedCardRef = React.useRef<HTMLElement>(null);
 
   // Auto-scroll to selected overlay card when selection changes
@@ -66,13 +65,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   // 🏢 ENTERPRISE: Handler wrappers for OverlayListCard
   const handleToggleVisibility = (id: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
-    const newHiddenOverlays = new Set(hiddenOverlays);
-    if (newHiddenOverlays.has(id)) {
-      newHiddenOverlays.delete(id);
-    } else {
-      newHiddenOverlays.add(id);
-    }
-    setHiddenOverlays(newHiddenOverlays);
+    overlayStore.toggleHidden(id);
   };
 
   const handleDelete = (id: string) => (e: React.MouseEvent) => {
@@ -81,11 +74,6 @@ export const OverlayList: React.FC<OverlayListProps> = ({
       onDelete(id);
       if (selectedOverlayId === id) onSelect(null);
     }
-  };
-
-  const handleEdit = (id: string) => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEdit(id);
   };
 
   const handleSelect = (id: string) => () => {
@@ -130,7 +118,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
             ) : (
               filteredOverlays.map(overlay => {
                 const isSelected = selectedOverlayId === overlay.id;
-                const isVisible = !hiddenOverlays.has(overlay.id);
+                const isVisible = !overlayStore.hiddenOverlayIds.has(overlay.id);
 
                 return (
                   <OverlayListCard
@@ -141,7 +129,6 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                     isVisible={isVisible}
                     onSelect={handleSelect(overlay.id)}
                     onToggleVisibility={handleToggleVisibility(overlay.id)}
-                    onEdit={handleEdit(overlay.id)}
                     onDelete={handleDelete(overlay.id)}
                     compact
                   />
