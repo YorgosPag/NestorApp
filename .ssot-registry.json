@@ -1002,6 +1002,85 @@
         "src/components/shared/space-info/DescriptionNotesCard.tsx"
       ],
       "tier": 3
+    },
+
+    "_comment_adr314_phaseD1": "=== ADR-314 PHASE D.1 (2026-04-19): registry gap reduction — 6 high-export SSoT modules ===",
+
+    "message-utils": {
+      "ssotFile": "src/lib/message-utils.ts",
+      "description": "HTML sanitization with DOMPurify (XSS protection, OWASP A03:2021). Telegram/email tag allowlists, Email signature detection (ADR-072/ADR-073). Re-implementation of sanitizeHTML/sanitizeEmailHTML/formatMessageHTML/stripHTMLTags/detectEmailSignature/stripEmailSignature outside message-utils.ts = security hole (divergent sanitization rules = XSS bypass). ADR-314 Phase D.1.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(sanitizeHTML|sanitizeEmailHTML|formatMessageHTML|stripHTMLTags|detectEmailSignature|stripEmailSignature|hasHTMLFormatting|getMessagePreview)\\b",
+        "(TELEGRAM_ALLOWED_TAGS|TELEGRAM_ALLOWED_ATTRIBUTES|EMAIL_ALLOWED_TAGS|EMAIL_ALLOWED_ATTRIBUTES|EMAIL_FORBIDDEN_ATTRIBUTES|DEFAULT_MESSAGE_CONFIG)\\s*(=|:)\\s*(\\[|\\{)"
+      ],
+      "allowlist": [
+        "src/lib/message-utils.ts"
+      ],
+      "tier": 2
+    },
+
+    "firebase-admin": {
+      "ssotFile": "src/lib/firebaseAdmin.ts",
+      "description": "Firebase Admin SDK singleton accessors (ADR-077). Every server-side Firestore/Auth/Storage read/write MUST go through getAdminFirestore/getAdminAuth/getAdminStorage/getAdminBucket. Re-implementation of these accessors outside the module breaks the lazy singleton + credential chain (B64 -> JSON -> ADC) and risks double-initialisation / bucket drift. ADR-314 Phase D.1.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(getAdminFirestore|getAdminAuth|getAdminStorage|getAdminBucket|isFirebaseAdminAvailable|getAdminDiagnostics|safeFirestoreOperation)\\b"
+      ],
+      "allowlist": [
+        "src/lib/firebaseAdmin.ts",
+        "src/lib/firebaseAdmin-credentials.ts",
+        "src/lib/firebaseAdmin-types.ts"
+      ],
+      "tier": 1
+    },
+
+    "npv-engine": {
+      "ssotFile": "src/lib/npv-engine.ts",
+      "description": "NPV / cash-flow math for the Interest Cost Calculator (ADR-234 SPEC-234E). Pure functions, zero side effects, runs on client + server. Re-implementation of calculateDiscountFactor/calculateNPV/calculateCashFlowAnalysis/calculateWACP/calculateTimeCost/calculateRecommendedPrice/calculateFullResult/buildComparisonScenarios outside this module forks the financial model (certainty multipliers, discount factors, time-cost formula). ADR-314 Phase D.1.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(calculateDiscountFactor|calculateNPV|calculateCashFlowAnalysis|calculateWACP|calculateTimeCost|calculateRecommendedPrice|calculateFullResult|buildComparisonScenarios)\\b"
+      ],
+      "allowlist": [
+        "src/lib/npv-engine.ts"
+      ],
+      "tier": 3
+    },
+
+    "hedging-engine": {
+      "ssotFile": "src/lib/hedging-engine.ts",
+      "description": "Interest-rate hedging strategy math (Floating/Swap/Cap/Collar) for SPEC-242E Hedging Simulator (ADR-242). Pure math, zero side effects. Re-implementation of calculateFloatingCost/calculateSwapCost/calculateCapCost/calculateCollarCost/compareHedgingStrategies/findBreakEvenRate/risingScenario/flatScenario/decliningScenario forks the risk model. ADR-314 Phase D.1.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(calculateFloatingCost|calculateSwapCost|calculateCapCost|calculateCollarCost|compareHedgingStrategies|findBreakEvenRate|risingScenario|flatScenario|decliningScenario)\\b"
+      ],
+      "allowlist": [
+        "src/lib/hedging-engine.ts"
+      ],
+      "tier": 3
+    },
+
+    "pagination": {
+      "ssotFile": "src/lib/pagination.ts",
+      "description": "Firestore cursor-based pagination primitives — applyPagination/processPaginationResult/createPaginationState/updatePaginationState/calculatePaginationMetrics + InfiniteScrollPagination/PageBasedPagination classes. Every paginated Firestore read must go through this module to keep limit()/startAfter()/cursor semantics consistent (prevents N+1 queries, enforces MAX_PAGE_SIZE guard). ADR-314 Phase D.1.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const|class)\\s+(applyPagination|processPaginationResult|createPaginationState|updatePaginationState|calculatePaginationMetrics|InfiniteScrollPagination|PageBasedPagination)\\b",
+        "PAGINATION_DEFAULTS\\s*(=|:)\\s*\\{"
+      ],
+      "allowlist": [
+        "src/lib/pagination.ts"
+      ],
+      "tier": 3
+    },
+
+    "rtl-utils": {
+      "ssotFile": "src/lib/rtl-utils.ts",
+      "description": "RTL (right-to-left) locale-aware helpers for bidirectional text and layout support. useRTL hook, containsRTLCharacters detection, bidiIsolate wrapping, formatRTLCurrency, sortRTL, generateRTLCSSVars + rtlClasses/rtlStyles/rtlIcon/rtlAnimation/rtlKeyboard/logicalProperties objects. Re-implementation fragments the RTL semantics (Arabic/Hebrew/Farsi) across the app. ADR-314 Phase D.1.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(useRTL|bidiIsolate|containsRTLCharacters|formatRTLCurrency|sortRTL|generateRTLCSSVars)\\b",
+        "export\\s+const\\s+(rtlClasses|rtlStyles|rtlIcon|rtlAnimation|rtlKeyboard|logicalProperties)\\s*="
+      ],
+      "allowlist": [
+        "src/lib/rtl-utils.ts"
+      ],
+      "tier": 3
     }
   }
 }
