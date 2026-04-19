@@ -150,7 +150,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
     const resolvedStatus = entity.commercialStatus
       ? commercialToPropertyStatus(entity.commercialStatus)
       : undefined;
-    const updates: UpdateOverlayData = { kind, linked: buildLinkedPayload(kind, value) };
+    const updates: UpdateOverlayData = { kind, linked: buildLinkedPayload(kind, value), label: entity.displayName };
     if (resolvedStatus) updates.status = resolvedStatus;
     onUpdate(overlay.id, updates);
   };
@@ -162,8 +162,8 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
     const resolvedStatus = entity?.commercialStatus
       ? commercialToPropertyStatus(entity.commercialStatus)
       : undefined;
-    onUpdate(pendingTransfer.fromOverlayId, { linked: null });
-    const updates: UpdateOverlayData = { kind, linked: buildLinkedPayload(kind, pendingTransfer.entityId) };
+    onUpdate(pendingTransfer.fromOverlayId, { linked: null, label: '' });
+    const updates: UpdateOverlayData = { kind, linked: buildLinkedPayload(kind, pendingTransfer.entityId), label: entity?.displayName ?? '' };
     if (resolvedStatus) updates.status = resolvedStatus;
     onUpdate(overlay.id, updates);
     setPendingTransfer(null);
