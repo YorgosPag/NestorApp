@@ -31,6 +31,8 @@ export interface LevelContextUpdate {
   floorplanType?: FloorplanType;
   entityLabel?: string;
   projectId?: string;
+  floorId?: string;
+  buildingId?: string;
 }
 
 export interface UseLevelOperationsResult {

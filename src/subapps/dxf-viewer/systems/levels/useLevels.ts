@@ -42,8 +42,8 @@ export interface LevelSystemActions extends ImportWizardActions {
   setDefaultLevel: (levelId: string) => Promise<void>;
   duplicateLevel: (levelId: string, newName?: string) => Promise<string | null>;
   linkLevelToFloor: (levelId: string, floorId: string | null, buildingId?: string | null) => Promise<void>;
-  /** ADR-309 Phase 3: Store wizard context (floorplanType + entityLabel + projectId) on a level */
-  updateLevelContext: (levelId: string, context: { floorplanType?: FloorplanType; entityLabel?: string; projectId?: string }) => Promise<void>;
+  /** ADR-309 Phase 3: Store wizard context on a level (floorplanType, entityLabel, projectId, floorId, buildingId) */
+  updateLevelContext: (levelId: string, context: { floorplanType?: FloorplanType; entityLabel?: string; projectId?: string; floorId?: string; buildingId?: string }) => Promise<void>;
 
   // Floorplan operations
   addFloorplan: (floorplan: Omit<FloorplanDoc, 'id' | 'importedAt'>) => string;

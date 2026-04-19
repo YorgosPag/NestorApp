@@ -431,6 +431,8 @@ export function LevelPanel({
                   floorplanType,
                   entityLabel: meta.entityLabel,
                   projectId: meta.projectId,
+                  floorId: saveContext.floorId,
+                  buildingId: saveContext.buildingId,
                 });
               }
             }
