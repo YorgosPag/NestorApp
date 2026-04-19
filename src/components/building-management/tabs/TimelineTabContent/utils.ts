@@ -69,7 +69,7 @@ export const getStatusText = (status: string, t?: TranslateFunction) => {
     return t ? t(key) : key;
 };
 
-export const getTypeIcon = (type: string) => {
+export const getTimelineTypeIcon = (type: string) => {
     switch (type) {
         case 'start': return Rocket;
         case 'construction': return NAVIGATION_ENTITIES.building.icon;

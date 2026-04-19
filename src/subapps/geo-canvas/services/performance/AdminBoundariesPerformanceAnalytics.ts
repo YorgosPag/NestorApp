@@ -8,7 +8,7 @@
  * - AdminBoundariesPerformanceAnalytics.ts        — This file: main class
  */
 
-import { performanceMonitor } from '../../performance/monitoring/PerformanceMonitor';
+import { geoCanvasPerformanceMonitor as performanceMonitor } from '../../performance/monitoring/PerformanceMonitor';
 import type { GreekAdminLevel } from '../../types/administrative-types';
 import { generateSearchId, generateRequestId, generateAlertId } from '@/services/enterprise-id.service';
 import type {

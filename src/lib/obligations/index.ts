@@ -108,7 +108,6 @@ export {
   formatGreekDate,
   stripHtmlTags,
   sanitizeHtml,
-  convertMarkdownToHtml,
   applyTemplate,
   generateSectionFromTemplate,
   isValidId,

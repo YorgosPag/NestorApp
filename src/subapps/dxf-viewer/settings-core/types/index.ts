@@ -93,7 +93,7 @@ export type {
 export {
   // Constants
   SUPPORTED_MODES,
-  ENTITY_TYPES,
+  DXF_ENTITY_TYPES,
   DEFAULT_OVERRIDE_FLAGS,
 
   // Type Guards

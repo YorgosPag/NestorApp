@@ -23,8 +23,8 @@ export interface BaseDialogProps {
 // HELPERS
 // =============================================================================
 
-/** Resolve projectId — Property.project is the canonical field */
-export function resolveProjectId(unit: Property): string {
+/** Resolve projectId from a sales Property unit — Property.project is the canonical field */
+export function resolveSalesUnitProjectId(unit: Property): string {
   return unit.project;
 }
 

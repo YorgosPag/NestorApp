@@ -7,13 +7,13 @@ import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 // 🏢 ENTERPRISE: Type for translate function (from useTranslation hook)
 type TranslateFunction = (key: string) => string;
 
-export const getTypeIcon = (type: StorageType) => {
+export const getStorageTypeIcon = (type: StorageType) => {
     return type === 'basement' || type === 'ground' ? Warehouse : Package;
 };
 
 // 🏢 ENTERPRISE: i18n-enabled type label function
 // 🌐 i18n: All fallbacks converted to i18n keys - 2026-01-18
-export const getTypeLabel = (type: StorageType, t?: TranslateFunction) => {
+export const getStorageTypeLabel = (type: StorageType, t?: TranslateFunction) => {
     const key = `pages.storage.typeLabels.${type}`;
     // Return translated value if t function provided, otherwise return the key
     return t ? t(key) : key;

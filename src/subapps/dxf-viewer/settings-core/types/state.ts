@@ -52,10 +52,10 @@ export type StorageMode = Exclude<ViewerMode, 'preview'>;
 // ============================================================================
 
 /**
- * All entity types that can have settings
+ * DXF entity types that can have settings (line/text/grip — distinct from domain ENTITY_TYPES in @/config/domain-constants)
  */
-export const ENTITY_TYPES = ['line', 'text', 'grip'] as const;
-export type EntityType = typeof ENTITY_TYPES[number];
+export const DXF_ENTITY_TYPES = ['line', 'text', 'grip'] as const;
+export type EntityType = typeof DXF_ENTITY_TYPES[number];
 
 // ============================================================================
 // ENTITY SETTINGS STRUCTURE
@@ -126,7 +126,7 @@ export function isViewerMode(value: unknown): value is ViewerMode {
 }
 
 export function isEntityType(value: unknown): value is EntityType {
-  return typeof value === 'string' && ENTITY_TYPES.includes(value as EntityType);
+  return typeof value === 'string' && DXF_ENTITY_TYPES.includes(value as EntityType);
 }
 
 export function isStorageMode(value: unknown): value is StorageMode {

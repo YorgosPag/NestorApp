@@ -7,7 +7,7 @@ import { TimelineMilestones } from './TimelineMilestones';
 import { CriticalPathCard } from './CriticalPathCard';
 import { CompletionForecastCard } from './CompletionForecastCard';
 import { getStatusColor } from '@/lib/status-helpers';
-import { getStatusText, getTypeIcon, getMilestones } from './utils';
+import { getStatusText, getTimelineTypeIcon, getMilestones } from './utils';
 import type { Building } from '../../BuildingsPageContent';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -48,7 +48,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
         milestones={milestones}
         getStatusColor={wrappedGetStatusColor}
         getStatusText={translatedGetStatusText}
-        getTypeIcon={getTypeIcon}
+        getTypeIcon={getTimelineTypeIcon}
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <CriticalPathCard buildingId={building.id as string} />

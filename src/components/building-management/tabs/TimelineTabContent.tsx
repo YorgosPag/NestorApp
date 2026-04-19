@@ -10,7 +10,7 @@ import { TimelineMilestones } from './TimelineTabContent/TimelineMilestones';
 import { CriticalPathCard } from './TimelineTabContent/CriticalPathCard';
 import { CompletionForecastCard } from './TimelineTabContent/CompletionForecastCard';
 import { getStatusColor } from '@/lib/status-helpers';
-import { getStatusText, getTypeIcon } from './TimelineTabContent/utils';
+import { getStatusText, getTimelineTypeIcon } from './TimelineTabContent/utils';
 import { TimelineViewToggle } from './TimelineTabContent/TimelineViewToggle';
 import type { TimelineView } from './TimelineTabContent/TimelineViewToggle';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -246,7 +246,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
               milestones={milestones}
               getStatusColor={wrappedGetStatusColor}
               getStatusText={wrappedGetStatusText}
-              getTypeIcon={getTypeIcon}
+              getTypeIcon={getTimelineTypeIcon}
               onEditMilestone={handleEditMilestone}
               onDeleteMilestone={handleDeleteMilestoneConfirm}
             />
@@ -281,7 +281,7 @@ const TimelineTabContent = ({ building }: TimelineTabContentProps) => {
                 milestones={milestones}
                 getStatusColor={wrappedGetStatusColor}
                 getStatusText={wrappedGetStatusText}
-                getTypeIcon={getTypeIcon}
+                getTypeIcon={getTimelineTypeIcon}
                 onEditMilestone={handleEditMilestone}
                 onDeleteMilestone={handleDeleteMilestoneConfirm}
               />

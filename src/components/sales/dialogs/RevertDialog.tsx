@@ -27,7 +27,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { resolveProjectId } from './sales-dialog-utils';
+import { resolveSalesUnitProjectId as resolveProjectId } from './sales-dialog-utils';
 import type { BaseDialogProps } from './sales-dialog-utils';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { useNotifications } from '@/providers/NotificationProvider';

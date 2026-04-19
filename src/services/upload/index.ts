@@ -121,7 +121,7 @@ export {
   getEntityTypeLabel,
   formatDateForFilename,
   sanitizeForFilename,
-  normalizeForSearch,
+  normalizeFileNameForSearch,
 } from './utils/file-display-name';
 
 export type {

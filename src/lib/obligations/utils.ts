@@ -87,66 +87,7 @@ export const sanitizeHtml = (html: string): string => {
     .trim();
 };
 
-export const convertMarkdownToHtml = (markdown: string): string => {
-  let html = markdown;
-
-  // Handle headers
-  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-
-  // Handle bold text
-  html = html.replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>');
-
-  // Handle italic text
-  html = html.replace(/\*(.*)\*/gim, '<em>$1</em>');
-
-  // Handle unordered lists
-  html = html.replace(/^\* (.+)/gim, '<li>$1</li>');
-  html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
-
-  // Handle numbered lists
-  let inNumberedList = false;
-  const processedNumberedLines: string[] = [];
-
-  html.split('\n').forEach(line => {
-    const isNumberedLine = /^\d+\. /.test(line);
-
-    if (isNumberedLine && !inNumberedList) {
-      processedNumberedLines.push('<ol>');
-      processedNumberedLines.push(`<li>${line.replace(/^\d+\. /, '')}</li>`);
-      inNumberedList = true;
-    } else if (isNumberedLine && inNumberedList) {
-      processedNumberedLines.push(`<li>${line.replace(/^\d+\. /, '')}</li>`);
-    } else if (!isNumberedLine && inNumberedList) {
-      processedNumberedLines.push('</ol>');
-      processedNumberedLines.push(line);
-      inNumberedList = false;
-    } else {
-      processedNumberedLines.push(line);
-    }
-  });
-
-  if (inNumberedList) {
-    processedNumberedLines.push('</ol>');
-  }
-
-  html = processedNumberedLines.join('\n');
-
-  // Handle paragraphs
-  html = html.replace(/\n\n/g, '</p><p>');
-  html = html.replace(/\n/g, '<br>');
-
-  // Wrap in paragraph tags if needed
-  if (!html.startsWith('<p>') && !html.startsWith('<ul>') && !html.startsWith('<ol>') && !html.startsWith('<h')) {
-    html = `<p>${html}</p>`;
-  }
-
-  // Fix paragraph tags
-  html = html.replace(/<\/p><p>/g, '</p>\n<p>');
-
-  return html;
-};
+// convertMarkdownToHtml removed — use @/lib/obligations-utils (SSoT, non-greedy impl, ADR-314)
 
 // ============================================================================
 // 📋 TEMPLATE APPLICATION

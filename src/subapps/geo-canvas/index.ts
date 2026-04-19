@@ -86,7 +86,7 @@ export {
 // Performance Monitoring
 export {
   PerformanceMonitor,
-  performanceMonitor,
+  geoCanvasPerformanceMonitor,
   type PerformanceMetrics
 } from './performance/monitoring/PerformanceMonitor';
 

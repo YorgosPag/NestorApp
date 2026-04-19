@@ -568,9 +568,9 @@ export const MESSAGE_CATEGORIES = {
 } as const;
 
 /**
- * Support για entity types
+ * Support για entity types (internal to EnterpriseMessagesManager — use ENTITY_TYPES from @/config/domain-constants for external use)
  */
-export const ENTITY_TYPES = {
+const MESSAGES_ENTITY_TYPES = {
   CONTACT: 'contact',
   PROJECT: 'project',
   BUILDING: 'building',

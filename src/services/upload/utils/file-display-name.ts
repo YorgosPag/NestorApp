@@ -42,7 +42,7 @@ export {
 export {
   formatDateForFilename,
   sanitizeForFilename,
-  normalizeForSearch,
+  normalizeFileNameForSearch,
 } from './file-display-name-utils';
 
 export { buildFileDisplayName } from './file-display-name-core';

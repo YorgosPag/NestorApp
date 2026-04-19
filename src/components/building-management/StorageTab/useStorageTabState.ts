@@ -21,7 +21,7 @@ import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { RealtimeService } from '@/services/realtime';
 import type { LinkableItem } from '../shared';
 import { getStatusLabel } from '@/lib/status-helpers';
-import { getTypeLabel, filterUnits, calculateStats } from './utils';
+import { getStorageTypeLabel, filterUnits, calculateStats } from './utils';
 
 const logger = createModuleLogger('StorageTab');
 
@@ -101,7 +101,7 @@ export function useStorageTabState(building: Building) {
   );
 
   const translatedGetTypeLabel = useCallback(
-    (type: StorageType) => getTypeLabel(type, t),
+    (type: StorageType) => getStorageTypeLabel(type, t),
     [t],
   );
 

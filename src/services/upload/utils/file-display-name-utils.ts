@@ -58,9 +58,9 @@ export function sanitizeForFilename(str: string): string {
 }
 
 /**
- * Normalize string for sorting/search (lowercase, no accents)
+ * Normalize filename string for sorting/search (lowercase, NFD accents, alphanumeric only — distinct from greek-text SSoT which uses normalizeGreekText wrapper)
  */
-export function normalizeForSearch(str: string): string {
+export function normalizeFileNameForSearch(str: string): string {
   return str
     .toLowerCase()
     .normalize('NFD')

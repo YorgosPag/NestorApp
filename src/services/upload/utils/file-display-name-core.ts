@@ -17,7 +17,7 @@ import {
   purposeToLabelMap,
   formatDateForFilename,
   sanitizeForFilename,
-  normalizeForSearch,
+  normalizeFileNameForSearch,
 } from './file-display-name-utils';
 
 /**
@@ -110,7 +110,7 @@ export function buildFileDisplayName(input: FileDisplayNameInput): FileDisplayNa
   const displayName = parts.join(' - ') + revisionSuffix;
 
   // Build normalized title (for sorting/search)
-  const normalizedTitle = normalizeForSearch(displayName);
+  const normalizedTitle = normalizeFileNameForSearch(displayName);
 
   // Build export filename
   const ext = input.ext || 'file';
