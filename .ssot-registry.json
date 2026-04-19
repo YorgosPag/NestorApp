@@ -1552,6 +1552,70 @@
       "tier": 3
     },
 
+    "_comment_adr314_phaseD3i": "=== ADR-314 PHASE D.3i (2026-04-19): registry gap — override-guard/pending-relationship-guard/section-field-utils/property-normalizer/file-validation ===",
+
+    "override-guard": {
+      "ssotFile": "src/utils/overrideGuard.ts",
+      "description": "Feature override guard utilities — isOverrideOn, guardGlobalAccess, guardWithCanary<T>, enableForceOverride, disableForceOverride. Canonical SSoT for canary/override access control in dev/staging environments. ADR-314 Phase D.3i.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+isOverrideOn\\b",
+        "export\\s+function\\s+(guardGlobalAccess|guardWithCanary|enableForceOverride|disableForceOverride)\\b"
+      ],
+      "allowlist": [
+        "src/utils/overrideGuard.ts"
+      ],
+      "tier": 3
+    },
+
+    "pending-relationship-guard": {
+      "ssotFile": "src/utils/pending-relationship-guard.ts",
+      "description": "Pending relationship guard — PendingRelationshipGuard object (canProceed, getBlockingMessage, hasBlockingRelationships). Canonical SSoT for entity mutation guards when pending relationships exist. ADR-314 Phase D.3i.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+PendingRelationshipGuard\\b"
+      ],
+      "allowlist": [
+        "src/utils/pending-relationship-guard.ts"
+      ],
+      "tier": 3
+    },
+
+    "section-field-utils": {
+      "ssotFile": "src/config/section-field-utils.ts",
+      "description": "Section field utilities — ARRAY_FIELD_SECTIONS registry, extractRealFieldIds(section). Canonical SSoT for mapping entity sections to their real field IDs (strips virtual/computed fields). ADR-314 Phase D.3i.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+ARRAY_FIELD_SECTIONS\\b",
+        "export\\s+function\\s+extractRealFieldIds\\b"
+      ],
+      "allowlist": [
+        "src/config/section-field-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "property-normalizer": {
+      "ssotFile": "src/utils/property-normalizer.ts",
+      "description": "Property document normalization — normalizeProperty, validatePropertyCompleteness, preparePropertyForFirestore, getPropertyDisplaySummary. Canonical SSoT for PropertyDoc↔PropertyModel conversion and Firestore serialization. ADR-314 Phase D.3i.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(normalizeProperty|validatePropertyCompleteness|preparePropertyForFirestore|getPropertyDisplaySummary)\\b"
+      ],
+      "allowlist": [
+        "src/utils/property-normalizer.ts"
+      ],
+      "tier": 3
+    },
+
+    "file-validation": {
+      "ssotFile": "src/utils/file-validation.ts",
+      "description": "File upload validation utilities — validateFile, validateFileExtension, validateFileMimeType, validateFileSize, validateImageFile, formatFileSize. Canonical SSoT for client-side file validation before upload. ADR-314 Phase D.3i.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(validateFile|validateFileExtension|validateFileMimeType|validateFileSize|validateImageFile|formatFileSize)\\b"
+      ],
+      "allowlist": [
+        "src/utils/file-validation.ts"
+      ],
+      "tier": 3
+    },
+
     "_comment_adr314_phaseD3h": "=== ADR-314 PHASE D.3h (2026-04-19): registry gap — firestore-now/toast-presets/firestore-helpers/form-error-handler/service-config ===",
 
     "firestore-now": {
