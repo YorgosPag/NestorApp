@@ -312,6 +312,7 @@ Data files with domain-specific Greek names use **structured locale entries**:
 
 | Date | Change |
 |------|--------|
+| 2026-04-19 | **Tooling hotfix** — `generate-i18n-baseline.sh` emitted malformed JSON when violations = 0 (empty `sum` from `awk` END block → `"totalViolations": ,`). Root cause: uninitialized `sum` prints empty string instead of 0. Fix: `END {print sum+0}` forces numeric. Baseline file repaired (0/0 valid JSON). Impacts any `npm run i18n:baseline` run when baseline reaches zero — now regenerates valid JSON always. |
 | 2026-04-09 | ADR-296 created. Full audit: 1,042 violations, 248 exempt, 794 to fix in 10 phases. |
 | 2026-04-09 | Phase 4H DONE: dxf-viewer encoding config — 11 violations fixed. encoding.ts: 4 encoding labels + 4 descriptions + 2 boolean labels → i18n keys (encoding.* namespace in dxf-viewer, common:boolean.yes/no). Consumers updated: DxfImportModal.tsx + PlotZoningSelectors.tsx wrap option.label with t(). 8 new locale keys in el/en dxf-viewer.json. |
 | 2026-04-09 | Phase 4G DONE: dxf-viewer toolbar config — 82 violations fixed. configurations.ts fully rewritten: 35 action button labels, 15 modal strings, 5 headers, 3 counters, 5 nav actions, 4 status messages, 4 confirm dialog → i18n keys (toolbar.* namespace). ~80 new locale keys in el/en dxf-viewer.json. |

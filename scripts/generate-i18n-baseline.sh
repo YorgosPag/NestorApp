@@ -28,7 +28,7 @@ grep -rnE "defaultValue:\s*['\"][^'\"]+['\"]" src \
     | sort | uniq -c | sort -rn > "$TMP_RAW"
 
 TOTAL_FILES=$(wc -l < "$TMP_RAW" | tr -d ' ')
-TOTAL_VIOLATIONS=$(awk '{sum+=$1} END {print sum}' "$TMP_RAW")
+TOTAL_VIOLATIONS=$(awk '{sum+=$1} END {print sum+0}' "$TMP_RAW")
 
 echo "  Files with violations: $TOTAL_FILES"
 echo "  Total violations:      $TOTAL_VIOLATIONS"
