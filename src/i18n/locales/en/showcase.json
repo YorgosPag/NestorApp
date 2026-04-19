@@ -15,6 +15,17 @@
         "defaultApp": "Email app",
         "copyAddress": "Copy address",
         "copied": "Copied"
+      },
+      "addressMenu": {
+        "title": "Open in map",
+        "googleMaps": "Google Maps",
+        "googleEarth": "Google Earth",
+        "bing": "Bing Maps (Microsoft)",
+        "apple": "Apple Maps",
+        "osm": "OpenStreetMap",
+        "waze": "Waze",
+        "copyAddress": "Copy address",
+        "copied": "Copied"
       }
     }
   },

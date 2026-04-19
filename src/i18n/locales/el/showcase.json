@@ -15,6 +15,17 @@
         "defaultApp": "Εφαρμογή email",
         "copyAddress": "Αντιγραφή διεύθυνσης",
         "copied": "Αντιγράφηκε"
+      },
+      "addressMenu": {
+        "title": "Άνοιγμα σε χάρτη",
+        "googleMaps": "Google Maps",
+        "googleEarth": "Google Earth",
+        "bing": "Bing Maps (Microsoft)",
+        "apple": "Apple Maps",
+        "osm": "OpenStreetMap",
+        "waze": "Waze",
+        "copyAddress": "Αντιγραφή διεύθυνσης",
+        "copied": "Αντιγράφηκε"
       }
     }
   },

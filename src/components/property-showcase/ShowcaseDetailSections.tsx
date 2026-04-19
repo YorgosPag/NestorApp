@@ -22,6 +22,7 @@ import type {
   ShowcaseLinkedSpace,
   ShowcaseViewInfo,
 } from './types';
+import { AddressMapPicker } from './AddressMapPicker';
 
 type Pair = [label: string, value: string];
 type Translator = (key: string) => string;
@@ -78,13 +79,24 @@ function TagList({ label, items }: { label: string; items: string[] }) {
 
 export function ShowcaseProjectCard({ project, t }: { project: ShowcaseProjectInfo; t: Translator }) {
   if (!project.name && !project.address) return null;
-  const pairs: Pair[] = [];
-  if (project.name) pairs.push([t('project.name'), project.name]);
-  if (project.address) pairs.push([t('project.address'), project.address]);
-  if (pairs.length === 0) return null;
   return (
     <SectionCard title={t('project.sectionTitle')}>
-      <KeyValueGrid pairs={pairs} />
+      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        {project.name && (
+          <div className="flex justify-between gap-3 border-b border-[hsl(var(--showcase-border))] pb-2">
+            <dt className="text-[hsl(var(--showcase-muted-fg))]">{t('project.name')}</dt>
+            <dd className="text-[hsl(var(--showcase-fg))] font-medium text-right">{project.name}</dd>
+          </div>
+        )}
+        {project.address && (
+          <div className="flex justify-between gap-3 border-b border-[hsl(var(--showcase-border))] pb-2">
+            <dt className="text-[hsl(var(--showcase-muted-fg))]">{t('project.address')}</dt>
+            <dd className="text-[hsl(var(--showcase-fg))] font-medium text-right">
+              <AddressMapPicker address={project.address} />
+            </dd>
+          </div>
+        )}
+      </dl>
     </SectionCard>
   );
 }

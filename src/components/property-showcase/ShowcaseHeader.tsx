@@ -12,6 +12,7 @@ import type {
   ShowcaseContactSocial,
 } from './types';
 import { EmailProviderPicker } from './EmailProviderPicker';
+import { AddressMapPicker } from './AddressMapPicker';
 
 const FALLBACK_LOGO_URL = '/images/pagonis-energo-logo.png';
 
@@ -93,7 +94,9 @@ export function ShowcaseHeader({ company }: ShowcaseHeaderProps) {
                 <dt className="sr-only">{t('header.contacts.addressLabel')}</dt>
                 <dd className="min-w-0">
                   {addresses.map((line) => (
-                    <p key={line} className="leading-snug">{line}</p>
+                    <p key={line} className="leading-snug">
+                      <AddressMapPicker address={line} />
+                    </p>
                   ))}
                 </dd>
               </div>
