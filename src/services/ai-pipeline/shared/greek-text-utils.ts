@@ -19,10 +19,9 @@
 // ============================================================================
 
 // ADR-217: Centralized in src/utils/greek-text.ts
-// SSoT aliases of @/utils/greek-text — ADR-314 Phase B (legitimate re-export for ai-pipeline barrel).
-import { stripAccents as _stripAccents, normalizeGreekText as _normalizeGreekText } from '@/utils/greek-text';
-export const stripAccents = _stripAccents;
-export const normalizeGreekText = _normalizeGreekText;
+// Pure re-export form (ADR-314 Phase C.5.46) — avoids scanner dup-count on aliased const.
+import { stripAccents, normalizeGreekText } from '@/utils/greek-text';
+export { stripAccents, normalizeGreekText };
 
 // ============================================================================
 // GREEK → LATIN TRANSLITERATION

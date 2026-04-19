@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 duplicateExports reduction ongoing — Phase C.5.45 chunkArray+isRecord DONE 2026-04-19)
+**STATUS: ACTIVE** (CHECK 3.18 duplicateExports reduction ongoing — Phase C.5.46 greek-text-utils DONE 2026-04-19)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-C.5.45):** **38 duplicateExports / 5 antiPatterns / 91 unprotected** (down from 42/5/91 pre-C.5.45, 46/5/91 Phase C baseline freeze)
+**Current CHECK 3.18 baseline (2026-04-19 post-C.5.46):** **36 duplicateExports / 5 antiPatterns / 91 unprotected** (down from 38/5/91 post-C.5.45, 42/5/91 pre-C.5.45, 46/5/91 Phase C baseline freeze)
 
 ---
 
@@ -135,6 +135,7 @@ After Phase A adds 5 SSoT to registry, 91 remain. Add them incrementally (P1 →
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase C.5.46 DONE.** CHECK 3.18 duplicateExports 38→36 (-2). `src/services/ai-pipeline/shared/greek-text-utils.ts` L23-25 aliased `export const stripAccents/normalizeGreekText` converted to `export { ... } from '@/utils/greek-text'` pure re-export syntax — scanner regex no longer matches. Zero blast radius (6 internal usages preserved via retained import). TSC clean. Baseline 38→36. |
 | 2026-04-19 | **Phase C.5.45 DONE.** CHECK 3.18 duplicateExports 42→38 (-4). (a) `chunkArray` in `src/services/report-engine/report-query-transforms.ts` byte-identical dup of SSoT `@/lib/array-utils` → collapsed to re-export. (b) `isRecord` in `src/core/configuration/enterprise-config/validators.ts` byte-identical dup of SSoT `@/lib/type-guards` → collapsed to import (internal-only usage). TSC clean. Baseline `.ssot-discover-baseline.json` refreshed 46→38. |
 | 2026-04-18 | Initial baseline from `npm run ssot:discover`. 74 duplicates, 5 anti-patterns, 96 registry gaps. Phase A/B/C defined. STATUS: ACTIVE. |
 | 2026-04-18 | **Phase A DONE.** 4 obligation ID wrappers deleted, 5 SSoT modules (enterprise-id-convenience, intl-formatting, intl-domain, date-local, design-system) added to `.ssot-registry.json` under new Tier 8. Baseline frozen at 637 violations / 390 files. Pre-commit now blocks new re-declarations + new `new Date().toISOString()` / `Timestamp.fromDate(new Date(` patterns. Phase A items A.1–A.9 removed from checklist. |
