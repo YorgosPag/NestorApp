@@ -3,8 +3,8 @@
 /**
  * 🏢 ADR-258B: Floor-level entity fetching for overlay linking dropdown
  *
- * SSoT hook that provides normalized, floor-filtered entities with linked-state
- * detection for the Properties Panel entity dropdown.
+ * Fetches ALL entity types (properties + parking + storages) from current floor
+ * and returns a unified sorted list for the overlay property selector.
  *
  * Reuses existing centralized hooks:
  * - useFirestoreProperties (supports floorId via API)
@@ -20,7 +20,7 @@ import { useFirestoreParkingSpots } from '@/hooks/useFirestoreParkingSpots';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
 import type { CommercialStatus } from '@/types/property';
 import type { SpaceCommercialStatus } from '@/types/sales-shared';
-import type { OverlayKind, Overlay } from '../overlays/types';
+import type { Overlay } from '../overlays/types';
 
 // =============================================================================
 // TYPES
@@ -32,20 +32,18 @@ export interface LinkableEntity {
   id: string;
   /** Human-readable name for dropdown display */
   displayName: string;
-  /** Commercial status for color dot (CommercialStatus for units, SpaceCommercialStatus for parking/storage) */
+  /** Commercial status for color dot */
   commercialStatus: CommercialStatus | SpaceCommercialStatus | undefined;
   /** Overlay ID this entity is linked to, or null if free */
   linkedToOverlayId: string | null;
-  /** Entity kind for type discrimination */
+  /** Entity kind — auto-set on overlay when this entity is selected */
   kind: 'property' | 'parking' | 'storage';
 }
 
 interface UseFloorEntitiesForLinkingParams {
-  /** Current overlay kind — determines which entity type to fetch */
-  kind: OverlayKind;
-  /** Building ID from ProjectHierarchyContext */
+  /** Building ID from ProjectHierarchyContext (required for parking/storage) */
   buildingId: string | undefined;
-  /** Floor ID derived from current Level.floorId */
+  /** Floor ID derived from current Level.floorId (required for properties) */
   floorId: string | undefined;
   /** All overlays on current level — for cross-reference of already-linked entities */
   overlays: Record<string, Overlay>;
@@ -54,9 +52,9 @@ interface UseFloorEntitiesForLinkingParams {
 }
 
 interface UseFloorEntitiesForLinkingReturn {
-  /** Floor-filtered entities with linked state, sorted by displayName */
+  /** All floor entities (properties + parking + storages) sorted by displayName */
   entities: LinkableEntity[];
-  /** True while any relevant hook is loading */
+  /** True while any hook is loading */
   loading: boolean;
 }
 
@@ -65,36 +63,31 @@ interface UseFloorEntitiesForLinkingReturn {
 // =============================================================================
 
 export function useFloorEntitiesForLinking({
-  kind,
   buildingId,
   floorId,
   overlays,
   enabled,
 }: UseFloorEntitiesForLinkingParams): UseFloorEntitiesForLinkingReturn {
 
-  const isUnit = kind === 'property';
-  const isParking = kind === 'parking';
-  const isStorage = kind === 'storage';
-
-  // All 3 hooks ALWAYS called (React rules of hooks) — autoFetch controls fetching
-  // Units: API supports floorId-only query (company-scoped) — buildingId optional
-  // Parking/Storage: API requires buildingId — floorId filtered client-side
   const hasFloorOrBuilding = !!buildingId || !!floorId;
 
+  // All 3 hooks ALWAYS called (React rules of hooks) — autoFetch controls fetching
+  // Properties: API supports floorId-only query (company-scoped)
+  // Parking/Storage: API requires buildingId — floorId filtered client-side
   const { properties: units, loading: unitsLoading } = useFirestoreProperties({
     buildingId,
     floorId,
-    autoFetch: enabled && isUnit && hasFloorOrBuilding,
+    autoFetch: enabled && hasFloorOrBuilding,
   });
 
   const { parkingSpots, loading: parkingLoading } = useFirestoreParkingSpots({
     buildingId,
-    autoFetch: enabled && isParking && !!buildingId,
+    autoFetch: enabled && !!buildingId,
   });
 
   const { storages, loading: storagesLoading } = useFirestoreStorages({
     buildingId,
-    autoFetch: enabled && isStorage && !!buildingId,
+    autoFetch: enabled && !!buildingId,
   });
 
   // Build entityId → overlayId map from ALL overlays (for duplicate detection)
@@ -108,51 +101,43 @@ export function useFloorEntitiesForLinking({
     return map;
   }, [overlays]);
 
-  // Normalize to LinkableEntity[] — sorted alphabetically by displayName
+  // Merge all entity types into a unified sorted list
   const entities = useMemo((): LinkableEntity[] => {
-    let result: LinkableEntity[] = [];
+    const unitEntities: LinkableEntity[] = units.map(u => ({
+      id: u.id,
+      displayName: u.name || u.code || u.id,
+      commercialStatus: u.commercialStatus,
+      linkedToOverlayId: linkedEntityIds.get(u.id) ?? null,
+      kind: 'property' as const,
+    }));
 
-    if (isUnit) {
-      // useFirestoreProperties already supports floorId in API query — no client filter needed
-      result = units.map(u => ({
-        id: u.id,
-        displayName: u.name || u.code || u.id,
-        commercialStatus: u.commercialStatus,
-        linkedToOverlayId: linkedEntityIds.get(u.id) ?? null,
-        kind: 'property' as const,
-      }));
-    } else if (isParking) {
-      // Parking hook fetches by building — filter by floorId client-side
-      const filtered = floorId
-        ? parkingSpots.filter(p => p.floorId === floorId)
-        : parkingSpots;
-      result = filtered.map(p => ({
-        id: p.id,
-        displayName: p.number || p.id,
-        commercialStatus: p.commercialStatus,
-        linkedToOverlayId: linkedEntityIds.get(p.id) ?? null,
-        kind: 'parking' as const,
-      }));
-    } else if (isStorage) {
-      // Storage hook fetches by building — filter by floorId client-side
-      const filtered = floorId
-        ? storages.filter(s => s.floorId === floorId)
-        : storages;
-      result = filtered.map(s => ({
-        id: s.id,
-        displayName: s.name || s.id,
-        commercialStatus: s.commercialStatus,
-        linkedToOverlayId: linkedEntityIds.get(s.id) ?? null,
-        kind: 'storage' as const,
-      }));
-    }
-    // kind === 'footprint' → empty array (footprints don't link to entities)
+    const filteredParking = floorId
+      ? parkingSpots.filter(p => p.floorId === floorId)
+      : parkingSpots;
+    const parkingEntities: LinkableEntity[] = filteredParking.map(p => ({
+      id: p.id,
+      displayName: p.number || p.id,
+      commercialStatus: p.commercialStatus,
+      linkedToOverlayId: linkedEntityIds.get(p.id) ?? null,
+      kind: 'parking' as const,
+    }));
 
-    // Sort alphabetically for consistent dropdown order
-    return result.sort((a, b) => a.displayName.localeCompare(b.displayName));
-  }, [isUnit, isParking, isStorage, units, parkingSpots, storages, floorId, linkedEntityIds]);
+    const filteredStorages = floorId
+      ? storages.filter(s => s.floorId === floorId)
+      : storages;
+    const storageEntities: LinkableEntity[] = filteredStorages.map(s => ({
+      id: s.id,
+      displayName: s.name || s.id,
+      commercialStatus: s.commercialStatus,
+      linkedToOverlayId: linkedEntityIds.get(s.id) ?? null,
+      kind: 'storage' as const,
+    }));
 
-  const loading = (isUnit && unitsLoading) || (isParking && parkingLoading) || (isStorage && storagesLoading);
+    return [...unitEntities, ...parkingEntities, ...storageEntities]
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [units, parkingSpots, storages, floorId, linkedEntityIds]);
+
+  const loading = unitsLoading || parkingLoading || storagesLoading;
 
   return { entities, loading };
 }
