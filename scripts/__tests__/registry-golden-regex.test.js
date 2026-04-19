@@ -113,11 +113,12 @@ describe('ERE syntax validity of every registry forbiddenPattern', () => {
 
   // Caveat: `grep -E` silently accepts PCRE lookaheads `(?!...)` / `(?=...)`
   // as literal text, so it matches nothing. Status-2 check above can't catch
-  // this. Known dormant pattern(s) in the current registry: `gcs-buckets[0]`
-  // uses `(?!-backups)` — the ratchet for that module is effectively dead
-  // code. Fix path: either switch enforcement to `grep -P` or rewrite the
-  // pattern using ERE alternation. Tracked separately — not gated here to
-  // avoid blocking commits on pre-existing registry debt.
+  // this class of dormant pattern. Historically `gcs-buckets[0]` used
+  // `pagonis-87766(?!\.)(?!-backups)` and was dead code; fixed 2026-04-19
+  // by rewriting to ERE-valid `['"]pagonis-87766['"]` — closes the hole
+  // without requiring `grep -P` across all 225 patterns. If future patterns
+  // reintroduce lookaheads, the golden fixture tests below (Group 2) will
+  // still catch semantic regressions, but authors should prefer ERE shapes.
 });
 
 // =============================================================================

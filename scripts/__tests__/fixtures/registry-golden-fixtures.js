@@ -12,7 +12,7 @@
  * Sampling covers one representative per architectural tier:
  *   Core: firestore-collections, enterprise-id, domain-constants,
  *         addDoc-prohibition, intent-badge-utils
- *   Tier 1: tenant-company-id, soft-delete-config
+ *   Tier 1: tenant-company-id, soft-delete-config, gcs-buckets
  *   Tier 3: intl-formatting, date-local, notification-events
  *   Tier 5: storage-path-construction, entity-creation-manual
  *
@@ -96,6 +96,21 @@ type Entity: SoftDeleteEntityConfig = Record<string, number>;`,
     shouldSkip: `// Scanner must pass SSoT import + usage:
 import { SOFT_DELETE_CONFIG } from '@/lib/firestore/soft-delete-config';
 function check(entity: string) { return SOFT_DELETE_CONFIG[entity]; }`,
+  },
+
+  'gcs-buckets': {
+    shouldMatch: `// Scanner must catch hardcoded GCP project ID + template-built backup bucket:
+const projectId = 'pagonis-87766';
+const alt = "pagonis-87766";
+const backupBucket = \`\${FIREBASE_PROJECT_ID}-backups\`;
+const another = \`\${GCP_PROJECT_ID}-backups\`;`,
+    shouldSkip: `// Scanner must pass SSoT imports + subdomain / backup-bucket literals:
+import { GCP_PROJECT_ID, GCS_BACKUP_BUCKET, FIREBASE_STORAGE_BUCKET } from '@/config/gcs-buckets';
+const bucket = GCS_BACKUP_BUCKET;
+const storage = FIREBASE_STORAGE_BUCKET;
+const authDomain = 'pagonis-87766.firebaseapp.com';
+const storageHost = 'pagonis-87766.firebasestorage.app';
+const backupsLiteral = 'pagonis-87766-backups';`,
   },
 
   'intl-formatting': {

@@ -23,7 +23,7 @@
       "ssotFile": "src/config/gcs-buckets.ts",
       "description": "GCS bucket names and GCP project ID must use gcs-buckets.ts constants",
       "forbiddenPatterns": [
-        "pagonis-87766(?!\\.)(?!-backups)",
+        "['\"]pagonis-87766['\"]",
         "\\$\\{.*PROJECT_ID.*\\}.*-backups"
       ],
       "allowlist": [

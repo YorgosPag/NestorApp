@@ -32,7 +32,7 @@ export interface BackupManifest {
   /** userId of the super-admin who triggered the backup */
   createdBy: string;
 
-  /** Firebase project ID (e.g. 'pagonis-87766') */
+  /** Firebase project ID (e.g. `pagonis-87766`) */
   projectId: string;
 
   /** Environment tag */
