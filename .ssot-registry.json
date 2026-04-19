@@ -1552,6 +1552,69 @@
       "tier": 3
     },
 
+    "_comment_adr314_phaseD3h": "=== ADR-314 PHASE D.3h (2026-04-19): registry gap — firestore-now/toast-presets/firestore-helpers/form-error-handler/service-config ===",
+
+    "firestore-now": {
+      "ssotFile": "src/lib/firestore-now.ts",
+      "description": "Firestore server timestamp utility — nowTimestamp() → Timestamp. Canonical SSoT for Firestore Timestamp.fromDate(new Date()) pattern. ADR-314 Phase D.3h.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+nowTimestamp\\b"
+      ],
+      "allowlist": [
+        "src/lib/firestore-now.ts"
+      ],
+      "tier": 3
+    },
+
+    "toast-presets": {
+      "ssotFile": "src/lib/toast-presets.ts",
+      "description": "Toast notification presets — toastPresets object (success/error/warning/info variants). Canonical SSoT for standardized toast notification configurations. ADR-314 Phase D.3h.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+toastPresets\\b"
+      ],
+      "allowlist": [
+        "src/lib/toast-presets.ts"
+      ],
+      "tier": 3
+    },
+
+    "firestore-helpers": {
+      "ssotFile": "src/utils/firestore-helpers.ts",
+      "description": "Firestore query helpers — sanitizeDocumentId, normalizeProjectIdForQuery. Canonical SSoT for Firestore document ID sanitization and project ID normalization for queries. ADR-314 Phase D.3h.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(sanitizeDocumentId|normalizeProjectIdForQuery)\\b"
+      ],
+      "allowlist": [
+        "src/utils/firestore-helpers.ts"
+      ],
+      "tier": 3
+    },
+
+    "form-error-handler": {
+      "ssotFile": "src/utils/form-error-handler.ts",
+      "description": "Form error handling utilities — useFormErrorHandler hook, createErrorMessage, errorMessages, createValidationResult<T>. Canonical SSoT for structured form validation error display and severity classification. ADR-314 Phase D.3h.",
+      "forbiddenPatterns": [
+        "export\\s+(function\\s+useFormErrorHandler|const\\s+createErrorMessage|const\\s+errorMessages|const\\s+createValidationResult)\\b"
+      ],
+      "allowlist": [
+        "src/utils/form-error-handler.ts"
+      ],
+      "tier": 3
+    },
+
+    "service-config": {
+      "ssotFile": "src/config/service-config.ts",
+      "description": "Service section/field configuration — SERVICE_SECTIONS, getServiceSortedSections, getServiceSectionById, getAllServiceFields. Canonical SSoT for service entity field layout and section ordering. ADR-314 Phase D.3h.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+SERVICE_SECTIONS\\b",
+        "export\\s+function\\s+(getServiceSortedSections|getServiceSectionById|getAllServiceFields)\\b"
+      ],
+      "allowlist": [
+        "src/config/service-config.ts"
+      ],
+      "tier": 3
+    },
+
     "_comment_adr314_phaseD3g": "=== ADR-314 PHASE D.3g (2026-04-19): registry gap — safe-fire-and-forget/firestore-sanitize/collection-utils/toggle-select/error-utils ===",
 
     "safe-fire-and-forget": {
