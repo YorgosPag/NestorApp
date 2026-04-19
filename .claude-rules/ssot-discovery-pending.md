@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.2 registry gap batch 2 DONE 2026-04-19, unprotected 85→81)
+**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.2b registry gap batch 2b DONE 2026-04-19, unprotected 81→77)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-D.2):** **21 duplicateExports / 5 antiPatterns / 81 unprotected** (down from 21/5/85 post-D.1, 21/5/91 post-C.5.47, 36/5/91 post-C.5.46, 38/5/91 post-C.5.45, 42/5/91 pre-C.5.45, 46/5/91 Phase C baseline freeze)
+**Current CHECK 3.18 baseline (2026-04-19 post-D.2b):** **21 duplicateExports / 5 antiPatterns / 77 unprotected** (down from 21/5/81 post-D.2, 21/5/85 post-D.1, 21/5/91 post-C.5.47)
 
 ---
 
@@ -127,6 +127,7 @@ After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 
 
 - [~] **D.1** P1 modules (high-export count) — **6/9 DONE 2026-04-19** (`message-utils` Tier 2, `firebase-admin` Tier 1, `npv-engine`/`hedging-engine`/`pagination`/`rtl-utils` Tier 3). Remaining: `validation`, `share-utils`, `smart-navigation-factory` (lower priority — `share-utils` callers largely collapsed in C.5.47, `smart-navigation-factory` already stable via JSDoc cleanup).
 - [x] **D.2** P2 modules (config files) — **DONE 2026-04-19** (`properties-tabs-config`, `period-selector-config`, `crm-dashboard-tabs-config`, `building-tabs-config` — all Tier 6). unprotected 85→81 (-4).
+- [x] **D.2b** P2 modules extended — **DONE 2026-04-19** (`contact-tabs-config`, `parking-tabs-config`, `project-tabs-config`, `storage-tabs-config` — all Tier 6). unprotected 81→77 (-4).
 - [ ] **D.3** Remaining ~77 low-priority modules — add as they get touched (Boy Scout rule)
 - [ ] **D.3** Remaining 70+ low-priority modules — add as they get touched (Boy Scout rule)
 
@@ -136,6 +137,7 @@ After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase D.2b DONE.** Registry gap batch 2b — 4 more tabs-config Tier 6: `contact-tabs-config`, `parking-tabs-config`, `project-tabs-config`, `storage-tabs-config`. Baseline: **unprotected 81→77 (-4)**, protected 55→59 (+4). |
 | 2026-04-19 | **Phase D.2 DONE.** Registry gap reduction batch 2 — 4 config/tabs SSoT modules Tier 6: `properties-tabs-config`, `period-selector-config`, `crm-dashboard-tabs-config`, `building-tabs-config`. All `forbiddenPatterns` pre-validated via grep. `ssot:audit` clean (0 new viol). CHECK 3.18 baseline: **unprotected 85→81 (-4)**, protected 51→55 (+4), duplicateExports/antiPatterns unchanged (21/5). Zero runtime edit. |
 | 2026-04-19 | **Phase D.1 DONE.** Registry gap reduction batch 1 — 6 high-export SSoT modules added to `.ssot-registry.json`: `message-utils` (Tier 2, DOMPurify XSS SSoT), `firebase-admin` (Tier 1, Admin SDK singleton), `npv-engine` + `hedging-engine` + `pagination` + `rtl-utils` (Tier 3 business/infra). All 6 `forbiddenPatterns` pre-validated via grep — zero hits outside allowlist. `npm run ssot:audit` clean (0 new viol across new modules + `.ssot-violations-baseline.json` stays 0/0). CHECK 3.18 baseline refreshed: **unprotected 91→85 (-6)**, protected 45→51 (+6), duplicateExports/antiPatterns unchanged (21/5). Zero runtime edit — pure config. 6/9 of Phase D.1 P1 list done; 3 deferred (`validation`, `share-utils`, `smart-navigation-factory` — lower priority, callers stabilised by C.5.47). Next batches (D.2) = config files. |
 | 2026-04-19 | **Phase C.5.47 DONE.** CHECK 3.18 duplicateExports **36→21 (-15, -42%)** in one session batch. Three independent edits: (a) `src/lib/social-platform-system/sharing-service.ts` L497-530 + `src/lib/social-platform-system/analytics-service.ts` L441-467 — 5 dup exports (`isWebShareSupported`, `getSocialShareUrls`, `getPhotoSocialShareUrls`, `generateShareableURL`, `trackShareEvent`) converted from class-backed wrappers / parallel impls to pure `export { X } from '@/lib/share-utils'` SSoT re-exports. Previously dead code (zero external consumers of social-platform-system barrel for these names), but regex-visible. (b) `src/config/smart-navigation-factory.ts` L993-1016 — 3 JSDoc comments `* Replaces: export const mainMenuItems/toolsMenuItems/settingsMenuItem: MenuItem[]` rewritten to `Replaces legacy 'X: MenuItem[]' constant (instance lives in navigation.ts)`. Scanner Phase 1 extract regex had no `^` anchor → matched `export const X` inside block comments → false-positive SSoT entry. Zero runtime change. (c) `src/constants/domains/property-status-core.ts` L332-333 aliased `export const getStatusLabel/getStatusColor = getEnhanced...` converted to `export { getEnhanced... as getStatusLabel/getStatusColor }` pure re-export form — scanner regex no longer matches. TSC clean. Baseline refreshed 36→21. |

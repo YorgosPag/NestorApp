@@ -1131,6 +1131,56 @@
         "src/config/building-tabs-config.ts"
       ],
       "tier": 6
+    },
+
+    "_comment_adr314_phaseD2b": "=== ADR-314 PHASE D.2b (2026-04-19): registry gap reduction — 4 more tabs-config SSoT modules ===",
+
+    "contact-tabs-config": {
+      "ssotFile": "src/config/contact-tabs-config.ts",
+      "description": "Contact tabs configuration — factory-based via unified-tabs-factory.ts with ContactType conditional logic (individual/company/service). Blocks CONTACT_TABS + ContactTabsConfig + all accessor/validation/debug functions. Re-implementation forks per-type tab filtering. ADR-314 Phase D.2b.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(CONTACT_TABS|ContactTabsConfig|getSortedContactTabs|getAllContactTabs|getContactTabById|getEnabledContactTabsCount|isContactTabEnabled|getDefaultContactTab|validateContactTabsConfig|debugContactTabsConfig)\\b"
+      ],
+      "allowlist": [
+        "src/config/contact-tabs-config.ts"
+      ],
+      "tier": 6
+    },
+
+    "parking-tabs-config": {
+      "ssotFile": "src/config/parking-tabs-config.ts",
+      "description": "Parking tabs configuration — factory-based via unified-tabs-factory.ts. Blocks PARKING_TABS + accessor/validation functions (getSortedParkingTabs, getParkingTabById, getDefaultParkingTab, validateParkingTabConfig, getAvailableParkingComponents, getParkingTabsForEnvironment). ADR-314 Phase D.2b.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(PARKING_TABS|getSortedParkingTabs|getParkingTabById|getDefaultParkingTab|validateParkingTabConfig|getAvailableParkingComponents|getParkingTabsForEnvironment)\\b"
+      ],
+      "allowlist": [
+        "src/config/parking-tabs-config.ts"
+      ],
+      "tier": 6
+    },
+
+    "project-tabs-config": {
+      "ssotFile": "src/config/project-tabs-config.ts",
+      "description": "Project tabs configuration — inline config (non-factory), 16 tabs covering general/locations/structure/ownership/engineers/brokers/customers/timeline/ika/floorplan/parking/measurements/documents/photos/videos/history. Blocks PROJECT_TABS + all accessor functions. ADR-314 Phase D.2b.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(PROJECT_TABS|getSortedProjectTabs|getEnabledProjectTabs|getProjectTab|getProjectTabByValue|getProjectTabsByComponent|isProjectTabEnabled|getProjectTabsCount|getEnabledProjectTabsCount)\\b"
+      ],
+      "allowlist": [
+        "src/config/project-tabs-config.ts"
+      ],
+      "tier": 6
+    },
+
+    "storage-tabs-config": {
+      "ssotFile": "src/config/storage-tabs-config.ts",
+      "description": "Storage (αποθήκη) tabs configuration — factory-based via unified-tabs-factory.ts. Blocks STORAGE_TABS + accessor/validation functions (getSortedStorageTabs, getStorageTabById, getDefaultStorageTab, validateStorageTabConfig, getAvailableStorageComponents, getStorageTabsForEnvironment). ADR-314 Phase D.2b.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(STORAGE_TABS|getSortedStorageTabs|getStorageTabById|getDefaultStorageTab|validateStorageTabConfig|getAvailableStorageComponents|getStorageTabsForEnvironment)\\b"
+      ],
+      "allowlist": [
+        "src/config/storage-tabs-config.ts"
+      ],
+      "tier": 6
     }
   }
 }
