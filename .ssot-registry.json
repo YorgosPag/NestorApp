@@ -1081,6 +1081,56 @@
         "src/lib/rtl-utils.ts"
       ],
       "tier": 3
+    },
+
+    "_comment_adr314_phaseD2": "=== ADR-314 PHASE D.2 (2026-04-19): registry gap reduction — 4 config/tabs-config SSoT modules ===",
+
+    "properties-tabs-config": {
+      "ssotFile": "src/config/properties-tabs-config.ts",
+      "description": "Properties (units) tabs configuration — factory-based via unified-tabs-factory.ts. Canonical data + utility functions + deprecated aliases (UNITS_TABS, getSortedUnitsTabs, etc.). Re-implementation of PROPERTIES_TABS/getSortedPropertiesTabs/getEnabledPropertiesTabs outside this file forks tab ordering, enabled state, and validation logic. ADR-314 Phase D.2.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(PROPERTIES_TABS|UNITS_TABS|getSortedPropertiesTabs|getEnabledPropertiesTabs|getPropertiesTabById|getPropertiesTabByValue|getAllPropertiesTabs|getPropertiesTabsByCondition|getPropertiesTabsStats|validatePropertiesTabIds|validatePropertiesTabValues|validatePropertiesTabOrders|validatePropertiesTabsConfiguration|debugPropertiesTabs)\\b"
+      ],
+      "allowlist": [
+        "src/config/properties-tabs-config.ts"
+      ],
+      "tier": 6
+    },
+
+    "period-selector-config": {
+      "ssotFile": "src/config/period-selector-config.ts",
+      "description": "PeriodSelector periods configuration — single source of truth for day/week/month/year period definitions. Re-implementation of PERIOD_SELECTOR_PERIODS or getSortedPeriods/getEnabledPeriods outside this file forks period ordering and enablement. ADR-314 Phase D.2.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(PERIOD_SELECTOR_PERIODS|getSortedPeriods|getEnabledPeriods|getPeriodById|getPeriodByValue|getAllPeriods|getPeriodsByCondition|getPeriodsStats|validatePeriodIds|validatePeriodValues|validatePeriodOrders|validatePeriodConfiguration|debugPeriods)\\b"
+      ],
+      "allowlist": [
+        "src/config/period-selector-config.ts"
+      ],
+      "tier": 6
+    },
+
+    "crm-dashboard-tabs-config": {
+      "ssotFile": "src/config/crm-dashboard-tabs-config.ts",
+      "description": "CRM Dashboard tabs configuration — single source of truth for overview/pipeline/communications/tasks/calendar tabs. Re-implementation of CRM_DASHBOARD_TABS or getSortedCRMDashboardTabs/getEnabledCRMDashboardTabs outside this file forks tab order and component routing. ADR-314 Phase D.2.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(CRM_DASHBOARD_TABS|getSortedCRMDashboardTabs|getEnabledCRMDashboardTabs|getCRMDashboardTabById|getCRMDashboardTabByValue|getAllCRMDashboardTabs|getCRMDashboardTabsByCondition|getCRMDashboardTabsStats|validateCRMDashboardTabIds|validateCRMDashboardTabValues|validateCRMDashboardTabOrders|validateCRMDashboardTabsConfiguration|debugCRMDashboardTabs)\\b"
+      ],
+      "allowlist": [
+        "src/config/crm-dashboard-tabs-config.ts"
+      ],
+      "tier": 6
+    },
+
+    "building-tabs-config": {
+      "ssotFile": "src/config/building-tabs-config.ts",
+      "description": "Building tabs configuration — factory-based via unified-tabs-factory.ts. Canonical accessor functions with module-level cache (getSortedBuildingTabs). Re-implementation of BUILDING_TABS or getSortedBuildingTabs/getEnabledBuildingTabs outside this file forks building tab definitions. ADR-314 Phase D.2.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(BUILDING_TABS|getSortedBuildingTabs|getEnabledBuildingTabs|getBuildingTabById|getBuildingTabByValue|getAllBuildingTabs|getBuildingTabsByCondition|getBuildingTabsStats|validateBuildingTabIds|validateBuildingTabValues|validateBuildingTabOrders|validateBuildingTabsConfiguration|debugBuildingTabs)\\b"
+      ],
+      "allowlist": [
+        "src/config/building-tabs-config.ts"
+      ],
+      "tier": 6
     }
   }
 }
