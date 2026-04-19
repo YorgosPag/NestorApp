@@ -1,6 +1,20 @@
 {
   "indexes": [
     {
+      "collectionGroup": "brokerage_agreements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "dxf_viewer_levels",
       "queryScope": "COLLECTION",
       "fields": [
@@ -434,6 +448,24 @@
         },
         {
           "fieldPath": "timestamps.lastActiveAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "direction",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
           "order": "DESCENDING"
         }
       ]

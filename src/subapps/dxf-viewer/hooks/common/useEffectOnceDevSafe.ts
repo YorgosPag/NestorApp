@@ -125,9 +125,9 @@ const { resource: snapEngine } = useResourceOnce(
   'SnapEngine'
 );
 
-// Example 2: Firestore Subscription
+// Example 2: Firestore Subscription (SSoT — ADR-214)
 useEffectOnceDevSafe(() => {
-  const unsubscribe = onSnapshot(firestoreRef, handleSnapshot);
+  const unsubscribe = firestoreQueryService.subscribe('MY_COLLECTION', onData, onError);
   return () => unsubscribe();
 });
 

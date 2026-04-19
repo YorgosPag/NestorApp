@@ -21,13 +21,11 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { MessageReaction, MessageReactionsMap } from '@/types/conversations';
 import { QUICK_REACTION_EMOJIS } from '@/types/conversations';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { API_ROUTES } from '@/config/domain-constants';
 
@@ -88,14 +86,13 @@ export function useMessageReactions(
     if (subscriptionsRef.current.has(messageId)) return;
 
     try {
-      const messageRef = doc(db, COLLECTIONS.MESSAGES, messageId);
-
-      const unsubscribe = onSnapshot(
-        messageRef,
-        (docSnapshot) => {
-          if (!docSnapshot.exists()) return;
-          const data = docSnapshot.data();
-          const reactions = parseFirestoreReactions(data?.reactions);
+      // 🏢 ADR-214 (C.5.33): subscribeDoc via firestoreQueryService SSoT.
+      const unsubscribe = firestoreQueryService.subscribeDoc<Record<string, unknown>>(
+        'MESSAGES',
+        messageId,
+        (data) => {
+          if (!data) return;
+          const reactions = parseFirestoreReactions(data.reactions);
 
           setReactionsMap(prev => {
             const newMap = new Map(prev);

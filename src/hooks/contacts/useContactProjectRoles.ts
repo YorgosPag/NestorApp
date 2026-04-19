@@ -11,9 +11,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { where } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import type { LandownerEntry } from '@/types/ownership-table';
 
@@ -56,27 +55,22 @@ export function useContactProjectRoles(contactId: string | undefined): {
 
     setLoading(true);
 
-    // Query projects where this contact is a landowner (tenant-scoped)
-    const q = query(
-      collection(db, COLLECTIONS.PROJECTS),
-      where('companyId', '==', companyId),
-      where('landownerContactIds', 'array-contains', contactId),
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
+    // 🏢 ADR-214 (C.5.33): subscribe via firestoreQueryService SSoT.
+    // companyId auto-injected by buildTenantConstraints; only need the
+    // landownerContactIds array-contains filter explicit.
+    const unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
+      'PROJECTS',
+      (result) => {
         const projectRoles: ProjectRole[] = [];
 
-        snapshot.docs.forEach((doc) => {
-          const data = doc.data();
+        result.documents.forEach((data) => {
           const landowners = (data.landowners ?? []) as LandownerEntry[];
           const entry = landowners.find(l => l.contactId === contactId);
 
           if (entry) {
             projectRoles.push({
-              projectId: doc.id,
-              projectName: (data.name as string) ?? doc.id,
+              projectId: data.id,
+              projectName: (data.name as string) ?? data.id,
               role: 'landowner',
               ownershipPct: entry.landOwnershipPct,
             });
@@ -90,6 +84,9 @@ export function useContactProjectRoles(contactId: string | undefined): {
         // Firestore index may not exist yet — degrade gracefully
         setRoles([]);
         setLoading(false);
+      },
+      {
+        constraints: [where('landownerContactIds', 'array-contains', contactId)],
       },
     );
 

@@ -20,9 +20,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { ChevronUp, ChevronDown, Plus } from 'lucide-react';
-import { collection, query, where, onSnapshot, type QueryConstraint } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { where } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { formatFloorLabel } from '@/lib/intl-utils';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -72,30 +71,27 @@ export function FloorMultiSelectField({
 
   useEffect(() => { if (initiallyOpen) setShowCreateForm(true); }, [initiallyOpen]);
 
-  // Real-time Firestore subscription for building floors
+  // 🏢 ADR-214 (C.5.33): subscribe via firestoreQueryService SSoT.
+  // Tenant filter (companyId + super_admin bypass) auto-handled by buildTenantConstraints.
   useEffect(() => {
     if (!buildingId || !user) { setAllFloors([]); setLoading(false); return; }
     setLoading(true);
-    const floorsCol = collection(db, COLLECTIONS.FLOORS);
-    const constraints: QueryConstraint[] = [where('buildingId', '==', buildingId)];
-    const isSuperAdmin = user.globalRole === 'super_admin';
-    if (!isSuperAdmin && user.companyId) {
-      constraints.push(where('companyId', '==', user.companyId));
-    }
-    const unsubscribe = onSnapshot(
-      query(floorsCol, ...constraints),
-      (snapshot) => {
-        const options: FloorOption[] = snapshot.docs
-          .map((doc) => {
-            const data = doc.data();
+    const unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
+      'FLOORS',
+      (result) => {
+        const options: FloorOption[] = result.documents
+          .map((data) => {
             const num = typeof data.number === 'number' ? data.number : 0;
-            return { id: doc.id, number: num, name: (data.name as string) || formatFloorLabel(num) };
+            return { id: data.id, number: num, name: (data.name as string) || formatFloorLabel(num) };
           })
           .sort((a, b) => a.number - b.number);
         setAllFloors(options);
         setLoading(false);
       },
-      () => { setAllFloors([]); setLoading(false); }
+      () => { setAllFloors([]); setLoading(false); },
+      {
+        constraints: [where('buildingId', '==', buildingId)],
+      }
     );
     return () => unsubscribe();
   }, [buildingId, user]);

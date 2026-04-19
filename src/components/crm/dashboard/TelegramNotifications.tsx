@@ -2,14 +2,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
+import { where, orderBy } from 'firebase/firestore';
 import { Bell, MessageCircle, User, Clock } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useCompanyId } from '@/hooks/useCompanyId';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -44,40 +43,39 @@ export function TelegramNotifications() {
 
   useEffect(() => {
     if (!companyId) return;
-    // Real-time listener για νέα Telegram μηνύματα
+    // 🏢 ADR-214 (C.5.33): subscribe via firestoreQueryService SSoT.
+    // companyId auto-injected via buildTenantConstraints.
     // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES (COMMUNICATIONS collection deprecated)
-    const q = query(
-      collection(db, COLLECTIONS.MESSAGES),
-      where('companyId', '==', companyId),
-      where('type', '==', 'telegram'),
-      where('direction', '==', 'inbound'),
-      orderBy('createdAt', 'desc'),
-      limit(10)
-    );
+    const unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
+      'MESSAGES',
+      (result) => {
+        const messages: TelegramMessage[] = result.documents.map((data) => ({
+          id: data.id,
+          content: data.content as string,
+          from: data.from as string,
+          direction: data.direction as TelegramMessage['direction'],
+          createdAt: data.createdAt as TelegramMessage['createdAt'],
+          status: data.status as string,
+        }));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messages: TelegramMessage[] = [];
-      
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        messages.push({
-          id: doc.id,
-          content: data.content,
-          from: data.from,
-          direction: data.direction,
-          createdAt: data.createdAt,
-          status: data.status
-        });
-      });
+        setNewMessages(messages);
+        setUnreadCount(messages.filter(m => m.status === 'received').length);
 
-      setNewMessages(messages);
-      setUnreadCount(messages.filter(m => m.status === 'received').length);
-
-      // Browser notification για νέα μηνύματα
-      if (messages.length > 0 && messages[0].status === 'received') {
-        showBrowserNotification(messages[0]);
+        // Browser notification για νέα μηνύματα
+        if (messages.length > 0 && messages[0].status === 'received') {
+          showBrowserNotification(messages[0]);
+        }
+      },
+      () => { /* silent fail */ },
+      {
+        constraints: [
+          where('type', '==', 'telegram'),
+          where('direction', '==', 'inbound'),
+          orderBy('createdAt', 'desc'),
+        ],
+        maxResults: 10,
       }
-    });
+    );
 
     return () => unsubscribe();
   }, [companyId]);

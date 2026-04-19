@@ -1,15 +1,14 @@
 'use client';
 import { useEffect } from 'react';
 import {
-  collection,
-  query,
   where,
   orderBy,
-  onSnapshot,
   doc,
   writeBatch,
 } from 'firebase/firestore';
 import { db } from '../../../../../lib/firebase';
+import { RealtimeService } from '@/services/realtime/RealtimeService';
+import type { RealtimeCollection } from '@/services/realtime/types';
 import { getErrorMessage } from '@/lib/error-utils';
 import { LevelOperations } from '../utils';
 import type { Level } from '../config';
@@ -64,23 +63,24 @@ export function useLevelsFirestoreSync({
 
     setIsLoading(true);
 
+    // 🏢 ADR-195 (C.5.33): subscribe via RealtimeService SSoT — dynamic
+    // collection name (param-driven) requires string-based API, not CollectionKey.
     // Non-super-admin users MUST include where('companyId', '==', ...) so that
     // Firestore can statically verify every returned document satisfies the
     // tenant-isolation rule (resource.data.companyId == getUserCompanyId()).
     // Super-admins rely on isSuperAdminOnly() in the rule, which is request-only
     // and does not require a where-clause.
-    const colRef = collection(db, firestoreCollection);
-    const q = isSuperAdmin
-      ? query(colRef, orderBy('order', 'asc'))
-      : query(colRef, where('companyId', '==', companyId), orderBy('order', 'asc'));
+    const constraints = isSuperAdmin
+      ? [orderBy('order', 'asc')]
+      : [where('companyId', '==', companyId), orderBy('order', 'asc')];
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
+    // Cast dynamic param to RealtimeCollection — `firestoreCollection` is runtime
+    // config (not statically a CollectionKey). Firestore rules enforce access.
+    const unsubscribe = RealtimeService.subscribeToCollection(
+      { collection: firestoreCollection as RealtimeCollection, constraints },
+      (docs) => {
         try {
-          const fetchedLevels = snapshot.docs.map(
-            d => ({ ...d.data(), id: d.id } as Level)
-          );
+          const fetchedLevels = docs as unknown as Level[];
 
           if (fetchedLevels.length > 0) {
             setLevels(fetchedLevels);

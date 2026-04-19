@@ -11,9 +11,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { BrokerageService } from '@/services/brokerage.service';
 import {
   createBrokerageAgreementWithPolicy,
@@ -79,22 +80,20 @@ export function useBrokerageAgreements(
     if (!projectId || !companyId) return;
     setIsLoading(true);
 
-    const q = query(
-      collection(db, COLLECTIONS.BROKERAGE_AGREEMENTS),
-      where('companyId', '==', companyId),
-      where('projectId', '==', projectId)
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as BrokerageAgreement);
-        setAgreements(data);
+    // 🏢 ADR-214 (C.5.33): subscribe via firestoreQueryService SSoT.
+    // companyId auto-injected via buildTenantConstraints.
+    const unsubscribe = firestoreQueryService.subscribe<BrokerageAgreement>(
+      'BROKERAGE_AGREEMENTS',
+      (result) => {
+        setAgreements([...result.documents]);
         setIsLoading(false);
       },
       () => {
         setAgreements([]);
         setIsLoading(false);
+      },
+      {
+        constraints: [where('projectId', '==', projectId)],
       }
     );
 
