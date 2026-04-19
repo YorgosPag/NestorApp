@@ -23,9 +23,8 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { where } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import type { ProjectListItem } from '@/components/building-management/building-services';
 import { useProjectsList } from '@/hooks/useProjectsList';
@@ -151,27 +150,17 @@ export function useNewUnitHierarchy({
     }
 
     setFloorsLoading(true);
-    const floorsCol = collection(db, COLLECTIONS.FLOORS);
-    const isSuperAdmin = user.globalRole === 'super_admin';
-    const constraints = [
-      where('buildingId', '==', selection.buildingId),
-      // Super admin sees all floors (consistent with buildTenantConstraints)
-      ...(!isSuperAdmin && user.companyId ? [where('companyId', '==', user.companyId)] : []),
-    ];
-    const q = query(floorsCol, ...constraints);
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const floors = snapshot.docs
-          .map((doc) => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              number: typeof data.number === 'number' ? data.number : 0,
-              name: (data.name as string) || '',
-            };
-          })
+    // 🏢 ADR-214 (C.5.34): subscribe via firestoreQueryService SSoT.
+    // Super-admin bypass + tenant filter gestiti da buildTenantConstraints.
+    const unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
+      'FLOORS',
+      (result) => {
+        const floors = result.documents
+          .map((data) => ({
+            id: data.id,
+            number: typeof data.number === 'number' ? data.number : 0,
+            name: (data.name as string) || '',
+          }))
           .sort((a, b) => a.number - b.number);
         setFloorOptions(floors);
         setFloorsLoading(false);
@@ -179,6 +168,9 @@ export function useNewUnitHierarchy({
       () => {
         setFloorOptions([]);
         setFloorsLoading(false);
+      },
+      {
+        constraints: [where('buildingId', '==', selection.buildingId)],
       },
     );
     return () => unsubscribe();

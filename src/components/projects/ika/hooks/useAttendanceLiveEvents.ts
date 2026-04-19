@@ -16,16 +16,9 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-} from 'firebase/firestore';
+import { where, orderBy } from 'firebase/firestore';
 import { useCompanyId } from '@/hooks/useCompanyId';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { AttendanceEvent, AttendanceEventType, AttendanceMethod } from '../contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createStaleCache } from '@/lib/stale-cache';
@@ -118,20 +111,13 @@ export function useAttendanceLiveEvents(
     const startOfDayStr = toStartOfDay(selectedDate);
     const endOfDayStr = toEndOfDay(selectedDate);
 
-    const eventsQuery = query(
-      collection(db, COLLECTIONS.ATTENDANCE_EVENTS),
-      where('companyId', '==', companyId),
-      where('projectId', '==', projectId),
-      where('timestamp', '>=', startOfDayStr),
-      where('timestamp', '<=', endOfDayStr),
-      orderBy('timestamp', 'asc')
-    );
-
-    const unsubscribe = onSnapshot(
-      eventsQuery,
-      (snapshot) => {
-        const fetchedEvents: AttendanceEvent[] = snapshot.docs.map((doc) =>
-          parseEventDoc(doc.id, doc.data() as Record<string, unknown>)
+    // 🏢 ADR-214 (C.5.34): subscribe via firestoreQueryService SSoT.
+    // companyId auto-injected via buildTenantConstraints.
+    const unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
+      'ATTENDANCE_EVENTS',
+      (result) => {
+        const fetchedEvents: AttendanceEvent[] = result.documents.map((data) =>
+          parseEventDoc(data.id, data as Record<string, unknown>)
         );
 
         attendanceLiveEventsCache.set(fetchedEvents, projectId);
@@ -154,7 +140,15 @@ export function useAttendanceLiveEvents(
         setError(message);
         setIsLive(false);
         setIsLoading(false);
-        logger.error('onSnapshot error', { error: message, projectId });
+        logger.error('subscription error', { error: message, projectId });
+      },
+      {
+        constraints: [
+          where('projectId', '==', projectId),
+          where('timestamp', '>=', startOfDayStr),
+          where('timestamp', '<=', endOfDayStr),
+          orderBy('timestamp', 'asc'),
+        ],
       }
     );
 

@@ -17,11 +17,9 @@
 const DEBUG_SHARED_PROPERTIES_PROVIDER = false;
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { Property } from '@/types/property-viewer';
-import { COLLECTIONS } from '@/config/firestore-collections';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('SharedPropertiesProvider');
@@ -108,22 +106,16 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     setIsLoading(true);
     setError(null);
 
-    const propertiesQuery = query(
-      collection(db, COLLECTIONS.PROPERTIES),
-      where('companyId', '==', user.companyId)
-    );
     logger.info('[SharedProperties] Setting up Firestore listener (activated)...');
 
-    const unsubscribe = onSnapshot(
-      propertiesQuery,
-      (snapshot) => {
-        if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info('Firestore snapshot received', { docsCount: snapshot.size });
+    // 🏢 ADR-214 (C.5.34): subscribe via firestoreQueryService SSoT.
+    // companyId auto-injected via buildTenantConstraints.
+    const unsubscribe = firestoreQueryService.subscribe<Property>(
+      'PROPERTIES',
+      (result) => {
+        if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info('Firestore snapshot received', { docsCount: result.size });
 
-        const propertiesData: Property[] = [];
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          propertiesData.push({ id: docSnap.id, ...data } as Property);
-        });
+        const propertiesData: Property[] = [...result.documents];
 
         if (propertiesData.length > 0) {
           setPropertiesState(propertiesData);
@@ -161,7 +153,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
         logger.error('Firestore listener error', { error: listenerError });
         setError('FIRESTORE_LISTENER_ERROR');
         setIsLoading(false);
-      }
+      },
     );
 
     unsubscribeRef.current = unsubscribe;

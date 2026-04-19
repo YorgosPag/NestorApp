@@ -24,14 +24,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { where } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { FileRecordService } from '@/services/file-record.service';
 import {
   moveFileToTrashWithPolicy,
@@ -165,29 +159,19 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
 
     logger.info('Setting up real-time subscription', { companyId });
 
-    // Build query: active files for this company
-    const filesQuery = query(
-      collection(db, COLLECTIONS.FILES),
-      where('companyId', '==', companyId),
-      where('status', '==', FILE_STATUS.READY),
-      where('isDeleted', '==', false),
-      where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE)
-    );
-
     // ADR-300: Only show spinner on first load — not on re-navigation
     if (!allCompanyFilesCache.hasLoaded(companyId)) setLoading(true);
 
-    // Subscribe to real-time updates
-    const unsubscribe = onSnapshot(
-      filesQuery,
-      (snapshot) => {
+    // 🏢 ADR-214 (C.5.34): subscribe via firestoreQueryService SSoT.
+    // companyId auto-injected via buildTenantConstraints.
+    const unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
+      'FILES',
+      (result) => {
         const activeFiles: FileRecord[] = [];
 
-        for (const docSnap of snapshot.docs) {
-          const data = docSnap.data();
+        for (const data of result.documents) {
           const record = {
             ...data,
-            id: docSnap.id,
             createdAt: toISOStringOrPassthrough(data.createdAt),
             updatedAt: toISOStringOrPassthrough(data.updatedAt),
           };
@@ -195,8 +179,8 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
           if (isFileRecord(record)) {
             activeFiles.push(record);
           } else {
-            logger.warn('Skipping invalid FileRecord in onSnapshot', {
-              docId: docSnap.id,
+            logger.warn('Skipping invalid FileRecord in subscription', {
+              docId: data.id,
               fields: {
                 id: typeof record.id,
                 entityType: typeof data.entityType,
@@ -233,6 +217,13 @@ export function useAllCompanyFiles(params: UseAllCompanyFilesParams): UseAllComp
         });
         setError(err);
         setLoading(false);
+      },
+      {
+        constraints: [
+          where('status', '==', FILE_STATUS.READY),
+          where('isDeleted', '==', false),
+          where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE),
+        ],
       }
     );
 
