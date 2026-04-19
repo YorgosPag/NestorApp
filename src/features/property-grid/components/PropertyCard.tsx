@@ -2,6 +2,7 @@
 import { Eye, ArrowRight, Heart, Square, Bed, Bath } from 'lucide-react';
 import { PropertyBadge, CommonBadge } from '@/core/badges';
 import { getPropertyImage } from '../utils/images';
+import { usePropertyThumbnail } from '../hooks/usePropertyThumbnail';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
@@ -47,6 +48,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, radius } = useBorderTokens();
+  const thumbnailUrl = usePropertyThumbnail(property.id);
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { badgeStatus, labelKey } = resolvePropertyBadge(property.commercialStatus, property.status);
@@ -55,7 +57,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
     <article className={`w-full flex flex-col ${colors.bg.primary} ${radius.xl} shadow-md ring-1 ${colors.border.muted} overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
       <header className={`relative h-48 overflow-hidden ${colors.bg.muted}`}> {/* ✅ ENTERPRISE: Better contrast in dark mode (was secondary) */}
         <img
-          src={getPropertyImage(property)}
+          src={thumbnailUrl ?? getPropertyImage(property)}
           alt={property.name}
           className={`w-full h-full object-cover ${GROUP_HOVER_PATTERNS.SCALE_ON_GROUP} ${TRANSITION_PRESETS.SLOW_ALL}`}
         />
