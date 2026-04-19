@@ -40,3 +40,25 @@
 | `src/core/modals/PhotoPreviewModal.tsx` | Stable fullscreen gallery με zoom/rotate/pan |
 
 > Βλέπε **ADR-054** για πλήρη λίστα σταθεροποιημένων αρχείων του upload pipeline.
+
+---
+
+## Changelog
+
+### 2026-04-19 — StoragePhotosTab migrated to EntityFilesManager (SSoT unification)
+
+**Motivation**: Apartment / parking / storage photo tabs had two divergent UX flows:
+- Apartment + parking → `EntityFilesManager` + `UploadEntryPointSelector` → category cards **before** upload (pre-upload selection).
+- Storage → `PhotosTabBase` + `usePhotosCategories` → category filter **after** upload (in-memory filter).
+
+User requested a single, unified flow across all three entities.
+
+**Changes**:
+- `src/components/space-management/StoragesPage/StorageDetails/tabs/StoragePhotosTab.tsx` — rewritten to use `EntityFilesManager` (same pattern as `ParkingPhotosTab`).
+- `src/config/upload-entry-points/entries-parking.ts` — added 3 photo entry points: `parking-interior-photo`, `parking-exterior-photo`, `parking-progress-photo` (no "view" for parking).
+- `src/config/upload-entry-points/entries-storage.ts` — added 3 photo entry points: `storage-interior-photo`, `storage-exterior-photo`, `storage-progress-photo` (no "view" for storage).
+- `src/i18n/locales/{el,en}/storage.json` — added `auth.signInToViewPhotos` key.
+
+**Canonical for photo tab (all entities)**: `EntityFilesManager` + per-entity `*_ENTRY_POINTS` with `category: 'photos'`.
+
+**`PhotosTabBase` scope after this change**: only `src/components/building-management/tabs/PhotosTabContent.tsx` still consumes it. Future work may migrate that too.

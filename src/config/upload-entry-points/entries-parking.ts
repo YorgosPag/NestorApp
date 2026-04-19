@@ -82,4 +82,57 @@ export const PARKING_ENTRY_POINTS: UploadEntryPoint[] = [
       icon: 'Droplets',
       order: 4,
     },
+
+    // ------------------------------------------------------------------------
+    // ΦΩΤΟΓΡΑΦΙΕΣ ΘΕΣΗΣ ΣΤΑΘΜΕΥΣΗΣ (Photos) — SSoT mirror of PROPERTY_ENTRY_POINTS
+    // NOTE: No "view" category for parking spots (per user spec)
+    // ------------------------------------------------------------------------
+    {
+      id: 'parking-interior-photo',
+      purpose: 'interior',
+      domain: 'construction',
+      category: 'photos',
+      label: {
+        el: 'Εσωτερικό',
+        en: 'Interior',
+      },
+      description: {
+        el: 'Φωτογραφία από το εσωτερικό της θέσης στάθμευσης',
+        en: 'Photo from inside the parking spot',
+      },
+      icon: 'Home',
+      order: 20,
+    },
+    {
+      id: 'parking-exterior-photo',
+      purpose: 'exterior',
+      domain: 'construction',
+      category: 'photos',
+      label: {
+        el: 'Εξωτερικό',
+        en: 'Exterior',
+      },
+      description: {
+        el: 'Φωτογραφία από το εξωτερικό της θέσης στάθμευσης',
+        en: 'Photo from outside the parking spot',
+      },
+      icon: 'Building',
+      order: 21,
+    },
+    {
+      id: 'parking-progress-photo',
+      purpose: 'progress',
+      domain: 'construction',
+      category: 'photos',
+      label: {
+        el: 'Πρόοδος Κατασκευής',
+        en: 'Construction Progress',
+      },
+      description: {
+        el: 'Φωτογραφία προόδου κατασκευής της θέσης στάθμευσης',
+        en: 'Construction progress photo of the parking spot',
+      },
+      icon: 'HardHat',
+      order: 22,
+    },
 ];

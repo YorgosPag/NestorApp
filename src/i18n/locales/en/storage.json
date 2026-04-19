@@ -351,5 +351,8 @@
   "common": {
     "storage": "Storage",
     "parking": "Parking"
+  },
+  "auth": {
+    "signInToViewPhotos": "Sign in to view photos."
   }
 }

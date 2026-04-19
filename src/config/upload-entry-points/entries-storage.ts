@@ -82,4 +82,57 @@ export const STORAGE_ENTRY_POINTS: UploadEntryPoint[] = [
       icon: 'Droplets',
       order: 4,
     },
+
+    // ------------------------------------------------------------------------
+    // ΦΩΤΟΓΡΑΦΙΕΣ ΑΠΟΘΗΚΗΣ (Photos) — SSoT mirror of PROPERTY_ENTRY_POINTS
+    // NOTE: No "view" category for storage rooms (per user spec)
+    // ------------------------------------------------------------------------
+    {
+      id: 'storage-interior-photo',
+      purpose: 'interior',
+      domain: 'construction',
+      category: 'photos',
+      label: {
+        el: 'Εσωτερικό',
+        en: 'Interior',
+      },
+      description: {
+        el: 'Φωτογραφία από το εσωτερικό της αποθήκης',
+        en: 'Photo from inside the storage room',
+      },
+      icon: 'Home',
+      order: 20,
+    },
+    {
+      id: 'storage-exterior-photo',
+      purpose: 'exterior',
+      domain: 'construction',
+      category: 'photos',
+      label: {
+        el: 'Εξωτερικό',
+        en: 'Exterior',
+      },
+      description: {
+        el: 'Φωτογραφία από το εξωτερικό της αποθήκης',
+        en: 'Photo from outside the storage room',
+      },
+      icon: 'Building',
+      order: 21,
+    },
+    {
+      id: 'storage-progress-photo',
+      purpose: 'progress',
+      domain: 'construction',
+      category: 'photos',
+      label: {
+        el: 'Πρόοδος Κατασκευής',
+        en: 'Construction Progress',
+      },
+      description: {
+        el: 'Φωτογραφία προόδου κατασκευής της αποθήκης',
+        en: 'Construction progress photo of the storage room',
+      },
+      icon: 'HardHat',
+      order: 22,
+    },
 ];
