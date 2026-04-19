@@ -192,7 +192,7 @@ function renderLinkedSpaceItem(space: ShowcaseLinkedSpace, labels: ShowcaseLinke
     space.allocationCode ? `<strong>${escapeHtml(space.allocationCode)}</strong>` : undefined,
     space.area ? `${space.area} τ.μ.` : undefined,
     space.floor ? `${escapeHtml(labels.floor)}: ${escapeHtml(space.floor)}` : undefined,
-    space.inclusion ? `${escapeHtml(labels.inclusion)}: ${escapeHtml(space.inclusion)}` : undefined,
+    space.inclusion ? `${escapeHtml(labels.inclusion)}: ${escapeHtml(labels.inclusions[space.inclusion as keyof typeof labels.inclusions] ?? space.inclusion)}` : undefined,
     typeof space.quantity === 'number' ? `${escapeHtml(labels.quantity)}: ${space.quantity}` : undefined,
   ].filter(Boolean);
   const body = bits.length > 0
