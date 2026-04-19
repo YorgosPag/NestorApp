@@ -83,7 +83,7 @@ function safe(value: string | number | undefined | null): string {
   return normalized.length > 0 ? normalized : '-';
 }
 
-function formatDate(iso: string, locale: 'el' | 'en' = 'el'): string {
+function formatShowcaseDate(iso: string, locale: 'el' | 'en' = 'el'): string {
   if (!iso) return '-';
   const parts = iso.slice(0, 10).split('-');
   if (parts.length !== 3) return iso;
@@ -201,7 +201,7 @@ export class PropertyShowcaseRenderer {
         this.drawSectionTitle(doc, y, margins, pageWidth, contentWidth, text),
       ensureSpace,
       formatPrice: (v) => formatPrice(v, data.locale),
-      formatDate: (iso) => formatDate(iso, data.locale),
+      formatDate: (iso) => formatShowcaseDate(iso, data.locale),
     };
   }
 
@@ -393,7 +393,7 @@ export class PropertyShowcaseRenderer {
     const contact = [brand.phone, brand.email, brand.website]
       .filter((value): value is string => Boolean(value))
       .join(' · ');
-    const footerLine = `${data.labels.chrome.footerNote} · ${data.labels.chrome.generatedOn} ${formatDate(
+    const footerLine = `${data.labels.chrome.footerNote} · ${data.labels.chrome.generatedOn} ${formatShowcaseDate(
       data.generatedAt.toISOString(),
       data.locale,
     )}`;
