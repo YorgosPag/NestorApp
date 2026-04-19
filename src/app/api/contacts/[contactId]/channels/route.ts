@@ -61,8 +61,57 @@ function extractEmailChannels(data: FirebaseFirestore.DocumentData): AvailableCh
     }));
 }
 
+// Platforms stored in `contact.socialMedia[]` that map 1:1 onto a shareable
+// channel. `facebook` is intentionally excluded because a Facebook profile
+// username is not a Messenger identity; `linkedin` / `twitter` / `tiktok` /
+// `youtube` / `github` are not share channels in ADR-147.
+const SOCIAL_MEDIA_TO_CHANNEL: Partial<Record<string, ChannelProvider>> = {
+  telegram: 'telegram',
+  whatsapp: 'whatsapp',
+  instagram: 'instagram',
+};
+
+function extractSocialMediaChannels(data: FirebaseFirestore.DocumentData): AvailableChannel[] {
+  const social = data.socialMedia;
+  if (!Array.isArray(social)) return [];
+
+  const channels: AvailableChannel[] = [];
+  for (const entry of social) {
+    const platform = String((entry as Record<string, unknown>)?.platform ?? '');
+    const username = String((entry as Record<string, unknown>)?.username ?? '').trim();
+    const provider = SOCIAL_MEDIA_TO_CHANNEL[platform];
+    if (!provider || !username) continue;
+
+    channels.push({
+      provider,
+      externalUserId: username,
+      displayName: username,
+      verified: false,
+      capabilities: CHANNEL_CAPABILITIES[provider],
+    });
+  }
+  return channels;
+}
+
 function isValidChannelProvider(provider: string): provider is ChannelProvider {
   return (CHANNEL_PROVIDERS as readonly string[]).includes(provider);
+}
+
+function mergeChannelsDeduped(...groups: AvailableChannel[][]): AvailableChannel[] {
+  const seen = new Map<string, AvailableChannel>();
+  for (const group of groups) {
+    for (const channel of group) {
+      const key = `${channel.provider}:${channel.externalUserId.toLowerCase()}`;
+      const existing = seen.get(key);
+      // `external_identities` entries come first in caller ordering and carry
+      // `verified: true` from the admin linking flow — keep them as the
+      // authoritative record. Fallbacks from `socialMedia[]` fill holes.
+      if (!existing || (!existing.verified && channel.verified)) {
+        seen.set(key, channel);
+      }
+    }
+  }
+  return Array.from(seen.values());
 }
 
 // ============================================================================
@@ -105,9 +154,8 @@ async function handleGet(
         .where('contactId', '==', contactId)
         .get();
 
-      const channels: AvailableChannel[] = [];
-
-      // 3. Map external identities to available channels
+      // 3. Map external identities (admin-linked) to available channels
+      const identityChannels: AvailableChannel[] = [];
       for (const doc of identitiesSnap.docs) {
         const data = doc.data();
         const provider = String(data.provider ?? '');
@@ -115,7 +163,7 @@ async function handleGet(
         if (!isValidChannelProvider(provider)) continue;
         if (provider === 'email') continue; // emails come from contact doc
 
-        channels.push({
+        identityChannels.push({
           provider,
           externalUserId: String(data.externalUserId ?? ''),
           displayName: String(data.displayName ?? data.username ?? ''),
@@ -124,11 +172,24 @@ async function handleGet(
         });
       }
 
-      // 4. Add email channels from contact document
-      const emailChannels = extractEmailChannels(contactData);
-      channels.push(...emailChannels);
+      // 4. Extract channels already registered in the contact profile via
+      // `socialMedia[{platform: 'telegram' | 'whatsapp' | 'instagram', …}]`.
+      // These are unverified but spare the user a redundant `Σύνδεση
+      // καναλιού` step when the data is already on the contact doc.
+      const socialMediaChannels = extractSocialMediaChannels(contactData);
 
-      // 5. Sort by provider priority (CHANNEL_PROVIDERS order)
+      // 5. Email channels live on the contact doc (not in external_identities)
+      const emailChannels = extractEmailChannels(contactData);
+
+      // 6. Merge + dedupe by (provider, externalUserId). Verified
+      // external_identities win over unverified socialMedia fallbacks.
+      const channels = mergeChannelsDeduped(
+        identityChannels,
+        socialMediaChannels,
+        emailChannels,
+      );
+
+      // 7. Sort by provider priority (CHANNEL_PROVIDERS order)
       channels.sort((a, b) => {
         const aIdx = CHANNEL_PROVIDERS.indexOf(a.provider);
         const bIdx = CHANNEL_PROVIDERS.indexOf(b.provider);
