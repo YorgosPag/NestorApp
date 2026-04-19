@@ -10,6 +10,7 @@
 
 import { UI_COLORS } from '../config/color-config';
 import type { GridSettings } from '../systems/rulers-grid/config';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions for Grid Testing
@@ -814,7 +815,7 @@ export async function runGridEnterpriseTests(): Promise<GridTestReport> {
 
   return {
     success,
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     totalTests,
     passed,
     failed,

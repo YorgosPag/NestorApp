@@ -4,7 +4,7 @@
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-D.3m — last successful scan):** **11 duplicateExports / 5 antiPatterns / 7 unprotected** (centralizedFiles=136 protected=129). D.3n+D.3o scanner failed /tmp — rirun `npm run ssot:discover:baseline` dopo prossimo commit.
+**Current CHECK 3.18 baseline (2026-04-19 post-C.1.4c):** **16 duplicateExports / 5 antiPatterns / 7 unprotected** (centralizedFiles=136 protected=129).
 
 ---
 
@@ -51,14 +51,14 @@ Created canonical `src/lib/status-helpers.ts` with discriminated-union API (8 do
 
 ## Phase C — Anti-pattern migration (automatable, ~6-8h)
 
-### C.1 — `new Date().toISOString()` → `nowISO()` — ✅ MOSTLY DONE
+### C.1 — `new Date().toISOString()` → `nowISO()` — ✅ DONE
 Codemod AST-aware (`scripts/migrate-toisostring.mjs`, idempotente) applicato su tutto src/. Commit:
 - `0387d6ab` — communications status SSoT (api layer indirect)
 - `3130dba4` — Phase C.1.4b.1 (ai-analysis/assignment/attendance/backup/brokerage)
 - `0096a966` — Phase C.1.4b.2 (src/lib/*)
 - `b3f5ad44` — Phase C.1.4b.3 (firestore converters + version-check + obligations)
-- **pending Batch 1** — Phase C.1.4c (components 48 + subapps 44 + hooks/server/database/utils/config/types 22 + lib misc 3 + core 3 + features 2 + stores 2 = **125 file**)
-- **pending Batch 2** — Phase C.1.4d (services, 93 file)
+- **C.1.4c DONE 2026-04-19** — 4 file dxf-viewer/debug migrati. Runtime violations = 0. Residui 3 file sono tutti commenti/JSDoc (non runtime).
+- **C.1.4d DONE** — services già migrati in batch precedenti (grep conferma 0 runtime violations in src/services).
 
 ### C.2 — `Timestamp.fromDate(new Date())` → `nowTimestamp()` — ✅ DONE (top offenders)
 - NEW `src/lib/firestore-now.ts` (helper canonico, client SDK)

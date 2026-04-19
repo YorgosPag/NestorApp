@@ -3,6 +3,8 @@
 
 import { getErrorMessage } from '@/lib/error-utils';
 import { UI_COLORS } from '../config/color-config';
+import { nowISO } from '@/lib/date-local';
+
 //
 // TEST CATEGORIES (Enterprise Quality Assurance):
 // 1. STORAGE INTEGRITY: IndexedDB + LocalStorage validation
@@ -628,7 +630,7 @@ export async function runEnterpriseSettingsTests(): Promise<SettingsTestReport> 
 
   const report: SettingsTestReport = {
     success,
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     totalTests: results.length,
     passed,
     failed,

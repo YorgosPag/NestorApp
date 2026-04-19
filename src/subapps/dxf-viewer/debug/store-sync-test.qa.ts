@@ -23,6 +23,7 @@ import { UI_COLORS } from '../config/color-config';
 import type { LineSettings, TextSettings, ViewerMode } from '../settings-core/types';
 import type { GripSettings } from '../types/gripSettings';
 import type { EffectiveSettingsGetter } from '../settings/sync/storeSync';
+import { nowISO } from '@/lib/date-local';
 
 interface TestResult {
   category: string;
@@ -839,7 +840,7 @@ export async function runStoreSyncTests(): Promise<StoreSyncTestReport> {
 
   const report: StoreSyncTestReport = {
     success,
-    timestamp: new Date().toISOString(),
+    timestamp: nowISO(),
     totalTests: results.length,
     passed,
     failed,

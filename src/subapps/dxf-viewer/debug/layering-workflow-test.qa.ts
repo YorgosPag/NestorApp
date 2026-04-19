@@ -2,6 +2,7 @@
 // Αντάξιο μεγάλων enterprise συστημάτων
 
 import { UI_COLORS } from '../config/color-config';
+import { nowISO } from '@/lib/date-local';
 
 export interface StepResult {
   step: string;
@@ -582,7 +583,7 @@ export async function runLayeringWorkflowTest(): Promise<WorkflowResult> {
     success: allPassed && layerDisplayed,
     steps: results,
     layerDisplayed,
-    reportTime: new Date().toISOString(),
+    reportTime: nowISO(),
   };
 
   const totalDuration = results.reduce((sum, r) => sum + r.durationMs, 0);
