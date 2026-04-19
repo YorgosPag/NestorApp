@@ -139,7 +139,7 @@ export const GET = withStandardRateLimit(
 
         return NextResponse.json({
           success: true,
-          properties,
+          units: properties,
           count: properties.length
         });
 
