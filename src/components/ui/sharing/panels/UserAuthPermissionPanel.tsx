@@ -55,6 +55,12 @@ export interface UserAuthPermissionPanelProps {
    * `property-share` template. ADR-312 Phase 8.
    */
   showcaseContext?: { propertyId: string };
+  /**
+   * Pre-fills `EmailShareForm`'s personal message field with the note already
+   * typed in the link-creation dialog (ADR-312 Phase 9.5). Unifies the field
+   * across the two dialogs while still allowing a last-minute edit.
+   */
+  initialPersonalMessage?: string;
 }
 
 export function UserAuthPermissionPanel({
@@ -66,6 +72,7 @@ export function UserAuthPermissionPanel({
   onShareError,
   onLoadingChange,
   showcaseContext,
+  initialPersonalMessage,
 }: UserAuthPermissionPanelProps): React.ReactElement {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const notifications = useNotifications();
@@ -135,7 +142,11 @@ export function UserAuthPermissionPanel({
             emailData.recipients.map((recipient) =>
               apiClient.post<ShowcaseEmailResponse>(
                 `/api/properties/${encodeURIComponent(showcaseContext.propertyId)}/showcase/email`,
-                { recipient, shareUrl: emailData.propertyUrl },
+                {
+                  recipient,
+                  shareUrl: emailData.propertyUrl,
+                  personalMessage: emailData.personalMessage,
+                },
               ),
             ),
           );
@@ -275,6 +286,7 @@ export function UserAuthPermissionPanel({
         onEmailShare={handleEmailShare}
         onBack={() => setShowEmailForm(false)}
         loading={loading}
+        initialPersonalMessage={initialPersonalMessage}
       />
     );
   }

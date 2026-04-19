@@ -51,6 +51,12 @@ export interface BuildShowcaseEmailParams {
   linkedSpaceFloorplans?: ShowcaseLinkedSpaceFloorplans;
   /** Public showcase URL (`<baseUrl>/shared/<token>`). Rendered as primary CTA. */
   shareUrl?: string;
+  /**
+   * Personal message typed by the sender (ADR-312 Phase 9.5). When provided
+   * and non-empty, replaces the default `labels.email.introText` in both html
+   * intro and text fallback. Preserves sender line breaks.
+   */
+  personalMessage?: string;
 }
 
 export interface BuiltShowcaseEmail {
@@ -76,13 +82,16 @@ export function buildShowcaseEmail(params: BuildShowcaseEmailParams): BuiltShowc
     propertyFloorFloorplans,
     linkedSpaceFloorplans,
     shareUrl,
+    personalMessage,
   } = params;
   const property = snapshot.property;
   const company = snapshot.company;
 
   const subject = `${labels.email.subjectPrefix} — ${property.name}${property.code ? ` (${property.code})` : ''}`;
 
-  const intro = `<p style="margin:0 0 16px;font-size:14px;color:${BRAND.navyDark};line-height:1.6;">${escapeHtml(labels.email.introText)}</p>`;
+  const introText = personalMessage?.trim() ? personalMessage.trim() : labels.email.introText;
+  const introHtml = escapeHtml(introText).replace(/\n/g, '<br />');
+  const intro = `<p style="margin:0 0 16px;font-size:14px;color:${BRAND.navyDark};line-height:1.6;">${introHtml}</p>`;
   const hero = renderPropertyHero(property, labels);
   const cta = shareUrl ? renderShareCta(shareUrl, labels.email.ctaLabel) : '';
 
@@ -127,7 +136,7 @@ export function buildShowcaseEmail(params: BuildShowcaseEmailParams): BuiltShowc
     enableContactProviderLinks: true,
   });
 
-  const text = buildTextFallback({ subject, property, shareUrl, intro: labels.email.introText });
+  const text = buildTextFallback({ subject, property, shareUrl, intro: introText });
 
   return { subject, html, text };
 }

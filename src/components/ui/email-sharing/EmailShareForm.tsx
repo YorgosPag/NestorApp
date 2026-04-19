@@ -34,6 +34,12 @@ export interface EmailShareFormProps {
   onEmailShare: (data: EmailShareData) => Promise<void> | void;
   onBack?: () => void;
   loading?: boolean;
+  /**
+   * Pre-filled personal message (ADR-312 Phase 9.5). Sourced from the share
+   * token's `note` so the message typed in the link-creation dialog is
+   * unified with the email channel, with last-minute edit still allowed.
+   */
+  initialPersonalMessage?: string;
 }
 
 export const EmailShareForm: React.FC<EmailShareFormProps> = ({
@@ -41,11 +47,14 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
   onEmailShare,
   onBack,
   loading = false,
+  initialPersonalMessage,
 }) => {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
   const [recipients, setRecipients] = useState<string[]>([]);
-  const [personalMessage, setPersonalMessage] = useState('');
+  const [personalMessage, setPersonalMessage] = useState(
+    (initialPersonalMessage ?? '').slice(0, MAX_MESSAGE_LENGTH),
+  );
   const [templateType, setTemplateType] = useState<EmailTemplateType>('residential');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>(

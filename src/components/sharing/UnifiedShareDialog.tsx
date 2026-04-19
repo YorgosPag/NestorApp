@@ -286,6 +286,7 @@ export function UnifiedShareDialog({
             showcaseContext={
               entityType === 'property_showcase' ? { propertyId: entityId } : undefined
             }
+            initialPersonalMessage={draft.note.trim() || undefined}
           />
 
           {entityType === 'property_showcase' && (

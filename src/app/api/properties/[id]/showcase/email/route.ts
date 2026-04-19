@@ -45,6 +45,7 @@ const BodySchema = z.object({
   recipient: z.string().email('recipient must be a valid email address'),
   shareUrl: z.string().url().optional(),
   locale: z.enum(['el', 'en']).optional(),
+  personalMessage: z.string().max(500).optional(),
 });
 
 type ShowcaseEmailResponse = ApiSuccessResponse<{
@@ -114,6 +115,7 @@ async function handle(
         ? linkedSpaceFloorplans
         : undefined,
     shareUrl: body.shareUrl,
+    personalMessage: body.personalMessage,
   });
 
   const result = await sendReplyViaMailgun({
