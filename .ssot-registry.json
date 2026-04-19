@@ -1236,6 +1236,68 @@
         "src/config/storage-tabs-config.ts"
       ],
       "tier": 6
+    },
+
+    "_comment_adr314_phaseD3a": "=== ADR-314 PHASE D.3a (2026-04-19): registry gap — utility SSoT modules (array-utils/type-guards/greek-text/json-utils/coords) ===",
+
+    "array-utils": {
+      "ssotFile": "src/lib/array-utils.ts",
+      "description": "Generic array utilities — chunkArray<T>(array, size). Canonical SSoT for array partitioning. Re-exports in report-query-transforms.ts and firestore/utils.ts use { X } form (not function declarations) — not caught by pattern. ADR-314 Phase D.3a.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+chunkArray\\b"
+      ],
+      "allowlist": [
+        "src/lib/array-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "type-guards": {
+      "ssotFile": "src/lib/type-guards.ts",
+      "description": "TypeScript runtime type predicates — isRecord, isNonEmptyString, isNonEmptyTrimmedString, isNonEmptyArray. Canonical SSoT for typed narrowing utilities. ADR-314 Phase D.3a.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(isRecord|isNonEmptyString|isNonEmptyTrimmedString|isNonEmptyArray)\\b"
+      ],
+      "allowlist": [
+        "src/lib/type-guards.ts"
+      ],
+      "tier": 3
+    },
+
+    "greek-text": {
+      "ssotFile": "src/utils/greek-text.ts",
+      "description": "Greek text processing utilities — stripAccents, normalizeGreekText, toGreekTitleCase, normalizeForSearch. Canonical SSoT for Greek locale text ops. ai-pipeline/greek-text-utils.ts converted to re-export form (Phase C.5.46). normalizeForSearch excluded from patterns (also in file-display-name-utils, different domain). ADR-314 Phase D.3a.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(stripAccents|normalizeGreekText|toGreekTitleCase)\\b"
+      ],
+      "allowlist": [
+        "src/utils/greek-text.ts"
+      ],
+      "tier": 3
+    },
+
+    "json-utils": {
+      "ssotFile": "src/lib/json-utils.ts",
+      "description": "Safe JSON parsing utilities — safeJsonParse<T>(input, fallback), safeJsonParseWith<T>(input, schema). Canonical SSoT for typed JSON deserialization with fallbacks. ADR-314 Phase D.3a.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(safeJsonParse|safeJsonParseWith)\\b"
+      ],
+      "allowlist": [
+        "src/lib/json-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "coords": {
+      "ssotFile": "src/lib/coords.ts",
+      "description": "SVG coordinate utilities for DXF viewer — getZoomFrom, getPanFrom, toSvgPointFromMouse. Canonical SSoT for SVG viewport coordinate transforms (zoom/pan/mouse-to-SVG-point). Distinct from hooks/utils/coords.ts which exports getZoomFromEl/toSvgPoint (different signatures). ADR-314 Phase D.3a.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(getZoomFrom|getPanFrom|toSvgPointFromMouse)\\b"
+      ],
+      "allowlist": [
+        "src/lib/coords.ts"
+      ],
+      "tier": 3
     }
   }
 }

@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.1b DONE 2026-04-19, unprotected 76→73)
+**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3a DONE 2026-04-19, unprotected 73→68)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-D.1b):** **16 duplicateExports / 5 antiPatterns / 73 unprotected** (down from 16/5/76 post-BUG2fix)
+**Current CHECK 3.18 baseline (2026-04-19 post-D.3a):** **16 duplicateExports / 5 antiPatterns / 68 unprotected** (down from 16/5/73 post-D.1b)
 
 ---
 
@@ -137,6 +137,7 @@ After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase D.3a DONE.** 5 utility SSoT modules Tier 3: `array-utils` (chunkArray), `type-guards` (isRecord/isNonEmptyString/isNonEmptyTrimmedString/isNonEmptyArray), `greek-text` (stripAccents/normalizeGreekText/toGreekTitleCase), `json-utils` (safeJsonParse/safeJsonParseWith), `coords` (getZoomFrom/getPanFrom/toSvgPointFromMouse). unprotected **73→68 (-5)**, protected 63→68 (+5). `ssot:audit` 0 new viol. |
 | 2026-04-19 | **Phase D.1b DONE.** D.1 residual: `validation` Tier 3, `share-utils` Tier 3 (allowlist social-platform-system), `smart-navigation-factory` Tier 6. unprotected **76→73 (-3)**, protected 60→63 (+3). D.1 fully complete (9/9). |
 | 2026-04-19 | **Scanner BUG 2 fix DONE.** Removed redundant `src/lib` double-scan from `scripts/ssot-discover.sh`. duplicateExports **21→16 (-5)**. Remaining 16 = documented false positives + blocked `convertMarkdownToHtml`. |
 | 2026-04-19 | **Phase D.2c DONE.** `unified-tabs-factory` Tier 6 (root factory per 8 tabs-config). unprotected **77→76 (-1)**, protected 59→60 (+1). |
