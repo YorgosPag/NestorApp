@@ -25,6 +25,8 @@ import type { FileRecord } from '@/types/file-record';
 export const META_PHOTO_PURPOSES: ReadonlySet<string> = new Set([
   'photo',
   'building-photo',
+  'parking-photo',
+  'storage-photo',
 ]);
 
 /**
