@@ -110,18 +110,16 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
 
       // Set new debounced save
       saveTimeoutRef.current = setTimeout(async () => {
-        // 🏢 ADR-240: Skip auto-save when wizard pipeline is active.
-        // The wizard handles saving via useFloorplanUpload + /api/floorplans/process.
-        // Running auto-save here would create a redundant scene file in Storage (cadFiles / dxf-scenes/).
-        if (injectedSaveContextRef.current?.purpose) {
-          // 🏢 ENTERPRISE: Even though auto-save is skipped, still notify LevelsSystem
-          // about the file association so sceneFileId gets persisted on the level.
-          // Without this, wizard-imported DXFs would NOT auto-load after restart.
-          const wizardFileId = injectedFileRecordIdRef.current
-            ?? fileIdCacheRef.current.get(fileName);
-          if (wizardFileId) {
-            onSceneSavedRef.current?.(wizardFileId, fileName);
-          }
+        // 🏢 ADR-240 / ADR-309 Phase 6: Skip auto-save when wizard pipeline is active.
+        // Detect wizard mode by the presence of an injected FileRecord ID — more
+        // reliable than checking `purpose` which can be empty string → coerced to
+        // undefined (LevelPanel: `purpose: meta.purpose || undefined`).
+        const wizardFileId = injectedFileRecordIdRef.current
+          ?? fileIdCacheRef.current.get(fileName);
+        if (wizardFileId) {
+          // Wizard already handled the file upload. Just notify LevelsSystem so
+          // sceneFileId gets persisted on the level for auto-reload after refresh.
+          onSceneSavedRef.current?.(wizardFileId, fileName);
           setSaveStatus('idle');
           return;
         }

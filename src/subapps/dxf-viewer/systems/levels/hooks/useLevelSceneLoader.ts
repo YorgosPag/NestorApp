@@ -1,8 +1,6 @@
 'use client';
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../../../lib/firebase';
 import { DxfFirestoreService } from '../../../services/dxf-firestore.service';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
 import type { Level } from '../config';
@@ -139,26 +137,31 @@ export function useLevelSceneLoader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLevelId, levels]); // levels dependency needed to detect sceneFileId changes from onSnapshot
 
-  // 🏢 ENTERPRISE: Persist level→DXF association in Firestore (CAD-industry standard)
-  // Called after successful auto-save to link the scene file to its level
+  // 🏢 ENTERPRISE: Persist level→DXF association via API route (Admin SDK).
+  // Firestore rules do NOT allow client-side updates on dxf_viewer_levels.
+  // Uses /api/dxf-levels PATCH — same route as updateLevelContext.
   const linkSceneToLevel = useCallback(
     async (levelId: string, fileId: string, fileName: string): Promise<void> => {
       if (!enableFirestore) return;
 
-      // Check if already linked (idempotent — no redundant writes)
+      // Idempotent guard — skip if already linked
       const level = levels.find(l => l.id === levelId);
       if (level?.sceneFileId === fileId) return;
 
       try {
-        await updateDoc(doc(db, firestoreCollection, levelId), {
-          sceneFileId: fileId,
-          sceneFileName: fileName,
+        const res = await fetch('/api/dxf-levels', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ levelId, sceneFileId: fileId, sceneFileName: fileName }),
         });
+        if (!res.ok) {
+          console.error('[LevelsSystem] Failed to link scene to level:', res.status, res.statusText);
+        }
       } catch (err) {
         console.error('[LevelsSystem] Failed to link scene to level:', err);
       }
     },
-    [enableFirestore, firestoreCollection, levels]
+    [enableFirestore, levels]
   );
 
   // 🏢 ENTERPRISE: Wire onSceneSaved callback — auto-save notifies us when scene is persisted
