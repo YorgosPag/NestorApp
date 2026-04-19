@@ -229,6 +229,14 @@ Dedicated `jest.config.firestore-rules.js` (node env, isolated from main suite).
 - **CHECK 3.18** (this one) → blocks *new duplicate patterns* + anti-patterns not yet registered. Total counts granularity, cross-module.
 - Together: CHECK 3.7 keeps known SSoT modules clean; CHECK 3.18 prevents new fragmentation from escaping undetected.
 
+### Test suite (Google presubmit-grade, ADR-294 changelog 2026-04-19)
+- **Location**: `scripts/__tests__/check-ssot-discover-ratchet.test.js`
+- **Fixtures**: `scripts/__tests__/fixtures/` — committed scanner output snapshot (`ssot-discover-output.txt`), minimal + ANSI variants, baseline JSON variants (valid / corrupt / missing-field / non-numeric / null-field), fake scanner shell scripts (`fake-scanner-ok.sh`, `fake-scanner-fail.sh`).
+- **57 tests in 9 groups**: `stripAnsi`, `parseSummary`, `loadBaseline`, `writeBaseline`, `compare`, `parseArgs`, env-driven resolvers, CLI integration (`spawnSync`), in-process coverage of `runScanner`/`runFull`/`runSmoke`/`printHelp`/`main` via `process.exit` stub, and a regression snapshot test that fails loudly if the bash scanner Summary format drifts.
+- **Coverage** on `scripts/check-ssot-discover-ratchet.js`: **96.82% statements / 92.30% branches / 100% functions / 96.69% lines** — exceeds the 95%/90% Google presubmit target. Runtime ~3.5s, no real scanner spawn (~4 min on Windows).
+- **Enabled by**: dependency-injected `filePath` arg on I/O fns, `SSOT_DISCOVER_BASELINE_FILE` + `SSOT_DISCOVER_SCANNER` env overrides, and a `require.main === module` guard so Jest can import internals.
+- **Run**: `npm run test:ssot-discover` (or `npx jest scripts/__tests__/check-ssot-discover-ratchet.test.js`).
+
 ---
 
 ## Boy Scout Rule (applies to all RATCHET checks)

@@ -233,7 +233,7 @@ When you touch a legacy file → clean up as many violations as you can. **ZERO 
 
 ## SOS. SOS. N.12 — SSoT RATCHET ENFORCEMENT (ADR-294)
 - **Pre-commit hook CHECK 3.7** blocks new SSoT violations
-- **Pre-commit hook CHECK 3.18 (ADR-314)** blocks new structural duplicates / anti-patterns / registry gaps. Layer 1 = pre-commit smoke (~0.2s), Layer 2 = `.github/workflows/ssot-discover.yml` full scan on every PR. Baseline: `.ssot-discover-baseline.json` (46 duplicates / 5 anti-patterns / 91 unprotected, 2026-04-19). Local full scan: `SSOT_DISCOVER_FULL=1 git commit …`
+- **Pre-commit hook CHECK 3.18 (ADR-314)** blocks new structural duplicates / anti-patterns / registry gaps. Layer 1 = pre-commit smoke (~0.2s), Layer 2 = `.github/workflows/ssot-discover.yml` full scan on every PR. Baseline: `.ssot-discover-baseline.json` (46 duplicates / 5 anti-patterns / 91 unprotected, 2026-04-19). Local full scan: `SSOT_DISCOVER_FULL=1 git commit …`. **Test suite**: `scripts/__tests__/check-ssot-discover-ratchet.test.js` (57 tests / 9 groups, coverage 96.82% stmts / 92.30% branches / 100% fns, runtime ~3.5s). Run: `npm run test:ssot-discover`.
 - **Registry**: `.ssot-registry.json` — 62+ modules in 7 tiers
 - **Baseline**: `.ssot-violations-baseline.json` — 7 files, 16 violations (2026-04-11)
 - **Entity audit trail**: Module `entity-audit-trail` (Tier 3, ADR-195) forbids direct writes to `entity_audit_trail`, inline queries, and re-implementations of the `useEntityAudit` hook. Canonical: `src/services/entity-audit.service.ts` + `src/hooks/useEntityAudit.ts`
@@ -261,6 +261,46 @@ When you touch a legacy file → clean up as many violations as you can. **ZERO 
 - New ratchet work starts → set `STATUS: ACTIVE`
 - NEVER mark completed without explicit Giorgio order or actual merge
 - Baselines change >10% → update §2 of ADR-299
+
+## 🚨🚨🚨 SOS. SOS. N.14 — MODEL SUGGESTION (cost optimization)
+
+**Giorgio non sa quale modello usare. L'agente DEVE consigliare PRIMA di eseguire task non-banali.**
+
+### Regola main session (manual switch)
+
+**PRIMA** di iniziare ogni task, valuta complessità e proponi:
+
+```
+🎯 Modello consigliato: [Haiku 4.5 | Sonnet 4.6 | Opus 4.7]
+Motivo: [1 riga]
+Switch: /model [haiku|sonnet|opus]
+```
+
+**Criteri:**
+| Modello | Quando usare | Esempi |
+|---------|--------------|--------|
+| **Haiku 4.5** | Lookup, lettura singola, domanda diretta, 1 grep | "che fa questa funzione?", "trova file X" |
+| **Sonnet 4.6** | 1-5 file, bugfix mirato, refactor isolato, feature singola | fix typo, aggiungi campo, piccolo componente |
+| **Opus 4.7** | 5+ file, 2+ domini, architettura, ADR planning, debug complesso, orchestrator | refactor cross-cutting, nuovo subsystem, security audit |
+
+**SKIP suggerimento se:**
+- Task evidente da 1 read/1 grep (es. "leggi file X")
+- Giorgio ha già scelto modello in messaggio precedente nella stessa sessione
+- Continuazione diretta task in corso
+
+### Regola subagenti (automatic)
+
+Quando lancio `Agent` tool, **DEVO** passare `model` param scegliendo il **minimo necessario**:
+- Subagente di esplorazione/lookup → `model: "haiku"`
+- Subagente di implementazione mirata → `model: "sonnet"`
+- Subagente di architettura/cross-cutting → `model: "opus"`
+
+**MAI** lasciare default Opus su subagenti se Haiku/Sonnet basta.
+
+### WHY
+- Opus 4.7 = ~5x costo Sonnet, ~25x Haiku
+- Giorgio paga ogni token. Modello giusto = -70% costo medio
+- Limite tecnico: main session non auto-switch → suggerimento manuale è il workaround
 
 ---
 

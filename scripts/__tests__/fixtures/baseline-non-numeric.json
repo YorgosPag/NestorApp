@@ -1,0 +1,8 @@
+{
+  "description": "duplicateExports as string — invalid.",
+  "duplicateExports": "21",
+  "antiPatterns": 5,
+  "unprotected": 91,
+  "centralizedFiles": 136,
+  "protected": 45
+}

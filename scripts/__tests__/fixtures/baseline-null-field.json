@@ -1,0 +1,8 @@
+{
+  "description": "antiPatterns null — invalid.",
+  "duplicateExports": 21,
+  "antiPatterns": null,
+  "unprotected": 91,
+  "centralizedFiles": 136,
+  "protected": 45
+}

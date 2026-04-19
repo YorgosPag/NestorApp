@@ -1,0 +1,263 @@
+
+[1m[0;36m═══════════════════════════════════════════════════════════════[0m
+[1m[0;36m  🔍 SSoT Discovery Scanner[0m
+[1m[0;36m═══════════════════════════════════════════════════════════════[0m
+
+[1mPhase 1: Extracting exports from centralized files...[0m
+  Found [1m1077[0m exports in [1m136[0m centralized files
+
+[1mPhase 2: Scanning for duplicate implementations...[0m
+  [2mBuilding declaration index...[0m
+  [2mCross-referencing...[0m
+  Found [1m21[0m duplicated exports
+
+[1mPhase 3: Scanning for scattered anti-patterns...[0m
+  Found [1m5[0m scattered anti-patterns
+
+[1mPhase 4: Registry gap analysis...[0m
+  Registry: [0;32m45 protected[0m, [1;33m91 unprotected[0m
+
+[1m[0;36m═══════════════════════════════════════════════════════════════[0m
+[1m[0;36m  📊 SSoT Discovery Report[0m
+[1m[0;36m═══════════════════════════════════════════════════════════════[0m
+
+[0;31m[1m🔴 DUPLICATED EXPORTS (21 found)[0m
+[2m   Functions/constants that exist in SSoT AND are re-declared elsewhere[0m
+
+  [0;31m[1mflattenForTracking[0m
+    SSoT: [0;36msrc/config/audit-tracked-fields.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/lib/audit/audit-diff.ts:91:export function flattenForTracking([0m
+
+  [0;31m[1mgetAllCompanyFields[0m
+    SSoT: [0;36msrc/config/company-config.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/config/company-gemi/utils/field-utilities.ts:22:export function getAllCompanyFields(): FieldConfig[] {[0m
+
+  [0;31m[1mcreateFieldsMap[0m
+    SSoT: [0;36msrc/config/company-gemi-config.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/config/company-gemi/utils/field-utilities.ts:46:export function createFieldsMap(): Map<string, FieldConfig> {[0m
+
+  [0;31m[1misFieldRequired[0m
+    SSoT: [0;36msrc/config/company-gemi-config.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/config/company-gemi/utils/field-utilities.ts:58:export function isFieldRequired(fieldId: string): boolean {[0m
+
+  [0;31m[1mENTITY_TYPES[0m
+    SSoT: [0;36msrc/config/domain-constants.ts[0m
+    Re-declared in 2 file(s):
+    [2m  src/core/configuration/enterprise-messages-system.ts:573:export const ENTITY_TYPES = {[0m
+    [2m  src/subapps/dxf-viewer/settings-core/types/state.ts:57:export const ENTITY_TYPES = ['line', 'text', 'grip'] as const;[0m
+
+  [0;31m[1misDevBypassAllowed[0m
+    SSoT: [0;36msrc/config/environment-security-config.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/lib/auth/security-policy.ts:166:export function isDevBypassAllowed(): boolean {[0m
+
+  [0;31m[1mDOCUMENT_TYPE_OPTIONS[0m
+    SSoT: [0;36msrc/config/individual-config.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/config/company-gemi/options/index.ts:63:export const DOCUMENT_TYPE_OPTIONS = getDocumentTypeOptions();[0m
+
+  [0;31m[1mgetTypeIcon[0m
+    SSoT: [0;36msrc/utils/contactFormUtils.ts[0m
+    Re-declared in 3 file(s):
+    [2m  src/components/building-management/StorageTab/utils.ts:10:export const getTypeIcon = (type: StorageType) => {[0m
+    [2m  src/components/building-management/tabs/TimelineTabContent/utils.ts:72:export const getTypeIcon = (type: string) => {[0m
+    [2m  src/components/communications/utils/formatters.ts:5:export const getTypeIcon = (type: string) => ({[0m
+
+  [0;31m[1mgetTypeLabel[0m
+    SSoT: [0;36msrc/utils/contactFormUtils.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/components/building-management/StorageTab/utils.ts:16:export const getTypeLabel = (type: StorageType, t?: TranslateFunction) => {[0m
+
+  [0;31m[1mnormalizeForSearch[0m
+    SSoT: [0;36msrc/utils/greek-text.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/services/upload/utils/file-display-name-utils.ts:63:export function normalizeForSearch(str: string): string {[0m
+
+  [0;31m[1mperformanceMonitor[0m
+    SSoT: [0;36msrc/utils/performanceMonitor.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/subapps/geo-canvas/performance/monitoring/PerformanceMonitor.ts:277:export const performanceMonitor = PerformanceMonitor.getInstance();[0m
+
+  [0;31m[1mgetStatusColor[0m
+    SSoT: [0;36msrc/lib/design-system.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/lib/status-helpers.ts:266:export function getStatusColor<D extends StatusDomain>([0m
+
+  [0;31m[1mresolveProjectId[0m
+    SSoT: [0;36msrc/lib/firebaseAdmin-credentials.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/components/sales/dialogs/sales-dialog-utils.ts:27:export function resolveProjectId(unit: Property): string {[0m
+
+  [0;31m[1mconvertMarkdownToHtml[0m
+    SSoT: [0;36msrc/lib/obligations-utils.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/lib/obligations/utils.ts:90:export const convertMarkdownToHtml = (markdown: string): string => {[0m
+
+  [0;31m[1mgetPropertyStatusConfig[0m
+    SSoT: [0;36msrc/lib/property-utils.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/features/property-hover/constants.ts:53:export function getPropertyStatusConfig() {[0m
+
+  [0;31m[1mgetStatusColor[0m
+    SSoT: [0;36msrc/lib/status-helpers.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/lib/design-system.ts:11:export const getStatusColor = (status: string, variant: 'bg' | 'text' | 'border' = 'text') => {[0m
+
+  [0;31m[1mgetStatusColor[0m
+    SSoT: [0;36msrc/lib/design-system.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/lib/status-helpers.ts:266:export function getStatusColor<D extends StatusDomain>([0m
+
+  [0;31m[1mresolveProjectId[0m
+    SSoT: [0;36msrc/lib/firebaseAdmin-credentials.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/components/sales/dialogs/sales-dialog-utils.ts:27:export function resolveProjectId(unit: Property): string {[0m
+
+  [0;31m[1mconvertMarkdownToHtml[0m
+    SSoT: [0;36msrc/lib/obligations-utils.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/lib/obligations/utils.ts:90:export const convertMarkdownToHtml = (markdown: string): string => {[0m
+
+  [0;31m[1mgetPropertyStatusConfig[0m
+    SSoT: [0;36msrc/lib/property-utils.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/features/property-hover/constants.ts:53:export function getPropertyStatusConfig() {[0m
+
+  [0;31m[1mgetStatusColor[0m
+    SSoT: [0;36msrc/lib/status-helpers.ts[0m
+    Re-declared in 1 file(s):
+    [2m  src/lib/design-system.ts:11:export const getStatusColor = (status: string, variant: 'bg' | 'text' | 'border' = 'text') => {[0m
+
+[1;33m[1m🟡 SCATTERED ANTI-PATTERNS (5 found)[0m
+[2m   Code patterns that should use centralized modules[0m
+
+  [1;33m[1mcrypto.randomUUID()[0m
+    In 1 files
+    Use: [0;36msrc/services/enterprise-id.service.ts[0m
+    [2m  2x  src/services/enterprise-id.service.ts[0m
+
+  [1;33m[1mnew Date().toISOString()[0m
+    In 8 files
+    Use: [0;36msrc/lib/date-local.ts[0m
+    [2m  2x  src/lib/date-local.ts[0m
+    [2m  1x  src/subapps/geo-canvas/system/GeoAlertSystem.ts[0m
+    [2m  1x  src/subapps/geo-canvas/services/geo-transform/ControlPointManager.ts[0m
+    [2m  1x  src/subapps/dxf-viewer/debug/store-sync-test.qa.ts[0m
+    [2m  1x  src/subapps/dxf-viewer/debug/settings-enterprise-test.qa.ts[0m
+
+  [1;33m[1mTimestamp.fromDate scattered[0m
+    In 20 files
+    Use: [0;36msrc/lib/date-local.ts[0m
+    [2m  14x  src/app/api/communications/webhooks/telegram/crm/store.ts[0m
+    [2m  6x  src/server/comms/email-adapter.ts[0m
+    [2m  5x  src/services/user-notification-settings/UserNotificationSettingsService.ts[0m
+    [2m  4x  src/server/comms/orchestrator.ts[0m
+    [2m  4x  src/app/api/communications/webhooks/whatsapp/crm-adapter.ts[0m
+
+  [1;33m[1mhardcoded entityType literals[0m
+    In 26 files
+    Use: [0;36msrc/config/domain-constants.ts → ENTITY_TYPES[0m
+    [2m  2x  src/services/upload/utils/storage-path.ts[0m
+    [2m  2x  src/services/entity-code.service.ts[0m
+    [2m  2x  src/core/headers/EnterpriseHeaderActions.tsx[0m
+    [2m  2x  src/components/shared/EntityCodeField.tsx[0m
+    [2m  2x  src/components/generic/photo-system/hooks/usePhotosTabState.ts[0m
+
+  [1;33m[1mmanual sort by locale[0m
+    In 37 files
+    Use: [0;36msrc/lib/intl-formatting.ts → sortByLocale()[0m
+    [2m  2x  src/components/ui/property-status/PropertyStatusSelector.tsx[0m
+    [2m  2x  src/components/space-management/StoragesPage/StoragesList/StoragesList.tsx[0m
+    [2m  2x  src/components/space-management/ParkingPage/ParkingsList/ParkingsList.tsx[0m
+    [2m  2x  src/components/shared/files/inbox-view-helpers.ts[0m
+    [2m  2x  src/components/properties/PropertiesList.tsx[0m
+
+[1;33m[1m🟡 REGISTRY GAPS — Centralized files WITHOUT enforcement (91)[0m
+[2m   These files are SSoT but not in .ssot-registry.json[0m
+
+   32 exports  src/lib/obligations-utils.ts
+   30 exports  src/lib/message-utils.ts
+   26 exports  src/config/properties-tabs-config.ts
+   24 exports  src/lib/rtl-utils.ts
+   18 exports  src/lib/hedging-engine.ts
+   16 exports  src/lib/pagination.ts
+   16 exports  src/lib/npv-engine.ts
+   16 exports  src/lib/firebaseAdmin.ts
+   13 exports  src/config/period-selector-config.ts
+   13 exports  src/config/crm-dashboard-tabs-config.ts
+   13 exports  src/config/building-tabs-config.ts
+   12 exports  src/lib/share-utils.ts
+   11 exports  src/utils/validation.ts
+   10 exports  src/utils/accessibility.ts
+   10 exports  src/lib/firebaseAdmin-credentials.ts
+   10 exports  src/config/error-reporting.ts
+   10 exports  src/config/contact-tabs-config.ts
+    9 exports  src/utils/enterprise-icon-migration.ts
+    9 exports  src/config/unified-tabs-factory.ts
+    9 exports  src/config/project-tabs-config.ts
+  [2m... and 71 more[0m
+
+[0;32m[1m🟢 PROTECTED — In registry with enforcement (45)[0m
+
+  ✅ src/components/admin/shared/intent-badge-utils.ts (3 exports)
+  ✅ src/config/address-config.ts (2 exports)
+  ✅ src/config/admin-tool-definitions.ts (4 exports)
+  ✅ src/config/ai-analysis-config.ts (8 exports)
+  ✅ src/config/ai-pipeline-config.ts (7 exports)
+  ✅ src/config/ai-role-access-matrix.ts (5 exports)
+  ✅ src/config/audit-tracked-fields.ts (8 exports)
+  ✅ src/config/auto-save-config.ts (1 exports)
+  ✅ src/config/boq-categories.ts (4 exports)
+  ✅ src/config/business-hours.ts (4 exports)
+  ✅ src/config/company-config.ts (4 exports)
+  ✅ src/config/construction-templates.ts (7 exports)
+  ✅ src/config/deletion-registry.ts (5 exports)
+  ✅ src/config/domain-constants.ts (42 exports)
+  ✅ src/config/entity-code-config.ts (12 exports)
+  ✅ src/config/environment-security-config.ts (10 exports)
+  ✅ src/config/feature-flags.ts (2 exports)
+  ✅ src/config/file-upload-config.ts (10 exports)
+  ✅ src/config/firestore-collections.ts (14 exports)
+  ✅ src/config/firestore-field-constants.ts (1 exports)
+  ✅ src/config/firestore-schema-map.ts (4 exports)
+  ✅ src/config/gcs-buckets.ts (4 exports)
+  ✅ src/config/geographic-config.ts (3 exports)
+  ✅ src/config/individual-config.ts (10 exports)
+  ✅ src/config/legal-procedures-kb.ts (4 exports)
+  ✅ src/config/media-constants.ts (2 exports)
+  ✅ src/config/notification-events.ts (14 exports)
+  ✅ src/config/payment-plan-templates.ts (3 exports)
+  ✅ src/config/persona-config.ts (10 exports)
+  ✅ src/config/photo-compression-config.ts (9 exports)
+  ✅ src/config/procurement-units.ts (3 exports)
+  ✅ src/config/project-mutation-impact.ts (5 exports)
+  ✅ src/config/role-mappings-config.ts (2 exports)
+  ✅ src/config/search-index-config.ts (10 exports)
+  ✅ src/config/study-groups-config.ts (5 exports)
+  ✅ src/config/tenant.ts (3 exports)
+  ✅ src/config/versioning-config.ts (5 exports)
+  ✅ src/lib/cron-auth.ts (2 exports)
+  ✅ src/lib/date-local.ts (16 exports)
+  ✅ src/lib/design-system.ts (28 exports)
+  ✅ src/lib/intl-domain.ts (28 exports)
+  ✅ src/lib/intl-formatting.ts (26 exports)
+  ✅ src/lib/status-helpers.ts (6 exports)
+  ✅ src/services/enterprise-id.service.ts (2 exports)
+  ✅ src/services/enterprise-id-convenience.ts (129 exports)
+
+[1m[0;36m═══════════════════════════════════════════════════════════════[0m
+  [1mSummary:[0m
+    Centralized files:  136
+    Protected:          [0;32m45[0m
+    Unprotected:        [1;33m91[0m
+    Duplicate exports:  [0;31m21[0m
+    Anti-patterns:      [1;33m5[0m
+
+  [0;36mNext: Add high-value modules to .ssot-registry.json[0m
+  [0;36mThen: npm run ssot:baseline[0m
+[1m[0;36m═══════════════════════════════════════════════════════════════[0m
+

@@ -1,0 +1,7 @@
+{
+  "description": "Missing duplicateExports field.",
+  "antiPatterns": 5,
+  "unprotected": 91,
+  "centralizedFiles": 136,
+  "protected": 45
+}

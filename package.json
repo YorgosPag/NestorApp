@@ -52,6 +52,7 @@
     "ssot:discover": "bash scripts/ssot-discover.sh",
     "ssot:discover:baseline": "node scripts/check-ssot-discover-ratchet.js --write-baseline",
     "ssot:discover:check": "node scripts/check-ssot-discover-ratchet.js --full",
+    "test:ssot-discover": "jest scripts/__tests__/check-ssot-discover-ratchet.test.js --verbose",
     "validate:all": "npm run lint:strict && bash scripts/validate-project-rules.sh",
     "strict-mode": "node scripts/simple-strict-check.js",
     "clear-cache": "node scripts/clear-cache.js",

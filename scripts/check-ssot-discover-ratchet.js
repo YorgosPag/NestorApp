@@ -50,10 +50,25 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
-const BASELINE_FILE = path.join(PROJECT_ROOT, '.ssot-discover-baseline.json');
-const SCANNER = path.join(PROJECT_ROOT, 'scripts', 'ssot-discover.sh');
+const DEFAULT_BASELINE_FILE = path.join(PROJECT_ROOT, '.ssot-discover-baseline.json');
+const DEFAULT_SCANNER = path.join(PROJECT_ROOT, 'scripts', 'ssot-discover.sh');
 
 const TRACKED_METRICS = ['duplicateExports', 'antiPatterns', 'unprotected'];
+
+// Env overrides allow the Jest suite to redirect both baseline file and scanner
+// to temp fixtures without monkey-patching fs/spawnSync. Read each call so that
+// tests spawning child processes pick up per-test values.
+function getBaselineFile() {
+  return process.env.SSOT_DISCOVER_BASELINE_FILE
+    ? path.resolve(process.env.SSOT_DISCOVER_BASELINE_FILE)
+    : DEFAULT_BASELINE_FILE;
+}
+
+function getScannerPath() {
+  return process.env.SSOT_DISCOVER_SCANNER
+    ? path.resolve(process.env.SSOT_DISCOVER_SCANNER)
+    : DEFAULT_SCANNER;
+}
 
 function parseArgs(argv) {
   const out = { full: false, writeBaseline: false, help: false };
@@ -68,6 +83,8 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
+  const baselineFile = getBaselineFile();
+  const scanner = getScannerPath();
   console.log(`CHECK 3.18 — SSoT Discover Ratchet
 
 Usage:
@@ -76,17 +93,18 @@ Usage:
   node scripts/check-ssot-discover-ratchet.js --write-baseline
   SSOT_DISCOVER_FULL=1 node scripts/check-ssot-discover-ratchet.js
 
-Baseline file: ${path.relative(PROJECT_ROOT, BASELINE_FILE)}
-Scanner:       ${path.relative(PROJECT_ROOT, SCANNER)}
+Baseline file: ${path.relative(PROJECT_ROOT, baselineFile)}
+Scanner:       ${path.relative(PROJECT_ROOT, scanner)}
 `);
 }
 
 function runScanner() {
-  if (!fs.existsSync(SCANNER)) {
-    console.error(`ERROR: scanner missing at ${SCANNER}`);
+  const scanner = getScannerPath();
+  if (!fs.existsSync(scanner)) {
+    console.error(`ERROR: scanner missing at ${scanner}`);
     process.exit(1);
   }
-  const result = spawnSync('bash', [SCANNER], {
+  const result = spawnSync('bash', [scanner], {
     cwd: PROJECT_ROOT,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
@@ -125,12 +143,12 @@ function parseSummary(output) {
   };
 }
 
-function loadBaseline() {
-  if (!fs.existsSync(BASELINE_FILE)) {
+function loadBaseline(filePath = getBaselineFile()) {
+  if (!fs.existsSync(filePath)) {
     return null;
   }
   try {
-    const raw = fs.readFileSync(BASELINE_FILE, 'utf8');
+    const raw = fs.readFileSync(filePath, 'utf8');
     const parsed = JSON.parse(raw);
     for (const m of TRACKED_METRICS) {
       if (typeof parsed[m] !== 'number') {
@@ -143,7 +161,7 @@ function loadBaseline() {
   }
 }
 
-function writeBaseline(counts) {
+function writeBaseline(counts, filePath = getBaselineFile()) {
   const payload = {
     description:
       'CHECK 3.18 — SSoT Discover Ratchet baseline (ADR-314). Tracks totals for duplicateExports, antiPatterns, unprotected. Ratchet down only: a raise blocks the commit/PR. Refresh via `npm run ssot:discover:baseline` after legitimate cleanup.',
@@ -157,8 +175,8 @@ function writeBaseline(counts) {
     duplicateExports: counts.duplicateExports,
     antiPatterns: counts.antiPatterns,
   };
-  fs.writeFileSync(BASELINE_FILE, JSON.stringify(payload, null, 2) + '\n');
-  console.log(`✅ Wrote baseline: ${path.relative(PROJECT_ROOT, BASELINE_FILE)}`);
+  fs.writeFileSync(filePath, JSON.stringify(payload, null, 2) + '\n');
+  console.log(`✅ Wrote baseline: ${path.relative(PROJECT_ROOT, filePath)}`);
   console.log(`   duplicateExports: ${counts.duplicateExports}`);
   console.log(`   antiPatterns:     ${counts.antiPatterns}`);
   console.log(`   unprotected:      ${counts.unprotected}`);
@@ -176,9 +194,10 @@ function compare(baseline, current) {
 }
 
 function runFull() {
-  const baseline = loadBaseline();
+  const baselineFile = getBaselineFile();
+  const baseline = loadBaseline(baselineFile);
   if (!baseline) {
-    console.error(`❌ CHECK 3.18 — baseline missing: ${path.relative(PROJECT_ROOT, BASELINE_FILE)}`);
+    console.error(`❌ CHECK 3.18 — baseline missing: ${path.relative(PROJECT_ROOT, baselineFile)}`);
     console.error(`   Run: npm run ssot:discover:baseline`);
     process.exit(1);
   }
@@ -217,9 +236,10 @@ function runFull() {
 }
 
 function runSmoke() {
-  const baseline = loadBaseline();
+  const baselineFile = getBaselineFile();
+  const baseline = loadBaseline(baselineFile);
   if (!baseline) {
-    console.error(`❌ CHECK 3.18 — baseline missing: ${path.relative(PROJECT_ROOT, BASELINE_FILE)}`);
+    console.error(`❌ CHECK 3.18 — baseline missing: ${path.relative(PROJECT_ROOT, baselineFile)}`);
     console.error(`   Run: npm run ssot:discover:baseline`);
     process.exit(1);
   }
@@ -253,4 +273,28 @@ function main() {
   runSmoke();
 }
 
-main();
+// Exported for Jest test suite (scripts/__tests__/check-ssot-discover-ratchet.test.js).
+// Pure fns (parseSummary, stripAnsi, compare, parseArgs) + I/O fns accept a filePath
+// arg so tests use tempdirs without touching the real .ssot-discover-baseline.json.
+module.exports = {
+  parseArgs,
+  parseSummary,
+  stripAnsi,
+  loadBaseline,
+  writeBaseline,
+  compare,
+  getBaselineFile,
+  getScannerPath,
+  runScanner,
+  runFull,
+  runSmoke,
+  printHelp,
+  main,
+  TRACKED_METRICS,
+  DEFAULT_BASELINE_FILE,
+  DEFAULT_SCANNER,
+};
+
+if (require.main === module) {
+  main();
+}
