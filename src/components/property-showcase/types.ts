@@ -56,6 +56,8 @@ export interface ShowcaseCompanyBrand {
   phone?: string;
   email?: string;
   website?: string;
+  /** Absolute logo URL (ADR-312 Phase 8). Undefined → UI falls back to the bundled Pagonis asset. */
+  logoUrl?: string;
 }
 
 /**

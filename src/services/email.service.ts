@@ -63,6 +63,25 @@ const sampleSend = async (payload: EmailPayload) => {
 };
 
 /**
+ * Race a provider call against a 20s timeout so a hanging SMTP/API server
+ * fails fast instead of pinning the Next.js serverless function on the 60s
+ * client budget (incident 2026-04-19: Resend hung silently → 408 in UI).
+ * Centralised here so both the Resend and Mailgun paths wear the same guard.
+ */
+function withProviderTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  const timeoutMs = 20_000;
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${label} provider timeout after ${timeoutMs}ms`)),
+        timeoutMs,
+      ),
+    ),
+  ]);
+}
+
+/**
  * Enterprise Email Service
  * Handles email sending with Resend integration
  */
@@ -160,17 +179,20 @@ export class EmailService {
 
       // Send via available provider
       if (provider === 'resend' && resend) {
-        const result = await resend.emails.send({
-          from: `${senderName || FROM_NAME} <${FROM_EMAIL}>`,
-          to: recipients,
-          subject,
-          html: htmlContent,
-          tags: [
-            { name: 'campaign', value: 'property_share' },
-            { name: 'template', value: templateType },
-            { name: 'environment', value: NODE_ENV }
-          ]
-        });
+        const result = await withProviderTimeout(
+          resend.emails.send({
+            from: `${senderName || FROM_NAME} <${FROM_EMAIL}>`,
+            to: recipients,
+            subject,
+            html: htmlContent,
+            tags: [
+              { name: 'campaign', value: 'property_share' },
+              { name: 'template', value: templateType },
+              { name: 'environment', value: NODE_ENV }
+            ]
+          }),
+          'Resend',
+        );
 
         console.debug('✅ EMAIL SENT via Resend:', { id: result.data?.id, recipients: recipients.length });
         return {
@@ -185,20 +207,23 @@ export class EmailService {
       // Mailgun path — send to each recipient
       if (provider === 'mailgun' && mailgunAdapter) {
         const fromHeader = `${senderName || FROM_NAME} <${FROM_EMAIL}>`;
-        const results = await Promise.all(
-          recipients.map(to =>
-            mailgunAdapter.sendEmail({
-              id: `share_${Date.now()}`,
-              to,
-              subject,
-              content: propertyUrl ? `${propertyTitle} — ${propertyUrl}` : propertyTitle,
-              html: htmlContent,
-              from: fromHeader,
-              metadata: { templateId: templateType, category: 'property_share' },
-              attempts: 0,
-              maxAttempts: 1,
-            })
-          )
+        const results = await withProviderTimeout(
+          Promise.all(
+            recipients.map(to =>
+              mailgunAdapter.sendEmail({
+                id: `share_${Date.now()}`,
+                to,
+                subject,
+                content: propertyUrl ? `${propertyTitle} — ${propertyUrl}` : propertyTitle,
+                html: htmlContent,
+                from: fromHeader,
+                metadata: { templateId: templateType, category: 'property_share' },
+                attempts: 0,
+                maxAttempts: 1,
+              })
+            )
+          ),
+          'Mailgun',
         );
 
         const successCount = results.filter(r => r.success).length;

@@ -126,5 +126,14 @@
     "generatedOn": "Δημιουργήθηκε",
     "descriptionSection": "Περιγραφή",
     "footerNote": "Παρουσίαση ακινήτου"
+  },
+  "brand": {
+    "appName": "Nestor App",
+    "poweredBy": "Υλοποίηση από Nestor App"
+  },
+  "email": {
+    "subjectPrefix": "Παρουσίαση Ακινήτου",
+    "introText": "Σας προωθούμε την αναλυτική παρουσίαση του ακινήτου.",
+    "ctaLabel": "Δείτε online"
   }
 }

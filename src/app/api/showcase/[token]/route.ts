@@ -119,6 +119,7 @@ export async function GET(
       phone: snapshot.company.phone,
       email: snapshot.company.email,
       website: snapshot.company.website,
+      logoUrl: snapshot.company.logoUrl,
     },
     photos,
     floorplans,

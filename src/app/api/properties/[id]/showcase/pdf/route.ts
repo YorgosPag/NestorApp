@@ -40,6 +40,7 @@ import { generateShareId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { nowISO } from '@/lib/date-local';
 import { PropertyShowcasePDFService } from '@/services/pdf/PropertyShowcasePDFService';
+import { loadBrandLogoAssets } from '@/services/property-showcase/brand-logo-assets';
 import {
   buildPdfData,
   deleteShowcaseShareRecord,
@@ -96,7 +97,7 @@ async function handlePdf(
   });
 
   const sources = await loadShowcaseSources(propertyId, ctx.companyId);
-  const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans] = await Promise.all([
+  const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans, logos] = await Promise.all([
     loadShowcasePhotos(propertyId, ctx.companyId),
     loadShowcaseFloorplans(propertyId, ctx.companyId),
     loadShowcaseLinkedSpaceFloorplans(sources.context, ctx.companyId).catch((err) => {
@@ -111,6 +112,7 @@ async function handlePdf(
       });
       return undefined;
     }),
+    loadBrandLogoAssets(sources.context.branding),
   ]);
 
   const pdfFileId = generateShareId();
@@ -133,7 +135,7 @@ async function handlePdf(
 
   const pdfData = buildPdfData(
     propertyId, sources, showcaseUrl, body.videoUrl, locale,
-    { photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans },
+    { photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans, ...logos },
   );
 
   let pdfBytes: Uint8Array;

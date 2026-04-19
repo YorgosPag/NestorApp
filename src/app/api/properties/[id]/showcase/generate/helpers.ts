@@ -16,6 +16,7 @@ import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
+import { loadBrandLogoAssets } from '@/services/property-showcase/brand-logo-assets';
 import {
   countPropertyMedia,
   downloadPropertyMedia,
@@ -306,6 +307,9 @@ export interface BuildPdfDataExtras {
   floorplans?: ShowcasePhotoAsset[];
   linkedSpaceFloorplans?: LinkedSpaceFloorplansPdfData;
   propertyFloorFloorplans?: PropertyFloorFloorplansPdfData;
+  /** Company + Nestor App logos for header/footer branding (ADR-312 Phase 8). */
+  companyLogo?: ShowcasePhotoAsset;
+  nestorAppLogo?: ShowcasePhotoAsset;
 }
 
 export function buildPdfData(
@@ -318,25 +322,19 @@ export function buildPdfData(
 ): PropertyShowcasePDFData {
   void propertyId;
   const snapshot = buildPropertyShowcaseSnapshot(sources.context, locale);
-  const { photos = [], floorplans = [], linkedSpaceFloorplans, propertyFloorFloorplans } = extras;
-  const hasLinked =
-    !!linkedSpaceFloorplans &&
+  const { photos = [], floorplans = [], linkedSpaceFloorplans, propertyFloorFloorplans,
+    companyLogo, nestorAppLogo } = extras;
+  const hasLinked = !!linkedSpaceFloorplans &&
     (linkedSpaceFloorplans.parking.length > 0 || linkedSpaceFloorplans.storage.length > 0);
-  const hasPropertyFloor =
-    !!propertyFloorFloorplans && propertyFloorFloorplans.assets.length > 0;
+  const hasPropertyFloor = !!propertyFloorFloorplans && propertyFloorFloorplans.assets.length > 0;
   return {
-    snapshot,
-    showcaseUrl,
-    videoUrl,
-    photoCount: sources.photoCount,
-    floorplanCount: sources.floorplanCount,
-    photos,
-    floorplans,
+    snapshot, showcaseUrl, videoUrl,
+    photoCount: sources.photoCount, floorplanCount: sources.floorplanCount,
+    photos, floorplans,
     propertyFloorFloorplans: hasPropertyFloor ? propertyFloorFloorplans : undefined,
     linkedSpaceFloorplans: hasLinked ? linkedSpaceFloorplans : undefined,
-    generatedAt: new Date(),
-    labels: loadShowcasePdfLabels(locale),
-    locale,
+    companyLogo, nestorAppLogo,
+    generatedAt: new Date(), labels: loadShowcasePdfLabels(locale), locale,
   };
 }
 
@@ -431,7 +429,7 @@ export async function regeneratePdfForShare(params: {
   const showcaseUrl = `${params.baseUrl.replace(/\/$/, '')}/showcase/${token}`;
 
   const sources = await loadShowcaseSources(params.propertyId, params.companyId);
-  const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans] = await Promise.all([
+  const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans, logos] = await Promise.all([
     loadShowcasePhotos(params.propertyId, params.companyId),
     loadShowcaseFloorplans(params.propertyId, params.companyId),
     loadShowcaseLinkedSpaceFloorplans(sources.context, params.companyId).catch((err) => {
@@ -446,11 +444,12 @@ export async function regeneratePdfForShare(params: {
       });
       return undefined;
     }),
+    loadBrandLogoAssets(sources.context.branding),
   ]);
 
   const pdfData = buildPdfData(
     params.propertyId, sources, showcaseUrl, params.videoUrl, locale,
-    { photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans },
+    { photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans, ...logos },
   );
 
   let pdfBytes: Uint8Array;

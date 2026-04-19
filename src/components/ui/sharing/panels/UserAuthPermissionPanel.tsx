@@ -49,6 +49,12 @@ export interface UserAuthPermissionPanelProps {
   onShareSuccess?: (platform: string) => void;
   onShareError?: (platform: string, error: string) => void;
   onLoadingChange?: (loading: boolean) => void;
+  /**
+   * When provided, email shares are routed through the Phase 8 showcase email
+   * endpoint (visual parity with the web/PDF surfaces) instead of the generic
+   * `property-share` template. ADR-312 Phase 8.
+   */
+  showcaseContext?: { propertyId: string };
 }
 
 export function UserAuthPermissionPanel({
@@ -59,6 +65,7 @@ export function UserAuthPermissionPanel({
   onShareSuccess,
   onShareError,
   onLoadingChange,
+  showcaseContext,
 }: UserAuthPermissionPanelProps): React.ReactElement {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const notifications = useNotifications();
@@ -118,6 +125,26 @@ export function UserAuthPermissionPanel({
     async (emailData: EmailShareData): Promise<void> => {
       setLoading(true);
       try {
+        if (showcaseContext) {
+          interface ShowcaseEmailResponse {
+            emailSent: boolean;
+            messageId?: string;
+            recipient: string;
+          }
+          await Promise.all(
+            emailData.recipients.map((recipient) =>
+              apiClient.post<ShowcaseEmailResponse>(
+                `/api/properties/${encodeURIComponent(showcaseContext.propertyId)}/showcase/email`,
+                { recipient, shareUrl: emailData.propertyUrl },
+              ),
+            ),
+          );
+          notifications.success(t('emailShare.sendSuccess'));
+          onShareSuccess?.(`showcase-email (${emailData.recipients.length} recipients)`);
+          setShowEmailForm(false);
+          onClose();
+          return;
+        }
         interface PropertyShareEmailResponse {
           success: boolean;
           error?: string;
@@ -145,7 +172,7 @@ export function UserAuthPermissionPanel({
         setLoading(false);
       }
     },
-    [setLoading, notifications, t, onShareSuccess, onShareError, onClose],
+    [setLoading, notifications, t, onShareSuccess, onShareError, onClose, showcaseContext],
   );
 
   const handleCopySuccess = useCallback((): void => {

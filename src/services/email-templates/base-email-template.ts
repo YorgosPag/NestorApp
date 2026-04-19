@@ -49,6 +49,11 @@ interface BaseEmailParams {
   companyAddress?: string;
   /** Company website URL */
   companyWebsite?: string;
+  /**
+   * Absolute URL of the company logo shown in the header (ADR-312 Phase 8).
+   * Falls back to the bundled `/images/pagonis-energo-logo.png` when undefined.
+   */
+  companyLogoUrl?: string;
 }
 
 /**
@@ -67,10 +72,13 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
     companyEmail,
     companyAddress,
     companyWebsite,
+    companyLogoUrl: companyLogoUrlOverride,
   } = params;
 
   const baseUrl = getAppBaseUrl();
-  const companyLogoUrl = `${baseUrl}/images/pagonis-energo-logo.png`;
+  const companyLogoUrl = companyLogoUrlOverride && companyLogoUrlOverride.trim().length > 0
+    ? companyLogoUrlOverride
+    : `${baseUrl}/images/pagonis-energo-logo.png`;
   const appLogoUrl = `${baseUrl}/images/nestor-app-logo.jpg`;
   const appName = 'Nestor App';
 

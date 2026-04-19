@@ -130,12 +130,6 @@ export function ShowcaseClient({ token }: ShowcaseClientProps) {
           orientationLabels={p.orientationLabels}
           t={t}
         />
-        {p.linkedSpaces && p.linkedSpaces.length > 0 && (
-          <ShowcaseLinkedSpacesCardView linkedSpaces={p.linkedSpaces} t={t} />
-        )}
-        {data.linkedSpaceFloorplans && (
-          <ShowcaseLinkedSpacesFloorplans linkedSpaceFloorplans={data.linkedSpaceFloorplans} />
-        )}
         {p.energy && <ShowcaseEnergyExtrasCard energy={p.energy} t={t} />}
         {p.views && p.views.length > 0 && <ShowcaseViewsCard views={p.views} t={t} />}
         <ShowcaseFloorplans
@@ -145,12 +139,18 @@ export function ShowcaseClient({ token }: ShowcaseClientProps) {
         {p.systems && <ShowcaseSystemsCard systems={p.systems} t={t} />}
         {p.finishes && <ShowcaseFinishesCard finishes={p.finishes} t={t} />}
         {p.features && <ShowcaseFeaturesCard features={p.features} t={t} />}
+        {p.linkedSpaces && p.linkedSpaces.length > 0 && (
+          <ShowcaseLinkedSpacesCardView linkedSpaces={p.linkedSpaces} t={t} />
+        )}
+        {data.linkedSpaceFloorplans && (
+          <ShowcaseLinkedSpacesFloorplans linkedSpaceFloorplans={data.linkedSpaceFloorplans} />
+        )}
         {data.pdfUrl && (
           <a
             href={data.pdfUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-600 hover:from-violet-600 hover:to-fuchsia-700 text-white px-5 py-3 rounded-lg font-semibold shadow-md"
+            className="inline-flex items-center gap-2 bg-[hsl(var(--showcase-surface))] hover:bg-[hsl(var(--showcase-border))] text-[hsl(var(--showcase-fg))] border border-[hsl(var(--showcase-border))] px-5 py-3 rounded-lg font-semibold shadow-md"
           >
             <Download className="h-4 w-4" />
             {t('actions.downloadPdf')}
@@ -177,11 +177,30 @@ function MessageScreen({
 }
 
 function ShowcaseFooter({ company }: { company: { name: string; phone?: string; email?: string; website?: string } }) {
+  const { t } = useTranslation('showcase');
   const contact = [company.phone, company.email, company.website].filter(Boolean).join(' · ');
-  if (!contact) return null;
+  const year = new Date().getFullYear();
   return (
-    <footer className="text-center text-sm text-[hsl(var(--showcase-muted-fg))] py-4">
-      {company.name} · {contact}
+    <footer className="mt-6 pt-5 border-t border-[hsl(var(--showcase-border))] text-center space-y-3">
+      {contact && (
+        <p className="text-sm text-[hsl(var(--showcase-muted-fg))]">
+          {company.name} · {contact}
+        </p>
+      )}
+      <div className="flex items-center justify-center gap-2 text-xs text-[hsl(var(--showcase-muted-fg))]">
+        <img
+          src="/images/nestor-app-logo.png"
+          alt=""
+          width={24}
+          height={24}
+          className="h-6 w-6 rounded bg-white/90 object-contain p-0.5"
+          aria-hidden="true"
+        />
+        <span className="font-semibold">{t('brand.poweredBy')}</span>
+      </div>
+      <p className="text-[10px] text-[hsl(var(--showcase-muted-fg))]/70">
+        &copy; {year} {t('brand.appName')}
+      </p>
     </footer>
   );
 }

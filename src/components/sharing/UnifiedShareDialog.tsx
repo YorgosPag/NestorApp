@@ -283,6 +283,9 @@ export function UnifiedShareDialog({
             onCopySuccess={onCopySuccess}
             onShareSuccess={onShareSuccess}
             onShareError={onShareError}
+            showcaseContext={
+              entityType === 'property_showcase' ? { propertyId: entityId } : undefined
+            }
           />
 
           {entityType === 'property_showcase' && (

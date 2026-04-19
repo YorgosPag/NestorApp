@@ -128,6 +128,17 @@ export interface ShowcasePdfChrome {
   photosTitle: string;
   floorplansTitle: string;
   viewsTitle: string;
+  /** "Powered by Nestor App" label shown in the PDF footer (ADR-312 Phase 8). */
+  poweredBy: string;
+}
+
+export interface ShowcaseEmailLabels {
+  /** Subject line prefix — e.g. "Παρουσίαση Ακινήτου". */
+  subjectPrefix: string;
+  /** Short introduction sentence shown above the hero block. */
+  introText: string;
+  /** Primary CTA button label pointing to the web showcase. */
+  ctaLabel: string;
 }
 
 export interface PropertyShowcasePDFLabels {
@@ -143,6 +154,7 @@ export interface PropertyShowcasePDFLabels {
   linkedSpacesFloorplans: ShowcaseLinkedSpacesFloorplansLabels;
   floorplans: ShowcaseFloorplansLabels;
   chrome: ShowcasePdfChrome;
+  email: ShowcaseEmailLabels;
 }
 
 export function loadShowcasePdfLabels(locale: EnumLocale = 'el'): PropertyShowcasePDFLabels {
@@ -193,6 +205,22 @@ export function loadShowcasePdfLabels(locale: EnumLocale = 'el'): PropertyShowca
       photosTitle: c.photos.title,
       floorplansTitle: c.floorplans.title,
       viewsTitle: c.views.sectionTitle,
+      poweredBy:
+        (c as { brand?: { poweredBy?: string } }).brand?.poweredBy
+        ?? (locale === 'el' ? 'Υλοποίηση από Nestor App' : 'Powered by Nestor App'),
+    },
+    email: {
+      subjectPrefix:
+        (c as { email?: { subjectPrefix?: string } }).email?.subjectPrefix
+        ?? (locale === 'el' ? 'Παρουσίαση Ακινήτου' : 'Property Showcase'),
+      introText:
+        (c as { email?: { introText?: string } }).email?.introText
+        ?? (locale === 'el'
+          ? 'Σας προωθούμε την αναλυτική παρουσίαση του ακινήτου.'
+          : 'We are sharing the detailed presentation of the property.'),
+      ctaLabel:
+        (c as { email?: { ctaLabel?: string } }).email?.ctaLabel
+        ?? (locale === 'el' ? 'Δείτε online' : 'View online'),
     },
   };
 }

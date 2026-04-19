@@ -35,6 +35,13 @@ export interface ShowcaseCompanyBranding {
   phone?: string;
   email?: string;
   website?: string;
+  /**
+   * Absolute URL of the company logo (ADR-312 Phase 8). When undefined the
+   * showcase surfaces fall back to the bundled `/images/pagonis-energo-logo.png`
+   * asset. Read from `contacts.logoURL` (primary) or `companies.logoURL`
+   * (tenant fallback). Empty strings are normalised to undefined.
+   */
+  logoUrl?: string;
   /** Which layer of the hierarchy produced this branding (for observability). */
   source: BrandingSource;
 }
@@ -64,6 +71,12 @@ function pickValue<T extends PrimaryCarrier & Record<string, unknown>>(
   return undefined;
 }
 
+function pickNonEmptyString(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 function extractContactBranding(
   contact: Record<string, unknown>,
   contactId: string,
@@ -88,6 +101,7 @@ function extractContactBranding(
       contact.websites,
       'url',
     ),
+    logoUrl: pickNonEmptyString(contact.logoURL),
     source: 'contact',
   };
 }
@@ -105,10 +119,10 @@ function extractTenantBranding(
       legalName: tenant.legalName as string | undefined,
       displayName: tenant.displayName as string | undefined,
     }),
-    phone: typeof tenant.phone === 'string' && tenant.phone.trim() ? tenant.phone.trim() : undefined,
-    email: typeof tenant.email === 'string' && tenant.email.trim() ? tenant.email.trim() : undefined,
-    website:
-      typeof tenant.website === 'string' && tenant.website.trim() ? tenant.website.trim() : undefined,
+    phone: pickNonEmptyString(tenant.phone),
+    email: pickNonEmptyString(tenant.email),
+    website: pickNonEmptyString(tenant.website),
+    logoUrl: pickNonEmptyString(tenant.logoURL) ?? pickNonEmptyString(tenant.logoUrl),
     source: 'tenant',
   };
 }

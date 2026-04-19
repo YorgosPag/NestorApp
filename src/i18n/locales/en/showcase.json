@@ -126,5 +126,14 @@
     "generatedOn": "Generated on",
     "descriptionSection": "Description",
     "footerNote": "Property showcase"
+  },
+  "brand": {
+    "appName": "Nestor App",
+    "poweredBy": "Powered by Nestor App"
+  },
+  "email": {
+    "subjectPrefix": "Property Showcase",
+    "introText": "We are sharing the detailed presentation of the property.",
+    "ctaLabel": "View online"
   }
 }

@@ -64,6 +64,10 @@ export interface PropertyShowcasePDFData {
   propertyFloorFloorplans?: PropertyFloorFloorplansPdfData;
   /** Κατόψεις of linked parking/storage (ADR-312 Phase 7). */
   linkedSpaceFloorplans?: LinkedSpaceFloorplansPdfData;
+  /** Company logo asset embedded in the brand header (ADR-312 Phase 8). */
+  companyLogo?: ShowcasePhotoAsset;
+  /** Nestor App logo embedded in the footer "Powered by" block (ADR-312 Phase 8). */
+  nestorAppLogo?: ShowcasePhotoAsset;
   generatedAt: Date;
   labels: PropertyShowcasePDFLabels;
   locale: 'el' | 'en';
@@ -72,7 +76,8 @@ export interface PropertyShowcasePDFData {
 // Re-export for downstream consumers that still import from this module.
 export type { PropertyShowcasePDFLabels };
 
-const VIOLET: [number, number, number] = [124, 58, 237];
+/** Brand navy — aligned with email template `BRAND.navy` #1E3A5F (ADR-312 Phase 8). */
+const BRAND_NAVY: [number, number, number] = [30, 58, 95];
 
 function safe(value: string | number | undefined | null): string {
   if (value === undefined || value === null) return '-';
@@ -130,16 +135,13 @@ export class PropertyShowcaseRenderer {
 
     // ── 6. Video — not embeddable in PDF, skipped on purpose ───────────────
 
-    // ── 7–9. Specs + Orientation + Linked spaces ───────────────────────────
+    // ── 7–8. Specs + Orientation ───────────────────────────────────────────
     this.drawSpecsBlockPage(doc, margins, pageWidth, contentWidth, data);
 
-    // ── 10. Linked-space Κατόψεις (parking + storage side-by-side) ─────────
-    this.drawLinkedSpacesFloorplansPage(doc, margins, pageWidth, contentWidth, data);
-
-    // ── 11–12. Energy + Views ──────────────────────────────────────────────
+    // ── 9–10. Energy + Views ───────────────────────────────────────────────
     this.drawEnergyAndViewsPage(doc, margins, pageWidth, contentWidth, data);
 
-    // ── 13. Floorplans (property) ──────────────────────────────────────────
+    // ── 11. Floorplans (property) ──────────────────────────────────────────
     drawMediaGridPage({
       doc, margins, pageWidth, contentWidth,
       assets: data.floorplans ?? [],
@@ -148,7 +150,7 @@ export class PropertyShowcaseRenderer {
       config: FLOORPLAN_GRID_CONFIG,
     });
 
-    // ── 13a. Κάτοψη ορόφου (property's floor) — ADR-312 Phase 7.5 ──────────
+    // ── 11a. Κάτοψη ορόφου (property's floor) — ADR-312 Phase 7.5 ──────────
     const propertyFloor = data.propertyFloorFloorplans;
     if (propertyFloor && propertyFloor.assets.length > 0) {
       const floorTitle = propertyFloor.label
@@ -165,6 +167,12 @@ export class PropertyShowcaseRenderer {
 
     // ── 12–14. Systems + Finishes + Features ───────────────────────────────
     this.drawSystemsBlockPage(doc, margins, pageWidth, contentWidth, data);
+
+    // ── 15. Συνδεδεμένοι χώροι (text) — ADR-312 Phase 7.7 (tail) ───────────
+    this.drawLinkedSpacesBlockPage(doc, margins, pageWidth, contentWidth, data);
+
+    // ── 16. Κατόψεις συνδεδεμένων χώρων — ADR-312 Phase 7.7 (tail) ─────────
+    this.drawLinkedSpacesFloorplansPage(doc, margins, pageWidth, contentWidth, data);
 
     this.drawFooter(doc, margins, pageWidth, data);
   }
@@ -221,13 +229,28 @@ export class PropertyShowcaseRenderer {
     contentWidth: number,
     data: PropertyShowcasePDFData,
   ): number {
-    doc.setFillColor(...VIOLET);
-    doc.rect(margins.left, y - 5, contentWidth, 18, 'F');
+    const bannerHeight = 34;
+    const bannerTop = y - 5;
+    doc.setFillColor(...BRAND_NAVY);
+    doc.rect(margins.left, bannerTop, contentWidth, bannerHeight, 'F');
 
+    const logo = data.companyLogo;
+    if (logo) {
+      const logoSize = 18;
+      const logoX = (pageWidth - logoSize) / 2;
+      const logoY = bannerTop + 3;
+      try {
+        doc.addImage(logo.bytes, logo.format, logoX, logoY, logoSize, logoSize, logo.id, 'FAST');
+      } catch (err) {
+        console.error('[PropertyShowcaseRenderer] company logo addImage failed', err);
+      }
+    }
+
+    const textStartY = bannerTop + (logo ? 23 : 4);
     let current = this.textRenderer.addText({
       doc,
       text: safe(data.snapshot.company.name),
-      y: y + 1,
+      y: textStartY,
       align: 'center',
       fontSize: FONT_SIZES.H3,
       bold: true,
@@ -247,7 +270,7 @@ export class PropertyShowcaseRenderer {
       pageWidth,
     });
 
-    return current + 4;
+    return Math.max(current + 4, bannerTop + bannerHeight + 2);
   }
 
   private drawTitle(
@@ -333,8 +356,21 @@ export class PropertyShowcaseRenderer {
     const ctx = this.buildSectionContext(doc, margins, pageWidth, contentWidth, data);
     let y = margins.top;
     y = drawSpecsSection(ctx, y);
-    y = drawOrientationSection(ctx, y);
-    drawLinkedSpacesSection(ctx, y);
+    drawOrientationSection(ctx, y);
+  }
+
+  private drawLinkedSpacesBlockPage(
+    doc: IPDFDoc,
+    margins: Margins,
+    pageWidth: number,
+    contentWidth: number,
+    data: PropertyShowcasePDFData,
+  ): void {
+    const spaces = data.snapshot.property.linkedSpaces;
+    if (!spaces || spaces.length === 0) return;
+    doc.addPage();
+    const ctx = this.buildSectionContext(doc, margins, pageWidth, contentWidth, data);
+    drawLinkedSpacesSection(ctx, margins.top);
   }
 
   private drawLinkedSpacesFloorplansPage(
@@ -398,13 +434,30 @@ export class PropertyShowcaseRenderer {
       data.generatedAt.toISOString(),
       data.locale,
     )}`;
+    const appLogo = data.nestorAppLogo;
+    const poweredBy = data.labels.chrome.poweredBy;
 
-    // Stamp contact + footerLine on EVERY page so the photo-grid page also
-    // carries branding/expiry context. Without this loop jsPDF only writes
-    // on the active page.
     const totalPages = doc.getNumberOfPages();
     for (let n = 1; n <= totalPages; n++) {
       doc.setPage(n);
+      if (appLogo) {
+        const logoSize = 4;
+        const logoX = pageWidth / 2 - 14;
+        try {
+          doc.addImage(
+            appLogo.bytes, appLogo.format, logoX, footerY - 16,
+            logoSize, logoSize, appLogo.id, 'FAST',
+          );
+        } catch (err) {
+          console.error('[PropertyShowcaseRenderer] nestor app logo addImage failed', err);
+        }
+      }
+      if (poweredBy) {
+        this.textRenderer.addText({
+          doc, text: poweredBy, y: footerY - 13, align: 'center',
+          fontSize: FONT_SIZES.SMALL, margins, pageWidth,
+        });
+      }
       if (contact) {
         this.textRenderer.addText({
           doc, text: contact, y: footerY - 8, align: 'center',

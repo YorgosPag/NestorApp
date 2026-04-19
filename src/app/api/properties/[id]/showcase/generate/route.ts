@@ -42,6 +42,7 @@ import {
   loadShowcaseSources,
   uploadPdfToStorage,
 } from './helpers';
+import { loadBrandLogoAssets } from '@/services/property-showcase/brand-logo-assets';
 
 const logger = createModuleLogger('PropertyShowcaseRoute');
 
@@ -146,7 +147,7 @@ async function handleGenerate(
   logger.info('Generating property showcase', { propertyId, uid: ctx.uid, companyId: ctx.companyId });
 
   const sources = await loadShowcaseSources(propertyId, ctx.companyId);
-  const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans] = await Promise.all([
+  const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans, logos] = await Promise.all([
     loadShowcasePhotos(propertyId, ctx.companyId),
     loadShowcaseFloorplans(propertyId, ctx.companyId),
     loadShowcaseLinkedSpaceFloorplans(sources.context, ctx.companyId).catch((err) => {
@@ -161,6 +162,7 @@ async function handleGenerate(
       });
       return undefined;
     }),
+    loadBrandLogoAssets(sources.context.branding),
   ]);
 
   const token = generateUrlSafeToken();
@@ -179,7 +181,7 @@ async function handleGenerate(
 
   const pdfData = buildPdfData(
     propertyId, sources, showcaseUrl, body.videoUrl, locale,
-    { photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans },
+    { photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans, ...logos },
   );
   const pdfBytes = await generatePdfOrThrow(propertyId, pdfData);
 
