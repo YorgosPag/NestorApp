@@ -19,6 +19,7 @@ import { NextRequest } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { nowISO } from '@/lib/date-local';
+import { verifyCronAuthorization } from '@/lib/cron-auth';
 
 const logger = createModuleLogger('CALENDAR_REMINDERS_CRON');
 
@@ -36,16 +37,7 @@ interface ReminderTask {
 }
 
 async function handleGET(request: NextRequest) {
-  // Verify cron authorization
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret) {
-    logger.error('CRON_SECRET env var not configured — blocking cron execution');
-    return NextResponse.json({ error: 'Cron secret not configured' }, { status: 500 });
-  }
-
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!verifyCronAuthorization(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

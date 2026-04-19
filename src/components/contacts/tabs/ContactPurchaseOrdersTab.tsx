@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import type { PurchaseOrder } from '@/types/procurement';
 import { PO_STATUS_META } from '@/types/procurement';
 import { createStaleCache } from '@/lib/stale-cache';
+import { formatDate } from '@/lib/intl-utils';
 
 const contactPurchaseOrdersCache = createStaleCache<PurchaseOrder[]>('contact-purchase-orders');
 
@@ -41,14 +42,6 @@ function formatEuro(amount: number): string {
     currency: 'EUR',
     minimumFractionDigits: 2,
   }).format(amount);
-}
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(iso));
 }
 
 // ============================================================================

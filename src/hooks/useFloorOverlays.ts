@@ -17,17 +17,10 @@
  */
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  orderBy,
-  type Unsubscribe,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { where, orderBy, type Unsubscribe } from 'firebase/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useCompanyId } from '@/hooks/useCompanyId';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useEntityStatusResolver } from './useEntityStatusResolver';
 import type { OverlayKind } from '@/subapps/dxf-viewer/overlays/types';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
@@ -66,15 +59,6 @@ interface UseFloorOverlaysReturn {
   loading: boolean;
   error: string | null;
 }
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-// SSoT: Collection names from centralized config
-import { COLLECTIONS } from '@/config/firestore-collections';
-const LEVELS_COLLECTION = COLLECTIONS.DXF_VIEWER_LEVELS;
-const OVERLAYS_COLLECTION = COLLECTIONS.DXF_OVERLAY_LEVELS;
 
 // ============================================================================
 // HELPERS
@@ -164,22 +148,15 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
       setRawOverlays(merged);
     };
 
-    // Step 1: Query levels where floorId matches (tenant-scoped)
-    const levelsRef = collection(db, LEVELS_COLLECTION);
-    const levelsQuery = query(
-      levelsRef,
-      where('companyId', '==', companyId),
-      where('floorId', '==', floorId),
-    );
-
-    const unsubLevels = onSnapshot(
-      levelsQuery,
-      (levelsSnapshot) => {
+    // Step 1: Query levels where floorId matches (companyId auto-injected by service)
+    const unsubLevels = firestoreQueryService.subscribe<{ id: string }>(
+      'DXF_VIEWER_LEVELS',
+      (result) => {
         // Clean up previous overlay subscriptions
         cleanupOverlaySubs();
         overlaysByLevel.clear();
 
-        const levelIds = levelsSnapshot.docs.map((doc) => doc.id);
+        const levelIds = result.documents.map((d) => d.id);
 
         if (levelIds.length === 0) {
           setRawOverlays([]);
@@ -194,16 +171,14 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
         let pendingInitial = levelIds.length;
 
         levelIds.forEach((levelId) => {
-          const itemsRef = collection(db, `${OVERLAYS_COLLECTION}/${levelId}/items`);
-          const itemsQuery = query(itemsRef, orderBy('createdAt', 'asc'));
-
-          const unsubItems = onSnapshot(
-            itemsQuery,
-            (itemsSnapshot) => {
+          const unsubItems = firestoreQueryService.subscribeSubcollection<Record<string, unknown>>(
+            'DXF_OVERLAY_LEVELS',
+            levelId,
+            'items',
+            (itemsResult) => {
               const items: RawFloorOverlayItem[] = [];
 
-              itemsSnapshot.docs.forEach((doc) => {
-                const data = doc.data() as Record<string, unknown>;
+              itemsResult.documents.forEach((data) => {
                 const kind = data.kind as OverlayKind | undefined;
 
                 // Filter out footprints — not shown on public page
@@ -213,7 +188,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
                 if (polygon.length < 3) return; // Skip invalid polygons
 
                 items.push({
-                  id: doc.id,
+                  id: data.id as string,
                   polygon,
                   kind: kind ?? 'property',
                   status: data.status as PropertyStatus | undefined,
@@ -239,6 +214,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
               setError(err.message);
               setLoading(false);
             },
+            { constraints: [orderBy('createdAt', 'asc')] },
           );
 
           overlayUnsubsRef.current.push(unsubItems);
@@ -249,6 +225,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
         setError(err.message);
         setLoading(false);
       },
+      { constraints: [where('floorId', '==', floorId)] },
     );
 
     return () => {
