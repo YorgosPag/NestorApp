@@ -13,7 +13,7 @@
 import { useTranslation } from 'react-i18next';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import type { TaxBracketResult } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -152,7 +152,7 @@ export function TaxBracketsVisual({ bracketBreakdown, taxableIncome }: TaxBracke
                 </div>
                 {isActive && (
                   <span className="text-xs font-medium text-foreground">
-                    {formatCurrency(taxAmount)}
+                    {formatAccountingCurrency(taxAmount)}
                   </span>
                 )}
               </div>
@@ -174,7 +174,7 @@ export function TaxBracketsVisual({ bracketBreakdown, taxableIncome }: TaxBracke
               {/* Taxable Amount */}
               {isActive && (
                 <p className={cn("text-xs mt-1", colors.text.muted)}>
-                  {t('reports.taxableInBracket')}: {formatCurrency(taxableAmount)}
+                  {t('reports.taxableInBracket')}: {formatAccountingCurrency(taxableAmount)}
                 </p>
               )}
             </article>

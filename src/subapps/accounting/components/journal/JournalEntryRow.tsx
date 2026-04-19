@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { JournalEntry } from '@/subapps/accounting/types';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -42,7 +42,7 @@ export function JournalEntryRow({ entry }: JournalEntryRowProps) {
 
   return (
     <TableRow>
-      <TableCell>{formatDate(entry.date)}</TableCell>
+      <TableCell>{formatAccountingDate(entry.date)}</TableCell>
       <TableCell>
         <Badge variant={TYPE_BADGE_VARIANTS[entry.type]}>
           {t(`journal.${entry.type}`)}
@@ -50,9 +50,9 @@ export function JournalEntryRow({ entry }: JournalEntryRowProps) {
       </TableCell>
       <TableCell className="text-sm">{entry.category}</TableCell>
       <TableCell className="max-w-[200px] truncate">{entry.description}</TableCell>
-      <TableCell className="text-right font-medium">{formatCurrency(entry.netAmount)}</TableCell>
-      <TableCell className="text-right">{formatCurrency(entry.vatAmount)}</TableCell>
-      <TableCell className="text-right font-medium">{formatCurrency(entry.grossAmount)}</TableCell>
+      <TableCell className="text-right font-medium">{formatAccountingCurrency(entry.netAmount)}</TableCell>
+      <TableCell className="text-right">{formatAccountingCurrency(entry.vatAmount)}</TableCell>
+      <TableCell className="text-right font-medium">{formatAccountingCurrency(entry.grossAmount)}</TableCell>
       <TableCell className="text-sm">{t(`common.paymentMethods.${entry.paymentMethod}`)}</TableCell>
     </TableRow>
   );

@@ -31,7 +31,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -128,21 +128,21 @@ export function AccountingDashboard() {
   const dashboardStats: DashboardStat[] = [
     {
       title: t('dashboard.totalIncome'),
-      value: formatCurrency(stats.totalIncome),
+      value: formatAccountingCurrency(stats.totalIncome),
       icon: ArrowUpRight,
       color: 'green',
       loading,
     },
     {
       title: t('dashboard.totalExpenses'),
-      value: formatCurrency(stats.totalExpenses),
+      value: formatAccountingCurrency(stats.totalExpenses),
       icon: ArrowDownRight,
       color: 'red',
       loading,
     },
     {
       title: t('dashboard.vatOwed'),
-      value: formatCurrency(stats.vatOwed),
+      value: formatAccountingCurrency(stats.vatOwed),
       icon: DollarSign,
       color: 'orange',
       loading,

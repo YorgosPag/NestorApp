@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 import type { ReportType, ReportDataMap } from '@/subapps/accounting/types';
 import { flattenReportForExport } from '../../services/export/report-table-adapter';
 import type { CellValue } from '../../services/export/report-table-adapter';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -53,7 +53,7 @@ function formatCell(value: CellValue, colIndex: number, headerCount: number): st
   const isPercentColumn = colIndex === headerCount - 1;
   if (isPercentColumn) return `${value.toFixed(1)}%`;
 
-  return formatCurrency(value);
+  return formatAccountingCurrency(value);
 }
 
 function getCellAlignment(value: CellValue): string {
@@ -91,10 +91,10 @@ function ChangeCell({ value }: { value: CellValue }) {
   if (typeof value !== 'number') return <span>{value}</span>;
 
   if (value > 0) {
-    return <Badge variant="success" className="text-xs">+{formatCurrency(value)}</Badge>;
+    return <Badge variant="success" className="text-xs">+{formatAccountingCurrency(value)}</Badge>;
   }
   if (value < 0) {
-    return <Badge variant="destructive" className="text-xs">{formatCurrency(value)}</Badge>;
+    return <Badge variant="destructive" className="text-xs">{formatAccountingCurrency(value)}</Badge>;
   }
   return <span className="text-muted-foreground">0</span>;
 }
@@ -147,7 +147,7 @@ export function ReportTable({ reportType, data }: ReportTableProps) {
           {tableData.summaryMetrics.map((metric) => (
             <article key={metric.label} className="flex items-center gap-2 rounded-lg border p-3">
               <span className="text-sm text-muted-foreground">{metric.label}</span>
-              <span className="text-sm font-semibold">{formatCurrency(metric.value)}</span>
+              <span className="text-sm font-semibold">{formatAccountingCurrency(metric.value)}</span>
               {metric.change && metric.change.percentage !== null && (
                 <Badge
                   variant={metric.change.percentage >= 0 ? 'success' : 'destructive'}

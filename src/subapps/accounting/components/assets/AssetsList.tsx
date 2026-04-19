@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { FixedAsset, AssetStatus } from '@/subapps/accounting/types';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -91,16 +91,16 @@ export function AssetsList({ assets }: AssetsListProps) {
                 {t(`assets.categories.${asset.category}`)}
               </TableCell>
               <TableCell className="text-sm">
-                {formatDate(asset.acquisitionDate)}
+                {formatAccountingDate(asset.acquisitionDate)}
               </TableCell>
               <TableCell className="text-right text-sm">
-                {formatCurrency(asset.acquisitionCost)}
+                {formatAccountingCurrency(asset.acquisitionCost)}
               </TableCell>
               <TableCell className={cn("text-right text-sm", colors.text.muted)}>
-                {formatCurrency(asset.accumulatedDepreciation)}
+                {formatAccountingCurrency(asset.accumulatedDepreciation)}
               </TableCell>
               <TableCell className="text-right font-medium text-sm">
-                {formatCurrency(asset.netBookValue)}
+                {formatAccountingCurrency(asset.netBookValue)}
               </TableCell>
               <TableCell>
                 <Badge variant={ASSET_STATUS_VARIANTS[asset.status]}>

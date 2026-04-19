@@ -10,7 +10,7 @@
 
 import type jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 import type { APYCertificate, APYCertificateLineItem } from '../../types';
 
 // ============================================================================
@@ -239,10 +239,10 @@ function drawAPYInvoiceTable(
   const body = lineItems.map((item, idx) => [
     String(idx + 1),
     item.invoiceNumber,
-    formatDate(item.issueDate),
-    formatCurrency(item.netAmount),
+    formatAccountingDate(item.issueDate),
+    formatAccountingCurrency(item.netAmount),
     `${item.withholdingRate}%`,
-    formatCurrency(item.withholdingAmount),
+    formatAccountingCurrency(item.withholdingAmount),
   ]);
 
   autoTable(pdf, {
@@ -290,7 +290,7 @@ function drawAPYTotalsSection(pdf: jsPDF, cert: APYCertificate, startY: number):
   pdf.setFontSize(9);
   pdf.text(LABELS.totalNetAmount, labelX, y + 4);
   setColor(pdf, COLORS.navy);
-  pdf.text(formatCurrency(cert.totalNetAmount), rightCol, y + 4, { align: 'right' });
+  pdf.text(formatAccountingCurrency(cert.totalNetAmount), rightCol, y + 4, { align: 'right' });
 
   y += 8;
   y = drawHR(pdf, y, COLORS.navy);
@@ -300,7 +300,7 @@ function drawAPYTotalsSection(pdf: jsPDF, cert: APYCertificate, startY: number):
   pdf.setFontSize(11);
   pdf.text(LABELS.totalWithholding, labelX, y + 6);
   pdf.setFontSize(13);
-  pdf.text(formatCurrency(cert.totalWithholdingAmount), rightCol, y + 6, { align: 'right' });
+  pdf.text(formatAccountingCurrency(cert.totalWithholdingAmount), rightCol, y + 6, { align: 'right' });
 
   y += 12;
   y = drawHR(pdf, y, COLORS.navy);

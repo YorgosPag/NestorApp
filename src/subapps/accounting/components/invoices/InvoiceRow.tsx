@@ -7,7 +7,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { Invoice } from '@/subapps/accounting/types';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 import { cn } from '@/lib/utils';
 
 interface InvoiceRowProps {
@@ -50,11 +50,11 @@ export function InvoiceRow({ invoice }: InvoiceRowProps) {
       <TableCell className="font-medium">
         {invoice.series}-{invoice.number}
       </TableCell>
-      <TableCell>{formatDate(invoice.issueDate)}</TableCell>
+      <TableCell>{formatAccountingDate(invoice.issueDate)}</TableCell>
       <TableCell className="max-w-[200px] truncate">{invoice.customer.name}</TableCell>
       <TableCell className="text-sm">{t(`invoices.types.${invoice.type}`)}</TableCell>
       <TableCell className="text-right font-medium">
-        {formatCurrency(invoice.totalGrossAmount)}
+        {formatAccountingCurrency(invoice.totalGrossAmount)}
       </TableCell>
       <TableCell>
         <Badge variant={PAYMENT_STATUS_VARIANTS[invoice.paymentStatus] ?? 'outline'}>

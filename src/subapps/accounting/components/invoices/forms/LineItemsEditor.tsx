@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { VATRateSelector } from '../../shared/VATRateSelector';
 import { ServicePresetCombobox } from '../../shared/ServicePresetCombobox';
 import type { InvoiceLineItem, MyDataIncomeType, ServicePreset } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../../utils/format';
+import { formatAccountingCurrency } from '../../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -167,17 +167,17 @@ export function LineItemsEditor({ lineItems, onLineItemsChange, presets }: LineI
 
               <div className="flex flex-col justify-end">
                 <span className={cn("text-xs", colors.text.muted)}>{t('forms.subtotal')}</span>
-                <span className="text-sm font-medium">{formatCurrency(netAmount)}</span>
+                <span className="text-sm font-medium">{formatAccountingCurrency(netAmount)}</span>
               </div>
 
               <div className="flex flex-col justify-end">
                 <span className={cn("text-xs", colors.text.muted)}>{t('invoices.vatLabel')}</span>
-                <span className="text-sm font-medium">{formatCurrency(vatAmount)}</span>
+                <span className="text-sm font-medium">{formatAccountingCurrency(vatAmount)}</span>
               </div>
 
               <div className="flex flex-col justify-end">
                 <span className={cn("text-xs", colors.text.muted)}>{t('forms.grandTotal')}</span>
-                <span className="text-sm font-bold">{formatCurrency(grossAmount)}</span>
+                <span className="text-sm font-bold">{formatAccountingCurrency(grossAmount)}</span>
               </div>
             </div>
           </article>

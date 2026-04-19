@@ -25,7 +25,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useJournalEntries } from '../../hooks/useJournalEntries';
 import type { EntryType, FiscalQuarter } from '@/subapps/accounting/types';
@@ -157,21 +157,21 @@ export function JournalPageContent() {
     return [
       {
         title: t('dashboard.totalIncome'),
-        value: formatCurrency(totalIncome),
+        value: formatAccountingCurrency(totalIncome),
         icon: ArrowUpRight,
         color: 'green' as const,
         loading,
       },
       {
         title: t('dashboard.totalExpenses'),
-        value: formatCurrency(totalExpenses),
+        value: formatAccountingCurrency(totalExpenses),
         icon: ArrowDownRight,
         color: 'red' as const,
         loading,
       },
       {
         title: t('dashboard.netResult'),
-        value: formatCurrency(netResult),
+        value: formatAccountingCurrency(netResult),
         icon: TrendingUp,
         color: netResult >= 0 ? 'green' as const : 'red' as const,
         loading,

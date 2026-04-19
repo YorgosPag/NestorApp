@@ -40,7 +40,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { useAPYCertificates } from '../../hooks/useAPYCertificates';
 import { createStaleCache } from '@/lib/stale-cache';
 import type { APYCertificate, APYEmailSendRecord } from '../../types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { SendReminderEmailDialog } from './SendReminderEmailDialog';
 import { nowISO } from '@/lib/date-local';
 import { formatDateTime } from '@/lib/intl-utils';
@@ -194,8 +194,8 @@ export function APYCertificateDetails({
   if (!cert) return <PageErrorState title={t('apy.notFoundTitle')} message={t('apy.notFoundMessage')} onRetry={onBack} />;
 
   const emailHistory = cert.emailHistory ?? [];
-  const totalNetFormatted = formatCurrency(cert.totalNetAmount);
-  const totalWithholdingFormatted = formatCurrency(cert.totalWithholdingAmount);
+  const totalNetFormatted = formatAccountingCurrency(cert.totalNetAmount);
+  const totalWithholdingFormatted = formatAccountingCurrency(cert.totalWithholdingAmount);
 
   return (
     <article className="space-y-6">
@@ -339,10 +339,10 @@ export function APYCertificateDetails({
               <TableRow key={item.invoiceId}>
                 <TableCell className="font-mono">{item.invoiceNumber}</TableCell>
                 <TableCell>{formatIsoDay(item.issueDate)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(item.netAmount)}</TableCell>
+                <TableCell className="text-right">{formatAccountingCurrency(item.netAmount)}</TableCell>
                 <TableCell className="text-center">{item.withholdingRate}%</TableCell>
                 <TableCell className="text-right font-medium">
-                  {formatCurrency(item.withholdingAmount)}
+                  {formatAccountingCurrency(item.withholdingAmount)}
                 </TableCell>
               </TableRow>
             ))}

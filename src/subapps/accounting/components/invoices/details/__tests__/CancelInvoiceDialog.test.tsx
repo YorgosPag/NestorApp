@@ -45,7 +45,7 @@ jest.mock('@/config/domain-constants', () => ({
 }));
 
 jest.mock('../../../../utils/format', () => ({
-  formatCurrency: (v: number) => `€${v.toFixed(2)}`,
+  formatAccountingCurrency: (v: number) => `€${v.toFixed(2)}`,
 }));
 
 // Mock Dialog to render inline (portals don't work in jsdom)

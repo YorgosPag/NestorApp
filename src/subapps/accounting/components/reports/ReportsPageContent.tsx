@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
 import { PageLoadingState } from '@/core/states';
@@ -52,28 +52,28 @@ export function ReportsPageContent() {
       return [
         {
           title: t('reports.totalIncome'),
-          value: formatCurrency(corporateResult.corporateTax.grossIncome),
+          value: formatAccountingCurrency(corporateResult.corporateTax.grossIncome),
           icon: TrendingUp,
           color: 'green' as const,
           loading,
         },
         {
           title: t('reports.totalExpenses'),
-          value: formatCurrency(corporateResult.corporateTax.deductibleExpenses),
+          value: formatAccountingCurrency(corporateResult.corporateTax.deductibleExpenses),
           icon: TrendingDown,
           color: 'red' as const,
           loading,
         },
         {
           title: t('reports.taxableIncome'),
-          value: formatCurrency(corporateResult.corporateTax.taxableIncome),
+          value: formatAccountingCurrency(corporateResult.corporateTax.taxableIncome),
           icon: Calculator,
           color: 'blue' as const,
           loading,
         },
         {
           title: t('setup.corporateTax.totalObligation'),
-          value: formatCurrency(corporateResult.corporateTax.totalObligation),
+          value: formatAccountingCurrency(corporateResult.corporateTax.totalObligation),
           icon: DollarSign,
           color: 'orange' as const,
           loading,
@@ -85,28 +85,28 @@ export function ReportsPageContent() {
       return [
         {
           title: t('reports.totalIncome'),
-          value: formatCurrency(partnershipResult.totalEntityIncome),
+          value: formatAccountingCurrency(partnershipResult.totalEntityIncome),
           icon: TrendingUp,
           color: 'green' as const,
           loading,
         },
         {
           title: t('reports.totalExpenses'),
-          value: formatCurrency(partnershipResult.totalEntityExpenses),
+          value: formatAccountingCurrency(partnershipResult.totalEntityExpenses),
           icon: TrendingDown,
           color: 'red' as const,
           loading,
         },
         {
           title: t('reports.taxableIncome'),
-          value: formatCurrency(partnershipResult.totalEntityProfit),
+          value: formatAccountingCurrency(partnershipResult.totalEntityProfit),
           icon: Calculator,
           color: 'blue' as const,
           loading,
         },
         {
           title: t('tax.partnerBreakdown.professionalTax'),
-          value: formatCurrency(partnershipResult.entityProfessionalTax),
+          value: formatAccountingCurrency(partnershipResult.entityProfessionalTax),
           icon: DollarSign,
           color: 'orange' as const,
           loading,
@@ -122,28 +122,28 @@ export function ReportsPageContent() {
     return [
       {
         title: t('reports.totalIncome'),
-        value: estimate ? formatCurrency(income) : '—',
+        value: estimate ? formatAccountingCurrency(income) : '—',
         icon: TrendingUp,
         color: 'green' as const,
         loading,
       },
       {
         title: t('reports.totalExpenses'),
-        value: estimate ? formatCurrency(expenses) : '—',
+        value: estimate ? formatAccountingCurrency(expenses) : '—',
         icon: TrendingDown,
         color: 'red' as const,
         loading,
       },
       {
         title: t('reports.taxableIncome'),
-        value: estimate ? formatCurrency(taxableIncome) : '—',
+        value: estimate ? formatAccountingCurrency(taxableIncome) : '—',
         icon: Calculator,
         color: 'blue' as const,
         loading,
       },
       {
         title: t('reports.estimatedTax'),
-        value: estimate ? formatCurrency(estimatedTax) : '—',
+        value: estimate ? formatAccountingCurrency(estimatedTax) : '—',
         icon: DollarSign,
         color: 'orange' as const,
         loading,

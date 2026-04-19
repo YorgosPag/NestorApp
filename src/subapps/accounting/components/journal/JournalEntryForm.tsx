@@ -39,7 +39,7 @@ import type {
   CreateJournalEntryInput,
 } from '@/subapps/accounting/types';
 import { getCategoryByCode } from '../../config/account-categories';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { nowISO } from '@/lib/date-local';
@@ -304,11 +304,11 @@ export function JournalEntryForm({ onSuccess, onCancel }: JournalEntryFormProps)
           <dl className="grid grid-cols-3 gap-4 text-sm">
             <div>
               <dt className={colors.text.muted}>{t('journal.vatAmount')}</dt>
-              <dd className="text-lg font-semibold">{formatCurrency(calculations.vatAmount)}</dd>
+              <dd className="text-lg font-semibold">{formatAccountingCurrency(calculations.vatAmount)}</dd>
             </div>
             <div>
               <dt className={colors.text.muted}>{t('journal.grossAmount')}</dt>
-              <dd className="text-lg font-bold">{formatCurrency(calculations.grossAmount)}</dd>
+              <dd className="text-lg font-bold">{formatAccountingCurrency(calculations.grossAmount)}</dd>
             </div>
           </dl>
         </CardContent>

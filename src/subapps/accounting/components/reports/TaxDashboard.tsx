@@ -21,7 +21,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { TaxResult, TaxInstallment } from '@/subapps/accounting/types';
 import { TaxBracketsVisual } from './TaxBracketsVisual';
 import { InstallmentsCard } from './InstallmentsCard';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 import { cn } from '@/lib/utils';
 
@@ -125,19 +125,19 @@ export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
               <article className="space-y-1">
                 <p className={cn("text-xs", colors.text.muted)}>{t('reports.grossIncome')}</p>
                 <p className="text-lg font-bold text-foreground">
-                  {formatCurrency(data.taxResult.grossIncome)}
+                  {formatAccountingCurrency(data.taxResult.grossIncome)}
                 </p>
               </article>
               <article className="space-y-1">
                 <p className={cn("text-xs", colors.text.muted)}>{t('reports.deductibleExpenses')}</p>
                 <p className="text-lg font-bold text-foreground">
-                  {formatCurrency(data.taxResult.deductibleExpenses)}
+                  {formatAccountingCurrency(data.taxResult.deductibleExpenses)}
                 </p>
               </article>
               <article className="space-y-1">
                 <p className={cn("text-xs", colors.text.muted)}>{t('reports.taxableIncome')}</p>
                 <p className="text-lg font-bold text-foreground">
-                  {formatCurrency(data.taxResult.taxableIncome)}
+                  {formatAccountingCurrency(data.taxResult.taxableIncome)}
                 </p>
               </article>
               <article className="space-y-1">
@@ -149,7 +149,7 @@ export function TaxDashboard({ fiscalYear }: TaxDashboardProps) {
                       : colors.text.success
                   }`}
                 >
-                  {formatCurrency(data.taxResult.finalAmount)}
+                  {formatAccountingCurrency(data.taxResult.finalAmount)}
                 </p>
               </article>
             </div>

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { TaxInstallment, TaxInstallmentStatus } from '@/subapps/accounting/types';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -74,8 +74,8 @@ export function InstallmentsCard({ installments }: InstallmentsCardProps) {
           <span>{t('reports.installments')}</span>
           <span className={cn("text-sm font-normal", colors.text.muted)}>
             {t('installmentsPaid', {
-              paid: formatCurrency(paidAmount),
-              total: formatCurrency(totalAmount),
+              paid: formatAccountingCurrency(paidAmount),
+              total: formatAccountingCurrency(totalAmount),
             })}
           </span>
         </CardTitle>
@@ -98,10 +98,10 @@ export function InstallmentsCard({ installments }: InstallmentsCardProps) {
                     {t('installmentNumber', { number: inst.installmentNumber })}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {formatDate(inst.dueDate)}
+                    {formatAccountingDate(inst.dueDate)}
                   </TableCell>
                   <TableCell className="text-right font-medium text-sm">
-                    {formatCurrency(inst.amount)}
+                    {formatAccountingCurrency(inst.amount)}
                   </TableCell>
                   <TableCell>
                     <Badge variant={INSTALLMENT_STATUS_VARIANTS[inst.status]}>

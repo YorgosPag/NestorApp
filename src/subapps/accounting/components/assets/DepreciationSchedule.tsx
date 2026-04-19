@@ -22,7 +22,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { DepreciationRecord } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 import { cn } from '@/lib/utils';
 
@@ -93,13 +93,13 @@ export function DepreciationSchedule({ assetDescription, records }: Depreciation
                   <TableRow key={record.recordId}>
                     <TableCell className="font-medium">{record.fiscalYear}</TableCell>
                     <TableCell className="text-right text-sm">
-                      {formatCurrency(openingValue)}
+                      {formatAccountingCurrency(openingValue)}
                     </TableCell>
                     <TableCell className={`text-right text-sm ${colors.text.error}`}>
-                      -{formatCurrency(record.annualDepreciation)}
+                      -{formatAccountingCurrency(record.annualDepreciation)}
                     </TableCell>
                     <TableCell className="text-right font-medium text-sm">
-                      {formatCurrency(record.closingNetBookValue)}
+                      {formatAccountingCurrency(record.closingNetBookValue)}
                     </TableCell>
                   </TableRow>
                 );

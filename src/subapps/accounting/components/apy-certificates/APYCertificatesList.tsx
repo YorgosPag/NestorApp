@@ -32,7 +32,7 @@ import {
 import { PageLoadingState, PageErrorState } from '@/core/states';
 import { useAPYCertificates } from '../../hooks/useAPYCertificates';
 import type { APYCertificate } from '../../types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { CreateAPYCertificateDialog } from './CreateAPYCertificateDialog';
 
 // ============================================================================
@@ -206,7 +206,7 @@ function APYCertificateRow({ cert, onClick }: APYCertificateRowProps) {
       <TableCell className="text-center text-gray-700">{cert.fiscalYear}</TableCell>
       <TableCell className="text-center text-gray-600">{cert.lineItems.length}</TableCell>
       <TableCell className="text-right font-semibold text-gray-900">
-        {formatCurrency(cert.totalWithholdingAmount)}
+        {formatAccountingCurrency(cert.totalWithholdingAmount)}
       </TableCell>
       <TableCell className="text-center">
         {cert.isReceived ? (

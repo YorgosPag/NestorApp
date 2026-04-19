@@ -21,7 +21,7 @@ import {
 import type { JournalEntry } from '@/subapps/accounting/types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { JournalEntryRow } from './JournalEntryRow';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -81,16 +81,16 @@ export function JournalEntriesTable({ entries }: JournalEntriesTableProps) {
       <footer className="mt-4 flex flex-wrap gap-6 text-sm">
         <dl className="flex items-center gap-2">
           <dt className={colors.text.muted}>{t('journal.totalIncome')}:</dt>
-          <dd className={`font-semibold ${colors.text.success}`}>{formatCurrency(totalIncome)}</dd>
+          <dd className={`font-semibold ${colors.text.success}`}>{formatAccountingCurrency(totalIncome)}</dd>
         </dl>
         <dl className="flex items-center gap-2">
           <dt className={colors.text.muted}>{t('journal.totalExpenses')}:</dt>
-          <dd className={`font-semibold ${colors.text.error}`}>{formatCurrency(totalExpenses)}</dd>
+          <dd className={`font-semibold ${colors.text.error}`}>{formatAccountingCurrency(totalExpenses)}</dd>
         </dl>
         <dl className="flex items-center gap-2">
           <dt className={colors.text.muted}>{t('journal.netResult')}:</dt>
           <dd className={`font-bold ${netResult >= 0 ? colors.text.success : colors.text.error}`}>
-            {formatCurrency(netResult)}
+            {formatAccountingCurrency(netResult)}
           </dd>
         </dl>
       </footer>

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import type { InvoiceLineItem } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../../utils/format';
+import { formatAccountingCurrency } from '../../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -38,13 +38,13 @@ export function InvoicePreview({ totals, lineItems }: InvoicePreviewProps) {
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className={colors.text.muted}>{t('invoices.netAmount')}</span>
-            <span className="font-medium">{formatCurrency(totals.totalNetAmount)}</span>
+            <span className="font-medium">{formatAccountingCurrency(totals.totalNetAmount)}</span>
           </div>
 
           {Array.from(vatByRate.entries()).map(([rate, amount]) => (
             <div key={rate} className="flex justify-between text-sm">
               <span className={colors.text.muted}>ΦΠΑ {rate}%</span>
-              <span className="font-medium">{formatCurrency(amount)}</span>
+              <span className="font-medium">{formatAccountingCurrency(amount)}</span>
             </div>
           ))}
 
@@ -52,14 +52,14 @@ export function InvoicePreview({ totals, lineItems }: InvoicePreviewProps) {
 
           <div className="flex justify-between text-sm">
             <span className={colors.text.muted}>{t('forms.totalVat')}</span>
-            <span className="font-medium">{formatCurrency(totals.totalVatAmount)}</span>
+            <span className="font-medium">{formatAccountingCurrency(totals.totalVatAmount)}</span>
           </div>
 
           <Separator />
 
           <div className="flex justify-between text-lg font-bold">
             <span>{t('forms.grandTotal')}</span>
-            <span>{formatCurrency(totals.totalGrossAmount)}</span>
+            <span>{formatAccountingCurrency(totals.totalGrossAmount)}</span>
           </div>
         </div>
       </CardContent>

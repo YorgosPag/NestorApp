@@ -22,7 +22,7 @@ import { Plus, Trash2, Download, Pencil, Check, X } from 'lucide-react';
 import { VATRateSelector } from '../shared/VATRateSelector';
 import { useServicePresets } from '../../hooks';
 import type { ServicePreset, MyDataIncomeType } from '../../types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { generateServicePresetId } from '@/services/enterprise-id-convenience';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -326,7 +326,7 @@ export function ServicePresetsSection() {
                     <span className="flex-1 text-sm font-medium truncate">{preset.description}</span>
                     <span className={cn("text-xs whitespace-nowrap", colors.text.muted)}>{preset.unit}</span>
                     <span className={cn("text-xs whitespace-nowrap", colors.text.muted)}>
-                      {formatCurrency(preset.unitPrice)}
+                      {formatAccountingCurrency(preset.unitPrice)}
                     </span>
                     <span className={cn("text-xs whitespace-nowrap", colors.text.muted)}>{preset.vatRate}%</span>
                     <Button

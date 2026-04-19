@@ -32,7 +32,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import type { Invoice, CancellationReasonCode } from '@/subapps/accounting/types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
-import { formatCurrency } from '../../../utils/format';
+import { formatAccountingCurrency } from '../../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -219,7 +219,7 @@ export function CancelInvoiceDialog({
               {invoice.customer.name}
             </p>
             <p className="text-sm font-medium">
-              {formatCurrency(invoice.totalGrossAmount)}
+              {formatAccountingCurrency(invoice.totalGrossAmount)}
             </p>
           </div>
 

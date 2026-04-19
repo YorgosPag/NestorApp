@@ -1,22 +1,15 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-19T08:58:57Z",
-    "totalViolations": 11,
-    "totalFiles": 10,
+    "generated": "2026-04-19T09:34:32Z",
+    "totalViolations": 3,
+    "totalFiles": 3,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
-    "src/subapps/accounting/utils/format.ts": 2,
     "src/subapps/geo-canvas/services/geo-transform/ControlPointManager.ts": 1,
     "src/subapps/geo-canvas/index.ts": 1,
-    "src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts": 1,
-    "src/subapps/dxf-viewer/debug/store-sync-test.ts": 1,
-    "src/subapps/dxf-viewer/debug/settings-enterprise-test.ts": 1,
-    "src/subapps/dxf-viewer/debug/layering-workflow-test.ts": 1,
-    "src/subapps/dxf-viewer/debug/grid-enterprise-test.ts": 1,
-    "src/services/pdf/renderers/PropertyShowcaseRenderer.ts": 1,
-    "src/core/configuration/enterprise-config-management.ts": 1
+    "src/services/pdf/renderers/PropertyShowcaseRenderer.ts": 1
   }
 }

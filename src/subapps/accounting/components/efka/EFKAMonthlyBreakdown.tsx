@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { EFKAMonthlyBreakdown as EFKAMonthlyBreakdownType } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -74,19 +74,19 @@ export function EFKAMonthlyBreakdown({ breakdown = [] }: EFKAMonthlyBreakdownPro
                 {t(`common.months.${row.month}`)}
               </TableCell>
               <TableCell className="text-right text-sm">
-                {formatCurrency(row.mainPensionAmount)}
+                {formatAccountingCurrency(row.mainPensionAmount)}
               </TableCell>
               <TableCell className="text-right text-sm">
-                {formatCurrency(row.healthAmount)}
+                {formatAccountingCurrency(row.healthAmount)}
               </TableCell>
               <TableCell className="text-right text-sm">
-                {formatCurrency(row.supplementaryAmount)}
+                {formatAccountingCurrency(row.supplementaryAmount)}
               </TableCell>
               <TableCell className="text-right text-sm">
-                {formatCurrency(row.lumpSumAmount)}
+                {formatAccountingCurrency(row.lumpSumAmount)}
               </TableCell>
               <TableCell className="text-right font-semibold text-sm">
-                {formatCurrency(row.totalMonthly)}
+                {formatAccountingCurrency(row.totalMonthly)}
               </TableCell>
             </TableRow>
           ))}
@@ -94,11 +94,11 @@ export function EFKAMonthlyBreakdown({ breakdown = [] }: EFKAMonthlyBreakdownPro
           {/* Totals Row */}
           <TableRow className="bg-muted/50 font-semibold">
             <TableCell>{t('efka.annualTotal')}</TableCell>
-            <TableCell className="text-right">{formatCurrency(totals.mainPension)}</TableCell>
-            <TableCell className="text-right">{formatCurrency(totals.health)}</TableCell>
-            <TableCell className="text-right">{formatCurrency(totals.supplementary)}</TableCell>
-            <TableCell className="text-right">{formatCurrency(totals.lumpSum)}</TableCell>
-            <TableCell className="text-right">{formatCurrency(totals.total)}</TableCell>
+            <TableCell className="text-right">{formatAccountingCurrency(totals.mainPension)}</TableCell>
+            <TableCell className="text-right">{formatAccountingCurrency(totals.health)}</TableCell>
+            <TableCell className="text-right">{formatAccountingCurrency(totals.supplementary)}</TableCell>
+            <TableCell className="text-right">{formatAccountingCurrency(totals.lumpSum)}</TableCell>
+            <TableCell className="text-right">{formatAccountingCurrency(totals.total)}</TableCell>
           </TableRow>
         </TableBody>
       </Table>

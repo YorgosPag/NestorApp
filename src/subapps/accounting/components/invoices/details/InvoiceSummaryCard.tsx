@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import type { Invoice } from '@/subapps/accounting/types';
-import { formatCurrency, formatDate } from '../../../utils/format';
+import { formatAccountingCurrency, formatAccountingDate } from '../../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -42,12 +42,12 @@ export function InvoiceSummaryCard({ invoice }: InvoiceSummaryCardProps) {
           <section className="space-y-2">
             <div className="flex items-center justify-between">
               <span className={cn("text-sm", colors.text.muted)}>{t('invoices.issueDate')}</span>
-              <span className="text-sm">{formatDate(invoice.issueDate)}</span>
+              <span className="text-sm">{formatAccountingDate(invoice.issueDate)}</span>
             </div>
             {invoice.dueDate && (
               <div className="flex items-center justify-between">
                 <span className={cn("text-sm", colors.text.muted)}>{t('invoices.dueDate')}</span>
-                <span className="text-sm">{formatDate(invoice.dueDate)}</span>
+                <span className="text-sm">{formatAccountingDate(invoice.dueDate)}</span>
               </div>
             )}
             <div className="flex items-center justify-between">
@@ -67,15 +67,15 @@ export function InvoiceSummaryCard({ invoice }: InvoiceSummaryCardProps) {
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <p className={cn("text-xs", colors.text.muted)}>{t('invoices.netAmount')}</p>
-            <p className="text-lg font-medium">{formatCurrency(invoice.totalNetAmount)}</p>
+            <p className="text-lg font-medium">{formatAccountingCurrency(invoice.totalNetAmount)}</p>
           </div>
           <div>
             <p className={cn("text-xs", colors.text.muted)}>{t('invoices.vatAmount')}</p>
-            <p className="text-lg font-medium">{formatCurrency(invoice.totalVatAmount)}</p>
+            <p className="text-lg font-medium">{formatAccountingCurrency(invoice.totalVatAmount)}</p>
           </div>
           <div>
             <p className={cn("text-xs", colors.text.muted)}>{t('invoices.grossAmount')}</p>
-            <p className="text-lg font-bold">{formatCurrency(invoice.totalGrossAmount)}</p>
+            <p className="text-lg font-bold">{formatAccountingCurrency(invoice.totalGrossAmount)}</p>
           </div>
         </div>
       </CardContent>

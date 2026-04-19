@@ -26,7 +26,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import type { AssetCategory, AssetStatus, CreateFixedAssetInput } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useFixedAssets } from '../../hooks/useFixedAssets';
 import { AssetsList } from './AssetsList';
@@ -149,21 +149,21 @@ export function AssetsPageContent() {
       },
       {
         title: t('dashboard.totalValue'),
-        value: formatCurrency(totalValue),
+        value: formatAccountingCurrency(totalValue),
         icon: DollarSign,
         color: 'green' as const,
         loading,
       },
       {
         title: t('dashboard.totalDepreciation'),
-        value: formatCurrency(totalDepreciation),
+        value: formatAccountingCurrency(totalDepreciation),
         icon: TrendingDown,
         color: 'orange' as const,
         loading,
       },
       {
         title: t('dashboard.netBookValue'),
-        value: formatCurrency(netBookValue),
+        value: formatAccountingCurrency(netBookValue),
         icon: BarChart3,
         color: 'purple' as const,
         loading,

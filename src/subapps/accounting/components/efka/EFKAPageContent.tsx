@@ -25,7 +25,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useEFKASummary } from '../../hooks/useEFKASummary';
 import { FiscalYearPicker } from '../shared/FiscalYearPicker';
@@ -124,7 +124,7 @@ export function EFKAPageContent() {
       return [
         {
           title: t('dashboard.totalPaid'),
-          value: formatCurrency(totalPaid),
+          value: formatAccountingCurrency(totalPaid),
           icon: CheckCircle,
           color: 'green' as const,
           description: t('efka.partnerTabs.totalAllPartners'),
@@ -132,14 +132,14 @@ export function EFKAPageContent() {
         },
         {
           title: t('dashboard.totalDue'),
-          value: formatCurrency(totalDue),
+          value: formatAccountingCurrency(totalDue),
           icon: DollarSign,
           color: 'blue' as const,
           loading,
         },
         {
           title: t('dashboard.balanceDue'),
-          value: formatCurrency(balance),
+          value: formatAccountingCurrency(balance),
           icon: balance > 0 ? AlertTriangle : CheckCircle,
           color: balance > 0 ? 'red' as const : 'green' as const,
           loading,
@@ -159,7 +159,7 @@ export function EFKAPageContent() {
     return [
       {
         title: t('dashboard.totalPaid'),
-        value: formatCurrency(summary.totalPaid),
+        value: formatAccountingCurrency(summary.totalPaid),
         icon: CheckCircle,
         color: 'green' as const,
         description: `${summary.paidMonths} ${t('efka.month')}`,
@@ -167,14 +167,14 @@ export function EFKAPageContent() {
       },
       {
         title: t('dashboard.totalDue'),
-        value: formatCurrency(summary.totalDue),
+        value: formatAccountingCurrency(summary.totalDue),
         icon: DollarSign,
         color: 'blue' as const,
         loading,
       },
       {
         title: t('dashboard.balanceDue'),
-        value: formatCurrency(summary.balanceDue),
+        value: formatAccountingCurrency(summary.balanceDue),
         icon: summary.balanceDue > 0 ? AlertTriangle : CheckCircle,
         color: summary.balanceDue > 0 ? 'red' as const : 'green' as const,
         loading,

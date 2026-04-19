@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { EFKAPayment, EFKAPaymentStatus } from '@/subapps/accounting/types';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -85,13 +85,13 @@ export function EFKAPaymentsList({ payments = [] }: EFKAPaymentsListProps) {
                 {t(`common.months.${payment.month}`)}
               </TableCell>
               <TableCell className="text-right font-medium text-sm">
-                {formatCurrency(payment.amount)}
+                {formatAccountingCurrency(payment.amount)}
               </TableCell>
               <TableCell className="text-sm">
-                {formatDate(payment.dueDate)}
+                {formatAccountingDate(payment.dueDate)}
               </TableCell>
               <TableCell className="text-sm">
-                {payment.paidDate ? formatDate(payment.paidDate) : '-'}
+                {payment.paidDate ? formatAccountingDate(payment.paidDate) : '-'}
               </TableCell>
               <TableCell>
                 <Badge variant={PAYMENT_STATUS_VARIANTS[payment.status]}>

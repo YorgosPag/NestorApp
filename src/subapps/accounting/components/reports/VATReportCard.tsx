@@ -17,7 +17,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useVATSummary } from '../../hooks/useVATSummary';
 import type { VATAnnualSummary } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 import { cn } from '@/lib/utils';
 
@@ -74,7 +74,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
             <div className="flex items-center justify-between">
               <dt className={cn("text-sm", colors.text.muted)}>{t('reports.outputVAT')}</dt>
               <dd className="font-medium text-sm">
-                {formatCurrency(summary.annualOutputVat)}
+                {formatAccountingCurrency(summary.annualOutputVat)}
               </dd>
             </div>
 
@@ -82,7 +82,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
             <div className="flex items-center justify-between">
               <dt className={cn("text-sm", colors.text.muted)}>{t('reports.inputVAT')}</dt>
               <dd className="font-medium text-sm">
-                {formatCurrency(summary.annualDeductibleInputVat)}
+                {formatAccountingCurrency(summary.annualDeductibleInputVat)}
               </dd>
             </div>
 
@@ -98,7 +98,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
                     : colors.text.success
                 }`}
               >
-                {formatCurrency(summary.annualVatPayable)}
+                {formatAccountingCurrency(summary.annualVatPayable)}
               </dd>
             </div>
 
@@ -107,7 +107,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
               <div className="flex items-center justify-between">
                 <dt className={cn("text-sm", colors.text.muted)}>{t('reports.vatCredit')}</dt>
                 <dd className={`font-medium text-sm ${colors.text.success}`}>
-                  {formatCurrency(summary.annualVatCredit)}
+                  {formatAccountingCurrency(summary.annualVatCredit)}
                 </dd>
               </div>
             )}
@@ -116,7 +116,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
             <div className="flex items-center justify-between">
               <dt className={cn("text-sm", colors.text.muted)}>{t('reports.vatPaid')}</dt>
               <dd className="font-medium text-sm">
-                {formatCurrency(summary.totalVatPaid)}
+                {formatAccountingCurrency(summary.totalVatPaid)}
               </dd>
             </div>
 
@@ -130,7 +130,7 @@ export function VATReportCard({ fiscalYear }: VATReportCardProps) {
                     : colors.text.success
                 }`}
               >
-                {formatCurrency(summary.settlementAmount)}
+                {formatAccountingCurrency(summary.settlementAmount)}
               </dd>
             </div>
           </dl>

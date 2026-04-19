@@ -17,7 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { MatchCandidate } from '@/subapps/accounting/types';
 import { TIER_BADGE_VARIANT } from './tier-colors';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 interface CandidateCardProps {
   candidate: MatchCandidate;
@@ -41,7 +41,7 @@ export function CandidateCard({ candidate, onMatch, matching }: CandidateCardPro
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            {formatCurrency(candidate.amount)}
+            {formatAccountingCurrency(candidate.amount)}
             <span className="mx-1.5">·</span>
             {candidate.date}
           </p>

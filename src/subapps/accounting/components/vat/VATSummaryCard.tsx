@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { VATAnnualSummary } from '@/subapps/accounting/types';
-import { formatCurrency } from '@/subapps/accounting/utils/format';
+import { formatAccountingCurrency } from '@/subapps/accounting/utils/format';
 
 // ============================================================================
 // TYPES
@@ -43,13 +43,13 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
           {/* Output VAT */}
           <div className="flex justify-between">
             <dt className={colors.text.muted}>{t('vat.outputVat')}</dt>
-            <dd className="font-medium">{formatCurrency(summary.annualOutputVat)}</dd>
+            <dd className="font-medium">{formatAccountingCurrency(summary.annualOutputVat)}</dd>
           </div>
 
           {/* Deductible Input VAT */}
           <div className="flex justify-between">
             <dt className={colors.text.muted}>{t('vat.deductibleVat')}</dt>
-            <dd className="font-medium">{formatCurrency(summary.annualDeductibleInputVat)}</dd>
+            <dd className="font-medium">{formatAccountingCurrency(summary.annualDeductibleInputVat)}</dd>
           </div>
 
           <Separator />
@@ -58,7 +58,7 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
           <div className="flex justify-between">
             <dt className="font-medium">{t('vat.vatPayable')}</dt>
             <dd className={`text-lg font-bold ${summary.annualVatPayable >= 0 ? colors.text.error : colors.text.success}`}>
-              {formatCurrency(summary.annualVatPayable)}
+              {formatAccountingCurrency(summary.annualVatPayable)}
             </dd>
           </div>
 
@@ -66,7 +66,7 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
           {summary.annualVatCredit > 0 && (
             <div className="flex justify-between">
               <dt className={colors.text.muted}>{t('vat.vatCredit')}</dt>
-              <dd className={`font-medium ${colors.text.success}`}>{formatCurrency(summary.annualVatCredit)}</dd>
+              <dd className={`font-medium ${colors.text.success}`}>{formatAccountingCurrency(summary.annualVatCredit)}</dd>
             </div>
           )}
 
@@ -77,7 +77,7 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
             <dt className={colors.text.muted}>
               {t('vat.vatPayable')} ({t('vat.quarterlyReturns')})
             </dt>
-            <dd>{formatCurrency(summary.totalVatPaid)}</dd>
+            <dd>{formatAccountingCurrency(summary.totalVatPaid)}</dd>
           </div>
 
           <div className="flex justify-between">
@@ -88,7 +88,7 @@ export function VATSummaryCard({ summary }: VATSummaryCardProps) {
               )
             </dt>
             <dd className={`text-lg font-bold ${summary.settlementAmount >= 0 ? colors.text.error : colors.text.success}`}>
-              {formatCurrency(Math.abs(summary.settlementAmount))}
+              {formatAccountingCurrency(Math.abs(summary.settlementAmount))}
             </dd>
           </div>
         </dl>

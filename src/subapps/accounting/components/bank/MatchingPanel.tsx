@@ -26,7 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BankTransaction, MatchCandidate } from '@/subapps/accounting/types';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 
 import { cn } from '@/lib/utils';
 
@@ -128,7 +128,7 @@ export function MatchingPanel({
                       onClick={() => handleSelectTransaction(tx.transactionId)}
                     >
                       <TableCell className="text-sm">
-                        {formatDate(tx.valueDate)}
+                        {formatAccountingDate(tx.valueDate)}
                       </TableCell>
                       <TableCell className="text-sm truncate max-w-[180px]">
                         {tx.bankDescription}
@@ -140,7 +140,7 @@ export function MatchingPanel({
                             : colors.text.error
                         }`}
                       >
-                        {formatCurrency(tx.amount)}
+                        {formatAccountingCurrency(tx.amount)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -186,11 +186,11 @@ export function MatchingPanel({
                       <TableCell className="text-sm">
                         <span className="block font-medium">{candidate.displayLabel}</span>
                         <span className={cn("text-xs", colors.text.muted)}>
-                          {formatDate(candidate.date)}
+                          {formatAccountingDate(candidate.date)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right font-medium text-sm">
-                        {formatCurrency(candidate.amount)}
+                        {formatAccountingCurrency(candidate.amount)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getConfidenceBadgeVariant(candidate.confidence)}>

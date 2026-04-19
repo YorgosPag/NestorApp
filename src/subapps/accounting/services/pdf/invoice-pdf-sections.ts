@@ -6,7 +6,7 @@
 
 import type jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 import type { Invoice, InvoiceLineItem } from '../../types';
 import {
   COLORS, LAYOUT, LOGO, LABELS, INVOICE_TITLES, PAYMENT_METHOD_LABELS,
@@ -77,9 +77,9 @@ export function drawHeader(
 
   pdf.setFontSize(8);
   setColor(pdf, COLORS.gray);
-  pdf.text(`${LABELS.invoiceDate}: ${formatDate(invoice.issueDate)}`, rightCol, y + 23, { align: 'right' });
+  pdf.text(`${LABELS.invoiceDate}: ${formatAccountingDate(invoice.issueDate)}`, rightCol, y + 23, { align: 'right' });
   if (invoice.dueDate) {
-    pdf.text(`${LABELS.dueDate}: ${formatDate(invoice.dueDate)}`, rightCol, y + 27, { align: 'right' });
+    pdf.text(`${LABELS.dueDate}: ${formatAccountingDate(invoice.dueDate)}`, rightCol, y + 27, { align: 'right' });
   }
 
   y = Math.max(infoY, y + 30) + 3;
@@ -164,9 +164,9 @@ export function drawLineItemsTable(pdf: jsPDF, invoice: Invoice, startY: number)
     const discountAmount = expectedNet - li.netAmount;
     const discountPct = expectedNet > 0 ? (discountAmount / expectedNet) * 100 : 0;
 
-    const row: string[] = [String(li.lineNumber), li.description, li.unit, String(li.quantity), formatCurrency(li.unitPrice)];
+    const row: string[] = [String(li.lineNumber), li.description, li.unit, String(li.quantity), formatAccountingCurrency(li.unitPrice)];
     if (hasDiscount) row.push(discountAmount > 0.01 ? `${discountPct.toFixed(0)}%` : '-');
-    row.push(`${li.vatRate}%`, formatCurrency(li.netAmount));
+    row.push(`${li.vatRate}%`, formatAccountingCurrency(li.netAmount));
     return row;
   });
 
@@ -194,26 +194,26 @@ export function drawTotalsSection(pdf: jsPDF, invoice: Invoice, startY: number, 
   pdf.setFontSize(8);
   setColor(pdf, COLORS.gray);
   pdf.text(LABELS.subtotal, labelX, y);
-  pdf.text(formatCurrency(invoice.totalNetAmount), valueX, y, { align: 'right' });
+  pdf.text(formatAccountingCurrency(invoice.totalNetAmount), valueX, y, { align: 'right' });
   y += 5;
 
   for (const vb of invoice.vatBreakdown) {
     pdf.text(`ΦΠΑ / VAT ${vb.vatRate}%`, labelX, y);
-    pdf.text(formatCurrency(vb.vatAmount), valueX, y, { align: 'right' });
+    pdf.text(formatAccountingCurrency(vb.vatAmount), valueX, y, { align: 'right' });
     y += 5;
   }
 
   setColor(pdf, COLORS.navy);
   pdf.setFontSize(9);
   pdf.text(LABELS.grossTotal, labelX, y);
-  pdf.text(formatCurrency(invoice.totalGrossAmount), valueX, y, { align: 'right' });
+  pdf.text(formatAccountingCurrency(invoice.totalGrossAmount), valueX, y, { align: 'right' });
   y += 5;
 
   if (withholdingAmount > 0) {
     setColor(pdf, COLORS.gray);
     pdf.setFontSize(8);
     pdf.text(LABELS.withholding, labelX, y);
-    pdf.text(`-${formatCurrency(withholdingAmount)}`, valueX, y, { align: 'right' });
+    pdf.text(`-${formatAccountingCurrency(withholdingAmount)}`, valueX, y, { align: 'right' });
     y += 5;
   }
 
@@ -222,7 +222,7 @@ export function drawTotalsSection(pdf: jsPDF, invoice: Invoice, startY: number, 
   setColor(pdf, COLORS.navy);
   pdf.setFontSize(11);
   pdf.text(LABELS.payable, labelX, y + 3);
-  pdf.text(formatCurrency(payable), valueX, y + 3, { align: 'right' });
+  pdf.text(formatAccountingCurrency(payable), valueX, y + 3, { align: 'right' });
   y += 8;
 
   return y + 3;

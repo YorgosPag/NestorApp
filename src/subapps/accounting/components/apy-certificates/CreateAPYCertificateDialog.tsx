@@ -43,7 +43,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { useAPYCertificates } from '../../hooks/useAPYCertificates';
 import { useCompanySetup } from '../../hooks/useCompanySetup';
 import type { APYCertificate, APYCertificateLineItem, Invoice } from '../../types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -319,10 +319,10 @@ export function CreateAPYCertificateDialog({
                     <TableRow key={inv.invoiceId}>
                       <TableCell className="font-mono">{buildInvoiceNumber(inv)}</TableCell>
                       <TableCell>{inv.issueDate.substring(0, 10)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(inv.totalNetAmount)}</TableCell>
+                      <TableCell className="text-right">{formatAccountingCurrency(inv.totalNetAmount)}</TableCell>
                       <TableCell className="text-center">{inv.withholdingRate ?? 20}%</TableCell>
                       <TableCell className="text-right font-semibold">
-                        {formatCurrency(inv.withholdingAmount ?? 0)}
+                        {formatAccountingCurrency(inv.withholdingAmount ?? 0)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -331,7 +331,7 @@ export function CreateAPYCertificateDialog({
                       {t('apy.invoiceTable.totalWithholding')}
                     </TableCell>
                     <TableCell className="text-right text-blue-900">
-                      {formatCurrency(totalWithholdingAmount)}
+                      {formatAccountingCurrency(totalWithholdingAmount)}
                     </TableCell>
                   </TableRow>
                 </TableBody>

@@ -25,7 +25,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
 import type { TransactionDirection, MatchStatus } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useBankTransactions } from '../../hooks/useBankTransactions';
 import { useBankMatching } from '../../hooks/useBankMatching';
@@ -170,14 +170,14 @@ export function BankPageContent() {
       },
       {
         title: t('dashboard.totalCredit'),
-        value: formatCurrency(totalCredit),
+        value: formatAccountingCurrency(totalCredit),
         icon: ArrowUpRight,
         color: 'green' as const,
         loading,
       },
       {
         title: t('dashboard.totalDebit'),
-        value: formatCurrency(totalDebit),
+        value: formatAccountingCurrency(totalDebit),
         icon: ArrowDownRight,
         color: 'red' as const,
         loading,

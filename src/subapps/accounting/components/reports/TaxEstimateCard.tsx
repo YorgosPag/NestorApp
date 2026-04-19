@@ -20,7 +20,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import type { TaxEstimate, EntityType, PartnershipTaxResult } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { formatPercentage } from '@/lib/intl-utils';
 
 /** API response discriminated by entityType */
@@ -135,7 +135,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
             <div className="flex items-center justify-between">
               <dt className={cn("text-sm", colors.text.muted)}>{t('reports.projectedIncome')}</dt>
               <dd className={`font-medium text-sm ${colors.text.success}`}>
-                {formatCurrency(estimate.projectedAnnualIncome)}
+                {formatAccountingCurrency(estimate.projectedAnnualIncome)}
               </dd>
             </div>
 
@@ -143,7 +143,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
             <div className="flex items-center justify-between">
               <dt className={cn("text-sm", colors.text.muted)}>{t('reports.projectedExpenses')}</dt>
               <dd className={`font-medium text-sm ${colors.text.error}`}>
-                {formatCurrency(estimate.projectedAnnualExpenses)}
+                {formatAccountingCurrency(estimate.projectedAnnualExpenses)}
               </dd>
             </div>
 
@@ -153,7 +153,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
             <div className="flex items-center justify-between">
               <dt className="text-sm font-semibold text-foreground">{t('reports.taxableIncome')}</dt>
               <dd className="font-bold text-sm">
-                {formatCurrency(
+                {formatAccountingCurrency(
                   estimate.projectedAnnualIncome - estimate.projectedAnnualExpenses,
                 )}
               </dd>
@@ -163,7 +163,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
             <div className="flex items-center justify-between">
               <dt className="text-sm font-semibold text-foreground">{t('reports.estimatedTax')}</dt>
               <dd className={`text-lg font-bold ${colors.text.error}`}>
-                {formatCurrency(estimate.projectedAnnualTax)}
+                {formatAccountingCurrency(estimate.projectedAnnualTax)}
               </dd>
             </div>
 
@@ -185,7 +185,7 @@ export function TaxEstimateCard({ fiscalYear }: TaxEstimateCardProps) {
                     : colors.text.success
                 }`}
               >
-                {formatCurrency(estimate.projectedFinalAmount)}
+                {formatAccountingCurrency(estimate.projectedFinalAmount)}
               </dd>
             </div>
           </dl>

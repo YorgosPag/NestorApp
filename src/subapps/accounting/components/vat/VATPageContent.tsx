@@ -24,7 +24,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
 import type { FilterPanelConfig, GenericFilterState } from '@/components/core/AdvancedFilters/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { useVATSummary } from '../../hooks/useVATSummary';
 import type { VATAnnualSummary } from '@/subapps/accounting/types';
@@ -142,28 +142,28 @@ export function VATPageContent() {
     return [
       {
         title: t('dashboard.outputVat'),
-        value: formatCurrency(outputVat),
+        value: formatAccountingCurrency(outputVat),
         icon: ArrowUpRight,
         color: 'blue' as const,
         loading,
       },
       {
         title: t('dashboard.inputVat'),
-        value: formatCurrency(inputVat),
+        value: formatAccountingCurrency(inputVat),
         icon: ArrowDownRight,
         color: 'green' as const,
         loading,
       },
       {
         title: t('dashboard.vatPayable'),
-        value: formatCurrency(vatPayable),
+        value: formatAccountingCurrency(vatPayable),
         icon: DollarSign,
         color: vatPayable > 0 ? 'red' as const : 'green' as const,
         loading,
       },
       {
         title: t('dashboard.vatCredit'),
-        value: formatCurrency(vatCredit),
+        value: formatAccountingCurrency(vatCredit),
         icon: TrendingUp,
         color: vatCredit > 0 ? 'green' as const : 'gray' as const,
         loading,

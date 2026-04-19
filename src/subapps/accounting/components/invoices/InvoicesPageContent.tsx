@@ -28,7 +28,7 @@ import type { FilterPanelConfig, GenericFilterState } from '@/components/core/Ad
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { Invoice } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 import { AccountingPageHeader } from '../shared/AccountingPageHeader';
 import { InvoicesTable } from './InvoicesTable';
 import { InvoiceDetails } from './details/InvoiceDetails';
@@ -207,7 +207,7 @@ export function InvoicesPageContent() {
       },
       {
         title: t('dashboard.unpaidBalance'),
-        value: formatCurrency(unpaidBalance),
+        value: formatAccountingCurrency(unpaidBalance),
         icon: CreditCard,
         color: 'red' as const,
         loading,

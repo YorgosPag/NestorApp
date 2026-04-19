@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { MatchCandidateGroup } from '@/subapps/accounting/types';
 import { TIER_BADGE_VARIANT } from './tier-colors';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 interface CandidateGroupCardProps {
   group: MatchCandidateGroup;
@@ -54,7 +54,7 @@ export function CandidateGroupCard({
             <li key={c.entityId} className="flex justify-between text-sm">
               <span className="truncate">{c.displayLabel}</span>
               <span className="text-muted-foreground ml-2 shrink-0">
-                {formatCurrency(c.amount)}
+                {formatAccountingCurrency(c.amount)}
               </span>
             </li>
           ))}
@@ -62,11 +62,11 @@ export function CandidateGroupCard({
         <div className="flex items-center justify-between border-t pt-2">
           <div className="text-sm">
             <span className="font-medium">
-              {t('reconciliation.groupTotal')}: {formatCurrency(group.totalAmount)}
+              {t('reconciliation.groupTotal')}: {formatAccountingCurrency(group.totalAmount)}
             </span>
             {hasDiff && (
               <span className="ml-2 text-destructive text-xs">
-                (Δ {formatCurrency(amountDiff)})
+                (Δ {formatAccountingCurrency(amountDiff)})
               </span>
             )}
           </div>

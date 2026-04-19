@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Badge } from '@/components/ui/badge';
 import type { VATQuarterSummary, VATQuarterStatus, FiscalQuarter } from '@/subapps/accounting/types';
-import { formatCurrency } from '@/subapps/accounting/utils/format';
+import { formatAccountingCurrency } from '@/subapps/accounting/utils/format';
 
 import { cn } from '@/lib/utils';
 
@@ -77,22 +77,22 @@ function QuarterCard({ quarter }: QuarterCardProps) {
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between">
             <dt className={colors.text.muted}>{t('vat.outputVat')}</dt>
-            <dd className="font-medium">{formatCurrency(quarter.totalOutputVat)}</dd>
+            <dd className="font-medium">{formatAccountingCurrency(quarter.totalOutputVat)}</dd>
           </div>
           <div className="flex justify-between">
             <dt className={colors.text.muted}>{t('vat.deductibleVat')}</dt>
-            <dd className="font-medium">{formatCurrency(quarter.totalDeductibleInputVat)}</dd>
+            <dd className="font-medium">{formatAccountingCurrency(quarter.totalDeductibleInputVat)}</dd>
           </div>
           <div className="flex justify-between border-t border-border pt-2">
             <dt className="font-medium">{t('vat.vatPayable')}</dt>
             <dd className={`font-bold ${quarter.vatPayable >= 0 ? colors.text.error : colors.text.success}`}>
-              {formatCurrency(quarter.vatPayable)}
+              {formatAccountingCurrency(quarter.vatPayable)}
             </dd>
           </div>
           {quarter.vatCredit > 0 && (
             <div className="flex justify-between">
               <dt className={colors.text.muted}>{t('vat.vatCredit')}</dt>
-              <dd className={`font-medium ${colors.text.success}`}>{formatCurrency(quarter.vatCredit)}</dd>
+              <dd className={`font-medium ${colors.text.success}`}>{formatAccountingCurrency(quarter.vatCredit)}</dd>
             </div>
           )}
         </dl>
@@ -130,15 +130,15 @@ function EmptyQuarterCard({ quarterNumber }: EmptyQuarterCardProps) {
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between">
             <dt className={colors.text.muted}>{t('vat.outputVat')}</dt>
-            <dd className="font-medium">{formatCurrency(0)}</dd>
+            <dd className="font-medium">{formatAccountingCurrency(0)}</dd>
           </div>
           <div className="flex justify-between">
             <dt className={colors.text.muted}>{t('vat.deductibleVat')}</dt>
-            <dd className="font-medium">{formatCurrency(0)}</dd>
+            <dd className="font-medium">{formatAccountingCurrency(0)}</dd>
           </div>
           <div className="flex justify-between border-t border-border pt-2">
             <dt className="font-medium">{t('vat.vatPayable')}</dt>
-            <dd className="font-bold">{formatCurrency(0)}</dd>
+            <dd className="font-bold">{formatAccountingCurrency(0)}</dd>
           </div>
         </dl>
       </CardContent>

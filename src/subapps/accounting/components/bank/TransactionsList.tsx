@@ -22,7 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BankTransaction, MatchStatus } from '@/subapps/accounting/types';
-import { formatCurrency, formatDate } from '../../utils/format';
+import { formatAccountingCurrency, formatAccountingDate } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -81,7 +81,7 @@ export function TransactionsList({ transactions }: TransactionsListProps) {
           {transactions.map((tx) => (
             <TableRow key={tx.transactionId}>
               <TableCell className="text-sm">
-                {formatDate(tx.valueDate)}
+                {formatAccountingDate(tx.valueDate)}
               </TableCell>
               <TableCell className="max-w-[300px] truncate text-sm">
                 {tx.bankDescription}
@@ -94,7 +94,7 @@ export function TransactionsList({ transactions }: TransactionsListProps) {
                 }`}
               >
                 {tx.direction === 'credit' ? '+' : '-'}
-                {formatCurrency(tx.amount)}
+                {formatAccountingCurrency(tx.amount)}
               </TableCell>
               <TableCell>
                 <Badge variant={MATCH_STATUS_VARIANTS[tx.matchStatus]}>

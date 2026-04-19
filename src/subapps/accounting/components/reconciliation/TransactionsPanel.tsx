@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Spinner } from '@/components/ui/spinner';
 import type { BankTransaction, MatchStatus } from '@/subapps/accounting/types';
-import { formatCurrency } from '../../utils/format';
+import { formatAccountingCurrency } from '../../utils/format';
 
 // ============================================================================
 // TYPES
@@ -186,7 +186,7 @@ function TransactionRow({ txn, selected, checked, onSelect, onCheck }: Transacti
         {txn.bankDescription}
       </TableCell>
       <TableCell className={`text-xs text-right font-mono ${txn.direction === 'credit' ? 'text-emerald-600' : 'text-red-600'}`}>
-        {txn.direction === 'credit' ? '+' : '-'}{formatCurrency(txn.amount)}
+        {txn.direction === 'credit' ? '+' : '-'}{formatAccountingCurrency(txn.amount)}
       </TableCell>
       <TableCell>
         <Badge variant={STATUS_VARIANT[txn.matchStatus]} className="text-[10px]">
