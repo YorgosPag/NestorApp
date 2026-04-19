@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { Eye, EyeOff, Trash2, Edit2, ChevronRight, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
 import { LayerItem } from './LayerItem';
 import { createColorGroupKey, type ColorGroupCommonProps } from './utils';
 import { DEFAULT_LAYER_COLOR } from '../../../config/color-config';
@@ -75,9 +75,9 @@ export function ColorGroupItem({
   // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
   const colorBgClass = useDynamicBackgroundClass(representativeColor);
   
-  // Color Group visibility check
-  const allVisible = layerNames.every((layerName: string) => scene.layers[layerName]?.visible);
-  const someVisible = layerNames.some((layerName: string) => scene.layers[layerName]?.visible);
+  // undefined treated as visible (canvas defaults entity.visible ?? true)
+  const allVisible = layerNames.every((layerName: string) => scene.layers[layerName]?.visible !== false);
+  const someVisible = layerNames.some((layerName: string) => scene.layers[layerName]?.visible !== false);
 
   const handleExpandToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -228,20 +228,6 @@ export function ColorGroupItem({
               </button>
             </TooltipTrigger>
             <TooltipContent>{allVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}</TooltipContent>
-          </Tooltip>
-
-          {/* Edit Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={handleEditClick}
-                aria-label={t('layerActions.renameGroup')}
-                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
-              >
-                <Edit2 className={iconSizes.sm} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t('layerActions.renameGroup')}</TooltipContent>
           </Tooltip>
 
           {/* Delete Button */}

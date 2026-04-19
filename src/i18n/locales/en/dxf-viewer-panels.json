@@ -1,4 +1,7 @@
 {
+  "common": {
+    "loadingComponent": "Loading..."
+  },
   "panels": {
     "properties": {
       "title": "Properties",
@@ -69,7 +72,8 @@
     },
     "layers": {
       "title": "Layers",
-      "description": "Layer Drawing & Status Management"
+      "description": "Layer Drawing & Status Management",
+      "headerWithCount": "DXF Layers ({count})"
     },
     "colors": {
       "loading": "Loading..."

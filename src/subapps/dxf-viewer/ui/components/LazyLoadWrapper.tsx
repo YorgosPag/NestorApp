@@ -15,6 +15,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { useTranslation } from '@/i18n';
 type DxfCanvasComponent = typeof import('../../canvas-v2/dxf-canvas/DxfCanvas').DxfCanvas;
 type FullLayoutDebugComponent = typeof import('../../debug/layout-debug').FullLayoutDebug;
 type AdminLayerManagerComponent = typeof import('./AdminLayerManager').AdminLayerManager;
@@ -48,10 +49,11 @@ interface LazyLoadWrapperProps {
 const DefaultFallback = () => {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { t } = useTranslation(['dxf-viewer-panels']);
   return (
     <aside className={`flex items-center justify-center ${PANEL_LAYOUT.SPACING.XXXL}`}>
       <Loader2 className={`${iconSizes.lg} ${PANEL_LAYOUT.ANIMATE.SPIN} ${colors.text.muted}`} />
-      <span className={`${PANEL_LAYOUT.MARGIN.LEFT_SM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>Loading component...</span>
+      <span className={`${PANEL_LAYOUT.MARGIN.LEFT_SM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>{t('common.loadingComponent')}</span>
     </aside>
   );
 };

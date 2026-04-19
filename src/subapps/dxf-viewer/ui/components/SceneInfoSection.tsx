@@ -1,8 +1,8 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
-import React from 'react';
-import { FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { FileText, ChevronDown } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
@@ -19,6 +19,7 @@ export function SceneInfoSection({ scene, selectedEntityIds }: SceneInfoSectionP
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const formatSize = (value: number) => {
     if (value < 1) {
       return (value * 1000).toFixed(1);
@@ -26,25 +27,40 @@ export function SceneInfoSection({ scene, selectedEntityIds }: SceneInfoSectionP
     return value.toFixed(2);
   };
 
+  const header = (
+    <button
+      type="button"
+      onClick={() => setIsCollapsed(prev => !prev)}
+      className={`w-full flex items-center justify-between cursor-pointer rounded ${PANEL_LAYOUT.PADDING.XS} hover:opacity-80 transition-opacity`}
+    >
+      <h3 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.TAB.FONT_WEIGHT} ${colors.text.info}`}>{t('sceneInfo.title')}</h3>
+      <ChevronDown
+        className={`${iconSizes.sm} ${colors.text.muted} transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
+      />
+    </button>
+  );
+
   if (!scene) {
     return (
       <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
-        <h3 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.TAB.FONT_WEIGHT} ${colors.text.info}`}>{t('sceneInfo.title')}</h3>
-        <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
-          <FileText className={`${iconSizes.xl} ${colors.text.muted} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`} />
-          <p className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.muted}`}>{t('sceneInfo.noScene')}</p>
-          <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
-            {t('sceneInfo.importHint')}
-          </p>
-        </div>
+        {header}
+        {!isCollapsed && (
+          <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
+            <FileText className={`${iconSizes.xl} ${colors.text.muted} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`} />
+            <p className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.muted}`}>{t('sceneInfo.noScene')}</p>
+            <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
+              {t('sceneInfo.importHint')}
+            </p>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
-      <h3 className={`${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${PANEL_LAYOUT.TAB.FONT_WEIGHT} ${colors.text.info}`}>{t('sceneInfo.title')}</h3>
-      <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}>
+      {header}
+      {!isCollapsed && (<div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}>
         <div className="flex justify-between">
           <span className={colors.text.muted}>{t('sceneInfo.elements')}</span>
           <span className={`${colors.text.primary} ${PANEL_LAYOUT.TAB.FONT_WEIGHT}`}>{scene.entities?.length || 0}</span>
@@ -69,7 +85,7 @@ export function SceneInfoSection({ scene, selectedEntityIds }: SceneInfoSectionP
             <span className={`${colors.text.warning} ${PANEL_LAYOUT.TAB.FONT_WEIGHT}`}>{t('sceneInfo.selectedElements', { count: selectedEntityIds.length })}</span>
           </div>
         )}
-      </div>
+      </div>)}
     </div>
   );
 }

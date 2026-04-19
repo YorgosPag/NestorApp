@@ -1,4 +1,7 @@
 {
+  "common": {
+    "loadingComponent": "Φόρτωση..."
+  },
   "panels": {
     "properties": {
       "title": "Ιδιότητες",
@@ -7,7 +10,7 @@
     "overlay": {
       "title": "Επικάλυψη",
       "description": "{{regionCount, plural, =0 {} other {{regionCount} περιοχές επικάλυψης}}",
-      "loading": "Loading..."
+      "loading": "Φόρτωση επικάλυψης..."
     },
     "levels": {
       "title": "Επίπεδα",
@@ -69,12 +72,13 @@
     },
     "layers": {
       "title": "Επίπεδα",
-      "description": "Σχεδίαση Επιπέδων & Διαχείριση Κατάστασης"
+      "description": "Σχεδίαση Επιπέδων & Διαχείριση Κατάστασης",
+      "headerWithCount": "Επίπεδα DXF ({count})"
     },
     "colors": {
-      "loading": "Loading..."
+      "loading": "Φόρτωση χρωμάτων..."
     },
-    "selectPanel": "Select panel"
+    "selectPanel": "Επιλογή πίνακα"
   },
   "layerActions": {
     "changeColor": "Αλλαγή χρώματος",

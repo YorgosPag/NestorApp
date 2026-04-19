@@ -78,6 +78,7 @@ export function LayersSection({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation('dxf-viewer-panels');
+  const [isCollapsed, setIsCollapsed] = React.useState(true);
 
   // Use custom hooks for state management
   const state = useLayersState(scene);
@@ -176,9 +177,10 @@ export function LayersSection({
 
   return (
     <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
-      <LayersHeader scene={scene} />
-      
-      <SearchInput 
+      <LayersHeader scene={scene} isCollapsed={isCollapsed} onToggle={() => setIsCollapsed(prev => !prev)} />
+
+      {!isCollapsed && (<>
+      <SearchInput
         searchTerm={state.searchTerm}
         onSearchChange={state.setSearchTerm}
       />
@@ -216,6 +218,7 @@ export function LayersSection({
         
         layerItemProps={layerItemProps}
       />
+      </>)}
 
       {/* COLOR PICKERS */}
       {state.colorPickerColorGroup && (

@@ -1,4 +1,5 @@
 import React from 'react';
+import { FileText, Save } from 'lucide-react';
 import { useLevels } from '../../systems/levels/useLevels';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -79,7 +80,8 @@ export function AutoSaveStatus() {
     <div className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${quick.card} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
       <div className="flex flex-col">
         <div className="flex items-center">
-          <span className={`${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.RIGHT_SM}`}>📁 {currentFileName}</span>
+          <FileText className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.RIGHT_XS} flex-shrink-0`} />
+          <span className={`${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.RIGHT_SM}`}>{currentFileName}</span>
           {getStatusIcon()}
         </div>
         {autoSaveStatus.lastSaveTime && (
@@ -97,10 +99,11 @@ export function AutoSaveStatus() {
 
             }
           }}
-          className={`${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.TEXT_TINY} ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} ${quick.button}`}
+          className={`flex items-center gap-1 px-3 py-1 ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.TEXT_TINY} ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} ${quick.button}`}
           title="Trigger manual save"
         >
-          💾 Save
+          <Save className={`${iconSizes.xs} ${colors.text.success}`} />
+          Save
         </button>
       </div>
     </div>
