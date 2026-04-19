@@ -1,15 +1,15 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-19T09:34:32Z",
+    "generated": "2026-04-19T10:03:13Z",
     "totalViolations": 3,
     "totalFiles": 3,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
-    "src/subapps/geo-canvas/services/geo-transform/ControlPointManager.ts": 1,
     "src/subapps/geo-canvas/index.ts": 1,
-    "src/services/pdf/renderers/PropertyShowcaseRenderer.ts": 1
+    "src/services/pdf/renderers/PropertyShowcaseRenderer.ts": 1,
+    "src/core/configuration/enterprise-config-management.ts": 1
   }
 }

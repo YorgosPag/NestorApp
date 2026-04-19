@@ -2,14 +2,28 @@
  * CONTROL POINT MANAGEMENT SERVICE
  * Enterprise-class διαχείριση Ground Control Points για DXF georeferencing
  * Βασισμένο σε photogrammetric και surveying standards
+ *
+ * C.5.41 SRP split: pure geometry + spatial analysis extracted to
+ * `./control-point-geometry`. `nowISO()` SSoT replaces
+ * `new Date().toISOString()` in `saveToLocalStorage`.
  */
 
 import { safeJsonParse } from '@/lib/json-utils';
+import { nowISO } from '@/lib/date-local';
 import type {
   GeoControlPoint,
   DxfCoordinate,
   GeoCoordinate
 } from '../../types';
+import {
+  assessSpatialDistribution,
+  assessCoverage,
+  calculateBoundingBox,
+  calculateDistance,
+  calculateGeometricDilution,
+  detectClusters,
+  type SpatialDistribution
+} from './control-point-geometry';
 
 // ============================================================================
 // CONTROL POINT EVENTS
@@ -37,7 +51,7 @@ export interface ControlPointValidation {
     count: number;
     averageAccuracy: number;
     maxError: number;
-    spatialDistribution: 'poor' | 'fair' | 'good' | 'excellent';
+    spatialDistribution: SpatialDistribution;
     geometricDilution: number; // Lower is better
   };
 }
@@ -194,8 +208,8 @@ export class ControlPointManager {
     }
 
     // Spatial distribution validation
-    const spatialDistribution = this.assessSpatialDistribution(points);
-    let geometricDilution = this.calculateGeometricDilution(points);
+    const spatialDistribution = assessSpatialDistribution(points);
+    const geometricDilution = calculateGeometricDilution(points);
 
     if (spatialDistribution === 'poor') {
       warnings.push('Κακή χωρική κατανομή control points - προσθέστε points στις γωνίες');
@@ -207,13 +221,13 @@ export class ControlPointManager {
     }
 
     // Clustering detection
-    const clusters = this.detectClusters(points);
+    const clusters = detectClusters(points);
     if (clusters.length > 0) {
       warnings.push(`Βρέθηκαν ${clusters.length} clusters από κοντινά points - διασκορπίστε τα`);
     }
 
     // Coverage assessment
-    const coverage = this.assessCoverage(points);
+    const coverage = assessCoverage(points);
     if (coverage < 0.6) {
       recommendations.push('Αυξήστε την κάλυψη της περιοχής με περισσότερα control points');
     }
@@ -233,121 +247,6 @@ export class ControlPointManager {
     };
   }
 
-  /**
-   * Assess spatial distribution quality
-   */
-  private assessSpatialDistribution(points: GeoControlPoint[]): 'poor' | 'fair' | 'good' | 'excellent' {
-    if (points.length < 3) return 'poor';
-
-    // Calculate bounding box
-    const dxfPoints = points.map(p => p.dxfPoint);
-    const bbox = this.calculateBoundingBox(dxfPoints);
-
-    // Check corner coverage
-    const corners = this.getCornerRegions(bbox);
-    const cornersWithPoints = corners.filter(corner =>
-      this.hasPointInRegion(dxfPoints, corner)
-    ).length;
-
-    // Check center coverage
-    const hasCenterPoint = this.hasPointInRegion(dxfPoints, {
-      minX: bbox.minX + (bbox.maxX - bbox.minX) * 0.25,
-      maxX: bbox.minX + (bbox.maxX - bbox.minX) * 0.75,
-      minY: bbox.minY + (bbox.maxY - bbox.minY) * 0.25,
-      maxY: bbox.minY + (bbox.maxY - bbox.minY) * 0.75
-    });
-
-    if (cornersWithPoints >= 4 && hasCenterPoint) return 'excellent';
-    if (cornersWithPoints >= 4) return 'good';
-    if (cornersWithPoints >= 3) return 'fair';
-    return 'poor';
-  }
-
-  /**
-   * Calculate Geometric Dilution of Precision (GDOP)
-   */
-  private calculateGeometricDilution(points: GeoControlPoint[]): number {
-    if (points.length < 3) return Infinity;
-
-    // Simplified GDOP calculation based on point spread
-    const dxfPoints = points.map(p => p.dxfPoint);
-    const bbox = this.calculateBoundingBox(dxfPoints);
-
-    const area = (bbox.maxX - bbox.minX) * (bbox.maxY - bbox.minY);
-    const perimeter = 2 * ((bbox.maxX - bbox.minX) + (bbox.maxY - bbox.minY));
-
-    if (area === 0) return Infinity;
-
-    // Lower values indicate better geometric distribution
-    return perimeter * perimeter / (4 * Math.PI * area);
-  }
-
-  /**
-   * Detect point clusters
-   */
-  private detectClusters(points: GeoControlPoint[], threshold: number = 10): GeoControlPoint[][] {
-    const clusters: GeoControlPoint[][] = [];
-    const processed = new Set<string>();
-
-    for (const point of points) {
-      if (processed.has(point.id)) continue;
-
-      const cluster = [point];
-      processed.add(point.id);
-
-      for (const other of points) {
-        if (processed.has(other.id)) continue;
-
-        const distance = this.calculateDistance(point.dxfPoint, other.dxfPoint);
-        if (distance <= threshold) {
-          cluster.push(other);
-          processed.add(other.id);
-        }
-      }
-
-      if (cluster.length > 1) {
-        clusters.push(cluster);
-      }
-    }
-
-    return clusters;
-  }
-
-  /**
-   * Assess overall coverage of the area
-   */
-  private assessCoverage(points: GeoControlPoint[]): number {
-    if (points.length < 3) return 0;
-
-    const dxfPoints = points.map(p => p.dxfPoint);
-    const bbox = this.calculateBoundingBox(dxfPoints);
-
-    // Create grid και check coverage
-    const gridSize = 10;
-    let coveredCells = 0;
-    const totalCells = gridSize * gridSize;
-
-    const cellWidth = (bbox.maxX - bbox.minX) / gridSize;
-    const cellHeight = (bbox.maxY - bbox.minY) / gridSize;
-
-    for (let i = 0; i < gridSize; i++) {
-      for (let j = 0; j < gridSize; j++) {
-        const cellBounds = {
-          minX: bbox.minX + i * cellWidth,
-          maxX: bbox.minX + (i + 1) * cellWidth,
-          minY: bbox.minY + j * cellHeight,
-          maxY: bbox.minY + (j + 1) * cellHeight
-        };
-
-        if (this.hasPointInRegion(dxfPoints, cellBounds)) {
-          coveredCells++;
-        }
-      }
-    }
-
-    return coveredCells / totalCells;
-  }
-
   // ========================================================================
   // OPTIMIZATION & RECOMMENDATIONS
   // ========================================================================
@@ -362,7 +261,7 @@ export class ControlPointManager {
     }
 
     const dxfPoints = existing.map(p => p.dxfPoint);
-    const bbox = this.calculateBoundingBox(dxfPoints);
+    const bbox = calculateBoundingBox(dxfPoints);
     const suggestions: DxfCoordinate[] = [];
 
     // Suggest corner points if missing
@@ -377,7 +276,7 @@ export class ControlPointManager {
       if (suggestions.length >= targetCount - existing.length) break;
 
       const hasNearbyPoint = dxfPoints.some(p =>
-        this.calculateDistance(p, corner) < 20
+        calculateDistance(p, corner) < 20
       );
 
       if (!hasNearbyPoint) {
@@ -393,7 +292,7 @@ export class ControlPointManager {
       };
 
       const hasNearbyCenterPoint = dxfPoints.some(p =>
-        this.calculateDistance(p, center) < 30
+        calculateDistance(p, center) < 30
       );
 
       if (!hasNearbyCenterPoint) {
@@ -402,77 +301,6 @@ export class ControlPointManager {
     }
 
     return suggestions;
-  }
-
-  // ========================================================================
-  // UTILITY METHODS
-  // ========================================================================
-
-  /**
-   * Calculate distance μεταξύ δύο DXF points
-   */
-  private calculateDistance(p1: DxfCoordinate, p2: DxfCoordinate): number {
-    const dx = p1.x - p2.x;
-    const dy = p1.y - p2.y;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  /**
-   * Calculate bounding box for DXF points
-   */
-  private calculateBoundingBox(points: DxfCoordinate[]): {
-    minX: number; maxX: number; minY: number; maxY: number;
-  } {
-    if (points.length === 0) {
-      return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
-    }
-
-    let minX = points[0].x;
-    let maxX = points[0].x;
-    let minY = points[0].y;
-    let maxY = points[0].y;
-
-    for (const point of points) {
-      minX = Math.min(minX, point.x);
-      maxX = Math.max(maxX, point.x);
-      minY = Math.min(minY, point.y);
-      maxY = Math.max(maxY, point.y);
-    }
-
-    return { minX, maxX, minY, maxY };
-  }
-
-  /**
-   * Get corner regions για spatial distribution assessment
-   */
-  private getCornerRegions(bbox: { minX: number; maxX: number; minY: number; maxY: number }) {
-    const width = bbox.maxX - bbox.minX;
-    const height = bbox.maxY - bbox.minY;
-    const margin = Math.min(width, height) * 0.2; // 20% margin
-
-    return [
-      // Top-left
-      { minX: bbox.minX, maxX: bbox.minX + margin, minY: bbox.maxY - margin, maxY: bbox.maxY },
-      // Top-right
-      { minX: bbox.maxX - margin, maxX: bbox.maxX, minY: bbox.maxY - margin, maxY: bbox.maxY },
-      // Bottom-right
-      { minX: bbox.maxX - margin, maxX: bbox.maxX, minY: bbox.minY, maxY: bbox.minY + margin },
-      // Bottom-left
-      { minX: bbox.minX, maxX: bbox.minX + margin, minY: bbox.minY, maxY: bbox.minY + margin }
-    ];
-  }
-
-  /**
-   * Check if region has any points
-   */
-  private hasPointInRegion(
-    points: DxfCoordinate[],
-    region: { minX: number; maxX: number; minY: number; maxY: number }
-  ): boolean {
-    return points.some(p =>
-      p.x >= region.minX && p.x <= region.maxX &&
-      p.y >= region.minY && p.y <= region.maxY
-    );
   }
 
   // ========================================================================
@@ -515,7 +343,7 @@ export class ControlPointManager {
     const data = {
       points: this.exportControlPoints(),
       nextId: this.nextId,
-      timestamp: new Date().toISOString()
+      timestamp: nowISO()
     };
 
     localStorage.setItem(key, JSON.stringify(data));
