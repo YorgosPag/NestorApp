@@ -17,62 +17,20 @@ import { SPATIAL_BOUNDS } from '../../config/validation-bounds-config';
 import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 // 🏢 ADR-092: Centralized localStorage Service
 import { storageGet, storageSet, storageRemove, STORAGE_KEYS } from '../../utils/storage-utils';
+// 🏢 ADR-314 C.5.32: SSoT nowISO for ISO timestamp generation
+import { nowISO } from '@/lib/date-local';
+// 🏢 SRP split: types/enum extracted for Google file size limit compliance
+import {
+  SnapConfidence,
+  type AISnapPoint,
+  type UserPattern,
+  type LearnedPreferences,
+  type SnapContext,
+} from './AISnappingEngine.types';
 
-/**
- * Snap prediction confidence levels
- */
-export enum SnapConfidence {
-  LOW = 0.3,
-  MEDIUM = 0.6,
-  HIGH = 0.9,
-  PERFECT = 1.0
-}
-
-/**
- * Snap point με AI prediction data
- */
-export interface AISnapPoint {
-  point: Point2D;
-  type: 'endpoint' | 'midpoint' | 'center' | 'intersection' | 'perpendicular' | 'tangent' | 'quadrant' | 'predicted';
-  confidence: number;
-  weight: number;
-  source: string;
-  predictedNext?: Point2D[];
-}
-
-/**
- * User pattern για learning
- */
-interface UserPattern {
-  sequence: Point2D[];
-  frequency: number;
-  lastUsed: Date;
-  context: string;
-}
-
-/**
- * Snapping preferences learned από user
- */
-interface LearnedPreferences {
-  preferredSnapTypes: Record<string, number>;
-  commonDistances: number[];
-  commonAngles: number[];
-  gridPreference: number;
-  patterns: UserPattern[];
-}
-
-/**
- * Snap context contains entity and scene information for snapping decisions
- */
-interface SnapContext {
-  entities?: Array<{ type: string; start?: Point2D; end?: Point2D; center?: Point2D; radius?: number }>;
-  currentTool?: string;
-  selectedEntities?: string[];
-  viewBounds?: { min: Point2D; max: Point2D };
-  gridSize?: number;
-  snapMode?: string;
-  lastPoint?: Point2D; // ✅ ENTERPRISE FIX: Added missing lastPoint property
-}
+// Re-export types for backward compatibility (zero consumers today, futureproof)
+export { SnapConfidence };
+export type { AISnapPoint };
 
 /**
  * AI Snapping Engine - Main Class
@@ -470,7 +428,7 @@ export class AISnappingEngine {
     const data = {
       preferences: this.preferences,
       patterns: Array.from(this.patterns.entries()),
-      savedAt: new Date().toISOString()
+      savedAt: nowISO()
     };
     storageSet(STORAGE_KEYS.AI_SNAPPING, data);
   }
