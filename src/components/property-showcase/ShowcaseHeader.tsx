@@ -11,6 +11,7 @@ import type {
   ShowcaseSocialPlatform,
   ShowcaseContactSocial,
 } from './types';
+import { EmailProviderPicker } from './EmailProviderPicker';
 
 const FALLBACK_LOGO_URL = '/images/pagonis-energo-logo.png';
 
@@ -118,7 +119,7 @@ export function ShowcaseHeader({ company }: ShowcaseHeaderProps) {
                 <dd className="min-w-0">
                   {emails.map((e) => (
                     <p key={e.value} className="leading-snug truncate">
-                      <a href={`mailto:${e.value}`} className="hover:underline">{e.value}</a>
+                      <EmailProviderPicker address={e.value} />
                     </p>
                   ))}
                 </dd>

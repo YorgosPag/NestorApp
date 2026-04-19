@@ -6,7 +6,16 @@
       "phoneLabel": "Τηλέφωνο",
       "emailLabel": "Email",
       "websiteLabel": "Ιστοσελίδα",
-      "socialLabel": "Κοινωνικά δίκτυα"
+      "socialLabel": "Κοινωνικά δίκτυα",
+      "emailMenu": {
+        "title": "Αποστολή email",
+        "gmail": "Gmail",
+        "outlook": "Outlook",
+        "yahoo": "Yahoo Mail",
+        "defaultApp": "Εφαρμογή email",
+        "copyAddress": "Αντιγραφή διεύθυνσης",
+        "copied": "Αντιγράφηκε"
+      }
     }
   },
   "property": {

@@ -6,7 +6,16 @@
       "phoneLabel": "Phone",
       "emailLabel": "Email",
       "websiteLabel": "Website",
-      "socialLabel": "Social media"
+      "socialLabel": "Social media",
+      "emailMenu": {
+        "title": "Send email",
+        "gmail": "Gmail",
+        "outlook": "Outlook",
+        "yahoo": "Yahoo Mail",
+        "defaultApp": "Email app",
+        "copyAddress": "Copy address",
+        "copied": "Copied"
+      }
     }
   },
   "property": {
