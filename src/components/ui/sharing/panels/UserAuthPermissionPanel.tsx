@@ -16,7 +16,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Users } from 'lucide-react';
+import { AlertTriangle, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -61,6 +62,13 @@ export interface UserAuthPermissionPanelProps {
    * across the two dialogs while still allowing a last-minute edit.
    */
   initialPersonalMessage?: string;
+  /**
+   * When true, the accordion draft policy differs from the live token's
+   * applied policy. The channel surface is visually dimmed and pointer events
+   * are blocked; a warning banner asks the user to re-apply the policy first.
+   * Prevents shipping the old URL with stale settings (ADR-312 Phase 9.10).
+   */
+  dirtyPolicy?: boolean;
 }
 
 export function UserAuthPermissionPanel({
@@ -73,6 +81,7 @@ export function UserAuthPermissionPanel({
   onLoadingChange,
   showcaseContext,
   initialPersonalMessage,
+  dirtyPolicy = false,
 }: UserAuthPermissionPanelProps): React.ReactElement {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const notifications = useNotifications();
@@ -293,43 +302,63 @@ export function UserAuthPermissionPanel({
 
   return (
     <>
-      <SharePlatformGrid
-        onPlatformSelect={handlePlatformShare}
-        loading={loading}
-        gridConfig={{
-          columns: 5,
-          buttonVariant: 'default',
-          iconSize: 'md',
-          showLabels: true,
-          spacing: 'normal',
-        }}
-      />
-      <p className="text-xs text-muted-foreground text-center -mt-1">
-        {t('common-shared:share.captionOwnAccounts')}
-      </p>
-
-      <CopyActionsSection
-        copyData={shareData}
-        onCopySuccess={handleCopySuccess}
-        onCopyError={handleCopyError}
-        loading={loading}
-      />
-
-      <section className="space-y-1">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setShowChannelPicker(true)}
-          disabled={loading}
-          className="w-full h-12"
+      {dirtyPolicy && (
+        <aside
+          role="alert"
+          className="flex items-start gap-2 p-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700"
         >
-          <Users className="w-4 h-4 mr-2" />
-          {t('channelShare.sendToContact')}
-        </Button>
-        <p className="text-xs text-muted-foreground text-center">
-          {t('common-shared:share.captionCrmContact')}
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800 dark:text-amber-200">
+            {t('common-shared:share.dirtyPolicyWarning')}
+          </p>
+        </aside>
+      )}
+
+      <div
+        className={cn(
+          'flex flex-col gap-4',
+          dirtyPolicy && 'pointer-events-none opacity-50',
+        )}
+        aria-disabled={dirtyPolicy}
+      >
+        <SharePlatformGrid
+          onPlatformSelect={handlePlatformShare}
+          loading={loading}
+          gridConfig={{
+            columns: 5,
+            buttonVariant: 'default',
+            iconSize: 'md',
+            showLabels: true,
+            spacing: 'normal',
+          }}
+        />
+        <p className="text-xs text-muted-foreground text-center -mt-1">
+          {t('common-shared:share.captionOwnAccounts')}
         </p>
-      </section>
+
+        <CopyActionsSection
+          copyData={shareData}
+          onCopySuccess={handleCopySuccess}
+          onCopyError={handleCopyError}
+          loading={loading}
+        />
+
+        <section className="space-y-1">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowChannelPicker(true)}
+            disabled={loading || dirtyPolicy}
+            className="w-full h-12"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            {t('channelShare.sendToContact')}
+          </Button>
+          <p className="text-xs text-muted-foreground text-center">
+            {t('common-shared:share.captionCrmContact')}
+          </p>
+        </section>
+      </div>
     </>
   );
 }

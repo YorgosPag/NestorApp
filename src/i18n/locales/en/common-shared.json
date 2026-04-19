@@ -712,7 +712,8 @@
     "publicReadOnlyNotice": "Public read-only page. Do not share sensitive data.",
     "creatingLink": "Creating link...",
     "captionOwnAccounts": "Share from your own accounts",
-    "captionCrmContact": "Send via company channel to a CRM contact"
+    "captionCrmContact": "Send via company channel to a CRM contact",
+    "dirtyPolicyWarning": "You changed the link settings. Press \"Create link\" inside the settings to apply them before sharing."
   },
   "personalMessage": {
     "label": "Personal Message",

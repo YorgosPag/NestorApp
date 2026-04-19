@@ -302,14 +302,21 @@ export function UnifiedShareDialog({
               entityType === 'property_showcase' ? { propertyId: entityId } : undefined
             }
             initialPersonalMessage={draft.note.trim() || undefined}
+            dirtyPolicy={isDirty}
           />
 
           {entityType === 'property_showcase' && (
-            <Button asChild variant="outline" className="w-full">
+            <Button
+              asChild
+              variant="outline"
+              className={cn('w-full', isDirty && 'pointer-events-none opacity-50')}
+              aria-disabled={isDirty}
+            >
               <a
                 href={`/api/showcase/${share.token}/pdf`}
                 target="_blank"
                 rel="noopener noreferrer"
+                tabIndex={isDirty ? -1 : undefined}
               >
                 <Download className="mr-2 h-4 w-4" />
                 {t('properties-detail:showcase.downloadPdf')}
