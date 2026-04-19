@@ -286,14 +286,11 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(
      */
     const title = useMemo(() => {
       if (overlay.label) return overlay.label;
-
-      // Generate title from kind + short id
-      const kindLabel = t(`overlayProperties.kindLabels.${overlay.kind}`, {
-        defaultValue: overlay.kind,
-      });
-      const shortId = overlay.id.slice(-4).toUpperCase();
-      return `${kindLabel} ${shortId}`;
-    }, [overlay.label, overlay.kind, overlay.id, t]);
+      const shortId = String(overlay.id).startsWith('ovrl_')
+        ? overlay.id.slice(5, 13)
+        : String(overlay.id);
+      return `Overlay ${shortId}`;
+    }, [overlay.label, overlay.id]);
 
     // ==========================================================================
     // 🏢 HANDLERS

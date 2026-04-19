@@ -84,7 +84,7 @@ export const UpdateDxfOverlayItemSchema = z.object({
   overlayId: z.string().min(1).max(128),
   polygon: PolygonSchema.optional(),
   kind: OverlayKindSchema.optional(),
-  status: z.string().max(64).optional(),
+  status: z.union([z.string().max(64), z.null()]).optional(),
   label: z.string().max(256).optional(),
   linked: z.union([LinkedEntitySchema, z.null()]).optional(),
   style: OverlayStyleSchema.optional(),

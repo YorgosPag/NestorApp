@@ -1393,7 +1393,7 @@ export const LEVEL_PANEL_TOKENS = {
 
   SECTIONS_BORDER: `mt-4 pt-4 border-t ${PANEL_COLORS.BORDER_MUTED}`,
 
-  OVERLAY_SECTION: `mt-4 pt-4 border-t ${PANEL_COLORS.BORDER_MUTED} flex-1 min-h-0`,
+  OVERLAY_SECTION: `mt-4 pt-4 border-t ${PANEL_COLORS.BORDER_MUTED} flex-1 min-h-0 min-w-0 overflow-x-hidden`,
 } as const;
 
 /**

@@ -134,7 +134,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
   const handleEntitySelect = (value: string) => {
     if (isSelectClearValue(value)) {
-      onUpdate(overlay.id, { linked: null });
+      onUpdate(overlay.id, { linked: null, label: '', status: null });
       return;
     }
     const entity = entities.find(e => e.id === value);
@@ -256,7 +256,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
               variant="ghost"
               size="icon"
               className="size-7 shrink-0"
-              onClick={() => onUpdate(overlay.id, { linked: null })}
+              onClick={() => onUpdate(overlay.id, { linked: null, label: '', status: null })}
               title={t('overlayProperties.unlink')}
             >
               <X className="size-3.5" />

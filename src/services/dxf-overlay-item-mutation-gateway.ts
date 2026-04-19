@@ -63,7 +63,7 @@ export interface UpdateOverlayItemPayload {
   overlayId: string;
   polygon?: Array<{ x: number; y: number }>;
   kind?: OverlayKindValue;
-  status?: string;
+  status?: string | null;
   label?: string;
   linked?: OverlayLinkedPayload | null;
   style?: OverlayStylePayload;

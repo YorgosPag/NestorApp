@@ -106,9 +106,9 @@ export const OverlayList: React.FC<OverlayListProps> = ({
 
       {/* 🏢 ENTERPRISE: Same pattern as UnitsList - flex-1 min-h-0 for scroll */}
       <div className="flex-1 min-h-0">
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full w-full">
           {/* 🏢 ENTERPRISE: Identical spacing to UnitsList (p-2 space-y-2) */}
-          <div className={`${spacing.padding.sm} ${spacing.spaceBetween.sm}`}>
+          <div className={`w-full min-w-0 ${spacing.padding.sm} ${spacing.spaceBetween.sm}`}>
             {filteredOverlays.length === 0 ? (
               <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
                 <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>

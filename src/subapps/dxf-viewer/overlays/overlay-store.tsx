@@ -163,7 +163,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     // Polygon is excluded because it requires [number,number][] → {x,y} conversion.
     const optimisticPatch: Partial<Overlay> = {};
     if (patch.kind !== undefined) optimisticPatch.kind = patch.kind;
-    if (patch.status !== undefined) optimisticPatch.status = patch.status;
+    if (patch.status !== undefined) optimisticPatch.status = patch.status ?? undefined;
     if (patch.label !== undefined) optimisticPatch.label = patch.label;
     if (patch.linked !== undefined) optimisticPatch.linked = patch.linked as Overlay['linked'];
     if (patch.style !== undefined) optimisticPatch.style = patch.style;

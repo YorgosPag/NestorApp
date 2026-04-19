@@ -52,7 +52,8 @@ export type CreateOverlayData = Omit<Overlay, 'id' | 'createdAt' | 'updatedAt' |
  * Patch data για updates
  * ADR-258B: `linked` accepts `null` to clear the entity link (Firestore rejects undefined but accepts null)
  */
-export type UpdateOverlayData = Partial<Pick<Overlay, 'polygon' | 'status' | 'label' | 'kind' | 'style'>> & {
+export type UpdateOverlayData = Partial<Pick<Overlay, 'polygon' | 'label' | 'kind' | 'style'>> & {
+  status?: Status | null;
   linked?: Overlay['linked'] | null;
 };
 
