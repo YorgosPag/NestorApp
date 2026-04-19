@@ -27,6 +27,7 @@ import { Plus, Search, Eye, Copy, AlertTriangle } from 'lucide-react';
 import { PO_STATUS_META } from '@/types/procurement';
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatPOCurrency, formatPODate } from './utils/procurement-format';
 
 // ============================================================================
 // STATUS BADGE
@@ -55,22 +56,6 @@ function StatusBadge({ status }: { status: PurchaseOrderStatus }) {
       {meta.label.el}
     </Badge>
   );
-}
-
-// ============================================================================
-// FORMAT HELPERS
-// ============================================================================
-
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(n);
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('el-GR');
 }
 
 // ============================================================================
@@ -247,10 +232,10 @@ function POTable({
                   <StatusBadge status={po.status} />
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatCurrency(po.total)}
+                  {formatPOCurrency(po.total)}
                 </TableCell>
-                <TableCell>{formatDate(po.dateCreated)}</TableCell>
-                <TableCell>{formatDate(po.dateNeeded)}</TableCell>
+                <TableCell>{formatPODate(po.dateCreated)}</TableCell>
+                <TableCell>{formatPODate(po.dateNeeded)}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button
@@ -297,9 +282,9 @@ function POTable({
               {po.supplierId}
             </p>
             <div className="flex items-center justify-between text-sm">
-              <span>{formatDate(po.dateCreated)}</span>
+              <span>{formatPODate(po.dateCreated)}</span>
               <span className="font-semibold tabular-nums">
-                {formatCurrency(po.total)}
+                {formatPOCurrency(po.total)}
               </span>
             </div>
           </article>

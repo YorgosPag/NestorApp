@@ -28,6 +28,7 @@ import { PO_VAT_RATES } from '@/types/procurement';
 import type { PurchaseOrder, POVatRate } from '@/types/procurement';
 import { usePurchaseOrderForm } from '@/hooks/procurement';
 import { PurchaseOrderItemsTable } from './PurchaseOrderItemsTable';
+import { formatPOCurrency } from './utils/procurement-format';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { POProjectSelector, POSupplierSelector, POBuildingSelector } from './POEntitySelectors';
 import type { FirestoreProject } from '@/hooks/useFirestoreProjects';
@@ -105,12 +106,6 @@ export function PurchaseOrderForm({
     },
     [setField, form.deliveryAddress]
   );
-
-  const formatCurrency = (n: number) =>
-    new Intl.NumberFormat('el-GR', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(n);
 
   return (
     <div className="space-y-6">
@@ -233,17 +228,17 @@ export function PurchaseOrderForm({
                 <span className="text-muted-foreground">
                   {t('form.subtotal')}
                 </span>
-                <span className="tabular-nums">{formatCurrency(totals.subtotal)}</span>
+                <span className="tabular-nums">{formatPOCurrency(totals.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
                   {t('form.vatRate')} {form.taxRate}%
                 </span>
-                <span className="tabular-nums">{formatCurrency(totals.taxAmount)}</span>
+                <span className="tabular-nums">{formatPOCurrency(totals.taxAmount)}</span>
               </div>
               <div className="flex justify-between border-t pt-1 font-semibold">
                 <span>{t('form.total')}</span>
-                <span className="tabular-nums">{formatCurrency(totals.total)}</span>
+                <span className="tabular-nums">{formatPOCurrency(totals.total)}</span>
               </div>
             </div>
           </div>

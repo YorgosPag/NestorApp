@@ -22,12 +22,9 @@ import {
   BarChart3,
 } from 'lucide-react';
 
-/** Format number as EUR currency */
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(n);
-}
 import type { SupplierMetrics, CategorySpend } from '@/types/procurement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatPOCurrency } from './utils/procurement-format';
 
 // ============================================================================
 // TYPES
@@ -64,12 +61,12 @@ export function SupplierMetricsCard({ metrics, className }: SupplierMetricsCardP
           />
           <MetricItem
             label={t('supplierMetrics.totalSpend')}
-            value={formatCurrency(metrics.totalSpend)}
+            value={formatPOCurrency(metrics.totalSpend)}
             icon={<TrendingUp className="h-4 w-4" />}
           />
           <MetricItem
             label={t('supplierMetrics.averageOrder')}
-            value={formatCurrency(metrics.averageOrderValue)}
+            value={formatPOCurrency(metrics.averageOrderValue)}
             icon={<TrendingUp className="h-4 w-4" />}
           />
           <MetricItem
@@ -105,7 +102,7 @@ export function SupplierMetricsCard({ metrics, className }: SupplierMetricsCardP
                     </Badge>
                     <span className={typography.body.sm}>{cat.categoryName}</span>
                   </span>
-                  <span className="font-medium">{formatCurrency(cat.totalSpend)}</span>
+                  <span className="font-medium">{formatPOCurrency(cat.totalSpend)}</span>
                 </li>
               ))}
             </ul>

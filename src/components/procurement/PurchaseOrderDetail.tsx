@@ -29,19 +29,11 @@ import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { useContactById } from '@/hooks/useContactById';
 import { getContactDisplayName } from '@/types/contacts/helpers';
+import { formatPOCurrency, formatPODate } from './utils/procurement-format';
 
 const ActivityTab = lazy(() =>
   import('@/components/shared/audit/ActivityTab').then((m) => ({ default: m.ActivityTab }))
 );
-
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(n);
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('el-GR');
-}
 
 const STATUS_SEMANTIC: Record<string, string> = {
   gray: 'pending', blue: 'planned', yellow: 'construction',
@@ -117,12 +109,12 @@ export function PurchaseOrderDetail({
             )}
             <div>
               <dt className="text-muted-foreground">{t('detail.dateCreated')}</dt>
-              <dd className="font-medium">{formatDate(po.dateCreated)}</dd>
+              <dd className="font-medium">{formatPODate(po.dateCreated)}</dd>
             </div>
             {po.dateNeeded && (
               <div>
                 <dt className="text-muted-foreground">{t('detail.dateNeeded')}</dt>
-                <dd className="font-medium">{formatDate(po.dateNeeded)}</dd>
+                <dd className="font-medium">{formatPODate(po.dateNeeded)}</dd>
               </div>
             )}
             {po.deliveryAddress && (
@@ -166,8 +158,8 @@ export function PurchaseOrderDetail({
                     <TableCell className="font-medium">{item.description}</TableCell>
                     <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
                     <TableCell>{item.unit}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatCurrency(item.unitPrice)}</TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatCurrency(item.total)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatPOCurrency(item.unitPrice)}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{formatPOCurrency(item.total)}</TableCell>
                     <TableCell>{item.categoryCode}</TableCell>
                     {showDelivery && (
                       <TableCell className="text-right tabular-nums">{item.quantityReceived}/{item.quantity}</TableCell>
@@ -183,8 +175,8 @@ export function PurchaseOrderDetail({
               <div key={item.id} className="rounded-lg border p-3 space-y-1">
                 <p className="font-medium">{item.description}</p>
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>{item.quantity} {item.unit} × {formatCurrency(item.unitPrice)}</span>
-                  <span className="font-semibold text-foreground tabular-nums">{formatCurrency(item.total)}</span>
+                  <span>{item.quantity} {item.unit} × {formatPOCurrency(item.unitPrice)}</span>
+                  <span className="font-semibold text-foreground tabular-nums">{formatPOCurrency(item.total)}</span>
                 </div>
               </div>
             ))}
@@ -194,15 +186,15 @@ export function PurchaseOrderDetail({
             <div className="w-full max-w-xs space-y-1 text-right">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t('detail.subtotal')}</span>
-                <span className="tabular-nums">{formatCurrency(po.subtotal)}</span>
+                <span className="tabular-nums">{formatPOCurrency(po.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t('detail.vat')} {po.taxRate}%</span>
-                <span className="tabular-nums">{formatCurrency(po.taxAmount)}</span>
+                <span className="tabular-nums">{formatPOCurrency(po.taxAmount)}</span>
               </div>
               <div className="flex justify-between border-t pt-1 font-semibold text-base">
                 <span>{t('detail.total')}</span>
-                <span className="tabular-nums">{formatCurrency(po.total)}</span>
+                <span className="tabular-nums">{formatPOCurrency(po.total)}</span>
               </div>
             </div>
           </div>

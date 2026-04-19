@@ -24,6 +24,7 @@ import {
 import type { PurchaseOrder } from '@/types/procurement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
+import { formatPOCurrencyRounded } from './utils/procurement-format';
 
 interface KPICardProps {
   label: string;
@@ -109,14 +110,6 @@ export function PurchaseOrderKPIs({ purchaseOrders }: PurchaseOrderKPIsProps) {
     };
   }, [purchaseOrders]);
 
-  const formatCurrency = (n: number) =>
-    new Intl.NumberFormat('el-GR', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(n);
-
   return (
     <section className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
       <KPICard
@@ -131,7 +124,7 @@ export function PurchaseOrderKPIs({ purchaseOrders }: PurchaseOrderKPIsProps) {
       />
       <KPICard
         label={t('kpi.totalCommitted')}
-        value={formatCurrency(kpis.totalCommitted)}
+        value={formatPOCurrencyRounded(kpis.totalCommitted)}
         icon={<DollarSign className="h-5 w-5" />}
       />
       <KPICard
@@ -153,7 +146,7 @@ export function PurchaseOrderKPIs({ purchaseOrders }: PurchaseOrderKPIsProps) {
       />
       <KPICard
         label={t('kpi.monthlySpend')}
-        value={formatCurrency(kpis.monthlySpend)}
+        value={formatPOCurrencyRounded(kpis.monthlySpend)}
         icon={<TrendingUp className="h-5 w-5" />}
         variant="success"
       />

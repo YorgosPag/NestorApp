@@ -22,11 +22,8 @@ import {
   Users,
 } from 'lucide-react';
 
-/** Format number as EUR currency */
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(n);
-}
 import type { SupplierMetrics } from '@/types/procurement';
+import { formatPOCurrency } from './utils/procurement-format';
 
 // ============================================================================
 // TYPES
@@ -110,7 +107,7 @@ export function SupplierComparisonTable({ suppliers, className }: SupplierCompar
                   </td>
                   <td className="px-4 py-3 font-medium">{s.supplierName}</td>
                   <td className="px-4 py-3 text-center">{s.totalOrders}</td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(s.totalSpend)}</td>
+                  <td className="px-4 py-3 text-right">{formatPOCurrency(s.totalSpend)}</td>
                   <td className="px-4 py-3 text-center">
                     <OnTimeBadge rate={s.onTimeDeliveryRate} />
                   </td>
@@ -195,7 +192,7 @@ function MobileSupplierCard({ supplier, rank }: { supplier: SupplierMetrics; ran
         </div>
         <div>
           <dt className={typography.body.sm}>{t('supplierMetrics.totalSpend')}</dt>
-          <dd className="font-medium">{formatCurrency(supplier.totalSpend)}</dd>
+          <dd className="font-medium">{formatPOCurrency(supplier.totalSpend)}</dd>
         </div>
         <div>
           <dt className={typography.body.sm}>{t('supplierMetrics.avgLeadTime')}</dt>
