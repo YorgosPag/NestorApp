@@ -1133,6 +1133,20 @@
       "tier": 6
     },
 
+    "_comment_adr314_phaseD2c": "=== ADR-314 PHASE D.2c (2026-04-19): registry gap — unified-tabs-factory root ===",
+
+    "unified-tabs-factory": {
+      "ssotFile": "src/config/unified-tabs-factory.ts",
+      "description": "Enterprise tabs smart factory — root of all 8 *-tabs-config modules. createTabsConfig/getSortedTabs/getTabById/getTabByValue/getDefaultTab/validateTabConfig/getTabsStats/getTabsForEnvironment + UnifiedTabConfig/TabEntityType types. Re-implementation forks tab creation logic for all entity types (properties/storage/building/contact/project/crm-dashboard/parking). ADR-314 Phase D.2c.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(createTabsConfig|getSortedTabs|getEnabledTabsCount|getTabById|getTabByValue|getDefaultTab|validateTabConfig|getTabsStats|getTabsForEnvironment)\\b"
+      ],
+      "allowlist": [
+        "src/config/unified-tabs-factory.ts"
+      ],
+      "tier": 6
+    },
+
     "_comment_adr314_phaseD2b": "=== ADR-314 PHASE D.2b (2026-04-19): registry gap reduction — 4 more tabs-config SSoT modules ===",
 
     "contact-tabs-config": {
