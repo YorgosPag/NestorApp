@@ -67,7 +67,7 @@ export {
   // Additional Options από centralized systems
   ADDRESS_TYPE_OPTIONS,
   SHAREHOLDER_TYPE_OPTIONS,
-  DOCUMENT_TYPE_OPTIONS,
+  COMPANY_DOCUMENT_TYPE_OPTIONS,
   BOARD_TYPE_OPTIONS,
   REPRESENTATIVE_POSITION_OPTIONS,
 } from './options';
@@ -77,7 +77,7 @@ export {
 // ============================================================================
 
 export {
-  getAllCompanyFields,
+  getAllGemiFields,
   getCompanySection,
   getCompanyField,
   createFieldsMap,
@@ -106,8 +106,8 @@ export {
 export default {
   sections: COMPANY_GEMI_SECTIONS || [],
   get getAllFields() {
-    const { getAllCompanyFields } = require('./utils/field-utilities');
-    return getAllCompanyFields;
+    const { getAllGemiFields } = require('./utils/field-utilities');
+    return getAllGemiFields;
   },
   get getSection() {
     const { getCompanySection } = require('./utils/field-utilities');
@@ -163,7 +163,7 @@ export default {
  * import { LEGAL_FORM_OPTIONS } from '@/config/company-gemi';
  *
  * Utility functions:
- * import { getAllCompanyFields, getCompanySection } from '@/config/company-gemi';
+ * import { getAllGemiFields, getCompanySection } from '@/config/company-gemi';
  *
  * Enterprise features:
  * import { loadLegalForms, getEnterpriseLegalForms } from '@/config/company-gemi';

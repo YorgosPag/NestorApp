@@ -19,7 +19,7 @@ import { COMPANY_GEMI_SECTIONS } from '../core/section-registry';
  * Αποκτά όλα τα πεδία από όλες τις ενότητες
  * ENTERPRISE: Centralized field aggregation
  */
-export function getAllCompanyFields(): FieldConfig[] {
+export function getAllGemiFields(): FieldConfig[] {
   return COMPANY_GEMI_SECTIONS.flatMap(section => section.fields);
 }
 
@@ -36,7 +36,7 @@ export function getCompanySection(sectionId: string): SectionConfig | undefined 
  * ENTERPRISE: Cross-section field lookup
  */
 export function getCompanyField(fieldId: string): FieldConfig | undefined {
-  return getAllCompanyFields().find(field => field.id === fieldId);
+  return getAllGemiFields().find(field => field.id === fieldId);
 }
 
 /**
@@ -45,7 +45,7 @@ export function getCompanyField(fieldId: string): FieldConfig | undefined {
  */
 export function createFieldsMap(): Map<string, FieldConfig> {
   const map = new Map<string, FieldConfig>();
-  getAllCompanyFields().forEach(field => {
+  getAllGemiFields().forEach(field => {
     map.set(field.id, field);
   });
   return map;
@@ -82,7 +82,7 @@ export function getFieldsBySection(sectionId: string): FieldConfig[] {
  * ENTERPRISE: Validation helper για required fields
  */
 export function getRequiredFields(): FieldConfig[] {
-  return getAllCompanyFields().filter(field => field.required);
+  return getAllGemiFields().filter(field => field.required);
 }
 
 /**

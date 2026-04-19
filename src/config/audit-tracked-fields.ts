@@ -605,10 +605,9 @@ export function getContactTrackedFieldsForType(
 // ============================================================================
 
 /**
- * Flatten a document for dot-notation tracking.
- * Accepts the new `TrackedFieldDef` map (the SSoT format).
+ * Flatten a document using TrackedFieldDef map format (wraps audit-diff SSoT via legacyLabelMap adapter).
  */
-export function flattenForTracking(
+export function flattenForTrackingDef(
   doc: Record<string, unknown>,
   trackedFields: Record<string, TrackedFieldDef>,
 ): Record<string, unknown> {

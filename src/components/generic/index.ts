@@ -74,7 +74,7 @@ export {
   getSortedSections,
   getCompanySection,
   getCompanyField,
-  getAllCompanyFields
+  getAllGemiFields
 } from '@/config/company-gemi';
 
 export type {

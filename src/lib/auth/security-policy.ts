@@ -161,8 +161,8 @@ export const DEV_BYPASS_POLICY = {
 } as const;
 
 /**
- * Check if development bypass is allowed.
+ * Check if this security policy permits dev bypass (distinct from environment-security-config.ts SSoT which uses getCurrentSecurityPolicy()).
  */
-export function isDevBypassAllowed(): boolean {
+export function isSecurityPolicyDevBypassAllowed(): boolean {
   return DEV_BYPASS_POLICY.ALLOW_AUTH_BYPASS && process.env.NODE_ENV === 'development';
 }

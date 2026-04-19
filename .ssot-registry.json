@@ -2171,6 +2171,79 @@
         "src/utils/performanceMonitor.ts"
       ],
       "tier": 3
+    },
+
+    "firebase-client": {
+      "ssotFile": "src/lib/firebase.ts",
+      "description": "Firebase client SDK singletons (db, auth, functions, storage). Canonical SSoT for client-side Firebase app initialization. ADR-314 Phase C.5.5x.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(db|auth|functions|storage)\\s*=\\s*(getFirestore|getAuth|getFunctions|getStorage)\\("
+      ],
+      "allowlist": [
+        "src/lib/firebase.ts"
+      ],
+      "tier": 1
+    },
+
+    "contact-form-utils": {
+      "ssotFile": "src/utils/contactFormUtils.ts",
+      "description": "Contact type icon/label helpers (getTypeIcon, getTypeLabel). SSoT for ContactType display. ADR-314 Phase C.5.5x.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(getTypeIcon|getTypeLabel)\\s*=\\s*\\(type:\\s*ContactType"
+      ],
+      "allowlist": [
+        "src/utils/contactFormUtils.ts"
+      ],
+      "tier": 3
+    },
+
+    "data-services": {
+      "ssotFile": "src/lib/data-services.ts",
+      "description": "Sample data services (getContacts, getProjects, sampleContacts, mockProjects). Dev/test data SSoT. ADR-314 Phase C.5.5x.",
+      "forbiddenPatterns": [
+        "export\\s+async\\s+function\\s+(getContacts|getProjects)\\b"
+      ],
+      "allowlist": [
+        "src/lib/data-services.ts"
+      ],
+      "tier": 3
+    },
+
+    "enterprise-id-prefixes": {
+      "ssotFile": "src/services/enterprise-id-prefixes.ts",
+      "description": "ENTERPRISE_ID_PREFIXES constant — canonical registry of all entity ID prefix strings. ADR-314 Phase C.5.5x.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+ENTERPRISE_ID_PREFIXES\\b"
+      ],
+      "allowlist": [
+        "src/services/enterprise-id-prefixes.ts"
+      ],
+      "tier": 2
+    },
+
+    "intl-utils": {
+      "ssotFile": "src/lib/intl-utils.ts",
+      "description": "Intl utils barrel — re-exports from intl-formatting and intl-domain plus getCurrentLocale(). ADR-314 Phase C.5.5x.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+getCurrentLocale\\b"
+      ],
+      "allowlist": [
+        "src/lib/intl-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "company-gemi-config": {
+      "ssotFile": "src/config/company-gemi-config.ts",
+      "description": "Company GEMI fields configuration — createFieldsMap, isFieldRequired (re-exported from field-utilities). ADR-314 Phase C.5.5x.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(createFieldsMap|isFieldRequired)\\b"
+      ],
+      "allowlist": [
+        "src/config/company-gemi-config.ts",
+        "src/config/company-gemi/utils/field-utilities.ts"
+      ],
+      "tier": 3
     }
   }
 }

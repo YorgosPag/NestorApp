@@ -14,7 +14,7 @@ import React from 'react';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PropertyHoverHeader } from './PropertyHoverHeader';
-import { getPropertyStatusConfig } from '../constants';
+import { getPropertyHoverStatusConfig } from '../constants';
 import { formatFloorLabel } from '@/lib/intl-utils';
 import { ORIENTATION_LABELS } from '@/constants/property-features-enterprise';
 import type { OrientationType } from '@/types/property';
@@ -44,7 +44,7 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { t: tUnits } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const colors = useSemanticColors();
-  const statusConfig = getPropertyStatusConfig();
+  const statusConfig = getPropertyHoverStatusConfig();
   // 🏢 ADR-258: commercialStatus is SSoT, legacy status is fallback
   const effectiveStatus = property.commercialStatus ?? property.status;
   const statusInfo = statusConfig[effectiveStatus as keyof typeof statusConfig] || statusConfig['unknown'];

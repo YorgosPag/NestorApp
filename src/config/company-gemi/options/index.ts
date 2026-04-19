@@ -57,10 +57,9 @@ export const ADDRESS_TYPE_OPTIONS = getAddressTypeOptions();
 export const SHAREHOLDER_TYPE_OPTIONS = getShareholderTypeOptions();
 
 /**
- * Document type options από centralized system
- * ENTERPRISE: Uses existing getDocumentTypeOptions - NO HARDCODED VALUES
+ * Company document type options (distinct from individual-config DOCUMENT_TYPE_OPTIONS which uses getIdentityTypeOptions)
  */
-export const DOCUMENT_TYPE_OPTIONS = getDocumentTypeOptions();
+export const COMPANY_DOCUMENT_TYPE_OPTIONS = getDocumentTypeOptions();
 
 /**
  * Board type options από centralized system

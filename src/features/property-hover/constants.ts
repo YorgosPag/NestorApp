@@ -50,7 +50,7 @@ const STATUS_COLORS = {
  * Returns status display configuration (label, color classes, price label).
  * No hook dependency — safe to call from any context.
  */
-export function getPropertyStatusConfig() {
+export function getPropertyHoverStatusConfig() {
   return {
     'for-sale': {
       label: PROPERTY_STATUS_LABELS['for-sale'],

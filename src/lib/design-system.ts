@@ -7,8 +7,8 @@ import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { cn } from '@/lib/utils';
 export { cn };
 
-// Status color utilities
-export const getStatusColor = (status: string, variant: 'bg' | 'text' | 'border' = 'text') => {
+// Status color utilities (CSS-class generator — distinct from domain-typed getStatusColor in @/lib/status-helpers)
+const getStatusColorClass = (status: string, variant: 'bg' | 'text' | 'border' = 'text') => {
   const statusColorMap: Record<string, string> = {
     // Property statuses
     'for-sale': 'status-success',
@@ -45,6 +45,8 @@ export const getStatusColor = (status: string, variant: 'bg' | 'text' | 'border'
       return `text-[hsl(var(--${colorVar}))]`;
   }
 };
+const getStatusColor = getStatusColorClass;
+export { getStatusColor };
 
 // Typography utilities
 export const getTypographyClass = (

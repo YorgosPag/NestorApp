@@ -18,7 +18,7 @@ import {
   getGemiStatusOptions
 } from '../subapps/dxf-viewer/config/modal-select';
 
-import { getSortedSections, getAllCompanyFields, getCompanyField, type FieldConfig } from './company-gemi';
+import { getSortedSections, getAllGemiFields, getCompanyField, createFieldsMap, isFieldRequired, type FieldConfig } from './company-gemi';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('company-gemi-config');
 
@@ -291,25 +291,8 @@ export async function getEnterpriseCompanyStatuses(options: {
 // ============================================================================
 
 
-/**
- * Δημιουργεί mapping από field ID σε FieldConfig για γρήγορη αναζήτηση
- */
-export function createFieldsMap(): Map<string, FieldConfig> {
-  const map = new Map<string, FieldConfig>();
-  getAllCompanyFields().forEach(field => {
-    map.set(field.id, field);
-  });
-  return map;
-}
-
-/**
- * Ελέγχει αν ένα πεδίο είναι required
- */
-export function isFieldRequired(fieldId: string): boolean {
-  const field = getCompanyField(fieldId);
-  return field?.required ?? false;
-}
-
+// createFieldsMap and isFieldRequired imported from ./company-gemi (SSoT: field-utilities.ts)
+export { createFieldsMap, isFieldRequired };
 
 // ============================================================================
 // EXPORTS
