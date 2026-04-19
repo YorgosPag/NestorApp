@@ -68,6 +68,27 @@ export interface AvailableChannel {
 }
 
 // ============================================================================
+// LINKING HINTS — pre-fill suggestions for the `Σύνδεση καναλιού` form
+// ============================================================================
+
+/** Why a `LinkingHint` exists — used for analytics and future UI cues */
+export type LinkingHintReason =
+  /** Telegram `socialMedia[]` entry with a non-numeric `@username` handle,
+   * filtered out of `channels[]` by ADR-312 Phase 9.12. We still want the UI
+   * to surface it so the user can replace the handle with a numeric chat_id
+   * instead of retyping the display name from scratch. */
+  | 'non_numeric_telegram_username';
+
+/** Server-generated suggestion that pre-fills the manual linking form when
+ * the user picks a provider without an existing deliverable channel. */
+export interface LinkingHint {
+  provider: ChannelProvider;
+  suggestedExternalId: string;
+  suggestedDisplayName: string;
+  reason: LinkingHintReason;
+}
+
+// ============================================================================
 // API REQUEST / RESPONSE TYPES
 // ============================================================================
 
@@ -75,6 +96,7 @@ export interface AvailableChannel {
 export interface ContactChannelsResponse {
   channels: AvailableChannel[];
   contactName: string;
+  linkingHints: LinkingHint[];
 }
 
 /** POST /api/communications/share-to-channel request body */

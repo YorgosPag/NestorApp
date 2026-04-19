@@ -9,12 +9,15 @@
  * 1. Search and select a CRM contact (reuses search-for-share API)
  * 2. Display available channels for the selected contact
  *
+ * The manual linking fieldset has been extracted to `ChannelLinkForm`
+ * (ADR-312 Phase 9.13) for SRP compliance and Google's component size limit.
+ *
  * @module components/ui/channel-sharing/ContactChannelPicker
  * @enterprise Phase 2 — Multi-Channel Sharing
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Search, ArrowLeft, User, Building2, Wrench, Mail, CheckCircle, Plus, Link2 } from 'lucide-react';
+import { Search, ArrowLeft, User, Building2, Wrench, Mail, CheckCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
@@ -30,10 +33,8 @@ import {
   MessengerIcon,
   InstagramIcon,
 } from '@/lib/social-sharing/SocialSharingPlatforms';
-import { useNotifications } from '@/providers/NotificationProvider';
-import type { AvailableChannel, ChannelProvider, ContactChannelsResponse } from './types';
-import { CHANNEL_CAPABILITIES } from './types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { AvailableChannel, ChannelProvider, ContactChannelsResponse, LinkingHint } from './types';
+import { ChannelLinkForm } from './ChannelLinkForm';
 
 const logger = createModuleLogger('ContactChannelPicker');
 
@@ -91,7 +92,6 @@ const CHANNEL_COLORS: Record<ChannelProvider, string> = {
 
 export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannelPickerProps) {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
-  const notifications = useNotifications();
 
   // Contact search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,15 +102,10 @@ export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannel
   // Selected contact + channels
   const [selectedContact, setSelectedContact] = useState<ShareableContact | null>(null);
   const [channels, setChannels] = useState<AvailableChannel[]>([]);
+  const [linkingHints, setLinkingHints] = useState<LinkingHint[]>([]);
   const [loadingChannels, setLoadingChannels] = useState(false);
   const [channelError, setChannelError] = useState<string | null>(null);
-
-  // Manual linking state
   const [showLinkForm, setShowLinkForm] = useState(false);
-  const [linkProvider, setLinkProvider] = useState<ChannelProvider | ''>('');
-  const [linkExternalId, setLinkExternalId] = useState('');
-  const [linkDisplayName, setLinkDisplayName] = useState('');
-  const [isLinking, setIsLinking] = useState(false);
 
   // Cleanup debounce on unmount
   useEffect(() => {
@@ -162,10 +157,12 @@ export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannel
         API_ROUTES.CONTACTS.CHANNELS(contact.id)
       );
       setChannels(data.channels);
+      setLinkingHints(data.linkingHints ?? []);
     } catch (err) {
       logger.error('Failed to load channels', { contactId: contact.id, error: err });
       setChannelError(t('channelShare.errorLoadingChannels'));
       setChannels([]);
+      setLinkingHints([]);
     } finally {
       setLoadingChannels(false);
     }
@@ -186,40 +183,15 @@ export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannel
   const handleBackToSearch = useCallback(() => {
     setSelectedContact(null);
     setChannels([]);
+    setLinkingHints([]);
     setChannelError(null);
     setShowLinkForm(false);
   }, []);
 
-  // ── Manual channel linking ──
-
-  const handleLinkChannel = useCallback(async () => {
-    if (!selectedContact || !linkProvider || !linkExternalId.trim()) return;
-    setIsLinking(true);
-
-    try {
-      await apiClient.post(
-        API_ROUTES.CONTACTS.LINK_CHANNEL(selectedContact.id),
-        {
-          provider: linkProvider,
-          externalUserId: linkExternalId.trim(),
-          displayName: linkDisplayName.trim() || undefined,
-        }
-      );
-      notifications.success(t('channelShare.linkSuccess'));
-
-      // Refresh channels list
-      setShowLinkForm(false);
-      setLinkProvider('');
-      setLinkExternalId('');
-      setLinkDisplayName('');
-      handleContactSelect(selectedContact);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      notifications.error(t('channelShare.linkError', { error: msg }));
-    } finally {
-      setIsLinking(false);
-    }
-  }, [selectedContact, linkProvider, linkExternalId, linkDisplayName, t, notifications, handleContactSelect]);
+  const handleLinked = useCallback(() => {
+    setShowLinkForm(false);
+    if (selectedContact) handleContactSelect(selectedContact);
+  }, [selectedContact, handleContactSelect]);
 
   // ============================================================================
   // RENDER — Contact Search Step
@@ -413,70 +385,13 @@ export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannel
       )}
 
       {showLinkForm && (
-        <fieldset className="space-y-3 p-3 rounded-lg border border-border">
-          <legend className="text-xs font-medium flex items-center gap-1.5 px-1">
-            <Link2 className="w-3.5 h-3.5" />
-            {t('channelShare.linkChannelDesc')}
-          </legend>
-
-          <Select
-            value={linkProvider}
-            onValueChange={(v) => setLinkProvider(v as ChannelProvider)}
-          >
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder={t('channelShare.selectProvider')} />
-            </SelectTrigger>
-            <SelectContent>
-              {(['telegram', 'whatsapp', 'messenger', 'instagram'] as const).map((p) => {
-                const PIcon = CHANNEL_ICONS[p];
-                return (
-                  <SelectItem key={p} value={p}>
-                    <span className="flex items-center gap-2">
-                      <PIcon className={cn('w-4 h-4', CHANNEL_COLORS[p])} />
-                      {t(`channelShare.channels.${p}`)}
-                    </span>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-
-          {linkProvider && (
-            <>
-              <Input
-                value={linkExternalId}
-                onChange={(e) => setLinkExternalId(e.target.value)}
-                placeholder={t(`channelShare.externalIdPlaceholder.${linkProvider}`)}
-                className="text-sm"
-              />
-              <Input
-                value={linkDisplayName}
-                onChange={(e) => setLinkDisplayName(e.target.value)}
-                placeholder={t('channelShare.displayNameLabel')}
-                className="text-sm"
-              />
-            </>
-          )}
-
-          <nav className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setShowLinkForm(false); setLinkProvider(''); setLinkExternalId(''); }}
-              className="flex-1"
-            >
-              {t('channelShare.back')}
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleLinkChannel}
-              disabled={isLinking || !linkProvider || !linkExternalId.trim()}
-              className="flex-1"
-            >
-              {isLinking ? t('channelShare.linking') : t('channelShare.linkChannel')}
-            </Button>
-          </nav>
-        </fieldset>
+        <ChannelLinkForm
+          contactId={selectedContact.id}
+          contactName={selectedContact.name}
+          linkingHints={linkingHints}
+          onLinked={handleLinked}
+          onCancel={() => setShowLinkForm(false)}
+        />
       )}
 
       {/* Back button */}

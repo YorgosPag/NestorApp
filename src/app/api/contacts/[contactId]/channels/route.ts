@@ -26,6 +26,7 @@ import {
   type AvailableChannel,
   type ChannelProvider,
   type ContactChannelsResponse,
+  type LinkingHint,
 } from '@/components/ui/channel-sharing/types';
 import { isValidTelegramChatId } from '@/lib/telegram/chat-id-validator';
 
@@ -99,6 +100,36 @@ function extractSocialMediaChannels(data: FirebaseFirestore.DocumentData): Avail
     });
   }
   return channels;
+}
+
+// Non-deliverable `socialMedia[]` entries still carry useful signal — the user
+// already typed the handle once, so the link form should pre-populate with it
+// instead of forcing a retype. Today only Telegram needs this (ADR-312 Phase
+// 9.13): `@username` handles are filtered out of `channels[]` by Phase 9.12
+// but remain the best anchor for `displayName` + guidance on what to replace.
+function extractLinkingHints(
+  data: FirebaseFirestore.DocumentData,
+  contactName: string,
+): LinkingHint[] {
+  const social = data.socialMedia;
+  if (!Array.isArray(social)) return [];
+
+  const hints: LinkingHint[] = [];
+  for (const entry of social) {
+    const platform = String((entry as Record<string, unknown>)?.platform ?? '');
+    const username = String((entry as Record<string, unknown>)?.username ?? '').trim();
+    if (!username) continue;
+
+    if (platform === 'telegram' && !isValidTelegramChatId(username)) {
+      hints.push({
+        provider: 'telegram',
+        suggestedExternalId: username,
+        suggestedDisplayName: contactName,
+        reason: 'non_numeric_telegram_username',
+      });
+    }
+  }
+  return hints;
 }
 
 function isValidChannelProvider(provider: string): provider is ChannelProvider {
@@ -204,14 +235,17 @@ async function handleGet(
         return aIdx - bIdx;
       });
 
+      const linkingHints = extractLinkingHints(contactData, contactName);
+
       logger.info('Contact channels resolved', {
         contactId,
         channelCount: channels.length,
+        hintCount: linkingHints.length,
         providers: [...new Set(channels.map(c => c.provider))],
         tenant: ctx.companyId,
       });
 
-      return apiSuccess<ContactChannelsResponse>({ channels, contactName });
+      return apiSuccess<ContactChannelsResponse>({ channels, contactName, linkingHints });
     },
     { permissions: 'crm:contacts:view' }
   );
