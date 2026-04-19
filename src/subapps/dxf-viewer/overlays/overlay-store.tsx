@@ -1,7 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { db } from '../../../lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { orderBy } from 'firebase/firestore';
 import { useAuth } from '@/auth/hooks/useAuth';
 import {
   createOverlayItemWithPolicy,
@@ -9,6 +8,7 @@ import {
   deleteOverlayItemWithPolicy,
   upsertOverlayItemWithPolicy,
 } from '@/services/dxf-overlay-item-mutation-gateway';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { Overlay, CreateOverlayData, UpdateOverlayData, Status, OverlayKind } from './types';
 // 🏢 ENTERPRISE: Debug system for production-silent logging
 import { dlog, dwarn, derr } from '../debug';
@@ -48,9 +48,6 @@ interface OverlayStoreActions {
 }
 
 const OverlayStoreContext = createContext<(OverlayStoreState & OverlayStoreActions) | null>(null);
-// SSoT: Collection name from centralized config
-import { COLLECTIONS } from '@/config/firestore-collections';
-const COLLECTION_PREFIX = COLLECTIONS.DXF_OVERLAY_LEVELS;
 
 export function OverlayStoreProvider({ children }: { children: React.ReactNode }) {
   // 🔧 FIX (2026-02-13): Get authenticated user for companyId/createdBy — Firestore rules require these
@@ -65,56 +62,61 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   });
 
   // Firestore subscription — requires both authenticated user AND a selected level
+  // 🏢 ADR-214 (C.5.29): subscribe via firestoreQueryService SSoT (no direct onSnapshot)
   useEffect(() => {
     if (!state.currentLevelId || !user) {
       return;
     }
 
     setState(prev => ({ ...prev, isLoading: true }));
-    const collectionRef = collection(db, `${COLLECTION_PREFIX}/${state.currentLevelId}/items`);
-    const q = query(collectionRef, orderBy('createdAt', 'asc'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const overlays: Record<string, Overlay> = {};
-      snapshot.docs.forEach(doc => {
-        // 🎯 TYPE-SAFE: Firestore returns DocumentData - cast to expected structure
-        const data = doc.data() as Record<string, unknown>;
-        let polygon = data.polygon;
+    const unsubscribe = firestoreQueryService.subscribeSubcollection<Record<string, unknown> & { id: string }>(
+      'DXF_OVERLAY_LEVELS',
+      state.currentLevelId,
+      'items',
+      (result) => {
+        const overlays: Record<string, Overlay> = {};
+        result.documents.forEach(data => {
+          let polygon = data.polygon;
 
-        // 🔧 FIX (2026-01-24): Normalize polygon format from various storage formats
-        if (isNonEmptyArray(polygon)) {
-          const firstElement = (polygon as unknown[])[0];
+          // 🔧 FIX (2026-01-24): Normalize polygon format from various storage formats
+          if (isNonEmptyArray(polygon)) {
+            const firstElement = (polygon as unknown[])[0];
 
-          // Format 1: Array of {x, y} objects (new Firebase-compatible format)
-          if (typeof firstElement === 'object' && firstElement !== null && 'x' in firstElement) {
-            polygon = (polygon as Array<{x: number, y: number}>).map(p => [p.x, p.y] as [number, number]);
-          }
-          // Format 2: Flat array [x1, y1, x2, y2, ...] (legacy format)
-          else if (typeof firstElement === 'number') {
-            const nums = polygon as unknown as number[];
-            const coordPairs: [number, number][] = [];
-            for (let i = 0; i < nums.length; i += 2) {
-              coordPairs.push([nums[i], nums[i + 1]]);
+            // Format 1: Array of {x, y} objects (new Firebase-compatible format)
+            if (typeof firstElement === 'object' && firstElement !== null && 'x' in firstElement) {
+              polygon = (polygon as Array<{x: number, y: number}>).map(p => [p.x, p.y] as [number, number]);
             }
-            polygon = coordPairs;
+            // Format 2: Flat array [x1, y1, x2, y2, ...] (legacy format)
+            else if (typeof firstElement === 'number') {
+              const nums = polygon as unknown as number[];
+              const coordPairs: [number, number][] = [];
+              for (let i = 0; i < nums.length; i += 2) {
+                coordPairs.push([nums[i], nums[i + 1]]);
+              }
+              polygon = coordPairs;
+            }
+            // Format 3: Already [[x,y], [x,y], ...] - use as-is
           }
-          // Format 3: Already [[x,y], [x,y], ...] - use as-is
-        }
 
-        // ✅ ENTERPRISE FIX: Type-safe overlay creation with proper polygon type
-        overlays[doc.id] = {
-          ...data,
-          id: doc.id,
-          polygon: polygon as [number, number][]
-        } as Overlay;
-      });
+          // ✅ ENTERPRISE FIX: Type-safe overlay creation with proper polygon type
+          overlays[data.id] = {
+            ...data,
+            polygon: polygon as [number, number][]
+          } as Overlay;
+        });
 
-      setState(prev => ({ ...prev, overlays, isLoading: false }));
-    }, (error) => {
-      // 🏢 ENTERPRISE: Handle Firestore permission errors gracefully (Fixes NESTOR-APP-3)
-      derr('Overlay subscription failed — user may lack permissions', error.message);
-      setState(prev => ({ ...prev, isLoading: false }));
-    });
+        setState(prev => ({ ...prev, overlays, isLoading: false }));
+      },
+      (error) => {
+        // 🏢 ENTERPRISE: Handle Firestore permission errors gracefully (Fixes NESTOR-APP-3)
+        derr('Overlay subscription failed — user may lack permissions', error.message);
+        setState(prev => ({ ...prev, isLoading: false }));
+      },
+      {
+        constraints: [orderBy('createdAt', 'asc')],
+      }
+    );
 
     return () => unsubscribe();
   }, [state.currentLevelId, user]);
