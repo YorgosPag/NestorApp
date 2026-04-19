@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { ArrowLeft, Send, Info, Mail } from 'lucide-react';
+import { ArrowLeft, Send, Info, Link as LinkIcon, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -92,6 +92,15 @@ export function ChannelShareForm({
   );
   const [message, setMessage] = useState('');
 
+  // Dispatch mode (ADR-312 Phase 9.16) — when no real photo is available but
+  // `shareData.url` is (always true for property_showcase), auto-switch to
+  // link mode: send the token URL as a plain text message instead of blocking
+  // the user on a photo upload that can never succeed.
+  const hasSelectedPhotos = selectedPhotos.length > 0 || !!defaultPhoto;
+  const shareUrl = shareData.url?.trim() ? shareData.url : undefined;
+  const isLinkMode = !hasSelectedPhotos && !!shareUrl;
+  const canSend = hasSelectedPhotos || isLinkMode;
+
   // ── Handlers ──
 
   const handleSend = useCallback(async () => {
@@ -99,19 +108,25 @@ export function ChannelShareForm({
       ? selectedPhotos
       : (defaultPhoto ? [defaultPhoto] : []);
 
-    if (photoUrls.length === 0) return;
-
-    const request: ChannelShareRequest = {
+    const baseRequest = {
       contactId: contact.id,
       contactName: contact.name,
       channel: channel.provider,
       externalUserId: channel.externalUserId,
-      photoUrls,
       caption: message.trim() || undefined,
     };
 
+    let request: ChannelShareRequest;
+    if (photoUrls.length > 0) {
+      request = { ...baseRequest, photoUrls };
+    } else if (shareUrl) {
+      request = { ...baseRequest, shareUrl };
+    } else {
+      return;
+    }
+
     await onSend(request);
-  }, [selectedPhotos, defaultPhoto, contact, channel, message, onSend]);
+  }, [selectedPhotos, defaultPhoto, shareUrl, contact, channel, message, onSend]);
 
   const handleMessageChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -125,7 +140,7 @@ export function ChannelShareForm({
   const ChannelIcon = CHANNEL_ICONS[channel.provider];
   const channelColorClass = CHANNEL_COLORS[channel.provider];
   const channelName = t(`channelShare.channels.${channel.provider}`);
-  const hasPhotos = selectedPhotos.length > 0 || !!defaultPhoto;
+  const hasPhotos = hasSelectedPhotos;
   const isLinkFallback = channel.capabilities.photoMethod === 'link-fallback';
   const charsRemaining = MAX_MESSAGE_LENGTH - message.length;
 
@@ -152,11 +167,10 @@ export function ChannelShareForm({
         </span>
       </header>
 
-      {/* Empty-state when no real photo is available — prevents the user from
-          clicking Send and getting a Telegram `IMAGE_PROCESS_FAILED`. The
-          `shareData.url` fallback that previously masked this case was
-          removed in ADR-312 Phase 9.15. */}
-      {!hasPhotos && (
+      {/* Empty-state when neither a photo nor a share URL is available —
+          blocks Send entirely. The link-mode fallback (ADR-312 Phase 9.16)
+          is only available when `shareData.url` is set. */}
+      {!hasPhotos && !isLinkMode && (
         <aside
           className={cn(
             'flex items-start gap-2 p-3 rounded-lg text-xs',
@@ -166,6 +180,22 @@ export function ChannelShareForm({
         >
           <Info className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{t('channelShare.errors.noPhotoAvailable')}</span>
+        </aside>
+      )}
+
+      {/* Link-mode notice (ADR-312 Phase 9.16) — shown when auto-switched
+          because no photo is available. Explains to the user that the
+          token URL will be sent as a text message instead of an image. */}
+      {isLinkMode && (
+        <aside
+          className={cn(
+            'flex items-start gap-2 p-3 rounded-lg text-xs',
+            'bg-sky-50 text-sky-800 dark:bg-sky-900/20 dark:text-sky-300',
+          )}
+          role="note"
+        >
+          <LinkIcon className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{t('channelShare.linkModeNotice')}</span>
         </aside>
       )}
 
@@ -229,11 +259,16 @@ export function ChannelShareForm({
         </Button>
         <Button
           onClick={handleSend}
-          disabled={loading || !hasPhotos}
+          disabled={loading || !canSend}
           className="flex-1 gap-2"
         >
           {loading ? (
             t('channelShare.sending')
+          ) : isLinkMode ? (
+            <>
+              <LinkIcon className="w-4 h-4" />
+              {t('channelShare.sendLinkVia', { channel: channelName })}
+            </>
           ) : (
             <>
               <Send className="w-4 h-4" />

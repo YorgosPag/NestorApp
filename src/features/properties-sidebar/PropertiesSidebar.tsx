@@ -1,7 +1,7 @@
 // ?? i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { Property } from '@/types/property-viewer';
 import { Edit, Trash2 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -65,7 +65,41 @@ export function PropertiesSidebar({
   const { user } = useAuth();
   const [isEditMode, setIsEditMode] = useState(false);
   const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
+  const [showcasePhotos, setShowcasePhotos] = useState<string[]>([]);
   const properties = units;
+
+  // Pre-fill the channel share surface with the property's real photo URLs
+  // (ADR-312 Phase 9.17). Without this, `UnifiedShareDialog` had no gallery
+  // to feed `PhotoPickerGrid`, which forced every Telegram/WhatsApp send
+  // through the link-only fallback (Phase 9.16). Fetched on open only.
+  useEffect(() => {
+    if (!showcaseDialogOpen || !selectedProperty) {
+      setShowcasePhotos([]);
+      return;
+    }
+    const propertyId = selectedProperty.id;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/properties/${encodeURIComponent(propertyId)}/photos`,
+          { method: 'GET', credentials: 'include' },
+        );
+        if (!res.ok) return;
+        const payload = await res.json().catch(() => null);
+        const photos = payload?.data?.photos ?? payload?.photos;
+        if (!cancelled && Array.isArray(photos)) {
+          const urls = photos
+            .map((p: { url?: string }) => p.url)
+            .filter((u: unknown): u is string => typeof u === 'string' && u.length > 0);
+          setShowcasePhotos(urls);
+        }
+      } catch {
+        // Non-blocking: the dialog still works in link-mode without photos.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [showcaseDialogOpen, selectedProperty]);
 
   const showcasePdfPreSubmit = useCallback(async () => {
     if (!selectedProperty) throw new Error('No property selected');
@@ -232,6 +266,13 @@ export function PropertiesSidebar({
           userId={user.uid}
           companyId={user.companyId}
           preSubmit={showcasePdfPreSubmit}
+          contactShareContent={{
+            title: selectedProperty.name ?? t('properties-detail:showcase.title'),
+            text: '',
+            isPhoto: showcasePhotos.length > 0,
+            photoUrl: showcasePhotos[0],
+            galleryPhotos: showcasePhotos,
+          }}
         />
       )}
     </>

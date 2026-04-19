@@ -15,21 +15,23 @@ import 'server-only';
 
 import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
-import { FieldValue } from 'firebase-admin/firestore';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import type { PipelineChannelValue } from '@/types/ai-pipeline';
-import type { ChannelMediaReplyParams } from '@/services/ai-pipeline/shared/channel-reply-types';
-import { sendChannelMediaReply } from '@/services/ai-pipeline/shared/channel-media-dispatcher';
 import { generateShareId } from '@/services/enterprise-id.service';
 import type { ChannelProvider, ChannelShareRequest, ChannelShareResponse } from '@/components/ui/channel-sharing/types';
+import {
+  dispatchLinkMode,
+  dispatchPhotoMode,
+  persistShareRecord,
+  recordAudit,
+} from './dispatch-helpers';
 
 const logger = createModuleLogger('ShareToChannelRoute');
 
@@ -44,19 +46,6 @@ const PROVIDER_TO_PIPELINE: Record<ChannelProvider, PipelineChannelValue> = {
   messenger: PipelineChannel.MESSENGER,
   instagram: PipelineChannel.INSTAGRAM,
 };
-
-function buildRecipientParams(
-  provider: ChannelProvider,
-  externalUserId: string
-): Partial<ChannelMediaReplyParams> {
-  switch (provider) {
-    case 'telegram':  return { telegramChatId: externalUserId };
-    case 'email':     return { recipientEmail: externalUserId };
-    case 'whatsapp':  return { whatsappPhone: externalUserId };
-    case 'messenger': return { messengerPsid: externalUserId };
-    case 'instagram': return { instagramIgsid: externalUserId };
-  }
-}
 
 // ============================================================================
 // VALIDATION
@@ -84,14 +73,41 @@ function validateRequest(body: unknown): ChannelShareRequest {
   if (typeof b.externalUserId !== 'string' || b.externalUserId.length === 0) {
     throw new ApiError(400, 'Invalid externalUserId', 'VALIDATION_ERROR');
   }
-  if (!Array.isArray(b.photoUrls) || b.photoUrls.length === 0 || b.photoUrls.length > MAX_PHOTOS) {
-    throw new ApiError(400, `photoUrls must be 1-${MAX_PHOTOS} items`, 'VALIDATION_ERROR');
+
+  // Mutually-exclusive dispatch modes (ADR-312 Phase 9.16): exactly one of
+  // `photoUrls` / `shareUrl` must be provided.
+  const hasPhotos = Array.isArray(b.photoUrls) && (b.photoUrls as unknown[]).length > 0;
+  const hasShareUrl = typeof b.shareUrl === 'string' && (b.shareUrl as string).length > 0;
+  if (hasPhotos === hasShareUrl) {
+    throw new ApiError(
+      400,
+      'Exactly one of photoUrls / shareUrl must be provided',
+      'VALIDATION_ERROR',
+    );
   }
-  for (const url of b.photoUrls) {
-    if (typeof url !== 'string' || !url.startsWith('http')) {
-      throw new ApiError(400, 'Invalid photo URL', 'VALIDATION_ERROR');
+
+  let photoUrls: string[] | undefined;
+  if (hasPhotos) {
+    const arr = b.photoUrls as unknown[];
+    if (arr.length > MAX_PHOTOS) {
+      throw new ApiError(400, `photoUrls must be 1-${MAX_PHOTOS} items`, 'VALIDATION_ERROR');
+    }
+    for (const url of arr) {
+      if (typeof url !== 'string' || !url.startsWith('http')) {
+        throw new ApiError(400, 'Invalid photo URL', 'VALIDATION_ERROR');
+      }
+    }
+    photoUrls = arr as string[];
+  }
+
+  let shareUrl: string | undefined;
+  if (hasShareUrl) {
+    shareUrl = b.shareUrl as string;
+    if (!shareUrl.startsWith('http')) {
+      throw new ApiError(400, 'Invalid shareUrl', 'VALIDATION_ERROR');
     }
   }
+
   if (b.caption !== undefined && typeof b.caption !== 'string') {
     throw new ApiError(400, 'Invalid caption', 'VALIDATION_ERROR');
   }
@@ -101,7 +117,8 @@ function validateRequest(body: unknown): ChannelShareRequest {
     contactName: b.contactName,
     channel: b.channel as ChannelProvider,
     externalUserId: b.externalUserId,
-    photoUrls: b.photoUrls as string[],
+    photoUrls,
+    shareUrl,
     caption: b.caption as string | undefined,
   };
 }
@@ -132,94 +149,21 @@ export const POST = withSensitiveRateLimit(
 
       const shareId = generateShareId();
       const pipelineChannel = PROVIDER_TO_PIPELINE[data.channel];
-      const recipientParams = buildRecipientParams(data.channel, data.externalUserId);
 
-      // Send each photo — caption only on the first
-      let lastResult: { success: boolean; error?: string } = { success: false, error: 'No photos sent' };
-      let sentCount = 0;
+      const dispatch = data.shareUrl
+        ? await dispatchLinkMode(data, pipelineChannel, shareId)
+        : await dispatchPhotoMode(data, pipelineChannel, shareId);
+      const { lastResult, sentCount, totalCount, mode } = dispatch;
 
-      for (let i = 0; i < data.photoUrls.length; i++) {
-        const mediaParams: ChannelMediaReplyParams = {
-          channel: pipelineChannel,
-          ...recipientParams,
-          mediaUrl: data.photoUrls[i],
-          mediaType: 'photo',
-          caption: i === 0 ? data.caption : undefined,
-          requestId: `${shareId}_${i}`,
-        };
-
-        const result = await sendChannelMediaReply(mediaParams);
-        lastResult = { success: result.success, error: result.error };
-
-        if (result.success) {
-          sentCount++;
-        } else {
-          logger.warn('Channel media send failed', {
-            shareId,
-            photoIndex: i,
-            channel: data.channel,
-            error: result.error,
-          });
-          break;
-        }
-      }
-
-      // Persist photo share record for history
-      const shareStatus = sentCount === data.photoUrls.length
-        ? 'sent'
-        : sentCount > 0 ? 'partial' : 'failed';
-
-      try {
-        await db.collection(COLLECTIONS.PHOTO_SHARES).doc(shareId).set({
-          contactId: data.contactId,
-          contactName: data.contactName,
-          channel: data.channel,
-          externalUserId: data.externalUserId,
-          photoUrls: data.photoUrls,
-          photoCount: data.photoUrls.length,
-          caption: data.caption ?? null,
-          status: shareStatus,
-          sentCount,
-          companyId: ctx.companyId,
-          createdBy: ctx.uid,
-          createdAt: FieldValue.serverTimestamp(),
-        });
-      } catch (writeError) {
-        logger.warn('Photo share record write failed (non-blocking)', {
-          shareId,
-          error: getErrorMessage(writeError),
-        });
-      }
-
-      // Audit trail (non-blocking)
-      try {
-        await logAuditEvent(ctx, 'message_sent', data.contactId, 'communication', {
-          newValue: {
-            type: 'communication_status',
-            value: {
-              shareId,
-              channel: data.channel,
-              contactName: data.contactName,
-              photoCount: data.photoUrls.length,
-              success: lastResult.success,
-            },
-          },
-          metadata: {
-            reason: `Photo shared via ${data.channel} to ${data.contactName}`,
-          },
-        });
-      } catch (auditError) {
-        logger.warn('Audit logging failed (non-blocking)', {
-          shareId,
-          error: getErrorMessage(auditError),
-        });
-      }
+      await persistShareRecord(db, shareId, data, mode, sentCount, totalCount, ctx);
+      await recordAudit(ctx, data, shareId, mode, totalCount, lastResult.success);
 
       logger.info('Channel share completed', {
         shareId,
+        mode,
         channel: data.channel,
         contactId: data.contactId,
-        photoCount: data.photoUrls.length,
+        totalCount,
         success: lastResult.success,
         tenant: ctx.companyId,
       });

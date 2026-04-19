@@ -99,13 +99,23 @@ export interface ContactChannelsResponse {
   linkingHints: LinkingHint[];
 }
 
-/** POST /api/communications/share-to-channel request body */
+/** POST /api/communications/share-to-channel request body.
+ *
+ * Two mutually-exclusive dispatch modes:
+ *  - **photo mode** — `photoUrls[]` present → sendChannelMediaReply per photo.
+ *  - **link mode** — `shareUrl` present → sendChannelReply text, body = `{caption}\n\n{shareUrl}`.
+ *
+ * Exactly one of `photoUrls` / `shareUrl` MUST be provided (ADR-312 Phase 9.16).
+ * Link mode is the fallback when the showcase has no real image payload and
+ * the user still wants to send the token URL via Telegram/WhatsApp/etc.
+ */
 export interface ChannelShareRequest {
   contactId: string;
   contactName: string;
   channel: ChannelProvider;
   externalUserId: string;
-  photoUrls: string[];
+  photoUrls?: string[];
+  shareUrl?: string;
   caption?: string;
 }
 
