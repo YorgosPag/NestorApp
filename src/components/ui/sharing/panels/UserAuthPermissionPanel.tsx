@@ -304,6 +304,9 @@ export function UserAuthPermissionPanel({
           spacing: 'normal',
         }}
       />
+      <p className="text-xs text-muted-foreground text-center -mt-1">
+        {t('common-shared:share.captionOwnAccounts')}
+      </p>
 
       <CopyActionsSection
         copyData={shareData}
@@ -312,16 +315,21 @@ export function UserAuthPermissionPanel({
         loading={loading}
       />
 
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => setShowChannelPicker(true)}
-        disabled={loading}
-        className="w-full h-12"
-      >
-        <Users className="w-4 h-4 mr-2" />
-        {t('channelShare.sendToContact')}
-      </Button>
+      <section className="space-y-1">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setShowChannelPicker(true)}
+          disabled={loading}
+          className="w-full h-12"
+        >
+          <Users className="w-4 h-4 mr-2" />
+          {t('channelShare.sendToContact')}
+        </Button>
+        <p className="text-xs text-muted-foreground text-center">
+          {t('common-shared:share.captionCrmContact')}
+        </p>
+      </section>
     </>
   );
 }

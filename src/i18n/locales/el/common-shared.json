@@ -710,7 +710,9 @@
   "share": {
     "expires": "Λήγει",
     "publicReadOnlyNotice": "Δημόσια σελίδα μόνο για ανάγνωση. Μην κοινοποιείτε ευαίσθητα στοιχεία.",
-    "creatingLink": "Δημιουργία συνδέσμου..."
+    "creatingLink": "Δημιουργία συνδέσμου...",
+    "captionOwnAccounts": "Μοιράσου από τον λογαριασμό σου",
+    "captionCrmContact": "Αποστολή μέσω εταιρικού καναλιού σε CRM επαφή"
   },
   "personalMessage": {
     "label": "Προσωπικό Μήνυμα",

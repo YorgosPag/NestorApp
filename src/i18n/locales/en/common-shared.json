@@ -710,7 +710,9 @@
   "share": {
     "expires": "Expires",
     "publicReadOnlyNotice": "Public read-only page. Do not share sensitive data.",
-    "creatingLink": "Creating link..."
+    "creatingLink": "Creating link...",
+    "captionOwnAccounts": "Share from your own accounts",
+    "captionCrmContact": "Send via company channel to a CRM contact"
   },
   "personalMessage": {
     "label": "Personal Message",
