@@ -14,6 +14,7 @@
 
 import { isValidEmail } from '@/lib/validation/email-validation';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isRecord } from '@/lib/type-guards';
 import type {
   CompanyConfiguration,
   EnterpriseConfiguration,
@@ -26,10 +27,6 @@ const logger = createModuleLogger('enterprise-config-validators');
 // ============================================================================
 // PRIMITIVE TYPE GUARDS
 // ============================================================================
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
 
 export function hasString(record: Record<string, unknown>, key: string): boolean {
   return typeof record[key] === 'string';

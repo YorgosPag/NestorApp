@@ -8,6 +8,9 @@
  */
 
 import type { FieldDefinition } from '@/config/report-builder/report-builder-types';
+import { chunkArray } from '@/lib/array-utils';
+
+export { chunkArray };
 
 // ============================================================================
 // Shared Utilities
@@ -48,15 +51,6 @@ export function getNestedValue(obj: Record<string, unknown>, dotPath: string): u
   }
 
   return current;
-}
-
-/** Splits an array into chunks of specified size */
-export function chunkArray<T>(array: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
 }
 
 // ============================================================================

@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (Phase C.5 verification in progress — C.4 BLOCKED, residui oversized da tackle next session)
+**STATUS: ACTIVE** (CHECK 3.18 duplicateExports reduction ongoing — Phase C.5.45 chunkArray+isRecord DONE 2026-04-19)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
-**Snapshot baseline:** `/tmp/ssot-full.txt` (regenerable via `npm run ssot:discover`)
-**Current baseline (2026-04-18 post-C.5.3):** **101 violations / 89 files** (down from 109/91 post-C.5.2, 115/91 post-C.5.1, 118/92 post-C.3 commit, 622/378 pre-commit, 637/390 Phase A origin)
+**Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
+**Current CHECK 3.18 baseline (2026-04-19 post-C.5.45):** **38 duplicateExports / 5 antiPatterns / 91 unprotected** (down from 42/5/91 pre-C.5.45, 46/5/91 Phase C baseline freeze)
 
 ---
 
@@ -135,6 +135,7 @@ After Phase A adds 5 SSoT to registry, 91 remain. Add them incrementally (P1 →
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase C.5.45 DONE.** CHECK 3.18 duplicateExports 42→38 (-4). (a) `chunkArray` in `src/services/report-engine/report-query-transforms.ts` byte-identical dup of SSoT `@/lib/array-utils` → collapsed to re-export. (b) `isRecord` in `src/core/configuration/enterprise-config/validators.ts` byte-identical dup of SSoT `@/lib/type-guards` → collapsed to import (internal-only usage). TSC clean. Baseline `.ssot-discover-baseline.json` refreshed 46→38. |
 | 2026-04-18 | Initial baseline from `npm run ssot:discover`. 74 duplicates, 5 anti-patterns, 96 registry gaps. Phase A/B/C defined. STATUS: ACTIVE. |
 | 2026-04-18 | **Phase A DONE.** 4 obligation ID wrappers deleted, 5 SSoT modules (enterprise-id-convenience, intl-formatting, intl-domain, date-local, design-system) added to `.ssot-registry.json` under new Tier 8. Baseline frozen at 637 violations / 390 files. Pre-commit now blocks new re-declarations + new `new Date().toISOString()` / `Timestamp.fromDate(new Date(` patterns. Phase A items A.1–A.9 removed from checklist. |
 | 2026-04-18 | **Phase B DONE.** Created canonical `src/lib/status-helpers.ts` (discriminated union over 8 status domains: storage/obligation/lead/communication/buildingTimeline/buildingProject/project/property). Migrated 4 real callers (`OpportunityCard`, `useStorageTabState`, `TimelineTabContent.tsx`+`TimelineTabContent/index.tsx`, `LeadsList`). Deleted 3 dead files (`lib/project-utils.ts`, `leads/utils/formatters.ts`, `projects/structure-tab/utils/status.ts`) and 6 dead export blocks. Resolved B.4 (`formatDateForDisplay` re-export in validation.ts) and B.5 (`getDaysUntilCompletion` wrappers). Documented 3 legitimate aliases (B.7). New `status-helpers` Tier 3 registry module with EXPORT-only regex pattern; removed `getStatusColor` from `design-system` pattern (now under status-helpers). Baseline ratcheted **637→622 violations / 390→378 files** (-15/-12). tsc --noEmit exit 0. Phase B items B.1–B.8 removed from checklist. |
