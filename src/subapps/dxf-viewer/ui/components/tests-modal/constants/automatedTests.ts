@@ -78,7 +78,7 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
       description: 'Έλεγχος ροής εργασίας layering (Ctrl+F2)',
       icon: RefreshCw,
       action: async () => {
-        const module = await import('../../../../debug/layering-workflow-test');
+        const module = await import('../../../../debug/layering-workflow-test.qa');
         const result = await module.runLayeringWorkflowTest();
         const successSteps = result.steps.filter((s: WorkflowStepResult) => s.status === 'success').length;
         const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${result.steps.length}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
@@ -120,7 +120,7 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
       description: 'Enterprise grid testing (CAD standards)',
       icon: Triangle,
       action: async () => {
-        const module = await import('../../../../debug/grid-enterprise-test');
+        const module = await import('../../../../debug/grid-enterprise-test.qa');
         const { runGridEnterpriseTests } = module;
         const report = await runGridEnterpriseTests();
         const summary = `Grid Tests Complete!\n✅ Passed: ${report.passed}/${report.totalTests}\n❌ Failed: ${report.failed}\n🏗️ Topological Integrity: ${report.topologicalIntegrity.percentage.toFixed(0)}%\n📏 Precision: ${report.coordinatePrecision.withinTolerance ? '✅ OK' : '⚠️ WARNING'}`;
@@ -185,7 +185,7 @@ export function getAutomatedTests(showCopyableNotification: NotificationFn): Tes
       description: 'Ports & Adapters Architecture validation (Hexagonal)',
       icon: Server,
       action: async () => {
-        const module = await import('../../../../debug/store-sync-test');
+        const module = await import('../../../../debug/store-sync-test.qa');
         const { runStoreSyncTests } = module;
         const report = await runStoreSyncTests();
         const summary = `Store Sync Tests Complete!\n✅ Passed: ${report.passed}/${report.totalTests}\n❌ Failed: ${report.failed}\n⚠️ Warnings: ${report.warnings}\n\n🎯 Architecture:\n  Ports: ${report.architecture.portsImplemented}\n  Adapters: ${report.architecture.adaptersImplemented}\n  Pure Functions: ${report.architecture.pureFunctionsValidated ? '✅' : '❌'}\n\n🔧 Feature Flags:\n  Sync Enabled: ${report.featureFlags.syncEnabled ? '✅' : '❌'}`;

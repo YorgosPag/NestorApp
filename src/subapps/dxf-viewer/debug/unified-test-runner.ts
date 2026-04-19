@@ -123,7 +123,7 @@ async function runCanvasAlignmentTest(): Promise<TestResult> {
  */
 async function runLayeringWorkflowTest(): Promise<TestResult> {
   return safeExecuteTest('Τεστ Ροής Εργασίας Layering', async () => {
-    const module = await import('./layering-workflow-test');
+    const module = await import('./layering-workflow-test.qa');
     const { runLayeringWorkflowTest } = module;
 
     const result = await runLayeringWorkflowTest();
@@ -186,7 +186,7 @@ async function runEnterpriseCursorCrosshairTest(): Promise<TestResult> {
  */
 async function runGridEnterpriseTest(): Promise<TestResult> {
   return safeExecuteTest('Enterprise Τεστ Πλέγματος', async () => {
-    const module = await import('./grid-enterprise-test');
+    const module = await import('./grid-enterprise-test.qa');
     const { runGridEnterpriseTests } = module;
 
     const report = await runGridEnterpriseTests();

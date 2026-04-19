@@ -189,7 +189,7 @@ export function useDxfViewerEffects(params: DxfViewerEffectsParams): void {
             showCopyableNotification(summary, result.success ? 'success' : 'error');
           });
         } else {
-          import('../debug/layering-workflow-test').then(module => {
+          import('../debug/layering-workflow-test.qa').then(module => {
             const runLayeringWorkflowTest = module.runLayeringWorkflowTest;
             runLayeringWorkflowTest().then((result) => {
               const successSteps = result.steps.filter((s) => s.status === 'success').length;

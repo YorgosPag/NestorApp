@@ -127,8 +127,8 @@ export const hitTestLog = (...args: unknown[]) => HitTestLogger.debug(...args);
 export const hitTestWarn = (...args: unknown[]) => HitTestLogger.warn(...args);
 
 // ═══ ENTERPRISE TESTS ═══
-export { runEnterpriseSettingsTests } from './settings-enterprise-test';
-export { runStoreSyncTests } from './store-sync-test';
+export { runEnterpriseSettingsTests } from './settings-enterprise-test.qa';
+export { runStoreSyncTests } from './store-sync-test.qa';
 
 // ═══ DEVELOPMENT HELPERS ═══
 
@@ -137,12 +137,12 @@ export { runStoreSyncTests } from './store-sync-test';
  */
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
   // Enterprise Settings Tests
-  import('./settings-enterprise-test').then(({ runEnterpriseSettingsTests }) => {
+  import('./settings-enterprise-test.qa').then(({ runEnterpriseSettingsTests }) => {
     window.runEnterpriseSettingsTests = runEnterpriseSettingsTests;
   });
 
   // Store Sync Tests (Ports & Adapters Architecture)
-  import('./store-sync-test').then(({ runStoreSyncTests }) => {
+  import('./store-sync-test.qa').then(({ runStoreSyncTests }) => {
     window.runStoreSyncTests = runStoreSyncTests;
   });
 

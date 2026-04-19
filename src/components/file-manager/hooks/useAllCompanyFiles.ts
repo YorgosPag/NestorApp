@@ -121,7 +121,7 @@ const toISOStringOrPassthrough = (value: unknown): string | undefined =>
  * 🏢 ENTERPRISE: Hook με REAL-TIME onSnapshot subscription
  *
  * Features:
- * - Real-time Firestore onSnapshot (instant updates from ANY entry point)
+ * - Real-time Firestore subscription via firestoreQueryService (instant updates from ANY entry point)
  * - Manual refetch for trashed files
  * - Files grouped by entity
  * - Files grouped by category
