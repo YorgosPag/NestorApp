@@ -91,6 +91,26 @@ export async function sendChannelMediaReply(
 
 // ── Telegram: Native sendPhoto / sendDocument ──
 
+// Telegram's URL-mode `sendPhoto` fails on Firebase Storage download-token
+// URLs with `Bad Request: wrong remote file identifier specified: Wrong string
+// length` — Telegram's downloader can't parse the tokenized URL and falls back
+// to `file_id` interpretation. We sidestep the URL parser entirely by
+// downloading the binary ourselves and uploading via multipart/form-data
+// (ADR-312 Phase 9.14). Telegram limits: 10 MB photo / 50 MB document.
+const TELEGRAM_PHOTO_MAX_BYTES = 10 * 1024 * 1024;
+const TELEGRAM_DOCUMENT_MAX_BYTES = 50 * 1024 * 1024;
+
+function filenameFromUrl(mediaUrl: string, fallbackExt: string): string {
+  try {
+    const pathname = new URL(mediaUrl).pathname;
+    const last = pathname.split('/').pop();
+    if (last && last.includes('.')) return decodeURIComponent(last);
+  } catch {
+    /* fall through */
+  }
+  return `attachment.${fallbackExt}`;
+}
+
 async function dispatchTelegramMedia(
   params: ChannelMediaReplyParams
 ): Promise<ChannelReplyResult> {
@@ -105,18 +125,64 @@ async function dispatchTelegramMedia(
   }
 
   try {
-    const { sendTelegramMessage } = await import(
+    const response = await fetch(mediaUrl);
+    if (!response.ok) {
+      const err = `Αποτυχία λήψης αρχείου (HTTP ${response.status})`;
+      logger.warn('Telegram media fetch failed', { requestId, status: response.status });
+      return { success: false, error: err, channel: PipelineChannel.TELEGRAM };
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const maxBytes = mediaType === 'photo' ? TELEGRAM_PHOTO_MAX_BYTES : TELEGRAM_DOCUMENT_MAX_BYTES;
+    if (buffer.byteLength > maxBytes) {
+      const mb = (buffer.byteLength / 1024 / 1024).toFixed(1);
+      const limitMb = (maxBytes / 1024 / 1024).toFixed(0);
+      return {
+        success: false,
+        error: `Το αρχείο είναι ${mb}MB — το Telegram επιτρέπει έως ${limitMb}MB για αυτό τον τύπο.`,
+        channel: PipelineChannel.TELEGRAM,
+      };
+    }
+
+    const contentType =
+      params.contentType ?? response.headers.get('content-type') ?? 'application/octet-stream';
+
+    // A photo dispatch with a non-image payload is always a caller bug — e.g.
+    // the showcase share-token URL (`/shared/{token}`) being passed in place
+    // of an image URL. Telegram responds with a cryptic
+    // `Bad Request: IMAGE_PROCESS_FAILED`; we short-circuit with a clear,
+    // routable error instead (ADR-312 Phase 9.15).
+    if (mediaType === 'photo' && !/^image\//i.test(contentType)) {
+      logger.warn('Telegram photo dispatch aborted: non-image content-type', {
+        requestId,
+        contentType,
+        mediaUrl,
+      });
+      return {
+        success: false,
+        error: `NOT_AN_IMAGE:${contentType}`,
+        channel: PipelineChannel.TELEGRAM,
+      };
+    }
+
+    const filename =
+      params.filename ?? filenameFromUrl(mediaUrl, mediaType === 'photo' ? 'jpg' : 'bin');
+
+    const { sendTelegramMediaMultipart } = await import(
       '@/app/api/communications/webhooks/telegram/telegram/client'
     );
 
     const method = mediaType === 'photo' ? 'sendPhoto' : 'sendDocument';
     const mediaKey = mediaType === 'photo' ? 'photo' : 'document';
 
-    const result = await sendTelegramMessage({
+    const result = await sendTelegramMediaMultipart({
       method,
-      chat_id: Number(telegramChatId),
-      [mediaKey]: mediaUrl,
-      ...(caption ? { caption } : {}),
+      chatId: Number(telegramChatId),
+      media: buffer,
+      mediaKey,
+      filename,
+      contentType,
+      caption,
     });
 
     if (result.success) {

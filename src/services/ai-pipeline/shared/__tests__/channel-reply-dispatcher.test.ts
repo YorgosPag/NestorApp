@@ -41,6 +41,7 @@ jest.mock(
   '@/app/api/communications/webhooks/telegram/telegram/client',
   () => ({
     sendTelegramMessage: jest.fn(async () => ({ success: true })),
+    sendTelegramMediaMultipart: jest.fn(async () => ({ success: true })),
   }),
 );
 
@@ -70,7 +71,7 @@ import type { ChannelReplyParams, ChannelMediaReplyParams } from '../channel-rep
 import { PipelineChannel } from '@/types/ai-pipeline';
 import type { PipelineContext } from '@/types/ai-pipeline';
 import { sendReplyViaMailgun } from '../mailgun-sender';
-import { sendTelegramMessage } from '@/app/api/communications/webhooks/telegram/telegram/client';
+import { sendTelegramMessage, sendTelegramMediaMultipart } from '@/app/api/communications/webhooks/telegram/telegram/client';
 import { sendWhatsAppMessage } from '@/app/api/communications/webhooks/whatsapp/whatsapp-client';
 import { sendMessengerMessage } from '@/app/api/communications/webhooks/messenger/messenger-client';
 import { sendInstagramMessage } from '@/app/api/communications/webhooks/instagram/instagram-client';
@@ -406,41 +407,75 @@ describe('channel-reply-dispatcher', () => {
   // ==========================================================================
 
   describe('sendChannelMediaReply', () => {
-    it('should send Telegram photo via sendPhoto method', async () => {
-      const result = await sendChannelMediaReply({
-        channel: PipelineChannel.TELEGRAM,
-        telegramChatId: '12345',
-        mediaUrl: 'https://example.com/photo.jpg',
-        mediaType: 'photo',
-        caption: 'Test photo',
-        requestId: 'req_media_001',
-      });
+    // ADR-312 Phase 9.14: dispatcher fetches the media itself and POSTs it as
+    // multipart/form-data via `sendTelegramMediaMultipart`, bypassing
+    // Telegram's remote fetcher which fails on Firebase Storage URLs.
+    it('should send Telegram photo via multipart sendPhoto method', async () => {
+      const originalFetch = global.fetch;
+      const fetchMock = jest.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: { get: (h: string) => (h.toLowerCase() === 'content-type' ? 'image/jpeg' : null) },
+        arrayBuffer: async () => new Uint8Array([0xff, 0xd8, 0xff]).buffer,
+      }));
+      global.fetch = fetchMock as unknown as typeof fetch;
 
-      expect(result.success).toBe(true);
-      expect(sendTelegramMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: 'sendPhoto',
-          photo: 'https://example.com/photo.jpg',
+      try {
+        const result = await sendChannelMediaReply({
+          channel: PipelineChannel.TELEGRAM,
+          telegramChatId: '12345',
+          mediaUrl: 'https://example.com/photo.jpg',
+          mediaType: 'photo',
           caption: 'Test photo',
-        }),
-      );
+          requestId: 'req_media_001',
+        });
+
+        expect(result.success).toBe(true);
+        expect(fetchMock).toHaveBeenCalledWith('https://example.com/photo.jpg');
+        expect(sendTelegramMediaMultipart).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: 'sendPhoto',
+            mediaKey: 'photo',
+            chatId: 12345,
+            caption: 'Test photo',
+            contentType: 'image/jpeg',
+          }),
+        );
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
 
-    it('should send Telegram document via sendDocument method', async () => {
-      await sendChannelMediaReply({
-        channel: PipelineChannel.TELEGRAM,
-        telegramChatId: '12345',
-        mediaUrl: 'https://example.com/file.pdf',
-        mediaType: 'document',
-        requestId: 'req_media_002',
-      });
+    it('should send Telegram document via multipart sendDocument method', async () => {
+      const originalFetch = global.fetch;
+      const fetchMock = jest.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: { get: (h: string) => (h.toLowerCase() === 'content-type' ? 'application/pdf' : null) },
+        arrayBuffer: async () => new Uint8Array([0x25, 0x50, 0x44, 0x46]).buffer,
+      }));
+      global.fetch = fetchMock as unknown as typeof fetch;
 
-      expect(sendTelegramMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: 'sendDocument',
-          document: 'https://example.com/file.pdf',
-        }),
-      );
+      try {
+        await sendChannelMediaReply({
+          channel: PipelineChannel.TELEGRAM,
+          telegramChatId: '12345',
+          mediaUrl: 'https://example.com/file.pdf',
+          mediaType: 'document',
+          requestId: 'req_media_002',
+        });
+
+        expect(sendTelegramMediaMultipart).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: 'sendDocument',
+            mediaKey: 'document',
+            chatId: 12345,
+            contentType: 'application/pdf',
+          }),
+        );
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
 
     it('should block Instagram PDF documents', async () => {

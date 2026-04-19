@@ -78,9 +78,12 @@ export function ChannelShareForm({
 }: ChannelShareFormProps) {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
-  // Photo selection
+  // Photo selection — `shareData.url` is a share-token page URL (HTML), not
+  // an image URL; falling back to it would turn `photoUrls` into a link to a
+  // page and Telegram rejects it with `IMAGE_PROCESS_FAILED`. Only a real
+  // photo URL is acceptable here (ADR-312 Phase 9.15).
   const galleryPhotos = shareData.galleryPhotos ?? [];
-  const defaultPhoto = shareData.photoUrl ?? shareData.url;
+  const defaultPhoto = shareData.photoUrl;
   const isMultiPhoto = galleryPhotos.length > 1;
   const selectionMode = channel.provider === 'email' ? 'multi' : 'single';
 
@@ -148,6 +151,23 @@ export function ChannelShareForm({
           {channelName}
         </span>
       </header>
+
+      {/* Empty-state when no real photo is available — prevents the user from
+          clicking Send and getting a Telegram `IMAGE_PROCESS_FAILED`. The
+          `shareData.url` fallback that previously masked this case was
+          removed in ADR-312 Phase 9.15. */}
+      {!hasPhotos && (
+        <aside
+          className={cn(
+            'flex items-start gap-2 p-3 rounded-lg text-xs',
+            'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300',
+          )}
+          role="note"
+        >
+          <Info className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{t('channelShare.errors.noPhotoAvailable')}</span>
+        </aside>
+      )}
 
       {/* Link fallback notice */}
       {isLinkFallback && (

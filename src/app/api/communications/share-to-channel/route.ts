@@ -239,6 +239,20 @@ export const POST = withSensitiveRateLimit(
             'TELEGRAM_CHAT_NOT_FOUND',
           );
         }
+        // Non-image payload reached Telegram (local guard or Telegram's own
+        // `IMAGE_PROCESS_FAILED`). Surface a dedicated 422 so the client can
+        // show a `telegramNotAnImage` message instead of the raw API text
+        // (ADR-312 Phase 9.15).
+        if (
+          data.channel === 'telegram' &&
+          (errText.startsWith('NOT_AN_IMAGE:') || /IMAGE_PROCESS_FAILED/i.test(errText))
+        ) {
+          throw new ApiError(
+            422,
+            'Telegram rejected the payload because it is not an image',
+            'TELEGRAM_NOT_AN_IMAGE',
+          );
+        }
         throw new ApiError(502, lastResult.error ?? 'Channel delivery failed', 'CHANNEL_ERROR');
       }
 

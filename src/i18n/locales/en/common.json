@@ -281,7 +281,9 @@
     "unlinkSuccess": "Channel unlinked",
     "errors": {
       "telegramChatNotFound": "The Telegram recipient hasn't started a chat with the bot. Ask them to send /start and use \"Link channel\" with a numeric chat_id.",
-      "telegramChatIdNonNumeric": "Telegram Chat ID must be numeric (e.g. 5618410820). @usernames do not work — ask the recipient to send you their numeric id."
+      "telegramChatIdNonNumeric": "Telegram Chat ID must be numeric (e.g. 5618410820). @usernames do not work — ask the recipient to send you their numeric id.",
+      "telegramNotAnImage": "The link you tried to send is not an image. Pick a photo from the gallery before sending.",
+      "noPhotoAvailable": "No photo available to send. Pick one from the gallery, or go back and share the link instead of a photo."
     }
   },
   "loading": {

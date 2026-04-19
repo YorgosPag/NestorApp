@@ -6,6 +6,62 @@ import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('TelegramClient');
 
+/**
+ * Send a photo or document to Telegram as `multipart/form-data` — required
+ * when the remote URL isn't directly fetchable by Telegram's server-side
+ * downloader (e.g. Firebase Storage download-token URLs, which fail with
+ * `Bad Request: wrong remote file identifier specified: Wrong string length`
+ * because Telegram falls back to interpreting them as `file_id`). The caller
+ * downloads the binary to a `Buffer` and hands it to this helper, which wraps
+ * it in `FormData` and POSTs to the appropriate Bot API method.
+ *
+ * Telegram limits: 10 MB per photo upload, 50 MB per document upload.
+ */
+export async function sendTelegramMediaMultipart(params: {
+  method: 'sendPhoto' | 'sendDocument';
+  chatId: number | string;
+  media: Buffer;
+  mediaKey: 'photo' | 'document';
+  filename: string;
+  contentType: string;
+  caption?: string;
+}): Promise<TelegramSendResult> {
+  try {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      logger.error('TELEGRAM_BOT_TOKEN not configured');
+      return { success: false, error: 'Bot token not configured' };
+    }
+
+    const telegramApiUrl = `https://api.telegram.org/bot${botToken}/${params.method}`;
+
+    const form = new FormData();
+    form.append('chat_id', String(params.chatId));
+    if (params.caption) form.append('caption', params.caption);
+    const blob = new Blob([new Uint8Array(params.media)], { type: params.contentType });
+    form.append(params.mediaKey, blob, params.filename);
+
+    logger.info('Sending multipart to Telegram API', {
+      method: params.method,
+      bytes: params.media.byteLength,
+      contentType: params.contentType,
+    });
+
+    const response = await fetch(telegramApiUrl, { method: 'POST', body: form });
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      logger.error('Telegram multipart API Error', { error: result });
+      return { success: false, error: result.description || 'Unknown error' };
+    }
+
+    return { success: true, result };
+  } catch (error) {
+    logger.error('Error sending Telegram multipart media', { error });
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
 export async function sendTelegramMessage(payload: TelegramSendPayload): Promise<TelegramSendResult> {
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
