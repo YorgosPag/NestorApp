@@ -46,7 +46,7 @@ export function useLevelsFirestoreSync({
   firestoreCollection,
   currentLevelId,
   companyId,
-  userId,
+  userId: creatorUid,
   isSuperAdmin,
   setLevels,
   setCurrentLevelId,
@@ -99,7 +99,7 @@ export function useLevelsFirestoreSync({
               batch.set(docRef, {
                 ...levelData,
                 ...(companyId ? { companyId } : {}),
-                ...(userId ? { createdBy: userId } : {}),
+                ...(creatorUid ? { createdBy: creatorUid } : {}),
               });
             });
             batch.commit().then(() => console.log('Default levels created in Firestore.'));
@@ -118,5 +118,5 @@ export function useLevelsFirestoreSync({
     );
 
     return () => unsubscribe();
-  }, [enableFirestore, firestoreCollection, currentLevelId, companyId, userId, isSuperAdmin, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
+  }, [enableFirestore, firestoreCollection, currentLevelId, companyId, creatorUid, isSuperAdmin, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
 }
