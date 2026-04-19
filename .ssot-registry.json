@@ -1238,6 +1238,44 @@
       "tier": 6
     },
 
+    "_comment_adr314_phaseD3d": "=== ADR-314 PHASE D.3d (2026-04-19): registry gap — waterfall/firestore-mappers/sensitivity engines ===",
+
+    "waterfall-engine": {
+      "ssotFile": "src/lib/waterfall-engine.ts",
+      "description": "Waterfall distribution engine — calculateWaterfall + PRESET_STANDARD_80_20/PRESET_JV_CATCH_UP/PRESET_SIMPLE_SPLIT preset configs. Canonical SSoT for real-estate JV profit waterfall calculations. ADR-314 Phase D.3d.",
+      "forbiddenPatterns": [
+        "export\\s+(function\\s+calculateWaterfall|const\\s+(PRESET_STANDARD_80_20|PRESET_JV_CATCH_UP|PRESET_SIMPLE_SPLIT))\\b"
+      ],
+      "allowlist": [
+        "src/lib/waterfall-engine.ts"
+      ],
+      "tier": 3
+    },
+
+    "firestore-mappers": {
+      "ssotFile": "src/lib/firestore-mappers.ts",
+      "description": "Firestore document mappers — isValidStorageType, isValidStorageStatus, mapStorageDoc, mapParkingDoc. Canonical SSoT for raw Firestore data → typed domain model conversion (Storage + ParkingSpot). ADR-314 Phase D.3d.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(isValidStorageType|isValidStorageStatus|mapStorageDoc|mapParkingDoc)\\b"
+      ],
+      "allowlist": [
+        "src/lib/firestore-mappers.ts"
+      ],
+      "tier": 3
+    },
+
+    "sensitivity-engine": {
+      "ssotFile": "src/lib/sensitivity-engine.ts",
+      "description": "Financial sensitivity analysis engine — applyVariablePerturbation, runTornadoAnalysis, buildHeatMap. Canonical SSoT for tornado/heat-map sensitivity analysis on financial models. ADR-314 Phase D.3d.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(applyVariablePerturbation|runTornadoAnalysis|buildHeatMap)\\b"
+      ],
+      "allowlist": [
+        "src/lib/sensitivity-engine.ts"
+      ],
+      "tier": 3
+    },
+
     "_comment_adr314_phaseD3c": "=== ADR-314 PHASE D.3c (2026-04-19): registry gap — financial/construction engine SSoT modules ===",
 
     "counterproposal-engine": {
