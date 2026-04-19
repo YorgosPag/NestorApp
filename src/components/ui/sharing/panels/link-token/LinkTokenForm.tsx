@@ -14,7 +14,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Clock, Download, Lock, MessageSquare, Share2 } from 'lucide-react';
+import { Clock, Download, Lock, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -27,6 +27,10 @@ import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import {
+  MAX_PERSONAL_MESSAGE_LENGTH,
+  PersonalMessageField,
+} from '@/components/sharing/fields/PersonalMessageField';
 import type { LinkTokenDraft } from './types';
 
 export interface LinkTokenFormProps {
@@ -132,22 +136,10 @@ export function LinkTokenForm({
         </Select>
       </fieldset>
 
-      <fieldset className="space-y-1.5">
-        <label className="text-sm font-medium flex items-center gap-1.5">
-          <MessageSquare className={cn('h-3.5 w-3.5', colors.text.muted)} />
-          {t('share.note')}
-          <span className={cn('text-xs font-normal', colors.text.muted)}>
-            ({t('share.optional')})
-          </span>
-        </label>
-        <input
-          type="text"
-          value={draft.note}
-          onChange={(e) => patch({ note: e.target.value })}
-          placeholder={t('share.notePlaceholder')}
-          className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-      </fieldset>
+      <PersonalMessageField
+        value={draft.note}
+        onChange={(next) => patch({ note: next.slice(0, MAX_PERSONAL_MESSAGE_LENGTH) })}
+      />
 
       <nav className="flex items-center justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>

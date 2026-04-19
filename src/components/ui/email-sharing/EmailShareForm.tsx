@@ -9,10 +9,13 @@ import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Send, Home, Briefcase, Crown } from 'lucide-react';
 import { PhotoPickerGrid } from '@/components/ui/social-sharing/PhotoPickerGrid';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import type { EmailTemplateType } from '@/types/email-templates';
+import {
+  MAX_PERSONAL_MESSAGE_LENGTH,
+  PersonalMessageField,
+} from '@/components/sharing/fields/PersonalMessageField';
 import { ContactEmailPicker } from './ContactEmailPicker';
 import type { SelectedContact } from './ContactEmailPicker';
 
@@ -21,7 +24,6 @@ import type { EmailShareData, ShareData } from './types';
 export type { EmailShareData, ShareData };
 
 const MAX_RECIPIENTS = 5;
-const MAX_MESSAGE_LENGTH = 500;
 
 const TEMPLATES: { id: EmailTemplateType; icon: typeof Home; color: string }[] = [
   { id: 'residential', icon: Home, color: 'from-orange-400 to-red-500' },
@@ -53,7 +55,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
 
   const [recipients, setRecipients] = useState<string[]>([]);
   const [personalMessage, setPersonalMessage] = useState(
-    (initialPersonalMessage ?? '').slice(0, MAX_MESSAGE_LENGTH),
+    (initialPersonalMessage ?? '').slice(0, MAX_PERSONAL_MESSAGE_LENGTH),
   );
   const [templateType, setTemplateType] = useState<EmailTemplateType>('residential');
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -88,8 +90,6 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
     }
   }, [recipients, personalMessage, templateType, shareData, onEmailShare, selectedContact, t]);
 
-  const charsRemaining = MAX_MESSAGE_LENGTH - personalMessage.length;
-
   return (
     <section className="space-y-4">
       {/* Recipients — Manual or CRM Contact */}
@@ -112,23 +112,12 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
         />
       )}
 
-      {/* Personal message */}
-      <fieldset>
-        <label className="text-sm font-medium mb-1.5 block">
-          {t('emailShare.messageLabel')}
-        </label>
-        <Textarea
-          value={personalMessage}
-          onChange={e => setPersonalMessage(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
-          placeholder={t('emailShare.messagePlaceholder')}
-          disabled={loading}
-          rows={3}
-          className="resize-none"
-        />
-        <p className="text-xs text-muted-foreground mt-1 text-right">
-          {t('emailShare.charsRemaining', { count: charsRemaining })}
-        </p>
-      </fieldset>
+      {/* Personal message (SSoT — ADR-312 Phase 9.6) */}
+      <PersonalMessageField
+        value={personalMessage}
+        onChange={setPersonalMessage}
+        disabled={loading}
+      />
 
       {/* Template selector */}
       <fieldset>

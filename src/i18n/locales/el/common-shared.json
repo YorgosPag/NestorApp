@@ -710,5 +710,11 @@
   "share": {
     "expires": "Λήγει",
     "publicReadOnlyNotice": "Δημόσια σελίδα μόνο για ανάγνωση. Μην κοινοποιείτε ευαίσθητα στοιχεία."
+  },
+  "personalMessage": {
+    "label": "Προσωπικό Μήνυμα",
+    "optional": "προαιρετικό",
+    "placeholder": "Γράψτε ένα μήνυμα για τον παραλήπτη...",
+    "charsRemaining": "{count} χαρακτήρες"
   }
 }

@@ -710,5 +710,11 @@
   "share": {
     "expires": "Expires",
     "publicReadOnlyNotice": "Public read-only page. Do not share sensitive data."
+  },
+  "personalMessage": {
+    "label": "Personal Message",
+    "optional": "optional",
+    "placeholder": "Write a message for the recipient...",
+    "charsRemaining": "{count} characters"
   }
 }
