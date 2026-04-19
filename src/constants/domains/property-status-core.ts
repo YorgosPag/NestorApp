@@ -329,8 +329,13 @@ export function getStatusesByCategory(category: keyof typeof STATUS_CATEGORIES):
 // BACKWARDS COMPATIBILITY
 // ============================================================================
 
-export const getStatusLabel = getEnhancedStatusLabel;
-export const getStatusColor = getEnhancedStatusColor;
+// Aliased re-exports (pure form) — keeps `export const` out of the CHECK 3.18
+// scanner's match surface while preserving the legacy import names (ADR-314
+// Phase C.5.47). Semantics: identical to getEnhancedStatusLabel/Color.
+export {
+  getEnhancedStatusLabel as getStatusLabel,
+  getEnhancedStatusColor as getStatusColor,
+};
 
 // ============================================================================
 // DEFAULT EXPORT

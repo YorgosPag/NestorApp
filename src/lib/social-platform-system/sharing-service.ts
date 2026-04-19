@@ -29,82 +29,26 @@ const logger = createModuleLogger('sharing-service');
 // ============================================================================
 // SHARING SERVICE TYPE DEFINITIONS
 // ============================================================================
+//
+// Types live in `sharing-service-types.ts` (extracted ADR-314 Phase C.5.47 to
+// keep this file under the 500-line Google-SRP limit). Re-exported below to
+// preserve the public barrel surface via `index.ts`.
 
-/**
- * 📤 Share Data Interface - Unified
- *
- * Standard interface για όλα τα sharing scenarios
- */
-export interface ShareData {
-  /** Main title/subject */
-  title: string;
-  /** Description/text content */
-  text?: string;
-  /** URL to share */
-  url: string;
-  /** File attachments (για Web Share API) */
-  files?: File[];
-  /** Indicates if this is photo sharing */
-  isPhoto?: boolean;
-}
+import type {
+  ShareData,
+  ShareOptions,
+  PropertyShareData,
+  PhotoShareData,
+  ShareResult,
+} from './sharing-service-types';
 
-/**
- * 🎯 Share Options - Advanced Configuration
- *
- * Options για customization του sharing behavior
- */
-export interface ShareOptions {
-  /** Preferred platforms (filter list) */
-  platforms?: SocialPlatformType[];
-  /** UTM source για tracking */
-  utmSource?: string;
-  /** UTM medium για tracking */
-  utmMedium?: string;
-  /** UTM campaign για tracking */
-  utmCampaign?: string;
-  /** Additional UTM parameters */
-  utmExtra?: Record<string, string>;
-  /** Force use of custom URL templates */
-  forceCustomTemplates?: boolean;
-}
-
-/**
- * 🏠 Property Share Data - Specialized
- *
- * Extended interface για property sharing
- */
-export interface PropertyShareData extends ShareData {
-  propertyId: string;
-  price?: number;
-  area?: number;
-  location?: string;
-  imageUrl?: string;
-  propertyType?: string;
-}
-
-/**
- * 📸 Photo Share Data - Specialized
- *
- * Extended interface για photo sharing
- */
-export interface PhotoShareData extends ShareData {
-  photoUrl: string;
-  photoType?: 'property' | 'contact' | 'document' | 'general';
-  associatedEntityId?: string;
-}
-
-/**
- * 📊 Share Result - Return Value
- *
- * Standardized result από sharing operations
- */
-export interface ShareResult {
-  success: boolean;
-  platform?: SocialPlatformType;
-  method: 'native_share' | 'external_url' | 'clipboard' | 'email';
-  error?: string;
-  sharedUrl?: string;
-}
+export type {
+  ShareData,
+  ShareOptions,
+  PropertyShareData,
+  PhotoShareData,
+  ShareResult,
+} from './sharing-service-types';
 
 // ============================================================================
 // CORE SHARING SERVICE - ENTERPRISE CLASS
@@ -492,42 +436,19 @@ export const copyToClipboard = SharingService.copyToClipboard;
 /**
  * 🔍 Web Share Support Check - Function Export
  *
- * BACKWARDS COMPATIBLE με existing code
+ * BACKWARDS COMPATIBLE με existing code (canonical SSoT: @/lib/share-utils)
  */
-export const isWebShareSupported = SharingService.isWebShareSupported;
+export { isWebShareSupported } from '@/lib/share-utils';
 
 // ============================================================================
 // LEGACY COMPATIBILITY - MIGRATION HELPERS
 // ============================================================================
 
-/**
- * 🔄 Get Social Share URLs - LEGACY COMPATIBILITY
- *
- * REPLACES: getSocialShareUrls από share-utils.ts
- * Returns URLs για όλες τις sharing platforms
- */
-export function getSocialShareUrls(url: string, text: string): Record<string, string> {
-  const urls: Record<string, string> = {};
-  const sharingPlatforms = getSharingPlatforms();
-
-  for (const platform of sharingPlatforms) {
-    const shareUrl = SharingService.buildPlatformShareUrl(platform.id, url, text);
-    if (shareUrl) {
-      urls[platform.id] = shareUrl;
-    }
-  }
-
-  return urls;
-}
-
-/**
- * 📸 Get Photo Social Share URLs - LEGACY COMPATIBILITY
- *
- * REPLACES: getPhotoSocialShareUrls από share-utils.ts
- */
-export function getPhotoSocialShareUrls(photoUrl: string, text: string, pageUrl?: string): Record<string, string> {
-  return SharingService.buildPhotoShareUrls(photoUrl, text, pageUrl);
-}
+// Canonical SSoT: @/lib/share-utils (getSocialShareUrls / getPhotoSocialShareUrls).
+// The former class-backed wrappers were dead (no barrel consumers) and diverged
+// from share-utils impl; redirecting to SSoT keeps the external API shape while
+// collapsing CHECK 3.18 duplicate exports (ADR-314 Phase C.5.47).
+export { getSocialShareUrls, getPhotoSocialShareUrls } from '@/lib/share-utils';
 
 // ============================================================================
 // EXPORTS - CLEAN ENTERPRISE API

@@ -991,7 +991,7 @@ export function findNavigationItemByPath(
 
 /**
  * ✅ BACKWARD COMPATIBLE: Main menu items factory
- * Replaces: export const mainMenuItems: MenuItem[]
+ * Replaces legacy `mainMenuItems: MenuItem[]` constant (instance lives in navigation.ts).
  */
 export function createMainMenuItems(
   environment: NavigationEnvironment = 'production',
@@ -1002,7 +1002,7 @@ export function createMainMenuItems(
 
 /**
  * ✅ BACKWARD COMPATIBLE: Tools menu items factory
- * Replaces: export const toolsMenuItems: MenuItem[]
+ * Replaces legacy `toolsMenuItems: MenuItem[]` constant (instance lives in navigation.ts).
  */
 export function createToolsMenuItems(
   environment: NavigationEnvironment = 'production',
@@ -1013,7 +1013,7 @@ export function createToolsMenuItems(
 
 /**
  * ✅ BACKWARD COMPATIBLE: Settings menu items factory
- * Replaces: export const settingsMenuItem: MenuItem[]
+ * Replaces legacy `settingsMenuItem: MenuItem[]` constant (instance lives in navigation.ts).
  */
 export function createSettingsMenuItems(
   environment: NavigationEnvironment = 'production',

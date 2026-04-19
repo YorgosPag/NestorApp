@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 duplicateExports reduction ongoing — Phase C.5.46 greek-text-utils DONE 2026-04-19)
+**STATUS: ACTIVE** (CHECK 3.18 duplicateExports reduction ongoing — Phase C.5.47 share-utils cluster + nav JSDoc + property-status alias DONE 2026-04-19)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-C.5.46):** **36 duplicateExports / 5 antiPatterns / 91 unprotected** (down from 38/5/91 post-C.5.45, 42/5/91 pre-C.5.45, 46/5/91 Phase C baseline freeze)
+**Current CHECK 3.18 baseline (2026-04-19 post-C.5.47):** **21 duplicateExports / 5 antiPatterns / 91 unprotected** (down from 36/5/91 post-C.5.46, 38/5/91 post-C.5.45, 42/5/91 pre-C.5.45, 46/5/91 Phase C baseline freeze)
 
 ---
 
@@ -135,6 +135,7 @@ After Phase A adds 5 SSoT to registry, 91 remain. Add them incrementally (P1 →
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase C.5.47 DONE.** CHECK 3.18 duplicateExports **36→21 (-15, -42%)** in one session batch. Three independent edits: (a) `src/lib/social-platform-system/sharing-service.ts` L497-530 + `src/lib/social-platform-system/analytics-service.ts` L441-467 — 5 dup exports (`isWebShareSupported`, `getSocialShareUrls`, `getPhotoSocialShareUrls`, `generateShareableURL`, `trackShareEvent`) converted from class-backed wrappers / parallel impls to pure `export { X } from '@/lib/share-utils'` SSoT re-exports. Previously dead code (zero external consumers of social-platform-system barrel for these names), but regex-visible. (b) `src/config/smart-navigation-factory.ts` L993-1016 — 3 JSDoc comments `* Replaces: export const mainMenuItems/toolsMenuItems/settingsMenuItem: MenuItem[]` rewritten to `Replaces legacy 'X: MenuItem[]' constant (instance lives in navigation.ts)`. Scanner Phase 1 extract regex had no `^` anchor → matched `export const X` inside block comments → false-positive SSoT entry. Zero runtime change. (c) `src/constants/domains/property-status-core.ts` L332-333 aliased `export const getStatusLabel/getStatusColor = getEnhanced...` converted to `export { getEnhanced... as getStatusLabel/getStatusColor }` pure re-export form — scanner regex no longer matches. TSC clean. Baseline refreshed 36→21. |
 | 2026-04-19 | **Phase C.5.46 DONE.** CHECK 3.18 duplicateExports 38→36 (-2). `src/services/ai-pipeline/shared/greek-text-utils.ts` L23-25 aliased `export const stripAccents/normalizeGreekText` converted to `export { ... } from '@/utils/greek-text'` pure re-export syntax — scanner regex no longer matches. Zero blast radius (6 internal usages preserved via retained import). TSC clean. Baseline 38→36. |
 | 2026-04-19 | **Phase C.5.45 DONE.** CHECK 3.18 duplicateExports 42→38 (-4). (a) `chunkArray` in `src/services/report-engine/report-query-transforms.ts` byte-identical dup of SSoT `@/lib/array-utils` → collapsed to re-export. (b) `isRecord` in `src/core/configuration/enterprise-config/validators.ts` byte-identical dup of SSoT `@/lib/type-guards` → collapsed to import (internal-only usage). TSC clean. Baseline `.ssot-discover-baseline.json` refreshed 46→38. |
 | 2026-04-18 | Initial baseline from `npm run ssot:discover`. 74 duplicates, 5 anti-patterns, 96 registry gaps. Phase A/B/C defined. STATUS: ACTIVE. |

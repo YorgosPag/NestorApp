@@ -433,38 +433,11 @@ export class AnalyticsService {
 // CONVENIENCE FUNCTIONS - BACKWARDS COMPATIBILITY
 // ============================================================================
 
-/**
- * 🔗 Generate Shareable URL - Function Export
- *
- * BACKWARDS COMPATIBLE με existing share-utils.ts code
- */
-export const generateShareableURL = (
-  baseUrl: string,
-  utmParams: UtmParameters,
-  additionalParams?: Record<string, string>
-): string => {
-  return AnalyticsService.generateShareableUrl(baseUrl, {
-    utm: utmParams,
-    additionalParams
-  });
-};
-
-/**
- * 📊 Track Share Event - Function Export
- *
- * BACKWARDS COMPATIBLE με existing share-utils.ts code
- */
-export const trackShareEvent = (
-  platform: string,
-  contentType: string,
-  contentId: string
-): void => {
-  AnalyticsService.trackShareEvent(
-    platform as SocialPlatformType,
-    contentType as ShareAnalyticsEvent['contentType'],
-    contentId
-  );
-};
+// Canonical SSoT: @/lib/share-utils (generateShareableURL / trackShareEvent).
+// Former class-backed wrappers were dead (no barrel consumers) and diverged
+// from share-utils impl; redirecting preserves the index.ts API surface while
+// collapsing CHECK 3.18 duplicate exports (ADR-314 Phase C.5.47).
+export { generateShareableURL, trackShareEvent } from '@/lib/share-utils';
 
 // ============================================================================
 // EXPORTS - CLEAN ENTERPRISE API
