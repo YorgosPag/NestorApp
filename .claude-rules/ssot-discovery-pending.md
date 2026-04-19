@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — BUG 2 scanner fix DONE 2026-04-19, duplicateExports 21→16)
+**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.1b DONE 2026-04-19, unprotected 76→73)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-BUG2fix):** **16 duplicateExports / 5 antiPatterns / 76 unprotected** (down from 21/5/76 post-D.2c)
+**Current CHECK 3.18 baseline (2026-04-19 post-D.1b):** **16 duplicateExports / 5 antiPatterns / 73 unprotected** (down from 16/5/76 post-BUG2fix)
 
 ---
 
@@ -125,7 +125,7 @@ Migration strategy: splittare file oversized prima di applicare codemod (evitare
 
 After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 → P2) over multiple sessions:
 
-- [~] **D.1** P1 modules (high-export count) — **6/9 DONE 2026-04-19** (`message-utils` Tier 2, `firebase-admin` Tier 1, `npv-engine`/`hedging-engine`/`pagination`/`rtl-utils` Tier 3). Remaining: `validation`, `share-utils`, `smart-navigation-factory` (lower priority — `share-utils` callers largely collapsed in C.5.47, `smart-navigation-factory` already stable via JSDoc cleanup).
+- [x] **D.1** P1 modules — **9/9 DONE 2026-04-19**. D.1b batch: `validation` Tier 3, `share-utils` Tier 3, `smart-navigation-factory` Tier 6. unprotected 76→73 (-3).
 - [x] **D.2** P2 modules (config files) — **DONE 2026-04-19** (`properties-tabs-config`, `period-selector-config`, `crm-dashboard-tabs-config`, `building-tabs-config` — all Tier 6). unprotected 85→81 (-4).
 - [x] **D.2b** P2 modules extended — **DONE 2026-04-19** (`contact-tabs-config`, `parking-tabs-config`, `project-tabs-config`, `storage-tabs-config` — all Tier 6). unprotected 81→77 (-4).
 - [ ] **D.3** Remaining ~77 low-priority modules — add as they get touched (Boy Scout rule)
@@ -137,6 +137,7 @@ After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase D.1b DONE.** D.1 residual: `validation` Tier 3, `share-utils` Tier 3 (allowlist social-platform-system), `smart-navigation-factory` Tier 6. unprotected **76→73 (-3)**, protected 60→63 (+3). D.1 fully complete (9/9). |
 | 2026-04-19 | **Scanner BUG 2 fix DONE.** Removed redundant `src/lib` double-scan from `scripts/ssot-discover.sh`. duplicateExports **21→16 (-5)**. Remaining 16 = documented false positives + blocked `convertMarkdownToHtml`. |
 | 2026-04-19 | **Phase D.2c DONE.** `unified-tabs-factory` Tier 6 (root factory per 8 tabs-config). unprotected **77→76 (-1)**, protected 59→60 (+1). |
 | 2026-04-19 | **Phase D.2b DONE.** Registry gap batch 2b — 4 more tabs-config Tier 6: `contact-tabs-config`, `parking-tabs-config`, `project-tabs-config`, `storage-tabs-config`. Baseline: **unprotected 81→77 (-4)**, protected 55→59 (+4). |
