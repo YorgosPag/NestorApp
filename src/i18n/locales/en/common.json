@@ -278,7 +278,10 @@
     "linkSuccess": "Channel linked successfully!",
     "linkError": "Failed to link: {error}",
     "unlinkConfirm": "Unlink",
-    "unlinkSuccess": "Channel unlinked"
+    "unlinkSuccess": "Channel unlinked",
+    "errors": {
+      "telegramChatNotFound": "The Telegram recipient hasn't started a chat with the bot. Ask them to send /start and use \"Link channel\" with a numeric chat_id."
+    }
   },
   "loading": {
     "ariaLabel": "Loading page",

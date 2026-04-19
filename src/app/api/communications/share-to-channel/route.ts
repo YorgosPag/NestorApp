@@ -225,6 +225,20 @@ export const POST = withSensitiveRateLimit(
       });
 
       if (!lastResult.success) {
+        // Telegram Bot API returns `Bad Request: chat not found` when the
+        // recipient either never sent `/start` to the bot or the stored
+        // `externalUserId` is a `@username` handle (not a numeric chat_id).
+        // Surface a 422 with a dedicated code so the client can render the
+        // `channelShare.errors.telegramChatNotFound` message instead of the
+        // raw Telegram description (ADR-312 Phase 9.12).
+        const errText = lastResult.error ?? '';
+        if (data.channel === 'telegram' && /chat not found/i.test(errText)) {
+          throw new ApiError(
+            422,
+            'Telegram chat not found — recipient must start the bot first',
+            'TELEGRAM_CHAT_NOT_FOUND',
+          );
+        }
         throw new ApiError(502, lastResult.error ?? 'Channel delivery failed', 'CHANNEL_ERROR');
       }
 

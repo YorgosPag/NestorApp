@@ -278,7 +278,10 @@
     "linkSuccess": "Το κανάλι συνδέθηκε επιτυχώς!",
     "linkError": "Αποτυχία σύνδεσης: {error}",
     "unlinkConfirm": "Αποσύνδεση",
-    "unlinkSuccess": "Το κανάλι αποσυνδέθηκε"
+    "unlinkSuccess": "Το κανάλι αποσυνδέθηκε",
+    "errors": {
+      "telegramChatNotFound": "Ο παραλήπτης Telegram δεν έχει ξεκινήσει συνομιλία με το bot. Ζητήστε του να στείλει /start και χρησιμοποιήστε «Σύνδεση καναλιού» με αριθμητικό chat_id."
+    }
   },
   "loading": {
     "ariaLabel": "Φόρτωση σελίδας",

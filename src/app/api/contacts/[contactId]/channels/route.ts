@@ -27,6 +27,7 @@ import {
   type ChannelProvider,
   type ContactChannelsResponse,
 } from '@/components/ui/channel-sharing/types';
+import { isValidTelegramChatId } from '@/lib/telegram/chat-id-validator';
 
 const logger = createModuleLogger('ContactChannelsRoute');
 
@@ -81,6 +82,13 @@ function extractSocialMediaChannels(data: FirebaseFirestore.DocumentData): Avail
     const username = String((entry as Record<string, unknown>)?.username ?? '').trim();
     const provider = SOCIAL_MEDIA_TO_CHANNEL[platform];
     if (!provider || !username) continue;
+
+    // Telegram Bot API only delivers messages to numeric `chat_id` values —
+    // `@username` handles return `Bad Request: chat not found`. Skip the
+    // channel entirely so the UI does not surface an unusable destination.
+    // The contact can still be reached after an admin registers the numeric
+    // chat_id via `Σύνδεση καναλιού` (ADR-312 Phase 9.12).
+    if (provider === 'telegram' && !isValidTelegramChatId(username)) continue;
 
     channels.push({
       provider,

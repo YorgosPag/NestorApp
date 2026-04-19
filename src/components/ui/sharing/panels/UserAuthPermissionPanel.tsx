@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { ApiClientError } from '@/lib/api/api-client-types';
 import { API_ROUTES } from '@/config/domain-constants';
 import { Button } from '@/components/ui/button';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -233,7 +234,16 @@ export function UserAuthPermissionPanel({
         onClose();
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        notifications.error(t('channelShare.sendError', { channel: data.channel, error: message }));
+        // Telegram Bot API rejects delivery to `@username` handles or recipients
+        // who never sent `/start` — the server turns that into a 422 with
+        // `TELEGRAM_CHAT_NOT_FOUND`. Surface an actionable hint instead of the
+        // raw backend description (ADR-312 Phase 9.12).
+        const isTelegramChatMissing =
+          ApiClientError.isApiClientError(error) && error.errorCode === 'TELEGRAM_CHAT_NOT_FOUND';
+        const toastMessage = isTelegramChatMissing
+          ? t('channelShare.errors.telegramChatNotFound')
+          : t('channelShare.sendError', { channel: data.channel, error: message });
+        notifications.error(toastMessage);
         onShareError?.(data.channel, message);
       } finally {
         setLoading(false);
