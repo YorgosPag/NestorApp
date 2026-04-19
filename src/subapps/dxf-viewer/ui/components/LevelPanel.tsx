@@ -422,6 +422,7 @@ export function LevelPanel({
               filesCategory: 'floorplans',
               purpose: meta.purpose || undefined,
               entityLabel: meta.entityLabel,
+              fileRecordId: meta.fileId,
             };
             if (currentLevelId) {
               const floorplanType = entityTypeToFloorplanType(meta.entityType);

@@ -55,6 +55,8 @@ export interface WizardCompleteMeta {
   purpose: string;
   /** Human-readable entity label (e.g., "Κτήριο Α", "ΣΟΦΙΤΑ") for displayName generation */
   entityLabel?: string;
+  /** FileRecord ID created by wizard upload — needed for linkSceneToLevel after refresh */
+  fileId?: string;
 }
 
 interface FloorplanImportWizardProps {
@@ -135,7 +137,7 @@ export function FloorplanImportWizard({
     [t, isNamespaceReady, mode],
   );
 
-  const handleUploadComplete = useCallback((file: File) => {
+  const handleUploadComplete = useCallback((file: File, fileId?: string) => {
     // 🏢 ADR-240: Build WizardCompleteMeta from uploadConfig so callers can configure auto-save
     const cfg = state.uploadConfig;
     if (cfg && onComplete) {
@@ -146,6 +148,7 @@ export function FloorplanImportWizard({
         entityId: cfg.entityId,
         purpose: cfg.purpose ?? '',
         entityLabel: cfg.entityLabel,
+        fileId,
       };
       onComplete(file, meta);
     } else {
@@ -267,7 +270,7 @@ export function FloorplanImportWizard({
           {mode === 'import' && state.step === 6 && state.uploadConfig && (
             <StepUpload
               config={state.uploadConfig}
-              onComplete={handleUploadComplete}
+              onComplete={(file, fileId) => handleUploadComplete(file, fileId)}
             />
           )}
 

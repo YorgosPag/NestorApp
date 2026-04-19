@@ -34,7 +34,8 @@ import '@/lib/design-system';
 
 interface StepUploadProps {
   config: FloorplanUploadConfig;
-  onComplete: (file: File) => void;
+  /** fileId is the FileRecord ID created during upload — passed so callers can link the scene to the level */
+  onComplete: (file: File, fileId?: string) => void;
 }
 
 // =============================================================================
@@ -104,7 +105,7 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
         }
       }
       setUploadSuccess(true);
-      onComplete(file);
+      onComplete(file, result.fileRecord?.id);
     }
   }, [uploadFloorplan, onComplete, existingFile, config.userId]);
 

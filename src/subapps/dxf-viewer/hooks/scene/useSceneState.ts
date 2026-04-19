@@ -123,9 +123,11 @@ export function useSceneState() {
       if (levelsSystem.setCurrentFileName) {
         levelsSystem.setCurrentFileName(file.name);
       }
-      // 🏢 ENTERPRISE: Inject FileRecord ID so cadFiles uses the same ID as files collection
-      if (fileRecordId && levelsSystem.setFileRecordId) {
-        levelsSystem.setFileRecordId(fileRecordId);
+      // 🏢 ENTERPRISE: Inject FileRecord ID so cadFiles uses the same ID as files collection.
+      // Prefer explicitly-passed fileRecordId; fall back to saveContext.fileRecordId (from wizard).
+      const resolvedFileRecordId = fileRecordId ?? saveContext?.fileRecordId;
+      if (resolvedFileRecordId && levelsSystem.setFileRecordId) {
+        levelsSystem.setFileRecordId(resolvedFileRecordId);
       }
       // 🏢 ADR-240: Inject save context from Wizard (entityType/floorId/purpose)
       if (levelsSystem.setSaveContext) {

@@ -35,6 +35,12 @@ export interface DxfSaveContext {
   purpose?: string;
   /** Human-readable entity label for displayName generation (e.g., "Κτήριο Α", "ΣΟΦΙΤΑ") */
   entityLabel?: string;
+  /**
+   * 🏢 ADR-309 Phase 6: FileRecord ID from wizard upload.
+   * Passed from StepUpload → WizardCompleteMeta → saveContext so that
+   * linkSceneToLevel writes the correct sceneFileId to the Level document.
+   */
+  fileRecordId?: string;
 }
 
 export interface DxfFileMetadata {
