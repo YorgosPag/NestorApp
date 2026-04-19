@@ -26,7 +26,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
 
   // 🏢 ADR-050: Overlay section collapse state (fullscreen mode)
   const [isOverlaySectionCollapsed, setIsOverlaySectionCollapsed] = React.useState(false);
-  const showOverlayToolbar = props.activeTool === 'layering';
+  const showOverlayToolbar = false;
 
   return (
   <div className={`fixed ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.Z_INDEX['50']} ${colors.bg.accent} flex flex-col`}>

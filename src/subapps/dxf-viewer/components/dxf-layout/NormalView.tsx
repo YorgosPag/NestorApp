@@ -1,40 +1,20 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
-import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
+import type { OverlayEditorMode } from '../../overlays/types';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // ⚠️ PANEL_COLORS REMOVED (2026-01-03): BG_SECONDARY → bg-muted caused canvas visibility issues
 
 /**
  * Renders the DXF viewer in its normal, non-fullscreen layout.
- *
- * 🔧 FIX (2026-01-24): Uses props.overlayMode/setOverlayMode from parent when available
- * to ensure Single Source of Truth with FloatingPanelsSection's DraggableOverlayToolbar.
- * Falls back to local state only if props are not provided.
+ * Overlay toolbar removed — clicking "layering" activates draw mode directly.
  */
 export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
-  // 🔧 FIX: Local state as FALLBACK only - prefer props from parent for Single Source of Truth
-  const [localOverlayMode, setLocalOverlayMode] = useState<OverlayEditorMode>('select');
-  const [localCurrentStatus, setLocalCurrentStatus] = useState<Status>('for-sale');
-  const [localCurrentKind, setLocalCurrentKind] = useState<OverlayKind>('property');
-
-  // 🏢 ADR-050: Overlay section collapse state
-  const [isOverlaySectionCollapsed, setIsOverlaySectionCollapsed] = useState(false);
-
-  // 🎯 ENTERPRISE: Use props when available, fallback to local state
-  // This ensures NormalView and FloatingPanelsSection share the same state
-  const overlayMode = props.overlayMode ?? localOverlayMode;
-  const setOverlayMode = props.setOverlayMode ?? setLocalOverlayMode;
-  const currentStatus = (props.overlayStatus ?? localCurrentStatus) as Status;
-  const setCurrentStatus = props.setOverlayStatus ?? setLocalCurrentStatus;
-  const currentKind = props.currentKind ?? localCurrentKind;
-  const setCurrentKind = props.setOverlayKind ?? setLocalCurrentKind;
-
-  // 🏢 ADR-050: Detect if overlay toolbar should be shown (layering tool + feature flag)
-  const showOverlayToolbar = props.activeTool === 'layering';
+  // Derive overlay mode from active tool: layering = draw, anything else = select
+  const overlayMode: OverlayEditorMode = props.activeTool === 'layering' ? 'draw' : 'select';
 
   return (
     // ╔════════════════════════════════════════════════════════════════════════╗
@@ -47,21 +27,19 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
       <ToolbarSection
         {...props}
         overlayMode={overlayMode}
-        setOverlayMode={setOverlayMode}
-        currentStatus={currentStatus}
-        setCurrentStatus={setCurrentStatus}
-        currentKind={currentKind}
-        setCurrentKind={setCurrentKind}
-        showOverlayToolbar={showOverlayToolbar}
-        isOverlaySectionCollapsed={isOverlaySectionCollapsed}
-        onToggleOverlaySection={() => setIsOverlaySectionCollapsed(prev => !prev)}
+        setOverlayMode={() => {}}
+        currentStatus="for-sale"
+        setCurrentStatus={() => {}}
+        currentKind="property"
+        setCurrentKind={() => {}}
+        showOverlayToolbar={false}
       />
       <div className={`flex-1 flex ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
         <CanvasSection
           {...props}
           overlayMode={overlayMode}
-          currentStatus={currentStatus}
-          currentKind={currentKind}
+          currentStatus="for-sale"
+          currentKind="property"
         />
       </div>
 
