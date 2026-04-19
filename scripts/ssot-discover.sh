@@ -88,12 +88,7 @@ for file in "${CENTRALIZED_FILES[@]}"; do
     fi
 done
 
-# Also scan src/lib/ direct children
-if [[ -d "src/lib" ]]; then
-    find "src/lib" -maxdepth 1 -name "*.ts" -type f 2>/dev/null | while read -r file; do
-        extract_exports "$file" >> "$TMP_DIR/exports.txt"
-    done
-fi
+# Note: src/lib is already scanned above via CENTRALIZED_DIRS loop (maxdepth 1)
 
 TOTAL_EXPORTS=$(wc -l < "$TMP_DIR/exports.txt" | tr -d ' ')
 TOTAL_SSoT_FILES=$(awk -F'|' '{print $2}' "$TMP_DIR/exports.txt" | sort -u | wc -l | tr -d ' ')

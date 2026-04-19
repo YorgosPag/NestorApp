@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.2c DONE 2026-04-19, unprotected 77→76)
+**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — BUG 2 scanner fix DONE 2026-04-19, duplicateExports 21→16)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-D.2c):** **21 duplicateExports / 5 antiPatterns / 76 unprotected** (down from 21/5/77 post-D.2b, 21/5/81 post-D.2, 21/5/85 post-D.1, 21/5/91 post-C.5.47)
+**Current CHECK 3.18 baseline (2026-04-19 post-BUG2fix):** **16 duplicateExports / 5 antiPatterns / 76 unprotected** (down from 21/5/76 post-D.2c)
 
 ---
 
@@ -137,6 +137,7 @@ After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Scanner BUG 2 fix DONE.** Removed redundant `src/lib` double-scan from `scripts/ssot-discover.sh`. duplicateExports **21→16 (-5)**. Remaining 16 = documented false positives + blocked `convertMarkdownToHtml`. |
 | 2026-04-19 | **Phase D.2c DONE.** `unified-tabs-factory` Tier 6 (root factory per 8 tabs-config). unprotected **77→76 (-1)**, protected 59→60 (+1). |
 | 2026-04-19 | **Phase D.2b DONE.** Registry gap batch 2b — 4 more tabs-config Tier 6: `contact-tabs-config`, `parking-tabs-config`, `project-tabs-config`, `storage-tabs-config`. Baseline: **unprotected 81→77 (-4)**, protected 55→59 (+4). |
 | 2026-04-19 | **Phase D.2 DONE.** Registry gap reduction batch 2 — 4 config/tabs SSoT modules Tier 6: `properties-tabs-config`, `period-selector-config`, `crm-dashboard-tabs-config`, `building-tabs-config`. All `forbiddenPatterns` pre-validated via grep. `ssot:audit` clean (0 new viol). CHECK 3.18 baseline: **unprotected 85→81 (-4)**, protected 51→55 (+4), duplicateExports/antiPatterns unchanged (21/5). Zero runtime edit. |
