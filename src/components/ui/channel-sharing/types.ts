@@ -117,6 +117,14 @@ export interface ChannelShareRequest {
   photoUrls?: string[];
   shareUrl?: string;
   caption?: string;
+  /**
+   * When present, the route loads the property showcase snapshot and appends
+   * a plain-text digest (project / commercial / specs / features / energy /
+   * linked spaces / ...) after the media dispatch, so the recipient gets the
+   * full context in the same Telegram/WhatsApp conversation even when the
+   * channel cannot render the HTML showcase (ADR-312 Phase 9.18).
+   */
+  propertyId?: string;
 }
 
 /** POST /api/communications/share-to-channel response */

@@ -270,6 +270,11 @@ export function UnifiedShareDialog({
     isPhoto: contactShareContent?.isPhoto,
     photoUrl: contactShareContent?.photoUrl,
     galleryPhotos: contactShareContent?.galleryPhotos,
+    // ADR-312 Phase 9.18 — the route uses this to load the showcase snapshot
+    // and append a text digest after the photo dispatch. Only set for the
+    // `property_showcase` entity type; other shares keep `propertyId`
+    // undefined so the digest step is skipped.
+    propertyId: entityType === 'property_showcase' ? entityId : undefined,
   };
 
   return (

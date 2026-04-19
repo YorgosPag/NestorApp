@@ -114,6 +114,7 @@ export function ChannelShareForm({
       channel: channel.provider,
       externalUserId: channel.externalUserId,
       caption: message.trim() || undefined,
+      propertyId: shareData.propertyId,
     };
 
     let request: ChannelShareRequest;
@@ -126,7 +127,7 @@ export function ChannelShareForm({
     }
 
     await onSend(request);
-  }, [selectedPhotos, defaultPhoto, shareUrl, contact, channel, message, onSend]);
+  }, [selectedPhotos, defaultPhoto, shareUrl, shareData.propertyId, contact, channel, message, onSend]);
 
   const handleMessageChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;

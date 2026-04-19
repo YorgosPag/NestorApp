@@ -29,6 +29,7 @@ import type { ChannelProvider, ChannelShareRequest, ChannelShareResponse } from 
 import {
   dispatchLinkMode,
   dispatchPhotoMode,
+  dispatchShowcaseDigest,
   persistShareRecord,
   recordAudit,
 } from './dispatch-helpers';
@@ -112,6 +113,14 @@ function validateRequest(body: unknown): ChannelShareRequest {
     throw new ApiError(400, 'Invalid caption', 'VALIDATION_ERROR');
   }
 
+  let propertyId: string | undefined;
+  if (b.propertyId !== undefined) {
+    if (typeof b.propertyId !== 'string' || b.propertyId.length < 3) {
+      throw new ApiError(400, 'Invalid propertyId', 'VALIDATION_ERROR');
+    }
+    propertyId = b.propertyId;
+  }
+
   return {
     contactId: b.contactId,
     contactName: b.contactName,
@@ -120,6 +129,7 @@ function validateRequest(body: unknown): ChannelShareRequest {
     photoUrls,
     shareUrl,
     caption: b.caption as string | undefined,
+    propertyId,
   };
 }
 
@@ -154,6 +164,14 @@ export const POST = withSensitiveRateLimit(
         ? await dispatchLinkMode(data, pipelineChannel, shareId)
         : await dispatchPhotoMode(data, pipelineChannel, shareId);
       const { lastResult, sentCount, totalCount, mode } = dispatch;
+
+      // ADR-312 Phase 9.18 — after a successful photo dispatch, follow up
+      // with the full showcase digest as plain-text chunks so the recipient
+      // sees company / project / specs / features / energy / linked spaces
+      // in-conversation, not just the photo caption.
+      if (mode === 'photo' && lastResult.success && data.propertyId) {
+        await dispatchShowcaseDigest(data, pipelineChannel, shareId, ctx.companyId);
+      }
 
       await persistShareRecord(db, shareId, data, mode, sentCount, totalCount, ctx);
       await recordAudit(ctx, data, shareId, mode, totalCount, lastResult.success);

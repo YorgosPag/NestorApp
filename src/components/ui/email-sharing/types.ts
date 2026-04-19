@@ -24,6 +24,13 @@ export interface ShareData {
   photoUrl?: string;
   isPhoto?: boolean;
   galleryPhotos?: string[];
+  /**
+   * Property doc id — populated only when the shared entity is a property
+   * showcase. Forwarded to `/api/communications/share-to-channel` so the
+   * route can load the full snapshot and append a text digest after the
+   * photo dispatch (ADR-312 Phase 9.18).
+   */
+  propertyId?: string;
 }
 
 /**

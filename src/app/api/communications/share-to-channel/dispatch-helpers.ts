@@ -31,6 +31,7 @@ import type {
 } from '@/services/ai-pipeline/shared/channel-reply-types';
 import { sendChannelMediaReply } from '@/services/ai-pipeline/shared/channel-media-dispatcher';
 import { sendChannelReply } from '@/services/ai-pipeline/shared/channel-reply-dispatcher';
+import { loadShowcaseTextDigest } from '@/services/property-showcase/load-text-digest';
 import type {
   ChannelProvider,
   ChannelShareRequest,
@@ -170,6 +171,59 @@ export async function persistShareRecord(
     logger.warn('Share record write failed (non-blocking)', {
       shareId, error: getErrorMessage(writeError),
     });
+  }
+}
+
+const TEXT_CAPABLE_CHANNELS: ReadonlySet<ChannelProvider> = new Set([
+  'telegram', 'whatsapp', 'messenger', 'instagram',
+]);
+
+/**
+ * After a photo dispatch, send the full showcase digest as one or more text
+ * messages. Skipped when the channel has no rich text surface (email already
+ * renders the full showcase via the branded template), when the caller did
+ * not pass a `propertyId` (non-showcase share), or when the initial photo
+ * send failed (no point flooding the chat with text after a broken image).
+ */
+export async function dispatchShowcaseDigest(
+  data: ChannelShareRequest,
+  pipelineChannel: PipelineChannelValue,
+  shareId: string,
+  companyId: string,
+): Promise<void> {
+  if (!data.propertyId) return;
+  if (!TEXT_CAPABLE_CHANNELS.has(data.channel)) return;
+
+  let chunks: string[] = [];
+  try {
+    chunks = await loadShowcaseTextDigest({
+      propertyId: data.propertyId,
+      companyId,
+      shareUrl: data.shareUrl,
+    });
+  } catch (err) {
+    logger.warn('Digest load failed (non-blocking)', {
+      shareId, propertyId: data.propertyId, error: getErrorMessage(err),
+    });
+    return;
+  }
+  if (chunks.length === 0) return;
+
+  const recipientParams = buildTextRecipient(data.channel, data.externalUserId);
+  for (let i = 0; i < chunks.length; i++) {
+    const params: ChannelReplyParams = {
+      channel: pipelineChannel,
+      ...recipientParams,
+      textBody: chunks[i],
+      requestId: `${shareId}_digest_${i}`,
+    };
+    const result = await sendChannelReply(params);
+    if (!result.success) {
+      logger.warn('Digest chunk send failed', {
+        shareId, chunkIndex: i, channel: data.channel, error: result.error,
+      });
+      return;
+    }
   }
 }
 
