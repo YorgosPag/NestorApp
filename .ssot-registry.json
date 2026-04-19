@@ -1552,6 +1552,69 @@
       "tier": 3
     },
 
+    "_comment_adr314_phaseD3g": "=== ADR-314 PHASE D.3g (2026-04-19): registry gap — safe-fire-and-forget/firestore-sanitize/collection-utils/toggle-select/error-utils ===",
+
+    "safe-fire-and-forget": {
+      "ssotFile": "src/lib/safe-fire-and-forget.ts",
+      "description": "Fire-and-forget async utilities — safeFireAndForget (server-safe), clientSafeFireAndForget (client-only with error boundary). Canonical SSoT for non-awaited async side-effects with structured error handling. ADR-314 Phase D.3g.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(safeFireAndForget|clientSafeFireAndForget)\\b"
+      ],
+      "allowlist": [
+        "src/lib/safe-fire-and-forget.ts"
+      ],
+      "tier": 3
+    },
+
+    "firestore-sanitize": {
+      "ssotFile": "src/utils/firestore-sanitize.ts",
+      "description": "Firestore data sanitization utilities — sanitizeForFirestore<T>, stripUndefinedDeep<T>, stripNullValues. Canonical SSoT for stripping undefined/null values before Firestore writes. Note: accounting/repository/firestore-helpers.ts re-exports via `export { X }` form — allowlisted. ADR-314 Phase D.3g.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(sanitizeForFirestore|stripUndefinedDeep|stripNullValues)\\b"
+      ],
+      "allowlist": [
+        "src/utils/firestore-sanitize.ts",
+        "src/subapps/accounting/services/repository/firestore-helpers.ts"
+      ],
+      "tier": 3
+    },
+
+    "collection-utils": {
+      "ssotFile": "src/utils/collection-utils.ts",
+      "description": "Generic collection aggregation utilities — groupByKey<T>, tallyBy<T>, sumByKey<T>, sumBy<T>, countBy<T>. Canonical SSoT for array grouping/tallying/summing. Note: hooks/useEntityStats.ts re-exports via `export { X }` form — not caught by function-declaration patterns. rate/avg/avgRounded excluded (duplicated elsewhere). ADR-314 Phase D.3g.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(groupByKey|tallyBy|sumByKey|sumBy|countBy)\\b"
+      ],
+      "allowlist": [
+        "src/utils/collection-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "toggle-select": {
+      "ssotFile": "src/lib/toggle-select.ts",
+      "description": "Generic multi-select toggle utility — toggleSelect<T extends { id? }>(items, item). Canonical SSoT for immutable add/remove toggle on arrays of identifiable items. ADR-314 Phase D.3g.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+toggleSelect\\b"
+      ],
+      "allowlist": [
+        "src/lib/toggle-select.ts"
+      ],
+      "tier": 3
+    },
+
+    "error-utils": {
+      "ssotFile": "src/lib/error-utils.ts",
+      "description": "Error message extraction utility — getErrorMessage(error: unknown, fallback). Canonical SSoT for safe unknown→string error coercion (Error.message, string passthrough, fallback). ADR-314 Phase D.3g.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+getErrorMessage\\b"
+      ],
+      "allowlist": [
+        "src/lib/error-utils.ts"
+      ],
+      "tier": 3
+    },
+
     "_comment_adr314_phaseD3f_firestore": "=== ADR-314 PHASE D.3f.2 (2026-04-19): registry gap — firestore cascade/impact/entity (subdirectory, informational only — not scanner-visible) ===",
 
     "cascade-propagation": {

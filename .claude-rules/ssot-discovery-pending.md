@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3f DONE 2026-04-19, unprotected 54→49)
+**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3g DONE 2026-04-19, unprotected 49→44)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-D.3f):** **16 duplicateExports / 5 antiPatterns / 49 unprotected** (down from 16/5/54 post-D.3e)
+**Current CHECK 3.18 baseline (2026-04-19 post-D.3g):** **16 duplicateExports / 5 antiPatterns / 44 unprotected** (down from 16/5/49 post-D.3f)
 
 ---
 
