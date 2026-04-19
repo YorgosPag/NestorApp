@@ -1486,6 +1486,137 @@
         "src/lib/coords.ts"
       ],
       "tier": 3
+    },
+
+    "_comment_adr314_phaseD3f": "=== ADR-314 PHASE D.3f (2026-04-19): registry gap — top-level lib/config SSoT modules (monte-carlo/firebase-server/stale-cache/contact-dependency/navigation) ===",
+
+    "monte-carlo-engine": {
+      "ssotFile": "src/lib/monte-carlo-engine.ts",
+      "description": "Monte Carlo simulation engine — runMonteCarloSimulation. Canonical SSoT for probabilistic financial modelling via Monte Carlo methods. ADR-314 Phase D.3f.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+runMonteCarloSimulation\\b"
+      ],
+      "allowlist": [
+        "src/lib/monte-carlo-engine.ts"
+      ],
+      "tier": 3
+    },
+
+    "firebase-server": {
+      "ssotFile": "src/lib/firebase-server.ts",
+      "description": "Server-side Firebase initialization — firebaseServer object (app, auth, db, storage). Canonical SSoT for server-side Firebase SDK instance. ADR-314 Phase D.3f.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+firebaseServer\\b"
+      ],
+      "allowlist": [
+        "src/lib/firebase-server.ts"
+      ],
+      "tier": 3
+    },
+
+    "stale-cache": {
+      "ssotFile": "src/lib/stale-cache.ts",
+      "description": "Stale-while-revalidate cache utility — createStaleCache<T>. Canonical SSoT for namespace-keyed in-memory stale cache with TTL. ADR-314 Phase D.3f.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+createStaleCache\\b"
+      ],
+      "allowlist": [
+        "src/lib/stale-cache.ts"
+      ],
+      "tier": 3
+    },
+
+    "contact-dependency-registry": {
+      "ssotFile": "src/config/contact-dependency-registry.ts",
+      "description": "Contact dependency impact registry — CONTACT_DEPENDENCY_REGISTRY, getDependenciesForScenario, getScenarioMode, deriveDeletionDependencies. Canonical SSoT for contact deletion/mutation impact analysis (block/warn/info scenarios). ADR-314 Phase D.3f.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+CONTACT_DEPENDENCY_REGISTRY\\b",
+        "export\\s+function\\s+(getDependenciesForScenario|getScenarioMode|deriveDeletionDependencies)\\b"
+      ],
+      "allowlist": [
+        "src/config/contact-dependency-registry.ts"
+      ],
+      "tier": 3
+    },
+
+    "navigation-config": {
+      "ssotFile": "src/config/navigation.ts",
+      "description": "Navigation menu configuration — mainMenuItems, toolsMenuItems, settingsMenuItem, getMainMenuItems, getToolsMenuItems, getSettingsMenuItems. Canonical SSoT for app navigation structure. ADR-314 Phase D.3f.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(mainMenuItems|toolsMenuItems|settingsMenuItem)\\b",
+        "export\\s+function\\s+(getMainMenuItems|getToolsMenuItems|getSettingsMenuItems)\\b"
+      ],
+      "allowlist": [
+        "src/config/navigation.ts"
+      ],
+      "tier": 3
+    },
+
+    "_comment_adr314_phaseD3f_firestore": "=== ADR-314 PHASE D.3f.2 (2026-04-19): registry gap — firestore cascade/impact/entity (subdirectory, informational only — not scanner-visible) ===",
+
+    "cascade-propagation": {
+      "ssotFile": "src/lib/firestore/cascade-propagation.service.ts",
+      "description": "Firestore cascade propagation SSoT — propagateBuildingProjectLink, propagateProjectCompanyLink, propagatePropertyBuildingLink, propagateChildBuildingLink, propagateSpaceAllocationCodeChange. Canonical SSoT for cross-entity field cascade operations. ADR-314 Phase D.3f.",
+      "forbiddenPatterns": [
+        "export\\s+async\\s+function\\s+(propagateBuildingProjectLink|propagateProjectCompanyLink|propagatePropertyBuildingLink|propagateChildBuildingLink|propagateSpaceAllocationCodeChange)\\b"
+      ],
+      "allowlist": [
+        "src/lib/firestore/cascade-propagation.service.ts"
+      ],
+      "tier": 3
+    },
+
+    "contact-impact-engine": {
+      "ssotFile": "src/lib/firestore/contact-impact-engine.ts",
+      "description": "Contact dependency impact engine — computeContactImpact, findDependencyCount. Canonical SSoT for computing cross-collection contact impact before mutations. ADR-314 Phase D.3f.",
+      "forbiddenPatterns": [
+        "export\\s+(async\\s+)?function\\s+(computeContactImpact|findDependencyCount)\\b"
+      ],
+      "allowlist": [
+        "src/lib/firestore/contact-impact-engine.ts"
+      ],
+      "tier": 3
+    },
+
+    "entity-creation-types": {
+      "ssotFile": "src/lib/firestore/entity-creation.types.ts",
+      "description": "Entity creation registry and types — ENTITY_REGISTRY, EntityRegistryEntry, EntityCreationParams, EntityCreationResult, ServerEntityType, EntityHierarchy, EntityIdGeneratorName. Canonical SSoT for server-side entity type definitions and creation metadata. ADR-314 Phase D.3f.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+ENTITY_REGISTRY\\b",
+        "export\\s+interface\\s+(EntityRegistryEntry|EntityCreationParams|EntityCreationResult)\\b",
+        "export\\s+type\\s+(ServerEntityType|EntityHierarchy|EntityIdGeneratorName)\\b"
+      ],
+      "allowlist": [
+        "src/lib/firestore/entity-creation.types.ts"
+      ],
+      "tier": 3
+    },
+
+    "entity-linking-types": {
+      "ssotFile": "src/lib/firestore/entity-linking.types.ts",
+      "description": "Entity linking registry and types — LINK_REGISTRY, LinkRegistryEntry, LinkCascadeType, LinkEntityParams, LinkEntityResult. Canonical SSoT for Firestore entity-link cascade metadata (distinct from services/entity-linking/types.ts which is UI-layer). ADR-314 Phase D.3f.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+LINK_REGISTRY\\b",
+        "export\\s+interface\\s+LinkRegistryEntry\\b",
+        "export\\s+type\\s+LinkCascadeType\\b"
+      ],
+      "allowlist": [
+        "src/lib/firestore/entity-linking.types.ts"
+      ],
+      "tier": 3
+    },
+
+    "firestore-auth-context": {
+      "ssotFile": "src/services/firestore/auth-context.ts",
+      "description": "Firestore auth context utilities — waitForAuthReady, requireAuthContext. Canonical SSoT for tenant-scoped auth context resolution in Firestore service layer. Re-exported via services/firestore/index.ts. ADR-314 Phase D.3f.",
+      "forbiddenPatterns": [
+        "export\\s+(async\\s+)?function\\s+(waitForAuthReady|requireAuthContext)\\b"
+      ],
+      "allowlist": [
+        "src/services/firestore/auth-context.ts",
+        "src/services/firestore/index.ts"
+      ],
+      "tier": 3
     }
   }
 }
