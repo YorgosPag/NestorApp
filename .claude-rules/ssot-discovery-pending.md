@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3j DONE 2026-04-19, unprotected 34→30)
+**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3k DONE 2026-04-19, unprotected 30→25)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-D.3j):** **16 duplicateExports / 5 antiPatterns / 30 unprotected** (down from 16/5/34 post-D.3i)
+**Current CHECK 3.18 baseline (2026-04-19 post-D.3k):** **16 duplicateExports / 5 antiPatterns / 25 unprotected** (down from 16/5/30 post-D.3j)
 
 ---
 
@@ -137,6 +137,7 @@ After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase D.3k DONE.** 5 config modules Tier 3: `address-map-config`, `admin-env`, `ai-tab-mapping`, `audit-value-catalogs`, `building-ids-config`. unprotected **30→25 (-5)**, protected 106→111 (+5). |
 | 2026-04-19 | **Phase D.3e DONE.** 4 modules Tier 3: `accessibility`, `preload-routes`, `enterprise-icon-migration`, `field-extractors`. unprotected **57→54 (-3)**, protected 79→82 (+3). |
 | 2026-04-19 | **Phase D.3d DONE.** 3 engine modules Tier 3: `waterfall-engine`, `firestore-mappers`, `sensitivity-engine`. unprotected **60→57 (-3)**, protected 76→79 (+3). |
 | 2026-04-19 | **Phase D.3c DONE.** 4 engine modules Tier 3: `counterproposal-engine`, `dscr-engine`, `forward-curve-engine`, `draw-schedule-engine`. unprotected **64→60 (-4)**, protected 72→76 (+4). Skipped `property-utils` (getPropertyStatusConfig dup documentato). |

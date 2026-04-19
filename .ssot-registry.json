@@ -1871,6 +1871,68 @@
         "src/services/firestore/index.ts"
       ],
       "tier": 3
+    },
+
+    "address-map-config": {
+      "ssotFile": "src/config/address-map-config.ts",
+      "description": "Address map display configuration — ADDRESS_MAP_CONFIG, AddressMapConfig, AddressMapHeightPreset. Canonical SSoT for AddressMap component settings (height presets, zoom levels, marker visuals, animation durations). ADR-314 Phase D.3k.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+ADDRESS_MAP_CONFIG\\b",
+        "export\\s+type\\s+(AddressMapConfig|AddressMapHeightPreset)\\b"
+      ],
+      "allowlist": [
+        "src/config/address-map-config.ts"
+      ],
+      "tier": 3
+    },
+
+    "admin-env": {
+      "ssotFile": "src/config/admin-env.ts",
+      "description": "Server-only admin environment configuration — getRequiredAdminCompanyName, getAdminEnvConfig, getCommunicationsEnvConfig. Canonical SSoT for server-side admin env var resolution with fail-fast validation. ADR-314 Phase D.3k.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(getRequiredAdminCompanyName|getAdminEnvConfig|getCommunicationsEnvConfig)\\b"
+      ],
+      "allowlist": [
+        "src/config/admin-env.ts"
+      ],
+      "tier": 3
+    },
+
+    "ai-tab-mapping": {
+      "ssotFile": "src/config/ai-tab-mapping.ts",
+      "description": "AI tab mapping prompt generator — generateTabMappingPrompt. Canonical SSoT for AI pipeline tab-routing prompt generation. ADR-314 Phase D.3k.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+generateTabMappingPrompt\\b"
+      ],
+      "allowlist": [
+        "src/config/ai-tab-mapping.ts"
+      ],
+      "tier": 3
+    },
+
+    "audit-value-catalogs": {
+      "ssotFile": "src/config/audit-value-catalogs.ts",
+      "description": "Audit value catalogs SSoT — AUDIT_VALUE_CATALOGS, AUDIT_CATALOG_FIELDS, getAuditValueCatalog. Canonical SSoT for audit field-to-catalog mapping (ADR-195). ADR-314 Phase D.3k.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(AUDIT_VALUE_CATALOGS|AUDIT_CATALOG_FIELDS)\\b",
+        "export\\s+function\\s+getAuditValueCatalog\\b"
+      ],
+      "allowlist": [
+        "src/config/audit-value-catalogs.ts"
+      ],
+      "tier": 3
+    },
+
+    "building-ids-config": {
+      "ssotFile": "src/config/building-ids-config.ts",
+      "description": "Building IDs configuration — BUILDING_IDS, BuildingIdUtils. Canonical SSoT for multi-tenant building identifier management sourced from env vars (zero hardcoded values). ADR-314 Phase D.3k.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(BUILDING_IDS|BuildingIdUtils)\\b"
+      ],
+      "allowlist": [
+        "src/config/building-ids-config.ts"
+      ],
+      "tier": 3
     }
   }
 }
