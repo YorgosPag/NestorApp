@@ -39,6 +39,12 @@ export interface LinkTokenFormProps {
   onSubmit: () => void;
   onCancel: () => void;
   submitting: boolean;
+  /**
+   * When true, the submit button is disabled even if not submitting.
+   * Used by hosts that want to suppress no-op revoke+recreate cycles when
+   * the draft matches the currently applied policy (ADR-312 Phase 9.8).
+   */
+  disabled?: boolean;
 }
 
 export function LinkTokenForm({
@@ -47,6 +53,7 @@ export function LinkTokenForm({
   onSubmit,
   onCancel,
   submitting,
+  disabled = false,
 }: LinkTokenFormProps): React.ReactElement {
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
@@ -145,7 +152,7 @@ export function LinkTokenForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           {t('share.cancel')}
         </Button>
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting || disabled}>
           {submitting ? (
             <Spinner size="small" color="inherit" className="mr-2" />
           ) : (

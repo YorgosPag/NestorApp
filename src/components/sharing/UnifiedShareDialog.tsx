@@ -141,6 +141,10 @@ export function UnifiedShareDialog({
   >(null);
   // Track previous shareId so editing the policy revokes the stale one.
   const previousShareIdRef = useRef<string | null>(null);
+  // Snapshot of the draft currently applied to the active token. Used to
+  // disable the accordion submit when the user has not changed any field
+  // (ADR-312 Phase 9.8 — no-op revoke+recreate suppression).
+  const appliedDraftRef = useRef<LinkTokenDraft>(INITIAL_LINK_TOKEN_DRAFT);
 
   const createShare = useCallback(
     async (currentDraft: LinkTokenDraft): Promise<CreatedShare> => {
@@ -191,6 +195,7 @@ export function UnifiedShareDialog({
           );
         }
         previousShareIdRef.current = next.shareId;
+        appliedDraftRef.current = currentDraft;
         setShare(next);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
@@ -222,6 +227,7 @@ export function UnifiedShareDialog({
       setError(null);
       preSubmitCacheRef.current = null;
       previousShareIdRef.current = null;
+      appliedDraftRef.current = INITIAL_LINK_TOKEN_DRAFT;
     }, 200);
   }, [onOpenChange]);
 
@@ -229,6 +235,12 @@ export function UnifiedShareDialog({
     void ensureShare(draft, { revokePrevious: true });
     setPolicyOpen(false);
   }, [ensureShare, draft]);
+
+  const isDirty =
+    draft.expiresInHours !== appliedDraftRef.current.expiresInHours ||
+    draft.password !== appliedDraftRef.current.password ||
+    draft.maxDownloads !== appliedDraftRef.current.maxDownloads ||
+    draft.note !== appliedDraftRef.current.note;
 
   const entity = useMemo(
     () => ({
@@ -332,6 +344,7 @@ export function UnifiedShareDialog({
                   onSubmit={handleApplyPolicy}
                   onCancel={() => setPolicyOpen(false)}
                   submitting={creating}
+                  disabled={!isDirty}
                 />
               </div>
             )}
