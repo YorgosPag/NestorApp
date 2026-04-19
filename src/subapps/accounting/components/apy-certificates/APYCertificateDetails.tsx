@@ -43,6 +43,7 @@ import type { APYCertificate, APYEmailSendRecord } from '../../types';
 import { formatCurrency } from '../../utils/format';
 import { SendReminderEmailDialog } from './SendReminderEmailDialog';
 import { nowISO } from '@/lib/date-local';
+import { formatDateTime } from '@/lib/intl-utils';
 
 // ADR-300: Module-level cache — keyed by certificateId, survives re-navigation
 const apyCertCache = createStaleCache<APYCertificate>('accounting-apy-detail');
@@ -60,19 +61,8 @@ interface APYCertificateDetailsProps {
 // HELPERS
 // ============================================================================
 
-function formatDate(iso: string): string {
+function formatIsoDay(iso: string): string {
   return iso.substring(0, 10);
-}
-
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 // ============================================================================
@@ -348,7 +338,7 @@ export function APYCertificateDetails({
             {cert.lineItems.map((item) => (
               <TableRow key={item.invoiceId}>
                 <TableCell className="font-mono">{item.invoiceNumber}</TableCell>
-                <TableCell>{formatDate(item.issueDate)}</TableCell>
+                <TableCell>{formatIsoDay(item.issueDate)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(item.netAmount)}</TableCell>
                 <TableCell className="text-center">{item.withholdingRate}%</TableCell>
                 <TableCell className="text-right font-medium">
