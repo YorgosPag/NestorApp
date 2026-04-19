@@ -113,17 +113,25 @@ export const GET = withStandardRateLimit(
 
         if (floorId) {
           unitsQuery = unitsQuery.where(FIELDS.FLOOR_ID, '==', floorId);
+        } else {
+          // ADR-281: Exclude soft-deleted records — use != only when floorId is absent
+          // (floorId path filters deleted in JS to avoid composite index on companyId+floorId+status)
+          unitsQuery = unitsQuery.where('status', '!=', 'deleted');
         }
-
-        // ADR-281: Exclude soft-deleted records from normal list
-        unitsQuery = unitsQuery.where('status', '!=', 'deleted');
 
         const propertiesSnapshot = await unitsQuery.get();
 
-        const properties = sortPropertiesByName(propertiesSnapshot.docs.map(doc => ({
+        const rawDocs = propertiesSnapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
-        })));
+          ...doc.data() as Record<string, unknown>
+        }));
+
+        // ADR-281: When floorId path was used, filter deleted in JS (avoids composite index requirement)
+        const filteredDocs = floorId
+          ? rawDocs.filter(doc => doc['status'] !== 'deleted')
+          : rawDocs;
+
+        const properties = sortPropertiesByName(filteredDocs);
 
         logger.info('[Properties/List] Found properties', { count: properties.length, companyId: tenantCompanyId, buildingId: buildingId || 'all' });
 
