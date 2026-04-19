@@ -124,6 +124,7 @@ export function buildShowcaseEmail(params: BuildShowcaseEmailParams): BuiltShowc
     companyWebsites: company.websites,
     companySocials: socials,
     contactLabels: labels.header.contacts,
+    enableContactProviderLinks: true,
   });
 
   const text = buildTextFallback({ subject, property, shareUrl, intro: labels.email.introText });

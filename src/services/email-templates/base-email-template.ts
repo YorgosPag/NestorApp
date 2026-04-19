@@ -98,6 +98,13 @@ interface BaseEmailParams {
   companySocials?: EmailSocialLink[];
   /** Localised labels used as a11y titles for the contact rows. */
   contactLabels?: EmailHeaderContactLabels;
+  /**
+   * When true, render a compact provider sub-row under every address and email
+   * in the header contact block (ADR-312 Phase 9.3). Mirrors the web dropdown
+   * pickers but as always-visible inline links because email clients strip JS.
+   * Default: false (other email templates keep the lean rendering).
+   */
+  enableContactProviderLinks?: boolean;
 }
 
 /**
@@ -124,6 +131,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
     companyWebsites,
     companySocials,
     contactLabels,
+    enableContactProviderLinks,
   } = params;
 
   const baseUrl = getAppBaseUrl();
@@ -169,6 +177,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
 
   const headerContacts = renderHeaderContacts({
     addresses, phones, emails, websites, socials, labels,
+    enableProviderLinks: enableContactProviderLinks === true,
   });
 
   return `<!DOCTYPE html>
@@ -248,10 +257,11 @@ interface RenderHeaderContactsParams {
   websites: EmailContactWebsite[];
   socials: EmailSocialLink[];
   labels: EmailHeaderContactLabels;
+  enableProviderLinks: boolean;
 }
 
 function renderHeaderContacts(params: RenderHeaderContactsParams): string {
-  const { addresses, phones, emails, websites, socials, labels } = params;
+  const { addresses, phones, emails, websites, socials, labels, enableProviderLinks } = params;
   if (
     addresses.length === 0
     && phones.length === 0
@@ -264,11 +274,20 @@ function renderHeaderContacts(params: RenderHeaderContactsParams): string {
 
   const linkStyle = `color:${BRAND.white};text-decoration:none;`;
   const rowStyle = `margin:4px 0 0;font-size:12px;color:${BRAND.navySoft};line-height:1.5;`;
+  const subRowStyle = `margin:2px 0 0;font-size:10px;color:${BRAND.navySoft};line-height:1.5;letter-spacing:0.02em;`;
+  const subLinkStyle = `color:${BRAND.white};text-decoration:underline;`;
 
   const rows: string[] = [];
   if (addresses.length > 0) {
-    const html = addresses.map((a) => escapeHtml(a)).join(' · ');
-    rows.push(`<p style="${rowStyle}" title="${escapeHtml(labels.addressLabel)}">📍 ${html}</p>`);
+    if (enableProviderLinks) {
+      addresses.forEach((a) => {
+        rows.push(`<p style="${rowStyle}" title="${escapeHtml(labels.addressLabel)}">📍 ${escapeHtml(a)}</p>`);
+        rows.push(`<p style="${subRowStyle}">${renderAddressProviderLinks(a, subLinkStyle)}</p>`);
+      });
+    } else {
+      const html = addresses.map((a) => escapeHtml(a)).join(' · ');
+      rows.push(`<p style="${rowStyle}" title="${escapeHtml(labels.addressLabel)}">📍 ${html}</p>`);
+    }
   }
   if (phones.length > 0) {
     const html = phones
@@ -277,10 +296,17 @@ function renderHeaderContacts(params: RenderHeaderContactsParams): string {
     rows.push(`<p style="${rowStyle}" title="${escapeHtml(labels.phoneLabel)}">📞 ${html}</p>`);
   }
   if (emails.length > 0) {
-    const html = emails
-      .map((e) => `<a href="mailto:${escapeHtml(e.value)}" style="${linkStyle}">${escapeHtml(e.value)}</a>`)
-      .join(' · ');
-    rows.push(`<p style="${rowStyle}" title="${escapeHtml(labels.emailLabel)}">✉️ ${html}</p>`);
+    if (enableProviderLinks) {
+      emails.forEach((e) => {
+        rows.push(`<p style="${rowStyle}" title="${escapeHtml(labels.emailLabel)}">✉️ <a href="mailto:${escapeHtml(e.value)}" style="${linkStyle}">${escapeHtml(e.value)}</a></p>`);
+        rows.push(`<p style="${subRowStyle}">${renderEmailProviderLinks(e.value, subLinkStyle)}</p>`);
+      });
+    } else {
+      const html = emails
+        .map((e) => `<a href="mailto:${escapeHtml(e.value)}" style="${linkStyle}">${escapeHtml(e.value)}</a>`)
+        .join(' · ');
+      rows.push(`<p style="${rowStyle}" title="${escapeHtml(labels.emailLabel)}">✉️ ${html}</p>`);
+    }
   }
   if (websites.length > 0) {
     const html = websites
@@ -315,6 +341,46 @@ const SOCIAL_DISPLAY: Record<EmailSocialPlatform, string> = {
 function buildPhoneHref(value: string): string {
   const digits = value.replace(/[^\d+]/g, '');
   return digits.length > 0 ? `tel:${digits}` : '#';
+}
+
+// ============================================================================
+// INLINE PROVIDER LINKS (ADR-312 Phase 9.3)
+// ============================================================================
+// Email clients strip <script>, so the web dropdown pickers (AddressMapPicker,
+// EmailProviderPicker) are replaced in the email by an always-visible sub-row
+// of direct provider links. Brand names kept as proper nouns (no translation).
+
+const MAP_URLS: Record<string, (q: string) => string> = {
+  'Google Maps': (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`,
+  'Google Earth': (q) => `https://earth.google.com/web/search/${encodeURIComponent(q)}`,
+  'Bing Maps': (q) => `https://www.bing.com/maps?q=${encodeURIComponent(q)}`,
+  'Apple Maps': (q) => `https://maps.apple.com/?q=${encodeURIComponent(q)}`,
+  'OpenStreetMap': (q) => `https://www.openstreetmap.org/search?query=${encodeURIComponent(q)}`,
+  'Waze': (q) => `https://www.waze.com/ul?q=${encodeURIComponent(q)}&navigate=yes`,
+};
+
+const EMAIL_URLS: Record<string, (to: string) => string> = {
+  'Gmail': (to) => `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}`,
+  'Outlook': (to) => `https://outlook.live.com/owa/?path=/mail/action/compose&to=${encodeURIComponent(to)}`,
+  'Yahoo Mail': (to) => `https://compose.mail.yahoo.com/?to=${encodeURIComponent(to)}`,
+  'Mailto': (to) => `mailto:${to}`,
+};
+
+function renderAddressProviderLinks(address: string, linkStyle: string): string {
+  return Object.entries(MAP_URLS)
+    .map(([name, build]) =>
+      `<a href="${escapeHtml(build(address))}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">${name}</a>`
+    )
+    .join(' · ');
+}
+
+function renderEmailProviderLinks(emailValue: string, linkStyle: string): string {
+  return Object.entries(EMAIL_URLS)
+    .map(([name, build]) => {
+      const target = name === 'Mailto' ? '' : ' target="_blank" rel="noopener noreferrer"';
+      return `<a href="${escapeHtml(build(emailValue))}"${target} style="${linkStyle}">${name}</a>`;
+    })
+    .join(' · ');
 }
 
 // ============================================================================
