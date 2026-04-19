@@ -155,6 +155,22 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   const update = useCallback(async (id: string, patch: UpdateOverlayData): Promise<void> => {
     if (!state.currentLevelId) return;
 
+    // Optimistic update: reflect non-polygon changes instantly so cross-overlay
+    // linked-entity detection (duplicate-link guard) sees the new state immediately.
+    // Polygon is excluded because it requires [number,number][] → {x,y} conversion.
+    const optimisticPatch: Partial<Overlay> = {};
+    if (patch.kind !== undefined) optimisticPatch.kind = patch.kind;
+    if (patch.status !== undefined) optimisticPatch.status = patch.status;
+    if (patch.label !== undefined) optimisticPatch.label = patch.label;
+    if (patch.linked !== undefined) optimisticPatch.linked = patch.linked as Overlay['linked'];
+    if (patch.style !== undefined) optimisticPatch.style = patch.style;
+    if (Object.keys(optimisticPatch).length > 0) {
+      setState(prev => {
+        if (!prev.overlays[id]) return prev;
+        return { ...prev, overlays: { ...prev.overlays, [id]: { ...prev.overlays[id], ...optimisticPatch } } };
+      });
+    }
+
     // 🔒 ADR-289: Route update through centralized API gateway. The gateway
     // payload supports polygon/kind/status/label/linked/style; unknown/undefined
     // fields are skipped. `linked: null` explicitly clears the link.
