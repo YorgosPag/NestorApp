@@ -30,14 +30,18 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   // auto-save writes companyId + createdBy into cadFiles metadata, enabling
   // cross-user reads under tenant-scoped Firestore rules.
   const { user } = useAuth();
-  const [currentFileName, setCurrentFileName] = useState<string | null>(null);
+  const [currentFileName, setCurrentFileNameState] = useState<string | null>(null);
+  // Ref mirrors state so setLevelSceneWithAutoSave always reads the latest value
+  // even before React re-renders (avoids stale closure when called synchronously
+  // after setCurrentFileName in the same event handler as setLevelScene).
+  const currentFileNameRef = useRef<string | null>(null);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState<boolean>(true);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
-  
+
   // Debounce auto-save to prevent excessive Firestore writes
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
-  
+
   // Flag to prevent auto-save when loading from Firestore
   const isLoadingFromFirestoreRef = useRef<boolean>(false);
   // Flag to prevent multiple simultaneous loads
@@ -51,6 +55,12 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   // 🏢 ENTERPRISE: Callback after successful save — LevelsSystem uses this to persist level→DXF link
   const onSceneSavedRef = useRef<((fileId: string, fileName: string) => void) | null>(null);
 
+  /** Stable setter — updates ref (sync) and state (triggers re-render for consumers). */
+  const setCurrentFileName = useCallback((fileName: string | null) => {
+    currentFileNameRef.current = fileName;
+    setCurrentFileNameState(fileName);
+  }, []);
+
   /**
    * 🏢 ENTERPRISE: Inject FileRecord ID from external source (wizard upload)
    * When set, auto-save writes to cadFiles using THIS ID instead of generating a new one.
@@ -58,11 +68,12 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
    */
   const setFileRecordId = useCallback((id: string | null) => {
     injectedFileRecordIdRef.current = id;
-    // Also cache it for the current filename so subsequent saves reuse it
-    if (id && currentFileName) {
-      fileIdCacheRef.current.set(currentFileName, id);
+    // Cache against current filename (read from ref to avoid stale closure)
+    const fileName = currentFileNameRef.current;
+    if (id && fileName) {
+      fileIdCacheRef.current.set(fileName, id);
     }
-  }, [currentFileName]);
+  }, []);
 
   /** 🏢 ADR-240: Inject DxfSaveContext from Wizard so dual-write uses correct entityType/floorId */
   const setSaveContext = useCallback((ctx: DxfSaveContext | null) => {
@@ -84,14 +95,19 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
    */
   const setLevelSceneWithAutoSave = useCallback((levelId: string, scene: SceneModel) => {
     sceneManager.setLevelScene(levelId, scene);
-    
+
+    // Read filename from ref — always current even before React re-renders
+    // (avoids stale-closure issue when setCurrentFileName and setLevelScene are
+    // called in the same synchronous block before any await).
+    const fileName = currentFileNameRef.current;
+
     // Trigger auto-save if enabled and we have a filename and not loading from Firestore
-    if (autoSaveEnabled && currentFileName && !isLoadingFromFirestoreRef.current) {
+    if (autoSaveEnabled && fileName && !isLoadingFromFirestoreRef.current) {
       // Clear existing timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-      
+
       // Set new debounced save
       saveTimeoutRef.current = setTimeout(async () => {
         // 🏢 ADR-240: Skip auto-save when wizard pipeline is active.
@@ -102,9 +118,9 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
           // about the file association so sceneFileId gets persisted on the level.
           // Without this, wizard-imported DXFs would NOT auto-load after restart.
           const wizardFileId = injectedFileRecordIdRef.current
-            ?? fileIdCacheRef.current.get(currentFileName);
+            ?? fileIdCacheRef.current.get(fileName);
           if (wizardFileId) {
-            onSceneSavedRef.current?.(wizardFileId, currentFileName);
+            onSceneSavedRef.current?.(wizardFileId, fileName);
           }
           setSaveStatus('idle');
           return;
@@ -119,7 +135,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
           // 3. Existing FileRecord in `files` collection (wizard uploaded this file before)
           // 4. New enterprise ID (first standalone save — no wizard involved)
           let fileId = injectedFileRecordIdRef.current
-            ?? fileIdCacheRef.current.get(currentFileName);
+            ?? fileIdCacheRef.current.get(fileName);
           let canonicalScenePath: string | undefined;
 
           if (!fileId) {
@@ -129,7 +145,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
               setSaveStatus('error');
               return;
             }
-            const existing = await DxfFirestoreService.findExistingFileRecord(lookupCompanyId, currentFileName);
+            const existing = await DxfFirestoreService.findExistingFileRecord(lookupCompanyId, fileName);
             if (existing) {
               fileId = existing.id;
               // Derive scene path next to the original DXF in canonical storage
@@ -137,9 +153,9 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
                 canonicalScenePath = DxfFirestoreService.deriveScenePath(existing.storagePath);
               }
             } else {
-              fileId = DxfFirestoreService.generateFileId(currentFileName);
+              fileId = DxfFirestoreService.generateFileId(fileName);
             }
-            fileIdCacheRef.current.set(currentFileName, fileId);
+            fileIdCacheRef.current.set(fileName, fileId);
           }
 
           // 🚀 PHASE 4: Use Storage-based auto-save with canonical path
@@ -154,29 +170,29 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
             ...(canonicalScenePath ? { canonicalScenePath } : {}),
           };
           const success = await DxfFirestoreService.autoSaveV2(
-            fileId, currentFileName, scene,
+            fileId, fileName, scene,
             Object.keys(saveContext).length > 0 ? saveContext : undefined
           );
-          
+
           if (success) {
             setSaveStatus('success');
             setLastSaveTime(new Date());
             // 🏢 ENTERPRISE: Notify LevelsSystem to persist level→DXF association
-            onSceneSavedRef.current?.(fileId, currentFileName);
+            onSceneSavedRef.current?.(fileId, fileName);
           } else {
             setSaveStatus('error');
-            console.error(`❌ [AutoSave] Failed to save changes to ${currentFileName}`);
+            console.error(`❌ [AutoSave] Failed to save changes to ${fileName}`);
           }
         } catch (error) {
           setSaveStatus('error');
           console.error(`❌ [AutoSave] Exception during save:`, error);
         }
-        
+
         // Reset status after delay
         setTimeout(() => setSaveStatus('idle'), PANEL_LAYOUT.TIMING.SAVE_STATUS_RESET);
       }, STORAGE_TIMING.SCENE_AUTOSAVE_DEBOUNCE); // 🏢 ADR-098
     }
-  }, [sceneManager, autoSaveEnabled, currentFileName]);
+  }, [sceneManager, autoSaveEnabled]);
   
   /**
    * Load scene from Firestore on file change
