@@ -13,7 +13,7 @@
  *
  * Architecture:
  * 1. Extract unique entity IDs per collection from overlays
- * 2. Set up onSnapshot subscriptions per collection (chunked at FIRESTORE_LIMITS)
+ * 2. Set up firestoreQueryService subscriptions per collection (chunked at FIRESTORE_LIMITS)
  * 3. Map each overlay to its resolved PropertyStatus
  *
  * @module hooks/useEntityStatusResolver
@@ -22,16 +22,13 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  collection,
-  query,
   where,
-  onSnapshot,
   documentId,
   type Unsubscribe,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
+import { FIRESTORE_LIMITS, type CollectionKey } from '@/config/firestore-collections';
 import { chunkArray } from '@/lib/array-utils';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { commercialToPropertyStatus } from '@/subapps/dxf-viewer/config/color-mapping';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
@@ -62,7 +59,7 @@ type EntityStatusCache = Map<string, CommercialStatus | SpaceCommercialStatus>;
 
 /** Collection subscription config */
 interface CollectionSubscription {
-  collectionName: string;
+  collectionKey: CollectionKey;
   entityIds: readonly string[];
 }
 
@@ -91,7 +88,7 @@ function getLinkedEntityId(overlay: ResolvableOverlay): string | undefined {
  * ENTERPRISE: Real-time Entity Status Resolver
  *
  * Resolves each overlay's PropertyStatus dynamically from its linked entity's
- * commercialStatus via Firestore onSnapshot subscriptions.
+ * commercialStatus via firestoreQueryService subscriptions (ADR-214 SSoT).
  *
  * Resolution priority (ADR-258):
  * 1. Linked entity found in Firestore → commercialToPropertyStatus(entity.commercialStatus)
@@ -140,7 +137,7 @@ export function useEntityStatusResolver(
   // ── Step B: Real-time subscriptions per collection/chunk ──────────────
   const [entityStatusCache, setEntityStatusCache] = useState<EntityStatusCache>(new Map());
 
-  // Mutable ref for accumulating status updates across multiple onSnapshot callbacks
+  // Mutable ref for accumulating status updates across multiple subscription callbacks
   const liveMapRef = useRef<EntityStatusCache>(new Map());
 
   useEffect(() => {
@@ -149,44 +146,38 @@ export function useEntityStatusResolver(
     liveMapRef.current = new Map();
 
     const subscriptions: CollectionSubscription[] = [
-      { collectionName: COLLECTIONS.PROPERTIES, entityIds: entityGroups.units },
-      { collectionName: COLLECTIONS.PARKING_SPACES, entityIds: entityGroups.parking },
-      { collectionName: COLLECTIONS.STORAGE, entityIds: entityGroups.storage },
+      { collectionKey: 'PROPERTIES', entityIds: entityGroups.units },
+      { collectionKey: 'PARKING_SPACES', entityIds: entityGroups.parking },
+      { collectionKey: 'STORAGE', entityIds: entityGroups.storage },
     ];
 
     let totalChunks = 0;
     let loadedChunks = 0;
 
-    for (const { collectionName, entityIds } of subscriptions) {
+    for (const { collectionKey, entityIds } of subscriptions) {
       if (entityIds.length === 0) continue;
 
       const chunks = chunkArray([...entityIds], FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
       totalChunks += chunks.length;
 
       for (const chunk of chunks) {
-        const colRef = collection(db, collectionName);
-        const q = query(
-          colRef,
-          // 🔒 companyId: N/A — batch-get by documentId() for units /
-          // parking_spots / storage_units whose tenant scope is resolved via
-          // buildingId / projectId (not a companyId field). entityIds come
-          // from a tenant-scoped upstream query + Firestore rules enforce.
-          where(documentId(), 'in', chunk),
-        );
-
-        const unsub = onSnapshot(
-          q,
-          (snapshot) => {
+        // 🏢 ADR-214 (C.5.31): subscribe via firestoreQueryService SSoT.
+        // 🔒 tenantOverride: 'skip' — batch-get by documentId() for units /
+        // parking_spots / storage_units whose tenant scope is resolved via
+        // buildingId / projectId (not a companyId field). entityIds come
+        // from a tenant-scoped upstream query + Firestore rules enforce.
+        const unsub = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
+          collectionKey,
+          (result) => {
             const foundIds = new Set<string>();
 
-            for (const docSnap of snapshot.docs) {
-              const data = docSnap.data();
-              const commercialStatus = data.commercialStatus as
+            for (const docData of result.documents) {
+              const commercialStatus = docData.commercialStatus as
                 | CommercialStatus
                 | SpaceCommercialStatus
                 | undefined;
-              liveMapRef.current.set(docSnap.id, commercialStatus ?? 'unavailable');
-              foundIds.add(docSnap.id);
+              liveMapRef.current.set(docData.id, commercialStatus ?? 'unavailable');
+              foundIds.add(docData.id);
             }
 
             // Mark missing IDs as 'unavailable' (entity deleted)
@@ -211,8 +202,12 @@ export function useEntityStatusResolver(
           (error) => {
             logger.error('Entity status subscription error', {
               error,
-              data: { collectionName },
+              data: { collectionKey },
             });
+          },
+          {
+            constraints: [where(documentId(), 'in', chunk)],
+            tenantOverride: 'skip',
           }
         );
 
