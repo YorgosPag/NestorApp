@@ -1238,6 +1238,56 @@
       "tier": 6
     },
 
+    "_comment_adr314_phaseD3b": "=== ADR-314 PHASE D.3b (2026-04-19): registry gap — error-mapping/geometry/admin-batch-utils/layer-sync ===",
+
+    "error-mapping": {
+      "ssotFile": "src/lib/error-mapping.ts",
+      "description": "Domain error → i18n mapping SSoT — mapErrorToI18n, getAllErrorMappings, registerErrorMapping, mapHttpStatusToError. DomainError/ErrorMapping interfaces. Canonical SSoT for structured error presentation. ADR-314 Phase D.3b.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(mapErrorToI18n|getAllErrorMappings|registerErrorMapping|mapHttpStatusToError)\\b"
+      ],
+      "allowlist": [
+        "src/lib/error-mapping.ts"
+      ],
+      "tier": 3
+    },
+
+    "geometry": {
+      "ssotFile": "src/lib/geometry.ts",
+      "description": "SVG/2D geometry primitives — getCentroid (polygon centroid), distanceToLineSegment (point-to-segment distance). Re-export in ConnectionElements.tsx uses `export { X }` form — not matched by `export const` pattern. ADR-314 Phase D.3b.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(getCentroid|distanceToLineSegment)\\b"
+      ],
+      "allowlist": [
+        "src/lib/geometry.ts"
+      ],
+      "tier": 3
+    },
+
+    "admin-batch-utils": {
+      "ssotFile": "src/lib/admin-batch-utils.ts",
+      "description": "Firestore batch operation utilities — BATCH_SIZE_READ (500)/BATCH_SIZE_WRITE (200) constants, processClientBatch<T>/processAdminBatch<T> async processors. Canonical SSoT for chunked Firestore reads/writes. ADR-314 Phase D.3b.",
+      "forbiddenPatterns": [
+        "export\\s+(async\\s+function|const)\\s+(BATCH_SIZE_READ|BATCH_SIZE_WRITE|processClientBatch|processAdminBatch)\\b"
+      ],
+      "allowlist": [
+        "src/lib/admin-batch-utils.ts"
+      ],
+      "tier": 3
+    },
+
+    "layer-sync": {
+      "ssotFile": "src/lib/layer-sync.ts",
+      "description": "DXF layer sync SSoT — LayerSyncManager class, useLayerSync hook, createGlobalLayerSync factory, forceSyncLayers async. Canonical SSoT for RealtimeService-backed layer synchronization (ADR-314 Phase C.5.2 — migrated from raw onSnapshot to RealtimeService). ADR-314 Phase D.3b.",
+      "forbiddenPatterns": [
+        "export\\s+(class\\s+LayerSyncManager|function\\s+useLayerSync|function\\s+createGlobalLayerSync|async\\s+function\\s+forceSyncLayers)\\b"
+      ],
+      "allowlist": [
+        "src/lib/layer-sync.ts"
+      ],
+      "tier": 3
+    },
+
     "_comment_adr314_phaseD3a": "=== ADR-314 PHASE D.3a (2026-04-19): registry gap — utility SSoT modules (array-utils/type-guards/greek-text/json-utils/coords) ===",
 
     "array-utils": {
