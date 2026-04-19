@@ -4,7 +4,7 @@
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-C.1.4c):** **16 duplicateExports / 5 antiPatterns / 7 unprotected** (centralizedFiles=136 protected=129).
+**Current CHECK 3.18 baseline (2026-04-19 post-C.5.5y):** **0 duplicateExports / 5 antiPatterns / 1 unprotected** (centralizedFiles=135 protected=134). 🎉 duplicateExports ALL GREEN.
 
 ---
 
