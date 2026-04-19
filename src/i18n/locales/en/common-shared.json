@@ -709,7 +709,8 @@
   },
   "share": {
     "expires": "Expires",
-    "publicReadOnlyNotice": "Public read-only page. Do not share sensitive data."
+    "publicReadOnlyNotice": "Public read-only page. Do not share sensitive data.",
+    "creatingLink": "Creating link..."
   },
   "personalMessage": {
     "label": "Personal Message",

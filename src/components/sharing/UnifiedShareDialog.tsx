@@ -47,6 +47,7 @@ import {
 import { UserAuthPermissionPanel } from '@/components/ui/sharing/panels/UserAuthPermissionPanel';
 import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { UnifiedSharingService } from '@/services/sharing/unified-sharing.service';
 // Side-effect import: registers file / contact / property_showcase resolvers
@@ -200,9 +201,17 @@ export function UnifiedShareDialog({
     [createShare, userId],
   );
 
-  // No auto-create on open. The token is created ONLY when the user submits
-  // the policy form — this guarantees the URL carries the password / note /
-  // max-accesses the user actually entered, not stale defaults.
+  // Auto-create on open (ADR-312 Phase 9.7) — restores the original
+  // single-dialog design. The token is created with defaults (72h, no
+  // password, 0 max accesses, no note) the first time the dialog opens so
+  // the channel surface (copy link / social dispatch) is immediately
+  // functional. Custom policy (password / note / expiry) is applied via the
+  // "Ρυθμίσεις συνδέσμου" accordion which does revoke + recreate on submit.
+  useEffect(() => {
+    if (!open) return;
+    if (share || creating) return;
+    void ensureShare(INITIAL_LINK_TOKEN_DRAFT, { revokePrevious: false });
+  }, [open, share, creating, ensureShare]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
@@ -215,10 +224,6 @@ export function UnifiedShareDialog({
       previousShareIdRef.current = null;
     }, 200);
   }, [onOpenChange]);
-
-  const handleCreateLink = useCallback(() => {
-    void ensureShare(draft, { revokePrevious: false });
-  }, [ensureShare, draft]);
 
   const handleApplyPolicy = useCallback(() => {
     void ensureShare(draft, { revokePrevious: true });
@@ -265,14 +270,12 @@ export function UnifiedShareDialog({
       error={error}
     >
       {!share ? (
-        <section className="flex flex-col gap-3">
-          <LinkTokenForm
-            draft={draft}
-            onDraftChange={setDraft}
-            onSubmit={handleCreateLink}
-            onCancel={handleClose}
-            submitting={creating}
-          />
+        <section
+          className="flex flex-col items-center justify-center gap-2 py-10 text-sm text-muted-foreground"
+          aria-busy="true"
+        >
+          <Spinner size="default" color="inherit" />
+          <span>{t('common-shared:share.creatingLink')}</span>
         </section>
       ) : (
         <section className="flex flex-col gap-4">

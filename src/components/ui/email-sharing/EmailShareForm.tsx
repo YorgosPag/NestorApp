@@ -9,6 +9,7 @@ import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Send, Home, Briefcase, Crown } from 'lucide-react';
 import { PhotoPickerGrid } from '@/components/ui/social-sharing/PhotoPickerGrid';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import type { EmailTemplateType } from '@/types/email-templates';
@@ -178,7 +179,11 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
           disabled={loading || recipients.length === 0}
           className="flex-1"
         >
-          <Send className="w-4 h-4 mr-1" />
+          {loading ? (
+            <Spinner size="small" color="inherit" className="mr-1" />
+          ) : (
+            <Send className="w-4 h-4 mr-1" />
+          )}
           {loading ? t('emailShare.sending') : t('emailShare.send')}
         </Button>
       </footer>
