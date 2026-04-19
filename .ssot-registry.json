@@ -1238,6 +1238,56 @@
       "tier": 6
     },
 
+    "_comment_adr314_phaseD3e": "=== ADR-314 PHASE D.3e (2026-04-19): registry gap — accessibility/preloadRoutes/icon-migration/field-extractors ===",
+
+    "accessibility": {
+      "ssotFile": "src/utils/accessibility.ts",
+      "description": "Accessibility utilities — FOCUSABLE_ELEMENTS_SELECTOR, getFocusableElements, focusFirstElement, focusLastElement, useFocusTrap, useArrowNavigation. Canonical SSoT for keyboard/focus management and ARIA navigation helpers. ADR-314 Phase D.3e.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(getFocusableElements|focusFirstElement|focusLastElement|useFocusTrap|useArrowNavigation|FOCUSABLE_ELEMENTS_SELECTOR)\\b"
+      ],
+      "allowlist": [
+        "src/utils/accessibility.ts"
+      ],
+      "tier": 3
+    },
+
+    "preload-routes": {
+      "ssotFile": "src/utils/preloadRoutes.ts",
+      "description": "Route preloading utilities — preloadRoute, preloadRoutes, preloadUserRoutes, preloadOnHover, useRoutePreload. Canonical SSoT for Next.js route prefetch strategy. ADR-314 Phase D.3e.",
+      "forbiddenPatterns": [
+        "export\\s+(async\\s+)?function\\s+(preloadRoute|preloadRoutes|preloadUserRoutes|preloadOnHover|useRoutePreload)\\b"
+      ],
+      "allowlist": [
+        "src/utils/preloadRoutes.ts"
+      ],
+      "tier": 3
+    },
+
+    "enterprise-icon-migration": {
+      "ssotFile": "src/utils/enterprise-icon-migration.ts",
+      "description": "Enterprise icon migration tooling — ICON_MIGRATION_PATTERNS, generateIconSizesImport, generateHookDeclaration, replaceIconClass, validateMigrationSafety. Canonical SSoT for automated hardcoded-icon → useIconSizes migration. ADR-314 Phase D.3e.",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(ICON_MIGRATION_PATTERNS|generateIconSizesImport|generateHookDeclaration|replaceIconClass|validateMigrationSafety)\\b"
+      ],
+      "allowlist": [
+        "src/utils/enterprise-icon-migration.ts"
+      ],
+      "tier": 3
+    },
+
+    "field-extractors": {
+      "ssotFile": "src/lib/firestore/field-extractors.ts",
+      "description": "Firestore document field extractors — getString, getNumber, getBoolean, getArray (all overloaded with optional defaultValue). Canonical SSoT for safe typed extraction from raw Firestore DataRecord maps. ADR-314 Phase D.3e.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+(getString|getNumber|getBoolean|getArray)\\b"
+      ],
+      "allowlist": [
+        "src/lib/firestore/field-extractors.ts"
+      ],
+      "tier": 3
+    },
+
     "_comment_adr314_phaseD3d": "=== ADR-314 PHASE D.3d (2026-04-19): registry gap — waterfall/firestore-mappers/sensitivity engines ===",
 
     "waterfall-engine": {
