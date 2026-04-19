@@ -233,7 +233,11 @@ When you touch a legacy file → clean up as many violations as you can. **ZERO 
 
 ## SOS. SOS. N.12 — SSoT RATCHET ENFORCEMENT (ADR-294)
 - **Pre-commit hook CHECK 3.7** blocks new SSoT violations
-- **Pre-commit hook CHECK 3.18 (ADR-314)** blocks new structural duplicates / anti-patterns / registry gaps. Layer 1 = pre-commit smoke (~0.2s), Layer 2 = `.github/workflows/ssot-discover.yml` full scan on every PR. Baseline: `.ssot-discover-baseline.json` (46 duplicates / 5 anti-patterns / 91 unprotected, 2026-04-19). Local full scan: `SSOT_DISCOVER_FULL=1 git commit …`. **Test suite**: `scripts/__tests__/check-ssot-discover-ratchet.test.js` (57 tests / 9 groups, coverage 96.82% stmts / 92.30% branches / 100% fns, runtime ~3.5s). Run: `npm run test:ssot-discover`.
+- **Pre-commit hook CHECK 3.18 (ADR-314)** blocks new structural duplicates / anti-patterns / registry gaps. Layer 1 = pre-commit smoke (~0.2s), Layer 2 = `.github/workflows/ssot-discover.yml` full scan on every PR. Baseline: `.ssot-discover-baseline.json` (46 duplicates / 5 anti-patterns / 91 unprotected, 2026-04-19). Local full scan: `SSOT_DISCOVER_FULL=1 git commit …`.
+- **Test suites (Google presubmit-grade)**:
+  - `scripts/__tests__/check-ssot-discover-ratchet.test.js` — CHECK 3.18 wrapper logic (57 tests / 9 groups, coverage 96.82% stmts / 92.30% branches / 100% fns). Run: `npm run test:ssot-discover`.
+  - `scripts/__tests__/registry-golden-regex.test.js` — registry golden tests (40 tests / 3 groups): ERE syntax validity on all ~225 `forbiddenPatterns` via real `grep -E -f` + semantic match/skip fixtures on a 12-module cross-tier sample. Catches the v3.0-class `(?:...)`/lookahead-silent-match-nothing bug at presubmit. Run: `npm run test:registry-golden`.
+  - Combined: `npm run test:ssot-suite` → 97 tests, ~55s Windows / ~10s Linux.
 - **Registry**: `.ssot-registry.json` — 62+ modules in 7 tiers
 - **Baseline**: `.ssot-violations-baseline.json` — 7 files, 16 violations (2026-04-11)
 - **Entity audit trail**: Module `entity-audit-trail` (Tier 3, ADR-195) forbids direct writes to `entity_audit_trail`, inline queries, and re-implementations of the `useEntityAudit` hook. Canonical: `src/services/entity-audit.service.ts` + `src/hooks/useEntityAudit.ts`
