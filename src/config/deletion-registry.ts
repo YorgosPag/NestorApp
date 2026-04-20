@@ -48,7 +48,25 @@ export interface DependencyDef {
 }
 
 /** A dependency that gets auto-deleted (cascade) before blocking check */
-export type CascadeDependencyDef = DependencyDef;
+export interface CascadeDependencyDef extends DependencyDef {
+  /**
+   * Query a collectionGroup instead of a top-level collection.
+   * Use when the target lives in a subcollection (e.g. `dxf_overlay_levels/{levelId}/items`).
+   * `collection` then holds the subcollection ID (e.g. `'items'`).
+   */
+  useCollectionGroup?: boolean;
+}
+
+/**
+ * Storage prefix cleanup applied after Firestore cascade.
+ * Template placeholders: `{companyId}`, `{entityId}`.
+ * Cleanup is best-effort (non-blocking): failures are logged but do not abort deletion.
+ */
+export interface StorageCleanupDef {
+  pathTemplate: string;
+  /** Human-readable label (Greek) for audit/log output */
+  label: string;
+}
 
 /** Deletion strategy for an entity type */
 type DeletionStrategy = 'BLOCK' | 'SOFT_DELETE';
@@ -69,6 +87,8 @@ export interface EntityDeletionConfig {
   dependencies: readonly DependencyDef[];
   /** Junction-record dependencies: auto-deleted BEFORE blocking check */
   cascadeDependencies?: readonly CascadeDependencyDef[];
+  /** Storage prefix cleanup executed AFTER Firestore cascade (best-effort). */
+  storageCleanup?: readonly StorageCleanupDef[];
   conditionalBlock?: ConditionalBlock;
 }
 
@@ -184,6 +204,8 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
   },
 
   // ─── PROPERTY ──────────────────────────────────────────────────────
+  // Note: entity_audit_trail is intentionally NOT cascaded — preserved as a
+  // permanent audit log (Google pattern). Orphan entries are expected & safe.
   property: {
     strategy: 'BLOCK',
     conditionalBlock: {
@@ -198,6 +220,36 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         label: 'Search index',
         queryType: 'equals',
         skipCompanyFilter: true,
+      },
+      {
+        collection: COLLECTIONS.FILES,
+        foreignKey: 'entityId',
+        label: 'Αρχεία ακινήτου',
+        queryType: 'equals',
+      },
+      {
+        collection: COLLECTIONS.SHARES,
+        foreignKey: 'entityId',
+        label: 'Share tokens (showcase κ.λπ.)',
+        queryType: 'equals',
+      },
+      {
+        // Subcollection: dxf_overlay_levels/{levelId}/items/{overlayId}
+        // No dedicated COLLECTIONS constant — `items` is the subcollection ID.
+        collection: 'items',
+        foreignKey: 'linked.propertyId',
+        label: 'DXF overlay polygons',
+        queryType: 'equals',
+        useCollectionGroup: true,
+        // Legacy overlays may have companyId: null; propertyId is globally
+        // unique (UUID), so skipping tenant filter is safe here.
+        skipCompanyFilter: true,
+      },
+    ],
+    storageCleanup: [
+      {
+        pathTemplate: 'companies/{companyId}/entities/property/{entityId}/',
+        label: 'Storage ακινήτου (φωτογραφίες, κατόψεις, share PDFs)',
       },
     ],
     dependencies: [

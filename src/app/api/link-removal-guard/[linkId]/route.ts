@@ -16,7 +16,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { hasPermission } from '@/lib/auth/permissions';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { checkLinkRemovalDependencies } from '@/lib/firestore/deletion-guard';
+import { checkLinkRemovalDependencies } from '@/lib/firestore/deletion-link-guard';
 import { isValidEntityType, type DependencyCheckResult } from '@/config/deletion-registry';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';

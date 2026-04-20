@@ -16,11 +16,9 @@ import 'server-only';
 
 import {
   DELETION_REGISTRY,
-  LINK_REMOVAL_REGISTRY,
   getEntityCollection,
   type EntityType,
   type DependencyDef,
-  type CompoundDependencyDef,
   type CascadeDependencyDef,
   type DependencyCheckResult,
   DEPENDENCY_REMEDIATIONS,
@@ -30,11 +28,13 @@ import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { FIELDS } from '@/config/firestore-field-constants';
+import { MAX_PREVIEW_IDS, getDefaultRemediation } from './deletion-common';
+import {
+  executeStorageCleanup,
+  type StorageCleanupResult,
+} from './deletion-storage-cleanup';
 
 const logger = createModuleLogger('DeletionGuard');
-
-/** Maximum document IDs returned per dependency (for UI preview) */
-const MAX_PREVIEW_IDS = 10;
 
 // ============================================================================
 // DEPENDENCY CHECK
@@ -158,7 +158,11 @@ async function executeCascadeDeletions(
 
   for (const dep of cascadeDeps) {
     try {
-      let query: FirebaseFirestore.Query = db.collection(dep.collection);
+      // Subcollection support: collectionGroup targets every subcollection
+      // with matching ID (e.g. `items` under `dxf_overlay_levels/*/items`).
+      let query: FirebaseFirestore.Query = dep.useCollectionGroup
+        ? db.collectionGroup(dep.collection)
+        : db.collection(dep.collection);
 
       if (!dep.skipCompanyFilter) {
         query = query.where(FIELDS.COMPANY_ID, '==', companyId);
@@ -267,6 +271,13 @@ export async function executeDeletion(
     cascadeResult = await executeCascadeDeletions(db, config.cascadeDependencies, entityId, companyId);
   }
 
+  // ── Step 3b: Storage prefix cleanup (best-effort, non-blocking) ──
+  let storageResult: StorageCleanupResult | null = null;
+
+  if (config.storageCleanup && config.storageCleanup.length > 0) {
+    storageResult = await executeStorageCleanup(config.storageCleanup, entityId, companyId);
+  }
+
   // ── Step 4: Delete entity document ──
   await docRef.delete();
 
@@ -276,6 +287,7 @@ export async function executeDeletion(
     companyId,
     deletedBy,
     cascadeDeleted: cascadeResult?.totalDeleted ?? 0,
+    storageDeleted: storageResult?.totalDeleted ?? 0,
   });
 
   // ── Step 5: Audit trail (fire-and-forget) ──
@@ -295,6 +307,16 @@ export async function executeDeletion(
       oldValue: JSON.stringify(cascadeResult.details),
       newValue: null,
       label: `Cascade: ${cascadeResult.totalDeleted} εγγραφές διαγράφηκαν αυτόματα`,
+    });
+  }
+
+  // Storage cleanup summary (attempted prefixes, even if 0 files)
+  if (storageResult && storageResult.details.length > 0) {
+    auditChanges.push({
+      field: '_storage_cleanup',
+      oldValue: JSON.stringify(storageResult.details),
+      newValue: null,
+      label: `Storage: ${storageResult.totalDeleted} αρχεία καθαρίστηκαν`,
     });
   }
 
@@ -319,138 +341,8 @@ export async function executeDeletion(
 }
 
 // ============================================================================
-// LINK REMOVAL GUARD (ADR-226 Phase 2)
-// ============================================================================
-
-/**
- * Check if a contact has active dependencies within a project/building scope
- * before allowing their link to be removed.
- *
- * Uses compound queries (contactField + scopeField) from LINK_REMOVAL_REGISTRY.
- */
-export async function checkLinkRemovalDependencies(
-  db: FirebaseFirestore.Firestore,
-  contactId: string,
-  targetEntityType: EntityType,
-  targetEntityId: string,
-  companyId: string
-): Promise<DependencyCheckResult> {
-  const deps = LINK_REMOVAL_REGISTRY[targetEntityType];
-
-  if (!deps || deps.length === 0) {
-    return { allowed: true, dependencies: [], totalDependents: 0, message: 'Δεν υπάρχουν εξαρτήσεις.' };
-  }
-
-  const results = await Promise.all(
-    deps.map((dep) => checkCompoundDependency(db, dep, contactId, targetEntityId, companyId))
-  );
-
-  const blocking = results.filter((r) => r.count !== 0);
-  const totalDependents = blocking.reduce((sum, r) => sum + Math.max(0, r.count), 0);
-
-  if (blocking.length === 0) {
-    return { allowed: true, dependencies: [], totalDependents: 0, message: 'Δεν υπάρχουν εξαρτήσεις. Η αφαίρεση επιτρέπεται.' };
-  }
-
-  const depLabels = blocking
-    .map((d) => d.count > 0 ? `${d.label} (${d.count})` : `${d.label} (έλεγχος μη διαθέσιμος)`)
-    .join(', ');
-
-  return {
-    allowed: false,
-    dependencies: blocking,
-    totalDependents,
-    message: totalDependents > 0
-      ? `Ο συνεργάτης δεν μπορεί να αφαιρεθεί. Εμπλέκεται σε ${totalDependents} εγγραφές: ${depLabels}.`
-      : `Ο συνεργάτης δεν μπορεί να αφαιρεθεί λόγω σφάλματος ελέγχου εξαρτήσεων: ${depLabels}. Δοκιμάστε ξανά.`,
-  };
-}
-
-/**
- * Query a single compound dependency (contact + scope).
- */
-async function checkCompoundDependency(
-  db: FirebaseFirestore.Firestore,
-  dep: CompoundDependencyDef,
-  contactId: string,
-  scopeEntityId: string,
-  companyId: string
-): Promise<DependencyCheckResult['dependencies'][number]> {
-  try {
-    let query: FirebaseFirestore.Query = db.collection(dep.collection);
-
-    if (!dep.skipCompanyFilter) {
-      query = query.where(FIELDS.COMPANY_ID, '==', companyId);
-    }
-
-    query = dep.contactQueryType === 'array-contains'
-      ? query.where(dep.contactField, 'array-contains', contactId)
-      : query.where(dep.contactField, '==', contactId);
-
-    query = dep.scopeQueryType === 'array-contains'
-      ? query.where(dep.scopeField, 'array-contains', scopeEntityId)
-      : query.where(dep.scopeField, '==', scopeEntityId);
-
-    const snapshot = await query.limit(MAX_PREVIEW_IDS + 1).get();
-    const documentIds = snapshot.docs.slice(0, MAX_PREVIEW_IDS).map((doc) => doc.id);
-
-    return {
-      label: dep.label,
-      collection: dep.collection,
-      count: snapshot.size,
-      remediation: dep.remediation ?? getDefaultRemediation(dep.collection),
-      documentIds,
-    };
-  } catch (err) {
-    logger.error(`[LinkRemovalGuard] Failed to check ${dep.collection}`, {
-      error: getErrorMessage(err), contactId, scopeEntityId,
-    });
-    return {
-      label: dep.label,
-      collection: dep.collection,
-      count: -1,
-      remediation: DEPENDENCY_REMEDIATIONS.guardUnavailable,
-      documentIds: [],
-    };
-  }
-}
-
-// ============================================================================
 // INTERNAL HELPERS
 // ============================================================================
-
-function getDefaultRemediation(collection: string): string {
-  switch (collection) {
-    case 'attendance_events':
-      return DEPENDENCY_REMEDIATIONS.attendanceEvents;
-    case 'employment_records':
-      return DEPENDENCY_REMEDIATIONS.employmentRecords;
-    case 'communications':
-      return DEPENDENCY_REMEDIATIONS.communications;
-    case 'opportunities':
-      return DEPENDENCY_REMEDIATIONS.opportunities;
-    case 'properties':
-    case 'parking_spaces':
-    case 'storage':
-      return DEPENDENCY_REMEDIATIONS.propertiesOwnership;
-    case 'contact_links':
-      return DEPENDENCY_REMEDIATIONS.contactLinks;
-    case 'obligations':
-      return DEPENDENCY_REMEDIATIONS.obligations;
-    case 'construction_phases':
-    case 'building_milestones':
-    case 'floors':
-    case 'buildings':
-      return DEPENDENCY_REMEDIATIONS.constructionChildren;
-    case 'accounting_invoices':
-      return DEPENDENCY_REMEDIATIONS.accountingDocs;
-    case 'projects':
-      return DEPENDENCY_REMEDIATIONS.projectsAsCompany;
-    default:
-      return DEPENDENCY_REMEDIATIONS.generic;
-  }
-}
-
 
 /**
  * Query a single dependency collection for blocking records.
