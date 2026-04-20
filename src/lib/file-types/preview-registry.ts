@@ -30,7 +30,7 @@
  * - `docx`        → Client-side docx-preview rendering
  * - `unsupported` → Fallback with download prompt
  */
-export type PreviewType = 'pdf' | 'image' | 'video' | 'audio' | 'docx' | 'excel' | 'xml' | 'text' | 'unsupported';
+export type PreviewType = 'pdf' | 'image' | 'video' | 'audio' | 'docx' | 'excel' | 'xml' | 'text' | 'html' | 'unsupported';
 
 /**
  * Broad file category used for user-facing labels (i18n).
@@ -92,6 +92,7 @@ export function getPreviewType(
   ) return 'excel';
   if (ct === 'text/xml' || ct === 'application/xml' || ext === 'xml') return 'xml';
   if (ct === 'text/plain' || ext === 'txt') return 'text';
+  if (ct === 'text/html' || ext === 'html' || ext === 'htm') return 'html';
 
   return 'unsupported';
 }

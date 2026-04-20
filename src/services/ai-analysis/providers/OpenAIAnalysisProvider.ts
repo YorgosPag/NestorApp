@@ -230,7 +230,13 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
           type: 'input_image',
           image_url: buildFileDataBuffer(input.content, input.mimeType),
         });
-      } else if (input.mimeType === 'text/plain' || input.mimeType === 'text/csv') {
+      } else if (
+        input.mimeType === 'text/plain' ||
+        input.mimeType === 'text/csv' ||
+        input.mimeType === 'text/html' ||
+        input.mimeType === 'text/xml' ||
+        input.mimeType === 'application/xml'
+      ) {
         content.push({
           type: 'input_text',
           text: input.content.toString('utf-8'),
