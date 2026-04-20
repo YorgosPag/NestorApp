@@ -18,22 +18,19 @@ import { DetailsCard } from '@/components/property-management/dashboard/DetailsC
 import { CoverageCard } from '@/components/property-management/dashboard/CoverageCard';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { CoverageStats } from '@/hooks/usePropertiesStats';
 
 interface DashboardStatsInput {
   propertiesByStatus: Record<string, number>;
   propertiesByType: Record<string, number>;
   propertiesByFloor: Record<string, number>;
-  coverage: {
-    photos: { missing: number; total: number };
-    floorplans: { missing: number; total: number };
-    documents: { missing: number; total: number };
-  };
+  coverage: CoverageStats;
 }
 
 interface PropertyPageDashboardProps {
   unifiedDashboardStats: DashboardStat[];
   dashboardStats: DashboardStatsInput;
-  onCardClick: (cardId: string) => void;
+  onCardClick: (stat: DashboardStat, index: number) => void;
   getStatusLabel: (status: string) => string;
   getTypeLabel: (type: string) => string;
   onMissingPhotosClick: () => void;

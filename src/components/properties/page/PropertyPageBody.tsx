@@ -17,6 +17,7 @@ import { PageLoadingState } from '@/core/states';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
+import type { FloorData, ViewerPassthroughProps } from '@/features/properties-sidebar/types';
 
 interface PropertyPageBodyProps {
   showTrash: boolean;
@@ -28,16 +29,16 @@ interface PropertyPageBodyProps {
   selectedPropertyIds: string[];
   isCreatingNewUnit: boolean;
   newUnitTemplate: Property | null;
-  viewerProps: Record<string, unknown>;
-  safeFloors: unknown[];
+  viewerProps: ViewerPassthroughProps;
+  safeFloors: FloorData[];
   urlTab: string | null;
-  onSelectProperty: (id: string, multiSelect?: boolean) => void;
+  onSelectProperty: (propertyId: string, isShiftClick: boolean) => void;
   setShowHistoryPanel: (show: boolean) => void;
   onAssignmentSuccess: () => void;
-  onPropertyCreated: (prop: Property) => void;
+  onPropertyCreated: (propertyId: string) => void;
   onCancelCreate: () => void;
   onNewProperty?: () => void;
-  onDeleteProperty?: (id: string) => void;
+  onDeleteProperty?: (propertyId: string) => Promise<void>;
 }
 
 export function PropertyPageBody(props: PropertyPageBodyProps) {
