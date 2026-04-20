@@ -114,6 +114,9 @@ export function EntityCodeField({
   // as long as the user has not manually overridden the field.
   const lastAutoApplied = useRef<string | null>(value || null);
 
+  // Track the disabled prop to detect transitions.
+  const prevDisabledRef = useRef(disabled);
+
   const { suggestedCode, isLoading: codeLoading } = useEntityCodeSuggestion({
     entityType,
     buildingId,
@@ -131,6 +134,18 @@ export function EntityCodeField({
       lastAutoApplied.current = null;
     }
   }, [value]);
+
+  // When the field transitions from disabled→enabled (entering edit mode) with an existing
+  // code, lock in the current value. This prevents stale lastAutoApplied state from causing
+  // the auto-suggest to silently override a persisted code on every edit session.
+  useEffect(() => {
+    const wasDisabled = prevDisabledRef.current;
+    prevDisabledRef.current = disabled;
+    if (wasDisabled && !disabled && value) {
+      setCodeOverridden(true);
+      lastAutoApplied.current = null;
+    }
+  }, [disabled, value]);
 
   // Propagate suggestion changes to parent orchestrators that need it for save payloads.
   useEffect(() => {
