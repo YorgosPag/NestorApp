@@ -58,8 +58,8 @@ export async function classifyInBackground(
       analyzeMimeType = 'text/plain';
     } else if (
       DXF_MIMES.has(contentType) ||
-      (contentType === 'application/octet-stream' &&
-        (originalFilename?.toLowerCase().endsWith('.dxf') || fileExt?.toLowerCase() === 'dxf'))
+      fileExt?.toLowerCase() === 'dxf' ||
+      originalFilename?.toLowerCase().endsWith('.dxf')
     ) {
       // DXF is ASCII text — truncate to first 50KB (header + layer info sufficient for classification)
       analyzeBuffer = fileBuffer.slice(0, DXF_MAX_BYTES);

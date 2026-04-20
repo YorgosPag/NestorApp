@@ -57,6 +57,13 @@ const TEXT_MIME_TYPES = new Set([
 const DXF_EXTENSIONS = new Set(['.dxf']);
 
 function isClassifiable(mimeType: string, filename?: string, fileExt?: string): boolean {
+  // ext-based override: known classifiable formats regardless of stored contentType
+  if (fileExt && DXF_EXTENSIONS.has(`.${fileExt.toLowerCase()}`)) return true;
+  if (filename) {
+    const lastDot = filename.lastIndexOf('.');
+    if (lastDot !== -1 && DXF_EXTENSIONS.has(filename.slice(lastDot).toLowerCase())) return true;
+  }
+
   if (IMAGE_MIME_TYPES.has(mimeType) || TEXT_MIME_TYPES.has(mimeType)) return true;
   if (mimeType.startsWith('video/') || mimeType.startsWith('audio/')) return true;
   if (mimeType === 'application/octet-stream') {
