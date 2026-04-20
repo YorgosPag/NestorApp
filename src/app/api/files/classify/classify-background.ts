@@ -12,6 +12,9 @@ import { isDocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { extractTextFromDocx } from '@/lib/document-extractors/docx-extractor';
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 const logger = createModuleLogger('FileClassifyBackground');
 
@@ -36,13 +39,22 @@ export async function classifyInBackground(
     }
     const fileBuffer = Buffer.from(await fileResponse.arrayBuffer());
 
-    // 2. Call AI provider
+    // 2. Extract text for DOCX — OpenAI does not accept .docx as input_file
+    let analyzeBuffer = fileBuffer;
+    let analyzeMimeType = contentType;
+    if (contentType === DOCX_MIME) {
+      const extractedText = await extractTextFromDocx(fileBuffer);
+      analyzeBuffer = Buffer.from(extractedText || `Filename: ${originalFilename ?? 'document'}`);
+      analyzeMimeType = 'text/plain';
+    }
+
+    // 3. Call AI provider
     const provider = createAIAnalysisProvider();
     const result = await provider.analyze({
       kind: 'document_classify',
-      content: fileBuffer,
+      content: analyzeBuffer,
       filename: originalFilename ?? 'document',
-      mimeType: contentType,
+      mimeType: analyzeMimeType,
       sizeBytes: sizeBytes ?? fileBuffer.length,
     });
 

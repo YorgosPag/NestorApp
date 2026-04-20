@@ -64,6 +64,7 @@ const CLASSIFIABLE_TYPES = new Set([
   'application/pdf',
   'text/plain',
   'text/csv',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]);
 
 /**

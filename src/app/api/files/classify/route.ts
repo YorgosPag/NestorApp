@@ -44,6 +44,7 @@ const TEXT_MIME_TYPES = new Set([
   'application/pdf',
   'text/plain',
   'text/csv',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]);
 
 function isClassifiable(mimeType: string): boolean {
