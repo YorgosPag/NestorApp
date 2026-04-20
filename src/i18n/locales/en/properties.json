@@ -873,7 +873,9 @@
       "building": "Building",
       "floor": "Floor",
       "area": "Area",
-      "price": "Price"
+      "price": "Price",
+      "sale": "Sale",
+      "rent": "Rent"
     },
     "ariaLabel": ""
   },

@@ -46,7 +46,8 @@
       "aiGenerateTooltip": "Δημιούργησε περιγραφή βάσει όλων των στοιχείων της μονάδας"
     },
     "commercial": {
-      "askingPrice": "Ζητούμενη Τιμή (€)"
+      "askingPrice": "Ζητούμενη Τιμή Πώλησης (€)",
+      "rentPrice": "Μηνιαίο Ενοίκιο (€)"
     },
     "millesimalShares": "Χιλιοστά (‰)",
     "areas": {

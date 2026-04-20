@@ -78,6 +78,7 @@ export interface Property {
     commercial?: {
       askingPrice?: number | null;
       finalPrice?: number | null;
+      rentPrice?: number | null;
     };
 
     area?: number;

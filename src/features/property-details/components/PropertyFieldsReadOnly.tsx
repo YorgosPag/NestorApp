@@ -96,10 +96,17 @@ export function ReadOnlyCompactView({ property, t }: { property: Property; t: TF
         label={t('fields.identity.commercialStatus')}
         value={property.commercialStatus ? t(`commercialStatus.${property.commercialStatus}`, { defaultValue: property.commercialStatus }) : undefined}
       />
-      {property.commercial?.askingPrice ? (
+      {property.commercial?.askingPrice && property.commercialStatus !== 'for-rent' ? (
         <CompactField
           label={t('fields.commercial.askingPrice')}
           value={formatCurrencyWhole(property.commercial.askingPrice)}
+        />
+      ) : null}
+      {property.commercial?.rentPrice &&
+        (property.commercialStatus === 'for-rent' || property.commercialStatus === 'for-sale-and-rent') ? (
+        <CompactField
+          label={t('fields.commercial.rentPrice')}
+          value={`${formatCurrencyWhole(property.commercial.rentPrice)}/μήνα`}
         />
       ) : null}
       <CompactField

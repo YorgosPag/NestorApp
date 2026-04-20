@@ -51,6 +51,7 @@ export interface PropertyFieldsFormData {
   /** ADR-236 Phase 4: Multi-level floors (populated during creation, read from property during edit) */
   levels: PropertyLevel[];
   askingPrice: string;
+  rentPrice: string;
 }
 
 /** Props for the form renderer component */

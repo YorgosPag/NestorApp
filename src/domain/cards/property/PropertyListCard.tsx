@@ -183,23 +183,54 @@ export function PropertyListCard({
       });
     }
 
-    // Price - 🏢 ENTERPRISE: ADR-197 commercial.askingPrice → fallback to deprecated price
-    const displayPrice = property.commercial?.askingPrice ?? property.price;
-    if (displayPrice && displayPrice > 0) {
-      items.push({
-        icon: NAVIGATION_ENTITIES.price.icon,
-        iconColor: NAVIGATION_ENTITIES.price.color,
-        label: t('card.stats.price'),
-        value: formatCurrency(displayPrice, 'EUR', {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }),
-        valueColor: NAVIGATION_ENTITIES.price.color,
-      });
+    // Price — context-aware per commercialStatus (ADR-197 + rentPrice extension)
+    const cs = property.commercialStatus;
+    const salePrice = property.commercial?.askingPrice ?? property.price;
+    const rentPrice = property.commercial?.rentPrice;
+
+    if (cs === 'for-rent') {
+      if (rentPrice && rentPrice > 0) {
+        items.push({
+          icon: NAVIGATION_ENTITIES.price.icon,
+          iconColor: NAVIGATION_ENTITIES.price.color,
+          label: t('card.stats.rent'),
+          value: `${formatCurrency(rentPrice, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/μήνα`,
+          valueColor: NAVIGATION_ENTITIES.price.color,
+        });
+      }
+    } else if (cs === 'for-sale-and-rent') {
+      if (salePrice && salePrice > 0) {
+        items.push({
+          icon: NAVIGATION_ENTITIES.price.icon,
+          iconColor: NAVIGATION_ENTITIES.price.color,
+          label: t('card.stats.sale'),
+          value: formatCurrency(salePrice, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+          valueColor: NAVIGATION_ENTITIES.price.color,
+        });
+      }
+      if (rentPrice && rentPrice > 0) {
+        items.push({
+          icon: NAVIGATION_ENTITIES.price.icon,
+          iconColor: NAVIGATION_ENTITIES.price.color,
+          label: t('card.stats.rent'),
+          value: `${formatCurrency(rentPrice, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/μήνα`,
+          valueColor: NAVIGATION_ENTITIES.price.color,
+        });
+      }
+    } else {
+      if (salePrice && salePrice > 0) {
+        items.push({
+          icon: NAVIGATION_ENTITIES.price.icon,
+          iconColor: NAVIGATION_ENTITIES.price.color,
+          label: t('card.stats.price'),
+          value: formatCurrency(salePrice, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+          valueColor: NAVIGATION_ENTITIES.price.color,
+        });
+      }
     }
 
     return items;
-  }, [property.building, property.floor, property.area, property.price, property.commercial?.askingPrice, t]);
+  }, [property.building, property.floor, property.area, property.price, property.commercial?.askingPrice, property.commercial?.rentPrice, property.commercialStatus, t]);
 
   /** Build badges from operational status + commercial status */
   const badges = useMemo(() => {

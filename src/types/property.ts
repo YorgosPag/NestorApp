@@ -112,8 +112,11 @@ import type { CommercialStatus } from '@/constants/commercial-statuses';
  * @pattern Salesforce Property Cloud, HubSpot CRM — pricing + buyer tracking
  */
 export interface PropertyCommercialData {
-  /** Ζητούμενη τιμή καταλόγου */
+  /** Ζητούμενη τιμή καταλόγου (πώληση) */
   askingPrice: number | null;
+
+  /** Μηνιαίο ενοίκιο (for-rent / for-sale-and-rent) */
+  rentPrice: number | null;
 
   /** Τελική τιμή πώλησης μετά διαπραγμάτευση (γράφεται στο συμβόλαιο) */
   finalPrice: number | null;

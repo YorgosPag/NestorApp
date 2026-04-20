@@ -32,9 +32,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/SalesDashboardRequirementsAlert';
-import { PricePlausibilityWarning } from '@/components/properties/shared/PricePlausibilityWarning';
 import { FloorTypePlausibilityWarning } from '@/components/properties/shared/FloorTypePlausibilityWarning';
+import { PropertyCommercialPriceFields } from './PropertyCommercialPriceFields';
 import { LayoutPlausibilityWarning } from '@/components/properties/shared/LayoutPlausibilityWarning';
 import { AreaPlausibilityWarning } from '@/components/properties/shared/AreaPlausibilityWarning';
 import { resolveAreaValues } from './area-values-resolver';
@@ -271,59 +270,30 @@ export function PropertyFieldsEditForm({
                 </SelectContent>
               </Select>
             </fieldset>
-            <fieldset className="space-y-1">
-              <Label className={cn("text-xs", colors.text.muted)}>
-                {t('fields.commercial.askingPrice')}
-              </Label>
-              <Input
-                id="unit-asking-price"
-                type="text"
-                inputMode="decimal"
-                value={formData.askingPrice ? Number(formData.askingPrice).toLocaleString('el-GR') : ''}
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/\./g, '').replace(/,/g, '.');
-                  if (raw === '' || /^\d+\.?\d*$/.test(raw)) {
-                    setFormData(prev => ({ ...prev, askingPrice: raw }));
-                  }
-                }}
-                size="sm" className="text-xs text-right"
-                placeholder={t('placeholders.priceExample')}
-                disabled={!isEditing || isSoldOrRented || isHierarchyLocked}
-              />
-              <SalesDashboardRequirementsAlert
-                commercialStatus={formData.commercialStatus}
-                askingPrice={formData.askingPrice ?? null}
-                grossArea={
-                  isMultiLevel && aggregatedTotals
-                    ? aggregatedTotals.areas.gross
-                    : formData.areaGross
-                }
-                className="py-2 px-3 mt-1"
-              />
-              <PricePlausibilityWarning
-                commercialStatus={formData.commercialStatus}
-                propertyType={formData.type}
-                askingPrice={formData.askingPrice ?? null}
-                grossArea={
-                  isMultiLevel && aggregatedTotals
-                    ? aggregatedTotals.areas.gross
-                    : formData.areaGross
-                }
-                className="py-2 px-3 mt-1"
-              />
-              <FloorTypePlausibilityWarning
-                propertyType={formData.type}
-                floor={formData.floor}
-                className="py-2 px-3 mt-1"
-              />
-              <LayoutPlausibilityWarning
-                propertyType={formData.type}
-                bedrooms={formData.bedrooms}
-                bathrooms={formData.bathrooms}
-                wc={formData.wc}
-                className="py-2 px-3 mt-1"
-              />
-            </fieldset>
+            <PropertyCommercialPriceFields
+              commercialStatus={formData.commercialStatus}
+              askingPrice={formData.askingPrice}
+              rentPrice={formData.rentPrice}
+              grossArea={isMultiLevel && aggregatedTotals ? aggregatedTotals.areas.gross : formData.areaGross}
+              propertyType={formData.type}
+              setFormData={setFormData}
+              isEditing={isEditing}
+              isSoldOrRented={isSoldOrRented}
+              isHierarchyLocked={isHierarchyLocked}
+              t={t}
+            />
+            <FloorTypePlausibilityWarning
+              propertyType={formData.type}
+              floor={formData.floor}
+              className="py-2 px-3 mt-1"
+            />
+            <LayoutPlausibilityWarning
+              propertyType={formData.type}
+              bedrooms={formData.bedrooms}
+              bathrooms={formData.bathrooms}
+              wc={formData.wc}
+              className="py-2 px-3 mt-1"
+            />
             <fieldset className="space-y-1">
               <Label className={cn("text-xs", colors.text.muted)}>
                 {t('dialog.addUnit.fields.status')}

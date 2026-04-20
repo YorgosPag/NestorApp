@@ -73,6 +73,7 @@ export function buildFormDataFromProperty(property: Property): PropertyFieldsFor
     levelData: (property.levelData ?? {}) as Record<string, LevelData>,
     levels: property.levels ?? [],
     askingPrice: property.commercial?.askingPrice?.toString() ?? '',
+    rentPrice: property.commercial?.rentPrice?.toString() ?? '',
   };
 }
 

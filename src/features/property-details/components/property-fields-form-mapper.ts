@@ -99,13 +99,16 @@ export function buildPropertyUpdatesFromForm(params: {
     updates.securityFeatures = formData.securityFeatures as SecurityFeatureCodeType[];
   }
 
-  // Commercial data — preserve existing fields, update only askingPrice
+  // Commercial data — preserve existing fields, update askingPrice + rentPrice
   const parsedPrice = formData.askingPrice ? Number(formData.askingPrice) : null;
+  const parsedRentPrice = formData.rentPrice ? Number(formData.rentPrice) : null;
   const priceChanged = parsedPrice !== (property.commercial?.askingPrice ?? null);
-  if (priceChanged) {
+  const rentPriceChanged = parsedRentPrice !== (property.commercial?.rentPrice ?? null);
+  if (priceChanged || rentPriceChanged) {
     updates.commercial = {
       ...(property.commercial as Record<string, unknown>),
       askingPrice: parsedPrice && parsedPrice > 0 ? parsedPrice : null,
+      rentPrice: parsedRentPrice && parsedRentPrice > 0 ? parsedRentPrice : null,
     } as Property['commercial'];
   }
 

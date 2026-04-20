@@ -46,7 +46,8 @@
       "aiGenerateTooltip": "Generate a description based on all unit data"
     },
     "commercial": {
-      "askingPrice": "Asking Price (€)"
+      "askingPrice": "Sale Price (€)",
+      "rentPrice": "Monthly Rent (€)"
     },
     "millesimalShares": "Millesimal Shares (‰)",
     "areas": {
