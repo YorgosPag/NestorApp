@@ -25,7 +25,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Download,
   File,
@@ -80,51 +80,130 @@ function PdfPreview({ url, title }: { url: string; title: string }) {
   return <PdfCanvasViewer url={url} title={title} className="flex-1" />;
 }
 
-/** Image preview with zoom/rotate */
+const IMG_MIN_ZOOM = 0.1;
+const IMG_MAX_ZOOM = 10;
+const IMG_WHEEL_FACTOR = 1.15;
+
+/** Image/SVG preview with cursor-centered wheel zoom + drag-to-pan */
 function ImagePreview({ url, title }: { url: string; title: string }) {
   const colors = useSemanticColors();
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
+  const [displayZoom, setDisplayZoom] = useState(1);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const zoomRef = useRef(1);
+  const panRef = useRef({ x: 0, y: 0 });
+  const rotRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const panAtDragRef = useRef({ x: 0, y: 0 });
+
+  const applyTransform = useCallback(() => {
+    if (!imgRef.current) return;
+    const { x, y } = panRef.current;
+    imgRef.current.style.transform =
+      `translate(${x}px, ${y}px) scale(${zoomRef.current}) rotate(${rotRef.current}deg)`;
+  }, []);
+
+  // Wheel zoom — cursor-centered (same formula as DxfPreview)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? IMG_WHEEL_FACTOR : 1 / IMG_WHEEL_FACTOR;
+      const oldZoom = zoomRef.current;
+      const newZoom = Math.min(IMG_MAX_ZOOM, Math.max(IMG_MIN_ZOOM, oldZoom * factor));
+      const rect = container!.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const ratio = newZoom / oldZoom;
+      panRef.current = {
+        x: (mx - rect.width / 2) * (1 - ratio) + panRef.current.x * ratio,
+        y: (my - rect.height / 2) * (1 - ratio) + panRef.current.y * ratio,
+      };
+      zoomRef.current = newZoom;
+      applyTransform();
+      setDisplayZoom(newZoom);
+    }
+    container.addEventListener('wheel', onWheel, { passive: false });
+    return () => container.removeEventListener('wheel', onWheel);
+  }, [applyTransform]);
+
+  // Drag-to-pan
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    function onMouseDown(e: MouseEvent) {
+      isDraggingRef.current = true;
+      dragStartRef.current = { x: e.clientX, y: e.clientY };
+      panAtDragRef.current = { ...panRef.current };
+      container!.style.cursor = 'grabbing';
+    }
+    function onMouseMove(e: MouseEvent) {
+      if (!isDraggingRef.current) return;
+      panRef.current = {
+        x: panAtDragRef.current.x + (e.clientX - dragStartRef.current.x),
+        y: panAtDragRef.current.y + (e.clientY - dragStartRef.current.y),
+      };
+      applyTransform();
+    }
+    function onMouseUp() {
+      isDraggingRef.current = false;
+      container!.style.cursor = 'grab';
+    }
+    container.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    container.style.cursor = 'grab';
+    return () => {
+      container.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [applyTransform]);
+
+  function zoomBy(delta: number) {
+    const newZoom = Math.min(IMG_MAX_ZOOM, Math.max(IMG_MIN_ZOOM, zoomRef.current + delta));
+    const ratio = newZoom / zoomRef.current;
+    panRef.current = { x: panRef.current.x * ratio, y: panRef.current.y * ratio };
+    zoomRef.current = newZoom;
+    applyTransform();
+    setDisplayZoom(newZoom);
+  }
+
+  function rotate() {
+    rotRef.current = (rotRef.current + 90) % 360;
+    applyTransform();
+  }
 
   return (
     <figure className="flex-1 flex flex-col overflow-hidden">
       <nav className="flex items-center justify-center gap-1 py-2 border-b bg-muted/30">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}
-          disabled={zoom <= 0.25}
-          className="h-7 w-7 p-0"
-        >
+        <Button variant="ghost" size="sm" onClick={() => zoomBy(-0.25)}
+          disabled={displayZoom <= IMG_MIN_ZOOM} className="h-7 w-7 p-0">
           <ZoomOut className="h-3.5 w-3.5" />
         </Button>
         <span className={cn('text-xs w-12 text-center', colors.text.muted)}>
-          {Math.round(zoom * 100)}%
+          {Math.round(displayZoom * 100)}%
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setZoom((z) => Math.min(4, z + 0.25))}
-          disabled={zoom >= 4}
-          className="h-7 w-7 p-0"
-        >
+        <Button variant="ghost" size="sm" onClick={() => zoomBy(0.25)}
+          disabled={displayZoom >= IMG_MAX_ZOOM} className="h-7 w-7 p-0">
           <ZoomIn className="h-3.5 w-3.5" />
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setRotation((r) => (r + 90) % 360)}
-          className="h-7 w-7 p-0 ml-2"
-        >
+        <Button variant="ghost" size="sm" onClick={rotate} className="h-7 w-7 p-0 ml-2">
           <RotateCw className="h-3.5 w-3.5" />
         </Button>
       </nav>
-      <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-muted/20">
+      <div ref={containerRef}
+        className="flex-1 overflow-hidden flex items-center justify-center p-4 bg-muted/20">
         <img
+          ref={imgRef}
           src={url}
           alt={title}
-          className="max-w-full max-h-full object-contain transition-transform duration-200"
-          style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }}
+          className="max-w-full max-h-full object-contain"
+          style={{ transformOrigin: 'center', userSelect: 'none' }}
+          draggable={false}
           loading="lazy"
         />
       </div>
