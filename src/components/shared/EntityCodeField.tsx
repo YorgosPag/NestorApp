@@ -156,9 +156,13 @@ export function EntityCodeField({
   // Auto-populate when suggestion arrives:
   // - field is empty, OR
   // - field currently holds the previously auto-applied code (not manually typed)
+  // After applying, lock codeOverridden=true so subsequent suggestion changes
+  // (e.g. from other sessions incrementing the sequence) don't silently override
+  // the accepted code. The lock resets only when the value is explicitly cleared.
   useEffect(() => {
     if (suggestedCode && !codeOverridden && (!value || value === lastAutoApplied.current)) {
       lastAutoApplied.current = suggestedCode;
+      setCodeOverridden(true);
       onChange(suggestedCode);
       onAutoApply?.(suggestedCode);
     }
