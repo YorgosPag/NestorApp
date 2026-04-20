@@ -127,7 +127,8 @@
   },
   "overlayToolbar": {
     "objectSnap": "Enable/Disable Object Snap (F3)",
-    "basicFunctions": "Enable basic functions"
+    "basicFunctions": "Enable basic functions",
+    "drawingTools": "Drawing Tools"
   },
   "toolLabels": {
     "line": "Line",
@@ -277,5 +278,8 @@
       "showAdvanced": "Show advanced features",
       "hideAdvanced": "Hide advanced features"
     }
+  },
+  "debug": {
+    "noUnitsAvailable": "No units available"
   }
 }

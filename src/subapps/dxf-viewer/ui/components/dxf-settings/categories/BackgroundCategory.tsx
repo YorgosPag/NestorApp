@@ -33,7 +33,7 @@ export const BackgroundCategory: React.FC<BackgroundCategoryProps> = ({
 }) => {
   return (
     <div className={`background-category ${className}`}>
-      <h4>Φόντο (Background) Category (Placeholder)</h4>
+      <h4>Background Category (Placeholder)</h4>
       <p>🚧 Under Construction - Phase 3 Step 3.5</p>
     </div>
   );

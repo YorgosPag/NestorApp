@@ -164,7 +164,7 @@ export function ComponentShowcase() {
           🔧 Integration Demo
         </h2>
         <div className="p-4 border rounded-lg bg-muted/20">
-          <h3 className="font-medium mb-2">Χρήση στην εφαρμογή:</h3>
+          <h3 className="font-medium mb-2">Usage in app:</h3>
           <pre className={`text-sm ${colors.bg.primary} p-3 rounded border overflow-x-auto`}>
 {`import { TaskCard, UserCard } from '@/components/compositions';
 

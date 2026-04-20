@@ -188,7 +188,7 @@ export function FileManagerPageContent() {
 
   // Debug: Trigger test error (caught by ErrorBoundary)
   if (triggerError) {
-    throw new Error('[ΔΟΚΙΜΗ] Αυτό είναι δοκιμαστικό σφάλμα για testing του Error Reporting System.');
+    throw new Error('[TEST] This is a test error for the Error Reporting System.');
   }
 
   return (

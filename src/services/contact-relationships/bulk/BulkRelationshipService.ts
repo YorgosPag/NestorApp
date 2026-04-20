@@ -115,7 +115,7 @@ export class BulkRelationshipService {
           logger.warn('Found validation errors', { invalidCount: validationResult.summary.invalidCount });
 
           if (!continueOnError) {
-            throw new Error(`Validation failed για ${validationResult.summary.invalidCount} relationships`);
+            throw new Error(`Validation failed for ${validationResult.summary.invalidCount} relationships`);
           }
 
           // Process only valid relationships

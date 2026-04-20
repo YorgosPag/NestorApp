@@ -419,7 +419,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
         <CardContent className="pt-6">
           <div className="flex items-center gap-6">
             <div className="w-52">
-              <Label htmlFor="withholdingRate">Παρακράτηση φόρου</Label>
+              <Label htmlFor="withholdingRate">{t('accounting:withholdingRate')}</Label>
               <Select
                 value={String(form.withholdingRate)}
                 onValueChange={(v) =>

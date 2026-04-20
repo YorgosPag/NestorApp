@@ -176,7 +176,9 @@
     "pointRemoved": "Control point removed",
     "transformationCompleted": "Transformation completed",
     "projectSaved": "Project saved",
-    "dataExported": "Data exported"
+    "dataExported": "Data exported",
+    "polygonClosed": "Polygon Closed!",
+    "pointsConnected": "{count} points connected successfully"
   },
   "buttons": {
     "upload": "Upload",

@@ -188,9 +188,18 @@ function scanHardcodedStringPatterns() {
     const lines = source.split(/\r?\n/);
 
     lines.forEach((line, index) => {
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) {
+        return;
+      }
       patterns.forEach(({ kind, regex }) => {
         regex.lastIndex = 0;
-        if (!regex.test(line)) {
+        const match = regex.exec(line);
+        if (!match) {
+          return;
+        }
+        const capturedContent = match[2] ?? '';
+        if (capturedContent.trim() === '') {
           return;
         }
 

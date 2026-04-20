@@ -32,9 +32,10 @@ fi
     grep -rnP "toast\.[a-z]+\(\s*[\"'\`][^\"'\`]*\p{Greek}" src --include="*.ts" --include="*.tsx" 2>/dev/null
 } \
     | grep -vE "/(i18n/locales|__tests__|data|constants)/" \
-    | grep -vE "\.test\.|\.spec\.|\.stories\.|\.config\.|\.qa\.|\.d\.ts|\.mock\." \
+    | grep -vE "\.test\.|\.spec\.|\.stories\.|\.config\.|\.qa\.|\.d\.ts|\.mock\.|\.original\." \
     | grep -vE -- "-definitions\.|-schema\." \
     | grep -vE "^[^:]+:[0-9]+:\s*(//|\*|#)" \
+    | grep -vP ":[0-9]+:\s*\{/\*" \
     | awk -F: '{print $1":"$2}' \
     | sort -u \
     | awk -F: '{print $1}' \

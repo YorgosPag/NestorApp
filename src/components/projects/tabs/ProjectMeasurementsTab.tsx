@@ -218,7 +218,7 @@ export function ProjectMeasurementsTab({ data: project }: ProjectMeasurementsTab
       <section className={cn("flex items-center justify-center gap-2 py-12", colors.text.muted)}>
         <Spinner size="large" />
         {/* eslint-disable-next-line custom/no-hardcoded-strings */}
-        <span className={typography.body.base}>Φόρτωση επιμετρήσεων...</span>
+        <span className={typography.body.base}>{t('projects:measurements.loading')}</span>
       </section>
     );
   }

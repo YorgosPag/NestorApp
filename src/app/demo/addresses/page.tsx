@@ -134,7 +134,7 @@ export default function AddressesDemoPage() {
         <AddressListCard
           addresses={addresses}
           onAddAddress={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
-          onEditAddress={(addr) => alert(`Επεξεργασία: ${addr.street} ${addr.number}`)}
+          onEditAddress={(addr) => alert(`Edit: ${addr.street} ${addr.number}`)}
         />
       </section>
 
@@ -236,7 +236,7 @@ export default function AddressesDemoPage() {
 
             {validationErrors.length > 0 && (
               <div className="bg-red-50 border border-red-200 rounded p-3">
-                <p className="text-sm font-semibold text-red-800 mb-1">Σφάλματα:</p>
+                <p className="text-sm font-semibold text-red-800 mb-1">Errors:</p>
                 <ul className="text-sm text-red-700 list-disc list-inside">
                   {validationErrors.map((error, i) => (
                     <li key={i}>{error}</li>

@@ -878,7 +878,12 @@
       "billing": "Billing",
       "correspondence": "Correspondence",
       "headquarters": "Headquarters",
-      "branch": "Branch"
+      "branch": "Branch",
+      "Greece": "Greece",
+      "Cyprus": "Cyprus",
+      "Germany": "Germany",
+      "United Kingdom": "United Kingdom",
+      "United States": "United States"
     },
     "fields": {
       "firstName": "First Name",

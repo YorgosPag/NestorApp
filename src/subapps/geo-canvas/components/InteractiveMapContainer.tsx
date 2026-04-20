@@ -251,8 +251,8 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🎯</span>
         <div>
-          <div class="font-bold text-lg">Πολύγωνο Κλείστηκε!</div>
-          <div class="text-sm opacity-90">${currentPoints.length} σημεία συνδέθηκαν επιτυχώς</div>
+          <div class="font-bold text-lg">${t('geo-canvas:notifications.polygonClosed')}</div>
+          <div class="text-sm opacity-90">${t('geo-canvas:notifications.pointsConnected', { count: currentPoints.length })}</div>
         </div>
       </div>
     `;

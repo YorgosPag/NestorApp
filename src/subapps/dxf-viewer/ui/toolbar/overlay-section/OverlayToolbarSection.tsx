@@ -22,6 +22,7 @@ import {
   OverlayActions
 } from './index';
 import type { OverlayToolbarSectionProps } from './types';
+import { useTranslation } from '@/i18n';
 
 export const OverlayToolbarSection: React.FC<OverlayToolbarSectionProps> = ({
   state,
@@ -34,6 +35,7 @@ export const OverlayToolbarSection: React.FC<OverlayToolbarSectionProps> = ({
   const iconSizes = useIconSizes();
   const eventBus = useEventBus();
   const { getStatusBorder } = useBorderTokens();
+  const { t } = useTranslation(['dxf-viewer-shell']);
 
   // Local state for draft polygon info (updated via EventBus)
   const [draftPolygonInfo, setDraftPolygonInfo] = useState({
@@ -69,7 +71,7 @@ export const OverlayToolbarSection: React.FC<OverlayToolbarSectionProps> = ({
         >
           {isCollapsed ? <ChevronDown className={iconSizes.sm} /> : <ChevronUp className={iconSizes.sm} />}
           <Activity className={iconSizes.sm} />
-          <span className="font-medium">Εργαλεία Σχεδίασης</span>
+          <span className="font-medium">{t('dxf-viewer-shell:overlayToolbar.drawingTools')}</span>
         </Button>
       </div>
 

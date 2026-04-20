@@ -9,6 +9,7 @@ import { ColorPickerModal } from './layers/components/ColorPickerModal';
 import type { SceneModel } from '../../types/scene';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
+import { useTranslation } from '@/i18n';
 
 interface ColorMenuState {
   open: boolean;
@@ -32,6 +33,7 @@ export const ColorManager: React.FC<ColorManagerProps> = ({
   onColorMenuClose,
   onExpandForSelection
 }) => {
+  const { t } = useTranslation(['dxf-viewer-panels']);
   // ΒΟΗΘΗΤΙΚΟ: βρίσκει/δημιουργεί layer για το συγκεκριμένο χρώμα
   const ensureLayerForColor = React.useCallback((scene: SceneModel, hex: string): { scene: SceneModel, layerName: string } => {
     // 1) αν ήδη υπάρχει layer με αυτό το χρώμα, χρησιμοποίησέ το
@@ -86,7 +88,7 @@ export const ColorManager: React.FC<ColorManagerProps> = ({
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }} // μην «ξαναανοίξει» το browser menu
     >
       <ColorPickerModal
-        title="🎨 Επιλογή Χρώματος για Επιλεγμένες Οντότητες"
+        title={t('dxf-viewer-panels:colorPicker.title')}
         onColorSelect={(hex) => applyColorToEntities(hex, colorMenu.ids)}
         onClose={onColorMenuClose}
       />

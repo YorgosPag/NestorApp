@@ -60,7 +60,7 @@ interface DocumentsProjectTabProps {
  */
 export function DocumentsProjectTab({ project, data, onNavigateToTab }: DocumentsProjectTabProps) {
   const { user } = useAuth();
-  const { t } = useTranslation(['files', 'files-media']);
+  const { t } = useTranslation(['files', 'files-media', 'projects']);
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
 
@@ -75,7 +75,7 @@ export function DocumentsProjectTab({ project, data, onNavigateToTab }: Document
   if (!resolvedProject?.id || !companyId || !currentUserId) {
     return (
       <div className={cn(spacing.padding.lg, "text-center", colors.text.muted)}>
-        <p>Επιλέξτε ένα έργο για να δείτε τα έγγραφα.</p> {/* eslint-disable-line custom/no-hardcoded-strings */}
+        <p>{t('projects:documents.selectProject')}</p>
       </div>
     );
   }

@@ -33,7 +33,7 @@ export const DrawingCategory: React.FC<DrawingCategoryProps> = ({
 }) => {
   return (
     <div className={`drawing-category ${className}`}>
-      <h4>Χάραξη (Drawing) Category (Placeholder)</h4>
+      <h4>Drawing Category (Placeholder)</h4>
       <p>🚧 Under Construction - Phase 3 Step 3.6</p>
     </div>
   );

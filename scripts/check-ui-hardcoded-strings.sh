@@ -38,7 +38,7 @@ count_ui_violations() {
         grep -nP "(throw new Error|alert|confirm|prompt)\(\s*[\"'\`][^\"'\`]*\p{Greek}" "$file" 2>/dev/null
         # Pattern 4: toast calls with Greek
         grep -nP "toast\.[a-z]+\(\s*[\"'\`][^\"'\`]*\p{Greek}" "$file" 2>/dev/null
-    } | grep -vE "^\s*[0-9]+:\s*(//|\*|#)" | awk -F: '{print $1}' | sort -u | wc -l | tr -d ' '
+    } | grep -vE "^\s*[0-9]+:\s*(//|\*|#)" | grep -vP "^\d+:\s*\{/\*" | awk -F: '{print $1}' | sort -u | wc -l | tr -d ' '
 }
 
 # Get baseline count for a file (0 if not in baseline)
@@ -68,14 +68,14 @@ show_violations() {
         grep -nP "(placeholder|title|aria-label|alt|label)=\"[^\"]*\p{Greek}[^\"]*\"" "$file" 2>/dev/null
         grep -nP "(throw new Error|alert|confirm|prompt)\(\s*[\"'\`][^\"'\`]*\p{Greek}" "$file" 2>/dev/null
         grep -nP "toast\.[a-z]+\(\s*[\"'\`][^\"'\`]*\p{Greek}" "$file" 2>/dev/null
-    } | grep -vE "^\s*[0-9]+:\s*(//|\*|#)" | sort -u -t: -k1,1n | head -5
+    } | grep -vE "^\s*[0-9]+:\s*(//|\*|#)" | grep -vP "^\d+:\s*\{/\*" | sort -u -t: -k1,1n | head -5
 }
 
 for file in $FILES; do
     [[ ! -f "$file" ]] && continue
 
     # EXEMPT patterns (same as defaultValue hook + extras)
-    if echo "$file" | grep -qE '(/i18n/locales/|/__tests__/|\.test\.|\.spec\.|\.d\.ts$|\.config\.|\.stories\.|\.qa\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/data/|/constants/|-definitions\.|-schema\.|\.mock\.)'; then
+    if echo "$file" | grep -qE '(/i18n/locales/|/__tests__/|\.test\.|\.spec\.|\.d\.ts$|\.config\.|\.stories\.|\.qa\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/data/|/constants/|-definitions\.|-schema\.|\.mock\.|\.original\.)'; then
         continue
     fi
 

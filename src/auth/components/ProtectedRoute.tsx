@@ -15,6 +15,7 @@ import { useUserRole } from '../contexts/UserRoleContext';
 import { Spinner } from '@/components/ui/spinner';
 import type { ProtectedRouteProps, UserRole } from '../types/auth.types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
@@ -33,6 +34,7 @@ export function ProtectedRoute({
   const { user, isLoading, isAuthenticated, isAdmin: _isAdmin } = useUserRole();
   const router = useRouter();
   const colors = useSemanticColors();
+  const { t } = useTranslation(['auth']);
 
   // ==========================================================================
   // AUTHENTICATION CHECK
@@ -74,7 +76,7 @@ export function ProtectedRoute({
         <div className="flex flex-col items-center gap-4">
           <Spinner size="large" />
           {/* eslint-disable-next-line custom/no-hardcoded-strings */}
-          <p className={colors.text.muted}>Έλεγχος πρόσβασης...</p>
+          <p className={colors.text.muted}>{t('auth:loading.checkingAccess')}</p>
         </div>
       </div>
     );

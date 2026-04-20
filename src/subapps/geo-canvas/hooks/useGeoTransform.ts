@@ -238,7 +238,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
 
       const controlPoints = controlPointManager.getAllControlPoints();
       if (controlPoints.length < 3) {
-        throw new Error('Χρειάζονται τουλάχιστον 3 control points για calibration');
+        throw new Error('At least 3 control points are required for calibration');
       }
 
       const georeferenceInfo = await dxfGeoTransformService.calibrateTransformation(

@@ -384,5 +384,8 @@
   },
   "importCategory": {
     "placeholder": "Import Category (Placeholder)"
+  },
+  "colorPicker": {
+    "title": "Color Selection for Selected Entities"
   }
 }

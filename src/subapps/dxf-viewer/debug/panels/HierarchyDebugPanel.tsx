@@ -5,7 +5,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { Building, Construction, Factory, Home, Package, ParkingCircle, Target } from 'lucide-react';
 import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
-import { useTranslation } from '../../../../i18n';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Centralized BaseButton for error retry
 import { BaseButton } from '../../components/shared/BaseButton';
@@ -258,7 +258,7 @@ export function HierarchyDebugPanel() {
                 </span>
               </li>
             )) : (
-              <li className={`${colors.text.disabled} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>Δεν υπάρχουν διαθέσιμα units</li>
+              <li className={`${colors.text.disabled} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('dxf-viewer-shell:debug.noUnitsAvailable')}</li>
             )}
           </ul>
         </section>

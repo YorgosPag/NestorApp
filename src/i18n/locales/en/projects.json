@@ -561,5 +561,17 @@
     "noUnits": "No units",
     "noStorages": "No storages",
     "noParkingSpots": "No parking spots"
+  },
+  "measurements": {
+    "loading": "Loading measurements..."
+  },
+  "photos": {
+    "selectProject": "Select a project to view photos."
+  },
+  "videos": {
+    "selectProject": "Select a project to view videos."
+  },
+  "documents": {
+    "selectProject": "Select a project to view documents."
   }
 }

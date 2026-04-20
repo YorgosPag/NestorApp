@@ -49,7 +49,7 @@ export function PropertyMutationImpactDialog({
   const getKindLabel = (kind: string): string => t(`impactGuard.kinds.${kind}`, { defaultValue: kind });
   const getDependencyLabel = (id: string): string => t(`impactGuard.dependencies.${id}.label`, { defaultValue: id });
   const getDependencySeverity = (mode: 'warn' | 'block', count: number): string =>
-    t(`impactGuard.severity.${mode}`, { count, defaultValue: `${mode} (${count})` });
+    t(`impactGuard.severity.${mode}`, { count });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

@@ -416,7 +416,7 @@ export async function deleteDraftTable(projectId: string): Promise<void> {
 
   const data = snapshot.data();
   if (data.status === 'finalized' || data.status === 'registered') {
-    throw new Error('Δεν μπορεί να διαγραφεί οριστικοποιημένος πίνακας');
+    throw new Error('Cannot delete a finalized ownership table');
   }
 
   await deleteDoc(docRef);

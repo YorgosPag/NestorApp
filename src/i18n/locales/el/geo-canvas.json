@@ -176,7 +176,9 @@
     "pointRemoved": "Το σημείο ελέγχου αφαιρέθηκε",
     "transformationCompleted": "Ο μετασχηματισμός ολοκληρώθηκε",
     "projectSaved": "Το έργο αποθηκεύτηκε",
-    "dataExported": "Τα δεδομένα εξήχθησαν"
+    "dataExported": "Τα δεδομένα εξήχθησαν",
+    "polygonClosed": "Πολύγωνο Κλείστηκε!",
+    "pointsConnected": "{count} σημεία συνδέθηκαν επιτυχώς"
   },
   "buttons": {
     "upload": "Ανέβασμα",

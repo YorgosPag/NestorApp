@@ -891,5 +891,6 @@
     }
   },
   "installmentsPaid": "Installments paid",
-  "installmentNumber": "Installment number"
+  "installmentNumber": "Installment number",
+  "withholdingRate": "Withholding tax"
 }

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { BarChart, Settings } from 'lucide-react';
-import { useTranslation } from '../../../../i18n';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Use centralized TabsOnlyTriggers (same as Contacts, ΓΕΜΗ tabs)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 // 🏢 ENTERPRISE: Import from Single Source of Truth (ADR-010)

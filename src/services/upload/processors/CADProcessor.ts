@@ -292,7 +292,7 @@ export class CADProcessor implements FileProcessor {
       };
     } catch (error) {
       logger.error('Upload failed', { error });
-      throw new Error('Σφάλμα κατά την αποθήκευση του DXF');
+      throw new Error('Failed to save DXF file');
     }
   }
 }

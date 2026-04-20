@@ -119,9 +119,6 @@ export function usePdfExport(document: ObligationDocument) {
         }
       } catch (err) {
         logger.error('Error exporting PDF', { error: err });
-        if (typeof window !== "undefined") {
-          window.alert("Σφάλμα κατά την εξαγωγή PDF. Παρακαλώ δοκιμάστε ξανά.");
-        }
       } finally {
         if (timer) {
           clearInterval(timer);

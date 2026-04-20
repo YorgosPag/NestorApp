@@ -43,7 +43,7 @@ export class DxfGeoTransformService {
     method: 'affine' | 'polynomial' | 'tps' = 'affine'
   ): Promise<GeoreferenceInfo> {
     if (controlPoints.length < 3) {
-      throw new Error('Χρειάζονται τουλάχιστον 3 control points για georeferencing');
+      throw new Error('At least 3 control points are required for georeferencing');
     }
 
     try {

@@ -235,7 +235,7 @@ export function ProfessionalDrawingInterface({
         {parserResult && (
           <div className={`mb-4 p-3 ${colors.bg.success} ${quick.card} ${getStatusBorder('success')}`}>
             <p className={`text-sm ${colors.text.success}`}>
-              <span className="font-medium">{t('drawingInterfaces.professional.floorPlanLabel', { defaultValue: '' })}:</span> {selectedFile?.name || 'Uploaded'} ✅
+              <span className="font-medium">{t('drawingInterfaces.professional.floorPlanLabel', { defaultValue: '' })}:</span> {selectedFile?.name || ''} ✅
             </p>
             {selectedFile && (
               <p className={`text-xs ${colors.text.success}`}>{t('drawingInterfaces.professional.sizeLabel', { defaultValue: '' })}: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
