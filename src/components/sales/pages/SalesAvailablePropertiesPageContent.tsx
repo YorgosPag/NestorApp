@@ -27,7 +27,7 @@ import type { Property } from '@/types/property';
 import '@/lib/design-system';
 
 function SalesAvailableContent() {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation', 'properties-enums']);
 
   const {
     filteredUnits,
@@ -181,7 +181,7 @@ function SalesAvailableContent() {
                   statusLabel={unit.commercialStatus
                     ? t(`sales.commercialStatus.${unit.commercialStatus}`)
                     : t('sales.commercialStatus.new')}
-                  description={`${t(`sales.unitTypes.${unit.type}`)} · ${area || '—'} m²`}
+                  description={`${t(`properties-enums:types.${unit.type}`, { defaultValue: unit.type })} · ${area || '—'} m²`}
                   price={price}
                   pricePerSqm={price && area ? price / area : null}
                   onClick={handleSelectProperty}

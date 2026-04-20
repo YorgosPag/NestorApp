@@ -89,12 +89,14 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
     setSaving(true);
     setSaveError('');
     try {
+      const depositAmount = Number(deposit);
+      const propertyName = unit.name ?? unit.propertyName ?? '';
       const updates = {
         commercialStatus: 'reserved',
         commercial: {
           askingPrice: unit.commercial?.askingPrice ?? null,
           finalPrice: unit.commercial?.finalPrice ?? null,
-          reservationDeposit: deposit ? Number(deposit) : null,
+          reservationDeposit: depositAmount || null,
           ...buildOwnerFields(owners),
           reservationDate: nowISO(),
           saleDate: unit.commercial?.saleDate ?? null,
@@ -103,76 +105,72 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       };
-      const completed = await runExistingPropertyUpdate(unit, updates as Record<string, unknown>);
-      if (!completed) {
-        return;
-      }
-      success(t('viewer.messages.updateSuccess', { ns: 'properties' }));
-      onOpenChange(false);
-      onSuccess?.();
 
-      // Fire-and-forget: email + invoice
-      const depositAmount = Number(deposit);
-      const propertyName = unit.name ?? unit.propertyName ?? '';
-      const selectedSpaces = linkedSpaces.getSelectedSpaces();
-      const lineItems = selectedSpaces.length > 0
-        ? linkedSpaces.buildLineItems(depositAmount, propertyName)
-        : undefined;
+      await runExistingPropertyUpdate(unit, updates as Record<string, unknown>, async () => {
+        success(t('viewer.messages.updateSuccess', { ns: 'properties' }));
+        onOpenChange(false);
+        onSuccess?.();
 
-      if (buyerContactId) {
-        dispatchSalesAccountingEventWithPolicy(unit.id, {
-          eventType: 'reservation_notify',
-          propertyId: unit.id,
-          propertyName,
-          projectId: resolveProjectId(unit) ?? null,
-          buyerContactId,
-          buyerName: buyerName || null,
-          projectName: null,
-          permitTitle: null,
-          companyName: null,
-          buildingName: null,
-          unitFloor: unit.floor ?? null,
-          projectAddress: null,
-          paymentMethod: 'bank_transfer',
-          notes: null,
-          depositAmount: depositAmount || 0,
-        }).catch((err: unknown) => {
-          logger.warn('Reservation notify failed', { error: err });
-        });
-      }
+        const selectedSpaces = linkedSpaces.getSelectedSpaces();
+        const lineItems = selectedSpaces.length > 0
+          ? linkedSpaces.buildLineItems(depositAmount, propertyName)
+          : undefined;
 
-      if (depositAmount > 0) {
-        dispatchSalesAccountingEventWithPolicy(unit.id, {
-          eventType: 'deposit_invoice',
-          propertyId: unit.id,
-          propertyName,
-          projectId: resolveProjectId(unit) ?? null,
-          buyerContactId: buyerContactId || null,
-          buyerName: buyerName || null,
-          projectName: null,
-          permitTitle: null,
-          companyName: null,
-          buildingName: null,
-          unitFloor: unit.floor ?? null,
-          projectAddress: null,
-          paymentMethod: 'bank_transfer',
-          notes: null,
-          depositAmount,
-          lineItems,
-        }).catch((err: unknown) => {
-          logger.warn('Deposit invoice failed', { error: err });
-        });
-      }
+        if (buyerContactId) {
+          dispatchSalesAccountingEventWithPolicy(unit.id, {
+            eventType: 'reservation_notify',
+            propertyId: unit.id,
+            propertyName,
+            projectId: resolveProjectId(unit) ?? null,
+            buyerContactId,
+            buyerName: buyerName || null,
+            projectName: null,
+            permitTitle: null,
+            companyName: null,
+            buildingName: null,
+            unitFloor: unit.floor ?? null,
+            projectAddress: null,
+            paymentMethod: 'bank_transfer',
+            notes: null,
+            depositAmount: depositAmount || 0,
+          }).catch((err: unknown) => {
+            logger.warn('Reservation notify failed', { error: err });
+          });
+        }
 
-      if (selectedSpaces.length > 0) {
-        syncSalesAppurtenancesWithPolicy(unit.id, {
-          action: 'reserve',
-          spaces: linkedSpaces.buildSyncPayload('reserve'),
-          ...buildOwnerFields(owners),
-        }).catch((err: unknown) => {
-          logger.warn('Appurtenance sync failed', { error: err });
-        });
-      }
+        if (depositAmount > 0) {
+          dispatchSalesAccountingEventWithPolicy(unit.id, {
+            eventType: 'deposit_invoice',
+            propertyId: unit.id,
+            propertyName,
+            projectId: resolveProjectId(unit) ?? null,
+            buyerContactId: buyerContactId || null,
+            buyerName: buyerName || null,
+            projectName: null,
+            permitTitle: null,
+            companyName: null,
+            buildingName: null,
+            unitFloor: unit.floor ?? null,
+            projectAddress: null,
+            paymentMethod: 'bank_transfer',
+            notes: null,
+            depositAmount,
+            lineItems,
+          }).catch((err: unknown) => {
+            logger.warn('Deposit invoice failed', { error: err });
+          });
+        }
+
+        if (selectedSpaces.length > 0) {
+          syncSalesAppurtenancesWithPolicy(unit.id, {
+            action: 'reserve',
+            spaces: linkedSpaces.buildSyncPayload('reserve'),
+            ...buildOwnerFields(owners),
+          }).catch((err: unknown) => {
+            logger.warn('Appurtenance sync failed', { error: err });
+          });
+        }
+      });
     } catch (err: unknown) {
       const errorObj = err as { message?: string; error?: string };
       const rawMsg = errorObj?.error ?? errorObj?.message ?? '';

@@ -74,7 +74,7 @@ export function SalesPropertyListCard({
   compact = true,
   className,
 }: SalesPropertyListCardProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation', 'properties-enums']);
 
   const commercialStatus = unit.commercialStatus ?? 'unavailable';
   const hasCommercialStatus = !!unit.commercialStatus;
@@ -95,7 +95,7 @@ export function SalesPropertyListCard({
       icon: NAVIGATION_ENTITIES.property.icon,
       iconColor: 'text-teal-600',
       label: t('sales.fields.type'),
-      value: t(`units:types.${unit.type}`, { defaultValue: unit.type }),
+      value: t(`properties-enums:types.${unit.type}`, { defaultValue: unit.type }),
     },
     {
       icon: NAVIGATION_ENTITIES.area?.icon ?? Calculator,

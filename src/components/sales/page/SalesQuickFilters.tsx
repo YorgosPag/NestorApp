@@ -32,6 +32,12 @@ interface SalesQuickFiltersProps {
   selectedPropertyType: string;
   onPropertyTypeChange: (type: string) => void;
   className?: string;
+  /**
+   * When `true`, the commercial-status row is not rendered.
+   * Useful for scoped pages (e.g. /sales/sold) where all items share the same
+   * status and a status filter is degenerate.
+   */
+  hideCommercialStatus?: boolean;
 }
 
 // =============================================================================
@@ -64,6 +70,7 @@ export function SalesQuickFilters({
   selectedPropertyType,
   onPropertyTypeChange,
   className,
+  hideCommercialStatus = false,
 }: SalesQuickFiltersProps) {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
@@ -79,13 +86,15 @@ export function SalesQuickFilters({
   return (
     <div className={`flex flex-col gap-1 ${className ?? ''}`}>
       {/* Row 1: Commercial Status */}
-      <TypeQuickFilters
-        options={COMMERCIAL_STATUS_OPTIONS}
-        selectedTypes={selectedCommercialStatus === 'all' ? [] : [selectedCommercialStatus]}
-        onTypeChange={handleStatusChange}
-        compact
-        ariaLabel={t('sales.quickFilters.statusAriaLabel')}
-      />
+      {!hideCommercialStatus && (
+        <TypeQuickFilters
+          options={COMMERCIAL_STATUS_OPTIONS}
+          selectedTypes={selectedCommercialStatus === 'all' ? [] : [selectedCommercialStatus]}
+          onTypeChange={handleStatusChange}
+          compact
+          ariaLabel={t('sales.quickFilters.statusAriaLabel')}
+        />
+      )}
 
       {/* Row 2: Unit Type */}
       <TypeQuickFilters

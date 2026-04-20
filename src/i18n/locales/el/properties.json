@@ -592,6 +592,14 @@
       "dependencies": "Εξαρτήσεις"
     },
     "emptyValue": "κενό",
+    "commercial": {
+      "askingPrice": "Τιμή ζήτησης",
+      "finalPrice": "Τελική τιμή",
+      "reservationDeposit": "Προκαταβολή κράτησης",
+      "owners": "Αγοραστές",
+      "reservationDate": "Ημ/νία κράτησης",
+      "saleDate": "Ημ/νία πώλησης"
+    },
     "fields": {
       "code": "Κωδικός",
       "name": "Όνομα",

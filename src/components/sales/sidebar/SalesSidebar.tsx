@@ -64,6 +64,21 @@ interface SalesSidebarProps {
   onPropertyTypeChange: (type: string) => void;
   /** Callback after commercial data mutation (price change, reserve, sell) */
   onDataMutated?: () => void;
+  /**
+   * Optional label overrides — lets scoped pages (e.g. /sales/sold) reuse the
+   * sidebar with their own copy without forking the component.
+   */
+  labels?: {
+    listTitle?: string;
+    listLabel?: string;
+    noResults?: string;
+    unitDetails?: string;
+  };
+  /**
+   * Hide the commercial-status row in quick filters. Useful on pages where all
+   * items share the same status (e.g. /sales/sold — all 'sold').
+   */
+  hideCommercialStatusFilter?: boolean;
 }
 
 // =============================================================================
@@ -134,6 +149,8 @@ export function SalesSidebar({
   selectedPropertyType,
   onPropertyTypeChange,
   onDataMutated,
+  labels,
+  hideCommercialStatusFilter = false,
 }: SalesSidebarProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
@@ -243,13 +260,21 @@ export function SalesSidebar({
   ) : null;
 
   // =========================================================================
+  // Resolved labels (scoped overrides fall back to 'sales.available.*' keys)
+  // =========================================================================
+  const listLabel = labels?.listLabel ?? t('sales.available.listLabel');
+  const listTitle = labels?.listTitle ?? t('sales.available.listTitle');
+  const noResultsLabel = labels?.noResults ?? t('sales.available.noResults');
+  const unitDetailsLabel = labels?.unitDetails ?? t('sales.available.unitDetails');
+
+  // =========================================================================
   // List Column
   // =========================================================================
   const listColumn = (
-    <EntityListColumn aria-label={t('sales.available.listLabel')}>
+    <EntityListColumn aria-label={listLabel}>
       <GenericListHeader
         icon={ShoppingBag}
-        entityName={t('sales.available.listTitle')}
+        entityName={listTitle}
         itemCount={units.length}
       />
 
@@ -259,6 +284,7 @@ export function SalesSidebar({
         onCommercialStatusChange={onCommercialStatusChange}
         selectedPropertyType={selectedPropertyType}
         onPropertyTypeChange={onPropertyTypeChange}
+        hideCommercialStatus={hideCommercialStatusFilter}
       />
 
       <ScrollArea className="flex-1">
@@ -274,7 +300,7 @@ export function SalesSidebar({
 
           {units.length === 0 && (
             <div className={cn("p-6 text-center text-sm", colors.text.muted)}>
-              {t('sales.available.noResults')}
+              {noResultsLabel}
             </div>
           )}
         </div>
@@ -295,7 +321,7 @@ export function SalesSidebar({
       <MobileDetailsSlideIn
         isOpen={isMobile && !!selectedProperty}
         onClose={() => onSelectProperty('__none__')}
-        title={selectedProperty?.name || t('sales.available.unitDetails')}
+        title={selectedProperty?.name || unitDetailsLabel}
       >
         {isMobile && selectedProperty && detailsContent}
       </MobileDetailsSlideIn>

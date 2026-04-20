@@ -592,6 +592,14 @@
       "dependencies": "Dependencies"
     },
     "emptyValue": "empty",
+    "commercial": {
+      "askingPrice": "Asking price",
+      "finalPrice": "Final price",
+      "reservationDeposit": "Reservation deposit",
+      "owners": "Buyers",
+      "reservationDate": "Reservation date",
+      "saleDate": "Sale date"
+    },
     "fields": {
       "code": "Code",
       "name": "Name",

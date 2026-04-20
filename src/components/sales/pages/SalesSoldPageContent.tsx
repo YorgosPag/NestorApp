@@ -1,317 +1,224 @@
-/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 /**
- * @module sales/sold
- * @enterprise Sold Properties Dashboard
+ * @fileoverview Sales Sold Properties — ADR-197 (sold scope)
  * @lazy ADR-294 Batch 3 — Extracted for dynamic import
+ * @pattern Mirrors /sales/available-properties with `viewScope: 'sold'`.
+ *          Same layout primitives (PageHeader, UnifiedDashboard,
+ *          AdvancedFiltersPanel, SalesSidebar) so the agent workflow
+ *          (payment plans, legal docs) stays consistent post-sale.
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
+import { formatCurrencyCompact, formatCurrencyWhole } from '@/lib/intl-utils';
+import { useSalesPropertiesViewerState } from '@/hooks/useSalesPropertiesViewerState';
+import { SalesAvailableHeader } from '@/components/sales/page/SalesAvailableHeader';
+import { SalesSidebar } from '@/components/sales/sidebar/SalesSidebar';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { AdvancedFiltersPanel, propertyListFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import {
   CheckCircle,
   DollarSign,
-  Calendar,
   TrendingUp,
-  Package,
-  Car,
-  BarChart3,
-  Users,
+  Maximize2,
 } from 'lucide-react';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
+import { ListContainer, PageContainer } from '@/core/containers';
+import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { SalesGridCard, SalesGridEmpty } from '@/components/sales/shared/SalesGridCard';
+import type { Property } from '@/types/property';
 import '@/lib/design-system';
 
-const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
-const propertyColor = NAVIGATION_ENTITIES.property.color;
+function SalesSoldContent() {
+  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation', 'properties-enums']);
 
-export function SalesSoldPageContent() {
-  const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
-  const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const {
+    filteredUnits,
+    loading,
+    viewMode,
+    setViewMode,
+    showDashboard,
+    setShowDashboard,
+    showFilters,
+    setShowFilters,
+    selectedProperty,
+    selectedPropertyId,
+    handleSelectProperty,
+    filters,
+    handleFiltersChange,
+    selectedCommercialStatus,
+    setSelectedCommercialStatus,
+    selectedPropertyType,
+    setSelectedPropertyType,
+    dashboardStats,
+    refetch,
+  } = useSalesPropertiesViewerState({ viewScope: 'sold' });
 
-  const soldStats: DashboardStat[] = [
+  const [searchTerm, setSearchTerm] = React.useState('');
+
+  React.useEffect(() => {
+    handleFiltersChange({ searchTerm });
+  }, [searchTerm, handleFiltersChange]);
+
+  const handleAdvancedFiltersChange = React.useCallback((unitFilters: UnitFilterState) => {
+    handleFiltersChange({
+      searchTerm: unitFilters.searchTerm || '',
+      building: unitFilters.building?.[0] || 'all',
+      floor: unitFilters.floor?.[0] || 'all',
+      propertyType: unitFilters.type?.[0] || 'all',
+      areaRange: {
+        min: unitFilters.areaRange?.min ?? null,
+        max: unitFilters.areaRange?.max ?? null,
+      },
+    });
+  }, [handleFiltersChange]);
+
+  if (loading) {
+    return (
+      <PageContainer ariaLabel={t('sales.sold.title')}>
+        <PageLoadingState icon={CheckCircle} message={t('sales.sold.loading')} layout="contained" />
+      </PageContainer>
+    );
+  }
+
+  const unifiedDashboardStats: DashboardStat[] = [
     {
       title: t('sales.sold.stats.totalSales'),
-      value: '568',
+      value: dashboardStats.availableCount,
       description: t('sales.sold.stats.completedSales'),
       icon: CheckCircle,
       color: 'green',
-      trend: { value: 18, label: t('sales.stats.increase') }
     },
     {
       title: t('sales.sold.stats.totalRevenue'),
-      value: '€18.4M',
+      value: dashboardStats.totalValue > 0 ? formatCurrencyCompact(dashboardStats.totalValue) : '—',
       description: t('sales.sold.stats.totalSalesValue'),
       icon: DollarSign,
       color: 'blue',
-      trend: { value: 22, label: t('sales.stats.increase') }
     },
     {
-      title: t('sales.sold.stats.avgSaleTime'),
-      value: '4.8 μήνες',
-      description: t('sales.sold.stats.marketAverage'),
-      icon: Calendar,
-      color: 'orange',
-      trend: { value: -8, label: t('sales.sold.stats.improvement') }
-    },
-    {
-      title: t('sales.sold.stats.salesThisYear', { year: 2024 }),
-      value: '89',
-      description: t('sales.sold.stats.yearToDate'),
+      title: t('sales.sold.stats.avgSalePrice'),
+      value: dashboardStats.averagePrice > 0 ? formatCurrencyCompact(dashboardStats.averagePrice) : '—',
+      description: t('sales.sold.stats.avgSalePriceDesc'),
       icon: TrendingUp,
       color: 'purple',
-      trend: { value: 15, label: t('sales.stats.increase') }
-    }
+    },
+    {
+      title: t('sales.sold.stats.avgPricePerSqm'),
+      value: dashboardStats.averagePricePerSqm > 0
+        ? formatCurrencyWhole(Math.round(dashboardStats.averagePricePerSqm))
+        : '—',
+      description: t('sales.sold.stats.avgPricePerSqmDesc'),
+      icon: Maximize2,
+      color: 'orange',
+    },
   ];
 
+  const sidebarLabels = {
+    listTitle: t('sales.sold.listTitle'),
+    listLabel: t('sales.sold.listLabel'),
+    noResults: t('sales.sold.noResults'),
+    unitDetails: t('sales.sold.unitDetails'),
+  };
+
   return (
-    <div className={`flex h-screen ${colors.bg.primary}`}>
-        <div className="flex-1 flex flex-col">
-          <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
-            <div className="flex h-14 items-center px-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle className={`${iconSizes.md} ${colors.text.muted}`} />
-                <h1 className="text-lg font-semibold">{t('sales.sold.title')}</h1>
-              </div>
-              <div className={cn("ml-auto text-sm", colors.text.muted)}>
-                {t('sales.sold.subtitle')}
-              </div>
-            </div>
-          </div>
+    <PageContainer ariaLabel={t('sales.sold.title')}>
+      <SalesAvailableHeader
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        showDashboard={showDashboard}
+        setShowDashboard={setShowDashboard}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        showFilters={showFilters}
+        setShowFilters={setShowFilters}
+        titleOverride={t('sales.sold.title')}
+        subtitleOverride={t('sales.sold.subtitle')}
+        searchPlaceholderOverride={t('sales.sold.searchPlaceholder')}
+      />
 
-          <div className="p-6 space-y-6">
-            <UnifiedDashboard
-              title={t('sales.sold.overview')}
-              stats={soldStats}
-              variant="modern"
-            />
+      {showDashboard && (
+        <UnifiedDashboard
+          stats={unifiedDashboardStats}
+          columns={6}
+        />
+      )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
-                    <PropertyIcon className={`${iconSizes.md} ${propertyColor}`} />
-                  </div>
-                  <h3 className="font-semibold">{t('sales.sold.cards.apartments.title')}</h3>
-                </div>
-                <div className="text-3xl font-bold mb-2">344</div>
-                <p className={cn("text-sm mb-3", colors.text.muted)}>
-                  {t('sales.sold.cards.apartments.description')}
-                </p>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.sold.cards.totalRevenue')}</span>
-                    <span className={`font-semibold ${colors.text.success}`}>€12.8M</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.sold.cards.avgPrice')}</span>
-                    <span className="font-medium">€372K</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.sold.cards.avgTime')}</span>
-                    <span className="font-medium">{t('units.monthsValue', { value: 4.2 })}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                    <Package className={`${iconSizes.md} ${colors.text.warning}`} />
-                  </div>
-                  <h3 className="font-semibold">{t('sales.sold.cards.storage.title')}</h3>
-                </div>
-                <div className="text-3xl font-bold mb-2">235</div>
-                <p className={cn("text-sm mb-3", colors.text.muted)}>
-                  {t('sales.sold.cards.storage.description')}
-                </p>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.sold.cards.totalRevenue')}</span>
-                    <span className={`font-semibold ${colors.text.success}`}>€3.2M</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.sold.cards.avgPrice')}</span>
-                    <span className="font-medium">€36K</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.sold.cards.avgTime')}</span>
-                    <span className="font-medium">{t('units.monthsValue', { value: 6.1 })}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
-                    <Car className={`${iconSizes.md} ${colors.text.info}`} />
-                  </div>
-                  <h3 className="font-semibold">{t('sales.sold.cards.parking.title')}</h3>
-                </div>
-                <div className="text-3xl font-bold mb-2">189</div>
-                <p className={cn("text-sm mb-3", colors.text.muted)}>
-                  {t('sales.sold.cards.parking.description')}
-                </p>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.sold.cards.totalRevenue')}</span>
-                    <span className={`font-semibold ${colors.text.success}`}>€2.4M</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.sold.cards.avgPrice')}</span>
-                    <span className="font-medium">€21K</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>{t('sales.sold.cards.avgTime')}</span>
-                    <span className="font-medium">{t('units.monthsValue', { value: 3.8 })}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <BarChart3 className={iconSizes.md} />
-                  {t('sales.sold.performance.title')}
-                </h2>
-
-                <div className="space-y-3">
-                  <div className={`p-4 bg-card ${quick.card}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium">{t('sales.sold.performance.yearToDate', { year: 2024 })}</span>
-                      <span className={`${colors.bg.success}/20 ${colors.text.success} px-2 py-1 rounded text-sm font-medium`}>
-                        {t('sales.sold.performance.sales', { count: 89 })}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.text.muted}>{t('sales.sold.performance.revenue')}</span>
-                        <span className={`${colors.text.success} font-medium`}>€3.2M</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.text.muted}>{t('sales.sold.performance.avgPrice')}</span>
-                        <span>€395K</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={`p-4 bg-card ${quick.card}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium">2023</span>
-                      <span className={`${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
-                        {t('sales.sold.performance.sales', { count: 156 })}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.text.muted}>{t('sales.sold.performance.revenue')}</span>
-                        <span className={`${colors.text.success} font-medium`}>€5.8M</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.text.muted}>{t('sales.sold.performance.avgPrice')}</span>
-                        <span>€372K</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={`p-4 bg-card ${quick.card}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium">2022</span>
-                      <span className={`${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
-                        {t('sales.sold.performance.sales', { count: 198 })}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.text.muted}>{t('sales.sold.performance.revenue')}</span>
-                        <span className={`${colors.text.success} font-medium`}>€6.8M</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className={colors.text.muted}>{t('sales.sold.performance.avgPrice')}</span>
-                        <span>€344K</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Users className={iconSizes.md} />
-                  {t('sales.sold.marketInsights.title')}
-                </h2>
-
-                <div className={`p-6 bg-card ${quick.card}`}>
-                  <h3 className="font-semibold mb-4">{t('sales.sold.marketInsights.topBuyerCategories')}</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.privateInvestors')}</span>
-                      <div className="text-right">
-                        <div className="font-medium">{t('sales.sold.performance.sales', { count: 234 })}</div>
-                        <div className={cn("text-xs", colors.text.muted)}>{t('sales.sold.marketInsights.ofTotal', { percent: 41 })}</div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.developmentCompanies')}</span>
-                      <div className="text-right">
-                        <div className="font-medium">{t('sales.sold.performance.sales', { count: 189 })}</div>
-                        <div className={cn("text-xs", colors.text.muted)}>{t('sales.sold.marketInsights.ofTotal', { percent: 33 })}</div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.familiesOwnerOccupied')}</span>
-                      <div className="text-right">
-                        <div className="font-medium">{t('sales.sold.performance.sales', { count: 145 })}</div>
-                        <div className={cn("text-xs", colors.text.muted)}>{t('sales.sold.marketInsights.ofTotal', { percent: 26 })}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={`p-6 bg-card ${quick.card}`}>
-                  <h3 className="font-semibold mb-4">{t('sales.sold.marketInsights.performanceMetrics')}</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.successRate')}</span>
-                      <span className={`font-medium ${colors.text.success}`}>78%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.avgDiscount')}</span>
-                      <span className={`font-medium ${colors.text.warning}`}>-3.2%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.fastestSale')}</span>
-                      <span className={`font-medium ${colors.text.info}`}>{t('sales.sold.marketInsights.days', { count: 8 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className={cn("text-sm", colors.text.muted)}>{t('sales.sold.marketInsights.slowestSale')}</span>
-                      <span className={`font-medium ${colors.text.error}`}>{t('sales.sold.marketInsights.months', { count: 18 })}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className={`p-4 bg-muted/50 ${quick.card}`}>
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className={iconSizes.sm} />
-                <span className="font-medium">{t('sales.sold.info.title')}</span>
-              </div>
-              <p className={cn("text-sm mt-1", colors.text.muted)}>
-                {t('sales.sold.info.description')}
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="hidden md:block -mt-1">
+        <AdvancedFiltersPanel
+          config={propertyListFiltersConfig}
+          filters={filters as unknown as UnitFilterState}
+          onFiltersChange={handleAdvancedFiltersChange}
+        />
       </div>
+
+      {showFilters && (
+        <div className="md:hidden"> {/* eslint-disable-line custom/no-hardcoded-strings */}
+          <AdvancedFiltersPanel
+            config={propertyListFiltersConfig}
+            filters={filters as unknown as UnitFilterState}
+            onFiltersChange={handleAdvancedFiltersChange}
+            defaultOpen
+          />
+        </div>
+      )}
+
+      <ListContainer>
+        {viewMode === 'list' ? (
+          <SalesSidebar
+            units={filteredUnits as Property[]}
+            selectedProperty={selectedProperty as Property | null}
+            onSelectProperty={handleSelectProperty}
+            selectedPropertyId={selectedPropertyId}
+            selectedCommercialStatus={selectedCommercialStatus}
+            onCommercialStatusChange={setSelectedCommercialStatus}
+            selectedPropertyType={selectedPropertyType}
+            onPropertyTypeChange={setSelectedPropertyType}
+            onDataMutated={refetch}
+            labels={sidebarLabels}
+            hideCommercialStatusFilter
+          />
+        ) : (
+          <section
+            className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
+            aria-label={t('sales.sold.gridLabel')}
+          >
+            {(filteredUnits as Property[]).map(unit => {
+              const area = unit.areas?.gross ?? unit.area ?? 0;
+              const price = unit.commercial?.finalPrice ?? unit.commercial?.askingPrice ?? null;
+              return (
+                <SalesGridCard
+                  key={unit.id}
+                  id={unit.id}
+                  icon={CheckCircle}
+                  title={unit.name || unit.code || unit.id}
+                  statusKey={unit.commercialStatus ?? 'sold'}
+                  statusLabel={unit.commercialStatus
+                    ? t(`sales.commercialStatus.${unit.commercialStatus}`)
+                    : t('sales.commercialStatus.sold')}
+                  description={`${t(`properties-enums:types.${unit.type}`, { defaultValue: unit.type })} · ${area || '—'} m²`}
+                  price={price}
+                  pricePerSqm={price && area ? price / area : null}
+                  onClick={handleSelectProperty}
+                />
+              );
+            })}
+
+            {filteredUnits.length === 0 && (
+              <SalesGridEmpty message={t('sales.sold.noResults')} />
+            )}
+          </section>
+        )}
+      </ListContainer>
+    </PageContainer>
+  );
+}
+
+export function SalesSoldPageContent() {
+  return (
+    <Suspense fallback={<StaticPageLoading />}>
+      <SalesSoldContent />
+    </Suspense>
   );
 }
 

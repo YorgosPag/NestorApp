@@ -119,6 +119,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     setSaving(true);
     setSaveError('');
     try {
+      const propertyName = unit.name ?? unit.propertyName ?? '';
       const updates = {
         commercialStatus: 'sold',
         commercial: {
@@ -133,68 +134,66 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       };
-      const completed = await runExistingPropertyUpdate(unit, updates as Record<string, unknown>);
-      if (!completed) {
-        return;
-      }
-      success(t('viewer.messages.updateSuccess', { ns: 'properties' }));
-      onOpenChange(false);
-      onSuccess?.();
 
-      const propertyName = unit.name ?? unit.propertyName ?? '';
-      const selectedSpaces = linkedSpaces.getSelectedSpaces();
-      const lineItems = selectedSpaces.length > 0
-        ? linkedSpaces.buildLineItems(price, propertyName)
-        : undefined;
+      await runExistingPropertyUpdate(unit, updates as Record<string, unknown>, async () => {
+        success(t('viewer.messages.updateSuccess', { ns: 'properties' }));
+        onOpenChange(false);
+        onSuccess?.();
 
-      dispatchSalesAccountingEventWithPolicy(unit.id, {
-        eventType: 'final_sale_invoice',
-        propertyId: unit.id, propertyName,
-        projectId: resolveProjectId(unit) ?? null,
-        buyerContactId: buyerContactId || null,
-        buyerName: buyerName || null,
-        projectName: null, permitTitle: null, companyName: null,
-        buildingName: null, unitFloor: unit.floor ?? null,
-        projectAddress: null, paymentMethod: 'bank_transfer', notes: null,
-        finalPrice: price,
-        depositAlreadyInvoiced: unit.commercial?.reservationDeposit ?? 0,
-        lineItems,
-      }).catch((err: unknown) => {
-        logger.warn('Final sale invoice failed', { error: err });
-      });
+        const selectedSpaces = linkedSpaces.getSelectedSpaces();
+        const lineItems = selectedSpaces.length > 0
+          ? linkedSpaces.buildLineItems(price, propertyName)
+          : undefined;
 
-      if (selectedBrokerId !== 'none') {
-        const agreement = brokerAgreements.find((a) => a.id === selectedBrokerId);
-        if (agreement) {
-          BrokerageService.recordCommission(
-            {
-              brokerageAgreementId: agreement.id,
-              agentContactId: agreement.agentContactId,
-              agentName: agreement.agentName,
-              propertyId: unit.id,
-              projectId: resolveProjectId(unit) ?? '',
-              primaryBuyerContactId: buyerContactId || '',
-              salePrice: price,
-              commissionType: agreement.commissionType,
-              commissionPercentage: agreement.commissionPercentage,
-              commissionFixedAmount: agreement.commissionFixedAmount,
-            },
-            'system'
-          ).catch((err: unknown) => {
-            logger.warn('Commission recording failed', { error: err });
+        dispatchSalesAccountingEventWithPolicy(unit.id, {
+          eventType: 'final_sale_invoice',
+          propertyId: unit.id, propertyName,
+          projectId: resolveProjectId(unit) ?? null,
+          buyerContactId: buyerContactId || null,
+          buyerName: buyerName || null,
+          projectName: null, permitTitle: null, companyName: null,
+          buildingName: null, unitFloor: unit.floor ?? null,
+          projectAddress: null, paymentMethod: 'bank_transfer', notes: null,
+          finalPrice: price,
+          depositAlreadyInvoiced: unit.commercial?.reservationDeposit ?? 0,
+          lineItems,
+        }).catch((err: unknown) => {
+          logger.warn('Final sale invoice failed', { error: err });
+        });
+
+        if (selectedBrokerId !== 'none') {
+          const agreement = brokerAgreements.find((a) => a.id === selectedBrokerId);
+          if (agreement) {
+            BrokerageService.recordCommission(
+              {
+                brokerageAgreementId: agreement.id,
+                agentContactId: agreement.agentContactId,
+                agentName: agreement.agentName,
+                propertyId: unit.id,
+                projectId: resolveProjectId(unit) ?? '',
+                primaryBuyerContactId: buyerContactId || '',
+                salePrice: price,
+                commissionType: agreement.commissionType,
+                commissionPercentage: agreement.commissionPercentage,
+                commissionFixedAmount: agreement.commissionFixedAmount,
+              },
+              'system'
+            ).catch((err: unknown) => {
+              logger.warn('Commission recording failed', { error: err });
+            });
+          }
+        }
+
+        if (selectedSpaces.length > 0) {
+          syncSalesAppurtenancesWithPolicy(unit.id, {
+            action: 'sell',
+            spaces: linkedSpaces.buildSyncPayload('sell'),
+            ...buildOwnerFields(owners),
+          }).catch((err: unknown) => {
+            logger.warn('Appurtenance sync failed', { error: err });
           });
         }
-      }
-
-      if (selectedSpaces.length > 0) {
-        syncSalesAppurtenancesWithPolicy(unit.id, {
-          action: 'sell',
-          spaces: linkedSpaces.buildSyncPayload('sell'),
-          ...buildOwnerFields(owners),
-        }).catch((err: unknown) => {
-          logger.warn('Appurtenance sync failed', { error: err });
-        });
-      }
+      });
     } catch (err: unknown) {
       const errorObj = err as { message?: string; error?: string };
       const rawMsg = errorObj?.error ?? errorObj?.message ?? '';

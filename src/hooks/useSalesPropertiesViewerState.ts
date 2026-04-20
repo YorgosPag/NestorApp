@@ -35,6 +35,17 @@ export interface SalesDashboardStats {
 
 export type SalesViewMode = 'list' | 'grid';
 
+/**
+ * View scope for this hook — distinguishes the sales-pipeline page using the hook:
+ * - `'available'` → properties actively on market (for-sale/for-sale-and-rent + reserved in-progress)
+ * - `'sold'`      → properties with finalized sale (commercialStatus === 'sold' with finalPrice)
+ */
+export type SalesViewScope = 'available' | 'sold';
+
+export interface UseSalesPropertiesViewerStateOptions {
+  viewScope?: SalesViewScope;
+}
+
 const DEFAULT_FILTERS: SalesFilterState = {
   searchTerm: '',
   commercialStatus: 'all',
@@ -49,7 +60,11 @@ const DEFAULT_FILTERS: SalesFilterState = {
 // 🏢 MAIN HOOK
 // =============================================================================
 
-export function useSalesPropertiesViewerState() {
+export function useSalesPropertiesViewerState(
+  options: UseSalesPropertiesViewerStateOptions = {},
+) {
+  const { viewScope = 'available' } = options;
+
   // Data from SharedPropertiesProvider — SAME data source as /properties page
   const { properties: allUnits, isLoading: loading, forceDataRefresh: refetch } = useSharedProperties();
 
@@ -65,24 +80,50 @@ export function useSalesPropertiesViewerState() {
   const [selectedPropertyType, setSelectedPropertyType] = useState<string>('all');
 
   // =========================================================================
-  // DISPLAY-ELIGIBLE UNITS — Gate via SSoT `isDisplayableInSalesDashboard`.
-  // Listed commercial status + askingPrice > 0 + grossArea > 0. Coerent με το
-  // UX contract του SalesDashboardRequirementsAlert (ADR-287 Batch 18).
+  // DISPLAY-ELIGIBLE UNITS — Scope-aware filter.
   //
-  // Αποκλείονται: unavailable, reserved, sold, rented + incomplete listings.
-  // Sold/rented units παραμένουν διαθέσιμα μέσω reports/analytics pages —
-  // όχι σε αυτήν την "Διαθέσιμα Ακίνητα" vetrina (το όνομα της σελίδας
-  // υπαγορεύει scope).
+  // `'available'` scope (Διαθέσιμα Ακίνητα vetrina):
+  //   - Listed status via SSoT `isDisplayableInSalesDashboard`
+  //     (for-sale / for-rent / for-sale-and-rent + askingPrice>0 + grossArea>0)
+  //   - + `reserved` in-progress sales (so the agent can complete or revert)
+  //   - Sold/rented units are NOT shown here — they live in their own pages
+  //     (/sales/sold, /sales/rented).
+  //
+  // `'sold'` scope (Πωληθέντα Ακίνητα):
+  //   - Only `commercialStatus === 'sold'` with `finalPrice > 0` and `grossArea > 0`.
+  //   - Sold units remain actionable (piano αποπληρωμής, legal docs) until the
+  //     full post-sale workflow is complete.
   // =========================================================================
   const salesUnits = useMemo(() => {
-    return (allUnits as Property[]).filter(unit =>
-      isDisplayableInSalesDashboard({
+    return (allUnits as Property[]).filter(unit => {
+      const askingPrice = unit.commercial?.askingPrice;
+      const finalPrice = unit.commercial?.finalPrice;
+      const grossArea = unit.areas?.gross ?? unit.area;
+
+      if (viewScope === 'sold') {
+        if (unit.commercialStatus !== 'sold') return false;
+        return typeof finalPrice === 'number' && finalPrice > 0 &&
+               typeof grossArea === 'number' && grossArea > 0;
+      }
+
+      // viewScope === 'available'
+      if (isDisplayableInSalesDashboard({
         commercialStatus: unit.commercialStatus,
-        askingPrice: unit.commercial?.askingPrice,
-        grossArea: unit.areas?.gross ?? unit.area,
-      }),
-    );
-  }, [allUnits]);
+        askingPrice,
+        grossArea,
+      })) {
+        return true;
+      }
+
+      // Reserved units are in-progress sales — include so they can be completed or reverted.
+      if (unit.commercialStatus === 'reserved') {
+        return typeof askingPrice === 'number' && askingPrice > 0 &&
+               typeof grossArea === 'number' && grossArea > 0;
+      }
+
+      return false;
+    });
+  }, [allUnits, viewScope]);
 
   // =========================================================================
   // FILTER: Apply user filters + search + quick filters
@@ -151,9 +192,34 @@ export function useSalesPropertiesViewerState() {
   }, [salesUnits, filters, selectedCommercialStatus, selectedPropertyType]);
 
   // =========================================================================
-  // DASHBOARD STATS (computed from salesUnits — not filtered)
+  // DASHBOARD STATS — scope-aware aggregations.
+  // Shape (count / averagePrice / totalValue / averagePricePerSqm) is shared
+  // between scopes; semantics differ:
+  //   - `'available'` uses `askingPrice` on for-sale/dual listings
+  //   - `'sold'`      uses `finalPrice` on sold units (contract price)
   // =========================================================================
   const dashboardStats = useMemo<SalesDashboardStats>(() => {
+    if (viewScope === 'sold') {
+      const finalPrices = salesUnits
+        .map(u => u.commercial?.finalPrice)
+        .filter((p): p is number => typeof p === 'number' && p > 0);
+
+      const areas = salesUnits
+        .map(u => u.areas?.gross ?? u.area ?? 0)
+        .filter(a => a > 0);
+
+      const totalRevenue = finalPrices.reduce((sum, p) => sum + p, 0);
+      const totalArea = areas.reduce((sum, a) => sum + a, 0);
+
+      return {
+        availableCount: salesUnits.length,
+        averagePrice: finalPrices.length > 0 ? totalRevenue / finalPrices.length : 0,
+        totalValue: totalRevenue,
+        averagePricePerSqm: totalArea > 0 ? totalRevenue / totalArea : 0,
+      };
+    }
+
+    // viewScope === 'available'
     const forSaleProperties = salesUnits.filter(u =>
       u.commercialStatus === 'for-sale' || u.commercialStatus === 'for-sale-and-rent'
     );
@@ -175,7 +241,7 @@ export function useSalesPropertiesViewerState() {
       totalValue: totalPrice,
       averagePricePerSqm: totalArea > 0 ? totalPrice / totalArea : 0,
     };
-  }, [salesUnits]);
+  }, [salesUnits, viewScope]);
 
   // =========================================================================
   // SELECTION

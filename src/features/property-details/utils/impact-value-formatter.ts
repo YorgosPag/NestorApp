@@ -165,6 +165,63 @@ function formatCommercialStatus(t: TFunction, raw: string): string {
   return t(`properties-enums:commercialStatus.${raw}`, { defaultValue: raw });
 }
 
+function formatCommercialObject(t: TFunction, raw: string): string {
+  const value = parse(raw);
+  if (!isRecord(value)) {
+    return raw;
+  }
+
+  const segments: string[] = [];
+
+  const askingPrice = readNumber(value, 'askingPrice');
+  if (askingPrice !== null) {
+    segments.push(`${t('properties:impactGuard.commercial.askingPrice')}: ${askingPrice.toLocaleString('el-GR')} €`);
+  }
+
+  const finalPrice = readNumber(value, 'finalPrice');
+  if (finalPrice !== null) {
+    segments.push(`${t('properties:impactGuard.commercial.finalPrice')}: ${finalPrice.toLocaleString('el-GR')} €`);
+  }
+
+  const reservationDeposit = readNumber(value, 'reservationDeposit');
+  if (reservationDeposit !== null) {
+    segments.push(`${t('properties:impactGuard.commercial.reservationDeposit')}: ${reservationDeposit.toLocaleString('el-GR')} €`);
+  }
+
+  const owners = value['owners'];
+  if (Array.isArray(owners) && owners.length > 0) {
+    const ownerNames = owners
+      .filter(isRecord)
+      .map((owner) => {
+        const name = readString(owner, 'name');
+        const pct = readNumber(owner, 'ownershipPct');
+        return name ? (pct !== null ? `${name} (${pct}%)` : name) : null;
+      })
+      .filter((n): n is string => n !== null);
+    if (ownerNames.length > 0) {
+      segments.push(`${t('properties:impactGuard.commercial.owners')}: ${ownerNames.join(LIST_SEPARATOR)}`);
+    }
+  }
+
+  const reservationDate = readString(value, 'reservationDate');
+  if (reservationDate) {
+    const date = new Date(reservationDate);
+    if (!isNaN(date.getTime())) {
+      segments.push(`${t('properties:impactGuard.commercial.reservationDate')}: ${date.toLocaleDateString('el-GR')}`);
+    }
+  }
+
+  const saleDate = readString(value, 'saleDate');
+  if (saleDate) {
+    const date = new Date(saleDate);
+    if (!isNaN(date.getTime())) {
+      segments.push(`${t('properties:impactGuard.commercial.saleDate')}: ${date.toLocaleDateString('el-GR')}`);
+    }
+  }
+
+  return segments.length > 0 ? segments.join(VALUE_SEPARATOR) : raw;
+}
+
 function formatLinkedSpaces(t: TFunction, raw: string): string {
   const value = parse(raw);
   if (!Array.isArray(value)) {
@@ -238,6 +295,7 @@ export function formatImpactValue(
     case 'securityFeatures':
       return formatFeatureArray(t, raw, 'security');
     case 'commercial':
+      return formatCommercialObject(t, raw);
     case 'commercialStatus':
       return formatCommercialStatus(t, raw);
     case 'linkedSpaces':
@@ -259,5 +317,6 @@ export const __testing__ = {
   formatFinishes,
   formatFeatureArray,
   formatCommercialStatus,
+  formatCommercialObject,
   formatLinkedSpaces,
 };
