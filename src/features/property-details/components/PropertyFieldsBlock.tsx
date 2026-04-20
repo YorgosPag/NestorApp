@@ -104,6 +104,8 @@ export function PropertyFieldsBlock({
   const prevPropertyIdRef = useRef(property.id);
 
   const codeRegenerationPending = useRef(false);
+  // Distinguishes save-exit from cancel-exit so form resets correctly on cancel
+  const editExitWasSaveRef = useRef(false);
   const currentCommercialStatus = (property.commercialStatus ?? 'unavailable') as CommercialStatus;
   const isReservedOrSold = (['reserved', 'sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
   const isSoldOrRented = (['sold', 'rented'] as CommercialStatus[]).includes(currentCommercialStatus);
@@ -149,6 +151,27 @@ export function PropertyFieldsBlock({
       };
     }
   }, [codeBuildingId, codeFloorLevel, localType, property.id, property.code]);
+
+  // Reset form state on cancel (isEditing false after a non-save exit).
+  // Prevents stale formData from showing edited values in view mode and next edit session.
+  const prevIsEditingRef = useRef(isEditing);
+  useEffect(() => {
+    const wasEditing = prevIsEditingRef.current;
+    prevIsEditingRef.current = isEditing;
+    if (wasEditing && !isEditing) {
+      if (!editExitWasSaveRef.current) {
+        setFormData(buildFormDataFromProperty(property));
+        setLocalType(property.type ?? '');
+        codeRegenerationPending.current = false;
+        prevCodeInputsRef.current = {
+          buildingId: property.buildingId ?? '',
+          floor: property.floor ?? 0,
+          type: property.type ?? '',
+        };
+      }
+      editExitWasSaveRef.current = false;
+    }
+  }, [isEditing, property]);
 
   // ADR-233: Gate suggestion — EntityCodeField receives empty buildingId when
   // hierarchy is incomplete, which naturally disables the auto-suggest hook.
@@ -297,6 +320,7 @@ export function PropertyFieldsBlock({
           buildingId: property.buildingId,
           floorId: property.floorId,
         }, updates as Partial<Property> & Record<string, unknown>, async () => {
+          editExitWasSaveRef.current = true;
           if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
           success(t('save.success'));
         });
