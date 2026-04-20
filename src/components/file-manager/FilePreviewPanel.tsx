@@ -99,7 +99,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
   const translateDisplayName = useFileDisplayName();
 
   const previewType = useMemo(
-    () => (file ? getPreviewType(file.contentType, file.displayName) : 'unsupported'),
+    () => (file ? getPreviewType(file.contentType, file.originalFilename) : 'unsupported'),
     [file]
   );
 
@@ -332,7 +332,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
       <FilePreviewRenderer
         url={file.downloadUrl}
         contentType={file.contentType}
-        fileName={file.displayName}
+        fileName={file.originalFilename}
         displayName={displayName}
         fileId={file.id}
         sizeBytes={file.sizeBytes}

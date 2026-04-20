@@ -17,6 +17,8 @@ import { extractTextFromXlsx } from '@/lib/document-extractors/xlsx-extractor';
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const DXF_MIMES = new Set(['image/vnd.dxf', 'application/dxf']);
+const DXF_MAX_BYTES = 50_000;
 
 const logger = createModuleLogger('FileClassifyBackground');
 
@@ -51,6 +53,13 @@ export async function classifyInBackground(
     } else if (contentType === XLSX_MIME) {
       const extractedText = await extractTextFromXlsx(fileBuffer);
       analyzeBuffer = Buffer.from(extractedText || `Filename: ${originalFilename ?? 'document'}`);
+      analyzeMimeType = 'text/plain';
+    } else if (
+      DXF_MIMES.has(contentType) ||
+      (contentType === 'application/octet-stream' && originalFilename?.toLowerCase().endsWith('.dxf'))
+    ) {
+      // DXF is ASCII text — truncate to first 50KB (header + layer info sufficient for classification)
+      analyzeBuffer = fileBuffer.slice(0, DXF_MAX_BYTES);
       analyzeMimeType = 'text/plain';
     }
 

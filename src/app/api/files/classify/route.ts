@@ -49,15 +49,20 @@ const TEXT_MIME_TYPES = new Set([
   'text/xml',
   'application/xml',
   'text/html',
+  'image/vnd.dxf',
+  'application/dxf',
 ]);
 
-function isClassifiable(mimeType: string): boolean {
-  return (
-    IMAGE_MIME_TYPES.has(mimeType) ||
-    TEXT_MIME_TYPES.has(mimeType) ||
-    mimeType.startsWith('video/') ||
-    mimeType.startsWith('audio/')
-  );
+const DXF_EXTENSIONS = new Set(['.dxf']);
+
+function isClassifiable(mimeType: string, filename?: string): boolean {
+  if (IMAGE_MIME_TYPES.has(mimeType) || TEXT_MIME_TYPES.has(mimeType)) return true;
+  if (mimeType.startsWith('video/') || mimeType.startsWith('audio/')) return true;
+  if (mimeType === 'application/octet-stream' && filename) {
+    const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase();
+    return DXF_EXTENSIONS.has(ext);
+  }
+  return false;
 }
 
 function getMediaDocumentType(mimeType: string): 'video' | 'audio' | null {
@@ -171,7 +176,7 @@ async function handlePost(
       );
     }
 
-    if (!contentType || !isClassifiable(contentType)) {
+    if (!contentType || !isClassifiable(contentType, originalFilename)) {
       return NextResponse.json(
         { success: false, fileId, error: `Content type not classifiable: ${contentType ?? 'unknown'}` },
         { status: 400 },

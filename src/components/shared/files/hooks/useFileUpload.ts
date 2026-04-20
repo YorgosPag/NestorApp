@@ -236,7 +236,7 @@ export function useFileUpload({
           });
 
           // ADR-191 Phase 2.2: AI auto-classify — starts background job, polls until done
-          if (isAIClassifiable(file.type)) {
+          if (isAIClassifiable(file.type, file.name)) {
             classifyFileWithPolicy(fileId)
               .then(() => pollClassifyAndDispatch(fileId, entityType, entityId))
               .catch(() => { /* non-blocking */ });

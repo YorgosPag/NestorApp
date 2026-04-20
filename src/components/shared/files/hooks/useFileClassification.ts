@@ -69,18 +69,20 @@ const CLASSIFIABLE_TYPES = new Set([
   'text/xml',
   'application/xml',
   'text/html',
+  'image/vnd.dxf',
+  'application/dxf',
 ]);
 
 /**
  * Check if a file can be classified by AI.
+ * For application/octet-stream, the server checks the extension — client trusts the server.
  */
-export function isAIClassifiable(contentType?: string): boolean {
+export function isAIClassifiable(contentType?: string, filename?: string): boolean {
   if (!contentType) return false;
-  return (
-    CLASSIFIABLE_TYPES.has(contentType) ||
-    contentType.startsWith('video/') ||
-    contentType.startsWith('audio/')
-  );
+  if (CLASSIFIABLE_TYPES.has(contentType)) return true;
+  if (contentType.startsWith('video/') || contentType.startsWith('audio/')) return true;
+  if (contentType === 'application/octet-stream' && filename?.toLowerCase().endsWith('.dxf')) return true;
+  return false;
 }
 
 // ============================================================================
