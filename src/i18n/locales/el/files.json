@@ -262,6 +262,18 @@
     "classificationFailed": "Αποτυχία κατηγοριοποίησης",
     "retryClassification": "Επανάληψη κατηγοριοποίησης"
   },
+  "documentType": {
+    "invoice": "Τιμολόγιο",
+    "contract": "Συμβόλαιο",
+    "photo-exterior": "Φωτογραφία Εξωτερικού",
+    "photo-interior": "Φωτογραφία Εσωτερικού",
+    "floorplan": "Κάτοψη",
+    "blueprint": "Σχέδιο",
+    "permit": "Άδεια",
+    "inspection-report": "Έκθεση Επιθεώρησης",
+    "receipt": "Απόδειξη",
+    "other": "Άλλο"
+  },
   "linkModal": {
     "title": "Σύνδεση αρχείου σε Κτίρια",
     "description": "Επιλέξτε τα κτίρια στα οποία θέλετε να εμφανίζεται αυτό το αρχείο.",

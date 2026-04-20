@@ -262,6 +262,18 @@
     "classificationFailed": "Classification failed",
     "retryClassification": "Retry classification"
   },
+  "documentType": {
+    "invoice": "Invoice",
+    "contract": "Contract",
+    "photo-exterior": "Exterior Photo",
+    "photo-interior": "Interior Photo",
+    "floorplan": "Floor Plan",
+    "blueprint": "Blueprint",
+    "permit": "Permit",
+    "inspection-report": "Inspection Report",
+    "receipt": "Receipt",
+    "other": "Other"
+  },
   "linkModal": {
     "title": "Link file to Buildings",
     "description": "Select the buildings where you want this file to appear.",
