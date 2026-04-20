@@ -162,11 +162,17 @@ async function handlePost(
       });
     }
     if (currentState === 'classifying') {
-      return NextResponse.json({
-        success: true,
-        fileId,
-        status: 'classifying',
-      });
+      // If stuck for >3 minutes, reset and re-classify
+      const stateChangedAt = fileData.ingestion?.stateChangedAt as string | undefined;
+      const isStuck = !stateChangedAt || (Date.now() - new Date(stateChangedAt).getTime() > 3 * 60 * 1000);
+      if (!isStuck) {
+        return NextResponse.json({
+          success: true,
+          fileId,
+          status: 'classifying',
+        });
+      }
+      logger.warn(`[classify] File ${fileId} stuck in classifying >3min — resetting`);
     }
 
     // 3. Validate

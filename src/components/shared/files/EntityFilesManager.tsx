@@ -185,8 +185,18 @@ export function EntityFilesManager({
   const filteredFiles = useMemo(() => {
     if (!searchTerm.trim()) return files;
 
+    const raw = searchTerm.trim();
+    const extMatch = raw.match(/^\*\.(\w+)$/);
+    if (extMatch) {
+      const ext = extMatch[1].toLowerCase();
+      return files.filter(f =>
+        (f.originalFilename ?? '').toLowerCase().endsWith(`.${ext}`) ||
+        (f.displayName ?? '').toLowerCase().endsWith(`.${ext}`)
+      );
+    }
+
     const norm = (s?: string | null) => (s ? normalizeForSearch(s) : '');
-    const query = norm(searchTerm.trim());
+    const query = norm(raw);
 
     return files.filter((file) => {
       const searchableFields = [
