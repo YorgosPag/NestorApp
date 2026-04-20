@@ -209,6 +209,7 @@ export async function previewPropertyMutationImpact(
         ? 'mutationImpact.warn'
         : 'mutationImpact.allow';
 
+    const commercialStatus = (updates['commercialStatus'] ?? property['commercialStatus']) as string | undefined;
     return {
       mode,
       mutationKinds,
@@ -217,6 +218,7 @@ export async function previewPropertyMutationImpact(
       messageKey,
       blockingCount,
       warningCount,
+      commercialStatus,
     };
   } catch {
     return {

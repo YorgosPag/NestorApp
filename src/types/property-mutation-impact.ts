@@ -36,4 +36,6 @@ export interface PropertyMutationImpactPreview {
   readonly messageKey: string;
   readonly blockingCount: number;
   readonly warningCount: number;
+  /** Effective commercialStatus after the mutation — used to filter commercial field display. */
+  readonly commercialStatus?: string;
 }

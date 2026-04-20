@@ -78,7 +78,7 @@ export function PropertyMutationImpactDialog({
                           <span className="text-xs text-muted-foreground">{getKindLabel(change.kind)}</span>
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {formatImpactValue(t, change.field, change.previousValue)} {'->'} {formatImpactValue(t, change.field, change.nextValue)}
+                          {formatImpactValue(t, change.field, change.previousValue, { commercialStatus: preview.commercialStatus })} {'->'} {formatImpactValue(t, change.field, change.nextValue, { commercialStatus: preview.commercialStatus })}
                         </p>
                       </li>
                     ))}

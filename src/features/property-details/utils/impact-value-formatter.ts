@@ -169,22 +169,32 @@ function formatCommercialStatus(t: TFunction, raw: string): string {
   return t(`properties-enums:commercialStatus.${raw}`, { defaultValue: raw });
 }
 
-function formatCommercialObject(t: TFunction, raw: string): string {
+const SHOW_ASKING_PRICE: ReadonlySet<string> = new Set(['for-sale', 'for-sale-and-rent', 'reserved', 'sold']);
+const SHOW_RENT_PRICE: ReadonlySet<string> = new Set(['for-rent', 'for-sale-and-rent', 'rented']);
+
+function formatCommercialObject(t: TFunction, raw: string, commercialStatus?: string): string {
   const value = parse(raw);
   if (!isRecord(value)) {
     return raw;
   }
 
+  const showAskingPrice = !commercialStatus || SHOW_ASKING_PRICE.has(commercialStatus);
+  const showRentPrice = !commercialStatus || SHOW_RENT_PRICE.has(commercialStatus);
+
   const segments: string[] = [];
 
-  const askingPrice = readNumber(value, 'askingPrice');
-  if (askingPrice !== null) {
-    segments.push(`${t('properties:impactGuard.commercial.askingPrice')}: ${askingPrice.toLocaleString('el-GR')} €`);
+  if (showAskingPrice) {
+    const askingPrice = readNumber(value, 'askingPrice');
+    if (askingPrice !== null) {
+      segments.push(`${t('properties:impactGuard.commercial.askingPrice')}: ${askingPrice.toLocaleString('el-GR')} €`);
+    }
   }
 
-  const rentPrice = readNumber(value, 'rentPrice');
-  if (rentPrice !== null) {
-    segments.push(`${t('properties:impactGuard.commercial.rentPrice')}: ${rentPrice.toLocaleString('el-GR')} €`);
+  if (showRentPrice) {
+    const rentPrice = readNumber(value, 'rentPrice');
+    if (rentPrice !== null) {
+      segments.push(`${t('properties:impactGuard.commercial.rentPrice')}: ${rentPrice.toLocaleString('el-GR')} €`);
+    }
   }
 
   const finalPrice = readNumber(value, 'finalPrice');
@@ -279,6 +289,7 @@ export function formatImpactValue(
   t: TFunction,
   field: string,
   raw: string | null,
+  context?: { commercialStatus?: string },
 ): string {
   if (raw === null) {
     return t('properties:impactGuard.emptyValue');
@@ -306,7 +317,7 @@ export function formatImpactValue(
     case 'securityFeatures':
       return formatFeatureArray(t, raw, 'security');
     case 'commercial':
-      return formatCommercialObject(t, raw);
+      return formatCommercialObject(t, raw, context?.commercialStatus);
     case 'commercialStatus':
       return formatCommercialStatus(t, raw);
     case 'linkedSpaces':
