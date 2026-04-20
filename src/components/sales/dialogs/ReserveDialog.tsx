@@ -28,6 +28,7 @@ import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
 import { useContactEmailWatch } from '@/hooks/sales/useContactEmailWatch';
 import { usePropertyHierarchyValidation } from '@/hooks/sales/usePropertyHierarchyValidation';
+import { usePaymentPlan } from '@/hooks/usePaymentPlan';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
@@ -61,6 +62,8 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
 
   const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
   const hierarchy = usePropertyHierarchyValidation(unit, open);
+  const { planGroup, isLoading: planLoading } = usePaymentPlan(open ? unit.id : null);
+  const hasNoPlan = !planLoading && planGroup === 'none';
 
   const hasAskingPrice = (unit.commercial?.askingPrice ?? 0) > 0;
   const netArea = unit.area ?? 0;
@@ -205,6 +208,12 @@ export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialo
               <p className={cn("flex items-center gap-1.5 text-xs", colors.text.warning)}>
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                 {t('sales.dialogs.reserve.noEmailWarning')}
+              </p>
+            )}
+            {hasNoPlan && (
+              <p className={cn("flex items-center gap-1.5 text-xs", colors.text.warning)}>
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                {t('sales.dialogs.reserve.noPaymentPlanWarning')}
               </p>
             )}
             <Button

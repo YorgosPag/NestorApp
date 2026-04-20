@@ -410,6 +410,7 @@
         "deposit": "Deposit (€)",
         "depositPlaceholder": "e.g. 5000",
         "noEmailWarning": "The buyer has no email — no reservation confirmation will be sent. Please update their contact card.",
+        "noPaymentPlanWarning": "No payment plan exists — you can create one after the reservation.",
         "newContact": "Create new contact",
         "confirm": "Reserve",
         "unknownError": "Error during reservation",
