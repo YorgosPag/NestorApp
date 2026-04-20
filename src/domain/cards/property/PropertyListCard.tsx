@@ -99,12 +99,14 @@ const COMMERCIAL_STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
   'for-sale': 'info',
   'for-rent': 'warning',
   'for-sale-and-rent': 'secondary',
+  'unavailable': 'default',
 };
 
 const COMMERCIAL_STATUS_LABEL_KEYS: Record<string, string> = {
   'for-sale': 'commercialStatus.for-sale',
   'for-rent': 'commercialStatus.for-rent',
   'for-sale-and-rent': 'commercialStatus.for-sale-and-rent',
+  'unavailable': 'commercialStatus.unavailable',
 };
 
 // =============================================================================
