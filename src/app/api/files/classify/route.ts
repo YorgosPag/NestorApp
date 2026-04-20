@@ -64,6 +64,7 @@ function isClassifiable(mimeType: string, filename?: string, fileExt?: string): 
     if (lastDot !== -1 && DXF_EXTENSIONS.has(filename.slice(lastDot).toLowerCase())) return true;
   }
 
+  if (!mimeType) return false;
   if (IMAGE_MIME_TYPES.has(mimeType) || TEXT_MIME_TYPES.has(mimeType)) return true;
   if (mimeType.startsWith('video/') || mimeType.startsWith('audio/')) return true;
   if (mimeType === 'application/octet-stream') {
@@ -192,7 +193,7 @@ async function handlePost(
       );
     }
 
-    if (!contentType || !isClassifiable(contentType, originalFilename, fileExt)) {
+    if (!isClassifiable(contentType ?? '', originalFilename, fileExt)) {
       return NextResponse.json(
         { success: false, fileId, error: `Content type not classifiable: ${contentType ?? 'unknown'}` },
         { status: 400 },
@@ -252,7 +253,7 @@ async function handlePost(
     after(() => classifyInBackground(
       fileId,
       downloadUrl,
-      contentType,
+      contentType ?? '',
       originalFilename,
       sizeBytes,
       ctx.uid,
