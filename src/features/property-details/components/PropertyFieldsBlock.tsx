@@ -251,8 +251,8 @@ export function PropertyFieldsBlock({
 
   const buildUpdatesFromForm = useCallback(
     (): Partial<Property> =>
-      buildPropertyUpdatesFromForm({ formData, property, suggestedCode: latestSuggestion, isMultiLevel }),
-    [formData, property, latestSuggestion, isMultiLevel],
+      buildPropertyUpdatesFromForm({ formData, property, isMultiLevel }),
+    [formData, property, isMultiLevel],
   );
 
   // ADR-233: Called by EntityCodeField.onChange — keeps formData.code in sync

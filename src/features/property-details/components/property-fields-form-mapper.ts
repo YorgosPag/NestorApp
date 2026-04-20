@@ -37,13 +37,14 @@ import type { PropertyFieldsFormData } from './property-fields-form-types';
 export function buildPropertyUpdatesFromForm(params: {
   formData: PropertyFieldsFormData;
   property: Property;
-  suggestedCode: string | null | undefined;
   isMultiLevel: boolean | undefined;
 }): Partial<Property> {
-  const { formData, property, suggestedCode, isMultiLevel } = params;
+  const { formData, property, isMultiLevel } = params;
 
-  // ADR-233: Use suggested code as fallback if user hasn't typed a custom one
-  const resolvedCode = formData.code || suggestedCode || undefined;
+  // ADR-233: Preserve existing code when formData.code is empty (suggestion not yet applied).
+  // Never use latestSuggestion as fallback here — EntityCodeField already applies it via onChange.
+  // Using a stale suggestion would cause spurious code-change warnings in ImpactGuard.
+  const resolvedCode = formData.code || property.code || undefined;
   const updates: Partial<Property> = {
     name: formData.name,
     code: resolvedCode,
