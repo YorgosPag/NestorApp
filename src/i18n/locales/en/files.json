@@ -473,6 +473,7 @@
     "fitToWidth": "Fit to width",
     "docxLoading": "Loading document...",
     "docxError": "Could not preview document",
+    "excelLoading": "Loading Excel file...",
     "excelError": "Could not preview Excel file",
     "xmlLoading": "Loading XML file...",
     "xmlError": "Could not preview XML file",

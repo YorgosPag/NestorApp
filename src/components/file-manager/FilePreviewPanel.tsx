@@ -334,6 +334,7 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
         contentType={file.contentType}
         fileName={file.displayName}
         displayName={displayName}
+        fileId={file.id}
         sizeBytes={file.sizeBytes}
         onDownload={handleDownload}
       />

@@ -60,6 +60,8 @@ export interface FilePreviewRendererProps {
   fileName: string | undefined;
   /** Human-readable title (alt text, tooltips) */
   displayName: string;
+  /** File ID — required for Excel preview (in-house API endpoint) */
+  fileId?: string;
   /** File size in bytes (shown in unsupported fallback) */
   sizeBytes?: number;
   /** Optional download handler (used by unsupported fallback) */
@@ -208,6 +210,7 @@ export function FilePreviewRenderer({
   contentType,
   fileName,
   displayName,
+  fileId,
   sizeBytes,
   onDownload,
   className,
@@ -236,7 +239,15 @@ export function FilePreviewRenderer({
       {previewType === 'video' && <VideoPreview url={url!} title={displayName} />}
       {previewType === 'audio' && <AudioPreview url={url!} title={displayName} />}
       {previewType === 'docx' && <DocxPreview url={url!} title={displayName} />}
-      {previewType === 'excel' && <ExcelPreview url={url!} title={displayName} />}
+      {previewType === 'excel' && fileId && <ExcelPreview fileId={fileId} title={displayName} />}
+      {previewType === 'excel' && !fileId && (
+        <UnsupportedPreview
+          displayName={displayName}
+          contentType={contentType}
+          sizeBytes={sizeBytes}
+          onDownload={onDownload}
+        />
+      )}
       {previewType === 'xml' && <XmlPreview url={url!} title={displayName} />}
       {previewType === 'text' && <TxtPreview url={url!} title={displayName} />}
       {previewType === 'html' && <HtmlPreview url={url!} title={displayName} />}
