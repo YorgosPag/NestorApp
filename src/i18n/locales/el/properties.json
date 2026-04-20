@@ -594,6 +594,7 @@
     "emptyValue": "κενό",
     "commercial": {
       "askingPrice": "Τιμή ζήτησης",
+      "rentPrice": "Μηνιαίο ενοίκιο",
       "finalPrice": "Τελική τιμή",
       "reservationDeposit": "Προκαταβολή κράτησης",
       "owners": "Αγοραστές",
@@ -612,7 +613,7 @@
       "area": "Εμβαδόν",
       "areas": "Εμβαδά",
       "price": "Τιμή",
-      "commercial": "Εμπορική κατάσταση",
+      "commercial": "Τιμολόγηση",
       "commercialStatus": "Εμπορική κατάσταση",
       "linkedSpaces": "Συνδεδεμένοι χώροι",
       "layout": "Διαρρύθμιση",

@@ -178,6 +178,11 @@ function formatCommercialObject(t: TFunction, raw: string): string {
     segments.push(`${t('properties:impactGuard.commercial.askingPrice')}: ${askingPrice.toLocaleString('el-GR')} €`);
   }
 
+  const rentPrice = readNumber(value, 'rentPrice');
+  if (rentPrice !== null) {
+    segments.push(`${t('properties:impactGuard.commercial.rentPrice')}: ${rentPrice.toLocaleString('el-GR')} €`);
+  }
+
   const finalPrice = readNumber(value, 'finalPrice');
   if (finalPrice !== null) {
     segments.push(`${t('properties:impactGuard.commercial.finalPrice')}: ${finalPrice.toLocaleString('el-GR')} €`);

@@ -594,6 +594,7 @@
     "emptyValue": "empty",
     "commercial": {
       "askingPrice": "Asking price",
+      "rentPrice": "Monthly rent",
       "finalPrice": "Final price",
       "reservationDeposit": "Reservation deposit",
       "owners": "Buyers",
@@ -612,7 +613,7 @@
       "area": "Area",
       "areas": "Areas",
       "price": "Price",
-      "commercial": "Commercial status",
+      "commercial": "Pricing",
       "commercialStatus": "Commercial status",
       "linkedSpaces": "Linked spaces",
       "layout": "Layout",
