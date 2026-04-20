@@ -20,7 +20,7 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { PROPERTY_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
 import { linkEntity, validateLinkedSpacesUniqueness } from '@/lib/firestore/entity-linking.service';
-import { validatePropertyFieldLocking } from '@/lib/firestore/property-field-locking';
+import { validatePropertyFieldLockingUnlessRevert } from '@/lib/firestore/property-field-locking';
 import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { PropertyOwnerRole } from '@/types/ownership-table';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -72,10 +72,10 @@ export const PATCH = withStandardRateLimit(
         if (parsed.error) throw new ApiError(400, 'Validation failed');
         const { _v: expectedVersion, ...body } = parsed.data as PropertyPatchPayload & { _v?: number };
 
-        // 🛡️ ADR-249: Field locking after sale/reservation
-        validatePropertyFieldLocking(
+        // 🛡️ ADR-249: Field locking (sale-revert flow bypasses — see helper).
+        validatePropertyFieldLockingUnlessRevert(
           existing.commercialStatus as string | undefined,
-          Object.keys(body),
+          body,
         );
 
         // ADR-236: Multi-level floors — mutates body in-place

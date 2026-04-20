@@ -37,6 +37,16 @@ const SOLD_LOCKED_FIELDS = [
  */
 const RESERVED_LOCKED_FIELDS = ['code', 'type', 'name'] as const;
 
+/**
+ * Top-level fields legitimately mutated by the sale-revert flow
+ * (reserved/sold → for-sale). Mirrors REVERT_ALLOWED_FIELDS in
+ * `services/property/property-mutation-gateway.ts` — keep both in sync.
+ */
+const REVERT_ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'commercialStatus',
+  'commercial',
+]);
+
 // ============================================================================
 // PUBLIC API
 // ============================================================================
@@ -71,4 +81,39 @@ export function validatePropertyFieldLocking(
       );
     }
   }
+}
+
+/**
+ * Detects whether an incoming PATCH body represents the legitimate sale-revert
+ * transition (reserved/sold → for-sale). Strict contract (mirrors client in
+ * `services/property/property-mutation-gateway.ts#revertPropertySaleWithPolicy`):
+ *   - Current status must be `reserved` or `sold`.
+ *   - `body.commercialStatus` must equal `'for-sale'`.
+ *   - All body keys must be in `REVERT_ALLOWED_FIELDS` ({ commercialStatus, commercial }).
+ */
+export function isPropertyRevertTransition(
+  currentStatus: string | null | undefined,
+  body: Record<string, unknown>,
+): boolean {
+  if (currentStatus !== 'reserved' && currentStatus !== 'sold') return false;
+  if (body.commercialStatus !== 'for-sale') return false;
+
+  const bodyKeys = Object.keys(body);
+  if (bodyKeys.length === 0) return false;
+
+  return bodyKeys.every((key) => REVERT_ALLOWED_FIELDS.has(key));
+}
+
+/**
+ * Convenience wrapper: runs `validatePropertyFieldLocking` UNLESS the body
+ * matches `isPropertyRevertTransition`. Keeps PATCH handlers concise while
+ * preserving the defense-in-depth guard — the revert flow is the ONE
+ * sanctioned way to flip `commercialStatus` on a locked property.
+ */
+export function validatePropertyFieldLockingUnlessRevert(
+  currentStatus: string | null | undefined,
+  body: Record<string, unknown>,
+): void {
+  if (isPropertyRevertTransition(currentStatus, body)) return;
+  validatePropertyFieldLocking(currentStatus, Object.keys(body));
 }
