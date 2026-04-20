@@ -6,6 +6,7 @@ import type { ContactType } from '@/types/contacts';
 import { RequestDeduplicator } from '../hooks/useRelationshipListOptimized';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
+import { useAuth } from '@/auth/hooks/useAuth';
 import {
   deleteRelationshipWithPolicy,
   terminateRelationshipWithPolicy,
@@ -42,6 +43,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
   onRelationshipsChange,
   children
 }) => {
+  const { user } = useAuth();
   const [relationships, setRelationships] = useState<ContactRelationship[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +98,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
       setError(null);
 
       logger.info('PROVIDER: Terminating relationship:', { data: relationshipId });
-      await terminateRelationshipWithPolicy({ relationshipId });
+      await terminateRelationshipWithPolicy({ relationshipId, actorId: user?.uid });
 
       RequestDeduplicator.invalidate(contactId);
       await loadRelationships(true);
@@ -118,7 +120,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
       setError(null);
 
       logger.info('PROVIDER: Deleting relationship:', { data: relationshipId });
-      await deleteRelationshipWithPolicy({ relationshipId });
+      await deleteRelationshipWithPolicy({ relationshipId, actorId: user?.uid });
 
       RequestDeduplicator.invalidate(contactId);
 
