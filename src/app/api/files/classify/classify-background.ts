@@ -13,8 +13,10 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import { extractTextFromDocx } from '@/lib/document-extractors/docx-extractor';
+import { extractTextFromXlsx } from '@/lib/document-extractors/xlsx-extractor';
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 const logger = createModuleLogger('FileClassifyBackground');
 
@@ -39,11 +41,15 @@ export async function classifyInBackground(
     }
     const fileBuffer = Buffer.from(await fileResponse.arrayBuffer());
 
-    // 2. Extract text for DOCX — OpenAI does not accept .docx as input_file
+    // 2. Extract text for DOCX/XLSX — OpenAI does not accept these as input_file
     let analyzeBuffer = fileBuffer;
     let analyzeMimeType = contentType;
     if (contentType === DOCX_MIME) {
       const extractedText = await extractTextFromDocx(fileBuffer);
+      analyzeBuffer = Buffer.from(extractedText || `Filename: ${originalFilename ?? 'document'}`);
+      analyzeMimeType = 'text/plain';
+    } else if (contentType === XLSX_MIME) {
+      const extractedText = await extractTextFromXlsx(fileBuffer);
       analyzeBuffer = Buffer.from(extractedText || `Filename: ${originalFilename ?? 'document'}`);
       analyzeMimeType = 'text/plain';
     }
