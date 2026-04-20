@@ -46,6 +46,8 @@ const TEXT_MIME_TYPES = new Set([
   'text/csv',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/xml',
+  'application/xml',
 ]);
 
 function isClassifiable(mimeType: string): boolean {
