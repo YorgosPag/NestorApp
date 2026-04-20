@@ -40,6 +40,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatFileSize } from '@/utils/file-validation';
 import { PdfCanvasViewer } from '@/components/file-manager/PdfCanvasViewer';
 import { DocxPreview } from '@/components/file-manager/preview/DocxPreview';
+import { ExcelPreview } from '@/components/file-manager/preview/ExcelPreview';
+import { XmlPreview } from '@/components/file-manager/preview/XmlPreview';
 import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-registry';
 import '@/lib/design-system';
 
@@ -232,6 +234,8 @@ export function FilePreviewRenderer({
       {previewType === 'video' && <VideoPreview url={url!} title={displayName} />}
       {previewType === 'audio' && <AudioPreview url={url!} title={displayName} />}
       {previewType === 'docx' && <DocxPreview url={url!} title={displayName} />}
+      {previewType === 'excel' && <ExcelPreview url={url!} title={displayName} />}
+      {previewType === 'xml' && <XmlPreview url={url!} title={displayName} />}
       {previewType === 'unsupported' && (
         <UnsupportedPreview
           displayName={displayName}

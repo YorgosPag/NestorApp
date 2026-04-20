@@ -472,7 +472,10 @@
     "rotate": "Rotate",
     "fitToWidth": "Fit to width",
     "docxLoading": "Loading document...",
-    "docxError": "Could not preview document"
+    "docxError": "Could not preview document",
+    "excelError": "Could not preview Excel file",
+    "xmlLoading": "Loading XML file...",
+    "xmlError": "Could not preview XML file"
   },
   "batch": {
     "toolbar": "Batch actions",

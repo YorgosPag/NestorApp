@@ -30,7 +30,7 @@
  * - `docx`        → Client-side docx-preview rendering
  * - `unsupported` → Fallback with download prompt
  */
-export type PreviewType = 'pdf' | 'image' | 'video' | 'audio' | 'docx' | 'unsupported';
+export type PreviewType = 'pdf' | 'image' | 'video' | 'audio' | 'docx' | 'excel' | 'xml' | 'unsupported';
 
 /**
  * Broad file category used for user-facing labels (i18n).
@@ -84,6 +84,13 @@ export function getPreviewType(
   if (ct.startsWith('video/')) return 'video';
   if (ct.startsWith('audio/')) return 'audio';
   if (ct === DOCX_MIME || ext === 'docx') return 'docx';
+  if (
+    ct.includes('spreadsheetml') ||
+    ct === 'application/vnd.ms-excel' ||
+    ext === 'xlsx' ||
+    ext === 'xls'
+  ) return 'excel';
+  if (ct === 'text/xml' || ct === 'application/xml' || ext === 'xml') return 'xml';
 
   return 'unsupported';
 }
