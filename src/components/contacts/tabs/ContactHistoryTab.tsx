@@ -23,14 +23,12 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { useEntityAudit } from '@/hooks/useEntityAudit';
 import { usePhotoShareHistory } from '@/hooks/usePhotoShareHistory';
-import { formatRelativeTime, formatDateTime } from '@/lib/intl-utils';
 import { StatsCard } from '@/components/property-management/dashboard/StatsCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { ACTION_MAP, FILTER_OPTIONS } from '@/components/shared/audit/activity-tab-config';
-import { formatDisplayValue } from '@/components/shared/audit/activity-tab-helpers';
-import { resolveAuditValue } from '@/components/shared/audit/audit-value-resolver';
+import { FILTER_OPTIONS } from '@/components/shared/audit/activity-tab-config';
+import { AuditTimelineEntry } from '@/components/shared/audit/audit-timeline-entry';
 import { ShareEntry } from './ShareEntryRenderer';
 import {
   mergeAndSort,
@@ -39,7 +37,6 @@ import {
   computeContactStats,
 } from './contact-history-helpers';
 import type { ContactHistoryFilter } from './contact-history-types';
-import type { EntityAuditEntry } from '@/types/audit-trail';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // ============================================================================
@@ -186,7 +183,7 @@ export function ContactHistoryTab({ contactId }: ContactHistoryTabProps) {
           <ol className="relative ml-3 space-y-0 border-l-2 border-muted">
             {dayEntries.map((item) =>
               item.kind === 'audit'
-                ? <AuditEntryRenderer key={item.entry.id} entry={item.entry} t={t} colors={colors} />
+                ? <AuditTimelineEntry key={item.entry.id} entry={item.entry} showEntityLink={false} />
                 : <PhotoShareTimelineEntry key={item.entry.id} share={item.entry} t={tContacts} colors={colors} />,
             )}
           </ol>
@@ -215,81 +212,10 @@ export function ContactHistoryTab({ contactId }: ContactHistoryTabProps) {
 }
 
 // ============================================================================
-// AUDIT ENTRY RENDERER (mirrors ActivityTab's AuditEntryItem)
-// ============================================================================
-
-interface SemanticColors { text: { muted: string } }
-
-function AuditEntryRenderer({ entry, t, colors }: { entry: EntityAuditEntry; t: (k: string, p?: Record<string, unknown>) => string; colors: SemanticColors }) {
-  const config = ACTION_MAP[entry.action] ?? ACTION_MAP.updated;
-  const Icon = config.icon;
-  const timestamp = entry.timestamp ? new Date(entry.timestamp) : null;
-  const relativeTime = timestamp ? formatRelativeTime(timestamp) : '';
-  const absoluteTime = timestamp ? formatDateTime(timestamp) : '';
-
-  /** Resolve field label via i18n, falling back to stored label → raw field name */
-  const resolveFieldLabel = (field: string, storedLabel: string | undefined): string => {
-    const i18nKey = `audit.fields.${field}`;
-    const resolved = t(i18nKey);
-    if (resolved !== i18nKey) return resolved;
-    return storedLabel ?? field;
-  };
-
-  /**
-   * Create a per-change translator that knows the field, so it can delegate to
-   * the SSoT catalog resolver. See ADR-279 — audit value resolution is driven
-   * by {@link AUDIT_VALUE_CATALOGS}, not ad-hoc `audit.values.*` duplicates.
-   */
-  const makeFieldTranslator = (field: string) =>
-    (v: string): string | undefined => resolveAuditValue(field, v, t);
-
-  return (
-    <li className="relative pb-5 pl-8 last:pb-0">
-      <div className={`absolute -left-[9px] top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-muted bg-background ${config.color}`}>
-        <Icon className="h-2.5 w-2.5" />
-      </div>
-      <article className="space-y-1">
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <span className={`text-sm font-medium ${config.color}`}>{t(config.labelKey)}</span>
-          {entry.performedByName && (
-            <span className={cn('text-xs', colors.text.muted)}>{t('audit.byUser', { name: entry.performedByName })}</span>
-          )}
-          {timestamp && (
-            <time dateTime={entry.timestamp} className={cn('ml-auto text-[11px]', colors.text.muted)} title={absoluteTime}>
-              {relativeTime}
-            </time>
-          )}
-        </div>
-        {entry.changes.length > 0 && (
-          <ul className="mt-1.5 space-y-1">
-            {entry.changes.map((change, idx) => {
-              const translateFieldValue = makeFieldTranslator(change.field);
-              return (
-                <li key={`${change.field}-${idx}`} className="rounded bg-muted/50 px-2.5 py-1 text-xs">
-                  <span className="font-medium">{resolveFieldLabel(change.field, change.label)}</span>
-                  {': '}
-                  <span className={cn(colors.text.muted, 'line-through decoration-red-400/60')}>
-                    {formatDisplayValue(change.oldValue, translateFieldValue)}
-                  </span>
-                  {' → '}
-                  <span className="font-medium text-foreground">
-                    {formatDisplayValue(change.newValue, translateFieldValue)}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </article>
-    </li>
-  );
-}
-
-// ============================================================================
 // PHOTO SHARE TIMELINE ENTRY (wraps ShareEntry in timeline dot styling)
 // ============================================================================
 
-function PhotoShareTimelineEntry({ share, t, colors }: { share: import('@/types/photo-share').PhotoShareRecord; t: (k: string, p?: Record<string, unknown>) => string; colors: SemanticColors }) {
+function PhotoShareTimelineEntry({ share, t, colors }: { share: import('@/types/photo-share').PhotoShareRecord; t: (k: string, p?: Record<string, unknown>) => string; colors: { text: { muted: string } } }) {
   return (
     <li className="relative pb-5 pl-8 last:pb-0">
       <div className="absolute -left-[9px] top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-muted bg-background text-sky-600">
