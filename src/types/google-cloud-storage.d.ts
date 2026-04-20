@@ -31,10 +31,17 @@ declare module '@google-cloud/storage' {
     getSignedUrl(options: Record<string, unknown>): Promise<[string]>;
   }
 
+  export interface DeleteFilesOptions {
+    prefix?: string;
+    force?: boolean;
+    [key: string]: unknown;
+  }
+
   export interface Bucket {
     name: string;
     file(path: string, options?: Record<string, unknown>): File;
     getFiles(options?: Record<string, unknown>): Promise<[File[]]>;
+    deleteFiles(options?: DeleteFilesOptions): Promise<void>;
     upload(path: string, options?: Record<string, unknown>): Promise<[File]>;
     exists(): Promise<[boolean]>;
     create(options?: Record<string, unknown>): Promise<unknown>;

@@ -11,6 +11,7 @@
 
 import 'server-only';
 
+import type { Bucket } from '@google-cloud/storage';
 import type { StorageCleanupDef } from '@/config/deletion-registry';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -51,7 +52,7 @@ export async function executeStorageCleanup(
   const details: StorageCleanupDetail[] = [];
   let totalDeleted = 0;
 
-  let bucket: ReturnType<typeof getAdminBucket>;
+  let bucket: Bucket;
   try {
     bucket = getAdminBucket();
   } catch (err) {
