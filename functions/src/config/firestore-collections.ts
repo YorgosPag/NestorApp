@@ -38,4 +38,7 @@ export const COLLECTIONS = {
   UNITS: 'units',
   CONTACTS: 'contacts',
   SEARCH_DOCUMENTS: 'search_documents',
+
+  // 👤 USERS — looked up by CDC audit trigger to resolve performer display name
+  USERS: 'users',
 } as const;

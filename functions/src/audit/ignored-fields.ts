@@ -32,6 +32,16 @@ export const IGNORED_FIELDS: readonly string[] = [
   '_lastModifiedByName',
   '_lastModifiedAt',
 
+  // Ownership / tenant metadata — set at create, immutable, mirrors the
+  // performer header. Not a user-facing change. Mirrors the service-layer
+  // exclusion via `*_TRACKED_FIELDS` registries.
+  'id',
+  'companyId',
+  'createdBy',
+  'updatedBy',
+  'ownerId',
+  'tenantId',
+
   // Search indexing metadata (rewritten by indexTriggers on every write)
   'searchTokens',
   'searchKeywords',

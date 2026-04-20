@@ -55,6 +55,53 @@ function str(v: unknown): string | null {
 }
 
 /**
+ * Resolve a user UID to "DisplayName (email)" for audit trail display.
+ * Mirrors the service-layer `resolvePerformerDisplayName` in
+ * `src/services/entity-audit.service.ts` so both writers produce the same
+ * `performedByName` shape and the UI renders identical rows regardless of
+ * which writer won the dedup window.
+ *
+ * Non-blocking: errors fall back to the stamped name unchanged.
+ */
+async function resolvePerformerDisplayName(
+  uid: string,
+  stamped: string | null,
+): Promise<string | null> {
+  // System sentinels (`cdc_unknown`, future `system:*`) and non-email
+  // display names are kept as-is.
+  if (!uid || uid === 'cdc_unknown') return stamped;
+  if (stamped && !stamped.includes('@')) {
+    // If the stamped name looks like a display name already, still try to
+    // upgrade it to "DisplayName (email)" shape for consistency with the
+    // service-layer resolver.
+  }
+
+  try {
+    const userDoc = await admin
+      .firestore()
+      .collection(COLLECTIONS.USERS)
+      .doc(uid)
+      .get();
+    if (!userDoc.exists) return stamped;
+
+    const data = userDoc.data() ?? {};
+    const displayName = str(data.displayName);
+    const email = str(data.email);
+
+    if (displayName && email) return `${displayName} (${email})`;
+    if (displayName) return displayName;
+    if (email) return email;
+    return stamped;
+  } catch (err) {
+    functions.logger.warn('CDC audit: performer name resolve failed', {
+      uid,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return stamped;
+  }
+}
+
+/**
  * Generic name resolver covering all three contact types
  * (individual / company / service). Mirrors the client `getDisplayName()`
  * priority without importing client code.
@@ -120,7 +167,7 @@ export const auditContactWrite = functions
 
     const source: DocData = after ?? before ?? {};
     const performedBy = str(source._lastModifiedBy) ?? 'cdc_unknown';
-    const performedByName = str(source._lastModifiedByName);
+    const stampedName = str(source._lastModifiedByName);
     const companyId = str(source.companyId);
 
     if (!companyId) {
@@ -137,6 +184,13 @@ export const auditContactWrite = functions
         action,
       });
     }
+
+    // Upgrade stamped name to "DisplayName (email)" shape (parity with the
+    // service-layer audit writer). Lookup is best-effort and non-blocking.
+    const performedByName = await resolvePerformerDisplayName(
+      performedBy,
+      stampedName,
+    );
 
     const entry: CdcAuditEntry = {
       entityType: 'contact',
