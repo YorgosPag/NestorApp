@@ -90,6 +90,18 @@ const OPERATIONAL_STATUS_LABEL_KEYS: Record<string, string> = {
   'draft': 'operationalStatus.draft',
 };
 
+const COMMERCIAL_STATUS_BADGE_VARIANTS: Record<string, GridCardBadgeVariant> = {
+  'for-sale': 'info',
+  'for-rent': 'warning',
+  'for-sale-and-rent': 'secondary',
+};
+
+const COMMERCIAL_STATUS_LABEL_KEYS: Record<string, string> = {
+  'for-sale': 'commercialStatus.for-sale',
+  'for-rent': 'commercialStatus.for-rent',
+  'for-sale-and-rent': 'commercialStatus.for-sale-and-rent',
+};
+
 // =============================================================================
 // 🏢 COMPONENT
 // =============================================================================
@@ -203,15 +215,25 @@ export function PropertyGridCard({
     return items;
   }, [property.building, property.floor, property.area, property.areas, property.layout, property.condition, t]);
 
-  /** Build badges from operational status */
+  /** Build badges from operational status + commercial status */
   const badges = useMemo(() => {
     const opStatus = property.operationalStatus || 'ready';
     const labelKey = OPERATIONAL_STATUS_LABEL_KEYS[opStatus] || 'operationalStatus.ready';
-    const statusLabel = t(labelKey);
     const variant = OPERATIONAL_STATUS_VARIANTS[opStatus] || 'success';
+    const result: { label: string; variant: GridCardBadgeVariant }[] = [
+      { label: t(labelKey), variant },
+    ];
 
-    return [{ label: statusLabel, variant }];
-  }, [property.operationalStatus, t]);
+    const cs = property.commercialStatus;
+    if (cs && COMMERCIAL_STATUS_LABEL_KEYS[cs]) {
+      result.push({
+        label: t(COMMERCIAL_STATUS_LABEL_KEYS[cs], { ns: 'properties-enums' }),
+        variant: COMMERCIAL_STATUS_BADGE_VARIANTS[cs] ?? 'default',
+      });
+    }
+
+    return result;
+  }, [property.operationalStatus, property.commercialStatus, t]);
 
   // ==========================================================================
   // 🏢 HANDLERS

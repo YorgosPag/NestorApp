@@ -95,6 +95,18 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
   draft: 'operationalStatus.draft',
 };
 
+const COMMERCIAL_STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
+  'for-sale': 'info',
+  'for-rent': 'warning',
+  'for-sale-and-rent': 'secondary',
+};
+
+const COMMERCIAL_STATUS_LABEL_KEYS: Record<string, string> = {
+  'for-sale': 'commercialStatus.for-sale',
+  'for-rent': 'commercialStatus.for-rent',
+  'for-sale-and-rent': 'commercialStatus.for-sale-and-rent',
+};
+
 // =============================================================================
 // 🏢 COMPONENT
 // =============================================================================
@@ -187,16 +199,25 @@ export function PropertyListCard({
     return items;
   }, [property.building, property.floor, property.area, property.price, property.commercial?.askingPrice, t]);
 
-  /** Build badges from operational status (no more sales statuses) */
+  /** Build badges from operational status + commercial status */
   const badges = useMemo(() => {
-    // 🎯 PR1.2: Default to 'ready' instead of 'for-sale' (operational status)
     const status = property.operationalStatus || property.status || 'ready';
     const labelKey = STATUS_LABEL_KEYS[status] || 'operationalStatus.ready';
-    const statusLabel = t(labelKey);
     const variant = STATUS_BADGE_VARIANTS[status] || 'success';
+    const result: { label: string; variant: ListCardBadgeVariant }[] = [
+      { label: t(labelKey), variant },
+    ];
 
-    return [{ label: statusLabel, variant }];
-  }, [property.operationalStatus, property.status, t]);
+    const cs = property.commercialStatus;
+    if (cs && COMMERCIAL_STATUS_LABEL_KEYS[cs]) {
+      result.push({
+        label: t(COMMERCIAL_STATUS_LABEL_KEYS[cs], { ns: 'properties-enums' }),
+        variant: COMMERCIAL_STATUS_BADGE_VARIANTS[cs] ?? 'default',
+      });
+    }
+
+    return result;
+  }, [property.operationalStatus, property.status, property.commercialStatus, t]);
 
   /** Get subtitle - type, code, and project */
   const subtitle = useMemo(() => {
