@@ -9,6 +9,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useAuth } from '@/auth/hooks/useAuth';
 import type {
   ContactRelationship,
   RelationshipType,
@@ -68,6 +69,7 @@ export const useRelationshipForm = (
   // ============================================================================
 
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { user } = useAuth();
   const [formData, setFormData] = useState<RelationshipFormData>(createInitialFormData());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -287,10 +289,12 @@ export const useRelationshipForm = (
         await updateRelationshipWithPolicy({
           relationshipId: editingId,
           updates: relationshipData,
+          actorId: user?.uid,
         });
       } else {
         await createRelationshipWithPolicy({
           data: relationshipData,
+          actorId: user?.uid,
         });
       }
 

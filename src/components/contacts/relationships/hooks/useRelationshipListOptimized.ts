@@ -14,6 +14,7 @@ import { ContactRelationshipService } from '@/services/contact-relationships/Con
 import { deleteRelationshipWithPolicy } from '@/services/contact-relationships/relationship-mutation-gateway';
 import type { UseRelationshipListReturn } from '../types/relationship-manager.types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useAuth } from '@/auth/hooks/useAuth';
 const logger = createModuleLogger('useRelationshipListOptimized');
 
 // ============================================================================
@@ -135,6 +136,7 @@ export const useRelationshipListOptimized = (
   // STATE MANAGEMENT
   // ============================================================================
 
+  const { user } = useAuth();
   const [relationships, setRelationships] = useState<ContactRelationship[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -208,7 +210,7 @@ export const useRelationshipListOptimized = (
       setError(null);
 
       logger.info('Deleting relationship:', { data: relationshipId });
-      await deleteRelationshipWithPolicy({ relationshipId });
+      await deleteRelationshipWithPolicy({ relationshipId, actorId: user?.uid });
 
       // Invalidate cache για this contact
       RequestDeduplicator.invalidate(contactId);

@@ -14,6 +14,7 @@ import { ContactRelationshipService } from '@/services/contact-relationships/Con
 import { deleteRelationshipWithPolicy } from '@/services/contact-relationships/relationship-mutation-gateway';
 import type { UseRelationshipListReturn } from '../types/relationship-manager.types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useAuth } from '@/auth/hooks/useAuth';
 const logger = createModuleLogger('useRelationshipList');
 
 /**
@@ -35,6 +36,7 @@ export const useRelationshipList = (
   // STATE MANAGEMENT
   // ============================================================================
 
+  const { user } = useAuth();
   const [relationships, setRelationships] = useState<ContactRelationship[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export const useRelationshipList = (
       setError(null);
 
       logger.info('Deleting relationship:', { data: relationshipId });
-      await deleteRelationshipWithPolicy({ relationshipId });
+      await deleteRelationshipWithPolicy({ relationshipId, actorId: user?.uid });
 
       // Remove from local state immediately for better UX
       setRelationships(prev => {
