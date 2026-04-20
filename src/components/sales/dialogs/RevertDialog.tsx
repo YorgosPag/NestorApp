@@ -46,7 +46,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
   const iconSizes = useIconSizes();
   const { success, error: notifyError } = useNotifications();
   const [saving, setSaving] = useState(false);
-  const { checking: previewChecking, runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(unit);
+  const { checking: previewChecking, runRevertUpdate, ImpactDialog } = useGuardedPropertyMutation(unit);
 
   const linkedSpaces = useLinkedSpacesForSale(unit);
 
@@ -80,7 +80,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       };
-      const completed = await runExistingPropertyUpdate(unit, updates);
+      const completed = await runRevertUpdate(unit, updates);
       if (!completed) {
         return;
       }
@@ -137,7 +137,7 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
     } finally {
       setSaving(false);
     }
-  }, [currentStatus, linkedSpaces, notifyError, onOpenChange, onSuccess, runExistingPropertyUpdate, success, t, unit]);
+  }, [currentStatus, linkedSpaces, notifyError, onOpenChange, onSuccess, runRevertUpdate, success, t, unit]);
 
   return (
     <>

@@ -23,6 +23,16 @@ const SOLD_LOCKED_FIELDS: ReadonlySet<string> = new Set([
 
 const RESERVED_LOCKED_FIELDS: ReadonlySet<string> = new Set(['code', 'type', 'name']);
 
+/**
+ * Top-level fields legitimately mutated by the sale-revert flow
+ * (reserved/sold → for-sale). Keeps the transition surgical — everything
+ * else in SOLD_LOCKED_FIELDS stays protected against accidental edits.
+ */
+const REVERT_ALLOWED_FIELDS: ReadonlySet<string> = new Set([
+  'commercialStatus',
+  'commercial',
+]);
+
 type PropertyMutationIntent =
   | 'create'
   | 'update'
@@ -68,6 +78,12 @@ interface GuardedPropertyLinkedSpacesInput {
   readonly propertyId: string;
   readonly currentProperty: PropertyMutationCurrentState;
   readonly linkedSpaces: LinkedSpace[];
+}
+
+interface GuardedPropertyRevertInput {
+  readonly propertyId: string;
+  readonly currentProperty: PropertyMutationCurrentState;
+  readonly updates: Record<string, unknown>;
 }
 
 interface GuardedPropertyDeleteInput {
@@ -288,6 +304,57 @@ export async function updatePropertyWithPolicy({
   }
 
   return result;
+}
+
+/**
+ * Sale-revert mutation (reserved/sold → for-sale).
+ *
+ * `updatePropertyWithPolicy` keeps `commercialStatus` in `SOLD_LOCKED_FIELDS`
+ * so a sold property cannot be silently flipped back by a generic edit form.
+ * Revert is the ONE legitimate way to flip that status — so it gets its own
+ * gateway that validates the transition shape strictly:
+ *   - Current status must be `reserved` or `sold`.
+ *   - Target `commercialStatus` must be `for-sale`.
+ *   - Payload limited to `REVERT_ALLOWED_FIELDS` (commercialStatus + commercial).
+ * Any deviation throws — the caller must use `updatePropertyWithPolicy`
+ * for anything else.
+ */
+export async function revertPropertySaleWithPolicy({
+  propertyId,
+  currentProperty,
+  updates,
+}: GuardedPropertyRevertInput): Promise<{ success: boolean }> {
+  if (!propertyId || propertyId === '__new__') {
+    throw new PropertyMutationPolicyError('Cannot mutate an unsaved property.');
+  }
+  if (!currentProperty) {
+    throw new PropertyMutationPolicyError('Property mutation context is required.');
+  }
+
+  const currentStatus = readCurrentCommercialStatus(currentProperty);
+  if (currentStatus !== 'reserved' && currentStatus !== 'sold') {
+    throw new PropertyMutationPolicyError(
+      `Revert only allowed from reserved or sold status (current: ${currentStatus ?? 'unknown'}).`,
+    );
+  }
+
+  const updateKeys = Object.keys(updates);
+  const disallowed = updateKeys.filter((key) => !REVERT_ALLOWED_FIELDS.has(key));
+  if (disallowed.length > 0) {
+    throw new PropertyMutationPolicyError(
+      `Revert can only modify: ${[...REVERT_ALLOWED_FIELDS].join(', ')}. Forbidden: ${disallowed.join(', ')}`,
+    );
+  }
+
+  normalizeEnumFieldsForWrite(updates);
+
+  if (updates.commercialStatus !== 'for-sale') {
+    throw new PropertyMutationPolicyError(
+      `Revert target must be 'for-sale' (got: ${String(updates.commercialStatus)}).`,
+    );
+  }
+
+  return updatePropertyRecord(propertyId, updates as Partial<Property>);
 }
 
 export async function updatePropertyBuildingLinkWithPolicy({

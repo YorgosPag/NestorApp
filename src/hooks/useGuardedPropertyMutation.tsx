@@ -2,7 +2,10 @@
 
 import { useCallback } from 'react';
 import { usePropertyMutationImpactGuard } from '@/hooks/usePropertyMutationImpactGuard';
-import { updatePropertyWithPolicy } from '@/services/property/property-mutation-gateway';
+import {
+  updatePropertyWithPolicy,
+  revertPropertySaleWithPolicy,
+} from '@/services/property/property-mutation-gateway';
 
 interface PropertyMutationPreviewTarget {
   readonly id: string;
@@ -55,11 +58,33 @@ export function useGuardedPropertyMutation(
     [property, runPreviewedMutation],
   );
 
+  const runRevertUpdate = useCallback(
+    async (
+      currentProperty: PropertyMutationCurrentState,
+      updates: Record<string, unknown>,
+      postUpdateAction?: () => Promise<void>,
+    ) => {
+      return runPreviewedMutation(updates, async () => {
+        await revertPropertySaleWithPolicy({
+          propertyId: property!.id,
+          currentProperty,
+          updates,
+        });
+
+        if (postUpdateAction) {
+          await postUpdateAction();
+        }
+      });
+    },
+    [property, runPreviewedMutation],
+  );
+
   return {
     checking,
     reset,
     ImpactDialog,
     runPreviewedMutation,
     runExistingPropertyUpdate,
+    runRevertUpdate,
   };
 }
