@@ -115,7 +115,11 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
       (result) => {
         if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info('Firestore snapshot received', { docsCount: result.size });
 
-        const propertiesData: Property[] = [...result.documents];
+        // ADR-281: Exclude soft-deleted properties from the live SSoT snapshot.
+        // Trash view uses its own endpoint (/api/properties/trash) — never this provider.
+        const propertiesData: Property[] = result.documents.filter(
+          (p) => (p.status as string | undefined) !== 'deleted',
+        );
 
         if (propertiesData.length > 0) {
           setPropertiesState(propertiesData);
