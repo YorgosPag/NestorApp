@@ -47,20 +47,6 @@ describe('assessInteriorFeaturesPlausibility', () => {
     expect(r.reason).toBe('airConditioningRedundant');
   });
 
-  it('returns unusual alarmSystemRedundant', () => {
-    const r = assessInteriorFeaturesPlausibility({
-      propertyType: 'apartment',
-      interiorFeatures: ['alarm-system'],
-      securityFeatures: ['alarm'],
-      energyClass: 'B',
-      heatingType: 'central',
-      coolingType: 'none',
-      areaGross: 80,
-    });
-    expect(r.verdict).toBe('unusual');
-    expect(r.reason).toBe('alarmSystemRedundant');
-  });
-
   it('returns unusual underfloorHeatingNoCentral (heating=none)', () => {
     const r = assessInteriorFeaturesPlausibility({
       propertyType: 'villa',

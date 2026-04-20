@@ -62,7 +62,6 @@ export const InteriorFeatureCode = {
   SOLAR_PANELS: 'solar-panels',
   UNDERFLOOR_HEATING: 'underfloor-heating',
   AIR_CONDITIONING: 'air-conditioning',
-  ALARM_SYSTEM: 'alarm-system'
 } as const;
 
 // =============================================================================

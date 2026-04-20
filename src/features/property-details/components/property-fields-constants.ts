@@ -60,7 +60,7 @@ export const GLAZING_OPTIONS: GlazingType[] = [
 
 export const INTERIOR_FEATURE_OPTIONS: InteriorFeatureCodeType[] = [
   'fireplace', 'jacuzzi', 'sauna', 'smart-home', 'solar-panels',
-  'underfloor-heating', 'air-conditioning', 'alarm-system',
+  'underfloor-heating', 'air-conditioning',
 ];
 
 export const SECURITY_FEATURE_OPTIONS: SecurityFeatureCodeType[] = [

@@ -22851,7 +22851,6 @@ interface I18n_PropertiesEnums_Features_Interior {
   'solar-panels': string;
   'underfloor-heating': string;
   'air-conditioning': string;
-  'alarm-system': string;
 }
 
 interface I18n_PropertiesEnums_Features_Security {

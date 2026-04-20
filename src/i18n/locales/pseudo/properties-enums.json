@@ -190,8 +190,7 @@
       "smart-home": "[[~~ Smart home ~~]]",
       "solar-panels": "[[~~~ Ηλιακά πάνελ ~~~]]",
       "underfloor-heating": "[[~~~~ Ενδοδαπέδια θέρμανση ~~~~]]",
-      "air-conditioning": "[[~~~ Κλιματισμός ~~~]]",
-      "alarm-system": "[[~~ Συναγερμός ~~]]"
+      "air-conditioning": "[[~~~ Κλιματισμός ~~~]]"
     },
     "security": {
       "label": "[[~~ Ασφάλεια ~~]]",

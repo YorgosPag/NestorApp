@@ -8,7 +8,7 @@
  * inline non-blocking warning όταν ο χρήστης συνδυάζει features που
  * αντιφάσκουν (φωτοβολταϊκά + κλάση F), είναι σπάνια για τον τύπο (τζάκι σε
  * studio 25 τ.μ.), ή είναι διπλές καταχωρήσεις (κλιματιστικό feature +
- * coolingType set, alarm-system στα interior + alarm στα security).
+ * coolingType set).
  *
  * **Google pattern**: Plausibility / sanity check — ΠΟΤΕ δεν μπλοκάρει το save.
  *
@@ -16,11 +16,10 @@
  *
  * **Priority order** (most severe first, single-reason surfacing):
  *   1. `airConditioningRedundant`  — duplicate field (unusual)
- *   2. `alarmSystemRedundant`      — duplicate field (unusual)
- *   3. `underfloorHeatingNoCentral` — incoherent (unusual)
- *   4. `solarPanelsLowEnergy`      — incoherent (unusual)
- *   5. `fireplaceTinyStudio`       — physical fit (unusual)
- *   6. `luxuryFeaturesStudio`      — type mismatch (unusual)
+ *   2. `underfloorHeatingNoCentral` — incoherent (unusual)
+ *   3. `solarPanelsLowEnergy`      — incoherent (unusual)
+ *   4. `fireplaceTinyStudio`       — physical fit (unusual)
+ *   5. `luxuryFeaturesStudio`      — type mismatch (unusual)
  *
  * @module constants/interior-features-plausibility
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 24)
@@ -38,10 +37,6 @@ const FEATURE_SAUNA = 'sauna';
 const FEATURE_SOLAR_PANELS = 'solar-panels';
 const FEATURE_UNDERFLOOR_HEATING = 'underfloor-heating';
 const FEATURE_AIR_CONDITIONING = 'air-conditioning';
-const FEATURE_ALARM_SYSTEM = 'alarm-system';
-
-const SECURITY_ALARM = 'alarm';
-
 const HEATING_NONE = 'none';
 const HEATING_AUTONOMOUS = 'autonomous'; // not central — carries fireplace/heat-pump alt
 const COOLING_NONE = 'none';
@@ -85,7 +80,6 @@ export type InteriorFeaturesReason =
   | 'fireplaceTinyStudio'
   | 'airConditioningRedundant'
   | 'luxuryFeaturesStudio'
-  | 'alarmSystemRedundant'
   | 'underfloorHeatingNoCentral'
   | null;
 
@@ -119,12 +113,11 @@ export interface AssessInteriorFeaturesPlausibilityArgs {
  * **Gate order**:
  *   1. `interiorFeatures` not empty → otherwise `insufficientData`.
  *   2. `airConditioningRedundant` (unusual).
- *   3. `alarmSystemRedundant` (unusual).
- *   4. `underfloorHeatingNoCentral` (unusual).
- *   5. `solarPanelsLowEnergy` (unusual).
- *   6. `fireplaceTinyStudio` (unusual) — needs propertyType + areaGross.
- *   7. `luxuryFeaturesStudio` (unusual) — needs propertyType.
- *   8. Otherwise → `ok`.
+ *   3. `underfloorHeatingNoCentral` (unusual).
+ *   4. `solarPanelsLowEnergy` (unusual).
+ *   5. `fireplaceTinyStudio` (unusual) — needs propertyType + areaGross.
+ *   6. `luxuryFeaturesStudio` (unusual) — needs propertyType.
+ *   7. Otherwise → `ok`.
  */
 export function assessInteriorFeaturesPlausibility(
   args: AssessInteriorFeaturesPlausibilityArgs,
@@ -166,15 +159,7 @@ export function assessInteriorFeaturesPlausibility(
     return build('unusual', 'airConditioningRedundant', interiorFeatures, securityFeatures, propertyType, energyClass, heatingType, coolingType, areaGross, []);
   }
 
-  // Step 3: alarm-system στα interior + alarm στα security → duplicate
-  if (
-    interiorFeatures.includes(FEATURE_ALARM_SYSTEM) &&
-    securityFeatures.includes(SECURITY_ALARM)
-  ) {
-    return build('unusual', 'alarmSystemRedundant', interiorFeatures, securityFeatures, propertyType, energyClass, heatingType, coolingType, areaGross, []);
-  }
-
-  // Step 4: underfloor-heating + heatingType=none → contradictory
+  // Step 3: underfloor-heating + heatingType=none → contradictory
   if (
     interiorFeatures.includes(FEATURE_UNDERFLOOR_HEATING) &&
     (heatingType === HEATING_NONE || heatingType === HEATING_AUTONOMOUS)
