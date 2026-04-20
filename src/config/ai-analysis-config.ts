@@ -175,7 +175,19 @@ RULES:
 - Extract as many entities as possible from the command`,
 
   DOCUMENT_CLASSIFY_SYSTEM:
-    'You are an enterprise document classifier for a Greek real estate & construction company. Return JSON only, matching the schema. Classify the document type and signals. Write a short description (1-2 sentences) in Greek about what this document is and its key content. The description should be helpful for someone browsing a file list. DXF files are CAD drawings — classify as blueprint or floorplan if applicable. SVG files are vector graphics — may be logos, diagrams, or technical drawings.',
+    `You are an enterprise document classifier for a Greek real estate & construction company. Return JSON only, matching the schema. Classify the document type and signals. Write a short description (1-2 sentences) in Greek about what this document is and its key content. The description should be helpful for someone browsing a file list.
+
+DXF TITLE BLOCK INSTRUCTIONS (apply when the text content contains Greek architectural drawing fields):
+Greek architectural DXF drawings contain a title block (υπόμνημα) with these fields — extract them in this EXACT priority order for the description:
+1. εργοδότης (employer/client) + έργο (project name) — HIGHEST PRIORITY — always mention these first if present
+2. θέση (location/site) — mention next if present
+3. θέμα σχεδίου (drawing subject, e.g. "ΚΑΤΟΨΗ ΥΠΟΓΕΙΟΥ", "ΤΟΜΗ", "ΟΨΕΙΣ") — mention next
+4. μελετητές (consultants: αρχιτεκτονικό, στατικό, μηχανολογικά) — mention last if space allows
+
+Example description format: "Αρχιτεκτονικό σχέδιο για τον εργοδότη [NAME], έργο: [PROJECT]. Θέση: [LOCATION]. Θέμα: [SUBJECT]."
+If NO title block fields are found, describe the drawing based on geometric/text content visible.
+
+SVG files are vector graphics — may be logos, diagrams, or technical drawings.`,
 
   /**
    * Property description generation prompt — used by PROPERTY_DESCRIPTION feature.

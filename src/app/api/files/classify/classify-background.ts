@@ -80,7 +80,7 @@ export async function classifyInBackground(
     const result = await provider.analyze({
       kind: 'document_classify',
       content: analyzeBuffer,
-      filename: originalFilename ?? 'document',
+      filename: originalFilename ?? (fileExt ? `drawing.${fileExt}` : 'document'),
       mimeType: analyzeMimeType,
       sizeBytes: sizeBytes ?? fileBuffer.length,
     });
