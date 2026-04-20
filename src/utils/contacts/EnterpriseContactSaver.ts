@@ -16,6 +16,7 @@ import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMed
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { isNonEmptyArray } from '@/lib/type-guards';
+import { stripTypeExclusiveFields } from './contact-type-fields';
 const logger = createModuleLogger('EnterpriseContactSaver');
 
 // ============================================================================
@@ -267,8 +268,15 @@ export class EnterpriseContactSaver {
       delete (enterpriseData as Record<string, unknown>)[field];
     }
 
+    // Strip fields that belong to other contact types (prevents form defaults
+    // from writing service/company fields onto individual contacts and vice versa).
+    const stripped = stripTypeExclusiveFields(
+      enterpriseData as Record<string, unknown>,
+      formData.type,
+    );
+
     logger.info('ENTERPRISE SAVER: Conversion complete');
-    return enterpriseData as EnterpriseContactData;
+    return stripped as EnterpriseContactData;
   }
 
   /**
