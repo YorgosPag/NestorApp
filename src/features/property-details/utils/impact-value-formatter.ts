@@ -84,6 +84,10 @@ function formatOrientations(t: TFunction, raw: string): string {
   return labels.length > 0 ? labels.join(LIST_SEPARATOR) : raw;
 }
 
+function formatType(t: TFunction, raw: string): string {
+  return t(`properties-enums:types.${raw}`, { defaultValue: raw });
+}
+
 function formatCondition(t: TFunction, raw: string): string {
   return t(`properties-enums:condition.${raw}`, { defaultValue: raw });
 }
@@ -281,6 +285,8 @@ export function formatImpactValue(
   }
 
   switch (field) {
+    case 'type':
+      return formatType(t, raw);
     case 'areas':
       return formatAreas(t, raw);
     case 'layout':
@@ -316,6 +322,7 @@ export const __testing__ = {
   formatAreas,
   formatLayout,
   formatOrientations,
+  formatType,
   formatCondition,
   formatEnergy,
   formatSystemsOverride,
