@@ -3,6 +3,7 @@ import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import { CanvasLayerStack } from './CanvasLayerStack';
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useOverlayStore } from '../../overlays/overlay-store';
+import { useLiveOverlaysForLevel } from '../../hooks/useLiveOverlaysForLevel';
 import { useLevels } from '../../systems/levels';
 import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
 import { useCursorSettings, useCursorActions } from '../../systems/cursor';
@@ -99,7 +100,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   overlayStoreRef.current = overlayStore;
   universalSelectionRef.current = universalSelection;
   const levelManager = useLevels();
-  const currentOverlays = levelManager.currentLevelId ? overlayStore.getByLevel(levelManager.currentLevelId) : [];
+  // ADR-281: filter out overlays linked to soft-deleted properties
+  const currentOverlays = useLiveOverlaysForLevel(levelManager.currentLevelId);
 
   // === Entity interaction state ===
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);

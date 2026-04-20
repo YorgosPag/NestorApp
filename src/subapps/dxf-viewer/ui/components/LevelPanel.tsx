@@ -13,6 +13,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { LevelListCard } from '@/domain/cards';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useOverlayStore } from '../../overlays/overlay-store';
+import { useLiveOverlaysForLevel } from '../../hooks/useLiveOverlaysForLevel';
 import { PANEL_TOKENS, PANEL_LAYOUT, PanelTokenUtils } from '../../config/panel-tokens';
 import { OverlayList } from '../OverlayList';
 import { OverlayProperties } from '../OverlayProperties';
@@ -121,9 +122,8 @@ export function LevelPanel({
     }, {
       setCurrentLevel,
     });
-  const currentOverlays = currentLevelId
-    ? overlayStore.getByLevel(currentLevelId)
-    : [];
+  // ADR-281: filter out overlays linked to soft-deleted properties
+  const currentOverlays = useLiveOverlaysForLevel(currentLevelId);
   const currentLevel = useMemo(
     () => (currentLevelId ? levels.find(l => l.id === currentLevelId) : undefined),
     [levels, currentLevelId]
