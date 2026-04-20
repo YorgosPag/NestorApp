@@ -108,6 +108,10 @@ export function PropertyFieldsBlock({
   const prevPropertyIdRef = useRef(property.id);
 
   const codeRegenerationPending = useRef(false);
+  // True when EntityCodeField auto-applied a suggestion (not user-typed).
+  // handleSave uses this to include the auto-suggested formData.code in the
+  // Firestore update instead of falling back to the (possibly null) server code.
+  const codeAutoAppliedRef = useRef(false);
   // Distinguishes save-exit from cancel-exit so form resets correctly on cancel
   const editExitWasSaveRef = useRef(false);
   const currentCommercialStatus = (property.commercialStatus ?? 'unavailable') as CommercialStatus;
@@ -137,6 +141,7 @@ export function PropertyFieldsBlock({
       };
       setFormData(p => ({ ...p, code: property.code ?? '' }));
       codeEditedByUserRef.current = false;
+      codeAutoAppliedRef.current = false;
       return;
     }
     const prev = prevCodeInputsRef.current;
@@ -169,6 +174,7 @@ export function PropertyFieldsBlock({
         setLocalType(property.type ?? '');
         codeRegenerationPending.current = false;
         codeEditedByUserRef.current = false;
+        codeAutoAppliedRef.current = false;
         prevCodeInputsRef.current = {
           buildingId: property.buildingId ?? '',
           floor: property.floor ?? 0,
@@ -268,24 +274,22 @@ export function PropertyFieldsBlock({
     codeEditedByUserRef.current = true;
   }, []);
 
-  // ADR-233: Called by EntityCodeField.onAutoApply — triggers auto-save after input change.
-  // Clears codeEditedByUser so the manual save does not re-include the auto-suggested code.
-  const handleCodeAutoApply = useCallback((code: string) => {
+  // ADR-233: Called by EntityCodeField.onAutoApply — marks the code as auto-applied so
+  // handleSave includes formData.code in the update (Google pattern: save on explicit Save only).
+  const handleCodeAutoApply = useCallback((_code: string) => {
     codeEditedByUserRef.current = false;
-    if (codeRegenerationPending.current && onAutoSaveFields) {
-      codeRegenerationPending.current = false;
-      onAutoSaveFields({ code });
-    }
-  }, [onAutoSaveFields]);
+    codeAutoAppliedRef.current = true;
+    codeRegenerationPending.current = false;
+  }, []);
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
       const updates = buildUpdatesFromForm();
-      // If user did NOT explicitly edit the code, preserve the server-side code
-      // to avoid spurious "code changed" entries in the impact guard. Auto-suggestions
-      // are saved separately via onAutoSaveFields/directSaveFields.
-      if (!isCreatingNewUnit && !codeEditedByUserRef.current) {
+      // Preserve server code only when neither the user nor auto-apply touched the field.
+      // Auto-applied codes (codeAutoAppliedRef) are in formData.code and must be persisted
+      // here — directSaveFields no longer handles them (Google pattern: save on explicit Save).
+      if (!isCreatingNewUnit && !codeEditedByUserRef.current && !codeAutoAppliedRef.current) {
         (updates as Record<string, unknown>).code = property.code ?? undefined;
       }
 

@@ -24,7 +24,7 @@ import { PropertyFieldsBlock } from './components/PropertyFieldsBlock';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { resolveAttachments } from './utils/attachments';
 import { createModuleLogger } from '@/lib/telemetry';
-import { updatePropertyBuildingLinkWithPolicy, updatePropertyWithPolicy } from '@/services/property/property-mutation-gateway';
+import { updatePropertyBuildingLinkWithPolicy } from '@/services/property/property-mutation-gateway';
 const logger = createModuleLogger('PropertyDetailsContent');
 
 import { PropertyEntityLinks } from './components/PropertyEntityLinks';
@@ -201,29 +201,6 @@ export function PropertyDetailsContent({
     [autoLevel, baseSafeUpdate, notifyError, t]
   );
 
-  // Auto-save triggered by field changes in PropertyFieldsBlock (type, code, name, levels).
-  // Bypasses ImpactGuard — auto-saves are transparent mid-edit operations that must never
-  // open an impact-check dialog. ImpactGuard fires only at manual Save time.
-  const directSaveFields = useCallback(
-    async (id: string, updates: Partial<Property>) => {
-      if (isReadOnly) return;
-      if (updates.type && typeof updates.type === 'string') {
-        setLocalType(updates.type);
-        autoLevel.triggerAutoLevelCreation(updates.type);
-      }
-      try {
-        await updatePropertyWithPolicy({
-          propertyId: id,
-          currentProperty: resolvedProperty,
-          updates: updates as Record<string, unknown>,
-        });
-      } catch (error) {
-        notifyError(translatePropertyMutationError(error, t));
-      }
-    },
-    [isReadOnly, resolvedProperty, autoLevel, notifyError, t]
-  );
-
   // 🏢 ENTERPRISE: Contextual floor validation (Google Contacts pattern)
   // Warns when user places a residential unit in a basement — non-blocking, user decides.
   const handleFloorBeforeChange = useCallback(async (floor: number): Promise<boolean> => {
@@ -392,15 +369,7 @@ export function PropertyDetailsContent({
         onActiveLevelChange={setActiveLevelId}
         onAutoSaveFields={(fields) => {
           if (resolvedProperty?.id && resolvedProperty.id !== '__new__') {
-            // Code-only auto-saves bypass ImpactGuard: they are a consequence of
-            // building/floor/type changes, not a standalone user action. The final
-            // manual Save runs ImpactGuard for all changes including the code.
-            const isCodeOnlyUpdate = Object.keys(fields).length === 1 && 'code' in fields;
-            if (isCodeOnlyUpdate) {
-              void directSaveFields(resolvedProperty.id, fields as Partial<Property>);
-            } else {
-              void safeOnUpdateProperty(resolvedProperty.id, fields);
-            }
+            void safeOnUpdateProperty(resolvedProperty.id, fields);
           }
         }}
       />
