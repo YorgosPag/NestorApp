@@ -38,12 +38,17 @@ import {
 } from 'firebase/firestore';
 
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { dedupDualWrite } from '@/services/audit/dedup-dual-write';
 import type {
   AuditAction,
   AuditEntityType,
   AuditSource,
   EntityAuditEntry,
 } from '@/types/audit-trail';
+
+// Re-export so existing importers (`useEntityAudit`, `useGlobalAuditTrail`)
+// keep their `dedupDualWrite` import from this module stable.
+export { dedupDualWrite };
 
 // ============================================================================
 // TYPES
@@ -122,60 +127,10 @@ function normalizeEntry(doc: DocumentData & { id?: string }): EntityAuditEntry {
   };
 }
 
-/**
- * Dedup window for Phase 1 CDC dual-write: the service-layer write and the
- * Cloud Function trigger fire within ~seconds of each other for the same
- * logical action. We collapse them so the user sees one row per action.
- *
- * 30s is comfortably larger than observed Cloud Function latency (<5s in
- * production telemetry) while small enough not to swallow unrelated writes
- * on the same entity.
- */
-const DUAL_WRITE_DEDUP_WINDOW_MS = 30_000;
-
-/**
- * Collapse service+cdc dual-write pairs.
- *
- * Groups by `(entityId, action)`; within each group, for every CDC entry we
- * drop any service-layer entry whose timestamp sits within the dedup window.
- * Legacy entries with `source === undefined` are treated as service-layer.
- *
- * Why prefer CDC:
- *   - Automatic deep diff → no field coverage gaps.
- *   - Once `_lastModifiedBy` is stamped by every writer (Phase 2 cutover
- *     plan), CDC entries carry the same `performedBy` as service entries.
- *   - Single source of truth across entity types — the same trigger pattern
- *     scales to project/building/unit without per-entity UI changes.
- */
-export function dedupDualWrite(entries: EntityAuditEntry[]): EntityAuditEntry[] {
-  const cdcEntries = entries.filter((e) => e.source === 'cdc');
-  if (cdcEntries.length === 0) return entries;
-
-  const supersededIds = new Set<string>();
-
-  for (const cdc of cdcEntries) {
-    const cdcMs = Date.parse(cdc.timestamp);
-    if (!Number.isFinite(cdcMs)) continue;
-
-    for (const candidate of entries) {
-      if (candidate === cdc) continue;
-      if (candidate.source === 'cdc') continue;
-      if (candidate.entityId !== cdc.entityId) continue;
-      if (candidate.action !== cdc.action) continue;
-      if (!candidate.id) continue;
-
-      const otherMs = Date.parse(candidate.timestamp);
-      if (!Number.isFinite(otherMs)) continue;
-
-      if (Math.abs(otherMs - cdcMs) <= DUAL_WRITE_DEDUP_WINDOW_MS) {
-        supersededIds.add(candidate.id);
-      }
-    }
-  }
-
-  if (supersededIds.size === 0) return entries;
-  return entries.filter((e) => !e.id || !supersededIds.has(e.id));
-}
+// `dedupDualWrite` lives in `@/services/audit/dedup-dual-write.ts` as a pure
+// module so it can be unit tested without pulling in the Firebase client SDK
+// that this service imports. Re-exported at the top of this file for
+// backward-compatible imports from `useEntityAudit` / `useGlobalAuditTrail`.
 
 function applyClientFilters(
   entries: EntityAuditEntry[],

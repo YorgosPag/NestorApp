@@ -32,6 +32,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { deepDiff, type FieldChange } from './deep-diff';
+import { resolveAction } from './resolve-action';
 import { COLLECTIONS } from '../config/firestore-collections';
 import { generateEntityAuditId } from '../config/enterprise-id';
 
@@ -123,37 +124,8 @@ function resolveContactName(data: DocData | null): string | null {
   return null;
 }
 
-/**
- * Classify the write into a semantic action. Order matters: create/delete
- * are structural events and take precedence over state transitions.
- */
-function resolveAction(before: DocData | null, after: DocData | null): string {
-  if (!before && after) return 'created';
-  if (before && !after) return 'deleted';
-  if (!before || !after) return 'updated';
-
-  // Soft-delete lifecycle via `status` string transitions (ADR-281 —
-  // canonical soft-delete engine uses `status: 'deleted'` + `previousStatus`,
-  // not an `isDeleted` boolean). Must precede the generic status_changed
-  // branch so the CDC entry matches the service-layer action verbatim and
-  // the UI dedup collapses the dual-write pair on (entityId, action).
-  if (before.status !== 'deleted' && after.status === 'deleted') {
-    return 'soft_deleted';
-  }
-  if (before.status === 'deleted' && after.status !== 'deleted') {
-    return 'restored';
-  }
-
-  // Legacy boolean lifecycle — kept as a fallback for entities that haven't
-  // migrated to the status-string pattern yet.
-  if (after.isDeleted === true && before.isDeleted !== true) return 'trashed';
-  if (after.isDeleted !== true && before.isDeleted === true) return 'restored';
-  if (after.archivedAt && !before.archivedAt) return 'archived';
-  if (after.archivedAt === null && before.archivedAt) return 'unarchived';
-  if (before.status !== after.status) return 'status_changed';
-
-  return 'updated';
-}
+// `resolveAction` lives in `./resolve-action.ts` as a pure module so it can
+// be unit tested without importing firebase-functions/firebase-admin.
 
 export const auditContactWrite = functions
   .runWith({ timeoutSeconds: 60, memory: '256MB' })
