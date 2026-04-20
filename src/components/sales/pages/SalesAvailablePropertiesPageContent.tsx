@@ -22,8 +22,10 @@ import {
 import { ListContainer, PageContainer } from '@/core/containers';
 import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { SalesGridCard, SalesGridEmpty } from '@/components/sales/shared/SalesGridCard';
+import { SalesGridEmpty } from '@/components/sales/shared/SalesGridCard';
+import { PropertyGridCard } from '@/domain/cards/property/PropertyGridCard';
 import type { Property } from '@/types/property';
+import type { Property as ViewerProperty } from '@/types/property-viewer';
 import '@/lib/design-system';
 
 function SalesAvailableContent() {
@@ -168,26 +170,14 @@ function SalesAvailableContent() {
             className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
             aria-label={t('sales.available.gridLabel')}
           >
-            {(filteredUnits as Property[]).map(unit => {
-              const area = unit.areas?.gross ?? unit.area ?? 0;
-              const price = unit.commercial?.askingPrice ?? null;
-              return (
-                <SalesGridCard
-                  key={unit.id}
-                  id={unit.id}
-                  icon={ShoppingBag}
-                  title={unit.name || unit.code || unit.id}
-                  statusKey={unit.commercialStatus ?? 'new'}
-                  statusLabel={unit.commercialStatus
-                    ? t(`sales.commercialStatus.${unit.commercialStatus}`)
-                    : t('sales.commercialStatus.new')}
-                  description={`${t(`properties-enums:types.${unit.type}`, { defaultValue: unit.type })} · ${area || '—'} m²`}
-                  price={price}
-                  pricePerSqm={price && area ? price / area : null}
-                  onClick={handleSelectProperty}
-                />
-              );
-            })}
+            {(filteredUnits as Property[]).map(unit => (
+              <PropertyGridCard
+                key={unit.id}
+                property={unit as unknown as ViewerProperty}
+                onSelect={() => handleSelectProperty(unit.id)}
+                showCommercialPrices
+              />
+            ))}
 
             {filteredUnits.length === 0 && (
               <SalesGridEmpty message={t('sales.available.noResults')} />

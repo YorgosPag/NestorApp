@@ -28,6 +28,7 @@ import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
 import { formatNumber, formatFloorLabel } from '@/lib/intl-utils';
+import { formatCurrencyWhole } from '@/lib/intl-domain';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 
 // 🏢 DOMAIN TYPES
@@ -60,6 +61,8 @@ export interface PropertyGridCardProps {
   compact?: boolean;
   /** Additional className */
   className?: string;
+  /** Show commercial price/sqm stats (sale + rent) — for sales pages */
+  showCommercialPrices?: boolean;
 }
 
 // =============================================================================
@@ -133,6 +136,7 @@ export function PropertyGridCard({
   onToggleFavorite,
   compact = false,
   className,
+  showCommercialPrices = false,
 }: PropertyGridCardProps) {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
@@ -214,8 +218,32 @@ export function PropertyGridCard({
       });
     }
 
+    // 💰 Commercial prices per sqm — only when showCommercialPrices=true (sales pages)
+    if (showCommercialPrices && displayArea) {
+      const askingPrice = property.commercial?.askingPrice;
+      const rentPrice = property.commercial?.rentPrice;
+
+      if (askingPrice && askingPrice > 0) {
+        items.push({
+          icon: NAVIGATION_ENTITIES.price.icon,
+          iconColor: NAVIGATION_ENTITIES.price.color,
+          label: t('card.stats.salePricePerSqm'),
+          value: `${formatCurrencyWhole(Math.round(askingPrice / displayArea))}/m²`,
+        });
+      }
+
+      if (rentPrice && rentPrice > 0) {
+        items.push({
+          icon: NAVIGATION_ENTITIES.price.icon,
+          iconColor: 'text-amber-600',
+          label: t('card.stats.rentPricePerSqm'),
+          value: `${formatCurrencyWhole(Math.round(rentPrice / displayArea))}/m²`,
+        });
+      }
+    }
+
     return items;
-  }, [property.building, property.floor, property.area, property.areas, property.layout, property.condition, t]);
+  }, [property.building, property.floor, property.area, property.areas, property.layout, property.condition, property.commercial, showCommercialPrices, t]);
 
   /** Build badges from operational status + commercial status */
   const badges = useMemo(() => {

@@ -876,7 +876,9 @@
       "area": "Εμβαδόν",
       "price": "Τιμή",
       "sale": "Πώληση",
-      "rent": "Ενοίκιο"
+      "rent": "Ενοίκιο",
+      "salePricePerSqm": "Πώληση/τ.μ.",
+      "rentPricePerSqm": "Ενοίκιο/τ.μ."
     },
     "ariaLabel": ""
   },

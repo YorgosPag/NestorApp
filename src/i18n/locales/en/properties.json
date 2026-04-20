@@ -876,7 +876,9 @@
       "area": "Area",
       "price": "Price",
       "sale": "Sale",
-      "rent": "Rent"
+      "rent": "Rent",
+      "salePricePerSqm": "Sale/sqm",
+      "rentPricePerSqm": "Rent/sqm"
     },
     "ariaLabel": ""
   },
