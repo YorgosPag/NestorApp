@@ -27,7 +27,7 @@ import { GridCard } from '@/design-system';
 import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
-import { formatNumber, formatFloorLabel } from '@/lib/intl-utils';
+import { formatNumber, formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 import { formatCurrencyWhole } from '@/lib/intl-domain';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 
@@ -218,6 +218,53 @@ export function PropertyGridCard({
       });
     }
 
+    // 💰 Price — context-aware per commercialStatus (mirrors PropertyListCard logic)
+    {
+      const cs = property.commercialStatus;
+      const salePrice = property.commercial?.askingPrice ?? property.price;
+      const rentPrice = property.commercial?.rentPrice;
+      const fmt = (n: number) => formatCurrency(n, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+      if (cs === 'for-rent') {
+        if (rentPrice && rentPrice > 0) {
+          items.push({
+            icon: NAVIGATION_ENTITIES.price.icon,
+            iconColor: NAVIGATION_ENTITIES.price.color,
+            label: t('card.stats.rent'),
+            value: `${fmt(rentPrice)}/μήνα`,
+            valueColor: NAVIGATION_ENTITIES.price.color,
+          });
+        }
+      } else if (cs === 'for-sale-and-rent') {
+        if (salePrice && salePrice > 0) {
+          items.push({
+            icon: NAVIGATION_ENTITIES.price.icon,
+            iconColor: NAVIGATION_ENTITIES.price.color,
+            label: t('card.stats.sale'),
+            value: fmt(salePrice),
+            valueColor: NAVIGATION_ENTITIES.price.color,
+          });
+        }
+        if (rentPrice && rentPrice > 0) {
+          items.push({
+            icon: NAVIGATION_ENTITIES.price.icon,
+            iconColor: NAVIGATION_ENTITIES.price.color,
+            label: t('card.stats.rent'),
+            value: `${fmt(rentPrice)}/μήνα`,
+            valueColor: NAVIGATION_ENTITIES.price.color,
+          });
+        }
+      } else if (salePrice && salePrice > 0) {
+        items.push({
+          icon: NAVIGATION_ENTITIES.price.icon,
+          iconColor: NAVIGATION_ENTITIES.price.color,
+          label: t('card.stats.price'),
+          value: fmt(salePrice),
+          valueColor: NAVIGATION_ENTITIES.price.color,
+        });
+      }
+    }
+
     // 💰 Commercial prices per sqm — only when showCommercialPrices=true (sales pages)
     if (showCommercialPrices && displayArea) {
       const askingPrice = property.commercial?.askingPrice;
@@ -243,7 +290,7 @@ export function PropertyGridCard({
     }
 
     return items;
-  }, [property.building, property.floor, property.area, property.areas, property.layout, property.condition, property.commercial, showCommercialPrices, t]);
+  }, [property.building, property.floor, property.area, property.areas, property.layout, property.condition, property.commercial, property.price, property.commercialStatus, showCommercialPrices, t]);
 
   /** Build badges from operational status + commercial status */
   const badges = useMemo(() => {
