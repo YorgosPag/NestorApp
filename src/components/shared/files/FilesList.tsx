@@ -241,7 +241,8 @@ export function FilesList({
               {/* Metadata */}
               <div className={cn("flex items-center gap-2 text-xs mt-1", colors.text.muted)}>
                 {(() => {
-                  const uploaderName = uploaderNames.get(file.createdBy)
+                  const uploaderName = file.uploaderName
+                    ?? uploaderNames.get(file.createdBy)
                     ?? (file.createdBy && file.createdBy === user?.uid
                       ? (user.displayName || user.email || null)
                       : null);

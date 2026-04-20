@@ -140,6 +140,7 @@ export class FileRecordService {
       linkedTo: input.linkedTo,
       levelFloorId: input.levelFloorId,
       language: 'el',
+      uploaderName: input.uploaderName,
     };
 
     const { fileId, storagePath, displayNameResult, recordBase } =

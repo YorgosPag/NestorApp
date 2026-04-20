@@ -37,6 +37,7 @@ import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-po
 import { generateUploadThumbnail, buildThumbnailPath } from '../utils/generate-upload-thumbnail';
 import { isAIClassifiable } from './useFileClassification';
 import { RealtimeService } from '@/services/realtime';
+import { useAuth } from '@/auth/hooks/useAuth';
 
 const CLASSIFY_POLL_DELAYS_MS = [3000, 5000, 8000];
 
@@ -131,6 +132,8 @@ export function useFileUpload({
   const [uploading, setUploading] = useState(false);
   const { t } = useTranslation(['files', 'files-media']);
   const { success, error: showError, warning } = useNotifications();
+  const { user } = useAuth();
+  const currentUserName = user?.displayName || user?.email || undefined;
 
   const handleUpload = useCallback(async (selectedFiles: File[]) => {
     if (!selectedFiles || selectedFiles.length === 0) return;
@@ -200,6 +203,7 @@ export function useFileUpload({
             ext,
             contentType: file.type,
             createdBy: currentUserId,
+            uploaderName: currentUserName,
             customTitle: selectedEntryPoint?.requiresCustomTitle
               ? customTitle
               : selectedEntryPoint?.label?.el,
@@ -274,7 +278,7 @@ export function useFileUpload({
     }
   }, [
     companyId, projectId, entityType, entityId, domain, category, entityLabel, purpose, levelFloorId,
-    currentUserId, selectedEntryPoint, customTitle, refetch, recordFileActivity,
+    currentUserId, currentUserName, selectedEntryPoint, customTitle, refetch, recordFileActivity,
     onUploadComplete, success, showError, warning, t,
   ]);
 

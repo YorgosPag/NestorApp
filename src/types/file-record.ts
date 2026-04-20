@@ -331,6 +331,9 @@ export interface FileRecord {
   /** User ID who created this file */
   createdBy: string;
 
+  /** Display name of uploader (denormalized at upload time — no Firestore lookup needed) */
+  uploaderName?: string;
+
   /** Last update timestamp */
   updatedAt?: Date | string;
 
@@ -687,6 +690,9 @@ export interface CreateFileRecordInput {
   contentType: string;
   /** User creating the file */
   createdBy: string;
+
+  /** Display name of uploader (denormalized at upload time) */
+  uploaderName?: string;
 }
 
 /**

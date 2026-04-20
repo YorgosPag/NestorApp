@@ -134,6 +134,9 @@ export interface BuildPendingFileRecordInput {
 
   // Language for display name
   language?: 'el' | 'en';
+
+  // Display name of uploader (denormalized at creation time)
+  uploaderName?: string;
 }
 
 /**
@@ -177,6 +180,9 @@ export interface FileRecordBase {
 
   // Ingestion state (for quarantine pipeline)
   ingestion?: IngestionState;
+
+  // Display name of uploader (denormalized at creation time)
+  uploaderName?: string;
 }
 
 /**
@@ -341,6 +347,9 @@ export function buildPendingFileRecordData(
   }
   if (input.ingestion) {
     recordBase.ingestion = input.ingestion;
+  }
+  if (input.uploaderName) {
+    recordBase.uploaderName = input.uploaderName;
   }
 
   return {

@@ -1673,6 +1673,24 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fileId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "file_audit_log",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "performedBy",
           "order": "ASCENDING"
         },
