@@ -9,7 +9,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useRouter } from 'next/navigation';
@@ -105,15 +105,34 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
     shouldShowTree
   } = useOrganizationTree(contactId, contactType);
 
-  const { contactNames } = useContactNames(relationships, contactId);
+  const { contactNames, orphanContactIds, loading: namesLoading } = useContactNames(relationships, contactId);
+
+  // Self-heal: stale relationships left in provider state after cascade-delete
+  // (cascade uses Admin SDK — bypasses RealtimeService → provider never gets RELATIONSHIP_DELETED)
+  useEffect(() => {
+    if (!namesLoading && orphanContactIds.length > 0) {
+      logger.warn('Orphan relationships detected — refreshing to self-heal stale state', { orphans: orphanContactIds });
+      void refreshRelationships();
+    }
+  }, [namesLoading, orphanContactIds, refreshRelationships]);
+
+  // Filter orphan relationships from display while self-heal is in progress
+  const orphanSet = useMemo(() => new Set(orphanContactIds), [orphanContactIds]);
+  const visibleRelationships = useMemo(
+    () => relationships.filter(rel => {
+      const otherId = rel.targetContactId === contactId ? rel.sourceContactId : rel.targetContactId;
+      return !orphanSet.has(otherId);
+    }),
+    [relationships, contactId, orphanSet]
+  );
 
   // ============================================================================
   // COMPUTED VALUES
   // ============================================================================
 
   const isNewContact = !contactId || contactId === 'new-contact';
-  const hasRelationships = relationships.length > 0;
-  const isLoading = relationshipsLoading || treeLoading;
+  const hasRelationships = visibleRelationships.length > 0;
+  const isLoading = relationshipsLoading || treeLoading || namesLoading;
 
   // ============================================================================
   // HANDLERS
@@ -125,7 +144,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   const handleDashboardCardClick = (stat: DashboardStat, _index: number) => {
     navigateToDashboardFilter(
       stat.title,
-      relationships,
+      visibleRelationships,
       contactNames,
       contactId,
       router
@@ -198,7 +217,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
         <CardContent>
           {/* 📊 Statistics Dashboard */}
           <StatisticsSection
-            relationships={relationships}
+            relationships={visibleRelationships}
             contactId={contactId}
             contactType={contactType}
             onCardClick={handleDashboardCardClick}
@@ -227,7 +246,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
 
           {/* 🔍 Recent Relationships */}
           <RecentRelationshipsSection
-            relationships={relationships}
+            relationships={visibleRelationships}
             contactNames={contactNames}
             contactId={contactId}
             onRelationshipClick={handleRelationshipClick}

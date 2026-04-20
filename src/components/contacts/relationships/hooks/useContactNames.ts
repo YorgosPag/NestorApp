@@ -25,12 +25,14 @@ const logger = createModuleLogger('useContactNames');
  */
 export const useContactNames = (relationships: ContactRelationship[], currentContactId: string) => {
   const [contactNames, setContactNames] = useState<Record<string, string>>({});
+  const [orphanContactIds, setOrphanContactIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchContactNames = async () => {
       if (relationships.length === 0) {
         setContactNames({});
+        setOrphanContactIds([]);
         return;
       }
 
@@ -40,6 +42,7 @@ export const useContactNames = (relationships: ContactRelationship[], currentCon
         logger.info('Current contactId', { currentContactId });
 
         const names: Record<string, string> = {};
+        const orphans: string[] = [];
 
         // Fetch contact names για κάθε relationship
         for (const relationship of relationships) {
@@ -68,27 +71,23 @@ export const useContactNames = (relationships: ContactRelationship[], currentCon
                 let contactName = 'Άγνωστη Επαφή';
 
                 if (contact.name) {
-                  // Primary name field (πλήρες όνομα)
                   contactName = contact.name;
                 } else if (contact.firstName && contact.lastName) {
-                  // Συνδυασμός ονόματος και επωνύμου
                   contactName = `${contact.firstName} ${contact.lastName}`;
                 } else if (contact.companyName) {
-                  // Company name
                   contactName = contact.companyName;
                 } else if (contact.serviceName) {
-                  // Service name
                   contactName = contact.serviceName;
                 } else if (contact.firstName) {
-                  // Μόνο το όνομα αν δεν υπάρχει επώνυμο
                   contactName = contact.firstName;
                 }
 
                 names[targetContactId] = contactName;
                 logger.info('Contact found', { targetContactId, name: contactName });
               } else {
-                names[targetContactId] = 'Όνομα μη διαθέσιμο';
-                logger.warn('Contact not found', { targetContactId });
+                // Contact not found in Firestore — stale relationship (cascade delete orphan)
+                orphans.push(targetContactId);
+                logger.warn('Orphan contact detected — related contact no longer exists', { targetContactId, relationshipId: relationship.id });
               }
             } catch (error) {
               names[targetContactId] = 'Σφάλμα φόρτωσης ονόματος';
@@ -98,10 +97,12 @@ export const useContactNames = (relationships: ContactRelationship[], currentCon
         }
 
         setContactNames(names);
-        logger.info('All contact names fetched', { count: Object.keys(names).length });
+        setOrphanContactIds(orphans);
+        logger.info('All contact names fetched', { count: Object.keys(names).length, orphans: orphans.length });
       } catch (error) {
         logger.error('Error in bulk fetch', { error });
         setContactNames({});
+        setOrphanContactIds([]);
       } finally {
         setLoading(false);
       }
@@ -110,5 +111,5 @@ export const useContactNames = (relationships: ContactRelationship[], currentCon
     fetchContactNames();
   }, [relationships, currentContactId]);
 
-  return { contactNames, loading };
+  return { contactNames, orphanContactIds, loading };
 };
