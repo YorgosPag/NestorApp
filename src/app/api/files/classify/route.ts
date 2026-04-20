@@ -51,7 +51,18 @@ const TEXT_MIME_TYPES = new Set([
 ]);
 
 function isClassifiable(mimeType: string): boolean {
-  return IMAGE_MIME_TYPES.has(mimeType) || TEXT_MIME_TYPES.has(mimeType);
+  return (
+    IMAGE_MIME_TYPES.has(mimeType) ||
+    TEXT_MIME_TYPES.has(mimeType) ||
+    mimeType.startsWith('video/') ||
+    mimeType.startsWith('audio/')
+  );
+}
+
+function getMediaDocumentType(mimeType: string): 'video' | 'audio' | null {
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  return null;
 }
 
 // ============================================================================
@@ -173,21 +184,49 @@ async function handlePost(
       );
     }
 
-    // 4. Set state to 'classifying' immediately
+    // 4. Deterministic classification for video/audio (no AI needed)
+    const mediaDocumentType = getMediaDocumentType(contentType);
+    if (mediaDocumentType) {
+      const now = nowISO();
+      await getAdminFirestore().collection(COLLECTIONS.FILES).doc(fileId).update({
+        'ingestion.analysis': {
+          kind: 'document_classify',
+          documentType: mediaDocumentType,
+          confidence: 1,
+          signals: ['mime-type'],
+          aiModel: null,
+          analysisTimestamp: now,
+          description: null,
+        },
+        'ingestion.state': 'classified',
+        'ingestion.stateChangedAt': now,
+        updatedAt: now,
+      });
+      return NextResponse.json({
+        success: true,
+        fileId,
+        status: 'already_classified' as const,
+        documentType: mediaDocumentType,
+        confidence: 1,
+        signals: ['mime-type'],
+      });
+    }
+
+    // 5. Set state to 'classifying' immediately
     await getAdminFirestore().collection(COLLECTIONS.FILES).doc(fileId).update({
       'ingestion.state': 'classifying',
       'ingestion.stateChangedAt': nowISO(),
       updatedAt: nowISO(),
     });
 
-    // 5. Return 200 immediately — classification happens in background
+    // 6. Return 200 immediately — classification happens in background
     const response = NextResponse.json({
       success: true,
       fileId,
       status: 'classifying' as const,
     });
 
-    // 6. Background classification via after()
+    // 7. Background classification via after()
     after(() => classifyInBackground(
       fileId,
       downloadUrl,

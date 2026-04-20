@@ -75,7 +75,11 @@ const CLASSIFIABLE_TYPES = new Set([
  */
 export function isAIClassifiable(contentType?: string): boolean {
   if (!contentType) return false;
-  return CLASSIFIABLE_TYPES.has(contentType);
+  return (
+    CLASSIFIABLE_TYPES.has(contentType) ||
+    contentType.startsWith('video/') ||
+    contentType.startsWith('audio/')
+  );
 }
 
 // ============================================================================

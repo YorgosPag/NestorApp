@@ -79,6 +79,8 @@ export const DocumentType = z.enum([
   'inspection-report',  // Έκθεση επιθεώρησης
   'receipt',            // Απόδειξη
   'other',              // Άλλο
+  'video',              // Αρχείο βίντεο
+  'audio',              // Αρχείο ήχου
 ]);
 
 export type DocumentTypeValue = z.infer<typeof DocumentType>;
