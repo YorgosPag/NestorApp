@@ -36,6 +36,34 @@ import type { EntityType, FileDomain, FileCategory } from '@/config/domain-const
 import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
 import { generateUploadThumbnail, buildThumbnailPath } from '../utils/generate-upload-thumbnail';
 import { isAIClassifiable } from './useFileClassification';
+import { RealtimeService } from '@/services/realtime';
+
+const CLASSIFY_POLL_DELAYS_MS = [3000, 5000, 8000];
+
+async function pollClassifyAndDispatch(
+  fileId: string,
+  entityType: string,
+  entityId: string,
+): Promise<void> {
+  for (const delay of CLASSIFY_POLL_DELAYS_MS) {
+    await new Promise<void>((resolve) => setTimeout(resolve, delay));
+    try {
+      const poll = await classifyFileWithPolicy(fileId);
+      if (!poll.success) return;
+      if (poll.status === 'already_classified') {
+        // Trigger refetch in useEntityFiles via FILE_CREATED handler
+        RealtimeService.dispatch('FILE_CREATED', {
+          fileId,
+          file: { displayName: '', category: 'documents', entityType, entityId, status: 'ready' },
+          timestamp: Date.now(),
+        });
+        return;
+      }
+    } catch {
+      return;
+    }
+  }
+}
 
 // ============================================================================
 // TYPES
@@ -207,9 +235,11 @@ export function useFileUpload({
             thumbnailUrl,
           });
 
-          // ADR-191 Phase 2.2: AI auto-classify (fire-and-forget)
+          // ADR-191 Phase 2.2: AI auto-classify — starts background job, polls until done
           if (isAIClassifiable(file.type)) {
-            classifyFileWithPolicy(fileId).catch(() => { /* non-blocking */ });
+            classifyFileWithPolicy(fileId)
+              .then(() => pollClassifyAndDispatch(fileId, entityType, entityId))
+              .catch(() => { /* non-blocking */ });
           }
 
           successCount++;

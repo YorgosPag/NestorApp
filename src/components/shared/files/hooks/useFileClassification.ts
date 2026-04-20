@@ -13,6 +13,24 @@
 import { useState, useCallback } from 'react';
 import { classifyFileWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 
+const POLL_DELAYS_MS = [3000, 5000, 8000];
+
+async function pollUntilClassified(fileId: string): Promise<ClassificationResult | null> {
+  for (const delay of POLL_DELAYS_MS) {
+    await new Promise<void>((resolve) => setTimeout(resolve, delay));
+    try {
+      const poll = await classifyFileWithPolicy(fileId);
+      if (!poll.success) return null;
+      if (poll.status === 'already_classified' && poll.documentType && poll.confidence !== undefined) {
+        return { documentType: poll.documentType, confidence: poll.confidence, signals: poll.signals ?? [] };
+      }
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -76,8 +94,12 @@ export function useFileClassification(): UseFileClassificationReturn {
         return null;
       }
 
+      // Background job in progress — poll until classified
+      if (data.status === 'classifying') {
+        return await pollUntilClassified(fileId);
+      }
+
       if (!data.documentType || data.confidence === undefined) {
-        setError('Classification response incomplete');
         return null;
       }
 

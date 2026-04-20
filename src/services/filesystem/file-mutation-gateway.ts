@@ -22,6 +22,7 @@ interface BatchDownloadFileInput {
 
 interface FileClassificationResponse {
   success?: boolean;
+  status?: 'classifying' | 'already_classified';
   error?: string;
   documentType?: string;
   confidence?: number;

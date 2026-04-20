@@ -28,6 +28,7 @@ import { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
 import { STUDY_ENTRIES } from '@/config/upload-entry-points/entries-studies';
+import { CONTACT_ENTRY_POINTS } from '@/config/upload-entry-points/entries-contact';
 
 /**
  * 🏢 ENTERPRISE: Add file extension to display name
@@ -52,7 +53,10 @@ function addExtension(displayName: string, ext?: string): string {
 let _purposeToLabelMap: Map<string, { el: string; en: string }> | null = null;
 function getPurposeToLabelMap(): Map<string, { el: string; en: string }> {
   if (!_purposeToLabelMap) {
-    _purposeToLabelMap = new Map(STUDY_ENTRIES.map((e) => [e.purpose, e.label]));
+    _purposeToLabelMap = new Map([
+      ...STUDY_ENTRIES.map((e): [string, { el: string; en: string }] => [e.purpose, e.label]),
+      ...CONTACT_ENTRY_POINTS.map((e): [string, { el: string; en: string }] => [e.purpose, e.label]),
+    ]);
   }
   return _purposeToLabelMap;
 }
