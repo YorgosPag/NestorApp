@@ -893,6 +893,7 @@
       "description": "Without the following data, this property will not appear in sales/rental dashboards:",
       "missing": {
         "askingPrice": "Asking price",
+        "rentPrice": "Monthly rent",
         "grossArea": "Gross area (m²)"
       }
     },

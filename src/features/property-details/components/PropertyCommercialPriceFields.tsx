@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/SalesDashboardRequirementsAlert';
 import { PricePlausibilityWarning } from '@/components/properties/shared/PricePlausibilityWarning';
+import '@/lib/design-system';
 import type { TFunction } from 'i18next';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
 
@@ -77,12 +78,6 @@ export function PropertyCommercialPriceFields({
             placeholder={t('placeholders.priceExample')}
             disabled={!isEditing || isSoldOrRented || isHierarchyLocked}
           />
-          <SalesDashboardRequirementsAlert
-            commercialStatus={commercialStatus}
-            askingPrice={askingPrice ?? null}
-            grossArea={grossArea}
-            className="py-2 px-3 mt-1"
-          />
           <PricePlausibilityWarning
             commercialStatus={commercialStatus}
             propertyType={propertyType}
@@ -113,8 +108,23 @@ export function PropertyCommercialPriceFields({
             placeholder={t('placeholders.priceExample')}
             disabled={!isEditing || isSoldOrRented || isHierarchyLocked}
           />
+          <PricePlausibilityWarning
+            commercialStatus="for-rent"
+            propertyType={propertyType}
+            askingPrice={rentPrice ?? null}
+            grossArea={grossArea}
+            className="py-2 px-3 mt-1"
+          />
         </fieldset>
       )}
+      {/* Unified requirements alert — missing price(s) or gross area */}
+      <SalesDashboardRequirementsAlert
+        commercialStatus={commercialStatus}
+        askingPrice={commercialStatus !== 'for-rent' ? (askingPrice ?? null) : undefined}
+        rentPrice={rentPrice ?? null}
+        grossArea={grossArea}
+        className="py-2 px-3 mt-1"
+      />
     </>
   );
 }

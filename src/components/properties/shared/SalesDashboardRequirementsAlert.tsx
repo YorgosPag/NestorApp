@@ -32,7 +32,7 @@ import { AlertTriangle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
-import { requiresAskingPrice } from '@/constants/commercial-statuses';
+import { requiresAskingPrice, requiresRentPrice } from '@/constants/commercial-statuses';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
 
 type NumericInput = number | string | null | undefined;
@@ -46,6 +46,12 @@ interface SalesDashboardRequirementsAlertProps {
    * ως missing. Αριθμός/string gated από `isMissingNumericValue()`.
    */
   readonly askingPrice?: NumericInput;
+  /**
+   * Τρέχον μηνιαίο ενοίκιο. Απαιτείται για for-rent / for-sale-and-rent.
+   * `undefined` = field απουσιάζει (creation flow) → πάντα εμφανίζεται ως
+   * missing. String/number gated από `isMissingNumericValue()`.
+   */
+  readonly rentPrice?: NumericInput;
   /**
    * Τρέχον μεικτό εμβαδό (gross area). Ίδια σημασιολογία με `askingPrice`:
    * `undefined` (field απουσιάζει) vs value (gated).
@@ -68,18 +74,23 @@ function isMissingNumericValue(value: NumericInput): boolean {
 export function SalesDashboardRequirementsAlert({
   commercialStatus,
   askingPrice,
+  rentPrice,
   grossArea,
   className,
 }: SalesDashboardRequirementsAlertProps) {
   const { t } = useTranslation(['properties', 'properties-detail']);
   const iconSizes = useIconSizes();
 
-  if (!requiresAskingPrice(commercialStatus)) return null;
+  const needsAskingPrice = requiresAskingPrice(commercialStatus);
+  const needsRentPrice = requiresRentPrice(commercialStatus);
 
-  const missingAskingPrice = isMissingNumericValue(askingPrice);
+  if (!needsAskingPrice && !needsRentPrice) return null;
+
+  const missingAskingPrice = needsAskingPrice && isMissingNumericValue(askingPrice);
+  const missingRentPrice = needsRentPrice && isMissingNumericValue(rentPrice);
   const missingGrossArea = isMissingNumericValue(grossArea);
 
-  if (!missingAskingPrice && !missingGrossArea) return null;
+  if (!missingAskingPrice && !missingRentPrice && !missingGrossArea) return null;
 
   return (
     <Alert
@@ -95,6 +106,9 @@ export function SalesDashboardRequirementsAlert({
         <ul className="mt-1 list-disc pl-5">
           {missingAskingPrice && (
             <li>{t('alerts.salesDashboardRequirements.missing.askingPrice')}</li>
+          )}
+          {missingRentPrice && (
+            <li>{t('alerts.salesDashboardRequirements.missing.rentPrice')}</li>
           )}
           {missingGrossArea && (
             <li>{t('alerts.salesDashboardRequirements.missing.grossArea')}</li>

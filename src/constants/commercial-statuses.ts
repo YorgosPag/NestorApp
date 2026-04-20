@@ -108,17 +108,30 @@ export function isFinalizedCommercialStatus(
 }
 
 /**
- * Semantic alias: statuses που απαιτούν δήλωση `askingPrice` πριν από
- * οποιαδήποτε sales/rental ενέργεια. Delegates στο `isListedCommercialStatus`
- * — SSoT: η λίστα ορίζεται μία φορά στο `LISTED_COMMERCIAL_STATUSES`.
+ * Semantic alias: statuses που απαιτούν δήλωση `askingPrice` (τιμή πώλησης).
+ * Περιλαμβάνει `for-sale` και `for-sale-and-rent` — ΕΞΑΙΡΕΙ `for-rent` (που
+ * απαιτεί μόνο `rentPrice`, όχι asking price).
  *
- * Χρήση: UX hints σε property creation / edit forms για να υπενθυμίσουν
- * στον χρήστη ότι τα listings χωρίς τιμή δεν εμφανίζονται σε sales dashboards.
+ * Χρήση: UX hints σε property forms για να υπενθυμίσουν ότι τα listings
+ * χωρίς τιμή πώλησης δεν εμφανίζονται σε sales dashboards.
  */
 export function requiresAskingPrice(
   value: unknown,
-): value is ListedCommercialStatus {
-  return isListedCommercialStatus(value);
+): value is 'for-sale' | 'for-sale-and-rent' {
+  return value === 'for-sale' || value === 'for-sale-and-rent';
+}
+
+/**
+ * Statuses που απαιτούν δήλωση `rentPrice` (μηνιαίο ενοίκιο):
+ * `for-rent` και `for-sale-and-rent`.
+ *
+ * Χρήση: UX hints σε property forms για να υπενθυμίσουν ότι τα rental
+ * listings χωρίς μηνιαίο ενοίκιο δεν εμφανίζονται σε rental dashboards.
+ */
+export function requiresRentPrice(
+  value: unknown,
+): value is 'for-rent' | 'for-sale-and-rent' {
+  return value === 'for-rent' || value === 'for-sale-and-rent';
 }
 
 /**
