@@ -153,7 +153,7 @@ function formatKnownEntity(obj: Record<string, unknown>): string | null {
  * Extract a short identifier from a Firebase Storage URL for audit display.
  * e.g. "...file_f76a661d-8667-4199-8d8a-2a8cc7e9c37f.png?..." → "Φωτογραφία (f76a661d.png)"
  */
-function formatStorageUrl(url: string): string {
+export function formatStorageUrl(url: string): string {
   const fileMatch = url.match(/file_([a-f0-9]{8})[^.]*(\.\w+)/);
   if (fileMatch) return `Φωτογραφία (${fileMatch[1]}${fileMatch[2]})`;
   const extMatch = url.match(/(\.\w{3,4})\?/);

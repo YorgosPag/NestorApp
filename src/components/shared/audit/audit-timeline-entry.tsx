@@ -23,7 +23,7 @@ import { useTranslation } from "@/i18n/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 import { ACTION_MAP } from "./activity-tab-config";
-import { formatFieldAwareValue } from "./activity-tab-helpers";
+import { formatFieldAwareValue, formatStorageUrl } from "./activity-tab-helpers";
 import { resolveAuditValue } from "./audit-value-resolver";
 
 // ============================================================================
@@ -194,7 +194,8 @@ export function AuditTimelineEntry({
               if (change.kind === 'collection' && change.op) {
                 const rawLabel = change.itemLabel ?? change.itemKey ?? '';
                 const itemLabel = rawLabel !== ''
-                  ? (resolveAuditValue(change.field, rawLabel, t) ?? rawLabel)
+                  ? (resolveAuditValue(change.field, rawLabel, t)
+                      ?? (rawLabel.includes('firebasestorage.googleapis.com') ? formatStorageUrl(rawLabel) : rawLabel))
                   : t('audit.collection.emptyItem');
                 const message = t(`audit.collection.${change.op}`, {
                   field: fieldLabel,
