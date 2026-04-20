@@ -52,7 +52,7 @@
     "balconies": "Number of balconies",
     "orientation": "Orientation",
     "energyClass": "Energy class",
-    "condition": "Condition",
+    "condition": "Upkeep condition",
     "renovationYear": "Renovation year",
     "deliveryDate": "Delivery date"
   },

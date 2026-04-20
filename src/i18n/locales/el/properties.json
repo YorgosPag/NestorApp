@@ -869,7 +869,7 @@
   },
   "card": {
     "stats": {
-      "condition": "Κατάσταση",
+      "condition": "Κατάσταση διατήρησης",
       "building": "Κτίριο",
       "floor": "Όροφος",
       "area": "Εμβαδόν",
@@ -1070,7 +1070,7 @@
       "bedrooms": "Υπνοδωμάτια",
       "bathrooms": "Μπάνια",
       "orientations": "Προσανατολισμός",
-      "condition": "Κατάσταση",
+      "condition": "Κατάσταση διατήρησης",
       "energyClass": "Ενεργειακή κλάση",
       "heatingType": "Θέρμανση",
       "coolingType": "Ψύξη",

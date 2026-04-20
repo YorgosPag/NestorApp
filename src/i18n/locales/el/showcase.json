@@ -52,7 +52,7 @@
     "balconies": "Αριθμός μπαλκονιών",
     "orientation": "Προσανατολισμός",
     "energyClass": "Ενεργειακή κλάση",
-    "condition": "Κατάσταση",
+    "condition": "Κατάσταση διατήρησης",
     "renovationYear": "Έτος ανακαίνισης",
     "deliveryDate": "Ημερομηνία παράδοσης"
   },

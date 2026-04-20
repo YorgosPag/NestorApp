@@ -869,7 +869,7 @@
   },
   "card": {
     "stats": {
-      "condition": "Condition",
+      "condition": "Upkeep condition",
       "building": "Building",
       "floor": "Floor",
       "area": "Area",
@@ -1070,7 +1070,7 @@
       "bedrooms": "Bedrooms",
       "bathrooms": "Bathrooms",
       "orientations": "Orientation",
-      "condition": "Condition",
+      "condition": "Upkeep condition",
       "energyClass": "Energy class",
       "heatingType": "Heating",
       "coolingType": "Cooling",
