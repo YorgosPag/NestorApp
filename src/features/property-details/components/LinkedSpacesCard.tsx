@@ -85,7 +85,6 @@ export function LinkedSpacesCard({
   const [draftLinkedSpaces, setDraftLinkedSpaces] = useState<LinkedSpace[]>(currentLinkedSpaces);
   const [selectedParkingId, setSelectedParkingId] = useState<string>(SELECT_CLEAR_VALUE);
   const [selectedStorageId, setSelectedStorageId] = useState<string>(SELECT_CLEAR_VALUE);
-  const [selectedInclusion, setSelectedInclusion] = useState<SpaceInclusionType>('included');
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
@@ -96,7 +95,6 @@ export function LinkedSpacesCard({
       setDraftLinkedSpaces(currentLinkedSpaces);
       setSelectedParkingId(SELECT_CLEAR_VALUE);
       setSelectedStorageId(SELECT_CLEAR_VALUE);
-      setSelectedInclusion('included');
       setSaveStatus('idle');
     }
     prevIsEditingRef.current = isEditing;
@@ -149,7 +147,7 @@ export function LinkedSpacesCard({
       spaceId: parkingId,
       spaceType: ALLOCATION_SPACE_TYPES.PARKING,
       quantity: 1,
-      inclusion: selectedInclusion,
+      inclusion: SPACE_INCLUSION_TYPES.INCLUDED,
       allocationCode: parking.number,
     };
     const previous = draftLinkedSpaces;
@@ -157,7 +155,7 @@ export function LinkedSpacesCard({
     setDraftLinkedSpaces(updated);
     setSelectedParkingId(SELECT_CLEAR_VALUE);
     persistLinkedSpaces(updated, previous);
-  }, [parkingOptions, draftLinkedSpaces, selectedInclusion, persistLinkedSpaces]);
+  }, [parkingOptions, draftLinkedSpaces, persistLinkedSpaces]);
 
   const handleStorageSelected = useCallback((storageId: string) => {
     if (!storageId || isSelectClearValue(storageId)) {
@@ -173,7 +171,7 @@ export function LinkedSpacesCard({
       spaceId: storageId,
       spaceType: ALLOCATION_SPACE_TYPES.STORAGE,
       quantity: 1,
-      inclusion: selectedInclusion,
+      inclusion: SPACE_INCLUSION_TYPES.INCLUDED,
       allocationCode: storage.name,
     };
     const previous = draftLinkedSpaces;
@@ -181,11 +179,18 @@ export function LinkedSpacesCard({
     setDraftLinkedSpaces(updated);
     setSelectedStorageId(SELECT_CLEAR_VALUE);
     persistLinkedSpaces(updated, previous);
-  }, [storageOptions, draftLinkedSpaces, selectedInclusion, persistLinkedSpaces]);
+  }, [storageOptions, draftLinkedSpaces, persistLinkedSpaces]);
 
   const handleRemoveSpace = useCallback((spaceId: string) => {
     const previous = draftLinkedSpaces;
     const updated = previous.filter(ls => ls.spaceId !== spaceId);
+    setDraftLinkedSpaces(updated);
+    persistLinkedSpaces(updated, previous);
+  }, [draftLinkedSpaces, persistLinkedSpaces]);
+
+  const handleInclusionChanged = useCallback((spaceId: string, inclusion: SpaceInclusionType) => {
+    const previous = draftLinkedSpaces;
+    const updated = previous.map(ls => ls.spaceId === spaceId ? { ...ls, inclusion } : ls);
     setDraftLinkedSpaces(updated);
     persistLinkedSpaces(updated, previous);
   }, [draftLinkedSpaces, persistLinkedSpaces]);
@@ -231,9 +236,28 @@ export function LinkedSpacesCard({
                       <Package className={cn(iconSizes.xs, PROPERTY_CARD_COLORS.storage)} />
                     )}
                     <span>{getSpaceName(space)}</span>
-                    <span className={cn("text-xs", colors.text.muted)}>
-                      ({getInclusionLabel(space.inclusion)})
-                    </span>
+                    {isEditing ? (
+                      <Select
+                        value={space.inclusion}
+                        onValueChange={(val) => handleInclusionChanged(space.spaceId, val as SpaceInclusionType)}
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          className="h-5 border-0 bg-transparent px-1 text-xs shadow-none hover:bg-muted/50 focus:ring-0"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={SPACE_INCLUSION_TYPES.INCLUDED}>{t('linkedSpaces.inclusion.included')}</SelectItem>
+                          <SelectItem value={SPACE_INCLUSION_TYPES.OPTIONAL}>{t('linkedSpaces.inclusion.optional')}</SelectItem>
+                          <SelectItem value={SPACE_INCLUSION_TYPES.RENTED}>{t('linkedSpaces.inclusion.rented')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className={cn("text-xs", colors.text.muted)}>
+                        ({getInclusionLabel(space.inclusion)})
+                      </span>
+                    )}
                     {isEditing && (
                       <button
                         type="button"
@@ -258,20 +282,6 @@ export function LinkedSpacesCard({
         {/* Add new spaces (edit mode only) */}
         {isEditing && (
           <>
-            <fieldset className={spacing.spaceBetween.sm}>
-              <Label htmlFor="inclusion-selector" className="text-xs">
-                {t('linkedSpaces.inclusionLabel')}
-              </Label>
-              <Select value={selectedInclusion} onValueChange={(value: SpaceInclusionType) => setSelectedInclusion(value)}>
-                <SelectTrigger id="inclusion-selector" size="sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SPACE_INCLUSION_TYPES.INCLUDED}>{t('linkedSpaces.inclusion.included')}</SelectItem>
-                  <SelectItem value={SPACE_INCLUSION_TYPES.OPTIONAL}>{t('linkedSpaces.inclusion.optional')}</SelectItem>
-                  <SelectItem value={SPACE_INCLUSION_TYPES.RENTED}>{t('linkedSpaces.inclusion.rented')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </fieldset>
-
             {/* Parking selector */}
             <fieldset className={spacing.spaceBetween.sm}>
               <Label className="text-xs flex items-center gap-1">
