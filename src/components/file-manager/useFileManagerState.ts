@@ -42,15 +42,26 @@ function applyFilters(files: FileRecord[], searchTerm: string, filters: FileFilt
 
   // Search term filter — accent & case insensitive (Greek support)
   if (searchTerm.trim()) {
-    const query = normalizeForSearch(searchTerm);
-    const norm = (s?: string | null) => s ? normalizeForSearch(s) : '';
-    result = result.filter(file =>
-      norm(file.displayName).includes(query) ||
-      norm(file.originalFilename).includes(query) ||
-      norm((file as { entityLabel?: string }).entityLabel).includes(query) ||
-      norm(file.category).includes(query) ||
-      norm(file.description).includes(query)
-    );
+    const raw = searchTerm.trim();
+    // Glob extension pattern: *.ext — match files ending with .ext
+    const extMatch = raw.match(/^\*\.(\w+)$/);
+    if (extMatch) {
+      const ext = extMatch[1].toLowerCase();
+      result = result.filter(file =>
+        (file.originalFilename ?? '').toLowerCase().endsWith(`.${ext}`) ||
+        (file.displayName ?? '').toLowerCase().endsWith(`.${ext}`)
+      );
+    } else {
+      const query = normalizeForSearch(raw);
+      const norm = (s?: string | null) => s ? normalizeForSearch(s) : '';
+      result = result.filter(file =>
+        norm(file.displayName).includes(query) ||
+        norm(file.originalFilename).includes(query) ||
+        norm((file as { entityLabel?: string }).entityLabel).includes(query) ||
+        norm(file.category).includes(query) ||
+        norm(file.description).includes(query)
+      );
+    }
   }
 
   // Advanced filters - search term
