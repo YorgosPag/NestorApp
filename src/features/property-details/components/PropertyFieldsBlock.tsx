@@ -87,6 +87,10 @@ export function PropertyFieldsBlock({
   }, [property.type]);
 
   const nameUserEdited = useRef(!isCreatingNewUnit);
+  // Tracks whether the user explicitly typed a new code (vs auto-suggestion).
+  // Auto-saves the code separately via onAutoSaveFields, so the manual save
+  // should not include it unless the user deliberately changed it.
+  const codeEditedByUserRef = useRef(false);
   const buildSuggestedName = useCallback((unitType: string, areaNet: number): string => {
     const typeKey = PROPERTY_TYPE_I18N_KEYS[unitType as keyof typeof PROPERTY_TYPE_I18N_KEYS];
     const typeLabel = typeKey ? t(typeKey) : unitType;
@@ -132,6 +136,7 @@ export function PropertyFieldsBlock({
         type: localType,
       };
       setFormData(p => ({ ...p, code: property.code ?? '' }));
+      codeEditedByUserRef.current = false;
       return;
     }
     const prev = prevCodeInputsRef.current;
@@ -163,6 +168,7 @@ export function PropertyFieldsBlock({
         setFormData(buildFormDataFromProperty(property));
         setLocalType(property.type ?? '');
         codeRegenerationPending.current = false;
+        codeEditedByUserRef.current = false;
         prevCodeInputsRef.current = {
           buildingId: property.buildingId ?? '',
           floor: property.floor ?? 0,
@@ -255,13 +261,17 @@ export function PropertyFieldsBlock({
     [formData, property, isMultiLevel],
   );
 
-  // ADR-233: Called by EntityCodeField.onChange — keeps formData.code in sync
+  // ADR-233: Called by EntityCodeField.onChange — keeps formData.code in sync.
+  // Tentatively marks as user-edited; handleCodeAutoApply clears this for auto-suggestions.
   const handleCodeChange = useCallback((code: string) => {
     setFormData(prev => ({ ...prev, code }));
+    codeEditedByUserRef.current = true;
   }, []);
 
-  // ADR-233: Called by EntityCodeField.onAutoApply — triggers auto-save after input change
+  // ADR-233: Called by EntityCodeField.onAutoApply — triggers auto-save after input change.
+  // Clears codeEditedByUser so the manual save does not re-include the auto-suggested code.
   const handleCodeAutoApply = useCallback((code: string) => {
+    codeEditedByUserRef.current = false;
     if (codeRegenerationPending.current && onAutoSaveFields) {
       codeRegenerationPending.current = false;
       onAutoSaveFields({ code });
@@ -272,6 +282,12 @@ export function PropertyFieldsBlock({
     setIsSaving(true);
     try {
       const updates = buildUpdatesFromForm();
+      // If user did NOT explicitly edit the code, preserve the server-side code
+      // to avoid spurious "code changed" entries in the impact guard. Auto-suggestions
+      // are saved separately via onAutoSaveFields/directSaveFields.
+      if (!isCreatingNewUnit && !codeEditedByUserRef.current) {
+        (updates as Record<string, unknown>).code = property.code ?? undefined;
+      }
 
       if (isCreatingNewUnit) {
         // ADR-284 Batch 7: Client-side discriminated validation (mirrors server policy)
@@ -321,6 +337,7 @@ export function PropertyFieldsBlock({
           floorId: property.floorId,
         }, updates as Partial<Property> & Record<string, unknown>, async () => {
           editExitWasSaveRef.current = true;
+          codeEditedByUserRef.current = false;
           if (onExitEditMode) { onExitEditMode(); } else { setLocalEditing(false); }
           success(t('save.success'));
         });
@@ -334,8 +351,8 @@ export function PropertyFieldsBlock({
   }, [buildUpdatesFromForm, formData.areaGross, formData.floor, formData.name, formData.type,
     formData.projectId, formData.buildingId, formData.floorId, formData.levels.length,
     isCreatingNewUnit, onExitEditMode, onPropertyCreated, property.id, property.buildingId,
-    property.commercialStatus, property.floorId, runExistingPropertyUpdate, latestSuggestion,
-    success, notifyError, t]);
+    property.code, property.commercialStatus, property.floorId, runExistingPropertyUpdate,
+    latestSuggestion, success, notifyError, t]);
 
   const toggleArrayItem = useCallback(<T extends string>(
     field: 'orientations' | 'flooring' | 'interiorFeatures' | 'securityFeatures',
