@@ -145,7 +145,7 @@ export function PropertyGridCard({
     const items: StatItem[] = [];
 
     // 🏢 ENTERPRISE: Use new areas schema with legacy fallback (Fix 85 vs 5.2 inconsistency)
-    const displayArea = property.areas?.gross ?? property.area;
+    const displayArea = property.areas?.gross || property.areas?.net || property.area;
 
     // Building with icon
     if (property.building) {

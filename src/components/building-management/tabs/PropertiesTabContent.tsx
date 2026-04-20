@@ -157,7 +157,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
     total: units.length,
     available: units.filter(u => u.status === 'for-sale' || u.status === 'for-rent').length,
     totalValue: units.reduce((sum, u) => sum + (u.price || 0), 0),
-    totalArea: units.reduce((sum, u) => sum + (u.area || 0), 0),
+    totalArea: units.reduce((sum, u) => sum + (u.areas?.gross || u.area || 0), 0),
   }), [units]);
 
   const filteredUnits = useMemo(() => {
@@ -285,14 +285,14 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
     { key: 'name', label: t('tabs.floors.name'), sortValue: (u) => u.name, render: (u) => <span className="font-medium">{u.name}</span> },
     { key: 'type', label: t('tabs.labels.properties'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{getPropertyTypeLabel(u.type, tUnits)}</span> },
     { key: 'floor', label: t('tabs.floors.number'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className={cn("font-mono text-sm", colors.text.muted)}>{u.floor}</span> },
-    { key: 'area', label: 'm²', width: 'w-20', sortValue: (u) => u.area || 0, render: (u) => <span className="font-mono text-xs">{u.area ? `${u.area}` : '—'}</span> },
+    { key: 'area', label: 'm²', width: 'w-20', sortValue: (u) => u.areas?.gross || u.area || 0, render: (u) => { const a = u.areas?.gross || u.area; return <span className="font-mono text-xs">{a ? `${a}` : '—'}</span>; } },
     { key: 'status', label: t('tabs.labels.details'), width: 'w-28', sortValue: (u) => u.status, render: (u) => getStatusBadge(u.status) },
   ], [t, tUnits]);
 
   const unitCardFields: SpaceCardField<Property>[] = useMemo(() => [
     buildTypeCodeField(tUnits('card.stats.type'), (u) => getPropertyTypeLabel(u.type, tUnits), (u) => u.code),
     buildFloorField(tUnits('card.stats.floor'), (u) => u.floor != null ? String(u.floor) : undefined),
-    buildAreaField((u) => u.area),
+    buildAreaField((u) => u.areas?.gross || u.area),
     buildPriceField(tUnits('table.price'), (u) => u.price),
   ], [tUnits]);
 

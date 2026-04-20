@@ -174,12 +174,13 @@ export function PropertyListCard({
     }
 
     // Area - 🏢 ENTERPRISE: Using centralized area icon/color
-    if (property.area) {
+    const _displayArea = property.areas?.gross || property.area;
+    if (_displayArea) {
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
         iconColor: NAVIGATION_ENTITIES.area.color,
         label: t('card.stats.area'),
-        value: `${property.area} m²`,
+        value: `${_displayArea} m²`,
       });
     }
 
