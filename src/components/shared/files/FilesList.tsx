@@ -33,6 +33,7 @@ import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
 import { useFileListActions } from './hooks/useFileListActions';
 import { useFileClassification } from './hooks/useFileClassification';
+import { useUserDisplayNames } from '@/hooks/useUserDisplayNames';
 
 // ============================================================================
 // TYPES
@@ -82,6 +83,9 @@ export function FilesList({
   const colors = useSemanticColors();
   const { t } = useTranslation(['files', 'files-media']);
   const translateDisplayName = useFileDisplayName();
+
+  const uploaderUids = files.map(f => f.createdBy).filter(Boolean);
+  const uploaderNames = useUserDisplayNames(uploaderUids);
 
   // Dynamic entity name for link/unlink tooltips
   const entityName = t(`list.entityName.${entityType ?? 'building'}`);
@@ -228,6 +232,11 @@ export function FilesList({
 
               {/* Metadata */}
               <div className={cn("flex items-center gap-2 text-xs mt-1", colors.text.muted)}>
+                {uploaderNames.get(file.createdBy) && (
+                  <span className="truncate max-w-[120px]">
+                    {uploaderNames.get(file.createdBy)}
+                  </span>
+                )}
                 <span className="flex items-center gap-1">
                   <HardDrive className={iconSizes.xs} aria-hidden="true" />
                   {formatFileSize(file.sizeBytes ?? 0)}
