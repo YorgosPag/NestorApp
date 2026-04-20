@@ -139,8 +139,10 @@ export const GET = withStandardRateLimit(
 
         return NextResponse.json({
           success: true,
-          units: properties,
-          count: properties.length
+          data: {
+            units: properties,
+            count: properties.length,
+          },
         });
 
       } catch (error) {

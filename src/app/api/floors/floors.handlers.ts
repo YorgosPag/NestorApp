@@ -69,26 +69,30 @@ export async function handleListFloors(
 
       return NextResponse.json({
         success: true,
-        floors,
-        floorsByBuilding,
-        stats: {
-          totalFloors: floors.length,
-          buildingsWithFloors: buildingCount,
-          projectId: params.projectId,
+        data: {
+          floors,
+          floorsByBuilding,
+          stats: {
+            totalFloors: floors.length,
+            buildingsWithFloors: buildingCount,
+            projectId: params.projectId,
+          },
+          message: `Found ${floors.length} floors in ${buildingCount} buildings`,
         },
-        message: `Found ${floors.length} floors in ${buildingCount} buildings`,
       });
     }
 
     logger.info('[Floors/List] Complete', { floorCount: floors.length });
     return NextResponse.json({
       success: true,
-      floors,
-      stats: {
-        totalFloors: floors.length,
-        buildingId: params.buildingId ?? undefined,
+      data: {
+        floors,
+        stats: {
+          totalFloors: floors.length,
+          buildingId: params.buildingId ?? undefined,
+        },
+        message: `Found ${floors.length} floors${params.buildingId ? ` for building ${params.buildingId}` : ''}`,
       },
-      message: `Found ${floors.length} floors${params.buildingId ? ` for building ${params.buildingId}` : ''}`,
     });
   } catch (error) {
     logger.error('[Floors/List] Error', {
