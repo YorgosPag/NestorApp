@@ -43,9 +43,9 @@ interface ClassificationResult {
 
 interface UseFileClassificationReturn {
   /** Trigger classification for a single file */
-  classifyFile: (fileId: string) => Promise<ClassificationResult | null>;
+  classifyFile: (fileId: string, force?: boolean) => Promise<ClassificationResult | null>;
   /** Trigger classification for multiple files */
-  classifyBatch: (fileIds: string[]) => Promise<Map<string, ClassificationResult>>;
+  classifyBatch: (fileIds: string[], force?: boolean) => Promise<Map<string, ClassificationResult>>;
   /** Currently classifying file IDs */
   classifyingIds: Set<string>;
   /** Last error (if any) */
@@ -106,12 +106,12 @@ export function useFileClassification(): UseFileClassificationReturn {
   const [classifyingIds, setClassifyingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
-  const classifyFile = useCallback(async (fileId: string): Promise<ClassificationResult | null> => {
+  const classifyFile = useCallback(async (fileId: string, force = false): Promise<ClassificationResult | null> => {
     setClassifyingIds((prev) => new Set(prev).add(fileId));
     setError(null);
 
     try {
-      const data = await classifyFileWithPolicy(fileId);
+      const data = await classifyFileWithPolicy(fileId, force);
 
       if (!data.success) {
         setError(data.error ?? 'Classification failed');
@@ -145,12 +145,12 @@ export function useFileClassification(): UseFileClassificationReturn {
     }
   }, []);
 
-  const classifyBatch = useCallback(async (fileIds: string[]): Promise<Map<string, ClassificationResult>> => {
+  const classifyBatch = useCallback(async (fileIds: string[], force = false): Promise<Map<string, ClassificationResult>> => {
     const results = new Map<string, ClassificationResult>();
 
     // Process sequentially to respect rate limits
     for (const fileId of fileIds) {
-      const result = await classifyFile(fileId);
+      const result = await classifyFile(fileId, force);
       if (result) {
         results.set(fileId, result);
       }

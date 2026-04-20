@@ -209,7 +209,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
       showWarning(t('batch.noAIClassifiableFiles'));
       return;
     }
-    await classifyBatch(classifiableIds);
+    await classifyBatch(classifiableIds, true);
     refetch();
   }, [selectedIds, filteredFiles, classifyBatch, refetch, showWarning, t]);
 

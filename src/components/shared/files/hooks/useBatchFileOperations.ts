@@ -238,7 +238,7 @@ export function useBatchFileOperations({
       return;
     }
 
-    await classifyBatch(classifiableIds);
+    await classifyBatch(classifiableIds, true);
     refetch();
   }, [selectedIds, files, classifyBatch, refetch, warning, t]);
 

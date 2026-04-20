@@ -103,7 +103,7 @@ export function FilesList({
   const { classifyFile, classifyingIds } = useFileClassification();
 
   async function handleRetryClassify(fileId: string) {
-    await classifyFile(fileId);
+    await classifyFile(fileId, true);
     onClassified?.();
   }
 

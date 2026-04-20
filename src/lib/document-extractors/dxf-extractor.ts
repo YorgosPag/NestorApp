@@ -26,9 +26,11 @@ export function extractTextFromDxf(buffer: Buffer): string {
     // Group code 1 = primary text value, code 3 = MTEXT continuation
     if (inTextEntity && (code === '1' || code === '3')) {
       const cleaned = value
-        .replace(/\\P/g, ' ')   // MTEXT paragraph break
-        .replace(/\\~/g, ' ')   // MTEXT non-breaking space
-        .replace(/\{[^}]*\}/g, '') // MTEXT formatting codes like \f, \H, \C
+        .replace(/\\[fFhHcCaAwWtTqQlLsS][^;]*;/g, '') // MTEXT formatting codes \f...; \H...; etc.
+        .replace(/\\[pP]/g, ' ')   // paragraph break
+        .replace(/\\[uUoOkK]/g, '') // underline/overline/strikethrough toggles
+        .replace(/\\~/g, ' ')       // non-breaking space
+        .replace(/[{}]/g, '')       // remove grouping braces, keep content
         .trim();
       if (cleaned.length > 1) texts.push(cleaned);
       i++;

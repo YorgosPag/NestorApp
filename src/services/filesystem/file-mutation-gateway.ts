@@ -267,11 +267,12 @@ export async function restoreFileFromTrashWithPolicy(
 
 export async function classifyFileWithPolicy(
   fileId: string,
+  force = false,
 ): Promise<FileClassificationResponse> {
   return mutateJson<FileClassificationResponse>(API_ROUTES.FILES.CLASSIFY, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileId }),
+    body: JSON.stringify({ fileId, force }),
   });
 }
 

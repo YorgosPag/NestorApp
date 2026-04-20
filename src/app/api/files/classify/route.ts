@@ -87,6 +87,8 @@ function getMediaDocumentType(mimeType: string): 'video' | 'audio' | null {
 
 interface ClassifyRequest {
   fileId: string;
+  /** Force re-classification even if already classified */
+  force?: boolean;
 }
 
 interface ClassifyResponse {
@@ -135,7 +137,7 @@ async function handlePost(
       );
     }
 
-    const { fileId } = body;
+    const { fileId, force = false } = body;
 
     // 1. Read FileRecord from Firestore
     const fileDoc = await getAdminFirestore().collection(COLLECTIONS.FILES).doc(fileId).get();
@@ -160,9 +162,9 @@ async function handlePost(
     const sizeBytes = fileData.sizeBytes as number | undefined;
     const fileExt = fileData.ext as string | undefined;
 
-    // 2. Skip if already classified or classifying
+    // 2. Skip if already classified or classifying (unless force=true)
     const currentState = fileData.ingestion?.state as string | undefined;
-    if (currentState === 'classified') {
+    if (currentState === 'classified' && !force) {
       return NextResponse.json({
         success: true,
         fileId,
