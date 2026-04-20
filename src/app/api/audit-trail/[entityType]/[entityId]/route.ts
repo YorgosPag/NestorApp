@@ -18,7 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import type { AuditEntityType, EntityAuditEntry, EntityAuditResponse } from '@/types/audit-trail';
+import type { AuditEntityType, AuditSource, EntityAuditEntry, EntityAuditResponse } from '@/types/audit-trail';
 
 // ============================================================================
 // VALIDATION
@@ -83,6 +83,9 @@ export const GET = withStandardRateLimit(
 
       const entries: EntityAuditEntry[] = resultDocs.map((doc) => {
         const data = doc.data();
+        const rawSource = data.source;
+        const source: AuditSource | undefined =
+          rawSource === 'cdc' || rawSource === 'service' ? rawSource : undefined;
         return {
           id: doc.id,
           entityType: data.entityType,
@@ -94,6 +97,7 @@ export const GET = withStandardRateLimit(
           performedByName: data.performedByName ?? null,
           companyId: data.companyId,
           timestamp: data.timestamp?.toDate?.()?.toISOString() ?? '',
+          ...(source ? { source } : {}),
         };
       });
 

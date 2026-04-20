@@ -27,7 +27,10 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/lib/error-utils';
-import { EntityAuditClientService } from '@/services/entity-audit-client.service';
+import {
+  EntityAuditClientService,
+  dedupDualWrite,
+} from '@/services/entity-audit-client.service';
 import type {
   AuditAction,
   AuditEntityType,
@@ -69,12 +72,15 @@ interface UseGlobalAuditTrailReturn {
 
 function dedupeAndSort(entries: EntityAuditEntry[]): EntityAuditEntry[] {
   const seen = new Set<string>();
-  const out: EntityAuditEntry[] = [];
+  const byId: EntityAuditEntry[] = [];
   for (const entry of entries) {
     if (!entry.id || seen.has(entry.id)) continue;
     seen.add(entry.id);
-    out.push(entry);
+    byId.push(entry);
   }
+  // ADR-195 Phase 1 CDC dual-write: collapse the service+cdc pair before
+  // surfacing to the admin global audit view.
+  const out = dedupDualWrite(byId);
   out.sort((a, b) => {
     const bMs = Date.parse(b.timestamp) || 0;
     const aMs = Date.parse(a.timestamp) || 0;

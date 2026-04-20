@@ -106,6 +106,16 @@ export interface AuditFieldChange {
 // AUDIT ENTRY (Firestore Document)
 // ============================================================================
 
+/**
+ * Writer identity for an audit entry. ADR-195 Phase 1 CDC dual-write:
+ *   - `'service'` — written by `EntityAuditService.recordChange` (service-layer,
+ *     curated tracked fields, authoritative `performedBy`).
+ *   - `'cdc'` — written by Cloud Function `auditContactWrite` (Firestore
+ *     onWrite trigger, full automatic deep diff).
+ * Client dedup prefers `'cdc'` when both coexist for the same logical action.
+ */
+export type AuditSource = 'service' | 'cdc';
+
 /** Full audit trail entry as stored in Firestore */
 export interface EntityAuditEntry {
   /** Firestore document ID (populated on read) */
@@ -128,6 +138,12 @@ export interface EntityAuditEntry {
   companyId: string;
   /** Timestamp (ISO string on read, serverTimestamp on write) */
   timestamp: string;
+  /**
+   * Writer that produced this entry. Optional for backward compatibility
+   * with entries written before Phase 1 CDC rollout. Missing = legacy
+   * service-layer (pre-CDC) semantics.
+   */
+  source?: AuditSource;
 }
 
 // ============================================================================

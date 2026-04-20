@@ -41,6 +41,7 @@ import { firestoreQueryService } from '@/services/firestore/firestore-query.serv
 import type {
   AuditAction,
   AuditEntityType,
+  AuditSource,
   EntityAuditEntry,
 } from '@/types/audit-trail';
 
@@ -101,6 +102,10 @@ function toIsoTimestamp(value: unknown): string {
   return new Date(0).toISOString();
 }
 
+function normalizeSource(value: unknown): AuditSource | undefined {
+  return value === 'cdc' || value === 'service' ? value : undefined;
+}
+
 function normalizeEntry(doc: DocumentData & { id?: string }): EntityAuditEntry {
   return {
     id: doc.id,
@@ -113,7 +118,63 @@ function normalizeEntry(doc: DocumentData & { id?: string }): EntityAuditEntry {
     performedByName: (doc.performedByName as string | null | undefined) ?? null,
     companyId: doc.companyId as string,
     timestamp: toIsoTimestamp(doc.timestamp),
+    source: normalizeSource(doc.source),
   };
+}
+
+/**
+ * Dedup window for Phase 1 CDC dual-write: the service-layer write and the
+ * Cloud Function trigger fire within ~seconds of each other for the same
+ * logical action. We collapse them so the user sees one row per action.
+ *
+ * 30s is comfortably larger than observed Cloud Function latency (<5s in
+ * production telemetry) while small enough not to swallow unrelated writes
+ * on the same entity.
+ */
+const DUAL_WRITE_DEDUP_WINDOW_MS = 30_000;
+
+/**
+ * Collapse service+cdc dual-write pairs.
+ *
+ * Groups by `(entityId, action)`; within each group, for every CDC entry we
+ * drop any service-layer entry whose timestamp sits within the dedup window.
+ * Legacy entries with `source === undefined` are treated as service-layer.
+ *
+ * Why prefer CDC:
+ *   - Automatic deep diff → no field coverage gaps.
+ *   - Once `_lastModifiedBy` is stamped by every writer (Phase 2 cutover
+ *     plan), CDC entries carry the same `performedBy` as service entries.
+ *   - Single source of truth across entity types — the same trigger pattern
+ *     scales to project/building/unit without per-entity UI changes.
+ */
+export function dedupDualWrite(entries: EntityAuditEntry[]): EntityAuditEntry[] {
+  const cdcEntries = entries.filter((e) => e.source === 'cdc');
+  if (cdcEntries.length === 0) return entries;
+
+  const supersededIds = new Set<string>();
+
+  for (const cdc of cdcEntries) {
+    const cdcMs = Date.parse(cdc.timestamp);
+    if (!Number.isFinite(cdcMs)) continue;
+
+    for (const candidate of entries) {
+      if (candidate === cdc) continue;
+      if (candidate.source === 'cdc') continue;
+      if (candidate.entityId !== cdc.entityId) continue;
+      if (candidate.action !== cdc.action) continue;
+      if (!candidate.id) continue;
+
+      const otherMs = Date.parse(candidate.timestamp);
+      if (!Number.isFinite(otherMs)) continue;
+
+      if (Math.abs(otherMs - cdcMs) <= DUAL_WRITE_DEDUP_WINDOW_MS) {
+        supersededIds.add(candidate.id);
+      }
+    }
+  }
+
+  if (supersededIds.size === 0) return entries;
+  return entries.filter((e) => !e.id || !supersededIds.has(e.id));
 }
 
 function applyClientFilters(
@@ -189,7 +250,8 @@ export const EntityAuditClientService = {
       'ENTITY_AUDIT_TRAIL',
       (result) => {
         const all = result.documents.map((doc) => normalizeEntry(doc));
-        callback(applyClientFilters(all, options.filters, windowSize), null);
+        const deduped = dedupDualWrite(all);
+        callback(applyClientFilters(deduped, options.filters, windowSize), null);
       },
       (error) => callback([], error),
       {
@@ -222,7 +284,7 @@ export const EntityAuditClientService = {
       'ENTITY_AUDIT_TRAIL',
       (result) => {
         const entries = result.documents.map((doc) => normalizeEntry(doc));
-        callback(entries, null);
+        callback(dedupDualWrite(entries), null);
       },
       (error) => callback([], error),
       {

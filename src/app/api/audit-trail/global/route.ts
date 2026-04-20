@@ -50,6 +50,7 @@ import {
 import type {
   AuditAction,
   AuditEntityType,
+  AuditSource,
   EntityAuditEntry,
   EntityAuditResponse,
 } from '@/types/audit-trail';
@@ -158,6 +159,9 @@ export const GET = withStandardRateLimit(
       // Materialize all docs → entries
       const allEntries: EntityAuditEntry[] = snapshot.docs.map((doc) => {
         const data = doc.data();
+        const rawSource = data.source;
+        const source: AuditSource | undefined =
+          rawSource === 'cdc' || rawSource === 'service' ? rawSource : undefined;
         return {
           id: doc.id,
           entityType: data.entityType,
@@ -169,6 +173,7 @@ export const GET = withStandardRateLimit(
           performedByName: data.performedByName ?? null,
           companyId: data.companyId,
           timestamp: data.timestamp?.toDate?.()?.toISOString() ?? '',
+          ...(source ? { source } : {}),
         };
       });
 

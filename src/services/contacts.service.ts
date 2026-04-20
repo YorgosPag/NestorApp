@@ -77,13 +77,26 @@ interface ContactPhotoFields {
   multiplePhotoURLs?: string[] | FieldValue;
 }
 
+/**
+ * ADR-195 Phase 1 CDC stamps. Read by the Cloud Function audit trigger to
+ * resolve a real `performedBy` on every contact write. Optional on every
+ * write path — missing stamps fall back to `'cdc_unknown'` with a warning.
+ */
+interface ContactLastModifiedStamps {
+  _lastModifiedBy?: string;
+  _lastModifiedByName?: string | null;
+  _lastModifiedAt?: FieldValue;
+}
+
 type ContactFirestoreData = Omit<Contact, 'createdAt' | 'updatedAt'> & {
   createdAt?: FieldValue;
   updatedAt?: FieldValue;
-} & ContactArchiveFields & ContactSoftDeleteFields;
+} & ContactArchiveFields & ContactSoftDeleteFields & ContactLastModifiedStamps;
 
 type ContactUpdatePayload = Omit<Partial<Contact>, 'multiplePhotoURLs'>
-  & ContactArchiveFields & ContactSoftDeleteFields & ContactPhotoFields & { updatedAt?: FieldValue };
+  & ContactArchiveFields & ContactSoftDeleteFields & ContactPhotoFields
+  & ContactLastModifiedStamps
+  & { updatedAt?: FieldValue };
 
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 
@@ -192,6 +205,14 @@ export class ContactsService {
       createdBy: currentUser.uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+      // ADR-195 Phase 1 (CDC PoC): stamp performer so `auditContactWrite`
+      // trigger resolves a real `performedBy` instead of 'cdc_unknown'.
+      // Mirrors the stamp applied in `updateContact` — on create the current
+      // user IS the performer, so `createdBy === _lastModifiedBy`.
+      _lastModifiedBy: currentUser.uid,
+      _lastModifiedByName:
+        currentUser.displayName?.trim() || currentUser.email || null,
+      _lastModifiedAt: serverTimestamp(),
     };
 
     // ADR-268 Q88: Auto-sync personaTypes on create
@@ -334,11 +355,10 @@ export class ContactsService {
     // a separate channel. Read by `auditContactWrite` from after.data().
     const currentUser = auth.currentUser;
     if (currentUser) {
-      const udStamp = updateData as Record<string, unknown>;
-      udStamp._lastModifiedBy = currentUser.uid;
-      udStamp._lastModifiedByName =
+      updateData._lastModifiedBy = currentUser.uid;
+      updateData._lastModifiedByName =
         currentUser.displayName?.trim() || currentUser.email || null;
-      udStamp._lastModifiedAt = serverTimestamp();
+      updateData._lastModifiedAt = serverTimestamp();
     }
 
     // Remove protected system fields
