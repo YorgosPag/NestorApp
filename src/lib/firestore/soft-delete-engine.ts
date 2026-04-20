@@ -85,6 +85,13 @@ export async function softDelete(
     deletedAt: FieldValue.serverTimestamp(),
     deletedBy,
     updatedAt: FieldValue.serverTimestamp(),
+    // ADR-195 Phase 1 CDC: refresh performer stamps so the Cloud Function
+    // audit trigger attributes this write to the actual actor (not the
+    // stale create-time stamp). Critical when an admin trashes another
+    // user's entity — without this the CDC entry would name the creator.
+    _lastModifiedBy: deletedBy,
+    _lastModifiedByName: performedByName ?? null,
+    _lastModifiedAt: FieldValue.serverTimestamp(),
   });
 
   // Audit trail (fire-and-forget)
@@ -172,6 +179,10 @@ export async function restoreFromTrash(
     restoredAt: FieldValue.serverTimestamp(),
     restoredBy,
     updatedAt: FieldValue.serverTimestamp(),
+    // ADR-195 Phase 1 CDC: refresh performer stamps (see softDelete above).
+    _lastModifiedBy: restoredBy,
+    _lastModifiedByName: performedByName ?? null,
+    _lastModifiedAt: FieldValue.serverTimestamp(),
   });
 
   // Audit trail (fire-and-forget)

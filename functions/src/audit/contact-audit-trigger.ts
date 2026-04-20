@@ -132,6 +132,20 @@ function resolveAction(before: DocData | null, after: DocData | null): string {
   if (before && !after) return 'deleted';
   if (!before || !after) return 'updated';
 
+  // Soft-delete lifecycle via `status` string transitions (ADR-281 —
+  // canonical soft-delete engine uses `status: 'deleted'` + `previousStatus`,
+  // not an `isDeleted` boolean). Must precede the generic status_changed
+  // branch so the CDC entry matches the service-layer action verbatim and
+  // the UI dedup collapses the dual-write pair on (entityId, action).
+  if (before.status !== 'deleted' && after.status === 'deleted') {
+    return 'soft_deleted';
+  }
+  if (before.status === 'deleted' && after.status !== 'deleted') {
+    return 'restored';
+  }
+
+  // Legacy boolean lifecycle — kept as a fallback for entities that haven't
+  // migrated to the status-string pattern yet.
   if (after.isDeleted === true && before.isDeleted !== true) return 'trashed';
   if (after.isDeleted !== true && before.isDeleted === true) return 'restored';
   if (after.archivedAt && !before.archivedAt) return 'archived';

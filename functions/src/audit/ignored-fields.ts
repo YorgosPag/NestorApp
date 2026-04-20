@@ -42,6 +42,14 @@ export const IGNORED_FIELDS: readonly string[] = [
   'ownerId',
   'tenantId',
 
+  // Soft-delete / restore internal bookkeeping — the action itself
+  // (`soft_deleted` / `restored`) and the status transition are enough
+  // for users. `deletedBy` equals `performedBy`; `previousStatus` is
+  // redundant with the `status` scalar diff.
+  'deletedBy',
+  'restoredBy',
+  'previousStatus',
+
   // Search indexing metadata (rewritten by indexTriggers on every write)
   'searchTokens',
   'searchKeywords',
