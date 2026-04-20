@@ -65,6 +65,7 @@ export async function classifyInBackground(
       // Extract human-readable text from DXF entities (TEXT/MTEXT/ATTRIB)
       // If the file contains text, send only that; otherwise fall back to raw header
       const extractedDxfText = extractTextFromDxf(fileBuffer.slice(0, DXF_MAX_BYTES));
+      logger.info(`[after] DXF extracted text (first 400 chars): ${extractedDxfText.slice(0, 400) || '(empty — no TEXT/MTEXT entities found)'}`);
       analyzeBuffer = extractedDxfText
         ? Buffer.from(extractedDxfText)
         : fileBuffer.slice(0, DXF_MAX_BYTES);

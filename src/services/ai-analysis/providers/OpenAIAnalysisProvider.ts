@@ -163,12 +163,24 @@ function buildDocumentPrompt(input: AnalysisInput): string {
   const mimeType = input.mimeType ? `MIME: ${input.mimeType}` : 'MIME: unknown';
   const sizeBytes = input.sizeBytes ? `Size: ${input.sizeBytes} bytes` : 'Size: unknown';
 
+  const isTextContent = Buffer.isBuffer(input.content) && (
+    input.mimeType === 'text/plain' ||
+    input.mimeType === 'text/csv' ||
+    input.mimeType === 'text/html' ||
+    input.mimeType === 'text/xml' ||
+    input.mimeType === 'application/xml'
+  );
+
   return [
     'Return JSON only using the schema.',
     filename,
     mimeType,
     sizeBytes,
-    typeof input.content === 'string' ? `Text: ${input.content}` : 'Binary content provided.',
+    typeof input.content === 'string'
+      ? `Text: ${input.content}`
+      : isTextContent
+        ? 'Extracted text content follows in the next message.'
+        : 'Binary content provided.',
   ].join('\n');
 }
 
