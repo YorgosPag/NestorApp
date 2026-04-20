@@ -15,10 +15,6 @@ import type {
 // Import existing DXF types
 import type { SceneModel, AnySceneEntity } from '../../../dxf-viewer/types/scene';
 
-// ============================================================================
-// COORDINATE TRANSFORMATION ENGINE
-// ============================================================================
-
 /**
  * Core Transformation Service για DXF georeferencing
  * Υποστηρίζει Affine, Polynomial, και Thin Plate Spline transformations
@@ -31,13 +27,7 @@ export class DxfGeoTransformService {
     // Service initialization
   }
 
-  // ========================================================================
-  // CALIBRATION & SETUP
-  // ========================================================================
-
-  /**
-   * Δημιουργία georeferencing από control points
-   */
+  /** Δημιουργία georeferencing από control points */
   async calibrateTransformation(
     controlPoints: GeoControlPoint[],
     method: 'affine' | 'polynomial' | 'tps' = 'affine'
@@ -81,21 +71,13 @@ export class DxfGeoTransformService {
     }
   }
 
-  /**
-   * Load existing georeferencing από αποθηκευμένα data
-   */
+  /** Load existing georeferencing από αποθηκευμένα data */
   loadGeoreferencing(georefInfo: GeoreferenceInfo): void {
     this.georeferenceInfo = georefInfo;
     this.isCalibrated = true;
   }
 
-  // ========================================================================
-  // COORDINATE TRANSFORMATIONS
-  // ========================================================================
-
-  /**
-   * Transform single DXF coordinate → Geographic (WGS84)
-   */
+  /** Transform single DXF coordinate → Geographic (WGS84) */
   transformDxfToGeo(dxfPoint: DxfCoordinate): GeoCoordinate {
     if (!this.isCalibrated || !this.georeferenceInfo) {
       throw new Error('Transformation not calibrated. Call calibrateTransformation() first.');
@@ -114,9 +96,7 @@ export class DxfGeoTransformService {
     };
   }
 
-  /**
-   * Transform Geographic → DXF coordinate (inverse)
-   */
+  /** Transform Geographic → DXF coordinate (inverse) */
   transformGeoToDxf(geoPoint: GeoCoordinate): DxfCoordinate {
     if (!this.isCalibrated || !this.georeferenceInfo) {
       throw new Error('Transformation not calibrated');
@@ -143,20 +123,12 @@ export class DxfGeoTransformService {
     };
   }
 
-  /**
-   * Batch transformation για multiple points
-   */
+  /** Batch transformation για multiple points */
   transformDxfBatch(dxfPoints: DxfCoordinate[]): GeoCoordinate[] {
     return dxfPoints.map(point => this.transformDxfToGeo(point));
   }
 
-  // ========================================================================
-  // DXF SCENE TRANSFORMATION
-  // ========================================================================
-
-  /**
-   * Transform ολόκληρο DXF scene σε GeoJSON-compatible format
-   */
+  /** Transform ολόκληρο DXF scene σε GeoJSON-compatible format */
   async transformSceneToGeoJSON(
     scene: SceneModel,
     options: {
@@ -193,9 +165,7 @@ export class DxfGeoTransformService {
     };
   }
 
-  /**
-   * Transform individual DXF entity → GeoJSON feature
-   */
+  /** Transform individual DXF entity → GeoJSON feature */
   private transformEntityToGeoJSON(entity: AnySceneEntity): GeoJSON.Feature | null {
     const properties = {
       id: entity.id,
@@ -309,14 +279,7 @@ export class DxfGeoTransformService {
     }
   }
 
-  // ========================================================================
-  // TRANSFORMATION ALGORITHMS
-  // ========================================================================
-
-  /**
-   * Calculate Affine Transformation Matrix από control points
-   * Χρησιμοποιεί least squares method για best fit
-   */
+  /** Calculate Affine Transformation Matrix από control points (least squares) */
   private calculateAffineTransformation(
     controlPoints: GeoControlPoint[]
   ): { transformMatrix: GeoTransformMatrix; accuracy: number } {
@@ -352,9 +315,7 @@ export class DxfGeoTransformService {
     return { transformMatrix, accuracy };
   }
 
-  /**
-   * Polynomial transformation (2nd order) - για complex distortions
-   */
+  /** Polynomial transformation (2nd order) - για complex distortions */
   private calculatePolynomialTransformation(
     controlPoints: GeoControlPoint[]
   ): { transformMatrix: GeoTransformMatrix; accuracy: number } {
@@ -367,9 +328,7 @@ export class DxfGeoTransformService {
     return this.calculateAffineTransformation(controlPoints);
   }
 
-  /**
-   * Thin Plate Spline transformation - για local deformations
-   */
+  /** Thin Plate Spline transformation - για local deformations */
   private calculateTPSTransformation(
     controlPoints: GeoControlPoint[]
   ): { transformMatrix: GeoTransformMatrix; accuracy: number } {
@@ -382,10 +341,7 @@ export class DxfGeoTransformService {
     return this.calculateAffineTransformation(controlPoints);
   }
 
-  /**
-   * Solve least squares: min ||Ax - b||²
-   * Returns x = (A^T * A)^(-1) * A^T * b
-   */
+  /** Solve least squares: min ||Ax - b||² → x = (A^T·A)^(-1)·A^T·b */
   private solveLeastSquares(A: number[][], b: number[]): number[] {
     const n = A.length; // rows
     const m = A[0].length; // columns
@@ -412,9 +368,7 @@ export class DxfGeoTransformService {
     return this.gaussianElimination(AtA, Atb);
   }
 
-  /**
-   * Gaussian elimination για solving linear system
-   */
+  /** Gaussian elimination για solving linear system */
   private gaussianElimination(A: number[][], b: number[]): number[] {
     const n = A.length;
     const augmented = A.map((row, i) => [...row, b[i]]);
@@ -454,9 +408,7 @@ export class DxfGeoTransformService {
     return x;
   }
 
-  /**
-   * Calculate Root Mean Square Error για accuracy validation
-   */
+  /** Calculate Root Mean Square Error για accuracy validation */
   private calculateRMSError(
     controlPoints: GeoControlPoint[],
     matrix: GeoTransformMatrix
@@ -478,13 +430,7 @@ export class DxfGeoTransformService {
     return Math.sqrt(sumSquaredErrors / controlPoints.length);
   }
 
-  // ========================================================================
-  // UTILITY METHODS
-  // ========================================================================
-
-  /**
-   * Get current transformation status
-   */
+  /** Get current transformation status */
   getTransformationStatus() {
     return {
       isCalibrated: this.isCalibrated,
@@ -496,37 +442,25 @@ export class DxfGeoTransformService {
     };
   }
 
-  /**
-   * Validate transformation accuracy
-   */
+  /** Validate transformation accuracy */
   validateAccuracy(threshold: number = 5.0): boolean {
     if (!this.georeferenceInfo) return false;
     return this.georeferenceInfo.accuracy <= threshold;
   }
 
-  /**
-   * Export georeferencing για persistence
-   */
+  /** Export georeferencing για persistence */
   exportGeoreferencing(): GeoreferenceInfo | null {
     return this.georeferenceInfo;
   }
 
-  /**
-   * Reset transformation
-   */
+  /** Reset transformation */
   reset(): void {
     this.georeferenceInfo = null;
     this.isCalibrated = false;
   }
 }
 
-// ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
-
-/**
- * Global transformation service instance
- */
+/** Global transformation service instance */
 export const dxfGeoTransformService = new DxfGeoTransformService();
 
 export default DxfGeoTransformService;
