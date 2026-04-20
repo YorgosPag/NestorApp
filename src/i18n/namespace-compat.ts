@@ -179,7 +179,7 @@ const LEGACY_NAMESPACE_ROOT_MAP = {
     navigation: 'contacts-core',
     filterBar: 'contacts-core',
     duplicate: 'contacts-core',
-    individual: 'contacts-core',
+    individual: 'contacts-relationships',
     addressesSection: 'contacts-core',
     form: 'contacts-form',
     options: 'contacts-form',
