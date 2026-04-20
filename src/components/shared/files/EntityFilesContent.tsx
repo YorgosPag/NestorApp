@@ -133,6 +133,7 @@ export interface EntityFilesContentProps {
   entityId: string;
   onRestore: (fileId: string) => void;
   onUnarchive: (fileId: string, displayName: string) => void;
+  onClassified?: () => void;
 }
 
 // ============================================================================
@@ -377,6 +378,7 @@ function FileViewDispatch(props: EntityFilesContentProps & { iconSizes: ReturnTy
       entityType: props.entityType,
       selectedIds: props.selectedIds,
       onToggleSelect: props.toggleSelect,
+      onClassified: props.onClassified,
     };
 
     if (props.listGroupingMode === 'domainCategory') {

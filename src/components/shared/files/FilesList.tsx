@@ -53,6 +53,7 @@ export interface FilesListProps {
   entityType?: string;
   selectedIds?: Set<string>;
   onToggleSelect?: (fileId: string) => void;
+  onClassified?: () => void;
 }
 
 // ============================================================================
@@ -74,6 +75,7 @@ export function FilesList({
   entityType,
   selectedIds,
   onToggleSelect,
+  onClassified,
 }: FilesListProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
@@ -87,6 +89,11 @@ export function FilesList({
   const unlinkFileLabel = t('list.unlinkFile', { entity: entityName });
 
   const { classifyFile, classifyingIds } = useFileClassification();
+
+  async function handleRetryClassify(fileId: string) {
+    await classifyFile(fileId);
+    onClassified?.();
+  }
 
   // All interactive state + handlers from extracted hook
   const actions = useFileListActions({
@@ -257,12 +264,12 @@ export function FilesList({
                       <TooltipTrigger asChild>
                         <button
                           type="button"
-                          onClick={() => classifyFile(file.id)}
+                          onClick={() => handleRetryClassify(file.id)}
                           disabled={classifyingIds.has(file.id)}
                           aria-label={t('list.retryClassification')}
                           className={cn(
                             'inline-flex items-center justify-center rounded p-0.5',
-                            getStatusColor('error', 'text'),
+                            'text-blue-600 dark:text-blue-400',
                             'hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity',
                           )}
                         >

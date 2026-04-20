@@ -463,6 +463,7 @@ export function EntityFilesManager({
             recordFileActivity('updated', 'file_unarchive', displayName, null, t('audit.fileUnarchive'));
             refetch();
           }}
+          onClassified={() => refetch()}
         />
 
         {enableBuildingLink && linkModalFile && entityId && (
