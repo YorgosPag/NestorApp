@@ -194,7 +194,7 @@
     }
   },
   "condition": {
-    "sectionTitle": "Condition",
+    "sectionTitle": "Upkeep condition",
     "new": "New",
     "excellent": "Excellent",
     "good": "Good",
