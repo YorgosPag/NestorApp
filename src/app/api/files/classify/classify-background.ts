@@ -30,6 +30,7 @@ export async function classifyInBackground(
   originalFilename: string | undefined,
   sizeBytes: number | undefined,
   userId: string,
+  fileExt?: string,
 ): Promise<void> {
   const db = getAdminFirestore();
   const fileRef = db.collection(COLLECTIONS.FILES).doc(fileId);
@@ -57,14 +58,15 @@ export async function classifyInBackground(
       analyzeMimeType = 'text/plain';
     } else if (
       DXF_MIMES.has(contentType) ||
-      (contentType === 'application/octet-stream' && originalFilename?.toLowerCase().endsWith('.dxf'))
+      (contentType === 'application/octet-stream' &&
+        (originalFilename?.toLowerCase().endsWith('.dxf') || fileExt?.toLowerCase() === 'dxf'))
     ) {
       // DXF is ASCII text — truncate to first 50KB (header + layer info sufficient for classification)
       analyzeBuffer = fileBuffer.slice(0, DXF_MAX_BYTES);
       analyzeMimeType = 'text/plain';
     } else if (contentType === SVG_MIME) {
-      // SVG is XML text — pass directly as text/plain
-      analyzeBuffer = fileBuffer;
+      // SVG is XML text — truncate to 50KB (large SVGs cause OpenAI timeout)
+      analyzeBuffer = fileBuffer.slice(0, DXF_MAX_BYTES);
       analyzeMimeType = 'text/plain';
     }
 

@@ -230,7 +230,7 @@ export function useBatchFileOperations({
 
   const handleAIClassify = useCallback(async () => {
     const classifiableIds = files
-      .filter(f => selectedIds.has(f.id) && isAIClassifiable(f.contentType, f.originalFilename))
+      .filter(f => selectedIds.has(f.id) && isAIClassifiable(f.contentType, f.originalFilename, f.ext))
       .map(f => f.id);
 
     if (classifiableIds.length === 0) return;

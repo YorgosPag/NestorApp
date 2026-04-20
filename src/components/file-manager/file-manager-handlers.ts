@@ -202,7 +202,7 @@ export function useFileManagerHandlers({ state }: HandlerDeps) {
   // AI auto-classification (ADR-191 Phase 2.2)
   const handleAIClassify = useCallback(async () => {
     const classifiableIds = filteredFiles
-      .filter(f => selectedIds.has(f.id) && isAIClassifiable(f.contentType, f.originalFilename))
+      .filter(f => selectedIds.has(f.id) && isAIClassifiable(f.contentType, f.originalFilename, f.ext))
       .map(f => f.id);
 
     if (classifiableIds.length === 0) return;

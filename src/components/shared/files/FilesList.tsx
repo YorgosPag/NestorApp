@@ -86,8 +86,11 @@ export function FilesList({
   const translateDisplayName = useFileDisplayName();
 
   const { user } = useAuth();
-  // Pre-seed cache with current user so own uploads show name instantly (no Firestore read)
-  if (user?.uid && user.displayName) seedUserNameCache(user.uid, user.displayName);
+  // Pre-seed cache with current user (displayName may be null for email/password accounts)
+  if (user?.uid) {
+    const name = user.displayName || user.email || '';
+    if (name) seedUserNameCache(user.uid, name);
+  }
 
   const uploaderUids = files.map(f => f.createdBy).filter(Boolean);
   const uploaderNames = useUserDisplayNames(uploaderUids);

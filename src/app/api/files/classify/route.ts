@@ -56,12 +56,13 @@ const TEXT_MIME_TYPES = new Set([
 
 const DXF_EXTENSIONS = new Set(['.dxf']);
 
-function isClassifiable(mimeType: string, filename?: string): boolean {
+function isClassifiable(mimeType: string, filename?: string, fileExt?: string): boolean {
   if (IMAGE_MIME_TYPES.has(mimeType) || TEXT_MIME_TYPES.has(mimeType)) return true;
   if (mimeType.startsWith('video/') || mimeType.startsWith('audio/')) return true;
-  if (mimeType === 'application/octet-stream' && filename) {
-    const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase();
-    return DXF_EXTENSIONS.has(ext);
+  if (mimeType === 'application/octet-stream') {
+    const byFilename = filename ? DXF_EXTENSIONS.has(filename.slice(filename.lastIndexOf('.')).toLowerCase()) : false;
+    const byExt = fileExt ? DXF_EXTENSIONS.has(`.${fileExt.toLowerCase()}`) : false;
+    return byFilename || byExt;
   }
   return false;
 }
@@ -149,6 +150,7 @@ async function handlePost(
     const contentType = fileData.contentType as string | undefined;
     const originalFilename = fileData.originalFilename as string | undefined;
     const sizeBytes = fileData.sizeBytes as number | undefined;
+    const fileExt = fileData.ext as string | undefined;
 
     // 2. Skip if already classified or classifying
     const currentState = fileData.ingestion?.state as string | undefined;
@@ -183,7 +185,7 @@ async function handlePost(
       );
     }
 
-    if (!contentType || !isClassifiable(contentType, originalFilename)) {
+    if (!contentType || !isClassifiable(contentType, originalFilename, fileExt)) {
       return NextResponse.json(
         { success: false, fileId, error: `Content type not classifiable: ${contentType ?? 'unknown'}` },
         { status: 400 },
@@ -247,6 +249,7 @@ async function handlePost(
       originalFilename,
       sizeBytes,
       ctx.uid,
+      fileExt,
     ));
 
     return response;

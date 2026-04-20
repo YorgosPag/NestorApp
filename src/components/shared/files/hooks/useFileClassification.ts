@@ -76,13 +76,16 @@ const CLASSIFIABLE_TYPES = new Set([
 
 /**
  * Check if a file can be classified by AI.
- * For application/octet-stream, the server checks the extension — client trusts the server.
+ * Pass ext (from FileRecord.ext) as additional fallback for octet-stream files.
  */
-export function isAIClassifiable(contentType?: string, filename?: string): boolean {
+export function isAIClassifiable(contentType?: string, filename?: string, ext?: string): boolean {
   if (!contentType) return false;
   if (CLASSIFIABLE_TYPES.has(contentType)) return true;
   if (contentType.startsWith('video/') || contentType.startsWith('audio/')) return true;
-  if (contentType === 'application/octet-stream' && filename?.toLowerCase().endsWith('.dxf')) return true;
+  if (contentType === 'application/octet-stream') {
+    const isDxf = filename?.toLowerCase().endsWith('.dxf') || ext?.toLowerCase() === 'dxf';
+    if (isDxf) return true;
+  }
   return false;
 }
 
