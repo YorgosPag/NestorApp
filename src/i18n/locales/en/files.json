@@ -475,7 +475,9 @@
     "docxError": "Could not preview document",
     "excelError": "Could not preview Excel file",
     "xmlLoading": "Loading XML file...",
-    "xmlError": "Could not preview XML file"
+    "xmlError": "Could not preview XML file",
+    "txtLoading": "Loading text file...",
+    "txtError": "Could not preview text file"
   },
   "batch": {
     "toolbar": "Batch actions",
