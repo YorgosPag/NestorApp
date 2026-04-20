@@ -129,7 +129,8 @@
       "createdAt": "Created:",
       "updatedAt": "Updated:",
       "recently": "Recently",
-      "phoneExtension": "ext."
+      "phoneExtension": "ext.",
+      "relatedInTrash": "In trash"
     },
     "recent": {
       "title": "Recent Relationships",

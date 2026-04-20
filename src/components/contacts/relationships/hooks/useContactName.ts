@@ -25,12 +25,14 @@ const logger = createModuleLogger('useContactName');
 export const useContactName = (contactId: string | undefined) => {
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const [contactName, setContactName] = useState<string>('');
+  const [contactStatus, setContactStatus] = useState<'active' | 'deleted' | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchContactName = async () => {
       if (!contactId) {
         setContactName('');
+        setContactStatus(null);
         return;
       }
 
@@ -55,13 +57,16 @@ export const useContactName = (contactId: string | undefined) => {
           }
 
           setContactName(resolved);
+          setContactStatus((contact.status as 'active' | 'deleted') ?? 'active');
         } else {
           logger.warn('Contact not found', { contactId });
           setContactName(t('relationships.organizationTree.unknownContact'));
+          setContactStatus(null);
         }
       } catch (error) {
         logger.error('Error fetching contact name', { error });
         setContactName(t('relationships.organizationTree.unknownContact'));
+        setContactStatus(null);
       } finally {
         setLoading(false);
       }
@@ -70,5 +75,5 @@ export const useContactName = (contactId: string | undefined) => {
     fetchContactName();
   }, [contactId, t]);
 
-  return { contactName, loading };
+  return { contactName, contactStatus, loading };
 };

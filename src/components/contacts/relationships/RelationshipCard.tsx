@@ -75,7 +75,8 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
     : relationship.sourceContactId;
 
 
-  const { contactName } = useContactName(contactIdToShow);
+  const { contactName, contactStatus } = useContactName(contactIdToShow);
+  const isRelatedInTrash = contactStatus === 'deleted';
 
   // ============================================================================
   // COMPUTED VALUES
@@ -91,7 +92,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   // ============================================================================
 
   return (
-    <Card className={`mb-2 ${getDirectionalBorder('info', 'left')}`}>
+    <Card className={cn(`mb-2 ${getDirectionalBorder('info', 'left')}`, isRelatedInTrash && 'opacity-60')}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -128,6 +129,12 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                     <Badge className={displayProps.color} variant="outline">
                       {translatedTypeLabel}
                     </Badge>
+                    {isRelatedInTrash && (
+                      <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-600 dark:text-amber-400">
+                        <Trash2 className="h-2.5 w-2.5" />
+                        {t('relationships.card.relatedInTrash')}
+                      </Badge>
+                    )}
                     {relationship.position && (
                       <span className={`text-xs ${colors.text.muted}`}>• {relationship.position}</span>
                     )}
@@ -150,7 +157,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
           {/* Action Buttons */}
           {!readonly && (
             <div className="flex space-x-2">
-              {onEdit && (
+              {onEdit && !isRelatedInTrash && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button

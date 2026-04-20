@@ -129,7 +129,8 @@
       "createdAt": "Δημιουργήθηκε:",
       "updatedAt": "Ενημερώθηκε:",
       "recently": "Πρόσφατα",
-      "phoneExtension": "ext."
+      "phoneExtension": "ext.",
+      "relatedInTrash": "Στον κάδο"
     },
     "recent": {
       "title": "Πρόσφατες Σχέσεις",
