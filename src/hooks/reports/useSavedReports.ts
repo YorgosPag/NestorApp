@@ -29,6 +29,7 @@ import type {
   SavedReportsTab,
 } from '@/types/reports/saved-report';
 import { nowISO } from '@/lib/date-local';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 // ============================================================================
 // Types
@@ -204,7 +205,7 @@ export function useSavedReports(): UseSavedReportsReturn {
       case 'recent':
         filtered = filtered
           .filter(r => r.lastRunAt !== null)
-          .sort((a, b) => (b.lastRunAt ?? '').localeCompare(a.lastRunAt ?? ''));
+          .sort((a, b) => compareByLocale(b.lastRunAt ?? '', a.lastRunAt ?? ''));
         break;
       case 'shared':
         filtered = filtered.filter(r => r.visibility === 'shared' || r.visibility === 'system');

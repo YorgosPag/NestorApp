@@ -1,10 +1,10 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase D.3o DONE 2026-04-19, backlog D.3 esaurito)
+**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase E DONE 2026-04-19 — baseline 0/0/0 🎉)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)
-**Current CHECK 3.18 baseline (2026-04-19 post-C.5.5y):** **0 duplicateExports / 5 antiPatterns / 1 unprotected** (centralizedFiles=135 protected=134). 🎉 duplicateExports ALL GREEN.
+**Current CHECK 3.18 baseline (2026-04-19 post-Phase-E):** **0 duplicateExports / 0 antiPatterns / 0 unprotected** (centralizedFiles=135 protected=135). 🎉🎉🎉 ALL GREEN — obiettivo raggiunto.
 
 ---
 
@@ -137,6 +137,7 @@ After Phase A added 5 + D.1 added 6 more, 85 remain. Add them incrementally (P1 
 
 | Date       | Change |
 |------------|--------|
+| 2026-04-19 | **Phase E — OBIETTIVO RAGGIUNTO 🎉 duplicateExports=0 / antiPatterns=0 / unprotected=0.** Scanner fix (5 improvements): (1) comment filter regex `:[0-9]+:` based (was `^\s*//`), (2) `allowlist_files` param per-SSoT-file exclusion, (3) `exclude_regex` param for false-positive line patterns (e.g. TypeScript unions), (4) `exclude_file_pattern` param for file-level exclusion (server-side Admin SDK files), (5) `Timestamp.fromDate` → `Timestamp.now()` only (fromDate is legitimate). Code fixes: `getCommunicationTypeIcon` rename (formatters.ts), `clone-utils` registry entry (Tier 2), `nowTimestamp()` migration in 6 client-side files (manager.ts, hardcoded-values-migration-operations.ts, dxf-migration-004.ts, notificationService.ts, ownership-table-service.ts, UserNotificationSettingsService.ts), `compareByLocale()` migration in 10 files. Baseline: **0/0/0** (centralizedFiles=135, protected=135). |
 | 2026-04-19 | **Phase D.3o DONE — BACKLOG D.3 ESAURITO.** 4 moduli: `text-utils`, `property-utils`, `memory-leak-detector`, `performance-monitor` (Tier 3). Skipped: `contactFormUtils` (getTypeIcon dup ×3), `company-gemi-config` (subdirectory dup — migration futura). Baseline aggiornato. |
 | 2026-04-19 | **Phase D.3n DONE.** 5 lib modules: `firebaseAdmin-credentials` (Tier 1), `firebaseAdmin-types` (Tier 1), `toast-utils`, `lib-utils`, `obligations-utils` (Tier 3). Baseline aggiornato. |
 | 2026-04-19 | **Phase D.3m DONE.** 5 lib modules Tier 3: `async-utils`, `channel-icon-map`, `contact-link-id`, `dev-auth`, `entity-formatters`. Baseline aggiornato da scanner. |

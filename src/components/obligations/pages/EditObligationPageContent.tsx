@@ -40,6 +40,7 @@ import { getContactDisplayName, type Contact } from '@/types/contacts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 const logger = createModuleLogger('EditObligationPage');
 
@@ -131,7 +132,7 @@ export function EditObligationPageContent() {
         const options = result.contacts
           .map(toAssigneeOption)
           .filter((option): option is AssigneeOption => option !== null)
-          .sort((left, right) => left.name.localeCompare(right.name));
+          .sort((left, right) => compareByLocale(left.name, right.name));
 
         setAssigneeOptions(options);
 

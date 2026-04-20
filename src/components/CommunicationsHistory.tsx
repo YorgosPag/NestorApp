@@ -4,7 +4,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
-  getTypeIcon, getTypeColor,
+  getCommunicationTypeIcon, getTypeColor,
   getDirectionLabel, getRelativeTime
 } from './communications/utils/formatters';
 import { getStatusColor, getStatusIcon } from '@/lib/status-helpers';
@@ -75,7 +75,7 @@ export default function CommunicationsHistory({ contactId }: CommunicationsHisto
 
       <ul className="space-y-4 list-none" role="feed" aria-label={t('history.aria.timeline')}>
         {communications.map((comm, index) => {
-          const TypeIcon = getTypeIcon(comm.type);
+          const TypeIcon = getCommunicationTypeIcon(comm.type);
           const StatusIcon = COMMUNICATION_STATUS_ICONS[getStatusIcon('communication', comm.status)] ?? Circle;
           return (
             <li key={comm.id} className="relative">

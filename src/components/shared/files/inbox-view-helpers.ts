@@ -16,6 +16,7 @@ import { FILE_DOMAINS, FILE_STATUS } from '@/config/domain-constants';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToISO } from '@/lib/date-local';
+import { compareByLocale } from '@/lib/intl-formatting';
 import { createStaleCache } from '@/lib/stale-cache';
 
 const logger = createModuleLogger('INBOX_VIEW');
@@ -78,13 +79,13 @@ export function groupFilesByChatId(files: InboxFileRecord[]): ChatGroup[] {
     chatFiles.sort((a, b) => {
       const dateA = toISOString(a.source?.receivedAt) || toISOString(a.createdAt) || '';
       const dateB = toISOString(b.source?.receivedAt) || toISOString(b.createdAt) || '';
-      return dateB.localeCompare(dateA);
+      return compareByLocale(dateB, dateA);
     });
     const latestTimestamp = toISOString(chatFiles[0]?.source?.receivedAt) || toISOString(chatFiles[0]?.createdAt) || '';
     groups.push({ chatId, files: chatFiles, latestTimestamp });
   }
 
-  groups.sort((a, b) => b.latestTimestamp.localeCompare(a.latestTimestamp));
+  groups.sort((a, b) => compareByLocale(b.latestTimestamp, a.latestTimestamp));
   return groups;
 }
 

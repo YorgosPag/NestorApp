@@ -11,6 +11,7 @@
 import type { BOQItem, BOQSummary, BOQCategorySummary } from '@/types/boq';
 import type { CostBreakdown, VarianceResult } from '@/types/boq';
 import { nowISO } from '@/lib/date-local';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 // ============================================================================
 // GROSS QUANTITY
@@ -169,7 +170,7 @@ export function computeBuildingSummary(
   }
 
   // Sort by category code
-  categories.sort((a, b) => a.categoryCode.localeCompare(b.categoryCode));
+  categories.sort((a, b) => compareByLocale(a.categoryCode, b.categoryCode));
 
   return {
     buildingId,

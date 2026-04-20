@@ -36,6 +36,7 @@ import { apiSuccess, type ApiSuccessResponse } from "@/lib/api/ApiErrorHandler";
 import { EnterpriseAPICache } from "@/lib/cache/enterprise-api-cache";
 import { withSensitiveRateLimit } from "@/lib/middleware/with-rate-limit";
 import { createModuleLogger } from "@/lib/telemetry";
+import { compareByLocale } from "@/lib/intl-formatting";
 import type { BootstrapCompany, BootstrapResponse } from "./bootstrap-helpers";
 import {
   fetchCompanies,
@@ -165,7 +166,7 @@ async function handleProjectsBootstrap(
       name: company.name,
       projectCount: projectCountByCompany.get(id) || 0,
     }))
-    .sort((a, b) => a.name.localeCompare(b.name, "el"));
+    .sort((a, b) => compareByLocale(a.name, b.name));
 
   const response: BootstrapResponse = {
     companies,

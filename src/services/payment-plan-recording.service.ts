@@ -32,6 +32,7 @@ import {
   getPaymentPlans,
 } from './payment-plan-core';
 import { nowISO } from '@/lib/date-local';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 // ============================================================================
 // PAYMENT RECORDING
@@ -282,7 +283,7 @@ export async function syncAggregatedPaymentSummary(propertyId: string): Promise<
     );
     const pendingInstallments = allInstallments
       .filter(i => i.status === 'pending' || i.status === 'due')
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+      .sort((a, b) => compareByLocale(a.dueDate, b.dueDate));
 
     const next = pendingInstallments[0] ?? null;
     const overdueCount = allInstallments.filter(

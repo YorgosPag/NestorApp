@@ -26,6 +26,7 @@ import {
   Firestore,
 } from 'firebase/firestore';
 import { normalizeToDate } from '@/lib/date-local';
+import { nowTimestamp } from '@/lib/firestore-now';
 
 import {
   UserNotificationSettings,
@@ -169,7 +170,7 @@ class UserNotificationSettingsService {
       const docRef = doc(this.db, COLLECTION_NAME, userId);
       const updateData = {
         ...updates,
-        updatedAt: Timestamp.now(),
+        updatedAt: nowTimestamp(),
       };
       await updateDoc(docRef, updateData);
       logger.info('Settings updated for user', { userId });
@@ -210,7 +211,7 @@ class UserNotificationSettingsService {
 
       await updateDoc(docRef, {
         [fieldPath]: update.enabled,
-        updatedAt: Timestamp.now(),
+        updatedAt: nowTimestamp(),
       });
 
       logger.info('Toggled category setting', { category: update.category, setting: update.setting, enabled: update.enabled });
@@ -249,7 +250,7 @@ class UserNotificationSettingsService {
       const docRef = doc(this.db, COLLECTION_NAME, userId);
       await updateDoc(docRef, {
         [`categories.${category}`]: updatedCategory,
-        updatedAt: Timestamp.now(),
+        updatedAt: nowTimestamp(),
       });
 
       logger.info('Toggled entire category', { category, enabled });
@@ -443,7 +444,7 @@ class UserNotificationSettingsService {
       categories: settings.categories,
       quietHours: settings.quietHours,
       createdAt: Timestamp.fromDate(settings.createdAt),
-      updatedAt: Timestamp.now(),
+      updatedAt: nowTimestamp(),
     };
   }
 }

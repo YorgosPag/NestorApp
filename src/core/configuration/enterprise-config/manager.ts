@@ -21,11 +21,11 @@ import {
   setDoc,
   collection,
   getDocs,
-  Timestamp,
   type DocumentData,
   type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { nowTimestamp } from '@/lib/firestore-now';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
@@ -311,7 +311,7 @@ export class EnterpriseConfigurationManager {
             itemsPerPage: 25
           }
         },
-        lastUpdated: Timestamp.now(),
+        lastUpdated: nowTimestamp(),
         version: '1.0.0'
       };
 

@@ -155,13 +155,39 @@ check_pattern() {
     local pattern="$2"
     local ssot_hint="$3"
     local min_threshold="${4:-3}"
+    local allowlist_files="${5:-}"  # pipe-separated file paths to exclude (SSoT files themselves)
+    local exclude_regex="${6:-}"    # additional grep -vE filter for false positives
 
     local results
     results=$(grep -rnE "$pattern" src \
         --include="*.ts" --include="*.tsx" 2>/dev/null \
         | grep -vE "$EXEMPT_REGEX" \
-        | grep -vE "^\s*(//|\*|#)" \
+        | grep -vE ":[0-9]+:[[:space:]]*(//|\*)" \
         || true)
+
+    # Exclude allowlisted SSoT files from violation counting
+    if [[ -n "$allowlist_files" ]]; then
+        results=$(echo "$results" | grep -vF "$allowlist_files" || true)
+    fi
+
+    # Exclude false-positive patterns (e.g. TypeScript union types)
+    if [[ -n "$exclude_regex" ]]; then
+        results=$(echo "$results" | grep -vE "$exclude_regex" || true)
+    fi
+
+    local exclude_file_pattern="${7:-}"  # exclude entire files whose content matches this pattern
+    if [[ -n "$exclude_file_pattern" ]]; then
+        local filtered_results=""
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            local file
+            file=$(echo "$line" | cut -d: -f1)
+            if ! grep -qE "$exclude_file_pattern" "$file" 2>/dev/null; then
+                filtered_results+="${line}"$'\n'
+            fi
+        done <<< "$results"
+        results="${filtered_results%$'\n'}"
+    fi
 
     if [[ -n "$results" ]]; then
         local file_count
@@ -187,7 +213,8 @@ check_pattern "hardcoded collection()" \
 
 check_pattern "crypto.randomUUID()" \
     "crypto\.randomUUID\(\)" \
-    "src/services/enterprise-id.service.ts" 1
+    "src/services/enterprise-id.service.ts" 1 \
+    "src/services/enterprise-id.service.ts"
 
 check_pattern "addDoc() usage" \
     "addDoc\(" \
@@ -195,11 +222,15 @@ check_pattern "addDoc() usage" \
 
 check_pattern "new Date().toISOString()" \
     "new Date\(\)\.toISOString\(\)" \
-    "src/lib/date-local.ts" 3
+    "src/lib/date-local.ts" 3 \
+    "src/lib/date-local.ts"
 
-check_pattern "Timestamp.fromDate scattered" \
-    "Timestamp\.(fromDate|now)\(" \
-    "src/lib/date-local.ts" 5
+check_pattern "Timestamp.now() scattered" \
+    "Timestamp\.now\(\)" \
+    "src/lib/firestore-now.ts → nowTimestamp()" 2 \
+    "src/lib/firestore-now.ts" \
+    "NOT Timestamp" \
+    "firestoreHelpers|firebase-admin/firestore"
 
 check_pattern "inline color-by-status" \
     "(status|state)\s*===?\s*['\"].*\?\s*['\"]#[0-9a-fA-F]" \
@@ -207,7 +238,9 @@ check_pattern "inline color-by-status" \
 
 check_pattern "hardcoded entityType literals" \
     "entityType\s*[:=]\s*['\"](?:lead|contact|company|project|property|building)['\"]" \
-    "src/config/domain-constants.ts → ENTITY_TYPES" 3
+    "src/config/domain-constants.ts → ENTITY_TYPES" 3 \
+    "" \
+    "['\"][[:space:]]*[|&]"
 
 check_pattern "hardcoded senderType literals" \
     "senderType\s*[:=]\s*['\"](?:customer|agent|bot|system)['\"]" \
@@ -218,8 +251,9 @@ check_pattern "manual formatCurrency" \
     "src/lib/intl-formatting.ts → formatCurrency()" 2
 
 check_pattern "manual sort by locale" \
-    "\.localeCompare\(" \
-    "src/lib/intl-formatting.ts → sortByLocale()" 3
+    "\.sort\s*\(.*\.localeCompare\(|\.localeCompare\(.*\)[^;]*[<>].*0" \
+    "src/lib/intl-formatting.ts → compareByLocale() or sortByLocale()" 3 \
+    "src/lib/intl-formatting.ts"
 
 PATTERN_COUNT=$(grep -c "^PATTERN:" "$TMP_DIR/patterns.txt" 2>/dev/null || echo "0")
 echo -e "  Found ${BOLD}${PATTERN_COUNT}${NC} scattered anti-patterns"

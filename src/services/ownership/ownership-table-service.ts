@@ -20,10 +20,10 @@ import {
   where,
   orderBy,
   serverTimestamp,
-  Timestamp,
   runTransaction,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { nowTimestamp } from '@/lib/firestore-now';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import {
   generateOwnershipTableId,
@@ -193,7 +193,7 @@ export async function createTable(
   buildingIds: string[],
 ): Promise<OwnershipPercentageTable> {
   const tableId = generateOwnershipTableId(projectId);
-  const now = Timestamp.now();
+  const now = nowTimestamp();
 
   const table: Omit<OwnershipPercentageTable, 'id'> = {
     projectId,
@@ -306,7 +306,7 @@ export async function finalizeTable(
         status: 'finalized',
       },
       finalizedBy: userId,
-      finalizedAt: Timestamp.now(),
+      finalizedAt: nowTimestamp(),
       changeReason: null,
     };
 

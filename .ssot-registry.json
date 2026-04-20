@@ -2244,6 +2244,19 @@
         "src/config/company-gemi/utils/field-utilities.ts"
       ],
       "tier": 3
+    },
+
+    "clone-utils": {
+      "ssotFile": "src/lib/clone-utils.ts",
+      "description": "Canonical deepClone<T> utility — JSON round-trip deep clone. ADR-212 Phase 9. ADR-314 Phase D.3n.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+deepClone\\b"
+      ],
+      "allowlist": [
+        "src/lib/clone-utils.ts",
+        "src/subapps/dxf-viewer/utils/clone-utils.ts"
+      ],
+      "tier": 2
     }
   }
 }

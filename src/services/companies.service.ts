@@ -6,6 +6,7 @@ import { getNavigationCompanyIds } from './navigation-companies.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { requireAuthContext } from '@/services/firestore/auth-context';
 import { createModuleLogger } from '@/lib/telemetry';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 const logger = createModuleLogger('CompaniesService');
 
@@ -210,7 +211,7 @@ export class CompaniesService {
       return snapshot.docs
         .map(doc => doc.data())
         .filter((contact): contact is CompanyContact => contact.type === 'company')
-        .sort((a, b) => (a.companyName || '').localeCompare(b.companyName || '', 'el'));
+        .sort((a, b) => compareByLocale(a.companyName || '', b.companyName || ''));
     } catch (error) {
       logger.error('getAllCompaniesForSelect failed:', error);
       return [];

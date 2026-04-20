@@ -21,6 +21,7 @@ import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
 import type { CommercialStatus } from '@/types/property';
 import type { SpaceCommercialStatus } from '@/types/sales-shared';
 import type { Overlay } from '../overlays/types';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 // =============================================================================
 // TYPES
@@ -134,7 +135,7 @@ export function useFloorEntitiesForLinking({
     }));
 
     return [...unitEntities, ...parkingEntities, ...storageEntities]
-      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      .sort((a, b) => compareByLocale(a.displayName, b.displayName));
   }, [units, parkingSpots, storages, floorId, linkedEntityIds]);
 
   const loading = unitsLoading || parkingLoading || storagesLoading;

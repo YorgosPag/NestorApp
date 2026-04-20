@@ -12,7 +12,6 @@ import {
   getDocs,
   updateDoc,
   doc,
-  Timestamp,
   type QueryConstraint,
   startAfter,
   type DocumentSnapshot,
@@ -21,6 +20,7 @@ import {
 import type { Notification, Severity } from '@/types/notification';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { fieldToISO } from '@/lib/date-local';
+import { nowTimestamp } from '@/lib/firestore-now';
 import { firestoreQueryService } from '@/services/firestore';
 
 const COLLECTION_NAME = COLLECTIONS.NOTIFICATIONS;
@@ -107,7 +107,7 @@ export async function markNotificationsAsRead(notificationIds: string[]): Promis
   const updatePromises = notificationIds.map(id =>
     updateDoc(doc(db, COLLECTION_NAME, id), {
       'delivery.state': 'seen',
-      seenAt: Timestamp.now()
+      seenAt: nowTimestamp()
     })
   );
 
@@ -121,7 +121,7 @@ export async function markNotificationsAsRead(notificationIds: string[]): Promis
 export async function dismissNotification(notificationId: string): Promise<void> {
   await updateDoc(doc(db, COLLECTION_NAME, notificationId), {
     'delivery.state': 'dismissed',
-    dismissedAt: Timestamp.now()
+    dismissedAt: nowTimestamp()
   });
 }
 
@@ -134,7 +134,7 @@ export async function recordNotificationAction(
 ): Promise<void> {
   await updateDoc(doc(db, COLLECTION_NAME, notificationId), {
     'delivery.state': 'acted',
-    actedAt: Timestamp.now(),
+    actedAt: nowTimestamp(),
     actionId
   });
 }

@@ -2,7 +2,7 @@ import { Mail, Phone, MessageSquare, Send } from 'lucide-react';
 import { formatDateTime } from '@/lib/intl-utils';
 import { normalizeToDate } from '@/lib/date-local';
 
-export const getTypeIcon = (type: string) => ({
+export const getCommunicationTypeIcon = (type: string) => ({
   email: Mail, sms: MessageSquare, call: Phone, whatsapp: MessageSquare, telegram: Send,
 }[type] || Mail);
 

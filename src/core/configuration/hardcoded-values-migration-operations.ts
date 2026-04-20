@@ -15,10 +15,10 @@ import {
   setDoc,
   getDoc,
   collection,
-  writeBatch,
-  Timestamp
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { nowTimestamp } from '@/lib/firestore-now';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -210,7 +210,7 @@ export async function validateEnvironment(): Promise<void> {
 
     // Check permissions
     const testWrite = doc(db, COLLECTIONS.SYSTEM, 'migration-test');
-    await setDoc(testWrite, { test: true, timestamp: Timestamp.now() });
+    await setDoc(testWrite, { test: true, timestamp: nowTimestamp() });
     logger.info('Write permissions validated');
 
     // Cleanup test
@@ -263,7 +263,7 @@ export async function createMigrationBackup(migrationId: string, backupId: strin
   try {
     const backupDoc = {
       id: backupId,
-      timestamp: Timestamp.now(),
+      timestamp: nowTimestamp(),
       migrationId,
       originalData: {
         company: DETECTED_COMPANY_DATA,
@@ -298,7 +298,7 @@ export async function logMigrationResult(
   try {
     const logDoc = {
       migrationId,
-      timestamp: Timestamp.now(),
+      timestamp: nowTimestamp(),
       dryRun,
       result,
       environment: process.env.NODE_ENV,

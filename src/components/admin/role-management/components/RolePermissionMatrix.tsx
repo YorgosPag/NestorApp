@@ -25,6 +25,7 @@ import { PERMISSIONS } from '@/lib/auth/types';
 import type { PermissionId, GlobalRole } from '@/lib/auth/types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 // =============================================================================
 // CONSTANTS
@@ -67,7 +68,7 @@ function groupPermissionsByDomain(): DomainGroup[] {
 
   return Object.entries(groups)
     .map(([domain, permissions]) => ({ domain, permissions }))
-    .sort((a, b) => a.domain.localeCompare(b.domain));
+    .sort((a, b) => compareByLocale(a.domain, b.domain));
 }
 
 type AccessLevel = 'full' | 'partial' | 'none';

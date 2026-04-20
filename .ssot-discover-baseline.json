@@ -1,12 +1,12 @@
 {
   "description": "CHECK 3.18 — SSoT Discover Ratchet baseline (ADR-314). Tracks totals for duplicateExports, antiPatterns, unprotected. Ratchet down only: a raise blocks the commit/PR. Refresh via `npm run ssot:discover:baseline` after legitimate cleanup.",
-  "generatedAt": "2026-04-19T19:31:07.190Z",
+  "generatedAt": "2026-04-20T06:37:27.682Z",
   "generatedBy": "scripts/check-ssot-discover-ratchet.js --write-baseline",
   "adr": "ADR-314",
   "check": "CHECK 3.18",
   "centralizedFiles": 135,
-  "protected": 134,
-  "unprotected": 1,
+  "protected": 135,
+  "unprotected": 0,
   "duplicateExports": 0,
-  "antiPatterns": 5
+  "antiPatterns": 0
 }

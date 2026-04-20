@@ -22,6 +22,7 @@ import {
   type SupplierPriceTrend,
 } from '@/types/procurement';
 import { listPurchaseOrders } from './procurement-repository';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 // ============================================================================
 // CATEGORY NAME LOOKUP (SSoT from boq-categories)
@@ -158,7 +159,7 @@ export async function getSupplierPriceTrend(
       orderCount: data.prices.length,
       totalQuantity: data.quantities.reduce((s, q) => s + q, 0),
     }))
-    .sort((a, b) => a.month.localeCompare(b.month));
+    .sort((a, b) => compareByLocale(a.month, b.month));
 }
 
 // ============================================================================

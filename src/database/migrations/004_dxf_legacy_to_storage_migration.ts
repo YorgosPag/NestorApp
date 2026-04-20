@@ -17,8 +17,9 @@ import { db } from '@/lib/firebase';
 import {
   collection,
   getDocs,
-  Timestamp
+  type Timestamp
 } from 'firebase/firestore';
+import { nowTimestamp } from '@/lib/firestore-now';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
@@ -190,7 +191,7 @@ export const dxfLegacyToStorageMigration: Migration = {
                 id: docSnap.id,
                 fileName: data.fileName || `legacy_file_${docSnap.id}`,
                 // Keep other metadata but remove scene
-                lastModified: data.lastModified || Timestamp.now(),
+                lastModified: data.lastModified || nowTimestamp(),
                 version: (data.version || 0) + 1, // Increment version
                 // Remove scene object - it's now in Storage
                 // The saveToStorage already created the proper metadata with storageUrl
