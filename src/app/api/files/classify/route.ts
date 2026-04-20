@@ -51,6 +51,7 @@ const TEXT_MIME_TYPES = new Set([
   'text/html',
   'image/vnd.dxf',
   'application/dxf',
+  'image/svg+xml',
 ]);
 
 const DXF_EXTENSIONS = new Set(['.dxf']);

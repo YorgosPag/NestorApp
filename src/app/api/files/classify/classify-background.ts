@@ -18,6 +18,7 @@ import { extractTextFromXlsx } from '@/lib/document-extractors/xlsx-extractor';
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const DXF_MIMES = new Set(['image/vnd.dxf', 'application/dxf']);
+const SVG_MIME = 'image/svg+xml';
 const DXF_MAX_BYTES = 50_000;
 
 const logger = createModuleLogger('FileClassifyBackground');
@@ -60,6 +61,10 @@ export async function classifyInBackground(
     ) {
       // DXF is ASCII text — truncate to first 50KB (header + layer info sufficient for classification)
       analyzeBuffer = fileBuffer.slice(0, DXF_MAX_BYTES);
+      analyzeMimeType = 'text/plain';
+    } else if (contentType === SVG_MIME) {
+      // SVG is XML text — pass directly as text/plain
+      analyzeBuffer = fileBuffer;
       analyzeMimeType = 'text/plain';
     }
 

@@ -71,6 +71,7 @@ const CLASSIFIABLE_TYPES = new Set([
   'text/html',
   'image/vnd.dxf',
   'application/dxf',
+  'image/svg+xml',
 ]);
 
 /**

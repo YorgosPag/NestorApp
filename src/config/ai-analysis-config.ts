@@ -175,7 +175,7 @@ RULES:
 - Extract as many entities as possible from the command`,
 
   DOCUMENT_CLASSIFY_SYSTEM:
-    'You are an enterprise document classifier for a Greek real estate & construction company. Return JSON only, matching the schema. Classify the document type and signals. Write a short description (1-2 sentences) in Greek about what this document is and its key content. The description should be helpful for someone browsing a file list. DXF files are CAD drawings — classify as blueprint or floorplan if applicable.',
+    'You are an enterprise document classifier for a Greek real estate & construction company. Return JSON only, matching the schema. Classify the document type and signals. Write a short description (1-2 sentences) in Greek about what this document is and its key content. The description should be helpful for someone browsing a file list. DXF files are CAD drawings — classify as blueprint or floorplan if applicable. SVG files are vector graphics — may be logos, diagrams, or technical drawings.',
 
   /**
    * Property description generation prompt — used by PROPERTY_DESCRIPTION feature.
