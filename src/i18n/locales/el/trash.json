@@ -15,7 +15,10 @@
   "restoreFailed": "Αποτυχία επαναφοράς",
   "permanentDelete": "Οριστική διαγραφή",
   "permanentDeleteConfirm": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
-  "permanentDeleteSuccess": "Διαγράφηκε οριστικά",
+  "permanentDeleteSuccess": "{count} αντικείμενα διαγράφηκαν οριστικά",
+  "permanentDeleteSuccess_one": "Διαγράφηκε οριστικά",
+  "permanentDeleteFailed": "Αποτυχία οριστικής διαγραφής",
+  "permanentDeletePartial": "{succeeded} διαγράφηκαν, {failed} απέτυχαν",
   "autoDeleteWarning": "Όσα έχουν διαγραφεί πριν από 30 ημέρες διαγράφονται οριστικά αυτόματα.",
   "softDeleteDialog": {
     "title": "Μεταφορά στον Κάδο",

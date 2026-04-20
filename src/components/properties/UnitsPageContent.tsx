@@ -7,26 +7,21 @@ import { usePropertiesViewerState } from '@/hooks/usePropertiesViewerState';
 import { usePropertiesTrashState } from '@/hooks/usePropertiesTrashState';
 import { PropertiesHeader } from '@/components/properties/page/PropertiesHeader';
 import { PropertyTrashActionsBar } from '@/components/properties/trash/PropertyTrashActionsBar';
-import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import {
-  TrendingUp,
-  MapPin,
-  Package,
-} from 'lucide-react';
+import { PropertyTrashDialogs } from '@/components/properties/trash/PropertyTrashDialogs';
+import { PropertyPageFilters } from '@/components/properties/page/PropertyPageFilters';
+import { PropertyPageDashboard } from '@/components/properties/page/PropertyPageDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { TrendingUp, Package } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { PropertyHierarchyResponse } from '@/app/api/properties/[id]/hierarchy/route';
-import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
-import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
-import { CoverageCard } from '@/components/property-management/dashboard/CoverageCard';
-import { AdvancedFiltersPanel, propertyListFiltersConfig, type UnitFilterState } from '@/components/core/AdvancedFilters';
+import type { UnitFilterState } from '@/components/core/AdvancedFilters';
+import { usePropertyFiltersConfig } from '@/components/core/AdvancedFilters/hooks/usePropertyFiltersConfig';
 import { ListContainer, PageContainer } from '@/core/containers';
-import { PropertiesSidebar } from '@/components/properties/PropertiesSidebar';
-import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
-// 🏢 ENTERPRISE: Import from canonical location
+import { PropertyPageBody } from '@/components/properties/page/PropertyPageBody';
 import { PageLoadingState } from '@/core/states';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -40,7 +35,7 @@ export const UnitsPageContent = PropertiesManagementContent;
 
 export function PropertiesManagementContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer', 'trash']);
   const _colors = useSemanticColors();
   const searchParams = useSearchParams();
   const urlPropertyId = searchParams.get('propertyId') ?? searchParams.get('unitId');
@@ -114,6 +109,9 @@ export function PropertiesManagementContent() {
     forceDataRefresh,
   } = usePropertiesViewerState();
 
+  // 🔧 BUGFIX: Load dynamic filter options from properties data
+  const dynamicFilterConfig = usePropertyFiltersConfig(properties);
+
   // 🏢 ENTERPRISE: Inline new unit creation state (replaces AddUnitDialog modal)
   const [isCreatingNewUnit, setIsCreatingNewUnit] = useState(false);
   const [newUnitTemplate, setNewUnitTemplate] = useState<Property | null>(null);
@@ -167,12 +165,16 @@ export function PropertiesManagementContent() {
     trashCount,
     trashedProperties,
     loadingTrash,
-    showPermanentDeleteDialog: _showPermanentDeleteDialog,
-    setShowPermanentDeleteDialog: _setShowPermanentDeleteDialog,
+    showPermanentDeleteDialog,
+    pendingPermanentDeleteIds,
+    isDeleting,
+    BlockedDialog: TrashBlockedDialog,
     handleToggleTrash,
     handleTrashActionComplete,
     handleRestoreProperties: _handleRestoreProperties,
     handlePermanentDeleteProperties,
+    handleConfirmPermanentDelete,
+    handleCancelPermanentDelete,
   } = usePropertiesTrashState({
     selectedPropertyIds,
     setSelectedProperties,
@@ -415,49 +417,24 @@ export function PropertiesManagementContent() {
         />
 
         {showDashboard && (
-          <UnifiedDashboard
-            stats={unifiedDashboardStats}
-            columns={6}
+          <PropertyPageDashboard
+            unifiedDashboardStats={unifiedDashboardStats}
+            dashboardStats={dashboardStats}
             onCardClick={handleCardClick}
-            additionalContainers={
-              <>
-                <StatusCard statsByStatus={dashboardStats.propertiesByStatus} getStatusLabel={getStatusLabel} />
-                <DetailsCard title={t('page.dashboard.unitTypes')} icon={NAVIGATION_ENTITIES.property.icon} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
-                <DetailsCard title={t('page.dashboard.floorDistribution')} icon={MapPin} data={dashboardStats.propertiesByFloor} isFloorData />
-                {/* ✅ ENTERPRISE: Coverage card for documentation completeness (PR1.2) */}
-                <CoverageCard
-                  coverage={dashboardStats.coverage}
-                  onMissingPhotosClick={handleMissingPhotosClick}
-                  onMissingFloorplansClick={handleMissingFloorplansClick}
-                  onMissingDocumentsClick={handleMissingDocumentsClick}
-                />
-                {/* 🎯 DOMAIN SEPARATION: Storages card removed (separate entity, not Unit subtype) */}
-                {/* Storage units have their own module at /spaces/storage */}
-              </>
-            }
+            getStatusLabel={getStatusLabel}
+            getTypeLabel={getTypeLabel}
+            onMissingPhotosClick={handleMissingPhotosClick}
+            onMissingFloorplansClick={handleMissingFloorplansClick}
+            onMissingDocumentsClick={handleMissingDocumentsClick}
           />
         )}
 
-        {/* Desktop: Always visible filters */}
-        <div className="hidden md:block -mt-1">
-          <AdvancedFiltersPanel
-            config={propertyListFiltersConfig}
-            filters={filters as unknown as UnitFilterState}
-            onFiltersChange={handleFiltersChange}
-          />
-        </div>
-
-        {/* Mobile: Show only when showFilters is true */}
-        {showFilters && (
-          <div className="md:hidden"> {/* eslint-disable-line custom/no-hardcoded-strings */}
-            <AdvancedFiltersPanel
-              config={propertyListFiltersConfig}
-              filters={filters as unknown as UnitFilterState}
-              onFiltersChange={handleFiltersChange}
-              defaultOpen
-            />
-          </div>
-        )}
+        <PropertyPageFilters
+          config={dynamicFilterConfig}
+          filters={filters as unknown as UnitFilterState}
+          onFiltersChange={handleFiltersChange}
+          showMobile={showFilters}
+        />
 
         {/* 🗑️ Trash mode: ActionsBar + trash list */}
         {showTrash && (
@@ -472,51 +449,27 @@ export function PropertiesManagementContent() {
         )}
 
         <ListContainer>
-          {showTrash ? (
-            loadingTrash ? (
-              <PageLoadingState icon={NAVIGATION_ENTITIES.property.icon} message={t('page.loading')} layout="contained" />
-            ) : (
-              <PropertiesSidebar
-                units={trashedProperties}
-                selectedProperty={selectedProperty || null}
-                onSelectProperty={handlePolygonSelect}
-                selectedPropertyIds={selectedPropertyIds}
-                viewerProps={viewerProps}
-                floors={safeFloors}
-                setShowHistoryPanel={setShowHistoryPanel}
-                onAssignmentSuccess={handleAssignmentSuccess}
-                isCreatingNewUnit={false}
-                onPropertyCreated={handleUnitCreated}
-                onCancelCreate={handleCancelCreate}
-                defaultTab={urlTab || undefined}
-              />
-            )
-          ) : viewMode === 'list' ? (
-            <PropertiesSidebar
-              units={searchFilteredProperties}
-              selectedProperty={isCreatingNewUnit ? newUnitTemplate : (selectedProperty || null)}
-              onSelectProperty={handlePolygonSelect}
-              selectedPropertyIds={selectedPropertyIds}
-              viewerProps={viewerProps}
-              floors={safeFloors}
-              setShowHistoryPanel={setShowHistoryPanel}
-              onAssignmentSuccess={handleAssignmentSuccess}
-              onNewProperty={handleNewUnitInline}
-              onDeleteProperty={handleDelete}
-              isCreatingNewUnit={isCreatingNewUnit}
-              onPropertyCreated={handleUnitCreated}
-              onCancelCreate={handleCancelCreate}
-              defaultTab={urlTab || undefined}
-            />
-          ) : (
-            // ✅ ENTERPRISE: Pass filtered properties + selection to grid (Single Source of Truth)
-            // 🏢 PR: Grid Selection Styling - Blue border + blue background on selected cards
-            <PropertyGridView
-              properties={searchFilteredProperties}
-              selectedPropertyIds={selectedPropertyIds}
-              onSelect={handlePolygonSelect}
-            />
-          )}
+          <PropertyPageBody
+            showTrash={showTrash}
+            loadingTrash={loadingTrash}
+            trashedProperties={trashedProperties}
+            searchFilteredProperties={searchFilteredProperties}
+            viewMode={viewMode as 'list' | 'grid'}
+            selectedProperty={selectedProperty || null}
+            selectedPropertyIds={selectedPropertyIds}
+            isCreatingNewUnit={isCreatingNewUnit}
+            newUnitTemplate={newUnitTemplate}
+            viewerProps={viewerProps}
+            safeFloors={safeFloors}
+            urlTab={urlTab}
+            onSelectProperty={handlePolygonSelect}
+            setShowHistoryPanel={setShowHistoryPanel}
+            onAssignmentSuccess={handleAssignmentSuccess}
+            onPropertyCreated={handleUnitCreated}
+            onCancelCreate={handleCancelCreate}
+            onNewProperty={handleNewUnitInline}
+            onDeleteProperty={handleDelete}
+          />
         </ListContainer>
 
         {showHistoryPanel && (
@@ -526,6 +479,14 @@ export function PropertiesManagementContent() {
         )}
         {PropertyMutationImpactDialog}
         {PropertyDeletionDialogs}
+        <PropertyTrashDialogs
+          showPermanentDeleteDialog={showPermanentDeleteDialog}
+          pendingPermanentDeleteIds={pendingPermanentDeleteIds}
+          isDeleting={isDeleting}
+          onConfirmPermanentDelete={handleConfirmPermanentDelete}
+          onCancelPermanentDelete={handleCancelPermanentDelete}
+          blockedDialog={TrashBlockedDialog}
+        />
       </PageContainer>
   );
 }

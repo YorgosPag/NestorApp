@@ -15,7 +15,10 @@
   "restoreFailed": "Failed to restore",
   "permanentDelete": "Permanently delete",
   "permanentDeleteConfirm": "This action cannot be undone.",
-  "permanentDeleteSuccess": "Permanently deleted",
+  "permanentDeleteSuccess": "{count} items permanently deleted",
+  "permanentDeleteSuccess_one": "Permanently deleted",
+  "permanentDeleteFailed": "Failed to permanently delete",
+  "permanentDeletePartial": "{succeeded} deleted, {failed} failed",
   "autoDeleteWarning": "Items deleted over 30 days ago are automatically permanently deleted.",
   "softDeleteDialog": {
     "title": "Move to Trash",
