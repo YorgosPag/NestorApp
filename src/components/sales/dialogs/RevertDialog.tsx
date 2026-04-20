@@ -80,7 +80,11 @@ export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialog
           transactionChainId: unit.commercial?.transactionChainId ?? null,
         },
       };
-      const completed = await runRevertUpdate(unit, updates);
+      const completed = await runRevertUpdate(
+        unit,
+        updates,
+        (err) => notifyError(translatePropertyMutationError(err, t)),
+      );
       if (!completed) {
         return;
       }

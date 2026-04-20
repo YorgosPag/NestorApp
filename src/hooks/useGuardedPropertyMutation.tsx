@@ -27,12 +27,13 @@ export function useGuardedPropertyMutation(
     async (
       updates: Record<string, unknown>,
       action: () => Promise<void>,
+      onError?: (err: unknown) => void,
     ) => {
       if (!property?.id) {
         return false;
       }
 
-      return previewBeforeMutate(updates, action);
+      return previewBeforeMutate(updates, action, onError);
     },
     [previewBeforeMutate, property?.id],
   );
@@ -62,6 +63,7 @@ export function useGuardedPropertyMutation(
     async (
       currentProperty: PropertyMutationCurrentState,
       updates: Record<string, unknown>,
+      onError?: (err: unknown) => void,
       postUpdateAction?: () => Promise<void>,
     ) => {
       return runPreviewedMutation(updates, async () => {
@@ -74,7 +76,7 @@ export function useGuardedPropertyMutation(
         if (postUpdateAction) {
           await postUpdateAction();
         }
-      });
+      }, onError);
     },
     [property, runPreviewedMutation],
   );

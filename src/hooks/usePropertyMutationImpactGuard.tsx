@@ -13,7 +13,7 @@ interface PropertyMutationPreviewTarget {
 
 interface UsePropertyMutationImpactGuardReturn {
   checking: boolean;
-  previewBeforeMutate: (updates: Record<string, unknown>, action: () => Promise<void>) => Promise<boolean>;
+  previewBeforeMutate: (updates: Record<string, unknown>, action: () => Promise<void>, onError?: (err: unknown) => void) => Promise<boolean>;
   reset: () => void;
   ImpactDialog: ReactNode;
 }
@@ -36,7 +36,7 @@ export function usePropertyMutationImpactGuard(
   const [checking, setChecking] = useState(false);
   const [preview, setPreview] = useState<PropertyMutationImpactPreview | null>(null);
   const [open, setOpen] = useState(false);
-  const deferredActionRef = useRef<(() => Promise<void>) | null>(null);
+  const deferredActionRef = useRef<{ execute: () => Promise<void>; onError: (err: unknown) => void } | null>(null);
 
   const reset = useCallback(() => {
     setOpen(false);
@@ -48,14 +48,16 @@ export function usePropertyMutationImpactGuard(
   // Close dialog first (visual feedback), yield to browser for paint,
   // then execute the mutation in the next task. This drops INP from ~380ms to <100ms.
   const handleConfirm = useCallback(() => {
-    const action = deferredActionRef.current;
+    const pending = deferredActionRef.current;
     reset();
-    if (action) {
-      setTimeout(() => void action(), 0);
+    if (pending) {
+      setTimeout(() => { pending.execute().catch(pending.onError); }, 0);
     }
   }, [reset]);
 
-  const previewBeforeMutate = useCallback(async (updates: Record<string, unknown>, action: () => Promise<void>) => {
+  const previewBeforeMutate = useCallback(async (updates: Record<string, unknown>, action: () => Promise<void>, onError?: (err: unknown) => void) => {
+    const errorHandler = onError ?? ((err: unknown) => console.error('[ImpactGuard] Deferred action failed:', err));
+
     if (!property?.id || property.id === '__new__') {
       await action();
       return true;
@@ -74,7 +76,9 @@ export function usePropertyMutationImpactGuard(
         return true;
       }
 
-      deferredActionRef.current = impactPreview.mode === 'warn' ? action : null;
+      deferredActionRef.current = impactPreview.mode === 'warn'
+        ? { execute: action, onError: errorHandler }
+        : null;
       setPreview(impactPreview);
       setOpen(true);
       setChecking(false);
