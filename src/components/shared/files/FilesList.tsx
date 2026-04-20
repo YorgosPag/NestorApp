@@ -33,7 +33,8 @@ import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
 import { useFileListActions } from './hooks/useFileListActions';
 import { useFileClassification } from './hooks/useFileClassification';
-import { useUserDisplayNames } from '@/hooks/useUserDisplayNames';
+import { useUserDisplayNames, seedUserNameCache } from '@/hooks/useUserDisplayNames';
+import { useAuth } from '@/auth/hooks/useAuth';
 
 // ============================================================================
 // TYPES
@@ -83,6 +84,10 @@ export function FilesList({
   const colors = useSemanticColors();
   const { t } = useTranslation(['files', 'files-media']);
   const translateDisplayName = useFileDisplayName();
+
+  const { user } = useAuth();
+  // Pre-seed cache with current user so own uploads show name instantly (no Firestore read)
+  if (user?.uid && user.displayName) seedUserNameCache(user.uid, user.displayName);
 
   const uploaderUids = files.map(f => f.createdBy).filter(Boolean);
   const uploaderNames = useUserDisplayNames(uploaderUids);
