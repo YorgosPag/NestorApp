@@ -14,6 +14,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import { extractTextFromDocx } from '@/lib/document-extractors/docx-extractor';
 import { extractTextFromXlsx } from '@/lib/document-extractors/xlsx-extractor';
+import { extractTextFromDxf } from '@/lib/document-extractors/dxf-extractor';
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -61,8 +62,12 @@ export async function classifyInBackground(
       fileExt?.toLowerCase() === 'dxf' ||
       originalFilename?.toLowerCase().endsWith('.dxf')
     ) {
-      // DXF is ASCII text — truncate to first 50KB (header + layer info sufficient for classification)
-      analyzeBuffer = fileBuffer.slice(0, DXF_MAX_BYTES);
+      // Extract human-readable text from DXF entities (TEXT/MTEXT/ATTRIB)
+      // If the file contains text, send only that; otherwise fall back to raw header
+      const extractedDxfText = extractTextFromDxf(fileBuffer.slice(0, DXF_MAX_BYTES));
+      analyzeBuffer = extractedDxfText
+        ? Buffer.from(extractedDxfText)
+        : fileBuffer.slice(0, DXF_MAX_BYTES);
       analyzeMimeType = 'text/plain';
     } else if (contentType === SVG_MIME) {
       // SVG is XML text — truncate to 50KB (large SVGs cause OpenAI timeout)
