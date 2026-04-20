@@ -234,7 +234,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
         content.push({
           type: 'input_file',
           filename: input.filename || 'document',
-          file_data: input.content.toString('base64'),
+          file_data: buildFileDataBuffer(input.content, input.mimeType),
         });
       }
     }
