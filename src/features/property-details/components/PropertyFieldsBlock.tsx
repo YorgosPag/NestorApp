@@ -96,8 +96,8 @@ export function PropertyFieldsBlock({
     return typeLabel;
   }, [t]);
   const prevCodeInputsRef = useRef({
-    buildingId: property.buildingId,
-    floor: property.floor,
+    buildingId: property.buildingId ?? '',
+    floor: property.floor ?? 0,
     type: localType,
   });
   // Track property ID to distinguish card-switch vs in-place field edit
