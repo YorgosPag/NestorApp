@@ -166,23 +166,25 @@ function SalesAvailableContent() {
             onDataMutated={refetch}
           />
         ) : (
-          <section
-            className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
-            aria-label={t('sales.available.gridLabel')}
-          >
-            {(filteredUnits as Property[]).map(unit => (
-              <PropertyGridCard
-                key={unit.id}
-                property={unit as unknown as ViewerProperty}
-                onSelect={() => handleSelectProperty(unit.id)}
-                showCommercialPrices
-              />
-            ))}
+          <div className="w-full p-2 overflow-y-auto flex-1">
+            <section
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2"
+              aria-label={t('sales.available.gridLabel')}
+            >
+              {(filteredUnits as Property[]).map(unit => (
+                <PropertyGridCard
+                  key={unit.id}
+                  property={unit as unknown as ViewerProperty}
+                  onSelect={() => handleSelectProperty(unit.id)}
+                  showCommercialPrices
+                />
+              ))}
 
-            {filteredUnits.length === 0 && (
-              <SalesGridEmpty message={t('sales.available.noResults')} />
-            )}
-          </section>
+              {filteredUnits.length === 0 && (
+                <SalesGridEmpty message={t('sales.available.noResults')} />
+              )}
+            </section>
+          </div>
         )}
       </ListContainer>
     </PageContainer>
