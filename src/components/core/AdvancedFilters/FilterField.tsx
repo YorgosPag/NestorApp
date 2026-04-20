@@ -231,8 +231,8 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
                   <Input
                     ref={minInputRef}
                     type="number"
-                    aria-label={`${t('filters.minimum')} ${translateLabel(config.label)?.toLowerCase()}`}
-                    placeholder={t('filters.from')}
+                    aria-label={`${t('filters:minimum')} ${translateLabel(config.label)?.toLowerCase()}`}
+                    placeholder={t('filters:from')}
                     className="h-9 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     value={minValue}
                     onChange={(e) => {
@@ -253,8 +253,8 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
                   <Input
                     ref={maxInputRef}
                     type="number"
-                    aria-label={`${t('filters.maximum')} ${translateLabel(config.label)?.toLowerCase()}`}
-                    placeholder={t('filters.to')}
+                    aria-label={`${t('filters:maximum')} ${translateLabel(config.label)?.toLowerCase()}`}
+                    placeholder={t('filters:to')}
                     className="h-9 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     value={maxValue}
                     onChange={(e) => {
@@ -283,8 +283,8 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
           <div className={`flex ${spacing.gap.sm}`}>
             <Input
               type="number"
-              aria-label={`${t('filters.minimum')} ${config.label?.toLowerCase()}`}
-              placeholder={t('filters.from')}
+              aria-label={`${t('filters:minimum')} ${config.label?.toLowerCase()}`}
+              placeholder={t('filters:from')}
               className="h-9"
               value={rangeValue?.min ?? ''}
               onChange={(e) => onRangeChange?.('min', e.target.value)}
@@ -293,8 +293,8 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
             />
             <Input
               type="number"
-              aria-label={`${t('filters.maximum')} ${config.label?.toLowerCase()}`}
-              placeholder={t('filters.to')}
+              aria-label={`${t('filters:maximum')} ${config.label?.toLowerCase()}`}
+              placeholder={t('filters:to')}
               className="h-9"
               value={rangeValue?.max ?? ''}
               onChange={(e) => onRangeChange?.('max', e.target.value)}
@@ -352,7 +352,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
               } />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t('filters.all')}</SelectItem>
+              <SelectItem value="all">{t('filters:all')}</SelectItem>
               {config.options?.map(option => (
                 <SelectItem key={option.value} value={option.value}>
                   {translateLabel(option.label)} {Array.isArray(value) && value.includes(option.value) ? '✓' : ''}

@@ -4,7 +4,7 @@ import { AFO, COMMON_FILTER_LABELS, FL, FT, PROPERTY_FILTER_LABELS, SP, UNIFIED_
 export const propertyListFiltersConfig: FilterPanelConfig = {
   title: FT.units,
   searchPlaceholder: SP.units_search,
-  i18nNamespace: "properties", // 🏢 ENTERPRISE: Properties domain namespace (ADR-269)
+  i18nNamespace: "filters", // 🏢 ENTERPRISE: Labels (AFO/SP/FT/RL/FL) all prefix "filters." → load from filters.json. Cross-namespace keys use explicit "ns:key" syntax.
   rows: [
     {
       id: "basic-filters",
@@ -47,20 +47,20 @@ export const propertyListFiltersConfig: FilterPanelConfig = {
           // 🏢 PR1.2: i18n keys directly (avoid circular dependency)
           options: [
             { value: "all", label: "filters.allStatuses" },
-            { value: "ready", label: "units.operationalStatus.ready" },
+            { value: "ready", label: "properties-enums:operationalStatus.ready" },
             {
               value: "under-construction",
-              label: "units.operationalStatus.underConstruction",
+              label: "properties-enums:operationalStatus.underConstruction",
             },
             {
               value: "inspection",
-              label: "units.operationalStatus.inspection",
+              label: "properties-enums:operationalStatus.inspection",
             },
             {
               value: "maintenance",
-              label: "units.operationalStatus.maintenance",
+              label: "properties-enums:operationalStatus.maintenance",
             },
-            { value: "draft", label: "units.operationalStatus.draft" },
+            { value: "draft", label: "properties-enums:operationalStatus.draft" },
           ],
         },
       ],
