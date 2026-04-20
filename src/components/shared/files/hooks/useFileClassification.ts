@@ -78,7 +78,13 @@ const CLASSIFIABLE_TYPES = new Set([
  * Check if a file can be classified by AI.
  * Pass ext (from FileRecord.ext) as additional fallback for octet-stream files.
  */
+const CLASSIFIABLE_EXTS = new Set(['dxf', 'svg', 'pdf', 'txt', 'csv', 'docx', 'xlsx', 'xml', 'html']);
+
 export function isAIClassifiable(contentType?: string, filename?: string, ext?: string, displayName?: string): boolean {
+  // ext-based override: known classifiable formats regardless of stored contentType
+  if (ext && CLASSIFIABLE_EXTS.has(ext.toLowerCase())) return true;
+  if (filename?.toLowerCase().endsWith('.dxf') || displayName?.toLowerCase().endsWith('.dxf')) return true;
+
   if (!contentType) return false;
   if (CLASSIFIABLE_TYPES.has(contentType)) return true;
   if (contentType.startsWith('video/') || contentType.startsWith('audio/')) return true;
