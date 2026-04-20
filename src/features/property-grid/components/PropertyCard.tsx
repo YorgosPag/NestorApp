@@ -97,10 +97,12 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
         </aside>
 
         <section className={`flex flex-wrap items-center gap-2 sm:gap-4 ${colors.text.muted} text-sm mb-4`} aria-label={t('card.aria.propertyFeatures')}>
+          {(property.areas?.gross || property.areas?.net || property.area) && (
           <span className="flex items-center gap-1" itemProp="floorSize">
             <Square className={iconSizes.sm} />
-            {property.area} m²
+            {property.areas?.gross || property.areas?.net || property.area} m²
           </span>
+          )}
           {property.layout?.bedrooms !== undefined && property.layout.bedrooms > 0 && (
             <span className="flex items-center gap-1" itemProp="numberOfRooms">
               <Bed className={iconSizes.sm} />

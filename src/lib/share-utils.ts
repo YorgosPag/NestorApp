@@ -256,8 +256,9 @@ function generatePropertyShareText(property: PropertyShareData): string {
     text += `\n💰 ${formatCurrency(property.price)}`;
   }
   
-  if (property.area) {
-    text += `\n📐 ${property.area} ${i18n.t('share.sqm', { ns: 'common' })}`;
+  const shareArea = property.areas?.gross || property.areas?.net || property.area;
+  if (shareArea) {
+    text += `\n📐 ${shareArea} ${i18n.t('share.sqm', { ns: 'common' })}`;
   }
 
   if (property.description) {

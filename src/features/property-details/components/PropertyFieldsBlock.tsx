@@ -425,7 +425,7 @@ export function PropertyFieldsBlock({
         toggleArrayItem={toggleArrayItem}
         updateLevelField={updateLevelField}
         handleSave={handleSave}
-        codeBuildingId={hasAllCodeInputs ? codeBuildingId : ''}
+        codeBuildingId={hasAllCodeInputs && (isCreatingNewUnit || !formData.code) ? codeBuildingId : ''}
         codeFloorLevel={codeFloorLevel}
         codePropertyType={(localType as PropertyType) || undefined}
         onCodeChange={handleCodeChange}

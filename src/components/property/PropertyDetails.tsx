@@ -49,9 +49,9 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
       const propertyShareData: PropertyShareData = {
         id: property.id,
         title: `${property.code} - ${property.description}`,
-        description: `${property.area} ${t('meta.sqm')} • ${property.rooms} ${t('meta.rooms')} • ${formatCurrency(property.price)}`,
+        description: `${property.areas?.gross || property.areas?.net || property.area} ${t('meta.sqm')} • ${property.rooms} ${t('meta.rooms')} • ${formatCurrency(property.price)}`,
         price: property.price,
-        area: property.area,
+        area: property.areas?.gross || property.areas?.net || property.area,
         location: property.building,
         propertyType: 'apartment' // You might want to add this to the Property type
       };

@@ -54,8 +54,9 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
   const effectivePrice = property.commercial?.askingPrice ?? property.price ?? null;
   const parkingCount = linkedSpaces?.filter(s => s.spaceType === 'parking').length ?? 0;
   const storageCount = linkedSpaces?.filter(s => s.spaceType === 'storage').length ?? 0;
-  const pricePerSqm = effectivePrice && property.area && property.area > 0
-    ? Math.round(effectivePrice / property.area)
+  const displayArea = property.areas?.gross || property.areas?.net || property.area;
+  const pricePerSqm = effectivePrice && displayArea && displayArea > 0
+    ? Math.round(effectivePrice / displayArea)
     : null;
 
   // Translate orientations using SSoT ORIENTATION_LABELS → i18n
@@ -83,10 +84,10 @@ export function PropertyQuickView({ property }: PropertyQuickViewProps) {
       {/* 2-column grid: labels (left) + values (right) */}
       <div className="space-y-0.5">
         <QuickViewRow label={formatFloorLabel(property.floor)} value="" />
-        {property.area && (
+        {displayArea && (
           <QuickViewRow
             label={t('hoverInfo.gross')}
-            value={`${property.area} m²`}
+            value={`${displayArea} m²`}
           />
         )}
         {areas?.net && (

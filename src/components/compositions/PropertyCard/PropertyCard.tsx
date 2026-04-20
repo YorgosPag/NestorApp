@@ -142,10 +142,10 @@ export function PropertyCard({
 
         {/* Στατιστικά */}
         <div className={cn("flex items-center gap-4 text-sm", colors.text.muted)}>
-          {property.area && (
+          {(property.areas?.gross || property.areas?.net || property.area) && (
             <div className="flex items-center gap-1">
               <Ruler className={iconSizes.sm} />
-              <span>{property.area} {t('grid.area.sqm')}</span>
+              <span>{property.areas?.gross || property.areas?.net || property.area} {t('grid.area.sqm')}</span>
             </div>
           )}
           

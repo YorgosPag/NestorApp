@@ -174,7 +174,7 @@ export function PropertyListCard({
     }
 
     // Area - 🏢 ENTERPRISE: Using centralized area icon/color
-    const _displayArea = property.areas?.gross || property.area;
+    const _displayArea = property.areas?.gross || property.areas?.net || property.area;
     if (_displayArea) {
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,

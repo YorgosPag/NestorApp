@@ -179,8 +179,9 @@ export class SharingService {
       text += `\n💰 ${formatCurrency(property.price)}`;
     }
 
-    if (property.area) {
-      text += `\n📐 ${property.area} τ.μ.`;
+    const shareArea = property.areas?.gross || property.areas?.net || property.area;
+    if (shareArea) {
+      text += `\n📐 ${shareArea} τ.μ.`;
     }
 
     if (property.description) {
