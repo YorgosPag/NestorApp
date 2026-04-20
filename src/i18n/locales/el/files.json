@@ -259,7 +259,8 @@
     "expandGroup": "Ανάπτυξη ομάδας",
     "openInNewTab": "Άνοιγμα σε νέα καρτέλα",
     "classifying": "Κατηγοριοποίηση...",
-    "classificationFailed": "Αποτυχία κατηγοριοποίησης"
+    "classificationFailed": "Αποτυχία κατηγοριοποίησης",
+    "retryClassification": "Επανάληψη κατηγοριοποίησης"
   },
   "linkModal": {
     "title": "Σύνδεση αρχείου σε Κτίρια",

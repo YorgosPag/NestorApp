@@ -14,7 +14,7 @@
 
 import React from 'react';
 import { getStatusColor } from '@/lib/design-system';
-import { FileText, Eye, Trash2, Calendar, HardDrive, Link2, Unlink, Pencil, Check, X } from 'lucide-react';
+import { FileText, Eye, Trash2, Calendar, HardDrive, Link2, Unlink, Pencil, Check, X, RotateCcw } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import { FileThumbnail } from './FileThumbnail';
@@ -32,6 +32,7 @@ import { formatDate } from '@/lib/intl-utils';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
 import { useFileListActions } from './hooks/useFileListActions';
+import { useFileClassification } from './hooks/useFileClassification';
 
 // ============================================================================
 // TYPES
@@ -84,6 +85,8 @@ export function FilesList({
   const entityName = t(`list.entityName.${entityType ?? 'building'}`);
   const linkFileLabel = t('list.linkFile', { entity: entityName });
   const unlinkFileLabel = t('list.unlinkFile', { entity: entityName });
+
+  const { classifyFile, classifyingIds } = useFileClassification();
 
   // All interactive state + handlers from extracted hook
   const actions = useFileListActions({
@@ -246,8 +249,31 @@ export function FilesList({
                   </span>
                 )}
                 {file.ingestion?.state === 'classification_failed' && (
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('error', 'bg')}/15 ${getStatusColor('error', 'text')}`}>
-                    {t('list.classificationFailed', 'Αποτυχία')}
+                  <span className="inline-flex items-center gap-1">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusColor('error', 'bg')}/15 ${getStatusColor('error', 'text')}`}>
+                      {t('list.classificationFailed')}
+                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => classifyFile(file.id)}
+                          disabled={classifyingIds.has(file.id)}
+                          aria-label={t('list.retryClassification')}
+                          className={cn(
+                            'inline-flex items-center justify-center rounded p-0.5',
+                            getStatusColor('error', 'text'),
+                            'hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity',
+                          )}
+                        >
+                          <RotateCcw
+                            className={cn(iconSizes.xs, classifyingIds.has(file.id) && 'animate-spin')}
+                            aria-hidden="true"
+                          />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('list.retryClassification')}</TooltipContent>
+                    </Tooltip>
                   </span>
                 )}
                 {file.ingestion?.analysis?.documentType && (
