@@ -501,6 +501,7 @@
     "selectedLabel": "selected",
     "aiClassify": "AI Classify",
     "aiClassifyTooltip": "Auto-detect document type with AI",
+    "noAIClassifiableFiles": "None of the selected files support auto-classification",
     "archive": "Archive",
     "archiveTooltip": "Move to archive",
     "deleteConfirmTitle": "Batch move to trash",

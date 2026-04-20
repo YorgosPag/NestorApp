@@ -240,11 +240,15 @@ export function FilesList({
 
               {/* Metadata */}
               <div className={cn("flex items-center gap-2 text-xs mt-1", colors.text.muted)}>
-                {uploaderNames.get(file.createdBy) && (
-                  <span className="truncate max-w-[120px]">
-                    {uploaderNames.get(file.createdBy)}
-                  </span>
-                )}
+                {(() => {
+                  const uploaderName = uploaderNames.get(file.createdBy)
+                    ?? (file.createdBy && file.createdBy === user?.uid
+                      ? (user.displayName || user.email || null)
+                      : null);
+                  return uploaderName
+                    ? <span className="truncate max-w-[120px]">{uploaderName}</span>
+                    : null;
+                })()}
                 <span className="flex items-center gap-1">
                   <HardDrive className={iconSizes.xs} aria-hidden="true" />
                   {formatFileSize(file.sizeBytes ?? 0)}

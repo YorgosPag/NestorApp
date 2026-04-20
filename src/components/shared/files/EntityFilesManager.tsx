@@ -191,7 +191,8 @@ export function EntityFilesManager({
       const ext = extMatch[1].toLowerCase();
       return files.filter(f =>
         (f.originalFilename ?? '').toLowerCase().endsWith(`.${ext}`) ||
-        (f.displayName ?? '').toLowerCase().endsWith(`.${ext}`)
+        (f.displayName ?? '').toLowerCase().endsWith(`.${ext}`) ||
+        f.ext?.toLowerCase() === ext
       );
     }
 

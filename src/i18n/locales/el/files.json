@@ -501,6 +501,7 @@
     "selectedLabel": "επιλεγμένα",
     "aiClassify": "AI Ταξινόμηση",
     "aiClassifyTooltip": "Αυτόματη αναγνώριση τύπου εγγράφου με AI",
+    "noAIClassifiableFiles": "Κανένα από τα επιλεγμένα αρχεία δεν υποστηρίζει αυτόματη ταξινόμηση",
     "archive": "Αρχειοθέτηση",
     "archiveTooltip": "Μεταφορά σε αρχειοθήκη",
     "deleteConfirmTitle": "Μαζική μετακίνηση στον κάδο",

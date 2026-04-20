@@ -49,7 +49,8 @@ function applyFilters(files: FileRecord[], searchTerm: string, filters: FileFilt
       const ext = extMatch[1].toLowerCase();
       result = result.filter(file =>
         (file.originalFilename ?? '').toLowerCase().endsWith(`.${ext}`) ||
-        (file.displayName ?? '').toLowerCase().endsWith(`.${ext}`)
+        (file.displayName ?? '').toLowerCase().endsWith(`.${ext}`) ||
+        file.ext?.toLowerCase() === ext
       );
     } else {
       const query = normalizeForSearch(raw);
