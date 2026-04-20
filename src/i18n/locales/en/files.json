@@ -480,7 +480,9 @@
     "txtLoading": "Loading text file...",
     "txtError": "Could not preview text file",
     "htmlLoading": "Loading HTML file...",
-    "htmlError": "Could not preview HTML file"
+    "htmlError": "Could not preview HTML file",
+    "dxfLoading": "Parsing DXF drawing...",
+    "dxfError": "Could not preview DXF drawing"
   },
   "batch": {
     "toolbar": "Batch actions",

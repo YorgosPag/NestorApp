@@ -44,6 +44,7 @@ import { ExcelPreview } from '@/components/file-manager/preview/ExcelPreview';
 import { XmlPreview } from '@/components/file-manager/preview/XmlPreview';
 import { TxtPreview } from '@/components/file-manager/preview/TxtPreview';
 import { HtmlPreview } from '@/components/file-manager/preview/HtmlPreview';
+import { DxfPreview } from '@/components/file-manager/preview/DxfPreview';
 import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-registry';
 import '@/lib/design-system';
 
@@ -251,6 +252,7 @@ export function FilePreviewRenderer({
       {previewType === 'xml' && <XmlPreview url={url!} title={displayName} />}
       {previewType === 'text' && <TxtPreview url={url!} title={displayName} />}
       {previewType === 'html' && <HtmlPreview url={url!} title={displayName} />}
+      {previewType === 'dxf' && <DxfPreview url={url!} fileName={fileName ?? displayName} title={displayName} />}
       {previewType === 'unsupported' && (
         <UnsupportedPreview
           displayName={displayName}
