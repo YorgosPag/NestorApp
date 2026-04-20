@@ -201,6 +201,12 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     // Blocking dependencies — DERIVED from unified ContactDependencyRegistry (ADR-145 SSoT)
     // Single source of truth: src/config/contact-dependency-registry.ts
     dependencies: deriveDeletionDependencies(),
+    storageCleanup: [
+      {
+        pathTemplate: 'companies/{companyId}/entities/contact/{entityId}/',
+        label: 'Storage επαφής (φωτογραφίες)',
+      },
+    ],
   },
 
   // ─── PROPERTY ──────────────────────────────────────────────────────
