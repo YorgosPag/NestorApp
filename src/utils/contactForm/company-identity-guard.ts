@@ -90,9 +90,18 @@ function extractContactValue(contact: Contact, field: CompanyIdentityField): str
       return isCompanyContact(contact) ? contact.companyName ?? '' : '';
     case 'vatNumber':
       return isCompanyContact(contact) ? contact.vatNumber ?? '' : '';
-    case 'gemiNumber':
-      // Stored as registrationNumber in Firestore
-      return isCompanyContact(contact) ? contact.registrationNumber ?? '' : '';
+    case 'gemiNumber': {
+      // Historically stored under two keys: the canonical `registrationNumber`
+      // (CompanyContact type) and the legacy `gemiNumber` top-level key that
+      // the mapper still writes for backward compatibility. The form reads
+      // `gemiNumber || registrationNumber`, so the guard must mirror that or
+      // it will see a phantom "" → "<value>" change on every save for
+      // contacts whose `registrationNumber` was never populated.
+      if (!isCompanyContact(contact)) return '';
+      const legacyGemi = (contact as unknown as { gemiNumber?: unknown }).gemiNumber;
+      const legacyGemiStr = typeof legacyGemi === 'string' ? legacyGemi : '';
+      return (contact.registrationNumber ?? '') || legacyGemiStr;
+    }
     case 'taxOffice':
       return isCompanyContact(contact) ? contact.taxOffice ?? '' : '';
     case 'legalForm':
