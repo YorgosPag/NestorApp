@@ -318,9 +318,6 @@
     "similarMatch": "A similar contact was found. Please check before continuing.",
     "possibleMatch": "Possible match with an existing contact."
   },
-  "addressesSection": {
-    "removeAddress": "Remove Address"
-  },
   "individual": {
     "sections": {
       "projectParticipation": {

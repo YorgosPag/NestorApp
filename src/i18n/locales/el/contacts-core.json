@@ -318,9 +318,6 @@
     "similarMatch": "Βρέθηκε παρόμοια επαφή. Ελέγξτε πριν συνεχίσετε.",
     "possibleMatch": "Πιθανή αντιστοιχία με υπάρχουσα επαφή."
   },
-  "addressesSection": {
-    "removeAddress": "Αφαίρεση Διεύθυνσης"
-  },
   "individual": {
     "sections": {
       "projectParticipation": {

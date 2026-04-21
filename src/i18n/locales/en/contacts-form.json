@@ -265,6 +265,7 @@
     "addAddress": "Add Address",
     "noBranches": "No additional addresses",
     "branch": "Branch",
+    "removeAddress": "Remove Address",
     "administrative": {
       "title": "Administrative Division",
       "postalCode": "Postal Code",
