@@ -106,14 +106,14 @@ const PATH_TO_ADDRESS: Array<{
 
 /** Placeholder i18n key mapping per level */
 const LEVEL_PLACEHOLDER_KEYS: Record<AdminLevel, string> = {
-  8: 'addressesSection.administrative.placeholders.city',
-  7: 'addressesSection.administrative.placeholders.community',
-  6: 'addressesSection.administrative.placeholders.unit',
-  5: 'addressesSection.administrative.placeholders.municipality',
-  4: 'addressesSection.administrative.placeholders.regionalUnit',
-  3: 'addressesSection.administrative.placeholders.region',
-  2: 'addressesSection.administrative.placeholders.decentralized',
-  1: 'addressesSection.administrative.placeholders.geographic',
+  8: 'contacts-form:addressesSection.administrative.placeholders.city',
+  7: 'contacts-form:addressesSection.administrative.placeholders.community',
+  6: 'contacts-form:addressesSection.administrative.placeholders.unit',
+  5: 'contacts-form:addressesSection.administrative.placeholders.municipality',
+  4: 'contacts-form:addressesSection.administrative.placeholders.regionalUnit',
+  3: 'contacts-form:addressesSection.administrative.placeholders.region',
+  2: 'contacts-form:addressesSection.administrative.placeholders.decentralized',
+  1: 'contacts-form:addressesSection.administrative.placeholders.geographic',
 };
 
 /** Ordered fields for display: bottom (settlement) to top (majorGeo) */
@@ -226,10 +226,10 @@ export function AdministrativeAddressPicker({
   }, [isLoading, levelOptions]);
 
   return (
-    <section className="space-y-3" aria-label={t('addressesSection.administrative.title')}>
+    <section className="space-y-3" aria-label={t('contacts-form:addressesSection.administrative.title')}>
       <header className={cn("flex items-center gap-2 text-sm font-medium", colors.text.muted)}>
         <MapPin className="h-4 w-4" />
-        <span>{t('addressesSection.administrative.title')}</span>
+        <span>{t('contacts-form:addressesSection.administrative.title')}</span>
       </header>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -257,7 +257,7 @@ export function AdministrativeAddressPicker({
                 }}
                 options={optionsByLevel.get(field.level) ?? []}
                 placeholder={t(LEVEL_PLACEHOLDER_KEYS[field.level])}
-                emptyMessage={t('addressesSection.administrative.searchHint')}
+                emptyMessage={t('contacts-form:addressesSection.administrative.searchHint')}
                 isLoading={isLoading}
                 allowFreeText
                 disabled={disabled}
@@ -271,7 +271,7 @@ export function AdministrativeAddressPicker({
         {showPostalCode && (
           <fieldset className="space-y-1">
             <label className={cn("text-xs font-medium", colors.text.muted)}>
-              {t('addressesSection.administrative.postalCode')}
+              {t('contacts-form:addressesSection.administrative.postalCode')}
             </label>
             <input
               type="text"
@@ -281,7 +281,7 @@ export function AdministrativeAddressPicker({
                 const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
                 onChange({ ...currentAddress, postalCode: val });
               }}
-              placeholder={t('addressesSection.administrative.postalCodePlaceholder')}
+              placeholder={t('contacts-form:addressesSection.administrative.postalCodePlaceholder')}
               disabled={disabled}
               maxLength={5}
               className={cn("flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder: focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50", colors.text.muted)}

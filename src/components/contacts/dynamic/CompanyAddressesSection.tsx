@@ -152,10 +152,10 @@ export function CompanyAddressesSection({
       <Separator />
 
       {/* Branches / Additional Addresses */}
-      <section aria-label={t('addressesSection.branchesTitle')}>
+      <section aria-label={t('contacts-form:addressesSection.branchesTitle')}>
         <header className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-foreground">
-            {t('addressesSection.branchesTitle')}
+            {t('contacts-form:addressesSection.branchesTitle')}
           </h3>
           <Button
             type="button"
@@ -165,13 +165,13 @@ export function CompanyAddressesSection({
             disabled={disabled}
           >
             <Plus className="mr-1 h-4 w-4" />
-            {t('addressesSection.addAddress')}
+            {t('contacts-form:addressesSection.addAddress')}
           </Button>
         </header>
 
         {branches.length === 0 ? (
           <p className={cn("text-sm py-2 text-center", colors.text.muted)}>
-            {t('addressesSection.noBranches')}
+            {t('contacts-form:addressesSection.noBranches')}
           </p>
         ) : (
           <ul className="space-y-4">
@@ -179,7 +179,7 @@ export function CompanyAddressesSection({
               <li key={i} className="space-y-3">
                 <header className="flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-foreground">
-                    {t('addressesSection.branch')} {branches.length > 1 ? `#${i + 1}` : ''}
+                    {t('contacts-form:addressesSection.branch')} {branches.length > 1 ? `#${i + 1}` : ''}
                   </h4>
                   <Button
                     type="button"
@@ -187,7 +187,7 @@ export function CompanyAddressesSection({
                     size="icon"
                     onClick={() => setBranchDeleteIndex(i)}
                     disabled={disabled}
-                    aria-label={t('addressesSection.removeAddress')}
+                    aria-label={t('contacts-form:addressesSection.removeAddress')}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
