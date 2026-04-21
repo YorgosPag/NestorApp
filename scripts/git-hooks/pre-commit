@@ -573,6 +573,48 @@ if [[ -f "$SSOT_DISCOVER_SCRIPT" ]]; then
 fi
 
 # =============================================================================
+# CHECK 3.20: Notification Keys Ratchet (SSoT Notifications / 2026-04-21)
+# =============================================================================
+# Ratchet-mode gate that prevents NEW raw-key calls to notifications.success|
+# error|info|warning() outside the SSoT allowlist. Pairs with the existing
+# `notification-keys` entry in .ssot-registry.json (which only blocks Greek
+# hardcoded literals) — this block targets dotted-identifier keys that
+# should come from NOTIFICATION_KEYS via a domain hook.
+#
+# Motivation: commit 175b7d8a introduced the SSoT (NOTIFICATION_KEYS +
+# use{Contact,Project}Notifications). ~110 legacy files still call
+# notifications.X('raw.key') directly. This check freezes the backlog so
+# Boy Scout migrations can only ratchet it down.
+#
+# Baseline: .notification-keys-baseline.json
+# Scope: triggered only when src/**/*.{ts,tsx} files are staged.
+# =============================================================================
+
+NOTIF_KEYS_SCRIPT="scripts/check-notification-keys-ratchet.js"
+if [[ -f "$NOTIF_KEYS_SCRIPT" ]]; then
+    NOTIF_KEYS_TARGETS=$(echo "$STAGED_FILES" | grep -E '^src/.*\.(ts|tsx)$' || true)
+
+    if [[ -n "$NOTIF_KEYS_TARGETS" ]]; then
+        echo -e "${YELLOW}🔍 Checking notification keys ratchet (CHECK 3.20)...${NC}"
+
+        NOTIF_KEYS_OUTPUT=$(node "$NOTIF_KEYS_SCRIPT" $NOTIF_KEYS_TARGETS 2>&1)
+        NOTIF_KEYS_EXIT=$?
+
+        if [[ $NOTIF_KEYS_EXIT -ne 0 ]]; then
+            echo "$NOTIF_KEYS_OUTPUT"
+            echo ""
+            echo -e "${RED}✖ CHECK 3.20 failed — replace raw notifications.X('key') with a domain-hook method call.${NC}"
+            echo -e "${YELLOW}  Tip: run 'npm run notification-keys:audit' for a full scan.${NC}"
+            exit 1
+        fi
+
+        if [[ -n "$NOTIF_KEYS_OUTPUT" ]]; then
+            echo "$NOTIF_KEYS_OUTPUT"
+        fi
+    fi
+fi
+
+# =============================================================================
 # CHECK 3.19: Storage Rules Test Coverage (ADR-301 / 2026-04-14)
 # =============================================================================
 # Zero-tolerance gate that ensures every top-level match block in
