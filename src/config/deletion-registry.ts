@@ -197,6 +197,12 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         queryType: 'equals',
         skipCompanyFilter: true,
       },
+      {
+        collection: COLLECTIONS.FILES,
+        foreignKey: 'entityId',
+        label: 'Αρχεία επαφής',
+        queryType: 'equals',
+      },
     ],
     // Blocking dependencies — DERIVED from unified ContactDependencyRegistry (ADR-145 SSoT)
     // Single source of truth: src/config/contact-dependency-registry.ts
