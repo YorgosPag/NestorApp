@@ -103,6 +103,29 @@ Every solution must be **professional**, not a **neighborhood corner-shop hack**
 - If the first solution is not Google-level → don't commit it, rewrite it correctly
 - Examples: Google Docs auto-save, Gmail instant actions, Google Contacts patterns
 
+## SOS. SOS. N.7.2 — GOOGLE-LEVEL ARCHITECTURE CHECKLIST (MANDATORY)
+
+**BEFORE implementing ANY feature/fix**, answer these questions internally:
+
+| # | Question | Google answer |
+|---|----------|---------------|
+| 1 | Proactive or reactive? | **Proactive** — create data at the right lifecycle moment, not as a side effect |
+| 2 | Race condition possible? | **No** — primary path runs before any dependent action |
+| 3 | Idempotent? | **Yes** — calling twice = same result, no duplicates |
+| 4 | Belt-and-suspenders? | **Yes** — primary path + safety net fallback |
+| 5 | Single Source of Truth? | **Yes** — one place owns the data, others read it |
+| 6 | Fire-and-forget or await? | **Await** for correctness, fire-and-forget only for non-blocking side effects |
+| 7 | Who owns the lifecycle? | **Explicit** — one service/route is responsible, not emergent behavior |
+
+**After implementation, declare explicitly:**
+```
+✅ Google-level: YES — [one-line reason]
+⚠️ Google-level: PARTIAL — [gap description + urgency]
+❌ Google-level: NO — [what needs to change]
+```
+
+**If PARTIAL or NO** → either fix immediately or open a pending item in `.claude-rules/`.
+
 ## SOS. SOS. N.7.1 — GOOGLE FILE SIZE STANDARDS
 - **Code files** (handler, service, utility, component): **MAX 500 lines**
 - **Functions**: **MAX 40 lines** — if exceeded, extract helper

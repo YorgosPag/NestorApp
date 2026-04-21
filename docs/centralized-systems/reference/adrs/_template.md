@@ -53,6 +53,14 @@ import { something } from '@/path/to/module';
 
 - ⚠️ Tradeoff 1 (if any)
 
+### ⚠️ Known Limitations / Not Google-level (MANDATORY section)
+
+> Every ADR MUST answer: is this implementation fully Google-level? If not, document the gap.
+
+- **Gap**: [description or "None — fully Google-level"]
+- **Urgency**: [critical / medium / low / N/A]
+- **Mitigation**: [safety net, workaround, or planned fix]
+
 ---
 
 ## 4. Prohibitions (after this ADR)
