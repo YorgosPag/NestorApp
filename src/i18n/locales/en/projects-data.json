@@ -442,7 +442,19 @@
     "addAddress": "Add Address",
     "editAddress": "Edit Address",
     "errors": {
-      "soleAddressMustBePrimary": "The only address must remain primary"
+      "soleAddressMustBePrimary": "The only address must remain primary",
+      "cityRequired": "Please fill in at least the Settlement/City"
+    },
+    "notifications": {
+      "added": "Address added successfully!",
+      "updated": "Address updated successfully!",
+      "deleted": "Address deleted successfully!",
+      "cleared": "Address cleared successfully!",
+      "primaryUpdated": "Primary address updated successfully!",
+      "saveError": "Error saving address",
+      "updateError": "Error updating address",
+      "deleteError": "Error deleting address",
+      "clearError": "Error clearing address"
     }
   },
   "measurements": {

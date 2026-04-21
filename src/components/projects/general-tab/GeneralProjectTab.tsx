@@ -21,7 +21,8 @@ import { getAllCompaniesForSelect } from '@/services/companies.service';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useGuardedProjectMutation } from '@/hooks/useGuardedProjectMutation';
-import { createProjectWithPolicy, updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
+import { useProjectCreate } from '@/hooks/useProjectCreate';
+import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { PolicyErrorBanner } from '@/components/shared/PolicyErrorBanner';
 import '@/lib/design-system';
 
@@ -76,6 +77,7 @@ export function GeneralProjectTab({
   refetchProject,
 }: ExtendedGeneralProjectTabProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { createProject } = useProjectCreate();
   const spacing = useSpacingTokens();
   const fallbackCompanyId = useCompanyId()?.companyId ?? '';
 
@@ -320,19 +322,17 @@ export function GeneralProjectTab({
         // this branch only forwarded 6 fields and silently dropped the rest,
         // leaving both the "Άδειες" container and the audit trail incomplete.
         const updatePayload = buildUpdatePayload(projectData);
-        const result = await createProjectWithPolicy({
-          payload: {
-            ...updatePayload,
-            name: trimmedName,
-            status: projectData.status,
-            companyId: fallbackCompanyId,
-            linkedCompanyId: effectiveLinkedCompanyId,
-          },
+        const result = await createProject({
+          ...updatePayload,
+          name: trimmedName,
+          status: projectData.status,
+          companyId: fallbackCompanyId,
+          linkedCompanyId: effectiveLinkedCompanyId,
         });
 
-        if (!result.success || !result.projectId) {
+        if (!result.success) {
           // 🏢 ADR-284: surface raw server message + errorCode for <PolicyErrorBanner>
-          setSaveError(result.error || 'Failed to create project');
+          setSaveError(result.error);
           setSaveErrorCode(result.errorCode ?? null);
           return;
         }
@@ -370,6 +370,7 @@ export function GeneralProjectTab({
   }, [
     buildUpdatePayload,
     companyLink,
+    createProject,
     fallbackCompanyId,
     isCreateMode,
     onProjectCreated,

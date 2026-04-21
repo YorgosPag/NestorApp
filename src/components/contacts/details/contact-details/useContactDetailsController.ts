@@ -7,6 +7,7 @@ import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useContactNotifications } from '@/hooks/notifications/useContactNotifications';
 import {
   validateCompanyContact,
   validateContactField,
@@ -27,15 +28,12 @@ import {
   OptimisticPersonaState,
   SUBCOLLECTION_TABS,
 } from './contact-details-helpers';
-
 const logger = createModuleLogger('ContactDetails');
-
 interface ValidationResult {
   isValid: boolean;
   fieldErrors: Record<string, string>;
   firstErrorField?: string;
 }
-
 interface UseContactDetailsControllerResult {
   activeTab: string;
   contactGuardDialogs: React.ReactNode;
@@ -68,6 +66,7 @@ export function useContactDetailsController({
   onContactUpdated,
 }: Pick<ContactDetailsProps, 'contact' | 'onContactUpdated'>): UseContactDetailsControllerResult {
   const notifications = useNotifications();
+  const contactNotifications = useContactNotifications();
   const photoModal = useGlobalPhotoPreview();
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<Partial<ContactFormData>>({});
@@ -246,13 +245,13 @@ export function useContactDetailsController({
 
     const validationResult = getValidationResult(mergedFormData);
     if (!validationResult) {
-      notifications.error('contacts-form.validation.unknownType');
+      contactNotifications.validationUnknownType();
       return;
     }
 
     setValidationErrors(validationResult.fieldErrors);
     if (!validationResult.isValid) {
-      notifications.error('contacts-form.validation.individual.reviewHighlightedFields');
+      contactNotifications.validationReviewFields();
       focusField(validationResult.firstErrorField);
       return;
     }
@@ -262,14 +261,14 @@ export function useContactDetailsController({
     if (!uploadValidation.isValid) {
       if (uploadValidation.failedUploads > 0) {
         logger.error('DETAILS SAVE BLOCKED: Failed uploads detected', { uploadValidation });
-        notifications.error('contacts-form.submission.failedUploads');
+        contactNotifications.uploadsFailed();
         return;
       }
       if (uploadValidation.pendingUploads > 0) {
         logger.info('DETAILS SAVE DEFERRED: Uploads in progress — will auto-save on completion', {
           pendingUploads: uploadValidation.pendingUploads,
         });
-        notifications.info('contacts-form.submission.pendingUploads', { duration: 3000 });
+        contactNotifications.uploadsPending();
         setPendingSave(true);
         return;
       }
@@ -306,6 +305,7 @@ export function useContactDetailsController({
         setIsEditing(false);
         setEditedData({});
         logger.info('Contact updated successfully with enterprise structure');
+        contactNotifications.updateSuccess();
         onContactUpdated?.();
       };
 
@@ -324,12 +324,12 @@ export function useContactDetailsController({
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Failed to update contact', error instanceof Error ? error : { error });
       if (message.startsWith('VALIDATION_ERROR:')) {
-        notifications.error('contacts-form.validation.individual.reviewHighlightedFields');
+        contactNotifications.validationReviewFields();
       } else {
-        notifications.error('contacts-form.submission.updateError');
+        contactNotifications.updateError();
       }
     }
-  }, [contact, editedData, focusField, getEditedFormData, getValidationResult, notifications, onContactUpdated, runExistingContactFormUpdate]);
+  }, [contact, editedData, focusField, getEditedFormData, getValidationResult, contactNotifications, onContactUpdated, runExistingContactFormUpdate]);
 
   // 🏢 ENTERPRISE: Deferred save — auto-submit when pending uploads complete (Google-style)
   useEffect(() => {
@@ -342,7 +342,7 @@ export function useContactDetailsController({
     if (uploadValidation.failedUploads > 0) {
       logger.info('DEFERRED SAVE: Cancelled — failed uploads detected');
       setPendingSave(false);
-      notifications.error('contacts-form.submission.failedUploads');
+      contactNotifications.uploadsFailed();
       return;
     }
 
@@ -351,7 +351,7 @@ export function useContactDetailsController({
       setPendingSave(false);
       handleSaveEdit();
     }
-  }, [editedData, pendingSave, isEditing, getEditedFormData, handleSaveEdit, notifications]);
+  }, [editedData, pendingSave, isEditing, getEditedFormData, handleSaveEdit, contactNotifications]);
 
   const clearFieldError = useCallback((fieldName: string) => {
     setValidationErrors((previous) => {

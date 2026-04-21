@@ -85,6 +85,18 @@
         "src/components/admin/shared/intent-badge-utils.ts"
       ]
     },
+    "notification-keys": {
+      "ssotFile": "src/config/notification-keys.ts",
+      "description": "Notification i18n keys must be imported from NOTIFICATION_KEYS (SSoT). Domain hooks in src/hooks/notifications/ own the when-to-fire logic. Callers must never hardcode i18n key strings inside notifications.success|error|info|warning() — use a domain hook (useContactNotifications, useProjectNotifications) that references NOTIFICATION_KEYS. Hardcoded Greek/English literals inside those calls are a double violation (SSoT + i18n SOS N.11).",
+      "forbiddenPatterns": [
+        "notifications\\.(success|error|info|warning)\\(['\"][\\u0370-\\u03FF\\u1F00-\\u1FFF]"
+      ],
+      "allowlist": [
+        "src/config/notification-keys.ts",
+        "src/hooks/notifications/",
+        "src/providers/NotificationProvider.tsx"
+      ]
+    },
     "addDoc-prohibition": {
       "ssotFile": "src/services/enterprise-id.service.ts",
       "description": "NEVER use addDoc()/.add()/.doc() — always setDoc() with enterprise ID",

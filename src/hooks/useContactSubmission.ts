@@ -16,6 +16,7 @@ import {
 } from '@/utils/contactForm/contact-validation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useGuardedContactMutation } from '@/hooks/useGuardedContactMutation';
+import { useContactNotifications } from '@/hooks/notifications/useContactNotifications';
 
 const logger = createModuleLogger('useContactSubmission');
 
@@ -57,6 +58,7 @@ export function useContactSubmission({
 }: UseContactSubmissionProps): UseContactSubmissionReturn {
   const [loading, setLoading] = useState(false);
   const notifications = useNotifications();
+  const contactNotifications = useContactNotifications();
   const [pendingSave, setPendingSave] = useState(false);
   const handleSubmitRef = useRef<((fd: ContactFormData) => Promise<void>) | null>(null);
 
@@ -97,7 +99,7 @@ export function useContactSubmission({
   const validateFormData = useCallback((formData: ContactFormData): boolean => {
     const validationResult = getValidationResult(formData);
     if (!validationResult) {
-      notifications.error('contacts-form.validation.unknownType');
+      contactNotifications.validationUnknownType();
       return false;
     }
 
@@ -108,13 +110,13 @@ export function useContactSubmission({
     }));
 
     if (!validationResult.isValid) {
-      notifications.error('contacts-form.validation.individual.reviewHighlightedFields');
+      contactNotifications.validationReviewFields();
       focusField(validationResult.firstErrorField);
       return false;
     }
 
     return true;
-  }, [focusField, getValidationResult, notifications, setTouchedFields, setValidationErrors]);
+  }, [focusField, getValidationResult, contactNotifications, setTouchedFields, setValidationErrors]);
 
   const handleSubmit = useCallback(async (formData: ContactFormData) => {
     if (loading) {
@@ -132,7 +134,7 @@ export function useContactSubmission({
     if (!uploadValidation.isValid) {
       if (uploadValidation.failedUploads > 0) {
         logger.error('SUBMISSION BLOCKED: Failed uploads detected', { uploadValidation });
-        notifications.error('contacts-form.submission.failedUploads');
+        contactNotifications.uploadsFailed();
         return;
       }
 
@@ -142,7 +144,7 @@ export function useContactSubmission({
           errors: uploadValidation.errors,
         });
 
-        notifications.info('contacts-form.submission.pendingUploads', { duration: 3000 });
+        contactNotifications.uploadsPending();
         logger.info('DEFERRED SAVE: Uploads in progress — will auto-save on completion', {
           pendingUploads: uploadValidation.pendingUploads,
         });
@@ -166,7 +168,7 @@ export function useContactSubmission({
           'SUBMISSION',
           async () => {
             await ContactsService.updateExistingContactFromForm(editContact, formData);
-            notifications.success('contacts-form.submission.updateSuccess');
+            contactNotifications.updateSuccess();
           },
         );
         if (!updateCompleted) {
@@ -175,7 +177,7 @@ export function useContactSubmission({
       } else {
         logger.info('SUBMISSION: Creating new contact');
         await createContactWithPolicy({ contactData });
-        notifications.success('contacts-form.submission.createSuccess');
+        contactNotifications.createSuccess();
       }
 
       setValidationErrors({});
@@ -191,7 +193,7 @@ export function useContactSubmission({
     } finally {
       setLoading(false);
     }
-  }, [loading, validateFormData, editContact, notifications, runExistingContactFormUpdate, setValidationErrors, onContactAdded, onOpenChange, resetForm]);
+  }, [loading, validateFormData, editContact, notifications, contactNotifications, runExistingContactFormUpdate, setValidationErrors, onContactAdded, onOpenChange, resetForm]);
 
   handleSubmitRef.current = handleSubmit;
 
@@ -202,7 +204,7 @@ export function useContactSubmission({
     if (uploadValidation.failedUploads > 0) {
       logger.info('DEFERRED SAVE: Cancelled — failed uploads detected');
       setPendingSave(false);
-      notifications.error('contacts-form.submission.failedUploads');
+      contactNotifications.uploadsFailed();
       return;
     }
 
@@ -211,7 +213,7 @@ export function useContactSubmission({
       setPendingSave(false);
       handleSubmitRef.current?.(formData);
     }
-  }, [pendingSave, loading, notifications]);
+  }, [pendingSave, loading, contactNotifications]);
 
   const clearPendingSave = useCallback(() => {
     setPendingSave(false);

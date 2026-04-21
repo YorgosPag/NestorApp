@@ -20,17 +20,17 @@ import {
   createProjectAddress,
 } from '@/types/project/address-helpers';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
-import { useNotifications } from '@/providers/NotificationProvider';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useProjectNotifications } from '@/hooks/notifications/useProjectNotifications';
 import { toHierarchyValue, fromHierarchyValue, EMPTY_HIERARCHY } from './location-converters';
+
+type AddressOp = 'added' | 'updated' | 'deleted' | 'cleared' | 'primaryUpdated';
 
 // =============================================================================
 // HOOK
 // =============================================================================
 
 export function useProjectLocations(project: Project) {
-  const { success, error } = useNotifications();
-  const { t } = useTranslation('projects-data');
+  const projectNotifications = useProjectNotifications();
 
   // Derive addresses from project prop
   const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(() =>
@@ -76,8 +76,27 @@ export function useProjectLocations(project: Project) {
   // PERSISTENCE HELPER
   // ---------------------------------------------------------------------------
 
-  async function persistAddresses(newAddresses: ProjectAddress[], successMsg: string, errorMsg: string) {
+  async function persistAddresses(newAddresses: ProjectAddress[], op: AddressOp) {
     const legacy = extractLegacyFields(newAddresses);
+    const fireSuccess = () => {
+      switch (op) {
+        case 'added': return projectNotifications.address.added();
+        case 'updated': return projectNotifications.address.updated();
+        case 'deleted': return projectNotifications.address.deleted();
+        case 'cleared': return projectNotifications.address.cleared();
+        case 'primaryUpdated': return projectNotifications.address.primaryUpdated();
+      }
+    };
+    const fireError = (serverMessage?: string) => {
+      switch (op) {
+        case 'added': return projectNotifications.address.saveError(serverMessage);
+        case 'deleted': return projectNotifications.address.deleteError(serverMessage);
+        case 'cleared': return projectNotifications.address.clearError(serverMessage);
+        case 'updated':
+        case 'primaryUpdated':
+          return projectNotifications.address.updateError(serverMessage);
+      }
+    };
     try {
       const result = await updateProjectWithPolicy({
         projectId: project.id!,
@@ -89,13 +108,13 @@ export function useProjectLocations(project: Project) {
       });
       if (result.success) {
         setLocalAddresses(newAddresses);
-        success(successMsg);
+        fireSuccess();
         return true;
       }
-      error(result.error || errorMsg);
+      fireError(result.error);
       return false;
     } catch {
-      error(errorMsg);
+      fireError();
       return false;
     }
   }
@@ -109,7 +128,7 @@ export function useProjectLocations(project: Project) {
       ...addr,
       isPrimary: i === index,
     }));
-    await persistAddresses(newAddresses, 'Η κύρια διεύθυνση ενημερώθηκε επιτυχώς!', 'Σφάλμα ενημέρωσης διεύθυνσης');
+    await persistAddresses(newAddresses, 'primaryUpdated');
   };
 
   // ---------------------------------------------------------------------------
@@ -142,7 +161,7 @@ export function useProjectLocations(project: Project) {
     if (localAddresses[deleteTargetIndex]?.isPrimary && newAddresses.length > 0) {
       newAddresses[0].isPrimary = true;
     }
-    const ok = await persistAddresses(newAddresses, 'Η διεύθυνση διαγράφηκε επιτυχώς!', 'Σφάλμα διαγραφής διεύθυνσης');
+    const ok = await persistAddresses(newAddresses, 'deleted');
     if (ok) {
       setDeleteDialogOpen(false);
       setDeleteTargetIndex(null);
@@ -162,7 +181,7 @@ export function useProjectLocations(project: Project) {
     });
     clearedAddress.id = localAddresses[0].id;
     const newAddresses = [clearedAddress, ...localAddresses.slice(1)];
-    await persistAddresses(newAddresses, 'Η διεύθυνση καθαρίστηκε επιτυχώς!', 'Σφάλμα καθαρισμού διεύθυνσης');
+    await persistAddresses(newAddresses, 'cleared');
   };
 
   // ---------------------------------------------------------------------------
@@ -181,7 +200,7 @@ export function useProjectLocations(project: Project) {
   const handleSaveNewAddress = async () => {
     const addressFields = fromHierarchyValue({ ...EMPTY_HIERARCHY, ...addHierarchy } as AddressWithHierarchyValue);
     if (!addressFields.city) {
-      error('Παρακαλώ συμπληρώστε τουλάχιστον τον Οικισμό/Πόλη');
+      projectNotifications.address.cityRequired();
       return;
     }
 
@@ -202,7 +221,7 @@ export function useProjectLocations(project: Project) {
         ? localAddresses.map(a => ({ ...a, isPrimary: false }))
         : localAddresses;
       const newAddresses = [...baseAddresses, newAddress];
-      const ok = await persistAddresses(newAddresses, 'Η διεύθυνση προστέθηκε επιτυχώς!', 'Σφάλμα αποθήκευσης διεύθυνσης');
+      const ok = await persistAddresses(newAddresses, 'added');
       if (ok) handleCancelAdd();
     } finally {
       setIsSaving(false);
@@ -236,14 +255,14 @@ export function useProjectLocations(project: Project) {
     if (editingIndex === null) return;
     const addressFields = fromHierarchyValue({ ...EMPTY_HIERARCHY, ...editHierarchy } as AddressWithHierarchyValue);
     if (!addressFields.city) {
-      error('Παρακαλώ συμπληρώστε τουλάχιστον τον Οικισμό/Πόλη');
+      projectNotifications.address.cityRequired();
       return;
     }
 
     // Guard: cannot un-mark primary when no other address exists to promote
     const otherAddressExists = localAddresses.some((_, i) => i !== editingIndex);
     if (!editIsPrimary && !otherAddressExists) {
-      error(t('locations.errors.soleAddressMustBePrimary'));
+      projectNotifications.address.soleAddressMustBePrimary();
       return;
     }
 
@@ -273,7 +292,7 @@ export function useProjectLocations(project: Project) {
         newAddresses = newAddresses.map((a, i) => i === target ? { ...a, isPrimary: true } : a);
       }
 
-      const ok = await persistAddresses(newAddresses, 'Η διεύθυνση ενημερώθηκε επιτυχώς!', 'Σφάλμα ενημέρωσης διεύθυνσης');
+      const ok = await persistAddresses(newAddresses, 'updated');
       if (ok) handleCancelEdit();
     } finally {
       setIsSaving(false);
@@ -283,7 +302,7 @@ export function useProjectLocations(project: Project) {
   // Intercepts primary-change for edit form: blocks unchecking when this is the sole address
   const handleEditIsPrimaryChange = (val: boolean) => {
     if (!val && localAddresses.length <= 1) {
-      error(t('locations.errors.soleAddressMustBePrimary'));
+      projectNotifications.address.soleAddressMustBePrimary();
       return;
     }
     setEditIsPrimary(val);
