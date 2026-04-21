@@ -102,6 +102,8 @@ export interface EntityFilesManagerProps {
   listGroupingMode?: 'studyGroup' | 'domainCategory';
   /** ADR-236 Phase 3: Filter/tag files by multi-level floor ID */
   levelFloorId?: string;
+  /** Open a specific tab on first render (e.g. 'trash' when parent entity is in trash) */
+  defaultActiveTab?: 'files' | 'archived' | 'trash';
 }
 
 // ============================================================================
@@ -134,6 +136,7 @@ export function EntityFilesManager({
   fetchAllDomains,
   listGroupingMode,
   levelFloorId,
+  defaultActiveTab,
 }: EntityFilesManagerProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const { activeWorkspace } = useWorkspace();
@@ -146,7 +149,7 @@ export function EntityFilesManager({
   const [viewMode, setViewMode] = useState<'list' | 'tree' | 'gallery'>(
     displayStyle === 'standard' ? 'list' : 'gallery',
   );
-  const [activeTab, setActiveTab] = useState<'files' | 'archived' | 'trash'>('files');
+  const [activeTab, setActiveTab] = useState<'files' | 'archived' | 'trash'>(defaultActiveTab ?? 'files');
   const [treeViewMode, setTreeViewMode] = useState<'business' | 'technical'>('business');
   const [selectedEntryPoint, setSelectedEntryPoint] = useState<UploadEntryPoint | null>(null);
   const [customTitle, setCustomTitle] = useState('');

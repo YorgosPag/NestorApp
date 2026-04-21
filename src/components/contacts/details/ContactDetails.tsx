@@ -103,6 +103,7 @@ export function ContactDetails({
           handleMultiplePhotosChange={isEditing ? handleMultiplePhotosChange : undefined}
           handleMultiplePhotoUploadComplete={isEditing ? handleMultiplePhotoUploadComplete : undefined}
           disabled={!isEditing}
+          isContactTrashed={readOnly}
           relationshipsMode={isEditing ? 'full' : 'summary'}
           onPhotoClick={handlePhotoClick}
           initialTab={activeTab}

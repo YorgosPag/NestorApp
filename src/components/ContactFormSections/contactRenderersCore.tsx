@@ -55,6 +55,8 @@ export interface RendererContext {
   handleMultiplePhotosChange?: (photos: PhotoSlot[]) => void;
   handleMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void;
   handleProfilePhotoSelection?: (index: number) => void;
+  /** True when the contact is in trash — shows amber banner + opens trash sub-tab in EntityFilesManager */
+  isContactTrashed?: boolean;
 }
 
 type RendererFn = (
@@ -151,7 +153,32 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
       if (contactType === 'individual') entityLabel = `${(formData.firstName as string) || ''} ${(formData.lastName as string) || ''}`.trim();
       else if (contactType === 'company') entityLabel = (formData.companyName as string) || (formData.tradeName as string) || '';
       else if (contactType === 'service') entityLabel = (formData.serviceName as string) || (formData.name as string) || '';
-      return <EntityFilesManager entityType={ENTITY_TYPES.CONTACT} entityId={contactId} companyId={ctx.resolvedCompanyId} domain="admin" category="documents" currentUserId={ctx.userId} entityLabel={entityLabel} companyName={ctx.companyDisplayName} contactType={contactType} activePersonas={formData.activePersonas} fetchAllDomains entryPointExcludeCategories={['photos', 'videos', 'floorplans']} listGroupingMode="domainCategory" />;
+      return (
+        <>
+          {ctx.isContactTrashed && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 mb-3 flex items-center gap-2 text-sm text-amber-800">
+              <span aria-hidden="true">🗑️</span>
+              <span>{ctx.t('contacts-lifecycle:trash.filesInTrashWithContact')}</span>
+            </div>
+          )}
+          <EntityFilesManager
+            entityType={ENTITY_TYPES.CONTACT}
+            entityId={contactId}
+            companyId={ctx.resolvedCompanyId}
+            domain="admin"
+            category="documents"
+            currentUserId={ctx.userId}
+            entityLabel={entityLabel}
+            companyName={ctx.companyDisplayName}
+            contactType={contactType}
+            activePersonas={formData.activePersonas}
+            fetchAllDomains
+            entryPointExcludeCategories={['photos', 'videos', 'floorplans']}
+            listGroupingMode="domainCategory"
+            defaultActiveTab={ctx.isContactTrashed ? 'trash' : undefined}
+          />
+        </>
+      );
     },
 
     // ── Project Participation (ADR-282: read-only derived section) ──

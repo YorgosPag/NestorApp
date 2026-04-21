@@ -45,6 +45,7 @@ interface UnifiedContactTabbedSectionProps {
   initialTab?: string;
   validationErrors?: Record<string, string>;
   onFieldBlur?: (fieldName: string) => void;
+  isContactTrashed?: boolean;
 }
 
 export function UnifiedContactTabbedSection({
@@ -57,6 +58,7 @@ export function UnifiedContactTabbedSection({
   onPhotoClick, canonicalUploadContext,
   onActiveTabChange, initialTab,
   validationErrors, onFieldBlur,
+  isContactTrashed = false,
 }: UnifiedContactTabbedSectionProps) {
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const { user } = useAuth();
@@ -108,7 +110,7 @@ export function UnifiedContactTabbedSection({
     const ctx: RendererContext = {
       formData, setFormData, disabled, contactType,
       handleChange, handleSelectChange,
-      userId: user?.uid, resolvedCompanyId, companyDisplayName,
+      userId: user?.uid, resolvedCompanyId, companyDisplayName, isContactTrashed,
       t: (key: string, optionsOrFallback?: string | Record<string, unknown>) => {
         if (typeof optionsOrFallback === 'string') return t(key, optionsOrFallback);
         if (typeof optionsOrFallback === 'object') return t(key, { defaultValue: '', ...optionsOrFallback });
