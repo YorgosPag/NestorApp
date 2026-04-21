@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -7,6 +8,13 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import {
+  FILE_LIFECYCLE_STATES,
+  HOLD_TYPES,
+  RETENTION_BY_CATEGORY,
+  DEFAULT_RETENTION_POLICIES,
+  type FileCategory,
+} from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { mapFirestoreContactToResponse } from './contact-data-mapper';
@@ -110,9 +118,76 @@ export async function GET(
 // DELETE /api/contacts/[contactId]
 // =============================================================================
 
+const FIRESTORE_BATCH_SIZE = 500;
+
+async function cascadeContactFilesToTrash(
+  db: FirebaseFirestore.Firestore,
+  contactId: string,
+  companyId: string,
+  trashedBy: string,
+): Promise<{ trashed: number; skipped: number }> {
+  const filesSnap = await db
+    .collection(COLLECTIONS.FILES)
+    .where('companyId', '==', companyId)
+    .where('entityType', '==', 'contact')
+    .where('entityId', '==', contactId)
+    .where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE)
+    .get();
+
+  if (filesSnap.empty) return { trashed: 0, skipped: 0 };
+
+  let trashed = 0;
+  let skipped = 0;
+  let batch = db.batch();
+  let batchCount = 0;
+
+  for (const fileDoc of filesSnap.docs) {
+    const data = fileDoc.data();
+
+    if (data.hold && data.hold !== HOLD_TYPES.NONE) {
+      logger.warn('Cascade trash: skipping file on hold', { fileId: fileDoc.id, hold: data.hold });
+      skipped++;
+      continue;
+    }
+
+    const retentionDays =
+      RETENTION_BY_CATEGORY[data.category as FileCategory] ??
+      DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS;
+    const purgeDate = new Date();
+    purgeDate.setDate(purgeDate.getDate() + retentionDays);
+
+    batch.update(fileDoc.ref, {
+      lifecycleState: FILE_LIFECYCLE_STATES.TRASHED,
+      isDeleted: true,
+      trashedAt: FieldValue.serverTimestamp(),
+      trashedBy,
+      purgeAt: purgeDate.toISOString(),
+      deletedAt: FieldValue.serverTimestamp(),
+      deletedBy: trashedBy,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    trashed++;
+    batchCount++;
+
+    if (batchCount === FIRESTORE_BATCH_SIZE) {
+      await batch.commit();
+      batch = db.batch();
+      batchCount = 0;
+    }
+  }
+
+  if (batchCount > 0) await batch.commit();
+
+  logger.info('Cascade trash complete', { contactId, trashed, skipped });
+  return { trashed, skipped };
+}
+
 interface ContactDeleteResponse {
   contactId: string;
   deleted: boolean;
+  filesCascaded: number;
+  filesSkipped: number;
 }
 
 export async function DELETE(
@@ -132,15 +207,19 @@ export async function DELETE(
       // 🗑️ ADR-281: Centralized soft-delete engine (tenant check + audit built-in)
       await softDelete(adminDb, 'contact', contactId, ctx.uid, ctx.companyId, ctx.email ?? undefined);
 
-      logger.info('Contact moved to trash', { contactId, email: ctx.email });
+      // Cascade: move all active contact files to trash
+      const { trashed: filesCascaded, skipped: filesSkipped } =
+        await cascadeContactFilesToTrash(adminDb, contactId, ctx.companyId, ctx.uid);
+
+      logger.info('Contact moved to trash', { contactId, email: ctx.email, filesCascaded, filesSkipped });
 
       await logAuditEvent(ctx, 'soft_deleted', 'contact', 'api', {
         newValue: { type: 'status', value: { contactId } },
-        metadata: { reason: 'Contact moved to trash via API' },
+        metadata: { reason: 'Contact moved to trash via API', filesCascaded, filesSkipped },
       });
 
       return apiSuccess<ContactDeleteResponse>(
-        { contactId, deleted: true },
+        { contactId, deleted: true, filesCascaded, filesSkipped },
         'Contact moved to trash'
       );
     },
