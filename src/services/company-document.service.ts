@@ -145,33 +145,23 @@ export async function ensureCompanyDocument(
     return existing;
   }
 
-  // Auto-resolve contact data from Firestore when not provided by caller
-  let resolvedContactData = contactData;
-  if (!resolvedContactData) {
+  // Auto-resolve workspace name from the company admin user when not provided
+  let resolvedName = contactData?.name ?? '';
+  if (!resolvedName && createdBy && createdBy !== 'system') {
     try {
       const db = getAdminFirestore();
-      const contactsSnap = await db
-        .collection(COLLECTIONS.CONTACTS)
-        .where('companyId', '==', companyId)
-        .where('type', '==', 'company')
-        .limit(1)
-        .get();
-
-      if (!contactsSnap.empty) {
-        const contactDoc = contactsSnap.docs[0];
-        const raw = contactDoc.data();
-        resolvedContactData = {
-          name: raw.companyName || raw.tradeName || raw.legalName || '',
-          contactId: contactDoc.id,
-        };
-        logger.info('[CompanyDocument] Auto-resolved contact for company document', {
+      const userDoc = await db.collection(COLLECTIONS.USERS).doc(createdBy).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        resolvedName = userData?.displayName || '';
+        logger.info('[CompanyDocument] Auto-resolved workspace name from user', {
           companyId,
-          contactId: contactDoc.id,
-          name: resolvedContactData.name,
+          createdBy,
+          name: resolvedName,
         });
       }
     } catch (lookupError) {
-      logger.warn('[CompanyDocument] Contact lookup failed, using ID-based fallback', {
+      logger.warn('[CompanyDocument] User lookup failed, using ID-based fallback', {
         companyId,
         error: getErrorMessage(lookupError),
       });
@@ -183,10 +173,9 @@ export async function ensureCompanyDocument(
   const docData = {
     name: resolveCompanyDisplayName({
       id: companyId,
-      name: resolvedContactData?.name,
-      companyName: resolvedContactData?.name,
+      name: resolvedName,
     }),
-    contactId: resolvedContactData?.contactId ?? null,
+    contactId: contactData?.contactId ?? null,
     status: 'active' as CompanyStatus,
     plan: 'free' as CompanyPlan,
     settings: getDefaultSettings(),
@@ -313,29 +302,32 @@ export async function createCompanyDocument(
 export async function repairCompanyDocument(
   companyId: string,
   repairedBy: string
-): Promise<{ name: string; contactId: string | null; wasRepaired: boolean }> {
+): Promise<{ name: string; wasRepaired: boolean }> {
   const db = getAdminFirestore();
 
-  const contactsSnap = await db
-    .collection(COLLECTIONS.CONTACTS)
+  // Resolve workspace name from the earliest admin user of this company
+  const usersSnap = await db
+    .collection(COLLECTIONS.USERS)
     .where('companyId', '==', companyId)
-    .where('type', '==', 'company')
+    .orderBy('createdAt', 'asc')
     .limit(1)
     .get();
 
-  if (contactsSnap.empty) {
-    logger.warn('[CompanyDocument] repairCompanyDocument: no matching contact found', { companyId });
-    return { name: '', contactId: null, wasRepaired: false };
+  if (usersSnap.empty) {
+    logger.warn('[CompanyDocument] repairCompanyDocument: no users found for company', { companyId });
+    return { name: '', wasRepaired: false };
   }
 
-  const contactDoc = contactsSnap.docs[0];
-  const raw = contactDoc.data();
-  const correctName = raw.companyName || raw.tradeName || raw.legalName || '';
-  const correctContactId = contactDoc.id;
+  const userData = usersSnap.docs[0].data();
+  const correctName = userData.displayName || '';
+
+  if (!correctName) {
+    logger.warn('[CompanyDocument] repairCompanyDocument: user has no displayName', { companyId });
+    return { name: '', wasRepaired: false };
+  }
 
   await db.collection(COLLECTIONS.COMPANIES).doc(companyId).update({
     name: correctName,
-    contactId: correctContactId,
     updatedAt: FieldValue.serverTimestamp(),
   });
 
@@ -348,20 +340,18 @@ export async function repairCompanyDocument(
     action: 'updated',
     changes: [
       { field: 'name', oldValue: null, newValue: correctName, label: 'name' },
-      { field: 'contactId', oldValue: null, newValue: correctContactId, label: 'contactId' },
     ],
     performedBy: repairedBy,
     performedByName: null,
     companyId,
   });
 
-  logger.info('[CompanyDocument] Repaired company document', {
+  logger.info('[CompanyDocument] Repaired company document name', {
     companyId,
     name: correctName,
-    contactId: correctContactId,
   });
 
-  return { name: correctName, contactId: correctContactId, wasRepaired: true };
+  return { name: correctName, wasRepaired: true };
 }
 
 // =============================================================================

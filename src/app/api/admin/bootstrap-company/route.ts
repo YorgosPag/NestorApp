@@ -205,7 +205,7 @@ export const PATCH = withSensitiveRateLimit(
 
         if (!result.wasRepaired) {
           return NextResponse.json(
-            { success: false, error: 'No matching company contact found', companyId: targetCompanyId },
+            { success: false, error: 'No admin user found for this company', companyId: targetCompanyId },
             { status: 404 }
           );
         }
@@ -213,7 +213,6 @@ export const PATCH = withSensitiveRateLimit(
         logger.info('[BootstrapCompany] PATCH repair completed', {
           companyId: targetCompanyId,
           name: result.name,
-          contactId: result.contactId,
         });
 
         return NextResponse.json({
@@ -221,7 +220,6 @@ export const PATCH = withSensitiveRateLimit(
           message: 'Company document repaired.',
           companyId: targetCompanyId,
           name: result.name,
-          contactId: result.contactId,
         });
       } catch (error) {
         logger.error('[BootstrapCompany] PATCH failed', { error: getErrorMessage(error) });
