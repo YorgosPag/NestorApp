@@ -22,6 +22,7 @@ import {
   type ArchiveFilesResponse,
 } from '@/services/filesystem/file-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import { useFileClassification, isAIClassifiable } from './useFileClassification';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { FileRecord } from '@/types/file-record';
@@ -118,7 +119,9 @@ export function useBatchFileOperations({
   refetch,
 }: UseBatchFileOperationsParams): UseBatchFileOperationsReturn {
   const { t } = useTranslation(['files', 'files-media']);
+  // useNotifications kept only for showArchiveResultFeedback (needs raw callbacks + t)
   const { success, error, warning } = useNotifications();
+  const fileNotifications = useFilesNotifications();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { classifyBatch, classifyingIds } = useFileClassification();
 
@@ -201,9 +204,9 @@ export function useBatchFileOperations({
       }
     } catch (archiveError) {
       logger.error('Batch archive failed', { error: archiveError });
-      error(t('batch.archiveError'));
+      fileNotifications.batch.archiveError();
     }
-  }, [selectedIds, refetch, error, success, t, warning]);
+  }, [selectedIds, refetch, success, warning, error, t, fileNotifications]);
 
   // ---- Batch Unarchive ----
 
@@ -214,17 +217,17 @@ export function useBatchFileOperations({
     try {
       const result = await unarchiveFilesWithPolicy(ids);
       if (!result.success) {
-        error(result.errors[0] || t('batch.unarchiveError'));
+        fileNotifications.batch.unarchiveError(result.errors[0]);
         return;
       }
-      success(t('batch.unarchiveSuccess', { count: result.processedCount }));
+      fileNotifications.batch.unarchiveSuccess(result.processedCount);
       setSelectedIds(new Set());
       await refetch();
     } catch (unarchiveError) {
       logger.error('Batch unarchive failed', { error: unarchiveError });
-      error(t('batch.unarchiveError'));
+      fileNotifications.batch.unarchiveError();
     }
-  }, [selectedIds, refetch, error, success, t]);
+  }, [selectedIds, refetch, fileNotifications]);
 
   // ---- AI Auto-Classify ----
 
@@ -234,13 +237,13 @@ export function useBatchFileOperations({
       .map(f => f.id);
 
     if (classifiableIds.length === 0) {
-      warning(t('batch.noAIClassifiableFiles'));
+      fileNotifications.batch.noAIClassifiableFiles();
       return;
     }
 
     await classifyBatch(classifiableIds, true);
     refetch();
-  }, [selectedIds, files, classifyBatch, refetch, warning, t]);
+  }, [selectedIds, files, classifyBatch, refetch, fileNotifications]);
 
   return {
     selectedIds,

@@ -24,7 +24,7 @@ import { storage } from '@/lib/firebase';
 import app from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useNotifications } from '@/providers/NotificationProvider';
+import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import {
   classifyFileWithPolicy,
   createPendingFileRecordWithPolicy,
@@ -131,7 +131,7 @@ export function useFileUpload({
 }: UseFileUploadParams): UseFileUploadReturn {
   const [uploading, setUploading] = useState(false);
   const { t } = useTranslation(['files', 'files-media']);
-  const { success, error: showError, warning } = useNotifications();
+  const fileNotifications = useFilesNotifications();
   const { user } = useAuth();
   const currentUserName = user?.displayName || user?.email || undefined;
 
@@ -149,13 +149,11 @@ export function useFileUpload({
     } catch (authError) {
       logger.error('AUTH_PRECHECK_FAILED', { error: String(authError) });
       const errorMessage = authError instanceof Error ? authError.message : '';
-      showError(
-        errorMessage.includes('AUTH_REQUIRED')
-          ? t('upload.errors.notAuthenticated')
-          : errorMessage.includes('COMPANY')
-            ? t('upload.errors.authFailed')
-            : t('upload.errors.authFailed'),
-      );
+      if (errorMessage.includes('AUTH_REQUIRED')) {
+        fileNotifications.upload.notAuthenticated();
+      } else {
+        fileNotifications.upload.authFailed();
+      }
       return;
     }
 
@@ -261,25 +259,25 @@ export function useFileUpload({
 
       // Toast notifications
       if (failCount > 0 && successCount > 0) {
-        warning(t('upload.errors.partialSuccess', { success: successCount, fail: failCount, total: selectedFiles.length }));
+        fileNotifications.upload.partialSuccess({ success: successCount, fail: failCount, total: selectedFiles.length });
       } else if (failCount > 0) {
-        showError(t('upload.errors.allFailed', { count: failCount }));
+        fileNotifications.upload.allFailed(failCount);
       } else if (successCount > 0) {
-        success(t('upload.success', { count: successCount }));
+        fileNotifications.upload.success(successCount);
       }
 
       await refetch();
       onUploadComplete?.();
     } catch (error) {
       logger.error('Upload failed:', { error });
-      showError(t('upload.errors.generic'));
+      fileNotifications.upload.generic();
     } finally {
       setUploading(false);
     }
   }, [
     companyId, projectId, entityType, entityId, domain, category, entityLabel, purpose, levelFloorId,
     currentUserId, currentUserName, selectedEntryPoint, customTitle, refetch, recordFileActivity,
-    onUploadComplete, success, showError, warning, t,
+    onUploadComplete, fileNotifications, t,
   ]);
 
   const handleCapture = useCallback(async (file: File, metadata: CaptureMetadata) => {

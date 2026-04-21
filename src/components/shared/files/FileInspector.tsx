@@ -41,7 +41,7 @@ import type { FileRecord } from '@/types/file-record';
 import { formatFileSize } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
 import { copyToClipboard } from '@/lib/share-utils'; // 🏢 ENTERPRISE: Centralized clipboard utility
 import { formatFlexibleDateTime } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date/time formatting
-import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized notifications
+import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import {
   Sheet,
   SheetContent,
@@ -92,29 +92,29 @@ export function FileInspector({
   const iconSizes = useIconSizes();
   const { t } = useTranslation(['files', 'files-media']);
   const colors = useSemanticColors();
-  const { success, error } = useNotifications();
+  const fileNotifications = useFilesNotifications();
 
   /**
    * Handle copy storage path to clipboard
    */
   const handleCopyPath = useCallback(async () => {
     if (!file.storagePath) {
-      error(t('technical.pathUnavailable'));
+      fileNotifications.technical.pathUnavailable();
       return;
     }
 
     try {
       const copied = await copyToClipboard(file.storagePath);
       if (copied) {
-        success(t('technical.pathCopied'));
+        fileNotifications.technical.pathCopied();
       } else {
-        error(t('copy.copyError', { ns: 'common' }));
+        fileNotifications.technical.copyError();
       }
     } catch (err) {
       logger.error('Failed to copy path', { error: err });
-      error(t('copy.copyError', { ns: 'common' }));
+      fileNotifications.technical.copyError();
     }
-  }, [file.storagePath, success, error, t]);
+  }, [file.storagePath, fileNotifications]);
 
   // 🏢 ENTERPRISE: Format timestamp using centralized formatFlexibleDateTime (ADR-208)
   const formatFileTimestamp = (timestamp: unknown): string => {

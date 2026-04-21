@@ -38,7 +38,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatDateTime } from '@/lib/intl-utils';
-import { useNotifications } from '@/providers/NotificationProvider';
+import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FileRecordService } from '@/services/file-record.service';
 import { unarchiveFilesWithPolicy } from '@/services/filesystem/file-mutation-gateway';
@@ -91,7 +91,7 @@ export function ArchiveView({
   const colors = useSemanticColors();
   const { t } = useTranslation(['files', 'files-media']);
   const translateDisplayName = useFileDisplayName();
-  const { success, error: showError } = useNotifications();
+  const fileNotifications = useFilesNotifications();
 
   const _archiveCacheKey = `${companyId}-${entityType ?? 'all'}-${entityId ?? 'all'}`;
   const [archivedFiles, setArchivedFiles] = useState<FileRecord[]>(archiveViewCache.get(_archiveCacheKey) ?? []);
@@ -155,7 +155,7 @@ export function ArchiveView({
     setUnarchiveLoading(true);
     try {
       await unarchiveFilesWithPolicy([fileToUnarchive]);
-      success(t('archived.unarchiveSuccess'));
+      fileNotifications.archived.unarchiveSuccess();
       setUnarchiveDialogOpen(false);
       setFileToUnarchive(null);
 
@@ -164,11 +164,11 @@ export function ArchiveView({
     } catch (err) {
       const restoreError = err instanceof Error ? err : new Error('Failed to unarchive file');
       logger.error('Failed to unarchive file', { error: restoreError.message });
-      showError(t('archived.unarchiveError'));
+      fileNotifications.archived.unarchiveError();
     } finally {
       setUnarchiveLoading(false);
     }
-  }, [fileToUnarchive, t, success, showError, onUnarchive]);
+  }, [fileToUnarchive, fileNotifications, onUnarchive]);
 
   // =========================================================================
   // RENDER

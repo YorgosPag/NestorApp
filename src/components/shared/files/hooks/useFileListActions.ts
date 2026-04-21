@@ -19,7 +19,7 @@
 import { useCallback, useState } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useNotifications } from '@/providers/NotificationProvider';
+import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import { useFileDownload } from './useFileDownload';
 import type { FileRecord } from '@/types/file-record';
 
@@ -95,7 +95,7 @@ export function useFileListActions({
   // SSoT: enterprise download with proper filename + extension (fallback when caller doesn't provide onDownload)
   const { handleDownload: enterpriseDownload } = useFileDownload();
   const { t } = useTranslation(['files', 'files-media']);
-  const { success, error } = useNotifications();
+  const fileNotifications = useFilesNotifications();
 
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -130,16 +130,16 @@ export function useFileListActions({
     setRenameLoading(true);
     try {
       onRename(editingFileId, editingName.trim());
-      success(t('list.renameSuccess'));
+      fileNotifications.list.renameSuccess();
       setEditingFileId(null);
       setEditingName('');
     } catch (err) {
-      error(t('list.renameError'));
+      fileNotifications.list.renameError();
       logger.error('Rename failed', { error: err });
     } finally {
       setRenameLoading(false);
     }
-  }, [editingFileId, editingName, onRename, t, success, error]);
+  }, [editingFileId, editingName, onRename, fileNotifications]);
 
   const handleRenameKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -181,7 +181,7 @@ export function useFileListActions({
     setDeleteLoading(true);
     try {
       await onDelete(fileToDelete);
-      success(t('list.deleteSuccess'));
+      fileNotifications.list.deleteSuccess();
       setDeleteConfirmOpen(false);
       setFileToDelete(null);
     } catch (err) {
@@ -192,14 +192,14 @@ export function useFileListActions({
         setDeleteBlockedMessage(blockedMessage);
         setDeleteBlockedOpen(true);
       } else {
-        error(t('list.deleteError'));
+        fileNotifications.list.deleteError();
       }
 
       logger.error('Delete failed', { error: err });
     } finally {
       setDeleteLoading(false);
     }
-  }, [fileToDelete, onDelete, t, success, error]);
+  }, [fileToDelete, onDelete, t, fileNotifications]);
 
   const handleUnlinkClick = useCallback((fileId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -214,16 +214,16 @@ export function useFileListActions({
     setUnlinkLoading(true);
     try {
       await onUnlink(fileToUnlink);
-      success(t('list.unlinkSuccess'));
+      fileNotifications.list.unlinkSuccess();
       setUnlinkConfirmOpen(false);
       setFileToUnlink(null);
     } catch (err) {
-      error(t('list.unlinkError'));
+      fileNotifications.list.unlinkError();
       logger.error('Unlink failed', { error: err });
     } finally {
       setUnlinkLoading(false);
     }
-  }, [fileToUnlink, onUnlink, t, success, error]);
+  }, [fileToUnlink, onUnlink, fileNotifications]);
 
   const handleLinkClick = useCallback((file: FileRecord, event: React.MouseEvent) => {
     event.stopPropagation();

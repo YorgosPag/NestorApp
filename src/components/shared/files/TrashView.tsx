@@ -42,7 +42,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { formatFileSize } from '@/utils/file-validation';
 import { formatDateTime } from '@/lib/intl-utils';
-import { useNotifications } from '@/providers/NotificationProvider';
+import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FileRecordService } from '@/services/file-record.service';
 import { restoreFileFromTrashWithPolicy } from '@/services/filesystem/file-mutation-gateway';
@@ -149,7 +149,7 @@ export function TrashView({
   const colors = useSemanticColors();
   const { t } = useTranslation(['files', 'files-media']);
   const translateDisplayName = useFileDisplayName();
-  const { success, error: showError } = useNotifications();
+  const fileNotifications = useFilesNotifications();
 
   // State
   const _trashCacheKey = `${companyId}-${entityType ?? 'all'}-${entityId ?? 'all'}`;
@@ -218,7 +218,7 @@ export function TrashView({
     setRestoreLoading(true);
     try {
       await restoreFileFromTrashWithPolicy(fileToRestore, currentUserId);
-      success(t('trash.restoreSuccess'));
+      fileNotifications.trash.restoreSuccess();
       setRestoreDialogOpen(false);
       setFileToRestore(null);
 
@@ -230,11 +230,11 @@ export function TrashView({
     } catch (err) {
       const restoreError = err instanceof Error ? err : new Error('Failed to restore file');
       logger.error('Failed to restore file', { error: restoreError.message });
-      showError(t('trash.restoreError'));
+      fileNotifications.trash.restoreError();
     } finally {
       setRestoreLoading(false);
     }
-  }, [fileToRestore, currentUserId, t, success, showError, onRestore]);
+  }, [fileToRestore, currentUserId, fileNotifications, onRestore]);
 
   // =========================================================================
   // RENDER

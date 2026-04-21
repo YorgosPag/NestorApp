@@ -76,6 +76,50 @@ export const NOTIFICATION_KEYS = {
       cityRequired: 'projects-data:locations.errors.cityRequired',
     },
   },
+
+  // ==========================================================================
+  // FILES domain
+  // ==========================================================================
+  files: {
+    upload: {
+      success: 'upload.success',
+      notAuthenticated: 'upload.errors.notAuthenticated',
+      authFailed: 'upload.errors.authFailed',
+      partialSuccess: 'upload.errors.partialSuccess',
+      allFailed: 'upload.errors.allFailed',
+      generic: 'upload.errors.generic',
+    },
+    list: {
+      renameSuccess: 'list.renameSuccess',
+      renameError: 'list.renameError',
+      deleteSuccess: 'list.deleteSuccess',
+      deleteError: 'list.deleteError',
+      unlinkSuccess: 'list.unlinkSuccess',
+      unlinkError: 'list.unlinkError',
+    },
+    technical: {
+      pathUnavailable: 'technical.pathUnavailable',
+      pathCopied: 'technical.pathCopied',
+      copyError: 'copy.copyError',
+    },
+    trash: {
+      restoreSuccess: 'trash.restoreSuccess',
+      restoreError: 'trash.restoreError',
+    },
+    archived: {
+      unarchiveSuccess: 'archived.unarchiveSuccess',
+      unarchiveError: 'archived.unarchiveError',
+    },
+    batch: {
+      archiveSuccess: 'batch.archiveSuccess',
+      archivePartialSuccess: 'batch.archivePartialSuccess',
+      archiveNoChanges: 'batch.archiveNoChanges',
+      archiveError: 'batch.archiveError',
+      unarchiveSuccess: 'batch.unarchiveSuccess',
+      unarchiveError: 'batch.unarchiveError',
+      noAIClassifiableFiles: 'batch.noAIClassifiableFiles',
+    },
+  },
 } as const;
 
 // ============================================================================

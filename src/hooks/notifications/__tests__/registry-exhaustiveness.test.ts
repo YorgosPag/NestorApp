@@ -26,6 +26,7 @@ import { renderHook } from '@testing-library/react';
 import { NOTIFICATION_KEYS } from '@/config/notification-keys';
 import { useContactNotifications } from '../useContactNotifications';
 import { useProjectNotifications } from '../useProjectNotifications';
+import { useFilesNotifications } from '../useFilesNotifications';
 
 const success = jest.fn();
 const error = jest.fn();
@@ -34,6 +35,15 @@ const warning = jest.fn();
 
 jest.mock('@/providers/NotificationProvider', () => ({
   useNotifications: () => ({ success, error, info, warning }),
+}));
+
+// Files domain hook uses useTranslation for ICU interpolation.
+// Mock as identity so dispatched value === key → Direction A passes.
+jest.mock('@/i18n/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: {},
+  }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -136,6 +146,44 @@ describe('NOTIFICATION_KEYS exhaustiveness — A: dispatched keys ⊂ registry',
       expect(registered).toContain(k);
     }
   });
+
+  it('useFilesNotifications — every method fires a NOTIFICATION_KEYS.files leaf', () => {
+    const { result } = renderHook(() => useFilesNotifications());
+    const api = result.current;
+    api.upload.success(1);
+    api.upload.notAuthenticated();
+    api.upload.authFailed();
+    api.upload.partialSuccess({ success: 2, fail: 1, total: 3 });
+    api.upload.allFailed(3);
+    api.upload.generic();
+    api.list.renameSuccess();
+    api.list.renameError();
+    api.list.deleteSuccess();
+    api.list.deleteError();
+    api.list.unlinkSuccess();
+    api.list.unlinkError();
+    api.technical.pathUnavailable();
+    api.technical.pathCopied();
+    api.technical.copyError();
+    api.trash.restoreSuccess();
+    api.trash.restoreError();
+    api.archived.unarchiveSuccess();
+    api.archived.unarchiveError();
+    api.batch.archiveSuccess(5);
+    api.batch.archivePartialSuccess({ processed: 3, failed: 2, total: 5 });
+    api.batch.archiveNoChanges();
+    api.batch.archiveError();
+    api.batch.unarchiveSuccess(4);
+    api.batch.unarchiveError();
+    api.batch.noAIClassifiableFiles();
+
+    const dispatched = allDispatchedKeys();
+    const registered = registryLeaves(NOTIFICATION_KEYS.files);
+
+    for (const k of dispatched) {
+      expect(registered).toContain(k);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -157,6 +205,13 @@ const DIRECT_USAGE_LEAVES = new Set<string>([
   NOTIFICATION_KEYS.contacts.duplicate.similarMatch,
   // src/utils/contactForm/execute-guarded-contact-update.ts — pure helper, no hook
   NOTIFICATION_KEYS.contacts.companyIdentity.unsafeClear,
+  // src/components/shared/files/hooks/useBatchFileOperations.ts — showArchiveResultFeedback()
+  // pure exported utility that accepts generic notify callbacks; called from
+  // file-manager-handlers.ts too. Migrated to domain hook in a future phase.
+  NOTIFICATION_KEYS.files.batch.archiveSuccess,
+  NOTIFICATION_KEYS.files.batch.archivePartialSuccess,
+  NOTIFICATION_KEYS.files.batch.archiveNoChanges,
+  NOTIFICATION_KEYS.files.batch.archiveError,
 ]);
 
 function leavesCoveredByHook(
@@ -213,6 +268,48 @@ describe('NOTIFICATION_KEYS exhaustiveness — B: every leaf has an owner', () =
       a.address.clearError();
       a.address.soleAddressMustBePrimary();
       a.address.cityRequired();
+    });
+
+    const orphans: string[] = [];
+    for (const leaf of registered) {
+      if (!covered.has(leaf) && !DIRECT_USAGE_LEAVES.has(leaf)) {
+        orphans.push(leaf);
+      }
+    }
+
+    expect(orphans).toEqual([]);
+  });
+
+  it('NOTIFICATION_KEYS.files — every leaf is covered by hook method or allow-list', () => {
+    const registered = registryLeaves(NOTIFICATION_KEYS.files);
+    const covered = leavesCoveredByHook(useFilesNotifications, (api) => {
+      const a = api as ReturnType<typeof useFilesNotifications>;
+      a.upload.success(1);
+      a.upload.notAuthenticated();
+      a.upload.authFailed();
+      a.upload.partialSuccess({ success: 2, fail: 1, total: 3 });
+      a.upload.allFailed(3);
+      a.upload.generic();
+      a.list.renameSuccess();
+      a.list.renameError();
+      a.list.deleteSuccess();
+      a.list.deleteError();
+      a.list.unlinkSuccess();
+      a.list.unlinkError();
+      a.technical.pathUnavailable();
+      a.technical.pathCopied();
+      a.technical.copyError();
+      a.trash.restoreSuccess();
+      a.trash.restoreError();
+      a.archived.unarchiveSuccess();
+      a.archived.unarchiveError();
+      a.batch.archiveSuccess(5);
+      a.batch.archivePartialSuccess({ processed: 3, failed: 2, total: 5 });
+      a.batch.archiveNoChanges();
+      a.batch.archiveError();
+      a.batch.unarchiveSuccess(4);
+      a.batch.unarchiveError();
+      a.batch.noAIClassifiableFiles();
     });
 
     const orphans: string[] = [];

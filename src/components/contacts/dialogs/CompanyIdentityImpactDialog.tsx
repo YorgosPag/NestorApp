@@ -71,7 +71,7 @@ export function CompanyIdentityImpactDialog({
   message,
 }: CompanyIdentityImpactDialogProps) {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
-  const { t: tForm } = useTranslation('contacts-form');
+  const { t: tForm } = useTranslation('forms');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
