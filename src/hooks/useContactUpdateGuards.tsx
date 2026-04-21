@@ -126,6 +126,7 @@ export function useContactUpdateGuards({
         editContactId,
         contactData,
         formData,
+        action,
         nameCascadeConfirmedRef,
         addressImpactConfirmedRef,
         companyIdentityConfirmedRef,
