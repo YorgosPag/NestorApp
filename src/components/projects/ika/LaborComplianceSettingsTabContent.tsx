@@ -103,12 +103,11 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
         setIsFromFirestore(false);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to load';
-      notifications.error(msg);
+      notifications.error(t('ika.efkaSettingsTab.loadError'));
     } finally {
       setIsLoading(false);
     }
-  }, [notifications]);
+  }, [notifications, t]);
 
   useEffect(() => {
     loadData();
@@ -163,8 +162,7 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
         setIsEditing(false);
         await loadData();
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Save failed';
-        notifications.error(msg);
+        notifications.error(t('ika.efkaSettingsTab.saveError'));
       } finally {
         setIsSaving(false);
       }
@@ -183,11 +181,10 @@ export function LaborComplianceSettingsTabContent({ projectId: _projectId }: Lab
         notifications.success(t('ika.efkaSettingsTab.seedSuccess'));
         await loadData();
       } else {
-        notifications.info('Document already exists');
+        notifications.info(t('ika.efkaSettingsTab.documentAlreadyExists'));
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Seed failed';
-      notifications.error(msg);
+      notifications.error(t('ika.efkaSettingsTab.seedError'));
     } finally {
       setIsSeeding(false);
     }

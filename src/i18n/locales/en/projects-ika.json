@@ -37,7 +37,11 @@
       "saving": "Saving...",
       "seeding": "Initializing...",
       "saveSuccess": "Settings saved successfully",
+      "saveError": "Failed to save EFKA settings",
       "seedSuccess": "Default values saved to the system",
+      "documentAlreadyExists": "Data already exists in the system",
+      "loadError": "Failed to load EFKA data",
+      "seedError": "Failed to initialize EFKA data",
       "validationError": "Validation error",
       "noProjectWarning": "Project ID is required"
     },
