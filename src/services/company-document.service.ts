@@ -145,14 +145,48 @@ export async function ensureCompanyDocument(
     return existing;
   }
 
+  // Auto-resolve contact data from Firestore when not provided by caller
+  let resolvedContactData = contactData;
+  if (!resolvedContactData) {
+    try {
+      const db = getAdminFirestore();
+      const contactsSnap = await db
+        .collection(COLLECTIONS.CONTACTS)
+        .where('companyId', '==', companyId)
+        .where('type', '==', 'company')
+        .limit(1)
+        .get();
+
+      if (!contactsSnap.empty) {
+        const contactDoc = contactsSnap.docs[0];
+        const raw = contactDoc.data();
+        resolvedContactData = {
+          name: raw.companyName || raw.tradeName || raw.legalName || '',
+          contactId: contactDoc.id,
+        };
+        logger.info('[CompanyDocument] Auto-resolved contact for company document', {
+          companyId,
+          contactId: contactDoc.id,
+          name: resolvedContactData.name,
+        });
+      }
+    } catch (lookupError) {
+      logger.warn('[CompanyDocument] Contact lookup failed, using ID-based fallback', {
+        companyId,
+        error: getErrorMessage(lookupError),
+      });
+    }
+  }
+
   // Create new document
   const now = FieldValue.serverTimestamp();
   const docData = {
     name: resolveCompanyDisplayName({
       id: companyId,
-      name: contactData?.name,
+      name: resolvedContactData?.name,
+      companyName: resolvedContactData?.name,
     }),
-    contactId: contactData?.contactId ?? companyId,
+    contactId: resolvedContactData?.contactId ?? null,
     status: 'active' as CompanyStatus,
     plan: 'free' as CompanyPlan,
     settings: getDefaultSettings(),
@@ -262,6 +296,72 @@ export async function createCompanyDocument(
     });
     throw error;
   }
+}
+
+// =============================================================================
+// REPAIR
+// =============================================================================
+
+/**
+ * Repair a company document whose `name` or `contactId` are stale/incorrect.
+ *
+ * Looks up the matching contact in the `contacts` collection (type=company,
+ * companyId==companyId) and patches the document with the correct values.
+ *
+ * @returns Object describing what was changed
+ */
+export async function repairCompanyDocument(
+  companyId: string,
+  repairedBy: string
+): Promise<{ name: string; contactId: string | null; wasRepaired: boolean }> {
+  const db = getAdminFirestore();
+
+  const contactsSnap = await db
+    .collection(COLLECTIONS.CONTACTS)
+    .where('companyId', '==', companyId)
+    .where('type', '==', 'company')
+    .limit(1)
+    .get();
+
+  if (contactsSnap.empty) {
+    logger.warn('[CompanyDocument] repairCompanyDocument: no matching contact found', { companyId });
+    return { name: '', contactId: null, wasRepaired: false };
+  }
+
+  const contactDoc = contactsSnap.docs[0];
+  const raw = contactDoc.data();
+  const correctName = raw.companyName || raw.tradeName || raw.legalName || '';
+  const correctContactId = contactDoc.id;
+
+  await db.collection(COLLECTIONS.COMPANIES).doc(companyId).update({
+    name: correctName,
+    contactId: correctContactId,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  companyExistsCache.delete(companyId);
+
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.COMPANY,
+    entityId: companyId,
+    entityName: correctName,
+    action: 'updated',
+    changes: [
+      { field: 'name', oldValue: null, newValue: correctName, label: 'name' },
+      { field: 'contactId', oldValue: null, newValue: correctContactId, label: 'contactId' },
+    ],
+    performedBy: repairedBy,
+    performedByName: null,
+    companyId,
+  });
+
+  logger.info('[CompanyDocument] Repaired company document', {
+    companyId,
+    name: correctName,
+    contactId: correctContactId,
+  });
+
+  return { name: correctName, contactId: correctContactId, wasRepaired: true };
 }
 
 // =============================================================================
