@@ -73,9 +73,8 @@ export interface FilesArchivedNotifications {
 }
 
 export interface FilesBatchNotifications {
-  readonly archiveSuccess: (count: number) => void;
-  readonly archivePartialSuccess: (params: { processed: number; failed: number; total: number }) => void;
-  readonly archiveNoChanges: () => void;
+  // archiveSuccess/archivePartialSuccess/archiveNoChanges intentionally absent:
+  // owned by showArchiveResultFeedback() per SSoT registry module "archive-feedback"
   readonly archiveError: (serverMessage?: string) => void;
   readonly unarchiveSuccess: (count: number) => void;
   readonly unarchiveError: (serverMessage?: string) => void;
@@ -128,7 +127,7 @@ export function useFilesNotifications(): FilesNotifications {
       technical: {
         pathUnavailable: () => error(t(NOTIFICATION_KEYS.files.technical.pathUnavailable)),
         pathCopied: () => success(t(NOTIFICATION_KEYS.files.technical.pathCopied)),
-        copyError: () => error(t(NOTIFICATION_KEYS.files.technical.copyError, { ns: 'common' })),
+        copyError: () => error(t(NOTIFICATION_KEYS.files.technical.copyError)),
       },
 
       trash: {
@@ -142,12 +141,6 @@ export function useFilesNotifications(): FilesNotifications {
       },
 
       batch: {
-        archiveSuccess: (count) =>
-          success(t(NOTIFICATION_KEYS.files.batch.archiveSuccess, { count })),
-        archivePartialSuccess: ({ processed, failed, total }) =>
-          warning(t(NOTIFICATION_KEYS.files.batch.archivePartialSuccess, { processed, failed, total })),
-        archiveNoChanges: () =>
-          warning(t(NOTIFICATION_KEYS.files.batch.archiveNoChanges)),
         archiveError: (serverMessage) => {
           if (serverMessage && serverMessage.trim().length > 0) {
             error(serverMessage);

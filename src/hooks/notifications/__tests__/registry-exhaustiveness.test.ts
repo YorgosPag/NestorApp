@@ -169,9 +169,6 @@ describe('NOTIFICATION_KEYS exhaustiveness — A: dispatched keys ⊂ registry',
     api.trash.restoreError();
     api.archived.unarchiveSuccess();
     api.archived.unarchiveError();
-    api.batch.archiveSuccess(5);
-    api.batch.archivePartialSuccess({ processed: 3, failed: 2, total: 5 });
-    api.batch.archiveNoChanges();
     api.batch.archiveError();
     api.batch.unarchiveSuccess(4);
     api.batch.unarchiveError();
@@ -205,13 +202,9 @@ const DIRECT_USAGE_LEAVES = new Set<string>([
   NOTIFICATION_KEYS.contacts.duplicate.similarMatch,
   // src/utils/contactForm/execute-guarded-contact-update.ts — pure helper, no hook
   NOTIFICATION_KEYS.contacts.companyIdentity.unsafeClear,
-  // src/components/shared/files/hooks/useBatchFileOperations.ts — showArchiveResultFeedback()
-  // pure exported utility that accepts generic notify callbacks; called from
-  // file-manager-handlers.ts too. Migrated to domain hook in a future phase.
-  NOTIFICATION_KEYS.files.batch.archiveSuccess,
-  NOTIFICATION_KEYS.files.batch.archivePartialSuccess,
-  NOTIFICATION_KEYS.files.batch.archiveNoChanges,
-  NOTIFICATION_KEYS.files.batch.archiveError,
+  // Note: batch.archiveSuccess/archivePartialSuccess/archiveNoChanges are owned by
+  // showArchiveResultFeedback() (SSoT registry "archive-feedback") and are NOT in
+  // NOTIFICATION_KEYS — they live entirely outside the domain-hook pattern.
 ]);
 
 function leavesCoveredByHook(
@@ -303,9 +296,6 @@ describe('NOTIFICATION_KEYS exhaustiveness — B: every leaf has an owner', () =
       a.trash.restoreError();
       a.archived.unarchiveSuccess();
       a.archived.unarchiveError();
-      a.batch.archiveSuccess(5);
-      a.batch.archivePartialSuccess({ processed: 3, failed: 2, total: 5 });
-      a.batch.archiveNoChanges();
       a.batch.archiveError();
       a.batch.unarchiveSuccess(4);
       a.batch.unarchiveError();
