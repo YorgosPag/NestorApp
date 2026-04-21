@@ -5,11 +5,10 @@
  *
  * Firestore `onWrite` trigger on `contacts/{docId}`. For every create / update
  * / delete, computes a generic deep diff and writes an audit entry to
- * `entity_audit_trail` with `source: 'cdc'`. Runs in parallel with the existing
- * service-layer audit path (`source: 'service'`) during the Phase 1 comparison
- * window. After one week of dual-write, if CDC coverage matches or exceeds the
- * service path with zero false positives, the service path will be retired for
- * contacts and the same pattern extended to other entity collections.
+ * `entity_audit_trail` with `source: 'cdc'`. Phase 2 cutover (2026-04-21):
+ * CDC is the sole writer for contact audit entries. The service-layer path
+ * in contacts.service.ts has been retired after Phase 1 confirmed full field
+ * coverage and zero false positives. Pattern ready to extend to other collections.
  *
  * Why CDC:
  *   The manual `CONTACT_TRACKED_FIELDS` + exclude-set pattern at the service

@@ -140,20 +140,16 @@ export async function ensureCompanyDocument(
   contactData?: { name: string; contactId: string },
   createdBy: string = 'system'
 ): Promise<CompanyDocument> {
-  const existing = await getCompanyDocument(companyId);
-  if (existing) {
-    return existing;
-  }
+  const db = getAdminFirestore();
+  const docRef = db.collection(COLLECTIONS.COMPANIES).doc(companyId);
 
-  // Auto-resolve workspace name from the company admin user when not provided
+  // Resolve name before the transaction (read-only, no side effects)
   let resolvedName = contactData?.name ?? '';
   if (!resolvedName && createdBy && createdBy !== 'system') {
     try {
-      const db = getAdminFirestore();
       const userDoc = await db.collection(COLLECTIONS.USERS).doc(createdBy).get();
       if (userDoc.exists) {
-        const userData = userDoc.data();
-        resolvedName = userData?.displayName || '';
+        resolvedName = userDoc.data()?.displayName || '';
         logger.info('[CompanyDocument] Auto-resolved workspace name from user', {
           companyId,
           createdBy,
@@ -168,13 +164,9 @@ export async function ensureCompanyDocument(
     }
   }
 
-  // Create new document
   const now = FieldValue.serverTimestamp();
   const docData = {
-    name: resolveCompanyDisplayName({
-      id: companyId,
-      name: resolvedName,
-    }),
+    name: resolveCompanyDisplayName({ id: companyId, name: resolvedName }),
     contactId: contactData?.contactId ?? null,
     status: 'active' as CompanyStatus,
     plan: 'free' as CompanyPlan,
@@ -184,43 +176,53 @@ export async function ensureCompanyDocument(
     createdBy,
   };
 
+  // Atomic create-if-not-exists — eliminates race condition on concurrent logins
+  let wasCreated: boolean;
   try {
-    const db = getAdminFirestore();
-    await db.collection(COLLECTIONS.COMPANIES).doc(companyId).set(docData);
-
-    // Invalidate cache
-    companyExistsCache.delete(companyId);
-
-    // ADR-195 — Entity audit trail (company materialization)
-    await EntityAuditService.recordChange({
-      entityType: ENTITY_TYPES.COMPANY,
-      entityId: companyId,
-      entityName: docData.name,
-      action: 'created',
-      changes: buildCreationChanges(docData),
-      performedBy: createdBy,
-      performedByName: null,
-      companyId,
+    wasCreated = await db.runTransaction(async (t) => {
+      const snap = await t.get(docRef);
+      if (snap.exists) return false;
+      t.set(docRef, docData);
+      return true;
     });
-
-    logger.info('[CompanyDocument] Materialized phantom → real document', {
-      companyId,
-      name: docData.name,
-    });
-
-    // Re-read to get server timestamps
-    const created = await getCompanyDocument(companyId);
-    if (!created) {
-      throw new Error('Document created but could not be read back');
-    }
-    return created;
   } catch (error) {
-    logger.error('[CompanyDocument] ensureCompanyDocument failed', {
+    logger.error('[CompanyDocument] ensureCompanyDocument transaction failed', {
       companyId,
       error: getErrorMessage(error),
     });
     throw error;
   }
+
+  if (!wasCreated) {
+    // Another concurrent caller already created the doc — return it
+    const existing = await getCompanyDocument(companyId);
+    if (!existing) throw new Error(`Company ${companyId} exists in transaction but not readable`);
+    return existing;
+  }
+
+  // Side effects outside transaction: cache + audit
+  companyExistsCache.delete(companyId);
+
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.COMPANY,
+    entityId: companyId,
+    entityName: docData.name,
+    action: 'created',
+    changes: buildCreationChanges(docData),
+    performedBy: createdBy,
+    performedByName: null,
+    companyId,
+  });
+
+  logger.info('[CompanyDocument] Materialized phantom → real document', {
+    companyId,
+    name: docData.name,
+  });
+
+  // Re-read to get server timestamps
+  const created = await getCompanyDocument(companyId);
+  if (!created) throw new Error('Document created but could not be read back');
+  return created;
 }
 
 /**

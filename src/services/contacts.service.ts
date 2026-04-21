@@ -34,7 +34,6 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
 import { SEARCH_ENTITY_TYPES } from '@/types/search';
 import { PhotoUploadService } from '@/services/photo-upload.service';
-import { computeEntityDiff, CONTACT_TRACKED_FIELDS, getContactTrackedFieldsForType } from '@/config/audit-tracked-fields';
 import { cleanupOrphanedPhotos } from '@/utils/contactForm/photo-cleanup';
 
 // Re-export read operations for backward compatibility
@@ -230,18 +229,7 @@ export class ContactsService {
     // ADR-029: Index for global search (fire-and-forget)
     apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: SEARCH_ENTITY_TYPES.CONTACT, entityId: id }).catch(() => {});
 
-    // Audit trail: record creation (fire-and-forget)
-    const displayName = this.getDisplayName(sanitizedData as unknown as Contact);
-    apiClient.post(API_ROUTES.AUDIT_TRAIL.RECORD, {
-      entityType: ENTITY_TYPES.CONTACT,
-      entityId: id,
-      entityName: displayName,
-      action: 'created',
-      changes: [
-        { field: 'type', oldValue: null, newValue: sanitizedData.type },
-        { field: 'status', oldValue: null, newValue: 'active' },
-      ],
-    }).catch(() => {});
+    // Audit trail: covered by CDC Cloud Function (auditContactWrite) — ADR-195 Phase 2 cutover.
 
     RealtimeService.dispatch('CONTACT_CREATED', {
       contactId: id,
@@ -326,22 +314,7 @@ export class ContactsService {
       apiClient.post(`/api/contacts/${id}/name-cascade`, { newDisplayName: newName }).catch(() => {});
     }
 
-    // Audit trail (fire-and-forget) — type-aware fields prevent cross-type noise
-    const trackedFields = getContactTrackedFieldsForType(existingContact.type);
-    const changes = computeEntityDiff(
-      existingContact as unknown as Record<string, unknown>,
-      enterpriseData as unknown as Record<string, unknown>,
-      trackedFields,
-    );
-    if (changes.length > 0) {
-      const isStatusChange = changes.some((c) => c.field === 'status');
-      apiClient.post(API_ROUTES.AUDIT_TRAIL.RECORD, {
-        entityType: ENTITY_TYPES.CONTACT, entityId: id,
-        entityName: this.getDisplayName(existingContact),
-        action: isStatusChange ? 'status_changed' : 'updated',
-        changes,
-      }).catch(() => {});
-    }
+    // Audit trail: covered by CDC Cloud Function (auditContactWrite) — ADR-195 Phase 2 cutover.
   }
 
   // ==== UPDATE (core) ====
