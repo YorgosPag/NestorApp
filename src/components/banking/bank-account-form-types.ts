@@ -22,4 +22,8 @@ export interface BankAccountFormProps {
   contactName?: string;
   /** Custom className */
   className?: string;
+  /** ADR-317: DOM form id so an external button (header) can trigger requestSubmit() */
+  formId?: string;
+  /** ADR-317: Hide internal Save/Cancel so the header owns submission */
+  hideActions?: boolean;
 }

@@ -12,7 +12,8 @@
  * @see BankAccount type in @/types/contacts/banking
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useId } from 'react';
+import { useRegisterEditFocus } from '@/components/contacts/details/contact-details/ContactEditFocusContext';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import type { Contact } from '@/types/contacts';
@@ -40,6 +41,11 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { createStaleCache } from '@/lib/stale-cache';
+import {
+  buildDeleteDescription,
+  buildSensitiveEditDescription,
+  buildSetPrimaryDescription,
+} from './contact-banking-descriptions';
 
 const logger = createModuleLogger('ContactBankingTab');
 
@@ -86,6 +92,9 @@ export function ContactBankingTab({
   const [deletingAccount, setDeletingAccount] = useState<BankAccount | null>(null);
   const [primaryAccountCandidate, setPrimaryAccountCandidate] = useState<BankAccount | null>(null);
   const activeAccountsCount = accounts.filter((account) => account.isActive).length;
+
+  // ADR-317: DOM form id so the adaptive header Save can trigger requestSubmit().
+  const bankingFormId = useId();
 
   const loadAccounts = useCallback(async () => {
     if (!contactId) {
@@ -140,35 +149,6 @@ export function ContactBankingTab({
     setDeletingAccount(account);
   };
 
-  const buildDeleteDescription = useCallback((account: BankAccount | null, isLastActive: boolean): React.ReactNode => {
-    if (!account) {
-      return null;
-    }
-
-    return (
-      <div className="space-y-3">
-        <p>
-          {t('bankingTab.deleteAccount.confirmation')}{' '}
-          <strong>{account.bankName}</strong> {t('bankingTab.deleteAccount.withIban')}{' '}
-          <code className="text-xs">{account.iban}</code>;
-        </p>
-        <p>{t('bankingTab.impact.futureUse')}</p>
-        <p className={cn('text-sm', colors.text.muted)}>{t('bankingTab.impact.snapshotPreserved')}</p>
-        {account.isPrimary && (
-          <p className="text-sm text-amber-600 dark:text-amber-400">
-            {t('bankingTab.impact.deletePrimary')}
-          </p>
-        )}
-        {isLastActive && (
-          <p className="text-sm text-amber-600 dark:text-amber-400">
-            {t('bankingTab.impact.deleteLastActive')}
-          </p>
-        )}
-        <p>{t('bankingTab.deleteAccount.irreversible')}</p>
-      </div>
-    );
-  }, [colors.text.muted, t]);
-
   const handleDeleteConfirm = async () => {
     if (!contactId || !deletingAccount) return;
 
@@ -196,24 +176,6 @@ export function ContactBankingTab({
     setPrimaryAccountCandidate(account);
   };
 
-  const buildSetPrimaryDescription = useCallback((account: BankAccount | null): React.ReactNode => {
-    if (!account) {
-      return null;
-    }
-
-    return (
-      <div className="space-y-3">
-        <p>
-          {t('bankingTab.setPrimaryDialog.confirmation', {
-            bankName: account.bankName,
-          })}
-        </p>
-        <p>{t('bankingTab.setPrimaryDialog.impact')}</p>
-        <p className={cn('text-sm', colors.text.muted)}>{t('bankingTab.impact.snapshotPreserved')}</p>
-      </div>
-    );
-  }, [colors.text.muted, t]);
-
   const handleSetPrimaryConfirm = async () => {
     if (!contactId || !primaryAccountCandidate) return;
 
@@ -234,25 +196,6 @@ export function ContactBankingTab({
     }
   };
 
-  const buildSensitiveEditDescription = useCallback((isSensitiveEdit: boolean, becomesPrimary: boolean): React.ReactNode => {
-    const messages: string[] = [];
-    if (becomesPrimary) {
-      messages.push(t('bankingTab.editImpact.makePrimary'));
-    }
-    if (isSensitiveEdit) {
-      messages.push(t('bankingTab.editImpact.updateSensitive'));
-    }
-
-    return (
-      <div className="space-y-3">
-        {messages.map((message) => (
-          <p key={message}>{message}</p>
-        ))}
-        <p className={cn('text-sm', colors.text.muted)}>{t('bankingTab.impact.snapshotPreserved')}</p>
-      </div>
-    );
-  }, [colors.text.muted, t]);
-
   const handleFormSubmit = async (formData: BankAccountInput) => {
     if (!contactId) return;
 
@@ -266,7 +209,7 @@ export function ContactBankingTab({
     if (editingAccount && (isSensitiveEdit || becomesPrimary)) {
       const shouldProceed = await confirm({
         title: t('bankingTab.editImpact.title'),
-        description: buildSensitiveEditDescription(isSensitiveEdit, becomesPrimary),
+        description: buildSensitiveEditDescription(isSensitiveEdit, becomesPrimary, t, colors.text.muted),
         variant: becomesPrimary ? 'warning' : 'default',
         confirmText: t('bankingTab.editImpact.confirm'),
         cancelText: t('bankingTab.deleteAccount.cancel'),
@@ -305,17 +248,40 @@ export function ContactBankingTab({
       setIsFormOpen(false);
       setEditingAccount(undefined);
     } catch (err) {
-      logger.error('[ContactBankingTab] Error saving account:', { error: err });
+      // BankAccountForm surfaces the message to the user via errors.submit;
+      // no need to log this as an application error (avoids Next.js error overlay for user-correctable validation).
+      logger.warn('[ContactBankingTab] Account save rejected', { error: err });
       throw err;
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleFormCancel = () => {
+  const handleFormCancel = useCallback(() => {
     setIsFormOpen(false);
     setEditingAccount(undefined);
-  };
+  }, []);
+
+  // ADR-317: Register as the active edit focus while the inline form is open.
+  // The adaptive header owns Save/Cancel and delegates to this form.
+  const submitBankingForm = useCallback(() => {
+    const formEl = typeof document !== 'undefined' ? document.getElementById(bankingFormId) : null;
+    if (formEl instanceof HTMLFormElement) {
+      formEl.requestSubmit();
+    }
+  }, [bankingFormId]);
+
+  useRegisterEditFocus(
+    isFormOpen
+      ? {
+          id: `banking-form-${contactId}`,
+          label: editingAccount ? t('bankingTab.editAccount.title') : t('bankingTab.newAccount.title'),
+          submit: submitBankingForm,
+          cancel: handleFormCancel,
+          loading: actionLoading,
+        }
+      : null,
+  );
 
   const accountsByBank = groupByKey(accounts, (account) => account.bankName);
   const deletingIsLastActive = deletingAccount?.isActive === true && activeAccountsCount === 1;
@@ -377,6 +343,8 @@ export function ContactBankingTab({
                 onCancel={handleFormCancel}
                 loading={actionLoading}
                 contactName={getContactDisplayName(data)}
+                formId={bankingFormId}
+                hideActions
               />
             </CardContent>
           </Card>
@@ -448,6 +416,8 @@ export function ContactBankingTab({
               onCancel={handleFormCancel}
               contactName={getContactDisplayName(data)}
               loading={actionLoading}
+              formId={bankingFormId}
+              hideActions
             />
           </CardContent>
         </Card>
@@ -461,7 +431,7 @@ export function ContactBankingTab({
           }
         }}
         title={t('bankingTab.deleteAccount.title')}
-        description={buildDeleteDescription(deletingAccount, deletingIsLastActive)}
+        description={buildDeleteDescription(deletingAccount, deletingIsLastActive, t, colors.text.muted)}
         onConfirm={handleDeleteConfirm}
         confirmText={t('bankingTab.deleteAccount.delete')}
         cancelText={t('bankingTab.deleteAccount.cancel')}
@@ -477,7 +447,7 @@ export function ContactBankingTab({
           }
         }}
         title={t('bankingTab.setPrimaryDialog.title')}
-        description={buildSetPrimaryDescription(primaryAccountCandidate)}
+        description={buildSetPrimaryDescription(primaryAccountCandidate, t, colors.text.muted)}
         onConfirm={handleSetPrimaryConfirm}
         confirmText={t('bankingTab.setPrimaryDialog.confirm')}
         cancelText={t('bankingTab.setPrimaryDialog.cancel')}

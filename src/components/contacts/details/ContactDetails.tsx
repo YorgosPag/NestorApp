@@ -12,6 +12,7 @@ import { AddPropertyToContactDialog } from './AddPropertyToContactDialog';
 import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { ContactDetailsMobileActions } from './contact-details/ContactDetailsMobileActions';
 import { useContactDetailsController } from './contact-details/useContactDetailsController';
+import { ContactEditFocusProvider } from './contact-details/ContactEditFocusContext';
 import type { ContactDetailsProps } from './contact-details/contact-details-types';
 
 export function ContactDetails({
@@ -57,7 +58,7 @@ export function ContactDetails({
   const resolvedFormData = (isEditing ? editedData : enhancedFormData) as ContactFormData;
 
   return (
-    <>
+    <ContactEditFocusProvider>
       <DetailsContainer
         selectedItem={contact ?? null}
         header={
@@ -91,6 +92,7 @@ export function ContactDetails({
               void handleSaveEdit();
             }}
             onCancelEdit={handleCancelEdit}
+            hideEditControls={isSubcollectionTab}
           />
         )}
 
@@ -127,6 +129,6 @@ export function ContactDetails({
       )}
 
       {contactGuardDialogs}
-    </>
+    </ContactEditFocusProvider>
   );
 }

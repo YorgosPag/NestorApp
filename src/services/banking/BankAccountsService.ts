@@ -278,7 +278,9 @@ export class BankAccountsService {
       const data = result as { success: boolean; accountId?: string; error?: string };
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error ?? 'Failed to create bank account');
+        const err = new Error(data.error ?? 'Failed to create bank account') as Error & { status?: number };
+        err.status = response.status;
+        throw err;
       }
 
       const accountId = data.accountId;
@@ -290,7 +292,14 @@ export class BankAccountsService {
       return accountId;
     } catch (error) {
       const msg = getErrorMessage(error, 'Failed to create bank account');
-      logger.error('[BankAccountsService] Error adding account:', msg);
+      const status = (error as { status?: number } | null)?.status ?? 0;
+      // 4xx = user-correctable validation → warn (kept out of Next.js error overlay).
+      // Everything else (network, 5xx) → error.
+      if (status >= 400 && status < 500) {
+        logger.warn('[BankAccountsService] Account add rejected by server', { msg, status });
+      } else {
+        logger.error('[BankAccountsService] Error adding account:', msg);
+      }
       throw new Error(msg);
     }
   }

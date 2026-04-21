@@ -20,6 +20,7 @@ import { CONTACT_TYPES, getContactIcon } from '@/constants/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
 import { ROLE_PERSONA_TYPES } from '@/config/persona-config';
 import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector';
+import { useContactEditFocus } from './contact-details/ContactEditFocusContext';
 
 const logger = createModuleLogger('ContactDetailsHeader');
 
@@ -55,6 +56,8 @@ export function ContactDetailsHeader({
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const photoModal = useGlobalPhotoPreview();
+  const { focus } = useContactEditFocus();
+  const hasFocus = focus !== null;
   const type = contact.type as ContactType;
 
   // 🔥 FORCE RE-RENDER: Key-based avatar invalidation
@@ -191,26 +194,36 @@ export function ContactDetailsHeader({
           title={displayName}
           avatarImageUrl={avatarImageUrl}
           onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
-          actions={[
-            // 🆕 New Contact button - always visible
-            ...(onNewContact ? [
-              createEntityAction('new', t('header.newContact'), () => onNewContact(), { icon: UserPlus })
-            ] : []),
-            // 🎯 Edit/Delete — always visible (Edit starts edit mode on contact data tabs)
-            ...(!isEditing && onStartEdit ? [
-              createEntityAction('edit', t('header.actions.edit'), () => onStartEdit())
-            ] : []),
-            // 🏢 ENTERPRISE: Save/Cancel — hidden on subcollection tabs (e.g. Relationships)
-            // These tabs have their own save mechanism; showing contact Save causes confusion
-            ...(isEditing && !hideEditControls ? [
-              createEntityAction('save', t('header.actions.save'), () => onSaveEdit?.()),
-              createEntityAction('cancel', t('header.actions.cancel'), () => onCancelEdit?.())
-            ] : []),
-            // Delete — always visible
-            ...(onDeleteContact ? [
-              createEntityAction('delete', t('header.actions.delete'), () => onDeleteContact?.())
-            ] : [])
-          ]}
+          actions={
+            // ADR-317: Adaptive actions — inline sub-form focus wins over global edit mode.
+            // When an inline form is active (e.g. BankAccountForm), Save/Cancel delegate to it
+            // and global actions are hidden so the user cannot lose unsaved focused work.
+            hasFocus && focus
+              ? [
+                  createEntityAction('save', t('header.actions.save'), () => { void focus.submit(); }),
+                  createEntityAction('cancel', t('header.actions.cancel'), () => focus.cancel()),
+                ]
+              : [
+                  // 🆕 New Contact button - always visible
+                  ...(onNewContact ? [
+                    createEntityAction('new', t('header.newContact'), () => onNewContact(), { icon: UserPlus })
+                  ] : []),
+                  // 🎯 Edit — only on contact-data tabs (not subcollection tabs, which own their CRUD)
+                  ...(!isEditing && !hideEditControls && onStartEdit ? [
+                    createEntityAction('edit', t('header.actions.edit'), () => onStartEdit())
+                  ] : []),
+                  // 🏢 ENTERPRISE: Save/Cancel — hidden on subcollection tabs (e.g. Relationships)
+                  // These tabs have their own save mechanism; showing contact Save causes confusion
+                  ...(isEditing && !hideEditControls ? [
+                    createEntityAction('save', t('header.actions.save'), () => onSaveEdit?.()),
+                    createEntityAction('cancel', t('header.actions.cancel'), () => onCancelEdit?.())
+                  ] : []),
+                  // Delete — always visible
+                  ...(onDeleteContact ? [
+                    createEntityAction('delete', t('header.actions.delete'), () => onDeleteContact?.())
+                  ] : [])
+                ]
+          }
           variant="detailed"
         />
 

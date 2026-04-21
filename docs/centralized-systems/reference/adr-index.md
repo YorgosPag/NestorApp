@@ -330,6 +330,7 @@
 | **ADR-313** | Enterprise Backup & Restore System — manifest-driven, schema-evolution-tolerant | Phase 1 IN PROGRESS | 2026-04-17 | Infrastructure / Data Protection / Disaster Recovery | [📄](../../../adrs/ADR-313-enterprise-backup-restore.md) |
 | **ADR-314** | SSoT Discovery Findings & Centralization Roadmap — 74 duplicates, 5 anti-patterns, 96 registry gaps; Phase A/B/C roadmap | 📋 APPROVED — Phase A pending | 2026-04-18 | Governance / SSoT Enforcement / Technical Debt | [📄](../../../adrs/ADR-314-ssot-discovery-findings-roadmap.md) |
 | **ADR-315** | Unified Sharing (Contact + File + Property Showcase) — polymorphic `shares` collection, `UnifiedSharingService` SSoT, `ChannelDispatchService` split, `UnifiedShareDialog`, bcrypt migration | 📋 Proposed | 2026-04-18 | Sharing / Access Control / Public Surfaces | [📄](../../../adrs/ADR-315-unified-sharing.md) |
+| **ADR-317** | Contact Details Unified Save Focus — SSoT `ContactEditFocusContext`, adaptive header Save/Cancel delegates to active inline sub-form; banking/files added to `SUBCOLLECTION_TABS`; validation logging downgraded to warn | ✅ IMPLEMENTED | 2026-04-22 | Contacts / UX / SSoT Enforcement | [📄](../../../adrs/ADR-317-contact-details-unified-save-focus.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

@@ -79,7 +79,9 @@ export function BankAccountForm({
   onCancel,
   loading = false,
   contactName,
-  className
+  className,
+  formId,
+  hideActions = false,
 }: BankAccountFormProps) {
   const { t } = useTranslation('banking');
   const iconSizes = useIconSizes();
@@ -227,7 +229,9 @@ export function BankAccountForm({
       await onSubmit(formData);
       logger.info('Submit successful');
     } catch (error) {
-      logger.error('Submit error', { error });
+      // User-correctable validation (duplicate IBAN, etc.) — surfaced inline via errors.submit.
+      // Logging at warn avoids the Next.js dev error overlay for expected business errors.
+      logger.warn('Submit rejected', { error });
       if (error instanceof Error) {
         setErrors({ submit: error.message });
       }
@@ -235,7 +239,7 @@ export function BankAccountForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className={cn('space-y-6', className)}>
+    <form id={formId} onSubmit={handleSubmit} className={cn('space-y-6', className)}>
       {/* IBAN */}
       <IBANInput
         value={formData.iban}
@@ -451,26 +455,28 @@ export function BankAccountForm({
         </p>
       )}
 
-      {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={loading}
-        >
-          <X size={iconSizes.numeric.sm} className="mr-2" />
-          {t('form.cancel')}
-        </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? (
-            <Spinner size="small" color="inherit" className="mr-2" />
-          ) : (
-            <Save size={iconSizes.numeric.sm} className="mr-2" />
-          )}
-          {isEditing ? t('form.submit') : t('form.add')}
-        </Button>
-      </div>
+      {/* Actions — hidden when an external header-level Save owns submission (ADR-317) */}
+      {!hideActions && (
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            <X size={iconSizes.numeric.sm} className="mr-2" />
+            {t('form.cancel')}
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? (
+              <Spinner size="small" color="inherit" className="mr-2" />
+            ) : (
+              <Save size={iconSizes.numeric.sm} className="mr-2" />
+            )}
+            {isEditing ? t('form.submit') : t('form.add')}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }
