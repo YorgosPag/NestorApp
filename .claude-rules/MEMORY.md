@@ -17,6 +17,7 @@
 - [Ratchet Backlog — ADR-299 live checklist](pending-ratchet-work.md) — **STATUS: ALL_DONE** (2026-04-14). Scenario A+B completati. Nuovo ratchet? Set STATUS: ACTIVE e aggiungi righe.
 - [SSoT Discovery Pending — ADR-314 baseline](ssot-discovery-pending.md) — **STATUS: ACTIVE** (2026-04-18). 74 duplicates, 5 anti-patterns, 96 registry gaps. Phase A/B/C roadmap.
 - [ADR-233 Building Code — 3 Pending Items](project_adr233_building_code_pending.md) — HIGH: uniqueness validation, MEDIUM: BuildingsList.tsx, LOW: unit tests (2026-04-05)
+- [Notification SSoT — Boy Scout Migration](pending-notification-migration.md) — **STATUS: ACTIVE** (2026-04-22). ~100 file usano ancora `useNotifications()` diretto. 3 domain hook esistenti (contacts/projects/files). Quando tocchi un file con `useNotifications` → menzionalo a Giorgio.
 
 ## Code Architecture
 - [File size → EXTRACT, never trim](feedback_file_size_extract_not_trim.md) — When hook blocks for size: create new module, NEVER cut comments/code. Google SRP.
