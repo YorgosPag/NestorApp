@@ -19,6 +19,10 @@ import { getCurrentRuntimeEnvironment } from '@/config/environment-security-conf
 import { SESSION_COOKIE_CONFIG, getSessionCookieDurationMs } from '@/lib/auth/security-policy';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
+import { ensureCompanyDocument } from '@/services/company-document.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('AuthSession');
 
 // ============================================================================
 // TYPES
@@ -104,7 +108,27 @@ const postHandler = async (request: NextRequest): Promise<NextResponse<SessionRe
     }
 
     const expiresIn = getSessionCookieDurationMs();
-    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
+
+    // Verify token + create session cookie in parallel
+    const [sessionCookie, decodedToken] = await Promise.all([
+      adminAuth.createSessionCookie(idToken, { expiresIn }),
+      adminAuth.verifyIdToken(idToken),
+    ]);
+
+    // Proactive workspace bootstrap — fire-and-forget (ADR-316)
+    // Creates companies/{companyId} at login time, before any action fires.
+    // Eliminates the audit-system race condition for company doc creation.
+    const uid = decodedToken.uid;
+    const companyId = decodedToken.companyId as string | undefined;
+    if (companyId && uid) {
+      ensureCompanyDocument(companyId, undefined, uid).catch((err: unknown) => {
+        logger.warn('[Session] Workspace bootstrap failed (non-blocking)', {
+          uid,
+          companyId,
+          error: getErrorMessage(err),
+        });
+      });
+    }
 
     const response = NextResponse.json({
       success: true,

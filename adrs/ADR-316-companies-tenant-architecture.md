@@ -64,17 +64,36 @@ CRM contacts: `contacts[*].companyId = companies.id`.
 
 ---
 
-## 4. Materialization Flow
+## 4. Materialization Flow (Google-level, ADR-316 v2)
 
-Το `companies` document **ΔΕΝ δημιουργείται** κατά τη δημιουργία CRM contacts.
-Δημιουργείται lazily όταν:
+Το `companies` document δημιουργείται **προληπτικά** κατά το login,
+πριν εκτελεστεί οποιαδήποτε action.
 
-1. Το audit system ανιχνεύει ότι `companies/{companyId}` δεν υπάρχει
-2. Καλεί `ensureCompanyDocument(companyId, undefined, uid)`
-3. Το service κάνει lookup `users/{uid}.displayName` → θέτει `name`
+### Primary path — Login time (proactive)
 
-**Γνωστό limitation:** Race condition αν το πρώτο audit event φτάσει πριν
-το user document γραφεί (απίθανο — users γράφονται κατά login).
+```
+POST /api/auth/session
+  → adminAuth.verifyIdToken(idToken)         // decode uid + companyId
+  → ensureCompanyDocument(companyId, uid)    // fire-and-forget
+      → users/{uid}.displayName              // resolve workspace name
+      → companies/{companyId} SET            // idempotent (cache + doc check)
+```
+
+### Safety net — Audit system (belt-and-suspenders)
+
+Αν το primary path αποτύχει (π.χ. race, server restart):
+```
+logAuditEvent()
+  → validateCompanyExists()   // cache 5min
+  → ensureCompanyDocument()   // fallback creation
+```
+
+### Idempotency
+
+`ensureCompanyDocument` είναι idempotent:
+1. Διαβάζει από in-memory cache (5min TTL)
+2. Αν cache miss → Firestore read
+3. Αν document υπάρχει → early return (no write)
 
 **Repair:** `PATCH /api/admin/bootstrap-company` → `repairCompanyDocument()`
 
@@ -96,4 +115,5 @@ workspace), θα δημιουργηθεί ένα special contact με `isWorkspa
 | Date | Change |
 |------|--------|
 | 2026-04-21 | Initial ADR — bug fix: `name` από `users.displayName` αντί από client contacts. `contactId` = null. |
+| 2026-04-21 | v2 — Proactive bootstrap at `/api/auth/session` POST. Eliminates audit-system race condition. |
 
