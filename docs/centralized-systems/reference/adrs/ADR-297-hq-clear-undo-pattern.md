@@ -131,6 +131,43 @@ Explicit namespace prefix `t('contacts-form:addressesSection.*')` λόγω react
 
 ---
 
-## 6. Changelog
+## 6. Safety Net (Google Presubmit Pattern)
+
+### 6.1 Unit test
+
+`src/components/contacts/dynamic/__tests__/useClearCompanyHqAddress.test.ts` (9 tests):
+
+1. No-op when `setFormData` undefined (read-only mode)
+2. `clearHq` updater blanks every HQ flat field (14 fields: `street`, `streetNumber`, `postalCode`, `city`, `settlement`, `settlementId`, `community`, `municipalUnit`, `municipality`, `municipalityId`, `regionalUnit`, `region`, `decentAdmin`, `majorGeo`)
+3. Preserves non-address fields (`firstName`, `lastName`, `email`, `type`)
+4. Replaces HQ entry in `companyAddresses`, keeps branches intact
+5. Inserts cleared HQ entry when `companyAddresses` undefined
+6. `notify` called with `type: 'info'`, `duration: 5000`, action label = undo i18n key
+7. Undo action restores **exact snapshot** (not partial)
+8. `hasPendingUndo` lifecycle (false → true → false)
+9. Undo idempotent (double-click fires `setFormData` once)
+
+Run: `npx jest src/components/contacts/dynamic/__tests__/useClearCompanyHqAddress.test.ts`
+
+### 6.2 SSoT ratchet
+
+Module `hq-clear-pattern` στο `.ssot-registry.json` (tier 3):
+
+```json
+"forbiddenPatterns": [
+  "export\\s+(function|const)\\s+useClearCompanyHqAddress\\b",
+  "export\\s+(function|const)\\s+buildClearedHqEntry\\b",
+  "export\\s+(function|const)\\s+withClearedHqEntry\\b"
+]
+```
+
+Allowlist: solo il canonical file. Νέο export με stesso nome → pre-commit hook CHECK 3.7 blocca.
+
+Qualsiasi futuro branch-clear deve **importare** dal canonical hook, non reimplementare.
+
+---
+
+## 7. Changelog
 
 - **2026-04-21** — Initial implementation. Eraser icon + optimistic clear + 5s undo snackbar + Ctrl+Backspace. Hook `useClearCompanyHqAddress` για SSoT. Keys σε `contacts-form.json`.
+- **2026-04-21** — Safety net: 9 unit test + SSoT ratchet module `hq-clear-pattern` στο `.ssot-registry.json` (tier 3). Google Presubmit Pattern completato.

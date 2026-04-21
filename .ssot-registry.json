@@ -2281,6 +2281,20 @@
         "src/subapps/dxf-viewer/utils/clone-utils.ts"
       ],
       "tier": 2
+    },
+
+    "hq-clear-pattern": {
+      "ssotFile": "src/components/contacts/dynamic/useClearCompanyHqAddress.ts",
+      "description": "Canonical HQ address Clear + Undo hook. Any new implementation of useClearCompanyHqAddress, buildClearedHqEntry, or withClearedHqEntry must reuse this module. Blocks duplicated optimistic-clear logic. ADR-297.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+useClearCompanyHqAddress\\b",
+        "export\\s+(function|const)\\s+buildClearedHqEntry\\b",
+        "export\\s+(function|const)\\s+withClearedHqEntry\\b"
+      ],
+      "allowlist": [
+        "src/components/contacts/dynamic/useClearCompanyHqAddress.ts"
+      ],
+      "tier": 3
     }
   }
 }
