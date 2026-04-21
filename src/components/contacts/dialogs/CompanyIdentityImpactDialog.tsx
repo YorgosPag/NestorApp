@@ -28,8 +28,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
-import { getStatusColor } from '@/lib/design-system';
-import type { IdentityFieldChange, FieldCategory } from '@/utils/contactForm/company-identity-guard';
+import type { IdentityFieldChange } from '@/utils/contactForm/company-identity-guard';
+import { resolveIdentityDisplay } from '@/utils/contactForm/identity-display-resolver';
 
 // ============================================================================
 // TYPES
@@ -52,22 +52,6 @@ interface CompanyIdentityImpactDialogProps {
 }
 
 // ============================================================================
-// HELPERS
-// ============================================================================
-
-/** Category badge styling */
-function getCategoryBadge(category: FieldCategory): { label: string; className: string } {
-  switch (category) {
-    case 'A':
-      return { label: 'A', className: `${getStatusColor('error', 'bg')} text-white` };
-    case 'B':
-      return { label: 'B', className: `${getStatusColor('warning', 'bg')} text-white` };
-    case 'C':
-      return { label: 'C', className: 'bg-muted text-muted-foreground' };
-  }
-}
-
-// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -87,6 +71,7 @@ export function CompanyIdentityImpactDialog({
   message,
 }: CompanyIdentityImpactDialogProps) {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t: tForm } = useTranslation('contacts-form');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -119,22 +104,20 @@ export function CompanyIdentityImpactDialog({
               <article className="space-y-1.5">
                 <ul className="space-y-1">
                   {changes.map((change) => {
-                    const badge = getCategoryBadge(change.category);
+                    const oldDisplay = resolveIdentityDisplay(change.field, change.oldValue, tForm);
+                    const newDisplay = resolveIdentityDisplay(change.field, change.newValue, tForm);
                     return (
                       <li
                         key={change.field}
                         className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1.5 text-sm"
                       >
-                        <span className={cn('inline-flex h-5 w-5 items-center justify-center rounded text-xs font-bold', badge.className)}>
-                          {badge.label}
-                        </span>
                         <span className="font-medium text-foreground">
                           {fieldLabel(change.field)}
                         </span>
                         <span className={cn('ml-auto text-xs', colors.text.muted)}>
                           {change.isCleared
-                            ? ci('fieldCleared', { oldValue: change.oldValue })
-                            : ci('fieldChanged', { oldValue: change.oldValue, newValue: change.newValue })}
+                            ? ci('fieldCleared', { oldValue: oldDisplay })
+                            : ci('fieldChanged', { oldValue: oldDisplay, newValue: newDisplay })}
                         </span>
                       </li>
                     );

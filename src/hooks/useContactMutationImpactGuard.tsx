@@ -1,29 +1,19 @@
 'use client';
 
-import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { detectIndividualIdentityChanges } from '@/utils/contactForm/individual-identity-guard';
-import { detectCompanyIdentityChanges } from '@/utils/contactForm/company-identity-guard';
 import { detectServiceIdentityChanges } from '@/utils/contactForm/service-identity-guard';
 import type { ContactIdentityImpactPreview } from '@/types/contact-identity-impact';
 import { ContactIdentityImpactDialog } from '@/components/contacts/dialogs/ContactIdentityImpactDialog';
-import { CompanyIdentityImpactDialog } from '@/components/contacts/dialogs/CompanyIdentityImpactDialog';
-import type { CompanyIdentityImpactPreview } from '@/lib/firestore/company-identity-impact-preview.service';
 
 interface MutationResult {
   readonly completed: boolean;
   readonly blockedUnsafeClear: boolean;
-}
-
-interface CompanyDialogState {
-  readonly changes: ReturnType<typeof detectCompanyIdentityChanges>['changes'];
-  readonly preview: CompanyIdentityImpactPreview;
-  readonly mode: 'warn' | 'block';
-  readonly message?: string;
 }
 
 interface UseContactMutationImpactGuardReturn {
@@ -90,17 +80,11 @@ export function useContactMutationImpactGuard(
 ): UseContactMutationImpactGuardReturn {
   const [identityPreview, setIdentityPreview] = useState<ContactIdentityImpactPreview | null>(null);
   const [identityDialogOpen, setIdentityDialogOpen] = useState(false);
-  const [companyDialogState, setCompanyDialogState] = useState<CompanyDialogState | null>(null);
   const deferredActionRef = useRef<(() => Promise<void>) | null>(null);
 
   const resetIdentityDialog = useCallback(() => {
     setIdentityDialogOpen(false);
     setIdentityPreview(null);
-    deferredActionRef.current = null;
-  }, []);
-
-  const resetCompanyDialog = useCallback(() => {
-    setCompanyDialogState(null);
     deferredActionRef.current = null;
   }, []);
 
@@ -114,63 +98,17 @@ export function useContactMutationImpactGuard(
     }
   }, [resetIdentityDialog]);
 
-  const handleCompanyConfirm = useCallback(() => {
-    const action = deferredActionRef.current;
-    resetCompanyDialog();
-    if (action) {
-      setTimeout(() => void action(), 0);
-    }
-  }, [resetCompanyDialog]);
-
   const previewBeforeMutate = useCallback(async (formData: ContactFormData, action: () => Promise<void>): Promise<MutationResult> => {
     if (!editContact || !editContact.id || editContact.type !== formData.type) {
       await action();
       return { completed: true, blockedUnsafeClear: false };
     }
 
+    // Company identity is handled exclusively by runGuardChain (Guard #3, ADR-278)
+    // via useContactUpdateGuards. Delegate here to avoid a duplicated dialog.
     if (editContact.type === 'company') {
-      const detection = detectCompanyIdentityChanges(editContact, formData);
-      if (detection.hasUnsafeClear) {
-        return { completed: false, blockedUnsafeClear: true };
-      }
-      if (!detection.requiresImpactPreview) {
-        await action();
-        return { completed: true, blockedUnsafeClear: false };
-      }
-
-      try {
-        const preview = await apiClient.get<CompanyIdentityImpactPreview>(
-          API_ROUTES.CONTACTS.COMPANY_IDENTITY_IMPACT_PREVIEW(editContact.id),
-        );
-
-        if (preview.totalAffected === 0) {
-          await action();
-          return { completed: true, blockedUnsafeClear: false };
-        }
-
-        deferredActionRef.current = action;
-        setCompanyDialogState({ changes: detection.changes, preview, mode: 'warn' });
-        return { completed: false, blockedUnsafeClear: false };
-      } catch (error) {
-        logPreviewError('useContactMutationImpactGuard/company', error);
-        deferredActionRef.current = null;
-        setCompanyDialogState({
-          changes: detection.changes,
-          preview: {
-            totalAffected: 0,
-            projects: 0,
-            properties: 0,
-            obligations: 0,
-            parking: 0,
-            storage: 0,
-            invoices: 0,
-            apyCertificates: 0,
-          },
-          mode: 'block',
-          message: 'contacts.companyIdentityImpact.unavailableBody',
-        });
-        return { completed: false, blockedUnsafeClear: false };
-      }
+      await action();
+      return { completed: true, blockedUnsafeClear: false };
     }
 
     if (editContact.type === 'individual') {
@@ -235,46 +173,20 @@ export function useContactMutationImpactGuard(
   }, [editContact]);
 
   const ImpactDialogs = useMemo(() => (
-    <Fragment>
-      <ContactIdentityImpactDialog
-        open={identityDialogOpen}
-        preview={identityPreview}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) {
-            resetIdentityDialog();
-          }
-        }}
-        onConfirm={handleIdentityConfirm}
-      />
-      {companyDialogState && (
-        <CompanyIdentityImpactDialog
-          open={!!companyDialogState}
-          onOpenChange={(nextOpen) => {
-            if (!nextOpen) {
-              resetCompanyDialog();
-            }
-          }}
-          changes={companyDialogState.changes}
-          projects={companyDialogState.preview.projects}
-          properties={companyDialogState.preview.properties}
-          obligations={companyDialogState.preview.obligations}
-          parking={companyDialogState.preview.parking}
-          storage={companyDialogState.preview.storage}
-          invoices={companyDialogState.preview.invoices}
-          apyCertificates={companyDialogState.preview.apyCertificates}
-          onConfirm={handleCompanyConfirm}
-          mode={companyDialogState.mode}
-          message={companyDialogState.message}
-        />
-      )}
-    </Fragment>
+    <ContactIdentityImpactDialog
+      open={identityDialogOpen}
+      preview={identityPreview}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          resetIdentityDialog();
+        }
+      }}
+      onConfirm={handleIdentityConfirm}
+    />
   ), [
-    companyDialogState,
-    handleCompanyConfirm,
     handleIdentityConfirm,
     identityDialogOpen,
     identityPreview,
-    resetCompanyDialog,
     resetIdentityDialog,
   ]);
 

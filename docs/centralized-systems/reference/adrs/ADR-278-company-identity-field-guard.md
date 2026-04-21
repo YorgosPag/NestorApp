@@ -53,9 +53,10 @@ Actual save: ContactsService.updateContact()
 | File | Lines | Purpose |
 |------|-------|---------|
 | `src/utils/contactForm/company-identity-guard.ts` | ~140 | Pure change detection utility |
+| `src/utils/contactForm/identity-display-resolver.ts` | ~60 | Code → human-readable label resolver (SSoT reuse) |
 | `src/lib/firestore/company-identity-impact-preview.service.ts` | ~110 | Server-only Firestore impact queries |
 | `src/app/api/contacts/[contactId]/company-identity-impact-preview/route.ts` | ~38 | GET API endpoint |
-| `src/components/contacts/dialogs/CompanyIdentityImpactDialog.tsx` | ~190 | AlertDialog component |
+| `src/components/contacts/dialogs/CompanyIdentityImpactDialog.tsx` | ~180 | AlertDialog component |
 
 ### Modified Files
 | File | Change |
@@ -81,3 +82,5 @@ Actual save: ContactsService.updateContact()
 | Date | Change |
 |------|--------|
 | 2026-04-01 | Initial implementation — 4 new files, 5 modified |
+| 2026-04-21 | Dialog display fix — (1) removed internal A/B/C category badge from rendered row (end-users should not see internal criticality codes); (2) resolve code-backed fields (`taxOffice`, `legalForm`, `gemiStatus`) to human-readable names via new `identity-display-resolver.ts`, reusing the same SSoT data sources (`GREEK_TAX_OFFICES`, `MODAL_SELECT_LEGAL_FORMS`, `MODAL_SELECT_GEMI_STATUSES`) the form dropdowns consume. `IdentityFieldChange.category` retained for guard logic (unsafe-clear checks). Safety net: 8 resolver tests + new dialog test asserting resolved names & absent badge. |
+| 2026-04-21 | Duplicate-dialog fix — `useContactMutationImpactGuard` was running a parallel company-identity preview/dialog flow on top of the ADR-278 guard inside `runGuardChain`, so the dialog reopened after the first "Αποθήκευση & Συνέχεια". Company branch in `useContactMutationImpactGuard` now delegates directly to `action()` (no preview fetch, no state, no duplicated dialog); the authoritative flow is `runGuardChain` Guard #3 only. Removed `CompanyDialogState`, `companyDialogState`/`resetCompanyDialog`/`handleCompanyConfirm`, and the duplicated `CompanyIdentityImpactDialog` mount from that hook. Test `useContactMutationImpactGuard.test.tsx` updated: the two removed company paths are replaced by a single assertion that company mutations delegate to `action` with no dialog. |

@@ -100,4 +100,43 @@ describe('CompanyIdentityImpactDialog', () => {
     fireEvent.click(screen.getByText('contacts.companyIdentityImpact.understood'));
     expect(onConfirm).not.toHaveBeenCalled();
   });
+
+  it('resolves taxOffice code to display name and omits category badge', () => {
+    const taxOfficeChange: ReadonlyArray<IdentityFieldChange> = [
+      {
+        field: 'taxOffice',
+        category: 'B',
+        oldValue: '1101',
+        newValue: '1104',
+        isCleared: false,
+      },
+    ];
+
+    render(
+      <CompanyIdentityImpactDialog
+        open
+        onOpenChange={jest.fn()}
+        changes={taxOfficeChange}
+        projects={1}
+        properties={0}
+        obligations={0}
+        invoices={0}
+        apyCertificates={0}
+        onConfirm={jest.fn()}
+      />
+    );
+
+    const fieldChangedNode = screen.getByText((_, node) => {
+      const text = node?.textContent ?? '';
+      return text.startsWith('contacts.companyIdentityImpact.fieldChanged::');
+    });
+    expect(fieldChangedNode.textContent).toContain("Α' Αθηνών");
+    expect(fieldChangedNode.textContent).toContain("Δ' Αθηνών");
+    expect(fieldChangedNode.textContent).not.toContain('1101');
+    expect(fieldChangedNode.textContent).not.toContain('1104');
+
+    expect(screen.queryByText((content) => content.trim() === 'B')).not.toBeInTheDocument();
+    expect(screen.queryByText((content) => content.trim() === 'A')).not.toBeInTheDocument();
+    expect(screen.queryByText((content) => content.trim() === 'C')).not.toBeInTheDocument();
+  });
 });

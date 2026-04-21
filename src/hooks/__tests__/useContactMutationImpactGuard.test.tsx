@@ -34,25 +34,6 @@ jest.mock('@/components/contacts/dialogs/ContactIdentityImpactDialog', () => ({
   ) : null,
 }));
 
-jest.mock('@/components/contacts/dialogs/CompanyIdentityImpactDialog', () => ({
-  CompanyIdentityImpactDialog: ({
-    open,
-    mode = 'warn',
-    message,
-    onConfirm,
-  }: {
-    open: boolean;
-    mode?: 'warn' | 'block';
-    message?: string;
-    onConfirm: () => void;
-  }) => open ? (
-    <div data-testid="company-impact-dialog" data-mode={mode}>
-      <span>{message ?? 'company-dialog-open'}</span>
-      <button type="button" onClick={() => { void onConfirm(); }}>confirm-company</button>
-    </div>
-  ) : null,
-}));
-
 const mockedApiClient = apiClient as jest.Mocked<typeof apiClient>;
 const NOW = new Date('2026-04-02T00:00:00.000Z');
 
@@ -248,33 +229,7 @@ describe('useContactMutationImpactGuard', () => {
     });
   });
 
-  it('blocks unsafe company clears without calling preview API', async () => {
-    const action = jest.fn<Promise<void>, []>(async () => undefined);
-    const onResult = jest.fn();
-    const contact = makeCompanyContact();
-    const formData = makeFormData({
-      type: 'company',
-      companyName: 'Acme SA',
-      companyVatNumber: '',
-      vatNumber: '',
-      gemiNumber: '123456789000',
-      taxOffice: 'Athens FAE',
-      legalForm: 'ΑΕ',
-      tradeName: 'Acme',
-      gemiStatus: 'active',
-    });
-
-    render(<Harness contact={contact} formData={formData} action={action} onResult={onResult} />);
-    fireEvent.click(screen.getByText('run-preview'));
-
-    await waitFor(() => {
-      expect(onResult).toHaveBeenCalledWith({ completed: false, blockedUnsafeClear: true });
-    });
-    expect(mockedApiClient.get).not.toHaveBeenCalled();
-    expect(action).not.toHaveBeenCalled();
-  });
-
-  it('opens blocked company dialog when company preview fails', async () => {
+  it('delegates company mutations directly to action without opening a dialog (runGuardChain owns the dialog)', async () => {
     const action = jest.fn<Promise<void>, []>(async () => undefined);
     const onResult = jest.fn();
     const contact = makeCompanyContact();
@@ -284,21 +239,21 @@ describe('useContactMutationImpactGuard', () => {
       companyVatNumber: '099999999',
       vatNumber: '099999999',
       gemiNumber: '123456789000',
-      taxOffice: 'Athens FAE',
+      taxOffice: '1104',
       legalForm: 'ΑΕ',
       tradeName: 'Acme',
       gemiStatus: 'active',
     });
-    mockedApiClient.get.mockRejectedValue(new Error('preview failed'));
 
     render(<Harness contact={contact} formData={formData} action={action} onResult={onResult} />);
     fireEvent.click(screen.getByText('run-preview'));
 
-    const dialog = await screen.findByTestId('company-impact-dialog');
-    expect(dialog).toHaveAttribute('data-mode', 'block');
-    expect(dialog).toHaveTextContent('contacts.companyIdentityImpact.unavailableBody');
-    expect(onResult).toHaveBeenCalledWith({ completed: false, blockedUnsafeClear: false });
-    expect(action).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(action).toHaveBeenCalledTimes(1);
+      expect(onResult).toHaveBeenCalledWith({ completed: true, blockedUnsafeClear: false });
+    });
+    expect(mockedApiClient.get).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('company-impact-dialog')).not.toBeInTheDocument();
   });
 
   it('executes service updates immediately when preview returns allow', async () => {
