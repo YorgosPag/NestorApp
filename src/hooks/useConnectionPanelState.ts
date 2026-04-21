@@ -30,9 +30,9 @@ export function useConnectionPanelState({
     const toggleConnectionMode = () => {
         setIsConnecting(!isConnecting);
         if (!isConnecting) {
-            notifications.info('✏️ Ενεργοποίηση Σύνδεσης: Επιλέξτε δύο ακίνητα για να τα συνδέσετε');
+            notifications.info(t('connectionPanel.controls.notifications.connectingEnabled'));
         } else {
-            notifications.info('❌ Απενεργοποίηση Σύνδεσης');
+            notifications.info(t('connectionPanel.controls.notifications.connectingDisabled'));
         }
     };
 
@@ -45,7 +45,7 @@ export function useConnectionPanelState({
         if (!groupName) return;
 
         if (selectedPropertyIds.length < 2) {
-            notifications.error('❌ Αποτυχία Ομαδοποίησης: Πρέπει να επιλέξετε τουλάχιστον 2 ακίνητα');
+            notifications.error(t('connectionPanel.controls.notifications.groupingError'));
             return;
         }
 
@@ -57,12 +57,12 @@ export function useConnectionPanelState({
         };
 
         setGroups(prev => [...prev, newGroup]);
-        notifications.success(`✅ Η ομάδα "${groupName}" δημιουργήθηκε`);
+        notifications.success(t('connectionPanel.controls.notifications.groupCreated', { name: groupName }));
     };
 
     const clearConnections = () => {
         setConnections([]);
-        notifications.success('✅ Όλες οι συνδέσεις διαγράφηκαν');
+        notifications.success(t('connectionPanel.controls.notifications.connectionsCleared'));
     };
     
     const deleteGroup = (groupId: string) => {

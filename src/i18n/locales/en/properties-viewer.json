@@ -176,7 +176,14 @@
       "clearConnections": "Clear Connections",
       "createGroupTitle": "Create Group",
       "groupNameLabel": "Group name",
-      "groupNamePlaceholder": "Enter group name"
+      "groupNamePlaceholder": "Enter group name",
+      "notifications": {
+        "connectingEnabled": "Connection mode active — select two properties",
+        "connectingDisabled": "Connection mode deactivated",
+        "groupingError": "At least 2 properties must be selected to create a group",
+        "groupCreated": "Group «{name}» created",
+        "connectionsCleared": "All connections cleared"
+      }
     },
     "connectionTypes": {
       "sameBuilding": "Same Building",

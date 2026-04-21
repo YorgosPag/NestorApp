@@ -176,7 +176,14 @@
       "clearConnections": "Καθαρισμός Συνδέσεων",
       "createGroupTitle": "Δημιουργία Ομάδας",
       "groupNameLabel": "Όνομα ομάδας",
-      "groupNamePlaceholder": "Εισάγετε όνομα ομάδας"
+      "groupNamePlaceholder": "Εισάγετε όνομα ομάδας",
+      "notifications": {
+        "connectingEnabled": "Λειτουργία σύνδεσης ενεργή — επιλέξτε δύο ακίνητα",
+        "connectingDisabled": "Λειτουργία σύνδεσης απενεργοποιήθηκε",
+        "groupingError": "Απαιτούνται τουλάχιστον 2 επιλεγμένα ακίνητα για ομαδοποίηση",
+        "groupCreated": "Η ομάδα «{name}» δημιουργήθηκε",
+        "connectionsCleared": "Όλες οι συνδέσεις διαγράφηκαν"
+      }
     },
     "connectionTypes": {
       "sameBuilding": "Ίδιο Κτίριο",
