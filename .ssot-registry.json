@@ -192,6 +192,18 @@
         "src/config/file-upload-config.ts"
       ]
     },
+    "file-type-classification": {
+      "ssotFile": "src/config/file-types/classification-registry.ts",
+      "description": "AI classification + preview + body-text extraction decisions for file types must go through classification-registry.ts (ADR-296). Before ADR-296 the same MIME list lived hand-synchronised in three places (route.ts, useFileClassification.ts, preview-registry.ts) and drift caused ~10 fix commits on 2026-04-21. Forbidden patterns (below): (1) re-declaring CLASSIFIABLE_TYPES / CLASSIFIABLE_EXTS / IMAGE_MIME_TYPES / TEXT_MIME_TYPES / DXF_EXTENSIONS outside the registry — every consumer must import `isAIClassifiable`, `getPreviewType`, `getFileCategory`, `getMediaDocumentType`, or `getExtractorKind`. (2) re-declaring the DOCX_MIME / XLSX_MIME / DXF_MIMES / SVG_MIME constants that used to drive the extractor switch — dispatch goes through `getExtractorKind` + `runExtractor`.",
+      "forbiddenPatterns": [
+        "(CLASSIFIABLE_TYPES|CLASSIFIABLE_EXTS|IMAGE_MIME_TYPES|TEXT_MIME_TYPES|DXF_EXTENSIONS)\\s*=\\s*new\\s+Set",
+        "const\\s+(DOCX_MIME|XLSX_MIME|DXF_MIMES|SVG_MIME)\\s*="
+      ],
+      "allowlist": [
+        "src/config/file-types/classification-registry.ts",
+        "src/lib/file-types/preview-registry.ts"
+      ]
+    },
 
     "_comment_tier3": "=== TIER 3: BUSINESS LOGIC (bypass = inconsistency) ===",
 

@@ -16,11 +16,19 @@ import { getAdminFirestore, getAdminBucket } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getErrorMessage } from '@/lib/error-utils';
 import ExcelJS from 'exceljs';
+import { specByMime } from '@/config/file-types/classification-registry';
 
-const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-const XLS_MIME = 'application/vnd.ms-excel';
 const MAX_ROWS = 500;
 const MAX_COLS = 50;
+
+/**
+ * Excel family MIME types — sourced from the classification registry SSoT
+ * (ADR-296). The registry groups .xlsx and .xls under the same spec (`xlsx`),
+ * which is exactly the acceptance set this route needs.
+ */
+function isExcelMime(contentType: string | undefined): boolean {
+  return specByMime(contentType)?.id === 'xlsx';
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -111,7 +119,7 @@ async function handleGet(
     if (!storagePath) {
       return NextResponse.json({ error: 'Missing storagePath' }, { status: 400 });
     }
-    if (contentType !== XLSX_MIME && contentType !== XLS_MIME) {
+    if (!isExcelMime(contentType)) {
       return NextResponse.json({ error: 'Not an Excel file' }, { status: 400 });
     }
 

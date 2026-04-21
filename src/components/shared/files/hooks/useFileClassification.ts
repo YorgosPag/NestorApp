@@ -12,6 +12,7 @@
 
 import { useState, useCallback } from 'react';
 import { classifyFileWithPolicy } from '@/services/filesystem/file-mutation-gateway';
+import { isAIClassifiable as isAIClassifiableSSoT } from '@/config/file-types/classification-registry';
 
 const POLL_DELAYS_MS = [3000, 5000, 8000];
 
@@ -53,49 +54,21 @@ interface UseFileClassificationReturn {
 }
 
 // ============================================================================
-// CLASSIFIABLE MIME TYPES (mirror of server-side check)
+// CLASSIFIABLE CHECK — delegated to SSoT
 // ============================================================================
-
-const CLASSIFIABLE_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'application/pdf',
-  'text/plain',
-  'text/csv',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/xml',
-  'application/xml',
-  'text/html',
-  'image/vnd.dxf',
-  'application/dxf',
-  'image/svg+xml',
-]);
 
 /**
  * Check if a file can be classified by AI.
  * Pass ext (from FileRecord.ext) as additional fallback for octet-stream files.
+ * Source of truth: `src/config/file-types/classification-registry.ts` (ADR-296).
  */
-const CLASSIFIABLE_EXTS = new Set(['dxf', 'svg', 'pdf', 'txt', 'csv', 'docx', 'xlsx', 'xml', 'html']);
-
-export function isAIClassifiable(contentType?: string, filename?: string, ext?: string, displayName?: string): boolean {
-  // ext-based override: known classifiable formats regardless of stored contentType
-  if (ext && CLASSIFIABLE_EXTS.has(ext.toLowerCase())) return true;
-  if (filename?.toLowerCase().endsWith('.dxf') || displayName?.toLowerCase().endsWith('.dxf')) return true;
-
-  if (!contentType) return false;
-  if (CLASSIFIABLE_TYPES.has(contentType)) return true;
-  if (contentType.startsWith('video/') || contentType.startsWith('audio/')) return true;
-  if (contentType === 'application/octet-stream') {
-    const isDxf =
-      filename?.toLowerCase().endsWith('.dxf') ||
-      ext?.toLowerCase() === 'dxf' ||
-      displayName?.toLowerCase().endsWith('.dxf');
-    if (isDxf) return true;
-  }
-  return false;
+export function isAIClassifiable(
+  contentType?: string,
+  filename?: string,
+  ext?: string,
+  displayName?: string,
+): boolean {
+  return isAIClassifiableSSoT(contentType, filename, ext, displayName);
 }
 
 // ============================================================================

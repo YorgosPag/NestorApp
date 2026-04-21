@@ -15,12 +15,56 @@ import { nowISO } from '@/lib/date-local';
 import { extractTextFromDocx } from '@/lib/document-extractors/docx-extractor';
 import { extractTextFromXlsx } from '@/lib/document-extractors/xlsx-extractor';
 import { extractTextFromDxf } from '@/lib/document-extractors/dxf-extractor';
+import {
+  getExtractorKind,
+  type ExtractorKind,
+} from '@/config/file-types/classification-registry';
 
-const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-const DXF_MIMES = new Set(['image/vnd.dxf', 'application/dxf']);
-const SVG_MIME = 'image/svg+xml';
 const DXF_MAX_BYTES = 50_000;
+
+/**
+ * Extractor dispatch table — one entry per `ExtractorKind`.
+ * Adding a new extractor means:
+ *   1. Add the `*-extractor.ts` module under `src/lib/document-extractors/`
+ *   2. Add its `ExtractorKind` literal in classification-registry.ts
+ *   3. Wire it here — the TypeScript switch makes the missing branch a compile error
+ *
+ * Guarded by CHECK 3.20 (extractor registry ratchet) and by the Jest test
+ * `extractor-registry.test.ts` which asserts the dispatch covers the union.
+ */
+async function runExtractor(
+  kind: ExtractorKind,
+  buffer: Buffer,
+  originalFilename: string | undefined,
+): Promise<{ buffer: Buffer; mime: string }> {
+  switch (kind) {
+    case 'docx': {
+      const text = await extractTextFromDocx(buffer);
+      return {
+        buffer: Buffer.from(text || `Filename: ${originalFilename ?? 'document'}`),
+        mime: 'text/plain',
+      };
+    }
+    case 'xlsx': {
+      const text = await extractTextFromXlsx(buffer);
+      return {
+        buffer: Buffer.from(text || `Filename: ${originalFilename ?? 'document'}`),
+        mime: 'text/plain',
+      };
+    }
+    case 'dxf': {
+      const sliced = buffer.slice(0, DXF_MAX_BYTES);
+      const text = extractTextFromDxf(sliced);
+      logger.info(
+        `[after] DXF extracted text (first 400 chars): ${text.slice(0, 400) || '(empty — no TEXT/MTEXT entities found)'}`,
+      );
+      return { buffer: text ? Buffer.from(text) : sliced, mime: 'text/plain' };
+    }
+    case 'svg-truncate': {
+      return { buffer: buffer.slice(0, DXF_MAX_BYTES), mime: 'text/plain' };
+    }
+  }
+}
 
 const logger = createModuleLogger('FileClassifyBackground');
 
@@ -46,34 +90,16 @@ export async function classifyInBackground(
     }
     const fileBuffer = Buffer.from(await fileResponse.arrayBuffer());
 
-    // 2. Extract text for DOCX/XLSX — OpenAI does not accept these as input_file
-    let analyzeBuffer = fileBuffer;
-    let analyzeMimeType = contentType;
-    if (contentType === DOCX_MIME) {
-      const extractedText = await extractTextFromDocx(fileBuffer);
-      analyzeBuffer = Buffer.from(extractedText || `Filename: ${originalFilename ?? 'document'}`);
-      analyzeMimeType = 'text/plain';
-    } else if (contentType === XLSX_MIME) {
-      const extractedText = await extractTextFromXlsx(fileBuffer);
-      analyzeBuffer = Buffer.from(extractedText || `Filename: ${originalFilename ?? 'document'}`);
-      analyzeMimeType = 'text/plain';
-    } else if (
-      DXF_MIMES.has(contentType) ||
-      fileExt?.toLowerCase() === 'dxf' ||
-      originalFilename?.toLowerCase().endsWith('.dxf')
-    ) {
-      // Extract human-readable text from DXF entities (TEXT/MTEXT/ATTRIB)
-      // If the file contains text, send only that; otherwise fall back to raw header
-      const extractedDxfText = extractTextFromDxf(fileBuffer.slice(0, DXF_MAX_BYTES));
-      logger.info(`[after] DXF extracted text (first 400 chars): ${extractedDxfText.slice(0, 400) || '(empty — no TEXT/MTEXT entities found)'}`);
-      analyzeBuffer = extractedDxfText
-        ? Buffer.from(extractedDxfText)
-        : fileBuffer.slice(0, DXF_MAX_BYTES);
-      analyzeMimeType = 'text/plain';
-    } else if (contentType === SVG_MIME) {
-      // SVG is XML text — truncate to 50KB (large SVGs cause OpenAI timeout)
-      analyzeBuffer = fileBuffer.slice(0, DXF_MAX_BYTES);
-      analyzeMimeType = 'text/plain';
+    // 2. Extract body text if the SSoT registry declares an extractor for this
+    // family. OpenAI does not accept DOCX/XLSX/DXF as input_file, so they must
+    // be converted to plain text before the AI call.
+    let analyzeBuffer: Buffer = fileBuffer;
+    let analyzeMimeType: string = contentType;
+    const extractorKind = getExtractorKind(contentType, originalFilename, fileExt);
+    if (extractorKind) {
+      const { buffer, mime } = await runExtractor(extractorKind, fileBuffer, originalFilename);
+      analyzeBuffer = buffer;
+      analyzeMimeType = mime;
     }
 
     // 3. Call AI provider

@@ -24,61 +24,27 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getErrorMessage } from '@/lib/error-utils';
 import { classifyInBackground } from './classify-background';
 import { nowISO } from '@/lib/date-local';
+import {
+  isAIClassifiable as isClassifiableSSoT,
+  getMediaDocumentType as getMediaDocumentTypeSSoT,
+} from '@/config/file-types/classification-registry';
 
 const logger = createModuleLogger('FileClassifyRoute');
 
 export const maxDuration = 60;
 
 // ============================================================================
-// SUPPORTED MIME TYPES FOR AI CLASSIFICATION
+// CLASSIFICATION DECISION — delegated to SSoT (ADR-296)
 // ============================================================================
 
-const IMAGE_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-]);
-
-const TEXT_MIME_TYPES = new Set([
-  'application/pdf',
-  'text/plain',
-  'text/csv',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/xml',
-  'application/xml',
-  'text/html',
-  'image/vnd.dxf',
-  'application/dxf',
-  'image/svg+xml',
-]);
-
-const DXF_EXTENSIONS = new Set(['.dxf']);
-
+/** Thin wrapper — single source of truth lives in classification-registry.ts. */
 function isClassifiable(mimeType: string, filename?: string, fileExt?: string): boolean {
-  // ext-based override: known classifiable formats regardless of stored contentType
-  if (fileExt && DXF_EXTENSIONS.has(`.${fileExt.toLowerCase()}`)) return true;
-  if (filename) {
-    const lastDot = filename.lastIndexOf('.');
-    if (lastDot !== -1 && DXF_EXTENSIONS.has(filename.slice(lastDot).toLowerCase())) return true;
-  }
-
-  if (!mimeType) return false;
-  if (IMAGE_MIME_TYPES.has(mimeType) || TEXT_MIME_TYPES.has(mimeType)) return true;
-  if (mimeType.startsWith('video/') || mimeType.startsWith('audio/')) return true;
-  if (mimeType === 'application/octet-stream') {
-    const byFilename = filename ? DXF_EXTENSIONS.has(filename.slice(filename.lastIndexOf('.')).toLowerCase()) : false;
-    const byExt = fileExt ? DXF_EXTENSIONS.has(`.${fileExt.toLowerCase()}`) : false;
-    return byFilename || byExt;
-  }
-  return false;
+  return isClassifiableSSoT(mimeType, filename, fileExt);
 }
 
-function getMediaDocumentType(mimeType: string): 'video' | 'audio' | null {
-  if (mimeType.startsWith('video/')) return 'video';
-  if (mimeType.startsWith('audio/')) return 'audio';
-  return null;
+/** Thin wrapper — single source of truth lives in classification-registry.ts. */
+function getMediaDocumentType(mimeType: string | undefined): 'video' | 'audio' | null {
+  return getMediaDocumentTypeSSoT(mimeType);
 }
 
 // ============================================================================
