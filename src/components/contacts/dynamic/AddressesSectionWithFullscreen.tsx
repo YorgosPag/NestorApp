@@ -11,6 +11,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Eraser } from 'lucide-react';
 import '@/lib/design-system';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import {
@@ -23,6 +24,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
@@ -30,6 +32,7 @@ import { CompanyAddressesSection } from '@/components/contacts/dynamic/CompanyAd
 import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { useClearCompanyHqAddress } from '@/components/contacts/dynamic/useClearCompanyHqAddress';
 
 // ============================================================================
 // TYPES
@@ -53,9 +56,35 @@ export function AddressesSectionWithFullscreen({
   const { t: tContacts } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const fullscreen = useFullscreen();
+  const { clearHq } = useClearCompanyHqAddress(formData, setFormData);
 
   // 📍 ADR-277: Pending drag resolve state (map drag may clear hierarchy)
   const [pendingDrag, setPendingDrag] = useState<{ addr: DragResolvedAddress; index: number } | null>(null);
+
+  /** Has any HQ field been filled? Drives disabled state of Clear button. */
+  const hqHasValue =
+    !!formData.street ||
+    !!formData.streetNumber ||
+    !!formData.postalCode ||
+    !!formData.city ||
+    !!formData.settlement ||
+    !!formData.settlementId ||
+    !!formData.community ||
+    !!formData.municipalUnit ||
+    !!formData.municipality ||
+    !!formData.municipalityId ||
+    !!formData.regionalUnit ||
+    !!formData.region ||
+    !!formData.decentAdmin ||
+    !!formData.majorGeo;
+
+  /** Keyboard affordance: Ctrl+Backspace on HQ form triggers clear. */
+  const handleHqKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.ctrlKey && e.key === 'Backspace' && !disabled && hqHasValue) {
+      e.preventDefault();
+      clearHq();
+    }
+  }, [clearHq, disabled, hqHasValue]);
 
   /** Apply drag-resolved address to form state (clears hierarchy fields) */
   const applyDragResolve = useCallback((addr: DragResolvedAddress, addressIndex: number) => {
@@ -108,13 +137,28 @@ export function AddressesSectionWithFullscreen({
     >
       {/* LEFT: AddressWithHierarchy for HQ + Branches */}
       <div className="space-y-2">
-        {/* HQ address with hierarchy + fullscreen toggle */}
+        {/* HQ address with hierarchy + clear + fullscreen toggle */}
         <header className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">{tContacts('addressesSection.headquarters')}</h3>
-          <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
+          <h3 className="text-sm font-semibold text-foreground">{tContacts('contacts-form:addressesSection.headquarters')}</h3>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={clearHq}
+              disabled={disabled || !hqHasValue}
+              aria-label={tContacts('contacts-form:addressesSection.clearAddress')}
+              title={tContacts('contacts-form:addressesSection.clearAddress')}
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            >
+              <Eraser className="h-4 w-4" />
+            </Button>
+            <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
+          </div>
         </header>
 
-        <AddressWithHierarchy
+        <div onKeyDown={handleHqKeyDown}>
+          <AddressWithHierarchy
           value={{
             street: (formData.street as string) || '',
             number: (formData.streetNumber as string) || '',
@@ -174,7 +218,8 @@ export function AddressesSectionWithFullscreen({
             }
           }}
           disabled={disabled}
-        />
+          />
+        </div>
 
         {/* Branches section */}
         <CompanyAddressesSection

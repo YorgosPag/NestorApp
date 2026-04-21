@@ -266,6 +266,9 @@
     "noBranches": "No additional addresses",
     "branch": "Branch",
     "removeAddress": "Remove Address",
+    "clearAddress": "Clear Address",
+    "addressCleared": "Address cleared",
+    "undo": "Undo",
     "administrative": {
       "title": "Administrative Division",
       "postalCode": "Postal Code",
