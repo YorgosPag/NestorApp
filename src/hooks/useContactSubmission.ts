@@ -62,10 +62,21 @@ export function useContactSubmission({
   const [pendingSave, setPendingSave] = useState(false);
   const handleSubmitRef = useRef<((fd: ContactFormData) => Promise<void>) | null>(null);
 
+  // Google-level single-click close: the deferred-submit path (guard confirm)
+  // must complete the same lifecycle as the main path — reset validation,
+  // refresh the list, close the dialog, and reset the form. Otherwise the
+  // user has to press Save a second time after confirming the impact dialog.
+  const handleUpdateSucceeded = useCallback(() => {
+    setValidationErrors({});
+    onContactAdded();
+    onOpenChange(false);
+    resetForm();
+  }, [setValidationErrors, onContactAdded, onOpenChange, resetForm]);
+
   const { runExistingContactFormUpdate, guardDialogs } = useGuardedContactMutation({
     editContact,
     notifications,
-    onUpdateSucceeded: onContactAdded,
+    onUpdateSucceeded: handleUpdateSucceeded,
     setLoading,
   });
 
@@ -172,6 +183,8 @@ export function useContactSubmission({
           },
         );
         if (!updateCompleted) {
+          // Deferred by a guard dialog — handleUpdateSucceeded will run when
+          // the user confirms, completing the lifecycle from there.
           return;
         }
       } else {
@@ -180,20 +193,13 @@ export function useContactSubmission({
         contactNotifications.createSuccess();
       }
 
-      setValidationErrors({});
-      onContactAdded();
-
-      // No manual contactsUpdated dispatch needed — the Firestore real-time
-      // subscription on the contacts page delivers changes automatically.
-
-      onOpenChange(false);
-      resetForm();
+      handleUpdateSucceeded();
     } catch (error) {
       handleSubmissionError(error, formData.type, editContact, notifications);
     } finally {
       setLoading(false);
     }
-  }, [loading, validateFormData, editContact, notifications, contactNotifications, runExistingContactFormUpdate, setValidationErrors, onContactAdded, onOpenChange, resetForm]);
+  }, [loading, validateFormData, editContact, notifications, contactNotifications, runExistingContactFormUpdate, handleUpdateSucceeded]);
 
   handleSubmitRef.current = handleSubmit;
 
