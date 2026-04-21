@@ -615,6 +615,44 @@ if [[ -f "$NOTIF_KEYS_SCRIPT" ]]; then
 fi
 
 # =============================================================================
+# CHECK 3.21: Notification Keys Locale Integrity (SSoT Notifications / 2026-04-21)
+# =============================================================================
+# Zero-tolerance gate that ensures every leaf value in NOTIFICATION_KEYS
+# (src/config/notification-keys.ts) resolves to a real entry in BOTH
+# src/i18n/locales/el/<ns>.json AND src/i18n/locales/en/<ns>.json.
+#
+# Complements CHECK 3.8 (grep of t('key') calls) at a higher level — this
+# check inspects the REGISTRY itself so drift (key renamed in one locale
+# but not the other) is caught before a notification ever fires.
+#
+# Scope: triggered only when notification-keys.ts or any el/en locale JSON
+#        is staged — otherwise the result cannot change.
+# =============================================================================
+
+NOTIF_LOCALE_SCRIPT="scripts/check-notification-keys-locale.js"
+if [[ -f "$NOTIF_LOCALE_SCRIPT" ]]; then
+    NOTIF_LOCALE_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^src/config/notification-keys\.ts$|^src/i18n/locales/(el|en)/.*\.json$' || true)
+
+    if [[ -n "$NOTIF_LOCALE_TRIGGERS" ]]; then
+        echo -e "${YELLOW}🔍 Checking notification keys locale integrity (CHECK 3.21)...${NC}"
+
+        NOTIF_LOCALE_OUTPUT=$(node "$NOTIF_LOCALE_SCRIPT" 2>&1)
+        NOTIF_LOCALE_EXIT=$?
+
+        if [[ $NOTIF_LOCALE_EXIT -ne 0 ]]; then
+            echo "$NOTIF_LOCALE_OUTPUT"
+            echo ""
+            echo -e "${RED}✖ CHECK 3.21 failed — every NOTIFICATION_KEYS leaf must exist in el AND en locales.${NC}"
+            exit 1
+        fi
+
+        if [[ -n "$NOTIF_LOCALE_OUTPUT" ]]; then
+            echo "$NOTIF_LOCALE_OUTPUT"
+        fi
+    fi
+fi
+
+# =============================================================================
 # CHECK 3.19: Storage Rules Test Coverage (ADR-301 / 2026-04-14)
 # =============================================================================
 # Zero-tolerance gate that ensures every top-level match block in

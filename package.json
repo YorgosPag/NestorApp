@@ -41,6 +41,7 @@
     "option-keys:baseline": "node scripts/generate-option-i18n-keys-baseline.js",
     "notification-keys:audit": "node scripts/check-notification-keys-ratchet.js --all",
     "notification-keys:baseline": "node scripts/generate-notification-keys-baseline.js",
+    "notification-keys:locale": "node scripts/check-notification-keys-locale.js",
     "resolver-reach:audit": "node scripts/check-i18n-resolver-reachability.js --all",
     "resolver-reach:baseline": "node scripts/check-i18n-resolver-reachability.js --baseline",
     "audit-values:audit": "node scripts/check-audit-value-catalogs.js",
