@@ -155,6 +155,8 @@ const DIRECT_USAGE_LEAVES = new Set<string>([
   NOTIFICATION_KEYS.contacts.duplicate.exactMatch,
   NOTIFICATION_KEYS.contacts.duplicate.possibleMatch,
   NOTIFICATION_KEYS.contacts.duplicate.similarMatch,
+  // src/utils/contactForm/execute-guarded-contact-update.ts — pure helper, no hook
+  NOTIFICATION_KEYS.contacts.companyIdentity.unsafeClear,
 ]);
 
 function leavesCoveredByHook(

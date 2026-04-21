@@ -10,6 +10,7 @@
 import type { Contact } from '@/types/contacts';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { NOTIFICATION_KEYS } from '@/config/notification-keys';
 
 const logger = createModuleLogger('SubmissionError');
 
@@ -36,11 +37,11 @@ export function handleSubmissionError(
     const confidence = confidenceMatch ? parseFloat(confidenceMatch[1]) : 0;
 
     if (confidence >= 95) {
-      notifications.error('contacts-core.duplicate.exactMatch', { duration: 8000 });
+      notifications.error(NOTIFICATION_KEYS.contacts.duplicate.exactMatch, { duration: 8000 });
     } else if (confidence >= 80) {
-      notifications.warning('contacts-core.duplicate.similarMatch', { duration: 6000 });
+      notifications.warning(NOTIFICATION_KEYS.contacts.duplicate.similarMatch, { duration: 6000 });
     } else {
-      notifications.info('contacts-core.duplicate.possibleMatch', { duration: 5000 });
+      notifications.info(NOTIFICATION_KEYS.contacts.duplicate.possibleMatch, { duration: 5000 });
     }
 
     logger.info('Duplicate handling applied', {

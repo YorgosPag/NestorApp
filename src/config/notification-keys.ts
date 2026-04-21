@@ -47,6 +47,9 @@ export const NOTIFICATION_KEYS = {
       possibleMatch: 'contacts-core.duplicate.possibleMatch',
       similarMatch: 'contacts-core.duplicate.similarMatch',
     },
+    companyIdentity: {
+      unsafeClear: 'common-shared.contacts.companyIdentityImpact.unsafeClear',
+    },
   },
 
   // ==========================================================================

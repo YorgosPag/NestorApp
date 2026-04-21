@@ -1,12 +1,8 @@
 {
-  "generated": "2026-04-21T19:35:13.050Z",
+  "generated": "2026-04-21T19:47:34.902Z",
   "description": "Raw i18n keys passed to notifications.success|error|info|warning() outside the allowlist — ratchet baseline",
   "source": "scripts/check-notification-keys-ratchet.js",
-  "totalViolations": 8,
-  "totalFiles": 3,
-  "files": {
-    "src/utils/contactForm/execute-guarded-contact-update.ts": 1,
-    "src/utils/contactForm/submission-error-handler.ts": 3,
-    "src/utils/contactForm/submission-guard-chain.ts": 4
-  }
+  "totalViolations": 0,
+  "totalFiles": 0,
+  "files": {}
 }

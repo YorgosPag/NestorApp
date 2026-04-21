@@ -1,6 +1,7 @@
 import { createModuleLogger } from '@/lib/telemetry';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { mapFormDataToContact } from '@/utils/contactForm/modular/orchestrator';
+import { NOTIFICATION_KEYS } from '@/config/notification-keys';
 
 const logger = createModuleLogger('ExecuteGuardedContactUpdate');
 
@@ -39,7 +40,7 @@ export async function executeGuardedContactUpdate({
 
   const mutationResult = await previewBeforeUpdate(formData, mappingResult.contactData, action);
   if (mutationResult.blockedUnsafeClear) {
-    notifications.error('common-shared.contacts.companyIdentityImpact.unsafeClear');
+    notifications.error(NOTIFICATION_KEYS.contacts.companyIdentity.unsafeClear);
     return false;
   }
 
