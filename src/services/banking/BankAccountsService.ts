@@ -474,7 +474,10 @@ export class BankAccountsService {
         logger.error('[BankAccountsService] Subscription error:', error);
       },
       {
-        constraints: [where('isActive', '==', true), orderBy('createdAt', 'desc')],
+        // ADR-317: include inactive accounts so the UI can explain why a soft-deleted
+        // IBAN still blocks re-adding (server uniqueness check spans all accounts).
+        // BankAccountCard applies `opacity-60` + "inactive" badge for isActive=false.
+        constraints: [orderBy('createdAt', 'desc')],
       }
     );
   }

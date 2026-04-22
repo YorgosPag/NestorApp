@@ -208,3 +208,4 @@ Il messaggio raggiunge sempre l'utente via `errors.submit` nel form, quindi ness
 ## 10. Changelog
 
 - **2026-04-22** — Versione iniziale. Implementazione completa su tab Banking. Downgrade validation logging a warn.
+- **2026-04-22** — Fix visibilità conti inattivi: `BankAccountsService.subscribeToAccounts` non filtra più `isActive=true` (il server controlla l'unicità IBAN su **tutti** i conti, compresi quelli soft-deleted). `BankAccountCard` già applica `opacity-60` + badge "inactive"; ora l'utente vede *perché* un IBAN soft-deleted blocca la ricreazione.
