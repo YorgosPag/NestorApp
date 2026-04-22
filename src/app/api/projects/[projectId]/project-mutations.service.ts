@@ -31,8 +31,6 @@ import type {
   ProjectUpdateResponse,
   ProjectDeleteResponse,
 } from './project-mutations.types';
-import { indexEntityForSearch } from '@/lib/search/search-indexer';
-import { SEARCH_ENTITY_TYPES } from '@/types/search';
 
 const logger = createModuleLogger('ProjectRoute');
 
@@ -146,13 +144,7 @@ export async function handleUpdateProject(
     metadata: { reason: 'Project updated' },
   });
 
-  // ADR-029: Reindex for global search (non-fatal)
-  void indexEntityForSearch({
-    entityType: SEARCH_ENTITY_TYPES.PROJECT,
-    entityId: projectId,
-    entityData: { ...projectData, ...cleanData, id: projectId },
-    tenantId: projectCompanyId,
-  });
+  // ADR-029 Phase D: search_documents written by Cloud Function onProjectWrite.
 
   return apiSuccess<ProjectUpdateResponse>(
     { projectId, updated: true, _v: versionResult.newVersion },
