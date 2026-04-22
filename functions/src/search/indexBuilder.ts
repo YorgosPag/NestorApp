@@ -176,10 +176,18 @@ export const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = 
       const displayName = doc.displayName as string | undefined;
       const firstName = doc.firstName as string | undefined;
       const lastName = doc.lastName as string | undefined;
-      return displayName || `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown';
+      const companyName = doc.companyName as string | undefined;
+      const serviceName = doc.serviceName as string | undefined;
+      return (
+        displayName ||
+        `${firstName || ''} ${lastName || ''}`.trim() ||
+        companyName ||
+        serviceName ||
+        'Unknown'
+      );
     },
     subtitleFields: ['email', 'phone'],
-    searchableFields: ['displayName', 'firstName', 'lastName', 'email', 'companyName'],
+    searchableFields: ['displayName', 'firstName', 'lastName', 'email', 'companyName', 'serviceName'],
     statusField: 'status',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'crm:contacts:view',
