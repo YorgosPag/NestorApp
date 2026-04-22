@@ -15,8 +15,6 @@ import { mapParkingDoc } from '@/lib/firestore-mappers';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
-import { indexEntityForSearch } from '@/lib/search/search-indexer';
-import { SEARCH_ENTITY_TYPES } from '@/types/search';
 
 const logger = createModuleLogger('ParkingRoute');
 
@@ -148,8 +146,7 @@ export const POST = withStandardRateLimit(
           apiPath: '/api/parking (POST)',
         });
 
-        // ADR-029: Index for global search (non-fatal)
-        void indexEntityForSearch({ entityType: SEARCH_ENTITY_TYPES.PARKING, entityId: result.id, entityData: { ...entitySpecificFields, id: result.id, companyId: ctx.companyId }, tenantId: ctx.companyId });
+        // ADR-029 Phase D: search_documents written by Cloud Function onParkingWrite.
         return apiSuccess<ParkingCreateResponse>(
           { parkingSpotId: result.id },
           'Parking spot created successfully'
