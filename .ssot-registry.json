@@ -635,7 +635,8 @@
         "(SEARCH_INDEX_CONFIG)\\s*(=|:)\\s*(\\{|\\[|Record)"
       ],
       "allowlist": [
-        "src/config/search-index-config.ts"
+        "src/config/search-index-config.ts",
+        "functions/src/search/search-config.mirror.ts"
       ]
     },
     "ai-analysis-config": {

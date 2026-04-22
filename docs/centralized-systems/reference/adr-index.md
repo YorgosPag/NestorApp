@@ -63,7 +63,7 @@
 | **ADR-027** | DXF Keyboard Shortcuts System | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-027-dxf-keyboard-shortcuts-system.md) |
 | **ADR-028** | Button Component Consolidation | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-028-button-component-consolidation.md) |
 | **ADR-029** | Canvas V2 Migration | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-029-canvas-v2-migration.md) |
-| **ADR-029** | Global Search System v1 | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-029-global-search-system-v1.md) |
+| **ADR-029** | Global Search System v1 | ✅ APPROVED | 2026-04-22 | Search & Indexing | [📄](./adrs/ADR-029-global-search-system-v1.md) |
 | **ADR-030** | Unified Frame Scheduler | ✅ APPROVED | 2026-02-01 | Performance | [📄](./adrs/ADR-030-unified-frame-scheduler.md) |
 | **ADR-031** | Enterprise Command Pattern (Undo/Redo) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-031-enterprise-command-pattern-undo-redo.md) |
 | **ADR-032** | Drawing State Machine | ✅ COMPLETED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-032-drawing-state-machine.md) |
