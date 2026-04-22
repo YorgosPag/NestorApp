@@ -10,8 +10,6 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateOpportunityId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { indexEntityForSearch } from '@/lib/search/search-indexer';
-import { SEARCH_ENTITY_TYPES } from '@/types/search';
 import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('OpportunitiesServerService');
@@ -95,14 +93,7 @@ export class OpportunitiesServerService {
 
       logger.info(`Created opportunity ${id} for company ${companyId}`);
 
-      // ADR-029: Index for global search (non-fatal)
-      void indexEntityForSearch({
-        entityType: SEARCH_ENTITY_TYPES.OPPORTUNITY,
-        entityId: id,
-        entityData: opportunity,
-        tenantId: companyId,
-      });
-
+      // ADR-029 Phase D: search_documents written by Cloud Function onOpportunityWrite.
       return { success: true, id };
     } catch (error) {
       logger.error('Failed to create opportunity:', error);
@@ -163,14 +154,7 @@ export class OpportunitiesServerService {
 
       logger.info(`Updated opportunity ${id}`);
 
-      // ADR-029: Reindex for global search (non-fatal)
-      void indexEntityForSearch({
-        entityType: SEARCH_ENTITY_TYPES.OPPORTUNITY,
-        entityId: id,
-        entityData: { ...existing, ...updates, id },
-        tenantId: companyId,
-      });
-
+      // ADR-029 Phase D: search_documents written by Cloud Function onOpportunityWrite.
       return { success: true };
     } catch (error) {
       logger.error('Failed to update opportunity:', error);
@@ -198,11 +182,7 @@ export class OpportunitiesServerService {
 
       await docRef.delete();
 
-      // ADR-029: Remove from search index (non-fatal)
-      void getDb().collection(COLLECTIONS.SEARCH_DOCUMENTS)
-        .doc(`${SEARCH_ENTITY_TYPES.OPPORTUNITY}_${id}`)
-        .delete()
-        .catch(() => {});
+      // ADR-029 Phase D: search_documents row cleaned up by Cloud Function onOpportunityWrite (delete branch).
 
       logger.info(`Deleted opportunity ${id}`);
       return { success: true };
