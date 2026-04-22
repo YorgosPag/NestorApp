@@ -13,8 +13,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { useLegalContracts } from '@/hooks/useLegalContracts';
-// 🏢 ADR-197/ADR-284: Centralized hierarchy validation (Company→Project→Building→Floor)
-import { usePropertyHierarchyValidation } from '@/hooks/sales/usePropertyHierarchyValidation';
+// 🏢 ADR-197/ADR-230: SSoT hierarchy resolver via server-side Admin SDK.
+// NOTE: intentionally NOT using `usePropertyHierarchyValidation` here — that hook
+// reads BUILDINGS client-side and can false-negative when Firestore rules reject
+// the read (building doc missing `companyId` field, or stale claims).
+import { usePropertyHierarchyApi } from '@/hooks/sales/usePropertyHierarchyApi';
 import { ContractTimeline } from '@/components/sales/legal/ContractTimeline';
 import { ContractCard } from '@/components/sales/legal/ContractCard';
 import { ProfessionalsCard } from '@/components/sales/legal/ProfessionalsCard';
@@ -64,10 +67,14 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { success, error: notifyError } = useNotifications();
-  // 🏢 SSoT hierarchy resolver — reads building.projectId real-time (cascade-safe).
-  // Do NOT trust unit.project (legacy denormalized field, may be stale).
-  const hierarchy = usePropertyHierarchyValidation(unit, true);
-  const resolvedProjectId = hierarchy.projectId ?? unit.project ?? null;
+  // 🏢 SSoT hierarchy via server endpoint (Admin SDK, rule-bypass).
+  // Falls back to unit.project only if API fails entirely.
+  const hierarchy = usePropertyHierarchyApi(unit.id, true);
+  const resolvedProjectId =
+    hierarchy.hierarchy?.project?.id ?? unit.project ?? null;
+  const resolvedBuildingId =
+    hierarchy.hierarchy?.building?.id ?? unit.buildingId ?? null;
+  const hasCompany = !!hierarchy.hierarchy?.company?.id;
   const {
     contracts,
     agreements,
@@ -99,15 +106,23 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
       notifyError(t('sales.legal.noBuyer'));
       return;
     }
-    // 🏢 SSoT: surface first hierarchy error (Company→Project→Building→Floor order).
-    // Errors come from usePropertyHierarchyValidation which resolves building.projectId real-time.
+    // 🏢 SSoT: hierarchy resolved server-side. Surface errors in canonical order
+    // (Company → Project → Building → Floor) mirroring usePropertyHierarchyValidation.
     if (hierarchy.loading) return;
-    if (hierarchy.errors.length > 0) {
-      notifyError(t(hierarchy.errors[0].i18nKey));
+    if (!resolvedBuildingId) {
+      notifyError(t('sales.errors.noBuilding'));
       return;
     }
-    if (!unit.buildingId || !resolvedProjectId) {
-      notifyError(t(resolvedProjectId ? 'sales.errors.noBuilding' : 'sales.errors.noProject'));
+    if (!resolvedProjectId) {
+      notifyError(t('sales.errors.noProject'));
+      return;
+    }
+    if (!hasCompany) {
+      notifyError(t('sales.errors.noCompany'));
+      return;
+    }
+    if (!unit.floorId) {
+      notifyError(t('sales.errors.noFloor'));
       return;
     }
 
@@ -115,7 +130,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
     const result = await createContract({
       propertyId: unit.id,
       projectId: resolvedProjectId,
-      buildingId: unit.buildingId,
+      buildingId: resolvedBuildingId,
       primaryBuyerContactId,
       phase: selectedPhase,
     });
@@ -126,7 +141,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
     } else {
       notifyError(result.error ?? t('sales.legal.createError'));
     }
-  }, [unit, selectedPhase, createContract, success, notifyError, t, hierarchy, resolvedProjectId]);
+  }, [unit, selectedPhase, createContract, success, notifyError, t, hierarchy.loading, resolvedProjectId, resolvedBuildingId, hasCompany]);
 
   // Loading state
   if (isLoading) {
@@ -208,6 +223,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
               <ContractCard
                 contract={c}
                 onTransition={transitionStatus}
+                associations={links}
               />
             </li>
           ))}

@@ -2113,6 +2113,20 @@
       ]
     },
     {
+      "collectionGroup": "cheques",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "context.propertyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "building_milestones",
       "queryScope": "COLLECTION",
       "fields": [

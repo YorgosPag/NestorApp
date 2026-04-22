@@ -14,6 +14,21 @@ Instruction text
 
 ---
 
+## ⚡ QUICK ABBREVIATIONS — WHEN GIORGIO WRITES THESE, ACTIVATE IMMEDIATELY
+
+| Abbreviation | Full Meaning | Rules to Apply |
+|---|---|---|
+| **GOL** | Google Level | N.7 + N.7.1 + N.7.2: Google-grade quality, checklist mandatory, 40-line functions, 500-line files, optimistic updates, zero race conditions, proper state management. Declare ✅/⚠️/❌ Google-level at end. |
+| **SSOT** | Single Source of Truth | N.0 + N.12: Search `docs/centralized-systems/README.md` + `.ssot-registry.json` FIRST. Use centralized systems. No duplicates. No scattered code. If centralized version exists → use it. If not → create it centralized. |
+
+**When Giorgio writes `GOL`** → activate N.7 + N.7.2 checklist, enforce function/file size limits, declare quality level at end.
+**When Giorgio writes `SSOT`** → before writing ANY code, grep centralized systems, use existing, never duplicate.
+**When Giorgio writes both `GOL + SSOT`** → apply all of the above simultaneously.
+
+These abbreviations can appear anywhere in a prompt (standalone, inline, in task descriptions).
+
+---
+
 ## 🚨🚨🚨 SOS. SOS. N.(-1) — TERMINAL PROHIBITION: NEVER GIT PUSH WITHOUT ORDER
 **ABSOLUTELY FORBIDDEN** to `git push` without EXPLICIT order from Giorgio.
 - After every `git commit`, **STOP** and **WAIT** for an order.

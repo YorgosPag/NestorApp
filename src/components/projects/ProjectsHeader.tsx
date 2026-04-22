@@ -19,6 +19,7 @@ import type { ViewMode } from '@/core/headers';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 
@@ -98,24 +99,30 @@ export function ProjectsHeader({
             </button>
           ] : []),
           ...(onToggleTrash ? [
-            <button
-              key="trash-toggle"
-              onClick={onToggleTrash}
-              className={`relative p-2 ${quick.button} transition-colors ${
-                showTrash
-                  ? `bg-destructive/10 text-destructive ${getStatusBorder('default')}`
-                  : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
-              }`}
-              aria-label={t('trashView', { ns: 'trash' })}
-              aria-pressed={showTrash}
-            >
-              <Trash2 className={iconSizes.sm} />
-              {trashCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground leading-none">
-                  {trashCount > 99 ? '99+' : trashCount}
-                </span>
-              )}
-            </button>
+            <Tooltip key="trash-toggle">
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onToggleTrash}
+                  className={`relative p-2 ${quick.button} transition-colors ${
+                    showTrash
+                      ? `bg-destructive/10 text-destructive ${getStatusBorder('default')}`
+                      : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
+                  }`}
+                  aria-label={t('trashView', { ns: 'trash' })}
+                  aria-pressed={showTrash}
+                >
+                  <Trash2 className={iconSizes.sm} />
+                  {trashCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground leading-none">
+                      {trashCount > 99 ? '99+' : trashCount}
+                    </span>
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {showTrash ? t('backToList', { ns: 'trash' }) : t('trashView', { ns: 'trash' })}
+              </TooltipContent>
+            </Tooltip>
           ] : []),
         ].filter(Boolean)
       }}

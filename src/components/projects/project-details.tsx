@@ -171,8 +171,8 @@ export function ProjectDetails({
   > => {
     const res = await fetch(`/api/projects/${displayProject?.id}/showcase/pdf`, { method: 'POST' });
     if (!res.ok) throw new Error('PDF generation failed');
-    const body = (await res.json()) as { showcaseMeta: { pdfStoragePath: string; pdfRegeneratedAt: string } };
-    return { showcaseMeta: body.showcaseMeta };
+    const body = (await res.json()) as { data: { pdfStoragePath: string; pdfRegeneratedAt: string } };
+    return { showcaseMeta: body.data };
   }, [displayProject?.id]);
 
   return (

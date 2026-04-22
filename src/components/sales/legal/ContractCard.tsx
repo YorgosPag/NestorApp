@@ -21,8 +21,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/providers/NotificationProvider';
-import type { LegalContract, ContractStatus } from '@/types/legal-contracts';
+import type { LegalContract, ContractStatus, LegalProfessionalRole } from '@/types/legal-contracts';
 import { CONTRACT_STATUS_TRANSITIONS } from '@/types/legal-contracts';
+import type { EntityAssociationLink } from '@/types/entity-associations';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
@@ -37,6 +38,8 @@ import {
 interface ContractCardProps {
   contract: LegalContract;
   onTransition: (contractId: string, targetStatus: ContractStatus) => Promise<{ success: boolean; error?: string }>;
+  /** Live role assignments (current) — used as fallback when the contract snapshot is empty */
+  associations?: EntityAssociationLink[];
 }
 
 // ============================================================================
@@ -84,7 +87,7 @@ function formatPriceOrDash(amount: number | null): string {
 // COMPONENT
 // ============================================================================
 
-export function ContractCard({ contract, onTransition }: ContractCardProps) {
+export function ContractCard({ contract, onTransition, associations = [] }: ContractCardProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { success, error: notifyError } = useNotifications();
@@ -170,19 +173,31 @@ export function ContractCard({ contract, onTransition }: ContractCardProps) {
               {t('sales.legal.professionals')}
             </h4>
             <ul className="space-y-0.5 text-xs">
-              {[
-                { label: t('sales.legal.sellerLawyer'), snap: contract.sellerLawyer },
-                { label: t('sales.legal.buyerLawyer'), snap: contract.buyerLawyer },
-                { label: t('sales.legal.notary'), snap: contract.notary },
-              ].map(({ label, snap }) => (
-                <li key={label} className="flex items-center gap-1">
-                  <User className={cn("h-3 w-3", colors.text.muted)} />
-                  <span className={colors.text.muted}>{label}:</span>
-                  <span className="font-medium">
-                    {snap?.displayName ?? t('sales.legal.unassigned')}
-                  </span>
-                </li>
-              ))}
+              {([
+                { label: t('sales.legal.sellerLawyer'), snap: contract.sellerLawyer, role: 'seller_lawyer' },
+                { label: t('sales.legal.buyerLawyer'), snap: contract.buyerLawyer, role: 'buyer_lawyer' },
+                { label: t('sales.legal.notary'), snap: contract.notary, role: 'notary' },
+              ] as Array<{ label: string; snap: typeof contract.sellerLawyer; role: LegalProfessionalRole }>).map(({ label, snap, role }) => {
+                const live = !snap ? associations.find((a) => a.role === role) : null;
+                const displayName = snap?.displayName ?? live?.contactName ?? null;
+                return (
+                  <li key={label} className="flex items-center gap-1">
+                    <User className={cn("h-3 w-3", colors.text.muted)} />
+                    <span className={colors.text.muted}>{label}:</span>
+                    <span className={cn('font-medium', live && 'italic')}>
+                      {displayName ?? t('sales.legal.unassigned')}
+                    </span>
+                    {live && (
+                      <span
+                        className={cn('text-[10px] px-1 rounded bg-amber-100 text-amber-800', 'dark:bg-amber-900/40 dark:text-amber-300')}
+                        title={t('sales.legal.liveNotInSnapshotTooltip')}
+                      >
+                        {t('sales.legal.liveNotInSnapshot')}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
 
