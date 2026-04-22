@@ -24,8 +24,6 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { requireStorageInTenant } from '@/lib/auth/tenant-isolation';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
-import { indexEntityForSearch } from '@/lib/search/search-indexer';
-import { SEARCH_ENTITY_TYPES } from '@/types/search';
 
 const UpdateStorageSchema = z.object({
   name: z.string().max(200).optional(),
@@ -145,13 +143,7 @@ export const PATCH = withStandardRateLimit(
           });
         }
 
-        // ADR-029: Re-index for global search (non-fatal)
-        void indexEntityForSearch({
-          entityType: SEARCH_ENTITY_TYPES.STORAGE,
-          entityId: id,
-          entityData: { ...existing, ...updateData, id },
-          tenantId: ctx.companyId,
-        });
+        // ADR-029 Phase D: search_documents written by Cloud Function onStorageWrite.
 
         logger.info('Storage unit updated', { id, companyId: ctx.companyId });
 
