@@ -8,6 +8,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { AuthContext } from '@/lib/auth';
 import { logAuditEvent } from '@/lib/auth';
@@ -77,6 +78,9 @@ export async function handleUpdateProject(
   // 4. Build update payload (companyId is IMMUTABLE — ADR-232)
   const { companyId: _immutableCompanyId, ...safeBody } = body;
   const cleanData = stripUndefinedDeep({ ...safeBody } as Record<string, unknown>);
+  cleanData._lastModifiedAt = FieldValue.serverTimestamp();
+  cleanData._lastModifiedBy = ctx.uid;
+  cleanData._lastModifiedByName = ctx.email ?? null;
 
   logger.info('[Projects/Update] Updating fields', { fieldsCount: Object.keys(cleanData).length });
 
