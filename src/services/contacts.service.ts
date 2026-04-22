@@ -32,7 +32,6 @@ import { resolveCompanyDisplayName } from '@/services/company/company-name-resol
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES, ENTITY_TYPES } from '@/config/domain-constants';
-import { SEARCH_ENTITY_TYPES } from '@/types/search';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import { cleanupOrphanedPhotos } from '@/utils/contactForm/photo-cleanup';
 
@@ -226,9 +225,7 @@ export class ContactsService {
 
     logger.info('CONTACT CREATED', { contactId: id, contactType: sanitizedData.type });
 
-    // ADR-029: Index for global search (fire-and-forget)
-    apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: SEARCH_ENTITY_TYPES.CONTACT, entityId: id }).catch(() => {});
-
+    // ADR-029 Phase D: search_documents written by Cloud Function onContactWrite.
     // Audit trail: covered by CDC Cloud Function (auditContactWrite) — ADR-195 Phase 2 cutover.
 
     RealtimeService.dispatch('CONTACT_CREATED', {
@@ -374,8 +371,7 @@ export class ContactsService {
 
     await updateDoc(docRef, udRecord);
 
-    // ADR-029: Reindex for global search (fire-and-forget)
-    apiClient.post(API_ROUTES.SEARCH_REINDEX, { entityType: SEARCH_ENTITY_TYPES.CONTACT, entityId: id }).catch(() => {});
+    // ADR-029 Phase D: search_documents written by Cloud Function onContactWrite.
 
     RealtimeService.dispatch('CONTACT_UPDATED', {
       contactId: id,
