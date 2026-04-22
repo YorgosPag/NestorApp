@@ -23,8 +23,6 @@ import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { POLICY_ERROR_CODES } from '@/lib/policy';
-import { indexEntityForSearch } from '@/lib/search/search-indexer';
-import { SEARCH_ENTITY_TYPES } from '@/types/search';
 
 const logger = createModuleLogger('BuildingUpdate');
 
@@ -133,13 +131,7 @@ export const PATCH = withStandardRateLimit(
 
       logger.info('[Buildings] Building updated', { buildingId, email: ctx.email, _v: versionResult.newVersion });
 
-      // ADR-029: Reindex for global search (non-fatal)
-      void indexEntityForSearch({
-        entityType: SEARCH_ENTITY_TYPES.BUILDING,
-        entityId: buildingId,
-        entityData: { ...buildingData, ...cleanUpdates, id: buildingId },
-        tenantId: ctx.companyId,
-      });
+      // ADR-029 Phase D: search_documents written by Cloud Function onBuildingWrite.
 
       if ('projectId' in cleanUpdates) {
         linkEntity('building:projectId', {
