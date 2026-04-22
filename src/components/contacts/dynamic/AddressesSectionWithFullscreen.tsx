@@ -25,6 +25,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
@@ -141,18 +142,24 @@ export function AddressesSectionWithFullscreen({
         <header className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">{tContacts('contacts-form:addressesSection.headquarters')}</h3>
           <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={clearHq}
-              disabled={disabled || !hqHasValue}
-              aria-label={tContacts('contacts-form:addressesSection.clearAddress')}
-              title={tContacts('contacts-form:addressesSection.clearAddress')}
-              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-            >
-              <Eraser className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={clearHq}
+                  disabled={disabled || !hqHasValue}
+                  aria-label={tContacts('contacts-form:addressesSection.clearAddress')}
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                >
+                  <Eraser className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {tContacts('contacts-form:addressesSection.clearAddress')}
+              </TooltipContent>
+            </Tooltip>
             <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
           </div>
         </header>

@@ -22,10 +22,10 @@
  * ```
  */
 
+import { Loader2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { Spinner } from '@/components/ui/spinner';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -53,6 +53,7 @@ export function PageLoadingState({
 }: PageLoadingStateProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const SpinnerIcon = Icon ?? Loader2;
 
   const layoutClass = layout === 'fullscreen'
     ? 'flex h-screen items-center justify-center'
@@ -61,10 +62,7 @@ export function PageLoadingState({
   return (
     <section className={layoutClass} role="status" aria-live="polite">
       <div className="text-center">
-        {Icon && (
-          <Icon className={cn(iconSizes.xl, 'mx-auto mb-2', colors.text.muted)} />
-        )}
-        <Spinner size="large" className="mx-auto mb-4" />
+        <SpinnerIcon className={cn(iconSizes.xl, 'animate-spin mx-auto mb-4', colors.text.muted)} />
         <p className={colors.text.muted}>{message}</p>
       </div>
     </section>

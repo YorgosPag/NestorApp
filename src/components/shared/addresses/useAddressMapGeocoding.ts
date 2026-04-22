@@ -121,8 +121,22 @@ export function useAddressMapGeocoding({
     const geocodeAllAddresses = async () => {
       if (addresses.length === 0) {
         setGeocodingStatus('idle');
+        setGeocodedAddresses(new Map());
+        setDragPositions(new Map());
         return;
       }
+
+      const currentIds = new Set(addresses.map(a => a.id));
+      setGeocodedAddresses(prev => {
+        const next = new Map<string, GeocodingServiceResult>();
+        prev.forEach((v, id) => { if (currentIds.has(id)) next.set(id, v); });
+        return next;
+      });
+      setDragPositions(prev => {
+        const next = new Map<string, DragPosition>();
+        prev.forEach((v, id) => { if (currentIds.has(id)) next.set(id, v); });
+        return next;
+      });
 
       setGeocodingStatus('loading');
 
@@ -130,7 +144,9 @@ export function useAddressMapGeocoding({
         const geocodable = getGeocodableAddresses(addresses);
 
         if (geocodable.length === 0) {
-          setGeocodingStatus('error');
+          setGeocodingStatus('idle');
+          setGeocodedAddresses(new Map());
+          setDragPositions(new Map());
           return;
         }
 

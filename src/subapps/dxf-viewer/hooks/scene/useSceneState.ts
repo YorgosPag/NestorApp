@@ -13,6 +13,7 @@ import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 // ✅ ΦΑΣΗ 7: useDxfImport μεταφέρθηκε στο hooks/ folder
 import { useDxfImport } from '../useDxfImport';
 import { useNotifications } from '../../../../providers/NotificationProvider';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // ✅ ENTERPRISE: Centralized copy-to-clipboard hook
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
@@ -23,6 +24,7 @@ import { dlog, dwarn, derr } from '../../debug';
 export function useSceneState() {
   const canvasOps = useCanvasOperations();
   const notifications = useNotifications();
+  const { t } = useTranslation('dxf-viewer');
   // ✅ ENTERPRISE: 2 separate copy instances for error notification actions
   const { copy: copyErrorMessage } = useCopyToClipboard();
   const { copy: copyImportError } = useCopyToClipboard();
@@ -146,10 +148,10 @@ export function useSceneState() {
         notifications.error(errorMessage, {
           duration: 6000,
           actions: [{
-            label: 'Αντιγραφή',
+            label: t('callbacks.copy'),
             onClick: async () => {
               const success = await copyErrorMessage(errorMessage);
-              if (success) notifications.success('Αντιγράφηκε στο πρόχειρο!', { duration: 2000 });
+              if (success) notifications.success(t('callbacks.copiedToClipboard'), { duration: 2000 });
             }
           }]
         });
@@ -161,15 +163,15 @@ export function useSceneState() {
       notifications.error(fullMessage, {
         duration: 6000,
         actions: [{
-          label: 'Αντιγραφή',
+          label: t('callbacks.copy'),
           onClick: async () => {
             const success = await copyImportError(fullMessage);
-            if (success) notifications.success('Αντιγράφηκε στο πρόχειρο!', { duration: 2000 });
+            if (success) notifications.success(t('callbacks.copiedToClipboard'), { duration: 2000 });
           }
         }]
       });
     }
-  }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem, copyErrorMessage, copyImportError, notifications, importError, canvasOps]);
+  }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem, copyErrorMessage, copyImportError, notifications, importError, canvasOps, t]);
 
   return {
     // State

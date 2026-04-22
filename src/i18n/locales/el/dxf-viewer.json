@@ -121,7 +121,8 @@
     "copiedToClipboard": "Αντιγράφηκε στο πρόχειρο!",
     "copyFailed": "Αποτυχία αντιγραφής",
     "perfMonitorOn": "Μετρήσεις FPS, Memory, Rendering ενεργές",
-    "perfMonitorOff": "Καλύτερη απόδοση - παρακολούθηση απενεργοποιημένη"
+    "perfMonitorOff": "Καλύτερη απόδοση - παρακολούθηση απενεργοποιημένη",
+    "selectLevelForPolygon": "Επιλέξτε πρώτα ένα επίπεδο (Level) για να αποθηκευτεί το polygon"
   },
   "toolbar": {
     "actions": {

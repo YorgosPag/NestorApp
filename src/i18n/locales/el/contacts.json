@@ -48,5 +48,53 @@
   },
   "esco": {
     "badge": "ESCO"
+  },
+  "page": {
+    "pageLabel": "Διαχείριση Επαφών",
+    "loading": "Φόρτωση Επαφών",
+    "loadingMessage": "Φόρτωση επαφών από βάση δεδομένων...",
+    "error": {
+      "pageLabel": "Σφάλμα Επαφών",
+      "ariaLabel": "Σφάλμα Φόρτωσης",
+      "title": "Αποτυχία φόρτωσης επαφών:",
+      "retry": "Επανάληψη"
+    },
+    "dashboard": {
+      "label": "Στατιστικά Επαφών",
+      "totalContacts": "Σύνολο Επαφών",
+      "totalPersonnel": "Σύνολο Προσωπικού",
+      "legalEntities": "Νομικά Πρόσωπα",
+      "activeContacts": "Ενεργές Επαφές",
+      "services": "Υπηρεσίες",
+      "recentAdditions": "Πρόσφατες Προσθήκες",
+      "favorites": "Αγαπημένες",
+      "contactsWithRelations": "Επαφές με Σχέσεις"
+    },
+    "filters": {
+      "desktop": "Φίλτρα Αναζήτησης",
+      "mobile": "Φίλτρα Αναζήτησης Mobile"
+    },
+    "views": {
+      "desktopView": "Λίστα και Λεπτομέρειες Desktop",
+      "mobileList": "Λίστα Επαφών Mobile",
+      "gridPlaceholder": "Η προβολή πλέγματος θα υλοποιηθεί σύντομα.",
+      "gridView": "Πλέγμα Επαφών"
+    },
+    "details": {
+      "title": "Λεπτομέρειες",
+      "editContact": "Επεξεργασία Επαφής",
+      "deleteContact": "Μεταφορά στον κάδο"
+    },
+    "filterIndicator": {
+      "viewingCustomer": "Προβολή πελάτη:",
+      "selectedContact": "Επιλεγμένη επαφή",
+      "back": "Επιστροφή",
+      "backToList": "Επιστροφή στη λίστα επαφών",
+      "filteringFor": "Φιλτράρισμα για:",
+      "contactsCount": "{count} επαφή",
+      "contactsCountPlural": "{count} επαφές",
+      "clear": "Καθάρισμα",
+      "showAll": "Εμφάνιση όλων των επαφών"
+    }
   }
 }

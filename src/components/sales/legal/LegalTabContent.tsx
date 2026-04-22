@@ -13,6 +13,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { useLegalContracts } from '@/hooks/useLegalContracts';
+// 🏢 ADR-197/ADR-284: Centralized hierarchy validation (Company→Project→Building→Floor)
+import { usePropertyHierarchyValidation } from '@/hooks/sales/usePropertyHierarchyValidation';
 import { ContractTimeline } from '@/components/sales/legal/ContractTimeline';
 import { ContractCard } from '@/components/sales/legal/ContractCard';
 import { ProfessionalsCard } from '@/components/sales/legal/ProfessionalsCard';
@@ -62,6 +64,10 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
   const colors = useSemanticColors();
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { success, error: notifyError } = useNotifications();
+  // 🏢 SSoT hierarchy resolver — reads building.projectId real-time (cascade-safe).
+  // Do NOT trust unit.project (legacy denormalized field, may be stale).
+  const hierarchy = usePropertyHierarchyValidation(unit, true);
+  const resolvedProjectId = hierarchy.projectId ?? unit.project ?? null;
   const {
     contracts,
     agreements,
@@ -70,7 +76,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
     createContract,
     transitionStatus,
     overrideProfessional,
-  } = useLegalContracts(unit.id, unit.project);
+  } = useLegalContracts(unit.id, resolvedProjectId ?? undefined);
 
   // Self-contained: load associations directly (page.tsx does NOT pass them)
   const { links, addLink, removeLink, LinkRemovalBlockedDialog } = useEntityContactLinks('property', unit.id);
@@ -93,13 +99,15 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
       notifyError(t('sales.legal.noBuyer'));
       return;
     }
-    if (!unit.buildingId) {
-      notifyError(t('sales.errors.noBuilding'));
+    // 🏢 SSoT: surface first hierarchy error (Company→Project→Building→Floor order).
+    // Errors come from usePropertyHierarchyValidation which resolves building.projectId real-time.
+    if (hierarchy.loading) return;
+    if (hierarchy.errors.length > 0) {
+      notifyError(t(hierarchy.errors[0].i18nKey));
       return;
     }
-    const resolvedProjectId = unit.project;
-    if (!resolvedProjectId) {
-      notifyError(t('sales.errors.noProject'));
+    if (!unit.buildingId || !resolvedProjectId) {
+      notifyError(t(resolvedProjectId ? 'sales.errors.noBuilding' : 'sales.errors.noProject'));
       return;
     }
 
@@ -118,7 +126,7 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
     } else {
       notifyError(result.error ?? t('sales.legal.createError'));
     }
-  }, [unit, selectedPhase, createContract, success, notifyError, t]);
+  }, [unit, selectedPhase, createContract, success, notifyError, t, hierarchy, resolvedProjectId]);
 
   // Loading state
   if (isLoading) {
@@ -183,10 +191,10 @@ export function LegalTabContent({ unit }: LegalTabContentProps) {
             size="sm"
             variant="outline"
             onClick={handleCreate}
-            disabled={creating}
+            disabled={creating || hierarchy.loading}
             className="text-xs gap-1"
           >
-            {creating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+            {(creating || hierarchy.loading) ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
             {t('sales.legal.create')}
           </Button>
         </section>

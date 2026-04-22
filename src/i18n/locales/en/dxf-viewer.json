@@ -121,7 +121,8 @@
     "copiedToClipboard": "Copied to clipboard!",
     "copyFailed": "Copy failed",
     "perfMonitorOn": "FPS, Memory, Rendering metrics active",
-    "perfMonitorOff": "Better performance - monitoring disabled"
+    "perfMonitorOff": "Better performance - monitoring disabled",
+    "selectLevelForPolygon": "Please select a Level first to save the polygon"
   },
   "toolbar": {
     "actions": {

@@ -13,6 +13,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { BankAccount } from '@/types/contacts/banking';
 import { formatIBAN, ACCOUNT_TYPE_LABELS, CURRENCY_LABELS } from '@/types/contacts/banking';
@@ -155,19 +156,24 @@ export function BankAccountCard({
               <code className="font-mono text-sm text-foreground bg-muted px-2 py-1 rounded">
                 {formattedIban}
               </code>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 shrink-0"
-                onClick={handleCopyIban}
-                title={t('account.copyIban')}
-              >
-                {copied ? (
-                  <Check size={iconSizes.numeric.sm} className="text-green-500" />
-                ) : (
-                  <Copy size={iconSizes.numeric.sm} />
-                )}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={handleCopyIban}
+                    aria-label={t('account.copyIban')}
+                  >
+                    {copied ? (
+                      <Check size={iconSizes.numeric.sm} className="text-green-500" />
+                    ) : (
+                      <Copy size={iconSizes.numeric.sm} />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('account.copyIban')}</TooltipContent>
+              </Tooltip>
             </div>
 
             {/* BIC/SWIFT code */}
@@ -224,41 +230,56 @@ export function BankAccountCard({
             <div className="flex flex-col gap-1 shrink-0">
               {/* Set as primary */}
               {!account.isPrimary && onSetPrimary && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => onSetPrimary(account)}
-                  title={t('account.setPrimary')}
-                >
-                  <StarOff size={iconSizes.numeric.sm} />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onSetPrimary(account)}
+                      aria-label={t('account.setPrimary')}
+                    >
+                      <StarOff size={iconSizes.numeric.sm} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('account.setPrimary')}</TooltipContent>
+                </Tooltip>
               )}
 
               {/* Edit */}
               {onEdit && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => onEdit(account)}
-                  title={t('account.edit')}
-                >
-                  <Pencil size={iconSizes.numeric.sm} />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onEdit(account)}
+                      aria-label={t('account.edit')}
+                    >
+                      <Pencil size={iconSizes.numeric.sm} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('account.edit')}</TooltipContent>
+                </Tooltip>
               )}
 
               {/* Delete */}
               {onDelete && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={() => onDelete(account)}
-                  title={t('account.delete')}
-                >
-                  <Trash2 size={iconSizes.numeric.sm} />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => onDelete(account)}
+                      aria-label={t('account.delete')}
+                    >
+                      <Trash2 size={iconSizes.numeric.sm} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('account.delete')}</TooltipContent>
+                </Tooltip>
               )}
             </div>
           )}

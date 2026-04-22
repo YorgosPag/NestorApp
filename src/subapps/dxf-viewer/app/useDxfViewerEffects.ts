@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
 import { MOVEMENT_DETECTION } from '../config/tolerance-config';
 import { matchesShortcut } from '../config/keyboard-shortcuts';
@@ -87,6 +88,7 @@ export interface DxfViewerEffectsParams {
  * ADR-065 SRP split.
  */
 export function useDxfViewerEffects(params: DxfViewerEffectsParams): void {
+  const { t } = useTranslation('dxf-viewer');
   const {
     activeTool, overlayMode, currentScene, canvasTransform,
     showLayers, selectedEntityIds, primarySelectedId,
@@ -396,9 +398,9 @@ Check console for detailed metrics`;
   React.useEffect(() => {
     const cleanup = eventBus.on('overlay:save-error', ({ reason }) => {
       if (reason === 'no-level-selected') {
-        notifications.warning('Παρακαλώ επιλέξτε ένα επίπεδο (Level) πρώτα για να αποθηκευτεί το polygon.', { duration: 4000 });
+        notifications.warning(t('callbacks.selectLevelForPolygon'), { duration: 4000 });
       }
     });
     return cleanup;
-  }, [eventBus, notifications]);
+  }, [eventBus, notifications, t]);
 }

@@ -159,7 +159,6 @@ const LEGACY_NAMESPACE_ROOT_MAP = {
     export: 'contacts-core',
     import: 'contacts-core',
     header: 'contacts-core',
-    page: 'contacts-core',
     list: 'contacts-core',
     types: 'contacts-core',
     card: 'contacts-core',

@@ -105,7 +105,10 @@ export function ContactBankingTab({
     try {
       if (!bankAccountsCache.hasLoaded(contactId)) setLoading(true);
       setError(null);
-      const loadedAccounts = await BankAccountsService.getAccounts(contactId);
+      // ADR-317: include inactive so subscription+initial-load agree.
+      // Server uniqueness check spans soft-deleted accounts; UI must show them
+      // (opacity+badge) to explain why re-adding a deleted IBAN is blocked.
+      const loadedAccounts = await BankAccountsService.getAccounts(contactId, true);
       bankAccountsCache.set(loadedAccounts, contactId);
       setAccounts(loadedAccounts);
     } catch (err) {
