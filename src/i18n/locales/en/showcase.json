@@ -162,5 +162,55 @@
     "subjectPrefix": "Property Showcase",
     "introText": "We are sharing the detailed presentation of the property.",
     "ctaLabel": "View online"
+  },
+  "projectShowcase": {
+    "header": {
+      "subtitle": "Project showcase"
+    },
+    "specs": {
+      "title": "Project Details",
+      "code": "Code",
+      "type": "Type",
+      "status": "Status",
+      "progress": "Progress",
+      "totalArea": "Total area",
+      "totalValue": "Total value",
+      "startDate": "Start date",
+      "completionDate": "Completion date",
+      "areaUnit": "m²",
+      "location": "Location",
+      "client": "Client"
+    },
+    "description": {
+      "sectionTitle": "Description"
+    },
+    "photos": {
+      "title": "Photos"
+    },
+    "floorplans": {
+      "title": "Floorplans"
+    },
+    "actions": {
+      "downloadPdf": "Download PDF"
+    },
+    "states": {
+      "expiredTitle": "Link expired",
+      "expiredDescription": "This project showcase is no longer available. Please contact the sender.",
+      "notFoundTitle": "Link not found",
+      "notFoundDescription": "This project showcase is not available or has been revoked.",
+      "errorTitle": "Loading error",
+      "errorDescription": "Something went wrong. Please try again later."
+    },
+    "pdf": {
+      "title": "Project Showcase",
+      "generatedOn": "Generated on",
+      "descriptionSection": "Description",
+      "footerNote": "Project showcase"
+    },
+    "email": {
+      "subjectPrefix": "Project Showcase",
+      "introText": "We are sharing the detailed presentation of the project.",
+      "ctaLabel": "View online"
+    }
   }
 }

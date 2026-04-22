@@ -162,5 +162,55 @@
     "subjectPrefix": "Παρουσίαση Ακινήτου",
     "introText": "Σας προωθούμε την αναλυτική παρουσίαση του ακινήτου.",
     "ctaLabel": "Δείτε online"
+  },
+  "projectShowcase": {
+    "header": {
+      "subtitle": "Παρουσίαση έργου"
+    },
+    "specs": {
+      "title": "Στοιχεία Έργου",
+      "code": "Κωδικός",
+      "type": "Τύπος",
+      "status": "Κατάσταση",
+      "progress": "Πρόοδος",
+      "totalArea": "Συνολικό εμβαδόν",
+      "totalValue": "Συνολική αξία",
+      "startDate": "Έναρξη",
+      "completionDate": "Παράδοση",
+      "areaUnit": "τ.μ.",
+      "location": "Τοποθεσία",
+      "client": "Πελάτης"
+    },
+    "description": {
+      "sectionTitle": "Περιγραφή"
+    },
+    "photos": {
+      "title": "Φωτογραφίες"
+    },
+    "floorplans": {
+      "title": "Κατόψεις"
+    },
+    "actions": {
+      "downloadPdf": "Λήψη PDF"
+    },
+    "states": {
+      "expiredTitle": "Ο σύνδεσμος έληξε",
+      "expiredDescription": "Η παρουσίαση έργου δεν είναι πλέον διαθέσιμη. Παρακαλούμε επικοινωνήστε με τον αποστολέα.",
+      "notFoundTitle": "Ο σύνδεσμος δεν βρέθηκε",
+      "notFoundDescription": "Η παρουσίαση έργου δεν είναι διαθέσιμη ή έχει ανακληθεί.",
+      "errorTitle": "Πρόβλημα φόρτωσης",
+      "errorDescription": "Κάτι πήγε στραβά. Δοκιμάστε ξανά αργότερα."
+    },
+    "pdf": {
+      "title": "Παρουσίαση Έργου",
+      "generatedOn": "Δημιουργήθηκε",
+      "descriptionSection": "Περιγραφή",
+      "footerNote": "Παρουσίαση έργου"
+    },
+    "email": {
+      "subjectPrefix": "Παρουσίαση Έργου",
+      "introText": "Σας προωθούμε την αναλυτική παρουσίαση του έργου.",
+      "ctaLabel": "Δείτε online"
+    }
   }
 }
