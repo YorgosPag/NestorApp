@@ -32,11 +32,18 @@ export const COLLECTIONS = {
   // 📜 ENTITY AUDIT TRAIL (ADR-195 — CDC-sourced entries written by triggers)
   ENTITY_AUDIT_TRAIL: 'entity_audit_trail',
 
-  // 🔍 SEARCH
+  // 🏢 CORE ENTITIES — indexed for Global Search (ADR-029)
   PROJECTS: 'projects',
   BUILDINGS: 'buildings',
-  UNITS: 'units',
+  PROPERTIES: 'properties',
   CONTACTS: 'contacts',
+  PARKING_SPACES: 'parking_spots',
+  STORAGE: 'storage_units',
+  // 🤝 CRM ENTITIES — indexed for Global Search (ADR-029 Phase 2)
+  OPPORTUNITIES: 'opportunities',
+  COMMUNICATIONS: 'communications',
+  TASKS: 'tasks',
+  // 🔍 SEARCH INDEX OUTPUT
   SEARCH_DOCUMENTS: 'search_documents',
 
   // 👤 USERS — looked up by CDC audit trigger to resolve performer display name
