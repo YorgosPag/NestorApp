@@ -257,11 +257,7 @@ export class ContactHandler implements ToolHandler {
         companyId: ctx.companyId,
       });
 
-      // FIND-K: Index for Global Search (non-fatal)
-      try {
-        const { indexContactForSearch } = await import('@/lib/search/search-indexer');
-        await indexContactForSearch(result.contactId, { displayName: result.displayName, firstName, lastName, email, companyName, status: 'active' }, ctx.companyId);
-      } catch { /* non-fatal */ }
+      // ADR-029 Phase D: search_documents written by Cloud Function onContactWrite.
 
       // ADR-264: Auto-enrich from invoice entities (code-level guarantee — not prompt-dependent)
       try {
