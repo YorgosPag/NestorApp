@@ -216,27 +216,7 @@ export async function handleDeleteProject(
   cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
 
-  // 6. ADR-195 — Entity audit trail (soft-delete is recorded as `deleted` action)
-  const deleteCompanyId = (projectData?.companyId as string | undefined) ?? ctx.companyId;
-  await EntityAuditService.recordChange({
-    entityType: ENTITY_TYPES.PROJECT,
-    entityId: projectId,
-    entityName: (projectData?.name as string | undefined) ?? projectId,
-    action: 'deleted',
-    changes: [
-      {
-        field: 'status',
-        oldValue: (projectData?.status as string | undefined) ?? null,
-        newValue: 'deleted',
-        label: 'Κατάσταση',
-      },
-    ],
-    performedBy: ctx.uid,
-    performedByName: ctx.email,
-    companyId: deleteCompanyId,
-  });
-
-  // 7. Legacy audit log
+  // 6. Legacy auth audit log (soft-delete engine handles entity audit — ADR-281 SSoT)
   await logAuditEvent(ctx, 'data_deleted', 'projects', 'api', {
     newValue: {
       type: 'status',

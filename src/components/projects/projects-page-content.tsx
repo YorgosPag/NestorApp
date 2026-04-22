@@ -162,7 +162,8 @@ export function ProjectsPageContent() {
     handlePermanentDeleteProjects,
     handleConfirmPermanentDelete,
     handleCancelPermanentDelete,
-  } = useProjectsTrashState({ forceDataRefresh: refetchProjects });
+    fetchTrashedProjects,
+  } = useProjectsTrashState({ forceDataRefresh: refetchProjects, setSelectedProject });
 
   const handleDeleteProject = React.useCallback(async (project: Project) => {
     const allowed = await checkBeforeDelete(project.id);
@@ -178,13 +179,14 @@ export function ProjectsPageContent() {
     if (result.success) {
       logger.info('Project deleted', { projectId: projectToDelete.id });
       setSelectedProject(null);
+      void fetchTrashedProjects();
     } else {
       logger.error('Failed to delete project', { error: result.error });
     }
     // Always close dialog — on error user can retry; project may have dependency guard re-fire
     setProjectToDelete(null);
     setIsDeleting(false);
-  }, [projectToDelete, setSelectedProject]);
+  }, [projectToDelete, setSelectedProject, fetchTrashedProjects]);
 
   // 🏢 ENTERPRISE: Dynamic filter config — populate company/location/client options from real Firestore data
   const dynamicProjectConfig = useMemo<FilterPanelConfig>(() => {
