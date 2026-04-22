@@ -97,10 +97,17 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
       const firstName = doc.firstName as string | undefined;
       const lastName = doc.lastName as string | undefined;
       const companyName = doc.companyName as string | undefined;
-      return displayName || `${firstName || ''} ${lastName || ''}`.trim() || companyName || 'Unknown';
+      const serviceName = doc.serviceName as string | undefined;
+      return (
+        displayName ||
+        `${firstName || ''} ${lastName || ''}`.trim() ||
+        companyName ||
+        serviceName ||
+        'Unknown'
+      );
     },
     subtitleFields: ['email', 'phone'],
-    searchableFields: ['displayName', 'firstName', 'lastName', 'email', 'companyName'],
+    searchableFields: ['displayName', 'firstName', 'lastName', 'email', 'companyName', 'serviceName'],
     statusField: 'status',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'crm:contacts:view' satisfies PermissionId,

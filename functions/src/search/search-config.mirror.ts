@@ -106,7 +106,7 @@ export const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = 
     subtitleFields: ['floor', 'type'],
     searchableFields: ['name', 'propertyCode', 'floor'],
     statusField: 'status',
-    audience: (doc) => {
+    audience: (doc: Record<string, unknown>) => {
       const isPublished = doc.isPublished as boolean | undefined;
       return isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL;
     },

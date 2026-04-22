@@ -50,6 +50,7 @@
     "audit-coverage:audit": "node scripts/check-entity-audit-coverage.js --all --verbose",
     "audit-coverage:baseline": "node scripts/check-entity-audit-coverage.js --write-baseline",
     "nav:audit": "node scripts/check-navigation-labels.js",
+    "search-config:sync": "node scripts/check-search-config-sync.js",
     "ssot:audit": "bash scripts/ssot-audit.sh",
     "ssot:baseline": "bash scripts/generate-ssot-baseline.sh",
     "ssot:discover": "bash scripts/ssot-discover.sh",
