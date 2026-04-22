@@ -9,8 +9,6 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PropertyType } from '@/types/property';
 import { getErrorMessage } from '@/lib/error-utils';
-import { indexEntityForSearch } from '@/lib/search/search-indexer';
-import { SEARCH_ENTITY_TYPES } from '@/types/search';
 import {
   PropertyCreationPolicyError,
   STANDALONE_UNIT_TYPES,
@@ -196,13 +194,7 @@ export const POST = withStandardRateLimit(
           },
         });
 
-        // ADR-029: Index for global search (non-fatal)
-        void indexEntityForSearch({
-          entityType: SEARCH_ENTITY_TYPES.PROPERTY,
-          entityId: result.id,
-          entityData: { ...entitySpecificFields, id: result.id, companyId: ctx.companyId },
-          tenantId: ctx.companyId,
-        });
+        // ADR-029 Phase D: search_documents written by Cloud Function onPropertyWrite.
 
         return apiSuccess<PropertyCreateResponse>(
           { propertyId: result.id },
