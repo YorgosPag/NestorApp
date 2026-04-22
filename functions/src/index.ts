@@ -13,16 +13,16 @@
  * @enterprise ADR-029 - Global Search v1
  */
 
-// =============================================================================
-// 🔍 SEARCH INDEX TRIGGERS (ADR-029)
-// =============================================================================
-export { onProjectWrite, onContactWrite } from './search/indexTriggers';
+// 🔍 SEARCH INDEX TRIGGERS (ADR-029) — single writer of search_documents per entity type.
+// Handoff: docs/handoffs/2026-04-22-search-ssot-refactor.md
+export {
+  onProjectWrite, onBuildingWrite, onPropertyWrite, onContactWrite,
+  onFileWrite, onParkingWrite, onStorageWrite, onOpportunityWrite,
+  onCommunicationWrite, onTaskWrite,
+} from './search/indexTriggers';
 
-// =============================================================================
-// 📜 ENTITY AUDIT CDC TRIGGERS (ADR-195 — Phase 1 PoC)
-// =============================================================================
-// Dual-write: runs alongside service-layer audit, marks entries with
-// `source: 'cdc'` for coverage comparison during the rollout window.
+// 📜 ENTITY AUDIT CDC TRIGGERS (ADR-195 Phase 1 PoC) — dual-write with source='cdc'
+// for coverage comparison against the service-layer audit during rollout.
 export { auditContactWrite } from './audit/contact-audit-trigger';
 
 import * as functions from 'firebase-functions';

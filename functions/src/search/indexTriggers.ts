@@ -6,9 +6,12 @@
  * Firestore triggers for automatic search document indexing.
  * Triggers on create/update/delete of entities to keep search index in sync.
  *
+ * Canonical owner of `search_documents` (ADR-029 Phase B). Client-side
+ * fire-and-forget reindex calls are being removed — these triggers are the
+ * single writer per entity type.
+ *
  * @module functions/search/indexTriggers
- * @enterprise ADR-029 - Global Search v1
- * @compliance Local_Protocol.txt - ZERO any, Centralization First
+ * @enterprise ADR-029 — Global Search v1
  */
 
 import * as functions from 'firebase-functions';
@@ -27,10 +30,6 @@ import {
 // FIRESTORE REFERENCE
 // =============================================================================
 
-/**
- * Get Firestore instance.
- * Note: admin.initializeApp() is called in main index.ts
- */
 function getDb(): FirebaseFirestore.Firestore {
   return admin.firestore();
 }
@@ -41,15 +40,11 @@ function getDb(): FirebaseFirestore.Firestore {
 
 /**
  * Handle entity write (create/update/delete) for search indexing.
- *
- * @param entityType - Type of entity being indexed
- * @param change - Firestore document change
- * @param context - Function context with params
  */
 async function handleEntityWrite(
   entityType: SearchEntityType,
   change: functions.Change<functions.firestore.DocumentSnapshot>,
-  context: functions.EventContext
+  context: functions.EventContext,
 ): Promise<void> {
   const db = getDb();
   const entityId = context.params.docId;
@@ -76,31 +71,34 @@ async function handleEntityWrite(
     return;
   }
 
-  // Skip soft-deleted documents
-  if (data.isDeleted === true || data.deletedAt) {
+  // Skip soft-deleted documents (ADR-281)
+  if (data.isDeleted === true || data.deletedAt || data.status === 'deleted') {
     functions.logger.info(`[Search] Skipping deleted entity ${entityType}/${entityId}`);
 
-    // Remove from search index if exists
     try {
       await searchDocRef.delete();
     } catch {
-      // Ignore - document may not exist
+      // Ignore — document may not exist
     }
     return;
   }
 
   // Build search document
-  const searchInput = buildSearchDocument(entityType, entityId, data as Record<string, unknown>);
+  const searchInput = buildSearchDocument(
+    entityType,
+    entityId,
+    data as Record<string, unknown>,
+  );
 
   if (!searchInput) {
-    functions.logger.warn(`[Search] Could not build search document for ${entityType}/${entityId}`);
+    functions.logger.warn(
+      `[Search] Could not build search document for ${entityType}/${entityId}`,
+    );
     return;
   }
 
-  // Create full document with timestamps
   const searchDoc = createSearchDocument(searchInput);
 
-  // Determine if create or update
   const isCreate = !change.before.exists;
   const operation = isCreate ? 'Creating' : 'Updating';
 
@@ -111,97 +109,66 @@ async function handleEntityWrite(
 
   try {
     if (isCreate) {
-      // Set with merge false for new documents
       await searchDocRef.set(searchDoc);
     } else {
-      // Update with merge to preserve createdAt
       await searchDocRef.set(
         {
           ...searchDoc,
-          // Don't overwrite createdAt on update
-          createdAt: admin.firestore.FieldValue.serverTimestamp(), // Will be ignored if exists
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           indexedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
-        { merge: true }
+        { merge: true },
       );
     }
 
-    functions.logger.info(`[Search] Index ${isCreate ? 'created' : 'updated'}: ${searchDocId}`);
+    functions.logger.info(
+      `[Search] Index ${isCreate ? 'created' : 'updated'}: ${searchDocId}`,
+    );
   } catch (error) {
     functions.logger.error(`[Search] Failed to index ${entityType}/${entityId}`, { error });
-    throw error; // Rethrow to trigger retry
+    throw error;
   }
 }
 
 // =============================================================================
-// ENTITY-SPECIFIC TRIGGERS
+// TRIGGER FACTORY — builds a trigger per collection
 // =============================================================================
 
-/**
- * Trigger for Project documents.
- * Fires on create, update, or delete of any document in 'projects' collection.
- */
-export const onProjectWrite = functions
-  .runWith({
-    timeoutSeconds: 60,
-    memory: '256MB',
-  })
-  .firestore.document('projects/{docId}')
-  .onWrite(async (
-    change: functions.Change<functions.firestore.DocumentSnapshot>,
-    context: functions.EventContext
-  ) => {
-    await handleEntityWrite(SEARCH_ENTITY_TYPES.PROJECT, change, context);
-  });
+const TRIGGER_RUNTIME = {
+  timeoutSeconds: 60,
+  memory: '256MB' as const,
+};
 
-/**
- * Trigger for Contact documents.
- * Fires on create, update, or delete of any document in 'contacts' collection.
- */
-export const onContactWrite = functions
-  .runWith({
-    timeoutSeconds: 60,
-    memory: '256MB',
-  })
-  .firestore.document('contacts/{docId}')
-  .onWrite(async (
-    change: functions.Change<functions.firestore.DocumentSnapshot>,
-    context: functions.EventContext
-  ) => {
-    await handleEntityWrite(SEARCH_ENTITY_TYPES.CONTACT, change, context);
-  });
+function makeTrigger(entityType: SearchEntityType, collection: string) {
+  return functions
+    .runWith(TRIGGER_RUNTIME)
+    .firestore.document(`${collection}/{docId}`)
+    .onWrite(async (change, context) => {
+      await handleEntityWrite(entityType, change, context);
+    });
+}
 
 // =============================================================================
-// FUTURE TRIGGERS (PR#4+)
+// ENTITY-SPECIFIC TRIGGERS — one per indexed collection (ADR-029)
 // =============================================================================
 
-// Uncomment when ready to enable building indexing:
-/*
-export const onBuildingWrite = functions
-  .runWith({ timeoutSeconds: 60, memory: '256MB' })
-  .firestore.document('buildings/{docId}')
-  .onWrite(async (change, context) => {
-    await handleEntityWrite(SEARCH_ENTITY_TYPES.BUILDING, change, context);
-  });
-*/
-
-// Uncomment when ready to enable unit indexing:
-/*
-export const onUnitWrite = functions
-  .runWith({ timeoutSeconds: 60, memory: '256MB' })
-  .firestore.document('units/{docId}')
-  .onWrite(async (change, context) => {
-    await handleEntityWrite(SEARCH_ENTITY_TYPES.UNIT, change, context);
-  });
-*/
-
-// Uncomment when ready to enable file indexing:
-/*
-export const onFileWrite = functions
-  .runWith({ timeoutSeconds: 60, memory: '256MB' })
-  .firestore.document('files/{docId}')
-  .onWrite(async (change, context) => {
-    await handleEntityWrite(SEARCH_ENTITY_TYPES.FILE, change, context);
-  });
-*/
+export const onProjectWrite = makeTrigger(SEARCH_ENTITY_TYPES.PROJECT, COLLECTIONS.PROJECTS);
+export const onBuildingWrite = makeTrigger(SEARCH_ENTITY_TYPES.BUILDING, COLLECTIONS.BUILDINGS);
+export const onPropertyWrite = makeTrigger(SEARCH_ENTITY_TYPES.PROPERTY, COLLECTIONS.PROPERTIES);
+export const onContactWrite = makeTrigger(SEARCH_ENTITY_TYPES.CONTACT, COLLECTIONS.CONTACTS);
+export const onFileWrite = makeTrigger(SEARCH_ENTITY_TYPES.FILE, COLLECTIONS.FILES);
+export const onParkingWrite = makeTrigger(
+  SEARCH_ENTITY_TYPES.PARKING,
+  COLLECTIONS.PARKING_SPACES,
+);
+export const onStorageWrite = makeTrigger(SEARCH_ENTITY_TYPES.STORAGE, COLLECTIONS.STORAGE);
+export const onOpportunityWrite = makeTrigger(
+  SEARCH_ENTITY_TYPES.OPPORTUNITY,
+  COLLECTIONS.OPPORTUNITIES,
+);
+export const onCommunicationWrite = makeTrigger(
+  SEARCH_ENTITY_TYPES.COMMUNICATION,
+  COLLECTIONS.COMMUNICATIONS,
+);
+export const onTaskWrite = makeTrigger(SEARCH_ENTITY_TYPES.TASK, COLLECTIONS.TASKS);

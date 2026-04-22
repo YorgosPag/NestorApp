@@ -6,53 +6,38 @@
  * Helper functions for building SearchDocument objects for Firestore indexing.
  * Used by indexTriggers.ts for automatic indexing on entity create/update.
  *
+ * Config + entity-type constants are owned by `./search-config.mirror.ts`
+ * (the SSoT mirror of `src/config/search-index-config.ts` — ADR-029).
+ *
  * @module functions/search/indexBuilder
- * @enterprise ADR-029 - Global Search v1
- * @compliance Local_Protocol.txt - ZERO any, Centralization First
+ * @enterprise ADR-029 — Global Search v1
  */
 
 import * as admin from 'firebase-admin';
 
-import { COLLECTIONS } from '../config/firestore-collections';
+import {
+  SEARCH_ENTITY_TYPES,
+  SEARCH_AUDIENCE,
+  SEARCH_INDEX_CONFIG,
+  type SearchEntityType,
+  type SearchAudience,
+  type SearchIndexConfig,
+} from './search-config.mirror';
+
+// Re-exports so `indexTriggers.ts` and other callers keep a stable import surface
+export { SEARCH_ENTITY_TYPES, SEARCH_AUDIENCE, SEARCH_INDEX_CONFIG };
+export type { SearchEntityType, SearchAudience, SearchIndexConfig };
+export { COLLECTIONS } from '../config/firestore-collections';
 
 // =============================================================================
-// TYPES (Mirrored from src/types/search.ts - Functions can't import from main app)
+// SEARCH DOCUMENT WIRE FORMAT
 // =============================================================================
 
-/**
- * Entity types that are searchable via Global Search.
- */
-export const SEARCH_ENTITY_TYPES = {
-  PROJECT: 'project',
-  BUILDING: 'building',
-  UNIT: 'unit',
-  CONTACT: 'contact',
-  FILE: 'file',
-} as const;
-
-export type SearchEntityType = typeof SEARCH_ENTITY_TYPES[keyof typeof SEARCH_ENTITY_TYPES];
-
-/**
- * Audience types for search access control.
- */
-export const SEARCH_AUDIENCE = {
-  INTERNAL: 'internal',
-  EXTERNAL: 'external',
-} as const;
-
-export type SearchAudience = typeof SEARCH_AUDIENCE[keyof typeof SEARCH_AUDIENCE];
-
-/**
- * Search fields for indexing and querying.
- */
 export interface SearchFields {
   normalized: string;
   prefixes: string[];
 }
 
-/**
- * Navigation links for search results.
- */
 export interface SearchResultLinks {
   href: string;
   routeParams: Record<string, string>;
@@ -60,7 +45,7 @@ export interface SearchResultLinks {
 
 /**
  * Search Document stored in Firestore.
- * Path: searchDocuments/{docId}
+ * Path: search_documents/{docId}
  * docId Format: {entityType}_{entityId}
  */
 export interface SearchDocument {
@@ -96,116 +81,6 @@ export interface SearchDocumentInput {
 }
 
 // =============================================================================
-// COLLECTIONS — SSoT from centralized config
-// =============================================================================
-
-// Re-export for indexTriggers.ts which imports COLLECTIONS from this module
-export { COLLECTIONS } from '../config/firestore-collections';
-
-// =============================================================================
-// INDEX CONFIGURATION
-// =============================================================================
-
-/**
- * Configuration for a single field that can be used as title.
- */
-type TitleFieldConfig = string | ((doc: Record<string, unknown>) => string);
-
-/**
- * Configuration for audience field.
- */
-type AudienceFieldConfig = SearchAudience | ((doc: Record<string, unknown>) => SearchAudience);
-
-/**
- * Index configuration for a searchable entity type.
- */
-interface SearchIndexConfig {
-  collection: string;
-  titleField: TitleFieldConfig;
-  subtitleFields: string[];
-  searchableFields: string[];
-  statusField: string;
-  audience: AudienceFieldConfig;
-  requiredPermission: string;
-  routeTemplate: string;
-}
-
-/**
- * Index configuration for all searchable entity types.
- */
-export const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
-  [SEARCH_ENTITY_TYPES.PROJECT]: {
-    collection: COLLECTIONS.PROJECTS,
-    titleField: 'name',
-    subtitleFields: ['address', 'city'],
-    searchableFields: ['name', 'address', 'city', 'projectCode'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'projects:projects:view',
-    routeTemplate: '/projects/{id}',
-  },
-  [SEARCH_ENTITY_TYPES.BUILDING]: {
-    collection: COLLECTIONS.BUILDINGS,
-    titleField: 'name',
-    subtitleFields: ['address'],
-    searchableFields: ['name', 'address', 'buildingCode'],
-    statusField: 'status',
-    audience: (doc) => {
-      const isPublished = doc.isPublished as boolean | undefined;
-      return isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL;
-    },
-    requiredPermission: 'buildings:buildings:view',
-    routeTemplate: '/buildings/{id}',
-  },
-  [SEARCH_ENTITY_TYPES.UNIT]: {
-    collection: COLLECTIONS.UNITS,
-    titleField: 'name',
-    subtitleFields: ['floor', 'type'],
-    searchableFields: ['name', 'unitCode', 'floor'],
-    statusField: 'status',
-    audience: (doc) => {
-      const isPublished = doc.isPublished as boolean | undefined;
-      return isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL;
-    },
-    requiredPermission: 'units:units:view',
-    routeTemplate: '/units/{id}',
-  },
-  [SEARCH_ENTITY_TYPES.CONTACT]: {
-    collection: COLLECTIONS.CONTACTS,
-    titleField: (doc) => {
-      const displayName = doc.displayName as string | undefined;
-      const firstName = doc.firstName as string | undefined;
-      const lastName = doc.lastName as string | undefined;
-      const companyName = doc.companyName as string | undefined;
-      const serviceName = doc.serviceName as string | undefined;
-      return (
-        displayName ||
-        `${firstName || ''} ${lastName || ''}`.trim() ||
-        companyName ||
-        serviceName ||
-        'Unknown'
-      );
-    },
-    subtitleFields: ['email', 'phone'],
-    searchableFields: ['displayName', 'firstName', 'lastName', 'email', 'companyName', 'serviceName'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'crm:contacts:view',
-    routeTemplate: '/contacts/{id}',
-  },
-  [SEARCH_ENTITY_TYPES.FILE]: {
-    collection: COLLECTIONS.FILES,
-    titleField: 'displayName',
-    subtitleFields: ['category', 'domain'],
-    searchableFields: ['displayName', 'originalFilename'],
-    statusField: 'status',
-    audience: SEARCH_AUDIENCE.INTERNAL,
-    requiredPermission: 'dxf:files:view',
-    routeTemplate: '/files/{id}',
-  },
-};
-
-// =============================================================================
 // TEXT NORMALIZATION (Greek-friendly)
 // =============================================================================
 
@@ -224,21 +99,16 @@ const GREEK_ACCENT_MAP: Record<string, string> = {
  * - Converts to lowercase
  * - Removes accents/diacritics
  * - Normalizes whitespace
- *
- * @param text - Text to normalize
- * @returns Normalized text
  */
 export function normalizeSearchText(text: string): string {
   if (!text) return '';
 
   let result = text.toLowerCase();
 
-  // Replace Greek accented characters
   for (const [accented, base] of Object.entries(GREEK_ACCENT_MAP)) {
     result = result.replace(new RegExp(accented, 'g'), base);
   }
 
-  // Normalize whitespace
   result = result.replace(/\s+/g, ' ').trim();
 
   return result;
@@ -247,17 +117,12 @@ export function normalizeSearchText(text: string): string {
 /**
  * Generate prefix array from normalized text.
  * Used for Firestore array-contains queries for autocomplete.
- *
- * @param text - Normalized text
- * @param maxPrefixLength - Maximum prefix length (default 5)
- * @returns Array of prefixes
  */
 export function generateSearchPrefixes(text: string, maxPrefixLength = 5): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const prefixes: Set<string> = new Set();
 
   for (const word of words) {
-    // Generate prefixes of length 3, 4, 5
     for (let len = 3; len <= Math.min(maxPrefixLength, word.length); len++) {
       prefixes.add(word.substring(0, len));
     }
@@ -270,9 +135,6 @@ export function generateSearchPrefixes(text: string, maxPrefixLength = 5): strin
 // HELPER FUNCTIONS
 // =============================================================================
 
-/**
- * Extract title from document using config.
- */
 function extractTitle(doc: Record<string, unknown>, config: SearchIndexConfig): string {
   if (typeof config.titleField === 'function') {
     return config.titleField(doc);
@@ -280,9 +142,6 @@ function extractTitle(doc: Record<string, unknown>, config: SearchIndexConfig): 
   return (doc[config.titleField] as string) || '';
 }
 
-/**
- * Extract subtitle from document using config.
- */
 function extractSubtitle(doc: Record<string, unknown>, config: SearchIndexConfig): string {
   return config.subtitleFields
     .map((field) => doc[field] as string | undefined)
@@ -290,27 +149,24 @@ function extractSubtitle(doc: Record<string, unknown>, config: SearchIndexConfig
     .join(' - ');
 }
 
-/**
- * Determine audience from document using config.
- */
-function determineAudience(doc: Record<string, unknown>, config: SearchIndexConfig): SearchAudience {
+function determineAudience(
+  doc: Record<string, unknown>,
+  config: SearchIndexConfig,
+): SearchAudience {
   if (typeof config.audience === 'function') {
     return config.audience(doc);
   }
   return config.audience;
 }
 
-/**
- * Build navigation href from template and entity ID.
- */
 function buildHref(config: SearchIndexConfig, entityId: string): string {
   return config.routeTemplate.replace('{id}', entityId);
 }
 
-/**
- * Extract all searchable text from document.
- */
-function extractSearchableText(doc: Record<string, unknown>, config: SearchIndexConfig): string {
+function extractSearchableText(
+  doc: Record<string, unknown>,
+  config: SearchIndexConfig,
+): string {
   const parts: string[] = [];
 
   for (const field of config.searchableFields) {
@@ -329,16 +185,11 @@ function extractSearchableText(doc: Record<string, unknown>, config: SearchIndex
 
 /**
  * Build a SearchDocument from entity data.
- *
- * @param entityType - Type of entity
- * @param entityId - Entity document ID
- * @param data - Entity document data
- * @returns SearchDocumentInput ready for Firestore
  */
 export function buildSearchDocument(
   entityType: SearchEntityType,
   entityId: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): SearchDocumentInput | null {
   const config = SEARCH_INDEX_CONFIG[entityType];
   if (!config) {
@@ -346,25 +197,21 @@ export function buildSearchDocument(
     return null;
   }
 
-  // Extract tenant ID (companyId)
   const tenantId = (data.companyId as string) || (data.tenantId as string);
   if (!tenantId) {
     console.warn(`Missing tenantId/companyId for ${entityType}/${entityId}`);
     return null;
   }
 
-  // Extract fields
   const title = extractTitle(data, config);
   const subtitle = extractSubtitle(data, config);
   const status = (data[config.statusField] as string) || 'active';
   const audience = determineAudience(data, config);
 
-  // Build search fields
   const searchableText = extractSearchableText(data, config);
   const normalizedText = normalizeSearchText(searchableText);
   const prefixes = generateSearchPrefixes(normalizedText);
 
-  // Build navigation links
   const href = buildHref(config, entityId);
 
   return {
@@ -389,9 +236,6 @@ export function buildSearchDocument(
 
 /**
  * Create full SearchDocument with timestamps.
- *
- * @param input - SearchDocumentInput
- * @returns SearchDocument with server timestamps
  */
 export function createSearchDocument(input: SearchDocumentInput): SearchDocument {
   return {
@@ -405,10 +249,6 @@ export function createSearchDocument(input: SearchDocumentInput): SearchDocument
 /**
  * Generate document ID for search document.
  * Format: {entityType}_{entityId}
- *
- * @param entityType - Entity type
- * @param entityId - Entity ID
- * @returns Document ID for searchDocuments collection
  */
 export function generateSearchDocId(entityType: SearchEntityType, entityId: string): string {
   return `${entityType}_${entityId}`;
