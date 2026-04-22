@@ -140,3 +140,4 @@ Storage path: `companies/{companyId}/projects/{projectId}/showcase/documents/{fi
 | 2026-04-22 | F6: ProjectDetailsHeader onShowcaseProject prop + project-details.tsx UnifiedShareDialog + preSubmit PDF callback |
 | 2026-04-22 | F7: i18n detailsHeader.actions.showcase (el + en) |
 | 2026-04-22 | F8: .ssot-registry.json project-showcase-service module (Tier 2) |
+| 2026-04-22 | Cleanup: extracted shared MessageScreen+ShowcaseFooter → ShowcaseShared.tsx; extended ShowcaseHeader with titleOverride+subtitleOverride; removed ProjectShowcaseHeader.tsx; extracted jsonError+streamPdfFromStorage → shared-pdf-proxy-helpers.ts (GOL+SSoT) |

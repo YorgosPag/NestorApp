@@ -20,20 +20,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { jsonError, streamPdfFromStorage } from '@/app/api/showcase/shared-pdf-proxy-helpers';
 
 const logger = createModuleLogger('ProjectShowcasePdfProxy');
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
-
-function jsonError(status: number, message: string): NextResponse {
-  return NextResponse.json({ error: message }, { status });
-}
 
 async function loadShare(token: string): Promise<{
   id: string;
@@ -64,26 +61,6 @@ async function loadShare(token: string): Promise<{
   if (!companyId || !entityId || !expiresAt || !pdfStoragePath) return null;
 
   return { id: snap.docs[0].id, companyId, entityId, expiresAt, pdfStoragePath };
-}
-
-async function streamPdfFromStorage(
-  storagePath: string,
-): Promise<{ stream: ReadableStream<Uint8Array>; size?: number }> {
-  const bucket = getAdminBucket();
-  if (!bucket) throw new Error('Storage not available');
-  const fileRef = bucket.file(storagePath);
-  const [meta] = await fileRef.getMetadata();
-  const size = meta.size !== undefined ? Number(meta.size) : undefined;
-  const nodeStream = fileRef.createReadStream();
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      nodeStream.on('data', (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-      nodeStream.on('end', () => controller.close());
-      nodeStream.on('error', (err) => controller.error(err));
-    },
-    cancel() { nodeStream.destroy(); },
-  });
-  return { stream, size };
 }
 
 async function incrementAccessCount(shareId: string): Promise<void> {

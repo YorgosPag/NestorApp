@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { Download, AlertTriangle, Clock } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Spinner } from '@/components/ui/spinner';
-import { ProjectShowcaseHeader } from './ProjectShowcaseHeader';
+import { ShowcaseHeader } from '@/components/property-showcase/ShowcaseHeader';
+import { MessageScreen, ShowcaseFooter } from '@/components/property-showcase/ShowcaseShared';
 import { ProjectShowcaseSpecs } from './ProjectShowcaseSpecs';
 import type { ProjectShowcasePayload, ProjectShowcaseMedia } from '@/types/project-showcase';
 
@@ -88,7 +89,11 @@ export function ProjectShowcaseClient({ token }: ProjectShowcaseClientProps) {
   return (
     <main className="min-h-screen bg-[hsl(var(--showcase-bg))] text-[hsl(var(--showcase-fg))] pb-12">
       <div className="max-w-4xl mx-auto px-4 pt-6 space-y-4">
-        <ProjectShowcaseHeader company={data.company} projectName={data.project.name} />
+        <ShowcaseHeader
+          company={data.company}
+          titleOverride={data.project.name}
+          subtitleOverride={`${data.company.name} · ${t('projectShowcase.header.subtitle')}`}
+        />
 
         {data.project.description && (
           <section className="bg-[hsl(var(--showcase-surface))] rounded-xl shadow-sm p-5 border border-[hsl(var(--showcase-border))]">
@@ -150,47 +155,3 @@ function MediaGrid({ media, title }: { media: ProjectShowcaseMedia[]; title: str
   );
 }
 
-function MessageScreen({
-  icon, title, description,
-}: { icon: React.ReactNode; title: string; description: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--showcase-bg))] px-4">
-      <div className="bg-[hsl(var(--showcase-surface))] rounded-xl shadow-sm p-8 max-w-md text-center border border-[hsl(var(--showcase-border))]">
-        <div className="flex justify-center mb-4">{icon}</div>
-        <h1 className="text-xl font-bold text-[hsl(var(--showcase-fg))] mb-2">{title}</h1>
-        <p className="text-[hsl(var(--showcase-muted-fg))]">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function ShowcaseFooter({
-  company,
-}: { company: { name: string; phone?: string; email?: string; website?: string } }) {
-  const { t } = useTranslation('showcase');
-  const contact = [company.phone, company.email, company.website].filter(Boolean).join(' · ');
-  const year = new Date().getFullYear();
-  return (
-    <footer className="mt-6 pt-5 border-t border-[hsl(var(--showcase-border))] text-center space-y-3">
-      {contact && (
-        <p className="text-sm text-[hsl(var(--showcase-muted-fg))]">
-          {company.name} · {contact}
-        </p>
-      )}
-      <div className="flex items-center justify-center gap-2 text-xs text-[hsl(var(--showcase-muted-fg))]">
-        <img
-          src="/images/nestor-app-logo.png"
-          alt=""
-          width={24}
-          height={24}
-          className="h-6 w-6 rounded bg-white/90 object-contain p-0.5"
-          aria-hidden="true"
-        />
-        <span className="font-semibold">{t('brand.poweredBy')}</span>
-      </div>
-      <p className="text-[10px] text-[hsl(var(--showcase-muted-fg))]/70">
-        &copy; {year} {t('brand.appName')}
-      </p>
-    </footer>
-  );
-}

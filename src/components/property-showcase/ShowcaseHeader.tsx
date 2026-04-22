@@ -18,6 +18,10 @@ const FALLBACK_LOGO_URL = '/images/pagonis-energo-logo.png';
 
 interface ShowcaseHeaderProps {
   company: ShowcaseCompanyBrand;
+  /** When set, renders this as the <h1> instead of company.name (e.g. project name). */
+  titleOverride?: string;
+  /** When set, replaces the default subtitle text. */
+  subtitleOverride?: string;
 }
 
 const SOCIAL_ICONS: Record<ShowcaseSocialPlatform, React.ComponentType<{ className?: string }>> = {
@@ -52,7 +56,7 @@ function SocialIcon({ item }: { item: ShowcaseContactSocial }) {
   );
 }
 
-export function ShowcaseHeader({ company }: ShowcaseHeaderProps) {
+export function ShowcaseHeader({ company, titleOverride, subtitleOverride }: ShowcaseHeaderProps) {
   const { t } = useTranslation('showcase');
   const logoSrc = company.logoUrl && company.logoUrl.trim().length > 0
     ? company.logoUrl
@@ -81,9 +85,11 @@ export function ShowcaseHeader({ company }: ShowcaseHeaderProps) {
         className="h-20 w-20 md:h-24 md:w-24 mx-auto md:mx-0 rounded-lg object-contain bg-white/95 p-1 shadow-sm"
       />
       <div className="min-w-0">
-        <h1 className="text-xl md:text-2xl font-bold leading-tight text-center md:text-left">{company.name}</h1>
+        <h1 className="text-xl md:text-2xl font-bold leading-tight text-center md:text-left">
+          {titleOverride ?? company.name}
+        </h1>
         <p className="text-sm text-[hsl(var(--showcase-muted-fg))] text-center md:text-left">
-          {t('header.subtitle')}
+          {subtitleOverride ?? t('header.subtitle')}
         </p>
 
         {hasContacts && (

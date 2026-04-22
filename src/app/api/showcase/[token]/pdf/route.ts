@@ -20,11 +20,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { jsonError, streamPdfFromStorage } from '../shared-pdf-proxy-helpers';
 
 const logger = createModuleLogger('ShowcasePdfProxy');
 
@@ -46,10 +47,6 @@ interface PropertyHeader {
   companyId?: string;
   code?: string;
   name?: string;
-}
-
-function jsonError(status: number, message: string): NextResponse {
-  return NextResponse.json({ error: message }, { status });
 }
 
 async function loadShareByToken(token: string): Promise<ShareDoc | null> {
@@ -140,34 +137,6 @@ async function incrementDownloadCount(shareId: string): Promise<void> {
   if (!legacySnap.exists) return;
   const current = (legacySnap.data()?.downloadCount as number | undefined) ?? 0;
   await legacyRef.update({ downloadCount: current + 1 });
-}
-
-async function streamPdfFromStorage(
-  storagePath: string
-): Promise<{ stream: ReadableStream<Uint8Array>; size?: number }> {
-  const bucket = getAdminBucket();
-  const fileRef = bucket.file(storagePath);
-  const [exists] = await fileRef.exists();
-  if (!exists) {
-    throw new Error(`PDF object missing at ${bucket.name}/${storagePath}`);
-  }
-
-  const [metadata] = await fileRef.getMetadata();
-  const sizeRaw = metadata.size;
-  const size = typeof sizeRaw === 'string' ? Number(sizeRaw) : (sizeRaw as number | undefined);
-
-  const nodeStream = fileRef.createReadStream();
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      nodeStream.on('data', (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-      nodeStream.on('end', () => controller.close());
-      nodeStream.on('error', (err) => controller.error(err));
-    },
-    cancel() {
-      nodeStream.destroy();
-    },
-  });
-  return { stream, size: Number.isFinite(size) ? size : undefined };
 }
 
 async function handleGet(
