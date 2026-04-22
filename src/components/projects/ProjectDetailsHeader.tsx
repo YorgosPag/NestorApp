@@ -25,6 +25,7 @@ interface ProjectDetailsHeaderProps {
      */
     isCreateMode?: boolean;
     onStatusChange?: (next: ProjectStatus) => void;
+    onShowcaseProject?: () => void;
 }
 
 export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
@@ -37,7 +38,8 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
     onDeleteProject,
     hideEditControls = false,
     isCreateMode = false,
-    onStatusChange
+    onStatusChange,
+    onShowcaseProject,
 }: ProjectDetailsHeaderProps) {
     const { t } = useTranslation(['projects', 'projects-data', 'projects-ika', 'trash']);
 
@@ -76,11 +78,15 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
                 createEntityAction('cancel', t('detailsHeader.actions.cancel'), () => onCancelEdit?.())
             ]
         ) : []),
+        // Showcase Action (ADR-316)
+        ...(!hideEditControls && onShowcaseProject ? [
+            createEntityAction('showcase', t('detailsHeader.actions.showcase'), () => onShowcaseProject())
+        ] : []),
         // Soft-delete Action (ADR-308 — moves to trash, not permanent delete)
         ...(!hideEditControls && onDeleteProject ? [
             createEntityAction('trash', t('moveToTrash', { ns: 'trash' }), () => onDeleteProject())
         ] : [])
-    ], [isEditing, onStartEdit, onSaveEdit, onCancelEdit, onNewProject, onDeleteProject, hideEditControls, t]);
+    ], [isEditing, onStartEdit, onSaveEdit, onCancelEdit, onNewProject, onDeleteProject, hideEditControls, onShowcaseProject, t]);
 
     return (
         <>

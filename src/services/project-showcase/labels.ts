@@ -13,6 +13,7 @@
 import elShowcase from '@/i18n/locales/el/showcase.json';
 import enShowcase from '@/i18n/locales/en/showcase.json';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
+import type { ShowcaseHeaderContactLabels } from '@/services/property-showcase/labels';
 
 // ============================================================================
 // ENUM LABEL MAPS (inline — no centralised label service for project types)
@@ -121,6 +122,7 @@ export interface ProjectShowcaseEmailLabels {
 
 export interface ProjectShowcaseHeaderLabels {
   subtitle: string;
+  contacts: ShowcaseHeaderContactLabels;
 }
 
 export interface ProjectShowcasePDFLabels {
@@ -141,6 +143,21 @@ const CATALOGS: Record<EnumLocale, ElShowcase> = {
   el: elShowcase as ElShowcase,
   en: enShowcase as unknown as ElShowcase,
 };
+
+function loadHeaderContactLabels(
+  c: ElShowcase,
+  locale: EnumLocale,
+): ShowcaseHeaderContactLabels {
+  const raw = (c as unknown as { header?: { contacts?: Record<string, string> } }).header?.contacts ?? {};
+  const fb = (el: string, en: string) => (locale === 'el' ? el : en);
+  return {
+    addressLabel: raw.addressLabel ?? fb('Διεύθυνση', 'Address'),
+    phoneLabel:   raw.phoneLabel   ?? fb('Τηλέφωνο', 'Phone'),
+    emailLabel:   raw.emailLabel   ?? fb('Email', 'Email'),
+    websiteLabel: raw.websiteLabel ?? fb('Ιστοσελίδα', 'Website'),
+    socialLabel:  raw.socialLabel  ?? fb('Μέσα κοινωνικής δικτύωσης', 'Social media'),
+  };
+}
 
 export function loadProjectShowcasePdfLabels(locale: EnumLocale = 'el'): ProjectShowcasePDFLabels {
   const c = CATALOGS[locale];
@@ -197,6 +214,7 @@ export function loadProjectShowcasePdfLabels(locale: EnumLocale = 'el'): Project
     },
     header: {
       subtitle: (header.subtitle as string | undefined) ?? fallback('sub', 'Παρουσίαση έργου', 'Project showcase'),
+      contacts: loadHeaderContactLabels(c, locale),
     },
   };
 }

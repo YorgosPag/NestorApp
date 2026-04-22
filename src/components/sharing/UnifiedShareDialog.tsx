@@ -310,7 +310,7 @@ export function UnifiedShareDialog({
             dirtyPolicy={isDirty}
           />
 
-          {entityType === 'property_showcase' && (
+          {(entityType === 'property_showcase' || entityType === 'project_showcase') && (
             <Button
               asChild
               variant="outline"
@@ -318,7 +318,11 @@ export function UnifiedShareDialog({
               aria-disabled={isDirty}
             >
               <a
-                href={`/api/showcase/${share.token}/pdf`}
+                href={
+                  entityType === 'project_showcase'
+                    ? `/api/project-showcase/${share.token}/pdf`
+                    : `/api/showcase/${share.token}/pdf`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 tabIndex={isDirty ? -1 : undefined}

@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SharedContactPageContent } from '@/components/shared/pages/SharedContactPageContent';
 import { SharedShowcasePageContent } from '@/components/shared/pages/SharedShowcasePageContent';
+import { SharedProjectShowcasePageContent } from '@/components/shared/pages/SharedProjectShowcasePageContent';
 import { formatFileSize } from '@/utils/file-validation';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
 import { getFileCategory, getFileCategoryI18nKey } from '@/lib/file-types/preview-registry';
@@ -93,6 +94,11 @@ export function SharedFilePageContent() {
   // ADR-315: Property Showcase public view — replaces legacy /shared/po redirect.
   if (state === 'showcase' && showcaseData) {
     return <SharedShowcasePageContent token={token} />;
+  }
+
+  // ADR-316: Project Showcase public view.
+  if (state === 'project_showcase') {
+    return <SharedProjectShowcasePageContent token={token} />;
   }
 
   return (

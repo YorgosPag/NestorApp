@@ -133,3 +133,10 @@ Storage path: `companies/{companyId}/projects/{projectId}/showcase/documents/{fi
 | Date | Change |
 |------|--------|
 | 2026-04-22 | ADR created — F0 foundation: types + i18n + ShareEntityType extension |
+| 2026-04-22 | F1: snapshot-builder + labels.ts (PROJECT_TYPE/STATUS_LABELS) |
+| 2026-04-22 | F2+F3: ProjectShowcasePDFService + ProjectShowcaseRenderer + public GET route + authenticated PDF POST route (in commit 12c431ab due to race) |
+| 2026-04-22 | F4: project-showcase.resolver.ts + resolvers/index.ts registration |
+| 2026-04-22 | F5: ProjectShowcaseClient + ProjectShowcaseHeader + ProjectShowcaseSpecs + SharedProjectShowcasePageContent + useSharedFilePageState dispatch + SharedFilePageContent dispatch |
+| 2026-04-22 | F6: ProjectDetailsHeader onShowcaseProject prop + project-details.tsx UnifiedShareDialog + preSubmit PDF callback |
+| 2026-04-22 | F7: i18n detailsHeader.actions.showcase (el + en) |
+| 2026-04-22 | F8: .ssot-registry.json project-showcase-service module (Tier 2) |

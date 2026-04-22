@@ -203,7 +203,8 @@
       "cascadeTotal": "Total records to be deleted: {count}",
       "cascadeNoChildren": "This project has no buildings or other records.",
       "cascadeLoading": "Loading data...",
-      "cascadeIrreversible": "This action is irreversible."
+      "cascadeIrreversible": "This action is irreversible.",
+      "showcase": "Project Showcase"
     }
   },
   "listCard": {

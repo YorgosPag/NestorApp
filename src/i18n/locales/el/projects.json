@@ -203,7 +203,8 @@
       "cascadeTotal": "Σύνολο εγγραφών προς διαγραφή: {count}",
       "cascadeNoChildren": "Το έργο δεν έχει κτίρια ή άλλες εγγραφές.",
       "cascadeLoading": "Φόρτωση δεδομένων...",
-      "cascadeIrreversible": "Η ενέργεια αυτή είναι μη αναστρέψιμη."
+      "cascadeIrreversible": "Η ενέργεια αυτή είναι μη αναστρέψιμη.",
+      "showcase": "Επίδειξη Έργου"
     }
   },
   "listCard": {

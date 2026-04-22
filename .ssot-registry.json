@@ -1014,6 +1014,24 @@
       "tier": 2
     },
 
+    "_comment_adr316": "=== TIER 2 — ADR-316 (2026-04-22): project showcase SSoT ===",
+
+    "project-showcase-service": {
+      "ssotFile": "src/services/project-showcase/snapshot-builder.ts",
+      "description": "All server-side project showcase snapshot construction MUST route through buildProjectShowcaseSnapshot() in snapshot-builder.ts. Direct Firestore reads of the projects collection for showcase purposes, inline branding resolution, and re-implementation of the snapshot-to-PDF pipeline outside src/services/project-showcase/ are forbidden. PDF rendering via ProjectShowcasePDFService + ProjectShowcaseRenderer. Public API: GET /api/project-showcase/[token]. PDF API: POST /api/projects/[id]/showcase/pdf. ADR-316.",
+      "forbiddenPatterns": [
+        "export\\s+(async\\s+)?function\\s+buildProjectShowcaseSnapshot\\b"
+      ],
+      "allowlist": [
+        "src/services/project-showcase/",
+        "src/services/pdf/ProjectShowcasePDFService.ts",
+        "src/services/pdf/renderers/ProjectShowcaseRenderer.ts",
+        "src/app/api/project-showcase/",
+        "src/app/api/projects/"
+      ],
+      "tier": 2
+    },
+
     "_comment_tier3_adr194": "=== TIER 3 — ADR-194 (2026-04-19): description+notes card SSoT ===",
 
     "description-notes-card": {

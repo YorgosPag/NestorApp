@@ -28,6 +28,9 @@ import { getSortedProjectTabs } from '@/config/project-tabs-config';
 import { DetailsContainer } from '@/core/containers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useProjectDetail } from '@/hooks/useProjectDetail';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
+import type { CreateShareInput } from '@/types/sharing';
 
 // ============================================================================
 // TYPES
@@ -79,9 +82,11 @@ export function ProjectDetails({
   isTrashMode = false,
 }: ProjectDetailsProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
+  const { user } = useAuth();
 
   // Use lifted state if available, otherwise fallback to local state
   const [localIsEditing, setLocalIsEditing] = useState(false);
+  const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
   const isEditing = externalIsEditing ?? localIsEditing;
   const setIsEditing = onSetEditing ?? setLocalIsEditing;
 
@@ -161,7 +166,17 @@ export function ProjectDetails({
     && /not found|404/i.test(hydrationError.message);
   const displayProject = is404 ? null : effectiveProject;
 
+  const projectShowcasePdfPreSubmit = useCallback(async (): Promise<
+    Pick<CreateShareInput, 'showcaseMeta'>
+  > => {
+    const res = await fetch(`/api/projects/${displayProject?.id}/showcase/pdf`, { method: 'POST' });
+    if (!res.ok) throw new Error('PDF generation failed');
+    const body = (await res.json()) as { showcaseMeta: { pdfStoragePath: string; pdfRegeneratedAt: string } };
+    return { showcaseMeta: body.showcaseMeta };
+  }, [displayProject?.id]);
+
   return (
+    <>
     <DetailsContainer
       selectedItem={displayProject}
       header={
@@ -177,6 +192,7 @@ export function ProjectDetails({
             isCreateMode={isCreateMode}
             onStatusChange={isCreateMode ? onDraftStatusChange : refetchProject}
             hideEditControls={isTrashMode}
+            onShowcaseProject={displayProject?.id && !isCreateMode ? () => setShowcaseDialogOpen(true) : undefined}
           />
         ) : null
       }
@@ -200,6 +216,20 @@ export function ProjectDetails({
         description: t('emptyState.description')
       }}
     />
+
+    {displayProject?.id && user?.companyId && user?.uid && (
+      <UnifiedShareDialog
+        open={showcaseDialogOpen}
+        onOpenChange={setShowcaseDialogOpen}
+        entityType="project_showcase"
+        entityId={displayProject.id}
+        entityTitle={displayProject.name}
+        companyId={user.companyId}
+        userId={user.uid}
+        preSubmit={projectShowcasePdfPreSubmit}
+      />
+    )}
+    </>
   );
 }
 
