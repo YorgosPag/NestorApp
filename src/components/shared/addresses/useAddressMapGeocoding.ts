@@ -295,8 +295,16 @@ export function useAddressMapGeocoding({
 
     try {
       const result = await reverseGeocode(lat, lng);
+      // Diagnostic (2026-04-23): surface the exact reverse-geocoding payload in
+      // browser console so we can tell whether the number drops at the API
+      // boundary or in the partial-mapping step.
+      // eslint-disable-next-line no-console
+      console.log('[DRAG DEBUG] reverseGeocode result', { lat, lng, result });
       if (result && onAddressDragUpdate) {
-        onAddressDragUpdate(reverseResultToAddress(result), addressIndex);
+        const partial = reverseResultToAddress(result);
+        // eslint-disable-next-line no-console
+        console.log('[DRAG DEBUG] partial address after mapping', partial);
+        onAddressDragUpdate(partial, addressIndex);
       } else if (!result) {
         logger.warn('Reverse geocoding returned no result', { data: { lat, lng } });
       }
