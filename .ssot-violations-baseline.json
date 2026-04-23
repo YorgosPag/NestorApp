@@ -1,14 +1,13 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-22T18:26:00Z",
-    "totalViolations": 4,
-    "totalFiles": 2,
+    "generated": "2026-04-23T21:40:42Z",
+    "totalViolations": 6,
+    "totalFiles": 1,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
-    "src/config/file-types/classification-registry.ts": 3,
-    "src/components/project-showcase/ProjectShowcaseSpecs.tsx": 1
+    "src/config/file-types/classification-registry.ts": 6
   }
 }
