@@ -19,6 +19,7 @@ import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { findNearestHouseNumber } from '@/lib/geocoding/overpass-housenumber';
 
 const logger = createModuleLogger('reverse-geocoding-api');
 
@@ -224,7 +225,17 @@ async function handleGet(request: NextRequest): Promise<Response> {
       );
     }
 
-    return NextResponse.json(formatReverseResult(result));
+    const formatted = formatReverseResult(result);
+    // OSM Greek coverage frequently omits `addr:housenumber`. Fallback query
+    // to Overpass for the nearest tagged building on the same road.
+    if (!formatted.number) {
+      const fallbackNumber = await findNearestHouseNumber(lat, lon, formatted.street);
+      if (fallbackNumber) {
+        formatted.number = fallbackNumber;
+      }
+    }
+
+    return NextResponse.json(formatted);
   } catch (error) {
     logger.error('Reverse geocoding API error', { error: getErrorMessage(error) });
     return NextResponse.json(
