@@ -51,7 +51,12 @@ export async function fetchCompanies(
 
   try {
     if (isAdmin) {
-      return fetchCompaniesAdmin(adminDb, companyIds, companyMap);
+      const adminResult = await fetchCompaniesAdmin(adminDb, companyIds, companyMap);
+      if (!adminResult.ok && ctx.companyId) {
+        logger.info("[Bootstrap] navigation_companies empty, falling back to tenant mode", { companyId: ctx.companyId });
+        return fetchCompaniesTenant(adminDb, ctx, [], new Map());
+      }
+      return adminResult;
     }
     return fetchCompaniesTenant(adminDb, ctx, companyIds, companyMap);
   } catch (error) {
@@ -143,28 +148,22 @@ async function fetchCompaniesTenant(
   }
 
   const companyDoc = await adminDb
-    .collection(COLLECTIONS.CONTACTS)
+    .collection(COLLECTIONS.COMPANIES)
     .doc(ctx.companyId)
     .get();
 
   if (!companyDoc.exists) {
-    logger.warn("[Bootstrap] Company not found", { companyId: ctx.companyId });
+    logger.warn("[Bootstrap] Company not found in companies collection", { companyId: ctx.companyId });
     return {
       ok: false,
       emptyReason: "Company not found - returning empty bootstrap data",
     };
   }
 
-  const data = companyDoc.data() as Partial<CompanyContact>;
-  companyMap.set(companyDoc.id, {
-    id: companyDoc.id,
-    name: resolveCompanyDisplayName({
-      id: companyDoc.id,
-      companyName: data?.companyName,
-      tradeName: data?.tradeName,
-      legalName: data?.legalName,
-      displayName: data?.displayName,
-    }),
+  const data = companyDoc.data() as { name?: string };
+  companyMap.set(ctx.companyId, {
+    id: ctx.companyId,
+    name: data?.name ?? ctx.companyId,
   });
   companyIds.push(ctx.companyId);
 
@@ -221,6 +220,56 @@ export async function fetchProjects(
     });
     throw new Error(`Failed to fetch projects: ${getErrorMessage(error)}`);
   }
+}
+
+// ============================================================================
+// COMPANY DISPLAY NAME RESOLUTION — linkedCompanyId → contacts
+// ============================================================================
+
+/**
+ * Resolves company display names for projects that have a linkedCompanyId.
+ * Fetches the corresponding contacts and returns a map: contactId → displayName.
+ * Used to show the business entity name (e.g. "ALFA") in breadcrumbs.
+ */
+export async function resolveProjectCompanyNames(
+  adminDb: FirebaseFirestore.Firestore,
+  projects: import("./bootstrap-helpers").BootstrapProject[],
+): Promise<Map<string, string>> {
+  const linkedIds = [
+    ...new Set(
+      projects
+        .map((p) => p.linkedCompanyId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  ];
+
+  if (linkedIds.length === 0) return new Map();
+
+  const nameMap = new Map<string, string>();
+  const chunks = chunkArray(linkedIds, FIRESTORE_IN_LIMIT);
+
+  for (const chunk of chunks) {
+    const snapshot = await adminDb
+      .collection(COLLECTIONS.CONTACTS)
+      .where("__name__", "in", chunk)
+      .get();
+
+    snapshot.docs.forEach((doc) => {
+      const data = doc.data() as Partial<CompanyContact>;
+      nameMap.set(
+        doc.id,
+        resolveCompanyDisplayName({
+          id: doc.id,
+          companyName: data.companyName,
+          tradeName: data.tradeName,
+          legalName: data.legalName,
+          displayName: data.displayName,
+        }),
+      );
+    });
+  }
+
+  return nameMap;
 }
 
 // ============================================================================

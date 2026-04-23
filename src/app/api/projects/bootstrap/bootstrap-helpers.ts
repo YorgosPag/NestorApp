@@ -25,6 +25,10 @@ export interface BootstrapProject {
   projectCode: string | null;
   name: string;
   companyId: string;
+  /** Business entity name (e.g. "ALFA") — denormalized from project.company */
+  companyDisplayName: string;
+  /** Business entity contact ID (ADR-232) */
+  linkedCompanyId: string | null;
   status: string;
   updatedAt: string | null; // ISO string (enterprise requirement)
   createdAt: string | null; // ISO string
@@ -63,6 +67,8 @@ export function mapProjectDocument(
     projectCode: typeof data.projectCode === "string" ? data.projectCode : null,
     name: typeof data.name === "string" ? data.name : "Unnamed Project",
     companyId: typeof data.companyId === "string" ? data.companyId : "",
+    companyDisplayName: typeof data.company === "string" ? data.company : "",
+    linkedCompanyId: typeof data.linkedCompanyId === "string" ? data.linkedCompanyId : null,
     status: typeof data.status === "string" ? data.status : "unknown",
     updatedAt: normalizeToISO(data.updatedAt),
     createdAt: normalizeToISO(data.createdAt),

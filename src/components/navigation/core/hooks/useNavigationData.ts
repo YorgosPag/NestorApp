@@ -168,8 +168,9 @@ export function useNavigationData(): UseNavigationDataReturn {
         const projects: NavigationProject[] = bootstrapData.projects.map(p => ({
           id: p.id,
           name: p.name,
-          company: '', // Will be looked up if needed
+          company: p.companyDisplayName,
           companyId: p.companyId,
+          linkedCompanyId: p.linkedCompanyId,
           projectCode: p.projectCode,
           status: p.status,
           buildings: [], // Loaded on-demand (Phase 3)

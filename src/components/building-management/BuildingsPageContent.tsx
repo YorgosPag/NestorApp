@@ -24,6 +24,7 @@ import {
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // [ENTERPRISE] Navigation context for breadcrumb sync
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
+import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
@@ -56,7 +57,7 @@ export function BuildingsPageContent() {
   const colors = useSemanticColors();
 
   // [ENTERPRISE] Navigation context for breadcrumb sync
-  const { companies, projects, syncBreadcrumb } = useNavigation();
+  const { companies } = useNavigation();
 
   // Load buildings from Firestore
   const { buildings: buildingsData, loading: buildingsLoading, error: buildingsError, refetch: refetchBuildings } = useFirestoreBuildings();
@@ -186,25 +187,11 @@ export function BuildingsPageContent() {
   // [PERF] Stable callback refs to prevent child re-renders
   const handleCloseMobileDetails = useCallback(() => setSelectedBuilding(null), [setSelectedBuilding]);
 
-  // [ENTERPRISE] Sync selectedBuilding with NavigationContext for breadcrumb display
-  React.useEffect(() => {
-    if (selectedBuilding && companies.length > 0 && projects.length > 0) {
-      // Find the project and company this building belongs to
-      const project = projects.find(p => p.id === selectedBuilding.projectId);
-      if (project) {
-        const company = companies.find(c => c.id === project.linkedCompanyId);
-        if (company) {
-          // Use atomic sync with names (not just IDs) - enterprise pattern
-          syncBreadcrumb({
-            company: { id: company.id, name: company.companyName },
-            project: { id: project.id, name: project.name },
-            building: { id: selectedBuilding.id, name: selectedBuilding.name },
-            currentLevel: 'buildings'
-          });
-        }
-      }
-    }
-  }, [selectedBuilding?.id, companies.length, projects.length, syncBreadcrumb]);
+  useBreadcrumbSync(
+    selectedBuilding?.projectId
+      ? { type: 'building', id: selectedBuilding.id, name: selectedBuilding.name, projectId: selectedBuilding.projectId }
+      : null
+  );
 
   const buildingsStats = useBuildingStats(baseFilteredBuildings);
 

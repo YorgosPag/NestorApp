@@ -26,7 +26,9 @@ const nextConfig = {
   // binary for the running platform. Without this, the DXF thumbnail
   // self-heal (services/floorplans/dxf-thumbnail-selfheal.ts) fails with
   // "could not resolve @resvg/resvg-js-win32-x64-msvc into a module".
-  serverExternalPackages: ['@mapbox/node-pre-gyp', '@resvg/resvg-js'],
+  // rimraf/fstream: utility packages used by bundler plugins at build-time.
+  // Marking external suppresses "can't be external" warnings from Turbopack.
+  serverExternalPackages: ['@mapbox/node-pre-gyp', '@resvg/resvg-js', 'rimraf', 'fstream'],
 
   // [OK] NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
   outputFileTracingRoot: __dirname,

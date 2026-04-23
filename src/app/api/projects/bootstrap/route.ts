@@ -42,6 +42,7 @@ import {
   fetchCompanies,
   fetchProjects,
   fetchBuildingCounts,
+  resolveProjectCompanyNames,
 } from "./bootstrap-queries";
 import { nowISO } from '@/lib/date-local';
 
@@ -150,6 +151,17 @@ async function handleProjectsBootstrap(
     ...p,
     buildingCount: buildingCounts.get(p.id) || 0,
   }));
+
+  // 3.6. RESOLVE COMPANY DISPLAY NAMES (linkedCompanyId → contacts → "ALFA")
+  const companyNameMap = await resolveProjectCompanyNames(adminDb, allProjects);
+  if (companyNameMap.size > 0) {
+    allProjects = allProjects.map((p) => ({
+      ...p,
+      companyDisplayName: p.linkedCompanyId
+        ? (companyNameMap.get(p.linkedCompanyId) ?? p.companyDisplayName)
+        : p.companyDisplayName,
+    }));
+  }
 
   // 4. BUILD RESPONSE
   const projectCountByCompany = new Map<string, number>();

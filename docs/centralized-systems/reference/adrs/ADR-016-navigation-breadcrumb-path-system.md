@@ -110,6 +110,40 @@
 
 ## API Reference
 
+### useBreadcrumbSync (ADR-016 §3 — Centralized hook)
+
+**File**: `src/components/navigation/core/hooks/useBreadcrumbSync.ts`
+
+Centralizes `syncBreadcrumb()` calls across all entity pages. Each entity type uses the correct resolution strategy internally — callers pass only the entity descriptor.
+
+```tsx
+import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
+
+// project
+useBreadcrumbSync(selectedProject ? { type: 'project', id: selectedProject.id, name: selectedProject.name, companyId: selectedProject.companyId, linkedCompanyId: selectedProject.linkedCompanyId, company: selectedProject.company } : null);
+
+// building
+useBreadcrumbSync(selectedBuilding?.projectId ? { type: 'building', id: selectedBuilding.id, name: selectedBuilding.name, projectId: selectedBuilding.projectId } : null);
+
+// property  (uses hierarchy API internally — Admin SDK, tenant-safe)
+useBreadcrumbSync(selectedProperty ? { type: 'property', id: selectedProperty.id, name: selectedProperty.name } : null);
+
+// space (parking / storage)
+useBreadcrumbSync(
+  selectedParking ? { type: 'space', id: selectedParking.id, name: selectedParking.number, spaceType: 'parking', buildingId: selectedParking.buildingId, projectId: String(selectedParking.projectId) } : null,
+  { buildings }
+);
+```
+
+**Resolution strategies per type:**
+
+| Type | Strategy |
+|------|----------|
+| `project` | NavigationContext `projects` → resolved company name from bootstrap step 3.6 |
+| `building` | NavigationContext `projects` → `project.company` name |
+| `property` | Hierarchy API `/api/properties/[id]/hierarchy` (Admin SDK) — cancellable async |
+| `space` | `options.buildings` (from `useFirestoreBuildings`) + NavigationContext `projects` |
+
 ### ModuleBreadcrumb
 
 ```tsx
@@ -135,3 +169,4 @@ Add the URL segment to `SEGMENT_CONFIG` in `ModuleBreadcrumb.tsx` (with `labelKe
 | 2026-01-01 | Initial: NavigationBreadcrumb for entity hierarchy |
 | 2026-03-12 | Added ModuleBreadcrumb for module/dashboard pages (18 pages) |
 | 2026-03-12 | Fix: moved breadcrumb INSIDE headers, `→` separator, colored icons per module |
+| 2026-04-24 | Added `useBreadcrumbSync` hook — centralized SSoT for all 5 entity page types (project/building/property/parking/storage). Eliminates per-page useEffect scatter. |

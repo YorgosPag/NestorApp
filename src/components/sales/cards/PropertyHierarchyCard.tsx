@@ -21,7 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { formatFloorLabel } from '@/lib/intl-utils';
-import { useNavigation } from '@/components/navigation/core/NavigationContext';
+import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
 import type { PropertyHierarchyResponse } from '@/app/api/properties/[id]/hierarchy/route';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
@@ -46,7 +46,6 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
   const colors = useSemanticColors();
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const iconSizes = useIconSizes();
-  const { syncBreadcrumb } = useNavigation();
   const [hierarchy, setHierarchy] = useState<PropertyHierarchyResponse | null>(
     propertyHierarchyCache.get(propertyId) ?? null
   );
@@ -64,22 +63,9 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
         if (!cancelled) {
           propertyHierarchyCache.set(data, propertyId);
           setHierarchy(data);
-
-          // 🏢 ENTERPRISE: Sync breadcrumb with actual unit hierarchy data
-          if (data.company && data.project) {
-            syncBreadcrumb({
-              company: { id: data.company.id, name: data.company.name },
-              project: { id: data.project.id, name: data.project.name },
-              building: data.building
-                ? { id: data.building.id, name: data.building.name }
-                : undefined,
-              property: { id: data.property.id, name: data.property.name },
-              currentLevel: 'properties',
-            });
-          }
         }
       } catch {
-        // Graceful — δεν εμφανίζουμε τίποτα αν αποτύχει
+        // Graceful — breadcrumb won't sync but page still works
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -87,7 +73,20 @@ export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps
 
     fetchHierarchy();
     return () => { cancelled = true; };
-  }, [propertyId, syncBreadcrumb]);
+  }, [propertyId]);
+
+  useBreadcrumbSync(
+    hierarchy
+      ? {
+          type: 'property-resolved',
+          id: hierarchy.property.id,
+          company: hierarchy.company,
+          project: hierarchy.project,
+          building: hierarchy.building,
+          property: hierarchy.property,
+        }
+      : null
+  );
 
   if (loading || !hierarchy) return null;
 

@@ -10,6 +10,7 @@ import { ListContainer, PageContainer } from '@/core/containers';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
 // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
 import { useNavigation } from '@/components/navigation/core/NavigationContext';
+import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
 
 import { ProjectsHeader } from './ProjectsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -46,7 +47,7 @@ export function ProjectsPageContent() {
   // Note: Deep-link tab is read from useProjectsPageState (same useSearchParams instance)
 
   // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
-  const { companies, syncBreadcrumb } = useNavigation();
+  const { companies } = useNavigation();
 
   // Φόρτωση έργων από Firestore αντί για sample data
   const { projects: firestoreProjects, loading, error, refetch: refetchProjects } = useFirestoreProjects();
@@ -66,21 +67,18 @@ export function ProjectsPageContent() {
 
   const projectsStats = useProjectsStats(filteredProjects || []);
 
-  // 🏢 ENTERPRISE: Sync selectedProject with NavigationContext for breadcrumb display
-  React.useEffect(() => {
-    if (selectedProject && companies.length > 0) {
-      // Find the company this project belongs to
-      const company = companies.find(c => c.id === selectedProject.companyId);
-      if (company) {
-        // Use atomic sync with names - enterprise pattern
-        syncBreadcrumb({
-          company: { id: company.id, name: company.companyName },
-          project: { id: selectedProject.id, name: selectedProject.name },
-          currentLevel: 'projects'
-        });
-      }
-    }
-  }, [selectedProject?.id, companies.length, syncBreadcrumb]);
+  useBreadcrumbSync(
+    selectedProject?.id
+      ? {
+          type: 'project',
+          id: selectedProject.id,
+          name: selectedProject.name,
+          companyId: selectedProject.companyId,
+          linkedCompanyId: selectedProject.linkedCompanyId,
+          company: selectedProject.company,
+        }
+      : null
+  );
 
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);

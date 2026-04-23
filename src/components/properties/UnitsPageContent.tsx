@@ -13,11 +13,7 @@ import { PropertyPageDashboard } from '@/components/properties/page/PropertyPage
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { TrendingUp, Package } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-// 🏢 ENTERPRISE: Navigation context for breadcrumb sync
-import { useNavigation } from '@/components/navigation/core/NavigationContext';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
-import type { PropertyHierarchyResponse } from '@/app/api/properties/[id]/hierarchy/route';
+import { useBreadcrumbSync } from '@/components/navigation/core/hooks/useBreadcrumbSync';
 import type { UnitFilterState } from '@/components/core/AdvancedFilters';
 import { usePropertyFiltersConfig } from '@/components/core/AdvancedFilters/hooks/usePropertyFiltersConfig';
 import { ListContainer, PageContainer } from '@/core/containers';
@@ -45,8 +41,6 @@ export function PropertiesManagementContent() {
   const getStatusLabel = React.useMemo(() => createStatusLabelGetter(t), [t]);
   const getTypeLabel = React.useMemo(() => createTypeLabelGetter(t), [t]);
 
-  // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
-  const { syncBreadcrumb } = useNavigation();
 
   const {
     properties,
@@ -200,34 +194,11 @@ export function PropertiesManagementContent() {
     }
   }, [urlPropertyId, properties, selectedProperty, handlePolygonSelect]);
 
-  // 🏢 ENTERPRISE: Sync breadcrumb via hierarchy API (robust — no multi-source chain lookup)
-  React.useEffect(() => {
-    if (!selectedProperty) return;
-    let cancelled = false;
-
-    async function syncFromHierarchy() {
-      try {
-        const data = await apiClient.get<PropertyHierarchyResponse>(
-          API_ROUTES.PROPERTIES.HIERARCHY(encodeURIComponent(selectedProperty!.id))
-        );
-        if (cancelled || !data.company || !data.project) return;
-        syncBreadcrumb({
-          company: { id: data.company.id, name: data.company.name },
-          project: { id: data.project.id, name: data.project.name },
-          building: data.building
-            ? { id: data.building.id, name: data.building.name }
-            : undefined,
-          property: { id: data.property.id, name: data.property.name },
-          currentLevel: 'properties',
-        });
-      } catch {
-        // Graceful — breadcrumb won't sync but page still works
-      }
-    }
-
-    syncFromHierarchy();
-    return () => { cancelled = true; };
-  }, [selectedProperty?.id, syncBreadcrumb]);
+  useBreadcrumbSync(
+    selectedProperty
+      ? { type: 'property', id: selectedProperty.id, name: selectedProperty.name }
+      : null
+  );
 
   const safeFloors = Array.isArray(floors) ? floors : [];
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];

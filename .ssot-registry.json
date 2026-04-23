@@ -2314,6 +2314,20 @@
         "src/components/contacts/dynamic/useClearCompanyHqAddress.ts"
       ],
       "tier": 3
+    },
+
+    "breadcrumb-sync": {
+      "ssotFile": "src/components/navigation/core/hooks/useBreadcrumbSync.ts",
+      "description": "Entity breadcrumb sync SSoT (ADR-016). All entity pages (project/building/property/space) MUST call useBreadcrumbSync() — never call syncBreadcrumb() directly. The hook encapsulates 4 resolution strategies: project (NavigationContext bootstrap-resolved name), building (NavigationContext project chain), property (hierarchy API, Admin SDK, cancellable async), space (useFirestoreBuildings + NavigationContext). Direct syncBreadcrumb() calls outside useBreadcrumbSync create duplicate resolution logic and break the single entry point guarantee. 2026-04-24.",
+      "forbiddenPatterns": [
+        "syncBreadcrumb\\s*\\("
+      ],
+      "allowlist": [
+        "src/components/navigation/core/hooks/useBreadcrumbSync.ts",
+        "src/components/navigation/core/NavigationContext.tsx",
+        "src/components/navigation/core/types.ts"
+      ],
+      "tier": 3
     }
   }
 }
