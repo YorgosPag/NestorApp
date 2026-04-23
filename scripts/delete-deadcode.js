@@ -1,19 +1,28 @@
 #!/usr/bin/env node
 /**
- * deadcode:delete — Safe dead-code file deletion with quadruple guard.
+ * deadcode:delete — Safe dead-code file deletion with seven-layer guard.
  *
  * Usage:
- *   node scripts/delete-deadcode.js <file> [file2 ...] [--dry-run]
+ *   node scripts/delete-deadcode.js <file> [file2 ...] [flags]
  *   npm run deadcode:delete -- src/path/to/file.ts
  *
- * Guards:
- *   1. File must exist in .deadcode-baseline.json
- *   2. Static grep across ENTIRE REPO (not just src/) finds zero references
- *   3. Dynamic import scan warns if template-literal imports mention the stem
- *   4. git rm removes the file; baseline regenerated atomically after all deletions
+ * Guards (in order):
+ *   1. File must exist in .deadcode-baseline.json              (hard block)
+ *   2. Fresh knip scan confirms file STILL unused now          (hard block)
+ *   3. Git staleness — warn if file modified in last N months  (soft warn)
+ *   4. Barrel detection — warn if file has `export * from`     (soft warn)
+ *   5. Static grep across ENTIRE REPO finds zero references    (hard block)
+ *   6. Dynamic import scan — warn on template-literal imports  (soft warn)
+ *   7. git rm + atomic baseline regeneration
  *
- * Escape hatch:
- *   SKIP_DEADCODE_CHECK=1 node scripts/delete-deadcode.js <file>
+ * Flags:
+ *   --dry-run            Simulate without changing files
+ *   --skip-fresh-check   Skip Guard 2 (knip live scan, ~30s)
+ *   --skip-warnings      Silence soft warnings (Guards 3, 4, 6)
+ *
+ * Env vars:
+ *   SKIP_DEADCODE_CHECK=1          Bypass ALL guards (emergency)
+ *   DEADCODE_STALENESS_MONTHS=24   Git staleness window (default: 12)
  */
 
 'use strict';
@@ -36,11 +45,15 @@ const GREP_INCLUDE_EXTS = ['*.ts', '*.tsx', '*.js', '*.mjs', '*.cjs'];
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
+const SKIP_FRESH = args.includes('--skip-fresh-check');
+const SKIP_WARN = args.includes('--skip-warnings');
 const SKIP_CHECK = process.env.SKIP_DEADCODE_CHECK === '1';
+const STALENESS_MONTHS = parseInt(process.env.DEADCODE_STALENESS_MONTHS ?? '12', 10);
 const files = args.filter(a => !a.startsWith('--'));
 
 if (files.length === 0) {
-  console.error('Usage: npm run deadcode:delete -- <file> [file2 ...] [--dry-run]');
+  console.error('Usage: npm run deadcode:delete -- <file> [file2 ...] [flags]');
+  console.error('Flags: --dry-run, --skip-fresh-check, --skip-warnings');
   process.exit(1);
 }
 
@@ -69,6 +82,74 @@ function checkInBaseline(relPath, baselineSet) {
   console.error(`❌ NOT in baseline: ${relPath}`);
   console.error('   File is not marked as unused. Run deadcode:audit to verify.');
   process.exit(1);
+}
+
+// Guard 2 — freshness re-check: rerun knip NOW to confirm still unused.
+// Called ONCE per batch (knip takes ~30s). Returns Set of currently-unused files.
+function getFreshUnusedSet() {
+  console.log('\n🔎 Running fresh knip scan to verify current state (~30s)...');
+  const result = spawnSync('npx', ['knip', '--reporter', 'json'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 50 * 1024 * 1024,
+    stdio: ['ignore', 'pipe', 'ignore'],
+    shell: true,
+  });
+  let report;
+  try {
+    report = JSON.parse(result.stdout ?? '');
+  } catch {
+    console.error('❌ Fresh knip scan failed to parse. Use --skip-fresh-check to bypass.');
+    process.exit(1);
+  }
+  const currentlyUnused = (report.issues ?? [])
+    .filter(i => Array.isArray(i.files) && i.files.length > 0)
+    .map(i => i.file.replace(/\\/g, '/'));
+  return new Set(currentlyUnused);
+}
+
+function verifyStillUnused(relPath, freshSet) {
+  if (freshSet.has(relPath)) return;
+  console.error(`\n❌ STALE BASELINE — ${relPath} is NO LONGER unused.`);
+  console.error('   Someone imported it after the baseline was generated.');
+  console.error('   Run: npm run deadcode:baseline — then retry, or abandon deletion.\n');
+  process.exit(1);
+}
+
+// Guard 3 — git staleness: file modified recently = higher risk (WIP integration).
+function checkGitStaleness(absPath) {
+  if (SKIP_WARN) return;
+  const rel = repoRelative(absPath);
+  const since = `${STALENESS_MONTHS}.months.ago`;
+  const result = spawnSync(
+    'git',
+    ['log', '--oneline', `--since=${since}`, '--', rel],
+    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+  );
+  const lines = (result.stdout ?? '').split('\n').filter(Boolean);
+  if (lines.length === 0) return;
+  console.warn(`   ⚠️  RECENT ACTIVITY — ${lines.length} commit(s) in last ${STALENESS_MONTHS} months:`);
+  lines.slice(0, 3).forEach(l => console.warn(`      ${l}`));
+  if (lines.length > 3) console.warn(`      ... and ${lines.length - 3} more`);
+  console.warn(`      File may be WIP (not yet imported). Verify manually.\n`);
+}
+
+// Guard 4 — barrel file detection: warn if file has `export * from` or `export { } from`.
+// Any file can be a barrel (not just index.*). Deletion silently breaks downstream re-exports.
+function detectBarrel(absPath) {
+  if (SKIP_WARN) return;
+  let content;
+  try {
+    content = fs.readFileSync(absPath, 'utf8');
+  } catch {
+    return;
+  }
+  const reExports = content.match(/^\s*export\s+(?:\*|\{[^}]*\})\s+from\s+['"][^'"]+['"]/gm);
+  if (!reExports || reExports.length === 0) return;
+  console.warn(`   ⚠️  BARREL FILE — ${reExports.length} re-export(s) detected:`);
+  reExports.slice(0, 5).forEach(r => console.warn(`      ${r.trim()}`));
+  if (reExports.length > 5) console.warn(`      ... and ${reExports.length - 5} more`);
+  console.warn(`      Downstream imports may break silently if they use parent paths.\n`);
 }
 
 function buildGrepArgs(stem) {
@@ -168,6 +249,7 @@ function main() {
   if (DRY_RUN) console.log('🔍 DRY RUN — no files will be deleted\n');
 
   const baselineSet = SKIP_CHECK ? new Set() : loadBaseline();
+  const freshSet = !SKIP_CHECK && !SKIP_FRESH ? getFreshUnusedSet() : null;
   const deleted = [];
 
   for (const rawArg of files) {
@@ -184,6 +266,14 @@ function main() {
     if (!SKIP_CHECK) {
       checkInBaseline(relPath, baselineSet);
       console.log('   ✅ In baseline');
+
+      if (freshSet) {
+        verifyStillUnused(relPath, freshSet);
+        console.log('   ✅ Fresh knip scan confirms still unused');
+      }
+
+      checkGitStaleness(absPath);
+      detectBarrel(absPath);
 
       checkNoImports(absPath);
       console.log('   ✅ Zero static references (entire repo scanned)');
