@@ -23,6 +23,7 @@ import {
   createRelationshipWithPolicy,
   updateRelationshipWithPolicy,
 } from '@/services/contact-relationships/relationship-mutation-gateway';
+import { syncWorkAddressOnRelationship } from '@/services/contact-relationships/work-address-sync.service';
 import type {
   RelationshipFormData,
   UseRelationshipFormReturn
@@ -297,6 +298,11 @@ export const useRelationshipForm = (
           actorId: user?.uid,
         });
       }
+
+      // Sync company address → individual work address (fire-and-forget)
+      syncWorkAddressOnRelationship(relationshipData).catch(err =>
+        logger.warn('Work address sync failed (non-critical)', { error: err })
+      );
 
       // Reset form state
       resetForm();

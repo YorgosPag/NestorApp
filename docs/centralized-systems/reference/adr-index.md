@@ -332,6 +332,7 @@
 | **ADR-315** | Unified Sharing (Contact + File + Property Showcase) — polymorphic `shares` collection, `UnifiedSharingService` SSoT, `ChannelDispatchService` split, `UnifiedShareDialog`, bcrypt migration | 📋 Proposed | 2026-04-18 | Sharing / Access Control / Public Surfaces | [📄](../../../adrs/ADR-315-unified-sharing.md) |
 | **ADR-316** | Project Showcase (Επίδειξη Έργου) — extends ADR-315 `entityType: 'project_showcase'`, branded PDF, `ProjectShowcasePDFService`, public viewer `/shared/{token}`, zero new sharing infrastructure | 📋 In Progress | 2026-04-22 | Projects / Sharing / PDF / Public Surfaces | [📄](../../../adrs/ADR-316-project-showcase.md) |
 | **ADR-317** | Contact Details Unified Save Focus — SSoT `ContactEditFocusContext`, adaptive header Save/Cancel delegates to active inline sub-form; banking/files added to `SUBCOLLECTION_TABS`; validation logging downgraded to warn | ✅ IMPLEMENTED | 2026-04-22 | Contacts / UX / SSoT Enforcement | [📄](../../../adrs/ADR-317-contact-details-unified-save-focus.md) |
+| **ADR-318** | Relationship Work Address Sync — auto-copy company `addresses[0]` → individual `individualAddresses[type='work']` on employment/ownership relationship save; fire-and-forget, idempotent upsert | ✅ IMPLEMENTED | 2026-04-23 | Contacts / Relationships / Address Management | [📄](../../../adrs/ADR-318-relationship-work-address-sync.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
