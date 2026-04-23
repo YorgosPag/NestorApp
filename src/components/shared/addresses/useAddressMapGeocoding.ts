@@ -212,24 +212,20 @@ export function useAddressMapGeocoding({
   }, [addresses, onGeocodingComplete]);
 
   // ===========================================================================
-  // FIT BOUNDS EFFECT
+  // FIT BOUNDS — SSoT helper + two triggers
   // ===========================================================================
 
-  useEffect(() => {
+  /**
+   * Zoom the map so every pin (geocoded + drag-pending + unrendered fallback)
+   * is visible. Single source of truth for bounds composition.
+   */
+  const runFitBounds = useCallback(() => {
     if (!mapRef.current || !mapReady) return;
-
     try {
       const bounds = new LngLatBounds();
-
-      geocodedAddresses.forEach(result => {
-        bounds.extend([result.lng, result.lat]);
-      });
-
+      geocodedAddresses.forEach(result => bounds.extend([result.lng, result.lat]));
       if (draggableMarkers) {
-        dragPositions.forEach(pos => {
-          bounds.extend([pos.lng, pos.lat]);
-        });
-        // Include default positions for empty addresses (not geocoded, not dragged)
+        dragPositions.forEach(pos => bounds.extend([pos.lng, pos.lat]));
         const refPos = findReferencePosition(addresses, dragPositions, geocodedAddresses);
         for (let i = 0; i < addresses.length; i++) {
           const addr = addresses[i];
@@ -238,9 +234,7 @@ export function useAddressMapGeocoding({
           }
         }
       }
-
       if (bounds.isEmpty()) return;
-
       mapRef.current.fitBounds(bounds, {
         padding: ADDRESS_MAP_CONFIG.FIT_BOUNDS_PADDING,
         maxZoom: ADDRESS_MAP_CONFIG.DEFAULT_MAX_ZOOM,
@@ -250,6 +244,29 @@ export function useAddressMapGeocoding({
       logger.error('fitBounds failed:', { error });
     }
   }, [geocodedAddresses, mapReady, draggableMarkers, dragPositions, addresses]);
+
+  // Trigger 1 — View mode: auto-fit whenever the geocoded set changes. Skipped
+  // in edit mode so a careful zoom-in + drag is not immediately reversed by
+  // an auto-fit triggered by the new drag position or freshly geocoded entry.
+  useEffect(() => {
+    if (draggableMarkers) return;
+    runFitBounds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geocodedAddresses, mapReady, draggableMarkers]);
+
+  // Trigger 2 — Entry into edit mode or initial mount in edit mode: fit once
+  // so all pins are visible, then hold the user's zoom until they exit edit.
+  const lastEditFitRef = useRef(false);
+  useEffect(() => {
+    if (!draggableMarkers) {
+      lastEditFitRef.current = false;
+      return;
+    }
+    if (lastEditFitRef.current) return;
+    runFitBounds();
+    lastEditFitRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggableMarkers, mapReady]);
 
   // ===========================================================================
   // AUTO-PAN DURING DRAG
