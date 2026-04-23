@@ -517,6 +517,7 @@
     "messages": {
       "noBuildings": "No buildings linked to this project. Link a building first (Building → General → Project).",
       "noFloors": "No floors in buildings. Add floors first.",
+      "noUnits": "No units in buildings. Add units first.",
       "noProperties": "No properties in buildings. Add properties first.",
       "propertiesWithoutArea": "{count} property(ies) without area — millesimal calculation will be incorrect.",
       "propertiesWithoutFloor": "{count} property(ies) without floor link — floor coefficient will not be calculated.",
