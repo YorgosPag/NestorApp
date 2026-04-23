@@ -194,11 +194,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
           )}
         </header>
 
-        {branches.length === 0 ? (
-          <p className={cn('text-sm py-2 text-center', colors.text.muted)}>
-            {t('contacts-form:addressesSection.noBranches')}
-          </p>
-        ) : (
+        {branches.length > 0 && (
           <ul className="space-y-4">
             {branches.map((addr, i) => (
               <li key={i} className="space-y-3">

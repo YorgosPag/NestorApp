@@ -311,12 +311,12 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                   const geocoded = geocodedAddresses.get(addr.id);
                   const dragPos = dragPositions.get(addr.id);
                   const isReadOnly = readOnlyAddressIds?.has(addr.id) === true;
+                  const translatedLabel = addr.label || t(`types.${addr.type}`);
 
                   // ADR-318: read-only derived pins require real geocoded coords —
                   // no fallback offset (they are not placeholders).
                   if (isReadOnly) {
                     if (!geocoded) return null;
-                    const translatedLabel = addr.label || t(`types.${addr.type}`);
                     return (
                       <Marker
                         key={addr.id}
@@ -351,7 +351,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                       <DraggableMarkerPin
                         isPrimary={addr.isPrimary}
                         pulsate={!hasData}
-                        label={addr.label}
+                        label={translatedLabel}
                       />
                     </Marker>
                   );

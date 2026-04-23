@@ -7,6 +7,7 @@ import { AddressUtils } from '@/config/address-config';
 import { createProjectAddress } from '@/types/project/address-helpers';
 import type { ProjectAddress, ProjectAddressType, PartialProjectAddress } from '@/types/project/addresses';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /** Address data returned by draggable pin reverse geocoding */
 export interface DragResolvedAddress {
@@ -70,6 +71,13 @@ export function ContactAddressMapPreview({
   className,
 }: ContactAddressMapPreviewProps) {
   const fallbackAddressIdRef = useRef<string>(AddressUtils.generateAddressId());
+  const { t: tContactsForm } = useTranslation('contacts-form');
+  const { t: tAddr } = useTranslation('addresses');
+
+  // SSoT labels — pulled from locale files, never hardcoded
+  const hqLabel = tContactsForm('addressesSection.headquarters');
+  const branchLabel = tContactsForm('addressesSection.branch');
+  const homeLabel = tAddr('types.home');
 
   const addresses = useMemo<ProjectAddress[]>(() => {
     const defaults = AddressUtils.getNewAddressDefaults();
@@ -94,7 +102,7 @@ export function ContactAddressMapPreview({
             regionalUnit: addr.regionalUnitName?.trim() || undefined,
             region: addr.regionName?.trim() || addr.region?.trim() || undefined,
             type: COMPANY_TYPE_MAP[addr.type],
-            label: isHq ? 'Έδρα' : 'Υποκατάστημα',
+            label: isHq ? hqLabel : branchLabel,
             isPrimary: isHq,
           });
         });
@@ -122,11 +130,11 @@ export function ContactAddressMapPreview({
         regionalUnit: regionalUnit?.trim() || undefined,
         region: region?.trim() || undefined,
         type: 'legal',
-        label: 'Διεύθυνση',
+        label: homeLabel,
         isPrimary: true,
       }),
     ];
-  }, [city, contactId, postalCode, street, streetNumber, municipality, regionalUnit, region, companyAddresses]);
+  }, [city, contactId, postalCode, street, streetNumber, municipality, regionalUnit, region, companyAddresses, draggable, hqLabel, branchLabel, homeLabel]);
 
   // ADR-318: append read-only derived addresses and track their ids so the
   // map knows not to make them draggable.
