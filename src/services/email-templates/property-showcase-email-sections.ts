@@ -24,31 +24,16 @@ import type {
   ShowcasePropertyFloorFloorplans,
 } from '@/components/property-showcase/types';
 import { BRAND, escapeHtml } from './base-email-template';
+import {
+  renderKeyValueTable,
+  renderMediaList as renderMediaListShared,
+  renderPhotoGrid as renderPhotoGridShared,
+  renderSectionTitle,
+  renderShareCta as renderShareCtaShared,
+  type ShowcaseKeyValueRow as RowsParam,
+} from './showcase-email-shared';
 
 type SnapshotProperty = PropertyShowcaseSnapshot['property'];
-
-interface RowsParam {
-  label: string;
-  value: string | number | undefined | null;
-  unit?: string;
-}
-
-function renderKeyValueTable(rows: RowsParam[]): string {
-  const visible = rows.filter((r) => r.value !== undefined && r.value !== null && r.value !== '');
-  if (visible.length === 0) return '';
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-    ${visible
-      .map((r) => `<tr>
-        <td style="padding:6px 0;border-bottom:1px solid ${BRAND.border};font-size:13px;color:${BRAND.grayLight};width:50%;">${escapeHtml(r.label)}</td>
-        <td style="padding:6px 0;border-bottom:1px solid ${BRAND.border};font-size:13px;color:${BRAND.navyDark};text-align:right;font-weight:600;">${escapeHtml(String(r.value))}${r.unit ? `&nbsp;${escapeHtml(r.unit)}` : ''}</td>
-      </tr>`)
-      .join('')}
-  </table>`;
-}
-
-function renderSectionTitle(text: string): string {
-  return `<h2 style="margin:24px 0 12px;padding:0;font-size:16px;color:${BRAND.navyDark};border-left:3px solid ${BRAND.navy};padding-left:10px;">${escapeHtml(text)}</h2>`;
-}
 
 export function renderPropertyHero(p: SnapshotProperty, labels: PropertyShowcasePDFLabels): string {
   const code = p.code ? `<p style="margin:4px 0 0;font-size:12px;color:${BRAND.grayLight};">${escapeHtml(labels.specs.code)}: ${escapeHtml(p.code)}</p>` : '';
@@ -63,18 +48,7 @@ export function renderPropertyHero(p: SnapshotProperty, labels: PropertyShowcase
 }
 
 export function renderPhotoGrid(photos: ShowcaseMedia[], labels: PropertyShowcasePDFLabels): string {
-  if (!photos || photos.length === 0) return '';
-  const cells = photos.slice(0, 12).map((photo) =>
-    `<td style="padding:4px;width:50%;vertical-align:top;">
-      <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.displayName ?? labels.chrome.photosTitle)}" width="260" height="180" style="display:block;width:100%;max-width:260px;height:180px;object-fit:cover;border-radius:6px;border:1px solid ${BRAND.border};" />
-    </td>`,
-  );
-  const rows: string[] = [];
-  for (let i = 0; i < cells.length; i += 2) {
-    rows.push(`<tr>${cells[i]}${cells[i + 1] ?? '<td style="width:50%;"></td>'}</tr>`);
-  }
-  return `${renderSectionTitle(labels.chrome.photosTitle)}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${rows.join('')}</table>`;
+  return renderPhotoGridShared(photos, labels.chrome.photosTitle);
 }
 
 export function renderSpecs(p: SnapshotProperty, labels: PropertyShowcasePDFLabels): string {
@@ -126,16 +100,7 @@ export function renderMediaList(
   title: string,
   emptyLabel?: string,
 ): string {
-  if (!media || media.length === 0) {
-    return emptyLabel ? `${renderSectionTitle(title)}<p style="margin:0;font-size:13px;color:${BRAND.grayLight};">${escapeHtml(emptyLabel)}</p>` : '';
-  }
-  const imgs = media.map((m) => {
-    const src = m.previewUrl ?? m.url;
-    return `<div style="margin:6px 0;">
-      <img src="${escapeHtml(src)}" alt="${escapeHtml(m.displayName ?? title)}" width="520" style="display:block;width:100%;max-width:520px;height:auto;border-radius:6px;border:1px solid ${BRAND.border};" />
-    </div>`;
-  }).join('');
-  return `${renderSectionTitle(title)}${imgs}`;
+  return renderMediaListShared(media, title, emptyLabel);
 }
 
 export function renderPropertyFloorFloorplans(
@@ -237,8 +202,4 @@ export function renderLinkedSpaceFloorplans(
   return `${renderSectionTitle(labels.linkedSpacesFloorplans.sectionTitle)}${blocks.join('')}`;
 }
 
-export function renderShareCta(shareUrl: string, ctaLabel: string): string {
-  return `<div style="margin:28px 0 8px;text-align:center;">
-    <a href="${escapeHtml(shareUrl)}" style="display:inline-block;background-color:${BRAND.navy};color:${BRAND.white};padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">${escapeHtml(ctaLabel)}</a>
-  </div>`;
-}
+export const renderShareCta = renderShareCtaShared;

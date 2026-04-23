@@ -52,11 +52,15 @@ export interface UserAuthPermissionPanelProps {
   onShareError?: (platform: string, error: string) => void;
   onLoadingChange?: (loading: boolean) => void;
   /**
-   * When provided, email shares are routed through the Phase 8 showcase email
+   * When provided, email shares are routed through the branded showcase email
    * endpoint (visual parity with the web/PDF surfaces) instead of the generic
-   * `property-share` template. ADR-312 Phase 8.
+   * `property-share` template. Discriminated by entity:
+   *   - `{ type: 'property', propertyId }` → ADR-312 Phase 8 property route
+   *   - `{ type: 'project',  projectId }`  → ADR-316 project route
    */
-  showcaseContext?: { propertyId: string };
+  showcaseContext?:
+    | { type: 'property'; propertyId: string }
+    | { type: 'project'; projectId: string };
   /**
    * Pre-fills `EmailShareForm`'s personal message field with the note already
    * typed in the link-creation dialog (ADR-312 Phase 9.5). Unifies the field
@@ -148,16 +152,16 @@ export function UserAuthPermissionPanel({
             messageId?: string;
             recipient: string;
           }
+          const endpoint = showcaseContext.type === 'project'
+            ? `/api/projects/${encodeURIComponent(showcaseContext.projectId)}/showcase/email`
+            : `/api/properties/${encodeURIComponent(showcaseContext.propertyId)}/showcase/email`;
           await Promise.all(
             emailData.recipients.map((recipient) =>
-              apiClient.post<ShowcaseEmailResponse>(
-                `/api/properties/${encodeURIComponent(showcaseContext.propertyId)}/showcase/email`,
-                {
-                  recipient,
-                  shareUrl: emailData.propertyUrl,
-                  personalMessage: emailData.personalMessage,
-                },
-              ),
+              apiClient.post<ShowcaseEmailResponse>(endpoint, {
+                recipient,
+                shareUrl: emailData.propertyUrl,
+                personalMessage: emailData.personalMessage,
+              }),
             ),
           );
           notifications.success(t('emailShare.sendSuccess'));

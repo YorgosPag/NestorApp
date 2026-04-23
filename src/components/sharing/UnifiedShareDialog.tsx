@@ -304,7 +304,11 @@ export function UnifiedShareDialog({
             onShareSuccess={onShareSuccess}
             onShareError={onShareError}
             showcaseContext={
-              entityType === 'property_showcase' ? { propertyId: entityId } : undefined
+              entityType === 'property_showcase'
+                ? { type: 'property', propertyId: entityId }
+                : entityType === 'project_showcase'
+                  ? { type: 'project', projectId: entityId }
+                  : undefined
             }
             initialPersonalMessage={draft.note.trim() || undefined}
             dirtyPolicy={isDirty}
