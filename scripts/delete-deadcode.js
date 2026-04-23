@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * deadcode:delete — Safe dead-code file deletion with triple guard.
+ * deadcode:delete — Safe dead-code file deletion with quadruple guard.
  *
  * Usage:
  *   node scripts/delete-deadcode.js <file> [file2 ...] [--dry-run]
@@ -8,9 +8,9 @@
  *
  * Guards:
  *   1. File must exist in .deadcode-baseline.json
- *   2. grep confirms zero imports in src/
- *   3. git rm removes the file
- *   4. Baseline regenerated atomically after all deletions
+ *   2. Static grep across ENTIRE REPO (not just src/) finds zero references
+ *   3. Dynamic import scan warns if template-literal imports mention the stem
+ *   4. git rm removes the file; baseline regenerated atomically after all deletions
  *
  * Escape hatch:
  *   SKIP_DEADCODE_CHECK=1 node scripts/delete-deadcode.js <file>
@@ -24,6 +24,13 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const BASELINE_FILE = path.join(ROOT, '.deadcode-baseline.json');
+
+// Dirs excluded from grep (never contain app imports)
+const GREP_EXCLUDE_DIRS = [
+  'node_modules', '.git', '.next', 'dist', 'build', '.turbo', 'coverage',
+];
+// Extensions to scan — all files that can import TS modules
+const GREP_INCLUDE_EXTS = ['*.ts', '*.tsx', '*.js', '*.mjs', '*.cjs'];
 
 // ─── CLI parsing ──────────────────────────────────────────────────────────────
 
@@ -64,28 +71,67 @@ function checkInBaseline(relPath, baselineSet) {
   process.exit(1);
 }
 
-function checkNoImports(absPath) {
+function buildGrepArgs(stem) {
+  const excludes = GREP_EXCLUDE_DIRS.flatMap(d => ['--exclude-dir', d]);
+  const includes = GREP_INCLUDE_EXTS.flatMap(e => ['--include', e]);
+  return ['-rl', ...excludes, ...includes, stem, ROOT];
+}
+
+// Guard 2A — static references across entire repo (scripts/, tools/, config files, etc.)
+function findStaticReferences(absPath) {
   const stem = path.basename(absPath, path.extname(absPath));
-  const srcDir = path.join(ROOT, 'src');
-
-  const result = spawnSync(
-    'grep',
-    ['-rl', '--include=*.ts', '--include=*.tsx', stem, srcDir],
-    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
-  );
-
-  const matches = (result.stdout ?? '')
+  const result = spawnSync('grep', buildGrepArgs(stem), {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  return (result.stdout ?? '')
     .split('\n')
     .map(l => l.trim())
     .filter(Boolean)
-    .filter(l => l.replace(/\\/g, '/') !== absPath.replace(/\\/g, '/'));
+    .map(l => l.replace(/\\/g, '/'))
+    .filter(l => l !== absPath.replace(/\\/g, '/'));
+}
 
-  if (matches.length === 0) return;
+// Guard 2B — dynamic import risk: files that use import(`...`) AND mention the stem.
+// These are warnings, not hard blocks (template expressions can't be statically resolved).
+function findDynamicImportRisk(absPath) {
+  const stem = path.basename(absPath, path.extname(absPath));
+  const dynamicResult = spawnSync('grep', buildGrepArgs('import(`'), {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const filesWithDynamic = (dynamicResult.stdout ?? '')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
 
-  console.error(`\n❌ IMPORT FOUND — ${path.basename(absPath)} is still referenced:\n`);
-  matches.forEach(m => console.error(`   ${repoRelative(m)}`));
-  console.error('\nAbort. Fix imports first, then retry.\n');
-  process.exit(1);
+  return filesWithDynamic.filter(f => {
+    try {
+      return fs.readFileSync(f, 'utf8').includes(stem);
+    } catch {
+      return false;
+    }
+  });
+}
+
+function checkNoImports(absPath) {
+  const name = path.basename(absPath);
+
+  const staticRefs = findStaticReferences(absPath);
+  if (staticRefs.length > 0) {
+    console.error(`\n❌ STATIC REFERENCE FOUND — ${name} is still imported:\n`);
+    staticRefs.forEach(m => console.error(`   ${repoRelative(m)}`));
+    console.error('\nAbort. Remove imports first, then retry.\n');
+    process.exit(1);
+  }
+
+  const dynamicRisk = findDynamicImportRisk(absPath);
+  if (dynamicRisk.length > 0) {
+    console.warn(`\n⚠️  DYNAMIC IMPORT WARNING — ${name} stem found in template-literal imports:`);
+    dynamicRisk.forEach(f => console.warn(`   ${repoRelative(f)}`));
+    console.warn('   Verify manually — dynamic resolution cannot be statically guaranteed.\n');
+    // Not a hard block — knip already confirmed unused, this is belt-and-suspenders hint.
+  }
 }
 
 function gitRm(absPath) {
@@ -140,7 +186,7 @@ function main() {
       console.log('   ✅ In baseline');
 
       checkNoImports(absPath);
-      console.log('   ✅ Zero imports found');
+      console.log('   ✅ Zero static references (entire repo scanned)');
     }
 
     if (DRY_RUN) {
