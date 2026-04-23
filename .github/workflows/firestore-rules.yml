@@ -76,8 +76,11 @@ jobs:
         with:
           node-version: '20'
 
-      # The coverage audit script is pure Node (walks the filesystem, parses
-      # firestore.rules + manifest). No runtime deps = no install needed.
+      # The coverage audit script parses coverage-manifest.ts via the TypeScript
+      # compiler API. Install TypeScript without modifying the lockfile.
+      - name: 📦 Install TypeScript (required by manifest parser)
+        run: npm install --no-save typescript
+
       - name: 🔍 CHECK 3.16 — Coverage + rule shape (full scan)
         run: node scripts/check-firestore-rules-test-coverage.js --all --verbose
 
@@ -140,6 +143,11 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      # firebase-tools is not a project devDependency (too large). Install
+      # globally so `firebase emulators:exec` is available in PATH.
+      - name: 📥 Install firebase-tools CLI
+        run: npm install -g firebase-tools
 
       # `firebase emulators:exec` boots the Firestore emulator, runs the
       # command, and shuts it down on exit. Single-line, deterministic, no
