@@ -305,6 +305,12 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
             >
               {/* Draggable Marker Mode */}
               {draggableMarkers && (() => {
+                // eslint-disable-next-line no-console
+                console.log('[DRAG DEBUG] AddressMap draggable mode active', {
+                  addressCount: addresses.length,
+                  readOnlyIds: readOnlyAddressIds ? Array.from(readOnlyAddressIds) : [],
+                  addresses: addresses.map(a => ({ id: a.id, type: a.type, isPrimary: a.isPrimary })),
+                });
                 const refPos = findReferencePosition(addresses, dragPositions, geocodedAddresses)
                   ?? defaultCenter;
                 return addresses.map((addr, index) => {

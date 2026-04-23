@@ -284,6 +284,8 @@ export function useAddressMapGeocoding({
     addressId: string,
     addressIndex: number,
   ) => {
+    // eslint-disable-next-line no-console
+    console.log('[DRAG DEBUG] handleDragEnd FIRED', { addressId, addressIndex, lngLat: event.lngLat });
     stopAutoPan();
     const { lng, lat } = event.lngLat;
     setDragPositions(prev => {
