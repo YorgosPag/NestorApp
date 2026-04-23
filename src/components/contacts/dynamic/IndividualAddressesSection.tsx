@@ -144,7 +144,7 @@ export const IndividualAddressesSection = forwardRef<IndividualAddressesSectionH
             {!hideAddButton && (
               <Button type="button" variant="outline" size="sm" onClick={addAddress} disabled={disabled}>
                 <Plus className="mr-1 h-4 w-4" />
-                {tAddr('list.add')}
+                {tAddr('locations.newAddress')}
               </Button>
             )}
           </header>

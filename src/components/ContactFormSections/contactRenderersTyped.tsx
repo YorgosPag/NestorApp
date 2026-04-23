@@ -152,7 +152,7 @@ function AddressWithMap({
           {isEditing && (
             <Button type="button" variant="default" size="sm" onClick={() => extraRef.current?.addAddress()}>
               <Plus className="mr-1 h-4 w-4" />
-              {tAddr('list.add')}
+              {tAddr('locations.newAddress')}
             </Button>
           )}
         </div>
