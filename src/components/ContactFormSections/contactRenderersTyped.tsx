@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Calendar, ExternalLink, X } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
