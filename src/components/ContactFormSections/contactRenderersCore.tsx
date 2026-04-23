@@ -200,6 +200,30 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
       if (!contactId) return <div className="p-8 text-center text-muted-foreground"><p>{t('individual.sections.history.description')}</p></div>;
       return <ContactHistoryTab contactId={contactId} />;
     },
+
+    // ── Addresses (ADR-318 SSoT: shared by individual/company/service) ──
+    // Individual schema uses sectionId 'address' (singular); company/service use 'addresses' (plural).
+    // Same component registered under both keys — schema files untouched.
+    addresses: () => (
+      <AddressesSectionWithFullscreen
+        formData={formData}
+        setFormData={setFormData ? (value) => {
+          const newData = typeof value === 'function' ? value(formData) : value;
+          setFormData(newData);
+        } : undefined}
+        disabled={disabled}
+      />
+    ),
+    address: () => (
+      <AddressesSectionWithFullscreen
+        formData={formData}
+        setFormData={setFormData ? (value) => {
+          const newData = typeof value === 'function' ? value(formData) : value;
+          setFormData(newData);
+        } : undefined}
+        disabled={disabled}
+      />
+    ),
   };
 }
 
@@ -240,27 +264,5 @@ export function buildCompanyRenderers(ctx: RendererContext): Record<string, Rend
       );
     },
 
-    addresses: () => (
-      <AddressesSectionWithFullscreen
-        formData={formData}
-        setFormData={setFormData ? (value) => {
-          const newData = typeof value === 'function' ? value(formData) : value;
-          setFormData(newData);
-        } : undefined}
-        disabled={disabled}
-      />
-    ),
-    // ADR-318 SSoT: individual schema uses sectionId 'address' (singular), company uses 'addresses' (plural).
-    // One component, two registry keys — keeps schema files untouched.
-    address: () => (
-      <AddressesSectionWithFullscreen
-        formData={formData}
-        setFormData={setFormData ? (value) => {
-          const newData = typeof value === 'function' ? value(formData) : value;
-          setFormData(newData);
-        } : undefined}
-        disabled={disabled}
-      />
-    ),
   };
 }
