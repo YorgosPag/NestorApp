@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * deadcode:delete — Safe dead-code file deletion with seven-layer guard.
+ * deadcode:delete — Safe dead-code file deletion with seven-layer guard + archive.
  *
  * Usage:
  *   node scripts/delete-deadcode.js <file> [file2 ...] [flags]
@@ -13,16 +13,21 @@
  *   4. Barrel detection — warn if file has `export * from`     (soft warn)
  *   5. Static grep across ENTIRE REPO finds zero references    (hard block)
  *   6. Dynamic import scan — warn on template-literal imports  (soft warn)
- *   7. git rm + atomic baseline regeneration
+ *   7. Secrets scan — warn if file contains API_KEY/SECRET/etc (soft warn)
+ *   8. Archive to external folder with git metadata            (safety net)
+ *   9. git rm + atomic baseline regeneration
  *
  * Flags:
  *   --dry-run            Simulate without changing files
  *   --skip-fresh-check   Skip Guard 2 (knip live scan, ~30s)
- *   --skip-warnings      Silence soft warnings (Guards 3, 4, 6)
+ *   --skip-warnings      Silence soft warnings (Guards 3, 4, 6, 7)
+ *   --no-archive         Skip Step 8 archive (pure git rm only)
+ *   --archive-dir=<path> Custom archive location
  *
  * Env vars:
  *   SKIP_DEADCODE_CHECK=1          Bypass ALL guards (emergency)
  *   DEADCODE_STALENESS_MONTHS=24   Git staleness window (default: 12)
+ *   DEADCODE_ARCHIVE_DIR=<path>    Archive root (default: C:\Nestor_Pagonis_Dead_Files)
  */
 
 'use strict';
@@ -41,19 +46,41 @@ const GREP_EXCLUDE_DIRS = [
 // Extensions to scan — all files that can import TS modules
 const GREP_INCLUDE_EXTS = ['*.ts', '*.tsx', '*.js', '*.mjs', '*.cjs'];
 
+// Archive default location (outside repo → no build impact)
+const ARCHIVE_DIR_DEFAULT = 'C:\\Nestor_Pagonis_Dead_Files';
+
+// Heuristic patterns that suggest the file may leak secrets if archived as-is
+const SECRET_PATTERNS = [
+  { name: 'API_KEY', re: /\b(?:API[_-]?KEY|APIKEY)\b/i },
+  { name: 'SECRET', re: /\bSECRET\b/i },
+  { name: 'PASSWORD', re: /\bPASSWORD\b/i },
+  { name: 'TOKEN', re: /\b(?:ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|BEARER)\b/i },
+  { name: 'PRIVATE_KEY', re: /\bPRIVATE[_-]?KEY\b/i },
+];
+
 // ─── CLI parsing ──────────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const SKIP_FRESH = args.includes('--skip-fresh-check');
 const SKIP_WARN = args.includes('--skip-warnings');
+const NO_ARCHIVE = args.includes('--no-archive');
 const SKIP_CHECK = process.env.SKIP_DEADCODE_CHECK === '1';
 const STALENESS_MONTHS = parseInt(process.env.DEADCODE_STALENESS_MONTHS ?? '12', 10);
+
+function parseArchiveDir() {
+  const flag = args.find(a => a.startsWith('--archive-dir='));
+  if (flag) return flag.slice('--archive-dir='.length);
+  return process.env.DEADCODE_ARCHIVE_DIR ?? ARCHIVE_DIR_DEFAULT;
+}
+const ARCHIVE_DIR = parseArchiveDir();
+
 const files = args.filter(a => !a.startsWith('--'));
 
 if (files.length === 0) {
   console.error('Usage: npm run deadcode:delete -- <file> [file2 ...] [flags]');
-  console.error('Flags: --dry-run, --skip-fresh-check, --skip-warnings');
+  console.error('Flags: --dry-run, --skip-fresh-check, --skip-warnings,');
+  console.error('       --no-archive, --archive-dir=<path>');
   process.exit(1);
 }
 
@@ -243,6 +270,76 @@ function regenerateBaseline() {
   }
 }
 
+// ─── Archive helpers (Step 8) ─────────────────────────────────────────────────
+
+function getDateFolder() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function getGitMeta(absPath) {
+  const rel = repoRelative(absPath);
+  const result = spawnSync(
+    'git',
+    ['log', '-1', '--format=%H|%s|%an|%aI', '--', rel],
+    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+  );
+  const line = (result.stdout ?? '').trim();
+  if (!line) return null;
+  const [hash, subject, author, date] = line.split('|');
+  return { hash, subject, author, date };
+}
+
+// Guard 7 — secrets scan: warn if file contains patterns that might leak.
+function checkSecrets(absPath) {
+  if (SKIP_WARN) return;
+  let content;
+  try {
+    content = fs.readFileSync(absPath, 'utf8');
+  } catch {
+    return;
+  }
+  const hits = SECRET_PATTERNS.filter(p => p.re.test(content));
+  if (hits.length === 0) return;
+  console.warn(`   ⚠️  SECRETS PATTERN — file mentions: ${hits.map(h => h.name).join(', ')}`);
+  console.warn(`      Archive will contain these strings. Use --no-archive if sensitive.\n`);
+}
+
+// Step 8 — archive the file outside the repo with full metadata before git rm.
+function archiveBeforeDelete(absPath) {
+  const rel = repoRelative(absPath);
+  const dateFolder = getDateFolder();
+  const targetDir = path.join(ARCHIVE_DIR, dateFolder, path.dirname(rel));
+  const baseName = path.basename(rel);
+
+  fs.mkdirSync(targetDir, { recursive: true });
+
+  // Collision handling: same file deleted twice in one day → append counter
+  let targetFile = path.join(targetDir, baseName);
+  let counter = 1;
+  const ext = path.extname(baseName);
+  const stem = path.basename(baseName, ext);
+  while (fs.existsSync(targetFile)) {
+    targetFile = path.join(targetDir, `${stem}.${counter}${ext}`);
+    counter++;
+  }
+
+  fs.copyFileSync(absPath, targetFile);
+
+  const meta = {
+    deleted_at: new Date().toISOString(),
+    original_path: rel,
+    archive_path: targetFile.replace(/\\/g, '/'),
+    git: getGitMeta(absPath),
+  };
+  fs.writeFileSync(`${targetFile}.meta.json`, JSON.stringify(meta, null, 2) + '\n');
+
+  return targetFile;
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 function main() {
@@ -277,11 +374,23 @@ function main() {
 
       checkNoImports(absPath);
       console.log('   ✅ Zero static references (entire repo scanned)');
+
+      if (!NO_ARCHIVE) checkSecrets(absPath);
     }
 
     if (DRY_RUN) {
+      if (!NO_ARCHIVE) {
+        const dateFolder = getDateFolder();
+        const previewPath = path.join(ARCHIVE_DIR, dateFolder, relPath);
+        console.log(`   🔍 [dry-run] Would archive to: ${previewPath}`);
+      }
       console.log('   🔍 [dry-run] Would git rm this file');
       continue;
+    }
+
+    if (!NO_ARCHIVE) {
+      const archived = archiveBeforeDelete(absPath);
+      console.log(`   📦 Archived → ${archived}`);
     }
 
     gitRm(absPath);
