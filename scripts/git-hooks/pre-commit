@@ -1211,9 +1211,38 @@ if [[ -z "${SKIP_DEADCODE_CHECK:-}" ]] && [[ -n "$TS_FILES" ]] && [[ -f ".deadco
         echo -e "${YELLOW}  Staged file(s) that are unused (not imported anywhere):${NC}"
         printf "$STAGED_DEAD_FILES"
         echo ""
+
+        # Interactive archive prompt — ask before blocking.
+        # Read from /dev/tty (terminal) so it works even when git pipes stdin.
+        ARCHIVE_CHOICE="n"
+        echo -e "${YELLOW}  📦 Vuoi archiviare questi file in C:\\Nestor_Pagonis_Dead_Files? [y/N]${NC}"
+        read -r ARCHIVE_CHOICE < /dev/tty 2>/dev/null || ARCHIVE_CHOICE="n"
+
+        if [[ "$ARCHIVE_CHOICE" =~ ^[yY]$ ]]; then
+            echo ""
+            echo -e "${YELLOW}  Archiviazione in corso...${NC}"
+            ARCHIVE_FAILED=0
+            while IFS= read -r dead_file; do
+                trimmed=$(echo "$dead_file" | xargs)
+                [[ -z "$trimmed" ]] && continue
+                if node scripts/archive-deadcode.js "$trimmed" 2>&1; then
+                    :
+                else
+                    echo -e "${RED}  ⚠️  Archive fallito per: $trimmed${NC}"
+                    ARCHIVE_FAILED=1
+                fi
+            done <<< "$(printf "$STAGED_DEAD_FILES" | sed 's/^  //')"
+
+            if [[ $ARCHIVE_FAILED -eq 0 ]]; then
+                echo ""
+                echo -e "${GREEN}  ✅ Archive completato. Il commit rimane bloccato.${NC}"
+            fi
+            echo ""
+        fi
+
         echo -e "${YELLOW}  Fix options:${NC}"
         echo -e "${YELLOW}    1. Import the file somewhere → re-run deadcode:baseline${NC}"
-        echo -e "${YELLOW}    2. Delete it: git rm <file> → re-run deadcode:baseline${NC}"
+        echo -e "${YELLOW}    2. Delete it: npm run deadcode:delete -- <file>${NC}"
         echo -e "${YELLOW}  Emergency skip: SKIP_DEADCODE_CHECK=1 git commit ...${NC}"
         echo ""
         exit 1
