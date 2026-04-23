@@ -34,6 +34,7 @@ import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { useClearCompanyHqAddress } from '@/components/contacts/dynamic/useClearCompanyHqAddress';
+import { useDerivedWorkAddresses } from '@/components/contacts/relationships/hooks/useDerivedWorkAddresses';
 
 // ============================================================================
 // TYPES
@@ -76,6 +77,10 @@ export function AddressesSectionWithFullscreen({
 
   const [isEditingHQ, setIsEditingHQ] = useState(false);
   const branchRef = useRef<CompanyAddressesSectionHandle>(null);
+
+  // ADR-318: live-derived work addresses from professional relationships.
+  // Returns [] for company/service contacts (semantic filter inside hook).
+  const { derived: derivedWorkAddresses } = useDerivedWorkAddresses(formData.id);
 
   // Close inline form when global edit mode ends
   React.useEffect(() => {
@@ -296,6 +301,22 @@ export function AddressesSectionWithFullscreen({
             });
           }}
         />
+
+        {/* ADR-318: Derived work addresses from professional relationships (read-only) */}
+        {derivedWorkAddresses.length > 0 && (
+          <ul className="space-y-4 pt-2">
+            {derivedWorkAddresses.map((addr, i) => (
+              <li key={`derived-work-${addr.companyId}-${i}`}>
+                <SharedAddressActionCard
+                  id={`derived-work-${addr.companyId}-${i}`}
+                  streetLine={[addr.street, addr.number, addr.city, addr.postalCode].filter(Boolean).join(', ')}
+                  typeLabel={`${tAddr('types.work')} — ${addr.companyName}`}
+                  isEditing={false}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* RIGHT: Map preview — draggable pin in edit mode */}

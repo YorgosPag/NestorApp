@@ -36,12 +36,13 @@ Earlier approaches (on-save copy, retroactive sync) violated SSoT: the relations
   5. Returns `DerivedWorkAddress[]` enriched with `companyId`, `companyName`, `relationshipLabel`
 - **No writes, no mutations**
 
-### Renderer Integration
-- **Path**: `src/components/ContactFormSections/contactRenderersTyped.tsx`
-- **Function**: `AddressWithMap` (individual address tab renderer)
-- Registered as `addresses` (plural) in `buildIndividualRenderers` so it overrides the company-style core renderer (`AddressesSectionWithFullscreen`) for `contactType === 'individual'`. The `GenericFormTabRenderer` looks up `customRenderers[section.id]` where `section.id === 'addresses'`.
-- Calls `useDerivedWorkAddresses(formData.id)` and renders derived cards as read-only `SharedAddressActionCard` below the editable `IndividualAddressesSection`
-- Label format: `Εργασία — <companyName>`
+### Renderer Integration — SSoT (single component for individual + company)
+- **Path**: `src/components/contacts/dynamic/AddressesSectionWithFullscreen.tsx`
+- The `addresses` section uses one renderer for **all contact types** (individual, company, service). The previous individual-only `AddressWithMap` duplicate component was deleted.
+- Inside `AddressesSectionWithFullscreen`, `useDerivedWorkAddresses(formData.id)` runs for every contact:
+  - For `individual`: returns work addresses from employment/ownership relationships → cards rendered
+  - For `company`/`service`: hook filter (`other.type === 'company' | 'service'`) yields `[]` → cards skipped
+- Derived cards render below `CompanyAddressesSection` as read-only `SharedAddressActionCard` with label `Εργασία — <companyName>`
 - No edit/delete buttons (derived = no user actions)
 
 ### Mapper Fix (ancillary)
@@ -89,3 +90,4 @@ Individual contact details opened
 | 2026-04-23 | Giorgio Pagonis | Added retroactive sync on relationships load (superseded) |
 | 2026-04-23 | Giorgio Pagonis | **Replaced with live derivation** — new `useDerivedWorkAddresses` hook, removed sync service + on-save hook. Zero Firestore writes; relationship is SSoT. |
 | 2026-04-23 | Giorgio Pagonis | **Bugfix**: renderer key was `address` (singular) — never matched section.id `addresses` (plural). `AddressWithMap` was dead code; tab fell back to company-style core renderer. Renamed key to `addresses` in `buildIndividualRenderers`; removed dead `address` key from `buildServiceRenderers`. |
+| 2026-04-23 | Giorgio Pagonis | **SSoT consolidation (GOL + SSOT)**: deleted duplicate `AddressWithMap` component (individual-only renderer). One `AddressesSectionWithFullscreen` now serves individual + company + service. `useDerivedWorkAddresses` moved inside that component; returns `[]` for company/service via existing semantic filter. Individual address tab visually identical to company address tab. |
