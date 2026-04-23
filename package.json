@@ -88,6 +88,7 @@
     "deadcode:audit:deps": "knip --include dependencies,devDependencies --reporter compact",
     "deadcode:baseline": "node scripts/generate-deadcode-baseline.js",
     "deadcode:check": "node scripts/check-deadcode-ratchet.js",
+    "deadcode:delete": "node scripts/delete-deadcode.js",
     "test": "jest --passWithNoTests",
     "test:ai-pipeline": "jest --testPathPatterns=ai-pipeline/tools/__tests__ --verbose",
     "test:ai-pipeline:all": "jest --testPathPatterns=src/services/ai-pipeline --verbose",
