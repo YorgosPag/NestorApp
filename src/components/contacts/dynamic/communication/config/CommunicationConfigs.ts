@@ -8,9 +8,8 @@
 //
 // ============================================================================
 
-import { Globe, User, Briefcase } from 'lucide-react';
-// 🏢 ENTERPRISE: Centralized entity icons (ZERO hardcoded values)
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: Single source of truth for communication icons
+import { COMMUNICATION_ICONS } from './CommunicationIcons';
 import type { CommunicationType, CommunicationConfig, CommunicationConfigRecord } from '../types/CommunicationTypes';
 import {
   PHONE_TYPE_LABELS,
@@ -59,7 +58,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   phone: {
     type: 'phone',
     title: 'communication.sections.phones',
-    icon: NAVIGATION_ENTITIES.phone.icon,
+    icon: COMMUNICATION_ICONS.phone,
     fields: { primary: 'number', secondary: 'countryCode' },
     types: [
       { value: 'mobile', label: PHONE_TYPE_LABELS.mobile },
@@ -81,7 +80,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   email: {
     type: 'email',
     title: 'communication.sections.emails',
-    icon: NAVIGATION_ENTITIES.email.icon,
+    icon: COMMUNICATION_ICONS.email,
     fields: { primary: 'email' },
     types: [
       { value: 'personal', label: EMAIL_TYPE_LABELS.personal },
@@ -101,7 +100,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   website: {
     type: 'website',
     title: 'communication.sections.websites',
-    icon: Globe,
+    icon: COMMUNICATION_ICONS.website,
     fields: { primary: 'url' },
     types: [
       { value: 'personal', label: WEBSITE_TYPE_LABELS.personal },
@@ -123,7 +122,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   social: {
     type: 'social',
     title: 'communication.sections.socialMedia',
-    icon: Globe,
+    icon: COMMUNICATION_ICONS.social,
     fields: { primary: 'username', secondary: 'platform' },
     // 🎯 ΤΥΠΟΙ ΧΡΗΣΗΣ για το "Τύπος" dropdown
     types: [
@@ -158,7 +157,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   identity: {
     type: 'identity',
     title: 'communication.sections.identity',
-    icon: User,
+    icon: COMMUNICATION_ICONS.identity,
     fields: { primary: 'number', secondary: 'type' },
     types: [
       { value: 'id_card', label: IDENTITY_TYPE_LABELS.id_card },
@@ -181,7 +180,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   professional: {
     type: 'professional',
     title: 'communication.sections.professional',
-    icon: Briefcase,
+    icon: COMMUNICATION_ICONS.professional,
     fields: { primary: 'value', secondary: 'type' },
     types: [
       { value: 'company_phone', label: PROFESSIONAL_TYPE_LABELS.company_phone },
@@ -205,7 +204,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   address: {
     type: 'address',
     title: 'communication.sections.addresses',
-    icon: NAVIGATION_ENTITIES.location.icon,
+    icon: COMMUNICATION_ICONS.address,
     fields: { primary: 'address', secondary: 'type' },
     types: [
       { value: 'home', label: ADDRESS_TYPE_LABELS.home },

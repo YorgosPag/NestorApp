@@ -26,8 +26,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized types και styles
-import type { CommunicationConfig } from '../communication/types';
+import type { CommunicationConfig, CommunicationType } from '../communication/types';
 import { COMMUNICATION_STYLES } from '../communication';
+import { COMMUNICATION_ICON_COLORS } from '../communication/config/CommunicationIcons';
 
 /**
  * Props interface for CommunicationEmptyState component
@@ -58,6 +59,10 @@ export function CommunicationEmptyState({
   const iconSizes = useIconSizes();
   const { t, isNamespaceReady } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const IconComponent = config.icon;
+  // Dark-mode-aware color from SSoT — replaces ad-hoc text-gray classes that
+  // washed out against dark backgrounds.
+  const iconColor = COMMUNICATION_ICON_COLORS[config.type as CommunicationType]
+    ?? 'text-muted-foreground';
 
   return (
     <section
@@ -67,14 +72,14 @@ export function CommunicationEmptyState({
       aria-live="polite"
     >
       <IconComponent
-        className={`${iconSizes.xl} mb-2 mx-auto`}
+        className={`${iconSizes.xl} mb-2 mx-auto ${iconColor}`}
         aria-hidden="true"
       />
-      <p className="font-medium text-gray-700">
+      <p className="font-medium text-foreground">
         {t(config.emptyStateText)}
       </p>
       {isNamespaceReady && (
-        <p className="text-sm mt-1 text-gray-500">
+        <p className="text-sm mt-1 text-muted-foreground">
           {t('communication.addContactInfo')}
         </p>
       )}
