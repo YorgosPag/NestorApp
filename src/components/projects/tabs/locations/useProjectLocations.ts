@@ -11,7 +11,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { Project } from '@/types/project';
-import type { ProjectAddress, ProjectAddressType, BlockSideDirection } from '@/types/project/addresses';
+import type { ProjectAddress, PartialProjectAddress, ProjectAddressType, BlockSideDirection } from '@/types/project/addresses';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import {
@@ -308,6 +308,31 @@ export function useProjectLocations(project: Project) {
     setEditIsPrimary(val);
   };
 
+  // ---------------------------------------------------------------------------
+  // MAP DRAG UPDATE — pin drag → reverse geocode → auto-save
+  // ---------------------------------------------------------------------------
+  const handleAddressDragUpdate = async (
+    addressData: Partial<PartialProjectAddress>,
+    addressIndex: number
+  ) => {
+    if (addressIndex < 0 || addressIndex >= localAddresses.length) return;
+    const newAddresses = localAddresses.map((addr, i) =>
+      i !== addressIndex ? addr : {
+        ...addr,
+        street: addressData.street ?? addr.street,
+        city: addressData.city ?? addr.city,
+        postalCode: addressData.postalCode ?? addr.postalCode,
+        coordinates: addressData.coordinates ?? addr.coordinates,
+        // Drag provides only reverse-geocoded coordinates — clear admin hierarchy
+        region: addressData.region ?? '',
+        regionalUnit: undefined,
+        municipality: undefined,
+        neighborhood: addressData.neighborhood ?? undefined,
+      }
+    );
+    await persistAddresses(newAddresses, 'updated');
+  };
+
   return {
     localAddresses,
     isSaving,
@@ -352,6 +377,7 @@ export function useProjectLocations(project: Project) {
     handleClearPrimaryAddress,
     handleRequestDelete,
     handleConfirmDelete,
+    handleAddressDragUpdate,
 
     // Delete dialog
     deleteDialogOpen,

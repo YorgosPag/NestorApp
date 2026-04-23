@@ -1,21 +1,6 @@
 /* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
-/**
- * =============================================================================
- * ProjectLocationsTab — Project address management (ADR-167)
- * =============================================================================
- *
- * Dedicated tab for managing project locations and addresses.
- * Pattern: Procore, Salesforce, SAP Real Estate (INLINE EDITING)
- *
- * Address action buttons (add/edit/delete) are gated by the global
- * "Επεξεργασία" button via the isEditing prop — same pattern as contacts.
- *
- * @module components/projects/tabs/ProjectLocationsTab
- * @enterprise Fortune 500-grade locations management
- */
-
 import React, { useEffect } from 'react';
 import type { Project } from '@/types/project';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
@@ -29,6 +14,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { cn } from '@/lib/utils';
 import { LocationInlineForm } from './locations/LocationInlineForm';
 import { useProjectLocations } from './locations/useProjectLocations';
@@ -54,6 +41,7 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
   const typography = useTypography();
   const spacing = useSpacingTokens();
   const colors = useSemanticColors();
+  const fullscreen = useFullscreen();
 
   const loc = useProjectLocations(project);
   const _primary = getPrimaryAddress(loc.localAddresses);
@@ -67,92 +55,88 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
   }, [isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <section className={spacing.spaceBetween.lg}>
-      {/* Header */}
-      <header className="flex items-center justify-between">
-        <div>
-          <h2 className={cn(typography.heading.lg, 'flex items-center', spacing.gap.sm)}>
-            <MapPin className={iconSizes.lg} />
-            {t('locations.title')}
-          </h2>
-          <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.top.xs)}>
-            {t('locations.subtitle')}
-          </p>
+    <FullscreenOverlay
+      isFullscreen={fullscreen.isFullscreen}
+      onToggle={fullscreen.toggle}
+      ariaLabel={t('locations.title')}
+      className="grid grid-cols-1 lg:grid-cols-2 gap-2"
+      fullscreenClassName="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 overflow-auto"
+    >
+      {/* LEFT: Toolbar + forms + address cards */}
+      <div className={spacing.spaceBetween.sm}>
+
+        {/* Toolbar: fullscreen toggle (left) + add button (right) */}
+        <div className="flex items-center justify-between">
+          <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
+          {isEditing && !loc.isAddFormOpen && loc.editingIndex === null && (
+            <Button onClick={() => loc.setIsAddFormOpen(true)} variant="default" size="sm">
+              <Plus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
+              {t('locations.newAddress')}
+            </Button>
+          )}
         </div>
-        {isEditing && !loc.isAddFormOpen && (
-          <Button onClick={() => loc.setIsAddFormOpen(true)} variant="default">
-            <Plus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
-            {t('locations.newAddress')}
-          </Button>
+
+        {/* Inline Add Form */}
+        {isEditing && loc.isAddFormOpen && (
+          <LocationInlineForm
+            mode="add"
+            hierarchy={loc.addHierarchy}
+            onHierarchyChange={loc.setAddHierarchy}
+            type={loc.addType}
+            blockSide={loc.addBlockSide}
+            label={loc.addLabel}
+            isPrimary={loc.addIsPrimary}
+            onTypeChange={loc.setAddType}
+            onBlockSideChange={loc.setAddBlockSide}
+            onLabelChange={loc.setAddLabel}
+            onIsPrimaryChange={loc.setAddIsPrimary}
+            isSaving={loc.isSaving}
+            onSave={loc.handleSaveNewAddress}
+            onCancel={loc.handleCancelAdd}
+            t={t}
+            tProjects={tProjects}
+          />
         )}
-      </header>
 
-      {/* Inline Add Form — only accessible when isEditing */}
-      {isEditing && loc.isAddFormOpen && (
-        <LocationInlineForm
-          mode="add"
-          hierarchy={loc.addHierarchy}
-          onHierarchyChange={loc.setAddHierarchy}
-          type={loc.addType}
-          blockSide={loc.addBlockSide}
-          label={loc.addLabel}
-          isPrimary={loc.addIsPrimary}
-          onTypeChange={loc.setAddType}
-          onBlockSideChange={loc.setAddBlockSide}
-          onLabelChange={loc.setAddLabel}
-          onIsPrimaryChange={loc.setAddIsPrimary}
-          isSaving={loc.isSaving}
-          onSave={loc.handleSaveNewAddress}
-          onCancel={loc.handleCancelAdd}
-          t={t}
-          tProjects={tProjects}
-        />
-      )}
+        {/* Inline Edit Form */}
+        {isEditing && loc.editingIndex !== null && !loc.isAddFormOpen && (
+          <LocationInlineForm
+            mode="edit"
+            hierarchy={loc.editHierarchy}
+            onHierarchyChange={loc.setEditHierarchy}
+            type={loc.editType}
+            blockSide={loc.editBlockSide}
+            label={loc.editLabel}
+            isPrimary={loc.editIsPrimary}
+            onTypeChange={loc.setEditType}
+            onBlockSideChange={loc.setEditBlockSide}
+            onLabelChange={loc.setEditLabel}
+            onIsPrimaryChange={loc.handleEditIsPrimaryChange}
+            isSaving={loc.isSaving}
+            onSave={loc.handleSaveEdit}
+            onCancel={loc.handleCancelEdit}
+            contactId={loc.localAddresses[loc.editingIndex]?.id}
+            t={t}
+            tProjects={tProjects}
+          />
+        )}
 
-      {/* Inline Edit Form — only accessible when isEditing */}
-      {isEditing && loc.editingIndex !== null && !loc.isAddFormOpen && (
-        <LocationInlineForm
-          mode="edit"
-          hierarchy={loc.editHierarchy}
-          onHierarchyChange={loc.setEditHierarchy}
-          type={loc.editType}
-          blockSide={loc.editBlockSide}
-          label={loc.editLabel}
-          isPrimary={loc.editIsPrimary}
-          onTypeChange={loc.setEditType}
-          onBlockSideChange={loc.setEditBlockSide}
-          onLabelChange={loc.setEditLabel}
-          onIsPrimaryChange={loc.handleEditIsPrimaryChange}
-          isSaving={loc.isSaving}
-          onSave={loc.handleSaveEdit}
-          onCancel={loc.handleCancelEdit}
-          contactId={loc.localAddresses[loc.editingIndex]?.id}
-          t={t}
-          tProjects={tProjects}
-        />
-      )}
-
-      {/* Address Cards + Map (view mode) */}
-      {!loc.isInlineFormActive && (
-        <>
-          {loc.localAddresses.length === 0 ? (
-            <div className={cn('text-center border-2 border-dashed rounded-lg', spacing.padding.y['2xl'])}>
-              <MapPin className={cn(iconSizes.xl, 'mx-auto', colors.text.muted, spacing.margin.bottom.md)} />
-              <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>{t('locations.noAddresses')}</h3>
-              <p className={cn(typography.body.sm, colors.text.muted)}>
-                {t('locations.noAddressesHint')}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-              {/* LEFT: Address Cards */}
+        {/* Address Cards (view mode) */}
+        {!loc.isInlineFormActive && (
+          <>
+            {loc.localAddresses.length === 0 ? (
+              <div className={cn('text-center border-2 border-dashed rounded-lg', spacing.padding.y['2xl'])}>
+                <MapPin className={cn(iconSizes.xl, 'mx-auto', colors.text.muted, spacing.margin.bottom.md)} />
+                <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>{t('locations.noAddresses')}</h3>
+                <p className={cn(typography.body.sm, colors.text.muted)}>
+                  {t('locations.noAddressesHint')}
+                </p>
+              </div>
+            ) : (
               <aside className={spacing.spaceBetween.md}>
-                <div className="flex items-center justify-between">
-                  <h3 className={typography.heading.md}>
-                    {t('locations.projectAddresses')} ({loc.localAddresses.length})
-                  </h3>
-                </div>
-
+                <h3 className={typography.heading.md}>
+                  {t('locations.projectAddresses')} ({loc.localAddresses.length})
+                </h3>
                 {loc.localAddresses.map((address, index) => {
                   const streetLine = [address.street, address.number, address.city, address.postalCode]
                     .filter(Boolean)
@@ -181,38 +165,25 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
                   );
                 })}
               </aside>
+            )}
+          </>
+        )}
+      </div>
 
-              {/* RIGHT: Map (desktop) */}
-              <aside className="hidden lg:block">
-                <div className="sticky top-0 h-[calc(100vh-12rem)]">
-                  <AddressMap
-                    addresses={loc.localAddresses}
-                    highlightPrimary
-                    showGeocodingStatus
-                    enableClickToFocus
-                    onMarkerClick={loc.handleMarkerClick}
-                    heightPreset="viewerFullscreen"
-                    className="rounded-lg border shadow-sm !h-full"
-                  />
-                </div>
-              </aside>
-
-              {/* Map (mobile) */}
-              <div className="lg:hidden">
-                <AddressMap
-                  addresses={loc.localAddresses}
-                  highlightPrimary
-                  showGeocodingStatus
-                  enableClickToFocus
-                  onMarkerClick={loc.handleMarkerClick}
-                  heightPreset="viewerStandard"
-                  className="rounded-lg border shadow-sm"
-                />
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      {/* RIGHT: Map — always visible, draggable in edit mode */}
+      <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-7rem)]">
+        <AddressMap
+          addresses={loc.localAddresses}
+          highlightPrimary
+          showGeocodingStatus
+          enableClickToFocus
+          onMarkerClick={loc.handleMarkerClick}
+          draggableMarkers={isEditing}
+          onAddressDragUpdate={loc.handleAddressDragUpdate}
+          heightPreset="viewerFullscreen"
+          className="rounded-lg border shadow-sm !h-full"
+        />
+      </aside>
 
       {/* Delete Confirmation */}
       <DeleteConfirmDialog
@@ -224,7 +195,7 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
         confirmText={t('deleteDialog.confirm')}
         cancelText={t('deleteDialog.cancel')}
       />
-    </section>
+    </FullscreenOverlay>
   );
 }
 
