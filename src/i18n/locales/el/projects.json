@@ -353,7 +353,8 @@
     "cancel": "Ακύρωση",
     "edit": "Επεξεργασία",
     "loading": "Φόρτωση...",
-    "primary": "Κύρια"
+    "primary": "Κύρια",
+    "setAsPrimary": "Ορισμός ως Κύρια"
   },
   "documents": {
     "selectForContracts": "Επιλέξτε ένα έργο για να δείτε τα συμβόλαια.",

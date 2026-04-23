@@ -7,6 +7,8 @@
  */
 
 export { AddressCard } from './AddressCard';
+export { SharedAddressActionCard } from './SharedAddressActionCard';
+export type { SharedAddressActionCardProps } from './SharedAddressActionCard';
 export { AddressListCard } from './AddressListCard';
 export { AddressFormSection } from './AddressFormSection';
 export { AddressWithHierarchy } from './AddressWithHierarchy';

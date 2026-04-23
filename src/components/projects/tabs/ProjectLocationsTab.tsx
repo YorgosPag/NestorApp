@@ -9,17 +9,19 @@
  * Dedicated tab for managing project locations and addresses.
  * Pattern: Procore, Salesforce, SAP Real Estate (INLINE EDITING)
  *
+ * Address action buttons (add/edit/delete) are gated by the global
+ * "Επεξεργασία" button via the isEditing prop — same pattern as contacts.
+ *
  * @module components/projects/tabs/ProjectLocationsTab
  * @enterprise Fortune 500-grade locations management
  */
 
 import React from 'react';
 import type { Project } from '@/types/project';
-import { AddressCard } from '@/components/shared/addresses';
+import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { MapPin, Plus, Star, Trash2, Pencil, Eraser } from 'lucide-react';
+import { MapPin, Plus } from 'lucide-react';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { getPrimaryAddress } from '@/types/project/address-helpers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -38,13 +40,14 @@ import { useProjectLocations } from './locations/useProjectLocations';
 interface ProjectLocationsTabProps {
   data: Project;
   projectId?: string;
+  isEditing?: boolean;
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps) {
+export function ProjectLocationsTab({ data: project, isEditing = false }: ProjectLocationsTabProps) {
   const { t } = useTranslation('addresses');
   const { t: tProjects } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
@@ -60,7 +63,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       {/* Header */}
       <header className="flex items-center justify-between">
         <div>
-          <h2 className={cn(typography.heading.lg, "flex items-center", spacing.gap.sm)}>
+          <h2 className={cn(typography.heading.lg, 'flex items-center', spacing.gap.sm)}>
             <MapPin className={iconSizes.lg} />
             {t('locations.title')}
           </h2>
@@ -68,7 +71,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             {t('locations.subtitle')}
           </p>
         </div>
-        {!loc.isAddFormOpen && (
+        {isEditing && !loc.isAddFormOpen && (
           <Button onClick={() => loc.setIsAddFormOpen(true)} variant="default">
             <Plus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
             {t('locations.newAddress')}
@@ -76,8 +79,8 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         )}
       </header>
 
-      {/* Inline Add Form */}
-      {loc.isAddFormOpen && (
+      {/* Inline Add Form — only accessible when isEditing */}
+      {isEditing && loc.isAddFormOpen && (
         <LocationInlineForm
           mode="add"
           hierarchy={loc.addHierarchy}
@@ -98,8 +101,8 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         />
       )}
 
-      {/* Inline Edit Form */}
-      {loc.editingIndex !== null && !loc.isAddFormOpen && (
+      {/* Inline Edit Form — only accessible when isEditing */}
+      {isEditing && loc.editingIndex !== null && !loc.isAddFormOpen && (
         <LocationInlineForm
           mode="edit"
           hierarchy={loc.editHierarchy}
@@ -125,8 +128,8 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       {!loc.isInlineFormActive && (
         <>
           {loc.localAddresses.length === 0 ? (
-            <div className={cn("text-center border-2 border-dashed rounded-lg", spacing.padding.y["2xl"])}>
-              <MapPin className={cn(iconSizes.xl, "mx-auto", colors.text.muted, spacing.margin.bottom.md)} />
+            <div className={cn('text-center border-2 border-dashed rounded-lg', spacing.padding.y['2xl'])}>
+              <MapPin className={cn(iconSizes.xl, 'mx-auto', colors.text.muted, spacing.margin.bottom.md)} />
               <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>{t('locations.noAddresses')}</h3>
               <p className={cn(typography.body.sm, colors.text.muted)}>
                 {t('locations.noAddressesHint')}
@@ -142,44 +145,33 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                   </h3>
                 </div>
 
-                {loc.localAddresses.map((address, index) => (
-                  <article
-                    key={address.id}
-                    id={`address-card-${address.id}`}
-                    className={cn("relative border rounded-lg hover:shadow-md transition-shadow", spacing.padding.sm)}
-                  >
-                    <AddressCard address={address} />
+                {loc.localAddresses.map((address, index) => {
+                  const streetLine = [address.street, address.number, address.city, address.postalCode]
+                    .filter(Boolean)
+                    .join(', ');
+                  const typeLabel = t(`types.${address.type}`);
+                  const isPrimary = address.isPrimary;
 
-                    <div className={cn("absolute top-4 right-4 flex", spacing.gap.sm)}>
-                      {address.isPrimary ? (
-                        <Badge variant="default" className="flex items-center gap-1">
-                          <Star className="h-3 w-3 fill-current" />
-                          {tProjects('common.primary')}
-                        </Badge>
-                      ) : (
-                        <Button variant="outline" size="sm" onClick={() => loc.handleSetPrimary(index)}>
-                          <Star className={iconSizes.sm} />
-                        </Button>
-                      )}
-                      <Button variant="outline" size="sm" onClick={() => loc.handleStartEdit(index)}>
-                        <Pencil className={iconSizes.sm} />
-                      </Button>
-                      {index === 0 ? (
-                        <Button variant="outline" size="sm" onClick={loc.handleClearPrimaryAddress}>
-                          <Eraser className={iconSizes.sm} />
-                        </Button>
-                      ) : (
-                        <Button variant="destructive" size="sm" onClick={() => loc.handleRequestDelete(index)}>
-                          <Trash2 className={iconSizes.sm} />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className={cn("border-t", typography.body.xs, colors.text.muted, spacing.margin.top.md, spacing.padding.top.md)}>
-                      {address.type && <span>{t(`types.${address.type}`)}</span>}
-                    </div>
-                  </article>
-                ))}
+                  return (
+                    <SharedAddressActionCard
+                      key={address.id}
+                      id={address.id}
+                      streetLine={streetLine}
+                      typeLabel={typeLabel}
+                      isPrimary={isPrimary}
+                      isEditing={isEditing}
+                      onEdit={() => loc.handleStartEdit(index)}
+                      onSetPrimary={!isPrimary ? () => loc.handleSetPrimary(index) : undefined}
+                      onClear={index === 0 ? loc.handleClearPrimaryAddress : undefined}
+                      onDelete={index !== 0 ? () => loc.handleRequestDelete(index) : undefined}
+                      editLabel={t('card.edit')}
+                      clearLabel={tProjects('locations.clearAddress')}
+                      deleteLabel={t('deleteDialog.confirm')}
+                      setPrimaryLabel={tProjects('common.setAsPrimary')}
+                      primaryLabel={tProjects('common.primary')}
+                    />
+                  );
+                })}
               </aside>
 
               {/* RIGHT: Map (desktop) */}

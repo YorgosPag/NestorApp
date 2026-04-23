@@ -6,8 +6,7 @@
  * ============================================================================
  *
  * Supports multiple addresses: headquarters (always present) + N branches.
- * Each branch uses AddressWithHierarchy for consistent address entry
- * with Greek administrative hierarchy support.
+ * Each branch uses SharedAddressActionCard (view) + AddressWithHierarchy (edit).
  *
  * @module components/contacts/dynamic/CompanyAddressesSection
  */
@@ -17,13 +16,14 @@ import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { BranchDeleteConfirmDialog } from '@/components/contacts/dialogs/BranchDeleteConfirmDialog';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
+import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -49,7 +49,6 @@ function createEmptyBranch(): CompanyAddress {
   };
 }
 
-/** Map CompanyAddress to AddressWithHierarchyValue */
 function toHierarchyValue(addr: CompanyAddress): Partial<AddressWithHierarchyValue> {
   return {
     street: addr.street,
@@ -68,11 +67,7 @@ function toHierarchyValue(addr: CompanyAddress): Partial<AddressWithHierarchyVal
   };
 }
 
-/** Map AddressWithHierarchyValue back to CompanyAddress fields */
-function fromHierarchyValue(
-  existing: CompanyAddress,
-  val: AddressWithHierarchyValue
-): CompanyAddress {
+function fromHierarchyValue(existing: CompanyAddress, val: AddressWithHierarchyValue): CompanyAddress {
   return {
     ...existing,
     street: val.street,
@@ -92,6 +87,11 @@ function fromHierarchyValue(
   };
 }
 
+function formatBranchStreetLine(addr: CompanyAddress): string {
+  const parts = [addr.street, addr.number, addr.city, addr.postalCode].filter(Boolean);
+  return parts.join(', ');
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -104,7 +104,10 @@ export function CompanyAddressesSection({
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const [branchDeleteIndex, setBranchDeleteIndex] = useState<number | null>(null);
-  // Headquarters = first entry with type 'headquarters', or first entry
+  const [editingBranchIndex, setEditingBranchIndex] = useState<number | null>(null);
+
+  const isEditing = !disabled;
+
   const hqIndex = addresses.findIndex((a) => a.type === 'headquarters');
   const effectiveHqIndex = hqIndex >= 0 ? hqIndex : 0;
   const branches = addresses.filter((_, i) => i !== effectiveHqIndex);
@@ -127,8 +130,11 @@ export function CompanyAddressesSection({
   );
 
   const addBranch = useCallback(() => {
-    onChange([...addresses, createEmptyBranch()]);
-  }, [addresses, onChange]);
+    const newAddresses = [...addresses, createEmptyBranch()];
+    onChange(newAddresses);
+    // Auto-open inline edit for the new branch
+    setEditingBranchIndex(branches.length);
+  }, [addresses, branches.length, onChange]);
 
   const removeBranch = useCallback(
     (branchVisualIndex: number) => {
@@ -151,7 +157,6 @@ export function CompanyAddressesSection({
     <div className="space-y-6">
       <Separator />
 
-      {/* Branches / Additional Addresses */}
       <section aria-label={t('contacts-form:addressesSection.branchesTitle')}>
         <header className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-foreground">
@@ -170,34 +175,48 @@ export function CompanyAddressesSection({
         </header>
 
         {branches.length === 0 ? (
-          <p className={cn("text-sm py-2 text-center", colors.text.muted)}>
+          <p className={cn('text-sm py-2 text-center', colors.text.muted)}>
             {t('contacts-form:addressesSection.noBranches')}
           </p>
         ) : (
           <ul className="space-y-4">
             {branches.map((addr, i) => (
               <li key={i} className="space-y-3">
-                <header className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-foreground">
-                    {t('contacts-form:addressesSection.branch')} {branches.length > 1 ? `#${i + 1}` : ''}
-                  </h4>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setBranchDeleteIndex(i)}
-                    disabled={disabled}
-                    aria-label={t('contacts-form:addressesSection.removeAddress')}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </header>
-                <AddressWithHierarchy
-                  value={toHierarchyValue(addr)}
-                  onChange={(val) => handleBranchUpdate(i, fromHierarchyValue(addr, val))}
-                  disabled={disabled}
-                />
+                {editingBranchIndex === i ? (
+                  /* Inline edit form */
+                  <div className="border-2 border-primary rounded-lg p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-foreground">
+                        {t('contacts-form:addressesSection.branch')}{branches.length > 1 ? ` #${i + 1}` : ''}
+                      </h4>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingBranchIndex(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <AddressWithHierarchy
+                      value={toHierarchyValue(addr)}
+                      onChange={(val) => handleBranchUpdate(i, fromHierarchyValue(addr, val))}
+                      disabled={disabled}
+                    />
+                  </div>
+                ) : (
+                  /* Card view */
+                  <SharedAddressActionCard
+                    id={`branch-${i}`}
+                    streetLine={formatBranchStreetLine(addr)}
+                    typeLabel={`${t('contacts-form:addressesSection.branch')}${branches.length > 1 ? ` #${i + 1}` : ''}`}
+                    isEditing={isEditing}
+                    onEdit={() => setEditingBranchIndex(i)}
+                    onDelete={() => setBranchDeleteIndex(i)}
+                    editLabel={t('contacts-form:addressesSection.editAddress')}
+                    deleteLabel={t('contacts-form:addressesSection.removeAddress')}
+                  />
+                )}
                 {i < branches.length - 1 && <Separator />}
               </li>
             ))}
@@ -205,7 +224,6 @@ export function CompanyAddressesSection({
         )}
       </section>
 
-      {/* 📍 Branch delete confirmation (ADR-277 Safety) */}
       <BranchDeleteConfirmDialog
         open={branchDeleteIndex !== null}
         onOpenChange={(open) => { if (!open) setBranchDeleteIndex(null); }}

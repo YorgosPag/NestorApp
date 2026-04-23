@@ -353,7 +353,8 @@
     "cancel": "Cancel",
     "edit": "Edit",
     "loading": "Loading...",
-    "primary": "Primary"
+    "primary": "Primary",
+    "setAsPrimary": "Set as Primary"
   },
   "documents": {
     "selectForContracts": "Select a project to view contracts.",

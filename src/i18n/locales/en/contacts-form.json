@@ -265,6 +265,7 @@
     "addAddress": "Add Address",
     "noBranches": "No additional addresses",
     "branch": "Branch",
+    "editAddress": "Edit Address",
     "removeAddress": "Remove Address",
     "clearAddress": "Clear Address",
     "addressCleared": "Address cleared",

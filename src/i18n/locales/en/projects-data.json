@@ -441,6 +441,7 @@
     "existingAddresses": "Existing Addresses",
     "addAddress": "Add Address",
     "editAddress": "Edit Address",
+    "clearAddress": "Clear Address",
     "errors": {
       "soleAddressMustBePrimary": "The only address must remain primary",
       "cityRequired": "Please fill in at least the Settlement/City"

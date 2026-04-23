@@ -11,9 +11,10 @@
 
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eraser } from 'lucide-react';
 import '@/lib/design-system';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -24,11 +25,10 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
+import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import { CompanyAddressesSection } from '@/components/contacts/dynamic/CompanyAddressesSection';
 import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
@@ -46,6 +46,20 @@ interface AddressesSectionWithFullscreenProps {
 }
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+function formatHqStreetLine(formData: ContactFormData): string {
+  const parts = [
+    formData.street,
+    formData.streetNumber,
+    formData.city,
+    formData.postalCode,
+  ].filter(Boolean);
+  return parts.join(', ');
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -59,8 +73,13 @@ export function AddressesSectionWithFullscreen({
   const fullscreen = useFullscreen();
   const { clearHq } = useClearCompanyHqAddress(formData, setFormData);
 
+  // Local state: which address is in inline-edit mode
+  const [isEditingHQ, setIsEditingHQ] = useState(false);
+
   // 📍 ADR-277: Pending drag resolve state (map drag may clear hierarchy)
   const [pendingDrag, setPendingDrag] = useState<{ addr: DragResolvedAddress; index: number } | null>(null);
+
+  const isEditing = !disabled;
 
   /** Has any HQ field been filled? Drives disabled state of Clear button. */
   const hqHasValue =
@@ -81,11 +100,11 @@ export function AddressesSectionWithFullscreen({
 
   /** Keyboard affordance: Ctrl+Backspace on HQ form triggers clear. */
   const handleHqKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.ctrlKey && e.key === 'Backspace' && !disabled && hqHasValue) {
+    if (e.ctrlKey && e.key === 'Backspace' && isEditing && hqHasValue) {
       e.preventDefault();
       clearHq();
     }
-  }, [clearHq, disabled, hqHasValue]);
+  }, [clearHq, isEditing, hqHasValue]);
 
   /** Apply drag-resolved address to form state (clears hierarchy fields) */
   const applyDragResolve = useCallback((addr: DragResolvedAddress, addressIndex: number) => {
@@ -128,6 +147,8 @@ export function AddressesSectionWithFullscreen({
       ? [{ type: 'headquarters' as const, street: formData.street as string, number: (formData.streetNumber as string) ?? '', postalCode: (formData.postalCode as string) ?? '', city: (formData.city as string) ?? '' }]
       : [{ type: 'headquarters' as const, street: '', number: '', postalCode: '', city: '' }];
 
+  const hqTypeLabel = tContacts('contacts-form:addressesSection.headquarters');
+
   return (
     <FullscreenOverlay
       isFullscreen={fullscreen.isFullscreen}
@@ -136,97 +157,97 @@ export function AddressesSectionWithFullscreen({
       className="grid grid-cols-1 lg:grid-cols-2 gap-2"
       fullscreenClassName="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 overflow-auto"
     >
-      {/* LEFT: AddressWithHierarchy for HQ + Branches */}
+      {/* LEFT: HQ address + Branches */}
       <div className="space-y-2">
-        {/* HQ address with hierarchy + clear + fullscreen toggle */}
-        <header className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">{tContacts('contacts-form:addressesSection.headquarters')}</h3>
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={clearHq}
-                  disabled={disabled || !hqHasValue}
-                  aria-label={tContacts('contacts-form:addressesSection.clearAddress')}
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                >
-                  <Eraser className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {tContacts('contacts-form:addressesSection.clearAddress')}
-              </TooltipContent>
-            </Tooltip>
-            <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
-          </div>
-        </header>
 
-        <div onKeyDown={handleHqKeyDown}>
-          <AddressWithHierarchy
-          value={{
-            street: (formData.street as string) || '',
-            number: (formData.streetNumber as string) || '',
-            postalCode: (formData.postalCode as string) || '',
-            settlementName: (formData.settlement as string) || (formData.city as string) || '',
-            settlementId: (formData.settlementId as string | null) ?? null,
-            communityName: (formData.community as string) || '',
-            municipalUnitName: (formData.municipalUnit as string) || '',
-            municipalityName: (formData.municipality as string) || '',
-            municipalityId: (formData.municipalityId as string | null) ?? null,
-            regionalUnitName: (formData.regionalUnit as string) || '',
-            regionName: (formData.region as string) || '',
-            decentAdminName: (formData.decentAdmin as string) || '',
-            majorGeoName: (formData.majorGeo as string) || '',
-          }}
-          onChange={(addr: AddressWithHierarchyValue) => {
-            if (setFormData) {
-              const updatedAddresses = [...effectiveAddresses];
-              const hqIdx = updatedAddresses.findIndex(a => a.type === 'headquarters');
-              if (hqIdx >= 0) {
-                updatedAddresses[hqIdx] = {
-                  ...updatedAddresses[hqIdx],
-                  street: addr.street,
-                  number: addr.number,
-                  city: addr.settlementName || addr.municipalityName,
-                  postalCode: addr.postalCode,
-                  settlementId: addr.settlementId,
-                  communityName: addr.communityName,
-                  municipalUnitName: addr.municipalUnitName,
-                  municipalityName: addr.municipalityName,
-                  municipalityId: addr.municipalityId,
-                  regionalUnitName: addr.regionalUnitName,
-                  regionName: addr.regionName,
-                  region: addr.regionName,
-                  decentAdminName: addr.decentAdminName,
-                  majorGeoName: addr.majorGeoName,
-                };
-              }
-              setFormData({
-                ...formData,
-                street: addr.street,
-                streetNumber: addr.number,
-                postalCode: addr.postalCode,
-                city: addr.settlementName || addr.municipalityName,
-                settlement: addr.settlementName,
-                settlementId: addr.settlementId,
-                community: addr.communityName,
-                municipalUnit: addr.municipalUnitName,
-                municipality: addr.municipalityName,
-                municipalityId: addr.municipalityId,
-                regionalUnit: addr.regionalUnitName,
-                region: addr.regionName,
-                decentAdmin: addr.decentAdminName,
-                majorGeo: addr.majorGeoName,
-                companyAddresses: updatedAddresses,
-              });
-            }
-          }}
-          disabled={disabled}
-          />
+        {/* Fullscreen toggle — standalone, always visible */}
+        <div className="flex justify-end">
+          <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
         </div>
+
+        {/* HQ — card view OR inline edit form */}
+        {!isEditingHQ ? (
+          <SharedAddressActionCard
+            id="hq"
+            streetLine={formatHqStreetLine(formData)}
+            typeLabel={hqTypeLabel}
+            isEditing={isEditing}
+            onEdit={() => setIsEditingHQ(true)}
+            onClear={hqHasValue ? clearHq : undefined}
+            editLabel={tContacts('contacts-form:addressesSection.editAddress')}
+            clearLabel={tContacts('contacts-form:addressesSection.clearAddress')}
+          />
+        ) : (
+          <div className="border-2 border-primary rounded-lg p-3 space-y-3" onKeyDown={handleHqKeyDown}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">{hqTypeLabel}</h3>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditingHQ(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <AddressWithHierarchy
+              value={{
+                street: (formData.street as string) || '',
+                number: (formData.streetNumber as string) || '',
+                postalCode: (formData.postalCode as string) || '',
+                settlementName: (formData.settlement as string) || (formData.city as string) || '',
+                settlementId: (formData.settlementId as string | null) ?? null,
+                communityName: (formData.community as string) || '',
+                municipalUnitName: (formData.municipalUnit as string) || '',
+                municipalityName: (formData.municipality as string) || '',
+                municipalityId: (formData.municipalityId as string | null) ?? null,
+                regionalUnitName: (formData.regionalUnit as string) || '',
+                regionName: (formData.region as string) || '',
+                decentAdminName: (formData.decentAdmin as string) || '',
+                majorGeoName: (formData.majorGeo as string) || '',
+              }}
+              onChange={(addr: AddressWithHierarchyValue) => {
+                if (setFormData) {
+                  const updatedAddresses = [...effectiveAddresses];
+                  const hqIdx = updatedAddresses.findIndex(a => a.type === 'headquarters');
+                  if (hqIdx >= 0) {
+                    updatedAddresses[hqIdx] = {
+                      ...updatedAddresses[hqIdx],
+                      street: addr.street,
+                      number: addr.number,
+                      city: addr.settlementName || addr.municipalityName,
+                      postalCode: addr.postalCode,
+                      settlementId: addr.settlementId,
+                      communityName: addr.communityName,
+                      municipalUnitName: addr.municipalUnitName,
+                      municipalityName: addr.municipalityName,
+                      municipalityId: addr.municipalityId,
+                      regionalUnitName: addr.regionalUnitName,
+                      regionName: addr.regionName,
+                      region: addr.regionName,
+                      decentAdminName: addr.decentAdminName,
+                      majorGeoName: addr.majorGeoName,
+                    };
+                  }
+                  setFormData({
+                    ...formData,
+                    street: addr.street,
+                    streetNumber: addr.number,
+                    postalCode: addr.postalCode,
+                    city: addr.settlementName || addr.municipalityName,
+                    settlement: addr.settlementName,
+                    settlementId: addr.settlementId,
+                    community: addr.communityName,
+                    municipalUnit: addr.municipalUnitName,
+                    municipality: addr.municipalityName,
+                    municipalityId: addr.municipalityId,
+                    regionalUnit: addr.regionalUnitName,
+                    region: addr.regionName,
+                    decentAdmin: addr.decentAdminName,
+                    majorGeo: addr.majorGeoName,
+                    companyAddresses: updatedAddresses,
+                  });
+                }
+              }}
+              disabled={disabled}
+            />
+          </div>
+        )}
 
         {/* Branches section */}
         <CompanyAddressesSection
@@ -257,8 +278,8 @@ export function AddressesSectionWithFullscreen({
           city={formData.city}
           postalCode={formData.postalCode}
           companyAddresses={formData.companyAddresses}
-          draggable={!disabled}
-          onDragResolve={!disabled && setFormData ? (addr: DragResolvedAddress, addressIndex: number) => {
+          draggable={isEditing}
+          onDragResolve={isEditing && setFormData ? (addr: DragResolvedAddress, addressIndex: number) => {
             // 📍 ADR-277: Check if HQ has hierarchy that would be cleared
             const targetAddr = effectiveAddresses[addressIndex];
             const isHQ = addressIndex === 0 || targetAddr?.type === 'headquarters';
