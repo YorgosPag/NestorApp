@@ -250,5 +250,17 @@ export function buildCompanyRenderers(ctx: RendererContext): Record<string, Rend
         disabled={disabled}
       />
     ),
+    // ADR-318 SSoT: individual schema uses sectionId 'address' (singular), company uses 'addresses' (plural).
+    // One component, two registry keys — keeps schema files untouched.
+    address: () => (
+      <AddressesSectionWithFullscreen
+        formData={formData}
+        setFormData={setFormData ? (value) => {
+          const newData = typeof value === 'function' ? value(formData) : value;
+          setFormData(newData);
+        } : undefined}
+        disabled={disabled}
+      />
+    ),
   };
 }
