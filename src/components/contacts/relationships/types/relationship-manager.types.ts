@@ -53,6 +53,12 @@ export interface RelationshipFormData {
   phones?: PhoneInfo[];
   /** Centralized email entries (replaces plain-text businessEmail) */
   emails?: EmailInfo[];
+  /**
+   * 🏢 ADR-318: per-instance override for optional work-address derivation.
+   * Rendered as a toggle when the selected relationship type's metadata
+   * has `derivesWorkAddress: 'optional'`.
+   */
+  isWorkplace?: boolean;
 }
 
 /**

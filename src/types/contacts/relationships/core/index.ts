@@ -8,3 +8,4 @@
 // ============================================================================
 
 export * from './relationship-types';
+export * from './relationship-metadata';

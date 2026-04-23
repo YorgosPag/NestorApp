@@ -6,13 +6,10 @@
 // Single-purpose module for basic relationship type definitions
 // Part of modular Enterprise relationship types architecture
 //
-// ✅ ENTERPRISE: Using centralized relationship type labels - ZERO HARDCODED VALUES
+// ADR-318: semantic properties (category, derivesWorkAddress) live in
+// `relationship-metadata.ts`. Legacy arrays are re-exported from that SSoT.
 //
 // ============================================================================
-
-// 🏢 ENTERPRISE: Import centralized relationship type labels - ZERO HARDCODED VALUES
-
-
 
 /**
  * 🔗 Relationship Types - Enterprise Standard Categories
@@ -22,113 +19,83 @@
  */
 export type RelationshipType =
   // 👥 Employment Relationships
-  | 'employee'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.EMPLOYEE
-  | 'manager'                  // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.MANAGER
-  | 'director'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.DIRECTOR
-  | 'executive'                // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.EXECUTIVE
-  | 'intern'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.INTERN
-  | 'contractor'               // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CONTRACTOR
-  | 'consultant'               // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CONSULTANT
+  | 'employee'
+  | 'manager'
+  | 'director'
+  | 'executive'
+  | 'intern'
+  | 'contractor'
+  | 'consultant'
 
   // 🏢 Corporate Relationships
-  | 'shareholder'              // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.SHAREHOLDER
-  | 'board_member'             // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.BOARD_MEMBER
-  | 'chairman'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CHAIRMAN
-  | 'ceo'                      // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CEO
-  | 'representative'           // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.REPRESENTATIVE
-  | 'partner'                  // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.PARTNER
-  | 'vendor'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.VENDOR
-  | 'client'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CLIENT
+  | 'shareholder'
+  | 'board_member'
+  | 'chairman'
+  | 'ceo'
+  | 'representative'
+  | 'partner'
+  | 'vendor'
+  | 'client'
 
   // 🏛️ Government/Service Relationships
-  | 'civil_servant'            // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CIVIL_SERVANT
-  | 'elected_official'         // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.ELECTED_OFFICIAL
-  | 'appointed_official'       // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.APPOINTED_OFFICIAL
-  | 'department_head'          // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.DEPARTMENT_HEAD
-  | 'ministry_official'        // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.MINISTRY_OFFICIAL
-  | 'mayor'                    // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.MAYOR
-  | 'deputy_mayor'             // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.DEPUTY_MAYOR
-  | 'regional_governor'        // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.REGIONAL_GOVERNOR
+  | 'civil_servant'
+  | 'elected_official'
+  | 'appointed_official'
+  | 'department_head'
+  | 'ministry_official'
+  | 'mayor'
+  | 'deputy_mayor'
+  | 'regional_governor'
 
   // 🔗 Other Professional Relationships
-  | 'advisor'                  // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.ADVISOR
-  | 'mentor'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.MENTOR
-  | 'protege'                  // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.PROTEGE
-  | 'colleague'                // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.COLLEAGUE
-  | 'supplier'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.SUPPLIER
-  | 'customer'                 // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.CUSTOMER
-  | 'competitor'               // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.COMPETITOR
-  | 'friend'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.FRIEND
-  | 'family'                   // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.FAMILY
-  | 'other'                    // ✅ CENTRALIZED: RELATIONSHIP_TYPE_LABELS.OTHER
+  | 'advisor'
+  | 'mentor'
+  | 'protege'
+  | 'colleague'
+  | 'supplier'
+  | 'customer'
+  | 'competitor'
+  | 'business_contact'
+  | 'friend'
+  | 'family'
+  | 'other'
   // ADR-244: Property ownership roles
-  | 'property_buyer'           // Αγοραστής ακινήτου
-  | 'property_co_buyer'        // Συν-αγοραστής ακινήτου
-  | 'property_landowner';      // Οικοπεδούχος
+  | 'property_buyer'
+  | 'property_co_buyer'
+  | 'property_landowner';
 
 /**
  * 📊 Relationship Status - Lifecycle Management
- *
- * Professional relationship lifecycle tracking
- * Essential for enterprise contact management
  */
 export type RelationshipStatus =
-  | 'active'                   // ✅ CENTRALIZED: RELATIONSHIP_STATUS_LABELS.ACTIVE
-  | 'inactive'                 // ✅ CENTRALIZED: RELATIONSHIP_STATUS_LABELS.INACTIVE
-  | 'pending'                  // ✅ CENTRALIZED: RELATIONSHIP_STATUS_LABELS.PENDING
-  | 'terminated'               // ✅ CENTRALIZED: RELATIONSHIP_STATUS_LABELS.TERMINATED
-  | 'suspended';               // ✅ CENTRALIZED: RELATIONSHIP_STATUS_LABELS.SUSPENDED
+  | 'active'
+  | 'inactive'
+  | 'pending'
+  | 'terminated'
+  | 'suspended';
 
 /**
  * 💼 Employment Status - Detailed Work Classification
- *
- * Professional employment status for detailed HR tracking
- * Aligned with Greek labor law and EU standards
  */
 export type EmploymentStatus =
-  | 'full_time'                // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.FULL_TIME
-  | 'part_time'                // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.PART_TIME
-  | 'contract'                 // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.CONTRACT
-  | 'temporary'                // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.TEMPORARY
-  | 'seasonal'                 // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.SEASONAL
-  | 'volunteer'                // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.VOLUNTEER
-  | 'retired'                  // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.RETIRED
-  | 'on_leave'                 // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.ON_LEAVE
-  | 'terminated';              // ✅ CENTRALIZED: EMPLOYMENT_STATUS_LABELS.TERMINATED
+  | 'full_time'
+  | 'part_time'
+  | 'contract'
+  | 'temporary'
+  | 'seasonal'
+  | 'volunteer'
+  | 'retired'
+  | 'on_leave'
+  | 'terminated';
 
 // ============================================================================
-// TYPE COLLECTIONS FOR VALIDATION
+// TYPE COLLECTIONS — DERIVED FROM METADATA REGISTRY (ADR-318 SSoT)
 // ============================================================================
-
-/**
- * 👥 Employment-based relationship types
- */
-export const EMPLOYMENT_RELATIONSHIP_TYPES: RelationshipType[] = [
-  'employee', 'manager', 'director', 'executive', 'intern', 'contractor',
-  'civil_servant', 'department_head', 'ministry_official'
-];
-
-/**
- * 🏢 Ownership-based relationship types
- */
-export const OWNERSHIP_RELATIONSHIP_TYPES: RelationshipType[] = [
-  'shareholder', 'board_member', 'chairman', 'ceo', 'partner'
-];
-
-/**
- * 🏘️ ADR-244: Property ownership relationship types
- */
-export const PROPERTY_RELATIONSHIP_TYPES: RelationshipType[] = [
-  'property_buyer', 'property_co_buyer', 'property_landowner'
-];
-
-/**
- * 🏛️ Government-based relationship types
- */
-export const GOVERNMENT_RELATIONSHIP_TYPES: RelationshipType[] = [
-  'civil_servant', 'elected_official', 'appointed_official', 'department_head',
-  'ministry_official', 'mayor', 'deputy_mayor', 'regional_governor'
-];
+// `EMPLOYMENT_RELATIONSHIP_TYPES`, `OWNERSHIP_RELATIONSHIP_TYPES`,
+// `GOVERNMENT_RELATIONSHIP_TYPES`, `PROPERTY_RELATIONSHIP_TYPES` are
+// exported from `./relationship-metadata` (the SSoT). Import them from
+// `./relationship-metadata` directly, or via the `./core` barrel.
+// ============================================================================
 
 /**
  * 📊 Relationship priority scores for sorting
@@ -165,6 +132,7 @@ export const RELATIONSHIP_TYPE_PRIORITY_SCORES: Record<RelationshipType, number>
   'supplier': 20,
   'customer': 20,
   'competitor': 5,
+  'business_contact': 20,
   'friend': 10,
   'family': 10,
   'property_buyer': 30,

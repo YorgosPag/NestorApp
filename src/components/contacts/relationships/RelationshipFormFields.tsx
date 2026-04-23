@@ -38,6 +38,10 @@ import type { PhoneInfo, EmailInfo } from '@/types/contacts';
 import type { ContactType } from '@/types/contacts/contracts';
 import type { RelationshipFormData } from './types/relationship-manager.types';
 
+// 🏢 ADR-318: Registry-driven work-address derivation
+import { getRelationshipMetadata } from '@/types/contacts/relationships/core/relationship-metadata';
+import { Switch } from '@/components/ui/switch';
+
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
@@ -165,6 +169,13 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
     const presets = getDepartmentOptions(t);
     return [...presets, ...customDepartments];
   }, [t, customDepartments]);
+
+  // 🏢 ADR-318: Show workplace toggle only when selected type is 'optional'
+  const workAddressMode = useMemo(
+    () => getRelationshipMetadata(formData.relationshipType)?.derivesWorkAddress ?? 'never',
+    [formData.relationshipType]
+  );
+  const showWorkplaceToggle = workAddressMode === 'optional';
 
   // ============================================================================
   // "ADD NEW" HANDLERS
@@ -338,6 +349,35 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
           />
           {renderError('department')}
         </div>
+
+        {/* ── Workplace Toggle (ADR-318) — visible for 'optional' types ── */}
+        {showWorkplaceToggle && (
+          <div className="md:col-span-2 flex items-start gap-3 rounded-md border border-dashed border-border/60 p-3">
+            <Switch
+              id="rel-is-workplace"
+              checked={formData.isWorkplace === true}
+              onCheckedChange={(checked) =>
+                setFormData(prev => ({ ...prev, isWorkplace: checked }))
+              }
+              disabled={loading}
+              variant="success"
+            />
+            <div className="space-y-1">
+              <Label
+                htmlFor="rel-is-workplace"
+                className={designSystem.getTypographyClass('sm', 'medium')}
+              >
+                {t('relationships.form.labels.isWorkplace')}
+              </Label>
+              <p className={designSystem.cn(
+                designSystem.getTypographyClass('xs'),
+                'text-muted-foreground'
+              )}>
+                {t('relationships.form.hints.isWorkplace')}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── Start Date ── */}
         {finalFieldConfig.showDates && (

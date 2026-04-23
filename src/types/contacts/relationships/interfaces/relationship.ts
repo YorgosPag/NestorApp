@@ -39,6 +39,15 @@ export interface ContactRelationship {
   /** 📊 Current status of relationship */
   status: RelationshipStatus;
 
+  /**
+   * 🏢 ADR-318: per-instance override for `derivesWorkAddress: 'optional'` types.
+   * When the relationship type is optional-derivation (e.g. `business_contact`,
+   * `consultant`, `advisor`, `representative`), setting this to `true` opts the
+   * relationship into live work-address derivation. Ignored for `always` /
+   * `never` types.
+   */
+  isWorkplace?: boolean | null;
+
   // ========================================================================
   // ORGANIZATIONAL DETAILS
   // ========================================================================

@@ -69,7 +69,11 @@
         "department": "Department",
         "startDate": "Start Date",
         "notes": "Notes",
-        "professionalInfo": "Professional Contact Information"
+        "professionalInfo": "Professional Contact Information",
+        "isWorkplace": "Is workplace"
+      },
+      "hints": {
+        "isWorkplace": "Enable if this company's/service's address is a workplace of the individual. It will appear in the individual's Addresses tab as a derived work address."
       },
       "placeholders": {
         "searchContact": "Search contact...",

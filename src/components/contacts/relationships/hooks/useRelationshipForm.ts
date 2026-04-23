@@ -46,7 +46,8 @@ const createInitialFormData = (): RelationshipFormData => ({
     businessEmail: ''
   },
   phones: [],
-  emails: []
+  emails: [],
+  isWorkplace: false
 });
 
 /**
@@ -271,6 +272,7 @@ export const useRelationshipForm = (
         startDate: formData.startDate || null,
         endDate: formData.endDate || null,
         notes: formData.notes || null,
+        isWorkplace: formData.isWorkplace ?? null,
         contactInfo: hasContactInfo
           ? builtContactInfo as ProfessionalContactInfo
           : null
@@ -431,7 +433,8 @@ export const useRelationshipForm = (
         businessEmail: relationship.contactInfo?.businessEmail || ''
       },
       phones: existingPhones,
-      emails: existingEmails
+      emails: existingEmails,
+      isWorkplace: relationship.isWorkplace === true
     });
 
     setError(null);

@@ -3,20 +3,24 @@
 import { useEffect, useState } from 'react';
 import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
 import { ContactsService } from '@/services/contacts.service';
-import {
-  EMPLOYMENT_RELATIONSHIP_TYPES,
-  OWNERSHIP_RELATIONSHIP_TYPES,
-} from '@/types/contacts/relationships/core/relationship-types';
-import type { RelationshipType } from '@/types/contacts/relationships';
+import { getWorkAddressDerivation } from '@/types/contacts/relationships/core/relationship-metadata';
+import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { IndividualAddress } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useDerivedWorkAddresses');
 
-const WORK_ADDRESS_SYNC_TYPES = new Set<RelationshipType>([
-  ...EMPLOYMENT_RELATIONSHIP_TYPES,
-  ...OWNERSHIP_RELATIONSHIP_TYPES,
-]);
+/**
+ * ADR-318: a relationship derives a work address when
+ *   - its type's metadata is `derivesWorkAddress: 'always'`, OR
+ *   - the type is `'optional'` AND `relationship.isWorkplace === true`
+ */
+function derivesWorkAddress(rel: ContactRelationship): boolean {
+  const mode = getWorkAddressDerivation(rel.relationshipType);
+  if (mode === 'always') return true;
+  if (mode === 'optional') return rel.isWorkplace === true;
+  return false;
+}
 
 interface DerivedWorkAddress extends IndividualAddress {
   companyId: string;
@@ -50,9 +54,7 @@ export function useDerivedWorkAddresses(individualId: string | undefined): {
     (async () => {
       try {
         const relationships = await ContactRelationshipService.getContactRelationships(individualId);
-        const professional = relationships.filter(r =>
-          WORK_ADDRESS_SYNC_TYPES.has(r.relationshipType as RelationshipType)
-        );
+        const professional = relationships.filter(derivesWorkAddress);
         if (professional.length === 0) {
           if (!cancelled) setDerived([]);
           return;

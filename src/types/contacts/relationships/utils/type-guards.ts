@@ -15,7 +15,7 @@ import {
   EMPLOYMENT_RELATIONSHIP_TYPES,
   OWNERSHIP_RELATIONSHIP_TYPES,
   GOVERNMENT_RELATIONSHIP_TYPES
-} from '../core/relationship-types';
+} from '../core/relationship-metadata';
 
 /**
  * 🔍 Type guard for checking if a relationship is employment-based
