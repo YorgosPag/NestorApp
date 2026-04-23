@@ -39,6 +39,7 @@ Earlier approaches (on-save copy, retroactive sync) violated SSoT: the relations
 ### Renderer Integration
 - **Path**: `src/components/ContactFormSections/contactRenderersTyped.tsx`
 - **Function**: `AddressWithMap` (individual address tab renderer)
+- Registered as `addresses` (plural) in `buildIndividualRenderers` so it overrides the company-style core renderer (`AddressesSectionWithFullscreen`) for `contactType === 'individual'`. The `GenericFormTabRenderer` looks up `customRenderers[section.id]` where `section.id === 'addresses'`.
 - Calls `useDerivedWorkAddresses(formData.id)` and renders derived cards as read-only `SharedAddressActionCard` below the editable `IndividualAddressesSection`
 - Label format: `Εργασία — <companyName>`
 - No edit/delete buttons (derived = no user actions)
@@ -87,3 +88,4 @@ Individual contact details opened
 | 2026-04-23 | Giorgio Pagonis | Read path fix in `individualMapper` + positional invariant in sync |
 | 2026-04-23 | Giorgio Pagonis | Added retroactive sync on relationships load (superseded) |
 | 2026-04-23 | Giorgio Pagonis | **Replaced with live derivation** — new `useDerivedWorkAddresses` hook, removed sync service + on-save hook. Zero Firestore writes; relationship is SSoT. |
+| 2026-04-23 | Giorgio Pagonis | **Bugfix**: renderer key was `address` (singular) — never matched section.id `addresses` (plural). `AddressWithMap` was dead code; tab fell back to company-style core renderer. Renamed key to `addresses` in `buildIndividualRenderers`; removed dead `address` key from `buildServiceRenderers`. |

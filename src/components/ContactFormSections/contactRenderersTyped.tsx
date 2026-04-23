@@ -348,7 +348,7 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
       );
     },
 
-    address: () => <AddressWithMap formData={formData} setFormData={setFormData} disabled={disabled} />,
+    addresses: () => <AddressWithMap formData={formData} setFormData={setFormData} disabled={disabled} />,
   };
 }
 
@@ -387,8 +387,6 @@ export function buildServiceRenderers(ctx: RendererContext): Record<string, Rend
         onChange={(name: string) => { if (setFormData) setFormData({ ...formData, supervisionMinistry: name }); }}
       />
     ),
-
-    address: () => <AddressWithMap formData={formData} setFormData={setFormData} disabled={disabled} />,
   };
 }
 
