@@ -9,12 +9,12 @@
  * @enterprise ADR-241 (Fullscreen centralization)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -29,7 +29,7 @@ import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/Ful
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
-import { CompanyAddressesSection } from '@/components/contacts/dynamic/CompanyAddressesSection';
+import { CompanyAddressesSection, type CompanyAddressesSectionHandle } from '@/components/contacts/dynamic/CompanyAddressesSection';
 import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactFormData } from '@/types/ContactFormTypes';
@@ -74,6 +74,7 @@ export function AddressesSectionWithFullscreen({
   const { clearHq } = useClearCompanyHqAddress(formData, setFormData);
 
   const [isEditingHQ, setIsEditingHQ] = useState(false);
+  const branchRef = useRef<CompanyAddressesSectionHandle>(null);
 
   // Close inline form when global edit mode ends
   React.useEffect(() => {
@@ -164,8 +165,19 @@ export function AddressesSectionWithFullscreen({
       {/* LEFT: HQ address + Branches */}
       <div className="space-y-2">
 
-        {/* Fullscreen toggle — standalone, always visible */}
-        <div className="flex justify-end">
+        {/* Toolbar: Fullscreen toggle + Add address button */}
+        <div className="flex items-center justify-between">
+          {isEditing ? (
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={() => branchRef.current?.addBranch()}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              {tContacts('contacts-form:addressesSection.addAddress')}
+            </Button>
+          ) : <span />}
           <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
         </div>
 
@@ -177,7 +189,7 @@ export function AddressesSectionWithFullscreen({
             typeLabel={hqTypeLabel}
             isEditing={isEditing}
             onEdit={() => setIsEditingHQ(true)}
-            onClear={hqHasValue ? clearHq : undefined}
+            onClear={clearHq}
             editLabel={tContacts('contacts-form:addressesSection.editAddress')}
             clearLabel={tContacts('contacts-form:addressesSection.clearAddress')}
           />
@@ -255,6 +267,8 @@ export function AddressesSectionWithFullscreen({
 
         {/* Branches section */}
         <CompanyAddressesSection
+          ref={branchRef}
+          hideAddButton
           addresses={effectiveAddresses}
           disabled={disabled}
           onChange={(newAddresses) => {

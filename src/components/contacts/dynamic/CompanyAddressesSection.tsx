@@ -11,7 +11,7 @@
  * @module components/contacts/dynamic/CompanyAddressesSection
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useImperativeHandle, forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,11 @@ interface CompanyAddressesSectionProps {
   addresses: CompanyAddress[];
   disabled?: boolean;
   onChange: (addresses: CompanyAddress[]) => void;
+  hideAddButton?: boolean;
+}
+
+export interface CompanyAddressesSectionHandle {
+  addBranch: () => void;
 }
 
 // ============================================================================
@@ -96,11 +101,12 @@ function formatBranchStreetLine(addr: CompanyAddress): string {
 // MAIN COMPONENT
 // ============================================================================
 
-export function CompanyAddressesSection({
+export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle, CompanyAddressesSectionProps>(function CompanyAddressesSection({
   addresses,
   disabled = false,
   onChange,
-}: CompanyAddressesSectionProps) {
+  hideAddButton = false,
+}, ref) {
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const [branchDeleteIndex, setBranchDeleteIndex] = useState<number | null>(null);
@@ -141,6 +147,8 @@ export function CompanyAddressesSection({
     setEditingBranchIndex(branches.length);
   }, [addresses, branches.length, onChange]);
 
+  useImperativeHandle(ref, () => ({ addBranch }), [addBranch]);
+
   const removeBranch = useCallback(
     (branchVisualIndex: number) => {
       const updated = [...addresses];
@@ -167,16 +175,18 @@ export function CompanyAddressesSection({
           <h3 className="text-sm font-semibold text-foreground">
             {t('contacts-form:addressesSection.branchesTitle')}
           </h3>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addBranch}
-            disabled={disabled}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            {t('contacts-form:addressesSection.addAddress')}
-          </Button>
+          {!hideAddButton && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addBranch}
+              disabled={disabled}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              {t('contacts-form:addressesSection.addAddress')}
+            </Button>
+          )}
         </header>
 
         {branches.length === 0 ? (
@@ -241,6 +251,6 @@ export function CompanyAddressesSection({
       />
     </div>
   );
-}
+});
 
 export default CompanyAddressesSection;
