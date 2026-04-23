@@ -190,7 +190,7 @@ export function AddressesSectionWithFullscreen({
         {/* Section title — individuals show "Διευθύνσεις", companies/services show "Υποκαταστήματα / Επιπλέον Διευθύνσεις" */}
         <h3 className="text-lg font-semibold text-foreground">
           {formData.type === 'individual'
-            ? tAddr('list.title')
+            ? tContacts('contacts-form:addressesSection.individualTitle')
             : tContacts('contacts-form:addressesSection.branchesTitle')}
           {' '}({effectiveAddresses.length})
         </h3>

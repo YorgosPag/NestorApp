@@ -262,6 +262,7 @@
   "addressesSection": {
     "headquarters": "Headquarters",
     "branchesTitle": "Branches / Additional Addresses",
+    "individualTitle": "Addresses",
     "addAddress": "Add Address",
     "noBranches": "No additional addresses",
     "branch": "Branch",
