@@ -57,10 +57,12 @@ export interface UserAuthPermissionPanelProps {
    * `property-share` template. Discriminated by entity:
    *   - `{ type: 'property', propertyId }` → ADR-312 Phase 8 property route
    *   - `{ type: 'project',  projectId }`  → ADR-316 project route
+   *   - `{ type: 'building', buildingId }` → ADR-320 building route
    */
   showcaseContext?:
     | { type: 'property'; propertyId: string }
-    | { type: 'project'; projectId: string };
+    | { type: 'project'; projectId: string }
+    | { type: 'building'; buildingId: string };
   /**
    * Pre-fills `EmailShareForm`'s personal message field with the note already
    * typed in the link-creation dialog (ADR-312 Phase 9.5). Unifies the field
@@ -154,7 +156,9 @@ export function UserAuthPermissionPanel({
           }
           const endpoint = showcaseContext.type === 'project'
             ? `/api/projects/${encodeURIComponent(showcaseContext.projectId)}/showcase/email`
-            : `/api/properties/${encodeURIComponent(showcaseContext.propertyId)}/showcase/email`;
+            : showcaseContext.type === 'building'
+              ? `/api/buildings/${encodeURIComponent(showcaseContext.buildingId)}/showcase/email`
+              : `/api/properties/${encodeURIComponent(showcaseContext.propertyId)}/showcase/email`;
           await Promise.all(
             emailData.recipients.map((recipient) =>
               apiClient.post<ShowcaseEmailResponse>(endpoint, {

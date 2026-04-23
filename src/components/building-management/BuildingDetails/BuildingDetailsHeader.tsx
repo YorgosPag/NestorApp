@@ -27,6 +27,8 @@ interface BuildingDetailsHeaderProps {
     onNewBuilding?: () => void;
     /** Delete the current building */
     onDeleteBuilding?: () => void;
+    /** Open the Building Showcase share dialog (ADR-320) */
+    onShowcaseBuilding?: () => void;
 }
 
 export function BuildingDetailsHeader({
@@ -38,9 +40,10 @@ export function BuildingDetailsHeader({
     onCancel,
     onNewBuilding,
     onDeleteBuilding,
+    onShowcaseBuilding,
 }: BuildingDetailsHeaderProps) {
     // ENTERPRISE: i18n hook for translations with namespace readiness check
-    const { t, isNamespaceReady } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+    const { t, isNamespaceReady } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'showcase']);
 
     // 🏢 ENTERPRISE: Actions via centralized presets
     // Edit mode: Save (🟢), Cancel (⚪)
@@ -61,6 +64,11 @@ export function BuildingDetailsHeader({
             ),
         ]
         : [
+            ...(onShowcaseBuilding ? [createEntityAction(
+                'showcase',
+                isNamespaceReady ? t('showcase:buildingShowcase.actions.showcase') : 'Showcase',
+                onShowcaseBuilding
+            )] : []),
             ...(onNewBuilding ? [createEntityAction(
                 'new',
                 isNamespaceReady ? t('details.newBuilding') : 'New',

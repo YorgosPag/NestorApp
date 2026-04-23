@@ -9,6 +9,10 @@ import type { Building } from './BuildingsPageContent';
 import { BuildingDetailsHeader } from './BuildingDetails/BuildingDetailsHeader';
 import { BuildingTabs } from './BuildingDetails/BuildingTabs';
 import { DetailsContainer } from '@/core/containers';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
+import { nowISO } from '@/lib/date-local';
+import type { CreateShareInput } from '@/types/sharing';
 
 
 interface BuildingDetailsProps {
@@ -47,12 +51,14 @@ export const BuildingDetails = React.memo(function BuildingDetails({
 }: BuildingDetailsProps) {
   // [ENTERPRISE] Centralized messages system
   const emptyStateMessages = useEmptyStateMessages();
+  const { user } = useAuth();
 
   // Inline editing state — use lifted state if available, otherwise local
   const [localIsEditing, setLocalIsEditing] = useState(false);
   const isEditing = externalIsEditing ?? localIsEditing;
   const setIsEditing = onSetEditing ?? setLocalIsEditing;
   const [isSaving, setIsSaving] = useState(false);
+  const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
 
   // Save delegation ref — GeneralTabContent registers its handleSave here
   const saveRef = useRef<(() => Promise<boolean>) | null>(null);
@@ -60,6 +66,28 @@ export const BuildingDetails = React.memo(function BuildingDetails({
   const handleStartEdit = useCallback(() => {
     setIsEditing(true);
   }, []);
+
+  const handleShowcaseBuilding = useCallback(() => {
+    setShowcaseDialogOpen(true);
+  }, []);
+
+  const buildingShowcasePdfPreSubmit = useCallback(async (): Promise<
+    Pick<CreateShareInput, 'showcaseMeta'>
+  > => {
+    const res = await fetch(`/api/buildings/${building?.id}/showcase/pdf`, { method: 'POST' });
+    if (!res.ok) throw new Error('PDF generation failed');
+    const body = (await res.json()) as {
+      data?: { pdfStoragePath?: string | null; pdfRegeneratedAt?: string | null };
+    };
+    const pdfStoragePath = body.data?.pdfStoragePath?.trim();
+    if (!pdfStoragePath) throw new Error('PDF generation returned no storage path');
+    return {
+      showcaseMeta: {
+        pdfStoragePath,
+        pdfRegeneratedAt: body.data?.pdfRegeneratedAt ?? nowISO(),
+      },
+    };
+  }, [building?.id]);
 
   const handleSave = useCallback(async () => {
     if (!saveRef.current) return;
@@ -86,36 +114,51 @@ export const BuildingDetails = React.memo(function BuildingDetails({
   }, [building?.id, startInEditMode]);
 
   return (
-    <DetailsContainer
-      selectedItem={building}
-      header={
-        <BuildingDetailsHeader
-          building={building!}
-          isEditing={isEditing}
-          isSaving={isSaving}
-          onStartEdit={isTrashMode ? undefined : handleStartEdit}
-          onSave={handleSave}
-          onCancel={handleCancel}
-          onNewBuilding={isTrashMode ? undefined : onNewBuilding}
-          onDeleteBuilding={isTrashMode ? undefined : onDeleteBuilding}
+    <>
+      <DetailsContainer
+        selectedItem={building}
+        header={
+          <BuildingDetailsHeader
+            building={building!}
+            isEditing={isEditing}
+            isSaving={isSaving}
+            onStartEdit={isTrashMode ? undefined : handleStartEdit}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            onNewBuilding={isTrashMode ? undefined : onNewBuilding}
+            onDeleteBuilding={isTrashMode ? undefined : onDeleteBuilding}
+            onShowcaseBuilding={isTrashMode || !building?.id ? undefined : handleShowcaseBuilding}
+          />
+        }
+        tabsRenderer={
+          <BuildingTabs
+            building={building!}
+            isEditing={isEditing}
+            onEditingChange={setIsEditing}
+            saveRef={saveRef}
+            isCreateMode={isCreateMode}
+            onBuildingCreated={onBuildingCreated}
+          />
+        }
+        onCreateAction={onNewBuilding}
+        emptyStateProps={{
+          icon: NAVIGATION_ENTITIES.building.icon,
+          ...emptyStateMessages.building,
+        }}
+      />
+      {building?.id && user?.companyId && user?.uid && (
+        <UnifiedShareDialog
+          open={showcaseDialogOpen}
+          onOpenChange={setShowcaseDialogOpen}
+          entityType="building_showcase"
+          entityId={building.id}
+          entityTitle={building.name}
+          companyId={user.companyId}
+          userId={user.uid}
+          preSubmit={buildingShowcasePdfPreSubmit}
         />
-      }
-      tabsRenderer={
-        <BuildingTabs
-          building={building!}
-          isEditing={isEditing}
-          onEditingChange={setIsEditing}
-          saveRef={saveRef}
-          isCreateMode={isCreateMode}
-          onBuildingCreated={onBuildingCreated}
-        />
-      }
-      onCreateAction={onNewBuilding}
-      emptyStateProps={{
-        icon: NAVIGATION_ENTITIES.building.icon,
-        ...emptyStateMessages.building
-      }}
-    />
+      )}
+    </>
   );
 }, (prev, next) => {
   // [PERF] Re-render when building changes (including entity links), edit state, or create mode

@@ -308,13 +308,17 @@ export function UnifiedShareDialog({
                 ? { type: 'property', propertyId: entityId }
                 : entityType === 'project_showcase'
                   ? { type: 'project', projectId: entityId }
-                  : undefined
+                  : entityType === 'building_showcase'
+                    ? { type: 'building', buildingId: entityId }
+                    : undefined
             }
             initialPersonalMessage={draft.note.trim() || undefined}
             dirtyPolicy={isDirty}
           />
 
-          {(entityType === 'property_showcase' || entityType === 'project_showcase') && (
+          {(entityType === 'property_showcase'
+            || entityType === 'project_showcase'
+            || entityType === 'building_showcase') && (
             <Button
               asChild
               variant="outline"
@@ -325,7 +329,9 @@ export function UnifiedShareDialog({
                 href={
                   entityType === 'project_showcase'
                     ? `/api/project-showcase/${share.token}/pdf`
-                    : `/api/showcase/${share.token}/pdf`
+                    : entityType === 'building_showcase'
+                      ? `/api/building-showcase/${share.token}/pdf`
+                      : `/api/showcase/${share.token}/pdf`
                 }
                 target="_blank"
                 rel="noopener noreferrer"
