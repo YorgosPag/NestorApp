@@ -143,7 +143,33 @@ export function AddressesSectionWithFullscreen({
   /** Apply drag-resolved address to form state (clears hierarchy fields) */
   const applyDragResolve = useCallback((addr: DragResolvedAddress, addressIndex: number) => {
     if (!setFormData) return;
-    const updatedAddresses = [...(formData.companyAddresses ?? [])];
+    const existing = formData.companyAddresses ?? [];
+
+    // Individual contact: no companyAddresses array — update HQ flat fields directly.
+    // Without this branch, the multi-address path would zero out street/city because
+    // `updatedAddresses[0]` is undefined, making the map pin disappear after drag.
+    if (existing.length === 0) {
+      setFormData({
+        ...formData,
+        street: addr.street,
+        streetNumber: addr.number,
+        postalCode: addr.postalCode,
+        city: addr.city,
+        settlement: addr.city,
+        settlementId: null,
+        community: '',
+        municipalUnit: '',
+        municipality: '',
+        municipalityId: null,
+        regionalUnit: '',
+        region: '',
+        decentAdmin: '',
+        majorGeo: '',
+      });
+      return;
+    }
+
+    const updatedAddresses = [...existing];
     if (addressIndex >= 0 && addressIndex < updatedAddresses.length) {
       updatedAddresses[addressIndex] = {
         ...updatedAddresses[addressIndex],
@@ -358,10 +384,12 @@ export function AddressesSectionWithFullscreen({
           readOnlyExtraAddresses={derivedPinAddresses}
           draggable={isEditing}
           onDragResolve={isEditing && setFormData ? (addr: DragResolvedAddress, addressIndex: number) => {
-            // 📍 ADR-277: Check if HQ has hierarchy that would be cleared
+            // 📍 ADR-277: Check if HQ has hierarchy that would be cleared.
+            // Individuals keep hierarchy on flat formData fields (no companyAddresses entry),
+            // so also look at formData.settlementId when the target pin is the HQ.
             const targetAddr = effectiveAddresses[addressIndex];
             const isHQ = addressIndex === 0 || targetAddr?.type === 'headquarters';
-            const hasHierarchy = isHQ && targetAddr?.settlementId;
+            const hasHierarchy = isHQ && (targetAddr?.settlementId || formData.settlementId);
 
             if (hasHierarchy) {
               setPendingDrag({ addr, index: addressIndex });
