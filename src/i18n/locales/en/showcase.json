@@ -212,5 +212,63 @@
       "introText": "We are sharing the detailed presentation of the project.",
       "ctaLabel": "View online"
     }
+  },
+  "buildingShowcase": {
+    "header": {
+      "subtitle": "Building showcase"
+    },
+    "specs": {
+      "title": "Building Details",
+      "code": "Code",
+      "type": "Type",
+      "status": "Status",
+      "progress": "Progress",
+      "totalArea": "Total area",
+      "builtArea": "Built area",
+      "floors": "Floors",
+      "units": "Units",
+      "totalValue": "Total value",
+      "energyClass": "Energy class",
+      "renovation": "Renovation",
+      "constructionYear": "Construction year",
+      "startDate": "Start date",
+      "completionDate": "Completion date",
+      "areaUnit": "m²",
+      "location": "Location",
+      "project": "Project",
+      "linkedCompany": "Linked company"
+    },
+    "description": {
+      "sectionTitle": "Description"
+    },
+    "photos": {
+      "title": "Photos"
+    },
+    "floorplans": {
+      "title": "Floorplans"
+    },
+    "actions": {
+      "downloadPdf": "Download PDF",
+      "showcase": "Building Showcase"
+    },
+    "states": {
+      "expiredTitle": "Link expired",
+      "expiredDescription": "This building showcase is no longer available. Please contact the sender.",
+      "notFoundTitle": "Link not found",
+      "notFoundDescription": "This building showcase is not available or has been revoked.",
+      "errorTitle": "Loading error",
+      "errorDescription": "Something went wrong. Please try again later."
+    },
+    "pdf": {
+      "title": "Building Showcase",
+      "generatedOn": "Generated on",
+      "descriptionSection": "Description",
+      "footerNote": "Building showcase"
+    },
+    "email": {
+      "subjectPrefix": "Building Showcase",
+      "introText": "We are sharing the detailed presentation of the building.",
+      "ctaLabel": "View online"
+    }
   }
 }

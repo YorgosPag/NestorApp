@@ -212,5 +212,63 @@
       "introText": "Σας προωθούμε την αναλυτική παρουσίαση του έργου.",
       "ctaLabel": "Δείτε online"
     }
+  },
+  "buildingShowcase": {
+    "header": {
+      "subtitle": "Παρουσίαση κτηρίου"
+    },
+    "specs": {
+      "title": "Στοιχεία Κτηρίου",
+      "code": "Κωδικός",
+      "type": "Τύπος",
+      "status": "Κατάσταση",
+      "progress": "Πρόοδος",
+      "totalArea": "Συνολικό εμβαδόν",
+      "builtArea": "Δομημένη επιφάνεια",
+      "floors": "Όροφοι",
+      "units": "Μονάδες",
+      "totalValue": "Συνολική αξία",
+      "energyClass": "Ενεργειακή κλάση",
+      "renovation": "Ανακαίνιση",
+      "constructionYear": "Έτος κατασκευής",
+      "startDate": "Έναρξη",
+      "completionDate": "Παράδοση",
+      "areaUnit": "τ.μ.",
+      "location": "Τοποθεσία",
+      "project": "Έργο",
+      "linkedCompany": "Συνεργαζόμενη εταιρεία"
+    },
+    "description": {
+      "sectionTitle": "Περιγραφή"
+    },
+    "photos": {
+      "title": "Φωτογραφίες"
+    },
+    "floorplans": {
+      "title": "Κατόψεις"
+    },
+    "actions": {
+      "downloadPdf": "Λήψη PDF",
+      "showcase": "Επίδειξη Κτηρίου"
+    },
+    "states": {
+      "expiredTitle": "Ο σύνδεσμος έληξε",
+      "expiredDescription": "Η παρουσίαση κτηρίου δεν είναι πλέον διαθέσιμη. Παρακαλούμε επικοινωνήστε με τον αποστολέα.",
+      "notFoundTitle": "Ο σύνδεσμος δεν βρέθηκε",
+      "notFoundDescription": "Η παρουσίαση κτηρίου δεν είναι διαθέσιμη ή έχει ανακληθεί.",
+      "errorTitle": "Πρόβλημα φόρτωσης",
+      "errorDescription": "Κάτι πήγε στραβά. Δοκιμάστε ξανά αργότερα."
+    },
+    "pdf": {
+      "title": "Παρουσίαση Κτηρίου",
+      "generatedOn": "Δημιουργήθηκε",
+      "descriptionSection": "Περιγραφή",
+      "footerNote": "Παρουσίαση κτηρίου"
+    },
+    "email": {
+      "subjectPrefix": "Παρουσίαση Κτηρίου",
+      "introText": "Σας προωθούμε την αναλυτική παρουσίαση του κτηρίου.",
+      "ctaLabel": "Δείτε online"
+    }
   }
 }

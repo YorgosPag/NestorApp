@@ -15,6 +15,7 @@ import { fileShareResolver } from './file.resolver';
 import { contactShareResolver } from './contact.resolver';
 import { propertyShowcaseShareResolver } from './property-showcase.resolver';
 import { projectShowcaseShareResolver } from './project-showcase.resolver';
+import { buildingShowcaseShareResolver } from './building-showcase.resolver';
 
 let registered = false;
 
@@ -24,14 +25,22 @@ export function registerShareResolvers(): void {
   ShareEntityRegistry.register('contact', contactShareResolver);
   ShareEntityRegistry.register('property_showcase', propertyShowcaseShareResolver);
   ShareEntityRegistry.register('project_showcase', projectShowcaseShareResolver);
+  ShareEntityRegistry.register('building_showcase', buildingShowcaseShareResolver);
   registered = true;
 }
 
 // Auto-register on module import — resolvers are idempotent side-effects.
 registerShareResolvers();
 
-export { fileShareResolver, contactShareResolver, propertyShowcaseShareResolver, projectShowcaseShareResolver };
+export {
+  fileShareResolver,
+  contactShareResolver,
+  propertyShowcaseShareResolver,
+  projectShowcaseShareResolver,
+  buildingShowcaseShareResolver,
+};
 export type { FileShareResolvedData } from './file.resolver';
 export type { ContactShareResolvedData } from './contact.resolver';
 export type { PropertyShowcaseResolvedData } from './property-showcase.resolver';
 export type { ProjectShowcaseResolvedData } from './project-showcase.resolver';
+export type { BuildingShowcaseResolvedData } from './building-showcase.resolver';

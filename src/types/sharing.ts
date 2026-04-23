@@ -14,10 +14,16 @@ import type { Timestamp } from 'firebase/firestore';
 import type { ReactNode } from 'react';
 
 // ============================================================================
-// ADR-315 — Polymorphic unified sharing (file / contact / property_showcase)
+// ADR-315 — Polymorphic unified sharing
+//   file / contact / property_showcase / project_showcase / building_showcase
 // ============================================================================
 
-export type ShareEntityType = 'file' | 'contact' | 'property_showcase' | 'project_showcase';
+export type ShareEntityType =
+  | 'file'
+  | 'contact'
+  | 'property_showcase'
+  | 'project_showcase'
+  | 'building_showcase';
 
 export type ShareDispatchChannel =
   | 'email'
