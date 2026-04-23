@@ -26,10 +26,10 @@ const nextConfig = {
   // binary for the running platform. Without this, the DXF thumbnail
   // self-heal (services/floorplans/dxf-thumbnail-selfheal.ts) fails with
   // "could not resolve @resvg/resvg-js-win32-x64-msvc into a module".
-  // rimraf: utility used by bundler plugins at build-time. Marking external
-  // suppresses "can't be external" warning from Turbopack (fstream is transitive
-  // dep of unzipper, not marked to avoid nested resolution issues).
-  serverExternalPackages: ['@mapbox/node-pre-gyp', '@resvg/resvg-js', 'rimraf'],
+  // Note: rimraf/fstream are transitive deps with malformed package.json in
+  // nested node_modules/.pnpm/ paths. Suppressing them via serverExternalPackages
+  // triggers "can't resolve" errors. Warnings are harmless — no action taken.
+  serverExternalPackages: ['@mapbox/node-pre-gyp', '@resvg/resvg-js'],
 
   // [OK] NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
   outputFileTracingRoot: __dirname,
