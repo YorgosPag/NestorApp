@@ -7,7 +7,8 @@
     "postal": "Postal",
     "billing": "Billing",
     "correspondence": "Correspondence",
-    "other": "Other"
+    "other": "Other",
+    "home": "Home"
   },
   "blockSides": {
     "north": "North",

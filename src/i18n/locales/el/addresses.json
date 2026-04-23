@@ -7,7 +7,8 @@
     "postal": "Ταχυδρομική",
     "billing": "Τιμολόγηση",
     "correspondence": "Αλληλογραφία",
-    "other": "Άλλη"
+    "other": "Άλλη",
+    "home": "Κατοικία"
   },
   "blockSides": {
     "north": "Βόρεια",

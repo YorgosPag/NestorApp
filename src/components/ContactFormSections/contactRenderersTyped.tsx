@@ -1,7 +1,12 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Calendar, ExternalLink } from 'lucide-react';
+import { Calendar, ExternalLink, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
+import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
+import { Button } from '@/components/ui/button';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import { EscoSkillPicker } from '@/components/shared/EscoSkillPicker';
 import type { EscoPickerValue, EscoSkillValue } from '@/types/contacts/esco-types';
@@ -23,10 +28,35 @@ type RendererFn = (
   fieldDisabled: boolean,
 ) => React.ReactNode;
 
-// ── Shared Address Layout ──────────────────────────────────────
+// ── Individual Address Layout (SSoT pattern — mirrors company HQ) ─────────────
 function AddressWithMap({
   formData, setFormData, disabled,
 }: Pick<RendererContext, 'formData' | 'setFormData' | 'disabled'>) {
+  const { t: tAddr } = useTranslation('addresses');
+  const { t: tForm } = useTranslation('contacts-form');
+  const fullscreen = useFullscreen();
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+
+  useEffect(() => {
+    if (disabled) setIsEditingAddress(false);
+  }, [disabled]);
+
+  const hasValue = !!(
+    formData.street || formData.streetNumber || formData.city ||
+    formData.postalCode || formData.settlementId
+  );
+
+  const clearAddress = () => {
+    if (!setFormData) return;
+    setFormData({
+      ...formData,
+      street: '', streetNumber: '', postalCode: '', city: '',
+      settlement: '', settlementId: null, community: '', municipalUnit: '',
+      municipality: '', municipalityId: null, regionalUnit: '', region: '',
+      decentAdmin: '', majorGeo: '',
+    });
+  };
+
   const handleAddressChange = (addr: AddressWithHierarchyValue) => {
     if (!setFormData) return;
     setFormData({
@@ -70,27 +100,72 @@ function AddressWithMap({
     }
     : undefined;
 
+  const streetLine = [formData.street, formData.streetNumber, formData.city, formData.postalCode]
+    .filter(Boolean).join(', ');
+  const typeLabel = tAddr('types.home');
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <AddressWithHierarchy
-        value={{
-          street: (formData.street as string) || '',
-          number: (formData.streetNumber as string) || '',
-          postalCode: (formData.postalCode as string) || '',
-          settlementName: (formData.settlement as string) || (formData.city as string) || '',
-          settlementId: (formData.settlementId as string | null) ?? null,
-          communityName: (formData.community as string) || '',
-          municipalUnitName: (formData.municipalUnit as string) || '',
-          municipalityName: (formData.municipality as string) || '',
-          municipalityId: (formData.municipalityId as string | null) ?? null,
-          regionalUnitName: (formData.regionalUnit as string) || '',
-          regionName: (formData.region as string) || '',
-          decentAdminName: (formData.decentAdmin as string) || '',
-          majorGeoName: (formData.majorGeo as string) || '',
-        }}
-        onChange={handleAddressChange}
-        disabled={disabled}
-      />
+    <FullscreenOverlay
+      isFullscreen={fullscreen.isFullscreen}
+      onToggle={fullscreen.toggle}
+      ariaLabel={tAddr('list.title')}
+      className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+      fullscreenClassName="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 overflow-auto"
+    >
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
+        </div>
+
+        <h3 className="text-lg font-semibold text-foreground">{tAddr('list.title')}</h3>
+
+        {!isEditingAddress ? (
+          <SharedAddressActionCard
+            id="individual-address"
+            streetLine={streetLine}
+            typeLabel={typeLabel}
+            isEditing={!disabled}
+            onEdit={() => setIsEditingAddress(true)}
+            onClear={hasValue ? clearAddress : undefined}
+            editLabel={tForm('addressesSection.editAddress')}
+            clearLabel={tForm('addressesSection.clearAddress')}
+          />
+        ) : (
+          <div className="border-2 border-primary rounded-lg p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">{typeLabel}</h3>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditingAddress(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <AddressWithHierarchy
+              value={{
+                street: (formData.street as string) || '',
+                number: (formData.streetNumber as string) || '',
+                postalCode: (formData.postalCode as string) || '',
+                settlementName: (formData.settlement as string) || (formData.city as string) || '',
+                settlementId: (formData.settlementId as string | null) ?? null,
+                communityName: (formData.community as string) || '',
+                municipalUnitName: (formData.municipalUnit as string) || '',
+                municipalityName: (formData.municipality as string) || '',
+                municipalityId: (formData.municipalityId as string | null) ?? null,
+                regionalUnitName: (formData.regionalUnit as string) || '',
+                regionName: (formData.region as string) || '',
+                decentAdminName: (formData.decentAdmin as string) || '',
+                majorGeoName: (formData.majorGeo as string) || '',
+              }}
+              onChange={handleAddressChange}
+              disabled={disabled}
+            />
+            <div className="flex justify-end border-t pt-3">
+              <Button type="button" variant="outline" onClick={() => setIsEditingAddress(false)}>
+                {tAddr('deleteDialog.cancel')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-7rem)]">
         <ContactAddressMapPreview
           className="!min-h-0 h-full rounded-lg"
@@ -106,7 +181,7 @@ function AddressWithMap({
           onDragResolve={handleDragResolve ? (addr: DragResolvedAddress, _index: number) => handleDragResolve(addr) : undefined}
         />
       </aside>
-    </div>
+    </FullscreenOverlay>
   );
 }
 
