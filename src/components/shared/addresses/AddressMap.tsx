@@ -224,8 +224,22 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
     const pinImage = new Image(40, 50);
     pinImage.onload = () => {
-      if (!map.hasImage('address-pin')) {
-        map.addImage('address-pin', pinImage);
+      // Async SVG load can complete after the map is unmounted or its style
+      // destroyed — guard against stale refs before calling style-dependent APIs.
+      const currentMap = mapRef.current;
+      const styleLoaded = typeof currentMap?.isStyleLoaded === 'function'
+        ? currentMap.isStyleLoaded()
+        : false;
+      if (!currentMap || !styleLoaded) {
+        setMapLoaded(true);
+        return;
+      }
+      try {
+        if (!currentMap.hasImage('address-pin')) {
+          currentMap.addImage('address-pin', pinImage);
+        }
+      } catch (err) {
+        logger.warn('Failed to register address-pin image', { error: err });
       }
       setMapLoaded(true);
     };
