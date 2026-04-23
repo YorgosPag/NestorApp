@@ -24,8 +24,10 @@ import {
 
 // Import centralized types και configurations από το νέο modular system
 import {
-  type UniversalCommunicationManagerProps
+  type UniversalCommunicationManagerProps,
+  type CommunicationType
 } from './communication';
+import { COMMUNICATION_ICON_COLORS } from './communication/config/CommunicationIcons';
 
 // ============================================================================
 // 🏢 ENTERPRISE UNIVERSAL COMMUNICATION MANAGER - REFACTORED
@@ -121,12 +123,16 @@ export function UniversalCommunicationManager({
   // ============================================================================
 
   const IconComponent = config.icon;
+  // Dark-mode-aware, per-type icon tint from SSoT — keeps the header scannable
+  // instead of blending into the muted foreground.
+  const iconColor = COMMUNICATION_ICON_COLORS[config.type as CommunicationType]
+    ?? 'text-muted-foreground';
 
   return (
     <section className="w-full max-w-none min-w-full space-y-2" aria-labelledby="comm-manager-title">
       {/* Header */}
-      <header className="flex items-center gap-2 text-sm font-medium text-gray-700">
-        <IconComponent className={iconSizes.sm} />
+      <header className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <IconComponent className={`${iconSizes.sm} ${iconColor}`} />
         <h3 id="comm-manager-title">{t(config.title)}</h3>
       </header>
 
