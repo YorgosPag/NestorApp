@@ -46,15 +46,26 @@ function buildHomeEntry(indivContact: Contact): IndividualAddress {
 export async function syncWorkAddressOnRelationship(
   relationship: Partial<ContactRelationship>,
 ): Promise<void> {
+  logger.info('SYNC START', { data: relationship });
+
   const { sourceContactId, targetContactId, relationshipType } = relationship;
-  if (!sourceContactId || !targetContactId || !relationshipType) return;
-  if (!WORK_ADDRESS_SYNC_TYPES.has(relationshipType as RelationshipType)) return;
+  if (!sourceContactId || !targetContactId || !relationshipType) {
+    logger.warn('SYNC ABORT: missing ids or type', { data: { sourceContactId, targetContactId, relationshipType } });
+    return;
+  }
+  if (!WORK_ADDRESS_SYNC_TYPES.has(relationshipType as RelationshipType)) {
+    logger.warn('SYNC ABORT: relationshipType not in sync set', { data: { relationshipType } });
+    return;
+  }
 
   const [source, target] = await Promise.all([
     ContactsService.getContact(sourceContactId),
     ContactsService.getContact(targetContactId),
   ]);
-  if (!source || !target) return;
+  if (!source || !target) {
+    logger.warn('SYNC ABORT: contact not found', { data: { hasSource: !!source, hasTarget: !!target } });
+    return;
+  }
 
   let individualId: string;
   let companyAddresses: typeof source.addresses;
@@ -66,11 +77,17 @@ export async function syncWorkAddressOnRelationship(
     individualId = targetContactId;
     companyAddresses = source.addresses;
   } else {
+    logger.warn('SYNC ABORT: not individual+company/service pair', { data: { sourceType: source.type, targetType: target.type } });
     return;
   }
 
+  logger.info('SYNC MATCHED pair', { data: { individualId, companyAddressesCount: companyAddresses?.length ?? 0, companyAddresses } });
+
   const primaryAddr = companyAddresses?.[0];
-  if (!primaryAddr?.street && !primaryAddr?.city) return;
+  if (!primaryAddr?.street && !primaryAddr?.city) {
+    logger.warn('SYNC ABORT: company has no populated address[0]', { data: { primaryAddr } });
+    return;
+  }
 
   const workAddress: IndividualAddress = {
     type: 'work',
@@ -93,12 +110,14 @@ export async function syncWorkAddressOnRelationship(
   });
   const updated: IndividualAddress[] = [homeEntry, workAddress, ...residue];
 
+  logger.info('SYNC WRITING', { data: { individualId, updatedCount: updated.length, updated } });
+
   await ContactsService.updateContact(
     individualId,
     { individualAddresses: updated } as unknown as Parameters<typeof ContactsService.updateContact>[1],
   );
 
-  logger.info('Work address synced from company to individual', {
+  logger.info('SYNC SUCCESS: work address written to Firestore', {
     data: { individualId, companyId: source.type !== 'individual' ? sourceContactId : targetContactId },
   });
 }
