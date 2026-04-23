@@ -18,11 +18,19 @@
 import type { ContactType } from '@/types/contacts';
 
 export type ContactAddressType =
+  // Company-scope semantics
   | 'headquarters'
   | 'branch'
   | 'warehouse'
   | 'showroom'
   | 'factory'
+  // Public-service scope (ADR-319 revision 2026-04-23)
+  | 'central_service'
+  | 'regional_service'
+  | 'annex'
+  | 'citizen_service_center'
+  | 'department'
+  // Shared
   | 'office'
   | 'home'
   | 'vacation'
@@ -44,15 +52,24 @@ interface ContactAddressTypeMeta {
 }
 
 export const CONTACT_ADDRESS_TYPE_METADATA: Record<ContactAddressType, ContactAddressTypeMeta> = {
-  headquarters: { scope: ['company', 'service'], primaryFor: ['company', 'service'] },
-  branch:       { scope: ['company', 'service'] },
-  warehouse:    { scope: ['company', 'service'] },
-  showroom:     { scope: ['company', 'service'] },
-  factory:      { scope: ['company', 'service'] },
-  office:       { scope: ['individual', 'company', 'service'] },
-  home:         { scope: ['individual'], primaryFor: ['individual'] },
-  vacation:     { scope: ['individual'] },
-  other:        { scope: ['individual', 'company', 'service'], allowsCustomLabel: true },
+  // Company only — warehouse/showroom/factory/branch do not apply to public services
+  headquarters:            { scope: ['company'], primaryFor: ['company'] },
+  branch:                  { scope: ['company'] },
+  warehouse:               { scope: ['company'] },
+  showroom:                { scope: ['company'] },
+  factory:                 { scope: ['company'] },
+  // Public-service taxonomy — Greek public administration (Κεντρική/Περιφερειακή
+  // Υπηρεσία, Παράρτημα, ΚΕΠ, Τμήμα) verified against official Greek sources.
+  central_service:         { scope: ['service'], primaryFor: ['service'] },
+  regional_service:        { scope: ['service'] },
+  annex:                   { scope: ['service'] },
+  citizen_service_center:  { scope: ['service'] },
+  department:              { scope: ['service', 'company'] },
+  // Shared
+  office:                  { scope: ['individual', 'company', 'service'] },
+  home:                    { scope: ['individual'], primaryFor: ['individual'] },
+  vacation:                { scope: ['individual'] },
+  other:                   { scope: ['individual', 'company', 'service'], allowsCustomLabel: true },
 };
 
 export const CONTACT_ADDRESS_TYPES = Object.keys(CONTACT_ADDRESS_TYPE_METADATA) as ContactAddressType[];
@@ -76,10 +93,11 @@ export function getPrimaryAddressType(contactType: ContactType | undefined): Con
   return primary ?? 'other';
 }
 
-/** Default non-primary key for a contact type (`branch` for companies, `office` for individuals). */
+/** Default non-primary key for a contact type. */
 export function getDefaultSecondaryAddressType(contactType: ContactType | undefined): ContactAddressType {
   const scope = contactTypeToScope(contactType);
   if (scope === 'individual') return 'office';
+  if (scope === 'service') return 'regional_service';
   return 'branch';
 }
 

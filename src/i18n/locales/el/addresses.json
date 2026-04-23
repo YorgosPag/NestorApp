@@ -17,6 +17,11 @@
     "warehouse": "Αποθήκη",
     "showroom": "Έκθεση",
     "factory": "Εργοστάσιο",
+    "central_service": "Κεντρική Υπηρεσία",
+    "regional_service": "Περιφερειακή Υπηρεσία",
+    "annex": "Παράρτημα",
+    "citizen_service_center": "ΚΕΠ",
+    "department": "Τμήμα",
     "individual": "Επιπλέον Διευθύνσεις"
   },
   "blockSides": {

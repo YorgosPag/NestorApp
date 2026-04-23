@@ -17,6 +17,11 @@
     "warehouse": "Warehouse",
     "showroom": "Showroom",
     "factory": "Factory",
+    "central_service": "Central Service",
+    "regional_service": "Regional Service",
+    "annex": "Annex",
+    "citizen_service_center": "Citizen Service Center",
+    "department": "Department",
     "individual": "Additional Addresses"
   },
   "blockSides": {
