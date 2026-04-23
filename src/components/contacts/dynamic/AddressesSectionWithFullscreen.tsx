@@ -70,6 +70,7 @@ export function AddressesSectionWithFullscreen({
 }: AddressesSectionWithFullscreenProps) {
   const { t: tContacts } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t: tAddr } = useTranslation('addresses');
   const fullscreen = useFullscreen();
   const { clearHq } = useClearCompanyHqAddress(formData, setFormData);
 
@@ -165,9 +166,10 @@ export function AddressesSectionWithFullscreen({
       {/* LEFT: HQ address + Branches */}
       <div className="space-y-2">
 
-        {/* Toolbar: Fullscreen toggle + Add address button */}
+        {/* Toolbar: Fullscreen toggle (left) + Add address button (right) */}
         <div className="flex items-center justify-between">
-          {isEditing ? (
+          <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
+          {isEditing && (
             <Button
               type="button"
               variant="default"
@@ -175,10 +177,9 @@ export function AddressesSectionWithFullscreen({
               onClick={() => branchRef.current?.addBranch()}
             >
               <Plus className="mr-1 h-4 w-4" />
-              {tContacts('contacts-form:addressesSection.addAddress')}
+              {tAddr('locations.newAddress')}
             </Button>
-          ) : <span />}
-          <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
+          )}
         </div>
 
         {/* HQ — card view OR inline edit form */}
@@ -262,6 +263,11 @@ export function AddressesSectionWithFullscreen({
               }}
               disabled={disabled}
             />
+            <div className="flex justify-end border-t pt-3">
+              <Button type="button" variant="outline" onClick={() => setIsEditingHQ(false)}>
+                {tAddr('deleteDialog.cancel')}
+              </Button>
+            </div>
           </div>
         )}
 

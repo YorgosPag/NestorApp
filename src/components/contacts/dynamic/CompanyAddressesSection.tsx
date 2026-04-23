@@ -108,6 +108,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
   hideAddButton = false,
 }, ref) {
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t: tAddr } = useTranslation('addresses');
   const colors = useSemanticColors();
   const [branchDeleteIndex, setBranchDeleteIndex] = useState<number | null>(null);
   const [editingBranchIndex, setEditingBranchIndex] = useState<number | null>(null);
@@ -218,6 +219,15 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                       onChange={(val) => handleBranchUpdate(i, fromHierarchyValue(addr, val))}
                       disabled={disabled}
                     />
+                    <div className="flex justify-end border-t pt-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditingBranchIndex(null)}
+                      >
+                        {tAddr('deleteDialog.cancel')}
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   /* Card view */
