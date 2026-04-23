@@ -1,11 +1,6 @@
 'use client';
 
-import { doc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
 import { ContactsService } from '@/services/contacts.service';
-import { EntityAuditService } from '@/services/entity-audit.service';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES } from '@/config/domain-constants';
 import {
   EMPLOYMENT_RELATIONSHIP_TYPES,
   OWNERSHIP_RELATIONSHIP_TYPES,
@@ -73,24 +68,10 @@ export async function syncWorkAddressOnRelationship(
     ? existing.map((a, i) => (i === workIdx ? workAddress : a))
     : [...existing, workAddress];
 
-  await updateDoc(
-    doc(db, COLLECTIONS.CONTACTS, individualId),
-    { individualAddresses: updated },
+  await ContactsService.updateContact(
+    individualId,
+    { individualAddresses: updated } as unknown as Parameters<typeof ContactsService.updateContact>[1],
   );
-
-  const companyId = (indivContact as unknown as Record<string, unknown>).companyId as string | undefined;
-  const currentUser = auth.currentUser;
-
-  EntityAuditService.recordChange({
-    entityType: ENTITY_TYPES.CONTACT,
-    entityId: individualId,
-    entityName: null,
-    action: 'update',
-    changes: [{ field: 'individualAddresses', oldValue: null, newValue: 'work address synced from relationship' }],
-    performedBy: currentUser?.uid ?? 'system',
-    performedByName: currentUser?.displayName ?? currentUser?.email ?? null,
-    companyId: companyId ?? '',
-  }).catch(err => logger.warn('Audit record failed (non-critical)', { error: err }));
 
   logger.info('Work address synced from company to individual', {
     data: { individualId, companyId: source.type !== 'individual' ? sourceContactId : targetContactId },
