@@ -1185,6 +1185,41 @@ fi
 if [[ -z "${SKIP_DEADCODE_CHECK:-}" ]] && [[ -n "$TS_FILES" ]] && [[ -f ".deadcode-baseline.json" ]]; then
     echo -e "${YELLOW}🔍 Checking dead-code ratchet (CHECK 3.22)...${NC}"
 
+    # Part A: block staging modifications to files already in the dead-code baseline.
+    # Rationale: touching a dead file without importing it first = wasted work.
+    # Fix: either import the file (removes it from baseline) or delete it entirely.
+    BASELINE_FILES=$(node -e "
+      const b = require('./.deadcode-baseline.json');
+      console.log((b.files || []).join('\n'));
+    " 2>/dev/null)
+
+    STAGED_DEAD_FILES=""
+    for f in $TS_FILES; do
+        # Normalise to forward-slash relative path (knip uses forward slashes)
+        NORM=$(echo "$f" | sed 's|\\|/|g')
+        if echo "$BASELINE_FILES" | grep -qxF "$NORM"; then
+            STAGED_DEAD_FILES="${STAGED_DEAD_FILES}  ${NORM}\n"
+        fi
+    done
+
+    if [[ -n "$STAGED_DEAD_FILES" ]]; then
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 3.22: modifying known dead-code file(s)${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo -e "${YELLOW}  Staged file(s) that are unused (not imported anywhere):${NC}"
+        printf "$STAGED_DEAD_FILES"
+        echo ""
+        echo -e "${YELLOW}  Fix options:${NC}"
+        echo -e "${YELLOW}    1. Import the file somewhere → re-run deadcode:baseline${NC}"
+        echo -e "${YELLOW}    2. Delete it: git rm <file> → re-run deadcode:baseline${NC}"
+        echo -e "${YELLOW}  Emergency skip: SKIP_DEADCODE_CHECK=1 git commit ...${NC}"
+        echo ""
+        exit 1
+    fi
+
+    # Part B: block if new unused files appear beyond baseline.
     DEADCODE_OUTPUT=$(node scripts/check-deadcode-ratchet.js 2>&1)
     DEADCODE_EXIT=$?
 
