@@ -8,7 +8,10 @@
     "billing": "Billing",
     "correspondence": "Correspondence",
     "other": "Other",
-    "home": "Home"
+    "home": "Home",
+    "work": "Work",
+    "vacation": "Vacation",
+    "individual": "Additional Addresses"
   },
   "blockSides": {
     "north": "North",

@@ -23,6 +23,28 @@ export interface AddNewContactDialogProps {
 // Import Contact type
 import type { Contact } from '@/types/contacts';
 
+/** Individual address types */
+export type IndividualAddressType = 'home' | 'work' | 'vacation' | 'other';
+
+/** Single individual address entry */
+export interface IndividualAddress {
+  type: IndividualAddressType;
+  street: string;
+  number: string;
+  postalCode: string;
+  city: string;
+  region?: string;
+  settlementId?: string | null;
+  communityName?: string;
+  municipalUnitName?: string;
+  municipalityName?: string;
+  municipalityId?: string | null;
+  regionalUnitName?: string;
+  regionName?: string;
+  decentAdminName?: string;
+  majorGeoName?: string;
+}
+
 /** Single company address entry */
 export interface CompanyAddress {
   type: 'headquarters' | 'branch';
@@ -94,6 +116,8 @@ export interface ContactFormData {
   postalCode: string;
   /** Multi-address array for companies */
   companyAddresses?: CompanyAddress[];
+  /** Multi-address array for individuals (home, work, vacation, other) */
+  individualAddresses?: IndividualAddress[];
   // Επαγγελματικά
   profession: string;
   specialty: string;

@@ -8,7 +8,10 @@
     "billing": "Τιμολόγηση",
     "correspondence": "Αλληλογραφία",
     "other": "Άλλη",
-    "home": "Κατοικία"
+    "home": "Κατοικία",
+    "work": "Εργασία",
+    "vacation": "Εξοχικό",
+    "individual": "Επιπλέον Διευθύνσεις"
   },
   "blockSides": {
     "north": "Βόρεια",
