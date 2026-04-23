@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Plus, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { BranchDeleteConfirmDialog } from '@/components/contacts/dialogs/BranchDeleteConfirmDialog';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
@@ -214,7 +214,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                 {editingBranchIndex === i ? (
                   /* Inline edit form */
                   <div className="border-2 border-primary rounded-lg p-3 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center">
                       <AddressTypeSelector
                         contactType={contactType}
                         value={addr.type}
@@ -222,14 +222,6 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                         disabled={disabled}
                         onChange={(next) => handleBranchUpdate(i, { ...addr, type: next.type, customLabel: next.customLabel })}
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingBranchIndex(null)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
                     </div>
                     <AddressWithHierarchy
                       value={toHierarchyValue(addr)}

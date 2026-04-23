@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { Button } from '@/components/ui/button';
-import { Plus, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -283,7 +283,7 @@ export function AddressesSectionWithFullscreen({
           />
         ) : (
           <div className="border-2 border-primary rounded-lg p-3 space-y-3" onKeyDown={handleHqKeyDown}>
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center">
               <AddressTypeSelector
                 contactType={formData.type}
                 value={primaryType}
@@ -291,9 +291,6 @@ export function AddressesSectionWithFullscreen({
                 disabled={disabled}
                 onChange={handlePrimaryTypeChange}
               />
-              <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditingHQ(false)}>
-                <X className="h-4 w-4" />
-              </Button>
             </div>
             <AddressWithHierarchy
               value={{

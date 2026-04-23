@@ -15,7 +15,7 @@
  * Labels live in `src/i18n/locales/{el,en}/addresses.json` under `types.*`.
  */
 
-import type { ContactType } from '@/types/contacts/core';
+import type { ContactType } from '@/types/contacts';
 
 export type ContactAddressType =
   | 'headquarters'
