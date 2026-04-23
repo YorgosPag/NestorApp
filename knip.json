@@ -1,0 +1,69 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/app/**/page.tsx",
+    "src/app/**/layout.tsx",
+    "src/app/**/route.ts",
+    "src/app/**/loading.tsx",
+    "src/app/**/error.tsx",
+    "src/app/**/not-found.tsx",
+    "src/app/**/template.tsx",
+    "src/app/**/default.tsx",
+    "src/app/**/global-error.tsx",
+    "src/app/api/**/*.ts",
+    "src/**/index.ts",
+    "src/**/index.tsx",
+    "src/middleware.ts",
+    "src/app/globals.css",
+    "sentry.client.config.ts",
+    "sentry.server.config.ts",
+    "sentry.edge.config.ts",
+    "next.config.js",
+    "tailwind.config.ts",
+    "postcss.config.mjs",
+    "eslint.config.mjs"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.test.{ts,tsx}",
+    "!src/**/*.spec.{ts,tsx}",
+    "!src/**/__tests__/**"
+  ],
+  "ignore": [
+    "src/subapps/dxf-viewer/**",
+    "src/subapps/dxf-viewer-10-backup/**",
+    "src/app/test.BACK/**",
+    "src/ai/**",
+    "src/ai.back/**",
+    "recovery/**",
+    "functions/**",
+    "scripts/**",
+    "packages/**",
+    "src/md_files/**",
+    "src/txt_files/**",
+    "migrate-*.ts",
+    "src/**/*.d.ts"
+  ],
+  "ignoreDependencies": [
+    "typescript",
+    "autoprefixer",
+    "cross-env",
+    "concurrently",
+    "patch-package"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "files": "warn",
+    "exports": "warn",
+    "types": "warn",
+    "nsExports": "warn",
+    "nsTypes": "warn",
+    "duplicates": "warn",
+    "dependencies": "warn",
+    "devDependencies": "warn",
+    "optionalPeerDependencies": "off",
+    "unlisted": "warn",
+    "binaries": "warn",
+    "unresolved": "warn"
+  }
+}
