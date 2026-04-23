@@ -11,7 +11,7 @@
  * @module components/contacts/dynamic/CompanyAddressesSection
  */
 
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
@@ -105,6 +105,11 @@ export function CompanyAddressesSection({
   const colors = useSemanticColors();
   const [branchDeleteIndex, setBranchDeleteIndex] = useState<number | null>(null);
   const [editingBranchIndex, setEditingBranchIndex] = useState<number | null>(null);
+
+  // Close inline form when global edit mode ends
+  React.useEffect(() => {
+    if (disabled) setEditingBranchIndex(null);
+  }, [disabled]);
 
   const isEditing = !disabled;
 

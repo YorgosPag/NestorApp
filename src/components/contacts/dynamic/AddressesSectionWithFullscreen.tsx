@@ -73,8 +73,12 @@ export function AddressesSectionWithFullscreen({
   const fullscreen = useFullscreen();
   const { clearHq } = useClearCompanyHqAddress(formData, setFormData);
 
-  // Local state: which address is in inline-edit mode
   const [isEditingHQ, setIsEditingHQ] = useState(false);
+
+  // Close inline form when global edit mode ends
+  React.useEffect(() => {
+    if (disabled) setIsEditingHQ(false);
+  }, [disabled]);
 
   // 📍 ADR-277: Pending drag resolve state (map drag may clear hierarchy)
   const [pendingDrag, setPendingDrag] = useState<{ addr: DragResolvedAddress; index: number } | null>(null);

@@ -16,7 +16,7 @@
  * @enterprise Fortune 500-grade locations management
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { Project } from '@/types/project';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
@@ -57,6 +57,14 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
 
   const loc = useProjectLocations(project);
   const _primary = getPrimaryAddress(loc.localAddresses);
+
+  // Close open forms when global edit mode ends
+  useEffect(() => {
+    if (!isEditing) {
+      loc.handleCancelAdd();
+      loc.handleCancelEdit();
+    }
+  }, [isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className={spacing.spaceBetween.lg}>
