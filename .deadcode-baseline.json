@@ -1,5 +1,5 @@
 {
-  "generated": "2026-04-23T21:18:35.341Z",
+  "generated": "2026-04-23T21:36:51.583Z",
   "knipVersion": "6",
   "files": [
     "src/api/notificationApi.ts",
@@ -218,6 +218,8 @@
     "src/components/sales/tabs/SalesVideosTab.tsx",
     "src/components/shared/addresses/AddressMarker.tsx",
     "src/components/shared/files/media/FloorplanGallery.styles.ts",
+    "src/components/showcase-core/ShowcaseClient.tsx",
+    "src/components/showcase-core/ShowcaseSpecsGrid.tsx",
     "src/components/space-management/StoragesPage/AddStorageDialog.tsx",
     "src/components/space-management/StoragesPage/StorageDetails/tabs/StorageHistoryTab.tsx",
     "src/components/space-management/StoragesPage/StorageDetails/tabs/StorageStatsTab.styles.ts",
@@ -358,6 +360,10 @@
     "src/services/real-estate-monitor/AddressResolver.ts",
     "src/services/real-estate-monitor/WebScrapingEngine.ts",
     "src/services/sharing/channel-dispatch.service.ts",
+    "src/services/showcase-core/api/create-email-route.ts",
+    "src/services/showcase-core/api/create-pdf-route.ts",
+    "src/services/showcase-core/api/create-public-payload-route.ts",
+    "src/services/showcase-core/api/create-public-pdf-route.ts",
     "src/services/showcase-core/email-builder-factory.ts",
     "src/services/showcase-core/labels-shared.ts",
     "src/services/showcase-core/pdf-renderer-base.ts",
@@ -439,5 +445,5 @@
     "src/utils/memoryLeakDetector.ts",
     "src/utils/performanceMonitor.ts"
   ],
-  "fileCount": 436
+  "fileCount": 442
 }

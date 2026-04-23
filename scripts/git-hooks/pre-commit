@@ -1173,5 +1173,38 @@ if [[ -n "$TS_FILES" ]]; then
     fi
 fi
 
+# =============================================================================
+# CHECK 3.22: Dead Code Ratchet (knip / 2026-04-24)
+# =============================================================================
+# Blocks commit if new unused files appear beyond .deadcode-baseline.json.
+# Runs only when .ts/.tsx files are staged (skip on config-only changes).
+# Skip: SKIP_DEADCODE_CHECK=1 git commit (emergency escape hatch).
+# Baseline: .deadcode-baseline.json — update with: npm run deadcode:baseline
+# =============================================================================
+
+if [[ -z "${SKIP_DEADCODE_CHECK:-}" ]] && [[ -n "$TS_FILES" ]] && [[ -f ".deadcode-baseline.json" ]]; then
+    echo -e "${YELLOW}🔍 Checking dead-code ratchet (CHECK 3.22)...${NC}"
+
+    DEADCODE_OUTPUT=$(node scripts/check-deadcode-ratchet.js 2>&1)
+    DEADCODE_EXIT=$?
+
+    if [[ $DEADCODE_EXIT -ne 0 ]]; then
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 3.22: new dead code introduced${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "$DEADCODE_OUTPUT"
+        echo ""
+        echo -e "${YELLOW}  Fix: import or delete the listed file(s), then run:${NC}"
+        echo -e "${YELLOW}    npm run deadcode:baseline${NC}"
+        echo -e "${YELLOW}  Emergency skip: SKIP_DEADCODE_CHECK=1 git commit ...${NC}"
+        echo ""
+        exit 1
+    fi
+
+    echo -e "${GREEN}  $(echo "$DEADCODE_OUTPUT" | tail -1)${NC}"
+fi
+
 echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
 exit 0
