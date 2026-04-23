@@ -24,14 +24,21 @@ import type { AddressMapHeightPreset } from '@/config/address-map-config';
 // PIN COLOR CONSTANTS
 // =============================================================================
 
-/** Map pin SVG colors — SSoT: design-tokens */
+/**
+ * Map pin SVG colors — SSoT: design-tokens.
+ * `labelClass` uses semantic theme tokens (bg-background / text-foreground)
+ * so the pill is legible on both light and dark map styles. Previous attempt
+ * piped through `getStatusColor('pending')` / `getStatusColor('construction')`
+ * but 'pending' / 'construction' are not registered status domains — the
+ * helper returned empty strings, leaving the label unstyled (white-on-white).
+ */
 export const PIN_COLORS = {
   body: colors.blue['500'],          // #3b82f6 — primary brand
   stroke: colors.background.primary, // white
   innerCircle: colors.background.primary, // white
   // eslint-disable-next-line design-system/no-hardcoded-colors
   shadow: 'rgba(0,0,0,0.3)',         // subtle shadow
-  labelClass: `${getStatusColor('pending', 'text')} ${getStatusColor('pending', 'bg')}/90`,
+  labelClass: 'bg-background/95 text-foreground border border-border',
 } as const;
 
 /** Branch pin colors — visually distinct from HQ */
@@ -41,7 +48,7 @@ export const BRANCH_PIN_COLORS = {
   innerCircle: colors.background.primary,
   // eslint-disable-next-line design-system/no-hardcoded-colors
   shadow: 'rgba(0,0,0,0.3)',
-  labelClass: `${getStatusColor('construction', 'text')} ${getStatusColor('construction', 'bg')}/90`,
+  labelClass: 'bg-background/95 text-foreground border border-border',
 } as const;
 
 /** Auto-pan configuration for edge dragging */
