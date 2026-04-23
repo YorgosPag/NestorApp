@@ -307,9 +307,13 @@ export function ServiceFormRenderer({
                 const translatedPlaceholder = translateFieldValue(field.placeholder, t) || field.placeholder;
                 const translatedHelpText = translateFieldValue(field.helpText, t) || field.helpText;
 
-                // Create translated field config for rendering
+                // Create translated field config for rendering.
+                // `label` is translated too so that renderSelectField's placeholder
+                // fallback (`field.placeholder || field.label`) does not leak the
+                // raw i18n key when the select has no explicit placeholder.
                 const translatedField: ServiceFieldConfig = {
                   ...field,
+                  label: translatedLabel,
                   placeholder: translatedPlaceholder,
                   helpText: translatedHelpText
                 };
