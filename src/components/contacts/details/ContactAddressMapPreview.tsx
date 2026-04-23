@@ -183,13 +183,6 @@ export function ContactAddressMapPreview({
           number = parts[2];
         }
       }
-      // Diagnostic (2026-04-23): log final {street, number} emitted upstream
-      // so we can verify whether the number survives the regex fallback step.
-      // eslint-disable-next-line no-console
-      console.log('[DRAG DEBUG] handleDragUpdate → onDragResolve', {
-        incoming: { street: data.street, number: data.number },
-        outgoing: { street, number },
-      });
       onDragResolve({
         street,
         number,

@@ -271,6 +271,7 @@
     "clearAddress": "Clear Address",
     "addressCleared": "Address cleared",
     "undo": "Undo",
+    "dragMissingNumber": "OpenStreetMap does not have a house number for this street. Please type it in the \"Number\" field.",
     "administrative": {
       "title": "Administrative Division",
       "postalCode": "Postal Code",

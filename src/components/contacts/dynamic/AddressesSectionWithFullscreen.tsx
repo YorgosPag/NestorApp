@@ -40,6 +40,7 @@ import { useDerivedWorkAddresses } from '@/components/contacts/relationships/hoo
 import { AddressTypeSelector } from '@/components/contacts/addresses/AddressTypeSelector';
 import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { getPrimaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 // ============================================================================
 // TYPES
@@ -79,6 +80,7 @@ export function AddressesSectionWithFullscreen({
   const { t: tAddr } = useTranslation('addresses');
   const fullscreen = useFullscreen();
   const { clearHq } = useClearCompanyHqAddress(formData, setFormData);
+  const { notify } = useNotifications();
 
   const [isEditingHQ, setIsEditingHQ] = useState(false);
   const branchRef = useRef<CompanyAddressesSectionHandle>(null);
@@ -143,7 +145,21 @@ export function AddressesSectionWithFullscreen({
     }
   }, [clearHq, isEditing, hqHasValue]);
 
-  /** Apply drag-resolved address to form state (clears hierarchy fields) */
+  /**
+   * Apply drag-resolved address to form state (clears hierarchy fields).
+   * If OSM did not return a house number (addr.number is empty), we open the
+   * HQ inline editor and raise a toast so the user knows to type it manually
+   * — Modo 4 UX fallback for the OSM coverage gap.
+   */
+  const maybeWarnMissingNumber = useCallback((addr: DragResolvedAddress) => {
+    if (addr.number?.trim()) return;
+    setIsEditingHQ(true);
+    notify(tContacts('contacts-form:addressesSection.dragMissingNumber'), {
+      type: 'info',
+      duration: 6000,
+    });
+  }, [notify, tContacts]);
+
   const applyDragResolve = useCallback((addr: DragResolvedAddress, addressIndex: number) => {
     if (!setFormData) return;
     const existing = formData.companyAddresses ?? [];
@@ -169,6 +185,7 @@ export function AddressesSectionWithFullscreen({
         decentAdmin: '',
         majorGeo: '',
       });
+      maybeWarnMissingNumber(addr);
       return;
     }
 
@@ -202,7 +219,8 @@ export function AddressesSectionWithFullscreen({
       decentAdmin: '',
       majorGeo: '',
     });
-  }, [formData, setFormData]);
+    maybeWarnMissingNumber(addr);
+  }, [formData, setFormData, maybeWarnMissingNumber]);
 
   // ADR-319: semantic type for the primary (flat-field) address — resolved from
   // formData or derived from the contact type (`home` for individuals,
