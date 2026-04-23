@@ -46,7 +46,6 @@ import { useRelationshipContext } from './context/RelationshipProvider';
 import { useRelationshipForm } from './hooks/useRelationshipForm';
 import { useOrganizationTree } from './hooks/useOrganizationTree';
 import { getRelationshipGovernanceInfo } from '@/services/contact-relationships/core/relationship-governance';
-import { syncWorkAddressOnRelationship } from '@/services/contact-relationships/work-address-sync.service';
 
 // 🏢 ENTERPRISE: Import types
 import type { ContactRelationshipManagerProps } from './types/relationship-manager.types';
@@ -167,16 +166,6 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const hasAnyError = listError || formError || treeError;
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
 
-  // 🔁 Retroactive work-address sync (ADR-318): heals data for relationships created
-  // before the on-save sync existed. Idempotent — sync is a no-op if up-to-date.
-  React.useEffect(() => {
-    if (!relationships || relationships.length === 0) return;
-    relationships.forEach(rel => {
-      syncWorkAddressOnRelationship(rel).catch(err =>
-        logger.warn('Retro work-address sync failed (non-critical)', { error: err })
-      );
-    });
-  }, [relationships]);
 
   // 🏢 ENTERPRISE: Compute used relationship types for the selected target contact
   // Prevents duplicate selections by filtering out already-used types from the dropdown

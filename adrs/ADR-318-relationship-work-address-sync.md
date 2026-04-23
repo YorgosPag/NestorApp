@@ -1,4 +1,4 @@
-# ADR-318: Relationship Work Address Sync — Auto-copy Company Address to Individual
+# ADR-318: Live Derivation of Work Address from Professional Relationships
 
 **Status**: Implemented
 **Date**: 2026-04-23
@@ -6,11 +6,13 @@
 
 ## Context
 
-When a professional relationship (employment, ownership) is created between an `individual` contact and a `company`/`service` contact, the individual's work address is typically the company's address. Previously this had to be entered manually, creating data redundancy and potential inconsistency.
+When a professional relationship (employment, ownership) is created between an `individual` contact and a `company`/`service` contact, the individual's work address is typically the company's address. The Διευθύνσεις tab of the individual should display this work address automatically.
+
+Earlier approaches (on-save copy, retroactive sync) violated SSoT: the relationship is already the source of truth. Copying company address to the individual's `individualAddresses` creates two places holding the same data, with all the sync hazards (stale copies, orphaned entries when company address changes, race conditions when company data is updated).
 
 ## Decision
 
-After any employment or ownership relationship is saved via `useRelationshipForm`, a fire-and-forget side effect copies the company's primary address into the individual's `individualAddresses` array as `type: 'work'`.
+**Live derivation** — no data copy, no Firestore writes. When the individual's Διευθύνσεις tab renders, it loads the individual's relationships on demand, picks the employment/ownership ones, fetches each linked company's primary address, and renders read-only work-address cards under the editable `IndividualAddressesSection`. SSoT: the relationship + company address remain the single truth; the tab is a view.
 
 **Trigger types** (from `EMPLOYMENT_RELATIONSHIP_TYPES` + `OWNERSHIP_RELATIONSHIP_TYPES`):
 - Employment: `employee`, `manager`, `director`, `executive`, `intern`, `contractor`, `civil_servant`, `department_head`, `ministry_official`
@@ -18,66 +20,70 @@ After any employment or ownership relationship is saved via `useRelationshipForm
 
 **Conditions**:
 - One contact must be `individual`, the other `company` or `service`
-- Company must have at least one address in `addresses[0]`
-- No-op if company has no address data
-
-**Upsert semantics**: If the individual already has a `type: 'work'` entry in `individualAddresses`, it is replaced. No duplicates.
+- Company must have `addresses[0]` populated
+- Derived cards are read-only — user edits the company address at its source
 
 ## Architecture
 
-### New Service
-- **Path**: `src/services/contact-relationships/work-address-sync.service.ts`
-- **Export**: `syncWorkAddressOnRelationship(relationship: Partial<ContactRelationship>): Promise<void>`
-- **Pattern**: Fire-and-forget — caller catches errors independently (non-critical side effect)
-- **Storage**: `ContactsService.updateContact` (client SDK, CDC audit trail handled by `auditContactWrite` Cloud Function — ADR-195)
+### New Hook
+- **Path**: `src/components/contacts/relationships/hooks/useDerivedWorkAddresses.ts`
+- **Signature**: `useDerivedWorkAddresses(individualId): { derived: DerivedWorkAddress[], loading }`
+- **Behavior**:
+  1. Fetches `ContactRelationshipService.getContactRelationships(individualId)` (cached)
+  2. Filters employment/ownership
+  3. Resolves the "other side" contact for each (company/service)
+  4. Builds an `IndividualAddress` (type='work') from `company.addresses[0]`
+  5. Returns `DerivedWorkAddress[]` enriched with `companyId`, `companyName`, `relationshipLabel`
+- **No writes, no mutations**
 
-### Hook Integration
-- **Path**: `src/components/contacts/relationships/hooks/useRelationshipForm.ts`
-- **Trigger point**: After `createRelationshipWithPolicy` / `updateRelationshipWithPolicy` succeeds
-- **Error handling**: `logger.warn` — never surfaces to user, never blocks relationship save
+### Renderer Integration
+- **Path**: `src/components/ContactFormSections/contactRenderersTyped.tsx`
+- **Function**: `AddressWithMap` (individual address tab renderer)
+- Calls `useDerivedWorkAddresses(formData.id)` and renders derived cards as read-only `SharedAddressActionCard` below the editable `IndividualAddressesSection`
+- Label format: `Εργασία — <companyName>`
+- No edit/delete buttons (derived = no user actions)
 
-### Read Path (critical)
+### Mapper Fix (ancillary)
 - **Path**: `src/utils/contactForm/fieldMappers/individualMapper.ts`
-- **Responsibility**: map `contact.individualAddresses` (Firestore) → `formData.individualAddresses` (form state)
-- Without this mapping, the Διευθύνσεις tab falls back to `[homeFromFlat]` and never displays the synced work address
-
-### Positional Invariant `[home, work, ...residue]`
-`contactRenderersTyped.tsx:65-68` treats `effectiveAddresses[0]` as the home card and `.slice(1)` as "extra" addresses rendered by `IndividualAddressesSection`. The sync service **must** preserve this contract:
-- If individual has no prior home entry, build one from `contact.addresses[type='home']` (AddressInfo) or an empty placeholder
-- Work address always lands at index 1
-- Other entries (`vacation`, `other`) preserved as residue
+- Propagates `individualAddresses` from Firestore to `formData` (needed so user-added extra addresses survive round-trips)
 
 ## Data Flow
 
 ```
-useRelationshipForm.handleSubmit
-  → createRelationshipWithPolicy (awaited)
-  → syncWorkAddressOnRelationship (fire-and-forget)
-      → getContact(sourceId) + getContact(targetId) in parallel
-      → identify individual + company from types
-      → read company.addresses[0]
-      → build [homeEntry, workAddress, ...residue] preserving invariant
-      → ContactsService.updateContact(individualId, { individualAddresses })
-  → onSnapshot fires → allContacts updated → contact prop re-passed
-  → mapIndividualContactToFormData propagates individualAddresses
-  → Διευθύνσεις tab renders home card + work card
+Individual contact details opened
+  → AddressWithMap renders
+  → useDerivedWorkAddresses(individualId)
+      → ContactRelationshipService.getContactRelationships(individualId)
+      → filter employment/ownership types
+      → Promise.all(companyIds.map(getContact))
+      → for each company with addresses[0]: build DerivedWorkAddress
+  → Renderer maps result to read-only SharedAddressActionCard list
+  → Home (flat) + user-added extras (editable) + derived works (read-only)
 ```
 
 ## Google-level checklist
 
 | # | Question | Answer |
 |---|----------|--------|
-| 1 | Proactive or reactive? | Proactive — runs at the right lifecycle moment (post-save) |
-| 2 | Race condition possible? | No — sequential: relationship saved → then sync |
-| 3 | Idempotent? | Yes — upsert, calling twice = same result |
-| 4 | Belt-and-suspenders? | Yes — fire-and-forget with warn log, relationship save unaffected |
-| 5 | SSoT? | Yes — one service owns the sync logic |
-| 6 | Fire-and-forget or await? | Fire-and-forget — non-critical side effect |
-| 7 | Who owns lifecycle? | `WorkAddressSyncService.syncWorkAddressOnRelationship` |
+| 1 | Proactive or reactive? | Proactive — renders on view, no stale data |
+| 2 | Race condition possible? | No — each render is a fresh derivation |
+| 3 | Idempotent? | Yes — pure function of current Firestore state |
+| 4 | Belt-and-suspenders? | N/A — SSoT removes the class of errors |
+| 5 | SSoT? | Yes — relationship + company address are the only sources |
+| 6 | Fire-and-forget or await? | Client-side derivation; no async mutation |
+| 7 | Who owns lifecycle? | `useDerivedWorkAddresses` hook |
+
+## Rejected alternatives
+
+1. **On-save copy to `individualAddresses`**: fails when user edits company address (individual copy goes stale). Violates SSoT.
+2. **Retroactive sync on mount**: heals relationships pre-existing the feature, but still duplicates data and requires mount of `ContactRelationshipManager` (which is lazy-loaded with the tab).
+3. **Sync via Cloud Function trigger on relationship writes**: robust but heavy. Users edit company addresses without touching relationships; the sync would miss those updates.
 
 ## Changelog
 
 | Date | Author | Change |
 |------|--------|--------|
-| 2026-04-23 | Giorgio Pagonis | Initial implementation |
-| 2026-04-23 | Giorgio Pagonis | Fix read path: `individualMapper` now propagates `individualAddresses` to `formData`. Fix sync: preserve `[home, work, ...]` invariant. Removed server-only `EntityAuditService` (CDC Cloud Function handles audit). |
+| 2026-04-23 | Giorgio Pagonis | Initial implementation — on-save sync (superseded) |
+| 2026-04-23 | Giorgio Pagonis | Read path fix in `individualMapper` + positional invariant in sync |
+| 2026-04-23 | Giorgio Pagonis | Added retroactive sync on relationships load (superseded) |
+| 2026-04-23 | Giorgio Pagonis | **Replaced with live derivation** — new `useDerivedWorkAddresses` hook, removed sync service + on-save hook. Zero Firestore writes; relationship is SSoT. |

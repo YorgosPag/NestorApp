@@ -9,6 +9,7 @@ import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAdd
 import { Button } from '@/components/ui/button';
 import { IndividualAddressesSection, type IndividualAddressesSectionHandle } from '@/components/contacts/dynamic/IndividualAddressesSection';
 import type { IndividualAddress } from '@/types/ContactFormTypes';
+import { useDerivedWorkAddresses } from '@/components/contacts/relationships/hooks/useDerivedWorkAddresses';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import { EscoSkillPicker } from '@/components/shared/EscoSkillPicker';
 import type { EscoPickerValue, EscoSkillValue } from '@/types/contacts/esco-types';
@@ -39,6 +40,7 @@ function AddressWithMap({
   const fullscreen = useFullscreen();
   const extraRef = useRef<IndividualAddressesSectionHandle>(null);
   const [isEditingHome, setIsEditingHome] = useState(false);
+  const { derived: derivedWorkAddresses } = useDerivedWorkAddresses(formData.id as string | undefined);
 
   useEffect(() => {
     if (disabled) setIsEditingHome(false);
@@ -218,6 +220,22 @@ function AddressWithMap({
           disabled={disabled}
           onChange={handleExtraChange}
         />
+
+        {/* Derived work addresses from professional relationships (ADR-318, read-only) */}
+        {derivedWorkAddresses.length > 0 && (
+          <ul className="space-y-4 pt-2">
+            {derivedWorkAddresses.map((addr, i) => (
+              <li key={`derived-work-${addr.companyId}-${i}`}>
+                <SharedAddressActionCard
+                  id={`derived-work-${addr.companyId}-${i}`}
+                  streetLine={[addr.street, addr.number, addr.city, addr.postalCode].filter(Boolean).join(', ')}
+                  typeLabel={`${tAddr('types.work')} — ${addr.companyName}`}
+                  isEditing={false}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Map — always visible, tracks home address */}
