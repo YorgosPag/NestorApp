@@ -1523,6 +1523,24 @@
       ]
     },
     {
+      "collectionGroup": "boq_items",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "buildingId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "categoryCode",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "boq_categories",
       "queryScope": "COLLECTION",
       "fields": [
