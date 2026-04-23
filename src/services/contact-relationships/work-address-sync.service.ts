@@ -37,6 +37,18 @@ function buildHomeEntry(indivContact: Contact): IndividualAddress {
   return homeAddr ? mapAddressInfoToIndividualAddress(homeAddr) : createEmptyHome();
 }
 
+function addressesEqual(a: IndividualAddress[], b: IndividualAddress[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((ai, i) => {
+    const bi = b[i];
+    return ai.type === bi.type
+      && (ai.street ?? '') === (bi.street ?? '')
+      && (ai.number ?? '') === (bi.number ?? '')
+      && (ai.postalCode ?? '') === (bi.postalCode ?? '')
+      && (ai.city ?? '') === (bi.city ?? '');
+  });
+}
+
 /**
  * After an employment/ownership relationship is saved, copies the company's
  * primary address into the individual contact's individualAddresses as type:'work'.
@@ -109,6 +121,11 @@ export async function syncWorkAddressOnRelationship(
     return true;
   });
   const updated: IndividualAddress[] = [homeEntry, workAddress, ...residue];
+
+  if (addressesEqual(existing, updated)) {
+    logger.info('SYNC NOOP: individualAddresses already up-to-date', { data: { individualId } });
+    return;
+  }
 
   logger.info('SYNC WRITING', { data: { individualId, updatedCount: updated.length, updated } });
 
