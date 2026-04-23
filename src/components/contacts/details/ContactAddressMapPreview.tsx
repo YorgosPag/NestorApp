@@ -32,6 +32,11 @@ interface ContactAddressMapPreviewProps {
   region?: string;
   /** Multi-address array for company contacts (HQ + branches) */
   companyAddresses?: CompanyAddress[];
+  /**
+   * ADR-318: additional addresses rendered as read-only pins (e.g. derived
+   * work addresses from professional relationships). Never draggable.
+   */
+  readOnlyExtraAddresses?: ProjectAddress[];
   /** Map height preset override */
   heightPreset?: 'viewerCompact' | 'viewerStandard' | 'viewerExpanded' | 'viewerFullscreen';
   /** Enable draggable pin for address selection (edit mode) */
@@ -58,6 +63,7 @@ export function ContactAddressMapPreview({
   regionalUnit,
   region,
   companyAddresses,
+  readOnlyExtraAddresses,
   heightPreset,
   draggable = false,
   onDragResolve,
@@ -122,6 +128,22 @@ export function ContactAddressMapPreview({
     ];
   }, [city, contactId, postalCode, street, streetNumber, municipality, regionalUnit, region, companyAddresses]);
 
+  // ADR-318: append read-only derived addresses and track their ids so the
+  // map knows not to make them draggable.
+  const combinedAddresses = useMemo<ProjectAddress[]>(
+    () => (readOnlyExtraAddresses && readOnlyExtraAddresses.length > 0
+      ? [...addresses, ...readOnlyExtraAddresses]
+      : addresses),
+    [addresses, readOnlyExtraAddresses]
+  );
+
+  const readOnlyAddressIds = useMemo<Set<string> | undefined>(
+    () => (readOnlyExtraAddresses && readOnlyExtraAddresses.length > 0
+      ? new Set(readOnlyExtraAddresses.map(a => a.id))
+      : undefined),
+    [readOnlyExtraAddresses]
+  );
+
   // Map drag handler — converts ProjectAddress partial to DragResolvedAddress
   const handleDragUpdate = useMemo(() => {
     if (!draggable || !onDragResolve) return undefined;
@@ -140,18 +162,19 @@ export function ContactAddressMapPreview({
   }, [draggable, onDragResolve]);
 
   // In draggable mode: always show map (even without addresses)
-  if (addresses.length === 0 && !draggable) {
+  if (combinedAddresses.length === 0 && !draggable) {
     return null;
   }
 
   return (
     <AddressMap
-      addresses={addresses}
+      addresses={combinedAddresses}
       highlightPrimary
       showGeocodingStatus
       enableClickToFocus
       draggableMarkers={draggable}
       onAddressDragUpdate={handleDragUpdate}
+      readOnlyAddressIds={readOnlyAddressIds}
       {...(heightPreset ? { heightPreset } : {})}
       className={className}
     />

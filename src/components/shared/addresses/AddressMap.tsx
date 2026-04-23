@@ -30,6 +30,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
+import { useMapPinImage } from '@/components/shared/addresses/useMapPinImage';
 import { Marker } from 'react-map-gl/maplibre';
 import { AlertTriangle, MapPin, Locate } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
@@ -39,7 +40,6 @@ import { Marker as MapLibreMarker } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
-import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -53,11 +53,9 @@ import { getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
-import { createModuleLogger } from '@/lib/telemetry';
 
 // Extracted modules (SRP split)
 import {
-  PIN_COLORS,
   AUTO_PAN,
   DraggableMarkerPin,
   type AddressMapProps,
@@ -71,8 +69,6 @@ import {
 export { PIN_COLORS, BRANCH_PIN_COLORS, AUTO_PAN, DraggableMarkerPin } from '@/components/shared/addresses/address-map-config';
 export type { AddressMapProps, GeocodingStatus, DragPosition } from '@/components/shared/addresses/address-map-config';
 export { reverseResultToAddress, findReferencePosition } from '@/components/shared/addresses/useAddressMapGeocoding';
-
-const logger = createModuleLogger('AddressMap');
 
 // =============================================================================
 // COMPONENT
@@ -93,6 +89,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   showLocateMe = true,
   draggableMarkers = false,
   onAddressDragUpdate,
+  readOnlyAddressIds,
   className = ''
 }) => {
   // ===========================================================================
@@ -111,10 +108,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   } = useGeolocation({ enableHighAccuracy: true, maximumAge: 30_000, timeout: 15_000 });
 
   const [_selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
-  const [mapReady, setMapReady] = useState(false);
-  const [mapLoaded, setMapLoaded] = useState(false);
-
-  const mapRef = useRef<MapInstance | null>(null);
+  const { mapRef, mapReady, mapLoaded, handleMapReady } = useMapPinImage();
 
   // Geocoding hook (extracted)
   const {
@@ -206,49 +200,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   // ===========================================================================
   // EVENT HANDLERS
   // ===========================================================================
-
-  const handleMapReady = useCallback((map: MapInstance) => {
-    mapRef.current = map;
-    setMapReady(true);
-
-    const pinSVG = `
-      <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="20" cy="47" rx="8" ry="3" fill="${PIN_COLORS.shadow}"/>
-        <path d="M 20 0 C 11.163 0 4 7.163 4 16 C 4 25 20 45 20 45 C 20 45 36 25 36 16 C 36 7.163 28.837 0 20 0 Z"
-              fill="${PIN_COLORS.body}"
-              stroke="${PIN_COLORS.stroke}"
-              stroke-width="2"/>
-        <circle cx="20" cy="16" r="6" fill="${PIN_COLORS.innerCircle}"/>
-      </svg>
-    `.trim();
-
-    const pinImage = new Image(40, 50);
-    pinImage.onload = () => {
-      // Async SVG load can complete after the map is unmounted or its style
-      // destroyed — guard against stale refs before calling style-dependent APIs.
-      const currentMap = mapRef.current;
-      const styleLoaded = typeof currentMap?.isStyleLoaded === 'function'
-        ? currentMap.isStyleLoaded()
-        : false;
-      if (!currentMap || !styleLoaded) {
-        setMapLoaded(true);
-        return;
-      }
-      try {
-        if (!currentMap.hasImage('address-pin')) {
-          currentMap.addImage('address-pin', pinImage);
-        }
-      } catch (err) {
-        logger.warn('Failed to register address-pin image', { error: err });
-      }
-      setMapLoaded(true);
-    };
-    pinImage.onerror = () => {
-      logger.warn('Pin SVG image failed to load, using Marker component fallback');
-      setMapLoaded(true);
-    };
-    pinImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(pinSVG)}`;
-  }, []);
 
   const handleMarkerClick = useCallback((address: ProjectAddress, index: number) => {
     setSelectedMarkerId(address.id);
@@ -359,6 +310,29 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                 return addresses.map((addr, index) => {
                   const geocoded = geocodedAddresses.get(addr.id);
                   const dragPos = dragPositions.get(addr.id);
+                  const isReadOnly = readOnlyAddressIds?.has(addr.id) === true;
+
+                  // ADR-318: read-only derived pins require real geocoded coords —
+                  // no fallback offset (they are not placeholders).
+                  if (isReadOnly) {
+                    if (!geocoded) return null;
+                    const translatedLabel = addr.label || t(`types.${addr.type}`);
+                    return (
+                      <Marker
+                        key={addr.id}
+                        longitude={geocoded.lng}
+                        latitude={geocoded.lat}
+                        anchor="bottom"
+                        onClick={() => handleMarkerClick(addr, index)}
+                      >
+                        <DraggableMarkerPin
+                          isPrimary={addr.isPrimary}
+                          label={translatedLabel}
+                        />
+                      </Marker>
+                    );
+                  }
+
                   const position = dragPos
                     ?? (geocoded ? { lng: geocoded.lng, lat: geocoded.lat } : null)
                     ?? { lng: refPos.lng - 0.003 * index, lat: refPos.lat + 0.003 * index };

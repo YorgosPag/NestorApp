@@ -85,6 +85,13 @@ export interface AddressMapProps {
   /** Callback when user drags a marker — provides reverse-geocoded address data + address index */
   onAddressDragUpdate?: (addressData: Partial<PartialProjectAddress>, addressIndex: number) => void;
 
+  /**
+   * IDs of addresses that must render as read-only pins even in draggable mode.
+   * Use for live-derived items (ADR-318) — they belong to the map but must not
+   * be dragged because their source of truth lives elsewhere.
+   */
+  readOnlyAddressIds?: Set<string>;
+
   /** Additional CSS classes */
   className?: string;
 }

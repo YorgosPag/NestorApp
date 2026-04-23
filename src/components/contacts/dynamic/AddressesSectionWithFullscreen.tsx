@@ -9,7 +9,7 @@
  * @enterprise ADR-241 (Fullscreen centralization)
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { useFullscreen } from '@/hooks/useFullscreen';
@@ -33,6 +33,8 @@ import { CompanyAddressesSection, type CompanyAddressesSectionHandle } from '@/c
 import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { ProjectAddress } from '@/types/project/addresses';
+import { createProjectAddress } from '@/types/project/address-helpers';
 import { useClearCompanyHqAddress } from '@/components/contacts/dynamic/useClearCompanyHqAddress';
 import { useDerivedWorkAddresses } from '@/components/contacts/relationships/hooks/useDerivedWorkAddresses';
 
@@ -81,6 +83,27 @@ export function AddressesSectionWithFullscreen({
   // ADR-318: live-derived work addresses from professional relationships.
   // Returns [] for company/service contacts (semantic filter inside hook).
   const { derived: derivedWorkAddresses } = useDerivedWorkAddresses(formData.id);
+
+  // ADR-318: map derived work addresses into ProjectAddress pins for the map
+  // preview. They render as read-only markers (never draggable) since the
+  // source of truth is the company address itself.
+  const workTypeLabel = tAddr('types.work');
+  const derivedPinAddresses = useMemo<ProjectAddress[]>(
+    () => derivedWorkAddresses
+      .filter(addr => addr.city?.trim() || (addr.street?.trim() && addr.postalCode?.trim()))
+      .map((addr, idx) => createProjectAddress({
+        id: `derived-work-${addr.companyId || 'unknown'}-${idx}`,
+        street: addr.street?.trim() || '',
+        number: addr.number?.trim() || undefined,
+        postalCode: addr.postalCode?.trim() || '',
+        city: addr.city?.trim() || '',
+        region: addr.region?.trim() || undefined,
+        type: 'other',
+        label: `${workTypeLabel} — ${addr.companyName}`,
+        isPrimary: false,
+      })),
+    [derivedWorkAddresses, workTypeLabel]
+  );
 
   // Close inline form when global edit mode ends
   React.useEffect(() => {
@@ -192,7 +215,7 @@ export function AddressesSectionWithFullscreen({
           {formData.type === 'individual'
             ? tContacts('contacts-form:addressesSection.individualTitle')
             : tContacts('contacts-form:addressesSection.branchesTitle')}
-          {' '}({effectiveAddresses.length})
+          {' '}({effectiveAddresses.length + derivedWorkAddresses.length})
         </h3>
 
         {/* HQ — card view OR inline edit form */}
@@ -332,6 +355,7 @@ export function AddressesSectionWithFullscreen({
           city={formData.city}
           postalCode={formData.postalCode}
           companyAddresses={formData.companyAddresses}
+          readOnlyExtraAddresses={derivedPinAddresses}
           draggable={isEditing}
           onDragResolve={isEditing && setFormData ? (addr: DragResolvedAddress, addressIndex: number) => {
             // 📍 ADR-277: Check if HQ has hierarchy that would be cleared
