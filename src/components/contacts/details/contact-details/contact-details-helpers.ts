@@ -5,7 +5,7 @@ import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 // ADR-317: Tabs that own subcollections with their own CRUD lifecycle.
 // On these tabs the global contact Save button is hidden — instead the adaptive
 // ContactEditFocus header takes over when an inline form is active.
-export const SUBCOLLECTION_TABS: string[] = ['relationships', 'banking', 'files'];
+export const SUBCOLLECTION_TABS: string[] = ['banking', 'files'];
 
 export interface OptimisticPersonaState {
   activePersonas: PersonaType[];
