@@ -226,13 +226,34 @@ async function handleGet(request: NextRequest): Promise<Response> {
     }
 
     const formatted = formatReverseResult(result);
+    const nominatimNumber = formatted.number;
+    let overpassNumber: string | null = null;
     // OSM Greek coverage frequently omits `addr:housenumber`. Fallback query
     // to Overpass for the nearest tagged building on the same road.
     if (!formatted.number) {
-      const fallbackNumber = await findNearestHouseNumber(lat, lon, formatted.street);
-      if (fallbackNumber) {
-        formatted.number = fallbackNumber;
+      overpassNumber = await findNearestHouseNumber(lat, lon, formatted.street);
+      if (overpassNumber) {
+        formatted.number = overpassNumber;
       }
+    }
+
+    logger.info('Reverse geocoding housenumber resolution', {
+      data: {
+        lat,
+        lon,
+        street: formatted.street,
+        nominatimNumber,
+        overpassNumber,
+        finalNumber: formatted.number,
+      },
+    });
+
+    const debug = searchParams.get('debug') === '1';
+    if (debug) {
+      return NextResponse.json({
+        ...formatted,
+        _debug: { nominatimNumber, overpassNumber, street: formatted.street },
+      });
     }
 
     return NextResponse.json(formatted);
