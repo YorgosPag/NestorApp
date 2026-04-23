@@ -19,6 +19,7 @@ import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { ContactFormData, CompanyAddress } from '@/types/ContactFormTypes';
+import { getPrimaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
 
 const UNDO_DURATION_MS = 5000;
 
@@ -40,10 +41,15 @@ const HQ_CLEARED_FIELDS = {
   majorGeo: '',
 } as const satisfies Partial<ContactFormData>;
 
-/** Build a cleared HQ entry preserving type='headquarters'. */
-function buildClearedHqEntry(): CompanyAddress {
+/**
+ * Build a cleared HQ entry preserving the caller's semantic type (ADR-319).
+ * The type is preserved so an individual stays `home`/`vacation`/...,
+ * not forced back to `headquarters`.
+ */
+function buildClearedHqEntry(primaryType: ContactAddressType, customLabel: string | undefined): CompanyAddress {
   return {
-    type: 'headquarters',
+    type: primaryType,
+    customLabel: primaryType === 'other' ? customLabel : undefined,
     street: '',
     number: '',
     postalCode: '',
@@ -60,13 +66,19 @@ function buildClearedHqEntry(): CompanyAddress {
   };
 }
 
-/** Replace (or insert) the HQ entry in a companyAddresses array. */
-function withClearedHqEntry(addresses: CompanyAddress[] | undefined): CompanyAddress[] {
+/**
+ * Replace (or insert) the HQ entry in a companyAddresses array.
+ * ADR-319: positional invariant — HQ is always index 0.
+ */
+function withClearedHqEntry(
+  addresses: CompanyAddress[] | undefined,
+  primaryType: ContactAddressType,
+  customLabel: string | undefined,
+): CompanyAddress[] {
   const list = addresses ? [...addresses] : [];
-  const hqIdx = list.findIndex(a => a.type === 'headquarters');
-  const cleared = buildClearedHqEntry();
-  if (hqIdx >= 0) {
-    list[hqIdx] = cleared;
+  const cleared = buildClearedHqEntry(primaryType, customLabel);
+  if (list.length > 0) {
+    list[0] = cleared;
   } else {
     list.unshift(cleared);
   }
@@ -93,11 +105,14 @@ export function useClearCompanyHqAddress(
 
     snapshotRef.current = formData;
 
-    setFormData(prev => ({
-      ...prev,
-      ...HQ_CLEARED_FIELDS,
-      companyAddresses: withClearedHqEntry(prev.companyAddresses),
-    }));
+    setFormData(prev => {
+      const primaryType = prev.primaryAddressType ?? getPrimaryAddressType(prev.type);
+      return {
+        ...prev,
+        ...HQ_CLEARED_FIELDS,
+        companyAddresses: withClearedHqEntry(prev.companyAddresses, primaryType, prev.primaryAddressCustomLabel),
+      };
+    });
 
     notify(t('contacts-form:addressesSection.addressCleared'), {
       type: 'info',

@@ -22,6 +22,10 @@ import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithH
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
+import type { ContactType } from '@/types/contacts';
+import { getDefaultSecondaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
+import { AddressTypeSelector } from '@/components/contacts/addresses/AddressTypeSelector';
+import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -35,6 +39,11 @@ interface CompanyAddressesSectionProps {
   onChange: (addresses: CompanyAddress[]) => void;
   hideAddButton?: boolean;
   hideSectionTitle?: boolean;
+  /**
+   * ADR-319: contact type drives which address-type keys are allowed in the
+   * per-branch selector. Falls back to company semantics when omitted.
+   */
+  contactType?: ContactType;
 }
 
 export interface CompanyAddressesSectionHandle {
@@ -45,9 +54,11 @@ export interface CompanyAddressesSectionHandle {
 // HELPERS
 // ============================================================================
 
-function createEmptyBranch(): CompanyAddress {
+function createEmptyBranch(contactType?: ContactType): CompanyAddress {
   return {
-    type: 'branch',
+    // ADR-319: default branch type respects the contact scope
+    // (`office` for individuals, `branch` for company/service).
+    type: getDefaultSecondaryAddressType(contactType),
     street: '',
     number: '',
     postalCode: '',
@@ -108,9 +119,11 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
   onChange,
   hideAddButton = false,
   hideSectionTitle = false,
+  contactType,
 }, ref) {
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const { t: tAddr } = useTranslation('addresses');
+  const tAddrFn = React.useCallback((key: string) => tAddr(key) as string, [tAddr]);
   const colors = useSemanticColors();
   const [branchDeleteIndex, setBranchDeleteIndex] = useState<number | null>(null);
   const [editingBranchIndex, setEditingBranchIndex] = useState<number | null>(null);
@@ -122,8 +135,8 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
 
   const isEditing = !disabled;
 
-  const hqIndex = addresses.findIndex((a) => a.type === 'headquarters');
-  const effectiveHqIndex = hqIndex >= 0 ? hqIndex : 0;
+  // ADR-319: HQ is always index 0 (positional invariant across contact types).
+  const effectiveHqIndex = 0;
   const branches = addresses.filter((_, i) => i !== effectiveHqIndex);
 
   const handleBranchUpdate = useCallback(
@@ -144,11 +157,11 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
   );
 
   const addBranch = useCallback(() => {
-    const newAddresses = [...addresses, createEmptyBranch()];
+    const newAddresses = [...addresses, createEmptyBranch(contactType)];
     onChange(newAddresses);
     // Auto-open inline edit for the new branch
     setEditingBranchIndex(branches.length);
-  }, [addresses, branches.length, onChange]);
+  }, [addresses, branches.length, contactType, onChange]);
 
   useImperativeHandle(ref, () => ({ addBranch }), [addBranch]);
 
@@ -201,10 +214,14 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                 {editingBranchIndex === i ? (
                   /* Inline edit form */
                   <div className="border-2 border-primary rounded-lg p-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-semibold text-foreground">
-                        {t('contacts-form:addressesSection.branch')}{branches.length > 1 ? ` #${i + 1}` : ''}
-                      </h4>
+                    <div className="flex items-center justify-between gap-2">
+                      <AddressTypeSelector
+                        contactType={contactType}
+                        value={addr.type}
+                        customLabel={addr.customLabel}
+                        disabled={disabled}
+                        onChange={(next) => handleBranchUpdate(i, { ...addr, type: next.type, customLabel: next.customLabel })}
+                      />
                       <Button
                         type="button"
                         variant="ghost"
@@ -234,7 +251,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                   <SharedAddressActionCard
                     id={`branch-${i}`}
                     streetLine={formatBranchStreetLine(addr)}
-                    typeLabel={`${t('contacts-form:addressesSection.branch')}${branches.length > 1 ? ` #${i + 1}` : ''}`}
+                    typeLabel={resolveContactAddressLabel(addr.type, addr.customLabel, tAddrFn)}
                     isEditing={isEditing}
                     onEdit={() => setEditingBranchIndex(i)}
                     onDelete={() => setBranchDeleteIndex(i)}

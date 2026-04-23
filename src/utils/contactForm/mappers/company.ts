@@ -70,8 +70,11 @@ function buildAddresses(formData: ContactFormData, fallbackAddresses?: AddressIn
       region: ca.region ?? '',
       country: 'GR',
       type: 'work' as const,
-      isPrimary: i === 0 || ca.type === 'headquarters',
-      label: ca.type === 'headquarters' ? 'Έδρα' : 'Υποκατάστημα',
+      isPrimary: i === 0 || ca.type === 'headquarters' || ca.type === 'home',
+      // ADR-319: persist the semantic key (`headquarters`/`branch`/`home`/...)
+      // or the user-provided custom label for `other`. UI resolves the
+      // display string from `addresses.types.<key>`.
+      label: (ca.type === 'other' && ca.customLabel?.trim()) ? ca.customLabel.trim() : ca.type,
     }));
   }
   return fallbackAddresses ?? [];

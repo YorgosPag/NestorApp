@@ -1,6 +1,7 @@
 import type { ContactType, PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo, CompanyContact } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+import type { ContactAddressType } from '@/types/contacts/address-types';
 
 export interface AddNewContactDialogProps {
   open: boolean;
@@ -47,7 +48,17 @@ export interface IndividualAddress {
 
 /** Single company address entry */
 export interface CompanyAddress {
-  type: 'headquarters' | 'branch';
+  /**
+   * Address semantic type (ADR-319 SSoT: `ContactAddressType`).
+   * Wider than the legacy `headquarters | branch` pair so individuals can
+   * pick `home`/`vacation`/`office` and companies can pick
+   * `warehouse`/`showroom`/`factory`/... — `getAddressTypesForContact` in
+   * `src/types/contacts/address-types.ts` returns the allowed set per
+   * contact type.
+   */
+  type: ContactAddressType;
+  /** Free-text label when `type === 'other'`. Ignored otherwise. */
+  customLabel?: string;
   street: string;
   number: string;
   postalCode: string;
@@ -114,6 +125,14 @@ export interface ContactFormData {
   streetNumber: string;
   city: string;
   postalCode: string;
+  /**
+   * Semantic type for the primary (flat-field) address — ADR-319.
+   * Defaults to `home` for individuals and `headquarters` for company/service.
+   * When `other`, `primaryAddressCustomLabel` carries the free-text label.
+   */
+  primaryAddressType?: ContactAddressType;
+  /** Free-text label when `primaryAddressType === 'other'`. */
+  primaryAddressCustomLabel?: string;
   /** Multi-address array for companies */
   companyAddresses?: CompanyAddress[];
   /** Multi-address array for individuals (home, work, vacation, other) */

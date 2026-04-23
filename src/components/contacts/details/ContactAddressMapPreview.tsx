@@ -48,11 +48,17 @@ interface ContactAddressMapPreviewProps {
   className?: string;
 }
 
-/** Map CompanyAddress type to ProjectAddressType with correct labels */
-const COMPANY_TYPE_MAP: Record<CompanyAddress['type'], ProjectAddressType> = {
-  headquarters: 'legal',
-  branch: 'postal',
-};
+/**
+ * Map CompanyAddress.type (ADR-319 taxonomy) to ProjectAddressType.
+ * The target taxonomy is only about pin colour/legend in the map — we keep
+ * `legal` for the primary slot (headquarters/home) and `postal` for every
+ * other semantic category.
+ */
+function mapContactTypeToProjectType(type: CompanyAddress['type']): ProjectAddressType {
+  if (type === 'headquarters' || type === 'home') return 'legal';
+  if (type === 'other') return 'other';
+  return 'postal';
+}
 
 export function ContactAddressMapPreview({
   contactId,
@@ -79,6 +85,15 @@ export function ContactAddressMapPreview({
   const branchLabel = tContactsForm('addressesSection.branch');
   const homeLabel = tAddr('types.home');
 
+  // Resolve a CompanyAddress to its human-readable pin label (ADR-319).
+  // `customLabel` wins for `other`; everything else reads from `addresses.types`.
+  const resolveTypeLabel = (addr: CompanyAddress): string => {
+    if (addr.type === 'other' && addr.customLabel?.trim()) return addr.customLabel.trim();
+    if (addr.type === 'headquarters') return hqLabel;
+    if (addr.type === 'branch') return branchLabel;
+    return tAddr(`types.${addr.type}`);
+  };
+
   const addresses = useMemo<ProjectAddress[]>(() => {
     const defaults = AddressUtils.getNewAddressDefaults();
 
@@ -90,7 +105,7 @@ export function ContactAddressMapPreview({
         : companyAddresses.filter((addr) => addr.city.trim() || (addr.street.trim() && addr.postalCode.trim()));
       return filtered
         .map((addr, index) => {
-          const isHq = addr.type === 'headquarters';
+          const isPrimary = addr.type === 'headquarters' || addr.type === 'home';
           return createProjectAddress({
             ...defaults,
             id: `${contactId || fallbackAddressIdRef.current}-${index}`,
@@ -101,9 +116,9 @@ export function ContactAddressMapPreview({
             municipality: addr.municipalityName?.trim() || undefined,
             regionalUnit: addr.regionalUnitName?.trim() || undefined,
             region: addr.regionName?.trim() || addr.region?.trim() || undefined,
-            type: COMPANY_TYPE_MAP[addr.type],
-            label: isHq ? hqLabel : branchLabel,
-            isPrimary: isHq,
+            type: mapContactTypeToProjectType(addr.type),
+            label: resolveTypeLabel(addr),
+            isPrimary,
           });
         });
     }

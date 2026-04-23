@@ -11,6 +11,12 @@
     "home": "Κατοικία",
     "work": "Εργασία",
     "vacation": "Εξοχικό",
+    "office": "Γραφείο",
+    "headquarters": "Έδρα",
+    "branch": "Υποκατάστημα",
+    "warehouse": "Αποθήκη",
+    "showroom": "Έκθεση",
+    "factory": "Εργοστάσιο",
     "individual": "Επιπλέον Διευθύνσεις"
   },
   "blockSides": {

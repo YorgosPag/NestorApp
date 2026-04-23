@@ -37,6 +37,9 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import { createProjectAddress } from '@/types/project/address-helpers';
 import { useClearCompanyHqAddress } from '@/components/contacts/dynamic/useClearCompanyHqAddress';
 import { useDerivedWorkAddresses } from '@/components/contacts/relationships/hooks/useDerivedWorkAddresses';
+import { AddressTypeSelector } from '@/components/contacts/addresses/AddressTypeSelector';
+import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
+import { getPrimaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
 
 // ============================================================================
 // TYPES
@@ -179,7 +182,8 @@ export function AddressesSectionWithFullscreen({
         city: addr.city,
       };
     }
-    const hq = updatedAddresses.find(a => a.type === 'headquarters') ?? updatedAddresses[0];
+    // ADR-319: HQ is always index 0 (positional invariant across contact types).
+    const hq = updatedAddresses[0];
     setFormData({
       ...formData,
       companyAddresses: updatedAddresses,
@@ -200,14 +204,35 @@ export function AddressesSectionWithFullscreen({
     });
   }, [formData, setFormData]);
 
+  // ADR-319: semantic type for the primary (flat-field) address — resolved from
+  // formData or derived from the contact type (`home` for individuals,
+  // `headquarters` for companies/services).
+  const primaryType: ContactAddressType = formData.primaryAddressType ?? getPrimaryAddressType(formData.type);
+  const primaryCustomLabel = formData.primaryAddressCustomLabel;
+
   const currentAddresses: CompanyAddress[] = formData.companyAddresses ?? [];
   const effectiveAddresses: CompanyAddress[] = currentAddresses.length > 0
     ? currentAddresses
     : formData.street
-      ? [{ type: 'headquarters' as const, street: formData.street as string, number: (formData.streetNumber as string) ?? '', postalCode: (formData.postalCode as string) ?? '', city: (formData.city as string) ?? '' }]
-      : [{ type: 'headquarters' as const, street: '', number: '', postalCode: '', city: '' }];
+      ? [{ type: primaryType, customLabel: primaryCustomLabel, street: formData.street as string, number: (formData.streetNumber as string) ?? '', postalCode: (formData.postalCode as string) ?? '', city: (formData.city as string) ?? '' }]
+      : [{ type: primaryType, customLabel: primaryCustomLabel, street: '', number: '', postalCode: '', city: '' }];
 
-  const hqTypeLabel = tContacts('contacts-form:addressesSection.headquarters');
+  const tAddrFn = useCallback((key: string) => tAddr(key) as string, [tAddr]);
+  const hqTypeLabel = resolveContactAddressLabel(primaryType, primaryCustomLabel, tAddrFn);
+
+  const handlePrimaryTypeChange = useCallback((next: { type: ContactAddressType; customLabel?: string }) => {
+    if (!setFormData) return;
+    const existing = formData.companyAddresses ?? [];
+    const updated = existing.length > 0
+      ? [{ ...existing[0], type: next.type, customLabel: next.customLabel }, ...existing.slice(1)]
+      : existing;
+    setFormData({
+      ...formData,
+      primaryAddressType: next.type,
+      primaryAddressCustomLabel: next.customLabel,
+      ...(existing.length > 0 ? { companyAddresses: updated } : {}),
+    });
+  }, [formData, setFormData]);
 
   return (
     <FullscreenOverlay
@@ -258,8 +283,14 @@ export function AddressesSectionWithFullscreen({
           />
         ) : (
           <div className="border-2 border-primary rounded-lg p-3 space-y-3" onKeyDown={handleHqKeyDown}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{hqTypeLabel}</h3>
+            <div className="flex items-center justify-between gap-2">
+              <AddressTypeSelector
+                contactType={formData.type}
+                value={primaryType}
+                customLabel={primaryCustomLabel}
+                disabled={disabled}
+                onChange={handlePrimaryTypeChange}
+              />
               <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditingHQ(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -283,8 +314,9 @@ export function AddressesSectionWithFullscreen({
               onChange={(addr: AddressWithHierarchyValue) => {
                 if (setFormData) {
                   const updatedAddresses = [...effectiveAddresses];
-                  const hqIdx = updatedAddresses.findIndex(a => a.type === 'headquarters');
-                  if (hqIdx >= 0) {
+                  // ADR-319: HQ is always index 0 (positional invariant).
+                  const hqIdx = 0;
+                  if (updatedAddresses.length > 0) {
                     updatedAddresses[hqIdx] = {
                       ...updatedAddresses[hqIdx],
                       street: addr.street,
@@ -340,9 +372,13 @@ export function AddressesSectionWithFullscreen({
           hideSectionTitle
           addresses={effectiveAddresses}
           disabled={disabled}
+          contactType={formData.type}
           onChange={(newAddresses) => {
             if (!setFormData) return;
-            const hq = newAddresses.find((a) => a.type === 'headquarters') ?? newAddresses[0];
+            // ADR-319: HQ lives at index 0 (positional invariant) — `home` is
+            // primary for individuals, `headquarters` for companies/services,
+            // so find-by-type cannot match across both scopes.
+            const hq = newAddresses[0];
             setFormData({
               ...formData,
               companyAddresses: newAddresses,
@@ -350,6 +386,7 @@ export function AddressesSectionWithFullscreen({
               streetNumber: hq?.number ?? '',
               postalCode: hq?.postalCode ?? '',
               city: hq?.city ?? '',
+              ...(hq ? { primaryAddressType: hq.type, primaryAddressCustomLabel: hq.customLabel } : {}),
             });
           }}
         />
@@ -388,7 +425,8 @@ export function AddressesSectionWithFullscreen({
             // Individuals keep hierarchy on flat formData fields (no companyAddresses entry),
             // so also look at formData.settlementId when the target pin is the HQ.
             const targetAddr = effectiveAddresses[addressIndex];
-            const isHQ = addressIndex === 0 || targetAddr?.type === 'headquarters';
+            // ADR-319: HQ positional invariant — index 0 is always primary.
+            const isHQ = addressIndex === 0;
             const hasHierarchy = isHQ && (targetAddr?.settlementId || formData.settlementId);
 
             if (hasHierarchy) {

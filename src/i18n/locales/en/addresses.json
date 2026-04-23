@@ -11,6 +11,12 @@
     "home": "Home",
     "work": "Work",
     "vacation": "Vacation",
+    "office": "Office",
+    "headquarters": "Headquarters",
+    "branch": "Branch",
+    "warehouse": "Warehouse",
+    "showroom": "Showroom",
+    "factory": "Factory",
     "individual": "Additional Addresses"
   },
   "blockSides": {

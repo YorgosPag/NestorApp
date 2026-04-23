@@ -339,8 +339,9 @@ export class EnterpriseContactSaver {
       region: ca.region ?? '',
       country: 'GR',
       type: 'work' as const,
-      isPrimary: i === 0 || ca.type === 'headquarters',
-      label: ca.type === 'headquarters' ? 'Έδρα' : 'Υποκατάστημα',
+      isPrimary: i === 0 || ca.type === 'headquarters' || ca.type === 'home',
+      // ADR-319: persist semantic key; `other` carries user-provided custom label.
+      label: (ca.type === 'other' && ca.customLabel?.trim()) ? ca.customLabel.trim() : ca.type,
     }));
   }
 

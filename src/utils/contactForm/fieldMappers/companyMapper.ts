@@ -78,8 +78,8 @@ function resolveCompanyAddresses(contact: ExtendedCompanyContact): CompanyAddres
   // Tertiary fallback: build from Contact.addresses[]
   const contactAddresses = contact.addresses;
   if (isNonEmptyArray(contactAddresses)) {
-    return contactAddresses.map((addr, i) => ({
-      type: (i === 0 ? 'headquarters' : 'branch') as 'headquarters' | 'branch',
+    return contactAddresses.map<CompanyAddress>((addr, i) => ({
+      type: i === 0 ? 'headquarters' : 'branch',
       street: addr.street || '',
       number: addr.number || '',
       postalCode: addr.postalCode || '',
