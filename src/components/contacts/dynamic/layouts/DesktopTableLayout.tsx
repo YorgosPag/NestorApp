@@ -67,11 +67,12 @@ export interface DesktopTableLayoutProps {
  */
 const getDesktopTableHeaders = (t: (key: string) => string) => ({
   phone: {
-    columns: 'grid-cols-5',
+    columns: 'grid-cols-6',
     headers: [
       t('communication.tableHeaders.type'),
       t('communication.tableHeaders.countryCode'),
       t('communication.tableHeaders.number'),
+      t('communication.tableHeaders.extension'),
       t('communication.tableHeaders.label'),
       t('communication.tableHeaders.actions')
     ]

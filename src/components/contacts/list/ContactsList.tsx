@@ -27,6 +27,7 @@ import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
 import type { ContactShareMeta } from '@/types/sharing';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
 // 🏢 ENTERPRISE: Centralized data exchange (SSoT - DataExportService/DataImportService)
 import { exportContacts } from '@/utils/contacts/contact-data-exchange';
 import { ImportContactsDialog } from '@/components/contacts/dialogs/ImportContactsDialog';
@@ -268,7 +269,8 @@ export function ContactsList({
     // Primary phone
     const primaryPhone = selectedContact.phones?.find(p => p.isPrimary) || selectedContact.phones?.[0];
     if (primaryPhone) {
-      lines.push(`📞 ${t('list.share.phone')}: ${primaryPhone.number}`);
+      const extShort = t('communication.display.extensionShort', { defaultValue: '' });
+      lines.push(`📞 ${t('list.share.phone')}: ${formatPhoneDisplay(primaryPhone, { omitCountryCode: true, extensionShort: extShort || undefined })}`);
     }
     // Primary address
     const primaryAddress = selectedContact.addresses?.find(a => a.isPrimary) || selectedContact.addresses?.[0];

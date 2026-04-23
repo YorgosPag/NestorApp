@@ -165,6 +165,20 @@ function MobileCommunicationItem({
           </div>
         )}
 
+        {/* Phone extension (εσωτερικό / PBX internal) — phone only */}
+        {config.type === 'phone' && (
+          <div className="w-full max-w-none min-w-full">
+            <Label>{t('communication.tableHeaders.extension')}</Label>
+            <Input
+              value={(item.extension as string | undefined) || ''}
+              onChange={(e) => updateItem(index, 'extension', e.target.value)}
+              placeholder={t('communication.placeholders.phoneExtension')}
+              disabled={disabled}
+              className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
+            />
+          </div>
+        )}
+
         {/* Type Field */}
         <div className="w-full max-w-none min-w-full">
           <Label>{t('communication.tableHeaders.type')}</Label>

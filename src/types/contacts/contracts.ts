@@ -256,6 +256,8 @@ export interface PhoneInfo {
   isPrimary: boolean;
   label?: string;
   countryCode?: string;
+  // Εσωτερικό / extension (PBX internal number). Optional free text.
+  extension?: string;
 }
 
 export interface AddressInfo {

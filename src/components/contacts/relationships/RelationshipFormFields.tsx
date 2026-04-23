@@ -33,6 +33,7 @@ import { UniversalCommunicationManager } from '@/components/contacts/dynamic/Uni
 import { getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
 import type { CommunicationItem } from '@/components/contacts/dynamic/communication';
 import type { PhoneInfo, EmailInfo } from '@/types/contacts';
+import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { ContactType } from '@/types/contacts/contracts';
@@ -78,7 +79,8 @@ const phonesToCommunicationItems = (phones: PhoneInfo[]): CommunicationItem[] =>
     label: phone.label,
     isPrimary: phone.isPrimary,
     number: phone.number,
-    countryCode: phone.countryCode
+    countryCode: phone.countryCode,
+    extension: phone.extension
   })) : [];
 
 const emailsToCommunicationItems = (emails: EmailInfo[]): CommunicationItem[] =>
@@ -90,13 +92,17 @@ const emailsToCommunicationItems = (emails: EmailInfo[]): CommunicationItem[] =>
   })) : [];
 
 const communicationItemsToPhones = (items: CommunicationItem[]): PhoneInfo[] =>
-  Array.isArray(items) ? items.map(item => ({
-    number: item.number || '',
-    type: item.type as PhoneInfo['type'],
-    isPrimary: item.isPrimary || false,
-    label: item.label || '',
-    countryCode: item.countryCode || '+30'
-  })) : [];
+  Array.isArray(items) ? items.map(item => {
+    const ext = (item.extension as string | undefined)?.trim();
+    return {
+      number: item.number || '',
+      type: item.type as PhoneInfo['type'],
+      isPrimary: item.isPrimary || false,
+      label: item.label || '',
+      countryCode: item.countryCode || '+30',
+      ...(ext ? { extension: ext } : {})
+    };
+  }) : [];
 
 const communicationItemsToEmails = (items: CommunicationItem[]): EmailInfo[] =>
   Array.isArray(items) ? items.map(item => ({
@@ -233,9 +239,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
       phones,
       contactInfo: {
         ...prev.contactInfo,
-        businessPhone: primaryPhone?.number
-          ? `${primaryPhone.countryCode || '+30'} ${primaryPhone.number}`
-          : ''
+        businessPhone: formatPhoneDisplay(primaryPhone)
       }
     }));
   }, [setFormData]);

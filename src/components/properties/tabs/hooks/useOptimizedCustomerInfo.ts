@@ -15,6 +15,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useOptimizedCustomerInfo');
@@ -275,7 +276,9 @@ function getPrimaryPhone(contact: ContactData): string | null {
   if (contact.primaryPhone) return contact.primaryPhone;
   if (contact.phones && contact.phones.length > 0) {
     const firstPhone = contact.phones[0];
-    return typeof firstPhone === 'string' ? firstPhone : firstPhone.number ?? null;
+    if (typeof firstPhone === 'string') return firstPhone;
+    // Include extension via SSoT formatter (keeps PBX internal number visible).
+    return formatPhoneDisplay(firstPhone, { omitCountryCode: true }) || null;
   }
   return null;
 }

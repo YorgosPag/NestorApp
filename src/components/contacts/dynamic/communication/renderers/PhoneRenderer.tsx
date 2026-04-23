@@ -61,7 +61,7 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
   // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή
   if (isDesktop) {
     return (
-      <div key={index} className={`grid grid-cols-5 gap-2 items-center py-2 ${quick.separatorH} last:border-b-0`}>
+      <div key={index} className={`grid grid-cols-6 gap-2 items-center py-2 ${quick.separatorH} last:border-b-0`}>
         {/* 1. Τύπος (Κινητό, Σπίτι, κτλ.) */}
         <div>
           <Select
@@ -105,7 +105,18 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
           />
         </div>
 
-        {/* 4. Ετικέτα */}
+        {/* 4. Εσωτερικό (extension / PBX internal) */}
+        <div>
+          <Input
+            value={(item.extension as string | undefined) || ''}
+            onChange={(e) => updateItem(index, 'extension', e.target.value)}
+            placeholder={t('communication.placeholders.phoneExtension')}
+            disabled={disabled}
+            className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
+          />
+        </div>
+
+        {/* 5. Ετικέτα */}
         <div>
           <Input
             value={item.label || ''}
@@ -116,7 +127,7 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
           />
         </div>
 
-        {/* 5. Actions - Κάδος & Primary */}
+        {/* 6. Actions - Κάδος & Primary */}
         <div className="flex items-center justify-end gap-2">
           {/* Primary Badge/Button */}
           {config.supportsPrimary && (

@@ -27,6 +27,7 @@ import type {
   RelationshipFormData,
   UseRelationshipFormReturn
 } from '../types/relationship-manager.types';
+import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('useRelationshipForm');
 
@@ -256,7 +257,7 @@ export const useRelationshipForm = (
       const builtContactInfo: Partial<ProfessionalContactInfo> = {
         ...formData.contactInfo,
         businessPhone: primaryPhone
-          ? `${primaryPhone.countryCode || '+30'} ${primaryPhone.number}`.trim()
+          ? formatPhoneDisplay(primaryPhone)
           : formData.contactInfo?.businessPhone ?? undefined,
         businessEmail: primaryEmail?.email || (formData.contactInfo?.businessEmail ?? undefined)
       };

@@ -354,6 +354,7 @@
     "placeholders": {
       "phone": "π.χ. 6981890123",
       "phoneLabel": "π.χ. Προσωπικό κινητό",
+      "phoneExtension": "π.χ. 123",
       "email": "π.χ. email@example.com",
       "emailLabel": "π.χ. Προσωπικό email",
       "website": "π.χ. https://example.com",
@@ -379,12 +380,16 @@
       "type": "Τύπος",
       "countryCode": "Κωδικός",
       "number": "Αριθμός",
+      "extension": "Εσωτ.",
       "label": "Ετικέτα",
       "actions": "Ενέργειες",
       "email": "Διεύθυνση E-mail",
       "url": "URL",
       "platform": "Πλατφόρμα",
       "username": "Όνομα Χρήστη"
+    },
+    "display": {
+      "extensionShort": "εσωτ."
     }
   },
   "service": {

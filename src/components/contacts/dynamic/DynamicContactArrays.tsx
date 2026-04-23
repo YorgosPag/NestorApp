@@ -51,7 +51,8 @@ const phonesToCommunicationItems = (phones: PhoneInfo[]): CommunicationItem[] =>
     label: phone.label,
     isPrimary: phone.isPrimary,
     number: phone.number,
-    countryCode: phone.countryCode
+    countryCode: phone.countryCode,
+    extension: phone.extension
   })) : [];
 
 const emailsToCommunicationItems = (emails: EmailInfo[]): CommunicationItem[] =>
@@ -82,13 +83,17 @@ const socialToCommunicationItems = (
   })) : [];
 
 const communicationItemsToPhones = (items: CommunicationItem[]): PhoneInfo[] =>
-  Array.isArray(items) ? items.map(item => ({
-    number: item.number || '',
-    type: item.type as PhoneInfo['type'],
-    isPrimary: item.isPrimary || false,
-    label: item.label || '',
-    countryCode: item.countryCode || '+30'
-  })) : [];
+  Array.isArray(items) ? items.map(item => {
+    const ext = (item.extension as string | undefined)?.trim();
+    return {
+      number: item.number || '',
+      type: item.type as PhoneInfo['type'],
+      isPrimary: item.isPrimary || false,
+      label: item.label || '',
+      countryCode: item.countryCode || '+30',
+      ...(ext ? { extension: ext } : {})
+    };
+  }) : [];
 
 const communicationItemsToEmails = (items: CommunicationItem[]): EmailInfo[] =>
   Array.isArray(items) ? items.map(item => ({

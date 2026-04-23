@@ -99,14 +99,15 @@ function formatKnownEntity(obj: Record<string, unknown>): string | null {
     if (obj.municipality) parts.push(String(obj.municipality));
     return parts.length > 0 ? parts.join(", ") : null;
   }
-  // PhoneInfo → "+30 6971234567 (Κινητό, Προσωπικό)"
+  // PhoneInfo → "+30 6971234567 εσωτ. 123 (Κινητό, Προσωπικό)"
   if ("number" in obj && "countryCode" in obj) {
     const code = obj.countryCode ? `${obj.countryCode} ` : "";
     const num = String(obj.number || "");
+    const ext = obj.extension ? ` εσωτ. ${String(obj.extension).trim()}` : "";
     const typeLabel = obj.type ? TYPE_LABELS[String(obj.type)] ?? String(obj.type) : "";
     const details = [typeLabel, obj.label].filter(Boolean).join(", ");
     const suffix = details ? ` (${details})` : "";
-    return num ? `${code}${num}${suffix}` : null;
+    return num ? `${code}${num}${ext}${suffix}` : null;
   }
   // EmailInfo → "user@example.com (Προσωπικό)"
   if ("email" in obj) {

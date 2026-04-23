@@ -354,6 +354,7 @@
     "placeholders": {
       "phone": "e.g. 6981890123",
       "phoneLabel": "e.g. Personal mobile",
+      "phoneExtension": "e.g. 123",
       "email": "e.g. email@example.com",
       "emailLabel": "e.g. Personal email",
       "website": "e.g. https://example.com",
@@ -379,12 +380,16 @@
       "type": "Type",
       "countryCode": "Code",
       "number": "Number",
+      "extension": "Ext.",
       "label": "Label",
       "actions": "Actions",
       "email": "Email Address",
       "url": "URL",
       "platform": "Platform",
       "username": "Username"
+    },
+    "display": {
+      "extensionShort": "ext."
     }
   },
   "service": {
