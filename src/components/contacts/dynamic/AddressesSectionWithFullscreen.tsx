@@ -187,9 +187,12 @@ export function AddressesSectionWithFullscreen({
           )}
         </div>
 
-        {/* Section title — same position as Διευθύνσεις Έργου (N) in projects */}
+        {/* Section title — individuals show "Διευθύνσεις", companies/services show "Υποκαταστήματα / Επιπλέον Διευθύνσεις" */}
         <h3 className="text-lg font-semibold text-foreground">
-          {tContacts('contacts-form:addressesSection.branchesTitle')} ({effectiveAddresses.length})
+          {formData.type === 'individual'
+            ? tAddr('list.title')
+            : tContacts('contacts-form:addressesSection.branchesTitle')}
+          {' '}({effectiveAddresses.length})
         </h3>
 
         {/* HQ — card view OR inline edit form */}
