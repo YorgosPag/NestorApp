@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 277 ADRs | Last Updated: 2026-04-07
+**📊 Stats**: 283 ADRs | Last Updated: 2026-04-23
 
 ---
 
@@ -18,7 +18,7 @@
 | 📐 **Domain - Geometry** | 1 | [View](#domain-geometry) |
 | 🎨 **UI Components** | 12 | [View](#ui-components) |
 | 🎨 **Design System** | 7 | [View](#design-system) |
-| 🖼️ **Canvas & Rendering** | 39 | [View](#canvas-rendering) |
+| 🖼️ **Canvas & Rendering** | 38 | [View](#canvas-rendering) |
 | 📊 **Data & State** | 12 | [View](#data-state) |
 | ✏️ **Drawing System** | 16 | [View](#drawing-system) |
 | 📂 **Entity Systems** | 16 | [View](#entity-systems) |
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 88 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 91 | [View](#uncategorized) |
 
 ---
 
@@ -63,7 +63,7 @@
 | **ADR-027** | DXF Keyboard Shortcuts System | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-027-dxf-keyboard-shortcuts-system.md) |
 | **ADR-028** | Button Component Consolidation | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-028-button-component-consolidation.md) |
 | **ADR-029** | Canvas V2 Migration | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-029-canvas-v2-migration.md) |
-| **ADR-029** | Global Search System v1 | ✅ APPROVED | 2026-04-22 | Search & Indexing | [📄](./adrs/ADR-029-global-search-system-v1.md) |
+| **ADR-029** | Global Search System v1 | ✅ APPROVED | 2026-01-01 | Search / Indexing / Cloud Functions | [📄](./adrs/ADR-029-global-search-system-v1.md) |
 | **ADR-030** | Unified Frame Scheduler | ✅ APPROVED | 2026-02-01 | Performance | [📄](./adrs/ADR-030-unified-frame-scheduler.md) |
 | **ADR-031** | Enterprise Command Pattern (Undo/Redo) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-031-enterprise-command-pattern-undo-redo.md) |
 | **ADR-032** | Drawing State Machine | ✅ COMPLETED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-032-drawing-state-machine.md) |
@@ -169,7 +169,7 @@
 | **ADR-145** | PropertyType SSoT Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-145-property-types-ssot.md) |
 | **ADR-145** | Super Admin AI Assistant — Omnichannel Admin Command System | ✅ ✅ IMPLEMENTED | 2026-02-09 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-145-super-admin-ai-assistant.md) |
 | **ADR-146** | Canvas Size Observer Hook Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-146-canvas-size-observer-hook-centralization.md) |
-| **ADR-147** | Unified Share Surface — ShareSurfaceShell + Pluggable PermissionPanel | ✅ IMPLEMENTED (Phase A + B) | 2026-04-11 | UI Components / Centralization | [📄](./adrs/ADR-147-unified-share-surface.md) |
+| **ADR-147** | Unified Share Surface — ShareSurfaceShell + Pluggable PermissionPanel | ✅ 🟢 ACCEPTED — Phase A + Phase B Implemented | 2026-04-11 | UI Components / Centralization | [📄](./adrs/ADR-147-unified-share-surface.md) |
 | **ADR-150** | Arrow Head Size Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-150-arrow-head-size-centralization.md) |
 | **ADR-151** | Grip Tolerance Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-151-grip-tolerance-centralization.md) |
 | **ADR-152** | Simple Coordinate Transform Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-152-simple-coordinate-transform-centralization.md) |
@@ -278,7 +278,7 @@
 | **ADR-249** | Comprehensive Server-Side Integrity Audit | ✅ DOCUMENTED | 2026-03-19 | Entity Systems / Data Integrity / Security | [📄](./adrs/ADR-249-comprehensive-server-integrity-audit.md) |
 | **ADR-250** | Codebase Audit Findings — Security, Indexes, Centralization | ✅ PARTIALLY IMPLEMENTED (P0 fixes done) | 2026-03-19 | Infrastructure / Security / Data Integrity | [📄](./adrs/ADR-250-codebase-audit-findings.md) |
 | **ADR-251** | Scattered Code Patterns Audit & Consolidation Roadmap | ✅ DOCUMENTED | 2026-03-19 | Uncategorized | [📄](./adrs/ADR-251-scattered-code-patterns-audit.md) |
-| **ADR-252** | Comprehensive Security Audit | ✅ ✅ PHASE_3_IMPLEMENTED | 2026-03-19 | Security / Infrastructure | [📄](./adrs/ADR-252-comprehensive-security-audit.md) |
+| **ADR-252** | Comprehensive Security Audit | ✅ ✅ PHASE_4_IMPLEMENTED | 2026-03-19 | Security / Infrastructure | [📄](./adrs/ADR-252-comprehensive-security-audit.md) |
 | **ADR-253** | Deep Security & Data Integrity Audit | ✅ ✅ IMPLEMENTED | 2026-03-20 | Security / Data Integrity | [📄](./adrs/ADR-253-deep-integrity-audit.md) |
 | **ADR-254** | Monolithic Architecture Audit — Ευρήματα & Roadmap | ✅ ✅ PHASE 1+2 IMPLEMENTED | 2026-03-20 | Architecture / Performance | [📄](./adrs/ADR-254-monolithic-architecture-audit.md) |
 | **ADR-255** | Security Hardening Phase 4 — Tenant Isolation, Validation, Audit Trail | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-255-security-hardening-phase-4.md) |
@@ -313,27 +313,11 @@
 | **ADR-291** | Notification Pattern Selection Strategy (Google Material Design 3) | ✅ APPROVED | 2026-04-05 | UI Components / Design System | [📄](./adrs/ADR-291-notification-pattern-selection-strategy.md) |
 | **ADR-292** | Floorplan Upload Consolidation Map | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-292-floorplan-upload-consolidation-map.md) |
 | **ADR-293** | File Naming & Storage Path SSoT Audit | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-293-file-naming-storage-path-ssot-audit.md) |
-| **ADR-294** | SSoT Ratchet Enforcement System | ✅ ✅ IMPLEMENTED | 2026-04-08 | Code Quality / SSoT Enforcement | [📄](./adrs/ADR-294-ssot-ratchet-enforcement.md) |
-| **ADR-295** | Multi-Channel Photo Sharing to CRM Contacts | ✅ ✅ IMPLEMENTED | 2026-04-09 | Omnichannel Communications | [📄](./adrs/ADR-295-multi-channel-photo-sharing.md) |
-| **ADR-296** | i18n Hardcoded Greek Strings — Phased Cleanup | ✅ APPROVED | 2026-04-09 | Code Quality / i18n | [📄](../../../adrs/ADR-296-i18n-hardcoded-strings-cleanup.md) |
-| **ADR-297** | Contact Dependency Registry — SSoT | ✅ ✅ IMPLEMENTED | 2026-04-09 | Data Architecture / SSoT Enforcement | [📄](../../../adrs/ADR-297-contact-dependency-ssot.md) |
-| **ADR-298** | Firestore Rules Test Coverage SSoT + CHECK 3.16 + CI (Phase D.2) | ✅ IMPLEMENTED (Phase A + Phase D.2 — 106/106 green, latent CEL helper bug fixed) | 2026-04-11 | Security / Testing Infrastructure / SSoT Enforcement | [📄](../../../adrs/ADR-298-firestore-rules-test-coverage-ssot.md) |
-| **ADR-299** | Ratchet Backlog Master Roadmap (SSoT για όλα τα pre-commit ratchets + hour estimates + scenarios A/B) | ✅ APPROVED | 2026-04-11 | Governance / Technical Debt Tracking / SSoT Enforcement | [📄](../../../adrs/ADR-299-ratchet-backlog-master-roadmap.md) |
-| **ADR-300** | Stale Cache Factory SSoT — Navigation Flash Prevention (`createStaleCache<T>`) | ✅ IMPLEMENTED | 2026-04-15 | Data & State / SSoT Enforcement | [📄](../../../adrs/ADR-300-stale-cache-factory-ssot.md) |
-| **ADR-300** | Project Status Pill — Google-grade Header State (Linear pattern) | ✅ IMPLEMENTED | 2026-04-13 | UI / Information Architecture | [📄](../../../adrs/ADR-300-project-status-pill-google-grade.md) |
-| **ADR-301** | Storage Rules Test Coverage SSoT + CHECK 3.19 (Phase A — 4 paths, 48 cells) | ✅ IMPLEMENTED | 2026-04-14 | Security / Testing Infrastructure / SSoT Enforcement | [📄](../../../adrs/ADR-301-storage-rules-test-coverage-ssot.md) |
-| **ADR-302** | Project Field Mutation Impact System — status transition matrix + declarative registry | ✅ IMPLEMENTED | 2026-04-14 | Data Architecture / UX Safety / SSoT Enforcement | [📄](../../../adrs/ADR-302-project-field-mutation-impact.md) |
-| **ADR-303** | Project Addresses Tab Mutation Impact Guard — per-operation guard (add/edit/delete/set-primary) | ✅ IMPLEMENTED | 2026-04-14 | Data Architecture / UX Safety | [📄](../../../adrs/ADR-303-project-addresses-mutation-impact.md) |
-| **ADR-304** | Project Ownership Table (Πίνακας Χιλιοστών) Mutation Impact Guard — FINALIZE/UNLOCK guards | ✅ IMPLEMENTED | 2026-04-14 | Data Architecture / UX Safety | [📄](../../../adrs/ADR-304-project-ownership-table-mutation-impact.md) |
-| **ADR-305** | Project Landowners & Engineers Tab Mutation Impact Guard — SAVE guard + engineer remove guard | ✅ IMPLEMENTED | 2026-04-14 | Data Architecture / UX Safety | [📄](../../../adrs/ADR-305-project-landowners-engineers-mutation-impact.md) |
-| **ADR-311** | Desktop Camera Capture via WebRTC (Photo + Video) — fix: `capture` attribute ignored on desktop | ✅ IMPLEMENTED | 2026-04-17 | File Management / Media Capture / SSoT Enforcement | [📄](../../../adrs/ADR-311-desktop-camera-capture-webrtc.md) |
-| **ADR-313** | Enterprise Backup & Restore System — manifest-driven, schema-evolution-tolerant | Phase 1 IN PROGRESS | 2026-04-17 | Infrastructure / Data Protection / Disaster Recovery | [📄](../../../adrs/ADR-313-enterprise-backup-restore.md) |
-| **ADR-314** | SSoT Discovery Findings & Centralization Roadmap — 74 duplicates, 5 anti-patterns, 96 registry gaps; Phase A/B/C roadmap | 📋 APPROVED — Phase A pending | 2026-04-18 | Governance / SSoT Enforcement / Technical Debt | [📄](../../../adrs/ADR-314-ssot-discovery-findings-roadmap.md) |
-| **ADR-315** | Unified Sharing (Contact + File + Property Showcase) — polymorphic `shares` collection, `UnifiedSharingService` SSoT, `ChannelDispatchService` split, `UnifiedShareDialog`, bcrypt migration | 📋 Proposed | 2026-04-18 | Sharing / Access Control / Public Surfaces | [📄](../../../adrs/ADR-315-unified-sharing.md) |
-| **ADR-316** | Project Showcase (Επίδειξη Έργου) — extends ADR-315 `entityType: 'project_showcase'`, branded PDF, `ProjectShowcasePDFService`, public viewer `/shared/{token}`, zero new sharing infrastructure | 📋 In Progress | 2026-04-22 | Projects / Sharing / PDF / Public Surfaces | [📄](../../../adrs/ADR-316-project-showcase.md) |
-| **ADR-317** | Contact Details Unified Save Focus — SSoT `ContactEditFocusContext`, adaptive header Save/Cancel delegates to active inline sub-form; banking/files added to `SUBCOLLECTION_TABS`; validation logging downgraded to warn | ✅ IMPLEMENTED | 2026-04-22 | Contacts / UX / SSoT Enforcement | [📄](../../../adrs/ADR-317-contact-details-unified-save-focus.md) |
-| **ADR-318** | Live Derivation of Work Address — individual's Διευθύνσεις tab renders read-only work cards derived on-demand from employment/ownership relationships + company `addresses[0]`; SSoT (no data copy), zero Firestore writes | ✅ IMPLEMENTED | 2026-04-23 | Contacts / Relationships / Address Management | [📄](../../../adrs/ADR-318-relationship-work-address-sync.md) |
-| **ADR-319** | Contact Address Type Registry — SSoT `ContactAddressType` taxonomy (home/vacation/office/headquarters/branch/warehouse/showroom/factory/other+customLabel), `getAddressTypesForContact` scope filter, positional HQ invariant, `AddressTypeSelector` Radix control; removes hardcoded "Υποκατάστημα" on individuals | ✅ IMPLEMENTED | 2026-04-23 | Contacts / Address Management / i18n SSoT | [📄](../../../adrs/ADR-319-contact-address-type-registry.md) |
+| **ADR-294** | SSoT Ratchet Enforcement System | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-294-ssot-ratchet-enforcement.md) |
+| **ADR-295** | Multi-Channel Photo Sharing to CRM Contacts | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-295-multi-channel-photo-sharing.md) |
+| **ADR-296** | File-Type Classification SSoT Unification | ✅ ✅ IMPLEMENTED | 2026-04-21 | File Management / Architectural Integrity | [📄](./adrs/ADR-296-file-type-classification-ssot.md) |
+| **ADR-297** | HQ Address Clear + Undo — Google-level Single-Click UX | ✅ ✅ IMPLEMENTED | 2026-04-21 | Frontend UX / Contacts Form | [📄](./adrs/ADR-297-hq-clear-undo-pattern.md) |
+| **ADR-314** | SSoT Discovery Findings & Centralization Roadmap | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-314-ssot-discovery-findings-roadmap.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -387,7 +371,6 @@
 | **ADR-008** | CSS→Canvas Coordinate Contract | ✅ APPROVED | [View](./adrs/ADR-008-css-canvas-coordinate-contract.md) |
 | **ADR-009** | Ruler Corner Box Interactive | ✅ APPROVED | [View](./adrs/ADR-009-ruler-corner-box-interactive.md) |
 | **ADR-029** | Canvas V2 Migration | ✅ APPROVED | [View](./adrs/ADR-029-canvas-v2-migration.md) |
-| **ADR-029** | Global Search System v1 | ✅ APPROVED | [View](./adrs/ADR-029-global-search-system-v1.md) |
 | **ADR-043** | Zoom Constants Consolidation | ✅ APPROVED | [View](./adrs/ADR-043-zoom-constants-consolidation.md) |
 | **ADR-044** | Canvas Line Widths Centralization | ✅ APPROVED | [View](./adrs/ADR-044-canvas-line-widths-centralization.md) |
 | **ADR-045** | Viewport Ready Guard | ✅ APPROVED | [View](./adrs/ADR-045-viewport-ready-guard.md) |
@@ -650,6 +633,9 @@
 | **ADR-290** | Building Creation SSoT Enforcement | ✅ APPROVED | [View](./adrs/ADR-290-building-creation-ssot-enforcement.md) |
 | **ADR-292** | Floorplan Upload Consolidation Map | ✅ APPROVED | [View](./adrs/ADR-292-floorplan-upload-consolidation-map.md) |
 | **ADR-293** | File Naming & Storage Path SSoT Audit | ✅ APPROVED | [View](./adrs/ADR-293-file-naming-storage-path-ssot-audit.md) |
+| **ADR-294** | SSoT Ratchet Enforcement System | ✅ APPROVED | [View](./adrs/ADR-294-ssot-ratchet-enforcement.md) |
+| **ADR-295** | Multi-Channel Photo Sharing to CRM Contacts | ✅ APPROVED | [View](./adrs/ADR-295-multi-channel-photo-sharing.md) |
+| **ADR-314** | SSoT Discovery Findings & Centralization Roadmap | ✅ APPROVED | [View](./adrs/ADR-314-ssot-discovery-findings-roadmap.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
