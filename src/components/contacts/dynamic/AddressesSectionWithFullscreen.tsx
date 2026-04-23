@@ -182,6 +182,11 @@ export function AddressesSectionWithFullscreen({
           )}
         </div>
 
+        {/* Section title — same position as Διευθύνσεις Έργου (N) in projects */}
+        <h3 className="text-lg font-semibold text-foreground">
+          {tContacts('contacts-form:addressesSection.branchesTitle')} ({effectiveAddresses.length})
+        </h3>
+
         {/* HQ — card view OR inline edit form */}
         {!isEditingHQ ? (
           <SharedAddressActionCard
@@ -275,6 +280,7 @@ export function AddressesSectionWithFullscreen({
         <CompanyAddressesSection
           ref={branchRef}
           hideAddButton
+          hideSectionTitle
           addresses={effectiveAddresses}
           disabled={disabled}
           onChange={(newAddresses) => {

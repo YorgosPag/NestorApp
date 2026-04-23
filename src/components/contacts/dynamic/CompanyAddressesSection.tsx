@@ -34,6 +34,7 @@ interface CompanyAddressesSectionProps {
   disabled?: boolean;
   onChange: (addresses: CompanyAddress[]) => void;
   hideAddButton?: boolean;
+  hideSectionTitle?: boolean;
 }
 
 export interface CompanyAddressesSectionHandle {
@@ -106,6 +107,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
   disabled = false,
   onChange,
   hideAddButton = false,
+  hideSectionTitle = false,
 }, ref) {
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const { t: tAddr } = useTranslation('addresses');
@@ -169,13 +171,15 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
 
   return (
     <div className="space-y-6">
-      <Separator />
+      {!hideSectionTitle && <Separator />}
 
       <section aria-label={t('contacts-form:addressesSection.branchesTitle')}>
         <header className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-foreground">
-            {t('contacts-form:addressesSection.branchesTitle')} ({branches.length})
-          </h3>
+          {!hideSectionTitle && (
+            <h3 className="text-lg font-semibold text-foreground">
+              {t('contacts-form:addressesSection.branchesTitle')} ({branches.length})
+            </h3>
+          )}
           {!hideAddButton && (
             <Button
               type="button"
