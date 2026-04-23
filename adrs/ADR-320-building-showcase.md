@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🏗️ IMPLEMENTATION IN PROGRESS (Phase 1 — SSoT fondamenta: types, snapshot-builder, labels, resolver, i18n namespace) |
+| **Status** | 🏗️ IMPLEMENTATION IN PROGRESS (Phase 2 — branded email template reusing `showcase-email-shared.ts` helpers) |
 | **Date** | 2026-04-23 |
 | **Category** | Buildings / Public Share Surfaces |
 | **Canonical Location** | `src/components/building-showcase/`, `src/app/api/{building-showcase,buildings}/…/showcase/`, `src/services/building-showcase/` (SSoT snapshot + labels) |
@@ -135,3 +135,4 @@ await resolveShowcaseCompanyBranding({
 | Date       | Change |
 |------------|--------|
 | 2026-04-23 | Phase 1 landed — SSoT fondamenta. Extended `ShareEntityType` union with `'building_showcase'`. New `types/building-showcase.ts`, `services/building-showcase/{snapshot-builder,labels}.ts`, `services/sharing/resolvers/building-showcase.resolver.ts`. Registered in `registerShareResolvers()`. Added `buildingShowcase` namespace to `showcase.json` (el + en) mirroring `projectShowcase` with building-specific fields (builtArea, floors, units, energyClass, renovation, constructionYear, project, linkedCompany). Tenant isolation + `brandingSource: 'tenant'` enforced. Phase 2 (email template) next. |
+| 2026-04-23 | Phase 2 landed — branded email template. New `services/email-templates/building-showcase-email.ts` exports `buildBuildingShowcaseEmail({ snapshot, labels, photos, floorplans, shareUrl, personalMessage })` returning `{ subject, html, text }`. 100% reuse of the SSoT helpers from `showcase-email-shared.ts` (`renderKeyValueTable`, `renderSectionTitle`, `renderPhotoGrid`, `renderMediaList`, `renderShareCta`, `buildSharedTextFallback`) — only `renderBuildingHero` + `renderBuildingSpecs` are local, because their field set differs from property/project (builtArea, floors, units, energyClass, renovation, constructionYear, project, linkedCompany). Subject prefix from `labels.email.subjectPrefix`; optional sender `personalMessage` overrides the default intro. Phase 3 (API routes) next. |
