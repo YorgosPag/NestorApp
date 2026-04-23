@@ -137,7 +137,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
           {ctx.relationshipsMode === 'summary' ? (
             <RelationshipsSummary contactId={contactId} contactType={contactType} readonly={disabled} className="mt-4" onManageRelationships={undefined} />
           ) : (
-            <ContactRelationshipManager contactId={contactId} contactType={contactType} readonly={disabled} className="mt-4" onRelationshipsChange={(rels) => logger.info('Relationships updated:', { count: rels.length })} />
+            <ContactRelationshipManager contactId={contactId} contactType={contactType} readonly={false} className="mt-4" onRelationshipsChange={(rels) => logger.info('Relationships updated:', { count: rels.length })} />
           )}
         </RelationshipProvider>
       );
