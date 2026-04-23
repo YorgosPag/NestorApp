@@ -173,8 +173,8 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
 
       <section aria-label={t('contacts-form:addressesSection.branchesTitle')}>
         <header className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-foreground">
-            {t('contacts-form:addressesSection.branchesTitle')}
+          <h3 className="text-lg font-semibold text-foreground">
+            {t('contacts-form:addressesSection.branchesTitle')} ({branches.length})
           </h3>
           {!hideAddButton && (
             <Button
