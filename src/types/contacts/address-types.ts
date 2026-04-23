@@ -28,7 +28,6 @@ export type ContactAddressType =
   | 'central_service'
   | 'regional_service'
   | 'annex'
-  | 'citizen_service_center'
   | 'department'
   // Shared
   | 'office'
@@ -59,11 +58,11 @@ export const CONTACT_ADDRESS_TYPE_METADATA: Record<ContactAddressType, ContactAd
   showroom:                { scope: ['company'] },
   factory:                 { scope: ['company'] },
   // Public-service taxonomy — Greek public administration (Κεντρική/Περιφερειακή
-  // Υπηρεσία, Παράρτημα, ΚΕΠ, Τμήμα) verified against official Greek sources.
+  // Υπηρεσία, Παράρτημα, Τμήμα). ΚΕΠ is itself a public service entity (a
+  // contact), not an address-type label for other public services.
   central_service:         { scope: ['service'], primaryFor: ['service'] },
   regional_service:        { scope: ['service'] },
   annex:                   { scope: ['service'] },
-  citizen_service_center:  { scope: ['service'] },
   department:              { scope: ['service', 'company'] },
   // Shared
   office:                  { scope: ['individual', 'company', 'service'] },
