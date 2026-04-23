@@ -167,15 +167,25 @@ export function ContactAddressMapPreview({
     [readOnlyExtraAddresses]
   );
 
-  // Map drag handler — converts ProjectAddress partial to DragResolvedAddress
+  // Map drag handler — converts ProjectAddress partial to DragResolvedAddress.
+  // `data.number` arrives separated from `data.street` (reverseResultToAddress
+  // preserves the Nominatim `addr.house_number` / `addr.road` split). The regex
+  // split is only a safety net for legacy callers that still concatenate.
   const handleDragUpdate = useMemo(() => {
     if (!draggable || !onDragResolve) return undefined;
     return (data: Partial<PartialProjectAddress>, addressIndex: number) => {
-      // Split "Σαμοθράκης 16" into street + number
-      const streetParts = (data.street ?? '').match(/^(.+?)\s+(\d+\S*)$/);
+      let street = (data.street ?? '').trim();
+      let number = (data.number ?? '').trim();
+      if (!number && street) {
+        const parts = street.match(/^(.+?)\s+(\d+\S*)$/);
+        if (parts) {
+          street = parts[1];
+          number = parts[2];
+        }
+      }
       onDragResolve({
-        street: streetParts ? streetParts[1] : (data.street ?? ''),
-        number: streetParts ? streetParts[2] : '',
+        street,
+        number,
         postalCode: data.postalCode ?? '',
         city: data.neighborhood || data.city || '',
         neighborhood: data.neighborhood ?? '',

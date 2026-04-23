@@ -39,12 +39,18 @@ const logger = createModuleLogger('AddressMapGeocoding');
 // HELPERS
 // =============================================================================
 
-/** Map ReverseGeocodingResult to partial address data for form population */
+/**
+ * Map ReverseGeocodingResult to partial address data for form population.
+ *
+ * ADR-277: keep `street` and `number` separate so downstream consumers
+ * (`handleDragUpdate`) don't have to re-split a pre-concatenated string.
+ * The server already returns Nominatim's `addr.road` / `addr.house_number`
+ * as distinct fields; the client preserves that split.
+ */
 export function reverseResultToAddress(result: ReverseGeocodingResult): Partial<PartialProjectAddress> {
   return {
-    street: result.number
-      ? `${result.street} ${result.number}`
-      : result.street,
+    street: result.street,
+    number: result.number || undefined,
     city: result.city,
     neighborhood: result.neighborhood || undefined,
     postalCode: result.postalCode,
