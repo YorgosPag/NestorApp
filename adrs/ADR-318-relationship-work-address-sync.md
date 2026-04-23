@@ -29,12 +29,23 @@ After any employment or ownership relationship is saved via `useRelationshipForm
 - **Path**: `src/services/contact-relationships/work-address-sync.service.ts`
 - **Export**: `syncWorkAddressOnRelationship(relationship: Partial<ContactRelationship>): Promise<void>`
 - **Pattern**: Fire-and-forget — caller catches errors independently (non-critical side effect)
-- **Storage**: Direct `updateDoc` on `contacts/{individualId}` with `{ individualAddresses: [...] }`
+- **Storage**: `ContactsService.updateContact` (client SDK, CDC audit trail handled by `auditContactWrite` Cloud Function — ADR-195)
 
 ### Hook Integration
 - **Path**: `src/components/contacts/relationships/hooks/useRelationshipForm.ts`
 - **Trigger point**: After `createRelationshipWithPolicy` / `updateRelationshipWithPolicy` succeeds
 - **Error handling**: `logger.warn` — never surfaces to user, never blocks relationship save
+
+### Read Path (critical)
+- **Path**: `src/utils/contactForm/fieldMappers/individualMapper.ts`
+- **Responsibility**: map `contact.individualAddresses` (Firestore) → `formData.individualAddresses` (form state)
+- Without this mapping, the Διευθύνσεις tab falls back to `[homeFromFlat]` and never displays the synced work address
+
+### Positional Invariant `[home, work, ...residue]`
+`contactRenderersTyped.tsx:65-68` treats `effectiveAddresses[0]` as the home card and `.slice(1)` as "extra" addresses rendered by `IndividualAddressesSection`. The sync service **must** preserve this contract:
+- If individual has no prior home entry, build one from `contact.addresses[type='home']` (AddressInfo) or an empty placeholder
+- Work address always lands at index 1
+- Other entries (`vacation`, `other`) preserved as residue
 
 ## Data Flow
 
@@ -45,8 +56,11 @@ useRelationshipForm.handleSubmit
       → getContact(sourceId) + getContact(targetId) in parallel
       → identify individual + company from types
       → read company.addresses[0]
-      → upsert individualAddresses[type='work']
-      → updateDoc(contacts/{individualId}, { individualAddresses })
+      → build [homeEntry, workAddress, ...residue] preserving invariant
+      → ContactsService.updateContact(individualId, { individualAddresses })
+  → onSnapshot fires → allContacts updated → contact prop re-passed
+  → mapIndividualContactToFormData propagates individualAddresses
+  → Διευθύνσεις tab renders home card + work card
 ```
 
 ## Google-level checklist
@@ -66,3 +80,4 @@ useRelationshipForm.handleSubmit
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-04-23 | Giorgio Pagonis | Initial implementation |
+| 2026-04-23 | Giorgio Pagonis | Fix read path: `individualMapper` now propagates `individualAddresses` to `formData`. Fix sync: preserve `[home, work, ...]` invariant. Removed server-only `EntityAuditService` (CDC Cloud Function handles audit). |

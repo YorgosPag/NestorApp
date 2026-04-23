@@ -1,6 +1,6 @@
 import type { Contact, IndividualContact } from '@/types/contacts';
 import { isIndividualContact } from '@/types/contacts';
-import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { ContactFormData, IndividualAddress } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import { getSafeFieldValue, getSafeArrayValue } from '../contactMapper';
@@ -168,6 +168,9 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     emails: contact.emails || [],
     websites: contact.websites || [],
     socialMediaArray: contact.socialMedia || [],
+
+    // Multi-address array (ADR-318): propagate individualAddresses from Firestore
+    individualAddresses: ((contact as unknown as Record<string, unknown>).individualAddresses as IndividualAddress[] | undefined) || [],
 
     // Legacy fields for backward compatibility
     phone: contact.phones?.[0]?.number || '',

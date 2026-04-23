@@ -6,6 +6,7 @@ import {
   OWNERSHIP_RELATIONSHIP_TYPES,
 } from '@/types/contacts/relationships/core/relationship-types';
 import type { RelationshipType, ContactRelationship } from '@/types/contacts/relationships';
+import type { AddressInfo, Contact } from '@/types/contacts';
 import type { IndividualAddress } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -15,6 +16,26 @@ const WORK_ADDRESS_SYNC_TYPES = new Set<RelationshipType>([
   ...EMPLOYMENT_RELATIONSHIP_TYPES,
   ...OWNERSHIP_RELATIONSHIP_TYPES,
 ]);
+
+function createEmptyHome(): IndividualAddress {
+  return { type: 'home', street: '', number: '', postalCode: '', city: '' };
+}
+
+function mapAddressInfoToIndividualAddress(addr: AddressInfo): IndividualAddress {
+  return {
+    type: 'home',
+    street: addr.street ?? '',
+    number: addr.number ?? '',
+    postalCode: addr.postalCode ?? '',
+    city: addr.city ?? '',
+    region: addr.region,
+  };
+}
+
+function buildHomeEntry(indivContact: Contact): IndividualAddress {
+  const homeAddr = indivContact.addresses?.find(a => a.type === 'home');
+  return homeAddr ? mapAddressInfoToIndividualAddress(homeAddr) : createEmptyHome();
+}
 
 /**
  * After an employment/ownership relationship is saved, copies the company's
@@ -63,10 +84,14 @@ export async function syncWorkAddressOnRelationship(
   const indivContact = source.type === 'individual' ? source : target;
   const existing = ((indivContact as unknown as Record<string, unknown>).individualAddresses as IndividualAddress[] | undefined) ?? [];
 
-  const workIdx = existing.findIndex(a => a.type === 'work');
-  const updated: IndividualAddress[] = workIdx >= 0
-    ? existing.map((a, i) => (i === workIdx ? workAddress : a))
-    : [...existing, workAddress];
+  // Preserve [home, work, ...residue] invariant (ADR-318)
+  const homeEntry = existing[0]?.type === 'home' ? existing[0] : buildHomeEntry(indivContact);
+  const residue = existing.filter((a, i) => {
+    if (i === 0 && a.type === 'home') return false;
+    if (a.type === 'work') return false;
+    return true;
+  });
+  const updated: IndividualAddress[] = [homeEntry, workAddress, ...residue];
 
   await ContactsService.updateContact(
     individualId,
