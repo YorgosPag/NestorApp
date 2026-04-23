@@ -94,6 +94,14 @@ export interface ResolveBrandingParams {
   propertyData: Record<string, unknown>;
   /** Tenant id (used as last-resort fallback). */
   companyId: string;
+  /**
+   * Which source to resolve branding from:
+   * - `'auto'` (default): Property → Project → linked Contact, then tenant fallback.
+   * - `'tenant'`: skip the contact chain and resolve directly from the tenant
+   *   company. Used by project showcases where the brand must represent the
+   *   developer/tenant, not the project's linked client contact.
+   */
+  brandingSource?: 'auto' | 'tenant';
 }
 
 interface PrimaryCarrier {
@@ -330,11 +338,13 @@ function extractTenantBranding(
 export async function resolveShowcaseCompanyBranding(
   params: ResolveBrandingParams,
 ): Promise<ShowcaseCompanyBranding> {
-  const { adminDb, propertyData, companyId } = params;
+  const { adminDb, propertyData, companyId, brandingSource = 'auto' } = params;
 
   // ── Primary path: Property → Project → Contact ───────────────────────────
+  // Skipped when `brandingSource === 'tenant'` — project showcase must always
+  // use the tenant/developer brand, not the linked client contact.
   const projectId = propertyData.projectId as string | undefined;
-  if (projectId) {
+  if (brandingSource === 'auto' && projectId) {
     const projectSnap = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
     if (projectSnap.exists) {
       const project = projectSnap.data() ?? {};

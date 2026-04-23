@@ -23,6 +23,7 @@ import type { ProjectStatus } from '@/constants/project-statuses';
 import { ProjectDetailsHeader } from './ProjectDetailsHeader';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
+import { nowISO } from '@/lib/date-local';
 import { PROJECT_COMPONENT_MAPPING } from '@/components/generic/mappings/projectMappings';
 import { getSortedProjectTabs } from '@/config/project-tabs-config';
 import { DetailsContainer } from '@/core/containers';
@@ -171,8 +172,17 @@ export function ProjectDetails({
   > => {
     const res = await fetch(`/api/projects/${displayProject?.id}/showcase/pdf`, { method: 'POST' });
     if (!res.ok) throw new Error('PDF generation failed');
-    const body = (await res.json()) as { data: { pdfStoragePath: string; pdfRegeneratedAt: string } };
-    return { showcaseMeta: body.data };
+    const body = (await res.json()) as {
+      data?: { pdfStoragePath?: string | null; pdfRegeneratedAt?: string | null };
+    };
+    const pdfStoragePath = body.data?.pdfStoragePath?.trim();
+    if (!pdfStoragePath) throw new Error('PDF generation returned no storage path');
+    return {
+      showcaseMeta: {
+        pdfStoragePath,
+        pdfRegeneratedAt: body.data?.pdfRegeneratedAt ?? nowISO(),
+      },
+    };
   }, [displayProject?.id]);
 
   return (

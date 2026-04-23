@@ -81,6 +81,7 @@ export async function buildProjectShowcaseSnapshot(
     adminDb,
     propertyData: { projectId },
     companyId,
+    brandingSource: 'tenant',
   });
 
   return { project, company };
