@@ -37,6 +37,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SharedContactPageContent } from '@/components/shared/pages/SharedContactPageContent';
 import { SharedShowcasePageContent } from '@/components/shared/pages/SharedShowcasePageContent';
 import { SharedProjectShowcasePageContent } from '@/components/shared/pages/SharedProjectShowcasePageContent';
+import { SharedBuildingShowcasePageContent } from '@/components/shared/pages/SharedBuildingShowcasePageContent';
 import { formatFileSize } from '@/utils/file-validation';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
 import { getFileCategory, getFileCategoryI18nKey } from '@/lib/file-types/preview-registry';
@@ -99,6 +100,11 @@ export function SharedFilePageContent() {
   // ADR-316: Project Showcase public view.
   if (state === 'project_showcase') {
     return <SharedProjectShowcasePageContent token={token} />;
+  }
+
+  // ADR-320: Building Showcase public view.
+  if (state === 'building_showcase') {
+    return <SharedBuildingShowcasePageContent token={token} />;
   }
 
   return (

@@ -43,7 +43,8 @@ export type PageState =
   | 'expired'
   | 'contact'
   | 'showcase'
-  | 'project_showcase';
+  | 'project_showcase'
+  | 'building_showcase';
 
 export interface SharedFilePageState {
   token: string;
@@ -141,6 +142,11 @@ export function useSharedFilePageState(): SharedFilePageState {
             setState('project_showcase');
             return;
           }
+          if (u.entityType === 'building_showcase') {
+            await UnifiedSharingService.incrementAccessCount(u.id);
+            setState('building_showcase');
+            return;
+          }
           if (u.entityType === 'contact') {
             setContactExpiresAt(u.expiresAt);
             // Resolve contact via registered resolver (respects includedFields)
@@ -230,6 +236,12 @@ export function useSharedFilePageState(): SharedFilePageState {
         await UnifiedSharingService.incrementAccessCount(u.id);
         setPendingUnifiedShare(null);
         setState('project_showcase');
+        return;
+      }
+      if (u.entityType === 'building_showcase') {
+        await UnifiedSharingService.incrementAccessCount(u.id);
+        setPendingUnifiedShare(null);
+        setState('building_showcase');
         return;
       }
       if (u.entityType === 'contact') {
