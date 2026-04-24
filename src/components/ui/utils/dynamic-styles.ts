@@ -41,13 +41,5 @@ export {
 
 export {
   useDynamicBackgroundClass,
-  useDynamicBackgroundImageClass,
   useDynamicBorderClass,
-  useDynamicElementClasses,
-  useDynamicHeightClass,
-  useDynamicOpacityClass,
-  useDynamicTextClass,
-  useDynamicTopClass,
-  useDynamicTransformClass,
-  useDynamicWidthClass,
 } from './dynamic-styles-hooks';

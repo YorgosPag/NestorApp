@@ -101,16 +101,6 @@ export const SEMANTIC_TYPOGRAPHY_TOKENS = {
   },
 } as const;
 
-/**
- * Typography token bridge για enterprise systems
- *
- * @param semanticSize - Semantic typography size (h1, h2, h3, h4, body, caption)
- * @returns Typography token information
- */
-export function getSemanticTypographyToken(semanticSize: keyof typeof SEMANTIC_TYPOGRAPHY_TOKENS) {
-  return SEMANTIC_TYPOGRAPHY_TOKENS[semanticSize];
-}
-
 // ============================================================================
 // 🎯 HOOK INTERFACE - TYPE-SAFE RETURNS
 // ============================================================================
@@ -324,77 +314,4 @@ export function useTypography(): UseTypographyReturn {
   } as const), [displayToken, h4Token, captionToken, bodyToken]); // Dependencies: semantic tokens
 }
 
-// ============================================================================
-// 🎯 SPECIALIZED HOOKS - COMMON USE CASES
-// ============================================================================
-
-/**
- * Hook για heading patterns - Lightweight
- * Χρήση: Όταν χρειάζεσαι μόνο headings
- */
-export function useHeadings() {
-  const typography = useTypography();
-
-  return useMemo(() => typography.heading, [typography.heading]);
-}
-
-/**
- * Hook για body text patterns - Lightweight
- * Χρήση: Όταν χρειάζεσαι μόνο body text
- */
-export function useBodyText() {
-  const typography = useTypography();
-
-  return useMemo(() => typography.body, [typography.body]);
-}
-
-/**
- * Hook για label patterns - Lightweight
- * Χρήση: Για form labels και metadata
- */
-export function useLabels() {
-  const typography = useTypography();
-
-  return useMemo(() => typography.label, [typography.label]);
-}
-
-/**
- * Hook για special purpose typography - Lightweight
- * Χρήση: Για specific use cases (prices, codes, κτλ.)
- */
-export function useSpecialTypography() {
-  const typography = useTypography();
-
-  return useMemo(() => typography.special, [typography.special]);
-}
-
-/**
- * Hook για card typography - Lightweight
- * Χρήση: Για ListCard και domain cards (Enterprise Theme-Aware)
- */
-export function useCardTypography() {
-  const typography = useTypography();
-
-  return useMemo(() => typography.card, [typography.card]);
-}
-
-// ============================================================================
-// 🔗 CONVENIENCE EXPORTS - EASY IMPORTS
-// ============================================================================
-
-/**
- * Default export για main hook
- */
 export default useTypography;
-
-/**
- * Quick access pattern
- */
-export {
-  useTypography as useText,
-  useHeadings as useHeadingStyles,
-  useBodyText as useBodyStyles,
-  useLabels as useLabelStyles,
-  useSpecialTypography as useSpecialText,
-  useCardTypography as useCardStyles,
-};

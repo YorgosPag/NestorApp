@@ -63,7 +63,3 @@ export function useSemanticColors(): UseSemanticColorsReturn {
   } as const), []);
 }
 
-/**
- * Default export for convenience
- */
-export default useSemanticColors;
