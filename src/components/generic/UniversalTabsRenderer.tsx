@@ -138,8 +138,6 @@ export interface PropertyTabComponentProps extends TabComponentProps, PropertyTa
   onUpdateProperty?: (propertyId: string, updates: Partial<Property>) => Promise<void> | void;
 }
 
-export type PropertyComponentMapping = Record<string, React.ComponentType<PropertyTabComponentProps>>;
-
 export interface BuildingTabAdditionalData {
   buildingFloorplan: BuildingFloorplanData | null;
   storageFloorplan: BuildingFloorplanData | null;
@@ -163,8 +161,6 @@ export interface BuildingTabComponentProps extends TabComponentProps, Partial<Bu
   title?: string;
 }
 
-export type BuildingComponentMapping = Record<string, React.ComponentType<BuildingTabComponentProps>>;
-
 export interface StorageTabGlobalProps {
   isEditing?: boolean;
   onEditingChange?: (editing: boolean) => void;
@@ -179,8 +175,6 @@ export interface StorageTabComponentProps extends TabComponentProps, Partial<Sto
   title?: string;
 }
 
-export type StorageComponentMapping = Record<string, React.ComponentType<StorageTabComponentProps>>;
-
 export interface ParkingTabGlobalProps {
   isEditing?: boolean;
   onEditingChange?: (editing: boolean) => void;
@@ -194,8 +188,6 @@ export interface ParkingTabComponentProps extends TabComponentProps, Partial<Par
   parking?: ParkingSpot;
   title?: string;
 }
-
-export type ParkingComponentMapping = Record<string, React.ComponentType<ParkingTabComponentProps>>;
 
 export interface UniversalTabsRendererProps<
   TData = unknown,

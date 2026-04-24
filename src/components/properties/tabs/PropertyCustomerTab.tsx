@@ -324,4 +324,3 @@ export function PropertyCustomerTab({
 
 // Backward compatibility
 export { PropertyCustomerTab as UnitCustomerTab };
-export type { PropertyCustomerTabProps as UnitCustomerTabProps };

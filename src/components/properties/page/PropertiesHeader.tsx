@@ -124,5 +124,3 @@ export function PropertiesHeader({
       />
   );
 }
-
-export type { PropertiesViewMode as UnitsViewMode };

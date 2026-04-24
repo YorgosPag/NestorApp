@@ -302,30 +302,6 @@ export interface StampsMonthSummary {
   recordsWithIssues: number;
 }
 
-/** APD period for tracking submission deadlines */
-export interface ApdPeriod {
-  /** Project ID */
-  projectId: string;
-  /** Month (1-12) */
-  month: number;
-  /** Year */
-  year: number;
-  /** APD submission status */
-  status: ApdStatus;
-  /** Submission date (ISO string) */
-  submissionDate: string | null;
-  /** ΕΦΚΑ reference number */
-  referenceNumber: string | null;
-  /** Mandatory submission deadline (ISO date) */
-  deadline: string;
-  /** Total contribution amount for this period (€) */
-  totalContribution: number;
-  /** Number of workers in this period */
-  workerCount: number;
-  /** Notes */
-  notes: string | null;
-}
-
 // ============================================================================
 // HELPER TYPES
 // ============================================================================

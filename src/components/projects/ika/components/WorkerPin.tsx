@@ -24,9 +24,6 @@ export const WORKER_STATUS_COLORS = {
   outside: '#ea580c',     // orange-600
   checked_out: '#dc2626', // red-600
 } as const;
-
-export type WorkerMarkerStatus = keyof typeof WORKER_STATUS_COLORS;
-
 // =============================================================================
 // COMPONENT
 // =============================================================================

@@ -64,14 +64,6 @@ export interface ChangeRoleResponse {
   };
 }
 
-export interface ChangeStatusResponse {
-  success: true;
-  data: {
-    previousStatus: 'active' | 'suspended';
-    newStatus: 'active' | 'suspended';
-  };
-}
-
 export interface UpdatePermissionSetsResponse {
   success: true;
   data: {
@@ -207,15 +199,6 @@ export interface ProjectMembersResponse {
     members: ProjectMemberEntry[];
     total: number;
   };
-}
-
-export interface ProjectMemberAction {
-  action: 'assign' | 'update' | 'remove';
-  projectId: string;
-  uid: string;
-  roleId?: string;
-  permissionSetIds?: string[];
-  reason: string;
 }
 
 // =============================================================================

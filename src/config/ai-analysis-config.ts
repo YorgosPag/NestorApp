@@ -13,9 +13,6 @@ export const AI_PROVIDER_IDS = {
   MOCK: 'mock',
   OPENAI: 'openai',
 } as const;
-
-export type AIProviderId = typeof AI_PROVIDER_IDS[keyof typeof AI_PROVIDER_IDS];
-
 export const AI_ANALYSIS_DEFAULTS = {
   PROVIDER: process.env.AI_PROVIDER,
   FALLBACK_CONFIDENCE: 0.5,
@@ -60,9 +57,6 @@ export const AI_COST_CONFIG = {
     PROPERTY_DESCRIPTION_TEMPERATURE: 0.7,
   },
 } as const;
-
-export type AiModelId = keyof typeof AI_COST_CONFIG.PRICING;
-
 export const AI_ANALYSIS_PROMPTS = {
   /** @deprecated Use MULTI_INTENT_SYSTEM for new pipeline. Kept for backward compatibility. */
   MESSAGE_INTENT_SYSTEM: `You are an AI classifier for a Greek real estate & construction management company (κτηματομεσιτικό/κατασκευαστικό γραφείο). Analyze incoming messages and return JSON matching the schema.

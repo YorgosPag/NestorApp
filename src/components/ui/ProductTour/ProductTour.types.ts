@@ -388,15 +388,3 @@ export interface TargetDimensions {
   right: number;
   bottom: number;
 }
-
-/**
- * CSS custom properties for tour styling
- * All values come from design-tokens.json
- */
-export interface TourCSSVariables {
-  '--tour-z-index': string;
-  '--tour-backdrop-color': string;
-  '--tour-spotlight-radius': string;
-  '--tour-tooltip-bg': string;
-  '--tour-tooltip-shadow': string;
-}

@@ -127,12 +127,6 @@ export const ADDRESS_MAP_CONFIG = {
 // =============================================================================
 // TYPE EXPORTS
 // =============================================================================
-
-/**
- * Type-safe config access
- */
-export type AddressMapConfig = typeof ADDRESS_MAP_CONFIG;
-
 /**
  * Height preset keys for AddressMap
  */

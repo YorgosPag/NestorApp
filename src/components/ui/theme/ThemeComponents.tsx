@@ -156,8 +156,6 @@ export function getThemeVariants() {
 
 // 🏗️ THEME UTILITIES
 export type ThemeVariant = keyof ReturnType<typeof getThemeVariants>;
-export type ContainerType = keyof ReturnType<typeof getThemeSystem>['containers'];
-export type TabTheme = keyof ReturnType<typeof getThemeSystem>['tabs'];
 
 /**
  * Get complete theme configuration for a specific variant
