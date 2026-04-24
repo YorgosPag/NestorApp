@@ -149,13 +149,5 @@ export interface UpdateSavedReportInput {
   config?: SavedReportConfig;
 }
 
-/** List saved reports filter */
-export interface ListSavedReportsFilter {
-  visibility?: SavedReportVisibility;
-  category?: SavedReportCategory;
-  favoritesOnly?: boolean;
-  searchQuery?: string;
-}
-
 /** Tabs for the saved reports list UI */
 export type SavedReportsTab = 'all' | 'favorites' | 'recent' | 'shared';
