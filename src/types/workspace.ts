@@ -114,26 +114,6 @@ export interface WorkspaceSettings {
 // ============================================================================
 // FIRESTORE DOCUMENT STRUCTURE
 // ============================================================================
-
-/**
- * Workspace as stored in Firestore
- * (with Timestamp instead of string dates)
- */
-export interface WorkspaceFirestoreDoc {
-  id: string;
-  type: WorkspaceType;
-  displayName: string;
-  description?: string;
-  companyId?: string;
-  status: WorkspaceStatus;
-  settings?: WorkspaceSettings;
-  createdAt: Timestamp;
-  createdBy: string;
-  updatedAt?: Timestamp;
-  updatedBy?: string;
-  metadata?: Record<string, unknown>;
-}
-
 // ============================================================================
 // CREATE/UPDATE INPUT TYPES
 // ============================================================================
@@ -201,55 +181,6 @@ export interface ActiveWorkspaceContext {
  * Workspace member role
  */
 export type WorkspaceMemberRole = 'owner' | 'admin' | 'member' | 'viewer';
-
-/**
- * Workspace membership
- * (Links a user to a workspace with a specific role)
- */
-export interface WorkspaceMember {
-  /** Member ID */
-  id: string;
-
-  /** Workspace ID */
-  workspaceId: string;
-
-  /** User ID */
-  userId: string;
-
-  /** User email (for display) */
-  userEmail: string;
-
-  /** User display name (for display) */
-  userDisplayName?: string;
-
-  /** Member role */
-  role: WorkspaceMemberRole;
-
-  /** Added timestamp */
-  addedAt: string | Timestamp;
-
-  /** Added by user ID */
-  addedBy: string;
-
-  /** Last active timestamp */
-  lastActiveAt?: string | Timestamp;
-}
-
-/**
- * Workspace membership as stored in Firestore
- */
-export interface WorkspaceMemberFirestoreDoc {
-  id: string;
-  workspaceId: string;
-  userId: string;
-  userEmail: string;
-  userDisplayName?: string;
-  role: WorkspaceMemberRole;
-  addedAt: Timestamp;
-  addedBy: string;
-  lastActiveAt?: Timestamp;
-}
-
 // ============================================================================
 // QUERY HELPERS
 // ============================================================================
