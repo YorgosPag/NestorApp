@@ -19,16 +19,6 @@ const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 // Mailgun fallback adapter
 const mailgunAdapter = MAILGUN_API_KEY ? new EmailAdapter() : null;
 
-// Legacy interface for backward compatibility
-interface EmailPayload {
-    to: string;
-    toName: string;
-    subject: string;
-    message: string;
-    leadId?: string;
-    templateType?: string;
-}
-
 // New enterprise interface
 export interface EmailRequest {
   recipients: string[];
@@ -56,11 +46,6 @@ export interface EmailResponse {
   note?: string;
 }
 
-// Legacy sample send for existing functionality
-const sampleSend = async (payload: EmailPayload) => {
-    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
-    return { success: true };
-};
 
 /**
  * Race a provider call against a 20s timeout so a hanging SMTP/API server
@@ -279,49 +264,3 @@ export class EmailService {
   }
 }
 
-// Legacy email service for backward compatibility
-export const emailService = {
-    sendEmail: async (payload: EmailPayload) => {
-        return sampleSend(payload);
-    },
-
-    sendWelcomeEmail: async (lead: { fullName: string, email: string }) => {
-        return sampleSend({
-            to: lead.email,
-            toName: lead.fullName,
-            subject: `Καλώς ήρθατε ${lead.fullName}!`,
-            message: "This is a sample welcome email.",
-            templateType: 'welcome'
-        });
-    },
-
-    sendFollowUpEmail: async (lead: { fullName: string, email: string }, message: string) => {
-        return sampleSend({
-            to: lead.email,
-            toName: lead.fullName,
-            subject: "Follow-up",
-            message: message,
-            templateType: 'followup'
-        });
-    },
-
-    sendAppointmentEmail: async (lead: { fullName: string, email: string }, customData: Record<string, unknown>) => {
-        return sampleSend({
-            to: lead.email,
-            toName: lead.fullName,
-            subject: "Appointment Confirmation",
-            message: `Sample appointment details: ${JSON.stringify(customData)}`,
-            templateType: 'appointment'
-        });
-    },
-
-    sendPropertyProposal: async (lead: { fullName: string, email: string }, customData: Record<string, unknown>) => {
-        return sampleSend({
-            to: lead.email,
-            toName: lead.fullName,
-            subject: "Property Proposal",
-            message: `Sample property proposal: ${JSON.stringify(customData)}`,
-            templateType: 'proposal'
-        });
-    },
-};

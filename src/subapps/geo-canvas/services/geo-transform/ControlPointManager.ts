@@ -405,9 +405,4 @@ export class ControlPointManager {
 // SINGLETON INSTANCE
 // ============================================================================
 
-/**
- * Global control point manager instance
- */
-export const controlPointManager = new ControlPointManager();
-
 export default ControlPointManager;

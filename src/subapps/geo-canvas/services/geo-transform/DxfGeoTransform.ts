@@ -460,7 +460,4 @@ export class DxfGeoTransformService {
   }
 }
 
-/** Global transformation service instance */
-export const dxfGeoTransformService = new DxfGeoTransformService();
-
 export default DxfGeoTransformService;

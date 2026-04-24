@@ -234,77 +234,6 @@ const EXTRACTED_ENTITIES_SCHEMA = {
   },
 };
 
-/**
- * Admin-specific extractedEntities sub-schema (base + admin fields)
- * @enterprise Used only for admin commands — extends base with 9 admin-specific fields
- * @see ADR-145 (Super Admin AI Assistant)
- */
-const EXTRACTED_ADMIN_ENTITIES_SCHEMA = {
-  type: 'object' as const,
-  required: [
-    // Base fields (same as EXTRACTED_ENTITIES_SCHEMA)
-    'companyId', 'projectId', 'buildingId', 'propertyId', 'contactId',
-    // Admin-specific fields
-    'contactName', 'contactType', 'projectName', 'searchCriteria',
-    'recipientName', 'emailContent', 'email', 'phone',
-    'fieldName', 'fieldValue',
-  ],
-  additionalProperties: false as const,
-  properties: {
-    // ── Base fields ──
-    companyId: { type: ['string', 'null'] as const },
-    projectId: { type: ['string', 'null'] as const },
-    buildingId: { type: ['string', 'null'] as const },
-    propertyId: { type: ['string', 'null'] as const },
-    contactId: { type: ['string', 'null'] as const },
-    // ── Admin-specific fields ──
-    contactName: { type: ['string', 'null'] as const },
-    contactType: { type: ['string', 'null'] as const },
-    projectName: { type: ['string', 'null'] as const },
-    searchCriteria: { type: ['string', 'null'] as const },
-    recipientName: { type: ['string', 'null'] as const },
-    emailContent: { type: ['string', 'null'] as const },
-    email: { type: ['string', 'null'] as const },
-    phone: { type: ['string', 'null'] as const },
-    fieldName: { type: ['string', 'null'] as const },
-    fieldValue: { type: ['string', 'null'] as const },
-  },
-};
-
-/** Message intent analysis — OpenAI strict-mode compatible */
-export const AI_MESSAGE_INTENT_SCHEMA = {
-  name: 'message_intent_result',
-  description: 'AI analysis: classify message intent for a Greek real estate company.',
-  strict: true,
-  schema: {
-    type: 'object',
-    required: [
-      'kind',
-      'aiModel',
-      'analysisTimestamp',
-      'confidence',
-      'needsTriage',
-      'extractedEntities',
-      'intentType',
-      'rawMessage',
-      'eventDate',
-      'dueDate',
-    ],
-    additionalProperties: false,
-    properties: {
-      kind: { type: 'string', enum: ['message_intent'] },
-      aiModel: { type: 'string' },
-      analysisTimestamp: { type: 'string' },
-      confidence: { type: 'number' },
-      needsTriage: { type: 'boolean' },
-      extractedEntities: EXTRACTED_ENTITIES_SCHEMA,
-      intentType: { type: 'string', enum: intentOptions },
-      rawMessage: { type: 'string' },
-      eventDate: { type: ['string', 'null'] },
-      dueDate: { type: ['string', 'null'] },
-    },
-  },
-} as const satisfies Record<string, unknown>;
 
 /**
  * Sub-schema for a single detected intent (primaryIntent / secondaryIntents items)
@@ -365,49 +294,6 @@ export const AI_MULTI_INTENT_SCHEMA = {
   },
 } as const satisfies Record<string, unknown>;
 
-/**
- * Admin command analysis — uses expanded entities schema for admin-specific fields
- * @enterprise OpenAI strict-mode compatible — separate schema to avoid silent field stripping
- * @see ADR-145 (Super Admin AI Assistant)
- */
-export const AI_ADMIN_COMMAND_SCHEMA = {
-  name: 'admin_command_result',
-  description: 'AI analysis: classify admin command intents for a Greek real estate company owner.',
-  strict: true,
-  schema: {
-    type: 'object',
-    required: [
-      'kind',
-      'aiModel',
-      'analysisTimestamp',
-      'confidence',
-      'needsTriage',
-      'extractedEntities',
-      'rawMessage',
-      'eventDate',
-      'dueDate',
-      'primaryIntent',
-      'secondaryIntents',
-    ],
-    additionalProperties: false,
-    properties: {
-      kind: { type: 'string', enum: ['multi_intent'] },
-      aiModel: { type: 'string' },
-      analysisTimestamp: { type: 'string' },
-      confidence: { type: 'number' },
-      needsTriage: { type: 'boolean' },
-      extractedEntities: EXTRACTED_ADMIN_ENTITIES_SCHEMA,
-      rawMessage: { type: 'string' },
-      eventDate: { type: ['string', 'null'] },
-      dueDate: { type: ['string', 'null'] },
-      primaryIntent: DETECTED_INTENT_SUB_SCHEMA,
-      secondaryIntents: {
-        type: 'array',
-        items: DETECTED_INTENT_SUB_SCHEMA,
-      },
-    },
-  },
-} as const satisfies Record<string, unknown>;
 
 /** Document classification — OpenAI strict-mode compatible */
 export const AI_DOCUMENT_CLASSIFY_SCHEMA = {

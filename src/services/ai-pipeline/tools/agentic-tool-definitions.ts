@@ -82,10 +82,6 @@ export type ActivityOperation = typeof ACTIVITY_OPERATIONS[number];
 export const PO_TOOL_OPERATIONS = ['create', 'list', 'get_status'] as const;
 export type POToolOperation = typeof PO_TOOL_OPERATIONS[number];
 
-/** Valid PO status values for filtering */
-export const PO_STATUS_FILTER_VALUES = [
-  'draft', 'approved', 'ordered', 'partially_delivered', 'delivered', 'closed', 'cancelled',
-] as const;
 
 // ============================================================================
 // AGENTIC TOOL DEFINITIONS (Chat Completions API format)

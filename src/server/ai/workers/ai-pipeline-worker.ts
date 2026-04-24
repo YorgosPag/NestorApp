@@ -399,14 +399,6 @@ export class AIPipelineWorker {
 }
 
 // ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
-
-/**
- * Singleton worker instance for long-running processes
- */
-export const aiPipelineWorker = new AIPipelineWorker();
-
 // ============================================================================
 // SERVERLESS HELPER FUNCTIONS
 // ============================================================================

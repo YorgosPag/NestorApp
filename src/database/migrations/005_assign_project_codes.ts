@@ -301,52 +301,6 @@ export async function executeMigration(
   };
 }
 
-/**
- * Rollback migration - remove assigned codes
- */
-export async function rollbackMigration(
-  rollbackData: MigrationLogEntry[]
-): Promise<MigrationResult> {
-  const startTime = Date.now();
-  logger.info('🔄 Starting ROLLBACK for project code migration...\n');
-
-  const database = getFirestore();
-  const errors: string[] = [];
-  let affectedRecords = 0;
-
-  for (const entry of rollbackData) {
-    try {
-      await database
-        .collection(COLLECTIONS.PROJECTS)
-        .doc(entry.projectId)
-        .update({
-          projectCode: entry.oldCode, // Will be null for newly assigned
-          updatedAt: new Date()
-        });
-
-      logger.info(`  ✓ Reverted: ${entry.projectName} (${entry.newCode} → ${entry.oldCode || 'null'})`);
-      affectedRecords++;
-    } catch (error) {
-      const errorMessage = `Failed to rollback project ${entry.projectId}: ${error}`;
-      errors.push(errorMessage);
-      logger.error(`  ✗ ${entry.projectName} - ERROR: ${error}`);
-    }
-  }
-
-  logger.info('\n📊 ROLLBACK COMPLETE:');
-  logger.info(`  Projects reverted: ${affectedRecords}`);
-  logger.info(`  Errors: ${errors.length}`);
-
-  return {
-    success: errors.length === 0,
-    migrationId: `${MIGRATION_ID}_rollback`,
-    executedAt: new Date(),
-    affectedRecords,
-    errors: errors.length > 0 ? errors : undefined,
-    executionTimeMs: Date.now() - startTime
-  };
-}
-
 // ============================================================================
 // MIGRATION DEFINITION
 // ============================================================================

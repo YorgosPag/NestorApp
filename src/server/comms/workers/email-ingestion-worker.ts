@@ -297,14 +297,6 @@ export class EmailIngestionWorker {
 }
 
 // ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
-
-/**
- * Singleton worker instance for long-running processes
- */
-export const emailIngestionWorker = new EmailIngestionWorker();
-
 // ============================================================================
 // SERVERLESS HELPER FUNCTIONS
 // ============================================================================
