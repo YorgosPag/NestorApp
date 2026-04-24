@@ -4,7 +4,6 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PersonaType } from '@/types/contacts/personas';
-import { createDefaultPersonaData } from '@/types/contacts/personas';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useContactNotifications } from '@/hooks/notifications/useContactNotifications';
@@ -28,6 +27,7 @@ import {
   OptimisticPersonaState,
   SUBCOLLECTION_TABS,
 } from './contact-details-helpers';
+import { usePersonaToggle } from './usePersonaToggle';
 const logger = createModuleLogger('ContactDetails');
 interface ValidationResult {
   isValid: boolean;
@@ -159,7 +159,6 @@ export function useContactDetailsController({
   }, [contact, editedData, enhancedFormData]);
 
   const {
-    runExistingContactFormUpdate,
     runExistingContactPartialFormUpdate,
     guardDialogs: contactGuardDialogs,
   } = useGuardedContactMutation({
@@ -201,8 +200,8 @@ export function useContactDetailsController({
       return;
     }
 
-    const mappingResult = mapContactToFormData(contact);
-    setEditedData(mappingResult.formData);
+    // ADR-323: editedData = dirty diff. Display merges with enhancedFormData.
+    setEditedData({});
     setValidationErrors({});
     setIsEditing(true);
   }, [contact]);
@@ -309,11 +308,14 @@ export function useContactDetailsController({
         onContactUpdated?.();
       };
 
-      const updateCompleted = await runExistingContactFormUpdate(
+      // ADR-323: guards see merged; write sends dirty diff only.
+      const dirtyOnly = editedData as Partial<ContactFormData>;
+      const updateCompleted = await runExistingContactPartialFormUpdate(
         mergedFormData,
+        dirtyOnly,
         'DETAILS SAVE',
         async () => {
-          await ContactsService.updateExistingContactFromForm(contact, mergedFormData);
+          await ContactsService.updateExistingContactFromForm(contact, dirtyOnly);
           await afterUpdate();
         },
       );
@@ -329,7 +331,7 @@ export function useContactDetailsController({
         contactNotifications.updateError();
       }
     }
-  }, [contact, editedData, focusField, getEditedFormData, getValidationResult, contactNotifications, onContactUpdated, runExistingContactFormUpdate]);
+  }, [contact, editedData, focusField, getEditedFormData, getValidationResult, contactNotifications, onContactUpdated, runExistingContactPartialFormUpdate]);
 
   // 🏢 ENTERPRISE: Deferred save — auto-submit when pending uploads complete (Google-style)
   useEffect(() => {
@@ -385,82 +387,16 @@ export function useContactDetailsController({
     handleLogoChange,
   } = useContactPhotoHandlers(setEditedData);
 
-  const handlePersonaToggle = useCallback(async (personaType: PersonaType) => {
-    if (!contact?.id) {
-      return;
-    }
-    const contactId = contact.id;
-
-    const currentFormData = isEditing ? editedData : enhancedFormData;
-    const currentActive = currentFormData.activePersonas ?? [];
-    const isActive = currentActive.includes(personaType);
-
-    let updatedActive: PersonaType[];
-    let updatedPersonaData = currentFormData.personaData ?? {};
-
-    if (isActive) {
-      updatedActive = currentActive.filter((activePersona) => activePersona !== personaType);
-    } else {
-      updatedActive = [...currentActive, personaType];
-      if (!updatedPersonaData[personaType]) {
-        const defaultData = createDefaultPersonaData(personaType);
-        const {
-          personaType: _personaType,
-          status: _status,
-          activatedAt: _activatedAt,
-          deactivatedAt: _deactivatedAt,
-          notes: _notes,
-          ...defaultFields
-        } = defaultData;
-        updatedPersonaData = {
-          ...updatedPersonaData,
-          [personaType]: defaultFields as Record<string, string | number | null>,
-        };
-      }
-    }
-
-    if (isEditing) {
-      setEditedData((previous) => ({
-        ...previous,
-        activePersonas: updatedActive,
-        personaData: updatedPersonaData,
-      }));
-      return;
-    }
-
-    setOptimisticPersonas({
-      activePersonas: updatedActive,
-      personaData: updatedPersonaData as Record<string, Record<string, string | number | null>>,
-    });
-
-    try {
-      const updatedFormData = {
-        ...enhancedFormData,
-        activePersonas: updatedActive,
-        personaData: updatedPersonaData,
-      } as ContactFormData;
-
-      const updateCompleted = await runExistingContactPartialFormUpdate(
-        updatedFormData,
-        {
-          activePersonas: updatedActive,
-          personaData: updatedPersonaData,
-        } as Partial<ContactFormData>,
-        'PERSONA TOGGLE',
-      );
-
-      if (!updateCompleted) {
-        setOptimisticPersonas(null);
-        return;
-      }
-
-      logger.info('Persona toggled and saved', { personaType, isActive: !isActive });
-      onContactUpdated?.();
-    } catch (error) {
-      logger.error('Failed to toggle persona', { error, personaType });
-      setOptimisticPersonas(null);
-    }
-  }, [contact, editedData, enhancedFormData, isEditing, onContactUpdated, runExistingContactPartialFormUpdate]);
+  const { handlePersonaToggle } = usePersonaToggle({
+    contact,
+    isEditing,
+    enhancedFormData,
+    editedData,
+    setEditedData,
+    setOptimisticPersonas,
+    runExistingContactPartialFormUpdate,
+    onContactUpdated,
+  });
 
   const handlePhotoClick = useCallback((index: number) => {
     if (contact) {
