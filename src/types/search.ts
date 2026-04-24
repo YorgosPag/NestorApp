@@ -196,20 +196,6 @@ export interface SearchDocumentInput {
 // =============================================================================
 
 /**
- * Search API query parameters.
- */
-export interface SearchQueryParams {
-  /** Search query string */
-  q: string;
-
-  /** Entity types to filter (comma-separated) */
-  types?: string;
-
-  /** Results per type (default: 10, max: 50) */
-  limit?: number;
-}
-
-/**
  * Search result stat item for display in cards.
  * Matches the StatItem interface from design system.
  */
