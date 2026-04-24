@@ -106,27 +106,6 @@ export interface ValidationResult {
  *
  * @param levels — candidate PropertyLevel array
  */
-export function validateMultiLevelFloors(levels: PropertyLevel[]): ValidationResult {
-  if (levels.length < 2) {
-    return { valid: false, error: 'Multi-level units require at least 2 floors' };
-  }
-
-  const primaryCount = levels.filter((l) => l.isPrimary).length;
-  if (primaryCount === 0) {
-    return { valid: false, error: 'Exactly one floor must be marked as primary' };
-  }
-  if (primaryCount > 1) {
-    return { valid: false, error: 'Only one floor can be primary' };
-  }
-
-  // Check for duplicate floorIds
-  const ids = new Set(levels.map((l) => l.floorId));
-  if (ids.size !== levels.length) {
-    return { valid: false, error: 'Duplicate floors are not allowed' };
-  }
-
-  return { valid: true };
-}
 
 // =============================================================================
 // AGGREGATE LEVEL DATA (ADR-236 Phase 2)

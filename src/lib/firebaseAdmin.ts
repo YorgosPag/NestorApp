@@ -16,7 +16,7 @@
  */
 
 import { getErrorMessage } from '@/lib/error-utils';
-import { FieldValue, Timestamp, FieldPath, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getStorage, type Storage } from 'firebase-admin/storage';
@@ -227,29 +227,10 @@ export async function safeFirestoreOperation<T>(
 // LEGACY COMPAT EXPORTS
 // ============================================================================
 
-/**
- * @deprecated Use `getAdminDiagnostics()` instead
- */
-export function getAdminInitializationStatus(): { initialized: boolean; environment: ReturnType<typeof getCurrentRuntimeEnvironment>; error?: string; timestamp: string } {
-  const diag = getAdminDiagnostics();
-  return {
-    initialized: diag.initialized,
-    environment: diag.environment,
-    error: diag.error ?? undefined,
-    timestamp: diag.timestamp,
-  };
-}
-
-/**
- * @deprecated Use `getAdminFirestore()` directly — it throws if not initialized
- */
-export function ensureAdminInitialized(): void {
-  ensureInitialized();
-}
 
 // ============================================================================
 // RE-EXPORTS (Convenience — avoids direct firebase-admin/firestore imports)
 // ============================================================================
 
-export { FieldValue, Timestamp, FieldPath };
+export { FieldValue, Timestamp };
 export type { Firestore, Auth, Storage };

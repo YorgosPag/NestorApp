@@ -94,11 +94,6 @@ export function isStandaloneUnitType(type: unknown): type is StandaloneUnitType 
 // 3. IN-BUILDING SUBSET (Family A) — derived from PROPERTY_TYPES \ STANDALONE
 // =============================================================================
 
-/** Family A — types that require full Project/Building/Floor hierarchy. */
-export const IN_BUILDING_UNIT_TYPES: readonly PropertyTypeCanonical[] =
-  PROPERTY_TYPES.filter(
-    (t) => !(STANDALONE_UNIT_TYPES as readonly string[]).includes(t),
-  );
 
 // =============================================================================
 // 4. i18n KEY MAPPING — namespace "properties"
@@ -166,13 +161,6 @@ export type LegacyGreekPropertyType = (typeof LEGACY_GREEK_PROPERTY_TYPES)[numbe
 // 6. RUNTIME TYPE GUARD
 // =============================================================================
 
-/** Returns `true` if `value` is one of the 12 canonical underscore-style types. */
-export function isPropertyType(value: unknown): value is PropertyTypeCanonical {
-  return (
-    typeof value === 'string' &&
-    (PROPERTY_TYPES as readonly string[]).includes(value)
-  );
-}
 
 // =============================================================================
 // 7. RESIDENTIAL vs COMMERCIAL CLASSIFICATION

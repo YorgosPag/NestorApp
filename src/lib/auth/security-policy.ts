@@ -125,44 +125,4 @@ export function getSessionCookieDurationMs(): number {
   return hours * minutesPerHour * secondsPerMinute * msPerSecond;
 }
 
-// =============================================================================
-// DEVELOPMENT BYPASS POLICY
-// =============================================================================
 
-/**
- * Development bypass settings.
- *
- * @enterprise CRITICAL: These settings ONLY apply when NODE_ENV === 'development'
- */
-export const DEV_BYPASS_POLICY = {
-  /**
-   * Allow skipping authentication in development.
-   * @security Set to false in production-like testing
-   */
-  ALLOW_AUTH_BYPASS: process.env.NODE_ENV === 'development',
-
-  /**
-   * Simulated MFA enrollment status in development bypass.
-   */
-  DEV_MFA_ENROLLED: true,
-
-  /**
-   * Simulated admin role in development bypass.
-   */
-  DEV_ADMIN_ROLE: 'admin' as AdminRole,
-
-  /**
-   * Simulated user info in development bypass.
-   */
-  DEV_USER: {
-    uid: 'dev-admin',
-    email: 'dev@localhost',
-  },
-} as const;
-
-/**
- * Check if this security policy permits dev bypass (distinct from environment-security-config.ts SSoT which uses getCurrentSecurityPolicy()).
- */
-export function isSecurityPolicyDevBypassAllowed(): boolean {
-  return DEV_BYPASS_POLICY.ALLOW_AUTH_BYPASS && process.env.NODE_ENV === 'development';
-}

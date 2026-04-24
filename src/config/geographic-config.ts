@@ -105,7 +105,7 @@ export const GEOGRAPHIC_CONFIG = getGeographicConfig();
 /**
  * 🏢 ENTERPRISE: Geographic utilities
  */
-export const GeographicUtils = {
+const GeographicUtils = {
   /**
    * Get default map center coordinates
    */
@@ -179,21 +179,6 @@ export const GeographicUtils = {
   }
 } as const;
 
-/**
- * 🏢 ENTERPRISE: Common location presets (configurable)
- */
-export const LocationPresets = {
-  PRIMARY: {
-    city: GEOGRAPHIC_CONFIG.DEFAULT_CITY,
-    coordinates: GeographicUtils.getDefaultMapCenter(),
-    region: GEOGRAPHIC_CONFIG.DEFAULT_REGION
-  },
-  ALTERNATIVE: {
-    city: GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY,
-    coordinates: GeographicUtils.getAlternativeMapCenter(),
-    region: GEOGRAPHIC_CONFIG.DEFAULT_REGION
-  }
-} as const;
 
 /**
  * 🏢 ENTERPRISE: Environment Variables Documentation

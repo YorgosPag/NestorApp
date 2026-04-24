@@ -52,16 +52,6 @@ export type DateRangePreset =
   | 'last_12_months'
   | 'year_to_date';
 
-/** All valid date presets */
-export const DATE_RANGE_PRESETS: readonly DateRangePreset[] = [
-  'today', 'yesterday',
-  'this_week', 'last_week',
-  'this_month', 'last_month',
-  'this_quarter', 'last_quarter',
-  'this_fiscal_year', 'last_fiscal_year',
-  'last_30_days', 'last_90_days', 'last_12_months',
-  'year_to_date',
-] as const;
 
 // ============================================================================
 // Date Range Configuration

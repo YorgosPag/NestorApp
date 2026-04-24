@@ -7,7 +7,3 @@ export function GeneralProjectTab(props: GeneralProjectTabProps) {
     return <GeneralTab {...props} />
 }
 
-// Υπάρχων wrapper - διατηρείται για backward compatibility
-export function GeneralProjectTabWrapper(props: GeneralProjectTabProps) {
-    return <GeneralProjectTab {...props} />
-}

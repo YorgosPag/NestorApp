@@ -249,14 +249,3 @@ export function getFieldWeightsForType(
   return FIELD_WEIGHTS.apartment;
 }
 
-/**
- * Returns `true` if the field is in the type's weight matrix (scorable),
- * `false` if exempt.
- */
-export function isFieldScorable(
-  type: PropertyTypeCanonical | string | null | undefined,
-  fieldKey: FieldKey,
-): boolean {
-  const entries = getFieldWeightsForType(type);
-  return entries.some((entry) => entry.key === fieldKey);
-}

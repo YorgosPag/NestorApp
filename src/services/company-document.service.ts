@@ -225,69 +225,6 @@ export async function ensureCompanyDocument(
   return created;
 }
 
-/**
- * Create a brand-new company document with an enterprise ID (comp_xxx).
- *
- * @param data - Company data (name, contactId, etc.)
- * @returns The created company document
- */
-export async function createCompanyDocument(
-  data: {
-    name: string;
-    contactId: string;
-    status?: CompanyStatus;
-    plan?: CompanyPlan;
-    settings?: CompanySettings;
-    createdBy: string;
-  }
-): Promise<CompanyDocument> {
-  const companyId = generateCompanyId();
-  const now = FieldValue.serverTimestamp();
-
-  const docData = {
-    name: data.name,
-    contactId: data.contactId,
-    status: data.status ?? 'active',
-    plan: data.plan ?? 'free',
-    settings: data.settings ?? getDefaultSettings(),
-    createdAt: now,
-    updatedAt: now,
-    createdBy: data.createdBy,
-  };
-
-  try {
-    const db = getAdminFirestore();
-    await db.collection(COLLECTIONS.COMPANIES).doc(companyId).set(docData);
-
-    // ADR-195 — Entity audit trail (company creation)
-    await EntityAuditService.recordChange({
-      entityType: ENTITY_TYPES.COMPANY,
-      entityId: companyId,
-      entityName: data.name,
-      action: 'created',
-      changes: buildCreationChanges(docData),
-      performedBy: data.createdBy,
-      performedByName: null,
-      companyId,
-    });
-
-    logger.info('[CompanyDocument] Created new company', {
-      companyId,
-      name: data.name,
-    });
-
-    const created = await getCompanyDocument(companyId);
-    if (!created) {
-      throw new Error('Document created but could not be read back');
-    }
-    return created;
-  } catch (error) {
-    logger.error('[CompanyDocument] createCompanyDocument failed', {
-      error: getErrorMessage(error),
-    });
-    throw error;
-  }
-}
 
 // =============================================================================
 // REPAIR

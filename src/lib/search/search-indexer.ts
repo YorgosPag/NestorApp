@@ -112,19 +112,3 @@ export async function indexEntityForSearch(params: IndexEntityParams): Promise<v
   }
 }
 
-/**
- * Convenience: Index a contact for search.
- * Used by createContactServerSide (FIND-K fix).
- */
-export async function indexContactForSearch(
-  contactId: string,
-  contactData: Record<string, unknown>,
-  companyId: string
-): Promise<void> {
-  return indexEntityForSearch({
-    entityType: SEARCH_ENTITY_TYPES.CONTACT,
-    entityId: contactId,
-    entityData: contactData,
-    tenantId: companyId,
-  });
-}

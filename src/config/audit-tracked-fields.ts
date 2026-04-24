@@ -576,28 +576,6 @@ export function getTrackedFieldsForEntityAuditType(
   }
 }
 
-/** Return CONTACT_TRACKED_FIELDS filtered to only relevant fields for the given type */
-export function getContactTrackedFieldsForType(
-  contactType: 'individual' | 'company' | 'service' | string,
-): Record<string, TrackedFieldDef> {
-  let excludeSet: ReadonlySet<string>;
-  switch (contactType) {
-    case 'individual':
-      excludeSet = new Set([...SERVICE_EXCLUSIVE, ...COMPANY_EXCLUSIVE]);
-      break;
-    case 'company':
-      excludeSet = new Set([...SERVICE_EXCLUSIVE, ...INDIVIDUAL_EXCLUSIVE]);
-      break;
-    case 'service':
-      excludeSet = new Set([...COMPANY_EXCLUSIVE, ...INDIVIDUAL_EXCLUSIVE]);
-      break;
-    default:
-      return CONTACT_TRACKED_FIELDS;
-  }
-  return Object.fromEntries(
-    Object.entries(CONTACT_TRACKED_FIELDS).filter(([field]) => !excludeSet.has(field)),
-  );
-}
 
 // ============================================================================
 // SHARED DIFF HELPERS — Wrappers over `@/lib/audit/audit-diff`

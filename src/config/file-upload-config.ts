@@ -190,11 +190,6 @@ export const DEFAULT_PHOTO_ACCEPT = buildAcceptString(['image']);
  */
 export const DEFAULT_VIDEO_ACCEPT = buildAcceptString(['video']);
 
-/**
- * 🏢 ENTERPRISE: Get default accept string for media (photos + videos)
- * Use for mixed media galleries
- */
-export const DEFAULT_MEDIA_ACCEPT = buildAcceptString(['image', 'video']);
 
 /**
  * 🏢 ENTERPRISE: Accept string for floorplans (DXF, PDF, images)

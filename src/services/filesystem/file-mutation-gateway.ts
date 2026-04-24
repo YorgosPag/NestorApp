@@ -204,25 +204,6 @@ export async function createFileShareWithPolicy(input: CreateShareInput): Promis
   return FileShareService.createShare(input);
 }
 
-/**
- * @deprecated Use `validateUploadAuth()` instead (ADR-292).
- * This function only checks if user exists — no companyId claim validation.
- */
-export async function verifyFileUploadAuthWithPolicy(): Promise<FileUploadAuthContext> {
-  const currentUser = auth.currentUser;
-
-  if (!currentUser) {
-    throw new Error('FILE_UPLOAD_AUTH_REQUIRED');
-  }
-
-  const idToken = await currentUser.getIdToken(true);
-
-  return {
-    uid: currentUser.uid,
-    hasEmail: typeof currentUser.email === 'string' && currentUser.email.length > 0,
-    tokenLength: idToken.length,
-  };
-}
 
 export async function createPendingFileRecordWithPolicy(
   input: Parameters<typeof FileRecordService.createPendingFileRecord>[0],

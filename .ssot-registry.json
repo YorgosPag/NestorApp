@@ -219,6 +219,19 @@
 
     "_comment_tier3": "=== TIER 3: BUSINESS LOGIC (bypass = inconsistency) ===",
 
+    "showcase-core": {
+      "ssotFile": "src/services/showcase-core/index.ts",
+      "description": "Public-showcase orchestration (PDF pipeline, email pipeline, public payload/PDF routes, snapshot builder, share resolver, email builder, PDF service+renderer) must use the showcase-core factories (ADR-321). New showcase surfaces must delegate to createShowcasePdfRoute, createShowcaseEmailRoute, createPublicShowcasePayloadRoute, createPublicShowcasePdfRoute, createShowcaseSnapshotBuilder, createShowcaseShareResolver, createShowcaseEmailBuilder, ShowcasePDFService, BaseShowcaseRenderer from src/services/showcase-core/ — not reimplement the orchestration.",
+      "forbiddenPatterns": [
+        "function createShowcaseSnapshotBuilder",
+        "class ShowcasePDFService"
+      ],
+      "allowlist": [
+        "src/services/showcase-core/",
+        "src/components/showcase-core/"
+      ],
+      "tier": 3
+    },
     "notification-events": {
       "ssotFile": "src/config/notification-events.ts",
       "description": "Notification events/channels/severities must use centralized registry",

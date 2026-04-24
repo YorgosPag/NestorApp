@@ -141,27 +141,6 @@ export const projectAddressesSchema = z.array(projectAddressSchema).refine(
   }
 );
 
-// CREATE/EDIT array schema (enforces non-empty strings)
-export const projectAddressesCreateSchema = z.array(projectAddressCreateSchema).refine(
-  (addresses) => {
-    // INVARIANT: Exactly ONE isPrimary=true per project
-    const primaryCount = addresses.filter((addr) => addr.isPrimary).length;
-    return primaryCount === 1;
-  },
-  {
-    message: 'Exactly one address must be marked as primary',
-  }
-).refine(
-  (addresses) => {
-    // INVARIANT: No duplicate IDs
-    const ids = addresses.map((addr) => addr.id);
-    const uniqueIds = new Set(ids);
-    return ids.length === uniqueIds.size;
-  },
-  {
-    message: 'Address IDs must be unique',
-  }
-);
 
 // Building address configs schema with invariants
 export const buildingAddressConfigsSchema = z.array(buildingAddressReferenceSchema).refine(

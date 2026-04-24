@@ -1,5 +1,4 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import type { CollectionReference, Query } from 'firebase-admin/firestore';
 import type { Property } from '@/types/property';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
@@ -157,30 +156,4 @@ export function extractSearchCriteria(searchText: string): PropertySearchCriteri
   return criteria;
 }
 
-/**
- * Builds a Firestore query from search criteria.
- */
-export function buildPropertyQuery(
-  criteria: PropertySearchCriteria,
-  collectionRef: CollectionReference
-): Query {
-  let queryRef: Query = collectionRef;
-
-  // Default to 'available' if no status is specified
-  queryRef = queryRef.where(FIELDS.STATUS, '==', criteria.status || 'available');
-
-  if (criteria.type) queryRef = queryRef.where(FIELDS.TYPE, '==', criteria.type);
-  if (criteria.building) queryRef = queryRef.where('building', '==', criteria.building);
-  if (criteria.minPrice) queryRef = queryRef.where('price', '>=', criteria.minPrice);
-  if (criteria.maxPrice) queryRef = queryRef.where('price', '<=', criteria.maxPrice);
-  if (criteria.minArea) queryRef = queryRef.where('area', '>=', criteria.minArea);
-  if (criteria.maxArea) queryRef = queryRef.where('area', '<=', criteria.maxArea);
-  if (criteria.rooms) queryRef = queryRef.where('rooms', '==', criteria.rooms);
-  if (criteria.floor) queryRef = queryRef.where('floorNumber', '==', criteria.floor);
-
-  queryRef = queryRef.orderBy(criteria.sortBy || 'price', criteria.sortOrder || 'asc');
-  queryRef = queryRef.limit(criteria.limit || 10);
-
-  return queryRef;
-}
 
