@@ -167,35 +167,6 @@ export async function geocodeAddress(
 }
 
 /**
- * Geocode multiple addresses sequentially with delay.
- * Respects Nominatim's 1 req/s rate limit by spacing requests 1.2s apart.
- *
- * @param queries - Array of structured address queries
- * @returns Array of results (null for failed lookups)
- */
-export async function geocodeAddressBatch(
-  queries: StructuredGeocodingQuery[]
-): Promise<(GeocodingServiceResult | null)[]> {
-  const results: (GeocodingServiceResult | null)[] = [];
-
-  for (let i = 0; i < queries.length; i++) {
-    // Delay between requests (except the first one)
-    // Note: Cache hits don't trigger API calls, so delay is only for actual requests
-    if (i > 0) {
-      const prevCacheKey = getCacheKey(queries[i - 1]);
-      const wasCacheHit = geocodingCache.has(prevCacheKey);
-      if (!wasCacheHit) {
-        await new Promise(resolve => setTimeout(resolve, GEOGRAPHIC_CONFIG.GEOCODING.BATCH_DELAY_MS));
-      }
-    }
-
-    results.push(await geocodeAddress(queries[i]));
-  }
-
-  return results;
-}
-
-/**
  * Reverse geocode coordinates to a structured address.
  * Calls the server-side /api/geocoding/reverse endpoint.
  * No caching — drag positions are unique.
@@ -233,21 +204,4 @@ export async function reverseGeocode(
     logger.error('Reverse geocoding API call failed', { error: String(error) });
     return null;
   }
-}
-
-/**
- * Clear the in-memory geocoding cache.
- */
-export function clearGeocodingCache(): void {
-  geocodingCache.clear();
-}
-
-/**
- * Get geocoding cache statistics.
- */
-export function getGeocodingCacheStats(): { size: number; keys: string[] } {
-  return {
-    size: geocodingCache.size,
-    keys: Array.from(geocodingCache.keys()),
-  };
 }

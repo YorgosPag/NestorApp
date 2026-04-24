@@ -374,16 +374,3 @@ export function useNotifications(): NotificationContextValue {
   return context;
 }
 
-/**
- * Hook for error handling with automatic i18n
- */
-export function useErrorHandler() {
-  const { error } = useNotifications();
-  const { t } = useTranslation('errors');
-
-  return useCallback((errorCode: string, fallbackMessage?: string) => {
-    // Try to get translated error message
-    const translatedMessage = t(errorCode, { defaultValue: fallbackMessage || errorCode });
-    error(translatedMessage);
-  }, [error, t]);
-}

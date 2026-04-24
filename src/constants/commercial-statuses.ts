@@ -51,14 +51,6 @@ export type CommercialStatus = (typeof COMMERCIAL_STATUSES)[number];
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
-/** Returns `true` if `value` is one of the 7 canonical commercial statuses. */
-export function isCommercialStatus(value: unknown): value is CommercialStatus {
-  return (
-    typeof value === 'string' &&
-    (COMMERCIAL_STATUSES as readonly string[]).includes(value)
-  );
-}
-
 // =============================================================================
 // 3. DERIVED SUBSETS — Active listings vs finalized transactions
 // =============================================================================
@@ -97,15 +89,6 @@ export function isListedCommercialStatus(
   );
 }
 
-/** Returns `true` if `value` represents a finalized transaction. */
-export function isFinalizedCommercialStatus(
-  value: unknown,
-): value is FinalizedCommercialStatus {
-  return (
-    typeof value === 'string' &&
-    (FINALIZED_COMMERCIAL_STATUSES as readonly string[]).includes(value)
-  );
-}
 
 /**
  * Semantic alias: statuses που απαιτούν δήλωση `askingPrice` (τιμή πώλησης).
@@ -132,23 +115,6 @@ export function requiresRentPrice(
   value: unknown,
 ): value is 'for-rent' | 'for-sale-and-rent' {
   return value === 'for-rent' || value === 'for-sale-and-rent';
-}
-
-/**
- * Semantic alias: statuses που απαιτούν δήλωση μεικτού εμβαδού (`areaGross`)
- * πριν εμφανιστούν σε sales/rental dashboards & listings. Delegates στο
- * `isListedCommercialStatus` — SSoT: η λίστα παραμένει στο
- * `LISTED_COMMERCIAL_STATUSES`. Αν προστεθεί νέο listed status, όλοι οι
- * semantic aliases ενημερώνονται αυτόματα.
- *
- * Χρήση: UX hints για να υπενθυμίσουν στον χρήστη ότι listings χωρίς
- * μεικτό εμβαδό δεν μπορούν να υπολογίσουν €/m² και αποκλείονται από
- * sales/rental dashboards.
- */
-export function requiresGrossArea(
-  value: unknown,
-): value is ListedCommercialStatus {
-  return isListedCommercialStatus(value);
 }
 
 // =============================================================================

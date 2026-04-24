@@ -45,14 +45,6 @@ export type BuildingType = (typeof BUILDING_TYPES)[number];
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
-/** Returns `true` if `value` is one of the 6 canonical building types. */
-export function isBuildingType(value: unknown): value is BuildingType {
-  return (
-    typeof value === 'string' &&
-    (BUILDING_TYPES as readonly string[]).includes(value)
-  );
-}
-
 // =============================================================================
 // 3. DERIVED SUBSETS — Residential vs Non-residential classification
 // =============================================================================
@@ -70,13 +62,3 @@ export const NON_RESIDENTIAL_BUILDING_TYPES = [
 
 export type NonResidentialBuildingType =
   (typeof NON_RESIDENTIAL_BUILDING_TYPES)[number];
-
-/** Returns `true` if the building is non-residential (commercial-leaning). */
-export function isNonResidentialBuildingType(
-  value: unknown,
-): value is NonResidentialBuildingType {
-  return (
-    typeof value === 'string' &&
-    (NON_RESIDENTIAL_BUILDING_TYPES as readonly string[]).includes(value)
-  );
-}

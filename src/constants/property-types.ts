@@ -437,18 +437,6 @@ export function arePropertyTypesEquivalent(
  * normalizeLegacyGreekPropertyType('apartment')     // → null (not legacy Greek)
  * normalizeLegacyGreekPropertyType('διαμέρισμα')    // → null (lowercase, use normalizePropertyType)
  */
-export function normalizeLegacyGreekPropertyType(
-  raw: unknown,
-): PropertyTypeCanonical | null {
-  if (typeof raw !== 'string') return null;
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) return null;
-  if (!(LEGACY_GREEK_PROPERTY_TYPES as readonly string[]).includes(trimmed)) {
-    return null;
-  }
-  // Safe cast — membership validated above.
-  return normalizePropertyType(trimmed);
-}
 
 /**
  * Convenience helper: resolve any input (canonical, alias, Greek with/without

@@ -51,10 +51,3 @@ export type ProjectType = (typeof PROJECT_TYPES)[number];
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
-/** Returns `true` if `value` is one of the 6 canonical project types. */
-export function isProjectType(value: unknown): value is ProjectType {
-  return (
-    typeof value === 'string' &&
-    (PROJECT_TYPES as readonly string[]).includes(value)
-  );
-}

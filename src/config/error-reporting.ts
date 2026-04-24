@@ -151,46 +151,6 @@ export const getErrorConfig = (): ErrorTrackerConfig => {
 // ERROR SEVERITY MAPPING
 // ============================================================================
 
-export const errorSeverityMapping = {
-  // **🔴 Critical Errors** - Άμεση προσοχή
-  critical: [
-    'authentication failed',
-    'authorization denied',
-    'database connection lost',
-    'payment processing error',
-    'data corruption detected',
-    'security breach detected'
-  ],
-
-  // **🟠 High Priority Errors** - Υψηλή προτεραιότητα
-  error: [
-    'api request failed',
-    'component render error',
-    'state update failed',
-    'polygon validation error',
-    'map initialization failed',
-    'file upload error'
-  ],
-
-  // **🟡 Warnings** - Χαμηλότερη προτεραιότητα
-  warning: [
-    'deprecated api usage',
-    'slow performance detected',
-    'missing translation key',
-    'invalid user input',
-    'feature flag disabled',
-    'cache miss'
-  ],
-
-  // **🔵 Info** - Ενημερωτικά
-  info: [
-    'user action completed',
-    'feature accessed',
-    'system status update',
-    'analytics event',
-    'debug information'
-  ]
-};
 
 // ============================================================================
 // PERFORMANCE MONITORING CONFIG

@@ -292,27 +292,3 @@ export function useWorkspace(): ActiveWorkspaceContext {
 
 /**
  * Hook to get current workspace ID (convenience)
- *
- * @returns Current workspace ID or null
- */
-export function useWorkspaceId(): string | null {
-  const { activeWorkspace } = useWorkspace();
-  return activeWorkspace?.id || null;
-}
-
-/**
- * Hook to require workspace (throws if none selected)
- * Implements ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ: "Αν δεν υπάρχει active workspace, stop/blocked UX"
- *
- * @returns Active workspace
- * @throws Error if no workspace selected
- */
-export function useRequireWorkspace(): Workspace {
-  const { activeWorkspace } = useWorkspace();
-
-  if (!activeWorkspace) {
-    throw new Error('No active workspace selected. Please select a workspace first.');
-  }
-
-  return activeWorkspace;
-}

@@ -125,6 +125,4 @@ export function PropertiesHeader({
   );
 }
 
-// Backward compatibility
-export { PropertiesHeader as UnitsHeader };
 export type { PropertiesViewMode as UnitsViewMode };

@@ -316,5 +316,3 @@ export class EnterprisePerformanceManager {
     EnterprisePerformanceManager.instance = null;
   }
 }
-
-export const performanceManager = EnterprisePerformanceManager.getInstance();

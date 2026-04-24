@@ -55,6 +55,7 @@
     },
     "loadingCustomers": "Loading customers list...",
     "notFound": "Project structure not found.",
+    "noBuildings": "No buildings have been added to this project yet.",
     "buildings": "buildings",
     "buildingsCount": "{count} buildings",
     "propertiesCount": "{count} properties",

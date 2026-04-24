@@ -114,11 +114,4 @@ export function useFirestoreStorages(
 // CONVENIENCE EXPORTS
 // =============================================================================
 
-/**
- * Get storages for a specific building (ADR-184)
- */
-export function useBuildingStorages(buildingId: string): UseFirestoreStoragesReturn {
-  return useFirestoreStorages({ buildingId });
-}
-
 export default useFirestoreStorages;

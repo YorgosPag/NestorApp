@@ -149,45 +149,6 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
   }
 }
 
-/**
- * Initialize i18n with lazy loading
- */
-export async function initI18n(defaultLanguage: Language = 'el') {
-  // Load initial translations for default language
-  const initialResources: Record<string, Record<string, TranslationData>> = {};
-  
-  // Load common namespace first (required for app boot)
-  initialResources[defaultLanguage] = {
-    common: await loadTranslations(defaultLanguage, 'common'),
-  };
-
-  await i18n
-    .use(ICU)
-    .use(initReactI18next)
-    .init({
-      resources: initialResources,
-      lng: defaultLanguage,
-      fallbackLng: 'el',
-      debug: process.env.NODE_ENV === 'development',
-      
-      // Lazy loading configuration
-      ns: ['common'], // Start with only common namespace
-      defaultNS: 'common',
-      
-      interpolation: {
-        escapeValue: false,
-      },
-      
-      // Resource loading config
-      partialBundledLanguages: true,
-      
-      react: {
-        useSuspense: false, // Disable suspense for lazy loading
-      },
-    });
-
-  return i18n;
-}
 
 /**
  * Load namespace on demand
@@ -290,26 +251,6 @@ export async function changeLanguage(language: Language) {
   // console.log(`🌍 Language changed to: ${language}`);
 }
 
-/**
- * Get language display name
- */
-export function getLanguageDisplayName(language: Language): string {
-  const names: Record<Language, string> = {
-    el: 'Ελληνικά',
-    en: 'English', 
-    pseudo: 'Pseudo (Dev)',
-  };
-  
-  return names[language] || language;
-}
-
-/**
- * Clear translation cache (for development)
- */
-export function clearTranslationCache() {
-  translationCache.clear();
-  logger.info('Translation cache cleared');
-}
 
 export default i18n;
 

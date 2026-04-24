@@ -62,11 +62,3 @@ export type SalesViewMode = 'list' | 'grid';
 // 🏢 ADR-199: APPURTENANCE HELPERS
 // =============================================================================
 
-/**
- * Determines if a parking/storage space can be sold independently.
- * A space with millesimal shares > 0 has its own legal identity and
- * can participate in a sale transaction.
- */
-export function canSellIndependently(millesimalShares: number | null | undefined): boolean {
-  return millesimalShares !== null && millesimalShares !== undefined && millesimalShares > 0;
-}

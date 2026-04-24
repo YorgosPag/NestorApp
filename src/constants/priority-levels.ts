@@ -40,22 +40,6 @@ export type PriorityLevel = (typeof PRIORITY_LEVELS)[number];
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
-/** Returns `true` if `value` is one of the 4 canonical priority levels. */
-export function isPriorityLevel(value: unknown): value is PriorityLevel {
-  return (
-    typeof value === 'string' &&
-    (PRIORITY_LEVELS as readonly string[]).includes(value)
-  );
-}
-
 // =============================================================================
 // 3. RANK HELPER — Numeric comparison για sorting/escalation
 // =============================================================================
-
-/**
- * Returns numeric rank (0 = low, 3 = critical). Χρησιμοποιείται για sort
- * comparisons ή escalation thresholds (e.g. `rank >= 2` για high+critical).
- */
-export function getPriorityRank(priority: PriorityLevel): number {
-  return (PRIORITY_LEVELS as readonly string[]).indexOf(priority);
-}

@@ -55,6 +55,7 @@
     },
     "loadingCustomers": "Φόρτωση λίστας πελατών...",
     "notFound": "Δεν βρέθηκε η δομή του έργου.",
+    "noBuildings": "Δεν έχουν προστεθεί κτίρια ακόμα στο έργο.",
     "buildings": "κτίρια",
     "buildingsCount": "{count} κτίρια",
     "propertiesCount": "{count} ακίνητα",

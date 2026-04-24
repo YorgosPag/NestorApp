@@ -329,12 +329,4 @@ export const createUnitBadge = (
   options?: BadgeFactoryOptions
 ): BadgeDefinition => BadgeFactory.createUnitBadge(status, colors, options);
 
-/**
- * ✅ ENTERPRISE PROFESSIONAL: Shorthand function για navigation badges με dependency injection
- */
-export const createNavigationBadge = (
-  status: NavigationStatus,
-  colors: UseSemanticColorsReturn,
-  options?: BadgeFactoryOptions
-): BadgeDefinition => BadgeFactory.createNavigationBadge(status, colors, options);
 

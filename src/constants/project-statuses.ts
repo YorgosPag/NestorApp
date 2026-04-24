@@ -73,16 +73,6 @@ export const ACTIVE_PROJECT_STATUSES = [
 
 export type ActiveProjectStatus = (typeof ACTIVE_PROJECT_STATUSES)[number];
 
-/** Returns `true` if `value` is an active (non-deleted) project status. */
-export function isActiveProjectStatus(
-  value: unknown,
-): value is ActiveProjectStatus {
-  return (
-    typeof value === 'string' &&
-    (ACTIVE_PROJECT_STATUSES as readonly string[]).includes(value)
-  );
-}
-
 /**
  * Statuses που σημαίνουν ενεργό (σε εξέλιξη) project — δεν έχει
  * ολοκληρωθεί/ακυρωθεί/διαγραφεί.
@@ -95,13 +85,3 @@ export const IN_PROGRESS_PROJECT_STATUSES = [
 
 export type InProgressProjectStatus =
   (typeof IN_PROGRESS_PROJECT_STATUSES)[number];
-
-/** Returns `true` if the project is still ongoing (not finalized/deleted). */
-export function isInProgressProjectStatus(
-  value: unknown,
-): value is InProgressProjectStatus {
-  return (
-    typeof value === 'string' &&
-    (IN_PROGRESS_PROJECT_STATUSES as readonly string[]).includes(value)
-  );
-}

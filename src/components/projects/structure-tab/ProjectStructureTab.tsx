@@ -34,7 +34,7 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
   }
 
   if (!structure) {
-    return <EmptyState projectId={projectId} />;
+    return <EmptyState />;
   }
 
   const totals = getTotals(structure);

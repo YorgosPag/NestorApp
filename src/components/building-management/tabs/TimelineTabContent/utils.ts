@@ -43,16 +43,6 @@ export const getMilestones = (t: TranslateFunction) => {
     }));
 };
 
-// 🏢 ENTERPRISE: Legacy export for backward compatibility (DEPRECATED)
-export const milestones = milestonesData.map(m => ({
-    id: m.id,
-    title: m.titleKey, // Will show key if not using getMilestones()
-    description: m.descriptionKey,
-    date: m.date,
-    status: m.status,
-    progress: m.progress,
-    type: m.type
-}));
 
 // 🏢 ENTERPRISE: i18n-enabled status text function
 // 🌐 i18n: All fallbacks converted to i18n keys - 2026-01-18

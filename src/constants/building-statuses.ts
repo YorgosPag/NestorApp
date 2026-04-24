@@ -44,14 +44,6 @@ export type BuildingStatus = (typeof BUILDING_STATUSES)[number];
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
-/** Returns `true` if `value` is one of the 5 canonical building statuses. */
-export function isBuildingStatus(value: unknown): value is BuildingStatus {
-  return (
-    typeof value === 'string' &&
-    (BUILDING_STATUSES as readonly string[]).includes(value)
-  );
-}
-
 // =============================================================================
 // 3. DERIVED SUBSETS
 // =============================================================================
@@ -69,16 +61,6 @@ export const ACTIVE_BUILDING_STATUSES = [
 
 export type ActiveBuildingStatus = (typeof ACTIVE_BUILDING_STATUSES)[number];
 
-/** Returns `true` if `value` is an active (non-deleted) building status. */
-export function isActiveBuildingStatus(
-  value: unknown,
-): value is ActiveBuildingStatus {
-  return (
-    typeof value === 'string' &&
-    (ACTIVE_BUILDING_STATUSES as readonly string[]).includes(value)
-  );
-}
-
 /**
  * Statuses που σημαίνουν pre-completion κατάσταση (αναφέρεται σε κτίρια
  * πριν την αποπεράτωση). Χρήσιμο για construction progress dashboards.
@@ -90,13 +72,3 @@ export const IN_CONSTRUCTION_BUILDING_STATUSES = [
 
 export type InConstructionBuildingStatus =
   (typeof IN_CONSTRUCTION_BUILDING_STATUSES)[number];
-
-/** Returns `true` if the building is pre-completion (planning/construction). */
-export function isInConstructionBuildingStatus(
-  value: unknown,
-): value is InConstructionBuildingStatus {
-  return (
-    typeof value === 'string' &&
-    (IN_CONSTRUCTION_BUILDING_STATUSES as readonly string[]).includes(value)
-  );
-}

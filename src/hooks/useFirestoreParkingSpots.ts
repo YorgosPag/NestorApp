@@ -137,12 +137,4 @@ export function useFirestoreParkingSpots(
   };
 }
 
-// =============================================================================
-// CONVENIENCE EXPORTS
-// =============================================================================
-
-export function useBuildingParkingSpots(buildingId: string): UseFirestoreParkingReturn {
-  return useFirestoreParkingSpots({ buildingId });
-}
-
 export default useFirestoreParkingSpots;

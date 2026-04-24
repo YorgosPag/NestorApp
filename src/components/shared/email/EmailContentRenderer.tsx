@@ -343,5 +343,3 @@ export function EmailContentWithSignature({ content }: { content: string }) {
   );
 }
 
-// Re-export RenderContentWithLinks for consumers that need React-based rendering
-export { RenderContentWithLinks };

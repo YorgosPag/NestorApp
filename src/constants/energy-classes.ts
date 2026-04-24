@@ -43,25 +43,9 @@ export type EnergyClass = (typeof ENERGY_CLASSES)[number];
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
-/** Returns `true` if `value` is one of the 9 canonical energy classes. */
-export function isEnergyClass(value: unknown): value is EnergyClass {
-  return (
-    typeof value === 'string' &&
-    (ENERGY_CLASSES as readonly string[]).includes(value)
-  );
-}
-
 // =============================================================================
 // 3. RATING HELPERS — Efficiency rank comparison
 // =============================================================================
-
-/**
- * Returns the efficiency rank (0 = best `A+`, 8 = worst `G`).
- * Throws if input is not a valid `EnergyClass` (use `isEnergyClass()` first).
- */
-export function getEnergyClassRank(energyClass: EnergyClass): number {
-  return (ENERGY_CLASSES as readonly string[]).indexOf(energyClass);
-}
 
 /**
  * High-efficiency classes (A+, A, B+, B) — eligible για green-building
@@ -76,13 +60,3 @@ export const HIGH_EFFICIENCY_ENERGY_CLASSES = [
 
 export type HighEfficiencyEnergyClass =
   (typeof HIGH_EFFICIENCY_ENERGY_CLASSES)[number];
-
-/** Returns `true` if the class is considered high-efficiency (B or better). */
-export function isHighEfficiencyEnergyClass(
-  value: unknown,
-): value is HighEfficiencyEnergyClass {
-  return (
-    typeof value === 'string' &&
-    (HIGH_EFFICIENCY_ENERGY_CLASSES as readonly string[]).includes(value)
-  );
-}
