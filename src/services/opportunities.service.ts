@@ -15,7 +15,6 @@ import {
   deleteDoc,
   orderBy,
   serverTimestamp,
-  writeBatch,
   type DocumentData,
 } from 'firebase/firestore';
 import { generateOpportunityId } from '@/services/enterprise-id.service';
@@ -108,22 +107,3 @@ export async function deleteOpportunity(opportunityId: string): Promise<{ succes
   }
 }
 
-/** Διαγραφή όλων των ευκαιριών */
-export async function deleteAllOpportunities(): Promise<{ success: boolean; deletedCount: number }> {
-  try {
-    // Tenant-aware read via firestoreQueryService
-    const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OPPORTUNITIES');
-    const batch = writeBatch(db);
-    let deletedCount = 0;
-
-    for (const opportunity of result.documents) {
-      batch.delete(doc(db, OPPORTUNITIES_COLLECTION, opportunity.id));
-      deletedCount++;
-    }
-
-    await batch.commit();
-    return { success: true, deletedCount };
-  } catch (error) {
-    throw error;
-  }
-}

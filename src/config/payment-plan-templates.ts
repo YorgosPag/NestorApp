@@ -17,15 +17,6 @@ import type { PaymentPlanTemplate } from '@/types/payment-plan';
 // CONSTRUCTION MILESTONES (Standard Set)
 // =============================================================================
 
-export const CONSTRUCTION_MILESTONES = [
-  { id: 'foundation', labelKey: 'payments.milestones.foundation', defaultLabel: 'Θεμελίωση' },
-  { id: 'frame', labelKey: 'payments.milestones.frame', defaultLabel: 'Σκελετός' },
-  { id: 'masonry', labelKey: 'payments.milestones.masonry', defaultLabel: 'Τοιχοποιία' },
-  { id: 'plastering', labelKey: 'payments.milestones.plastering', defaultLabel: 'Σοβάδες' },
-  { id: 'flooring', labelKey: 'payments.milestones.flooring', defaultLabel: 'Δάπεδα' },
-  { id: 'windows_doors', labelKey: 'payments.milestones.windowsDoors', defaultLabel: 'Κουφώματα' },
-  { id: 'completion', labelKey: 'payments.milestones.completion', defaultLabel: 'Αποπεράτωση' },
-] as const;
 
 // =============================================================================
 // TEMPLATES
@@ -109,7 +100,3 @@ export const PAYMENT_PLAN_TEMPLATES: PaymentPlanTemplate[] = [
   LUMP_SUM,
 ];
 
-/** Get template by ID */
-export function getPaymentPlanTemplate(id: string): PaymentPlanTemplate | undefined {
-  return PAYMENT_PLAN_TEMPLATES.find((t) => t.id === id);
-}

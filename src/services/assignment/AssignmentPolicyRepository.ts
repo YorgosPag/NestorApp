@@ -18,43 +18,18 @@
 'use server';
 import 'server-only';
 
-import { db } from '@/lib/firebase';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  updateDoc,
-  query,
-  where,
-  serverTimestamp,
-} from 'firebase/firestore';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { getErrorMessage } from '@/lib/error-utils';
-import type {
-  AssignmentPolicy,
-  UpdateAssignmentPolicyInput,
-  AssignmentPolicyQuery,
-} from '@/types/assignment-policy';
-import { nowISO } from '@/lib/date-local';
+import type { AssignmentPolicy } from '@/types/assignment-policy';
 
 // ============================================================================
 // LOGGER
 // ============================================================================
 
 const logger = createModuleLogger('ASSIGNMENT_POLICY');
-
-// ============================================================================
-// COLLECTION REFERENCE
-// ============================================================================
-
-function getPoliciesCollection() {
-  return collection(db, COLLECTIONS.ASSIGNMENT_POLICIES);
-}
 
 // ============================================================================
 // ADMIN COLLECTION (SERVER-SIDE)
@@ -65,103 +40,6 @@ function getPoliciesAdminCollection() {
   return adminDb.collection(COLLECTIONS.ASSIGNMENT_POLICIES);
 }
 
-// ============================================================================
-// READ
-// ============================================================================
-
-/**
- * Get policy by ID
- * @enterprise Validates tenant isolation
- */
-export async function getAssignmentPolicyById(
-  policyId: string,
-  companyId: string
-): Promise<AssignmentPolicy | null> {
-  const policiesRef = getPoliciesCollection();
-  const policyDoc = doc(policiesRef, policyId);
-  const snapshot = await getDoc(policyDoc);
-
-  if (!snapshot.exists()) {
-    return null;
-  }
-
-  const policy = snapshot.data() as AssignmentPolicy;
-
-  // Tenant isolation check
-  if (policy.companyId !== companyId) {
-    logger.warn('Tenant isolation violation: Policy belongs to different company', {
-      policyId,
-      requestedCompanyId: companyId,
-      actualCompanyId: policy.companyId,
-    });
-    return null;
-  }
-
-  return policy;
-}
-
-/**
- * Get policies by query
- * @enterprise Tenant-scoped queries
- */
-export async function getAssignmentPolicies(
-  queryParams: AssignmentPolicyQuery
-): Promise<AssignmentPolicy[]> {
-  const policiesRef = getPoliciesCollection();
-
-  // Build query — base query filters by companyId (tenant isolation).
-  // Subsequent query(q, ...) extensions inherit this constraint.
-  let q = query(
-    policiesRef,
-    where('companyId', '==', queryParams.companyId)
-  );
-
-  // Project filter
-  if (queryParams.projectId !== undefined) {
-    q = query(
-      // 🔒 companyId: inherited from base query above (query extension pattern).
-      q,
-      where('projectId', '==', queryParams.projectId),
-    );
-  }
-
-  // Status filter
-  if (queryParams.status) {
-    q = query(
-      // 🔒 companyId: inherited from base query above (query extension pattern).
-      q,
-      where('status', '==', queryParams.status),
-    );
-  } else if (!queryParams.includeInactive) {
-    // Default: only active policies
-    q = query(
-      // 🔒 companyId: inherited from base query above (query extension pattern).
-      q,
-      where('status', '==', ENTITY_STATUS.ACTIVE),
-    );
-  }
-
-  const snapshot = await getDocs(q);
-
-  return snapshot.docs.map((doc) => doc.data() as AssignmentPolicy);
-}
-
-/**
- * Get company-wide policy (projectId=null)
- * @enterprise Fallback policy για company
- */
-export async function getCompanyWidePolicy(
-  companyId: string
-): Promise<AssignmentPolicy | null> {
-  const policies = await getAssignmentPolicies({
-    companyId,
-    projectId: null,
-    status: ENTITY_STATUS.ACTIVE,
-  });
-
-  // Return first active company-wide policy
-  return policies.length > 0 ? policies[0] : null;
-}
 
 /**
  * Get company-wide policy (Admin SDK)
@@ -185,23 +63,6 @@ export async function getCompanyWidePolicyAdmin(
   return snapshot.docs[0].data() as AssignmentPolicy;
 }
 
-/**
- * Get project-specific policy
- * @enterprise Project-scoped policy (higher priority than company-wide)
- */
-export async function getProjectPolicy(
-  companyId: string,
-  projectId: string
-): Promise<AssignmentPolicy | null> {
-  const policies = await getAssignmentPolicies({
-    companyId,
-    projectId,
-    status: ENTITY_STATUS.ACTIVE,
-  });
-
-  // Return first active project-specific policy
-  return policies.length > 0 ? policies[0] : null;
-}
 
 /**
  * Get project-specific policy (Admin SDK)
@@ -236,56 +97,4 @@ export async function getProjectPolicyAdmin(
   return policy;
 }
 
-// ============================================================================
-// UPDATE
-// ============================================================================
-
-/**
- * Update assignment policy
- * @enterprise Version tracking για change history
- */
-export async function updateAssignmentPolicy(
-  policyId: string,
-  companyId: string,
-  input: UpdateAssignmentPolicyInput
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const policiesRef = getPoliciesCollection();
-    const policyDoc = doc(policiesRef, policyId);
-
-    // Fetch current policy για validation
-    const current = await getAssignmentPolicyById(policyId, companyId);
-    if (!current) {
-      logger.warn('Policy not found or access denied', { policyId, companyId });
-      return { success: false, error: 'Policy not found or access denied' };
-    }
-
-    // Build update data
-    const updatedAt = nowISO();
-    const updateData: Partial<AssignmentPolicy> = {
-      ...input,
-      updatedBy: input.updatedBy,
-      updatedAt,
-      version: (current.version || 1) + 1,
-    };
-
-    await updateDoc(policyDoc, {
-      ...updateData,
-      updatedAt: serverTimestamp()
-    });
-
-    logger.info('Policy updated successfully', { policyId, companyId });
-    return { success: true };
-  } catch (error) {
-    logger.error('Failed to update policy', {
-      policyId,
-      companyId,
-      error: getErrorMessage(error),
-    });
-    return {
-      success: false,
-      error: getErrorMessage(error),
-    };
-  }
-}
 

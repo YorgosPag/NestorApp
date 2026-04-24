@@ -38,6 +38,3 @@ export function PropertiesListHeader({
         </div>
     );
 }
-
-// Backward compatibility
-export { PropertiesListHeader as UnitsListHeader };

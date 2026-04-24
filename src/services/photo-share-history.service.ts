@@ -88,13 +88,3 @@ export async function getPhotoSharesByContact(
   }
 }
 
-/**
- * Count total photo shares for a contact (for stats display).
- */
-export async function countPhotoSharesByContact(
-  contactId: string,
-  companyId: string,
-): Promise<number> {
-  const records = await getPhotoSharesByContact(contactId, companyId, MAX_LIMIT);
-  return records.length;
-}

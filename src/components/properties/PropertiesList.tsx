@@ -230,6 +230,3 @@ export function PropertiesList({
     </EntityListColumn>
   );
 }
-
-// Backward compatibility
-export { PropertiesList as UnitsList };

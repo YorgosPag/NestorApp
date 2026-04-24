@@ -80,25 +80,3 @@ export async function upsertCadFileWithPolicy(
     payload as unknown as Record<string, unknown>
   );
 }
-
-/**
- * Read cadFile metadata by fileId (server-side tenant-scoped read).
- * Returns the raw server envelope (non-canonical for this read).
- */
-export async function getCadFileMetadata(fileId: string): Promise<
-  | { success: true; metadata: CadFileMetadataLookup; message?: string }
-  | { success: false; error: string; details?: string }
-> {
-  const url = `${API_ROUTES.CAD_FILES.LIST}?fileId=${encodeURIComponent(fileId)}`;
-  return apiClient.get(url);
-}
-
-/**
- * Delete cadFile metadata by fileId.
- */
-export async function deleteCadFileWithPolicy(
-  fileId: string
-): Promise<{ success: boolean; message?: string; error?: string }> {
-  const url = `${API_ROUTES.CAD_FILES.LIST}?fileId=${encodeURIComponent(fileId)}`;
-  return apiClient.delete(url);
-}

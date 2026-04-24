@@ -20,18 +20,3 @@ export const TIER_BADGE_VARIANT: Record<MatchTier, BadgeVariant> = {
   no_match: 'destructive',
 };
 
-/** Row background classes per match tier */
-export const TIER_ROW_CLASSES: Record<MatchTier, string> = {
-  auto_match: 'bg-emerald-50/50 dark:bg-emerald-950/20',
-  suggested: 'bg-blue-50/50 dark:bg-blue-950/20',
-  manual_review: 'bg-amber-50/50 dark:bg-amber-950/20',
-  no_match: 'bg-red-50/50 dark:bg-red-950/20',
-};
-
-/** i18n keys per tier */
-export const TIER_LABEL_KEYS: Record<MatchTier, string> = {
-  auto_match: 'reconciliation.tiers.autoMatch',
-  suggested: 'reconciliation.tiers.suggested',
-  manual_review: 'reconciliation.tiers.manualReview',
-  no_match: 'reconciliation.tiers.noMatch',
-};

@@ -19,7 +19,6 @@ import { TasksRepository } from '@/services/crm/tasks/repositories/TasksReposito
 import { AppointmentsRepository } from './AppointmentsRepository';
 import { taskToCalendarEvent, appointmentToCalendarEvent } from './mappers';
 import type { CalendarEvent } from '@/types/calendar-event';
-import type { ICalendarEventService } from './contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('CalendarEventService');
@@ -101,8 +100,3 @@ export async function getCalendarEvents(
 
   return allEvents;
 }
-
-// Export as service object for interface compliance
-export const CalendarEventService: ICalendarEventService = {
-  getEvents: getCalendarEvents,
-};

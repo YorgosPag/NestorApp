@@ -282,20 +282,6 @@ export class ElevationService {
 export const elevationService = new ElevationService();
 
 // ============================================================================
-// 🎯 CONVENIENCE FUNCTION EXPORTS
-// ============================================================================
-
-/**
- * Quick elevation lookup function
- */
-export const getElevation = (lng: number, lat: number): Promise<number | null> =>
-  elevationService.getElevation(lng, lat);
-
-/**
- * Batch elevation lookup function
- */
-export const getBatchElevations = (coordinates: Array<{ lng: number; lat: number }>): Promise<ElevationResponse[]> =>
-  elevationService.getBatchElevations(coordinates);
 
 /**
  * ✅ ENTERPRISE ELEVATION SERVICE COMPLETE (2025-12-17)

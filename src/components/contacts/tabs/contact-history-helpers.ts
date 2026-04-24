@@ -29,9 +29,6 @@ function toDate(value: Date | string | number | { seconds: number; nanoseconds: 
   return new Date(value);
 }
 
-export function getEntryTimestamp(entry: ContactTimelineEntry): Date {
-  return entry.timestamp;
-}
 
 // ============================================================================
 // MERGE & SORT

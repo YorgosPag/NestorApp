@@ -22,15 +22,6 @@ export function getEnabledPropertiesTabs(): PropertiesTabConfig[] {
   return getSortedTabs('properties') as PropertiesTabConfig[];
 }
 
-export function getAllPropertiesTabs(): PropertiesTabConfig[] {
-  return [...PROPERTIES_TABS];
-}
-
-export function getPropertiesTabsByCondition(
-  predicate: (tab: PropertiesTabConfig) => boolean
-): PropertiesTabConfig[] {
-  return PROPERTIES_TABS.filter(predicate);
-}
 
 export function getPropertiesTabsStats() {
   return getTabsStats('properties');

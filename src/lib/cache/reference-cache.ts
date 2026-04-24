@@ -110,26 +110,3 @@ export function invalidate(key: string): void {
   notify(key);
 }
 
-/** Drops every cached key whose name contains `pattern`. */
-export function invalidatePattern(pattern: string): number {
-  let count = 0;
-  for (const key of Array.from(cache.keys())) {
-    if (key.includes(pattern)) {
-      cache.delete(key);
-      notify(key);
-      count++;
-    }
-  }
-  return count;
-}
-
-/** Manually seed the cache (e.g. after a successful POST returns the entity). */
-export function seedCache<T>(key: string, data: T): void {
-  cache.set(key, {
-    data,
-    error: undefined,
-    timestamp: Date.now(),
-    promise: undefined,
-  });
-  notify(key);
-}

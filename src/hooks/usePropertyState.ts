@@ -1,8 +1,7 @@
-'use client';
+﻿'use client';
 
 import { useState, useCallback } from "react";
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
-import { BUILDING_IDS } from '@/config/building-ids-config';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('usePropertyState');
@@ -16,8 +15,8 @@ interface Floor {
 }
 
 export function usePropertyState() {
-  // Χρησιμοποιούμε ΜΟΝΟ τα δεδομένα από το SharedPropertiesProvider
-  // για να είναι συγχρονισμένα και τα δύο systems
+  // Ξ§ΟΞ·ΟƒΞΉΞΌΞΏΟ€ΞΏΞΉΞΏΟΞΌΞµ ΞΞΞΞ Ο„Ξ± Ξ΄ΞµΞ΄ΞΏΞΌΞ­Ξ½Ξ± Ξ±Ο€Ο Ο„ΞΏ SharedPropertiesProvider
+  // Ξ³ΞΉΞ± Ξ½Ξ± ΞµΞ―Ξ½Ξ±ΞΉ ΟƒΟ…Ξ³Ο‡ΟΞΏΞ½ΞΉΟƒΞΌΞ­Ξ½Ξ± ΞΊΞ±ΞΉ Ο„Ξ± Ξ΄ΟΞΏ systems
   const { 
     properties, 
     setProperties, 
@@ -30,7 +29,7 @@ export function usePropertyState() {
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [selectedFloorId, setSelectedFloorId] = useState<string | null>("floor-2");
 
-  // Dummy undo/redo για backwards compatibility (θα τα φτιάξουμε μετά)
+  // Dummy undo/redo Ξ³ΞΉΞ± backwards compatibility (ΞΈΞ± Ο„Ξ± Ο†Ο„ΞΉΞ¬ΞΎΞΏΟ…ΞΌΞµ ΞΌΞµΟ„Ξ¬)
   const [canUndoState, setCanUndoState] = useState(false);
   const [canRedoState, setCanRedoState] = useState(false);
   
@@ -69,60 +68,4 @@ export function usePropertyState() {
   };
 }
 
-// 🏢 ENTERPRISE: Mock data για testing - NO HARDCODED IDs
-export const mockProperties = [
-  {
-    name: "Διαμέρισμα Α1",
-    type: "Διαμέρισμα 2Δ",
-    status: "for-sale",
-    building: "Κτίριο Alpha",
-    floor: 1,
-    project: "Έργο Κέντρο",
-    buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
-    floorId: "floor-1",
-    price: 150000,
-    area: 75,
-    vertices: [
-      { x: 100, y: 100 },
-      { x: 200, y: 100 },
-      { x: 200, y: 150 },
-      { x: 100, y: 150 }
-    ]
-  },
-  {
-    name: "Διαμέρισμα Α2",
-    type: "Διαμέρισμα 3Δ",
-    status: "for-sale",
-    building: "Κτίριο Alpha",
-    floor: 1,
-    project: "Έργο Κέντρο",
-    buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
-    floorId: "floor-1",
-    price: 180000,
-    area: 95,
-    vertices: [
-      { x: 220, y: 100 },
-      { x: 320, y: 100 },
-      { x: 320, y: 150 },
-      { x: 220, y: 150 }
-    ]
-  },
-  {
-    name: "Διαμέρισμα Β1",
-    type: "Διαμέρισμα 2Δ",
-    status: "for-sale",
-    building: "Κτίριο Alpha",
-    floor: 2,
-    project: "Έργο Κέντρο",
-    buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
-    floorId: "floor-2",
-    price: 160000,
-    area: 80,
-    vertices: [
-      { x: 100, y: 200 },
-      { x: 200, y: 200 },
-      { x: 200, y: 250 },
-      { x: 100, y: 250 }
-    ]
-  }
 ];

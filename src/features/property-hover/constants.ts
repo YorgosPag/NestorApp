@@ -103,10 +103,3 @@ export function getPropertyHoverStatusConfig() {
   } as const;
 }
 
-/**
- * ⚠️ DEPRECATED: Για backward compatibility ΜΟΝΟ
- * Αυτό θα αφαιρεθεί σε μελλοντική έκδοση.
- * Χρησιμοποίησε getPropertyStatusConfig() αντί για αυτό.
- * 🏢 ENTERPRISE: Type-safe empty object with proper typing
- */
-export const statusConfig: Record<string, never> = {}; // Empty για να μην σπάσει compilation

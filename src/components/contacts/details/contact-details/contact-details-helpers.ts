@@ -1,6 +1,5 @@
 import type { Contact, IndividualContact } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
-import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 // ADR-317: Tabs that own subcollections with their own CRUD lifecycle.
 // On these tabs the global contact Save button is hidden — instead the adaptive
