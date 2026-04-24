@@ -154,9 +154,6 @@ export interface ProjectStats {
   totalSoldArea: number;
 }
 
-
-export type ProjectSortKey = 'name' | 'progress' | 'totalValue' | 'status' | 'area';
-
 /**
  * 🏢 ENTERPRISE: Project update payload for Firestore operations
  * Follows contacts.service.ts pattern for type-safe updates
