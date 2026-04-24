@@ -1,22 +1,24 @@
 /**
- * Building Showcase Snapshot Builder — SSoT (ADR-320).
+ * Building Showcase Snapshot Builder — SSoT (ADR-320 + ADR-321 Phase 2).
  *
- * Builds a `BuildingShowcaseSnapshot` from a Firestore building document.
- * Used by: PDF API route, public showcase API route.
- *
- * Tenant isolation enforced: throws if `building.companyId !== companyId`.
+ * Delegates orchestration to `createShowcaseSnapshotBuilder` (Phase 1.1);
+ * this file now owns only the Building-specific field mapping (`buildInfo`)
+ * + the project-name relation loader. Tenant isolation + branding resolution
+ * move into the core factory (belt-and-suspenders).
  *
  * @module services/building-showcase/snapshot-builder
  */
 
-import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { resolveShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
+import {
+  createShowcaseSnapshotBuilder,
+  ShowcaseEntityNotFoundError,
+  ShowcaseTenantMismatchError,
+} from '@/services/showcase-core/snapshot-builder-factory';
 import type {
   BuildingShowcaseInfo,
   BuildingShowcaseSnapshot,
 } from '@/types/building-showcase';
-import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   translateBuildingType,
   translateBuildingStatus,
@@ -33,55 +35,45 @@ function pickNumber(v: unknown): number | null {
   return null;
 }
 
-export class BuildingNotFoundError extends Error {
+// Legacy error aliases kept so downstream catches keep working unchanged.
+export class BuildingNotFoundError extends ShowcaseEntityNotFoundError {
   constructor(buildingId: string) {
-    super(`Building not found: ${buildingId}`);
+    super('Building', buildingId);
     this.name = 'BuildingNotFoundError';
   }
 }
 
-export class TenantMismatchError extends Error {
+export class TenantMismatchError extends ShowcaseTenantMismatchError {
   constructor(buildingId: string) {
-    super(`Tenant isolation violation for building: ${buildingId}`);
-    this.name = 'TenantMismatchError';
+    super('Building', buildingId);
   }
 }
 
-async function loadProjectName(
-  adminDb: Firestore,
-  projectId: string,
-): Promise<string | null> {
-  const snap = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-  if (!snap.exists) return null;
-  const raw = snap.data() ?? {};
-  return pickString(raw.name) ?? pickString(raw.title);
+interface BuildingRelations {
+  projectName: string | null;
 }
 
-export async function buildBuildingShowcaseSnapshot(
-  buildingId: string,
-  locale: EnumLocale,
-  adminDb: Firestore,
-  companyId: string,
-): Promise<BuildingShowcaseSnapshot> {
-  const buildingSnap = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
-
-  if (!buildingSnap.exists) {
-    throw new BuildingNotFoundError(buildingId);
-  }
-
-  const raw = buildingSnap.data() ?? {};
-
-  if ((raw.companyId as string | undefined) !== companyId) {
-    throw new TenantMismatchError(buildingId);
-  }
-
-  const projectId = pickString(raw.projectId);
-  const projectName = projectId ? await loadProjectName(adminDb, projectId) : null;
-
-  const building: BuildingShowcaseInfo = {
-    id:                buildingId,
+export const buildBuildingShowcaseSnapshot = createShowcaseSnapshotBuilder<
+  BuildingShowcaseInfo,
+  BuildingRelations,
+  BuildingShowcaseSnapshot
+>({
+  collection: COLLECTIONS.BUILDINGS,
+  entityLabel: 'Building',
+  loadRelations: async (adminDb, _buildingId, raw) => {
+    const projectId = pickString(raw.projectId);
+    if (!projectId) return { projectName: null };
+    const snap = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+    if (!snap.exists) return { projectName: null };
+    const pRaw = snap.data() ?? {};
+    return {
+      projectName: pickString(pRaw.name) ?? pickString(pRaw.title),
+    };
+  },
+  buildInfo: ({ entityId, raw, relations, locale }) => ({
+    id:                entityId,
     code:              pickString(raw.code),
-    name:              pickString(raw.name) ?? buildingId,
+    name:              pickString(raw.name) ?? entityId,
     description:       pickString(raw.description),
     typeLabel:         translateBuildingType(pickString(raw.type) ?? undefined, locale) ?? null,
     statusLabel:       translateBuildingStatus(pickString(raw.status) ?? undefined, locale) ?? null,
@@ -99,17 +91,9 @@ export async function buildBuildingShowcaseSnapshot(
     address:           pickString(raw.address),
     city:              pickString(raw.city),
     location:          pickString(raw.location),
-    projectId,
-    projectName,
+    projectId:         pickString(raw.projectId),
+    projectName:       relations.projectName,
     linkedCompanyName: pickString(raw.linkedCompanyName),
-  };
-
-  const company = await resolveShowcaseCompanyBranding({
-    adminDb,
-    propertyData: projectId ? { projectId } : {},
-    companyId,
-    brandingSource: 'tenant',
-  });
-
-  return { building, company };
-}
+  }),
+  wrapSnapshot: (building, company) => ({ building, company }),
+});
