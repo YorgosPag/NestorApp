@@ -157,5 +157,3 @@ export const ORIENTATION_LABELS: Record<OrientationType, string> = {
   'west': 'units.orientation.west',
   'northwest': 'units.orientation.northwest'
 };
-
-/**

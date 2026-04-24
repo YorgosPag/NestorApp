@@ -289,6 +289,3 @@ export function useWorkspace(): ActiveWorkspaceContext {
 
   return context;
 }
-
-/**
- * Hook to get current workspace ID (convenience)
