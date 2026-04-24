@@ -75,25 +75,6 @@ export interface ShareRecord {
   fileMeta?: FileShareMeta | null;
 }
 
-export interface ShareDispatchLog {
-  id: string;
-  shareId?: string | null;
-  token?: string | null;
-  companyId: string;
-  createdBy: string;
-  createdAt: Timestamp | string;
-  channel: ShareDispatchChannel;
-  externalUserId: string;
-  contactId?: string | null;
-  payload: {
-    subject?: string | null;
-    body?: string | null;
-    photoUrls?: string[] | null;
-  };
-  status: ShareDispatchStatus;
-  errorCode?: string | null;
-}
-
 export interface CreateShareInput {
   entityType: ShareEntityType;
   entityId: string;
