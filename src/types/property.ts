@@ -619,13 +619,6 @@ export interface BackfillDefaults {
 // =============================================================================
 // 🏢 SORT KEYS
 // =============================================================================
-
-/**
- * ⚠️ PARTIAL DEPRECATION: 'price' sort key will be removed
- * @migration PR1: Remove price sorting from UnitsList
- */
-export type PropertySortKey = 'name' | 'price' | 'area';
-
 // =============================================================================
 // 🏢 PROPERTY FILTERS & STATS (merged from legacy property.ts)
 // =============================================================================
