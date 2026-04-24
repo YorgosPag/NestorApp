@@ -104,14 +104,6 @@ export type BuildingFeatureKey = keyof typeof BUILDING_FEATURES;
  * Useful for UI dropdowns/selects.
  */
 export const BUILDING_FEATURE_KEYS = Object.keys(BUILDING_FEATURES) as BuildingFeatureKey[];
-
-/**
- * Feature definition with i18n key.
- */
-export interface BuildingFeatureDefinition {
-  readonly i18nKey: string;
-}
-
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
