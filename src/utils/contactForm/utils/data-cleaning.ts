@@ -279,6 +279,82 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
 }
 
 /**
+ * Sanitize a partial contact update payload (ADR-323).
+ *
+ * Unlike `sanitizeContactData` (used on CREATE — drops empty fields so the new
+ * document stays minimal), an UPDATE needs to distinguish:
+ *   - field NOT in payload → leave existing Firestore value alone
+ *   - field in payload with a real value → overwrite
+ *   - field in payload with empty string / empty array / empty object →
+ *     user EXPLICITLY cleared it → the field must be REMOVED from Firestore
+ *
+ * This function returns the fields split into those two cases. The caller
+ * (`ContactsService.updateContact`) pairs `fieldsToDelete` with Firestore's
+ * `deleteField()` sentinel — keeping the firebase SDK dependency out of the
+ * utils layer.
+ *
+ * Fields flagged via `requiresSpecialDeletion` (photoURL / logoURL /
+ * multiplePhotoURLs) are preserved as-is so existing photo-deletion semantics
+ * keep working (handled in contacts.service.ts with their own sentinel logic).
+ *
+ * @param updates - Partial contact payload coming from a form save
+ * @returns `{ cleanUpdates, fieldsToDelete }` — caller merges back with `deleteField()`
+ */
+export function sanitizeContactForUpdate(
+  updates: ContactDataRecord,
+): { cleanUpdates: ContactDataRecord; fieldsToDelete: string[] } {
+  const cleanUpdates: ContactDataRecord = {};
+  const fieldsToDelete: string[] = [];
+
+  Object.keys(updates).forEach((key) => {
+    const value = updates[key];
+
+    // Preserve fields that have their own deletion semantics elsewhere.
+    if (requiresSpecialDeletion(key, value)) {
+      cleanUpdates[key] = value;
+      return;
+    }
+
+    // undefined → skip (Firestore rejects undefined, and no-op keeps existing value)
+    if (value === undefined) return;
+
+    // Explicit null → treat as explicit clear
+    if (value === null) {
+      fieldsToDelete.push(key);
+      return;
+    }
+
+    // Empty string → explicit clear
+    if (typeof value === 'string' && value.trim() === '') {
+      fieldsToDelete.push(key);
+      return;
+    }
+
+    // Empty array → explicit clear
+    if (Array.isArray(value) && value.length === 0) {
+      fieldsToDelete.push(key);
+      return;
+    }
+
+    // Nested object: sanitize recursively; if all keys ended up empty, flag the
+    // whole object for deletion.
+    if (typeof value === 'object' && !(value instanceof Date) && !Array.isArray(value)) {
+      const nested = sanitizeContactForUpdate(value as ContactDataRecord);
+      if (Object.keys(nested.cleanUpdates).length === 0 && nested.fieldsToDelete.length > 0) {
+        fieldsToDelete.push(key);
+        return;
+      }
+      cleanUpdates[key] = nested.cleanUpdates;
+      return;
+    }
+
+    cleanUpdates[key] = value;
+  });
+
+  return { cleanUpdates, fieldsToDelete };
+}
+
+/**
  * 🏢 ENTERPRISE: Contact Field Validator με comprehensive checks
  *
  * Validates required fields based on contact type και ensures data integrity
