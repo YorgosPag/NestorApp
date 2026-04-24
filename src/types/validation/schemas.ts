@@ -403,38 +403,9 @@ export const taskFiltersSchema = z.object({
 
 // Export types for each schema
 export type ContactFormData = z.infer<typeof contactBaseSchema>;
-export type ContactCreateData = z.infer<typeof contactCreateSchema>;
-export type ContactEditData = z.infer<typeof contactEditSchema>;
 export type CompanyContactData = z.infer<typeof companyContactSchema>;
 
 export type StorageUnitFormData = z.infer<typeof storageUnitBaseSchema>;
-export type StorageUnitCreateData = z.infer<typeof storageUnitCreateSchema>;
-export type StorageUnitEditData = z.infer<typeof storageUnitEditSchema>;
-
 export type FinancialData = z.infer<typeof financialDataSchema>;
-export type CalculatedFinancialData = z.infer<typeof calculatedFinancialSchema>;
-
-export type BuildingFormData = z.infer<typeof buildingBaseSchema>;
-export type BuildingCreateData = z.infer<typeof buildingCreateSchema>;
-export type BuildingEditData = z.infer<typeof buildingEditSchema>;
-
 export type ProjectFormData = z.infer<typeof projectBaseSchema>;
-export type ProjectCreateData = z.infer<typeof projectCreateSchema>;
-export type ProjectEditData = z.infer<typeof projectEditSchema>;
-
-export type LoginData = z.infer<typeof loginSchema>;
-export type RegisterData = z.infer<typeof registerSchema>;
-export type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
-export type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
-
-export type OpportunityFormData = z.infer<typeof opportunityBaseSchema>;
-export type OpportunityCreateData = z.infer<typeof opportunityCreateSchema>;
-export type OpportunityEditData = z.infer<typeof opportunityEditSchema>;
-
 export type TaskFormData = z.infer<typeof taskBaseSchema>;
-export type TaskCreateData = z.infer<typeof taskCreateSchema>;
-export type TaskEditData = z.infer<typeof taskEditSchema>;
-
-export type BuildingFiltersData = z.infer<typeof buildingFiltersSchema>;
-export type PropertyFiltersData = z.infer<typeof propertyFiltersSchema>;
-export type TaskFiltersData = z.infer<typeof taskFiltersSchema>;
