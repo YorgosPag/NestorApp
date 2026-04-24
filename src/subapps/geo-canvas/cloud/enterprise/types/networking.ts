@@ -38,33 +38,6 @@ export interface VPCConfig {
 }
 
 /**
- * Cache behavior
- */
-export interface CacheBehavior {
-  pathPattern: string;
-  targetOriginId: string;
-  compress: boolean;
-  allowedMethods: string[];
-  cachedMethods: string[];
-  forwardCookies: 'none' | 'whitelist' | 'all';
-  forwardHeaders: string[];
-  ttl: {
-    min: number;
-    default: number;
-    max: number;
-  };
-}
-
-/**
- * WAF condition
- */
-export interface WAFCondition {
-  type: 'ip' | 'country' | 'string-match' | 'size-constraint' | 'xss' | 'sql-injection';
-  value: string;
-  operator: 'equals' | 'contains' | 'starts-with' | 'ends-with' | 'greater-than' | 'less-than';
-}
-
-/**
  * Subnet configuration για network segmentation
  * Enterprise: Multi-AZ deployment support
  */
