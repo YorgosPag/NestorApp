@@ -55,7 +55,12 @@ export function ContactDetails({
     onContactUpdated,
   });
 
-  const resolvedFormData = (isEditing ? editedData : enhancedFormData) as ContactFormData;
+  // ADR-323: editedData holds only the dirty diff (Google-level diff-based
+  // updates). In edit mode, merge it on top of enhancedFormData so inputs still
+  // display the existing values, while the save path writes only the diff.
+  const resolvedFormData = (
+    isEditing ? { ...enhancedFormData, ...editedData } : enhancedFormData
+  ) as ContactFormData;
 
   return (
     <ContactEditFocusProvider>
