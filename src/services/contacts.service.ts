@@ -18,7 +18,7 @@ import {
 import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { DuplicatePreventionService } from './contacts/DuplicatePreventionService';
-import { sanitizeContactData, validateContactData, type ContactDataRecord } from '@/utils/contactForm/utils/data-cleaning';
+import { sanitizeContactData, sanitizeContactForUpdate, validateContactData, type ContactDataRecord } from '@/utils/contactForm/utils/data-cleaning';
 
 import { getCol, asDate } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
@@ -279,21 +279,23 @@ export class ContactsService {
     const existingContact = await this.getContact(id);
     if (!existingContact) throw new Error('Contact not found');
 
-    const enterpriseData = EnterpriseContactSaver.updateExistingContact(existingContact, formData);
+    // ADR-323: `formData` is the DIRTY DIFF (only fields the user touched).
+    // We build two views:
+    //   - `enterpriseFull`  = merge (existing + diff) — used for validation,
+    //     photo diff, and the post-save name cascade.
+    //   - `enterpriseDiff`  = convert diff only — this is what we WRITE, so
+    //     untouched fields are not overwritten with stale form defaults.
+    const enterpriseFull = EnterpriseContactSaver.updateExistingContact(existingContact, formData);
 
-    const validationResult = validateContactData(enterpriseData as ContactDataRecord);
+    const validationResult = validateContactData(enterpriseFull as ContactDataRecord);
     if (!validationResult.isValid) {
       throw new Error(`VALIDATION_ERROR: ${validationResult.errors.join(', ')}`);
     }
 
-    // Preserve companyId for Firestore rules
-    if (existingContact.companyId && !enterpriseData.companyId) {
-      enterpriseData.companyId = existingContact.companyId;
-    }
-
-    // Cleanup removed photos from Storage (fire-and-forget)
+    // Cleanup removed photos from Storage (fire-and-forget) — needs the full view
+    // to know what the existing photos were vs. the desired post-save set.
     const oldURLs = (existingContact as unknown as Record<string, unknown>).multiplePhotoURLs;
-    const newURLs = enterpriseData.multiplePhotoURLs;
+    const newURLs = enterpriseFull.multiplePhotoURLs;
     if (Array.isArray(oldURLs) && oldURLs.length > 0) {
       const newURLSet = new Set(Array.isArray(newURLs) ? newURLs : []);
       const deletedURLs = oldURLs.filter((url): url is string => typeof url === 'string' && !newURLSet.has(url));
@@ -302,11 +304,14 @@ export class ContactsService {
       }
     }
 
-    await this.updateContact(id, enterpriseData);
+    // Write only the diff. companyId is immutable per Firestore rules, so
+    // skipping it in the diff is safe — existing doc keeps its value.
+    const enterpriseDiff = EnterpriseContactSaver.convertToEnterpriseStructure(formData);
+    await this.updateContact(id, enterpriseDiff);
 
     // ADR-249: Contact name cascade (fire-and-forget)
     const oldName = this.getDisplayName(existingContact);
-    const newName = this.getDisplayName({ ...existingContact, ...enterpriseData });
+    const newName = this.getDisplayName({ ...existingContact, ...enterpriseFull });
     if (oldName !== newName && newName.length > 0) {
       apiClient.post(`/api/contacts/${id}/name-cascade`, { newDisplayName: newName }).catch(() => {});
     }
@@ -318,7 +323,17 @@ export class ContactsService {
 
   static async updateContact(id: string, updates: ContactUpdatePayload): Promise<void> {
     const docRef = doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id);
-    const updateData = { ...updates, updatedAt: serverTimestamp() } as ContactUpdatePayload;
+
+    // ADR-323: Sanitize the user payload BEFORE adding system fields / FieldValue
+    // sentinels. Empty strings / arrays / objects in the payload represent an
+    // explicit user "clear" and are converted to Firestore deleteField() so the
+    // stale value is actually removed (instead of being overwritten with ""
+    // which bloated the document). Fields not in the payload are left alone.
+    const { cleanUpdates, fieldsToDelete } = sanitizeContactForUpdate(updates as ContactDataRecord);
+    const updateData = { ...cleanUpdates, updatedAt: serverTimestamp() } as ContactUpdatePayload;
+    for (const field of fieldsToDelete) {
+      (updateData as Record<string, unknown>)[field] = deleteField();
+    }
 
     // ADR-195 Phase 1 (CDC PoC): stamp the performer on the document itself
     // so the Cloud Function audit trigger has user context without needing
