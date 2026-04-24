@@ -149,19 +149,6 @@ export interface EntityAuditEntry {
 // ============================================================================
 // QUERY OPTIONS
 // ============================================================================
-
-/** Options for querying audit trail entries */
-export interface EntityAuditQueryOptions {
-  /** Entity type filter */
-  entityType: AuditEntityType;
-  /** Entity ID filter */
-  entityId: string;
-  /** Max entries to return (default: 20) */
-  limit?: number;
-  /** Cursor for pagination (Firestore doc ID) */
-  startAfter?: string;
-}
-
 // ============================================================================
 // API RESPONSE
 // ============================================================================
