@@ -532,93 +532,10 @@ export const FIRESTORE_LIMITS = {
 } as const;
 
 // ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Get collection name με type safety
- */
-export function getCollectionName(collectionKey: keyof typeof COLLECTIONS): string {
-  return COLLECTIONS[collectionKey];
-}
-
-/**
- * Get subcollection name με type safety
- */
-export function getSubcollectionName(subcollectionKey: keyof typeof SUBCOLLECTIONS): string {
-  return SUBCOLLECTIONS[subcollectionKey];
-}
-
-/**
- * Get system document path με type safety
- */
-export function getSystemDocPath(docKey: keyof typeof SYSTEM_DOCS): string {
-  return SYSTEM_DOCS[docKey];
-}
-
-/**
- * Build full document path
- */
-export function buildDocPath(collection: keyof typeof COLLECTIONS, docId: string): string {
-  return `${COLLECTIONS[collection]}/${docId}`;
-}
-
-/**
- * Build full subcollection path
- */
-export function buildSubcollectionPath(
-  collection: keyof typeof COLLECTIONS,
-  docId: string,
-  subcollection: keyof typeof SUBCOLLECTIONS
-): string {
-  return `${COLLECTIONS[collection]}/${docId}/${SUBCOLLECTIONS[subcollection]}`;
-}
-
-/**
- * Validate collection name exists
- * ✅ ENTERPRISE: Type-safe collection validation
- */
-export function isValidCollection(collectionName: string): boolean {
-  return (Object.values(COLLECTIONS) as string[]).includes(collectionName);
-}
-
-/**
- * Get all collection names για debugging
- */
-export function getAllCollections(): Record<string, string> {
-  return { ...COLLECTIONS };
-}
-
-/**
- * Get collection configuration summary για logging
- */
-export function getCollectionConfigSummary(): {
-  totalCollections: number;
-  totalSubcollections: number;
-  customizedCollections: number;
-  environment: string;
-} {
-  const customizedCount = Object.entries(COLLECTIONS).reduce((count, [key]) => {
-    const envVar = `NEXT_PUBLIC_${key}_COLLECTION`;
-    return process.env[envVar] ? count + 1 : count;
-  }, 0);
-
-  return {
-    totalCollections: Object.keys(COLLECTIONS).length,
-    totalSubcollections: Object.keys(SUBCOLLECTIONS).length,
-    customizedCollections: customizedCount,
-    environment: process.env.NODE_ENV || 'development'
-  };
-}
-
-// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 
 export type CollectionKey = keyof typeof COLLECTIONS;
 export type SubcollectionKey = keyof typeof SUBCOLLECTIONS;
 export type SystemDocKey = keyof typeof SYSTEM_DOCS;
-
-// Default export για backward compatibility
-export default COLLECTIONS;
 

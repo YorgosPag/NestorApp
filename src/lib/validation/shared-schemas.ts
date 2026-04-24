@@ -20,53 +20,14 @@ import { NextResponse } from 'next/server';
 /** Firestore document ID (non-empty, max 128 chars) */
 export const IdSchema = z.string().min(1).max(128);
 
-/** Optional Firestore document ID */
-export const OptionalIdSchema = IdSchema.optional();
-
-/** Non-empty string with reasonable max length */
-export const RequiredStringSchema = z.string().min(1).max(1000);
-
-/** Optional string with max length */
-export const OptionalStringSchema = z.string().max(5000).optional();
-
-/** Optional nullable string */
-export const NullableStringSchema = z.string().max(5000).nullable().optional();
-
 /** ISO date string */
 export const ISODateSchema = z.string().min(10).max(30);
-
-/** Optional ISO date */
-export const OptionalISODateSchema = ISODateSchema.optional();
-
-/** Nullable ISO date */
-export const NullableISODateSchema = ISODateSchema.nullable().optional();
 
 /** Positive monetary amount (max €999M) */
 export const MoneySchema = z.number().min(0).max(999_999_999);
 
-/** Optional monetary amount */
-export const OptionalMoneySchema = MoneySchema.optional();
-
-/** Nullable monetary amount */
-export const NullableMoneySchema = MoneySchema.nullable().optional();
-
-/** Positive percentage (0-100) */
-export const PercentageSchema = z.number().min(0).max(100);
-
 /** Page size limiter (1-100, default 20) — prevents abuse */
 export const PageSizeSchema = z.number().int().min(1).max(100).default(20);
-
-/** Common pagination params */
-export const PaginationSchema = z.object({
-  page: z.number().int().min(1).default(1),
-  pageSize: PageSizeSchema,
-});
-
-/** Sort params */
-export const SortSchema = z.object({
-  sortBy: z.string().max(50).optional(),
-  sortOrder: z.enum(['asc', 'desc']).default('asc'),
-});
 
 // =============================================================================
 // SAFE PARSE UTILITY

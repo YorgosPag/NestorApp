@@ -167,13 +167,3 @@ export function UnifiedContactTabbedSection({
   );
 }
 
-export default UnifiedContactTabbedSection;
-
-// 🏷️ EXPORT ALIASES για backward compatibility
-export { UnifiedContactTabbedSection as CompanyContactTabbedSection };
-export { UnifiedContactTabbedSection as ServiceContactTabbedSection };
-export { UnifiedContactTabbedSection as IndividualContactTabbedSection };
-export { UnifiedContactTabbedSection as CompanyContactSection };
-export { UnifiedContactTabbedSection as ServiceContactSection };
-export { UnifiedContactTabbedSection as IndividualContactSection };
-export { UnifiedContactTabbedSection as CommonContactSection };

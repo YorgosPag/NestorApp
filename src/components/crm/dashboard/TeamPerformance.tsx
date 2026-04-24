@@ -59,7 +59,8 @@ export function TeamPerformance() {
                         <tr key={member.name} className={`border-b ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}>
                             <td className="p-2 font-medium">{member.name}</td>
                             <td className={`p-2 ${colors.text.muted}`}>{member.leads}</td>
-                            <td className="p-2 text-green-600">{member.value}</td> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+                            {/* eslint-disable-next-line design-system/enforce-semantic-colors */}
+                            <td className="p-2 text-green-600">{member.value}</td>
                         </tr>
                     ))}
                 </tbody>
