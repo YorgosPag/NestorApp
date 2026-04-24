@@ -187,14 +187,6 @@ export function isTerminalChequeStatus(status: ChequeStatus): boolean {
   return VALID_CHEQUE_TRANSITIONS[status].length === 0;
 }
 
-/** Ordered statuses for timeline display (χωρίς terminals) */
-export const CHEQUE_STATUS_ORDER: ChequeStatus[] = [
-  'received',
-  'in_custody',
-  'deposited',
-  'clearing',
-  'cleared',
-];
 
 // =============================================================================
 // INPUT TYPES

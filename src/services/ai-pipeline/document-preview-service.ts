@@ -183,18 +183,6 @@ export async function previewDocumentFromBuffer(
   return callVisionAPI(content, apiKey, params.fileRecordId);
 }
 
-/**
- * Analyze a document using OpenAI Vision and return a structured preview.
- * Returns `null` on failure (unsupported type, large file, API error).
- */
-export async function previewDocument(
-  params: DocumentPreviewParams
-): Promise<DocumentPreviewResult | null> {
-  const fileBuffer = await downloadAndValidateFile(params);
-  if (!fileBuffer) return null;
-
-  return previewDocumentFromBuffer(fileBuffer, params);
-}
 
 // ============================================================================
 // INTERNAL HELPERS

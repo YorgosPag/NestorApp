@@ -227,14 +227,8 @@ export class NavigationCompaniesService {
 export const navigationCompaniesService = new NavigationCompaniesService();
 
 // Helper functions
-export const addCompanyToNavigation = (contactId: string, userId?: string) =>
-  navigationCompaniesService.addCompanyToNavigation(contactId, userId);
-
 export const removeCompanyFromNavigation = (contactId: string) =>
   navigationCompaniesService.removeCompanyFromNavigation(contactId);
-
-export const isCompanyInNavigation = (contactId: string) =>
-  navigationCompaniesService.isCompanyInNavigation(contactId);
 
 export const getNavigationCompanyIds = () =>
   navigationCompaniesService.getNavigationCompanyIds();

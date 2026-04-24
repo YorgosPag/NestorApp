@@ -29,14 +29,3 @@ export const CONFLICT_CODE = 'VERSION_CONFLICT' as const;
  * These collections never need conflict detection because documents
  * are created once and never updated, or are system-managed.
  */
-export const EXCLUDED_COLLECTIONS: ReadonlySet<string> = new Set([
-  'audit_log',
-  'entity_audit',
-  'communications',
-  'messages',
-  'email_ingestion_queue',
-  'ai_chat_history',
-  'attendance_qr_tokens',
-  'file_audit_log',
-  'file_comments',
-]);

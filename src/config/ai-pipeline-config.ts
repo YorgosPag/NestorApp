@@ -126,14 +126,3 @@ export const PIPELINE_REPLY_CONFIG = {
 } as const;
 
 // ============================================================================
-// AGGREGATE CONFIG (convenience export)
-// ============================================================================
-
-export const AI_PIPELINE_CONFIG = {
-  queue: PIPELINE_QUEUE_CONFIG,
-  timeouts: PIPELINE_TIMEOUT_CONFIG,
-  confidence: PIPELINE_CONFIDENCE_CONFIG,
-  protocol: PIPELINE_PROTOCOL_CONFIG,
-  threat: PIPELINE_THREAT_CONFIG,
-  reply: PIPELINE_REPLY_CONFIG,
-} as const;

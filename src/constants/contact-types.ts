@@ -40,13 +40,6 @@ export type ContactType = (typeof CONTACT_TYPES)[number];
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
-/** Returns `true` if `value` is one of the 3 canonical contact types. */
-export function isContactType(value: unknown): value is ContactType {
-  return (
-    typeof value === 'string' &&
-    (CONTACT_TYPES as readonly string[]).includes(value)
-  );
-}
 
 // =============================================================================
 // 3. ALIAS RESOLUTION — Greek ↔ English normalization

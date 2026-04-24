@@ -304,7 +304,5 @@ export const geoAlertBundleOptimizer = GeoAlertBundleOptimizer.getInstance();
 
 export const analyzeBundles = () => geoAlertBundleOptimizer.analyzeBundles();
 export const validateBudget = () => geoAlertBundleOptimizer.validatePerformanceBudget();
-export const generateBundleReport = (format?: 'json' | 'html' | 'csv') =>
-  geoAlertBundleOptimizer.generateReport(format);
 
 export default geoAlertBundleOptimizer;

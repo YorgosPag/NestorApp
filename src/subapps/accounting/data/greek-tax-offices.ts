@@ -318,10 +318,3 @@ export function getTaxOfficeDisplayName(code: string): string {
   return NAMES[code] || code;
 }
 
-/**
- * Gets the region display name for a tax office code.
- */
-export function getRegionDisplayName(code: string): string {
-  const office = GREEK_TAX_OFFICES.find(o => o.code === code);
-  return office?.region || code;
-}

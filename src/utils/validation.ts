@@ -267,36 +267,6 @@ export {
   isDatePastOrToday,
 } from './validation/date-validators';
 
-// Common validation schemas
-export const commonSchemas = {
-  // Contact information
-  email: validationRules.email(),
-  phone: validationRules.phone(),
-
-  // Property information
-  area: validationRules.area(),
-  price: validationRules.price(),
-
-  // Financial fields
-  salePricePerSqm: validationRules.price(),
-  costPerSqm: validationRules.price(),
-  realizedValue: validationRules.nonNegative(),
-  financing: validationRules.nonNegative(),
-
-  // Basic fields
-  name: validationRules.required().pipe(validationRules.minLength(2)),
-  description: validationRules.maxLength(1000),
-  code: validationRules.required().pipe(validationRules.minLength(1)),
-
-  // Numbers
-  floor: validationRules.integer(),
-  percentage: validationRules.number().pipe(validationRules.minValue(0)).pipe(validationRules.maxValue(100)),
-
-  // 🏢 ENTERPRISE DATE SCHEMAS
-  birthDate: validationRules.birthDate(),
-  documentIssueDate: validationRules.documentIssueDate(),
-  // Note: documentExpiryDate requires dynamic validation with issue date
-};
 
 // Utility to convert Zod errors to form-friendly format
 export const formatZodErrors = (error: z.ZodError) => {

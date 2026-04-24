@@ -40,14 +40,6 @@ export type RenovationStatus = (typeof RENOVATION_STATUSES)[number];
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
-/** Returns `true` if `value` is one of the 4 canonical renovation statuses. */
-export function isRenovationStatus(value: unknown): value is RenovationStatus {
-  return (
-    typeof value === 'string' &&
-    (RENOVATION_STATUSES as readonly string[]).includes(value)
-  );
-}
-
 // =============================================================================
 // 3. DERIVED SUBSETS — Completed vs pending renovation
 // =============================================================================
@@ -60,13 +52,3 @@ export const COMPLETED_RENOVATION_STATUSES = [
 
 export type CompletedRenovationStatus =
   (typeof COMPLETED_RENOVATION_STATUSES)[number];
-
-/** Returns `true` if a renovation has been executed (partial ή full). */
-export function isCompletedRenovationStatus(
-  value: unknown,
-): value is CompletedRenovationStatus {
-  return (
-    typeof value === 'string' &&
-    (COMPLETED_RENOVATION_STATUSES as readonly string[]).includes(value)
-  );
-}

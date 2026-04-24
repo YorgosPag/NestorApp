@@ -328,6 +328,5 @@ export class GeoAlertTestSuite {
 export const geoAlertTestSuite = GeoAlertTestSuite.getInstance();
 export const runAllTests = () => geoAlertTestSuite.runAllTests();
 export const runPhaseTests = (phase: TestCategory) => geoAlertTestSuite.runTestCategory(phase);
-export const getTestStats = () => geoAlertTestSuite.getTestStatistics();
 
 export default geoAlertTestSuite;

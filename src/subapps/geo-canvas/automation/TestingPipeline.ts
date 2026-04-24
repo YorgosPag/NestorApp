@@ -482,8 +482,6 @@ export const geoAlertTestingPipeline = GeoAlertTestingPipeline.getInstance();
 
 export const executePipeline = (trigger?: string, metadata?: Partial<ExecutionMetadata>) =>
   geoAlertTestingPipeline.executePipeline(trigger, metadata);
-export const getPipelineStatus = (executionId: string) =>
-  geoAlertTestingPipeline.getExecutionStatus(executionId);
 export const getPipelineStats = () =>
   geoAlertTestingPipeline.getPipelineStatistics();
 
