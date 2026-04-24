@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClearableSelectSection, shouldAllowClearForField, wrapClearableSelectHandler } from './form-select-helpers';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
@@ -183,6 +184,7 @@ function renderSelectField(
 ): React.ReactNode {
   const currentValue = formData[field.id];
   const valueStr = currentValue !== null && currentValue !== undefined ? String(currentValue) : (field.defaultValue ?? '');
+  const allowClear = shouldAllowClearForField(field);
 
   // 🌐 Use translated placeholder from field (already translated by parent)
   const placeholder = field.placeholder || field.label;
@@ -191,7 +193,7 @@ function renderSelectField(
     <Select
       name={field.id}
       value={valueStr}
-      onValueChange={(value) => onSelectChange(field.id, value)}
+      onValueChange={wrapClearableSelectHandler((value) => onSelectChange(field.id, value))}
       disabled={disabled}
       required={field.required}
     >
@@ -199,6 +201,7 @@ function renderSelectField(
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
+        <ClearableSelectSection shouldAllowClear={allowClear} />
         {field.options?.map((option) => {
           // 🔧 FIX: Translate option labels using the same logic as field labels
           const translatedLabel = translateFieldValue(option.label, t) || option.label;
