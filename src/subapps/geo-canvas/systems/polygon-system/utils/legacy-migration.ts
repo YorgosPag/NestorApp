@@ -13,10 +13,6 @@ import { nowISO } from '@/lib/date-local';
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
-
-/** Potential legacy source data type */
-export type LegacySourceData = LegacyPolygonData | LegacyControlPoint[] | Record<string, unknown> | unknown;
-
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
