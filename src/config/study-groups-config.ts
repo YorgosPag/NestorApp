@@ -158,10 +158,6 @@ export function getStudyGroupMeta(group: StudyGroup): StudyGroupMeta | undefined
   return getGroupMetaMap().get(group);
 }
 
-export function getStudyGroupsForEntity(entityLevel: EntityLevel): readonly StudyGroupMeta[] {
-  return STUDY_GROUPS.filter((g) => g.entityLevels.includes(entityLevel));
-}
-
 // ─── Purpose → Group Reverse Lookup ─────────────────────────────────────────
 
 import { STUDY_ENTRIES } from './upload-entry-points/entries-studies';

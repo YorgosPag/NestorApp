@@ -124,13 +124,6 @@ export const PROJECT_STATUS_TRANSITION_REGISTRY: StatusTransitionRegistry = {
   ],
 };
 
-export const PROJECT_MUTATION_CHANGE_FIELDS = {
-  COMPANY_LINK: ['linkedCompanyId'],
-  PROJECT_IDENTITY: ['name', 'title', 'description'],
-  PERMIT_METADATA: ['buildingBlock', 'protocolNumber', 'licenseNumber', 'issuingAuthority', 'issueDate'],
-  PROJECT_STATUS: ['status'],
-} as const;
-
 export const PROJECT_MUTATION_FIELD_KIND_MAP = {
   linkedCompanyId: 'companyLink',
   name: 'projectIdentity',
@@ -143,14 +136,6 @@ export const PROJECT_MUTATION_FIELD_KIND_MAP = {
   issueDate: 'permitMetadata',
   status: 'projectStatus',
 } as const;
-
-export const PROJECT_MUTATION_STATUS_GUARDED_VALUES: ReadonlySet<ProjectStatus> = new Set([
-  'planning',
-  'in_progress',
-  'completed',
-  'on_hold',
-  'cancelled',
-]);
 
 export type ProjectMutationKind = typeof PROJECT_MUTATION_FIELD_KIND_MAP[keyof typeof PROJECT_MUTATION_FIELD_KIND_MAP];
 export type ProjectMutationField = keyof typeof PROJECT_MUTATION_FIELD_KIND_MAP;

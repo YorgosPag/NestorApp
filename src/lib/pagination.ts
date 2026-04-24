@@ -47,16 +47,6 @@ export interface PaginationState<T = unknown> {
 }
 
 // =============================================================================
-// PAGINATION CONSTANTS
-// =============================================================================
-
-export const PAGINATION_DEFAULTS = {
-  PAGE_SIZE: 20,
-  MAX_PAGE_SIZE: 100, // Prevent excessive loads
-  PREFETCH_SIZE: 5 // Prefetch next N items for smooth scrolling
-} as const;
-
-// =============================================================================
 // PAGINATION FUNCTIONS
 // =============================================================================
 

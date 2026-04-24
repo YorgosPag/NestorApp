@@ -32,10 +32,3 @@ export const PROCUREMENT_UNIT_OPTIONS: readonly ProcurementUnit[] = [
   { value: 'σετ',  label: { el: 'Σετ', en: 'Set' } },
 ] as const;
 
-/** Special value for custom unit entry */
-export const CUSTOM_UNIT_VALUE = '__custom__' as const;
-
-/** Check if a unit value is from the predefined list */
-export function isPredefinedUnit(value: string): boolean {
-  return PROCUREMENT_UNIT_OPTIONS.some(u => u.value === value);
-}

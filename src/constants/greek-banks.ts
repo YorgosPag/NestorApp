@@ -260,32 +260,3 @@ export function getSystemicBanks(): readonly BankInfo[] {
   return GREEK_BANKS.filter(bank => systemicCodes.includes(bank.code));
 }
 
-/**
- * Search banks by name (partial match)
- *
- * @param query - Search query
- * @returns Array of matching banks
- *
- * @example
- * ```typescript
- * const results = searchBanks('εθνική');
- * // Returns: [{ code: 'ETHNGRAA', name: 'Εθνική Τράπεζα της Ελλάδος', ... }]
- * ```
- */
-export function searchBanks(query: string): readonly BankInfo[] {
-  const lowerQuery = query.toLowerCase();
-  return GREEK_BANKS.filter(bank =>
-    bank.name.toLowerCase().includes(lowerQuery) ||
-    bank.code.toLowerCase().includes(lowerQuery)
-  );
-}
-
-/**
- * Check if a SWIFT/BIC code belongs to a Greek bank
- *
- * @param code - The SWIFT/BIC code to check
- * @returns true if the bank is Greek
- */
-export function isGreekBank(code: string): boolean {
-  return GREEK_BANKS.some(bank => bank.code === code.toUpperCase());
-}

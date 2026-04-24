@@ -16,7 +16,6 @@ import {
   Group as PanelGroup,
   Panel,
   Separator as PanelResizeHandle,
-  usePanelRef,
   type PanelImperativeHandle,
 } from 'react-resizable-panels';
 import { cn } from '@/lib/utils';
@@ -66,5 +65,5 @@ const ResizableHandle = ({
   </PanelResizeHandle>
 );
 
-export { ResizablePanelGroup, ResizablePanel, ResizableHandle, usePanelRef };
+export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
 export type { PanelImperativeHandle };

@@ -11,8 +11,6 @@
  * This file is for client-side operations that need immediate real-time dispatch.
  */
 
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { API_ROUTES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Direct Firestore writes removed - now using Admin SDK via API endpoints
@@ -283,31 +281,3 @@ export async function deleteProject(
   }
 }
 
-/**
- * 🎯 ENTERPRISE: Λίστα έργων από Firebase (Client-side)
- * Για περιπτώσεις που χρειάζεται client-side fetch
- */
-export async function getProjectsClient(limitCount: number = 100): Promise<Project[]> {
-  try {
-    logger.info('Starting Firestore query');
-
-    const projectsQuery = query(
-      collection(db, COLLECTIONS.PROJECTS),
-      orderBy('name', 'asc'),
-      limit(limitCount)
-    );
-    const snapshot = await getDocs(projectsQuery);
-
-    const projects = snapshot.docs.map(docSnap => ({
-      id: docSnap.id,
-      ...docSnap.data()
-    })) as Project[];
-
-    logger.info('Loaded projects from Firebase', { count: projects.length });
-    return projects;
-
-  } catch (error) {
-    logger.error('Error loading projects', { error });
-    return [];
-  }
-}
