@@ -1,14 +1,15 @@
 /**
- * @fileoverview Project Showcase HTML email — orchestrator (ADR-316 Phase 2).
- * @description Composes the project showcase view (hero, photos, specs,
- *              description, floorplans) into a branded Mailgun-ready email,
- *              using the SSoT wrapper from `base-email-template.ts` and the
- *              shared section helpers from `showcase-email-shared.ts`.
+ * @fileoverview Project Showcase HTML email — thin config on top of the
+ * showcase-core email builder factory (ADR-316 + ADR-321 Phase 3).
  *
- *              Mirror of `property-showcase-email.ts` but adapted to the
- *              project snapshot shape (progress, totalValue, totalArea,
- *              startDate, completionDate, client) — no linked spaces, no
- *              per-property sections.
+ * Surface-specific concerns:
+ *   - Project hero (name + projectCode suffix + type/status subtitle + description)
+ *   - Specs key/value table wired to the project snapshot shape
+ *   - Label accessors bridging `ProjectShowcasePDFLabels` to the core
+ *
+ * Everything else (subject composition, intro text, photo grid, floorplans
+ * media list, CTA, branded wrap, text fallback) lives in
+ * `createShowcaseEmailBuilder`.
  */
 
 import 'server-only';
@@ -16,47 +17,33 @@ import 'server-only';
 import type { ProjectShowcaseSnapshot } from '@/types/project-showcase';
 import type { ProjectShowcasePDFLabels } from '@/services/project-showcase/labels';
 import {
-  wrapInBrandedTemplate,
-  type EmailSocialLink,
-  type EmailSocialPlatform,
-} from './base-email-template';
+  createShowcaseEmailBuilder,
+  type BuildShowcaseEmailParams,
+  type BuiltShowcaseEmail,
+  type ShowcaseEmailRenderHookParams,
+} from '@/services/showcase-core';
 import {
   BRAND,
   escapeHtml,
-  buildSharedTextFallback,
   renderKeyValueTable,
-  renderMediaList,
-  renderPhotoGrid,
   renderSectionTitle,
-  renderShareCta,
   type ShowcaseEmailMedia,
   type ShowcaseKeyValueRow,
 } from './showcase-email-shared';
 
-export interface BuildProjectShowcaseEmailParams {
-  snapshot: ProjectShowcaseSnapshot;
-  labels: ProjectShowcasePDFLabels;
-  photos?: ShowcaseEmailMedia[];
-  floorplans?: ShowcaseEmailMedia[];
-  /** Public showcase URL (`<baseUrl>/shared/<token>`). Rendered as primary CTA. */
-  shareUrl?: string;
-  /**
-   * Personal message typed by the sender. When provided and non-empty,
-   * replaces the default `labels.email.introText` in both html intro and
-   * text fallback. Preserves sender line breaks.
-   */
-  personalMessage?: string;
-}
+export type BuildProjectShowcaseEmailParams = BuildShowcaseEmailParams<
+  ProjectShowcaseSnapshot,
+  ProjectShowcasePDFLabels,
+  ShowcaseEmailMedia
+>;
 
-export interface BuiltProjectShowcaseEmail {
-  subject: string;
-  html: string;
-  text: string;
-}
+export type BuiltProjectShowcaseEmail = BuiltShowcaseEmail;
 
 type SnapshotProject = ProjectShowcaseSnapshot['project'];
+type HookParams = ShowcaseEmailRenderHookParams<ProjectShowcaseSnapshot, ProjectShowcasePDFLabels>;
 
-function renderProjectHero(p: SnapshotProject, labels: ProjectShowcasePDFLabels): string {
+function renderProjectHero({ snapshot, labels }: HookParams): string {
+  const p = snapshot.project;
   const code = p.projectCode
     ? `<p style="margin:4px 0 0;font-size:12px;color:${BRAND.grayLight};">${escapeHtml(labels.specs.code)}: ${escapeHtml(p.projectCode)}</p>`
     : '';
@@ -92,7 +79,8 @@ function composeLocation(p: SnapshotProject): string | undefined {
   return parts.length > 0 ? parts.join(', ') : undefined;
 }
 
-function renderProjectSpecs(p: SnapshotProject, labels: ProjectShowcasePDFLabels): string {
+function renderProjectSpecs({ snapshot, labels }: HookParams): string {
+  const p = snapshot.project;
   const rows: ShowcaseKeyValueRow[] = [
     { label: labels.specs.type,           value: p.typeLabel },
     { label: labels.specs.status,         value: p.statusLabel },
@@ -109,62 +97,31 @@ function renderProjectSpecs(p: SnapshotProject, labels: ProjectShowcasePDFLabels
   return `${renderSectionTitle(labels.specs.title)}${table}`;
 }
 
-export function buildProjectShowcaseEmail(
-  params: BuildProjectShowcaseEmailParams,
-): BuiltProjectShowcaseEmail {
-  const { snapshot, labels, photos, floorplans, shareUrl, personalMessage } = params;
-  const project = snapshot.project;
-  const company = snapshot.company;
-
-  const codeSuffix = project.projectCode ? ` (${project.projectCode})` : '';
-  const subject = `${labels.email.subjectPrefix} — ${project.name}${codeSuffix}`;
-
-  const introText = personalMessage?.trim() ? personalMessage.trim() : labels.email.introText;
-  const introHtml = escapeHtml(introText).replace(/\n/g, '<br />');
-  const intro = `<p style="margin:0 0 16px;font-size:14px;color:${BRAND.navyDark};line-height:1.6;">${introHtml}</p>`;
-  const hero = renderProjectHero(project, labels);
-  const cta = shareUrl ? renderShareCta(shareUrl, labels.email.ctaLabel) : '';
-
-  const sections = [
-    intro,
-    hero,
-    renderPhotoGrid(photos, labels.photos.title),
-    renderProjectSpecs(project, labels),
-    renderMediaList(floorplans, labels.floorplans.title),
-    cta,
-  ].filter((s) => s && s.length > 0);
-
-  const socials: EmailSocialLink[] = (company.socialMedia ?? []).map((s) => ({
-    platform: s.platform as EmailSocialPlatform,
-    url: s.url,
-    username: s.username,
-    label: s.label,
-  }));
-
-  const html = wrapInBrandedTemplate({
-    contentHtml: sections.join('\n'),
-    companyName: company.name,
-    companyPhone: company.phone,
-    companyEmail: company.email,
-    companyWebsite: company.website,
-    companyLogoUrl: company.logoUrl,
-    headerSubtitle: labels.header.subtitle,
-    companyPhones: company.phones,
-    companyEmails: company.emails,
-    companyAddresses: company.addresses,
-    companyWebsites: company.websites,
-    companySocials: socials,
-    contactLabels: labels.header.contacts,
-    enableContactProviderLinks: true,
-  });
-
-  const text = buildSharedTextFallback({
-    subject,
-    heading: project.name + codeSuffix,
-    intro: introText,
-    description: project.description,
-    shareUrl,
-  });
-
-  return { subject, html, text };
-}
+export const buildProjectShowcaseEmail = createShowcaseEmailBuilder<
+  ProjectShowcaseSnapshot,
+  ProjectShowcasePDFLabels,
+  ShowcaseEmailMedia
+>({
+  getEntityHeading: (snapshot) => {
+    const p = snapshot.project;
+    return {
+      name: p.name,
+      codeSuffix: p.projectCode ? ` (${p.projectCode})` : '',
+      description: p.description,
+    };
+  },
+  getCompany: (snapshot) => snapshot.company,
+  labels: {
+    subjectPrefix:   (l) => l.email.subjectPrefix,
+    introText:       (l) => l.email.introText,
+    ctaLabel:        (l) => l.email.ctaLabel,
+    headerSubtitle:  (l) => l.header.subtitle,
+    contactLabels:   (l) => l.header.contacts,
+    photosTitle:     (l) => l.photos.title,
+    floorplansTitle: (l) => l.floorplans.title,
+  },
+  hooks: {
+    renderHero:  renderProjectHero,
+    renderSpecs: renderProjectSpecs,
+  },
+});

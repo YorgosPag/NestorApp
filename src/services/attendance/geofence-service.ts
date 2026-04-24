@@ -27,9 +27,6 @@ export const MIN_GEOFENCE_RADIUS = 50;
 /** Maximum valid geofence radius (meters) */
 export const MAX_GEOFENCE_RADIUS = 500;
 
-/** Default geofence radius if none configured (meters) */
-export const DEFAULT_GEOFENCE_RADIUS = 200;
-
 // =============================================================================
 // HAVERSINE DISTANCE
 // =============================================================================

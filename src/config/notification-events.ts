@@ -351,30 +351,3 @@ export const FIREBASE_ERROR_CODES = {
   ALREADY_EXISTS_STRING: 'already-exists',
 } as const;
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Get event mapping by event type
- */
-export function getEventMapping(eventType: NotificationEventType): EventCategoryMapping | undefined {
-  return EVENT_CATEGORY_MAP[eventType];
-}
-
-/**
- * Check if event is mandatory (security)
- */
-export function isEventMandatory(eventType: NotificationEventType): boolean {
-  const mapping = EVENT_CATEGORY_MAP[eventType];
-  return mapping?.isMandatory ?? false;
-}
-
-/**
- * Get all events for a category
- */
-export function getEventsForCategory(category: NotificationCategory): NotificationEventType[] {
-  return Object.entries(EVENT_CATEGORY_MAP)
-    .filter(([, mapping]) => mapping.category === category)
-    .map(([eventType]) => eventType as NotificationEventType);
-}

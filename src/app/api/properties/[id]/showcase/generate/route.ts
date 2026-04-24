@@ -30,7 +30,7 @@ import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-con
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { generateShareId } from '@/services/enterprise-id.service';
-import { PropertyShowcasePDFService } from '@/services/pdf/PropertyShowcasePDFService';
+import { createPropertyShowcasePdfService } from '@/services/pdf/PropertyShowcasePDFService';
 import {
   buildPdfData,
   deactivateShowcaseShares,
@@ -90,7 +90,7 @@ async function generatePdfOrThrow(
   pdfData: ReturnType<typeof buildPdfData>
 ): Promise<Uint8Array> {
   try {
-    const pdfService = new PropertyShowcasePDFService();
+    const pdfService = createPropertyShowcasePdfService();
     return await pdfService.generate(pdfData);
   } catch (err) {
     logger.error('PDF generation failed', {

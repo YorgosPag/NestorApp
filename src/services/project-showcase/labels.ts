@@ -1,11 +1,13 @@
 /**
- * Project Showcase PDF labels — server-side i18n SSoT (ADR-316).
+ * Project Showcase PDF labels — server-side i18n SSoT (ADR-316 + ADR-321 Phase 3).
  *
  * Reads `src/i18n/locales/{el,en}/showcase.json` → `projectShowcase` namespace
  * so the PDF generator never duplicates localised strings.
  *
  * Also exports inline label maps for project type + status (no separate
- * constants file exists for these enum labels).
+ * constants file exists for these enum labels). Chrome / email / header
+ * fallbacks are delegated to `showcase-core/labels-shared` so all three
+ * showcases share a single source of truth.
  *
  * @module services/project-showcase/labels
  */
@@ -13,7 +15,20 @@
 import elShowcase from '@/i18n/locales/el/showcase.json';
 import enShowcase from '@/i18n/locales/en/showcase.json';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
-import type { ShowcaseHeaderContactLabels } from '@/services/property-showcase/labels';
+import {
+  createLocaleFallback,
+  resolveHeaderContactLabels,
+  showcaseCtaLabelDefault,
+  showcaseDescriptionSectionDefault,
+  showcaseFloorplansTitleDefault,
+  showcaseGeneratedOnDefault,
+  showcasePhotosTitleDefault,
+  showcasePoweredByDefault,
+  type ShowcaseHeaderContactLabels,
+  type ShowcaseHeaderLabels,
+} from '@/services/showcase-core/labels-shared';
+
+export type { ShowcaseHeaderContactLabels };
 
 // ============================================================================
 // ENUM LABEL MAPS (inline — no centralised label service for project types)
@@ -120,11 +135,6 @@ export interface ProjectShowcaseEmailLabels {
   ctaLabel: string;
 }
 
-export interface ProjectShowcaseHeaderLabels {
-  subtitle: string;
-  contacts: ShowcaseHeaderContactLabels;
-}
-
 export interface ProjectShowcasePDFLabels {
   specs: ProjectShowcaseSpecLabels;
   description: ProjectShowcaseDescriptionLabels;
@@ -132,7 +142,7 @@ export interface ProjectShowcasePDFLabels {
   floorplans: ProjectShowcaseFloorplansLabels;
   chrome: ProjectShowcasePdfChrome;
   email: ProjectShowcaseEmailLabels;
-  header: ProjectShowcaseHeaderLabels;
+  header: ShowcaseHeaderLabels;
 }
 
 // ============================================================================
@@ -144,24 +154,10 @@ const CATALOGS: Record<EnumLocale, ElShowcase> = {
   en: enShowcase as unknown as ElShowcase,
 };
 
-function loadHeaderContactLabels(
-  c: ElShowcase,
-  locale: EnumLocale,
-): ShowcaseHeaderContactLabels {
-  const raw = (c as unknown as { header?: { contacts?: Record<string, string> } }).header?.contacts ?? {};
-  const fb = (el: string, en: string) => (locale === 'el' ? el : en);
-  return {
-    addressLabel: raw.addressLabel ?? fb('Διεύθυνση', 'Address'),
-    phoneLabel:   raw.phoneLabel   ?? fb('Τηλέφωνο', 'Phone'),
-    emailLabel:   raw.emailLabel   ?? fb('Email', 'Email'),
-    websiteLabel: raw.websiteLabel ?? fb('Ιστοσελίδα', 'Website'),
-    socialLabel:  raw.socialLabel  ?? fb('Μέσα κοινωνικής δικτύωσης', 'Social media'),
-  };
-}
-
 export function loadProjectShowcasePdfLabels(locale: EnumLocale = 'el'): ProjectShowcasePDFLabels {
   const c = CATALOGS[locale];
   const ps = (c as unknown as { projectShowcase?: Record<string, unknown> }).projectShowcase ?? {};
+  const fb = createLocaleFallback(locale);
 
   const specs = (ps.specs ?? {}) as Record<string, string>;
   const description = (ps.description ?? {}) as Record<string, string>;
@@ -171,50 +167,50 @@ export function loadProjectShowcasePdfLabels(locale: EnumLocale = 'el'): Project
   const email = (ps.email ?? {}) as Record<string, string>;
   const header = (ps.header ?? {}) as Record<string, string>;
 
-  const fallback = (key: string, el: string, en: string) =>
-    (locale === 'el' ? el : en);
-
   return {
     specs: {
-      title:          specs.title          ?? fallback('title', 'Στοιχεία Έργου', 'Project Details'),
-      code:           specs.code           ?? fallback('code', 'Κωδικός', 'Code'),
-      type:           specs.type           ?? fallback('type', 'Τύπος', 'Type'),
-      status:         specs.status         ?? fallback('status', 'Κατάσταση', 'Status'),
-      progress:       specs.progress       ?? fallback('progress', 'Πρόοδος', 'Progress'),
-      totalArea:      specs.totalArea      ?? fallback('totalArea', 'Συνολικό εμβαδόν', 'Total area'),
-      totalValue:     specs.totalValue     ?? fallback('totalValue', 'Συνολική αξία', 'Total value'),
-      startDate:      specs.startDate      ?? fallback('startDate', 'Έναρξη', 'Start date'),
-      completionDate: specs.completionDate ?? fallback('completionDate', 'Παράδοση', 'Completion date'),
+      title:          specs.title          ?? fb('Στοιχεία Έργου', 'Project Details'),
+      code:           specs.code           ?? fb('Κωδικός', 'Code'),
+      type:           specs.type           ?? fb('Τύπος', 'Type'),
+      status:         specs.status         ?? fb('Κατάσταση', 'Status'),
+      progress:       specs.progress       ?? fb('Πρόοδος', 'Progress'),
+      totalArea:      specs.totalArea      ?? fb('Συνολικό εμβαδόν', 'Total area'),
+      totalValue:     specs.totalValue     ?? fb('Συνολική αξία', 'Total value'),
+      startDate:      specs.startDate      ?? fb('Έναρξη', 'Start date'),
+      completionDate: specs.completionDate ?? fb('Παράδοση', 'Completion date'),
       areaUnit:       specs.areaUnit       ?? 'm²',
-      location:       specs.location       ?? fallback('location', 'Τοποθεσία', 'Location'),
-      client:         specs.client         ?? fallback('client', 'Πελάτης', 'Client'),
+      location:       specs.location       ?? fb('Τοποθεσία', 'Location'),
+      client:         specs.client         ?? fb('Πελάτης', 'Client'),
     },
     description: {
-      sectionTitle: description.sectionTitle ?? fallback('desc', 'Περιγραφή', 'Description'),
+      sectionTitle: description.sectionTitle ?? showcaseDescriptionSectionDefault(locale),
     },
     photos: {
-      title: photos.title ?? fallback('photos', 'Φωτογραφίες', 'Photos'),
+      title: photos.title ?? showcasePhotosTitleDefault(locale),
     },
     floorplans: {
-      title: floorplans.title ?? fallback('floorplans', 'Κατόψεις', 'Floorplans'),
+      title: floorplans.title ?? showcaseFloorplansTitleDefault(locale),
     },
     chrome: {
-      title:              pdf.title              ?? fallback('pdfTitle', 'Παρουσίαση Έργου', 'Project Showcase'),
-      generatedOn:        pdf.generatedOn        ?? fallback('gen', 'Δημιουργήθηκε', 'Generated on'),
-      descriptionSection: pdf.descriptionSection ?? fallback('desc', 'Περιγραφή', 'Description'),
-      footerNote:         pdf.footerNote         ?? fallback('footer', 'Παρουσίαση έργου', 'Project showcase'),
-      photosTitle:        photos.title           ?? fallback('photos', 'Φωτογραφίες', 'Photos'),
-      floorplansTitle:    floorplans.title       ?? fallback('floorplans', 'Κατόψεις', 'Floorplans'),
-      poweredBy:          locale === 'el' ? 'Υλοποίηση από Nestor App' : 'Powered by Nestor App',
+      title:              pdf.title              ?? fb('Παρουσίαση Έργου', 'Project Showcase'),
+      generatedOn:        pdf.generatedOn        ?? showcaseGeneratedOnDefault(locale),
+      descriptionSection: pdf.descriptionSection ?? showcaseDescriptionSectionDefault(locale),
+      footerNote:         pdf.footerNote         ?? fb('Παρουσίαση έργου', 'Project showcase'),
+      photosTitle:        photos.title           ?? showcasePhotosTitleDefault(locale),
+      floorplansTitle:    floorplans.title       ?? showcaseFloorplansTitleDefault(locale),
+      poweredBy:          showcasePoweredByDefault(locale),
     },
     email: {
-      subjectPrefix: email.subjectPrefix ?? fallback('sub', 'Παρουσίαση Έργου', 'Project Showcase'),
-      introText:     email.introText     ?? fallback('intro', 'Σας προωθούμε την αναλυτική παρουσίαση του έργου.', 'We are sharing the detailed presentation of the project.'),
-      ctaLabel:      email.ctaLabel      ?? fallback('cta', 'Δείτε online', 'View online'),
+      subjectPrefix: email.subjectPrefix ?? fb('Παρουσίαση Έργου', 'Project Showcase'),
+      introText:     email.introText     ?? fb('Σας προωθούμε την αναλυτική παρουσίαση του έργου.', 'We are sharing the detailed presentation of the project.'),
+      ctaLabel:      email.ctaLabel      ?? showcaseCtaLabelDefault(locale),
     },
     header: {
-      subtitle: (header.subtitle as string | undefined) ?? fallback('sub', 'Παρουσίαση έργου', 'Project showcase'),
-      contacts: loadHeaderContactLabels(c, locale),
+      subtitle: (header.subtitle as string | undefined) ?? fb('Παρουσίαση έργου', 'Project showcase'),
+      contacts: resolveHeaderContactLabels(
+        (c as unknown as { header?: { contacts?: Record<string, unknown> } }).header?.contacts,
+        locale,
+      ),
     },
   };
 }

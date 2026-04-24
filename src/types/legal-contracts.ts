@@ -58,18 +58,6 @@ export const CONTRACT_PHASE_ORDER: readonly ContractPhase[] = [
   'payoff',
 ] as const;
 
-/**
- * Prerequisite: ποια φάση πρέπει να είναι signed πριν δημιουργηθεί η επόμενη.
- * null = καμία prerequisite (preliminary μπορεί να δημιουργηθεί ελεύθερα).
- * ΣΗΜΑΝΤΙΚΟ: Preliminary είναι ΠΡΟΑΙΡΕΤΙΚΟ — final μπορεί να δημιουργηθεί
- * χωρίς preliminary, ΑΛΛΑ αν υπάρχει preliminary πρέπει να είναι signed.
- */
-export const CONTRACT_PHASE_PREREQUISITES: Record<ContractPhase, ContractPhase | null> = {
-  preliminary: null,
-  final: null, // preliminary is optional — validated conditionally in service
-  payoff: 'final',
-};
-
 // ============================================================================
 // LEGAL PHASE COMPUTATION MAP
 // ============================================================================

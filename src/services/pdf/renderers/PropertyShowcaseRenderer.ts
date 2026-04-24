@@ -40,13 +40,14 @@ import {
   type LinkedSpaceFloorplansPdfData,
 } from './PropertyShowcaseSections';
 import { drawShowcaseBrandHeader } from './PropertyShowcaseBrandHeader';
+import {
+  safeShowcaseValue,
+  formatShowcasePdfDate,
+  formatShowcasePdfEuro,
+  type ShowcasePhotoAsset,
+} from '@/services/showcase-core';
 
-export interface ShowcasePhotoAsset {
-  id: string;
-  bytes: Uint8Array;
-  format: 'JPEG' | 'PNG';
-  displayName?: string;
-}
+export type { ShowcasePhotoAsset };
 
 export interface PropertyFloorFloorplansPdfData {
   label?: string;
@@ -77,28 +78,6 @@ export interface PropertyShowcasePDFData {
 // Re-export for downstream consumers that still import from this module.
 export type { PropertyShowcasePDFLabels };
 
-function safe(value: string | number | undefined | null): string {
-  if (value === undefined || value === null) return '-';
-  const normalized = String(value).trim();
-  return normalized.length > 0 ? normalized : '-';
-}
-
-function formatShowcaseDate(iso: string, locale: 'el' | 'en' = 'el'): string {
-  if (!iso) return '-';
-  const parts = iso.slice(0, 10).split('-');
-  if (parts.length !== 3) return iso;
-  const [year, month, day] = parts;
-  return locale === 'el' ? `${day}/${month}/${year}` : `${year}-${month}-${day}`;
-}
-
-function formatPrice(value: number, locale: 'el' | 'en' = 'el'): string {
-  const formatter = new Intl.NumberFormat(locale === 'el' ? 'el-GR' : 'en-US', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  });
-  return formatter.format(value);
-}
 
 export class PropertyShowcaseRenderer {
   // Showcase PDFs must render Greek labels + user content, so the renderer
@@ -200,8 +179,8 @@ export class PropertyShowcaseRenderer {
       drawSectionTitle: (y, text) =>
         this.drawSectionTitle(doc, y, margins, pageWidth, contentWidth, text),
       ensureSpace,
-      formatPrice: (v) => formatPrice(v, data.locale),
-      formatDate: (iso) => formatShowcaseDate(iso, data.locale),
+      formatPrice: (v) => formatShowcasePdfEuro(v, data.locale),
+      formatDate: (iso) => formatShowcasePdfDate(iso, data.locale),
     };
   }
 
@@ -246,7 +225,7 @@ export class PropertyShowcaseRenderer {
     const p = data.snapshot.property;
     let current = this.textRenderer.addText({
       doc,
-      text: safe(p.name),
+      text: safeShowcaseValue(p.name),
       y,
       align: 'center',
       fontSize: FONT_SIZES.H2,
@@ -393,7 +372,7 @@ export class PropertyShowcaseRenderer {
     const contact = [brand.phone, brand.email, brand.website]
       .filter((value): value is string => Boolean(value))
       .join(' · ');
-    const footerLine = `${data.labels.chrome.footerNote} · ${data.labels.chrome.generatedOn} ${formatShowcaseDate(
+    const footerLine = `${data.labels.chrome.footerNote} · ${data.labels.chrome.generatedOn} ${formatShowcasePdfDate(
       data.generatedAt.toISOString(),
       data.locale,
     )}`;

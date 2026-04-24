@@ -1,149 +1,155 @@
 /**
  * =============================================================================
- * GET /api/showcase/[token] (ADR-312 Phase 4)
+ * GET /api/showcase/[token] (ADR-312 Phase 4 + ADR-321 Phase 4)
  * =============================================================================
  *
- * Public endpoint — no authentication required. Resolves a showcase token into
- * a read-only snapshot of the property: full Πληροφορίες-tab coverage, company
- * branding, published photos, floorplans, optional video link, PDF link.
+ * Thin forward to `createPublicShowcasePayloadRoute` (showcase-core). Public
+ * (anonymous) — resolves the share via dual-read (unified `shares` first, then
+ * legacy `file_shares` for backward compat) and delegates payload assembly to
+ * the surface-specific `buildPayload` hook.
  *
- * The snapshot payload is produced by the SSoT `buildPropertyShowcaseSnapshot`
- * so this route and the PDF generator cannot drift.
- *
- * Validation:
- *  - Share exists, is active, has showcaseMode=true
- *  - Share is not expired
- *
- * SRP split — media helpers + share lookup live in ./helpers.ts.
+ * Token lookup: unified `shares` (entityType='property_showcase') first,
+ * then legacy `file_shares.showcaseMode=true` for older tokens.
+ * videoUrl lives in legacy `file_shares.note` — surfaced via `extra.note`.
  *
  * @module app/api/showcase/[token]/route
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { NextRequest } from 'next/server';
+import { createPublicShowcasePayloadRoute } from '@/services/showcase-core';
 import { FILE_CATEGORIES } from '@/config/domain-constants';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { resolveShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
 import {
   buildPropertyShowcaseSnapshot,
   loadShowcaseRelations,
 } from '@/services/property-showcase/snapshot-builder';
-import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
-import { createModuleLogger } from '@/lib/telemetry/Logger';
 import type { ShowcasePayload } from '@/components/property-showcase/types';
 import {
-  buildBaseUrl,
   loadFilesByCategory,
   loadLinkedSpaceFloorplans,
   loadPropertyFloorFloorplans,
-  loadShareByToken,
 } from './helpers';
-
-const logger = createModuleLogger('ShowcasePublicApi');
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
-function jsonError(status: number, message: string): NextResponse {
-  return NextResponse.json({ error: message }, { status });
+interface PropertyShareExtra {
+  note?: string;
 }
+
+const route = createPublicShowcasePayloadRoute<ShowcasePayload, PropertyShareExtra>({
+  loggerName: 'ShowcasePublicApi',
+  shareNotFoundMessage: 'Showcase link not found or deactivated',
+  pdfUrlPath: (token) => `/api/showcase/${token}/pdf`,
+
+  resolveShare: async (token, adminDb) => {
+    // 1. Unified shares (entityType='property_showcase') — ADR-315 M3+.
+    const unifiedSnap = await adminDb
+      .collection(COLLECTIONS.SHARES)
+      .where('token', '==', token)
+      .where('isActive', '==', true)
+      .limit(1)
+      .get();
+    if (!unifiedSnap.empty) {
+      const d = unifiedSnap.docs[0].data() as Record<string, unknown>;
+      if (d.entityType === 'property_showcase') {
+        const entityId = d.entityId as string | undefined;
+        const companyId = d.companyId as string | undefined;
+        const expiresAt = d.expiresAt as string | undefined;
+        if (!entityId || !companyId || !expiresAt) return null;
+        const showcaseMeta = (d.showcaseMeta ?? {}) as { pdfStoragePath?: string };
+        return { entityId, companyId, expiresAt, pdfStoragePath: showcaseMeta.pdfStoragePath };
+      }
+    }
+
+    // 2. Legacy file_shares fallback — older tokens before ADR-315 M3.
+    const legacySnap = await adminDb
+      .collection(COLLECTIONS.FILE_SHARES)
+      .where('token', '==', token)
+      .where('isActive', '==', true)
+      .limit(1)
+      .get();
+    if (legacySnap.empty) return null;
+    const d = legacySnap.docs[0].data() as Record<string, unknown>;
+    const entityId = d.showcasePropertyId as string | undefined;
+    const companyId = d.companyId as string | undefined;
+    const expiresAt = d.expiresAt as string | undefined;
+    if (!d.showcaseMode || !entityId || !companyId || !expiresAt) return null;
+    return {
+      entityId,
+      companyId,
+      expiresAt,
+      pdfStoragePath: d.pdfStoragePath as string | undefined,
+      extra: { note: d.note as string | undefined },
+    };
+  },
+
+  buildPayload: async ({
+    entityId, companyId, locale, expiresAt, pdfUrl, extra, adminDb, logger,
+  }) => {
+    const propertySnap = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(entityId).get();
+    if (!propertySnap.exists) throw new Error('Property not found');
+    const propertyData = (propertySnap.data() ?? {}) as Record<string, unknown>;
+    if ((propertyData.companyId as string | undefined) !== companyId) {
+      throw new Error('Tenant mismatch');
+    }
+
+    const branding = await resolveShowcaseCompanyBranding({ adminDb, propertyData, companyId });
+    const context = await loadShowcaseRelations({
+      adminDb, propertyId: entityId, property: propertyData, branding,
+    });
+
+    const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans] = await Promise.all([
+      loadFilesByCategory(companyId, entityId, FILE_CATEGORIES.PHOTOS),
+      loadFilesByCategory(companyId, entityId, FILE_CATEGORIES.FLOORPLANS),
+      loadLinkedSpaceFloorplans(companyId, context),
+      loadPropertyFloorFloorplans(companyId, context),
+    ]);
+
+    const snapshot = buildPropertyShowcaseSnapshot(context, locale);
+    const hasLinkedFloorplans =
+      linkedSpaceFloorplans.parking.length > 0 || linkedSpaceFloorplans.storage.length > 0;
+
+    logger.info('Showcase resolved', {
+      propertyId: entityId, companyId,
+      photoCount: photos.length, floorplanCount: floorplans.length,
+      propertyFloorFloorplans: propertyFloorFloorplans?.media.length ?? 0,
+      linkedParkingFloorplans: linkedSpaceFloorplans.parking.reduce(
+        (sum, g) => sum + g.media.length + (g.floorFloorplans?.length ?? 0), 0),
+      linkedStorageFloorplans: linkedSpaceFloorplans.storage.reduce(
+        (sum, g) => sum + g.media.length + (g.floorFloorplans?.length ?? 0), 0),
+    });
+
+    return {
+      property: snapshot.property,
+      company: {
+        name: snapshot.company.name,
+        phone: snapshot.company.phone,
+        email: snapshot.company.email,
+        website: snapshot.company.website,
+        logoUrl: snapshot.company.logoUrl,
+        phones: snapshot.company.phones,
+        emails: snapshot.company.emails,
+        addresses: snapshot.company.addresses,
+        websites: snapshot.company.websites,
+        socialMedia: snapshot.company.socialMedia,
+      },
+      photos,
+      floorplans,
+      propertyFloorFloorplans,
+      linkedSpaceFloorplans: hasLinkedFloorplans ? linkedSpaceFloorplans : undefined,
+      videoUrl: extra?.note || undefined,
+      pdfUrl,
+      expiresAt,
+    };
+  },
+});
 
 export async function GET(
   request: NextRequest,
-  segmentData: { params: Promise<{ token: string }> }
+  segmentData: { params: Promise<{ token: string }> },
 ) {
   const { token } = await segmentData.params;
-  if (!token || token.trim().length === 0) {
-    return jsonError(400, 'Token is required');
-  }
-
-  const adminDb = getAdminFirestore();
-  if (!adminDb) return jsonError(503, 'Database connection not available');
-
-  const share = await loadShareByToken(token);
-  if (!share) return jsonError(404, 'Showcase link not found or deactivated');
-
-  const showcaseMode = share.showcaseMode as boolean | undefined;
-  const showcasePropertyId = share.showcasePropertyId as string | undefined;
-  const companyId = share.companyId as string | undefined;
-  const expiresAt = share.expiresAt as string | undefined;
-
-  if (!showcaseMode || !showcasePropertyId || !companyId || !expiresAt) {
-    return jsonError(400, 'Share is not a property showcase');
-  }
-
-  if (new Date(expiresAt).getTime() < Date.now()) {
-    return jsonError(410, 'Showcase link has expired');
-  }
-
-  const propertySnap = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(showcasePropertyId).get();
-  if (!propertySnap.exists) return jsonError(404, 'Property not found');
-  const propertyData = (propertySnap.data() ?? {}) as Record<string, unknown>;
-  if ((propertyData as { companyId?: string }).companyId !== companyId) {
-    return jsonError(403, 'Tenant mismatch');
-  }
-
-  // Branding via hierarchy Property → Project → Contact (ADR-312 Phase 3.7).
-  const branding = await resolveShowcaseCompanyBranding({
-    adminDb,
-    propertyData,
-    companyId,
-  });
-
-  const localeParam = request.nextUrl.searchParams.get('locale');
-  const locale: EnumLocale = localeParam === 'en' ? 'en' : 'el';
-
-  const context = await loadShowcaseRelations({
-    adminDb,
-    propertyId: showcasePropertyId,
-    property: propertyData,
-    branding,
-  });
-
-  const [photos, floorplans, linkedSpaceFloorplans, propertyFloorFloorplans] = await Promise.all([
-    loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.PHOTOS),
-    loadFilesByCategory(companyId, showcasePropertyId, FILE_CATEGORIES.FLOORPLANS),
-    loadLinkedSpaceFloorplans(companyId, context),
-    loadPropertyFloorFloorplans(companyId, context),
-  ]);
-
-  const snapshot = buildPropertyShowcaseSnapshot(context, locale);
-
-  const hasLinkedFloorplans =
-    linkedSpaceFloorplans.parking.length > 0 || linkedSpaceFloorplans.storage.length > 0;
-
-  const response: ShowcasePayload = {
-    property: snapshot.property,
-    company: {
-      name: snapshot.company.name,
-      phone: snapshot.company.phone,
-      email: snapshot.company.email,
-      website: snapshot.company.website,
-      logoUrl: snapshot.company.logoUrl,
-      phones: snapshot.company.phones,
-      emails: snapshot.company.emails,
-      addresses: snapshot.company.addresses,
-      websites: snapshot.company.websites,
-      socialMedia: snapshot.company.socialMedia,
-    },
-    photos,
-    floorplans,
-    propertyFloorFloorplans,
-    linkedSpaceFloorplans: hasLinkedFloorplans ? linkedSpaceFloorplans : undefined,
-    videoUrl: (share.note as string | undefined) || undefined,
-    pdfUrl: share.pdfStoragePath ? `${buildBaseUrl(request)}/api/showcase/${token}/pdf` : undefined,
-    expiresAt,
-  };
-
-  logger.info('Showcase resolved', {
-    token, propertyId: showcasePropertyId, companyId,
-    photoCount: photos.length, floorplanCount: floorplans.length,
-    propertyFloorFloorplans: propertyFloorFloorplans?.media.length ?? 0,
-    linkedParkingFloorplans: linkedSpaceFloorplans.parking.reduce(
-      (sum, g) => sum + g.media.length + (g.floorFloorplans?.length ?? 0), 0),
-    linkedStorageFloorplans: linkedSpaceFloorplans.storage.reduce(
-      (sum, g) => sum + g.media.length + (g.floorFloorplans?.length ?? 0), 0),
-  });
-
-  return NextResponse.json(response);
+  return route.handle(request, token);
 }

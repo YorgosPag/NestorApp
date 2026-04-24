@@ -1,17 +1,6 @@
 {
-  "generated": "2026-04-24T12:41:24.803Z",
+  "generated": "2026-04-24T14:24:44.922Z",
   "knipVersion": "6",
-  "files": [
-    "src/components/showcase-core/ShowcaseClient.tsx",
-    "src/components/showcase-core/ShowcaseSpecsGrid.tsx",
-    "src/services/showcase-core/api/create-email-route.ts",
-    "src/services/showcase-core/api/create-pdf-route.ts",
-    "src/services/showcase-core/api/create-public-payload-route.ts",
-    "src/services/showcase-core/api/create-public-pdf-route.ts",
-    "src/services/showcase-core/email-builder-factory.ts",
-    "src/services/showcase-core/labels-shared.ts",
-    "src/services/showcase-core/pdf-renderer-base.ts",
-    "src/services/showcase-core/pdf-service.ts"
-  ],
-  "fileCount": 10
+  "files": [],
+  "fileCount": 0
 }

@@ -76,21 +76,6 @@ export interface AdminEnvConfig {
   defaultCity?: string;
 }
 
-/**
- * Get all admin env config as a single object.
- * Validates required vars and returns aggregated config.
- *
- * @returns AdminEnvConfig object
- * @throws Error if required vars are missing
- */
-export function getAdminEnvConfig(): AdminEnvConfig {
-  return {
-    companyName: getRequiredAdminCompanyName(),
-    projectName: getOptionalAdminProjectName(),
-    defaultCity: getOptionalAdminCity(),
-  };
-}
-
 // ============================================================================
 // COMMUNICATIONS / EMAIL CONFIG (RFC v6 Phase 1)
 // ============================================================================
@@ -113,21 +98,3 @@ export function getRequiredEmailFunctionUrl(): string {
   return url;
 }
 
-/**
- * Communications environment config interface.
- */
-export interface CommunicationsEnvConfig {
-  emailFunctionUrl: string;
-}
-
-/**
- * Get communications env config.
- *
- * @returns CommunicationsEnvConfig object
- * @throws Error if required vars are missing
- */
-export function getCommunicationsEnvConfig(): CommunicationsEnvConfig {
-  return {
-    emailFunctionUrl: getRequiredEmailFunctionUrl(),
-  };
-}

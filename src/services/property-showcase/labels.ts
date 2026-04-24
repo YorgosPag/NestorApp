@@ -1,22 +1,36 @@
 /**
- * Showcase PDF labels — server-side i18n SSoT.
+ * Showcase PDF labels — server-side i18n SSoT (ADR-312 + ADR-321 Phase 4).
  *
- * Reads `src/i18n/locales/{el,en}/showcase.json` directly (same pattern as
- * `property-enum-labels.service`) so the PDF generator never duplicates
- * localised strings. Every label the renderer needs is loaded here, keyed to
- * the exact JSON paths used by the web `ShowcaseClient` component.
+ * Reads `src/i18n/locales/{el,en}/showcase.json` directly so the PDF
+ * generator never duplicates localised strings. Chrome / email / header
+ * fallbacks are delegated to `showcase-core/labels-shared` (ADR-321 SSoT).
  *
  * @module services/property-showcase/labels
- * @enterprise ADR-312 Phase 4 — replaces hard-coded `buildShowcaseLabels`
  */
 
 import elShowcase from '@/i18n/locales/el/showcase.json';
 import enShowcase from '@/i18n/locales/en/showcase.json';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
+import {
+  createLocaleFallback,
+  resolveHeaderContactLabels,
+  showcaseCtaLabelDefault,
+  showcaseDescriptionSectionDefault,
+  showcaseFloorplansTitleDefault,
+  showcaseGeneratedOnDefault,
+  showcasePhotosTitleDefault,
+  showcasePoweredByDefault,
+  type ShowcaseHeaderContactLabels,
+  type ShowcaseHeaderLabels,
+} from '@/services/showcase-core/labels-shared';
 
-const CATALOGS: Record<EnumLocale, typeof elShowcase> = {
-  el: elShowcase as typeof elShowcase,
-  en: enShowcase as unknown as typeof elShowcase,
+export type { ShowcaseHeaderContactLabels, ShowcaseHeaderLabels };
+
+type ElShowcase = typeof elShowcase;
+
+const CATALOGS: Record<EnumLocale, ElShowcase> = {
+  el: elShowcase as ElShowcase,
+  en: enShowcase as unknown as ElShowcase,
 };
 
 export interface ShowcaseSpecLabels {
@@ -141,19 +155,6 @@ export interface ShowcaseEmailLabels {
   ctaLabel: string;
 }
 
-export interface ShowcaseHeaderContactLabels {
-  addressLabel: string;
-  phoneLabel: string;
-  emailLabel: string;
-  websiteLabel: string;
-  socialLabel: string;
-}
-
-export interface ShowcaseHeaderLabels {
-  subtitle: string;
-  contacts: ShowcaseHeaderContactLabels;
-}
-
 export interface PropertyShowcasePDFLabels {
   specs: ShowcaseSpecLabels;
   project: ShowcaseProjectLabels;
@@ -173,90 +174,66 @@ export interface PropertyShowcasePDFLabels {
 
 export function loadShowcasePdfLabels(locale: EnumLocale = 'el'): PropertyShowcasePDFLabels {
   const c = CATALOGS[locale];
+  const raw = c as unknown as Record<string, Record<string, unknown>>;
+  const fb = createLocaleFallback(locale);
+
+  const pdf = (raw.pdf ?? {}) as Record<string, string>;
+  const email = (raw.email ?? {}) as Record<string, string>;
+
+  const floorplansRaw = (raw.floorplans ?? {}) as Record<string, string>;
+  const floorplans: ShowcaseFloorplansLabels = {
+    title:        floorplansRaw.title        ?? showcaseFloorplansTitleDefault(locale),
+    floorSubtitle: floorplansRaw.floorSubtitle ?? fb('Κάτοψη ορόφου', 'Floor plan'),
+  };
+
+  const linkedSpacesFloorplansRaw = (raw.linkedSpacesFloorplans ?? {}) as Record<string, string>;
+  const linkedSpacesFloorplans: ShowcaseLinkedSpacesFloorplansLabels = {
+    sectionTitle:  linkedSpacesFloorplansRaw.sectionTitle  ?? fb('Κατόψεις συνδεδεμένων χώρων', 'Linked spaces floorplans'),
+    parkingColumn: linkedSpacesFloorplansRaw.parkingColumn ?? fb('Κατόψεις θέσεων στάθμευσης', 'Parking floorplans'),
+    storageColumn: linkedSpacesFloorplansRaw.storageColumn ?? fb('Κατόψεις αποθηκών', 'Storage floorplans'),
+    emptyParking:  linkedSpacesFloorplansRaw.emptyParking  ?? fb('Δεν υπάρχουν κατόψεις για τις θέσεις στάθμευσης', 'No parking floorplans available'),
+    emptyStorage:  linkedSpacesFloorplansRaw.emptyStorage  ?? fb('Δεν υπάρχουν κατόψεις για τις αποθήκες', 'No storage floorplans available'),
+    unnamedSpace:  linkedSpacesFloorplansRaw.unnamedSpace  ?? fb('Χωρίς κωδικό', 'Unlabeled'),
+    floorSubtitle: linkedSpacesFloorplansRaw.floorSubtitle ?? fb('Κάτοψη ορόφου', 'Floor plan'),
+  };
+
+  const orientationRaw = (raw.orientation ?? {}) as Record<string, string>;
+
   return {
-    specs: c.specs as unknown as ShowcaseSpecLabels,
-    project: c.project as unknown as ShowcaseProjectLabels,
-    commercial: c.commercial as unknown as ShowcaseCommercialLabels,
-    systems: c.systems as unknown as ShowcaseSystemsLabels,
-    finishes: c.finishes as unknown as ShowcaseFinishesLabels,
-    features: c.features as unknown as ShowcaseFeaturesLabels,
-    energy: c.energy as unknown as ShowcaseEnergyLabels,
-    orientation: (c as { orientation?: ShowcaseOrientationLabels }).orientation ?? {
-      sectionTitle: locale === 'el' ? 'Προσανατολισμός' : 'Orientation',
+    specs:                 c.specs as unknown as ShowcaseSpecLabels,
+    project:               c.project as unknown as ShowcaseProjectLabels,
+    commercial:            c.commercial as unknown as ShowcaseCommercialLabels,
+    systems:               c.systems as unknown as ShowcaseSystemsLabels,
+    finishes:              c.finishes as unknown as ShowcaseFinishesLabels,
+    features:              c.features as unknown as ShowcaseFeaturesLabels,
+    energy:                c.energy as unknown as ShowcaseEnergyLabels,
+    orientation: {
+      sectionTitle: orientationRaw.sectionTitle ?? fb('Προσανατολισμός', 'Orientation'),
     },
-    linkedSpaces: c.linkedSpaces as unknown as ShowcaseLinkedSpacesLabels,
-    linkedSpacesFloorplans: (c as { linkedSpacesFloorplans?: ShowcaseLinkedSpacesFloorplansLabels })
-      .linkedSpacesFloorplans ?? {
-        sectionTitle: locale === 'el' ? 'Κατόψεις συνδεδεμένων χώρων' : 'Linked spaces floorplans',
-        parkingColumn: locale === 'el' ? 'Κατόψεις θέσεων στάθμευσης' : 'Parking floorplans',
-        storageColumn: locale === 'el' ? 'Κατόψεις αποθηκών' : 'Storage floorplans',
-        emptyParking: locale === 'el'
-          ? 'Δεν υπάρχουν κατόψεις για τις θέσεις στάθμευσης'
-          : 'No parking floorplans available',
-        emptyStorage: locale === 'el'
-          ? 'Δεν υπάρχουν κατόψεις για τις αποθήκες'
-          : 'No storage floorplans available',
-        unnamedSpace: locale === 'el' ? 'Χωρίς κωδικό' : 'Unlabeled',
-        floorSubtitle: locale === 'el' ? 'Κάτοψη ορόφου' : 'Floor plan',
-      },
-    floorplans: (c as { floorplans?: ShowcaseFloorplansLabels }).floorplans
-      ? {
-          title: (c as { floorplans: ShowcaseFloorplansLabels }).floorplans.title,
-          floorSubtitle:
-            (c as { floorplans: ShowcaseFloorplansLabels }).floorplans.floorSubtitle
-            ?? (locale === 'el' ? 'Κάτοψη ορόφου' : 'Floor plan'),
-        }
-      : {
-          title: locale === 'el' ? 'Κατόψεις' : 'Floorplans',
-          floorSubtitle: locale === 'el' ? 'Κάτοψη ορόφου' : 'Floor plan',
-        },
+    linkedSpaces:          c.linkedSpaces as unknown as ShowcaseLinkedSpacesLabels,
+    linkedSpacesFloorplans,
+    floorplans,
     chrome: {
-      title: (c as { pdf?: { title?: string } }).pdf?.title ?? 'Property Showcase',
-      generatedOn: (c as { pdf?: { generatedOn?: string } }).pdf?.generatedOn ?? 'Generated on',
-      descriptionSection:
-        (c as { pdf?: { descriptionSection?: string } }).pdf?.descriptionSection ?? 'Description',
-      footerNote: (c as { pdf?: { footerNote?: string } }).pdf?.footerNote ?? 'Property showcase',
-      photosTitle: c.photos.title,
-      floorplansTitle: c.floorplans.title,
-      viewsTitle: c.views.sectionTitle,
-      poweredBy:
-        (c as { brand?: { poweredBy?: string } }).brand?.poweredBy
-        ?? (locale === 'el' ? 'Υλοποίηση από Nestor App' : 'Powered by Nestor App'),
+      title:              pdf.title              ?? fb('Property Showcase', 'Property Showcase'),
+      generatedOn:        pdf.generatedOn        ?? showcaseGeneratedOnDefault(locale),
+      descriptionSection: pdf.descriptionSection ?? showcaseDescriptionSectionDefault(locale),
+      footerNote:         pdf.footerNote         ?? fb('Property showcase', 'Property showcase'),
+      photosTitle:        (c.photos as unknown as { title: string }).title ?? showcasePhotosTitleDefault(locale),
+      floorplansTitle:    floorplans.title,
+      viewsTitle:         (c.views as unknown as { sectionTitle: string }).sectionTitle ?? fb('Θέα', 'Views'),
+      poweredBy:          showcasePoweredByDefault(locale),
     },
     email: {
-      subjectPrefix:
-        (c as { email?: { subjectPrefix?: string } }).email?.subjectPrefix
-        ?? (locale === 'el' ? 'Παρουσίαση Ακινήτου' : 'Property Showcase'),
-      introText:
-        (c as { email?: { introText?: string } }).email?.introText
-        ?? (locale === 'el'
-          ? 'Σας προωθούμε την αναλυτική παρουσίαση του ακινήτου.'
-          : 'We are sharing the detailed presentation of the property.'),
-      ctaLabel:
-        (c as { email?: { ctaLabel?: string } }).email?.ctaLabel
-        ?? (locale === 'el' ? 'Δείτε online' : 'View online'),
+      subjectPrefix: email.subjectPrefix ?? fb('Παρουσίαση Ακινήτου', 'Property Showcase'),
+      introText:     email.introText     ?? fb('Σας προωθούμε την αναλυτική παρουσίαση του ακινήτου.', 'We are sharing the detailed presentation of the property.'),
+      ctaLabel:      email.ctaLabel      ?? showcaseCtaLabelDefault(locale),
     },
     header: {
-      subtitle:
-        (c as { header?: { subtitle?: string } }).header?.subtitle
-        ?? (locale === 'el' ? 'Παρουσίαση ακινήτου' : 'Property showcase'),
-      contacts: {
-        addressLabel:
-          (c as { header?: { contacts?: { addressLabel?: string } } }).header?.contacts?.addressLabel
-          ?? (locale === 'el' ? 'Διεύθυνση' : 'Address'),
-        phoneLabel:
-          (c as { header?: { contacts?: { phoneLabel?: string } } }).header?.contacts?.phoneLabel
-          ?? (locale === 'el' ? 'Τηλέφωνο' : 'Phone'),
-        emailLabel:
-          (c as { header?: { contacts?: { emailLabel?: string } } }).header?.contacts?.emailLabel
-          ?? 'Email',
-        websiteLabel:
-          (c as { header?: { contacts?: { websiteLabel?: string } } }).header?.contacts?.websiteLabel
-          ?? (locale === 'el' ? 'Ιστοσελίδα' : 'Website'),
-        socialLabel:
-          (c as { header?: { contacts?: { socialLabel?: string } } }).header?.contacts?.socialLabel
-          ?? (locale === 'el' ? 'Κοινωνικά δίκτυα' : 'Social media'),
-      },
+      subtitle: ((raw.header ?? {}) as Record<string, string>).subtitle ?? fb('Παρουσίαση ακινήτου', 'Property showcase'),
+      contacts: resolveHeaderContactLabels(
+        (c as unknown as { header?: { contacts?: Record<string, unknown> } }).header?.contacts,
+        locale,
+      ),
     },
   };
 }

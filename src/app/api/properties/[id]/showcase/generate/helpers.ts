@@ -33,7 +33,7 @@ import {
   type PropertyShowcaseContext,
 } from '@/services/property-showcase/snapshot-builder';
 import { loadShowcasePdfLabels } from '@/services/property-showcase/labels';
-import { PropertyShowcasePDFService } from '@/services/pdf/PropertyShowcasePDFService';
+import { createPropertyShowcasePdfService } from '@/services/pdf/PropertyShowcasePDFService';
 import type {
   PropertyFloorFloorplansPdfData,
   PropertyShowcasePDFData,
@@ -454,7 +454,7 @@ export async function regeneratePdfForShare(params: {
 
   let pdfBytes: Uint8Array;
   try {
-    pdfBytes = await new PropertyShowcasePDFService().generate(pdfData);
+    pdfBytes = await createPropertyShowcasePdfService().generate(pdfData);
   } catch (err) {
     logger.error('Regenerate: PDF generation failed', {
       shareId: params.shareId, propertyId: params.propertyId,

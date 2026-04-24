@@ -1,13 +1,15 @@
 /**
- * @fileoverview Property Showcase HTML email — orchestrator (ADR-312 Phase 8).
- * @description Composes the full showcase view (hero, photos, specs, energy,
- *              views, floorplans, systems, finishes, features, linked spaces,
- *              linked-space floorplans) into a branded Mailgun-ready email,
- *              using the SSoT wrapper from `base-email-template.ts`.
+ * @fileoverview Property Showcase HTML email — thin config on top of the
+ * showcase-core email builder factory (ADR-312 + ADR-321 Phase 4).
  *
- *              The caller is responsible for loading `snapshot` + media +
- *              labels via the server-side property-showcase helpers, so that
- *              web, PDF and email render the identical dataset.
+ * Surface-specific concerns:
+ *   - Property hero (code + description)
+ *   - Specs key/value table wired to the property snapshot shape
+ *   - 8 body sections: energy, views, floorplans list, propertyFloor,
+ *     systems, finishes, features, linkedSpaces, linkedSpaceFloorplans
+ *
+ * Everything else (subject, intro, photo grid, CTA, branded wrap, text
+ * fallback) lives in `createShowcaseEmailBuilder`.
  */
 
 import 'server-only';
@@ -20,148 +22,78 @@ import type {
   ShowcasePropertyFloorFloorplans,
 } from '@/components/property-showcase/types';
 import {
-  wrapInBrandedTemplate,
-  BRAND,
-  escapeHtml,
-  type EmailSocialLink,
-  type EmailSocialPlatform,
-} from './base-email-template';
+  createShowcaseEmailBuilder,
+  type BuildShowcaseEmailParams as CoreBuildShowcaseEmailParams,
+  type BuiltShowcaseEmail as CoreBuiltShowcaseEmail,
+} from '@/services/showcase-core';
+import { renderMediaList } from './showcase-email-shared';
 import {
-  renderEnergy,
-  renderFeatures,
-  renderFinishes,
-  renderLinkedSpaceFloorplans,
-  renderLinkedSpaces,
-  renderMediaList,
-  renderPhotoGrid,
-  renderPropertyFloorFloorplans,
   renderPropertyHero,
-  renderShareCta,
   renderSpecs,
-  renderSystems,
+  renderEnergy,
   renderViews,
+  renderPropertyFloorFloorplans,
+  renderSystems,
+  renderFinishes,
+  renderFeatures,
+  renderLinkedSpaces,
+  renderLinkedSpaceFloorplans,
 } from './property-showcase-email-sections';
 
-export interface BuildShowcaseEmailParams {
-  snapshot: PropertyShowcaseSnapshot;
-  labels: PropertyShowcasePDFLabels;
-  photos?: ShowcaseMedia[];
-  floorplans?: ShowcaseMedia[];
+export interface PropertyShowcaseEmailExtras {
   propertyFloorFloorplans?: ShowcasePropertyFloorFloorplans;
   linkedSpaceFloorplans?: ShowcaseLinkedSpaceFloorplans;
-  /** Public showcase URL (`<baseUrl>/shared/<token>`). Rendered as primary CTA. */
-  shareUrl?: string;
-  /**
-   * Personal message typed by the sender (ADR-312 Phase 9.5). When provided
-   * and non-empty, replaces the default `labels.email.introText` in both html
-   * intro and text fallback. Preserves sender line breaks.
-   */
-  personalMessage?: string;
 }
 
-export interface BuiltShowcaseEmail {
-  subject: string;
-  html: string;
-  text: string;
-}
+export type BuildShowcaseEmailParams = CoreBuildShowcaseEmailParams<
+  PropertyShowcaseSnapshot,
+  PropertyShowcasePDFLabels,
+  ShowcaseMedia,
+  PropertyShowcaseEmailExtras
+>;
 
-/**
- * Build the full-parity showcase email (subject + html + text).
- *
- * The html body is wrapped by `wrapInBrandedTemplate()` so the company header
- * (with logo) and the Nestor App footer are guaranteed regardless of the
- * section set. The `text` fallback is a plain summary for clients that do not
- * render HTML.
- */
-export function buildShowcaseEmail(params: BuildShowcaseEmailParams): BuiltShowcaseEmail {
-  const {
-    snapshot,
-    labels,
-    photos,
-    floorplans,
-    propertyFloorFloorplans,
-    linkedSpaceFloorplans,
-    shareUrl,
-    personalMessage,
-  } = params;
-  const property = snapshot.property;
-  const company = snapshot.company;
+export type BuiltShowcaseEmail = CoreBuiltShowcaseEmail;
 
-  const subject = `${labels.email.subjectPrefix} — ${property.name}${property.code ? ` (${property.code})` : ''}`;
-
-  const introText = personalMessage?.trim() ? personalMessage.trim() : labels.email.introText;
-  const introHtml = escapeHtml(introText).replace(/\n/g, '<br />');
-  const intro = `<p style="margin:0 0 16px;font-size:14px;color:${BRAND.navyDark};line-height:1.6;">${introHtml}</p>`;
-  const hero = renderPropertyHero(property, labels);
-  const cta = shareUrl ? renderShareCta(shareUrl, labels.email.ctaLabel) : '';
-
-  const sections = [
-    intro,
-    hero,
-    renderPhotoGrid(photos ?? [], labels),
-    renderSpecs(property, labels),
-    renderEnergy(property, labels),
-    renderViews(property, labels),
-    renderMediaList(floorplans ?? [], labels.floorplans.title),
-    renderPropertyFloorFloorplans(propertyFloorFloorplans, labels),
-    renderSystems(property, labels),
-    renderFinishes(property, labels),
-    renderFeatures(property, labels),
-    renderLinkedSpaces(property, labels),
-    renderLinkedSpaceFloorplans(linkedSpaceFloorplans, labels),
-    cta,
-  ].filter((s) => s && s.length > 0);
-
-  const socials: EmailSocialLink[] = (company.socialMedia ?? []).map((s) => ({
-    platform: s.platform as EmailSocialPlatform,
-    url: s.url,
-    username: s.username,
-    label: s.label,
-  }));
-
-  const html = wrapInBrandedTemplate({
-    contentHtml: sections.join('\n'),
-    companyName: company.name,
-    companyPhone: company.phone,
-    companyEmail: company.email,
-    companyWebsite: company.website,
-    companyLogoUrl: company.logoUrl,
-    headerSubtitle: labels.header.subtitle,
-    companyPhones: company.phones,
-    companyEmails: company.emails,
-    companyAddresses: company.addresses,
-    companyWebsites: company.websites,
-    companySocials: socials,
-    contactLabels: labels.header.contacts,
-    enableContactProviderLinks: true,
-  });
-
-  const text = buildTextFallback({ subject, property, shareUrl, intro: introText });
-
-  return { subject, html, text };
-}
-
-interface TextFallbackParams {
-  subject: string;
-  property: PropertyShowcaseSnapshot['property'];
-  shareUrl?: string;
-  intro: string;
-}
-
-function buildTextFallback(params: TextFallbackParams): string {
-  const { subject, property, shareUrl, intro } = params;
-  const lines = [
-    subject,
-    '',
-    intro,
-    '',
-    property.name + (property.code ? ` (${property.code})` : ''),
-  ];
-  if (property.description) {
-    lines.push('', property.description);
-  }
-  if (shareUrl) {
-    lines.push('', shareUrl);
-  }
-  return lines.join('\n');
-}
+export const buildShowcaseEmail = createShowcaseEmailBuilder<
+  PropertyShowcaseSnapshot,
+  PropertyShowcasePDFLabels,
+  ShowcaseMedia,
+  PropertyShowcaseEmailExtras
+>({
+  getEntityHeading: (snapshot) => {
+    const p = snapshot.property;
+    return {
+      name: p.name,
+      codeSuffix: p.code ? ` (${p.code})` : '',
+      description: p.description,
+    };
+  },
+  getCompany: (snapshot) => snapshot.company,
+  labels: {
+    subjectPrefix:   (l) => l.email.subjectPrefix,
+    introText:       (l) => l.email.introText,
+    ctaLabel:        (l) => l.email.ctaLabel,
+    headerSubtitle:  (l) => l.header.subtitle,
+    contactLabels:   (l) => l.header.contacts,
+    photosTitle:     (l) => l.chrome.photosTitle,
+    floorplansTitle: (l) => l.floorplans.title,
+  },
+  hooks: {
+    renderHero:  ({ snapshot, labels }) => renderPropertyHero(snapshot.property, labels),
+    renderSpecs: ({ snapshot, labels }) => renderSpecs(snapshot.property, labels),
+    renderBodySections: ({ snapshot, labels, floorplans, extras }) => {
+      const p = snapshot.property;
+      return [
+        renderEnergy(p, labels),
+        renderViews(p, labels),
+        renderMediaList(floorplans, labels.floorplans.title),
+        renderPropertyFloorFloorplans(extras?.propertyFloorFloorplans, labels),
+        renderSystems(p, labels),
+        renderFinishes(p, labels),
+        renderFeatures(p, labels),
+        renderLinkedSpaces(p, labels),
+        renderLinkedSpaceFloorplans(extras?.linkedSpaceFloorplans, labels),
+      ];
+    },
+  },
+});

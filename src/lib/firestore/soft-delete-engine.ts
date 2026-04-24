@@ -265,66 +265,6 @@ export async function permanentDelete(
 }
 
 // ============================================================================
-// BATCH OPERATIONS
-// ============================================================================
-
-export async function batchSoftDelete(
-  db: FirebaseFirestore.Firestore,
-  entityType: SoftDeletableEntityType,
-  entityIds: string[],
-  deletedBy: string,
-  companyId: string,
-  performedByName?: string,
-): Promise<{
-  succeeded: string[];
-  failed: Array<{ id: string; error: string }>;
-}> {
-  const succeeded: string[] = [];
-  const failed: Array<{ id: string; error: string }> = [];
-
-  await Promise.all(
-    entityIds.map(async (id) => {
-      try {
-        await softDelete(db, entityType, id, deletedBy, companyId, performedByName);
-        succeeded.push(id);
-      } catch (err) {
-        failed.push({ id, error: getErrorMessage(err) });
-      }
-    }),
-  );
-
-  return { succeeded, failed };
-}
-
-export async function batchRestore(
-  db: FirebaseFirestore.Firestore,
-  entityType: SoftDeletableEntityType,
-  entityIds: string[],
-  restoredBy: string,
-  companyId: string,
-  performedByName?: string,
-): Promise<{
-  succeeded: string[];
-  failed: Array<{ id: string; error: string }>;
-}> {
-  const succeeded: string[] = [];
-  const failed: Array<{ id: string; error: string }> = [];
-
-  await Promise.all(
-    entityIds.map(async (id) => {
-      try {
-        await restoreFromTrash(db, entityType, id, restoredBy, companyId, performedByName);
-        succeeded.push(id);
-      } catch (err) {
-        failed.push({ id, error: getErrorMessage(err) });
-      }
-    }),
-  );
-
-  return { succeeded, failed };
-}
-
-// ============================================================================
 // HELPERS
 // ============================================================================
 

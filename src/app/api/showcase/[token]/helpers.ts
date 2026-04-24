@@ -10,7 +10,6 @@
  * @module app/api/showcase/[token]/helpers
  */
 
-import type { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, FILE_CATEGORIES, type FileCategory } from '@/config/domain-constants';
@@ -252,10 +251,3 @@ export function pickAllocationCode(doc: Record<string, unknown>): string | undef
   return undefined;
 }
 
-export function buildBaseUrl(req: NextRequest): string {
-  const envBase = process.env.NEXT_PUBLIC_APP_URL;
-  if (envBase && envBase.trim().length > 0) return envBase.replace(/\/$/, '');
-  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
-  const proto = req.headers.get('x-forwarded-proto') || 'https';
-  return `${proto}://${host}`;
-}
