@@ -200,62 +200,6 @@ export const parkingComponentsStyles: ParkingComponentsStylesType = {
   layout: layoutStyles
 } as const;
 
-// ============================================================================
-// 🎯 UTILITY FUNCTIONS - DYNAMIC WIDTH CALCULATIONS
-// ============================================================================
-
-/**
- * 🎯 WIDTH VALIDATOR
- * Ensures valid width values για columns
- */
-export const validateColumnWidth = (width: number, minWidth: number = 80, maxWidth: number = 500): number => {
-  return Math.max(minWidth, Math.min(maxWidth, width));
-};
-
-/**
- * 🎯 RESPONSIVE COLUMN WIDTHS
- * Calculates responsive widths για different screen sizes
- */
-export const getResponsiveColumnWidths = (baseWidth: number) => ({
-  mobile: Math.max(baseWidth * 0.8, 60),
-  tablet: Math.max(baseWidth * 0.9, 80),
-  desktop: baseWidth
-});
-
-/**
- * 🎯 FLEX BASIS CALCULATOR
- * Calculates flex basis για dynamic table layouts
- */
-export const calculateFlexBasis = (width: number, totalWidth: number): string => {
-  const percentage = (width / totalWidth) * 100;
-  return `${Math.max(percentage, 10)}%`; // Minimum 10% width
-};
-
-/**
- * 🎯 TABLE COLUMN DISTRIBUTION
- * Distributes available width among columns
- */
-export const distributeColumnWidths = (
-  availableWidth: number,
-  columns: Array<{ minWidth?: number; preferredWidth?: number }>
-): number[] => {
-  const totalMinWidth = columns.reduce((sum, col) => sum + (col.minWidth || 80), 0);
-
-  if (totalMinWidth >= availableWidth) {
-    // Use minimum widths if not enough space
-    return columns.map(col => col.minWidth || 80);
-  }
-
-  const extraWidth = availableWidth - totalMinWidth;
-  const totalPreferred = columns.reduce((sum, col) => sum + (col.preferredWidth || 120), 0);
-
-  return columns.map(col => {
-    const minWidth = col.minWidth || 80;
-    const preferredWidth = col.preferredWidth || 120;
-    const ratio = preferredWidth / totalPreferred;
-    return minWidth + (extraWidth * ratio);
-  });
-};
 
 // ============================================================================
 // 🔒 TYPE EXPORTS - ENTERPRISE TYPE SAFETY

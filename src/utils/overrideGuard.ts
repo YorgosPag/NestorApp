@@ -29,23 +29,3 @@ export function guardGlobalAccess(tag: string): void {
   }
 }
 
-// Εναλλακτική: "Ορατό καναρίνι" - επιστροφή εξωφρενικών τιμών αντί για crash
-export function guardWithCanary<T>(tag: string, normalValue: T, canaryValue: T): T {
-  if (isOverrideOn()) {
-    // Using canary value during override (console logging removed)
-    return canaryValue;
-  }
-  return normalValue;
-}
-
-// Helper για ενεργοποίηση του προσωρινού override flag (για testing)
-export function enableForceOverride(): void {
-  (window as Window & { __FORCE_OVERRIDE__?: boolean }).__FORCE_OVERRIDE__ = true;
-  // Force Override enabled
-}
-
-// Helper για απενεργοποίηση του προσωρινού override flag
-export function disableForceOverride(): void {
-  (window as Window & { __FORCE_OVERRIDE__?: boolean }).__FORCE_OVERRIDE__ = false;
-  // Force Override disabled
-}

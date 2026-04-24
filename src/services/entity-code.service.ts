@@ -21,7 +21,6 @@ import {
   VALID_TYPE_CODES,
   PROPERTY_TYPE_TO_CODE,
   PARKING_ZONE_TO_CODE,
-  extractBuildingLetter,
 } from '@/config/entity-code-config';
 import type { PropertyType } from '@/types/property';
 import type { ParkingLocationZone } from '@/types/parking';
@@ -60,24 +59,6 @@ export interface EntityCodeSuggestionParams {
 export function formatFloorCode(level: number): string {
   if (level < 0) return `Y${Math.abs(level)}`;
   return String(level);
-}
-
-/**
- * Parses an ADR-233 floor code back to a numeric level.
- *
- * @example parseFloorCode("0") → 0
- * @example parseFloorCode("Y1") → -1
- * @example parseFloorCode("Y2") → -2
- * @example parseFloorCode("3") → 3
- */
-export function parseFloorCode(code: string): number {
-  const upper = code.toUpperCase();
-  if (upper.startsWith('Y')) {
-    const num = parseInt(upper.slice(1), 10);
-    return isNaN(num) ? 0 : -num;
-  }
-  const num = parseInt(upper, 10);
-  return isNaN(num) ? 0 : num;
 }
 
 /**
@@ -124,15 +105,6 @@ export function isValidEntityCodeFormat(code: string): boolean {
 }
 
 /**
- * Validates whether a code follows ADR-233 format AND uses known type codes.
- */
-export function isStandardEntityCode(code: string): boolean {
-  const parsed = parseEntityCode(code);
-  if (!parsed) return false;
-  return VALID_TYPE_CODES.has(parsed.typeCode);
-}
-
-/**
  * Resolves the 2-character type code for a given entity type.
  */
 export function resolveTypeCode(
@@ -154,29 +126,3 @@ export function resolveTypeCode(
   }
 }
 
-/**
- * Builds a suggested entity code from parameters.
- * The sequence is provided externally (from Firestore query).
- */
-export function buildSuggestedCode(params: EntityCodeSuggestionParams, sequence: number): string {
-  const building = extractBuildingLetter(params.buildingName);
-  const typeCode = resolveTypeCode(params.entityType, params.propertyType, params.locationZone);
-  if (!typeCode) return '';
-
-  const floorCode = formatFloorCode(params.floorLevel);
-  return formatEntityCode(building, typeCode, floorCode, sequence);
-}
-
-// =============================================================================
-// COUNTER KEY — Composite key for per-type-per-floor sequences
-// =============================================================================
-
-/**
- * Builds the Firestore counter key for sequence tracking.
- * Format: "{buildingId}_{typeCode}_{floorCode}"
- *
- * This ensures sequences are unique per building, type, and floor.
- */
-export function buildCounterKey(buildingId: string, typeCode: string, floorCode: string): string {
-  return `${buildingId}_${typeCode}_${floorCode}`;
-}

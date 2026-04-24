@@ -25,33 +25,6 @@ export const parseDate = (dateStr?: string): Date | null => {
   return isNaN(date.getTime()) ? null : date;
 };
 
-/**
- * Checks if date string is valid
- */
-export const isValidDate = (dateStr?: string): boolean => {
-  return parseDate(dateStr) !== null;
-};
-
-/**
- * Compare two dates for validation (returns true if firstDate <= secondDate)
- */
-export const isDateBeforeOrEqual = (firstDate?: string, secondDate?: string): boolean => {
-  const date1 = parseDate(firstDate);
-  const date2 = parseDate(secondDate);
-  if (!date1 || !date2) return true; // Skip validation if either date is invalid/empty
-  return date1 <= date2;
-};
-
-/**
- * Check if date is in the future (including today)
- */
-export const isDateFutureOrToday = (dateStr?: string): boolean => {
-  const date = parseDate(dateStr);
-  if (!date) return true; // Skip validation if date is empty/invalid
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date >= today;
-};
 
 /**
  * Check if date is in the past or today

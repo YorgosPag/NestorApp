@@ -24,19 +24,12 @@
  */
 
 export {
-  clearDynamicStyles,
   getDynamicBackgroundClass,
-  getDynamicBackgroundImageClass,
   getDynamicBorderClass,
-  getDynamicElementClasses,
   getDynamicHeightClass,
-  getDynamicOpacityClass,
-  getDynamicStylesCount,
   getDynamicTextClass,
-  getDynamicTopClass,
   getDynamicTransformClass,
   getDynamicWidthClass,
-  type DynamicStyleConfig,
 } from './dynamic-styles-generators';
 
 export {

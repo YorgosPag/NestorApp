@@ -84,22 +84,6 @@ export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = Object.fromEnt
   PROPERTY_TYPES.map((type) => [type, `properties.${PROPERTY_TYPE_I18N_KEYS[type]}`]),
 ) as Record<PropertyType, string>;
 
-/**
- * @deprecated ADR-145: Use `PROPERTY_TYPE_LABELS` directly (τώρα πλήρες — 14 types).
- * Διατηρείται ως alias για καλύτερη backward compatibility. Προηγούμενες εκδόσεις
- * αυτού του map είχαν hyphenated keys (`apartment-2br`) που ΔΕΝ ήταν συμβατά με
- * τον canonical PropertyType union (underscore form).
- */
-export const EXTENDED_PROPERTY_TYPE_LABELS = PROPERTY_TYPE_LABELS;
-
-// Legacy status mapping for compatibility
-export const LEGACY_STATUS_MAPPING: Record<string, PropertyStatus> = {
-  'available': 'for-sale',
-  'sold': 'sold',
-  'reserved': 'reserved',
-  'owner': 'landowner'
-};
-
 // ============================================================================
 // ENHANCED STATUS TYPES
 // ============================================================================
@@ -329,32 +313,5 @@ export function getStatusesByCategory(category: keyof typeof STATUS_CATEGORIES):
 // BACKWARDS COMPATIBILITY
 // ============================================================================
 
-// Aliased re-exports (pure form) — keeps `export const` out of the CHECK 3.18
-// scanner's match surface while preserving the legacy import names (ADR-314
-// Phase C.5.47). Semantics: identical to getEnhancedStatusLabel/Color.
-export {
-  getEnhancedStatusLabel as getStatusLabel,
-  getEnhancedStatusColor as getStatusColor,
-};
-
-// ============================================================================
-// DEFAULT EXPORT
-// ============================================================================
-
-export default {
-  ENHANCED_STATUS_LABELS,
-  ENHANCED_STATUS_COLORS,
-  PROPERTY_INTENT_LABELS,
-  MARKET_AVAILABILITY_LABELS,
-  PROPERTY_PRIORITY_LABELS,
-  STATUS_CATEGORIES,
-  getEnhancedStatusLabel,
-  getEnhancedStatusColor,
-  getStatusCategory,
-  isPropertyAvailable,
-  isPropertyCommitted,
-  isPropertyOffMarket,
-  hasPropertyIssues,
-  getAllEnhancedStatuses,
-  getStatusesByCategory,
-};
+// Aliased re-export — keeps `export const` out of CHECK 3.18 scanner surface (ADR-314 Phase C.5.47).
+export { getEnhancedStatusLabel as getStatusLabel };

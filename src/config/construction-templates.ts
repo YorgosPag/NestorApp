@@ -207,30 +207,10 @@ export const CONSTRUCTION_PHASES: PredefinedPhase[] = [
 
 // ─── Helper Functions ──────────────────────────────────────────────────────
 
-/** Get all predefined phases */
-export function getPredefinedPhases(): PredefinedPhase[] {
-  return CONSTRUCTION_PHASES;
-}
-
 /** Get predefined tasks for a specific phase by key */
 export function getPredefinedTasksForPhase(phaseKey: string): PredefinedTask[] {
   const phase = CONSTRUCTION_PHASES.find((p) => p.key === phaseKey);
   return phase?.tasks ?? [];
-}
-
-/** Get all predefined tasks across all phases */
-export function getAllPredefinedTasks(): PredefinedTask[] {
-  return CONSTRUCTION_PHASES.flatMap((phase) => phase.tasks);
-}
-
-/** Find a predefined phase by its code (e.g. 'PH-002') */
-export function findPhaseByCode(code: string): PredefinedPhase | undefined {
-  return CONSTRUCTION_PHASES.find((p) => p.code === code);
-}
-
-/** Find a predefined phase by its key (e.g. 'foundation') */
-export function findPhaseByKey(key: string): PredefinedPhase | undefined {
-  return CONSTRUCTION_PHASES.find((p) => p.key === key);
 }
 
 /**

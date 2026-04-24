@@ -264,9 +264,6 @@ export const validationRules = {
 // formatDateForDisplay alias REMOVED — canonical SSoT: '@/lib/intl-utils'
 export {
   parseDate,
-  isValidDate,
-  isDateBeforeOrEqual,
-  isDateFutureOrToday,
   isDatePastOrToday,
 } from './validation/date-validators';
 
@@ -307,16 +304,6 @@ export const passwordSchema = {
   confirmPassword: validationRules.required(),
 };
 
-// Password confirmation validation
-export const createPasswordConfirmSchema = () => 
-  z.object(passwordSchema).refine(
-    (data) => data.password === data.confirmPassword,
-    {
-      message: getValidationMessage('confirmPassword'),
-      path: ['confirmPassword'],
-    }
-  );
-
 // Utility to create form schema from field definitions
 export const createFormSchema = (fields: Record<string, z.ZodType>) => {
   return z.object(fields);
@@ -332,24 +319,6 @@ export const formatZodErrors = (error: z.ZodError) => {
   });
   
   return formattedErrors;
-};
-
-// Form validation hook for React Hook Form integration
-export const createValidationResolver = <T>(schema: z.ZodSchema<T>) => {
-  return (values: unknown) => {
-    try {
-      schema.parse(values);
-      return { values, errors: {} };
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return {
-          values: {},
-          errors: formatZodErrors(error)
-        };
-      }
-      throw error;
-    }
-  };
 };
 
 // Export common field validations
@@ -444,43 +413,3 @@ export const validateDocumentDates = (formData: {
   };
 };
 
-/**
- * Creates a validation schema for contact forms with date validation
- * @param contactType - Type of contact (individual, company, service)
- * @returns Zod schema with appropriate validations
- */
-export const createContactValidationSchema = (contactType: 'individual' | 'company' | 'service') => {
-  const baseFields = {
-    email: fieldValidations.contact.email,
-    phone: fieldValidations.contact.phone,
-  };
-
-  switch (contactType) {
-    case 'individual':
-      return createFormSchema({
-        ...baseFields,
-        firstName: fieldValidations.individual.firstName,
-        lastName: fieldValidations.individual.lastName,
-        birthDate: fieldValidations.individual.birthDate,
-        documentIssueDate: fieldValidations.individual.documentIssueDate,
-        vatNumber: fieldValidations.individual.vatNumber,
-        amka: fieldValidations.individual.amka,
-      });
-
-    case 'company':
-      return createFormSchema({
-        ...baseFields,
-        companyName: fieldValidations.company.companyName,
-        vatNumber: fieldValidations.company.vatNumber,
-      });
-
-    case 'service':
-      return createFormSchema({
-        ...baseFields,
-        serviceName: fieldValidations.service.serviceName,
-      });
-
-    default:
-      return createFormSchema(baseFields);
-  }
-};

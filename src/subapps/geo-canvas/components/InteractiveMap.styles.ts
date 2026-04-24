@@ -315,48 +315,6 @@ export const interactiveMapStyles: InteractiveMapStylesType = {
   layout: layoutStyles
 } as const;
 
-// 🎯 UTILITY FUNCTIONS - DYNAMIC MAP CALCULATIONS
-/**
- * 🎯 CURSOR STATE UTILITY
- * Determines map cursor based on interaction state
- */
-export const getMapCursorStyle = (isPickingCoordinates: boolean, systemIsDrawing: boolean): string =>
-  mapInteractionTokens.getMapCursor(isPickingCoordinates, systemIsDrawing);
-
-/**
- * 🎯 CONTROL POINT STATE UTILITY
- * Gets appropriate control point styling based on state
- */
-export const getControlPointStateStyle = (
-  isSelected: boolean,
-  shouldHighlight: boolean,
-  isComplete: boolean
-) => mapControlPointTokens.getControlPointStyle(isSelected, shouldHighlight, isComplete);
-
-/**
- * 🎯 ACCURACY LEVEL COLOR UTILITY
- * Determines color based on accuracy level
- */
-export const getAccuracyLevelColor = (level: 'excellent' | 'good' | 'fair' | 'poor'): string => {
-  switch (level) {
-    case 'excellent': return colors.green[500];
-    case 'good': return colors.orange[500]; // Using orange instead of yellow for better visibility
-    case 'fair': return colors.yellow[500];
-    case 'poor': return colors.red[500];
-    default: return colors.gray[500];
-  }
-};
-
-/**
- * 🎯 RADIUS TO PIXELS UTILITY
- * Converts radius in meters to pixels for display
- */
-export const radiusToPixels = (radiusInMeters: number, zoomLevel: number): number => {
-  // Approximate pixels per meter at different zoom levels
-  const pixelsPerMeter = Math.pow(2, zoomLevel - 10);
-  return radiusInMeters * pixelsPerMeter;
-};
-
 // 🔒 TYPE EXPORTS - ENTERPRISE TYPE SAFETY
 export type {
   InteractiveMapStylesType,

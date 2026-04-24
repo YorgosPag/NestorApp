@@ -59,32 +59,7 @@ export const LEGAL_PHASES = [
 export type LegalPhase = (typeof LEGAL_PHASES)[number];
 
 // =============================================================================
-// 2. RUNTIME TYPE GUARD
-// =============================================================================
-
-/** Returns `true` if `value` is one of the 7 canonical legal phases. */
-export function isLegalPhase(value: unknown): value is LegalPhase {
-  return (
-    typeof value === 'string' &&
-    (LEGAL_PHASES as readonly string[]).includes(value)
-  );
-}
-
-// =============================================================================
-// 3. RANK HELPER — Numeric comparison για escalation/progress ordering
-// =============================================================================
-
-/**
- * Returns numeric rank (0 = `none`, 6 = `payoff_completed`). Χρησιμοποιείται
- * για sort comparisons και για να υπολογίσουμε το highest contract phase
- * ανάμεσα σε πολλαπλά contracts (LegalContractService.syncLegalPhase).
- */
-export function getLegalPhaseRank(phase: LegalPhase): number {
-  return (LEGAL_PHASES as readonly string[]).indexOf(phase);
-}
-
-// =============================================================================
-// 4. DERIVED SUBSETS
+// 2. DERIVED SUBSETS
 // =============================================================================
 
 /** Phases με pending contract που αναμένει υπογραφή. */
@@ -96,16 +71,6 @@ export const PENDING_LEGAL_PHASES = [
 
 export type PendingLegalPhase = (typeof PENDING_LEGAL_PHASES)[number];
 
-/** Returns `true` if `value` is a pending (awaiting signature) phase. */
-export function isPendingLegalPhase(
-  value: unknown,
-): value is PendingLegalPhase {
-  return (
-    typeof value === 'string' &&
-    (PENDING_LEGAL_PHASES as readonly string[]).includes(value)
-  );
-}
-
 /** Phases με υπογεγραμμένο ή ολοκληρωμένο contract. */
 export const SIGNED_LEGAL_PHASES = [
   'preliminary_signed',
@@ -115,12 +80,3 @@ export const SIGNED_LEGAL_PHASES = [
 
 export type SignedLegalPhase = (typeof SIGNED_LEGAL_PHASES)[number];
 
-/** Returns `true` if `value` represents a signed/completed contract phase. */
-export function isSignedLegalPhase(
-  value: unknown,
-): value is SignedLegalPhase {
-  return (
-    typeof value === 'string' &&
-    (SIGNED_LEGAL_PHASES as readonly string[]).includes(value)
-  );
-}

@@ -21,7 +21,6 @@ import 'server-only';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import type { NextRequest } from 'next/server';
 import {
-  isApiAccessAllowed,
   validateEnvironmentForOperation,
   getCurrentRuntimeEnvironment,
 } from '@/config/environment-security-config';
@@ -71,31 +70,6 @@ import { nowISO } from '@/lib/date-local';
 // ============================================================================
 // ADR-077: All Firebase Admin initialization is handled by src/lib/firebaseAdmin.ts
 export { getAdminFirestore } from '@/lib/firebaseAdmin';
-
-// ============================================================================
-// ENVIRONMENT GATING
-// ============================================================================
-
-/**
- * Check if current environment allows API access
- * @deprecated Use isApiAccessAllowed() from environment-security-config directly
- */
-export function isAllowedEnvironment(): boolean {
-  return isApiAccessAllowed();
-}
-
-/**
- * Assert environment allows operation, throws if not
- * @deprecated Use validateEnvironmentForOperation() from environment-security-config
- */
-export function assertAllowedEnvironment(): void {
-  const result = validateEnvironmentForOperation('API_ACCESS');
-  if (!result.allowed) {
-    throw new Error(
-      `[ADMIN_GUARDS] ${result.reason || 'Operation not allowed in current environment'}`
-    );
-  }
-}
 
 // ============================================================================
 // FIREBASE AUTH VERIFICATION
@@ -290,101 +264,6 @@ export async function requireAdminContext(
       environment,
       mfaEnrolled,
     },
-  };
-}
-
-// ============================================================================
-// USER AUTHENTICATION (NO ADMIN ROLE REQUIRED)
-// ============================================================================
-
-/**
- * Require user authentication for a request (no admin role required)
- *
- * Gates: Environment → Token → Firebase verify → Return context (role optional)
- *
- * @param request - NextRequest object
- * @param operationId - Unique operation ID for audit trail
- * @returns UserAuthResult with success status and context or error
- */
-export async function requireUserContext(
-  request: NextRequest,
-  operationId: string
-): Promise<UserAuthResult> {
-  const environment = getCurrentRuntimeEnvironment();
-
-  // Gate 1: Environment check
-  const envValidation = validateEnvironmentForOperation('requireUserContext');
-  if (!envValidation.allowed) {
-    return {
-      success: false,
-      error: envValidation.reason || `Operation not allowed in ${environment} environment`,
-    };
-  }
-
-  // Gate 2: Extract token (NO BYPASS - always require valid token)
-  const token = extractBearerToken(request);
-
-  if (!token) {
-    return {
-      success: false,
-      error: 'Missing Authorization header with Bearer token',
-    };
-  }
-
-  // Gate 3: Verify token
-  const decodedToken = await verifyIdToken(token);
-  if (!decodedToken) {
-    return {
-      success: false,
-      error: 'Invalid or expired authentication token',
-    };
-  }
-
-  const role = hasAdminRole(decodedToken);
-
-  return {
-    success: true,
-    context: {
-      uid: decodedToken.uid,
-      email: decodedToken.email || 'unknown',
-      role,
-      operationId,
-      environment,
-    },
-  };
-}
-
-// ============================================================================
-// STAFF AUTHENTICATION (ADMIN/BROKER/BUILDER ROLES REQUIRED)
-// ============================================================================
-
-/**
- * Require staff authentication for a request (admin/broker/builder roles)
- *
- * Thin wrapper around requireAdminContext with staff-specific error semantics.
- *
- * @param request - NextRequest object
- * @param operationId - Unique operation ID for audit trail
- * @returns StaffAuthResult with success status and context or error
- * @enterprise EPIC Δ - Staff-only Inbox endpoints
- */
-export async function requireStaffContext(
-  request: NextRequest,
-  operationId: string
-): Promise<StaffAuthResult> {
-  const adminResult = await requireAdminContext(request, operationId);
-
-  if (!adminResult.success) {
-    const isRoleError = adminResult.error?.includes('admin privileges');
-    return {
-      success: false,
-      error: isRoleError ? 'Staff access required' : adminResult.error,
-    };
-  }
-
-  return {
-    success: true,
-    context: adminResult.context,
   };
 }
 
