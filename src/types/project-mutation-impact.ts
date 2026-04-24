@@ -28,7 +28,3 @@ export interface ProjectMutationImpactPreview {
   readonly blockingCount: number;
   readonly warningCount: number;
 }
-
-export interface ProjectMutationImpactRequest {
-  readonly updates: ProjectUpdatePayload;
-}
