@@ -176,9 +176,6 @@ export const COMMERCIAL_PROPERTY_TYPES = [
   'hall',
   'storage',
 ] as const satisfies readonly PropertyTypeCanonical[];
-
-export type CommercialPropertyType = (typeof COMMERCIAL_PROPERTY_TYPES)[number];
-
 /**
  * Residential property types — derived complement of COMMERCIAL_PROPERTY_TYPES.
  * Basement placement is unusual για residential types (field-rule warning trigger).

@@ -182,29 +182,3 @@ export interface ExternalIdentityDocument {
 // ============================================================================
 // LEGACY COMMUNICATION DOCUMENT (Firestore)
 // ============================================================================
-
-/**
- * Legacy communication document (for backward compatibility)
- * @enterprise Use this type for COMMUNICATIONS collection writes
- * @usage const doc = { ... } satisfies LegacyCommunicationDocument;
- */
-export interface LegacyCommunicationDocument {
-  type: string;
-  direction: MessageDirection;
-  channel: string;
-  from: string;
-  to: string;
-  content: string;
-  status: string;
-  entityType: string;
-  entityId: string | null;
-  externalId: string;
-  conversationId: string;
-  metadata: {
-    userName: string;
-    platform: string;
-    chatId: string;
-  };
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}

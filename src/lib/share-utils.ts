@@ -25,13 +25,6 @@ export interface PropertyShareData {
   propertyType?: string;
 }
 
-export interface LeadShareData {
-  leadId: string;
-  propertyId?: string;
-  searchCriteria?: Record<string, unknown>;
-  customMessage?: string;
-}
-
 /**
  * Check if Web Share API is supported
  */

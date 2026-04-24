@@ -67,11 +67,6 @@ export interface ValidationRule {
   validate: (data: unknown) => Promise<ValidationResult>;
 }
 
-export interface DataIntegrityCheck {
-  tableName: string;
-  rules: ValidationRule[];
-}
-
 export interface MigrationConfig {
   maxRetries: number;
   timeoutMs: number;

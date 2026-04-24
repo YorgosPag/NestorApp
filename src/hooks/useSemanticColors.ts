@@ -55,16 +55,6 @@ import { useSemanticColors as useNewSemanticColors } from '@/ui-adapters/react/u
 // ============================================================================
 
 /**
- * Legacy types re-exported for backward compatibility
- * (These now map to the new design system types)
- */
-export type SemanticColorName =
-  | 'success' | 'error' | 'warning' | 'info'
-  | 'price' | 'primary' | 'secondary' | 'muted'
-  | 'accent' | 'foreground' | 'background'
-  | 'hover' | 'focus';
-
-/**
  * Text color patterns - Semantic text coloring
  */
 export interface SemanticTextColors {

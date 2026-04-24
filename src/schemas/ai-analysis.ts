@@ -82,9 +82,6 @@ export const DocumentType = z.enum([
   'video',              // Αρχείο βίντεο
   'audio',              // Αρχείο ήχου
 ]);
-
-export type DocumentTypeValue = z.infer<typeof DocumentType>;
-
 // ============================================================================
 // EXTRACTED ENTITIES (Common)
 // ============================================================================
@@ -100,9 +97,6 @@ export const ExtractedEntitiesSchema = z.object({
   propertyId: z.string().optional(),
   contactId: z.string().optional(),
 }).passthrough();
-
-export type ExtractedEntities = z.infer<typeof ExtractedEntitiesSchema>;
-
 // ============================================================================
 // BASE ANALYSIS SCHEMA (Common Fields)
 // ============================================================================
@@ -169,9 +163,6 @@ export const DetectedIntentSchema = z.object({
   confidence: z.number().min(0).max(1),
   rationale: z.string(),
 });
-
-export type DetectedIntentResult = z.infer<typeof DetectedIntentSchema>;
-
 // ============================================================================
 // MULTI-INTENT ANALYSIS (Discriminated Union Member)
 // ============================================================================

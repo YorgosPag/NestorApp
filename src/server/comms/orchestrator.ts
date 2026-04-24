@@ -71,15 +71,6 @@ export interface TelegramKeyboard {
 
 /** WhatsApp template parameters */
 export type WhatsAppTemplateParams = Array<string | { type: string; text?: string; image?: { link: string } }>;
-
-/** Channel-specific metadata type */
-export interface ChannelMetadata {
-  chatId?: string;
-  parseMode?: 'HTML' | 'Markdown';
-  templateName?: string;
-  templateParams?: WhatsAppTemplateParams;
-}
-
 // 🏢 ENTERPRISE: FirestoreHelpers type imported from canonical module
 // @see src/app/api/communications/webhooks/telegram/firebase/helpers-lazy.ts
 

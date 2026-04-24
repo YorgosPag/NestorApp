@@ -156,20 +156,3 @@ export interface IAIAnalysisProvider {
 // ============================================================================
 // PROVIDER FACTORY TYPE
 // ============================================================================
-
-/**
- * Provider factory function type
- * @enterprise For creating provider instances με configuration
- *
- * @example
- * ```typescript
- * const createOpenAIProvider: ProviderFactory = (config) => {
- *   return new OpenAIProvider(config.apiKey);
- * };
- * ```
- */
-export type ProviderFactory = (config: {
-  apiKey?: string;
-  baseUrl?: string;
-  [key: string]: unknown;
-}) => IAIAnalysisProvider;

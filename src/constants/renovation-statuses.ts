@@ -49,6 +49,3 @@ export const COMPLETED_RENOVATION_STATUSES = [
   'partial',
   'full',
 ] as const satisfies readonly RenovationStatus[];
-
-export type CompletedRenovationStatus =
-  (typeof COMPLETED_RENOVATION_STATUSES)[number];

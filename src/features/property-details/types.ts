@@ -13,8 +13,3 @@ export type PropertyDetailsContentProps = {
   isCreatingNewUnit?: boolean;
   onPropertyCreated?: (propertyId: string) => void;
 };
-
-export type AttachmentsData = {
-  storage: StorageUnitStub[];
-  parking: ParkingSpotStub[];
-};

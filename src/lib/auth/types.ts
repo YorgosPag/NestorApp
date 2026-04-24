@@ -355,25 +355,6 @@ export type RequestContext = AuthContext | UnauthenticatedContext;
 // =============================================================================
 // COMPANY MEMBERSHIP (ADR-244: Role Management — Source of Truth for RBAC)
 // =============================================================================
-
-/** Company member document — SOURCE OF TRUTH for RBAC (stored in /companies/{cid}/members/{uid}). */
-export interface CompanyMemberDocument {
-  /** Firebase Auth UID */
-  uid: string;
-  /** Global role — SOURCE OF TRUTH (Firebase claims = sync copy) */
-  globalRole: GlobalRole;
-  /** User status — derived from Firebase Auth disabled field */
-  status: "active" | "suspended";
-  /** When the user joined the company */
-  joinedAt: Date;
-  /** Org-level permission set IDs (apply to ALL projects) */
-  permissionSetIds: string[];
-  /** Who added this member */
-  addedBy: string;
-  /** Last update timestamp */
-  updatedAt: Date | null;
-}
-
 // =============================================================================
 // PROJECT MEMBERSHIP
 // =============================================================================

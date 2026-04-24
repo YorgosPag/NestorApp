@@ -17,18 +17,9 @@ import { Query, QuerySnapshot, DocumentSnapshot, limit, startAfter, query } from
 
 /** Firestore document data type */
 export type FirestoreDocData = Record<string, unknown>;
-
-/** Document mapper function type */
-export type DocumentMapper<T> = (doc: DocumentSnapshot) => T;
-
 // =============================================================================
 // PAGINATION INTERFACES
 // =============================================================================
-
-export interface PaginationOptions {
-  pageSize?: number; // Default: 20
-  startAfter?: DocumentSnapshot; // For cursor-based pagination
-}
 
 export interface PaginatedResult<T> {
   items: T[];
@@ -36,14 +27,6 @@ export interface PaginatedResult<T> {
   nextCursor?: DocumentSnapshot; // For next page
   totalShown: number; // Items shown so far
   pageSize: number;
-}
-
-export interface PaginationState<T = unknown> {
-  currentPage: number;
-  hasNext: boolean;
-  isLoading: boolean;
-  lastCursor?: DocumentSnapshot;
-  allItems: T[]; // Accumulated items across pages
 }
 
 // =============================================================================
