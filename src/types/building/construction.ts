@@ -208,15 +208,6 @@ export interface ConstructionResourceAssignment {
   updatedBy?: string;
 }
 
-/** Lightweight summary for list views */
-export interface ResourceAssignmentSummary {
-  id: string;
-  taskId: string;
-  resourceType: ResourceType;
-  resourceName: string;
-  allocatedHours: number;
-}
-
 export interface ResourceAssignmentCreatePayload {
   taskId: string;
   phaseId: string;
@@ -234,8 +225,3 @@ export interface ResourceAssignmentUpdatePayload {
 }
 
 // ─── API Response Types ──────────────────────────────────────────────────
-
-export interface ConstructionDataResponse {
-  phases: ConstructionPhase[];
-  tasks: ConstructionTask[];
-}
