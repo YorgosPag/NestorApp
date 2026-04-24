@@ -96,8 +96,6 @@ export function mapContactToFormData(contact: Contact): ContactMappingResult {
   }
 }
 
-/**
-
 function toRecord(value: SafeFieldSource | null | undefined): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') {
     return null;
