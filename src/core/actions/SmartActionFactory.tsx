@@ -375,38 +375,6 @@ export function createSmartAction(config: SmartActionConfig): React.ReactElement
 }
 
 /**
- * 🏭 Create Smart Action Group
- * Δημιουργεί group action buttons με intelligent layout
- */
-export function createSmartActionGroup(config: SmartActionGroupConfig): React.ReactElement {
-  return smartActionFactory.createActionGroup(config);
-}
-
-/**
- * 🏭 Create Smart Action Bar
- * Δημιουργεί complete action bar με positioning
- */
-export function createSmartActionBar(config: SmartActionBarConfig): React.ReactElement {
-  return smartActionFactory.createActionBar(config);
-}
-
-/**
- * 🎯 Get Action Labels
- * Επιστρέφει τα centralized labels για consistency
- */
-export function getSmartActionLabels() {
-  return getActionButtons();
-}
-
-/**
- * 🎨 Get Action Categories
- * Επιστρέφει τα existing BUTTON_CATEGORIES για consistency
- */
-export function getSmartActionCategories() {
-  return BUTTON_CATEGORIES;
-}
-
-/**
  * 🏢 Legacy Support Function για backward compatibility
  * Converts old ActionButton configs to Smart Factory format
  */

@@ -167,29 +167,6 @@ export const formatPriceWithUnit = (price: number, unit: string, currency: strin
 // ============================================================================
 
 /**
- * Get list format according to current locale
- */
-export const formatList = (items: string[], options?: Intl.ListFormatOptions): string => {
-  const locale = getCurrentLocale();
-
-  const defaultOptions: Intl.ListFormatOptions = {
-    style: 'long',
-    type: 'conjunction'
-  };
-
-  return new Intl.ListFormat(locale, { ...defaultOptions, ...options }).format(items);
-};
-
-/**
- * Sort strings according to current locale collation rules
- */
-export const sortByLocale = (strings: string[]): string[] => {
-  const locale = getCurrentLocale();
-  const collator = new Intl.Collator(locale, { sensitivity: 'base' });
-  return [...strings].sort(collator.compare);
-};
-
-/**
  * Compare strings according to current locale collation rules
  */
 export const compareByLocale = (a: string, b: string): number => {
@@ -224,9 +201,3 @@ export const isRTLLocale = (): boolean => {
   return rtlLocales.some(rtl => locale.startsWith(rtl));
 };
 
-/**
- * Get text direction for current locale
- */
-export const getTextDirection = (): 'ltr' | 'rtl' => {
-  return isRTLLocale() ? 'rtl' : 'ltr';
-};

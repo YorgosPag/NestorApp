@@ -1,19 +1,11 @@
 
 'use server';
 
-import { db } from '@/lib/firebase';
 import { randomUUID } from 'crypto';
-import {
-  doc,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
 import type { Communication } from '@/types/crm';
 import { TRIAGE_STATUSES, TRIAGE_STATUS_VALUES, type TriageStatus } from '@/constants/triage-statuses';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { generateMessageId } from '@/services/enterprise-id.service';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { normalizeToISO, normalizeToDate } from '@/lib/date-local';
@@ -44,9 +36,6 @@ export async function rejectCommunication(
   const mod = await import('./communications-triage-actions');
   return mod.rejectCommunication(communicationId, companyId, adminUid, operationId);
 }
-
-// 🏢 ENTERPRISE: Centralized collection configuration
-const COMMUNICATIONS_COLLECTION = COLLECTIONS.MESSAGES;
 
 const logger = createModuleLogger('COMMUNICATIONS_SERVICE');
 
@@ -151,41 +140,8 @@ async function fetchTriageCommunications(params: {
 }
 
 // ============================================================================
-// BASIC CRUD
-// ============================================================================
-
-export async function addCommunication(communicationData: Omit<Communication, 'id' | 'createdAt' | 'updatedAt'>) {
-  const enterpriseId = generateMessageId();
-  const docRef = doc(db, COMMUNICATIONS_COLLECTION, enterpriseId);
-  await setDoc(docRef, {
-    ...communicationData,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
-
-  // ADR-029 Phase D: search_documents written by Cloud Function onCommunicationWrite.
-  return { id: enterpriseId, success: true };
-}
-
-export async function updateCommunicationStatus(communicationId: string, status: Communication['status']) {
-  const commRef = doc(db, COMMUNICATIONS_COLLECTION, communicationId);
-  await updateDoc(commRef, { status, updatedAt: serverTimestamp() });
-  return { success: true };
-}
-
-// ============================================================================
 // TRIAGE QUERIES
 // ============================================================================
-
-export async function getPendingTriageCommunications(
-  companyId: string,
-  operationId?: string
-): Promise<
-  | { ok: true; data: Communication[] }
-  | { ok: false; errorId: string; code: ActionErrorCode }
-> {
-  return getTriageCommunications(companyId, operationId, TRIAGE_STATUSES.PENDING);
-}
 
 export async function getTriageCommunications(
   companyId: string | undefined,

@@ -391,10 +391,5 @@ export class GeoAlertPerformanceProfiler {
 export const geoAlertPerformanceProfiler = GeoAlertPerformanceProfiler.getInstance();
 
 export const startProfiler = (name?: string) => geoAlertPerformanceProfiler.startProfiling(name);
-export const stopProfiler = (id: string) => geoAlertPerformanceProfiler.stopProfiling(id);
 export const profileFunction = <T>(fn: () => T, name: string) =>
   geoAlertPerformanceProfiler.profileFunction(fn, name);
-export const profileAsync = <T>(fn: () => Promise<T>, name: string) =>
-  geoAlertPerformanceProfiler.profileAsync(fn, name);
-
-export default geoAlertPerformanceProfiler;

@@ -17,9 +17,6 @@
 /** Greek mobile (69XXXXXXXX) and landline (2XXXXXXXXX), with optional +30 prefix */
 export const GREEK_PHONE_REGEX = /^(\+30)?(69\d{8}|2\d{9})$/;
 
-/** International phones in E.164-like format: +<country><number> (10-15 digits) */
-export const INTERNATIONAL_PHONE_REGEX = /^\+[1-9]\d{9,14}$/;
-
 /** Combined: Greek OR international phone */
 export const PHONE_REGEX = /^(\+30)?(69\d{8}|2\d{9})$|^\+[1-9]\d{9,14}$/;
 

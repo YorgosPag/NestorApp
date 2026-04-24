@@ -125,43 +125,9 @@ export const formatFloorString = (floorValue: string | number | undefined | null
 // CATEGORY / STATUS LABELS
 // ============================================================================
 
-/**
- * Get category label according to locale
- */
-export const getCategoryLabel = (category: string): string => {
-  const locale = getCurrentLocale();
-  
-  if (locale.startsWith('el')) {
-    switch (category) {
-      case 'residential': return 'Κατοικία';
-      case 'commercial': return 'Εμπορικό';
-      case 'mixed': return 'Μικτό';
-      case 'industrial': return 'Βιομηχανικό';
-      default: return category;
-    }
-  }
-  
-  // English fallback
-  switch (category) {
-    case 'residential': return 'Residential';
-    case 'commercial': return 'Commercial';
-    case 'mixed': return 'Mixed';
-    case 'industrial': return 'Industrial';
-    default: return category;
-  }
-};
-
 // 🏢 ENTERPRISE: getStatusLabel REMOVED 2026-04-18 (ADR-314 Phase B)
 // Canonical SSoT: '@/lib/status-helpers' → getStatusLabel(domain, status, { t })
 // Was hardcoding Greek/English in violation of i18n SSoT (SOS N.11).
-
-/**
- * Get price per square meter unit
- */
-export const getPricePerSqmUnit = (): string => {
-  const locale = getCurrentLocale();
-  return locale.startsWith('el') ? '€/τ.μ.' : '€/m²';
-};
 
 // ============================================================================
 // 🔄 CENTRALIZED DATE FORMATTING - BACKWARD COMPATIBILITY ALIASES
@@ -207,25 +173,6 @@ export const formatDateShort = (dateInput?: Date | string | number): string => {
   } catch {
     return '-';
   }
-};
-
-/**
- * Format date in long format (e.g. "13 Δεκεμβρίου 2025") - Replaces obligations-utils.ts formatDate
- *
- * @param dateInput - Date object (required)
- * @returns Long formatted date or fallback
- *
- * @example formatDateLong(new Date()) // "13 Δεκεμβρίου 2025"
- * @example formatDateLong(invalidDate) // "-"
- */
-export const formatDateLong = (dateInput: Date): string => {
-  if (!dateInput || isNaN(dateInput.getTime())) return '-';
-
-  return formatDate(dateInput, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
 };
 
 /**

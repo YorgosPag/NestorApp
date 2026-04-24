@@ -22,14 +22,6 @@ export function getEnabledPropertiesTabs(): PropertiesTabConfig[] {
   return getSortedTabs('properties') as PropertiesTabConfig[];
 }
 
-export function getPropertiesTabById(id: string): PropertiesTabConfig | undefined {
-  return getTabById('properties', id) as PropertiesTabConfig | undefined;
-}
-
-export function getPropertiesTabByValue(value: string): PropertiesTabConfig | undefined {
-  return getTabByValue('properties', value) as PropertiesTabConfig | undefined;
-}
-
 export function getAllPropertiesTabs(): PropertiesTabConfig[] {
   return [...PROPERTIES_TABS];
 }

@@ -24,7 +24,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
   updateDoc,
   query,
   where,
@@ -38,7 +37,6 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import type {
   AssignmentPolicy,
-  CreateAssignmentPolicyInput,
   UpdateAssignmentPolicyInput,
   AssignmentPolicyQuery,
 } from '@/types/assignment-policy';
@@ -65,50 +63,6 @@ function getPoliciesCollection() {
 function getPoliciesAdminCollection() {
   const adminDb = getAdminFirestore();
   return adminDb.collection(COLLECTIONS.ASSIGNMENT_POLICIES);
-}
-
-// ============================================================================
-// CREATE
-// ============================================================================
-
-/**
- * Create new assignment policy
- * @enterprise Tenant-scoped, audit trail, version=1
- */
-export async function createAssignmentPolicy(
-  input: CreateAssignmentPolicyInput
-): Promise<{ id: string; policy: AssignmentPolicy }> {
-  const policiesRef = getPoliciesCollection();
-  const newPolicyRef = doc(policiesRef);
-
-  // Generate IDs για rules
-  const rulesWithIds = input.rules.map((rule, index) => ({
-    ...rule,
-    id: `rule_${index + 1}`,
-  }));
-
-  const createdAt = nowISO();
-  const newPolicy: AssignmentPolicy = {
-    id: newPolicyRef.id,
-    companyId: input.companyId,
-    projectId: input.projectId || null,
-    name: input.name,
-    description: input.description,
-    rules: rulesWithIds,
-    triageSettings: input.triageSettings,
-    taskDefaults: input.taskDefaults,
-    status: ENTITY_STATUS.ACTIVE,
-    createdBy: input.createdBy,
-    createdAt,
-    version: 1,
-  };
-
-  await setDoc(newPolicyRef, {
-    ...newPolicy,
-    createdAt: serverTimestamp()
-  });
-
-  return { id: newPolicyRef.id, policy: newPolicy };
 }
 
 // ============================================================================
@@ -335,36 +289,3 @@ export async function updateAssignmentPolicy(
   }
 }
 
-// ============================================================================
-// DELETE (Soft Delete)
-// ============================================================================
-
-/**
- * Archive assignment policy (soft delete)
- * @enterprise Preserves audit trail
- */
-export async function archiveAssignmentPolicy(
-  policyId: string,
-  companyId: string,
-  archivedBy: string
-): Promise<{ success: boolean; error?: string }> {
-  return updateAssignmentPolicy(policyId, companyId, {
-    status: 'archived',
-    updatedBy: archivedBy,
-  });
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Check if policy exists
- */
-export async function policyExists(
-  policyId: string,
-  companyId: string
-): Promise<boolean> {
-  const policy = await getAssignmentPolicyById(policyId, companyId);
-  return policy !== null;
-}

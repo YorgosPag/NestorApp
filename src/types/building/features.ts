@@ -117,15 +117,6 @@ export interface BuildingFeatureDefinition {
 // ============================================================================
 
 /**
- * Get the i18n key for a building feature.
- * @param key - The building feature key
- * @returns The i18n translation path
- */
-export function getBuildingFeatureI18nKey(key: BuildingFeatureKey): string {
-  return BUILDING_FEATURES[key].i18nKey;
-}
-
-/**
  * Check if a string is a valid BuildingFeatureKey.
  * @param value - String to validate
  * @returns Type guard for BuildingFeatureKey
@@ -149,68 +140,3 @@ export function getBuildingFeaturesForUI(): Array<{ key: BuildingFeatureKey; i18
 // RUNTIME VALIDATION - For dynamic/parsed inputs (env vars, user input, etc.)
 // ============================================================================
 
-/**
- * Validate and assert an array of strings as BuildingFeatureKey[].
- * Use this for dynamic inputs (env vars, DB reads, user input).
- *
- * @param values - Array of strings to validate
- * @param context - Optional context for error messages (e.g., 'env.FEATURES')
- * @returns Validated BuildingFeatureKey array
- * @throws Error if any value is not a valid BuildingFeatureKey
- *
- * @example
- * // Runtime validation for env vars
- * const features = assertBuildingFeatureKeys(
- *   process.env.FEATURES?.split(',') || [],
- *   'NEXT_PUBLIC_SAMPLE_BUILDING_1_FEATURES'
- * );
- */
-export function assertBuildingFeatureKeys(
-  values: readonly string[],
-  context?: string
-): BuildingFeatureKey[] {
-  const invalid: string[] = [];
-  const valid: BuildingFeatureKey[] = [];
-
-  for (const value of values) {
-    const trimmed = value.trim();
-    if (trimmed === '') continue; // Skip empty strings
-
-    if (isBuildingFeatureKey(trimmed)) {
-      valid.push(trimmed);
-    } else {
-      invalid.push(trimmed);
-    }
-  }
-
-  if (invalid.length > 0) {
-    const contextMsg = context ? ` in ${context}` : '';
-    throw new Error(
-      `Invalid BuildingFeatureKey(s)${contextMsg}: ${invalid.join(', ')}. ` +
-      `Valid keys are: ${BUILDING_FEATURE_KEYS.join(', ')}`
-    );
-  }
-
-  return valid;
-}
-
-/**
- * Filter valid BuildingFeatureKey values from a comma-separated string.
- * Invalid keys are silently dropped (not thrown).
- *
- * Use this when you want lenient parsing that ignores invalid values.
- * For strict validation that throws on invalid, use assertBuildingFeatureKeys().
- *
- * @param input - Comma-separated string of feature keys
- * @returns Array containing only valid BuildingFeatureKey values
- *
- * @example
- * filterBuildingFeatureKeys('elevator,invalid,parkingSpaces')
- * // Returns: ['elevator', 'parkingSpaces']
- */
-export function filterBuildingFeatureKeys(input: string | undefined): BuildingFeatureKey[] {
-  if (!input || input.trim() === '') return [];
-
-  const values = input.split(',').map(s => s.trim()).filter(Boolean);
-  return values.filter(isBuildingFeatureKey);
-}

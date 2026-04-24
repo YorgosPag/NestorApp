@@ -378,28 +378,10 @@ export const mapStyleManager = new MapStyleManager();
 // ============================================================================
 
 /**
- * Get style definition
- */
-export const getMapStyle = (styleType: MapStyleType): MapStyleDefinition =>
-  mapStyleManager.getStyleDefinition(styleType);
-
-/**
- * Get style URL
- */
-export const getMapStyleUrl = (styleType: MapStyleType): MapStyleUrl =>
-  mapStyleManager.getStyleUrl(styleType);
-
-/**
  * Get all style URLs
  */
 export const getAllMapStyleUrls = (): Record<MapStyleType, MapStyleUrl> =>
   mapStyleManager.getStyleUrls();
-
-/**
- * Get fallback style
- */
-export const getFallbackMapStyle = (currentStyle: MapStyleType): MapStyleType | null =>
-  mapStyleManager.getFallbackStyle(currentStyle);
 
 /**
  * ✅ ENTERPRISE MAP STYLE MANAGER COMPLETE (2025-12-17)

@@ -328,7 +328,4 @@ function getPhotoDisplayName(photoType: PhotoType): string {
 // EXPORTS
 // ============================================================================
 
-// Export the main validation function with a legacy-compatible name
-export const validateUploadState = validateAllPhotos;
-
 // Note: Individual functions are already exported above with their declarations

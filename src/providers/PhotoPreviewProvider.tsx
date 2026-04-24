@@ -1,11 +1,9 @@
 'use client';
 
-import React, { createContext, useContext } from 'react';
+import { createContext, useContext } from 'react';
 import { PhotoPreviewModal } from '@/core/modals/PhotoPreviewModal';
 import {
   usePhotoPreviewModal,
-  openContactAvatarModal,
-  openGalleryPhotoModal,
   type UsePhotoPreviewModalReturn
 } from '@/core/modals/usePhotoPreviewModal';
 
@@ -114,43 +112,3 @@ export function useGlobalPhotoPreview(): UsePhotoPreviewModalReturn {
   return context;
 }
 
-// ============================================================================
-// CONVENIENCE FUNCTIONS
-// ============================================================================
-
-/**
- * 🖼️ Global Avatar Modal Helper
- *
- * Convenience function για άνοιγμα contact avatar με το global modal.
- * Wrapper γύρω από το openContactAvatarModal που χρησιμοποιεί το global context.
- */
-export function useOpenContactAvatar() {
-  const photoModal = useGlobalPhotoPreview();
-
-  return React.useCallback((
-    contact: Parameters<typeof openContactAvatarModal>[1],
-    photoType?: Parameters<typeof openContactAvatarModal>[2]
-  ) => {
-    openContactAvatarModal(photoModal, contact, photoType);
-  }, [photoModal]);
-}
-
-/**
- * 📸 Global Gallery Modal Helper
- *
- * Convenience function για άνοιγμα photo gallery με το global modal.
- * Wrapper γύρω από το openGalleryPhotoModal που χρησιμοποιεί το global context.
- */
-export function useOpenGalleryPhoto() {
-  const photoModal = useGlobalPhotoPreview();
-
-  return React.useCallback((
-    contact: Parameters<typeof openGalleryPhotoModal>[1],
-    photoIndex: Parameters<typeof openGalleryPhotoModal>[2],
-    customGalleryPhotos?: Parameters<typeof openGalleryPhotoModal>[3]
-  ) => {
-    openGalleryPhotoModal(photoModal, contact, photoIndex, customGalleryPhotos);
-  }, [photoModal]);
-}
-
-export default PhotoPreviewProvider;

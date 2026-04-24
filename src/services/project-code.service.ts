@@ -386,19 +386,3 @@ export const projectCodeService = new ProjectCodeService();
 export const formatProjectCode = (sequence: number): string =>
   projectCodeService.formatCode(sequence);
 
-/**
- * Parse a project code to extract sequence number
- */
-export const parseProjectCode = (code: string): number | null =>
-  projectCodeService.parseCode(code);
-
-/**
- * Validate project code format
- */
-export const isValidProjectCode = (code: string): boolean =>
-  projectCodeService.isValidCode(code);
-
-/**
- * Default export
- */
-export default projectCodeService;

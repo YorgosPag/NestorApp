@@ -279,30 +279,3 @@ export function validateImageFile(file: File, maxSize?: number): FileValidationR
   });
 }
 
-/**
- * Validates PDF files specifically
- *
- * @param file - File to validate
- * @param maxSize - Optional max size (default: 20MB)
- * @returns Validation result
- */
-export function validatePDFFile(file: File, maxSize?: number): FileValidationResult {
-  return validateFile(file, {
-    fileType: 'pdf',
-    maxSize
-  });
-}
-
-/**
- * Validates document files specifically
- *
- * @param file - File to validate
- * @param maxSize - Optional max size (default: 10MB)
- * @returns Validation result
- */
-export function validateDocumentFile(file: File, maxSize?: number): FileValidationResult {
-  return validateFile(file, {
-    fileType: 'document',
-    maxSize
-  });
-}

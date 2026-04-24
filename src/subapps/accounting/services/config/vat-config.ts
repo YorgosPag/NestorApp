@@ -9,10 +9,8 @@
  */
 
 import type { VATRate, VATDeductibilityRule } from '../../types/vat';
-import type { ExpenseCategory, AccountCategory } from '../../types/common';
+import type { ExpenseCategory } from '../../types/common';
 import { ACCOUNT_CATEGORIES } from '../../config/account-categories';
-import { isCustomCategoryCode } from '../../types/custom-category';
-import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // GREEK VAT RATES (Ν.2859/2000 — Κώδικας ΦΠΑ)
@@ -122,59 +120,3 @@ export function getVatDeductibilityRules(): ReadonlyMap<ExpenseCategory, VATDedu
   return _cachedRules;
 }
 
-/**
- * Ποσοστό εκπτωσιμότητας ΦΠΑ για οποιαδήποτε AccountCategory (built-in ή custom).
- *
- * Custom categories: χρησιμοποιεί το `vatDeductiblePercent` που παρέχεται ως argument.
- * Built-in categories: αναζήτηση στο cached rules map.
- *
- * @param category - AccountCategory (built-in ή custom_xxx)
- * @param customVatDeductiblePercent - Για custom categories: το percent από το Firestore doc
- * @returns Ποσοστό εκπτωσιμότητας (0, 50, 100)
- */
-export function getDeductibilityPercent(
-  category: AccountCategory,
-  customVatDeductiblePercent?: number
-): number {
-  if (isCustomCategoryCode(category)) {
-    return customVatDeductiblePercent ?? 100;
-  }
-  const rules = getVatDeductibilityRules();
-  const rule = rules.get(category as ExpenseCategory);
-  return rule?.deductiblePercent ?? 100;
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Λήψη ισχύοντος συντελεστή ΦΠΑ για δεδομένη ημερομηνία
- *
- * @param rate - Αριθμητικός συντελεστής (24, 13, 6, 0)
- * @param date - Ημερομηνία αναφοράς (ISO 8601), default = σήμερα
- * @returns VATRate ή null αν δεν βρεθεί
- */
-export function getVatRateForDate(rate: number, date?: string): VATRate | null {
-  const refDate = date ?? nowISO().split('T')[0];
-
-  return (
-    GREEK_VAT_RATES.find(
-      (vr) =>
-        vr.rate === rate &&
-        vr.validFrom <= refDate &&
-        (vr.validTo === null || vr.validTo >= refDate)
-    ) ?? null
-  );
-}
-
-/**
- * Λήψη myDATA κατηγορίας ΦΠΑ από συντελεστή
- *
- * @param rate - Αριθμητικός συντελεστής (24, 13, 6, 0)
- * @returns myDATA category number (1, 2, 3, 8) ή null
- */
-export function getMyDataVatCategory(rate: number): number | null {
-  const vatRate = GREEK_VAT_RATES.find((vr) => vr.rate === rate && vr.validTo === null);
-  return vatRate?.mydataCategory ?? null;
-}

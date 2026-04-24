@@ -20,15 +20,6 @@ import { NextResponse } from 'next/server';
 /** Firestore document ID (non-empty, max 128 chars) */
 export const IdSchema = z.string().min(1).max(128);
 
-/** ISO date string */
-export const ISODateSchema = z.string().min(10).max(30);
-
-/** Positive monetary amount (max €999M) */
-export const MoneySchema = z.number().min(0).max(999_999_999);
-
-/** Page size limiter (1-100, default 20) — prevents abuse */
-export const PageSizeSchema = z.number().int().min(1).max(100).default(20);
-
 // =============================================================================
 // SAFE PARSE UTILITY
 // =============================================================================

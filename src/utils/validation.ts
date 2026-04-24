@@ -298,17 +298,6 @@ export const commonSchemas = {
   // Note: documentExpiryDate requires dynamic validation with issue date
 };
 
-// Password validation
-export const passwordSchema = {
-  password: validationRules.required().pipe(validationRules.minLength(8)),
-  confirmPassword: validationRules.required(),
-};
-
-// Utility to create form schema from field definitions
-export const createFormSchema = (fields: Record<string, z.ZodType>) => {
-  return z.object(fields);
-};
-
 // Utility to convert Zod errors to form-friendly format
 export const formatZodErrors = (error: z.ZodError) => {
   const formattedErrors: Record<string, string> = {};
@@ -319,66 +308,6 @@ export const formatZodErrors = (error: z.ZodError) => {
   });
   
   return formattedErrors;
-};
-
-// Export common field validations
-export const fieldValidations = {
-  // Storage/Property fields
-  storageUnit: {
-    code: commonSchemas.code,
-    area: commonSchemas.area,
-    price: commonSchemas.price,
-    floor: commonSchemas.floor,
-  },
-
-  // Contact fields
-  contact: {
-    name: commonSchemas.name,
-    email: commonSchemas.email,
-    phone: commonSchemas.phone,
-  },
-
-  // 🏢 INDIVIDUAL CONTACT DATE VALIDATIONS
-  individual: {
-    // Basic info
-    firstName: validationRules.required(validationMessages.first_name_required),
-    lastName: validationRules.required(validationMessages.last_name_required),
-
-    // Date validations
-    birthDate: validationRules.reasonablePastDate(150, validationMessages.birthdate_invalid),
-    documentIssueDate: validationRules.documentIssueDate(),
-
-    // Contact info
-    email: validationRules.email().optional(),
-    phone: validationRules.phone().optional(),
-
-    // VAT/AMKA numbers
-    vatNumber: validationRules.exactLength(9, validationMessages.vat_individual_format).optional(),
-    amka: validationRules.exactLength(11, validationMessages.amka_format).optional(),
-  },
-
-  // 🏢 COMPANY CONTACT VALIDATIONS
-  company: {
-    companyName: validationRules.required(validationMessages.company_name_required),
-    vatNumber: validationRules.exactLength(9, validationMessages.vat_company_format),
-    email: validationRules.email().optional(),
-    phone: validationRules.phone().optional(),
-  },
-
-  // 🏢 SERVICE CONTACT VALIDATIONS
-  service: {
-    serviceName: validationRules.required(validationMessages.service_name_required),
-    email: validationRules.email().optional(),
-    phone: validationRules.phone().optional(),
-  },
-
-  // Financial fields
-  financial: {
-    salePricePerSqm: commonSchemas.salePricePerSqm,
-    costPerSqm: commonSchemas.costPerSqm,
-    realizedValue: commonSchemas.realizedValue,
-    financing: commonSchemas.financing,
-  },
 };
 
 // 🏢 ENTERPRISE DATE VALIDATION FUNCTIONS

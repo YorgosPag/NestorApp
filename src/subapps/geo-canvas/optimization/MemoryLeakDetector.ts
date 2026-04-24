@@ -454,8 +454,4 @@ export class GeoAlertMemoryLeakDetector {
 export const geoAlertMemoryLeakDetector = GeoAlertMemoryLeakDetector.getInstance();
 
 export const startMemoryMonitoring = () => geoAlertMemoryLeakDetector.startMonitoring();
-export const stopMemoryMonitoring = () => geoAlertMemoryLeakDetector.stopMonitoring();
 export const getMemoryHealth = () => geoAlertMemoryLeakDetector.getMemoryHealthReport();
-export const takeMemorySnapshot = () => geoAlertMemoryLeakDetector.takeSnapshot();
-
-export default geoAlertMemoryLeakDetector;

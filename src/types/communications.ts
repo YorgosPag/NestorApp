@@ -137,27 +137,6 @@ export type MessageCategory = typeof MESSAGE_CATEGORIES[keyof typeof MESSAGE_CAT
 // VALIDATORS
 // ============================================================================
 
-/**
- * Check if value is a valid communication channel
- */
-export function isValidChannel(value: string): value is CommunicationChannel {
-  return Object.values(COMMUNICATION_CHANNELS).includes(value as CommunicationChannel);
-}
-
-/**
- * Check if value is a valid message priority
- */
-export function isValidPriority(value: string): value is MessagePriority {
-  return Object.values(MESSAGE_PRIORITIES).includes(value as MessagePriority);
-}
-
-/**
- * Check if value is a valid message category
- */
-export function isValidCategory(value: string): value is MessageCategory {
-  return Object.values(MESSAGE_CATEGORIES).includes(value as MessageCategory);
-}
-
 // ============================================================================
 // MESSAGE INTERFACES
 // ============================================================================
