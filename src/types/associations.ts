@@ -176,41 +176,6 @@ export interface EntityLink {
   metadata?: ParkingStorageAllocationMetadata;
 }
 
-/**
- * Entity Link as stored in Firestore
- */
-export interface EntityLinkFirestoreDoc {
-  id: string;
-  sourceEntityType: EntityType;
-  sourceEntityId: string;
-  sourceWorkspaceId: string;
-  targetEntityType: EntityType;
-  targetEntityId: string;
-  targetWorkspaceId?: string;
-  reason?: AllocationReasonCode;
-  status: 'active' | 'inactive';
-  createdAt: Timestamp;
-  createdBy: string;
-  updatedAt?: Timestamp;
-  updatedBy?: string;
-  metadata?: ParkingStorageAllocationMetadata;
-}
-
-/**
- * Input for creating an entity link
- */
-export interface CreateEntityLinkInput {
-  sourceEntityType: EntityType;
-  sourceEntityId: string;
-  sourceWorkspaceId: string;
-  targetEntityType: EntityType;
-  targetEntityId: string;
-  targetWorkspaceId?: string;
-  reason?: AllocationReasonCode;
-  createdBy: string;
-  metadata?: ParkingStorageAllocationMetadata;
-}
-
 // ============================================================================
 // FILE LINKS
 // ============================================================================
@@ -317,35 +282,6 @@ export interface ListContactLinksParams {
 
   /** Filter by target entity ID */
   targetEntityId?: string;
-
-  /** Filter by status */
-  status?: 'active' | 'inactive';
-
-  /** Limit results */
-  limit?: number;
-}
-
-/**
- * Query parameters for listing entity links
- */
-export interface ListEntityLinksParams {
-  /** Filter by source entity type */
-  sourceEntityType?: EntityType;
-
-  /** Filter by source entity ID */
-  sourceEntityId?: string;
-
-  /** Filter by source workspace ID */
-  sourceWorkspaceId?: string;
-
-  /** Filter by target entity type */
-  targetEntityType?: EntityType;
-
-  /** Filter by target entity ID */
-  targetEntityId?: string;
-
-  /** Filter by target workspace ID */
-  targetWorkspaceId?: string;
 
   /** Filter by status */
   status?: 'active' | 'inactive';
