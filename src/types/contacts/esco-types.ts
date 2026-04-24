@@ -149,28 +149,6 @@ export interface EscoSearchResponse {
 // ============================================================================
 // ESCO CONTACT FIELDS — Integration with Contact System
 // ============================================================================
-
-/**
- * ESCO professional fields stored on an IndividualContact.
- *
- * These fields are **optional** and **backward compatible**:
- * - Contacts without ESCO data continue to work with free-text `profession`
- * - When user selects an ESCO occupation, `escoUri` and `iscoCode` are set
- * - `profession` field is always set (human-readable, cached label)
- *
- * Stored directly on the contact document (not in a subcollection).
- */
-export interface EscoContactFields {
-  /** ESCO occupation URI — link to EU taxonomy (optional) */
-  escoUri?: string;
-
-  /** Cached ESCO preferred label in user's language (optional) */
-  escoLabel?: string;
-
-  /** ISCO-08 4-digit code for grouping/filtering (optional) */
-  iscoCode?: string;
-}
-
 // ============================================================================
 // ESCO PICKER — UI Component Types
 // ============================================================================
@@ -245,10 +223,6 @@ export const ISCO_MAJOR_GROUPS = {
   '9': { el: 'Ανειδίκευτοι Εργάτες', en: 'Elementary Occupations' },
   '0': { el: 'Ένοπλες Δυνάμεις', en: 'Armed Forces Occupations' },
 } as const;
-
-/** Type for ISCO major group code */
-export type IscoMajorGroupCode = keyof typeof ISCO_MAJOR_GROUPS;
-
 // ============================================================================
 // FIRESTORE DOCUMENT — Cached ESCO Data
 // ============================================================================
@@ -411,33 +385,3 @@ export interface EscoSkillPickerProps {
 // ============================================================================
 // IMPORT SCRIPT — CSV Processing Types
 // ============================================================================
-
-/**
- * Raw ESCO CSV row from the occupations download.
- * Used by the import script only.
- */
-export interface EscoCsvRow {
-  conceptUri: string;
-  conceptType: string;
-  iscoGroup: string;
-  preferredLabel: string;
-  altLabels: string;
-  description: string;
-}
-
-/**
- * Import configuration for the ESCO CSV→Firestore script.
- */
-export interface EscoImportConfig {
-  /** Path to the Greek CSV file */
-  csvPathEl: string;
-
-  /** Path to the English CSV file */
-  csvPathEn: string;
-
-  /** Firestore collection path for cached occupations */
-  collectionPath: string;
-
-  /** Batch size for Firestore writes (max 500) */
-  batchSize: number;
-}
