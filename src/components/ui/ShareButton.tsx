@@ -117,55 +117,6 @@ export function ShareButton({
   );
 }
 
-// Export convenience props for specific use cases
-export interface PropertyShareButtonProps extends Omit<ShareButtonProps, 'shareData'> {
-  /** Property ID */
-  propertyId: string;
-  /** Property title */
-  propertyTitle: string;
-  /** Property description (optional) */
-  propertyDescription?: string;
-  /** Property price (optional) */
-  propertyPrice?: number;
-  /** Property area (optional) */
-  propertyArea?: number;
-  /** Property location (optional) */
-  propertyLocation?: string;
-  /** Share source for tracking */
-  source?: string;
-}
-
-/**
- * Pre-configured ShareButton for properties
- */
-export function PropertyShareButton({
-  propertyId,
-  propertyTitle,
-  propertyDescription,
-  propertyPrice,
-  propertyArea,
-  propertyLocation,
-  source = 'property_details',
-  ...buttonProps
-}: PropertyShareButtonProps) {
-  const propertyData = {
-    id: propertyId,
-    title: propertyTitle,
-    description: propertyDescription,
-    price: propertyPrice,
-    area: propertyArea,
-    location: propertyLocation,
-  };
-
-  // Generate share data using utility function
-  const shareData: ShareData = {
-    title: propertyTitle,
-    text: generatePropertyShareText(propertyData),
-    url: generatePropertyShareUrl(propertyId, source),
-  };
-
-  return <ShareButton shareData={shareData} {...buttonProps} />;
-}
 
 // Helper functions for property sharing
 function generatePropertyShareText(property: {

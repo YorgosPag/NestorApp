@@ -43,10 +43,6 @@ export function ensureFloor(floor: FloorData | null | undefined): SafeFloor {
   };
 }
 
-export function isNodeEditMode(mode: string): boolean {
-  return mode === 'edit' || mode === 'create';
-}
-
 export function safeGetProperty(properties: Property[], id: string | null | undefined): Property | null {
   if (!id || !Array.isArray(properties)) {
     return null;
@@ -54,15 +50,3 @@ export function safeGetProperty(properties: Property[], id: string | null | unde
   return properties.find(p => p && p.id === id) || null;
 }
 
-export function safeUpdateProperties(
-  properties: Property[],
-  id: string,
-  updates: Partial<Property>
-): Property[] {
-  if (!Array.isArray(properties)) {
-    return [];
-  }
-  return properties.map(p =>
-    (p && p.id === id) ? { ...p, ...updates } : p
-  ).filter((p): p is Property => Boolean(p));
-}

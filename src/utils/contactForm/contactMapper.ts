@@ -97,50 +97,6 @@ export function mapContactToFormData(contact: Contact): ContactMappingResult {
 }
 
 /**
- * Validate contact data before mapping
- *
- * @param contact - Contact object to validate
- * @returns Validation warnings array
- */
-export function validateContactForMapping(contact: Contact): string[] {
-  const warnings: string[] = [];
-
-  if (!contact.type) {
-    warnings.push('Contact type is missing');
-  }
-
-  if (!contact.id) {
-    warnings.push('Contact ID is missing');
-  }
-
-  // Type-specific validations
-  const unknownContact = contact as UnknownContact;
-  switch (contact.type) {
-    case 'individual':
-      if (!unknownContact.firstName && !unknownContact.lastName) {
-        warnings.push('Individual contact missing name information');
-      }
-      break;
-
-    case 'company':
-      if (!unknownContact.companyName) {
-        warnings.push('Company contact missing company name');
-      }
-      break;
-
-    case 'service':
-      if (!unknownContact.serviceName) {
-        warnings.push('Service contact missing service name');
-      }
-      break;
-  }
-
-  if (warnings.length > 0) {
-    logger.warn('MAPPER: Contact validation warnings', { warnings });
-  }
-
-  return warnings;
-}
 
 function toRecord(value: SafeFieldSource | null | undefined): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') {

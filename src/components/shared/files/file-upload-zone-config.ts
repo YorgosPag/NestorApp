@@ -86,13 +86,6 @@ export function detectFileType(mimeType: string): FileType {
   return 'any';
 }
 
-/**
- * Get max allowed size for a specific file type.
- * Falls back to the global UPLOAD_LIMITS.MAX_FILE_SIZE when no type config exists.
- */
-export function getMaxSizeForType(fileType: FileType): number {
-  return FILE_TYPE_CONFIG[fileType]?.maxSize ?? UPLOAD_LIMITS.MAX_FILE_SIZE;
-}
 
 /** Format bytes to human-readable string — delegates to centralized formatFileSize */
 export const formatBytes = formatFileSize;

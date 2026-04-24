@@ -268,69 +268,6 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
 };
 
 // ============================================================================
-// CONVENIENCE HOOKS για Advanced Usage
-// ============================================================================
-
-/**
- * 🪝 useContactSearch Hook για advanced usage
- */
-export const useContactSearch = (config: {
-  excludeContactIds?: string[];
-  allowedContactTypes?: ContactType[];
-  maxResults?: number;
-  debug?: boolean;
-}) => {
-  const [searchResults, setSearchResults] = useState<ContactSummary[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const searchContacts = useCallback(async (query: string) => {
-    setIsSearching(true);
-    setError(null);
-
-    try {
-      let contacts;
-
-      if (!query.trim()) {
-        const allContactsResult = await ContactsService.getAllContacts();
-        contacts = allContactsResult.contacts || [];
-      } else {
-        contacts = await ContactsService.searchContacts({ searchTerm: query });
-      }
-
-      const contactSummaries = ContactNameResolver.mapContactsToSummaries(
-        contacts,
-        undefined,
-        { debug: config.debug }
-      );
-
-      const filteredContacts = contactSummaries
-        .filter(contact => {
-          if (config.excludeContactIds?.includes(contact.id)) return false;
-          if (config.allowedContactTypes?.length && !config.allowedContactTypes.includes(contact.type)) return false;
-          return true;
-        })
-        .slice(0, config.maxResults || 50);
-
-      setSearchResults(filteredContacts);
-    } catch (err) {
-      logger.error('Contact search error', { error: err });
-      setError('Search error'); // Note: Hardcoded fallback since hooks cannot use i18n
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, [config]);
-
-  return {
-    searchResults,
-    isSearching,
-    error,
-    searchContacts
-  };
-};
-
-// ============================================================================
 // EXPORTS
 // ============================================================================
 

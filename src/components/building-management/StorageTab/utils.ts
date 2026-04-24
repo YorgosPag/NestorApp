@@ -7,9 +7,6 @@ import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 // 🏢 ENTERPRISE: Type for translate function (from useTranslation hook)
 type TranslateFunction = (key: string) => string;
 
-export const getStorageTypeIcon = (type: StorageType) => {
-    return type === 'basement' || type === 'ground' ? Warehouse : Package;
-};
 
 // 🏢 ENTERPRISE: i18n-enabled type label function
 // 🌐 i18n: All fallbacks converted to i18n keys - 2026-01-18

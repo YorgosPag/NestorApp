@@ -291,11 +291,3 @@ export const SPECIAL_WORKSPACE_IDS = {
   OFFICE_DIRECTORY: 'ws_office_directory',
 } as const;
 
-/**
- * Workspace type display names (i18n keys)
- */
-export const WORKSPACE_TYPE_LABELS: Record<WorkspaceType, string> = {
-  company: 'workspace.type.company',
-  office_directory: 'workspace.type.officeDirectory',
-  personal: 'workspace.type.personal',
-};

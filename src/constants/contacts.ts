@@ -37,32 +37,6 @@ export const CONTACT_COLORS = {
   },
 } as const;
 
-export const CONTACT_LABELS = {
-  [CONTACT_TYPES.INDIVIDUAL]: {
-    singular: 'contacts.types.individual.singular',
-    plural: 'contacts.types.individual.plural',
-    short: 'contacts.types.individual.short',
-    emoji: '👤',
-  },
-  [CONTACT_TYPES.COMPANY]: {
-    singular: 'contacts.types.company.singular',
-    plural: 'contacts.types.company.plural',
-    short: 'contacts.types.company.short',
-    emoji: '🏢',
-    alt: {
-      singular: 'contacts.types.company.altSingular',
-      plural: 'contacts.types.company.altPlural',
-      short: 'contacts.types.company.altShort',
-    }
-  },
-  [CONTACT_TYPES.SERVICE]: {
-    singular: 'contacts.types.service.singular',
-    plural: 'contacts.types.service.plural',
-    short: 'contacts.types.service.short',
-    emoji: '🏛️',
-  },
-} as const;
-
 export const CONTACT_ICONS = {
   [CONTACT_TYPES.INDIVIDUAL]: Users,
   [CONTACT_TYPES.COMPANY]: Factory,
@@ -71,10 +45,6 @@ export const CONTACT_ICONS = {
 
 export const getContactIcon = (type: ContactType): LucideIcon => {
   return CONTACT_ICONS[type] || CONTACT_ICONS[CONTACT_TYPES.INDIVIDUAL];
-};
-
-export const isValidContactType = (type: string): type is ContactType => {
-  return Object.values(CONTACT_TYPES).includes(type as ContactType);
 };
 
 export const ALL_CONTACT_TYPES = [CONTACT_TYPES.INDIVIDUAL, CONTACT_TYPES.COMPANY, CONTACT_TYPES.SERVICE] as const;

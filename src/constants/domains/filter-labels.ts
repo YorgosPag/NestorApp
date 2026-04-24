@@ -146,14 +146,6 @@ export const PRIORITY_LABELS = {
   critical: 'filters.priority.critical'
 } as const;
 
-export const RISK_COMPLEXITY_LABELS = {
-  'low': 'filters.riskComplexity.low',
-  'medium': 'filters.riskComplexity.medium',
-  'high': 'filters.riskComplexity.high',
-  'simple': 'filters.riskComplexity.simple',
-  'complex': 'filters.riskComplexity.complex',
-  'very_complex': 'filters.riskComplexity.veryComplex'
-} as const;
 
 // ============================================================================
 // BUILDING/PROJECT STATUS & TYPE LABELS

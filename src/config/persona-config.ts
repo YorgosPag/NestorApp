@@ -63,11 +63,6 @@ export const PERSONA_METADATA: readonly PersonaMetadata[] = [
 // PERSONA TYPE CATEGORIZATION (ADR-282)
 // ============================================================================
 
-/** Professional personas — show chips + conditional sections in Professional tab */
-export const PROFESSIONAL_PERSONA_TYPES: readonly PersonaType[] = [
-  'construction_worker', 'engineer', 'accountant', 'lawyer', 'notary',
-] as const;
-
 /** Role personas — show chips in Professional tab, badges in header */
 export const ROLE_PERSONA_TYPES: readonly PersonaType[] = [
   'property_owner', 'client', 'supplier', 'real_estate_agent',

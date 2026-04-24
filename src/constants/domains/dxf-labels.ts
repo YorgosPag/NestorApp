@@ -160,10 +160,6 @@ export const DXF_SETTINGS_TAB_LABELS = {
   SELECTION: 'dxfViewer.settings.tabs.selection'
 } as const;
 
-export const DXF_SETTINGS_OVERRIDE_LABELS = {
-  OVERRIDE_GLOBAL_SETTINGS: 'dxfViewer.settings.overrideGlobalSettings'
-} as const;
-
 // ============================================================================
 // DXF SIMPLE TOOL LABELS (without context)
 // ============================================================================
@@ -182,25 +178,3 @@ export const DXF_MEASUREMENT_SIMPLE_LABELS = {
   ANGLE: 'dxfViewer.measurements.angle'
 } as const;
 
-// ============================================================================
-// DXF DESTINATION LABELS
-// ============================================================================
-
-export const DXF_DESTINATION_LABELS = {
-  GENERAL_PLAN: 'dxfViewer.destinations.generalPlan',
-  PARKING_SPOTS: 'dxfViewer.destinations.parkingSpots',
-  STORAGE_AREAS: 'dxfViewer.destinations.storageAreas',
-  BUILDING_PLAN: 'dxfViewer.destinations.buildingPlan',
-  UNIT_PLAN: 'dxfViewer.destinations.unitPlan'
-} as const;
-
-// ============================================================================
-// ENCODING LABELS (DXF Import)
-// ============================================================================
-
-export const ENCODING_LABELS = {
-  'windows-1253': 'dxfViewer.encoding.windows1253',
-  'UTF-8': 'dxfViewer.encoding.utf8',
-  'windows-1252': 'dxfViewer.encoding.windows1252',
-  'ISO-8859-7': 'dxfViewer.encoding.iso88597'
-} as const;

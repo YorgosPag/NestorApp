@@ -12,15 +12,6 @@ const costBreakdownData = [
     { categoryKey: 'other', amount: 100000, percentage: 10, color: 'bg-purple-500' }
 ];
 
-// 🏢 ENTERPRISE: Get cost breakdown with i18n support
-export const getCostBreakdown = (t: TranslateFunction) => {
-    return costBreakdownData.map(item => ({
-        category: t(`analytics.costCategories.${item.categoryKey}`),
-        amount: item.amount,
-        percentage: item.percentage,
-        color: item.color
-    }));
-};
 
 // 🏢 ENTERPRISE: Legacy export for backward compatibility
 export const costBreakdown = costBreakdownData.map(item => ({
@@ -41,15 +32,6 @@ const monthlyProgressData = [
     { monthKey: 'jul', planned: 90, actual: 85, cost: 87000 }
 ];
 
-// 🏢 ENTERPRISE: Get monthly progress with i18n support
-export const getMonthlyProgress = (t: TranslateFunction) => {
-    return monthlyProgressData.map(item => ({
-        month: t(`analytics.months.${item.monthKey}`),
-        planned: item.planned,
-        actual: item.actual,
-        cost: item.cost
-    }));
-};
 
 // 🏢 ENTERPRISE: Legacy export for backward compatibility
 export const monthlyProgress = monthlyProgressData.map(item => ({
@@ -69,11 +51,6 @@ const kpisData = {
     profitMargin: 12.3
 };
 
-// 🏢 ENTERPRISE: Get KPIs with i18n support
-export const getKpis = (t: TranslateFunction) => ({
-    ...kpisData,
-    riskLevel: t(`analytics.riskLevels.${kpisData.riskLevelKey}`)
-});
 
 // 🏢 ENTERPRISE: Legacy export for backward compatibility
 export const kpis = {

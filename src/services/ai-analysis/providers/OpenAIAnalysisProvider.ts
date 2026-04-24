@@ -457,9 +457,3 @@ export function createOpenAIProvider(): IAIAnalysisProvider | null {
   return new OpenAIAnalysisProvider(config);
 }
 
-export function normalizeDocumentAnalysis(
-  result: AIAnalysisResult
-): DocumentClassifyAnalysis | null {
-  if (result.kind !== 'document_classify') return null;
-  return result;
-}

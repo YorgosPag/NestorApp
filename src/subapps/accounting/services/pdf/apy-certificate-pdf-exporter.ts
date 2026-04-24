@@ -60,30 +60,3 @@ export async function exportAPYCertificatePDF(cert: APYCertificate): Promise<voi
   pdf.save(buildAPYFilename(cert));
 }
 
-/**
- * Get APY Certificate PDF as Blob (for email attachments).
- *
- * @param cert - The APY certificate to render
- * @returns PDF Blob
- */
-export async function getAPYCertificatePDFBlob(cert: APYCertificate): Promise<Blob> {
-  const logoBase64 = await loadLogo();
-
-  const pdf = await renderAPYCertificatePDF({ cert, logoBase64 });
-  return pdf.output('blob');
-}
-
-/**
- * Print APY Certificate PDF via browser print dialog.
- *
- * @param cert - The APY certificate to print
- */
-export async function printAPYCertificatePDF(cert: APYCertificate): Promise<void> {
-  const blob = await getAPYCertificatePDFBlob(cert);
-  const tab = openBlobInNewTab(blob, { onLoad: (w) => w.print() });
-
-  // Fallback: download if popup blocked
-  if (!tab) {
-    await exportAPYCertificatePDF(cert);
-  }
-}

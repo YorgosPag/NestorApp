@@ -194,29 +194,3 @@ export function calculateMonthlyBreakdown(
   return months;
 }
 
-/**
- * Υπολογισμός ετήσιου συνόλου εισφορών για δεδομένες κατηγορίες
- */
-export function calculateAnnualTotal(
-  year: number,
-  mainCode: string,
-  suppCode: string,
-  lumpCode: string
-): number {
-  const config = getEfkaConfigForYear(year);
-
-  const mainCat = config.mainPensionCategories.find((c) => c.code === mainCode);
-  const suppCat = config.supplementaryCategories.find((c) => c.code === suppCode);
-  const lumpCat = config.lumpSumCategories.find((c) => c.code === lumpCode);
-
-  if (!mainCat || !suppCat || !lumpCat) {
-    throw new Error(`[EFKAConfig] Invalid category codes for annual total calculation`);
-  }
-
-  return (
-    mainCat.annualAmount +
-    suppCat.annualAmount +
-    lumpCat.annualAmount +
-    config.healthContributionMonthly * 12
-  );
-}

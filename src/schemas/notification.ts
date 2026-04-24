@@ -49,8 +49,6 @@ export const ListResponseSchema = z.object({
   cursor: z.string().optional(),
 });
 
-export const AckRequestSchema = z.object({ ids: z.array(z.string().min(1)), seenAt: z.string().datetime().optional() });
-export const ActionRequestSchema = z.object({ id: z.string().min(1), actionId: z.string().min(1), payload: z.record(z.unknown()).optional() });
 
 export const QuietHoursSchema = z.object({ start: z.string().regex(/^\d{2}:\d{2}$/), end: z.string().regex(/^\d{2}:\d{2}$/), days: z.array(z.number().int().min(0).max(6)).optional() });
 export const UserPreferencesSchema = z.object({

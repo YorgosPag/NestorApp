@@ -59,20 +59,3 @@ export const validateForm = (formData: Partial<StorageUnit>): { isValid: boolean
     };
   }
 };
-
-// Partial validation for individual fields
-export const validateField = (field: keyof StorageUnitFormData, value: unknown): string | undefined => {
-  try {
-    const schema = storageUnitSchema.shape;
-    const fieldSchema = schema[field as keyof typeof schema];
-    if (fieldSchema) {
-      fieldSchema.parse(value);
-      return undefined;
-    }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return error.errors[0]?.message;
-    }
-  }
-  return undefined;
-};

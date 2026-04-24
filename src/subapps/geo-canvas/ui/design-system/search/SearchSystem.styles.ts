@@ -410,29 +410,6 @@ const searchLayoutStyles = {
   } as const
 } as const;
 
-// 🎯 MAIN EXPORT - ENTERPRISE SEARCH STYLES
-/**
- * 🔍 ENTERPRISE SEARCH SYSTEM STYLES EXPORT
- *
- * Centralized styling object που αντικαθιστά όλα τα inline styles
- * στο SearchSystem component και τα sub-components του.
- *
- * Usage:
- * ```typescript
- * import { searchSystemStyles } from './SearchSystem.styles';
- *
- * <div style={searchSystemStyles.searchInput.container}>
- * <input style={searchSystemStyles.searchInput.input} />
- * <div style={searchSystemStyles.layout.main}>
- * ```
- */
-export const searchSystemStyles: SearchSystemStylesType = {
-  searchInput: searchInputStyles,
-  filters: searchFiltersStyles,
-  results: searchResultsStyles,
-  layout: searchLayoutStyles
-} as const;
-
 // 🔒 TYPE EXPORTS - ENTERPRISE TYPE SAFETY
 export type { SearchSystemStylesType, SearchInputStylesType, SearchFilterStylesType, SearchResultsStylesType };
 

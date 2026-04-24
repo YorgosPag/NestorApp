@@ -137,30 +137,6 @@ export function findMatchingCombinations(
   }
 }
 
-/**
- * Find groups of transactions that match a single entity amount
- *
- * Used for N:1 matching (e.g., 3 deposits totaling €5,200 → 1 invoice €5,200).
- * Same algorithm as findMatchingCombinations but with transactions as candidates.
- */
-export function findTransactionGroups(
-  transactions: ReadonlyArray<{ readonly transactionId: string; readonly amount: number }>,
-  entityAmount: number,
-  config: MatchingConfig
-): CombinationResult[] {
-  const candidates: CombinationCandidate[] = transactions.map((txn) => ({
-    entityId: txn.transactionId,
-    entityType: 'invoice' as const, // placeholder — actual entity type is the target
-    amount: txn.amount,
-  }));
-
-  return findMatchingCombinations({
-    targetAmount: entityAmount,
-    candidates,
-    tolerancePercent: config.amountTolerancePercent,
-    maxCombinationSize: config.maxCombinationSize,
-  });
-}
 
 /**
  * Pre-filter candidates to a manageable size for combination search

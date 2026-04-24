@@ -51,8 +51,6 @@ export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
   deleted: "bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-500",
 };
 
-export const getParkingTypeLabel = (type: ParkingSpotType | undefined) =>
-  PARKING_TYPE_LABELS[type || "standard"] || type;
 export const getParkingStatusLabel = (status: ParkingSpotStatus | undefined) =>
   PARKING_STATUS_LABELS[status || "available"] || status;
 
@@ -69,5 +67,3 @@ export const getParkingStatusColor = (
   );
 };
 
-export const getLegacyParkingStatusColor = (status: ParkingSpotStatus) =>
-  PARKING_STATUS_COLORS[status] || "";

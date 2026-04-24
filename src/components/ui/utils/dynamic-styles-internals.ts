@@ -54,16 +54,6 @@ export function isValidTransform(value: string): boolean {
   return false;
 }
 
-/**
- * Validate if background-image value is valid
- */
-export function isValidBackgroundImage(value: string): boolean {
-  if (value.startsWith('var(') || value.startsWith('calc(')) return true;
-  if (value.startsWith('url(')) return true;
-  if (/^(linear-gradient|radial-gradient|conic-gradient)/.test(value)) return true;
-
-  return false;
-}
 
 // ============================================================================
 // 🔑 CSS CLASS-KEY GENERATORS (NOT entity IDs)

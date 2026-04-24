@@ -109,19 +109,6 @@ export async function findRuleByMerchant(
   }, null);
 }
 
-/** List all active rules */
-export async function listActiveRules(): Promise<LearnedRule[]> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db
-      .collection(COLLECTIONS.ACCOUNTING_MATCHING_RULES)
-      .where('status', '==', 'active')
-      .orderBy('confidence', 'desc')
-      .limit(200)
-      .get();
-
-    return snap.docs.map((d) => d.data() as LearnedRule);
-  }, []);
-}
 
 // ============================================================================
 // UPDATE

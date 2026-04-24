@@ -95,13 +95,6 @@ export function useFirestoreProperties(
 // CONVENIENCE EXPORTS
 // =============================================================================
 
-/**
- * Get properties for a specific building (ADR-184)
- */
-export function useBuildingProperties(buildingId: string): UseFirestorePropertiesReturn {
-  return useFirestoreProperties({ buildingId });
-}
-
 export default useFirestoreProperties;
 
 

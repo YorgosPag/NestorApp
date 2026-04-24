@@ -117,19 +117,6 @@ export function formatEuro(amount: number): string {
   return new Intl.NumberFormat('el', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 }
 
-/**
- * Server-safe date formatter — kept local for same server-only constraint as formatEuro.
- * @see @/lib/intl-utils formatDateTime — client-side equivalent
- */
-export function formatNotificationDate(date: Date): string {
-  return new Intl.DateTimeFormat('el-GR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
 
 // Aliased re-export — preserves back-compat `formatDate` binding for consumer
 // `accounting-office-notify.ts` (UI-strings ratchet zero-tolerance prevents

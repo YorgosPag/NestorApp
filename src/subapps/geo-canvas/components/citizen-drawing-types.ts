@@ -98,10 +98,6 @@ export const HOVER_BACKGROUND_EFFECTS = {
   MUTED: 'hover:bg-muted'
 };
 
-export const INTERACTIVE_PATTERNS = {
-  PRIMARY_HOVER: 'hover:bg-blue-700',
-  SUBTLE_HOVER: 'hover:bg-slate-700/60'
-};
 
 export const HOVER_SHADOWS = {
   ENHANCED: 'hover:shadow-lg'
@@ -148,17 +144,6 @@ export const BoundaryLayerControlPanel = ({ layers }: BoundaryLayerControlPanelP
 // MOCK HOOKS
 // ============================================================================
 
-export const useCentralizedPolygonSystem = () => ({
-  polygons: [] as UniversalPolygon[],
-  stats: { totalPolygons: 0, activePolygons: 0 },
-  startDrawing: (_mode: string, _config?: PolygonConfig) => {},
-  finishDrawing: () => null as UniversalPolygon | null,
-  cancelDrawing: () => {},
-  clearAll: () => {},
-  isDrawing: false,
-  currentRole: 'citizen' as const,
-  updatePolygonConfig: (_id: string, _config: PolygonConfig) => {}
-});
 
 export const useMockRealEstateService = () => ({
   addRealEstatePolygon: (_polygon: RealEstatePolygon) => {},

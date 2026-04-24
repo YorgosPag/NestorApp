@@ -105,53 +105,6 @@ export async function sendToAdminAsync(errorReport: ErrorReport): Promise<void> 
 }
 
 // ============================================================================
-// EMAIL FORMATTING
-// ============================================================================
-
-export function formatErrorForAdminEmail(errorReport: ErrorReport): string {
-  const { context } = errorReport;
-
-  return `
-🚨 AUTOMATIC ERROR REPORT - GEO-ALERT SYSTEM
-
-📋 ERROR SUMMARY:
-• Error ID: ${errorReport.id}
-• Severity: ${errorReport.severity.toUpperCase()}
-• Category: ${errorReport.category}
-• Message: ${errorReport.message}
-• Count: ${errorReport.count} occurrence(s)
-
-⏰ TIMING:
-• First Seen: ${new Date(errorReport.firstSeen).toLocaleString('el-GR')}
-• Last Seen: ${new Date(errorReport.lastSeen).toLocaleString('el-GR')}
-
-👤 USER CONTEXT:
-• User ID: ${context.userId || 'Anonymous'}
-• User Type: ${context.userType || 'Unknown'}
-• Session: ${context.sessionId}
-
-🌐 LOCATION:
-• URL: ${context.url}
-• Route: ${context.route}
-• Component: ${context.component || 'Unknown'}
-• Action: ${context.action || 'N/A'}
-
-🔧 TECHNICAL:
-• User Agent: ${context.userAgent}
-• Build Version: ${context.buildVersion || 'Unknown'}
-
-📚 STACK TRACE:
-${errorReport.stack || 'Stack trace not available'}
-
-${context.metadata ? `\n📊 ADDITIONAL METADATA:\n${JSON.stringify(context.metadata, null, 2)}` : ''}
-
----
-⚡ Αυτό το email στάλθηκε αυτόματα από το ErrorTracker service
-🕒 Timestamp: ${new Date().toLocaleString('el-GR')}
-  `.trim();
-}
-
-// ============================================================================
 // ENCODING & FINGERPRINT UTILITIES
 // ============================================================================
 
@@ -185,30 +138,3 @@ export function generateFingerprint(message: string, _stack?: string, context?: 
   return safeBase64Encode(key).substr(0, 16);
 }
 
-/** Safe JSON stringify with circular reference handling */
-export function safeStringify(obj: unknown): string {
-  try {
-    if (obj === null || obj === undefined) return String(obj);
-    if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
-      return String(obj);
-    }
-
-    const seen = new WeakSet();
-    return JSON.stringify(obj, (key, value: unknown) => {
-      if (key === '_map' || key === '_controls' || key === 'map' || key === 'target') {
-        return '[Circular Reference]';
-      }
-
-      if (value !== null && typeof value === 'object') {
-        if (seen.has(value as object)) {
-          return '[Circular Reference]';
-        }
-        seen.add(value as object);
-      }
-      return value;
-    });
-  } catch {
-    const objWithConstructor = obj as { constructor?: { name?: string } };
-    return `[Object: ${objWithConstructor?.constructor?.name || 'Unknown'}]`;
-  }
-}

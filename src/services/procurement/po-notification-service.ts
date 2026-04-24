@@ -45,40 +45,6 @@ function buildSource(): DispatchRequest['source'] {
 // DISPATCH FUNCTIONS
 // ============================================================================
 
-/**
- * Notify that a PO requires approval.
- * Fire-and-forget: never throws.
- */
-export async function notifyApprovalNeeded(
-  po: PurchaseOrder,
-  approverUserId: string
-): Promise<void> {
-  try {
-    await dispatchNotification({
-      eventType: NOTIFICATION_EVENT_TYPES.PROCUREMENT_APPROVAL_NEEDED,
-      recipientId: approverUserId,
-      tenantId: po.companyId,
-      title: `Παραγγελία ${po.poNumber} — Αναμένει έγκριση`,
-      body: `Η παραγγελία ${po.poNumber} αξίας ${formatEuro(po.total)} αναμένει την έγκρισή σας.`,
-      severity: 'warning',
-      source: buildSource(),
-      eventId: buildEventId('approval', po.id),
-      entityId: po.id,
-      entityType: NOTIFICATION_ENTITY_TYPES.PURCHASE_ORDER,
-      actions: [
-        {
-          id: 'view',
-          label: 'Προβολή PO',
-          url: `/procurement/${po.id}`,
-        },
-      ],
-      titleKey: 'procurement.notifications.approvalNeeded',
-      titleParams: { poNumber: po.poNumber },
-    });
-  } catch (err) {
-    logger.warn('Failed to notify approval needed', { poId: po.id, err });
-  }
-}
 
 /**
  * Notify that a PO has been approved.
@@ -115,50 +81,4 @@ export async function notifyPOApproved(
   }
 }
 
-/**
- * Notify that a PO is overdue (past dateNeeded).
- * Fire-and-forget: never throws.
- */
-export async function notifyPOOverdue(
-  po: PurchaseOrder,
-  recipientUserId: string
-): Promise<void> {
-  try {
-    const dateNeeded = po.dateNeeded ?? 'N/A';
-    await dispatchNotification({
-      eventType: NOTIFICATION_EVENT_TYPES.PROCUREMENT_PO_OVERDUE,
-      recipientId: recipientUserId,
-      tenantId: po.companyId,
-      title: `Παραγγελία ${po.poNumber} — Εκπρόθεσμη`,
-      body: `Η παραγγελία ${po.poNumber} είναι εκπρόθεσμη (παράδοση: ${dateNeeded}).`,
-      severity: 'warning',
-      source: buildSource(),
-      eventId: buildEventId('overdue', po.id),
-      entityId: po.id,
-      entityType: NOTIFICATION_ENTITY_TYPES.PURCHASE_ORDER,
-      actions: [
-        {
-          id: 'view',
-          label: 'Προβολή PO',
-          url: `/procurement/${po.id}`,
-        },
-      ],
-      titleKey: 'procurement.notifications.poOverdue',
-      titleParams: { poNumber: po.poNumber, dateNeeded },
-    });
-  } catch (err) {
-    logger.warn('Failed to notify PO overdue', { poId: po.id, err });
-  }
-}
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function formatEuro(amount: number): string {
-  return new Intl.NumberFormat('el', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}

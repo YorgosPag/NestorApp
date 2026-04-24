@@ -130,7 +130,3 @@ export function createErrorDialogTourConfig(
   });
 }
 
-/**
- * Default tour config for immediate use
- */
-export const errorDialogTourConfig = createErrorDialogTourConfig();

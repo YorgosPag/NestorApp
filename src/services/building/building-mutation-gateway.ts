@@ -13,10 +13,6 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BuildingMutationGateway');
 
-interface GuardedBuildingCreateInput {
-  readonly payload: BuildingCreatePayload;
-}
-
 interface GuardedBuildingUpdateInput {
   readonly buildingId: string;
   readonly updates: BuildingUpdatePayload & { _v?: number };
@@ -24,12 +20,6 @@ interface GuardedBuildingUpdateInput {
 
 interface GuardedBuildingDeleteInput {
   readonly buildingId: string;
-}
-
-export async function createBuildingWithPolicy({
-  payload,
-}: GuardedBuildingCreateInput): Promise<{ success: boolean; buildingId?: string; error?: string; errorCode?: string }> {
-  return createBuilding(payload);
 }
 
 /**

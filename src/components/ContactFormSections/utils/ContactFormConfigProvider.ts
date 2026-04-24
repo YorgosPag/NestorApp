@@ -96,14 +96,6 @@ export function getContactFormSections(contactType: ContactType) {
 }
 
 /**
- * 📊 Get contact type display name
- */
-export function getContactTypeDisplayName(contactType: ContactType): string {
-  const config = getContactFormConfig(contactType);
-  return config.name;
-}
-
-/**
  * 🎭 Get appropriate renderer for contact type
  */
 export function getContactFormRenderer(contactType: ContactType) {

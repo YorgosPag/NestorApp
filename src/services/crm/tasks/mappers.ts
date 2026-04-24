@@ -11,7 +11,7 @@
  */
 
 import type { CrmTask } from '@/types/crm';
-import type { QueryDocumentSnapshot, DocumentSnapshot, DocumentData } from 'firebase/firestore';
+import type { DocumentData } from 'firebase/firestore';
 import { normalizeToDate } from '@/lib/date-local';
 
 /** Intermediate type for task transformation */
@@ -21,19 +21,6 @@ type TaskTransformOutput = Partial<CrmTask> & { id: string; [key: string]: unkno
 const toDateIfTimestamp = (v: unknown): unknown => {
   if (v && typeof v === 'object' && 'toDate' in v) return normalizeToDate(v);
   return v;
-};
-
-/** Transform a Firestore DocumentSnapshot to CrmTask (legacy — used by write-adjacent reads) */
-export const transformTask = (snap: QueryDocumentSnapshot | DocumentSnapshot): CrmTask => {
-  const data = snap.data();
-  if (!data) {
-    throw new Error('Task document missing');
-  }
-  const out: TaskTransformOutput = { id: snap.id };
-  for (const k in data) {
-    out[k] = toDateIfTimestamp(data[k]);
-  }
-  return out as CrmTask;
 };
 
 /** Transform raw DocumentData (from firestoreQueryService) to CrmTask */

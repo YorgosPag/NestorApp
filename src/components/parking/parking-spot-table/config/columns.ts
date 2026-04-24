@@ -1,12 +1,6 @@
 // 🏢 ENTERPRISE: Import centralized parking table column labels - ZERO HARDCODED VALUES
 import { PARKING_TABLE_COLUMN_LABELS } from '@/constants/property-statuses-enterprise';
 
-export const COLUMN_KEYS = [
-  "select", "code", "type", "propertyCode", "level", "area", "price",
-  "value", "valueWithSyndicate", "status", "owner", "floorPlan",
-  "constructedBy", "actions",
-] as const;
-
 // ✅ CENTRALIZED: Using PARKING_TABLE_COLUMN_LABELS from central system - ZERO HARDCODED VALUES
 export const COLUMNS = [
   { key: "select", label: "" },

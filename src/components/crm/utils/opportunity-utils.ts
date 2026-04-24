@@ -14,13 +14,6 @@ export const STAGE_IDS: Opportunity['stage'][] = [
     'closed_lost',
 ];
 
-/**
- * @deprecated Use STAGE_IDS with useTranslation(['crm', 'crm-inbox']) t(`opportunities.stages.${stageId}`)
- */
-export const stageDefinitions: { id: Opportunity['stage']; label: string }[] = STAGE_IDS.map(id => ({
-    id,
-    label: id // Placeholder - should use i18n
-}));
 
 export function opportunitiesByStage(opportunities: Opportunity[], stageId: Opportunity['stage']) {
     return opportunities.filter(opp => opp.stage === stageId);

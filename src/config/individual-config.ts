@@ -488,13 +488,3 @@ export function getIndividualSortedSections(): IndividualSectionConfig[] {
   return [...INDIVIDUAL_SECTIONS].sort((a, b) => a.order - b.order);
 }
 
-/**
- * Get specific section by ID
- */
-export function getIndividualSection(sectionId: string): IndividualSectionConfig | undefined {
-  return INDIVIDUAL_SECTIONS.find(section => section.id === sectionId);
-}
-
-export function getAllIndividualFields(): IndividualFieldConfig[] {
-  return INDIVIDUAL_SECTIONS.flatMap(section => section.fields);
-}

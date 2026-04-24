@@ -56,49 +56,6 @@ export const PROJECT_COMPONENT_LABELS = {
   PARKING_FLOORPLAN_TITLE: 'floorplan.titles.parking'
 } as const;
 
-// ============================================================================
-// BUILDING TOOLBAR LABELS
-// ============================================================================
-
-export const BUILDING_TOOLBAR_LABELS = {
-  NEW_BUILDING: 'building.toolbar.newBuilding',
-  EDIT_BUILDING: 'building.toolbar.editBuilding',
-  DELETE_BUILDING: 'building.toolbar.deleteBuilding',
-  EXPORT: 'common-actions:actions.export',
-  IMPORT: 'common-actions:actions.import',
-  REFRESH: 'common-actions:actions.refresh',
-  ARCHIVE: 'building.toolbar.archive',
-  FAVORITES: 'toolbar.labels.favorites',
-  HELP: 'common-actions:actions.help',
-  STATUS_FILTER: 'filters.fields.status',
-  TYPE_FILTER: 'filters.fields.type',
-  SORT_FILTER: 'filters.fields.sort'
-} as const;
-
-export const BUILDING_TOOLBAR_TOOLTIPS = {
-  NEW_BUILDING: 'building.toolbar.tooltips.newBuilding',
-  EDIT_BUILDING: 'building.toolbar.tooltips.editBuilding',
-  DELETE_BUILDING_SINGLE: 'building.toolbar.tooltips.deleteBuilding',
-  DELETE_BUILDING_MULTIPLE: 'building.toolbar.tooltips.deleteBuildingMultiple',
-  EXPORT_DATA: 'building.toolbar.tooltips.exportData',
-  IMPORT_DATA: 'building.toolbar.tooltips.importData',
-  REFRESH_DATA: 'building.toolbar.tooltips.refreshData',
-  ARCHIVE_SELECTED: 'building.toolbar.tooltips.archiveSelected',
-  ADD_TO_FAVORITES: 'building.toolbar.tooltips.addToFavorites',
-  SHOW_HELP: 'building.toolbar.tooltips.showHelp'
-} as const;
-
-export const BUILDING_TOOLBAR_UI_LABELS = {
-  SEARCH_PLACEHOLDER: 'building.toolbar.ui.searchPlaceholder',
-  BUILDING_STATUS_LABEL: 'building.toolbar.ui.statusLabel',
-  BUILDING_TYPE_LABEL: 'building.toolbar.ui.typeLabel',
-  BUILDING_SORTING_LABEL: 'building.toolbar.ui.sortingLabel',
-  SORT_ASCENDING: 'filters.sorting.ascending',
-  SORT_DESCENDING: 'filters.sorting.descending',
-  SORT_BY_DATE: 'filters.sorting.byDate',
-  SORT_BY_SIZE: 'filters.sorting.bySize',
-  SELECTED_BUILDINGS: 'building.toolbar.ui.selectedBuildings'
-} as const;
 
 // ============================================================================
 // PERSONA LABELS (ADR-121)

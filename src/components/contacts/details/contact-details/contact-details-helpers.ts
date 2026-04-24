@@ -12,13 +12,6 @@ export interface OptimisticPersonaState {
   personaData: Record<string, Record<string, string | number | null>>;
 }
 
-export function getMultiplePhotoURLs(contact: Contact): string[] {
-  if ('multiplePhotoURLs' in contact && Array.isArray((contact as IndividualContact).multiplePhotoURLs)) {
-    return (contact as IndividualContact).multiplePhotoURLs ?? [];
-  }
-
-  return [];
-}
 
 export function getActiveIndividualPersonaTypes(contact: Contact): PersonaType[] {
   if (!('personas' in contact) || !Array.isArray((contact as IndividualContact).personas)) {
@@ -41,10 +34,3 @@ export function optimisticPersonasMatchContact(
     && [...optimisticSet].every((personaType) => firestoreSet.has(personaType));
 }
 
-export function getFilledPhotoSlotCount(multiplePhotos?: PhotoSlot[]): number {
-  if (!multiplePhotos || !Array.isArray(multiplePhotos)) {
-    return 0;
-  }
-
-  return multiplePhotos.filter((photo) => photo.file || photo.uploadUrl || photo.preview).length;
-}
