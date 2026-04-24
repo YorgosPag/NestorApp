@@ -51,24 +51,6 @@ interface SearchResultsStylesType {
   readonly tag: StyleObject;
 }
 
-interface SearchSystemStylesType {
-  readonly searchInput: SearchInputStylesType;
-  readonly filters: SearchFilterStylesType;
-  readonly results: SearchResultsStylesType;
-  readonly layout: {
-    readonly main: StyleObject;
-    readonly filtersSection: StyleObject;
-    readonly resultsSection: StyleObject;
-    readonly loadingState: StyleObject;
-    readonly emptyState: StyleObject;
-    readonly activeFiltersContainer: StyleObject;
-    readonly activeFilterBadge: StyleObject;
-    readonly activeFilterCloseButton: StyleObject;
-    readonly resultCount: StyleObject;
-    readonly searchInputSection: StyleObject;
-  };
-}
-
 // 🔍 SEARCH INPUT STYLES - ENTERPRISE SEARCH PATTERNS
 /**
  * 🎯 SEARCH INPUT: Professional search interface styling
