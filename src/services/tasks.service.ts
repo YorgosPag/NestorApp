@@ -54,13 +54,6 @@ export async function addTask(
 }
 
 /**
- * Get all tasks from Firestore
- */
-export async function getAllTasks(): Promise<CrmTask[]> {
-  return tasksRepository.getAll();
-}
-
-/**
  * Get a single task by ID
  */
 export async function getTaskById(taskId: string): Promise<CrmTask | null> {
@@ -79,20 +72,6 @@ export async function getTasksByUser(userId: string): Promise<CrmTask[]> {
  */
 export async function getTasksByLead(leadId: string): Promise<CrmTask[]> {
   return tasksRepository.getByLead(leadId);
-}
-
-/**
- * Get tasks by status
- */
-export async function getTasksByStatus(status: CrmTask['status']): Promise<CrmTask[]> {
-  return tasksRepository.getByStatus(status);
-}
-
-/**
- * Get overdue tasks
- */
-export async function getOverdueTasks(): Promise<CrmTask[]> {
-  return tasksRepository.getOverdue();
 }
 
 /**
@@ -134,13 +113,6 @@ export async function deleteTask(id: string): Promise<void> {
 }
 
 /**
- * Delete all tasks
- */
-export async function deleteAllTasks(): Promise<void> {
-  await tasksRepository.deleteAll();
-}
-
-/**
  * Complete a task with optional notes
  */
 export async function completeTask(id: string, notes = ''): Promise<void> {
@@ -159,9 +131,3 @@ export async function completeTask(id: string, notes = ''): Promise<void> {
   });
 }
 
-/**
- * Get task statistics
- */
-export async function getTasksStats(userId: string | null = null) {
-  return tasksRepository.getStats(userId);
-}

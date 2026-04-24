@@ -353,60 +353,6 @@ export const createBuildingStatuses = (colors: UseSemanticColorsReturn): Record<
 });
 
 // ============================================================================
-// 🎯 SIMPLE CONSTANTS (SAFE - NO COLORS)
-// ============================================================================
-
-// ===== UNIT SALE STATUS CONSTANTS =====
-
-export const UNIT_SALE_STATUS = {
-  NOT_SOLD: 'NOT_SOLD',
-  SOLD: 'SOLD',
-  RESERVED: 'RESERVED',
-  PENDING: 'PENDING'
-} as const;
-
-// 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
-export const UNIT_SALE_STATUS_LABELS = {
-  'NOT_SOLD': propertyMarketStatusLabels.not_sold,
-  'SOLD': propertyMarketStatusLabels.sold,
-  'RESERVED': storageStatusLabels.reserved,
-  'PENDING': propertyMarketStatusLabels.pending
-} as const;
-
-// ============================================================================
-// UTILITIES
-// ============================================================================
-
-export const getObligationStatusLabel = (status: ObligationStatus): string => {
-  return status; // Simple fallback since we use enterprise functions now
-};
-
-/**
- * ✅ ENTERPRISE PATTERN: Dependency Injection
- * Αντί να καλώ useSemanticColors() hook εδώ (violation των Rules of Hooks),
- * περνώ τα colors ως παράμετρο από το component που καλεί τη function.
- */
-export const getObligationStatusColor = (status: ObligationStatus, colors: UseSemanticColorsReturn): string => {
-  // ✅ ENTERPRISE PROFESSIONAL: Direct mapping using centralized color system
-  const statusColorMap: Record<ObligationStatus, string> = {
-    draft: `${colors.bg.warning} ${colors.text.warning}`,
-    completed: `${colors.bg.success} ${colors.text.success}`,
-    approved: `${colors.bg.info} ${colors.text.info}`
-  };
-
-  return statusColorMap[status] || `${colors.bg.secondary} ${colors.text.muted}`;
-};
-
-export const getObligationStatusIcon = (status: ObligationStatus): string => {
-  const iconMap: Record<ObligationStatus, string> = {
-    draft: "📝",
-    completed: "✅",
-    approved: "🔐"
-  };
-  return iconMap[status] || "📄";
-};
-
-// ============================================================================
 // 🏢 ENTERPRISE: UNIFIED BADGE SYSTEM CONFIG με Dependency Injection
 // ============================================================================
 
@@ -473,8 +419,3 @@ const getDefaultColors = (): UseSemanticColorsReturn => {
 
 export const PROJECT_STATUSES = createProjectStatuses(getDefaultColors());
 export const BUILDING_STATUSES = createBuildingStatuses(getDefaultColors());
-export const CONTACT_STATUSES = createContactStatuses(getDefaultColors());
-export const PROPERTY_STATUSES = createPropertyStatuses(getDefaultColors());
-export const UNIT_STATUSES = createUnitStatuses(getDefaultColors());
-export const COMMON_STATUSES = createCommonStatuses(getDefaultColors());
-export const UNIFIED_BADGE_SYSTEM = createUnifiedBadgeSystem(getDefaultColors());
