@@ -1,35 +1,22 @@
 /**
- * Building Showcase PDF Service (ADR-320).
+ * Building Showcase PDF Service — factory delegating to ShowcasePDFService
+ * (ADR-320 + ADR-321 Phase 2).
  *
- * Orchestrates jsPDF + Greek font + BuildingShowcaseRenderer.
- * Mirrors ProjectShowcasePDFService — zero new infrastructure.
+ * Thin surface factory: composes the generic `ShowcasePDFService` with the
+ * building-specific renderer produced by `createBuildingShowcaseRenderer`.
+ * Caller-owned singleton — instantiate once at module load in the route file.
  *
  * @module services/pdf/BuildingShowcasePDFService
  */
 
-import { JSPDFAdapter } from './adapters/JSPDFAdapter';
-import { registerGreekFont } from './greek-font-loader';
-import { BuildingShowcaseRenderer } from './renderers/BuildingShowcaseRenderer';
-import type { BuildingShowcasePDFData } from './renderers/BuildingShowcaseRenderer';
-import type { IPDFDoc, Margins } from './contracts';
+import { ShowcasePDFService } from '@/services/showcase-core';
+import {
+  createBuildingShowcaseRenderer,
+  type BuildingShowcasePDFData,
+} from './renderers/BuildingShowcaseRenderer';
 
 export type { BuildingShowcasePDFData };
 
-const DEFAULT_MARGINS: Margins = { top: 20, right: 18, bottom: 20, left: 18 };
-
-export class BuildingShowcasePDFService {
-  async generate(data: BuildingShowcasePDFData): Promise<Uint8Array> {
-    const doc = await this.createDoc();
-    const renderer = new BuildingShowcaseRenderer();
-    renderer.render(doc, DEFAULT_MARGINS, data);
-    return new Uint8Array(doc.output('arraybuffer'));
-  }
-
-  private async createDoc(): Promise<IPDFDoc> {
-    const jsPDFModule = await import('jspdf');
-    const JsPDF = jsPDFModule.default;
-    const instance = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    await registerGreekFont(instance);
-    return new JSPDFAdapter(instance);
-  }
+export function createBuildingShowcasePdfService(): ShowcasePDFService<BuildingShowcasePDFData> {
+  return new ShowcasePDFService(createBuildingShowcaseRenderer());
 }

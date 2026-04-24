@@ -1,12 +1,13 @@
 /**
- * Building Showcase PDF labels — server-side i18n SSoT (ADR-320).
+ * Building Showcase PDF labels — server-side i18n SSoT (ADR-320 + ADR-321 Phase 2).
  *
  * Reads `src/i18n/locales/{el,en}/showcase.json` → `buildingShowcase` namespace
  * so the PDF generator never duplicates localised strings.
  *
- * Also exports inline label maps for building type, status, energy class and
- * renovation status (canonical enum arrays imported from leaf SSoT modules
- * in `@/constants/*`).
+ * Building-specific enum label maps stay inline (BUILDING_TYPE_LABELS /
+ * BUILDING_STATUS_LABELS / RENOVATION_STATUS_LABELS). Chrome / email / header
+ * fallbacks are delegated to `showcase-core/labels-shared` so all three
+ * showcases share a single source of truth.
  *
  * @module services/building-showcase/labels
  */
@@ -14,7 +15,18 @@
 import elShowcase from '@/i18n/locales/el/showcase.json';
 import enShowcase from '@/i18n/locales/en/showcase.json';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
-import type { ShowcaseHeaderContactLabels } from '@/services/property-showcase/labels';
+import {
+  createLocaleFallback,
+  resolveHeaderContactLabels,
+  showcaseCtaLabelDefault,
+  showcaseDescriptionSectionDefault,
+  showcaseFloorplansTitleDefault,
+  showcaseGeneratedOnDefault,
+  showcasePhotosTitleDefault,
+  showcasePoweredByDefault,
+  type ShowcaseHeaderContactLabels,
+  type ShowcaseHeaderLabels,
+} from '@/services/showcase-core/labels-shared';
 import type { BuildingType } from '@/constants/building-types';
 import type { BuildingStatus } from '@/constants/building-statuses';
 import type { RenovationStatus } from '@/constants/renovation-statuses';
@@ -157,10 +169,7 @@ export interface BuildingShowcaseEmailLabels {
   ctaLabel: string;
 }
 
-export interface BuildingShowcaseHeaderLabels {
-  subtitle: string;
-  contacts: ShowcaseHeaderContactLabels;
-}
+export type BuildingShowcaseHeaderLabels = ShowcaseHeaderLabels;
 
 export interface BuildingShowcasePDFLabels {
   specs: BuildingShowcaseSpecLabels;
@@ -172,6 +181,8 @@ export interface BuildingShowcasePDFLabels {
   header: BuildingShowcaseHeaderLabels;
 }
 
+export type { ShowcaseHeaderContactLabels };
+
 // ============================================================================
 // LOADER
 // ============================================================================
@@ -180,22 +191,6 @@ const CATALOGS: Record<EnumLocale, ElShowcase> = {
   el: elShowcase as ElShowcase,
   en: enShowcase as unknown as ElShowcase,
 };
-
-function loadHeaderContactLabels(
-  c: ElShowcase,
-  locale: EnumLocale,
-): ShowcaseHeaderContactLabels {
-  const raw =
-    (c as unknown as { header?: { contacts?: Record<string, string> } }).header?.contacts ?? {};
-  const fb = (el: string, en: string) => (locale === 'el' ? el : en);
-  return {
-    addressLabel: raw.addressLabel ?? fb('Διεύθυνση', 'Address'),
-    phoneLabel:   raw.phoneLabel   ?? fb('Τηλέφωνο', 'Phone'),
-    emailLabel:   raw.emailLabel   ?? fb('Email', 'Email'),
-    websiteLabel: raw.websiteLabel ?? fb('Ιστοσελίδα', 'Website'),
-    socialLabel:  raw.socialLabel  ?? fb('Μέσα κοινωνικής δικτύωσης', 'Social media'),
-  };
-}
 
 export function loadBuildingShowcasePdfLabels(
   locale: EnumLocale = 'el',
@@ -210,60 +205,60 @@ export function loadBuildingShowcasePdfLabels(
   const pdf = (bs.pdf ?? {}) as Record<string, string>;
   const email = (bs.email ?? {}) as Record<string, string>;
   const header = (bs.header ?? {}) as Record<string, string>;
+  const headerContacts = (c as unknown as { header?: { contacts?: Record<string, string> } })
+    .header?.contacts;
 
-  const fallback = (el: string, en: string) => (locale === 'el' ? el : en);
+  const fb = createLocaleFallback(locale);
+  const photosTitle = photos.title ?? showcasePhotosTitleDefault(locale);
+  const floorplansTitle = floorplans.title ?? showcaseFloorplansTitleDefault(locale);
 
   return {
     specs: {
-      title:             specs.title             ?? fallback('Στοιχεία Κτηρίου', 'Building Details'),
-      code:              specs.code              ?? fallback('Κωδικός', 'Code'),
-      type:              specs.type              ?? fallback('Τύπος', 'Type'),
-      status:            specs.status            ?? fallback('Κατάσταση', 'Status'),
-      progress:          specs.progress          ?? fallback('Πρόοδος', 'Progress'),
-      totalArea:         specs.totalArea         ?? fallback('Συνολικό εμβαδόν', 'Total area'),
-      builtArea:         specs.builtArea         ?? fallback('Δομημένη επιφάνεια', 'Built area'),
-      floors:            specs.floors            ?? fallback('Όροφοι', 'Floors'),
-      units:             specs.units             ?? fallback('Μονάδες', 'Units'),
-      totalValue:        specs.totalValue        ?? fallback('Συνολική αξία', 'Total value'),
-      energyClass:       specs.energyClass       ?? fallback('Ενεργειακή κλάση', 'Energy class'),
-      renovation:        specs.renovation        ?? fallback('Ανακαίνιση', 'Renovation'),
-      constructionYear:  specs.constructionYear  ?? fallback('Έτος κατασκευής', 'Construction year'),
-      startDate:         specs.startDate         ?? fallback('Έναρξη', 'Start date'),
-      completionDate:    specs.completionDate    ?? fallback('Παράδοση', 'Completion date'),
-      location:          specs.location          ?? fallback('Τοποθεσία', 'Location'),
-      project:           specs.project           ?? fallback('Έργο', 'Project'),
-      linkedCompany:     specs.linkedCompany     ?? fallback('Συνεργαζόμενη εταιρεία', 'Linked company'),
+      title:             specs.title             ?? fb('Στοιχεία Κτηρίου', 'Building Details'),
+      code:              specs.code              ?? fb('Κωδικός', 'Code'),
+      type:              specs.type              ?? fb('Τύπος', 'Type'),
+      status:            specs.status            ?? fb('Κατάσταση', 'Status'),
+      progress:          specs.progress          ?? fb('Πρόοδος', 'Progress'),
+      totalArea:         specs.totalArea         ?? fb('Συνολικό εμβαδόν', 'Total area'),
+      builtArea:         specs.builtArea         ?? fb('Δομημένη επιφάνεια', 'Built area'),
+      floors:            specs.floors            ?? fb('Όροφοι', 'Floors'),
+      units:             specs.units             ?? fb('Μονάδες', 'Units'),
+      totalValue:        specs.totalValue        ?? fb('Συνολική αξία', 'Total value'),
+      energyClass:       specs.energyClass       ?? fb('Ενεργειακή κλάση', 'Energy class'),
+      renovation:        specs.renovation        ?? fb('Ανακαίνιση', 'Renovation'),
+      constructionYear:  specs.constructionYear  ?? fb('Έτος κατασκευής', 'Construction year'),
+      startDate:         specs.startDate         ?? fb('Έναρξη', 'Start date'),
+      completionDate:    specs.completionDate    ?? fb('Παράδοση', 'Completion date'),
+      location:          specs.location          ?? fb('Τοποθεσία', 'Location'),
+      project:           specs.project           ?? fb('Έργο', 'Project'),
+      linkedCompany:     specs.linkedCompany     ?? fb('Συνεργαζόμενη εταιρεία', 'Linked company'),
       areaUnit:          specs.areaUnit          ?? 'm²',
     },
     description: {
-      sectionTitle: description.sectionTitle ?? fallback('Περιγραφή', 'Description'),
+      sectionTitle: description.sectionTitle ?? showcaseDescriptionSectionDefault(locale),
     },
-    photos: {
-      title: photos.title ?? fallback('Φωτογραφίες', 'Photos'),
-    },
-    floorplans: {
-      title: floorplans.title ?? fallback('Κατόψεις', 'Floorplans'),
-    },
+    photos: { title: photosTitle },
+    floorplans: { title: floorplansTitle },
     chrome: {
-      title:              pdf.title              ?? fallback('Παρουσίαση Κτηρίου', 'Building Showcase'),
-      generatedOn:        pdf.generatedOn        ?? fallback('Δημιουργήθηκε', 'Generated on'),
-      descriptionSection: pdf.descriptionSection ?? fallback('Περιγραφή', 'Description'),
-      footerNote:         pdf.footerNote         ?? fallback('Παρουσίαση κτηρίου', 'Building showcase'),
-      photosTitle:        photos.title           ?? fallback('Φωτογραφίες', 'Photos'),
-      floorplansTitle:    floorplans.title       ?? fallback('Κατόψεις', 'Floorplans'),
-      poweredBy:          locale === 'el' ? 'Υλοποίηση από Nestor App' : 'Powered by Nestor App',
+      title:              pdf.title              ?? fb('Παρουσίαση Κτηρίου', 'Building Showcase'),
+      generatedOn:        pdf.generatedOn        ?? showcaseGeneratedOnDefault(locale),
+      descriptionSection: pdf.descriptionSection ?? showcaseDescriptionSectionDefault(locale),
+      footerNote:         pdf.footerNote         ?? fb('Παρουσίαση κτηρίου', 'Building showcase'),
+      photosTitle,
+      floorplansTitle,
+      poweredBy:          showcasePoweredByDefault(locale),
     },
     email: {
-      subjectPrefix: email.subjectPrefix ?? fallback('Παρουσίαση Κτηρίου', 'Building Showcase'),
-      introText:     email.introText     ?? fallback(
+      subjectPrefix: email.subjectPrefix ?? fb('Παρουσίαση Κτηρίου', 'Building Showcase'),
+      introText:     email.introText     ?? fb(
         'Σας προωθούμε την αναλυτική παρουσίαση του κτηρίου.',
         'We are sharing the detailed presentation of the building.',
       ),
-      ctaLabel:      email.ctaLabel      ?? fallback('Δείτε online', 'View online'),
+      ctaLabel:      email.ctaLabel      ?? showcaseCtaLabelDefault(locale),
     },
     header: {
-      subtitle: (header.subtitle as string | undefined) ?? fallback('Παρουσίαση κτηρίου', 'Building showcase'),
-      contacts: loadHeaderContactLabels(c, locale),
+      subtitle: (header.subtitle as string | undefined) ?? fb('Παρουσίαση κτηρίου', 'Building showcase'),
+      contacts: resolveHeaderContactLabels(headerContacts, locale),
     },
   };
 }

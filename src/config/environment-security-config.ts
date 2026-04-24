@@ -196,17 +196,6 @@ export function getCurrentSecurityPolicy(): EnvironmentSecurityPolicy {
   return ENVIRONMENT_SECURITY_POLICIES[env];
 }
 
-/**
- * Get security policy for specific environment
- * @param environment - Target environment
- * @returns Environment's security policy
- */
-export function getSecurityPolicyForEnvironment(
-  environment: RuntimeEnvironment
-): EnvironmentSecurityPolicy {
-  return ENVIRONMENT_SECURITY_POLICIES[environment];
-}
-
 // ============================================================================
 // SECURITY VALIDATION FUNCTIONS
 // ============================================================================
@@ -217,22 +206,6 @@ export function getSecurityPolicyForEnvironment(
  */
 export function isApiAccessAllowed(): boolean {
   return getCurrentSecurityPolicy().allowApiAccess;
-}
-
-/**
- * Check if current environment requires authentication
- * @returns true if authentication is required
- */
-export function isAuthenticationRequired(): boolean {
-  return getCurrentSecurityPolicy().requireAuthentication;
-}
-
-/**
- * Check if current environment allows development bypass
- * @returns true if dev bypass is allowed
- */
-export function isDevBypassAllowed(): boolean {
-  return getCurrentSecurityPolicy().allowDevBypass;
 }
 
 /**
@@ -275,65 +248,12 @@ export function validateEnvironmentForOperation(
   };
 }
 
-/**
- * Assert that environment allows operation (throws if not)
- *
- * @param operation - Operation name
- * @throws Error if operation not allowed in current environment
- *
- * @enterprise Used by admin endpoints for fail-fast validation
- */
-export function assertEnvironmentAllowsOperation(operation: string): void {
-  const result = validateEnvironmentForOperation(operation);
-
-  if (!result.allowed) {
-    throw new Error(
-      `[ENVIRONMENT_SECURITY] ${result.reason || 'Operation not allowed'}`
-    );
-  }
-}
-
-// ============================================================================
-// ENVIRONMENT INFO LOGGING
-// ============================================================================
-
-/**
- * Log current environment και security policy (για debugging)
- * Only logs in development/staging
- */
-export function logEnvironmentSecurityStatus(): void {
-  const env = getCurrentRuntimeEnvironment();
-  const policy = getCurrentSecurityPolicy();
-
-  // Only log in non-production
-  if (env === 'production') {
-    return;
-  }
-
-  logger.info('[ENVIRONMENT_SECURITY] Current Configuration', {
-    environment: env,
-    apiAccess: policy.allowApiAccess,
-    authentication: policy.requireAuthentication,
-    rateLimiting: policy.enableRateLimiting,
-    auditLogging: policy.enableAuditLogging,
-    maxRequestsPerMin: policy.maxRequestsPerMinute,
-  });
-}
-
 // ============================================================================
 // EXPORTS
 // ============================================================================
 
-/**
- * Re-export types για type-safe usage
- */
 export type {
   RuntimeEnvironment as Environment,
   EnvironmentSecurityPolicy as SecurityPolicy,
   OperationValidationResult as ValidationResult,
 };
-
-/**
- * Default export - current security policy
- */
-export default getCurrentSecurityPolicy;

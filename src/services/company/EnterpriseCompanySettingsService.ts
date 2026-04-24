@@ -368,42 +368,4 @@ export const companySettingsService = new EnterpriseCompanySettingsService();
 // CONVENIENCE FUNCTIONS
 // ============================================================================
 
-/**
- * 🏢 Get company name
- */
-export async function getCompanyName(tenantId?: string): Promise<string> {
-  const settings = await companySettingsService.loadCompanySettings(tenantId);
-  return settings.companyInfo.name;
-}
-
-/**
- * 📧 Get company email
- */
-export async function getCompanyEmail(tenantId?: string): Promise<string> {
-  const settings = await companySettingsService.loadCompanySettings(tenantId);
-  return settings.contactInfo.email;
-}
-
-/**
- * 📞 Get company phone
- */
-export async function getCompanyPhone(tenantId?: string): Promise<string> {
-  const settings = await companySettingsService.loadCompanySettings(tenantId);
-  return settings.contactInfo.phone;
-}
-
-/**
- * 🏢 Get company domain
- */
-export async function getCompanyDomain(tenantId?: string): Promise<string> {
-  const settings = await companySettingsService.loadCompanySettings(tenantId);
-  return settings.technicalSettings.domain;
-}
-
-/**
- * 📧 Get template variables για communications
- */
-export async function getCommunicationTemplateVars(tenantId?: string): Promise<Record<string, string>> {
-  return companySettingsService.getTemplateVariables(tenantId);
-}
 

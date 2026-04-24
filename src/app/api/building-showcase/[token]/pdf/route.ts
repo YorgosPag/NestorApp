@@ -1,125 +1,77 @@
 /**
  * =============================================================================
- * GET /api/building-showcase/[token]/pdf (ADR-320)
+ * GET /api/building-showcase/[token]/pdf (ADR-320 + ADR-321 Phase 2)
  * =============================================================================
  *
- * Public PDF proxy — streams a building showcase PDF via Admin SDK, bypassing
- * Storage rules and the `.firebasestorage.app` download-token limitation.
+ * Thin forward to `createPublicShowcasePdfRoute` (showcase-core). Public PDF
+ * proxy — streams a building showcase PDF via Admin SDK, bypassing Storage
+ * rules and the `.firebasestorage.app` download-token limitation.
  *
- * Flow:
- *  1. Validate share by token (unified shares, entityType=building_showcase, active)
- *  2. Cross-check tenant: share.companyId === building.companyId
- *  3. Stream object at showcaseMeta.pdfStoragePath via Admin SDK
- *  4. Serve as PDF attachment
- *  5. Increment accessCount (fire-and-forget)
- *
- * Security: anonymous endpoint protected only by share-token validation and
- * tenant cross-check. Rate-limited with withStandardRateLimit.
+ * Security unchanged: anonymous, token-validated + tenant cross-check +
+ * `withStandardRateLimit`.
  *
  * @module app/api/building-showcase/[token]/pdf/route
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { createPublicShowcasePdfRoute } from '@/services/showcase-core';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
-import { jsonError, streamPdfFromStorage } from '@/app/api/showcase/shared-pdf-proxy-helpers';
-
-const logger = createModuleLogger('BuildingShowcasePdfProxy');
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
-async function loadShare(token: string): Promise<{
-  id: string;
+interface BuildingPdfHeader {
   companyId: string;
-  entityId: string;
-  expiresAt: string;
-  pdfStoragePath: string;
-} | null> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) return null;
-
-  const snap = await adminDb
-    .collection(COLLECTIONS.SHARES)
-    .where('token', '==', token)
-    .where('entityType', '==', 'building_showcase')
-    .where('isActive', '==', true)
-    .limit(1)
-    .get();
-
-  if (snap.empty) return null;
-
-  const d = snap.docs[0].data() as Record<string, unknown>;
-  const companyId = d.companyId as string | undefined;
-  const entityId = d.entityId as string | undefined;
-  const expiresAt = d.expiresAt as string | undefined;
-  const pdfStoragePath = (d.showcaseMeta as { pdfStoragePath?: string } | undefined)?.pdfStoragePath;
-
-  if (!companyId || !entityId || !expiresAt || !pdfStoragePath) return null;
-
-  return { id: snap.docs[0].id, companyId, entityId, expiresAt, pdfStoragePath };
+  name: string;
 }
 
-async function incrementAccessCount(shareId: string): Promise<void> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) return;
-  await adminDb
-    .collection(COLLECTIONS.SHARES)
-    .doc(shareId)
-    .update({ accessCount: (await import('firebase-admin/firestore')).FieldValue.increment(1) });
-}
+const route = createPublicShowcasePdfRoute<BuildingPdfHeader>({
+  loggerName: 'BuildingShowcasePdfProxy',
+  shareNotFoundMessage: 'Building showcase link not found or deactivated',
+  entityNotFoundMessage: 'Building not found',
+  resolveShare: async (token, adminDb) => {
+    const snap = await adminDb
+      .collection(COLLECTIONS.SHARES)
+      .where('token', '==', token)
+      .where('entityType', '==', 'building_showcase')
+      .where('isActive', '==', true)
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
 
-async function handleGet(_request: NextRequest, token: string): Promise<NextResponse> {
-  if (!token?.trim()) return jsonError(400, 'Token is required');
+    const d = snap.docs[0].data() as Record<string, unknown>;
+    const companyId = d.companyId as string | undefined;
+    const entityId = d.entityId as string | undefined;
+    const expiresAt = d.expiresAt as string | undefined;
+    const pdfStoragePath = (d.showcaseMeta as { pdfStoragePath?: string } | undefined)?.pdfStoragePath;
 
-  const share = await loadShare(token);
-  if (!share) return jsonError(404, 'Building showcase link not found or deactivated');
-  if (new Date(share.expiresAt).getTime() < Date.now()) return jsonError(410, 'Building showcase link has expired');
+    if (!companyId || !entityId || !expiresAt || !pdfStoragePath) return null;
 
-  const adminDb = getAdminFirestore();
-  if (!adminDb) return jsonError(503, 'Database not available');
-
-  const buildingSnap = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(share.entityId).get();
-  if (!buildingSnap.exists) return jsonError(404, 'Building not found');
-  const buildingCompanyId = (buildingSnap.data() as Record<string, unknown>).companyId as string | undefined;
-  if (buildingCompanyId !== share.companyId) return jsonError(403, 'Tenant mismatch');
-
-  let stream: ReadableStream<Uint8Array>;
-  let size: number | undefined;
-  try {
-    const result = await streamPdfFromStorage(share.pdfStoragePath);
-    stream = result.stream;
-    size = result.size;
-  } catch (err) {
-    logger.error('Building showcase PDF stream failed', {
-      token, shareId: share.id, buildingId: share.entityId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return jsonError(500, 'Failed to stream PDF');
-  }
-
-  safeFireAndForget(incrementAccessCount(share.id), 'BuildingShowcasePdfProxy.incrementAccessCount');
-
-  const buildingName = ((buildingSnap.data() as Record<string, unknown>).name as string | undefined) ?? 'building-showcase';
-  const filename = `${buildingName.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-')}-showcase.pdf`;
-  const encodedFilename = encodeURIComponent(filename);
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/pdf',
-    'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`,
-    'Cache-Control': 'private, max-age=0, no-store',
-    'X-Content-Type-Options': 'nosniff',
-  };
-  if (size !== undefined) headers['Content-Length'] = String(size);
-
-  logger.info('Building showcase PDF streamed', {
-    token, shareId: share.id, buildingId: share.entityId, companyId: share.companyId, size,
-  });
-
-  return new NextResponse(stream, { status: 200, headers });
-}
+    return { id: snap.docs[0].id, companyId, entityId, expiresAt, pdfStoragePath };
+  },
+  loadEntityHeader: async (buildingId, adminDb) => {
+    const snap = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+    if (!snap.exists) return null;
+    const d = snap.data() as Record<string, unknown>;
+    return {
+      companyId: (d.companyId as string | undefined) ?? '',
+      name: (d.name as string | undefined) ?? 'building-showcase',
+    };
+  },
+  checkTenant: (header, companyId) => header.companyId === companyId,
+  buildFilename: (header) => {
+    const sanitized = header.name.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
+    return `${sanitized || 'building-showcase'}-showcase.pdf`;
+  },
+  incrementCounter: async (shareId, adminDb) => {
+    await adminDb
+      .collection(COLLECTIONS.SHARES)
+      .doc(shareId)
+      .update({ accessCount: FieldValue.increment(1) });
+  },
+});
 
 export async function GET(
   request: NextRequest,
@@ -127,7 +79,7 @@ export async function GET(
 ) {
   const { token } = await segmentData.params;
   const handler = withStandardRateLimit<{ params: Promise<{ token: string }> }>(
-    async (req) => handleGet(req, token)
+    async (req: NextRequest): Promise<NextResponse> => route.handle(req, token),
   );
   return handler(request);
 }

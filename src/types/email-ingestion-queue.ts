@@ -84,17 +84,6 @@ export interface SerializedAttachment {
  * Files smaller than INLINE_THRESHOLD are stored as base64 (fast)
  * Files larger are stored as reference (deferred download)
  */
-export const ATTACHMENT_MODE_CONFIG = {
-  /** Files <= 1MB: Store inline as base64 (fast processing) */
-  INLINE_THRESHOLD_BYTES: 1 * 1024 * 1024, // 1MB
-
-  /** Files > 1MB: Store reference, fetch from Mailgun later */
-  DEFERRED_THRESHOLD_BYTES: 1 * 1024 * 1024,
-
-  /** Mailgun stores messages for 3 days */
-  MAILGUN_STORAGE_RETENTION_HOURS: 72,
-} as const;
-
 // ============================================================================
 // ROUTING RESOLUTION
 // ============================================================================
@@ -331,43 +320,11 @@ export const EMAIL_QUEUE_CONFIG = {
 } as const;
 
 // ============================================================================
-// TYPE GUARDS
-// ============================================================================
-
-export function isValidQueueStatus(status: string): status is EmailIngestionQueueStatus {
-  return ['pending', 'processing', 'completed', 'failed', 'dead_letter'].includes(status);
-}
-
-export function isValidEmailProvider(provider: string): provider is EmailProvider {
-  return provider === 'mailgun';
-}
-
-// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Get retry delay for given attempt number
- * Uses exponential backoff from config
- */
 export function getRetryDelayMs(retryCount: number): number {
   const delays = EMAIL_QUEUE_CONFIG.RETRY_DELAYS_MS;
   const index = Math.min(retryCount, delays.length - 1);
   return delays[index];
-}
-
-/**
- * Check if item should be moved to dead letter
- */
-export function shouldMoveToDeadLetter(item: EmailIngestionQueueItem): boolean {
-  return item.retryCount >= item.maxRetries;
-}
-
-/**
- * Calculate time until next retry
- */
-export function getNextRetryTime(item: EmailIngestionQueueItem): Date {
-  const delayMs = getRetryDelayMs(item.retryCount);
-  const lastAttempt = item.lastError?.occurredAt || item.createdAt;
-  return new Date(lastAttempt.getTime() + delayMs);
 }

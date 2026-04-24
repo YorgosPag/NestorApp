@@ -435,57 +435,6 @@ export function getCategoryByCode(code: AccountCategory): CategoryDefinition | u
  *
  * @returns Πίνακας 6 income categories, ταξινομημένες κατά sortOrder
  */
-export function getIncomeCategories(): CategoryDefinition[] {
-  return ACCOUNT_CATEGORIES.filter(
-    (cat): cat is CategoryDefinition & { code: IncomeCategory } => cat.type === 'income'
-  );
-}
-
-/**
- * Επιστρέφει μόνο τις κατηγορίες εξόδων
- *
- * @returns Πίνακας 19 expense categories, ταξινομημένες κατά sortOrder
- */
-export function getExpenseCategories(): CategoryDefinition[] {
-  return ACCOUNT_CATEGORIES.filter(
-    (cat): cat is CategoryDefinition & { code: ExpenseCategory } => cat.type === 'expense'
-  );
-}
-
-/**
- * Αναζήτηση κατηγορίας βάσει myDATA code
- *
- * @param mydataCode - myDATA classification code (π.χ. 'category1_3')
- * @returns Πρώτη κατηγορία που ταιριάζει, ή undefined
- *
- * @remarks
- * Ένας myDATA code μπορεί να αντιστοιχεί σε πολλές κατηγορίες.
- * Π.χ. category2_5 → fuel, vehicle_expenses, office_supplies, κ.λπ.
- * Αυτή η function επιστρέφει την **πρώτη** (μικρότερο sortOrder).
- */
-export function getCategoryByMyDataCode(mydataCode: string): CategoryDefinition | undefined {
-  return ACCOUNT_CATEGORIES.find((cat) => cat.mydataCode === mydataCode);
-}
-
-/**
- * Επιστρέφει όλες τις κατηγορίες που αντιστοιχούν σε myDATA code
- *
- * @param mydataCode - myDATA classification code
- * @returns Πίνακας κατηγοριών (μπορεί να είναι κενός)
- */
-export function getCategoriesByMyDataCode(mydataCode: string): CategoryDefinition[] {
-  return ACCOUNT_CATEGORIES.filter((cat) => cat.mydataCode === mydataCode);
-}
-
-/**
- * Επιστρέφει μόνο τις ενεργές κατηγορίες
- *
- * @returns Πίνακας ενεργών categories
- */
-export function getActiveCategories(): CategoryDefinition[] {
-  return ACCOUNT_CATEGORIES.filter((cat) => cat.isActive);
-}
-
 /**
  * Resolves a category's i18n label key to the user's current locale.
  *

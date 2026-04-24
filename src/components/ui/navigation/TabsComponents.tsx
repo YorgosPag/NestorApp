@@ -135,27 +135,6 @@ export function ToolbarTabs(props: ToolbarTabsProps) {
   return <TabsContainer {...props} />;
 }
 
-// Themed variants for easy usage
-export function WarningTabs(props: TabsContainerProps) {
-  return <TabsContainer {...props} theme="warning" />;
-}
-
-export function SuccessTabs(props: TabsContainerProps) {
-  return <TabsContainer {...props} theme="success" />;
-}
-
-export function DangerTabs(props: TabsContainerProps) {
-  return <TabsContainer {...props} theme="danger" />;
-}
-
-export function DarkTabs(props: TabsContainerProps) {
-  return <TabsContainer {...props} theme="dark" />;
-}
-
-export function LightTabs(props: TabsContainerProps) {
-  return <TabsContainer {...props} theme="light" />;
-}
-
 // Specialized component that ONLY centralizes tab triggers without affecting content
 interface TabsOnlyTriggersProps {
   tabs: TabDefinition[];

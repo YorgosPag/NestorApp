@@ -73,16 +73,6 @@ export const ROLE_PERSONA_TYPES: readonly PersonaType[] = [
   'property_owner', 'client', 'supplier', 'real_estate_agent',
 ] as const;
 
-/** Get metadata for professional personas only */
-export function getProfessionalPersonaMetadata(): readonly PersonaMetadata[] {
-  return PERSONA_METADATA.filter(m => PROFESSIONAL_PERSONA_TYPES.includes(m.type));
-}
-
-/** Get metadata for role personas only */
-export function getRolePersonaMetadata(): readonly PersonaMetadata[] {
-  return PERSONA_METADATA.filter(m => ROLE_PERSONA_TYPES.includes(m.type));
-}
-
 // ============================================================================
 // SELECT OPTIONS FOR PERSONA FIELDS
 // ============================================================================
@@ -475,26 +465,6 @@ export const PERSONA_SECTIONS: Record<PersonaType, PersonaSectionConfig[]> = {
 // ============================================================================
 
 /**
- * Get all sections for active personas.
- */
-export function getPersonaSections(
-  activePersonas: PersonaType[]
-): PersonaSectionConfig[] {
-  return activePersonas
-    .flatMap(personaType => PERSONA_SECTIONS[personaType] ?? [])
-    .sort((a, b) => a.order - b.order);
-}
-
-/**
- * Get persona metadata by type.
- */
-export function getPersonaMetadata(
-  personaType: PersonaType
-): PersonaMetadata | undefined {
-  return PERSONA_METADATA.find(m => m.type === personaType);
-}
-
-/**
  * Get all field configs for a specific persona type.
  */
 export function getPersonaFields(
@@ -504,11 +474,3 @@ export function getPersonaFields(
   return sections.flatMap(section => section.fields);
 }
 
-/**
- * Check if a section is a persona section.
- */
-export function isPersonaSection(
-  section: IndividualSectionConfig
-): section is PersonaSectionConfig {
-  return 'personaType' in section;
-}
