@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClearableSelectSection, shouldAllowClearForField, wrapClearableSelectHandler } from './form-select-helpers';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
@@ -153,12 +154,13 @@ function renderSelectField(
 ): React.ReactNode {
   const currentValue = formData[field.id];
   const valueStr = currentValue !== null && currentValue !== undefined ? String(currentValue) : (field.defaultValue ?? '');
+  const allowClear = shouldAllowClearForField(field);
 
   return (
     <Select
       name={field.id}
       value={valueStr}
-      onValueChange={(value) => onSelectChange(field.id, value)}
+      onValueChange={wrapClearableSelectHandler((value) => onSelectChange(field.id, value))}
       disabled={disabled}
       required={field.required}
     >
@@ -166,6 +168,7 @@ function renderSelectField(
         <SelectValue placeholder={field.placeholder ? t(field.placeholder) : `${t('common.select')} ${t(field.label)}`} />
       </SelectTrigger>
       <SelectContent>
+        <ClearableSelectSection shouldAllowClear={allowClear} />
         {field.options?.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {t(option.label)}
