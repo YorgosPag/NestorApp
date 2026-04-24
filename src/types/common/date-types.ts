@@ -42,49 +42,8 @@ export interface FirebaseTimestamp {
   toDate?: () => Date;
 }
 
-/**
- * ⏰ ENTERPRISE: Date Formatting Options
- *
- * Κεντρικοποιημένες επιλογές για consistent date formatting
- */
-export interface DateFormatOptions {
-  /** Include time component */
-  includeTime?: boolean;
-  /** Use relative dates ("πριν από 2 ώρες") */
-  useRelative?: boolean;
-  /** Greek locale formatting */
-  useGreekLocale?: boolean;
-  /** Custom format string */
-  customFormat?: string;
-  /** Fallback text for invalid dates */
-  fallbackText?: string;
-}
-
-/**
- * 🎯 ENTERPRISE: Date Validation Result
- *
- * Type-safe result για date validation με error handling
- */
-export interface DateValidationResult {
-  /** Is the date valid? */
-  isValid: boolean;
-  /** Parsed Date object (if valid) */
-  date?: Date;
-  /** Error message (if invalid) */
-  error?: string;
-  /** Original input value */
-  originalInput: FlexibleDateInput;
-}
-
 // ============================================================================
 // CONVENIENCE TYPE EXPORTS
 // ============================================================================
-
-/** Common date input για relationship creation dates */
-export type RelationshipDate = FlexibleDateInput;
-
 /** Common date input για contact timestamps */
 export type ContactTimestamp = FlexibleDateInput;
-
-/** Common date input για event dates */
-export type EventDate = FlexibleDateInput;
