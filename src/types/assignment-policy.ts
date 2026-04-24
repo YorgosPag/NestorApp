@@ -158,75 +158,9 @@ export interface AssignmentPolicy {
 // ============================================================================
 // POLICY RESOLUTION RESULT
 // ============================================================================
-
-/**
- * Result από policy resolution
- * @enterprise Output από AssignmentPolicyService.resolve()
- */
-export interface PolicyResolutionResult {
-  /** Whether a matching rule was found */
-  matched: boolean;
-
-  /** Matched rule (if any) */
-  matchedRule?: AssignmentRule;
-
-  /** Resolved assignee */
-  assignedTo?: AssignmentTarget;
-
-  /** Users/roles to notify */
-  notifyTargets?: AssignmentTarget[];
-
-  /** Whether task should go to triage */
-  needsTriage: boolean;
-
-  /** Triage reason (if needsTriage=true) */
-  triageReason?: string;
-
-  /** Applied policy ID */
-  policyId?: string;
-}
-
 // ============================================================================
 // INPUT TYPES (for creating policies)
 // ============================================================================
-
-/**
- * Input για creating assignment policy
- */
-export interface CreateAssignmentPolicyInput {
-  companyId: string;
-  projectId?: string | null;
-  name: string;
-  description?: string;
-  rules: Omit<AssignmentRule, 'id'>[];
-  triageSettings: AssignmentPolicy['triageSettings'];
-  taskDefaults: NonNullable<AssignmentPolicy['taskDefaults']>;
-  createdBy: string;
-}
-
-/**
- * Input για updating assignment policy
- */
-export interface UpdateAssignmentPolicyInput {
-  name?: string;
-  description?: string;
-  rules?: AssignmentRule[];
-  triageSettings?: AssignmentPolicy['triageSettings'];
-  taskDefaults?: AssignmentPolicy['taskDefaults'];
-  status?: AssignmentPolicy['status'];
-  updatedBy: string;
-}
-
 // ============================================================================
 // QUERY TYPES
 // ============================================================================
-
-/**
- * Query parameters για fetching policies
- */
-export interface AssignmentPolicyQuery {
-  companyId: string;
-  projectId?: string | null;
-  status?: AssignmentPolicy['status'];
-  includeInactive?: boolean;
-}
