@@ -58,9 +58,6 @@ export const ACTIVE_BUILDING_STATUSES = [
   'completed',
   'active',
 ] as const satisfies readonly BuildingStatus[];
-
-export type ActiveBuildingStatus = (typeof ACTIVE_BUILDING_STATUSES)[number];
-
 /**
  * Statuses που σημαίνουν pre-completion κατάσταση (αναφέρεται σε κτίρια
  * πριν την αποπεράτωση). Χρήσιμο για construction progress dashboards.
@@ -69,6 +66,3 @@ export const IN_CONSTRUCTION_BUILDING_STATUSES = [
   'planning',
   'construction',
 ] as const satisfies readonly BuildingStatus[];
-
-export type InConstructionBuildingStatus =
-  (typeof IN_CONSTRUCTION_BUILDING_STATUSES)[number];

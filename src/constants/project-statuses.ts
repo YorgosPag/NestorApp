@@ -70,9 +70,6 @@ export const ACTIVE_PROJECT_STATUSES = [
   'on_hold',
   'cancelled',
 ] as const satisfies readonly ProjectStatus[];
-
-export type ActiveProjectStatus = (typeof ACTIVE_PROJECT_STATUSES)[number];
-
 /**
  * Statuses που σημαίνουν ενεργό (σε εξέλιξη) project — δεν έχει
  * ολοκληρωθεί/ακυρωθεί/διαγραφεί.
@@ -82,6 +79,3 @@ export const IN_PROGRESS_PROJECT_STATUSES = [
   'in_progress',
   'on_hold',
 ] as const satisfies readonly ProjectStatus[];
-
-export type InProgressProjectStatus =
-  (typeof IN_PROGRESS_PROJECT_STATUSES)[number];

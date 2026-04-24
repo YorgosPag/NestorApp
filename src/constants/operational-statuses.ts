@@ -57,11 +57,6 @@ export const IN_PROGRESS_OPERATIONAL_STATUSES = [
   'inspection',
   'maintenance',
 ] as const satisfies readonly OperationalStatus[];
-
-export type InProgressOperationalStatus =
-  (typeof IN_PROGRESS_OPERATIONAL_STATUSES)[number];
-
-
 // =============================================================================
 // 4. PRE-COMPLETION SUBSET — Google-style progressive disclosure
 // =============================================================================

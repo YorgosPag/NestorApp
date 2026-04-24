@@ -27,9 +27,6 @@ export const OPERATIONAL_STATUS_LABELS = {
   maintenance: 'units.operationalStatus.maintenance',
   draft: 'units.operationalStatus.draft'
 } as const;
-
-export type OperationalStatusValue = keyof typeof OPERATIONAL_STATUS_LABELS;
-
 // ============================================================================
 // OBLIGATION STATUS
 // ============================================================================

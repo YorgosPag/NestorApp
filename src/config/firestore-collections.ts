@@ -536,6 +536,3 @@ export const FIRESTORE_LIMITS = {
 // ============================================================================
 
 export type CollectionKey = keyof typeof COLLECTIONS;
-export type SubcollectionKey = keyof typeof SUBCOLLECTIONS;
-export type SystemDocKey = keyof typeof SYSTEM_DOCS;
-

@@ -1,32 +1,3 @@
-/**
- * =============================================================================
- * FIRESTORE SCHEMA MAP — AI AWARENESS
- * =============================================================================
- *
- * Compressed schema for the top 25 business collections so the AI agent
- * knows which fields exist in each collection, their types, and how
- * collections relate to each other.
- *
- * Injected into the agentic system prompt (~2000 tokens).
- *
- * @module config/firestore-schema-map
- * @see ADR-171 (Autonomous AI Agent)
- * @see config/firestore-collections.ts (Collection name SSoT)
- */
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export interface CollectionFieldSchema {
-  /** Field type: 'string', 'number', 'boolean', 'Timestamp', or enum like 'active|inactive' */
-  type: string;
-  /** True if field is optional */
-  optional?: boolean;
-  /** Brief description (for AI context) */
-  desc?: string;
-}
-
 export interface CollectionSchema {
   /** Human-readable description (Greek, for the AI) */
   description: string;

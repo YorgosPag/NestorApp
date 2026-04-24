@@ -76,9 +76,6 @@ export const FINALIZED_COMMERCIAL_STATUSES = [
   'rented',
 ] as const satisfies readonly CommercialStatus[];
 
-export type FinalizedCommercialStatus =
-  (typeof FINALIZED_COMMERCIAL_STATUSES)[number];
-
 /** Returns `true` if `value` represents an active market listing. */
 export function isListedCommercialStatus(
   value: unknown,

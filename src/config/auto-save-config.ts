@@ -46,6 +46,3 @@ export const AUTO_SAVE_TIMING = {
   /** Maximum automatic retry attempts */
   MAX_RETRIES: 2,
 } as const;
-
-/** Type for AUTO_SAVE_TIMING */
-export type AutoSaveTiming = typeof AUTO_SAVE_TIMING;

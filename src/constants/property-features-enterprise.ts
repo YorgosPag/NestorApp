@@ -127,7 +127,6 @@ export type EnergyClassType = typeof EnergyClass[keyof typeof EnergyClass];
 // =============================================================================
 
 export type ViewQuality = 'full' | 'partial' | 'distant';
-export type OperationalStatusType = 'ready' | 'under-construction';
 export type ConditionType = 'new' | 'excellent' | 'good' | 'needs-renovation';
 export type HeatingType = 'central' | 'autonomous' | 'heat-pump' | 'solar' | 'none';
 export type FuelType = 'natural-gas' | 'oil' | 'electricity' | 'solar' | 'heat-pump';
@@ -137,8 +136,6 @@ export type FlooringType = 'tiles' | 'wood' | 'laminate' | 'marble' | 'carpet';
 export type FrameType = 'aluminum' | 'pvc' | 'wood';
 export type GlazingType = 'single' | 'double' | 'triple' | 'energy';
 export type BuildingType = 'apartment-complex' | 'villa' | 'maisonette' | 'commercial';
-export type LocationTagType = 'nearSea' | 'nearMetro' | 'quietArea' | 'cityCenter' | 'suburban';
-
 // =============================================================================
 // 🏢 I18N KEY MAPPINGS (for translation)
 // =============================================================================

@@ -57,6 +57,3 @@ export const HIGH_EFFICIENCY_ENERGY_CLASSES = [
   'B+',
   'B',
 ] as const satisfies readonly EnergyClass[];
-
-export type HighEfficiencyEnergyClass =
-  (typeof HIGH_EFFICIENCY_ENERGY_CLASSES)[number];

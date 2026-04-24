@@ -130,5 +130,3 @@ type LeafValues<T> = T extends string
   : T extends object
   ? { [K in keyof T]: LeafValues<T[K]> }[keyof T]
   : never;
-
-export type NotificationKey = LeafValues<typeof NOTIFICATION_KEYS>;

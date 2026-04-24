@@ -59,6 +59,3 @@ export const NON_RESIDENTIAL_BUILDING_TYPES = [
   'office',
   'warehouse',
 ] as const satisfies readonly BuildingType[];
-
-export type NonResidentialBuildingType =
-  (typeof NON_RESIDENTIAL_BUILDING_TYPES)[number];

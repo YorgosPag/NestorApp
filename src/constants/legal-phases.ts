@@ -68,15 +68,9 @@ export const PENDING_LEGAL_PHASES = [
   'final_pending',
   'payoff_pending',
 ] as const satisfies readonly LegalPhase[];
-
-export type PendingLegalPhase = (typeof PENDING_LEGAL_PHASES)[number];
-
 /** Phases με υπογεγραμμένο ή ολοκληρωμένο contract. */
 export const SIGNED_LEGAL_PHASES = [
   'preliminary_signed',
   'final_signed',
   'payoff_completed',
 ] as const satisfies readonly LegalPhase[];
-
-export type SignedLegalPhase = (typeof SIGNED_LEGAL_PHASES)[number];
-
