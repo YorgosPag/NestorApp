@@ -57,11 +57,6 @@ export type TrackedFieldDef =
       readonly subFieldLabels?: Readonly<Record<string, string>>;
     };
 
-/** Read the human-readable label from any TrackedFieldDef variant. */
-export function getTrackedFieldLabel(def: TrackedFieldDef): string {
-  return def.label;
-}
-
 /**
  * Convert a `TrackedFieldDef` map back to a plain `Record<string, string>`
  * (field → label). Used internally so the legacy flatten/diff helpers keep

@@ -126,20 +126,6 @@ export async function dismissNotification(notificationId: string): Promise<void>
 }
 
 /**
- * Record notification action
- */
-export async function recordNotificationAction(
-  notificationId: string,
-  actionId: string
-): Promise<void> {
-  await updateDoc(doc(db, COLLECTION_NAME, notificationId), {
-    'delivery.state': 'acted',
-    actedAt: nowTimestamp(),
-    actionId
-  });
-}
-
-/**
  * Subscribe to real-time notification updates
  */
 export function subscribeToNotifications(

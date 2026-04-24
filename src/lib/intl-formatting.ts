@@ -192,12 +192,4 @@ export const getDisplayNames = () => {
   };
 };
 
-/**
- * Check if current locale uses RTL writing direction
- */
-export const isRTLLocale = (): boolean => {
-  const locale = getCurrentLocale();
-  const rtlLocales = ['ar', 'he', 'fa', 'ur'];
-  return rtlLocales.some(rtl => locale.startsWith(rtl));
-};
 

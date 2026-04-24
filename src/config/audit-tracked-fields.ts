@@ -19,7 +19,6 @@ import {
 // Re-export the SSoT type so consumers that already import from this file
 // (the historical home of `*_TRACKED_FIELDS`) can keep their imports.
 export type { TrackedFieldDef } from '@/lib/audit/audit-diff';
-export { getTrackedFieldLabel } from '@/lib/audit/audit-diff';
 
 /** Narrow alias for the collection variant — one-liner so the per-entity maps stay readable. */
 type CollectionDef = Extract<TrackedFieldDef, { kind: 'collection' }>;

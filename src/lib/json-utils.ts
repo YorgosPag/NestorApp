@@ -16,18 +16,3 @@ export function safeJsonParse<T>(input: string, fallback: T): T {
   }
 }
 
-/**
- * Safe JSON.parse with validation. Returns fallback if parse fails OR validator rejects.
- */
-export function safeJsonParseWith<T>(
-  input: string,
-  fallback: T,
-  validator: (parsed: unknown) => parsed is T
-): T {
-  try {
-    const parsed: unknown = JSON.parse(input);
-    return validator(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
-}

@@ -104,13 +104,3 @@ export function getObject<T extends Record<string, unknown>>(
   return defaultValue;
 }
 
-// =============================================================================
-// getStringOrNumber — for IDs that could be string or number
-// =============================================================================
-
-export function getStringOrNumber(data: DataRecord, field: string): string | undefined {
-  const value = data?.[field];
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number') return String(value);
-  return undefined;
-}

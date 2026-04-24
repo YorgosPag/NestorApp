@@ -384,20 +384,6 @@ export type SearchIndexConfigMap = Record<SearchEntityType, SearchIndexConfig>;
 // TYPE GUARDS
 // =============================================================================
 
-/**
- * Type guard for SearchSuccessResponse
- */
-export function isSearchSuccessResponse(response: SearchResponse): response is SearchSuccessResponse {
-  return response.success === true;
-}
-
-/**
- * Type guard for SearchErrorResponse
- */
-export function isSearchErrorResponse(response: SearchResponse): response is SearchErrorResponse {
-  return response.success === false;
-}
-
 // =============================================================================
 // CONSTANTS
 // =============================================================================

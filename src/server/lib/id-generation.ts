@@ -155,39 +155,3 @@ export function isValidDocumentId(id: string): boolean {
   return /^[a-zA-Z0-9_]+$/.test(id);
 }
 
-/**
- * Validate that all generated IDs are safe
- * @enterprise Self-test function for development
- */
-export function validateIdGeneration(): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  // Test conversation ID
-  const convId = generateConversationId('telegram', 'test@example.com');
-  if (!isValidDocumentId(convId)) {
-    errors.push(`Invalid conversation ID: ${convId}`);
-  }
-
-  // Test message ID
-  const msgId = generateMessageDocId('telegram', '12345', '99999');
-  if (!isValidDocumentId(msgId)) {
-    errors.push(`Invalid message ID: ${msgId}`);
-  }
-
-  // Test external identity ID
-  const eidId = generateExternalIdentityId('telegram', '12345');
-  if (!isValidDocumentId(eidId)) {
-    errors.push(`Invalid external identity ID: ${eidId}`);
-  }
-
-  // Test that same input produces same output (determinism)
-  const convId2 = generateConversationId('telegram', 'test@example.com');
-  if (convId !== convId2) {
-    errors.push('Conversation ID not deterministic');
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
-}
