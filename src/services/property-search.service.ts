@@ -30,15 +30,6 @@ export interface ParkingSpace {
   location?: string;
 }
 
-export interface UnifiedSearchResult {
-  success: boolean;
-  units: Property[];
-  storageUnits: StorageUnit[];
-  parkingSpaces: ParkingSpace[];
-  totalCount: number;
-  message: string;
-}
-
 /**
  * Enhanced Property Search Service for Telegram Bot
  * Provides smart property search with natural language processing
@@ -74,16 +65,6 @@ export interface PropertySearchCriteria {
   limit?: number;
   sortBy?: 'price' | 'area' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
-}
-
-export interface PropertySearchResult {
-  success: boolean;
-  properties: Property[];
-  totalCount: number;
-  criteria: PropertySearchCriteria;
-  message: string;
-  hasMore?: boolean;
-  nextCursor?: string;
 }
 
 export interface PropertySummary {

@@ -52,20 +52,6 @@ export interface CadFileUpsertResult {
   created: boolean;
 }
 
-export interface CadFileMetadataLookup {
-  id: string;
-  fileName: string;
-  storageUrl: string;
-  storagePath: string;
-  sizeBytes: number;
-  entityCount: number;
-  version: number;
-  checksum?: string;
-  companyId?: string;
-  createdBy?: string;
-  [key: string]: unknown;
-}
-
 /**
  * Upsert cadFile metadata via /api/cad-files POST.
  * The server computes version + handles create-vs-update internally using the

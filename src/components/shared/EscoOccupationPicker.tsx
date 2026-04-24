@@ -25,7 +25,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { EscoPickerPopoverShell } from '@/components/shared/esco/esco-picker-popover-shell';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Search, PenLine, X } from 'lucide-react';
@@ -290,63 +290,59 @@ export function EscoOccupationPicker({
   // RENDER
   // ========================================================================
 
-  return (
-    <Popover open={isOpen && !disabled} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <div className="relative w-full">
-          <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />
-          <Input
-            ref={inputRef}
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => {
-              if (inputValue.trim().length >= MIN_CHARS && !hasEscoSelection) {
-                setIsOpen(true);
-                debouncedSearch(inputValue);
-              }
-            }}
-            disabled={disabled}
-            placeholder={placeholder ?? t('individual.placeholders.profession')}
-            hasLeftIcon
-            hasRightIcon={!!inputValue || isLoading}
-            className={cn(
-              hasEscoSelection && 'pr-16'
-            )}
-            aria-expanded={isOpen}
-            aria-haspopup="listbox"
-            aria-autocomplete="list"
-            role="combobox"
-          />
-          {/* ESCO badge when selection is active */}
-          {hasEscoSelection && !disabled && (
-            <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
-              {t('esco.badge', 'ESCO')}
-            </span>
-          )}
-          {/* Loading / Clear buttons */}
-          {isLoading && (
-            <Spinner size="small" className="absolute right-3 top-1/2 -translate-y-1/2" />
-          )}
-          {!isLoading && inputValue && !disabled && (
-            <button
-              type="button"
-              onClick={handleClearSelection}
-              className={cn("absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 hover:text-foreground transition-colors", colors.text.muted)}
-              aria-label={t('common.clear')}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      </PopoverTrigger>
+  const anchor = (
+    <>
+      <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />
+      <Input
+        ref={inputRef}
+        value={inputValue}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        onFocus={() => {
+          if (inputValue.trim().length >= MIN_CHARS && !hasEscoSelection) {
+            setIsOpen(true);
+            debouncedSearch(inputValue);
+          }
+        }}
+        disabled={disabled}
+        placeholder={placeholder ?? t('individual.placeholders.profession')}
+        hasLeftIcon
+        hasRightIcon={!!inputValue || isLoading}
+        className={cn(
+          hasEscoSelection && 'pr-16'
+        )}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-autocomplete="list"
+        role="combobox"
+      />
+      {hasEscoSelection && !disabled && (
+        <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+          {t('esco.badge', 'ESCO')}
+        </span>
+      )}
+      {isLoading && (
+        <Spinner size="small" className="absolute right-3 top-1/2 -translate-y-1/2" />
+      )}
+      {!isLoading && inputValue && !disabled && (
+        <button
+          type="button"
+          onClick={handleClearSelection}
+          className={cn("absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 hover:text-foreground transition-colors", colors.text.muted)}
+          aria-label={t('common.clear')}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+    </>
+  );
 
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0 max-h-80 overflow-y-auto"
-        align="start"
-        sideOffset={4}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
+  return (
+    <EscoPickerPopoverShell
+      open={isOpen && !disabled}
+      onOpenChange={setIsOpen}
+      anchor={anchor}
+    >
         <ul
           ref={listRef}
           role="listbox"
@@ -413,8 +409,7 @@ export function EscoOccupationPicker({
             </li>
           )}
         </ul>
-      </PopoverContent>
-    </Popover>
+    </EscoPickerPopoverShell>
   );
 }
 

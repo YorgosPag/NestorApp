@@ -134,18 +134,6 @@ export interface UserTwoFactorState {
 // =============================================================================
 
 /**
- * Input for starting 2FA enrollment
- */
-export interface StartEnrollmentInput {
-  /** User ID */
-  userId: string;
-  /** Method to enroll */
-  method: TwoFactorMethod;
-  /** Display name for the factor */
-  displayName?: string;
-}
-
-/**
  * Result of starting enrollment
  */
 export interface StartEnrollmentResult {
@@ -157,18 +145,6 @@ export interface StartEnrollmentResult {
   qrCodeDataUrl?: string;
   /** Error message if failed */
   error?: string;
-}
-
-/**
- * Input for completing 2FA enrollment
- */
-export interface CompleteEnrollmentInput {
-  /** User ID */
-  userId: string;
-  /** Verification code from authenticator */
-  verificationCode: string;
-  /** Display name for the factor */
-  displayName?: string;
 }
 
 /**

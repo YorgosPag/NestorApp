@@ -11,14 +11,6 @@ export interface PDFExportOptions {
   margins?: { top: number; right: number; bottom: number; left: number };
 }
 
-export interface PDFSection {
-  id: string;
-  title: string;
-  content: string;
-  level: number;
-  pageNumber?: number;
-}
-
 export interface IPDFDoc {
   getNumberOfPages(): number;
   setPage(n: number): void;

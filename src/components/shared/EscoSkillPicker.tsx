@@ -28,7 +28,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { EscoPickerPopoverShell } from '@/components/shared/esco/esco-picker-popover-shell';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Search, PenLine, X } from 'lucide-react';
@@ -312,9 +312,11 @@ export function EscoSkillPicker({
 
       {/* Search Input with Popover */}
       {!isMaxReached && (
-        <Popover open={isOpen && !disabled} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>
-            <div className="relative w-full">
+        <EscoPickerPopoverShell
+          open={isOpen && !disabled}
+          onOpenChange={setIsOpen}
+          anchor={
+            <>
               <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />
               <Input
                 ref={inputRef}
@@ -339,15 +341,9 @@ export function EscoSkillPicker({
               {isLoading && (
                 <Spinner size="small" className="absolute right-3 top-1/2 -translate-y-1/2" />
               )}
-            </div>
-          </PopoverTrigger>
-
-          <PopoverContent
-            className="w-[var(--radix-popover-trigger-width)] p-0 max-h-80 overflow-y-auto"
-            align="start"
-            sideOffset={4}
-            onOpenAutoFocus={(e) => e.preventDefault()}
-          >
+            </>
+          }
+        >
             <ul
               ref={listRef}
               role="listbox"
@@ -411,8 +407,7 @@ export function EscoSkillPicker({
                 </li>
               )}
             </ul>
-          </PopoverContent>
-        </Popover>
+        </EscoPickerPopoverShell>
       )}
 
       {/* Max reached message */}

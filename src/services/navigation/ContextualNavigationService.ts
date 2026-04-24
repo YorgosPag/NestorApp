@@ -32,15 +32,6 @@ export type NavigableEntityType =
   | 'parking';
 
 /**
- * Route definition with type-safe parameters
- */
-export interface ContextualRoute {
-  path: string;
-  params?: Record<string, string | number | boolean>;
-  context?: NavigationContext;
-}
-
-/**
  * Navigation context that gets preserved across routes
  */
 export interface NavigationContext {

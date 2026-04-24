@@ -13,6 +13,14 @@ const Popover = PopoverPrimitive.Root
 
 const PopoverTrigger = PopoverPrimitive.Trigger
 
+/**
+ * Anchor-only positioning for controlled Popovers.
+ * Unlike PopoverTrigger, Anchor does NOT toggle open state on click — use it
+ * when the component fully owns the open/close logic (e.g. focus-driven
+ * comboboxes) to avoid click-focus race conditions that flash the popover.
+ */
+const PopoverAnchor = PopoverPrimitive.Anchor
+
 const PopoverContent = React.forwardRef<
   React.ComponentRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
@@ -37,4 +45,4 @@ const PopoverContent = React.forwardRef<
 })
 PopoverContent.displayName = PopoverPrimitive.Content.displayName
 
-export { Popover, PopoverTrigger, PopoverContent }
+export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent }

@@ -87,8 +87,6 @@ export type GroupMatchInput = z.infer<typeof GroupMatchSchema>;
 // ============================================================================
 
 export const MatchRequestSchema = z.union([SingleMatchSchema, GroupMatchSchema]);
-export type MatchRequestInput = z.infer<typeof MatchRequestSchema>;
-
 // ============================================================================
 // RECONCILE SCHEMA (Q1, Q8)
 // ============================================================================
@@ -98,9 +96,6 @@ export const ReconcileSchema = z.object({
   /** Expected version for optimistic locking */
   expectedVersion: z.number().int().min(0).optional(),
 });
-
-export type ReconcileInput = z.infer<typeof ReconcileSchema>;
-
 // ============================================================================
 // ADMIN UNLOCK SCHEMA (Q4)
 // ============================================================================
@@ -110,9 +105,6 @@ export const AdminUnlockSchema = z.object({
   /** Mandatory reason for unlocking reconciled transaction */
   reason: z.string().min(5, { message: 'Ο λόγος πρέπει να είναι τουλάχιστον 5 χαρακτήρες' }).max(500),
 });
-
-export type AdminUnlockInput = z.infer<typeof AdminUnlockSchema>;
-
 // ============================================================================
 // DIRECTION VALIDATION (Q9)
 // ============================================================================

@@ -85,20 +85,6 @@ export interface FileAuditEntry {
   metadata?: Record<string, string | number | boolean | null>;
 }
 
-/** Query parameters for retrieving audit logs */
-export interface FileAuditQuery {
-  /** Filter by file ID */
-  fileId?: string;
-  /** Filter by action type */
-  action?: FileAuditAction;
-  /** Filter by user */
-  performedBy?: string;
-  /** Filter by company */
-  companyId?: string;
-  /** Maximum entries to return */
-  maxEntries?: number;
-}
-
 /** Audit entry as returned from Firestore (with resolved timestamp) */
 export interface FileAuditRecord extends Omit<FileAuditEntry, 'timestamp'> {
   id: string;

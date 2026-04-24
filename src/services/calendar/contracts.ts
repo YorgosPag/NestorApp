@@ -26,7 +26,3 @@ export interface IAppointmentsRepository {
 // ============================================================================
 // CALENDAR EVENT SERVICE
 // ============================================================================
-
-export interface ICalendarEventService {
-  getEvents(start: Date, end: Date, userId?: string): Promise<CalendarEvent[]>;
-}

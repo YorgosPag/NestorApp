@@ -30,15 +30,6 @@ import {
   type ShowcaseEmailMedia,
   type ShowcaseKeyValueRow,
 } from './showcase-email-shared';
-
-export type BuildBuildingShowcaseEmailParams = BuildShowcaseEmailParams<
-  BuildingShowcaseSnapshot,
-  BuildingShowcasePDFLabels,
-  ShowcaseEmailMedia
->;
-
-export type BuiltBuildingShowcaseEmail = BuiltShowcaseEmail;
-
 type SnapshotBuilding = BuildingShowcaseSnapshot['building'];
 type HookParams = ShowcaseEmailRenderHookParams<BuildingShowcaseSnapshot, BuildingShowcasePDFLabels>;
 

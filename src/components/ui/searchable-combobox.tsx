@@ -20,7 +20,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { normalizeForSearch } from '@/utils/greek-text';
 import { useDropdownTokens } from '@/hooks/useDropdownTokens';
@@ -272,7 +272,11 @@ export function SearchableCombobox({
 
   return (
     <Popover open={open && !disabled} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+      {/* PopoverAnchor (not Trigger) — we own open state via handleFocus / chevron
+          onClick / handleBlur. Trigger's built-in toggle-on-click raced with
+          handleFocus, producing the "first click flashes & closes, second click
+          opens" bug reported 2026-04-25. */}
+      <PopoverAnchor asChild>
         <div className={cn('relative w-full', className)}>
           <Input
             ref={inputRef}
@@ -323,7 +327,7 @@ export function SearchableCombobox({
             />
           </button>
         </div>
-      </PopoverTrigger>
+      </PopoverAnchor>
 
       <PopoverContent
         className="w-[var(--radix-popover-trigger-width)] p-0"

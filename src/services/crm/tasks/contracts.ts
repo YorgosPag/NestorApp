@@ -21,18 +21,3 @@ export interface ITasksRepository {
   deleteAll(): Promise<number>;
   getStats(userId?: string|null): Promise<TasksStats>;
 }
-
-export interface ITasksService {
-  addTask(taskData: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>): Promise<{ id: string; success: boolean }>;
-  getTaskById(taskId: string): Promise<CrmTask | null>;
-  getAllTasks(): Promise<CrmTask[]>;
-  getTasksByUser(userId: string): Promise<CrmTask[]>;
-  getTasksByLead(leadId: string): Promise<CrmTask[]>;
-  getTasksByStatus(status: CrmTask['status']): Promise<CrmTask[]>;
-  getOverdueTasks(): Promise<CrmTask[]>;
-  updateTask(taskId: string, updates: Partial<CrmTask>): Promise<{ success: boolean }>;
-  deleteTask(taskId: string): Promise<{ success: boolean }>;
-  deleteAllTasks(): Promise<{ success: boolean; deletedCount: number }>;
-  completeTask(taskId: string, notes?: string): Promise<{ success: boolean }>;
-  getTasksStats(userId?: string | null): Promise<TasksStats>;
-}

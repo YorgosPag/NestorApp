@@ -76,13 +76,8 @@ export type AttachmentPurpose = typeof ATTACHMENT_PURPOSES[number];
 
 /** Activity operations for manage_activities (SSoT — tool def enum + handler validation) */
 export const ACTIVITY_OPERATIONS = ['add', 'list', 'remove', 'set_primary'] as const;
-export type ActivityOperation = typeof ACTIVITY_OPERATIONS[number];
-
 /** ADR-267 Phase C: Purchase order operations (SSoT — tool def enum + handler validation) */
 export const PO_TOOL_OPERATIONS = ['create', 'list', 'get_status'] as const;
-export type POToolOperation = typeof PO_TOOL_OPERATIONS[number];
-
-
 // ============================================================================
 // AGENTIC TOOL DEFINITIONS (Chat Completions API format)
 // ============================================================================

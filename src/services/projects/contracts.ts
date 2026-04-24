@@ -49,21 +49,3 @@ export interface ProjectStructure {
   project: Project;
   buildings: ProjectBuilding[];
 }
-
-export interface IProjectsRepository {
-  getProjectsByCompanyId(companyId: string): Promise<Project[]>;
-  getProjectById(projectId: string): Promise<Project | null>;
-  getBuildingsByProjectId(projectId: string): Promise<Building[]>;
-  getPropertiesByBuildingId(buildingId: string): Promise<Property[]>;
-  getContactsByIds(ids: string[]): Promise<Contact[]>;
-  /** 🏢 ENTERPRISE: Update project in Firestore */
-  updateProject?(projectId: string, updates: ProjectUpdatePayload): Promise<void>;
-}
-
-export interface IProjectsService {
-  getProjectsByCompanyId(companyId: string): Promise<Project[]>;
-  getProjectStructure(projectId: string): Promise<ProjectStructure | null>;
-  getProjectCustomers(projectId: string): Promise<ProjectCustomer[]>;
-  getProjectStats(projectId: string): Promise<ProjectStats>;
-  debugProjectData(projectId: string): Promise<void>;
-}
