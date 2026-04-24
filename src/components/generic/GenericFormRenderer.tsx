@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClearableSelectSection, shouldAllowClearForField, wrapClearableSelectHandler } from './form-select-helpers';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
@@ -153,17 +154,20 @@ function renderSelectField(
     ? translateText(field.placeholder, t)
     : translateText(field.label, t).toLowerCase();
 
+  const allowClear = shouldAllowClearForField(field);
+
   return (
     <Select
       name={field.id}
       value={toStringValue(formData[field.id] || field.initialValue)}
-      onValueChange={(value) => onSelectChange(field.id, value)}
+      onValueChange={wrapClearableSelectHandler((value) => onSelectChange(field.id, value))}
       disabled={disabled}
     >
       <SelectTrigger>
         <SelectValue placeholder={`${translateText('common.select', t)} ${placeholder}`} />
       </SelectTrigger>
       <SelectContent>
+        <ClearableSelectSection shouldAllowClear={allowClear} />
         {field.options.map(option => (
           <SelectItem key={option.value} value={option.value}>
             {translateText(option.label, t)}
