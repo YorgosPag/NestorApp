@@ -56,10 +56,6 @@ export type BuildingRole = typeof ENTITY_ASSOCIATION_ROLES.building[number];
 
 /** Role values for property associations */
 export type PropertyRole = typeof ENTITY_ASSOCIATION_ROLES.property[number];
-
-/** Union of all role values */
-export type AssociationRoleValue = ProjectRole | BuildingRole | PropertyRole;
-
 // ============================================================================
 // VIEW MODELS — FOR UI DISPLAY
 // ============================================================================
