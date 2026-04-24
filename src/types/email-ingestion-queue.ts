@@ -200,27 +200,6 @@ export interface EmailIngestionQueueItem {
 // ============================================================================
 // QUEUE ITEM INPUT (for creation)
 // ============================================================================
-
-/**
- * Input for creating a new queue item
- * Used by webhook handler for fast enqueue
- */
-export interface EmailIngestionQueueInput {
-  provider: EmailProvider;
-  providerMessageId: string;
-  routingResolution: QueueRoutingResolution;
-  sender: ParsedAddress;
-  recipients: string[];
-  subject: string;
-  /** Plain text content (for search/preview/fallback) */
-  contentText: string;
-  /** 🏢 ENTERPRISE: HTML content with formatting (colors, fonts, styles) */
-  contentHtml?: string;
-  attachments: SerializedAttachment[];
-  emailReceivedAt?: string;
-  rawMetadata?: Record<string, unknown>;
-}
-
 // ============================================================================
 // QUEUE STATISTICS
 // ============================================================================
