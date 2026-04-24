@@ -925,6 +925,42 @@ run_area_tests "Contact Mutations" \
     "contact-mutation" \
     "npx jest --testPathPatterns=contact-mutation --verbose"
 
+# Contact Mappers (ADR-322 — SSoT safe field accessors + form data mapping) — ~6s
+# Regression guard for 2026-04-24 unclosed-JSDoc incident that swallowed
+# getSafeFieldValue/getSafeArrayValue errors and produced empty edit forms.
+run_area_tests "Contact Mappers" \
+    "^src/utils/contactForm/(contactMapper\.ts|fieldMappers/)" \
+    "src/utils/contactForm/__tests__/contactMapper" \
+    "npm run test:contact-mappers"
+
+# Contact Sanitize (ADR-323 — sanitizeContactForUpdate + dirty-diff writes) — ~8s
+# Regression guard for 2026-04-24 bloat incident where updateContact wrote ~30
+# empty default fields on every save. Locks the clean/delete partitioning and
+# the photo-field preservation semantics.
+run_area_tests "Contact Sanitize" \
+    "^src/utils/contactForm/utils/data-cleaning\.ts|^src/services/contacts\.service\.ts" \
+    "src/utils/contactForm/utils/__tests__/data-cleaning" \
+    "npm run test:contact-sanitize"
+
+# Clearable Select SSoT (ADR-324 — form-select-helpers) — ~15s
+# Locks the SSoT helper used by Individual/Company/Service form renderers:
+# non-required selects get a "Καθαρισμός επιλογής" sentinel that translates
+# to an empty string, which (via ADR-323) becomes deleteField() in Firestore.
+run_area_tests "Clearable Select" \
+    "^src/components/generic/form-select-helpers\.tsx|^src/components/generic/(Individual|Generic|Service)FormRenderer\.tsx" \
+    "src/components/generic/__tests__/form-select-helpers" \
+    "npm run test:clearable-select"
+
+# ESCO Pickers (ADR-325 — EscoPickerPopoverShell SSoT) — ~13s
+# Locks the PopoverAnchor-based popover shell used by EscoOccupationPicker and
+# EscoSkillPicker. Regression guard for 2026-04-25 bug where PopoverTrigger's
+# built-in click toggle raced with the MIN_CHARS-gated open state, producing a
+# zero-height flash on empty input click.
+run_area_tests "ESCO Pickers" \
+    "^src/components/shared/esco/|^src/components/shared/Esco(Occupation|Skill)Picker\.tsx" \
+    "src/components/shared/esco/__tests__/esco-picker-popover-shell" \
+    "npm run test:esco-pickers"
+
 # File Display Cascade (Batch 30 — entity rename → FileRecord.displayName) — ~5s
 run_area_tests "File Display Cascade" \
     "^src/(services/filesystem|services/property|app/api/files/propagate|components/shared/files/hooks/useEntityFiles)" \

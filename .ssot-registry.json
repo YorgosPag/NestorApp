@@ -2253,6 +2253,54 @@
       "tier": 3
     },
 
+    "contact-mappers": {
+      "ssotFile": "src/utils/contactForm/contactMapper.ts",
+      "description": "Safe field accessors (toRecord/getSafeFieldValue/getSafeNestedValue/getSafeArrayValue) used by all contact form mappers. ADR-322 — regression guard for 2026-04-24 unclosed-JSDoc incident that silently returned empty form data.",
+      "forbiddenPatterns": [
+        "function\\s+(toRecord|getSafeFieldValue|getSafeNestedValue|getSafeArrayValue)\\("
+      ],
+      "allowlist": [
+        "src/utils/contactForm/contactMapper.ts"
+      ],
+      "tier": 3
+    },
+
+    "contact-sanitize": {
+      "ssotFile": "src/utils/contactForm/utils/data-cleaning.ts",
+      "description": "Contact write sanitization (sanitizeContactData for CREATE, sanitizeContactForUpdate for UPDATE with explicit-clear → deleteField). ADR-323 — regression guard for 2026-04-24 bloat incident (empty default fields written on every save).",
+      "forbiddenPatterns": [
+        "function\\s+(sanitizeContactData|sanitizeContactForUpdate)\\("
+      ],
+      "allowlist": [
+        "src/utils/contactForm/utils/data-cleaning.ts"
+      ],
+      "tier": 3
+    },
+
+    "clearable-select-helpers": {
+      "ssotFile": "src/components/generic/form-select-helpers.tsx",
+      "description": "SSoT for clearable Radix Select helpers (ClearableSelectSection, shouldAllowClearForField, wrapClearableSelectHandler) used by all form renderers. ADR-324 — allows non-required selects to clear their value, writing deleteField() via ADR-323 sanitize.",
+      "forbiddenPatterns": [
+        "function\\s+(ClearableSelectSection|shouldAllowClearForField|wrapClearableSelectHandler)\\("
+      ],
+      "allowlist": [
+        "src/components/generic/form-select-helpers.tsx"
+      ],
+      "tier": 3
+    },
+
+    "esco-picker-popover": {
+      "ssotFile": "src/components/shared/esco/esco-picker-popover-shell.tsx",
+      "description": "SSoT Popover wrapper for ESCO pickers (EscoOccupationPicker, EscoSkillPicker). ADR-325 — uses PopoverAnchor (not PopoverTrigger) so the click-toggle race that flashes a zero-height dropdown on empty input cannot reappear.",
+      "forbiddenPatterns": [
+        "function\\s+EscoPickerPopoverShell\\("
+      ],
+      "allowlist": [
+        "src/components/shared/esco/esco-picker-popover-shell.tsx"
+      ],
+      "tier": 3
+    },
+
     "data-services": {
       "ssotFile": "src/lib/data-services.ts",
       "description": "Sample data services (getContacts, getProjects, sampleContacts, mockProjects). Dev/test data SSoT. ADR-314 Phase C.5.5x.",

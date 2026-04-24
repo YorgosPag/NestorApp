@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 283 ADRs | Last Updated: 2026-04-23
+**📊 Stats**: 283 ADRs | Last Updated: 2026-04-24
 
 ---
 
