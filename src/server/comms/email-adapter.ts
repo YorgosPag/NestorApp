@@ -231,5 +231,3 @@ export class EmailAdapter {
   }
 }
 
-// Export singleton instance
-export const emailAdapter = new EmailAdapter();

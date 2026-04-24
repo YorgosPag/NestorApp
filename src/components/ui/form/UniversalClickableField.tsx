@@ -225,21 +225,3 @@ function getInputType(fieldType: string): string {
   }
 }
 
-// ============================================================================
-// CONVENIENCE COMPONENTS για specific use cases
-// ============================================================================
-
-export interface ClickableEmailFieldProps extends Omit<UniversalClickableFieldProps, 'type'> {}
-export function ClickableEmailField(props: ClickableEmailFieldProps) {
-  return <UniversalClickableField {...props} type="email" />;
-}
-
-export interface ClickablePhoneFieldProps extends Omit<UniversalClickableFieldProps, 'type'> {}
-export function ClickablePhoneField(props: ClickablePhoneFieldProps) {
-  return <UniversalClickableField {...props} type="tel" />;
-}
-
-export interface ClickableWebsiteFieldProps extends Omit<UniversalClickableFieldProps, 'type'> {}
-export function ClickableWebsiteField(props: ClickableWebsiteFieldProps) {
-  return <UniversalClickableField {...props} type="url" />;
-}

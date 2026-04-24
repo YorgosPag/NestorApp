@@ -495,33 +495,6 @@ export function getIndividualSection(sectionId: string): IndividualSectionConfig
   return INDIVIDUAL_SECTIONS.find(section => section.id === sectionId);
 }
 
-/**
- * Get specific field by section and field ID
- */
-export function getIndividualField(sectionId: string, fieldId: string): IndividualFieldConfig | undefined {
-  const section = getIndividualSection(sectionId);
-  return section?.fields.find(field => field.id === fieldId);
-}
-
-/**
- * Get all fields from all sections as a flat array
- */
 export function getAllIndividualFields(): IndividualFieldConfig[] {
   return INDIVIDUAL_SECTIONS.flatMap(section => section.fields);
-}
-
-/**
- * Get field by ID from any section
- */
-export function getIndividualFieldById(fieldId: string): IndividualFieldConfig | undefined {
-  return getAllIndividualFields().find(field => field.id === fieldId);
-}
-
-/**
- * Get all required field IDs
- */
-export function getRequiredIndividualFields(): string[] {
-  return getAllIndividualFields()
-    .filter(field => field.required)
-    .map(field => field.id);
 }

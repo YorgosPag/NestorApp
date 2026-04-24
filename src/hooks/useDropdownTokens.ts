@@ -207,5 +207,3 @@ export function useDropdownTokens(): DropdownTokens {
 
 export default useDropdownTokens;
 
-/** Alias for shorter imports */
-export { useDropdownTokens as useDropdown };

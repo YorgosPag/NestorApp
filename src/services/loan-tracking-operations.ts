@@ -51,17 +51,6 @@ interface ServiceResult {
   error?: string;
 }
 
-/** Resolve loans from plan, with migration fallback */
-export function resolveLoansFromPlan(plan: PaymentPlan): LoanTracking[] {
-  // Re-import at call time to avoid circular — this is the same logic as in main service
-  const { migrateLoanInfoToTracking } = require('@/types/loan-tracking');
-  if (plan.loans && plan.loans.length > 0) return plan.loans;
-  if (plan.loan && plan.loan.status !== 'not_applicable') {
-    return [migrateLoanInfoToTracking(plan.loan, 'migrated_loan')];
-  }
-  return [];
-}
-
 // ============================================================================
 // DISBURSEMENT
 // ============================================================================

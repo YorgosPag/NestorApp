@@ -358,18 +358,6 @@ export class ContextualNavigationService {
  * navigateToEntity('company', companyId, { action: 'select' });
  * ```
  */
-export function useContextualNavigation() {
-  // This will be imported and used by React components
-  // Implementation would use Next.js router
-
-  return {
-    generateRoute: ContextualNavigationService.generateRoute,
-    parseContext: ContextualNavigationService.parseContext,
-    hasContext: ContextualNavigationService.hasContext,
-    clearContext: ContextualNavigationService.clearContext,
-    generateBreadcrumbRoute: ContextualNavigationService.generateBreadcrumbRoute
-  };
-}
 
 // ============================================================================
 // EXPORT DEFAULT

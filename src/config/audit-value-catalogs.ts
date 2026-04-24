@@ -82,11 +82,6 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   commercialStatus: { ns: 'properties-enums', path: 'auditCommercialStatus' },
 } as const;
 
-/** All field names that have a registered catalog — cheap membership test. */
-export const AUDIT_CATALOG_FIELDS: ReadonlySet<string> = new Set(
-  Object.keys(AUDIT_VALUE_CATALOGS),
-);
-
 /** Type-safe lookup. Returns `undefined` for fields without a registered catalog. */
 export function getAuditValueCatalog(field: string): AuditCatalogRef | undefined {
   return AUDIT_VALUE_CATALOGS[field];

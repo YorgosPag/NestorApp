@@ -558,13 +558,6 @@ export function getCompressedSchema(): string {
 }
 
 /**
- * Get list of all collection names in the schema map
- */
-export function getSchemaCollectionNames(): string[] {
-  return Object.keys(FIRESTORE_SCHEMA_MAP);
-}
-
-/**
  * Get schema for a specific collection
  */
 export function getCollectionSchemaInfo(collection: string): CollectionSchema | null {

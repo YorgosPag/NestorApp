@@ -114,15 +114,6 @@ export const ENTITY_SINGULAR_LABELS: Record<FileEntityType, string> = {
   company: 'entities.companySingular',
 };
 
-export const CATEGORY_LABELS: Partial<Record<FileCategory | 'other', string>> = {
-  photos: 'files.categories.photos',
-  videos: 'files.categories.videos',
-  documents: 'files.categories.documents',
-  contracts: 'files.categories.contracts',
-  floorplans: 'files.categories.floorplans',
-  other: 'files.categories.other',
-};
-
 // ============================================================================
 // TREE BUILDING FUNCTIONS
 // ============================================================================

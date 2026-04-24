@@ -1,12 +1,5 @@
 // Layout constants for PDF generation
 
-export const MARGINS = {
-  top: 25,
-  right: 20,
-  bottom: 25,
-  left: 20,
-};
-
 export const COLORS = {
   RED: [139, 0, 0] as [number, number, number],
   BLACK: [0, 0, 0] as [number, number, number],

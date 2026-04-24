@@ -148,9 +148,6 @@ export const getRelationshipTypesConfig = (colors?: ReturnType<typeof useSemanti
   } as const;
 };
 
-// Legacy export for backward compatibility
-export const RELATIONSHIP_TYPES_CONFIG = getRelationshipTypesConfig();
-
 /**
  * 🔍 Helper function to get relationship type configuration
  *
@@ -198,19 +195,3 @@ export const getRelationshipDisplayProps = (type: string, colors?: ReturnType<ty
   return config;
 };
 
-/**
- * ✅ Validate if relationship type is allowed for contact type
- *
- * @param relationshipType - The relationship type to validate
- * @param contactType - The contact type to validate against
- * @param colors - Optional semantic colors for dynamic theming
- * @returns True if allowed, false otherwise
- */
-export const isRelationshipTypeAllowed = (
-  relationshipType: string,
-  contactType: ContactType,
-  colors?: ReturnType<typeof useSemanticColors>
-): boolean => {
-  const config = getRelationshipTypeConfig(relationshipType, colors);
-  return config ? config.allowedFor.includes(contactType) : false;
-};
