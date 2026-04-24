@@ -42,41 +42,6 @@ export function getRequiredAdminCompanyName(): string {
 }
 
 // ============================================================================
-// OPTIONAL ENV VARS (with fallbacks or undefined)
-// ============================================================================
-
-/**
- * Get optional admin project name from server-only env var.
- *
- * @returns Project name or undefined if not set
- */
-export function getOptionalAdminProjectName(): string | undefined {
-  return process.env.ADMIN_PROJECT_NAME || undefined;
-}
-
-/**
- * Get optional admin default city from server-only env var.
- *
- * @returns City name or undefined if not set
- */
-export function getOptionalAdminCity(): string | undefined {
-  return process.env.ADMIN_DEFAULT_CITY || undefined;
-}
-
-// ============================================================================
-// ADMIN CONFIG OBJECT (aggregated)
-// ============================================================================
-
-/**
- * Admin configuration interface.
- */
-export interface AdminEnvConfig {
-  companyName: string;
-  projectName?: string;
-  defaultCity?: string;
-}
-
-// ============================================================================
 // COMMUNICATIONS / EMAIL CONFIG (RFC v6 Phase 1)
 // ============================================================================
 

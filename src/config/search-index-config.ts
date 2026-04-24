@@ -238,15 +238,6 @@ export function getSearchIndexConfig(entityType: SearchEntityType): SearchIndexC
 }
 
 /**
- * Get all searchable entity types.
- *
- * @returns Array of all SearchEntityType values
- */
-export function getAllSearchableEntityTypes(): SearchEntityType[] {
-  return Object.values(SEARCH_ENTITY_TYPES);
-}
-
-/**
  * Extract title from document using config.
  *
  * @param doc - Document data
@@ -363,40 +354,3 @@ export function extractStats(
     .filter((stat): stat is NonNullable<typeof stat> => stat !== null);
 }
 
-/**
- * Get all searchable fields for an entity type.
- *
- * @param entityType - The entity type
- * @returns Array of searchable field names
- */
-export function getSearchableFields(entityType: SearchEntityType): string[] {
-  const config = SEARCH_INDEX_CONFIG[entityType];
-  return config?.searchableFields ?? [];
-}
-
-// =============================================================================
-// VALIDATION
-// =============================================================================
-
-/**
- * Validate that a config has all required fields.
- *
- * @param config - Config to validate
- * @returns true if valid, false otherwise
- */
-export function isValidSearchIndexConfig(config: unknown): config is SearchIndexConfig {
-  if (!config || typeof config !== 'object') return false;
-
-  const c = config as Record<string, unknown>;
-
-  return (
-    typeof c.collection === 'string' &&
-    (typeof c.titleField === 'string' || typeof c.titleField === 'function') &&
-    Array.isArray(c.subtitleFields) &&
-    Array.isArray(c.searchableFields) &&
-    typeof c.statusField === 'string' &&
-    (typeof c.audience === 'string' || typeof c.audience === 'function') &&
-    typeof c.requiredPermission === 'string' &&
-    typeof c.routeTemplate === 'string'
-  );
-}

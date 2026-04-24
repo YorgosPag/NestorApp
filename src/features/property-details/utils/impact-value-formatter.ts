@@ -327,19 +327,3 @@ export function formatImpactValue(
   }
 }
 
-export const __testing__ = {
-  parse,
-  isRecord,
-  formatAreas,
-  formatLayout,
-  formatOrientations,
-  formatType,
-  formatCondition,
-  formatEnergy,
-  formatSystemsOverride,
-  formatFinishes,
-  formatFeatureArray,
-  formatCommercialStatus,
-  formatCommercialObject,
-  formatLinkedSpaces,
-};

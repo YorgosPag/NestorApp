@@ -201,14 +201,6 @@ export function getCurrentSecurityPolicy(): EnvironmentSecurityPolicy {
 // ============================================================================
 
 /**
- * Check if current environment allows API access
- * @returns true if API access is allowed
- */
-export function isApiAccessAllowed(): boolean {
-  return getCurrentSecurityPolicy().allowApiAccess;
-}
-
-/**
  * Validate environment για specific operation
  *
  * @param operation - Operation name (για audit logging)

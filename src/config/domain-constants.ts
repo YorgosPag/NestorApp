@@ -851,12 +851,6 @@ export const API_ROUTES = {
   },
 } as const;
 
-// ── Backward-compatible flat aliases (DEPRECATED — migrate to nested form) ──
-/** @deprecated Use API_ROUTES.AUTH.SESSION */
-export const API_ROUTES_AUTH_SESSION = API_ROUTES.AUTH.SESSION;
-/** @deprecated Use API_ROUTES.AUTH.MFA_ENROLL_COMPLETE */
-export const API_ROUTES_AUTH_MFA_ENROLL_COMPLETE = API_ROUTES.AUTH.MFA_ENROLL_COMPLETE;
-
 // ============================================================================
 // AUTH EVENTS (SSoT)
 // ============================================================================
@@ -897,15 +891,6 @@ export const SELECT_CLEAR_VALUE = '__clear__' as const;
  */
 export function isSelectClearValue(value: string | undefined | null): value is typeof SELECT_CLEAR_VALUE {
   return value === SELECT_CLEAR_VALUE;
-}
-
-/**
- * Convert select value for persistence (sentinel → undefined)
- * @param value - Select value (may be sentinel)
- * @returns undefined if sentinel, otherwise original value
- */
-export function selectValueForPersistence(value: string | undefined): string | undefined {
-  return isSelectClearValue(value) ? undefined : value;
 }
 
 /**

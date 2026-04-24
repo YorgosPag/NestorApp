@@ -104,13 +104,6 @@ export function getTaxScaleForYear(year: number): TaxScaleConfig {
   return scale;
 }
 
-/**
- * Λίστα διαθέσιμων ετών
- */
-export function getAvailableTaxYears(): number[] {
-  return Array.from(GREEK_TAX_SCALES.keys()).sort((a, b) => a - b);
-}
-
 // ============================================================================
 // PROFESSIONAL TAX BY ENTITY TYPE (Τέλος Επιτηδεύματος)
 // ============================================================================

@@ -82,28 +82,6 @@ export const VALID_TYPE_CODES = new Set([
 ]);
 
 // =============================================================================
-// REVERSE MAPPING (code → human-readable i18n key)
-// =============================================================================
-
-/** Maps ADR-233 code back to an i18n-friendly label key */
-export const CODE_TO_LABEL_KEY: Record<string, string> = {
-  DI: 'types.apartment',
-  GK: 'types.apartment_1br',
-  ST: 'types.studio',
-  ME: 'types.maisonette',
-  RE: 'types.penthouse',
-  LO: 'types.loft',
-  MO: 'types.detached_house',
-  BI: 'types.villa',
-  KA: 'types.shop',
-  GR: 'types.office',
-  AI: 'types.hall',
-  AP: 'types.storage',
-  PK: 'parking.closedParking',
-  PY: 'parking.openParking',
-};
-
-// =============================================================================
 // BUILDING LETTER EXTRACTION
 // =============================================================================
 
