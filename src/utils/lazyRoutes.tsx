@@ -209,5 +209,4 @@ export const LazyRoutes = {
 } as const;
 
 // Export types for TypeScript support
-export type LazyRouteComponent = ComponentType<Record<string, unknown>>;
 export type LoadingType = 'spinner' | 'dashboard' | 'form' | 'list';
