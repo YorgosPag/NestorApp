@@ -766,20 +766,6 @@ export interface BackupResource {
 }
 
 /**
- * Infrastructure status - EXACT COPY FROM ORIGINAL
- */
-export interface InfrastructureStatusOriginal {
-  name: string;
-  environment: string;
-  status: 'provisioning' | 'running' | 'updating' | 'failed' | 'destroyed';
-  regions: RegionStatusOriginal[];
-  resources: ResourceStatusOriginal[];
-  costs: CostAnalysis;
-  health: HealthStatusOriginal;
-  lastUpdated: number;
-}
-
-/**
  * Region status - EXACT COPY FROM ORIGINAL
  */
 export interface RegionStatusOriginal {
