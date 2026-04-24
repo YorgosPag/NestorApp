@@ -387,19 +387,6 @@ export interface MessageAttachment {
 }
 
 /**
- * Attachment upload request - for outbound message composition
- * @enterprise Used by ReplyComposer when attaching files
- */
-export interface AttachmentUploadRequest {
-  /** The file to upload */
-  file: File;
-  /** Attachment type (auto-detected from MIME if not provided) */
-  type?: AttachmentType;
-  /** Custom filename override */
-  filename?: string;
-}
-
-/**
  * Detect attachment type from MIME type
  * @enterprise Helper function for type discrimination
  */
@@ -413,48 +400,6 @@ export function detectAttachmentType(mimeType: string): AttachmentType {
 // ============================================================================
 // INBOUND NORMALIZATION CONTRACT
 // ============================================================================
-
-/**
- * Normalized inbound message (output from channel adapters)
- * @enterprise All channel adapters MUST normalize to this format
- */
-export interface InboundMessageNormalized {
-  /** Provider event ID (for idempotency) */
-  providerEventId: string;
-
-  /** Provider message ID */
-  providerMessageId: string;
-
-  /** Channel source */
-  channel: ImplementedChannel;
-
-  /** External sender identity */
-  sender: {
-    externalUserId: string;
-    displayName: string;
-    username?: string;
-    providerMetadata?: Record<string, unknown>;
-  };
-
-  /** Recipient (typically our bot/system) */
-  recipient: {
-    externalUserId: string;
-    isBot: boolean;
-  };
-
-  /** Normalized content */
-  content: {
-    text?: string;
-    attachments?: MessageAttachment[];
-  };
-
-  /** Original timestamp from provider */
-  timestamp: Date;
-
-  /** Original raw payload (for debugging, not for business logic) */
-  rawPayload?: unknown;
-}
-
 // ============================================================================
 // TYPE GUARDS
 // ============================================================================
