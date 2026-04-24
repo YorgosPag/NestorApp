@@ -379,15 +379,6 @@ export const GEO_COLORS = {
 
 // Default export για convenience
 export default GEO_COLORS;
-
-/**
- * Type exports για TypeScript integration
- */
-export type GeoColorConfig = typeof GEO_COLORS;
-export type PolygonColorKey = keyof typeof POLYGON_COLORS;
-export type SnapColorKey = keyof typeof AUTOCAD_SNAP_COLORS;
-export type MonitoringColorKey = keyof typeof MONITORING_COLORS;
-
 // ============================================================================
 // DEVELOPMENT NOTES & MIGRATION GUIDE
 // ============================================================================
