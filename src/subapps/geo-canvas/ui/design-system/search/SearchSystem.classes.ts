@@ -7,82 +7,6 @@
  * @module SearchSystem.classes
  */
 
-import React from 'react';
-import { colors } from '../../../../../styles/design-tokens';
-import { GEO_COLORS } from '../../../config/color-config';
-import { searchSystemStyles } from './SearchSystem.styles';
-
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-type StyleObject = React.CSSProperties & Record<string, React.CSSProperties | string | number>;
-
-// ============================================================================
-// STYLE UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Generates dynamic styling for filter states (active/inactive)
- */
-export const getFilterStateStyle = (isActive: boolean): StyleObject => ({
-  backgroundColor: isActive ? colors.primary[500] : GEO_COLORS.TRANSPARENT,
-  color: isActive ? colors.text.inverse : colors.text.primary,
-  border: `1px solid ${isActive ? colors.primary[500] : colors.border.primary}`
-});
-
-/**
- * Generates hover interaction για search result items
- */
-export const getSearchResultHoverHandlers = () => ({
-  onMouseEnter: (e: React.MouseEvent<HTMLElement>) => {
-    e.currentTarget.style.backgroundColor = colors.background.hover;
-  },
-  onMouseLeave: (e: React.MouseEvent<HTMLElement>) => {
-    e.currentTarget.style.backgroundColor = GEO_COLORS.TRANSPARENT;
-  }
-});
-
-/**
- * Generates highlighting για search suggestions
- */
-export const getSuggestionHighlightStyle = (isHighlighted: boolean): StyleObject => ({
-  backgroundColor: isHighlighted ? colors.primary[500] : GEO_COLORS.TRANSPARENT,
-  color: isHighlighted ? colors.text.inverse : colors.text.primary
-});
-
-/**
- * Generates dynamic background for suggestion items
- */
-export const getDynamicSuggestionStyle = (isSelected: boolean): StyleObject => ({
-  ...searchSystemStyles.searchInput.suggestion,
-  backgroundColor: isSelected ? colors.background.secondary : GEO_COLORS.TRANSPARENT
-});
-
-/**
- * Generates dynamic input styling με focus states
- */
-export const getDynamicInputStyle = (focused: boolean): StyleObject => ({
-  ...searchSystemStyles.searchInput.input,
-  borderColor: focused ? colors.primary[500] : colors.border.primary,
-  boxShadow: focused ? `0 0 0 2px ${colors.primary[500]}20` : 'none'
-});
-
-/**
- * Generates dynamic result item styling με cursor states
- */
-export const getDynamicResultItemStyle = (hasClickHandler: boolean): StyleObject => ({
-  ...searchSystemStyles.results.item,
-  cursor: hasClickHandler ? 'pointer' : 'default'
-});
-
-// ============================================================================
-// CSS CLASS BUILDERS (Tailwind utility-first)
-// ============================================================================
-
-/**
- * Tailwind className builders — eliminates style={} violations
- */
 export const searchSystemClasses = {
   searchInput: {
     container: 'relative w-full mb-4',
@@ -134,10 +58,6 @@ export const searchSystemClasses = {
     itemSelected: 'p-2 cursor-pointer border-b border-border last:border-b-0 transition-colors bg-accent text-accent-foreground'
   }
 };
-
-// ============================================================================
-// DYNAMIC CLASSNAME UTILITIES
-// ============================================================================
 
 export const getSearchInputClassName = (focused: boolean): string =>
   focused ? searchSystemClasses.searchInput.inputFocused : searchSystemClasses.searchInput.input;

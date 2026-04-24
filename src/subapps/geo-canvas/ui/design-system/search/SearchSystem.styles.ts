@@ -438,12 +438,6 @@ export type { SearchSystemStylesType, SearchInputStylesType, SearchFilterStylesT
 
 // 🎯 CLASS BUILDERS & UTILITIES — re-exported from SearchSystem.classes (SRP)
 export {
-  getFilterStateStyle,
-  getSearchResultHoverHandlers,
-  getSuggestionHighlightStyle,
-  getDynamicSuggestionStyle,
-  getDynamicInputStyle,
-  getDynamicResultItemStyle,
   searchSystemClasses,
   getSearchInputClassName,
   getSuggestionItemClassName,

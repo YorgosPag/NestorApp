@@ -76,16 +76,6 @@ export function getPreloadableRouteFromHref(href: string): PreloadableRoute | un
   return HREF_TO_PRELOADABLE_ROUTE[href];
 }
 
-/**
- * 🏢 ENTERPRISE: Check if href has a preloadable route
- *
- * @param href - Navigation href to check
- * @returns true if href has a preloadable route
- */
-export function isPreloadableHref(href: string): boolean {
-  return href in HREF_TO_PRELOADABLE_ROUTE;
-}
-
 // Preload a specific route
 export async function preloadRoute(route: PreloadableRoute): Promise<void> {
   try {
@@ -157,16 +147,6 @@ export function preloadOnHover(route: PreloadableRoute) {
   };
 }
 
-// Hook for component-based preloading
-export function useRoutePreload() {
-  return {
-    preloadRoute,
-    preloadRoutes,
-    preloadUserRoutes,
-    preloadOnHover,
-  };
-}
-
 // ============================================================================
 // 🏢 ENTERPRISE ROUTE CONFIGURATION
 // ============================================================================
@@ -193,31 +173,5 @@ export { CRITICAL_ROUTES, ADMIN_ROUTES, IDLE_ROUTES };
 // 🔧 ENTERPRISE UTILITIES
 // ============================================================================
 
-/**
- * 🏢 Get route configuration από database
- */
-export async function getEnterpriseRouteConfig(userRole?: UserRole, tenantId?: string) {
-  return routeConfigService.getRoutesByCategory(userRole, tenantId);
-}
 
-/**
- * 📊 Get routes ordered by priority
- */
-export async function getPrioritizedRoutes(userRole?: UserRole, tenantId?: string) {
-  return routeConfigService.getRoutesByPriority(userRole, tenantId);
-}
-
-/**
- * ⚙️ Update route configuration (admin only)
- */
-export async function updateRouteConfig(configId: string, updates: Record<string, unknown>) {
-  return routeConfigService.updateRouteConfig(configId, updates);
-}
-
-/**
- * 🔄 Invalidate route configuration cache
- */
-export function invalidateRouteCache() {
-  routeConfigService.invalidateCache();
-}
 
