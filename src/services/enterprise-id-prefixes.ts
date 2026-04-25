@@ -126,6 +126,11 @@ export const ENTERPRISE_ID_PREFIXES = {
   EMPLOYMENT_RECORD: 'emprec',
   APPOINTMENT: 'appt',
 
+  // Org Structure (ADR-326)
+  ORG_STRUCTURE: 'org',
+  ORG_DEPARTMENT: 'odep',
+  ORG_MEMBER: 'omem',
+
   // Integrations
   WEBHOOK: 'whk',
 

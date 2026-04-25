@@ -168,6 +168,11 @@ export const generatePOAttachmentId = () => enterpriseIdService.generatePOAttach
 export const generateSavedReportId = () => enterpriseIdService.generateSavedReportId();
 export const generateRecurringPaymentId = () => enterpriseIdService.generateRecurringPaymentId();
 
+// Org Structure (ADR-326)
+export const generateOrgStructureId = () => enterpriseIdService.generateOrgStructureId();
+export const generateOrgDepartmentId = () => enterpriseIdService.generateOrgDepartmentId();
+export const generateOrgMemberId = () => enterpriseIdService.generateOrgMemberId();
+
 // Optimistic & Temporary
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
 export const generateTempId = () => enterpriseIdService.generateTempId();

@@ -46,7 +46,9 @@ export {
   generateLearnedPatternId, generateConstructionPhaseId, generateConstructionTaskId,
   generateConstructionBaselineId, generateConstructionResourceAssignmentId,
   generateAttendanceQrTokenId, generateAttendanceEventId,
-  generateEmploymentRecordId, generateAppointmentId, generateFolderId,
+  generateEmploymentRecordId, generateAppointmentId,
+  generateOrgStructureId, generateOrgDepartmentId, generateOrgMemberId,
+  generateFolderId,
   generateCommentId, generateApprovalId, generateBankAccountId,
   generateDebtMaturityId, generateBudgetVarianceId, generateQueryStrategyDocId,
   generateChatHistoryDocId, generateOwnershipTableId, generateOwnershipRevisionId,
@@ -237,6 +239,11 @@ export class EnterpriseIdService {
   // HR & Employment
   generateEmploymentRecordId(): string { return this.generateId(P.EMPLOYMENT_RECORD).id; }
   generateAppointmentId(): string { return this.generateId(P.APPOINTMENT).id; }
+
+  // Org Structure (ADR-326)
+  generateOrgStructureId(): string { return this.generateId(P.ORG_STRUCTURE).id; }
+  generateOrgDepartmentId(): string { return this.generateId(P.ORG_DEPARTMENT).id; }
+  generateOrgMemberId(): string { return this.generateId(P.ORG_MEMBER).id; }
 
   // Integrations & AI
   generateWebhookId(): string { return this.generateId(P.WEBHOOK).id; }

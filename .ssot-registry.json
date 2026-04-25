@@ -2389,6 +2389,27 @@
         "src/components/navigation/core/types.ts"
       ],
       "tier": 3
+    },
+
+    "_comment_adr326": "=== TIER 2 — ADR-326 (2026-04-25): Tenant Org Structure & Departmental Routing SSoT ===",
+
+    "org-structure": {
+      "ssotFile": "src/types/org/org-structure.ts",
+      "configFile": "src/config/department-codes.ts",
+      "resolverFile": "src/services/org-structure/org-routing-resolver.ts",
+      "description": "Tenant org structure + departmental email routing SSoT (ADR-326). Department codes must use DEPARTMENT_CODES constants. Email routing must go through resolveEmailFromOrgStructure/resolveTenantNotificationEmail. ACCOUNTING_NOTIFY_EMAIL env var pattern is superseded.",
+      "forbiddenPatterns": [
+        "process\\.env\\.ACCOUNTING_NOTIFY_EMAIL",
+        "process\\.env\\.SALES_NOTIFY_EMAIL",
+        "process\\.env\\.LEGAL_NOTIFY_EMAIL"
+      ],
+      "allowlist": [
+        "src/types/org/",
+        "src/config/department-codes.ts",
+        "src/services/org-structure/",
+        "src/config/notification-events.ts"
+      ],
+      "tier": 2
     }
   }
 }

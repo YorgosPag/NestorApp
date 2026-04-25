@@ -19,6 +19,7 @@ import type {
   ProcurementNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
 import type { Channel, Severity } from '@/types/notification';
+import { DEPARTMENT_CODES, type DepartmentCode } from '@/config/department-codes';
 
 // ============================================================================
 // CHANNEL CONSTANTS
@@ -350,4 +351,39 @@ export const FIREBASE_ERROR_CODES = {
   /** Firebase Admin SDK string code */
   ALREADY_EXISTS_STRING: 'already-exists',
 } as const;
+
+// ============================================================================
+// ORG ROUTING EVENTS — ADR-326 (departmental email routing)
+// Distinct from NOTIFICATION_EVENT_TYPES (per-user prefs): these are
+// tenant-level routing events that map to departments, not per-user toggles.
+// ============================================================================
+
+export const NOTIFICATION_EVENTS = {
+  RESERVATION_CREATED:     'reservation.created',
+  RESERVATION_CANCELLED:   'reservation.cancelled',
+  SALE_DEPOSIT_INVOICE:    'sale.deposit_invoice',
+  SALE_FINAL_INVOICE:      'sale.final_invoice',
+  SALE_CREDIT_INVOICE:     'sale.credit_invoice',
+  PROFESSIONAL_ASSIGNED:   'professional.assigned',
+  PROJECT_STUDY_DELIVERED: 'project.study_delivered',
+  PROCUREMENT_PO_APPROVED: 'procurement.po_approved',
+  HR_ATTENDANCE_ANOMALY:   'hr.attendance_anomaly',
+  CONTRACT_READY_TO_SIGN:  'contract.ready_to_sign',
+} as const;
+
+export type NotificationEventCode = typeof NOTIFICATION_EVENTS[keyof typeof NOTIFICATION_EVENTS];
+
+/** Default department per event — used when tenant has no NotificationRoutingRule for the event. */
+export const DEFAULT_EVENT_TO_DEPARTMENT: Record<NotificationEventCode, DepartmentCode> = {
+  [NOTIFICATION_EVENTS.RESERVATION_CREATED]:     DEPARTMENT_CODES.ACCOUNTING,
+  [NOTIFICATION_EVENTS.RESERVATION_CANCELLED]:   DEPARTMENT_CODES.ACCOUNTING,
+  [NOTIFICATION_EVENTS.SALE_DEPOSIT_INVOICE]:    DEPARTMENT_CODES.ACCOUNTING,
+  [NOTIFICATION_EVENTS.SALE_FINAL_INVOICE]:      DEPARTMENT_CODES.ACCOUNTING,
+  [NOTIFICATION_EVENTS.SALE_CREDIT_INVOICE]:     DEPARTMENT_CODES.ACCOUNTING,
+  [NOTIFICATION_EVENTS.PROFESSIONAL_ASSIGNED]:   DEPARTMENT_CODES.LEGAL,
+  [NOTIFICATION_EVENTS.PROJECT_STUDY_DELIVERED]: DEPARTMENT_CODES.ARCHITECTURE_STUDIES,
+  [NOTIFICATION_EVENTS.PROCUREMENT_PO_APPROVED]: DEPARTMENT_CODES.PROCUREMENT,
+  [NOTIFICATION_EVENTS.HR_ATTENDANCE_ANOMALY]:   DEPARTMENT_CODES.HR,
+  [NOTIFICATION_EVENTS.CONTRACT_READY_TO_SIGN]:  DEPARTMENT_CODES.LEGAL,
+};
 

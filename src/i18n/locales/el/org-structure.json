@@ -1,0 +1,87 @@
+{
+  "orgStructure": {
+    "title": "Δομή Οργανισμού",
+    "subtitle": "Τμήματα και υπεύθυνοι της επιχείρησης",
+    "noDepartments": "Δεν έχουν οριστεί τμήματα",
+    "addDepartment": "Προσθήκη τμήματος",
+    "editDepartment": "Επεξεργασία τμήματος",
+    "deleteDepartment": "Διαγραφή τμήματος",
+    "addMember": "Προσθήκη μέλους",
+    "editMember": "Επεξεργασία μέλους",
+    "deleteMember": "Διαγραφή μέλους",
+    "noMembers": "Δεν έχουν οριστεί μέλη",
+    "treeView": "Δενδρική προβολή",
+    "tableView": "Προβολή πίνακα",
+    "head": "Επικεφαλής",
+    "reportsTo": "Αναφέρεται σε",
+    "active": "Ενεργό",
+    "archived": "Αρχειοθετημένο"
+  },
+  "departments": {
+    "accounting": "Λογιστήριο",
+    "engineering": "Μηχανικοί",
+    "architecture_studies": "Μελέτες Αρχιτεκτονικές",
+    "construction": "Κατασκευή / Εργοτάξιο",
+    "sales": "Πωλήσεις",
+    "legal": "Νομικό",
+    "hr": "Ανθρώπινο Δυναμικό",
+    "it": "Πληροφορική",
+    "procurement": "Προμήθειες",
+    "operations": "Λειτουργίες",
+    "management": "Διοίκηση",
+    "customer_service": "Εξυπηρέτηση Πελατών",
+    "custom": "Τμήμα (προσαρμοσμένο)"
+  },
+  "roles": {
+    "head": "Επικεφαλής Τμήματος",
+    "manager": "Προϊστάμενος",
+    "senior": "Senior Εργαζόμενος",
+    "employee": "Εργαζόμενος",
+    "intern": "Ασκούμενος",
+    "custom": "Προσαρμοσμένος Ρόλος"
+  },
+  "memberMode": {
+    "linked": "Επιλογή από επαφές",
+    "created": "Δημιουργία νέας επαφής",
+    "plain": "Απλό όνομα",
+    "linkedHint": "Σύνδεση με υπάρχουσα επαφή CRM",
+    "createdHint": "Δημιουργεί νέα επαφή και την συνδέει",
+    "plainHint": "Απλό όνομα ή email χωρίς επαφή"
+  },
+  "routing": {
+    "title": "Routing Ειδοποιήσεων",
+    "event": "Γεγονός",
+    "targetDepartment": "Τμήμα προορισμού",
+    "overrideEmail": "Override email",
+    "noRouting": "Δεν έχουν οριστεί κανόνες routing",
+    "addRule": "Προσθήκη κανόνα",
+    "events": {
+      "reservation.created": "Δημιουργία Κράτησης",
+      "reservation.cancelled": "Ακύρωση Κράτησης",
+      "sale.deposit_invoice": "Τιμολόγιο Προκαταβολής",
+      "sale.final_invoice": "Τελικό Τιμολόγιο",
+      "sale.credit_invoice": "Πιστωτικό Τιμολόγιο",
+      "professional.assigned": "Ανάθεση Επαγγελματία",
+      "project.study_delivered": "Παράδοση Μελέτης",
+      "procurement.po_approved": "Έγκριση Εντολής Αγοράς",
+      "hr.attendance_anomaly": "Ανωμαλία Παρουσίας",
+      "contract.ready_to_sign": "Σύμβαση Έτοιμη για Υπογραφή"
+    }
+  },
+  "errors": {
+    "noHead": "Δεν έχει οριστεί επικεφαλής τμήματος",
+    "multipleHeads": "Μόνο ένας επικεφαλής επιτρέπεται ανά τμήμα",
+    "cycle": "Εντοπίστηκε κυκλική αναφορά στην ιεραρχία",
+    "orphan": "Υπάρχουν μέλη χωρίς σύνδεση στην ιεραρχία",
+    "depthExceeded": "Η ιεραρχία υπερβαίνει το μέγιστο επιτρεπόμενο βάθος (10 επίπεδα)",
+    "canonicalDuplicate": "Υπάρχει ήδη τμήμα με αυτό τον κωδικό",
+    "selfReference": "Ένα μέλος δεν μπορεί να αναφέρεται στον εαυτό του",
+    "invalidReportsTo": "Ο προϊστάμενος δεν ανήκει στο ίδιο τμήμα"
+  },
+  "importBanner": {
+    "title": "Εισαγωγή από Σχέσεις",
+    "message": "Βρέθηκαν {count} εργασιακές σχέσεις. Εισαγωγή ως μέλη τμημάτων;",
+    "confirm": "Ναι, εισαγωγή",
+    "dismiss": "Όχι, ξεκινώ από το μηδέν"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "orgStructure": {
+    "title": "Organisation Structure",
+    "subtitle": "Departments and responsible persons",
+    "noDepartments": "No departments defined",
+    "addDepartment": "Add department",
+    "editDepartment": "Edit department",
+    "deleteDepartment": "Delete department",
+    "addMember": "Add member",
+    "editMember": "Edit member",
+    "deleteMember": "Delete member",
+    "noMembers": "No members defined",
+    "treeView": "Tree view",
+    "tableView": "Table view",
+    "head": "Head",
+    "reportsTo": "Reports to",
+    "active": "Active",
+    "archived": "Archived"
+  },
+  "departments": {
+    "accounting": "Accounting",
+    "engineering": "Engineering",
+    "architecture_studies": "Architectural Studies",
+    "construction": "Construction / Site",
+    "sales": "Sales",
+    "legal": "Legal",
+    "hr": "Human Resources",
+    "it": "IT",
+    "procurement": "Procurement",
+    "operations": "Operations",
+    "management": "Management",
+    "customer_service": "Customer Service",
+    "custom": "Department (custom)"
+  },
+  "roles": {
+    "head": "Department Head",
+    "manager": "Manager",
+    "senior": "Senior Employee",
+    "employee": "Employee",
+    "intern": "Intern",
+    "custom": "Custom Role"
+  },
+  "memberMode": {
+    "linked": "Select from contacts",
+    "created": "Create new contact",
+    "plain": "Plain name",
+    "linkedHint": "Link to an existing CRM contact",
+    "createdHint": "Creates a new contact and links it",
+    "plainHint": "Plain name or email without a contact record"
+  },
+  "routing": {
+    "title": "Notification Routing",
+    "event": "Event",
+    "targetDepartment": "Target department",
+    "overrideEmail": "Override email",
+    "noRouting": "No routing rules defined",
+    "addRule": "Add rule",
+    "events": {
+      "reservation.created": "Reservation Created",
+      "reservation.cancelled": "Reservation Cancelled",
+      "sale.deposit_invoice": "Deposit Invoice",
+      "sale.final_invoice": "Final Invoice",
+      "sale.credit_invoice": "Credit Invoice",
+      "professional.assigned": "Professional Assigned",
+      "project.study_delivered": "Study Delivered",
+      "procurement.po_approved": "Purchase Order Approved",
+      "hr.attendance_anomaly": "Attendance Anomaly",
+      "contract.ready_to_sign": "Contract Ready to Sign"
+    }
+  },
+  "errors": {
+    "noHead": "No department head defined",
+    "multipleHeads": "Only one head is allowed per department",
+    "cycle": "Circular reference detected in hierarchy",
+    "orphan": "Some members are not connected to the hierarchy",
+    "depthExceeded": "Hierarchy exceeds maximum depth (10 levels)",
+    "canonicalDuplicate": "A department with this code already exists",
+    "selfReference": "A member cannot report to themselves",
+    "invalidReportsTo": "The manager does not belong to the same department"
+  },
+  "importBanner": {
+    "title": "Import from Relationships",
+    "message": "Found {count} employment relationships. Import as department members?",
+    "confirm": "Yes, import",
+    "dismiss": "No, start from scratch"
+  }
+}
