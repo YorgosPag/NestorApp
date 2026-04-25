@@ -11,11 +11,12 @@ import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sende
 import { wrapInBrandedTemplate, escapeHtml } from '@/services/email-templates';
 import { BRAND } from '@/services/email-templates';
 import { getErrorMessage } from '@/lib/error-utils';
-import type { SalesAccountingEvent, SalesAccountingResult } from './types';
+import type { SalesAccountingEvent, SalesAccountingResult, SalesAccountingEventType } from './types';
+import { NOTIFICATION_EVENTS, type NotificationEventCode } from '@/config/notification-events';
 import {
   type AccountingNotification,
   VAT_DIVISOR,
-  getAccountingEmail,
+  resolveAccountingEmail,
   getAppBaseUrl,
   htmlInfoRow,
   htmlTotalRow,
@@ -26,6 +27,17 @@ import {
   formatDate,
   formatPaymentMethod,
 } from './notification-helpers';
+
+// ============================================================================
+// EVENT CODE MAPPING (ADR-326 Phase 3)
+// ============================================================================
+
+const SALES_EVENT_TO_NOTIFICATION_CODE = {
+  deposit_invoice:    NOTIFICATION_EVENTS.SALE_DEPOSIT_INVOICE,
+  final_sale_invoice: NOTIFICATION_EVENTS.SALE_FINAL_INVOICE,
+  credit_invoice:     NOTIFICATION_EVENTS.SALE_CREDIT_INVOICE,
+  reservation_notify: NOTIFICATION_EVENTS.RESERVATION_CREATED,
+} as const satisfies Record<SalesAccountingEventType, NotificationEventCode>;
 
 // ============================================================================
 // NOTIFICATION BUILDERS
@@ -273,24 +285,26 @@ function buildReservationNotifyNotification(
  * Στέλνει email ειδοποίηση στο λογιστήριο μετά από επιτυχή δημιουργία τιμολογίου.
  *
  * Fire-and-forget: αν αποτύχει, δεν επηρεάζει τη ροή πώλησης.
- * Αν δεν υπάρχει ACCOUNTING_NOTIFY_EMAIL, δεν στέλνεται τίποτα.
+ * Recipient resolved via OrgStructure (ADR-326 Phase 3). No env var fallback (G1).
  */
 export async function notifyAccountingOffice(
   event: SalesAccountingEvent,
-  result: SalesAccountingResult | null
+  result: SalesAccountingResult | null,
+  companyId: string,
 ): Promise<void> {
   if (result !== null && !result.success) {
-    console.log('[ADR-198 Notify] Skipping — invoice creation failed');
+    console.log('[ADR-326 Notify] Skipping — invoice creation failed');
     return;
   }
 
-  const accountingEmail = getAccountingEmail();
-  if (!accountingEmail) {
-    console.log('[ADR-198 Notify] Skipping — ACCOUNTING_NOTIFY_EMAIL not set');
+  const eventCode = SALES_EVENT_TO_NOTIFICATION_CODE[event.eventType];
+  const resolved = await resolveAccountingEmail(companyId, eventCode);
+  if (!resolved) {
+    console.warn('[ADR-326 Notify] Skipping — no email resolved from orgStructure', { companyId, eventCode });
     return;
   }
 
-  console.log(`[ADR-198 Notify] Sending to ${accountingEmail} for ${event.eventType}`);
+  console.log('[ADR-326 Notify] Sending', { to: resolved.email, source: resolved.source, eventCode });
 
   try {
     let notification: AccountingNotification;
@@ -311,19 +325,19 @@ export async function notifyAccountingOffice(
     }
 
     const mailResult = await sendReplyViaMailgun({
-      to: accountingEmail,
+      to: resolved.email,
       subject: notification.subject,
       textBody: notification.text,
       htmlBody: notification.html,
     });
 
     if (mailResult.success) {
-      console.log(`[ADR-198 Notify] Email sent successfully — messageId: ${mailResult.messageId}`);
+      console.log('[ADR-326 Notify] Email sent', { messageId: mailResult.messageId, source: resolved.source });
     } else {
-      console.warn(`[ADR-198 Notify] Mailgun returned error: ${mailResult.error}`);
+      console.warn('[ADR-326 Notify] Mailgun error', { error: mailResult.error, source: resolved.source });
     }
   } catch (err) {
     const msg = getErrorMessage(err);
-    console.warn(`[ADR-198 Notify] Failed to send email: ${msg}`);
+    console.warn('[ADR-326 Notify] Failed to send email', { error: msg, companyId, eventCode });
   }
 }

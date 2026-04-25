@@ -10,6 +10,9 @@ import 'server-only';
 
 import { GREEK_VAT_RATES } from '@/subapps/accounting/services/config/vat-config';
 import { BRAND, escapeHtml } from '@/services/email-templates';
+import { resolveTenantNotificationEmail } from '@/services/org-structure/org-routing-resolver';
+import type { ResolveResult } from '@/services/org-structure/org-routing-resolver';
+import type { NotificationEventCode } from '@/config/notification-events';
 import type { SalesAccountingEvent } from './types';
 
 // ============================================================================
@@ -25,17 +28,20 @@ export const VAT_DIVISOR = 1 + STANDARD_VAT_RATE / 100;
 // CONFIGURATION
 // ============================================================================
 
-/**
- * Email λογιστηρίου — διαβάζεται από env var ή fallback σε null
- * Αν δεν υπάρχει, η ειδοποίηση δεν στέλνεται (graceful skip)
- */
-export function getAccountingEmail(): string | null {
-  return process.env.ACCOUNTING_NOTIFY_EMAIL?.trim() || null;
-}
-
 /** Base URL της εφαρμογής */
 export function getAppBaseUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://nestor-app.vercel.app';
+}
+
+/**
+ * Resolves the accounting email for a tenant notification event via OrgStructure (ADR-326 Phase 3).
+ * Returns null when orgStructure is absent or no email resolves — caller skips email (G1, no env fallback).
+ */
+export async function resolveAccountingEmail(
+  companyId: string,
+  event: NotificationEventCode,
+): Promise<ResolveResult | null> {
+  return resolveTenantNotificationEmail(companyId, event);
 }
 
 // ============================================================================
@@ -118,9 +124,10 @@ export function formatEuro(amount: number): string {
 }
 
 
-// Aliased re-export — preserves back-compat `formatDate` binding for consumer
-// `accounting-office-notify.ts` (UI-strings ratchet zero-tolerance prevents
-// consumer touch: Greek hardcoded preesistente in email HTML templates).
+function formatNotificationDate(date: Date): string {
+  return date.toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
 export { formatNotificationDate as formatDate };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {

@@ -58,9 +58,11 @@ import {
  */
 export class SalesAccountingBridge {
   private readonly services;
+  private readonly companyId: string;
 
   constructor(tenant: { companyId: string; userId: string }) {
     this.services = createAccountingServices(tenant);
+    this.companyId = tenant.companyId;
   }
 
   /**
@@ -112,7 +114,7 @@ export class SalesAccountingBridge {
     }
 
     // 2. Email notification to accounting office (fire-and-forget)
-    notifyAccountingOffice(event, result).catch(() => { /* silent */ });
+    notifyAccountingOffice(event, result, this.companyId).catch(() => { /* silent */ });
 
     // 3. Email notification to buyer on sale (fire-and-forget)
     if (event.eventType === 'final_sale_invoice' && event.buyerContactId) {
@@ -148,7 +150,7 @@ export class SalesAccountingBridge {
       }
     }
 
-    notifyAccountingOffice(event, null).catch(() => { /* silent */ });
+    notifyAccountingOffice(event, null, this.companyId).catch(() => { /* silent */ });
 
     return {
       success: true,
