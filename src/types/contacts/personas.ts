@@ -1,4 +1,5 @@
 import { nowISO } from '@/lib/date-local';
+import type { TradeCode } from '@/subapps/procurement/types/trade';
 
 /**
  * ============================================================================
@@ -203,6 +204,8 @@ export interface SupplierPersona extends BasePersonaData {
   supplierCategory: SupplierCategory | null;
   /** Όροι πληρωμής (ημέρες) */
   paymentTermsDays: number | null;
+  /** Ειδικότητες trades — ADR-327 §9.3. Backward-compatible: legacy supplierCategory παραμένει */
+  tradeSpecialties: TradeCode[];
 }
 
 /**

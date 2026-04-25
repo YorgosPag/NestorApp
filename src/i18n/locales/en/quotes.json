@@ -1,0 +1,139 @@
+{
+  "quotes": {
+    "title": "Quotes",
+    "titleSingle": "Quote",
+    "create": "New Quote",
+    "edit": "Edit Quote",
+    "list": "Quote List",
+    "empty": "No quotes found",
+    "number": "Number",
+    "vendor": "Vendor",
+    "trade": "Trade",
+    "source": "Source",
+    "status": "Status",
+    "total": "Total",
+    "validUntil": "Valid Until",
+    "paymentTerms": "Payment Terms",
+    "deliveryTerms": "Delivery Terms",
+    "warranty": "Warranty",
+    "notes": "Notes",
+    "attachments": "Attachments",
+    "lines": "Quote Lines",
+    "overrideReason": "Override Reason",
+    "overrideReasonPlaceholder": "Enter your reason for choosing this vendor despite risk flags...",
+    "confidence": "AI Confidence",
+    "statuses": {
+      "draft": "Draft",
+      "sent_to_vendor": "Sent to Vendor",
+      "submitted": "Submitted",
+      "under_review": "Under Review",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "expired": "Expired",
+      "archived": "Archived"
+    },
+    "sources": {
+      "manual": "Manual",
+      "scan": "Scan",
+      "portal": "Vendor Portal",
+      "email_inbox": "Email"
+    },
+    "actions": {
+      "accept": "Accept",
+      "reject": "Reject",
+      "archive": "Archive",
+      "addLine": "Add Line",
+      "removeLine": "Remove"
+    },
+    "errors": {
+      "loadFailed": "Failed to load quotes",
+      "createFailed": "Failed to create quote",
+      "updateFailed": "Failed to update quote",
+      "invalidTransition": "Invalid status transition"
+    }
+  },
+  "rfqs": {
+    "title": "Requests for Quotation (RFQ)",
+    "titleSingle": "Request for Quotation",
+    "create": "New RFQ",
+    "edit": "Edit RFQ",
+    "list": "RFQ List",
+    "empty": "No RFQs found",
+    "titleField": "Title",
+    "description": "Description",
+    "deadline": "Deadline",
+    "awardMode": "Award Mode",
+    "awardModes": {
+      "whole_package": "Whole Package (1 vendor)",
+      "cherry_pick": "Cherry-pick per line"
+    },
+    "reminderTemplate": "Reminders",
+    "reminderTemplates": {
+      "aggressive": "Aggressive",
+      "standard": "Standard",
+      "soft": "Soft",
+      "off": "Off"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "active": "Active",
+      "closed": "Closed",
+      "archived": "Archived"
+    },
+    "actions": {
+      "activate": "Send to Vendors",
+      "close": "Close",
+      "archive": "Archive",
+      "declareWinner": "Declare Winner"
+    },
+    "errors": {
+      "loadFailed": "Failed to load RFQs",
+      "createFailed": "Failed to create RFQ"
+    }
+  },
+  "trades": {
+    "title": "Trades",
+    "groups": {
+      "structure": "Structure",
+      "frames": "Frames & Openings",
+      "networks": "Networks / MEP",
+      "claddings": "Claddings & Coverings",
+      "finishing": "Finishing",
+      "external": "External Works",
+      "special": "Special Works",
+      "services": "Services / Logistics"
+    },
+    "concrete": "Concrete",
+    "masonry": "Masonry",
+    "formwork": "Formwork",
+    "reinforcement": "Reinforcement Steel",
+    "aluminum_frames": "Aluminum Frames",
+    "interior_frames": "Interior Doors & Frames",
+    "glazing": "Glazing",
+    "rolling_shutters": "Rolling Shutters",
+    "plumbing": "Plumbing",
+    "electrical": "Electrical",
+    "hvac": "Mechanical / HVAC",
+    "gas": "Gas Installation",
+    "fire_protection": "Fire Protection",
+    "data_telecoms": "Data & Telecoms",
+    "tiling": "Tiling",
+    "marble": "Marble / Stone",
+    "insulation": "Insulation",
+    "waterproofing": "Waterproofing",
+    "gypsum": "Drywall / Ceilings",
+    "painting": "Painting",
+    "plastering": "Plastering",
+    "woodwork": "Woodwork",
+    "flooring_wood": "Wood Flooring",
+    "roofing": "Roofing",
+    "landscaping": "Landscaping",
+    "facade": "Facade / ETICS",
+    "elevator": "Elevator",
+    "prefab": "Prefab / Metal Structures",
+    "pool": "Pool",
+    "materials_general": "General Materials",
+    "equipment_rental": "Equipment Rental",
+    "demolition": "Demolition / Excavation"
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "quotes": {
+    "title": "Προσφορές",
+    "titleSingle": "Προσφορά",
+    "create": "Νέα Προσφορά",
+    "edit": "Επεξεργασία Προσφοράς",
+    "list": "Λίστα Προσφορών",
+    "empty": "Δεν υπάρχουν προσφορές",
+    "number": "Αριθμός",
+    "vendor": "Προμηθευτής",
+    "trade": "Ειδικότητα",
+    "source": "Πηγή",
+    "status": "Κατάσταση",
+    "total": "Σύνολο",
+    "validUntil": "Ισχύει έως",
+    "paymentTerms": "Όροι Πληρωμής",
+    "deliveryTerms": "Όροι Παράδοσης",
+    "warranty": "Εγγύηση",
+    "notes": "Σημειώσεις",
+    "attachments": "Συνημμένα",
+    "lines": "Γραμμές Προσφοράς",
+    "overrideReason": "Αιτιολόγηση Επιλογής",
+    "overrideReasonPlaceholder": "Γράψτε τον λόγο επιλογής παρά τις επισημάνσεις κινδύνου...",
+    "confidence": "Αξιοπιστία AI",
+    "statuses": {
+      "draft": "Πρόχειρο",
+      "sent_to_vendor": "Απεστάλη",
+      "submitted": "Υποβλήθηκε",
+      "under_review": "Υπό Εξέταση",
+      "accepted": "Εγκρίθηκε",
+      "rejected": "Απορρίφθηκε",
+      "expired": "Έληξε",
+      "archived": "Αρχείο"
+    },
+    "sources": {
+      "manual": "Χειροκίνητη",
+      "scan": "Σάρωση",
+      "portal": "Portal Προμηθευτή",
+      "email_inbox": "Email"
+    },
+    "actions": {
+      "accept": "Αποδοχή",
+      "reject": "Απόρριψη",
+      "archive": "Αρχειοθέτηση",
+      "addLine": "Προσθήκη Γραμμής",
+      "removeLine": "Αφαίρεση"
+    },
+    "errors": {
+      "loadFailed": "Αποτυχία φόρτωσης προσφορών",
+      "createFailed": "Αποτυχία δημιουργίας προσφοράς",
+      "updateFailed": "Αποτυχία ενημέρωσης προσφοράς",
+      "invalidTransition": "Μη επιτρεπτή αλλαγή κατάστασης"
+    }
+  },
+  "rfqs": {
+    "title": "Αιτήματα Προσφορών (RFQ)",
+    "titleSingle": "Αίτημα Προσφοράς",
+    "create": "Νέο RFQ",
+    "edit": "Επεξεργασία RFQ",
+    "list": "Λίστα RFQ",
+    "empty": "Δεν υπάρχουν αιτήματα",
+    "titleField": "Τίτλος",
+    "description": "Περιγραφή",
+    "deadline": "Προθεσμία",
+    "awardMode": "Τρόπος Ανάθεσης",
+    "awardModes": {
+      "whole_package": "Πακέτο (1 προμηθευτής)",
+      "cherry_pick": "Επιλογή ανά γραμμή"
+    },
+    "reminderTemplate": "Υπενθυμίσεις",
+    "reminderTemplates": {
+      "aggressive": "Εντατικές",
+      "standard": "Τυπικές",
+      "soft": "Ήπιες",
+      "off": "Απενεργοποιημένες"
+    },
+    "statuses": {
+      "draft": "Πρόχειρο",
+      "active": "Ενεργό",
+      "closed": "Κλειστό",
+      "archived": "Αρχείο"
+    },
+    "actions": {
+      "activate": "Αποστολή σε Vendors",
+      "close": "Κλείσιμο",
+      "archive": "Αρχειοθέτηση",
+      "declareWinner": "Ανάδειξη Νικητή"
+    },
+    "errors": {
+      "loadFailed": "Αποτυχία φόρτωσης αιτημάτων",
+      "createFailed": "Αποτυχία δημιουργίας αιτήματος"
+    }
+  },
+  "trades": {
+    "title": "Ειδικότητες",
+    "groups": {
+      "structure": "Σκελετός",
+      "frames": "Κουφώματα",
+      "networks": "Δίκτυα (Η/Μ)",
+      "claddings": "Επενδύσεις",
+      "finishing": "Φινίρισμα",
+      "external": "Εξωτερικά",
+      "special": "Ειδικές Εγκαταστάσεις",
+      "services": "Υπηρεσίες / Logistics"
+    },
+    "concrete": "Μπετόν / Μπετατζής",
+    "masonry": "Τοιχοποιία / Κτίστης",
+    "formwork": "Ξυλότυπος",
+    "reinforcement": "Σιδεράς / Σιδηροπλέγματα",
+    "aluminum_frames": "Αλουμίνια / Κουφώματα Εξωτερικά",
+    "interior_frames": "Εσωτερικά Κουφώματα / Πόρτες",
+    "glazing": "Τζαμαδόρος / Υαλοπίνακες",
+    "rolling_shutters": "Ρολά / Σήτες",
+    "plumbing": "Υδραυλικά",
+    "electrical": "Ηλεκτρολογικά",
+    "hvac": "Μηχανολογικά / HVAC",
+    "gas": "Φυσικό Αέριο",
+    "fire_protection": "Πυρόσβεση / Πυρανίχνευση",
+    "data_telecoms": "Δίκτυα Δεδομένων",
+    "tiling": "Πλακάκια / Κεραμικά",
+    "marble": "Μάρμαρα / Φυσικός Λίθος",
+    "insulation": "Μονώσεις",
+    "waterproofing": "Στεγανοποίηση / Ασφαλτικά",
+    "gypsum": "Γυψοκαρτές / Οροφές",
+    "painting": "Ελαιοχρωματισμοί",
+    "plastering": "Σοβατίσματα",
+    "woodwork": "Ξυλουργικά / Έπιπλα",
+    "flooring_wood": "Ξύλινα Δάπεδα / Parquet",
+    "roofing": "Στέγη / Κεραμοσκεπή",
+    "landscaping": "Διαμόρφωση Εξωτερικών",
+    "facade": "Πρόσοψη / ETICS",
+    "elevator": "Ανελκυστήρας",
+    "prefab": "Προκατασκευή / Μεταλλικές Κατ.",
+    "pool": "Πισίνα",
+    "materials_general": "Υλικά (Γενικά)",
+    "equipment_rental": "Ενοικίαση Εξοπλισμού",
+    "demolition": "Κατεδάφιση / Εκσκαφή"
+  }
+}

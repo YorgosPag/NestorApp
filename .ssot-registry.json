@@ -2410,6 +2410,81 @@
         "src/config/notification-events.ts"
       ],
       "tier": 2
+    },
+
+    "_comment_adr327": "=== ADR-327 (2026-04-25): Quote Management & Comparison System SSoT ===",
+
+    "quote-entity": {
+      "ssotFile": "src/subapps/procurement/types/quote.ts",
+      "serviceFile": "src/subapps/procurement/services/quote-service.ts",
+      "description": "Quote entity + FSM SSoT (ADR-327). All quote CRUD goes through quote-service.ts. FORBIDDEN: addDoc() on quotes collection, inline status transitions, direct Firestore writes from API routes.",
+      "forbiddenPatterns": [
+        "collection.*quotes.*addDoc",
+        "collection.*quotes.*add("
+      ],
+      "allowlist": [
+        "src/subapps/procurement/types/quote.ts",
+        "src/subapps/procurement/services/quote-service.ts",
+        "src/subapps/procurement/services/quote-counters.ts",
+        "src/app/api/quotes/"
+      ],
+      "tier": 2
+    },
+
+    "rfq-entity": {
+      "ssotFile": "src/subapps/procurement/types/rfq.ts",
+      "serviceFile": "src/subapps/procurement/services/rfq-service.ts",
+      "description": "RFQ entity + lifecycle SSoT (ADR-327). All RFQ CRUD goes through rfq-service.ts. FORBIDDEN: direct Firestore writes from API routes.",
+      "forbiddenPatterns": [
+        "collection.*rfqs.*addDoc",
+        "collection.*rfqs.*add("
+      ],
+      "allowlist": [
+        "src/subapps/procurement/types/rfq.ts",
+        "src/subapps/procurement/services/rfq-service.ts",
+        "src/app/api/rfqs/"
+      ],
+      "tier": 2
+    },
+
+    "trade-taxonomy": {
+      "ssotFile": "src/subapps/procurement/data/trades.ts",
+      "typeFile": "src/subapps/procurement/types/trade.ts",
+      "registryFile": "src/subapps/procurement/services/trade-registry.ts",
+      "description": "Trade taxonomy SSoT (ADR-327 §9). 32 trades / 8 groups. FORBIDDEN: hardcoded trade labels in components, inline trade lists, parallel trade enums. Use TRADE_CODES or TRADE_SEED_DATA.",
+      "forbiddenPatterns": [
+        "Μπετατζής",
+        "Ελαιοχρωματ"
+      ],
+      "allowlist": [
+        "src/subapps/procurement/data/trades.ts",
+        "src/subapps/procurement/types/trade.ts",
+        "src/subapps/procurement/services/trade-registry.ts",
+        "src/i18n/locales/"
+      ],
+      "tier": 2
+    },
+
+    "vendor-portal-token-stub": {
+      "ssotFile": "src/subapps/procurement/types/vendor-invite.ts",
+      "description": "Vendor invite token + delivery channel SSoT (ADR-327 §7). Stub for P3 (HMAC token generation). Token generation will mirror ADR-170 HMAC pattern. FORBIDDEN: vendor writes to quotes collection without Admin SDK.",
+      "forbiddenPatterns": [],
+      "allowlist": [
+        "src/subapps/procurement/types/vendor-invite.ts",
+        "src/subapps/procurement/services/"
+      ],
+      "tier": 3
+    },
+
+    "quote-comparison-stub": {
+      "ssotFile": "src/subapps/procurement/types/comparison.ts",
+      "description": "Quote comparison weights + templates SSoT (ADR-327 §8). Stub for P4 (comparison engine). COMPARISON_TEMPLATES defines 4 built-in templates. FORBIDDEN: inline scoring logic, hardcoded weights.",
+      "forbiddenPatterns": [],
+      "allowlist": [
+        "src/subapps/procurement/types/comparison.ts",
+        "src/subapps/procurement/services/"
+      ],
+      "tier": 3
     }
   }
 }

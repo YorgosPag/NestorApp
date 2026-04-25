@@ -1,0 +1,169 @@
+import 'server-only';
+
+import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
+import { generateRfqId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+import admin from 'firebase-admin';
+import { normalizeToDate } from '@/lib/date-local';
+import type { RFQ, RfqStatus, CreateRfqDTO, UpdateRfqDTO, RfqFilters } from '../types/rfq';
+import { RFQ_STATUS_TRANSITIONS } from '../types/rfq';
+import type { AuthContext } from '@/lib/auth';
+
+const logger = createModuleLogger('RFQ_SERVICE');
+
+// ============================================================================
+// CREATE
+// ============================================================================
+
+export async function createRfq(
+  ctx: AuthContext,
+  dto: CreateRfqDTO
+): Promise<RFQ> {
+  return safeFirestoreOperation(async (db) => {
+    const id = generateRfqId();
+    const now = admin.firestore.Timestamp.now();
+
+    const rfq: RFQ = {
+      id,
+      projectId: dto.projectId,
+      buildingId: dto.buildingId ?? null,
+      companyId: ctx.companyId,
+      title: dto.title,
+      description: dto.description ?? null,
+      lines: dto.lines ?? [],
+      deadlineDate: null,
+      status: 'draft',
+      awardMode: dto.awardMode ?? 'whole_package',
+      reminderTemplate: dto.reminderTemplate ?? 'standard',
+      invitedVendorIds: [],
+      winnerQuoteId: null,
+      comparisonTemplateId: dto.comparisonTemplateId ?? 'standard',
+      auditTrail: [{
+        timestamp: now,
+        userId: ctx.userId,
+        action: 'created',
+        detail: null,
+      }],
+      createdAt: now,
+      updatedAt: now,
+      createdBy: ctx.userId,
+    };
+
+    await db.collection(COLLECTIONS.RFQS).doc(id).set(sanitizeForFirestore(rfq));
+    logger.info('RFQ created', { id, companyId: ctx.companyId });
+    return rfq;
+  });
+}
+
+// ============================================================================
+// READ — LIST
+// ============================================================================
+
+export async function listRfqs(
+  companyId: string,
+  filters: RfqFilters = {}
+): Promise<RFQ[]> {
+  return safeFirestoreOperation(async (db) => {
+    let query = db.collection(COLLECTIONS.RFQS)
+      .where('companyId', '==', companyId)
+      .where('status', '!=', 'archived') as FirebaseFirestore.Query;
+
+    if (filters.projectId) query = query.where('projectId', '==', filters.projectId);
+    if (filters.status) query = query.where('status', '==', filters.status);
+
+    const snap = await query.orderBy('createdAt', 'desc').get();
+    const rfqs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RFQ));
+
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      return rfqs.filter((r) => r.title.toLowerCase().includes(q));
+    }
+
+    return rfqs;
+  }, []);
+}
+
+// ============================================================================
+// READ — GET
+// ============================================================================
+
+export async function getRfq(
+  companyId: string,
+  rfqId: string
+): Promise<RFQ | null> {
+  return safeFirestoreOperation(async (db) => {
+    const snap = await db.collection(COLLECTIONS.RFQS).doc(rfqId).get();
+    if (!snap.exists) return null;
+    const rfq = { id: snap.id, ...snap.data() } as RFQ;
+    if (rfq.companyId !== companyId) return null;
+    return rfq;
+  }, null);
+}
+
+// ============================================================================
+// UPDATE
+// ============================================================================
+
+export async function updateRfq(
+  ctx: AuthContext,
+  rfqId: string,
+  dto: UpdateRfqDTO
+): Promise<RFQ> {
+  return safeFirestoreOperation(async (db) => {
+    const ref = db.collection(COLLECTIONS.RFQS).doc(rfqId);
+    const snap = await ref.get();
+    if (!snap.exists) throw new Error(`RFQ ${rfqId} not found`);
+
+    const current = { id: snap.id, ...snap.data() } as RFQ;
+    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+
+    if (dto.status && dto.status !== current.status) {
+      const allowed = RFQ_STATUS_TRANSITIONS[current.status];
+      if (!allowed.includes(dto.status)) {
+        throw new Error(`Invalid transition: ${current.status} → ${dto.status}`);
+      }
+    }
+
+    const newAudit = [...current.auditTrail];
+    if (dto.status && dto.status !== current.status) {
+      newAudit.push({
+        timestamp: admin.firestore.Timestamp.now(),
+        userId: ctx.userId,
+        action: 'status_change',
+        detail: `${current.status} → ${dto.status}`,
+      });
+    }
+
+    const updates: Partial<RFQ> = {
+      title: dto.title ?? current.title,
+      description: dto.description !== undefined ? dto.description : current.description,
+      lines: dto.lines ?? current.lines,
+      deadlineDate: dto.deadlineDate !== undefined
+        ? (dto.deadlineDate ? admin.firestore.Timestamp.fromDate(normalizeToDate(dto.deadlineDate) ?? new Date()) : null)
+        : current.deadlineDate,
+      awardMode: dto.awardMode ?? current.awardMode,
+      reminderTemplate: dto.reminderTemplate ?? current.reminderTemplate,
+      status: (dto.status ?? current.status) as RfqStatus,
+      winnerQuoteId: dto.winnerQuoteId !== undefined ? dto.winnerQuoteId : current.winnerQuoteId,
+      auditTrail: newAudit,
+      updatedAt: admin.firestore.Timestamp.now(),
+    };
+
+    await ref.update(sanitizeForFirestore(updates));
+    return { ...current, ...updates };
+  });
+}
+
+// ============================================================================
+// SOFT DELETE
+// ============================================================================
+
+export async function archiveRfq(
+  ctx: AuthContext,
+  rfqId: string
+): Promise<void> {
+  await updateRfq(ctx, rfqId, { status: 'archived' });
+  logger.info('RFQ archived', { rfqId, userId: ctx.userId });
+}

@@ -80,6 +80,16 @@ export interface ProcurementNotificationSettings {
   poApproved: boolean;
   /** Notify when PO is overdue (past dateNeeded) */
   poOverdue: boolean;
+  /** ADR-327 — Notify when vendor submits a quote */
+  quoteReceived: boolean;
+  /** ADR-327 — Notify when RFQ deadline is approaching */
+  quoteDeadlineApproaching: boolean;
+  /** ADR-327 — Notify when vendor declines an invite */
+  vendorDeclined: boolean;
+  /** ADR-327 — Notify when vendor edits a submitted quote */
+  quoteEdited: boolean;
+  /** ADR-327 — Notify when AI extraction confidence is low (review needed) */
+  aiLowConfidence: boolean;
 }
 
 /**
@@ -184,6 +194,11 @@ export const DEFAULT_PROCUREMENT_SETTINGS: ProcurementNotificationSettings = {
   approvalNeeded: true,
   poApproved: true,
   poOverdue: true,
+  quoteReceived: true,
+  quoteDeadlineApproaching: true,
+  vendorDeclined: true,
+  quoteEdited: false,
+  aiLowConfidence: true,
 };
 
 /**

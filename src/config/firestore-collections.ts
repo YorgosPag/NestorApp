@@ -292,6 +292,14 @@ export const COLLECTIONS = {
 
   // 📊 SAVED REPORTS (ADR-268 Phase 7: Saved Reports)
   SAVED_REPORTS: process.env.NEXT_PUBLIC_SAVED_REPORTS_COLLECTION || 'saved_reports',
+
+  // 📋 QUOTES & RFQ (ADR-327: Quote Management & Comparison System)
+  RFQS: process.env.NEXT_PUBLIC_RFQS_COLLECTION || 'rfqs',
+  QUOTES: process.env.NEXT_PUBLIC_QUOTES_COLLECTION || 'quotes',
+  QUOTE_COUNTERS: process.env.NEXT_PUBLIC_QUOTE_COUNTERS_COLLECTION || 'quote_counters',
+  VENDOR_INVITES: process.env.NEXT_PUBLIC_VENDOR_INVITES_COLLECTION || 'vendor_invites',
+  VENDOR_INVITE_TOKENS: process.env.NEXT_PUBLIC_VENDOR_INVITE_TOKENS_COLLECTION || 'vendor_invite_tokens',
+  TRADES: process.env.NEXT_PUBLIC_TRADES_COLLECTION || 'trades',
 } as const;
 
 // ============================================================================

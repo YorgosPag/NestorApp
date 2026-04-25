@@ -54,6 +54,7 @@ export {
   generateChatHistoryDocId, generateOwnershipTableId, generateOwnershipRevisionId,
   generatePurchaseOrderId, generatePOItemId,
   generatePOAttachmentId, generateSavedReportId, generateRecurringPaymentId,
+  generateQuoteId, generateRfqId, generateVendorInviteId, generateTradeId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId,
 } from './enterprise-id-convenience';
@@ -286,6 +287,12 @@ export class EnterpriseIdService {
   generatePurchaseOrderId(): string { return this.generateId(P.PURCHASE_ORDER).id; }
   generatePOItemId(): string { return this.generateId(P.PO_ITEM).id; }
   generatePOAttachmentId(): string { return this.generateId(P.PO_ATTACHMENT).id; }
+
+  // Quotes & RFQ (ADR-327)
+  generateQuoteId(): string { return this.generateId(P.QUOTE).id; }
+  generateRfqId(): string { return this.generateId(P.RFQ).id; }
+  generateVendorInviteId(): string { return this.generateId(P.VENDOR_INVITE).id; }
+  generateTradeId(): string { return this.generateId(P.TRADE).id; }
 
   // Reports & Cash Flow (ADR-268)
   generateSavedReportId(): string { return this.generateId(P.SAVED_REPORT).id; }

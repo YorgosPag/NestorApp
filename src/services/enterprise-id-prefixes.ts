@@ -178,6 +178,12 @@ export const ENTERPRISE_ID_PREFIXES = {
   PO_ITEM: 'poi',
   PO_ATTACHMENT: 'poatt',
 
+  // Quotes & RFQ (ADR-327)
+  QUOTE: 'qt',
+  RFQ: 'rfq',
+  VENDOR_INVITE: 'vi',
+  TRADE: 'trd',
+
   // Reports (ADR-268 Phase 7)
   SAVED_REPORT: 'srpt',
 

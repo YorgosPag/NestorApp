@@ -164,6 +164,12 @@ export const generatePurchaseOrderId = () => enterpriseIdService.generatePurchas
 export const generatePOItemId = () => enterpriseIdService.generatePOItemId();
 export const generatePOAttachmentId = () => enterpriseIdService.generatePOAttachmentId();
 
+// Quotes & RFQ (ADR-327)
+export const generateQuoteId = () => enterpriseIdService.generateQuoteId();
+export const generateRfqId = () => enterpriseIdService.generateRfqId();
+export const generateVendorInviteId = () => enterpriseIdService.generateVendorInviteId();
+export const generateTradeId = () => enterpriseIdService.generateTradeId();
+
 // Reports & Cash Flow (ADR-268)
 export const generateSavedReportId = () => enterpriseIdService.generateSavedReportId();
 export const generateRecurringPaymentId = () => enterpriseIdService.generateRecurringPaymentId();

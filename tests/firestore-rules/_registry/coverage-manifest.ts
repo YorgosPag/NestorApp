@@ -1071,6 +1071,14 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // accounting_efka_config          → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
   // accounting_invoice_counters     → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
   // accounting_customer_balances    → moved to COVERAGE (ADR-298 Phase C.1, 2026-04-13)
+  // — Quotes / RFQ / Vendor Portal (ADR-327 P1a, 2026-04-25) —
+  // TODO(ADR-298 Phase E): write full matrix for quotes + rfqs
+  'rfqs',                   // Admin SDK writes only; read: auth + companyId
+  'quotes',                 // Admin SDK writes only; vendor portal path in P3
+  'quote_counters',         // Admin SDK only — no client access
+  'vendor_invites',         // Admin SDK writes only; read: auth + companyId
+  'vendor_invite_tokens',   // Admin SDK only — no client access
+  'trades',                 // read: isAuthenticated(); write: Admin SDK only
 ] as const;
 
 // ---------------------------------------------------------------------------

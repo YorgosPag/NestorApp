@@ -3332,6 +3332,59 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📋 QUOTES & RFQ — ADR-327 Quote Management & Comparison System
+    // All writes go through Admin SDK (API routes with withAuth).
+    // Vendor portal writes (P3) also use Admin SDK only.
+    // =========================================================================
+
+    match /rfqs/{rfqId} {
+      allow read: if isAuthenticated()
+                  && resource.data.keys().hasAny(['companyId'])
+                  && belongsToCompany(resource.data.companyId);
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /quotes/{quoteId} {
+      allow read: if isAuthenticated()
+                  && resource.data.keys().hasAny(['companyId'])
+                  && belongsToCompany(resource.data.companyId);
+      // Vendor portal writes and internal writes via Admin SDK only
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /quote_counters/{docId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    match /vendor_invites/{inviteId} {
+      allow read: if isAuthenticated()
+                  && resource.data.keys().hasAny(['companyId'])
+                  && belongsToCompany(resource.data.companyId);
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /vendor_invite_tokens/{tokenId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    match /trades/{tradeId} {
+      // Trades are company-agnostic (system trades) or company-scoped (custom).
+      // All authenticated users can read. Writes via Admin SDK only.
+      allow read: if isAuthenticated();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // =========================================================================
     // 🏗️ DEVELOPMENT MODE HELPERS
     // =========================================================================
 
