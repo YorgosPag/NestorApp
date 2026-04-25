@@ -826,6 +826,9 @@ export const API_ROUTES = {
     GLOBAL: '/api/audit-trail/global',
   },
 
+  // ── Org Structure (ADR-326) ───────────────────────────────────────────
+  ORG_STRUCTURE: '/api/org-structure',
+
   // ── Misc ──────────────────────────────────────────────────────────────
   UPLOAD: { PHOTO: '/api/upload/photo' },
   SEARCH: '/api/search',

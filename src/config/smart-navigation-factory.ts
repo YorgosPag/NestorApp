@@ -70,6 +70,7 @@ import {
   Banknote,
   History,
   DatabaseBackup,
+  Network,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -122,6 +123,9 @@ const NAVIGATION_LABELS = {
 
   // 🏢 ENTERPRISE: Backup & Restore (ADR-313)
   backup: 'admin.backup',
+
+  // 🏢 ENTERPRISE: Company Settings (ADR-326)
+  company_settings: 'admin.companySettings',
 
   // Badges
   badge_new: 'badges.new',
@@ -700,6 +704,15 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                 smartConfig: {
                   priority: 'low'
                 }
+              },
+              {
+                icon: Network,
+                href: '/settings/company',
+                smartConfig: {
+                  priority: 'medium',
+                  analyticsKey: 'nav_company_settings',
+                  permissions: ['admin_access']
+                }
               }
             ]
           }
@@ -799,6 +812,7 @@ function getLabelKeyForPath(path: string): string {
     // Settings subpaths
     'settings': 'settings',
     'settings/shortcuts': 'shortcuts',
+    'settings/company': 'company_settings',
 
     // Admin paths
     'admin/ai-inbox': 'ai_inbox',

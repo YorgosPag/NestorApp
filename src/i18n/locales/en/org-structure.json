@@ -15,7 +15,34 @@
     "head": "Head",
     "reportsTo": "Reports to",
     "active": "Active",
-    "archived": "Archived"
+    "archived": "Archived",
+    "tabs": {
+      "info": "Company Info",
+      "tax": "Tax Settings",
+      "orgChart": "Organisation Structure",
+      "routing": "Notification Routing"
+    },
+    "dept": {
+      "addDept": "Add department",
+      "editDept": "Edit department",
+      "archiveDept": "Archive department",
+      "memberCount": "{count} members",
+      "memberCountSingular": "{count} member",
+      "codePlaceholder": "Select department code",
+      "labelPlaceholder": "Department name"
+    },
+    "member": {
+      "modeSelector": "Member type",
+      "reportsToPlaceholder": "Select manager",
+      "noManager": "No manager (department head)",
+      "displayNamePlaceholder": "Member name",
+      "contactIdPlaceholder": "CRM contact ID",
+      "isDeptHead": "Department head",
+      "receivesNotifications": "Receives notifications (backup)"
+    },
+    "validation": {
+      "cycleDetected": "Circular reference — choose a different manager"
+    }
   },
   "departments": {
     "accounting": "Accounting",
@@ -55,6 +82,10 @@
     "overrideEmail": "Override email",
     "noRouting": "No routing rules defined",
     "addRule": "Add rule",
+    "defaultDept": "Default",
+    "overrideDept": "Send to",
+    "saveChanges": "Save changes",
+    "savedOk": "Changes saved",
     "events": {
       "reservation.created": "Reservation Created",
       "reservation.cancelled": "Reservation Cancelled",

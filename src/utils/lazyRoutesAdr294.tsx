@@ -202,6 +202,12 @@ export const lazyRoutesAdr294 = {
     { loadingType: 'list', ssr: false }
   ),
 
+  // 🏢 ENTERPRISE: Company Settings (ADR-326 Phase 2)
+  CompanySettings: createLazyRoute(
+    () => import('@/components/settings/company/CompanySettingsPageContent').then(mod => ({ default: mod.CompanySettingsPageContent })),
+    { loadingType: 'form', ssr: false }
+  ),
+
   CrmHub: createLazyRoute(
     () => import('@/components/crm/pages/CrmHubPageContent').then(mod => ({ default: mod.CrmHubPageContent })),
     { loadingType: 'dashboard', ssr: false }

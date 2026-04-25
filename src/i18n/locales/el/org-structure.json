@@ -15,7 +15,34 @@
     "head": "Επικεφαλής",
     "reportsTo": "Αναφέρεται σε",
     "active": "Ενεργό",
-    "archived": "Αρχειοθετημένο"
+    "archived": "Αρχειοθετημένο",
+    "tabs": {
+      "info": "Στοιχεία",
+      "tax": "Φορολογικά",
+      "orgChart": "Δομή Οργανισμού",
+      "routing": "Routing Ειδοποιήσεων"
+    },
+    "dept": {
+      "addDept": "Προσθήκη τμήματος",
+      "editDept": "Επεξεργασία τμήματος",
+      "archiveDept": "Αρχειοθέτηση τμήματος",
+      "memberCount": "{count} μέλη",
+      "memberCountSingular": "{count} μέλος",
+      "codePlaceholder": "Επιλογή κωδικού τμήματος",
+      "labelPlaceholder": "Ονομασία τμήματος"
+    },
+    "member": {
+      "modeSelector": "Τύπος μέλους",
+      "reportsToPlaceholder": "Επιλογή προϊσταμένου",
+      "noManager": "Χωρίς προϊστάμενο (επικεφαλής)",
+      "displayNamePlaceholder": "Όνομα μέλους",
+      "contactIdPlaceholder": "ID επαφής CRM",
+      "isDeptHead": "Επικεφαλής τμήματος",
+      "receivesNotifications": "Λαμβάνει ειδοποιήσεις (backup)"
+    },
+    "validation": {
+      "cycleDetected": "Κυκλική αναφορά — επιλέξτε άλλο προϊστάμενο"
+    }
   },
   "departments": {
     "accounting": "Λογιστήριο",
@@ -55,6 +82,10 @@
     "overrideEmail": "Override email",
     "noRouting": "Δεν έχουν οριστεί κανόνες routing",
     "addRule": "Προσθήκη κανόνα",
+    "defaultDept": "Προεπιλεγμένο",
+    "overrideDept": "Αποστολή σε",
+    "saveChanges": "Αποθήκευση αλλαγών",
+    "savedOk": "Οι αλλαγές αποθηκεύτηκαν",
     "events": {
       "reservation.created": "Δημιουργία Κράτησης",
       "reservation.cancelled": "Ακύρωση Κράτησης",
