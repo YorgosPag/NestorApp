@@ -35,7 +35,9 @@ export class TOCRenderer implements ITOCRenderer {
       const titleWidth = doc.getTextWidth(item.title);
       const pageNumWidth = doc.getTextWidth(pageNum);
       const dotsWidth = maxWidth - titleWidth - pageNumWidth;
-      const dots = '.'.repeat(Math.floor(dotsWidth / doc.getTextWidth('.')));
+      const dotCharWidth = doc.getTextWidth('.');
+      const dotCount = dotCharWidth > 0 ? Math.floor(dotsWidth / dotCharWidth) : 0;
+      const dots = dotCount > 0 ? '.'.repeat(dotCount) : '';
       
       doc.text(dots, margins.left + indent + titleWidth + 2, currentY);
       doc.text(pageNum, pageWidth - margins.right - pageNumWidth, currentY, { align: 'right' });

@@ -34,7 +34,7 @@ export function convertToMarkdown(document: ObligationDocument): string {
   if (document.tableOfContents && document.tableOfContents.length > 0) {
     markdown += '## Πίνακας Περιεχομένων\n\n';
     document.tableOfContents.forEach(item => {
-      const indent = '  '.repeat(item.level - 1);
+      const indent = '  '.repeat(Math.max(0, item.level - 1));
       const pageInfo = item.page ? ` (σελ. ${item.page})` : '';
       markdown += `${indent}- ${item.number} ${item.title}${pageInfo}\n`;
     });

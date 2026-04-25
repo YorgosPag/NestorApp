@@ -1,13 +1,13 @@
 {
   "_meta": {
     "description": "i18n hardcoded UI strings baseline (JSX text, attrs, errors, toasts)",
-    "generated": "2026-04-20T07:26:57Z",
-    "totalViolations": 0,
-    "totalFiles": 0,
+    "generated": "2026-04-25T07:35:27Z",
+    "totalViolations": 16,
+    "totalFiles": 1,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "patterns": ["JSX text", "attributes", "throw/alert/confirm", "toast calls"]
   },
   "files": {
-
+    "src/lib/obligations/content.ts": 16
   }
 }

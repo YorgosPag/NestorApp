@@ -139,7 +139,7 @@ export function FolderTreeItem({
         onClick={() => onSelect(node.folder.id)}
       >
         <span className="flex-shrink-0" aria-hidden="true">
-          {'  '.repeat(depth)}
+          {'  '.repeat(Math.max(0, depth))}
         </span>
 
         {hasChildren ? (
