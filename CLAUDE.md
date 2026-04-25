@@ -2,15 +2,15 @@ Instruction text
 
 ## 🌐🌐🌐 LANGUAGE RULE — ABSOLUTE, NON-NEGOTIABLE, OVERRIDES EVERYTHING
 
-**Giorgio writes to you in Greek. You ALWAYS respond in Italian.**
+**Giorgio writes to you in Greek. You ALWAYS respond in Italian — UNLESS Giorgio explicitly requests Greek.**
 
 - ✅ READ Greek input perfectly (Giorgio's native language)
-- ✅ RESPOND ALWAYS in Italian, regardless of the language of these instructions
+- ✅ RESPOND in Italian by default, regardless of the language of these instructions
+- ✅ RESPOND in Greek IF Giorgio explicitly asks for it (e.g. "απάντησέ μου στα ελληνικά", "γράψε στα ελληνικά")
 - ❌ NEVER respond in English (even though these instructions are in English)
-- ❌ NEVER respond in Greek (token cost is 2.5-3x higher than Italian)
 - ⚠️ This rule OVERRIDES every other instruction. If any rule below appears to conflict, this one wins.
 
-**Why**: Italian output saves ~60% output tokens vs Greek, and output tokens cost 5x input tokens. Giorgio knows Italian fluently. The English language of this file is purely for input-token efficiency in the tokenizer — it does NOT mean you should respond in English.
+**Why**: Italian output saves ~60% output tokens vs Greek, and output tokens cost 5x input tokens. Giorgio knows Italian fluently. The English language of this file is purely for input-token efficiency in the tokenizer — it does NOT mean you should respond in English. Greek is allowed only on explicit request, as it costs ~2.5-3x more tokens than Italian.
 
 ---
 
@@ -304,19 +304,27 @@ When you touch a legacy file → clean up as many violations as you can. **ZERO 
 - NEVER mark completed without explicit Giorgio order or actual merge
 - Baselines change >10% → update §2 of ADR-299
 
-## 🚨🚨🚨 SOS. SOS. N.14 — MODEL SUGGESTION (cost optimization)
+## 🚨🚨🚨 SOS. SOS. N.14 — MODEL ENFORCEMENT (cost optimization)
 
-**Giorgio non sa quale modello usare. L'agente DEVE consigliare PRIMA di eseguire task non-banali.**
+**MANDATORY STOP before every non-trivial task. NO implementation until model is confirmed.**
 
-### Regola main session (manual switch)
+### Regola main session — BLOCCO OBBLIGATORIO
 
-**PRIMA** di iniziare ogni task, valuta complessità e proponi:
+**PRIMA** di iniziare ogni task (non-banale), l'agente DEVE:
 
+1. Valutare la complessità del task
+2. Dichiarare il modello consigliato
+3. **FERMARSI e aspettare conferma** — NON procedere con l'implementazione
+
+Formato obbligatorio:
 ```
 🎯 Modello consigliato: [Haiku 4.5 | Sonnet 4.6 | Opus 4.7]
 Motivo: [1 riga]
 Switch: /model [haiku|sonnet|opus]
+⏸️ In attesa di conferma — rispondi "ok" o switcha il modello prima che proceda.
 ```
+
+**L'agente NON scrive codice, NON legge file, NON fa grep** finché Giorgio non risponde "ok" / "vai" / "procedi" o conferma il modello.
 
 **Criteri:**
 | Modello | Quando usare | Esempi |
@@ -325,10 +333,11 @@ Switch: /model [haiku|sonnet|opus]
 | **Sonnet 4.6** | 1-5 file, bugfix mirato, refactor isolato, feature singola | fix typo, aggiungi campo, piccolo componente |
 | **Opus 4.7** | 5+ file, 2+ domini, architettura, ADR planning, debug complesso, orchestrator | refactor cross-cutting, nuovo subsystem, security audit |
 
-**SKIP suggerimento se:**
-- Task evidente da 1 read/1 grep (es. "leggi file X")
-- Giorgio ha già scelto modello in messaggio precedente nella stessa sessione
-- Continuazione diretta task in corso
+**SKIP blocco se:**
+- Task è 1 read / 1 grep / risposta diretta senza codice (Haiku implicito)
+- Giorgio ha già dichiarato il modello nel messaggio corrente (es. "con Sonnet fai X")
+- Continuazione diretta di task già confermato nella stessa sessione
+- Giorgio risponde a una domanda dell'agente (non è una nuova implementazione)
 
 ### Regola subagenti (automatic)
 
@@ -341,8 +350,8 @@ Quando lancio `Agent` tool, **DEVO** passare `model` param scegliendo il **minim
 
 ### WHY
 - Opus 4.7 = ~5x costo Sonnet, ~25x Haiku
-- Giorgio paga ogni token. Modello giusto = -70% costo medio
-- Limite tecnico: main session non auto-switch → suggerimento manuale è il workaround
+- Giorgio paga ogni token. Modello sbagliato = token sprecati
+- L'agente non può auto-switchare → BLOCCO + attesa = unico workaround affidabile
 
 ---
 
@@ -503,4 +512,4 @@ All low priority. They work incrementally when you touch related files.
 
 ## 🌐 LANGUAGE RULE REMINDER (final repetition for safety)
 
-**Giorgio writes Greek. You ALWAYS respond in Italian. NEVER English. NEVER Greek.** This file is in English purely for token efficiency. The instructions are in English; the responses to Giorgio are in Italian. No exceptions.
+**Giorgio writes Greek. You respond in Italian by default. NEVER English. Greek ONLY if Giorgio explicitly requests it.** This file is in English purely for token efficiency. The instructions are in English; the responses to Giorgio are in Italian unless he asks for Greek.
