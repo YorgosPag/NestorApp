@@ -204,10 +204,25 @@ describe('resolveEmailFromOrgStructure', () => {
   });
 });
 
+jest.mock('../org-structure-repository', () => ({
+  getOrgStructure: jest.fn(),
+}));
+
 describe('resolveTenantNotificationEmail', () => {
-  it('throws until Phase 1 is implemented', async () => {
-    await expect(
-      resolveTenantNotificationEmail('comp_test', NOTIFICATION_EVENTS.RESERVATION_CREATED),
-    ).rejects.toThrow('Phase 1 required');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const repo = require('../org-structure-repository') as { getOrgStructure: jest.Mock };
+
+  it('returns null when orgStructure not found', async () => {
+    repo.getOrgStructure.mockResolvedValue(null);
+    const result = await resolveTenantNotificationEmail('comp_test', NOTIFICATION_EVENTS.RESERVATION_CREATED);
+    expect(result).toBeNull();
+  });
+
+  it('resolves email when orgStructure present', async () => {
+    const org = makeOrgStructure({ departments: [makeAccountingDept()] });
+    repo.getOrgStructure.mockResolvedValue(org);
+    const result = await resolveTenantNotificationEmail('comp_test', NOTIFICATION_EVENTS.RESERVATION_CREATED);
+    expect(result?.source).toBe('head');
+    expect(result?.email).toBe('accounting-head@tenant.gr');
   });
 });

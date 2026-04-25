@@ -11,6 +11,7 @@
  */
 
 import type { Timestamp } from 'firebase/firestore';
+import type { OrgStructure } from '@/types/org/org-structure';
 
 // =============================================================================
 // COMPANY DOCUMENT
@@ -40,6 +41,8 @@ export interface CompanySettings {
   readonly timezone: string;
   /** Feature flags scoped to this company */
   readonly features: Record<string, boolean>;
+  /** Org structure: departments, members, routing rules (ADR-326) */
+  readonly orgStructure?: OrgStructure;
 }
 
 /**

@@ -103,14 +103,17 @@ export function resolveEmailFromOrgStructure(
 }
 
 /**
- * Firestore-backed resolver — Phase 1 will implement this.
- * @throws Error until Phase 1 wires the OrgStructureRepository.
+ * Firestore-backed resolver (ADR-326 Phase 1).
+ * Reads orgStructure from companies/{companyId}.settings.orgStructure via Admin SDK.
+ * Cache 5-min in-memory (invalidated on save by OrgStructureRepository).
+ * Returns null when orgStructure absent or no email resolves — caller should warn + audit.
  */
 export async function resolveTenantNotificationEmail(
-  _companyId: string,
-  _event: NotificationEventCode,
+  companyId: string,
+  event: NotificationEventCode,
 ): Promise<ResolveResult | null> {
-  throw new Error(
-    'resolveTenantNotificationEmail: Phase 1 required (OrgStructureRepository not yet wired). Use resolveEmailFromOrgStructure directly.',
-  );
+  const { getOrgStructure } = await import('./org-structure-repository');
+  const orgStructure = await getOrgStructure(companyId);
+  if (!orgStructure) return null;
+  return resolveEmailFromOrgStructure(orgStructure, event);
 }

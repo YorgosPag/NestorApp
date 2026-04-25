@@ -528,6 +528,7 @@ service cloud.firestore {
                      );
 
       // ✍️ CREATE/UPDATE/DELETE: ΌΧΙ από client - μόνο admin/server
+      // ADR-326: settings.orgStructure managed via PUT /api/org-structure (Admin SDK, company_admin only)
       allow write: if false;
 
       // =========================================================================
