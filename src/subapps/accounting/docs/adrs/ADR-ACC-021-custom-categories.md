@@ -347,9 +347,27 @@ Built-in Categories (25, hardcoded)     Custom Categories (N, Firestore)
 
 ---
 
+## 7.1 Firestore Composite Indexes (REQUIRED)
+
+Η query `listCustomCategories` έχει 2 paths με 2 διαφορετικά composite indexes:
+
+| Path | Query | Index Fields |
+|------|-------|--------------|
+| Default (`includeInactive=false`) | `where companyId == X AND isActive == true ORDER BY sortOrder ASC` | `companyId ASC + isActive ASC + sortOrder ASC` |
+| Admin (`includeInactive=true`) | `where companyId == X ORDER BY sortOrder ASC` | `companyId ASC + sortOrder ASC` |
+
+Definition: `firestore.indexes.json` (collectionGroup `accounting_custom_categories`).
+
+**WHY**: Firestore native composite query optimizer δεν reverse-engineering — κάθε query path ζητά δικό του index. Αν λείπει → `FAILED_PRECONDITION` runtime error + `safeFirestoreOperation` fallback σε `[]` (empty list, silent failure).
+
+**Deploy**: `firebase deploy --only firestore:indexes --project pagonis-87766`. Build 2-5 min.
+
+---
+
 ## 8. Changelog
 
 | Date | Decision | Author |
 |------|----------|--------|
 | 2026-03-17 | ADR-ACC-021 Created — Custom Categories architecture, 8 ερωτήματα ανοιχτά, full implementation plan (5 φάσεις, ~20 αρχεία) | Claude Code |
 | 2026-03-17 | ADR-ACC-021 ACCEPTED — Όλες οι αρχιτεκτονικές αποφάσεις κλειδώθηκαν μετά από συζήτηση με Γιώργο Παγώνη: Α1=collection, Α2=template literal, Α3=enterprise-id, Α4=mandatory myDATA, Α5=inherit+override, Α6=setup page, Α7=soft+hard delete, Α8=bilingual-ready | Γιώργος Παγώνης + Claude Code |
+| 2026-04-26 | §7.1 ADDED — Documented 2 required composite indexes (`companyId+sortOrder` + `companyId+isActive+sortOrder`). Root cause: production runtime `FAILED_PRECONDITION` errors silently swallowed by `safeFirestoreOperation` fallback (returned `[]` → UI thought "no categories"). Both indexes deployed to `pagonis-87766`. | Γιώργος Παγώνης + Claude Code |
