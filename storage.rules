@@ -229,6 +229,23 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 📋 QUOTE ATTACHMENTS — ADR-327 §7 + §11 (vendor portal + scan uploads)
+    // =========================================================================
+    // Path: /companies/{companyId}/quotes/{quoteId}/{fileName}
+    //
+    // Writes: NONE through client SDK. All writes (vendor portal POST + AI scan
+    // route) go through Admin SDK. Public read via Storage public-object ACL
+    // (`fileRef.makePublic()`) so signed URLs are not required.
+    // Reads: authenticated PMs in the owning company; super_admin globally.
+    // =========================================================================
+
+    match /companies/{companyId}/quotes/{quoteId}/{fileName} {
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      allow write: if false;
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin());
+    }
+
+    // =========================================================================
     // 🎨 CAD FILES (DXF/Technical Drawings)
     // =========================================================================
     // Path: /cad/{userId}/{fileId}/{filename}

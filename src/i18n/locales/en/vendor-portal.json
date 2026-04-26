@@ -1,0 +1,103 @@
+{
+  "page": {
+    "title": "Submit Quote",
+    "subtitle": "Vendor Invitation",
+    "languageToggle": "EL",
+    "expiresOn": "Link expires on {date}",
+    "editWindow": "Edit window expires on {date}"
+  },
+  "intro": {
+    "greeting": "Hello {vendorName}",
+    "rfqLabel": "Request for Quote",
+    "deadlineLabel": "Deadline",
+    "noDeadline": "No deadline",
+    "descriptionLabel": "Description"
+  },
+  "rfq": {
+    "linesTitle": "Requested items",
+    "lineDescription": "Description",
+    "lineQuantity": "Quantity",
+    "lineUnit": "Unit",
+    "lineNotes": "Notes",
+    "trade": "Trade",
+    "noLines": "No specific items requested — submit a package quote."
+  },
+  "form": {
+    "linesTitle": "Quote lines",
+    "addLine": "Add line",
+    "removeLine": "Remove",
+    "description": "Description",
+    "quantity": "Quantity",
+    "unit": "Unit",
+    "unitPrice": "Unit Price (€)",
+    "vatRate": "VAT %",
+    "lineTotal": "Line Total",
+    "totalsTitle": "Totals",
+    "subtotal": "Subtotal",
+    "vatAmount": "VAT",
+    "total": "Grand Total",
+    "termsTitle": "Terms",
+    "paymentTerms": "Payment Terms",
+    "paymentTermsHint": "e.g. 30 days, on delivery",
+    "deliveryTerms": "Delivery Terms",
+    "deliveryTermsHint": "e.g. 14 working days, within Attica",
+    "warranty": "Warranty",
+    "warrantyHint": "e.g. 2 years materials + labor",
+    "validUntil": "Quote Valid Until",
+    "notes": "Notes",
+    "notesHint": "Additional information or conditions"
+  },
+  "attachments": {
+    "title": "Attachments",
+    "hint": "Up to 5 images (jpg/png/webp) and 1 PDF, max 10MB per file",
+    "upload": "Choose files",
+    "remove": "Remove",
+    "image": "Image",
+    "pdf": "PDF",
+    "noFiles": "No files attached",
+    "maxImagesReached": "Reached the 5-image limit",
+    "maxPdfReached": "A PDF is already attached",
+    "fileTooLarge": "{name} exceeds 10MB",
+    "unsupportedType": "Unsupported file type: {name}"
+  },
+  "actions": {
+    "submit": "Submit Quote",
+    "submitting": "Submitting...",
+    "decline": "Decline",
+    "back": "Back"
+  },
+  "decline": {
+    "title": "Decline Invitation",
+    "subtitle": "Optionally let us know why",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "e.g. we do not handle this trade",
+    "confirm": "Confirm Decline",
+    "cancel": "Cancel",
+    "doneTitle": "Recorded",
+    "doneBody": "Thank you for letting us know. You will not receive further reminders."
+  },
+  "success": {
+    "title": "Quote submitted",
+    "body": "We received your quote. You can edit it from the same link until {editWindowExpiresAt}.",
+    "viewAgain": "View Quote"
+  },
+  "errors": {
+    "tokenInvalid": "Invalid link",
+    "tokenInvalidBody": "The link is invalid or has been tampered with. Please contact the project manager.",
+    "tokenExpired": "Link expired",
+    "tokenExpiredBody": "The submission deadline has passed.",
+    "tokenRevoked": "Link revoked",
+    "tokenRevokedBody": "This link is no longer active.",
+    "tokenAlreadyUsed": "Already submitted",
+    "tokenAlreadyUsedBody": "A quote has already been submitted from this link.",
+    "submitFailed": "Submission failed",
+    "submitFailedBody": "Something went wrong. Please try again shortly.",
+    "validationRequired": "Please fill in required fields",
+    "validationLines": "Add at least one quote line",
+    "uploadFailed": "Upload failed for {name}"
+  },
+  "security": {
+    "warning": "⚠️ This link is personal. Do not forward it.",
+    "company": "{companyName} — Official quote submission portal"
+  }
+}

@@ -352,3 +352,35 @@ export async function dispatchSecurityNotification(
     eventId,
   });
 }
+
+/**
+ * Dispatch procurement notification (ADR-327 Phase 3 — vendor portal events).
+ */
+export async function dispatchProcurementNotification(
+  eventType: NotificationEventType,
+  recipientId: string,
+  tenantId: string,
+  title: string,
+  eventId: string,
+  options?: {
+    body?: string;
+    entityId?: string;
+    entityType?: NotificationEntityType;
+    titleKey?: string;
+    titleParams?: Record<string, string>;
+  },
+): Promise<DispatchResult> {
+  return dispatchNotification({
+    eventType,
+    recipientId,
+    tenantId,
+    title,
+    body: options?.body,
+    source: { service: SOURCE_SERVICES.PROCUREMENT, env: getCurrentEnvironment() },
+    eventId,
+    entityId: options?.entityId,
+    entityType: options?.entityType,
+    titleKey: options?.titleKey,
+    titleParams: options?.titleParams,
+  });
+}

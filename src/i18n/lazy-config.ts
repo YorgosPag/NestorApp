@@ -102,6 +102,8 @@ export const SUPPORTED_NAMESPACES = [
   'trash',                  // 🗑️ Centralized trash/soft-delete strings (ADR-281)
   'showcase',               // 🏢 Property showcase public page (ADR-312)
   'org-structure',          // 🏢 Tenant organisation structure / departments / routing (ADR-326)
+  'quotes',                 // 🏢 Quotes & RFQ management (ADR-327)
+  'vendor-portal',          // 🏢 Public vendor portal (ADR-327 §7)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 

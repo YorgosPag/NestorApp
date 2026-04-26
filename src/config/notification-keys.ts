@@ -78,6 +78,19 @@ export const NOTIFICATION_KEYS = {
   },
 
   // ==========================================================================
+  // PROCUREMENT domain (ADR-327: Quote Management & Comparison System)
+  // ==========================================================================
+  procurement: {
+    quote: {
+      submittedViaPortal: 'quotes:quotes.notifications.quoteSubmittedViaPortal',
+      vendorDeclined: 'quotes:quotes.notifications.vendorDeclined',
+      vendorEdited: 'quotes:quotes.notifications.vendorEdited',
+      inviteSent: 'quotes:quotes.notifications.inviteSent',
+      inviteFailed: 'quotes:quotes.notifications.inviteFailed',
+    },
+  },
+
+  // ==========================================================================
   // FILES domain
   // ==========================================================================
   files: {

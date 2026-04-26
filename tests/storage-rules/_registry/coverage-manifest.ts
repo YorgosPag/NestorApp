@@ -158,12 +158,12 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
 
   // -------------------------------------------------------------------------
   // Path 3: CAD files (ownership-based, super_admin can read/delete but not write)
-  // storage.rules lines 238-249
+  // storage.rules lines 255-266
   // -------------------------------------------------------------------------
   {
     pathId: 'cad',
     pattern: 'owner_based',
-    rulesRange: [238, 249],
+    rulesRange: [255, 266],
     testFile: 'tests/storage-rules/suites/cad-files.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -187,18 +187,18 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
 
   // -------------------------------------------------------------------------
   // Path 4: Temp uploads (owner-only, NO super_admin bypass on any operation)
-  // storage.rules lines 258-265
+  // storage.rules lines 275-282
   //
   // NOTE: The `allow read, write` rule uses `isValidFileSize()` which checks
   // `request.resource.size`. For read operations, `request.resource` is null
   // in Firebase Storage Rules. If the emulator denies owner reads due to this
-  // null-dereference, it indicates a latent bug in storage.rules line 261.
+  // null-dereference, it indicates a latent bug in storage.rules.
   // In that case update `same_tenant_user × read` to `deny` and file a fix.
   // -------------------------------------------------------------------------
   {
     pathId: 'temp',
     pattern: 'owner_based_no_superadmin',
-    rulesRange: [258, 265],
+    rulesRange: [275, 282],
     testFile: 'tests/storage-rules/suites/temp-uploads.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -227,4 +227,8 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
  * Zero-tolerance: CHECK 3.19 blocks commits that add new match blocks to
  * storage.rules without adding a corresponding entry here or in COVERAGE.
  */
-export const STORAGE_RULES_PENDING: readonly string[] = [] as const;
+export const STORAGE_RULES_PENDING: readonly string[] = [
+  // ADR-327 P5 vendor-portal quote uploads (Admin SDK writes only, authenticated company-scoped reads).
+  // Test suite to be added in follow-up: tests/storage-rules/suites/vendor-portal-quotes.storage.test.ts
+  '/companies/{companyId}/quotes/{quoteId}/{fileName}',
+] as const;

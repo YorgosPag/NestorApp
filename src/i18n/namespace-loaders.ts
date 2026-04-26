@@ -101,6 +101,8 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'trash': return () => import('./locales/el/trash.json');
     case 'showcase': return () => import('./locales/el/showcase.json');
     case 'org-structure': return () => import('./locales/el/org-structure.json');
+    case 'quotes': return () => import('./locales/el/quotes.json');
+    case 'vendor-portal': return () => import('./locales/el/vendor-portal.json');
     default: return null;
   }
 }
@@ -191,6 +193,8 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'trash': return () => import('./locales/en/trash.json');
     case 'showcase': return () => import('./locales/en/showcase.json');
     case 'org-structure': return () => import('./locales/en/org-structure.json');
+    case 'quotes': return () => import('./locales/en/quotes.json');
+    case 'vendor-portal': return () => import('./locales/en/vendor-portal.json');
     default: return null;
   }
 }

@@ -79,6 +79,10 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROCUREMENT_APPROVAL_NEEDED: 'procurement.approvalNeeded',
   PROCUREMENT_PO_APPROVED: 'procurement.poApproved',
   PROCUREMENT_PO_OVERDUE: 'procurement.poOverdue',
+  // Procurement Quote Events (ADR-327 Phase 3 — Vendor Portal)
+  PROCUREMENT_QUOTE_RECEIVED: 'procurement.quoteReceived',
+  PROCUREMENT_VENDOR_DECLINED: 'procurement.vendorDeclined',
+  PROCUREMENT_QUOTE_EDITED: 'procurement.quoteEdited',
 } as const;
 
 export type NotificationEventType = typeof NOTIFICATION_EVENT_TYPES[keyof typeof NOTIFICATION_EVENT_TYPES];
@@ -221,6 +225,25 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
   },
+  // ADR-327 Phase 3 — Vendor Portal
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_RECEIVED]: {
+    category: 'procurement',
+    settingKey: 'quoteReceived',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_VENDOR_DECLINED]: {
+    category: 'procurement',
+    settingKey: 'vendorDeclined',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_EDITED]: {
+    category: 'procurement',
+    settingKey: 'quoteEdited',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
 };
 
 // ============================================================================
@@ -239,6 +262,8 @@ export const NOTIFICATION_ENTITY_TYPES = {
   BUILDING: 'building',
   USER: 'user',
   PURCHASE_ORDER: 'purchase_order',
+  QUOTE: 'quote',
+  RFQ: 'rfq',
 } as const;
 
 export type NotificationEntityType = typeof NOTIFICATION_ENTITY_TYPES[keyof typeof NOTIFICATION_ENTITY_TYPES];
