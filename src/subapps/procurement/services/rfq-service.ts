@@ -45,13 +45,13 @@ export async function createRfq(
       comparisonTemplateId: dto.comparisonTemplateId ?? 'standard',
       auditTrail: [{
         timestamp: now,
-        userId: ctx.userId,
+        userId: ctx.uid,
         action: 'created',
         detail: null,
       }],
       createdAt: now,
       updatedAt: now,
-      createdBy: ctx.userId,
+      createdBy: ctx.uid,
     };
 
     await db.collection(COLLECTIONS.RFQS).doc(id).set(sanitizeForFirestore(rfq));
@@ -133,7 +133,7 @@ export async function updateRfq(
     if (dto.status && dto.status !== current.status) {
       newAudit.push({
         timestamp: admin.firestore.Timestamp.now(),
-        userId: ctx.userId,
+        userId: ctx.uid,
         action: 'status_change',
         detail: `${current.status} → ${dto.status}`,
       });

@@ -156,7 +156,7 @@ async function uploadAndAttach(
     mimeType: file.type,
     sizeBytes: file.size,
     uploadedAt: admin.firestore.Timestamp.now(),
-    uploadedBy: ctx.userId,
+    uploadedBy: ctx.uid,
   };
 
   await safeFirestoreOperation(async (db) => {

@@ -87,13 +87,13 @@ export async function createQuote(
       overriddenBy: null,
       vendorEditHistory: [],
       editWindowExpiresAt: null,
-      auditTrail: [auditEntry(ctx.userId, 'created', null, 'draft', dto.source)],
+      auditTrail: [auditEntry(ctx.uid, 'created', null, 'draft', dto.source)],
       submittedAt: null,
       submitterIp: null,
       linkedPoId: null,
       createdAt: now,
       updatedAt: now,
-      createdBy: ctx.userId,
+      createdBy: ctx.uid,
     };
 
     await db.collection(COLLECTIONS.QUOTES).doc(id).set(sanitizeForFirestore(quote));
@@ -174,10 +174,10 @@ export async function updateQuote(
     const newLines = dto.lines ?? current.lines;
     const newAudit = [...current.auditTrail];
     if (dto.status && dto.status !== current.status) {
-      newAudit.push(auditEntry(ctx.userId, 'status_change', current.status, dto.status));
+      newAudit.push(auditEntry(ctx.uid, 'status_change', current.status, dto.status));
     }
     if (dto.overrideReason) {
-      newAudit.push(auditEntry(ctx.userId, 'risk_flag_override', null, dto.overrideReason));
+      newAudit.push(auditEntry(ctx.uid, 'risk_flag_override', null, dto.overrideReason));
     }
 
     const updates: Partial<Quote> = {
@@ -190,7 +190,7 @@ export async function updateQuote(
       status: (dto.status ?? current.status) as QuoteStatus,
       overrideReason: dto.overrideReason ?? current.overrideReason,
       overrideAt: dto.overrideReason ? admin.firestore.Timestamp.now() : current.overrideAt,
-      overriddenBy: dto.overrideReason ? ctx.userId : current.overriddenBy,
+      overriddenBy: dto.overrideReason ? ctx.uid : current.overriddenBy,
       auditTrail: newAudit,
       updatedAt: admin.firestore.Timestamp.now(),
     };
@@ -209,7 +209,7 @@ export async function archiveQuote(
   quoteId: string
 ): Promise<void> {
   await updateQuote(ctx, quoteId, { status: 'archived' });
-  logger.info('Quote archived', { quoteId, userId: ctx.userId });
+  logger.info('Quote archived', { quoteId, userId: ctx.uid });
 }
 
 // ============================================================================
@@ -286,14 +286,14 @@ export async function applyExtractedData(
     const newLines = materializeQuoteLines(extracted);
     const newAudit = [...current.auditTrail];
     newAudit.push(auditEntry(
-      ctx.userId,
+      ctx.uid,
       'extracted_applied',
       null,
       `confidence=${extracted.overallConfidence}; lines=${newLines.length}`,
       source
     ));
     if (shouldAutoSubmit) {
-      newAudit.push(auditEntry(ctx.userId, 'status_change', current.status, 'submitted', source));
+      newAudit.push(auditEntry(ctx.uid, 'status_change', current.status, 'submitted', source));
     }
 
     const updates: Partial<Quote> = {
