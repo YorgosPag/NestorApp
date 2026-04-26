@@ -12,6 +12,7 @@ import 'server-only';
 
 import { safeJsonParse } from '@/lib/json-utils';
 import { isRecord } from '@/lib/type-guards';
+import { getAdminStorage } from '@/lib/firebaseAdmin';
 import type { IQuoteAnalyzer, QuoteClassification } from '../../types/quote-analyzer';
 import type {
   ExtractedQuoteData,
@@ -39,7 +40,8 @@ interface OpenAIQuoteConfig {
 
 type OpenAIRequestContent =
   | { type: 'input_text'; text: string }
-  | { type: 'input_image'; image_url: string };
+  | { type: 'input_image'; image_url: string }
+  | { type: 'input_file'; filename: string; file_data: string };
 
 interface OpenAIRequestMessage {
   role: 'system' | 'user';
@@ -217,7 +219,7 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
 
   async classifyQuote(fileUrl: string, mimeType: string): Promise<QuoteClassification> {
     try {
-      const content = this.buildVisionContent(fileUrl, mimeType, 'Είναι αυτό το αρχείο προσφορά προμηθευτή;');
+      const content = await this.buildVisionContent(fileUrl, mimeType, 'Είναι αυτό το αρχείο προσφορά προμηθευτή;');
       const request: OpenAIRequestBody = {
         model: this.config.visionModel,
         input: [
@@ -255,7 +257,7 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
 
   async extractQuote(fileUrl: string, mimeType: string): Promise<ExtractedQuoteData> {
     try {
-      const content = this.buildVisionContent(fileUrl, mimeType, 'Εξάγαγε τα δεδομένα της προσφοράς.');
+      const content = await this.buildVisionContent(fileUrl, mimeType, 'Εξάγαγε τα δεδομένα της προσφοράς.');
       const request: OpenAIRequestBody = {
         model: this.config.visionModel,
         input: [
@@ -289,14 +291,28 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
 
   // ── Private helpers ─────────────────────────────────────────────────────
 
-  private buildVisionContent(fileUrl: string, mimeType: string, promptText: string): OpenAIRequestContent[] {
+  private async buildVisionContent(
+    fileUrl: string,
+    mimeType: string,
+    promptText: string,
+  ): Promise<OpenAIRequestContent[]> {
     const content: OpenAIRequestContent[] = [{ type: 'input_text', text: promptText }];
     if (detectImageMime(mimeType)) {
       content.push({ type: 'input_image', image_url: fileUrl });
-    } else {
-      content.push({ type: 'input_text', text: `[Attached file URL: ${fileUrl} (${mimeType})]` });
+    } else if (mimeType === 'application/pdf') {
+      const b64 = await this.fetchFileAsBase64(fileUrl);
+      content.push({ type: 'input_file', filename: 'quote.pdf', file_data: `data:application/pdf;base64,${b64}` });
     }
     return content;
+  }
+
+  private async fetchFileAsBase64(url: string): Promise<string> {
+    const bucket = getAdminStorage().bucket();
+    const prefix = `https://storage.googleapis.com/${bucket.name}/`;
+    if (!url.startsWith(prefix)) throw new Error(`Unexpected storage URL: ${url}`);
+    const storagePath = decodeURIComponent(url.slice(prefix.length));
+    const [buffer] = await bucket.file(storagePath).download();
+    return buffer.toString('base64');
   }
 
   private async executeRequest(request: OpenAIRequestBody): Promise<unknown> {

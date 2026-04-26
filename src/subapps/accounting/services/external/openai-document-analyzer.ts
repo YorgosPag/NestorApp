@@ -13,6 +13,7 @@ import 'server-only';
 
 import { safeJsonParse } from '@/lib/json-utils';
 import { isRecord } from '@/lib/type-guards';
+import { getAdminStorage } from '@/lib/firebaseAdmin';
 import type { IDocumentAnalyzer } from '../../types/interfaces';
 import type {
   DocumentClassification,
@@ -21,6 +22,12 @@ import type {
   ExtractedLineItem,
 } from '../../types/documents';
 import type { ExpenseCategory } from '../../types/common';
+import {
+  EXPENSE_CLASSIFY_SCHEMA,
+  EXPENSE_EXTRACT_SCHEMA,
+  CLASSIFY_SYSTEM_PROMPT,
+  EXTRACT_SYSTEM_PROMPT,
+} from './document-analyzer.schemas';
 
 // ============================================================================
 // TYPES
@@ -36,7 +43,8 @@ interface OpenAIDocumentConfig {
 
 type OpenAIRequestContent =
   | { type: 'input_text'; text: string }
-  | { type: 'input_image'; image_url: string };
+  | { type: 'input_image'; image_url: string }
+  | { type: 'input_file'; filename: string; file_data: string };
 
 interface OpenAIRequestMessage {
   role: 'system' | 'user';
@@ -65,165 +73,6 @@ interface OpenAIErrorPayload {
     type?: string;
   };
 }
-
-// ============================================================================
-// SCHEMAS — OpenAI Strict Mode Compatible
-// ============================================================================
-
-/**
- * Schema for document classification
- * ALL properties in `required`, ALL objects have `additionalProperties: false`
- */
-const EXPENSE_CLASSIFY_SCHEMA = {
-  name: 'expense_classify',
-  description: 'Classify an expense document by type and suggested category',
-  strict: true,
-  schema: {
-    type: 'object',
-    properties: {
-      documentType: {
-        type: 'string',
-        enum: [
-          'purchase_invoice',
-          'receipt',
-          'utility_bill',
-          'telecom_bill',
-          'fuel_receipt',
-          'bank_statement',
-          'other',
-        ],
-      },
-      suggestedCategory: {
-        type: 'string',
-        enum: [
-          'third_party_fees', 'rent', 'utilities', 'telecom', 'fuel',
-          'vehicle_expenses', 'vehicle_insurance', 'office_supplies',
-          'software', 'equipment', 'travel', 'training', 'advertising',
-          'efka', 'professional_tax', 'bank_fees', 'tee_fees',
-          'depreciation', 'other_expense',
-        ],
-      },
-      typeConfidence: { type: 'number' },
-      categoryConfidence: { type: 'number' },
-      alternativeCategories: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            category: {
-              type: 'string',
-              enum: [
-                'third_party_fees', 'rent', 'utilities', 'telecom', 'fuel',
-                'vehicle_expenses', 'vehicle_insurance', 'office_supplies',
-                'software', 'equipment', 'travel', 'training', 'advertising',
-                'efka', 'professional_tax', 'bank_fees', 'tee_fees',
-                'depreciation', 'other_expense',
-              ],
-            },
-            confidence: { type: 'number' },
-          },
-          required: ['category', 'confidence'],
-          additionalProperties: false,
-        },
-      },
-    },
-    required: [
-      'documentType',
-      'suggestedCategory',
-      'typeConfidence',
-      'categoryConfidence',
-      'alternativeCategories',
-    ],
-    additionalProperties: false,
-  },
-} as const;
-
-/**
- * Schema for data extraction from expense documents
- * Optional fields are nullable (type: ['string', 'null']) per strict mode rules
- */
-const EXPENSE_EXTRACT_SCHEMA = {
-  name: 'expense_extract',
-  description: 'Extract structured data from an expense document (invoice, receipt, bill)',
-  strict: true,
-  schema: {
-    type: 'object',
-    properties: {
-      issuerName: { type: ['string', 'null'] },
-      issuerVatNumber: { type: ['string', 'null'] },
-      issuerAddress: { type: ['string', 'null'] },
-      documentNumber: { type: ['string', 'null'] },
-      issueDate: { type: ['string', 'null'] },
-      netAmount: { type: ['number', 'null'] },
-      vatAmount: { type: ['number', 'null'] },
-      grossAmount: { type: ['number', 'null'] },
-      vatRate: { type: ['number', 'null'] },
-      lineItems: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            description: { type: 'string' },
-            quantity: { type: ['number', 'null'] },
-            unitPrice: { type: ['number', 'null'] },
-            netAmount: { type: 'number' },
-            vatRate: { type: ['number', 'null'] },
-          },
-          required: ['description', 'quantity', 'unitPrice', 'netAmount', 'vatRate'],
-          additionalProperties: false,
-        },
-      },
-      paymentMethod: {
-        type: ['string', 'null'],
-        enum: ['cash', 'bank_transfer', 'card', 'check', 'credit', 'mixed', null],
-      },
-      overallConfidence: { type: 'number' },
-    },
-    required: [
-      'issuerName', 'issuerVatNumber', 'issuerAddress', 'documentNumber',
-      'issueDate', 'netAmount', 'vatAmount', 'grossAmount', 'vatRate',
-      'lineItems', 'paymentMethod', 'overallConfidence',
-    ],
-    additionalProperties: false,
-  },
-} as const;
-
-// ============================================================================
-// SYSTEM PROMPTS
-// ============================================================================
-
-const CLASSIFY_SYSTEM_PROMPT = `Είσαι AI σύστημα ταξινόμησης παραστατικών για ελληνικό τεχνικό γραφείο (μηχανικός/κατασκευαστής).
-
-Αναγνώρισε τον τύπο του εγγράφου:
-- purchase_invoice: Τιμολόγιο αγοράς (ΤΠΥ/ΤΠ) — έχει ΑΦΜ εκδότη, αρ. παραστατικού
-- receipt: Απόδειξη (ΑΛΠ/ΑΠΥ) — μικρό ποσό, λιανική
-- utility_bill: ΔΕΚΟ (ΔΕΗ, ΕΥΔΑΠ, φυσικό αέριο)
-- telecom_bill: Τηλεπικοινωνίες (OTE, Vodafone, Wind, Cosmote)
-- fuel_receipt: Απόδειξη καυσίμων (βενζινάδικο)
-- bank_statement: Τραπεζικό αντίγραφο κίνησης
-- other: Λοιπά
-
-Κατηγοριοποίησε στη σωστή κατηγορία εξόδου. Δώσε confidence 0-100.
-Επέστρεψε ΜΟΝΟ JSON σύμφωνα με το schema.`;
-
-const EXTRACT_SYSTEM_PROMPT = `Είσαι AI σύστημα εξαγωγής δεδομένων από ελληνικά παραστατικά εξόδων.
-
-Εξάγαγε τα ακόλουθα πεδία:
-- issuerName: Επωνυμία εκδότη (η εταιρεία που εξέδωσε)
-- issuerVatNumber: ΑΦΜ εκδότη (9 ψηφία)
-- issuerAddress: Διεύθυνση εκδότη
-- documentNumber: Αριθμός παραστατικού
-- issueDate: Ημερομηνία (ISO 8601: YYYY-MM-DD)
-- netAmount: Καθαρό ποσό (χωρίς ΦΠΑ)
-- vatAmount: Ποσό ΦΠΑ
-- grossAmount: Μικτό ποσό (συνολικό)
-- vatRate: Συντελεστής ΦΠΑ (6, 13, 24)
-- lineItems: Γραμμές αν υπάρχουν
-- paymentMethod: Τρόπος πληρωμής αν αναγράφεται
-- overallConfidence: Βαθμός εμπιστοσύνης 0-100
-
-Αν δεν αναγνωρίζεις κάποιο πεδίο, βάλε null. Μην μαντεύεις.
-Επέστρεψε ΜΟΝΟ JSON σύμφωνα με το schema.`;
 
 // ============================================================================
 // HELPERS
@@ -312,7 +161,7 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
     mimeType: string
   ): Promise<DocumentClassification> {
     try {
-      const content = this.buildVisionContent(fileUrl, mimeType, 'Ταξινόμησε αυτό το παραστατικό.');
+      const content = await this.buildVisionContent(fileUrl, mimeType, 'Ταξινόμησε αυτό το παραστατικό.');
 
       const request: OpenAIRequestBody = {
         model: this.config.visionModel,
@@ -364,7 +213,7 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
     try {
       const mimeType = this.guessMimeFromUrl(fileUrl);
       const promptText = `Εξάγαγε δεδομένα από αυτό το ${documentType}. Τύπος εγγράφου: ${documentType}`;
-      const content = this.buildVisionContent(fileUrl, mimeType, promptText);
+      const content = await this.buildVisionContent(fileUrl, mimeType, promptText);
 
       const request: OpenAIRequestBody = {
         model: this.config.visionModel,
@@ -414,29 +263,28 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
 
   // ── Private Helpers ────────────────────────────────────────────────────
 
-  private buildVisionContent(
+  private async buildVisionContent(
     fileUrl: string,
     mimeType: string,
-    promptText: string
-  ): OpenAIRequestContent[] {
-    const content: OpenAIRequestContent[] = [
-      { type: 'input_text', text: promptText },
-    ];
-
+    promptText: string,
+  ): Promise<OpenAIRequestContent[]> {
+    const content: OpenAIRequestContent[] = [{ type: 'input_text', text: promptText }];
     if (detectImageMime(mimeType)) {
-      content.push({
-        type: 'input_image',
-        image_url: fileUrl,
-      });
-    } else {
-      // For PDFs and other files, instruct model via text
-      content.push({
-        type: 'input_text',
-        text: `[Attached file URL: ${fileUrl} (${mimeType})]`,
-      });
+      content.push({ type: 'input_image', image_url: fileUrl });
+    } else if (mimeType === 'application/pdf') {
+      const b64 = await this.fetchFileAsBase64(fileUrl);
+      content.push({ type: 'input_file', filename: 'document.pdf', file_data: `data:application/pdf;base64,${b64}` });
     }
-
     return content;
+  }
+
+  private async fetchFileAsBase64(url: string): Promise<string> {
+    const bucket = getAdminStorage().bucket();
+    const prefix = `https://storage.googleapis.com/${bucket.name}/`;
+    if (!url.startsWith(prefix)) throw new Error(`Unexpected storage URL: ${url}`);
+    const storagePath = decodeURIComponent(url.slice(prefix.length));
+    const [buffer] = await bucket.file(storagePath).download();
+    return buffer.toString('base64');
   }
 
   private guessMimeFromUrl(url: string): string {

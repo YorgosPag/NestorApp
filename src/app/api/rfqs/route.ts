@@ -109,10 +109,5 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 // EXPORTS
 // ============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  return withStandardRateLimit(request, () => handleGet(request));
-}
-
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  return withSensitiveRateLimit(request, () => handlePost(request));
-}
+export const GET = withStandardRateLimit(handleGet);
+export const POST = withSensitiveRateLimit(handlePost);
