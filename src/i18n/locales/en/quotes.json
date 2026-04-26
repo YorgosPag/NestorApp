@@ -229,6 +229,53 @@
     "equipment_rental": "Equipment Rental",
     "demolition": "Demolition / Excavation"
   },
+  "invites": {
+    "title": "Vendor Invitations",
+    "button": "Invite Vendor",
+    "empty": "No invitations yet",
+    "modal": {
+      "title": "Invite Vendor",
+      "vendorLabel": "Vendor",
+      "vendorPlaceholder": "Search vendor...",
+      "vendorEmpty": "No vendors found",
+      "channelLabel": "Delivery Method",
+      "channelEmail": "Email",
+      "channelCopyLink": "Copy Link",
+      "expiresLabel": "Expires (days)",
+      "submit": "Send Invitation",
+      "cancel": "Cancel",
+      "sending": "Sending...",
+      "portalUrlLabel": "Portal Link",
+      "portalUrlCopy": "Copy"
+    },
+    "table": {
+      "vendor": "Vendor",
+      "channel": "Channel",
+      "status": "Status",
+      "expires": "Expires",
+      "actions": "Actions"
+    },
+    "statuses": {
+      "sent": "Sent",
+      "opened": "Opened",
+      "submitted": "Submitted",
+      "declined": "Declined",
+      "expired": "Expired"
+    },
+    "copyLink": "Copy Link",
+    "linkCopied": "Copied!",
+    "revoke": "Revoke",
+    "confirmRevoke": "Revoke this invitation?",
+    "createSuccess": "Invitation sent",
+    "revokeSuccess": "Invitation revoked",
+    "errors": {
+      "loadFailed": "Failed to load invitations",
+      "createFailed": "Failed to create invitation",
+      "revokeFailed": "Failed to revoke invitation",
+      "noVendorSelected": "Select a vendor",
+      "loadContactsFailed": "Failed to load vendors"
+    }
+  },
   "comparison": {
     "title": "Quote Comparison",
     "empty": "No comparable quotes for this RFQ yet.",

@@ -10,6 +10,7 @@ import { useComparison } from '@/subapps/procurement/hooks/useComparison';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
 import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
+import { VendorInviteSection } from '@/subapps/procurement/components/VendorInviteSection';
 import type { RFQ } from '@/subapps/procurement/types/rfq';
 import { rfqIsMultiTrade } from '@/subapps/procurement/types/rfq';
 
@@ -126,6 +127,8 @@ export default function RfqDetailPage({ params }: RfqDetailPageProps) {
           onAward={handleAward}
         />
       )}
+
+      <VendorInviteSection rfqId={id} />
     </main>
   );
 }

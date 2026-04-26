@@ -229,6 +229,53 @@
     "equipment_rental": "Ενοικίαση Εξοπλισμού",
     "demolition": "Κατεδάφιση / Εκσκαφή"
   },
+  "invites": {
+    "title": "Προσκλήσεις Προμηθευτών",
+    "button": "Πρόσκληση Προμηθευτή",
+    "empty": "Δεν υπάρχουν προσκλήσεις ακόμη",
+    "modal": {
+      "title": "Πρόσκληση Προμηθευτή",
+      "vendorLabel": "Προμηθευτής",
+      "vendorPlaceholder": "Αναζήτηση προμηθευτή...",
+      "vendorEmpty": "Δεν βρέθηκαν προμηθευτές",
+      "channelLabel": "Μέθοδος Αποστολής",
+      "channelEmail": "Email",
+      "channelCopyLink": "Αντιγραφή Συνδέσμου",
+      "expiresLabel": "Λήξη (ημέρες)",
+      "submit": "Αποστολή Πρόσκλησης",
+      "cancel": "Ακύρωση",
+      "sending": "Αποστολή...",
+      "portalUrlLabel": "Σύνδεσμος Portal",
+      "portalUrlCopy": "Αντιγραφή"
+    },
+    "table": {
+      "vendor": "Προμηθευτής",
+      "channel": "Κανάλι",
+      "status": "Κατάσταση",
+      "expires": "Λήξη",
+      "actions": "Ενέργειες"
+    },
+    "statuses": {
+      "sent": "Απεστάλη",
+      "opened": "Ανοίχθηκε",
+      "submitted": "Υποβλήθηκε",
+      "declined": "Αρνήθηκε",
+      "expired": "Έληξε"
+    },
+    "copyLink": "Αντιγραφή Συνδέσμου",
+    "linkCopied": "Αντιγράφηκε!",
+    "revoke": "Ανάκληση",
+    "confirmRevoke": "Να ανακληθεί η πρόσκληση;",
+    "createSuccess": "Πρόσκληση εστάλη",
+    "revokeSuccess": "Πρόσκληση ανακλήθηκε",
+    "errors": {
+      "loadFailed": "Αποτυχία φόρτωσης προσκλήσεων",
+      "createFailed": "Αποτυχία δημιουργίας πρόσκλησης",
+      "revokeFailed": "Αποτυχία ανάκλησης πρόσκλησης",
+      "noVendorSelected": "Επιλέξτε προμηθευτή",
+      "loadContactsFailed": "Αποτυχία φόρτωσης προμηθευτών"
+    }
+  },
   "comparison": {
     "title": "Σύγκριση Προσφορών",
     "empty": "Δεν υπάρχουν συγκρίσιμες προσφορές για αυτό το αίτημα.",
