@@ -497,6 +497,48 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       isActive: 'boolean',
     },
   },
+
+  // ── ADR-326 Phase 7 — Org structure SSoT (L1 tenant, L2 CompanyContact) ──
+
+  'companies.settings.orgStructure': {
+    description: 'L1 Tenant Org Structure (ADR-326). Embedded at companies/{companyId}.settings.orgStructure. Use for ANY question about τμήματα/υπεύθυνους/οργανόγραμμα/οργανωτική δομή του τενάντη. ΜΗΝ κάνεις firestore_query — χρησιμοποίησε τα dedicated AI tools: query_org_structure, get_department_head, find_department_member, traverse_hierarchy, resolve_routing_email.',
+    fields: {
+      id: 'string (org_xxx, enterprise ID)',
+      'departments[].id': 'string (odep_xxx)',
+      'departments[].code': 'accounting|engineering|architecture_studies|construction|sales|legal|hr|it|procurement|operations|management|customer_service|custom',
+      'departments[].label': 'string? (i18n key for canonical, free-text for code=custom)',
+      'departments[].emails': 'OrgEmailInfo[]? (centralino — type ∈ work/notification/...)',
+      'departments[].phones': 'OrgPhoneInfo[]?',
+      'departments[].members': 'OrgMember[] (vedi sotto)',
+      'departments[].status': 'active|archived',
+      'departments[].members[].id': 'string (omem_xxx)',
+      'departments[].members[].displayName': 'string',
+      'departments[].members[].mode': 'linked|created|plain',
+      'departments[].members[].contactId': 'string? (->contacts, when mode=linked|created)',
+      'departments[].members[].userId': 'string? (->users, L1 only — null on L2)',
+      'departments[].members[].role': 'head|manager|senior|employee|intern|custom',
+      'departments[].members[].positionLabel': 'string?',
+      'departments[].members[].reportsTo': 'string? (->members.id, null=department head)',
+      'departments[].members[].isDepartmentHead': 'boolean (max 1 per dept)',
+      'departments[].members[].receivesNotifications': 'boolean (G3 backup candidate)',
+      'departments[].members[].emails': 'OrgEmailInfo[]',
+      'departments[].members[].phones': 'OrgPhoneInfo[]',
+      'departments[].members[].status': 'active|archived',
+      'notificationRouting': 'NotificationRoutingRule[]? (per-event department + override email)',
+      updatedAt: 'Timestamp',
+      updatedBy: 'string (->users)',
+    },
+  },
+
+  'contacts.orgStructure': {
+    description: 'L2 CompanyContact Org Structure (ADR-326). Embedded at contacts/{contactId}.orgStructure ONLY su CompanyContact (type=company). Stessa shape di L1 ma senza notificationRouting και userId sempre null (G8). Use for B2B partner queries — "στείλε στο λογιστήριο της ΑΛΦΑ ΣΙΔΗΡΟΣ" / "ποιος είναι ο υπεύθυνος μελετών της εταιρείας X". Use AI tools (scope=contact, contactId=...): query_org_structure, get_department_head, find_department_member, traverse_hierarchy, resolve_routing_email.',
+    fields: {
+      id: 'string (org_xxx)',
+      'departments': 'OrgDepartment[] (vedi companies.settings.orgStructure schema)',
+      updatedAt: 'Timestamp',
+      updatedBy: 'string',
+    },
+  },
 };
 
 // ============================================================================

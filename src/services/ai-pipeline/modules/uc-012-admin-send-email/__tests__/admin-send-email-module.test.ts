@@ -34,6 +34,12 @@ jest.mock('../../../shared/mailgun-sender', () => ({
   sendReplyViaMailgun: (...args: unknown[]) => Reflect.apply(mockSendReplyViaMailgun, null, args),
 }));
 
+// ADR-326 Phase 7: department-keyword-resolver mock (avoids Firebase Admin SDK init in unit tests)
+jest.mock('../department-keyword-resolver', () => ({
+  tryResolveDepartmentEmail: jest.fn().mockResolvedValue(null),
+  detectDepartmentKeyword: jest.fn().mockReturnValue(null),
+}));
+
 import { AdminSendEmailModule } from '../admin-send-email-module';
 
 // ---------------------------------------------------------------------------

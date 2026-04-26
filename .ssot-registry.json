@@ -2499,6 +2499,42 @@
         "src/app/api/notifications/professional-assigned/__tests__/"
       ],
       "tier": 3
+    },
+
+    "ai-org-structure-tools": {
+      "ssotFile": "src/services/ai-pipeline/tools/handlers/org-structure-handler.ts",
+      "description": "AI agentic tools for org structure (ADR-326 Phase 7). Canonical entry point for AI org-structure access. FORBIDDEN: AI tools that bypass resolveTenantNotificationEmail / resolveContactDepartmentEmail for routing; AI tools that read companies/{id}.settings.orgStructure or contacts/{id}.orgStructure outside the OrgStructureHandler; hardcoded department names in agentic prompts (must use DEPARTMENT_CODES).",
+      "forbiddenPatterns": [
+        "settings\\.orgStructure[^a-zA-Z_]"
+      ],
+      "allowlist": [
+        "src/services/ai-pipeline/tools/handlers/org-structure-handler.ts",
+        "src/services/ai-pipeline/modules/uc-012-admin-send-email/department-keyword-resolver.ts",
+        "src/services/org-structure/",
+        "src/types/org/",
+        "src/components/settings/company/",
+        "src/components/contacts/tabs/",
+        "src/app/api/org-structure/",
+        "src/app/(app)/settings/company/",
+        "src/config/firestore-schema-map.ts"
+      ],
+      "tier": 3
+    },
+
+    "onboarding-flow": {
+      "ssotFile": "src/services/onboarding/onboarding-state-service.ts",
+      "description": "Tenant onboarding state (ADR-326 Phase 8). Canonical read/write for companies/{id}.settings.onboarding. FORBIDDEN: direct Firestore writes to settings.onboarding outside onboarding-state-service; duplicating isBannerEligible / isRemindEligible logic outside onboarding-types.ts.",
+      "forbiddenPatterns": [
+        "settings\\.onboarding[^a-zA-Z_]"
+      ],
+      "allowlist": [
+        "src/services/onboarding/",
+        "src/app/api/onboarding/",
+        "src/app/api/cron/onboarding-reminder/",
+        "src/app/onboarding/",
+        "src/components/dashboard/OnboardingBanner.tsx"
+      ],
+      "tier": 3
     }
   }
 }

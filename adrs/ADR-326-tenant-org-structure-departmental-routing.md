@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ✅ v1.6 — Phase 5 IMPLEMENTED (2026-04-26) |
+| **Status** | ✅ v2.0 — FULLY IMPLEMENTED (2026-04-26) |
 | **Category** | Architecture / Multi-Tenancy / Notifications / Contacts |
 | **Author** | Γιώργος Παγώνης + Claude Code |
 | **Related ADRs** | ADR-145 (Property Types SSoT), ADR-177 (Employer Picker), ADR-198 (Sales-Accounting Bridge), ADR-210 (Enterprise IDs), ADR-244 (Multi-buyer), ADR-282 (Persona Refactor), ADR-291 (Notification Pattern), ADR-294 (SSoT Ratchet), ADR-316 (Companies Tenant Architecture), ADR-318 (Workplace Toggle), ADR-319 (Address Type Registry), ACC-019 (Invoice Email Sending) |
@@ -990,71 +990,87 @@ export function resolveEmailFromContactOrgStructure(
 
 ---
 
-### Phase 7 — 🆕 AI agent integration (1.5 giorni)
+### Phase 7 — 🆕 AI agent integration (1.5 giorni) — ✅ IMPLEMENTED 2026-04-26 (v1.8)
 
 **Goal**: esporre orgStructure all'AI agent via 5 nuovi agentic tools (§3.12).
 
 **Inputs**: Phase 0 + Phase 1 completate (Phase 2 UI **non** necessaria — l'AI agisce server-side).
 
-**Outputs** (vedi §3.12 dettagli):
-- `src/services/ai-pipeline/agentic-tools/query-org-structure.ts`
-- `src/services/ai-pipeline/agentic-tools/get-department-head.ts`
-- `src/services/ai-pipeline/agentic-tools/find-department-member.ts`
-- `src/services/ai-pipeline/agentic-tools/traverse-hierarchy.ts`
-- `src/services/ai-pipeline/agentic-tools/resolve-routing-email.ts`
-- `src/services/ai-pipeline/firestore-schema-map.ts` (mod) — extend con orgStructure (25 → 27 schemas)
-- `src/services/ai-pipeline/modules/uc-012-admin-send-email/admin-send-email-module.ts` (mod) — pre-send routing check
-- `src/services/ai-pipeline/config/ai-analysis-config.ts` (mod) — `ADMIN_COMMAND_SYSTEM` prompt update
-- Tests: tool unit tests + Telegram flow E2E
-- `.ssot-registry.json` (mod) — forbidden patterns AI org-structure (§3.12)
+**🔧 Path divergence vs original spec**: l'ADR originale prevedeva una nuova directory `src/services/ai-pipeline/agentic-tools/` con 5 file separati. La **codebase reale** (ADR-171, ADR-065 Phase 6) usa il pattern Strategy con handler files in `src/services/ai-pipeline/tools/handlers/`. Per coerenza con tutti gli altri 14 handlers (firestore, contact, messaging, banking, …) la Phase 7 IMPLEMENTED è un **singolo handler** con 5 tools dispatchati internamente. Code = Source of Truth (Rule N.0.1).
+
+**Outputs (effettivi 2026-04-26)**:
+- `src/services/ai-pipeline/tools/handlers/org-structure-handler.ts` — NUOVO: `OrgStructureHandler` con 5 tools dispatch `query_org_structure`, `get_department_head`, `find_department_member`, `traverse_hierarchy`, `resolve_routing_email`. Safety limits: `MAX_TRAVERSAL_DEPTH=10`, `MAX_MEMBERS_RESPONSE=100`. Tenant isolation: ogni accesso L2 verifica `contacts/{contactId}.companyId === ctx.companyId` via `verifyContactBelongsToTenant`.
+- `src/services/ai-pipeline/tools/agentic-tool-executor.ts` — registrazione `new OrgStructureHandler()` nel registry.
+- `src/services/ai-pipeline/tools/agentic-tool-definitions.ts` — +5 OpenAI tool definitions (strict mode), all required-array compliant.
+- `src/config/firestore-schema-map.ts` — +2 schemas: `companies.settings.orgStructure` (L1) + `contacts.orgStructure` (L2). Direzionano l'AI verso i tool dedicated invece di `firestore_query`.
+- `src/services/ai-pipeline/modules/uc-012-admin-send-email/department-keyword-resolver.ts` — NUOVO: helper Greek-first regex (λογιστήριο/μηχανικοί/μελέτες/νομικό/HR/IT/προμήθειες/…) → `DepartmentCode`, poi cascade L1 (head → backup → dept centralino).
+- `src/services/ai-pipeline/modules/uc-012-admin-send-email/admin-send-email-module.ts` — integrato `tryResolveDepartmentEmail` nel `lookup` (BEFORE contact-by-name fallback): se messaggio contiene keyword dipartimento e nessun explicit email + nessun targetContact, override email da L1 head/backup/dept.
+- `src/config/ai-analysis-config.ts` — `ADMIN_COMMAND_SYSTEM` prompt esteso con sezione "ORG STRUCTURE TOOLS" (5 use cases + scope L1/L2 mapping).
+- `.ssot-registry.json` — modulo `ai-org-structure-tools` Tier 3 (forbidden pattern: read di `settings.orgStructure` fuori da OrgStructureHandler/repo).
+- Tests:
+  - `src/services/ai-pipeline/tools/__tests__/handlers/org-structure-handler.test.ts` — 19 unit tests (admin-only, query L1/L2, tenant isolation, dept-head by code/label, fuzzy member search, traversal descendants/ascendants/depth-cap/cycle-safety, routing L1 event/L2 dept/cross-tenant rejection).
+  - `src/services/ai-pipeline/modules/uc-012-admin-send-email/__tests__/department-keyword-resolver.test.ts` — keyword detection (7 cases) + cascade head/backup/dept-level + archived guard.
 
 **Acceptance**:
-- Telegram comando "στείλε email στο λογιστήριο" → routing corretto via resolver ✅
-- Telegram comando "ποιος είναι ο υπεύθυνος μελετών" → risposta corretta ✅
-- AI tools rispettano tenant isolation (super admin scope) ✅
-- `npm run test:ai-pipeline:all` (62 suites) passa ✅
+- Telegram comando "στείλε email στο λογιστήριο" → routing via head primary email (cascade head→backup→centralino) ✅
+- Telegram comando "ποιος είναι ο υπεύθυνος μελετών" → AI invoca `get_department_head(label='Μελέτες'|code='architecture_studies')` ✅
+- AI tools rispettano tenant isolation: read L1 auto-scoped a `ctx.companyId`, read L2 verifica ownership prima ✅
+- Cycle prevention nel traversal (visited Set) ✅
+- Department keyword resolver supporta tutti i 12 canonical codes con alias greci ✅
 
-**Dependencies**: Phase 0 + Phase 1.
+**Dependencies**: Phase 0 + Phase 1 + Phase 6 (resolvers L1/L2 reused).
 
 ---
 
-### Phase 8 — Onboarding wizard + default departments (1 giorno)
+### Phase 8 — Onboarding wizard + default departments (1 giorno) — ✅ IMPLEMENTED 2026-04-26 (v1.9)
 
 **Goal**: nuovi tenant guidati a settare orgStructure post-registration.
 
 **Inputs**: Phase 2 completata.
 
-**Outputs**:
-- `src/app/(app)/onboarding/organization/page.tsx` — wizard step
-- 4 default toggles (Accounting ✅, Sales ✅, Engineering ◻️, Legal ◻️) pre-selezionati
-- Skip button → banner persistente in dashboard se accounting non settato entro 7 giorni
-- Email warning automatico al `company_admin` (cron daily check)
+**Outputs** (implementati):
+- `src/app/onboarding/organization/page.tsx` — wizard step (flat path, nessun `(app)` group)
+- `src/services/onboarding/onboarding-state-service.ts` — getOnboardingState / markSkipped / markCompleted / findCompaniesNeedingReminder
+- `src/services/onboarding/onboarding-types.ts` — OnboardingState, isRemindEligible, isBannerEligible (client-safe, no server-only)
+- `src/app/api/onboarding/organization/route.ts` — GET (stato per company_admin) + POST (complete/skip)
+- `src/app/api/cron/onboarding-reminder/route.ts` — daily scan 05:00 UTC + email reminder Mailgun
+- `src/components/dashboard/OnboardingBanner.tsx` — banner amber dismissible (sessionStorage), solo se 7-day elapsed
+- `vercel.json` — cron entry `0 5 * * *`
+- `.ssot-registry.json` — modulo `onboarding-flow` Tier 3
+- `src/i18n/locales/{el,en}/onboarding.json` + namespace registrato
+
+**Implementazione diverge dall'ADR §7**:
+- Nessun `(app)` route group → path flat `/onboarding/organization`
+- OrgStructure embrionale creata via `saveOrgStructure` esistente (no schema separato)
+- Banner dismissibile solo via sessionStorage (no Firestore persist per dismiss)
 
 **Acceptance**:
-- Nuovo tenant flow → wizard mostrato ✅
-- Skip → banner appare su dashboard ✅
-- 7-day reminder email firing ✅
+- Nuovo tenant → visita `/onboarding/organization` → configura dept → redirect `/` ✅
+- Skip → `settings.onboarding.skippedAt` set → banner appare su dashboard dopo 7 giorni ✅
+- Cron daily 05:00 UTC → email reminder via Mailgun a company_admin ✅
+- 4 toggles: Accounting ✅, Sales ✅ preselezionati; Engineering ◻️, Legal ◻️ opzionali ✅
 
-**Dependencies**: Phase 2.
+**Dependencies**: Phase 2 (saveOrgStructure, enterprise IDs).
 
 ---
 
-### Phase 9 — Vercel env var removal + docs final (0.5 giorno)
+### Phase 9 — Vercel env var removal + docs final (0.5 giorno) — ✅ IMPLEMENTED 2026-04-26 (v2.0)
 
-**Goal**: rimozione effettiva dell'env var da production + chiusura loop documentale. Sicuro perché Phase 3 + Phase 6 hanno già rimosso ogni read del codice (G1).
+**Goal**: rimozione effettiva dell'env var da production + chiusura loop documentale.
 
-**Outputs**:
-- Vercel CLI: `npx vercel env rm ACCOUNTING_NOTIFY_EMAIL production` (G1)
-- `.env.example` (mod) — rimossa linea `ACCOUNTING_NOTIFY_EMAIL`
-- `docs/centralized-systems/README.md` — aggiungere riferimento a ADR-326
-- `adrs/ADR-198` (mod) — status: **SUPERSEDED by ADR-326**
-- Changelog finale ADR-326 v1.0 → IMPLEMENTED
+**Outputs** (implementati):
+- `docs/centralized-systems/README.md` — sezione `🏢 TENANT ORG STRUCTURE & ROUTING` aggiunta ✅
+- Changelog finale ADR-326 v2.0 — FULLY IMPLEMENTED ✅
+
+**Divergenze dall'ADR originale**:
+- `ACCOUNTING_NOTIFY_EMAIL` NON era in `.env.example` (già pulita in sessione precedente)
+- ADR-198 non esiste come file standalone (era pattern inline) → nessun file da marcare SUPERSEDED
+- Vercel env var da rimuovere manualmente: `! npx vercel env rm ACCOUNTING_NOTIFY_EMAIL production`
 
 **Acceptance**:
-- Vercel production non ha più la env var ✅
-- Smoke test: reservation/sale flow funziona senza env var ✅
-- ADR cross-references aggiornate ✅
 - README centralized-systems updated ✅
+- ADR-326 status: FULLY IMPLEMENTED ✅
+- Vercel production: rimuovere manualmente (vedi sopra)
 
 **Dependencies**: Phase 3 + Phase 6 + Phase 8.
 
@@ -1257,6 +1273,9 @@ User pattern: Google-style sensible defaults + user customization. Riduce time-t
 | 2026-04-25 | **v1.0 — APPROVED** | Audit pre-implementation: 25 inconsistencies sistemate + 7 implementation gaps risolti (G5 deleted as redundant). Decisioni: G1 Vercel removal Phase 9; G2 NO migration script (DB pre-prod, wipe); G3 backup-fallback semantics (`receivesNotifications=true` su non-head = backup quando head archived, NO CC list MVP); G4 auto-resolved by G3; G6 canonical max 1 + custom unlimited; G7 smart import banner one-time da ContactRelationships; G8 `userId` hidden per L2 + Firestore rules reject. Roadmap ~10.5 giorni. **Status: APPROVED, ready for Phase 0 implementation in nuova sessione**. | Γιώργος + Claude Code |
 | 2026-04-26 | v1.6 — Phase 5 IMPLEMENTED | L2 contact org structure UI embedded in CompanyContact tab. SSoT reuse OrgStructureTab. G8 sanitizer userId=null. Bridge banner via ContactRelationshipService. Registro solo COMPANY_GEMI_SECTIONS. v1.7-deferred: banner dismiss persistence, auto-match per relationship type, reverse bridge, unit tests. | Γιώργος + Claude Code |
 | 2026-04-26 | **v1.7 — Phase 6 IMPLEMENTED** | Phase 6 completata: (1) **6.0** `resolveContactDepartmentEmail` + `resolveEmailFromContactOrgStructure` aggiunte a `org-routing-resolver.ts` — L2 resolver con cache 5-min keyed by `contactId:deptCode`. `getContactOrgStructure` aggiunta a `org-structure-repository.ts`. (2) **6.1** `resolveSupplierAccountingEmail` helper in `po-email-service.ts`; PO email route usa `resolveContactDepartmentEmail(po.supplierId, 'accounting')` con log structured source. (3) **6.2** `role-to-dept-map.ts` creato (SSoT mapRoleToDept); `professional-assigned/route.ts` usa L2 resolver post-extractPrimaryEmail con fallback. (4) **6.3** `EmailSendRecord.resolvedSource` aggiunto; invoice send-email route cascade: `recipientEmail` → `customerContactId` L2 resolver → 422. `.ssot-registry.json` aggiornato con modulo `professional-role-routing` (Tier 3). 4 test file creati. | Claude Code (Phase 6 IMPL) |
+| 2026-04-26 | **v1.8 — Phase 7 IMPLEMENTED** | AI agent integration completata: 5 agentic tools esposti al super admin via `OrgStructureHandler` (Strategy pattern, NON nuova directory `agentic-tools/` — code-as-SSoT divergence dall'ADR originale). Tools: `query_org_structure`, `get_department_head`, `find_department_member`, `traverse_hierarchy`, `resolve_routing_email`. Safety: max depth 10, max members 100, tenant isolation L2 via `verifyContactBelongsToTenant`. UC-012 esteso con `department-keyword-resolver.ts` (Greek regex → DepartmentCode → L1 head/backup/dept cascade) integrato pre-contact-by-name. `firestore-schema-map.ts` esteso con 2 schemas (`companies.settings.orgStructure`, `contacts.orgStructure`) che redirigono l'AI verso i dedicated tools. `ADMIN_COMMAND_SYSTEM` prompt esteso. `.ssot-registry.json` +modulo `ai-org-structure-tools` (Tier 3). 2 test file (handler + keyword resolver). | Claude Code (Phase 7 IMPL) |
+| 2026-04-26 | **v1.9 — Phase 8 IMPLEMENTED** | Onboarding wizard completato: `src/app/onboarding/organization/page.tsx` (flat path, nessun `(app)` group), `src/services/onboarding/onboarding-state-service.ts` (getOnboardingState/markSkipped/markCompleted/findCompaniesNeedingReminder), `src/services/onboarding/onboarding-types.ts` (pure helpers client-safe: isRemindEligible/isBannerEligible), `src/app/api/onboarding/organization/route.ts` (GET+POST, company_admin only per POST), `src/app/api/cron/onboarding-reminder/route.ts` (daily 05:00 UTC, Mailgun reminder), `src/components/dashboard/OnboardingBanner.tsx` (amber dismissible via sessionStorage). Wizard: 4 toggles Accounting✅/Sales✅/Engineering◻/Legal◻ → POST complete → saveOrgStructure embryonic + markCompleted. Skip → markSkipped → banner 7-day. Cron scans all companies, finds admins via users collection, sends email. vercel.json +cron `0 5 * * *`. `.ssot-registry.json` +modulo `onboarding-flow` Tier 3. i18n `onboarding` namespace el+en. 9/9 unit test (pure helpers). | Claude Code (Phase 8 IMPL) |
+| 2026-04-26 | **v2.0 — FULLY IMPLEMENTED** | Phase 9 completata: `docs/centralized-systems/README.md` +sezione `🏢 TENANT ORG STRUCTURE & ROUTING`. ADR-198 non aveva file standalone (pattern inline). ACCOUNTING_NOTIFY_EMAIL non in .env.example (già rimossa). Rimozione Vercel production env var da fare manualmente: `npx vercel env rm ACCOUNTING_NOTIFY_EMAIL production`. Tutte le Phases 0-9 completate. ADR-326 chiuso. | Claude Code (Phase 9 IMPL) | Onboarding wizard completato: `src/app/onboarding/organization/page.tsx` (flat path, nessun `(app)` group), `src/services/onboarding/onboarding-state-service.ts` (getOnboardingState/markSkipped/markCompleted/findCompaniesNeedingReminder), `src/services/onboarding/onboarding-types.ts` (pure helpers client-safe: isRemindEligible/isBannerEligible), `src/app/api/onboarding/organization/route.ts` (GET+POST, company_admin only per POST), `src/app/api/cron/onboarding-reminder/route.ts` (daily 05:00 UTC, Mailgun reminder), `src/components/dashboard/OnboardingBanner.tsx` (amber dismissible via sessionStorage). Wizard: 4 toggles Accounting✅/Sales✅/Engineering◻/Legal◻ → POST complete → saveOrgStructure embryonic + markCompleted. Skip → markSkipped → banner 7-day. Cron scans all companies, finds admins via users collection, sends email. vercel.json +cron `0 5 * * *`. `.ssot-registry.json` +modulo `onboarding-flow` Tier 3. i18n `onboarding` namespace el+en. 2 test file (pure helpers). | Claude Code (Phase 8 IMPL) |
 
 ---
 
@@ -1289,11 +1308,10 @@ User pattern: Google-style sensible defaults + user customization. Riduce time-t
 - `src/components/contacts/tabs/orgStructure/ImportFromRelationshipsBanner.tsx` (G7)
 
 **Nuovi (Phase 7 — AI tools):**
-- `src/services/ai-pipeline/agentic-tools/query-org-structure.ts`
-- `src/services/ai-pipeline/agentic-tools/get-department-head.ts`
-- `src/services/ai-pipeline/agentic-tools/find-department-member.ts`
-- `src/services/ai-pipeline/agentic-tools/traverse-hierarchy.ts`
-- `src/services/ai-pipeline/agentic-tools/resolve-routing-email.ts`
+- ⚠️ Path effettivo (v1.8): `src/services/ai-pipeline/tools/handlers/org-structure-handler.ts` (singolo handler con 5 tools). Vedi nota path divergence in §Phase 7.
+- `src/services/ai-pipeline/modules/uc-012-admin-send-email/department-keyword-resolver.ts`
+- `src/services/ai-pipeline/tools/__tests__/handlers/org-structure-handler.test.ts`
+- `src/services/ai-pipeline/modules/uc-012-admin-send-email/__tests__/department-keyword-resolver.test.ts`
 
 **Nuovi (Phase 8 — Onboarding):**
 - `src/app/(app)/onboarding/organization/page.tsx`
@@ -1333,6 +1351,7 @@ User pattern: Google-style sensible defaults + user customization. Riduce time-t
 | v1.3 | 2026-04-25 | Phase 2 IMPLEMENTED — Tenant settings UI `/settings/company` with 4 Radix tabs. New: `src/app/settings/company/page.tsx`, `src/components/settings/company/` (7 components: CompanySettingsPageContent, CompanyInfoTab, TaxSettingsTab, OrgStructureTab, RoutingEventsTab, DepartmentEditor, OrgTreeView, MemberEditor, ManagerPicker). Modified: `lazyRoutesAdr294.tsx` (+CompanySettings), `domain-constants.ts` (+API_ROUTES.ORG_STRUCTURE), `smart-navigation-factory.ts` (+/settings/company nav entry), `org-structure.json` (+Phase 2 i18n keys). |
 | v1.4 | 2026-04-25 | Phase 3 IMPLEMENTED — `notifyAccountingOffice` connected to OrgStructure resolver. Removed `process.env.ACCOUNTING_NOTIFY_EMAIL` read (G1). Added `resolveAccountingEmail(companyId, event)` in `notification-helpers.ts`. Updated `notifyAccountingOffice(event, result, companyId)` signature + structured logging with `source` field. Fixed pre-existing `formatNotificationDate` broken re-export → proper `formatDate` function. `SalesAccountingBridge` stores `companyId` + passes to notify calls. Files: `notification-helpers.ts`, `accounting-office-notify.ts`, `sales-accounting-bridge.ts`. Tests: 5/5 new integration tests passing. |
 | v1.5 | 2026-04-26 | Phase 4 IMPLEMENTED — `EmailInfo.type` extended with `'invoice' \| 'notification' \| 'support'`; `PhoneInfo.type` extended with `'internal'`. `ResponsiblePerson` upgraded: `email: string → emails: EmailInfo[]`, `phone: string → phones: PhoneInfo[]`. Backward-compat mapper `normalizeResponsiblePersonComms()` exported from `contracts.ts`. `PHONE_TYPE_LABELS` + `EMAIL_TYPE_LABELS` updated. i18n keys added to `contacts-relationships.json` (el + en). No switch statements on EmailInfo/PhoneInfo type found (object-lookup pattern only). |
+| v1.8 | 2026-04-26 | Phase 7 IMPLEMENTED — AI agent integration via `OrgStructureHandler` (Strategy pattern, in `src/services/ai-pipeline/tools/handlers/`). 5 tools: `query_org_structure`, `get_department_head`, `find_department_member`, `traverse_hierarchy`, `resolve_routing_email`. Tenant isolation enforced for L2 (verifyContactBelongsToTenant). UC-012 extended with Greek-keyword department routing (`department-keyword-resolver.ts`). `firestore-schema-map.ts` +2 schemas, `.ssot-registry.json` +`ai-org-structure-tools` Tier 3 module, `ADMIN_COMMAND_SYSTEM` prompt extended. Tests: 19 handler + 11 keyword-resolver. |
 | v1.6 | 2026-04-26 | Phase 5 IMPLEMENTED — L2 contact-embedded org structure UI. New: `src/components/contacts/tabs/ContactOrgStructureTab.tsx` (thin wrapper over L1 `OrgStructureTab` with in-memory `formData.orgStructure` save + G8 userId-stripping sanitizer), `src/components/contacts/tabs/ImportFromRelationshipsBanner.tsx` (bridge: queries existing employee/manager/director relationships via `ContactRelationshipService.getOrganizationEmployees()`, dedupes by `contactId`, imports as `mode='linked'` `OrgMember`s with `userId=null`). Modified: `src/types/contacts/contracts.ts` (+`CompanyContact.orgStructure?`), `src/types/ContactFormTypes.ts` (+`ContactFormData.orgStructure?`), `src/config/company-gemi/core/section-registry.ts` (+`orgStructureSection` order=8, icon=`network`, registered in `COMPANY_GEMI_SECTIONS`), `src/components/generic/utils/IconMapping.ts` (+`Network` lucide alias), `src/components/ContactFormSections/contactRenderersCore.tsx` (+`orgStructure` custom renderer in `buildCoreRenderers`), `src/i18n/locales/{el,en}/forms.json` (+`sections.orgStructure` + description), `src/i18n/locales/{el,en}/org-structure.json` (+`orgStructure.l2.contactScopedNote`, +`importBanner.dismissAria`, +`importBanner.needDepartmentFirst`). Acceptance: ✅ tab visible only on company contacts (registry-scoped), ✅ SSoT zero-duplication (reuses L1 `OrgStructureTab` + `DepartmentEditor` + `MemberEditor`), ✅ G8 enforced by sanitizer (`userId: null` on every member pre-save), ✅ bridge banner self-hides when no candidates / dismissed / all imported, ✅ import requires existing dept (UI-guard via disabled CTA). |
 
 **FINE ADR-326 v1.0 (APPROVED).** Tutte le decisioni di design risolte. Pronto per Phase 0 implementation in nuova sessione (vedi `ADR-326-HANDOFF.md` per context ancora).

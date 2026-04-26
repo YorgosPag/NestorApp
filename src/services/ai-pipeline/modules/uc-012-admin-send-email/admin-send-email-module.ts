@@ -18,6 +18,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { findContactByName, type ContactNameSearchResult } from '../../shared/contact-lookup';
 import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
 import { sendReplyViaMailgun } from '../../shared/mailgun-sender';
+import { tryResolveDepartmentEmail } from './department-keyword-resolver';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -152,6 +153,22 @@ export class AdminSendEmailModule implements IUCModule {
         requestId: ctx.requestId,
         overrideRecipientEmail,
       });
+    }
+
+    // ── ADR-326 Phase 7 — Department-keyword routing (L1 orgStructure) ──
+    if (!overrideRecipientEmail && !targetContact) {
+      const deptRoute = await tryResolveDepartmentEmail(rawMessage, ctx.companyId, ctx.requestId);
+      if (deptRoute) {
+        overrideRecipientEmail = deptRoute.email;
+        if (!recipientName) {
+          recipientName = deptRoute.memberDisplayName ?? deptRoute.departmentCode;
+        }
+        logger.info('UC-012 LOOKUP: Department-keyword routing resolved', {
+          requestId: ctx.requestId,
+          departmentCode: deptRoute.departmentCode,
+          source: deptRoute.source,
+        });
+      }
     }
 
     // ── Contact card: AI extracts includeContactCardOf via tool calling ──

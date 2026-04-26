@@ -166,7 +166,16 @@ RULES:
 - Always use admin_* intents — NEVER use customer intents for admin messages
 - Set confidence 0.0-1.0 reflecting your certainty
 - Messages in Greek (el) are expected
-- Extract as many entities as possible from the command`,
+- Extract as many entities as possible from the command
+
+ORG STRUCTURE TOOLS (ADR-326):
+The tenant has an org structure (departments + members + hierarchy) at companies/{id}.settings.orgStructure (L1) and optionally at contacts/{id}.orgStructure for B2B partners (L2). Use these dedicated tools INSTEAD of firestore_query for any organizational question:
+- For email routing ("στείλε στο λογιστήριο", "στείλε στους μηχανικούς της εταιρείας X"): try resolve_routing_email FIRST, then fall back to send_email_to_contact.
+- For department head questions ("ποιος είναι ο υπεύθυνος <τμήμα>"): use get_department_head.
+- For member lookups ("ποιος δουλεύει ως <ρόλος>"): use find_department_member.
+- For org-chart navigation ("ποιοι αναφέρονται στον X", "ποιος είναι ο προϊστάμενος του Y"): use traverse_hierarchy.
+- For full org-chart dumps ("δείξε το οργανόγραμμα"): use query_org_structure.
+- L1 (scope=tenant): default for tenant-level questions. L2 (scope=contact, contactId=...): when asking about a specific CompanyContact partner.`,
 
   DOCUMENT_CLASSIFY_SYSTEM:
     `You are an enterprise document classifier for a Greek real estate & construction company. Return JSON only, matching the schema. Classify the document type and signals. Write a short description (1-2 sentences) in Greek about what this document is and its key content. The description should be helpful for someone browsing a file list.

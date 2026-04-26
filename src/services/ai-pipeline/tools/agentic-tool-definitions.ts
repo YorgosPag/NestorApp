@@ -1156,6 +1156,172 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       strict: true,
     },
   },
+
+  // ============================================================================
+  // ORG STRUCTURE TOOLS — ADR-326 Phase 7 (super admin org-chart access)
+  // ============================================================================
+
+  // ── 27. query_org_structure ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'query_org_structure',
+      description: [
+        'Return the org structure (departments + members) of the tenant (scope=tenant)',
+        'or of a CompanyContact (scope=contact, contactId required).',
+        'Use when the admin asks for the org chart, departments, or "οργανόγραμμα".',
+        'Tenant isolation enforced. Admin-only.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: {
+            type: 'string',
+            description: 'tenant=L1 super-admin company; contact=L2 CompanyContact (a B2B partner of the tenant)',
+            enum: ['tenant', 'contact'],
+          },
+          contactId: {
+            type: ['string', 'null'],
+            description: 'Required when scope=contact (the CompanyContact document ID). null for tenant scope.',
+          },
+        },
+        required: ['scope', 'contactId'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 28. get_department_head ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_department_head',
+      description: [
+        'Return the active head (isDepartmentHead=true) of a department, with displayName + primary email/phone.',
+        'Use when the admin asks "ποιος είναι ο υπεύθυνος <department>" / "head of <dept>".',
+        'Pass either departmentCode (canonical, e.g. "accounting", "engineering", "legal") OR label (free text, e.g. "Λογιστήριο", "Engineering").',
+        'Tenant isolation enforced. Admin-only.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: { type: 'string', enum: ['tenant', 'contact'] },
+          contactId: { type: ['string', 'null'], description: 'Required when scope=contact' },
+          departmentCode: {
+            type: ['string', 'null'],
+            description: 'Canonical code (one of: accounting, engineering, architecture_studies, construction, sales, legal, hr, it, procurement, operations, management, customer_service). Null if using label.',
+          },
+          label: {
+            type: ['string', 'null'],
+            description: 'Free-text department label (e.g. "Λογιστήριο", "Μελέτες"). Null if using departmentCode.',
+          },
+        },
+        required: ['scope', 'contactId', 'departmentCode', 'label'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 29. find_department_member ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'find_department_member',
+      description: [
+        'Fuzzy search for members across all departments by displayName, positionLabel, or role.',
+        'Use when the admin asks "ποιος είναι ο/η <name>" / "βρες υπάλληλο/μηχανικό/...".',
+        'Returns up to 100 matches. Admin-only.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: { type: 'string', enum: ['tenant', 'contact'] },
+          contactId: { type: ['string', 'null'], description: 'Required when scope=contact' },
+          query: {
+            type: 'string',
+            description: 'Search term — case-insensitive substring match against displayName / positionLabel / role.',
+          },
+        },
+        required: ['scope', 'contactId', 'query'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 30. traverse_hierarchy ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'traverse_hierarchy',
+      description: [
+        'Walk the manager-pointer tree starting from a memberId.',
+        'direction=descendants: returns all reports (chain of subordinates).',
+        'direction=ascendants: walks up reportsTo to the department head.',
+        'Use when the admin asks "ποιοι αναφέρονται στον/στην X" / "ποιος είναι ο προϊστάμενος του Y".',
+        'maxDepth defaults to 5; capped at 10. Admin-only.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: { type: 'string', enum: ['tenant', 'contact'] },
+          contactId: { type: ['string', 'null'], description: 'Required when scope=contact' },
+          memberId: { type: 'string', description: 'OrgMember ID (omem_xxx) to start traversal from.' },
+          direction: {
+            type: 'string',
+            description: 'descendants = subordinates; ascendants = managers up to head',
+            enum: ['ascendants', 'descendants'],
+          },
+          maxDepth: {
+            type: ['number', 'null'],
+            description: 'Optional traversal depth (1-10, default 5).',
+          },
+        },
+        required: ['scope', 'contactId', 'memberId', 'direction', 'maxDepth'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
+
+  // ── 31. resolve_routing_email ──
+  {
+    type: 'function' as const,
+    function: {
+      name: 'resolve_routing_email',
+      description: [
+        'Resolve the email address that should receive notifications for an event (L1) or for a department of a CompanyContact (L2).',
+        'Use BEFORE send_email_to_contact when the admin says "στείλε στο <department>" or names a routing event.',
+        'L1 (scope=tenant): pass `event` (e.g. "reservation.created", "sale.deposit_invoice"). Resolver applies per-event override → head → backup → dept centralino cascade.',
+        'L2 (scope=contact): pass `contactId` + `departmentCode` (canonical) or `label`. Resolver applies head → backup → dept cascade against the contact\'s embedded orgStructure.',
+        'Returns { resolved: true, email, source } on success. Admin-only.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: { type: 'string', enum: ['tenant', 'contact'] },
+          contactId: { type: ['string', 'null'], description: 'Required when scope=contact' },
+          event: {
+            type: ['string', 'null'],
+            description: 'Tenant routing event code (e.g. "reservation.created", "sale.deposit_invoice", "professional.assigned"). Required when scope=tenant.',
+          },
+          departmentCode: {
+            type: ['string', 'null'],
+            description: 'Canonical department code. Used when scope=contact (or alongside label).',
+          },
+          label: {
+            type: ['string', 'null'],
+            description: 'Free-text department label. Used when scope=contact.',
+          },
+        },
+        required: ['scope', 'contactId', 'event', 'departmentCode', 'label'],
+        additionalProperties: false,
+      },
+      strict: true,
+    },
+  },
 ];
 
 /**
