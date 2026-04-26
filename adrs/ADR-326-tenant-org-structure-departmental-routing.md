@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ✅ v1.5 — Phase 4 IMPLEMENTED (2026-04-26) |
+| **Status** | ✅ v1.6 — Phase 5 IMPLEMENTED (2026-04-26) |
 | **Category** | Architecture / Multi-Tenancy / Notifications / Contacts |
 | **Author** | Γιώργος Παγώνης + Claude Code |
 | **Related ADRs** | ADR-145 (Property Types SSoT), ADR-177 (Employer Picker), ADR-198 (Sales-Accounting Bridge), ADR-210 (Enterprise IDs), ADR-244 (Multi-buyer), ADR-282 (Persona Refactor), ADR-291 (Notification Pattern), ADR-294 (SSoT Ratchet), ADR-316 (Companies Tenant Architecture), ADR-318 (Workplace Toggle), ADR-319 (Address Type Registry), ACC-019 (Invoice Email Sending) |
@@ -345,14 +345,34 @@ export async function resolveTenantNotificationEmail(
 /** Cache 5min in-memory + RealtimeService invalidate on write (pattern ADR-316). */
 ```
 
-Per L2 (CompanyContact con orgStructure) — stesso pattern:
+Per L2 (CompanyContact con orgStructure) — stesso pattern, simmetrico a L1 (input = id, NON entity):
 
 ```typescript
+export interface ResolveContactResult {
+  email: string;
+  phone?: string;
+  displayName?: string;
+  source: 'head' | 'backup' | 'dept';
+  departmentCode: DepartmentCode;
+}
+
+/**
+ * L2 contact resolver. Reads CompanyContact.orgStructure (userId always null per G8).
+ * Cascade: head → backup → dept-level. NO override (overrides L1-only, per-event).
+ */
 export async function resolveContactDepartmentEmail(
-  contact: CompanyContact,
+  contactId: string,
   departmentCode: DepartmentCode,
-): Promise<{ email: string; phone?: string; displayName: string } | null>;
+): Promise<ResolveContactResult | null>;
+
+/** Pure variant per testing — accetta orgStructure in-memory. */
+export function resolveEmailFromContactOrgStructure(
+  orgStructure: OrgStructure,
+  departmentCode: DepartmentCode,
+): ResolveContactResult | null;
 ```
+
+> **Implementation note (Phase 6.0)**: in v1.0 ADR la signature era `(contact: CompanyContact, departmentCode)`. Refined in v1.7-PLANNED a `(contactId, departmentCode)` per simmetria con L1 + caching keyed by id. Caller fornisce solo l'id; resolver legge contact + orgStructure internamente con caching 5min.
 
 Per L3 (ServiceContact) — code path diverso (legge `responsiblePersons[]` direttamente, no orgStructure):
 
@@ -839,7 +859,7 @@ Ogni fase è progettata per essere **eseguibile in isolamento** con un solo prom
 
 ---
 
-### Phase 5 — L2 contact org structure UI (1 giorno, ridotto da 1.5)
+### Phase 5 — L2 contact org structure UI (1 giorno, ridotto da 1.5) — ✅ IMPLEMENTED 2026-04-26 (v1.6)
 
 **Goal**: «Δομή Οργανισμού» tab **SOLO su CompanyContact** + smart import prompt da ContactRelationships (G7). NO migration script (G2 — DB pre-prod, wipe before launch). ServiceContact (L3) **fuori scope**.
 
@@ -865,23 +885,108 @@ Ogni fase è progettata per essere **eseguibile in isolamento** con un solo prom
 
 ---
 
-### Phase 6 — Other senders incremental (1 giorno)
+### Phase 6 — Other senders incremental (1.5 giorni, esteso da 1)
 
-**Goal**: PO supplier, professional assignment, study delivery, invoice email.
+**Goal**: estendere resolver routing a 3 sender oggi non-org-structure-aware (PO supplier, professional assignment, invoice email).
 
-**Inputs**: Phase 3 completata.
+**Inputs**: Phase 3 completata + Phase 5 completata (L2 contact UI presente).
 
-**Outputs**:
-- `src/services/procurement/po-email-service.ts` (mod) — usa `resolveContactDepartmentEmail` per L2 supplier accounting
-- `src/app/api/notifications/professional-assigned/route.ts` (mod) — usa resolver L1 per legal/engineering dept head
-- `src/app/api/accounting/invoices/[id]/send-email/route.ts` (mod) — extend ACC-019 cascade con resolver L1
-- Tests integrazione per ognuno
+#### 6.0 — Prerequisite: implementare resolver L2 (CRITICO, mancava in Phase 0/1)
+
+**Discovered 2026-04-26 durante Phase 6 RECOGNITION**: §3.5 specifica `resolveContactDepartmentEmail()` ma la funzione **non esiste** in `org-routing-resolver.ts`. Phase 0/1 hanno implementato solo L1 (`resolveTenantNotificationEmail`). Phase 5 ha messo l'UI L2 ma nessun consumer server-side. Phase 6 senza resolver L2 = blocked.
+
+**Output 6.0**:
+- `src/services/org-structure/org-routing-resolver.ts` (mod) — aggiungere:
+
+```typescript
+export interface ResolveContactResult {
+  email: string;
+  phone?: string;
+  displayName?: string;
+  source: 'head' | 'backup' | 'dept';
+  departmentCode: DepartmentCode;
+}
+
+/**
+ * L2 contact resolver (ADR-326 §3.5 + Phase 6.0).
+ * Reads CompanyContact.orgStructure (L2-scoped, userId always null per G8).
+ * Cascade: head → backup → dept-level. NO override (overrides sono solo L1 per-event).
+ * Returns null se contact non ha orgStructure o dept non trovato.
+ */
+export async function resolveContactDepartmentEmail(
+  contactId: string,
+  departmentCode: DepartmentCode,
+): Promise<ResolveContactResult | null>;
+
+/** Pure variant per testing — accetta orgStructure in-memory. */
+export function resolveEmailFromContactOrgStructure(
+  orgStructure: OrgStructure,
+  departmentCode: DepartmentCode,
+): ResolveContactResult | null;
+```
+
+- Caching: 5-min in-memory keyed by `contactId` (pattern identico al repo L1)
+- Reuse: estrae le funzioni `resolveFromMembers` e `resolveDeptLevel` esistenti — single source of cascade logic (SSoT)
+- Tests: `__tests__/contact-routing-resolver.test.ts` (head priority, archived head→backup, dept fallback, missing orgStructure→null, missing dept→null)
+
+#### 6.1 — PO email service (L2 supplier accounting)
+
+**Output**:
+- `src/services/procurement/po-email-service.ts` (mod) — aggiungere helper `resolveSupplierAccountingEmail(supplierContactId): Promise<string | null>` che chiama `resolveContactDepartmentEmail(id, 'ACCOUNTING')`. NON modificare la signature di `sendPurchaseOrderEmail` — il caller (route handler PO send) chiama prima il resolver, poi passa il `recipientEmail` risolto. Fallback: caller mantiene il behavior attuale (recipient da form/contact primary email) se resolver ritorna null.
+- `src/app/api/procurement/purchase-orders/[id]/send/route.ts` (mod, se esiste) — invoca resolver prima di `sendPurchaseOrderEmail`. Log structured della source (head/backup/dept/manual).
+
+#### 6.2 — Professional assignment (L2 contact orgStructure-aware)
+
+**Clarificazione (Discovered 2026-04-26)**: il sender comunica con un **professionista esterno** (avvocato, ingegnere). Il routing è verso il **contatto stesso**, NON un dept del tenant. Logica corretta:
+
+- Se contact (es. studio legale) ha `orgStructure` con dept che matcha il role → risolvi dept (es. role=`legal_advisor` → `LEGAL` dept del professionista)
+- Altrimenti fallback a primary email (behavior attuale)
+- ENG/ARCH roles → `ENGINEERING` dept se presente
+
+**Output**:
+- `src/app/api/notifications/professional-assigned/route.ts` (mod) — dopo `extractPrimaryEmail`, se contact ha `orgStructure`, prova `resolveContactDepartmentEmail(contactId, mapRoleToDept(role))`. Se ritorna risultato, usa quello; altrimenti fallback a primary email.
+- `src/app/api/notifications/professional-assigned/role-to-dept-map.ts` (nuovo) — SSoT mapping role → DepartmentCode (legal_advisor→LEGAL, civil_engineer→ENGINEERING, architect→ENGINEERING, accountant→ACCOUNTING, ...). Ratchet: registrare in `.ssot-registry.json` come modulo `professional-role-routing`.
+
+#### 6.3 — Invoice send-email (cascade resolver per customer)
+
+**Clarificazione**: oggi `recipientEmail` è **mandatory** in body. Estendere a opt-out: se body omette `recipientEmail` MA include `customerContactId`, risolvi via L2 con event=`ACCOUNTING_RECEIPT` (default per evento).
+
+**Output**:
+- `src/app/api/accounting/invoices/[id]/send-email/route.ts` (mod) — body schema esteso:
+  ```typescript
+  interface SendEmailRequestBody {
+    recipientEmail?: string;          // se omesso, richiede customerContactId
+    customerContactId?: string;       // L2 cascade source
+    subject?: string;
+    language?: 'el' | 'en';
+  }
+  ```
+  Cascade: `body.recipientEmail` → (se omesso) `resolveContactDepartmentEmail(customerContactId, 'ACCOUNTING')` → 422 se entrambi assenti / nessuna email risolta. La risposta include `resolvedSource: 'manual' | 'head' | 'backup' | 'dept'` per audit.
+- `EmailSendRecord` (mod, se esiste — `src/subapps/accounting/types`) — aggiungere campo `resolvedSource` opzionale.
+
+#### 6.4 — Tests
+
+- `src/services/org-structure/__tests__/contact-routing-resolver.test.ts` — pure resolver L2 (5 cases)
+- `src/services/procurement/__tests__/po-email-service.resolver.test.ts` — integrazione PO + resolver
+- `src/app/api/notifications/professional-assigned/__tests__/route.resolver.test.ts` — role→dept mapping + fallback
+- `src/app/api/accounting/invoices/[id]/send-email/__tests__/route.cascade.test.ts` — cascade body→resolver→422
 
 **Acceptance**:
-- Per ognuno: test E2E send → verifica destinatario corretto via resolver ✅
-- Fallback chain testato (resolver miss → cascade originale) ✅
+- 6.0: resolver L2 disponibile, cache funzionante, tests verdi (5/5) ✅
+- 6.1: PO send → log structured source resolver L2 ✅
+- 6.2: Professional assigned → contact con orgStructure routing per dept; senza orgStructure → primary email ✅
+- 6.3: Invoice send-email → opzione body customerContactId funziona, cascade testata ✅
+- Nessuna regressione: tutti i test esistenti passano ✅
+- ADR-326 §3.5 aggiornato con signature `resolveContactDepartmentEmail` allineata all'implementazione ✅
+- `.ssot-registry.json` aggiornato con modulo `professional-role-routing` ✅
 
-**Dependencies**: Phase 3.
+**Dependencies**: Phase 3 + Phase 5.
+
+**Note Google+SSoT**:
+- Single resolver canonico in `org-routing-resolver.ts` — NO duplicazione cascade in caller
+- Role→Dept mapping centralizzato (SSoT) — NON inline in route
+- Audit trail: `resolvedSource` propagata fino a `EmailSendRecord` per tracing
+- Idempotenza: resolver è puro + side-effect-free, safe per chiamate ripetute
 
 ---
 
@@ -1150,6 +1255,8 @@ User pattern: Google-style sensible defaults + user customization. Riduce time-t
 | 2026-04-25 | v0.11 — Q10 risolta | Decisione Γιώργου: UI unificata `Settings → Εταιρεία` con 4 tabs (Β) — Στοιχεία/Φορολογικά/Δομή Οργανισμού/Routing Eventi. NO data migration (i tab leggono dai canonical path). Phase 2 path adjusted da `/settings/organization` → `/settings/company` con tabs. | Γιώργος + Claude Code |
 | 2026-04-25 | v0.12 — Q6 + Q8 risolte ENTERPRISE | Decisioni Γιώργου: (1) NESSUN env var fallback — pure UI-driven da Phase 0 (resolver 4-step, ADR-198 SUPERSEDED in Phase 0 invece di Phase 9). (2) L3 simplified — ServiceContact mantiene `responsiblePersons[]` con upgrade solo comms (EmailInfo[]/PhoneInfo[]), NO orgStructure, NO hierarchy, NO tab. Update §3.1, §3.5, §3.13, §3.14, §4, Phase 4, Phase 5, Phase 9. Roadmap ridotto a ~11 giorni. | Γιώργος + Claude Code |
 | 2026-04-25 | **v1.0 — APPROVED** | Audit pre-implementation: 25 inconsistencies sistemate + 7 implementation gaps risolti (G5 deleted as redundant). Decisioni: G1 Vercel removal Phase 9; G2 NO migration script (DB pre-prod, wipe); G3 backup-fallback semantics (`receivesNotifications=true` su non-head = backup quando head archived, NO CC list MVP); G4 auto-resolved by G3; G6 canonical max 1 + custom unlimited; G7 smart import banner one-time da ContactRelationships; G8 `userId` hidden per L2 + Firestore rules reject. Roadmap ~10.5 giorni. **Status: APPROVED, ready for Phase 0 implementation in nuova sessione**. | Γιώργος + Claude Code |
+| 2026-04-26 | v1.6 — Phase 5 IMPLEMENTED | L2 contact org structure UI embedded in CompanyContact tab. SSoT reuse OrgStructureTab. G8 sanitizer userId=null. Bridge banner via ContactRelationshipService. Registro solo COMPANY_GEMI_SECTIONS. v1.7-deferred: banner dismiss persistence, auto-match per relationship type, reverse bridge, unit tests. | Γιώργος + Claude Code |
+| 2026-04-26 | **v1.7-PLANNED — Phase 6 spec refined** | Phase 6 RECOGNITION ha scoperto 3 gap rispetto a v1.0: (1) `resolveContactDepartmentEmail` specificato in §3.5 ma mai implementato in Phase 0/1 — aggiunto sub-phase 6.0 prerequisite. (2) Signature L2 cambiata da `(contact, deptCode)` a `(contactId, deptCode)` per simmetria con L1 + caching by id. (3) Phase 6 §868-885 reso self-contained con sub-phase 6.0/6.1/6.2/6.3/6.4 dettagliate, clarificate ambiguità su professional-assigned (routing è verso prof esterno via L2, non dept del tenant) e su invoices send-email (cascade opt-in via `customerContactId` body field). Aggiunto modulo SSoT `professional-role-routing` (role→DepartmentCode). Roadmap Phase 6 esteso da 1 → 1.5 giorni. **Status: PLANNED, ready for Phase 6 implementation**. | Claude Code (Phase 6 RECOGNITION) |
 
 ---
 
@@ -1226,5 +1333,6 @@ User pattern: Google-style sensible defaults + user customization. Riduce time-t
 | v1.3 | 2026-04-25 | Phase 2 IMPLEMENTED — Tenant settings UI `/settings/company` with 4 Radix tabs. New: `src/app/settings/company/page.tsx`, `src/components/settings/company/` (7 components: CompanySettingsPageContent, CompanyInfoTab, TaxSettingsTab, OrgStructureTab, RoutingEventsTab, DepartmentEditor, OrgTreeView, MemberEditor, ManagerPicker). Modified: `lazyRoutesAdr294.tsx` (+CompanySettings), `domain-constants.ts` (+API_ROUTES.ORG_STRUCTURE), `smart-navigation-factory.ts` (+/settings/company nav entry), `org-structure.json` (+Phase 2 i18n keys). |
 | v1.4 | 2026-04-25 | Phase 3 IMPLEMENTED — `notifyAccountingOffice` connected to OrgStructure resolver. Removed `process.env.ACCOUNTING_NOTIFY_EMAIL` read (G1). Added `resolveAccountingEmail(companyId, event)` in `notification-helpers.ts`. Updated `notifyAccountingOffice(event, result, companyId)` signature + structured logging with `source` field. Fixed pre-existing `formatNotificationDate` broken re-export → proper `formatDate` function. `SalesAccountingBridge` stores `companyId` + passes to notify calls. Files: `notification-helpers.ts`, `accounting-office-notify.ts`, `sales-accounting-bridge.ts`. Tests: 5/5 new integration tests passing. |
 | v1.5 | 2026-04-26 | Phase 4 IMPLEMENTED — `EmailInfo.type` extended with `'invoice' \| 'notification' \| 'support'`; `PhoneInfo.type` extended with `'internal'`. `ResponsiblePerson` upgraded: `email: string → emails: EmailInfo[]`, `phone: string → phones: PhoneInfo[]`. Backward-compat mapper `normalizeResponsiblePersonComms()` exported from `contracts.ts`. `PHONE_TYPE_LABELS` + `EMAIL_TYPE_LABELS` updated. i18n keys added to `contacts-relationships.json` (el + en). No switch statements on EmailInfo/PhoneInfo type found (object-lookup pattern only). |
+| v1.6 | 2026-04-26 | Phase 5 IMPLEMENTED — L2 contact-embedded org structure UI. New: `src/components/contacts/tabs/ContactOrgStructureTab.tsx` (thin wrapper over L1 `OrgStructureTab` with in-memory `formData.orgStructure` save + G8 userId-stripping sanitizer), `src/components/contacts/tabs/ImportFromRelationshipsBanner.tsx` (bridge: queries existing employee/manager/director relationships via `ContactRelationshipService.getOrganizationEmployees()`, dedupes by `contactId`, imports as `mode='linked'` `OrgMember`s with `userId=null`). Modified: `src/types/contacts/contracts.ts` (+`CompanyContact.orgStructure?`), `src/types/ContactFormTypes.ts` (+`ContactFormData.orgStructure?`), `src/config/company-gemi/core/section-registry.ts` (+`orgStructureSection` order=8, icon=`network`, registered in `COMPANY_GEMI_SECTIONS`), `src/components/generic/utils/IconMapping.ts` (+`Network` lucide alias), `src/components/ContactFormSections/contactRenderersCore.tsx` (+`orgStructure` custom renderer in `buildCoreRenderers`), `src/i18n/locales/{el,en}/forms.json` (+`sections.orgStructure` + description), `src/i18n/locales/{el,en}/org-structure.json` (+`orgStructure.l2.contactScopedNote`, +`importBanner.dismissAria`, +`importBanner.needDepartmentFirst`). Acceptance: ✅ tab visible only on company contacts (registry-scoped), ✅ SSoT zero-duplication (reuses L1 `OrgStructureTab` + `DepartmentEditor` + `MemberEditor`), ✅ G8 enforced by sanitizer (`userId: null` on every member pre-save), ✅ bridge banner self-hides when no candidates / dismissed / all imported, ✅ import requires existing dept (UI-guard via disabled CTA). |
 
 **FINE ADR-326 v1.0 (APPROVED).** Tutte le decisioni di design risolte. Pronto per Phase 0 implementation in nuova sessione (vedi `ADR-326-HANDOFF.md` per context ancora).

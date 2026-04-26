@@ -13,6 +13,7 @@ import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicConta
 import { EntityFilesManager } from '@/components/shared/files';
 import { ContactBankingTab } from '@/components/contacts/tabs/ContactBankingTab';
 import { ContactHistoryTab } from '@/components/contacts/tabs/ContactHistoryTab';
+import { ContactOrgStructureTab } from '@/components/contacts/tabs/ContactOrgStructureTab';
 import { ProjectParticipationSection } from '@/components/contacts/details/ProjectParticipationSection';
 import { DoyPicker } from '@/components/ui/doy-picker';
 import { VatNumberField } from '@/components/contacts/fields/VatNumberField';
@@ -244,6 +245,16 @@ export function buildCompanyRenderers(ctx: RendererContext): Record<string, Rend
         uploadHandlers={getPhotoUploadHandlers(formData, ctx.canonicalUploadContext)}
         disabled={disabled}
         className="mt-4"
+      />
+    ),
+
+    // ── ADR-326 Phase 5: L2 Org Structure (CompanyContact-embedded) ──
+    orgStructure: () => (
+      <ContactOrgStructureTab
+        formData={formData}
+        setFormData={setFormData}
+        disabled={disabled}
+        userId={ctx.userId}
       />
     ),
 

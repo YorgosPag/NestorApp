@@ -1,6 +1,11 @@
 {
-  "generated": "2026-04-24T19:48:59.150Z",
+  "generated": "2026-04-26T14:25:04.791Z",
   "knipVersion": "6",
-  "files": [],
-  "fileCount": 0
+  "files": [
+    "src/subapps/procurement/components/ComparisonPanelStub.tsx",
+    "src/subapps/procurement/hooks/useTradeRegistry.ts",
+    "src/subapps/procurement/services/trade-registry.ts",
+    "src/subapps/procurement/types/vendor-invite.ts"
+  ],
+  "fileCount": 4
 }

@@ -35,6 +35,7 @@
     "logoPhotos": "Logo & Photos",
     "shareholdersEmployees": "Shareholders & Employees",
     "peopleRoles": "People & Roles",
+    "orgStructure": "Organisation Structure",
     "basicInfo": "Basic Information",
     "administrative": "Administrative Information",
     "contactInfo": "Contact Information",
@@ -63,6 +64,7 @@
     "logoPhotos": "Logo and photos",
     "shareholdersEmployees": "Shareholders and employees management",
     "peopleRoles": "Shareholders, representatives, management and employees",
+    "orgStructure": "Company departments and hierarchy",
     "banking": "Manage contact bank accounts",
     "communication": "Phone numbers, emails, websites and social media"
   },

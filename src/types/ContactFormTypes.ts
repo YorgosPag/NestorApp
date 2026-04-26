@@ -338,6 +338,12 @@ export interface ContactFormData {
   activePersonas: PersonaType[];
   /** Persona-specific field data, keyed by PersonaType */
   personaData: Partial<Record<PersonaType, Record<string, string | number | null>>>;
+
+  /**
+   * ADR-326 Phase 5 — Embedded org chart for L2 CompanyContact only.
+   * Edited via ContactOrgStructureTab; persisted with the contact document.
+   */
+  orgStructure?: import('@/types/org/org-structure').OrgStructure | null;
 }
 
 export const initialFormData: ContactFormData = {

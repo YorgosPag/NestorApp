@@ -42,6 +42,9 @@
     },
     "validation": {
       "cycleDetected": "Circular reference — choose a different manager"
+    },
+    "l2": {
+      "contactScopedNote": "Structure applies to this contact only; members are not linked to users (Firebase Auth)."
     }
   },
   "departments": {
@@ -113,6 +116,8 @@
     "title": "Import from Relationships",
     "message": "Found {count} employment relationships. Import as department members?",
     "confirm": "Yes, import",
-    "dismiss": "No, start from scratch"
+    "dismiss": "No, start from scratch",
+    "dismissAria": "Dismiss import suggestion",
+    "needDepartmentFirst": "Create a department first"
   }
 }

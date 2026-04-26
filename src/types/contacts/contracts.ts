@@ -204,6 +204,13 @@ export interface CompanyContact extends BaseContact {
   // 🏢 ENTERPRISE: Representative photo for company (2026-01-20)
   /** Representative photo URL for company primary contact */
   representativePhotoURL?: string;
+
+  /**
+   * ADR-326 Phase 5 — Embedded org chart for L2 CompanyContact.
+   * Optional: tenants opt in per-supplier/customer.
+   * `userId` on members MUST be null at L2 (server enforces, G8).
+   */
+  orgStructure?: import('@/types/org/org-structure').OrgStructure | null;
 }
 
 // Interface για Δημόσιες Υπηρεσίες

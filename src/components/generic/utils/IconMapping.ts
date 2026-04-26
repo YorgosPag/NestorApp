@@ -6,7 +6,7 @@ import {
   Hash, Wrench, Factory, Smartphone, Shield, ClipboardList, Image, Mail, Lock,
   AlertTriangle, CheckCircle, XCircle, Star, Search, Edit, Save, Upload, Download,
   Building2, Warehouse, LayoutGrid, FileSignature, ClipboardCheck, PlayCircle,
-  BarChart3,
+  BarChart3, Network,
   // 🎭 ENTERPRISE: Persona System icons (ADR-121)
   HardHat, UserCog, Calculator, Scale, Key, Euro, Award, Tag, Percent,
   // 🏢 Procurement icons (PO statuses)
@@ -110,6 +110,7 @@ export const ICON_MAPPING = {
   'clipboard-check': ClipboardCheck,
   'play-circle': PlayCircle,
   'bar-chart-3': BarChart3,
+  'network': Network,
 
   // 🏢 ENTERPRISE: PascalCase aliases for component-style icon names
   // Ensures compatibility with configs that use PascalCase (e.g., 'FileSignature')

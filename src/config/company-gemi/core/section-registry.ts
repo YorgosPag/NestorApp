@@ -120,8 +120,10 @@ const shareholdersSection: SectionConfig = {
 const photosSection: SectionConfig = { id: 'companyPhotos', title: 'sections.logoPhotos', icon: 'image', order: 5, fields: [], description: 'sectionDescriptions.logoPhotos' };
 const bankingSection: SectionConfig = { id: 'banking', title: 'sections.banking', icon: 'credit-card', order: 6, fields: [], description: 'sectionDescriptions.banking' };
 const relationshipsSection: SectionConfig = { id: 'relationships', title: 'sections.peopleRoles', icon: 'users', order: 7, fields: [], description: 'sectionDescriptions.peopleRoles' };
-const filesSection: SectionConfig = { id: 'files', title: 'sections.files', icon: 'file-text', order: 8, fields: [], description: 'sectionDescriptions.files' };
-const historySection: SectionConfig = { id: 'history', title: 'sections.history', icon: 'history', order: 9, fields: [], description: 'sectionDescriptions.history' };
+// ADR-326 Phase 5 — embedded org chart for L2 CompanyContact (NOT ServiceContact)
+const orgStructureSection: SectionConfig = { id: 'orgStructure', title: 'sections.orgStructure', icon: 'network', order: 8, fields: [], description: 'sectionDescriptions.orgStructure' };
+const filesSection: SectionConfig = { id: 'files', title: 'sections.files', icon: 'file-text', order: 9, fields: [], description: 'sectionDescriptions.files' };
+const historySection: SectionConfig = { id: 'history', title: 'sections.history', icon: 'history', order: 10, fields: [], description: 'sectionDescriptions.history' };
 // representativesSection REMOVED — merged into relationshipsSection (Πρόσωπα & Ρόλοι)
 const decisionsSection: SectionConfig = { id: 'decisions', title: 'sections.organDecisions', icon: 'gavel', order: 10, fields: [], description: 'sectionDescriptions.organDecisions' };
 const announcementsSection: SectionConfig = { id: 'announcements', title: 'sections.announcementsPublications', icon: 'megaphone', order: 11, fields: [], description: 'sectionDescriptions.announcementsPublications' };
@@ -146,6 +148,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   filesSection,
   photosSection,
   relationshipsSection,
+  orgStructureSection, // 🏢 ADR-326 Phase 5: embedded org chart (L2 only)
   bankingSection, // 🏢 ENTERPRISE: Banking System (ADR-126)
   historySection, // 📜 Unified History: Audit Trail + Photo Shares (reuses ContactHistoryTab)
 ].sort((a, b) => a.order - b.order); // Auto-sort by order
