@@ -33,9 +33,10 @@ const nextConfig = {
   // [OK] NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
   outputFileTracingRoot: __dirname,
 
-  // [ENTERPRISE] ENTERPRISE: Transpile pdfjs-dist for proper ESM handling
-  // Fixes: "Object.defineProperty called on non-object" error
-  transpilePackages: ['pdfjs-dist'],
+  // pdfjs-dist: removed from transpilePackages (conflicts with serverExternalPackages).
+  // Server-side: loaded natively from node_modules via serverExternalPackages.
+  // Client-side: pdfjs-dist v4 ships proper ESM — no transpilation needed.
+  transpilePackages: [],
 
   // =========================================================================
   // [TURBOPACK] ENTERPRISE TURBOPACK CONFIGURATION (Next.js 15.5+)
