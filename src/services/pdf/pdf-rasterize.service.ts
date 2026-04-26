@@ -45,8 +45,23 @@ interface CanvasModule {
   createCanvas(w: number, h: number): CanvasLike;
 }
 
+interface CanvasAndContext {
+  canvas: CanvasLike | null;
+  context: CanvasContextLike | null;
+}
+
+interface CanvasFactory {
+  create(width: number, height: number): CanvasAndContext;
+  reset(canvasAndContext: CanvasAndContext, width: number, height: number): void;
+  destroy(canvasAndContext: CanvasAndContext): void;
+}
+
 interface PdfjsLib {
-  getDocument(opts: { data: Uint8Array; isEvalSupported: boolean }): { promise: Promise<PdfjsDoc> };
+  getDocument(opts: {
+    data: Uint8Array;
+    isEvalSupported: boolean;
+    canvasFactory?: CanvasFactory;
+  }): { promise: Promise<PdfjsDoc> };
 }
 interface PdfjsDoc {
   numPages: number;
@@ -85,6 +100,28 @@ async function loadCanvas(): Promise<CanvasModule> {
   }
 }
 
+// @napi-rs/canvas throws "Failed to unwrap exclusive reference" when pdfjs
+// tries to set canvas.width = 0 during cleanup (browser pattern to release GPU
+// memory — not applicable to native Node bindings). This factory overrides
+// destroy() to null references instead of zeroing dimensions.
+function makeCanvasFactory(createCanvas: (w: number, h: number) => CanvasLike): CanvasFactory {
+  return {
+    create(width, height) {
+      const canvas = createCanvas(width, height);
+      return { canvas, context: canvas.getContext('2d') };
+    },
+    reset(canvasAndContext, width, height) {
+      if (!canvasAndContext.canvas) return;
+      canvasAndContext.canvas.width = width;
+      canvasAndContext.canvas.height = height;
+    },
+    destroy(canvasAndContext) {
+      canvasAndContext.canvas = null;
+      canvasAndContext.context = null;
+    },
+  };
+}
+
 export async function rasterizePdfPages(
   pdfBuffer: Buffer,
   options: RasterizeOptions = {},
@@ -95,9 +132,12 @@ export async function rasterizePdfPages(
 
   const [pdfjs, canvasMod] = await Promise.all([loadPdfjs(), loadCanvas()]);
   const { createCanvas } = canvasMod;
+  const canvasFactory = makeCanvasFactory(createCanvas);
+
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(pdfBuffer),
     isEvalSupported: false,
+    canvasFactory,
   });
   const doc = await loadingTask.promise;
 
