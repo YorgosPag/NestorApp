@@ -215,6 +215,9 @@ export interface PurchaseOrder {
   cancellationReason: POCancellationReason | null;
   cancellationComment: string | null;
 
+  // Quote link (ADR-327 P5 — auto-generated from awarded quote)
+  sourceQuoteId: string | null;
+
   // Metadata
   createdBy: string;                // userId
   approvedBy: string | null;
@@ -270,6 +273,7 @@ export interface CreatePurchaseOrderDTO {
   paymentTermsDays?: number | null;
   supplierNotes?: string | null;
   internalNotes?: string | null;
+  sourceQuoteId?: string | null;
 }
 
 /** Update PO — partial update payload */

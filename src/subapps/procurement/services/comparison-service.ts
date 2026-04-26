@@ -8,6 +8,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { nowISO } from '@/lib/date-local';
 import { calculateSupplierMetrics } from '@/services/procurement/supplier-metrics-service';
 import { listQuotes, updateQuote } from './quote-service';
+import { generatePoFromAwardedQuote } from './po-generation-service';
 import { getRfq, updateRfq } from './rfq-service';
 import {
   COMPARISON_TEMPLATES,
@@ -351,6 +352,8 @@ export interface AwardResult {
   winnerQuoteId: string;
   rejectedQuoteIds: string[];
   override: boolean;
+  poId: string;
+  poNumber: string;
 }
 
 async function transitionWinner(
@@ -450,12 +453,16 @@ export async function awardRfq(
   await updateRfq(ctx, rfqId, { winnerQuoteId: options.winnerQuoteId, status: 'closed' });
   await writeAwardAudit(rfqId, ctx.uid, options, awardCtx);
 
+  const { poId, poNumber } = await generatePoFromAwardedQuote(ctx, winner);
+
   logger.info('RFQ awarded', {
     rfqId,
     winnerQuoteId: options.winnerQuoteId,
     override: awardCtx.isOverride,
     riskOverride: awardCtx.isRiskOverride,
     losers: losers.length,
+    poId,
+    poNumber,
   });
 
   return {
@@ -463,5 +470,7 @@ export async function awardRfq(
     winnerQuoteId: options.winnerQuoteId,
     rejectedQuoteIds: losers.map((l) => l.id),
     override: awardCtx.isOverride || awardCtx.isRiskOverride,
+    poId,
+    poNumber,
   };
 }

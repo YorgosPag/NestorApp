@@ -90,6 +90,7 @@ export async function createQuote(
       auditTrail: [auditEntry(ctx.userId, 'created', null, 'draft', dto.source)],
       submittedAt: null,
       submitterIp: null,
+      linkedPoId: null,
       createdAt: now,
       updatedAt: now,
       createdBy: ctx.userId,

@@ -119,6 +119,7 @@ export async function createPurchaseOrder(
     attachments: [],
     cancellationReason: null,
     cancellationComment: null,
+    sourceQuoteId: dto.sourceQuoteId ?? null,
     createdBy: userId,
     approvedBy: null,
     updatedAt: now,

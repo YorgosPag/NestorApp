@@ -180,6 +180,7 @@ export interface Quote {
   auditTrail: QuoteAuditEntry[];
   submittedAt: Timestamp | null;
   submitterIp: string | null;
+  linkedPoId: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   createdBy: string;
