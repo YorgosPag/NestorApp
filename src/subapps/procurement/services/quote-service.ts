@@ -111,18 +111,23 @@ export async function listQuotes(
   filters: QuoteFilters = {}
 ): Promise<Quote[]> {
   return safeFirestoreOperation(async (db) => {
+    // status != 'archived' moved to JS filter — Firestore inequality on status
+    // combined with orderBy createdAt requires complex composite index that
+    // causes FAILED_PRECONDITION; JS filter is fine for small per-company collections
     let query = db.collection(COLLECTIONS.QUOTES)
-      .where('companyId', '==', companyId)
-      .where('status', '!=', 'archived') as FirebaseFirestore.Query;
+      .where('companyId', '==', companyId) as FirebaseFirestore.Query;
 
     if (filters.projectId) query = query.where('projectId', '==', filters.projectId);
     if (filters.rfqId) query = query.where('rfqId', '==', filters.rfqId);
     if (filters.vendorContactId) query = query.where('vendorContactId', '==', filters.vendorContactId);
     if (filters.trade) query = query.where('trade', '==', filters.trade);
-    if (filters.status) query = query.where('status', '==', filters.status);
+    if (filters.status) {
+      query = query.where('status', '==', filters.status);
+    }
 
     const snap = await query.orderBy('createdAt', 'desc').get();
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Quote));
+    const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Quote));
+    return filters.status ? docs : docs.filter((q) => q.status !== 'archived');
   }, []);
 }
 
