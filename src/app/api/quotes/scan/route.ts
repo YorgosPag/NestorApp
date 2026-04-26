@@ -24,7 +24,7 @@ import { after } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminStorage, safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { getAdminBucket, safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateFileId } from '@/services/enterprise-id.service';
@@ -137,7 +137,7 @@ async function uploadAndAttach(
     ext,
   });
 
-  const bucket = getAdminStorage().bucket();
+  const bucket = getAdminBucket();
   const fileRef = bucket.file(storagePath);
   await fileRef.save(buffer, {
     metadata: {

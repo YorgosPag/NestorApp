@@ -12,7 +12,7 @@ import 'server-only';
 
 import { safeJsonParse } from '@/lib/json-utils';
 import { isRecord } from '@/lib/type-guards';
-import { getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminBucket } from '@/lib/firebaseAdmin';
 import type { IQuoteAnalyzer, QuoteClassification } from '../../types/quote-analyzer';
 import type {
   ExtractedQuoteData,
@@ -307,7 +307,7 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
   }
 
   private async fetchFileAsBase64(url: string): Promise<string> {
-    const bucket = getAdminStorage().bucket();
+    const bucket = getAdminBucket();
     const prefix = `https://storage.googleapis.com/${bucket.name}/`;
     if (!url.startsWith(prefix)) throw new Error(`Unexpected storage URL: ${url}`);
     const storagePath = decodeURIComponent(url.slice(prefix.length));
