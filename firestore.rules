@@ -3173,40 +3173,6 @@ service cloud.firestore {
              && data.company is string && data.company.size() > 0;
     }
 
-    // Relationship Data Validation
-    // 📅 Updated: 2026-02-13 — Expanded to match all 30+ RelationshipType values
-    function isValidRelationshipData(data) {
-      return data.keys().hasAll(['sourceContactId', 'targetContactId', 'relationshipType', 'status'])
-             && data.sourceContactId is string && data.sourceContactId.size() > 0
-             && data.targetContactId is string && data.targetContactId.size() > 0
-             && data.relationshipType is string && data.relationshipType.size() > 0
-             && data.status in ['active', 'inactive', 'pending', 'deleted'];
-    }
-
-    // 🎨 Enterprise CAD File Data Validation (Firebase Storage + Metadata Only)
-    function isValidCadFileData(data) {
-      return data.keys().hasAll(['fileName'])
-             && data.fileName is string && data.fileName.size() > 0
-             // 🚨 ΚΡΙΣΙΜΟ: ΔΕΝ επιτρέπουμε scene object στο Firestore! (Μπακάλικο γειτονιάς)
-             && !data.keys().hasAny(['scene'])
-             // ✅ ENTERPRISE: Firebase Storage-based validation
-             && (
-               // Legacy format (Firestore-based data)
-               !data.keys().hasAny(['storageUrl']) ||
-               // 🏢 ENTERPRISE FORMAT: Firebase Storage με metadata
-               (data.keys().hasAll(['storageUrl'])
-                && data.storageUrl is string
-                && data.storageUrl.size() > 0
-                // ✅ Validate Firebase Storage URL format
-                && data.storageUrl.matches('https://firebasestorage.googleapis.com/.*'))
-             )
-             // ✅ Enterprise metadata validation
-             && (!data.keys().hasAny(['version']) || (data.version is number && data.version > 0))
-             && (!data.keys().hasAny(['sizeBytes']) || (data.sizeBytes is number && data.sizeBytes > 0))
-             && (!data.keys().hasAny(['entityCount']) || (data.entityCount is number && data.entityCount >= 0))
-             && (!data.keys().hasAny(['checksum']) || (data.checksum is string && data.checksum.size() > 0));
-    }
-
     // Contact Data Validation
     // 🏢 ENTERPRISE: Updated for tenant isolation (ADR-029)
     // companyId is required for new contacts (tenant isolation)
@@ -3324,13 +3290,6 @@ service cloud.firestore {
       return newData.diff(existingData).affectedKeys().hasAny(systemFields);
     }
 
-    // Relationship checking helper
-    function hasRelationshipWithContact(userId, contactId) {
-      // This would need to be implemented based on your relationship logic
-      // For now, allowing basic access - you can refine this later
-      return true;
-    }
-
     // =========================================================================
     // 📋 QUOTES & RFQ — ADR-327 Quote Management & Comparison System
     // All writes go through Admin SDK (API routes with withAuth).
@@ -3382,17 +3341,6 @@ service cloud.firestore {
       allow create: if false;
       allow update: if false;
       allow delete: if false;
-    }
-
-    // =========================================================================
-    // 🏗️ DEVELOPMENT MODE HELPERS
-    // =========================================================================
-
-    // Dev mode helper - PRODUCTION MODE ENABLED
-    function isDevMode() {
-      // 🔒 PRODUCTION: Dev mode disabled for security
-      // Changed from true → false on 2026-01-11 (Security Audit Fix)
-      return false;
     }
 
     // Authentication helper
@@ -3587,9 +3535,5 @@ service cloud.firestore {
              && request.resource.data.id == resource.data.id;
     }
 
-    // Validate parent document exists (for subcollections - prevents injection)
-    function parentExists(path) {
-      return exists(path);
-    }
   }
 }
