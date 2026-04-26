@@ -15,6 +15,7 @@ import 'server-only';
 import { safeJsonParse } from '@/lib/json-utils';
 import { isRecord } from '@/lib/type-guards';
 import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { rasterizePdfPages } from '@/services/pdf/pdf-rasterize.service';
 import type { IQuoteAnalyzer, QuoteClassification } from '../../types/quote-analyzer';
 import type {
   ExtractedQuoteData,
@@ -43,6 +44,8 @@ interface OpenAIQuoteConfig {
   timeoutMs: number;
   maxRetries: number;
   maxValidationRetries: number;
+  rasterizePdf: boolean;
+  rasterDpi: number;
 }
 
 type OpenAIRequestContent =
@@ -184,8 +187,27 @@ function normalizeLineItems(raw: RawExtractedQuote['lineItems']): ExtractedQuote
   return flat;
 }
 
-function normalizeExtracted(raw: RawExtractedQuote): ExtractedQuoteData {
+const VALIDATION_FAIL_CONFIDENCE_CAP = 50;
+
+function appendValidationIssuesToNotes(originalNotes: string | null, issues: string[]): string {
+  const header = '⚠️ Αυτόματη επαλήθευση εντόπισε ασυνέπειες — απαιτείται χειροκίνητος έλεγχος:';
+  const bullets = issues.slice(0, 6).map((i) => `  • ${i}`).join('\n');
+  const block = `${header}\n${bullets}`;
+  return originalNotes ? `${originalNotes}\n\n${block}` : block;
+}
+
+function normalizeExtracted(raw: RawExtractedQuote, validationIssues: string[] = []): ExtractedQuoteData {
   const c = raw.confidence ?? {};
+  const failed = validationIssues.length > 0;
+  const rawOverall = typeof raw.overallConfidence === 'number' ? raw.overallConfidence : 0;
+  const overallConfidence = failed ? Math.min(VALIDATION_FAIL_CONFIDENCE_CAP, rawOverall) : rawOverall;
+  const cap = (n: number | undefined): number => {
+    const v = typeof n === 'number' ? n : 0;
+    return failed ? Math.min(VALIDATION_FAIL_CONFIDENCE_CAP, v) : v;
+  };
+  const notesValue = failed
+    ? appendValidationIssuesToNotes(raw.notes ?? null, validationIssues)
+    : raw.notes ?? null;
   return {
     vendorName: field<string | null>(raw.vendorName ?? null, c.vendorName),
     vendorVat: field<string | null>(raw.vendorVat ?? null, c.vendorVat),
@@ -195,16 +217,16 @@ function normalizeExtracted(raw: RawExtractedQuote): ExtractedQuoteData {
     validUntil: field<string | null>(raw.validUntil ?? null, c.validUntil),
     quoteReference: field<string | null>(raw.quoteReference ?? null, c.quoteReference),
     lineItems: normalizeLineItems(raw.lineItems),
-    subtotal: field<number | null>(raw.subtotal ?? null, c.subtotal),
-    vatAmount: field<number | null>(raw.vatAmount ?? null, c.vatAmount),
-    totalAmount: field<number | null>(raw.totalAmount ?? null, c.totalAmount),
+    subtotal: field<number | null>(raw.subtotal ?? null, cap(c.subtotal)),
+    vatAmount: field<number | null>(raw.vatAmount ?? null, cap(c.vatAmount)),
+    totalAmount: field<number | null>(raw.totalAmount ?? null, cap(c.totalAmount)),
     paymentTerms: field<string | null>(raw.paymentTerms ?? null, c.paymentTerms),
     deliveryTerms: field<string | null>(raw.deliveryTerms ?? null, c.deliveryTerms),
     warranty: field<string | null>(raw.warranty ?? null, c.warranty),
-    notes: field<string | null>(raw.notes ?? null, c.notes),
+    notes: field<string | null>(notesValue, c.notes),
     tradeHint: field<string | null>(raw.tradeHint ?? null, c.tradeHint),
     detectedLanguage: raw.detectedLanguage ?? 'unknown',
-    overallConfidence: typeof raw.overallConfidence === 'number' ? raw.overallConfidence : 0,
+    overallConfidence,
   };
 }
 
@@ -260,6 +282,7 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
   async extractQuote(fileUrl: string, mimeType: string, fileBuffer?: Buffer): Promise<ExtractedQuoteData> {
     try {
       let lastParsed: RawExtractedQuote | null = null;
+      let lastIssues: string[] = [];
       let promptText = 'Εξάγαγε τα δεδομένα της προσφοράς.';
 
       for (let attempt = 0; attempt <= this.config.maxValidationRetries; attempt += 1) {
@@ -297,11 +320,14 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
           console.info(`[OpenAIQuoteAnalyzer] extraction OK on attempt ${attempt + 1} (model=${visionModel})`);
           return normalizeExtracted(parsed);
         }
+        lastIssues = validation.issues;
         console.warn(`[OpenAIQuoteAnalyzer] validation failed on attempt ${attempt + 1}:`, validation.issues);
         promptText = buildRetryFeedback(validation.issues);
       }
 
-      return lastParsed ? normalizeExtracted(lastParsed) : buildFallbackExtractedData();
+      return lastParsed
+        ? normalizeExtracted(lastParsed, lastIssues)
+        : buildFallbackExtractedData();
     } catch (error) {
       console.error('[OpenAIQuoteAnalyzer] extractQuote failed:', error);
       return buildFallbackExtractedData();
@@ -320,21 +346,29 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
     if (detectImageMime(mimeType)) {
       content.push({ type: 'input_image', image_url: fileUrl });
     } else if (mimeType === 'application/pdf') {
-      const b64 = fileBuffer
-        ? fileBuffer.toString('base64')
-        : await this.fetchFileAsBase64(fileUrl);
-      content.push({ type: 'input_file', filename: 'quote.pdf', file_data: `data:application/pdf;base64,${b64}` });
+      const buffer = fileBuffer ?? await this.fetchFileAsBuffer(fileUrl);
+      const useRaster = this.config.rasterizePdf;
+      if (useRaster) {
+        const pageBuffers = await rasterizePdfPages(buffer, { dpi: this.config.rasterDpi, maxPages: 10 });
+        for (const png of pageBuffers) {
+          const b64 = png.toString('base64');
+          content.push({ type: 'input_image', image_url: `data:image/png;base64,${b64}` });
+        }
+      } else {
+        const b64 = buffer.toString('base64');
+        content.push({ type: 'input_file', filename: 'quote.pdf', file_data: `data:application/pdf;base64,${b64}` });
+      }
     }
     return content;
   }
 
-  private async fetchFileAsBase64(url: string): Promise<string> {
+  private async fetchFileAsBuffer(url: string): Promise<Buffer> {
     const bucket = getAdminBucket();
     const prefix = `https://storage.googleapis.com/${bucket.name}/`;
     if (!url.startsWith(prefix)) throw new Error(`Unexpected storage URL: ${url}`);
     const storagePath = decodeURIComponent(url.slice(prefix.length));
     const [buffer] = await bucket.file(storagePath).download();
-    return buffer.toString('base64');
+    return buffer;
   }
 
   private async executeRequest(request: OpenAIRequestBody): Promise<unknown> {
@@ -393,6 +427,10 @@ export function createOpenAIQuoteAnalyzer(): OpenAIQuoteAnalyzer | null {
   ).trim();
   const escalateRaw = process.env.OPENAI_QUOTE_ESCALATE_MODEL?.trim() || '';
 
+  // Rasterize PDF → PNG before vision call. Bypasses native PDF parsing limits
+  // for column-heavy/image-overlay layouts (FENPLAST-class). Disable via env=0.
+  const rasterizePdf = (process.env.OPENAI_QUOTE_RASTERIZE_PDF || '1').trim() !== '0';
+
   const config: OpenAIQuoteConfig = {
     apiKey,
     baseUrl: (process.env.OPENAI_API_BASE_URL || 'https://api.openai.com/v1').trim(),
@@ -401,6 +439,8 @@ export function createOpenAIQuoteAnalyzer(): OpenAIQuoteAnalyzer | null {
     timeoutMs: Number.parseInt(process.env.OPENAI_TIMEOUT_MS || '60000', 10),
     maxRetries: Number.parseInt(process.env.OPENAI_MAX_RETRIES || '2', 10),
     maxValidationRetries: Number.parseInt(process.env.OPENAI_QUOTE_VALIDATION_RETRIES || '2', 10),
+    rasterizePdf,
+    rasterDpi: Number.parseInt(process.env.OPENAI_QUOTE_RASTER_DPI || '200', 10),
   };
 
   return new OpenAIQuoteAnalyzer(config);

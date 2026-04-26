@@ -21,6 +21,7 @@ import { POProjectSelector, POSupplierSelector } from '@/components/procurement/
 import { computeQuoteTotals } from '@/subapps/procurement/types/quote';
 import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import type { QuoteLine, CreateQuoteDTO } from '@/subapps/procurement/types/quote';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 
@@ -92,12 +93,12 @@ function LineRow({ line, index, suggestedAtoeCodes, onUpdate, onRemove }: LineRo
       </td>
       <td className="py-1 pr-2 w-28">
         <Select
-          value={line.categoryCode ?? ''}
-          onValueChange={(v) => onUpdate(index, 'categoryCode', v || null)}
+          value={line.categoryCode ?? SELECT_CLEAR_VALUE}
+          onValueChange={(v) => onUpdate(index, 'categoryCode', v === SELECT_CLEAR_VALUE ? null : v)}
         >
           <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('quotes.categoryCodePlaceholder')} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">{t('quotes.noCategoryCode')}</SelectItem>
+            <SelectItem value={SELECT_CLEAR_VALUE}>{t('quotes.noCategoryCode')}</SelectItem>
             {suggestedAtoeCodes.map((c) => (
               <SelectItem key={c} value={c}>{c}</SelectItem>
             ))}

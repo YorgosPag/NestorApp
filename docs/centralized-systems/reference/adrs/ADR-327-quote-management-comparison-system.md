@@ -350,6 +350,35 @@ If checks fail:
 
 Schema includes `tableStructureNotes: string` as **first** required field. Strict mode emits properties in declaration order → AI writes structural reasoning **before** numbers, grounding subsequent extraction. Pattern from OpenAI Structured Outputs guide. Field ignored downstream (UI doesn't render it; logged for debug).
 
+### 6.7 PDF→PNG rasterization (SSoT)
+
+Vision models (incl. `gpt-4o`) struggle on PDFs that combine product imagery with column-heavy numeric tables (FENPLAST-class quotes). Native `input_file` parsing aligns numbers across visual rows incorrectly → shuffled prices.
+
+**Fix**: rasterize PDF to PNG **before** vision call. Pattern AWS Textract / Google Document AI.
+
+**SSoT module**: `src/services/pdf/pdf-rasterize.service.ts` (registered as Tier 3 in `.ssot-registry.json::pdf-rasterize`).
+
+```typescript
+import { rasterizePdfPages } from '@/services/pdf/pdf-rasterize.service';
+const pages: Buffer[] = await rasterizePdfPages(pdfBuffer, { dpi: 200, maxPages: 10 });
+// each page sent as input_image data:image/png;base64,...
+```
+
+Implementation: `pdfjs-dist/legacy/build/pdf.mjs` + `@napi-rs/canvas` (server-side, zero DOM dependency). DPI 200 default → ~1.65k px width per A4 page (capped at `maxWidthPx` 2000).
+
+**Knobs**:
+
+| Env var | Default | Purpose |
+|---------|---------|---------|
+| `OPENAI_QUOTE_RASTERIZE_PDF` | `1` (on) | Set to `0` to revert to native `input_file` |
+| `OPENAI_QUOTE_RASTER_DPI` | `200` | Render DPI |
+
+**Confidence cap on validation fail**: when retries exhausted with issues > 0, `normalizeExtracted()` caps `overallConfidence` to `min(50, raw)` and **appends issues to `notes` field**. UI signals manual review via low confidence + visible warning block. Avoids the AI's bogus "99% confidence" self-assessment when checksum fails.
+
+### 6.8 FSM transition
+
+PM review confirm → status `under_review` (NOT `submitted` — `submitted` is reserved for vendor portal self-submission). Path: `draft → under_review → accepted | rejected`.
+
 ---
 
 ## 7. VENDOR PORTAL STRATEGY (Phase 3)

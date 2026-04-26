@@ -40,7 +40,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
       const res = await fetch(`/api/quotes/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines, status: 'submitted' }),
+        body: JSON.stringify({ lines, status: 'under_review' }),
       });
       if (!res.ok) {
         const txt = await res.text();

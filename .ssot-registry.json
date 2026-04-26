@@ -2516,6 +2516,18 @@
       "tier": 3
     },
 
+    "pdf-rasterize": {
+      "ssotFile": "src/services/pdf/pdf-rasterize.service.ts",
+      "description": "Server-side PDF→PNG rasterization SSoT (ADR-327 §6.7). rasterizePdfPages() is the single entry point — converts a PDF Buffer into per-page PNG Buffers using pdfjs-dist (legacy build) + @napi-rs/canvas. Use BEFORE sending PDFs to vision AIs (OpenAI Responses, Anthropic Vision) when documents have column-heavy or image-overlay layouts. FORBIDDEN: inline pdfjs.getDocument() in route handlers or services — always import this SSoT.",
+      "forbiddenPatterns": [
+        "pdfjs-dist/legacy/build"
+      ],
+      "allowlist": [
+        "src/services/pdf/pdf-rasterize.service.ts"
+      ],
+      "tier": 3
+    },
+
     "professional-role-routing": {
       "ssotFile": "src/app/api/notifications/professional-assigned/role-to-dept-map.ts",
       "description": "SSoT mapping: professional role string → DepartmentCode for L2 org-structure routing (ADR-326 Phase 6.2). mapRoleToDept() is the canonical lookup. FORBIDDEN: inline role→dept mapping outside this file.",
