@@ -1396,6 +1396,24 @@
       "status": "governed",
       "splitRequired": false,
       "targetNamespaces": []
+    },
+    {
+      "namespace": "org-structure",
+      "owner": "platform-tenant",
+      "primarySurface": "settings-company-org-structure",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary",
+        "validation-errors"
+      ],
+      "budget": {
+        "maxLines": 600,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
     }
   ]
 }

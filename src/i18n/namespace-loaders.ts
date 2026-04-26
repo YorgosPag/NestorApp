@@ -100,6 +100,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'saved-reports': return () => import('./locales/el/saved-reports.json');
     case 'trash': return () => import('./locales/el/trash.json');
     case 'showcase': return () => import('./locales/el/showcase.json');
+    case 'org-structure': return () => import('./locales/el/org-structure.json');
     default: return null;
   }
 }
@@ -189,6 +190,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'saved-reports': return () => import('./locales/en/saved-reports.json');
     case 'trash': return () => import('./locales/en/trash.json');
     case 'showcase': return () => import('./locales/en/showcase.json');
+    case 'org-structure': return () => import('./locales/en/org-structure.json');
     default: return null;
   }
 }

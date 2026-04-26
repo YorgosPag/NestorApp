@@ -101,6 +101,7 @@ export const SUPPORTED_NAMESPACES = [
   'reports-extended',       // 🏢 Reports CRM/spaces (split from reports — ADR-280)
   'trash',                  // 🗑️ Centralized trash/soft-delete strings (ADR-281)
   'showcase',               // 🏢 Property showcase public page (ADR-312)
+  'org-structure',          // 🏢 Tenant organisation structure / departments / routing (ADR-326)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
