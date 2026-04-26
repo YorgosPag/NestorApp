@@ -19,6 +19,7 @@ import { useTranslation } from '@/i18n';
 import { DashboardWelcome } from './DashboardWelcome';
 import { QuickActionsStrip } from './QuickActionsStrip';
 import { NavigationGrid, type NavigationTile } from './NavigationGrid';
+import { OnboardingBanner } from './OnboardingBanner';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -138,6 +139,7 @@ export function DashboardHome() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <DashboardWelcome displayName={user?.displayName ?? null} />
+      <OnboardingBanner />
       <QuickActionsStrip />
       <NavigationGrid
         sectionLabel={t('home.sections.mainMenu')}

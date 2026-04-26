@@ -104,6 +104,7 @@ export const SUPPORTED_NAMESPACES = [
   'org-structure',          // 🏢 Tenant organisation structure / departments / routing (ADR-326)
   'quotes',                 // 🏢 Quotes & RFQ management (ADR-327)
   'vendor-portal',          // 🏢 Public vendor portal (ADR-327 §7)
+  'onboarding',             // 🏢 New tenant onboarding wizard (ADR-326 Phase 8)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 

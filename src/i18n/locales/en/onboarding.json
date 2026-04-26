@@ -1,0 +1,45 @@
+{
+  "onboarding": {
+    "org": {
+      "title": "Welcome to Nestor",
+      "subtitle": "Set up your organization departments",
+      "description": "Select the departments your company uses. You can modify them anytime from Settings.",
+      "preselected": "Pre-selected",
+      "optional": "Optional",
+      "depts": {
+        "accounting": "Accounting",
+        "sales": "Sales",
+        "engineering": "Engineering",
+        "legal": "Legal"
+      },
+      "deptNote": {
+        "accounting": "Required for financial notifications",
+        "sales": "For sales and reservation notifications",
+        "engineering": "Technical projects and studies",
+        "legal": "Contracts and legal matters"
+      },
+      "actions": {
+        "confirm": "Confirm and continue",
+        "skip": "Skip for now",
+        "configure": "Configure now",
+        "saving": "Saving..."
+      },
+      "success": "Organization structure created successfully",
+      "skipNote": "We will remind you if Accounting is not set up within 7 days",
+      "noPermission": "Administrator permissions required to configure"
+    },
+    "banner": {
+      "title": "Set up your organization structure",
+      "description": "Accounting department is not configured. Required for proper notification routing.",
+      "cta": "Configure now",
+      "dismiss": "Dismiss"
+    },
+    "email": {
+      "subject": "Reminder: Set up your Nestor organization structure",
+      "greeting": "Dear administrator,",
+      "body": "The Accounting department has not been configured within 7 days of the initial invitation. Please log in to the application and complete the setup.",
+      "cta": "Set up now",
+      "footer": "This message was sent automatically by Nestor."
+    }
+  }
+}

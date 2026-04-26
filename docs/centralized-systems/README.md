@@ -111,6 +111,13 @@
 - **[🏛️ Governance](ai/governance.md)** - Prompt/model registry, drift monitoring, runbooks
 - **[📋 Prerequisites](ai/prerequisites.md)** - PRE-001~PRE-005 (calendar, leads, procurement)
 
+### 🏢 **TENANT ORG STRUCTURE & ROUTING**
+- **[ADR-326 — Tenant Org Structure + Departmental Routing](../../adrs/ADR-326-tenant-org-structure-departmental-routing.md)** — L1/L2/L3 org hierarchy, per-dept notification routing, onboarding wizard, AI agent tools. **SUPERSEDES ADR-198** (ACCOUNTING_NOTIFY_EMAIL env var).
+  - Canonical: `src/services/org-structure/org-routing-resolver.ts` (resolver cascade)
+  - Onboarding: `src/services/onboarding/` + `/onboarding/organization` wizard
+  - AI tools: `src/services/ai-pipeline/tools/handlers/org-structure-handler.ts`
+  - Status: ✅ **FULLY IMPLEMENTED** (Phases 0-9, 2026-04-26)
+
 ### 📡 **OMNICHANNEL COMMUNICATIONS**
 - **[📱 Meta Omnichannel (ADR-174)](reference/adrs/ADR-174-meta-omnichannel-whatsapp-messenger-instagram.md)** - WhatsApp + Messenger + Instagram integration
 - **[💬 Telegram Pipeline (ADR-134)](reference/adrs/ADR-134-uc-modules-expansion-telegram-channel.md)** - Telegram webhook + CRM + AI pipeline
