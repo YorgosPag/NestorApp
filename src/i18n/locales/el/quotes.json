@@ -22,6 +22,26 @@
     "overrideReason": "Αιτιολόγηση Επιλογής",
     "overrideReasonPlaceholder": "Γράψτε τον λόγο επιλογής παρά τις επισημάνσεις κινδύνου...",
     "confidence": "Αξιοπιστία AI",
+    "project": "Έργο",
+    "rfq": "RFQ",
+    "description": "Περιγραφή",
+    "lineDescription": "Περιγραφή",
+    "quantity": "Ποσότητα",
+    "unit": "Μονάδα",
+    "unitPrice": "Τιμή Μον.",
+    "vatRate": "ΦΠΑ %",
+    "lineTotal": "Σύνολο Γραμμής",
+    "subtotal": "Υποσύνολο",
+    "vatAmount": "ΦΠΑ",
+    "loading": "Φόρτωση...",
+    "submit": "Αποθήκευση",
+    "cancel": "Ακύρωση",
+    "searchPlaceholder": "Αναζήτηση...",
+    "filterStatus": "Κατάσταση",
+    "filterTrade": "Ειδικότητα",
+    "createSuccess": "Η προσφορά δημιουργήθηκε",
+    "createdAt": "Ημερομηνία",
+    "noResults": "Δεν βρέθηκαν αποτελέσματα",
     "statuses": {
       "draft": "Πρόχειρο",
       "sent_to_vendor": "Απεστάλη",
@@ -89,10 +109,33 @@
     "errors": {
       "loadFailed": "Αποτυχία φόρτωσης αιτημάτων",
       "createFailed": "Αποτυχία δημιουργίας αιτήματος"
-    }
+    },
+    "project": "Έργο",
+    "quoteCount": "Προσφορές",
+    "vendors": "Προμηθευτές",
+    "lines": "Γραμμές Αιτήματος",
+    "lineDescription": "Περιγραφή",
+    "lineTrade": "Ειδικότητα",
+    "lineQuantity": "Ποσότητα",
+    "lineUnit": "Μονάδα",
+    "addLine": "Προσθήκη Γραμμής",
+    "removeLine": "Αφαίρεση",
+    "loading": "Φόρτωση...",
+    "submit": "Δημιουργία RFQ",
+    "cancel": "Ακύρωση",
+    "searchPlaceholder": "Αναζήτηση RFQ...",
+    "createSuccess": "Το RFQ δημιουργήθηκε",
+    "detailTitle": "Αίτημα Προσφοράς",
+    "quotesSection": "Προσφορές που Ελήφθησαν",
+    "noQuotes": "Δεν υπάρχουν ακόμη προσφορές",
+    "unitPlaceholder": "τεμ"
   },
   "trades": {
     "title": "Ειδικότητες",
+    "search": "Αναζήτηση ειδικότητας...",
+    "select": "Επιλέξτε ειδικότητα",
+    "noResults": "Δεν βρέθηκαν ειδικότητες",
+    "allGroups": "Όλες",
     "groups": {
       "structure": "Σκελετός",
       "frames": "Κουφώματα",
@@ -135,5 +178,10 @@
     "materials_general": "Υλικά (Γενικά)",
     "equipment_rental": "Ενοικίαση Εξοπλισμού",
     "demolition": "Κατεδάφιση / Εκσκαφή"
+  },
+  "comparison": {
+    "title": "Σύγκριση Προσφορών",
+    "comingSoon": "Προσεχώς διαθέσιμο",
+    "description": "Η αυτόματη σύγκριση και βαθμολόγηση προσφορών υλοποιείται στη Φάση P4."
   }
 }

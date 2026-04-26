@@ -15,6 +15,11 @@ export type QuoteStatus =
   | 'expired'
   | 'archived';
 
+export const QUOTE_STATUSES = [
+  'draft', 'sent_to_vendor', 'submitted', 'under_review',
+  'accepted', 'rejected', 'expired', 'archived',
+] as const satisfies readonly QuoteStatus[];
+
 export const QUOTE_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
   draft:          ['sent_to_vendor', 'under_review', 'rejected', 'archived'],
   sent_to_vendor: ['submitted', 'expired', 'archived'],

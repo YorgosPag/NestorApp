@@ -22,6 +22,26 @@
     "overrideReason": "Override Reason",
     "overrideReasonPlaceholder": "Enter your reason for choosing this vendor despite risk flags...",
     "confidence": "AI Confidence",
+    "project": "Project",
+    "rfq": "RFQ",
+    "description": "Description",
+    "lineDescription": "Description",
+    "quantity": "Qty",
+    "unit": "Unit",
+    "unitPrice": "Unit Price",
+    "vatRate": "VAT %",
+    "lineTotal": "Line Total",
+    "subtotal": "Subtotal",
+    "vatAmount": "VAT",
+    "loading": "Loading...",
+    "submit": "Save",
+    "cancel": "Cancel",
+    "searchPlaceholder": "Search...",
+    "filterStatus": "Status",
+    "filterTrade": "Trade",
+    "createSuccess": "Quote created",
+    "createdAt": "Date",
+    "noResults": "No results found",
     "statuses": {
       "draft": "Draft",
       "sent_to_vendor": "Sent to Vendor",
@@ -89,10 +109,33 @@
     "errors": {
       "loadFailed": "Failed to load RFQs",
       "createFailed": "Failed to create RFQ"
-    }
+    },
+    "project": "Project",
+    "quoteCount": "Quotes",
+    "vendors": "Vendors",
+    "lines": "RFQ Lines",
+    "lineDescription": "Description",
+    "lineTrade": "Trade",
+    "lineQuantity": "Qty",
+    "lineUnit": "Unit",
+    "addLine": "Add Line",
+    "removeLine": "Remove",
+    "loading": "Loading...",
+    "submit": "Create RFQ",
+    "cancel": "Cancel",
+    "searchPlaceholder": "Search RFQs...",
+    "createSuccess": "RFQ created",
+    "detailTitle": "Request for Quotation",
+    "quotesSection": "Received Quotes",
+    "noQuotes": "No quotes received yet",
+    "unitPlaceholder": "pcs"
   },
   "trades": {
     "title": "Trades",
+    "search": "Search trades...",
+    "select": "Select trade",
+    "noResults": "No trades found",
+    "allGroups": "All",
     "groups": {
       "structure": "Structure",
       "frames": "Frames & Openings",
@@ -135,5 +178,10 @@
     "materials_general": "General Materials",
     "equipment_rental": "Equipment Rental",
     "demolition": "Demolition / Excavation"
+  },
+  "comparison": {
+    "title": "Quote Comparison",
+    "comingSoon": "Coming soon",
+    "description": "Automatic quote comparison and scoring will be available in Phase P4."
   }
 }
