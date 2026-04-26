@@ -23,6 +23,7 @@
 | 2026-04-25 | ✅ **APPROVED** — Όλες οι 20 ερωτήσεις του §13 απαντήθηκαν Q&A με Γιώργο (Σενάριο Γ σχεδόν παντού — Google-level + SSoT enforcement). Key decisions: hybrid RFQ model, hierarchical 32-trade taxonomy (8 groups, runtime-extensible), AI scan με per-field confidence + multilingual auto-detect, vendor portal με 3-day edit window + counter-offer (1 round), comparison templates ανά τύπο RFQ (Standard/Commodity/Specialty/Urgent), risk warnings + override-with-reason, multi-channel notifications με smart batching, configurable vendor reminders. **Phase plan**: 6 phases (P1a → P1b → P2 → P4 → P3 → P5), 1 phase = 1 session, deferred production rollout (Google-style incremental build, single cutover at end). Decision log §17 πλήρης. |
 | 2026-04-26 | 🗂️ **SSoT registry cleanup** — `.ssot-registry.json` aggiornato post-P5: stub `vendor-portal-token-stub` → `vendor-portal` (P3 fully implemented: `vendor-invite-service.ts` canonical, hooks+components+API routes in allowlist, forbidden patterns for direct addDoc); stub `quote-comparison-stub` → `quote-comparison` (P4 fully implemented: `comparison-service.ts` canonical, scoring function forbidden patterns); new module `po-auto-generation` (P5-ATOE: `generatePoFromAwardedQuote()` SSoT, `comparison-service.ts` only allowed caller). |
 | 2026-04-27 | 🧠 **AI extraction prompt tuning** — `quote-analyzer.schemas.ts::QUOTE_EXTRACT_PROMPT` esteso post-test FENPLAST 146918 (3 cufomi + 3 ρολά). Cause root: AI saltava 1/3 righe causa layout colonnare, non calcolava `validUntil` da "ισχύει 30 μέρες", confondeva "Ημ/νία παράδοσης" del template con `validUntil`. Fix: (1) line items — istruzione esplicita di scansionare tutti i numeri sequenziali `001/002/003` e leggere multi-page; uso opzionale di "Σύνοψη/Summary" come verifica conteggio; (2) `validUntil` — calcolo da durata "ισχύει X ημέρες"; separazione netta da `deliveryTerms`; (3) `paymentTerms` — null esplicito quando "Τρόπος Πληρωμής" è vuoto (no false positives); (4) `notes` — aggregazione da entrambe le pagine. Solo prompt update, schema invariato. |
+| 2026-04-27 | 🚀 **AI extraction v2.0 — Google Document AI pattern**: validation re-test FENPLAST 146918 mostrava ancora numeri shuffled tra colonne (gpt-4o-mini vision limit). Decisione "fai come Google" → architettura riscritta zero-hard-coding. **4 cambiamenti combinati**: (1) **Hierarchical schema** `QUOTE_LINE_ITEM` ora ha `rowNumber + rowSubtotal + components[]` con `discountPercent` per component (mappa cufomo+ρολό + qualsiasi kit). (2) **Self-validation loop** generico — checksums `unitPrice×qty×(1-discount) ≈ lineTotal`, `Σ(components) ≈ rowSubtotal`, `subtotal+vat ≈ total` (tolerance 2%). On mismatch → retry max 2 con feedback specifico iniettato nel prompt. (3) **Dedicated quote vision model**: env var `OPENAI_QUOTE_VISION_MODEL` (default `gpt-4o`, NON mini) + opzionale `OPENAI_QUOTE_ESCALATE_MODEL` per retry escalation. (4) **CoT reasoning step** via `tableStructureNotes: string` come primo campo strict-schema → AI descrive struttura tabellare prima di estrarre. Tutto generic, nessun template-specific. ADR-327 §6 riscritto v2.0. Files: `openai-quote-analyzer.ts`, `quote-analyzer.schemas.ts`, `types/quote.ts` (`+discountPercent`, `+parentRowNumber`). |
 
 ---
 
@@ -263,37 +264,91 @@ Trade (SSoT registry)
 
 ### 6.1 Reuse path
 
-- Νέο αρχείο: `src/subapps/procurement/services/external/openai-quote-analyzer.ts`
-- Mirror `OpenAIDocumentAnalyzer` (accounting), επανάχρηση factory `createOpenAIDocumentAnalyzer()` env-vars
-- 2 νέα strict schemas:
-  - `QUOTE_CLASSIFY_SCHEMA` — distinguishes `vendor_quote | price_list | invoice | other`
-  - `QUOTE_EXTRACT_SCHEMA` — fields:
-    - `vendorName`, `vendorVAT`, `vendorPhone`, `vendorEmail`
-    - `quoteDate`, `validUntil`, `quoteReference`
-    - `lineItems[]`: `{description, quantity, unit, unitPrice, vatRate, lineTotal}`
-    - `subtotal`, `vatAmount`, `totalAmount`, `currency`
-    - `paymentTerms`, `deliveryTerms`, `warranty`, `notes`
-    - `confidence` per field
-    - `tradeHint` (AI guess: μπετατζής/ελαιοχρωματιστής/...)
+- Αρχείο: `src/subapps/procurement/services/external/openai-quote-analyzer.ts`
+- Mirror `OpenAIDocumentAnalyzer` (accounting) ως αφετηρία, αλλά **divergent evolution** για quotes (πιο σύνθετα tables, multi-vendor formats).
+- 2 strict schemas:
+  - `QUOTE_CLASSIFY_SCHEMA` — distinguishes vendor quote vs invoice vs other
+  - `QUOTE_EXTRACT_SCHEMA` — **hierarchical** structure (parent rows + components, βλ. §6.4)
 
-### 6.2 Flow
+### 6.2 Flow (v2.0 — Google Document AI pattern)
 
 ```
 1. User uploads photo/PDF → /api/quotes/scan
-2. Server: save to Firebase Storage, create quote με status='processing'
-3. Non-blocking: call OpenAIQuoteAnalyzer.classify() → discard if not 'vendor_quote'
-4. OpenAIQuoteAnalyzer.extract() → ExtractedQuoteData
-5. Auto-suggest: vendorContactId (fuzzy match σε contacts), trade (από tradeHint)
-6. Update quote status='draft', set extractedData + confidence
-7. UI: review screen με highlighted low-confidence fields
-8. PM accepts → status='under_review' (έτοιμο για comparison)
+2. Server: save to Firebase Storage + capture buffer (zero re-download)
+3. Non-blocking after(): call OpenAIQuoteAnalyzer.classifyQuote() → if not quote → mark rejected
+4. ┌─ extractQuote() loop (max 1 + maxValidationRetries):
+   │  a) Build vision content (PDF base64 inline OR image_url)
+   │  b) Call OpenAI Responses API with QUOTE_EXTRACT_SCHEMA (strict + CoT)
+   │  c) Parse → validate (§6.5)
+   │  d) If valid → return; else inject specific feedback into prompt + retry
+   │     (escalation model used on retry if OPENAI_QUOTE_ESCALATE_MODEL set)
+   └─ After max retries → return last attempt (UI shows low confidence + issues)
+5. Flatten components → ExtractedQuoteLine[] με parentRowNumber preserved
+6. Auto-suggest vendorContactId (fuzzy contacts), trade (από tradeHint)
+7. Update quote: extractedData + materialized lines + status='draft'
+8. UI: review screen με highlighted low-confidence cells + parent-grouping
+9. PM accepts → status='under_review' (ready for comparison)
 ```
 
-### 6.3 Constraints
-- `gpt-4o-mini`, timeout 45s (paper photos μεγαλύτερα), max 2 retries
-- Έλληνικά prompts (όλα τα paper quotes είναι ελληνικά)
-- Fallback-first: αν αποτύχει το AI, status='draft' με empty extractedData → PM μπαίνει χειροκίνητα
-- Cost target: <$0.001/scan
+### 6.3 Constraints (v2.0)
+
+| Knob | Default | Env var |
+|------|---------|---------|
+| Primary vision model | `gpt-4o` (full vision, NOT mini) | `OPENAI_QUOTE_VISION_MODEL` (fallback `OPENAI_VISION_MODEL`) |
+| Escalation model (retry) | none (reuses primary) | `OPENAI_QUOTE_ESCALATE_MODEL` (e.g. `o1`, `gpt-4-turbo`) |
+| Validation retries | 2 | `OPENAI_QUOTE_VALIDATION_RETRIES` |
+| Request timeout | 60s | `OPENAI_TIMEOUT_MS` |
+| Network retries (per call) | 2 | `OPENAI_MAX_RETRIES` |
+
+- **Multi-language prompts**: Greek-first, `detectedLanguage` ISO output. Vendors' formats vary (Greek, Bulgarian-templated like FENPLAST, English boilerplate).
+- **Generic, NOT template-specific**: zero hard-coded vendor patterns. Cross-vendor robustness via prompt engineering + validation, not regex.
+- **Cost envelope**: typical 1-3 page PDF ~$0.01-0.05/scan. Acceptable for low-volume task (single-digit scans/day).
+
+### 6.4 Hierarchical schema
+
+Πραγματικές προσφορές δεν είναι flat: ένα `κούφωμα` περιέχει `τελάρο + ρολό + φυλλαράκι`, ένα HVAC kit έχει sub-components, ένας πίνακας ηλεκτρολογικός έχει εξαρτήματα. Παλαιό flat schema ανάγκαζε το AI να συνενώνει ή να σπάει αυθαίρετα → mismatched columns.
+
+**Νέο schema** (`quote-analyzer.schemas.ts`):
+
+```typescript
+QUOTE_LINE_ITEM = {
+  rowNumber: string | null,        // "001", "1", "A1"…
+  description: string,             // header της αριθμημένης γραμμής
+  rowSubtotal: number | null,      // καθαρή τιμή γραμμής μετά εκπτώσεις
+  components: QUOTE_COMPONENT[],   // ένα ή πολλά υπο-εξαρτήματα
+}
+
+QUOTE_COMPONENT = {
+  description, quantity, unit, unitPrice,
+  discountPercent: number | null,  // ΝΕΟ — colonna sconto vendor
+  vatRate, lineTotal,
+  // + per-field confidence
+}
+```
+
+Post-extraction normalize → flatten σε `ExtractedQuoteLine[]` με `parentRowNumber` preserved (so UI mporei grouping/indentation).
+
+### 6.5 Self-validation loop (Google Document AI pattern)
+
+Generic, μηδενικό template knowledge. Tolerance: **2%** (numeric formatting, rounding).
+
+| Check | Formula |
+|-------|---------|
+| Component math | `unitPrice × quantity × (1 - discountPercent/100) ≈ lineTotal` |
+| Row consistency | `Σ(components.lineTotal) ≈ rowSubtotal` |
+| Quote subtotal | `Σ(rowSubtotal) ≈ subtotal` |
+| Totals integrity | `subtotal + vatAmount ≈ totalAmount` |
+
+If checks fail:
+1. Build feedback string με **specific** issues (greek, ≤8 issues per retry).
+2. Inject feedback as **next user prompt** in same conversation.
+3. Re-call OpenAI με ίδιο schema.
+4. If `OPENAI_QUOTE_ESCALATE_MODEL` set → use it on retry calls.
+5. Max `OPENAI_QUOTE_VALIDATION_RETRIES` (default 2). Final response returned regardless.
+
+### 6.6 CoT (Chain-of-Thought) reasoning
+
+Schema includes `tableStructureNotes: string` as **first** required field. Strict mode emits properties in declaration order → AI writes structural reasoning **before** numbers, grounding subsequent extraction. Pattern from OpenAI Structured Outputs guide. Field ignored downstream (UI doesn't render it; logged for debug).
 
 ---
 

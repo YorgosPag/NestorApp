@@ -12,6 +12,59 @@
  */
 
 // ============================================================================
+// RAW TYPES — shape returned by OpenAI for QUOTE_EXTRACT_SCHEMA (pre-normalize)
+// ============================================================================
+
+export interface RawComponent {
+  description: string;
+  descriptionConfidence: number;
+  quantity: number | null;
+  quantityConfidence: number;
+  unit: string | null;
+  unitConfidence: number;
+  unitPrice: number | null;
+  unitPriceConfidence: number;
+  discountPercent: number | null;
+  discountPercentConfidence: number;
+  vatRate: number | null;
+  vatRateConfidence: number;
+  lineTotal: number | null;
+  lineTotalConfidence: number;
+}
+
+export interface RawLineItem {
+  rowNumber: string | null;
+  description: string;
+  descriptionConfidence: number;
+  rowSubtotal: number | null;
+  rowSubtotalConfidence: number;
+  components: RawComponent[];
+}
+
+export interface RawExtractedQuote {
+  tableStructureNotes: string;
+  vendorName: string | null;
+  vendorVat: string | null;
+  vendorPhone: string | null;
+  vendorEmail: string | null;
+  quoteDate: string | null;
+  validUntil: string | null;
+  quoteReference: string | null;
+  lineItems: RawLineItem[];
+  subtotal: number | null;
+  vatAmount: number | null;
+  totalAmount: number | null;
+  paymentTerms: string | null;
+  deliveryTerms: string | null;
+  warranty: string | null;
+  notes: string | null;
+  tradeHint: string | null;
+  detectedLanguage: string;
+  overallConfidence: number;
+  confidence: Record<string, number>;
+}
+
+// ============================================================================
 // CLASSIFY SCHEMA — is this image/PDF actually a quote?
 // ============================================================================
 
@@ -37,7 +90,8 @@ export const QUOTE_CLASSIFY_SCHEMA = {
 
 const VAT_RATE_NULLABLE = { type: ['number', 'null'] } as const;
 
-const QUOTE_LINE_ITEM = {
+// Component = leaf-level row (no children). Mirrors κούφωμα|ρολό|kit-component.
+const QUOTE_COMPONENT = {
   type: 'object',
   properties: {
     description: { type: 'string' },
@@ -48,6 +102,8 @@ const QUOTE_LINE_ITEM = {
     unitConfidence: { type: 'number' },
     unitPrice: { type: ['number', 'null'] },
     unitPriceConfidence: { type: 'number' },
+    discountPercent: { type: ['number', 'null'] },
+    discountPercentConfidence: { type: 'number' },
     vatRate: VAT_RATE_NULLABLE,
     vatRateConfidence: { type: 'number' },
     lineTotal: { type: ['number', 'null'] },
@@ -58,8 +114,27 @@ const QUOTE_LINE_ITEM = {
     'quantity', 'quantityConfidence',
     'unit', 'unitConfidence',
     'unitPrice', 'unitPriceConfidence',
+    'discountPercent', 'discountPercentConfidence',
     'vatRate', 'vatRateConfidence',
     'lineTotal', 'lineTotalConfidence',
+  ],
+  additionalProperties: false,
+} as const;
+
+// Parent line = numbered row (001, 002…) that may bundle multiple components.
+const QUOTE_LINE_ITEM = {
+  type: 'object',
+  properties: {
+    rowNumber: { type: ['string', 'null'] },
+    description: { type: 'string' },
+    descriptionConfidence: { type: 'number' },
+    rowSubtotal: { type: ['number', 'null'] },
+    rowSubtotalConfidence: { type: 'number' },
+    components: { type: 'array', items: QUOTE_COMPONENT },
+  },
+  required: [
+    'rowNumber', 'description', 'descriptionConfidence',
+    'rowSubtotal', 'rowSubtotalConfidence', 'components',
   ],
   additionalProperties: false,
 } as const;
@@ -88,6 +163,8 @@ export const QUOTE_EXTRACT_SCHEMA = {
   schema: {
     type: 'object',
     properties: {
+      // CoT reasoning step — written FIRST to ground subsequent extraction.
+      tableStructureNotes: { type: 'string' },
       vendorName: { type: ['string', 'null'] },
       vendorVat: { type: ['string', 'null'] },
       vendorPhone: { type: ['string', 'null'] },
@@ -114,6 +191,7 @@ export const QUOTE_EXTRACT_SCHEMA = {
       },
     },
     required: [
+      'tableStructureNotes',
       'vendorName', 'vendorVat', 'vendorPhone', 'vendorEmail',
       'quoteDate', 'validUntil', 'quoteReference',
       'lineItems', 'subtotal', 'vatAmount', 'totalAmount',
@@ -144,9 +222,20 @@ detectedLanguage: ISO code (el, en, it, de, fr) ή 'unknown'.
 
 Επέστρεψε ΜΟΝΟ JSON σύμφωνα με το schema.`;
 
-export const QUOTE_EXTRACT_PROMPT = `Είσαι AI σύστημα εξαγωγής δεδομένων από προσφορές προμηθευτών (κατασκευαστικό κλάδο).
+export const QUOTE_EXTRACT_PROMPT = `Είσαι AI σύστημα εξαγωγής δεδομένων από προσφορές προμηθευτών (κατασκευαστικό κλάδο). Δουλεύεις σαν Google Document AI — πρώτα κατανοείς τη δομή, μετά εξάγεις.
 
-Εξάγαγε τα ακόλουθα πεδία ΜΕ confidence 0-100 για κάθε ένα:
+# ΒΗΜΑ 1 — tableStructureNotes (ΥΠΟΧΡΕΩΤΙΚΟ, ΓΡΑΨΕ ΠΡΩΤΟ)
+
+Πριν εξάγεις δεδομένα, γράψε ΣΥΝΤΟΜΟ (3-6 γραμμές) στο πεδίο \`tableStructureNotes\`:
+1. Αριθμός σελίδων.
+2. Πόσες αριθμημένες γραμμές βλέπεις (\`001, 002, 003…\` ή \`1, 2, 3…\` ή \`Α/Α\`).
+3. Σε κάθε αριθμημένη γραμμή: ΜΙΑ μόνο γραμμή προϊόντος ή ΠΟΛΛΑΠΛΑ υπο-εξαρτήματα (π.χ. κούφωμα + ρολό);
+4. Ποιες στήλες αριθμών υπάρχουν στην tabella (π.χ. "ποσότητα | τιμή μονάδος | έκπτωση % | αξία") και η σειρά τους.
+5. Αν υπάρχει "Σύνοψη/Summary" στο τέλος → πόσα τμχ ανά κατηγορία αναφέρει.
+
+Αυτό το βήμα είναι reasoning — βελτιώνει την ακρίβεια. Μην παραλείψεις.
+
+# ΒΗΜΑ 2 — Εξαγωγή
 
 **ΣΤΟΙΧΕΙΑ ΠΡΟΜΗΘΕΥΤΗ:**
 - vendorName: Επωνυμία προμηθευτή (η εταιρεία που εκδίδει την προσφορά)
@@ -162,15 +251,37 @@ export const QUOTE_EXTRACT_PROMPT = `Είσαι AI σύστημα εξαγωγή
   • ΜΗΝ μπερδεύεις validUntil με "Ημ/νία παράδοσης / Delivery Date" — αυτή είναι ΑΛΛΟ πεδίο (πάει στο deliveryTerms αν δεν έχει σχέση με την ισχύ).
 - quoteReference: Αρ. προσφοράς (αν αναγράφεται)
 
-**ΓΡΑΜΜΕΣ (lineItems):**
-Για κάθε γραμμή: description, quantity, unit (τμχ/m/m²/m³/kg/lt/kit/h), unitPrice, vatRate (0|6|13|24), lineTotal.
-Δώσε confidence για ΚΑΘΕ πεδίο της γραμμής.
+**ΓΡΑΜΜΕΣ (lineItems) — HIERARCHICAL ΔΟΜΗ:**
 
-ΚΡΙΣΙΜΟ — ΑΝΑΓΝΩΡΙΣΗ ΓΡΑΜΜΩΝ:
-- Ψάξε ΟΛΟΥΣ τους αύξοντες αριθμούς γραμμών: \`001, 002, 003...\` ή \`1, 2, 3...\` ή \`Α/Α: 1, 2, 3\`. ΜΗΝ παραλείπεις καμία.
-- Αν μια γραμμή έχει υπο-εξαρτήματα (π.χ. κούφωμα + ρολό κάτω από τον ίδιο αριθμό), θεώρησέ τα ΜΙΑ γραμμή με σύνθετο description, ή σπάσε σε δύο sub-rows ΜΕ ΤΟΝ ΙΔΙΟ ΑΡΙΘΜΟ. Ποτέ μην χάνεις δεδομένα.
-- Διάβασε ΟΛΕΣ τις σελίδες (multi-page PDF) — γραμμές μπορεί να συνεχίζουν.
-- Αν το PDF περιέχει "Σύνοψη/Summary" με συνολικά τμχ ανά κατηγορία (π.χ. "ΚΟΥΦΩΜΑ 3, ΡΟΛΟ 3"), χρησιμοποίησέ το ΩΣ ΕΠΑΛΗΘΕΥΣΗ — το άθροισμα quantities στο lineItems πρέπει να ταιριάζει.
+Κάθε στοιχείο του \`lineItems\` array αντιστοιχεί σε ΜΙΑ αριθμημένη γραμμή του παραστατικού (\`001, 002, 003…\`).
+
+Για κάθε αριθμημένη γραμμή συμπλήρωσε:
+- \`rowNumber\`: Αύξων αριθμός όπως φαίνεται (\`"001"\`, \`"1"\`, \`"A1"\`). Αν δεν υπάρχει αρίθμηση → null.
+- \`description\`: Τίτλος της γραμμής (π.χ. "ΔΙΦΥΛΛΟ ΔΕΞΙΑ τζάμι 2 εποχών 1.260X2.085").
+- \`rowSubtotal\`: Συνολική αξία της αριθμημένης γραμμής μετά εκπτώσεων (π.χ. 325,4 €). Αν δεν αναγράφεται → null.
+- \`components\`: Array με ΟΛΑ τα υπο-εξαρτήματα της γραμμής. Αν η γραμμή είναι απλή (1 προϊόν), βάλε ένα μόνο component.
+
+ΚΑΘΕ component:
+- \`description\`: Όνομα υπο-εξαρτήματος (π.χ. "Aluplast Ideal 4000 round-line UF 1,3 ΛΕΥΚΟ").
+- \`quantity\`: Ποσότητα. Αν η γραμμή είναι μοναδιαίας ποσότητας (φαίνεται από rowNumber), βάλε 1.
+- \`unit\`: Μονάδα (τμχ/m/m²/m³/kg/lt/kit/h).
+- \`unitPrice\`: Καθαρή τιμή μονάδος (ΠΡΙΝ έκπτωση).
+- \`discountPercent\`: Ποσοστό έκπτωσης (π.χ. 47 για 47%). Αν δεν υπάρχει στήλη → null.
+- \`vatRate\`: 0|6|13|24.
+- \`lineTotal\`: Τελική αξία υπο-εξαρτήματος ΜΕΤΑ έκπτωση (π.χ. 240,6).
+
+Δώσε confidence 0-100 για ΚΑΘΕ πεδίο.
+
+ΚΡΙΣΙΜΑ ΟΡΙΖΟΝΤΙΚΗΣ ΕΥΘΥΓΡΑΜΜΙΣΗΣ ΣΤΗΛΩΝ (most important):
+- ΚΑΘΕ αριθμός που εξάγεις πρέπει να διαβάζεται από την ΙΔΙΑ ΣΕΙΡΑ του πίνακα. Δεν ανακατεύεις τιμές μεταξύ γραμμών.
+- Αν η εικόνα του προϊόντος καταλαμβάνει 2 σειρές οπτικά, η αντιστοιχία \`unitPrice/discount/lineTotal\` παραμένει ΣΤΗΝ ΙΔΙΑ ΣΕΙΡΑ ΚΕΙΜΕΝΟΥ.
+- Επαλήθευσε εσωτερικά: \`lineTotal ≈ unitPrice × quantity × (1 - discountPercent/100)\`. Αν δεν ταιριάζει → ξαναδιαβάζεις τη σειρά.
+- Επαλήθευσε εσωτερικά: \`rowSubtotal ≈ Σ(components.lineTotal)\`. Αν δεν ταιριάζει → λάθος αντιστοίχιση κάποιου component.
+
+ΑΝΑΓΝΩΡΙΣΗ ΓΡΑΜΜΩΝ:
+- Ψάξε ΟΛΟΥΣ τους αύξοντες αριθμούς. ΜΗΝ παραλείπεις. Αν Σύνοψη λέει "ΚΟΥΦΩΜΑ 3" → πρέπει να βρεις 3 lineItems.
+- Διάβασε ΟΛΕΣ τις σελίδες.
+- Αν Σύνοψη υπάρχει → ο σύνολος των \`Σ(components.quantity)\` πρέπει να ταιριάζει με τα totals της Σύνοψης.
 
 **ΣΥΝΟΛΑ:**
 - subtotal: Καθαρό σύνολο

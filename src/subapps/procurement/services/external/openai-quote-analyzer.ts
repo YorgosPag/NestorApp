@@ -1,11 +1,13 @@
 /**
- * OpenAI Quote Analyzer — ADR-327 §6.
+ * OpenAI Quote Analyzer — ADR-327 §6 (v2.0, Google Document AI pattern).
  *
- * Mirrors `OpenAIDocumentAnalyzer` (accounting) but specialized for vendor quotes.
- * Uses OpenAI Responses API + Vision (gpt-4o-mini default) with strict JSON schemas.
+ * Pipeline: classify → extract (with CoT structure-notes) → validate → retry
+ * with feedback (escalation model optional). Hierarchical lineItems flattened
+ * post-extraction. Generic, zero template-specific knowledge.
  *
- * @see ADR-327 — AI Extraction Strategy (Phase 2)
- * @see Pattern: src/subapps/accounting/services/external/openai-document-analyzer.ts
+ * @see ADR-327 — AI Extraction Strategy v2.0
+ * @see ./quote-analyzer.schemas.ts — strict JSON schemas + RAW types
+ * @see ./quote-analyzer.validation.ts — self-consistency loop
  */
 
 import 'server-only';
@@ -24,7 +26,10 @@ import {
   QUOTE_EXTRACT_SCHEMA,
   QUOTE_CLASSIFY_PROMPT,
   QUOTE_EXTRACT_PROMPT,
+  type RawExtractedQuote,
+  type RawComponent,
 } from './quote-analyzer.schemas';
+import { validateExtraction, buildRetryFeedback } from './quote-analyzer.validation';
 
 // ============================================================================
 // TYPES
@@ -34,8 +39,10 @@ interface OpenAIQuoteConfig {
   apiKey: string;
   baseUrl: string;
   visionModel: string;
+  escalateModel: string | null;
   timeoutMs: number;
   maxRetries: number;
+  maxValidationRetries: number;
 }
 
 type OpenAIRequestContent =
@@ -64,42 +71,6 @@ interface OpenAIRequestBody {
 
 interface OpenAIErrorPayload {
   error?: { message?: string; type?: string };
-}
-
-// Raw shape returned by OpenAI for QUOTE_EXTRACT_SCHEMA — flat values + parallel `confidence` object.
-interface RawExtractedQuote {
-  vendorName: string | null;
-  vendorVat: string | null;
-  vendorPhone: string | null;
-  vendorEmail: string | null;
-  quoteDate: string | null;
-  validUntil: string | null;
-  quoteReference: string | null;
-  lineItems: Array<{
-    description: string;
-    descriptionConfidence: number;
-    quantity: number | null;
-    quantityConfidence: number;
-    unit: string | null;
-    unitConfidence: number;
-    unitPrice: number | null;
-    unitPriceConfidence: number;
-    vatRate: number | null;
-    vatRateConfidence: number;
-    lineTotal: number | null;
-    lineTotalConfidence: number;
-  }>;
-  subtotal: number | null;
-  vatAmount: number | null;
-  totalAmount: number | null;
-  paymentTerms: string | null;
-  deliveryTerms: string | null;
-  warranty: string | null;
-  notes: string | null;
-  tradeHint: string | null;
-  detectedLanguage: string;
-  overallConfidence: number;
-  confidence: Record<string, number>;
 }
 
 // ============================================================================
@@ -170,16 +141,47 @@ function buildFallbackExtractedData(): ExtractedQuoteData {
   };
 }
 
+function normalizeComponent(c: RawComponent, parentRowNumber: string | null, parentDescription: string): ExtractedQuoteLine {
+  const compDesc = c.description ?? '';
+  const merged = parentDescription && compDesc && !compDesc.includes(parentDescription)
+    ? `${parentDescription} — ${compDesc}`
+    : compDesc || parentDescription;
+  return {
+    description: { value: merged, confidence: c.descriptionConfidence ?? 0 },
+    quantity: { value: c.quantity ?? 0, confidence: c.quantityConfidence ?? 0 },
+    unit: { value: c.unit ?? '', confidence: c.unitConfidence ?? 0 },
+    unitPrice: { value: c.unitPrice ?? 0, confidence: c.unitPriceConfidence ?? 0 },
+    discountPercent: { value: c.discountPercent, confidence: c.discountPercentConfidence ?? 0 },
+    vatRate: { value: c.vatRate ?? 24, confidence: c.vatRateConfidence ?? 0 },
+    lineTotal: { value: c.lineTotal ?? 0, confidence: c.lineTotalConfidence ?? 0 },
+    parentRowNumber,
+  };
+}
+
 function normalizeLineItems(raw: RawExtractedQuote['lineItems']): ExtractedQuoteLine[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map((item): ExtractedQuoteLine => ({
-    description: { value: item.description ?? '', confidence: item.descriptionConfidence ?? 0 },
-    quantity: { value: item.quantity ?? 0, confidence: item.quantityConfidence ?? 0 },
-    unit: { value: item.unit ?? '', confidence: item.unitConfidence ?? 0 },
-    unitPrice: { value: item.unitPrice ?? 0, confidence: item.unitPriceConfidence ?? 0 },
-    vatRate: { value: item.vatRate ?? 24, confidence: item.vatRateConfidence ?? 0 },
-    lineTotal: { value: item.lineTotal ?? 0, confidence: item.lineTotalConfidence ?? 0 },
-  }));
+  const flat: ExtractedQuoteLine[] = [];
+  for (const item of raw) {
+    const parentDesc = item.description ?? '';
+    const components = Array.isArray(item.components) ? item.components : [];
+    if (components.length === 0) {
+      flat.push({
+        description: { value: parentDesc, confidence: item.descriptionConfidence ?? 0 },
+        quantity: { value: 1, confidence: 0 },
+        unit: { value: '', confidence: 0 },
+        unitPrice: { value: item.rowSubtotal ?? 0, confidence: item.rowSubtotalConfidence ?? 0 },
+        discountPercent: { value: null, confidence: 0 },
+        vatRate: { value: 24, confidence: 0 },
+        lineTotal: { value: item.rowSubtotal ?? 0, confidence: item.rowSubtotalConfidence ?? 0 },
+        parentRowNumber: item.rowNumber ?? null,
+      });
+      continue;
+    }
+    for (const c of components) {
+      flat.push(normalizeComponent(c, item.rowNumber ?? null, parentDesc));
+    }
+  }
+  return flat;
 }
 
 function normalizeExtracted(raw: RawExtractedQuote): ExtractedQuoteData {
@@ -257,32 +259,49 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
 
   async extractQuote(fileUrl: string, mimeType: string, fileBuffer?: Buffer): Promise<ExtractedQuoteData> {
     try {
-      const content = await this.buildVisionContent(fileUrl, mimeType, 'Εξάγαγε τα δεδομένα της προσφοράς.', fileBuffer);
-      const request: OpenAIRequestBody = {
-        model: this.config.visionModel,
-        input: [
-          { role: 'system', content: [{ type: 'input_text', text: QUOTE_EXTRACT_PROMPT }] },
-          { role: 'user', content },
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            name: QUOTE_EXTRACT_SCHEMA.name,
-            description: QUOTE_EXTRACT_SCHEMA.description,
-            strict: QUOTE_EXTRACT_SCHEMA.strict,
-            schema: QUOTE_EXTRACT_SCHEMA.schema as Record<string, unknown>,
+      let lastParsed: RawExtractedQuote | null = null;
+      let promptText = 'Εξάγαγε τα δεδομένα της προσφοράς.';
+
+      for (let attempt = 0; attempt <= this.config.maxValidationRetries; attempt += 1) {
+        const visionModel = attempt === 0
+          ? this.config.visionModel
+          : (this.config.escalateModel || this.config.visionModel);
+        const content = await this.buildVisionContent(fileUrl, mimeType, promptText, fileBuffer);
+        const request: OpenAIRequestBody = {
+          model: visionModel,
+          input: [
+            { role: 'system', content: [{ type: 'input_text', text: QUOTE_EXTRACT_PROMPT }] },
+            { role: 'user', content },
+          ],
+          text: {
+            format: {
+              type: 'json_schema',
+              name: QUOTE_EXTRACT_SCHEMA.name,
+              description: QUOTE_EXTRACT_SCHEMA.description,
+              strict: QUOTE_EXTRACT_SCHEMA.strict,
+              schema: QUOTE_EXTRACT_SCHEMA.schema as Record<string, unknown>,
+            },
           },
-        },
-      };
+        };
 
-      const responsePayload = await this.executeRequest(request);
-      const outputText = extractOutputText(responsePayload);
-      if (!outputText) return buildFallbackExtractedData();
+        const responsePayload = await this.executeRequest(request);
+        const outputText = extractOutputText(responsePayload);
+        if (!outputText) break;
 
-      const parsed = safeJsonParse<RawExtractedQuote>(outputText, null as unknown as RawExtractedQuote);
-      if (parsed === null) return buildFallbackExtractedData();
+        const parsed = safeJsonParse<RawExtractedQuote>(outputText, null as unknown as RawExtractedQuote);
+        if (parsed === null) break;
+        lastParsed = parsed;
 
-      return normalizeExtracted(parsed);
+        const validation = validateExtraction(parsed);
+        if (validation.valid) {
+          console.info(`[OpenAIQuoteAnalyzer] extraction OK on attempt ${attempt + 1} (model=${visionModel})`);
+          return normalizeExtracted(parsed);
+        }
+        console.warn(`[OpenAIQuoteAnalyzer] validation failed on attempt ${attempt + 1}:`, validation.issues);
+        promptText = buildRetryFeedback(validation.issues);
+      }
+
+      return lastParsed ? normalizeExtracted(lastParsed) : buildFallbackExtractedData();
     } catch (error) {
       console.error('[OpenAIQuoteAnalyzer] extractQuote failed:', error);
       return buildFallbackExtractedData();
@@ -364,12 +383,24 @@ export function createOpenAIQuoteAnalyzer(): OpenAIQuoteAnalyzer | null {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
 
+  // Quote extraction is vision-heavy (table layout, multi-column numbers).
+  // Default primary = gpt-4o (full vision, much better on tables than mini).
+  // Escalation model used on validation retry when primary keeps producing inconsistent numbers.
+  const primaryModel = (
+    process.env.OPENAI_QUOTE_VISION_MODEL ||
+    process.env.OPENAI_VISION_MODEL ||
+    'gpt-4o'
+  ).trim();
+  const escalateRaw = process.env.OPENAI_QUOTE_ESCALATE_MODEL?.trim() || '';
+
   const config: OpenAIQuoteConfig = {
     apiKey,
     baseUrl: (process.env.OPENAI_API_BASE_URL || 'https://api.openai.com/v1').trim(),
-    visionModel: (process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini').trim(),
-    timeoutMs: Number.parseInt(process.env.OPENAI_TIMEOUT_MS || '30000', 10),
+    visionModel: primaryModel,
+    escalateModel: escalateRaw.length > 0 ? escalateRaw : null,
+    timeoutMs: Number.parseInt(process.env.OPENAI_TIMEOUT_MS || '60000', 10),
     maxRetries: Number.parseInt(process.env.OPENAI_MAX_RETRIES || '2', 10),
+    maxValidationRetries: Number.parseInt(process.env.OPENAI_QUOTE_VALIDATION_RETRIES || '2', 10),
   };
 
   return new OpenAIQuoteAnalyzer(config);

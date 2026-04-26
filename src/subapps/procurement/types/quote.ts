@@ -83,8 +83,10 @@ export interface ExtractedQuoteLine {
   quantity: FieldWithConfidence<number>;
   unit: FieldWithConfidence<string>;
   unitPrice: FieldWithConfidence<number>;
+  discountPercent: FieldWithConfidence<number | null>;
   vatRate: FieldWithConfidence<number>;
   lineTotal: FieldWithConfidence<number>;
+  parentRowNumber: string | null;
 }
 
 export interface ExtractedQuoteData {
