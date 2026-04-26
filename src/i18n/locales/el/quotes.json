@@ -115,7 +115,8 @@
       "noLinesExtracted": "Δεν εξήχθησαν γραμμές. Προσθέστε χειροκίνητα.",
       "confirm": "Επιβεβαίωση & Αποθήκευση",
       "reject": "Απόρριψη",
-      "retry": "Νέα Σάρωση"
+      "retry": "Νέα Σάρωση",
+      "requiredHint": "Για να συνεχίσεις, επίλεξε επίσης:"
     },
     "notifications": {
       "quoteSubmittedViaPortal": "Νέα προσφορά υποβλήθηκε από προμηθευτή για το RFQ {rfqTitle}",

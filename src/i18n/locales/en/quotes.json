@@ -115,7 +115,8 @@
       "noLinesExtracted": "No lines extracted. Add them manually.",
       "confirm": "Confirm & Save",
       "reject": "Reject",
-      "retry": "Re-scan"
+      "retry": "Re-scan",
+      "requiredHint": "To proceed, also select:"
     },
     "notifications": {
       "quoteSubmittedViaPortal": "New vendor quote submitted for RFQ {rfqTitle}",

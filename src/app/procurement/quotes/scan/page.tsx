@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,8 @@ export default function ScanQuotePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const rfqId = search.get('rfqId') ?? '';
+    const raw = search.get('rfqId') ?? '';
+    const rfqId = /^[a-zA-Z0-9_-]+$/.test(raw) ? raw : '';
     const projectId = search.get('projectId') ?? '';
     const tradeParam = search.get('trade') ?? '';
     const trade = (TRADE_CODES as readonly string[]).includes(tradeParam)
@@ -107,6 +108,15 @@ export default function ScanQuotePage() {
 
   const fileSize = form.file ? Math.round(form.file.size / 1024) : 0;
 
+  const missingFields = useMemo(() => {
+    if (!form.file) return [];
+    const m: string[] = [];
+    if (!form.projectId) m.push(t('quotes.project'));
+    if (!form.vendorContactId) m.push(t('quotes.vendor'));
+    if (!form.trade) m.push(t('quotes.trade'));
+    return m;
+  }, [form.file, form.projectId, form.vendorContactId, form.trade, t]);
+
   return (
     <main className="container mx-auto max-w-3xl space-y-6 py-6">
       <div className="flex items-center gap-3">
@@ -140,27 +150,42 @@ export default function ScanQuotePage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>{t('quotes.project')}</Label>
+              <Label>
+                {t('quotes.project')}
+                <span className="ml-0.5 text-destructive">*</span>
+              </Label>
               <POProjectSelector
                 value={form.projectId}
                 onSelect={(id) => setForm((prev) => ({ ...prev, projectId: id }))}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>{t('quotes.vendor')}</Label>
+              <Label>
+                {t('quotes.vendor')}
+                <span className="ml-0.5 text-destructive">*</span>
+              </Label>
               <POSupplierSelector
                 value={form.vendorContactId}
                 onSelect={(id) => setForm((prev) => ({ ...prev, vendorContactId: id }))}
               />
             </div>
             <div className="col-span-full space-y-1.5">
-              <Label>{t('quotes.trade')}</Label>
+              <Label>
+                {t('quotes.trade')}
+                <span className="ml-0.5 text-destructive">*</span>
+              </Label>
               <TradeSelector
                 value={form.trade}
                 onChange={(code) => setForm((prev) => ({ ...prev, trade: code }))}
               />
             </div>
           </div>
+
+          {missingFields.length > 0 && (
+            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+              {t('quotes.scan.requiredHint')} <strong>{missingFields.join(', ')}</strong>
+            </p>
+          )}
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
