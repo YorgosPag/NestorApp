@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
-**STATUS: ALL_DONE**
-**Last updated:** 2026-04-14 (tutte le fasi completate)
+**STATUS: ACTIVE**
+**Last updated:** 2026-04-26 (ADR-233 + ADR-314 aggiunti)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
@@ -23,6 +23,14 @@
 
 - [x] **CHECK 3.17 Entity Audit Coverage** — COMPLETATO. Baseline 9→0. _(Batch 4: 4 wire-up server-side + 5 HARD_EXEMPT nel scanner.)_
 
+
+### 🏗️ FEATURE PENDING
+
+- **ADR-233 Building Code — Uniqueness Validation** [HIGH] — `src/app/api/buildings/route.ts` POST: query `buildings.where(projectId==X).where(code==body.code)` → 409 se duplicate. Anche PATCH in `building-update.handler.ts`. Previene race condition (2 utenti stesso codice auto-suggerito). Dettagli: `memory/project_adr233_building_code_pending.md`.
+
+- **ADR-314 SSoT Discovery** [LOW] — 74 duplicati, 5 anti-pattern (309 `toISOString`!), 96 registry gap. Phase A (~1-2h, zero risk): delete 4 id-wrappers + add 5 SSoT to registry. Dettagli: `.claude-rules/ssot-discovery-pending.md` + `memory/project_adr314_ssot_discovery_pending.md`.
+
+---
 
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
@@ -68,4 +76,5 @@
 | 2026-04-14 | ADR-298 Phase C.6 DONE. 8 ownership-based collections → COVERAGE: companies, security_roles, users, user_notification_settings, user_2fa_settings, workspaces, teams, positions. 3 new matrix builders (companiesMatrix, usersMatrix, ownerOnlyMatrix) + coverage-matrices-users.ts (SRP) + seed-helpers-users.ts + 8 suites. 198 tests green. Pending 21→13, coverage 73→81 collections. |
 | 2026-04-14 | ADR-298 Phase C.7 DONE — PHASE C COMPLETA. 11 specialized collections → COVERAGE: contact_relationships, contact_links, relationships, relationship_audit, employment_records, notifications, audit_logs, system_audit_logs, audit_log, search_documents, voice_commands. 5 new matrix builders (contactRelationshipsMatrix, employmentRecordsMatrix, notificationsMatrix, auditLogMatrix, searchDocumentsMatrix, voiceCommandsMatrix) + coverage-matrices-specialized.ts (SRP) + seed-helpers-specialized.ts + 11 suites. 291 tests green. Pending 13→0 (VUOTA). Coverage 81→92 collections. FIRESTORE_RULES_PENDING = []. |
 | 2026-04-14 | ADR-301 Phase A DONE — Storage Rules Coverage SSoT. 4 path patterns → COVERAGE (canonical_with_project, canonical_no_project, cad, temp). Harness: emulator.ts + auth-contexts.ts + seed-helpers.ts + assertions.ts. Registry: personas.ts + operations.ts + coverage-manifest.ts. 4 test suites, 48 cells. CHECK 3.19 (zero-tolerance, pre-commit). jest.config.storage-rules.js + 5 npm scripts. ADR-298 Phase E chiusa. |
+| 2026-04-26 | ADR-233 uniqueness validation + ADR-314 SSoT discovery aggiunti come pending. STATUS tornato ACTIVE. SSoT violations (53→0) già DONE dal 2026-04-09 — entry MEMORY.md corretta. |
 | 2026-04-14 | CHECK 3.8 i18n Missing Keys DONE — ZERO BASELINE. 4,750→0 violazioni in 3 fasi: (1) 730 file single-ns→array (ADR-280 namespace split: dxf-viewer+5 subs, common+9 subs, building+5 subs, contacts+5 subs, properties+3 subs, projects+2 subs, accounting+2 subs, crm+1 sub, files+1 sub); (2) 479 chiavi genuinamente mancanti aggiunte a 30 locale files el+en; (3) settings.json creato (el+en). Baseline regenerated: 0 violations / 0 files. |
