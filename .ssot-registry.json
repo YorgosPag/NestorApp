@@ -2465,24 +2465,53 @@
       "tier": 2
     },
 
-    "vendor-portal-token-stub": {
+    "vendor-portal": {
       "ssotFile": "src/subapps/procurement/types/vendor-invite.ts",
-      "description": "Vendor invite token + delivery channel SSoT (ADR-327 §7). Stub for P3 (HMAC token generation). Token generation will mirror ADR-170 HMAC pattern. FORBIDDEN: vendor writes to quotes collection without Admin SDK.",
-      "forbiddenPatterns": [],
+      "serviceFile": "src/subapps/procurement/services/vendor-invite-service.ts",
+      "description": "Vendor invite + portal token SSoT (ADR-327 §7, P3 fully implemented). createVendorInvite() is canonical — generates HMAC token, sends email/copy-link, writes to vendor_invites + vendor_invite_tokens. FORBIDDEN: direct addDoc on vendor_invites/vendor_invite_tokens, inline token generation outside vendor-invite-service.ts.",
+      "forbiddenPatterns": [
+        "collection.*vendor_invites.*addDoc",
+        "collection.*vendor_invite_tokens.*addDoc"
+      ],
       "allowlist": [
         "src/subapps/procurement/types/vendor-invite.ts",
-        "src/subapps/procurement/services/"
+        "src/subapps/procurement/services/vendor-invite-service.ts",
+        "src/subapps/procurement/services/vendor-portal-submit-service.ts",
+        "src/subapps/procurement/hooks/useVendorInvites.ts",
+        "src/subapps/procurement/components/VendorInviteSection.tsx",
+        "src/app/api/rfqs/",
+        "src/app/api/vendor/"
       ],
       "tier": 3
     },
 
-    "quote-comparison-stub": {
+    "quote-comparison": {
       "ssotFile": "src/subapps/procurement/types/comparison.ts",
-      "description": "Quote comparison weights + templates SSoT (ADR-327 §8). Stub for P4 (comparison engine). COMPARISON_TEMPLATES defines 4 built-in templates. FORBIDDEN: inline scoring logic, hardcoded weights.",
-      "forbiddenPatterns": [],
+      "serviceFile": "src/subapps/procurement/services/comparison-service.ts",
+      "description": "Quote comparison + scoring engine SSoT (ADR-327 §8, P4 fully implemented). compareQuotes() scores all quotes per weights+templates; awardRfq() closes RFQ with winner + optional override-with-reason. COMPARISON_TEMPLATES defines 4 built-in templates. FORBIDDEN: inline scoring logic, hardcoded comparison weights, duplicate awardRfq flow.",
+      "forbiddenPatterns": [
+        "function.*scoreQuote[^s]",
+        "function.*computeScore",
+        "function.*calcScore"
+      ],
       "allowlist": [
         "src/subapps/procurement/types/comparison.ts",
-        "src/subapps/procurement/services/"
+        "src/subapps/procurement/services/comparison-service.ts",
+        "src/subapps/procurement/services/po-generation-service.ts",
+        "src/app/api/rfqs/"
+      ],
+      "tier": 3
+    },
+
+    "po-auto-generation": {
+      "ssotFile": "src/subapps/procurement/services/po-generation-service.ts",
+      "description": "Auto-PO generation from awarded quote SSoT (ADR-327 P5-ATOE). generatePoFromAwardedQuote() is the single entry point — maps quote lines to PO items, resolves VAT, calls createPO, stamps linkedPoId on the quote. FORBIDDEN: inline quote→PO mapping outside this service, duplicate award-to-PO flows.",
+      "forbiddenPatterns": [
+        "generatePoFromAwardedQuote"
+      ],
+      "allowlist": [
+        "src/subapps/procurement/services/po-generation-service.ts",
+        "src/subapps/procurement/services/comparison-service.ts"
       ],
       "tier": 3
     },
