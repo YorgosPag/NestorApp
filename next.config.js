@@ -103,9 +103,8 @@ const nextConfig = {
       'embla-carousel-react',
       'react-day-picker',
       'react-resizable-panels',
-      // Notifications / PDF / AI
+      // Notifications / AI (pdfjs-dist excluded: conflicts with serverExternalPackages)
       'sonner',
-      'pdfjs-dist',
       'openai',
       '@sentry/nextjs',
     ],
