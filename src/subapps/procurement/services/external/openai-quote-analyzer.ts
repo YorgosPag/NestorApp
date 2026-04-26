@@ -15,7 +15,7 @@ import 'server-only';
 import { safeJsonParse } from '@/lib/json-utils';
 import { isRecord } from '@/lib/type-guards';
 import { getAdminBucket } from '@/lib/firebaseAdmin';
-import { rasterizePdfPages } from '@/services/pdf/pdf-rasterize.service';
+import { rasterizePdfPages, RasterizeUnavailableError } from '@/services/pdf/pdf-rasterize.service';
 import type { IQuoteAnalyzer, QuoteClassification } from '../../types/quote-analyzer';
 import type {
   ExtractedQuoteData,
@@ -347,14 +347,24 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
       content.push({ type: 'input_image', image_url: fileUrl });
     } else if (mimeType === 'application/pdf') {
       const buffer = fileBuffer ?? await this.fetchFileAsBuffer(fileUrl);
-      const useRaster = this.config.rasterizePdf;
-      if (useRaster) {
-        const pageBuffers = await rasterizePdfPages(buffer, { dpi: this.config.rasterDpi, maxPages: 10 });
-        for (const png of pageBuffers) {
-          const b64 = png.toString('base64');
-          content.push({ type: 'input_image', image_url: `data:image/png;base64,${b64}` });
+      let usedRaster = false;
+      if (this.config.rasterizePdf) {
+        try {
+          const pageBuffers = await rasterizePdfPages(buffer, { dpi: this.config.rasterDpi, maxPages: 10 });
+          for (const png of pageBuffers) {
+            const b64 = png.toString('base64');
+            content.push({ type: 'input_image', image_url: `data:image/png;base64,${b64}` });
+          }
+          usedRaster = true;
+        } catch (err) {
+          if (err instanceof RasterizeUnavailableError) {
+            console.warn('[OpenAIQuoteAnalyzer] PDF rasterize unavailable, falling back to native input_file:', err.message);
+          } else {
+            console.error('[OpenAIQuoteAnalyzer] PDF rasterize threw, falling back to native input_file:', err);
+          }
         }
-      } else {
+      }
+      if (!usedRaster) {
         const b64 = buffer.toString('base64');
         content.push({ type: 'input_file', filename: 'quote.pdf', file_data: `data:application/pdf;base64,${b64}` });
       }

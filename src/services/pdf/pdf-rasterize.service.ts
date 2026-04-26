@@ -14,17 +14,36 @@
 
 import 'server-only';
 
-import { createCanvas, type SKRSContext2D } from '@napi-rs/canvas';
-
 export interface RasterizeOptions {
   dpi?: number;
   maxPages?: number;
   maxWidthPx?: number;
 }
 
+export class RasterizeUnavailableError extends Error {
+  constructor(cause: unknown) {
+    super(`PDF rasterization unavailable (native canvas binding missing or runtime not supported): ${String(cause)}`);
+    this.name = 'RasterizeUnavailableError';
+  }
+}
+
 const DEFAULT_DPI = 200;
 const DEFAULT_MAX_PAGES = 10;
 const DEFAULT_MAX_WIDTH_PX = 2000;
+
+type CanvasLike = {
+  width: number;
+  height: number;
+  getContext(kind: '2d'): CanvasContextLike;
+  toBuffer(mime: 'image/png'): Buffer;
+};
+type CanvasContextLike = {
+  fillStyle: string;
+  fillRect(x: number, y: number, w: number, h: number): void;
+};
+interface CanvasModule {
+  createCanvas(w: number, h: number): CanvasLike;
+}
 
 interface PdfjsLib {
   getDocument(opts: { data: Uint8Array; isEvalSupported: boolean }): { promise: Promise<PdfjsDoc> };
@@ -37,18 +56,33 @@ interface PdfjsDoc {
 interface PdfjsViewport { width: number; height: number; }
 interface PdfjsPage {
   getViewport(opts: { scale: number }): PdfjsViewport;
-  render(opts: { canvasContext: SKRSContext2D; viewport: PdfjsViewport }): { promise: Promise<void> };
+  render(opts: { canvasContext: CanvasContextLike; viewport: PdfjsViewport }): { promise: Promise<void> };
   cleanup(): void;
 }
 
-let cached: PdfjsLib | null = null;
+let cachedPdfjs: PdfjsLib | null = null;
+let cachedCanvas: CanvasModule | null = null;
 
 async function loadPdfjs(): Promise<PdfjsLib> {
-  if (cached) return cached;
-  // Legacy build is the Node-compatible entrypoint (no DOM dependency).
-  const mod = (await import('pdfjs-dist/legacy/build/pdf.mjs')) as unknown as PdfjsLib;
-  cached = mod;
-  return mod;
+  if (cachedPdfjs) return cachedPdfjs;
+  try {
+    const mod = (await import('pdfjs-dist/legacy/build/pdf.mjs')) as unknown as PdfjsLib;
+    cachedPdfjs = mod;
+    return mod;
+  } catch (e) {
+    throw new RasterizeUnavailableError(e);
+  }
+}
+
+async function loadCanvas(): Promise<CanvasModule> {
+  if (cachedCanvas) return cachedCanvas;
+  try {
+    const mod = (await import('@napi-rs/canvas')) as unknown as CanvasModule;
+    cachedCanvas = mod;
+    return mod;
+  } catch (e) {
+    throw new RasterizeUnavailableError(e);
+  }
 }
 
 export async function rasterizePdfPages(
@@ -59,7 +93,8 @@ export async function rasterizePdfPages(
   const maxPages = options.maxPages ?? DEFAULT_MAX_PAGES;
   const maxWidthPx = options.maxWidthPx ?? DEFAULT_MAX_WIDTH_PX;
 
-  const pdfjs = await loadPdfjs();
+  const [pdfjs, canvasMod] = await Promise.all([loadPdfjs(), loadCanvas()]);
+  const { createCanvas } = canvasMod;
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(pdfBuffer),
     isEvalSupported: false,

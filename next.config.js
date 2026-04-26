@@ -28,7 +28,7 @@ const nextConfig = {
   // "could not resolve @resvg/resvg-js-win32-x64-msvc into a module".
   // rimraf: added as direct dependency to suppress transitive resolution warnings
   // from Turbopack (previously unavailable in nested pnpm structure).
-  serverExternalPackages: ['@mapbox/node-pre-gyp', '@resvg/resvg-js', 'rimraf'],
+  serverExternalPackages: ['@mapbox/node-pre-gyp', '@resvg/resvg-js', 'rimraf', '@napi-rs/canvas'],
 
   // [OK] NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
   outputFileTracingRoot: __dirname,
