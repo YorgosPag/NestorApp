@@ -210,10 +210,14 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         const analyzer: IQuoteAnalyzer =
           createOpenAIQuoteAnalyzer() ?? new QuoteAnalyzerStub();
 
+        // Capture bytes now — avoids GCS re-download inside after() where bucket
+        // resolution can be inconsistent across request boundaries.
+        const fileBuffer = Buffer.from(await file.arrayBuffer());
+
         // Fire-and-forget AI processing — uses Next.js 15 `after()` so it survives
         // beyond response flush on Vercel serverless.
         after(async () => {
-          await processScanAsync(ctx, quote.id, attachment.fileUrl, attachment.mimeType, analyzer);
+          await processScanAsync(ctx, quote.id, attachment.fileUrl, attachment.mimeType, analyzer, fileBuffer);
         });
 
         logger.info('Quote scan accepted', {

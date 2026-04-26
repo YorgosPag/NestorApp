@@ -22,10 +22,11 @@ export async function processScanAsync(
   quoteId: string,
   fileUrl: string,
   mimeType: string,
-  analyzer: IQuoteAnalyzer
+  analyzer: IQuoteAnalyzer,
+  fileBuffer?: Buffer,
 ): Promise<void> {
   try {
-    const classification = await analyzer.classifyQuote(fileUrl, mimeType);
+    const classification = await analyzer.classifyQuote(fileUrl, mimeType, fileBuffer);
 
     if (!classification.isQuote || classification.confidence < 30) {
       logger.warn('Document does not look like a quote', {
@@ -39,7 +40,7 @@ export async function processScanAsync(
       return;
     }
 
-    const extracted = await analyzer.extractQuote(fileUrl, mimeType);
+    const extracted = await analyzer.extractQuote(fileUrl, mimeType, fileBuffer);
     await applyExtractedData(ctx, quoteId, extracted, { source: 'scan' });
 
     logger.info('Quote scan completed', {

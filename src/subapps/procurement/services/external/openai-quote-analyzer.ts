@@ -217,9 +217,9 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
     this.config = config;
   }
 
-  async classifyQuote(fileUrl: string, mimeType: string): Promise<QuoteClassification> {
+  async classifyQuote(fileUrl: string, mimeType: string, fileBuffer?: Buffer): Promise<QuoteClassification> {
     try {
-      const content = await this.buildVisionContent(fileUrl, mimeType, 'Είναι αυτό το αρχείο προσφορά προμηθευτή;');
+      const content = await this.buildVisionContent(fileUrl, mimeType, 'Είναι αυτό το αρχείο προσφορά προμηθευτή;', fileBuffer);
       const request: OpenAIRequestBody = {
         model: this.config.visionModel,
         input: [
@@ -255,9 +255,9 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
     }
   }
 
-  async extractQuote(fileUrl: string, mimeType: string): Promise<ExtractedQuoteData> {
+  async extractQuote(fileUrl: string, mimeType: string, fileBuffer?: Buffer): Promise<ExtractedQuoteData> {
     try {
-      const content = await this.buildVisionContent(fileUrl, mimeType, 'Εξάγαγε τα δεδομένα της προσφοράς.');
+      const content = await this.buildVisionContent(fileUrl, mimeType, 'Εξάγαγε τα δεδομένα της προσφοράς.', fileBuffer);
       const request: OpenAIRequestBody = {
         model: this.config.visionModel,
         input: [
@@ -295,12 +295,15 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
     fileUrl: string,
     mimeType: string,
     promptText: string,
+    fileBuffer?: Buffer,
   ): Promise<OpenAIRequestContent[]> {
     const content: OpenAIRequestContent[] = [{ type: 'input_text', text: promptText }];
     if (detectImageMime(mimeType)) {
       content.push({ type: 'input_image', image_url: fileUrl });
     } else if (mimeType === 'application/pdf') {
-      const b64 = await this.fetchFileAsBase64(fileUrl);
+      const b64 = fileBuffer
+        ? fileBuffer.toString('base64')
+        : await this.fetchFileAsBase64(fileUrl);
       content.push({ type: 'input_file', filename: 'quote.pdf', file_data: `data:application/pdf;base64,${b64}` });
     }
     return content;

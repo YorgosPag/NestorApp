@@ -14,6 +14,6 @@ export interface QuoteClassification {
 }
 
 export interface IQuoteAnalyzer {
-  classifyQuote(fileUrl: string, mimeType: string): Promise<QuoteClassification>;
-  extractQuote(fileUrl: string, mimeType: string): Promise<ExtractedQuoteData>;
+  classifyQuote(fileUrl: string, mimeType: string, fileBuffer?: Buffer): Promise<QuoteClassification>;
+  extractQuote(fileUrl: string, mimeType: string, fileBuffer?: Buffer): Promise<ExtractedQuoteData>;
 }

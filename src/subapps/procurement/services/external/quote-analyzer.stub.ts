@@ -12,11 +12,11 @@ const NOT_CONFIGURED_MSG =
   '[QuoteAnalyzer] Η AI ανάλυση προσφορών δεν έχει ρυθμιστεί. Ορίστε OPENAI_API_KEY για ενεργοποίηση.';
 
 export class QuoteAnalyzerStub implements IQuoteAnalyzer {
-  async classifyQuote(_fileUrl: string, _mimeType: string): Promise<QuoteClassification> {
+  async classifyQuote(_fileUrl: string, _mimeType: string, _fileBuffer?: Buffer): Promise<QuoteClassification> {
     throw new Error(NOT_CONFIGURED_MSG);
   }
 
-  async extractQuote(_fileUrl: string, _mimeType: string): Promise<ExtractedQuoteData> {
+  async extractQuote(_fileUrl: string, _mimeType: string, _fileBuffer?: Buffer): Promise<ExtractedQuoteData> {
     throw new Error(NOT_CONFIGURED_MSG);
   }
 }
