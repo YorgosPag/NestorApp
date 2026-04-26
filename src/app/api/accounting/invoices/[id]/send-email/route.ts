@@ -39,6 +39,7 @@ import type { EmailSendRecord, UpdateInvoiceInput } from '@/subapps/accounting/t
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { resolveContactDepartmentEmail } from '@/services/org-structure/org-routing-resolver';
 
 const logger = createModuleLogger('INVOICE_EMAIL');
 
@@ -57,7 +58,10 @@ function isValidEmail(email: string): boolean {
 // =============================================================================
 
 interface SendEmailRequestBody {
-  recipientEmail: string;
+  /** Explicit email. If omitted, customerContactId must be provided for L2 cascade. */
+  recipientEmail?: string;
+  /** Contact ID for L2 org-structure cascade (ADR-326 Phase 6.3). */
+  customerContactId?: string;
   subject?: string;
   language?: 'el' | 'en';
 }
@@ -86,12 +90,33 @@ async function handlePost(
           );
         }
 
-        const { recipientEmail, subject: subjectOverride, language: langOverride } = body;
+        const {
+          recipientEmail: rawRecipientEmail,
+          customerContactId,
+          subject: subjectOverride,
+          language: langOverride,
+        } = body;
 
-        if (!recipientEmail || !isValidEmail(recipientEmail)) {
+        // Cascade: manual email → L2 resolver (accounting dept) → 422 (ADR-326 Phase 6.3)
+        let recipientEmail: string;
+        let resolvedSource: 'manual' | 'head' | 'backup' | 'dept' = 'manual';
+
+        if (rawRecipientEmail && isValidEmail(rawRecipientEmail)) {
+          recipientEmail = rawRecipientEmail;
+        } else if (customerContactId) {
+          const orgResult = await resolveContactDepartmentEmail(customerContactId, 'accounting');
+          if (!orgResult) {
+            return NextResponse.json(
+              { success: false, error: 'No accounting email found for contact' },
+              { status: 422 }
+            );
+          }
+          recipientEmail = orgResult.email;
+          resolvedSource = orgResult.source;
+        } else {
           return NextResponse.json(
-            { success: false, error: 'Invalid or missing recipientEmail' },
-            { status: 400 }
+            { success: false, error: 'recipientEmail or customerContactId required' },
+            { status: 422 }
           );
         }
 
@@ -202,6 +227,7 @@ async function handlePost(
           mailgunMessageId: mailgunResult.messageId ?? null,
           status: mailgunResult.success ? 'sent' : 'failed',
           error: mailgunResult.error ?? null,
+          resolvedSource,
         };
 
         const updatedEmailHistory: EmailSendRecord[] = [

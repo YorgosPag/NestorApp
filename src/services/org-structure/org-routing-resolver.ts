@@ -102,6 +102,64 @@ export function resolveEmailFromOrgStructure(
   );
 }
 
+// ─── L2: Contact-scoped resolver (ADR-326 Phase 6.0) ─────────────────────────
+
+export interface ResolveContactResult {
+  email: string;
+  displayName?: string;
+  source: 'head' | 'backup' | 'dept';
+  departmentCode: DepartmentCode;
+}
+
+const contactResolveCache = new Map<string, { result: ResolveContactResult | null; expiresAt: number }>();
+const CONTACT_CACHE_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * Pure variant — takes OrgStructure in-memory + departmentCode.
+ * L2 has no per-event overrides (only L1 has those). Cascade: head → backup → dept-level.
+ */
+export function resolveEmailFromContactOrgStructure(
+  orgStructure: OrgStructure,
+  departmentCode: DepartmentCode,
+): ResolveContactResult | null {
+  const dept =
+    orgStructure.departments.find((d) => d.code === departmentCode && d.status === 'active') ?? null;
+  if (!dept) return null;
+
+  const result = resolveFromMembers(dept.members, dept.code) ?? resolveDeptLevel(dept);
+  if (!result) return null;
+
+  return {
+    email: result.email,
+    displayName: result.memberDisplayName,
+    source: result.source as 'head' | 'backup' | 'dept',
+    departmentCode: result.departmentCode,
+  };
+}
+
+/**
+ * Firestore-backed L2 resolver (ADR-326 Phase 6.0).
+ * Reads CompanyContact.orgStructure. Cache 5-min keyed by contactId:deptCode.
+ * Returns null when contact has no orgStructure or dept not found — caller should warn + audit.
+ */
+export async function resolveContactDepartmentEmail(
+  contactId: string,
+  departmentCode: DepartmentCode,
+): Promise<ResolveContactResult | null> {
+  const cacheKey = `${contactId}:${departmentCode}`;
+  const hit = contactResolveCache.get(cacheKey);
+  if (hit && hit.expiresAt > Date.now()) return hit.result;
+
+  const { getContactOrgStructure } = await import('./org-structure-repository');
+  const orgStructure = await getContactOrgStructure(contactId);
+  const result = orgStructure ? resolveEmailFromContactOrgStructure(orgStructure, departmentCode) : null;
+
+  contactResolveCache.set(cacheKey, { result, expiresAt: Date.now() + CONTACT_CACHE_TTL_MS });
+  return result;
+}
+
+// ─── L1: Tenant-level resolver ───────────────────────────────────────────────
+
 /**
  * Firestore-backed resolver (ADR-326 Phase 1).
  * Reads orgStructure from companies/{companyId}.settings.orgStructure via Admin SDK.

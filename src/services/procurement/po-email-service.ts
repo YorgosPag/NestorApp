@@ -62,6 +62,20 @@ function isValidEmail(email: string): boolean {
 // SERVICE
 // ============================================================================
 
+/**
+ * Convenience wrapper — resolves supplier's accounting dept email via L2 org-structure.
+ * Returns null when supplier has no orgStructure or no accounting dept configured.
+ */
+export async function resolveSupplierAccountingEmail(
+  supplierContactId: string,
+): Promise<string | null> {
+  const { resolveContactDepartmentEmail } = await import(
+    '@/services/org-structure/org-routing-resolver'
+  );
+  const result = await resolveContactDepartmentEmail(supplierContactId, 'accounting');
+  return result?.email ?? null;
+}
+
 export async function sendPurchaseOrderEmail(
   params: SendPOEmailParams
 ): Promise<SendPOEmailResult> {

@@ -215,6 +215,8 @@ export interface EmailSendRecord {
   status: 'sent' | 'failed';
   /** Μήνυμα σφάλματος (null αν επιτυχής) */
   error: string | null;
+  /** ADR-326 Phase 6.3: how email was resolved (omitted for pre-existing records) */
+  resolvedSource?: 'manual' | 'head' | 'backup' | 'dept';
 }
 
 // ============================================================================

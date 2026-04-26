@@ -14,6 +14,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getPO } from '@/services/procurement';
 import { sendPurchaseOrderEmail } from '@/services/procurement/po-email-service';
+import { resolveContactDepartmentEmail } from '@/services/org-structure/org-routing-resolver';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -46,7 +47,7 @@ async function handlePost(
           );
         }
 
-        const { recipientEmail, recipientName, language } = body;
+        const { recipientEmail: bodyEmail, recipientName, language } = body;
 
         const po = await getPO(poId);
         if (!po || po.companyId !== ctx.companyId) {
@@ -55,6 +56,18 @@ async function handlePost(
             { status: 404 }
           );
         }
+
+        // L2 org-structure resolver: supplier accounting dept takes priority (ADR-326 Phase 6.1)
+        let recipientEmail = bodyEmail;
+        let emailSource: 'manual' | 'head' | 'backup' | 'dept' = 'manual';
+        if (po.supplierId) {
+          const resolverResult = await resolveContactDepartmentEmail(po.supplierId, 'accounting');
+          if (resolverResult) {
+            recipientEmail = resolverResult.email;
+            emailSource = resolverResult.source;
+          }
+        }
+        logger.info('PO email resolver', { poId, emailSource, supplierId: po.supplierId ?? null });
 
         const result = await sendPurchaseOrderEmail({
           po,

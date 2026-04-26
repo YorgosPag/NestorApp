@@ -23,10 +23,15 @@ const logger = createModuleLogger('OrgStructureRepository');
 
 interface CacheEntry { data: OrgStructure; expiresAt: number }
 const cache = new Map<string, CacheEntry>();
+const contactOrgCache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 export function invalidateOrgStructureCache(companyId: string): void {
   cache.delete(companyId);
+}
+
+export function invalidateContactOrgStructureCache(contactId: string): void {
+  contactOrgCache.delete(contactId);
 }
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
@@ -50,6 +55,31 @@ export async function getOrgStructure(companyId: string): Promise<OrgStructure |
     return raw;
   } catch (err) {
     logger.error('[OrgStructureRepository] getOrgStructure failed', { companyId, err });
+    return null;
+  }
+}
+
+// ─── Read L2 (Contact Org Structure) ─────────────────────────────────────────
+
+/** Reads CompanyContact.orgStructure from contacts/{contactId}. Cache 5-min. */
+export async function getContactOrgStructure(contactId: string): Promise<OrgStructure | null> {
+  const hit = contactOrgCache.get(contactId);
+  if (hit && hit.expiresAt > Date.now()) return hit.data;
+
+  try {
+    const snap = await getAdminFirestore()
+      .collection(COLLECTIONS.CONTACTS)
+      .doc(contactId)
+      .get();
+
+    if (!snap.exists) return null;
+
+    const raw = (snap.data() as { orgStructure?: OrgStructure }).orgStructure ?? null;
+
+    if (raw) contactOrgCache.set(contactId, { data: raw, expiresAt: Date.now() + CACHE_TTL_MS });
+    return raw;
+  } catch (err) {
+    logger.error('[OrgStructureRepository] getContactOrgStructure failed', { contactId, err });
     return null;
   }
 }

@@ -31,6 +31,8 @@ import {
   extractPrimaryEmail,
   ROLE_LABELS,
 } from './hierarchy-resolver';
+import { mapRoleToDept } from './role-to-dept-map';
+import { resolveContactDepartmentEmail } from '@/services/org-structure/org-routing-resolver';
 
 const logger = createModuleLogger('api/notifications/professional-assigned');
 
@@ -97,12 +99,25 @@ async function handleAssignmentNotification(
     }
 
     const contactData = contactSnap.data() as Record<string, unknown>;
-    const email = extractPrimaryEmail(contactData);
+    const primaryEmail = extractPrimaryEmail(contactData);
 
-    if (!email) {
+    if (!primaryEmail) {
       logger.info('Contact has no email — skipping notification', { contactId });
       return NextResponse.json({ success: true, emailSent: false });
     }
+
+    // L2 org-structure routing: professional's dept email takes priority (ADR-326 Phase 6.2)
+    let email = primaryEmail;
+    let emailSource = 'primary';
+    const deptCode = mapRoleToDept(role);
+    if (deptCode) {
+      const orgResult = await resolveContactDepartmentEmail(contactId, deptCode);
+      if (orgResult) {
+        email = orgResult.email;
+        emailSource = orgResult.source;
+      }
+    }
+    logger.info('Professional notification email resolved', { contactId, role, emailSource });
 
     // 2. Resolve display name
     const displayName = (contactData.displayName as string)
