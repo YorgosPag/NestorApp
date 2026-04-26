@@ -15,6 +15,13 @@
 (function() {
   'use strict';
 
+  // Guard React 19.2.1 describeNode bug: indent-- → -1 → repeat(-1) → RangeError
+  var _origRepeat = String.prototype.repeat;
+  String.prototype.repeat = function(count) {
+    if (typeof count === 'number' && count < 0) return '';
+    return _origRepeat.call(this, count);
+  };
+
   // ═══ ENTERPRISE ENVIRONMENT DETECTION ═══
 
   const isProduction = typeof window !== 'undefined' &&
@@ -54,7 +61,6 @@
     'initializeFakeTask',               // 🏢 FIX: React debug task
     'initializeDebugInfo',              // 🏢 FIX: React debug info
     'initializeDebugChunk',             // 🏢 FIX: React debug chunk
-    'Invalid count value: -1',          // 🏢 FIX: React 19.2.1 describeNode indent-- bug (repeat(-1))
     'parseModelString',                 // 🏢 FIX: React model parsing
     'getOutlinedModel',                 // 🏢 FIX: React outlined model
     'resolveModelChunk',                // 🏢 FIX: React model chunk
@@ -475,42 +481,6 @@
     return;
   }
 
-  // ═══ REACT 19 INTERNAL ERROR SUPPRESSION ═══
-  // 🏢 FIX (2026-04-25): React 19.2.1 dev mode bug — describeNode's `indent--` can
-  // produce indent=-1 → "  ".repeat(-1) → RangeError. describeDiff() has a try-catch
-  // that catches it, but React 19 re-reports the error via window.reportError()
-  // (non-cancelable ErrorEvent). We intercept window.reportError BEFORE React reads it,
-  // since this script runs beforeInteractive. Also covers the event+console paths.
-  // Root: react-dom 19.2.1 cjs/react-dom.development.js describeNode L~3655.
-
-  function suppressReact19InternalErrors() {
-    if (window._react19ErrorPatchApplied) return;
-    window._react19ErrorPatchApplied = true;
-
-    // Layer 1 — intercept window.reportError before React captures it as reportGlobalError
-    if (typeof window.reportError === 'function') {
-      var _origReportError = window.reportError;
-      window.reportError = function(error) {
-        if (error instanceof RangeError &&
-            typeof error.message === 'string' &&
-            error.message.includes('Invalid count value')) {
-          return; // React 19 describeNode indent-- bug — swallow silently
-        }
-        return _origReportError.call(window, error);
-      };
-    }
-
-    // Layer 2 — cancelable synchronous uncaught exceptions (non-reportError path)
-    window.addEventListener('error', function(event) {
-      if (event.cancelable &&
-          event.error instanceof RangeError &&
-          typeof event.message === 'string' &&
-          event.message.includes('Invalid count value')) {
-        event.preventDefault();
-      }
-    });
-  }
-
   // ═══ FIREBASE PERMISSION ERROR SUPPRESSION ═══
   // 🏢 FIX (2026-03-16): Firestore onSnapshot listeners throw unhandled
   // promise rejections for "Missing or insufficient permissions" when
@@ -577,9 +547,6 @@
 
       // 4. Firebase permission error suppression
       suppressFirebaseRejections();
-
-      // 5. React 19 internal error suppression (describeNode indent-- bug)
-      suppressReact19InternalErrors();
 
       // ✅ Success notification (μόνο σε development)
       if (isDevelopment) {
