@@ -70,6 +70,56 @@
       "createFailed": "Failed to create quote",
       "updateFailed": "Failed to update quote",
       "invalidTransition": "Invalid status transition"
+    },
+    "scan": {
+      "title": "Scan Quote (AI)",
+      "description": "Upload an image or PDF of a vendor quote for automatic data extraction.",
+      "uploadCta": "Upload File",
+      "uploadHint": "Image (JPG/PNG/WEBP/HEIC) or PDF, up to 10MB.",
+      "selectFile": "Choose File",
+      "fileSelected": "Selected: {name} ({size} KB)",
+      "uploadAndScan": "Upload & Scan",
+      "uploading": "Uploading...",
+      "missingFile": "Pick a file first",
+      "missingProject": "Pick a project",
+      "missingVendor": "Pick a vendor",
+      "missingTrade": "Pick a trade",
+      "scanFromRfq": "Scan Quote (AI)",
+      "scanFromRfqHint": "Upload an image/PDF quote — AI extracts data automatically.",
+      "backToRfq": "Back to RFQ",
+      "openReview": "Open Review",
+      "fileTooLarge": "File exceeds the 10MB limit.",
+      "invalidMime": "Unsupported file type.",
+      "processing": "AI processing in progress...",
+      "processingHint": "Extraction usually takes 10-30 seconds.",
+      "processingFailed": "AI processing failed",
+      "notAQuote": "Document was not recognized as a quote. Please check manually.",
+      "lowConfidence": "Low AI confidence — review required",
+      "reviewTitle": "AI Extraction Review",
+      "vendorSection": "Vendor Details",
+      "metaSection": "Quote Details",
+      "linesSection": "Lines",
+      "termsSection": "Terms",
+      "vendorVat": "Vendor VAT",
+      "vendorPhone": "Phone",
+      "vendorEmail": "Email",
+      "quoteDate": "Issue Date",
+      "quoteReference": "Quote Ref.",
+      "warranty": "Warranty",
+      "confidence": "Confidence",
+      "overallConfidence": "Overall Confidence",
+      "editableHint": "Lines are editable — correct anything that looks wrong.",
+      "noLinesExtracted": "No lines extracted. Add them manually.",
+      "confirm": "Confirm & Save",
+      "reject": "Reject",
+      "retry": "Re-scan"
+    },
+    "notifications": {
+      "quoteSubmittedViaPortal": "New vendor quote submitted for RFQ {rfqTitle}",
+      "vendorDeclined": "Vendor {vendorName} declined RFQ {rfqTitle}",
+      "vendorEdited": "Vendor {vendorName} updated their quote",
+      "inviteSent": "Invitation sent to vendor {vendorName}",
+      "inviteFailed": "Invitation delivery failed for vendor {vendorName}: {reason}"
     }
   },
   "rfqs": {
@@ -181,7 +231,57 @@
   },
   "comparison": {
     "title": "Quote Comparison",
-    "comingSoon": "Coming soon",
-    "description": "Automatic quote comparison and scoring will be available in Phase P4."
+    "empty": "No comparable quotes for this RFQ yet.",
+    "totalLabel": "Total",
+    "scoreLabel": "Score",
+    "breakdown": "Breakdown",
+    "flagsHeader": "Flags",
+    "action": "Action",
+    "awardBtn": "Award",
+    "template": "Template",
+    "weightSummary": "Price {price} · Supplier {supplier} · Terms {terms} · Delivery {delivery}",
+    "confidence": "Confidence",
+    "riskWarning": "Winner has risk flags — justification required.",
+    "factors": {
+      "price": "Price",
+      "supplier": "Supplier",
+      "terms": "Terms",
+      "delivery": "Delivery"
+    },
+    "flags": {
+      "cheapest": "Cheapest",
+      "most_reliable": "Most Reliable",
+      "fastest_delivery": "Fastest Delivery",
+      "best_terms": "Best Terms",
+      "risk_low_score": "Low Supplier Score"
+    },
+    "reasons": {
+      "cheapest": "Cheapest",
+      "most_reliable": "Most reliable",
+      "fastest_delivery": "Fastest delivery",
+      "best_terms": "Best terms",
+      "balanced_score": "Balanced score",
+      "strong_lead": "Strong lead",
+      "narrow_lead": "Narrow lead"
+    },
+    "recommendation": {
+      "title": "System Recommendation"
+    },
+    "award": {
+      "title": "Declare Winner",
+      "description": "Award to {vendor} ({total}).",
+      "overrideWarning": "You are overriding the system recommendation ({recommended} – {recommendedTotal}).",
+      "riskWarning": "Selected vendor has risk flags.",
+      "reasonLabel": "Override Reason",
+      "reasonPlaceholder": "Explain why you are overriding the recommendation (at least 20 characters)...",
+      "minCharsHint": "Minimum {count} characters (you have {current}).",
+      "confirm": "Confirm Award",
+      "submitting": "Saving..."
+    },
+    "cherryPick": {
+      "title": "Per-Line Award — Potential Savings",
+      "summary": "Cherry-pick total: {cherry} · Whole-package total: {whole}",
+      "savings": "Potential savings {amount} ({percent}%)"
+    }
   }
 }

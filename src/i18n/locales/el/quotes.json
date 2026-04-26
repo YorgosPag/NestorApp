@@ -70,6 +70,56 @@
       "createFailed": "Αποτυχία δημιουργίας προσφοράς",
       "updateFailed": "Αποτυχία ενημέρωσης προσφοράς",
       "invalidTransition": "Μη επιτρεπτή αλλαγή κατάστασης"
+    },
+    "scan": {
+      "title": "Σάρωση Προσφοράς (AI)",
+      "description": "Ανεβάστε εικόνα ή PDF προσφοράς για αυτόματη εξαγωγή στοιχείων.",
+      "uploadCta": "Ανέβασμα Αρχείου",
+      "uploadHint": "Εικόνα (JPG/PNG/WEBP/HEIC) ή PDF, έως 10MB.",
+      "selectFile": "Επιλογή Αρχείου",
+      "fileSelected": "Επιλέχθηκε: {name} ({size} KB)",
+      "uploadAndScan": "Ανέβασμα & Σάρωση",
+      "uploading": "Ανέβασμα...",
+      "missingFile": "Επιλέξτε αρχείο πρώτα",
+      "missingProject": "Επιλέξτε έργο",
+      "missingVendor": "Επιλέξτε προμηθευτή",
+      "missingTrade": "Επιλέξτε ειδικότητα",
+      "scanFromRfq": "Σάρωση Προσφοράς (AI)",
+      "scanFromRfqHint": "Ανέβασε προσφορά εικόνα/PDF — η AI εξάγει αυτόματα τα στοιχεία.",
+      "backToRfq": "Πίσω στο RFQ",
+      "openReview": "Άνοιγμα Ελέγχου",
+      "fileTooLarge": "Το αρχείο υπερβαίνει το όριο των 10MB.",
+      "invalidMime": "Μη υποστηριζόμενος τύπος αρχείου.",
+      "processing": "Επεξεργασία AI σε εξέλιξη...",
+      "processingHint": "Η εξαγωγή στοιχείων διαρκεί συνήθως 10-30 δευτερόλεπτα.",
+      "processingFailed": "Αποτυχία επεξεργασίας AI",
+      "notAQuote": "Το αρχείο δεν αναγνωρίστηκε ως προσφορά. Ελέγξτε χειροκίνητα.",
+      "lowConfidence": "Χαμηλή αξιοπιστία AI — απαιτείται έλεγχος",
+      "reviewTitle": "Έλεγχος Εξαγωγής AI",
+      "vendorSection": "Στοιχεία Προμηθευτή",
+      "metaSection": "Στοιχεία Προσφοράς",
+      "linesSection": "Γραμμές",
+      "termsSection": "Όροι",
+      "vendorVat": "ΑΦΜ Προμηθευτή",
+      "vendorPhone": "Τηλέφωνο",
+      "vendorEmail": "Email",
+      "quoteDate": "Ημερομηνία Έκδοσης",
+      "quoteReference": "Αρ. Προσφοράς",
+      "warranty": "Εγγύηση",
+      "confidence": "Αξιοπιστία",
+      "overallConfidence": "Συνολική Αξιοπιστία",
+      "editableHint": "Οι γραμμές είναι επεξεργάσιμες — διορθώστε ό,τι χρειάζεται.",
+      "noLinesExtracted": "Δεν εξήχθησαν γραμμές. Προσθέστε χειροκίνητα.",
+      "confirm": "Επιβεβαίωση & Αποθήκευση",
+      "reject": "Απόρριψη",
+      "retry": "Νέα Σάρωση"
+    },
+    "notifications": {
+      "quoteSubmittedViaPortal": "Νέα προσφορά υποβλήθηκε από προμηθευτή για το RFQ {rfqTitle}",
+      "vendorDeclined": "Ο προμηθευτής {vendorName} αρνήθηκε τη συμμετοχή στο RFQ {rfqTitle}",
+      "vendorEdited": "Ο προμηθευτής {vendorName} ενημέρωσε την προσφορά του",
+      "inviteSent": "Η πρόσκληση στάλθηκε στον προμηθευτή {vendorName}",
+      "inviteFailed": "Η αποστολή πρόσκλησης απέτυχε για τον προμηθευτή {vendorName}: {reason}"
     }
   },
   "rfqs": {
@@ -181,7 +231,57 @@
   },
   "comparison": {
     "title": "Σύγκριση Προσφορών",
-    "comingSoon": "Προσεχώς διαθέσιμο",
-    "description": "Η αυτόματη σύγκριση και βαθμολόγηση προσφορών υλοποιείται στη Φάση P4."
+    "empty": "Δεν υπάρχουν συγκρίσιμες προσφορές για αυτό το αίτημα.",
+    "totalLabel": "Σύνολο",
+    "scoreLabel": "Σκορ",
+    "breakdown": "Ανάλυση",
+    "flagsHeader": "Επισημάνσεις",
+    "action": "Ενέργεια",
+    "awardBtn": "Ανάδειξη",
+    "template": "Πρότυπο",
+    "weightSummary": "Τιμή {price} · Προμηθευτής {supplier} · Όροι {terms} · Παράδοση {delivery}",
+    "confidence": "Εμπιστοσύνη",
+    "riskWarning": "Ο νικητής έχει επισημάνσεις κινδύνου — απαιτείται αιτιολόγηση.",
+    "factors": {
+      "price": "Τιμή",
+      "supplier": "Προμηθευτής",
+      "terms": "Όροι",
+      "delivery": "Παράδοση"
+    },
+    "flags": {
+      "cheapest": "Φθηνότερος",
+      "most_reliable": "Πιο Αξιόπιστος",
+      "fastest_delivery": "Γρηγορότερη Παράδοση",
+      "best_terms": "Καλύτεροι Όροι",
+      "risk_low_score": "Χαμηλό Σκορ Προμηθευτή"
+    },
+    "reasons": {
+      "cheapest": "Φθηνότερος",
+      "most_reliable": "Πιο αξιόπιστος",
+      "fastest_delivery": "Γρηγορότερη παράδοση",
+      "best_terms": "Καλύτεροι όροι",
+      "balanced_score": "Ισορροπημένη βαθμολογία",
+      "strong_lead": "Σαφής νικητής",
+      "narrow_lead": "Οριακός νικητής"
+    },
+    "recommendation": {
+      "title": "Πρόταση Συστήματος"
+    },
+    "award": {
+      "title": "Ανάδειξη Νικητή",
+      "description": "Ανάθεση στον προμηθευτή {vendor} ({total}).",
+      "overrideWarning": "Παρακάμπτετε την πρόταση συστήματος ({recommended} – {recommendedTotal}).",
+      "riskWarning": "Ο επιλεγμένος προμηθευτής έχει επισημάνσεις κινδύνου.",
+      "reasonLabel": "Αιτιολόγηση Παράκαμψης",
+      "reasonPlaceholder": "Γράψτε γιατί παρακάμπτετε την πρόταση (τουλάχιστον 20 χαρακτήρες)...",
+      "minCharsHint": "Ελάχιστο {count} χαρακτήρες (έχετε γράψει {current}).",
+      "confirm": "Επιβεβαίωση Ανάδειξης",
+      "submitting": "Αποθήκευση..."
+    },
+    "cherryPick": {
+      "title": "Επιλογή ανά Γραμμή — Δυνατά Οφέλη",
+      "summary": "Σύνολο ανά γραμμή: {cherry} · Σύνολο πακέτου: {whole}",
+      "savings": "Δυνατή εξοικονόμηση {amount} ({percent}%)"
+    }
   }
 }

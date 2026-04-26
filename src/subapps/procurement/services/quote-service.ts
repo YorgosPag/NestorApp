@@ -15,6 +15,9 @@ import type {
   UpdateQuoteDTO,
   QuoteFilters,
   QuoteAuditEntry,
+  QuoteLine,
+  ExtractedQuoteData,
+  QuoteSource,
 } from '../types/quote';
 import { QUOTE_STATUS_TRANSITIONS, computeQuoteTotals, isTransitionAllowed } from '../types/quote';
 import type { AuthContext } from '@/lib/auth';
@@ -206,4 +209,111 @@ export async function archiveQuote(
 ): Promise<void> {
   await updateQuote(ctx, quoteId, { status: 'archived' });
   logger.info('Quote archived', { quoteId, userId: ctx.userId });
+}
+
+// ============================================================================
+// AI APPLY EXTRACTED DATA — ADR-327 §6 (Phase 2 — AI Scan)
+// ============================================================================
+
+/**
+ * Materialize `ExtractedQuoteData.lineItems` (FieldWithConfidence wrapped) into
+ * concrete `QuoteLine[]` for the quote document. Confidence info is preserved
+ * separately in `extractedData` so the review UI can highlight low-confidence cells.
+ */
+function materializeQuoteLines(extracted: ExtractedQuoteData): QuoteLine[] {
+  return extracted.lineItems.map((item, idx): QuoteLine => {
+    const qty = item.quantity.value;
+    const price = item.unitPrice.value;
+    const explicitTotal = item.lineTotal.value;
+    const computedTotal = qty * price;
+    const total = explicitTotal && explicitTotal > 0 ? explicitTotal : computedTotal;
+    const vatRaw = item.vatRate.value;
+    const vatRate: 0 | 6 | 13 | 24 =
+      vatRaw === 0 || vatRaw === 6 || vatRaw === 13 ? vatRaw : 24;
+    return {
+      id: `${generateOptimisticId()}_line_${idx}`,
+      description: item.description.value || '',
+      categoryCode: null,
+      quantity: qty || 0,
+      unit: item.unit.value || 'τμχ',
+      unitPrice: price || 0,
+      vatRate,
+      lineTotal: total || 0,
+      notes: null,
+    };
+  });
+}
+
+export interface ApplyExtractedDataOptions {
+  /** Source that produced the extraction (default: 'scan'). */
+  source?: QuoteSource;
+  /** Auto-accept threshold 0-1. If `overallConfidence/100 >= threshold` → status `submitted`. Default 1.0 (always review). */
+  autoAcceptThreshold?: number;
+}
+
+/**
+ * Persist AI-extracted fields onto a quote.
+ *
+ * Behavior (Q6 default):
+ *  - extractedData stored as-is (review UI reads confidence info)
+ *  - quote.lines materialized from extracted lineItems (review UI may overwrite)
+ *  - quote.totals recomputed from materialized lines
+ *  - audit entry `extracted_applied`
+ *  - if confidence ratio below threshold → status remains `draft` (manual review)
+ *  - if confidence ratio meets/exceeds threshold AND current status is `draft` → status `submitted`
+ */
+export async function applyExtractedData(
+  ctx: AuthContext,
+  quoteId: string,
+  extracted: ExtractedQuoteData,
+  options: ApplyExtractedDataOptions = {}
+): Promise<Quote> {
+  return safeFirestoreOperation(async (db) => {
+    const ref = db.collection(COLLECTIONS.QUOTES).doc(quoteId);
+    const snap = await ref.get();
+    if (!snap.exists) throw new Error(`Quote ${quoteId} not found`);
+
+    const current = { id: snap.id, ...snap.data() } as Quote;
+    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+
+    const source = options.source ?? 'scan';
+    const threshold = options.autoAcceptThreshold ?? 1.0;
+    const ratio = (extracted.overallConfidence ?? 0) / 100;
+    const shouldAutoSubmit =
+      current.status === 'draft' && ratio >= threshold && extracted.lineItems.length > 0;
+
+    const newLines = materializeQuoteLines(extracted);
+    const newAudit = [...current.auditTrail];
+    newAudit.push(auditEntry(
+      ctx.userId,
+      'extracted_applied',
+      null,
+      `confidence=${extracted.overallConfidence}; lines=${newLines.length}`,
+      source
+    ));
+    if (shouldAutoSubmit) {
+      newAudit.push(auditEntry(ctx.userId, 'status_change', current.status, 'submitted', source));
+    }
+
+    const updates: Partial<Quote> = {
+      extractedData: extracted,
+      overallConfidence: extracted.overallConfidence ?? 0,
+      lines: newLines,
+      totals: computeQuoteTotals(newLines),
+      acceptanceMode: shouldAutoSubmit ? 'auto' : 'manual',
+      status: shouldAutoSubmit ? 'submitted' : current.status,
+      auditTrail: newAudit,
+      updatedAt: admin.firestore.Timestamp.now(),
+    };
+
+    await ref.update(sanitizeForFirestore(updates));
+    logger.info('Quote extracted data applied', {
+      quoteId,
+      confidence: extracted.overallConfidence,
+      lines: newLines.length,
+      autoSubmitted: shouldAutoSubmit,
+    });
+
+    return { ...current, ...updates } as Quote;
+  });
 }
