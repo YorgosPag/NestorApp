@@ -205,7 +205,8 @@
         "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την εργασία;",
         "duplicate": "Αντιγραφή",
         "expandAll": "Ανάπτυξη όλων",
-        "collapseAll": "Σύμπτυξη όλων"
+        "collapseAll": "Σύμπτυξη όλων",
+        "createRfqFromBoq": "Δημιουργία RFQ από BOQ"
       },
       "units": {
         "m": "μ.",

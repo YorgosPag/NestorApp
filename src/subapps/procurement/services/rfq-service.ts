@@ -7,9 +7,12 @@ import { generateRfqId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import admin from 'firebase-admin';
 import { normalizeToDate } from '@/lib/date-local';
-import type { RFQ, RfqStatus, CreateRfqDTO, UpdateRfqDTO, RfqFilters } from '../types/rfq';
+import type { RFQ, RfqStatus, CreateRfqDTO, UpdateRfqDTO, RfqFilters, RfqLine } from '../types/rfq';
 import { RFQ_STATUS_TRANSITIONS } from '../types/rfq';
 import type { AuthContext } from '@/lib/auth';
+import type { BOQItem } from '@/types/boq/boq';
+import { getTradeCodeForAtoeCategory } from '../data/trades';
+import type { TradeCode } from '../types/trade';
 
 const logger = createModuleLogger('RFQ_SERVICE');
 
@@ -37,7 +40,7 @@ export async function createRfq(
       status: 'draft',
       awardMode: dto.awardMode ?? 'whole_package',
       reminderTemplate: dto.reminderTemplate ?? 'standard',
-      invitedVendorIds: [],
+      invitedVendorIds: dto.invitedVendorIds ?? [],
       winnerQuoteId: null,
       comparisonTemplateId: dto.comparisonTemplateId ?? 'standard',
       auditTrail: [{
@@ -165,5 +168,75 @@ export async function archiveRfq(
   rfqId: string
 ): Promise<void> {
   await updateRfq(ctx, rfqId, { status: 'archived' });
-  logger.info('RFQ archived', { rfqId, userId: ctx.userId });
+  logger.info('RFQ archived', { rfqId, uid: ctx.uid });
+}
+
+// ============================================================================
+// FACTORY — Build CreateRfqDTO from BOQ items (ADR-327 P5-BOQ)
+// Reads BOQ items from Firestore, maps ΑΤΟΕ categoryCode → TradeCode,
+// returns a pre-filled DTO ready for RfqBuilder. Does NOT persist an RFQ.
+// ============================================================================
+
+export async function createRfqFromBoqItems(
+  ctx: AuthContext,
+  boqItemIds: string[]
+): Promise<CreateRfqDTO> {
+  if (boqItemIds.length === 0) {
+    return { projectId: '', title: '', lines: [] };
+  }
+  // Firestore `in` supports max 30 values
+  const ids = boqItemIds.slice(0, 30);
+
+  return safeFirestoreOperation(async (db) => {
+    const snap = await db.collection(COLLECTIONS.BOQ_ITEMS)
+      .where(admin.firestore.FieldPath.documentId(), 'in', ids)
+      .get();
+
+    const items = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as BOQItem))
+      .filter((item) => item.companyId === ctx.companyId);
+
+    if (items.length === 0) {
+      return { projectId: '', title: '', lines: [] };
+    }
+
+    const firstItem = items[0];
+    const projectId = firstItem.projectId;
+    const buildingId = firstItem.buildingId ?? null;
+
+    const vendorIdSet = new Set<string>();
+    const lines: RfqLine[] = items.map((item, idx) => {
+      if (item.linkedContractorId) vendorIdSet.add(item.linkedContractorId);
+
+      const tradeCode: TradeCode =
+        getTradeCodeForAtoeCategory(item.categoryCode) ?? 'materials_general';
+
+      return {
+        id: `rfql_boq_${idx}_${Date.now()}`,
+        description: item.title,
+        trade: tradeCode,
+        categoryCode: item.categoryCode,
+        quantity: item.estimatedQuantity,
+        unit: item.unit as string,
+        notes: item.description ?? null,
+      };
+    });
+
+    const tradeGroups = new Set(lines.map((l) => l.trade));
+    const primaryTrade = tradeGroups.size === 1 ? [...tradeGroups][0] : null;
+    const title = primaryTrade
+      ? `RFQ — ${firstItem.categoryCode}`
+      : `RFQ — ${projectId.slice(-6)}`;
+
+    const dto: CreateRfqDTO = {
+      projectId,
+      buildingId,
+      title,
+      lines,
+      invitedVendorIds: vendorIdSet.size > 0 ? [...vendorIdSet] : undefined,
+    };
+
+    logger.info('createRfqFromBoqItems', { count: items.length, projectId });
+    return dto;
+  }, { projectId: '', title: '', lines: [] });
 }

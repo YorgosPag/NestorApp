@@ -10,6 +10,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -17,6 +18,8 @@ import { Plus, Trash2, Save, X } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TradeSelector } from './TradeSelector';
 import { POProjectSelector } from '@/components/procurement/POEntitySelectors';
+import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
+import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import type { RfqLine, CreateRfqDTO, AwardMode, ReminderTemplate } from '@/subapps/procurement/types/rfq';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 
@@ -32,6 +35,18 @@ interface FormState {
   awardMode: AwardMode;
   reminderTemplate: ReminderTemplate;
   lines: RfqLine[];
+  invitedVendorIds: string[];
+}
+
+export interface RfqBuilderInitialState {
+  projectId?: string;
+  title?: string;
+  description?: string;
+  deadlineDate?: string;
+  awardMode?: AwardMode;
+  reminderTemplate?: ReminderTemplate;
+  lines?: RfqLine[];
+  invitedVendorIds?: string[];
 }
 
 // ============================================================================
@@ -47,6 +62,18 @@ interface RfqLineRowProps {
 
 function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
   const { t } = useTranslation('quotes');
+
+  const suggestedCodes = getAtoeCodesForTrade(line.trade as TradeCode);
+  const remainingCodes = ATOE_MASTER_CATEGORIES
+    .map((c) => c.code)
+    .filter((c) => !suggestedCodes.includes(c));
+
+  const handleTradeChange = (code: TradeCode) => {
+    onUpdate(index, 'trade', code);
+    const codes = getAtoeCodesForTrade(code);
+    if (codes.length > 0) onUpdate(index, 'categoryCode', codes[0]);
+  };
+
   return (
     <tr className="border-b text-sm">
       <td className="py-1 pr-2">
@@ -60,9 +87,27 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
       <td className="py-1 pr-2 w-40">
         <TradeSelector
           value={line.trade ?? ''}
-          onChange={(code) => onUpdate(index, 'trade', code)}
+          onChange={handleTradeChange}
           className="h-8"
         />
+      </td>
+      <td className="py-1 pr-2 w-28">
+        <Select
+          value={line.categoryCode ?? ''}
+          onValueChange={(v) => onUpdate(index, 'categoryCode', v || null)}
+        >
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('rfqs.categoryCodePlaceholder')} /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">{t('rfqs.noCategoryCode')}</SelectItem>
+            {suggestedCodes.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+            {suggestedCodes.length > 0 && remainingCodes.length > 0 && <SelectSeparator />}
+            {remainingCodes.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </td>
       <td className="py-1 pr-2 w-20">
         <Input
@@ -96,20 +141,22 @@ function RfqLineRow({ line, index, onUpdate, onRemove }: RfqLineRowProps) {
 // ============================================================================
 
 interface RfqBuilderProps {
+  initialState?: RfqBuilderInitialState;
   onSuccess?: (id: string) => void;
   onCancel?: () => void;
 }
 
-export function RfqBuilder({ onSuccess, onCancel }: RfqBuilderProps) {
+export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProps) {
   const { t } = useTranslation('quotes');
   const [form, setForm] = useState<FormState>({
-    projectId: '',
-    title: '',
-    description: '',
-    deadlineDate: '',
-    awardMode: 'whole_package',
-    reminderTemplate: 'standard',
-    lines: [],
+    projectId: initialState?.projectId ?? '',
+    title: initialState?.title ?? '',
+    description: initialState?.description ?? '',
+    deadlineDate: initialState?.deadlineDate ?? '',
+    awardMode: initialState?.awardMode ?? 'whole_package',
+    reminderTemplate: initialState?.reminderTemplate ?? 'standard',
+    lines: initialState?.lines ?? [],
+    invitedVendorIds: initialState?.invitedVendorIds ?? [],
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,11 +167,13 @@ export function RfqBuilder({ onSuccess, onCancel }: RfqBuilderProps) {
 
   const addLine = () => {
     const id = `rfql_${Date.now()}`;
+    const defaultTrade: TradeCode = 'concrete';
+    const defaultCategoryCode = getAtoeCodesForTrade(defaultTrade)[0] ?? null;
     const line: RfqLine = {
       id,
       description: '',
-      trade: 'concrete' as TradeCode,
-      categoryCode: null,
+      trade: defaultTrade,
+      categoryCode: defaultCategoryCode,
       quantity: null,
       unit: null,
       notes: null,
@@ -158,6 +207,7 @@ export function RfqBuilder({ onSuccess, onCancel }: RfqBuilderProps) {
         awardMode: form.awardMode,
         reminderTemplate: form.reminderTemplate,
         lines: form.lines,
+        invitedVendorIds: form.invitedVendorIds.length > 0 ? form.invitedVendorIds : undefined,
       };
       const res = await fetch('/api/rfqs', {
         method: 'POST',
@@ -250,6 +300,7 @@ export function RfqBuilder({ onSuccess, onCancel }: RfqBuilderProps) {
                   <tr className="border-b text-xs text-muted-foreground">
                     <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineDescription')}</th>
                     <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineTrade')}</th>
+                    <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineCategoryCode')}</th>
                     <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineQuantity')}</th>
                     <th className="pb-1 pr-2 text-left font-normal">{t('rfqs.lineUnit')}</th>
                     <th />

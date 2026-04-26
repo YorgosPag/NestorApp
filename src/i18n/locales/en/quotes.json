@@ -26,6 +26,9 @@
     "rfq": "RFQ",
     "description": "Description",
     "lineDescription": "Description",
+    "categoryCode": "ΑΤΟΕ Category",
+    "categoryCodePlaceholder": "ΑΤΟΕ code",
+    "noCategoryCode": "—",
     "quantity": "Qty",
     "unit": "Unit",
     "unitPrice": "Unit Price",
@@ -166,6 +169,9 @@
     "lines": "RFQ Lines",
     "lineDescription": "Description",
     "lineTrade": "Trade",
+    "lineCategoryCode": "ΑΤΟΕ",
+    "categoryCodePlaceholder": "ΑΤΟΕ code",
+    "noCategoryCode": "—",
     "lineQuantity": "Qty",
     "lineUnit": "Unit",
     "addLine": "Add Line",
@@ -178,7 +184,12 @@
     "detailTitle": "Request for Quotation",
     "quotesSection": "Received Quotes",
     "noQuotes": "No quotes received yet",
-    "unitPlaceholder": "pcs"
+    "unitPlaceholder": "pcs",
+    "fromBoq": {
+      "button": "Create RFQ from BOQ",
+      "loading": "Loading BOQ...",
+      "suggested": "{count} BOQ items loaded"
+    }
   },
   "trades": {
     "title": "Trades",

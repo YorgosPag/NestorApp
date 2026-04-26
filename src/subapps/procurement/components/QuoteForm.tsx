@@ -10,6 +10,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -18,6 +19,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TradeSelector } from './TradeSelector';
 import { POProjectSelector, POSupplierSelector } from '@/components/procurement/POEntitySelectors';
 import { computeQuoteTotals } from '@/subapps/procurement/types/quote';
+import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
+import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import type { QuoteLine, CreateQuoteDTO } from '@/subapps/procurement/types/quote';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 
@@ -57,12 +60,17 @@ const VAT_RATES = [0, 6, 13, 24] as const;
 interface LineRowProps {
   line: QuoteLine;
   index: number;
+  suggestedAtoeCodes: string[];
   onUpdate: (index: number, field: keyof QuoteLine, value: QuoteLine[keyof QuoteLine]) => void;
   onRemove: (index: number) => void;
 }
 
-function LineRow({ line, index, onUpdate, onRemove }: LineRowProps) {
+function LineRow({ line, index, suggestedAtoeCodes, onUpdate, onRemove }: LineRowProps) {
   const { t } = useTranslation('quotes');
+
+  const remainingCodes = ATOE_MASTER_CATEGORIES
+    .map((c) => c.code)
+    .filter((c) => !suggestedAtoeCodes.includes(c));
 
   const handleQtyPrice = (field: 'quantity' | 'unitPrice', raw: string) => {
     const n = parseFloat(raw) || 0;
@@ -81,6 +89,24 @@ function LineRow({ line, index, onUpdate, onRemove }: LineRowProps) {
           placeholder={t('quotes.lineDescription')}
           className="h-8 text-sm"
         />
+      </td>
+      <td className="py-1 pr-2 w-28">
+        <Select
+          value={line.categoryCode ?? ''}
+          onValueChange={(v) => onUpdate(index, 'categoryCode', v || null)}
+        >
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('quotes.categoryCodePlaceholder')} /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">{t('quotes.noCategoryCode')}</SelectItem>
+            {suggestedAtoeCodes.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+            {suggestedAtoeCodes.length > 0 && remainingCodes.length > 0 && <SelectSeparator />}
+            {remainingCodes.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </td>
       <td className="py-1 pr-2 w-20">
         <Input
@@ -163,9 +189,15 @@ export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
     setForm((prev) => ({ ...prev, [key]: val }));
   }, []);
 
+  const atoeCodesForTrade = form.trade ? getAtoeCodesForTrade(form.trade as TradeCode) : [];
+
   const addLine = () => {
     const id = `line_${Date.now()}`;
-    setForm((prev) => ({ ...prev, lines: [...prev.lines, { id, ...EMPTY_LINE }] }));
+    const defaultCategoryCode = atoeCodesForTrade[0] ?? null;
+    setForm((prev) => ({
+      ...prev,
+      lines: [...prev.lines, { id, ...EMPTY_LINE, categoryCode: defaultCategoryCode }],
+    }));
   };
 
   const removeLine = (index: number) => {
@@ -268,6 +300,7 @@ export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
                 <thead>
                   <tr className="border-b text-xs text-muted-foreground">
                     <th className="pb-1 pr-2 text-left font-normal">{t('quotes.lineDescription')}</th>
+                    <th className="pb-1 pr-2 text-left font-normal">{t('quotes.categoryCode')}</th>
                     <th className="pb-1 pr-2 text-left font-normal">{t('quotes.quantity')}</th>
                     <th className="pb-1 pr-2 text-left font-normal">{t('quotes.unit')}</th>
                     <th className="pb-1 pr-2 text-left font-normal">{t('quotes.unitPrice')}</th>
@@ -278,7 +311,7 @@ export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
                 </thead>
                 <tbody>
                   {form.lines.map((line, i) => (
-                    <LineRow key={line.id} line={line} index={i} onUpdate={updateLine} onRemove={removeLine} />
+                    <LineRow key={line.id} line={line} index={i} suggestedAtoeCodes={atoeCodesForTrade} onUpdate={updateLine} onRemove={removeLine} />
                   ))}
                 </tbody>
               </table>

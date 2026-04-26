@@ -90,6 +90,7 @@ export interface CreateRfqDTO {
   awardMode?: AwardMode;
   reminderTemplate?: ReminderTemplate;
   comparisonTemplateId?: string | null;
+  invitedVendorIds?: string[];
 }
 
 export interface UpdateRfqDTO {

@@ -12,6 +12,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
@@ -22,7 +23,7 @@ import { BOQFilterBar } from './MeasurementsTabContent/BOQFilterBar';
 import { BOQCategoryAccordion, getCategoryCodes } from './MeasurementsTabContent/BOQCategoryAccordion';
 import { BOQItemEditor } from './MeasurementsTabContent/BOQItemEditor';
 import { Button } from '@/components/ui/button';
-import { Ruler, Plus, AlertCircle, ChevronRight, ChevronDown } from 'lucide-react';
+import { Ruler, Plus, AlertCircle, ChevronRight, ChevronDown, FileText } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -52,6 +53,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
   const colors = useSemanticColors();
   const { user } = useAuth();
   const { confirm, dialogProps } = useConfirmDialog();
+  const router = useRouter();
   // 🏢 ADR-241: Fullscreen state
   const fullscreen = useFullscreen();
   // 🏢 ADR-201: Centralized companyId resolution (building → user fallback)
@@ -147,6 +149,12 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
     setEditingItem(null);
   }, []);
 
+  const handleCreateRfqFromBoq = useCallback(() => {
+    if (filteredItems.length === 0) return;
+    const ids = filteredItems.map((i) => i.id).join(',');
+    router.push(`/procurement/rfqs/new?boqItems=${encodeURIComponent(ids)}`);
+  }, [filteredItems, router]);
+
   // --- LOADING STATE ---
 
   if (loading) {
@@ -222,6 +230,16 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
           />
         </section>
         <nav className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCreateRfqFromBoq}
+            disabled={filteredItems.length === 0}
+            title={t('tabs.measurements.actions.createRfqFromBoq')}
+          >
+            <FileText className="h-4 w-4 mr-1" />
+            {t('tabs.measurements.actions.createRfqFromBoq')}
+          </Button>
           <Button onClick={handleNewItem}>
             <Plus className="h-4 w-4 mr-2" />
             {t('tabs.measurements.actions.newItem')}

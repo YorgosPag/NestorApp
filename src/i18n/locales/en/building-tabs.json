@@ -205,7 +205,8 @@
         "deleteConfirm": "Are you sure you want to delete this item?",
         "duplicate": "Duplicate",
         "expandAll": "Expand all",
-        "collapseAll": "Collapse all"
+        "collapseAll": "Collapse all",
+        "createRfqFromBoq": "Create RFQ from BOQ"
       },
       "units": {
         "m": "m",
