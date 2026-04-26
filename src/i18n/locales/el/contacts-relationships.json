@@ -265,11 +265,15 @@
       "home": "Οικίας",
       "work": "Εργασίας",
       "fax": "Fax",
+      "internal": "Εσωτερικό",
       "other": "Άλλο"
     },
     "emailTypes": {
       "personal": "Προσωπικό",
       "work": "Εργασίας",
+      "invoice": "Λογαριασμοί",
+      "notification": "Ειδοποιήσεις",
+      "support": "Υποστήριξη",
       "other": "Άλλο"
     },
     "websiteTypes": {

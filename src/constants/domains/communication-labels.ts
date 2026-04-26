@@ -17,12 +17,16 @@ export const PHONE_TYPE_LABELS = {
   home: 'communication.phoneTypes.home',
   work: 'communication.phoneTypes.work',
   fax: 'communication.phoneTypes.fax',
+  internal: 'communication.phoneTypes.internal',
   other: 'communication.phoneTypes.other'
 } as const;
 
 export const EMAIL_TYPE_LABELS = {
   personal: 'communication.emailTypes.personal',
   work: 'communication.emailTypes.work',
+  invoice: 'communication.emailTypes.invoice',
+  notification: 'communication.emailTypes.notification',
+  support: 'communication.emailTypes.support',
   other: 'communication.emailTypes.other'
 } as const;
 

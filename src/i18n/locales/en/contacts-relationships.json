@@ -265,11 +265,15 @@
       "home": "Home",
       "work": "Work",
       "fax": "Fax",
+      "internal": "Internal",
       "other": "Other"
     },
     "emailTypes": {
       "personal": "Personal",
       "work": "Work",
+      "invoice": "Invoice",
+      "notification": "Notifications",
+      "support": "Support",
       "other": "Other"
     },
     "websiteTypes": {

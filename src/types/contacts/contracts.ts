@@ -245,14 +245,16 @@ export interface ServiceContact extends BaseContact {
 // Auxiliary Types
 export interface EmailInfo {
   email: string;
-  type: 'personal' | 'work' | 'other';
+  /** Extended with org-routing literals (ADR-326 Phase 4) */
+  type: 'personal' | 'work' | 'invoice' | 'notification' | 'support' | 'other';
   isPrimary: boolean;
   label?: string;
 }
 
 export interface PhoneInfo {
   number: string;
-  type: 'mobile' | 'home' | 'work' | 'fax' | 'other';
+  /** Extended with 'internal' for PBX extensions (ADR-326 Phase 4) */
+  type: 'mobile' | 'home' | 'work' | 'fax' | 'internal' | 'other';
   isPrimary: boolean;
   label?: string;
   countryCode?: string;
@@ -322,6 +324,36 @@ export interface ContactPerson {
 export interface ResponsiblePerson extends ContactPerson {
   responsibilities?: string[];
   availableHours?: string;
+  /** L3 comms upgrade (ADR-326 Phase 4): replaces inherited single-string email/phone */
+  emails: EmailInfo[];
+  phones: PhoneInfo[];
+}
+
+/**
+ * Backward-compat mapper: wraps legacy single-string email/phone fields
+ * (from pre-Phase-4 Firestore docs) into the new EmailInfo[]/PhoneInfo[] arrays.
+ */
+export function normalizeResponsiblePersonComms(
+  raw: Omit<ResponsiblePerson, 'emails' | 'phones'> & {
+    emails?: EmailInfo[];
+    phones?: PhoneInfo[];
+    email?: string;
+    phone?: string;
+  }
+): ResponsiblePerson {
+  const emails: EmailInfo[] =
+    raw.emails && raw.emails.length > 0
+      ? raw.emails
+      : raw.email
+      ? [{ email: raw.email, type: 'work', isPrimary: true }]
+      : [];
+  const phones: PhoneInfo[] =
+    raw.phones && raw.phones.length > 0
+      ? raw.phones
+      : raw.phone
+      ? [{ number: raw.phone, type: 'work', isPrimary: true }]
+      : [];
+  return { ...raw, emails, phones } as ResponsiblePerson;
 }
 
 export interface OperatingHours {

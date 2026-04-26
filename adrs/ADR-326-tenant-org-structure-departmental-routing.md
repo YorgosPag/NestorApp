@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ✅ v1.4 — Phase 3 IMPLEMENTED (2026-04-25) |
+| **Status** | ✅ v1.5 — Phase 4 IMPLEMENTED (2026-04-26) |
 | **Category** | Architecture / Multi-Tenancy / Notifications / Contacts |
 | **Author** | Γιώργος Παγώνης + Claude Code |
 | **Related ADRs** | ADR-145 (Property Types SSoT), ADR-177 (Employer Picker), ADR-198 (Sales-Accounting Bridge), ADR-210 (Enterprise IDs), ADR-244 (Multi-buyer), ADR-282 (Persona Refactor), ADR-291 (Notification Pattern), ADR-294 (SSoT Ratchet), ADR-316 (Companies Tenant Architecture), ADR-318 (Workplace Toggle), ADR-319 (Address Type Registry), ACC-019 (Invoice Email Sending) |
@@ -1225,5 +1225,6 @@ User pattern: Google-style sensible defaults + user customization. Riduce time-t
 | v1.2 | 2026-04-25 | Phase 1 IMPLEMENTED — Server write path L1 + Firestore rules note. New: `org-structure-repository.ts` (Admin SDK CRUD, 5-min cache), `api/org-structure/route.ts` (GET + PUT, company_admin guard, hierarchy validation). Modified: `types/company.ts` (+orgStructure to CompanySettings), `org-routing-resolver.ts` (resolveTenantNotificationEmail wired to repository), `firestore.rules` (comment). Tests: 33 passing (33/33). |
 | v1.3 | 2026-04-25 | Phase 2 IMPLEMENTED — Tenant settings UI `/settings/company` with 4 Radix tabs. New: `src/app/settings/company/page.tsx`, `src/components/settings/company/` (7 components: CompanySettingsPageContent, CompanyInfoTab, TaxSettingsTab, OrgStructureTab, RoutingEventsTab, DepartmentEditor, OrgTreeView, MemberEditor, ManagerPicker). Modified: `lazyRoutesAdr294.tsx` (+CompanySettings), `domain-constants.ts` (+API_ROUTES.ORG_STRUCTURE), `smart-navigation-factory.ts` (+/settings/company nav entry), `org-structure.json` (+Phase 2 i18n keys). |
 | v1.4 | 2026-04-25 | Phase 3 IMPLEMENTED — `notifyAccountingOffice` connected to OrgStructure resolver. Removed `process.env.ACCOUNTING_NOTIFY_EMAIL` read (G1). Added `resolveAccountingEmail(companyId, event)` in `notification-helpers.ts`. Updated `notifyAccountingOffice(event, result, companyId)` signature + structured logging with `source` field. Fixed pre-existing `formatNotificationDate` broken re-export → proper `formatDate` function. `SalesAccountingBridge` stores `companyId` + passes to notify calls. Files: `notification-helpers.ts`, `accounting-office-notify.ts`, `sales-accounting-bridge.ts`. Tests: 5/5 new integration tests passing. |
+| v1.5 | 2026-04-26 | Phase 4 IMPLEMENTED — `EmailInfo.type` extended with `'invoice' \| 'notification' \| 'support'`; `PhoneInfo.type` extended with `'internal'`. `ResponsiblePerson` upgraded: `email: string → emails: EmailInfo[]`, `phone: string → phones: PhoneInfo[]`. Backward-compat mapper `normalizeResponsiblePersonComms()` exported from `contracts.ts`. `PHONE_TYPE_LABELS` + `EMAIL_TYPE_LABELS` updated. i18n keys added to `contacts-relationships.json` (el + en). No switch statements on EmailInfo/PhoneInfo type found (object-lookup pattern only). |
 
-**FINE ADR-326 v1.0 (APPROVED).** Tutte le decisioni di design risolte. Pronto per Phase 0 implementation in nuova sessione (vedi `ADR-326-HANDOFF.md` per context anchor).
+**FINE ADR-326 v1.0 (APPROVED).** Tutte le decisioni di design risolte. Pronto per Phase 0 implementation in nuova sessione (vedi `ADR-326-HANDOFF.md` per context ancora).
