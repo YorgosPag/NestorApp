@@ -61,11 +61,11 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           (c) => normalizeVat(c['vatNumber'] as string | undefined) === normalizedVat,
         );
         if (vatMatch) {
-          await ensureSupplierPersona(vatMatch.id, companyId, ctx.uid);
-          if (bankAccounts?.length) await storeBankAccounts(vatMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(vatMatch));
+          try { await ensureSupplierPersona(vatMatch.id, companyId, ctx.uid); } catch (e) { logger.warn('ensureSupplierPersona failed (vat)', { error: getErrorMessage(e) }); }
+          if (bankAccounts?.length) { try { await storeBankAccounts(vatMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(vatMatch)); } catch (e) { logger.warn('storeBankAccounts failed (vat)', { error: getErrorMessage(e) }); } }
           logger.info('Storing emails for VAT-matched contact', { contactId: vatMatch.id, emailCount: (emails ?? []).length, emails: emails ?? [] });
-          for (const em of emails ?? []) { if (em) await storeContactEmail(vatMatch.id, companyId, ctx.uid, em); }
-          if (logoUrl) await setContactLogoIfEmpty(vatMatch.id, companyId, ctx.uid, logoUrl);
+          for (const em of emails ?? []) { if (em) { try { await storeContactEmail(vatMatch.id, companyId, ctx.uid, em); } catch (e) { logger.warn('storeContactEmail failed (vat)', { email: em, error: getErrorMessage(e) }); } } }
+          if (logoUrl) { try { await setContactLogoIfEmpty(vatMatch.id, companyId, ctx.uid, logoUrl); } catch (e) { logger.warn('setContactLogoIfEmpty failed (vat)', { error: getErrorMessage(e) }); } }
           return NextResponse.json({ success: true, data: { contactId: vatMatch.id, displayName: resolveDisplayName(vatMatch), wasCreated: false } });
         }
       }
@@ -80,10 +80,10 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           return fuzzyGreekMatch(cStripped, stripped) || fuzzyGreekMatch(stripped, cStripped);
         });
         if (nameMatch) {
-          await ensureSupplierPersona(nameMatch.id, companyId, ctx.uid);
-          if (bankAccounts?.length) await storeBankAccounts(nameMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(nameMatch));
-          for (const em of emails ?? []) { if (em) await storeContactEmail(nameMatch.id, companyId, ctx.uid, em); }
-          if (logoUrl) await setContactLogoIfEmpty(nameMatch.id, companyId, ctx.uid, logoUrl);
+          try { await ensureSupplierPersona(nameMatch.id, companyId, ctx.uid); } catch (e) { logger.warn('ensureSupplierPersona failed (name)', { error: getErrorMessage(e) }); }
+          if (bankAccounts?.length) { try { await storeBankAccounts(nameMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(nameMatch)); } catch (e) { logger.warn('storeBankAccounts failed (name)', { error: getErrorMessage(e) }); } }
+          for (const em of emails ?? []) { if (em) { try { await storeContactEmail(nameMatch.id, companyId, ctx.uid, em); } catch (e) { logger.warn('storeContactEmail failed (name)', { email: em, error: getErrorMessage(e) }); } } }
+          if (logoUrl) { try { await setContactLogoIfEmpty(nameMatch.id, companyId, ctx.uid, logoUrl); } catch (e) { logger.warn('setContactLogoIfEmpty failed (name)', { error: getErrorMessage(e) }); } }
           return NextResponse.json({ success: true, data: { contactId: nameMatch.id, displayName: resolveDisplayName(nameMatch), wasCreated: false } });
         }
       }
@@ -134,11 +134,11 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           });
         }
 
-        await ensureSupplierPersona(result.contactId, companyId, ctx.uid);
+        try { await ensureSupplierPersona(result.contactId, companyId, ctx.uid); } catch (e) { logger.warn('ensureSupplierPersona failed', { contactId: result.contactId, error: getErrorMessage(e) }); }
         logger.info('Storing emails for new contact', { contactId: result.contactId, emailCount: (emails ?? []).length, emails: emails ?? [] });
-        for (const em of emails ?? []) { if (em) await storeContactEmail(result.contactId, companyId, ctx.uid, em); }
-        if (logoUrl) await setContactLogoIfEmpty(result.contactId, companyId, ctx.uid, logoUrl);
-        if (bankAccounts?.length) await storeBankAccounts(result.contactId, companyId, ctx.uid, bankAccounts, result.displayName ?? undefined);
+        for (const em of emails ?? []) { if (em) { try { await storeContactEmail(result.contactId, companyId, ctx.uid, em); } catch (e) { logger.warn('storeContactEmail failed', { email: em, error: getErrorMessage(e) }); } } }
+        if (logoUrl) { try { await setContactLogoIfEmpty(result.contactId, companyId, ctx.uid, logoUrl); } catch (e) { logger.warn('setContactLogoIfEmpty failed', { error: getErrorMessage(e) }); } }
+        if (bankAccounts?.length) { try { await storeBankAccounts(result.contactId, companyId, ctx.uid, bankAccounts, result.displayName ?? undefined); } catch (e) { logger.warn('storeBankAccounts failed', { error: getErrorMessage(e) }); } }
 
         return NextResponse.json({
           success: true,
@@ -158,6 +158,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
             // fall through to generic error
           }
         }
+        logger.error('Contact resolve failed', { msg });
         return NextResponse.json({ success: false, error: msg }, { status: 500 });
       }
     },
