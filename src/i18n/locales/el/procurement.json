@@ -197,7 +197,8 @@
     "pageLabel": "Σελίδα Προμηθειών",
     "loadingMessage": "Φόρτωση παραγγελιών...",
     "dashboard": { "label": "Dashboard Προμηθειών" },
-    "filters": { "desktop": "Φίλτρα", "mobile": "Φίλτρα" }
+    "filters": { "desktop": "Φίλτρα", "mobile": "Φίλτρα" },
+    "scanQuote": "Σάρωση Προσφοράς"
   },
   "header": {
     "title": "Προμήθειες",

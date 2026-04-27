@@ -197,7 +197,8 @@
     "pageLabel": "Procurement Page",
     "loadingMessage": "Loading purchase orders...",
     "dashboard": { "label": "Procurement Dashboard" },
-    "filters": { "desktop": "Filters", "mobile": "Filters" }
+    "filters": { "desktop": "Filters", "mobile": "Filters" },
+    "scanQuote": "Scan Quote"
   },
   "header": {
     "title": "Procurement",
