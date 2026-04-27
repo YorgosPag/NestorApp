@@ -41,6 +41,27 @@ async function handleGet(
 
       try {
         const bucket = getAdminBucket();
+        // Diagnostic: also test the default bucket reference. If they resolve
+        // to different physical buckets, getMetadata results will differ.
+        let defaultBucketProbe: { name: string; exists: boolean | null; error?: string } | null = null;
+        try {
+          const { getAdminStorage } = await import('@/lib/firebaseAdmin');
+          const defaultBucket = getAdminStorage().bucket();
+          const defaultRef = defaultBucket.file(storagePath);
+          try {
+            await defaultRef.getMetadata();
+            defaultBucketProbe = { name: defaultBucket.name, exists: true };
+          } catch (probeErr) {
+            const code = (probeErr as { code?: number }).code;
+            defaultBucketProbe = {
+              name: defaultBucket.name,
+              exists: code === 404 ? false : null,
+              error: code !== 404 ? getErrorMessage(probeErr) : undefined,
+            };
+          }
+        } catch (e) {
+          defaultBucketProbe = { name: '<probe-init-failed>', exists: null, error: getErrorMessage(e) };
+        }
         const fileRef = bucket.file(storagePath);
 
         // Direct getMetadata: file.exists() returns false against
@@ -68,6 +89,8 @@ async function handleGet(
             errorCode: errCode,
             errorMessage: getErrorMessage(metaErr),
             siblingsAtParent: siblings,
+            envFirebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+            defaultBucketProbe,
           });
           if (errCode === 404) {
             return NextResponse.json({ error: 'Not found' }, { status: 404 });
