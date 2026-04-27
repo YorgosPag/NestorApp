@@ -12,8 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Eye, Archive } from 'lucide-react';
 import { cn } from '@/lib/design-system';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -49,9 +48,11 @@ interface QuoteListProps {
   quotes: Quote[];
   loading: boolean;
   onCreateNew?: () => void;
+  onView?: (quoteId: string) => void;
+  onArchive?: (quoteId: string) => void;
 }
 
-export function QuoteList({ quotes, loading, onCreateNew }: QuoteListProps) {
+export function QuoteList({ quotes, loading, onCreateNew, onView, onArchive }: QuoteListProps) {
   const { t } = useTranslation('quotes');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | ''>('');
@@ -66,6 +67,8 @@ export function QuoteList({ quotes, loading, onCreateNew }: QuoteListProps) {
     }
     return true;
   });
+
+  const hasActions = !!(onView || onArchive);
 
   return (
     <Card>
@@ -105,11 +108,16 @@ export function QuoteList({ quotes, loading, onCreateNew }: QuoteListProps) {
                 <TableHead>{t('quotes.status')}</TableHead>
                 <TableHead className="text-right">{t('quotes.total')}</TableHead>
                 <TableHead>{t('quotes.validUntil')}</TableHead>
+                {hasActions && <TableHead className="w-[90px]" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((q) => (
-                <TableRow key={q.id}>
+                <TableRow
+                  key={q.id}
+                  className={cn(onView && 'cursor-pointer hover:bg-muted/50')}
+                  onClick={onView ? () => onView(q.id) : undefined}
+                >
                   <TableCell className="font-mono text-sm">{q.displayNumber}</TableCell>
                   <TableCell className="text-sm">{q.trade}</TableCell>
                   <TableCell>
@@ -122,8 +130,31 @@ export function QuoteList({ quotes, loading, onCreateNew }: QuoteListProps) {
                     {formatCurrency(q.totals.total)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {q.validUntil ? new Date((q.validUntil as { seconds: number }).seconds * 1000).toLocaleDateString('el-GR') : '—'}
+                    {q.validUntil
+                      ? new Date((q.validUntil as { seconds: number }).seconds * 1000).toLocaleDateString('el-GR')
+                      : '—'}
                   </TableCell>
+                  {hasActions && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-1">
+                        {onView && (
+                          <Button variant="ghost" size="icon" onClick={() => onView(q.id)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {onArchive && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => onArchive(q.id)}
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

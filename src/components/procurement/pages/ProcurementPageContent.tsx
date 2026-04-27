@@ -22,6 +22,7 @@ import { PageContainer, ListContainer } from '@/core/containers';
 import { PageLoadingState } from '@/core/states';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { ProcurementHeader } from '@/components/procurement/page/ProcurementHeader';
+import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { PurchaseOrderList } from '@/components/procurement/PurchaseOrderList';
 import { PurchaseOrderDetail } from '@/components/procurement/PurchaseOrderDetail';
 import { PurchaseOrderForm } from '@/components/procurement/PurchaseOrderForm';
@@ -88,6 +89,9 @@ export function ProcurementPageContent() {
         onScanQuote={() => router.push('/procurement/quotes/scan')}
         breadcrumb={<ModuleBreadcrumb />}
       />
+
+      {/* ── Sub-nav: Παραγγελίες | Προσφορές ───────────────────────────── */}
+      <ProcurementSubNav />
 
       {/* ── Dashboard stats (collapsibile) ──────────────────────────────── */}
       {showDashboard && (

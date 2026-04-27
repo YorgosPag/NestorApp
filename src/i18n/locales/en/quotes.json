@@ -45,6 +45,8 @@
     "createSuccess": "Quote created",
     "createdAt": "Date",
     "noResults": "No results found",
+    "archivedMessage": "Quote archived",
+    "undo": "Undo",
     "statuses": {
       "draft": "Draft",
       "sent_to_vendor": "Sent to Vendor",

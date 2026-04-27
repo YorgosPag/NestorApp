@@ -45,6 +45,8 @@
     "createSuccess": "Η προσφορά δημιουργήθηκε",
     "createdAt": "Ημερομηνία",
     "noResults": "Δεν βρέθηκαν αποτελέσματα",
+    "archivedMessage": "Η προσφορά αρχειοθετήθηκε",
+    "undo": "Αναίρεση",
     "statuses": {
       "draft": "Πρόχειρο",
       "sent_to_vendor": "Απεστάλη",

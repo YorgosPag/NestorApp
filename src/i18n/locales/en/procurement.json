@@ -200,6 +200,10 @@
     "filters": { "desktop": "Filters", "mobile": "Filters" },
     "scanQuote": "Scan Quote"
   },
+  "nav": {
+    "purchaseOrders": "Purchase Orders",
+    "quotes": "Quotes"
+  },
   "header": {
     "title": "Procurement",
     "subtitle": "Manage purchase orders"

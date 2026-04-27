@@ -200,6 +200,10 @@
     "filters": { "desktop": "Φίλτρα", "mobile": "Φίλτρα" },
     "scanQuote": "Σάρωση Προσφοράς"
   },
+  "nav": {
+    "purchaseOrders": "Παραγγελίες",
+    "quotes": "Προσφορές"
+  },
   "header": {
     "title": "Προμήθειες",
     "subtitle": "Διαχείριση παραγγελιών αγοράς"
