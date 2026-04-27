@@ -78,7 +78,7 @@ function FieldRow<T>({ label, field }: FieldRowProps<T>) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <Label className="text-xs text-muted-foreground">{label}</Label>
-          <p className="truncate text-sm font-medium">{display}</p>
+          <p className="break-words text-sm font-medium">{display}</p>
         </div>
         <ConfidenceBadge confidence={field.confidence} />
       </div>
