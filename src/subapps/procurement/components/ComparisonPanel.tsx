@@ -92,7 +92,7 @@ export function ComparisonPanel({
                 <TableHead>{t('quotes.vendor')}</TableHead>
                 <TableHead className="text-right">{t('quotes.total')}</TableHead>
                 <TableHead className="text-right">{t('comparison.scoreLabel')}</TableHead>
-                <TableHead>{t('comparison.breakdown')}</TableHead>
+                <TableHead className="min-w-[280px]">{t('comparison.breakdown')}</TableHead>
                 <TableHead>{t('comparison.flagsHeader')}</TableHead>
                 <TableHead className="text-right">{t('comparison.action')}</TableHead>
               </TableRow>
@@ -216,7 +216,7 @@ function BreakdownBars({ breakdown }: { breakdown: QuoteComparisonEntry['breakdo
     ['delivery', t('comparison.factors.delivery')],
   ];
   return (
-    <div className="grid grid-cols-1 gap-1 min-w-[180px]">
+    <div className="grid grid-cols-1 gap-1 min-w-[280px]">
       {items.map(([key, label]) => (
         <div key={key} className="flex items-center gap-2">
           <span className="w-16 text-xs text-muted-foreground">{label}</span>
