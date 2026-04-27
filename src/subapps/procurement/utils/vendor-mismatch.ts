@@ -61,8 +61,21 @@ export function detectVendorMismatch(
   const vatConfidence = extracted.vendorVat.confidence;
   const nameConfidence = extracted.vendorName.confidence;
 
-  const contactVat = normalizeVat(contact.vatNumber ?? (contact as Record<string, unknown>)['taxNumber'] as string | undefined);
-  const contactName = (contact.displayName ?? contact.companyName ?? '') as string;
+  const contactVat = normalizeVat(
+    contact.vatNumber ?? (contact as Record<string, unknown>)['taxNumber'] as string | undefined,
+  );
+  // Contact name: try all possible fields (individual/company/service contacts).
+  const contactName = (
+    contact.displayName ??
+    contact.name ??
+    (contact.firstName && contact.lastName ? `${contact.firstName} ${contact.lastName}` : null) ??
+    contact.firstName ??
+    contact.companyName ??
+    contact.serviceName ??
+    contact.legalName ??
+    contact.tradeName ??
+    ''
+  ) as string;
 
   // Primary: VAT match (deterministic)
   if (extractedVat && vatConfidence >= MIN_VAT_CONFIDENCE && contactVat) {
