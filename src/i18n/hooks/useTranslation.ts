@@ -47,6 +47,15 @@ export const useTranslation = (namespace?: string | string[]) => {
   );
   const { t: rawT, i18n, ready } = useI18nextTranslation(effectiveNs);
 
+  // 🏢 ENTERPRISE: Track if ALL required namespaces (explicit + compat) are loaded
+  // Declared BEFORE `t` memo so namespaceLoaded can be a dep — forces `t` to be a new
+  // reference when the namespace finishes loading, ensuring consumers' useMemo chains
+  // (e.g. TradeSelector options) recompute and show the correct translated labels.
+  const [namespaceLoaded, setNamespaceLoaded] = useState(() => {
+    if (allNamespacesToLoad.length === 0) return true;
+    return allNamespacesToLoad.every((ns) => i18n.hasResourceBundle(i18n.language, ns));
+  });
+
   // Wrap t to apply compat remapping for split namespaces (ADR-280)
   const t = useMemo(() => {
     type RawTCall = (key: string, opts?: TOptions | string, ...rest: unknown[]) => string;
@@ -71,13 +80,7 @@ export const useTranslation = (namespace?: string | string[]) => {
       return result;
     };
     return wrapped as unknown as typeof rawT;
-  }, [rawT, primaryNs]);
-
-  // 🏢 ENTERPRISE: Track if ALL required namespaces (explicit + compat) are loaded
-  const [namespaceLoaded, setNamespaceLoaded] = useState(() => {
-    if (allNamespacesToLoad.length === 0) return true;
-    return allNamespacesToLoad.every((ns) => i18n.hasResourceBundle(i18n.language, ns));
-  });
+  }, [rawT, primaryNs, namespaceLoaded]);
 
   // Lazy load namespace + its compat split namespaces (ADR-280)
   useEffect(() => {
