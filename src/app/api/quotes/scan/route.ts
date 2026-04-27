@@ -44,8 +44,9 @@ import admin from 'firebase-admin';
 
 const logger = createModuleLogger('QUOTES_SCAN_API');
 
-// Required for after() with OpenAI calls (default 10s would abort mid-classify)
-export const maxDuration = 60;
+// Required for after() with OpenAI vision: rasterize (~30s) + OpenAI call (~90s) = ~120s total
+// Vercel Hobby hard cap = 60s → production needs Pro plan for PDF scans
+export const maxDuration = 180;
 
 // ============================================================================
 // CONSTANTS

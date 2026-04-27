@@ -446,7 +446,7 @@ export function createOpenAIQuoteAnalyzer(): OpenAIQuoteAnalyzer | null {
     baseUrl: (process.env.OPENAI_API_BASE_URL || 'https://api.openai.com/v1').trim(),
     visionModel: primaryModel,
     escalateModel: escalateRaw.length > 0 ? escalateRaw : null,
-    timeoutMs: Number.parseInt(process.env.OPENAI_TIMEOUT_MS || '60000', 10),
+    timeoutMs: Number.parseInt(process.env.OPENAI_TIMEOUT_MS || '120000', 10),
     maxRetries: Number.parseInt(process.env.OPENAI_MAX_RETRIES || '2', 10),
     maxValidationRetries: Number.parseInt(process.env.OPENAI_QUOTE_VALIDATION_RETRIES || '2', 10),
     rasterizePdf,
