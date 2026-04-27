@@ -1,11 +1,13 @@
 /**
  * Vendor Logo Extractor — ADR-327 §6.
  *
- * Crops the top-left quadrant of a quote document's first page
- * (top 22% height × left 45% width) to isolate the vendor logo.
- * Logos in B2B invoices are almost universally top-left; the right side
- * carries customer details and quote title which we explicitly exclude.
- * Server-side only — uses @napi-rs/canvas + pdf-rasterize service.
+ * Strategy (belt-and-suspenders):
+ *   1. PRIMARY: Extract largest DCTDecode Image XObject from PDF page 1.
+ *      Gives the clean embedded logo without rasterization artifacts.
+ *   2. FALLBACK: Rasterize page 1 → crop top-left quadrant (22%×45%).
+ *      Logos in B2B invoices are almost universally top-left; the right side
+ *      carries customer details and quote title which we explicitly exclude.
+ * Server-side only — uses pdf-lib + @napi-rs/canvas.
  */
 
 import 'server-only';
@@ -31,6 +33,47 @@ interface NapiCanvasMod {
   loadImage(src: Buffer): Promise<NapiImage>;
 }
 
+async function extractEmbeddedLogoFromPdf(pdfBuffer: Buffer): Promise<Buffer | null> {
+  try {
+    const { PDFDocument, PDFName, PDFDict, PDFRawStream, PDFNumber } = await import('pdf-lib');
+    const doc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+    const pages = doc.getPages();
+    if (!pages.length) return null;
+
+    const resources = pages[0].node.Resources();
+    if (!resources) return null;
+    const xObjDict = resources.lookupMaybe(PDFName.of('XObject'), PDFDict);
+    if (!xObjDict) return null;
+
+    let bestBuf: Uint8Array | null = null;
+    let bestArea = 0;
+
+    for (const [, ref] of xObjDict.entries()) {
+      const obj = doc.context.lookup(ref);
+      if (!(obj instanceof PDFRawStream)) continue;
+      if (obj.dict.get(PDFName.of('Subtype'))?.toString() !== '/Image') continue;
+      if (obj.dict.get(PDFName.of('ImageMask'))?.toString() === 'true') continue;
+      if (!obj.dict.get(PDFName.of('Filter'))?.toString().includes('DCTDecode')) continue;
+      const wObj = obj.dict.get(PDFName.of('Width'));
+      const hObj = obj.dict.get(PDFName.of('Height'));
+      if (!(wObj instanceof PDFNumber) || !(hObj instanceof PDFNumber)) continue;
+      const area = wObj.asNumber() * hObj.asNumber();
+      if (area > bestArea) { bestArea = area; bestBuf = obj.contents; }
+    }
+
+    if (!bestBuf) return null;
+
+    const mod = (await import('@napi-rs/canvas')) as unknown as NapiCanvasMod;
+    const img = await mod.loadImage(Buffer.from(bestBuf));
+    const canvas = mod.createCanvas(img.width, img.height);
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    return canvas.toBuffer('image/png');
+  } catch (e) {
+    logger.warn('Embedded logo extraction failed, will fallback to crop', { error: String(e) });
+    return null;
+  }
+}
+
 async function cropToLogoQuadrant(imageBuffer: Buffer): Promise<Buffer | null> {
   try {
     const mod = (await import('@napi-rs/canvas')) as unknown as NapiCanvasMod;
@@ -53,23 +96,18 @@ export async function extractAndUploadVendorLogo(
   quoteId: string,
 ): Promise<string | null> {
   try {
-    let firstPageBuffer: Buffer;
+    let logoBuffer: Buffer | null = null;
 
     if (mimeType === 'application/pdf') {
-      const pages = await rasterizePdfPages(fileBuffer, {
-        dpi: LOGO_DPI,
-        maxPages: 1,
-        maxWidthPx: LOGO_MAX_WIDTH_PX,
-      });
-      if (!pages.length) return null;
-      firstPageBuffer = pages[0];
+      logoBuffer = await extractEmbeddedLogoFromPdf(fileBuffer);
+      if (!logoBuffer) {
+        const pages = await rasterizePdfPages(fileBuffer, { dpi: LOGO_DPI, maxPages: 1, maxWidthPx: LOGO_MAX_WIDTH_PX });
+        if (pages.length) logoBuffer = await cropToLogoQuadrant(pages[0]);
+      }
     } else if (mimeType.startsWith('image/') && mimeType !== 'image/heic') {
-      firstPageBuffer = fileBuffer;
-    } else {
-      return null;
+      logoBuffer = await cropToLogoQuadrant(fileBuffer);
     }
 
-    const logoBuffer = await cropToLogoQuadrant(firstPageBuffer);
     if (!logoBuffer) return null;
 
     const { path: storagePath } = buildStoragePath({
