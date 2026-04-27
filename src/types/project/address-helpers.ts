@@ -562,7 +562,7 @@ export function formatAddressForGeocoding(address: ProjectAddress): StructuredGe
     county: stripAdminPrefix(address.regionalUnit),
     municipality: stripAdminPrefix(address.municipality),
     region: stripAdminPrefix(address.region),
-    country: address.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
+    country: address.country || undefined,
   };
 }
 

@@ -73,11 +73,10 @@ interface NominatimResult {
 const NOMINATIM_BASE_URL = process.env.NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org';
 const USER_AGENT = process.env.GEOCODING_USER_AGENT || 'NestorPagonisApp/1.0 (geocoding)';
 const NOMINATIM_TIMEOUT_MS = parseInt(process.env.GEOCODING_TIMEOUT_MS || '8000', 10);
-const DEFAULT_COUNTRY_CODE = GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY_CODE;
 const { GEOCODING } = GEOGRAPHIC_CONFIG;
 
 // Country name (Greek + English variants) → ISO 3166-1 alpha-2 code.
-// Unknown country → null → omit countrycodes → global Nominatim search.
+// Unknown or absent country → null → omit countrycodes → global Nominatim search.
 const COUNTRY_CODE_MAP: Record<string, string> = {
   // ISO 3166-1 alpha-2 codes (returned by AI as-is)
   gr: 'gr', bg: 'bg', cy: 'cy', al: 'al', mk: 'mk', ro: 'ro',
@@ -93,7 +92,7 @@ const COUNTRY_CODE_MAP: Record<string, string> = {
 };
 
 function countryNameToCode(country: string | undefined): string | null {
-  if (!country) return DEFAULT_COUNTRY_CODE;
+  if (!country) return null;
   return COUNTRY_CODE_MAP[country.toLowerCase().trim()] ?? null;
 }
 

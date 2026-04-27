@@ -321,5 +321,13 @@ const addresses = migrateLegacyAddress(oldProject);
 
 ---
 
-**Last Updated**: 2026-02-02
+---
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-04-27 | `formatAddressForGeocoding`: removed `DEFAULT_COUNTRY` fallback — vendor contacts without country now pass `undefined`, triggering global Nominatim search from attempt 1 instead of wasting 6 attempts restricted to Greece. Paired fix: `geocoding-engine.ts` `countryNameToCode(undefined)` now returns `null` (global) instead of `DEFAULT_COUNTRY_CODE`. |
+
+**Last Updated**: 2026-04-27
 **Status**: ✅ APPROVED - Implementation Phase 1 Complete
