@@ -52,11 +52,22 @@ async function handleGet(
           [metadata] = await fileRef.getMetadata();
         } catch (metaErr) {
           const errCode = (metaErr as { code?: number }).code;
+          // Diagnostic: list a few sibling files to see what the proxy's
+          // bucket actually contains at this path's parent.
+          let siblings: string[] = [];
+          try {
+            const parentPrefix = storagePath.split('/').slice(0, -1).join('/') + '/';
+            const [files] = await bucket.getFiles({ prefix: parentPrefix, maxResults: 5 });
+            siblings = files.map((f) => f.name);
+          } catch (listErr) {
+            siblings = [`<list error: ${getErrorMessage(listErr)}>`];
+          }
           logger.warn('Storage file proxy: getMetadata failed', {
             bucket: bucket.name,
             storagePath,
             errorCode: errCode,
             errorMessage: getErrorMessage(metaErr),
+            siblingsAtParent: siblings,
           });
           if (errCode === 404) {
             return NextResponse.json({ error: 'Not found' }, { status: 404 });
