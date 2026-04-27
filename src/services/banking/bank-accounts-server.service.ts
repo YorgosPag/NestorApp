@@ -98,9 +98,11 @@ async function verifyContactTenant(
 
 /**
  * Validate bank account input fields.
+ * @param skipChecksumValidation - When true (AI extraction flows), MOD97 failure is a soft warning
+ *   rather than a hard block. Format/length errors still fail hard.
  * Returns null on success, or an error string.
  */
-function validateAccountInput(data: BankAccountInput): string | null {
+function validateAccountInput(data: BankAccountInput, skipChecksumValidation = false): string | null {
   if (!data.bankName || typeof data.bankName !== 'string' || data.bankName.trim().length === 0) {
     return 'bankName is required';
   }
@@ -111,7 +113,11 @@ function validateAccountInput(data: BankAccountInput): string | null {
 
   const ibanResult = validateIBAN(data.iban);
   if (!ibanResult.valid) {
-    return ibanResult.error ?? 'Invalid IBAN';
+    if (skipChecksumValidation && ibanResult.error === 'Μη έγκυρος αριθμός ελέγχου IBAN') {
+      // Allow through — caller annotates notes with a verification warning
+    } else {
+      return ibanResult.error ?? 'Invalid IBAN';
+    }
   }
 
   if (!isCurrencyCode(data.currency)) {
@@ -243,34 +249,44 @@ export const BankAccountsServerService = {
     contactId: string,
     data: BankAccountInput,
     companyId: string,
-    createdBy: string
+    createdBy: string,
+    options?: { lenientIban?: boolean }
   ): Promise<ServiceResult<{ accountId: string }>> {
     try {
+      const lenientIban = options?.lenientIban ?? false;
+
       // 1. Tenant check
       const tenantResult = await verifyContactTenant(contactId, companyId);
       if (!tenantResult.success) {
         return tenantResult;
       }
 
-      // 2. Input validation
-      const validationError = validateAccountInput(data);
+      // 2. Input validation (lenient IBAN skips MOD97 for AI-extracted accounts)
+      const validationError = validateAccountInput(data, lenientIban);
       if (validationError) {
         return { success: false, error: validationError };
       }
 
-      // 3. Duplicate IBAN check
+      // 3. If lenient and IBAN checksum failed, prepend a verification note
+      const ibanCheck = lenientIban ? validateIBAN(data.iban) : null;
+      const ibanNote =
+        ibanCheck && !ibanCheck.valid
+          ? '⚠️ IBAN estratto automaticamente — checksum non valido. Verificare manualmente.'
+          : '';
+
+      // 4. Duplicate IBAN check
       const cleanedIban = cleanIBAN(data.iban);
       const isDuplicate = await checkDuplicateIBAN(contactId, cleanedIban);
       if (isDuplicate) {
         return { success: false, error: 'This IBAN already exists for this contact' };
       }
 
-      // 4. If setting as primary, unset others first
+      // 5. If setting as primary, unset others first
       if (data.isPrimary) {
         await unsetAllPrimary(contactId);
       }
 
-      // 5. Create document with enterprise ID
+      // 6. Create document with enterprise ID
       const db = getAdminFirestore();
       const accountId = generateBankAccountId();
       const accountsRef = db
@@ -278,6 +294,7 @@ export const BankAccountsServerService = {
         .doc(contactId)
         .collection(BANK_ACCOUNTS_SUBCOLLECTION);
 
+      const baseNotes = data.notes ?? null;
       const docData: Record<string, unknown> = {
         bankName: data.bankName.trim(),
         bankCode: data.bankCode ?? null,
@@ -288,7 +305,7 @@ export const BankAccountsServerService = {
         currency: data.currency as CurrencyCode,
         isPrimary: data.isPrimary,
         holderName: data.holderName ?? null,
-        notes: data.notes ?? null,
+        notes: ibanNote ? (baseNotes ? `${ibanNote}\n${baseNotes}` : ibanNote) : baseNotes,
         isActive: data.isActive,
         createdBy,
         createdAt: FieldValue.serverTimestamp(),

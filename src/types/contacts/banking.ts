@@ -28,9 +28,9 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
 } as const;
 
 /**
- * ISO 4217 Currency codes commonly used in Greece
+ * ISO 4217 Currency codes — EUR/USD/GBP/CHF + SE-European currencies (BGN, RON, RSD, MKD, ALL)
  */
-export type CurrencyCode = 'EUR' | 'USD' | 'GBP' | 'CHF';
+export type CurrencyCode = 'EUR' | 'USD' | 'GBP' | 'CHF' | 'BGN' | 'RON' | 'RSD' | 'MKD' | 'ALL';
 
 /**
  * Currency labels for UI display
@@ -39,7 +39,12 @@ export const CURRENCY_LABELS: Record<CurrencyCode, string> = {
   EUR: 'Ευρώ (EUR)',
   USD: 'Δολάριο ΗΠΑ (USD)',
   GBP: 'Λίρα Αγγλίας (GBP)',
-  CHF: 'Ελβετικό Φράγκο (CHF)'
+  CHF: 'Ελβετικό Φράγκο (CHF)',
+  BGN: 'Βουλγαρικό Λεβ (BGN)',
+  RON: 'Ρουμανικό Λέι (RON)',
+  RSD: 'Σερβικό Δηνάριο (RSD)',
+  MKD: 'Δηνάριο Β. Μακεδονίας (MKD)',
+  ALL: 'Αλβανικό Λεκ (ALL)',
 } as const;
 
 // ============================================================================
@@ -347,7 +352,7 @@ export function isAccountType(value: string): value is AccountType {
  * Type guard for CurrencyCode
  */
 export function isCurrencyCode(value: string): value is CurrencyCode {
-  return ['EUR', 'USD', 'GBP', 'CHF'].includes(value);
+  return ['EUR', 'USD', 'GBP', 'CHF', 'BGN', 'RON', 'RSD', 'MKD', 'ALL'].includes(value);
 }
 
 // ============================================================================

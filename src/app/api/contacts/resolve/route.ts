@@ -29,6 +29,7 @@ import { updateContactField } from '@/services/ai-pipeline/shared/contact-lookup
 import { fuzzyGreekMatch } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { BankAccountsServerService } from '@/services/banking/bank-accounts-server.service';
+import type { CurrencyCode } from '@/types/contacts/banking';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ContactResolveRoute');
@@ -104,13 +105,14 @@ async function storeBankAccounts(
         bankCode: b.bic ?? undefined,
         iban: b.iban,
         accountType: 'business',
-        currency: (b.currency as 'EUR' | 'USD' | 'GBP' | 'CHF' | undefined) ?? 'EUR',
+        currency: (b.currency as CurrencyCode | undefined) ?? 'EUR',
         isPrimary: i === 0,
         isActive: true,
         holderName: b.accountHolder ?? undefined,
       },
       companyId,
       uid,
+      { lenientIban: true },
     );
     if (!result.success && !result.error.includes('already exists')) {
       logger.warn('Bank account store failed', { contactId, iban: b.iban, error: result.error });
