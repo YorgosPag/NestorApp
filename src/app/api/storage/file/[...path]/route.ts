@@ -42,18 +42,28 @@ async function handleGet(
       try {
         const bucket = getAdminBucket();
         const fileRef = bucket.file(storagePath);
-        const [exists] = await fileRef.exists();
-        logger.info('Storage file proxy lookup', {
-          bucket: bucket.name,
-          storagePath,
-          exists,
-          rawSegmentsCount: rawSegments.length,
-        });
-        if (!exists) {
-          return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+        // Direct getMetadata: file.exists() returns false against
+        // .firebasestorage.app buckets in some Admin SDK paths even when the
+        // object is present. getMetadata() throws a structured 404 we can
+        // distinguish from other errors.
+        let metadata: Awaited<ReturnType<typeof fileRef.getMetadata>>[0];
+        try {
+          [metadata] = await fileRef.getMetadata();
+        } catch (metaErr) {
+          const errCode = (metaErr as { code?: number }).code;
+          logger.warn('Storage file proxy: getMetadata failed', {
+            bucket: bucket.name,
+            storagePath,
+            errorCode: errCode,
+            errorMessage: getErrorMessage(metaErr),
+          });
+          if (errCode === 404) {
+            return NextResponse.json({ error: 'Not found' }, { status: 404 });
+          }
+          throw metaErr;
         }
 
-        const [metadata] = await fileRef.getMetadata();
         const contentType = (metadata.contentType as string | undefined) ?? 'application/octet-stream';
         const cacheControl = (metadata.cacheControl as string | undefined) ?? 'private, max-age=86400';
         const sizeRaw = metadata.size;
