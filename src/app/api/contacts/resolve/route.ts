@@ -18,6 +18,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ContactResolveRoute');
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EntityAuditService } from '@/services/entity-audit.service';
