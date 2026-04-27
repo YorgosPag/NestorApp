@@ -98,10 +98,17 @@ export async function uploadPublicFile(
   // (e.g. bucket-name aliasing that lets save() succeed against a different
   // bucket than the one the proxy will read from).
   let verifiedSize: number | undefined;
+  let postSaveSiblings: string[] = [];
+  let postSaveTopFiles: string[] = [];
   try {
     const [meta] = await fileRef.getMetadata();
     const sizeRaw = meta.size;
     verifiedSize = typeof sizeRaw === 'string' ? Number(sizeRaw) : (sizeRaw as number | undefined);
+    const parentPrefix = params.storagePath.split('/').slice(0, -1).join('/') + '/';
+    const [siblings] = await bucket.getFiles({ prefix: parentPrefix, maxResults: 5 });
+    postSaveSiblings = siblings.map((f) => f.name);
+    const [topFiles] = await bucket.getFiles({ maxResults: 5 });
+    postSaveTopFiles = topFiles.map((f) => f.name);
   } catch (verifyErr) {
     logger.error('Post-save verification FAILED — save reported success but object is unreachable', {
       bucket: bucket.name,
@@ -118,6 +125,9 @@ export async function uploadPublicFile(
     storagePath: params.storagePath,
     sizeBytes: params.buffer.length,
     verifiedSize,
+    postSaveSiblings,
+    postSaveTopFiles,
+    envFirebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     contentType: params.contentType,
   });
 
