@@ -161,23 +161,28 @@ export function ProcurementPageContent() {
           {/* Dettaglio / Form / Empty state */}
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
             {editMode ? (
-              <PurchaseOrderForm
-                existingPO={selectedPO ?? undefined}
-                onSuccess={handleFormSuccess}
-                onCancel={handleCancelEdit}
-              />
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
+                <PurchaseOrderForm
+                  existingPO={selectedPO ?? undefined}
+                  onSuccess={handleFormSuccess}
+                  onCancel={handleCancelEdit}
+                />
+              </div>
             ) : selectedPO ? (
-              <PurchaseOrderDetail
-                po={selectedPO}
-                onApprove={() => handleAction('approve')}
-                onMarkOrdered={() => handleAction('order')}
-                onRecordDelivery={() => {/* TODO: delivery dialog */}}
-                onClose={() => handleAction('close')}
-                onCancel={() => handleAction('cancel', { reason: 'other' })}
-                onEdit={() => setEditMode(true)}
-                onDuplicate={() => handleDuplicate(selectedPO.id)}
-              />
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
+                <PurchaseOrderDetail
+                  po={selectedPO}
+                  onApprove={() => handleAction('approve')}
+                  onMarkOrdered={() => handleAction('order')}
+                  onRecordDelivery={() => {/* TODO: delivery dialog */}}
+                  onClose={() => handleAction('close')}
+                  onCancel={() => handleAction('cancel', { reason: 'other' })}
+                  onEdit={() => setEditMode(true)}
+                  onDuplicate={() => handleDuplicate(selectedPO.id)}
+                />
+              </div>
             ) : (
+
               <EmptyDetailState
                 onCreateNew={handleCreateNew}
                 label={t('detail.emptyTitle')}
