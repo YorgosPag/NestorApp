@@ -194,7 +194,7 @@ function normalizeLineItems(raw: RawExtractedQuote['lineItems']): ExtractedQuote
 const VALIDATION_FAIL_CONFIDENCE_CAP = 50;
 
 function appendValidationIssuesToNotes(originalNotes: string | null, issues: string[]): string {
-  const header = '⚠️ Αυτόματη επαλήθευση εντόπισε ασυνέπειες — απαιτείται χειροκίνητος έλεγχος:\n   Automated verification detected inconsistencies — manual review required:';
+  const header = '⚠️ Αυτόματη επαλήθευση εντόπισε ασυνέπειες — απαιτείται χειροκίνητος έλεγχος:';
   const bullets = issues.slice(0, 6).map((i) => `  • ${i}`).join('\n');
   const block = `${header}\n${bullets}`;
   return originalNotes ? `${originalNotes}\n\n${block}` : block;
