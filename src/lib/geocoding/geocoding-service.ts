@@ -78,6 +78,7 @@ export interface ReverseGeocodingResult {
 // =============================================================================
 
 const geocodingCache = new Map<string, GeocodingServiceResult>();
+const geocodingInFlight = new Map<string, Promise<GeocodingServiceResult | null>>();
 
 /**
  * Generate a cache key from a structured query.
@@ -148,22 +149,27 @@ export async function geocodeAddress(
 ): Promise<GeocodingServiceResult | null> {
   const cacheKey = getCacheKey(query);
 
-  // Check cache
   const cached = geocodingCache.get(cacheKey);
   if (cached) {
     logger.info('Geocoding cache hit', { data: { key: cacheKey } });
     return cached;
   }
 
-  // Call API
-  const result = await callGeocodingApi(query);
-
-  // Cache successful results
-  if (result) {
-    geocodingCache.set(cacheKey, result);
+  // Dedup concurrent requests for the same address (prevents Nominatim 429)
+  const inFlight = geocodingInFlight.get(cacheKey);
+  if (inFlight) {
+    logger.info('Geocoding in-flight dedup', { data: { key: cacheKey } });
+    return inFlight;
   }
 
-  return result;
+  const promise = callGeocodingApi(query).then((result) => {
+    geocodingInFlight.delete(cacheKey);
+    if (result) geocodingCache.set(cacheKey, result);
+    return result;
+  });
+
+  geocodingInFlight.set(cacheKey, promise);
+  return promise;
 }
 
 /**

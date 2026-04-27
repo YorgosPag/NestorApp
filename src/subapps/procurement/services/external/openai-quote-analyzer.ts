@@ -201,7 +201,7 @@ function appendValidationIssuesToNotes(originalNotes: string | null, issues: str
   return originalNotes ? `${originalNotes}\n\n${block}` : block;
 }
 
-function normalizeExtracted(raw: RawExtractedQuote, validationIssues: string[] = []): ExtractedQuoteData {
+function normalizeExtracted(raw: RawExtractedQuote, validationIssues: string[] = [], softWarnings: string[] = []): ExtractedQuoteData {
   const c = raw.confidence ?? {};
   const failed = validationIssues.length > 0;
   const rawOverall = typeof raw.overallConfidence === 'number' ? raw.overallConfidence : 0;
@@ -210,9 +210,12 @@ function normalizeExtracted(raw: RawExtractedQuote, validationIssues: string[] =
     const v = typeof n === 'number' ? n : 0;
     return failed ? Math.min(VALIDATION_FAIL_CONFIDENCE_CAP, v) : v;
   };
-  const notesValue = failed
-    ? appendValidationIssuesToNotes(raw.notes ?? null, validationIssues)
-    : raw.notes ?? null;
+  let notesValue = raw.notes ?? null;
+  if (failed) {
+    notesValue = appendValidationIssuesToNotes(notesValue, validationIssues);
+  } else if (softWarnings.length > 0) {
+    notesValue = appendValidationIssuesToNotes(notesValue, softWarnings);
+  }
   return {
     vendorName: field<string | null>(raw.vendorName ?? null, c.vendorName),
     vendorVat: field<string | null>(raw.vendorVat ?? null, c.vendorVat),
@@ -334,7 +337,7 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
         const validation = validateExtraction(parsed);
         if (validation.valid) {
           console.info(`[OpenAIQuoteAnalyzer] extraction OK on attempt ${attempt + 1} (model=${visionModel})`);
-          return normalizeExtracted(parsed);
+          return normalizeExtracted(parsed, [], validation.warnings);
         }
         lastIssues = validation.issues;
         console.warn(`[OpenAIQuoteAnalyzer] validation failed on attempt ${attempt + 1}:`, validation.issues);

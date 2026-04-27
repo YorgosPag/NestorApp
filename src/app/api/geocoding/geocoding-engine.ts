@@ -79,13 +79,17 @@ const { GEOCODING } = GEOGRAPHIC_CONFIG;
 // Country name (Greek + English variants) → ISO 3166-1 alpha-2 code.
 // Unknown country → null → omit countrycodes → global Nominatim search.
 const COUNTRY_CODE_MAP: Record<string, string> = {
+  // ISO 3166-1 alpha-2 codes (returned by AI as-is)
+  gr: 'gr', bg: 'bg', cy: 'cy', al: 'al', mk: 'mk', ro: 'ro',
+  de: 'de', it: 'it', fr: 'fr', gb: 'gb', uk: 'gb', tr: 'tr', rs: 'rs',
+  // Country names (Greek + English variants)
   greece: 'gr', 'ελλάδα': 'gr', 'ελλας': 'gr', hellas: 'gr',
   bulgaria: 'bg', 'βουλγαρία': 'bg', 'βουλγαρια': 'bg',
   cyprus: 'cy', 'κύπρος': 'cy', 'κυπρος': 'cy',
   albania: 'al', 'αλβανία': 'al', 'north macedonia': 'mk', 'βόρεια μακεδονία': 'mk',
   romania: 'ro', 'ρουμανία': 'ro', germany: 'de', 'γερμανία': 'de',
   italy: 'it', 'ιταλία': 'it', france: 'fr', 'γαλλία': 'fr',
-  'united kingdom': 'gb', uk: 'gb', turkey: 'tr', 'τουρκία': 'tr', serbia: 'rs',
+  'united kingdom': 'gb', turkey: 'tr', 'τουρκία': 'tr', serbia: 'rs',
 };
 
 function countryNameToCode(country: string | undefined): string | null {
