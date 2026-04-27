@@ -3,11 +3,14 @@
 import { Suspense } from 'react';
 import { StaticPageLoading } from '@/core/states';
 import { ContactsPageContent } from '@/components/contacts/ContactsPageContent';
+import { ProtectedRoute } from '@/auth';
 
 export default function ContactsPage() {
   return (
-    <Suspense fallback={<StaticPageLoading />}>
-      <ContactsPageContent />
-    </Suspense>
+    <ProtectedRoute>
+      <Suspense fallback={<StaticPageLoading />}>
+        <ContactsPageContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }
