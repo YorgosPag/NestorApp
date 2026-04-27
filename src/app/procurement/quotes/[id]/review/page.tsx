@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useQuote } from '@/subapps/procurement/hooks/useQuote';
+import { useContactById } from '@/hooks/useContactById';
 import { ExtractedDataReviewPanel } from '@/subapps/procurement/components/ExtractedDataReviewPanel';
 import type { QuoteLine } from '@/subapps/procurement/types/quote';
 
@@ -22,6 +23,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
     pollIntervalMs: 2000,
     stopWhen: (q) => q !== null && q.extractedData !== null,
   });
+  const supplierContact = useContactById(quote?.vendorContactId ?? null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -111,8 +113,10 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
           {saveError && <p className="text-sm text-destructive">{saveError}</p>}
           <ExtractedDataReviewPanel
             quote={quote}
+            supplierContact={supplierContact}
             onConfirm={handleConfirm}
             onReject={handleReject}
+            onGoBack={handleBack}
             isSaving={saving}
           />
         </>

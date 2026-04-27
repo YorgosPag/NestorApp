@@ -118,7 +118,14 @@
       "confirm": "Confirm & Save",
       "reject": "Reject",
       "retry": "Re-scan",
-      "requiredHint": "To proceed, also select:"
+      "requiredHint": "To proceed, also select:",
+      "vendorMismatch": {
+        "title": "Possible Vendor Mismatch",
+        "bodyVat": "The quote has VAT/EIK {extractedVat} ({extractedName}), but a different vendor is selected.",
+        "bodyName": "The quote was issued by {extractedName}, but a different vendor is selected.",
+        "dismiss": "Understood, continue",
+        "goBack": "Go back to correct"
+      }
     },
     "notifications": {
       "quoteSubmittedViaPortal": "New vendor quote submitted for RFQ {rfqTitle}",

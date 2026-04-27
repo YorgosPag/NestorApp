@@ -19,12 +19,14 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, AlertTriangle, X, Save } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { computeQuoteTotals } from '@/subapps/procurement/types/quote';
+import { detectVendorMismatch } from '@/subapps/procurement/utils/vendor-mismatch';
 import type {
   ExtractedQuoteData,
   FieldWithConfidence,
   QuoteLine,
   Quote,
 } from '@/subapps/procurement/types/quote';
+import type { Contact } from '@/types/contacts';
 
 // ============================================================================
 // HELPERS
@@ -92,20 +94,25 @@ function FieldRow<T>({ label, field }: FieldRowProps<T>) {
 
 export interface ExtractedDataReviewPanelProps {
   quote: Quote;
+  supplierContact?: Contact | null;
   onConfirm: (lines: QuoteLine[]) => Promise<void> | void;
   onReject?: () => Promise<void> | void;
+  onGoBack?: () => void;
   isSaving?: boolean;
 }
 
 export function ExtractedDataReviewPanel({
   quote,
+  supplierContact,
   onConfirm,
   onReject,
+  onGoBack,
   isSaving = false,
 }: ExtractedDataReviewPanelProps) {
   const { t } = useTranslation('quotes');
   const extracted = quote.extractedData;
   const [lines, setLines] = useState<QuoteLine[]>(quote.lines);
+  const [mismatchDismissed, setMismatchDismissed] = useState(false);
 
   const overall = extracted?.overallConfidence ?? 0;
   const totals = useMemo(() => computeQuoteTotals(lines), [lines]);
@@ -126,6 +133,13 @@ export function ExtractedDataReviewPanel({
   const removeLine = (index: number) => {
     setLines((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const mismatch = useMemo(() => {
+    if (!extracted || !supplierContact) return null;
+    return detectVendorMismatch(extracted, supplierContact);
+  }, [extracted, supplierContact]);
+
+  const showMismatchBanner = !mismatchDismissed && mismatch?.hasMismatch;
 
   if (!extracted) {
     return (
@@ -163,6 +177,44 @@ export function ExtractedDataReviewPanel({
       </CardHeader>
 
       <CardContent className="space-y-5">
+        {showMismatchBanner && mismatch && (
+          <div className="flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-700 dark:bg-amber-950/40">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                  {t('quotes.scan.vendorMismatch.title')}
+                </p>
+                <p className="mt-0.5 break-words text-sm text-amber-700 dark:text-amber-400">
+                  {mismatch.type === 'vat'
+                    ? t('quotes.scan.vendorMismatch.bodyVat', {
+                        extractedVat: mismatch.extractedVat ?? '—',
+                        extractedName: mismatch.extractedVendorName ?? '—',
+                      })
+                    : t('quotes.scan.vendorMismatch.bodyName', {
+                        extractedName: mismatch.extractedVendorName ?? '—',
+                      })}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              {onGoBack && (
+                <Button size="sm" variant="outline" onClick={onGoBack}>
+                  {t('quotes.scan.vendorMismatch.goBack')}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-amber-700 hover:text-amber-900 dark:text-amber-400"
+                onClick={() => setMismatchDismissed(true)}
+              >
+                {t('quotes.scan.vendorMismatch.dismiss')}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <section>
           <h3 className="mb-2 text-sm font-semibold">{t('quotes.scan.vendorSection')}</h3>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
