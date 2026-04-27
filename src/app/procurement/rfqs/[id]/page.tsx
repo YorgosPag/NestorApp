@@ -61,6 +61,11 @@ export default function RfqDetailPage({ params }: RfqDetailPageProps) {
     await Promise.all([fetchRfq(), refetch(), refetchComparison()]);
   }, [id, fetchRfq, refetch, refetchComparison]);
 
+  const handleViewQuote = useCallback(
+    (quoteId: string) => router.push(`/procurement/quotes/${quoteId}/review`),
+    [router],
+  );
+
   const scanHref = useMemo(() => {
     const params = new URLSearchParams({ rfqId: id });
     if (rfq) {
@@ -115,7 +120,7 @@ export default function RfqDetailPage({ params }: RfqDetailPageProps) {
         />
       )}
 
-      <QuoteList quotes={quotes} loading={loading} />
+      <QuoteList quotes={quotes} loading={loading} onView={handleViewQuote} />
 
       {comparison && (
         <ComparisonPanel
