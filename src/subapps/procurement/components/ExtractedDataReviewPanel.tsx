@@ -107,6 +107,7 @@ export interface ExtractedDataReviewPanelProps {
     vendorCity: string | null,
     vendorPostalCode: string | null,
     vendorCountry: string | null,
+    bankAccounts: Array<{ bankName: string; bic: string | null; iban: string; currency: string | null; accountHolder: string | null }>,
   ) => Promise<void>;
   isSaving?: boolean;
   isSwitchingVendor?: boolean;
@@ -226,6 +227,7 @@ export function ExtractedDataReviewPanel({
                       extracted?.vendorCity.value ?? null,
                       extracted?.vendorPostalCode.value ?? null,
                       extracted?.vendorCountry.value ?? null,
+                      extracted?.vendorBankAccounts ?? [],
                     )
                   }
                 >

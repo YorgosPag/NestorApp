@@ -143,6 +143,7 @@ function buildFallbackExtractedData(): ExtractedQuoteData {
     warranty: field<string | null>(null, 0),
     notes: field<string | null>(null, 0),
     tradeHint: field<string | null>(null, 0),
+    vendorBankAccounts: [],
     detectedLanguage: 'unknown',
     overallConfidence: 0,
   };
@@ -233,6 +234,13 @@ function normalizeExtracted(raw: RawExtractedQuote, validationIssues: string[] =
     warranty: field<string | null>(raw.warranty ?? null, c.warranty),
     notes: field<string | null>(notesValue, c.notes),
     tradeHint: field<string | null>(raw.tradeHint ?? null, c.tradeHint),
+    vendorBankAccounts: (raw.vendorBankAccounts ?? []).map((b) => ({
+      bankName: b.bankName,
+      bic: b.bic ?? null,
+      iban: b.iban,
+      currency: b.currency ?? null,
+      accountHolder: b.accountHolder ?? null,
+    })),
     detectedLanguage: raw.detectedLanguage ?? 'unknown',
     overallConfidence,
   };

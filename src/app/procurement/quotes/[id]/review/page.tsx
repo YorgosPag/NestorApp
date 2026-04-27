@@ -65,6 +65,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
     vendorCity: string | null,
     vendorPostalCode: string | null,
     vendorCountry: string | null,
+    bankAccounts: Array<{ bankName: string; bic: string | null; iban: string; currency: string | null; accountHolder: string | null }> = [],
   ) => {
     setSwitchingVendor(true);
     setSaveError(null);
@@ -72,7 +73,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
       const resolveRes = await fetch('/api/contacts/resolve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vatNumber: vat, name, phone, email, vendorAddress, vendorCity, vendorPostalCode, vendorCountry }),
+        body: JSON.stringify({ vatNumber: vat, name, phone, email, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts }),
       });
       if (!resolveRes.ok) throw new Error(await resolveRes.text());
       const resolveJson = await resolveRes.json();

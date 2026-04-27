@@ -78,6 +78,14 @@ export interface FieldWithConfidence<T> {
   confidence: number;
 }
 
+export interface ExtractedBankAccount {
+  bankName: string;
+  bic: string | null;
+  iban: string;
+  currency: string | null;
+  accountHolder: string | null;
+}
+
 export interface ExtractedQuoteLine {
   description: FieldWithConfidence<string>;
   quantity: FieldWithConfidence<number>;
@@ -110,6 +118,7 @@ export interface ExtractedQuoteData {
   warranty: FieldWithConfidence<string | null>;
   notes: FieldWithConfidence<string | null>;
   tradeHint: FieldWithConfidence<string | null>;
+  vendorBankAccounts: ExtractedBankAccount[];
   detectedLanguage: string;
   overallConfidence: number;
 }

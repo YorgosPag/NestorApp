@@ -28,10 +28,22 @@ import { createContactServerSide } from '@/services/ai-pipeline/shared/contact-l
 import { updateContactField } from '@/services/ai-pipeline/shared/contact-lookup-crud';
 import { fuzzyGreekMatch } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
+import { BankAccountsServerService } from '@/services/banking/bank-accounts-server.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ContactResolveRoute');
 
 // ============================================================================
 // SCHEMA
 // ============================================================================
+
+const BankAccountSchema = z.object({
+  bankName: z.string().min(1),
+  bic: z.string().nullable().optional(),
+  iban: z.string().min(5),
+  currency: z.string().nullable().optional(),
+  accountHolder: z.string().nullable().optional(),
+});
 
 const ResolveContactSchema = z.object({
   vatNumber: z.string().nullable().optional(),
@@ -42,6 +54,7 @@ const ResolveContactSchema = z.object({
   vendorCity: z.string().nullable().optional(),
   vendorPostalCode: z.string().nullable().optional(),
   vendorCountry: z.string().nullable().optional(),
+  bankAccounts: z.array(BankAccountSchema).optional(),
 });
 
 // ============================================================================
@@ -71,6 +84,41 @@ function resolveDisplayName(doc: Record<string, unknown>): string {
 }
 
 // ============================================================================
+// BANK ACCOUNT HELPER
+// ============================================================================
+
+type BankAccountInput = z.infer<typeof BankAccountSchema>;
+
+async function storeBankAccounts(
+  contactId: string,
+  companyId: string,
+  uid: string,
+  accounts: BankAccountInput[],
+): Promise<void> {
+  for (let i = 0; i < accounts.length; i++) {
+    const b = accounts[i];
+    const result = await BankAccountsServerService.addAccount(
+      contactId,
+      {
+        bankName: b.bankName,
+        bankCode: b.bic ?? undefined,
+        iban: b.iban,
+        accountType: 'business',
+        currency: (b.currency as 'EUR' | 'USD' | 'GBP' | 'CHF' | undefined) ?? 'EUR',
+        isPrimary: i === 0,
+        isActive: true,
+        holderName: b.accountHolder ?? undefined,
+      },
+      companyId,
+      uid,
+    );
+    if (!result.success && !result.error.includes('already exists')) {
+      logger.warn('Bank account store failed', { contactId, iban: b.iban, error: result.error });
+    }
+  }
+}
+
+// ============================================================================
 // HANDLER
 // ============================================================================
 
@@ -80,7 +128,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       const parsed = safeParseBody(ResolveContactSchema, await req.json());
       if (parsed.error) return parsed.error;
 
-      const { vatNumber, name, phone, email, vendorAddress, vendorCity, vendorPostalCode, vendorCountry } = parsed.data;
+      const { vatNumber, name, phone, email, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts } = parsed.data;
       const normalizedVat = normalizeVat(vatNumber);
       const companyId = ctx.companyId;
 
@@ -101,6 +149,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           (c) => normalizeVat(c['vatNumber'] as string | undefined) === normalizedVat,
         );
         if (vatMatch) {
+          if (bankAccounts?.length) {
+            await storeBankAccounts(vatMatch.id, companyId, ctx.uid, bankAccounts);
+          }
           return NextResponse.json({
             success: true,
             data: {
@@ -122,6 +173,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           return fuzzyGreekMatch(cStripped, stripped) || fuzzyGreekMatch(stripped, cStripped);
         });
         if (nameMatch) {
+          if (bankAccounts?.length) {
+            await storeBankAccounts(nameMatch.id, companyId, ctx.uid, bankAccounts);
+          }
           return NextResponse.json({
             success: true,
             data: {
@@ -179,6 +233,10 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
             performedByName: ctx.uid,
             companyId,
           });
+        }
+
+        if (bankAccounts?.length) {
+          await storeBankAccounts(result.contactId, companyId, ctx.uid, bankAccounts);
         }
 
         return NextResponse.json({

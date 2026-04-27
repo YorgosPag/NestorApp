@@ -41,6 +41,14 @@ export interface RawLineItem {
   components: RawComponent[];
 }
 
+export interface RawBankAccount {
+  bankName: string;
+  bic: string | null;
+  iban: string;
+  currency: string | null;
+  accountHolder: string | null;
+}
+
 export interface RawExtractedQuote {
   tableStructureNotes: string;
   vendorName: string | null;
@@ -51,6 +59,7 @@ export interface RawExtractedQuote {
   vendorCity: string | null;
   vendorPostalCode: string | null;
   vendorCountry: string | null;
+  vendorBankAccounts: RawBankAccount[];
   quoteDate: string | null;
   validUntil: string | null;
   quoteReference: string | null;
@@ -93,6 +102,19 @@ export const QUOTE_CLASSIFY_SCHEMA = {
 // ============================================================================
 
 const VAT_RATE_NULLABLE = { type: ['number', 'null'] } as const;
+
+const QUOTE_BANK_ACCOUNT = {
+  type: 'object',
+  properties: {
+    bankName: { type: 'string' },
+    bic: { type: ['string', 'null'] },
+    iban: { type: 'string' },
+    currency: { type: ['string', 'null'] },
+    accountHolder: { type: ['string', 'null'] },
+  },
+  required: ['bankName', 'bic', 'iban', 'currency', 'accountHolder'],
+  additionalProperties: false,
+} as const;
 
 // Component = leaf-level row (no children). Mirrors κούφωμα|ρολό|kit-component.
 const QUOTE_COMPONENT = {
@@ -178,6 +200,7 @@ export const QUOTE_EXTRACT_SCHEMA = {
       vendorCity: { type: ['string', 'null'] },
       vendorPostalCode: { type: ['string', 'null'] },
       vendorCountry: { type: ['string', 'null'] },
+      vendorBankAccounts: { type: 'array', items: QUOTE_BANK_ACCOUNT },
       quoteDate: { type: ['string', 'null'] },
       validUntil: { type: ['string', 'null'] },
       quoteReference: { type: ['string', 'null'] },
@@ -203,6 +226,7 @@ export const QUOTE_EXTRACT_SCHEMA = {
       'tableStructureNotes',
       'vendorName', 'vendorVat', 'vendorPhone', 'vendorEmail',
       'vendorAddress', 'vendorCity', 'vendorPostalCode', 'vendorCountry',
+      'vendorBankAccounts',
       'quoteDate', 'validUntil', 'quoteReference',
       'lineItems', 'subtotal', 'vatAmount', 'totalAmount',
       'paymentTerms', 'deliveryTerms', 'warranty', 'notes', 'tradeHint',
@@ -263,6 +287,13 @@ export const QUOTE_EXTRACT_PROMPT = `Είσαι AI σύστημα εξαγωγή
 - vendorCity: Πόλη/οικισμός έδρας (π.χ. "Русе", "Θεσσαλονίκη", "Milano"). Null αν δεν αναγράφεται.
 - vendorPostalCode: ΤΚ έδρας (π.χ. "7000", "54621", "20121"). Null αν δεν αναγράφεται.
 - vendorCountry: Χώρα ISO κωδικός 2 γραμμάτων (π.χ. "GR", "BG", "IT", "DE"). Συμπέρανε από στοιχεία εγγράφου (ΑΦΜ μορφή, γλώσσα, postal code). Null αν αδύνατη η εκτίμηση.
+- vendorBankAccounts: Βρες ΟΛΟΥΣ τους τραπεζικούς λογαριασμούς του προμηθευτή που αναγράφονται στο έγγραφο (συχνά στο τέλος ή στο footer). Για κάθε λογαριασμό:
+  • bankName: Επωνυμία τράπεζας — κείμενο ελεύθερο (π.χ. "UBB BANK", "UNICREDIT BULBANK", "Εθνική Τράπεζα"). ΜΗΝ κάνεις lookup — γράψε ακριβώς αυτό που βλέπεις.
+  • bic: SWIFT/BIC κωδικός αν αναγράφεται (π.χ. "UBBSBGSF", "UNCRBGSF") — null αν δεν υπάρχει.
+  • iban: IBAN ακριβώς όπως αναγράφεται, χωρίς κενά (π.χ. "BG84UBBS88881400876765"). ΜΗΝ μπερδεύεις με ΑΦΜ — IBAN ξεκινά με γράμματα χώρας (GR/BG/DE/etc.) + 2 check digits + αριθμός.
+  • currency: Νόμισμα αν αναγράφεται ρητά (π.χ. "EUR", "BGN") — null αν δεν αναγράφεται.
+  • accountHolder: Κάτοχος λογαριασμού αν διαφέρει από vendorName (π.χ. "FEN-PLAST TRADE OOD") — null αν ίδιος ή δεν αναγράφεται.
+  Αν δεν υπάρχει κανένας τραπεζικός λογαριασμός → κενό array [].
 
 **ΣΤΟΙΧΕΙΑ ΠΡΟΣΦΟΡΑΣ:**
 - quoteDate: Ημερομηνία έκδοσης (ISO 8601: YYYY-MM-DD). Συνώνυμα: "Ημ/νία εισαγωγής", "Input Date", "Ημερομηνία προσφοράς".
