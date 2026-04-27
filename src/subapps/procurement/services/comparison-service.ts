@@ -423,6 +423,12 @@ export async function awardRfq(
   const losers = all.filter((q) => q.id !== options.winnerQuoteId && COMPARABLE_STATUSES.has(q.status));
   for (const l of losers) await transitionLoser(ctx, l);
 
+  // RFQ FSM only allows draft → active → closed. Manual quote-entry flows
+  // never move the RFQ to `active` (no vendor invites sent), so award would
+  // fail FSM with `Invalid transition: draft → closed`. Promote first.
+  if (rfq.status === 'draft') {
+    await updateRfq(ctx, rfqId, { status: 'active' });
+  }
   await updateRfq(ctx, rfqId, { winnerQuoteId: options.winnerQuoteId, status: 'closed' });
   await writeAwardAudit(rfqId, ctx.uid, options, awardCtx);
 
