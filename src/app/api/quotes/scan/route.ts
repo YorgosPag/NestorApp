@@ -24,7 +24,8 @@ import { after } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminBucket, safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateFileId } from '@/services/enterprise-id.service';
@@ -138,16 +139,12 @@ async function uploadAndAttach(
     ext,
   });
 
-  const bucket = getAdminBucket();
-  const fileRef = bucket.file(storagePath);
-  await fileRef.save(buffer, {
-    metadata: {
-      contentType: file.type,
-      cacheControl: 'private, max-age=86400',
-    },
+  const { url: fileUrl } = await uploadPublicFile({
+    storagePath,
+    buffer,
+    contentType: file.type,
+    cacheControl: 'public, max-age=86400',
   });
-  await fileRef.makePublic();
-  const fileUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
 
   const attachment: QuoteAttachment = {
     id: fileId,

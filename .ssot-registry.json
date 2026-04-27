@@ -31,6 +31,22 @@
       ],
       "tier": 1
     },
+    "storage-public-upload": {
+      "ssotFile": "src/services/storage-admin/public-upload.service.ts",
+      "description": "Server-side publicly-accessible uploads must go through uploadPublicFile(). makePublic() silently no-ops on UBLA-enabled buckets (the new .firebasestorage.app default), making direct storage.googleapis.com URLs return 403. Token-based URLs via firebasestorage.googleapis.com bypass UBLA.",
+      "forbiddenPatterns": [
+        "\\.makePublic\\(\\)",
+        "https://storage\\.googleapis\\.com/\\$\\{"
+      ],
+      "allowlist": [
+        "src/services/storage-admin/public-upload.service.ts",
+        "src/app/api/upload/photo/route.ts",
+        "src/app/api/communications/webhooks/telegram/telegram/media-download-storage.ts",
+        "src/app/api/vendor/quote/[token]/upload.ts",
+        "src/services/attendance/attendance-server-service.ts"
+      ],
+      "tier": 2
+    },
     "enterprise-id": {
       "ssotFile": "src/services/enterprise-id.service.ts",
       "description": "All document IDs must use EnterpriseIdService — no crypto.randomUUID()",

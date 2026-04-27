@@ -12,8 +12,8 @@
 
 import 'server-only';
 
-import { getAdminBucket } from '@/lib/firebaseAdmin';
 import { rasterizePdfPages, RasterizeUnavailableError } from '@/services/pdf/pdf-rasterize.service';
+import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -120,13 +120,13 @@ export async function extractAndUploadVendorLogo(
       ext: 'png',
     });
 
-    const bucket = getAdminBucket();
-    const fileRef = bucket.file(storagePath);
-    await fileRef.save(logoBuffer, {
-      metadata: { contentType: 'image/png', cacheControl: 'private, max-age=86400' },
+    const { url } = await uploadPublicFile({
+      storagePath,
+      buffer: logoBuffer,
+      contentType: 'image/png',
+      cacheControl: 'public, max-age=86400',
     });
-    await fileRef.makePublic();
-    return `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    return url;
   } catch (err) {
     if (err instanceof RasterizeUnavailableError) {
       logger.warn('Logo extraction skipped — rasterizer unavailable');

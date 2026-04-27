@@ -1,13 +1,18 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-24T15:04:45Z",
-    "totalViolations": 3,
-    "totalFiles": 1,
+    "generated": "2026-04-27T18:36:05Z",
+    "totalViolations": 8,
+    "totalFiles": 6,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
   "files": {
-    "src/config/file-types/classification-registry.ts": 3
+    "src/config/file-types/classification-registry.ts": 3,
+    "src/subapps/procurement/services/external/openai-quote-analyzer.ts": 1,
+    "src/subapps/accounting/services/external/openai-document-analyzer.ts": 1,
+    "src/services/ai-pipeline/tools/esco-search-utils.ts": 1,
+    "src/config/ai-analysis-config.ts": 1,
+    "src/app/api/vendor/quote/[token]/upload.ts": 1
   }
 }

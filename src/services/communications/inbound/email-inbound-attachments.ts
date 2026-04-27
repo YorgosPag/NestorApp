@@ -103,24 +103,17 @@ async function uploadToFirebaseStorage(params: {
 }> {
   const { buffer, storagePath, contentType, metadata } = params;
 
-  const { getStorage } = await import('firebase-admin/storage');
-  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-  if (!storageBucket) {
-    logger.error('Firebase storage bucket not configured');
-    return { downloadUrl: null, verified: false };
-  }
+  const { uploadPublicFile } = await import('@/services/storage-admin/public-upload.service');
+  const { getAdminBucket } = await import('@/lib/firebaseAdmin');
 
-  const bucket = getStorage().bucket(storageBucket);
-  const file = bucket.file(storagePath);
-
-  await file.save(buffer, {
-    metadata: {
-      contentType,
-      metadata,
-    },
+  const { url: downloadUrl } = await uploadPublicFile({
+    storagePath,
+    buffer,
+    contentType,
+    customMetadata: metadata,
   });
 
-  await file.makePublic();
+  const file = getAdminBucket().file(storagePath);
   const [exists] = await file.exists();
   const [fileMetadata] = await file.getMetadata().catch(() => [undefined]);
   const metadataSize = fileMetadata?.size ? Number(fileMetadata.size) : undefined;
@@ -138,7 +131,7 @@ async function uploadToFirebaseStorage(params: {
   }
 
   return {
-    downloadUrl: `https://storage.googleapis.com/${storageBucket}/${storagePath}`,
+    downloadUrl,
     verified,
     storageSizeBytes: metadataSize,
   };
