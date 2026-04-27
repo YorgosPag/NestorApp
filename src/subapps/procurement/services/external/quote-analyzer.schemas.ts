@@ -47,6 +47,10 @@ export interface RawExtractedQuote {
   vendorVat: string | null;
   vendorPhone: string | null;
   vendorEmail: string | null;
+  vendorAddress: string | null;
+  vendorCity: string | null;
+  vendorPostalCode: string | null;
+  vendorCountry: string | null;
   quoteDate: string | null;
   validUntil: string | null;
   quoteReference: string | null;
@@ -141,6 +145,7 @@ const QUOTE_LINE_ITEM = {
 
 const HEADER_FIELDS = [
   'vendorName', 'vendorVat', 'vendorPhone', 'vendorEmail',
+  'vendorAddress', 'vendorCity', 'vendorPostalCode', 'vendorCountry',
   'quoteDate', 'validUntil', 'quoteReference',
   'paymentTerms', 'deliveryTerms', 'warranty', 'notes', 'tradeHint',
 ] as const;
@@ -169,6 +174,10 @@ export const QUOTE_EXTRACT_SCHEMA = {
       vendorVat: { type: ['string', 'null'] },
       vendorPhone: { type: ['string', 'null'] },
       vendorEmail: { type: ['string', 'null'] },
+      vendorAddress: { type: ['string', 'null'] },
+      vendorCity: { type: ['string', 'null'] },
+      vendorPostalCode: { type: ['string', 'null'] },
+      vendorCountry: { type: ['string', 'null'] },
       quoteDate: { type: ['string', 'null'] },
       validUntil: { type: ['string', 'null'] },
       quoteReference: { type: ['string', 'null'] },
@@ -193,6 +202,7 @@ export const QUOTE_EXTRACT_SCHEMA = {
     required: [
       'tableStructureNotes',
       'vendorName', 'vendorVat', 'vendorPhone', 'vendorEmail',
+      'vendorAddress', 'vendorCity', 'vendorPostalCode', 'vendorCountry',
       'quoteDate', 'validUntil', 'quoteReference',
       'lineItems', 'subtotal', 'vatAmount', 'totalAmount',
       'paymentTerms', 'deliveryTerms', 'warranty', 'notes', 'tradeHint',
@@ -249,6 +259,10 @@ export const QUOTE_EXTRACT_PROMPT = `Είσαι AI σύστημα εξαγωγή
   • Αν δεν υπάρχει σαφής ΑΦΜ/ΕΙΚ → null + confidence: 0. ΜΗΝ μαντεύεις.
 - vendorPhone: Τηλέφωνο επικοινωνίας
 - vendorEmail: Email επικοινωνίας
+- vendorAddress: Οδός + αριθμός της έδρας προμηθευτή (π.χ. "ул. Хан Аспарух 15"). Null αν δεν αναγράφεται.
+- vendorCity: Πόλη/οικισμός έδρας (π.χ. "Русе", "Θεσσαλονίκη", "Milano"). Null αν δεν αναγράφεται.
+- vendorPostalCode: ΤΚ έδρας (π.χ. "7000", "54621", "20121"). Null αν δεν αναγράφεται.
+- vendorCountry: Χώρα ISO κωδικός 2 γραμμάτων (π.χ. "GR", "BG", "IT", "DE"). Συμπέρανε από στοιχεία εγγράφου (ΑΦΜ μορφή, γλώσσα, postal code). Null αν αδύνατη η εκτίμηση.
 
 **ΣΤΟΙΧΕΙΑ ΠΡΟΣΦΟΡΑΣ:**
 - quoteDate: Ημερομηνία έκδοσης (ISO 8601: YYYY-MM-DD). Συνώνυμα: "Ημ/νία εισαγωγής", "Input Date", "Ημερομηνία προσφοράς".

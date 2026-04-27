@@ -24,6 +24,7 @@ export interface AddressWithHierarchyValue {
   street: string;
   number: string;
   postalCode: string;
+  country: string;
   // Settlement = Oikismos / City
   settlementId: string | null;
   settlementName: string;
@@ -64,6 +65,7 @@ export const EMPTY_VALUE: AddressWithHierarchyValue = {
   street: '',
   number: '',
   postalCode: '',
+  country: '',
   settlementId: null,
   settlementName: '',
   communityId: null,

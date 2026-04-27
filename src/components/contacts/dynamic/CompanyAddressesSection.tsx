@@ -71,6 +71,7 @@ function toHierarchyValue(addr: CompanyAddress): Partial<AddressWithHierarchyVal
     street: addr.street,
     number: addr.number,
     postalCode: addr.postalCode,
+    country: addr.country ?? '',
     settlementName: addr.city,
     settlementId: addr.settlementId ?? null,
     communityName: addr.communityName ?? '',
@@ -101,6 +102,7 @@ function fromHierarchyValue(existing: CompanyAddress, val: AddressWithHierarchyV
     region: val.regionName,
     decentAdminName: val.decentAdminName,
     majorGeoName: val.majorGeoName,
+    country: val.country || undefined,
   };
 }
 

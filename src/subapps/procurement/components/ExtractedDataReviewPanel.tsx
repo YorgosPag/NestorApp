@@ -103,6 +103,10 @@ export interface ExtractedDataReviewPanelProps {
     vat: string | null,
     phone: string | null,
     email: string | null,
+    vendorAddress: string | null,
+    vendorCity: string | null,
+    vendorPostalCode: string | null,
+    vendorCountry: string | null,
   ) => Promise<void>;
   isSaving?: boolean;
   isSwitchingVendor?: boolean;
@@ -218,6 +222,10 @@ export function ExtractedDataReviewPanel({
                       mismatch.extractedVat,
                       extracted?.vendorPhone.value ?? null,
                       extracted?.vendorEmail.value ?? null,
+                      extracted?.vendorAddress.value ?? null,
+                      extracted?.vendorCity.value ?? null,
+                      extracted?.vendorPostalCode.value ?? null,
+                      extracted?.vendorCountry.value ?? null,
                     )
                   }
                 >

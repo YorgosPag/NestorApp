@@ -61,6 +61,10 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
     vat: string | null,
     phone: string | null,
     email: string | null,
+    vendorAddress: string | null,
+    vendorCity: string | null,
+    vendorPostalCode: string | null,
+    vendorCountry: string | null,
   ) => {
     setSwitchingVendor(true);
     setSaveError(null);
@@ -68,7 +72,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
       const resolveRes = await fetch('/api/contacts/resolve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vatNumber: vat, name, phone, email }),
+        body: JSON.stringify({ vatNumber: vat, name, phone, email, vendorAddress, vendorCity, vendorPostalCode, vendorCountry }),
       });
       if (!resolveRes.ok) throw new Error(await resolveRes.text());
       const resolveJson = await resolveRes.json();

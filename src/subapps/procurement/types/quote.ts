@@ -94,6 +94,10 @@ export interface ExtractedQuoteData {
   vendorVat: FieldWithConfidence<string | null>;
   vendorPhone: FieldWithConfidence<string | null>;
   vendorEmail: FieldWithConfidence<string | null>;
+  vendorAddress: FieldWithConfidence<string | null>;
+  vendorCity: FieldWithConfidence<string | null>;
+  vendorPostalCode: FieldWithConfidence<string | null>;
+  vendorCountry: FieldWithConfidence<string | null>;
   quoteDate: FieldWithConfidence<string | null>;
   validUntil: FieldWithConfidence<string | null>;
   quoteReference: FieldWithConfidence<string | null>;

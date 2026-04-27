@@ -19,8 +19,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createContactServerSide } from '@/services/ai-pipeline/shared/contact-lookup-crud';
 import { updateContactField } from '@/services/ai-pipeline/shared/contact-lookup-crud';
@@ -36,6 +38,10 @@ const ResolveContactSchema = z.object({
   name: z.string().min(1).nullable().optional(),
   phone: z.string().nullable().optional(),
   email: z.string().nullable().optional(),
+  vendorAddress: z.string().nullable().optional(),
+  vendorCity: z.string().nullable().optional(),
+  vendorPostalCode: z.string().nullable().optional(),
+  vendorCountry: z.string().nullable().optional(),
 });
 
 // ============================================================================
@@ -74,7 +80,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       const parsed = safeParseBody(ResolveContactSchema, await req.json());
       if (parsed.error) return parsed.error;
 
-      const { vatNumber, name, phone, email } = parsed.data;
+      const { vatNumber, name, phone, email, vendorAddress, vendorCity, vendorPostalCode, vendorCountry } = parsed.data;
       const normalizedVat = normalizeVat(vatNumber);
       const companyId = ctx.companyId;
 
@@ -145,6 +151,34 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         // Store VAT on the newly created contact (createContactServerSide doesn't accept vatNumber)
         if (normalizedVat) {
           await updateContactField(result.contactId, 'vatNumber', normalizedVat, ctx.uid);
+        }
+
+        // Store vendor address if provided (extracted from PDF)
+        if (vendorAddress || vendorCity) {
+          const addressEntry = {
+            street: vendorAddress ?? '',
+            city: vendorCity ?? '',
+            postalCode: vendorPostalCode ?? '',
+            country: vendorCountry ?? '',
+            type: 'work',
+            isPrimary: true,
+          };
+          const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(result.contactId);
+          await docRef.update({
+            addresses: FieldValue.arrayUnion(addressEntry),
+            updatedAt: FieldValue.serverTimestamp(),
+            lastModifiedBy: ctx.uid,
+          });
+          await EntityAuditService.recordChange({
+            entityType: ENTITY_TYPES.CONTACT,
+            entityId: result.contactId,
+            entityName: result.displayName ?? null,
+            action: 'updated',
+            changes: [{ field: 'addresses', oldValue: null, newValue: JSON.stringify(addressEntry), label: 'addresses' }],
+            performedBy: ctx.uid,
+            performedByName: ctx.uid,
+            companyId,
+          });
         }
 
         return NextResponse.json({

@@ -63,6 +63,7 @@ export interface CompanyAddress {
   number: string;
   postalCode: string;
   city: string;
+  country?: string;
   region?: string;
   /** Greek administrative hierarchy (optional — auto-filled from AddressWithHierarchy) */
   settlementId?: string | null;
@@ -125,6 +126,7 @@ export interface ContactFormData {
   streetNumber: string;
   city: string;
   postalCode: string;
+  hqAddressCountry?: string;
   /**
    * Semantic type for the primary (flat-field) address — ADR-319.
    * Defaults to `home` for individuals and `headquarters` for company/service.

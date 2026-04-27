@@ -89,13 +89,15 @@ export function AddressWithHierarchy({
   // HANDLERS
   // =========================================================================
 
-  /** Handle basic text field changes (street, number, postalCode) */
+  /** Handle basic text field changes (street, number, postalCode, country) */
   const handleBasicChange = useCallback(
-    (field: 'street' | 'number' | 'postalCode', val: string) => {
+    (field: 'street' | 'number' | 'postalCode' | 'country', val: string) => {
       onChange({ ...current, [field]: val });
     },
     [current, onChange],
   );
+
+  const isGreekAddress = !current.country || current.country.trim().toUpperCase() === 'GR';
 
   /**
    * Handle settlement selection — auto-fills entire hierarchy.
@@ -194,7 +196,8 @@ export function AddressWithHierarchy({
     const hasPostalCode = current.postalCode.trim().length === 5;
     const hasSettlement = current.settlementName.trim().length > 0;
 
-    if (!hasStreet || !hasPostalCode || hasSettlement || disabled) {
+    // Skip geocoding for non-Greek addresses — the Greek admin hierarchy is hidden anyway
+    if (!hasStreet || !hasPostalCode || hasSettlement || disabled || !isGreekAddress) {
       return;
     }
 
@@ -233,8 +236,8 @@ export function AddressWithHierarchy({
   // =========================================================================
 
   useEffect(() => {
-    // Only trigger when: settlement name exists, no ID (set externally), data loaded
-    if (isLoading || !current.settlementName.trim() || current.settlementId) return;
+    // Only trigger when: settlement name exists, no ID (set externally), data loaded, Greek address
+    if (isLoading || !current.settlementName.trim() || current.settlementId || !isGreekAddress) return;
 
     // Normalize: strip accents, hyphens, lowercase
     const normalize = (s: string) =>
@@ -320,7 +323,7 @@ export function AddressWithHierarchy({
     }
 
     onChange(updated);
-  }, [current.settlementName, current.settlementId, current.postalCode, isLoading]);
+  }, [current.settlementName, current.settlementId, current.postalCode, isLoading, isGreekAddress]);
 
   // =========================================================================
   // RENDER
@@ -387,9 +390,21 @@ export function AddressWithHierarchy({
             />
           </fieldset>
         </div>
+
+        {/* Row 3: Country */}
+        <fieldset className="space-y-1">
+          <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.country')}</Label>
+          <Input
+            value={current.country}
+            onChange={e => handleBasicChange('country', e.target.value)}
+            placeholder={t('form.countryPlaceholder')}
+            disabled={disabled}
+          />
+        </fieldset>
       </div>
 
-      {/* Section 2: Collapsible Greek Administrative Hierarchy */}
+      {/* Section 2: Collapsible Greek Administrative Hierarchy — only for GR addresses */}
+      {isGreekAddress && (
       <div className="border-t border-border pt-2">
         <Button
           type="button"
@@ -453,6 +468,7 @@ export function AddressWithHierarchy({
           </div>
         )}
       </div>
+      )}
     </section>
   );
 }
