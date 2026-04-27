@@ -122,7 +122,7 @@ export function PurchaseOrderForm({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Project */}
             <div className="space-y-1.5">
-              <Label>{t('form.project')} *</Label>
+              <Label>{t('form.project')} <span className="text-destructive">*</span></Label>
               <POProjectSelector
                 value={form.projectId}
                 onSelect={(projectId, project) =>
@@ -133,7 +133,7 @@ export function PurchaseOrderForm({
 
             {/* Supplier */}
             <div className="space-y-1.5">
-              <Label>{t('form.supplier')} *</Label>
+              <Label>{t('form.supplier')} <span className="text-destructive">*</span></Label>
               <POSupplierSelector
                 value={form.supplierId}
                 onSelect={(id) => setField('supplierId', id)}

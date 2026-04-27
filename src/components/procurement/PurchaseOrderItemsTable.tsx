@@ -76,12 +76,12 @@ export function PurchaseOrderItemsTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[200px]">{t('items.description')}</TableHead>
+              <TableHead className="min-w-[200px]">{t('items.description')} <span className="text-destructive">*</span></TableHead>
               <TableHead className="w-[100px]">{t('items.quantity')}</TableHead>
               <TableHead className="w-[100px]">{t('items.unit')}</TableHead>
               <TableHead className="w-[120px]">{t('items.unitPrice')}</TableHead>
               <TableHead className="w-[120px]">{t('items.total')}</TableHead>
-              <TableHead className="w-[140px]">{t('items.category')}</TableHead>
+              <TableHead className="w-[140px]">{t('items.category')} <span className="text-destructive">*</span></TableHead>
               {!readOnly && <TableHead className="w-[50px]" />}
             </TableRow>
           </TableHeader>
@@ -213,14 +213,19 @@ export function PurchaseOrderItemsTable({
                 </Button>
               )}
             </div>
-            <Input
-              value={item.description}
-              onChange={(e) =>
-                onUpdateItem(item.tempId, { description: e.target.value })
-              }
-              placeholder={t('items.descriptionShort')}
-              disabled={readOnly}
-            />
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">
+                {t('items.description')} <span className="text-destructive">*</span>
+              </p>
+              <Input
+                value={item.description}
+                onChange={(e) =>
+                  onUpdateItem(item.tempId, { description: e.target.value })
+                }
+                placeholder={t('items.descriptionShort')}
+                disabled={readOnly}
+              />
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <Input
                 type="number"
@@ -265,24 +270,29 @@ export function PurchaseOrderItemsTable({
               />
             </div>
             <div className="flex items-center justify-between">
-              <Select
-                value={item.categoryCode}
-                onValueChange={(v) =>
-                  onUpdateItem(item.tempId, { categoryCode: v })
-                }
-                disabled={readOnly}
-              >
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder={t('contributionTypePlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {ATOE_MASTER_CATEGORIES.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.code} — {c.nameEL}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">
+                  ΑΤΟΕ <span className="text-destructive">*</span>
+                </p>
+                <Select
+                  value={item.categoryCode}
+                  onValueChange={(v) =>
+                    onUpdateItem(item.tempId, { categoryCode: v })
+                  }
+                  disabled={readOnly}
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder={t('contributionTypePlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ATOE_MASTER_CATEGORIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.code} — {c.nameEL}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <span className="font-semibold tabular-nums">
                 €{(item.quantity * item.unitPrice).toFixed(2)}
               </span>
