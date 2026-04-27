@@ -475,6 +475,25 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
       }
     ],
   },
+
+  // -------------------------------------------------------------------------
+  // 12. ΠΡΟΣΦΟΡΕΣ & ΠΑΡΑΓΓΕΛΙΕΣ — ADR-327 §18 (Vendor 360°)
+  // Visibility gated in renderer: only shown when `supplier` persona active.
+  // -------------------------------------------------------------------------
+  {
+    id: 'procurement',
+    title: 'individual.sections.procurement.title',
+    icon: 'shopping-cart',
+    description: 'individual.sections.procurement.description',
+    order: 12,
+    fields: [
+      {
+        id: 'procurement',
+        label: 'procurementTab.title',
+        type: 'input',
+      },
+    ],
+  },
 ];
 
 // ============================================================================

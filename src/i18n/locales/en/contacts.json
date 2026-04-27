@@ -96,5 +96,41 @@
       "clear": "Clear",
       "showAll": "Show all contacts"
     }
+  },
+  "procurementTab": {
+    "title": "Quotes & Orders",
+    "description": "Quotes, RFQs and purchase orders for this supplier",
+    "kpis": {
+      "openRfqs": "Open RFQs",
+      "activeQuotes": "Active Quotes",
+      "recentPOs": "Recent POs",
+      "totalSpendYtd": "Total spend ({year})"
+    },
+    "sections": {
+      "metrics": "Performance Metrics",
+      "quotes": "Quotes",
+      "rfqInvites": "RFQ Invitations",
+      "purchaseOrders": "Purchase Orders"
+    },
+    "empty": {
+      "title": "No procurement history",
+      "description": "This contact has no quotes, RFQ invitations or purchase orders yet.",
+      "cta": {
+        "firstQuote": "Create first quote",
+        "firstRfq": "Invite to RFQ"
+      }
+    },
+    "error": {
+      "permissionDenied": "You do not have permission to view this data",
+      "generic": "Error loading data"
+    },
+    "archived": {
+      "banner": "Contact is archived — all actions are disabled"
+    },
+    "rfqInviteStatus": {
+      "active": "Active",
+      "closed": "Closed",
+      "awarded": "Awarded"
+    }
   }
 }

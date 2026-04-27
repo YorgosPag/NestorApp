@@ -124,6 +124,8 @@ const relationshipsSection: SectionConfig = { id: 'relationships', title: 'secti
 const orgStructureSection: SectionConfig = { id: 'orgStructure', title: 'sections.orgStructure', icon: 'network', order: 8, fields: [], description: 'sectionDescriptions.orgStructure' };
 const filesSection: SectionConfig = { id: 'files', title: 'sections.files', icon: 'file-text', order: 9, fields: [], description: 'sectionDescriptions.files' };
 const historySection: SectionConfig = { id: 'history', title: 'sections.history', icon: 'history', order: 10, fields: [], description: 'sectionDescriptions.history' };
+// ADR-327 §18 — Vendor 360° Procurement tab. Visibility for company contacts is "always show" (empty state on zero data).
+const procurementSection: SectionConfig = { id: 'procurement', title: 'sections.procurement', icon: 'shopping-cart', order: 11, fields: [], description: 'sectionDescriptions.procurement' };
 // representativesSection REMOVED — merged into relationshipsSection (Πρόσωπα & Ρόλοι)
 const decisionsSection: SectionConfig = { id: 'decisions', title: 'sections.organDecisions', icon: 'gavel', order: 10, fields: [], description: 'sectionDescriptions.organDecisions' };
 const announcementsSection: SectionConfig = { id: 'announcements', title: 'sections.announcementsPublications', icon: 'megaphone', order: 11, fields: [], description: 'sectionDescriptions.announcementsPublications' };
@@ -151,4 +153,5 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   orgStructureSection, // 🏢 ADR-326 Phase 5: embedded org chart (L2 only)
   bankingSection, // 🏢 ENTERPRISE: Banking System (ADR-126)
   historySection, // 📜 Unified History: Audit Trail + Photo Shares (reuses ContactHistoryTab)
+  procurementSection, // 🛒 ADR-327 §18: Vendor 360° (quotes, RFQ invites, POs, supplier metrics)
 ].sort((a, b) => a.order - b.order); // Auto-sort by order

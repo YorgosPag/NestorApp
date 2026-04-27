@@ -11,7 +11,11 @@
     "status": "Κατάσταση",
     "total": "Σύνολο",
     "dateCreated": "Ημ. Δημιουργίας",
-    "dateNeeded": "Ημ. Παράδοσης"
+    "dateNeeded": "Ημ. Παράδοσης",
+    "loading": "Φόρτωση...",
+    "empty": "Καμία παραγγελία",
+    "number": "Αριθμός",
+    "dateOrdered": "Ημ. Παραγγελίας"
   },
   "items": {
     "description": "Περιγραφή",

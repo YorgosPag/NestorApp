@@ -11,7 +11,11 @@
     "status": "Status",
     "total": "Total",
     "dateCreated": "Date Created",
-    "dateNeeded": "Date Needed"
+    "dateNeeded": "Date Needed",
+    "loading": "Loading...",
+    "empty": "No orders",
+    "number": "Number",
+    "dateOrdered": "Date Ordered"
   },
   "items": {
     "description": "Description",

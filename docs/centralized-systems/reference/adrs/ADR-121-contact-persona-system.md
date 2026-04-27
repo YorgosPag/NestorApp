@@ -33,7 +33,7 @@ Implement the **SAP Business Partner "Role/Persona" pattern**:
 | `lawyer` | barAssociationNumber, barAssociation | P1 |
 | `property_owner` | propertyCount, ownershipNotes | P1 |
 | `client` | clientSince (read-only) | P1 |
-| `supplier` | supplierCategory, paymentTermsDays | P2 |
+| `supplier` | supplierCategory, paymentTermsDays, tradeSpecialties (ADR-327) | P2 |
 | `notary` | notaryRegistryNumber, notaryDistrict | P2 |
 | `real_estate_agent` | licenseNumber, agency | P2 |
 
@@ -134,6 +134,17 @@ Implement the **SAP Business Partner "Role/Persona" pattern**:
 | `src/components/ContactFormSections/UnifiedContactTabbedSection.tsx` | Added client guard + custom clientSince renderer (read-only + sales link) |
 
 **Note**: `ClientCategory` and `PreferredContactMethod` types kept in `personas.ts` (used by `contact-info.ts`).
+
+### 2026-04-28 — Vendor 360° Procurement Tab cross-link (ADR-327 §18)
+
+When the `supplier` persona is active on an individual contact (or when the contact is a `company`), the contact card surfaces a dedicated **"Προσφορές & Παραγγελίες"** tab via the existing dummy-field renderer pattern in `contactRenderersCore.tsx`. The tab aggregates quotes, RFQ invitations, purchase orders, and supplier KPIs scoped on the contact id — no new persistence, pure SSoT reuse over `quote-service`, `vendor-invite-service`, `procurement-repository`, and `supplier-metrics-service`.
+
+Visibility rules:
+- `service` contacts → never (public services aren't vendors)
+- `individual` → only with `supplier` persona active (this ADR)
+- `company` → always visible (empty state when zero data)
+
+See **ADR-327 §18 "Vendor 360° Contact Tab"** for the full design (component tree, KPI definitions, navigation behavior, edge cases). The persona system here owns the visibility rule for individuals; ADR-327 owns the data flow and UI.
 
 ### 2026-03-19 — Centralized Persona Removal Guard Registry
 

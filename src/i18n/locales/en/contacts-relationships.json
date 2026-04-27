@@ -554,6 +554,10 @@
       "history": {
         "title": "History",
         "description": "Contact change history"
+      },
+      "procurement": {
+        "title": "Quotes & Orders",
+        "description": "Quotes, RFQs and purchase orders for this supplier"
       }
     },
     "fields": {

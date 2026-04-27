@@ -20,6 +20,7 @@ import { VatNumberField } from '@/components/contacts/fields/VatNumberField';
 import { ContactKadSection } from '@/components/contacts/dynamic/ContactKadSection';
 import type { KadActivity } from '@/types/ContactFormTypes';
 import { AddressesSectionWithFullscreen } from '@/components/contacts/dynamic/AddressesSectionWithFullscreen';
+import { ProcurementContactTab } from '@/components/contacts/tabs/procurement/ProcurementContactTab';
 import { getPhotoUploadHandlers, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
 import { createModuleLogger } from '@/lib/telemetry';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -225,7 +226,36 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
         disabled={disabled}
       />
     ),
+
+    // ── Procurement Tab — ADR-327 §18 ──────────────────────────
+    procurement: () => {
+      if (!shouldShowProcurementTab(ctx)) return null;
+      const contactId = formData.id;
+      if (!contactId) return null;
+      return (
+        <ProcurementContactTab
+          contactId={contactId}
+          contactType={contactType as 'individual' | 'company'}
+          archived={Boolean(ctx.isContactTrashed)}
+        />
+      );
+    },
   };
+}
+
+/**
+ * Visibility rule for the Vendor 360° procurement tab (ADR-327 §18).
+ * - service contacts → never (public services aren't vendors)
+ * - individual contacts → only with `supplier` persona active (ADR-121)
+ * - company contacts → always (empty state shown when zero data)
+ */
+function shouldShowProcurementTab(ctx: RendererContext): boolean {
+  if (ctx.contactType === 'service') return false;
+  if (ctx.contactType === 'individual') {
+    const personas = ctx.formData.activePersonas ?? [];
+    return personas.includes('supplier');
+  }
+  return ctx.contactType === 'company';
 }
 
 /**

@@ -43,7 +43,8 @@
     "logo": "Logo",
     "employeesOrganization": "Employees & Organization",
     "banking": "Banking",
-    "communication": "Communication"
+    "communication": "Communication",
+    "procurement": "Quotes & Orders"
   },
   "sectionDescriptions": {
     "basicInfoGemi": "Basic company information from GEMI",
@@ -66,7 +67,8 @@
     "peopleRoles": "Shareholders, representatives, management and employees",
     "orgStructure": "Company departments and hierarchy",
     "banking": "Manage contact bank accounts",
-    "communication": "Phone numbers, emails, websites and social media"
+    "communication": "Phone numbers, emails, websites and social media",
+    "procurement": "Quotes, RFQs and purchase orders for this supplier"
   },
   "company": {
     "companyName": "Company Name",

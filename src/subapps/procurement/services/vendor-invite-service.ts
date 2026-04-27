@@ -270,6 +270,21 @@ export async function listVendorInvitesByRfq(
   }, []);
 }
 
+export async function listVendorInvitesByVendor(
+  companyId: string,
+  vendorContactId: string,
+): Promise<VendorInvite[]> {
+  return safeFirestoreOperation(async (db) => {
+    const snap = await db
+      .collection(COLLECTIONS.VENDOR_INVITES)
+      .where('companyId', '==', companyId)
+      .where('vendorContactId', '==', vendorContactId)
+      .orderBy('createdAt', 'desc')
+      .get();
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as VendorInvite));
+  }, []);
+}
+
 // =============================================================================
 // STATUS TRANSITIONS
 // =============================================================================

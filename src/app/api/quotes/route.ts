@@ -66,8 +66,14 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
         const projectId = url.searchParams.get('projectId') ?? undefined;
         const rfqId = url.searchParams.get('rfqId') ?? undefined;
         const trade = url.searchParams.get('trade') ?? undefined;
+        const vendorContactId = url.searchParams.get('vendorContactId') ?? undefined;
 
-        const quotes = await listQuotes(ctx.companyId, { projectId, rfqId, trade: trade as never });
+        const quotes = await listQuotes(ctx.companyId, {
+          projectId,
+          rfqId,
+          trade: trade as never,
+          vendorContactId,
+        });
         return NextResponse.json({ success: true, data: quotes });
       } catch (error) {
         const message = getErrorMessage(error, 'Failed to list quotes');
