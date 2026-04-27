@@ -54,7 +54,7 @@ export interface RawExtractedQuote {
   vendorName: string | null;
   vendorVat: string | null;
   vendorPhone: string | null;
-  vendorEmail: string | null;
+  vendorEmails: string[];
   vendorAddress: string | null;
   vendorCity: string | null;
   vendorPostalCode: string | null;
@@ -166,7 +166,7 @@ const QUOTE_LINE_ITEM = {
 } as const;
 
 const HEADER_FIELDS = [
-  'vendorName', 'vendorVat', 'vendorPhone', 'vendorEmail',
+  'vendorName', 'vendorVat', 'vendorPhone', 'vendorEmails',
   'vendorAddress', 'vendorCity', 'vendorPostalCode', 'vendorCountry',
   'quoteDate', 'validUntil', 'quoteReference',
   'paymentTerms', 'deliveryTerms', 'warranty', 'notes', 'tradeHint',
@@ -195,7 +195,7 @@ export const QUOTE_EXTRACT_SCHEMA = {
       vendorName: { type: ['string', 'null'] },
       vendorVat: { type: ['string', 'null'] },
       vendorPhone: { type: ['string', 'null'] },
-      vendorEmail: { type: ['string', 'null'] },
+      vendorEmails: { type: 'array', items: { type: 'string' } },
       vendorAddress: { type: ['string', 'null'] },
       vendorCity: { type: ['string', 'null'] },
       vendorPostalCode: { type: ['string', 'null'] },
@@ -224,7 +224,7 @@ export const QUOTE_EXTRACT_SCHEMA = {
     },
     required: [
       'tableStructureNotes',
-      'vendorName', 'vendorVat', 'vendorPhone', 'vendorEmail',
+      'vendorName', 'vendorVat', 'vendorPhone', 'vendorEmails',
       'vendorAddress', 'vendorCity', 'vendorPostalCode', 'vendorCountry',
       'vendorBankAccounts',
       'quoteDate', 'validUntil', 'quoteReference',
@@ -282,7 +282,7 @@ export const QUOTE_EXTRACT_PROMPT = `Είσαι AI σύστημα εξαγωγή
   • Αν βρεις αριθμό που ξεκινά με "GR" και έχει >4 χαρακτήρες → IBAN → βάλε null + confidence: 0.
   • Αν δεν υπάρχει σαφής ΑΦΜ/ΕΙΚ → null + confidence: 0. ΜΗΝ μαντεύεις.
 - vendorPhone: Τηλέφωνο της εταιρείας που ΕΚΔΙΔΕΙ την προσφορά (ο προμηθευτής). ΟΧΙ το τηλέφωνο του παραλήπτη/πελάτη. Βρίσκεται στα στοιχεία επικεφαλίδας του προμηθευτή, ΟΧΙ στη γραμμή "Προς:" / "Πελάτης:" / "Αποστολή προς:".
-- vendorEmail: Email επικοινωνίας. Ψάξε σε ΟΛΕΣ τις σελίδες και σε ΟΛΑ τα sections: header, footer, disclaimers, υποσημειώσεις, "Για πληροφορίες στείλτε μας email στο...", "e-mail: X". Αν βρεις email στα notes/footer που ανήκει στον προμηθευτή → βάλε το ΕΔΩ (vendorEmail), ΟΧΙ στο notes.
+- vendorEmails: Array με ΟΛΕΣ τις email διευθύνσεις του προμηθευτή. Ψάξε σε ΟΛΕΣ τις σελίδες και σε ΟΛΑ τα sections: header, footer, disclaimers, υποσημειώσεις, "Για πληροφορίες στείλτε μας email στο...", "e-mail: X". Πρόσθεσε ΚΑΘΕ email που ανήκει στον προμηθευτή στο array — ΟΧΙ στο notes. Αν δεν υπάρχει καμία email → κενό array [].
 - vendorAddress: Οδός + αριθμός της έδρας προμηθευτή (π.χ. "ул. Хан Аспарух 15"). Null αν δεν αναγράφεται.
 - vendorCity: Πόλη/οικισμός έδρας (π.χ. "Русе", "Θεσσαλονίκη", "Milano"). Null αν δεν αναγράφεται.
 - vendorPostalCode: ΤΚ έδρας (π.χ. "7000", "54621", "20121"). Null αν δεν αναγράφεται.

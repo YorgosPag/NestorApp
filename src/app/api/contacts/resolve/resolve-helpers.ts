@@ -30,7 +30,7 @@ export const ResolveContactSchema = z.object({
   vatNumber: z.string().nullable().optional(),
   name: z.string().min(1).nullable().optional(),
   phone: z.string().nullable().optional(),
-  email: z.string().nullable().optional(),
+  emails: z.array(z.string()).optional(),
   vendorAddress: z.string().nullable().optional(),
   vendorCity: z.string().nullable().optional(),
   vendorPostalCode: z.string().nullable().optional(),

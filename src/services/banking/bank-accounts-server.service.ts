@@ -113,8 +113,11 @@ function validateAccountInput(data: BankAccountInput, skipChecksumValidation = f
 
   const ibanResult = validateIBAN(data.iban);
   if (!ibanResult.valid) {
-    if (skipChecksumValidation && ibanResult.error === 'Μη έγκυρος αριθμός ελέγχου IBAN') {
-      // Allow through — caller annotates notes with a verification warning
+    const isLenientBypassable =
+      ibanResult.error === 'Μη έγκυρος αριθμός ελέγχου IBAN' ||
+      (typeof ibanResult.error === 'string' && ibanResult.error.startsWith('Το IBAN για ') && ibanResult.error.includes('χαρακτήρες'));
+    if (skipChecksumValidation && isLenientBypassable) {
+      // Allow through — caller annotates with ibanChecksumWarning flag
     } else {
       return ibanResult.error ?? 'Invalid IBAN';
     }

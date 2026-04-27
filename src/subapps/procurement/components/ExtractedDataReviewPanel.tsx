@@ -102,7 +102,7 @@ export interface ExtractedDataReviewPanelProps {
     name: string | null,
     vat: string | null,
     phone: string | null,
-    email: string | null,
+    emails: string[],
     vendorAddress: string | null,
     vendorCity: string | null,
     vendorPostalCode: string | null,
@@ -222,7 +222,7 @@ export function ExtractedDataReviewPanel({
                       mismatch.extractedVendorName,
                       mismatch.extractedVat,
                       extracted?.vendorPhone.value ?? null,
-                      extracted?.vendorEmail.value ?? null,
+                      extracted?.vendorEmails.value ?? [],
                       extracted?.vendorAddress.value ?? null,
                       extracted?.vendorCity.value ?? null,
                       extracted?.vendorPostalCode.value ?? null,
@@ -267,7 +267,7 @@ export function ExtractedDataReviewPanel({
             <FieldRow label={t('quotes.vendor')} field={extracted.vendorName} />
             <FieldRow label={t('quotes.scan.vendorVat')} field={extracted.vendorVat} />
             <FieldRow label={t('quotes.scan.vendorPhone')} field={extracted.vendorPhone} />
-            <FieldRow label={t('quotes.scan.vendorEmail')} field={extracted.vendorEmail} />
+            <FieldRow label={t('quotes.scan.vendorEmail')} field={{ value: extracted.vendorEmails.value.join(', ') || null, confidence: extracted.vendorEmails.confidence }} />
           </div>
         </section>
 

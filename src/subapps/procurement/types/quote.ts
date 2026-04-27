@@ -101,7 +101,7 @@ export interface ExtractedQuoteData {
   vendorName: FieldWithConfidence<string | null>;
   vendorVat: FieldWithConfidence<string | null>;
   vendorPhone: FieldWithConfidence<string | null>;
-  vendorEmail: FieldWithConfidence<string | null>;
+  vendorEmails: FieldWithConfidence<string[]>;
   vendorAddress: FieldWithConfidence<string | null>;
   vendorCity: FieldWithConfidence<string | null>;
   vendorPostalCode: FieldWithConfidence<string | null>;

@@ -42,7 +42,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       const parsed = safeParseBody(ResolveContactSchema, await req.json());
       if (parsed.error) return parsed.error;
 
-      const { vatNumber, name, phone, email, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts } = parsed.data;
+      const { vatNumber, name, phone, emails, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts } = parsed.data;
       const normalizedVat = normalizeVat(vatNumber);
       const companyId = ctx.companyId;
       const adminDb = getAdminFirestore();
@@ -62,7 +62,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         if (vatMatch) {
           await ensureSupplierPersona(vatMatch.id, companyId, ctx.uid);
           if (bankAccounts?.length) await storeBankAccounts(vatMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(vatMatch));
-          if (email) await storeContactEmail(vatMatch.id, companyId, ctx.uid, email);
+          for (const em of emails ?? []) { if (em) await storeContactEmail(vatMatch.id, companyId, ctx.uid, em); }
           return NextResponse.json({ success: true, data: { contactId: vatMatch.id, displayName: resolveDisplayName(vatMatch), wasCreated: false } });
         }
       }
@@ -79,7 +79,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         if (nameMatch) {
           await ensureSupplierPersona(nameMatch.id, companyId, ctx.uid);
           if (bankAccounts?.length) await storeBankAccounts(nameMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(nameMatch));
-          if (email) await storeContactEmail(nameMatch.id, companyId, ctx.uid, email);
+          for (const em of emails ?? []) { if (em) await storeContactEmail(nameMatch.id, companyId, ctx.uid, em); }
           return NextResponse.json({ success: true, data: { contactId: nameMatch.id, displayName: resolveDisplayName(nameMatch), wasCreated: false } });
         }
       }
@@ -131,7 +131,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         }
 
         await ensureSupplierPersona(result.contactId, companyId, ctx.uid);
-        if (email) await storeContactEmail(result.contactId, companyId, ctx.uid, email);
+        for (const em of emails ?? []) { if (em) await storeContactEmail(result.contactId, companyId, ctx.uid, em); }
         if (bankAccounts?.length) await storeBankAccounts(result.contactId, companyId, ctx.uid, bankAccounts, result.displayName ?? undefined);
 
         return NextResponse.json({

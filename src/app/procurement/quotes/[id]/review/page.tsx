@@ -60,7 +60,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
     name: string | null,
     vat: string | null,
     phone: string | null,
-    email: string | null,
+    emails: string[],
     vendorAddress: string | null,
     vendorCity: string | null,
     vendorPostalCode: string | null,
@@ -73,7 +73,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
       const resolveRes = await fetch('/api/contacts/resolve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vatNumber: vat, name, phone, email, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts }),
+        body: JSON.stringify({ vatNumber: vat, name, phone, emails, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts }),
       });
       if (!resolveRes.ok) throw new Error(await resolveRes.text());
       const resolveJson = await resolveRes.json();
