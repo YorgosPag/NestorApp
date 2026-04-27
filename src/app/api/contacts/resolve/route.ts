@@ -33,6 +33,7 @@ import {
   resolveDisplayName,
   storeContactEmail,
   storeBankAccounts,
+  ensureSupplierPersona,
 } from './resolve-helpers';
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
@@ -59,6 +60,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           (c) => normalizeVat(c['vatNumber'] as string | undefined) === normalizedVat,
         );
         if (vatMatch) {
+          await ensureSupplierPersona(vatMatch.id, companyId, ctx.uid);
           if (bankAccounts?.length) await storeBankAccounts(vatMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(vatMatch));
           if (email) await storeContactEmail(vatMatch.id, companyId, ctx.uid, email);
           return NextResponse.json({ success: true, data: { contactId: vatMatch.id, displayName: resolveDisplayName(vatMatch), wasCreated: false } });
@@ -75,6 +77,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           return fuzzyGreekMatch(cStripped, stripped) || fuzzyGreekMatch(stripped, cStripped);
         });
         if (nameMatch) {
+          await ensureSupplierPersona(nameMatch.id, companyId, ctx.uid);
           if (bankAccounts?.length) await storeBankAccounts(nameMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(nameMatch));
           if (email) await storeContactEmail(nameMatch.id, companyId, ctx.uid, email);
           return NextResponse.json({ success: true, data: { contactId: nameMatch.id, displayName: resolveDisplayName(nameMatch), wasCreated: false } });
@@ -127,6 +130,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           });
         }
 
+        await ensureSupplierPersona(result.contactId, companyId, ctx.uid);
         if (email) await storeContactEmail(result.contactId, companyId, ctx.uid, email);
         if (bankAccounts?.length) await storeBankAccounts(result.contactId, companyId, ctx.uid, bankAccounts, result.displayName ?? undefined);
 

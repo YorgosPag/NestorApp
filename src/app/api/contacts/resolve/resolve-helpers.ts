@@ -104,6 +104,39 @@ export async function storeContactEmail(
   });
 }
 
+// ── Supplier persona ──────────────────────────────────────────────────────────
+
+const SUPPLIER_PERSONA = { personaType: 'supplier', status: 'active', supplierCategory: null, paymentTermsDays: null, tradeSpecialties: [] } as const;
+
+export async function ensureSupplierPersona(
+  contactId: string,
+  companyId: string,
+  uid: string,
+): Promise<void> {
+  const db = getAdminFirestore();
+  const docRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
+  const snap = await docRef.get();
+  if (!snap.exists || snap.data()?.companyId !== companyId) return;
+  const personaTypes = (snap.data()?.personaTypes ?? []) as string[];
+  if (personaTypes.includes('supplier')) return;
+  await docRef.update({
+    personas: FieldValue.arrayUnion(SUPPLIER_PERSONA),
+    personaTypes: FieldValue.arrayUnion('supplier'),
+    updatedAt: FieldValue.serverTimestamp(),
+    lastModifiedBy: uid,
+  });
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.CONTACT,
+    entityId: contactId,
+    entityName: resolveDisplayName(snap.data() as Record<string, unknown>),
+    action: 'updated',
+    changes: [{ field: 'personaTypes', oldValue: null, newValue: 'supplier', label: 'Persona' }],
+    performedBy: uid,
+    performedByName: uid,
+    companyId,
+  });
+}
+
 // ── Bank account storage ──────────────────────────────────────────────────────
 
 export type BankAccountInput = z.infer<typeof BankAccountSchema>;
