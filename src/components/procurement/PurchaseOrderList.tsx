@@ -28,6 +28,8 @@ import { PO_STATUS_META } from '@/types/procurement';
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatPOCurrency, formatPODate } from './utils/procurement-format';
+import { useContactById } from '@/hooks/useContactById';
+import { getContactDisplayName } from '@/types/contacts/helpers';
 
 // ============================================================================
 // STATUS BADGE
@@ -215,46 +217,15 @@ function POTable({
           </TableHeader>
           <TableBody>
             {items.map((po) => (
-              <TableRow
+              <POTableRow
                 key={po.id}
-                className={cn(
-                  'cursor-pointer',
-                  highlight && 'bg-amber-50/50 dark:bg-amber-950/20',
-                  selectedPOId === po.id && 'bg-primary/10 border-l-2 border-l-primary',
-                )}
-                onClick={() => onSelect ? onSelect(po) : onView(po.id)}
-              >
-                <TableCell className="font-medium">{po.poNumber}</TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {po.supplierId}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={po.status} />
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatPOCurrency(po.total)}
-                </TableCell>
-                <TableCell>{formatPODate(po.dateCreated)}</TableCell>
-                <TableCell>{formatPODate(po.dateNeeded)}</TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => { e.stopPropagation(); onView(po.id); }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => { e.stopPropagation(); onDuplicate(po.id); }}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+                po={po}
+                highlight={highlight}
+                selectedPOId={selectedPOId}
+                onView={onView}
+                onDuplicate={onDuplicate}
+                onSelect={onSelect}
+              />
             ))}
           </TableBody>
         </Table>
@@ -263,34 +234,99 @@ function POTable({
       {/* Mobile */}
       <div className="md:hidden space-y-2">
         {items.map((po) => (
-          <article
+          <POCardItem
             key={po.id}
-            className={cn(
-              'rounded-lg border p-3 space-y-1.5',
-              highlight && 'border-amber-300 dark:border-amber-700',
-              selectedPOId === po.id && 'border-primary bg-primary/5',
-            )}
-            onClick={() => onSelect ? onSelect(po) : onView(po.id)}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">{po.poNumber}</span>
-              <StatusBadge status={po.status} />
-            </div>
-            <p className="text-sm text-muted-foreground truncate">
-              {po.supplierId}
-            </p>
-            <div className="flex items-center justify-between text-sm">
-              <span>{formatPODate(po.dateCreated)}</span>
-              <span className="font-semibold tabular-nums">
-                {formatPOCurrency(po.total)}
-              </span>
-            </div>
-          </article>
+            po={po}
+            highlight={highlight}
+            selectedPOId={selectedPOId}
+            onView={onView}
+            onSelect={onSelect}
+          />
         ))}
       </div>
     </>
+  );
+}
+
+// ============================================================================
+// ROW / CARD — resolve supplierId → display name via hook
+// ============================================================================
+
+interface RowProps {
+  po: PurchaseOrder;
+  highlight: boolean;
+  selectedPOId?: string;
+  onView: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onSelect?: (po: PurchaseOrder) => void;
+}
+
+function POTableRow({ po, highlight, selectedPOId, onView, onDuplicate, onSelect }: RowProps) {
+  const contact = useContactById(po.supplierId);
+  const supplierName = contact ? getContactDisplayName(contact) : po.supplierId;
+
+  return (
+    <TableRow
+      className={cn(
+        'cursor-pointer',
+        highlight && 'bg-amber-50/50 dark:bg-amber-950/20',
+        selectedPOId === po.id && 'bg-primary/10 border-l-2 border-l-primary',
+      )}
+      onClick={() => onSelect ? onSelect(po) : onView(po.id)}
+    >
+      <TableCell className="font-medium">{po.poNumber}</TableCell>
+      <TableCell className="max-w-[200px] truncate">{supplierName}</TableCell>
+      <TableCell><StatusBadge status={po.status} /></TableCell>
+      <TableCell className="text-right tabular-nums">{formatPOCurrency(po.total)}</TableCell>
+      <TableCell>{formatPODate(po.dateCreated)}</TableCell>
+      <TableCell>{formatPODate(po.dateNeeded)}</TableCell>
+      <TableCell>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onView(po.id); }}>
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDuplicate(po.id); }}>
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+interface CardItemProps {
+  po: PurchaseOrder;
+  highlight: boolean;
+  selectedPOId?: string;
+  onView: (id: string) => void;
+  onSelect?: (po: PurchaseOrder) => void;
+}
+
+function POCardItem({ po, highlight, selectedPOId, onView, onSelect }: CardItemProps) {
+  const contact = useContactById(po.supplierId);
+  const supplierName = contact ? getContactDisplayName(contact) : po.supplierId;
+
+  return (
+    <article
+      className={cn(
+        'rounded-lg border p-3 space-y-1.5',
+        highlight && 'border-amber-300 dark:border-amber-700',
+        selectedPOId === po.id && 'border-primary bg-primary/5',
+      )}
+      onClick={() => onSelect ? onSelect(po) : onView(po.id)}
+      role="button"
+      tabIndex={0}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-semibold">{po.poNumber}</span>
+        <StatusBadge status={po.status} />
+      </div>
+      <p className="text-sm text-muted-foreground truncate">{supplierName}</p>
+      <div className="flex items-center justify-between text-sm">
+        <span>{formatPODate(po.dateCreated)}</span>
+        <span className="font-semibold tabular-nums">{formatPOCurrency(po.total)}</span>
+      </div>
+    </article>
   );
 }
 
