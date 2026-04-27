@@ -108,6 +108,7 @@
       "vendorVat": "Vendor VAT",
       "vendorPhone": "Phone",
       "vendorEmail": "Email",
+      "vendorLogoPreview": "Vendor Logo (extracted from quote)",
       "quoteDate": "Issue Date",
       "quoteReference": "Quote Ref.",
       "warranty": "Warranty",

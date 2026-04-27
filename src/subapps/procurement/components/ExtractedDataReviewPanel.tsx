@@ -108,6 +108,7 @@ export interface ExtractedDataReviewPanelProps {
     vendorPostalCode: string | null,
     vendorCountry: string | null,
     bankAccounts: Array<{ bankName: string; bic: string | null; iban: string; currency: string | null; accountHolder: string | null }>,
+    logoUrl: string | null,
   ) => Promise<void>;
   isSaving?: boolean;
   isSwitchingVendor?: boolean;
@@ -222,12 +223,13 @@ export function ExtractedDataReviewPanel({
                       mismatch.extractedVendorName,
                       mismatch.extractedVat,
                       extracted?.vendorPhone.value ?? null,
-                      extracted?.vendorEmails.value ?? [],
+                      extracted?.vendorEmails?.value ?? [],
                       extracted?.vendorAddress.value ?? null,
                       extracted?.vendorCity.value ?? null,
                       extracted?.vendorPostalCode.value ?? null,
                       extracted?.vendorCountry.value ?? null,
                       extracted?.vendorBankAccounts ?? [],
+                      extracted?.vendorLogoUrl ?? null,
                     )
                   }
                 >
@@ -263,11 +265,21 @@ export function ExtractedDataReviewPanel({
 
         <section>
           <h3 className="mb-2 text-sm font-semibold">{t('quotes.scan.vendorSection')}</h3>
+          {extracted.vendorLogoUrl && (
+            <div className="mb-3 flex items-center gap-3 rounded-md border bg-muted/20 px-3 py-2">
+              <img
+                src={extracted.vendorLogoUrl}
+                alt="vendor logo"
+                className="h-12 max-w-[180px] rounded object-contain"
+              />
+              <span className="text-xs text-muted-foreground">{t('quotes.scan.vendorLogoPreview')}</span>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <FieldRow label={t('quotes.vendor')} field={extracted.vendorName} />
             <FieldRow label={t('quotes.scan.vendorVat')} field={extracted.vendorVat} />
             <FieldRow label={t('quotes.scan.vendorPhone')} field={extracted.vendorPhone} />
-            <FieldRow label={t('quotes.scan.vendorEmail')} field={{ value: extracted.vendorEmails.value.join(', ') || null, confidence: extracted.vendorEmails.confidence }} />
+            <FieldRow label={t('quotes.scan.vendorEmail')} field={{ value: extracted.vendorEmails?.value?.join(', ') || null, confidence: extracted.vendorEmails?.confidence ?? 0 }} />
           </div>
         </section>
 

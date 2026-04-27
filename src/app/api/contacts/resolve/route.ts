@@ -34,6 +34,7 @@ import {
   storeContactEmail,
   storeBankAccounts,
   ensureSupplierPersona,
+  setContactLogoIfEmpty,
 } from './resolve-helpers';
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
@@ -42,7 +43,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       const parsed = safeParseBody(ResolveContactSchema, await req.json());
       if (parsed.error) return parsed.error;
 
-      const { vatNumber, name, phone, emails, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts } = parsed.data;
+      const { vatNumber, name, phone, emails, logoUrl, vendorAddress, vendorCity, vendorPostalCode, vendorCountry, bankAccounts } = parsed.data;
       const normalizedVat = normalizeVat(vatNumber);
       const companyId = ctx.companyId;
       const adminDb = getAdminFirestore();
@@ -63,6 +64,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           await ensureSupplierPersona(vatMatch.id, companyId, ctx.uid);
           if (bankAccounts?.length) await storeBankAccounts(vatMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(vatMatch));
           for (const em of emails ?? []) { if (em) await storeContactEmail(vatMatch.id, companyId, ctx.uid, em); }
+          if (logoUrl) await setContactLogoIfEmpty(vatMatch.id, companyId, ctx.uid, logoUrl);
           return NextResponse.json({ success: true, data: { contactId: vatMatch.id, displayName: resolveDisplayName(vatMatch), wasCreated: false } });
         }
       }
@@ -80,6 +82,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           await ensureSupplierPersona(nameMatch.id, companyId, ctx.uid);
           if (bankAccounts?.length) await storeBankAccounts(nameMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(nameMatch));
           for (const em of emails ?? []) { if (em) await storeContactEmail(nameMatch.id, companyId, ctx.uid, em); }
+          if (logoUrl) await setContactLogoIfEmpty(nameMatch.id, companyId, ctx.uid, logoUrl);
           return NextResponse.json({ success: true, data: { contactId: nameMatch.id, displayName: resolveDisplayName(nameMatch), wasCreated: false } });
         }
       }
@@ -132,6 +135,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
         await ensureSupplierPersona(result.contactId, companyId, ctx.uid);
         for (const em of emails ?? []) { if (em) await storeContactEmail(result.contactId, companyId, ctx.uid, em); }
+        if (logoUrl) await setContactLogoIfEmpty(result.contactId, companyId, ctx.uid, logoUrl);
         if (bankAccounts?.length) await storeBankAccounts(result.contactId, companyId, ctx.uid, bankAccounts, result.displayName ?? undefined);
 
         return NextResponse.json({

@@ -121,6 +121,7 @@ export interface ExtractedQuoteData {
   vendorBankAccounts: ExtractedBankAccount[];
   detectedLanguage: string;
   overallConfidence: number;
+  vendorLogoUrl?: string | null;
 }
 
 // ============================================================================

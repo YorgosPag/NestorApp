@@ -11,7 +11,10 @@ import 'server-only';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { applyExtractedData, updateQuote } from '@/subapps/procurement/services/quote-service';
+import { extractAndUploadVendorLogo } from '@/subapps/procurement/services/logo-extractor';
 import type { IQuoteAnalyzer } from '@/subapps/procurement/types/quote-analyzer';
 import type { AuthContext } from '@/lib/auth';
 
@@ -48,6 +51,17 @@ export async function processScanAsync(
       overallConfidence: extracted.overallConfidence,
       lines: extracted.lineItems.length,
     });
+
+    if (fileBuffer) {
+      const logoUrl = await extractAndUploadVendorLogo(fileBuffer, mimeType, ctx.companyId, quoteId);
+      if (logoUrl) {
+        await getAdminFirestore()
+          .collection(COLLECTIONS.QUOTES)
+          .doc(quoteId)
+          .update({ 'extractedData.vendorLogoUrl': logoUrl, updatedAt: FieldValue.serverTimestamp() });
+        logger.info('Vendor logo extracted', { quoteId, logoUrl });
+      }
+    }
   } catch (error) {
     const message = getErrorMessage(error, 'Quote AI scan failed');
     logger.error('Quote scan failed', { quoteId, error: message });

@@ -31,6 +31,7 @@ export const ResolveContactSchema = z.object({
   name: z.string().min(1).nullable().optional(),
   phone: z.string().nullable().optional(),
   emails: z.array(z.string()).optional(),
+  logoUrl: z.string().nullable().optional(),
   vendorAddress: z.string().nullable().optional(),
   vendorCity: z.string().nullable().optional(),
   vendorPostalCode: z.string().nullable().optional(),
@@ -102,6 +103,22 @@ export async function storeContactEmail(
     performedByName: uid,
     companyId,
   });
+}
+
+// ── Logo storage ─────────────────────────────────────────────────────────────
+
+export async function setContactLogoIfEmpty(
+  contactId: string,
+  companyId: string,
+  uid: string,
+  logoUrl: string,
+): Promise<void> {
+  const db = getAdminFirestore();
+  const docRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
+  const snap = await docRef.get();
+  if (!snap.exists || snap.data()?.companyId !== companyId) return;
+  if (snap.data()?.photoURL) return;
+  await docRef.update({ photoURL: logoUrl, updatedAt: FieldValue.serverTimestamp(), lastModifiedBy: uid });
 }
 
 // ── Supplier persona ──────────────────────────────────────────────────────────
