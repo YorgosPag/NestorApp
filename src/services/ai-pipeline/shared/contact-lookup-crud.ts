@@ -31,6 +31,61 @@ import { checkContactDuplicates } from './contact-lookup-search';
 const logger = createModuleLogger('PIPELINE_CONTACT_CRUD');
 
 // ============================================================================
+// PHONE PARSING (E.164 country-code split)
+// ============================================================================
+
+/**
+ * Split an international phone string into countryCode + local number.
+ * Handles `+359...` and `00359...` prefixes. Returns raw string if no prefix found.
+ * Exported for unit-testing only.
+ */
+export function parsePhoneForStorage(raw: string): { number: string; countryCode?: string } {
+  const clean = raw.replace(/[\s\-.() ]+/g, '');
+  const e164 = clean.startsWith('00') ? '+' + clean.slice(2) : clean;
+  if (!e164.startsWith('+')) return { number: clean };
+
+  const rest = e164.slice(1); // digits after '+'
+
+  // 3-digit codes (checked before 2-digit to avoid prefix collision in zones 35x/38x)
+  const CC3 = [
+    '350','351','352','353','354','355','356','357','358','359',
+    '370','371','372','373','374','375','376','377','378','380',
+    '381','382','385','386','387','388','389','420','421','423',
+    '500','501','502','503','504','505','506','507','508','509',
+    '590','591','592','593','594','595','596','597','598','599',
+    '850','852','853','855','856','880','886',
+    '960','961','962','963','964','965','966','967','968','969',
+    '970','971','972','973','974','975','976','977',
+    '992','993','994','995','996','998',
+  ];
+  for (const cc of CC3) {
+    if (rest.startsWith(cc) && rest.length > cc.length) {
+      return { countryCode: '+' + cc, number: rest.slice(cc.length) };
+    }
+  }
+
+  // 2-digit codes
+  const CC2 = [
+    '20','27','30','31','32','33','34','36','39','40','41','43',
+    '44','45','46','47','48','49','51','52','53','54','55','56',
+    '57','58','60','61','62','63','64','65','66','81','82','84',
+    '86','90','91','92','93','94','95','98',
+  ];
+  for (const cc of CC2) {
+    if (rest.startsWith(cc) && rest.length > cc.length) {
+      return { countryCode: '+' + cc, number: rest.slice(cc.length) };
+    }
+  }
+
+  // 1-digit (+1 NANP, +7 Russia/Kazakhstan)
+  if ((rest[0] === '1' || rest[0] === '7') && rest.length > 1) {
+    return { countryCode: '+' + rest[0], number: rest.slice(1) };
+  }
+
+  return { number: rest };
+}
+
+// ============================================================================
 // UPDATE CONTACT FIELD (ADR-145: UC-016)
 // ============================================================================
 
@@ -63,8 +118,10 @@ export async function updateContactField(
 
   if (isArray) {
     if (field === 'phone') {
+      const parsed = parsePhoneForStorage(value);
       updateData['phones'] = FieldValue.arrayUnion({
-        number: value,
+        number: parsed.number,
+        ...(parsed.countryCode ? { countryCode: parsed.countryCode } : {}),
         type: 'mobile',
         isPrimary: false,
       });
@@ -276,6 +333,8 @@ export async function createContactServerSide(
     : `${params.firstName} ${params.lastName}`.trim();
 
   // ── Step 3: Build Firestore document ──
+  const parsedPhone = params.phone ? parsePhoneForStorage(params.phone) : null;
+
   const contactDoc: Record<string, unknown> = {
     type: params.type,
     status: 'active',
@@ -289,8 +348,8 @@ export async function createContactServerSide(
     emails: params.email
       ? [{ email: params.email, type: 'work', isPrimary: true }]
       : [],
-    phones: params.phone
-      ? [{ number: params.phone, type: 'mobile', isPrimary: true }]
+    phones: parsedPhone
+      ? [{ number: parsedPhone.number, ...(parsedPhone.countryCode ? { countryCode: parsedPhone.countryCode } : {}), type: 'mobile', isPrimary: true }]
       : [],
     addresses: [],
     companyId: params.companyId,
