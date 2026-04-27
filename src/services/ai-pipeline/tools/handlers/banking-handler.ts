@@ -49,7 +49,7 @@ async function recordBankingAudit(
 // ============================================================================
 
 const VALID_ACCOUNT_TYPES: ReadonlySet<string> = new Set(['checking', 'savings', 'business', 'other']);
-const VALID_CURRENCIES: ReadonlySet<string> = new Set(['EUR', 'USD', 'GBP', 'CHF']);
+const VALID_CURRENCIES: ReadonlySet<string> = new Set(['EUR', 'USD', 'GBP', 'CHF', 'BGN', 'RON', 'RSD', 'MKD', 'ALL']);
 
 // ============================================================================
 // HANDLER
