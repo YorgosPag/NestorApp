@@ -33,17 +33,22 @@
     },
     "storage-public-upload": {
       "ssotFile": "src/services/storage-admin/public-upload.service.ts",
-      "description": "Server-side publicly-accessible uploads must go through uploadPublicFile(). makePublic() silently no-ops on UBLA-enabled buckets (the new .firebasestorage.app default), making direct storage.googleapis.com URLs return 403. Token-based URLs via firebasestorage.googleapis.com bypass UBLA.",
+      "description": "Server-side publicly-accessible uploads must go through uploadPublicFile(). Three failure modes blocked: (1) makePublic() silently no-ops on UBLA-enabled buckets making storage.googleapis.com URLs return 403; (2) hardcoded storage.googleapis.com URL templates assume public ACL; (3) bucket.file().save() without prior FILES/{fileId} pre-claim races against onStorageFinalize orphan-cleanup which deletes the file hundreds of ms after upload (ADR-327 incident 2026-04-27). The pre-claim must be written BEFORE save() — uploadPublicFile() does this atomically.",
       "forbiddenPatterns": [
         "\\.makePublic\\(\\)",
-        "https://storage\\.googleapis\\.com/\\$\\{"
+        "https://storage\\.googleapis\\.com/\\$\\{",
+        "\\.file\\([^)]*\\)\\.save\\("
       ],
       "allowlist": [
         "src/services/storage-admin/public-upload.service.ts",
         "src/app/api/upload/photo/route.ts",
         "src/app/api/communications/webhooks/telegram/telegram/media-download-storage.ts",
         "src/app/api/vendor/quote/[token]/upload.ts",
-        "src/services/attendance/attendance-server-service.ts"
+        "src/services/attendance/attendance-server-service.ts",
+        "src/services/showcase-core/",
+        "src/services/floorplans/",
+        "src/app/api/properties/",
+        "functions/"
       ],
       "tier": 2
     },

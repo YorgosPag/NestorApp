@@ -166,4 +166,17 @@ const doc = { createdBy: userId };`,
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 const entity = await createEntity({ name: 'x' });`,
   },
+
+  'storage-public-upload': {
+    shouldMatch: `// Scanner must catch all 3 anti-patterns:
+await fileRef.makePublic();
+const url = \`https://storage.googleapis.com/\${bucket.name}/\${path}\`;
+await bucket.file(storagePath).save(buffer);
+await bucket.file(buildPath(id)).save(buf, { contentType: 'image/png' });`,
+    shouldSkip: `// Scanner must pass SSoT-routed uploads:
+import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
+const result = await uploadPublicFile({ storagePath, buffer, contentType });
+const proxyUrl = result.url;
+const altHost = 'pagonis-87766.firebasestorage.app';`,
+  },
 };
