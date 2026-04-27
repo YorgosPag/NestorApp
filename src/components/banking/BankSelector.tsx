@@ -25,7 +25,9 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   GREEK_BANKS,
+  SE_EUROPEAN_BANKS,
   getSystemicBanks,
+  getSEEuropeanBanks,
   getAllBanksSorted,
   type BankInfo
 } from '@/constants/greek-banks';
@@ -106,12 +108,15 @@ export function BankSelector({
   const otherBanks = allBanks.filter(
     bank => !systemicBanks.some(s => s.code === bank.code)
   );
+  const seEuropeanBanks = getSEEuropeanBanks();
 
   const handleValueChange = (newValue: string) => {
     if (newValue === OTHER_BANK_VALUE) {
       onChange('', undefined);
     } else {
-      const bank = GREEK_BANKS.find(b => b.code === newValue);
+      const bank =
+        GREEK_BANKS.find(b => b.code === newValue) ??
+        SE_EUROPEAN_BANKS.find(b => b.code === newValue);
       onChange(newValue, bank);
     }
   };
@@ -163,6 +168,14 @@ export function BankSelector({
               <SelectGroup>
                 <SelectLabel>{t('bank.groups.other')}</SelectLabel>
                 {otherBanks.map(renderBankItem)}
+              </SelectGroup>
+
+              <SelectSeparator />
+
+              {/* SE European / Balkan Banks */}
+              <SelectGroup>
+                <SelectLabel>{t('bank.groups.international')}</SelectLabel>
+                {seEuropeanBanks.map(renderBankItem)}
               </SelectGroup>
 
               {/* Other Option */}

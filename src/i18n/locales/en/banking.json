@@ -4,7 +4,8 @@
     "placeholder": "Select bank...",
     "groups": {
       "systemic": "Systemic Banks",
-      "other": "Other Banks"
+      "other": "Other Greek Banks",
+      "international": "Balkan / SE European Banks"
     },
     "otherForeign": "Other bank (foreign)"
   },

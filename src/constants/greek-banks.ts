@@ -158,6 +158,29 @@ export const GREEK_BANKS: readonly BankInfo[] = [
 ] as const;
 
 // ============================================================================
+// SE EUROPEAN / BALKAN BANKS CATALOG
+// ============================================================================
+
+export const SE_EUROPEAN_BANKS: readonly BankInfo[] = [
+  // Bulgaria
+  { code: 'UNCRBGSF', name: 'UniCredit Bulbank', country: 'BG', city: 'Sofia', brandColor: '#E31937' },
+  { code: 'UBBSBGSF', name: 'UBB (United Bulgarian Bank)', country: 'BG', city: 'Sofia', brandColor: '#004B87' },
+  { code: 'STSABGSF', name: 'DSK Bank', country: 'BG', city: 'Sofia', brandColor: '#009B4D' },
+  { code: 'RZBBBGSF', name: 'Raiffeisenbank Bulgaria', country: 'BG', city: 'Sofia', brandColor: '#FFED00' },
+  { code: 'FINVBGSF', name: 'First Investment Bank (FIB)', country: 'BG', city: 'Sofia', brandColor: '#003087' },
+  { code: 'BPBIBGSF', name: 'Postbank Bulgaria', country: 'BG', city: 'Sofia', brandColor: '#00529B' },
+  { code: 'CECBBGSF', name: 'CCB (Central Cooperative Bank)', country: 'BG', city: 'Sofia', brandColor: '#004B87' },
+  // Romania
+  { code: 'RNCBROBU', name: 'BCR (Banca Comerciala Romana)', country: 'RO', city: 'Bucharest', brandColor: '#003087' },
+  { code: 'BRDEROBUXXX', name: 'BRD – Groupe Société Générale', country: 'RO', city: 'Bucharest', brandColor: '#E2001A' },
+  { code: 'BTRLRO22', name: 'Banca Transilvania', country: 'RO', city: 'Cluj-Napoca', brandColor: '#0054A5' },
+  // Serbia
+  { code: 'BACXRSBG', name: 'UniCredit Bank Serbia', country: 'RS', city: 'Belgrade', brandColor: '#E31937' },
+  // Albania
+  { code: 'NCBAALTX', name: 'BKT (Banka Kombetare Tregtare)', country: 'AL', city: 'Tirana', brandColor: '#E31937' },
+] as const;
+
+// ============================================================================
 // GREEK BANK CODE TO SWIFT MAPPING
 // ============================================================================
 
@@ -205,7 +228,10 @@ export const GREEK_BANK_CODES: Record<string, string> = {
  */
 export function getBankByCode(code: string): BankInfo | undefined {
   const upperCode = code.toUpperCase();
-  return GREEK_BANKS.find(bank => bank.code === upperCode);
+  return (
+    GREEK_BANKS.find(bank => bank.code === upperCode) ??
+    SE_EUROPEAN_BANKS.find(bank => bank.code === upperCode)
+  );
 }
 
 /**
@@ -220,23 +246,32 @@ export function getBankByCode(code: string): BankInfo | undefined {
  * console.log(bank?.name); // "Εθνική Τράπεζα της Ελλάδος"
  * ```
  */
+/** Bulgarian IBAN bank codes (positions 4-7, 4 letters) → SWIFT */
+const BULGARIAN_BANK_CODES: Record<string, string> = {
+  'UNCR': 'UNCRBGSF', // UniCredit Bulbank
+  'UBBS': 'UBBSBGSF', // UBB
+  'STSA': 'STSABGSF', // DSK Bank
+  'RZBB': 'RZBBBGSF', // Raiffeisenbank
+  'FINV': 'FINVBGSF', // First Investment Bank
+  'BPBI': 'BPBIBGSF', // Postbank
+  'CECB': 'CECBBGSF', // CCB
+};
+
 export function getBankByIBAN(iban: string): BankInfo | undefined {
   const cleaned = iban.replace(/\s/g, '').toUpperCase();
+  const country = cleaned.substring(0, 2);
 
-  // Check if it's a Greek IBAN
-  if (!cleaned.startsWith('GR') || cleaned.length !== 27) {
-    return undefined;
+  if (country === 'GR' && cleaned.length === 27) {
+    const swiftCode = GREEK_BANK_CODES[cleaned.substring(4, 7)];
+    return swiftCode ? getBankByCode(swiftCode) : undefined;
   }
 
-  // Extract bank code (positions 4-6, 0-indexed)
-  const bankCode = cleaned.substring(4, 7);
-  const swiftCode = GREEK_BANK_CODES[bankCode];
-
-  if (!swiftCode) {
-    return undefined;
+  if (country === 'BG' && cleaned.length === 22) {
+    const swiftCode = BULGARIAN_BANK_CODES[cleaned.substring(4, 8)];
+    return swiftCode ? getBankByCode(swiftCode) : undefined;
   }
 
-  return getBankByCode(swiftCode);
+  return undefined;
 }
 
 /**
@@ -258,5 +293,9 @@ export function getAllBanksSorted(): readonly BankInfo[] {
 export function getSystemicBanks(): readonly BankInfo[] {
   const systemicCodes = ['ETHNGRAA', 'CRBAGRAA', 'PIABORAA', 'EFABORAA'];
   return GREEK_BANKS.filter(bank => systemicCodes.includes(bank.code));
+}
+
+export function getSEEuropeanBanks(): readonly BankInfo[] {
+  return SE_EUROPEAN_BANKS;
 }
 
