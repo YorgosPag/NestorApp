@@ -27,16 +27,6 @@ function approxEqual(a: number, b: number, tol = TOLERANCE): boolean {
   return Math.abs(a - b) / ref <= tol;
 }
 
-// Ratio threshold above which component math mismatch is likely area-based pricing
-// (e.g. unitPrice=106€/m², qty=20pz, lineTotal=84.80 = 0.8m²×106 per piece).
-// Below this threshold we still hard-fail (genuine column misread).
-const AREA_PRICING_RATIO_THRESHOLD = 0.5;
-
-function isLikelyAreaPricing(expected: number, actual: number): boolean {
-  const ref = Math.max(Math.abs(expected), Math.abs(actual), 1);
-  return Math.abs(expected - actual) / ref > AREA_PRICING_RATIO_THRESHOLD;
-}
-
 export function validateExtraction(raw: RawExtractedQuote): ValidationResult {
   const issues: string[] = [];
   const warnings: string[] = [];
@@ -55,13 +45,9 @@ export function validateExtraction(raw: RawExtractedQuote): ValidationResult {
         if (!approxEqual(expected, c.lineTotal)) {
           const r = row.rowNumber ?? '?';
           const desc = (c.description ?? '').slice(0, 30);
-          const msg = `Γραμμή ${r} "${desc}": τιμή(${c.unitPrice}) × τμχ(${c.quantity}) × (1 - ${discount}%) = ${expected.toFixed(2)} αλλά αξία γραμμής = ${c.lineTotal.toFixed(2)}.`;
-          // Large discrepancy → likely area-based pricing (m²/ml). Don't retry; add soft warning.
-          if (isLikelyAreaPricing(expected, c.lineTotal)) {
-            warnings.push(msg);
-          } else {
-            issues.push(msg);
-          }
+          // Always soft warning: area-based pricing (m²/ml/τ.μ.) legitimately breaks
+          // unitPrice×qty=lineTotal. Row-level and quote-level checks catch genuine misreads.
+          warnings.push(`Γραμμή ${r} "${desc}": τιμή(${c.unitPrice}) × τμχ(${c.quantity}) × (1 - ${discount}%) = ${expected.toFixed(2)} αλλά αξία γραμμής = ${c.lineTotal.toFixed(2)}.`);
         }
       }
     }

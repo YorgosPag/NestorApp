@@ -306,6 +306,15 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
       result = await fetchNominatim(buildFreeformUrl(globalQuery, null));
       if (result) return formatResult(result, params);
     }
+
+    // 8th variant: city-only global — transliterated foreign addresses often fail street lookup.
+    const cityOnly = params.city || params.neighborhood;
+    if (cityOnly) {
+      logger.info('Geocoding attempt 8: city-only global fallback');
+      await sleep(GEOCODING.NOMINATIM_DELAY_MS);
+      result = await fetchNominatim(buildFreeformUrl(cityOnly, null));
+      if (result) return formatResult(result, params);
+    }
   }
 
   logger.warn('All geocoding variants failed', { data: { params } });
