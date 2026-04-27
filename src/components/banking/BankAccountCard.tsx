@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { BankAccount } from '@/types/contacts/banking';
-import { formatIBAN, ACCOUNT_TYPE_LABELS, CURRENCY_LABELS } from '@/types/contacts/banking';
+import { formatIBAN } from '@/types/contacts/banking';
 import { getBankByCode } from '@/constants/greek-banks';
 import {
   Star,
@@ -205,10 +205,10 @@ export function BankAccountCard({
             {/* Account type and currency */}
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline">
-                {ACCOUNT_TYPE_LABELS[account.accountType]}
+                {t(`account.types.${account.accountType}`)}
               </Badge>
               <Badge variant="outline">
-                {CURRENCY_LABELS[account.currency] || account.currency}
+                {t(`account.currencies.${account.currency}`) || account.currency}
               </Badge>
               {account.holderName && (
                 <span className={cn("text-sm", colors.text.muted)}>
@@ -217,6 +217,12 @@ export function BankAccountCard({
               )}
             </div>
 
+            {/* IBAN checksum warning (AI-extracted, failed MOD97) */}
+            {account.ibanChecksumWarning && (
+              <p className={cn("text-sm", colors.text.warning)}>
+                {t('account.ibanChecksumWarning')}
+              </p>
+            )}
             {/* Notes */}
             {account.notes && (
               <p className={cn("text-sm line-clamp-2", colors.text.muted)}>

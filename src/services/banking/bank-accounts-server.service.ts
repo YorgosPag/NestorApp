@@ -267,12 +267,9 @@ export const BankAccountsServerService = {
         return { success: false, error: validationError };
       }
 
-      // 3. If lenient and IBAN checksum failed, prepend a verification note
+      // 3. If lenient and IBAN checksum failed, flag for UI warning (no hardcoded text in DB)
       const ibanCheck = lenientIban ? validateIBAN(data.iban) : null;
-      const ibanNote =
-        ibanCheck && !ibanCheck.valid
-          ? '⚠️ IBAN estratto automaticamente — checksum non valido. Verificare manualmente.'
-          : '';
+      const ibanChecksumWarning = !!(ibanCheck && !ibanCheck.valid);
 
       // 4. Duplicate IBAN check
       const cleanedIban = cleanIBAN(data.iban);
@@ -305,7 +302,8 @@ export const BankAccountsServerService = {
         currency: data.currency as CurrencyCode,
         isPrimary: data.isPrimary,
         holderName: data.holderName ?? null,
-        notes: ibanNote ? (baseNotes ? `${ibanNote}\n${baseNotes}` : ibanNote) : baseNotes,
+        notes: baseNotes,
+        ibanChecksumWarning: ibanChecksumWarning || null,
         isActive: data.isActive,
         createdBy,
         createdAt: FieldValue.serverTimestamp(),

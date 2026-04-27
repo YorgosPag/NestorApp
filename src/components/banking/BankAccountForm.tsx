@@ -31,8 +31,8 @@ import type {
 import {
   createEmptyBankAccount,
   validateIBAN,
-  ACCOUNT_TYPE_LABELS,
-  CURRENCY_LABELS
+  ACCOUNT_TYPE_OPTIONS,
+  CURRENCY_OPTIONS,
 } from '@/types/contacts/banking';
 import { getBankByIBAN } from '@/constants/greek-banks';
 import { IBANInput } from './IBANInput';
@@ -348,13 +348,11 @@ export function BankAccountForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(Object.entries(ACCOUNT_TYPE_LABELS) as [AccountType, string][]).map(
-                ([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                )
-              )}
+              {ACCOUNT_TYPE_OPTIONS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {t(`account.types.${value}`)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -371,13 +369,11 @@ export function BankAccountForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(Object.entries(CURRENCY_LABELS) as [CurrencyCode, string][]).map(
-                ([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                )
-              )}
+              {CURRENCY_OPTIONS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {t(`account.currencies.${value}`)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

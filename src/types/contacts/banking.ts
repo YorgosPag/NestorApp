@@ -20,6 +20,7 @@ export type AccountType = 'checking' | 'savings' | 'business' | 'other';
 /**
  * Account type labels for UI display (Greek)
  */
+/** @deprecated Use t('account.types.<key>') with banking namespace instead */
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   checking: 'Τρεχούμενος',
   savings: 'Ταμιευτηρίου',
@@ -27,14 +28,15 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   other: 'Άλλος'
 } as const;
 
+/** Ordered keys for account type dropdowns — use with t('account.types.<key>') */
+export const ACCOUNT_TYPE_OPTIONS: readonly AccountType[] = ['checking', 'savings', 'business', 'other'] as const;
+
 /**
  * ISO 4217 Currency codes — EUR/USD/GBP/CHF + SE-European currencies (BGN, RON, RSD, MKD, ALL)
  */
 export type CurrencyCode = 'EUR' | 'USD' | 'GBP' | 'CHF' | 'BGN' | 'RON' | 'RSD' | 'MKD' | 'ALL';
 
-/**
- * Currency labels for UI display
- */
+/** @deprecated Use t('account.currencies.<code>') with banking namespace instead */
 export const CURRENCY_LABELS: Record<CurrencyCode, string> = {
   EUR: 'Ευρώ (EUR)',
   USD: 'Δολάριο ΗΠΑ (USD)',
@@ -46,6 +48,9 @@ export const CURRENCY_LABELS: Record<CurrencyCode, string> = {
   MKD: 'Δηνάριο Β. Μακεδονίας (MKD)',
   ALL: 'Αλβανικό Λεκ (ALL)',
 } as const;
+
+/** Ordered keys for currency dropdowns — use with t('account.currencies.<code>') */
+export const CURRENCY_OPTIONS: readonly CurrencyCode[] = ['EUR', 'USD', 'GBP', 'CHF', 'BGN', 'RON', 'RSD', 'MKD', 'ALL'] as const;
 
 // ============================================================================
 // BANK INFO INTERFACE
@@ -126,6 +131,9 @@ export interface BankAccount {
 
   /** Additional notes */
   notes?: string;
+
+  /** True when IBAN was AI-extracted and failed MOD97 checksum — manual verification needed */
+  ibanChecksumWarning?: boolean;
 
   /** Whether the account is active */
   isActive: boolean;

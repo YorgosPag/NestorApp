@@ -27,7 +27,25 @@
     "primaryAccount": "Primary account",
     "activeAccount": "Active account",
     "accountNumber": "Account No.",
-    "branch": "Branch"
+    "branch": "Branch",
+    "ibanChecksumWarning": "⚠️ IBAN extracted automatically — check code invalid. Manual verification required.",
+    "types": {
+      "checking": "Checking",
+      "savings": "Savings",
+      "business": "Business",
+      "other": "Other"
+    },
+    "currencies": {
+      "EUR": "Euro (EUR)",
+      "USD": "US Dollar (USD)",
+      "GBP": "British Pound (GBP)",
+      "CHF": "Swiss Franc (CHF)",
+      "BGN": "Bulgarian Lev (BGN)",
+      "RON": "Romanian Leu (RON)",
+      "RSD": "Serbian Dinar (RSD)",
+      "MKD": "North Macedonian Denar (MKD)",
+      "ALL": "Albanian Lek (ALL)"
+    }
   },
   "form": {
     "bankName": "Bank Name",
