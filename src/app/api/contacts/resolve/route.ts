@@ -213,7 +213,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
             street: vendorAddress ?? '',
             city: vendorCity ?? '',
             postalCode: vendorPostalCode ?? '',
-            country: vendorCountry ?? '',
+            country: vendorCountry ?? null,
             type: 'work',
             isPrimary: true,
           };

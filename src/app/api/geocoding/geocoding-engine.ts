@@ -296,6 +296,18 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
     if (result) return formatResult(result, params);
   }
 
+  // 7th variant: if we had a country restriction and all failed, try global search.
+  // Handles foreign vendor addresses saved with wrong default country (e.g. BG vendor → Greece).
+  if (cc !== null) {
+    const globalQuery = toFreeformQuery(params);
+    if (globalQuery.trim() && globalQuery !== osmQuery) {
+      logger.info('Geocoding attempt 7: global free-form (country restriction lifted)');
+      await sleep(GEOCODING.NOMINATIM_DELAY_MS);
+      result = await fetchNominatim(buildFreeformUrl(globalQuery, null));
+      if (result) return formatResult(result, params);
+    }
+  }
+
   logger.warn('All geocoding variants failed', { data: { params } });
   return null;
 }
