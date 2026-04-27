@@ -491,10 +491,8 @@ export const getTrashStats = functions
     };
   });
 
-// ============================================================================
-// STORAGE TRIGGERS (onFinalize)
-//   - onStorageFinalize: orphan cleanup (ADR-032 + ADR-312)
-//   - onDxfProcessedFinalize: DXF → PNG thumbnail (ADR-312 Phase 3)
-// ============================================================================
+// STORAGE TRIGGERS — onStorageFinalize (orphan cleanup, ADR-032+312),
+// onDxfProcessedFinalize (DXF thumbnail), orphanSpikeAlert (ADR-327 Layer 3).
 export { onStorageFinalize } from './storage/orphan-cleanup';
 export { onDxfProcessedFinalize } from './storage/dxf-thumbnail-onfinalize';
+export { orphanSpikeAlert } from './storage/orphan-spike-alert';
