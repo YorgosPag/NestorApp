@@ -123,6 +123,8 @@
         "title": "Possible Vendor Mismatch",
         "bodyVat": "The quote has VAT/EIK {extractedVat} ({extractedName}), but a different vendor is selected.",
         "bodyName": "The quote was issued by {extractedName}, but a different vendor is selected.",
+        "switchVendor": "Switch to {name}",
+        "switching": "Updating vendor...",
         "dismiss": "Understood, continue",
         "goBack": "Go back to correct"
       }

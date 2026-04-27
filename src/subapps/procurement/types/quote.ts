@@ -216,6 +216,7 @@ export interface UpdateQuoteDTO {
   notes?: string | null;
   status?: QuoteStatus;
   overrideReason?: string;
+  vendorContactId?: string;
 }
 
 export interface QuoteFilters {

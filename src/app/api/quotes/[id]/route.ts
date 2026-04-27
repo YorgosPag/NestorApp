@@ -50,6 +50,7 @@ const UpdateQuoteSchema = z.object({
   warrantyTerms: z.string().max(500).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   overrideReason: z.string().min(20).max(1000).optional(),
+  vendorContactId: z.string().min(1).optional(),
 });
 
 // ============================================================================

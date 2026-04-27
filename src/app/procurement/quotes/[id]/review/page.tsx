@@ -26,6 +26,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
   const supplierContact = useContactById(quote?.vendorContactId ?? null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [switchingVendor, setSwitchingVendor] = useState(false);
 
   const handleBack = useCallback(() => {
     if (quote?.rfqId) {
@@ -52,6 +53,40 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : t('quotes.errors.updateFailed'));
       setSaving(false);
+    }
+  };
+
+  const handleSwitchVendor = async (
+    name: string | null,
+    vat: string | null,
+    phone: string | null,
+    email: string | null,
+  ) => {
+    setSwitchingVendor(true);
+    setSaveError(null);
+    try {
+      const resolveRes = await fetch('/api/contacts/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vatNumber: vat, name, phone, email }),
+      });
+      if (!resolveRes.ok) throw new Error(await resolveRes.text());
+      const resolveJson = await resolveRes.json();
+      const contactId = resolveJson?.data?.contactId as string | undefined;
+      if (!contactId) throw new Error('No contactId returned');
+
+      const patchRes = await fetch(`/api/quotes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendorContactId: contactId }),
+      });
+      if (!patchRes.ok) throw new Error(await patchRes.text());
+
+      await refetch();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : t('quotes.errors.updateFailed'));
+    } finally {
+      setSwitchingVendor(false);
     }
   };
 
@@ -117,7 +152,9 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
             onConfirm={handleConfirm}
             onReject={handleReject}
             onGoBack={handleBack}
+            onSwitchVendor={handleSwitchVendor}
             isSaving={saving}
+            isSwitchingVendor={switchingVendor}
           />
         </>
       )}

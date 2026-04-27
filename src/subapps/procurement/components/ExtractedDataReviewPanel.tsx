@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, AlertTriangle, X, Save } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, X, Save, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { computeQuoteTotals } from '@/subapps/procurement/types/quote';
 import { detectVendorMismatch } from '@/subapps/procurement/utils/vendor-mismatch';
@@ -98,7 +98,14 @@ export interface ExtractedDataReviewPanelProps {
   onConfirm: (lines: QuoteLine[]) => Promise<void> | void;
   onReject?: () => Promise<void> | void;
   onGoBack?: () => void;
+  onSwitchVendor?: (
+    name: string | null,
+    vat: string | null,
+    phone: string | null,
+    email: string | null,
+  ) => Promise<void>;
   isSaving?: boolean;
+  isSwitchingVendor?: boolean;
 }
 
 export function ExtractedDataReviewPanel({
@@ -107,7 +114,9 @@ export function ExtractedDataReviewPanel({
   onConfirm,
   onReject,
   onGoBack,
+  onSwitchVendor,
   isSaving = false,
+  isSwitchingVendor = false,
 }: ExtractedDataReviewPanelProps) {
   const { t } = useTranslation('quotes');
   const extracted = quote.extractedData;
@@ -197,9 +206,35 @@ export function ExtractedDataReviewPanel({
                 </p>
               </div>
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              {onSwitchVendor && mismatch.extractedVendorName && (
+                <Button
+                  size="sm"
+                  className="bg-amber-600 text-white hover:bg-amber-700"
+                  disabled={isSwitchingVendor || isSaving}
+                  onClick={() =>
+                    void onSwitchVendor(
+                      mismatch.extractedVendorName,
+                      mismatch.extractedVat,
+                      extracted?.vendorPhone.value ?? null,
+                      extracted?.vendorEmail.value ?? null,
+                    )
+                  }
+                >
+                  {isSwitchingVendor ? (
+                    <>
+                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                      {t('quotes.scan.vendorMismatch.switching')}
+                    </>
+                  ) : (
+                    t('quotes.scan.vendorMismatch.switchVendor', {
+                      name: mismatch.extractedVendorName,
+                    })
+                  )}
+                </Button>
+              )}
               {onGoBack && (
-                <Button size="sm" variant="outline" onClick={onGoBack}>
+                <Button size="sm" variant="outline" disabled={isSwitchingVendor} onClick={onGoBack}>
                   {t('quotes.scan.vendorMismatch.goBack')}
                 </Button>
               )}
@@ -207,6 +242,7 @@ export function ExtractedDataReviewPanel({
                 size="sm"
                 variant="ghost"
                 className="text-amber-700 hover:text-amber-900 dark:text-amber-400"
+                disabled={isSwitchingVendor}
                 onClick={() => setMismatchDismissed(true)}
               >
                 {t('quotes.scan.vendorMismatch.dismiss')}

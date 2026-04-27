@@ -196,6 +196,7 @@ export async function updateQuote(
       overrideReason: dto.overrideReason ?? current.overrideReason,
       overrideAt: dto.overrideReason ? admin.firestore.Timestamp.now() : current.overrideAt,
       overriddenBy: dto.overrideReason ? ctx.uid : current.overriddenBy,
+      vendorContactId: dto.vendorContactId ?? current.vendorContactId,
       auditTrail: newAudit,
       updatedAt: admin.firestore.Timestamp.now(),
     };
