@@ -20,8 +20,8 @@ const logger = createModuleLogger('VendorLogoExtractor');
 
 const LOGO_CROP_HEIGHT_PCT = 0.22;
 const LOGO_CROP_WIDTH_PCT = 0.45;
-const LOGO_DPI = 120;
-const LOGO_MAX_WIDTH_PX = 900;
+const LOGO_DPI = 200;
+const LOGO_MAX_WIDTH_PX = 1600;
 
 interface NapiImage { width: number; height: number; }
 interface NapiCtx { drawImage(image: NapiImage, dx: number, dy: number): void; }
