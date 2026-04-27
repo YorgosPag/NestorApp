@@ -93,12 +93,31 @@ export async function uploadPublicFile(
     },
   });
 
+  // Post-save verification: read back the metadata to confirm the object is
+  // actually present at the expected bucket+path. Detects silent SDK failures
+  // (e.g. bucket-name aliasing that lets save() succeed against a different
+  // bucket than the one the proxy will read from).
+  let verifiedSize: number | undefined;
+  try {
+    const [meta] = await fileRef.getMetadata();
+    const sizeRaw = meta.size;
+    verifiedSize = typeof sizeRaw === 'string' ? Number(sizeRaw) : (sizeRaw as number | undefined);
+  } catch (verifyErr) {
+    logger.error('Post-save verification FAILED — save reported success but object is unreachable', {
+      bucket: bucket.name,
+      storagePath: params.storagePath,
+      errorCode: (verifyErr as { code?: number }).code,
+      errorMessage: (verifyErr as Error).message,
+    });
+  }
+
   const url = buildProxyUrl(params.storagePath);
 
   logger.info('File uploaded', {
     bucket: bucket.name,
     storagePath: params.storagePath,
     sizeBytes: params.buffer.length,
+    verifiedSize,
     contentType: params.contentType,
   });
 
