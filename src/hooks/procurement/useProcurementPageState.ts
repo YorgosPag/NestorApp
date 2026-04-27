@@ -39,7 +39,7 @@ export function useProcurementPageState() {
   // ── UI State ──────────────────────────────────────────────────────────────
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [editMode, setEditMode] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
   // ── Filter State (AdvancedFiltersPanel) ───────────────────────────────────
