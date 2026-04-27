@@ -137,22 +137,36 @@ function PanelShell({ title, children }: { title: string; children: React.ReactN
   );
 }
 
+const FACTOR_TEXT_COLORS: Record<keyof QuoteComparisonEntry['breakdown'], string> = {
+  price: 'text-blue-600 dark:text-blue-400',
+  supplier: 'text-emerald-600 dark:text-emerald-400',
+  terms: 'text-amber-600 dark:text-amber-400',
+  delivery: 'text-pink-600 dark:text-pink-400',
+};
+
 function TemplateSummary({ templateId, weights }: { templateId: string; weights: ComparisonWeights }) {
   const { t, i18n } = useTranslation('quotes');
   const meta = COMPARISON_TEMPLATES[templateId];
   const label = meta ? (i18n.language === 'el' ? meta.labelEl : meta.labelEn) : templateId;
   const fmt = (n: number) => `${Math.round(n * 100)}%`;
+  const factors: Array<[keyof QuoteComparisonEntry['breakdown'], string]> = [
+    ['price', t('comparison.factors.price')],
+    ['supplier', t('comparison.factors.supplier')],
+    ['terms', t('comparison.factors.terms')],
+    ['delivery', t('comparison.factors.delivery')],
+  ];
 
   return (
     <p className="text-xs text-muted-foreground">
       {t('comparison.template')}: <span className="font-medium">{label}</span>
-      {' · '}
-      {t('comparison.weightSummary', {
-        price: fmt(weights.price),
-        supplier: fmt(weights.supplier),
-        terms: fmt(weights.terms),
-        delivery: fmt(weights.delivery),
-      })}
+      {factors.map(([key, factorLabel]) => (
+        <span key={key}>
+          {' · '}
+          <span className={`font-medium ${FACTOR_TEXT_COLORS[key]}`}>
+            {factorLabel} {fmt(weights[key])}
+          </span>
+        </span>
+      ))}
     </p>
   );
 }
@@ -196,6 +210,13 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, onAwardClick }: RowPr
   );
 }
 
+const FACTOR_BAR_COLORS: Record<keyof QuoteComparisonEntry['breakdown'], string> = {
+  price: 'bg-blue-600',
+  supplier: 'bg-emerald-600',
+  terms: 'bg-amber-600',
+  delivery: 'bg-pink-600',
+};
+
 function BreakdownBars({ breakdown }: { breakdown: QuoteComparisonEntry['breakdown'] }) {
   const { t } = useTranslation('quotes');
   const items: Array<[keyof QuoteComparisonEntry['breakdown'], string]> = [
@@ -209,13 +230,25 @@ function BreakdownBars({ breakdown }: { breakdown: QuoteComparisonEntry['breakdo
       {items.map(([key, label]) => (
         <div key={key} className="flex items-center gap-2">
           <span className="w-16 text-xs text-muted-foreground">{label}</span>
-          <Progress value={Math.round(breakdown[key])} className="h-1.5 flex-1" />
+          <Progress
+            value={Math.round(breakdown[key])}
+            className="h-1.5 flex-1"
+            indicatorClassName={FACTOR_BAR_COLORS[key]}
+          />
           <span className="w-8 text-right text-xs tabular-nums">{Math.round(breakdown[key])}</span>
         </div>
       ))}
     </div>
   );
 }
+
+const FLAG_BADGE_COLORS: Record<QuoteComparisonEntry['flags'][number], string> = {
+  cheapest: 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700',
+  most_reliable: 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700',
+  best_terms: 'border-amber-600 bg-amber-600 text-white hover:bg-amber-700',
+  fastest_delivery: 'border-pink-600 bg-pink-600 text-white hover:bg-pink-700',
+  risk_low_score: '',
+};
 
 function FlagsRow({ flags }: { flags: QuoteComparisonEntry['flags'] }) {
   const { t } = useTranslation('quotes');
@@ -225,7 +258,11 @@ function FlagsRow({ flags }: { flags: QuoteComparisonEntry['flags'] }) {
       {flags.map((flag) => {
         const isRisk = flag === 'risk_low_score';
         return (
-          <Badge key={flag} variant={isRisk ? 'destructive' : 'secondary'} className="text-[10px]">
+          <Badge
+            key={flag}
+            variant={isRisk ? 'destructive' : 'outline'}
+            className={`text-[10px] ${isRisk ? '' : FLAG_BADGE_COLORS[flag]}`}
+          >
             {isRisk && <AlertTriangle className="mr-1 h-3 w-3" />}
             {t(`comparison.flags.${flag}`, { defaultValue: '' }) || flag}
           </Badge>

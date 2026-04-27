@@ -35,35 +35,7 @@ const COMPARABLE_STATUSES: ReadonlySet<QuoteStatus> = new Set([
 const RISK_SUPPLIER_SCORE_THRESHOLD = 70;
 const STRONG_WINNER_DELTA_PERCENT = 5;
 
-// ============================================================================
-// VENDOR NAME RESOLUTION
-// ============================================================================
-
-async function fetchVendorNames(
-  companyId: string,
-  vendorIds: string[]
-): Promise<Map<string, string>> {
-  const unique = Array.from(new Set(vendorIds.filter(Boolean)));
-  const out = new Map<string, string>();
-  if (unique.length === 0) return out;
-
-  return safeFirestoreOperation(async (db) => {
-    for (let i = 0; i < unique.length; i += 30) {
-      const chunk = unique.slice(i, i + 30);
-      const snap = await db
-        .collection(COLLECTIONS.CONTACTS)
-        .where('companyId', '==', companyId)
-        .where('__name__', 'in', chunk)
-        .get();
-      for (const doc of snap.docs) {
-        const data = doc.data();
-        out.set(doc.id, String(data.displayName ?? data.companyName ?? doc.id));
-      }
-    }
-    for (const id of unique) if (!out.has(id)) out.set(id, id);
-    return out;
-  }, out);
-}
+import { fetchVendorNames, resolveVendorName } from './vendor-name-resolver';
 
 // ============================================================================
 // FACTOR SCORERS (each returns 0-100)
@@ -163,13 +135,14 @@ async function buildEntries(
   weights: ComparisonWeights
 ): Promise<QuoteComparisonEntry[]> {
   const names = await fetchVendorNames(companyId, quotes.map((q) => q.vendorContactId));
+  const resolvedNames = new Map(quotes.map((q) => [q.id, resolveVendorName(q, names)] as const));
 
   const totals = quotes.map((q) => q.totals.total);
   const minTotal = Math.min(...totals);
   const maxTotal = Math.max(...totals);
 
   const vendorScores = await Promise.all(
-    quotes.map((q) => computeVendorScore(companyId, q.vendorContactId, names.get(q.vendorContactId) ?? q.vendorContactId))
+    quotes.map((q) => computeVendorScore(companyId, q.vendorContactId, resolvedNames.get(q.id) ?? q.vendorContactId))
   );
 
   const partial: QuoteComparisonEntry[] = quotes.map((q, idx) => {
@@ -186,7 +159,7 @@ async function buildEntries(
       breakdown.delivery * weights.delivery;
     return {
       quoteId: q.id,
-      vendorName: names.get(q.vendorContactId) ?? q.vendorContactId,
+      vendorName: resolvedNames.get(q.id) ?? q.vendorContactId,
       vendorContactId: q.vendorContactId,
       total: q.totals.total,
       score: Math.round(score * 100) / 100,

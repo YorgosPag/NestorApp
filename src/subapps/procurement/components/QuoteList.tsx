@@ -119,7 +119,7 @@ export function QuoteList({ quotes, loading, onCreateNew, onView, onArchive }: Q
                   onClick={onView ? () => onView(q.id) : undefined}
                 >
                   <TableCell className="font-mono text-sm">{q.displayNumber}</TableCell>
-                  <TableCell className="text-sm">{q.trade}</TableCell>
+                  <TableCell className="text-sm">{t(`trades.${q.trade}`)}</TableCell>
                   <TableCell>
                     <SourceBadge source={q.source} />
                   </TableCell>
