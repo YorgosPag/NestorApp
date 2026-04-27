@@ -12,6 +12,10 @@ import { formatCurrency } from '@/lib/intl-formatting';
 import { RecommendationCard } from './RecommendationCard';
 import { AwardModal } from './AwardModal';
 import { COMPARISON_TEMPLATES } from '@/subapps/procurement/types/comparison';
+import {
+  COMPARISON_FACTOR_COLORS,
+  FLAG_TO_FACTOR,
+} from '@/subapps/procurement/config/comparison-factor-colors';
 import type {
   QuoteComparisonEntry,
   QuoteComparisonResult,
@@ -137,13 +141,6 @@ function PanelShell({ title, children }: { title: string; children: React.ReactN
   );
 }
 
-const FACTOR_TEXT_COLORS: Record<keyof QuoteComparisonEntry['breakdown'], string> = {
-  price: 'text-blue-600 dark:text-blue-400',
-  supplier: 'text-emerald-600 dark:text-emerald-400',
-  terms: 'text-amber-600 dark:text-amber-400',
-  delivery: 'text-pink-600 dark:text-pink-400',
-};
-
 function TemplateSummary({ templateId, weights }: { templateId: string; weights: ComparisonWeights }) {
   const { t, i18n } = useTranslation('quotes');
   const meta = COMPARISON_TEMPLATES[templateId];
@@ -162,7 +159,7 @@ function TemplateSummary({ templateId, weights }: { templateId: string; weights:
       {factors.map(([key, factorLabel]) => (
         <span key={key}>
           {' · '}
-          <span className={`font-medium ${FACTOR_TEXT_COLORS[key]}`}>
+          <span className={`font-medium ${COMPARISON_FACTOR_COLORS[key].text}`}>
             {factorLabel} {fmt(weights[key])}
           </span>
         </span>
@@ -210,13 +207,6 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, onAwardClick }: RowPr
   );
 }
 
-const FACTOR_BAR_COLORS: Record<keyof QuoteComparisonEntry['breakdown'], string> = {
-  price: 'bg-blue-600',
-  supplier: 'bg-emerald-600',
-  terms: 'bg-amber-600',
-  delivery: 'bg-pink-600',
-};
-
 function BreakdownBars({ breakdown }: { breakdown: QuoteComparisonEntry['breakdown'] }) {
   const { t } = useTranslation('quotes');
   const items: Array<[keyof QuoteComparisonEntry['breakdown'], string]> = [
@@ -233,7 +223,7 @@ function BreakdownBars({ breakdown }: { breakdown: QuoteComparisonEntry['breakdo
           <Progress
             value={Math.round(breakdown[key])}
             className="h-1.5 flex-1"
-            indicatorClassName={FACTOR_BAR_COLORS[key]}
+            indicatorClassName={COMPARISON_FACTOR_COLORS[key].bar}
           />
           <span className="w-8 text-right text-xs tabular-nums">{Math.round(breakdown[key])}</span>
         </div>
@@ -242,28 +232,24 @@ function BreakdownBars({ breakdown }: { breakdown: QuoteComparisonEntry['breakdo
   );
 }
 
-const FLAG_BADGE_COLORS: Record<QuoteComparisonEntry['flags'][number], string> = {
-  cheapest: 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700',
-  most_reliable: 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700',
-  best_terms: 'border-amber-600 bg-amber-600 text-white hover:bg-amber-700',
-  fastest_delivery: 'border-pink-600 bg-pink-600 text-white hover:bg-pink-700',
-  risk_low_score: '',
-};
-
 function FlagsRow({ flags }: { flags: QuoteComparisonEntry['flags'] }) {
   const { t } = useTranslation('quotes');
   if (flags.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap items-center justify-center gap-1">
       {flags.map((flag) => {
-        const isRisk = flag === 'risk_low_score';
+        if (flag === 'risk_low_score') {
+          return (
+            <Badge key={flag} variant="destructive" className="text-[10px]">
+              <AlertTriangle className="mr-1 h-3 w-3" />
+              {t(`comparison.flags.${flag}`, { defaultValue: '' }) || flag}
+            </Badge>
+          );
+        }
+        const factor = FLAG_TO_FACTOR[flag];
+        const palette = factor ? COMPARISON_FACTOR_COLORS[factor].badge : '';
         return (
-          <Badge
-            key={flag}
-            variant={isRisk ? 'destructive' : 'outline'}
-            className={`text-[10px] ${isRisk ? '' : FLAG_BADGE_COLORS[flag]}`}
-          >
-            {isRisk && <AlertTriangle className="mr-1 h-3 w-3" />}
+          <Badge key={flag} variant="outline" className={`text-[10px] ${palette}`}>
             {t(`comparison.flags.${flag}`, { defaultValue: '' }) || flag}
           </Badge>
         );

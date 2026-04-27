@@ -6,6 +6,10 @@ import { Progress } from '@/components/ui/progress';
 import { Sparkles, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
+import {
+  COMPARISON_FACTOR_COLORS,
+  FLAG_TO_FACTOR,
+} from '@/subapps/procurement/config/comparison-factor-colors';
 import type {
   ComparisonRecommendation,
   QuoteComparisonEntry,
@@ -41,12 +45,20 @@ export function RecommendationCard({ recommendation, winner }: RecommendationCar
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {reasonTokens.map((token) => (
-            <Badge key={token} variant="secondary">
-              {t(`comparison.reasons.${token}`, { defaultValue: '' }) || token}
-            </Badge>
-          ))}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {reasonTokens.map((token) => {
+            const factor = FLAG_TO_FACTOR[token];
+            const palette = factor ? COMPARISON_FACTOR_COLORS[factor].badge : '';
+            return (
+              <Badge
+                key={token}
+                variant={factor ? 'outline' : 'secondary'}
+                className={palette}
+              >
+                {t(`comparison.reasons.${token}`, { defaultValue: '' }) || token}
+              </Badge>
+            );
+          })}
         </div>
 
         <div>

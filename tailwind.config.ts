@@ -25,6 +25,7 @@ export default {
     './src/features/**/*.{ts,tsx}',
     './src/domain/**/*.{ts,tsx}',
     './src/hooks/**/*.ts',
+    './src/subapps/**/*.{ts,tsx}',
   ],
   theme: {
     extend: {
