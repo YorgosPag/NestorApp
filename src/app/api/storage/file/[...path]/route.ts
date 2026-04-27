@@ -40,8 +40,15 @@ async function handleGet(
       }
 
       try {
-        const fileRef = getAdminBucket().file(storagePath);
+        const bucket = getAdminBucket();
+        const fileRef = bucket.file(storagePath);
         const [exists] = await fileRef.exists();
+        logger.info('Storage file proxy lookup', {
+          bucket: bucket.name,
+          storagePath,
+          exists,
+          rawSegmentsCount: rawSegments.length,
+        });
         if (!exists) {
           return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
