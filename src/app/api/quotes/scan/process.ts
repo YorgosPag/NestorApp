@@ -44,6 +44,18 @@ export async function processScanAsync(
     }
 
     const extracted = await analyzer.extractQuote(fileUrl, mimeType, fileBuffer);
+
+    // Extract logo BEFORE applyExtractedData so vendorLogoUrl is included
+    // in the single Firestore write — avoids the race where the client reads
+    // the quote between applyExtractedData and the subsequent logo patch.
+    if (fileBuffer) {
+      const logoUrl = await extractAndUploadVendorLogo(fileBuffer, mimeType, ctx.companyId, quoteId);
+      if (logoUrl) {
+        extracted.vendorLogoUrl = logoUrl;
+        logger.info('Vendor logo extracted', { quoteId, logoUrl });
+      }
+    }
+
     await applyExtractedData(ctx, quoteId, extracted, { source: 'scan' });
 
     logger.info('Quote scan completed', {
@@ -51,17 +63,6 @@ export async function processScanAsync(
       overallConfidence: extracted.overallConfidence,
       lines: extracted.lineItems.length,
     });
-
-    if (fileBuffer) {
-      const logoUrl = await extractAndUploadVendorLogo(fileBuffer, mimeType, ctx.companyId, quoteId);
-      if (logoUrl) {
-        await getAdminFirestore()
-          .collection(COLLECTIONS.QUOTES)
-          .doc(quoteId)
-          .update({ 'extractedData.vendorLogoUrl': logoUrl, updatedAt: FieldValue.serverTimestamp() });
-        logger.info('Vendor logo extracted', { quoteId, logoUrl });
-      }
-    }
   } catch (error) {
     const message = getErrorMessage(error, 'Quote AI scan failed');
     logger.error('Quote scan failed', { quoteId, error: message });
