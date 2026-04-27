@@ -92,7 +92,7 @@ export function ComparisonPanel({
                 <TableHead>{t('quotes.vendor')}</TableHead>
                 <TableHead className="text-right">{t('quotes.total')}</TableHead>
                 <TableHead className="text-right">{t('comparison.scoreLabel')}</TableHead>
-                <TableHead className="min-w-[280px]">{t('comparison.breakdown')}</TableHead>
+                <TableHead className="min-w-[320px]">{t('comparison.breakdown')}</TableHead>
                 <TableHead>{t('comparison.flagsHeader')}</TableHead>
                 <TableHead className="text-right">{t('comparison.action')}</TableHead>
               </TableRow>
@@ -218,14 +218,14 @@ function BreakdownBars({ breakdown }: { breakdown: QuoteComparisonEntry['breakdo
   return (
     <div className="grid grid-cols-1 gap-1 min-w-[280px]">
       {items.map(([key, label]) => (
-        <div key={key} className="flex items-center gap-2">
-          <span className="w-16 text-xs text-muted-foreground">{label}</span>
+        <div key={key} className="flex items-center gap-3">
+          <span className="w-28 shrink-0 text-xs text-muted-foreground">{label}</span>
           <Progress
             value={Math.round(breakdown[key])}
             className="h-1.5 flex-1"
             indicatorClassName={COMPARISON_FACTOR_COLORS[key].bar}
           />
-          <span className="w-8 text-right text-xs tabular-nums">{Math.round(breakdown[key])}</span>
+          <span className="w-8 shrink-0 text-right text-xs tabular-nums">{Math.round(breakdown[key])}</span>
         </div>
       ))}
     </div>
