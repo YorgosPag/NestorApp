@@ -95,6 +95,7 @@ async function storeBankAccounts(
   companyId: string,
   uid: string,
   accounts: BankAccountInput[],
+  contactDisplayName?: string,
 ): Promise<void> {
   for (let i = 0; i < accounts.length; i++) {
     const b = accounts[i];
@@ -108,7 +109,9 @@ async function storeBankAccounts(
         currency: (b.currency as CurrencyCode | undefined) ?? 'EUR',
         isPrimary: i === 0,
         isActive: true,
-        holderName: b.accountHolder ?? undefined,
+        // SSoT: contact.displayName is the canonical holder name.
+        // PDF may use a different legal-form variant (e.g. OOD vs LTD) — discard it.
+        holderName: contactDisplayName ?? b.accountHolder ?? undefined,
       },
       companyId,
       uid,
@@ -152,7 +155,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         );
         if (vatMatch) {
           if (bankAccounts?.length) {
-            await storeBankAccounts(vatMatch.id, companyId, ctx.uid, bankAccounts);
+            await storeBankAccounts(vatMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(vatMatch));
           }
           return NextResponse.json({
             success: true,
@@ -176,7 +179,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         });
         if (nameMatch) {
           if (bankAccounts?.length) {
-            await storeBankAccounts(nameMatch.id, companyId, ctx.uid, bankAccounts);
+            await storeBankAccounts(nameMatch.id, companyId, ctx.uid, bankAccounts, resolveDisplayName(nameMatch));
           }
           return NextResponse.json({
             success: true,
@@ -238,7 +241,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         }
 
         if (bankAccounts?.length) {
-          await storeBankAccounts(result.contactId, companyId, ctx.uid, bankAccounts);
+          await storeBankAccounts(result.contactId, companyId, ctx.uid, bankAccounts, result.displayName ?? undefined);
         }
 
         return NextResponse.json({
