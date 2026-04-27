@@ -1,8 +1,10 @@
 /**
  * Vendor Logo Extractor — ADR-327 §6.
  *
- * Crops the top header band (22%) of a quote document's first page
- * and uploads it to Storage as the vendor's logo candidate.
+ * Crops the top-left quadrant of a quote document's first page
+ * (top 22% height × left 45% width) to isolate the vendor logo.
+ * Logos in B2B invoices are almost universally top-left; the right side
+ * carries customer details and quote title which we explicitly exclude.
  * Server-side only — uses @napi-rs/canvas + pdf-rasterize service.
  */
 
@@ -17,6 +19,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('VendorLogoExtractor');
 
 const LOGO_CROP_HEIGHT_PCT = 0.22;
+const LOGO_CROP_WIDTH_PCT = 0.45;
 const LOGO_DPI = 120;
 const LOGO_MAX_WIDTH_PX = 900;
 
@@ -28,12 +31,13 @@ interface NapiCanvasMod {
   loadImage(src: Buffer): Promise<NapiImage>;
 }
 
-async function cropToHeaderBand(imageBuffer: Buffer): Promise<Buffer | null> {
+async function cropToLogoQuadrant(imageBuffer: Buffer): Promise<Buffer | null> {
   try {
     const mod = (await import('@napi-rs/canvas')) as unknown as NapiCanvasMod;
     const img = await mod.loadImage(imageBuffer);
     const cropH = Math.max(10, Math.floor(img.height * LOGO_CROP_HEIGHT_PCT));
-    const canvas = mod.createCanvas(img.width, cropH);
+    const cropW = Math.max(10, Math.floor(img.width * LOGO_CROP_WIDTH_PCT));
+    const canvas = mod.createCanvas(cropW, cropH);
     canvas.getContext('2d').drawImage(img, 0, 0);
     return canvas.toBuffer('image/png');
   } catch (e) {
@@ -65,7 +69,7 @@ export async function extractAndUploadVendorLogo(
       return null;
     }
 
-    const logoBuffer = await cropToHeaderBand(firstPageBuffer);
+    const logoBuffer = await cropToLogoQuadrant(firstPageBuffer);
     if (!logoBuffer) return null;
 
     const { path: storagePath } = buildStoragePath({

@@ -117,8 +117,8 @@ export async function setContactLogoIfEmpty(
   const docRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
   const snap = await docRef.get();
   if (!snap.exists || snap.data()?.companyId !== companyId) return;
-  if (snap.data()?.photoURL) return;
-  await docRef.update({ photoURL: logoUrl, updatedAt: FieldValue.serverTimestamp(), lastModifiedBy: uid });
+  if (snap.data()?.logoURL) return;
+  await docRef.update({ logoURL: logoUrl, updatedAt: FieldValue.serverTimestamp(), lastModifiedBy: uid });
 }
 
 // ── Supplier persona ──────────────────────────────────────────────────────────
