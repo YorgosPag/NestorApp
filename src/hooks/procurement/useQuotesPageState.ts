@@ -19,7 +19,7 @@ function byCreatedAtDesc(a: Quote, b: Quote): number {
 }
 
 export function useQuotesPageState() {
-  const { t } = useTranslation('quotes');
+  const { t, isNamespaceReady } = useTranslation('quotes');
   const router = useRouter();
   const { quotes: fetched, loading, error, refetch } = useQuotes();
 
@@ -79,6 +79,49 @@ export function useQuotesPageState() {
     setDisplayedQuotes((prev) => [...prev, pending.quote].sort(byCreatedAtDesc));
   }, []);
 
+  // ── Archived quotes view ──────────────────────────────────────────────────
+
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedQuotes, setArchivedQuotes] = useState<Quote[]>([]);
+  const [loadingArchived, setLoadingArchived] = useState(false);
+
+  const fetchArchived = useCallback(async () => {
+    setLoadingArchived(true);
+    try {
+      const res = await fetch('/api/quotes?status=archived');
+      if (!res.ok) throw new Error(`Fetch archived → ${res.status}`);
+      const json = await res.json() as { success: boolean; data: Quote[] };
+      setArchivedQuotes(json.data ?? []);
+    } catch (e) {
+      logger.error('Fetch archived failed', { error: e });
+      setArchivedQuotes([]);
+    } finally {
+      setLoadingArchived(false);
+    }
+  }, []);
+
+  const toggleArchived = useCallback(async () => {
+    const next = !showArchived;
+    setShowArchived(next);
+    if (next) await fetchArchived();
+  }, [showArchived, fetchArchived]);
+
+  const restoreQuote = useCallback(async (quoteId: string) => {
+    try {
+      const res = await fetch(`/api/quotes/${quoteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'draft' }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setArchivedQuotes((prev) => prev.filter((q) => q.id !== quoteId));
+      toast.success(t('quotes.restoreSuccess'));
+      void refetch();
+    } catch (e) {
+      logger.error('Restore failed', { quoteId, error: e });
+    }
+  }, [t, refetch]);
+
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   const handleViewQuote = useCallback((quoteId: string) => {
@@ -97,6 +140,12 @@ export function useQuotesPageState() {
     archiveWithUndo,
     handleViewQuote,
     handleScanNew,
+    showArchived,
+    archivedQuotes,
+    loadingArchived,
+    toggleArchived,
+    restoreQuote,
+    isNamespaceReady,
     t,
   };
 }

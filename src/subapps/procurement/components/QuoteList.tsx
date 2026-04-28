@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Search, Eye, Archive } from 'lucide-react';
+import { Plus, Search, Eye, Archive, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/design-system';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -50,9 +50,11 @@ interface QuoteListProps {
   onCreateNew?: () => void;
   onView?: (quoteId: string) => void;
   onArchive?: (quoteId: string) => void;
+  onRestore?: (quoteId: string) => void;
+  emptyMessage?: string;
 }
 
-export function QuoteList({ quotes, loading, onCreateNew, onView, onArchive }: QuoteListProps) {
+export function QuoteList({ quotes, loading, onCreateNew, onView, onArchive, onRestore, emptyMessage }: QuoteListProps) {
   const { t } = useTranslation('quotes');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | ''>('');
@@ -68,7 +70,7 @@ export function QuoteList({ quotes, loading, onCreateNew, onView, onArchive }: Q
     return true;
   });
 
-  const hasActions = !!(onView || onArchive);
+  const hasActions = !!(onView || onArchive || onRestore);
 
   return (
     <Card>
@@ -97,7 +99,9 @@ export function QuoteList({ quotes, loading, onCreateNew, onView, onArchive }: Q
         {loading ? (
           <p className="py-6 text-center text-sm text-muted-foreground">{t('quotes.loading')}</p>
         ) : filtered.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">{t('quotes.empty')}</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            {emptyMessage ?? t('quotes.empty')}
+          </p>
         ) : (
           <Table>
             <TableHeader>
@@ -150,6 +154,17 @@ export function QuoteList({ quotes, loading, onCreateNew, onView, onArchive }: Q
                             onClick={() => onArchive(q.id)}
                           >
                             <Archive className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {onRestore && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-primary"
+                            title={t('quotes.restore')}
+                            onClick={() => onRestore(q.id)}
+                          >
+                            <RotateCcw className="h-4 w-4" />
                           </Button>
                         )}
                       </div>

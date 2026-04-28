@@ -53,6 +53,11 @@
     "noResults": "No results found",
     "archivedMessage": "Quote archived",
     "undo": "Undo",
+    "restore": "Restore",
+    "restoreSuccess": "Quote restored",
+    "archivedTab": "Archived",
+    "archivedCount": "Archived ({count})",
+    "archivedEmpty": "No archived quotes",
     "statuses": {
       "draft": "Draft",
       "sent_to_vendor": "Sent to Vendor",

@@ -21,6 +21,8 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
+import { QUOTE_STATUSES } from '@/subapps/procurement/types/quote';
+import type { QuoteStatus } from '@/subapps/procurement/types/quote';
 
 const logger = createModuleLogger('QUOTES_API');
 
@@ -67,12 +69,17 @@ async function handleGet(request: NextRequest): Promise<NextResponse> {
         const rfqId = url.searchParams.get('rfqId') ?? undefined;
         const trade = url.searchParams.get('trade') ?? undefined;
         const vendorContactId = url.searchParams.get('vendorContactId') ?? undefined;
+        const statusParam = url.searchParams.get('status') ?? undefined;
+        const status = statusParam && (QUOTE_STATUSES as readonly string[]).includes(statusParam)
+          ? statusParam as QuoteStatus
+          : undefined;
 
         const quotes = await listQuotes(ctx.companyId, {
           projectId,
           rfqId,
           trade: trade as never,
           vendorContactId,
+          status,
         });
         return NextResponse.json({ success: true, data: quotes });
       } catch (error) {

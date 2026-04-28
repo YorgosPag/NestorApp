@@ -108,12 +108,30 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
     }
   };
 
-  const handleReject = async () => {
+  const handleArchive = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
-      await fetch(`/api/quotes/${id}`, { method: 'DELETE' });
-    } finally {
+      const res = await fetch(`/api/quotes/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(await res.text());
+      toast.warning(t('quotes.archivedMessage'), {
+        action: {
+          label: t('quotes.undo'),
+          onClick: async () => {
+            await fetch(`/api/quotes/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'draft' }),
+            });
+            router.push(`/procurement/quotes/${id}/review`);
+          },
+        },
+        duration: 5000,
+      });
       handleBack();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : t('quotes.errors.updateFailed'));
+      setSaving(false);
     }
   };
 
@@ -180,7 +198,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
             quote={quote}
             supplierContact={supplierContact}
             onConfirm={handleConfirm}
-            onReject={handleReject}
+            onReject={handleArchive}
             onGoBack={handleBack}
             onSwitchVendor={handleSwitchVendor}
             isSaving={saving}

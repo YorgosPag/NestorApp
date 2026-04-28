@@ -28,7 +28,7 @@ export const QUOTE_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
   accepted:       ['archived'],
   rejected:       ['archived'],
   expired:        ['archived'],
-  archived:       [],
+  archived:       ['draft'],
 } as const;
 
 export const QUOTE_STATUS_META: Record<QuoteStatus, {

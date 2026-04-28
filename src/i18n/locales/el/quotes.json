@@ -53,6 +53,11 @@
     "noResults": "Δεν βρέθηκαν αποτελέσματα",
     "archivedMessage": "Η προσφορά αρχειοθετήθηκε",
     "undo": "Αναίρεση",
+    "restore": "Επαναφορά",
+    "restoreSuccess": "Η προσφορά επαναφέρθηκε",
+    "archivedTab": "Αρχειοθετημένες",
+    "archivedCount": "Αρχειοθετημένες ({count})",
+    "archivedEmpty": "Δεν υπάρχουν αρχειοθετημένες προσφορές",
     "statuses": {
       "draft": "Πρόχειρο",
       "sent_to_vendor": "Απεστάλη",
