@@ -21,6 +21,9 @@ import { getQuote, updateQuote, archiveQuote } from '@/subapps/procurement/servi
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { QUOTE_STATUSES } from '@/subapps/procurement/types/quote';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('QuoteRoute');
 
 // ============================================================================
 // SCHEMAS
@@ -64,9 +67,21 @@ async function handleGet(
   const { id } = await segmentData!.params;
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const quote = await getQuote(ctx.companyId, id);
-      if (!quote) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
-      return NextResponse.json({ success: true, data: quote });
+      try {
+        const quote = await getQuote(ctx.companyId, id);
+        if (!quote) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+        return NextResponse.json({ success: true, data: quote });
+      } catch (error) {
+        logger.error('GET /api/quotes/[id] — Firestore failure', {
+          quoteId: id,
+          companyId: ctx.companyId,
+          error: getErrorMessage(error),
+        });
+        return NextResponse.json(
+          { success: false, error: 'Service unavailable' },
+          { status: 503 },
+        );
+      }
     }
   );
   return handler(request);

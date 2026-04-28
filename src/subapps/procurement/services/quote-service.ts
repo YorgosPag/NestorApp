@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { safeFirestoreOperation, getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateQuoteId, generateOptimisticId } from '@/services/enterprise-id.service';
@@ -135,17 +135,43 @@ export async function listQuotes(
 // READ — GET
 // ============================================================================
 
+/**
+ * Fetch a single quote by id, scoped to `companyId`.
+ *
+ * Returns `null` ONLY for legitimate "not visible to caller" cases:
+ *   - document does not exist (`!snap.exists`)
+ *   - document exists but belongs to a different tenant
+ *
+ * Firestore errors (timeouts, deadline exceeded, network failures) are
+ * **propagated** — callers must distinguish "404 not-found" from "503
+ * service-unavailable". The previous `safeFirestoreOperation(..., null)`
+ * wrapper silently swallowed transient failures and returned `null`,
+ * surfacing them in the API as false 404s and triggering useQuote retry
+ * loops on doc that actually existed.
+ */
 export async function getQuote(
   companyId: string,
   quoteId: string
 ): Promise<Quote | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.QUOTES).doc(quoteId).get();
-    if (!snap.exists) return null;
-    const quote = { id: snap.id, ...snap.data() } as Quote;
-    if (quote.companyId !== companyId) return null;
-    return quote;
-  }, null);
+  if (!isFirebaseAdminAvailable()) {
+    throw new Error('Firestore unavailable');
+  }
+  const db = getAdminFirestore();
+  const snap = await db.collection(COLLECTIONS.QUOTES).doc(quoteId).get();
+  if (!snap.exists) {
+    logger.info('getQuote: document does not exist', { quoteId, companyId });
+    return null;
+  }
+  const quote = { id: snap.id, ...snap.data() } as Quote;
+  if (quote.companyId !== companyId) {
+    logger.warn('getQuote: tenant mismatch', {
+      quoteId,
+      requestedBy: companyId,
+      actualCompanyId: quote.companyId,
+    });
+    return null;
+  }
+  return quote;
 }
 
 // ============================================================================
