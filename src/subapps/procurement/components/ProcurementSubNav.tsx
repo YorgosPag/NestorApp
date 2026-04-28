@@ -29,6 +29,7 @@ export function ProcurementSubNav() {
       tabs={PROCUREMENT_TABS}
       i18nNamespace="procurement"
       ariaLabel="Procurement sub-navigation"
+      variant="radix"
     />
   );
 }

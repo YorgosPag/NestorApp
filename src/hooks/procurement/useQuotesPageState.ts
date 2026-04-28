@@ -64,7 +64,8 @@ export function useQuotesPageState() {
   }, [fetched]);
 
   // ── UI state ──────────────────────────────────────────────────────────────
-  const [showDashboard, setShowDashboard] = useState(true);
+  // Dashboard closed by default — parità con /procurement (POs) e UX preferenza Giorgio.
+  const [showDashboard, setShowDashboard] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [quoteFilters, setQuoteFilters] = useState<QuotesFilterState>(defaultQuotesFilters);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
