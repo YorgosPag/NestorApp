@@ -31,6 +31,7 @@ import { PurchaseOrderItemsTable } from './PurchaseOrderItemsTable';
 import { formatPOCurrency } from './utils/procurement-format';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { POProjectSelector, POSupplierSelector, POBuildingSelector } from './POEntitySelectors';
+import { PODeliveryAddressField } from './PODeliveryAddressField';
 import type { FirestoreProject } from '@/hooks/useFirestoreProjects';
 import { formatAddressLine } from '@/types/project/address-helpers';
 
@@ -195,13 +196,12 @@ export function PurchaseOrderForm({
               />
             </div>
 
-            {/* Delivery address */}
-            <div className="space-y-1.5 md:col-span-2">
-              <Label>{t('form.deliveryAddress')}</Label>
-              <Input
+            {/* Delivery address — type-driven autofill */}
+            <div className="md:col-span-2">
+              <PODeliveryAddressField
+                projectId={form.projectId}
                 value={form.deliveryAddress}
-                onChange={(e) => setField('deliveryAddress', e.target.value)}
-                placeholder={t('form.deliveryPlaceholder')}
+                onChange={(v) => setField('deliveryAddress', v)}
               />
             </div>
           </div>
