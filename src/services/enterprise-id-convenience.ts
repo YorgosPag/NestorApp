@@ -169,6 +169,8 @@ export const generateQuoteId = () => enterpriseIdService.generateQuoteId();
 export const generateRfqId = () => enterpriseIdService.generateRfqId();
 export const generateVendorInviteId = () => enterpriseIdService.generateVendorInviteId();
 export const generateTradeId = () => enterpriseIdService.generateTradeId();
+export const generateVendorLogoFileId = (quoteId: string) =>
+  enterpriseIdService.generateVendorLogoFileId(quoteId);
 
 // Reports & Cash Flow (ADR-268)
 export const generateSavedReportId = () => enterpriseIdService.generateSavedReportId();

@@ -183,6 +183,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   RFQ: 'rfq',
   VENDOR_INVITE: 'vi',
   TRADE: 'trd',
+  VENDOR_LOGO: 'vlogo',       // ADR-327 §6: deterministic per-quote logo claim
 
   // Reports (ADR-268 Phase 7)
   SAVED_REPORT: 'srpt',

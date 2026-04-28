@@ -55,6 +55,7 @@ export {
   generatePurchaseOrderId, generatePOItemId,
   generatePOAttachmentId, generateSavedReportId, generateRecurringPaymentId,
   generateQuoteId, generateRfqId, generateVendorInviteId, generateTradeId,
+  generateVendorLogoFileId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId,
 } from './enterprise-id-convenience';
@@ -321,6 +322,24 @@ export class EnterpriseIdService {
   /** ADR-235: Deterministic revision key — one revision per version */
   generateOwnershipRevisionId(version: number): string {
     return `${P.OWNERSHIP_TABLE}_rev_v${version}`;
+  }
+
+  /**
+   * ADR-327 §6: Deterministic vendor-logo file ID — one logo claim per quote.
+   *
+   * The logo is a derived artifact extracted from the quote PDF, so its
+   * lifecycle is owned by the parent quote (1:1). Determinism gives:
+   *   - Idempotency by construction (re-extract → same `FILES/{id}` claim doc)
+   *   - No `quote.vendorLogoFileId` ref field needed — id is computed
+   *   - Re-uploading replaces cleanly (same storagePath basename)
+   *   - Deleting the quote → can target `vlogo_{quoteId}` directly (no scan)
+   *
+   * Replaces the legacy literal `'vendor-logo'` shared-claim id which produced
+   * a single mutable Firestore doc serving N quotes (race-prone, no per-quote
+   * traceability).
+   */
+  generateVendorLogoFileId(quoteId: string): string {
+    return `${P.VENDOR_LOGO}_${quoteId}`;
   }
 
   /**

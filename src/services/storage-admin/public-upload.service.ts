@@ -162,9 +162,11 @@ export function buildProxyUrl(storagePath: string): string {
 /**
  * Write the minimal `FILES/{fileId}` document the orphan-cleanup resolver
  * checks (`functions/shared/file-ownership-resolver.ts::OWNERSHIP_CLAIM_PROVIDERS`).
- * Uses `set({ merge: true })` so reusing a fixed `fileId` (e.g. `vendor-logo`)
- * across many parent entities is safe — repeated writes refresh metadata
- * instead of creating duplicates or failing.
+ * Uses `set({ merge: true })` so re-uploads of the same artifact (e.g. a
+ * deterministic per-entity id like `vlogo_{quoteId}`) refresh the claim
+ * metadata in place instead of creating duplicates or failing. Callers MUST
+ * derive `fileId` from `enterprise-id.service` (CLAUDE.md N.6) — never use
+ * literal hardcoded ids.
  */
 async function writeOrphanClaim(args: {
   fileId: string;

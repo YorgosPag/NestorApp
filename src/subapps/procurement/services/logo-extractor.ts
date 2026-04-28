@@ -15,6 +15,7 @@ import 'server-only';
 import { rasterizePdfPages, RasterizeUnavailableError } from '@/services/pdf/pdf-rasterize.service';
 import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
+import { generateVendorLogoFileId } from '@/services/enterprise-id.service';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -116,7 +117,7 @@ export async function extractAndUploadVendorLogo(
       entityId: quoteId,
       domain: FILE_DOMAINS.SALES,
       category: FILE_CATEGORIES.DOCUMENTS,
-      fileId: 'vendor-logo',
+      fileId: generateVendorLogoFileId(quoteId),
       ext: 'png',
     });
 
