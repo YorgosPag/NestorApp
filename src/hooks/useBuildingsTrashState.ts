@@ -16,6 +16,8 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { TrashService } from '@/services/trash.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Building } from '@/types/building/contracts';
 
 const logger = createModuleLogger('useBuildingsTrashState');
@@ -34,6 +36,8 @@ export function useBuildingsTrashState({
   forceDataRefresh,
 }: UseBuildingsTrashStateParams) {
   const { user, loading: authLoading } = useAuth();
+  const { success: showSuccess } = useNotifications();
+  const { t } = useTranslation(['trash']);
   const [showTrash, setShowTrash] = useState(false);
   const [trashedBuildings, setTrashedBuildings] = useState<Building[]>([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
@@ -80,10 +84,11 @@ export function useBuildingsTrashState({
     try {
       await TrashService.bulkRestore('building', ids);
       handleTrashActionComplete();
+      showSuccess(ids.length === 1 ? t('restoreSuccess_one') : t('restoreSuccess', { count: ids.length }));
     } catch (error) {
       logger.error('Failed to restore buildings', { ids, error });
     }
-  }, [handleTrashActionComplete]);
+  }, [handleTrashActionComplete, showSuccess, t]);
 
   const handlePermanentDeleteBuildings = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
