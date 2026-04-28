@@ -132,9 +132,7 @@
         "src/subapps/dxf-viewer/hooks/useOverlayDrawing.ts"
       ]
     },
-
     "_comment_tier1": "=== TIER 1: DATA INTEGRITY (bypass = corruption) ===",
-
     "tenant-company-id": {
       "ssotFile": "src/config/tenant.ts",
       "description": "Company ID must come from TENANT_COMPANY_ID/getCompanyId() — never hardcoded",
@@ -180,9 +178,7 @@
         "src/services/entity-code.service.ts"
       ]
     },
-
     "_comment_tier2": "=== TIER 2: SECURITY (bypass = vulnerability) ===",
-
     "openai-provider": {
       "ssotFile": "src/services/ai/openai-provider.ts",
       "description": "OpenAI provider creation must use getOpenAIProvider() — no inline createOpenAI() calls outside the SSoT module",
@@ -237,9 +233,7 @@
         "src/lib/file-types/preview-registry.ts"
       ]
     },
-
     "_comment_tier3": "=== TIER 3: BUSINESS LOGIC (bypass = inconsistency) ===",
-
     "showcase-core": {
       "ssotFile": "src/services/showcase-core/index.ts",
       "description": "Public-showcase orchestration (PDF pipeline, email pipeline, public payload/PDF routes, snapshot builder, share resolver, email builder, PDF service+renderer) must use the showcase-core factories (ADR-321). New showcase surfaces must delegate to createShowcasePdfRoute, createShowcaseEmailRoute, createPublicShowcasePayloadRoute, createPublicShowcasePdfRoute, createShowcaseSnapshotBuilder, createShowcaseShareResolver, createShowcaseEmailBuilder, ShowcasePDFService, BaseShowcaseRenderer from src/services/showcase-core/ — not reimplement the orchestration.",
@@ -399,9 +393,7 @@
         "src/config/firestore-schema-map.ts"
       ]
     },
-
     "_comment_tier4": "=== TIER 4: ENUM/STATUS CONSTANTS — ADR-287 (bypass = inconsistency) ===",
-
     "commercial-statuses": {
       "ssotFile": "src/constants/commercial-statuses.ts",
       "description": "Commercial statuses must import from @/constants/commercial-statuses — no inline re-declaration",
@@ -573,7 +565,6 @@
         "src/subapps/dxf-viewer/config/modal-select.ts"
       ]
     },
-
     "archive-feedback": {
       "ssotFile": "src/components/shared/files/hooks/useBatchFileOperations.ts",
       "description": "Archive result feedback must use showArchiveResultFeedback() — no inline archive toast logic",
@@ -615,9 +606,7 @@
         "src/services/data-exchange/DataExportService.ts"
       ]
     },
-
     "_comment_tier5": "=== TIER 5: INFRASTRUCTURE (bypass = path inconsistency) ===",
-
     "storage-path-construction": {
       "ssotFile": "src/services/upload/utils/storage-path.ts",
       "description": "Storage paths must use buildStoragePath() — no hardcoded companies/${id}/... paths",
@@ -659,9 +648,7 @@
         "src/components/projects/ika/contracts.ts"
       ]
     },
-
     "_comment_tier6": "=== TIER 6: CONFIG CONSOLIDATION (bypass = config drift) ===",
-
     "search-index-config": {
       "ssotFile": "src/config/search-index-config.ts",
       "description": "Search index definitions must use SEARCH_INDEX_CONFIG — no inline search configs",
@@ -703,9 +690,7 @@
         "src/config/persona-config.ts"
       ]
     },
-
     "_comment_tier7": "=== TIER 7: EXPANDED CONFIG COVERAGE (v3.2 — 2026-04-09) ===",
-
     "firestore-field-constants": {
       "ssotFile": "src/config/firestore-field-constants.ts",
       "description": "Firestore field names must use FIELDS constant — no inline redefinition",
@@ -930,9 +915,7 @@
         "src/lib/cron-auth.ts"
       ]
     },
-
     "_comment_tier8": "=== TIER 8: ADR-314 PHASE A — CORE SSoT MODULES (2026-04-18) ===",
-
     "enterprise-id-convenience": {
       "ssotFile": "src/services/enterprise-id-convenience.ts",
       "description": "All generate*Id() named functions must be declared ONLY in enterprise-id.service.ts (core) or enterprise-id-convenience.ts (barrel). No local wrappers/duplicates. Allowlist covers the sealed SSoT set + the React hook barrel (useEnterpriseIds) + the server-side composite-key ID generators (id-generation.ts — different purpose). ADR-314 Phase A.",
@@ -1000,9 +983,18 @@
       ],
       "tier": 3
     },
-
+    "ui-tooltip": {
+      "ssotFile": "src/components/ui/tooltip.tsx",
+      "description": "All tooltip UI must use @/components/ui/tooltip (Radix wrapper, dark bg + white text SSoT). Direct @radix-ui/react-tooltip imports are forbidden outside the canonical wrapper. Use Tooltip/TooltipTrigger/TooltipContent/TooltipProvider or InfoTooltip from @/components/ui/InfoTooltip.",
+      "forbiddenPatterns": [
+        "from ['\"]@radix-ui/react-tooltip['\"]"
+      ],
+      "allowlist": [
+        "src/components/ui/tooltip.tsx"
+      ],
+      "tier": 1
+    },
     "_comment_tier8_phaseB": "=== TIER 8 cont. — ADR-314 PHASE B (2026-04-18): canonical domain status SSoT ===",
-
     "status-helpers": {
       "ssotFile": "src/lib/status-helpers.ts",
       "description": "Domain-aware status helpers — getStatusColor(domain, status, opts)/getStatusLabel(domain, status, opts)/getStatusIcon(domain, status) — discriminated union over StatusDomain ('storage'|'obligation'|'lead'|'communication'|'buildingTimeline'|'buildingProject'|'project'|'property'). Canonical SSoT for ALL exported domain status helpers; previously scattered across obligations-utils.ts, project-utils.ts (deleted), leads/utils/formatters.ts (deleted), projects/structure-tab/utils/status.ts (deleted), and 4 component-local copies. The semantic-token variant (success/error/info) remains in design-system.ts (orthogonal namespace, allowlisted). Property-status alias in property-status-core.ts is allowlisted (canonical alias for the property domain, ADR-287 precedent). Pattern matches EXPORTED declarations only — local component-internal const/function with same name is permitted (not a SSoT duplicate). ADR-314 Phase B.",
@@ -1016,9 +1008,7 @@
       ],
       "tier": 3
     },
-
     "_comment_tier2_adr315": "=== TIER 2 — ADR-315 (2026-04-18): polymorphic sharing SSoT ===",
-
     "unified-sharing-service": {
       "ssotFile": "src/services/sharing/unified-sharing.service.ts",
       "description": "All sharing logic (token lifecycle, validation, access-count, revocation, listing) MUST route through UnifiedSharingService. Direct reads/writes on COLLECTIONS.SHARES or the literal 'shares' collection from other modules are forbidden. Re-implementation of createShare/validateShare/verifyPassword semantics outside src/services/sharing/ is a SSoT violation. FileShareService on file_shares remains operational (legacy) and is NOT subject to this module. Scheduled retirement in ADR-315 Phase M5. ADR-315 Phase M1.",
@@ -1033,7 +1023,6 @@
       ],
       "tier": 2
     },
-
     "channel-dispatch-service": {
       "ssotFile": "src/services/sharing/channel-dispatch.service.ts",
       "description": "All outbound share dispatches (email / telegram / whatsapp / messenger / instagram) MUST write an audit record in `share_dispatches` via ChannelDispatchService. Direct reads/writes on COLLECTIONS.SHARE_DISPATCHES from other modules are forbidden. Re-implementing dispatch-logging semantics outside src/services/sharing/ is a SSoT violation. ADR-315 Phase M3.",
@@ -1048,9 +1037,7 @@
       ],
       "tier": 2
     },
-
     "_comment_adr316": "=== TIER 2 — ADR-316 (2026-04-22): project showcase SSoT ===",
-
     "project-showcase-service": {
       "ssotFile": "src/services/project-showcase/snapshot-builder.ts",
       "description": "All server-side project showcase snapshot construction MUST route through buildProjectShowcaseSnapshot() in snapshot-builder.ts. Direct Firestore reads of the projects collection for showcase purposes, inline branding resolution, and re-implementation of the snapshot-to-PDF pipeline outside src/services/project-showcase/ are forbidden. PDF rendering via ProjectShowcasePDFService + ProjectShowcaseRenderer. Public API: GET /api/project-showcase/[token]. PDF API: POST /api/projects/[id]/showcase/pdf. ADR-316.",
@@ -1066,9 +1053,7 @@
       ],
       "tier": 2
     },
-
     "_comment_tier3_adr194": "=== TIER 3 — ADR-194 (2026-04-19): description+notes card SSoT ===",
-
     "description-notes-card": {
       "ssotFile": "src/components/shared/space-info/DescriptionNotesCard.tsx",
       "description": "Paired description+notes textareas on entity info tabs (storage, parking, future units/offices) MUST render via DescriptionNotesCard. Inline re-implementation of the pattern (Card wrapper with two Textarea fields bound to description+notes fields of a form state) is forbidden. Keeps the Card/Textarea layout and the StickyNote/violet styling consistent across entities. ADR-194.",
@@ -1080,9 +1065,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD1": "=== ADR-314 PHASE D.1 (2026-04-19): registry gap reduction — 6 high-export SSoT modules ===",
-
     "message-utils": {
       "ssotFile": "src/lib/message-utils.ts",
       "description": "HTML sanitization with DOMPurify (XSS protection, OWASP A03:2021). Telegram/email tag allowlists, Email signature detection (ADR-072/ADR-073). Re-implementation of sanitizeHTML/sanitizeEmailHTML/formatMessageHTML/stripHTMLTags/detectEmailSignature/stripEmailSignature outside message-utils.ts = security hole (divergent sanitization rules = XSS bypass). ADR-314 Phase D.1.",
@@ -1095,7 +1078,6 @@
       ],
       "tier": 2
     },
-
     "firebase-admin": {
       "ssotFile": "src/lib/firebaseAdmin.ts",
       "description": "Firebase Admin SDK singleton accessors (ADR-077). Every server-side Firestore/Auth/Storage read/write MUST go through getAdminFirestore/getAdminAuth/getAdminStorage/getAdminBucket. Re-implementation of these accessors outside the module breaks the lazy singleton + credential chain (B64 -> JSON -> ADC) and risks double-initialisation / bucket drift. ADR-314 Phase D.1.",
@@ -1109,7 +1091,6 @@
       ],
       "tier": 1
     },
-
     "npv-engine": {
       "ssotFile": "src/lib/npv-engine.ts",
       "description": "NPV / cash-flow math for the Interest Cost Calculator (ADR-234 SPEC-234E). Pure functions, zero side effects, runs on client + server. Re-implementation of calculateDiscountFactor/calculateNPV/calculateCashFlowAnalysis/calculateWACP/calculateTimeCost/calculateRecommendedPrice/calculateFullResult/buildComparisonScenarios outside this module forks the financial model (certainty multipliers, discount factors, time-cost formula). ADR-314 Phase D.1.",
@@ -1121,7 +1102,6 @@
       ],
       "tier": 3
     },
-
     "hedging-engine": {
       "ssotFile": "src/lib/hedging-engine.ts",
       "description": "Interest-rate hedging strategy math (Floating/Swap/Cap/Collar) for SPEC-242E Hedging Simulator (ADR-242). Pure math, zero side effects. Re-implementation of calculateFloatingCost/calculateSwapCost/calculateCapCost/calculateCollarCost/compareHedgingStrategies/findBreakEvenRate/risingScenario/flatScenario/decliningScenario forks the risk model. ADR-314 Phase D.1.",
@@ -1133,7 +1113,6 @@
       ],
       "tier": 3
     },
-
     "pagination": {
       "ssotFile": "src/lib/pagination.ts",
       "description": "Firestore cursor-based pagination primitives — applyPagination/processPaginationResult/createPaginationState/updatePaginationState/calculatePaginationMetrics + InfiniteScrollPagination/PageBasedPagination classes. Every paginated Firestore read must go through this module to keep limit()/startAfter()/cursor semantics consistent (prevents N+1 queries, enforces MAX_PAGE_SIZE guard). ADR-314 Phase D.1.",
@@ -1146,7 +1125,6 @@
       ],
       "tier": 3
     },
-
     "rtl-utils": {
       "ssotFile": "src/lib/rtl-utils.ts",
       "description": "RTL (right-to-left) locale-aware helpers for bidirectional text and layout support. useRTL hook, containsRTLCharacters detection, bidiIsolate wrapping, formatRTLCurrency, sortRTL, generateRTLCSSVars + rtlClasses/rtlStyles/rtlIcon/rtlAnimation/rtlKeyboard/logicalProperties objects. Re-implementation fragments the RTL semantics (Arabic/Hebrew/Farsi) across the app. ADR-314 Phase D.1.",
@@ -1159,9 +1137,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD2": "=== ADR-314 PHASE D.2 (2026-04-19): registry gap reduction — 4 config/tabs-config SSoT modules ===",
-
     "properties-tabs-config": {
       "ssotFile": "src/config/properties-tabs-config.ts",
       "description": "Properties (units) tabs configuration — factory-based via unified-tabs-factory.ts. Canonical data + utility functions + deprecated aliases (UNITS_TABS, getSortedUnitsTabs, etc.). Re-implementation of PROPERTIES_TABS/getSortedPropertiesTabs/getEnabledPropertiesTabs outside this file forks tab ordering, enabled state, and validation logic. ADR-314 Phase D.2.",
@@ -1173,7 +1149,6 @@
       ],
       "tier": 6
     },
-
     "period-selector-config": {
       "ssotFile": "src/config/period-selector-config.ts",
       "description": "PeriodSelector periods configuration — single source of truth for day/week/month/year period definitions. Re-implementation of PERIOD_SELECTOR_PERIODS or getSortedPeriods/getEnabledPeriods outside this file forks period ordering and enablement. ADR-314 Phase D.2.",
@@ -1185,7 +1160,6 @@
       ],
       "tier": 6
     },
-
     "crm-dashboard-tabs-config": {
       "ssotFile": "src/config/crm-dashboard-tabs-config.ts",
       "description": "CRM Dashboard tabs configuration — single source of truth for overview/pipeline/communications/tasks/calendar tabs. Re-implementation of CRM_DASHBOARD_TABS or getSortedCRMDashboardTabs/getEnabledCRMDashboardTabs outside this file forks tab order and component routing. ADR-314 Phase D.2.",
@@ -1197,7 +1171,6 @@
       ],
       "tier": 6
     },
-
     "building-tabs-config": {
       "ssotFile": "src/config/building-tabs-config.ts",
       "description": "Building tabs configuration — factory-based via unified-tabs-factory.ts. Canonical accessor functions with module-level cache (getSortedBuildingTabs). Re-implementation of BUILDING_TABS or getSortedBuildingTabs/getEnabledBuildingTabs outside this file forks building tab definitions. ADR-314 Phase D.2.",
@@ -1209,9 +1182,7 @@
       ],
       "tier": 6
     },
-
     "_comment_adr314_phaseD1b": "=== ADR-314 PHASE D.1b (2026-04-19): D.1 residual — validation, share-utils, smart-navigation-factory ===",
-
     "validation": {
       "ssotFile": "src/utils/validation.ts",
       "description": "Centralized Zod validation rules, schemas, and resolvers. validationRules object, commonSchemas, passwordSchema, createFormSchema, formatZodErrors, createValidationResolver, validateDocumentDates, createContactValidationSchema. Re-implementation forks validation logic (field rules, error messages, contact type schemas). ADR-314 Phase D.1b.",
@@ -1224,7 +1195,6 @@
       ],
       "tier": 3
     },
-
     "share-utils": {
       "ssotFile": "src/lib/share-utils.ts",
       "description": "Web Share API + clipboard + URL generation + social share URLs SSoT. isWebShareSupported, shareContent, copyToClipboard, generateShareableURL, shareProperty, getSocialShareUrls, getPhotoSocialShareUrls, trackShareEvent. social-platform-system wrappers (class-backed SharingService) are allowlisted as legitimate adapters. ADR-314 Phase D.1b.",
@@ -1238,7 +1208,6 @@
       ],
       "tier": 3
     },
-
     "smart-navigation-factory": {
       "ssotFile": "src/config/smart-navigation-factory.ts",
       "description": "Navigation config factory — createNavigationConfig, getNavigationStats, validateNavigationConfig, findNavigationItemByPath, createMainMenuItems, createToolsMenuItems, createSettingsMenuItems, debugNavigationFactory. Re-implementation forks menu structure, item priorities, and environment-based filtering. ADR-314 Phase D.1b.",
@@ -1250,9 +1219,7 @@
       ],
       "tier": 6
     },
-
     "_comment_adr314_phaseD2c": "=== ADR-314 PHASE D.2c (2026-04-19): registry gap — unified-tabs-factory root ===",
-
     "unified-tabs-factory": {
       "ssotFile": "src/config/unified-tabs-factory.ts",
       "description": "Enterprise tabs smart factory — root of all 8 *-tabs-config modules. createTabsConfig/getSortedTabs/getTabById/getTabByValue/getDefaultTab/validateTabConfig/getTabsStats/getTabsForEnvironment + UnifiedTabConfig/TabEntityType types. Re-implementation forks tab creation logic for all entity types (properties/storage/building/contact/project/crm-dashboard/parking). ADR-314 Phase D.2c.",
@@ -1264,9 +1231,7 @@
       ],
       "tier": 6
     },
-
     "_comment_adr314_phaseD2b": "=== ADR-314 PHASE D.2b (2026-04-19): registry gap reduction — 4 more tabs-config SSoT modules ===",
-
     "contact-tabs-config": {
       "ssotFile": "src/config/contact-tabs-config.ts",
       "description": "Contact tabs configuration — factory-based via unified-tabs-factory.ts with ContactType conditional logic (individual/company/service). Blocks CONTACT_TABS + ContactTabsConfig + all accessor/validation/debug functions. Re-implementation forks per-type tab filtering. ADR-314 Phase D.2b.",
@@ -1278,7 +1243,6 @@
       ],
       "tier": 6
     },
-
     "parking-tabs-config": {
       "ssotFile": "src/config/parking-tabs-config.ts",
       "description": "Parking tabs configuration — factory-based via unified-tabs-factory.ts. Blocks PARKING_TABS + accessor/validation functions (getSortedParkingTabs, getParkingTabById, getDefaultParkingTab, validateParkingTabConfig, getAvailableParkingComponents, getParkingTabsForEnvironment). ADR-314 Phase D.2b.",
@@ -1290,7 +1254,6 @@
       ],
       "tier": 6
     },
-
     "project-tabs-config": {
       "ssotFile": "src/config/project-tabs-config.ts",
       "description": "Project tabs configuration — inline config (non-factory), 16 tabs covering general/locations/structure/ownership/engineers/brokers/customers/timeline/ika/floorplan/parking/measurements/documents/photos/videos/history. Blocks PROJECT_TABS + all accessor functions. ADR-314 Phase D.2b.",
@@ -1302,7 +1265,6 @@
       ],
       "tier": 6
     },
-
     "storage-tabs-config": {
       "ssotFile": "src/config/storage-tabs-config.ts",
       "description": "Storage (αποθήκη) tabs configuration — factory-based via unified-tabs-factory.ts. Blocks STORAGE_TABS + accessor/validation functions (getSortedStorageTabs, getStorageTabById, getDefaultStorageTab, validateStorageTabConfig, getAvailableStorageComponents, getStorageTabsForEnvironment). ADR-314 Phase D.2b.",
@@ -1314,9 +1276,7 @@
       ],
       "tier": 6
     },
-
     "_comment_adr314_phaseD3e": "=== ADR-314 PHASE D.3e (2026-04-19): registry gap — accessibility/preloadRoutes/icon-migration/field-extractors ===",
-
     "accessibility": {
       "ssotFile": "src/utils/accessibility.ts",
       "description": "Accessibility utilities — FOCUSABLE_ELEMENTS_SELECTOR, getFocusableElements, focusFirstElement, focusLastElement, useFocusTrap, useArrowNavigation. Canonical SSoT for keyboard/focus management and ARIA navigation helpers. ADR-314 Phase D.3e.",
@@ -1328,7 +1288,6 @@
       ],
       "tier": 3
     },
-
     "preload-routes": {
       "ssotFile": "src/utils/preloadRoutes.ts",
       "description": "Route preloading utilities — preloadRoute, preloadRoutes, preloadUserRoutes, preloadOnHover, useRoutePreload. Canonical SSoT for Next.js route prefetch strategy. ADR-314 Phase D.3e.",
@@ -1340,7 +1299,6 @@
       ],
       "tier": 3
     },
-
     "enterprise-icon-migration": {
       "ssotFile": "src/utils/enterprise-icon-migration.ts",
       "description": "Enterprise icon migration tooling — ICON_MIGRATION_PATTERNS, generateIconSizesImport, generateHookDeclaration, replaceIconClass, validateMigrationSafety. Canonical SSoT for automated hardcoded-icon → useIconSizes migration. ADR-314 Phase D.3e.",
@@ -1352,7 +1310,6 @@
       ],
       "tier": 3
     },
-
     "field-extractors": {
       "ssotFile": "src/lib/firestore/field-extractors.ts",
       "description": "Firestore document field extractors — getString, getNumber, getBoolean, getArray (all overloaded with optional defaultValue). Canonical SSoT for safe typed extraction from raw Firestore DataRecord maps. ADR-314 Phase D.3e.",
@@ -1364,9 +1321,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD3d": "=== ADR-314 PHASE D.3d (2026-04-19): registry gap — waterfall/firestore-mappers/sensitivity engines ===",
-
     "waterfall-engine": {
       "ssotFile": "src/lib/waterfall-engine.ts",
       "description": "Waterfall distribution engine — calculateWaterfall + PRESET_STANDARD_80_20/PRESET_JV_CATCH_UP/PRESET_SIMPLE_SPLIT preset configs. Canonical SSoT for real-estate JV profit waterfall calculations. ADR-314 Phase D.3d.",
@@ -1378,7 +1333,6 @@
       ],
       "tier": 3
     },
-
     "firestore-mappers": {
       "ssotFile": "src/lib/firestore-mappers.ts",
       "description": "Firestore document mappers — isValidStorageType, isValidStorageStatus, mapStorageDoc, mapParkingDoc. Canonical SSoT for raw Firestore data → typed domain model conversion (Storage + ParkingSpot). ADR-314 Phase D.3d.",
@@ -1390,7 +1344,6 @@
       ],
       "tier": 3
     },
-
     "sensitivity-engine": {
       "ssotFile": "src/lib/sensitivity-engine.ts",
       "description": "Financial sensitivity analysis engine — applyVariablePerturbation, runTornadoAnalysis, buildHeatMap. Canonical SSoT for tornado/heat-map sensitivity analysis on financial models. ADR-314 Phase D.3d.",
@@ -1402,9 +1355,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD3c": "=== ADR-314 PHASE D.3c (2026-04-19): registry gap — financial/construction engine SSoT modules ===",
-
     "counterproposal-engine": {
       "ssotFile": "src/lib/counterproposal-engine.ts",
       "description": "Counterproposal financial engine — buildCounterproposalCashFlows, calculateCounterproposalScenario, runCounterproposalAnalysis, calculateSliderScenario. Canonical SSoT for loan counterproposal cash-flow modeling. ADR-314 Phase D.3c.",
@@ -1416,7 +1367,6 @@
       ],
       "tier": 3
     },
-
     "dscr-engine": {
       "ssotFile": "src/lib/dscr-engine.ts",
       "description": "DSCR (Debt Service Coverage Ratio) engine — getDSCRStatus, calculateDSCR, runStressTest, findMaxRateForDSCR. Canonical SSoT for mortgage stress-test and DSCR calculations. ADR-314 Phase D.3c.",
@@ -1428,7 +1378,6 @@
       ],
       "tier": 3
     },
-
     "forward-curve-engine": {
       "ssotFile": "src/lib/forward-curve-engine.ts",
       "description": "Euribor forward-curve engine — extractSpotRates, deriveForwardRates, detectCurveShape, buildForwardCurveResult. Canonical SSoT for interest-rate curve modeling. ADR-314 Phase D.3c.",
@@ -1440,7 +1389,6 @@
       ],
       "tier": 3
     },
-
     "draw-schedule-engine": {
       "ssotFile": "src/lib/draw-schedule-engine.ts",
       "description": "Construction draw-schedule engine — analyzeDrawSchedule, getGreekConstructionTemplate. Canonical SSoT for Greek construction phase payment scheduling. ADR-314 Phase D.3c.",
@@ -1452,9 +1400,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD3b": "=== ADR-314 PHASE D.3b (2026-04-19): registry gap — error-mapping/geometry/admin-batch-utils/layer-sync ===",
-
     "error-mapping": {
       "ssotFile": "src/lib/error-mapping.ts",
       "description": "Domain error → i18n mapping SSoT — mapErrorToI18n, getAllErrorMappings, registerErrorMapping, mapHttpStatusToError. DomainError/ErrorMapping interfaces. Canonical SSoT for structured error presentation. ADR-314 Phase D.3b.",
@@ -1466,7 +1412,6 @@
       ],
       "tier": 3
     },
-
     "geometry": {
       "ssotFile": "src/lib/geometry.ts",
       "description": "SVG/2D geometry primitives — getCentroid (polygon centroid), distanceToLineSegment (point-to-segment distance). Re-export in ConnectionElements.tsx uses `export { X }` form — not matched by `export const` pattern. ADR-314 Phase D.3b.",
@@ -1478,7 +1423,6 @@
       ],
       "tier": 3
     },
-
     "admin-batch-utils": {
       "ssotFile": "src/lib/admin-batch-utils.ts",
       "description": "Firestore batch operation utilities — BATCH_SIZE_READ (500)/BATCH_SIZE_WRITE (200) constants, processClientBatch<T>/processAdminBatch<T> async processors. Canonical SSoT for chunked Firestore reads/writes. ADR-314 Phase D.3b.",
@@ -1490,7 +1434,6 @@
       ],
       "tier": 3
     },
-
     "layer-sync": {
       "ssotFile": "src/lib/layer-sync.ts",
       "description": "DXF layer sync SSoT — LayerSyncManager class, useLayerSync hook, createGlobalLayerSync factory, forceSyncLayers async. Canonical SSoT for RealtimeService-backed layer synchronization (ADR-314 Phase C.5.2 — migrated from raw onSnapshot to RealtimeService). ADR-314 Phase D.3b.",
@@ -1502,9 +1445,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD3a": "=== ADR-314 PHASE D.3a (2026-04-19): registry gap — utility SSoT modules (array-utils/type-guards/greek-text/json-utils/coords) ===",
-
     "array-utils": {
       "ssotFile": "src/lib/array-utils.ts",
       "description": "Generic array utilities — chunkArray<T>(array, size). Canonical SSoT for array partitioning. Re-exports in report-query-transforms.ts and firestore/utils.ts use { X } form (not function declarations) — not caught by pattern. ADR-314 Phase D.3a.",
@@ -1516,7 +1457,6 @@
       ],
       "tier": 3
     },
-
     "type-guards": {
       "ssotFile": "src/lib/type-guards.ts",
       "description": "TypeScript runtime type predicates — isRecord, isNonEmptyString, isNonEmptyTrimmedString, isNonEmptyArray. Canonical SSoT for typed narrowing utilities. ADR-314 Phase D.3a.",
@@ -1528,7 +1468,6 @@
       ],
       "tier": 3
     },
-
     "greek-text": {
       "ssotFile": "src/utils/greek-text.ts",
       "description": "Greek text processing utilities — stripAccents, normalizeGreekText, toGreekTitleCase, normalizeForSearch. Canonical SSoT for Greek locale text ops. ai-pipeline/greek-text-utils.ts converted to re-export form (Phase C.5.46). normalizeForSearch excluded from patterns (also in file-display-name-utils, different domain). ADR-314 Phase D.3a.",
@@ -1540,7 +1479,6 @@
       ],
       "tier": 3
     },
-
     "json-utils": {
       "ssotFile": "src/lib/json-utils.ts",
       "description": "Safe JSON parsing utilities — safeJsonParse<T>(input, fallback), safeJsonParseWith<T>(input, schema). Canonical SSoT for typed JSON deserialization with fallbacks. ADR-314 Phase D.3a.",
@@ -1552,7 +1490,6 @@
       ],
       "tier": 3
     },
-
     "coords": {
       "ssotFile": "src/lib/coords.ts",
       "description": "SVG coordinate utilities for DXF viewer — getZoomFrom, getPanFrom, toSvgPointFromMouse. Canonical SSoT for SVG viewport coordinate transforms (zoom/pan/mouse-to-SVG-point). Distinct from hooks/utils/coords.ts which exports getZoomFromEl/toSvgPoint (different signatures). ADR-314 Phase D.3a.",
@@ -1564,9 +1501,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD3f": "=== ADR-314 PHASE D.3f (2026-04-19): registry gap — top-level lib/config SSoT modules (monte-carlo/firebase-server/stale-cache/contact-dependency/navigation) ===",
-
     "monte-carlo-engine": {
       "ssotFile": "src/lib/monte-carlo-engine.ts",
       "description": "Monte Carlo simulation engine — runMonteCarloSimulation. Canonical SSoT for probabilistic financial modelling via Monte Carlo methods. ADR-314 Phase D.3f.",
@@ -1578,7 +1513,6 @@
       ],
       "tier": 3
     },
-
     "firebase-server": {
       "ssotFile": "src/lib/firebase-server.ts",
       "description": "Server-side Firebase initialization — firebaseServer object (app, auth, db, storage). Canonical SSoT for server-side Firebase SDK instance. ADR-314 Phase D.3f.",
@@ -1590,7 +1524,6 @@
       ],
       "tier": 3
     },
-
     "stale-cache": {
       "ssotFile": "src/lib/stale-cache.ts",
       "description": "Stale-while-revalidate cache utility — createStaleCache<T>. Canonical SSoT for namespace-keyed in-memory stale cache with TTL. ADR-314 Phase D.3f.",
@@ -1602,7 +1535,6 @@
       ],
       "tier": 3
     },
-
     "contact-dependency-registry": {
       "ssotFile": "src/config/contact-dependency-registry.ts",
       "description": "Contact dependency impact registry — CONTACT_DEPENDENCY_REGISTRY, getDependenciesForScenario, getScenarioMode, deriveDeletionDependencies. Canonical SSoT for contact deletion/mutation impact analysis (block/warn/info scenarios). ADR-314 Phase D.3f.",
@@ -1615,7 +1547,6 @@
       ],
       "tier": 3
     },
-
     "navigation-config": {
       "ssotFile": "src/config/navigation.ts",
       "description": "Navigation menu configuration — mainMenuItems, toolsMenuItems, settingsMenuItem, getMainMenuItems, getToolsMenuItems, getSettingsMenuItems. Canonical SSoT for app navigation structure. ADR-314 Phase D.3f.",
@@ -1628,9 +1559,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD3j": "=== ADR-314 PHASE D.3j (2026-04-19): registry gap — contact-info-config/profession-bridge/persona-removal-guards/sidebar-utils/building-features-i18n ===",
-
     "contact-info-config": {
       "ssotFile": "src/config/contact-info-config.ts",
       "description": "Contact info configuration — CONTACT_INFO singleton, ContactInfoUtils object. Canonical SSoT for contact display/format configuration (phone/email/address patterns). ADR-314 Phase D.3j.",
@@ -1642,7 +1571,6 @@
       ],
       "tier": 3
     },
-
     "profession-bridge": {
       "ssotFile": "src/config/profession-bridge.config.ts",
       "description": "Profession/role bridge registry — PROJECT_ROLE_BRIDGE, getBridgeEntry. Canonical SSoT for mapping project roles to profession metadata (i18n keys, icons, categories). ADR-314 Phase D.3j.",
@@ -1655,7 +1583,6 @@
       ],
       "tier": 3
     },
-
     "persona-removal-guards": {
       "ssotFile": "src/config/persona-removal-guards.ts",
       "description": "Persona removal guard — checkPersonaRemovalGuard async function. Canonical SSoT for pre-deletion persona dependency checks across collections. ADR-314 Phase D.3j.",
@@ -1667,7 +1594,6 @@
       ],
       "tier": 3
     },
-
     "sidebar-utils": {
       "ssotFile": "src/lib/sidebar-utils.ts",
       "description": "Sidebar badge variant utility — getBadgeVariant(badge). Canonical SSoT for mapping sidebar item states to Radix/shadcn badge variant strings. ADR-314 Phase D.3j.",
@@ -1679,7 +1605,6 @@
       ],
       "tier": 3
     },
-
     "building-features-i18n": {
       "ssotFile": "src/utils/building-features-i18n.ts",
       "description": "Building features i18n utilities — FEATURE_GREEK_TO_KEY registry, getBuildingFeatureKey, translateBuildingFeature. Canonical SSoT for Greek↔key mapping of building amenity/feature labels. ADR-314 Phase D.3j.",
@@ -1692,9 +1617,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD3i": "=== ADR-314 PHASE D.3i (2026-04-19): registry gap — override-guard/pending-relationship-guard/section-field-utils/property-normalizer/file-validation ===",
-
     "override-guard": {
       "ssotFile": "src/utils/overrideGuard.ts",
       "description": "Feature override guard utilities — isOverrideOn, guardGlobalAccess, guardWithCanary<T>, enableForceOverride, disableForceOverride. Canonical SSoT for canary/override access control in dev/staging environments. ADR-314 Phase D.3i.",
@@ -1707,7 +1630,6 @@
       ],
       "tier": 3
     },
-
     "pending-relationship-guard": {
       "ssotFile": "src/utils/pending-relationship-guard.ts",
       "description": "Pending relationship guard — PendingRelationshipGuard object (canProceed, getBlockingMessage, hasBlockingRelationships). Canonical SSoT for entity mutation guards when pending relationships exist. ADR-314 Phase D.3i.",
@@ -1719,7 +1641,6 @@
       ],
       "tier": 3
     },
-
     "section-field-utils": {
       "ssotFile": "src/config/section-field-utils.ts",
       "description": "Section field utilities — ARRAY_FIELD_SECTIONS registry, extractRealFieldIds(section). Canonical SSoT for mapping entity sections to their real field IDs (strips virtual/computed fields). ADR-314 Phase D.3i.",
@@ -1732,7 +1653,6 @@
       ],
       "tier": 3
     },
-
     "property-normalizer": {
       "ssotFile": "src/utils/property-normalizer.ts",
       "description": "Property document normalization — normalizeProperty, validatePropertyCompleteness, preparePropertyForFirestore, getPropertyDisplaySummary. Canonical SSoT for PropertyDoc↔PropertyModel conversion and Firestore serialization. ADR-314 Phase D.3i.",
@@ -1744,7 +1664,6 @@
       ],
       "tier": 3
     },
-
     "file-validation": {
       "ssotFile": "src/utils/file-validation.ts",
       "description": "File upload validation utilities — validateFile, validateFileExtension, validateFileMimeType, validateFileSize, validateImageFile, formatFileSize. Canonical SSoT for client-side file validation before upload. ADR-314 Phase D.3i.",
@@ -1756,9 +1675,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD3h": "=== ADR-314 PHASE D.3h (2026-04-19): registry gap — firestore-now/toast-presets/firestore-helpers/form-error-handler/service-config ===",
-
     "firestore-now": {
       "ssotFile": "src/lib/firestore-now.ts",
       "description": "Firestore server timestamp utility — nowTimestamp() → Timestamp. Canonical SSoT for Firestore Timestamp.fromDate(new Date()) pattern. ADR-314 Phase D.3h.",
@@ -1770,7 +1687,6 @@
       ],
       "tier": 3
     },
-
     "toast-presets": {
       "ssotFile": "src/lib/toast-presets.ts",
       "description": "Toast notification presets — toastPresets object (success/error/warning/info variants). Canonical SSoT for standardized toast notification configurations. ADR-314 Phase D.3h.",
@@ -1782,7 +1698,6 @@
       ],
       "tier": 3
     },
-
     "firestore-helpers": {
       "ssotFile": "src/utils/firestore-helpers.ts",
       "description": "Firestore query helpers — sanitizeDocumentId, normalizeProjectIdForQuery. Canonical SSoT for Firestore document ID sanitization and project ID normalization for queries. ADR-314 Phase D.3h.",
@@ -1794,7 +1709,6 @@
       ],
       "tier": 3
     },
-
     "form-error-handler": {
       "ssotFile": "src/utils/form-error-handler.ts",
       "description": "Form error handling utilities — useFormErrorHandler hook, createErrorMessage, errorMessages, createValidationResult<T>. Canonical SSoT for structured form validation error display and severity classification. ADR-314 Phase D.3h.",
@@ -1806,7 +1720,6 @@
       ],
       "tier": 3
     },
-
     "service-config": {
       "ssotFile": "src/config/service-config.ts",
       "description": "Service section/field configuration — SERVICE_SECTIONS, getServiceSortedSections, getServiceSectionById, getAllServiceFields. Canonical SSoT for service entity field layout and section ordering. ADR-314 Phase D.3h.",
@@ -1819,9 +1732,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD3g": "=== ADR-314 PHASE D.3g (2026-04-19): registry gap — safe-fire-and-forget/firestore-sanitize/collection-utils/toggle-select/error-utils ===",
-
     "safe-fire-and-forget": {
       "ssotFile": "src/lib/safe-fire-and-forget.ts",
       "description": "Fire-and-forget async utilities — safeFireAndForget (server-safe), clientSafeFireAndForget (client-only with error boundary). Canonical SSoT for non-awaited async side-effects with structured error handling. ADR-314 Phase D.3g.",
@@ -1833,7 +1744,6 @@
       ],
       "tier": 3
     },
-
     "firestore-sanitize": {
       "ssotFile": "src/utils/firestore-sanitize.ts",
       "description": "Firestore data sanitization utilities — sanitizeForFirestore<T>, stripUndefinedDeep<T>, stripNullValues. Canonical SSoT for stripping undefined/null values before Firestore writes. Note: accounting/repository/firestore-helpers.ts re-exports via `export { X }` form — allowlisted. ADR-314 Phase D.3g.",
@@ -1846,7 +1756,6 @@
       ],
       "tier": 3
     },
-
     "collection-utils": {
       "ssotFile": "src/utils/collection-utils.ts",
       "description": "Generic collection aggregation utilities — groupByKey<T>, tallyBy<T>, sumByKey<T>, sumBy<T>, countBy<T>. Canonical SSoT for array grouping/tallying/summing. Note: hooks/useEntityStats.ts re-exports via `export { X }` form — not caught by function-declaration patterns. rate/avg/avgRounded excluded (duplicated elsewhere). ADR-314 Phase D.3g.",
@@ -1858,7 +1767,6 @@
       ],
       "tier": 3
     },
-
     "toggle-select": {
       "ssotFile": "src/lib/toggle-select.ts",
       "description": "Generic multi-select toggle utility — toggleSelect<T extends { id? }>(items, item). Canonical SSoT for immutable add/remove toggle on arrays of identifiable items. ADR-314 Phase D.3g.",
@@ -1870,7 +1778,6 @@
       ],
       "tier": 3
     },
-
     "error-utils": {
       "ssotFile": "src/lib/error-utils.ts",
       "description": "Error message extraction utility — getErrorMessage(error: unknown, fallback). Canonical SSoT for safe unknown→string error coercion (Error.message, string passthrough, fallback). ADR-314 Phase D.3g.",
@@ -1882,9 +1789,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr314_phaseD3f_firestore": "=== ADR-314 PHASE D.3f.2 (2026-04-19): registry gap — firestore cascade/impact/entity (subdirectory, informational only — not scanner-visible) ===",
-
     "cascade-propagation": {
       "ssotFile": "src/lib/firestore/cascade-propagation.service.ts",
       "description": "Firestore cascade propagation SSoT — propagateBuildingProjectLink, propagateProjectCompanyLink, propagatePropertyBuildingLink, propagateChildBuildingLink, propagateSpaceAllocationCodeChange. Canonical SSoT for cross-entity field cascade operations. ADR-314 Phase D.3f.",
@@ -1896,7 +1801,6 @@
       ],
       "tier": 3
     },
-
     "contact-impact-engine": {
       "ssotFile": "src/lib/firestore/contact-impact-engine.ts",
       "description": "Contact dependency impact engine — computeContactImpact, findDependencyCount. Canonical SSoT for computing cross-collection contact impact before mutations. ADR-314 Phase D.3f.",
@@ -1908,7 +1812,6 @@
       ],
       "tier": 3
     },
-
     "entity-creation-types": {
       "ssotFile": "src/lib/firestore/entity-creation.types.ts",
       "description": "Entity creation registry and types — ENTITY_REGISTRY, EntityRegistryEntry, EntityCreationParams, EntityCreationResult, ServerEntityType, EntityHierarchy, EntityIdGeneratorName. Canonical SSoT for server-side entity type definitions and creation metadata. ADR-314 Phase D.3f.",
@@ -1922,7 +1825,6 @@
       ],
       "tier": 3
     },
-
     "entity-linking-types": {
       "ssotFile": "src/lib/firestore/entity-linking.types.ts",
       "description": "Entity linking registry and types — LINK_REGISTRY, LinkRegistryEntry, LinkCascadeType, LinkEntityParams, LinkEntityResult. Canonical SSoT for Firestore entity-link cascade metadata (distinct from services/entity-linking/types.ts which is UI-layer). ADR-314 Phase D.3f.",
@@ -1936,7 +1838,6 @@
       ],
       "tier": 3
     },
-
     "firestore-auth-context": {
       "ssotFile": "src/services/firestore/auth-context.ts",
       "description": "Firestore auth context utilities — waitForAuthReady, requireAuthContext. Canonical SSoT for tenant-scoped auth context resolution in Firestore service layer. Re-exported via services/firestore/index.ts. ADR-314 Phase D.3f.",
@@ -1949,7 +1850,6 @@
       ],
       "tier": 3
     },
-
     "address-map-config": {
       "ssotFile": "src/config/address-map-config.ts",
       "description": "Address map display configuration — ADDRESS_MAP_CONFIG, AddressMapConfig, AddressMapHeightPreset. Canonical SSoT for AddressMap component settings (height presets, zoom levels, marker visuals, animation durations). ADR-314 Phase D.3k.",
@@ -1962,7 +1862,6 @@
       ],
       "tier": 3
     },
-
     "admin-env": {
       "ssotFile": "src/config/admin-env.ts",
       "description": "Server-only admin environment configuration — getRequiredAdminCompanyName, getAdminEnvConfig, getCommunicationsEnvConfig. Canonical SSoT for server-side admin env var resolution with fail-fast validation. ADR-314 Phase D.3k.",
@@ -1974,7 +1873,6 @@
       ],
       "tier": 3
     },
-
     "ai-tab-mapping": {
       "ssotFile": "src/config/ai-tab-mapping.ts",
       "description": "AI tab mapping prompt generator — generateTabMappingPrompt. Canonical SSoT for AI pipeline tab-routing prompt generation. ADR-314 Phase D.3k.",
@@ -1986,7 +1884,6 @@
       ],
       "tier": 3
     },
-
     "audit-value-catalogs": {
       "ssotFile": "src/config/audit-value-catalogs.ts",
       "description": "Audit value catalogs SSoT — AUDIT_VALUE_CATALOGS, AUDIT_CATALOG_FIELDS, getAuditValueCatalog. Canonical SSoT for audit field-to-catalog mapping (ADR-195). ADR-314 Phase D.3k.",
@@ -1999,7 +1896,6 @@
       ],
       "tier": 3
     },
-
     "building-ids-config": {
       "ssotFile": "src/config/building-ids-config.ts",
       "description": "Building IDs configuration — BUILDING_IDS, BuildingIdUtils. Canonical SSoT for multi-tenant building identifier management sourced from env vars (zero hardcoded values). ADR-314 Phase D.3k.",
@@ -2011,7 +1907,6 @@
       ],
       "tier": 3
     },
-
     "connection-config": {
       "ssotFile": "src/config/connection-config.ts",
       "description": "Connection visual configuration — CONNECTION_COLORS, CONNECTION_FALLBACK_COLOR, CONNECTION_DEFAULTS. Canonical SSoT for connection line/panel color and style tokens. ADR-314 Phase D.3l.",
@@ -2023,7 +1918,6 @@
       ],
       "tier": 3
     },
-
     "dev-environment": {
       "ssotFile": "src/config/dev-environment.ts",
       "description": "Dev environment helpers — getDevCompanyId. Canonical SSoT for development-only company ID resolution. ADR-314 Phase D.3l.",
@@ -2035,7 +1929,6 @@
       ],
       "tier": 3
     },
-
     "error-reporting": {
       "ssotFile": "src/config/error-reporting.ts",
       "description": "Error reporting configuration — errorReportingConfig, getErrorConfig, errorSeverityMapping, shouldReportError, getSamplingRate, hasUserOptedOut. Canonical SSoT for error tracker configuration (privacy, sampling, severity). ADR-314 Phase D.3l.",
@@ -2048,7 +1941,6 @@
       ],
       "tier": 3
     },
-
     "sentry-config": {
       "ssotFile": "src/config/sentry-config.ts",
       "description": "Sentry SDK configuration constants — SENTRY_TRACES_SAMPLE_RATE, SENTRY_ENABLED, SENTRY_REPLAYS_SESSION_SAMPLE_RATE, SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE. Canonical SSoT for Sentry initialization parameters. ADR-314 Phase D.3l.",
@@ -2060,7 +1952,6 @@
       ],
       "tier": 3
     },
-
     "seed-data-config": {
       "ssotFile": "src/config/seed-data-config.ts",
       "description": "Seed data configuration — SEED_DATA_CONFIG, ENTERPRISE_SEED_CONTACTS, validateSeedConfig, shouldSeedDatabase, getSeedData. Canonical SSoT for database seeding configuration and guards. ADR-314 Phase D.3l.",
@@ -2073,7 +1964,6 @@
       ],
       "tier": 3
     },
-
     "async-utils": {
       "ssotFile": "src/lib/async-utils.ts",
       "description": "Async utility — sleep. Canonical SSoT for promise-based delay helper. ADR-314 Phase D.3m.",
@@ -2085,7 +1975,6 @@
       ],
       "tier": 3
     },
-
     "channel-icon-map": {
       "ssotFile": "src/lib/channel-icon-map.ts",
       "description": "Channel icon mapping — getChannelIconComponent. Canonical SSoT for communication channel → Lucide icon resolution. ADR-314 Phase D.3m.",
@@ -2097,7 +1986,6 @@
       ],
       "tier": 3
     },
-
     "contact-link-id": {
       "ssotFile": "src/lib/contact-link-id.ts",
       "description": "Contact link key builder — buildContactLinkKey (alias: generateContactLinkId). Canonical SSoT for deterministic contact-link composite key generation. ADR-314 Phase D.3m.",
@@ -2109,7 +1997,6 @@
       ],
       "tier": 3
     },
-
     "dev-auth": {
       "ssotFile": "src/lib/dev-auth.ts",
       "description": "Dev auth helpers — DEV_MODE, getDevUser, isDevelopment. Canonical SSoT for development-only auth bypass and env detection. ADR-314 Phase D.3m.",
@@ -2122,7 +2009,6 @@
       ],
       "tier": 3
     },
-
     "entity-formatters": {
       "ssotFile": "src/lib/entity-formatters.ts",
       "description": "Entity label formatters — formatBuildingLabel. Canonical SSoT for display-ready building label formatting. ADR-314 Phase D.3m.",
@@ -2134,7 +2020,6 @@
       ],
       "tier": 3
     },
-
     "firebaseAdmin-credentials": {
       "ssotFile": "src/lib/firebaseAdmin-credentials.ts",
       "description": "Firebase Admin credential chain helpers — sanitizeEnvJson, maskedPreview, parseServiceAccount, initializeWithCredentialChain. Split module of firebase-admin (ADR-077). ADR-314 Phase D.3n.",
@@ -2147,7 +2032,6 @@
       ],
       "tier": 1
     },
-
     "firebaseAdmin-types": {
       "ssotFile": "src/lib/firebaseAdmin-types.ts",
       "description": "Firebase Admin types — CredentialSource, AdminDiagnosticReport, FirebaseAdminInitError. Split module of firebase-admin (ADR-077). ADR-314 Phase D.3n.",
@@ -2162,7 +2046,6 @@
       ],
       "tier": 1
     },
-
     "toast-utils": {
       "ssotFile": "src/lib/toast-utils.ts",
       "description": "Toast key generator — nextToastKey (alias: generateToastId). Canonical SSoT for sequential toast ID generation. ADR-314 Phase D.3n.",
@@ -2174,7 +2057,6 @@
       ],
       "tier": 3
     },
-
     "lib-utils": {
       "ssotFile": "src/lib/utils.ts",
       "description": "Core UI utilities — cn (classnames merger), applyUpdates. Canonical SSoT for Tailwind class merging and immutable state updates. ADR-314 Phase D.3n.",
@@ -2187,7 +2069,6 @@
       ],
       "tier": 3
     },
-
     "obligations-utils": {
       "ssotFile": "src/lib/obligations-utils.ts",
       "description": "Obligations utility aliases — validateObligation, getDocumentStats, getProgressMetrics, calculateProgress, searchInText. Canonical SSoT barrel for obligation document helpers. ADR-314 Phase D.3n.",
@@ -2200,7 +2081,6 @@
       ],
       "tier": 3
     },
-
     "text-utils": {
       "ssotFile": "src/lib/text-utils.ts",
       "description": "Text truncation utility — truncateText. Canonical SSoT for length-bounded string truncation with ellipsis. ADR-314 Phase D.3o.",
@@ -2212,7 +2092,6 @@
       ],
       "tier": 3
     },
-
     "property-utils": {
       "ssotFile": "src/lib/property-utils.ts",
       "description": "Property status/type config — getPropertyStatusConfig, PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS. Canonical SSoT for property status color+label config and type icon map. ADR-314 Phase D.3o.",
@@ -2224,7 +2103,6 @@
       ],
       "tier": 3
     },
-
     "memory-leak-detector": {
       "ssotFile": "src/utils/memoryLeakDetector.ts",
       "description": "Memory leak detection utilities — memoryLeakDetector, useMemoryTracker, withMemoryTracking, useEventListenerCleanup, enableMemoryMonitoring. Canonical SSoT for component memory leak detection hooks. ADR-314 Phase D.3o.",
@@ -2237,7 +2115,6 @@
       ],
       "tier": 3
     },
-
     "performance-monitor": {
       "ssotFile": "src/utils/performanceMonitor.ts",
       "description": "Performance monitoring hooks — usePerformanceTracker, withPerformanceTracking, enablePerformanceLogging. Canonical SSoT for component render performance hooks (excludes geo-canvas PerformanceMonitor singleton). ADR-314 Phase D.3o.",
@@ -2249,7 +2126,6 @@
       ],
       "tier": 3
     },
-
     "firebase-client": {
       "ssotFile": "src/lib/firebase.ts",
       "description": "Firebase client SDK singletons (db, auth, functions, storage). Canonical SSoT for client-side Firebase app initialization. ADR-314 Phase C.5.5x.",
@@ -2261,7 +2137,6 @@
       ],
       "tier": 1
     },
-
     "contact-form-utils": {
       "ssotFile": "src/utils/contactFormUtils.ts",
       "description": "Contact type icon/label helpers (getTypeIcon, getTypeLabel). SSoT for ContactType display. ADR-314 Phase C.5.5x.",
@@ -2273,7 +2148,6 @@
       ],
       "tier": 3
     },
-
     "contact-mappers": {
       "ssotFile": "src/utils/contactForm/contactMapper.ts",
       "description": "Safe field accessors (toRecord/getSafeFieldValue/getSafeNestedValue/getSafeArrayValue) used by all contact form mappers. ADR-322 — regression guard for 2026-04-24 unclosed-JSDoc incident that silently returned empty form data.",
@@ -2285,7 +2159,6 @@
       ],
       "tier": 3
     },
-
     "contact-sanitize": {
       "ssotFile": "src/utils/contactForm/utils/data-cleaning.ts",
       "description": "Contact write sanitization (sanitizeContactData for CREATE, sanitizeContactForUpdate for UPDATE with explicit-clear → deleteField). ADR-323 — regression guard for 2026-04-24 bloat incident (empty default fields written on every save).",
@@ -2297,7 +2170,6 @@
       ],
       "tier": 3
     },
-
     "clearable-select-helpers": {
       "ssotFile": "src/components/generic/form-select-helpers.tsx",
       "description": "SSoT for clearable Radix Select helpers (ClearableSelectSection, shouldAllowClearForField, wrapClearableSelectHandler) used by all form renderers. ADR-324 — allows non-required selects to clear their value, writing deleteField() via ADR-323 sanitize.",
@@ -2309,7 +2181,6 @@
       ],
       "tier": 3
     },
-
     "esco-picker-popover": {
       "ssotFile": "src/components/shared/esco/esco-picker-popover-shell.tsx",
       "description": "SSoT Popover wrapper for ESCO pickers (EscoOccupationPicker, EscoSkillPicker). ADR-325 — uses PopoverAnchor (not PopoverTrigger) so the click-toggle race that flashes a zero-height dropdown on empty input cannot reappear.",
@@ -2321,7 +2192,6 @@
       ],
       "tier": 3
     },
-
     "data-services": {
       "ssotFile": "src/lib/data-services.ts",
       "description": "Sample data services (getContacts, getProjects, sampleContacts, mockProjects). Dev/test data SSoT. ADR-314 Phase C.5.5x.",
@@ -2333,7 +2203,6 @@
       ],
       "tier": 3
     },
-
     "enterprise-id-prefixes": {
       "ssotFile": "src/services/enterprise-id-prefixes.ts",
       "description": "ENTERPRISE_ID_PREFIXES constant — canonical registry of all entity ID prefix strings. ADR-314 Phase C.5.5x.",
@@ -2345,7 +2214,6 @@
       ],
       "tier": 2
     },
-
     "intl-utils": {
       "ssotFile": "src/lib/intl-utils.ts",
       "description": "Intl utils barrel — re-exports from intl-formatting and intl-domain plus getCurrentLocale(). ADR-314 Phase C.5.5x.",
@@ -2357,7 +2225,6 @@
       ],
       "tier": 3
     },
-
     "company-gemi-config": {
       "ssotFile": "src/config/company-gemi-config.ts",
       "description": "Company GEMI fields configuration — createFieldsMap, isFieldRequired (re-exported from field-utilities). ADR-314 Phase C.5.5x.",
@@ -2370,7 +2237,6 @@
       ],
       "tier": 3
     },
-
     "clone-utils": {
       "ssotFile": "src/lib/clone-utils.ts",
       "description": "Canonical deepClone<T> utility — JSON round-trip deep clone. ADR-212 Phase 9. ADR-314 Phase D.3n.",
@@ -2383,7 +2249,6 @@
       ],
       "tier": 2
     },
-
     "hq-clear-pattern": {
       "ssotFile": "src/components/contacts/dynamic/useClearCompanyHqAddress.ts",
       "description": "Canonical HQ address Clear + Undo hook. Any new implementation of useClearCompanyHqAddress, buildClearedHqEntry, or withClearedHqEntry must reuse this module. Blocks duplicated optimistic-clear logic. ADR-297.",
@@ -2397,7 +2262,6 @@
       ],
       "tier": 3
     },
-
     "breadcrumb-sync": {
       "ssotFile": "src/components/navigation/core/hooks/useBreadcrumbSync.ts",
       "description": "Entity breadcrumb sync SSoT (ADR-016). All entity pages (project/building/property/space) MUST call useBreadcrumbSync() — never call syncBreadcrumb() directly. The hook encapsulates 4 resolution strategies: project (NavigationContext bootstrap-resolved name), building (NavigationContext project chain), property (hierarchy API, Admin SDK, cancellable async), space (useFirestoreBuildings + NavigationContext). Direct syncBreadcrumb() calls outside useBreadcrumbSync create duplicate resolution logic and break the single entry point guarantee. 2026-04-24.",
@@ -2411,9 +2275,7 @@
       ],
       "tier": 3
     },
-
     "_comment_adr326": "=== TIER 2 — ADR-326 (2026-04-25): Tenant Org Structure & Departmental Routing SSoT ===",
-
     "org-structure": {
       "ssotFile": "src/types/org/org-structure.ts",
       "configFile": "src/config/department-codes.ts",
@@ -2432,9 +2294,7 @@
       ],
       "tier": 2
     },
-
     "_comment_adr327": "=== ADR-327 (2026-04-25): Quote Management & Comparison System SSoT ===",
-
     "quote-entity": {
       "ssotFile": "src/subapps/procurement/types/quote.ts",
       "serviceFile": "src/subapps/procurement/services/quote-service.ts",
@@ -2451,7 +2311,6 @@
       ],
       "tier": 2
     },
-
     "rfq-entity": {
       "ssotFile": "src/subapps/procurement/types/rfq.ts",
       "serviceFile": "src/subapps/procurement/services/rfq-service.ts",
@@ -2467,7 +2326,6 @@
       ],
       "tier": 2
     },
-
     "trade-taxonomy": {
       "ssotFile": "src/subapps/procurement/data/trades.ts",
       "typeFile": "src/subapps/procurement/types/trade.ts",
@@ -2485,7 +2343,6 @@
       ],
       "tier": 2
     },
-
     "vendor-portal": {
       "ssotFile": "src/subapps/procurement/types/vendor-invite.ts",
       "serviceFile": "src/subapps/procurement/services/vendor-invite-service.ts",
@@ -2505,7 +2362,6 @@
       ],
       "tier": 3
     },
-
     "quote-comparison": {
       "ssotFile": "src/subapps/procurement/types/comparison.ts",
       "serviceFile": "src/subapps/procurement/services/comparison-service.ts",
@@ -2523,7 +2379,6 @@
       ],
       "tier": 3
     },
-
     "po-auto-generation": {
       "ssotFile": "src/subapps/procurement/services/po-generation-service.ts",
       "description": "Auto-PO generation from awarded quote SSoT (ADR-327 P5-ATOE). generatePoFromAwardedQuote() is the single entry point — maps quote lines to PO items, resolves VAT, calls createPO, stamps linkedPoId on the quote. FORBIDDEN: inline quote→PO mapping outside this service, duplicate award-to-PO flows.",
@@ -2536,7 +2391,6 @@
       ],
       "tier": 3
     },
-
     "pdf-rasterize": {
       "ssotFile": "src/services/pdf/pdf-rasterize.service.ts",
       "description": "Server-side PDF→PNG rasterization SSoT (ADR-327 §6.7). rasterizePdfPages() is the single entry point — converts a PDF Buffer into per-page PNG Buffers using pdfjs-dist (legacy build) + @napi-rs/canvas. Use BEFORE sending PDFs to vision AIs (OpenAI Responses, Anthropic Vision) when documents have column-heavy or image-overlay layouts. FORBIDDEN: inline pdfjs.getDocument() in route handlers or services — always import this SSoT.",
@@ -2548,7 +2402,6 @@
       ],
       "tier": 3
     },
-
     "professional-role-routing": {
       "ssotFile": "src/app/api/notifications/professional-assigned/role-to-dept-map.ts",
       "description": "SSoT mapping: professional role string → DepartmentCode for L2 org-structure routing (ADR-326 Phase 6.2). mapRoleToDept() is the canonical lookup. FORBIDDEN: inline role→dept mapping outside this file.",
@@ -2562,7 +2415,6 @@
       ],
       "tier": 3
     },
-
     "ai-org-structure-tools": {
       "ssotFile": "src/services/ai-pipeline/tools/handlers/org-structure-handler.ts",
       "description": "AI agentic tools for org structure (ADR-326 Phase 7). Canonical entry point for AI org-structure access. FORBIDDEN: AI tools that bypass resolveTenantNotificationEmail / resolveContactDepartmentEmail for routing; AI tools that read companies/{id}.settings.orgStructure or contacts/{id}.orgStructure outside the OrgStructureHandler; hardcoded department names in agentic prompts (must use DEPARTMENT_CODES).",
@@ -2582,7 +2434,6 @@
       ],
       "tier": 3
     },
-
     "onboarding-flow": {
       "ssotFile": "src/services/onboarding/onboarding-state-service.ts",
       "description": "Tenant onboarding state (ADR-326 Phase 8). Canonical read/write for companies/{id}.settings.onboarding. FORBIDDEN: direct Firestore writes to settings.onboarding outside onboarding-state-service; duplicating isBannerEligible / isRemindEligible logic outside onboarding-types.ts.",

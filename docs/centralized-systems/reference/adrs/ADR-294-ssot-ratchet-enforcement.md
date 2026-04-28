@@ -23,7 +23,7 @@
 | `scripts/generate-ssot-baseline.sh` | Baseline generator |
 | `scripts/ssot-audit.sh` | Progress report |
 
-### Modules (v3.0 — 40 modules, 6 tiers)
+### Modules (v3.0 — 41 modules, 6 tiers + UI patterns)
 
 **Tier 0 — Core (5 modules):**
 | Module | SSoT File | Pattern |
@@ -41,6 +41,11 @@
 | deletion-registry | `src/config/deletion-registry.ts` | Re-declared `DELETION_REGISTRY` / `DependencyDef[]` |
 | soft-delete-config | `src/lib/firestore/soft-delete-config.ts` | Re-declared `SOFT_DELETE_CONFIG` |
 | entity-code-config | `src/config/entity-code-config.ts` | Re-declared `PROPERTY_TYPE_TO_CODE` / `PARKING_ZONE_TO_CODE` |
+
+**UI Components (bypass = visual inconsistency + dark/light mismatch):**
+| Module | SSoT File | Pattern |
+|--------|-----------|---------|
+| ui-tooltip | `src/components/ui/tooltip.tsx` | Direct `@radix-ui/react-tooltip` import — use `@/components/ui/tooltip` or `InfoTooltip` |
 
 **Tier 2 — Security (bypass = vulnerability):**
 | Module | SSoT File | Pattern |
@@ -171,6 +176,7 @@ capturing groups, NEVER `(?:...)`.
 ## Changelog
 | Date | Change |
 |------|--------|
+| 2026-04-28 | **ui-tooltip SSoT module** — New `ui-tooltip` module (UI Components tier). Canonical: `src/components/ui/tooltip.tsx` (Radix wrapper, dark bg + white text). Forbidden: direct `@radix-ui/react-tooltip` imports outside the wrapper. Allowlist: `src/components/ui/tooltip.tsx` only. Baseline: 0 violations (codebase already clean). Registry: 236 modules. |
 | 2026-04-08 | Initial implementation — 5 modules, 92 files baseline |
 | 2026-04-08 | Added Discovery Scanner — 4-phase batch analysis, 77 duplicates found |
 | 2026-04-08 | **v2.0** — Expanded from 5 → 20 modules (3 tiers: data integrity, security, business logic) |
