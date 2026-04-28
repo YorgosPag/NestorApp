@@ -19,7 +19,7 @@ import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { generateContactId, generateCompanyId } from '@/services/enterprise-id.service';
+import { generateContactId } from '@/services/enterprise-id.service';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import type { EntitySyncAction, SyncEntityType } from '@/services/realtime/types';
@@ -367,9 +367,7 @@ export async function createContactServerSide(
   };
 
   // ── Step 4: Generate enterprise ID ──
-  const contactId = params.type === 'company'
-    ? generateCompanyId()
-    : generateContactId();
+  const contactId = generateContactId();
 
   // ── Step 5: Write to Firestore ──
   await adminDb

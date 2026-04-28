@@ -84,7 +84,13 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
       if (!resolveRes.ok) throw new Error(await resolveRes.text());
       const resolveJson = await resolveRes.json();
       const contactId = resolveJson?.data?.contactId as string | undefined;
+      const wasCreated = resolveJson?.data?.wasCreated as boolean | undefined;
+      const resolvedName = resolveJson?.data?.displayName as string | undefined;
       if (!contactId) throw new Error('No contactId returned');
+
+      if (wasCreated && resolvedName) {
+        toast.success(t('quotes.notifications.vendorCreated', { vendorName: resolvedName }));
+      }
 
       const patchRes = await fetch(`/api/quotes/${id}`, {
         method: 'PATCH',
