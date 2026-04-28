@@ -20,7 +20,7 @@ async function fetchQuotes(filters: Partial<QuoteFilters>): Promise<Quote[]> {
 export function useQuotes(filters: Partial<QuoteFilters> = {}) {
   const { data, loading, error, refetch, silentRefetch, patch } = useAsyncData<Quote[]>({
     fetcher: () => fetchQuotes(filters),
-    deps: [filters.projectId, filters.rfqId, filters.trade, filters.status],
+    deps: [filters.projectId, filters.rfqId, filters.trade, filters.status, filters.vendorContactId],
     initialData: [],
   });
 

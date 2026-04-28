@@ -92,6 +92,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
       });
       if (!patchRes.ok) throw new Error(await patchRes.text());
 
+      router.refresh();
       await refetch();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : t('quotes.errors.updateFailed'));
