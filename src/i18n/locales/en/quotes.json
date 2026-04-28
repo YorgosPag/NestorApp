@@ -37,6 +37,11 @@
     "subtotal": "Subtotal",
     "vatAmount": "VAT",
     "loading": "Loading...",
+    "notFound": {
+      "title": "Quote not found",
+      "hint": "It may have been deleted or the link is incorrect.",
+      "goBack": "Go back"
+    },
     "submit": "Save",
     "cancel": "Cancel",
     "searchPlaceholder": "Search...",

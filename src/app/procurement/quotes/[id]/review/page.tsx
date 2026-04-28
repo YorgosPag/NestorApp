@@ -19,7 +19,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
   const { id } = use(params);
   const { t } = useTranslation('quotes');
   const router = useRouter();
-  const { quote, loading, error, refetch } = useQuote(id, {
+  const { quote, loading, error, notFound, refetch } = useQuote(id, {
     pollIntervalMs: 2000,
     stopWhen: (q) => q !== null && q.extractedData !== null,
   });
@@ -119,7 +119,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
         )}
       </div>
 
-      {loading && !quote && (
+      {loading && !quote && !notFound && (
         <Card>
           <CardContent className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -128,7 +128,19 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
         </Card>
       )}
 
-      {error && (
+      {notFound && (
+        <Card>
+          <CardContent className="space-y-3 py-10 text-center">
+            <p className="text-sm font-medium text-destructive">{t('quotes.notFound.title')}</p>
+            <p className="text-xs text-muted-foreground">{t('quotes.notFound.hint')}</p>
+            <Button variant="outline" size="sm" onClick={handleBack}>
+              {t('quotes.notFound.goBack')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {error && !notFound && (
         <Card>
           <CardContent className="py-6 text-sm text-destructive">
             {error}
