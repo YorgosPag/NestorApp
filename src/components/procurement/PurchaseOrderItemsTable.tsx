@@ -54,12 +54,6 @@ interface PurchaseOrderItemsTableProps {
   readOnly?: boolean;
 }
 
-/** ΑΤΟΕ category codes — labels from i18n */
-const ATOE_CODES = [
-  'OIK-1', 'OIK-2', 'OIK-3', 'OIK-4', 'OIK-5', 'OIK-6',
-  'OIK-7', 'OIK-8', 'OIK-9', 'OIK-10', 'OIK-11', 'OIK-12',
-] as const;
-
 export function PurchaseOrderItemsTable({
   items,
   onUpdateItem,
@@ -76,18 +70,38 @@ export function PurchaseOrderItemsTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="min-w-[220px] w-[220px]">{t('items.category')} <span className="text-destructive">*</span></TableHead>
               <TableHead className="min-w-[200px]">{t('items.description')} <span className="text-destructive">*</span></TableHead>
               <TableHead className="w-[100px]">{t('items.quantity')}</TableHead>
               <TableHead className="w-[100px]">{t('items.unit')}</TableHead>
               <TableHead className="w-[120px]">{t('items.unitPrice')}</TableHead>
               <TableHead className="w-[120px]">{t('items.total')}</TableHead>
-              <TableHead className="w-[140px]">{t('items.category')} <span className="text-destructive">*</span></TableHead>
               {!readOnly && <TableHead className="w-[50px]" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.map((item) => (
               <TableRow key={item.tempId}>
+                <TableCell className="min-w-[220px] w-[220px]">
+                  <Select
+                    value={item.categoryCode}
+                    onValueChange={(v) =>
+                      onUpdateItem(item.tempId, { categoryCode: v })
+                    }
+                    disabled={readOnly}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('contributionTypePlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent className="min-w-[260px]">
+                      {ATOE_MASTER_CATEGORIES.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.code} — {t(`categories.${c.code}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
                 <TableCell>
                   <Input
                     value={item.description}
@@ -148,26 +162,6 @@ export function PurchaseOrderItemsTable({
                     €{(item.quantity * item.unitPrice).toFixed(2)}
                   </span>
                 </TableCell>
-                <TableCell>
-                  <Select
-                    value={item.categoryCode}
-                    onValueChange={(v) =>
-                      onUpdateItem(item.tempId, { categoryCode: v })
-                    }
-                    disabled={readOnly}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('contributionTypePlaceholder')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ATOE_CODES.map((code) => (
-                        <SelectItem key={code} value={code}>
-                          {code} — {t(`categories.${code}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
                 {!readOnly && (
                   <TableCell>
                     <Button
@@ -212,6 +206,29 @@ export function PurchaseOrderItemsTable({
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">
+                {t('items.category')} <span className="text-destructive">*</span>
+              </p>
+              <Select
+                value={item.categoryCode}
+                onValueChange={(v) =>
+                  onUpdateItem(item.tempId, { categoryCode: v })
+                }
+                disabled={readOnly}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t('contributionTypePlaceholder')} />
+                </SelectTrigger>
+                <SelectContent className="min-w-[260px]">
+                  {ATOE_MASTER_CATEGORIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code} — {t(`categories.${c.code}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">
@@ -269,30 +286,7 @@ export function PurchaseOrderItemsTable({
                 disabled={readOnly}
               />
             </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">
-                  ΑΤΟΕ <span className="text-destructive">*</span>
-                </p>
-                <Select
-                  value={item.categoryCode}
-                  onValueChange={(v) =>
-                    onUpdateItem(item.tempId, { categoryCode: v })
-                  }
-                  disabled={readOnly}
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder={t('contributionTypePlaceholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ATOE_MASTER_CATEGORIES.map((c) => (
-                      <SelectItem key={c.code} value={c.code}>
-                        {c.code} — {c.nameEL}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex items-center justify-end">
               <span className="font-semibold tabular-nums">
                 €{(item.quantity * item.unitPrice).toFixed(2)}
               </span>
