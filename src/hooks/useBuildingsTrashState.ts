@@ -42,6 +42,12 @@ export function useBuildingsTrashState({
 
   const trashCount = trashedBuildings.length;
 
+  const onBuildingMovedToTrash = useCallback((building: Building) => {
+    setTrashedBuildings(prev =>
+      prev.some(b => b.id === building.id) ? prev : [...prev, building]
+    );
+  }, []);
+
   const fetchTrashedBuildings = useCallback(async () => {
     setLoadingTrash(true);
     try {
@@ -124,5 +130,6 @@ export function useBuildingsTrashState({
     handleConfirmPermanentDelete,
     handleCancelPermanentDelete,
     fetchTrashedBuildings,
+    onBuildingMovedToTrash,
   } as const;
 }

@@ -150,10 +150,13 @@ export function BuildingsPageContent() {
     showPermanentDeleteDialog,
     pendingPermanentDeleteIds,
     handleToggleTrash,
+    handleTrashActionComplete,
     handleRestoreBuildings,
     handlePermanentDeleteBuildings,
     handleConfirmPermanentDelete,
     handleCancelPermanentDelete,
+    fetchTrashedBuildings,
+    onBuildingMovedToTrash,
   } = useBuildingsTrashState({ forceDataRefresh: refetchBuildings });
 
   // 🛡️ ADR-226 Phase 3: Deletion Guard — replaces cascade preview
@@ -172,17 +175,20 @@ export function BuildingsPageContent() {
   const handleConfirmDelete = useCallback(async () => {
     if (!buildingToDelete) return;
     setIsDeleting(true);
+    // Optimistic: badge updates instantly before server confirms
+    onBuildingMovedToTrash(buildingToDelete);
     const result = await deleteBuildingWithPolicy({ buildingId: buildingToDelete.id });
     if (result.success) {
       logger.info('Building deleted', { buildingId: buildingToDelete.id });
       setSelectedBuilding(null);
+      handleTrashActionComplete();
     } else {
       logger.error('Failed to delete building', { buildingId: buildingToDelete.id, error: result.error });
+      void fetchTrashedBuildings();
     }
-    // Always close dialog — on error user can retry
     setBuildingToDelete(null);
     setIsDeleting(false);
-  }, [buildingToDelete, setSelectedBuilding]);
+  }, [buildingToDelete, setSelectedBuilding, onBuildingMovedToTrash, handleTrashActionComplete, fetchTrashedBuildings]);
 
   // [PERF] Stable callback refs to prevent child re-renders
   const handleCloseMobileDetails = useCallback(() => setSelectedBuilding(null), [setSelectedBuilding]);
