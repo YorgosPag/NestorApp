@@ -53,6 +53,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
       toast.success(t('quotes.saveSuccess'), {
         description: quote?.displayNumber ? `${t('quotes.number')}: ${quote.displayNumber}` : undefined,
       });
+      router.refresh();
       handleBack();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : t('quotes.errors.updateFailed'));
