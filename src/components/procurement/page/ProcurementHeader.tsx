@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { Package, Filter, ScanLine } from 'lucide-react';
+import { Package, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -27,7 +27,6 @@ interface ProcurementHeaderProps {
   setShowDashboard: (show: boolean) => void;
   showFilters: boolean;
   setShowFilters: (show: boolean) => void;
-  onScanQuote: () => void;
   breadcrumb?: React.ReactNode;
 }
 
@@ -40,7 +39,6 @@ export function ProcurementHeader({
   setShowDashboard,
   showFilters,
   setShowFilters,
-  onScanQuote,
   breadcrumb,
 }: ProcurementHeaderProps) {
   const { t } = useTranslation('procurement');
@@ -63,17 +61,6 @@ export function ProcurementHeader({
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         customActions: [
-          // Scan quote PDF
-          React.createElement('button', {
-            key: 'scan-quote',
-            onClick: onScanQuote,
-            className: `flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 ${TRANSITION_PRESETS.STANDARD_COLORS}`,
-            'aria-label': t('page.scanQuote'),
-          },
-            React.createElement(ScanLine, { className: iconSizes.sm }),
-            t('page.scanQuote'),
-          ),
-          // Mobile filter toggle
           React.createElement('button', {
             key: 'mobile-filter',
             onClick: () => setShowFilters(!showFilters),

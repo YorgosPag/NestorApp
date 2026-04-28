@@ -86,7 +86,6 @@ export function ProcurementPageContent() {
         setShowDashboard={setShowDashboard}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
-        onScanQuote={() => router.push('/procurement/quotes/scan')}
         breadcrumb={<ModuleBreadcrumb />}
       />
 

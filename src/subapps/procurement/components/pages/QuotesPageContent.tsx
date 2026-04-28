@@ -101,7 +101,6 @@ export function QuotesPageContent() {
         loading={loading}
         onView={handleViewQuote}
         onArchive={archiveWithUndo}
-        onCreateNew={handleScanNew}
       />
 
       {/* ── Archived quote list ──────────────────────────────────────────── */}
