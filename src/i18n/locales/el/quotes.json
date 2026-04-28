@@ -141,7 +141,8 @@
       "vendorDeclined": "Ο προμηθευτής {vendorName} αρνήθηκε τη συμμετοχή στο RFQ {rfqTitle}",
       "vendorEdited": "Ο προμηθευτής {vendorName} ενημέρωσε την προσφορά του",
       "inviteSent": "Η πρόσκληση στάλθηκε στον προμηθευτή {vendorName}",
-      "inviteFailed": "Η αποστολή πρόσκλησης απέτυχε για τον προμηθευτή {vendorName}: {reason}"
+      "inviteFailed": "Η αποστολή πρόσκλησης απέτυχε για τον προμηθευτή {vendorName}: {reason}",
+      "quoteScanCompleted": "Σάρωση προσφοράς ολοκληρώθηκε: {vendorName}"
     }
   },
   "rfqs": {

@@ -141,7 +141,8 @@
       "vendorDeclined": "Vendor {vendorName} declined RFQ {rfqTitle}",
       "vendorEdited": "Vendor {vendorName} updated their quote",
       "inviteSent": "Invitation sent to vendor {vendorName}",
-      "inviteFailed": "Invitation delivery failed for vendor {vendorName}: {reason}"
+      "inviteFailed": "Invitation delivery failed for vendor {vendorName}: {reason}",
+      "quoteScanCompleted": "Quote scan completed: {vendorName}"
     }
   },
   "rfqs": {
