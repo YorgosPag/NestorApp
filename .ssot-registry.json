@@ -2460,6 +2460,19 @@
         "src/components/ui/navigation/__tests__/"
       ],
       "tier": 2
+    },
+    "no-navigation-flash": {
+      "ssotFile": "src/lib/stale-cache.ts",
+      "description": "Hooks fetching list data MUST use createStaleCache + silentInitialFetch (ADR-300). PageContents MUST NOT gate render on isNamespaceReady or bare `if (loading)` returning <Loader2> — sister pages prove the canonical pattern is `if (loading && data.length === 0) return <PageLoadingState/>`. Regex-based ratchet CHECK 3.25 enforces this; this registry layer is a defense-in-depth grep against the most distinctive flash trigger (ADR-267 Phase H+3).",
+      "forbiddenPatterns": [
+        "if[[:space:]]*\\([[:space:]]*![[:space:]]*isNamespaceReady[[:space:]]*\\)"
+      ],
+      "allowlist": [
+        "src/lib/stale-cache.ts",
+        "src/hooks/useAsyncData.ts",
+        "src/subapps/dxf-viewer/"
+      ],
+      "tier": 2
     }
   }
 }

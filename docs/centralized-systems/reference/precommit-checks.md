@@ -342,6 +342,60 @@ import { RouteTabs } from '@/components/ui/navigation/route-tabs';
 
 ---
 
+## CHECK 3.25 — No-Navigation-Flash Ratchet (regex-based, ADR-267 / ADR-300)
+
+**Goal:** Block three classes of navigation-flash regressions on list/detail pages:
+- **Pattern A** — list-fetch hooks using `useAsyncData<T[]>` without ADR-300 stale-cache (`createStaleCache` import + `silentInitialFetch:` option). Causes blank-then-populate on remount.
+- **Pattern B** — `*PageContent.tsx` gating render on `if (!isNamespaceReady)` early-return. Namespace lazy-load (~50-150ms) renders blank then populates — sister pages prove the guard is unnecessary.
+- **Pattern C** — `*PageContent.tsx` using bare `if (loading)` returning raw `<Loader2>`. Canonical SSoT (ADR-229) is `if (loading && data.length === 0) return <PageLoadingState />`.
+
+**Why regex, not AST:**
+All three patterns are line-or-near-line localized. Multiline regex with bounded non-greedy windows handles them robustly without the AST parse cost on every staged file (smoke target <500ms across <50 files).
+
+**File scope:**
+- Pattern A: `src/hooks/**/use*.ts` + `src/subapps/*/hooks/**/use*.ts` (excludes `__tests__/`)
+- Pattern B/C: `src/components/**/pages/*PageContent.tsx` + `src/subapps/*/components/**/pages/*PageContent.tsx`
+
+**Canonical compliant pattern:**
+```ts
+// ✅ Hook (Pattern A compliant)
+import { createStaleCache } from '@/lib/stale-cache';
+const cache = createStaleCache<Quote[]>('quotes');
+useAsyncData<Quote[]>({
+  fetcher: async () => { const r = await fetchQuotes(); cache.set(r); return r; },
+  initialData: cache.get() ?? [],
+  silentInitialFetch: cache.hasLoaded(),
+});
+
+// ✅ PageContent (Pattern B+C compliant)
+if (loading && filteredQuotes.length === 0 && !showArchived) {
+  return <PageLoadingState icon={FileText} message={t('page.loadingMessage')} />;
+}
+```
+
+**Script:** `scripts/check-no-flash-ratchet.js`
+**Baseline:** `.no-flash-baseline.json` (4 files / 4 violations — pre-existing legacy hooks + EditObligationPageContent, 2026-04-29)
+
+**Commands:**
+| Command | Purpose |
+|---------|---------|
+| `npm run no-flash:audit` | Full codebase scan (report only) |
+| `npm run no-flash:baseline` | Regenerate baseline after Boy Scout cleanup |
+| `npm run test:no-flash` | Run 53 golden tests |
+| `SKIP_NO_FLASH=1 git commit` | Emergency skip |
+
+**Ratchet rules:**
+- New files (not in baseline) → **zero tolerance**
+- Existing files: count can only **decrease**
+- Run `npm run no-flash:baseline` after cleanup to persist lower counts
+
+**Relationship to module `no-navigation-flash` (Tier 2 in `.ssot-registry.json`):**
+- Module — registry-level grep ERE on `if[[:space:]]*\([[:space:]]*![[:space:]]*isNamespaceReady`, defense-in-depth (Pattern B only)
+- CHECK 3.25 (this) — authoritative; covers all three patterns + ratchet semantics
+- Together: cheap registry hit on the most distinctive flash trigger + full multi-pattern enforcement
+
+---
+
 ## Boy Scout Rule (applies to all RATCHET checks)
 
 Όταν αγγίζεις legacy file → καθάρισε όσα violations μπορείς. Δεν είναι υποχρεωτικό, αλλά σταδιακά φτάνουμε στο 0.

@@ -1,0 +1,15 @@
+{
+  "_meta": {
+    "description": "No-navigation-flash ratchet (CHECK 3.25, ADR-267/ADR-300). Hooks must use createStaleCache + silentInitialFetch; PageContent must not gate render on isNamespaceReady or bare `if (loading)` <Loader2>.",
+    "generated": "2026-04-28T21:19:46.941Z",
+    "totalViolations": 4,
+    "totalFiles": 4,
+    "rule": "List-fetch hooks → ADR-300 stale-cache. PageContents → no namespace guard, no bare loading-only Loader2 returns."
+  },
+  "files": {
+    "src/components/obligations/pages/EditObligationPageContent.tsx": 1,
+    "src/hooks/procurement/useVendorPurchaseOrders.ts": 1,
+    "src/hooks/procurement/useVendorRfqInvites.ts": 1,
+    "src/subapps/procurement/hooks/useRfqs.ts": 1
+  }
+}

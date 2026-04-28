@@ -23,7 +23,7 @@
 | `scripts/generate-ssot-baseline.sh` | Baseline generator |
 | `scripts/ssot-audit.sh` | Progress report |
 
-### Modules (v3.0 — 41 modules, 6 tiers + UI patterns)
+### Modules (v3.0 — 42 modules, 6 tiers + UI patterns)
 
 **Tier 0 — Core (5 modules):**
 | Module | SSoT File | Pattern |
@@ -176,6 +176,7 @@ capturing groups, NEVER `(?:...)`.
 ## Changelog
 | Date | Change |
 |------|--------|
+| 2026-04-29 | **CHECK 3.25 — No-Navigation-Flash Ratchet (regex-based, ADR-267 Phase H+3 / ADR-300)** — New pre-commit check enforcing the Phase H+1/H+2 procurement flash fixes against future regressions (Beyoncé Rule). Three regex-detected patterns: (A) `useAsyncData<T[]>` in `src/hooks/**/use*.ts` + `src/subapps/*/hooks/**/use*.ts` without `@/lib/stale-cache` import + `silentInitialFetch:` option (ADR-300 SWR violation), (B) `if (!isNamespaceReady)` early-return in `*PageContent.tsx` (50-150ms blank flash on namespace lazy-load), (C) bare `if (loading)` returning raw `<Loader2>` in PageContent (canonical = `if (loading && data.length === 0) return <PageLoadingState />` per ADR-229). Ratchet semantics mirror CHECK 3.23/3.24: new file = zero tolerance, existing files = count-only-decrease. Baseline `.no-flash-baseline.json`: 4 files / 4 violations (3 vendor portal + RFQ hooks legacy + 1 EditObligationPageContent), Boy Scout target. Script: `scripts/check-no-flash-ratchet.js` (~270 LOC, smoke <500ms). **Golden test suite**: `scripts/__tests__/check-no-flash-ratchet.test.js` — 53 tests / 8 groups (pattern A/B/C semantics, file scope, allowlist, baseline ratchet new/equal/lower/higher, parseArgs CLI), runtime ~2s. **Registry**: new `no-navigation-flash` Tier 2 module — defense-in-depth ERE grep on `if[[:space:]]*\([[:space:]]*![[:space:]]*isNamespaceReady` (Pattern B canonical trigger), allowlist `src/lib/stale-cache.ts` + `src/hooks/useAsyncData.ts` + `src/subapps/dxf-viewer/`. NPM scripts: `no-flash:audit` / `no-flash:baseline` / `test:no-flash`. Module count 41 → 42. Emergency skip: `SKIP_NO_FLASH=1 git commit`. |
 | 2026-04-28 | **CHECK 3.23 — Native HTML Tooltip Ratchet (AST-based)** — New pre-commit check blocking `title=` props on HTML (lowercase) JSX elements. Uses `@typescript-eslint/parser` AST walk — immune to multiline JSX where `title=` sits on its own line (grep cannot see the parent tag). HTML_ELEMENTS set: 70+ tags. Ratchet: zero tolerance for new files, existing legacy frozen at baseline. Script: `scripts/check-native-tooltip.js`. Baseline: `.native-tooltip-baseline.json` (48 files / 63 violations — all legacy). npm scripts: `native-tooltip:audit` (full scan), `native-tooltip:baseline` (regenerate). Canonical replacement: `<Tooltip><TooltipTrigger/><TooltipContent/>` or `<InfoTooltip content={x} />`. Emergency skip: `SKIP_NATIVE_TOOLTIP=1 git commit`. |
 | 2026-04-28 | **ui-tooltip SSoT module** — New `ui-tooltip` module (UI Components tier). Canonical: `src/components/ui/tooltip.tsx` (Radix wrapper, dark bg + white text). Forbidden: direct `@radix-ui/react-tooltip` imports outside the wrapper. Allowlist: `src/components/ui/tooltip.tsx` only. Baseline: 0 violations (codebase already clean). |
 | 2026-04-08 | Initial implementation — 5 modules, 92 files baseline |

@@ -1387,5 +1387,45 @@ if [[ -z "${SKIP_TABS_IMPORT:-}" ]] && [[ -f "$TABS_IMPORT_SCRIPT" ]] && [[ -n "
     echo -e "${GREEN}  ✅ Tabs SSoT ratchet: clean${NC}"
 fi
 
+# =============================================================================
+# CHECK 3.25: No-Navigation-Flash Ratchet (regex-based / ADR-267 / ADR-300)
+# =============================================================================
+# Blocks new violations of three flash patterns:
+#   A. List-fetch hooks using useAsyncData<T[]> without ADR-300 stale-cache
+#      (createStaleCache + silentInitialFetch). Causes blank flash on remount.
+#   B. PageContent gating render on `if (!isNamespaceReady)` early-return —
+#      namespace lazy-load (~50-150ms) renders blank then populates.
+#   C. PageContent using bare `if (loading)` returning <Loader2> — canonical
+#      SSoT is `if (loading && data.length === 0) return <PageLoadingState />`.
+#
+# Ratchet: new files = zero tolerance. Existing files: counts can only decrease.
+# Baseline: .no-flash-baseline.json
+# Skip: SKIP_NO_FLASH=1 git commit (emergency only)
+# Full scan: node scripts/check-no-flash-ratchet.js --all
+# =============================================================================
+
+NO_FLASH_SCRIPT="scripts/check-no-flash-ratchet.js"
+if [[ -z "${SKIP_NO_FLASH:-}" ]] && [[ -f "$NO_FLASH_SCRIPT" ]] && [[ -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking no-navigation-flash patterns (CHECK 3.25)...${NC}"
+
+    NO_FLASH_OUTPUT=$(node "$NO_FLASH_SCRIPT" $TS_FILES 2>&1)
+    NO_FLASH_EXIT=$?
+
+    if [[ $NO_FLASH_EXIT -ne 0 ]]; then
+        echo "$NO_FLASH_OUTPUT"
+        echo ""
+        echo -e "${RED}✖ CHECK 3.25 failed — wire ADR-300 stale-cache or remove flash guards.${NC}"
+        echo -e "${YELLOW}  Tip: run 'npm run no-flash:audit' for a full scan.${NC}"
+        echo -e "${YELLOW}  Emergency skip: SKIP_NO_FLASH=1 git commit ...${NC}"
+        exit 1
+    fi
+
+    if [[ -n "$NO_FLASH_OUTPUT" ]]; then
+        echo "$NO_FLASH_OUTPUT"
+    fi
+
+    echo -e "${GREEN}  ✅ No-flash ratchet: clean${NC}"
+fi
+
 echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
 exit 0
