@@ -56,7 +56,6 @@ const DEPRECATED_JSX_VARIANT_VALUE = 'radix';
 const ALLOWLIST = [
   'src/components/ui/navigation/TabsComponents.tsx',
   'src/components/ui/navigation/__tests__/',
-  'src/components/shared/TabsNav.tsx',
 ];
 
 function isAllowlisted(filePath) {

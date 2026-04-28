@@ -20,11 +20,7 @@ The Tabs UI domain was fragmented across three layers with overlapping responsib
 
    All three independently re-implemented theme resolution, icon sizing, `useTransition` for INP, and per-tab icon mapping.
 
-3. **`src/components/shared/TabsNav.tsx`** (132 LOC) — sub-nav routing-aware tabs with two visual variants:
-   - `link` — Next.js `<Link>` styled as tabs (border-bottom underline, default).
-   - `radix` — Radix Tabs + `router.push()` on change (added in ADR-267 Phase F to align with the centralized Trigger Tabs).
-
-   Helpers `isTabActive` / `findActiveHref` lived inline.
+3. **`src/components/shared/TabsNav.tsx`** (132 LOC, REMOVED in Phase I) — sub-nav routing-aware tabs with two visual variants (`link` Next.js Link styled, `radix` Radix Tabs + `router.push()`). Used exclusively by `ProcurementSubNav`. Helpers `isTabActive` / `findActiveHref` lived inline.
 
 Phase A→H of ADR-267 had already aligned the **visual** layer between the two families, but the **code path** remained tripled. Every new tabs feature required deciding which wrapper to use, with subtly different INP behavior, layout assumptions, and theming branches.
 
@@ -51,11 +47,12 @@ Introduce **one canonical pure renderer** (`BaseTabs`) and **two thin wrappers**
               │                              │
               ▼                              ▼
    ┌──────────────────────────────┐  ┌──────────────────────────────────┐
-   │ DEPRECATED aliases           │  │ DEPRECATED alias                 │
-   │ - TabsContainer              │  │ - TabsNav variant='radix'        │
-   │ - ToolbarTabs                │  │   (variant='link' stays inline,  │
-   │ - TabsOnlyTriggers           │  │   distinct visual contract)      │
-   │ (TabsComponents.tsx shims)   │  │                                  │
+   │ DEPRECATED aliases           │  │ Direct consumers                 │
+   │ - TabsContainer              │  │ - ProcurementSubNav (canonical   │
+   │ - ToolbarTabs                │  │   pattern, migrated in Phase I)  │
+   │ - TabsOnlyTriggers           │  │                                  │
+   │ (TabsComponents.tsx shims)   │  │ TabsNav.tsx removed (zero        │
+   │                              │  │ remaining consumers post-L4).    │
    └──────────────────────────────┘  └──────────────────────────────────┘
 ```
 
@@ -146,13 +143,13 @@ export { TABS_STYLES } from './tabs-types';
 
 The 23 consumers of `TabsOnlyTriggers`, the 2 of `ToolbarTabs`, and the consumer of `TabsContainer` keep their import statements unchanged — `@deprecated` only surfaces in IDE hover/lint feedback.
 
-### `TabsNav.tsx` (post-refactor, ~95 LOC)
+### `TabsNav.tsx` — REMOVED in Phase I
 
-`variant='radix'` becomes a single-line forward to `RouteTabs`. `variant='link'` remains inline (Next.js `<Link>` styled, distinct visual contract — kept verbatim). The deprecation note lives on the `radix` JSDoc, **not** on the component export, so consumers using `variant='link'` are not flagged.
+Originally planned to keep as a `radix`-variant alias of `RouteTabs` plus an inline `link` variant for back-compat. Removed in L4 because `ProcurementSubNav` was its sole consumer and migrated directly to `RouteTabs`. No remaining `variant='link'` callers existed. Phase II is unnecessary for this file.
 
 ### `ProcurementSubNav.tsx` (direct consumer, canonical pattern)
 
-Migrated from `TabsNav variant='radix'` to `RouteTabs` direct import. Demonstrates the canonical sub-nav pattern for new code. The remaining ~25 deprecated consumers stay on aliases (no Phase II direct migration in scope).
+Migrated from `TabsNav variant='radix'` to `RouteTabs` direct import. Demonstrates the canonical sub-nav pattern for new code. The remaining ~25 deprecated `TabsComponents` consumers stay on aliases (no Phase II direct migration in scope).
 
 ---
 
@@ -163,9 +160,9 @@ Migrated from `TabsNav variant='radix'` to `RouteTabs` direct import. Demonstrat
 | Detector | Pattern | Catches |
 |----------|---------|---------|
 | **A** | `ImportDeclaration` with source `@/components/ui/navigation/TabsComponents` and specifiers ∈ {`TabsOnlyTriggers`, `TabsContainer`, `ToolbarTabs`} | New imports of deprecated symbols |
-| **B** | `JSXOpeningElement` with name `TabsNav` and `variant` attribute literal value `"radix"` | New `<TabsNav variant="radix">` JSX usage |
+| **B** | `JSXOpeningElement` with name `TabsNav` and `variant` attribute literal value `"radix"` | Defensive: blocks any future re-introduction of `<TabsNav variant="radix">` JSX |
 
-**Allowlist:** alias home (`TabsComponents.tsx`), navigation tests, and `TabsNav.tsx` itself.
+**Allowlist:** alias home (`TabsComponents.tsx`) and navigation tests.
 
 **Baseline:** `.tabs-import-baseline.json` — 25 files / 25 violations as of 2026-04-28.
 
@@ -216,4 +213,4 @@ Migrated from `TabsNav variant='radix'` to `RouteTabs` direct import. Demonstrat
 
 | Date | Phase | Change |
 |------|-------|--------|
-| 2026-04-28 | Phase I | Initial implementation. `tabs-types.ts` + `base-tabs.tsx` (130 LOC, 15 tests, 95% coverage, jest-axe a11y) + `state-tabs.tsx` (95 LOC, 14 tests) + `route-tabs.tsx` (70 LOC, 12 tests). `TabsComponents.tsx` reduced to 50 LOC of `@deprecated` shims. `TabsNav.tsx` `radix` branch → `RouteTabs` alias. `ProcurementSubNav` migrated to direct `RouteTabs`. CHECK 3.24 active with 25-file baseline. SSoT registry +`tabs-primitive` (Tier 2). |
+| 2026-04-28 | Phase I | Initial implementation. `tabs-types.ts` + `base-tabs.tsx` (130 LOC, 15 tests, 95% coverage, jest-axe a11y) + `state-tabs.tsx` (95 LOC, 14 tests) + `route-tabs.tsx` (70 LOC, 12 tests). `TabsComponents.tsx` reduced to 50 LOC of `@deprecated` shims. `TabsNav.tsx` REMOVED (zero remaining consumers post-L4 — `ProcurementSubNav` migrated to direct `RouteTabs`). CHECK 3.24 active with 25-file baseline. SSoT registry +`tabs-primitive` (Tier 2). |

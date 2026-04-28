@@ -2451,14 +2451,13 @@
     },
     "tabs-primitive": {
       "ssotFile": "src/components/ui/navigation/base-tabs.tsx",
-      "description": "Tabs UI must use BaseTabs/StateTabs/RouteTabs from src/components/ui/navigation/. TabsContainer/ToolbarTabs/TabsOnlyTriggers (in TabsComponents.tsx) and TabsNav variant='radix' are deprecated aliases. AST-based ratchet CHECK 3.24 enforces this; this regex layer is a defense-in-depth grep against deprecated import lines (ADR-328).",
+      "description": "Tabs UI must use BaseTabs/StateTabs/RouteTabs from src/components/ui/navigation/. TabsContainer/ToolbarTabs/TabsOnlyTriggers (in TabsComponents.tsx) are deprecated aliases. AST-based ratchet CHECK 3.24 enforces this; this regex layer is a defense-in-depth grep against deprecated import lines (ADR-328).",
       "forbiddenPatterns": [
         "import[[:space:]]+\\{[^}]*(TabsOnlyTriggers|TabsContainer|ToolbarTabs)[^}]*\\}[[:space:]]+from[[:space:]]+['\"]@/components/ui/navigation/TabsComponents['\"]"
       ],
       "allowlist": [
         "src/components/ui/navigation/TabsComponents.tsx",
-        "src/components/ui/navigation/__tests__/",
-        "src/components/shared/TabsNav.tsx"
+        "src/components/ui/navigation/__tests__/"
       ],
       "tier": 2
     }

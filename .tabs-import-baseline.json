@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "Tabs SSoT import ratchet (CHECK 3.24, ADR-328). Deprecated TabsContainer/ToolbarTabs/TabsOnlyTriggers imports + <TabsNav variant=\"radix\">.",
-    "generated": "2026-04-28T20:33:08.332Z",
+    "generated": "2026-04-28T21:00:47.241Z",
     "totalViolations": 25,
     "totalFiles": 25,
     "rule": "New code must import BaseTabs/StateTabs/RouteTabs directly."
