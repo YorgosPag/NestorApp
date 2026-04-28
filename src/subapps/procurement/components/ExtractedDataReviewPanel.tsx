@@ -10,7 +10,7 @@
  * (overrides the auto-materialized lines from `applyExtractedData`).
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -128,9 +128,24 @@ export function ExtractedDataReviewPanel({
   const extracted = quote.extractedData;
   const [lines, setLines] = useState<QuoteLine[]>(quote.lines);
   const [mismatchDismissed, setMismatchDismissed] = useState(false);
+  const savedLinesRef = useRef<QuoteLine[]>(quote.lines);
 
   const overall = extracted?.overallConfidence ?? 0;
   const totals = useMemo(() => computeQuoteTotals(lines), [lines]);
+
+  const isDirty = useMemo(() => {
+    const saved = savedLinesRef.current;
+    if (lines.length !== saved.length) return true;
+    return lines.some((line, i) => {
+      const s = saved[i];
+      return (
+        line.description !== s.description ||
+        line.quantity !== s.quantity ||
+        line.unit !== s.unit ||
+        line.unitPrice !== s.unitPrice
+      );
+    });
+  }, [lines]);
 
   const updateLine = (index: number, field: keyof QuoteLine, value: QuoteLine[keyof QuoteLine]) => {
     setLines((prev) => {
@@ -391,7 +406,10 @@ export function ExtractedDataReviewPanel({
               {t('quotes.scan.reject')}
             </Button>
           )}
-          <Button onClick={() => onConfirm(lines)} disabled={isSaving}>
+          <Button
+            onClick={() => onConfirm(lines)}
+            disabled={isSaving || (quote.status === 'under_review' && !isDirty)}
+          >
             <Save className="mr-1 h-4 w-4" />
             {t('quotes.scan.confirm')}
           </Button>
