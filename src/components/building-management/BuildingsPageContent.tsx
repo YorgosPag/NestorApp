@@ -40,6 +40,7 @@ import type { Building as BuildingType } from '@/types/building/contracts';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { useBuildingsTrashState } from '@/hooks/useBuildingsTrashState';
 import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { nowISO } from '@/lib/date-local';
@@ -53,6 +54,7 @@ export function BuildingsPageContent() {
   // [ENTERPRISE] i18n hook for translations
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
   const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { success: showSuccess } = useNotifications();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -132,7 +134,8 @@ export function BuildingsPageContent() {
       );
       setStartInEditMode(false);
     }
-  }, [selectedBuilding, setSelectedBuilding, buildingsData]);
+    showSuccess(t('dialog.messages.success'));
+  }, [selectedBuilding, setSelectedBuilding, buildingsData, showSuccess, t]);
 
   // 🏢 ENTERPRISE: Cancel create mode — deselect building
   const handleCancelCreate = useCallback(() => {
