@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Plus, Search, Eye, Archive, RotateCcw } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/design-system';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -140,34 +141,50 @@ export function QuoteList({ quotes, loading, onCreateNew, onView, onArchive, onR
                   </TableCell>
                   {hasActions && (
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        {onView && (
-                          <Button variant="ghost" size="icon" onClick={() => onView(q.id)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {onArchive && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() => onArchive(q.id)}
-                          >
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {onRestore && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-primary"
-                            title={t('quotes.restore')}
-                            onClick={() => onRestore(q.id)}
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+                      <TooltipProvider>
+                        <div className="flex gap-1">
+                          {onView && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => onView(q.id)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t('quotes.actions.view')}</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {onArchive && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-muted-foreground hover:text-destructive"
+                                  onClick={() => onArchive(q.id)}
+                                >
+                                  <Archive className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t('quotes.actions.archive')}</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {onRestore && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-muted-foreground hover:text-primary"
+                                  onClick={() => onRestore(q.id)}
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t('quotes.restore')}</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </TooltipProvider>
                     </TableCell>
                   )}
                 </TableRow>

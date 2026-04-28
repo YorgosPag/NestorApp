@@ -77,6 +77,7 @@
     "actions": {
       "accept": "Accept",
       "reject": "Reject",
+      "view": "View",
       "archive": "Archive",
       "addLine": "Add Line",
       "removeLine": "Remove"
