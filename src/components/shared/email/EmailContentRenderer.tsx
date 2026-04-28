@@ -22,6 +22,7 @@
  */
 
 import { sanitizeEmailHTML, detectEmailSignature } from '@/lib/message-utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { truncateText } from '@/lib/text-utils';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -199,17 +200,20 @@ function RenderContentWithLinks({ content }: { content: string }) {
             : `https://${part.href}`;
 
           return (
-            <a
-              key={index}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[hsl(var(--link-color))] underline hover:text-[hsl(var(--link-color-hover))] transition-colors"
-              onClick={(e) => e.stopPropagation()}
-              title={part.href}
-            >
-              {part.displayText || part.content}
-            </a>
+            <Tooltip key={index}>
+              <TooltipTrigger asChild>
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[hsl(var(--link-color))] underline hover:text-[hsl(var(--link-color-hover))] transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {part.displayText || part.content}
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>{part.href}</TooltipContent>
+            </Tooltip>
           );
         }
         return (

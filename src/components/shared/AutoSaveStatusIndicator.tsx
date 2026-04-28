@@ -22,6 +22,7 @@
 
 import React, { useMemo } from 'react';
 import { CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { AutoSaveStatusIndicatorProps, SaveStatus } from '@/types/auto-save';
@@ -131,20 +132,24 @@ export function AutoSaveStatusIndicator({
   // ── Compact variant: colored dot only ──────────────────
   if (variant === 'compact') {
     return (
-      <output
-        aria-live="polite"
-        aria-label={label}
-        title={label}
-        className={cn('inline-block', className)}
-      >
-        <span
-          className={cn(
-            'inline-block h-2 w-2 rounded-full',
-            config.dotColor,
-            config.animate && 'animate-pulse'
-          )}
-        />
-      </output>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <output
+            aria-live="polite"
+            aria-label={label}
+            className={cn('inline-block', className)}
+          >
+            <span
+              className={cn(
+                'inline-block h-2 w-2 rounded-full',
+                config.dotColor,
+                config.animate && 'animate-pulse'
+              )}
+            />
+          </output>
+        </TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
     );
   }
 

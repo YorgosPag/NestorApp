@@ -141,12 +141,22 @@ export function FileInspector({
           <section className="space-y-6">
             {/* File Name */}
             <header className="pb-4 border-b">
-              <h3 className="text-lg font-semibold truncate" title={file.displayName}>
-                {file.displayName}
-              </h3>
-              <p className={cn("text-sm truncate", colors.text.muted)} title={file.originalFilename}>
-                {file.originalFilename}
-              </p>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <h3 className="text-lg font-semibold truncate">
+                    {file.displayName}
+                  </h3>
+                </TooltipTrigger>
+                <TooltipContent>{file.displayName}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className={cn("text-sm truncate", colors.text.muted)}>
+                    {file.originalFilename}
+                  </p>
+                </TooltipTrigger>
+                <TooltipContent>{file.originalFilename}</TooltipContent>
+              </Tooltip>
             </header>
 
             {/* Metadata (Definition List - Semantic DOM) */}

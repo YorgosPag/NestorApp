@@ -131,7 +131,6 @@ export function ErrorReportingDashboard({
               <button
                 onClick={clearAllErrors}
                 className={`text-xs ${colors.bg.error} px-2 py-1 ${radius.md} ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                title={t('errorTracking.clear')}
               >
                 {t('errorTracking.clear')}
               </button>

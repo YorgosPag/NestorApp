@@ -13,6 +13,7 @@
  */
 
 import { Paperclip, FileText, FileImage, Download, File } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { normalizeToDate } from '@/lib/date-local';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useTypography } from '@/hooks/useTypography';
@@ -205,12 +206,14 @@ export const AttachmentDisplay = ({ attachments }: AttachmentDisplayProps) => {
 
               {/* Filename & Type */}
               <div className="flex-1 min-w-0">
-                <p
-                  className={`${typography.body.sm} truncate font-medium`}
-                  title={filename}
-                >
-                  {filename}
-                </p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className={`${typography.body.sm} truncate font-medium`}>
+                      {filename}
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent>{filename}</TooltipContent>
+                </Tooltip>
                 <p className={`${typography.label.xs} ${colors.text.muted}`}>
                   {fileInfo.type.toUpperCase()}
                 </p>

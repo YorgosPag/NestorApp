@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { where, orderBy } from 'firebase/firestore';
 import { Bell, MessageCircle, User, Clock } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -102,18 +103,22 @@ export function TelegramNotifications() {
   return (
     <div className="relative">
       {/* Notification Bell */}
-      <button 
-        onClick={() => setShowNotifications(!showNotifications)}
-        className={`relative p-2 ${colors.text.muted} ${HOVER_TEXT_EFFECTS.BLUE} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} rounded-lg transition-colors`}
-        title="Telegram Messages"
-      >
-        <MessageCircle className={iconSizes.lg} />
-        {unreadCount > 0 && (
-          <span className={`absolute -top-1 -right-1 ${colors.bg.danger} ${colors.text.inverted} text-xs rounded-full ${iconSizes.md} flex items-center justify-center`}>
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            className={`relative p-2 ${colors.text.muted} ${HOVER_TEXT_EFFECTS.BLUE} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} rounded-lg transition-colors`}
+          >
+            <MessageCircle className={iconSizes.lg} />
+            {unreadCount > 0 && (
+              <span className={`absolute -top-1 -right-1 ${colors.bg.danger} ${colors.text.inverted} text-xs rounded-full ${iconSizes.md} flex items-center justify-center`}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{t('telegram.title')}</TooltipContent>
+      </Tooltip>
 
       {/* Notifications Panel */}
       {showNotifications && (
@@ -124,13 +129,17 @@ export function TelegramNotifications() {
                 <MessageCircle className={`${iconSizes.sm} mr-2`} />
                 {t('telegram.title')}
               </h3>
-              <button
-                onClick={requestNotificationPermission}
-                className={`text-xs ${colors.text.info} ${HOVER_TEXT_EFFECTS.BLUE_DARK}`}
-                title="Enable Browser Notifications"
-              >
-                <Bell className={iconSizes.sm} />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={requestNotificationPermission}
+                    className={`text-xs ${colors.text.info} ${HOVER_TEXT_EFFECTS.BLUE_DARK}`}
+                  >
+                    <Bell className={iconSizes.sm} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Enable Browser Notifications</TooltipContent>
+              </Tooltip>
             </div>
           </div>
 

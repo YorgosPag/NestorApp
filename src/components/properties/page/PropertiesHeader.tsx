@@ -8,6 +8,7 @@
 import React from 'react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Filter, Trash2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PageHeader } from '@/core/headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Breadcrumb from centralized navigation
@@ -86,24 +87,27 @@ export function PropertiesHeader({
           // Trash toggle + mobile filter buttons
           customActions: [
             ...(onToggleTrash ? [
-              <button
-                key="trash-toggle"
-                onClick={onToggleTrash}
-                className={`relative ${spacing.padding.sm} rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
-                  showTrash
-                    ? `bg-destructive/10 text-destructive border border-destructive/30`
-                    : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
-                }`}
-                aria-label={tViewer('trash.viewTrash')}
-                title={tViewer('trash.viewTrash')}
-              >
-                <Trash2 className={iconSizes.sm} />
-                {(trashCount ?? 0) > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground font-medium">
-                    {trashCount}
-                  </span>
-                )}
-              </button>
+              <Tooltip key="trash-toggle">
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={onToggleTrash}
+                    className={`relative ${spacing.padding.sm} rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+                      showTrash
+                        ? `bg-destructive/10 text-destructive border border-destructive/30`
+                        : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
+                    }`}
+                    aria-label={tViewer('trash.viewTrash')}
+                  >
+                    <Trash2 className={iconSizes.sm} />
+                    {(trashCount ?? 0) > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground font-medium">
+                        {trashCount}
+                      </span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{tViewer('trash.viewTrash')}</TooltipContent>
+              </Tooltip>
             ] : []),
             ...(setShowFilters ? [
               <button

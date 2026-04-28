@@ -5,6 +5,7 @@ import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { CommonBadge } from '@/core/badges';
 import { formatFlexibleDateTime, formatCurrency } from '@/lib/intl-utils';
 import { User, Mail, Phone, MessageSquare } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
 // 🏢 ENTERPRISE: i18n support
@@ -104,16 +105,20 @@ export function ContactCard({
                 <div className="flex items-center gap-3">
                   <Mail className={`${iconSizes.sm} ${colors.text.muted}`} />
                   <div className="flex-1">
-                    <a
-                      href={`https://mail.google.com/mail/?view=cm&to=${lead.email}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`text-sm font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
-                      onClick={(e) => e.stopPropagation()}
-                      title={t('contactCard.sendEmailTo', { email: lead.email })}
-                    >
-                      {lead.email}
-                    </a>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a
+                          href={`https://mail.google.com/mail/?view=cm&to=${lead.email}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`text-sm font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {lead.email}
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('contactCard.sendEmailTo', { email: lead.email })}</TooltipContent>
+                    </Tooltip>
                     <p className={cn("text-xs", colors.text.muted)}>{t('contactCard.email')}</p>
                   </div>
                 </div>
@@ -122,14 +127,18 @@ export function ContactCard({
                 <div className="flex items-center gap-3">
                   <Phone className={`${iconSizes.sm} ${colors.text.muted}`} />
                   <div className="flex-1">
-                    <a
-                      href={`tel:${lead.phone}`}
-                      className={`text-sm font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
-                      onClick={(e) => e.stopPropagation()}
-                      title={t('contactCard.callTo', { phone: lead.phone })}
-                    >
-                      {lead.phone}
-                    </a>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a
+                          href={`tel:${lead.phone}`}
+                          className={`text-sm font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {lead.phone}
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('contactCard.callTo', { phone: lead.phone })}</TooltipContent>
+                    </Tooltip>
                     <p className={cn("text-xs", colors.text.muted)}>{t('contactCard.phone')}</p>
                   </div>
                 </div>

@@ -370,7 +370,7 @@ export function FloorplanGallery({
           </section>
         )}
         {isPdf && currentFile?.downloadUrl && (
-          <iframe src={currentFile.downloadUrl} title={currentFile.displayName} className="absolute inset-0 w-full h-full border-0" />
+          <iframe src={currentFile.downloadUrl} aria-label={currentFile.displayName} className="absolute inset-0 w-full h-full border-0" />
         )}
         {isImage && currentFile?.downloadUrl && (
           <img src={currentFile.downloadUrl} alt={currentFile.displayName} className="w-full h-full object-contain" style={zp.contentStyle} draggable={false} />

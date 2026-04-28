@@ -22,6 +22,7 @@ import type {
 import { useTranslation } from "@/i18n/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ACTION_MAP } from "./activity-tab-config";
 import { formatFieldAwareValue, formatStorageUrl } from "./activity-tab-helpers";
 import { resolveAuditValue } from "./audit-value-resolver";
@@ -166,13 +167,17 @@ export function AuditTimelineEntry({
             </span>
           )}
           {timestamp && (
-            <time
-              dateTime={entry.timestamp}
-              className={cn("ml-auto text-[11px]", colors.text.muted)}
-              title={absoluteTime}
-            >
-              {relativeTime}
-            </time>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <time
+                  dateTime={entry.timestamp}
+                  className={cn("ml-auto text-[11px]", colors.text.muted)}
+                >
+                  {relativeTime}
+                </time>
+              </TooltipTrigger>
+              <TooltipContent>{absoluteTime}</TooltipContent>
+            </Tooltip>
           )}
         </div>
 

@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { Clock } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getChannelIconComponent } from '@/lib/channel-icon-map';
 import { formatRelativeTime, formatDateTime } from '@/lib/intl-formatting';
 import { cn } from '@/lib/utils';
@@ -100,10 +101,15 @@ export function ShareEntry({ share, t }: ShareEntryProps) {
         )}
 
         {/* Timestamp */}
-        <p className="text-xs text-muted-foreground mt-1.5" title={formatDateTime(createdDate)}>
-          <Clock className="w-3 h-3 inline-block mr-1 -mt-px" />
-          {formatRelativeTime(createdDate)}
-        </p>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              <Clock className="w-3 h-3 inline-block mr-1 -mt-px" />
+              {formatRelativeTime(createdDate)}
+            </p>
+          </TooltipTrigger>
+          <TooltipContent>{formatDateTime(createdDate)}</TooltipContent>
+        </Tooltip>
       </div>
     </article>
   );

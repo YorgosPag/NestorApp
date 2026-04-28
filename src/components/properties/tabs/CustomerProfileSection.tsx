@@ -17,6 +17,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useOptimizedCustomerInfo } from './hooks/useOptimizedCustomerInfo';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================================================
 // Types
@@ -133,6 +134,8 @@ export function CustomerProfileSection({ customerId, unitPrice }: CustomerProfil
       <CardContent>
         <div className="space-y-4">
           {/* Clickable Customer Profile Header */}
+          <Tooltip>
+            <TooltipTrigger asChild>
           <div
             className={`flex items-start gap-4 p-3 ${quick.card} border border-transparent ${getStatusBorder('info')} ${getElementBorder('card', 'hover')} hover:bg-primary/5 cursor-pointer transition-all duration-200 group`}
             onClick={() => {
@@ -141,7 +144,7 @@ export function CustomerProfileSection({ customerId, unitPrice }: CustomerProfil
             }}
             role="button"
             tabIndex={0}
-            title={t('customerTab.viewInContacts')}
+            aria-label={t('customerTab.viewInContacts')}
           >
             <div className={`${iconSizes.xl4} bg-primary/10 rounded-full flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors`}>
               <User className={`${iconSizes.xl} text-primary`} />
@@ -174,6 +177,9 @@ export function CustomerProfileSection({ customerId, unitPrice }: CustomerProfil
               <ArrowRight className={iconSizes.md} />
             </div>
           </div>
+            </TooltipTrigger>
+            <TooltipContent>{t('customerTab.viewInContacts')}</TooltipContent>
+          </Tooltip>
 
           {/* Navigation Hint */}
           <div className={`${colors.bg.info} ${quick.info} p-3`}>

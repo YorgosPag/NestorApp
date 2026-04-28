@@ -11,6 +11,7 @@ import type {
   ShowcaseSocialPlatform,
   ShowcaseContactSocial,
 } from './types';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmailProviderPicker } from './EmailProviderPicker';
 import { AddressMapPicker } from './AddressMapPicker';
 
@@ -43,16 +44,20 @@ function SocialIcon({ item }: { item: ShowcaseContactSocial }) {
   const Icon = SOCIAL_ICONS[item.platform] ?? LinkIcon;
   const label = item.label ?? item.platform;
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={label}
-      title={label}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[hsl(var(--showcase-surface-elevated,var(--showcase-surface)))]/60 text-[hsl(var(--showcase-fg))] ring-1 ring-[hsl(var(--showcase-border))] hover:bg-[hsl(var(--showcase-border))] transition-colors"
-    >
-      <Icon className="h-4 w-4" />
-    </a>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <a
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={label}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[hsl(var(--showcase-surface-elevated,var(--showcase-surface)))]/60 text-[hsl(var(--showcase-fg))] ring-1 ring-[hsl(var(--showcase-border))] hover:bg-[hsl(var(--showcase-border))] transition-colors"
+        >
+          <Icon className="h-4 w-4" />
+        </a>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 

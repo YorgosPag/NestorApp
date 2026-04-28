@@ -39,6 +39,7 @@ import { Marker as MapLibreMarker } from 'maplibre-gl';
 // 🔧 FIX: MapLibre CSS required for Marker positioning — was missing, causing invisible pins
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -399,30 +400,34 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
         {/* Locate Me Button */}
         {showLocateMe && (
-          <button
-            type="button"
-            onClick={requestPosition}
-            disabled={geoStatus === 'requesting'}
-            className={`
-              absolute bottom-3 right-3 z-10
-              flex items-center justify-center
-              w-9 h-9 rounded-lg shadow-md
-              border border-border
-              transition-colors duration-150
-              disabled:opacity-60 disabled:cursor-not-allowed
-              ${geoStatus === 'granted'
-                ? `${getStatusColor('available', 'bg')}/10 ${getStatusColor('available', 'text')}`
-                : `bg-background ${semanticColors.text.muted} hover:bg-accent hover:text-accent-foreground`}
-            `}
-            title={t('map.locateMe')}
-            aria-label={t('map.locateMe')}
-          >
-            {geoStatus === 'requesting' ? (
-              <Spinner size="small" />
-            ) : (
-              <Locate className="w-4 h-4" />
-            )}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={requestPosition}
+                disabled={geoStatus === 'requesting'}
+                className={`
+                  absolute bottom-3 right-3 z-10
+                  flex items-center justify-center
+                  w-9 h-9 rounded-lg shadow-md
+                  border border-border
+                  transition-colors duration-150
+                  disabled:opacity-60 disabled:cursor-not-allowed
+                  ${geoStatus === 'granted'
+                    ? `${getStatusColor('available', 'bg')}/10 ${getStatusColor('available', 'text')}`
+                    : `bg-background ${semanticColors.text.muted} hover:bg-accent hover:text-accent-foreground`}
+                `}
+                aria-label={t('map.locateMe')}
+              >
+                {geoStatus === 'requesting' ? (
+                  <Spinner size="small" />
+                ) : (
+                  <Locate className="w-4 h-4" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('map.locateMe')}</TooltipContent>
+          </Tooltip>
         )}
 
         {/* Drag hint badge */}

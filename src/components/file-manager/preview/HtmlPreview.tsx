@@ -66,7 +66,7 @@ export function HtmlPreview({ url, title }: HtmlPreviewProps) {
       {/* sandbox blocks scripts/forms/popups — safe rendering of untrusted HTML */}
       <iframe
         srcDoc={content}
-        title={title}
+        aria-label={title}
         className="flex-1 w-full border-0 bg-white"
         sandbox="allow-same-origin"
       />

@@ -22,6 +22,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Play, Check, Image as ImageIcon, AlertCircle, Film } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -288,16 +289,20 @@ export function MediaCard({
       {/* Metadata Footer */}
       <footer className="flex-1 p-2 flex flex-col justify-between min-h-0">
         {/* File Name */}
-        <h3
-          className={cn(
-            'font-medium truncate',
-            sizeConfig.text,
-            colors.text.primary
-          )}
-          title={file.displayName}
-        >
-          {file.displayName}
-        </h3>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <h3
+              className={cn(
+                'font-medium truncate',
+                sizeConfig.text,
+                colors.text.primary
+              )}
+            >
+              {file.displayName}
+            </h3>
+          </TooltipTrigger>
+          <TooltipContent>{file.displayName}</TooltipContent>
+        </Tooltip>
 
         {/* File Info */}
         <div className={cn('flex items-center justify-between gap-1 mt-1', sizeConfig.text)}>

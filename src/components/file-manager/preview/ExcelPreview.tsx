@@ -65,7 +65,7 @@ export function ExcelPreview({ fileId, title }: ExcelPreviewProps) {
     <div className="flex-1 flex flex-col overflow-hidden" aria-label={title}>
       <iframe
         srcDoc={html}
-        title={title}
+        aria-label={title}
         className="flex-1 w-full border-0"
         sandbox="allow-same-origin"
       />
