@@ -1350,5 +1350,42 @@ if [[ -z "${SKIP_NATIVE_TOOLTIP:-}" ]] && [[ -f "$NATIVE_TOOLTIP_SCRIPT" ]] && [
     echo -e "${GREEN}  ✅ Native tooltip ratchet: clean${NC}"
 fi
 
+# =============================================================================
+# CHECK 3.24: Tabs SSoT Import Ratchet (AST-based / ADR-328)
+# =============================================================================
+# Blocks new imports of deprecated TabsContainer/ToolbarTabs/TabsOnlyTriggers
+# from @/components/ui/navigation/TabsComponents AND new <TabsNav variant="radix">
+# usage. Canonical replacements: BaseTabs/StateTabs/RouteTabs from
+# @/components/ui/navigation/{base,state,route}-tabs.
+#
+# Ratchet: new files = zero tolerance. Existing files: counts can only decrease.
+# Baseline: .tabs-import-baseline.json
+# Skip: SKIP_TABS_IMPORT=1 git commit (emergency only)
+# Full scan: node scripts/check-tabs-import-ratchet.js --all
+# =============================================================================
+
+TABS_IMPORT_SCRIPT="scripts/check-tabs-import-ratchet.js"
+if [[ -z "${SKIP_TABS_IMPORT:-}" ]] && [[ -f "$TABS_IMPORT_SCRIPT" ]] && [[ -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking Tabs SSoT imports (CHECK 3.24)...${NC}"
+
+    TABS_IMPORT_OUTPUT=$(node "$TABS_IMPORT_SCRIPT" $TS_FILES 2>&1)
+    TABS_IMPORT_EXIT=$?
+
+    if [[ $TABS_IMPORT_EXIT -ne 0 ]]; then
+        echo "$TABS_IMPORT_OUTPUT"
+        echo ""
+        echo -e "${RED}✖ CHECK 3.24 failed — use BaseTabs/StateTabs/RouteTabs directly.${NC}"
+        echo -e "${YELLOW}  Tip: run 'npm run tabs-import:audit' for a full scan.${NC}"
+        echo -e "${YELLOW}  Emergency skip: SKIP_TABS_IMPORT=1 git commit ...${NC}"
+        exit 1
+    fi
+
+    if [[ -n "$TABS_IMPORT_OUTPUT" ]]; then
+        echo "$TABS_IMPORT_OUTPUT"
+    fi
+
+    echo -e "${GREEN}  ✅ Tabs SSoT ratchet: clean${NC}"
+fi
+
 echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
 exit 0

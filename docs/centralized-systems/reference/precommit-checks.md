@@ -294,6 +294,54 @@ Dedicated `jest.config.firestore-rules.js` (node env, isolated from main suite).
 
 ---
 
+## CHECK 3.24 — Tabs SSoT Import Ratchet (AST-based, ADR-328)
+
+**Goal:** Block new imports of deprecated `TabsContainer` / `ToolbarTabs` / `TabsOnlyTriggers` from `@/components/ui/navigation/TabsComponents` AND new `<TabsNav variant="radix">` JSX usage. Canonical replacements: `BaseTabs` / `StateTabs` / `RouteTabs` from `@/components/ui/navigation/{base,state,route}-tabs`.
+
+**Why AST, not grep:**
+- Detector A (deprecated imports): the named-specifier set spans 3 symbols across multiline `import { … }` blocks — line-based regex is unreliable.
+- Detector B (`<TabsNav variant="radix">`): attribute-value match on a *capitalized* JSX component is a distinct code path from CHECK 3.23's attribute-presence match on *lowercase* HTML tags. Only `JSXOpeningElement` traversal handles both deterministically.
+
+**Canonical replacement:**
+```tsx
+// ❌ Deprecated
+import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
+<TabsOnlyTriggers tabs={…} value={…} onTabChange={…}>…</TabsOnlyTriggers>
+
+// ✅ New
+import { StateTabs } from '@/components/ui/navigation/state-tabs';
+<StateTabs tabs={…} value={…} onTabChange={…} fillHeight>…</StateTabs>
+
+// ❌ Deprecated
+<TabsNav tabs={…} variant="radix" i18nNamespace={…} ariaLabel={…} />
+
+// ✅ New
+import { RouteTabs } from '@/components/ui/navigation/route-tabs';
+<RouteTabs tabs={…} i18nNamespace={…} ariaLabel={…} />
+```
+
+**Script:** `scripts/check-tabs-import-ratchet.js`
+**Baseline:** `.tabs-import-baseline.json` (25 files / 25 violations — all legacy, 2026-04-28)
+
+**Commands:**
+| Command | Purpose |
+|---------|---------|
+| `npm run tabs-import:audit` | Full codebase scan (report only) |
+| `npm run tabs-import:baseline` | Regenerate baseline after Boy Scout cleanup |
+| `SKIP_TABS_IMPORT=1 git commit` | Emergency skip |
+
+**Ratchet rules:**
+- New files (not in baseline) → **zero tolerance**
+- Existing files: count can only **decrease**
+- Run `npm run tabs-import:baseline` after cleanup to persist lower counts
+
+**Relationship to CHECK 3.7 (`tabs-primitive` module):**
+- CHECK 3.7 (`tabs-primitive` Tier 2) — regex-based grep on the import line, defense-in-depth
+- CHECK 3.24 (this) — AST-based, authoritative; covers JSX usage that grep cannot
+- Together: full Tabs SSoT enforcement — import layer + JSX usage layer
+
+---
+
 ## Boy Scout Rule (applies to all RATCHET checks)
 
 Όταν αγγίζεις legacy file → καθάρισε όσα violations μπορείς. Δεν είναι υποχρεωτικό, αλλά σταδιακά φτάνουμε στο 0.

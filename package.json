@@ -91,6 +91,8 @@
     "deadcode:delete": "node scripts/delete-deadcode.js",
     "native-tooltip:audit": "node scripts/check-native-tooltip.js --all",
     "native-tooltip:baseline": "node scripts/check-native-tooltip.js --write-baseline",
+    "tabs-import:audit": "node scripts/check-tabs-import-ratchet.js --all",
+    "tabs-import:baseline": "node scripts/check-tabs-import-ratchet.js --write-baseline",
     "test": "jest --passWithNoTests",
     "test:ai-pipeline": "jest --testPathPatterns=ai-pipeline/tools/__tests__ --verbose",
     "test:ai-pipeline:all": "jest --testPathPatterns=src/services/ai-pipeline --verbose",

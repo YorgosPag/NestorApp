@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "description": "Tabs SSoT import ratchet (CHECK 3.24, ADR-328). Deprecated TabsContainer/ToolbarTabs/TabsOnlyTriggers imports + <TabsNav variant=\"radix\">.",
+    "generated": "2026-04-28T20:33:08.332Z",
+    "totalViolations": 25,
+    "totalFiles": 25,
+    "rule": "New code must import BaseTabs/StateTabs/RouteTabs directly."
+  },
+  "files": {
+    "src/components/admin/pages/RoleManagementPageContent.tsx": 1,
+    "src/components/contacts/toolbar/ContactsToolbar.tsx": 1,
+    "src/components/generic/GenericCRMDashboardTabsRenderer.tsx": 1,
+    "src/components/generic/GenericFormTabRenderer.tsx": 1,
+    "src/components/generic/IndividualFormTabRenderer.tsx": 1,
+    "src/components/generic/ServiceFormTabRenderer.tsx": 1,
+    "src/components/generic/UniversalTabsRenderer.tsx": 1,
+    "src/components/navigation/components/BuildingSpacesTabs.tsx": 1,
+    "src/components/projects/BuildingDataTabs.tsx": 1,
+    "src/components/projects/ika-tab.tsx": 1,
+    "src/components/projects/ProjectToolbar.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/categories/CursorCategory.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/categories/GridCategory.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/panels/GeneralSettingsPanel.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/CrosshairSettings.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/EntitiesSettings.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/EntitiesToolSettings.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/GridSettings.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/LayersSettings.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerLinesSettings.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/RulersSettings.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/SelectionSettings.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/DxfSettingsPanel.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/PanelTabs.tsx": 1,
+    "src/subapps/dxf-viewer/ui/components/shared/SubTabRenderer.tsx": 1
+  }
+}

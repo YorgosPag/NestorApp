@@ -346,6 +346,7 @@
 | **ADR-128** | Switch Status Variant (Green ON / Red OFF) | ✅ APPROVED | [View](./adrs/ADR-128-switch-status-variant-green-on-red-off.md) |
 | **ADR-135** | Menu Icons Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-135-menu-icons-centralization.md) |
 | **ADR-144** | Icon Click Sequence Colors Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-144-icon-click-sequence-colors-centralization.md) |
+| **ADR-328** | Tabs SSoT Consolidation (BaseTabs/StateTabs/RouteTabs) | ✅ APPROVED | [View](./adrs/ADR-328-tabs-ssot-consolidation.md) |
 
 ---
 

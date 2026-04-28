@@ -1,15 +1,19 @@
 'use client';
 
 /**
- * ProcurementSubNav — wrapper sopra TabsNav SSoT
+ * ProcurementSubNav — direct consumer of `RouteTabs` (ADR-328 Phase I L4).
  *
- * Sub-navigation tra Παραγγελίες e Προσφορές nel dominio Procurement.
+ * Sub-navigation between Παραγγελίες and Προσφορές in the Procurement domain.
+ * Migrated from `TabsNav variant="radix"` to `RouteTabs` direct as the canonical
+ * pattern for new sub-nav consumers.
  *
  * @see ADR-267 §Phase F — Sub-nav SSoT extraction
+ * @see ADR-328 §RouteTabs API
  */
 
 import { Package, FileText } from 'lucide-react';
-import { TabsNav, type TabsNavTab } from '@/components/shared/TabsNav';
+import { RouteTabs } from '@/components/ui/navigation/route-tabs';
+import type { TabsNavTab } from '@/components/ui/navigation/tabs-types';
 
 const PROCUREMENT_TABS: readonly TabsNavTab[] = [
   {
@@ -28,13 +32,17 @@ const PROCUREMENT_TABS: readonly TabsNavTab[] = [
   },
 ] as const;
 
-export function ProcurementSubNav() {
+export interface ProcurementSubNavProps {
+  className?: string;
+}
+
+export function ProcurementSubNav({ className }: ProcurementSubNavProps = {}) {
   return (
-    <TabsNav
+    <RouteTabs
       tabs={PROCUREMENT_TABS}
       i18nNamespace="procurement"
       ariaLabel="Procurement sub-navigation"
-      variant="radix"
+      className={className}
     />
   );
 }

@@ -12,7 +12,7 @@
 
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Loader2, RotateCcw } from 'lucide-react';
+import { FileText, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -64,7 +64,6 @@ export function QuotesPageContent() {
     toggleArchived,
     restoreQuote,
     handleScanNew,
-    isNamespaceReady,
     t,
   } = state;
 
@@ -75,16 +74,6 @@ export function QuotesPageContent() {
   const handleEditQuote = useCallback((quoteId: string) => {
     router.push(`/procurement/quotes/${quoteId}/review`);
   }, [router]);
-
-  if (!isNamespaceReady) {
-    return (
-      <PageContainer ariaLabel="">
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      </PageContainer>
-    );
-  }
 
   if (loading && filteredQuotes.length === 0 && !showArchived) {
     return (
@@ -112,9 +101,6 @@ export function QuotesPageContent() {
         onScanNew={handleScanNew}
         breadcrumb={<ModuleBreadcrumb />}
       />
-
-      {/* ── Sub-nav: Παραγγελίες | Προσφορές ───────────────────────────── */}
-      <ProcurementSubNav />
 
       {/* ── Dashboard stats (collapsibile) ──────────────────────────────── */}
       {showDashboard && (
@@ -160,6 +146,11 @@ export function QuotesPageContent() {
           />
         </aside>
       )}
+
+      {/* ── Sub-nav: Παραγγελίες | Προσφορές ───────────────────────────── */}
+      <div className="px-2 mt-2">
+        <ProcurementSubNav className="mb-0" />
+      </div>
 
       {/* ── Error ────────────────────────────────────────────────────────── */}
       {error && (
