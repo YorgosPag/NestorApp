@@ -96,7 +96,7 @@ export function QuoteDetailSummary({ quote, onArchive }: QuoteDetailSummaryProps
             ))}
             {hiddenLinesCount > 0 && (
               <li className="px-3 py-2 text-xs text-muted-foreground italic">
-                {t('quotes.detail.moreLines', { count: hiddenLinesCount })}
+                {t('detail.moreLines', { count: hiddenLinesCount })}
               </li>
             )}
           </ul>
@@ -141,7 +141,7 @@ export function QuoteDetailSummary({ quote, onArchive }: QuoteDetailSummaryProps
       <footer className="flex items-center gap-2 pt-3 border-t mt-auto">
         <Button onClick={handleEdit} className="flex-1">
           <Pencil className="mr-1.5 h-4 w-4" />
-          {t('quotes.detail.editButton')}
+          {t('detail.editButton')}
         </Button>
         {onArchive && quote.status !== 'archived' && (
           <Button

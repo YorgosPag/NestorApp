@@ -61,49 +61,49 @@ export function buildQuotesDashboardStats(
 
   return [
     {
-      title: t('quotes.dashboard.total'),
+      title: t('dashboard.total'),
       value: quotes.length,
       icon: FileText,
       color: 'blue',
     },
     {
-      title: t('quotes.dashboard.draft'),
+      title: t('dashboard.draft'),
       value: drafts.length,
       icon: FileEdit,
       color: 'gray',
     },
     {
-      title: t('quotes.dashboard.scanned'),
+      title: t('dashboard.scanned'),
       value: scanned.length,
       icon: ScanLine,
       color: 'orange',
     },
     {
-      title: t('quotes.dashboard.portal'),
+      title: t('dashboard.portal'),
       value: portal.length,
       icon: Globe,
       color: 'cyan',
     },
     {
-      title: t('quotes.dashboard.underReview'),
+      title: t('dashboard.underReview'),
       value: underReview.length,
       icon: Eye,
       color: 'yellow',
     },
     {
-      title: t('quotes.dashboard.accepted'),
+      title: t('dashboard.accepted'),
       value: accepted.length,
       icon: CheckCircle2,
       color: 'green',
     },
     {
-      title: t('quotes.dashboard.expired'),
+      title: t('dashboard.expired'),
       value: expired.length,
       icon: Clock,
       color: expired.length > 0 ? 'red' : 'gray',
     },
     {
-      title: t('quotes.dashboard.totalValue'),
+      title: t('dashboard.totalValue'),
       value: formatEur(totalValue),
       icon: Coins,
       color: 'purple',

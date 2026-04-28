@@ -85,10 +85,10 @@ export function useQuotesPageState() {
   const handleCardClick = useCallback(
     (stat: DashboardStat) => {
       const titleToStatus: Partial<Record<string, QuoteStatus>> = {
-        [t('quotes.dashboard.draft')]:        'draft',
-        [t('quotes.dashboard.underReview')]:  'under_review',
-        [t('quotes.dashboard.accepted')]:     'accepted',
-        [t('quotes.dashboard.expired')]:      'expired',
+        [t('dashboard.draft')]:        'draft',
+        [t('dashboard.underReview')]:  'under_review',
+        [t('dashboard.accepted')]:     'accepted',
+        [t('dashboard.expired')]:      'expired',
       };
       const mapped = titleToStatus[stat.title];
       if (!mapped) return;

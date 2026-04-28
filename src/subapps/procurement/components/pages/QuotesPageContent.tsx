@@ -77,10 +77,10 @@ export function QuotesPageContent() {
 
   if (loading && filteredQuotes.length === 0 && !showArchived) {
     return (
-      <PageContainer ariaLabel={t('quotes.page.pageLabel')}>
+      <PageContainer ariaLabel={t('page.pageLabel')}>
         <PageLoadingState
           icon={FileText}
-          message={t('quotes.page.loadingMessage')}
+          message={t('page.loadingMessage')}
           layout="contained"
         />
       </PageContainer>
@@ -88,7 +88,7 @@ export function QuotesPageContent() {
   }
 
   return (
-    <PageContainer ariaLabel={t('quotes.page.pageLabel')}>
+    <PageContainer ariaLabel={t('page.pageLabel')}>
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <QuotesHeader
         showDashboard={showDashboard}
@@ -109,7 +109,7 @@ export function QuotesPageContent() {
       {showDashboard && (
         <section
           role="region"
-          aria-label={t('quotes.page.dashboard.label')}
+          aria-label={t('page.dashboard.label')}
           className="w-full overflow-hidden"
         >
           <UnifiedDashboard
@@ -125,7 +125,7 @@ export function QuotesPageContent() {
       <aside
         className="hidden md:block"
         role="complementary"
-        aria-label={t('quotes.page.filters.desktop')}
+        aria-label={t('page.filtersAria.desktop')}
       >
         <AdvancedFiltersPanel
           config={quotesFiltersConfig}
@@ -139,7 +139,7 @@ export function QuotesPageContent() {
         <aside
           className="md:hidden"
           role="complementary"
-          aria-label={t('quotes.page.filters.mobile')}
+          aria-label={t('page.filtersAria.mobile')}
         >
           <AdvancedFiltersPanel
             config={quotesFiltersConfig}
@@ -185,8 +185,8 @@ export function QuotesPageContent() {
               />
             ) : (
               <EmptyDetailState
-                label={t('quotes.detail.emptyTitle')}
-                description={t('quotes.detail.emptyDescription')}
+                label={t('detail.emptyTitle')}
+                description={t('detail.emptyDescription')}
               />
             )}
           </div>
@@ -210,7 +210,7 @@ export function QuotesPageContent() {
         <MobileDetailsSlideIn
           isOpen={!!selectedQuote}
           onClose={handleMobileClose}
-          title={selectedQuote?.displayNumber ?? t('quotes.detail.emptyTitle')}
+          title={selectedQuote?.displayNumber ?? t('detail.emptyTitle')}
         >
           {selectedQuote ? (
             <QuoteDetailSummary

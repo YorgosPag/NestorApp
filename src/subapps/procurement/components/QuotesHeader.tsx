@@ -59,8 +59,8 @@ export function QuotesHeader({
       breadcrumb={breadcrumb}
       title={{
         icon: FileText,
-        title: t('quotes.header.title'),
-        subtitle: t('quotes.header.subtitle'),
+        title: t('header.title'),
+        subtitle: t('header.subtitle'),
       }}
       actions={{
         showDashboard,
@@ -93,7 +93,7 @@ export function QuotesHeader({
                 ? `bg-primary text-primary-foreground ${quick.card}`
                 : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }`,
-            'aria-label': t('quotes.page.filters.mobile'),
+            'aria-label': t('page.filtersAria.mobile'),
           }, React.createElement(Filter, { className: iconSizes.sm })),
         ],
       }}
