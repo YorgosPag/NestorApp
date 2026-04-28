@@ -22,6 +22,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import type { CompanyUser, UserListFilters } from '../types';
 import { ROLE_BADGE_VARIANT, STATUS_BADGE_VARIANT } from '../types';
@@ -241,17 +242,24 @@ export function UserTable({
 
                 {/* MFA */}
                 <TableCell>
-                  <span
-                    className={cn(
-                      'text-sm',
-                      companyUser.mfaEnrolled ? 'text-green-600' : colors.text.muted
-                    )}
-                    {/* non-centralized tooltip test */}
-                    title={companyUser.mfaEnrolled ? 'MFA Enabled' : 'MFA Not Enabled'}
-                    aria-label={companyUser.mfaEnrolled ? 'MFA Enabled' : 'MFA Not Enabled'}
-                  >
-                    {companyUser.mfaEnrolled ? '🔒' : '—'}
-                  </span>
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={cn(
+                            'text-sm',
+                            companyUser.mfaEnrolled ? 'text-green-600' : colors.text.muted
+                          )}
+                          aria-label={companyUser.mfaEnrolled ? 'MFA Enabled' : 'MFA Not Enabled'}
+                        >
+                          {companyUser.mfaEnrolled ? '🔒' : '—'}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {companyUser.mfaEnrolled ? 'MFA Enabled' : 'MFA Not Enabled'}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
 
                 {/* Projects */}

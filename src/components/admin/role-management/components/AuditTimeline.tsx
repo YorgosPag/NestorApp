@@ -10,6 +10,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import type { FrontendAuditEntry } from '../types';
@@ -149,27 +150,38 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
 
                   <section className="flex-1 min-w-0 space-y-1">
                     <p className="text-sm">
-                      <button
-                        type="button"
-                        className="font-medium text-primary hover:underline cursor-pointer"
-                        onClick={() => onFilterByActor(entry.actorId)}
-                        {/* non-centralized tooltip test */}
-                        title={entry.actorId}
-                      >
-                        {entry.actorDisplayName ?? entry.actorId.slice(0, 12)}
-                      </button>
+                      <TooltipProvider delayDuration={300}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="font-medium text-primary hover:underline cursor-pointer"
+                              onClick={() => onFilterByActor(entry.actorId)}
+                            >
+                              {entry.actorDisplayName ?? entry.actorId.slice(0, 12)}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>{entry.actorId}</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <span className={cn("mx-1.5", colors.text.muted)}>
                         {actionConfig?.label ?? entry.action}
                       </span>
                       {entry.targetType === 'user' ? (
-                        <button
-                          type="button"
-                          className="font-medium text-primary hover:underline cursor-pointer"
-                          onClick={() => onFilterByTarget(entry.targetId)}
-                          title={entry.targetId}
-                        >
-                          {entry.targetDisplayName ?? entry.targetId.slice(0, 12)}
-                        </button>
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="font-medium text-primary hover:underline cursor-pointer"
+                                onClick={() => onFilterByTarget(entry.targetId)}
+                              >
+                                {entry.targetDisplayName ?? entry.targetId.slice(0, 12)}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>{entry.targetId}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ) : (
                         <span className={cn("font-mono text-xs", colors.text.muted)}>
                           {entry.targetId.slice(0, 16)}

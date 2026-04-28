@@ -10,6 +10,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table,
   TableHeader,
@@ -154,10 +155,16 @@ export function RolePermissionMatrix() {
 
                 return (
                   <TableCell key={roleId} className="text-center">
-                    {/* non-centralized tooltip test */}
-                    <span title={ACCESS_LABEL[level]} aria-label={ACCESS_LABEL[level]}>
-                      {ACCESS_ICON[level]}
-                    </span>
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span aria-label={ACCESS_LABEL[level]}>
+                            {ACCESS_ICON[level]}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>{ACCESS_LABEL[level]}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                 );
               })}
