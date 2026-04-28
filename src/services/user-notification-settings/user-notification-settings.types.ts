@@ -92,6 +92,8 @@ export interface ProcurementNotificationSettings {
   quoteEdited: boolean;
   /** ADR-327 — Notify when AI extraction confidence is low (review needed) */
   aiLowConfidence: boolean;
+  /** ADR-327 — Notify when a new vendor contact is auto-created from a quote scan */
+  vendorCreated: boolean;
 }
 
 /**
@@ -202,6 +204,7 @@ export const DEFAULT_PROCUREMENT_SETTINGS: ProcurementNotificationSettings = {
   vendorDeclined: true,
   quoteEdited: false,
   aiLowConfidence: true,
+  vendorCreated: true,
 };
 
 /**

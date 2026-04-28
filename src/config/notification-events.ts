@@ -87,6 +87,8 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROCUREMENT_QUOTE_EDITED: 'procurement.quoteEdited',
   // ADR-327 Phase 2 — AI Scan
   PROCUREMENT_QUOTE_SCAN_COMPLETED: 'procurement.quoteScanCompleted',
+  // ADR-327 Phase 2 — Vendor auto-created from scan
+  PROCUREMENT_VENDOR_CREATED: 'procurement.vendorCreated',
 } as const;
 
 export type NotificationEventType = typeof NOTIFICATION_EVENT_TYPES[keyof typeof NOTIFICATION_EVENT_TYPES];
@@ -260,6 +262,12 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'quoteReceived',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.SUCCESS,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROCUREMENT_VENDOR_CREATED]: {
+    category: 'procurement',
+    settingKey: 'vendorCreated',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
 };
 

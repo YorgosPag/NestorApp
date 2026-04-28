@@ -142,7 +142,8 @@
       "vendorEdited": "Ο προμηθευτής {vendorName} ενημέρωσε την προσφορά του",
       "inviteSent": "Η πρόσκληση στάλθηκε στον προμηθευτή {vendorName}",
       "inviteFailed": "Η αποστολή πρόσκλησης απέτυχε για τον προμηθευτή {vendorName}: {reason}",
-      "quoteScanCompleted": "Σάρωση προσφοράς ολοκληρώθηκε: {vendorName}"
+      "quoteScanCompleted": "Σάρωση προσφοράς ολοκληρώθηκε: {vendorName}",
+      "vendorCreated": "Νέος προμηθευτής καταχωρήθηκε: {vendorName}"
     }
   },
   "rfqs": {

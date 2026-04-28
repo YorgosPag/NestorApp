@@ -29,6 +29,8 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createContactServerSide, updateContactField } from '@/services/ai-pipeline/shared/contact-lookup-crud';
 import { fuzzyGreekMatch } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
+import { dispatchProcurementNotification } from '@/server/notifications/notification-orchestrator';
+import { NOTIFICATION_EVENT_TYPES, NOTIFICATION_ENTITY_TYPES } from '@/config/notification-events';
 import {
   ResolveContactSchema,
   normalizeVat,
@@ -142,6 +144,20 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         for (const em of emails ?? []) { if (em) { try { await storeContactEmail(result.contactId, companyId, ctx.uid, em); } catch (e) { logger.warn('storeContactEmail failed', { email: em, error: getErrorMessage(e) }); } } }
         if (logoUrl) { try { await setContactLogoIfEmpty(result.contactId, companyId, ctx.uid, logoUrl); } catch (e) { logger.warn('setContactLogoIfEmpty failed', { error: getErrorMessage(e) }); } }
         if (bankAccounts?.length) { try { await storeBankAccounts(result.contactId, companyId, ctx.uid, bankAccounts, result.displayName ?? undefined); } catch (e) { logger.warn('storeBankAccounts failed', { error: getErrorMessage(e) }); } }
+
+        void dispatchProcurementNotification(
+          NOTIFICATION_EVENT_TYPES.PROCUREMENT_VENDOR_CREATED,
+          ctx.uid,
+          companyId,
+          `Νέος προμηθευτής καταχωρήθηκε: ${result.displayName ?? companyName}`,
+          `vendor_resolve_${result.contactId}`,
+          {
+            entityId: result.contactId,
+            entityType: NOTIFICATION_ENTITY_TYPES.CONTACT,
+            titleKey: 'quotes:quotes.notifications.vendorCreated',
+            titleParams: { vendorName: result.displayName ?? companyName },
+          },
+        );
 
         return NextResponse.json({
           success: true,
