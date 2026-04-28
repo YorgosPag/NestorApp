@@ -20,7 +20,6 @@ import {
   assertBuildingCreatePolicy,
   assertBuildingUpstreamChain,
 } from '@/services/building/building-creation-policy';
-import { notifyBuildingCreated } from '@/services/building/building-notification.service';
 
 const CreateBuildingSchema = z.object({
   name: z.string().min(1).max(200),
@@ -270,8 +269,6 @@ export const POST = withStandardRateLimit(
         apiPath: '/api/buildings (POST)',
         auditFieldResolvers,
       });
-
-      notifyBuildingCreated({ buildingId: result.id, buildingName: body.name, recipientId: ctx.uid, tenantId: ctx.companyId });
 
       // ADR-029 Phase D: search_documents written by Cloud Function onBuildingWrite.
       return apiSuccess<BuildingCreateResponse>(

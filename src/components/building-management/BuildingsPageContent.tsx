@@ -185,13 +185,14 @@ export function BuildingsPageContent() {
       logger.info('Building deleted', { buildingId: buildingToDelete.id });
       setSelectedBuilding(null);
       handleTrashActionComplete();
+      showSuccess(t('trash:deleteSuccess'));
     } else {
       logger.error('Failed to delete building', { buildingId: buildingToDelete.id, error: result.error });
       void fetchTrashedBuildings();
     }
     setBuildingToDelete(null);
     setIsDeleting(false);
-  }, [buildingToDelete, setSelectedBuilding, onBuildingMovedToTrash, handleTrashActionComplete, fetchTrashedBuildings]);
+  }, [buildingToDelete, setSelectedBuilding, onBuildingMovedToTrash, handleTrashActionComplete, fetchTrashedBuildings, showSuccess, t]);
 
   // [PERF] Stable callback refs to prevent child re-renders
   const handleCloseMobileDetails = useCallback(() => setSelectedBuilding(null), [setSelectedBuilding]);
