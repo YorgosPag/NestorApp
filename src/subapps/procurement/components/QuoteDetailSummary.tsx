@@ -3,26 +3,24 @@
 /**
  * QuoteDetailSummary — view-only detail card per split layout su /procurement/quotes
  *
- * Mostra info essenziali del quote selezionato (header, vendor, totals,
- * lines preview). Bottone "Επεξεργασία" naviga alla full review page
- * `/procurement/quotes/[id]/review` (route esistente).
+ * Mostra info essenziali del quote selezionato (vendor, source/trade, totals,
+ * lines preview, terms). Header (displayNumber + status badge + actions
+ * "+Νέα/Επεξεργασία/Αρχειοθέτηση") vive ora nel `QuoteDetailsHeader` SSoT
+ * sopra questo componente — niente duplicate header.
  *
- * @see ADR-327 §Layout Unification — Split layout view-only summary
+ * @see ADR-267 §Phase H — Quote Detail Header SSoT
+ * @see QuoteDetailsHeader
  */
 
-import { useRouter } from 'next/navigation';
-import { Pencil, Archive, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { FileText } from 'lucide-react';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { QuoteStatusBadge } from './QuoteStatusBadge';
 import type { Quote } from '@/subapps/procurement/types/quote';
 
 const MAX_LINES_PREVIEW = 5;
 
 interface QuoteDetailSummaryProps {
   quote: Quote;
-  onArchive?: (id: string) => void;
 }
 
 function formatValidUntil(quote: Quote): string {
@@ -31,36 +29,28 @@ function formatValidUntil(quote: Quote): string {
   return new Date(ts.seconds * 1000).toLocaleDateString('el-GR');
 }
 
-export function QuoteDetailSummary({ quote, onArchive }: QuoteDetailSummaryProps) {
-  const router = useRouter();
+export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
   const { t } = useTranslation('quotes');
 
   const visibleLines = quote.lines.slice(0, MAX_LINES_PREVIEW);
   const hiddenLinesCount = Math.max(0, quote.lines.length - MAX_LINES_PREVIEW);
-
-  const handleEdit = () => {
-    router.push(`/procurement/quotes/${quote.id}/review`);
-  };
+  const vendorName = quote.extractedData?.vendorName?.value ?? t('quotes.vendor');
 
   return (
     <article
       className="flex flex-col h-full overflow-y-auto p-4 sm:p-6 gap-4"
       aria-label={t('quotes.titleSingle')}
     >
-      <header className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b">
+      <section
+        aria-label={t('quotes.vendor')}
+        className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b"
+      >
         <div className="space-y-1 min-w-0">
-          <p className="font-mono text-sm text-muted-foreground">{quote.displayNumber}</p>
-          <h2 className="text-lg font-semibold truncate">
-            {quote.extractedData?.vendorName?.value ?? t('quotes.vendor')}
-          </h2>
-          <div className="flex items-center gap-2 flex-wrap">
-            <QuoteStatusBadge status={quote.status} />
-            <span className="text-xs text-muted-foreground">
-              {t(`quotes.sources.${quote.source}`)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              · {t(`trades.${quote.trade}`)}
-            </span>
+          <h2 className="text-lg font-semibold truncate">{vendorName}</h2>
+          <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+            <span>{t(`quotes.sources.${quote.source}`)}</span>
+            <span>·</span>
+            <span>{t(`trades.${quote.trade}`)}</span>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -69,7 +59,7 @@ export function QuoteDetailSummary({ quote, onArchive }: QuoteDetailSummaryProps
             {t('quotes.validUntil')}: {formatValidUntil(quote)}
           </span>
         </div>
-      </header>
+      </section>
 
       <section aria-label={t('quotes.lines')} className="space-y-2">
         <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
@@ -137,22 +127,6 @@ export function QuoteDetailSummary({ quote, onArchive }: QuoteDetailSummaryProps
           )}
         </section>
       )}
-
-      <footer className="flex items-center gap-2 pt-3 border-t mt-auto">
-        <Button onClick={handleEdit} className="flex-1">
-          <Pencil className="mr-1.5 h-4 w-4" />
-          {t('detail.editButton')}
-        </Button>
-        {onArchive && quote.status !== 'archived' && (
-          <Button
-            variant="outline"
-            onClick={() => onArchive(quote.id)}
-            aria-label={t('quotes.actions.archive')}
-          >
-            <Archive className="h-4 w-4" />
-          </Button>
-        )}
-      </footer>
     </article>
   );
 }

@@ -34,6 +34,17 @@ import {
   Mail,
   MessageSquare,
   Phone,
+  FileEdit,
+  CheckCircle,
+  Send,
+  PackageOpen,
+  PackageCheck,
+  CircleCheck,
+  XCircle,
+  Inbox,
+  Eye,
+  Clock,
+  Archive,
   type LucideIcon
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -109,6 +120,22 @@ export const CHANNEL_OPTIONS: TypeFilterOption[] = [
   { value: 'email', label: 'filters.channels.email', icon: Mail, tooltip: 'filters.channels.emailTooltip' },
   { value: 'sms', label: 'filters.channels.sms', icon: Phone, tooltip: 'filters.channels.smsTooltip' },
   { value: 'telegram', label: 'filters.channels.telegram', icon: MessageSquare, tooltip: 'filters.channels.telegramTooltip' },
+];
+
+/**
+ * PO Status Options (για Παραγγελίες/Procurement)
+ * 🏢 ENTERPRISE: Mirrors PO_STATUS_META (src/types/procurement/purchase-order.ts)
+ * 🏢 ENTERPRISE: Labels via procurement namespace (filters.poStatus.*)
+ */
+export const PO_STATUS_OPTIONS: TypeFilterOption[] = [
+  { value: 'all', label: 'procurement:filters.poStatus.all', icon: LayoutGrid, tooltip: 'procurement:filters.poStatus.allTooltip' },
+  { value: 'draft', label: 'procurement:filters.poStatus.draft', icon: FileEdit, tooltip: 'procurement:filters.poStatus.draftTooltip' },
+  { value: 'approved', label: 'procurement:filters.poStatus.approved', icon: CheckCircle, tooltip: 'procurement:filters.poStatus.approvedTooltip' },
+  { value: 'ordered', label: 'procurement:filters.poStatus.ordered', icon: Send, tooltip: 'procurement:filters.poStatus.orderedTooltip' },
+  { value: 'partially_delivered', label: 'procurement:filters.poStatus.partially_delivered', icon: PackageOpen, tooltip: 'procurement:filters.poStatus.partially_deliveredTooltip' },
+  { value: 'delivered', label: 'procurement:filters.poStatus.delivered', icon: PackageCheck, tooltip: 'procurement:filters.poStatus.deliveredTooltip' },
+  { value: 'closed', label: 'procurement:filters.poStatus.closed', icon: CircleCheck, tooltip: 'procurement:filters.poStatus.closedTooltip' },
+  { value: 'cancelled', label: 'procurement:filters.poStatus.cancelled', icon: XCircle, tooltip: 'procurement:filters.poStatus.cancelledTooltip' },
 ];
 
 // =============================================================================
@@ -273,6 +300,53 @@ export function ChannelQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'
       {...props}
       options={CHANNEL_OPTIONS}
       ariaLabel={props.ariaLabel ?? t('filters.channels.ariaLabel')}
+    />
+  );
+}
+
+/**
+ * PO Status Quick Filters - Pre-configured for Procurement / Purchase Orders
+ * 🏢 ENTERPRISE: aria label resolved via procurement namespace
+ */
+export function POStatusQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+  const { t } = useTranslation(['procurement']);
+  return (
+    <TypeQuickFilters
+      {...props}
+      options={PO_STATUS_OPTIONS}
+      ariaLabel={props.ariaLabel ?? t('filters.poStatusAriaLabel')}
+    />
+  );
+}
+
+/**
+ * Quote Status Options (για Προσφορές)
+ * 🏢 ENTERPRISE: Mirrors QUOTE_STATUS_META (src/subapps/procurement/types/quote.ts)
+ * 🏢 ENTERPRISE: Labels via quotes namespace (filters.quoteStatus.*)
+ */
+export const QUOTE_STATUS_OPTIONS: TypeFilterOption[] = [
+  { value: 'all', label: 'quotes:filters.quoteStatus.all', icon: LayoutGrid, tooltip: 'quotes:filters.quoteStatus.allTooltip' },
+  { value: 'draft', label: 'quotes:filters.quoteStatus.draft', icon: FileEdit, tooltip: 'quotes:filters.quoteStatus.draftTooltip' },
+  { value: 'sent_to_vendor', label: 'quotes:filters.quoteStatus.sent_to_vendor', icon: Send, tooltip: 'quotes:filters.quoteStatus.sent_to_vendorTooltip' },
+  { value: 'submitted', label: 'quotes:filters.quoteStatus.submitted', icon: Inbox, tooltip: 'quotes:filters.quoteStatus.submittedTooltip' },
+  { value: 'under_review', label: 'quotes:filters.quoteStatus.under_review', icon: Eye, tooltip: 'quotes:filters.quoteStatus.under_reviewTooltip' },
+  { value: 'accepted', label: 'quotes:filters.quoteStatus.accepted', icon: CheckCircle, tooltip: 'quotes:filters.quoteStatus.acceptedTooltip' },
+  { value: 'rejected', label: 'quotes:filters.quoteStatus.rejected', icon: XCircle, tooltip: 'quotes:filters.quoteStatus.rejectedTooltip' },
+  { value: 'expired', label: 'quotes:filters.quoteStatus.expired', icon: Clock, tooltip: 'quotes:filters.quoteStatus.expiredTooltip' },
+  { value: 'archived', label: 'quotes:filters.quoteStatus.archived', icon: Archive, tooltip: 'quotes:filters.quoteStatus.archivedTooltip' },
+];
+
+/**
+ * Quote Status Quick Filters - Pre-configured for Quotes
+ * 🏢 ENTERPRISE: aria label resolved via quotes namespace
+ */
+export function QuoteStatusQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+  const { t } = useTranslation(['quotes']);
+  return (
+    <TypeQuickFilters
+      {...props}
+      options={QUOTE_STATUS_OPTIONS}
+      ariaLabel={props.ariaLabel ?? t('filters.quoteStatusAriaLabel')}
     />
   );
 }

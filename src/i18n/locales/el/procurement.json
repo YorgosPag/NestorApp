@@ -1,6 +1,7 @@
 {
   "list": {
     "search": "Αναζήτηση PO, προμηθευτή, υλικού...",
+    "searchPlaceholder": "Αναζήτηση παραγγελίας ή προμηθευτή...",
     "createPO": "Νέα Παραγγελία",
     "requiresAction": "Απαιτούν ενέργεια",
     "allOrders": "Όλες οι παραγγελίες",
@@ -15,7 +16,31 @@
     "loading": "Φόρτωση...",
     "empty": "Καμία παραγγελία",
     "number": "Αριθμός",
-    "dateOrdered": "Ημ. Παραγγελίας"
+    "dateOrdered": "Ημ. Παραγγελίας",
+    "entityName": "Παραγγελίες",
+    "ariaLabel": "Λίστα παραγγελιών",
+    "cardAriaLabel": "Παραγγελία {poNumber} προς {supplier}"
+  },
+  "filters": {
+    "poStatusAriaLabel": "Φίλτρα κατάστασης παραγγελίας",
+    "poStatus": {
+      "all": "Όλες",
+      "allTooltip": "Εμφάνιση όλων των παραγγελιών",
+      "draft": "Πρόχειρες",
+      "draftTooltip": "Πρόχειρες παραγγελίες (μη εγκεκριμένες)",
+      "approved": "Εγκεκριμένες",
+      "approvedTooltip": "Εγκεκριμένες παραγγελίες (έτοιμες για αποστολή)",
+      "ordered": "Παραγγελμένες",
+      "orderedTooltip": "Έχουν αποσταλεί στον προμηθευτή",
+      "partially_delivered": "Μερική Παραλαβή",
+      "partially_deliveredTooltip": "Έχει παραληφθεί μέρος της παραγγελίας",
+      "delivered": "Παραδοθείσες",
+      "deliveredTooltip": "Έχουν παραληφθεί πλήρως",
+      "closed": "Ολοκληρωμένες",
+      "closedTooltip": "Έχουν τιμολογηθεί και κλείσει",
+      "cancelled": "Ακυρωμένες",
+      "cancelledTooltip": "Ακυρωμένες παραγγελίες"
+    }
   },
   "items": {
     "description": "Περιγραφή",

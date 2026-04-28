@@ -75,6 +75,16 @@ export function useQuotesPageState() {
     [displayedQuotes, quoteFilters],
   );
 
+  // ── Action-required quotes — pinned at top of list (parità con PO) ───────
+  // Statuses requiring user decision: submitted (new vendor submission),
+  // under_review (decision pending), expired (renew/archive needed).
+  const actionRequired = useMemo(
+    () => displayedQuotes.filter(
+      (q) => q.status === 'submitted' || q.status === 'under_review' || q.status === 'expired',
+    ),
+    [displayedQuotes],
+  );
+
   // ── Dashboard stats ───────────────────────────────────────────────────────
   const dashboardStats = useMemo(
     () => buildQuotesDashboardStats(displayedQuotes, t),
@@ -204,6 +214,7 @@ export function useQuotesPageState() {
     // Data
     displayedQuotes,
     filteredQuotes,
+    actionRequired,
     loading,
     error,
     refetch,

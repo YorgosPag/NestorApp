@@ -1,6 +1,7 @@
 {
   "list": {
     "search": "Search PO, supplier, material...",
+    "searchPlaceholder": "Search purchase order or supplier...",
     "createPO": "New Purchase Order",
     "requiresAction": "Requires Action",
     "allOrders": "All Orders",
@@ -15,7 +16,31 @@
     "loading": "Loading...",
     "empty": "No orders",
     "number": "Number",
-    "dateOrdered": "Date Ordered"
+    "dateOrdered": "Date Ordered",
+    "entityName": "Purchase Orders",
+    "ariaLabel": "Purchase orders list",
+    "cardAriaLabel": "Purchase order {poNumber} to {supplier}"
+  },
+  "filters": {
+    "poStatusAriaLabel": "Purchase order status filters",
+    "poStatus": {
+      "all": "All",
+      "allTooltip": "Show all purchase orders",
+      "draft": "Drafts",
+      "draftTooltip": "Draft purchase orders (not yet approved)",
+      "approved": "Approved",
+      "approvedTooltip": "Approved purchase orders (ready to send)",
+      "ordered": "Ordered",
+      "orderedTooltip": "Sent to supplier",
+      "partially_delivered": "Partial",
+      "partially_deliveredTooltip": "Part of the order has been delivered",
+      "delivered": "Delivered",
+      "deliveredTooltip": "Fully delivered",
+      "closed": "Closed",
+      "closedTooltip": "Invoiced and closed",
+      "cancelled": "Cancelled",
+      "cancelledTooltip": "Cancelled purchase orders"
+    }
   },
   "items": {
     "description": "Description",

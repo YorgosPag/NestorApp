@@ -186,10 +186,46 @@
     "allTrades": "Όλες οι ειδικότητες",
     "allSources": "Όλες οι πηγές"
   },
+  "list": {
+    "entityName": "Προσφορές",
+    "ariaLabel": "Λίστα προσφορών",
+    "searchPlaceholder": "Αναζήτηση προσφοράς, προμηθευτή ή ειδικότητας...",
+    "cardAriaLabel": "Προσφορά {number} από {vendor}",
+    "requiresAction": "Απαιτούν ενέργεια",
+    "allQuotes": "Όλες οι προσφορές",
+    "emptyTitle": "Δεν υπάρχουν προσφορές",
+    "emptyDescription": "Σαρώστε την πρώτη προσφορά για να ξεκινήσετε.",
+    "createQuote": "Νέα Προσφορά"
+  },
+  "filters": {
+    "quoteStatusAriaLabel": "Φίλτρα κατάστασης προσφοράς",
+    "quoteStatus": {
+      "all": "Όλες",
+      "allTooltip": "Εμφάνιση όλων των προσφορών",
+      "draft": "Πρόχειρες",
+      "draftTooltip": "Πρόχειρες προσφορές (μη απεσταλμένες)",
+      "sent_to_vendor": "Απεσταλμένες",
+      "sent_to_vendorTooltip": "Έχουν αποσταλεί στον προμηθευτή — αναμονή υποβολής",
+      "submitted": "Υποβληθείσες",
+      "submittedTooltip": "Νέα προσφορά υποβλήθηκε — απαιτεί έλεγχο",
+      "under_review": "Υπό Εξέταση",
+      "under_reviewTooltip": "Σε εξέλιξη αξιολόγηση — απαιτείται απόφαση",
+      "accepted": "Εγκεκριμένες",
+      "acceptedTooltip": "Έχουν εγκριθεί",
+      "rejected": "Απορριφθείσες",
+      "rejectedTooltip": "Έχουν απορριφθεί",
+      "expired": "Ληγμένες",
+      "expiredTooltip": "Έχουν λήξει — απαιτείται απόφαση (ανανέωση/αρχειοθέτηση)",
+      "archived": "Αρχειοθετημένες",
+      "archivedTooltip": "Έχουν αρχειοθετηθεί"
+    }
+  },
   "detail": {
     "emptyTitle": "Δεν έχει επιλεγεί προσφορά",
     "emptyDescription": "Επίλεξε μια προσφορά από τη λίστα για προβολή λεπτομερειών.",
     "editButton": "Επεξεργασία",
+    "editQuote": "Επεξεργασία Προσφοράς",
+    "archiveQuote": "Αρχειοθέτηση Προσφοράς",
     "viewFull": "Πλήρης Προβολή",
     "linesCount": "{count} γραμμές",
     "moreLines": "+{count} ακόμη"

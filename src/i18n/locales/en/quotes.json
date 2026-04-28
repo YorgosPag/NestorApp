@@ -186,10 +186,46 @@
     "allTrades": "All trades",
     "allSources": "All sources"
   },
+  "list": {
+    "entityName": "Quotes",
+    "ariaLabel": "Quotes list",
+    "searchPlaceholder": "Search quote, vendor or trade...",
+    "cardAriaLabel": "Quote {number} from {vendor}",
+    "requiresAction": "Requires action",
+    "allQuotes": "All quotes",
+    "emptyTitle": "No quotes",
+    "emptyDescription": "Scan your first vendor quote to get started.",
+    "createQuote": "New Quote"
+  },
+  "filters": {
+    "quoteStatusAriaLabel": "Quote status filters",
+    "quoteStatus": {
+      "all": "All",
+      "allTooltip": "Show all quotes",
+      "draft": "Drafts",
+      "draftTooltip": "Draft quotes (not yet sent)",
+      "sent_to_vendor": "Sent",
+      "sent_to_vendorTooltip": "Sent to vendor — awaiting submission",
+      "submitted": "Submitted",
+      "submittedTooltip": "New vendor submission — needs review",
+      "under_review": "Under Review",
+      "under_reviewTooltip": "Review in progress — decision pending",
+      "accepted": "Accepted",
+      "acceptedTooltip": "Accepted quotes",
+      "rejected": "Rejected",
+      "rejectedTooltip": "Rejected quotes",
+      "expired": "Expired",
+      "expiredTooltip": "Expired — needs decision (renew/archive)",
+      "archived": "Archived",
+      "archivedTooltip": "Archived quotes"
+    }
+  },
   "detail": {
     "emptyTitle": "No quote selected",
     "emptyDescription": "Select a quote from the list to view details.",
     "editButton": "Edit",
+    "editQuote": "Edit Quote",
+    "archiveQuote": "Archive Quote",
     "viewFull": "Full View",
     "linesCount": "{count} lines",
     "moreLines": "+{count} more"

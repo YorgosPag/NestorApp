@@ -1,357 +1,259 @@
 'use client';
 
 /**
- * PurchaseOrderList — PO list with "Requires Action" section + filters
+ * PurchaseOrderList — PO list panel mirroring Contacts SSoT pattern.
  *
- * Desktop: full table. Mobile: card list.
- * Section 1: Pinned "Requires Action" items.
- * Section 2: Full list sorted by dateCreated DESC.
+ * Composition: GenericListHeader + CompactToolbar + POStatusQuickFilters + ScrollArea[PurchaseOrderListCard].
+ * Selected state styling and chip behavior identical to /contacts.
+ *
+ * "Requires Action" POs are pinned at the top of the same scrollable list with a section divider.
  *
  * @see ADR-267 §8.3 (PO List View)
+ * @see ContactsList.tsx for reference implementation
  */
 
+import React, { useMemo, useState } from 'react';
+import { Package } from 'lucide-react';
+
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { cn, getStatusColor } from '@/lib/design-system';
-import { Plus, Search, Eye, Copy, AlertTriangle } from 'lucide-react';
-import { PO_STATUS_META } from '@/types/procurement';
+
+import { GenericListHeader } from '@/components/shared/GenericListHeader';
+import { CompactToolbar, procurementConfig } from '@/components/core/CompactToolbar';
+import { POStatusQuickFilters } from '@/components/shared/TypeQuickFilters';
+import { PurchaseOrderListCard } from '@/domain';
+import { EntityListColumn } from '@/core/containers';
+
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
+import { useSortState } from '@/hooks/useSortState';
+import { matchesSearchTerm } from '@/lib/search/search';
+
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatPOCurrency, formatPODate } from './utils/procurement-format';
-import { useContactById } from '@/hooks/useContactById';
-import { getContactDisplayName } from '@/types/contacts/helpers';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
-// STATUS BADGE
-// ============================================================================
-
-function StatusBadge({ status }: { status: PurchaseOrderStatus }) {
-  const meta = PO_STATUS_META[status];
-  const statusColorMapping: Record<string, string> = {
-    gray: 'pending',
-    blue: 'planned',
-    yellow: 'construction',
-    orange: 'reserved',
-    green: 'available',
-    emerald: 'completed',
-    red: 'cancelled',
-  };
-
-  const semanticStatus = statusColorMapping[meta.color] ?? 'pending';
-
-  return (
-    <Badge variant="outline" className={cn(
-      'font-medium',
-      getStatusColor(semanticStatus, 'bg'),
-      getStatusColor(semanticStatus, 'text'),
-    )}>
-      {meta.label.el}
-    </Badge>
-  );
-}
-
-// ============================================================================
-// COMPONENT
+// PROPS
 // ============================================================================
 
 interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrder[];
   actionRequired: PurchaseOrder[];
   loading: boolean;
-  searchValue: string;
-  onSearchChange: (v: string) => void;
   onCreateNew: () => void;
   onViewPO: (poId: string) => void;
   onDuplicate: (poId: string) => void;
-  /** Split-panel mode: seleziona inline invece di navigare */
+  /** Split-panel mode: select inline instead of navigating */
   onSelectPO?: (po: PurchaseOrder) => void;
-  /** ID del PO selezionato — per highlight riga */
+  /** Selected PO id — drives card highlight (split-panel) */
   selectedPOId?: string;
-  /** Nasconde search bar (es. quando AdvancedFiltersPanel gestisce la search) */
-  hideSearchBar?: boolean;
+  /** Edit currently selected PO (split-panel: opens form) */
+  onEditPO?: (poId: string) => void;
+  /** Delete currently selected POs */
+  onDeletePOs?: (poIds: string[]) => void;
 }
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 export function PurchaseOrderList({
   purchaseOrders,
   actionRequired,
   loading,
-  searchValue,
-  onSearchChange,
   onCreateNew,
   onViewPO,
-  onDuplicate,
+  onDuplicate: _onDuplicate,
   onSelectPO,
   selectedPOId,
-  hideSearchBar = false,
+  onEditPO,
+  onDeletePOs,
 }: PurchaseOrderListProps) {
-  const { t } = useTranslation('procurement');
+  const { t } = useTranslation(['procurement', 'common']);
+  const colors = useSemanticColors();
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+  // Sort state via centralized hook
+  const { sortBy, sortOrder, onSortChange } = useSortState<'date' | 'number' | 'status' | 'value'>('date');
+
+  // CompactToolbar local state (mirrors ContactsList)
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [showToolbar, setShowToolbar] = useState(false);
+
+  // Quick-filter chips state — single-select mirroring ContactTypeQuickFilters
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+
+  // Filter pipeline: status chips → search (poNumber + supplierId raw) → sort.
+  // Supplier-name lookup happens per-card via useContactById (cards render their own name);
+  // batch directory hook would be a separate optimization.
+  const filtered = useMemo(() => {
+    const actionRequiredIds = new Set(actionRequired.map((po) => po.id));
+
+    return purchaseOrders.filter((po) => {
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(po.status as PurchaseOrderStatus)) {
+        return false;
+      }
+      if (searchTerm) {
+        return matchesSearchTerm(
+          [po.poNumber, po.supplierId, po.id],
+          searchTerm,
+        );
+      }
+      return true;
+    }).map((po) => ({ po, isActionRequired: actionRequiredIds.has(po.id) }));
+  }, [purchaseOrders, actionRequired, selectedStatuses, searchTerm]);
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      // Pinned action-required items always first (regardless of sort direction)
+      if (a.isActionRequired !== b.isActionRequired) {
+        return a.isActionRequired ? -1 : 1;
+      }
+      const dir = sortOrder === 'asc' ? 1 : -1;
+      switch (sortBy) {
+        case 'number':
+          return a.po.poNumber.localeCompare(b.po.poNumber) * dir;
+        case 'status':
+          return a.po.status.localeCompare(b.po.status) * dir;
+        case 'value':
+          return (a.po.total - b.po.total) * dir;
+        case 'date':
+        default:
+          return a.po.dateCreated.localeCompare(b.po.dateCreated) * dir;
+      }
+    });
+    return arr;
+  }, [filtered, sortBy, sortOrder]);
+
+  const firstNonAction = sorted.findIndex((entry) => !entry.isActionRequired);
+  const actionRequiredVisible = sorted.filter((e) => e.isActionRequired).length;
+
+  // Action handlers — wire toolbar to parent callbacks; mirror ContactsList semantics
+  const handleNewItem = () => onCreateNew();
+  const handleEditItem = (_id: string) => {
+    if (selectedPOId && onEditPO) onEditPO(selectedPOId);
+  };
+  const handleDeleteItems = (_ids: string[]) => {
+    if (selectedPOId && onDeletePOs) onDeletePOs([selectedPOId]);
+  };
+
+  const renderSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
+    if (newSortBy === 'date' || newSortBy === 'number' || newSortBy === 'status' || newSortBy === 'value') {
+      onSortChange(newSortBy, newSortOrder);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Toolbar */}
-      {!hideSearchBar && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchValue}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder={t('list.search')}
-              className="pl-9"
-            />
-          </div>
-          <Button onClick={onCreateNew}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            {t('list.createPO')}
-          </Button>
+    <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
+      {/* Header + CompactToolbar */}
+      <div>
+        <GenericListHeader
+          icon={Package}
+          entityName={t('list.entityName')}
+          itemCount={sorted.length}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={t('list.searchPlaceholder')}
+          showToolbar={showToolbar}
+          onToolbarToggle={setShowToolbar}
+          hideSearch
+        />
+
+        {/* Desktop: always visible */}
+        <div className="hidden md:block">
+          <CompactToolbar
+            config={procurementConfig}
+            selectedItems={selectedItems}
+            onSelectionChange={setSelectedItems}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            activeFilters={activeFilters}
+            onFiltersChange={setActiveFilters}
+            sortBy={sortBy}
+            onSortChange={renderSortChange}
+            hasSelectedContact={!!selectedPOId}
+            onNewItem={handleNewItem}
+            onEditItem={handleEditItem}
+            onDeleteItems={handleDeleteItems}
+          />
         </div>
-      )}
 
-      {/* Section 1: Requires Action */}
-      {actionRequired.length > 0 && (
-        <Card className="border-amber-300 dark:border-amber-700">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <AlertTriangle className="h-4 w-4" />
-              {t('list.requiresAction')}
-              <Badge variant="secondary" className="ml-auto">
-                {actionRequired.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <POTable
-              items={actionRequired}
-              onView={onViewPO}
-              onDuplicate={onDuplicate}
-              onSelect={onSelectPO}
-              selectedPOId={selectedPOId}
-              highlight
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Section 2: All POs */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            {t('list.allOrders')}
-            <Badge variant="secondary" className="ml-auto">
-              {purchaseOrders.length}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {purchaseOrders.length === 0 ? (
-            <EmptyState onCreateNew={onCreateNew} />
-          ) : (
-            <POTable
-              items={purchaseOrders}
-              onView={onViewPO}
-              onDuplicate={onDuplicate}
-              onSelect={onSelectPO}
-              selectedPOId={selectedPOId}
+        {/* Mobile: toggle */}
+        <div className="md:hidden">
+          {showToolbar && (
+            <CompactToolbar
+              config={procurementConfig}
+              selectedItems={selectedItems}
+              onSelectionChange={setSelectedItems}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              activeFilters={activeFilters}
+              onFiltersChange={setActiveFilters}
+              sortBy={sortBy}
+              onSortChange={renderSortChange}
+              hasSelectedContact={!!selectedPOId}
+              onNewItem={handleNewItem}
+              onEditItem={handleEditItem}
+              onDeleteItems={handleDeleteItems}
             />
           )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ============================================================================
-// PO TABLE (Desktop) / CARDS (Mobile)
-// ============================================================================
-
-function POTable({
-  items,
-  onView,
-  onDuplicate,
-  onSelect,
-  selectedPOId,
-  highlight = false,
-}: {
-  items: PurchaseOrder[];
-  onView: (id: string) => void;
-  onDuplicate: (id: string) => void;
-  onSelect?: (po: PurchaseOrder) => void;
-  selectedPOId?: string;
-  highlight?: boolean;
-}) {
-  const { t } = useTranslation('procurement');
-
-  return (
-    <>
-      {/* Desktop */}
-      <div className="hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>PO #</TableHead>
-              <TableHead>{t('list.supplier')}</TableHead>
-              <TableHead>{t('list.status')}</TableHead>
-              <TableHead className="text-right">{t('list.total')}</TableHead>
-              <TableHead>{t('list.dateCreated')}</TableHead>
-              <TableHead>{t('list.dateNeeded')}</TableHead>
-              <TableHead className="w-[100px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((po) => (
-              <POTableRow
-                key={po.id}
-                po={po}
-                highlight={highlight}
-                selectedPOId={selectedPOId}
-                onView={onView}
-                onDuplicate={onDuplicate}
-                onSelect={onSelect}
-              />
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Mobile */}
-      <div className="md:hidden space-y-2">
-        {items.map((po) => (
-          <POCardItem
-            key={po.id}
-            po={po}
-            highlight={highlight}
-            selectedPOId={selectedPOId}
-            onView={onView}
-            onSelect={onSelect}
-          />
-        ))}
-      </div>
-    </>
-  );
-}
-
-// ============================================================================
-// ROW / CARD — resolve supplierId → display name via hook
-// ============================================================================
-
-interface RowProps {
-  po: PurchaseOrder;
-  highlight: boolean;
-  selectedPOId?: string;
-  onView: (id: string) => void;
-  onDuplicate: (id: string) => void;
-  onSelect?: (po: PurchaseOrder) => void;
-}
-
-function POTableRow({ po, highlight, selectedPOId, onView, onDuplicate, onSelect }: RowProps) {
-  const contact = useContactById(po.supplierId);
-  const supplierName = contact ? getContactDisplayName(contact) : po.supplierId;
-
-  return (
-    <TableRow
-      className={cn(
-        'cursor-pointer',
-        highlight && 'bg-amber-50/50 dark:bg-amber-950/20',
-        selectedPOId === po.id && 'bg-primary/10 border-l-2 border-l-primary',
-      )}
-      onClick={() => onSelect ? onSelect(po) : onView(po.id)}
-    >
-      <TableCell className="font-medium">{po.poNumber}</TableCell>
-      <TableCell className="max-w-[200px] truncate">{supplierName}</TableCell>
-      <TableCell><StatusBadge status={po.status} /></TableCell>
-      <TableCell className="text-right tabular-nums">{formatPOCurrency(po.total)}</TableCell>
-      <TableCell>{formatPODate(po.dateCreated)}</TableCell>
-      <TableCell>{formatPODate(po.dateNeeded)}</TableCell>
-      <TableCell>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onView(po.id); }}>
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDuplicate(po.id); }}>
-            <Copy className="h-4 w-4" />
-          </Button>
         </div>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-interface CardItemProps {
-  po: PurchaseOrder;
-  highlight: boolean;
-  selectedPOId?: string;
-  onView: (id: string) => void;
-  onSelect?: (po: PurchaseOrder) => void;
-}
-
-function POCardItem({ po, highlight, selectedPOId, onView, onSelect }: CardItemProps) {
-  const contact = useContactById(po.supplierId);
-  const supplierName = contact ? getContactDisplayName(contact) : po.supplierId;
-
-  return (
-    <article
-      className={cn(
-        'rounded-lg border p-3 space-y-1.5',
-        highlight && 'border-amber-300 dark:border-amber-700',
-        selectedPOId === po.id && 'border-primary bg-primary/5',
-      )}
-      onClick={() => onSelect ? onSelect(po) : onView(po.id)}
-      role="button"
-      tabIndex={0}
-    >
-      <div className="flex items-center justify-between">
-        <span className="font-semibold">{po.poNumber}</span>
-        <StatusBadge status={po.status} />
       </div>
-      <p className="text-sm text-muted-foreground truncate">{supplierName}</p>
-      <div className="flex items-center justify-between text-sm">
-        <span>{formatPODate(po.dateCreated)}</span>
-        <span className="font-semibold tabular-nums">{formatPOCurrency(po.total)}</span>
-      </div>
-    </article>
-  );
-}
 
-// ============================================================================
-// EMPTY STATE
-// ============================================================================
+      {/* Quick-filter chips — PO status */}
+      <POStatusQuickFilters
+        selectedTypes={selectedStatuses}
+        onTypeChange={setSelectedStatuses}
+        compact
+      />
 
-function EmptyState({ onCreateNew }: { onCreateNew: () => void }) {
-  const { t } = useTranslation('procurement');
-
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-        <Plus className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <h3 className="text-lg font-semibold">
-        {t('list.emptyTitle')}
-      </h3>
-      <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-        {t('list.emptyDescription')}
-      </p>
-      <Button onClick={onCreateNew} className="mt-4">
-        <Plus className="mr-1.5 h-4 w-4" />
-        {t('list.createFirst')}
-      </Button>
-    </div>
+      {/* List */}
+      <ScrollArea className="flex-1">
+        <div className="p-2 space-y-2">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="p-3 rounded-lg border border-border bg-card">
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))
+          ) : sorted.length === 0 ? (
+            <div className={cn('text-center p-4', colors.text.muted)}>
+              <p>{t('list.emptyTitle')}</p>
+              <p className="text-sm mt-1">{t('list.emptyDescription')}</p>
+            </div>
+          ) : (
+            sorted.map((entry, index) => (
+              <React.Fragment key={entry.po.id}>
+                {/* Section divider between Requires Action block and the rest */}
+                {actionRequiredVisible > 0 && index === 0 && (
+                  <div className="flex items-center gap-2 px-1 pt-1 pb-2">
+                    <span className={cn('text-xs font-medium uppercase tracking-wide', colors.text.muted)}>
+                      {t('list.requiresAction')}
+                    </span>
+                    <Badge variant="secondary" className="text-xs">{actionRequiredVisible}</Badge>
+                  </div>
+                )}
+                {actionRequiredVisible > 0 && index === firstNonAction && (
+                  <div className="flex items-center gap-2 px-1 pt-3 pb-2">
+                    <span className={cn('text-xs font-medium uppercase tracking-wide', colors.text.muted)}>
+                      {t('list.allOrders')}
+                    </span>
+                  </div>
+                )}
+                <PurchaseOrderListCard
+                  po={entry.po}
+                  isSelected={selectedPOId === entry.po.id}
+                  onSelect={() => (onSelectPO ? onSelectPO(entry.po) : onViewPO(entry.po.id))}
+                />
+              </React.Fragment>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </EntityListColumn>
   );
 }

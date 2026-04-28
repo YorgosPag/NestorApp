@@ -40,7 +40,7 @@ const COMMUNICATIONS_STATUS_LABELS = {
 } as const;
 
 // 🚀 ENTERPRISE: Helper functions για filter categories και sort options
-function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications') {
+function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications' | 'procurement' | 'quotes') {
   // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   const baseCategories = [
     {
@@ -130,18 +130,59 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
           ]
         }
       ];
+    case 'procurement':
+      return [
+        {
+          id: 'status',
+          label: 'toolbar.filters.categories.status',
+          options: [
+            { value: 'draft', label: 'procurement:filters.poStatus.draft' },
+            { value: 'approved', label: 'procurement:filters.poStatus.approved' },
+            { value: 'ordered', label: 'procurement:filters.poStatus.ordered' },
+            { value: 'partially_delivered', label: 'procurement:filters.poStatus.partially_delivered' },
+            { value: 'delivered', label: 'procurement:filters.poStatus.delivered' },
+            { value: 'closed', label: 'procurement:filters.poStatus.closed' },
+            { value: 'cancelled', label: 'procurement:filters.poStatus.cancelled' }
+          ]
+        }
+      ];
+    case 'quotes':
+      return [
+        {
+          id: 'status',
+          label: 'toolbar.filters.categories.status',
+          options: [
+            { value: 'draft', label: 'quotes:filters.quoteStatus.draft' },
+            { value: 'sent_to_vendor', label: 'quotes:filters.quoteStatus.sent_to_vendor' },
+            { value: 'submitted', label: 'quotes:filters.quoteStatus.submitted' },
+            { value: 'under_review', label: 'quotes:filters.quoteStatus.under_review' },
+            { value: 'accepted', label: 'quotes:filters.quoteStatus.accepted' },
+            { value: 'rejected', label: 'quotes:filters.quoteStatus.rejected' },
+            { value: 'expired', label: 'quotes:filters.quoteStatus.expired' },
+            { value: 'archived', label: 'quotes:filters.quoteStatus.archived' }
+          ]
+        }
+      ];
     default:
       return baseCategories;
   }
 }
 
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications') {
+function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications' | 'procurement' | 'quotes') {
   if (type === 'communications') {
     return [
       { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
       { field: 'channel' as const, ascLabel: 'toolbar.sort.channel.asc', descLabel: 'toolbar.sort.channel.desc' },
       { field: 'status' as const, ascLabel: 'toolbar.sort.status.asc', descLabel: 'toolbar.sort.status.desc' }
+    ];
+  }
+  if (type === 'procurement' || type === 'quotes') {
+    return [
+      { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
+      { field: 'number' as const, ascLabel: 'toolbar.sort.number.asc', descLabel: 'toolbar.sort.number.desc' },
+      { field: 'status' as const, ascLabel: 'toolbar.sort.status.asc', descLabel: 'toolbar.sort.status.desc' },
+      { field: 'value' as const, ascLabel: 'toolbar.sort.value.asc', descLabel: 'toolbar.sort.value.desc' }
     ];
   }
   return [
@@ -160,7 +201,9 @@ const NEW_ITEM_LABELS_BY_TYPE: Record<string, string> = {
   properties: 'actions.newProperty',
   storages: 'actions.newStorage',
   parking: 'actions.newParking',
-  communications: 'actions.newMessage'
+  communications: 'actions.newMessage',
+  procurement: 'procurement:list.createPO',
+  quotes: 'quotes:list.createQuote'
 };
 
 // 🏢 ENTERPRISE: Direct i18n keys for entity-specific tooltips
@@ -172,7 +215,9 @@ const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   properties: 'tooltips.newPropertyShortcut',
   storages: 'tooltips.newStorageShortcut',
   parking: 'tooltips.newParkingShortcut',
-  communications: 'tooltips.newMessageShortcut'
+  communications: 'tooltips.newMessageShortcut',
+  procurement: 'procurement:list.createPO',
+  quotes: 'quotes:list.createQuote'
 };
 
 const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
@@ -182,7 +227,9 @@ const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   properties: 'toolbar.actions.properties.edit',
   storages: 'toolbar.actions.storage.edit',
   parking: 'tooltips.editSelected',
-  communications: 'tooltips.editSelected'
+  communications: 'tooltips.editSelected',
+  procurement: 'tooltips.editSelected',
+  quotes: 'tooltips.editSelected'
 };
 
 const DELETE_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
@@ -192,7 +239,9 @@ const DELETE_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   properties: 'toolbar.actions.properties.delete',
   storages: 'toolbar.actions.storage.delete',
   parking: 'tooltips.deleteSelected',
-  communications: 'tooltips.deleteSelected'
+  communications: 'tooltips.deleteSelected',
+  procurement: 'tooltips.deleteSelected',
+  quotes: 'tooltips.deleteSelected'
 };
 
 const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
@@ -202,15 +251,27 @@ const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
   properties: 'tooltips.shareProperty',
   storages: 'tooltips.shareStorage',
   parking: 'toolbar.labels.share',
-  communications: 'toolbar.labels.share'
+  communications: 'toolbar.labels.share',
+  procurement: 'toolbar.labels.share',
+  quotes: 'toolbar.labels.share'
 };
 
 // 🚀 ENTERPRISE: Smart Configuration Factory - No duplicated labels!
 function createToolbarConfig(
-  type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications'
+  type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications' | 'procurement' | 'quotes'
 ): CompactToolbarConfig {
+  // 🏢 ENTERPRISE: Procurement/Quotes use their own namespace; other types pull from centralized modal-select map.
+  let searchPlaceholder: string;
+  if (type === 'procurement') {
+    searchPlaceholder = 'procurement:list.searchPlaceholder';
+  } else if (type === 'quotes') {
+    searchPlaceholder = 'quotes:list.searchPlaceholder';
+  } else {
+    searchPlaceholder = searchPlaceholders[type];
+  }
+
   return {
-    searchPlaceholder: searchPlaceholders[type],
+    searchPlaceholder,
 
     // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
     labels: {
@@ -312,6 +373,50 @@ export const storagesToolbarConfig: CompactToolbarConfig = createToolbarConfig('
 
 // 🅿️ ENTERPRISE: Parking Configuration - Using Smart Factory (100+ lines → 1 line!)
 export const parkingToolbarConfig: CompactToolbarConfig = createToolbarConfig('parking');
+
+// 📦 ENTERPRISE: Procurement Configuration - Factory + overrides (POs not favoritable, no import flow,
+// delete handled via PO lifecycle "cancel" — not a destructive list action)
+const _procurementBase = createToolbarConfig('procurement');
+export const procurementToolbarConfig: CompactToolbarConfig = {
+  ..._procurementBase,
+  availableActions: {
+    ..._procurementBase.availableActions,
+    favorites: false,
+    favoritesManagement: false,
+    import: false,
+    preview: false,
+    copy: false,
+    refresh: false,
+    reports: false,
+    settings: false,
+    help: false,
+    deleteItems: false,
+    archive: false,
+  },
+};
+
+// 📄 ENTERPRISE: Quotes Configuration - Factory + overrides (Quotes not favoritable, no import,
+// "delete" semantically = archive via lifecycle status — triggered by QuoteDetailsHeader, not toolbar.
+// Toolbar archive button is unwired across all entities → matched PO and disabled here too.)
+const _quotesBase = createToolbarConfig('quotes');
+export const quotesToolbarConfig: CompactToolbarConfig = {
+  ..._quotesBase,
+  availableActions: {
+    ..._quotesBase.availableActions,
+    favorites: false,
+    favoritesManagement: false,
+    import: false,
+    preview: false,
+    copy: false,
+    refresh: false,
+    reports: false,
+    settings: false,
+    help: false,
+    deleteItems: false,
+    archive: false,
+    share: false,
+  },
+};
 
 // 📧 ENTERPRISE: Communications Configuration - WORKFLOW ACTIONS ONLY (not CRUD)
 // Per ChatGPT guidance: Inbox toolbar = WORKFLOW, not CRUD

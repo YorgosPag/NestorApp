@@ -23,7 +23,7 @@ export function ContactQuotesSection({
     <QuoteList
       quotes={quotes}
       loading={loading}
-      onView={(quoteId) => router.push(`/procurement/quotes/${quoteId}/review`)}
+      onSelectQuote={(q) => router.push(`/procurement/quotes/${q.id}/review`)}
       onCreateNew={
         archived
           ? undefined

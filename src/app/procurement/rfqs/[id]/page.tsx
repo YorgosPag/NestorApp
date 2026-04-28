@@ -120,7 +120,11 @@ export default function RfqDetailPage({ params }: RfqDetailPageProps) {
         />
       )}
 
-      <QuoteList quotes={quotes} loading={loading} onView={handleViewQuote} />
+      <QuoteList
+        quotes={quotes}
+        loading={loading}
+        onSelectQuote={(q) => handleViewQuote(q.id)}
+      />
 
       {comparison && (
         <ComparisonPanel

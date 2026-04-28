@@ -5,13 +5,17 @@
  *
  * Layout unificato pattern Contacts/POs (SSoT):
  *   PageContainer → QuotesHeader → ProcurementSubNav → UnifiedDashboard
- *   → AdvancedFiltersPanel → ListContainer (QuoteList | QuoteDetailSummary split)
+ *   → AdvancedFiltersPanel → ListContainer (QuoteList | QuoteDetailsHeader+QuoteDetailSummary split)
  *
- * @see ADR-327 §Layout Unification
+ * @see ADR-267 §Phase H — Quote List Panel + Detail Header SSoT
  */
 
 import { useCallback } from 'react';
-import { FileText, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { FileText, Loader2, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
@@ -25,17 +29,21 @@ import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementS
 import { QuotesHeader } from '@/subapps/procurement/components/QuotesHeader';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteDetailSummary } from '@/subapps/procurement/components/QuoteDetailSummary';
+import { QuoteDetailsHeader } from '@/subapps/procurement/components/QuoteDetailsHeader';
 import { useQuotesPageState } from '@/hooks/procurement/useQuotesPageState';
+import type { Quote } from '@/subapps/procurement/types/quote';
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
 export function QuotesPageContent() {
+  const router = useRouter();
   const state = useQuotesPageState();
 
   const {
     filteredQuotes,
+    actionRequired,
     loading,
     error,
     selectedQuote,
@@ -55,7 +63,6 @@ export function QuotesPageContent() {
     loadingArchived,
     toggleArchived,
     restoreQuote,
-    handleViewQuote,
     handleScanNew,
     isNamespaceReady,
     t,
@@ -64,6 +71,10 @@ export function QuotesPageContent() {
   const handleMobileClose = useCallback(() => {
     setSelectedQuote(null);
   }, [setSelectedQuote]);
+
+  const handleEditQuote = useCallback((quoteId: string) => {
+    router.push(`/procurement/quotes/${quoteId}/review`);
+  }, [router]);
 
   if (!isNamespaceReady) {
     return (
@@ -168,21 +179,29 @@ export function QuotesPageContent() {
           role="region"
           aria-label="Quotes list and detail"
         >
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <QuoteList
-              quotes={filteredQuotes}
-              loading={loading}
-              onView={handleViewQuote}
-              onArchive={archiveWithUndo}
-            />
-          </div>
+          <QuoteList
+            quotes={filteredQuotes}
+            actionRequired={actionRequired}
+            loading={loading}
+            onCreateNew={handleScanNew}
+            onSelectQuote={handleSelectQuote}
+            selectedQuoteId={selectedQuote?.id}
+            onEditQuote={handleEditQuote}
+          />
 
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
             {selectedQuote ? (
-              <QuoteDetailSummary
-                quote={selectedQuote}
-                onArchive={archiveWithUndo}
-              />
+              <>
+                <QuoteDetailsHeader
+                  quote={selectedQuote}
+                  onCreateNew={handleScanNew}
+                  onEdit={() => handleEditQuote(selectedQuote.id)}
+                  onArchive={() => archiveWithUndo(selectedQuote.id)}
+                />
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  <QuoteDetailSummary quote={selectedQuote} />
+                </div>
+              </>
             ) : (
               <EmptyDetailState
                 label={t('detail.emptyTitle')}
@@ -200,9 +219,12 @@ export function QuotesPageContent() {
         >
           <QuoteList
             quotes={filteredQuotes}
+            actionRequired={actionRequired}
             loading={loading}
-            onView={handleViewQuote}
-            onArchive={archiveWithUndo}
+            onCreateNew={handleScanNew}
+            onSelectQuote={handleSelectQuote}
+            selectedQuoteId={selectedQuote?.id}
+            onEditQuote={handleEditQuote}
           />
         </section>
 
@@ -213,10 +235,15 @@ export function QuotesPageContent() {
           title={selectedQuote?.displayNumber ?? t('detail.emptyTitle')}
         >
           {selectedQuote ? (
-            <QuoteDetailSummary
-              quote={selectedQuote}
-              onArchive={archiveWithUndo}
-            />
+            <>
+              <QuoteDetailsHeader
+                quote={selectedQuote}
+                onCreateNew={handleScanNew}
+                onEdit={() => handleEditQuote(selectedQuote.id)}
+                onArchive={() => archiveWithUndo(selectedQuote.id)}
+              />
+              <QuoteDetailSummary quote={selectedQuote} />
+            </>
           ) : null}
         </MobileDetailsSlideIn>
       </ListContainer>
@@ -227,11 +254,12 @@ export function QuotesPageContent() {
           <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
             {t('quotes.archivedTab')}
           </h2>
-          <QuoteList
+          <ArchivedQuotesPanel
             quotes={archivedQuotes}
             loading={loadingArchived}
             onRestore={restoreQuote}
-            emptyMessage={t('quotes.archivedEmpty')}
+            emptyLabel={t('quotes.archivedEmpty')}
+            restoreLabel={t('quotes.restore')}
           />
         </section>
       )}
@@ -262,5 +290,68 @@ function EmptyDetailState({
         <p className="text-sm text-muted-foreground max-w-xs">{description}</p>
       </div>
     </div>
+  );
+}
+
+// =============================================================================
+// ARCHIVED PANEL — minimal restore-only list (auxiliary view)
+// =============================================================================
+
+interface ArchivedQuotesPanelProps {
+  quotes: Quote[];
+  loading: boolean;
+  onRestore: (id: string) => void;
+  emptyLabel: string;
+  restoreLabel: string;
+}
+
+function ArchivedQuotesPanel({
+  quotes,
+  loading,
+  onRestore,
+  emptyLabel,
+  restoreLabel,
+}: ArchivedQuotesPanelProps) {
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-md" />
+        ))}
+      </div>
+    );
+  }
+
+  if (quotes.length === 0) {
+    return <p className="text-sm text-muted-foreground py-4">{emptyLabel}</p>;
+  }
+
+  return (
+    <ScrollArea className="max-h-[400px]">
+      <ul className="space-y-2">
+        {quotes.map((q) => (
+          <li
+            key={q.id}
+            className="flex items-center justify-between gap-3 rounded-md border bg-card p-3"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="font-mono text-sm">{q.displayNumber}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {q.extractedData?.vendorName?.value ?? q.vendorContactId}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onRestore(q.id)}
+              aria-label={restoreLabel}
+            >
+              <RotateCcw className="mr-1 h-3.5 w-3.5" />
+              {restoreLabel}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </ScrollArea>
   );
 }

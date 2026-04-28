@@ -150,16 +150,12 @@ export function ProcurementPageContent() {
             purchaseOrders={purchaseOrders}
             actionRequired={actionRequired}
             loading={loading}
-            searchValue={procFilters.searchTerm}
-            onSearchChange={(v) =>
-              handleFiltersChange({ ...procFilters, searchTerm: v })
-            }
             onCreateNew={handleCreateNew}
             onViewPO={(id) => router.push(`/procurement/${id}`)}
             onDuplicate={handleDuplicate}
             onSelectPO={handleSelectPO}
             selectedPOId={selectedPO?.id}
-            hideSearchBar
+            onEditPO={() => selectedPO && setEditMode(true)}
           />
 
           {/* Dettaglio / Form / Empty state */}
@@ -208,15 +204,12 @@ export function ProcurementPageContent() {
             purchaseOrders={purchaseOrders}
             actionRequired={actionRequired}
             loading={loading}
-            searchValue={procFilters.searchTerm}
-            onSearchChange={(v) =>
-              handleFiltersChange({ ...procFilters, searchTerm: v })
-            }
             onCreateNew={handleCreateNew}
             onViewPO={(id) => router.push(`/procurement/${id}`)}
             onDuplicate={handleDuplicate}
             onSelectPO={handleSelectPO}
             selectedPOId={selectedPO?.id}
+            onEditPO={() => selectedPO && setEditMode(true)}
           />
         </section>
 
