@@ -251,6 +251,49 @@ Dedicated `jest.config.firestore-rules.js` (node env, isolated from main suite).
 
 ---
 
+## CHECK 3.23 — Native HTML Tooltip Ratchet (AST-based)
+
+**Goal:** Block `title=` props on HTML (lowercase) JSX elements — these render browser-native grey tooltips instead of the centralized Radix dark-bg/white-text tooltip.
+
+**Why AST, not grep:** In multiline JSX the `title=` attribute sits on its own line — a line-based regex cannot determine the parent tag name. `@typescript-eslint/parser` parses the full JSX tree, so `JSXOpeningElement` → tag name → attribute scan is reliable regardless of formatting.
+
+**Canonical replacement:**
+```tsx
+// ❌ Native browser tooltip
+<span title={msg}>…</span>
+
+// ✅ Centralized Radix tooltip
+<Tooltip>
+  <TooltipTrigger>…</TooltipTrigger>
+  <TooltipContent>{msg}</TooltipContent>
+</Tooltip>
+
+// ✅ Shorthand for info icons
+<InfoTooltip content={msg} />
+```
+
+**Script:** `scripts/check-native-tooltip.js`
+**Baseline:** `.native-tooltip-baseline.json` (48 files / 63 violations — all legacy, 2026-04-28)
+
+**Commands:**
+| Command | Purpose |
+|---------|---------|
+| `npm run native-tooltip:audit` | Full codebase scan (report only) |
+| `npm run native-tooltip:baseline` | Regenerate baseline after Boy Scout cleanup |
+| `SKIP_NATIVE_TOOLTIP=1 git commit` | Emergency skip |
+
+**Ratchet rules:**
+- New files (not in baseline) → **zero tolerance**
+- Existing files: count can only **decrease**
+- Run `npm run native-tooltip:baseline` after cleanup to persist lower counts
+
+**Relationship to CHECK 3.7 (`ui-tooltip` module):**
+- CHECK 3.7 blocks direct `@radix-ui/react-tooltip` imports in new files (library-level bypass)
+- CHECK 3.23 blocks `title=` on HTML elements (usage-level bypass)
+- Together: full tooltip SSoT enforcement — import layer + usage layer
+
+---
+
 ## Boy Scout Rule (applies to all RATCHET checks)
 
 Όταν αγγίζεις legacy file → καθάρισε όσα violations μπορείς. Δεν είναι υποχρεωτικό, αλλά σταδιακά φτάνουμε στο 0.

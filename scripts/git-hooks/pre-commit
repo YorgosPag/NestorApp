@@ -1306,5 +1306,49 @@ if [[ -z "${SKIP_DEADCODE_CHECK:-}" ]] && [[ -n "$TS_FILES" ]] && [[ -f ".deadco
     echo -e "${GREEN}  $(echo "$DEADCODE_OUTPUT" | tail -1)${NC}"
 fi
 
+# =============================================================================
+# CHECK 3.23: Native HTML Tooltip Ratchet (AST-based / 2026-04-28)
+# =============================================================================
+# Blocks commit if new title= props appear on HTML (lowercase) JSX elements.
+# These render as grey browser-native tooltips — not the centralized
+# dark-bg/white-text Radix tooltip from @/components/ui/tooltip.
+#
+# Why AST: multiline JSX puts `title=` on its own line — grep can't tell
+# the parent element name. @typescript-eslint/parser gives the full JSX tree.
+#
+# Canonical replacement:
+#   <Tooltip><TooltipTrigger>…</TooltipTrigger>
+#   <TooltipContent>{msg}</TooltipContent></Tooltip>
+#   or: <InfoTooltip content={msg} />
+#
+# Ratchet: new files = zero tolerance. Existing files: counts can only decrease.
+# Baseline: .native-tooltip-baseline.json
+# Skip: SKIP_NATIVE_TOOLTIP=1 git commit (emergency only)
+# Full scan: node scripts/check-native-tooltip.js --all
+# =============================================================================
+
+NATIVE_TOOLTIP_SCRIPT="scripts/check-native-tooltip.js"
+if [[ -z "${SKIP_NATIVE_TOOLTIP:-}" ]] && [[ -f "$NATIVE_TOOLTIP_SCRIPT" ]] && [[ -n "$TS_FILES" ]]; then
+    echo -e "${YELLOW}🔍 Checking native HTML tooltips (CHECK 3.23)...${NC}"
+
+    NATIVE_TOOLTIP_OUTPUT=$(node "$NATIVE_TOOLTIP_SCRIPT" $TS_FILES 2>&1)
+    NATIVE_TOOLTIP_EXIT=$?
+
+    if [[ $NATIVE_TOOLTIP_EXIT -ne 0 ]]; then
+        echo "$NATIVE_TOOLTIP_OUTPUT"
+        echo ""
+        echo -e "${RED}✖ CHECK 3.23 failed — replace title= on HTML elements with centralized Tooltip.${NC}"
+        echo -e "${YELLOW}  Tip: run 'npm run native-tooltip:audit' for a full scan.${NC}"
+        echo -e "${YELLOW}  Emergency skip: SKIP_NATIVE_TOOLTIP=1 git commit ...${NC}"
+        exit 1
+    fi
+
+    if [[ -n "$NATIVE_TOOLTIP_OUTPUT" ]]; then
+        echo "$NATIVE_TOOLTIP_OUTPUT"
+    fi
+
+    echo -e "${GREEN}  ✅ Native tooltip ratchet: clean${NC}"
+fi
+
 echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
 exit 0

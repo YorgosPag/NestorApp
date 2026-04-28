@@ -257,6 +257,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.15** | Firestore Index Coverage (super-admin variant) | ZERO TOL on touch | no baseline |
 | **3.16** | Firestore Rules Test Coverage (ADR-298) | ZERO TOL on touch | no baseline |
 | **3.17** | Entity Audit Coverage — writers call `EntityAuditService.recordChange()` | RATCHET | `.entity-audit-coverage-baseline.json` (70) |
+| **3.23** | Native HTML Tooltip — `title=` on HTML JSX elements (AST-based) | RATCHET | `.native-tooltip-baseline.json` (63 violations / 48 files) |
 
 **📘 Full details (incidents, why, commands, relationships)**: `docs/centralized-systems/reference/precommit-checks.md`
 

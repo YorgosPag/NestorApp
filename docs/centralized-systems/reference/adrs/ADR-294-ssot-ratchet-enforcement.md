@@ -176,7 +176,8 @@ capturing groups, NEVER `(?:...)`.
 ## Changelog
 | Date | Change |
 |------|--------|
-| 2026-04-28 | **ui-tooltip SSoT module** — New `ui-tooltip` module (UI Components tier). Canonical: `src/components/ui/tooltip.tsx` (Radix wrapper, dark bg + white text). Forbidden: direct `@radix-ui/react-tooltip` imports outside the wrapper. Allowlist: `src/components/ui/tooltip.tsx` only. Baseline: 0 violations (codebase already clean). Registry: 236 modules. |
+| 2026-04-28 | **CHECK 3.23 — Native HTML Tooltip Ratchet (AST-based)** — New pre-commit check blocking `title=` props on HTML (lowercase) JSX elements. Uses `@typescript-eslint/parser` AST walk — immune to multiline JSX where `title=` sits on its own line (grep cannot see the parent tag). HTML_ELEMENTS set: 70+ tags. Ratchet: zero tolerance for new files, existing legacy frozen at baseline. Script: `scripts/check-native-tooltip.js`. Baseline: `.native-tooltip-baseline.json` (48 files / 63 violations — all legacy). npm scripts: `native-tooltip:audit` (full scan), `native-tooltip:baseline` (regenerate). Canonical replacement: `<Tooltip><TooltipTrigger/><TooltipContent/>` or `<InfoTooltip content={x} />`. Emergency skip: `SKIP_NATIVE_TOOLTIP=1 git commit`. |
+| 2026-04-28 | **ui-tooltip SSoT module** — New `ui-tooltip` module (UI Components tier). Canonical: `src/components/ui/tooltip.tsx` (Radix wrapper, dark bg + white text). Forbidden: direct `@radix-ui/react-tooltip` imports outside the wrapper. Allowlist: `src/components/ui/tooltip.tsx` only. Baseline: 0 violations (codebase already clean). |
 | 2026-04-08 | Initial implementation — 5 modules, 92 files baseline |
 | 2026-04-08 | Added Discovery Scanner — 4-phase batch analysis, 77 duplicates found |
 | 2026-04-08 | **v2.0** — Expanded from 5 → 20 modules (3 tiers: data integrity, security, business logic) |
