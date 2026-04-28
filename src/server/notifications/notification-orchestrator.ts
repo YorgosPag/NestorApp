@@ -316,7 +316,13 @@ export async function dispatchCrmNotification(
   tenantId: string,
   title: string,
   eventId: string,
-  options?: { body?: string; entityId?: string }
+  options?: {
+    body?: string;
+    entityId?: string;
+    entityType?: NotificationEntityType;
+    titleKey?: string;
+    titleParams?: Record<string, string>;
+  }
 ): Promise<DispatchResult> {
   return dispatchNotification({
     eventType,
@@ -327,7 +333,9 @@ export async function dispatchCrmNotification(
     source: { service: SOURCE_SERVICES.CRM, env: getCurrentEnvironment() },
     eventId,
     entityId: options?.entityId,
-    entityType: NOTIFICATION_ENTITY_TYPES.LEAD,
+    entityType: options?.entityType ?? NOTIFICATION_ENTITY_TYPES.LEAD,
+    titleKey: options?.titleKey,
+    titleParams: options?.titleParams,
   });
 }
 

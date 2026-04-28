@@ -132,5 +132,9 @@
       "closed": "Κλειστό",
       "awarded": "Ανατεθειμένο"
     }
+  },
+  "notifications": {
+    "contactTrashed": "Η επαφή μεταφέρθηκε στον κάδο: {contactName}",
+    "contactPermanentlyDeleted": "Η επαφή διαγράφηκε οριστικά: {contactName}"
   }
 }

@@ -40,6 +40,10 @@ export interface CrmNotificationSettings {
   taskAssigned: boolean;
   /** Notify when communication is received */
   newCommunication: boolean;
+  /** Notify when a contact is moved to trash */
+  contactTrashed: boolean;
+  /** Notify when a contact is permanently deleted */
+  contactPermanentlyDeleted: boolean;
 }
 
 /**
@@ -169,6 +173,8 @@ export const DEFAULT_CRM_SETTINGS: CrmNotificationSettings = {
   leadStatusChange: true,
   taskAssigned: true,
   newCommunication: false,
+  contactTrashed: true,
+  contactPermanentlyDeleted: true,
 };
 
 /**

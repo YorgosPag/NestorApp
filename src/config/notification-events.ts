@@ -60,6 +60,8 @@ export const NOTIFICATION_EVENT_TYPES = {
   CRM_LEAD_STATUS_CHANGE: 'crm.leadStatusChange',
   CRM_TASK_ASSIGNED: 'crm.taskAssigned',
   CRM_NEW_COMMUNICATION: 'crm.newCommunication',
+  CRM_CONTACT_TRASHED: 'crm.contactTrashed',
+  CRM_CONTACT_PERMANENTLY_DELETED: 'crm.contactPermanentlyDeleted',
   // Properties Events
   PROPERTIES_STATUS_CHANGE: 'properties.statusChange',
   PROPERTIES_NEW_PROPERTY: 'properties.newProperty',
@@ -136,6 +138,18 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'newCommunication',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.CRM_CONTACT_TRASHED]: {
+    category: 'crm',
+    settingKey: 'contactTrashed',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  [NOTIFICATION_EVENT_TYPES.CRM_CONTACT_PERMANENTLY_DELETED]: {
+    category: 'crm',
+    settingKey: 'contactPermanentlyDeleted',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.ERROR,
   },
   // Properties
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_STATUS_CHANGE]: {

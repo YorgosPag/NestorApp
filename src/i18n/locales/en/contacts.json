@@ -132,5 +132,9 @@
       "closed": "Closed",
       "awarded": "Awarded"
     }
+  },
+  "notifications": {
+    "contactTrashed": "Contact moved to trash: {contactName}",
+    "contactPermanentlyDeleted": "Contact permanently deleted: {contactName}"
   }
 }
