@@ -24,6 +24,7 @@ const logger = createModuleLogger('useBuildingsTrashState');
 
 interface UseBuildingsTrashStateParams {
   forceDataRefresh: () => void;
+  onRestoreComplete?: () => void;
 }
 
 interface TrashApiResponse {
@@ -34,6 +35,7 @@ interface TrashApiResponse {
 
 export function useBuildingsTrashState({
   forceDataRefresh,
+  onRestoreComplete,
 }: UseBuildingsTrashStateParams) {
   const { user, loading: authLoading } = useAuth();
   const { success: showSuccess } = useNotifications();
@@ -85,10 +87,11 @@ export function useBuildingsTrashState({
       await TrashService.bulkRestore('building', ids);
       handleTrashActionComplete();
       showSuccess(t('restoreSuccess', { count: ids.length }));
+      onRestoreComplete?.();
     } catch (error) {
       logger.error('Failed to restore buildings', { ids, error });
     }
-  }, [handleTrashActionComplete, showSuccess, t]);
+  }, [handleTrashActionComplete, showSuccess, t, onRestoreComplete]);
 
   const handlePermanentDeleteBuildings = useCallback((ids: string[]) => {
     if (ids.length === 0) return;

@@ -160,7 +160,10 @@ export function BuildingsPageContent() {
     handleCancelPermanentDelete,
     fetchTrashedBuildings,
     onBuildingMovedToTrash,
-  } = useBuildingsTrashState({ forceDataRefresh: refetchBuildings });
+  } = useBuildingsTrashState({
+    forceDataRefresh: refetchBuildings,
+    onRestoreComplete: () => setSelectedBuilding(null),
+  });
 
   // 🛡️ ADR-226 Phase 3: Deletion Guard — replaces cascade preview
   const { checking: checkingDeletion, checkBeforeDelete, BlockedDialog } = useDeletionGuard('building');
