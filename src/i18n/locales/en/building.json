@@ -629,5 +629,8 @@
         "help": "Help"
       }
     }
+  },
+  "notifications": {
+    "created": "Building {buildingName} was created"
   }
 }

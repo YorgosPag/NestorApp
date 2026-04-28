@@ -629,5 +629,8 @@
         "help": "Βοήθεια"
       }
     }
+  },
+  "notifications": {
+    "created": "Το κτίριο {buildingName} δημιουργήθηκε"
   }
 }

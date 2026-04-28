@@ -79,6 +79,8 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROCUREMENT_APPROVAL_NEEDED: 'procurement.approvalNeeded',
   PROCUREMENT_PO_APPROVED: 'procurement.poApproved',
   PROCUREMENT_PO_OVERDUE: 'procurement.poOverdue',
+  // Building Events
+  BUILDING_CREATED: 'building.created',
   // Procurement Quote Events (ADR-327 Phase 3 — Vendor Portal)
   PROCUREMENT_QUOTE_RECEIVED: 'procurement.quoteReceived',
   PROCUREMENT_VENDOR_DECLINED: 'procurement.vendorDeclined',
@@ -205,6 +207,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'suspiciousActivity',
     isMandatory: true,
     defaultSeverity: NOTIFICATION_SEVERITIES.ERROR,
+  },
+  // Buildings
+  [NOTIFICATION_EVENT_TYPES.BUILDING_CREATED]: {
+    category: 'properties',
+    settingKey: 'newBuilding',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.SUCCESS,
   },
   // Procurement (ADR-267 Phase B)
   [NOTIFICATION_EVENT_TYPES.PROCUREMENT_APPROVAL_NEEDED]: {

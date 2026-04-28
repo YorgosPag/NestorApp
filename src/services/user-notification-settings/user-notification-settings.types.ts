@@ -54,6 +54,8 @@ export interface PropertiesNotificationSettings {
   priceChange: boolean;
   /** Notify when property viewing is scheduled */
   viewingScheduled: boolean;
+  /** Notify when new building is created */
+  newBuilding: boolean;
 }
 
 /**
@@ -175,6 +177,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   newProperty: false,
   priceChange: false,
   viewingScheduled: true,
+  newBuilding: true,
 };
 
 /**
