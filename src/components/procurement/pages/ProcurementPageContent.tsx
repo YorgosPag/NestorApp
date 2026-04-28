@@ -183,6 +183,7 @@ export function ProcurementPageContent() {
                   onCancel={() => handleAction('cancel', { reason: 'other' })}
                   onEdit={() => setEditMode(true)}
                   onDuplicate={() => handleDuplicate(selectedPO.id)}
+                  onCreateNew={handleCreateNew}
                 />
               </div>
             ) : (
@@ -245,6 +246,7 @@ export function ProcurementPageContent() {
               onCancel={() => handleAction('cancel', { reason: 'other' })}
               onEdit={() => setEditMode(true)}
               onDuplicate={() => handleDuplicate(selectedPO.id)}
+              onCreateNew={handleCreateNew}
             />
           ) : null}
         </MobileDetailsSlideIn>

@@ -10,21 +10,20 @@
  */
 
 import { lazy, Suspense } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn, getStatusColor } from '@/lib/design-system';
+import { cn } from '@/lib/design-system';
 import {
   CheckCircle, Send, PackageCheck, XCircle, Copy, Edit, Clipboard, Loader2,
 } from 'lucide-react';
-import { PO_STATUS_META } from '@/types/procurement';
 import type { PurchaseOrder } from '@/types/procurement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PurchaseOrderActions } from './PurchaseOrderActions';
+import { PurchaseOrderDetailsHeader } from './PurchaseOrderDetailsHeader';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { useContactById } from '@/hooks/useContactById';
@@ -35,11 +34,6 @@ const ActivityTab = lazy(() =>
   import('@/components/shared/audit/ActivityTab').then((m) => ({ default: m.ActivityTab }))
 );
 
-const STATUS_SEMANTIC: Record<string, string> = {
-  gray: 'pending', blue: 'planned', yellow: 'construction',
-  orange: 'reserved', green: 'available', emerald: 'completed', red: 'cancelled',
-};
-
 interface PurchaseOrderDetailProps {
   po: PurchaseOrder;
   onApprove?: () => void;
@@ -49,13 +43,15 @@ interface PurchaseOrderDetailProps {
   onCancel?: () => void;
   onEdit?: () => void;
   onDuplicate?: () => void;
+  onCreateNew?: () => void;
   onExportPDF?: () => void;
   onCopyText?: () => void;
 }
 
 export function PurchaseOrderDetail({
   po, onApprove, onMarkOrdered, onRecordDelivery, onClose,
-  onCancel, onEdit, onDuplicate, onExportPDF: _onExportPDF, onCopyText,
+  onCancel, onEdit, onDuplicate, onCreateNew,
+  onExportPDF: _onExportPDF, onCopyText,
 }: PurchaseOrderDetailProps) {
   const { t } = useTranslation('procurement');
 
@@ -72,26 +68,24 @@ export function PurchaseOrderDetail({
     ? (buildings.find((b) => b.id === po.buildingId)?.name ?? po.buildingId)
     : null;
 
-  const statusMeta = PO_STATUS_META[po.status];
-  const sem = STATUS_SEMANTIC[statusMeta.color] ?? 'pending';
   const showDelivery = ['ordered', 'partially_delivered', 'delivered'].includes(po.status);
 
   return (
     <div className="space-y-6">
+      {/* SSoT detail header — title + status pill + entity actions */}
+      <PurchaseOrderDetailsHeader
+        po={po}
+        onCreateNew={onCreateNew}
+        onEdit={onEdit}
+        onCancel={onCancel}
+      />
+
       {/* Phase B: Actions toolbar (PDF, Email, Share) */}
       <PurchaseOrderActions po={po} />
 
-      {/* Header */}
+      {/* Header — supplier / project / dates / address */}
       <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-xl">{po.poNumber}</CardTitle>
-            <Badge variant="outline" className={cn('text-sm font-medium', getStatusColor(sem, 'bg'), getStatusColor(sem, 'text'))}>
-              {statusMeta.label.el}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <dt className="text-muted-foreground">{t('detail.supplier')}</dt>
