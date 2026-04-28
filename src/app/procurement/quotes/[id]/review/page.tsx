@@ -10,6 +10,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useQuote } from '@/subapps/procurement/hooks/useQuote';
 import { useContactById } from '@/hooks/useContactById';
 import { ExtractedDataReviewPanel } from '@/subapps/procurement/components/ExtractedDataReviewPanel';
+import { QuoteOriginalDocumentPanel } from '@/subapps/procurement/components/QuoteOriginalDocumentPanel';
+import { useAuth } from '@/auth/hooks/useAuth';
 import type { QuoteLine } from '@/subapps/procurement/types/quote';
 
 interface ReviewPageProps {
@@ -25,6 +27,8 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
     stopWhen: (q) => q !== null && q.extractedData !== null,
   });
   const supplierContact = useContactById(quote?.vendorContactId ?? null);
+  const { user } = useAuth();
+  const companyId = user?.companyId ?? '';
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [switchingVendor, setSwitchingVendor] = useState(false);
@@ -136,7 +140,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
   };
 
   return (
-    <main className="container mx-auto max-w-5xl space-y-4 py-6">
+    <main className="container mx-auto max-w-7xl space-y-4 py-6">
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="mr-1 h-4 w-4" />
@@ -191,19 +195,26 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
         </Card>
       )}
 
-      {quote && quote.extractedData && (
+      {quote && quote.extractedData && companyId && (
         <>
           {saveError && <p className="text-sm text-destructive">{saveError}</p>}
-          <ExtractedDataReviewPanel
-            quote={quote}
-            supplierContact={supplierContact}
-            onConfirm={handleConfirm}
-            onReject={handleArchive}
-            onGoBack={handleBack}
-            onSwitchVendor={handleSwitchVendor}
-            isSaving={saving}
-            isSwitchingVendor={switchingVendor}
-          />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <QuoteOriginalDocumentPanel
+              quoteId={quote.id}
+              companyId={companyId}
+              sticky
+            />
+            <ExtractedDataReviewPanel
+              quote={quote}
+              supplierContact={supplierContact}
+              onConfirm={handleConfirm}
+              onReject={handleArchive}
+              onGoBack={handleBack}
+              onSwitchVendor={handleSwitchVendor}
+              isSaving={saving}
+              isSwitchingVendor={switchingVendor}
+            />
+          </div>
         </>
       )}
     </main>

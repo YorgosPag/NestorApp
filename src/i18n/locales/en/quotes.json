@@ -140,6 +140,14 @@
         "switching": "Updating vendor...",
         "dismiss": "Understood, continue",
         "goBack": "Go back to correct"
+      },
+      "originalDocument": {
+        "title": "Original Document",
+        "badge": "Original",
+        "download": "Download",
+        "openExternal": "Open in new tab",
+        "previewUnavailable": "Preview not available",
+        "empty": "No attachment"
       }
     },
     "notifications": {

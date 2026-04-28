@@ -140,6 +140,14 @@
         "switching": "Ενημέρωση προμηθευτή...",
         "dismiss": "Κατανοώ, συνέχεια",
         "goBack": "Επιστροφή για διόρθωση"
+      },
+      "originalDocument": {
+        "title": "Πρωτότυπο Έγγραφο",
+        "badge": "Πρωτότυπο",
+        "download": "Λήψη",
+        "openExternal": "Άνοιγμα σε νέα καρτέλα",
+        "previewUnavailable": "Δεν διατίθεται προεπισκόπηση",
+        "empty": "Χωρίς συνημμένο"
       }
     },
     "notifications": {

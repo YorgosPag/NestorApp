@@ -15,6 +15,8 @@
 import { FileText } from 'lucide-react';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { QuoteOriginalDocumentPanel } from '@/subapps/procurement/components/QuoteOriginalDocumentPanel';
 import type { Quote } from '@/subapps/procurement/types/quote';
 
 const MAX_LINES_PREVIEW = 5;
@@ -31,6 +33,8 @@ function formatValidUntil(quote: Quote): string {
 
 export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
   const { t } = useTranslation('quotes');
+  const { user } = useAuth();
+  const companyId = user?.companyId ?? '';
 
   const visibleLines = quote.lines.slice(0, MAX_LINES_PREVIEW);
   const hiddenLinesCount = Math.max(0, quote.lines.length - MAX_LINES_PREVIEW);
@@ -104,6 +108,14 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
         <span className="font-semibold">{t('quotes.total')}</span>
         <span className="text-right font-bold">{formatCurrency(quote.totals.total)}</span>
       </section>
+
+      {companyId && (
+        <QuoteOriginalDocumentPanel
+          quoteId={quote.id}
+          companyId={companyId}
+          compact
+        />
+      )}
 
       {(quote.paymentTerms || quote.deliveryTerms || quote.warranty) && (
         <section aria-label={t('quotes.paymentTerms')} className="space-y-2 text-sm">

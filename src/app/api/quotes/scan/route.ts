@@ -41,6 +41,7 @@ import { QuoteAnalyzerStub } from '@/subapps/procurement/services/external/quote
 import type { IQuoteAnalyzer } from '@/subapps/procurement/types/quote-analyzer';
 import type { Quote, QuoteAttachment } from '@/subapps/procurement/types/quote';
 import { processScanAsync } from './process';
+import { writeQuoteFileRecord } from './quote-file-record-writer';
 import admin from 'firebase-admin';
 
 const logger = createModuleLogger('QUOTES_SCAN_API');
@@ -122,7 +123,7 @@ function readFormFields(formData: FormData): ScanFormFields | { error: NextRespo
 
 async function uploadAndAttach(
   ctx: AuthContext,
-  quoteId: string,
+  quote: Quote,
   file: File
 ): Promise<QuoteAttachment> {
   const arrayBuffer = await file.arrayBuffer();
@@ -132,7 +133,7 @@ async function uploadAndAttach(
   const { path: storagePath } = buildStoragePath({
     companyId: ctx.companyId,
     entityType: ENTITY_TYPES.QUOTE,
-    entityId: quoteId,
+    entityId: quote.id,
     domain: FILE_DOMAINS.SALES,
     category: FILE_CATEGORIES.DOCUMENTS,
     fileId,
@@ -144,6 +145,24 @@ async function uploadAndAttach(
     buffer,
     contentType: file.type,
     cacheControl: 'public, max-age=86400',
+  });
+
+  // ADR-327 §Phase G — write canonical FileRecord so quote scans appear in
+  // the SSoT file system (useEntityFiles / EntityFilesManager / preview).
+  await writeQuoteFileRecord({
+    fileId,
+    quoteId: quote.id,
+    projectId: quote.projectId,
+    companyId: ctx.companyId,
+    createdBy: ctx.uid,
+    uploaderName: null,
+    storagePath,
+    downloadUrl: fileUrl,
+    originalFilename: file.name,
+    ext,
+    contentType: file.type,
+    sizeBytes: file.size,
+    quoteDisplayNumber: quote.displayNumber ?? null,
   });
 
   const attachment: QuoteAttachment = {
@@ -158,7 +177,7 @@ async function uploadAndAttach(
   };
 
   await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.QUOTES).doc(quoteId).update(
+    await db.collection(COLLECTIONS.QUOTES).doc(quote.id).update(
       sanitizeForFirestore({ attachments: admin.firestore.FieldValue.arrayUnion(attachment) }),
     );
   });
@@ -198,7 +217,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
 
         let attachment: QuoteAttachment;
         try {
-          attachment = await uploadAndAttach(ctx, quote.id, file);
+          attachment = await uploadAndAttach(ctx, quote, file);
         } catch (err) {
           const message = getErrorMessage(err, 'Failed to upload scan file');
           logger.error('uploadAndAttach failed', { quoteId: quote.id, error: message });
