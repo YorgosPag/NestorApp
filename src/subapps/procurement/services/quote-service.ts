@@ -111,9 +111,9 @@ export async function listQuotes(
   filters: QuoteFilters = {}
 ): Promise<Quote[]> {
   return safeFirestoreOperation(async (db) => {
-    // status != 'archived' moved to JS filter — Firestore inequality on status
-    // combined with orderBy createdAt requires complex composite index that
-    // causes FAILED_PRECONDITION; JS filter is fine for small per-company collections
+    // Sorting done in JS — orderBy(createdAt) on base query requires a 2-field
+    // composite index [companyId, createdAt] that Firestore doesn't auto-create.
+    // Per-company collections are small so JS sort is acceptable.
     let query = db.collection(COLLECTIONS.QUOTES)
       .where('companyId', '==', companyId) as FirebaseFirestore.Query;
 
@@ -121,13 +121,18 @@ export async function listQuotes(
     if (filters.rfqId) query = query.where('rfqId', '==', filters.rfqId);
     if (filters.vendorContactId) query = query.where('vendorContactId', '==', filters.vendorContactId);
     if (filters.trade) query = query.where('trade', '==', filters.trade);
-    if (filters.status) {
-      query = query.where('status', '==', filters.status);
-    }
+    if (filters.status) query = query.where('status', '==', filters.status);
 
-    const snap = await query.orderBy('createdAt', 'desc').get();
-    const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Quote));
-    return filters.status ? docs : docs.filter((q) => q.status !== 'archived');
+    const snap = await query.get();
+    const docs = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as Quote))
+      .filter((q) => filters.status ? q.status === filters.status : q.status !== 'archived')
+      .sort((a, b) => {
+        const aTs = (a.createdAt as unknown as { _seconds: number })?._seconds ?? 0;
+        const bTs = (b.createdAt as unknown as { _seconds: number })?._seconds ?? 0;
+        return bTs - aTs;
+      });
+    return docs;
   }, []);
 }
 

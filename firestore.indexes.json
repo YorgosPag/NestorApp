@@ -1988,6 +1988,20 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "entity_audit_trail",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "entityType",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "entityId",
           "order": "ASCENDING"
         },
@@ -2846,6 +2860,14 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "quotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
@@ -2868,6 +2890,24 @@
         { "fieldPath": "projectId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "quotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "vendorContactId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "vendor_invites",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "vendorContactId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],
