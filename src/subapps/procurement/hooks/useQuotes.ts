@@ -1,7 +1,12 @@
 'use client';
 
 import { useAsyncData } from '@/hooks/useAsyncData';
+// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
+import { createStaleCache } from '@/lib/stale-cache';
 import type { Quote, QuoteFilters } from '@/subapps/procurement/types/quote';
+
+// ADR-300: Cache only the default (no-filter) list — state on re-navigation
+const quotesCache = createStaleCache<Quote[]>('quotes');
 
 async function fetchQuotes(filters: Partial<QuoteFilters>): Promise<Quote[]> {
   const params = new URLSearchParams();
@@ -18,10 +23,23 @@ async function fetchQuotes(filters: Partial<QuoteFilters>): Promise<Quote[]> {
 }
 
 export function useQuotes(filters: Partial<QuoteFilters> = {}) {
+  const isDefaultFilters =
+    !filters.projectId &&
+    !filters.rfqId &&
+    !filters.trade &&
+    !filters.status &&
+    !filters.vendorContactId;
+
   const { data, loading, error, refetch, silentRefetch, patch } = useAsyncData<Quote[]>({
-    fetcher: () => fetchQuotes(filters),
+    fetcher: async () => {
+      const result = await fetchQuotes(filters);
+      // ADR-300: Cache only the default state — what user sees on re-navigation
+      if (isDefaultFilters) quotesCache.set(result);
+      return result;
+    },
     deps: [filters.projectId, filters.rfqId, filters.trade, filters.status, filters.vendorContactId],
-    initialData: [],
+    initialData: isDefaultFilters ? (quotesCache.get() ?? []) : [],
+    silentInitialFetch: isDefaultFilters && quotesCache.hasLoaded(),
   });
 
   return { quotes: data ?? [], loading, error, refetch, silentRefetch, patch };

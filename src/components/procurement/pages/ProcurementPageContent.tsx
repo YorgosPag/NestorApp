@@ -89,9 +89,6 @@ export function ProcurementPageContent() {
         breadcrumb={<ModuleBreadcrumb />}
       />
 
-      {/* ── Sub-nav: Παραγγελίες | Προσφορές ───────────────────────────── */}
-      <ProcurementSubNav />
-
       {/* ── Dashboard stats (collapsibile) ──────────────────────────────── */}
       {showDashboard && (
         <section
@@ -136,6 +133,11 @@ export function ProcurementPageContent() {
           />
         </aside>
       )}
+
+      {/* ── Sub-nav: Παραγγελίες | Προσφορές ───────────────────────────── */}
+      <div className="px-2 mt-2">
+        <ProcurementSubNav className="mb-0" />
+      </div>
 
       {/* ── List + Detail split ──────────────────────────────────────────── */}
       <ListContainer>
