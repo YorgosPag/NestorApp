@@ -48,6 +48,7 @@
     "filterStatus": "Status",
     "filterTrade": "Trade",
     "createSuccess": "Quote created",
+    "saveSuccess": "Quote saved",
     "createdAt": "Date",
     "noResults": "No results found",
     "archivedMessage": "Quote archived",

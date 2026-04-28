@@ -2,6 +2,7 @@
 
 import { use, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
@@ -32,7 +33,7 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
     if (quote?.rfqId) {
       router.push(`/procurement/rfqs/${quote.rfqId}`);
     } else {
-      router.push('/procurement/rfqs');
+      router.push('/procurement/quotes');
     }
   }, [quote?.rfqId, router]);
 
@@ -49,6 +50,9 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
         const txt = await res.text();
         throw new Error(txt || `Update failed: ${res.status}`);
       }
+      toast.success(t('quotes.saveSuccess'), {
+        description: quote?.displayNumber ? `${t('quotes.number')}: ${quote.displayNumber}` : undefined,
+      });
       handleBack();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : t('quotes.errors.updateFailed'));
