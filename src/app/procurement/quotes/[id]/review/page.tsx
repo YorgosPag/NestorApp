@@ -45,10 +45,14 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
     setSaving(true);
     setSaveError(null);
     try {
+      const body: { lines: QuoteLine[]; status?: 'under_review' } = { lines };
+      if (quote && quote.status !== 'under_review') {
+        body.status = 'under_review';
+      }
       const res = await fetch(`/api/quotes/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines, status: 'under_review' }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const txt = await res.text();

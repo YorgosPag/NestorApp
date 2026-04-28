@@ -33,7 +33,10 @@ const QuoteLineSchema = z.object({
   id: z.string().min(1),
   description: z.string().min(1).max(500),
   categoryCode: z.string().max(30).nullable().default(null),
-  quantity: z.number().positive(),
+  // quantity may be 0 — AI extraction of multi-row tables can yield parent
+  // rows / sub-totals / descriptive rows where quantity is intentionally
+  // empty. The user removes them in review if needed (X button).
+  quantity: z.number().min(0),
   unit: z.string().min(1).max(20),
   unitPrice: z.number().min(0),
   vatRate: z.union([z.literal(0), z.literal(6), z.literal(13), z.literal(24)]),
