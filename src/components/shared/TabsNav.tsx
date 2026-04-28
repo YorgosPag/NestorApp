@@ -19,17 +19,25 @@
  * @see src/components/ui/navigation/TabsComponents.tsx — TabsContainer SSoT (in-page tabs)
  */
 
+import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export interface TabsNavTab {
   href: string;
   labelKey: string;
   exactMatch?: boolean;
   excludeStartsWith?: readonly string[];
+  /** Optional icon (rendered only in `radix` variant for visual parity with Trigger Tabs SSoT). */
+  icon?: LucideIcon | React.ComponentType<{ className?: string }>;
+  /** Optional Tailwind color class for the icon (e.g. `text-orange-600`). */
+  iconColor?: string;
 }
 
 interface TabsNavProps {
@@ -65,6 +73,7 @@ export function TabsNav({
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useTranslation(i18nNamespace);
+  const iconSizes = useIconSizes();
 
   if (variant === 'radix') {
     const activeHref = findActiveHref(pathname, tabs);
@@ -77,7 +86,16 @@ export function TabsNav({
       >
         <TabsList>
           {tabs.map((tab) => (
-            <TabsTrigger key={tab.href} value={tab.href}>
+            <TabsTrigger
+              key={tab.href}
+              value={tab.href}
+              className={cn('flex items-center gap-1', INTERACTIVE_PATTERNS.PRIMARY_HOVER)}
+            >
+              {tab.icon
+                ? React.createElement(tab.icon, {
+                    className: cn(iconSizes.sm, tab.iconColor),
+                  })
+                : null}
               {t(tab.labelKey)}
             </TabsTrigger>
           ))}
