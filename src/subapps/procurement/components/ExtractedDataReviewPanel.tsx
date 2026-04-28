@@ -401,9 +401,9 @@ export function ExtractedDataReviewPanel({
 
         <div className="flex justify-end gap-2 pt-2">
           {onReject && (
-            <Button variant="ghost" onClick={() => onReject()} disabled={isSaving}>
+            <Button variant="outline" onClick={() => onReject()} disabled={isSaving}>
               <X className="mr-1 h-4 w-4" />
-              {t('quotes.scan.reject')}
+              {t('quotes.scan.archive')}
             </Button>
           )}
           <Button

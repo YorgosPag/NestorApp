@@ -123,7 +123,7 @@
       "editableHint": "Lines are editable — correct anything that looks wrong.",
       "noLinesExtracted": "No lines extracted. Add them manually.",
       "confirm": "Confirm & Save",
-      "reject": "Reject",
+      "archive": "Archive",
       "retry": "Re-scan",
       "requiredHint": "To proceed, also select:",
       "vendorMismatch": {
