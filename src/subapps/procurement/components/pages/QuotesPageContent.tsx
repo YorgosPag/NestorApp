@@ -1,40 +1,69 @@
 'use client';
 
 /**
- * QuotesPageContent — Lista quote AI-scansionate con soft-delete + undo toast
+ * QuotesPageContent — Pagina /procurement/quotes (Προσφορές)
  *
- * Layout: PageContainer → ProcurementSubNav → QuoteList
- * Archive pattern: Gmail undo (5s timeout, ottimistico)
- * Archived view: toggle "Αρχειοθετημένες (N)" + restore
+ * Layout unificato pattern Contacts/POs (SSoT):
+ *   PageContainer → QuotesHeader → ProcurementSubNav → UnifiedDashboard
+ *   → AdvancedFiltersPanel → ListContainer (QuoteList | QuoteDetailSummary split)
  *
- * @see ADR-327 §6 — AI Scan pipeline
+ * @see ADR-327 §Layout Unification
  */
 
-import { ScanLine, FileText, ArchiveX, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { PageContainer } from '@/core/containers';
-import { PageLoadingState } from '@/core/states';
+import { useCallback } from 'react';
+import { FileText, Loader2 } from 'lucide-react';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import {
+  AdvancedFiltersPanel,
+  quotesFiltersConfig,
+} from '@/components/core/AdvancedFilters';
+import { PageContainer, ListContainer } from '@/core/containers';
+import { PageLoadingState } from '@/core/states';
+import { MobileDetailsSlideIn } from '@/core/layouts';
 import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
+import { QuotesHeader } from '@/subapps/procurement/components/QuotesHeader';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
+import { QuoteDetailSummary } from '@/subapps/procurement/components/QuoteDetailSummary';
 import { useQuotesPageState } from '@/hooks/procurement/useQuotesPageState';
 
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
 export function QuotesPageContent() {
+  const state = useQuotesPageState();
+
   const {
-    displayedQuotes,
+    filteredQuotes,
     loading,
     error,
+    selectedQuote,
+    setSelectedQuote,
+    handleSelectQuote,
+    showDashboard,
+    setShowDashboard,
+    showFilters,
+    setShowFilters,
+    quoteFilters,
+    handleFiltersChange,
+    dashboardStats,
+    handleCardClick,
     archiveWithUndo,
-    handleViewQuote,
-    handleScanNew,
     showArchived,
     archivedQuotes,
     loadingArchived,
     toggleArchived,
     restoreQuote,
+    handleViewQuote,
+    handleScanNew,
     isNamespaceReady,
     t,
-  } = useQuotesPageState();
+  } = state;
+
+  const handleMobileClose = useCallback(() => {
+    setSelectedQuote(null);
+  }, [setSelectedQuote]);
 
   if (!isNamespaceReady) {
     return (
@@ -46,66 +75,155 @@ export function QuotesPageContent() {
     );
   }
 
-  if (loading && displayedQuotes.length === 0 && !showArchived) {
+  if (loading && filteredQuotes.length === 0 && !showArchived) {
     return (
-      <PageContainer ariaLabel={t('quotes.title')}>
+      <PageContainer ariaLabel={t('quotes.page.pageLabel')}>
         <PageLoadingState
           icon={FileText}
-          message={t('quotes.loading')}
+          message={t('quotes.page.loadingMessage')}
           layout="contained"
         />
       </PageContainer>
     );
   }
 
-  const archivedLabel = archivedQuotes.length > 0
-    ? t('quotes.archivedCount', { count: archivedQuotes.length })
-    : t('quotes.archivedTab');
-
   return (
-    <PageContainer ariaLabel={t('quotes.title')}>
-      {/* ── Breadcrumb + Sub-nav ─────────────────────────────────────────── */}
-      <div className="flex flex-col gap-1">
-        <ModuleBreadcrumb />
-        <ProcurementSubNav />
-      </div>
+    <PageContainer ariaLabel={t('quotes.page.pageLabel')}>
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <QuotesHeader
+        showDashboard={showDashboard}
+        setShowDashboard={setShowDashboard}
+        showFilters={showFilters}
+        setShowFilters={setShowFilters}
+        archivedCount={archivedQuotes.length}
+        showArchived={showArchived}
+        onToggleArchived={() => void toggleArchived()}
+        onScanNew={handleScanNew}
+        breadcrumb={<ModuleBreadcrumb />}
+      />
 
-      {/* ── Header actions ──────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">{t('quotes.title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('quotes.list')}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => void toggleArchived()}>
-            <ArchiveX className="mr-1.5 h-4 w-4" />
-            {archivedLabel}
-          </Button>
-          <Button onClick={handleScanNew}>
-            <ScanLine className="mr-1.5 h-4 w-4" />
-            {t('quotes.create')}
-          </Button>
-        </div>
-      </div>
+      {/* ── Sub-nav: Παραγγελίες | Προσφορές ───────────────────────────── */}
+      <ProcurementSubNav />
+
+      {/* ── Dashboard stats (collapsibile) ──────────────────────────────── */}
+      {showDashboard && (
+        <section
+          role="region"
+          aria-label={t('quotes.page.dashboard.label')}
+          className="w-full overflow-hidden"
+        >
+          <UnifiedDashboard
+            stats={dashboardStats}
+            columns={4}
+            onCardClick={handleCardClick}
+            className="px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden"
+          />
+        </section>
+      )}
+
+      {/* ── Advanced Filters — Desktop ───────────────────────────────────── */}
+      <aside
+        className="hidden md:block"
+        role="complementary"
+        aria-label={t('quotes.page.filters.desktop')}
+      >
+        <AdvancedFiltersPanel
+          config={quotesFiltersConfig}
+          filters={quoteFilters}
+          onFiltersChange={handleFiltersChange}
+        />
+      </aside>
+
+      {/* ── Advanced Filters — Mobile (condizionale) ─────────────────────── */}
+      {showFilters && (
+        <aside
+          className="md:hidden"
+          role="complementary"
+          aria-label={t('quotes.page.filters.mobile')}
+        >
+          <AdvancedFiltersPanel
+            config={quotesFiltersConfig}
+            filters={quoteFilters}
+            onFiltersChange={handleFiltersChange}
+            defaultOpen
+          />
+        </aside>
+      )}
 
       {/* ── Error ────────────────────────────────────────────────────────── */}
       {error && (
-        <p className="rounded-md border border-destructive/50 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/50 bg-destructive/5 px-4 py-3 text-sm text-destructive mx-2"
+        >
           {error}
         </p>
       )}
 
-      {/* ── Active quote list ────────────────────────────────────────────── */}
-      <QuoteList
-        quotes={displayedQuotes}
-        loading={loading}
-        onView={handleViewQuote}
-        onArchive={archiveWithUndo}
-      />
+      {/* ── List + Detail split ──────────────────────────────────────────── */}
+      <ListContainer>
+        {/* Desktop: lista sx | dettaglio dx */}
+        <section
+          className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden"
+          role="region"
+          aria-label="Quotes list and detail"
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <QuoteList
+              quotes={filteredQuotes}
+              loading={loading}
+              onView={handleViewQuote}
+              onArchive={archiveWithUndo}
+            />
+          </div>
 
-      {/* ── Archived quote list ──────────────────────────────────────────── */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
+            {selectedQuote ? (
+              <QuoteDetailSummary
+                quote={selectedQuote}
+                onArchive={archiveWithUndo}
+              />
+            ) : (
+              <EmptyDetailState
+                label={t('quotes.detail.emptyTitle')}
+                description={t('quotes.detail.emptyDescription')}
+              />
+            )}
+          </div>
+        </section>
+
+        {/* Mobile: solo lista */}
+        <section
+          className={`md:hidden w-full ${selectedQuote ? 'hidden' : 'block'}`}
+          role="region"
+          aria-label="Quotes list mobile"
+        >
+          <QuoteList
+            quotes={filteredQuotes}
+            loading={loading}
+            onView={handleViewQuote}
+            onArchive={archiveWithUndo}
+          />
+        </section>
+
+        {/* Mobile: slide-in dettaglio */}
+        <MobileDetailsSlideIn
+          isOpen={!!selectedQuote}
+          onClose={handleMobileClose}
+          title={selectedQuote?.displayNumber ?? t('quotes.detail.emptyTitle')}
+        >
+          {selectedQuote ? (
+            <QuoteDetailSummary
+              quote={selectedQuote}
+              onArchive={archiveWithUndo}
+            />
+          ) : null}
+        </MobileDetailsSlideIn>
+      </ListContainer>
+
+      {/* ── Archived view (sotto la lista principale) ────────────────────── */}
       {showArchived && (
-        <section aria-label={t('quotes.archivedTab')}>
+        <section aria-label={t('quotes.archivedTab')} className="px-2 mt-4">
           <h2 className="mb-2 text-sm font-semibold text-muted-foreground">
             {t('quotes.archivedTab')}
           </h2>
@@ -118,5 +236,31 @@ export function QuotesPageContent() {
         </section>
       )}
     </PageContainer>
+  );
+}
+
+export default QuotesPageContent;
+
+// =============================================================================
+// EMPTY STATE
+// =============================================================================
+
+function EmptyDetailState({
+  label,
+  description,
+}: {
+  label: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+        <FileText className="h-8 w-8 text-muted-foreground" />
+      </div>
+      <div className="space-y-1">
+        <p className="font-semibold text-foreground">{label}</p>
+        <p className="text-sm text-muted-foreground max-w-xs">{description}</p>
+      </div>
+    </div>
   );
 }

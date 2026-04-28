@@ -150,6 +150,48 @@
       "inviteFailed": "Η αποστολή πρόσκλησης απέτυχε για τον προμηθευτή {vendorName}: {reason}",
       "quoteScanCompleted": "Σάρωση προσφοράς ολοκληρώθηκε: {vendorName}",
       "vendorCreated": "Νέος προμηθευτής καταχωρήθηκε: {vendorName}"
+    },
+    "header": {
+      "title": "Προσφορές",
+      "subtitle": "Σύγκριση και διαχείριση προσφορών προμηθευτών"
+    },
+    "page": {
+      "pageLabel": "Σελίδα Προσφορών",
+      "loadingMessage": "Φόρτωση προσφορών...",
+      "dashboard": {
+        "label": "Δείκτες Προσφορών"
+      },
+      "filters": {
+        "desktop": "Φίλτρα προσφορών",
+        "mobile": "Φίλτρα (κινητό)"
+      }
+    },
+    "dashboard": {
+      "total": "Σύνολο",
+      "draft": "Πρόχειρες",
+      "scanned": "Σαρωμένες AI",
+      "portal": "Από Portal",
+      "underReview": "Υπό Αξιολόγηση",
+      "accepted": "Αποδεκτές",
+      "expired": "Ληγμένες",
+      "totalValue": "Συνολική Αξία"
+    },
+    "filters": {
+      "search": "Αναζήτηση προσφοράς",
+      "status": "Κατάσταση",
+      "trade": "Ειδικότητα",
+      "source": "Πηγή",
+      "allStatuses": "Όλες οι καταστάσεις",
+      "allTrades": "Όλες οι ειδικότητες",
+      "allSources": "Όλες οι πηγές"
+    },
+    "detail": {
+      "emptyTitle": "Δεν έχει επιλεγεί προσφορά",
+      "emptyDescription": "Επίλεξε μια προσφορά από τη λίστα για προβολή λεπτομερειών.",
+      "editButton": "Επεξεργασία",
+      "viewFull": "Πλήρης Προβολή",
+      "linesCount": "{count} γραμμές",
+      "moreLines": "+{count} ακόμη"
     }
   },
   "rfqs": {

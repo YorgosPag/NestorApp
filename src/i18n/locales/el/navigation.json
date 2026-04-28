@@ -333,7 +333,9 @@
     "admin": "Διαχείριση",
     "aiInbox": "Εισερχόμενα AI",
     "operatorInbox": "Εισερχόμενα Χειριστή",
-    "financialIntelligence": "Χρηματοοικονομική Ανάλυση"
+    "financialIntelligence": "Χρηματοοικονομική Ανάλυση",
+    "procurement": "Προμήθειες",
+    "quotes": "Προσφορές"
   },
   "badges": {
     "new": "Νέο",

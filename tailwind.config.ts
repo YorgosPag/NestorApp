@@ -17,11 +17,10 @@ export default {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-    // 🏢 ENTERPRISE: Additional paths for centralized systems
     './src/core/**/*.{ts,tsx}',
     './src/styles/design-tokens.ts',
-    './src/styles/design-tokens/**/*.ts',  // 🏢 CRITICAL: Scan all design-token modules (layout.ts has entity-list classes)
-    './src/design-system/**/*.ts', // 🏢 ADR-128: Color bridge & switch tokens
+    './src/styles/design-tokens/**/*.ts',
+    './src/design-system/**/*.ts',
     './src/features/**/*.{ts,tsx}',
     './src/domain/**/*.{ts,tsx}',
     './src/hooks/**/*.ts',

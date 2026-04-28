@@ -333,7 +333,9 @@
     "admin": "Admin",
     "aiInbox": "AI Inbox",
     "operatorInbox": "Operator Inbox",
-    "financialIntelligence": "Financial Intelligence"
+    "financialIntelligence": "Financial Intelligence",
+    "procurement": "Procurement",
+    "quotes": "Quotes"
   },
   "badges": {
     "new": "New",

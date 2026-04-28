@@ -246,6 +246,7 @@ export function UserTable({
                       'text-sm',
                       companyUser.mfaEnrolled ? 'text-green-600' : colors.text.muted
                     )}
+                    {/* non-centralized tooltip test */}
                     title={companyUser.mfaEnrolled ? 'MFA Enabled' : 'MFA Not Enabled'}
                     aria-label={companyUser.mfaEnrolled ? 'MFA Enabled' : 'MFA Not Enabled'}
                   >

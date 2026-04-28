@@ -154,6 +154,7 @@ export function RolePermissionMatrix() {
 
                 return (
                   <TableCell key={roleId} className="text-center">
+                    {/* non-centralized tooltip test */}
                     <span title={ACCESS_LABEL[level]} aria-label={ACCESS_LABEL[level]}>
                       {ACCESS_ICON[level]}
                     </span>

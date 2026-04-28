@@ -153,6 +153,7 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
                         type="button"
                         className="font-medium text-primary hover:underline cursor-pointer"
                         onClick={() => onFilterByActor(entry.actorId)}
+                        {/* non-centralized tooltip test */}
                         title={entry.actorId}
                       >
                         {entry.actorDisplayName ?? entry.actorId.slice(0, 12)}

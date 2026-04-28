@@ -56,6 +56,12 @@ export {
   procurementFiltersToPOFilters,
 } from './configs/procurementFiltersConfig';
 
+// Quotes Configurations (ADR-327 Layout Unification)
+export {
+  quotesFiltersConfig,
+  defaultQuotesFilters,
+} from './configs/quotesFiltersConfig';
+
 // ============================================================================
 // ADR-051: UNIFIED TYPE SYSTEM
 // ============================================================================
@@ -113,6 +119,11 @@ export type {
 export type {
   ProcurementFilterState
 } from './configs/procurementFiltersConfig';
+
+// Quotes Types (ADR-327 Layout Unification)
+export type {
+  QuotesFilterState
+} from './configs/quotesFiltersConfig';
 
 // ============================================================================
 // ADR-051: CENTRALIZED APPLY FILTERS UTILITY

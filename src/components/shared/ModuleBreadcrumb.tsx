@@ -38,6 +38,8 @@ import {
   Inbox,
   Headphones,
   BarChart3,
+  Package,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -90,6 +92,9 @@ const SEGMENT_CONFIG: Record<string, { labelKey: string; icon: LucideIcon; color
   'operator-inbox': { labelKey: 'module.operatorInbox',   icon: Headphones,   color: 'text-cyan-400' }, // eslint-disable-line design-system/enforce-semantic-colors
   // Financial Intelligence (SPEC-242C)
   'financial-intelligence': { labelKey: 'module.financialIntelligence', icon: BarChart3, color: 'text-emerald-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  // Procurement (ADR-267 + ADR-327)
+  'procurement':    { labelKey: 'module.procurement',     icon: Package,     color: 'text-orange-400' }, // eslint-disable-line design-system/enforce-semantic-colors
+  'quotes':         { labelKey: 'module.quotes',          icon: FileText,    color: 'text-amber-400' }, // eslint-disable-line design-system/enforce-semantic-colors
 };
 
 interface BreadcrumbSegment {

@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { Quote } from '@/subapps/procurement/types/quote';
+import {
+  defaultQuotesFilters,
+  type QuotesFilterState,
+} from '@/components/core/AdvancedFilters/configs/quotesFiltersConfig';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
+import { buildQuotesDashboardStats } from '@/subapps/procurement/components/quotesDashboardStats';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
+import type { TradeCode } from '@/subapps/procurement/types/trade';
 
 const logger = createModuleLogger('QUOTES_PAGE');
 
@@ -18,15 +26,35 @@ function byCreatedAtDesc(a: Quote, b: Quote): number {
   return bTs - aTs;
 }
 
+function applyQuoteFilters(quotes: Quote[], filters: QuotesFilterState): Quote[] {
+  const search = filters.searchTerm.trim().toLowerCase();
+  const status = filters.status[0];
+  const trade = filters.trade[0];
+  const source = filters.source[0];
+
+  return quotes.filter((q) => {
+    if (status && status !== SELECT_CLEAR_VALUE && q.status !== status) return false;
+    if (trade && trade !== SELECT_CLEAR_VALUE && q.trade !== trade) return false;
+    if (source && source !== SELECT_CLEAR_VALUE && q.source !== source) return false;
+    if (search) {
+      const vendorName = q.extractedData?.vendorName?.value?.toLowerCase() ?? '';
+      const tradeStr = q.trade.toLowerCase();
+      const num = q.displayNumber.toLowerCase();
+      if (!num.includes(search) && !vendorName.includes(search) && !tradeStr.includes(search)) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
 export function useQuotesPageState() {
   const { t, isNamespaceReady } = useTranslation('quotes');
   const router = useRouter();
   const { quotes: fetched, loading, error, refetch } = useQuotes();
 
-  // Displayed list — separate from fetched so we can optimistically remove
+  // ── Displayed list (separate so we can optimistically remove) ─────────────
   const [displayedQuotes, setDisplayedQuotes] = useState<Quote[]>([]);
-
-  // Sync fetched → displayed (only when no pending archive for that id)
   const pendingArchives = useRef(new Map<string, PendingArchive>());
 
   useEffect(() => {
@@ -35,23 +63,57 @@ export function useQuotesPageState() {
     );
   }, [fetched]);
 
-  // ── Archive with undo (Google Gmail pattern) ──────────────────────────────
+  // ── UI state ──────────────────────────────────────────────────────────────
+  const [showDashboard, setShowDashboard] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [quoteFilters, setQuoteFilters] = useState<QuotesFilterState>(defaultQuotesFilters);
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
 
+  // ── Filtered data ─────────────────────────────────────────────────────────
+  const filteredQuotes = useMemo(
+    () => applyQuoteFilters(displayedQuotes, quoteFilters),
+    [displayedQuotes, quoteFilters],
+  );
+
+  // ── Dashboard stats ───────────────────────────────────────────────────────
+  const dashboardStats = useMemo(
+    () => buildQuotesDashboardStats(displayedQuotes, t),
+    [displayedQuotes, t],
+  );
+
+  // ── Card click → toggle status filter ─────────────────────────────────────
+  const handleCardClick = useCallback(
+    (stat: DashboardStat) => {
+      const titleToStatus: Partial<Record<string, QuoteStatus>> = {
+        [t('quotes.dashboard.draft')]:        'draft',
+        [t('quotes.dashboard.underReview')]:  'under_review',
+        [t('quotes.dashboard.accepted')]:     'accepted',
+        [t('quotes.dashboard.expired')]:      'expired',
+      };
+      const mapped = titleToStatus[stat.title];
+      if (!mapped) return;
+      setQuoteFilters((prev) => ({
+        ...prev,
+        status: prev.status[0] === mapped ? [] : [mapped],
+      }));
+    },
+    [t],
+  );
+
+  // ── Archive with undo (Google Gmail pattern) ──────────────────────────────
   const archiveWithUndo = useCallback((quoteId: string) => {
     const quote = displayedQuotes.find((q) => q.id === quoteId);
     if (!quote) return;
 
-    // 1. Optimistic remove
     setDisplayedQuotes((prev) => prev.filter((q) => q.id !== quoteId));
+    if (selectedQuote?.id === quoteId) setSelectedQuote(null);
 
-    // 2. Schedule actual DELETE after 5s
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/quotes/${quoteId}`, { method: 'DELETE' });
         if (!res.ok) throw new Error(`DELETE ${quoteId} → ${res.status}`);
       } catch (e) {
         logger.error('Archive failed', { quoteId, error: e });
-        // Restore on failure
         setDisplayedQuotes((prev) => [...prev, quote].sort(byCreatedAtDesc));
       } finally {
         pendingArchives.current.delete(quoteId);
@@ -60,7 +122,6 @@ export function useQuotesPageState() {
 
     pendingArchives.current.set(quoteId, { quote, timer });
 
-    // 3. Toast with undo action
     toast.warning(t('quotes.archivedMessage'), {
       action: {
         label: t('quotes.undo'),
@@ -68,8 +129,8 @@ export function useQuotesPageState() {
       },
       duration: 5000,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayedQuotes, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedQuotes, selectedQuote, t]);
 
   const undoArchive = useCallback((quoteId: string) => {
     const pending = pendingArchives.current.get(quoteId);
@@ -80,7 +141,6 @@ export function useQuotesPageState() {
   }, []);
 
   // ── Archived quotes view ──────────────────────────────────────────────────
-
   const [showArchived, setShowArchived] = useState(false);
   const [archivedQuotes, setArchivedQuotes] = useState<Quote[]>([]);
   const [loadingArchived, setLoadingArchived] = useState(false);
@@ -122,29 +182,65 @@ export function useQuotesPageState() {
     }
   }, [t, refetch]);
 
-  // ── Navigation ─────────────────────────────────────────────────────────────
+  // ── Selection (split panel) ───────────────────────────────────────────────
+  const handleSelectQuote = useCallback((quote: Quote) => {
+    setSelectedQuote((prev) => (prev?.id === quote.id ? null : quote));
+  }, []);
 
+  // ── Navigation ────────────────────────────────────────────────────────────
   const handleViewQuote = useCallback((quoteId: string) => {
-    router.push(`/procurement/quotes/${quoteId}/review`);
-  }, [router]);
+    const q = displayedQuotes.find((x) => x.id === quoteId)
+      ?? archivedQuotes.find((x) => x.id === quoteId);
+    if (q) {
+      setSelectedQuote((prev) => (prev?.id === q.id ? null : q));
+    }
+  }, [displayedQuotes, archivedQuotes]);
 
   const handleScanNew = useCallback(() => {
     router.push('/procurement/quotes/scan');
   }, [router]);
 
   return {
+    // Data
     displayedQuotes,
+    filteredQuotes,
     loading,
     error,
     refetch,
+
+    // Selection
+    selectedQuote,
+    setSelectedQuote,
+    handleSelectQuote,
+
+    // UI toggles
+    showDashboard,
+    setShowDashboard,
+    showFilters,
+    setShowFilters,
+
+    // Filters
+    quoteFilters,
+    setQuoteFilters,
+    handleFiltersChange: setQuoteFilters,
+
+    // Dashboard
+    dashboardStats,
+    handleCardClick,
+
+    // Archive
     archiveWithUndo,
-    handleViewQuote,
-    handleScanNew,
     showArchived,
     archivedQuotes,
     loadingArchived,
     toggleArchived,
     restoreQuote,
+
+    // Navigation
+    handleViewQuote,
+    handleScanNew,
+
+    // i18n
     isNamespaceReady,
     t,
   };

@@ -150,6 +150,48 @@
       "inviteFailed": "Invitation delivery failed for vendor {vendorName}: {reason}",
       "quoteScanCompleted": "Quote scan completed: {vendorName}",
       "vendorCreated": "New vendor added: {vendorName}"
+    },
+    "header": {
+      "title": "Quotes",
+      "subtitle": "Compare and manage vendor quotes"
+    },
+    "page": {
+      "pageLabel": "Quotes Page",
+      "loadingMessage": "Loading quotes...",
+      "dashboard": {
+        "label": "Quotes Dashboard"
+      },
+      "filters": {
+        "desktop": "Quote filters",
+        "mobile": "Filters (mobile)"
+      }
+    },
+    "dashboard": {
+      "total": "Total",
+      "draft": "Drafts",
+      "scanned": "AI Scanned",
+      "portal": "From Portal",
+      "underReview": "Under Review",
+      "accepted": "Accepted",
+      "expired": "Expired",
+      "totalValue": "Total Value"
+    },
+    "filters": {
+      "search": "Search quotes",
+      "status": "Status",
+      "trade": "Trade",
+      "source": "Source",
+      "allStatuses": "All statuses",
+      "allTrades": "All trades",
+      "allSources": "All sources"
+    },
+    "detail": {
+      "emptyTitle": "No quote selected",
+      "emptyDescription": "Select a quote from the list to view details.",
+      "editButton": "Edit",
+      "viewFull": "Full View",
+      "linesCount": "{count} lines",
+      "moreLines": "+{count} more"
     }
   },
   "rfqs": {
