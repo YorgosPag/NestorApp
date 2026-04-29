@@ -24,6 +24,8 @@ import { ComparisonEmptyState } from '@/subapps/procurement/components/Compariso
 import { SourcingEventSummaryCard } from '@/subapps/procurement/components/SourcingEventSummaryCard';
 import { VendorInviteSection } from '@/subapps/procurement/components/VendorInviteSection';
 import { RfqLinesPanel } from '@/subapps/procurement/components/RfqLinesPanel';
+import { SetupLockBanner } from '@/subapps/procurement/components/SetupLockBanner';
+import { deriveSetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
 import type { RFQ } from '@/subapps/procurement/types/rfq';
 import { rfqIsMultiTrade } from '@/subapps/procurement/types/rfq';
 
@@ -83,6 +85,14 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     handleSelectQuote,
     handleComparisonDrillDown,
   } = useRfqUrlState({ quotes, quotesLoading: loading });
+
+  const lockState = useMemo(() => deriveSetupLockState(rfq, quotes), [rfq, quotes]);
+
+  const winnerVendorName = useMemo(() => {
+    if (!rfq?.winnerQuoteId) return undefined;
+    const winner = quotes.find((q) => q.id === rfq.winnerQuoteId);
+    return winner?.extractedData?.vendorName?.value ?? undefined;
+  }, [rfq, quotes]);
 
   const handleAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
     const res = await fetch(`/api/rfqs/${id}/award`, {
@@ -243,6 +253,10 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         </TabsContent>
 
         <TabsContent value="setup" className="space-y-6">
+          <SetupLockBanner
+            lockState={lockState}
+            vendorName={winnerVendorName}
+          />
           <section className="space-y-2">
             <h2 className="text-base font-semibold">{t('rfqs.lines')}</h2>
             <RfqLinesPanel
@@ -251,9 +265,10 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
               loading={linesLoading}
               onAdd={addLine}
               onDelete={deleteLine}
+              lockState={lockState}
             />
           </section>
-          <VendorInviteSection rfqId={id} />
+          <VendorInviteSection rfqId={id} lockState={lockState} />
         </TabsContent>
       </Tabs>
     </main>

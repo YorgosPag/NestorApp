@@ -9,6 +9,7 @@ import { TradeSelector } from './TradeSelector';
 import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
 import type { RfqLine, CreateRfqLineDTO } from '@/subapps/procurement/types/rfq-line';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
+import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
 
 // ============================================================================
 // TYPES
@@ -20,6 +21,7 @@ interface RfqLinesPanelProps {
   loading: boolean;
   onAdd: (dto: CreateRfqLineDTO) => Promise<RfqLine>;
   onDelete: (lineId: string) => Promise<void>;
+  lockState?: SetupLockState;
 }
 
 interface NewLineState {
@@ -42,7 +44,8 @@ const EMPTY_LINE: NewLineState = {
 // COMPONENT
 // ============================================================================
 
-export function RfqLinesPanel({ lines, loading, onAdd, onDelete }: RfqLinesPanelProps) {
+export function RfqLinesPanel({ lines, loading, onAdd, onDelete, lockState = 'unlocked' }: RfqLinesPanelProps) {
+  const locked = lockState !== 'unlocked';
   const { t } = useTranslation('quotes');
   const [showForm, setShowForm] = useState(false);
   const [newLine, setNewLine] = useState<NewLineState>(EMPTY_LINE);
@@ -122,7 +125,7 @@ export function RfqLinesPanel({ lines, loading, onAdd, onDelete }: RfqLinesPanel
                       size="icon"
                       variant="ghost"
                       className="h-7 w-7"
-                      disabled={deleting === line.id}
+                      disabled={deleting === line.id || locked}
                       onClick={() => handleDelete(line.id)}
                     >
                       {deleting === line.id
@@ -180,7 +183,7 @@ export function RfqLinesPanel({ lines, loading, onAdd, onDelete }: RfqLinesPanel
       )}
 
       {!showForm && (
-        <Button size="sm" variant="outline" onClick={() => setShowForm(true)}>
+        <Button size="sm" variant="outline" disabled={locked} onClick={() => setShowForm(true)}>
           <Plus className="mr-1 h-3.5 w-3.5" />
           {t('rfqs.addLine')}
         </Button>

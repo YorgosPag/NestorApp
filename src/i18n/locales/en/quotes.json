@@ -353,6 +353,21 @@
       "backToList": "Back to list"
     },
     "selectQuoteHint": "Select a quote to view details",
+    "setup": {
+      "banner": {
+        "awardLocked": "Settings locked by winner selection ({vendor})",
+        "poLocked": "A purchase order has been created ({poNumber}) — settings locked",
+        "revertAward": "Revert Winner",
+        "viewPo": "View Purchase Order",
+        "cancelPo": "Cancel Purchase Order"
+      },
+      "lockedTooltip": {
+        "lines": "Locked by winner selection",
+        "inviteAction": "Winner already selected",
+        "reminder": "Winner already selected",
+        "po": "Locked by existing purchase order"
+      }
+    },
     "comparison": {
       "rowAriaLabel": "View quote details",
       "empty": {

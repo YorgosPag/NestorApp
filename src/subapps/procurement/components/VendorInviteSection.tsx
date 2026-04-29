@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import type { BadgeVariantProps } from '@/components/ui/badge';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
 import type { InviteStatus, DeliveryChannel } from '../types/vendor-invite';
+import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
 import { useVendorInvites } from '../hooks/useVendorInvites';
 import { VendorInviteDialog } from './VendorInviteDialog';
 
@@ -72,14 +73,17 @@ interface InviteRowProps {
   invite: ReturnType<typeof useVendorInvites>['invites'][number];
   vendorName: string;
   onRevoke: (id: string) => Promise<void>;
+  lockState: SetupLockState;
 }
 
-function InviteRow({ invite, vendorName, onRevoke }: InviteRowProps) {
+function InviteRow({ invite, vendorName, onRevoke, lockState }: InviteRowProps) {
   const { t } = useTranslation('quotes');
   const [copied, setCopied] = useState(false);
   const [revoking, setRevoking] = useState(false);
 
-  const canRevoke = invite.status === 'pending' || invite.status === 'sent' || invite.status === 'opened';
+  const statusCanRevoke = invite.status === 'pending' || invite.status === 'sent' || invite.status === 'opened';
+  // awardLocked: cancel still allowed (housekeeping). poLocked: full lock (§5.G.1)
+  const canRevoke = statusCanRevoke && lockState !== 'poLocked';
 
   const handleCopy = useCallback(() => {
     const base = process.env.NEXT_PUBLIC_APP_URL ?? '';
@@ -131,9 +135,10 @@ function InviteRow({ invite, vendorName, onRevoke }: InviteRowProps) {
 
 interface VendorInviteSectionProps {
   rfqId: string;
+  lockState?: SetupLockState;
 }
 
-export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
+export function VendorInviteSection({ rfqId, lockState = 'unlocked' }: VendorInviteSectionProps) {
   const { t } = useTranslation('quotes');
   const { invites, vendorContacts, loading, contactsLoading, createInvite, revokeInvite, refetch } =
     useVendorInvites(rfqId);
@@ -164,7 +169,7 @@ export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
         <h2 id="vendor-invites-heading" className="text-base font-semibold">
           {t('invites.title')}
         </h2>
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
+        <Button size="sm" disabled={lockState !== 'unlocked'} onClick={() => setDialogOpen(true)}>
           <Plus className="mr-1 h-4 w-4" />
           {t('invites.button')}
         </Button>
@@ -193,6 +198,7 @@ export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
                   invite={invite}
                   vendorName={resolveVendorName(invite)}
                   onRevoke={revokeInvite}
+                  lockState={lockState}
                 />
               ))}
             </tbody>
