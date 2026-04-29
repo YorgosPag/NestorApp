@@ -46,6 +46,8 @@ import { ProjectBrokersTab } from '@/components/projects/tabs/ProjectBrokersTab'
 import { OwnershipTableTab } from '@/components/projects/tabs/OwnershipTableTab';
 // 🏢 ENTERPRISE: Landowners management tab (ADR-244 / SPEC-244A)
 import { ProjectLandownersTab } from '@/components/projects/tabs/ProjectLandownersTab';
+// 🏢 ENTERPRISE: Procurement RFQ tab (ADR-327)
+import { ProcurementProjectTab } from '@/components/projects/tabs/ProcurementProjectTab';
 
 // ============================================================================
 // PROJECT COMPONENT MAPPING
@@ -83,6 +85,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'OwnershipTableTab': OwnershipTableTab,
   // 🏢 ENTERPRISE: Landowners management tab (ADR-244 / SPEC-244A)
   'ProjectLandownersTab': ProjectLandownersTab,
+  // 🏢 ENTERPRISE: Procurement RFQ tab (ADR-327)
+  'ProcurementProjectTab': ProcurementProjectTab,
 } as const;
 
 // ============================================================================

@@ -50,9 +50,10 @@ function RfqStatusBadge({ status }: { status: RfqStatus }) {
 interface RfqListProps {
   rfqs: RFQ[];
   loading: boolean;
+  onCreateRfq?: () => void;
 }
 
-export function RfqList({ rfqs, loading }: RfqListProps) {
+export function RfqList({ rfqs, loading, onCreateRfq }: RfqListProps) {
   const { t } = useTranslation('quotes');
   const router = useRouter();
   const [search, setSearch] = useState('');
@@ -62,7 +63,7 @@ export function RfqList({ rfqs, loading }: RfqListProps) {
     return r.title.toLowerCase().includes(search.toLowerCase());
   });
 
-  const handleCreate = () => router.push('/procurement/rfqs/new');
+  const handleCreate = onCreateRfq ?? (() => router.push('/procurement/rfqs/new'));
   const handleView = (id: string) => router.push(`/procurement/rfqs/${id}`);
 
   return (

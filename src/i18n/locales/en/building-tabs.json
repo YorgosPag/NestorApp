@@ -52,7 +52,8 @@
       "brokers": "Brokers",
       "ownershipTable": "Ownership Table",
       "landowners": "Landowners",
-      "locations": "Addresses"
+      "locations": "Addresses",
+      "procurement": "Procurement"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",
@@ -74,7 +75,8 @@
       "brokers": "Brokerage agreements and sales assignments",
       "ownershipTable": "Ownership percentage table (millesimal shares) for each property",
       "landowners": "Manage landowners and bartex percentage",
-      "locations": "Manage project addresses"
+      "locations": "Manage project addresses",
+      "procurement": "RFQ requests and quote evaluation for the project"
     },
     "floors": {
       "title": "Building Floors",

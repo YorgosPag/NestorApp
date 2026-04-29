@@ -29,6 +29,7 @@ export const PROJECT_TAB_LABELS = {
   BROKERS: 'tabs.labels.brokers',
   OWNERSHIP_TABLE: 'tabs.labels.ownershipTable',
   LANDOWNERS: 'tabs.labels.landowners',
+  PROCUREMENT: 'tabs.labels.procurement',
 } as const;
 
 export const PROJECT_TAB_DESCRIPTIONS = {
@@ -49,6 +50,7 @@ export const PROJECT_TAB_DESCRIPTIONS = {
   BROKERS: 'tabs.descriptions.brokers',
   OWNERSHIP_TABLE: 'tabs.descriptions.ownershipTable',
   LANDOWNERS: 'tabs.descriptions.landowners',
+  PROCUREMENT: 'tabs.descriptions.procurement',
 } as const;
 
 export const PROJECT_COMPONENT_LABELS = {
