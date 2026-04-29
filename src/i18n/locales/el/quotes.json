@@ -477,6 +477,18 @@
       "title": "Επιλογή ανά Γραμμή — Δυνατά Οφέλη",
       "summary": "Σύνολο ανά γραμμή: {cherry} · Σύνολο πακέτου: {whole}",
       "savings": "Δυνατή εξοικονόμηση {amount} ({percent}%)"
+    },
+    "sourcingEvent": {
+      "cardTitle": "Πακέτο Προμήθειας",
+      "rfqsCount": "{count} RFQ",
+      "tradesCount": "{count} ειδικότητες",
+      "vendorsCount": "{count} vendors",
+      "bestTotal": "Βέλτιστο Σύνολο Πακέτου",
+      "partialHint": "Μερικό — δεν έχουν εισαχθεί προσφορές σε όλα τα RFQ",
+      "tradeColumn": "Ειδικότητα",
+      "bestQuoteColumn": "Βέλτιστη Προσφορά",
+      "noQuotes": "—",
+      "currentRfq": "Τρέχον"
     }
   }
 }

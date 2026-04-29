@@ -8,9 +8,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
 import { useComparison } from '@/subapps/procurement/hooks/useComparison';
 import { useRfqLines } from '@/subapps/procurement/hooks/useRfqLines';
+import { useSourcingEventAggregate } from '@/subapps/procurement/hooks/useSourcingEventAggregate';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
 import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
+import { SourcingEventSummaryCard } from '@/subapps/procurement/components/SourcingEventSummaryCard';
 import { VendorInviteSection } from '@/subapps/procurement/components/VendorInviteSection';
 import { RfqLinesPanel } from '@/subapps/procurement/components/RfqLinesPanel';
 import type { RFQ } from '@/subapps/procurement/types/rfq';
@@ -47,6 +49,9 @@ export default function RfqDetailPage({ params }: RfqDetailPageProps) {
   const cherryPickEnabled = rfq?.awardMode === 'cherry_pick';
   const { comparison, cherryPick, loading: comparisonLoading, refetch: refetchComparison } =
     useComparison(id, { cherryPick: cherryPickEnabled });
+  const { aggregate, loading: aggregateLoading } = useSourcingEventAggregate(
+    rfq?.sourcingEventId,
+  );
 
   const handleAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
     const res = await fetch(`/api/rfqs/${id}/award`, {
@@ -128,6 +133,14 @@ export default function RfqDetailPage({ params }: RfqDetailPageProps) {
         loading={loading}
         onSelectQuote={(q) => handleViewQuote(q.id)}
       />
+
+      {rfq?.sourcingEventId && (
+        <SourcingEventSummaryCard
+          aggregate={aggregate}
+          loading={aggregateLoading}
+          currentRfqId={id}
+        />
+      )}
 
       {comparison && (
         <ComparisonPanel

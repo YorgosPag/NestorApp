@@ -477,6 +477,18 @@
       "title": "Per-Line Award — Potential Savings",
       "summary": "Cherry-pick total: {cherry} · Whole-package total: {whole}",
       "savings": "Potential savings {amount} ({percent}%)"
+    },
+    "sourcingEvent": {
+      "cardTitle": "Procurement Package",
+      "rfqsCount": "{count} RFQs",
+      "tradesCount": "{count} trades",
+      "vendorsCount": "{count} vendors",
+      "bestTotal": "Best Package Total",
+      "partialHint": "Partial — not all RFQs have quotes yet",
+      "tradeColumn": "Trade",
+      "bestQuoteColumn": "Best Quote",
+      "noQuotes": "—",
+      "currentRfq": "Current"
     }
   }
 }
