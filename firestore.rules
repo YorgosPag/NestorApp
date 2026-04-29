@@ -3334,6 +3334,33 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ADR-327 §17 Q31 — Multi-Vendor sourcing_events parent (HYBRID A-Enhanced)
+    // Optional umbrella grouping N atomic single-trade RFQs into one logical
+    // procurement package. Tenant-scoped reads via companyId; all writes go
+    // through Admin SDK in `sourcing-event-service` (step c).
+    match /sourcing_events/{eventId} {
+      allow read: if isAuthenticated()
+                  && resource.data.keys().hasAny(['companyId'])
+                  && belongsToCompany(resource.data.companyId);
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ADR-327 §17 Q29 — RFQ lines sub-collection (HYBRID Γ BOQ-first + ad_hoc)
+    // Snapshot semantics: lines are written once at RFQ creation time and
+    // never live-updated from BOQ. companyId denormalized on every line for
+    // tenant isolation + collectionGroup queries. Vendor portal projection
+    // strips internal fields (unitPrice, boqItemId, source) server-side.
+    match /rfqs/{rfqId}/lines/{lineId} {
+      allow read: if isAuthenticated()
+                  && resource.data.keys().hasAny(['companyId'])
+                  && belongsToCompany(resource.data.companyId);
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
     match /trades/{tradeId} {
       // Trades are company-agnostic (system trades) or company-scoped (custom).
       // All authenticated users can read. Writes via Admin SDK only.

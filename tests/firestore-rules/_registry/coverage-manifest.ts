@@ -1079,6 +1079,10 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'vendor_invites',         // Admin SDK writes only; read: auth + companyId
   'vendor_invite_tokens',   // Admin SDK only — no client access
   'trades',                 // read: isAuthenticated(); write: Admin SDK only
+  // — Multi-Vendor (ADR-327 §17 Q28-Q32 step b, 2026-04-29) —
+  // Sub-collection rfqs/{id}/lines parses as 'rfqs' (already pending).
+  // Full matrix lands in step (c) once services exist to drive seeding.
+  'sourcing_events',        // Admin SDK writes only; read: auth + companyId
 ] as const;
 
 // ---------------------------------------------------------------------------
