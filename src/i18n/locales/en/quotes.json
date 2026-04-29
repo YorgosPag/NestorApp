@@ -150,6 +150,9 @@
         "empty": "No attachment"
       }
     },
+    "dialog": {
+      "description": "Select project and trade. Lines and details can be added after creation."
+    },
     "notifications": {
       "quoteSubmittedViaPortal": "New vendor quote submitted for RFQ {rfqTitle}",
       "vendorDeclined": "Vendor {vendorName} declined RFQ {rfqTitle}",

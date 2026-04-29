@@ -150,6 +150,9 @@
         "empty": "Χωρίς συνημμένο"
       }
     },
+    "dialog": {
+      "description": "Επιλέξτε έργο και ειδικότητα. Γραμμές και στοιχεία συμπληρώνονται μετά τη δημιουργία."
+    },
     "notifications": {
       "quoteSubmittedViaPortal": "Νέα προσφορά υποβλήθηκε από προμηθευτή για το RFQ {rfqTitle}",
       "vendorDeclined": "Ο προμηθευτής {vendorName} αρνήθηκε τη συμμετοχή στο RFQ {rfqTitle}",

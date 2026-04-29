@@ -22,6 +22,7 @@ interface ContactQuotesSectionProps {
   loading: boolean;
   archived: boolean;
   contactId: string;
+  onCreateManual?: () => void;
 }
 
 function timestampToDate(ts: unknown): string {
@@ -53,18 +54,14 @@ export function ContactQuotesSection({
   quotes,
   loading,
   archived,
-  contactId,
+  contactId: _contactId,
+  onCreateManual,
 }: ContactQuotesSectionProps) {
   const { t } = useTranslation(['contacts', 'quotes']);
   const router = useRouter();
 
   const handleView = (quoteId: string) =>
     router.push(`/procurement/quotes/${quoteId}/review`);
-
-  const handleCreate = () =>
-    router.push(
-      `/procurement/quotes/new?vendorContactId=${encodeURIComponent(contactId)}`,
-    );
 
   return (
     <Card>
@@ -73,7 +70,7 @@ export function ContactQuotesSection({
           {t('contacts:procurementTab.sections.quotes')}
         </CardTitle>
         {!archived && (
-          <Button size="sm" variant="outline" onClick={handleCreate}>
+          <Button size="sm" variant="outline" onClick={() => onCreateManual?.()}>
             <Plus className="mr-1 h-4 w-4" />
             {t('quotes:quotes.create')}
           </Button>

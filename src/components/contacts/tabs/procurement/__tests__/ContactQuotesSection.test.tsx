@@ -184,19 +184,22 @@ describe('ContactQuotesSection', () => {
     expect(screen.getByTestId('status-accepted')).toBeInTheDocument();
   });
 
-  it('shows create button when not archived and triggers navigation', () => {
+  it('shows create button when not archived and calls onCreateManual', () => {
+    const onCreateManual = jest.fn();
     render(
       <ContactQuotesSection
         quotes={[]}
         loading={false}
         archived={false}
         contactId="c-99"
+        onCreateManual={onCreateManual}
       />,
     );
     const createBtn = screen.getByText('quotes:quotes.create');
     expect(createBtn).toBeInTheDocument();
     fireEvent.click(createBtn);
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(onCreateManual).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalledWith(
       '/procurement/quotes/new?vendorContactId=c-99',
     );
   });

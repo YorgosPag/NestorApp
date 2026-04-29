@@ -9,11 +9,13 @@ import { useRouter } from 'next/navigation';
 interface ProcurementContactTabEmptyStateProps {
   contactId: string;
   archived: boolean;
+  onCreateManual?: () => void;
 }
 
 export function ProcurementContactTabEmptyState({
   contactId,
   archived,
+  onCreateManual,
 }: ProcurementContactTabEmptyStateProps) {
   const { t } = useTranslation('contacts');
   const router = useRouter();
@@ -30,9 +32,7 @@ export function ProcurementContactTabEmptyState({
           <div className="flex flex-wrap justify-center gap-2">
             <Button
               size="sm"
-              onClick={() =>
-                router.push(`/procurement/quotes/new?vendorContactId=${encodeURIComponent(contactId)}`)
-              }
+              onClick={() => onCreateManual?.()}
             >
               <FileText className="mr-1 h-4 w-4" />
               {t('procurementTab.empty.cta.firstQuote')}

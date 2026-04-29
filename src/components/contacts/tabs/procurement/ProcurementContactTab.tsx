@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AlertTriangle } from 'lucide-react';
 import { useVendorQuotes } from '@/hooks/procurement/useVendorQuotes';
@@ -7,6 +8,7 @@ import { useVendorPurchaseOrders } from '@/hooks/procurement/useVendorPurchaseOr
 import { useVendorRfqInvites } from '@/hooks/procurement/useVendorRfqInvites';
 import { useSupplierMetricsForContact } from '@/hooks/procurement/useSupplierMetricsForContact';
 import { SupplierMetricsCard } from '@/components/procurement/SupplierMetricsCard';
+import { ManualQuoteDialog } from '@/subapps/procurement/components/ManualQuoteDialog';
 import { ProcurementContactTabHeader } from './ProcurementContactTabHeader';
 import { ProcurementContactTabSkeleton } from './ProcurementContactTabSkeleton';
 import { ProcurementContactTabEmptyState } from './ProcurementContactTabEmptyState';
@@ -25,6 +27,7 @@ export function ProcurementContactTab({
   archived,
 }: ProcurementContactTabProps) {
   const { t } = useTranslation('contacts');
+  const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
 
   const { quotes, loading: quotesLoading, error: quotesError } = useVendorQuotes(contactId);
   const { invites, loading: invitesLoading, error: invitesError } =
@@ -47,7 +50,20 @@ export function ProcurementContactTab({
     purchaseOrders.filter((po) => !po.isDeleted).length === 0;
 
   if (allEmpty) {
-    return <ProcurementContactTabEmptyState contactId={contactId} archived={archived} />;
+    return (
+      <>
+        <ProcurementContactTabEmptyState
+          contactId={contactId}
+          archived={archived}
+          onCreateManual={() => setQuoteDialogOpen(true)}
+        />
+        <ManualQuoteDialog
+          open={quoteDialogOpen}
+          onOpenChange={setQuoteDialogOpen}
+          vendorContactId={contactId}
+        />
+      </>
+    );
   }
 
   const errorMessage = pickErrorMessage(quotesError, invitesError, poError, t);
@@ -75,11 +91,17 @@ export function ProcurementContactTab({
 
       {metrics && metrics.totalOrders > 0 && <SupplierMetricsCard metrics={metrics} />}
 
+      <ManualQuoteDialog
+        open={quoteDialogOpen}
+        onOpenChange={setQuoteDialogOpen}
+        vendorContactId={contactId}
+      />
       <ContactQuotesSection
         quotes={quotes}
         loading={quotesLoading}
         archived={archived}
         contactId={contactId}
+        onCreateManual={() => setQuoteDialogOpen(true)}
       />
 
       <ContactRfqInvitesSection invites={invites} loading={invitesLoading} />
