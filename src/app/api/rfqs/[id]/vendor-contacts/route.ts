@@ -46,7 +46,10 @@ async function handleGet(
         const vendors: VendorContactOption[] = [];
         for (const doc of snap.docs) {
           const data = doc.data();
-          if (!data.supplierPersona) continue;
+          const isSupplier =
+            (Array.isArray(data.personaTypes) && (data.personaTypes as string[]).includes('supplier')) ||
+            Boolean(data.supplierPersona);
+          if (!isSupplier) continue;
           vendors.push({
             id: doc.id,
             displayName: String(
