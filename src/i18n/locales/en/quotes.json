@@ -320,6 +320,12 @@
       "add": "Add {count} items",
       "noProject": "Select a project first",
       "loading": "Loading..."
+    },
+    "vendorPicker": {
+      "label": "Vendors to invite",
+      "placeholder": "Search vendor...",
+      "empty": "No vendors found",
+      "noSelected": "No vendors selected"
     }
   },
   "trades": {

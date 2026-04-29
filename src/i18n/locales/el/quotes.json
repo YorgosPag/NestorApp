@@ -306,6 +306,12 @@
       "noProject": "Επιλέξτε πρώτα έργο",
       "loading": "Φόρτωση..."
     },
+    "vendorPicker": {
+      "label": "Vendors προς πρόσκληση",
+      "placeholder": "Αναζήτηση vendor...",
+      "empty": "Δεν βρέθηκαν vendors",
+      "noSelected": "Κανένας vendor επιλεγμένος"
+    },
     "loading": "Φόρτωση...",
     "submit": "Δημιουργία RFQ",
     "cancel": "Ακύρωση",

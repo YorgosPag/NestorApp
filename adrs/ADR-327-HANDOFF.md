@@ -1,8 +1,8 @@
-# ADR-327 HANDOFF — Multi-Vendor Architecture Phase 1 step (g)
+# ADR-327 HANDOFF — Multi-Vendor Architecture Phase 1 step (h)
 
 **Date**: 2026-04-29
-**Previous session ended at**: Step (f) committed — GET /api/boq/items + BoqLinePicker + RfqBuilder split (boqItemIds vs adHocLines). Context ~45%.
-**Next session goal**: Step (g) — **Wizard Step4-5**: vendor multi-select + submit.
+**Previous session ended at**: Step (g) committed — VendorPickerSection (multi-select combobox+chips) wired to form.invitedVendorIds inside RfqBuilder. Context ~55%.
+**Next session goal**: Step (h) — **Email invitation template extension**.
 
 ---
 
@@ -14,60 +14,56 @@
 ✅ c. Services (sourcing-event + rfq-line + rfq-service modify)  (COMMIT 84dd62f1)
 ✅ d. API endpoints (8 routes — rfq lines + sourcing events)     (COMMIT b563db10)
 ✅ e. UI components — hooks + RfqBuilder migration + RfqLinesPanel + detail page  (COMMIT b563db10)
-✅ f. BOQ picker inside RfqBuilder — BoqLinePicker + GET /api/boq/items + handleSubmit split  (THIS SESSION)
-⏸️ g. Wizard Step4-5 — vendor multi-select + submit  ← NEXT SESSION
-⏸️ h. Email invitation template extension (mostly P3, minor extension)
+✅ f. BOQ picker inside RfqBuilder — BoqLinePicker + GET /api/boq/items + handleSubmit split
+✅ g. Vendor multi-select — VendorPickerSection (combobox+chips) wired to invitedVendorIds
+⏸️ h. Email invitation template extension  ← NEXT SESSION
 ⏸️ i. Comparison view extensions (multi-vendor aggregate)
 ```
 
 ---
 
-## 🌐 STEP (f) DELIVERABLES — What Was Built
+## 🌐 STEP (g) DELIVERABLES — What Was Built
 
 ### New files
 
 | File | Description |
 |------|-------------|
-| `src/app/api/boq/items/route.ts` | GET `/api/boq/items?projectId=X` — tenant-scoped BOQ item list |
-| `src/subapps/procurement/components/BoqLinePicker.tsx` | Dialog picker: multi-checkbox + search + "Aggiungi X" CTA |
+| `src/subapps/procurement/components/VendorPickerSection.tsx` | Controlled multi-select: `SearchableCombobox` + chips + remove |
 
 ### Modified files
 
 | File | Change |
 |------|--------|
-| `src/subapps/procurement/components/RfqBuilder.tsx` | `FormLine` type (extends `RfqLine`), BOQ picker button, `handleBoqSelect`, `handleSubmit` split `boqItemIds`/`adHocLines` |
-| `src/i18n/locales/el/quotes.json` | `rfqs.boqPicker.*` (7 keys) |
-| `src/i18n/locales/en/quotes.json` | `rfqs.boqPicker.*` (7 keys) |
-| `docs/.../ADR-327-*.md` | Step (f) changelog entry |
+| `src/subapps/procurement/components/RfqBuilder.tsx` | Import + mount `VendorPickerSection` |
+| `src/i18n/locales/el/quotes.json` | `rfqs.vendorPicker.*` (4 keys) |
+| `src/i18n/locales/en/quotes.json` | `rfqs.vendorPicker.*` (4 keys) |
+| `docs/.../ADR-327-*.md` | Step (g) changelog entry |
 
 ---
 
-## 🚦 PROTOCOL FOR NEXT SESSION (step g — Vendor Multi-Select)
+## 🚦 PROTOCOL FOR NEXT SESSION (step h — Email Invitation Template)
 
 ### Step 0 — Model declaration (CLAUDE.md N.14)
 
-**Modello consigliato: Sonnet 4.6** — UI extension + pattern reuse from existing `VendorInviteSection`, no new architecture.
+**Modello consigliato: Sonnet 4.6** — email template extension, pattern reuse from existing P3 channel adapter.
 
 ### Step 1 — Read in parallel (RECOGNITION)
 
 Before writing code:
 
 1. `adrs/ADR-327-HANDOFF.md` (this file)
-2. `src/subapps/procurement/components/RfqBuilder.tsx` — current form state
-3. `src/subapps/procurement/components/VendorInviteSection.tsx` — existing vendor picker pattern (Combobox + vendor contact list)
-4. `src/subapps/procurement/hooks/useVendorInvites.ts` — existing hook for vendor contacts
-5. `src/subapps/procurement/types/rfq.ts` — `CreateRfqDTO.invitedVendorIds?: string[]`
-6. `src/i18n/locales/el/quotes.json` rfqs section (check existing vendor keys)
+2. `src/subapps/procurement/services/channels/email-channel.ts` — existing email template (vendor portal invite)
+3. `src/subapps/procurement/services/rfq-service.ts` — how invites are currently generated on `createRfq()`
+4. `src/i18n/locales/el/quotes.json` — existing `rfqs.*` + `invites.*` sections
 
-### Step 2 — Scope for step (g)
+### Step 2 — Scope for step (h)
 
-Add vendor multi-select to RfqBuilder:
-- Section below Lines: "Vendors da invitare"
-- Searchable combobox (uses existing vendor contacts API from P3.b: `/api/rfqs/[id]/vendor-contacts` OR a simpler `/api/contacts?persona=supplier`)
-- Selected vendors as chips/badges with remove button
-- `form.invitedVendorIds` is already in FormState — just need UI wiring
+Extend the email invitation template to include multi-vendor context:
+- When `createRfq()` with `invitedVendorIds[]` → generate vendor invites + send emails
+- Current flow: invites created post-RFQ creation manually via `VendorInviteSection`
+- Step (h) goal: auto-generate invites on RFQ creation when `invitedVendorIds` are provided
 
-**Key constraint**: vendor contacts are already pre-fetched in `useVendorInvites.ts` (for an existing RFQ). For the NEW RFQ wizard, vendor contacts must be fetched without an rfqId. Use the existing `/api/contacts` endpoint filtered by supplier persona.
+**Key question to answer in RECOGNITION**: Does `createRfq()` currently call `VendorInviteService.createInvite()` for each vendorId in `invitedVendorIds`? Or is that deferred to the UI?
 
 ---
 
@@ -77,7 +73,6 @@ Add vendor multi-select to RfqBuilder:
 2. ❌ **DO NOT skip Phase 3 ADR update** — same commit as code
 3. ❌ **DO NOT expose `unitPrice` to vendors** — use `toPublicRfqLine()` for portal payloads
 4. ❌ **DO NOT hardcode strings** — i18n via `t('quotes.*')` namespace (keys first in locale JSON)
-5. ❌ **DO NOT add a wizard 5-step flow** — form remains flat (see step e spec)
 
 ---
 
@@ -100,15 +95,8 @@ Add vendor multi-select to RfqBuilder:
 - **Step (b) commit**: `d0ef2c3c` (+ firebase deploy — rules+indexes live in production)
 - **Step (c) commit**: `84dd62f1`
 - **Step (d+e) commit**: `b563db10`
-- **Step (f) commit**: see `git log --oneline -1` at session start
-- **API endpoints (step d)**: all in `src/app/api/procurement/rfqs/` + `src/app/api/procurement/sourcing-events/`
-- **Service layer (step c)**: `src/subapps/procurement/services/rfq-line-service.ts` + `sourcing-event-service.ts`
-- **Types**: `src/subapps/procurement/types/rfq-line.ts` + `sourcing-event.ts`
+- **Step (f+g) commit**: see `git log --oneline -1` at session start
 - **BOQ API (step f)**: `src/app/api/boq/items/route.ts`
 - **BOQ Picker (step f)**: `src/subapps/procurement/components/BoqLinePicker.tsx`
-
----
-
-## 💬 IF GIORGIO SAYS "VAI"
-
-Proceed with step (g) following the protocol above. If anything in the recognition phase contradicts this handoff, STOP and report — code is SoT, the handoff may be wrong.
+- **Vendor Picker (step g)**: `src/subapps/procurement/components/VendorPickerSection.tsx`
+- **Vendor contacts API (reused)**: `src/app/api/rfqs/[id]/vendor-contacts/route.ts`

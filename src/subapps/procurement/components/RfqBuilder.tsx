@@ -19,6 +19,7 @@ import { Plus, Trash2, Save, X, ListFilter } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TradeSelector } from './TradeSelector';
 import { BoqLinePicker } from './BoqLinePicker';
+import { VendorPickerSection } from './VendorPickerSection';
 import { POProjectSelector } from '@/components/procurement/POEntitySelectors';
 import { getAtoeCodesForTrade, getTradeCodeForAtoeCategory } from '@/subapps/procurement/data/trades';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
@@ -413,6 +414,11 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
             </div>
           )}
         </section>
+
+        <VendorPickerSection
+          value={form.invitedVendorIds}
+          onChange={(ids) => setField('invitedVendorIds', ids)}
+        />
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
