@@ -82,6 +82,12 @@ export interface UserAuthPermissionPanelProps {
    * email is dispatched via email-channel.ts (ADR-327 Phase H).
    */
   onDirectEmailShare?: () => Promise<void>;
+  /**
+   * When true, hides the "Αποστολή σε Επαφή" CRM channel picker button.
+   * Used for vendor invites where the recipient is already known from step 1
+   * and the generic contact picker would be redundant and confusing.
+   */
+  hideChannelPicker?: boolean;
 }
 
 export function UserAuthPermissionPanel({
@@ -96,6 +102,7 @@ export function UserAuthPermissionPanel({
   initialPersonalMessage,
   dirtyPolicy = false,
   onDirectEmailShare,
+  hideChannelPicker = false,
 }: UserAuthPermissionPanelProps): React.ReactElement {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const notifications = useNotifications();
@@ -383,21 +390,23 @@ export function UserAuthPermissionPanel({
           loading={loading}
         />
 
-        <section className="space-y-1">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowChannelPicker(true)}
-            disabled={loading || dirtyPolicy}
-            className="w-full h-12"
-          >
-            <Users className="w-4 h-4 mr-2" />
-            {t('channelShare.sendToContact')}
-          </Button>
-          <p className="text-xs text-muted-foreground text-center">
-            {t('common-shared:share.captionCrmContact')}
-          </p>
-        </section>
+        {!hideChannelPicker && (
+          <section className="space-y-1">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowChannelPicker(true)}
+              disabled={loading || dirtyPolicy}
+              className="w-full h-12"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              {t('channelShare.sendToContact')}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              {t('common-shared:share.captionCrmContact')}
+            </p>
+          </section>
+        )}
       </div>
     </>
   );

@@ -334,6 +334,7 @@ function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onDirectEmailSh
         isOpen={isOpen}
         onClose={onClose}
         onDirectEmailShare={onDirectEmailShare}
+        hideChannelPicker
       />
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>
