@@ -158,7 +158,7 @@ export function VendorInviteDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent size="sm">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
@@ -368,7 +368,6 @@ function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend }: 
         isOpen={isOpen}
         onClose={onClose}
         hideChannelPicker
-        excludePlatformsFromGrid={EMAIL_EXCLUDE}
         extraQuickActions={emailButton}
       />
       <DialogFooter>
@@ -379,5 +378,3 @@ function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend }: 
     </section>
   );
 }
-
-const EMAIL_EXCLUDE = ['email'] as const;
