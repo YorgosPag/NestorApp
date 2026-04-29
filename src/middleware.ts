@@ -152,6 +152,17 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const userAgent = (request.headers.get('user-agent') ?? '').toLowerCase();
 
+  // ── 0. Routing safety guard: literal Next.js template placeholders ──
+  // Catches stale browser tabs / Turbopack hot-reload edge cases where the URL
+  // contains a literal [id], [rfqId], etc. (URL-encoded as %5Bxxx%5D).
+  // Server Component redirect() returns 200 in dev/Turbopack — middleware 307
+  // is the only guarantee that fetches never fire with id='[id]'.
+  const decodedPath = decodeURIComponent(pathname);
+  if (/\/\[[^/\]]+\]/.test(decodedPath)) {
+    const parentPath = decodedPath.replace(/\/\[[^/\]]+\].*$/, '') || '/';
+    return NextResponse.redirect(new URL(parentPath, request.url), 307);
+  }
+
   // ── 1. Block vulnerability scanner paths (immediate 404) ──
   const isScanner = SCANNER_PATHS.some((scanPath) =>
     pathname.toLowerCase().startsWith(scanPath)
