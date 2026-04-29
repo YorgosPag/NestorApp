@@ -300,6 +300,8 @@ export const COLLECTIONS = {
   VENDOR_INVITES: process.env.NEXT_PUBLIC_VENDOR_INVITES_COLLECTION || 'vendor_invites',
   VENDOR_INVITE_TOKENS: process.env.NEXT_PUBLIC_VENDOR_INVITE_TOKENS_COLLECTION || 'vendor_invite_tokens',
   TRADES: process.env.NEXT_PUBLIC_TRADES_COLLECTION || 'trades',
+  // ADR-327 §17 Q28-Q31 Multi-Vendor extension (2026-04-29)
+  SOURCING_EVENTS: process.env.NEXT_PUBLIC_SOURCING_EVENTS_COLLECTION || 'sourcing_events',
 } as const;
 
 // ============================================================================

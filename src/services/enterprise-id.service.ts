@@ -56,6 +56,7 @@ export {
   generatePOAttachmentId, generateSavedReportId, generateRecurringPaymentId,
   generateQuoteId, generateRfqId, generateVendorInviteId, generateTradeId,
   generateVendorLogoFileId,
+  generateSourcingEventId, generateRfqLineId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId,
 } from './enterprise-id-convenience';
@@ -294,6 +295,8 @@ export class EnterpriseIdService {
   generateRfqId(): string { return this.generateId(P.RFQ).id; }
   generateVendorInviteId(): string { return this.generateId(P.VENDOR_INVITE).id; }
   generateTradeId(): string { return this.generateId(P.TRADE).id; }
+  generateSourcingEventId(): string { return this.generateId(P.SOURCING_EVENT).id; }
+  generateRfqLineId(): string { return this.generateId(P.RFQ_LINE).id; }
 
   // Reports & Cash Flow (ADR-268)
   generateSavedReportId(): string { return this.generateId(P.SAVED_REPORT).id; }

@@ -172,6 +172,10 @@ export const generateTradeId = () => enterpriseIdService.generateTradeId();
 export const generateVendorLogoFileId = (quoteId: string) =>
   enterpriseIdService.generateVendorLogoFileId(quoteId);
 
+// Multi-Vendor extension (ADR-327 §17 Q28-Q31, 2026-04-29)
+export const generateSourcingEventId = () => enterpriseIdService.generateSourcingEventId();
+export const generateRfqLineId = () => enterpriseIdService.generateRfqLineId();
+
 // Reports & Cash Flow (ADR-268)
 export const generateSavedReportId = () => enterpriseIdService.generateSavedReportId();
 export const generateRecurringPaymentId = () => enterpriseIdService.generateRecurringPaymentId();

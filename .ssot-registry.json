@@ -2326,6 +2326,37 @@
       ],
       "tier": 2
     },
+    "sourcing-event-entity": {
+      "ssotFile": "src/subapps/procurement/types/sourcing-event.ts",
+      "serviceFile": "src/subapps/procurement/services/sourcing-event-service.ts",
+      "description": "Sourcing Event entity + lifecycle SSoT (ADR-327 §17 Q31, Multi-Vendor extension 2026-04-29). Optional parent grouping N atomic single-trade RFQs into one logical multi-trade procurement package. status derived server-side from child RFQs via deriveSourcingEventStatus(). FORBIDDEN: direct addDoc on sourcing_events, inline status recomputation outside the service, parallel multi-trade RFQ schemas.",
+      "forbiddenPatterns": [
+        "collection.*sourcing_events.*addDoc",
+        "collection.*sourcing_events.*\\.add\\("
+      ],
+      "allowlist": [
+        "src/subapps/procurement/types/sourcing-event.ts",
+        "src/subapps/procurement/services/sourcing-event-service.ts",
+        "src/app/api/sourcing-events/"
+      ],
+      "tier": 2
+    },
+    "rfq-line-entity": {
+      "ssotFile": "src/subapps/procurement/types/rfq-line.ts",
+      "serviceFile": "src/subapps/procurement/services/rfq-line-service.ts",
+      "description": "RFQ line items as sub-collection rfqs/{rfqId}/lines/{lineId} (ADR-327 §17 Q29, Multi-Vendor extension 2026-04-29). Per Q29 (HYBRID Γ): BOQ-first snapshot + ad-hoc escape hatch. Lines are NEVER live-updated from the BOQ — snapshot semantics preserve quote integrity. Public portal projection via toPublicRfqLine() strips internal fields (unitPrice, boqItemId, source, companyId). FORBIDDEN: direct sub-collection writes outside rfq-line-service, inline addDoc on lines, exposing RfqLine.unitPrice to vendor portal.",
+      "forbiddenPatterns": [
+        "collection\\(['\"]rfqs['\"]\\).*collection\\(['\"]lines['\"]\\).*\\.add\\(",
+        "doc\\(.*\\)\\.collection\\(['\"]lines['\"]\\)\\.add\\("
+      ],
+      "allowlist": [
+        "src/subapps/procurement/types/rfq-line.ts",
+        "src/subapps/procurement/services/rfq-line-service.ts",
+        "src/subapps/procurement/services/rfq-service.ts",
+        "src/app/api/rfqs/"
+      ],
+      "tier": 2
+    },
     "trade-taxonomy": {
       "ssotFile": "src/subapps/procurement/data/trades.ts",
       "typeFile": "src/subapps/procurement/types/trade.ts",

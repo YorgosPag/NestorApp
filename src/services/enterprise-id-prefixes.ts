@@ -185,6 +185,10 @@ export const ENTERPRISE_ID_PREFIXES = {
   TRADE: 'trd',
   VENDOR_LOGO: 'vlogo',       // ADR-327 §6: deterministic per-quote logo claim
 
+  // Quotes & RFQ — Multi-Vendor extension (ADR-327 §17 Q28-Q31, 2026-04-29)
+  SOURCING_EVENT: 'srcev',    // §17 Q31: parent collection multi-trade RFQ package (HYBRID A-Enhanced)
+  RFQ_LINE: 'rfqln',          // §17 Q29: sub-collection rfqs/{rfqId}/lines/{lineId} (HYBRID Γ BOQ-first)
+
   // Reports (ADR-268 Phase 7)
   SAVED_REPORT: 'srpt',
 
