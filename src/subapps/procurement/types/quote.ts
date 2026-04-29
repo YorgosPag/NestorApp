@@ -118,6 +118,9 @@ export interface ExtractedQuoteData {
   warranty: FieldWithConfidence<string | null>;
   notes: FieldWithConfidence<string | null>;
   tradeHint: FieldWithConfidence<string | null>;
+  pricingType: FieldWithConfidence<'unit_prices' | 'lump_sum' | 'mixed' | null>;
+  vatIncluded: FieldWithConfidence<boolean | null>;
+  laborIncluded: FieldWithConfidence<boolean | null>;
   vendorBankAccounts: ExtractedBankAccount[];
   detectedLanguage: string;
   overallConfidence: number;

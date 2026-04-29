@@ -143,6 +143,9 @@ function buildFallbackExtractedData(): ExtractedQuoteData {
     warranty: field<string | null>(null, 0),
     notes: field<string | null>(null, 0),
     tradeHint: field<string | null>(null, 0),
+    pricingType: field<'unit_prices' | 'lump_sum' | 'mixed' | null>(null, 0),
+    vatIncluded: field<boolean | null>(null, 0),
+    laborIncluded: field<boolean | null>(null, 0),
     vendorBankAccounts: [],
     detectedLanguage: 'unknown',
     overallConfidence: 0,
@@ -237,6 +240,12 @@ function normalizeExtracted(raw: RawExtractedQuote, validationIssues: string[] =
     warranty: field<string | null>(raw.warranty ?? null, c.warranty),
     notes: field<string | null>(notesValue, c.notes),
     tradeHint: field<string | null>(raw.tradeHint ?? null, c.tradeHint),
+    pricingType: field<'unit_prices' | 'lump_sum' | 'mixed' | null>(
+      (raw.pricingType as 'unit_prices' | 'lump_sum' | 'mixed' | null) ?? null,
+      raw.pricingType != null ? 90 : 0,
+    ),
+    vatIncluded: field<boolean | null>(raw.vatIncluded ?? null, raw.vatIncludedConfidence ?? 0),
+    laborIncluded: field<boolean | null>(raw.laborIncluded ?? null, raw.laborIncludedConfidence ?? 0),
     vendorBankAccounts: (raw.vendorBankAccounts ?? []).map((b) => ({
       bankName: b.bankName,
       bic: b.bic ?? null,

@@ -72,6 +72,11 @@ export interface RawExtractedQuote {
   warranty: string | null;
   notes: string | null;
   tradeHint: string | null;
+  pricingType: 'unit_prices' | 'lump_sum' | 'mixed' | null;
+  vatIncluded: boolean | null;
+  vatIncludedConfidence: number;
+  laborIncluded: boolean | null;
+  laborIncludedConfidence: number;
   detectedLanguage: string;
   overallConfidence: number;
   confidence: Record<string, number>;
@@ -213,6 +218,11 @@ export const QUOTE_EXTRACT_SCHEMA = {
       warranty: { type: ['string', 'null'] },
       notes: { type: ['string', 'null'] },
       tradeHint: { type: ['string', 'null'] },
+      pricingType: { type: ['string', 'null'] },
+      vatIncluded: { type: ['boolean', 'null'] },
+      vatIncludedConfidence: { type: 'number' },
+      laborIncluded: { type: ['boolean', 'null'] },
+      laborIncludedConfidence: { type: 'number' },
       detectedLanguage: { type: 'string' },
       overallConfidence: { type: 'number' },
       confidence: {
@@ -230,6 +240,8 @@ export const QUOTE_EXTRACT_SCHEMA = {
       'quoteDate', 'validUntil', 'quoteReference',
       'lineItems', 'subtotal', 'vatAmount', 'totalAmount',
       'paymentTerms', 'deliveryTerms', 'warranty', 'notes', 'tradeHint',
+      'pricingType', 'vatIncluded', 'vatIncludedConfidence',
+      'laborIncluded', 'laborIncludedConfidence',
       'detectedLanguage', 'overallConfidence', 'confidence',
     ],
     additionalProperties: false,
@@ -358,9 +370,34 @@ export const QUOTE_EXTRACT_PROMPT = `Είσαι AI σύστημα εξαγωγή
 - "ΚΟΥΦΩΜΑ", "ΚΟΥΦΩΜΑΤΑ", "ΡΟΛΟ ΕΞΩΤΕΡΙΚΟ", "ΔΙΦΥΛΛΟ", "ΜΟΝΟΦΥΛΛΟ" = σωστά (μην αλλάζεις)
 
 **ΣΥΝΟΛΑ:**
-- subtotal: Καθαρό σύνολο
-- vatAmount: ΦΠΑ
-- totalAmount: Μικτό σύνολο
+- subtotal: Καθαρό σύνολο (χωρίς ΦΠΑ). Null αν δεν αναγράφεται ξεχωριστά.
+- vatAmount: Ποσό ΦΠΑ. Null αν δεν αναγράφεται ξεχωριστά.
+- totalAmount: Μικτό σύνολο (τελική τιμή). ΠΑΝΤΑ συμπλήρωσε αν υπάρχει οποιοδήποτε συνολικό ποσό στο έγγραφο.
+
+**ΤΥΠΟΣ ΤΙΜΟΛΟΓΗΣΗΣ (pricingType):**
+Ανάλυσε τη δομή του πίνακα τιμών:
+- \`'unit_prices'\`: Υπάρχει στήλη τιμής μονάδος με τιμές για κάθε γραμμή → κανονική τιμολόγηση.
+- \`'lump_sum'\`: ΔΕΝ υπάρχει στήλη τιμής μονάδος. Υπάρχουν μόνο ποσότητες + ΕΝΑ συνολικό ποσό στο τέλος ("ΣΥΝΟΛΙΚΟ ΚΟΣΤΟΣ", "TOTAL", "Σύνολο") → συνολική τιμολόγηση.
+  ΚΡΙΣΙΜΟΙ ΚΑΝΟΝΕΣ για \`'lump_sum'\`:
+  • \`totalAmount\` = το συνολικό ποσό (π.χ. 600 για "ΣΥΝΟΛΙΚΟ ΚΟΣΤΟΣ: 600 €"). ΜΗΝ αφήνεις null.
+  • Για ΟΛΕΣ τις γραμμές: \`unitPrice\` = null, \`lineTotal\` = null (δεν υπάρχουν μοναδιαίες τιμές).
+  • \`rowSubtotal\` = null για κάθε γραμμή.
+  • \`subtotal\` = null αν δεν αναγράφεται ξεχωριστά χωρίς ΦΠΑ.
+- \`'mixed'\`: Μερικές γραμμές έχουν τιμή μονάδος, άλλες όχι.
+- null: Αδύνατο να προσδιοριστεί.
+
+**ΦΠΑ ΠΕΡΙΛΗΨΗ (vatIncluded):**
+Ψάξε σε ΟΛΕΣ τις σελίδες για ρητή δήλωση περί ΦΠΑ:
+- "Στη τιμή περιλαμβάνεται ο ΦΠΑ" / "Με ΦΠΑ" / "incl. VAT" / "VAT included" / "τιμή με ΦΠΑ" → \`vatIncluded: true\` (confidence: 95)
+- "Χωρίς ΦΠΑ" / "πλέον ΦΠΑ" / "excl. VAT" / "Στη τιμή ΔΕΝ περιλαμβάνεται ο ΦΠΑ" / "τιμή χωρίς ΦΠΑ" → \`vatIncluded: false\` (confidence: 95)
+- Αν δεν αναφέρεται ρητά → \`vatIncluded: null\`, \`vatIncludedConfidence: 0\`.
+
+**ΕΡΓΑΤΙΚΑ (laborIncluded):**
+Ψάξε αν η εργασία / εγκατάσταση / τοποθέτηση είναι μέσα στην τιμή:
+- Ρητή αναφορά "περιλαμβάνεται η εργασία/τοποθέτηση/εγκατάσταση" / "incl. labour/installation" → \`laborIncluded: true\` (confidence: 90)
+- Αν υπάρχει γραμμή στη λίστα ειδών με περιγραφή που περιέχει "Εργατικά", "Εργασία", "Εργασίες", "Τοποθέτηση", "Εγκατάσταση", "Ρύθμιση" → \`laborIncluded: true\` (confidence: 80)
+- "Χωρίς εργασία" / "πλέον εργατικών" / "excl. labour" → \`laborIncluded: false\` (confidence: 90)
+- Αν δεν αναφέρεται και δεν υπάρχει τέτοια γραμμή → \`laborIncluded: null\`, \`laborIncludedConfidence: 0\`.
 
 **ΟΡΟΙ:**
 - paymentTerms: Όροι πληρωμής. Ψάξε σε ΟΛΕΣ τις σελίδες για ετικέτες όπως:

@@ -385,8 +385,31 @@ export function ExtractedDataReviewPanel({
           <div className="mt-2 flex justify-end gap-4 text-sm">
             <span className="text-muted-foreground">{t('quotes.subtotal')}: {totals.subtotal.toFixed(2)}</span>
             <span className="text-muted-foreground">{t('quotes.vatAmount')}: {totals.vatAmount.toFixed(2)}</span>
-            <span className="font-semibold">{t('quotes.total')}: {totals.total.toFixed(2)} €</span>
+            <span className="font-semibold">
+              {t('quotes.total')}: {extracted?.totalAmount?.value != null && totals.total === 0
+                ? extracted.totalAmount.value.toFixed(2)
+                : totals.total.toFixed(2)} €
+            </span>
           </div>
+          {extracted && (
+            <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
+              {extracted.pricingType?.value === 'lump_sum' && (
+                <Badge variant="secondary" className="text-xs">{t('quotes.scan.pricingTypeLumpSum')}</Badge>
+              )}
+              {extracted.vatIncluded?.value === true && (
+                <Badge variant="outline" className="border-blue-400 text-blue-700 dark:text-blue-400 text-xs">{t('quotes.scan.vatIncludedYes')}</Badge>
+              )}
+              {extracted.vatIncluded?.value === false && (
+                <Badge variant="outline" className="border-orange-400 text-orange-700 dark:text-orange-400 text-xs">{t('quotes.scan.vatIncludedNo')}</Badge>
+              )}
+              {extracted.laborIncluded?.value === true && (
+                <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400 text-xs">{t('quotes.scan.laborIncludedYes')}</Badge>
+              )}
+              {extracted.laborIncluded?.value === false && (
+                <Badge variant="outline" className="border-red-400 text-red-700 dark:text-red-400 text-xs">{t('quotes.scan.laborIncludedNo')}</Badge>
+              )}
+            </div>
+          )}
         </section>
 
         <section>
