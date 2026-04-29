@@ -31,6 +31,7 @@ import {
   type GeneratedVendorPortalToken,
 } from '@/services/vendor-portal/vendor-portal-token-service';
 import { resolveChannel } from './channels';
+import { pickContactDisplayName } from './vendor-name-resolver';
 import type {
   VendorInvite,
   CreateVendorInviteDTO,
@@ -68,7 +69,7 @@ async function fetchVendorContact(
     const supplierPersona = data.supplierPersona as { preferredChannel?: DeliveryChannel } | undefined;
     return {
       id: snap.id,
-      displayName: String(data.displayName ?? data.companyName ?? data.fullName ?? contactId),
+      displayName: pickContactDisplayName(data) ?? contactId,
       email: getContactEmail(data as Parameters<typeof getContactEmail>[0]),
       preferredChannel: supplierPersona?.preferredChannel ?? null,
     };
