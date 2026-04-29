@@ -18,8 +18,73 @@ import { getTradeCodeForAtoeCategory } from '../data/trades';
 import type { TradeCode } from '../types/trade';
 import { snapshotFromBoq, addRfqLinesBulk } from './rfq-line-service';
 import { recomputeSourcingEventStatus } from './sourcing-event-service';
+import { emailVendorInviteChannel } from './channels/email-channel';
+import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
 
 const logger = createModuleLogger('RFQ_SERVICE');
+
+// ============================================================================
+// EMAIL DISPATCH HELPERS — post-create invite fan-out (ADR-327 §7 step h)
+// ============================================================================
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://nestor-app.vercel.app';
+
+function rfqPortalUrl(token: string): string {
+  return `${APP_URL}/vendor/quote/${encodeURIComponent(token)}`;
+}
+
+function rfqDeclineUrl(token: string): string {
+  return `${APP_URL}/vendor/quote/${encodeURIComponent(token)}/decline`;
+}
+
+interface InviteMeta {
+  inviteId: string;
+  vendorId: string;
+  token: string;
+  expiresAt: string;
+}
+
+async function dispatchRfqInviteEmails(
+  ctx: AuthContext,
+  rfq: RFQ,
+  inviteMeta: InviteMeta[],
+): Promise<void> {
+  const db = admin.firestore();
+  const results = await Promise.allSettled(
+    inviteMeta.map(async (meta) => {
+      const snap = await db.collection(COLLECTIONS.CONTACTS).doc(meta.vendorId).get();
+      if (!snap.exists) return;
+      const data = snap.data() ?? {};
+      if (data.companyId && data.companyId !== ctx.companyId) return;
+      const email = getContactEmail(data as Parameters<typeof getContactEmail>[0]);
+      if (!email) return;
+      const vendorName = String(data.displayName ?? data.companyName ?? data.fullName ?? meta.vendorId);
+      const portalUrl = rfqPortalUrl(meta.token);
+      const result = await emailVendorInviteChannel.send({
+        inviteId: meta.inviteId,
+        vendorName,
+        recipient: email,
+        rfqTitle: rfq.title,
+        projectName: null,
+        portalUrl,
+        expiresAt: meta.expiresAt,
+        locale: 'el',
+        declineUrl: rfqDeclineUrl(meta.token),
+      });
+      if (result.success) {
+        await db.collection(COLLECTIONS.VENDOR_INVITES).doc(meta.inviteId).update({
+          deliveredAt: admin.firestore.Timestamp.now(),
+          updatedAt: admin.firestore.Timestamp.now(),
+        });
+      }
+    }),
+  );
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      logger.error('Invite email dispatch failed', { vendorId: inviteMeta[i].vendorId, error: String(r.reason) });
+    }
+  });
+}
 
 const DEFAULT_INVITE_EXPIRY_DAYS = 7;
 
@@ -31,7 +96,7 @@ export async function createRfq(
   ctx: AuthContext,
   dto: CreateRfqDTO
 ): Promise<RFQ> {
-  const rfq = await safeFirestoreOperation(async (db) => {
+  const result = await safeFirestoreOperation(async (db) => {
     const id = generateRfqId();
     const now = admin.firestore.Timestamp.now();
     const invitedVendorIds = dto.invitedVendorIds ?? [];
@@ -75,6 +140,7 @@ export async function createRfq(
     };
 
     const needsBatch = invitedVendorIds.length > 0 || !!dto.sourcingEventId;
+    const inviteMeta: InviteMeta[] = [];
 
     if (needsBatch) {
       const batch = db.batch();
@@ -84,6 +150,7 @@ export async function createRfq(
       for (const vendorId of invitedVendorIds) {
         const inviteId = generateVendorInviteId();
         const generated = generateVendorPortalToken(id, vendorId, DEFAULT_INVITE_EXPIRY_DAYS);
+        inviteMeta.push({ inviteId, vendorId, token: generated.token, expiresAt: generated.expiresAt });
         const inviteStub = {
           id: inviteId,
           rfqId: id,
@@ -129,16 +196,22 @@ export async function createRfq(
     }
 
     logger.info('RFQ created', { id, companyId: ctx.companyId, linesStorage });
-    return newRfq;
+    return { rfq: newRfq, inviteMeta };
   });
 
-  if (!rfq) throw new Error('Failed to create RFQ');
+  if (!result) throw new Error('Failed to create RFQ');
+  const { rfq, inviteMeta } = result;
 
   // Sub-collection line writes — after RFQ doc exists (Q29)
   if (dto.boqItemIds?.length) {
     await snapshotFromBoq(ctx, rfq.id, dto.boqItemIds, 'materials_general');
   } else if (dto.adHocLines?.length) {
     await addRfqLinesBulk(ctx, rfq.id, dto.adHocLines);
+  }
+
+  // Email dispatch — fire-and-forget, does not block RFQ creation response (step h)
+  if (inviteMeta.length > 0) {
+    void dispatchRfqInviteEmails(ctx, rfq, inviteMeta);
   }
 
   return rfq;
