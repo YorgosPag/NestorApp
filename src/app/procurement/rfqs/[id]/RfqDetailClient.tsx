@@ -5,9 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Building2, ClipboardList, Plus, ScanLine } from 'lucide-react';
+import { ArrowLeft, Building2, ClipboardList, Eye, EyeOff, Plus, ScanLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { Badge } from '@/components/ui/badge';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { useVendorInvites } from '@/subapps/procurement/hooks/useVendorInvites';
+import { buildRfqDashboardStats } from '@/subapps/procurement/utils/rfq-dashboard-stats';
 import { PageHeader } from '@/core/headers';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
@@ -45,8 +49,10 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   }, [id, router]);
 
   const { quotes, loading, refetch } = useQuotes({ rfqId: id });
+  const { invites } = useVendorInvites(id);
   const { lines, loading: linesLoading, addLine, deleteLine } = useRfqLines(id);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [rfq, setRfq] = useState<RFQ | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
 
@@ -93,6 +99,38 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     const winner = quotes.find((q) => q.id === rfq.winnerQuoteId);
     return winner?.extractedData?.vendorName?.value ?? undefined;
   }, [rfq, quotes]);
+
+  const underReviewCount = useMemo(
+    () => quotes.filter(q => q.status === 'under_review').length,
+    [quotes],
+  );
+
+  const recommendationPending = useMemo(
+    () => Boolean(comparison?.recommendation) && !quotes.some(q => q.status === 'accepted'),
+    [comparison, quotes],
+  );
+
+  const setupAttentionCount = useMemo(() => {
+    const now = Date.now();
+    const deadline = rfq?.deadlineDate;
+    let deadlineMs: number | null = null;
+    if (deadline) {
+      if (typeof deadline === 'object' && 'seconds' in (deadline as object)) {
+        deadlineMs = (deadline as { seconds: number }).seconds * 1000;
+      } else {
+        const n = new Date(deadline as unknown as string).getTime();
+        if (!Number.isNaN(n)) deadlineMs = n;
+      }
+    }
+    return invites.filter(
+      i => i.status === 'expired' || (i.status === 'pending' && deadlineMs !== null && now > deadlineMs),
+    ).length;
+  }, [invites, rfq]);
+
+  const dashboardStats = useMemo(
+    () => buildRfqDashboardStats(rfq, quotes, invites, comparison, activeTab, t),
+    [rfq, quotes, invites, comparison, activeTab, t],
+  );
 
   const handleAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
     const res = await fetch(`/api/rfqs/${id}/award`, {
@@ -149,6 +187,16 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         actions={{
           customActions: [
             <Button
+              key="dashboard-toggle"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDashboard(v => !v)}
+              aria-label={t('rfqs.dashboard.toggle')}
+              title={t('rfqs.dashboard.toggle')}
+            >
+              {showDashboard ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>,
+            <Button
               key="scan"
               variant="outline"
               size="sm"
@@ -170,11 +218,37 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         }}
       />
 
+      {showDashboard && (
+        <UnifiedDashboard stats={dashboardStats} columns={4} />
+      )}
+
       <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as RfqTabValue)}>
         <TabsList>
-          <TabsTrigger value="quotes">{t('rfqs.tabs.quotes')}</TabsTrigger>
-          <TabsTrigger value="comparison">{t('rfqs.tabs.comparison')}</TabsTrigger>
-          <TabsTrigger value="setup">{t('rfqs.tabs.setup')}</TabsTrigger>
+          <TabsTrigger value="quotes">
+            {t('rfqs.tabs.quotes')}
+            {underReviewCount > 0 && (
+              <Badge variant="destructive" className="ml-2" aria-label={t('rfqs.tabs.badges.underReview')}>
+                {underReviewCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="comparison">
+            {t('rfqs.tabs.comparison')}
+            {recommendationPending && (
+              <span
+                className="ml-2 inline-block size-2 rounded-full bg-yellow-500"
+                aria-label={t('rfqs.tabs.badges.recommendation')}
+              />
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="setup">
+            {t('rfqs.tabs.setup')}
+            {setupAttentionCount > 0 && (
+              <Badge variant="warning" className="ml-2" aria-label={t('rfqs.tabs.badges.setupAttention')}>
+                {setupAttentionCount}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="quotes" className="space-y-4">

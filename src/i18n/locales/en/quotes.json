@@ -347,7 +347,33 @@
     "tabs": {
       "quotes": "Quotes",
       "comparison": "Comparison",
-      "setup": "RFQ Setup"
+      "setup": "RFQ Setup",
+      "badges": {
+        "underReview": "quotes under review",
+        "recommendation": "winner selection pending",
+        "setupAttention": "invites needing attention"
+      }
+    },
+    "dashboard": {
+      "toggle": "Toggle stats dashboard",
+      "quotes": {
+        "total": "Total Quotes",
+        "underReview": "Under Review",
+        "accepted": "Accepted",
+        "bestPrice": "Best Price"
+      },
+      "comparison": {
+        "bestPrice": "Best Price",
+        "worstPrice": "Worst Price",
+        "priceDiff": "Price Difference",
+        "recommendation": "System Recommendation"
+      },
+      "setup": {
+        "totalLines": "Total Lines",
+        "totalVolume": "Total Volume",
+        "invites": "Invitations",
+        "pending": "Pending"
+      }
     },
     "mobile": {
       "backToList": "Back to list"
@@ -383,6 +409,38 @@
         },
         "deliveryDays": "{days} days delivery"
       }
+    },
+    "conflict": {
+      "award": {
+        "title": "Winner selection conflict",
+        "body": "{actor} selected {actualVendor} as winner {ago}. You attempted to award {attemptedVendor} — the state has already changed."
+      },
+      "poCreate": {
+        "title": "Purchase order conflict"
+      },
+      "lineEdit": {
+        "title": "Line edit conflict"
+      },
+      "statusChange": {
+        "title": "Status change conflict"
+      },
+      "generic": {
+        "body": "{actor} made a change {ago}. The state has already changed."
+      },
+      "action": {
+        "acceptRemote": "View {actor}'s selection",
+        "keepMine": "Keep mine"
+      }
+    },
+    "live": {
+      "newQuote": "New quote: {vendor} — {total}",
+      "quoteConfirmed": "{actor} confirmed quote: {vendor}",
+      "quoteAwarded": "{actor} selected winner: {vendor}",
+      "quoteRejected": "{actor} rejected quote: {vendor}",
+      "poCreated": "{actor} created a purchase order",
+      "lineEdited": "{actor} edited an RFQ line",
+      "aggregated": "{actor} made {count} changes",
+      "viewAction": "View"
     }
   },
   "trades": {

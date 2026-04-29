@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { RfqLine, CreateRfqLineDTO, UpdateRfqLineDTO } from '../types/rfq-line';
 
 interface UseRfqLinesResult {
@@ -21,88 +22,79 @@ export function useRfqLines(rfqId: string): UseRfqLinesResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(BASE(rfqId));
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-      setLines((json.data ?? []) as RfqLine[]);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load lines');
-    } finally {
+  useEffect(() => {
+    if (!rfqId) {
+      setLines([]);
       setLoading(false);
+      return;
     }
+
+    setLoading(true);
+    setError(null);
+
+    const unsubscribe = firestoreQueryService.subscribeSubcollection<RfqLine>(
+      'RFQS',
+      rfqId,
+      'lines',
+      (result) => {
+        const sorted = [...result.documents].sort(
+          (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+        );
+        setLines(sorted);
+        setLoading(false);
+      },
+      (err) => {
+        setError(err.message ?? 'Failed to subscribe to RFQ lines');
+        setLoading(false);
+      },
+    );
+
+    return () => unsubscribe();
   }, [rfqId]);
 
-  useEffect(() => {
-    void refetch();
-  }, [refetch]);
+  const refetch = useCallback(async () => {
+    /* onSnapshot is live — no manual refetch (kept for API compat) */
+  }, []);
 
   const addLine = useCallback(
     async (dto: CreateRfqLineDTO): Promise<RfqLine> => {
-      const optimistic = { ...dto, id: `__opt_${Date.now()}` } as RfqLine;
-      setLines((prev) => [...prev, optimistic]);
-      try {
-        const res = await fetch(BASE(rfqId), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dto),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-        const created = json.data as RfqLine | undefined;
-        if (!created) throw new Error('Server returned empty line data');
-        setLines((prev) => prev.map((l) => (l.id === optimistic.id ? created : l)));
-        return created;
-      } catch (e) {
-        setLines((prev) => prev.filter((l) => l.id !== optimistic.id));
-        throw e;
-      }
+      const res = await fetch(BASE(rfqId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dto),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
+      const created = json.data as RfqLine | undefined;
+      if (!created) throw new Error('Server returned empty line data');
+      return created;
     },
     [rfqId],
   );
 
   const updateLine = useCallback(
     async (lineId: string, dto: UpdateRfqLineDTO): Promise<RfqLine> => {
-      const snapshot = lines.find((l) => l.id === lineId);
-      setLines((prev) => prev.map((l) => (l.id === lineId ? { ...l, ...dto } : l)));
-      try {
-        const res = await fetch(`${BASE(rfqId)}/${lineId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dto),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-        const updated = json.data as RfqLine;
-        setLines((prev) => prev.map((l) => (l.id === lineId ? updated : l)));
-        return updated;
-      } catch (e) {
-        if (snapshot) setLines((prev) => prev.map((l) => (l.id === lineId ? snapshot : l)));
-        throw e;
-      }
+      const res = await fetch(`${BASE(rfqId)}/${lineId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dto),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
+      return json.data as RfqLine;
     },
-    [rfqId, lines],
+    [rfqId],
   );
 
   const deleteLine = useCallback(
     async (lineId: string): Promise<void> => {
-      const snapshot = lines.find((l) => l.id === lineId);
-      setLines((prev) => prev.filter((l) => l.id !== lineId));
-      try {
-        const res = await fetch(`${BASE(rfqId)}/${lineId}`, { method: 'DELETE' });
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({}));
-          throw new Error(json?.error ?? `HTTP ${res.status}`);
-        }
-      } catch (e) {
-        if (snapshot) setLines((prev) => [...prev, snapshot]);
-        throw e;
+      const res = await fetch(`${BASE(rfqId)}/${lineId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error ?? `HTTP ${res.status}`);
       }
     },
-    [rfqId, lines],
+    [rfqId],
   );
 
   const bulkAdd = useCallback(
@@ -114,9 +106,7 @@ export function useRfqLines(rfqId: string): UseRfqLinesResult {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-      const created = (json.data ?? []) as RfqLine[];
-      setLines((prev) => [...prev, ...created]);
-      return created;
+      return (json.data ?? []) as RfqLine[];
     },
     [rfqId],
   );

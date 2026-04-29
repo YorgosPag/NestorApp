@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { where } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type {
   QuoteComparisonResult,
   CherryPickResult,
@@ -36,15 +38,19 @@ async function fetchComparison(rfqId: string, options: UseComparisonOptions): Pr
   return json.data as ApiPayload;
 }
 
+const COMPARISON_REFETCH_DEBOUNCE_MS = 400;
+
 export function useComparison(
   rfqId: string | null,
-  options: UseComparisonOptions = {}
+  options: UseComparisonOptions = {},
 ): UseComparisonResult {
   const { templateId, cherryPick: cherryPickOpt = false } = options;
   const [comparison, setComparison] = useState<QuoteComparisonResult | null>(null);
   const [cherryPick, setCherryPick] = useState<CherryPickResult | null>(null);
   const [loading, setLoading] = useState<boolean>(Boolean(rfqId));
   const [error, setError] = useState<string | null>(null);
+
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refetch = useCallback(async () => {
     if (!rfqId) return;
@@ -61,6 +67,8 @@ export function useComparison(
     }
   }, [rfqId, templateId, cherryPickOpt]);
 
+  // Subscribe to underlying quote changes and re-compute comparison via API.
+  // Debounced to coalesce bursts (e.g. award flow updates multiple quotes at once).
   useEffect(() => {
     if (!rfqId) {
       setComparison(null);
@@ -68,7 +76,38 @@ export function useComparison(
       setLoading(false);
       return;
     }
+
+    let initialDelivered = false;
+
+    const triggerRefetch = () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        void refetch();
+      }, COMPARISON_REFETCH_DEBOUNCE_MS);
+    };
+
+    // Initial fetch — don't wait for snapshot (which may also trigger one)
     void refetch();
+
+    const unsubscribe = firestoreQueryService.subscribe(
+      'QUOTES',
+      () => {
+        if (!initialDelivered) {
+          initialDelivered = true;
+          return;
+        }
+        triggerRefetch();
+      },
+      (err) => {
+        setError(err.message ?? 'Failed to subscribe to quote changes');
+      },
+      { constraints: [where('rfqId', '==', rfqId)] },
+    );
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      unsubscribe();
+    };
   }, [rfqId, refetch]);
 
   return { comparison, cherryPick, loading, error, refetch };

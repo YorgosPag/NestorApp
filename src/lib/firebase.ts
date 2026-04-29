@@ -1,5 +1,12 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentSingleTabManager,
+  connectFirestoreEmulator,
+  type Firestore,
+} from 'firebase/firestore';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
@@ -14,7 +21,23 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-export const db = getFirestore(app);
+// ── Firestore w/ IndexedDB persistent cache (ADR-328 §5.J / §5.5 offline support) ──
+// On the client we initialize Firestore with persistentLocalCache so onSnapshot
+// continues delivering cached data while offline and queued writes flush on reconnect.
+// SSR / Node falls back to plain getFirestore (no IndexedDB available).
+const isClient = typeof window !== 'undefined';
+function createDb(): Firestore {
+  if (!isClient) return getFirestore(app);
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) }),
+    });
+  } catch {
+    // initializeFirestore already called (HMR / repeat import) — reuse existing.
+    return getFirestore(app);
+  }
+}
+export const db: Firestore = createDb();
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 

@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { where } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { VendorInvite } from '../types/vendor-invite';
 
 export interface VendorContactOption {
@@ -43,19 +45,30 @@ export function useVendorInvites(rfqId: string): UseVendorInvitesResult {
   const [contactsLoading, setContactsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/rfqs/${rfqId}/invites`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-      setInvites((json.data ?? []) as VendorInvite[]);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load invites');
-    } finally {
+  useEffect(() => {
+    if (!rfqId) {
+      setInvites([]);
       setLoading(false);
+      return;
     }
+
+    setLoading(true);
+    setError(null);
+
+    const unsubscribe = firestoreQueryService.subscribe<VendorInvite>(
+      'VENDOR_INVITES',
+      (result) => {
+        setInvites(result.documents as VendorInvite[]);
+        setLoading(false);
+      },
+      (err) => {
+        setError(err.message ?? 'Failed to subscribe to vendor invites');
+        setLoading(false);
+      },
+      { constraints: [where('rfqId', '==', rfqId)] },
+    );
+
+    return () => unsubscribe();
   }, [rfqId]);
 
   const fetchContacts = useCallback(async () => {
@@ -66,16 +79,19 @@ export function useVendorInvites(rfqId: string): UseVendorInvitesResult {
       if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
       setVendorContacts((json.data ?? []) as VendorContactOption[]);
     } catch {
-      // non-blocking — picker will show empty
+      // non-blocking — picker shows empty
     } finally {
       setContactsLoading(false);
     }
   }, [rfqId]);
 
   useEffect(() => {
-    void refetch();
     void fetchContacts();
-  }, [refetch, fetchContacts]);
+  }, [fetchContacts]);
+
+  const refetch = useCallback(async () => {
+    /* onSnapshot is live — no manual refetch (kept for API compat) */
+  }, []);
 
   const createInvite = useCallback(
     async (dto: CreateInviteInput): Promise<CreateInviteOutput> => {
@@ -91,10 +107,9 @@ export function useVendorInvites(rfqId: string): UseVendorInvitesResult {
         portalUrl: string;
         delivery: CreateInviteOutput['delivery'];
       };
-      await refetch();
       return { inviteId: data.invite.id, portalUrl: data.portalUrl, delivery: data.delivery };
     },
-    [rfqId, refetch],
+    [rfqId],
   );
 
   const revokeInvite = useCallback(
@@ -104,9 +119,8 @@ export function useVendorInvites(rfqId: string): UseVendorInvitesResult {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-      await refetch();
     },
-    [rfqId, refetch],
+    [rfqId],
   );
 
   return { invites, vendorContacts, loading, contactsLoading, error, refetch, createInvite, revokeInvite };

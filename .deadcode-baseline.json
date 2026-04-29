@@ -1,9 +1,12 @@
 {
-  "generated": "2026-04-29T14:35:36.784Z",
+  "generated": "2026-04-29T22:48:16.694Z",
   "knipVersion": "6",
   "files": [
+    "src/subapps/procurement/components/ConflictDialog.tsx",
+    "src/subapps/procurement/hooks/useLiveChangeToasts.ts",
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
+    "src/subapps/procurement/services/quote-versioning-service.ts",
     "src/subapps/procurement/services/trade-registry.ts"
   ],
-  "fileCount": 2
+  "fileCount": 5
 }

@@ -347,7 +347,33 @@
     "tabs": {
       "quotes": "Προσφορές",
       "comparison": "Σύγκριση",
-      "setup": "Ρύθμιση RFQ"
+      "setup": "Ρύθμιση RFQ",
+      "badges": {
+        "underReview": "προσφορές υπό εξέταση",
+        "recommendation": "εκκρεμεί επιλογή νικητή",
+        "setupAttention": "προσκλήσεις που χρειάζονται προσοχή"
+      }
+    },
+    "dashboard": {
+      "toggle": "Εναλλαγή πίνακα στατιστικών",
+      "quotes": {
+        "total": "Συνολικές Προσφορές",
+        "underReview": "Υπό Εξέταση",
+        "accepted": "Εγκρίθηκαν",
+        "bestPrice": "Καλύτερη Τιμή"
+      },
+      "comparison": {
+        "bestPrice": "Καλύτερη Τιμή",
+        "worstPrice": "Χειρότερη Τιμή",
+        "priceDiff": "Διαφορά (€)",
+        "recommendation": "Σύσταση Συστήματος"
+      },
+      "setup": {
+        "totalLines": "Σύνολο Γραμμών",
+        "totalVolume": "Συνολικός Όγκος",
+        "invites": "Προσκλήσεις",
+        "pending": "Εκκρεμείς"
+      }
     },
     "mobile": {
       "backToList": "Πίσω στη λίστα"
@@ -383,6 +409,38 @@
         },
         "deliveryDays": "{days} ημέρες παράδοση"
       }
+    },
+    "conflict": {
+      "award": {
+        "title": "Σύγκρουση επιλογής νικητή",
+        "body": "Η/Ο {actor} επέλεξε νικητή τον/την {actualVendor} {ago}. Πάτησες «Έγκριση» στον/στην {attemptedVendor} — αλλά η κατάσταση έχει ήδη αλλάξει."
+      },
+      "poCreate": {
+        "title": "Σύγκρουση δημιουργίας παραγγελίας"
+      },
+      "lineEdit": {
+        "title": "Σύγκρουση επεξεργασίας γραμμής"
+      },
+      "statusChange": {
+        "title": "Σύγκρουση αλλαγής κατάστασης"
+      },
+      "generic": {
+        "body": "Η/Ο {actor} έκανε αλλαγή {ago}. Η κατάσταση έχει ήδη αλλάξει."
+      },
+      "action": {
+        "acceptRemote": "Δες την επιλογή της/του {actor}",
+        "keepMine": "Κράτα τη δική σου"
+      }
+    },
+    "live": {
+      "newQuote": "Νέα προσφορά: {vendor} — {total}",
+      "quoteConfirmed": "Η/Ο {actor} επιβεβαίωσε προσφορά: {vendor}",
+      "quoteAwarded": "Η/Ο {actor} επέλεξε νικητή: {vendor}",
+      "quoteRejected": "Η/Ο {actor} απέρριψε προσφορά: {vendor}",
+      "poCreated": "Η/Ο {actor} δημιούργησε παραγγελία",
+      "lineEdited": "Η/Ο {actor} τροποποίησε γραμμή RFQ",
+      "aggregated": "Η/Ο {actor} έκανε {count} αλλαγές",
+      "viewAction": "Δες"
     }
   },
   "trades": {

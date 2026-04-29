@@ -1,46 +1,66 @@
 'use client';
 
-import { useAsyncData } from '@/hooks/useAsyncData';
-// 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
-import { createStaleCache } from '@/lib/stale-cache';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { where, type QueryConstraint } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { Quote, QuoteFilters } from '@/subapps/procurement/types/quote';
 
-// ADR-300: Cache only the default (no-filter) list — state on re-navigation
-const quotesCache = createStaleCache<Quote[]>('quotes');
-
-async function fetchQuotes(filters: Partial<QuoteFilters>): Promise<Quote[]> {
-  const params = new URLSearchParams();
-  if (filters.projectId) params.set('projectId', filters.projectId);
-  if (filters.rfqId) params.set('rfqId', filters.rfqId);
-  if (filters.trade) params.set('trade', filters.trade);
-  if (filters.status) params.set('status', filters.status);
-  if (filters.vendorContactId) params.set('vendorContactId', filters.vendorContactId);
-  const qs = params.toString();
-  const res = await fetch(`/api/quotes${qs ? `?${qs}` : ''}`);
-  if (!res.ok) throw new Error(`Failed to fetch quotes: ${res.status}`);
-  const json = await res.json();
-  return (json.data ?? []) as Quote[];
+interface UseQuotesResult {
+  quotes: Quote[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  silentRefetch: () => Promise<void>;
+  patch: (updater: (prev: Quote[]) => Quote[]) => void;
 }
 
-export function useQuotes(filters: Partial<QuoteFilters> = {}) {
-  const isDefaultFilters =
-    !filters.projectId &&
-    !filters.rfqId &&
-    !filters.trade &&
-    !filters.status &&
-    !filters.vendorContactId;
+export function useQuotes(filters: Partial<QuoteFilters> = {}): UseQuotesResult {
+  const { projectId, rfqId, trade, status, vendorContactId } = filters;
 
-  const { data, loading, error, refetch, silentRefetch, patch } = useAsyncData<Quote[]>({
-    fetcher: async () => {
-      const result = await fetchQuotes(filters);
-      // ADR-300: Cache only the default state — what user sees on re-navigation
-      if (isDefaultFilters) quotesCache.set(result);
-      return result;
-    },
-    deps: [filters.projectId, filters.rfqId, filters.trade, filters.status, filters.vendorContactId],
-    initialData: isDefaultFilters ? (quotesCache.get() ?? []) : [],
-    silentInitialFetch: isDefaultFilters && quotesCache.hasLoaded(),
-  });
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  return { quotes: data ?? [], loading, error, refetch, silentRefetch, patch };
+  const constraints = useMemo<QueryConstraint[]>(() => {
+    const c: QueryConstraint[] = [];
+    if (projectId) c.push(where('projectId', '==', projectId));
+    if (rfqId) c.push(where('rfqId', '==', rfqId));
+    if (trade) c.push(where('trade', '==', trade));
+    if (status) c.push(where('status', '==', status));
+    if (vendorContactId) c.push(where('vendorContactId', '==', vendorContactId));
+    return c;
+  }, [projectId, rfqId, trade, status, vendorContactId]);
+
+  const onDataRef = useRef<((qs: Quote[]) => void) | null>(null);
+  onDataRef.current = (qs) => setQuotes(qs);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+
+    const unsubscribe = firestoreQueryService.subscribe<Quote>(
+      'QUOTES',
+      (result) => {
+        onDataRef.current?.(result.documents as Quote[]);
+        setLoading(false);
+      },
+      (err) => {
+        setError(err.message ?? 'Failed to subscribe to quotes');
+        setLoading(false);
+      },
+      { constraints },
+    );
+
+    return () => unsubscribe();
+  }, [constraints]);
+
+  const refetch = useCallback(async () => {
+    /* onSnapshot is live — no manual refetch needed (kept for API compat) */
+  }, []);
+
+  const patch = useCallback((updater: (prev: Quote[]) => Quote[]) => {
+    setQuotes(updater);
+  }, []);
+
+  return { quotes, loading, error, refetch, silentRefetch: refetch, patch };
 }
