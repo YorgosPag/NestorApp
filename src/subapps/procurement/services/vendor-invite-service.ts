@@ -218,7 +218,8 @@ export async function createVendorInvite(
           declineUrl,
         });
 
-  const persistedStatus: InviteStatus = dispatch.success ? 'sent' : 'pending';
+  const persistedStatus: InviteStatus =
+    effectiveChannel === 'copy_link' ? 'pending' : (dispatch.success ? 'sent' : 'pending');
 
   await safeFirestoreOperation<void>(async (db) => {
     const batch = db.batch();
