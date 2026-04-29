@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AlertTriangle } from 'lucide-react';
 import { useVendorQuotes } from '@/hooks/procurement/useVendorQuotes';
@@ -27,7 +28,12 @@ export function ProcurementContactTab({
   archived,
 }: ProcurementContactTabProps) {
   const { t } = useTranslation('contacts');
+  const router = useRouter();
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
+
+  const handleCreateRfq = useCallback(() => {
+    router.push(`/procurement/rfqs/new?vendorContactId=${encodeURIComponent(contactId)}`);
+  }, [contactId, router]);
 
   const { quotes, loading: quotesLoading, error: quotesError } = useVendorQuotes(contactId);
   const { invites, loading: invitesLoading, error: invitesError } =
@@ -104,7 +110,11 @@ export function ProcurementContactTab({
         onCreateManual={() => setQuoteDialogOpen(true)}
       />
 
-      <ContactRfqInvitesSection invites={invites} loading={invitesLoading} />
+      <ContactRfqInvitesSection
+        invites={invites}
+        loading={invitesLoading}
+        onCreateRfq={handleCreateRfq}
+      />
 
       <ContactPurchaseOrdersSection purchaseOrders={purchaseOrders} loading={poLoading} />
     </div>

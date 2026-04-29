@@ -10,24 +10,40 @@ export default function NewRfqPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const boqItemsParam = searchParams.get('boqItems');
+  const projectIdParam = searchParams.get('projectId');
+  const vendorContactIdParam = searchParams.get('vendorContactId');
 
   const [initialState, setInitialState] = useState<RfqBuilderInitialState | undefined>();
   const [loading, setLoading] = useState(!!boqItemsParam);
 
   useEffect(() => {
-    if (!boqItemsParam) return;
-    const ids = boqItemsParam.split(',').filter(Boolean);
-    fetch('/api/rfqs/from-boq', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ boqItemIds: ids }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        if (json?.data) setInitialState(json.data as RfqBuilderInitialState);
+    if (boqItemsParam) {
+      const ids = boqItemsParam.split(',').filter(Boolean);
+      fetch('/api/rfqs/from-boq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boqItemIds: ids }),
       })
-      .finally(() => setLoading(false));
-  }, [boqItemsParam]);
+        .then((r) => (r.ok ? r.json() : null))
+        .then((json) => {
+          const state: RfqBuilderInitialState = json?.data ?? {};
+          if (projectIdParam && !state.projectId) state.projectId = projectIdParam;
+          if (vendorContactIdParam) {
+            state.invitedVendorIds = [...(state.invitedVendorIds ?? []), vendorContactIdParam];
+          }
+          setInitialState(state);
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
+    // No BOQ — build initialState directly from URL params (no async needed)
+    if (projectIdParam ?? vendorContactIdParam) {
+      const state: RfqBuilderInitialState = {};
+      if (projectIdParam) state.projectId = projectIdParam;
+      if (vendorContactIdParam) state.invitedVendorIds = [vendorContactIdParam];
+      setInitialState(state);
+    }
+  }, [boqItemsParam, projectIdParam, vendorContactIdParam]);
 
   if (loading) {
     return (

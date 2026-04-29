@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -11,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Plus } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/design-system';
 import type { VendorInvite } from '@/subapps/procurement/types/vendor-invite';
@@ -19,6 +20,7 @@ import type { VendorInvite } from '@/subapps/procurement/types/vendor-invite';
 interface ContactRfqInvitesSectionProps {
   invites: VendorInvite[];
   loading: boolean;
+  onCreateRfq?: () => void;
 }
 
 const STATUS_VARIANTS: Record<VendorInvite['status'], string> = {
@@ -32,6 +34,7 @@ const STATUS_VARIANTS: Record<VendorInvite['status'], string> = {
 export function ContactRfqInvitesSection({
   invites,
   loading,
+  onCreateRfq,
 }: ContactRfqInvitesSectionProps) {
   const { t } = useTranslation(['contacts', 'quotes']);
   const router = useRouter();
@@ -41,9 +44,17 @@ export function ContactRfqInvitesSection({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">
-          {t('contacts:procurementTab.sections.rfqInvites')}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">
+            {t('contacts:procurementTab.sections.rfqInvites')}
+          </CardTitle>
+          {onCreateRfq && (
+            <Button size="sm" variant="outline" onClick={onCreateRfq}>
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              {t('quotes:rfqs.create')}
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
