@@ -192,6 +192,7 @@ export function VendorInviteDialog({
               isOpen={open}
               onClose={handleClose}
               onEmailSend={handleEmailResend}
+              onBack={() => setStep('form')}
             />
           )
         )}
@@ -319,10 +320,11 @@ interface ShareStepProps {
   isOpen: boolean;
   onClose: () => void;
   onEmailSend: () => Promise<void>;
+  onBack: () => void;
 }
 
-function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend }: ShareStepProps) {
-  const { t } = useTranslation('quotes');
+function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend, onBack }: ShareStepProps) {
+  const { t } = useTranslation(['quotes', 'common-actions']);
   const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const sentRef = useRef(false);
 
@@ -371,6 +373,9 @@ function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend }: 
         extraQuickActions={emailButton}
       />
       <DialogFooter>
+        <Button variant="outline" onClick={onBack}>
+          {t('common-actions:actions.back')}
+        </Button>
         <Button variant="outline" onClick={onClose}>
           {t('invites.dialog.close')}
         </Button>
