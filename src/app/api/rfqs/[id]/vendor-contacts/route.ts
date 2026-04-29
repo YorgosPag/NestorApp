@@ -19,6 +19,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
+import { pickContactDisplayName } from '@/subapps/procurement/services/vendor-name-resolver';
 
 interface VendorContactOption {
   id: string;
@@ -50,11 +51,11 @@ async function handleGet(
             (Array.isArray(data.personaTypes) && (data.personaTypes as string[]).includes('supplier')) ||
             Boolean(data.supplierPersona);
           if (!isSupplier) continue;
+          const resolvedName = pickContactDisplayName(data);
+          if (!resolvedName) continue;
           vendors.push({
             id: doc.id,
-            displayName: String(
-              data.displayName ?? data.companyName ?? data.fullName ?? doc.id,
-            ),
+            displayName: resolvedName,
             email: getContactEmail(data as Parameters<typeof getContactEmail>[0]),
           });
         }

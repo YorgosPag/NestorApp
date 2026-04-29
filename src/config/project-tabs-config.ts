@@ -200,20 +200,6 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 8.5. ΠΡΟΜΗΘΕΙΕΣ (ADR-327)
-  // -------------------------------------------------------------------------
-  {
-    id: 'procurement',
-    label: PROJECT_TAB_LABELS.PROCUREMENT,
-    value: 'procurement',
-    icon: 'shopping-cart',
-    description: PROJECT_TAB_DESCRIPTIONS.PROCUREMENT,
-    order: 8.5,
-    enabled: true,
-    component: 'ProcurementProjectTab',
-  },
-
-  // -------------------------------------------------------------------------
   // 9. ΙΚΑ
   // -------------------------------------------------------------------------
   {
@@ -279,6 +265,20 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     order: 12,
     enabled: true,
     component: 'ProjectMeasurementsTab',
+  },
+
+  // -------------------------------------------------------------------------
+  // 12.5. ΠΡΟΜΗΘΕΙΕΣ (ADR-327)
+  // -------------------------------------------------------------------------
+  {
+    id: 'procurement',
+    label: PROJECT_TAB_LABELS.PROCUREMENT,
+    value: 'procurement',
+    icon: 'shopping-cart',
+    description: PROJECT_TAB_DESCRIPTIONS.PROCUREMENT,
+    order: 12.5,
+    enabled: true,
+    component: 'ProcurementProjectTab',
   },
 
   // -------------------------------------------------------------------------
