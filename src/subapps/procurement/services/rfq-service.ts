@@ -1,9 +1,12 @@
 import 'server-only';
 
-import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
+import { safeFirestoreOperation, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
-import { generateRfqId } from '@/services/enterprise-id.service';
+import { generateRfqId, generateVendorInviteId } from '@/services/enterprise-id.service';
+import {
+  generateVendorPortalToken,
+} from '@/services/vendor-portal/vendor-portal-token-service';
 import { createModuleLogger } from '@/lib/telemetry';
 import admin from 'firebase-admin';
 import { normalizeToDate } from '@/lib/date-local';
@@ -13,8 +16,12 @@ import type { AuthContext } from '@/lib/auth';
 import type { BOQItem } from '@/types/boq/boq';
 import { getTradeCodeForAtoeCategory } from '../data/trades';
 import type { TradeCode } from '../types/trade';
+import { snapshotFromBoq, addRfqLinesBulk } from './rfq-line-service';
+import { recomputeSourcingEventStatus } from './sourcing-event-service';
 
 const logger = createModuleLogger('RFQ_SERVICE');
+
+const DEFAULT_INVITE_EXPIRY_DAYS = 7;
 
 // ============================================================================
 // CREATE
@@ -24,11 +31,18 @@ export async function createRfq(
   ctx: AuthContext,
   dto: CreateRfqDTO
 ): Promise<RFQ> {
-  return safeFirestoreOperation(async (db) => {
+  const rfq = await safeFirestoreOperation(async (db) => {
     const id = generateRfqId();
     const now = admin.firestore.Timestamp.now();
+    const invitedVendorIds = dto.invitedVendorIds ?? [];
 
-    const rfq: RFQ = {
+    const linesStorage =
+      dto.boqItemIds?.length ? 'boq' :
+      dto.adHocLines?.length ? 'ad_hoc' :
+      dto.lines?.length ? 'inline_legacy' :
+      null;
+
+    const newRfq: RFQ = {
       id,
       projectId: dto.projectId,
       buildingId: dto.buildingId ?? null,
@@ -40,7 +54,7 @@ export async function createRfq(
       status: 'draft',
       awardMode: dto.awardMode ?? 'whole_package',
       reminderTemplate: dto.reminderTemplate ?? 'standard',
-      invitedVendorIds: dto.invitedVendorIds ?? [],
+      invitedVendorIds,
       winnerQuoteId: null,
       comparisonTemplateId: dto.comparisonTemplateId ?? 'standard',
       auditTrail: [{
@@ -52,12 +66,82 @@ export async function createRfq(
       createdAt: now,
       updatedAt: now,
       createdBy: ctx.uid,
+      // Multi-Vendor extension fields (Q28-Q31)
+      sourcingEventId: dto.sourcingEventId ?? null,
+      sourcingEventStatus: null,
+      invitedVendorCount: invitedVendorIds.length,
+      respondedCount: 0,
+      linesStorage,
     };
 
-    await db.collection(COLLECTIONS.RFQS).doc(id).set(sanitizeForFirestore(rfq));
-    logger.info('RFQ created', { id, companyId: ctx.companyId });
-    return rfq;
+    const needsBatch = invitedVendorIds.length > 0 || !!dto.sourcingEventId;
+
+    if (needsBatch) {
+      const batch = db.batch();
+      batch.set(db.collection(COLLECTIONS.RFQS).doc(id), sanitizeForFirestore(newRfq));
+
+      // Q28 fan-out: create vendor invite stubs atomically with the RFQ
+      for (const vendorId of invitedVendorIds) {
+        const inviteId = generateVendorInviteId();
+        const generated = generateVendorPortalToken(id, vendorId, DEFAULT_INVITE_EXPIRY_DAYS);
+        const inviteStub = {
+          id: inviteId,
+          rfqId: id,
+          vendorContactId: vendorId,
+          companyId: ctx.companyId,
+          token: generated.token,
+          deliveryChannel: 'email',
+          preferredChannel: null,
+          status: 'sent',
+          deliveredAt: null,
+          openedAt: null,
+          submittedAt: null,
+          declinedAt: null,
+          declineReason: null,
+          expiresAt: admin.firestore.Timestamp.fromDate(normalizeToDate(generated.expiresAt) ?? new Date()),
+          editWindowExpiresAt: null,
+          remindersSentAt: [],
+          lastReminderAt: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+        batch.set(
+          db.collection(COLLECTIONS.VENDOR_INVITES).doc(inviteId),
+          sanitizeForFirestore(inviteStub),
+        );
+      }
+
+      // Q31: link to parent sourcing event atomically
+      if (dto.sourcingEventId) {
+        batch.update(
+          db.collection(COLLECTIONS.SOURCING_EVENTS).doc(dto.sourcingEventId),
+          sanitizeForFirestore({
+            rfqIds: FieldValue.arrayUnion(id),
+            rfqCount: FieldValue.increment(1),
+            updatedAt: now,
+          }),
+        );
+      }
+
+      await batch.commit();
+    } else {
+      await db.collection(COLLECTIONS.RFQS).doc(id).set(sanitizeForFirestore(newRfq));
+    }
+
+    logger.info('RFQ created', { id, companyId: ctx.companyId, linesStorage });
+    return newRfq;
   });
+
+  if (!rfq) throw new Error('Failed to create RFQ');
+
+  // Sub-collection line writes — after RFQ doc exists (Q29)
+  if (dto.boqItemIds?.length) {
+    await snapshotFromBoq(ctx, rfq.id, dto.boqItemIds, 'materials_general');
+  } else if (dto.adHocLines?.length) {
+    await addRfqLinesBulk(ctx, rfq.id, dto.adHocLines);
+  }
+
+  return rfq;
 }
 
 // ============================================================================
@@ -155,7 +239,20 @@ export async function updateRfq(
     };
 
     await ref.update(sanitizeForFirestore(updates));
-    return { ...current, ...updates };
+    const updatedRfq = { ...current, ...updates };
+
+    // Q31: propagate closed status to parent sourcing event
+    if (dto.status === 'closed' && dto.status !== current.status && current.sourcingEventId) {
+      await recomputeSourcingEventStatus(ctx, current.sourcingEventId).catch((err) => {
+        logger.warn('Failed to recompute sourcing event status', {
+          rfqId,
+          sourcingEventId: current.sourcingEventId,
+          error: String(err),
+        });
+      });
+    }
+
+    return updatedRfq;
   });
 }
 

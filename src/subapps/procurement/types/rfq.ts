@@ -109,6 +109,12 @@ export interface CreateRfqDTO {
   reminderTemplate?: ReminderTemplate;
   comparisonTemplateId?: string | null;
   invitedVendorIds?: string[];
+  /** Optional parent sourcing event for multi-trade packages (Q31). */
+  sourcingEventId?: string | null;
+  /** BOQ item IDs for sub-collection snapshot lines (Q29 BOQ-first path). */
+  boqItemIds?: string[];
+  /** Ad-hoc line definitions for Q29 escape-hatch path. */
+  adHocLines?: import('./rfq-line').CreateRfqLineDTO[];
 }
 
 export interface UpdateRfqDTO {
