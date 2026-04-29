@@ -346,16 +346,19 @@ function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend }: 
         ? t('invites.dialog.emailSent')
         : t('invites.dialog.sendEmail', { name: recipientLabel });
 
+  const emailButton = (
+    <Button
+      type="button"
+      className="w-full h-12"
+      onClick={handleEmailSend}
+      disabled={emailState !== 'idle'}
+    >
+      {emailLabel}
+    </Button>
+  );
+
   return (
     <section className="space-y-4">
-      <Button
-        type="button"
-        className="w-full"
-        onClick={handleEmailSend}
-        disabled={emailState !== 'idle'}
-      >
-        {emailLabel}
-      </Button>
       <UserAuthPermissionPanel
         shareData={{
           title: recipientLabel || t('invites.dialog.shareTitle'),
@@ -366,6 +369,7 @@ function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend }: 
         onClose={onClose}
         hideChannelPicker
         excludePlatformsFromGrid={EMAIL_EXCLUDE}
+        extraQuickActions={emailButton}
       />
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>

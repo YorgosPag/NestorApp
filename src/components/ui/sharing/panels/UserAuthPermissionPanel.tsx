@@ -94,6 +94,12 @@ export interface UserAuthPermissionPanelProps {
    * email button is shown separately with the vendor name for clarity).
    */
   excludePlatformsFromGrid?: string[];
+  /**
+   * Extra action nodes rendered in the quick-actions section (below copy,
+   * alongside or instead of the channel picker). Used by vendor invites to
+   * inject the "Αποστολή Email σε [name]" button in the correct visual slot.
+   */
+  extraQuickActions?: React.ReactNode;
 }
 
 export function UserAuthPermissionPanel({
@@ -110,6 +116,7 @@ export function UserAuthPermissionPanel({
   onDirectEmailShare,
   hideChannelPicker = false,
   excludePlatformsFromGrid,
+  extraQuickActions,
 }: UserAuthPermissionPanelProps): React.ReactElement {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const notifications = useNotifications();
@@ -398,21 +405,26 @@ export function UserAuthPermissionPanel({
           loading={loading}
         />
 
-        {!hideChannelPicker && (
-          <section className="space-y-1">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowChannelPicker(true)}
-              disabled={loading || dirtyPolicy}
-              className="w-full h-12"
-            >
-              <Users className="w-4 h-4 mr-2" />
-              {t('channelShare.sendToContact')}
-            </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              {t('common-shared:share.captionCrmContact')}
-            </p>
+        {(!hideChannelPicker || extraQuickActions) && (
+          <section className="space-y-2">
+            {extraQuickActions}
+            {!hideChannelPicker && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowChannelPicker(true)}
+                  disabled={loading || dirtyPolicy}
+                  className="w-full h-12"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  {t('channelShare.sendToContact')}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  {t('common-shared:share.captionCrmContact')}
+                </p>
+              </>
+            )}
           </section>
         )}
       </div>
