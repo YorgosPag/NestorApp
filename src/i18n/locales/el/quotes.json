@@ -403,7 +403,10 @@
       "create": "Δημιουργία Πρόσκλησης",
       "creating": "Δημιουργία...",
       "cancel": "Ακύρωση",
-      "close": "Κλείσιμο"
+      "close": "Κλείσιμο",
+      "sendEmail": "Αποστολή Email σε {name}",
+      "sendingEmail": "Αποστολή...",
+      "emailSent": "Email εστάλη"
     },
     "table": {
       "vendor": "Προμηθευτής",

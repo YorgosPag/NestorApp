@@ -403,7 +403,10 @@
       "create": "Create Invitation",
       "creating": "Creating...",
       "cancel": "Cancel",
-      "close": "Close"
+      "close": "Close",
+      "sendEmail": "Send Email to {name}",
+      "sendingEmail": "Sending...",
+      "emailSent": "Email sent"
     },
     "table": {
       "vendor": "Vendor",

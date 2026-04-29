@@ -88,6 +88,12 @@ export interface UserAuthPermissionPanelProps {
    * and the generic contact picker would be redundant and confusing.
    */
   hideChannelPicker?: boolean;
+  /**
+   * Platform IDs to exclude from the SharePlatformGrid.
+   * Used for vendor invites to remove 'email' from the grid (a dedicated
+   * email button is shown separately with the vendor name for clarity).
+   */
+  excludePlatformsFromGrid?: string[];
 }
 
 export function UserAuthPermissionPanel({
@@ -103,6 +109,7 @@ export function UserAuthPermissionPanel({
   dirtyPolicy = false,
   onDirectEmailShare,
   hideChannelPicker = false,
+  excludePlatformsFromGrid,
 }: UserAuthPermissionPanelProps): React.ReactElement {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const notifications = useNotifications();
@@ -371,6 +378,7 @@ export function UserAuthPermissionPanel({
         <SharePlatformGrid
           onPlatformSelect={handlePlatformShare}
           loading={loading}
+          excludePlatforms={excludePlatformsFromGrid}
           gridConfig={{
             columns: 5,
             buttonVariant: 'default',

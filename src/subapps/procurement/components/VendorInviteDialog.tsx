@@ -20,7 +20,7 @@
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import {
@@ -191,7 +191,7 @@ export function VendorInviteDialog({
                 : manualName}
               isOpen={open}
               onClose={handleClose}
-              onDirectEmailShare={handleEmailResend}
+              onEmailSend={handleEmailResend}
             />
           )
         )}
@@ -318,13 +318,44 @@ interface ShareStepProps {
   recipientLabel: string;
   isOpen: boolean;
   onClose: () => void;
-  onDirectEmailShare: () => Promise<void>;
+  onEmailSend: () => Promise<void>;
 }
 
-function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onDirectEmailShare }: ShareStepProps) {
+function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend }: ShareStepProps) {
   const { t } = useTranslation('quotes');
+  const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const sentRef = useRef(false);
+
+  const handleEmailSend = useCallback(async () => {
+    if (sentRef.current) return;
+    sentRef.current = true;
+    setEmailState('sending');
+    try {
+      await onEmailSend();
+      setEmailState('sent');
+    } catch {
+      sentRef.current = false;
+      setEmailState('idle');
+    }
+  }, [onEmailSend]);
+
+  const emailLabel =
+    emailState === 'sending'
+      ? t('invites.dialog.sendingEmail')
+      : emailState === 'sent'
+        ? t('invites.dialog.emailSent')
+        : t('invites.dialog.sendEmail', { name: recipientLabel });
+
   return (
     <section className="space-y-4">
+      <Button
+        type="button"
+        className="w-full"
+        onClick={handleEmailSend}
+        disabled={emailState !== 'idle'}
+      >
+        {emailLabel}
+      </Button>
       <UserAuthPermissionPanel
         shareData={{
           title: recipientLabel || t('invites.dialog.shareTitle'),
@@ -333,8 +364,8 @@ function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onDirectEmailSh
         }}
         isOpen={isOpen}
         onClose={onClose}
-        onDirectEmailShare={onDirectEmailShare}
         hideChannelPicker
+        excludePlatformsFromGrid={EMAIL_EXCLUDE}
       />
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>
@@ -344,3 +375,5 @@ function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onDirectEmailSh
     </section>
   );
 }
+
+const EMAIL_EXCLUDE = ['email'] as const;
