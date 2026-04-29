@@ -394,7 +394,8 @@
       "cancel": "Ακύρωση",
       "sending": "Αποστολή...",
       "portalUrlLabel": "Σύνδεσμος Portal",
-      "portalUrlCopy": "Αντιγραφή"
+      "portalUrlCopy": "Αντιγραφή",
+      "emailSent": "Το email εστάλη επιτυχώς στον προμηθευτή"
     },
     "table": {
       "vendor": "Προμηθευτής",
@@ -421,7 +422,9 @@
       "createFailed": "Αποτυχία δημιουργίας πρόσκλησης",
       "revokeFailed": "Αποτυχία ανάκλησης πρόσκλησης",
       "noVendorSelected": "Επιλέξτε προμηθευτή",
-      "loadContactsFailed": "Αποτυχία φόρτωσης προμηθευτών"
+      "loadContactsFailed": "Αποτυχία φόρτωσης προμηθευτών",
+      "deliveryFailed": "Αποτυχία αποστολής",
+      "emailNotSent": "Το email δεν εστάλη"
     }
   },
   "comparison": {

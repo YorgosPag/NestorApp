@@ -103,6 +103,7 @@ function InviteModal({ open, onClose, vendorContacts, contactsLoading, onCreate 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
+  const [deliveryWarning, setDeliveryWarning] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const reset = useCallback(() => {
@@ -111,6 +112,7 @@ function InviteModal({ open, onClose, vendorContacts, contactsLoading, onCreate 
     setExpiresInDays(7);
     setError(null);
     setPortalUrl(null);
+    setDeliveryWarning(null);
     setCopied(false);
     setSubmitting(false);
   }, []);
@@ -127,6 +129,9 @@ function InviteModal({ open, onClose, vendorContacts, contactsLoading, onCreate 
     try {
       const result = await onCreate({ vendorContactId: vendorId, deliveryChannel: channel, expiresInDays });
       setPortalUrl(result.portalUrl);
+      if (!result.delivery.success) {
+        setDeliveryWarning(result.delivery.errorReason ?? t('invites.errors.deliveryFailed'));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('invites.errors.createFailed'));
     } finally {
@@ -151,6 +156,13 @@ function InviteModal({ open, onClose, vendorContacts, contactsLoading, onCreate 
 
         {portalUrl ? (
           <section className="space-y-3">
+            {deliveryWarning ? (
+              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                ⚠️ {t('invites.errors.emailNotSent')}: {deliveryWarning}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('invites.modal.emailSent')}</p>
+            )}
             <p className="text-sm font-medium">{t('invites.modal.portalUrlLabel')}</p>
             <div className="flex items-center gap-2">
               <Input value={portalUrl} readOnly className="font-mono text-xs" />

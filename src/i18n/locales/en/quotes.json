@@ -394,7 +394,8 @@
       "cancel": "Cancel",
       "sending": "Sending...",
       "portalUrlLabel": "Portal Link",
-      "portalUrlCopy": "Copy"
+      "portalUrlCopy": "Copy",
+      "emailSent": "Email sent successfully to the vendor"
     },
     "table": {
       "vendor": "Vendor",
@@ -421,7 +422,9 @@
       "createFailed": "Failed to create invitation",
       "revokeFailed": "Failed to revoke invitation",
       "noVendorSelected": "Select a vendor",
-      "loadContactsFailed": "Failed to load vendors"
+      "loadContactsFailed": "Failed to load vendors",
+      "deliveryFailed": "Delivery failed",
+      "emailNotSent": "Email was not sent"
     }
   },
   "comparison": {
