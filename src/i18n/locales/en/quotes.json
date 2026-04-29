@@ -381,24 +381,29 @@
     "title": "Vendor Invitations",
     "button": "Invite Vendor",
     "empty": "No invitations yet",
-    "modal": {
-      "title": "Invite Vendor",
-      "vendorLabel": "Vendor",
-      "vendorPlaceholder": "Search vendor...",
-      "vendorEmpty": "No vendors found",
-      "channelLabel": "Delivery Method",
-      "channelEmail": "Email",
-      "channelCopyLink": "Copy Link",
+    "dialog": {
+      "title": "New Vendor Invitation",
+      "shareTitle": "Share Invitation",
+      "tabs": {
+        "manual": "Manual",
+        "contacts": "From Contacts"
+      },
+      "manual": {
+        "emailLabel": "Vendor Email",
+        "emailPlaceholder": "vendor@example.com",
+        "nameLabel": "Vendor Name",
+        "namePlaceholder": "e.g. ABC Materials"
+      },
+      "contacts": {
+        "label": "Vendor",
+        "placeholder": "Search vendor...",
+        "empty": "No vendors found"
+      },
       "expiresLabel": "Expires (days)",
-      "submit": "Send Invitation",
+      "create": "Create Invitation",
+      "creating": "Creating...",
       "cancel": "Cancel",
-      "sending": "Sending...",
-      "portalUrlLabel": "Portal Link",
-      "portalUrlCopy": "Copy",
-      "emailSent": "Email sent successfully to the vendor"
-    },
-    "shareDialog": {
-      "title": "Share Invitation"
+      "close": "Close"
     },
     "table": {
       "vendor": "Vendor",
@@ -425,6 +430,9 @@
       "createFailed": "Failed to create invitation",
       "revokeFailed": "Failed to revoke invitation",
       "noVendorSelected": "Select a vendor",
+      "noEmailEntered": "Enter vendor email",
+      "noNameEntered": "Enter vendor name",
+      "invalidEmail": "Invalid email",
       "loadContactsFailed": "Failed to load vendors",
       "deliveryFailed": "Delivery failed",
       "emailNotSent": "Email was not sent"

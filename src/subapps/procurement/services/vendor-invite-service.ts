@@ -111,6 +111,39 @@ export interface CreateInviteResult {
  * vendor on `RFQ.invitedVendorIds`, and dispatches the configured channel
  * (default `email`, falls back to `copy_link` if email is unavailable).
  */
+interface ResolvedRecipient {
+  vendorContactId: string;
+  displayName: string;
+  email: string | null;
+  preferredChannel: DeliveryChannel | null;
+}
+
+async function resolveRecipient(
+  ctx: AuthContext,
+  dto: CreateVendorInviteDTO,
+): Promise<ResolvedRecipient> {
+  if (dto.vendorContactId !== undefined) {
+    const vendor = await fetchVendorContact(ctx.companyId, dto.vendorContactId);
+    if (!vendor) throw new Error(`Vendor contact ${dto.vendorContactId} not found`);
+    return {
+      vendorContactId: vendor.id,
+      displayName: vendor.displayName,
+      email: vendor.email,
+      preferredChannel: vendor.preferredChannel,
+    };
+  }
+  const email = dto.manualEmail.trim();
+  const name = dto.manualName.trim();
+  if (!email) throw new Error('manualEmail is required');
+  if (!name) throw new Error('manualName is required');
+  return {
+    vendorContactId: '',
+    displayName: name,
+    email,
+    preferredChannel: null,
+  };
+}
+
 export async function createVendorInvite(
   ctx: AuthContext,
   dto: CreateVendorInviteDTO,
@@ -120,13 +153,12 @@ export async function createVendorInvite(
   if (!rfq) throw new Error(`RFQ ${dto.rfqId} not found`);
   if (rfq.status === 'archived') throw new Error('Cannot invite vendor on archived RFQ');
 
-  const vendor = await fetchVendorContact(ctx.companyId, dto.vendorContactId);
-  if (!vendor) throw new Error(`Vendor contact ${dto.vendorContactId} not found`);
+  const recipient = await resolveRecipient(ctx, dto);
 
   const expiresInDays = dto.expiresInDays ?? DEFAULT_EXPIRY_DAYS;
   const generated: GeneratedVendorPortalToken = generateVendorPortalToken(
     dto.rfqId,
-    dto.vendorContactId,
+    recipient.vendorContactId,
     expiresInDays,
   );
   const portalUrl = buildPortalUrl(generated.token);
@@ -145,11 +177,11 @@ export async function createVendorInvite(
   const invite: VendorInvite = {
     id: inviteId,
     rfqId: dto.rfqId,
-    vendorContactId: dto.vendorContactId,
+    vendorContactId: recipient.vendorContactId,
     companyId: ctx.companyId,
     token: generated.token,
     deliveryChannel: effectiveChannel,
-    preferredChannel: vendor.preferredChannel,
+    preferredChannel: recipient.preferredChannel,
     status: 'sent',
     deliveredAt: null,
     openedAt: null,
@@ -162,20 +194,22 @@ export async function createVendorInvite(
     lastReminderAt: null,
     createdAt: now,
     updatedAt: now,
+    recipientEmail: recipient.email,
+    recipientName: recipient.displayName,
   };
 
   const dispatch =
-    effectiveChannel === 'email' && !vendor.email
+    effectiveChannel === 'email' && !recipient.email
       ? {
           success: false,
           providerMessageId: null,
-          errorReason: 'Vendor contact has no email address',
+          errorReason: 'Recipient has no email address',
           channel: 'email' as DeliveryChannel,
         }
       : await channelDriver.send({
           inviteId,
-          vendorName: vendor.displayName,
-          recipient: effectiveChannel === 'email' ? vendor.email! : portalUrl,
+          vendorName: recipient.displayName,
+          recipient: effectiveChannel === 'email' ? recipient.email! : portalUrl,
           rfqTitle: rfq.title,
           projectName: null,
           portalUrl,
@@ -193,9 +227,9 @@ export async function createVendorInvite(
         deliveredAt: dispatch.success ? now : null,
       }),
     );
-    if (!rfq.invitedVendorIds.includes(dto.vendorContactId)) {
+    if (recipient.vendorContactId && !rfq.invitedVendorIds.includes(recipient.vendorContactId)) {
       batch.update(db.collection(COLLECTIONS.RFQS).doc(dto.rfqId), {
-        invitedVendorIds: FieldValue.arrayUnion(dto.vendorContactId),
+        invitedVendorIds: FieldValue.arrayUnion(recipient.vendorContactId),
         updatedAt: now,
       });
     }
@@ -205,7 +239,7 @@ export async function createVendorInvite(
   logger.info('Vendor invite created', {
     inviteId,
     rfqId: dto.rfqId,
-    vendorContactId: dto.vendorContactId,
+    vendorContactId: recipient.vendorContactId || '<manual>',
     channel: effectiveChannel,
     delivered: dispatch.success,
   });
@@ -381,9 +415,19 @@ export async function resendVendorInvite(
     throw new Error(`Cannot resend invite with status '${invite.status}'`);
   }
 
-  const vendor = await fetchVendorContact(ctx.companyId, invite.vendorContactId);
-  if (!vendor) throw new Error(`Vendor contact ${invite.vendorContactId} not found`);
-  if (!vendor.email) throw new Error('Vendor contact has no email address');
+  // Prefer the snapshot stored on the invite document (works for both contact
+  // and manual-email modes). Falls back to the live contact lookup for legacy
+  // invites created before the snapshot fields were introduced.
+  let recipientEmail = invite.recipientEmail;
+  let recipientName = invite.recipientName;
+  if ((!recipientEmail || !recipientName) && invite.vendorContactId) {
+    const vendor = await fetchVendorContact(ctx.companyId, invite.vendorContactId);
+    if (!vendor) throw new Error(`Vendor contact ${invite.vendorContactId} not found`);
+    recipientEmail = recipientEmail ?? vendor.email;
+    recipientName = recipientName ?? vendor.displayName;
+  }
+  if (!recipientEmail) throw new Error('Recipient has no email address');
+  if (!recipientName) throw new Error('Recipient has no display name');
 
   const rfq = await getRfq(ctx.companyId, invite.rfqId);
   if (!rfq) throw new Error(`RFQ ${invite.rfqId} not found`);
@@ -396,8 +440,8 @@ export async function resendVendorInvite(
 
   const dispatch = await emailChannel.send({
     inviteId,
-    vendorName: vendor.displayName,
-    recipient: vendor.email,
+    vendorName: recipientName,
+    recipient: recipientEmail,
     rfqTitle: rfq.title,
     projectName: null,
     portalUrl: buildPortalUrl(invite.token),

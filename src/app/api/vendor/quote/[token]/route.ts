@@ -240,7 +240,7 @@ const basePOST = async (
           : 'quotes:quotes.notifications.vendorEdited';
         const titleParams: Record<string, string> = isFirstSubmission
           ? { rfqTitle: rfq.title }
-          : { vendorName: invite.vendorContactId, rfqTitle: rfq.title };
+          : { vendorName: invite.recipientName ?? invite.vendorContactId, rfqTitle: rfq.title };
         await dispatchProcurementNotification(
           eventType,
           rfq.createdBy,

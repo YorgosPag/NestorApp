@@ -19,6 +19,7 @@ export type InviteStatus = 'sent' | 'opened' | 'submitted' | 'declined' | 'expir
 export interface VendorInvite {
   id: string;
   rfqId: string;
+  /** Empty string when invite was created via manual email entry (no contact). */
   vendorContactId: string;
   companyId: string;
   token: string;
@@ -36,15 +37,34 @@ export interface VendorInvite {
   lastReminderAt: Timestamp | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  /** Snapshot of recipient email at creation (always set, both modes). */
+  recipientEmail: string | null;
+  /** Snapshot of recipient display name at creation (always set, both modes). */
+  recipientName: string | null;
 }
 
 // ============================================================================
 // DTOS
 // ============================================================================
 
-export interface CreateVendorInviteDTO {
+interface CreateVendorInviteBaseDTO {
   rfqId: string;
-  vendorContactId: string;
   deliveryChannel: DeliveryChannel;
   expiresInDays?: number;
 }
+
+interface CreateVendorInviteFromContactDTO extends CreateVendorInviteBaseDTO {
+  vendorContactId: string;
+  manualEmail?: undefined;
+  manualName?: undefined;
+}
+
+interface CreateVendorInviteManualDTO extends CreateVendorInviteBaseDTO {
+  vendorContactId?: undefined;
+  manualEmail: string;
+  manualName: string;
+}
+
+export type CreateVendorInviteDTO =
+  | CreateVendorInviteFromContactDTO
+  | CreateVendorInviteManualDTO;

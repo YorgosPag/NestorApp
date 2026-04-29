@@ -14,6 +14,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit, withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createVendorInvite, listVendorInvitesByRfq } from '@/subapps/procurement/services/vendor-invite-service';
+import type { CreateVendorInviteDTO } from '@/subapps/procurement/types/vendor-invite';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
@@ -21,12 +22,23 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 // SCHEMAS
 // ============================================================================
 
-const CreateInviteSchema = z.object({
-  vendorContactId: z.string().min(1),
-  deliveryChannel: z.enum(['email', 'copy_link']),
-  expiresInDays: z.number().int().min(1).max(90).optional(),
-  locale: z.enum(['el', 'en']).optional(),
-});
+const CreateInviteSchema = z
+  .object({
+    vendorContactId: z.string().min(1).optional(),
+    manualEmail: z.string().email().optional(),
+    manualName: z.string().min(1).optional(),
+    deliveryChannel: z.enum(['email', 'copy_link']),
+    expiresInDays: z.number().int().min(1).max(90).optional(),
+    locale: z.enum(['el', 'en']).optional(),
+  })
+  .refine(
+    (val) => (val.vendorContactId !== undefined) !== (val.manualEmail !== undefined),
+    { message: 'Provide either vendorContactId or manualEmail+manualName' },
+  )
+  .refine(
+    (val) => val.manualEmail === undefined || val.manualName !== undefined,
+    { message: 'manualName is required when manualEmail is provided' },
+  );
 
 // ============================================================================
 // POST — create invite
@@ -43,8 +55,11 @@ async function handlePost(
         const body = await req.json().catch(() => ({}));
         const parsed = safeParseBody(CreateInviteSchema, body);
         if (parsed.error) return parsed.error;
-        const { locale, ...dto } = parsed.data;
-        const result = await createVendorInvite(ctx, { rfqId: id, ...dto }, { locale });
+        const { locale, vendorContactId, manualEmail, manualName, deliveryChannel, expiresInDays } = parsed.data;
+        const dto: CreateVendorInviteDTO = vendorContactId !== undefined
+          ? { rfqId: id, vendorContactId, deliveryChannel, expiresInDays }
+          : { rfqId: id, manualEmail: manualEmail!, manualName: manualName!, deliveryChannel, expiresInDays };
+        const result = await createVendorInvite(ctx, dto, { locale });
         return NextResponse.json({ success: true, data: result });
       } catch (error) {
         return NextResponse.json(

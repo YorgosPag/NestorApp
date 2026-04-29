@@ -3,23 +3,13 @@
 import { useCallback, useState } from 'react';
 import { Copy, Link, Mail, Plus, RotateCcw } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { BadgeVariantProps } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
 import type { InviteStatus, DeliveryChannel } from '../types/vendor-invite';
 import { useVendorInvites } from '../hooks/useVendorInvites';
-import { useAuth } from '@/auth/hooks/useAuth';
+import { VendorInviteDialog } from './VendorInviteDialog';
 
 // ============================================================================
 // TIMESTAMP HELPER
@@ -71,107 +61,6 @@ function StatusBadge({ status }: { status: InviteStatus }) {
 function ChannelIcon({ channel }: { channel: DeliveryChannel }) {
   if (channel === 'email') return <Mail className="h-4 w-4 shrink-0" aria-label="email" />;
   return <Link className="h-4 w-4 shrink-0" aria-label="copy_link" />;
-}
-
-// ============================================================================
-// INVITE MODAL
-// ============================================================================
-
-interface InviteModalProps {
-  rfqId: string;
-  open: boolean;
-  onClose: () => void;
-  vendorContacts: ComboboxOption[];
-  contactsLoading: boolean;
-  onCreate: (dto: {
-    vendorContactId: string;
-    deliveryChannel: 'email' | 'copy_link';
-    expiresInDays?: number;
-  }) => Promise<{ inviteId: string; portalUrl: string; delivery: { success: boolean; errorReason: string | null } }>;
-  onCreated: (data: { portalUrl: string; inviteId: string }) => void;
-}
-
-function InviteModal({ open, onClose, vendorContacts, contactsLoading, onCreate, onCreated }: InviteModalProps) {
-  const { t } = useTranslation('quotes');
-  const [vendorId, setVendorId] = useState('');
-  const [expiresInDays, setExpiresInDays] = useState(7);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const reset = useCallback(() => {
-    setVendorId('');
-    setExpiresInDays(7);
-    setError(null);
-    setSubmitting(false);
-  }, []);
-
-  const handleClose = useCallback(() => {
-    reset();
-    onClose();
-  }, [reset, onClose]);
-
-  const handleSubmit = useCallback(async () => {
-    if (!vendorId) { setError(t('invites.errors.noVendorSelected')); return; }
-    setSubmitting(true);
-    setError(null);
-    try {
-      const result = await onCreate({ vendorContactId: vendorId, deliveryChannel: 'copy_link', expiresInDays });
-      reset();
-      onClose();
-      onCreated({ portalUrl: result.portalUrl, inviteId: result.inviteId });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('invites.errors.createFailed'));
-    } finally {
-      setSubmitting(false);
-    }
-  }, [vendorId, expiresInDays, onCreate, onCreated, onClose, reset, t]);
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent size="sm">
-        <DialogHeader>
-          <DialogTitle>{t('invites.modal.title')}</DialogTitle>
-        </DialogHeader>
-
-        <section className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">{t('invites.modal.vendorLabel')}</label>
-            <SearchableCombobox
-              value={vendorId}
-              onValueChange={(val) => setVendorId(val)}
-              options={vendorContacts}
-              placeholder={t('invites.modal.vendorPlaceholder')}
-              emptyMessage={t('invites.modal.vendorEmpty')}
-              isLoading={contactsLoading}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">{t('invites.modal.expiresLabel')}</label>
-            <Input
-              type="number"
-              min={1}
-              max={90}
-              value={expiresInDays}
-              onChange={(e) => setExpiresInDays(Number(e.target.value))}
-              className="w-24"
-            />
-          </div>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={handleClose} disabled={submitting}>
-              {t('invites.modal.cancel')}
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? t('invites.modal.sending') : t('invites.modal.submit')}
-            </Button>
-          </DialogFooter>
-        </section>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 // ============================================================================
@@ -243,19 +132,11 @@ interface VendorInviteSectionProps {
   rfqId: string;
 }
 
-interface ShareDialogData {
-  portalUrl: string;
-  inviteId: string;
-}
-
 export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
   const { t } = useTranslation('quotes');
-  const { user } = useAuth();
   const { invites, vendorContacts, loading, contactsLoading, createInvite, revokeInvite } =
     useVendorInvites(rfqId);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [shareData, setShareData] = useState<ShareDialogData | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const vendorContactOptions: ComboboxOption[] = vendorContacts.map((c) => ({
     value: c.id,
@@ -265,28 +146,16 @@ export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
 
   const vendorNameMap = new Map(vendorContacts.map((c) => [c.id, c.displayName]));
 
-  const handleCreated = useCallback((data: ShareDialogData) => {
-    setShareData(data);
-    setShareDialogOpen(true);
-  }, []);
-
-  const handleShareClose = useCallback(() => {
-    setShareDialogOpen(false);
-    setShareData(null);
-  }, []);
-
-  const handleEmailResend = useCallback(async () => {
-    if (!shareData) return;
-    const res = await fetch(`/api/rfqs/${rfqId}/invites/${shareData.inviteId}/resend`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    if (!res.ok) {
-      const json = await res.json() as { error?: string };
-      throw new Error(json?.error ?? `HTTP ${res.status}`);
-    }
-  }, [rfqId, shareData]);
+  const resolveVendorName = useCallback(
+    (invite: ReturnType<typeof useVendorInvites>['invites'][number]): string => {
+      if (invite.recipientName) return invite.recipientName;
+      if (invite.vendorContactId) {
+        return vendorNameMap.get(invite.vendorContactId) ?? invite.vendorContactId;
+      }
+      return invite.recipientEmail ?? '—';
+    },
+    [vendorNameMap],
+  );
 
   return (
     <section aria-labelledby="vendor-invites-heading" className="space-y-4 rounded-lg border p-4">
@@ -294,7 +163,7 @@ export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
         <h2 id="vendor-invites-heading" className="text-base font-semibold">
           {t('invites.title')}
         </h2>
-        <Button size="sm" onClick={() => setModalOpen(true)}>
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
           <Plus className="mr-1 h-4 w-4" />
           {t('invites.button')}
         </Button>
@@ -321,7 +190,7 @@ export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
                 <InviteRow
                   key={invite.id}
                   invite={invite}
-                  vendorName={vendorNameMap.get(invite.vendorContactId) ?? invite.vendorContactId}
+                  vendorName={resolveVendorName(invite)}
                   onRevoke={revokeInvite}
                 />
               ))}
@@ -330,29 +199,14 @@ export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
         </div>
       )}
 
-      <InviteModal
+      <VendorInviteDialog
         rfqId={rfqId}
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
         vendorContacts={vendorContactOptions}
         contactsLoading={contactsLoading}
         onCreate={createInvite}
-        onCreated={handleCreated}
       />
-
-      {shareData && user?.uid && (
-        <UnifiedShareDialog
-          open={shareDialogOpen}
-          onOpenChange={(o) => { if (!o) handleShareClose(); }}
-          entityType="vendor_rfq_invite"
-          entityId={shareData.inviteId}
-          entityTitle={t('invites.shareDialog.title')}
-          userId={user.uid}
-          companyId={user.companyId ?? ''}
-          shareUrl={shareData.portalUrl}
-          onDirectEmailShare={handleEmailResend}
-        />
-      )}
     </section>
   );
 }

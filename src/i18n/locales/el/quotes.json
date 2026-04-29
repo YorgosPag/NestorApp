@@ -381,24 +381,29 @@
     "title": "Προσκλήσεις Προμηθευτών",
     "button": "Πρόσκληση Προμηθευτή",
     "empty": "Δεν υπάρχουν προσκλήσεις ακόμη",
-    "modal": {
-      "title": "Πρόσκληση Προμηθευτή",
-      "vendorLabel": "Προμηθευτής",
-      "vendorPlaceholder": "Αναζήτηση προμηθευτή...",
-      "vendorEmpty": "Δεν βρέθηκαν προμηθευτές",
-      "channelLabel": "Μέθοδος Αποστολής",
-      "channelEmail": "Email",
-      "channelCopyLink": "Αντιγραφή Συνδέσμου",
+    "dialog": {
+      "title": "Νέα Πρόσκληση Προμηθευτή",
+      "shareTitle": "Κοινοποίηση Πρόσκλησης",
+      "tabs": {
+        "manual": "Χειροκίνητα",
+        "contacts": "Από Επαφές"
+      },
+      "manual": {
+        "emailLabel": "Email Προμηθευτή",
+        "emailPlaceholder": "vendor@example.com",
+        "nameLabel": "Όνομα Προμηθευτή",
+        "namePlaceholder": "π.χ. ABC Materials"
+      },
+      "contacts": {
+        "label": "Προμηθευτής",
+        "placeholder": "Αναζήτηση προμηθευτή...",
+        "empty": "Δεν βρέθηκαν προμηθευτές"
+      },
       "expiresLabel": "Λήξη (ημέρες)",
-      "submit": "Αποστολή Πρόσκλησης",
+      "create": "Δημιουργία Πρόσκλησης",
+      "creating": "Δημιουργία...",
       "cancel": "Ακύρωση",
-      "sending": "Αποστολή...",
-      "portalUrlLabel": "Σύνδεσμος Portal",
-      "portalUrlCopy": "Αντιγραφή",
-      "emailSent": "Το email εστάλη επιτυχώς στον προμηθευτή"
-    },
-    "shareDialog": {
-      "title": "Κοινοποίηση Πρόσκλησης"
+      "close": "Κλείσιμο"
     },
     "table": {
       "vendor": "Προμηθευτής",
@@ -425,6 +430,9 @@
       "createFailed": "Αποτυχία δημιουργίας πρόσκλησης",
       "revokeFailed": "Αποτυχία ανάκλησης πρόσκλησης",
       "noVendorSelected": "Επιλέξτε προμηθευτή",
+      "noEmailEntered": "Πληκτρολογήστε email προμηθευτή",
+      "noNameEntered": "Πληκτρολογήστε όνομα προμηθευτή",
+      "invalidEmail": "Μη έγκυρο email",
       "loadContactsFailed": "Αποτυχία φόρτωσης προμηθευτών",
       "deliveryFailed": "Αποτυχία αποστολής",
       "emailNotSent": "Το email δεν εστάλη"

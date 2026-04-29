@@ -20,12 +20,15 @@ interface UseVendorInvitesResult {
   revokeInvite: (inviteId: string) => Promise<void>;
 }
 
-export interface CreateInviteInput {
-  vendorContactId: string;
+interface CreateInviteBaseInput {
   deliveryChannel: 'email' | 'copy_link';
   expiresInDays?: number;
   locale?: 'el' | 'en';
 }
+
+export type CreateInviteInput =
+  | (CreateInviteBaseInput & { vendorContactId: string; manualEmail?: undefined; manualName?: undefined })
+  | (CreateInviteBaseInput & { vendorContactId?: undefined; manualEmail: string; manualName: string });
 
 export interface CreateInviteOutput {
   inviteId: string;

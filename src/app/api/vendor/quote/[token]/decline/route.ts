@@ -82,7 +82,7 @@ const basePOST = async (
             entityId: invite.rfqId,
             entityType: NOTIFICATION_ENTITY_TYPES.RFQ,
             titleKey: 'quotes:quotes.notifications.vendorDeclined',
-            titleParams: { vendorName: invite.vendorContactId, rfqTitle: rfq.title },
+            titleParams: { vendorName: invite.recipientName ?? invite.vendorContactId, rfqTitle: rfq.title },
           },
         );
       } catch (err) {
