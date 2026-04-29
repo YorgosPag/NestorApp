@@ -413,6 +413,7 @@
       "actions": "Actions"
     },
     "statuses": {
+      "pending": "Pending",
       "sent": "Sent",
       "opened": "Opened",
       "submitted": "Submitted",

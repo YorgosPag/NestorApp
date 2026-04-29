@@ -38,6 +38,7 @@ function formatExpiry(ts: SerializedTimestamp | null | undefined): string {
 // ============================================================================
 
 const STATUS_VARIANTS: Record<InviteStatus, BadgeVariantProps['variant']> = {
+  pending: 'outline',
   sent: 'secondary',
   opened: 'info',
   submitted: 'success',
@@ -78,7 +79,7 @@ function InviteRow({ invite, vendorName, onRevoke }: InviteRowProps) {
   const [copied, setCopied] = useState(false);
   const [revoking, setRevoking] = useState(false);
 
-  const canRevoke = invite.status === 'sent' || invite.status === 'opened';
+  const canRevoke = invite.status === 'pending' || invite.status === 'sent' || invite.status === 'opened';
 
   const handleCopy = useCallback(() => {
     const base = process.env.NEXT_PUBLIC_APP_URL ?? '';

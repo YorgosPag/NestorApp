@@ -10,7 +10,7 @@ export type DeliveryChannel = 'email' | 'whatsapp' | 'sms' | 'copy_link';
 // INVITE STATUS — ADR-327 §17 Q23 (decline button)
 // ============================================================================
 
-export type InviteStatus = 'sent' | 'opened' | 'submitted' | 'declined' | 'expired';
+export type InviteStatus = 'pending' | 'sent' | 'opened' | 'submitted' | 'declined' | 'expired';
 
 // ============================================================================
 // VENDOR INVITE ENTITY

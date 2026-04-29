@@ -7,7 +7,7 @@
  * `vendor-portal-token-service`, dispatches the invite through a `MessageChannel`
  * driver (email/copy_link in P3 day-1), and tracks delivery + lifecycle status.
  *
- * Status machine: sent → opened → submitted | declined | expired
+ * Status machine: pending → sent → opened → submitted | declined | expired
  *
  * @module subapps/procurement/services/vendor-invite-service
  * @enterprise ADR-327 §7 — Phase 3 Vendor Portal
@@ -182,7 +182,7 @@ export async function createVendorInvite(
     token: generated.token,
     deliveryChannel: effectiveChannel,
     preferredChannel: recipient.preferredChannel,
-    status: 'sent',
+    status: 'pending',
     deliveredAt: null,
     openedAt: null,
     submittedAt: null,
@@ -218,12 +218,15 @@ export async function createVendorInvite(
           declineUrl,
         });
 
+  const persistedStatus: InviteStatus = dispatch.success ? 'sent' : 'pending';
+
   await safeFirestoreOperation<void>(async (db) => {
     const batch = db.batch();
     batch.set(
       db.collection(COLLECTIONS.VENDOR_INVITES).doc(inviteId),
       sanitizeForFirestore({
         ...invite,
+        status: persistedStatus,
         deliveredAt: dispatch.success ? now : null,
       }),
     );
@@ -245,7 +248,7 @@ export async function createVendorInvite(
   });
 
   return {
-    invite: { ...invite, deliveredAt: dispatch.success ? now : null },
+    invite: { ...invite, status: persistedStatus, deliveredAt: dispatch.success ? now : null },
     portalUrl,
     delivery: {
       success: dispatch.success,
@@ -350,7 +353,7 @@ export async function markInviteOpened(inviteId: string): Promise<void> {
     if (!snap.exists) return;
     const data = snap.data() as VendorInvite;
     const now = admin.firestore.Timestamp.now();
-    if (data.status === 'sent') {
+    if (data.status === 'pending' || data.status === 'sent') {
       tx.update(ref, {
         status: 'opened' satisfies InviteStatus,
         openedAt: now,
@@ -449,6 +452,13 @@ export async function resendVendorInvite(
     locale: options.locale ?? 'el',
     declineUrl: buildDeclineUrl(invite.token),
   });
+
+  if (dispatch.success && invite.status === 'pending') {
+    await patchInvite(inviteId, {
+      status: 'sent',
+      deliveredAt: adminTimestampAsClient(),
+    });
+  }
 
   logger.info('Vendor invite resent', { inviteId, success: dispatch.success });
   return { success: dispatch.success, errorReason: dispatch.errorReason };
