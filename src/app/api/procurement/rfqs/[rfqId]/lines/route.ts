@@ -77,6 +77,12 @@ async function handlePost(
         const parsed = safeParseBody(CreateRfqLineSchema, await req.json());
         if (parsed.error) return parsed.error;
         const line = await addRfqLine(ctx, rfqId, parsed.data);
+        if (!line) {
+          return NextResponse.json(
+            { success: false, error: 'Failed to create line' },
+            { status: 500 },
+          );
+        }
         return NextResponse.json({ success: true, data: line }, { status: 201 });
       } catch (error) {
         const message = getErrorMessage(error, 'Failed to add RFQ line');

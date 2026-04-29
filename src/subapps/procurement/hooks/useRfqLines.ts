@@ -52,7 +52,8 @@ export function useRfqLines(rfqId: string): UseRfqLinesResult {
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-        const created = json.data as RfqLine;
+        const created = json.data as RfqLine | undefined;
+        if (!created) throw new Error('Server returned empty line data');
         setLines((prev) => prev.map((l) => (l.id === optimistic.id ? created : l)));
         return created;
       } catch (e) {
