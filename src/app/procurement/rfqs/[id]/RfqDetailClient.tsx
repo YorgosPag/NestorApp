@@ -25,19 +25,20 @@ interface RfqDetailClientProps {
 export function RfqDetailClient({ id }: RfqDetailClientProps) {
   const { t } = useTranslation('quotes');
   const router = useRouter();
-  const { quotes, loading, refetch } = useQuotes({ rfqId: id });
-  const { lines, loading: linesLoading, addLine, deleteLine } = useRfqLines(id);
-  const [showQuoteForm, setShowQuoteForm] = useState(false);
-  const [rfq, setRfq] = useState<RFQ | null>(null);
 
+  // All hooks must be called unconditionally (React Rules of Hooks).
   // Belt-and-suspenders: SC page.tsx has redirect() but Turbopack dev mode may skip it.
-  // This client-side guard ensures [id] template literals never reach the API layer.
+  // This client-side guard fires on mount if id='[id]' reaches here.
   useEffect(() => {
     if (id.startsWith('[')) {
       router.replace('/procurement/rfqs');
     }
   }, [id, router]);
-  if (id.startsWith('[')) return null;
+
+  const { quotes, loading, refetch } = useQuotes({ rfqId: id });
+  const { lines, loading: linesLoading, addLine, deleteLine } = useRfqLines(id);
+  const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [rfq, setRfq] = useState<RFQ | null>(null);
 
   const fetchRfq = useCallback(async () => {
     try {
@@ -97,6 +98,10 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     setShowQuoteForm(false);
     await refetch();
   };
+
+  // Early return AFTER all hooks — safe per React Rules of Hooks.
+  // Prevents rendering when id is a Next.js template literal.
+  if (id.startsWith('[')) return null;
 
   return (
     <main className="container mx-auto max-w-5xl space-y-6 py-6">
