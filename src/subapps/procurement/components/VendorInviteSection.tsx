@@ -135,7 +135,7 @@ interface VendorInviteSectionProps {
 
 export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
   const { t } = useTranslation('quotes');
-  const { invites, vendorContacts, loading, contactsLoading, createInvite, revokeInvite } =
+  const { invites, vendorContacts, loading, contactsLoading, createInvite, revokeInvite, refetch } =
     useVendorInvites(rfqId);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -207,6 +207,7 @@ export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
         vendorContacts={vendorContactOptions}
         contactsLoading={contactsLoading}
         onCreate={createInvite}
+        onAfterEmailSend={refetch}
       />
     </section>
   );

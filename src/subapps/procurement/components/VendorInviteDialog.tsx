@@ -57,6 +57,7 @@ export interface VendorInviteDialogProps {
   vendorContacts: ComboboxOption[];
   contactsLoading: boolean;
   onCreate: (dto: CreateInviteInput) => Promise<CreateInviteResult>;
+  onAfterEmailSend?: () => Promise<void>;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -72,6 +73,7 @@ export function VendorInviteDialog({
   vendorContacts,
   contactsLoading,
   onCreate,
+  onAfterEmailSend,
 }: VendorInviteDialogProps) {
   const { t } = useTranslation('quotes');
 
@@ -151,7 +153,8 @@ export function VendorInviteDialog({
       const json = await res.json() as { error?: string };
       throw new Error(json?.error ?? `HTTP ${res.status}`);
     }
-  }, [rfqId, createdInvite]);
+    await onAfterEmailSend?.();
+  }, [rfqId, createdInvite, onAfterEmailSend]);
 
   const dialogTitle =
     step === 'form' ? t('invites.dialog.title') : t('invites.dialog.shareTitle');
