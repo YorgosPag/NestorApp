@@ -24,7 +24,8 @@ export default function QuoteReviewPage({ params }: ReviewPageProps) {
   const router = useRouter();
   const { quote, loading, error, notFound, refetch } = useQuote(id, {
     pollIntervalMs: 2000,
-    stopWhen: (q) => q !== null && q.extractedData !== null,
+    stopWhen: (q) =>
+      q !== null && (q.extractedData !== null || (q.source !== 'scan' && q.source !== 'email_inbox')),
   });
   const supplierContact = useContactById(quote?.vendorContactId ?? null);
   const { user } = useAuth();
