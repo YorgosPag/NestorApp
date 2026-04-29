@@ -31,7 +31,7 @@ function linesRef(
   db: FirebaseFirestore.Firestore,
   rfqId: string,
 ): FirebaseFirestore.CollectionReference {
-  return db.collection(COLLECTIONS.RFQS).doc(rfqId).collection('lines');
+  return db.collection(COLLECTIONS.RFQS).doc(rfqId).collection(COLLECTIONS.RFQ_LINES_SUB);
 }
 
 async function assertRfqOwnership(
