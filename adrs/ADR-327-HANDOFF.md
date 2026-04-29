@@ -1,8 +1,8 @@
-# ADR-327 HANDOFF — Multi-Vendor Architecture Phase 1 step (e)
+# ADR-327 HANDOFF — Multi-Vendor Architecture Phase 1 step (f)
 
 **Date**: 2026-04-29
-**Previous session ended at**: Step (d) committed — 8 API route files created. Context ~50%, clean break for fresh-session continuation.
-**Next session goal**: Step (e) — **UI Components**: RFQ Lines editor + SourcingEvent UI (wizard integration, multi-vendor package toggle).
+**Previous session ended at**: Step (e) committed — 2 hooks + 1 component + RfqBuilder migration + detail page extension. Context ~60%.
+**Next session goal**: Step (f) — **Wizard Step3**: BOQ picker + ad-hoc lines editor (full 5-step wizard).
 
 ---
 
@@ -13,7 +13,8 @@
 ✅ b. Firestore rules + indexes (deployed)        (COMMIT d0ef2c3c, 2026-04-29)
 ✅ c. Services (sourcing-event + rfq-line + rfq-service modify)  (COMMIT 84dd62f1)
 ✅ d. API endpoints (8 routes — rfq lines + sourcing events)     (COMMIT pending)
-⏸️ e. UI components — RFQ wizard integration (lines editor + multi-trade toggle)  ← NEXT SESSION
+✅ e. UI components — hooks + RfqBuilder migration + RfqLinesPanel + detail page  (COMMIT pending)
+⏸️ f. UI wizard Step3 (BOQ picker + ad-hoc lines editor)  ← NEXT SESSION
 ⏸️ f. UI wizard Step1-Step2 (Project select + Trade select)
 ⏸️ g. UI wizard Step3 (BOQ picker + ad-hoc lines editor)
 ⏸️ h. UI wizard Step4-Step5 (vendor multi-select + meta + submit)

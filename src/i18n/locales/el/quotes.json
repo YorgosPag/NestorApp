@@ -305,7 +305,13 @@
     "detailTitle": "Αίτημα Προσφοράς",
     "quotesSection": "Προσφορές που Ελήφθησαν",
     "noQuotes": "Δεν υπάρχουν ακόμη προσφορές",
-    "unitPlaceholder": "τεμ"
+    "unitPlaceholder": "τεμ",
+    "linesEmpty": "Δεν υπάρχουν γραμμές",
+    "multiTrade": {
+      "toggle": "Πολλαπλές ειδικότητες σε πακέτο",
+      "packageTitle": "Τίτλος πακέτου",
+      "packageTitlePlaceholder": "π.χ. Φινίρισμα Οικοδομής Α"
+    }
   },
   "trades": {
     "title": "Ειδικότητες",

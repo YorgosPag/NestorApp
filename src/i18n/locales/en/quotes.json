@@ -301,6 +301,12 @@
     "quotesSection": "Received Quotes",
     "noQuotes": "No quotes received yet",
     "unitPlaceholder": "pcs",
+    "linesEmpty": "No lines found",
+    "multiTrade": {
+      "toggle": "Multiple trades as a package",
+      "packageTitle": "Package title",
+      "packageTitlePlaceholder": "e.g. Block A — finishing package"
+    },
     "fromBoq": {
       "button": "Create RFQ from BOQ",
       "loading": "Loading BOQ...",

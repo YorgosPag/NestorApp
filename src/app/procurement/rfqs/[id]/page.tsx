@@ -7,10 +7,12 @@ import { ArrowLeft, Plus, ScanLine } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
 import { useComparison } from '@/subapps/procurement/hooks/useComparison';
+import { useRfqLines } from '@/subapps/procurement/hooks/useRfqLines';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
 import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
 import { VendorInviteSection } from '@/subapps/procurement/components/VendorInviteSection';
+import { RfqLinesPanel } from '@/subapps/procurement/components/RfqLinesPanel';
 import type { RFQ } from '@/subapps/procurement/types/rfq';
 import { rfqIsMultiTrade } from '@/subapps/procurement/types/rfq';
 
@@ -23,6 +25,7 @@ export default function RfqDetailPage({ params }: RfqDetailPageProps) {
   const { t } = useTranslation('quotes');
   const router = useRouter();
   const { quotes, loading, refetch } = useQuotes({ rfqId: id });
+  const { lines, loading: linesLoading, addLine, deleteLine } = useRfqLines(id);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [rfq, setRfq] = useState<RFQ | null>(null);
 
@@ -136,6 +139,17 @@ export default function RfqDetailPage({ params }: RfqDetailPageProps) {
           onAward={handleAward}
         />
       )}
+
+      <section className="space-y-2">
+        <h2 className="text-base font-semibold">{t('rfqs.lines')}</h2>
+        <RfqLinesPanel
+          rfqId={id}
+          lines={lines}
+          loading={linesLoading}
+          onAdd={addLine}
+          onDelete={deleteLine}
+        />
+      </section>
 
       <VendorInviteSection rfqId={id} />
     </main>

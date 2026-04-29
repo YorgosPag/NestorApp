@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -22,7 +23,9 @@ import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import type { RfqLine, CreateRfqDTO, AwardMode, ReminderTemplate } from '@/subapps/procurement/types/rfq';
+import type { CreateRfqLineDTO } from '@/subapps/procurement/types/rfq-line';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
+import { useSourcingEvent } from '@/subapps/procurement/hooks/useSourcingEvent';
 
 // ============================================================================
 // TYPES
@@ -161,6 +164,9 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [multiTradeMode, setMultiTradeMode] = useState(false);
+  const [sourcingEventTitle, setSourcingEventTitle] = useState('');
+  const { create: createSourcingEvent } = useSourcingEvent();
 
   const setField = useCallback(<K extends keyof FormState>(key: K, val: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -200,6 +206,25 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
     setSubmitting(true);
     setError(null);
     try {
+      let sourcingEventId: string | undefined;
+      if (multiTradeMode && sourcingEventTitle.trim()) {
+        const ev = await createSourcingEvent({
+          projectId: form.projectId,
+          title: sourcingEventTitle.trim(),
+        });
+        sourcingEventId = ev.id;
+      }
+
+      const adHocLines: CreateRfqLineDTO[] = form.lines.map((l) => ({
+        source: 'ad_hoc' as const,
+        description: l.description,
+        trade: l.trade as TradeCode,
+        categoryCode: l.categoryCode ?? null,
+        quantity: l.quantity ?? null,
+        unit: l.unit ?? null,
+        notes: l.notes ?? null,
+      }));
+
       const dto: CreateRfqDTO = {
         projectId: form.projectId,
         title: form.title,
@@ -207,7 +232,9 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
         deadlineDate: form.deadlineDate || null,
         awardMode: form.awardMode,
         reminderTemplate: form.reminderTemplate,
-        lines: form.lines,
+        lines: [],
+        adHocLines: adHocLines.length > 0 ? adHocLines : undefined,
+        ...(sourcingEventId ? { sourcingEventId } : {}),
         invitedVendorIds: form.invitedVendorIds.length > 0 ? form.invitedVendorIds : undefined,
       };
       const res = await fetch('/api/rfqs', {
@@ -231,6 +258,26 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
         <CardTitle className="text-base">{t('rfqs.create')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Switch
+            id="multi-trade"
+            checked={multiTradeMode}
+            onCheckedChange={setMultiTradeMode}
+          />
+          <Label htmlFor="multi-trade">{t('rfqs.multiTrade.toggle')}</Label>
+        </div>
+
+        {multiTradeMode && (
+          <div className="space-y-1.5">
+            <Label>{t('rfqs.multiTrade.packageTitle')}</Label>
+            <Input
+              value={sourcingEventTitle}
+              onChange={(e) => setSourcingEventTitle(e.target.value)}
+              placeholder={t('rfqs.multiTrade.packageTitlePlaceholder')}
+            />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>{t('rfqs.project')}</Label>
