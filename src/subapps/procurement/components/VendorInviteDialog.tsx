@@ -329,6 +329,7 @@ interface ShareStepProps {
 function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend, onBack }: ShareStepProps) {
   const { t } = useTranslation(['quotes', 'common-actions']);
   const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [isInSubView, setIsInSubView] = useState(false);
   const sentRef = useRef(false);
 
   const handleEmailSend = useCallback(async () => {
@@ -374,15 +375,18 @@ function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend, on
         onClose={onClose}
         hideChannelPicker
         extraQuickActions={emailButton}
+        onSubViewChange={setIsInSubView}
       />
-      <DialogFooter>
-        <Button variant="outline" onClick={onBack}>
-          {t('common-actions:actions.back')}
-        </Button>
-        <Button variant="outline" onClick={onClose}>
-          {t('invites.dialog.close')}
-        </Button>
-      </DialogFooter>
+      {!isInSubView && (
+        <DialogFooter>
+          <Button variant="outline" onClick={onBack}>
+            {t('common-actions:actions.back')}
+          </Button>
+          <Button variant="outline" onClick={onClose}>
+            {t('invites.dialog.close')}
+          </Button>
+        </DialogFooter>
+      )}
     </section>
   );
 }

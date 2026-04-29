@@ -100,6 +100,13 @@ export interface UserAuthPermissionPanelProps {
    * inject the "Αποστολή Email σε [name]" button in the correct visual slot.
    */
   extraQuickActions?: React.ReactNode;
+  /**
+   * Called with `true` when a sub-view (email form, channel picker, photo picker)
+   * opens, and `false` when returning to the main share surface. Allows the host
+   * to hide external footer controls that would duplicate the sub-view's own
+   * back/cancel buttons (e.g. VendorInviteDialog step-2 footer).
+   */
+  onSubViewChange?: (inSubView: boolean) => void;
 }
 
 export function UserAuthPermissionPanel({
@@ -117,6 +124,7 @@ export function UserAuthPermissionPanel({
   hideChannelPicker = false,
   excludePlatformsFromGrid,
   extraQuickActions,
+  onSubViewChange,
 }: UserAuthPermissionPanelProps): React.ReactElement {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const notifications = useNotifications();
@@ -147,6 +155,10 @@ export function UserAuthPermissionPanel({
     setChannelContact(null);
     setChannelSelected(null);
   }, [isOpen]);
+
+  useEffect(() => {
+    onSubViewChange?.(showEmailForm || showChannelPicker || !!photoPickerPlatform);
+  }, [showEmailForm, showChannelPicker, photoPickerPlatform, onSubViewChange]);
 
   const effectivePhotoUrl = shareData.isPhoto && shareData.photoUrl ? shareData.photoUrl : null;
 
