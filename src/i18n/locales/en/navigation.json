@@ -335,7 +335,8 @@
     "operatorInbox": "Operator Inbox",
     "financialIntelligence": "Financial Intelligence",
     "procurement": "Procurement",
-    "quotes": "Quotes"
+    "quotes": "Quotes",
+    "rfqs": "Requests for Quotation"
   },
   "badges": {
     "new": "New",

@@ -133,8 +133,12 @@
       "vatIncludedNo": "VAT: excluded",
       "laborIncludedYes": "Labour: included",
       "laborIncludedNo": "Labour: excluded",
+      "laborIncludedUnknown": "Labour: not specified",
+      "vatIncludedUnknown": "VAT: not specified",
       "confirm": "Confirm & Save",
+      "confirmTooltip": "Accepts the extracted data and saves the quote to the system. It becomes available for price comparison.",
       "archive": "Archive",
+      "archiveTooltip": "Saves the quote as archived. Data is preserved but the quote is excluded from active comparisons.",
       "retry": "Re-scan",
       "requiredHint": "To proceed, also select:",
       "vendorMismatch": {
@@ -331,6 +335,19 @@
       "placeholder": "Search vendor...",
       "empty": "No vendors found",
       "noSelected": "No vendors selected"
+    },
+    "detail": {
+      "fallback": {
+        "untitled": "Request for Quotation"
+      },
+      "projectLink": {
+        "aria": "View project page: {projectName}"
+      }
+    },
+    "tabs": {
+      "quotes": "Quotes",
+      "comparison": "Comparison",
+      "setup": "RFQ Setup"
     }
   },
   "trades": {

@@ -22,7 +22,7 @@ import '@/lib/design-system';
 interface HeaderTitleProps {
   icon?: LucideIcon;
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   variant?: 'large' | 'medium' | 'small';
   hideSubtitle?: boolean;
   badge?: React.ReactNode; // 🏢 ENTERPRISE: Optional badge element

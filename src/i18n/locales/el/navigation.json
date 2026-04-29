@@ -335,7 +335,8 @@
     "operatorInbox": "Εισερχόμενα Χειριστή",
     "financialIntelligence": "Χρηματοοικονομική Ανάλυση",
     "procurement": "Προμήθειες",
-    "quotes": "Προσφορές"
+    "quotes": "Προσφορές",
+    "rfqs": "Αιτήματα Προσφορών"
   },
   "badges": {
     "new": "Νέο",

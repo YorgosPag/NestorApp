@@ -40,7 +40,7 @@ export interface HeaderIconProps {
 export interface HeaderTitleProps {
   icon?: LucideIcon;
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   variant?: 'large' | 'medium' | 'small';
   className?: string;
   hideSubtitle?: boolean; // 🏢 Enterprise support για conditional subtitle

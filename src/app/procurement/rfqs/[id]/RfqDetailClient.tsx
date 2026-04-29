@@ -1,14 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, ScanLine } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Building2, ClipboardList, Plus, ScanLine } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { PageHeader } from '@/core/headers';
+import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
 import { useComparison } from '@/subapps/procurement/hooks/useComparison';
 import { useRfqLines } from '@/subapps/procurement/hooks/useRfqLines';
 import { useSourcingEventAggregate } from '@/subapps/procurement/hooks/useSourcingEventAggregate';
+import { useRfqUrlState, type RfqTabValue } from '@/subapps/procurement/hooks/useRfqUrlState';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
 import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
@@ -26,9 +31,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   const { t } = useTranslation('quotes');
   const router = useRouter();
 
-  // All hooks must be called unconditionally (React Rules of Hooks).
   // Belt-and-suspenders: SC page.tsx has redirect() but Turbopack dev mode may skip it.
-  // This client-side guard fires on mount if id='[id]' reaches here.
   useEffect(() => {
     if (id.startsWith('[')) {
       router.replace('/procurement/rfqs');
@@ -39,15 +42,24 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   const { lines, loading: linesLoading, addLine, deleteLine } = useRfqLines(id);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [rfq, setRfq] = useState<RFQ | null>(null);
+  const [projectName, setProjectName] = useState<string | null>(null);
 
   const fetchRfq = useCallback(async () => {
     try {
       const res = await fetch(`/api/rfqs/${id}`);
       if (!res.ok) return;
       const json = await res.json();
-      setRfq((json?.data ?? null) as RFQ | null);
+      const rfqData = (json?.data ?? null) as RFQ | null;
+      setRfq(rfqData);
+      if (rfqData?.projectId) {
+        const pRes = await fetch(`/api/projects/${rfqData.projectId}`).catch(() => null);
+        if (pRes?.ok) {
+          const pJson = await pRes.json().catch(() => ({}));
+          setProjectName((pJson?.data?.name as string | undefined) ?? null);
+        }
+      }
     } catch {
-      // silent — scan button will fall back to manual selectors
+      // silent — page renders without project name subtitle
     }
   }, [id]);
 
@@ -58,18 +70,15 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   const cherryPickEnabled = rfq?.awardMode === 'cherry_pick';
   const { comparison, cherryPick, loading: comparisonLoading, refetch: refetchComparison } =
     useComparison(id, { cherryPick: cherryPickEnabled });
-  const { aggregate, loading: aggregateLoading } = useSourcingEventAggregate(
-    rfq?.sourcingEventId,
-  );
+  const { aggregate, loading: aggregateLoading } = useSourcingEventAggregate(rfq?.sourcingEventId);
+
+  const { activeTab, handleTabChange } = useRfqUrlState({ quotes, quotesLoading: loading });
 
   const handleAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
     const res = await fetch(`/api/rfqs/${id}/award`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        winnerQuoteId,
-        ...(overrideReason ? { overrideReason } : {}),
-      }),
+      body: JSON.stringify({ winnerQuoteId, ...(overrideReason ? { overrideReason } : {}) }),
     });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
@@ -84,14 +93,14 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   );
 
   const scanHref = useMemo(() => {
-    const searchParams = new URLSearchParams({ rfqId: id });
+    const sp = new URLSearchParams({ rfqId: id });
     if (rfq) {
-      searchParams.set('projectId', rfq.projectId);
+      sp.set('projectId', rfq.projectId);
       if (!rfqIsMultiTrade(rfq) && rfq.lines.length > 0) {
-        searchParams.set('trade', rfq.lines[0].trade);
+        sp.set('trade', rfq.lines[0].trade);
       }
     }
-    return `/procurement/quotes/scan?${searchParams.toString()}`;
+    return `/procurement/quotes/scan?${sp.toString()}`;
   }, [id, rfq]);
 
   const handleQuoteCreated = async () => {
@@ -99,85 +108,109 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     await refetch();
   };
 
-  // Early return AFTER all hooks — safe per React Rules of Hooks.
-  // Prevents rendering when id is a Next.js template literal.
   if (id.startsWith('[')) return null;
 
+  const projectSubtitle = rfq?.projectId && projectName ? (
+    <Link
+      href={`/projects/${rfq.projectId}`}
+      className="text-sm text-muted-foreground hover:text-foreground hover:underline inline-flex items-center gap-1"
+      aria-label={t('rfqs.detail.projectLink.aria', { projectName })}
+    >
+      <Building2 className="size-3" />
+      {projectName}
+    </Link>
+  ) : undefined;
+
   return (
-    <main className="container mx-auto max-w-5xl space-y-6 py-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => router.push('/procurement/rfqs')}>
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          {t('rfqs.title')}
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">{t('rfqs.quotesSection')}</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(scanHref)}
-            title={t('quotes.scan.scanFromRfqHint')}
-          >
-            <ScanLine className="mr-1 h-4 w-4" />
-            {t('quotes.scan.scanFromRfq')}
-          </Button>
-          {!showQuoteForm && (
-            <Button size="sm" onClick={() => setShowQuoteForm(true)}>
-              <Plus className="mr-1 h-4 w-4" />
-              {t('quotes.create')}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {showQuoteForm && (
-        <QuoteForm
-          rfqId={id}
-          onSuccess={handleQuoteCreated}
-          onCancel={() => setShowQuoteForm(false)}
-        />
-      )}
-
-      <QuoteList
-        quotes={quotes}
-        loading={loading}
-        onSelectQuote={(q) => handleViewQuote(q.id)}
+    <main className="container mx-auto max-w-5xl space-y-4 py-6">
+      <PageHeader
+        variant="sticky-rounded"
+        breadcrumb={<ModuleBreadcrumb />}
+        title={{
+          icon: ClipboardList,
+          title: rfq?.title ?? t('rfqs.detail.fallback.untitled'),
+          subtitle: projectSubtitle,
+        }}
+        actions={{
+          customActions: [
+            <Button
+              key="scan"
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(scanHref)}
+              title={t('quotes.scan.scanFromRfqHint')}
+            >
+              <ScanLine className="mr-1 h-4 w-4" />
+              {t('quotes.scan.scanFromRfq')}
+            </Button>,
+            ...(!showQuoteForm
+              ? [
+                  <Button key="add" size="sm" onClick={() => setShowQuoteForm(true)}>
+                    <Plus className="mr-1 h-4 w-4" />
+                    {t('quotes.create')}
+                  </Button>,
+                ]
+              : []),
+          ],
+        }}
       />
 
-      {rfq?.sourcingEventId && (
-        <SourcingEventSummaryCard
-          aggregate={aggregate}
-          loading={aggregateLoading}
-          currentRfqId={id}
-        />
-      )}
+      <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as RfqTabValue)}>
+        <TabsList>
+          <TabsTrigger value="quotes">{t('rfqs.tabs.quotes')}</TabsTrigger>
+          <TabsTrigger value="comparison">{t('rfqs.tabs.comparison')}</TabsTrigger>
+          <TabsTrigger value="setup">{t('rfqs.tabs.setup')}</TabsTrigger>
+        </TabsList>
 
-      {comparison && (
-        <ComparisonPanel
-          comparison={comparison}
-          cherryPick={cherryPick}
-          loading={comparisonLoading}
-          rfqAwarded={Boolean(rfq?.winnerQuoteId)}
-          awardMode={rfq?.awardMode ?? 'whole_package'}
-          onAward={handleAward}
-        />
-      )}
+        <TabsContent value="quotes" className="space-y-6">
+          {showQuoteForm && (
+            <QuoteForm
+              rfqId={id}
+              onSuccess={handleQuoteCreated}
+              onCancel={() => setShowQuoteForm(false)}
+            />
+          )}
+          <QuoteList
+            quotes={quotes}
+            loading={loading}
+            onSelectQuote={(q) => handleViewQuote(q.id)}
+          />
+        </TabsContent>
 
-      <section className="space-y-2">
-        <h2 className="text-base font-semibold">{t('rfqs.lines')}</h2>
-        <RfqLinesPanel
-          rfqId={id}
-          lines={lines}
-          loading={linesLoading}
-          onAdd={addLine}
-          onDelete={deleteLine}
-        />
-      </section>
+        <TabsContent value="comparison" className="space-y-6">
+          {rfq?.sourcingEventId && (
+            <SourcingEventSummaryCard
+              aggregate={aggregate}
+              loading={aggregateLoading}
+              currentRfqId={id}
+            />
+          )}
+          {comparison && (
+            <ComparisonPanel
+              comparison={comparison}
+              cherryPick={cherryPick}
+              loading={comparisonLoading}
+              rfqAwarded={Boolean(rfq?.winnerQuoteId)}
+              awardMode={rfq?.awardMode ?? 'whole_package'}
+              onAward={handleAward}
+            />
+          )}
+        </TabsContent>
 
-      <VendorInviteSection rfqId={id} />
+        <TabsContent value="setup" className="space-y-6">
+          <section className="space-y-2">
+            <h2 className="text-base font-semibold">{t('rfqs.lines')}</h2>
+            <RfqLinesPanel
+              rfqId={id}
+              lines={lines}
+              loading={linesLoading}
+              onAdd={addLine}
+              onDelete={deleteLine}
+            />
+          </section>
+          <VendorInviteSection rfqId={id} />
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }
