@@ -49,6 +49,7 @@ interface UseRfqUrlStateResult {
   selectedQuote: Quote | null;
   handleTabChange: (tab: RfqTabValue) => void;
   handleSelectQuote: (quote: Quote | null) => void;
+  handleComparisonDrillDown: (quoteId: string) => void;
 }
 
 export function useRfqUrlState({
@@ -96,6 +97,17 @@ export function useRfqUrlState({
     [router, pathname, searchParams, isMobile],
   );
 
+  // Single push: tab=quotes + quote=id — one history entry (§5.D.3)
+  const handleComparisonDrillDown = useCallback(
+    (quoteId: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', 'quotes');
+      params.set('quote', quoteId);
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [router, pathname, searchParams],
+  );
+
   // Self-correct stale ?quote= param (e.g. deleted quote in URL after refresh).
   // Fires once when loading completes. Always router.replace — silent, no history.
   const correctedRef = useRef(false);
@@ -112,5 +124,5 @@ export function useRfqUrlState({
     router.replace(`${pathname}?${params.toString()}`);
   }, [quotesLoading, selectedQuote, quoteParam, searchParams, pathname, router]);
 
-  return { activeTab, selectedQuote, handleTabChange, handleSelectQuote };
+  return { activeTab, selectedQuote, handleTabChange, handleSelectQuote, handleComparisonDrillDown };
 }

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { BarChart2, Trophy, Award, AlertTriangle } from 'lucide-react';
+import { BarChart2, Trophy, Award, AlertTriangle, ChevronRight } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { RecommendationCard } from './RecommendationCard';
@@ -30,6 +30,7 @@ interface ComparisonPanelProps {
   rfqAwarded: boolean;
   awardMode: 'whole_package' | 'cherry_pick';
   onAward: (winnerQuoteId: string, overrideReason: string | null) => Promise<void>;
+  onRowClick?: (quoteId: string) => void;
 }
 
 export function ComparisonPanel({
@@ -39,6 +40,7 @@ export function ComparisonPanel({
   rfqAwarded,
   awardMode,
   onAward,
+  onRowClick,
 }: ComparisonPanelProps) {
   const { t } = useTranslation('quotes');
   const [selected, setSelected] = useState<QuoteComparisonEntry | null>(null);
@@ -105,6 +107,7 @@ export function ComparisonPanel({
                   isRecommended={recommended?.quoteId === entry.quoteId}
                   rfqAwarded={rfqAwarded}
                   onAwardClick={handleAwardClick}
+                  onRowClick={onRowClick}
                 />
               ))}
             </TableBody>
@@ -173,12 +176,32 @@ interface RowProps {
   isRecommended: boolean;
   rfqAwarded: boolean;
   onAwardClick: (entry: QuoteComparisonEntry) => void;
+  onRowClick?: (quoteId: string) => void;
 }
 
-function ComparisonRow({ entry, isRecommended, rfqAwarded, onAwardClick }: RowProps) {
+function ComparisonRow({ entry, isRecommended, rfqAwarded, onAwardClick, onRowClick }: RowProps) {
   const { t } = useTranslation('quotes');
+  const clickable = !!onRowClick;
   return (
-    <TableRow className={isRecommended ? 'bg-emerald-50/40 dark:bg-emerald-950/10' : undefined}>
+    <TableRow
+      className={[
+        isRecommended ? 'bg-emerald-50/40 dark:bg-emerald-950/10' : '',
+        clickable ? 'group cursor-pointer hover:bg-muted/50' : '',
+      ].join(' ') || undefined}
+      onClick={clickable ? () => onRowClick(entry.quoteId) : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onRowClick(entry.quoteId);
+              }
+            }
+          : undefined
+      }
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? t('rfqs.comparison.rowAriaLabel') : undefined}
+    >
       <TableCell className="font-medium">
         {entry.rank === 1 && <Trophy className="inline h-4 w-4 text-emerald-600" />}
         {entry.rank}
@@ -193,15 +216,23 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, onAwardClick }: RowPr
         <FlagsRow flags={entry.flags} />
       </TableCell>
       <TableCell className="text-right">
-        <Button
-          size="sm"
-          variant={isRecommended ? 'default' : 'outline'}
-          disabled={rfqAwarded}
-          onClick={() => onAwardClick(entry)}
-        >
-          <Award className="mr-1 h-4 w-4" />
-          {t('comparison.awardBtn')}
-        </Button>
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            size="sm"
+            variant={isRecommended ? 'default' : 'outline'}
+            disabled={rfqAwarded}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAwardClick(entry);
+            }}
+          >
+            <Award className="mr-1 h-4 w-4" />
+            {t('comparison.awardBtn')}
+          </Button>
+          {clickable && (
+            <ChevronRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );

@@ -352,7 +352,23 @@
     "mobile": {
       "backToList": "Back to list"
     },
-    "selectQuoteHint": "Select a quote to view details"
+    "selectQuoteHint": "Select a quote to view details",
+    "comparison": {
+      "rowAriaLabel": "View quote details",
+      "empty": {
+        "zero": {
+          "title": "No quotes to compare yet",
+          "body": "When you receive vendor quotes, you will see them compared here with scores, prices and a recommended winner."
+        },
+        "one": {
+          "title": "You have 1 quote — at least 2 are needed for comparison",
+          "body": "Add a second quote to enable comparison.",
+          "currentLabel": "Current quote",
+          "viewDetails": "View details"
+        },
+        "deliveryDays": "{days} days delivery"
+      }
+    }
   },
   "trades": {
     "title": "Trades",

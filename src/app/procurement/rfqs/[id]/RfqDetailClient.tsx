@@ -20,6 +20,7 @@ import { QuoteDetailsHeader } from '@/subapps/procurement/components/QuoteDetail
 import { QuoteDetailSummary } from '@/subapps/procurement/components/QuoteDetailSummary';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
 import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
+import { ComparisonEmptyState } from '@/subapps/procurement/components/ComparisonEmptyState';
 import { SourcingEventSummaryCard } from '@/subapps/procurement/components/SourcingEventSummaryCard';
 import { VendorInviteSection } from '@/subapps/procurement/components/VendorInviteSection';
 import { RfqLinesPanel } from '@/subapps/procurement/components/RfqLinesPanel';
@@ -75,10 +76,13 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     useComparison(id, { cherryPick: cherryPickEnabled });
   const { aggregate, loading: aggregateLoading } = useSourcingEventAggregate(rfq?.sourcingEventId);
 
-  const { activeTab, selectedQuote, handleTabChange, handleSelectQuote } = useRfqUrlState({
-    quotes,
-    quotesLoading: loading,
-  });
+  const {
+    activeTab,
+    selectedQuote,
+    handleTabChange,
+    handleSelectQuote,
+    handleComparisonDrillDown,
+  } = useRfqUrlState({ quotes, quotesLoading: loading });
 
   const handleAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
     const res = await fetch(`/api/rfqs/${id}/award`, {
@@ -206,22 +210,35 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         </TabsContent>
 
         <TabsContent value="comparison" className="space-y-6">
-          {rfq?.sourcingEventId && (
-            <SourcingEventSummaryCard
-              aggregate={aggregate}
-              loading={aggregateLoading}
-              currentRfqId={id}
+          {quotes.length < 2 ? (
+            <ComparisonEmptyState
+              quotes={quotes}
+              onNewQuote={() => setShowQuoteForm(true)}
+              onScan={() => router.push(scanHref)}
+              onViewInvites={() => handleTabChange('setup')}
+              onViewQuoteDetails={handleComparisonDrillDown}
             />
-          )}
-          {comparison && (
-            <ComparisonPanel
-              comparison={comparison}
-              cherryPick={cherryPick}
-              loading={comparisonLoading}
-              rfqAwarded={Boolean(rfq?.winnerQuoteId)}
-              awardMode={rfq?.awardMode ?? 'whole_package'}
-              onAward={handleAward}
-            />
+          ) : (
+            <>
+              {rfq?.sourcingEventId && (
+                <SourcingEventSummaryCard
+                  aggregate={aggregate}
+                  loading={aggregateLoading}
+                  currentRfqId={id}
+                />
+              )}
+              {comparison && (
+                <ComparisonPanel
+                  comparison={comparison}
+                  cherryPick={cherryPick}
+                  loading={comparisonLoading}
+                  rfqAwarded={Boolean(rfq?.winnerQuoteId)}
+                  awardMode={rfq?.awardMode ?? 'whole_package'}
+                  onAward={handleAward}
+                  onRowClick={handleComparisonDrillDown}
+                />
+              )}
+            </>
           )}
         </TabsContent>
 
