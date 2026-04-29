@@ -1,8 +1,8 @@
-# ADR-327 HANDOFF — Multi-Vendor Architecture Phase 1 step (f)
+# ADR-327 HANDOFF — Multi-Vendor Architecture Phase 1 step (g)
 
 **Date**: 2026-04-29
-**Previous session ended at**: Step (e) committed — 2 hooks + 1 component + RfqBuilder migration + detail page extension. Context ~60%.
-**Next session goal**: Step (f) — **Wizard Step3**: BOQ picker + ad-hoc lines editor (full 5-step wizard).
+**Previous session ended at**: Step (f) committed — GET /api/boq/items + BoqLinePicker + RfqBuilder split (boqItemIds vs adHocLines). Context ~45%.
+**Next session goal**: Step (g) — **Wizard Step4-5**: vendor multi-select + submit.
 
 ---
 
@@ -12,92 +12,72 @@
 ✅ a. Types + enterprise IDs + SSoT registry      (COMMIT d4c3f5d1, 2026-04-29)
 ✅ b. Firestore rules + indexes (deployed)        (COMMIT d0ef2c3c, 2026-04-29)
 ✅ c. Services (sourcing-event + rfq-line + rfq-service modify)  (COMMIT 84dd62f1)
-✅ d. API endpoints (8 routes — rfq lines + sourcing events)     (COMMIT pending)
-✅ e. UI components — hooks + RfqBuilder migration + RfqLinesPanel + detail page  (COMMIT pending)
-⏸️ f. UI wizard Step3 (BOQ picker + ad-hoc lines editor)  ← NEXT SESSION
-⏸️ f. UI wizard Step1-Step2 (Project select + Trade select)
-⏸️ g. UI wizard Step3 (BOQ picker + ad-hoc lines editor)
-⏸️ h. UI wizard Step4-Step5 (vendor multi-select + meta + submit)
-⏸️ i. Email invitation template extension (mostly P3, minor extension)
-⏸️ j. Comparison view extensions (multi-vendor, sourcing event aggregate)
-⏸️ k. ADR-327 §17 final + changelog (Phase 1 complete)
+✅ d. API endpoints (8 routes — rfq lines + sourcing events)     (COMMIT b563db10)
+✅ e. UI components — hooks + RfqBuilder migration + RfqLinesPanel + detail page  (COMMIT b563db10)
+✅ f. BOQ picker inside RfqBuilder — BoqLinePicker + GET /api/boq/items + handleSubmit split  (THIS SESSION)
+⏸️ g. Wizard Step4-5 — vendor multi-select + submit  ← NEXT SESSION
+⏸️ h. Email invitation template extension (mostly P3, minor extension)
+⏸️ i. Comparison view extensions (multi-vendor aggregate)
 ```
 
 ---
 
-## 🌐 STEP (d) DELIVERABLES — What Was Built
+## 🌐 STEP (f) DELIVERABLES — What Was Built
 
-8 new route files (all under `src/app/api/procurement/`):
+### New files
 
-| Route | Methods | Service calls |
-|-------|---------|---------------|
-| `rfqs/[rfqId]/lines/route.ts` | GET, POST | `listRfqLines`, `addRfqLine` |
-| `rfqs/[rfqId]/lines/[lineId]/route.ts` | PATCH, DELETE | `updateRfqLine`, `deleteRfqLine` |
-| `rfqs/[rfqId]/lines/bulk/route.ts` | POST | `addRfqLinesBulk` |
-| `rfqs/[rfqId]/lines/snapshot/route.ts` | POST | `snapshotFromBoq` |
-| `sourcing-events/route.ts` | GET, POST | `listSourcingEvents`, `createSourcingEvent` |
-| `sourcing-events/[eventId]/route.ts` | GET, PATCH | `getSourcingEvent`, `updateSourcingEvent` |
-| `sourcing-events/[eventId]/archive/route.ts` | POST | `archiveSourcingEvent` |
-| `sourcing-events/[eventId]/rfqs/route.ts` | POST, DELETE | `addRfqToSourcingEvent`, `removeRfqFromSourcingEvent` |
+| File | Description |
+|------|-------------|
+| `src/app/api/boq/items/route.ts` | GET `/api/boq/items?projectId=X` — tenant-scoped BOQ item list |
+| `src/subapps/procurement/components/BoqLinePicker.tsx` | Dialog picker: multi-checkbox + search + "Aggiungi X" CTA |
 
-Pattern applied: `withAuth` + rate-limit + Zod validation + `errorStatus()` helper + `{ success, data }` envelope.
+### Modified files
+
+| File | Change |
+|------|--------|
+| `src/subapps/procurement/components/RfqBuilder.tsx` | `FormLine` type (extends `RfqLine`), BOQ picker button, `handleBoqSelect`, `handleSubmit` split `boqItemIds`/`adHocLines` |
+| `src/i18n/locales/el/quotes.json` | `rfqs.boqPicker.*` (7 keys) |
+| `src/i18n/locales/en/quotes.json` | `rfqs.boqPicker.*` (7 keys) |
+| `docs/.../ADR-327-*.md` | Step (f) changelog entry |
 
 ---
 
-## 🚦 PROTOCOL FOR NEXT SESSION (step e — UI Components)
+## 🚦 PROTOCOL FOR NEXT SESSION (step g — Vendor Multi-Select)
 
 ### Step 0 — Model declaration (CLAUDE.md N.14)
 
-**UI-heavy step.** Multiple React components, hooks, and wizard integration. Recommend **Sonnet 4.6**.
-
-```
-🎯 Modello consigliato: Sonnet 4.6
-Motivo: UI components + hooks, pattern reuse from existing wizard,
-        no new architecture decisions — execution step.
-Switch: /model sonnet
-⏸️ Aspetta "ok" da Giorgio prima di procedere.
-```
+**Modello consigliato: Sonnet 4.6** — UI extension + pattern reuse from existing `VendorInviteSection`, no new architecture.
 
 ### Step 1 — Read in parallel (RECOGNITION)
 
 Before writing code:
 
 1. `adrs/ADR-327-HANDOFF.md` (this file)
-2. `docs/centralized-systems/reference/adrs/ADR-327-quote-management-comparison-system.md` §17 Q29-Q31 (line editor UX decisions)
-3. `src/app/procurement/rfqs/new/page.tsx` — existing wizard (5 steps: Project → Trade → Lines → Vendor → Meta)
-4. `src/subapps/procurement/components/RfqBuilder.tsx` — wizard step components
-5. `src/app/api/procurement/rfqs/[rfqId]/lines/route.ts` (step d — POST endpoint shape)
-6. `src/app/api/procurement/sourcing-events/route.ts` (step d — POST endpoint shape)
-7. `src/subapps/procurement/types/rfq-line.ts` — CreateRfqLineDTO, RfqLine
-8. `src/subapps/procurement/types/sourcing-event.ts` — SourcingEvent, CreateSourcingEventDTO
+2. `src/subapps/procurement/components/RfqBuilder.tsx` — current form state
+3. `src/subapps/procurement/components/VendorInviteSection.tsx` — existing vendor picker pattern (Combobox + vendor contact list)
+4. `src/subapps/procurement/hooks/useVendorInvites.ts` — existing hook for vendor contacts
+5. `src/subapps/procurement/types/rfq.ts` — `CreateRfqDTO.invitedVendorIds?: string[]`
+6. `src/i18n/locales/el/quotes.json` rfqs section (check existing vendor keys)
 
-### Step 2 — Scope confirmation
+### Step 2 — Scope for step (g)
 
-Giorgio confirms what UI components he wants in step (e). Possible scope:
+Add vendor multi-select to RfqBuilder:
+- Section below Lines: "Vendors da invitare"
+- Searchable combobox (uses existing vendor contacts API from P3.b: `/api/rfqs/[id]/vendor-contacts` OR a simpler `/api/contacts?persona=supplier`)
+- Selected vendors as chips/badges with remove button
+- `form.invitedVendorIds` is already in FormState — just need UI wiring
 
-**Option A — Minimal (lines editor only)**:
-- `RfqLinesEditor.tsx` (CRUD table for `rfqs/{id}/lines`) — shown in wizard Step 3 when `source = 'ad_hoc'`
-- `BulkBoqImporter.tsx` — BOQ item picker → POST `/lines/snapshot`
-
-**Option B — Multi-trade toggle**:
-- `SourcingEventToggle.tsx` — "+ Πολλαπλές ειδικότητες σε πακέτο" toggle in RfqBuilder Step 1
-- `useSourcingEvent` hook — wraps `sourcing-events` CRUD API
-- SourcingEvent summary card in RFQ detail page
-
-**Option C — Full wizard wiring (steps f-h)**:
-- Full 5-step wizard connected to new API endpoints (including vendor multi-select + lines)
-
-Giorgio decides scope.
+**Key constraint**: vendor contacts are already pre-fetched in `useVendorInvites.ts` (for an existing RFQ). For the NEW RFQ wizard, vendor contacts must be fetched without an rfqId. Use the existing `/api/contacts` endpoint filtered by supplier persona.
 
 ---
 
-## ⚠️ CRITICAL — DO NOT (carry-over from step c/d)
+## ⚠️ CRITICAL — DO NOT
 
 1. ❌ **DO NOT push** without explicit order (N.(-1))
 2. ❌ **DO NOT skip Phase 3 ADR update** — same commit as code
 3. ❌ **DO NOT expose `unitPrice` to vendors** — use `toPublicRfqLine()` for portal payloads
 4. ❌ **DO NOT hardcode strings** — i18n via `t('quotes.*')` namespace (keys first in locale JSON)
-5. ❌ **DO NOT call API routes directly** from components — always via custom hooks
+5. ❌ **DO NOT add a wizard 5-step flow** — form remains flat (see step e spec)
 
 ---
 
@@ -119,13 +99,16 @@ Giorgio decides scope.
 - **Step (a) commit**: `d4c3f5d1`
 - **Step (b) commit**: `d0ef2c3c` (+ firebase deploy — rules+indexes live in production)
 - **Step (c) commit**: `84dd62f1`
-- **Step (d) commit**: see `git log --oneline -1` at session start
+- **Step (d+e) commit**: `b563db10`
+- **Step (f) commit**: see `git log --oneline -1` at session start
 - **API endpoints (step d)**: all in `src/app/api/procurement/rfqs/` + `src/app/api/procurement/sourcing-events/`
 - **Service layer (step c)**: `src/subapps/procurement/services/rfq-line-service.ts` + `sourcing-event-service.ts`
 - **Types**: `src/subapps/procurement/types/rfq-line.ts` + `sourcing-event.ts`
+- **BOQ API (step f)**: `src/app/api/boq/items/route.ts`
+- **BOQ Picker (step f)**: `src/subapps/procurement/components/BoqLinePicker.tsx`
 
 ---
 
 ## 💬 IF GIORGIO SAYS "VAI"
 
-Proceed with step (e) following the protocol above. If anything in the recognition phase contradicts this handoff, STOP and report — code is SoT, the handoff may be wrong.
+Proceed with step (g) following the protocol above. If anything in the recognition phase contradicts this handoff, STOP and report — code is SoT, the handoff may be wrong.

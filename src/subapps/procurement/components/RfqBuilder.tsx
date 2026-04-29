@@ -15,21 +15,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, Save, X } from 'lucide-react';
+import { Plus, Trash2, Save, X, ListFilter } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TradeSelector } from './TradeSelector';
+import { BoqLinePicker } from './BoqLinePicker';
 import { POProjectSelector } from '@/components/procurement/POEntitySelectors';
-import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
+import { getAtoeCodesForTrade, getTradeCodeForAtoeCategory } from '@/subapps/procurement/data/trades';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import type { RfqLine, CreateRfqDTO, AwardMode, ReminderTemplate } from '@/subapps/procurement/types/rfq';
 import type { CreateRfqLineDTO } from '@/subapps/procurement/types/rfq-line';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
+import type { BOQItem } from '@/types/boq/boq';
 import { useSourcingEvent } from '@/subapps/procurement/hooks/useSourcingEvent';
 
 // ============================================================================
 // TYPES
 // ============================================================================
+
+type FormLine = RfqLine & { source: 'boq' | 'ad_hoc'; boqItemId?: string | null };
 
 interface FormState {
   projectId: string;
@@ -38,7 +42,7 @@ interface FormState {
   deadlineDate: string;
   awardMode: AwardMode;
   reminderTemplate: ReminderTemplate;
-  lines: RfqLine[];
+  lines: FormLine[];
   invitedVendorIds: string[];
 }
 
@@ -58,7 +62,7 @@ export interface RfqBuilderInitialState {
 // ============================================================================
 
 interface RfqLineRowProps {
-  line: RfqLine;
+  line: FormLine;
   index: number;
   onUpdate: (i: number, field: keyof RfqLine, v: RfqLine[keyof RfqLine]) => void;
   onRemove: (i: number) => void;
@@ -159,13 +163,14 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
     deadlineDate: initialState?.deadlineDate ?? '',
     awardMode: initialState?.awardMode ?? 'whole_package',
     reminderTemplate: initialState?.reminderTemplate ?? 'standard',
-    lines: initialState?.lines ?? [],
+    lines: initialState?.lines?.map((l) => ({ ...l, source: 'ad_hoc' as const })) ?? [],
     invitedVendorIds: initialState?.invitedVendorIds ?? [],
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [multiTradeMode, setMultiTradeMode] = useState(false);
   const [sourcingEventTitle, setSourcingEventTitle] = useState('');
+  const [boqPickerOpen, setBoqPickerOpen] = useState(false);
   const { create: createSourcingEvent } = useSourcingEvent();
 
   const setField = useCallback(<K extends keyof FormState>(key: K, val: FormState[K]) => {
@@ -176,7 +181,7 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
     const id = `rfql_${Date.now()}`;
     const defaultTrade: TradeCode = 'concrete';
     const defaultCategoryCode = getAtoeCodesForTrade(defaultTrade)[0] ?? null;
-    const line: RfqLine = {
+    const line: FormLine = {
       id,
       description: '',
       trade: defaultTrade,
@@ -184,9 +189,28 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
       quantity: null,
       unit: null,
       notes: null,
+      source: 'ad_hoc',
     };
     setForm((prev) => ({ ...prev, lines: [...prev.lines, line] }));
   };
+
+  const handleBoqSelect = useCallback(
+    (boqItems: Array<Pick<BOQItem, 'id' | 'title' | 'categoryCode' | 'estimatedQuantity' | 'unit' | 'description'>>) => {
+      const newLines: FormLine[] = boqItems.map((item) => ({
+        id: `rfql_${Date.now()}_${item.id}`,
+        description: item.title,
+        trade: getTradeCodeForAtoeCategory(item.categoryCode) ?? 'materials_general',
+        categoryCode: item.categoryCode,
+        quantity: item.estimatedQuantity,
+        unit: item.unit as string,
+        notes: item.description ?? null,
+        source: 'boq' as const,
+        boqItemId: item.id,
+      }));
+      setForm((prev) => ({ ...prev, lines: [...prev.lines, ...newLines] }));
+    },
+    [],
+  );
 
   const removeLine = (i: number) =>
     setForm((prev) => ({ ...prev, lines: prev.lines.filter((_, idx) => idx !== i) }));
@@ -215,15 +239,21 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
         sourcingEventId = ev.id;
       }
 
-      const adHocLines: CreateRfqLineDTO[] = form.lines.map((l) => ({
-        source: 'ad_hoc' as const,
-        description: l.description,
-        trade: l.trade as TradeCode,
-        categoryCode: l.categoryCode ?? null,
-        quantity: l.quantity ?? null,
-        unit: l.unit ?? null,
-        notes: l.notes ?? null,
-      }));
+      const boqItemIds = form.lines
+        .filter((l) => l.source === 'boq' && l.boqItemId)
+        .map((l) => l.boqItemId as string);
+
+      const adHocLines: CreateRfqLineDTO[] = form.lines
+        .filter((l) => l.source === 'ad_hoc')
+        .map((l) => ({
+          source: 'ad_hoc' as const,
+          description: l.description,
+          trade: l.trade as TradeCode,
+          categoryCode: l.categoryCode ?? null,
+          quantity: l.quantity ?? null,
+          unit: l.unit ?? null,
+          notes: l.notes ?? null,
+        }));
 
       const dto: CreateRfqDTO = {
         projectId: form.projectId,
@@ -233,6 +263,7 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
         awardMode: form.awardMode,
         reminderTemplate: form.reminderTemplate,
         lines: [],
+        boqItemIds: boqItemIds.length > 0 ? boqItemIds : undefined,
         adHocLines: adHocLines.length > 0 ? adHocLines : undefined,
         ...(sourcingEventId ? { sourcingEventId } : {}),
         invitedVendorIds: form.invitedVendorIds.length > 0 ? form.invitedVendorIds : undefined,
@@ -333,13 +364,32 @@ export function RfqBuilder({ initialState, onSuccess, onCancel }: RfqBuilderProp
           </div>
         </div>
 
+        <BoqLinePicker
+          open={boqPickerOpen}
+          onOpenChange={setBoqPickerOpen}
+          projectId={form.projectId}
+          onSelect={handleBoqSelect}
+        />
+
         <section>
           <div className="mb-2 flex items-center justify-between">
             <Label>{t('rfqs.lines')}</Label>
-            <Button size="sm" variant="outline" onClick={addLine}>
-              <Plus className="mr-1 h-3.5 w-3.5" />
-              {t('rfqs.addLine')}
-            </Button>
+            <div className="flex gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBoqPickerOpen(true)}
+                disabled={!form.projectId}
+                title={!form.projectId ? t('rfqs.boqPicker.noProject') : undefined}
+              >
+                <ListFilter className="mr-1 h-3.5 w-3.5" />
+                {t('rfqs.boqPicker.button')}
+              </Button>
+              <Button size="sm" variant="outline" onClick={addLine}>
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                {t('rfqs.addLine')}
+              </Button>
+            </div>
           </div>
           {form.lines.length > 0 && (
             <div className="overflow-x-auto">

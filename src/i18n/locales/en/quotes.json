@@ -311,6 +311,15 @@
       "button": "Create RFQ from BOQ",
       "loading": "Loading BOQ...",
       "suggested": "{count} BOQ items loaded"
+    },
+    "boqPicker": {
+      "button": "From BOQ",
+      "title": "Select from Bill of Quantities",
+      "search": "Search...",
+      "empty": "No items found",
+      "add": "Add {count} items",
+      "noProject": "Select a project first",
+      "loading": "Loading..."
     }
   },
   "trades": {
