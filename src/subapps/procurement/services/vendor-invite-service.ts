@@ -362,6 +362,54 @@ export async function markInviteDeclined(
 /**
  * Revoke invite (PM action) — invalidates token + stops reminders.
  */
+// =============================================================================
+// RESEND
+// =============================================================================
+
+/**
+ * Re-send the invite email for an existing invite. Always uses email channel.
+ * Used by the UnifiedShareDialog email button (ADR-327 Phase H).
+ */
+export async function resendVendorInvite(
+  ctx: AuthContext,
+  inviteId: string,
+  options: { locale?: 'el' | 'en' } = {},
+): Promise<{ success: boolean; errorReason: string | null }> {
+  const invite = await getVendorInvite(ctx.companyId, inviteId);
+  if (!invite) throw new Error(`Vendor invite ${inviteId} not found`);
+  if (invite.status === 'expired' || invite.status === 'declined') {
+    throw new Error(`Cannot resend invite with status '${invite.status}'`);
+  }
+
+  const vendor = await fetchVendorContact(ctx.companyId, invite.vendorContactId);
+  if (!vendor) throw new Error(`Vendor contact ${invite.vendorContactId} not found`);
+  if (!vendor.email) throw new Error('Vendor contact has no email address');
+
+  const rfq = await getRfq(ctx.companyId, invite.rfqId);
+  if (!rfq) throw new Error(`RFQ ${invite.rfqId} not found`);
+
+  const emailChannel = resolveChannel('email');
+  if (!emailChannel) throw new Error('Email channel not available');
+
+  const expiresTs = invite.expiresAt as unknown as { toDate?: () => Date; seconds?: number };
+  const expiresDate = expiresTs.toDate?.() ?? new Date((expiresTs.seconds ?? 0) * 1000);
+
+  const dispatch = await emailChannel.send({
+    inviteId,
+    vendorName: vendor.displayName,
+    recipient: vendor.email,
+    rfqTitle: rfq.title,
+    projectName: null,
+    portalUrl: buildPortalUrl(invite.token),
+    expiresAt: expiresDate.toISOString(),
+    locale: options.locale ?? 'el',
+    declineUrl: buildDeclineUrl(invite.token),
+  });
+
+  logger.info('Vendor invite resent', { inviteId, success: dispatch.success });
+  return { success: dispatch.success, errorReason: dispatch.errorReason };
+}
+
 export async function revokeVendorInvite(
   ctx: AuthContext,
   inviteId: string,

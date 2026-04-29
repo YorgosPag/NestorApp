@@ -28,6 +28,7 @@ export interface CreateInviteInput {
 }
 
 export interface CreateInviteOutput {
+  inviteId: string;
   portalUrl: string;
   delivery: { success: boolean; errorReason: string | null };
 }
@@ -82,9 +83,13 @@ export function useVendorInvites(rfqId: string): UseVendorInvitesResult {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-      const data = json.data as { portalUrl: string; delivery: CreateInviteOutput['delivery'] };
+      const data = json.data as {
+        invite: { id: string };
+        portalUrl: string;
+        delivery: CreateInviteOutput['delivery'];
+      };
       await refetch();
-      return { portalUrl: data.portalUrl, delivery: data.delivery };
+      return { inviteId: data.invite.id, portalUrl: data.portalUrl, delivery: data.delivery };
     },
     [rfqId, refetch],
   );

@@ -23,7 +23,8 @@ export type ShareEntityType =
   | 'contact'
   | 'property_showcase'
   | 'project_showcase'
-  | 'building_showcase';
+  | 'building_showcase'
+  | 'vendor_rfq_invite';
 
 export type ShareDispatchChannel =
   | 'email'

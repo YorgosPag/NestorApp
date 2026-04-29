@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { Copy, Link, Mail, Plus, RotateCcw } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { BadgeVariantProps } from '@/components/ui/badge';
@@ -13,18 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
 import type { InviteStatus, DeliveryChannel } from '../types/vendor-invite';
 import { useVendorInvites } from '../hooks/useVendorInvites';
+import { useAuth } from '@/auth/hooks/useAuth';
 
 // ============================================================================
 // TIMESTAMP HELPER
@@ -92,28 +87,21 @@ interface InviteModalProps {
     vendorContactId: string;
     deliveryChannel: 'email' | 'copy_link';
     expiresInDays?: number;
-  }) => Promise<{ portalUrl: string; delivery: { success: boolean; errorReason: string | null } }>;
+  }) => Promise<{ inviteId: string; portalUrl: string; delivery: { success: boolean; errorReason: string | null } }>;
+  onCreated: (data: { portalUrl: string; inviteId: string }) => void;
 }
 
-function InviteModal({ open, onClose, vendorContacts, contactsLoading, onCreate }: InviteModalProps) {
+function InviteModal({ open, onClose, vendorContacts, contactsLoading, onCreate, onCreated }: InviteModalProps) {
   const { t } = useTranslation('quotes');
   const [vendorId, setVendorId] = useState('');
-  const [channel, setChannel] = useState<'email' | 'copy_link'>('email');
   const [expiresInDays, setExpiresInDays] = useState(7);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [portalUrl, setPortalUrl] = useState<string | null>(null);
-  const [deliveryWarning, setDeliveryWarning] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const reset = useCallback(() => {
     setVendorId('');
-    setChannel('email');
     setExpiresInDays(7);
     setError(null);
-    setPortalUrl(null);
-    setDeliveryWarning(null);
-    setCopied(false);
     setSubmitting(false);
   }, []);
 
@@ -127,25 +115,16 @@ function InviteModal({ open, onClose, vendorContacts, contactsLoading, onCreate 
     setSubmitting(true);
     setError(null);
     try {
-      const result = await onCreate({ vendorContactId: vendorId, deliveryChannel: channel, expiresInDays });
-      setPortalUrl(result.portalUrl);
-      if (!result.delivery.success) {
-        setDeliveryWarning(result.delivery.errorReason ?? t('invites.errors.deliveryFailed'));
-      }
+      const result = await onCreate({ vendorContactId: vendorId, deliveryChannel: 'copy_link', expiresInDays });
+      reset();
+      onClose();
+      onCreated({ portalUrl: result.portalUrl, inviteId: result.inviteId });
     } catch (e) {
       setError(e instanceof Error ? e.message : t('invites.errors.createFailed'));
     } finally {
       setSubmitting(false);
     }
-  }, [vendorId, channel, expiresInDays, onCreate, t]);
-
-  const handleCopyUrl = useCallback(() => {
-    if (!portalUrl) return;
-    void navigator.clipboard.writeText(portalUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [portalUrl]);
+  }, [vendorId, expiresInDays, onCreate, onCreated, onClose, reset, t]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
@@ -154,78 +133,42 @@ function InviteModal({ open, onClose, vendorContacts, contactsLoading, onCreate 
           <DialogTitle>{t('invites.modal.title')}</DialogTitle>
         </DialogHeader>
 
-        {portalUrl ? (
-          <section className="space-y-3">
-            {deliveryWarning ? (
-              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                ⚠️ {t('invites.errors.emailNotSent')}: {deliveryWarning}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">{t('invites.modal.emailSent')}</p>
-            )}
-            <p className="text-sm font-medium">{t('invites.modal.portalUrlLabel')}</p>
-            <div className="flex items-center gap-2">
-              <Input value={portalUrl} readOnly className="font-mono text-xs" />
-              <Button variant="outline" size="sm" onClick={handleCopyUrl} className="shrink-0">
-                <Copy className="mr-1 h-3 w-3" />
-                {copied ? t('invites.linkCopied') : t('invites.modal.portalUrlCopy')}
-              </Button>
-            </div>
-            <DialogFooter>
-              <Button onClick={handleClose}>{t('invites.modal.cancel')}</Button>
-            </DialogFooter>
-          </section>
-        ) : (
-          <section className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('invites.modal.vendorLabel')}</label>
-              <SearchableCombobox
-                value={vendorId}
-                onValueChange={(val) => setVendorId(val)}
-                options={vendorContacts}
-                placeholder={t('invites.modal.vendorPlaceholder')}
-                emptyMessage={t('invites.modal.vendorEmpty')}
-                isLoading={contactsLoading}
-              />
-            </div>
+        <section className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">{t('invites.modal.vendorLabel')}</label>
+            <SearchableCombobox
+              value={vendorId}
+              onValueChange={(val) => setVendorId(val)}
+              options={vendorContacts}
+              placeholder={t('invites.modal.vendorPlaceholder')}
+              emptyMessage={t('invites.modal.vendorEmpty')}
+              isLoading={contactsLoading}
+            />
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('invites.modal.channelLabel')}</label>
-              <Select value={channel} onValueChange={(v) => setChannel(v as 'email' | 'copy_link')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="email">{t('invites.modal.channelEmail')}</SelectItem>
-                  <SelectItem value="copy_link">{t('invites.modal.channelCopyLink')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">{t('invites.modal.expiresLabel')}</label>
+            <Input
+              type="number"
+              min={1}
+              max={90}
+              value={expiresInDays}
+              onChange={(e) => setExpiresInDays(Number(e.target.value))}
+              className="w-24"
+            />
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('invites.modal.expiresLabel')}</label>
-              <Input
-                type="number"
-                min={1}
-                max={90}
-                value={expiresInDays}
-                onChange={(e) => setExpiresInDays(Number(e.target.value))}
-                className="w-24"
-              />
-            </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose} disabled={submitting}>
-                {t('invites.modal.cancel')}
-              </Button>
-              <Button onClick={handleSubmit} disabled={submitting}>
-                {submitting ? t('invites.modal.sending') : t('invites.modal.submit')}
-              </Button>
-            </DialogFooter>
-          </section>
-        )}
+          <DialogFooter>
+            <Button variant="outline" onClick={handleClose} disabled={submitting}>
+              {t('invites.modal.cancel')}
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? t('invites.modal.sending') : t('invites.modal.submit')}
+            </Button>
+          </DialogFooter>
+        </section>
       </DialogContent>
     </Dialog>
   );
@@ -300,11 +243,19 @@ interface VendorInviteSectionProps {
   rfqId: string;
 }
 
+interface ShareDialogData {
+  portalUrl: string;
+  inviteId: string;
+}
+
 export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
   const { t } = useTranslation('quotes');
+  const { user } = useAuth();
   const { invites, vendorContacts, loading, contactsLoading, createInvite, revokeInvite } =
     useVendorInvites(rfqId);
   const [modalOpen, setModalOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareData, setShareData] = useState<ShareDialogData | null>(null);
 
   const vendorContactOptions: ComboboxOption[] = vendorContacts.map((c) => ({
     value: c.id,
@@ -313,6 +264,29 @@ export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
   }));
 
   const vendorNameMap = new Map(vendorContacts.map((c) => [c.id, c.displayName]));
+
+  const handleCreated = useCallback((data: ShareDialogData) => {
+    setShareData(data);
+    setShareDialogOpen(true);
+  }, []);
+
+  const handleShareClose = useCallback(() => {
+    setShareDialogOpen(false);
+    setShareData(null);
+  }, []);
+
+  const handleEmailResend = useCallback(async () => {
+    if (!shareData) return;
+    const res = await fetch(`/api/rfqs/${rfqId}/invites/${shareData.inviteId}/resend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) {
+      const json = await res.json() as { error?: string };
+      throw new Error(json?.error ?? `HTTP ${res.status}`);
+    }
+  }, [rfqId, shareData]);
 
   return (
     <section aria-labelledby="vendor-invites-heading" className="space-y-4 rounded-lg border p-4">
@@ -363,7 +337,22 @@ export function VendorInviteSection({ rfqId }: VendorInviteSectionProps) {
         vendorContacts={vendorContactOptions}
         contactsLoading={contactsLoading}
         onCreate={createInvite}
+        onCreated={handleCreated}
       />
+
+      {shareData && user?.uid && (
+        <UnifiedShareDialog
+          open={shareDialogOpen}
+          onOpenChange={(o) => { if (!o) handleShareClose(); }}
+          entityType="vendor_rfq_invite"
+          entityId={shareData.inviteId}
+          entityTitle={t('invites.shareDialog.title')}
+          userId={user.uid}
+          companyId={user.companyId ?? ''}
+          shareUrl={shareData.portalUrl}
+          onDirectEmailShare={handleEmailResend}
+        />
+      )}
     </section>
   );
 }

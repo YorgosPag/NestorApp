@@ -397,6 +397,9 @@
       "portalUrlCopy": "Copy",
       "emailSent": "Email sent successfully to the vendor"
     },
+    "shareDialog": {
+      "title": "Share Invitation"
+    },
     "table": {
       "vendor": "Vendor",
       "channel": "Channel",

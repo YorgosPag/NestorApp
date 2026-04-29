@@ -97,6 +97,18 @@ export interface UnifiedShareDialogProps {
   onShareSuccess?: (platform: string) => void;
   onShareError?: (platform: string, error: string) => void;
   onCopySuccess?: () => void;
+  /**
+   * Pre-built share URL. When provided, bypasses `UnifiedSharingService.createShare`
+   * entirely and uses this URL directly. The policy accordion is hidden.
+   * Used for vendor_rfq_invite where the HMAC token URL is pre-generated.
+   */
+  shareUrl?: string;
+  /**
+   * When provided, the email platform button bypasses `EmailShareForm` and
+   * calls this function directly. Used for vendor_rfq_invite to dispatch via
+   * email-channel.ts (ADR-327 Phase H). Caller owns the API call.
+   */
+  onDirectEmailShare?: () => Promise<void>;
 }
 
 // ============================================================================
@@ -126,6 +138,8 @@ export function UnifiedShareDialog({
   onShareSuccess,
   onShareError,
   onCopySuccess,
+  shareUrl,
+  onDirectEmailShare,
 }: UnifiedShareDialogProps): React.ReactElement {
   const { t } = useTranslation(['files', 'common', 'common-shared', 'properties-detail']);
   const { t: tShell } = useTranslation('common-shared');
@@ -206,17 +220,17 @@ export function UnifiedShareDialog({
     [createShare, userId],
   );
 
-  // Auto-create on open (ADR-312 Phase 9.7) — restores the original
-  // single-dialog design. The token is created with defaults (72h, no
-  // password, 0 max accesses, no note) the first time the dialog opens so
-  // the channel surface (copy link / social dispatch) is immediately
-  // functional. Custom policy (password / note / expiry) is applied via the
-  // "Ρυθμίσεις συνδέσμου" accordion which does revoke + recreate on submit.
+  // Auto-create on open (ADR-312 Phase 9.7). When `shareUrl` is pre-provided
+  // (vendor_rfq_invite), skip createShare and use the URL directly.
   useEffect(() => {
     if (!open) return;
     if (share || creating) return;
+    if (shareUrl) {
+      setShare({ shareId: '', token: '', url: shareUrl });
+      return;
+    }
     void ensureShare(INITIAL_LINK_TOKEN_DRAFT, { revokePrevious: false });
-  }, [open, share, creating, ensureShare]);
+  }, [open, share, creating, ensureShare, shareUrl]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
@@ -314,6 +328,7 @@ export function UnifiedShareDialog({
             }
             initialPersonalMessage={draft.note.trim() || undefined}
             dirtyPolicy={isDirty}
+            onDirectEmailShare={onDirectEmailShare}
           />
 
           {(entityType === 'property_showcase'
@@ -343,38 +358,40 @@ export function UnifiedShareDialog({
             </Button>
           )}
 
-          <section
-            className={cn(
-              'border rounded-lg overflow-hidden',
-              policyOpen && 'border-primary/40',
-            )}
-          >
-            <button
-              type="button"
-              onClick={() => setPolicyOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
-              aria-expanded={policyOpen}
-            >
-              <span>{t('common:share.linkSettings')}</span>
-              {policyOpen ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
+          {!shareUrl && (
+            <section
+              className={cn(
+                'border rounded-lg overflow-hidden',
+                policyOpen && 'border-primary/40',
               )}
-            </button>
-            {policyOpen && (
-              <div className="p-3 border-t bg-muted/20">
-                <LinkTokenForm
-                  draft={draft}
-                  onDraftChange={setDraft}
-                  onSubmit={handleApplyPolicy}
-                  onCancel={() => setPolicyOpen(false)}
-                  submitting={creating}
-                  disabled={!isDirty}
-                />
-              </div>
-            )}
-          </section>
+            >
+              <button
+                type="button"
+                onClick={() => setPolicyOpen((v) => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
+                aria-expanded={policyOpen}
+              >
+                <span>{t('common:share.linkSettings')}</span>
+                {policyOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </button>
+              {policyOpen && (
+                <div className="p-3 border-t bg-muted/20">
+                  <LinkTokenForm
+                    draft={draft}
+                    onDraftChange={setDraft}
+                    onSubmit={handleApplyPolicy}
+                    onCancel={() => setPolicyOpen(false)}
+                    submitting={creating}
+                    disabled={!isDirty}
+                  />
+                </div>
+              )}
+            </section>
+          )}
         </section>
       )}
     </ShareSurfaceShell>

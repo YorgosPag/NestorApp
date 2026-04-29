@@ -76,6 +76,12 @@ export interface UserAuthPermissionPanelProps {
    * Prevents shipping the old URL with stale settings (ADR-312 Phase 9.10).
    */
   dirtyPolicy?: boolean;
+  /**
+   * When provided, clicking the email platform button calls this directly
+   * instead of opening `EmailShareForm`. Used for vendor_rfq_invite where the
+   * email is dispatched via email-channel.ts (ADR-327 Phase H).
+   */
+  onDirectEmailShare?: () => Promise<void>;
 }
 
 export function UserAuthPermissionPanel({
@@ -89,6 +95,7 @@ export function UserAuthPermissionPanel({
   showcaseContext,
   initialPersonalMessage,
   dirtyPolicy = false,
+  onDirectEmailShare,
 }: UserAuthPermissionPanelProps): React.ReactElement {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const notifications = useNotifications();
@@ -132,7 +139,19 @@ export function UserAuthPermissionPanel({
   const { handlePlatformShare, handlePhotoPickerConfirm } = usePlatformShareController({
     shareData,
     effectivePhotoUrl,
-    onEmailRequest: () => setShowEmailForm(true),
+    onEmailRequest: onDirectEmailShare
+      ? () => {
+          setLoading(true);
+          void onDirectEmailShare()
+            .then(() => { onShareSuccess?.('email'); })
+            .catch((err: unknown) => {
+              const msg = err instanceof Error ? err.message : 'Email send failed';
+              notifications.error(msg);
+              onShareError?.('email', msg);
+            })
+            .finally(() => setLoading(false));
+        }
+      : () => setShowEmailForm(true),
     onPhotoPickerRequest: (platformId, initialPhoto) => {
       setSelectedPhoto(initialPhoto);
       setPhotoPickerPlatform(platformId);

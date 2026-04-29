@@ -397,6 +397,9 @@
       "portalUrlCopy": "Αντιγραφή",
       "emailSent": "Το email εστάλη επιτυχώς στον προμηθευτή"
     },
+    "shareDialog": {
+      "title": "Κοινοποίηση Πρόσκλησης"
+    },
     "table": {
       "vendor": "Προμηθευτής",
       "channel": "Κανάλι",
