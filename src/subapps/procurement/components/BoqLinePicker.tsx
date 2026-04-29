@@ -46,8 +46,12 @@ export function BoqLinePicker({ open, onOpenChange, projectId, onSelect }: BoqLi
     setLoading(true);
 
     fetch(`/api/boq/items?projectId=${encodeURIComponent(projectId)}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((json) => setItems(json.data ?? []))
+      .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, [open, projectId]);
 
