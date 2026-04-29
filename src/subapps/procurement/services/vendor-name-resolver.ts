@@ -65,6 +65,11 @@ export function pickContactDisplayName(data: admin.firestore.DocumentData): stri
   for (const c of candidates) {
     if (typeof c === 'string' && c.trim().length > 0) return c.trim();
   }
+  // Natural persons: firstName + lastName stored separately
+  const first = typeof data.firstName === 'string' ? data.firstName.trim() : '';
+  const last = typeof data.lastName === 'string' ? data.lastName.trim() : '';
+  const composite = [first, last].filter(Boolean).join(' ');
+  if (composite.length > 0) return composite;
   return null;
 }
 
