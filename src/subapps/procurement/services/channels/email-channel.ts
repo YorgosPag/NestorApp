@@ -15,6 +15,7 @@ import { Resend } from 'resend';
 import { EmailAdapter } from '@/server/comms/email-adapter';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { wrapInBrandedTemplate, escapeHtml, BRAND } from '@/services/email-templates/base-email-template';
 import type { ChannelDeliveryResult, MessageChannel, VendorInviteMessage } from './types';
 
 const logger = createModuleLogger('VENDOR_PORTAL_EMAIL_CHANNEL');
@@ -39,15 +40,6 @@ function withProviderTimeout<T>(promise: Promise<T>, label: string): Promise<T> 
       ),
     ),
   ]);
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 interface ComposedEmail {
@@ -79,38 +71,25 @@ function compose(message: VendorInviteMessage): ComposedEmail {
     ? `<p style="font-size:13px;color:#666;">${escapeHtml(declineQuestion)} <a href="${message.declineUrl}" style="color:#888;">${escapeHtml(declineCta)}</a>.</p>`
     : '';
 
-  const html = `<!doctype html>
-<html lang="${message.locale}">
-<head><meta charset="utf-8"><title>${escapeHtml(subject)}</title></head>
-<body style="margin:0;padding:0;background:#f5f6f7;font-family:'Helvetica Neue',Arial,sans-serif;color:#222;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 0;">
-    <tr><td align="center">
-      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-        <tr><td style="padding:24px 32px;border-bottom:1px solid #eee;">
-          <strong style="font-size:18px;color:#1a1a1a;">${escapeHtml(FROM_NAME)}</strong>
-        </td></tr>
-        <tr><td style="padding:32px;">
-          <p style="margin:0 0 16px;">${escapeHtml(greeting)}</p>
-          <p style="margin:0 0 24px;line-height:1.5;">${intro}</p>
-          <p style="margin:0 0 32px;">
-            <a href="${message.portalUrl}" style="display:inline-block;padding:12px 28px;background:#0a66c2;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">${escapeHtml(cta)}</a>
-          </p>
-          <p style="margin:0 0 12px;font-size:13px;color:#666;">
-            ${escapeHtml(expiresLabel)}: <strong>${new Date(message.expiresAt).toLocaleString(message.locale)}</strong>
-          </p>
-          <p style="margin:24px 0 0;padding:12px 16px;background:#fff7e6;border-left:3px solid #fa8c16;font-size:13px;color:#8a4b00;">
-            ${escapeHtml(warning)}
-          </p>
-          ${declineLine}
-        </td></tr>
-        <tr><td style="padding:16px 32px;background:#fafafa;border-top:1px solid #eee;font-size:11px;color:#999;">
-          ${escapeHtml(FROM_EMAIL)} • ${escapeHtml(FROM_NAME)}
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  const contentHtml = `
+<p style="margin:0 0 16px;font-size:15px;font-weight:600;color:${BRAND.navyDark};">${escapeHtml(greeting)}</p>
+<p style="margin:0 0 24px;font-size:15px;color:${BRAND.gray};line-height:1.6;">${intro}</p>
+<p style="margin:0 0 32px;text-align:center;">
+  <a href="${escapeHtml(message.portalUrl)}" style="display:inline-block;padding:14px 32px;background:${BRAND.accent};color:${BRAND.white};text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">${escapeHtml(cta)}</a>
+</p>
+<p style="margin:0 0 8px;font-size:13px;color:${BRAND.grayLight};">
+  ${escapeHtml(expiresLabel)}: <strong style="color:${BRAND.navyDark};">${new Date(message.expiresAt).toLocaleString(message.locale)}</strong>
+</p>
+<p style="margin:24px 0 0;padding:12px 16px;background:#fff7e6;border-left:3px solid #fa8c16;font-size:13px;color:#8a4b00;">
+  ${escapeHtml(warning)}
+</p>
+${declineLine}`;
+
+  const html = wrapInBrandedTemplate({
+    contentHtml,
+    companyName: FROM_NAME,
+    companyEmail: FROM_EMAIL,
+  });
 
   const text = `${greeting}\n\n${
     isEl ? 'Αίτημα προσφοράς:' : 'Quote request:'
