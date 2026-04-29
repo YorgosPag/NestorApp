@@ -30,6 +30,15 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [rfq, setRfq] = useState<RFQ | null>(null);
 
+  // Belt-and-suspenders: SC page.tsx has redirect() but Turbopack dev mode may skip it.
+  // This client-side guard ensures [id] template literals never reach the API layer.
+  useEffect(() => {
+    if (id.startsWith('[')) {
+      router.replace('/procurement/rfqs');
+    }
+  }, [id, router]);
+  if (id.startsWith('[')) return null;
+
   const fetchRfq = useCallback(async () => {
     try {
       const res = await fetch(`/api/rfqs/${id}`);
