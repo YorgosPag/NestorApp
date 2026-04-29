@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useIsMobile } from '@/hooks/useMobile';
 import type { Quote } from '../types/quote';
 
 export type RfqTabValue = 'quotes' | 'comparison' | 'setup';
@@ -57,6 +58,7 @@ export function useRfqUrlState({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
 
   const tabParam = searchParams.get('tab');
   const quoteParam = searchParams.get('quote');
@@ -86,10 +88,29 @@ export function useRfqUrlState({
       const params = new URLSearchParams(searchParams.toString());
       if (quote) params.set('quote', quote.id);
       else params.delete('quote');
-      router.replace(`${pathname}?${params.toString()}`);
+      const url = `${pathname}?${params.toString()}`;
+      // Mobile: push so back-gesture restores list (§5.E.4)
+      if (isMobile) router.push(url);
+      else router.replace(url);
     },
-    [router, pathname, searchParams],
+    [router, pathname, searchParams, isMobile],
   );
+
+  // Self-correct stale ?quote= param (e.g. deleted quote in URL after refresh).
+  // Fires once when loading completes. Always router.replace — silent, no history.
+  const correctedRef = useRef(false);
+  useEffect(() => {
+    if (quotesLoading) { correctedRef.current = false; return; }
+    if (correctedRef.current) return;
+    correctedRef.current = true;
+    const expectedId = selectedQuote?.id ?? null;
+    const currentId = quoteParam;
+    if (currentId === expectedId) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (expectedId) params.set('quote', expectedId);
+    else params.delete('quote');
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [quotesLoading, selectedQuote, quoteParam, searchParams, pathname, router]);
 
   return { activeTab, selectedQuote, handleTabChange, handleSelectQuote };
 }

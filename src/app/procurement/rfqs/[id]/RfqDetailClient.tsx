@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, ClipboardList, Plus, ScanLine } from 'lucide-react';
+import { ArrowLeft, Building2, ClipboardList, Plus, ScanLine } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PageHeader } from '@/core/headers';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
@@ -15,6 +16,8 @@ import { useRfqLines } from '@/subapps/procurement/hooks/useRfqLines';
 import { useSourcingEventAggregate } from '@/subapps/procurement/hooks/useSourcingEventAggregate';
 import { useRfqUrlState, type RfqTabValue } from '@/subapps/procurement/hooks/useRfqUrlState';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
+import { QuoteDetailsHeader } from '@/subapps/procurement/components/QuoteDetailsHeader';
+import { QuoteDetailSummary } from '@/subapps/procurement/components/QuoteDetailSummary';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
 import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
 import { SourcingEventSummaryCard } from '@/subapps/procurement/components/SourcingEventSummaryCard';
@@ -72,7 +75,10 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     useComparison(id, { cherryPick: cherryPickEnabled });
   const { aggregate, loading: aggregateLoading } = useSourcingEventAggregate(rfq?.sourcingEventId);
 
-  const { activeTab, handleTabChange } = useRfqUrlState({ quotes, quotesLoading: loading });
+  const { activeTab, selectedQuote, handleTabChange, handleSelectQuote } = useRfqUrlState({
+    quotes,
+    quotesLoading: loading,
+  });
 
   const handleAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
     const res = await fetch(`/api/rfqs/${id}/award`, {
@@ -86,11 +92,6 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     }
     await Promise.all([fetchRfq(), refetch(), refetchComparison()]);
   }, [id, fetchRfq, refetch, refetchComparison]);
-
-  const handleViewQuote = useCallback(
-    (quoteId: string) => router.push(`/procurement/quotes/${quoteId}/review`),
-    [router],
-  );
 
   const scanHref = useMemo(() => {
     const sp = new URLSearchParams({ rfqId: id });
@@ -162,7 +163,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           <TabsTrigger value="setup">{t('rfqs.tabs.setup')}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="quotes" className="space-y-6">
+        <TabsContent value="quotes" className="space-y-4">
           {showQuoteForm && (
             <QuoteForm
               rfqId={id}
@@ -170,11 +171,38 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
               onCancel={() => setShowQuoteForm(false)}
             />
           )}
-          <QuoteList
-            quotes={quotes}
-            loading={loading}
-            onSelectQuote={(q) => handleViewQuote(q.id)}
-          />
+          <div className="md:grid md:grid-cols-[380px_1fr] md:gap-4">
+            <div className={cn(selectedQuote ? 'hidden md:block' : 'block')}>
+              <QuoteList
+                quotes={quotes}
+                loading={loading}
+                onSelectQuote={handleSelectQuote}
+                selectedQuoteId={selectedQuote?.id}
+              />
+            </div>
+            <aside className={cn(selectedQuote ? 'block' : 'hidden md:block')}>
+              {selectedQuote && (
+                <>
+                  <button
+                    type="button"
+                    className="md:hidden mb-2 flex items-center gap-2 text-sm font-medium"
+                    onClick={() => handleSelectQuote(null)}
+                    aria-label={t('rfqs.mobile.backToList')}
+                  >
+                    <ArrowLeft className="size-4" />
+                    {t('rfqs.mobile.backToList')}
+                  </button>
+                  <QuoteDetailsHeader quote={selectedQuote} />
+                  <QuoteDetailSummary quote={selectedQuote} />
+                </>
+              )}
+              {!selectedQuote && (
+                <div className="hidden md:flex h-full items-center justify-center text-sm text-muted-foreground">
+                  {t('rfqs.selectQuoteHint')}
+                </div>
+              )}
+            </aside>
+          </div>
         </TabsContent>
 
         <TabsContent value="comparison" className="space-y-6">

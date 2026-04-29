@@ -348,7 +348,11 @@
       "quotes": "Quotes",
       "comparison": "Comparison",
       "setup": "RFQ Setup"
-    }
+    },
+    "mobile": {
+      "backToList": "Back to list"
+    },
+    "selectQuoteHint": "Select a quote to view details"
   },
   "trades": {
     "title": "Trades",
