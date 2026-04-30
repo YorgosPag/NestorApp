@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, AlertTriangle, X, Save, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { computeQuoteTotals } from '@/subapps/procurement/types/quote';
 import { detectVendorMismatch } from '@/subapps/procurement/utils/vendor-mismatch';
 import type {
@@ -402,11 +403,17 @@ export function ExtractedDataReviewPanel({
               {extracted.vatIncluded?.value === false && (
                 <Badge variant="outline" className="border-orange-400 text-orange-700 dark:text-orange-400 text-xs">{t('quotes.scan.vatIncludedNo')}</Badge>
               )}
+              {extracted.vatIncluded?.value === null && (
+                <Badge variant="outline" className="border-muted-foreground/40 text-muted-foreground text-xs">{t('quotes.scan.vatIncludedUnknown')}</Badge>
+              )}
               {extracted.laborIncluded?.value === true && (
                 <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400 text-xs">{t('quotes.scan.laborIncludedYes')}</Badge>
               )}
               {extracted.laborIncluded?.value === false && (
                 <Badge variant="outline" className="border-red-400 text-red-700 dark:text-red-400 text-xs">{t('quotes.scan.laborIncludedNo')}</Badge>
+              )}
+              {extracted.laborIncluded?.value === null && (
+                <Badge variant="outline" className="border-muted-foreground/40 text-muted-foreground text-xs">{t('quotes.scan.laborIncludedUnknown')}</Badge>
               )}
             </div>
           )}
@@ -422,20 +429,26 @@ export function ExtractedDataReviewPanel({
           </div>
         </section>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end items-center gap-3 pt-2">
           {onReject && (
-            <Button variant="outline" onClick={() => onReject()} disabled={isSaving}>
-              <X className="mr-1 h-4 w-4" />
-              {t('quotes.scan.archive')}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" onClick={() => onReject()} disabled={isSaving}>
+                <X className="mr-1 h-4 w-4" />
+                {t('quotes.scan.archive')}
+              </Button>
+              <InfoTooltip content={t('quotes.scan.archiveTooltip')} side="top" />
+            </div>
           )}
-          <Button
-            onClick={() => onConfirm(lines)}
-            disabled={isSaving || (quote.status === 'under_review' && !isDirty)}
-          >
-            <Save className="mr-1 h-4 w-4" />
-            {t('quotes.scan.confirm')}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              onClick={() => onConfirm(lines)}
+              disabled={isSaving || (quote.status === 'under_review' && !isDirty)}
+            >
+              <Save className="mr-1 h-4 w-4" />
+              {t('quotes.scan.confirm')}
+            </Button>
+            <InfoTooltip content={t('quotes.scan.confirmTooltip')} side="top" />
+          </div>
         </div>
       </CardContent>
     </Card>

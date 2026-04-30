@@ -19,8 +19,6 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { QuoteOriginalDocumentPanel } from '@/subapps/procurement/components/QuoteOriginalDocumentPanel';
 import type { Quote } from '@/subapps/procurement/types/quote';
 
-const MAX_LINES_PREVIEW = 5;
-
 interface QuoteDetailSummaryProps {
   quote: Quote;
 }
@@ -36,8 +34,6 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
   const { user } = useAuth();
   const companyId = user?.companyId ?? '';
 
-  const visibleLines = quote.lines.slice(0, MAX_LINES_PREVIEW);
-  const hiddenLinesCount = Math.max(0, quote.lines.length - MAX_LINES_PREVIEW);
   const vendorName = quote.extractedData?.vendorName?.value ?? t('quotes.vendor');
 
   return (
@@ -65,6 +61,14 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
         </div>
       </section>
 
+      {companyId && (
+        <QuoteOriginalDocumentPanel
+          quoteId={quote.id}
+          companyId={companyId}
+          compact
+        />
+      )}
+
       <section aria-label={t('quotes.lines')} className="space-y-2">
         <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
           <FileText className="h-4 w-4" />
@@ -74,7 +78,7 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
           <p className="text-sm text-muted-foreground">—</p>
         ) : (
           <ul className="divide-y rounded-md border">
-            {visibleLines.map((line) => (
+            {quote.lines.map((line) => (
               <li
                 key={line.id}
                 className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
@@ -88,11 +92,6 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
                 </span>
               </li>
             ))}
-            {hiddenLinesCount > 0 && (
-              <li className="px-3 py-2 text-xs text-muted-foreground italic">
-                {t('detail.moreLines', { count: hiddenLinesCount })}
-              </li>
-            )}
           </ul>
         )}
       </section>
@@ -108,14 +107,6 @@ export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {
         <span className="font-semibold">{t('quotes.total')}</span>
         <span className="text-right font-bold">{formatCurrency(quote.totals.total)}</span>
       </section>
-
-      {companyId && (
-        <QuoteOriginalDocumentPanel
-          quoteId={quote.id}
-          companyId={companyId}
-          compact
-        />
-      )}
 
       {(quote.paymentTerms || quote.deliveryTerms || quote.warranty) && (
         <section aria-label={t('quotes.paymentTerms')} className="space-y-2 text-sm">

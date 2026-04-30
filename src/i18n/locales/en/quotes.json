@@ -464,6 +464,53 @@
           "price": "Price (e.g. 12500)"
         }
       }
+    },
+    "award": {
+      "lockedBadge": "Awarded",
+      "successToast": "Awarded to {vendor}",
+      "undoButton": "Undo",
+      "undoneToast": "Award undone",
+      "errorToast": "Award failed. Please try again.",
+      "errorRetry": "Retry",
+      "winnerBanner": {
+        "title": "Winner: {vendor}"
+      },
+      "createPO": "Create Purchase Order"
+    },
+    "awardReason": {
+      "dialog": {
+        "title": "Why are you choosing this vendor?",
+        "body": "You are awarding {vendorName} ({selectedTotal}) instead of the cheapest option {cheapestVendorName} ({cheapestTotal}). Please explain your reasoning."
+      },
+      "label": {
+        "category": "Reason category",
+        "note": "Additional notes (optional)",
+        "noteRequired": "Additional notes (required)"
+      },
+      "placeholder": {
+        "note": {
+          "delivery": "e.g. Vendor guarantees delivery within 5 working days",
+          "quality": "e.g. Product includes extended warranty and quality certification",
+          "relationship": "e.g. Reliable partner with 3+ years of collaboration",
+          "certifications": "e.g. ISO 9001 certified, meets project specifications",
+          "inclusions": "e.g. Price includes installation and training",
+          "stock": "e.g. Items in stock, immediate delivery available",
+          "consistency": "e.g. No delays or quality issues in previous orders",
+          "other": "Describe the reason for choosing this vendor..."
+        }
+      },
+      "category": {
+        "better_delivery": "Better delivery terms",
+        "better_quality": "Better quality / warranty",
+        "existing_relationship": "Existing relationship",
+        "certifications": "Certifications required",
+        "inclusions": "Inclusions / extras",
+        "stock_availability": "Stock availability",
+        "past_consistency": "Past consistency",
+        "other": "Other"
+      },
+      "cancelButton": "Cancel",
+      "confirmButton": "Confirm award"
     }
   },
   "trades": {

@@ -47,6 +47,7 @@ const QuoteLineSchema = z.object({
 const UpdateQuoteSchema = z.object({
   status: z.enum(QUOTE_STATUSES).optional(),
   lines: z.array(QuoteLineSchema).max(200).optional(),
+  quotedTotal: z.number().min(0).nullable().optional(),
   totalNet: z.number().min(0).optional(),
   totalVat: z.number().min(0).optional(),
   totalGross: z.number().min(0).optional(),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,6 @@ import { BarChart2, Trophy, Award, AlertTriangle, ChevronRight } from 'lucide-re
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { RecommendationCard } from './RecommendationCard';
-import { AwardModal } from './AwardModal';
 import { COMPARISON_TEMPLATES } from '@/subapps/procurement/types/comparison';
 import {
   COMPARISON_FACTOR_COLORS,
@@ -28,8 +27,9 @@ interface ComparisonPanelProps {
   cherryPick: CherryPickResult | null;
   loading: boolean;
   rfqAwarded: boolean;
+  winnerQuoteId?: string | null;
   awardMode: 'whole_package' | 'cherry_pick';
-  onAward: (winnerQuoteId: string, overrideReason: string | null) => Promise<void>;
+  onAwardIntent: (entry: QuoteComparisonEntry) => void;
   onRowClick?: (quoteId: string) => void;
 }
 
@@ -38,13 +38,12 @@ export function ComparisonPanel({
   cherryPick,
   loading,
   rfqAwarded,
+  winnerQuoteId,
   awardMode,
-  onAward,
+  onAwardIntent,
   onRowClick,
 }: ComparisonPanelProps) {
   const { t } = useTranslation('quotes');
-  const [selected, setSelected] = useState<QuoteComparisonEntry | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
 
   const recommended = useMemo(() => {
     if (!comparison.recommendation) return null;
@@ -52,8 +51,7 @@ export function ComparisonPanel({
   }, [comparison]);
 
   const handleAwardClick = (entry: QuoteComparisonEntry) => {
-    setSelected(entry);
-    setModalOpen(true);
+    onAwardIntent(entry);
   };
 
   if (loading) {
@@ -106,6 +104,7 @@ export function ComparisonPanel({
                   entry={entry}
                   isRecommended={recommended?.quoteId === entry.quoteId}
                   rfqAwarded={rfqAwarded}
+                  winnerQuoteId={winnerQuoteId}
                   onAwardClick={handleAwardClick}
                   onRowClick={onRowClick}
                 />
@@ -115,13 +114,6 @@ export function ComparisonPanel({
         </CardContent>
       </Card>
 
-      <AwardModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        selected={selected}
-        recommended={recommended}
-        onConfirm={onAward}
-      />
     </div>
   );
 }
@@ -175,17 +167,19 @@ interface RowProps {
   entry: QuoteComparisonEntry;
   isRecommended: boolean;
   rfqAwarded: boolean;
+  winnerQuoteId?: string | null;
   onAwardClick: (entry: QuoteComparisonEntry) => void;
   onRowClick?: (quoteId: string) => void;
 }
 
-function ComparisonRow({ entry, isRecommended, rfqAwarded, onAwardClick, onRowClick }: RowProps) {
+function ComparisonRow({ entry, isRecommended, rfqAwarded, winnerQuoteId, onAwardClick, onRowClick }: RowProps) {
   const { t } = useTranslation('quotes');
   const clickable = !!onRowClick;
+  const isWinner = winnerQuoteId === entry.quoteId;
   return (
     <TableRow
       className={[
-        isRecommended ? 'bg-emerald-50/40 dark:bg-emerald-950/10' : '',
+        isWinner ? 'bg-emerald-50/60 dark:bg-emerald-950/20' : isRecommended ? 'bg-emerald-50/40 dark:bg-emerald-950/10' : '',
         clickable ? 'group cursor-pointer hover:bg-muted/50' : '',
       ].join(' ') || undefined}
       onClick={clickable ? () => onRowClick(entry.quoteId) : undefined}
@@ -203,7 +197,7 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, onAwardClick, onRowCl
       aria-label={clickable ? t('rfqs.comparison.rowAriaLabel') : undefined}
     >
       <TableCell className="font-medium">
-        {entry.rank === 1 && <Trophy className="inline h-4 w-4 text-emerald-600" />}
+        {(isWinner || entry.rank === 1) && <Trophy className="inline h-4 w-4 text-emerald-600" />}
         {entry.rank}
       </TableCell>
       <TableCell>{entry.vendorName}</TableCell>
@@ -219,15 +213,18 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, onAwardClick, onRowCl
         <div className="flex items-center justify-end gap-2">
           <Button
             size="sm"
-            variant={isRecommended ? 'default' : 'outline'}
+            variant={isWinner ? 'outline' : isRecommended ? 'default' : 'outline'}
             disabled={rfqAwarded}
             onClick={(e) => {
               e.stopPropagation();
-              onAwardClick(entry);
+              if (!isWinner) onAwardClick(entry);
             }}
           >
-            <Award className="mr-1 h-4 w-4" />
-            {t('comparison.awardBtn')}
+            {isWinner ? (
+              <>{t('rfqs.award.lockedBadge')}</>
+            ) : (
+              <><Award className="mr-1 h-4 w-4" />{t('comparison.awardBtn')}</>
+            )}
           </Button>
           {clickable && (
             <ChevronRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />

@@ -73,6 +73,7 @@ export async function createQuote(
       status: 'draft',
       lines,
       totals: computeQuoteTotals(lines),
+      quotedTotal: null,
       validUntil: null,
       paymentTerms: dto.paymentTerms ?? null,
       deliveryTerms: dto.deliveryTerms ?? null,
@@ -208,6 +209,7 @@ export async function updateQuote(
     }
 
     const newLines = dto.lines ?? current.lines;
+    const newQuotedTotal = dto.quotedTotal !== undefined ? dto.quotedTotal : (current.quotedTotal ?? null);
     const newAudit = [...current.auditTrail];
     if (dto.status && dto.status !== current.status) {
       newAudit.push(auditEntry(ctx.uid, 'status_change', current.status, dto.status));
@@ -218,7 +220,8 @@ export async function updateQuote(
 
     const updates: Partial<Quote> = {
       lines: newLines,
-      totals: computeQuoteTotals(newLines),
+      totals: computeQuoteTotals(newLines, newQuotedTotal),
+      quotedTotal: newQuotedTotal,
       paymentTerms: dto.paymentTerms !== undefined ? dto.paymentTerms : current.paymentTerms,
       deliveryTerms: dto.deliveryTerms !== undefined ? dto.deliveryTerms : current.deliveryTerms,
       warranty: dto.warranty !== undefined ? dto.warranty : current.warranty,
@@ -321,12 +324,13 @@ export async function applyExtractedData(
       current.status === 'draft' && ratio >= threshold && extracted.lineItems.length > 0;
 
     const newLines = materializeQuoteLines(extracted);
+    const quotedTotal = extracted.totalAmount?.value ?? null;
     const newAudit = [...current.auditTrail];
     newAudit.push(auditEntry(
       ctx.uid,
       'extracted_applied',
       null,
-      `confidence=${extracted.overallConfidence}; lines=${newLines.length}`,
+      `confidence=${extracted.overallConfidence}; lines=${newLines.length}; quotedTotal=${quotedTotal}`,
       source
     ));
     if (shouldAutoSubmit) {
@@ -337,7 +341,8 @@ export async function applyExtractedData(
       extractedData: extracted,
       overallConfidence: extracted.overallConfidence ?? 0,
       lines: newLines,
-      totals: computeQuoteTotals(newLines),
+      totals: computeQuoteTotals(newLines, quotedTotal),
+      quotedTotal,
       acceptanceMode: shouldAutoSubmit ? 'auto' : 'manual',
       status: shouldAutoSubmit ? 'submitted' : current.status,
       auditTrail: newAudit,

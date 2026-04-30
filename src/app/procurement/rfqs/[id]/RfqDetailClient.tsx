@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Building2, ClipboardList, Eye, EyeOff, Plus, ScanLine } from 'lucide-react';
+import { ArrowLeft, Building2, CheckCircle2, ClipboardList, Eye, EyeOff, Plus, ScanLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatCurrency } from '@/lib/intl-formatting';
 import { Badge } from '@/components/ui/badge';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useVendorInvites } from '@/subapps/procurement/hooks/useVendorInvites';
@@ -19,11 +20,13 @@ import { useComparison } from '@/subapps/procurement/hooks/useComparison';
 import { useRfqLines } from '@/subapps/procurement/hooks/useRfqLines';
 import { useSourcingEventAggregate } from '@/subapps/procurement/hooks/useSourcingEventAggregate';
 import { useRfqUrlState, type RfqTabValue } from '@/subapps/procurement/hooks/useRfqUrlState';
+import { useAwardFlow } from '@/subapps/procurement/hooks/useAwardFlow';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteDetailsHeader } from '@/subapps/procurement/components/QuoteDetailsHeader';
 import { QuoteDetailSummary } from '@/subapps/procurement/components/QuoteDetailSummary';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
 import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
+import { AwardReasonDialog } from '@/subapps/procurement/components/AwardReasonDialog';
 import { ComparisonEmptyState } from '@/subapps/procurement/components/ComparisonEmptyState';
 import { SourcingEventSummaryCard } from '@/subapps/procurement/components/SourcingEventSummaryCard';
 import { VendorInviteSection } from '@/subapps/procurement/components/VendorInviteSection';
@@ -132,7 +135,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     [rfq, quotes, invites, comparison, activeTab, t],
   );
 
-  const handleAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
+  const onFireAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
     const res = await fetch(`/api/rfqs/${id}/award`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -144,6 +147,22 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     }
     await Promise.all([fetchRfq(), refetch(), refetchComparison()]);
   }, [id, fetchRfq, refetch, refetchComparison]);
+
+  const {
+    optimisticWinnerId,
+    pendingEntry,
+    cheapestEntry,
+    handleAwardIntent,
+    handleDialogConfirm,
+    handleDialogCancel,
+  } = useAwardFlow({
+    comparison: comparison ?? null,
+    currentWinnerId: rfq?.winnerQuoteId ?? null,
+    onFireAward,
+  });
+
+  const effectiveWinnerId = optimisticWinnerId ?? rfq?.winnerQuoteId ?? null;
+  const winnerQuote = effectiveWinnerId ? quotes.find((q) => q.id === effectiveWinnerId) ?? null : null;
 
   const scanHref = useMemo(() => {
     const sp = new URLSearchParams({ rfqId: id });
@@ -294,6 +313,24 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         </TabsContent>
 
         <TabsContent value="comparison" className="space-y-6">
+          {winnerQuote && (
+            <div className="flex items-center justify-between rounded-lg border border-emerald-500/40 bg-emerald-50/40 px-4 py-3 dark:bg-emerald-950/20">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                <div>
+                  <p className="text-sm font-semibold">
+                    {t('rfqs.award.winnerBanner.title', { vendor: winnerQuote.extractedData?.vendorName?.value ?? '—' })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(winnerQuote.totals?.total ?? 0)}
+                  </p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" disabled>
+                {t('rfqs.award.createPO')}
+              </Button>
+            </div>
+          )}
           {quotes.length < 2 ? (
             <ComparisonEmptyState
               quotes={quotes}
@@ -316,9 +353,10 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
                   comparison={comparison}
                   cherryPick={cherryPick}
                   loading={comparisonLoading}
-                  rfqAwarded={Boolean(rfq?.winnerQuoteId)}
+                  rfqAwarded={!!effectiveWinnerId}
                   awardMode={rfq?.awardMode ?? 'whole_package'}
-                  onAward={handleAward}
+                  onAwardIntent={handleAwardIntent}
+                  winnerQuoteId={effectiveWinnerId}
                   onRowClick={handleComparisonDrillDown}
                 />
               )}
@@ -345,6 +383,14 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           <VendorInviteSection rfqId={id} lockState={lockState} />
         </TabsContent>
       </Tabs>
+
+      <AwardReasonDialog
+        open={!!pendingEntry}
+        entry={pendingEntry}
+        cheapestEntry={cheapestEntry}
+        onConfirm={handleDialogConfirm}
+        onCancel={handleDialogCancel}
+      />
     </main>
   );
 }

@@ -45,7 +45,12 @@ export function QuoteReviewClient({ id }: QuoteReviewClientProps) {
     setSaving(true);
     setSaveError(null);
     try {
-      const body: { lines: QuoteLine[]; status?: 'under_review' } = { lines };
+      const extracted = quote?.extractedData;
+      const quotedTotal = extracted?.totalAmount?.value ?? null;
+      const body: { lines: QuoteLine[]; quotedTotal: number | null; status?: 'under_review' } = {
+        lines,
+        quotedTotal,
+      };
       if (quote && quote.status !== 'under_review') {
         body.status = 'under_review';
       }

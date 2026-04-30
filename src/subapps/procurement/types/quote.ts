@@ -178,6 +178,8 @@ export interface Quote {
     total: number;
     vatRate: 0 | 6 | 13 | 24;
   };
+  /** Declared lump-sum total from the scanned document. Used as fallback when line prices are 0. */
+  quotedTotal: number | null;
   validUntil: Timestamp | null;
   paymentTerms: string | null;
   deliveryTerms: string | null;
@@ -226,6 +228,7 @@ export interface CreateQuoteDTO {
 
 export interface UpdateQuoteDTO {
   lines?: QuoteLine[];
+  quotedTotal?: number | null;
   validUntil?: string | null;
   paymentTerms?: string | null;
   deliveryTerms?: string | null;
@@ -249,11 +252,24 @@ export interface QuoteFilters {
 // HELPERS
 // ============================================================================
 
-export function computeQuoteTotals(lines: QuoteLine[]): Quote['totals'] {
+/**
+ * Compute quote totals from line items.
+ * `quotedTotal` is the fallback for lump-sum quotes where line prices are 0
+ * (e.g. scanned invoices with a single grand total, no per-line prices).
+ * When line prices sum to 0 and quotedTotal is set, the declared total is used directly.
+ */
+export function computeQuoteTotals(
+  lines: QuoteLine[],
+  quotedTotal: number | null = null
+): Quote['totals'] {
   const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
   const vatAmount = lines.reduce((s, l) => s + l.lineTotal * (l.vatRate / 100), 0);
+  const computedTotal = subtotal + vatAmount;
   const dominantVatRate = lines[0]?.vatRate ?? 24;
-  return { subtotal, vatAmount, total: subtotal + vatAmount, vatRate: dominantVatRate };
+  if (computedTotal === 0 && quotedTotal != null && quotedTotal > 0) {
+    return { subtotal: quotedTotal, vatAmount: 0, total: quotedTotal, vatRate: dominantVatRate };
+  }
+  return { subtotal, vatAmount, total: computedTotal, vatRate: dominantVatRate };
 }
 
 export function isTransitionAllowed(from: QuoteStatus, to: QuoteStatus): boolean {
