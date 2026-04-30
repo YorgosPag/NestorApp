@@ -68,6 +68,11 @@ export const COLLECTIONS = {
   // 🔄 RELATIONSHIPS
   RELATIONSHIPS: process.env.NEXT_PUBLIC_RELATIONSHIPS_COLLECTION || 'relationships',
   CONTACT_RELATIONSHIPS: process.env.NEXT_PUBLIC_CONTACT_RELATIONSHIPS_COLLECTION || 'contact_relationships',
+  // ADR-336 — self-extending taxonomy of custom relationship types
+  // (label registry for user-created relationship types beyond the 31 static ones in code).
+  CONTACT_RELATIONSHIP_TYPE_REGISTRY:
+    process.env.NEXT_PUBLIC_CONTACT_RELATIONSHIP_TYPE_REGISTRY_COLLECTION ||
+    'contact_relationship_type_registry',
 
   // 🔗 ASSOCIATIONS (ADR-032: Linking Model - ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
   CONTACT_LINKS: process.env.NEXT_PUBLIC_CONTACT_LINKS_COLLECTION || 'contact_links',

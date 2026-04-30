@@ -170,6 +170,52 @@
       "inviteFailed": "Invitation delivery failed for vendor {vendorName}: {reason}",
       "quoteScanCompleted": "Quote scan completed: {vendorName}",
       "vendorCreated": "New vendor added: {vendorName}"
+    },
+    "signatory": {
+      "cardTitle": "Signatory proposal",
+      "relationshipTypeLabel": "Relationship type with vendor",
+      "relationshipTypePlaceholder": "Select relationship type",
+      "relationshipTypeCustomOption": "Other / custom…",
+      "customLabelLabel": "New relationship label (Greek)",
+      "customLabelPlaceholder": "e.g. Sales representative",
+      "advancedToggle": "Advanced",
+      "reverseLabelLabel": "Reverse role (optional)",
+      "reverseLabelPlaceholder": "e.g. Sales rep represents",
+      "reverseLabelHint": "If left blank, the reverse role is filled automatically.",
+      "fields": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "role": "Role / title",
+        "profession": "Profession / qualification",
+        "mobile": "Mobile",
+        "email": "Email",
+        "vatNumber": "Personal VAT number"
+      },
+      "confidenceBand": {
+        "high": "High confidence (>={high}%)",
+        "medium": "Medium confidence ({medium}-84%)",
+        "low": "Low confidence (<{medium}%)"
+      },
+      "commitButton": {
+        "high": "Save contact + relationship",
+        "medium": "Confirm & save",
+        "low": "Fill in the fields to save"
+      },
+      "commitSuccess": "Signatory saved and relationship created.",
+      "commitError": "Failed to save signatory.",
+      "disambiguation": {
+        "title": "Possible existing contact",
+        "description": "Found contacts with shared fields but a different name or employer. Pick whether this is the same person or a new one.",
+        "noCandidates": "No candidate contacts found.",
+        "linkButton": "Link to this one",
+        "cancelButton": "Cancel",
+        "createAnywayButton": "Create new anyway",
+        "matchedOn": {
+          "mobile": "same mobile",
+          "email": "same email",
+          "name": "same name"
+        }
+      }
     }
   },
   "header": {

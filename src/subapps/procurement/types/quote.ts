@@ -89,6 +89,21 @@ export interface ExtractedBankAccount {
   accountHolder: string | null;
 }
 
+/**
+ * ADR-336 — extracted signatory / sales-rep block.
+ * Per-field FieldWithConfidence wrapper so the review UI can color each cell
+ * independently (green ≥85, yellow 60-84, red <60).
+ */
+export interface ExtractedSignatory {
+  firstName: FieldWithConfidence<string | null>;
+  lastName: FieldWithConfidence<string | null>;
+  role: FieldWithConfidence<string | null>;
+  profession: FieldWithConfidence<string | null>;
+  mobile: FieldWithConfidence<string | null>;
+  email: FieldWithConfidence<string | null>;
+  vatNumber: FieldWithConfidence<string | null>;
+}
+
 export interface ExtractedQuoteLine {
   description: FieldWithConfidence<string>;
   quantity: FieldWithConfidence<number>;
@@ -125,6 +140,12 @@ export interface ExtractedQuoteData {
   vatIncluded: FieldWithConfidence<boolean | null>;
   laborIncluded: FieldWithConfidence<boolean | null>;
   vendorBankAccounts: ExtractedBankAccount[];
+  /**
+   * ADR-336 — natural-person signatory extracted from quote footer.
+   * Always present after extraction; all inner fields may be null when no
+   * signatory is detected (in that case confidence values are 0).
+   */
+  signatory: ExtractedSignatory;
   detectedLanguage: string;
   overallConfidence: number;
   vendorLogoUrl?: string | null;

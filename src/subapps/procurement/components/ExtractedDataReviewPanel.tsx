@@ -21,6 +21,7 @@ import { computeQuoteTotals } from '@/subapps/procurement/types/quote';
 import { detectVendorMismatch } from '@/subapps/procurement/utils/vendor-mismatch';
 import { validateQuote } from '@/subapps/procurement/utils/quote-validation';
 import { QuoteLineEditorTable } from '@/subapps/procurement/components/QuoteLineEditorTable';
+import { SignatoryProposalCard } from '@/subapps/procurement/components/signatory/SignatoryProposalCard';
 import { formatEuro } from '@/lib/number/greek-decimal';
 import type {
   ExtractedQuoteData,
@@ -275,6 +276,20 @@ export function ExtractedDataReviewPanel({
             />
           </div>
         </section>
+
+        {extracted.signatory && (
+          extracted.signatory.firstName.value ||
+          extracted.signatory.lastName.value ||
+          extracted.signatory.mobile.value ||
+          extracted.signatory.email.value ||
+          extracted.signatory.role.value ||
+          extracted.signatory.profession.value ||
+          extracted.signatory.vatNumber.value
+        ) ? (
+          <section>
+            <SignatoryProposalCard quoteId={quote.id} signatory={extracted.signatory} />
+          </section>
+        ) : null}
 
         <section>
           <h3 className="mb-2 text-sm font-semibold">{t('quotes.scan.metaSection')}</h3>

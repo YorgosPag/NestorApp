@@ -1,6 +1,6 @@
 # ADR-336 — Quote Signatory Auto-Resolution & Vendor Relationship
 
-**Status:** READY-FOR-IMPLEMENTATION
+**Status:** IMPLEMENTED
 **Date:** 2026-04-30
 **Author:** Giorgio Pagonis
 **Related:** ADR-327 (procurement), ADR-080 (AI pipeline), ADR-171 (autonomous agent), `src/services/contact-relationships/`
@@ -150,7 +150,7 @@ Re-used by extraction service + UI panel — never hardcoded.
 
 **3. Auto-translation** — el label is the canonical input; en label is auto-generated (OpenAI translation pass) at create time and stored alongside. User can edit later from Settings. No prompt at create time.
 
-**4. Auto-category** — AI classifies the new type into one of `employment | corporate | government | other` from the existing taxonomy buckets, defaulting to `other` if uncertain.
+**4. Auto-category** — AI classifies the new type into one of the existing `RelationshipCategory` buckets defined by `src/types/contacts/relationships/core/relationship-metadata.ts` — namely `employment | ownership | government | professional | personal | property`. Default fallback when uncertain: `professional` (most common for B2B custom relationships introduced via quote signatories).
 
 **5. Permission scope** — V1: all authenticated users may extend the registry. Admin-only restriction is deferred (separate ADR if needed).
 
@@ -166,6 +166,37 @@ Re-used by extraction service + UI panel — never hardcoded.
 - UI: small modal embedded in the signatory commit panel from Q3, with collapsible «προχωρημένα ▾» disclosure for the reverse type.
 
 **Giorgio's answer:** ✅ ΝΑΙ ΣΥΜΦΩΝΩ (2026-04-30) — auto-normalization mandatory, auto-reverse default with disclosure escape hatch.
+
+### Q5 — Metadata defaults for dynamic types (Phase 1 Recognition follow-up)
+
+**Context:** ADR-318 established `RELATIONSHIP_METADATA` (`src/types/contacts/relationships/core/relationship-metadata.ts`) as SSoT for type semantics. Every static type carries:
+- `category: RelationshipCategory`
+- `derivesWorkAddress: 'always' | 'optional' | 'never'`
+- `isEmployment / isOwnership / isGovernment / isProperty: boolean`
+- `allowedFor: ContactType[]`
+
+When a user creates a custom type via Q4's self-extending registry, these metadata fields MUST be populated — otherwise `useDerivedWorkAddresses`, type-collection helpers (`EMPLOYMENT_RELATIONSHIP_TYPES`, etc.), and ContactType validation all break.
+
+**Final decision (2026-04-30, Phase 1 Recognition):**
+
+| Field | Default for dynamic type | Rationale |
+|---|---|---|
+| `category` | AI auto-classify (Q4 §4) → fallback `professional` | Most B2B signatory relationships are professional. |
+| `derivesWorkAddress` | `'optional'` | User may flag the relationship as workplace via `ContactRelationship.isWorkplace=true`. Avoids automatic work-address inflation on every custom type. |
+| `isEmployment` | derived: `true` iff `category === 'employment'` | Boolean flags follow category — preserves the invariant in `relationship-metadata.ts`. |
+| `isOwnership` | derived: `true` iff `category === 'ownership'` | — |
+| `isGovernment` | derived: `true` iff `category === 'government'` | — |
+| `isProperty` | derived: `true` iff `category === 'property'` | — |
+| `allowedFor` | `['company', 'service']` for `employment | ownership | government | professional`; `['individual', 'company', 'service']` for `personal | property` | Mirrors static-registry convention; permissive enough for legit use, strict enough that an obviously personal type doesn't get attached to a company. |
+
+**Implementation note:** `findOrCreateRelationshipType()` constructs the full metadata block from the AI-inferred category + the rules above and persists it in Firestore alongside the label. Reads cache the metadata client-side along with the type list.
+
+**Why this works (Google-level rationale):**
+- Conservative: never auto-derives a work-address (always opt-in via `isWorkplace`) → zero risk of inflating the contact's address book whenever a user invents a custom type.
+- Preserves invariants: derived boolean flags stay consistent with `category`, so `EMPLOYMENT_RELATIONSHIP_TYPES`-style filtering keeps working without code changes.
+- `allowedFor` defaults are permissive enough not to block legitimate use, strict enough that an obviously personal type like `friend` doesn't get attached to a `company`.
+
+**Giorgio's answer:** ✅ ΝΑΙ — implicit acceptance via «ok» on Phase 2 kickoff (2026-04-30). Defaults can be overridden per-type in a follow-up Settings UI if needed.
 
 ---
 
@@ -221,3 +252,5 @@ After all four answers:
 | 2026-04-30 | Q3 closed → Q2 **revised**. Vendor company stays button-driven (no silent auto-create — confirmed by Giorgio: existing UX with «αλλάξε σε Thermoland» button works well). Signatory follows the same pattern. Q2 updated: confidence drives UI color/copy, persistence is always user-initiated via button click. Goal: «το σωστό αποτέλεσμα», not minimum files. |
 | 2026-04-30 | Q4 closed. Self-extending taxonomy with auto-normalization (anti-duplicate), auto-reverse with «προχωρημένα ▾» disclosure, auto-translation, auto-category. Registry migrates from static module to Firestore collection. ALL FOUR QUESTIONS RESOLVED — design phase complete, ready for implementation in a fresh session. |
 | 2026-04-30 | Status: PROPOSED → READY-FOR-IMPLEMENTATION. Full scope consolidated (12 files). Implementation deferred to a new session for clean context. |
+| 2026-04-30 | Phase 1 Recognition (new session) complete. Q4 §4 corrected: categories now match the actual `RelationshipCategory` enum (`employment | ownership | government | professional | personal | property`) — previous bucket list `corporate / other` was inaccurate vs `relationship-metadata.ts`. New §Q5 added: metadata defaults for dynamic types (`derivesWorkAddress: 'optional'`, derived boolean flags from `category`, sensible `allowedFor` per category). Implementation Phase 2 kicks off. Status: READY-FOR-IMPLEMENTATION → IN-PROGRESS. |
+| 2026-04-30 | Phase 2 Implementation complete. Status: IN-PROGRESS → IMPLEMENTED. Files shipped: <br>• `quote-analyzer.schemas.ts` extended with `RawSignatory` + `QUOTE_SIGNATORY` JSON schema + Greek prompt block for footer "Υπεύθυνος ..." extraction. <br>• `types/quote.ts` extended with `ExtractedSignatory` (FieldWithConfidence wrapped) + `signatory` field on `ExtractedQuoteData`. <br>• `openai-quote-analyzer.ts` `normalizeSignatory()` + `buildEmptySignatory()` helpers; fallback path includes signatory. <br>• **NEW** `src/subapps/procurement/services/signatory-confidence.ts` — SSoT thresholds 85/60 + `getSignatoryConfidenceBand()` + `aggregateSignatoryBand()`. <br>• **NEW** `src/services/contacts/signatory-resolver.ts` — multi-field strong/weak/none resolver with normalized phone/email/name/vat matching. Tenant-scoped fetch capped at 5000. <br>• **NEW** `src/services/contact-relationships/relationship-type-ai-inference.ts` — single OpenAI call inferring labelEn + reverseLabelEl + reverseLabelEn + category. Deterministic fallback when key absent. <br>• **NEW** `src/services/contact-relationships/relationship-type-registry.ts` — `findOrCreateRelationshipType()` with normalize-key dedupe; merges static (code) + dynamic (Firestore). Q5 metadata defaults applied. <br>• **NEW** `scripts/seed-relationship-type-registry.ts` — optional one-shot seed of static types into Firestore (idempotent, not required for V1 runtime). <br>• **NEW** Collection const `CONTACT_RELATIONSHIP_TYPE_REGISTRY` added to `firestore-collections.ts`. <br>• **NEW** `src/subapps/procurement/services/commit-signatory-service.ts` — orchestration: resolver → registry → contact create/link → relationship create. Custom types persisted as `relationshipType: 'other'` + `customFields.customRelationshipType*` (V1 strict-union compromise). Idempotent. <br>• **NEW** `src/app/api/quotes/[id]/commit-signatory/route.ts` — POST endpoint with `withAuth` + `withStandardRateLimit` + `discriminatedUnion` zod schema. 409 on weak match returns disambiguation candidates. <br>• **NEW** UI: `signatory/types.ts`, `RelationshipTypePicker.tsx` (static dropdown + custom mode + «προχωρημένα ▾» reverse disclosure), `SignatoryDisambiguationModal.tsx` (link / create-anyway / cancel), `SignatoryProposalCard.tsx` (per-field confidence colors + aggregate band button). <br>• `ExtractedDataReviewPanel.tsx` wired: SignatoryProposalCard renders only when extraction returned at least one populated signatory field. <br>• i18n: `quotes.signatory.*` keys added in `el/quotes.json` + `en/quotes.json`. <br><br>**Deferred (V1 → V2):** auto-listing of previously-created custom types in the picker (V1 only shows static; custom types still dedupe via normalized key on findOrCreate). Multi-signatory per offer. Auto-relationship signatory↔project. Migration of existing static `RELATIONSHIP_METADATA` consumers to Firestore reads. |

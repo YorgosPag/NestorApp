@@ -170,6 +170,52 @@
       "inviteFailed": "Η αποστολή πρόσκλησης απέτυχε για τον προμηθευτή {vendorName}: {reason}",
       "quoteScanCompleted": "Σάρωση προσφοράς ολοκληρώθηκε: {vendorName}",
       "vendorCreated": "Νέος προμηθευτής καταχωρήθηκε: {vendorName}"
+    },
+    "signatory": {
+      "cardTitle": "Πρόταση υπεύθυνου πωλητή",
+      "relationshipTypeLabel": "Τύπος σχέσης με προμηθευτή",
+      "relationshipTypePlaceholder": "Επιλέξτε τύπο σχέσης",
+      "relationshipTypeCustomOption": "Άλλο / προσαρμοσμένο…",
+      "customLabelLabel": "Ετικέτα νέας σχέσης (στα ελληνικά)",
+      "customLabelPlaceholder": "π.χ. Υπεύθυνος Πωλητής",
+      "advancedToggle": "Προχωρημένα",
+      "reverseLabelLabel": "Αντίστροφος ρόλος (προαιρετικό)",
+      "reverseLabelPlaceholder": "π.χ. Πωλητής εκπρόσωπος",
+      "reverseLabelHint": "Αν δεν συμπληρωθεί, ο αντίστροφος ρόλος συμπληρώνεται αυτόματα.",
+      "fields": {
+        "firstName": "Όνομα",
+        "lastName": "Επώνυμο",
+        "role": "Ρόλος / Ιδιότητα",
+        "profession": "Επάγγελμα / Τίτλος",
+        "mobile": "Κινητό",
+        "email": "Email",
+        "vatNumber": "ΑΦΜ φυσικού προσώπου"
+      },
+      "confidenceBand": {
+        "high": "Υψηλή αξιοπιστία (≥{high}%)",
+        "medium": "Μέτρια αξιοπιστία ({medium}-84%)",
+        "low": "Χαμηλή αξιοπιστία (<{medium}%)"
+      },
+      "commitButton": {
+        "high": "Καταχώρηση επαφής + σχέσης",
+        "medium": "Επιβεβαίωση & καταχώρηση",
+        "low": "Συμπληρώστε τα πεδία για καταχώρηση"
+      },
+      "commitSuccess": "Ο υπεύθυνος καταχωρήθηκε και η σχέση δημιουργήθηκε.",
+      "commitError": "Αποτυχία καταχώρησης υπευθύνου.",
+      "disambiguation": {
+        "title": "Πιθανή υπάρχουσα επαφή",
+        "description": "Βρέθηκαν επαφές με κοινά στοιχεία αλλά διαφορετικό όνομα ή εργοδότη. Επιλέξτε αν είναι το ίδιο πρόσωπο ή διαφορετικό.",
+        "noCandidates": "Δεν βρέθηκαν υποψήφιες επαφές.",
+        "linkButton": "Σύνδεση με αυτή",
+        "cancelButton": "Άκυρο",
+        "createAnywayButton": "Δημιουργία νέας ούτως ή άλλως",
+        "matchedOn": {
+          "mobile": "ίδιο κινητό",
+          "email": "ίδιο email",
+          "name": "ίδιο όνομα"
+        }
+      }
     }
   },
   "header": {
