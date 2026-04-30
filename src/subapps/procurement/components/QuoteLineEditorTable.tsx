@@ -141,6 +141,7 @@ export function QuoteLineEditorTable({
       <table className="w-full">
         <thead>
           <tr className="border-b text-xs text-muted-foreground">
+            <th className="pb-1 pr-2 text-center font-normal">{t('quotes.scan.rowNumber')}</th>
             <th className="pb-1 pr-2 text-left font-normal">{t('quotes.lineDescription')}</th>
             <th className="pb-1 pr-2 text-left font-normal">{t('quotes.quantity')}</th>
             <th className="pb-1 pr-2 text-left font-normal">{t('quotes.unit')}</th>
@@ -160,8 +161,13 @@ export function QuoteLineEditorTable({
             const isCustomUnit = customUnitRows.has(i);
             const unitSelectValue = isCustomUnit ? OTHER_UNIT : (isKnownUnit(line.unit) ? line.unit : OTHER_UNIT);
 
+            const rowNumber = extractedLineItems?.[i]?.parentRowNumber ?? String(i + 1);
+
             return (
               <tr key={line.id} className="border-b align-top text-sm">
+                <td className="w-10 py-1 pr-2 text-center text-xs text-muted-foreground tabular-nums">
+                  {rowNumber}
+                </td>
                 <td className="py-1 pr-2">
                   <Input value={line.description} onChange={(e) => updateLine(i, { description: e.target.value })} className="h-8 text-sm" />
                   {v.errors.description && <p className="mt-0.5 text-xs text-destructive">{t(v.errors.description)}</p>}

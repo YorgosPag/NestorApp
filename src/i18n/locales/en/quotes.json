@@ -125,6 +125,7 @@
       "quoteReference": "Quote Ref.",
       "warranty": "Warranty",
       "confidence": "Confidence",
+      "rowNumber": "#",
       "overallConfidence": "Overall Confidence",
       "editableHint": "Lines are editable — correct anything that looks wrong.",
       "noLinesExtracted": "No lines extracted. Add them manually.",
