@@ -276,6 +276,7 @@
       "draft": "Draft",
       "active": "Active",
       "closed": "Closed",
+      "cancelled": "Cancelled",
       "archived": "Archived"
     },
     "actions": {
@@ -342,6 +343,51 @@
       },
       "projectLink": {
         "aria": "View project page: {projectName}"
+      },
+      "action": {
+        "close": "Close",
+        "reopen": "Reopen",
+        "cancel": "Cancel",
+        "archive": "Archive"
+      },
+      "confirm": {
+        "close": "Close this RFQ? No new quotes can be submitted.",
+        "reopen": "Reopen this RFQ? The current winner will be cleared.",
+        "archive": "Archive this RFQ?"
+      },
+      "toast": {
+        "closed": "RFQ closed",
+        "reopened": "RFQ reopened",
+        "cancelled": "RFQ cancelled",
+        "archived": "RFQ archived"
+      },
+      "errors": {
+        "closeFailed": "Failed to close RFQ",
+        "reopenFailed": "Failed to reopen RFQ",
+        "reopenBlockedByPo": "Cancel the Purchase Order first to reopen this RFQ",
+        "cancelFailed": "Failed to cancel RFQ",
+        "archiveFailed": "Failed to archive RFQ"
+      }
+    },
+    "cancelDialog": {
+      "title": "Cancel RFQ",
+      "descriptionDraft": "This draft RFQ will be marked as cancelled. No reason required.",
+      "descriptionActive": "This active RFQ will be marked as cancelled. A reason is required.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Pick a reason...",
+      "detailLabel": "Detail",
+      "detailPlaceholder": "Optional description (required for \"Other\")",
+      "notifyVendorsLabel": "Notify vendors with active invitations",
+      "keepRfq": "Keep RFQ",
+      "confirmCancel": "Cancel RFQ",
+      "submitting": "Cancelling...",
+      "reasons": {
+        "project_change": "Project change",
+        "budget_cut": "Budget cut",
+        "no_responses": "No responses",
+        "duplicate": "Duplicate RFQ",
+        "wrong_scope": "Wrong scope",
+        "other": "Other"
       }
     },
     "tabs": {
@@ -409,7 +455,12 @@
         "poLocked": "A purchase order has been created ({poNumber}) — settings locked",
         "revertAward": "Revert Winner",
         "viewPo": "View Purchase Order",
-        "cancelPo": "Cancel Purchase Order"
+        "cancelPo": "Cancel Purchase Order",
+        "lifecycleLocked": {
+          "closed": "RFQ is closed — read-only",
+          "cancelled": "RFQ was cancelled — read-only",
+          "archived": "RFQ is archived — read-only"
+        }
       },
       "lockedTooltip": {
         "lines": "Locked by winner selection",

@@ -6,6 +6,10 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, ClipboardList, Eye, EyeOff, Plus, ScanLine } from 'lucide-react';
+import { buildRfqHeaderActions, type RfqHeaderAction } from '@/subapps/procurement/utils/rfq-header-actions';
+import { RfqCancelDialog } from '@/subapps/procurement/components/RfqCancelDialog';
+import { RfqLifecycleButtons } from '@/subapps/procurement/components/RfqLifecycleButtons';
+import { useRfqLifecycle } from '@/subapps/procurement/hooks/useRfqLifecycle';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +29,6 @@ import { QuoteRevisionDetectedDialog } from '@/subapps/procurement/components/Qu
 import { ExpiredAwardWarningDialog } from '@/subapps/procurement/components/ExpiredAwardWarningDialog';
 import { QuoteRenewalRequestDialog } from '@/subapps/procurement/components/QuoteRenewalRequestDialog';
 import { useScanQueue } from '@/subapps/procurement/hooks/useScanQueue';
-import { formatValidUntilDate, daysUntilExpiry } from '@/subapps/procurement/utils/quote-expiration';
 import { toast } from 'sonner';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteRightPane } from '@/subapps/procurement/components/QuoteRightPane';
@@ -33,12 +36,11 @@ import { RfqHistoryTab } from '@/subapps/procurement/components/RfqHistoryTab';
 import { buildQuoteHeaderActions } from '@/subapps/procurement/utils/quote-header-actions';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
 import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
-import { AwardReasonDialog } from '@/subapps/procurement/components/AwardReasonDialog';
 import { ComparisonEmptyState } from '@/subapps/procurement/components/ComparisonEmptyState';
 import { SourcingEventSummaryCard } from '@/subapps/procurement/components/SourcingEventSummaryCard';
 import { VendorInviteSection } from '@/subapps/procurement/components/VendorInviteSection';
 import { ComparisonWinnerBanner } from '@/subapps/procurement/components/ComparisonWinnerBanner';
-import { VendorNotificationDialog } from '@/subapps/procurement/components/VendorNotificationDialog';
+import { RfqDetailDialogs } from '@/subapps/procurement/components/RfqDetailDialogs';
 import { RfqLinesPanel } from '@/subapps/procurement/components/RfqLinesPanel';
 import { SetupLockBanner } from '@/subapps/procurement/components/SetupLockBanner';
 import { deriveSetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
@@ -178,6 +180,30 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
 
   const [renewalQuoteId, setRenewalQuoteId] = useState<string | null>(null);
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
+
+  const refetchAll = useCallback(async () => {
+    await Promise.all([fetchRfq(), refetch(), refetchComparison()]);
+  }, [fetchRfq, refetch, refetchComparison]);
+
+  const lifecycle = useRfqLifecycle({
+    rfqId: id,
+    rfq,
+    t,
+    onChanged: refetchAll,
+    onArchived: () => router.push('/procurement/rfqs'),
+  });
+
+  const lifecycleActions: RfqHeaderAction[] = useMemo(
+    () => buildRfqHeaderActions({
+      rfq,
+      onClose: () => void lifecycle.handleClose(),
+      onReopen: () => void lifecycle.handleReopen(),
+      onCancel: lifecycle.openCancelDialog,
+      onArchive: () => void lifecycle.handleArchive(),
+      t, isConnected,
+    }),
+    [rfq, lifecycle, t, isConnected],
+  );
   const renewalQuote = useMemo(
     () => (renewalQuoteId ? quotes.find((q) => q.id === renewalQuoteId) ?? null : null),
     [renewalQuoteId, quotes],
@@ -295,6 +321,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
                   </Button>,
                 ]
               : []),
+            <RfqLifecycleButtons key="lifecycle" actions={lifecycleActions} />,
           ],
         }}
       />
@@ -424,6 +451,11 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           <SetupLockBanner
             lockState={lockState}
             vendorName={winnerVendorName}
+            rfqStatus={
+              rfq?.status === 'closed' || rfq?.status === 'cancelled' || rfq?.status === 'archived'
+                ? rfq.status
+                : undefined
+            }
           />
           <section className="space-y-2">
             <h2 className="text-base font-semibold">{t('rfqs.lines')}</h2>
@@ -440,59 +472,27 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         </TabsContent>
       </Tabs>
 
-      <AwardReasonDialog
-        open={!!pendingEntry}
-        entry={pendingEntry}
+      <RfqDetailDialogs
+        rfqId={id}
+        rfq={rfq}
+        activeQuotes={activeQuotes}
+        quotes={quotes}
+        pendingEntry={pendingEntry}
         cheapestEntry={cheapestEntry}
-        onConfirm={handleDialogConfirm}
-        onCancel={handleDialogCancel}
-      />
-      {pendingDetection && (
-        <QuoteRevisionDetectedDialog
-          open
-          detection={pendingDetection.detection}
-          existingQuote={pendingDetection.existingQuote}
-          newQuote={pendingDetection.newQuote}
-          onConfirm={dismissDetection}
-          onCancel={dismissDetection}
-        />
-      )}
-      {pendingExpiredEntry && (
-        <ExpiredAwardWarningDialog
-          open
-          vendorName={pendingExpiredEntry.vendorName}
-          validUntilDate={pendingExpiredQuote ? formatValidUntilDate(pendingExpiredQuote) : ''}
-          daysAgo={pendingExpiredQuote ? Math.abs(daysUntilExpiry(pendingExpiredQuote) ?? 0) : 0}
-          onAction={(action) => {
-            if (action === 'request_renewal' && pendingExpiredQuote) {
-              setRenewalQuoteId(pendingExpiredQuote.id);
-            }
-            handleExpiredDialogAction(action);
-          }}
-        />
-      )}
-      {renewalQuote && (
-        <QuoteRenewalRequestDialog
-          open
-          vendorEmail={renewalQuote.extractedData?.vendorEmails?.value?.[0] ?? ''}
-          vendorName={renewalQuote.extractedData?.vendorName?.value ?? renewalQuote.vendorContactId}
-          rfqTitle={rfq?.title ?? id}
-          quoteNumber={renewalQuote.displayNumber}
-          validUntilDate={formatValidUntilDate(renewalQuote)}
-          total={String(renewalQuote.totals?.total ?? '')}
-          senderName=""
-          onSend={async (to, subject, body) => {
-            if (!renewalQuote) return;
-            const res = await fetch(`/api/quotes/${renewalQuote.id}/request-renewal`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to, subject, body }) });
-            if (!res.ok) { toast.error(t('quotes.errors.updateFailed')); return; }
-            setRenewalQuoteId(null);
-          }}
-          onCancel={() => setRenewalQuoteId(null)}
-        />
-      )}
-      <VendorNotificationDialog
-        open={notifyDialogOpen} rfq={rfq} quotes={activeQuotes}
-        senderName="" companyName="" onOpenChange={setNotifyDialogOpen}
+        pendingExpiredEntry={pendingExpiredEntry}
+        pendingExpiredQuote={pendingExpiredQuote}
+        pendingDetection={pendingDetection}
+        renewalQuote={renewalQuote}
+        notifyDialogOpen={notifyDialogOpen}
+        cancelDialogOpen={lifecycle.cancelDialogOpen}
+        setNotifyDialogOpen={setNotifyDialogOpen}
+        setRenewalQuoteId={setRenewalQuoteId}
+        handleDialogConfirm={handleDialogConfirm}
+        handleDialogCancel={handleDialogCancel}
+        handleExpiredDialogAction={handleExpiredDialogAction}
+        dismissDetection={dismissDetection}
+        onCancelConfirm={lifecycle.handleConfirmCancel}
+        onCancelDialogClose={lifecycle.closeCancelDialog}
       />
     </main>
     </DirtyFormProvider>

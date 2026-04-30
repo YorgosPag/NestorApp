@@ -24,10 +24,11 @@ import type { RFQ, RfqStatus } from '@/subapps/procurement/types/rfq';
 // ============================================================================
 
 const RFQ_STATUS_SEMANTIC: Record<RfqStatus, string> = {
-  draft:    'pending',
-  active:   'active',
-  closed:   'completed',
-  archived: 'completed',
+  draft:     'pending',
+  active:    'active',
+  closed:    'completed',
+  cancelled: 'rejected',
+  archived:  'completed',
 };
 
 function RfqStatusBadge({ status }: { status: RfqStatus }) {

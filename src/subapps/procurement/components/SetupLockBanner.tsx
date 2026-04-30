@@ -9,6 +9,7 @@ interface SetupLockBannerProps {
   lockState: SetupLockState;
   vendorName?: string;
   poNumber?: string;
+  rfqStatus?: 'closed' | 'cancelled' | 'archived';
   onRevertAward?: () => void;
   onViewPo?: () => void;
   onCancelPo?: () => void;
@@ -18,6 +19,7 @@ export function SetupLockBanner({
   lockState,
   vendorName,
   poNumber,
+  rfqStatus,
   onRevertAward,
   onViewPo,
   onCancelPo,
@@ -25,6 +27,18 @@ export function SetupLockBanner({
   const { t } = useTranslation('quotes');
 
   if (lockState === 'unlocked') return null;
+
+  if (lockState === 'lifecycleLocked') {
+    const statusKey = rfqStatus ?? 'closed';
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-950/30">
+        <Lock className="size-4 shrink-0 text-slate-700 dark:text-slate-300" />
+        <span className="text-slate-700 dark:text-slate-300">
+          {t(`rfqs.setup.banner.lifecycleLocked.${statusKey}`)}
+        </span>
+      </div>
+    );
+  }
 
   if (lockState === 'awardLocked') {
     return (

@@ -276,6 +276,7 @@
       "draft": "Πρόχειρο",
       "active": "Ενεργό",
       "closed": "Κλειστό",
+      "cancelled": "Ακυρώθηκε",
       "archived": "Αρχείο"
     },
     "actions": {
@@ -342,6 +343,51 @@
       },
       "projectLink": {
         "aria": "Δες σελίδα έργου: {projectName}"
+      },
+      "action": {
+        "close": "Κλείσιμο",
+        "reopen": "Επανεκκίνηση",
+        "cancel": "Ακύρωση",
+        "archive": "Αρχειοθέτηση"
+      },
+      "confirm": {
+        "close": "Σίγουρα θέλεις να κλείσεις αυτό το RFQ; Δεν θα μπορούν να σταλούν νέες προσφορές.",
+        "reopen": "Σίγουρα θέλεις να επανεκκινήσεις αυτό το RFQ; Ο νικητής θα διαγραφεί.",
+        "archive": "Σίγουρα θέλεις να αρχειοθετήσεις αυτό το RFQ;"
+      },
+      "toast": {
+        "closed": "Το RFQ έκλεισε",
+        "reopened": "Το RFQ επανεκκινήθηκε",
+        "cancelled": "Το RFQ ακυρώθηκε",
+        "archived": "Το RFQ αρχειοθετήθηκε"
+      },
+      "errors": {
+        "closeFailed": "Αποτυχία κλεισίματος RFQ",
+        "reopenFailed": "Αποτυχία επανεκκίνησης RFQ",
+        "reopenBlockedByPo": "Ακύρωσε πρώτα την Παραγγελία Αγοράς για να επανεκκινήσεις το RFQ",
+        "cancelFailed": "Αποτυχία ακύρωσης RFQ",
+        "archiveFailed": "Αποτυχία αρχειοθέτησης RFQ"
+      }
+    },
+    "cancelDialog": {
+      "title": "Ακύρωση RFQ",
+      "descriptionDraft": "Αυτό το πρόχειρο RFQ θα σημανθεί ως ακυρωμένο. Δεν χρειάζεται αιτιολογία.",
+      "descriptionActive": "Αυτό το ενεργό RFQ θα σημανθεί ως ακυρωμένο. Απαιτείται αιτιολογία.",
+      "reasonLabel": "Αιτιολογία",
+      "reasonPlaceholder": "Επίλεξε αιτιολογία...",
+      "detailLabel": "Λεπτομέρειες",
+      "detailPlaceholder": "Προαιρετική περιγραφή (υποχρεωτική για \"Άλλο\")",
+      "notifyVendorsLabel": "Ειδοποίηση προμηθευτών με ενεργές προσκλήσεις",
+      "keepRfq": "Διατήρηση",
+      "confirmCancel": "Ακύρωση RFQ",
+      "submitting": "Ακύρωση...",
+      "reasons": {
+        "project_change": "Αλλαγή έργου",
+        "budget_cut": "Περικοπή budget",
+        "no_responses": "Καμία απάντηση",
+        "duplicate": "Διπλό RFQ",
+        "wrong_scope": "Λάθος αντικείμενο",
+        "other": "Άλλο"
       }
     },
     "tabs": {
@@ -409,7 +455,12 @@
         "poLocked": "Έχει δημιουργηθεί παραγγελία ({poNumber}) — ρύθμιση κλειδωμένη",
         "revertAward": "Αναίρεση Νικητή",
         "viewPo": "Δες Παραγγελία",
-        "cancelPo": "Ακύρωση Παραγγελίας"
+        "cancelPo": "Ακύρωση Παραγγελίας",
+        "lifecycleLocked": {
+          "closed": "Το RFQ είναι κλειστό — μόνο για ανάγνωση",
+          "cancelled": "Το RFQ ακυρώθηκε — μόνο για ανάγνωση",
+          "archived": "Το RFQ είναι στο αρχείο — μόνο για ανάγνωση"
+        }
       },
       "lockedTooltip": {
         "lines": "Κλειδωμένο από την επιλογή νικητή",

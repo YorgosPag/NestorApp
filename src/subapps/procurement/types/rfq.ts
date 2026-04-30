@@ -7,14 +7,40 @@ import type { SourcingEventStatus } from './sourcing-event';
 // RFQ STATUS
 // ============================================================================
 
-export type RfqStatus = 'draft' | 'active' | 'closed' | 'archived';
+export type RfqStatus = 'draft' | 'active' | 'closed' | 'cancelled' | 'archived';
 
 export const RFQ_STATUS_TRANSITIONS: Record<RfqStatus, RfqStatus[]> = {
-  draft:    ['active', 'archived'],
-  active:   ['closed', 'archived'],
-  closed:   ['archived'],
-  archived: [],
+  draft:     ['active', 'cancelled', 'archived'],
+  active:    ['closed', 'cancelled', 'archived'],
+  closed:    ['active', 'archived'],
+  cancelled: ['archived'],
+  archived:  [],
 } as const;
+
+// ADR-335 — Set of statuses that block line edits, invite sends, status mutations.
+export const RFQ_LIFECYCLE_LOCKED_STATUSES: ReadonlySet<RfqStatus> = new Set<RfqStatus>([
+  'closed',
+  'cancelled',
+  'archived',
+]);
+
+// ADR-335 — Cancellation reason categories (free-text fallback via 'other').
+export type RfqCancellationReason =
+  | 'project_change'
+  | 'budget_cut'
+  | 'no_responses'
+  | 'duplicate'
+  | 'wrong_scope'
+  | 'other';
+
+export const RFQ_CANCELLATION_REASONS: readonly RfqCancellationReason[] = [
+  'project_change',
+  'budget_cut',
+  'no_responses',
+  'duplicate',
+  'wrong_scope',
+  'other',
+] as const;
 
 // ============================================================================
 // AWARD MODE — ADR-327 §17 Q12
@@ -92,6 +118,18 @@ export interface RFQ {
   respondedCount?: number;
   /** Migration breadcrumb for line-storage source (Q29 sub-collection). */
   linesStorage?: RfqLineSource | 'inline_legacy' | null;
+
+  // --- ADR-335 lifecycle (cancellation metadata) ---
+  /** Reason category when status === 'cancelled'. */
+  cancellationReason?: RfqCancellationReason | null;
+  /** Free-text detail when reason === 'other' or extra context. */
+  cancellationDetail?: string | null;
+  /** Server timestamp the cancellation was committed. */
+  cancelledAt?: Timestamp | null;
+  /** UID who triggered the cancellation. */
+  cancelledBy?: string | null;
+  /** Whether vendors with active invites were notified at cancel time. */
+  cancellationNotifiedVendors?: boolean | null;
 }
 
 // ============================================================================

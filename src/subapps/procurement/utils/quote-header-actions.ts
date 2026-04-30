@@ -101,6 +101,7 @@ export function buildQuoteHeaderActions(p: BuildQuoteHeaderActionsParams): Quote
   const awardTooltip = locked ? p.t('rfqs.quoteHeader.tooltip.disabledByAward') : undefined;
   const comingSoon = p.t('rfqs.quoteHeader.tooltip.comingSoon');
   const offlineTooltip = p.isConnected === false ? p.t('rfqs.offline.requiresConnection') : undefined;
+  const offline = offlineTooltip !== undefined;
 
   const primaryActions = buildPrimary(p, locked, awardTooltip, offlineTooltip);
   const secondaryActions: QuoteHeaderSecondaryAction[] = [

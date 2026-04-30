@@ -342,6 +342,13 @@ export async function archiveRfq(
 }
 
 // ============================================================================
+// LIFECYCLE — ADR-335 cancel + reopen (extracted to rfq-lifecycle-service.ts)
+// ============================================================================
+
+export { cancelRfq, reopenRfq } from './rfq-lifecycle-service';
+export type { CancelRfqOptions } from './rfq-lifecycle-service';
+
+// ============================================================================
 // FACTORY — Build CreateRfqDTO from BOQ items (ADR-327 P5-BOQ)
 // Reads BOQ items from Firestore, maps ΑΤΟΕ categoryCode → TradeCode,
 // returns a pre-filled DTO ready for RfqBuilder. Does NOT persist an RFQ.
