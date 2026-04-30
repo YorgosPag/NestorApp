@@ -104,10 +104,12 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     activeTab,
     selectedQuote,
     pdfOpen,
+    commentsOpen,
     handleTabChange,
     handleSelectQuote,
     handleComparisonDrillDown,
     handleTogglePdf,
+    handleToggleComments,
   } = useRfqUrlState({ quotes: activeQuotes, quotesLoading: loading });
   const lockState = useMemo(() => deriveSetupLockState(rfq, activeQuotes), [rfq, activeQuotes]);
   const winnerVendorName = useMemo(() => {
@@ -140,12 +142,10 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
       i => i.status === 'expired' || (i.status === 'pending' && deadlineMs !== null && now > deadlineMs),
     ).length;
   }, [invites, rfq]);
-
   const dashboardStats = useMemo(
     () => buildRfqDashboardStats(rfq, activeQuotes, invites, comparison, activeTab, t),
     [rfq, activeQuotes, invites, comparison, activeTab, t],
   );
-
   const onFireAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
     const res = await fetch(`/api/rfqs/${id}/award`, {
       method: 'POST',
@@ -158,7 +158,6 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     }
     await Promise.all([fetchRfq(), refetch(), refetchComparison()]);
   }, [id, fetchRfq, refetch, refetchComparison]);
-
   const { pendingDetection, dismissDetection } = useQuoteRevision();
 
   const {
@@ -219,11 +218,11 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           onCreatePo: handleStub, onViewPo: handleStub,
           onRestore: () => void patchQuoteStatus('submitted'),
           onDownload: handleTogglePdf,
-          onOpenComments: handleStub, onOpenHistory: handleStub,
+          onOpenComments: handleToggleComments, onOpenHistory: handleStub,
           onEdit: handleStub, onDuplicate: handleStub, onDelete: handleStub,
           t, isConnected,
         }),
-    [selectedQuote, rfq, patchQuoteStatus, handleAwardIntent, handleStub, handleTogglePdf, t, isConnected],
+    [selectedQuote, rfq, patchQuoteStatus, handleAwardIntent, handleStub, handleTogglePdf, handleToggleComments, t, isConnected],
   );
   const allVendorNotified = activeQuotes.filter((q) => q.status === 'accepted' || q.status === 'rejected').every((q) => !!q.lastNotifiedAt);
   const effectiveWinnerId = optimisticWinnerId ?? rfq?.winnerQuoteId ?? null;
@@ -362,7 +361,9 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
                 <QuoteRightPane
                   quote={selectedQuote}
                   pdfOpen={pdfOpen}
+                  commentsOpen={commentsOpen}
                   onTogglePdf={handleTogglePdf}
+                  onToggleComments={handleToggleComments}
                   onSelectQuote={handleSelectQuote}
                   onRequestRenewal={() => setRenewalQuoteId(selectedQuote.id)}
                   primaryActions={primaryActions}

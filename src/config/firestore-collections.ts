@@ -366,6 +366,9 @@ export const SUBCOLLECTIONS = {
 
   // Contact bank accounts (subcollection under contacts/{id})
   BANK_ACCOUNTS: process.env.NEXT_PUBLIC_BANK_ACCOUNTS_SUBCOL || 'bank_accounts',
+
+  // Quote subcollections (ADR-329: Quote Comments)
+  QUOTE_COMMENTS: process.env.NEXT_PUBLIC_QUOTE_COMMENTS_SUBCOL || 'quote_comments',
 } as const;
 
 // ============================================================================

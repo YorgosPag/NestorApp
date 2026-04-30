@@ -111,7 +111,6 @@ export function buildQuoteHeaderActions(p: BuildQuoteHeaderActionsParams): Quote
       icon: MessageSquare,
       tooltip: p.t('rfqs.quoteHeader.tooltip.comments'),
       onClick: p.onOpenComments,
-      disabled: true,
     },
     {
       id: 'history',

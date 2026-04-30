@@ -1,6 +1,6 @@
 # ADR-329 — Quote Comments Side Panel
 
-**Status:** PROPOSED  
+**Status:** ACCEPTED  
 **Date:** 2026-04-30  
 **Author:** Giorgio Pagonis  
 **Supersedes:** N/A  
@@ -14,11 +14,41 @@ ADR-328 §5.R defines the Comments side panel for the RFQ detail page. The panel
 
 ## Scope
 
-- Comments thread UI in the right-pane side panel
+- Comments thread UI in the right-pane side panel (Sheet — right desktop / bottom mobile)
 - Per-quote comment creation, display, and deletion
-- Real-time updates via Firestore `onSnapshot`
-- Firestore collection: `quote_comments` (sub-collection of `quotes/{id}`)
-- i18n keys under `rfqs.comments.*`
+- Read via GET API route (v1); real-time `onSnapshot` deferred to v1.1 (requires Firestore rules update)
+- Firestore collection: `quote_comments` (sub-collection of `quotes/{id}`, via `SUBCOLLECTIONS.QUOTE_COMMENTS`)
+- i18n keys under `rfqs.comments.*` in `src/i18n/locales/{el,en}/quotes.json`
+
+## Implementation (v1 — 2026-04-30)
+
+### Files created
+
+| File | Role |
+|------|------|
+| `src/services/quote-comment.service.ts` | Types (`QuoteComment`) + fetch-based API helpers |
+| `src/subapps/procurement/components/QuoteCommentsDrawer.tsx` | Sheet drawer — comment list, add/edit/delete |
+| `src/app/api/quotes/[id]/comments/route.ts` | GET (list) + POST (create) |
+| `src/app/api/quotes/[id]/comments/[commentId]/route.ts` | PATCH (edit) + DELETE (soft/hard) |
+
+### Files modified
+
+| File | Change |
+|------|--------|
+| `src/config/firestore-collections.ts` | Added `SUBCOLLECTIONS.QUOTE_COMMENTS = 'quote_comments'` |
+| `src/i18n/locales/el/quotes.json` | Added `rfqs.comments.*` keys |
+| `src/i18n/locales/en/quotes.json` | Added `rfqs.comments.*` keys |
+| `src/subapps/procurement/hooks/useRfqUrlState.ts` | Added `commentsOpen` + `handleToggleComments` (mutually exclusive with PDF) |
+| `src/subapps/procurement/utils/quote-header-actions.ts` | Removed `disabled: true` from comments action |
+| `src/subapps/procurement/components/QuoteRightPane.tsx` | Added `commentsOpen`/`onToggleComments` props + `QuoteCommentsDrawer` render |
+| `src/app/procurement/rfqs/[id]/RfqDetailClient.tsx` | Wired `commentsOpen` + `handleToggleComments` from hook; replaced stub |
+
+### v1.1 deferred items
+
+- Real-time `onSnapshot` subscription (requires `quote_comments` sub-collection Firestore rules)
+- `@mention` notification dispatch (parse @name, look up user, fire notification)
+- Comment count badge on header icon (requires subscription or lightweight count fetch on quote select)
+- Soft-delete placeholder «[Σχόλιο διαγράφηκε]» visible to admins
 
 ## Design decisions
 
@@ -57,3 +87,4 @@ ADR-328 §5.R defines the Comments side panel for the RFQ detail page. The panel
 | Date | Change |
 |------|--------|
 | 2026-04-30 | Stub created from ADR-328 §5.R deferral |
+| 2026-04-30 | v1 implemented: 4 new files + 7 modified. Sheet drawer, API routes (GET/POST/PATCH/DELETE), URL state (`commentsOpen`), enterprise IDs, i18n keys. Status → ACCEPTED. |

@@ -378,6 +378,23 @@
     "mobile": {
       "backToList": "Back to list"
     },
+    "comments": {
+      "title": "Comments",
+      "empty": "No comments yet",
+      "placeholder": "Write a comment... (@ to mention a team member)",
+      "add": "Add",
+      "cancel": "Cancel",
+      "edited": "edited",
+      "deleted": "Comment deleted",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "confirmDelete": "Delete comment?",
+      "closeAria": "Close comments",
+      "internalOnly": "Internal only — not visible to vendor",
+      "count_one": "{count} comment",
+      "count_other": "{count} comments"
+    },
     "selectQuoteHint": "Select a quote to view details",
     "setup": {
       "banner": {

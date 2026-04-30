@@ -23,6 +23,7 @@ import type {
   QuoteHeaderSecondaryAction,
   QuoteHeaderOverflowAction,
 } from '../utils/quote-header-actions';
+import { QuoteCommentsDrawer } from './QuoteCommentsDrawer';
 
 // ============================================================================
 // PROPS
@@ -31,7 +32,9 @@ import type {
 export interface QuoteRightPaneProps {
   quote: Quote;
   pdfOpen: boolean;
+  commentsOpen: boolean;
   onTogglePdf: () => void;
+  onToggleComments: () => void;
   onSelectQuote: (q: Quote | null) => void;
   onRequestRenewal: () => void;
   primaryActions: QuoteHeaderPrimaryAction[];
@@ -46,7 +49,9 @@ export interface QuoteRightPaneProps {
 export function QuoteRightPane({
   quote,
   pdfOpen,
+  commentsOpen,
   onTogglePdf,
+  onToggleComments,
   onSelectQuote,
   onRequestRenewal,
   primaryActions,
@@ -99,6 +104,12 @@ export function QuoteRightPane({
           </DialogContent>
         </Dialog>
       )}
+
+      <QuoteCommentsDrawer
+        quoteId={quote.id}
+        open={commentsOpen}
+        onClose={onToggleComments}
+      />
     </>
   );
 }
