@@ -32,6 +32,7 @@ import { formatCurrency } from '@/lib/intl-formatting';
 
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { expiryBadgeState, daysUntilExpiry, formatValidUntilDate } from '@/subapps/procurement/utils/quote-expiration';
 
 // =============================================================================
 // 🏢 TYPES
@@ -116,12 +117,31 @@ export function QuoteListCard({
     return { label: `v${v}`, variant: 'info' as ListCardBadgeVariant };
   }, [quote.version]);
 
+  const expiryBadge: ListCardBadge | null = useMemo(() => {
+    const state = expiryBadgeState(quote);
+    if (state === 'expired') {
+      return {
+        label: t('rfqs.expiry.badge.expired', { date: formatValidUntilDate(quote) }),
+        variant: 'destructive' as ListCardBadgeVariant,
+      };
+    }
+    if (state === 'expiring_soon') {
+      const days = daysUntilExpiry(quote) ?? 0;
+      return {
+        label: t('rfqs.expiry.badge.expiringSoon', { days }),
+        variant: 'warning' as ListCardBadgeVariant,
+      };
+    }
+    return null;
+  }, [quote, t]);
+
   const badges: ListCardBadge[] = useMemo(
     () => [
       ...(versionBadge ? [versionBadge] : []),
+      ...(expiryBadge ? [expiryBadge] : []),
       { label: statusLabel, variant: STATUS_BADGE_VARIANTS[quote.status] },
     ],
-    [statusLabel, quote.status, versionBadge],
+    [statusLabel, quote.status, versionBadge, expiryBadge],
   );
 
   const VersionChevron = isVersionExpanded ? ChevronDown : ChevronRight;

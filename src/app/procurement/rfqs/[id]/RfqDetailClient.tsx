@@ -23,6 +23,10 @@ import { useRfqUrlState, type RfqTabValue } from '@/subapps/procurement/hooks/us
 import { useAwardFlow } from '@/subapps/procurement/hooks/useAwardFlow';
 import { useQuoteRevision } from '@/subapps/procurement/hooks/useQuoteRevision';
 import { QuoteRevisionDetectedDialog } from '@/subapps/procurement/components/QuoteRevisionDetectedDialog';
+import { ExpiredAwardWarningDialog } from '@/subapps/procurement/components/ExpiredAwardWarningDialog';
+import { QuoteRenewalRequestDialog } from '@/subapps/procurement/components/QuoteRenewalRequestDialog';
+import { useScanQueue } from '@/subapps/procurement/hooks/useScanQueue';
+import { formatValidUntilDate, daysUntilExpiry } from '@/subapps/procurement/utils/quote-expiration';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteDetailsHeader } from '@/subapps/procurement/components/QuoteDetailsHeader';
 import { QuoteDetailSummary } from '@/subapps/procurement/components/QuoteDetailSummary';
@@ -160,13 +164,31 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     optimisticWinnerId,
     pendingEntry,
     cheapestEntry,
+    pendingExpiredEntry,
     handleAwardIntent,
     handleDialogConfirm,
     handleDialogCancel,
+    handleExpiredDialogAction,
   } = useAwardFlow({
     comparison: comparison ?? null,
     currentWinnerId: rfq?.winnerQuoteId ?? null,
     onFireAward,
+    quotes: activeQuotes,
+  });
+
+  const [renewalQuoteId, setRenewalQuoteId] = useState<string | null>(null);
+  const renewalQuote = useMemo(
+    () => (renewalQuoteId ? quotes.find((q) => q.id === renewalQuoteId) ?? null : null),
+    [renewalQuoteId, quotes],
+  );
+  const pendingExpiredQuote = useMemo(
+    () => (pendingExpiredEntry ? quotes.find((q) => q.id === pendingExpiredEntry.quoteId) ?? null : null),
+    [pendingExpiredEntry, quotes],
+  );
+
+  const scanQueue = useScanQueue({
+    rfqId: id,
+    projectId: rfq?.projectId,
   });
 
   const effectiveWinnerId = optimisticWinnerId ?? rfq?.winnerQuoteId ?? null;
@@ -293,6 +315,9 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
                 loading={loading}
                 onSelectQuote={handleSelectQuote}
                 selectedQuoteId={selectedQuote?.id}
+                scanItems={scanQueue.items}
+                onRetryScan={scanQueue.retry}
+                onRemoveScan={scanQueue.remove}
               />
             </div>
             <aside className={cn(selectedQuote ? 'block' : 'hidden md:block')}>
@@ -307,7 +332,10 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
                     <ArrowLeft className="size-4" />
                     {t('rfqs.mobile.backToList')}
                   </button>
-                  <QuoteDetailsHeader quote={selectedQuote} />
+                  <QuoteDetailsHeader
+                    quote={selectedQuote}
+                    onRequestRenewal={() => setRenewalQuoteId(selectedQuote.id)}
+                  />
                   <QuoteDetailSummary quote={selectedQuote} />
                 </>
               )}
@@ -407,6 +435,36 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           newQuote={pendingDetection.newQuote}
           onConfirm={dismissDetection}
           onCancel={dismissDetection}
+        />
+      )}
+      {pendingExpiredEntry && (
+        <ExpiredAwardWarningDialog
+          open
+          vendorName={pendingExpiredEntry.vendorName}
+          validUntilDate={pendingExpiredQuote ? formatValidUntilDate(pendingExpiredQuote) : ''}
+          daysAgo={pendingExpiredQuote ? Math.abs(daysUntilExpiry(pendingExpiredQuote) ?? 0) : 0}
+          onAction={(action) => {
+            if (action === 'request_renewal' && pendingExpiredQuote) {
+              setRenewalQuoteId(pendingExpiredQuote.id);
+            }
+            handleExpiredDialogAction(action);
+          }}
+        />
+      )}
+      {renewalQuote && (
+        <QuoteRenewalRequestDialog
+          open
+          vendorEmail={renewalQuote.extractedData?.vendorEmails?.value?.[0] ?? ''}
+          vendorName={renewalQuote.extractedData?.vendorName?.value ?? renewalQuote.vendorContactId}
+          rfqTitle={rfq?.title ?? id}
+          quoteNumber={renewalQuote.displayNumber}
+          validUntilDate={formatValidUntilDate(renewalQuote)}
+          total={String(renewalQuote.totals?.total ?? '')}
+          senderName=""
+          onSend={async (_to, _subject, _body) => {
+            setRenewalQuoteId(null);
+          }}
+          onCancel={() => setRenewalQuoteId(null)}
         />
       )}
     </main>

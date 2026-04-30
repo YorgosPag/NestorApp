@@ -545,6 +545,64 @@
         "isWinner": "Προσοχή: Η υπάρχουσα προσφορά έχει κατακυρωθεί. Αν ανανεωθεί, το award θα μεταφερθεί στη νέα version.",
         "hasPO": "Δεν μπορεί να αντικατασταθεί — υπάρχει ενεργή παραγγελία αγοράς. Ακύρωσε πρώτα την παραγγελία."
       }
+    },
+    "expiry": {
+      "badge": {
+        "expired": "⏳ Έληξε στις {date}",
+        "expiringSoon": "⚠️ Λήγει σε {days} ημέρες"
+      },
+      "banner": {
+        "title": "Η προσφορά έληξε στις {date} (πριν {daysAgo} ημέρα)",
+        "titlePlural": "Η προσφορά έληξε στις {date} (πριν {daysAgo} ημέρες)",
+        "requestRenewalCta": "Ζήτησε ανανέωση"
+      },
+      "warningModal": {
+        "title": "Η προσφορά έχει λήξει",
+        "body": "Η προσφορά του {vendor} έληξε στις {date} (πριν {daysAgo} ημέρες). Ο vendor μπορεί να μην τηρήσει την τιμή.",
+        "requestRenewal": "Ζήτησε ανανέωση από vendor",
+        "awardAnyway": "Award παρόλα αυτά",
+        "cancel": "Ακύρωση"
+      },
+      "awardedExpiredBanner": "⚠️ Awarded από expired προσφορά",
+      "renewal": {
+        "dialogTitle": "Ζήτηση ανανέωσης προσφοράς",
+        "toLabel": "Προς",
+        "subjectLabel": "Θέμα",
+        "bodyLabel": "Μήνυμα",
+        "subjectDefault": "Ανανέωση προσφοράς για: {rfqTitle}",
+        "bodyDefault": "Αγαπητέ {vendorName},\n\nΗ προσφορά σας {quoteNumber} με ισχύ έως {originalValidUntil} έχει λήξει.\n\nΕίναι ακόμη έγκυρη η τιμή των {total} €; Αν ναι, παρακαλούμε στείλτε ανανέωση. Αν όχι, στείλτε αναθεωρημένη προσφορά.\n\nΜε εκτίμηση,\n{senderName}",
+        "sendButton": "Στείλε email",
+        "cancelButton": "Ακύρωση",
+        "sendingButton": "Αποστολή..."
+      },
+      "stats": {
+        "expiringSoonCard": "Λήγουν σύντομα"
+      },
+      "filter": {
+        "chip": "Έληξαν"
+      }
+    },
+    "scan": {
+      "stage": {
+        "reading": "Ανάγνωση PDF...",
+        "extracting": "Εξαγωγή στοιχείων με AI...",
+        "validating": "Επικύρωση δεδομένων...",
+        "processing": "Επεξεργασία..."
+      },
+      "stageSuffix": "(στάδιο {current} από {total})",
+      "toast": {
+        "processingSingle": "Επεξεργασία αρχείου...",
+        "processingMultiple": "Επεξεργασία {count} αρχείων ({done}/{count} έτοιμο)",
+        "success": "Νέα προσφορά: {vendor} — {total}",
+        "successWithMore": "Νέα προσφορά: {vendor} — {total} (+{moreCount} ακόμα)",
+        "viewAction": "Δες",
+        "error": "Δεν ολοκληρώθηκε η ανάλυση του \"{fileName}\""
+      },
+      "placeholder": {
+        "failed": "Αποτυχία επεξεργασίας",
+        "retry": "Δοκίμασε ξανά",
+        "delete": "Διαγραφή"
+      }
     }
   },
   "trades": {

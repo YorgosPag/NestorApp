@@ -4,6 +4,8 @@ import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { QuoteComparisonEntry, QuoteComparisonResult } from '../types/comparison';
+import type { Quote } from '../types/quote';
+import { isExpired } from '../utils/quote-expiration';
 
 // ADR-328 §5.F «Optimistic + Undo» award flow.
 // Named useAwardFlow (hook) rather than quote-award-service (plain module) because it
@@ -13,26 +15,31 @@ interface UseAwardFlowOptions {
   comparison: QuoteComparisonResult | null;
   currentWinnerId: string | null;
   onFireAward: (winnerQuoteId: string, overrideReason: string | null) => Promise<void>;
+  quotes?: Quote[];
 }
 
 export interface UseAwardFlowResult {
   optimisticWinnerId: string | null;
   pendingEntry: QuoteComparisonEntry | null;
   cheapestEntry: QuoteComparisonEntry | null;
+  pendingExpiredEntry: QuoteComparisonEntry | null;
   handleAwardIntent: (entry: QuoteComparisonEntry) => void;
   handleDialogConfirm: (category: string, note: string) => Promise<void>;
   handleDialogCancel: () => void;
+  handleExpiredDialogAction: (action: 'award_anyway' | 'request_renewal' | 'cancel') => void;
 }
 
 export function useAwardFlow({
   comparison,
   currentWinnerId,
   onFireAward,
+  quotes,
 }: UseAwardFlowOptions): UseAwardFlowResult {
   const { t } = useTranslation('quotes');
   const [optimisticWinnerId, setOptimisticWinnerId] = useState<string | null>(null);
   const [pendingEntry, setPendingEntry] = useState<QuoteComparisonEntry | null>(null);
   const [cheapestEntry, setCheapestEntry] = useState<QuoteComparisonEntry | null>(null);
+  const [pendingExpiredEntry, setPendingExpiredEntry] = useState<QuoteComparisonEntry | null>(null);
 
   const executeAward = useCallback(
     async (entry: QuoteComparisonEntry, overrideReason: string | null) => {
@@ -67,21 +74,38 @@ export function useAwardFlow({
     [currentWinnerId, onFireAward, t],
   );
 
-  const handleAwardIntent = useCallback(
+  const proceedWithAward = useCallback(
     (entry: QuoteComparisonEntry) => {
       const isCheapest =
         entry.flags.includes('cheapest') ||
         (comparison?.quotes ?? []).filter((e) => e.quoteId !== entry.quoteId).length === 0;
-
-      if (isCheapest) {
-        void executeAward(entry, null);
-        return;
-      }
+      if (isCheapest) { void executeAward(entry, null); return; }
       const cheapest = comparison?.quotes.find((e) => e.flags.includes('cheapest')) ?? null;
       setCheapestEntry(cheapest);
       setPendingEntry(entry);
     },
     [comparison, executeAward],
+  );
+
+  const handleAwardIntent = useCallback(
+    (entry: QuoteComparisonEntry) => {
+      const quote = quotes?.find((q) => q.id === entry.quoteId);
+      if (quote && isExpired(quote)) {
+        setPendingExpiredEntry(entry);
+        return;
+      }
+      proceedWithAward(entry);
+    },
+    [quotes, proceedWithAward],
+  );
+
+  const handleExpiredDialogAction = useCallback(
+    (action: 'award_anyway' | 'request_renewal' | 'cancel') => {
+      const entry = pendingExpiredEntry;
+      setPendingExpiredEntry(null);
+      if (action === 'award_anyway' && entry) proceedWithAward(entry);
+    },
+    [pendingExpiredEntry, proceedWithAward],
   );
 
   const handleDialogConfirm = useCallback(
@@ -104,8 +128,10 @@ export function useAwardFlow({
     optimisticWinnerId,
     pendingEntry,
     cheapestEntry,
+    pendingExpiredEntry,
     handleAwardIntent,
     handleDialogConfirm,
     handleDialogCancel,
+    handleExpiredDialogAction,
   };
 }

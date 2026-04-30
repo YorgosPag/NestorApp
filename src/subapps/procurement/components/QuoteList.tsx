@@ -13,7 +13,7 @@
 
 import React, { useMemo, useState, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { FileText, History, Search } from 'lucide-react';
+import { FileText, History, Loader2, Search, XCircle } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,6 +33,7 @@ import { QuoteListCard } from '@/domain';
 import { EntityListColumn } from '@/core/containers';
 
 import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
+import type { ScanQueueItem } from '../hooks/useScanQueue';
 import { useSortState } from '@/hooks/useSortState';
 import { matchesSearchTerm } from '@/lib/search/search';
 import {
@@ -48,10 +49,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
-// ============================================================================
-// PROPS
-// ============================================================================
-
 interface QuoteListProps {
   quotes: Quote[];
   /** Pinned action-required quotes (submitted/under_review/expired). Optional for auxiliary contexts (e.g. RFQ detail). */
@@ -65,11 +62,51 @@ interface QuoteListProps {
   selectedQuoteId?: string;
   /** Edit currently selected quote (split-panel: opens review page) */
   onEditQuote?: (quoteId: string) => void;
+  /** Async scan placeholders (§5.H). Only rendered in RFQ mode. */
+  scanItems?: ScanQueueItem[];
+  onRetryScan?: (clientId: string) => void;
+  onRemoveScan?: (clientId: string) => void;
 }
 
-// ============================================================================
-// SUPERSEDED VERSION ROW — muted, non-selectable (§5.AA.6)
-// ============================================================================
+function ScanPlaceholderRow({
+  item,
+  onRetry,
+  onRemove,
+}: {
+  item: ScanQueueItem;
+  onRetry: () => void;
+  onRemove: () => void;
+}) {
+  const { t } = useTranslation(['quotes', 'common']);
+  const stageKeys = ['reading', 'extracting', 'validating'] as const;
+  const stageLabel = item.stage
+    ? t(`rfqs.scan.stage.${stageKeys[item.stage - 1]}`)
+    : t('rfqs.scan.stage.processing');
+
+  if (item.status === 'error') {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded border border-destructive/50 bg-destructive/5 text-destructive text-xs">
+        <XCircle className="size-3 shrink-0" />
+        <span className="flex-1 truncate font-medium">{item.fileName}</span>
+        <span className="text-destructive/80">{t('rfqs.scan.placeholder.failed')}</span>
+        <button type="button" onClick={onRetry} className="underline hover:no-underline shrink-0">
+          {t('rfqs.scan.placeholder.retry')}
+        </button>
+        <button type="button" onClick={onRemove} className="underline hover:no-underline shrink-0">
+          {t('rfqs.scan.placeholder.delete')}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 rounded border border-dashed border-primary/30 bg-primary/5 text-xs">
+      <Loader2 className="size-3 shrink-0 animate-spin text-primary" />
+      <span className="flex-1 truncate font-medium">{item.fileName}</span>
+      <span className="text-muted-foreground">{stageLabel}</span>
+    </div>
+  );
+}
 
 function SupersededVersionRow({ quote }: { quote: Quote }) {
   const dateStr = (() => {
@@ -102,6 +139,9 @@ export function QuoteList({
   onSelectQuote,
   selectedQuoteId,
   onEditQuote,
+  scanItems = [],
+  onRetryScan,
+  onRemoveScan,
 }: QuoteListProps) {
   const { t } = useTranslation(['quotes', 'common']);
   const colors = useSemanticColors();
@@ -320,6 +360,20 @@ export function QuoteList({
         onTypeChange={setSelectedStatuses}
         compact
       />
+
+      {/* Scan placeholders — top of list in RFQ mode (§5.H.1) */}
+      {isRfqMode && scanItems.length > 0 && (
+        <div className="px-2 pt-2 space-y-1.5">
+          {scanItems.map((item) => (
+            <ScanPlaceholderRow
+              key={item.clientId}
+              item={item}
+              onRetry={() => onRetryScan?.(item.clientId)}
+              onRemove={() => onRemoveScan?.(item.clientId)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* List */}
       <ScrollArea className="flex-1">

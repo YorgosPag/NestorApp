@@ -545,6 +545,64 @@
         "isWinner": "Warning: The existing quote has been awarded. Replacing it will transfer the award to the new version.",
         "hasPO": "Cannot replace — there is an active purchase order. Cancel the order first."
       }
+    },
+    "expiry": {
+      "badge": {
+        "expired": "⏳ Expired on {date}",
+        "expiringSoon": "⚠️ Expires in {days} days"
+      },
+      "banner": {
+        "title": "Quote expired on {date} ({daysAgo} day ago)",
+        "titlePlural": "Quote expired on {date} ({daysAgo} days ago)",
+        "requestRenewalCta": "Request renewal"
+      },
+      "warningModal": {
+        "title": "Quote has expired",
+        "body": "{vendor}'s quote expired on {date} ({daysAgo} days ago). The vendor may not honor the price.",
+        "requestRenewal": "Request renewal from vendor",
+        "awardAnyway": "Award anyway",
+        "cancel": "Cancel"
+      },
+      "awardedExpiredBanner": "⚠️ Awarded from expired quote",
+      "renewal": {
+        "dialogTitle": "Request quote renewal",
+        "toLabel": "To",
+        "subjectLabel": "Subject",
+        "bodyLabel": "Message",
+        "subjectDefault": "Renewal of quote for: {rfqTitle}",
+        "bodyDefault": "Dear {vendorName},\n\nYour quote {quoteNumber} valid until {originalValidUntil} has expired.\n\nIs the price of {total} € still valid? If so, please send a renewal. If not, please send a revised quote.\n\nKind regards,\n{senderName}",
+        "sendButton": "Send email",
+        "cancelButton": "Cancel",
+        "sendingButton": "Sending..."
+      },
+      "stats": {
+        "expiringSoonCard": "Expiring soon"
+      },
+      "filter": {
+        "chip": "Expired"
+      }
+    },
+    "scan": {
+      "stage": {
+        "reading": "Reading PDF...",
+        "extracting": "Extracting data with AI...",
+        "validating": "Validating data...",
+        "processing": "Processing..."
+      },
+      "stageSuffix": "(stage {current} of {total})",
+      "toast": {
+        "processingSingle": "Processing file...",
+        "processingMultiple": "Processing {count} files ({done}/{count} done)",
+        "success": "New quote: {vendor} — {total}",
+        "successWithMore": "New quote: {vendor} — {total} (+{moreCount} more)",
+        "viewAction": "View",
+        "error": "Could not finish analyzing \"{fileName}\""
+      },
+      "placeholder": {
+        "failed": "Processing failed",
+        "retry": "Retry",
+        "delete": "Delete"
+      }
     }
   },
   "trades": {
