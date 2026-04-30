@@ -19,9 +19,25 @@ The naive cheapest-detection in `quote-cheapest.ts` (`isCheapestEligible` compar
 - Inclusions/Exclusions matrix (per-quote, per-line)
 - Normalized TCO calculation (labor, VAT, delivery, warranty capitalized)
 - Weighted scoring model (price / reliability / delivery / terms — user-adjustable weights)
-- Vendor qualification flags (certifications, past consistency)
 - Reference patterns: Procore, SAP Ariba (construction-leaning per §5.T.3)
 - Replace naive `isCheapestEligible` comparison with normalized TCO
+
+## Design decisions
+
+**Q4 — Vendor certifications:** Removed from scope. Never a real need in practice — not worth building. If it becomes relevant in the future, open a new ADR.
+
+**Q3 — Scoring weights:** Company-level defaults (set once in Settings, apply to all RFQs) + optional per-RFQ override when a specific project has different priorities (e.g. fire protection RFQ: certifications weight ↑, price weight ↓). Pattern: SAP Ariba per-event model, simplified. No per-RFQ configuration forced — defaults cover 90% of cases.
+
+**Q2 — Normalization components:**
+- **VAT (compute)**: if `vatIncluded === false` → normalized total = `total × 1.24`. Only item computed as a € delta. Precise and unambiguous.
+- **Labor (flag)**: if `laborIncluded === false` → show ⚠️ «Δεν περιλαμβάνει εργατικά». Cannot compute market rate → flag only. #1 hidden cost in Greek construction.
+- **Delivery (flag)**: if delivery cost is a line item → already in total. If absent → flag «Μεταφορά εκτός τιμής».
+- **Warranty (display field)**: show warranty duration (e.g. «12 μήνες» vs «24 μήνες») as a comparison field. Do not capitalize into €.
+- Rule: only compute what can be computed correctly. Everything else is a flag.
+
+**Q1b — Normalization input:** AI proposes automatically (existing `vatIncluded`, `laborIncluded` flags already extracted during scan), user can override per-quote if AI was wrong. Pattern: AI-first + manual correction. No extra scan step needed — data already exists in Quote object.
+
+**Q1 — Core problem:** The current comparison uses raw totals only. Two quotes are not comparable as-is when they differ in VAT inclusion (24% vs 0%), labor inclusion (yes vs no), or delivery costs. The system declares the wrong winner. The fix: normalize all quotes to the same base before comparing (apples-to-apples).
 
 ## Out of scope
 

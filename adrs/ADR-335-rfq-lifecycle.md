@@ -12,6 +12,21 @@
 
 ADR-328 §5.EE audits the current RFQ status field and explicitly declares lifecycle changes out of scope. The detail page uses a read-only tolerance contract for `closed`, `cancelled`, and `archived` statuses. The gap identified: awarding a winner does NOT auto-transition RFQ `status` to `closed` — these are decoupled.
 
+## Design decisions
+
+**Q3 — Reopen closed RFQ:** Conditional:
+- **No PO exists** → Reopen freely (one-click, status back to `active`, award cleared). Full audit entry logged.
+- **PO exists** → Reopen blocked. Clear message: «Ακύρωσε πρώτα την Παραγγελία Αγοράς». PO cancellation unlocks Reopen.
+- Pattern: Procore (PO-gated reopen) + SAP Ariba (free reopen without contract).
+
+**Q2 — Cancellation:** Context-dependent:
+- **Draft RFQ** (no invites sent) → simple delete, no reason required, no notifications
+- **Active RFQ** (invites sent) → cancellation reason mandatory + optional vendor notification («Το RFQ ακυρώθηκε»)
+- Add `cancelled` status to schema. Reason stored as `cancellationReason: string` on RFQ doc.
+- Pattern: Procore (state-dependent) + Primavera (mandatory reason when active).
+
+**Q1 — Auto-close on award:** RFQ status auto-transitions to `closed` when a winner is awarded (`winnerQuoteId` set). No manual step required. Rationale: RFQ has one purpose — find a vendor. Once found, it's done. Industry standard: Primavera Unifier, Procore, SAP Ariba, Linear all auto-close on award.
+
 ## Key findings from ADR-328 §5.EE.3 audit
 
 - `RFQ.status` values present: `draft`, `active`, `closed`, `archived`
