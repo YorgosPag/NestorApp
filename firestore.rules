@@ -3297,18 +3297,20 @@ service cloud.firestore {
     // =========================================================================
 
     match /rfqs/{rfqId} {
-      allow read: if isAuthenticated()
-                  && resource.data.keys().hasAny(['companyId'])
-                  && belongsToCompany(resource.data.companyId);
+      allow read: if isSuperAdminOnly()
+                  || (isAuthenticated()
+                      && resource.data.keys().hasAny(['companyId'])
+                      && belongsToCompany(resource.data.companyId));
       allow create: if false;
       allow update: if false;
       allow delete: if false;
     }
 
     match /quotes/{quoteId} {
-      allow read: if isAuthenticated()
-                  && resource.data.keys().hasAny(['companyId'])
-                  && belongsToCompany(resource.data.companyId);
+      allow read: if isSuperAdminOnly()
+                  || (isAuthenticated()
+                      && resource.data.keys().hasAny(['companyId'])
+                      && belongsToCompany(resource.data.companyId));
       // Vendor portal writes and internal writes via Admin SDK only
       allow create: if false;
       allow update: if false;
@@ -3321,9 +3323,10 @@ service cloud.firestore {
     }
 
     match /vendor_invites/{inviteId} {
-      allow read: if isAuthenticated()
-                  && resource.data.keys().hasAny(['companyId'])
-                  && belongsToCompany(resource.data.companyId);
+      allow read: if isSuperAdminOnly()
+                  || (isAuthenticated()
+                      && resource.data.keys().hasAny(['companyId'])
+                      && belongsToCompany(resource.data.companyId));
       allow create: if false;
       allow update: if false;
       allow delete: if false;
@@ -3339,9 +3342,10 @@ service cloud.firestore {
     // procurement package. Tenant-scoped reads via companyId; all writes go
     // through Admin SDK in `sourcing-event-service` (step c).
     match /sourcing_events/{eventId} {
-      allow read: if isAuthenticated()
-                  && resource.data.keys().hasAny(['companyId'])
-                  && belongsToCompany(resource.data.companyId);
+      allow read: if isSuperAdminOnly()
+                  || (isAuthenticated()
+                      && resource.data.keys().hasAny(['companyId'])
+                      && belongsToCompany(resource.data.companyId));
       allow create: if false;
       allow update: if false;
       allow delete: if false;
@@ -3353,9 +3357,10 @@ service cloud.firestore {
     // tenant isolation + collectionGroup queries. Vendor portal projection
     // strips internal fields (unitPrice, boqItemId, source) server-side.
     match /rfqs/{rfqId}/lines/{lineId} {
-      allow read: if isAuthenticated()
-                  && resource.data.keys().hasAny(['companyId'])
-                  && belongsToCompany(resource.data.companyId);
+      allow read: if isSuperAdminOnly()
+                  || (isAuthenticated()
+                      && resource.data.keys().hasAny(['companyId'])
+                      && belongsToCompany(resource.data.companyId));
       allow create: if false;
       allow update: if false;
       allow delete: if false;
