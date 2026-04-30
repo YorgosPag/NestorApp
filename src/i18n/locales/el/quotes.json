@@ -636,6 +636,77 @@
       "closeAria": "Κλείσιμο PDF",
       "loading": "Φόρτωση PDF...",
       "error": "Δεν φόρτωσε το PDF"
+    },
+    "notify": {
+      "triggerButton": "Ενημέρωσε προμηθευτές",
+      "triggerButtonResend": "Ξανά ενημέρωση",
+      "dialog": {
+        "title": "Ενημέρωση προμηθευτών",
+        "subtitle": "Επίλεξε ποιους θα ενημερώσεις και έλεγξε τα μηνύματα.",
+        "cancel": "Ακύρωση",
+        "editMessage": "Επεξεργασία μηνύματος"
+      },
+      "template": {
+        "winner": "Πρότυπο: Επιβεβαίωση",
+        "rejection": "Πρότυπο: Απόρριψη"
+      },
+      "lastSent": {
+        "never": "Ποτέ",
+        "at": "Εστάλη στις {date}"
+      },
+      "send": {
+        "button": "Αποστολή σε {count} προμηθευτές",
+        "sending": "Αποστολή...",
+        "retry": "Δοκίμασε ξανά"
+      },
+      "subject": { "label": "Θέμα" },
+      "body": { "label": "Μήνυμα" },
+      "status": {
+        "sent": "Εστάλη",
+        "sending": "Σε αποστολή",
+        "failed": "Απέτυχε"
+      },
+      "sentBadge": "✉️ Ενημερώθηκε στις {date}",
+      "staleBadge": "✉️ Ενημερώθηκε (παλαιό)"
+    },
+    "invite": {
+      "dialog": {
+        "title": "Στείλε πρόσκληση για: «{rfqTitle}»"
+      },
+      "search": {
+        "placeholder": "Αναζήτηση προμηθευτή..."
+      },
+      "section": {
+        "suggested": "⭐ Προτεινόμενοι",
+        "allVendors": "Όλοι οι προμηθευτές",
+        "adHoc": "Πρόσθεσε email απευθείας",
+        "adHocList": "Ad-hoc ({count})"
+      },
+      "alreadyInvited": {
+        "banner": "{count} προμηθευτές έχουν ήδη προσκληθεί για αυτό το RFQ.",
+        "action": "Δες προσκλήσεις"
+      },
+      "addAdhocButton": "+ Προσθήκη",
+      "adhocPlaceholder": "contact@newvendor.gr",
+      "createContact": "Δημιουργία νέου contact με αυτό το email",
+      "deadline": {
+        "label": "Προθεσμία απάντησης",
+        "preset": {
+          "3d": "3 ημέρες",
+          "5d": "5 ημέρες",
+          "7d": "7 ημέρες",
+          "14d": "14 ημέρες",
+          "custom": "Προσαρμοσμένη..."
+        }
+      },
+      "sendButton": "Στείλε σε {count} προμηθευτές",
+      "cancel": "Ακύρωση",
+      "subject": { "label": "Θέμα" },
+      "body": { "label": "Μήνυμα" },
+      "ccSelf": "Στείλε cc σε εμένα",
+      "errors": {
+        "invalidEmail": "Μη έγκυρο email"
+      }
     }
   },
   "trades": {

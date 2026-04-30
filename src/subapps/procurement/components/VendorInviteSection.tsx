@@ -6,11 +6,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { BadgeVariantProps } from '@/components/ui/badge';
-import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
 import type { InviteStatus, DeliveryChannel } from '../types/vendor-invite';
 import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
 import { useVendorInvites } from '../hooks/useVendorInvites';
 import { VendorInviteDialog } from './VendorInviteDialog';
+import type { RFQ } from '../types/rfq';
 
 // ============================================================================
 // TIMESTAMP HELPER
@@ -135,20 +135,21 @@ function InviteRow({ invite, vendorName, onRevoke, lockState }: InviteRowProps) 
 
 interface VendorInviteSectionProps {
   rfqId: string;
+  rfq?: RFQ | null;
   lockState?: SetupLockState;
+  onViewInvites?: () => void;
 }
 
-export function VendorInviteSection({ rfqId, lockState = 'unlocked' }: VendorInviteSectionProps) {
+export function VendorInviteSection({ rfqId, rfq, lockState = 'unlocked', onViewInvites }: VendorInviteSectionProps) {
   const { t } = useTranslation('quotes');
   const { invites, vendorContacts, loading, contactsLoading, createInvite, revokeInvite, refetch } =
     useVendorInvites(rfqId);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const vendorContactOptions: ComboboxOption[] = vendorContacts.map((c) => ({
-    value: c.id,
-    label: c.displayName,
-    secondaryLabel: c.email ?? undefined,
-  }));
+  const alreadyInvitedIds = useMemo(
+    () => new Set(invites.filter((i) => i.status === 'pending' || i.status === 'sent' || i.status === 'opened').map((i) => i.vendorContactId).filter(Boolean) as string[]),
+    [invites],
+  );
 
   const vendorNameMap = new Map(vendorContacts.map((c) => [c.id, c.displayName]));
 
@@ -208,12 +209,15 @@ export function VendorInviteSection({ rfqId, lockState = 'unlocked' }: VendorInv
 
       <VendorInviteDialog
         rfqId={rfqId}
+        rfq={rfq ?? null}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        vendorContacts={vendorContactOptions}
+        vendorContacts={vendorContacts}
         contactsLoading={contactsLoading}
+        alreadyInvitedIds={alreadyInvitedIds}
         onCreate={createInvite}
-        onAfterEmailSend={refetch}
+        onAfterSend={refetch}
+        onViewInvites={onViewInvites}
       />
     </section>
   );

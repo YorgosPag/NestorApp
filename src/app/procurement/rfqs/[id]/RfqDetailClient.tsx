@@ -5,10 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, CheckCircle2, ClipboardList, Eye, EyeOff, Plus, ScanLine } from 'lucide-react';
+import { Building2, ClipboardList, Eye, EyeOff, Plus, ScanLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/lib/intl-formatting';
 import { Badge } from '@/components/ui/badge';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useVendorInvites } from '@/subapps/procurement/hooks/useVendorInvites';
@@ -37,11 +36,12 @@ import { AwardReasonDialog } from '@/subapps/procurement/components/AwardReasonD
 import { ComparisonEmptyState } from '@/subapps/procurement/components/ComparisonEmptyState';
 import { SourcingEventSummaryCard } from '@/subapps/procurement/components/SourcingEventSummaryCard';
 import { VendorInviteSection } from '@/subapps/procurement/components/VendorInviteSection';
+import { ComparisonWinnerBanner } from '@/subapps/procurement/components/ComparisonWinnerBanner';
+import { VendorNotificationDialog } from '@/subapps/procurement/components/VendorNotificationDialog';
 import { RfqLinesPanel } from '@/subapps/procurement/components/RfqLinesPanel';
 import { SetupLockBanner } from '@/subapps/procurement/components/SetupLockBanner';
 import { deriveSetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
-import type { RFQ } from '@/subapps/procurement/types/rfq';
-import { rfqIsMultiTrade } from '@/subapps/procurement/types/rfq';
+import { rfqIsMultiTrade, type RFQ } from '@/subapps/procurement/types/rfq';
 
 interface RfqDetailClientProps {
   id: string;
@@ -180,6 +180,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   });
 
   const [renewalQuoteId, setRenewalQuoteId] = useState<string | null>(null);
+  const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
   const renewalQuote = useMemo(
     () => (renewalQuoteId ? quotes.find((q) => q.id === renewalQuoteId) ?? null : null),
     [renewalQuoteId, quotes],
@@ -226,6 +227,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         }),
     [selectedQuote, rfq, patchQuoteStatus, handleAwardIntent, handleStub, handleTogglePdf, t],
   );
+  const allVendorNotified = activeQuotes.filter((q) => q.status === 'accepted' || q.status === 'rejected').every((q) => !!q.lastNotifiedAt);
   const effectiveWinnerId = optimisticWinnerId ?? rfq?.winnerQuoteId ?? null;
   const winnerQuote = effectiveWinnerId ? quotes.find((q) => q.id === effectiveWinnerId) ?? null : null;
 
@@ -378,22 +380,11 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
 
         <TabsContent value="comparison" className="space-y-6">
           {winnerQuote && (
-            <div className="flex items-center justify-between rounded-lg border border-emerald-500/40 bg-emerald-50/40 px-4 py-3 dark:bg-emerald-950/20">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-                <div>
-                  <p className="text-sm font-semibold">
-                    {t('rfqs.award.winnerBanner.title', { vendor: winnerQuote.extractedData?.vendorName?.value ?? '—' })}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(winnerQuote.totals?.total ?? 0)}
-                  </p>
-                </div>
-              </div>
-              <Button size="sm" variant="outline" disabled>
-                {t('rfqs.award.createPO')}
-              </Button>
-            </div>
+            <ComparisonWinnerBanner
+              winnerQuote={winnerQuote}
+              allVendorNotified={allVendorNotified}
+              onNotifyVendors={() => setNotifyDialogOpen(true)}
+            />
           )}
           {activeQuotes.length < 2 ? (
             <ComparisonEmptyState
@@ -444,7 +435,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
               lockState={lockState}
             />
           </section>
-          <VendorInviteSection rfqId={id} lockState={lockState} />
+          <VendorInviteSection rfqId={id} rfq={rfq} lockState={lockState} onViewInvites={() => handleTabChange('setup')} />
         </TabsContent>
       </Tabs>
 
@@ -489,12 +480,19 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           validUntilDate={formatValidUntilDate(renewalQuote)}
           total={String(renewalQuote.totals?.total ?? '')}
           senderName=""
-          onSend={async (_to, _subject, _body) => {
+          onSend={async (to, subject, body) => {
+            if (!renewalQuote) return;
+            const res = await fetch(`/api/quotes/${renewalQuote.id}/request-renewal`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to, subject, body }) });
+            if (!res.ok) { toast.error(t('quotes.errors.updateFailed')); return; }
             setRenewalQuoteId(null);
           }}
           onCancel={() => setRenewalQuoteId(null)}
         />
       )}
+      <VendorNotificationDialog
+        open={notifyDialogOpen} rfq={rfq} quotes={activeQuotes}
+        senderName="" companyName="" onOpenChange={setNotifyDialogOpen}
+      />
     </main>
   );
 }

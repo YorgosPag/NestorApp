@@ -37,6 +37,7 @@ export type AuditAction =
   | 'professional_assigned'
   | 'professional_removed'
   | 'email_sent'
+  | 'vendor_notified'
   | 'invoice_created'
   | 'document_added'
   | 'document_removed';

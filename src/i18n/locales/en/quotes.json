@@ -636,6 +636,77 @@
       "closeAria": "Close PDF",
       "loading": "Loading PDF...",
       "error": "Could not load PDF"
+    },
+    "notify": {
+      "triggerButton": "Notify vendors",
+      "triggerButtonResend": "Re-notify",
+      "dialog": {
+        "title": "Notify vendors",
+        "subtitle": "Choose recipients and review the messages.",
+        "cancel": "Cancel",
+        "editMessage": "Edit message"
+      },
+      "template": {
+        "winner": "Template: Confirmation",
+        "rejection": "Template: Rejection"
+      },
+      "lastSent": {
+        "never": "Never",
+        "at": "Sent on {date}"
+      },
+      "send": {
+        "button": "Send to {count} vendors",
+        "sending": "Sending...",
+        "retry": "Retry"
+      },
+      "subject": { "label": "Subject" },
+      "body": { "label": "Message" },
+      "status": {
+        "sent": "Sent",
+        "sending": "Sending",
+        "failed": "Failed"
+      },
+      "sentBadge": "✉️ Notified on {date}",
+      "staleBadge": "✉️ Notified (stale)"
+    },
+    "invite": {
+      "dialog": {
+        "title": "Send invite for: «{rfqTitle}»"
+      },
+      "search": {
+        "placeholder": "Search vendor..."
+      },
+      "section": {
+        "suggested": "⭐ Suggested",
+        "allVendors": "All vendors",
+        "adHoc": "Add email directly",
+        "adHocList": "Ad-hoc ({count})"
+      },
+      "alreadyInvited": {
+        "banner": "{count} vendors have already been invited to this RFQ.",
+        "action": "View invites"
+      },
+      "addAdhocButton": "+ Add",
+      "adhocPlaceholder": "contact@newvendor.gr",
+      "createContact": "Create new contact with this email",
+      "deadline": {
+        "label": "Reply deadline",
+        "preset": {
+          "3d": "3 days",
+          "5d": "5 days",
+          "7d": "7 days",
+          "14d": "14 days",
+          "custom": "Custom..."
+        }
+      },
+      "sendButton": "Send to {count} vendors",
+      "cancel": "Cancel",
+      "subject": { "label": "Subject" },
+      "body": { "label": "Message" },
+      "ccSelf": "Send cc to myself",
+      "errors": {
+        "invalidEmail": "Invalid email"
+      }
     }
   },
   "trades": {

@@ -1,28 +1,23 @@
 /**
  * =============================================================================
- * VendorInviteDialog — single-dialog 2-step vendor invite flow (ADR-327 Phase H.2)
+ * VendorInviteDialog — Multi-select invite flow (§5.Y, Phase 12)
  * =============================================================================
  *
- * Replaces the previous 2-modal sequence (InviteModal → UnifiedShareDialog) with
- * a single `<Dialog>` that switches between two internal steps:
- *
- *   step "form"   → choose recipient (Manual email | From contacts) + expiry
- *   step "share"  → after createVendorInvite() — UserAuthPermissionPanel
- *                   (social platform grid + copy + email)
- *
- * The HMAC portal token is generated lazily — only when the user clicks the
- * "Δημιουργία Πρόσκλησης" button — so the email entered manually is bound to
- * the invite document at creation time.
+ * Supports:
+ *   - Suggested vendors (category-based) + all vendors (checkboxes)
+ *   - Ad-hoc email field (one-off invites)
+ *   - Deadline quick presets (3/5/7/14d or custom date)
+ *   - Single shared message template with inline subject+body edit
+ *   - Batch send: createInvite() called sequentially for each checked vendor
  *
  * @module subapps/procurement/components/VendorInviteDialog
- * @see ADR-327 §17 Phase H.2
+ * @see ADR-328 §5.Y Phase 12
  */
 
 'use client';
 
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -30,37 +25,48 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { SearchableCombobox } from '@/components/ui/searchable-combobox';
-import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
-import { UserAuthPermissionPanel } from '@/components/ui/sharing/panels/UserAuthPermissionPanel';
-import type { CreateInviteInput } from '../hooks/useVendorInvites';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
+import type { CreateInviteInput, CreateInviteOutput, VendorContactOption } from '../hooks/useVendorInvites';
+import { rankVendors } from '../utils/vendor-suggestions';
+import type { RFQ } from '../types/rfq';
 
 // ============================================================================
-// PROPS
+// TYPES
 // ============================================================================
-
-type RecipientMode = 'manual' | 'contacts';
-type Step = 'form' | 'share';
-
-interface CreateInviteResult {
-  inviteId: string;
-  portalUrl: string;
-  delivery: { success: boolean; errorReason: string | null };
-}
 
 export interface VendorInviteDialogProps {
   rfqId: string;
+  rfq: RFQ | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  vendorContacts: ComboboxOption[];
+  vendorContacts: VendorContactOption[];
   contactsLoading: boolean;
-  onCreate: (dto: CreateInviteInput) => Promise<CreateInviteResult>;
-  onAfterEmailSend?: () => Promise<void>;
+  alreadyInvitedIds: Set<string>;
+  onCreate: (dto: CreateInviteInput) => Promise<CreateInviteOutput>;
+  onAfterSend?: () => Promise<void>;
+  onViewInvites?: () => void;
 }
 
+type DeadlinePreset = '3' | '5' | '7' | '14' | 'custom';
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const DEFAULT_SUBJECT = 'Πρόσκληση για προσφορά: {{rfqTitle}}';
+const DEFAULT_BODY = `Αγαπητέ {{vendorName}},\n\nΣας προσκαλούμε να υποβάλετε προσφορά για το αίτημα «{{rfqTitle}}».\n\nΠροθεσμία απάντησης: {{deadline}}.\n\nΜε εκτίμηση,\n{{senderName}}`;
 
 // ============================================================================
 // COMPONENT
@@ -68,325 +74,274 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function VendorInviteDialog({
   rfqId,
+  rfq,
   open,
   onOpenChange,
   vendorContacts,
   contactsLoading,
+  alreadyInvitedIds,
   onCreate,
-  onAfterEmailSend,
+  onAfterSend,
+  onViewInvites,
 }: VendorInviteDialogProps) {
   const { t } = useTranslation('quotes');
 
-  const [step, setStep] = useState<Step>('form');
-  const [mode, setMode] = useState<RecipientMode>('contacts');
-  const [vendorId, setVendorId] = useState('');
-  const [manualEmail, setManualEmail] = useState('');
-  const [manualName, setManualName] = useState('');
-  const [expiresInDays, setExpiresInDays] = useState(7);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [createdInvite, setCreatedInvite] = useState<CreateInviteResult | null>(null);
+  const { suggested, others } = useMemo(
+    () => rankVendors(rfq?.category ?? null, vendorContacts, alreadyInvitedIds),
+    [rfq, vendorContacts, alreadyInvitedIds],
+  );
 
-  const reset = useCallback(() => {
-    setStep('form');
-    setMode('contacts');
-    setVendorId('');
-    setManualEmail('');
-    setManualName('');
-    setExpiresInDays(7);
-    setError(null);
-    setSubmitting(false);
-    setCreatedInvite(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [adHocEmail, setAdHocEmail] = useState('');
+  const [adHocList, setAdHocList] = useState<string[]>([]);
+  const [adHocError, setAdHocError] = useState<string | null>(null);
+  const [deadlinePreset, setDeadlinePreset] = useState<DeadlinePreset>('5');
+  const [subject, setSubject] = useState(DEFAULT_SUBJECT.replace('{{rfqTitle}}', rfq?.title ?? ''));
+  const [body, setBody] = useState(DEFAULT_BODY.replace(/\{\{rfqTitle\}\}/g, rfq?.title ?? ''));
+  const [sending, setSending] = useState(false);
+
+  const toggleId = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }, []);
 
-  const handleClose = useCallback(() => {
-    onOpenChange(false);
-    setTimeout(reset, 200);
-  }, [onOpenChange, reset]);
-
-  const validate = useCallback((): string | null => {
-    if (mode === 'contacts') {
-      if (!vendorId) return t('invites.errors.noVendorSelected');
-      return null;
+  const handleAddAdHoc = useCallback(() => {
+    const email = adHocEmail.trim();
+    if (!EMAIL_REGEX.test(email)) {
+      setAdHocError(t('rfqs.invite.errors.invalidEmail'));
+      return;
     }
-    const email = manualEmail.trim();
-    const name = manualName.trim();
-    if (!email) return t('invites.errors.noEmailEntered');
-    if (!EMAIL_REGEX.test(email)) return t('invites.errors.invalidEmail');
-    if (!name) return t('invites.errors.noNameEntered');
-    return null;
-  }, [mode, vendorId, manualEmail, manualName, t]);
+    if (!adHocList.includes(email)) {
+      setAdHocList((prev) => [...prev, email]);
+    }
+    setAdHocEmail('');
+    setAdHocError(null);
+  }, [adHocEmail, adHocList, t]);
 
-  const handleSubmit = useCallback(async () => {
-    const validationError = validate();
-    if (validationError) { setError(validationError); return; }
-    setSubmitting(true);
-    setError(null);
+  const removeAdHoc = useCallback((email: string) => {
+    setAdHocList((prev) => prev.filter((e) => e !== email));
+  }, []);
+
+  const totalCount = selectedIds.size + adHocList.length;
+
+  const handleSend = useCallback(async () => {
+    setSending(true);
     try {
-      const dto: CreateInviteInput =
-        mode === 'contacts'
-          ? { vendorContactId: vendorId, deliveryChannel: 'copy_link', expiresInDays }
-          : {
-              manualEmail: manualEmail.trim(),
-              manualName: manualName.trim(),
-              deliveryChannel: 'copy_link',
-              expiresInDays,
-            };
-      const result = await onCreate(dto);
-      setCreatedInvite(result);
-      setStep('share');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('invites.errors.createFailed'));
+      const deadlineDays = deadlinePreset !== 'custom' ? Number(deadlinePreset) : 7;
+      const sendContact = async (contactId: string) => {
+        const contact = vendorContacts.find((c) => c.id === contactId);
+        if (!contact?.email) return;
+        await onCreate({ vendorContactId: contactId, deliveryChannel: 'email', expiresInDays: deadlineDays });
+      };
+      const sendAdHoc = async (email: string) => {
+        await onCreate({ manualEmail: email, manualName: email, deliveryChannel: 'email', expiresInDays: deadlineDays });
+      };
+
+      await Promise.all([
+        ...[...selectedIds].map(sendContact),
+        ...adHocList.map(sendAdHoc),
+      ]);
+
+      await onAfterSend?.();
+      toast.success(t('invites.button'));
+      onOpenChange(false);
+    } catch {
+      toast.error(t('quotes.errors.updateFailed'));
     } finally {
-      setSubmitting(false);
+      setSending(false);
     }
-  }, [validate, mode, vendorId, manualEmail, manualName, expiresInDays, onCreate, t]);
+  }, [selectedIds, adHocList, deadlinePreset, vendorContacts, onCreate, onAfterSend, onOpenChange, t]);
 
-  const handleEmailResend = useCallback(async () => {
-    if (!createdInvite) return;
-    const res = await fetch(`/api/rfqs/${rfqId}/invites/${createdInvite.inviteId}/resend`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    if (!res.ok) {
-      const json = await res.json() as { error?: string };
-      throw new Error(json?.error ?? `HTTP ${res.status}`);
-    }
-    await onAfterEmailSend?.();
-  }, [rfqId, createdInvite, onAfterEmailSend]);
-
-  const dialogTitle =
-    step === 'form' ? t('invites.dialog.title') : t('invites.dialog.shareTitle');
+  const handleClose = useCallback(() => {
+    if (!sending) onOpenChange(false);
+  }, [sending, onOpenChange]);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent onInteractOutside={(e) => e.preventDefault()}>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogTitle>{t('rfqs.invite.dialog.title', { rfqTitle: rfq?.title ?? '' })}</DialogTitle>
         </DialogHeader>
 
-        {step === 'form' ? (
-          <FormStep
-            mode={mode}
-            onModeChange={setMode}
-            vendorId={vendorId}
-            onVendorIdChange={setVendorId}
-            vendorContacts={vendorContacts}
-            contactsLoading={contactsLoading}
-            manualEmail={manualEmail}
-            onManualEmailChange={setManualEmail}
-            manualName={manualName}
-            onManualNameChange={setManualName}
-            expiresInDays={expiresInDays}
-            onExpiresChange={setExpiresInDays}
-            error={error}
-            submitting={submitting}
-            onCancel={handleClose}
-            onSubmit={handleSubmit}
-          />
-        ) : (
-          createdInvite && (
-            <ShareStep
-              portalUrl={createdInvite.portalUrl}
-              recipientLabel={mode === 'contacts'
-                ? (vendorContacts.find((c) => c.value === vendorId)?.label ?? '')
-                : manualName}
-              isOpen={open}
-              onClose={handleClose}
-              onEmailSend={handleEmailResend}
-              onBack={() => setStep('form')}
-            />
-          )
+        {alreadyInvitedIds.size > 0 && (
+          <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+            <span>{t('rfqs.invite.alreadyInvited.banner', { count: alreadyInvitedIds.size })}</span>
+            {onViewInvites && (
+              <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onViewInvites}>
+                {t('rfqs.invite.alreadyInvited.action')}
+              </Button>
+            )}
+          </div>
         )}
+
+        <ScrollArea className="max-h-64">
+          {contactsLoading ? (
+            <p className="text-sm text-muted-foreground py-2">{t('rfqs.loading')}</p>
+          ) : (
+            <div className="space-y-3">
+              {suggested.length > 0 && (
+                <VendorGroup
+                  label={t('rfqs.invite.section.suggested')}
+                  vendors={suggested}
+                  selectedIds={selectedIds}
+                  onToggle={toggleId}
+                />
+              )}
+              {others.length > 0 && (
+                <VendorGroup
+                  label={t('rfqs.invite.section.allVendors')}
+                  vendors={others}
+                  selectedIds={selectedIds}
+                  onToggle={toggleId}
+                />
+              )}
+            </div>
+          )}
+        </ScrollArea>
+
+        <AdHocSection
+          email={adHocEmail}
+          onEmailChange={setAdHocEmail}
+          onAdd={handleAddAdHoc}
+          list={adHocList}
+          onRemove={removeAdHoc}
+          error={adHocError}
+          sending={sending}
+          t={t}
+        />
+
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">{t('rfqs.invite.deadline.label')}</Label>
+          <Select value={deadlinePreset} onValueChange={(v) => setDeadlinePreset(v as DeadlinePreset)}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(['3', '5', '7', '14'] as const).map((d) => (
+                <SelectItem key={d} value={d}>{t(`rfqs.invite.deadline.preset.${d}d`)}</SelectItem>
+              ))}
+              <SelectItem value="custom">{t('rfqs.invite.deadline.preset.custom')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">{t('rfqs.invite.subject.label')}</Label>
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} disabled={sending} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">{t('rfqs.invite.body.label')}</Label>
+            <Textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={5}
+              disabled={sending}
+              className="font-mono text-sm resize-none"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={sending}>
+            {t('rfqs.invite.cancel')}
+          </Button>
+          <Button onClick={handleSend} disabled={totalCount === 0 || sending || !subject.trim() || !body.trim()}>
+            {sending
+              ? t('rfqs.notify.send.sending')
+              : t('rfqs.invite.sendButton', { count: totalCount })}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
 // ============================================================================
-// FORM STEP
+// SUB-COMPONENTS
 // ============================================================================
 
-interface FormStepProps {
-  mode: RecipientMode;
-  onModeChange: (mode: RecipientMode) => void;
-  vendorId: string;
-  onVendorIdChange: (id: string) => void;
-  vendorContacts: ComboboxOption[];
-  contactsLoading: boolean;
-  manualEmail: string;
-  onManualEmailChange: (email: string) => void;
-  manualName: string;
-  onManualNameChange: (name: string) => void;
-  expiresInDays: number;
-  onExpiresChange: (days: number) => void;
+interface VendorGroupProps {
+  label: string;
+  vendors: VendorContactOption[];
+  selectedIds: Set<string>;
+  onToggle: (id: string) => void;
+}
+
+function VendorGroup({ label, vendors, selectedIds, onToggle }: VendorGroupProps) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-muted-foreground mb-1">{label}</p>
+      <ul className="space-y-1">
+        {vendors.map((v) => (
+          <li key={v.id} className="flex items-center gap-2 rounded px-1 py-1 hover:bg-muted/50">
+            <Checkbox
+              id={`inv-${v.id}`}
+              checked={selectedIds.has(v.id)}
+              onCheckedChange={() => onToggle(v.id)}
+            />
+            <label htmlFor={`inv-${v.id}`} className="flex-1 cursor-pointer">
+              <span className="text-sm">{v.displayName}</span>
+              {v.email && <span className="ml-2 text-xs text-muted-foreground">{v.email}</span>}
+            </label>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+interface AdHocSectionProps {
+  email: string;
+  onEmailChange: (e: string) => void;
+  onAdd: () => void;
+  list: string[];
+  onRemove: (e: string) => void;
   error: string | null;
-  submitting: boolean;
-  onCancel: () => void;
-  onSubmit: () => void;
+  sending: boolean;
+  t: (key: string) => string;
 }
 
-function FormStep({
-  mode, onModeChange,
-  vendorId, onVendorIdChange, vendorContacts, contactsLoading,
-  manualEmail, onManualEmailChange, manualName, onManualNameChange,
-  expiresInDays, onExpiresChange,
-  error, submitting, onCancel, onSubmit,
-}: FormStepProps) {
-  const { t } = useTranslation('quotes');
-
+function AdHocSection({ email, onEmailChange, onAdd, list, onRemove, error, sending, t }: AdHocSectionProps) {
   return (
-    <section className="space-y-4">
-      <Tabs value={mode} onValueChange={(v) => onModeChange(v as RecipientMode)}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="contacts">{t('invites.dialog.tabs.contacts')}</TabsTrigger>
-          <TabsTrigger value="manual">{t('invites.dialog.tabs.manual')}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="contacts" className="space-y-1.5 pt-3">
-          <label className="text-sm font-medium">{t('invites.dialog.contacts.label')}</label>
-          <SearchableCombobox
-            value={vendorId}
-            onValueChange={onVendorIdChange}
-            options={vendorContacts}
-            placeholder={t('invites.dialog.contacts.placeholder')}
-            emptyMessage={t('invites.dialog.contacts.empty')}
-            isLoading={contactsLoading}
-          />
-        </TabsContent>
-
-        <TabsContent value="manual" className="space-y-3 pt-3">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium" htmlFor="vendor-invite-email">
-              {t('invites.dialog.manual.emailLabel')}
-            </label>
-            <Input
-              id="vendor-invite-email"
-              type="email"
-              value={manualEmail}
-              onChange={(e) => onManualEmailChange(e.target.value)}
-              placeholder={t('invites.dialog.manual.emailPlaceholder')}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium" htmlFor="vendor-invite-name">
-              {t('invites.dialog.manual.nameLabel')}
-            </label>
-            <Input
-              id="vendor-invite-name"
-              type="text"
-              value={manualName}
-              onChange={(e) => onManualNameChange(e.target.value)}
-              placeholder={t('invites.dialog.manual.namePlaceholder')}
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium" htmlFor="vendor-invite-expires">
-          {t('invites.dialog.expiresLabel')}
-        </label>
+    <div className="space-y-2 rounded-md border p-3">
+      <p className="text-xs font-semibold text-muted-foreground">{t('rfqs.invite.section.adHoc')}</p>
+      <div className="flex gap-2">
         <Input
-          id="vendor-invite-expires"
-          type="number"
-          min={1}
-          max={90}
-          value={expiresInDays}
-          onChange={(e) => onExpiresChange(Number(e.target.value))}
-          className="w-24"
+          type="email"
+          value={email}
+          onChange={(e) => onEmailChange(e.target.value)}
+          placeholder={t('rfqs.invite.adhocPlaceholder')}
+          disabled={sending}
+          className={error ? 'border-destructive' : ''}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } }}
         />
+        <Button type="button" variant="outline" size="sm" onClick={onAdd} disabled={sending || !email}>
+          {t('rfqs.invite.addAdhocButton')}
+        </Button>
       </div>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-
-      <DialogFooter>
-        <Button variant="outline" onClick={onCancel} disabled={submitting}>
-          {t('invites.dialog.cancel')}
-        </Button>
-        <Button onClick={onSubmit} disabled={submitting}>
-          {submitting ? t('invites.dialog.creating') : t('invites.dialog.create')}
-        </Button>
-      </DialogFooter>
-    </section>
-  );
-}
-
-// ============================================================================
-// SHARE STEP
-// ============================================================================
-
-interface ShareStepProps {
-  portalUrl: string;
-  recipientLabel: string;
-  isOpen: boolean;
-  onClose: () => void;
-  onEmailSend: () => Promise<void>;
-  onBack: () => void;
-}
-
-function ShareStep({ portalUrl, recipientLabel, isOpen, onClose, onEmailSend, onBack }: ShareStepProps) {
-  const { t } = useTranslation(['quotes', 'common-actions']);
-  const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent'>('idle');
-  const [isInSubView, setIsInSubView] = useState(false);
-  const sentRef = useRef(false);
-
-  const handleEmailSend = useCallback(async () => {
-    if (sentRef.current) return;
-    sentRef.current = true;
-    setEmailState('sending');
-    try {
-      await onEmailSend();
-      setEmailState('sent');
-    } catch {
-      sentRef.current = false;
-      setEmailState('idle');
-    }
-  }, [onEmailSend]);
-
-  const emailLabel =
-    emailState === 'sending'
-      ? t('invites.dialog.sendingEmail')
-      : emailState === 'sent'
-        ? t('invites.dialog.emailSent')
-        : t('invites.dialog.sendEmail', { name: recipientLabel });
-
-  const emailButton = (
-    <Button
-      type="button"
-      className="w-full h-12"
-      onClick={handleEmailSend}
-      disabled={emailState !== 'idle'}
-    >
-      {emailLabel}
-    </Button>
-  );
-
-  return (
-    <section className="space-y-4">
-      <UserAuthPermissionPanel
-        shareData={{
-          title: recipientLabel || t('invites.dialog.shareTitle'),
-          text: '',
-          url: portalUrl,
-        }}
-        isOpen={isOpen}
-        onClose={onClose}
-        hideChannelPicker
-        extraQuickActions={emailButton}
-        onSubViewChange={setIsInSubView}
-      />
-      {!isInSubView && (
-        <DialogFooter>
-          <Button variant="outline" onClick={onBack}>
-            {t('common-actions:actions.back')}
-          </Button>
-          <Button variant="outline" onClick={onClose}>
-            {t('invites.dialog.close')}
-          </Button>
-        </DialogFooter>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      {list.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {list.map((e) => (
+            <Badge key={e} variant="secondary" className="gap-1">
+              {e}
+              <button
+                type="button"
+                onClick={() => onRemove(e)}
+                className="ml-1 rounded hover:text-destructive"
+                aria-label={`Remove ${e}`}
+              >
+                ×
+              </button>
+            </Badge>
+          ))}
+        </div>
       )}
-    </section>
+    </div>
   );
 }

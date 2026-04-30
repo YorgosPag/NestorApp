@@ -135,13 +135,30 @@ export function QuoteListCard({
     return null;
   }, [quote, t]);
 
+  // §5.V.6 — sent badge: shows after vendor is notified of outcome.
+  // ⚠️ stale: notified template no longer matches current status.
+  const notifiedBadge: ListCardBadge | null = useMemo(() => {
+    const lastAt = quote.lastNotifiedAt as { seconds?: number } | null | undefined;
+    if (!lastAt) return null;
+    const secs = lastAt.seconds;
+    if (!secs) return null;
+    const date = new Date(secs * 1000).toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit' });
+    const expectedTemplate = quote.status === 'accepted' ? 'winner' : 'rejection';
+    const stale = quote.lastNotifiedTemplate && quote.lastNotifiedTemplate !== expectedTemplate;
+    return {
+      label: stale ? t('rfqs.notify.staleBadge') : t('rfqs.notify.sentBadge', { date }),
+      variant: (stale ? 'warning' : 'info') as ListCardBadgeVariant,
+    };
+  }, [quote, t]);
+
   const badges: ListCardBadge[] = useMemo(
     () => [
       ...(versionBadge ? [versionBadge] : []),
       ...(expiryBadge ? [expiryBadge] : []),
+      ...(notifiedBadge ? [notifiedBadge] : []),
       { label: statusLabel, variant: STATUS_BADGE_VARIANTS[quote.status] },
     ],
-    [statusLabel, quote.status, versionBadge, expiryBadge],
+    [statusLabel, quote.status, versionBadge, expiryBadge, notifiedBadge],
   );
 
   const VersionChevron = isVersionExpanded ? ChevronDown : ChevronRight;

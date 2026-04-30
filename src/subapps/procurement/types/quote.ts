@@ -214,6 +214,9 @@ export interface Quote {
   supersededBy?: string;
   supersededAt?: Timestamp;
   _previousStatus?: QuoteStatus; // internal: status before supersede, used by revertSupersede
+  // §5.V vendor notification fields (Phase 12)
+  lastNotifiedAt?: Timestamp;
+  lastNotifiedTemplate?: 'winner' | 'rejection';
 }
 
 // ============================================================================
