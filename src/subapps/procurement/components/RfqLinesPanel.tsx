@@ -3,10 +3,19 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TradeSelector } from './TradeSelector';
 import { getAtoeCodesForTrade } from '@/subapps/procurement/data/trades';
+import { UNITS, OTHER_UNIT } from '@/subapps/procurement/utils/units';
 import type { RfqLine, CreateRfqLineDTO } from '@/subapps/procurement/types/rfq-line';
 import type { TradeCode } from '@/subapps/procurement/types/trade';
 import type { SetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
@@ -29,6 +38,7 @@ interface NewLineState {
   trade: TradeCode;
   quantity: string;
   unit: string;
+  customUnit: boolean;
 }
 
 const DEFAULT_TRADE: TradeCode = 'concrete';
@@ -37,7 +47,8 @@ const EMPTY_LINE: NewLineState = {
   description: '',
   trade: DEFAULT_TRADE,
   quantity: '',
-  unit: '',
+  unit: UNITS[0],
+  customUnit: false,
 };
 
 // ============================================================================
@@ -59,13 +70,14 @@ export function RfqLinesPanel({ lines, loading, onAdd, onDelete, lockState = 'un
     setFormError(null);
     try {
       const defaultCategoryCode = getAtoeCodesForTrade(newLine.trade)[0] ?? null;
+      const resolvedUnit = newLine.customUnit ? newLine.unit.trim() || null : newLine.unit || null;
       const dto: CreateRfqLineDTO = {
         source: 'ad_hoc',
         description: newLine.description.trim(),
         trade: newLine.trade,
         categoryCode: defaultCategoryCode,
         quantity: newLine.quantity ? parseFloat(newLine.quantity) : null,
-        unit: newLine.unit.trim() || null,
+        unit: resolvedUnit,
       };
       await onAdd(dto);
       setNewLine(EMPTY_LINE);
@@ -162,12 +174,33 @@ export function RfqLinesPanel({ lines, loading, onAdd, onDelete, lockState = 'un
               className="w-20"
               min={0}
             />
-            <Input
-              placeholder={t('rfqs.unitPlaceholder')}
-              value={newLine.unit}
-              onChange={(e) => setNewLine((p) => ({ ...p, unit: e.target.value }))}
-              className="w-20"
-            />
+            <div className="flex flex-col gap-1">
+              <Select
+                value={newLine.customUnit ? OTHER_UNIT : newLine.unit}
+                onValueChange={(val) => {
+                  if (val === OTHER_UNIT) {
+                    setNewLine((p) => ({ ...p, customUnit: true, unit: '' }));
+                  } else {
+                    setNewLine((p) => ({ ...p, customUnit: false, unit: val }));
+                  }
+                }}
+              >
+                <SelectTrigger className="h-9 w-24 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  <SelectSeparator />
+                  <SelectItem value={OTHER_UNIT}>{t('rfqs.lineEdit.unitOption.other')}</SelectItem>
+                </SelectContent>
+              </Select>
+              {newLine.customUnit && (
+                <Input
+                  placeholder={t('rfqs.lineEdit.unitOption.otherPlaceholder')}
+                  value={newLine.unit}
+                  onChange={(e) => setNewLine((p) => ({ ...p, unit: e.target.value }))}
+                  className="h-7 w-24 text-xs"
+                />
+              )}
+            </div>
           </div>
           {formError && <p className="col-span-full text-xs text-destructive">{formError}</p>}
           <div className="col-span-full flex gap-2">

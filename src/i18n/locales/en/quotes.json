@@ -707,6 +707,35 @@
       "errors": {
         "invalidEmail": "Invalid email"
       }
+    },
+    "lineEdit": {
+      "error": {
+        "descriptionRequired": "Description is required",
+        "quantityInvalid": "Quantity must be ≥ 0",
+        "unitRequired": "Select a unit",
+        "priceInvalid": "Price must be a number",
+        "vatRateRequired": "Select a VAT rate"
+      },
+      "warning": {
+        "title": "Notice",
+        "fixButton": "Fix",
+        "saveAnywayButton": "Save anyway",
+        "totalMismatch": "Total does not match qty × price. Stated: {statedTotal}, computed: {computedTotal}",
+        "quantityMismatch": "Vendor offers {vendorQty} instead of the {requestedQty} you requested",
+        "negativePrice": "Negative price — verify it is a discount line",
+        "zeroQuantityWithPrice": "Quantity 0 — free sample or mistake?"
+      },
+      "totalAuto": "Auto",
+      "totalOverride": "Override",
+      "unitOption": {
+        "other": "Other...",
+        "otherPlaceholder": "e.g. barrel, cart"
+      }
+    },
+    "quoteEdit": {
+      "warning": {
+        "linesSumMismatch": "Lines sum ({sum}) does not match the stated total ({stated})"
+      }
     }
   },
   "trades": {

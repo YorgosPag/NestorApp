@@ -6,21 +6,22 @@
  * Renders AI-extracted quote fields with per-field confidence highlighting:
  *   - green ≥ 80, yellow 50-79, red < 50, gray = no value.
  *
- * Lines are editable inline; confirm posts edited lines back via PATCH
- * (overrides the auto-materialized lines from `applyExtractedData`).
+ * Lines are editable via QuoteLineEditorTable (Phase 13 — §5.Z validation).
  */
 
-import { useState, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, AlertTriangle, X, Save, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Save, X } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { computeQuoteTotals } from '@/subapps/procurement/types/quote';
 import { detectVendorMismatch } from '@/subapps/procurement/utils/vendor-mismatch';
+import { validateQuote } from '@/subapps/procurement/utils/quote-validation';
+import { QuoteLineEditorTable } from '@/subapps/procurement/components/QuoteLineEditorTable';
+import { formatEuro } from '@/lib/number/greek-decimal';
 import type {
   ExtractedQuoteData,
   FieldWithConfidence,
@@ -72,9 +73,7 @@ interface FieldRowProps<T> {
 
 function FieldRow<T>({ label, field }: FieldRowProps<T>) {
   const level = levelOf(field.value, field.confidence);
-  const display = field.value === null || field.value === ''
-    ? '—'
-    : String(field.value);
+  const display = field.value === null || field.value === '' ? '—' : String(field.value);
 
   return (
     <div className={`rounded-md px-3 py-2 ${levelClasses(level)}`}>
@@ -129,6 +128,8 @@ export function ExtractedDataReviewPanel({
   const extracted = quote.extractedData;
   const [lines, setLines] = useState<QuoteLine[]>(quote.lines);
   const [mismatchDismissed, setMismatchDismissed] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [hasLineErrors, setHasLineErrors] = useState(false);
   const savedLinesRef = useRef<QuoteLine[]>(quote.lines);
 
   const overall = extracted?.overallConfidence ?? 0;
@@ -148,22 +149,22 @@ export function ExtractedDataReviewPanel({
     });
   }, [lines]);
 
-  const updateLine = (index: number, field: keyof QuoteLine, value: QuoteLine[keyof QuoteLine]) => {
-    setLines((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], [field]: value };
-      if (field === 'quantity' || field === 'unitPrice') {
-        const qty = field === 'quantity' ? Number(value) || 0 : next[index].quantity;
-        const price = field === 'unitPrice' ? Number(value) || 0 : next[index].unitPrice;
-        next[index].lineTotal = parseFloat((qty * price).toFixed(2));
-      }
-      return next;
-    });
-  };
+  const quoteValidation = useMemo(
+    () => validateQuote(lines, extracted?.totalAmount?.value ?? null),
+    [lines, extracted],
+  );
 
-  const removeLine = (index: number) => {
-    setLines((prev) => prev.filter((_, i) => i !== index));
-  };
+  const hasWarnings = quoteValidation.hasWarnings;
+  const showWarningBanner = hasWarnings && !bannerDismissed;
+
+  const handleLinesChange = useCallback((newLines: QuoteLine[]) => {
+    setLines(newLines);
+    setBannerDismissed(false);
+  }, []);
+
+  const handleValidationChange = useCallback((hasErrors: boolean) => {
+    setHasLineErrors(hasErrors);
+  }, []);
 
   const mismatch = useMemo(() => {
     if (!extracted || !supplierContact) return null;
@@ -182,14 +183,6 @@ export function ExtractedDataReviewPanel({
     );
   }
 
-  const lineConfidence = (idx: number) => {
-    const ec = extracted.lineItems[idx];
-    if (!ec) return null;
-    return Math.round(
-      (ec.description.confidence + ec.quantity.confidence + ec.unitPrice.confidence) / 3,
-    );
-  };
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
@@ -200,9 +193,7 @@ export function ExtractedDataReviewPanel({
           ) : (
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
           )}
-          <span className="text-sm text-muted-foreground">
-            {t('quotes.scan.overallConfidence')}:
-          </span>
+          <span className="text-sm text-muted-foreground">{t('quotes.scan.overallConfidence')}:</span>
           <ConfidenceBadge confidence={overall} />
         </div>
       </CardHeader>
@@ -222,9 +213,7 @@ export function ExtractedDataReviewPanel({
                         extractedVat: mismatch.extractedVat ?? '—',
                         extractedName: mismatch.extractedVendorName ?? '—',
                       })
-                    : t('quotes.scan.vendorMismatch.bodyName', {
-                        extractedName: mismatch.extractedVendorName ?? '—',
-                      })}
+                    : t('quotes.scan.vendorMismatch.bodyName', { extractedName: mismatch.extractedVendorName ?? '—' })}
                 </p>
               </div>
             </div>
@@ -250,14 +239,9 @@ export function ExtractedDataReviewPanel({
                   }
                 >
                   {isSwitchingVendor ? (
-                    <>
-                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                      {t('quotes.scan.vendorMismatch.switching')}
-                    </>
+                    <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />{t('quotes.scan.vendorMismatch.switching')}</>
                   ) : (
-                    t('quotes.scan.vendorMismatch.switchVendor', {
-                      name: mismatch.extractedVendorName,
-                    })
+                    t('quotes.scan.vendorMismatch.switchVendor', { name: mismatch.extractedVendorName })
                   )}
                 </Button>
               )}
@@ -266,13 +250,7 @@ export function ExtractedDataReviewPanel({
                   {t('quotes.scan.vendorMismatch.goBack')}
                 </Button>
               )}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-amber-700 hover:text-amber-900 dark:text-amber-400"
-                disabled={isSwitchingVendor}
-                onClick={() => setMismatchDismissed(true)}
-              >
+              <Button size="sm" variant="ghost" className="text-amber-700 hover:text-amber-900 dark:text-amber-400" disabled={isSwitchingVendor} onClick={() => setMismatchDismissed(true)}>
                 {t('quotes.scan.vendorMismatch.dismiss')}
               </Button>
             </div>
@@ -283,11 +261,7 @@ export function ExtractedDataReviewPanel({
           <h3 className="mb-2 text-sm font-semibold">{t('quotes.scan.vendorSection')}</h3>
           {extracted.vendorLogoUrl && (
             <div className="mb-3 flex items-center gap-3 rounded-md border bg-muted/20 px-3 py-2">
-              <img
-                src={extracted.vendorLogoUrl}
-                alt="vendor logo"
-                className="h-12 max-w-[180px] rounded object-contain"
-              />
+              <img src={extracted.vendorLogoUrl} alt="vendor logo" className="h-12 max-w-[180px] rounded object-contain" />
               <span className="text-xs text-muted-foreground">{t('quotes.scan.vendorLogoPreview')}</span>
             </div>
           )}
@@ -295,7 +269,10 @@ export function ExtractedDataReviewPanel({
             <FieldRow label={t('quotes.vendor')} field={extracted.vendorName} />
             <FieldRow label={t('quotes.scan.vendorVat')} field={extracted.vendorVat} />
             <FieldRow label={t('quotes.scan.vendorPhone')} field={extracted.vendorPhone} />
-            <FieldRow label={t('quotes.scan.vendorEmail')} field={{ value: extracted.vendorEmails?.value?.join(', ') || null, confidence: extracted.vendorEmails?.confidence ?? 0 }} />
+            <FieldRow
+              label={t('quotes.scan.vendorEmail')}
+              field={{ value: extracted.vendorEmails?.value?.join(', ') || null, confidence: extracted.vendorEmails?.confidence ?? 0 }}
+            />
           </div>
         </section>
 
@@ -313,76 +290,13 @@ export function ExtractedDataReviewPanel({
             <h3 className="text-sm font-semibold">{t('quotes.scan.linesSection')}</h3>
             <span className="text-xs text-muted-foreground">{t('quotes.scan.editableHint')}</span>
           </div>
-          {lines.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('quotes.scan.noLinesExtracted')}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b text-xs text-muted-foreground">
-                    <th className="pb-1 pr-2 text-left font-normal">{t('quotes.lineDescription')}</th>
-                    <th className="pb-1 pr-2 text-left font-normal">{t('quotes.quantity')}</th>
-                    <th className="pb-1 pr-2 text-left font-normal">{t('quotes.unit')}</th>
-                    <th className="pb-1 pr-2 text-left font-normal">{t('quotes.unitPrice')}</th>
-                    <th className="pb-1 pr-2 text-right font-normal">{t('quotes.lineTotal')}</th>
-                    <th className="pb-1 pr-2 text-center font-normal">{t('quotes.scan.confidence')}</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map((line, i) => {
-                    const conf = lineConfidence(i);
-                    return (
-                      <tr key={line.id} className="border-b text-sm">
-                        <td className="py-1 pr-2">
-                          <Input
-                            value={line.description}
-                            onChange={(e) => updateLine(i, 'description', e.target.value)}
-                            className="h-8 text-sm"
-                          />
-                        </td>
-                        <td className="py-1 pr-2 w-20">
-                          <Input
-                            type="number"
-                            value={line.quantity}
-                            onChange={(e) => updateLine(i, 'quantity', parseFloat(e.target.value) || 0)}
-                            className="h-8 text-sm"
-                            min={0}
-                          />
-                        </td>
-                        <td className="py-1 pr-2 w-20">
-                          <Input
-                            value={line.unit}
-                            onChange={(e) => updateLine(i, 'unit', e.target.value)}
-                            className="h-8 text-sm"
-                          />
-                        </td>
-                        <td className="py-1 pr-2 w-24">
-                          <Input
-                            type="number"
-                            value={line.unitPrice}
-                            onChange={(e) => updateLine(i, 'unitPrice', parseFloat(e.target.value) || 0)}
-                            className="h-8 text-sm"
-                            min={0}
-                            step={0.01}
-                          />
-                        </td>
-                        <td className="py-1 pr-2 w-24 text-right font-medium">{line.lineTotal.toFixed(2)}</td>
-                        <td className="py-1 pr-2 w-20 text-center">
-                          {conf !== null && <ConfidenceBadge confidence={conf} />}
-                        </td>
-                        <td className="py-1">
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeLine(i)}>
-                            <X className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <QuoteLineEditorTable
+            lines={lines}
+            extractedLineItems={extracted.lineItems}
+            vatIncluded={extracted.vatIncluded?.value}
+            onChange={handleLinesChange}
+            onValidationChange={handleValidationChange}
+          />
           <div className="mt-2 flex justify-end gap-4 text-sm">
             <span className="text-muted-foreground">{t('quotes.subtotal')}: {totals.subtotal.toFixed(2)}</span>
             <span className="text-muted-foreground">{t('quotes.vatAmount')}: {totals.vatAmount.toFixed(2)}</span>
@@ -429,7 +343,29 @@ export function ExtractedDataReviewPanel({
           </div>
         </section>
 
-        <div className="flex justify-end items-center gap-3 pt-2">
+        {showWarningBanner && quoteValidation.warnings.linesSumMismatch && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-700 dark:bg-amber-950/40">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                {t('rfqs.quoteEdit.warning.linesSumMismatch', {
+                  sum: formatEuro(quoteValidation.warnings.linesSumMismatch.sum),
+                  stated: formatEuro(quoteValidation.warnings.linesSumMismatch.stated),
+                })}
+              </p>
+            </div>
+            <div className="mt-2 flex justify-end gap-2">
+              <Button size="sm" variant="outline" onClick={() => setBannerDismissed(true)}>
+                {t('rfqs.lineEdit.warning.fixButton')}
+              </Button>
+              <Button size="sm" onClick={() => onConfirm(lines)} disabled={isSaving}>
+                {t('rfqs.lineEdit.warning.saveAnywayButton')}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-3 pt-2">
           {onReject && (
             <div className="flex items-center gap-1">
               <Button variant="outline" onClick={() => onReject()} disabled={isSaving}>
@@ -442,7 +378,7 @@ export function ExtractedDataReviewPanel({
           <div className="flex items-center gap-1">
             <Button
               onClick={() => onConfirm(lines)}
-              disabled={isSaving || (quote.status === 'under_review' && !isDirty)}
+              disabled={isSaving || hasLineErrors || (quote.status === 'under_review' && !isDirty)}
             >
               <Save className="mr-1 h-4 w-4" />
               {t('quotes.scan.confirm')}
