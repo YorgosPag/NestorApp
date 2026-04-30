@@ -21,6 +21,8 @@ import { useRfqLines } from '@/subapps/procurement/hooks/useRfqLines';
 import { useSourcingEventAggregate } from '@/subapps/procurement/hooks/useSourcingEventAggregate';
 import { useRfqUrlState, type RfqTabValue } from '@/subapps/procurement/hooks/useRfqUrlState';
 import { useAwardFlow } from '@/subapps/procurement/hooks/useAwardFlow';
+import { useQuoteRevision } from '@/subapps/procurement/hooks/useQuoteRevision';
+import { QuoteRevisionDetectedDialog } from '@/subapps/procurement/components/QuoteRevisionDetectedDialog';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteDetailsHeader } from '@/subapps/procurement/components/QuoteDetailsHeader';
 import { QuoteDetailSummary } from '@/subapps/procurement/components/QuoteDetailSummary';
@@ -51,7 +53,11 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     }
   }, [id, router]);
 
-  const { quotes, loading, refetch } = useQuotes({ rfqId: id });
+  const { quotes, loading, refetch } = useQuotes({ rfqId: id }, { includeSuperseded: true });
+  const activeQuotes = useMemo(
+    () => quotes.filter((q) => q.status !== 'superseded'),
+    [quotes],
+  );
   const { invites } = useVendorInvites(id);
   const { lines, loading: linesLoading, addLine, deleteLine } = useRfqLines(id);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
@@ -93,24 +99,24 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     handleTabChange,
     handleSelectQuote,
     handleComparisonDrillDown,
-  } = useRfqUrlState({ quotes, quotesLoading: loading });
+  } = useRfqUrlState({ quotes: activeQuotes, quotesLoading: loading });
 
-  const lockState = useMemo(() => deriveSetupLockState(rfq, quotes), [rfq, quotes]);
+  const lockState = useMemo(() => deriveSetupLockState(rfq, activeQuotes), [rfq, activeQuotes]);
 
   const winnerVendorName = useMemo(() => {
     if (!rfq?.winnerQuoteId) return undefined;
-    const winner = quotes.find((q) => q.id === rfq.winnerQuoteId);
+    const winner = activeQuotes.find((q) => q.id === rfq.winnerQuoteId);
     return winner?.extractedData?.vendorName?.value ?? undefined;
-  }, [rfq, quotes]);
+  }, [rfq, activeQuotes]);
 
   const underReviewCount = useMemo(
-    () => quotes.filter(q => q.status === 'under_review').length,
-    [quotes],
+    () => activeQuotes.filter(q => q.status === 'under_review').length,
+    [activeQuotes],
   );
 
   const recommendationPending = useMemo(
-    () => Boolean(comparison?.recommendation) && !quotes.some(q => q.status === 'accepted'),
-    [comparison, quotes],
+    () => Boolean(comparison?.recommendation) && !activeQuotes.some(q => q.status === 'accepted'),
+    [comparison, activeQuotes],
   );
 
   const setupAttentionCount = useMemo(() => {
@@ -131,8 +137,8 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   }, [invites, rfq]);
 
   const dashboardStats = useMemo(
-    () => buildRfqDashboardStats(rfq, quotes, invites, comparison, activeTab, t),
-    [rfq, quotes, invites, comparison, activeTab, t],
+    () => buildRfqDashboardStats(rfq, activeQuotes, invites, comparison, activeTab, t),
+    [rfq, activeQuotes, invites, comparison, activeTab, t],
   );
 
   const onFireAward = useCallback(async (winnerQuoteId: string, overrideReason: string | null) => {
@@ -147,6 +153,8 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     }
     await Promise.all([fetchRfq(), refetch(), refetchComparison()]);
   }, [id, fetchRfq, refetch, refetchComparison]);
+
+  const { pendingDetection, dismissDetection } = useQuoteRevision();
 
   const {
     optimisticWinnerId,
@@ -331,9 +339,9 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
               </Button>
             </div>
           )}
-          {quotes.length < 2 ? (
+          {activeQuotes.length < 2 ? (
             <ComparisonEmptyState
-              quotes={quotes}
+              quotes={activeQuotes}
               onNewQuote={() => setShowQuoteForm(true)}
               onScan={() => router.push(scanHref)}
               onViewInvites={() => handleTabChange('setup')}
@@ -391,6 +399,16 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         onConfirm={handleDialogConfirm}
         onCancel={handleDialogCancel}
       />
+      {pendingDetection && (
+        <QuoteRevisionDetectedDialog
+          open
+          detection={pendingDetection.detection}
+          existingQuote={pendingDetection.existingQuote}
+          newQuote={pendingDetection.newQuote}
+          onConfirm={dismissDetection}
+          onCancel={dismissDetection}
+        />
+      )}
     </main>
   );
 }

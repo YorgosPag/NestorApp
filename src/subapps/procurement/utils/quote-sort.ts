@@ -1,6 +1,7 @@
 import type { Quote, QuoteStatus } from '../types/quote';
 
 // NOTE: 'expired' IS a status in our FSM (quote.ts) — ADR §5.BB overlay is a separate UI concern
+// superseded ranks last — excluded from main list by useQuotes default filter (§5.AA.7)
 export const STATUS_PRIORITY: Record<QuoteStatus, number> = {
   accepted: 1,
   under_review: 2,
@@ -10,6 +11,7 @@ export const STATUS_PRIORITY: Record<QuoteStatus, number> = {
   rejected: 6,
   expired: 7,
   archived: 8,
+  superseded: 9,
 };
 
 export type SortKey = 'status-price' | 'recent' | 'price-asc' | 'price-desc' | 'vendor-asc';

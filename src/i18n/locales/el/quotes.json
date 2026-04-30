@@ -511,6 +511,40 @@
       },
       "cancelButton": "Ακύρωση",
       "confirmButton": "Επιβεβαίωση κατακύρωσης"
+    },
+    "versioning": {
+      "autoversionToast": "Αναγνωρίστηκε ως ανανέωση προσφοράς του {vendorName}",
+      "autoversionDetail": "Παλιά: {oldTotal} → Νέα: {newTotal}",
+      "undoButton": "Όχι, ξεχωριστές προσφορές",
+      "undoneToast": "Ακυρώθηκε — η προσφορά αποθηκεύτηκε ως ξεχωριστή",
+      "versionBadge": "v{n}",
+      "versionBadgeTooltip": "Έχει {count} προηγούμενη version από {date}",
+      "expandButton": "Εμφάνιση παλαιότερων versions",
+      "collapseButton": "Απόκρυψη παλαιότερων versions",
+      "supersededLabel": "Αντικαταστάθηκε"
+    },
+    "revisionDialog": {
+      "title": "Πιθανή ανανέωση προσφοράς",
+      "body": "Η προσφορά που σαρώθηκε μοιάζει με υπάρχουσα. Επίλεξε τι θέλεις να κάνεις.",
+      "vendorLabel": "Vendor",
+      "matchingSignals": "Συμπίπτουν",
+      "existingQuote": "Υπάρχουσα προσφορά",
+      "newQuote": "Νέα προσφορά",
+      "options": {
+        "revision": "Ανανέωση — αντικατέστησε την παλιά",
+        "separate": "Ξεχωριστή προσφορά — κράτα και τις δύο",
+        "cancelImport": "Ακύρωσε import — διπλό σκαν κατά λάθος"
+      },
+      "confirmButton": "Επιβεβαίωση",
+      "signals": {
+        "email": "Email",
+        "taxId": "ΑΦΜ",
+        "name": "Όνομα"
+      },
+      "warning": {
+        "isWinner": "Προσοχή: Η υπάρχουσα προσφορά έχει κατακυρωθεί. Αν ανανεωθεί, το award θα μεταφερθεί στη νέα version.",
+        "hasPO": "Δεν μπορεί να αντικατασταθεί — υπάρχει ενεργή παραγγελία αγοράς. Ακύρωσε πρώτα την παραγγελία."
+      }
     }
   },
   "trades": {

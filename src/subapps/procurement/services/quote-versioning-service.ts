@@ -199,16 +199,154 @@ export async function runVersionedUpdate<T extends DocumentData>(
 }
 
 // ============================================================================
-// PHASE 9 PLACEHOLDERS — full revision logic
+// SUPERSEDE — §5.AA.2 high-confidence auto-version
 // ============================================================================
-//
-// The following operations are defined in ADR-328 §5.AA (Quote duplicate
-// detection & versioning) but are NOT implemented in Phase 5. They will land
-// in Phase 9 alongside the multi-signal duplicate detector.
-//
-//   - supersede(quoteId, newQuoteId)
-//   - revertSupersede(quoteId)
-//   - createRevision(baseQuoteId, mutator)
-//
-// Phase 5 ships only the transaction primitives that Phase 8 (award flow) and
-// Phase 9 (revisions) will compose on top of.
+
+export interface SupersedeResult {
+  readonly newVersion: number;
+}
+
+/**
+ * Atomically marks oldQuoteId as superseded and promotes newQuoteId as the
+ * active revision with version = oldQuote.version + 1.
+ * Stores _previousStatus on the old quote for compensating revert.
+ */
+export async function supersede(
+  oldQuoteId: string,
+  newQuoteId: string,
+  userId: string,
+): Promise<SupersedeResult> {
+  const quotesCol = COLLECTIONS.QUOTES;
+  const oldRef = doc(db, quotesCol, oldQuoteId);
+  const newRef = doc(db, quotesCol, newQuoteId);
+
+  return runTransaction(db, async (tx) => {
+    const oldSnap = await tx.get(oldRef);
+    const newSnap = await tx.get(newRef);
+
+    if (!oldSnap.exists()) throw new Error(`Quote ${oldQuoteId} not found`);
+    if (!newSnap.exists()) throw new Error(`Quote ${newQuoteId} not found`);
+
+    const oldData = oldSnap.data() as VersionedFields & { status: string; version?: number };
+    const oldVersion = oldData.version ?? 1;
+    const newVersion = oldVersion + 1;
+
+    tx.update(oldRef, {
+      status: 'superseded',
+      supersededBy: newQuoteId,
+      supersededAt: serverTimestamp(),
+      _previousStatus: oldData.status,
+      ...nextVersionFields(oldVersion, userId),
+    });
+
+    const newData = newSnap.data() as VersionedFields;
+    tx.update(newRef, {
+      version: newVersion,
+      previousVersionId: oldQuoteId,
+      ...nextVersionFields(newData.version, userId),
+    });
+
+    return { newVersion };
+  });
+}
+
+// ============================================================================
+// REVERT SUPERSEDE — §5.AA.2 undo within 8s window
+// ============================================================================
+
+/**
+ * Compensating call for supersede(). Restores oldQuote to its pre-supersede
+ * status and clears the version chain on newQuote (version back to 1).
+ */
+export async function revertSupersede(
+  oldQuoteId: string,
+  newQuoteId: string,
+  userId: string,
+): Promise<void> {
+  const quotesCol = COLLECTIONS.QUOTES;
+  const oldRef = doc(db, quotesCol, oldQuoteId);
+  const newRef = doc(db, quotesCol, newQuoteId);
+
+  await runTransaction(db, async (tx) => {
+    const oldSnap = await tx.get(oldRef);
+    const newSnap = await tx.get(newRef);
+
+    if (!oldSnap.exists()) throw new Error(`Quote ${oldQuoteId} not found`);
+    if (!newSnap.exists()) throw new Error(`Quote ${newQuoteId} not found`);
+
+    const oldData = oldSnap.data() as VersionedFields & { _previousStatus?: string };
+    const previousStatus = (oldData._previousStatus as string | undefined) ?? 'submitted';
+
+    tx.update(oldRef, {
+      status: previousStatus,
+      supersededBy: null,
+      supersededAt: null,
+      _previousStatus: null,
+      ...nextVersionFields(oldData.version, userId),
+    });
+
+    const newData = newSnap.data() as VersionedFields;
+    tx.update(newRef, {
+      version: 1,
+      previousVersionId: null,
+      ...nextVersionFields(newData.version, userId),
+    });
+  });
+}
+
+// ============================================================================
+// CREATE REVISION — §5.AA.9 manual revision (copies base doc + supersedes it)
+// ============================================================================
+
+/**
+ * Creates a new Firestore document as a revision of baseQuoteId:
+ *   1. Reads baseQuote
+ *   2. Sets newQuoteId doc = base + mutator(base) overrides + version + previousVersionId
+ *   3. Marks base as superseded
+ *
+ * @param newQuoteId  Pre-generated ID from enterprise-id.service (generateQuoteId)
+ * @param mutator     Returns partial fields that override the base in the new doc
+ */
+export async function createRevision(
+  baseQuoteId: string,
+  newQuoteId: string,
+  mutator: (base: Record<string, unknown>) => Record<string, unknown>,
+  userId: string,
+): Promise<SupersedeResult> {
+  const quotesCol = COLLECTIONS.QUOTES;
+  const baseRef = doc(db, quotesCol, baseQuoteId);
+  const newRef = doc(db, quotesCol, newQuoteId);
+
+  return runTransaction(db, async (tx) => {
+    const baseSnap = await tx.get(baseRef);
+    if (!baseSnap.exists()) throw new Error(`Base quote ${baseQuoteId} not found`);
+
+    const baseData = baseSnap.data() as VersionedFields & { version?: number; status: string };
+    const baseVersion = baseData.version ?? 1;
+    const newVersion = baseVersion + 1;
+    const overrides = mutator(baseData as Record<string, unknown>);
+
+    tx.set(newRef, {
+      ...baseData,
+      ...overrides,
+      id: newQuoteId,
+      version: newVersion,
+      previousVersionId: baseQuoteId,
+      supersededBy: null,
+      supersededAt: null,
+      _previousStatus: null,
+      status: 'submitted',
+      ...nextVersionFields(undefined, userId),
+    });
+
+    tx.update(baseRef, {
+      status: 'superseded',
+      supersededBy: newQuoteId,
+      supersededAt: serverTimestamp(),
+      _previousStatus: baseData.status,
+      ...nextVersionFields(baseVersion, userId),
+    });
+
+    return { newVersion };
+  });
+}

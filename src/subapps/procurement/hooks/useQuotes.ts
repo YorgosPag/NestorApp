@@ -5,6 +5,11 @@ import { where, type QueryConstraint } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import type { Quote, QuoteFilters } from '@/subapps/procurement/types/quote';
 
+interface UseQuotesOptions {
+  /** When false (default), superseded quotes are filtered client-side. §5.AA.7 */
+  includeSuperseded?: boolean;
+}
+
 interface UseQuotesResult {
   quotes: Quote[];
   loading: boolean;
@@ -14,7 +19,10 @@ interface UseQuotesResult {
   patch: (updater: (prev: Quote[]) => Quote[]) => void;
 }
 
-export function useQuotes(filters: Partial<QuoteFilters> = {}): UseQuotesResult {
+export function useQuotes(
+  filters: Partial<QuoteFilters> = {},
+  options: UseQuotesOptions = {},
+): UseQuotesResult {
   const { projectId, rfqId, trade, status, vendorContactId } = filters;
 
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -34,6 +42,9 @@ export function useQuotes(filters: Partial<QuoteFilters> = {}): UseQuotesResult 
   const onDataRef = useRef<((qs: Quote[]) => void) | null>(null);
   onDataRef.current = (qs) => setQuotes(qs);
 
+  const filterSupersededRef = useRef(!(options.includeSuperseded ?? false));
+  filterSupersededRef.current = !(options.includeSuperseded ?? false);
+
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -41,7 +52,11 @@ export function useQuotes(filters: Partial<QuoteFilters> = {}): UseQuotesResult 
     const unsubscribe = firestoreQueryService.subscribe<Quote>(
       'QUOTES',
       (result) => {
-        onDataRef.current?.(result.documents as Quote[]);
+        let docs = result.documents as Quote[];
+        if (filterSupersededRef.current) {
+          docs = docs.filter((q) => q.status !== 'superseded');
+        }
+        onDataRef.current?.(docs);
         setLoading(false);
       },
       (err) => {

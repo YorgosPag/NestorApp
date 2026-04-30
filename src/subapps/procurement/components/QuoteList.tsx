@@ -13,7 +13,7 @@
 
 import React, { useMemo, useState, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { FileText, Search } from 'lucide-react';
+import { FileText, History, Search } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -65,6 +65,29 @@ interface QuoteListProps {
   selectedQuoteId?: string;
   /** Edit currently selected quote (split-panel: opens review page) */
   onEditQuote?: (quoteId: string) => void;
+}
+
+// ============================================================================
+// SUPERSEDED VERSION ROW — muted, non-selectable (§5.AA.6)
+// ============================================================================
+
+function SupersededVersionRow({ quote }: { quote: Quote }) {
+  const dateStr = (() => {
+    const ts = (quote.submittedAt ?? quote.createdAt) as { seconds: number } | null;
+    return ts?.seconds ? new Date(ts.seconds * 1000).toLocaleDateString('el-GR') : '—';
+  })();
+  return (
+    <div className="ml-4 flex items-center gap-2 px-3 py-1.5 rounded border border-dashed border-muted text-muted-foreground text-xs opacity-70">
+      <History className="size-3 shrink-0" />
+      <span className="font-mono">v{quote.version ?? 1}</span>
+      <span className="flex-1 truncate">{formatCurrencyRow(quote.totals.total)}</span>
+      <span>{dateStr}</span>
+    </div>
+  );
+}
+
+function formatCurrencyRow(n: number): string {
+  return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(n);
 }
 
 // ============================================================================
@@ -125,11 +148,41 @@ export function QuoteList({
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
 
   // ──────────────────────────────────────────────────────────────
-  // RFQ mode: filter → sort → group
+  // ──────────────────────────────────────────────────────────────
+  // Versioning: active vs superseded segregation (§5.AA.6 / §5.AA.7)
+  // ──────────────────────────────────────────────────────────────
+  const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set());
+
+  const toggleVersionExpand = useCallback((quoteId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedVersions((prev) => {
+      const next = new Set(prev);
+      if (next.has(quoteId)) next.delete(quoteId);
+      else next.add(quoteId);
+      return next;
+    });
+  }, []);
+
+  const supersededByParentId = useMemo<Map<string, Quote[]>>(() => {
+    if (!isRfqMode) return new Map();
+    const map = new Map<string, Quote[]>();
+    for (const q of quotes) {
+      if (q.status === 'superseded' && q.supersededBy) {
+        const arr = map.get(q.supersededBy) ?? [];
+        arr.push(q);
+        map.set(q.supersededBy, arr);
+      }
+    }
+    return map;
+  }, [isRfqMode, quotes]);
+
+  // ──────────────────────────────────────────────────────────────
+  // RFQ mode: filter active → sort → group
   // ──────────────────────────────────────────────────────────────
   const rfqSorted = useMemo<Quote[]>(() => {
     if (!isRfqMode) return [];
     const filtered = quotes.filter((q) => {
+      if (q.status === 'superseded') return false;
       if (selectedStatuses.length > 0 && !selectedStatuses.includes(q.status as QuoteStatus)) return false;
       return matchesQuote(q, urlSearch);
     });
@@ -305,25 +358,47 @@ export function QuoteList({
               rfqGroups.map((group, groupIdx) => (
                 <React.Fragment key={group.status}>
                   {groupIdx > 0 && <div className="border-t border-muted my-2" />}
-                  {group.quotes.map((q) => (
-                    <QuoteListCard
-                      key={q.id}
-                      quote={q}
-                      isSelected={selectedQuoteId === q.id}
-                      onSelect={() => onSelectQuote(q)}
-                    />
-                  ))}
+                  {group.quotes.map((q) => {
+                    const older = supersededByParentId.get(q.id) ?? [];
+                    const isExpanded = expandedVersions.has(q.id);
+                    return (
+                      <React.Fragment key={q.id}>
+                        <QuoteListCard
+                          quote={q}
+                          isSelected={selectedQuoteId === q.id}
+                          onSelect={() => onSelectQuote(q)}
+                          hasOlderVersions={older.length > 0}
+                          isVersionExpanded={isExpanded}
+                          onVersionToggle={(e) => toggleVersionExpand(q.id, e)}
+                        />
+                        {isExpanded && older.map((sq) => (
+                          <SupersededVersionRow key={sq.id} quote={sq} />
+                        ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </React.Fragment>
               ))
             ) : (
-              rfqSorted.map((q) => (
-                <QuoteListCard
-                  key={q.id}
-                  quote={q}
-                  isSelected={selectedQuoteId === q.id}
-                  onSelect={() => onSelectQuote(q)}
-                />
-              ))
+              rfqSorted.map((q) => {
+                const older = supersededByParentId.get(q.id) ?? [];
+                const isExpanded = expandedVersions.has(q.id);
+                return (
+                  <React.Fragment key={q.id}>
+                    <QuoteListCard
+                      quote={q}
+                      isSelected={selectedQuoteId === q.id}
+                      onSelect={() => onSelectQuote(q)}
+                      hasOlderVersions={older.length > 0}
+                      isVersionExpanded={isExpanded}
+                      onVersionToggle={(e) => toggleVersionExpand(q.id, e)}
+                    />
+                    {isExpanded && older.map((sq) => (
+                      <SupersededVersionRow key={sq.id} quote={sq} />
+                    ))}
+                  </React.Fragment>
+                );
+              })
             )
           ) : standaloneSorted.length === 0 ? (
             <div className={cn('text-center p-4', colors.text.muted)}>

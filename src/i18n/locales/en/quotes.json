@@ -511,6 +511,40 @@
       },
       "cancelButton": "Cancel",
       "confirmButton": "Confirm award"
+    },
+    "versioning": {
+      "autoversionToast": "Recognized as a revision from {vendorName}",
+      "autoversionDetail": "Old: {oldTotal} → New: {newTotal}",
+      "undoButton": "No, keep as separate quote",
+      "undoneToast": "Reverted — quote saved as a separate entry",
+      "versionBadge": "v{n}",
+      "versionBadgeTooltip": "Has {count} previous version from {date}",
+      "expandButton": "Show older versions",
+      "collapseButton": "Hide older versions",
+      "supersededLabel": "Superseded"
+    },
+    "revisionDialog": {
+      "title": "Possible quote revision",
+      "body": "The scanned quote looks like an existing one. Choose what to do.",
+      "vendorLabel": "Vendor",
+      "matchingSignals": "Matches",
+      "existingQuote": "Existing quote",
+      "newQuote": "New quote",
+      "options": {
+        "revision": "Revision — replace the old quote",
+        "separate": "Separate quote — keep both",
+        "cancelImport": "Cancel import — accidental duplicate scan"
+      },
+      "confirmButton": "Confirm",
+      "signals": {
+        "email": "Email",
+        "taxId": "Tax ID",
+        "name": "Name"
+      },
+      "warning": {
+        "isWinner": "Warning: The existing quote has been awarded. Replacing it will transfer the award to the new version.",
+        "hasPO": "Cannot replace — there is an active purchase order. Cancel the order first."
+      }
     }
   },
   "trades": {

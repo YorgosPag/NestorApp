@@ -15,7 +15,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { FileText } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText } from 'lucide-react';
 
 // 🏢 DESIGN SYSTEM
 import { ListCard } from '@/design-system';
@@ -42,6 +42,10 @@ export interface QuoteListCardProps {
   isSelected?: boolean;
   onSelect?: () => void;
   className?: string;
+  /** Show collapsible chevron when older versions exist */
+  hasOlderVersions?: boolean;
+  isVersionExpanded?: boolean;
+  onVersionToggle?: (e: React.MouseEvent) => void;
 }
 
 // =============================================================================
@@ -57,6 +61,7 @@ const STATUS_BADGE_VARIANTS: Record<QuoteStatus, ListCardBadgeVariant> = {
   rejected: 'destructive',
   expired: 'destructive',
   archived: 'secondary',
+  superseded: 'secondary',
 };
 
 // =============================================================================
@@ -77,6 +82,9 @@ export function QuoteListCard({
   isSelected = false,
   onSelect,
   className,
+  hasOlderVersions = false,
+  isVersionExpanded = false,
+  onVersionToggle,
 }: QuoteListCardProps) {
   const { t, i18n } = useTranslation(['quotes']);
   const contact = useContactById(quote.vendorContactId);
@@ -102,29 +110,49 @@ export function QuoteListCard({
       .join(' · ');
   }, [vendorName, quote.totals.total, quote.validUntil, quote.createdAt]);
 
+  const versionBadge: ListCardBadge | null = useMemo(() => {
+    const v = quote.version ?? 1;
+    if (v <= 1) return null;
+    return { label: `v${v}`, variant: 'info' as ListCardBadgeVariant };
+  }, [quote.version]);
+
   const badges: ListCardBadge[] = useMemo(
     () => [
-      {
-        label: statusLabel,
-        variant: STATUS_BADGE_VARIANTS[quote.status],
-      },
+      ...(versionBadge ? [versionBadge] : []),
+      { label: statusLabel, variant: STATUS_BADGE_VARIANTS[quote.status] },
     ],
-    [statusLabel, quote.status],
+    [statusLabel, quote.status, versionBadge],
   );
 
+  const VersionChevron = isVersionExpanded ? ChevronDown : ChevronRight;
+
   return (
-    <ListCard
-      customIcon={FileText}
-      customIconColor="text-amber-600"
-      title={quote.displayNumber}
-      subtitle={subtitle}
-      badges={badges}
-      inlineBadges
-      isSelected={isSelected}
-      onClick={onSelect}
-      className={className}
-      aria-label={t('list.cardAriaLabel', { number: quote.displayNumber, vendor: vendorName })}
-    />
+    <div className="relative">
+      <ListCard
+        customIcon={FileText}
+        customIconColor="text-amber-600"
+        title={quote.displayNumber}
+        subtitle={subtitle}
+        badges={badges}
+        inlineBadges
+        isSelected={isSelected}
+        onClick={onSelect}
+        className={className}
+        aria-label={t('list.cardAriaLabel', { number: quote.displayNumber, vendor: vendorName })}
+      />
+      {hasOlderVersions && onVersionToggle && (
+        <button
+          type="button"
+          onClick={onVersionToggle}
+          className="absolute bottom-1 right-2 flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
+          aria-label={isVersionExpanded
+            ? t('rfqs.versioning.collapseButton')
+            : t('rfqs.versioning.expandButton')}
+        >
+          <VersionChevron className="size-3" />
+        </button>
+      )}
+    </div>
   );
 }
 

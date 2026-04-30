@@ -13,11 +13,12 @@ export type QuoteStatus =
   | 'accepted'
   | 'rejected'
   | 'expired'
-  | 'archived';
+  | 'archived'
+  | 'superseded'; // §5.AA — replaced by a newer revision
 
 export const QUOTE_STATUSES = [
   'draft', 'sent_to_vendor', 'submitted', 'under_review',
-  'accepted', 'rejected', 'expired', 'archived',
+  'accepted', 'rejected', 'expired', 'archived', 'superseded',
 ] as const satisfies readonly QuoteStatus[];
 
 export const QUOTE_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
@@ -29,6 +30,7 @@ export const QUOTE_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
   rejected:       ['archived'],
   expired:        ['archived'],
   archived:       ['draft'],
+  superseded:     ['archived'],
 } as const;
 
 export const QUOTE_STATUS_META: Record<QuoteStatus, {
@@ -43,6 +45,7 @@ export const QUOTE_STATUS_META: Record<QuoteStatus, {
   rejected:       { labelEl: 'Απορρίφθηκε',     labelEn: 'Rejected',       color: 'red' },
   expired:        { labelEl: 'Έληξε',            labelEn: 'Expired',        color: 'gray' },
   archived:       { labelEl: 'Αρχειοθετήθηκε',  labelEn: 'Archived',       color: 'purple' },
+  superseded:     { labelEl: 'Αντικαταστάθηκε', labelEn: 'Superseded',     color: 'gray' },
 } as const;
 
 // ============================================================================
@@ -205,6 +208,12 @@ export interface Quote {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   createdBy: string;
+  // §5.AA versioning fields (Phase 9)
+  version?: number;
+  previousVersionId?: string;
+  supersededBy?: string;
+  supersededAt?: Timestamp;
+  _previousStatus?: QuoteStatus; // internal: status before supersede, used by revertSupersede
 }
 
 // ============================================================================
