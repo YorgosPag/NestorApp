@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "i18n hardcoded defaultValue baseline (ADR-i18n-ratchet)",
-    "generated": "2026-04-30T14:16:25Z",
+    "generated": "2026-04-30T14:32:28Z",
     "totalViolations": 0,
     "totalFiles": 0,
     "rule": "Counts can only decrease. New files = zero tolerance."

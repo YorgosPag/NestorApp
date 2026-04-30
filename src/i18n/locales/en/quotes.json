@@ -348,6 +348,7 @@
       "quotes": "Quotes",
       "comparison": "Comparison",
       "setup": "RFQ Setup",
+      "history": "History",
       "badges": {
         "underReview": "quotes under review",
         "recommendation": "winner selection pending",

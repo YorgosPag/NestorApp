@@ -6,7 +6,7 @@
  * and RFQ award lock state.
  */
 
-import { Download, MessageSquare, History } from 'lucide-react';
+import { Download, MessageSquare } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Quote, QuoteStatus } from '../types/quote';
 import type { RFQ } from '../types/rfq';
@@ -63,7 +63,6 @@ export interface BuildQuoteHeaderActionsParams {
   onRestore: () => void;
   onDownload: () => void;
   onOpenComments: () => void;
-  onOpenHistory: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
@@ -111,12 +110,6 @@ export function buildQuoteHeaderActions(p: BuildQuoteHeaderActionsParams): Quote
       icon: MessageSquare,
       tooltip: p.t('rfqs.quoteHeader.tooltip.comments'),
       onClick: p.onOpenComments,
-    },
-    {
-      id: 'history',
-      icon: History,
-      tooltip: p.t('rfqs.quoteHeader.tooltip.history'),
-      onClick: p.onOpenHistory,
     },
   ];
   const overflowActions: QuoteHeaderOverflowAction[] = [

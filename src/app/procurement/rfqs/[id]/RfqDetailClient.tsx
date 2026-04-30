@@ -29,6 +29,7 @@ import { formatValidUntilDate, daysUntilExpiry } from '@/subapps/procurement/uti
 import { toast } from 'sonner';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteRightPane } from '@/subapps/procurement/components/QuoteRightPane';
+import { RfqHistoryTab } from '@/subapps/procurement/components/RfqHistoryTab';
 import { buildQuoteHeaderActions } from '@/subapps/procurement/utils/quote-header-actions';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
 import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
@@ -104,13 +105,11 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     selectedQuote,
     pdfOpen,
     commentsOpen,
-    historyOpen,
     handleTabChange,
     handleSelectQuote,
     handleComparisonDrillDown,
     handleTogglePdf,
     handleToggleComments,
-    handleToggleHistory,
   } = useRfqUrlState({ quotes: activeQuotes, quotesLoading: loading });
   const lockState = useMemo(() => deriveSetupLockState(rfq, activeQuotes), [rfq, activeQuotes]);
   const winnerVendorName = useMemo(() => {
@@ -219,11 +218,11 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           onCreatePo: handleStub, onViewPo: handleStub,
           onRestore: () => void patchQuoteStatus('submitted'),
           onDownload: handleTogglePdf,
-          onOpenComments: handleToggleComments, onOpenHistory: handleToggleHistory,
+          onOpenComments: handleToggleComments,
           onEdit: handleStub, onDuplicate: handleStub, onDelete: handleStub,
           t, isConnected,
         }),
-    [selectedQuote, rfq, patchQuoteStatus, handleAwardIntent, handleStub, handleTogglePdf, handleToggleComments, handleToggleHistory, t, isConnected],
+    [selectedQuote, rfq, patchQuoteStatus, handleAwardIntent, handleStub, handleTogglePdf, handleToggleComments, t, isConnected],
   );
   const allVendorNotified = activeQuotes.filter((q) => q.status === 'accepted' || q.status === 'rejected').every((q) => !!q.lastNotifiedAt);
   const effectiveWinnerId = optimisticWinnerId ?? rfq?.winnerQuoteId ?? null;
@@ -332,6 +331,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="history">{t('rfqs.tabs.history')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="quotes" className="space-y-4">
@@ -360,10 +360,8 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
                   quote={selectedQuote}
                   pdfOpen={pdfOpen}
                   commentsOpen={commentsOpen}
-                  historyOpen={historyOpen}
                   onTogglePdf={handleTogglePdf}
                   onToggleComments={handleToggleComments}
-                  onToggleHistory={handleToggleHistory}
                   onSelectQuote={handleSelectQuote}
                   onRequestRenewal={() => setRenewalQuoteId(selectedQuote.id)}
                   primaryActions={primaryActions}
@@ -418,6 +416,9 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
               )}
             </>
           )}
+        </TabsContent>
+        <TabsContent value="history" className="space-y-4">
+          <RfqHistoryTab rfqId={id} quotes={quotes} />
         </TabsContent>
         <TabsContent value="setup" className="space-y-6">
           <SetupLockBanner
