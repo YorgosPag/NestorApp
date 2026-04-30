@@ -58,9 +58,19 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
   const fitScaleRef = useRef<number>(1);
 
   // Pan state refs (not in React state to avoid re-renders during drag)
+  // Transform-based pan: container is overflow-hidden, canvas is translated.
+  // Works regardless of canvas vs container size (scroll-based pan was a no-op
+  // when canvas <= container, e.g. at fit-to-width with small PDFs).
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
-  const scrollStartRef = useRef({ x: 0, y: 0 });
+  const panRef = useRef({ x: 0, y: 0 });
+  const panAtDragRef = useRef({ x: 0, y: 0 });
+
+  const applyPanTransform = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.style.transform = `translate(${panRef.current.x}px, ${panRef.current.y}px)`;
+  }, []);
 
   const [state, setState] = useState<PdfState>({
     numPages: 0,
@@ -164,6 +174,9 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
         canvas!.height = viewport.height * dpr;
         canvas!.style.width = `${viewport.width}px`;
         canvas!.style.height = `${viewport.height}px`;
+        canvas!.style.transformOrigin = 'center center';
+        canvas!.style.willChange = 'transform';
+        canvas!.style.transform = `translate(${panRef.current.x}px, ${panRef.current.y}px)`;
 
         const ctx = canvas!.getContext('2d');
         if (!ctx) return;
@@ -231,27 +244,27 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
     return () => container.removeEventListener('wheel', handleWheel);
   }, [state.loading]);
 
-  // ── Pan (click & drag) ─────────────────────────────────────────────────
+  // ── Pan (click & drag) — transform-based, works at any zoom ─────────────
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     function handlePointerDown(e: PointerEvent) {
-      // Only left-click pan
       if (e.button !== 0) return;
       isPanningRef.current = true;
       panStartRef.current = { x: e.clientX, y: e.clientY };
-      scrollStartRef.current = { x: container!.scrollLeft, y: container!.scrollTop };
+      panAtDragRef.current = { ...panRef.current };
       container!.setPointerCapture(e.pointerId);
       container!.style.cursor = 'grabbing';
     }
 
     function handlePointerMove(e: PointerEvent) {
       if (!isPanningRef.current) return;
-      const dx = e.clientX - panStartRef.current.x;
-      const dy = e.clientY - panStartRef.current.y;
-      container!.scrollLeft = scrollStartRef.current.x - dx;
-      container!.scrollTop = scrollStartRef.current.y - dy;
+      panRef.current = {
+        x: panAtDragRef.current.x + (e.clientX - panStartRef.current.x),
+        y: panAtDragRef.current.y + (e.clientY - panStartRef.current.y),
+      };
+      applyPanTransform();
     }
 
     function handlePointerUp(e: PointerEvent) {
@@ -273,7 +286,7 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
       container.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('pointercancel', handlePointerUp);
     };
-  }, [state.loading]);
+  }, [state.loading, applyPanTransform]);
 
   // Navigation handlers
   const goToPrev = useCallback(() => {
@@ -302,8 +315,10 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
   }, []);
 
   const fitToWidth = useCallback(() => {
+    panRef.current = { x: 0, y: 0 };
+    applyPanTransform();
     setState((s) => ({ ...s, scale: fitScaleRef.current }));
-  }, []);
+  }, [applyPanTransform]);
 
   const rotate = useCallback(() => {
     setState((s) => ({ ...s, rotation: (s.rotation + 90) % 360 }));
@@ -440,10 +455,10 @@ export function PdfCanvasViewer({ url, title, className }: PdfCanvasViewerProps)
         </div>
       </nav>
 
-      {/* Canvas area — scrollable, pan-enabled */}
+      {/* Canvas area — pan via transform, no scrollbars */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto flex items-start justify-center p-4 bg-muted/20 select-none relative"
+        className="flex-1 overflow-hidden flex items-center justify-center p-4 bg-muted/20 select-none relative touch-none"
       >
         {showOverlay && (
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-muted/20">
