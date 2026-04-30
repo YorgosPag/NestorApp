@@ -4,7 +4,6 @@ import { safeFirestoreOperation, getAdminFirestore, isFirebaseAdminAvailable } f
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateQuoteId, generateOptimisticId } from '@/services/enterprise-id.service';
-import { EntityAuditService } from '@/services/entity-audit.service';
 import { getNextQuoteNumber } from './quote-counters';
 import { createModuleLogger } from '@/lib/telemetry';
 import admin from 'firebase-admin';

@@ -1115,5 +1115,24 @@
   },
   "entityLinks": {
     "error": "Παρουσιάστηκε σφάλμα"
+  },
+  "datetime": {
+    "relative": {
+      "justNow": "μόλις τώρα",
+      "minutesAgo": "πριν {n} λεπτό",
+      "minutesAgo_plural": "πριν {n} λεπτά",
+      "hoursAgo": "πριν {n} ώρα",
+      "hoursAgo_plural": "πριν {n} ώρες",
+      "yesterdayAt": "χθες στις {time}",
+      "daysAgo": "πριν {n} ημέρες"
+    },
+    "deadline": {
+      "future": "{absolute} — σε {n} ημέρες",
+      "today": "σήμερα στις {time}",
+      "tomorrow": "αύριο",
+      "expiredRecent": "έληξε {absolute} — πριν {n} ημέρες",
+      "expiredOld": "έληξε {absolute}"
+    },
+    "empty": "—"
   }
 }
