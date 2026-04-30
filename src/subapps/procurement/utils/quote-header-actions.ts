@@ -68,6 +68,7 @@ export interface BuildQuoteHeaderActionsParams {
   onDuplicate: () => void;
   onDelete: () => void;
   t: (key: string) => string;
+  isConnected?: boolean;
 }
 
 // ============================================================================
@@ -94,8 +95,9 @@ export function buildQuoteHeaderActions(p: BuildQuoteHeaderActionsParams): Quote
   const locked = isLockedByAward(p.quote, p.rfq);
   const awardTooltip = locked ? p.t('rfqs.quoteHeader.tooltip.disabledByAward') : undefined;
   const comingSoon = p.t('rfqs.quoteHeader.tooltip.comingSoon');
+  const offlineTooltip = p.isConnected === false ? p.t('rfqs.offline.requiresConnection') : undefined;
 
-  const primaryActions = buildPrimary(p, locked, awardTooltip);
+  const primaryActions = buildPrimary(p, locked, awardTooltip, offlineTooltip);
   const secondaryActions: QuoteHeaderSecondaryAction[] = [
     {
       id: 'download',
@@ -132,26 +134,52 @@ function buildPrimary(
   p: BuildQuoteHeaderActionsParams,
   locked: boolean,
   awardTooltip: string | undefined,
+  offlineTooltip: string | undefined,
 ): QuoteHeaderPrimaryAction[] {
+  const offline = offlineTooltip !== undefined;
   switch (p.quote.status) {
     case 'submitted':
       return [
-        { id: 'confirm', label: p.t('rfqs.quoteHeader.action.confirm'), onClick: p.onConfirm, disabled: locked, disabledTooltip: awardTooltip },
-        { id: 'reject', label: p.t('rfqs.quoteHeader.action.reject'), onClick: p.onReject, variant: 'outline' },
+        {
+          id: 'confirm', label: p.t('rfqs.quoteHeader.action.confirm'), onClick: p.onConfirm,
+          disabled: locked || offline,
+          disabledTooltip: offlineTooltip ?? awardTooltip,
+        },
+        {
+          id: 'reject', label: p.t('rfqs.quoteHeader.action.reject'), onClick: p.onReject,
+          variant: 'outline', disabled: offline, disabledTooltip: offlineTooltip,
+        },
       ];
     case 'under_review':
       return [
-        { id: 'approve', label: p.t('rfqs.quoteHeader.action.approve'), onClick: p.onApprove, disabled: locked, disabledTooltip: awardTooltip },
-        { id: 'reject', label: p.t('rfqs.quoteHeader.action.reject'), onClick: p.onReject, variant: 'outline' },
+        {
+          id: 'approve', label: p.t('rfqs.quoteHeader.action.approve'), onClick: p.onApprove,
+          disabled: locked || offline,
+          disabledTooltip: offlineTooltip ?? awardTooltip,
+        },
+        {
+          id: 'reject', label: p.t('rfqs.quoteHeader.action.reject'), onClick: p.onReject,
+          variant: 'outline', disabled: offline, disabledTooltip: offlineTooltip,
+        },
       ];
     case 'accepted':
       return p.quote.linkedPoId
         ? [{ id: 'viewPo', label: p.t('rfqs.quoteHeader.action.viewPo'), onClick: p.onViewPo }]
-        : [{ id: 'createPo', label: p.t('rfqs.quoteHeader.action.createPo'), onClick: p.onCreatePo }];
+        : [{
+            id: 'createPo', label: p.t('rfqs.quoteHeader.action.createPo'), onClick: p.onCreatePo,
+            disabled: offline, disabledTooltip: offlineTooltip,
+          }];
     case 'rejected':
-      return [{ id: 'restore', label: p.t('rfqs.quoteHeader.action.restore'), onClick: p.onRestore, disabled: locked, disabledTooltip: awardTooltip }];
+      return [{
+        id: 'restore', label: p.t('rfqs.quoteHeader.action.restore'), onClick: p.onRestore,
+        disabled: locked || offline,
+        disabledTooltip: offlineTooltip ?? awardTooltip,
+      }];
     case 'draft':
-      return [{ id: 'edit', label: p.t('rfqs.quoteHeader.action.edit'), onClick: p.onEdit }];
+      return [{
+        id: 'edit', label: p.t('rfqs.quoteHeader.action.edit'), onClick: p.onEdit,
+        disabled: offline, disabledTooltip: offlineTooltip,
+      }];
     default:
       return [];
   }

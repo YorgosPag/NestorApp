@@ -736,6 +736,21 @@
       "warning": {
         "linesSumMismatch": "Lines sum ({sum}) does not match the stated total ({stated})"
       }
+    },
+    "unsaved": {
+      "title": "You have unsaved changes",
+      "body": "If you close, changes will be lost.",
+      "discard": "Discard changes",
+      "keep": "Continue editing"
+    },
+    "offline": {
+      "banner": "No connection — attempting to reconnect...",
+      "recovered": "Connection restored",
+      "requiresConnection": "This action requires a connection",
+      "queuedPending": "Pending sync",
+      "queueFailed": "Could not send. Try again.",
+      "summaryToast": "{count} changes while you were offline.",
+      "summaryAction": "View history"
     }
   },
   "trades": {

@@ -1,8 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useDirtyForm } from '@/providers/DirtyFormProvider';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -170,8 +176,11 @@ interface QuoteFormProps {
   onCancel?: () => void;
 }
 
+const FORM_ID = 'quote-form';
+
 export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
   const { t } = useTranslation('quotes');
+  const { registerDirty, clearDirty } = useDirtyForm();
   const [form, setForm] = useState<FormState>({
     projectId: '',
     vendorContactId: '',
@@ -185,8 +194,18 @@ export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+
+  useEffect(() => {
+    if (hasInteracted) registerDirty(FORM_ID);
+    else clearDirty(FORM_ID);
+  }, [hasInteracted, registerDirty, clearDirty]);
+
+  useEffect(() => () => clearDirty(FORM_ID), [clearDirty]);
 
   const setField = useCallback(<K extends keyof FormState>(key: K, val: FormState[K]) => {
+    setHasInteracted(true);
     setForm((prev) => ({ ...prev, [key]: val }));
   }, []);
 
@@ -195,6 +214,7 @@ export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
   const addLine = () => {
     const id = `line_${Date.now()}`;
     const defaultCategoryCode = atoeCodesForTrade[0] ?? null;
+    setHasInteracted(true);
     setForm((prev) => ({
       ...prev,
       lines: [...prev.lines, { id, ...EMPTY_LINE, categoryCode: defaultCategoryCode }],
@@ -202,10 +222,12 @@ export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
   };
 
   const removeLine = (index: number) => {
+    setHasInteracted(true);
     setForm((prev) => ({ ...prev, lines: prev.lines.filter((_, i) => i !== index) }));
   };
 
   const updateLine = (index: number, field: keyof QuoteLine, value: QuoteLine[keyof QuoteLine]) => {
+    setHasInteracted(true);
     setForm((prev) => {
       const lines = [...prev.lines];
       lines[index] = { ...lines[index], [field]: value };
@@ -241,12 +263,18 @@ export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
       });
       if (!res.ok) throw new Error(await res.text());
       const json = await res.json();
+      clearDirty(FORM_ID);
       onSuccess?.(json.data.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('quotes.errors.createFailed'));
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleCancel = () => {
+    if (!hasInteracted) { onCancel?.(); return; }
+    setDiscardOpen(true);
   };
 
   return (
@@ -356,7 +384,7 @@ export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
 
         <div className="flex justify-end gap-2">
           {onCancel && (
-            <Button variant="ghost" onClick={onCancel}>
+            <Button variant="ghost" onClick={handleCancel}>
               <X className="mr-1 h-4 w-4" />
               {t('quotes.cancel')}
             </Button>
@@ -367,6 +395,20 @@ export function QuoteForm({ rfqId, onSuccess, onCancel }: QuoteFormProps) {
           </Button>
         </div>
       </CardContent>
+      <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('rfqs.unsaved.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('rfqs.unsaved.body')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('rfqs.unsaved.keep')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { clearDirty(FORM_ID); onCancel?.(); }}>
+              {t('rfqs.unsaved.discard')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

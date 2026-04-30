@@ -380,7 +380,8 @@
       "allowlist": [
         "src/services/firestore/firestore-query.service.ts",
         "src/services/realtime/RealtimeService.ts",
-        "src/services/realtime/hooks/"
+        "src/services/realtime/hooks/",
+        "src/hooks/useFirestoreStatus.ts"
       ]
     },
     "firestore-schema-map": {

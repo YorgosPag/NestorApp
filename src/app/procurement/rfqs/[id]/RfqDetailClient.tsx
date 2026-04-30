@@ -42,6 +42,10 @@ import { RfqLinesPanel } from '@/subapps/procurement/components/RfqLinesPanel';
 import { SetupLockBanner } from '@/subapps/procurement/components/SetupLockBanner';
 import { deriveSetupLockState } from '@/subapps/procurement/utils/rfq-lock-state';
 import { rfqIsMultiTrade, type RFQ } from '@/subapps/procurement/types/rfq';
+import { DirtyFormProvider } from '@/providers/DirtyFormProvider';
+import { OfflineBanner } from '@/subapps/procurement/components/OfflineBanner';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useFirestoreStatus } from '@/hooks/useFirestoreStatus';
 
 interface RfqDetailClientProps {
   id: string;
@@ -50,14 +54,15 @@ interface RfqDetailClientProps {
 export function RfqDetailClient({ id }: RfqDetailClientProps) {
   const { t } = useTranslation('quotes');
   const router = useRouter();
-
+  const isOnline = useOnlineStatus();
+  const isFirestoreConnected = useFirestoreStatus();
+  const isConnected = isOnline && isFirestoreConnected;
   // Belt-and-suspenders: SC page.tsx has redirect() but Turbopack dev mode may skip it.
   useEffect(() => {
     if (id.startsWith('[')) {
       router.replace('/procurement/rfqs');
     }
   }, [id, router]);
-
   const { quotes, loading, refetch } = useQuotes({ rfqId: id }, { includeSuperseded: true });
   const activeQuotes = useMemo(
     () => quotes.filter((q) => q.status !== 'superseded'),
@@ -88,16 +93,13 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
       // silent — page renders without project name subtitle
     }
   }, [id]);
-
   useEffect(() => {
     void fetchRfq();
   }, [fetchRfq]);
-
   const cherryPickEnabled = rfq?.awardMode === 'cherry_pick';
   const { comparison, cherryPick, loading: comparisonLoading, refetch: refetchComparison } =
     useComparison(id, { cherryPick: cherryPickEnabled });
   const { aggregate, loading: aggregateLoading } = useSourcingEventAggregate(rfq?.sourcingEventId);
-
   const {
     activeTab,
     selectedQuote,
@@ -107,20 +109,16 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     handleComparisonDrillDown,
     handleTogglePdf,
   } = useRfqUrlState({ quotes: activeQuotes, quotesLoading: loading });
-
   const lockState = useMemo(() => deriveSetupLockState(rfq, activeQuotes), [rfq, activeQuotes]);
-
   const winnerVendorName = useMemo(() => {
     if (!rfq?.winnerQuoteId) return undefined;
     const winner = activeQuotes.find((q) => q.id === rfq.winnerQuoteId);
     return winner?.extractedData?.vendorName?.value ?? undefined;
   }, [rfq, activeQuotes]);
-
   const underReviewCount = useMemo(
     () => activeQuotes.filter(q => q.status === 'under_review').length,
     [activeQuotes],
   );
-
   const recommendationPending = useMemo(
     () => Boolean(comparison?.recommendation) && !activeQuotes.some(q => q.status === 'accepted'),
     [comparison, activeQuotes],
@@ -223,9 +221,9 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           onDownload: handleTogglePdf,
           onOpenComments: handleStub, onOpenHistory: handleStub,
           onEdit: handleStub, onDuplicate: handleStub, onDelete: handleStub,
-          t,
+          t, isConnected,
         }),
-    [selectedQuote, rfq, patchQuoteStatus, handleAwardIntent, handleStub, handleTogglePdf, t],
+    [selectedQuote, rfq, patchQuoteStatus, handleAwardIntent, handleStub, handleTogglePdf, t, isConnected],
   );
   const allVendorNotified = activeQuotes.filter((q) => q.status === 'accepted' || q.status === 'rejected').every((q) => !!q.lastNotifiedAt);
   const effectiveWinnerId = optimisticWinnerId ?? rfq?.winnerQuoteId ?? null;
@@ -261,6 +259,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   ) : undefined;
 
   return (
+    <DirtyFormProvider>
     <main className="container mx-auto max-w-5xl space-y-4 py-6">
       <PageHeader
         variant="sticky-rounded"
@@ -304,6 +303,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         }}
       />
 
+      <OfflineBanner isConnected={isConnected} />
       {showDashboard && (
         <UnifiedDashboard stats={dashboardStats} columns={4} />
       )}
@@ -494,5 +494,6 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         senderName="" companyName="" onOpenChange={setNotifyDialogOpen}
       />
     </main>
+    </DirtyFormProvider>
   );
 }
