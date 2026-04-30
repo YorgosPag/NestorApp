@@ -940,6 +940,12 @@
       "confirm": "Επιβεβαίωση Ανάδειξης",
       "submitting": "Αποθήκευση..."
     },
+    "tco": {
+      "vatDeltaLabel": "ΦΠΑ",
+      "laborWarning": "Δεν περιλαμβάνει εργατικά",
+      "deliveryWarning": "Μεταφορά εκτός τιμής",
+      "warrantyLabel": "Εγγύηση"
+    },
     "cherryPick": {
       "title": "Επιλογή ανά Γραμμή — Δυνατά Οφέλη",
       "summary": "Σύνολο ανά γραμμή: {cherry} · Σύνολο πακέτου: {whole}",

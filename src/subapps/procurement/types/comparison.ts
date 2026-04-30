@@ -19,6 +19,20 @@ export const COMPARISON_TEMPLATES: Record<string, { labelEl: string; labelEn: st
 export const DEFAULT_COMPARISON_TEMPLATE_ID = 'standard';
 
 // ============================================================================
+// TCO NORMALIZATION — ADR-331
+// ============================================================================
+
+export interface TcoNormalization {
+  normalizedTotal: number;
+  vatDelta: number;
+  laborFlag: boolean;
+  deliveryFlag: boolean;
+  warrantyText: string | null;
+  vatIncluded: boolean | null;
+  laborIncluded: boolean | null;
+}
+
+// ============================================================================
 // COMPARISON RESULT — ADR-327 §8.4
 // ============================================================================
 
@@ -34,6 +48,7 @@ export interface QuoteComparisonEntry {
   vendorName: string;
   vendorContactId: string;
   total: number;
+  tco: TcoNormalization;
   score: number;
   breakdown: QuoteScoreBreakdown;
   rank: number;

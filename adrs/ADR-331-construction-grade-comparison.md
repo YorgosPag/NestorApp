@@ -1,6 +1,6 @@
 # ADR-331 — Construction-Grade Quote Comparison: Inclusions, TCO, Weighted Scoring
 
-**Status:** PROPOSED  
+**Status:** IMPLEMENTED  
 **Date:** 2026-04-30  
 **Author:** Giorgio Pagonis  
 **Supersedes:** N/A  
@@ -49,8 +49,17 @@ The naive cheapest-detection in `quote-cheapest.ts` (`isCheapestEligible` compar
 - ADR-328 §5.X — award reason: "naive cheapest" note referencing ADR-331 refinement
 - `src/subapps/procurement/utils/quote-cheapest.ts` — naive implementation to replace
 
+## Implementation notes
+
+- `normalizeTco(quote)` in `comparison-service.ts` reads `extractedData.vatIncluded/laborIncluded` (AI-extracted, existing fields). VAT delta computed as `total × 0.24` when `vatIncluded === false`. Labor/delivery → flags only (no € computation per Q2 rule).
+- `QuoteComparisonEntry` now carries `tco: TcoNormalization` — normalized total, VAT delta, labor flag, delivery flag, warranty text.
+- `priceScore()` and `cheapest` flag use `normalizedTotal` (apples-to-apples ranking).
+- `ComparisonPanel` shows delta badge (`+€X VAT`) in Total column; labor/delivery/warranty flags inline per row.
+- Per-RFQ TCO override (Q1b) is V2 — requires `tcoOverrides` API params + re-ranking.
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
 | 2026-04-30 | Stub created from ADR-328 §5.T deferral |
+| 2026-04-30 | IMPLEMENTED — TCO normalization (VAT delta, labor/delivery flags, warranty), normalized ranking in `comparison-service.ts`, TCO display in `ComparisonPanel.tsx` |

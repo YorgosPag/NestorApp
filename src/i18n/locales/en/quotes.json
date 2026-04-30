@@ -940,6 +940,12 @@
       "confirm": "Confirm Award",
       "submitting": "Saving..."
     },
+    "tco": {
+      "vatDeltaLabel": "VAT",
+      "laborWarning": "Labor not included",
+      "deliveryWarning": "Delivery not in price",
+      "warrantyLabel": "Warranty"
+    },
     "cherryPick": {
       "title": "Per-Line Award — Potential Savings",
       "summary": "Cherry-pick total: {cherry} · Whole-package total: {whole}",

@@ -22,6 +22,7 @@ import type {
   ComparisonRecommendation,
   CherryPickResult,
   LineWinner,
+  TcoNormalization,
 } from '../types/comparison';
 import type { Quote, QuoteLine, QuoteStatus } from '../types/quote';
 import type { AuthContext } from '@/lib/auth';
@@ -36,6 +37,26 @@ const RISK_SUPPLIER_SCORE_THRESHOLD = 70;
 const STRONG_WINNER_DELTA_PERCENT = 5;
 
 import { fetchVendorNames, resolveVendorName } from './vendor-name-resolver';
+
+// ============================================================================
+// TCO NORMALIZATION — ADR-331
+// ============================================================================
+
+function normalizeTco(quote: Quote): TcoNormalization {
+  const vatIncluded = quote.extractedData?.vatIncluded?.value ?? null;
+  const laborIncluded = quote.extractedData?.laborIncluded?.value ?? null;
+  const rawTotal = quote.totals.total;
+  const vatDelta = vatIncluded === false ? Math.round(rawTotal * 0.24 * 100) / 100 : 0;
+  return {
+    normalizedTotal: Math.round((rawTotal + vatDelta) * 100) / 100,
+    vatDelta,
+    laborFlag: laborIncluded === false,
+    deliveryFlag: !quote.deliveryTerms || quote.deliveryTerms.trim() === '',
+    warrantyText: quote.warranty ?? null,
+    vatIncluded,
+    laborIncluded,
+  };
+}
 
 // ============================================================================
 // FACTOR SCORERS (each returns 0-100)
@@ -98,10 +119,10 @@ async function computeVendorScore(
 
 function assignFlags(
   entry: QuoteComparisonEntry,
-  ctx: { minTotal: number; maxSupplier: number; maxDelivery: number; maxTerms: number }
+  ctx: { minNormTotal: number; maxSupplier: number; maxDelivery: number; maxTerms: number }
 ): QuoteComparisonEntry['flags'] {
   const flags: QuoteComparisonEntry['flags'] = [];
-  if (entry.total === ctx.minTotal) flags.push('cheapest');
+  if (entry.tco.normalizedTotal === ctx.minNormTotal) flags.push('cheapest');
   if (entry.breakdown.supplier === ctx.maxSupplier && ctx.maxSupplier > 0) flags.push('most_reliable');
   if (entry.breakdown.delivery === ctx.maxDelivery && ctx.maxDelivery > 0) flags.push('fastest_delivery');
   if (entry.breakdown.terms === ctx.maxTerms && ctx.maxTerms > 0) flags.push('best_terms');
@@ -137,17 +158,19 @@ async function buildEntries(
   const names = await fetchVendorNames(companyId, quotes.map((q) => q.vendorContactId));
   const resolvedNames = new Map(quotes.map((q) => [q.id, resolveVendorName(q, names)] as const));
 
-  const totals = quotes.map((q) => q.totals.total);
-  const minTotal = Math.min(...totals);
-  const maxTotal = Math.max(...totals);
+  const tcoMap = new Map(quotes.map((q) => [q.id, normalizeTco(q)] as const));
+  const normTotals = quotes.map((q) => tcoMap.get(q.id)!.normalizedTotal);
+  const minNormTotal = Math.min(...normTotals);
+  const maxNormTotal = Math.max(...normTotals);
 
   const vendorScores = await Promise.all(
     quotes.map((q) => computeVendorScore(companyId, q.vendorContactId, resolvedNames.get(q.id) ?? q.vendorContactId))
   );
 
   const partial: QuoteComparisonEntry[] = quotes.map((q, idx) => {
+    const tco = tcoMap.get(q.id)!;
     const breakdown: QuoteScoreBreakdown = {
-      price: priceScore(q.totals.total, minTotal, maxTotal),
+      price: priceScore(tco.normalizedTotal, minNormTotal, maxNormTotal),
       supplier: vendorScores[idx].score,
       terms: termsScore(q),
       delivery: deliveryScore(q),
@@ -162,6 +185,7 @@ async function buildEntries(
       vendorName: resolvedNames.get(q.id) ?? q.vendorContactId,
       vendorContactId: q.vendorContactId,
       total: q.totals.total,
+      tco,
       score: Math.round(score * 100) / 100,
       breakdown,
       rank: 0,
@@ -175,7 +199,7 @@ async function buildEntries(
   partial.forEach((e, i) => { e.rank = i + 1; });
 
   const ctx = {
-    minTotal,
+    minNormTotal,
     maxSupplier: Math.max(...partial.map((e) => e.breakdown.supplier)),
     maxDelivery: Math.max(...partial.map((e) => e.breakdown.delivery)),
     maxTerms: Math.max(...partial.map((e) => e.breakdown.terms)),

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { BarChart2, Trophy, Award, AlertTriangle, ChevronRight } from 'lucide-react';
+import { BarChart2, Trophy, Award, AlertTriangle, ChevronRight, Truck, HardHat, ShieldCheck } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { RecommendationCard } from './RecommendationCard';
@@ -20,6 +20,7 @@ import type {
   QuoteComparisonResult,
   CherryPickResult,
   ComparisonWeights,
+  TcoNormalization,
 } from '@/subapps/procurement/types/comparison';
 
 interface ComparisonPanelProps {
@@ -201,13 +202,18 @@ function ComparisonRow({ entry, isRecommended, rfqAwarded, winnerQuoteId, onAwar
         {entry.rank}
       </TableCell>
       <TableCell>{entry.vendorName}</TableCell>
-      <TableCell className="text-right">{formatCurrency(entry.total)}</TableCell>
+      <TableCell className="text-right">
+        <TcoTotalCell total={entry.total} tco={entry.tco} />
+      </TableCell>
       <TableCell className="text-right font-semibold">{entry.score.toFixed(1)}</TableCell>
       <TableCell>
         <BreakdownBars breakdown={entry.breakdown} />
       </TableCell>
       <TableCell>
-        <FlagsRow flags={entry.flags} />
+        <div className="space-y-1">
+          <FlagsRow flags={entry.flags} />
+          <TcoFlagsRow tco={entry.tco} />
+        </div>
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
@@ -284,6 +290,50 @@ function FlagsRow({ flags }: { flags: QuoteComparisonEntry['flags'] }) {
       })}
     </div>
   );
+}
+
+function TcoTotalCell({ total, tco }: { total: number; tco: TcoNormalization }) {
+  const { t } = useTranslation('quotes');
+  if (tco.vatDelta <= 0) return <span>{formatCurrency(total)}</span>;
+  return (
+    <div className="flex flex-col items-end gap-0.5">
+      <span>{formatCurrency(tco.normalizedTotal)}</span>
+      <span className="text-[10px] text-amber-600 tabular-nums">
+        +{formatCurrency(tco.vatDelta)} {t('comparison.tco.vatDeltaLabel')}
+      </span>
+    </div>
+  );
+}
+
+function TcoFlagsRow({ tco }: { tco: TcoNormalization }) {
+  const { t } = useTranslation('quotes');
+  const items: React.ReactNode[] = [];
+  if (tco.laborFlag) {
+    items.push(
+      <span key="labor" className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400">
+        <HardHat className="h-3 w-3 shrink-0" />
+        {t('comparison.tco.laborWarning')}
+      </span>
+    );
+  }
+  if (tco.deliveryFlag) {
+    items.push(
+      <span key="delivery" className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400">
+        <Truck className="h-3 w-3 shrink-0" />
+        {t('comparison.tco.deliveryWarning')}
+      </span>
+    );
+  }
+  if (tco.warrantyText) {
+    items.push(
+      <span key="warranty" className="flex items-center gap-1 text-[10px] text-muted-foreground">
+        <ShieldCheck className="h-3 w-3 shrink-0" />
+        {t('comparison.tco.warrantyLabel')}: {tco.warrantyText}
+      </span>
+    );
+  }
+  if (items.length === 0) return null;
+  return <div className="flex flex-col gap-0.5">{items}</div>;
 }
 
 function CherryPickCard({ result }: { result: CherryPickResult }) {
