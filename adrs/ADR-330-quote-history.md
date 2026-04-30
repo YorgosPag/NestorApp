@@ -1,6 +1,6 @@
 # ADR-330 — Quote History Side Panel
 
-**Status:** PROPOSED  
+**Status:** ACCEPTED  
 **Date:** 2026-04-30  
 **Author:** Giorgio Pagonis  
 **Supersedes:** N/A  
@@ -65,3 +65,4 @@ Implementation: `EntityAuditService.recordChange()` already stores `changes: { f
 | Date | Change |
 |------|--------|
 | 2026-04-30 | Stub created from ADR-328 §5.R deferral |
+| 2026-04-30 | ACCEPTED — implemented v1.0: `QuoteHistoryDrawer` (Sheet right/bottom), `'quote'` added to `AuditEntityType`, `EntityAuditService.recordChange()` wired in `createQuote` + `updateQuote` (status_changed), History button enabled, `historyOpen` URL param (`?history=1`) mutually exclusive with pdf+comments. Deferred to v1.1: real-time onSnapshot already provided by `useEntityAudit`, @mention notifications, line-edit diff (needs ADR-333), badge count. |

@@ -7,6 +7,9 @@ import { generateQuoteId, generateOptimisticId } from '@/services/enterprise-id.
 import { getNextQuoteNumber } from './quote-counters';
 import { createModuleLogger } from '@/lib/telemetry';
 import admin from 'firebase-admin';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type {
   Quote,
   QuoteStatus,
@@ -97,6 +100,16 @@ export async function createQuote(
     };
 
     await db.collection(COLLECTIONS.QUOTES).doc(id).set(sanitizeForFirestore(quote));
+    safeFireAndForget(EntityAuditService.recordChange({
+      entityType: ENTITY_TYPES.QUOTE,
+      entityId: id,
+      entityName: `#${displayNumber}`,
+      action: 'created',
+      changes: [],
+      performedBy: ctx.uid,
+      performedByName: null,
+      companyId: ctx.companyId,
+    }));
     logger.info('Quote created', { id, displayNumber, companyId: ctx.companyId });
     return quote;
   });
@@ -235,6 +248,18 @@ export async function updateQuote(
     };
 
     await ref.update(sanitizeForFirestore(updates));
+    if (dto.status && dto.status !== current.status) {
+      safeFireAndForget(EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.QUOTE,
+        entityId: quoteId,
+        entityName: `#${current.displayNumber}`,
+        action: 'status_changed',
+        changes: [{ field: 'status', oldValue: current.status, newValue: dto.status }],
+        performedBy: ctx.uid,
+        performedByName: null,
+        companyId: ctx.companyId,
+      }));
+    }
     return { ...current, ...updates };
   });
 }

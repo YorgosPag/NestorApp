@@ -58,6 +58,8 @@ export function buildEntityHref(
       return null;
     case "purchase_order":
       return `/procurement/purchase-orders/${id}`;
+    case "quote":
+      return null;
     default:
       return null;
   }

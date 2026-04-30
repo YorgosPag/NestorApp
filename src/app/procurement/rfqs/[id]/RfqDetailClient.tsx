@@ -46,7 +46,6 @@ import { DirtyFormProvider } from '@/providers/DirtyFormProvider';
 import { OfflineBanner } from '@/subapps/procurement/components/OfflineBanner';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useFirestoreStatus } from '@/hooks/useFirestoreStatus';
-
 interface RfqDetailClientProps {
   id: string;
 }
@@ -105,11 +104,13 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     selectedQuote,
     pdfOpen,
     commentsOpen,
+    historyOpen,
     handleTabChange,
     handleSelectQuote,
     handleComparisonDrillDown,
     handleTogglePdf,
     handleToggleComments,
+    handleToggleHistory,
   } = useRfqUrlState({ quotes: activeQuotes, quotesLoading: loading });
   const lockState = useMemo(() => deriveSetupLockState(rfq, activeQuotes), [rfq, activeQuotes]);
   const winnerVendorName = useMemo(() => {
@@ -218,11 +219,11 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           onCreatePo: handleStub, onViewPo: handleStub,
           onRestore: () => void patchQuoteStatus('submitted'),
           onDownload: handleTogglePdf,
-          onOpenComments: handleToggleComments, onOpenHistory: handleStub,
+          onOpenComments: handleToggleComments, onOpenHistory: handleToggleHistory,
           onEdit: handleStub, onDuplicate: handleStub, onDelete: handleStub,
           t, isConnected,
         }),
-    [selectedQuote, rfq, patchQuoteStatus, handleAwardIntent, handleStub, handleTogglePdf, handleToggleComments, t, isConnected],
+    [selectedQuote, rfq, patchQuoteStatus, handleAwardIntent, handleStub, handleTogglePdf, handleToggleComments, handleToggleHistory, t, isConnected],
   );
   const allVendorNotified = activeQuotes.filter((q) => q.status === 'accepted' || q.status === 'rejected').every((q) => !!q.lastNotifiedAt);
   const effectiveWinnerId = optimisticWinnerId ?? rfq?.winnerQuoteId ?? null;
@@ -238,14 +239,11 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     }
     return `/procurement/quotes/scan?${sp.toString()}`;
   }, [id, rfq]);
-
   const handleQuoteCreated = async () => {
     setShowQuoteForm(false);
     await refetch();
   };
-
   if (id.startsWith('[')) return null;
-
   const projectSubtitle = rfq?.projectId && projectName ? (
     <Link
       href={`/projects/${rfq.projectId}`}
@@ -362,8 +360,10 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
                   quote={selectedQuote}
                   pdfOpen={pdfOpen}
                   commentsOpen={commentsOpen}
+                  historyOpen={historyOpen}
                   onTogglePdf={handleTogglePdf}
                   onToggleComments={handleToggleComments}
+                  onToggleHistory={handleToggleHistory}
                   onSelectQuote={handleSelectQuote}
                   onRequestRenewal={() => setRenewalQuoteId(selectedQuote.id)}
                   primaryActions={primaryActions}
@@ -419,7 +419,6 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
             </>
           )}
         </TabsContent>
-
         <TabsContent value="setup" className="space-y-6">
           <SetupLockBanner
             lockState={lockState}

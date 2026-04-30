@@ -117,7 +117,6 @@ export function buildQuoteHeaderActions(p: BuildQuoteHeaderActionsParams): Quote
       icon: History,
       tooltip: p.t('rfqs.quoteHeader.tooltip.history'),
       onClick: p.onOpenHistory,
-      disabled: true,
     },
   ];
   const overflowActions: QuoteHeaderOverflowAction[] = [

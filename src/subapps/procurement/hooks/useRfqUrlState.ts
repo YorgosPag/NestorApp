@@ -49,11 +49,13 @@ interface UseRfqUrlStateResult {
   selectedQuote: Quote | null;
   pdfOpen: boolean;
   commentsOpen: boolean;
+  historyOpen: boolean;
   handleTabChange: (tab: RfqTabValue) => void;
   handleSelectQuote: (quote: Quote | null) => void;
   handleComparisonDrillDown: (quoteId: string) => void;
   handleTogglePdf: () => void;
   handleToggleComments: () => void;
+  handleToggleHistory: () => void;
 }
 
 export function useRfqUrlState({
@@ -69,8 +71,10 @@ export function useRfqUrlState({
   const quoteParam = searchParams.get('quote');
   const pdfParam = searchParams.get('pdf');
   const commentsParam = searchParams.get('comments');
+  const historyParam = searchParams.get('history');
   const pdfOpen = pdfParam === '1';
   const commentsOpen = commentsParam === '1';
+  const historyOpen = historyParam === '1';
 
   const activeTab = useMemo<RfqTabValue>(
     () => resolveDefaultTab(quotes.length, quotesLoading, tabParam),
@@ -122,10 +126,23 @@ export function useRfqUrlState({
       params.delete('comments');
     } else {
       params.set('comments', '1');
-      params.delete('pdf'); // mutually exclusive with PDF panel
+      params.delete('pdf');
+      params.delete('history');
     }
     router.replace(`${pathname}?${params.toString()}`);
   }, [router, pathname, searchParams, commentsOpen]);
+
+  const handleToggleHistory = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (historyOpen) {
+      params.delete('history');
+    } else {
+      params.set('history', '1');
+      params.delete('pdf');
+      params.delete('comments');
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [router, pathname, searchParams, historyOpen]);
 
   // Single push: tab=quotes + quote=id — one history entry (§5.D.3)
   const handleComparisonDrillDown = useCallback(
@@ -154,5 +171,5 @@ export function useRfqUrlState({
     router.replace(`${pathname}?${params.toString()}`);
   }, [quotesLoading, selectedQuote, quoteParam, searchParams, pathname, router]);
 
-  return { activeTab, selectedQuote, pdfOpen, commentsOpen, handleTabChange, handleSelectQuote, handleComparisonDrillDown, handleTogglePdf, handleToggleComments };
+  return { activeTab, selectedQuote, pdfOpen, commentsOpen, historyOpen, handleTabChange, handleSelectQuote, handleComparisonDrillDown, handleTogglePdf, handleToggleComments, handleToggleHistory };
 }

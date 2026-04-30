@@ -395,6 +395,12 @@
       "count_one": "{count} comment",
       "count_other": "{count} comments"
     },
+    "history": {
+      "title": "Change History",
+      "empty": "No history yet",
+      "emptyDesc": "Actions on this quote will appear here",
+      "closeAria": "Close history"
+    },
     "selectQuoteHint": "Select a quote to view details",
     "setup": {
       "banner": {

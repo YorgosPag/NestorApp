@@ -24,6 +24,7 @@ import type {
   QuoteHeaderOverflowAction,
 } from '../utils/quote-header-actions';
 import { QuoteCommentsDrawer } from './QuoteCommentsDrawer';
+import { QuoteHistoryDrawer } from './QuoteHistoryDrawer';
 
 // ============================================================================
 // PROPS
@@ -33,8 +34,10 @@ export interface QuoteRightPaneProps {
   quote: Quote;
   pdfOpen: boolean;
   commentsOpen: boolean;
+  historyOpen: boolean;
   onTogglePdf: () => void;
   onToggleComments: () => void;
+  onToggleHistory: () => void;
   onSelectQuote: (q: Quote | null) => void;
   onRequestRenewal: () => void;
   primaryActions: QuoteHeaderPrimaryAction[];
@@ -50,8 +53,10 @@ export function QuoteRightPane({
   quote,
   pdfOpen,
   commentsOpen,
+  historyOpen,
   onTogglePdf,
   onToggleComments,
+  onToggleHistory,
   onSelectQuote,
   onRequestRenewal,
   primaryActions,
@@ -109,6 +114,12 @@ export function QuoteRightPane({
         quoteId={quote.id}
         open={commentsOpen}
         onClose={onToggleComments}
+      />
+
+      <QuoteHistoryDrawer
+        quoteId={quote.id}
+        open={historyOpen}
+        onClose={onToggleHistory}
       />
     </>
   );
