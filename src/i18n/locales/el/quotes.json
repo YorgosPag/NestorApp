@@ -441,6 +441,29 @@
       "lineEdited": "Η/Ο {actor} τροποποίησε γραμμή RFQ",
       "aggregated": "Η/Ο {actor} έκανε {count} αλλαγές",
       "viewAction": "Δες"
+    },
+    "sort": {
+      "label": "Ταξινόμηση",
+      "option": {
+        "statusPrice": "Κατάσταση + Τιμή",
+        "statusPriceDefault": "Κατάσταση + Τιμή (προεπιλογή)",
+        "recent": "Πιο πρόσφατες",
+        "priceAsc": "Φθηνότερη πρώτα",
+        "priceDesc": "Ακριβότερη πρώτα",
+        "vendorAsc": "Προμηθευτής (Α-Ω)"
+      }
+    },
+    "search": {
+      "placeholder": "Αναζήτηση σε προσφορές...",
+      "empty": {
+        "title": "Δεν βρέθηκαν προσφορές με «{query}»",
+        "suggestionsTitle": "Δοκίμασε να ψάξεις με:",
+        "suggestion": {
+          "vendor": "Όνομα προμηθευτή (π.χ. Thermoland)",
+          "quoteNumber": "Αριθμό προσφοράς (π.χ. Q-2026-0042)",
+          "price": "Τιμή (π.χ. 12500)"
+        }
+      }
     }
   },
   "trades": {

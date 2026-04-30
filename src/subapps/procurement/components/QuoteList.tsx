@@ -3,22 +3,28 @@
 /**
  * QuoteList — Quote list panel mirroring Contacts/POs SSoT pattern.
  *
- * Composition: GenericListHeader + CompactToolbar + QuoteStatusQuickFilters + ScrollArea[QuoteListCard].
- * Selected state styling and chip behavior identical to /contacts and /procurement.
+ * Composition: GenericListHeader + CompactToolbar + SortSelect + QuoteStatusQuickFilters + ScrollArea[QuoteListCard].
+ * In RFQ split-panel mode (onSelectQuote provided): URL-persistent sort (?sort=) + search (?q=)
+ * + status-priority group dividers. In standalone mode: legacy CompactToolbar sort.
  *
- * "Requires Action" quotes (submitted / under_review / expired) are pinned at
- * the top of the same scrollable list with a section divider.
- *
+ * @see ADR-328 §5.P §5.U §5.W (Phase 7 — Sort + Search)
  * @see ADR-267 §Phase H (Quote List View)
- * @see PurchaseOrderList.tsx for sibling reference implementation
  */
 
-import React, { useMemo, useState } from 'react';
-import { FileText } from 'lucide-react';
+import React, { useMemo, useState, useCallback } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { FileText, Search } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { CompactToolbar, quotesConfig } from '@/components/core/CompactToolbar';
@@ -29,6 +35,14 @@ import { EntityListColumn } from '@/core/containers';
 import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
 import { useSortState } from '@/hooks/useSortState';
 import { matchesSearchTerm } from '@/lib/search/search';
+import {
+  sortQuotes,
+  groupByStatus,
+  type SortKey,
+  VALID_SORT_KEYS,
+  DEFAULT_SORT_KEY,
+} from '../utils/quote-sort';
+import { matchesQuote } from '../utils/quote-search';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -45,7 +59,7 @@ interface QuoteListProps {
   loading: boolean;
   /** "+Νέα Προσφορά" handler — toolbar create button. Optional; if absent, button is no-op. */
   onCreateNew?: () => void;
-  /** Split-panel mode: select inline */
+  /** Split-panel mode: select inline. Presence enables RFQ mode (URL sort+search). */
   onSelectQuote?: (quote: Quote) => void;
   /** Selected quote id — drives card highlight (split-panel) */
   selectedQuoteId?: string;
@@ -68,55 +82,89 @@ export function QuoteList({
 }: QuoteListProps) {
   const { t } = useTranslation(['quotes', 'common']);
   const colors = useSemanticColors();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
-  // Sort state via centralized hook
+  // RFQ mode: URL-persistent sort + search (activated when onSelectQuote is provided)
+  const isRfqMode = !!onSelectQuote;
+
+  const sortParam = searchParams.get('sort');
+  const urlSearch = searchParams.get('q') ?? '';
+  const sortKey: SortKey =
+    isRfqMode && (VALID_SORT_KEYS as readonly string[]).includes(sortParam ?? '')
+      ? (sortParam as SortKey)
+      : DEFAULT_SORT_KEY;
+
+  const handleUrlSortChange = useCallback(
+    (newSort: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newSort === DEFAULT_SORT_KEY) params.delete('sort');
+      else params.set('sort', newSort);
+      router.replace(`${pathname}?${params.toString()}`);
+    },
+    [router, pathname, searchParams],
+  );
+
+  const handleUrlSearchChange = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value) params.set('q', value);
+      else params.delete('q');
+      router.replace(`${pathname}?${params.toString()}`);
+    },
+    [router, pathname, searchParams],
+  );
+
+  // Legacy state (standalone mode + CompactToolbar)
   const { sortBy, sortOrder, onSortChange } = useSortState<'date' | 'number' | 'status' | 'value'>('date');
-
-  // CompactToolbar local state (mirrors PurchaseOrderList)
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
-
-  // Quick-filter chips state — single-select mirroring POStatusQuickFilters
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
 
-  // Filter pipeline: status chips → search (displayNumber + vendorContactId + trade) → sort.
-  // Vendor-name resolution (extractedData/contact) happens per-card; batch directory hook
-  // would be a separate optimization.
-  const filtered = useMemo(() => {
+  // ──────────────────────────────────────────────────────────────
+  // RFQ mode: filter → sort → group
+  // ──────────────────────────────────────────────────────────────
+  const rfqSorted = useMemo<Quote[]>(() => {
+    if (!isRfqMode) return [];
+    const filtered = quotes.filter((q) => {
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(q.status as QuoteStatus)) return false;
+      return matchesQuote(q, urlSearch);
+    });
+    return sortQuotes(filtered, sortKey);
+  }, [isRfqMode, quotes, selectedStatuses, urlSearch, sortKey]);
+
+  const rfqGroups = useMemo(
+    () => (isRfqMode && sortKey === 'status-price' ? groupByStatus(rfqSorted) : null),
+    [isRfqMode, sortKey, rfqSorted],
+  );
+
+  // ──────────────────────────────────────────────────────────────
+  // Standalone mode: filter → sort (legacy behaviour)
+  // ──────────────────────────────────────────────────────────────
+  const standaloneSorted = useMemo<{ q: Quote; isActionRequired: boolean }[]>(() => {
+    if (isRfqMode) return [];
     const actionRequiredIds = new Set(actionRequired.map((q) => q.id));
+    const filtered = quotes
+      .filter((q) => {
+        if (selectedStatuses.length > 0 && !selectedStatuses.includes(q.status as QuoteStatus)) return false;
+        if (searchTerm) {
+          const extractedVendor = q.extractedData?.vendorName?.value ?? '';
+          return matchesSearchTerm([q.displayNumber, q.vendorContactId, q.trade, extractedVendor, q.id], searchTerm);
+        }
+        return true;
+      })
+      .map((q) => ({ q, isActionRequired: actionRequiredIds.has(q.id) }));
 
-    return quotes.filter((q) => {
-      if (selectedStatuses.length > 0 && !selectedStatuses.includes(q.status as QuoteStatus)) {
-        return false;
-      }
-      if (searchTerm) {
-        const extractedVendor = q.extractedData?.vendorName?.value ?? '';
-        return matchesSearchTerm(
-          [q.displayNumber, q.vendorContactId, q.trade, extractedVendor, q.id],
-          searchTerm,
-        );
-      }
-      return true;
-    }).map((q) => ({ q, isActionRequired: actionRequiredIds.has(q.id) }));
-  }, [quotes, actionRequired, selectedStatuses, searchTerm]);
-
-  const sorted = useMemo(() => {
-    const arr = [...filtered];
-    arr.sort((a, b) => {
-      // Pinned action-required items always first (regardless of sort direction)
-      if (a.isActionRequired !== b.isActionRequired) {
-        return a.isActionRequired ? -1 : 1;
-      }
-      const dir = sortOrder === 'asc' ? 1 : -1;
+    const dir = sortOrder === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      if (a.isActionRequired !== b.isActionRequired) return a.isActionRequired ? -1 : 1;
       switch (sortBy) {
-        case 'number':
-          return a.q.displayNumber.localeCompare(b.q.displayNumber) * dir;
-        case 'status':
-          return a.q.status.localeCompare(b.q.status) * dir;
-        case 'value':
-          return (a.q.totals.total - b.q.totals.total) * dir;
+        case 'number': return a.q.displayNumber.localeCompare(b.q.displayNumber) * dir;
+        case 'status': return a.q.status.localeCompare(b.q.status) * dir;
+        case 'value': return (a.q.totals.total - b.q.totals.total) * dir;
         case 'date':
         default: {
           const aTs = (a.q.createdAt as { seconds: number } | null)?.seconds ?? 0;
@@ -125,23 +173,23 @@ export function QuoteList({
         }
       }
     });
-    return arr;
-  }, [filtered, sortBy, sortOrder]);
+  }, [isRfqMode, quotes, actionRequired, selectedStatuses, searchTerm, sortBy, sortOrder]);
 
-  const firstNonAction = sorted.findIndex((entry) => !entry.isActionRequired);
-  const actionRequiredVisible = sorted.filter((e) => e.isActionRequired).length;
+  const displayCount = isRfqMode ? rfqSorted.length : standaloneSorted.length;
+  const effectiveSearch = isRfqMode ? urlSearch : searchTerm;
+  const handleSearchChange = isRfqMode ? handleUrlSearchChange : setSearchTerm;
 
-  // Action handlers — wire toolbar to parent callbacks; mirror PurchaseOrderList semantics
-  const handleNewItem = () => onCreateNew?.();
-  const handleEditItem = (_id: string) => {
-    if (selectedQuoteId && onEditQuote) onEditQuote(selectedQuoteId);
-  };
+  const firstNonAction = isRfqMode ? -1 : standaloneSorted.findIndex((e) => !e.isActionRequired);
+  const actionRequiredVisible = isRfqMode ? 0 : standaloneSorted.filter((e) => e.isActionRequired).length;
 
   const renderSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
     if (newSortBy === 'date' || newSortBy === 'number' || newSortBy === 'status' || newSortBy === 'value') {
       onSortChange(newSortBy, newSortOrder);
     }
   };
+
+  const handleNewItem = () => onCreateNew?.();
+  const handleEditItem = () => { if (selectedQuoteId && onEditQuote) onEditQuote(selectedQuoteId); };
 
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
@@ -150,23 +198,21 @@ export function QuoteList({
         <GenericListHeader
           icon={FileText}
           entityName={t('list.entityName')}
-          itemCount={sorted.length}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
+          itemCount={displayCount}
+          searchTerm={effectiveSearch}
+          onSearchChange={handleSearchChange}
           searchPlaceholder={t('list.searchPlaceholder')}
           showToolbar={showToolbar}
           onToolbarToggle={setShowToolbar}
           hideSearch
         />
-
-        {/* Desktop: always visible */}
         <div className="hidden md:block">
           <CompactToolbar
             config={quotesConfig}
             selectedItems={selectedItems}
             onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
+            searchTerm={effectiveSearch}
+            onSearchChange={handleSearchChange}
             activeFilters={activeFilters}
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
@@ -176,16 +222,14 @@ export function QuoteList({
             onEditItem={handleEditItem}
           />
         </div>
-
-        {/* Mobile: toggle */}
         <div className="md:hidden">
           {showToolbar && (
             <CompactToolbar
               config={quotesConfig}
               selectedItems={selectedItems}
               onSelectionChange={setSelectedItems}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
+              searchTerm={effectiveSearch}
+              onSearchChange={handleSearchChange}
               activeFilters={activeFilters}
               onFiltersChange={setActiveFilters}
               sortBy={sortBy}
@@ -197,6 +241,25 @@ export function QuoteList({
           )}
         </div>
       </div>
+
+      {/* Sort dropdown — RFQ mode only (ADR-328 §5.P) */}
+      {isRfqMode && (
+        <div className="flex items-center gap-2 px-3 pb-2">
+          <span className={cn('text-xs shrink-0', colors.text.muted)}>{t('rfqs.sort.label')}</span>
+          <Select value={sortKey} onValueChange={handleUrlSortChange}>
+            <SelectTrigger className="h-7 text-xs flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="status-price">{t('rfqs.sort.option.statusPriceDefault')}</SelectItem>
+              <SelectItem value="recent">{t('rfqs.sort.option.recent')}</SelectItem>
+              <SelectItem value="price-asc">{t('rfqs.sort.option.priceAsc')}</SelectItem>
+              <SelectItem value="price-desc">{t('rfqs.sort.option.priceDesc')}</SelectItem>
+              <SelectItem value="vendor-asc">{t('rfqs.sort.option.vendorAsc')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Quick-filter chips — Quote status */}
       <QuoteStatusQuickFilters
@@ -215,15 +278,61 @@ export function QuoteList({
                 <Skeleton className="h-3 w-1/2" />
               </div>
             ))
-          ) : sorted.length === 0 ? (
+          ) : isRfqMode ? (
+            rfqSorted.length === 0 ? (
+              urlSearch ? (
+                <div className={cn('text-center p-6 space-y-3', colors.text.muted)}>
+                  <Search className="mx-auto h-8 w-8 opacity-40" />
+                  <p className="text-sm font-medium">
+                    {t('rfqs.search.empty.title', { query: urlSearch })}
+                  </p>
+                  <div className="text-xs text-left space-y-1">
+                    <p>{t('rfqs.search.empty.suggestionsTitle')}</p>
+                    <ul className="list-disc list-inside space-y-0.5 opacity-80">
+                      <li>{t('rfqs.search.empty.suggestion.vendor')}</li>
+                      <li>{t('rfqs.search.empty.suggestion.quoteNumber')}</li>
+                      <li>{t('rfqs.search.empty.suggestion.price')}</li>
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <div className={cn('text-center p-4', colors.text.muted)}>
+                  <p>{t('list.emptyTitle')}</p>
+                  <p className="text-sm mt-1">{t('list.emptyDescription')}</p>
+                </div>
+              )
+            ) : rfqGroups ? (
+              rfqGroups.map((group, groupIdx) => (
+                <React.Fragment key={group.status}>
+                  {groupIdx > 0 && <div className="border-t border-muted my-2" />}
+                  {group.quotes.map((q) => (
+                    <QuoteListCard
+                      key={q.id}
+                      quote={q}
+                      isSelected={selectedQuoteId === q.id}
+                      onSelect={() => onSelectQuote(q)}
+                    />
+                  ))}
+                </React.Fragment>
+              ))
+            ) : (
+              rfqSorted.map((q) => (
+                <QuoteListCard
+                  key={q.id}
+                  quote={q}
+                  isSelected={selectedQuoteId === q.id}
+                  onSelect={() => onSelectQuote(q)}
+                />
+              ))
+            )
+          ) : standaloneSorted.length === 0 ? (
             <div className={cn('text-center p-4', colors.text.muted)}>
               <p>{t('list.emptyTitle')}</p>
               <p className="text-sm mt-1">{t('list.emptyDescription')}</p>
             </div>
           ) : (
-            sorted.map((entry, index) => (
+            standaloneSorted.map((entry, index) => (
               <React.Fragment key={entry.q.id}>
-                {/* Section divider between Requires Action block and the rest */}
                 {actionRequiredVisible > 0 && index === 0 && (
                   <div className="flex items-center gap-2 px-1 pt-1 pb-2">
                     <span className={cn('text-xs font-medium uppercase tracking-wide', colors.text.muted)}>

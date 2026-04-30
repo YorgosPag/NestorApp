@@ -441,6 +441,29 @@
       "lineEdited": "{actor} edited an RFQ line",
       "aggregated": "{actor} made {count} changes",
       "viewAction": "View"
+    },
+    "sort": {
+      "label": "Sort",
+      "option": {
+        "statusPrice": "Status + Price",
+        "statusPriceDefault": "Status + Price (default)",
+        "recent": "Most recent",
+        "priceAsc": "Cheapest first",
+        "priceDesc": "Most expensive first",
+        "vendorAsc": "Vendor (A-Z)"
+      }
+    },
+    "search": {
+      "placeholder": "Search quotes...",
+      "empty": {
+        "title": "No quotes found for «{query}»",
+        "suggestionsTitle": "Try searching by:",
+        "suggestion": {
+          "vendor": "Vendor name (e.g. Thermoland)",
+          "quoteNumber": "Quote number (e.g. Q-2026-0042)",
+          "price": "Price (e.g. 12500)"
+        }
+      }
     }
   },
   "trades": {
