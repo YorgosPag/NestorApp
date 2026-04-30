@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { X, Lock, Unlock } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { UNITS, OTHER_UNIT, isKnownUnit } from '@/subapps/procurement/utils/units';
@@ -231,15 +232,22 @@ export function QuoteLineEditorTable({
                     ) : (
                       <span className="font-medium">{line.lineTotal.toFixed(2)}</span>
                     )}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 shrink-0"
-                      title={isOverridden ? t('rfqs.lineEdit.totalAuto') : t('rfqs.lineEdit.totalOverride')}
-                      onClick={() => toggleOverride(i)}
-                    >
-                      {isOverridden ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3 text-muted-foreground" />}
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 shrink-0"
+                          aria-label={isOverridden ? t('rfqs.lineEdit.totalAuto') : t('rfqs.lineEdit.totalOverride')}
+                          onClick={() => toggleOverride(i)}
+                        >
+                          {isOverridden ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3 text-muted-foreground" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        {isOverridden ? t('rfqs.lineEdit.totalAuto') : t('rfqs.lineEdit.totalOverride')}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                   {v.warnings.totalMismatch && (
                     <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
@@ -256,9 +264,22 @@ export function QuoteLineEditorTable({
                   </td>
                 )}
                 <td className="py-1">
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeLine(i)}>
-                    <X className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        aria-label={t('quotes.actions.removeLine')}
+                        onClick={() => removeLine(i)}
+                      >
+                        <X className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {t('quotes.actions.removeLine')}
+                    </TooltipContent>
+                  </Tooltip>
                 </td>
               </tr>
             );
