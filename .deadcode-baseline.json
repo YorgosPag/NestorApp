@@ -1,11 +1,12 @@
 {
-  "generated": "2026-04-30T09:20:18.698Z",
+  "generated": "2026-04-30T22:18:18.914Z",
   "knipVersion": "6",
   "files": [
+    "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
     "src/subapps/procurement/components/ConflictDialog.tsx",
     "src/subapps/procurement/hooks/useLiveChangeToasts.ts",
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
     "src/subapps/procurement/services/trade-registry.ts"
   ],
-  "fileCount": 4
+  "fileCount": 5
 }
