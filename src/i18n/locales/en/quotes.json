@@ -603,6 +603,39 @@
         "retry": "Retry",
         "delete": "Delete"
       }
+    },
+    "quoteHeader": {
+      "action": {
+        "confirm": "Confirm",
+        "approve": "Award Winner",
+        "reject": "Reject",
+        "createPo": "Create Purchase Order",
+        "viewPo": "View Purchase Order",
+        "restore": "Restore",
+        "edit": "Edit",
+        "duplicate": "Duplicate as new",
+        "delete": "Delete"
+      },
+      "tooltip": {
+        "download": "Download original PDF",
+        "comments": "Comments",
+        "history": "Change history",
+        "disabledByAward": "Winner already selected",
+        "viewPdf": "View original PDF",
+        "hidePdf": "Hide original PDF",
+        "comingSoon": "Coming soon"
+      },
+      "delete": {
+        "confirmTitle": "Delete quote {number}?",
+        "confirmBody": "This action cannot be undone.",
+        "confirmAction": "Delete",
+        "cancelAction": "Cancel"
+      }
+    },
+    "pdfPanel": {
+      "closeAria": "Close PDF",
+      "loading": "Loading PDF...",
+      "error": "Could not load PDF"
     }
   },
   "trades": {

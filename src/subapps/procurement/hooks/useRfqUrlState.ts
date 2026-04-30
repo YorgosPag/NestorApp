@@ -47,9 +47,11 @@ interface UseRfqUrlStateOptions {
 interface UseRfqUrlStateResult {
   activeTab: RfqTabValue;
   selectedQuote: Quote | null;
+  pdfOpen: boolean;
   handleTabChange: (tab: RfqTabValue) => void;
   handleSelectQuote: (quote: Quote | null) => void;
   handleComparisonDrillDown: (quoteId: string) => void;
+  handleTogglePdf: () => void;
 }
 
 export function useRfqUrlState({
@@ -63,6 +65,8 @@ export function useRfqUrlState({
 
   const tabParam = searchParams.get('tab');
   const quoteParam = searchParams.get('quote');
+  const pdfParam = searchParams.get('pdf');
+  const pdfOpen = pdfParam === '1';
 
   const activeTab = useMemo<RfqTabValue>(
     () => resolveDefaultTab(quotes.length, quotesLoading, tabParam),
@@ -97,6 +101,13 @@ export function useRfqUrlState({
     [router, pathname, searchParams, isMobile],
   );
 
+  const handleTogglePdf = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (pdfOpen) params.delete('pdf');
+    else params.set('pdf', '1');
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [router, pathname, searchParams, pdfOpen]);
+
   // Single push: tab=quotes + quote=id — one history entry (§5.D.3)
   const handleComparisonDrillDown = useCallback(
     (quoteId: string) => {
@@ -124,5 +135,5 @@ export function useRfqUrlState({
     router.replace(`${pathname}?${params.toString()}`);
   }, [quotesLoading, selectedQuote, quoteParam, searchParams, pathname, router]);
 
-  return { activeTab, selectedQuote, handleTabChange, handleSelectQuote, handleComparisonDrillDown };
+  return { activeTab, selectedQuote, pdfOpen, handleTabChange, handleSelectQuote, handleComparisonDrillDown, handleTogglePdf };
 }

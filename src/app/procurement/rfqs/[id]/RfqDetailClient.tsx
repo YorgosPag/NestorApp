@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Building2, CheckCircle2, ClipboardList, Eye, EyeOff, Plus, ScanLine } from 'lucide-react';
+import { Building2, CheckCircle2, ClipboardList, Eye, EyeOff, Plus, ScanLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
@@ -27,9 +27,10 @@ import { ExpiredAwardWarningDialog } from '@/subapps/procurement/components/Expi
 import { QuoteRenewalRequestDialog } from '@/subapps/procurement/components/QuoteRenewalRequestDialog';
 import { useScanQueue } from '@/subapps/procurement/hooks/useScanQueue';
 import { formatValidUntilDate, daysUntilExpiry } from '@/subapps/procurement/utils/quote-expiration';
+import { toast } from 'sonner';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
-import { QuoteDetailsHeader } from '@/subapps/procurement/components/QuoteDetailsHeader';
-import { QuoteDetailSummary } from '@/subapps/procurement/components/QuoteDetailSummary';
+import { QuoteRightPane } from '@/subapps/procurement/components/QuoteRightPane';
+import { buildQuoteHeaderActions } from '@/subapps/procurement/utils/quote-header-actions';
 import { QuoteForm } from '@/subapps/procurement/components/QuoteForm';
 import { ComparisonPanel } from '@/subapps/procurement/components/ComparisonPanel';
 import { AwardReasonDialog } from '@/subapps/procurement/components/AwardReasonDialog';
@@ -100,9 +101,11 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   const {
     activeTab,
     selectedQuote,
+    pdfOpen,
     handleTabChange,
     handleSelectQuote,
     handleComparisonDrillDown,
+    handleTogglePdf,
   } = useRfqUrlState({ quotes: activeQuotes, quotesLoading: loading });
 
   const lockState = useMemo(() => deriveSetupLockState(rfq, activeQuotes), [rfq, activeQuotes]);
@@ -191,6 +194,38 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     projectId: rfq?.projectId,
   });
 
+  const handleStub = useCallback(
+    () => void toast.info(t('rfqs.quoteHeader.tooltip.comingSoon')),
+    [t],
+  );
+
+  const patchQuoteStatus = useCallback(async (status: string) => {
+    if (!selectedQuote) return;
+    const res = await fetch(`/api/quotes/${selectedQuote.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) { toast.error(t('quotes.errors.updateFailed')); return; }
+    await refetch();
+  }, [selectedQuote, refetch, t]);
+  const { primaryActions, secondaryActions, overflowActions } = useMemo(
+    () => !selectedQuote
+      ? { primaryActions: [], secondaryActions: [], overflowActions: [] }
+      : buildQuoteHeaderActions({
+          quote: selectedQuote, rfq,
+          onConfirm: () => void patchQuoteStatus('under_review'),
+          onApprove: () => handleAwardIntent(selectedQuote.id),
+          onReject: () => void patchQuoteStatus('rejected'),
+          onCreatePo: handleStub, onViewPo: handleStub,
+          onRestore: () => void patchQuoteStatus('submitted'),
+          onDownload: handleTogglePdf,
+          onOpenComments: handleStub, onOpenHistory: handleStub,
+          onEdit: handleStub, onDuplicate: handleStub, onDelete: handleStub,
+          t,
+        }),
+    [selectedQuote, rfq, patchQuoteStatus, handleAwardIntent, handleStub, handleTogglePdf, t],
+  );
   const effectiveWinnerId = optimisticWinnerId ?? rfq?.winnerQuoteId ?? null;
   const winnerQuote = effectiveWinnerId ? quotes.find((q) => q.id === effectiveWinnerId) ?? null : null;
 
@@ -321,25 +356,18 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
               />
             </div>
             <aside className={cn(selectedQuote ? 'block' : 'hidden md:block')}>
-              {selectedQuote && (
-                <>
-                  <button
-                    type="button"
-                    className="md:hidden mb-2 flex items-center gap-2 text-sm font-medium"
-                    onClick={() => handleSelectQuote(null)}
-                    aria-label={t('rfqs.mobile.backToList')}
-                  >
-                    <ArrowLeft className="size-4" />
-                    {t('rfqs.mobile.backToList')}
-                  </button>
-                  <QuoteDetailsHeader
-                    quote={selectedQuote}
-                    onRequestRenewal={() => setRenewalQuoteId(selectedQuote.id)}
-                  />
-                  <QuoteDetailSummary quote={selectedQuote} />
-                </>
-              )}
-              {!selectedQuote && (
+              {selectedQuote ? (
+                <QuoteRightPane
+                  quote={selectedQuote}
+                  pdfOpen={pdfOpen}
+                  onTogglePdf={handleTogglePdf}
+                  onSelectQuote={handleSelectQuote}
+                  onRequestRenewal={() => setRenewalQuoteId(selectedQuote.id)}
+                  primaryActions={primaryActions}
+                  secondaryActions={secondaryActions}
+                  overflowActions={overflowActions}
+                />
+              ) : (
                 <div className="hidden md:flex h-full items-center justify-center text-sm text-muted-foreground">
                   {t('rfqs.selectQuoteHint')}
                 </div>

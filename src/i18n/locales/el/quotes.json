@@ -603,6 +603,39 @@
         "retry": "Δοκίμασε ξανά",
         "delete": "Διαγραφή"
       }
+    },
+    "quoteHeader": {
+      "action": {
+        "confirm": "Επιβεβαίωση",
+        "approve": "Έγκριση Νικητή",
+        "reject": "Απόρριψη",
+        "createPo": "Δημιουργία Παραγγελίας",
+        "viewPo": "Δες Παραγγελία",
+        "restore": "Επαναφορά",
+        "edit": "Επεξεργασία",
+        "duplicate": "Αντιγραφή ως νέα",
+        "delete": "Διαγραφή"
+      },
+      "tooltip": {
+        "download": "Λήψη αρχικού PDF",
+        "comments": "Σχολιασμός",
+        "history": "Ιστορικό αλλαγών",
+        "disabledByAward": "Έχει ήδη επιλεγεί νικητής",
+        "viewPdf": "Δες αρχικό PDF",
+        "hidePdf": "Κλείσε αρχικό PDF",
+        "comingSoon": "Έρχεται σύντομα"
+      },
+      "delete": {
+        "confirmTitle": "Διαγραφή προσφοράς {number};",
+        "confirmBody": "Η ενέργεια δεν αναιρείται.",
+        "confirmAction": "Διαγραφή",
+        "cancelAction": "Ακύρωση"
+      }
+    },
+    "pdfPanel": {
+      "closeAria": "Κλείσιμο PDF",
+      "loading": "Φόρτωση PDF...",
+      "error": "Δεν φόρτωσε το PDF"
     }
   },
   "trades": {
