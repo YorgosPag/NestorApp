@@ -1085,5 +1085,19 @@
       "floorplan": "Κάτοψη",
       "photos": "Φωτογραφίες"
     }
+  },
+  "deletion": {
+    "blockedTitle": "Δεν είναι δυνατή η διαγραφή του «{propertyName}»",
+    "blockedBody": "Το ακίνητο χρησιμοποιείται σε {count} εργασίες επιμετρήσεων:",
+    "draftRefs": "{count} πρόχειρες (draft)",
+    "submittedRefs": "{count} οριστικές (submitted/approved/certified)",
+    "lockedRefs": "{count} κλειδωμένες (locked)",
+    "viewTasksLink": "Δείτε τις εργασίες",
+    "archiveOption": "Εναλλακτικά, μπορείτε να αρχειοθετήσετε το ακίνητο. Θα κρυφτεί από λίστες/pickers αλλά οι εργασίες παραμένουν άθικτες.",
+    "cancel": "Ακύρωση",
+    "archiveButton": "Αρχειοθέτηση αντί για διαγραφή",
+    "archiveSuccess": "Το ακίνητο αρχειοθετήθηκε.",
+    "restoreButton": "Επαναφορά",
+    "archivedBadge": "αρχειοθετημένο"
   }
 }

@@ -195,6 +195,62 @@
         "cancel": "Ακύρωση",
         "saving": "Αποθήκευση..."
       },
+      "scope": {
+        "label": "Εύρος Εφαρμογής",
+        "building": "Ολόκληρο Κτίριο",
+        "commonAreas": "Κοινόχρηστοι Χώροι",
+        "floor": "Ολόκληρος Όροφος",
+        "property": "Συγκεκριμένο Ακίνητο",
+        "properties": "Πολλαπλά Ακίνητα",
+        "floorPickerLabel": "Όροφος",
+        "floorPickerPlaceholder": "Επιλέξτε όροφο...",
+        "floorPickerEmpty": "Δεν υπάρχουν όροφοι για αυτό το κτίριο.",
+        "floorPickerHint": "Η εργασία θα συνδεθεί με όλα τα ακίνητα του ορόφου ({count} ακίνητα)",
+        "propertyPickerLabel": "Ακίνητο",
+        "propertyPickerPlaceholder": "Επιλέξτε ακίνητο...",
+        "propertiesPickerLabel": "Ακίνητα",
+        "propertiesPickerEmpty": "Δεν υπάρχουν ακίνητα για αυτό το κτίριο.",
+        "propertiesPickerMinError": "Επιλέξτε τουλάχιστον 2 ακίνητα ή χρησιμοποιήστε «Συγκεκριμένο Ακίνητο».",
+        "multiSelect": {
+          "selectedHeader": "Επιλεγμένα ({count})",
+          "selectedEmpty": "Δεν έχει επιλεγεί κανένα ακίνητο",
+          "groupHeader": "{floorName} ({count} ακίνητα)",
+          "searchPlaceholder": "Αναζήτηση ακινήτου (όνομα ή κωδικός)...",
+          "selectAllOnFloor": "Επιλογή όλων του ορόφου",
+          "removeChip": "Αφαίρεση",
+          "suggestSwitchToFloor": "Φαίνεται ότι θέλετε «Ολόκληρος Όροφος». Να αλλάξει αυτόματα;",
+          "suggestSwitchConfirm": "Ναι, αλλαγή",
+          "suggestSwitchDismiss": "Όχι, συνέχεια"
+        },
+        "costAllocation": {
+          "label": "Κατανομή Κόστους",
+          "byArea": "Κατά εμβαδόν (αυτόματο)",
+          "byAreaHint": "Αναλογικά με τα τετραγωνικά κάθε ακινήτου",
+          "equal": "Ισόποσα",
+          "equalHint": "Ίδιο ποσό σε κάθε ακίνητο",
+          "custom": "Χειροκίνητα ποσοστά",
+          "customHint": "Ορίστε εσείς το ποσοστό κάθε ακινήτου",
+          "customTotalLabel": "Σύνολο",
+          "customTotalValid": "✓ 100%",
+          "customTotalInvalid": "Σύνολο: {percent}% (πρέπει να είναι 100%)",
+          "previewHeader": "Προεπισκόπηση κατανομής",
+          "byAreaFallbackWarning": "Το ακίνητο {code} δεν έχει εμβαδόν. Αυτόματη μετάβαση σε «Ισόποσα».",
+          "partialAreaWarning": "Το ακίνητο {code} δεν έχει per-level εμβαδά. Συνεισφέρει με το συνολικό του εμβαδόν."
+        },
+        "scopeLock": {
+          "tooltip": "Δεν αλλάζει μετά την υποβολή. Ακυρώστε και δημιουργήστε νέα εργασία ή χρησιμοποιήστε «Επαναφορά σε Πρόχειρο».",
+          "reopenButton": "Επαναφορά σε Πρόχειρο",
+          "reopenConfirmTitle": "Επαναφορά σε Πρόχειρο",
+          "reopenConfirmBody": "Η εργασία θα επιστρέψει σε κατάσταση «Πρόχειρη». Τα στοιχεία scope θα ξεκλειδώσουν για επεξεργασία.",
+          "reopenSuccess": "Η εργασία επανέφερε σε πρόχειρο."
+        },
+        "singlePropertyFloorToast": {
+          "title": "Ο όροφος έχει 1 ακίνητο",
+          "body": "Ο {floorName} έχει μόνο 1 ακίνητο ({propertyCode}). Μήπως εννοείτε «Συγκεκριμένο Ακίνητο»;",
+          "confirm": "Ναι, αλλαγή",
+          "dismiss": "Όχι, συνέχεια"
+        }
+      },
       "empty": {
         "title": "Δεν υπάρχουν επιμετρήσεις",
         "description": "Δεν έχουν προστεθεί εργασίες σε αυτό το κτίριο.",

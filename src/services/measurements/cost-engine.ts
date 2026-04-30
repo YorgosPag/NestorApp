@@ -8,10 +8,12 @@
  * @see ADR-175 §4.1.4 (Waste Factor), §3.4 (Cost Breakdown)
  */
 
-import type { BOQItem, BOQSummary, BOQCategorySummary } from '@/types/boq';
+import type { BOQItem, BOQScope, BOQSummary, BOQCategorySummary, CostAllocationMethod } from '@/types/boq';
 import type { CostBreakdown, VarianceResult } from '@/types/boq';
+import type { Property } from '@/types/property';
 import { nowISO } from '@/lib/date-local';
 import { compareByLocale } from '@/lib/intl-formatting';
+import { propertyAreaOnFloor } from '@/lib/properties/floor-helpers';
 
 // ============================================================================
 // GROSS QUANTITY
@@ -98,6 +100,96 @@ export function computeVariance(item: BOQItem): VarianceResult | null {
     actualCost,
     costDelta: actualCost - estimatedCost,
   };
+}
+
+// ============================================================================
+// COST ALLOCATION (ADR-329 §3.1.1, §3.7.2)
+// ============================================================================
+
+/** Result of cost allocation: per-property breakdown + warnings emitted. */
+export interface AllocationResult {
+  /** Map of propertyId → allocated cost (€) */
+  allocations: Record<string, number>;
+  /** Warnings (e.g. partial-area fallback per ADR-329 §3.7.2). */
+  warnings: AllocationWarning[];
+}
+
+export interface AllocationWarning {
+  type: 'partial_area_fallback' | 'no_area_fallback_to_equal' | 'empty_targets';
+  propertyId?: string;
+  propertyCode?: string;
+}
+
+/**
+ * Allocate `totalCost` across `targetProperties` according to method.
+ * - by_area  : proportional to per-floor area when scope=floor (multi-level
+ *              partial via levelData[floorId].areas.gross), else total area.
+ *              Falls back to `equal` when all areas are 0.
+ * - equal    : even split.
+ * - custom   : honor `customAllocations` percentages (sum=100 caller-validated).
+ *
+ * Pure function — no side effects.
+ *
+ * @see ADR-329 §3.1.1, §3.7.2
+ */
+export function allocateCost(
+  targetProperties: Property[],
+  totalCost: number,
+  method: CostAllocationMethod,
+  scope: BOQScope,
+  linkedFloorId: string | null,
+  customAllocations: Record<string, number> | null,
+): AllocationResult {
+  const warnings: AllocationWarning[] = [];
+
+  if (targetProperties.length === 0) {
+    return { allocations: {}, warnings: [{ type: 'empty_targets' }] };
+  }
+
+  if (method === 'equal') {
+    const per = totalCost / targetProperties.length;
+    const allocations: Record<string, number> = {};
+    for (const p of targetProperties) allocations[p.id] = per;
+    return { allocations, warnings };
+  }
+
+  if (method === 'custom' && customAllocations) {
+    const allocations: Record<string, number> = {};
+    for (const p of targetProperties) {
+      const pct = customAllocations[p.id] ?? 0;
+      allocations[p.id] = totalCost * (pct / 100);
+    }
+    return { allocations, warnings };
+  }
+
+  // by_area (default)
+  const areas: Record<string, number> = {};
+  let totalArea = 0;
+  for (const p of targetProperties) {
+    const info = scope === 'floor' && linkedFloorId
+      ? propertyAreaOnFloor(p, linkedFloorId)
+      : { area: p.areas?.gross ?? 0, isPartial: false, isFallback: false };
+    const area = info?.area ?? 0;
+    areas[p.id] = area;
+    totalArea += area;
+    if (info?.isFallback) {
+      warnings.push({ type: 'partial_area_fallback', propertyId: p.id, propertyCode: p.code ?? p.name });
+    }
+  }
+
+  if (totalArea === 0) {
+    warnings.push({ type: 'no_area_fallback_to_equal' });
+    const per = totalCost / targetProperties.length;
+    const allocations: Record<string, number> = {};
+    for (const p of targetProperties) allocations[p.id] = per;
+    return { allocations, warnings };
+  }
+
+  const allocations: Record<string, number> = {};
+  for (const p of targetProperties) {
+    allocations[p.id] = totalCost * (areas[p.id] / totalArea);
+  }
+  return { allocations, warnings };
 }
 
 // ============================================================================

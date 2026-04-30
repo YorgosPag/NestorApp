@@ -1445,3 +1445,14 @@ src/
 **Files changed:** `boq-repository.ts` (create + duplicate methods)
 **Impact:** BOQ items now get `boq_uuid` enterprise IDs instead of Firestore auto-generated IDs
 **Ref:** ADR-210 Phase 4, CLAUDE.md SOS N.6
+
+### 2026-05-01 — Scope Granularity Extension (ADR-329)
+**Change:** §4.4.3 scope union extended from 2 levels (`'building' | 'property'`) to 5 levels
+(`'building' | 'common_areas' | 'floor' | 'property' | 'properties'`). Added cost allocation
+method (`by_area | equal | custom`) + scope mutability lock (draft-only edit) + reopen-to-draft
+action. BOQItem schema gained `linkedFloorId`, `linkedUnitIds`, `costAllocationMethod`,
+`customAllocations` fields. Property gained `archivedAt` + `archivedBy` for soft archive.
+**Impact:** Per-unit costing enabled. Common-areas separate from whole-building. Floor-level
+tasks supported. Multi-property cherry-pick supported. Multi-level properties consume
+partial-area allocation via ADR-236 `levelData[floorId].areas.gross`.
+**Ref:** **ADR-329 §3.1, §3.2, §3.7** (Multi-Level Property Compatibility), §3.9 (deletion guard)

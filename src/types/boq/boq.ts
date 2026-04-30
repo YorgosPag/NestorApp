@@ -22,6 +22,33 @@ import type {
 } from './units';
 
 // ============================================================================
+// BOQ SCOPE & COST ALLOCATION (ADR-329)
+// ============================================================================
+
+/**
+ * BOQ scope — 5 levels of granularity (ADR-329 §3.1)
+ * - building: Ολόκληρο κτίριο (shell, struttura, facciata, tetto)
+ * - common_areas: Κοινόχρηστοι χώροι (κλιμακοστάσιο, lobby, ανελκυστήρας)
+ * - floor: Ολόκληρος όροφος (όλα τα ακίνητα ενός ορόφου)
+ * - property: 1 ακίνητο specifico
+ * - properties: Cherry-picked subset N ακινήτων (cross-floor)
+ */
+export type BOQScope =
+  | 'building'
+  | 'common_areas'
+  | 'floor'
+  | 'property'
+  | 'properties';
+
+/**
+ * Cost allocation method για multi-property scopes (ADR-329 §3.1.1)
+ * - by_area: Αναλογικά κατά εμβαδόν (DEFAULT) — cost_i = total * (area_i / Σ area)
+ * - equal: Ισόποσα — cost_i = total / N
+ * - custom: Χειροκίνητα ποσοστά — με customAllocations field, Σ = 100
+ */
+export type CostAllocationMethod = 'by_area' | 'equal' | 'custom';
+
+// ============================================================================
 // BOQ ITEM — ΚΥΡΙΟ ENTITY
 // ============================================================================
 
@@ -39,13 +66,27 @@ export interface BOQItem {
   /** Ανήκει σε building */
   buildingId: string;
 
-  // --- Scope ---
+  // --- Scope (ADR-329) ---
 
-  /** Scope: ολόκληρο κτίριο ή μεμονωμένο ακίνητο */
-  scope: 'building' | 'property';
+  /** Scope εφαρμογής — 5 επίπεδα granularity */
+  scope: BOQScope;
 
-  /** ID ακινήτου αν scope = 'property' (null αν scope = 'building') */
+  /** ID ορόφου αν scope = 'floor' (null αλλιώς) */
+  linkedFloorId: string | null;
+
+  /** ID ακινήτου αν scope = 'property' (null αλλιώς) */
   linkedUnitId: string | null;
+
+  /** IDs ακινήτων αν scope = 'properties' (null αλλιώς, min 2 αν populated) */
+  linkedUnitIds: string[] | null;
+
+  // --- Cost Allocation (ADR-329 §3.1.1) ---
+
+  /** Μέθοδος κατανομής κόστους σε multi-property scopes (default: 'by_area') */
+  costAllocationMethod: CostAllocationMethod;
+
+  /** Custom percentages αν method='custom' (key=propertyId, value=0-100, Σ=100) */
+  customAllocations: Record<string, number> | null;
 
   // --- Ταυτότητα ---
 
@@ -223,8 +264,12 @@ export interface BOQProjectSummary {
 export interface CreateBOQItemInput {
   projectId: string;
   buildingId: string;
-  scope: 'building' | 'property';
+  scope: BOQScope;
+  linkedFloorId?: string | null;
   linkedUnitId?: string | null;
+  linkedUnitIds?: string[] | null;
+  costAllocationMethod?: CostAllocationMethod;
+  customAllocations?: Record<string, number> | null;
   categoryCode: string;
   title: string;
   description?: string | null;
@@ -266,7 +311,9 @@ export interface UpdateBOQItemInput {
 /** Φίλτρα αναζήτησης BOQ items */
 export interface BOQFilters {
   buildingId?: string;
-  scope?: 'building' | 'property';
+  scope?: BOQScope;
+  linkedFloorId?: string;
+  linkedUnitId?: string;
   categoryCode?: string;
   status?: BOQItemStatus | 'all';
   source?: BOQSource;
@@ -287,6 +334,7 @@ export const BOQ_ITEM_DEFAULTS = {
   qaStatus: 'pending' as const,
   wastePolicy: 'inherited' as const,
   priceAuthority: 'master' as const,
+  costAllocationMethod: 'by_area' as const,
   wasteFactor: 0,
   materialUnitCost: 0,
   laborUnitCost: 0,

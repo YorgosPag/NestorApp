@@ -57,3 +57,15 @@ export async function transitionBOQItemWithPolicy({
 }: TransitionBOQItemWithPolicyInput): Promise<boolean> {
   return boqService.transition(id, status, userId);
 }
+
+interface ReopenBOQItemWithPolicyInput {
+  readonly id: string;
+  readonly userId: string;
+}
+
+export async function reopenBOQItemToDraftWithPolicy({
+  id,
+  userId,
+}: ReopenBOQItemWithPolicyInput): Promise<boolean> {
+  return boqService.reopenToDraft(id, userId);
+}

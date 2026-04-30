@@ -112,6 +112,9 @@ export interface IBOQService {
   /** Governance transition (draft→submitted→approved→certified→locked) */
   transition(id: string, targetStatus: BOQItemStatus, userId: string): Promise<boolean>;
 
+  /** Reopen to draft — unlocks scope fields for editing (ADR-329 §3.3.1) */
+  reopenToDraft(id: string, userId: string): Promise<boolean>;
+
   /** Αναζήτηση (companyId required for tenant isolation) */
   search(companyId: string, buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]>;
 

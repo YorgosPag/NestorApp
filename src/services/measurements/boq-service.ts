@@ -15,6 +15,7 @@ import type {
   BOQCategory,
   BOQSummary,
   BOQItemStatus,
+  BOQScope,
   CreateBOQItemInput,
   UpdateBOQItemInput,
 } from '@/types/boq';
@@ -45,6 +46,67 @@ const BOQ_ALLOWED_TRANSITIONS: Record<BOQItemStatus, BOQItemStatus[]> = {
 function isTransitionAllowed(from: BOQItemStatus, to: BOQItemStatus): boolean {
   if (from === to) return true;
   return BOQ_ALLOWED_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+// ============================================================================
+// SCOPE VALIDATION (ADR-329 §3.3)
+// ============================================================================
+
+interface ScopeFields {
+  scope?: BOQScope;
+  linkedFloorId?: string | null;
+  linkedUnitId?: string | null;
+  linkedUnitIds?: string[] | null;
+}
+
+function validateScopeFields(input: ScopeFields & { scope: BOQScope }): void {
+  const { scope, linkedFloorId, linkedUnitId, linkedUnitIds } = input;
+  switch (scope) {
+    case 'building':
+    case 'common_areas':
+      if (linkedFloorId || linkedUnitId || (linkedUnitIds && linkedUnitIds.length > 0)) {
+        throw new Error(`VALIDATION_ERROR: scope=${scope} cannot have linkedFloorId/linkedUnitId/linkedUnitIds`);
+      }
+      return;
+    case 'floor':
+      if (!linkedFloorId) {
+        throw new Error('VALIDATION_ERROR: scope=floor requires linkedFloorId');
+      }
+      if (linkedUnitId || (linkedUnitIds && linkedUnitIds.length > 0)) {
+        throw new Error('VALIDATION_ERROR: scope=floor cannot have linkedUnitId/linkedUnitIds');
+      }
+      return;
+    case 'property':
+      if (!linkedUnitId) {
+        throw new Error('VALIDATION_ERROR: scope=property requires linkedUnitId');
+      }
+      if (linkedFloorId || (linkedUnitIds && linkedUnitIds.length > 0)) {
+        throw new Error('VALIDATION_ERROR: scope=property cannot have linkedFloorId/linkedUnitIds');
+      }
+      return;
+    case 'properties':
+      if (!linkedUnitIds || linkedUnitIds.length < 2) {
+        throw new Error('VALIDATION_ERROR: scope=properties requires linkedUnitIds with at least 2 ids');
+      }
+      if (linkedFloorId || linkedUnitId) {
+        throw new Error('VALIDATION_ERROR: scope=properties cannot have linkedFloorId/linkedUnitId');
+      }
+      return;
+  }
+}
+
+const SCOPE_LOCK_FIELDS: ReadonlyArray<keyof UpdateBOQItemInput | keyof CreateBOQItemInput> = [
+  'scope', 'linkedFloorId', 'linkedUnitId', 'linkedUnitIds',
+  'costAllocationMethod', 'customAllocations',
+];
+
+function rejectScopeMutationIfLocked(current: BOQItem, data: UpdateBOQItemInput): void {
+  if (current.status === 'draft') return;
+  for (const field of SCOPE_LOCK_FIELDS) {
+    if (field in data) {
+      throw new Error(`SCOPE_LOCKED_AFTER_SUBMIT: cannot modify ${field} once status=${current.status}`);
+    }
+  }
 }
 
 // ============================================================================
@@ -97,6 +159,7 @@ class BOQService implements IBOQService {
     if (data.estimatedQuantity < 0) {
       throw new Error('VALIDATION_ERROR: Quantity cannot be negative');
     }
+    validateScopeFields(data);
 
     // Apply default waste factor from category if not provided
     const wasteFactor = data.wasteFactor ?? getDefaultWasteFactor(data.categoryCode);
@@ -122,6 +185,10 @@ class BOQService implements IBOQService {
       logger.warn('Attempted to update locked BOQ item', { id });
       throw new Error('GOVERNANCE_ERROR: Locked item — updates not allowed');
     }
+
+    // ADR-329 §3.3.1 — Scope mutability lock: scope-related fields frozen
+    // once status leaves draft. Use reopenToDraft() to unlock.
+    rejectScopeMutationIfLocked(current, data);
 
     // Governance: certified items — μόνο actualQuantity
     if (current.status === 'certified') {
@@ -185,6 +252,22 @@ class BOQService implements IBOQService {
 
   duplicate(id: string): Promise<BOQItem | null> {
     return this.repository.duplicate(id);
+  }
+
+  // --- REOPEN TO DRAFT (ADR-329 §3.3.1) ---
+
+  async reopenToDraft(id: string, userId: string): Promise<boolean> {
+    const current = await this.repository.getById(id);
+    if (!current) {
+      logger.warn('BOQ item not found for reopenToDraft', { id });
+      return false;
+    }
+    if (current.status === 'draft') return true;
+    if (current.status === 'locked') {
+      logger.warn('Cannot reopen locked BOQ item', { id });
+      throw new Error('GOVERNANCE_ERROR: Locked items cannot be reopened');
+    }
+    return this.repository.updateStatus(id, 'draft', userId);
   }
 
   // --- GOVERNANCE TRANSITIONS ---

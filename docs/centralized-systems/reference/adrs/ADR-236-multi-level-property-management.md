@@ -255,6 +255,10 @@ Google contract: **αν A→B δημιουργεί N level cards, τότε B→A
 - Per-level finishes preservation σε flat (Phase 2 contract immutable)
 
 ## Changelog
+- **2026-05-01**: BOQ becomes a multi-level consumer — ADR-329 §3.7 codifies the contract.
+  `levels[]` (visibility on every floor a unit occupies) and `levelData[floorId].areas.gross`
+  (partial-area cost allocation) are now consumed by the BOQ scope picker + cost engine.
+  No schema changes — pure consumer integration. Ref: **ADR-329 §3.7.1, §3.7.2, §3.7.3**.
 - **2026-04-17**: Phase 5 — Bidirectional type symmetry, SSoT reconciliation helper, edit-mode parity, auto-save propagation (ADR-287 Batch 22)
 - **2026-04-06**: Phase 4 — Auto-level creation on type change with always/optional/warning flows
 - **2026-03-16**: Phase 3 — Per-level unit floorplan tabs with `levelFloorId` schema field

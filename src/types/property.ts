@@ -480,6 +480,12 @@ export interface Property {
   levels?: PropertyLevel[];
   /** Per-level content data keyed by floorId — multi-level units only (ADR-236 Phase 2) */
   levelData?: Record<string, LevelData>;
+
+  // === SOFT ARCHIVE (ADR-329 §3.9) ===
+  /** Soft-delete timestamp — null = active, Timestamp = archived */
+  archivedAt?: Timestamp | null;
+  /** UserId of who archived (null if not archived) */
+  archivedBy?: string | null;
 }
 
 // =============================================================================

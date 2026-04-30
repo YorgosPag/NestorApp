@@ -1085,5 +1085,19 @@
       "floorplan": "Floorplan",
       "photos": "Photos"
     }
+  },
+  "deletion": {
+    "blockedTitle": "Cannot delete «{propertyName}»",
+    "blockedBody": "This property is used in {count} measurement tasks:",
+    "draftRefs": "{count} drafts",
+    "submittedRefs": "{count} submitted (incl. approved/certified)",
+    "lockedRefs": "{count} locked",
+    "viewTasksLink": "View tasks",
+    "archiveOption": "Alternatively, you can archive the property. It will be hidden from lists/pickers but the tasks remain intact.",
+    "cancel": "Cancel",
+    "archiveButton": "Archive instead of deleting",
+    "archiveSuccess": "Property archived.",
+    "restoreButton": "Restore",
+    "archivedBadge": "archived"
   }
 }

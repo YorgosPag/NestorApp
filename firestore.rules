@@ -2758,11 +2758,12 @@ service cloud.firestore {
 
       // ✍️ CREATE: Authenticated user with required fields + tenant check
       // 🔒 SECURITY (ADR-252 FR-H1): companyId MUST match user's company claim
+      // 📐 ADR-329 §3.3: scope must be one of 5 levels.
       allow create: if isAuthenticated()
                     && resource == null
                     && request.resource.data.keys().hasAll([
                          'companyId', 'projectId', 'buildingId',
-                         'categoryCode', 'title', 'unit', 'status',
+                         'categoryCode', 'title', 'unit', 'status', 'scope',
                          'estimatedQuantity', 'createdAt', 'updatedAt'
                        ])
                     && request.resource.data.companyId is string
@@ -2775,9 +2776,13 @@ service cloud.firestore {
                     && request.resource.data.status in [
                          'draft', 'submitted', 'approved', 'certified', 'locked'
                        ]
+                    && request.resource.data.scope in [
+                         'building', 'common_areas', 'floor', 'property', 'properties'
+                       ]
                     && request.resource.data.estimatedQuantity is number;
 
       // ✏️ UPDATE: Tenant-scoped (buildingId and projectId immutable)
+      // 📐 ADR-329 §3.3.1: scope-related fields immutable once status leaves draft.
       allow update: if isAuthenticated()
                     && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId))
                     && request.resource.data.buildingId == resource.data.buildingId
@@ -2785,7 +2790,23 @@ service cloud.firestore {
                     && request.resource.data.companyId == resource.data.companyId
                     && request.resource.data.status in [
                          'draft', 'submitted', 'approved', 'certified', 'locked'
-                       ];
+                       ]
+                    && (
+                         resource.data.status == 'draft'
+                         || (
+                              request.resource.data.scope == resource.data.scope
+                              && request.resource.data.get('linkedFloorId', null)
+                                 == resource.data.get('linkedFloorId', null)
+                              && request.resource.data.get('linkedUnitId', null)
+                                 == resource.data.get('linkedUnitId', null)
+                              && request.resource.data.get('linkedUnitIds', null)
+                                 == resource.data.get('linkedUnitIds', null)
+                              && request.resource.data.get('costAllocationMethod', 'by_area')
+                                 == resource.data.get('costAllocationMethod', 'by_area')
+                              && request.resource.data.get('customAllocations', null)
+                                 == resource.data.get('customAllocations', null)
+                            )
+                       );
 
       // 🗑️ DELETE: Tenant-scoped (only draft/submitted items)
       allow delete: if isAuthenticated()
@@ -3551,7 +3572,9 @@ service cloud.firestore {
         // Metadata
         'updatedAt', 'updatedBy',
         // Operational
-        'operationalStatus', 'unitCoverage'
+        'operationalStatus', 'unitCoverage',
+        // ADR-329 §3.9 — soft archive
+        'archivedAt', 'archivedBy'
       ];
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
     }

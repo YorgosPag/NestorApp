@@ -195,6 +195,62 @@
         "cancel": "Cancel",
         "saving": "Saving..."
       },
+      "scope": {
+        "label": "Scope of Application",
+        "building": "Whole Building",
+        "commonAreas": "Common Areas",
+        "floor": "Whole Floor",
+        "property": "Specific Property",
+        "properties": "Multiple Properties",
+        "floorPickerLabel": "Floor",
+        "floorPickerPlaceholder": "Select floor...",
+        "floorPickerEmpty": "No floors exist for this building.",
+        "floorPickerHint": "Task will be linked to all properties on the floor ({count} properties)",
+        "propertyPickerLabel": "Property",
+        "propertyPickerPlaceholder": "Select property...",
+        "propertiesPickerLabel": "Properties",
+        "propertiesPickerEmpty": "No properties exist for this building.",
+        "propertiesPickerMinError": "Select at least 2 properties or use «Specific Property».",
+        "multiSelect": {
+          "selectedHeader": "Selected ({count})",
+          "selectedEmpty": "No properties selected",
+          "groupHeader": "{floorName} ({count} properties)",
+          "searchPlaceholder": "Search property (name or code)...",
+          "selectAllOnFloor": "Select all on floor",
+          "removeChip": "Remove",
+          "suggestSwitchToFloor": "Looks like you mean «Whole Floor». Auto-switch?",
+          "suggestSwitchConfirm": "Yes, switch",
+          "suggestSwitchDismiss": "No, continue"
+        },
+        "costAllocation": {
+          "label": "Cost Allocation",
+          "byArea": "By area (automatic)",
+          "byAreaHint": "Proportional to each property's area",
+          "equal": "Equal",
+          "equalHint": "Same amount per property",
+          "custom": "Custom percentages",
+          "customHint": "You set the percentage for each property",
+          "customTotalLabel": "Total",
+          "customTotalValid": "✓ 100%",
+          "customTotalInvalid": "Total: {percent}% (must be 100%)",
+          "previewHeader": "Allocation preview",
+          "byAreaFallbackWarning": "Property {code} has no area. Auto-fallback to «Equal».",
+          "partialAreaWarning": "Property {code} has no per-level areas. Contributes with its total area."
+        },
+        "scopeLock": {
+          "tooltip": "Cannot change after submission. Cancel and create a new task or use «Reopen to Draft».",
+          "reopenButton": "Reopen to Draft",
+          "reopenConfirmTitle": "Reopen to Draft",
+          "reopenConfirmBody": "The task will return to «Draft» status. Scope fields will unlock for editing.",
+          "reopenSuccess": "Task reopened to draft."
+        },
+        "singlePropertyFloorToast": {
+          "title": "Floor has only 1 property",
+          "body": "{floorName} has only 1 property ({propertyCode}). Did you mean «Specific Property»?",
+          "confirm": "Yes, switch",
+          "dismiss": "No, continue"
+        }
+      },
       "empty": {
         "title": "No measurements",
         "description": "No items have been added to this building.",

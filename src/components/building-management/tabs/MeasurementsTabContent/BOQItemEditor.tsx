@@ -1,15 +1,20 @@
 /**
- * BOQItemEditor — Dialog form for creating/editing BOQ items
+ * BOQItemEditor — Slide-over drawer for creating/editing BOQ items (ADR-329)
+ *
+ * Wrapped in Radix Sheet (right-side drawer, 900px). 2-column body:
+ * left = Basic info + Scope + Cost Allocation + Notes; right = Quantities +
+ * Costs + Totals. Sticky footer with Save/Cancel + optional Reopen-to-Draft.
  *
  * @module components/building-management/tabs/MeasurementsTabContent/BOQItemEditor
- * @see ADR-175 §4.4.3 (SCREEN 2)
+ * @see ADR-175 §4.4.3, ADR-329 §3.0 (drawer), §3.1 (5 scopes), §3.1.1 (cost allocation)
  */
 
 'use client';
 
+import { useMemo } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
-} from '@/components/ui/dialog';
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,12 +27,14 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BOQItem, BOQItemStatus, BOQMeasurementUnit } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import type { CreateBOQItemInput, UpdateBOQItemInput } from '@/types/boq';
+import { usePropertiesByBuilding } from '@/components/properties/shared/usePropertiesByBuilding';
 import '@/lib/design-system';
 
-// 🏢 ENTERPRISE: Extracted state hook
 import { useBOQEditorState } from './useBOQEditorState';
+import { BOQEditorScopeSection } from './BOQEditorScopeSection';
+import { BOQEditorCostAllocationSection } from './BOQEditorCostAllocationSection';
+import { resolveTargetProperties } from './boq-target-properties';
 
-// Re-exports
 export { type EditorFormState } from './useBOQEditorState';
 
 interface BOQItemEditorProps {
@@ -38,151 +45,399 @@ interface BOQItemEditorProps {
   projectId: string;
   categories: readonly MasterBOQCategory[];
   onSave: (data: CreateBOQItemInput | UpdateBOQItemInput, isNew: boolean) => Promise<void>;
+  /** Optional: when provided, "Reopen to Draft" button shown for non-draft, non-locked items. */
+  onReopenToDraft?: (id: string) => Promise<void>;
 }
 
-export function BOQItemEditor({ open, onClose, item, buildingId, projectId, categories, onSave }: BOQItemEditorProps) {
-  const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
+export function BOQItemEditor({
+  open, onClose, item, buildingId, projectId, categories, onSave, onReopenToDraft,
+}: BOQItemEditorProps) {
+  const { t } = useTranslation([
+    'building', 'building-address', 'building-filters', 'building-storage',
+    'building-tabs', 'building-timeline',
+  ]);
   const colors = useSemanticColors();
 
   const {
-    form, saving, isEdit,
+    form, saving, isEdit, scopeLocked,
     grossQuantity, materialCost, laborCost, equipmentCost, totalCost,
-    allowedUnits, availableStatuses,
-    updateField, handleCategoryChange, handleSave,
+    allowedUnits, availableStatuses, scopeValidation, customAllocationsValid,
+    updateField, handleScopeChange, handleCategoryChange, handleSave,
   } = useBOQEditorState({ open, item, categories, buildingId, projectId, onSave, onClose });
 
+  const { properties } = usePropertiesByBuilding(buildingId, { enabled: open });
+
+  const targetProperties = useMemo(
+    () => resolveTargetProperties(
+      form.scope, form.linkedFloorId, form.linkedUnitId, form.linkedUnitIds, properties,
+    ),
+    [form.scope, form.linkedFloorId, form.linkedUnitId, form.linkedUnitIds, properties],
+  );
+
+  const showReopen = isEdit
+    && onReopenToDraft != null
+    && form.status !== 'draft'
+    && form.status !== 'locked';
+
+  const handleReopen = async () => {
+    if (!item || !onReopenToDraft) return;
+    await onReopenToDraft(item.id);
+  };
+
+  const saveDisabled = saving
+    || !form.title.trim()
+    || !scopeValidation.valid
+    || !customAllocationsValid;
+
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? t('tabs.measurements.editor.editTitle') : t('tabs.measurements.editor.createTitle')}</DialogTitle>
-          <DialogDescription>{isEdit ? item?.title : t('tabs.measurements.editor.sections.basic')}</DialogDescription>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-[900px]"
+      >
+        <SheetHeader className="border-b px-6 py-4">
+          <SheetTitle>
+            {isEdit
+              ? t('tabs.measurements.editor.editTitle')
+              : t('tabs.measurements.editor.createTitle')}
+          </SheetTitle>
+          <SheetDescription>
+            {isEdit ? item?.title : t('tabs.measurements.editor.sections.basic')}
+          </SheetDescription>
+        </SheetHeader>
 
-        <form onSubmit={(e) => { e.preventDefault(); void handleSave(); }} className="space-y-2">
-          {/* Basic Info */}
-          <fieldset className="space-y-2">
-            <legend className={cn("text-sm font-semibold", colors.text.muted)}>{t('tabs.measurements.editor.sections.basic')}</legend>
-            <section className="space-y-1.5">
-              <Label>{t('tabs.measurements.editor.fields.category')}</Label>
-              <Select value={form.categoryCode} onValueChange={handleCategoryChange} disabled={isEdit}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => <SelectItem key={cat.code} value={cat.code}>{cat.code} — {cat.nameEL}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </section>
-            <section className="space-y-1.5">
-              <Label>{t('tabs.measurements.editor.fields.title')} *</Label>
-              <Input value={form.title} onChange={(e) => updateField('title', e.target.value)} placeholder={t('tabs.measurements.editor.fields.titlePlaceholder')} required />
-            </section>
-            <section className="space-y-1.5">
-              <Label>{t('tabs.measurements.editor.fields.specifications')}</Label>
-              <Textarea size="sm" value={form.description} onChange={(e) => updateField('description', e.target.value)} placeholder={t('tabs.measurements.editor.fields.specificationsPlaceholder')} rows={3} className="resize-none" />
-            </section>
-          </fieldset>
+        <form
+          onSubmit={(e) => { e.preventDefault(); void handleSave(); }}
+          className="flex-1 overflow-y-auto px-6 py-4"
+        >
+          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <article className="flex flex-col gap-4">
+              <BasicInfoFieldset
+                form={form}
+                isEdit={isEdit}
+                categories={categories}
+                onCategoryChange={handleCategoryChange}
+                onUpdateField={updateField}
+                colors={colors}
+                t={t}
+              />
 
-          {/* Scope (create only) */}
-          {!isEdit && (
-            <fieldset className="space-y-2">
-              <legend className={cn("text-sm font-semibold", colors.text.muted)}>{t('tabs.measurements.editor.sections.scope')}</legend>
-              <section className="flex items-center gap-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="scope" value="building" checked={form.scope === 'building'} onChange={() => updateField('scope', 'building')} className="accent-primary" />
-                  <span className="text-sm">{t('tabs.measurements.editor.fields.scopeBuilding')}</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="scope" value="property" checked={form.scope === 'property'} onChange={() => updateField('scope', 'property')} className="accent-primary" />
-                  <span className="text-sm">{t('tabs.measurements.editor.fields.scopeUnit')}</span>
-                </label>
-              </section>
-            </fieldset>
-          )}
+              <BOQEditorScopeSection
+                buildingId={buildingId}
+                scope={form.scope}
+                linkedFloorId={form.linkedFloorId}
+                linkedUnitId={form.linkedUnitId}
+                linkedUnitIds={form.linkedUnitIds}
+                scopeLocked={scopeLocked}
+                onScopeChange={handleScopeChange}
+                onLinkedFloorIdChange={(id) => updateField('linkedFloorId', id)}
+                onLinkedUnitIdChange={(id) => updateField('linkedUnitId', id)}
+                onLinkedUnitIdsChange={(ids) => updateField('linkedUnitIds', ids)}
+              />
 
-          {/* Quantities */}
-          <fieldset className="space-y-2">
-            <legend className={cn("text-sm font-semibold", colors.text.muted)}>{t('tabs.measurements.editor.sections.quantities')}</legend>
-            <section className="grid grid-cols-2 gap-2">
-              <article className="space-y-1.5">
-                <Label>{t('tabs.measurements.editor.fields.measurementUnit')}</Label>
-                <Select value={form.unit} onValueChange={(v) => updateField('unit', v as BOQMeasurementUnit)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{allowedUnits.map((u) => <SelectItem key={u} value={u}>{t(`tabs.measurements.units.${u}`)} ({u})</SelectItem>)}</SelectContent>
-                </Select>
-              </article>
-              <article className="space-y-1.5">
-                <Label>{t('tabs.measurements.editor.fields.estimatedQuantity')}</Label>
-                <Input type="number" min="0" step="0.01" value={form.estimatedQuantity} onChange={(e) => updateField('estimatedQuantity', e.target.value)} />
-              </article>
-              <article className="space-y-1.5">
-                <Label>{t('tabs.measurements.editor.fields.wasteFactor')}</Label>
-                <Input type="number" min="0" max="100" step="1" value={form.wasteFactor} onChange={(e) => updateField('wasteFactor', e.target.value)} />
-              </article>
-              <article className="space-y-1.5">
-                <Label>{t('tabs.measurements.editor.fields.grossQuantity')}</Label>
-                <Input type="text" value={formatNumber(grossQuantity, { maximumFractionDigits: 2 })} disabled className="bg-muted tabular-nums" />
-              </article>
-              {isEdit && (
-                <article className="space-y-1.5 col-span-2 sm:col-span-1">
-                  <Label>{t('tabs.measurements.editor.fields.actualQuantity')}</Label>
-                  <Input type="number" min="0" step="0.01" value={form.actualQuantity} onChange={(e) => updateField('actualQuantity', e.target.value)} placeholder="—" />
-                </article>
-              )}
-            </section>
-          </fieldset>
+              <BOQEditorCostAllocationSection
+                scope={form.scope}
+                method={form.costAllocationMethod}
+                customAllocations={form.customAllocations}
+                targetProperties={targetProperties}
+                scopeLocked={scopeLocked}
+                onMethodChange={(m) => updateField('costAllocationMethod', m)}
+                onCustomAllocationsChange={(next) => updateField('customAllocations', next)}
+              />
+            </article>
 
-          {/* Costs */}
-          <fieldset className="space-y-2">
-            <legend className={cn("text-sm font-semibold", colors.text.muted)}>{t('tabs.measurements.editor.sections.costs')}</legend>
-            <section className="grid grid-cols-3 gap-2">
-              <article className="space-y-1.5">
-                <Label>{t('tabs.measurements.editor.fields.materialUnitCost')}</Label>
-                <Input type="number" min="0" step="0.01" value={form.materialUnitCost} onChange={(e) => updateField('materialUnitCost', e.target.value)} />
-              </article>
-              <article className="space-y-1.5">
-                <Label>{t('tabs.measurements.editor.fields.laborUnitCost')}</Label>
-                <Input type="number" min="0" step="0.01" value={form.laborUnitCost} onChange={(e) => updateField('laborUnitCost', e.target.value)} />
-              </article>
-              <article className="space-y-1.5">
-                <Label>{t('tabs.measurements.editor.fields.equipmentUnitCost')}</Label>
-                <Input type="number" min="0" step="0.01" value={form.equipmentUnitCost} onChange={(e) => updateField('equipmentUnitCost', e.target.value)} />
-              </article>
-            </section>
-          </fieldset>
+            <article className="flex flex-col gap-4">
+              <QuantitiesFieldset
+                form={form}
+                isEdit={isEdit}
+                allowedUnits={allowedUnits}
+                grossQuantity={grossQuantity}
+                onUpdateField={updateField}
+                colors={colors}
+                t={t}
+              />
 
-          {/* Totals */}
-          <fieldset className="space-y-2 rounded-lg bg-muted/50 p-2">
-            <legend className={cn("text-sm font-semibold", colors.text.muted)}>{t('tabs.measurements.editor.sections.totals')}</legend>
-            <p className={cn("text-sm", colors.text.muted)}>{t('tabs.measurements.editor.fields.materialUnitCost')}: {formatCurrency(materialCost * grossQuantity)}</p>
-            <p className={cn("text-sm", colors.text.muted)}>{t('tabs.measurements.editor.fields.laborUnitCost')}: {formatCurrency(laborCost * grossQuantity)}</p>
-            <p className={cn("text-sm", colors.text.muted)}>{t('tabs.measurements.editor.fields.equipmentUnitCost')}: {formatCurrency(equipmentCost * grossQuantity)}</p>
-            <p className="text-base font-semibold tabular-nums">{t('tabs.measurements.summary.total')}: {formatCurrency(totalCost)}</p>
-          </fieldset>
+              <CostsFieldset
+                form={form}
+                onUpdateField={updateField}
+                colors={colors}
+                t={t}
+              />
 
-          {/* Notes + Status */}
-          <fieldset className="space-y-2">
-            <legend className={cn("text-sm font-semibold", colors.text.muted)}>{t('tabs.measurements.editor.sections.link')}</legend>
-            <section className="space-y-1.5">
-              <Label>{t('tabs.measurements.editor.fields.notes')}</Label>
-              <Textarea size="sm" value={form.notes} onChange={(e) => updateField('notes', e.target.value)} placeholder={t('tabs.measurements.editor.fields.notesPlaceholder')} rows={2} className="resize-none" />
-            </section>
-            {isEdit && availableStatuses.length > 1 && (
-              <section className="space-y-1.5">
-                <Label>{t('tabs.measurements.editor.fields.statusLabel')}</Label>
-                <Select value={form.status} onValueChange={(v) => updateField('status', v as BOQItemStatus)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{availableStatuses.map((s) => <SelectItem key={s} value={s}>{t(`tabs.measurements.status.${s}`)}</SelectItem>)}</SelectContent>
-                </Select>
-              </section>
-            )}
-          </fieldset>
+              <TotalsFieldset
+                grossQuantity={grossQuantity}
+                materialCost={materialCost}
+                laborCost={laborCost}
+                equipmentCost={equipmentCost}
+                totalCost={totalCost}
+                colors={colors}
+                t={t}
+              />
+
+              <NotesAndStatusFieldset
+                form={form}
+                isEdit={isEdit}
+                availableStatuses={availableStatuses}
+                onUpdateField={updateField}
+                colors={colors}
+                t={t}
+              />
+            </article>
+          </section>
         </form>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>{t('tabs.measurements.editor.cancel')}</Button>
-          <Button onClick={() => void handleSave()} disabled={saving || !form.title.trim()}>{saving ? t('tabs.measurements.editor.saving') : t('tabs.measurements.editor.save')}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <footer className="flex items-center justify-between gap-2 border-t bg-background px-6 py-3">
+          <section>
+            {showReopen && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={saving}
+                onClick={() => void handleReopen()}
+              >
+                {t('tabs.measurements.scope.scopeLock.reopenButton')}
+              </Button>
+            )}
+          </section>
+          <section className="flex items-center gap-2">
+            <p className="text-sm font-semibold tabular-nums">
+              {t('tabs.measurements.summary.total')}: {formatCurrency(totalCost)}
+            </p>
+            <Button variant="outline" onClick={onClose} disabled={saving}>
+              {t('tabs.measurements.editor.cancel')}
+            </Button>
+            <Button onClick={() => void handleSave()} disabled={saveDisabled}>
+              {saving
+                ? t('tabs.measurements.editor.saving')
+                : t('tabs.measurements.editor.save')}
+            </Button>
+          </section>
+        </footer>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// ============================================================================
+// SUB-FIELDSETS
+// ============================================================================
+
+interface FieldsetCommon {
+  colors: ReturnType<typeof useSemanticColors>;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}
+
+interface BasicInfoProps extends FieldsetCommon {
+  form: ReturnType<typeof useBOQEditorState>['form'];
+  isEdit: boolean;
+  categories: readonly MasterBOQCategory[];
+  onCategoryChange: (code: string) => void;
+  onUpdateField: ReturnType<typeof useBOQEditorState>['updateField'];
+}
+
+function BasicInfoFieldset({ form, isEdit, categories, onCategoryChange, onUpdateField, colors, t }: BasicInfoProps) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className={cn('text-sm font-semibold', colors.text.muted)}>
+        {t('tabs.measurements.editor.sections.basic')}
+      </legend>
+      <section className="space-y-1.5">
+        <Label>{t('tabs.measurements.editor.fields.category')}</Label>
+        <Select value={form.categoryCode} onValueChange={onCategoryChange} disabled={isEdit}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {categories.map((cat) => (
+              <SelectItem key={cat.code} value={cat.code}>{cat.code} — {cat.nameEL}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </section>
+      <section className="space-y-1.5">
+        <Label>{t('tabs.measurements.editor.fields.title')} *</Label>
+        <Input
+          value={form.title}
+          onChange={(e) => onUpdateField('title', e.target.value)}
+          placeholder={t('tabs.measurements.editor.fields.titlePlaceholder')}
+          required
+        />
+      </section>
+      <section className="space-y-1.5">
+        <Label>{t('tabs.measurements.editor.fields.specifications')}</Label>
+        <Textarea
+          size="sm"
+          value={form.description}
+          onChange={(e) => onUpdateField('description', e.target.value)}
+          placeholder={t('tabs.measurements.editor.fields.specificationsPlaceholder')}
+          rows={3}
+          className="resize-none"
+        />
+      </section>
+    </fieldset>
+  );
+}
+
+interface QuantitiesProps extends FieldsetCommon {
+  form: ReturnType<typeof useBOQEditorState>['form'];
+  isEdit: boolean;
+  allowedUnits: BOQMeasurementUnit[];
+  grossQuantity: number;
+  onUpdateField: ReturnType<typeof useBOQEditorState>['updateField'];
+}
+
+function QuantitiesFieldset({ form, isEdit, allowedUnits, grossQuantity, onUpdateField, colors, t }: QuantitiesProps) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className={cn('text-sm font-semibold', colors.text.muted)}>
+        {t('tabs.measurements.editor.sections.quantities')}
+      </legend>
+      <section className="grid grid-cols-2 gap-2">
+        <article className="space-y-1.5">
+          <Label>{t('tabs.measurements.editor.fields.measurementUnit')}</Label>
+          <Select value={form.unit} onValueChange={(v) => onUpdateField('unit', v as BOQMeasurementUnit)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {allowedUnits.map((u) => (
+                <SelectItem key={u} value={u}>{t(`tabs.measurements.units.${u}`)} ({u})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </article>
+        <article className="space-y-1.5">
+          <Label>{t('tabs.measurements.editor.fields.estimatedQuantity')}</Label>
+          <Input
+            type="number" min="0" step="0.01"
+            value={form.estimatedQuantity}
+            onChange={(e) => onUpdateField('estimatedQuantity', e.target.value)}
+          />
+        </article>
+        <article className="space-y-1.5">
+          <Label>{t('tabs.measurements.editor.fields.wasteFactor')}</Label>
+          <Input
+            type="number" min="0" max="100" step="1"
+            value={form.wasteFactor}
+            onChange={(e) => onUpdateField('wasteFactor', e.target.value)}
+          />
+        </article>
+        <article className="space-y-1.5">
+          <Label>{t('tabs.measurements.editor.fields.grossQuantity')}</Label>
+          <Input
+            type="text"
+            value={formatNumber(grossQuantity, { maximumFractionDigits: 2 })}
+            disabled
+            className="bg-muted tabular-nums"
+          />
+        </article>
+        {isEdit && (
+          <article className="space-y-1.5 col-span-2 sm:col-span-1">
+            <Label>{t('tabs.measurements.editor.fields.actualQuantity')}</Label>
+            <Input
+              type="number" min="0" step="0.01"
+              value={form.actualQuantity}
+              onChange={(e) => onUpdateField('actualQuantity', e.target.value)}
+              placeholder="—"
+            />
+          </article>
+        )}
+      </section>
+    </fieldset>
+  );
+}
+
+interface CostsProps extends FieldsetCommon {
+  form: ReturnType<typeof useBOQEditorState>['form'];
+  onUpdateField: ReturnType<typeof useBOQEditorState>['updateField'];
+}
+
+function CostsFieldset({ form, onUpdateField, colors, t }: CostsProps) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className={cn('text-sm font-semibold', colors.text.muted)}>
+        {t('tabs.measurements.editor.sections.costs')}
+      </legend>
+      <section className="grid grid-cols-3 gap-2">
+        {(['materialUnitCost', 'laborUnitCost', 'equipmentUnitCost'] as const).map((field) => (
+          <article key={field} className="space-y-1.5">
+            <Label>{t(`tabs.measurements.editor.fields.${field}`)}</Label>
+            <Input
+              type="number" min="0" step="0.01"
+              value={form[field]}
+              onChange={(e) => onUpdateField(field, e.target.value)}
+            />
+          </article>
+        ))}
+      </section>
+    </fieldset>
+  );
+}
+
+interface TotalsProps extends FieldsetCommon {
+  grossQuantity: number;
+  materialCost: number;
+  laborCost: number;
+  equipmentCost: number;
+  totalCost: number;
+}
+
+function TotalsFieldset({ grossQuantity, materialCost, laborCost, equipmentCost, totalCost, colors, t }: TotalsProps) {
+  return (
+    <fieldset className="space-y-2 rounded-lg bg-muted/50 p-2">
+      <legend className={cn('text-sm font-semibold', colors.text.muted)}>
+        {t('tabs.measurements.editor.sections.totals')}
+      </legend>
+      <p className={cn('text-sm', colors.text.muted)}>
+        {t('tabs.measurements.editor.fields.materialUnitCost')}: {formatCurrency(materialCost * grossQuantity)}
+      </p>
+      <p className={cn('text-sm', colors.text.muted)}>
+        {t('tabs.measurements.editor.fields.laborUnitCost')}: {formatCurrency(laborCost * grossQuantity)}
+      </p>
+      <p className={cn('text-sm', colors.text.muted)}>
+        {t('tabs.measurements.editor.fields.equipmentUnitCost')}: {formatCurrency(equipmentCost * grossQuantity)}
+      </p>
+      <p className="text-base font-semibold tabular-nums">
+        {t('tabs.measurements.summary.total')}: {formatCurrency(totalCost)}
+      </p>
+    </fieldset>
+  );
+}
+
+interface NotesAndStatusProps extends FieldsetCommon {
+  form: ReturnType<typeof useBOQEditorState>['form'];
+  isEdit: boolean;
+  availableStatuses: BOQItemStatus[];
+  onUpdateField: ReturnType<typeof useBOQEditorState>['updateField'];
+}
+
+function NotesAndStatusFieldset({ form, isEdit, availableStatuses, onUpdateField, colors, t }: NotesAndStatusProps) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className={cn('text-sm font-semibold', colors.text.muted)}>
+        {t('tabs.measurements.editor.sections.link')}
+      </legend>
+      <section className="space-y-1.5">
+        <Label>{t('tabs.measurements.editor.fields.notes')}</Label>
+        <Textarea
+          size="sm"
+          value={form.notes}
+          onChange={(e) => onUpdateField('notes', e.target.value)}
+          placeholder={t('tabs.measurements.editor.fields.notesPlaceholder')}
+          rows={2}
+          className="resize-none"
+        />
+      </section>
+      {isEdit && availableStatuses.length > 1 && (
+        <section className="space-y-1.5">
+          <Label>{t('tabs.measurements.editor.fields.statusLabel')}</Label>
+          <Select value={form.status} onValueChange={(v) => onUpdateField('status', v as BOQItemStatus)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {availableStatuses.map((s) => (
+                <SelectItem key={s} value={s}>{t(`tabs.measurements.status.${s}`)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </section>
+      )}
+    </fieldset>
   );
 }

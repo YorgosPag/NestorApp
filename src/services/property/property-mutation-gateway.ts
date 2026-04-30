@@ -11,6 +11,12 @@ import {
 } from '@/services/properties.service';
 import { propagateEntityLabelRenameWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import {
+  archiveProperty,
+  checkBOQReferences,
+  loadPropertyContext,
+  restoreProperty,
+} from './property-deletion-guard';
 
 const SOLD_LOCKED_FIELDS: ReadonlySet<string> = new Set([
   'code', 'type', 'name', 'areas', 'layout', 'floor', 'floorId',
@@ -399,7 +405,43 @@ export async function deletePropertyWithPolicy({
     throw new PropertyMutationPolicyError('Cannot delete an unsaved property.');
   }
 
+  // ADR-329 §3.9 — defense-in-depth: BOQ-reference guard at the service
+  // boundary. UI should call checkBOQReferences() first and offer the
+  // archive flow; this throw is the fail-safe.
+  const ctx = await loadPropertyContext(propertyId);
+  if (ctx) {
+    const report = await checkBOQReferences(ctx.companyId, ctx.buildingId, propertyId);
+    if (report.blocked) {
+      throw new PropertyMutationPolicyError(
+        `BOQ_REFERENCES_BLOCK_DELETE: ${report.totalRefs} measurement task(s) reference this property`,
+      );
+    }
+  }
+
   return deletePropertyRecord(propertyId);
+}
+
+export async function archivePropertyWithPolicy({
+  propertyId, userId,
+}: { propertyId: string; userId: string }): Promise<{ success: boolean }> {
+  if (!propertyId || propertyId === '__new__') {
+    throw new PropertyMutationPolicyError('Cannot archive an unsaved property.');
+  }
+  if (!userId) {
+    throw new PropertyMutationPolicyError('Archive requires authenticated user.');
+  }
+  await archiveProperty(propertyId, userId);
+  return { success: true };
+}
+
+export async function restorePropertyWithPolicy({
+  propertyId,
+}: { propertyId: string }): Promise<{ success: boolean }> {
+  if (!propertyId) {
+    throw new PropertyMutationPolicyError('Cannot restore an unsaved property.');
+  }
+  await restoreProperty(propertyId);
+  return { success: true };
 }
 
 export async function updatePropertyCoverageWithPolicy({
