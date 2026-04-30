@@ -628,6 +628,23 @@
         "delete": "Delete"
       }
     },
+    "editDialog": {
+      "title": "Edit Quote",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "lockedTooltip": "Accepted quote — restore to edit",
+      "headerSection": "Quote Details",
+      "linesSection": "Line Items",
+      "inclusionsSection": "Inclusions",
+      "vatIncluded": "VAT included",
+      "laborIncluded": "Labor included",
+      "placeholders": {
+        "paymentTerms": "e.g. 30 days",
+        "deliveryTerms": "e.g. FCA warehouse",
+        "warranty": "e.g. 12 months"
+      }
+    },
     "quoteHeader": {
       "action": {
         "confirm": "Confirm",

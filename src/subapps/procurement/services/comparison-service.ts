@@ -43,8 +43,12 @@ import { fetchVendorNames, resolveVendorName } from './vendor-name-resolver';
 // ============================================================================
 
 function normalizeTco(quote: Quote): TcoNormalization {
-  const vatIncluded = quote.extractedData?.vatIncluded?.value ?? null;
-  const laborIncluded = quote.extractedData?.laborIncluded?.value ?? null;
+  const vatIncluded = quote.vatIncluded !== undefined
+    ? quote.vatIncluded
+    : (quote.extractedData?.vatIncluded?.value ?? null);
+  const laborIncluded = quote.laborIncluded !== undefined
+    ? quote.laborIncluded
+    : (quote.extractedData?.laborIncluded?.value ?? null);
   const rawTotal = quote.totals.total;
   const vatDelta = vatIncluded === false ? Math.round(rawTotal * 0.24 * 100) / 100 : 0;
   return {

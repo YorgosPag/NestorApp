@@ -8,6 +8,7 @@
  * Extracted from RfqDetailClient to keep that file within the 500-line budget.
  */
 
+import { useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -16,6 +17,7 @@ import { useIsMobile } from '@/hooks/useMobile';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { QuoteDetailsHeader } from './QuoteDetailsHeader';
 import { QuoteDetailSummary } from './QuoteDetailSummary';
+import { QuoteEditMode } from './QuoteEditMode';
 import { QuoteOriginalDocumentPanel } from './QuoteOriginalDocumentPanel';
 import type { Quote } from '../types/quote';
 import type {
@@ -64,6 +66,15 @@ export function QuoteRightPane({
   const isMobile = useIsMobile();
   const hasPdf = quote.source === 'scan' || quote.source === 'email_inbox';
 
+  const [editMode, setEditMode] = useState(false);
+
+  const editableOverflowActions = useMemo(
+    () => overflowActions.map((a) =>
+      a.id === 'edit' ? { ...a, onClick: () => setEditMode(true) } : a
+    ),
+    [overflowActions]
+  );
+
   return (
     <>
       <button
@@ -81,19 +92,27 @@ export function QuoteRightPane({
         onRequestRenewal={onRequestRenewal}
         primaryActions={primaryActions}
         secondaryActions={secondaryActions}
-        overflowActions={overflowActions}
+        overflowActions={editableOverflowActions}
         pdfOpen={pdfOpen}
         onTogglePdf={onTogglePdf}
         hasPdf={hasPdf}
       />
 
-      {/* Desktop split: PDF left, summary right */}
-      <div className={cn('mt-2', pdfOpen && !isMobile && 'grid grid-cols-2 gap-3')}>
-        {pdfOpen && !isMobile && (
-          <QuoteOriginalDocumentPanel quoteId={quote.id} companyId={companyId} sticky />
-        )}
-        <QuoteDetailSummary quote={quote} />
-      </div>
+      {editMode ? (
+        <QuoteEditMode
+          quote={quote}
+          onCancel={() => setEditMode(false)}
+          onSaved={() => setEditMode(false)}
+        />
+      ) : (
+        /* Desktop split: PDF left, summary right */
+        <div className={cn('mt-2', pdfOpen && !isMobile && 'grid grid-cols-2 gap-3')}>
+          {pdfOpen && !isMobile && (
+            <QuoteOriginalDocumentPanel quoteId={quote.id} companyId={companyId} sticky />
+          )}
+          <QuoteDetailSummary quote={quote} />
+        </div>
+      )}
 
       {/* Mobile modal */}
       {isMobile && (

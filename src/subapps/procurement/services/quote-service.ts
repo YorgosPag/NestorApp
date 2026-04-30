@@ -6,6 +6,7 @@ import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateQuoteId, generateOptimisticId } from '@/services/enterprise-id.service';
 import { getNextQuoteNumber } from './quote-counters';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToDate } from '@/lib/date-local';
 import admin from 'firebase-admin';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -230,6 +231,14 @@ export async function updateQuote(
       newAudit.push(auditEntry(ctx.uid, 'risk_flag_override', null, dto.overrideReason));
     }
 
+    const isFieldEdit = dto.lines !== undefined ||
+      dto.paymentTerms !== undefined || dto.deliveryTerms !== undefined ||
+      dto.warranty !== undefined || dto.validUntil !== undefined ||
+      dto.vatIncluded !== undefined || dto.laborIncluded !== undefined;
+    if (isFieldEdit) {
+      newAudit.push(auditEntry(ctx.uid, 'field_edit', null, null, 'system'));
+    }
+
     const updates: Partial<Quote> = {
       lines: newLines,
       totals: computeQuoteTotals(newLines, newQuotedTotal),
@@ -238,6 +247,11 @@ export async function updateQuote(
       deliveryTerms: dto.deliveryTerms !== undefined ? dto.deliveryTerms : current.deliveryTerms,
       warranty: dto.warranty !== undefined ? dto.warranty : current.warranty,
       notes: dto.notes !== undefined ? dto.notes : current.notes,
+      validUntil: dto.validUntil !== undefined
+        ? (dto.validUntil ? admin.firestore.Timestamp.fromDate(normalizeToDate(dto.validUntil)!) : null)
+        : current.validUntil,
+      vatIncluded: dto.vatIncluded !== undefined ? dto.vatIncluded : current.vatIncluded,
+      laborIncluded: dto.laborIncluded !== undefined ? dto.laborIncluded : current.laborIncluded,
       status: (dto.status ?? current.status) as QuoteStatus,
       overrideReason: dto.overrideReason ?? current.overrideReason,
       overrideAt: dto.overrideReason ? admin.firestore.Timestamp.now() : current.overrideAt,

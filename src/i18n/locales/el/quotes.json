@@ -628,6 +628,23 @@
         "delete": "Διαγραφή"
       }
     },
+    "editDialog": {
+      "title": "Επεξεργασία Προσφοράς",
+      "save": "Αποθήκευση",
+      "saving": "Αποθήκευση...",
+      "cancel": "Ακύρωση",
+      "lockedTooltip": "Εγκεκριμένη προσφορά — επαναφέρετε για επεξεργασία",
+      "headerSection": "Στοιχεία Προσφοράς",
+      "linesSection": "Γραμμές Προσφοράς",
+      "inclusionsSection": "Περιλαμβάνει",
+      "vatIncluded": "ΦΠΑ περιλαμβάνεται",
+      "laborIncluded": "Εργατικά περιλαμβάνονται",
+      "placeholders": {
+        "paymentTerms": "π.χ. 30 ημέρες",
+        "deliveryTerms": "π.χ. FCA αποθήκη",
+        "warranty": "π.χ. 12 μήνες"
+      }
+    },
     "quoteHeader": {
       "action": {
         "confirm": "Επιβεβαίωση",

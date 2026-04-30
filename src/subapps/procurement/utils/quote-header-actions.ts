@@ -76,10 +76,16 @@ export interface BuildQuoteHeaderActionsParams {
 
 const AWARD_LOCKABLE: readonly QuoteStatus[] = ['submitted', 'under_review', 'rejected'];
 
+const EDIT_LOCKED_STATUSES: readonly QuoteStatus[] = ['accepted', 'archived', 'superseded'];
+
 function isLockedByAward(quote: Quote, rfq: RFQ | null): boolean {
   if (!rfq?.winnerQuoteId) return false;
   if (rfq.winnerQuoteId === quote.id) return false;
   return AWARD_LOCKABLE.includes(quote.status);
+}
+
+function isEditLocked(quote: Quote): boolean {
+  return EDIT_LOCKED_STATUSES.includes(quote.status);
 }
 
 function hasPdfSource(quote: Quote): boolean {
@@ -112,8 +118,12 @@ export function buildQuoteHeaderActions(p: BuildQuoteHeaderActionsParams): Quote
       onClick: p.onOpenComments,
     },
   ];
+  const editLocked = isEditLocked(p.quote);
+  const editTooltip = editLocked
+    ? p.t('rfqs.editDialog.lockedTooltip')
+    : offlineTooltip;
   const overflowActions: QuoteHeaderOverflowAction[] = [
-    { id: 'edit', label: p.t('rfqs.quoteHeader.action.edit'), onClick: p.onEdit, disabled: true, disabledTooltip: comingSoon },
+    { id: 'edit', label: p.t('rfqs.quoteHeader.action.edit'), onClick: p.onEdit, disabled: editLocked || offline, disabledTooltip: editTooltip },
     { id: 'duplicate', label: p.t('rfqs.quoteHeader.action.duplicate'), onClick: p.onDuplicate },
     { id: 'delete', label: p.t('rfqs.quoteHeader.action.delete'), onClick: p.onDelete, destructive: true },
   ];

@@ -1,6 +1,6 @@
 # ADR-333 — Quote Edit Dialog with AI Confidence
 
-**Status:** PROPOSED  
+**Status:** IMPLEMENTED  
 **Date:** 2026-04-30  
 **Author:** Giorgio Pagonis  
 **Supersedes:** N/A  
@@ -46,8 +46,19 @@ Rationale: AI makes mistakes. If only editable at scan time, users are stuck wit
 - ADR-328 §5.I.3 — Edit action placeholder in header actions
 - ADR-328 §5.Z — Line validation (negative price note)
 
+## Implementation notes
+
+- `QuoteEditMode.tsx` — inline edit component with AI confidence left-border per field (≥85% green, 60-84% yellow, <60% red). Reuses `QuoteLineEditorTable`.
+- `QuoteRightPane.tsx` — manages `editMode` state, overrides edit overflow action onClick, shows `QuoteEditMode` in place of `QuoteDetailSummary` when editing.
+- Edit lock: `EDIT_LOCKED_STATUSES = ['accepted', 'archived', 'superseded']` in `quote-header-actions.ts`.
+- `quote-service.ts` — `validUntil` (Timestamp conversion), `vatIncluded`, `laborIncluded` now persisted. `field_edit` audit entry written on content changes.
+- `comparison-service.ts` `normalizeTco()` — prefers `quote.vatIncluded` over `extractedData.vatIncluded` (user overrides TCO normalization).
+- API route: fixed `warrantyTerms` → `warranty` schema key; added `vatIncluded`, `laborIncluded`.
+- Discount-line flag (negative unitPrice) — deferred to V2 (needs `line-validation.ts` + `QuoteLineEditorTable` changes).
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
 | 2026-04-30 | Stub created from ADR-328 §5.CC.3 deferral |
+| 2026-04-30 | IMPLEMENTED — inline edit mode, AI confidence per field, edit lock on accepted/archived, vatIncluded/laborIncluded top-level fields, PATCH fix (warrantyTerms→warranty, validUntil, vatIncluded, laborIncluded) |

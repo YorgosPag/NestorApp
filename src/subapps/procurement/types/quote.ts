@@ -217,6 +217,9 @@ export interface Quote {
   // §5.V vendor notification fields (Phase 12)
   lastNotifiedAt?: Timestamp;
   lastNotifiedTemplate?: 'winner' | 'rejection';
+  // ADR-333 — user-editable TCO flags (override extractedData values)
+  vatIncluded?: boolean | null;
+  laborIncluded?: boolean | null;
 }
 
 // ============================================================================
@@ -249,6 +252,8 @@ export interface UpdateQuoteDTO {
   status?: QuoteStatus;
   overrideReason?: string;
   vendorContactId?: string;
+  vatIncluded?: boolean | null;
+  laborIncluded?: boolean | null;
 }
 
 export interface QuoteFilters {
