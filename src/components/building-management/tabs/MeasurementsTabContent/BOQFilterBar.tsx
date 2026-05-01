@@ -45,7 +45,7 @@ export function BOQFilterBar({ filters, onFiltersChange, categories }: BOQFilter
   return (
     <nav
       aria-label={t('tabs.measurements.filters.scope')}
-      className="flex flex-wrap items-center gap-2"
+      className="flex flex-wrap items-center gap-2 [--input:var(--border)]"
     >
       {/* Scope filter */}
       <Select

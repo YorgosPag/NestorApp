@@ -469,7 +469,7 @@ export const borderTokens = {
     default: 'border border-border rounded-lg',
     card: 'border border-border rounded-lg',
     button: 'border border-border',
-    input: 'border border-border rounded-md',
+    input: 'border border-input rounded-md',
     checkbox: 'border border-border rounded-md',
     modal: 'border-0 rounded-lg shadow-lg',
     container: 'border-0',
