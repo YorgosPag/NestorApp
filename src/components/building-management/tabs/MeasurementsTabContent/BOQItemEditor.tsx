@@ -93,7 +93,7 @@ export function BOQItemEditor({
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-[900px] bg-[hsl(var(--showcase-bg))] text-[hsl(var(--showcase-fg))] border-l-[hsl(var(--showcase-border))] [--background:var(--showcase-surface)] [--input:var(--showcase-border)] [--border:var(--showcase-border)] [--muted:var(--showcase-surface)] [--muted-foreground:var(--showcase-muted-fg)] [--card:var(--showcase-surface)] [--card-foreground:var(--showcase-fg)] [--foreground:var(--showcase-fg)] [--popover:var(--showcase-surface)] [--popover-foreground:var(--showcase-fg)] [--accent:var(--showcase-surface)] [--accent-foreground:var(--showcase-fg)]"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-[900px] bg-[hsl(var(--showcase-bg))] text-[hsl(var(--showcase-fg))] border-l-[hsl(var(--showcase-border))] [--background:var(--showcase-input-bg)] [--input:var(--showcase-input-bg)] [--border:var(--showcase-border)] [--muted:var(--showcase-surface)] [--muted-foreground:var(--showcase-muted-fg)] [--card:var(--showcase-surface)] [--card-foreground:var(--showcase-fg)] [--foreground:var(--showcase-fg)] [--popover:var(--showcase-input-bg)] [--popover-foreground:var(--showcase-fg)] [--accent:var(--showcase-surface)] [--accent-foreground:var(--showcase-fg)]"
       >
         <SheetHeader className="border-b border-[hsl(var(--showcase-border))] px-6 py-4">
           <SheetTitle>

@@ -127,6 +127,7 @@
     --showcase-surface: 217 28% 22%;  /* slightly lighter navy for cards on top of --showcase-bg */
     --showcase-border: 217 20% 30%;   /* subtle navy border */
     --showcase-muted-fg: 215 20% 75%; /* muted foreground on navy */
+    --showcase-input-bg: 220 20% 11%; /* rgb(22,26,34) — deep navy for inputs/selects inside showcase drawers */
   }
 
   .dark {
@@ -224,6 +225,7 @@
     --showcase-surface: 217 28% 22%;
     --showcase-border: 217 20% 30%;
     --showcase-muted-fg: 215 20% 75%;
+    --showcase-input-bg: 220 20% 11%;
 
     /* ✅ ENTERPRISE: Dropdown positioning variables - Dark Mode (same values) */
     /* 🏢 NOTE: z-index comes from design-tokens.json via var(--z-index-dropdown) */
