@@ -1471,3 +1471,9 @@ added to every field label and section header in the BOQItemEditor drawer (7 fie
 `tabs.measurements.editor.tooltips.*`, `tabs.measurements.scope.tooltips.*`,
 `tabs.measurements.scope.costAllocation.tooltips.*`.
 **Impact:** Zero runtime cost (Radix Tooltip, hover-only). No schema change. No new components created — uses existing SSOT.
+
+### 2026-05-01 — Level 2 Hierarchy Design (ADR-337)
+**Change:** Curated Level-2 sub-category list designed (PROPOSED status). 12 master groups × 5–7 sub-groups = 78 entries.
+Existing `CategoryLevel = 'group' | 'subgroup' | 'item'` and `parentId` field reused — no schema changes, no breaking changes.
+**Impact:** Documentation only — no code changes in this commit. Implementation tracked as separate ticket post-approval (~4–5 h dev time).
+**Ref:** **ADR-337** §4.2 (full 78-entry list), §4.4 (cascading dropdown UI plan), §4.6 (Boy Scout backward compatibility).
