@@ -1,9 +1,10 @@
 /**
  * BOQItemEditor — Slide-over drawer for creating/editing BOQ items (ADR-329)
  *
- * Wrapped in Radix Sheet (right-side drawer, 900px). 2-column body:
- * left = Basic info + Scope + Cost Allocation + Notes; right = Quantities +
- * Costs + Totals. Sticky footer with Save/Cancel + optional Reopen-to-Draft.
+ * Wrapped in Radix Sheet (right-side drawer, 1200px). Entity-style header:
+ * Ruler icon + title + Cancel/Save actions. 2-column body: left = Basic info
+ * + Scope + Cost Allocation + Notes; right = Quantities + Costs + Totals.
+ * Footer: optional Reopen-to-Draft (left) + running total (right).
  *
  * @module components/building-management/tabs/MeasurementsTabContent/BOQItemEditor
  * @see ADR-175 §4.4.3, ADR-329 §3.0 (drawer), §3.1 (5 scopes), §3.1.1 (cost allocation)
@@ -12,8 +13,9 @@
 'use client';
 
 import { useMemo } from 'react';
+import { Ruler } from 'lucide-react';
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+  Sheet, SheetContent, SheetTitle,
 } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -95,16 +97,33 @@ export function BOQItemEditor({
         side="right"
         className="flex w-full flex-col gap-0 p-0 sm:max-w-[1200px] bg-[hsl(var(--showcase-bg))] text-[hsl(var(--showcase-fg))] border-l-[hsl(var(--showcase-border))] [--background:var(--showcase-input-bg)] [--input:var(--showcase-input-bg)] [--border:var(--showcase-border)] [--muted:var(--showcase-surface)] [--muted-foreground:var(--showcase-muted-fg)] [--card:var(--showcase-surface)] [--card-foreground:var(--showcase-fg)] [--foreground:var(--showcase-fg)] [--popover:var(--showcase-input-bg)] [--popover-foreground:var(--showcase-fg)] [--accent:var(--showcase-surface)] [--accent-foreground:var(--showcase-fg)]"
       >
-        <SheetHeader className="border-b border-[hsl(var(--showcase-border))] px-6 py-4">
-          <SheetTitle>
-            {isEdit
-              ? t('tabs.measurements.editor.editTitle')
-              : t('tabs.measurements.editor.createTitle')}
-          </SheetTitle>
-          <SheetDescription>
-            {isEdit ? item?.title : t('tabs.measurements.editor.sections.basic')}
-          </SheetDescription>
-        </SheetHeader>
+        {/* Radix accessibility title (visually hidden — visible title is in <header> below) */}
+        <SheetTitle className="sr-only">
+          {isEdit ? t('tabs.measurements.editor.editTitle') : t('tabs.measurements.editor.createTitle')}
+        </SheetTitle>
+
+        {/* Entity-style header: icon + title + Cancel/Save actions */}
+        <header className="flex items-center justify-between gap-4 border-b border-[hsl(var(--showcase-border))] px-6 py-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Ruler className="h-5 w-5 shrink-0 text-[hsl(var(--showcase-muted-fg))]" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-base font-semibold leading-tight truncate">
+                {isEdit ? t('tabs.measurements.editor.editTitle') : t('tabs.measurements.editor.createTitle')}
+              </p>
+              <p className="text-sm text-[hsl(var(--showcase-muted-fg))] truncate">
+                {isEdit ? (item?.title ?? '') : t('tabs.measurements.editor.sections.basic')}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>
+              {t('tabs.measurements.editor.cancel')}
+            </Button>
+            <Button size="sm" onClick={() => void handleSave()} disabled={saveDisabled}>
+              {saving ? t('tabs.measurements.editor.saving') : t('tabs.measurements.editor.save')}
+            </Button>
+          </div>
+        </header>
 
         <form
           onSubmit={(e) => { e.preventDefault(); void handleSave(); }}
@@ -200,19 +219,9 @@ export function BOQItemEditor({
               </Button>
             )}
           </section>
-          <section className="flex items-center gap-2">
-            <p className="text-sm font-semibold tabular-nums">
-              {t('tabs.measurements.summary.total')}: {formatCurrency(totalCost)}
-            </p>
-            <Button variant="outline" onClick={onClose} disabled={saving}>
-              {t('tabs.measurements.editor.cancel')}
-            </Button>
-            <Button onClick={() => void handleSave()} disabled={saveDisabled}>
-              {saving
-                ? t('tabs.measurements.editor.saving')
-                : t('tabs.measurements.editor.save')}
-            </Button>
-          </section>
+          <p className="text-sm font-semibold tabular-nums">
+            {t('tabs.measurements.summary.total')}: {formatCurrency(totalCost)}
+          </p>
         </footer>
       </SheetContent>
     </Sheet>
