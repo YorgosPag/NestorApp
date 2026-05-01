@@ -35,6 +35,7 @@ export interface EntityHeaderAction {
   icon?: LucideIcon;
   variant?: 'default' | 'outline' | 'ghost';
   className?: string;
+  disabled?: boolean;
 }
 
 export interface EntityHeaderProps {
@@ -263,7 +264,8 @@ const EntityAction: React.FC<EntityHeaderAction> = ({
   onClick,
   icon: Icon,
   variant = 'default',
-  className
+  className,
+  disabled,
 }) => {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
@@ -272,6 +274,7 @@ const EntityAction: React.FC<EntityHeaderAction> = ({
       variant={variant}
       size="sm"
       onClick={onClick}
+      disabled={disabled}
       className={cn("h-8", spacing.padding.x.sm, className)}
     >
       {Icon && <Icon className={`${iconSizes.sm} mr-2`} />}
