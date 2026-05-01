@@ -1,6 +1,6 @@
 # ADR-337 — BOQ Categories Level 2 Hierarchy (Curated Sub-Categories)
 
-**Status:** PROPOSED
+**Status:** ACCEPTED
 **Date:** 2026-05-01
 **Author:** Giorgio Pagonis
 **Related:** ADR-175 (Quantity Surveying / BOQ), ADR-329 (Scope Granularity), `src/config/boq-categories.ts`, `src/types/boq/units.ts`
@@ -211,7 +211,38 @@ interface BOQItem {
 | OIK-12.6 | Γκαραζόπορτες & ρολά | Garage doors & shutters |
 | OIK-12.7 | Εξώπορτες ασφαλείας | Security doors |
 
-**Total: 78 sub-categories.**
+#### OIK-13 — Ανελκυστήρες / Elevators & Lifts
+
+| Code | nameEL | nameEN |
+|---|---|---|
+| OIK-13.1 | Υδραυλικοί ανελκυστήρες | Hydraulic elevators |
+| OIK-13.2 | Ηλεκτροκίνητοι ανελκυστήρες (με μηχανοστάσιο) | Electric traction elevators (with machine room) |
+| OIK-13.3 | Ανελκυστήρες χωρίς μηχανοστάσιο (MRL) | Machine-room-less (MRL) elevators |
+| OIK-13.4 | Ανυψωτικές πλατφόρμες ΑΜΕΑ | Accessibility platform lifts |
+| OIK-13.5 | Συντήρηση & πιστοποίηση | Maintenance & certification |
+
+#### OIK-14 — Πισίνες / Swimming Pools
+
+| Code | nameEL | nameEN |
+|---|---|---|
+| OIK-14.1 | Κατασκευή λεκάνης | Pool basin construction |
+| OIK-14.2 | Επένδυση & αδιαβροχοποίηση | Lining & waterproofing |
+| OIK-14.3 | Υδραυλικές εγκαταστάσεις | Pool plumbing & filtration |
+| OIK-14.4 | Φωτισμός πισίνας | Pool lighting |
+| OIK-14.5 | Εξοπλισμός (αντλίες, φίλτρα) | Equipment (pumps, filters) |
+| OIK-14.6 | Περίφραξη & κάλυμμα | Fencing & cover |
+
+#### OIK-15 — Φωτοβολταϊκά / Photovoltaics
+
+| Code | nameEL | nameEN |
+|---|---|---|
+| OIK-15.1 | Φωτοβολταϊκά πάνελ | PV panels |
+| OIK-15.2 | Inverter & ηλεκτρολογικά | Inverter & electrical |
+| OIK-15.3 | Σύστημα στήριξης | Mounting structure |
+| OIK-15.4 | Αποθήκευση ενέργειας (μπαταρίες) | Battery storage |
+| OIK-15.5 | Σύνδεση δικτύου & net metering | Grid connection & net metering |
+
+**Total: 94 sub-categories (15 groups).**
 
 ### 4.3 i18n keys
 
@@ -251,7 +282,7 @@ In `BasicInfoFieldset`, after the existing category `<Select>`:
       <Label>{t('tabs.measurements.editor.fields.subCategory')}</Label>
       <InfoTooltip content={t('tabs.measurements.editor.tooltips.subCategory')} />
     </div>
-    <Select value={form.subCategoryCode ?? ''} onValueChange={(v) => onUpdateField('subCategoryCode', v)} disabled={isEdit}>
+    <Select value={form.subCategoryCode ?? ''} onValueChange={(v) => onUpdateField('subCategoryCode', v)}>
       <SelectTrigger><SelectValue placeholder={t('tabs.measurements.editor.fields.subCategoryPlaceholder')} /></SelectTrigger>
       <SelectContent>
         <SelectItem value="">— {t('tabs.measurements.editor.fields.subCategoryNone')} —</SelectItem>
@@ -267,21 +298,29 @@ In `BasicInfoFieldset`, after the existing category `<Select>`:
 Sub-category dropdown:
 - **Conditionally rendered** only after Level-1 is chosen.
 - **Optional** (a "— Καμία —" / "— None —" entry is always available).
-- **Disabled in edit mode** (`isEdit`) — same lock as `categoryCode`.
+- **Always editable** — even in edit mode. Sub-category is enrichment metadata; blocking it would punish users who created items without one (Progressive Detail pattern — Procore/Primavera/SAP standard).
+- Only `categoryCode` (Level-1) is locked in edit mode, because changing it would invalidate cost rollups and vendor quote comparisons.
 
 ### 4.5 Firestore seed
 
+Sub-categories are a **global master catalog** — shared across all companies, seeded once per environment. New companies get them automatically with no extra step.
+
 New script `scripts/seed-boq-subcategories.ts`:
 - Reads the static array (companion file `src/config/boq-subcategories.ts`).
+- Writes to a **system-level path** (no `companyId`) — e.g. `system/boq_subcategories/{code}`.
 - Uses `setDoc()` + enterprise-id from `enterprise-id.service.ts` (per SOS N.6).
 - Idempotent (skips if doc with same `code` already exists).
 - Run once per environment (`npm run seed:boq-subcategories`).
 
+> Rationale: sub-categories are canonical Greek construction terminology, not company-specific data. Storing them once avoids 78 × N duplicate documents as tenant count grows.
+
 ### 4.6 Backward compatibility
 
-- Existing BOQ items have no `subCategoryCode`. They display in lists/reports as "OIK-X — (no sub)".
+- Existing BOQ items have no `subCategoryCode`. They display in lists/reports with the Level-1 category name only — no "(no sub)" suffix. Absent optional metadata is silent (Procore/Primavera/SAP standard).
 - Boy Scout migration is **manual / opportunistic**: when a user opens an old item in edit mode, the form prefills `subCategoryCode = ''` and they can optionally select one before saving.
 - No bulk migration script. No mandatory backfill.
+- Sub-category is **always optional** — never required per category type. Hard-coded required fields cause premature validation (blocks users who don't have all info yet).
+- When sending a quote to a contractor (ADR-327): show a **non-blocking warning** if any line items have no sub-category — «⚠️ X εργασίες δεν έχουν υποκατηγορία. Θέλεις να συνεχίσεις;» — user can proceed or go back to fill them in.
 
 ## 5. Consequences
 
@@ -291,8 +330,11 @@ New script `scripts/seed-boq-subcategories.ts`:
 - Better DXF auto-extraction (Phase 2 — ADR-175 §6) — AI can map detected elements to a fixed sub-category code with high confidence.
 - Vendor quote comparison (ADR-327) — quotes can be normalized by sub-category, not by free text.
 
+**ADR-327 integration (vendor quotes):**
+Sub-category name appears as a **group header** in exported quote documents — e.g. «Θεμελιώσεις» above the line items. The internal code (OIK-2.1) is never shown to contractors. Items without sub-category are grouped under the Level-1 category name only.
+
 **Negative:**
-- ~78 new Firestore docs per company on first seed (~one-time cost).
+- ~78 new Firestore system docs on first seed (~one-time cost, not per-company).
 - New i18n keys (~80 EL + 80 EN entries).
 - Boy Scout migration adds one extra click for existing items.
 - The curated list is a **local convention**, not the official ΑΤΟΕ — explicitly stated to users to avoid public-procurement misuse.
@@ -311,7 +353,12 @@ The Level-2 list was **NOT** transcribed from any single official document — t
   - HM Construction, Stone Group, Durostick, Fenestral, Alunet, Fragoulakis, Sidirokataskeves, Smart Building, MVP Construction, Douleutaras
 - **Wikipedia (el)** for terminology cross-checks (μόνωση, σιδηρός οπλισμός, σκυρόδεμα).
 
-The list reflects **common private-construction usage**, not the formal ΑΤΟΕ catalog. Future contributors may add/remove entries based on user feedback — schema is designed to handle additions without breaking changes (open-set codes, `parentId` already in schema).
+The list reflects **common private-construction usage**, not the formal ΑΤΟΕ catalog. The catalog is a **starting point, not a prison** (Procore/Primavera/SAP standard):
+
+- **Phase 1 (now)**: admin UI in Settings (step f) — user adds/edits sub-categories directly, zero developer dependency. Data belongs to the user, not the codebase.
+- Seed script (step b) populates the initial 83 entries; all subsequent changes go through the UI.
+
+Schema is designed for open-ended additions: open-set codes, `parentId` already in schema, no hard-coded enum on `BOQItem.subCategoryCode`.
 
 ## 7. Implementation plan (separate ticket)
 
@@ -319,17 +366,27 @@ This ADR documents the design **only**. Implementation is broken into:
 
 | Step | Effort | Owner |
 |---|---|---|
-| (a) Static array `boq-subcategories.ts` (78 entries) | ~30 min | dev |
-| (b) Firestore seed script + npm script | ~1 h | dev |
+| (a) Static array `boq-subcategories.ts` (94 entries, 15 groups) | ~30 min | dev |
+| (b) Firestore seed script + npm script (system-level, no companyId) | ~1 h | dev |
 | (c) `subCategoryCode` optional field on `BOQItem` + helpers in `useBOQEditorState` | ~30 min | dev |
 | (d) `BasicInfoFieldset` cascading dropdown + i18n keys (el + en) | ~1 h | dev |
-| (e) Display the sub-category in `BOQItemList` / `BOQSummaryCards` rollup | ~1 h | dev |
-| (f) Manual Boy Scout test on 5 sample items | ~30 min | QA |
+| (e) Display sub-category as second smaller line in `BOQItemList` (Procore/Primavera pattern). `BOQSummaryCards` rollup by sub-category. | ~1 h | dev |
+| (f) Admin UI in Settings — «Ρυθμίσεις → Κατηγορίες Εργασιών» — add/edit/delete sub-categories without developer. User owns their catalog data. | ~3 h | dev |
+| (g) Non-blocking warning on quote send (ADR-327) if line items missing sub-category | ~30 min | dev |
+| (h) Manual Boy Scout test on 5 sample items | ~30 min | QA |
 
-Total: ~4–5 hours dev time. To be filed as a separate task after Giorgio's approval of this ADR.
+Total: ~8 hours dev time. To be filed as a separate task after Giorgio's approval of this ADR.
 
 ## Changelog
 
 | Date | Change |
 |------|--------|
 | 2026-05-01 | Initial draft. Status PROPOSED. 12 categories × 5–7 subgroups = 78 entries. |
+| 2026-05-01 | §4.4 corrected: `subCategoryCode` always editable in edit mode (Progressive Detail pattern). Only `categoryCode` locked. |
+| 2026-05-01 | §4.6 corrected: items without sub-category show Level-1 name only — no "(no sub)" suffix. Silent absence is enterprise standard. |
+| 2026-05-01 | §7(e) confirmed: sub-category displays as second smaller line in BOQItemList (Procore/Primavera two-line pattern). Not a badge/chip. |
+| 2026-05-01 | §4.5 confirmed: global master catalog — no companyId, seeded once, shared across all tenants automatically. |
+| 2026-05-01 | §5 ADR-327 integration: sub-category shown as group header in quotes (name only, never OIK-x.x code). |
+| 2026-05-01 | §4.6 confirmed: sub-category always optional everywhere. Non-blocking warning on quote send if items missing sub-category. |
+| 2026-05-01 | §6 extensibility: admin UI (step f) moved to main plan — user owns catalog data, zero developer dependency. |
+| 2026-05-01 | OIK-13 Ανελκυστήρες (5), OIK-14 Πισίνες (6), OIK-15 Φωτοβολταϊκά (5) added. Total: 94. `boq-categories.ts` updated. |

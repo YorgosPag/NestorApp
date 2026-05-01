@@ -158,6 +158,36 @@ export const ATOE_MASTER_CATEGORIES: readonly MasterBOQCategory[] = [
     defaultWasteFactor: 0.07,
     allowedUnits: ['kg', 'm', 'm2', 'pcs'],
   },
+  {
+    code: 'OIK-13',
+    nameEL: 'Ανελκυστήρες',
+    nameEN: 'Elevators & Lifts',
+    description: 'Ανελκυστήρες, πλατφόρμες ΑΜΕΑ, συντήρηση',
+    level: 'group',
+    sortOrder: 13,
+    defaultWasteFactor: 0,
+    allowedUnits: ['pcs', 'set'],
+  },
+  {
+    code: 'OIK-14',
+    nameEL: 'Πισίνες',
+    nameEN: 'Swimming Pools',
+    description: 'Κατασκευή, επένδυση, υδραυλικά, εξοπλισμός πισίνας',
+    level: 'group',
+    sortOrder: 14,
+    defaultWasteFactor: 0.05,
+    allowedUnits: ['pcs', 'set', 'm2', 'm3'],
+  },
+  {
+    code: 'OIK-15',
+    nameEL: 'Φωτοβολταϊκά',
+    nameEN: 'Photovoltaics',
+    description: 'Πάνελ, inverter, στήριξη, αποθήκευση, σύνδεση δικτύου',
+    level: 'group',
+    sortOrder: 15,
+    defaultWasteFactor: 0,
+    allowedUnits: ['pcs', 'set', 'kWp'],
+  },
 ] as const;
 
 // ============================================================================
