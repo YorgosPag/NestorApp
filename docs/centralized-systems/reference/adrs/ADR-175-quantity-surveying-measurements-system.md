@@ -1456,3 +1456,18 @@ action. BOQItem schema gained `linkedFloorId`, `linkedUnitIds`, `costAllocationM
 tasks supported. Multi-property cherry-pick supported. Multi-level properties consume
 partial-area allocation via ADR-236 `levelData[floorId].areas.gross`.
 **Ref:** **ADR-329 §3.1, §3.2, §3.7** (Multi-Level Property Compatibility), §3.9 (deletion guard)
+
+### 2026-05-01 — Contextual Tooltips on BOQItemEditor Drawer (GOL)
+**Change:** Contextual `InfoTooltip` (SSOT: `@/components/ui/InfoTooltip`, SSoT registry `ui-tooltip`)
+added to every field label and section header in the BOQItemEditor drawer (7 fieldsets + scope + cost allocation):
+- `BasicInfoFieldset`: category, title, specifications
+- `QuantitiesFieldset`: measurementUnit, estimatedQuantity, wasteFactor, grossQuantity, actualQuantity
+- `CostsFieldset`: materialUnitCost, laborUnitCost, equipmentUnitCost (dynamic via `.map()`)
+- `TotalsFieldset`: section header
+- `NotesAndStatusFieldset`: notes, status
+- `BOQEditorScopeSection`: section legend + each of 5 scope options (Tooltip wrapper on Button)
+- `BOQEditorCostAllocationSection`: section legend + each of 3 allocation methods (Tooltip wrapper on Button)
+**i18n:** 23 new keys added to `el/building-tabs.json` and `en/building-tabs.json` under:
+`tabs.measurements.editor.tooltips.*`, `tabs.measurements.scope.tooltips.*`,
+`tabs.measurements.scope.costAllocation.tooltips.*`.
+**Impact:** Zero runtime cost (Radix Tooltip, hover-only). No schema change. No new components created — uses existing SSOT.

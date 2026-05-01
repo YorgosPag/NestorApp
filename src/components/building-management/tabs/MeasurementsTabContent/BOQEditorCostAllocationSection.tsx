@@ -19,6 +19,10 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
+import {
+  Tooltip, TooltipContent, TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { BOQScope, CostAllocationMethod } from '@/types/boq';
 import type { Property } from '@/types/property';
 
@@ -63,23 +67,31 @@ export function BOQEditorCostAllocationSection({
 
   return (
     <fieldset className={cn('space-y-2', scopeLocked && 'opacity-60')}>
-      <legend className={cn('text-sm font-semibold', colors.text.muted)}>
+      <legend className={cn('text-sm font-semibold inline-flex items-center gap-1', colors.text.muted)}>
         {t('tabs.measurements.scope.costAllocation.label')}
+        <InfoTooltip content={t('tabs.measurements.scope.costAllocation.tooltips.section')} />
       </legend>
 
       <ul className="flex flex-col gap-1.5">
         {allowedMethods.map((m) => (
           <li key={m}>
-            <Button
-              type="button"
-              variant={method === m ? 'default' : 'outline'}
-              size="sm"
-              className="w-full justify-start whitespace-normal text-left leading-tight"
-              disabled={scopeLocked}
-              onClick={() => onMethodChange(m)}
-            >
-              {t(`tabs.measurements.scope.costAllocation.${m === 'by_area' ? 'byArea' : m}`)}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant={method === m ? 'default' : 'outline'}
+                  size="sm"
+                  className="w-full justify-start whitespace-normal text-left leading-tight"
+                  disabled={scopeLocked}
+                  onClick={() => onMethodChange(m)}
+                >
+                  {t(`tabs.measurements.scope.costAllocation.${m === 'by_area' ? 'byArea' : m}`)}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-xs text-xs">
+                {t(`tabs.measurements.scope.costAllocation.tooltips.${m === 'by_area' ? 'byArea' : m}`)}
+              </TooltipContent>
+            </Tooltip>
           </li>
         ))}
       </ul>

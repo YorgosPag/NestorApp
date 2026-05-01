@@ -193,7 +193,23 @@
         },
         "save": "Save",
         "cancel": "Cancel",
-        "saving": "Saving..."
+        "saving": "Saving...",
+        "tooltips": {
+          "category": "ATOE code: classifies the work into standardized construction categories. Cannot be changed after saving.",
+          "title": "Short title shown in lists, prints and reports.",
+          "specifications": "Detailed technical specs: standards, material grades, construction method.",
+          "measurementUnit": "Unit used to calculate quantity (e.g. m², m³, piece).",
+          "estimatedQuantity": "Initial quantity estimate before applying the waste factor.",
+          "wasteFactor": "Extra material percentage for cutting losses and placement errors. Gross = estimated × (1 + waste/100).",
+          "grossQuantity": "Auto-calculated: estimated × (1 + waste/100). This quantity is used in cost calculations.",
+          "actualQuantity": "Real quantity measured on site. Used for comparison and verification.",
+          "materialUnitCost": "Material cost per unit, excluding labor and equipment.",
+          "laborUnitCost": "Labor cost per unit, excluding materials and equipment.",
+          "equipmentUnitCost": "Equipment rental cost per unit (e.g. crane, concrete pump).",
+          "totals": "Auto-calculated: unit cost × gross quantity per cost category.",
+          "notes": "Internal team notes — not printed on client documents.",
+          "status": "Work lifecycle: Draft → Active → Completed → Locked (non-editable)."
+        }
       },
       "scope": {
         "label": "Scope of Application",
@@ -222,6 +238,14 @@
           "suggestSwitchConfirm": "Yes, switch",
           "suggestSwitchDismiss": "No, continue"
         },
+        "tooltips": {
+          "section": "Defines which parts of the building this work applies to. Cannot be changed after saving.",
+          "building": "Work applies to the entire building and is not attributed to specific units.",
+          "commonAreas": "Common areas only: entrance, elevator, stairs, courtyard, etc.",
+          "floor": "All units on a specific floor. Select the floor below.",
+          "property": "Work applies exclusively to one property. Suitable for custom individual work.",
+          "properties": "Select multiple properties in the same building — useful for grouped work on selected units."
+        },
         "costAllocation": {
           "label": "Cost Allocation",
           "byArea": "By area (automatic)",
@@ -235,7 +259,13 @@
           "customTotalInvalid": "Total: {percent}% (must be 100%)",
           "previewHeader": "Allocation preview",
           "byAreaFallbackWarning": "Property {code} has no area. Auto-fallback to «Equal».",
-          "partialAreaWarning": "Property {code} has no per-level areas. Contributes with its total area."
+          "partialAreaWarning": "Property {code} has no per-level areas. Contributes with its total area.",
+          "tooltips": {
+            "section": "Defines how total cost is distributed across the selected properties.",
+            "byArea": "Cost split proportional to each property's area. Recommended for size-dependent work (e.g. insulation, flooring).",
+            "equal": "Equal amount per property regardless of area (e.g. per-door work).",
+            "custom": "You set the percentage per property. Total must equal 100%."
+          }
         },
         "scopeLock": {
           "tooltip": "Cannot change after submission. Cancel and create a new task or use «Reopen to Draft».",

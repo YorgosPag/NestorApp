@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
@@ -250,7 +251,10 @@ function BasicInfoFieldset({ form, isEdit, categories, onCategoryChange, onUpdat
         {t('tabs.measurements.editor.sections.basic')}
       </legend>
       <section className="space-y-1.5">
-        <Label>{t('tabs.measurements.editor.fields.category')}</Label>
+        <div className="flex items-center gap-1">
+          <Label>{t('tabs.measurements.editor.fields.category')}</Label>
+          <InfoTooltip content={t('tabs.measurements.editor.tooltips.category')} />
+        </div>
         <Select value={form.categoryCode} onValueChange={onCategoryChange} disabled={isEdit}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -261,7 +265,10 @@ function BasicInfoFieldset({ form, isEdit, categories, onCategoryChange, onUpdat
         </Select>
       </section>
       <section className="space-y-1.5">
-        <Label>{t('tabs.measurements.editor.fields.title')} *</Label>
+        <div className="flex items-center gap-1">
+          <Label>{t('tabs.measurements.editor.fields.title')} *</Label>
+          <InfoTooltip content={t('tabs.measurements.editor.tooltips.title')} />
+        </div>
         <Input
           value={form.title}
           onChange={(e) => onUpdateField('title', e.target.value)}
@@ -270,7 +277,10 @@ function BasicInfoFieldset({ form, isEdit, categories, onCategoryChange, onUpdat
         />
       </section>
       <section className="space-y-1.5">
-        <Label>{t('tabs.measurements.editor.fields.specifications')}</Label>
+        <div className="flex items-center gap-1">
+          <Label>{t('tabs.measurements.editor.fields.specifications')}</Label>
+          <InfoTooltip content={t('tabs.measurements.editor.tooltips.specifications')} />
+        </div>
         <Textarea
           size="sm"
           value={form.description}
@@ -300,7 +310,10 @@ function QuantitiesFieldset({ form, isEdit, allowedUnits, grossQuantity, onUpdat
       </legend>
       <section className="grid grid-cols-2 gap-2">
         <article className="space-y-1.5">
-          <Label>{t('tabs.measurements.editor.fields.measurementUnit')}</Label>
+          <div className="flex items-center gap-1">
+            <Label>{t('tabs.measurements.editor.fields.measurementUnit')}</Label>
+            <InfoTooltip content={t('tabs.measurements.editor.tooltips.measurementUnit')} />
+          </div>
           <Select value={form.unit} onValueChange={(v) => onUpdateField('unit', v as BOQMeasurementUnit)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -311,7 +324,10 @@ function QuantitiesFieldset({ form, isEdit, allowedUnits, grossQuantity, onUpdat
           </Select>
         </article>
         <article className="space-y-1.5">
-          <Label>{t('tabs.measurements.editor.fields.estimatedQuantity')}</Label>
+          <div className="flex items-center gap-1">
+            <Label>{t('tabs.measurements.editor.fields.estimatedQuantity')}</Label>
+            <InfoTooltip content={t('tabs.measurements.editor.tooltips.estimatedQuantity')} />
+          </div>
           <Input
             type="number" min="0" step="0.01"
             value={form.estimatedQuantity}
@@ -319,7 +335,10 @@ function QuantitiesFieldset({ form, isEdit, allowedUnits, grossQuantity, onUpdat
           />
         </article>
         <article className="space-y-1.5">
-          <Label>{t('tabs.measurements.editor.fields.wasteFactor')}</Label>
+          <div className="flex items-center gap-1">
+            <Label>{t('tabs.measurements.editor.fields.wasteFactor')}</Label>
+            <InfoTooltip content={t('tabs.measurements.editor.tooltips.wasteFactor')} />
+          </div>
           <Input
             type="number" min="0" max="100" step="1"
             value={form.wasteFactor}
@@ -327,7 +346,10 @@ function QuantitiesFieldset({ form, isEdit, allowedUnits, grossQuantity, onUpdat
           />
         </article>
         <article className="space-y-1.5">
-          <Label>{t('tabs.measurements.editor.fields.grossQuantity')}</Label>
+          <div className="flex items-center gap-1">
+            <Label>{t('tabs.measurements.editor.fields.grossQuantity')}</Label>
+            <InfoTooltip content={t('tabs.measurements.editor.tooltips.grossQuantity')} />
+          </div>
           <Input
             type="text"
             value={formatNumber(grossQuantity, { maximumFractionDigits: 2 })}
@@ -337,7 +359,10 @@ function QuantitiesFieldset({ form, isEdit, allowedUnits, grossQuantity, onUpdat
         </article>
         {isEdit && (
           <article className="space-y-1.5 col-span-2 sm:col-span-1">
-            <Label>{t('tabs.measurements.editor.fields.actualQuantity')}</Label>
+            <div className="flex items-center gap-1">
+              <Label>{t('tabs.measurements.editor.fields.actualQuantity')}</Label>
+              <InfoTooltip content={t('tabs.measurements.editor.tooltips.actualQuantity')} />
+            </div>
             <Input
               type="number" min="0" step="0.01"
               value={form.actualQuantity}
@@ -365,7 +390,10 @@ function CostsFieldset({ form, onUpdateField, colors, t }: CostsProps) {
       <section className="grid grid-cols-3 gap-2">
         {(['materialUnitCost', 'laborUnitCost', 'equipmentUnitCost'] as const).map((field) => (
           <article key={field} className="space-y-1.5">
-            <Label>{t(`tabs.measurements.editor.fields.${field}`)}</Label>
+            <div className="flex items-center gap-1">
+              <Label>{t(`tabs.measurements.editor.fields.${field}`)}</Label>
+              <InfoTooltip content={t(`tabs.measurements.editor.tooltips.${field}`)} />
+            </div>
             <Input
               type="number" min="0" step="0.01"
               value={form[field]}
@@ -389,9 +417,12 @@ interface TotalsProps extends FieldsetCommon {
 function TotalsFieldset({ grossQuantity, materialCost, laborCost, equipmentCost, totalCost, colors, t }: TotalsProps) {
   return (
     <section className="rounded-lg bg-muted/50 p-3 space-y-2">
-      <p className={cn('text-sm font-semibold', colors.text.muted)}>
-        {t('tabs.measurements.editor.sections.totals')}
-      </p>
+      <div className="flex items-center gap-1">
+        <p className={cn('text-sm font-semibold', colors.text.muted)}>
+          {t('tabs.measurements.editor.sections.totals')}
+        </p>
+        <InfoTooltip content={t('tabs.measurements.editor.tooltips.totals')} />
+      </div>
       <ul className="space-y-1">
         <li className={cn('text-sm', colors.text.muted)}>
           {t('tabs.measurements.editor.fields.materialUnitCost')}: {formatCurrency(materialCost * grossQuantity)}
@@ -424,7 +455,10 @@ function NotesAndStatusFieldset({ form, isEdit, availableStatuses, onUpdateField
         {t('tabs.measurements.editor.sections.link')}
       </legend>
       <section className="space-y-1.5">
-        <Label>{t('tabs.measurements.editor.fields.notes')}</Label>
+        <div className="flex items-center gap-1">
+          <Label>{t('tabs.measurements.editor.fields.notes')}</Label>
+          <InfoTooltip content={t('tabs.measurements.editor.tooltips.notes')} />
+        </div>
         <Textarea
           size="sm"
           value={form.notes}
@@ -436,7 +470,10 @@ function NotesAndStatusFieldset({ form, isEdit, availableStatuses, onUpdateField
       </section>
       {isEdit && availableStatuses.length > 1 && (
         <section className="space-y-1.5">
-          <Label>{t('tabs.measurements.editor.fields.statusLabel')}</Label>
+          <div className="flex items-center gap-1">
+            <Label>{t('tabs.measurements.editor.fields.statusLabel')}</Label>
+            <InfoTooltip content={t('tabs.measurements.editor.tooltips.status')} />
+          </div>
           <Select value={form.status} onValueChange={(v) => onUpdateField('status', v as BOQItemStatus)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>

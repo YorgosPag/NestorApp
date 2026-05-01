@@ -17,6 +17,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
+import {
+  Tooltip, TooltipContent, TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { FloorSelectByBuilding } from '@/components/properties/shared/FloorSelectByBuilding';
 import { PropertySelectByBuilding } from '@/components/properties/shared/PropertySelectByBuilding';
 import { PropertyMultiSelectByBuilding } from '@/components/properties/shared/PropertyMultiSelectByBuilding';
@@ -92,23 +96,31 @@ export function BOQEditorScopeSection({
 
   return (
     <fieldset className={cn('space-y-2', scopeLocked && 'opacity-60')}>
-      <legend className={cn('text-sm font-semibold', colors.text.muted)}>
+      <legend className={cn('text-sm font-semibold inline-flex items-center gap-1', colors.text.muted)}>
         {t('tabs.measurements.scope.label')}
+        <InfoTooltip content={t('tabs.measurements.scope.tooltips.section')} />
       </legend>
 
       <ul className="flex flex-col gap-1.5">
         {SCOPE_OPTIONS.map((opt) => (
           <li key={opt}>
-            <Button
-              type="button"
-              variant={scope === opt ? 'default' : 'outline'}
-              size="sm"
-              className="w-full justify-start whitespace-normal text-left leading-tight"
-              disabled={scopeLocked}
-              onClick={() => onScopeChange(opt)}
-            >
-              {t(`tabs.measurements.scope.${labelKey(opt)}`)}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant={scope === opt ? 'default' : 'outline'}
+                  size="sm"
+                  className="w-full justify-start whitespace-normal text-left leading-tight"
+                  disabled={scopeLocked}
+                  onClick={() => onScopeChange(opt)}
+                >
+                  {t(`tabs.measurements.scope.${labelKey(opt)}`)}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-xs text-xs">
+                {t(`tabs.measurements.scope.tooltips.${opt === 'common_areas' ? 'commonAreas' : opt}`)}
+              </TooltipContent>
+            </Tooltip>
           </li>
         ))}
       </ul>
