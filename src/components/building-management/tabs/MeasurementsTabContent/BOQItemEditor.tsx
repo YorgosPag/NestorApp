@@ -96,17 +96,16 @@ export function BOQItemEditor({
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-[1200px] bg-[hsl(var(--showcase-bg))] text-[hsl(var(--showcase-fg))] border-l-[hsl(var(--showcase-border))] [--background:var(--showcase-input-bg)] [--input:var(--showcase-input-bg)] [--border:var(--showcase-border)] [--muted:var(--showcase-surface)] [--muted-foreground:var(--showcase-muted-fg)] [--card:var(--showcase-surface)] [--card-foreground:var(--showcase-fg)] [--foreground:var(--showcase-fg)] [--popover:var(--showcase-input-bg)] [--popover-foreground:var(--showcase-fg)] [--accent:var(--showcase-surface)] [--accent-foreground:var(--showcase-fg)]"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-[1200px] bg-[hsl(var(--showcase-bg))] text-[hsl(var(--showcase-fg))] border-l-[hsl(var(--showcase-border))] [--background:var(--showcase-input-bg)] [--input:var(--showcase-input-bg)] [--border:var(--showcase-border)] [--muted:var(--showcase-surface)] [--muted-foreground:var(--showcase-muted-fg)] [--card:var(--showcase-surface)] [--card-foreground:var(--showcase-fg)] [--foreground:var(--showcase-fg)] [--popover:var(--showcase-input-bg)] [--popover-foreground:var(--showcase-fg)] [--accent:var(--showcase-surface)] [--accent-foreground:var(--showcase-fg)] [&>button]:hidden"
       >
         {/* Radix accessibility title (sr-only — EntityDetailsHeader renders the visible title) */}
         <SheetTitle className="sr-only">
           {isEdit ? t('tabs.measurements.editor.editTitle') : t('tabs.measurements.editor.createTitle')}
         </SheetTitle>
 
-        {/* Entity-style header — same pattern as BuildingDetailsHeader (SSOT: EntityDetailsHeader) */}
+        {/* Entity-style header — identical to BuildingDetailsHeader (SSOT: EntityDetailsHeader) */}
         <EntityDetailsHeader
           icon={Ruler}
-          iconColor="text-[hsl(var(--showcase-muted-fg))]"
           title={isEdit ? t('tabs.measurements.editor.editTitle') : t('tabs.measurements.editor.createTitle')}
           subtitle={isEdit ? (item?.title ?? '') : t('tabs.measurements.editor.sections.basic')}
           actions={[
@@ -120,8 +119,8 @@ export function BOQItemEditor({
               disabled: saveDisabled,
             },
           ]}
-          variant="compact"
-          className="bg-none bg-[hsl(var(--showcase-bg))] rounded-none border-b border-[hsl(var(--showcase-border))] px-6 py-4"
+          variant="detailed"
+          className="rounded-none border-b border-[hsl(var(--showcase-border))]"
         />
 
         <form
