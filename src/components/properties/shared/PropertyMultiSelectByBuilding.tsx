@@ -16,6 +16,7 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { ChevronDown, ChevronRight, X, Search } from 'lucide-react';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -262,6 +263,7 @@ function FloorGroupRow({
   group, collapsed, onToggleCollapse, onToggleFloor, onTogglePropertySelection,
   selectedSet, disabled, t,
 }: FloorGroupRowProps) {
+  const FloorIcon = NAVIGATION_ENTITIES.floor.icon;
   const ids = group.properties.map((p) => p.id);
   const selectedOnFloor = ids.filter((id) => selectedSet.has(id)).length;
   const allSelected = ids.length > 0 && selectedOnFloor === ids.length;
@@ -287,7 +289,8 @@ function FloorGroupRow({
           disabled={disabled || ids.length === 0}
           aria-label={t('tabs.measurements.scope.multiSelect.selectAllOnFloor')}
         />
-        <span className="text-sm font-medium">
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          <FloorIcon className={`h-4 w-4 shrink-0 ${NAVIGATION_ENTITIES.floor.color}`} aria-hidden />
           {t('tabs.measurements.scope.multiSelect.groupHeader', { floorName: group.floor.name, count: ids.length })}
         </span>
       </article>
