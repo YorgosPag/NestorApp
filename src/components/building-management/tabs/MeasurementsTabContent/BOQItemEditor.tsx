@@ -13,7 +13,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Ruler } from 'lucide-react';
+import { Ruler, Package, Wrench, Truck, Calculator } from 'lucide-react';
 import {
   Sheet, SheetContent, SheetTitle,
 } from '@/components/ui/sheet';
@@ -418,25 +418,32 @@ function TotalsFieldset({ grossQuantity, materialCost, laborCost, equipmentCost,
   return (
     <section className="rounded-lg bg-muted/50 p-3 space-y-2">
       <div className="flex items-center gap-1">
-        <p className={cn('text-sm font-semibold', colors.text.muted)}>
-          {t('tabs.measurements.editor.sections.totals')}
-        </p>
+        <p className={cn('text-sm font-semibold', colors.text.muted)}>{t('tabs.measurements.editor.sections.totals')}</p>
         <InfoTooltip content={t('tabs.measurements.editor.tooltips.totals')} />
       </div>
-      <ul className="space-y-1">
-        <li className={cn('text-sm', colors.text.muted)}>
-          {t('tabs.measurements.editor.fields.materialUnitCost')}: {formatCurrency(materialCost * grossQuantity)}
+      {/* accent colors match BOQSummaryCards SSOT — design-system/enforce-semantic-colors intentional */}
+      <ul className="space-y-1.5">
+        <li className="flex items-center gap-2">
+          <Package className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
+          <span className={cn('text-sm flex-1', colors.text.muted)}>{t('tabs.measurements.editor.fields.materialUnitCost')}</span>
+          <span className="text-sm font-semibold tabular-nums text-blue-600 dark:text-blue-400">{formatCurrency(materialCost * grossQuantity)}</span>
         </li>
-        <li className={cn('text-sm', colors.text.muted)}>
-          {t('tabs.measurements.editor.fields.laborUnitCost')}: {formatCurrency(laborCost * grossQuantity)}
+        <li className="flex items-center gap-2">
+          <Wrench className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span className={cn('text-sm flex-1', colors.text.muted)}>{t('tabs.measurements.editor.fields.laborUnitCost')}</span>
+          <span className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">{formatCurrency(laborCost * grossQuantity)}</span>
         </li>
-        <li className={cn('text-sm', colors.text.muted)}>
-          {t('tabs.measurements.editor.fields.equipmentUnitCost')}: {formatCurrency(equipmentCost * grossQuantity)}
+        <li className="flex items-center gap-2">
+          <Truck className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span className={cn('text-sm flex-1', colors.text.muted)}>{t('tabs.measurements.editor.fields.equipmentUnitCost')}</span>
+          <span className="text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(equipmentCost * grossQuantity)}</span>
         </li>
       </ul>
-      <p className="text-base font-semibold tabular-nums border-t border-border/50 pt-2">
-        {t('tabs.measurements.summary.total')}: {formatCurrency(totalCost)}
-      </p>
+      <div className="flex items-center gap-2 border-t border-border/50 pt-2">
+        <Calculator className="h-4 w-4 shrink-0 text-purple-600 dark:text-purple-400" />
+        <span className="text-sm font-semibold flex-1">{t('tabs.measurements.summary.total')}</span>
+        <span className="text-base font-bold tabular-nums text-purple-600 dark:text-purple-400">{formatCurrency(totalCost)}</span>
+      </div>
     </section>
   );
 }
