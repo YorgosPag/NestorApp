@@ -17,6 +17,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePropertiesByBuilding } from './usePropertiesByBuilding';
 import { useFloorsByBuilding } from './useFloorsByBuilding';
 import { propertiesOnFloor } from '@/lib/properties/floor-helpers';
+import { PropertyTypeIcon } from './property-type-icon';
 import type { Property } from '@/types/property';
 
 export interface PropertySelectByBuildingProps {
@@ -81,7 +82,10 @@ export function PropertySelectByBuilding({
             const floorLabel = floorNameById.get(p.floorId ?? '') ?? '';
             return (
               <SelectItem key={p.id} value={p.id}>
-                {code} — {p.name}{floorLabel ? ` (${floorLabel})` : ''}
+                <span className="flex items-center gap-1.5">
+                  <PropertyTypeIcon type={p.type} className="h-4 w-4" />
+                  <span>{code} — {p.name}{floorLabel ? ` (${floorLabel})` : ''}</span>
+                </span>
               </SelectItem>
             );
           })}

@@ -23,6 +23,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFloorsByBuilding, type FloorOption } from './useFloorsByBuilding';
 import { usePropertiesByBuilding } from './usePropertiesByBuilding';
 import { propertiesOnFloor } from '@/lib/properties/floor-helpers';
+import { PropertyTypeIcon } from './property-type-icon';
 import type { Property } from '@/types/property';
 
 export interface PropertyMultiSelectByBuildingProps {
@@ -229,13 +230,14 @@ function ChipsRow({ selectedProperties, onRemove, labelHeader, labelEmpty, label
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="h-7 gap-1"
+                className="h-7 gap-1.5"
                 onClick={() => onRemove(p.id)}
                 disabled={disabled}
                 aria-label={labelRemove}
               >
+                <PropertyTypeIcon type={p.type} className="h-3.5 w-3.5" />
                 <span>{p.code ?? p.name}</span>
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3 opacity-60" />
               </Button>
             </li>
           ))}
@@ -299,8 +301,9 @@ function FloorGroupRow({
                 disabled={disabled}
                 id={`prop-${p.id}`}
               />
-              <label htmlFor={`prop-${p.id}`} className="text-sm cursor-pointer">
-                {p.code ? `${p.code} — ${p.name}` : p.name}
+              <label htmlFor={`prop-${p.id}`} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <PropertyTypeIcon type={p.type} className="h-3.5 w-3.5" />
+                <span>{p.code ? `${p.code} — ${p.name}` : p.name}</span>
               </label>
             </li>
           ))}
