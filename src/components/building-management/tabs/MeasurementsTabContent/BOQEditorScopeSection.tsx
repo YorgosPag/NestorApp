@@ -96,14 +96,14 @@ export function BOQEditorScopeSection({
         {t('tabs.measurements.scope.label')}
       </legend>
 
-      <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+      <ul className="flex flex-col gap-1.5">
         {SCOPE_OPTIONS.map((opt) => (
           <li key={opt}>
             <Button
               type="button"
               variant={scope === opt ? 'default' : 'outline'}
               size="sm"
-              className="w-full text-xs"
+              className="w-full justify-start whitespace-normal text-left leading-tight"
               disabled={scopeLocked}
               onClick={() => onScopeChange(opt)}
             >

@@ -74,7 +74,7 @@ export function BOQEditorCostAllocationSection({
               type="button"
               variant={method === m ? 'default' : 'outline'}
               size="sm"
-              className="w-full justify-start"
+              className="w-full justify-start whitespace-normal text-left leading-tight"
               disabled={scopeLocked}
               onClick={() => onMethodChange(m)}
             >
