@@ -93,6 +93,9 @@ export interface BOQItem {
   /** Κωδικός κατηγορίας ΑΤΟΕ (π.χ. 'OIK-2') */
   categoryCode: string;
 
+  /** Κωδικός υποκατηγορίας Level-2 (π.χ. 'OIK-2.1') — ADR-337, προαιρετικό */
+  subCategoryCode: string | null;
+
   /** Σύντομη περιγραφή (π.χ. 'Οπλισμένο σκυρόδεμα C20/25') */
   title: string;
 
@@ -271,6 +274,7 @@ export interface CreateBOQItemInput {
   costAllocationMethod?: CostAllocationMethod;
   customAllocations?: Record<string, number> | null;
   categoryCode: string;
+  subCategoryCode?: string | null;
   title: string;
   description?: string | null;
   unit: BOQMeasurementUnit;
@@ -289,6 +293,7 @@ export interface CreateBOQItemInput {
 /** Input για ενημέρωση BOQ item (partial) */
 export interface UpdateBOQItemInput {
   title?: string;
+  subCategoryCode?: string | null;
   description?: string | null;
   unit?: BOQMeasurementUnit;
   estimatedQuantity?: number;

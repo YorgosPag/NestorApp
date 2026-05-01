@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { Pencil, Trash2 } from 'lucide-react';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
+import { findSubCategory } from '@/config/boq-subcategories';
 import { computeItemCost, computeVariance } from '@/services/measurements';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -231,6 +232,11 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
               <TableCell className={cn("tabular-nums", colors.text.muted)}>{idx + 1}</TableCell>
               <TableCell>
                 <p className="font-medium text-sm">{item.title}</p>
+                {item.subCategoryCode && (
+                  <p className={cn('text-xs mt-0.5', colors.text.muted)}>
+                    {findSubCategory(item.subCategoryCode)?.nameEL ?? item.subCategoryCode}
+                  </p>
+                )}
                 {variance && (
                   <p className={cn('text-xs tabular-nums mt-0.5', getVarianceClass(variance.percent))}>
                     {variance.percent > 0 ? '+' : ''}{formatNumber(variance.percent, { maximumFractionDigits: 1 })}%

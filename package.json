@@ -71,6 +71,7 @@
     "seed:all": "pnpm run seed:opportunities && pnpm run seed:firestore && pnpm run seed:communications && pnpm run seed:tasks",
     "claims:batch": "node scripts/set-user-claims-batch.js",
     "claims:direct": "node scripts/set-user-claims-direct.js",
+    "seed:boq-subcategories": "tsx --require dotenv/config scripts/seed-boq-subcategories.ts",
     "seed:ai-inbox": "node scripts/seed-ai-inbox-messages.js",
     "generate:i18n-types": "node scripts/generate-i18n-types.js",
     "extract:strings": "node scripts/extract-strings.js",

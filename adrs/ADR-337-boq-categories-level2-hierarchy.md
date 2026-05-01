@@ -390,3 +390,13 @@ Total: ~8 hours dev time. To be filed as a separate task after Giorgio's approva
 | 2026-05-01 | §4.6 confirmed: sub-category always optional everywhere. Non-blocking warning on quote send if items missing sub-category. |
 | 2026-05-01 | §6 extensibility: admin UI (step f) moved to main plan — user owns catalog data, zero developer dependency. |
 | 2026-05-01 | OIK-13 Ανελκυστήρες (5), OIK-14 Πισίνες (6), OIK-15 Φωτοβολταϊκά (5) added. Total: 94. `boq-categories.ts` updated. |
+| 2026-05-01 | OIK-9.7 "Αυτοματισμοί Smart Home (KNX / BUS)" added. OIK-16 "Ξυλουργικά / Κουζίνες" added (5 subs). Total: **98 sub-categories, 16 groups**. |
+| 2026-05-01 | IMPLEMENTED — Step (a): `src/config/boq-subcategories.ts` (98 subs, helpers `subCategoriesFor` + `findSubCategory`). |
+| 2026-05-01 | IMPLEMENTED — Step (b): `scripts/seed-boq-subcategories.ts` + `npm run seed:boq-subcategories`. Idempotent, uses `setDoc()`. |
+| 2026-05-01 | IMPLEMENTED — Step (c): `subCategoryCode: string \| null` on `BOQItem` / `CreateBOQItemInput` / `UpdateBOQItemInput`. `useBOQEditorState.ts` updated (init, save, category-change reset). |
+| 2026-05-01 | IMPLEMENTED — Step (d): `BasicInfoFieldset` cascading Select in `BOQItemEditor.tsx`. File size exceeded 500 lines → `BOQEditorFieldsets.tsx` extracted. i18n keys added to `building-tabs.json` (el + en). Sub-category Select always editable per Progressive Detail pattern. |
+| 2026-05-01 | IMPLEMENTED — Step (e): `BOQCategoryAccordion.tsx` shows sub-category name as second smaller line (Procore two-line pattern). `findSubCategory()` used for lookup. |
+| 2026-05-01 | IMPLEMENTED — Step (f): Admin UI `src/components/settings/company/BOQCategoriesTab.tsx` + API `src/app/api/settings/boq-subcategories/route.ts` (GET/POST/PATCH/DELETE). Tab "Κατηγορίες Εργασιών" added to `CompanySettingsPageContent.tsx`. i18n keys added to `org-structure.json` (el + en). |
+| 2026-05-01 | IMPLEMENTED — Step (g): `MeasurementsTabContent.tsx` — non-blocking confirm dialog on "Δημιουργία RFQ" if BOQ items missing `subCategoryCode`. |
+| 2026-05-01 | `boq-service.ts` — `subCategoryCode` added to `allowedFieldsForCertified` (certified items can still get sub-category assigned per Progressive Detail). |
+| 2026-05-01 | COLLECTIONS.BOQ_SYSTEM_SUBCATEGORIES added to `firestore-collections.ts`. |

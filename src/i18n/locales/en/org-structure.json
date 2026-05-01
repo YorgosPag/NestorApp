@@ -20,7 +20,8 @@
       "info": "Company Info",
       "tax": "Tax Settings",
       "orgChart": "Organisation Structure",
-      "routing": "Notification Routing"
+      "routing": "Notification Routing",
+      "boqCategories": "Work Categories"
     },
     "dept": {
       "addDept": "Add department",
@@ -45,6 +46,22 @@
     },
     "l2": {
       "contactScopedNote": "Structure applies to this contact only; members are not linked to users (Firebase Auth)."
+    },
+    "boqCat": {
+      "title": "BOQ Work Categories",
+      "subtitle": "Manage Level-2 sub-categories per ΑΤΟΕ group",
+      "addSubCat": "Add",
+      "editTitle": "Edit sub-category",
+      "addTitle": "New sub-category",
+      "deleteConfirm": "Delete sub-category? This cannot be undone.",
+      "code": "Code",
+      "nameEL": "Name (EL)",
+      "nameEN": "Name (EN)",
+      "active": "Active",
+      "actions": "Actions",
+      "noItems": "No sub-categories",
+      "save": "Save",
+      "cancel": "Cancel"
     }
   },
   "departments": {

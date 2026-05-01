@@ -187,6 +187,9 @@
           "equipmentUnitCost": "Equipment (€/unit)",
           "linkedPhase": "Construction Phase",
           "linkedPhaseNone": "No link",
+          "subCategory": "Sub-category",
+          "subCategoryPlaceholder": "Select sub-category...",
+          "subCategoryNone": "None",
           "notes": "Notes",
           "notesPlaceholder": "Work notes...",
           "statusLabel": "Status"
@@ -207,6 +210,7 @@
           "laborUnitCost": "Labor cost per unit, excluding materials and equipment.",
           "equipmentUnitCost": "Equipment rental cost per unit (e.g. crane, concrete pump).",
           "totals": "Auto-calculated: unit cost × gross quantity per cost category.",
+          "subCategory": "Specifies the type of work within the selected category. Always editable.",
           "notes": "Internal team notes — not printed on client documents.",
           "status": "Work lifecycle: Draft → Active → Completed → Locked (non-editable)."
         }
@@ -294,7 +298,9 @@
         "duplicate": "Duplicate",
         "expandAll": "Expand all",
         "collapseAll": "Collapse all",
-        "createRfqFromBoq": "Create RFQ from BOQ"
+        "createRfqFromBoq": "Create RFQ from BOQ",
+        "rfqWarningTitle": "Items without sub-category",
+        "rfqWarningBody": "{count} work items have no sub-category. Continue?"
       },
       "units": {
         "m": "m",

@@ -188,6 +188,16 @@ export const ATOE_MASTER_CATEGORIES: readonly MasterBOQCategory[] = [
     defaultWasteFactor: 0,
     allowedUnits: ['pcs', 'set', 'kWp'],
   },
+  {
+    code: 'OIK-16',
+    nameEL: 'Ξυλουργικά / Κουζίνες',
+    nameEN: 'Joinery & Kitchens',
+    description: 'Κουζίνες, ντουλάπες, εσωτερικές ξύλινες πόρτες, ξύλινες επενδύσεις',
+    level: 'group',
+    sortOrder: 16,
+    defaultWasteFactor: 0.05,
+    allowedUnits: ['pcs', 'set', 'm2', 'm'],
+  },
 ] as const;
 
 // ============================================================================

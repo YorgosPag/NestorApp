@@ -9,6 +9,7 @@ import { CompanyInfoTab } from './CompanyInfoTab';
 import { TaxSettingsTab } from './TaxSettingsTab';
 import { OrgStructureTab } from './OrgStructureTab';
 import { RoutingEventsTab } from './RoutingEventsTab';
+import { BOQCategoriesTab } from './BOQCategoriesTab';
 import type { OrgStructure } from '@/types/org/org-structure';
 
 interface OrgStructureState {
@@ -99,6 +100,7 @@ export function CompanySettingsPageContent() {
           <TabsTrigger value="tax">{t('orgStructure.tabs.tax')}</TabsTrigger>
           <TabsTrigger value="org">{t('orgStructure.tabs.orgChart')}</TabsTrigger>
           <TabsTrigger value="routing">{t('orgStructure.tabs.routing')}</TabsTrigger>
+          <TabsTrigger value="boqCats">{t('orgStructure.tabs.boqCategories')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info">
@@ -123,6 +125,10 @@ export function CompanySettingsPageContent() {
             saving={state.saving}
             onSave={handleSave}
           />
+        </TabsContent>
+
+        <TabsContent value="boqCats">
+          <BOQCategoriesTab />
         </TabsContent>
       </Tabs>
     </div>

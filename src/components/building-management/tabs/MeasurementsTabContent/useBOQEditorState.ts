@@ -50,6 +50,7 @@ const SCOPE_FIELDS: ReadonlyArray<keyof EditorFormState> = [
 
 export interface EditorFormState {
   categoryCode: string;
+  subCategoryCode: string;
   title: string;
   description: string;
   scope: BOQScope;
@@ -74,6 +75,7 @@ export function createInitialState(item: BOQItem | null, defaultCategory: string
   if (item) {
     return {
       categoryCode: item.categoryCode,
+      subCategoryCode: item.subCategoryCode ?? '',
       title: item.title,
       description: item.description ?? '',
       scope: item.scope,
@@ -97,6 +99,7 @@ export function createInitialState(item: BOQItem | null, defaultCategory: string
 
   return {
     categoryCode: defaultCategory,
+    subCategoryCode: '',
     title: '',
     description: '',
     scope: 'building',
@@ -230,6 +233,7 @@ export function useBOQEditorState({
     setForm((prev) => ({
       ...prev,
       categoryCode: code,
+      subCategoryCode: '',
       wasteFactor: String(defaultWaste),
       unit: currentUnitValid ? prev.unit : (catUnits[0] ?? 'm2'),
     }));
@@ -259,6 +263,7 @@ export function useBOQEditorState({
       if (isEdit) {
         const updateData: UpdateBOQItemInput = {
           title: form.title.trim(),
+          subCategoryCode: form.subCategoryCode || null,
           description: form.description.trim() || null,
           unit: form.unit,
           estimatedQuantity: numericEstimated,
@@ -276,6 +281,7 @@ export function useBOQEditorState({
           projectId, buildingId,
           ...buildScopePayload(),
           categoryCode: form.categoryCode,
+          subCategoryCode: form.subCategoryCode || null,
           title: form.title.trim(),
           description: form.description.trim() || null,
           unit: form.unit,

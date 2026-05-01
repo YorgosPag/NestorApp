@@ -149,11 +149,19 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
     setEditingItem(null);
   }, []);
 
-  const handleCreateRfqFromBoq = useCallback(() => {
+  const handleCreateRfqFromBoq = useCallback(async () => {
     if (filteredItems.length === 0) return;
+    const missingSubCat = filteredItems.filter((i) => !i.subCategoryCode).length;
+    if (missingSubCat > 0) {
+      const proceed = await confirm({
+        title: t('tabs.measurements.actions.rfqWarningTitle'),
+        description: t('tabs.measurements.actions.rfqWarningBody', { count: missingSubCat }),
+      });
+      if (!proceed) return;
+    }
     const ids = filteredItems.map((i) => i.id).join(',');
     router.push(`/procurement/rfqs/new?boqItems=${encodeURIComponent(ids)}`);
-  }, [filteredItems, router]);
+  }, [filteredItems, router, confirm, t]);
 
   // --- LOADING STATE ---
 

@@ -192,7 +192,7 @@ class BOQService implements IBOQService {
 
     // Governance: certified items — μόνο actualQuantity
     if (current.status === 'certified') {
-      const allowedFieldsForCertified: (keyof UpdateBOQItemInput)[] = ['actualQuantity', 'qaStatus', 'notes'];
+      const allowedFieldsForCertified: (keyof UpdateBOQItemInput)[] = ['actualQuantity', 'qaStatus', 'notes', 'subCategoryCode'];
       const attemptedFields = Object.keys(data) as (keyof UpdateBOQItemInput)[];
       const disallowedFields = attemptedFields.filter((f) => !allowedFieldsForCertified.includes(f));
 
