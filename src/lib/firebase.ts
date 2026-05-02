@@ -3,7 +3,7 @@ import {
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
-  persistentSingleTabManager,
+  persistentMultipleTabManager,
   connectFirestoreEmulator,
   type Firestore,
 } from 'firebase/firestore';
@@ -25,12 +25,15 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 // On the client we initialize Firestore with persistentLocalCache so onSnapshot
 // continues delivering cached data while offline and queued writes flush on reconnect.
 // SSR / Node falls back to plain getFirestore (no IndexedDB available).
+// Multi-tab manager: allows multiple browser tabs to share the IndexedDB cache
+// without competing for exclusive ownership (fixes "Failed to obtain exclusive
+// access to the persistence layer" console error in multi-tab sessions).
 const isClient = typeof window !== 'undefined';
 function createDb(): Firestore {
   if (!isClient) return getFirestore(app);
   try {
     return initializeFirestore(app, {
-      localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) }),
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
     });
   } catch {
     // initializeFirestore already called (HMR / repeat import) — reuse existing.
