@@ -278,6 +278,13 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   };
 
   const handleDelete = async (floor: FloorRecord) => {
+    const nums = floors.map((f) => f.number);
+    const isIntermediate = nums.some((n) => n < floor.number) && nums.some((n) => n > floor.number);
+    if (isIntermediate) {
+      notifyError(t('tabs.floors.deleteIntermediate'));
+      return;
+    }
+
     try {
       const allowed = await checkBeforeDelete(floor.id);
       if (!allowed) return;

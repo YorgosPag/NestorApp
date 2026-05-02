@@ -281,6 +281,21 @@ export async function handleDeleteFloor(
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }
 
+    const siblingsSnap = await db.collection(COLLECTIONS.FLOORS)
+      .where(FIELDS.BUILDING_ID, '==', floorData?.buildingId)
+      .get();
+    const siblingNumbers = siblingsSnap.docs
+      .filter((d) => d.id !== floorId)
+      .map((d) => (d.data() as FloorDocument).number);
+    const targetNumber = (floorData as FloorDocument).number;
+    const isIntermediate = siblingNumbers.some((n) => n < targetNumber) && siblingNumbers.some((n) => n > targetNumber);
+    if (isIntermediate) {
+      return NextResponse.json({
+        success: false,
+        error: 'Cannot delete an intermediate floor. Delete the floors above it first.',
+      }, { status: 422 });
+    }
+
     await executeDeletion(db, 'floor', floorId, ctx.uid, ctx.companyId);
     logger.info('[Floors/Delete] Floor deleted', { floorId, userId: ctx.uid });
 

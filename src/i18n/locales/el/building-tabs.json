@@ -100,6 +100,7 @@
       "cascadeElevationTitle": "Αναπροσαρμογή Υψομέτρων",
       "cascadeElevationDescription": "Η αλλαγή κατά {delta} m θα μετατοπίσει τις στάθμες {count} ορόφων. Να συνεχίσω;",
       "cascadeElevationConfirm": "Συνέχεια",
+      "deleteIntermediate": "Δεν επιτρέπεται διαγραφή ενδιάμεσου ορόφου. Διαγράψτε πρώτα τους ορόφους από πάνω.",
       "deleteSuccess": "Ο όροφος διαγράφηκε",
       "createSuccess": "Ο όροφος δημιουργήθηκε επιτυχώς!",
       "createError": "Αποτυχία δημιουργίας ορόφου",
