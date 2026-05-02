@@ -318,8 +318,11 @@ export function PropertiesManagementContent() {
     }
   }, [forceDataRefresh, setSelectedProperties]);
 
-  // ADR-229 Phase 2: Data-level loading guard (after all hooks)
-  if (loading) {
+  // ADR-229 Phase 2: Data-level loading guard (after all hooks).
+  // Skip during create mode — interrupting the create flow with a loading flash
+  // (e.g. from the initial SharedPropertiesProvider activation) would discard
+  // the user's in-progress form entry.
+  if (loading && !isCreatingNewUnit) {
     return (
       <PageContainer ariaLabel={t('page.pageLabel')}>
         <PageLoadingState icon={NAVIGATION_ENTITIES.property.icon} message={t('page.loading')} layout="contained" />

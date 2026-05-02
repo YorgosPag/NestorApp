@@ -91,7 +91,7 @@ export function DetailsContainer({
   if (!selectedItem) {
     // 🏢 ENTERPRISE: Auto-generate action button if onCreateAction provided and no explicit action
     const autoAction = !emptyStateProps.action && onCreateAction ? (
-      <Button variant="outline" onClick={onCreateAction}>
+      <Button type="button" variant="outline" onClick={onCreateAction}>
         <Plus className="mr-2 h-4 w-4" />
         {emptyStateProps.title}
       </Button>
