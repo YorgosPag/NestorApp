@@ -313,6 +313,7 @@
     "restore": "Restore",
     "restoreFile": "Restore File",
     "restoreConfirm": "Do you want to restore this file?",
+    "movedToTrash": "🗑️ {name} moved to trash",
     "restoreSuccess": "File restored successfully",
     "restoreError": "Failed to restore file",
     "permanentDelete": "Delete Permanently",

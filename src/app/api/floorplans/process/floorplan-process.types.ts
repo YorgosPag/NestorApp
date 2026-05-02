@@ -29,8 +29,15 @@ export interface ProcessFloorplanErrorResponse {
   details?: string;
 }
 
+export interface ProcessFloorplanInProgressResponse {
+  success: true;
+  status: 'in_progress';
+  fileId: string;
+}
+
 export type ProcessFloorplanResponse =
   | ProcessFloorplanSuccessResponse
+  | ProcessFloorplanInProgressResponse
   | ProcessFloorplanErrorResponse;
 
 export interface FileRecordData {
@@ -42,6 +49,7 @@ export interface FileRecordData {
   displayName: string;
   processedData?: FloorplanProcessedData;
   companyId?: string;
+  processingStatus?: 'idle' | 'processing' | 'done' | 'error';
 }
 
 export interface FirebaseAdminError {

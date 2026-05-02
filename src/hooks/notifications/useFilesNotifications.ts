@@ -64,6 +64,7 @@ export interface FilesTechnicalNotifications {
 }
 
 export interface FilesTrashNotifications {
+  readonly movedToTrash: (filename: string) => void;
   readonly restoreSuccess: () => void;
   readonly restoreError: () => void;
 }
@@ -134,6 +135,8 @@ export function useFilesNotifications(): FilesNotifications {
       },
 
       trash: {
+        movedToTrash: (filename) =>
+          success(t(NOTIFICATION_KEYS.files.trash.movedToTrash, { name: filename })),
         restoreSuccess: () => success(t(NOTIFICATION_KEYS.files.trash.restoreSuccess)),
         restoreError: () => error(t(NOTIFICATION_KEYS.files.trash.restoreError)),
       },

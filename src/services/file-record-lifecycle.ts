@@ -100,6 +100,7 @@ export async function moveToTrash(fileId: string, trashedBy: string): Promise<vo
     fileId,
     trashedBy,
     purgeAt: purgeDate.toISOString(),
+    displayName: (data.displayName as string | undefined) ?? undefined,
     timestamp: Date.now(),
   });
 

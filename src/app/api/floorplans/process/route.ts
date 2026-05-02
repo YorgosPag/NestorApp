@@ -21,16 +21,15 @@ import { getErrorMessage } from '@/lib/error-utils';
 import type {
   ProcessFloorplanRequest,
   ProcessFloorplanResponse,
+  ProcessFloorplanInProgressResponse,
   FileRecordData,
   FirebaseAdminError,
 } from './floorplan-process.types';
 import { getFileType, downloadFile, processDxf, processPdf } from './floorplan-process.service';
 import { nowISO } from '@/lib/date-local';
+import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 const logger = createModuleLogger('FloorplanProcessRoute');
-
-// In-memory mutex to prevent concurrent processing of same file
-const processingInProgress = new Set<string>();
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -56,7 +55,7 @@ async function handleProcessFloorplan(
   ctx: AuthContext
 ): Promise<NextResponse<ProcessFloorplanResponse>> {
   const startTime = Date.now();
-  let currentFileId: string | null = null;
+  let lockedFileId: string | null = null;
 
   logger.info('Request', { email: ctx.email, companyId: ctx.companyId });
 
@@ -71,19 +70,6 @@ async function handleProcessFloorplan(
         { status: 400 }
       );
     }
-
-    currentFileId = fileId;
-
-    if (processingInProgress.has(fileId)) {
-      logger.info('File already being processed', { fileId });
-      currentFileId = null;
-      return NextResponse.json(
-        { success: false, error: 'File is already being processed', errorCode: 'ALREADY_PROCESSING' },
-        { status: 409 }
-      );
-    }
-
-    processingInProgress.add(fileId);
 
     // 2. FIREBASE ADMIN
     const adminDb = getAdminFirestore();
@@ -119,7 +105,7 @@ async function handleProcessFloorplan(
       );
     }
 
-    // 5. CHECK ALREADY PROCESSED
+    // 5. CHECK ALREADY PROCESSED (fast path — no lock needed)
     if (fileData.processedData && !forceReprocess) {
       return NextResponse.json({
         success: true,
@@ -135,6 +121,32 @@ async function handleProcessFloorplan(
           : undefined,
       });
     }
+
+    // 5b. ATOMIC LOCK — cross-instance safe via Firestore transaction
+    // Replaces the in-memory Set which was per-lambda and unreliable on Vercel.
+    const fileRef = adminDb.collection(COLLECTIONS.FILES).doc(fileId);
+    let isAlreadyProcessing = false;
+
+    await adminDb.runTransaction(async (txn) => {
+      const snap = await txn.get(fileRef);
+      const current = snap.data();
+      if (current?.processingStatus === 'processing') {
+        isAlreadyProcessing = true;
+        return;
+      }
+      txn.update(fileRef, { processingStatus: 'processing' });
+    });
+
+    if (isAlreadyProcessing) {
+      logger.info('File already being processed (Firestore lock)', { fileId });
+      return NextResponse.json<ProcessFloorplanInProgressResponse>({
+        success: true,
+        status: 'in_progress',
+        fileId,
+      });
+    }
+
+    lockedFileId = fileId;
 
     // 6. DETERMINE FILE TYPE
     const fileType = getFileType(fileData.ext || '');
@@ -152,9 +164,10 @@ async function handleProcessFloorplan(
       ? await processDxf(rawBuffer, fileData, bucket)
       : processPdf(rawBuffer);
 
-    // 8. SAVE METADATA TO FIRESTORE
+    // 8. SAVE METADATA TO FIRESTORE + release lock
     await adminDb.collection(COLLECTIONS.FILES).doc(fileId).update({
       processedData: result.processedData,
+      processingStatus: 'done',
       updatedAt: nowISO(),
     });
 
@@ -167,8 +180,6 @@ async function handleProcessFloorplan(
       },
     });
 
-    processingInProgress.delete(fileId);
-
     return NextResponse.json({
       success: true,
       fileId,
@@ -177,8 +188,13 @@ async function handleProcessFloorplan(
       stats: result.stats,
     });
   } catch (error) {
-    if (currentFileId) {
-      processingInProgress.delete(currentFileId);
+    if (lockedFileId) {
+      const adminDb = getAdminFirestore();
+      safeFireAndForget(
+        adminDb.collection(COLLECTIONS.FILES).doc(lockedFileId).update({ processingStatus: 'error' }),
+        'FloorplanProcessRoute.releaseLock',
+        { fileId: lockedFileId }
+      );
     }
 
     const firebaseError = error as FirebaseAdminError | null;

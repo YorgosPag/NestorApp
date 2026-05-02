@@ -18,8 +18,20 @@ export interface FloorplanProcessResult {
   };
 }
 
+export interface FloorplanProcessInProgressResult {
+  success: true;
+  status: 'in_progress';
+  fileId: string;
+}
+
+export type FloorplanProcessOutcome = FloorplanProcessResult | FloorplanProcessInProgressResult;
+
+export function isInProgress(r: FloorplanProcessOutcome): r is FloorplanProcessInProgressResult {
+  return 'status' in r && r.status === 'in_progress';
+}
+
 export async function processFloorplanWithPolicy(
   input: FloorplanProcessInput,
-): Promise<FloorplanProcessResult> {
-  return apiClient.post<FloorplanProcessResult>(API_ROUTES.FLOORPLANS.PROCESS, input);
+): Promise<FloorplanProcessOutcome> {
+  return apiClient.post<FloorplanProcessOutcome>(API_ROUTES.FLOORPLANS.PROCESS, input);
 }

@@ -157,6 +157,7 @@ export const NOTIFICATION_KEYS = {
       copyError: 'common:copy.copyError',
     },
     trash: {
+      movedToTrash: 'files:trash.movedToTrash',
       restoreSuccess: 'files:trash.restoreSuccess',
       restoreError: 'files:trash.restoreError',
     },

@@ -10,19 +10,29 @@
 
 import { useEffect } from 'react';
 import { RealtimeService } from '@/services/realtime';
-import type { FileUpdatedPayload } from '@/services/realtime/types';
+import type { FileUpdatedPayload, FileTrashedPayload } from '@/services/realtime/types';
 import { useFilesNotifications } from '@/hooks/notifications/useFilesNotifications';
 
 export function GlobalFileUploadToast() {
   const fileNotifications = useFilesNotifications();
 
   useEffect(() => {
-    const unsub = RealtimeService.subscribe('FILE_UPDATED', (payload: FileUpdatedPayload) => {
+    const unsubUpload = RealtimeService.subscribe('FILE_UPDATED', (payload: FileUpdatedPayload) => {
       if (payload.updates.status === 'ready' && payload.updates.displayName) {
         fileNotifications.upload.fileReady(payload.updates.displayName);
       }
     });
-    return unsub;
+
+    const unsubTrash = RealtimeService.subscribe('FILE_TRASHED', (payload: FileTrashedPayload) => {
+      if (payload.displayName) {
+        fileNotifications.trash.movedToTrash(payload.displayName);
+      }
+    });
+
+    return () => {
+      unsubUpload();
+      unsubTrash();
+    };
   }, [fileNotifications]);
 
   return null;

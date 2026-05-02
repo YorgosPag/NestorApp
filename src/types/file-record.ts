@@ -487,6 +487,17 @@ export interface FileRecord {
    */
   processedData?: FloorplanProcessedData;
 
+  /**
+   * 🏢 ENTERPRISE: Floorplan processing lock state (ADR-033)
+   *
+   * Replaces in-memory Set mutex — Firestore field is cross-instance safe on Vercel.
+   * Set atomically via runTransaction before processing starts.
+   * - 'processing': lock held by an active serverless invocation
+   * - 'done': processedData is available
+   * - 'error': last attempt failed; next request resets to 'processing'
+   */
+  processingStatus?: 'idle' | 'processing' | 'done' | 'error';
+
   // =========================================================================
   // 🔗 ENTITY LINKING - Cross-entity file references (ADR file-linking)
   // =========================================================================
