@@ -17,6 +17,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { permanentDelete } from '@/lib/firestore/soft-delete-engine';
 import { isSoftDeletableEntity, SOFT_DELETE_CONFIG } from '@/lib/firestore/soft-delete-config';
 import type { SoftDeletableEntityType } from '@/types/soft-deletable';
+import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 
 interface PermanentDeleteResponse {
   entityType: string;
@@ -45,6 +46,14 @@ export const DELETE = withStandardRateLimit(
       await permanentDelete(
         adminDb, typedEntityType, entityId, ctx.uid, ctx.companyId
       );
+
+      if (entityType === 'project') {
+        const cache = EnterpriseAPICache.getInstance();
+        cache.delete(`api:projects:list:${ctx.companyId}`);
+        cache.delete('api:projects:list:all');
+        cache.delete('api:projects:bootstrap:admin');
+        cache.delete(`api:projects:bootstrap:tenant:${ctx.companyId}`);
+      }
 
       await logAuditEvent(ctx, 'data_deleted', entityType, 'api', {
         newValue: { type: 'status', value: { entityId, deleted: true } },

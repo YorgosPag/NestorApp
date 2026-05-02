@@ -101,6 +101,8 @@ export async function handleUpdateProject(
   const cache = EnterpriseAPICache.getInstance();
   cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
+  cache.delete('api:projects:bootstrap:admin');
+  cache.delete(`api:projects:bootstrap:tenant:${ctx.companyId}`);
 
   // 7. ADR-239: Centralized linking
   if ('linkedCompanyId' in body) {
@@ -211,6 +213,8 @@ export async function handleDeleteProject(
   const cache = EnterpriseAPICache.getInstance();
   cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
   cache.delete(`${CACHE_KEY_PREFIX}:all`);
+  cache.delete('api:projects:bootstrap:admin');
+  cache.delete(`api:projects:bootstrap:tenant:${ctx.companyId}`);
 
   // 6. Legacy auth audit log (soft-delete engine handles entity audit — ADR-281 SSoT)
   await logAuditEvent(ctx, 'data_deleted', 'projects', 'api', {

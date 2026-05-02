@@ -228,6 +228,8 @@ export const POST = withHighRateLimit(
         const cache = EnterpriseAPICache.getInstance();
         cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
         cache.delete(`${CACHE_KEY_PREFIX}:all`);
+        cache.delete('api:projects:bootstrap:admin');
+        cache.delete(`api:projects:bootstrap:tenant:${ctx.companyId}`);
 
         // ADR-029 Phase D: search_documents written by Cloud Function onProjectWrite.
 
