@@ -41,7 +41,6 @@ const UpdateParkingSchema = z.object({
   status: z.string().max(50).optional(),
   locationZone: z.string().max(100).nullable().optional(),
   floor: z.union([z.string().max(50), z.number()]).nullable().optional(),
-  floorId: z.string().max(128).nullable().optional(),
   location: z.string().max(200).nullable().optional(),
   area: z.number().min(0).max(999_999).nullable().optional(),
   price: z.number().min(0).max(999_999_999).nullable().optional(),
@@ -107,7 +106,6 @@ export const PATCH = withStandardRateLimit(
         if (body.type) updateData.type = body.type;
         if (body.status) updateData.status = body.status;
         if (body.floor !== undefined) updateData.floor = typeof body.floor === 'number' ? body.floor : (body.floor?.trim() || null);
-        if (body.floorId !== undefined) updateData.floorId = body.floorId || null;
         if (body.location !== undefined) updateData.location = body.location?.trim() || null;
         if (body.area !== undefined) updateData.area = typeof body.area === 'number' ? body.area : null;
         if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : null;

@@ -79,6 +79,13 @@ export interface FloorSelectFieldProps {
   disabled?: boolean;
   /** Fallback floor string (e.g. "0", "Ισόγειο") shown when floorId has no match in loaded options */
   fallbackFloor?: string;
+  /**
+   * Value binding mode (ADR-145 — parking floor schema simplification).
+   * - `'floorId'` (default): `value` is the floor document ID; emits both floor number string + floorId in payload.
+   * - `'floor'`: `value` is the floor number string ("0", "-1"); emits ONLY floor string, no payload.
+   *   Use this for entities that don't need a Firestore floor doc reference (e.g. parking).
+   */
+  valueMode?: 'floorId' | 'floor';
 }
 
 // =============================================================================
@@ -98,6 +105,7 @@ export function FloorSelectField({
   placeholder = '—',
   disabled = false,
   fallbackFloor,
+  valueMode = 'floorId',
 }: FloorSelectFieldProps) {
   const colors = useSemanticColors();
   const [floors, setFloors] = useState<FloorOption[]>([]);
@@ -139,13 +147,16 @@ export function FloorSelectField({
 
   const isDisabled = disabled || !buildingId;
 
-  // Determine effective select value — synthetic fallback when floorId has no match
-  const matchedFloor = !loading ? floors.find((f) => f.id === value) : null;
+  // Determine effective select value — match strategy depends on valueMode
+  const matchedFloor = !loading
+    ? floors.find((f) => valueMode === 'floor' ? f.value === value : f.id === value)
+    : null;
   const fallbackLabel = !matchedFloor && !loading && fallbackFloor
     ? formatFloorString(fallbackFloor)
     : null;
+  const itemValueOf = (f: FloorOption): string => valueMode === 'floor' ? f.value : f.id;
   const selectValue = value && matchedFloor
-    ? value
+    ? itemValueOf(matchedFloor)
     : (fallbackLabel ? FALLBACK_VALUE : NONE_VALUE);
 
   const handleValueChange = async (v: string) => {
@@ -154,8 +165,10 @@ export function FloorSelectField({
       return;
     }
 
-    // v = floor doc ID (since SelectItem value={f.id})
-    const selectedFloor = floorsRef.current.find((f) => f.id === v);
+    // v = floor doc ID OR floor number string (per valueMode)
+    const selectedFloor = floorsRef.current.find((f) =>
+      valueMode === 'floor' ? f.value === v : f.id === v,
+    );
     if (!selectedFloor) return;
 
     const floorNumber = Number(selectedFloor.value);
@@ -166,9 +179,14 @@ export function FloorSelectField({
       if (!allowed) return;
     }
 
+    if (valueMode === 'floor') {
+      onChange(selectedFloor.value);
+      return;
+    }
+
     onChange(selectedFloor.value, {
       floor: floorNumber,
-      floorId: v,
+      floorId: selectedFloor.id,
     });
   };
 
@@ -201,7 +219,7 @@ export function FloorSelectField({
               </SelectItem>
             )}
             {floors.map((f) => (
-              <SelectItem key={f.id} value={f.id}>
+              <SelectItem key={f.id} value={itemValueOf(f)}>
                 {f.label}
               </SelectItem>
             ))}

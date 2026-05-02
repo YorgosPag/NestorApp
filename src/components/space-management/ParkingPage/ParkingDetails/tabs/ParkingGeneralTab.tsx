@@ -36,7 +36,6 @@ import { useParkingNotifications } from '@/hooks/notifications/useParkingNotific
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { getBuildingsList } from '@/services/properties.service';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
-import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
@@ -71,7 +70,6 @@ interface ParkingFormState {
   type: ParkingSpotType;
   status: ParkingSpotStatus;
   floor: string;
-  floorId: string;
   location: string;
   area: string;
   description: string;
@@ -113,7 +111,6 @@ function buildFormState(parking: ParkingSpot): ParkingFormState {
     type: parking.type || 'standard',
     status: parking.status || 'available',
     floor: parking.floor || '',
-    floorId: parking.floorId || '',
     location: parking.location || '',
     area: parking.area !== undefined ? String(parking.area) : '',
     description: parking.description || '',
@@ -234,7 +231,6 @@ export function ParkingGeneralTab({
         if (form.code.trim()) payload.code = form.code.trim();
         if (buildingLink.linkedId) payload.buildingId = buildingLink.linkedId;
         if (form.floor.trim()) payload.floor = form.floor.trim();
-        if (form.floorId) payload.floorId = form.floorId;
         if (form.location.trim()) payload.location = form.location.trim();
         if (form.area) payload.area = parseFloat(form.area);
         if (form.description.trim()) payload.description = form.description.trim();
@@ -263,7 +259,6 @@ export function ParkingGeneralTab({
       if (form.type !== (parking.type || 'standard')) payload.type = form.type;
       if (form.status !== (parking.status || 'available')) payload.status = form.status;
       if (form.floor.trim() !== (parking.floor || '')) payload.floor = form.floor.trim();
-      if (form.floorId !== (parking.floorId || '')) payload.floorId = form.floorId || null;
       if (form.location.trim() !== (parking.location || '')) payload.location = form.location.trim();
 
       const newArea = form.area ? parseFloat(form.area) : undefined;
@@ -360,12 +355,10 @@ export function ParkingGeneralTab({
           <CardContent className="p-2 pt-0">
             <FloorSelectField
               buildingId={buildingLink.linkedId}
-              value={form.floorId}
+              value={form.floor}
+              valueMode="floor"
               fallbackFloor={form.floor}
-              onChange={(v: string, payload?: FloorChangePayload) => {
-                updateField('floor', v);
-                updateField('floorId', payload ? payload.floorId : '');
-              }}
+              onChange={(v: string) => updateField('floor', v)}
               label={t('general.fields.floor')}
               noBuildingHint={t('entityLinks.building.noFloorHint')}
               disabled={!isEditing}

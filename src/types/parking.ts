@@ -65,10 +65,8 @@ export interface ParkingSpot {
   type?: ParkingSpotType;
   /** Current status */
   status?: ParkingSpotStatus;
-  /** Floor/level identifier, e.g. "-1", "0", "pilotis" */
+  /** Floor/level identifier, e.g. "-1", "0", "pilotis" — canonical field (ADR-145) */
   floor?: string;
-  /** Floor document ID (Firestore doc reference) */
-  floorId?: string;
   /** Freeform location description */
   location?: string;
   /** Area in m^2 */

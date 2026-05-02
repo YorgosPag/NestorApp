@@ -94,7 +94,8 @@ const VALID_LOCATION_ZONES: readonly string[] = [
  * Map a Firestore parking document to a type-safe ParkingSpot object.
  *
  * Covers every field declared in `ParkingSpot` (types/parking.ts).
- * Connection fields (buildingId, floorId, projectId, …) are always optional.
+ * Connection fields (buildingId, projectId, …) are always optional.
+ * ADR-145: parking has no floorId — floor is a free string only.
  */
 export function mapParkingDoc(docId: string, data: Record<string, unknown>): ParkingSpot {
   const rawType = data.type as string | undefined;
@@ -117,7 +118,6 @@ export function mapParkingDoc(docId: string, data: Record<string, unknown>): Par
       ? rawStatus as ParkingSpotStatus
       : undefined,
     floor: data.floor as string | undefined,
-    floorId: data.floorId as string | undefined,
     location: data.location as string | undefined,
     area: typeof data.area === 'number' ? data.area : undefined,
     price: typeof data.price === 'number' ? data.price : undefined,
