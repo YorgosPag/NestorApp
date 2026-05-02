@@ -46,6 +46,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { getStatusColor } from '@/lib/design-system';
+import { buttonVariants } from '@/components/ui/button';
 
 // ============================================================================
 // TYPES
@@ -85,12 +86,12 @@ export interface ConfirmDialogProps {
 }
 
 // ============================================================================
-// VARIANT STYLES (Centralized - no inline styles)
+// VARIANT STYLES — SSoT: buttonVariants() for default/destructive, getStatusColor for warning
 // ============================================================================
 
-const VARIANT_STYLES: Record<ConfirmDialogVariant, string> = {
-  default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+const CONFIRM_BUTTON_CLASS: Record<ConfirmDialogVariant, string> = {
+  default: buttonVariants({ variant: 'default' }),
+  destructive: buttonVariants({ variant: 'destructive' }),
   warning: `${getStatusColor('reserved', 'bg')} text-white hover:opacity-90`,
 };
 
@@ -124,9 +125,8 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
-  // Default button texts from i18n
-  const resolvedConfirmText = confirmText || t('buttons.confirm', 'Confirm');
-  const resolvedCancelText = cancelText || t('buttons.cancel', 'Cancel');
+  const resolvedConfirmText = confirmText || t('buttons.confirm');
+  const resolvedCancelText = cancelText || t('buttons.cancel');
 
   // Handle confirm with loading support
   const handleConfirm = async () => {
@@ -151,9 +151,7 @@ export function ConfirmDialog({
             {typeof description === 'string' ? (
               description
             ) : (
-              <div className="text-sm text-muted-foreground">
-                {description}
-              </div>
+              <div>{description}</div>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -168,7 +166,7 @@ export function ConfirmDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={disabled || loading}
-            className={cn(VARIANT_STYLES[variant])}
+            className={cn(CONFIRM_BUTTON_CLASS[variant])}
           >
             {loading ? (
               <Spinner size="small" color="inherit" />
@@ -201,7 +199,7 @@ export function DeleteConfirmDialog(
     <ConfirmDialog
       {...props}
       variant={props.variant || 'destructive'}
-      confirmText={props.confirmText || t('buttons.delete', 'Delete')}
+      confirmText={props.confirmText || t('buttons.delete')}
     />
   );
 }
@@ -222,7 +220,7 @@ export function SoftDeleteConfirmDialog(
     <ConfirmDialog
       {...props}
       variant={props.variant || 'destructive'}
-      confirmText={props.confirmText || t('buttons.moveToTrash', 'Move to Trash')}
+      confirmText={props.confirmText || t('buttons.moveToTrash')}
       contentClassName={cn('dialog-brand', props.contentClassName)}
     />
   );
