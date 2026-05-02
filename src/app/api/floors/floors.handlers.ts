@@ -146,6 +146,7 @@ export async function handleCreateFloor(
       buildingName: body.buildingName || '',
       units: body.units || 0,
       elevation: body.elevation ?? null,
+      height: body.height ?? null,
     };
     if (body.projectId) entitySpecificFields.projectId = String(body.projectId);
     if (body.projectName) entitySpecificFields.projectName = body.projectName;
@@ -221,6 +222,7 @@ export async function handleUpdateFloor(
     if (body.name !== undefined) updates.name = body.name;
     if (body.number !== undefined) updates.number = body.number;
     if (body.elevation !== undefined) updates.elevation = body.elevation ?? null;
+    if (body.height !== undefined) updates.height = body.height ?? null;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });

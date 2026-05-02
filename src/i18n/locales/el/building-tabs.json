@@ -93,6 +93,8 @@
       "numberPlaceholder": "π.χ. -1, 0, 1",
       "namePlaceholder": "π.χ. Υπόγειο, Ισόγειο",
       "elevationPlaceholder": "π.χ. 0.00",
+      "height": "Ύψος (m)",
+      "heightPlaceholder": "π.χ. 3.00",
       "editSuccess": "Ο όροφος ενημερώθηκε",
       "deleteSuccess": "Ο όροφος διαγράφηκε",
       "createSuccess": "Ο όροφος δημιουργήθηκε επιτυχώς!",

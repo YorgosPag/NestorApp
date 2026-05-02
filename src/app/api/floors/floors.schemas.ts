@@ -9,6 +9,7 @@ export const CreateFloorSchema = z.object({
   projectName: z.string().max(200).optional(),
   units: z.number().int().min(0).max(9999).optional(),
   elevation: z.number().min(-999).max(9999).optional(),
+  height: z.number().min(0.1).max(999).optional(),
 });
 
 export const UpdateFloorSchema = z.object({
@@ -16,5 +17,6 @@ export const UpdateFloorSchema = z.object({
   number: z.number().int().optional(),
   name: z.string().max(200).optional(),
   elevation: z.number().min(-999).max(9999).optional(),
+  height: z.number().min(0.1).max(999).optional().nullable(),
   _v: z.number().int().optional(),
 }).passthrough();

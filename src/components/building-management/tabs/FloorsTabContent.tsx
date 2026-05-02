@@ -34,7 +34,7 @@ interface FloorsTabContentProps {
   building: Building;
 }
 
-const COLUMN_COUNT = 6;
+const COLUMN_COUNT = 7;
 
 export function FloorsTabContent({ building }: FloorsTabContentProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
@@ -44,7 +44,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     floors, loading, error, expandedFloorId, toggleFloorExpand,
     showCreateForm, setShowCreateForm,
     editingId, editNumber, handleEditNumberChange, editName, handleEditNameChange,
-    editElevation, handleEditElevationChange, saving,
+    editElevation, handleEditElevationChange, editHeight, handleEditHeightChange, saving,
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
@@ -115,6 +115,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                 <th className="w-20 px-2 py-2">{t('tabs.floors.number')}</th>
                 <th className="px-2 py-2">{t('tabs.floors.name')}</th>
                 <th className="w-32 px-2 py-2">{t('tabs.floors.elevation')}</th>
+                <th className="w-24 px-2 py-2">{t('tabs.floors.height')}</th>
                 <th className="w-20 px-2 py-2 text-center">{t('tabs.floors.units')}</th>
                 <th className="w-32 px-2 py-2 text-right">{t('tabs.floors.actions')}</th>
               </tr>
@@ -157,6 +158,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                             )}
                           </td>
                           <td className="px-2 py-2"><Input type="number" step="0.01" value={editElevation} onChange={(e) => handleEditElevationChange(e.target.value)} placeholder="—" className="h-8 w-24" disabled={saving} /></td>
+                          <td className="px-2 py-2"><Input type="number" step="0.01" min="0.1" value={editHeight} onChange={(e) => handleEditHeightChange(e.target.value)} placeholder="3.00" className="h-8 w-20" disabled={saving} /></td>
                           <td className={cn("px-2 py-2 text-center", colors.text.muted)}>{floor.units ?? 0}</td>
                           <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">
@@ -195,6 +197,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                             </div>
                           </td>
                           <td className={cn("px-2 py-2 font-mono text-xs", colors.text.muted)}>{formatElevation(floor.elevation)}</td>
+                          <td className={cn("px-2 py-2 font-mono text-xs", colors.text.muted)}>{floor.height != null ? `${floor.height.toFixed(2)} m` : '—'}</td>
                           <td className={cn("px-2 py-2 text-center", colors.text.muted)}>{floor.units ?? 0}</td>
                           <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">

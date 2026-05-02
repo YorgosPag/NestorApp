@@ -43,7 +43,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 /** Residential standard floor-to-floor height (meters). */
 const DEFAULT_STOREY_HEIGHT = 3.0;
 
-type ExistingFloorElevation = { number: number; elevation?: number | null };
+type ExistingFloorElevation = { number: number; elevation?: number | null; height?: number | null };
 
 interface FloorMutationResponse {
   floorId?: string;
@@ -75,16 +75,18 @@ export interface FloorInlineCreateFormProps {
 // =============================================================================
 
 /**
- * Smart elevation: infers start elevation for a new floor from actual existing
- * floor elevations instead of the fixed 3m-per-floor default.
- * Falls back to DEFAULT_STOREY_HEIGHT when no elevation data is available.
+ * Smart elevation: derives the start elevation of a new floor from the
+ * adjacent floor's stored elevation + its height (or DEFAULT_STOREY_HEIGHT).
+ *
+ * Uses height field directly — no inference from differences between floors.
+ * Example: floor 1 elevation=2.85, height=null → floor 2 start = 2.85 + 3.00 = 5.85
  */
 function computeSmartElevation(
   floorNumber: number,
   existingFloors: ReadonlyArray<ExistingFloorElevation>,
 ): string {
   const withElev = existingFloors
-    .filter((f): f is { number: number; elevation: number } =>
+    .filter((f): f is ExistingFloorElevation & { elevation: number } =>
       f.elevation != null && Number.isFinite(f.elevation as number))
     .sort((a, b) => a.number - b.number);
 
@@ -93,24 +95,13 @@ function computeSmartElevation(
   const below = [...withElev].reverse().find((f) => f.number < floorNumber);
   const above = withElev.find((f) => f.number > floorNumber);
 
-  if (below && above) {
-    const heightPerFloor = (above.elevation - below.elevation) / (above.number - below.number);
-    return (below.elevation + (floorNumber - below.number) * heightPerFloor).toFixed(2);
-  }
-
   if (below) {
-    const belowBelow = [...withElev].reverse().find((f) => f.number < below.number);
-    const h = belowBelow
-      ? (below.elevation - belowBelow.elevation) / (below.number - belowBelow.number)
-      : DEFAULT_STOREY_HEIGHT;
+    const h = below.height != null && Number.isFinite(below.height) ? below.height : DEFAULT_STOREY_HEIGHT;
     return (below.elevation + (floorNumber - below.number) * h).toFixed(2);
   }
 
   if (above) {
-    const aboveAbove = withElev.find((f) => f.number > above.number);
-    const h = aboveAbove
-      ? (aboveAbove.elevation - above.elevation) / (aboveAbove.number - above.number)
-      : DEFAULT_STOREY_HEIGHT;
+    const h = above.height != null && Number.isFinite(above.height) ? above.height : DEFAULT_STOREY_HEIGHT;
     return (above.elevation - (above.number - floorNumber) * h).toFixed(2);
   }
 
@@ -166,6 +157,7 @@ export function FloorInlineCreateForm({
   const [createNameManuallyEdited, setCreateNameManuallyEdited] = useState(false);
   const [createElevation, setCreateElevation] = useState(() => computeSmartElevation(initNum, existingFloors));
   const [createElevationManuallyEdited, setCreateElevationManuallyEdited] = useState(false);
+  const [createHeight, setCreateHeight] = useState(DEFAULT_STOREY_HEIGHT.toFixed(2));
   const [creating, setCreating] = useState(false);
 
   // ── Handlers with auto-suggest (Revit/ArchiCAD pattern) ──
@@ -208,6 +200,10 @@ export function FloorInlineCreateForm({
     setCreateElevationManuallyEdited(true);
   }, []);
 
+  const handleHeightChange = useCallback((value: string) => {
+    setCreateHeight(value);
+  }, []);
+
   // ── Mismatch warning: name manually edited but differs from auto-suggest ──
   const createNameMismatch = useMemo((): boolean => {
     if (!createNameManuallyEdited || !createName.trim()) return false;
@@ -237,6 +233,7 @@ export function FloorInlineCreateForm({
           number: parseInt(createNumber, 10) || 0,
           name: createName.trim(),
           elevation: createElevation ? parseFloat(createElevation) : null,
+          height: createHeight ? parseFloat(createHeight) : null,
           buildingId,
           ...(projectId ? { projectId } : {}),
         },
@@ -262,7 +259,7 @@ export function FloorInlineCreateForm({
       className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2"
       role="group"
     >
-      <section className="grid grid-cols-[80px_1fr_120px_auto] items-end gap-2">
+      <section className="grid grid-cols-[80px_1fr_120px_100px_auto] items-end gap-2">
         <fieldset className="flex flex-col gap-1">
           <label className={cn('text-xs font-medium', colors.text.muted)}>
             {t('tabs.floors.number')}
@@ -309,6 +306,21 @@ export function FloorInlineCreateForm({
             value={createElevation}
             onChange={(e) => handleElevationChange(e.target.value)}
             placeholder={t('tabs.floors.elevationPlaceholder')}
+            className="h-9"
+            disabled={creating}
+          />
+        </fieldset>
+        <fieldset className="flex flex-col gap-1">
+          <label className={cn('text-xs font-medium', colors.text.muted)}>
+            {t('tabs.floors.height')}
+          </label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0.1"
+            value={createHeight}
+            onChange={(e) => handleHeightChange(e.target.value)}
+            placeholder={t('tabs.floors.heightPlaceholder')}
             className="h-9"
             disabled={creating}
           />

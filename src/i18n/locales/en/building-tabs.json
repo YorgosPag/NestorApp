@@ -93,6 +93,8 @@
       "numberPlaceholder": "e.g. -1, 0, 1",
       "namePlaceholder": "e.g. Basement, Ground, 1st",
       "elevationPlaceholder": "e.g. 0.00",
+      "height": "Height (m)",
+      "heightPlaceholder": "e.g. 3.00",
       "editSuccess": "Floor updated",
       "deleteSuccess": "Floor deleted",
       "createSuccess": "Floor created successfully!",

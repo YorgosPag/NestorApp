@@ -26,6 +26,7 @@ export interface FloorRecord {
   number: number;
   name: string;
   elevation?: number | null;
+  height?: number | null;
   buildingId: string;
   units?: number;
   hasFloorplan?: boolean;
@@ -78,6 +79,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const [editNameManuallyEdited, setEditNameManuallyEdited] = useState(false);
   const [editElevation, setEditElevation] = useState('');
   const [editElevationManuallyEdited, setEditElevationManuallyEdited] = useState(false);
+  const [editHeight, setEditHeight] = useState('');
   const [editVersion, setEditVersion] = useState<number | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
@@ -122,6 +124,10 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   const handleEditElevationChange = useCallback((value: string) => {
     setEditElevation(value);
     setEditElevationManuallyEdited(true);
+  }, []);
+
+  const handleEditHeightChange = useCallback((value: string) => {
+    setEditHeight(value);
   }, []);
 
   // =========================================================================
@@ -183,6 +189,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     setEditNameManuallyEdited(false);
     setEditElevation(floor.elevation != null ? String(floor.elevation) : '');
     setEditElevationManuallyEdited(floor.elevation != null);
+    setEditHeight(floor.height != null ? String(floor.height) : '');
     setEditVersion(floor._v);
   };
 
@@ -197,6 +204,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
         number: parseInt(editNumber, 10),
         name: editName.trim(),
         elevation: editElevation ? parseFloat(editElevation) : null,
+        height: editHeight ? parseFloat(editHeight) : null,
       };
       if (editVersion !== undefined) payload._v = editVersion;
       const result = await updateFloorWithPolicy<FloorMutationResponse>({ payload });
@@ -267,7 +275,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     // ADR-284 Batch 7 SSoT: create state extracted to FloorInlineCreateForm component
     showCreateForm, setShowCreateForm,
     editingId, editNumber, handleEditNumberChange, editName, handleEditNameChange,
-    editElevation, handleEditElevationChange, saving,
+    editElevation, handleEditElevationChange, editHeight, handleEditHeightChange, saving,
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
