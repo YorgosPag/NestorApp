@@ -212,19 +212,18 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
       ? (floors.filter((f) => f.id !== editingId && f.elevation != null) as FloorWithElevation[])
       : [];
 
-    let doCascade = false;
     if (floorsToShift.length > 0 && elevationDelta != null) {
       const sign = elevationDelta > 0 ? '+' : '';
-      doCascade = await confirm({
+      const confirmed = await confirm({
         title: t('tabs.floors.cascadeElevationTitle'),
         description: t('tabs.floors.cascadeElevationDescription', {
           delta: `${sign}${elevationDelta.toFixed(2)}`,
           count: floorsToShift.length,
         }),
         confirmText: t('tabs.floors.cascadeElevationConfirm'),
-        cancelText: t('tabs.floors.cascadeElevationSkip'),
         variant: 'warning',
       });
+      if (!confirmed) return;
     }
 
     setSaving(true);
@@ -243,7 +242,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
         return;
       }
 
-      if (doCascade && floorsToShift.length > 0 && elevationDelta != null) {
+      if (floorsToShift.length > 0 && elevationDelta != null) {
         await Promise.all(
           floorsToShift.map((f) =>
             updateFloorWithPolicy<FloorMutationResponse>({
@@ -259,7 +258,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
 
       setEditingId(null);
       success(
-        doCascade && floorsToShift.length > 0
+        floorsToShift.length > 0
           ? t('tabs.floors.editSuccessCascade', { count: floorsToShift.length })
           : t('tabs.floors.editSuccess')
       );
