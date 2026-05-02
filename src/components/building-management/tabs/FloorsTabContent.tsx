@@ -180,7 +180,6 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                                 className="flex items-center gap-2 text-left hover:text-primary transition-colors"
                               >
                                 {floor.name}
-                                <Map className={cn("h-3.5 w-3.5", isExpanded ? "text-primary" : `${colors.text.muted} opacity-70`)} aria-hidden="true" />
                               </button>
                               {!floor.hasFloorplan && (
                                 <TooltipProvider delayDuration={300}>

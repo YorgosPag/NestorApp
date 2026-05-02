@@ -6,7 +6,7 @@
  * @see ADR-180 (IFC Floor Management System)
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -16,6 +16,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { formatFloorLabel } from '@/lib/intl-domain';
+import { RealtimeService } from '@/services/realtime';
 
 // ============================================================================
 // TYPES
@@ -179,6 +180,30 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
   }, [buildingId]);
 
   useEffect(() => { fetchFloors(); }, [fetchFloors]);
+
+  // =========================================================================
+  // REACTIVE hasFloorplan — re-fetch when a floor file is added or removed
+  // =========================================================================
+
+  const floorIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    floorIdsRef.current = new Set(floors.map((f) => f.id));
+  }, [floors]);
+
+  useEffect(() => {
+    const unsubTrash = RealtimeService.subscribe('FILE_TRASHED', (p) => {
+      if (p.entityType === 'floor' && p.entityId && floorIdsRef.current.has(p.entityId)) {
+        fetchFloors();
+      }
+    });
+    const unsubCreate = RealtimeService.subscribe('FILE_CREATED', (p) => {
+      const eid = p.file.entityId;
+      if (p.file.entityType === 'floor' && eid && floorIdsRef.current.has(eid)) {
+        fetchFloors();
+      }
+    });
+    return () => { unsubTrash(); unsubCreate(); };
+  }, [fetchFloors]);
 
   // handleCreate extracted to FloorInlineCreateForm (SSoT, ADR-284 Batch 7)
 

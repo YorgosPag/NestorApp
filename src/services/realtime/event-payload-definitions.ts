@@ -379,6 +379,8 @@ export interface FileTrashedPayload {
   trashedBy: string;
   purgeAt?: string;
   displayName?: string;
+  entityId?: string;
+  entityType?: string;
   timestamp: number;
 }
 
