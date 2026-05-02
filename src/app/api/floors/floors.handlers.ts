@@ -151,6 +151,18 @@ export async function handleCreateFloor(
       parentId: body.buildingId,
       entitySpecificFields,
       apiPath: '/api/floors (POST)',
+      auditFieldResolvers: {
+        buildingId: async (id) => {
+          if (!id || typeof id !== 'string') return null;
+          const snap = await db.collection(COLLECTIONS.BUILDINGS).doc(id).get();
+          return snap.exists ? ((snap.data()?.name as string) ?? null) : null;
+        },
+        projectId: async (id) => {
+          if (!id || typeof id !== 'string') return null;
+          const snap = await db.collection(COLLECTIONS.PROJECTS).doc(id).get();
+          return snap.exists ? ((snap.data()?.name as string) ?? null) : null;
+        },
+      },
     });
 
     return apiSuccess<FloorCreateResponse>(
