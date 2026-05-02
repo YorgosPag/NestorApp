@@ -17,7 +17,7 @@ import "server-only";
 import { FieldValue } from "firebase-admin/firestore";
 import { SOFT_DELETE_CONFIG } from "./soft-delete-config";
 import { executeDeletion } from "./deletion-guard";
-import { EntityAuditService } from "@/services/entity-audit.service";
+import { EntityAuditService, resolveUserDisplayName } from "@/services/entity-audit.service";
 import { ApiError } from "@/lib/api/ApiErrorHandler";
 import { createModuleLogger } from "@/lib/telemetry";
 import { getErrorMessage } from "@/lib/error-utils";
@@ -79,6 +79,8 @@ export async function softDelete(
     previousStatus,
   });
 
+  const resolvedName = await resolveUserDisplayName(deletedBy, performedByName ?? null);
+
   await docRef.update({
     status: "deleted",
     previousStatus,
@@ -90,7 +92,7 @@ export async function softDelete(
     // stale create-time stamp). Critical when an admin trashes another
     // user's entity — without this the CDC entry would name the creator.
     _lastModifiedBy: deletedBy,
-    _lastModifiedByName: performedByName ?? null,
+    _lastModifiedByName: resolvedName,
     _lastModifiedAt: FieldValue.serverTimestamp(),
   });
 
@@ -171,6 +173,8 @@ export async function restoreFromTrash(
     restoredStatus,
   });
 
+  const resolvedName = await resolveUserDisplayName(restoredBy, performedByName ?? null);
+
   await docRef.update({
     status: restoredStatus,
     previousStatus: FieldValue.delete(),
@@ -181,7 +185,7 @@ export async function restoreFromTrash(
     updatedAt: FieldValue.serverTimestamp(),
     // ADR-195 Phase 1 CDC: refresh performer stamps (see softDelete above).
     _lastModifiedBy: restoredBy,
-    _lastModifiedByName: performedByName ?? null,
+    _lastModifiedByName: resolvedName,
     _lastModifiedAt: FieldValue.serverTimestamp(),
   });
 
