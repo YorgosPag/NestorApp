@@ -58,7 +58,7 @@ export {
   generateVendorLogoFileId,
   generateSourcingEventId, generateRfqLineId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
-  getIdType, isLegacyId,
+  getIdType, isLegacyId, generateNotificationDedupeId,
 } from './enterprise-id-convenience';
 
 import {

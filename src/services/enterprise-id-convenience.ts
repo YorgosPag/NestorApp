@@ -38,6 +38,12 @@ export const generateTransmittalId = () => enterpriseIdService.generateTransmitt
 export const generateSessionId = () => enterpriseIdService.generateSessionId();
 export const generateTransactionId = () => enterpriseIdService.generateTransactionId();
 export const generateNotificationId = () => enterpriseIdService.generateNotificationId();
+/** Deterministic notification ID for idempotent writes — same inputs = same doc ID, no duplicates. */
+export const generateNotificationDedupeId = (
+  eventType: string,
+  recipientId: string,
+  eventId: string,
+): string => `${eventType}:${recipientId}:${eventId}`;
 export const generateTaskId = () => enterpriseIdService.generateTaskId();
 export const generateEventId = () => enterpriseIdService.generateEventId();
 export const generateRequestId = () => enterpriseIdService.generateRequestId();

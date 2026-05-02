@@ -43,6 +43,7 @@ import {
   getDefaultNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
 import type { Severity } from '@/types/notification';
+import { generateNotificationDedupeId } from '@/services/enterprise-id.service';
 
 // ============================================================================
 // TYPES
@@ -84,13 +85,8 @@ export interface DispatchResult {
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Generate deterministic dedupe key for idempotency
- * This becomes the document ID for atomic create
- */
-function generateDedupeKey(eventType: NotificationEventType, recipientId: string, eventId: string): string {
-  return `${eventType}:${recipientId}:${eventId}`;
-}
+// ADR-017: deterministic notification doc ID → enterprise-id.service.ts SSoT
+const generateDedupeKey = generateNotificationDedupeId;
 
 /**
  * Load user notification settings from Firestore
