@@ -80,3 +80,5 @@ Each floor in the response gains `hasFloorplan: boolean`. The client receives th
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-05-02 | v1.0 | Initial implementation: sequential validation, smart elevation, κάτωψη badge |
+| 2026-05-02 | v1.1 | Add `height` field (floor-to-floor meters) to schema, API, create form, edit row, table; fix `computeSmartElevation` to use `adjacent.height` directly instead of inferring from elevation differences |
+| 2026-05-02 | v1.2 | Cascade elevation update: when editing a floor's elevation, detect delta, show ConfirmDialog warning (count + delta), batch-update all other floors with elevations on confirm |

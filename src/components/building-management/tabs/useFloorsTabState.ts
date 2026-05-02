@@ -197,24 +197,73 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
 
   const handleSaveEdit = async () => {
     if (!editingId || !editName.trim()) return;
+
+    const editedFloor = floors.find((f) => f.id === editingId);
+    const oldElevation = editedFloor?.elevation ?? null;
+    const newElevation = editElevation ? parseFloat(editElevation) : null;
+
+    const elevationDelta =
+      newElevation != null && oldElevation != null && Math.abs(newElevation - oldElevation) > 0.001
+        ? newElevation - oldElevation
+        : null;
+
+    type FloorWithElevation = FloorRecord & { elevation: number };
+    const floorsToShift: FloorWithElevation[] = elevationDelta != null
+      ? (floors.filter((f) => f.id !== editingId && f.elevation != null) as FloorWithElevation[])
+      : [];
+
+    let doCascade = false;
+    if (floorsToShift.length > 0 && elevationDelta != null) {
+      const sign = elevationDelta > 0 ? '+' : '';
+      doCascade = await confirm({
+        title: t('tabs.floors.cascadeElevationTitle'),
+        description: t('tabs.floors.cascadeElevationDescription', {
+          delta: `${sign}${elevationDelta.toFixed(2)}`,
+          count: floorsToShift.length,
+        }),
+        confirmText: t('tabs.floors.cascadeElevationConfirm'),
+        cancelText: t('tabs.floors.cascadeElevationSkip'),
+        variant: 'warning',
+      });
+    }
+
     setSaving(true);
     try {
       const payload: Record<string, unknown> = {
         floorId: editingId,
         number: parseInt(editNumber, 10),
         name: editName.trim(),
-        elevation: editElevation ? parseFloat(editElevation) : null,
+        elevation: newElevation,
         height: editHeight ? parseFloat(editHeight) : null,
       };
       if (editVersion !== undefined) payload._v = editVersion;
       const result = await updateFloorWithPolicy<FloorMutationResponse>({ payload });
-      if (result?.success) {
-        setEditingId(null);
-        success(t('tabs.floors.editSuccess'));
-        await fetchFloors();
-      } else {
+      if (!result?.success) {
         notifyError(result?.error ?? t('tabs.floors.editError'));
+        return;
       }
+
+      if (doCascade && floorsToShift.length > 0 && elevationDelta != null) {
+        await Promise.all(
+          floorsToShift.map((f) =>
+            updateFloorWithPolicy<FloorMutationResponse>({
+              payload: {
+                floorId: f.id,
+                elevation: f.elevation + elevationDelta,
+                ...(f._v !== undefined ? { _v: f._v } : {}),
+              },
+            })
+          )
+        );
+      }
+
+      setEditingId(null);
+      success(
+        doCascade && floorsToShift.length > 0
+          ? t('tabs.floors.editSuccessCascade', { count: floorsToShift.length })
+          : t('tabs.floors.editSuccess')
+      );
+      await fetchFloors();
     } catch (err) {
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
         notifyError(t('tabs.floors.versionConflict'));
