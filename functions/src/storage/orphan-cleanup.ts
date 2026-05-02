@@ -47,6 +47,10 @@ export const onStorageFinalize = functions
     const fileName = segments[segments.length - 1];
     if (!fileName) return;
 
+    // Skip companion thumbnails — convention: {fileId}_thumb.{ext}
+    // Their fileId (extracted below) would include '_thumb' suffix → no Firestore claim → false orphan.
+    if (fileName.includes('_thumb.')) return;
+
     const fileId = fileName.split('.')[0];
     if (!fileId) return;
 
