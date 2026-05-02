@@ -116,7 +116,7 @@ async function handlePatch(
             typeof (body as Record<string, unknown>)[field] === 'boolean'
               ? ((body as Record<string, unknown>)[field] as string | number | boolean)
               : null,
-          label: `Δήλωση ΕΦΚΑ / ${field}`,
+          label: `efkaDeclaration.${field}`,
         }));
 
         await EntityAuditService.recordChange({

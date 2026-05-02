@@ -51,37 +51,37 @@ function mergeDefs(
 /** Fields tracked for property audit trail (raw field → Greek label) */
 const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
   // Core fields
-  name: 'Όνομα',
-  type: 'Τύπος',
-  status: 'Κατάσταση',
-  floor: 'Όροφος',
-  area: 'Εμβαδόν',
-  price: 'Τιμή',
-  description: 'Περιγραφή',
-  buildingId: 'Κτίριο',
-  projectId: 'Έργο',
+  name: 'name',
+  type: 'type',
+  status: 'status',
+  floor: 'floor',
+  area: 'area',
+  price: 'price',
+  description: 'description',
+  buildingId: 'buildingId',
+  projectId: 'projectId',
   // companyId intentionally omitted — it is the tenant isolation key and
   // never changes after creation. Tracking it produces noise (raw ID) with
   // no informational value for the property audit timeline.
   // Extended fields (from PropertyFieldsBlock)
-  layout: 'Διαρρύθμιση',
-  areas: 'Εμβαδά',
-  orientations: 'Προσανατολισμοί',
-  condition: 'Κατάσταση ακινήτου',
-  energy: 'Ενεργειακή κλάση',
-  finishes: 'Φινιρίσματα',
-  interiorFeatures: 'Εσωτερικά χαρακτηριστικά',
-  securityFeatures: 'Χαρακτηριστικά ασφαλείας',
-  systemsOverride: 'Εγκαταστάσεις (Θέρμανση/Ψύξη)',
+  layout: 'layout',
+  areas: 'areas',
+  orientations: 'orientations',
+  condition: 'condition',
+  energy: 'energy',
+  finishes: 'finishes',
+  interiorFeatures: 'interiorFeatures',
+  securityFeatures: 'securityFeatures',
+  systemsOverride: 'systemsOverride',
   // Commercial status (top-level)
-  commercialStatus: 'Εμπορική κατάσταση',
+  commercialStatus: 'commercialStatus',
   // Commercial sub-fields (dot-notation — human-readable, no internal IDs)
-  'commercial.askingPrice': 'Τιμή ζητούμενη',
-  'commercial.finalPrice': 'Τελική τιμή',
-  'commercial.reservationDeposit': 'Προκαταβολή',
-  'commercial.owners': 'Ιδιοκτήτες/Αγοραστές',
-  'commercial.reservationDate': 'Ημερ. κράτησης',
-  'commercial.saleDate': 'Ημερ. πώλησης',
+  'commercial.askingPrice': 'commercial.askingPrice',
+  'commercial.finalPrice': 'commercial.finalPrice',
+  'commercial.reservationDeposit': 'commercial.reservationDeposit',
+  'commercial.owners': 'commercialOwners',
+  'commercial.reservationDate': 'commercial.reservationDate',
+  'commercial.saleDate': 'commercial.saleDate',
 };
 
 // ============================================================================
@@ -100,184 +100,184 @@ const PROPERTY_TRACKED_FIELDS_RAW: Record<string, string> = {
  */
 const PROJECT_TRACKED_FIELDS_RAW: Record<string, string> = {
   // ── Identity ──
-  name: 'Όνομα',
-  title: 'Τίτλος',
-  description: 'Περιγραφή',
-  status: 'Κατάσταση',
-  type: 'Τύπος',
+  name: 'name',
+  title: 'title',
+  description: 'description',
+  status: 'status',
+  type: 'type',
 
   // ── Company links (ADR-232: linkedCompanyId is business entity, companyId is tenant) ──
-  company: 'Εταιρεία',
-  linkedCompanyId: 'Συνδεδεμένη εταιρεία',
-  linkedCompanyName: 'Επωνυμία συνδεδεμένης εταιρείας',
+  company: 'company',
+  linkedCompanyId: 'linkedCompanyId',
+  linkedCompanyName: 'linkedCompanyName',
 
   // ── Location ──
   // NOTE: `address` and `city` are legacy fields auto-derived from addresses[].isPrimary.
   // They are intentionally excluded from tracking to avoid duplicate audit entries
   // whenever an address is added/edited (the `addresses` collection field already
   // captures all changes with full sub-field detail).
-  addresses: 'Διευθύνσεις',
-  location: 'Τοποθεσία',
+  addresses: 'addresses',
+  location: 'location',
 
   // ── Progress / financials ──
-  progress: 'Πρόοδος',
-  totalValue: 'Συνολική αξία',
-  totalArea: 'Συνολικό εμβαδόν',
-  budget: 'Προϋπολογισμός',
+  progress: 'progress',
+  totalValue: 'totalValue',
+  totalArea: 'totalArea',
+  budget: 'budget',
 
   // ── Timeline ──
-  startDate: 'Ημερομηνία έναρξης',
-  completionDate: 'Ημερομηνία ολοκλήρωσης',
-  endDate: 'Ημερομηνία λήξης',
-  duration: 'Διάρκεια (μήνες)',
-  startYear: 'Έτος έναρξης',
+  startDate: 'startDate',
+  completionDate: 'completionDate',
+  endDate: 'endDate',
+  duration: 'duration',
+  startYear: 'startYear',
 
   // ── Classification ──
-  priority: 'Προτεραιότητα',
-  riskLevel: 'Επίπεδο ρίσκου',
-  complexity: 'Πολυπλοκότητα',
+  priority: 'priority',
+  riskLevel: 'riskLevel',
+  complexity: 'complexity',
 
   // ── Permits / legal ──
-  buildingBlock: 'Οικοδομικό τετράγωνο',
-  protocolNumber: 'Αρ. πρωτοκόλλου',
-  licenseNumber: 'Αρ. άδειας',
-  issuingAuthority: 'Αρχή έκδοσης άδειας',
-  issueDate: 'Ημερομηνία έκδοσης άδειας',
+  buildingBlock: 'buildingBlock',
+  protocolNumber: 'protocolNumber',
+  licenseNumber: 'licenseNumber',
+  issuingAuthority: 'issuingAuthority',
+  issueDate: 'issueDate',
 
   // ── Feature flags ──
-  hasPermits: 'Έχει άδειες',
-  hasFinancing: 'Έχει χρηματοδότηση',
-  isEcological: 'Οικολογικό',
-  hasSubcontractors: 'Με υπεργολάβους',
-  isActive: 'Ενεργό',
-  hasIssues: 'Έχει ζητήματα',
+  hasPermits: 'hasPermits',
+  hasFinancing: 'hasFinancing',
+  isEcological: 'isEcological',
+  hasSubcontractors: 'hasSubcontractors',
+  isActive: 'isActive',
+  hasIssues: 'hasIssues',
 
   // ── ADR-244: Landowners / bartex ──
-  landowners: 'Οικοπεδούχοι',
-  bartexPercentage: 'Ποσοστό αντιπαροχής',
+  landowners: 'landowners',
+  bartexPercentage: 'bartexPercentage',
 };
 
 // ============================================================================
 // CONTACT TRACKED FIELDS
 // ============================================================================
 
-/** Fields tracked for contact audit trail (raw field → Greek label) */
+/** Fields tracked for contact audit trail (raw field → field identifier) */
 const CONTACT_TRACKED_FIELDS_RAW: Record<string, string> = {
   // ── Identity (shared) ──
-  firstName: 'Όνομα',
-  lastName: 'Επώνυμο',
-  fatherName: 'Πατρώνυμο',
-  motherName: 'Μητρώνυμο',
-  middleName: 'Μεσαίο Όνομα',
-  nickname: 'Ψευδώνυμο',
-  companyName: 'Επωνυμία',
-  serviceName: 'Όνομα Υπηρεσίας',
-  type: 'Τύπος',
-  status: 'Κατάσταση',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  fatherName: 'fatherName',
+  motherName: 'motherName',
+  middleName: 'middleName',
+  nickname: 'nickname',
+  companyName: 'companyName',
+  serviceName: 'serviceName',
+  type: 'type',
+  status: 'status',
 
   // ── Individual — Personal ──
-  birthDate: 'Ημ. Γέννησης',
-  birthCountry: 'Χώρα Γέννησης',
-  gender: 'Φύλο',
-  amka: 'ΑΜΚΑ',
+  birthDate: 'birthDate',
+  birthCountry: 'birthCountry',
+  gender: 'gender',
+  amka: 'amka',
 
   // ── Individual — Identity Documents ──
-  documentType: 'Τύπος Εγγράφου',
-  documentIssuer: 'Εκδούσα Αρχή',
-  documentNumber: 'Αρ. Εγγράφου',
-  documentIssueDate: 'Ημ. Έκδοσης Εγγράφου',
-  documentExpiryDate: 'Ημ. Λήξης Εγγράφου',
+  documentType: 'documentType',
+  documentIssuer: 'documentIssuer',
+  documentNumber: 'documentNumber',
+  documentIssueDate: 'documentIssueDate',
+  documentExpiryDate: 'documentExpiryDate',
 
   // ── Tax / Legal ──
-  vatNumber: 'ΑΦΜ',
-  taxOffice: 'ΔΟΥ',
-  idNumber: 'Αρ. Ταυτότητας',
-  profession: 'Επάγγελμα',
+  vatNumber: 'vatNumber',
+  taxOffice: 'taxOffice',
+  idNumber: 'idNumber',
+  profession: 'profession',
 
   // ── Individual — Professional ──
-  specialty: 'Ειδικότητα',
-  employer: 'Εργοδότης',
-  employerId: 'ID Εργοδότη',
-  position: 'Θέση',
-  department: 'Τμήμα',
-  workAddress: 'Διεύθυνση Εργασίας',
-  workWebsite: 'Ιστοσελίδα Εργασίας',
-  escoLabel: 'Επάγγελμα ESCO',
-  iscoCode: 'Κωδικός ISCO',
-  escoSkills: 'Δεξιότητες ESCO',
+  specialty: 'specialty',
+  employer: 'employer',
+  employerId: 'employerId',
+  position: 'position',
+  department: 'department',
+  workAddress: 'workAddress',
+  workWebsite: 'workWebsite',
+  escoLabel: 'escoLabel',
+  iscoCode: 'iscoCode',
+  escoSkills: 'escoSkills',
 
   // ── Individual — Family ──
-  maritalStatus: 'Οικογ. Κατάσταση',
-  spouse: 'Σύζυγος',
-  children: 'Τέκνα',
+  maritalStatus: 'maritalStatus',
+  spouse: 'spouse',
+  children: 'children',
 
   // ── Contact info (arrays — serialized to JSON for diff) ──
-  emails: 'Emails',
-  phones: 'Τηλέφωνα',
-  websites: 'Ιστοσελίδες',
-  socialMedia: 'Μέσα Κοιν. Δικτύωσης',
+  emails: 'emails',
+  phones: 'phones',
+  websites: 'websites',
+  socialMedia: 'socialMedia',
 
   // ── Address fields ──
-  addresses: 'Διευθύνσεις',
+  addresses: 'addresses',
 
   // ── Categorization ──
-  tags: 'Ετικέτες',
-  isFavorite: 'Αγαπημένο',
-  category: 'Κατηγορία',
+  tags: 'tags',
+  isFavorite: 'isFavorite',
+  category: 'category',
 
   // ── Notes ──
-  notes: 'Σημειώσεις',
+  notes: 'notes',
 
   // ── Photos / Media ──
   // photoURL: excluded — derived from multiplePhotoURLs[0], not independent data
-  multiplePhotoURLs: 'Φωτογραφίες',
-  logoURL: 'Λογότυπο',
-  representativePhotoURL: 'Φωτογραφία Εκπροσώπου',
+  multiplePhotoURLs: 'multiplePhotoURLs',
+  logoURL: 'logoURL',
+  representativePhotoURL: 'representativePhotoURL',
 
   // ── Company-specific ──
-  legalForm: 'Νομική Μορφή',
-  companyType: 'Τύπος Εταιρείας',
-  legalName: 'Νομική Επωνυμία',
-  tradeName: 'Εμπορική Επωνυμία',
-  gemiNumber: 'Αρ. ΓΕΜΗ',
-  registrationNumber: 'Αρ. ΓΕΜΗ (legacy)',
-  industry: 'Κλάδος',
-  sector: 'Τομέας',
-  numberOfEmployees: 'Αρ. Εργαζομένων',
-  annualRevenue: 'Ετήσιος Κύκλος Εργασιών',
-  contactPersons: 'Πρόσωπα Επικοινωνίας',
-  'customFields.activities': 'Δραστηριότητες ΚΑΔ',
-  'customFields.chamber': 'Επιμελητήριο / Τ.Υ. ΓΕΜΗ',
-  'customFields.activityCodeKAD': 'Κύριος ΚΑΔ',
-  'customFields.activityDescription': 'Περιγραφή ΚΑΔ',
-  'customFields.activityType': 'Τύπος δραστηριότητας',
-  'customFields.gemiStatus': 'Κατάσταση ΓΕΜΗ',
-  'customFields.gemiStatusDate': 'Ημερ. Κατάστασης ΓΕΜΗ',
-  'customFields.capitalAmount': 'Κεφάλαιο',
-  'customFields.currency': 'Νόμισμα',
-  'customFields.registrationDate': 'Ημερ. Εγγραφής',
-  'customFields.lastUpdateDate': 'Ημερ. Τελ. Ενημέρωσης',
-  'customFields.gemiDepartment': 'Τμήμα ΓΕΜΗ',
-  'customFields.prefecture': 'Νομός',
-  'customFields.municipality': 'Δήμος',
+  legalForm: 'legalForm',
+  companyType: 'companyType',
+  legalName: 'legalName',
+  tradeName: 'tradeName',
+  gemiNumber: 'gemiNumber',
+  registrationNumber: 'registrationNumber',
+  industry: 'industry',
+  sector: 'sector',
+  numberOfEmployees: 'numberOfEmployees',
+  annualRevenue: 'annualRevenue',
+  contactPersons: 'contactPersons',
+  'customFields.activities': 'customFields.activities',
+  'customFields.chamber': 'customFields.chamber',
+  'customFields.activityCodeKAD': 'customFields.activityCodeKAD',
+  'customFields.activityDescription': 'customFields.activityDescription',
+  'customFields.activityType': 'customFields.activityType',
+  'customFields.gemiStatus': 'customFields.gemiStatus',
+  'customFields.gemiStatusDate': 'customFields.gemiStatusDate',
+  'customFields.capitalAmount': 'customFields.capitalAmount',
+  'customFields.currency': 'customFields.currency',
+  'customFields.registrationDate': 'customFields.registrationDate',
+  'customFields.lastUpdateDate': 'customFields.lastUpdateDate',
+  'customFields.gemiDepartment': 'customFields.gemiDepartment',
+  'customFields.prefecture': 'customFields.prefecture',
+  'customFields.municipality': 'customFields.municipality',
 
   // ── Service-specific ──
-  name: 'Ονομασία Υπηρεσίας',
-  shortName: 'Συντομογραφία',
-  supervisionMinistry: 'Εποπτεύον Υπουργείο',
-  serviceType: 'Τύπος Υπηρεσίας',
-  parentOrganization: 'Μητρικός Οργανισμός',
-  serviceCode: 'Κωδικός Υπηρεσίας',
-  registryNumber: 'Αρ. Μητρώου',
-  responsibleMinistry: 'Αρμόδιο Υπουργείο',
-  division: 'Διεύθυνση',
-  operatingHours: 'Ωράριο Λειτουργίας',
-  responsiblePersons: 'Υπεύθυνοι Επικοινωνίας',
-  servicesProvided: 'Παρεχόμενες Υπηρεσίες',
+  name: 'name',
+  shortName: 'shortName',
+  supervisionMinistry: 'supervisionMinistry',
+  serviceType: 'serviceType',
+  parentOrganization: 'parentOrganization',
+  serviceCode: 'serviceCode',
+  registryNumber: 'registryNumber',
+  responsibleMinistry: 'responsibleMinistry',
+  division: 'division',
+  operatingHours: 'operatingHours',
+  responsiblePersons: 'responsiblePersons',
+  servicesProvided: 'servicesProvided',
 
   // ── Personas (ADR-121) ──
-  personas: 'Ρόλοι (Personas)',
-  personaTypes: 'Τύποι Ρόλων',
+  personas: 'personas',
+  personaTypes: 'personaTypes',
 };
 
 // Fields exclusive to a specific contact type — excluded from audit diffs
@@ -322,20 +322,20 @@ const INDIVIDUAL_EXCLUSIVE: ReadonlySet<string> = new Set([
 // falls through as scalar via `mergeDefs`.
 
 const ADDRESS_SUB_FIELD_LABELS: Readonly<Record<string, string>> = {
-  type: 'Τύπος Διεύθυνσης',
-  isPrimary: 'Κύρια Διεύθυνση',
-  label: 'Ετικέτα',
-  street: 'Οδός',
-  number: 'Αριθμός',
-  city: 'Πόλη',
-  postalCode: 'Τ.Κ.',
-  region: 'Περιφέρεια',
-  regionalUnit: 'Περιφερειακή Ενότητα',
-  country: 'Χώρα',
-  municipality: 'Δήμος',
-  neighborhood: 'Περιοχή / Συνοικία',
-  blockSide: 'Πλευρά Οικοδομικού Τετραγώνου',
-  floor: 'Όροφος',
+  type: 'type',
+  isPrimary: 'isPrimary',
+  label: 'label',
+  street: 'street',
+  number: 'number',
+  city: 'city',
+  postalCode: 'postalCode',
+  region: 'region',
+  regionalUnit: 'regionalUnit',
+  country: 'country',
+  municipality: 'municipality',
+  neighborhood: 'neighborhood',
+  blockSide: 'blockSide',
+  floor: 'floor',
 };
 
 const ADDRESS_TRACK_SUB_FIELDS: readonly string[] = [
@@ -349,7 +349,7 @@ const ADDRESS_TRACK_SUB_FIELDS: readonly string[] = [
 const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
   addresses: {
     kind: 'collection',
-    label: 'Διευθύνσεις',
+    label: 'addresses',
     keyBy: 'id',
     labelFields: ['type', 'street', 'number'],
     trackSubFields: ADDRESS_TRACK_SUB_FIELDS,
@@ -357,7 +357,7 @@ const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
   },
   landowners: {
     kind: 'collection',
-    label: 'Οικοπεδούχοι',
+    label: 'landowners',
     keyBy: 'contactId',
     labelFields: ['name'],
     trackSubFields: ['name', 'landOwnershipPct', 'allocatedShares'],
@@ -367,35 +367,35 @@ const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
 const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
   emails: {
     kind: 'collection',
-    label: 'Emails',
+    label: 'emails',
     keyBy: 'email',
     labelFields: ['email'],
     trackSubFields: ['email', 'type', 'isPrimary', 'label'],
   },
   phones: {
     kind: 'collection',
-    label: 'Τηλέφωνα',
+    label: 'phones',
     keyBy: 'number',
     labelFields: ['number'],
     trackSubFields: ['number', 'type', 'isPrimary', 'label', 'countryCode'],
   },
   websites: {
     kind: 'collection',
-    label: 'Ιστοσελίδες',
+    label: 'websites',
     keyBy: 'url',
     labelFields: ['url'],
     trackSubFields: ['url', 'type', 'label'],
   },
   socialMedia: {
     kind: 'collection',
-    label: 'Μέσα Κοιν. Δικτύωσης',
+    label: 'socialMedia',
     keyBy: ['platform', 'username'],
     labelFields: ['platform', 'username'],
     trackSubFields: ['platform', 'username', 'url', 'type', 'label'],
   },
   addresses: {
     kind: 'collection',
-    label: 'Διευθύνσεις',
+    label: 'addresses',
     keyBy: ['type', 'street', 'city', 'postalCode'],
     labelFields: ['type', 'street', 'city'],
     trackSubFields: [
@@ -409,29 +409,29 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
   },
   children: {
     kind: 'collection',
-    label: 'Τέκνα',
+    label: 'children',
     keyBy: 'value',
   },
   contactPersons: {
     kind: 'collection',
-    label: 'Πρόσωπα Επικοινωνίας',
+    label: 'contactPersons',
     keyBy: ['name', 'position'],
     labelFields: ['name', 'position'],
     trackSubFields: ['name', 'position', 'department', 'email', 'phone', 'isPrimary'],
   },
   tags: {
     kind: 'collection',
-    label: 'Ετικέτες',
+    label: 'tags',
     keyBy: 'value',
   },
   multiplePhotoURLs: {
     kind: 'collection',
-    label: 'Φωτογραφίες',
+    label: 'multiplePhotoURLs',
     keyBy: 'value',
   },
   responsiblePersons: {
     kind: 'collection',
-    label: 'Υπεύθυνοι Επικοινωνίας',
+    label: 'responsiblePersons',
     keyBy: ['name', 'position'],
     labelFields: ['name', 'position'],
     trackSubFields: [
@@ -441,23 +441,23 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
   },
   servicesProvided: {
     kind: 'collection',
-    label: 'Παρεχόμενες Υπηρεσίες',
+    label: 'servicesProvided',
     keyBy: 'value',
   },
   personas: {
     kind: 'collection',
-    label: 'Ρόλοι (Personas)',
+    label: 'personas',
     keyBy: ['type'],
     labelFields: ['type'],
   },
   personaTypes: {
     kind: 'collection',
-    label: 'Τύποι Ρόλων',
+    label: 'personaTypes',
     keyBy: 'value',
   },
   escoSkills: {
     kind: 'collection',
-    label: 'Δεξιότητες ESCO',
+    label: 'escoSkills',
     keyBy: ['code'],
     labelFields: ['label', 'code'],
   },
@@ -466,22 +466,22 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
 const PROPERTY_COLLECTION_DEFS: Record<string, CollectionDef> = {
   orientations: {
     kind: 'collection',
-    label: 'Προσανατολισμοί',
+    label: 'orientations',
     keyBy: 'value',
   },
   interiorFeatures: {
     kind: 'collection',
-    label: 'Εσωτερικά χαρακτηριστικά',
+    label: 'interiorFeatures',
     keyBy: 'value',
   },
   securityFeatures: {
     kind: 'collection',
-    label: 'Χαρακτηριστικά ασφαλείας',
+    label: 'securityFeatures',
     keyBy: 'value',
   },
   'commercial.owners': {
     kind: 'collection',
-    label: 'Ιδιοκτήτες/Αγοραστές',
+    label: 'commercialOwners',
     keyBy: 'contactId',
     labelFields: ['name'],
     trackSubFields: ['name', 'ownershipPct', 'role', 'paymentPlanId'],
@@ -500,36 +500,36 @@ export const PROPERTY_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 // BUILDING TRACKED FIELDS (ADR-195 — creation diff for service-layer writes)
 // ============================================================================
 
-/** Fields tracked for building audit trail (raw field → Greek label) */
+/** Fields tracked for building audit trail (raw field → field identifier) */
 const BUILDING_TRACKED_FIELDS_RAW: Record<string, string> = {
   // Identity
-  name: 'Τίτλος',
-  code: 'Κωδικός',
-  description: 'Περιγραφή',
-  status: 'Κατάσταση',
-  category: 'Κατηγορία Κτιρίου',
-  projectId: 'Έργο',
+  name: 'name',
+  code: 'code',
+  description: 'description',
+  status: 'status',
+  category: 'category',
+  projectId: 'projectId',
   // Location — `address`/`city` excluded (legacy derived fields, tracked via `addresses` collection)
-  addresses: 'Διευθύνσεις',
+  addresses: 'addresses',
   // Metrics
-  totalArea: 'Συνολικό εμβαδόν',
-  builtArea: 'Δομημένο εμβαδόν',
-  floors: 'Όροφοι',
-  units: 'Μονάδες',
-  totalValue: 'Συνολική αξία',
-  progress: 'Πρόοδος',
+  totalArea: 'totalArea',
+  builtArea: 'builtArea',
+  floors: 'floors',
+  units: 'units',
+  totalValue: 'totalValue',
+  progress: 'progress',
   // Timeline
-  startDate: 'Ημερομηνία έναρξης',
-  completionDate: 'Ημερομηνία ολοκλήρωσης',
+  startDate: 'startDate',
+  completionDate: 'completionDate',
   // Company links
-  company: 'Εταιρεία',
-  linkedCompanyId: 'Συνδεδεμένη εταιρεία',
+  company: 'company',
+  linkedCompanyId: 'linkedCompanyId',
 };
 
 const BUILDING_COLLECTION_DEFS: Record<string, CollectionDef> = {
   addresses: {
     kind: 'collection',
-    label: 'Διευθύνσεις',
+    label: 'addresses',
     keyBy: 'id',
     labelFields: ['type', 'street', 'number'],
     trackSubFields: ADDRESS_TRACK_SUB_FIELDS,
@@ -546,12 +546,12 @@ export const BUILDING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 // ============================================================================
 
 const FLOOR_TRACKED_FIELDS_RAW: Record<string, string> = {
-  name: 'Τίτλος',
-  number: 'Αριθμός Ορόφου',
-  buildingId: 'Κτίριο',
-  projectId: 'Έργο',
-  units: 'Μονάδες',
-  elevation: 'Ύψος (m)',
+  name: 'name',
+  number: 'number',
+  buildingId: 'buildingId',
+  projectId: 'projectId',
+  units: 'units',
+  elevation: 'elevation',
 };
 
 /** Floor audit registry — `field → TrackedFieldDef`. */
@@ -563,14 +563,14 @@ export const FLOOR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 // ============================================================================
 
 const STORAGE_TRACKED_FIELDS_RAW: Record<string, string> = {
-  name: 'Τίτλος',
-  type: 'Τύπος',
-  status: 'Κατάσταση',
-  buildingId: 'Κτίριο',
-  floor: 'Όροφος',
-  area: 'Εμβαδόν',
-  code: 'Κωδικός',
-  projectId: 'Έργο',
+  name: 'name',
+  type: 'type',
+  status: 'status',
+  buildingId: 'buildingId',
+  floor: 'floor',
+  area: 'area',
+  code: 'code',
+  projectId: 'projectId',
 };
 
 /** Storage audit registry — `field → TrackedFieldDef`. */
@@ -582,15 +582,15 @@ export const STORAGE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 // ============================================================================
 
 const PARKING_TRACKED_FIELDS_RAW: Record<string, string> = {
-  number: 'Αριθμός Θέσης',
-  type: 'Τύπος',
-  status: 'Κατάσταση',
-  buildingId: 'Κτίριο',
-  floor: 'Όροφος',
-  code: 'Κωδικός',
-  projectId: 'Έργο',
-  area: 'Εμβαδόν',
-  monthlyRent: 'Μηνιαίο Ενοίκιο',
+  number: 'number',
+  type: 'type',
+  status: 'status',
+  buildingId: 'buildingId',
+  floor: 'floor',
+  code: 'code',
+  projectId: 'projectId',
+  area: 'area',
+  monthlyRent: 'monthlyRent',
 };
 
 /** Parking audit registry — `field → TrackedFieldDef`. */

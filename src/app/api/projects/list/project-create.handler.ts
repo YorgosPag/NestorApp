@@ -178,7 +178,7 @@ export const POST = withHighRateLimit(
             field: 'projectCode',
             oldValue: null,
             newValue: projectCode,
-            label: 'Κωδικός Έργου',
+            label: 'projectCode',
           },
         ];
 
