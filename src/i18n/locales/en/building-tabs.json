@@ -95,7 +95,7 @@
       "elevationPlaceholder": "e.g. 0.00",
       "editSuccess": "Floor updated",
       "deleteSuccess": "Floor deleted",
-      "createSuccess": "Floor created",
+      "createSuccess": "Floor created successfully!",
       "createError": "Failed to create floor",
       "editError": "Failed to update floor",
       "deleteError": "Failed to delete floor",

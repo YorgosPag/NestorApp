@@ -95,7 +95,7 @@
       "elevationPlaceholder": "π.χ. 0.00",
       "editSuccess": "Ο όροφος ενημερώθηκε",
       "deleteSuccess": "Ο όροφος διαγράφηκε",
-      "createSuccess": "Ο όροφος δημιουργήθηκε",
+      "createSuccess": "Ο όροφος δημιουργήθηκε επιτυχώς!",
       "createError": "Αποτυχία δημιουργίας ορόφου",
       "editError": "Αποτυχία ενημέρωσης ορόφου",
       "deleteError": "Αποτυχία διαγραφής ορόφου",
