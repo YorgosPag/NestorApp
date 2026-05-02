@@ -11,7 +11,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   FILE_LIFECYCLE_STATES,
   HOLD_TYPES,
-  RETENTION_BY_CATEGORY,
+  TRASH_RETENTION_BY_CATEGORY,
   DEFAULT_RETENTION_POLICIES,
   type FileCategory,
 } from '@/config/domain-constants';
@@ -151,7 +151,7 @@ async function cascadeContactFilesToTrash(
     }
 
     const retentionDays =
-      RETENTION_BY_CATEGORY[data.category as FileCategory] ??
+      TRASH_RETENTION_BY_CATEGORY[data.category as FileCategory] ??
       DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS;
     const purgeDate = new Date();
     purgeDate.setDate(purgeDate.getDate() + retentionDays);

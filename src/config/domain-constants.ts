@@ -263,22 +263,39 @@ export const DEFAULT_RETENTION_POLICIES = {
 } as const;
 
 /**
- * 🏢 ENTERPRISE: Retention policies by file category
- * @enterprise Construction/real estate specific
+ * 🏢 ENTERPRISE: Trash retention by file category (Google Drive / SharePoint pattern)
  *
- * Critical documents (contracts, permits) have longer retention
- * Temporary files (drafts, temp uploads) have shorter retention
+ * Short window for accidental-delete recovery. Distinct from archive retention.
+ * After this period, the scheduled purge cron deletes from Storage + Firestore.
  */
-export const RETENTION_BY_CATEGORY: Record<FileCategory, number> = {
-  [FILE_CATEGORIES.PHOTOS]: 30, // Standard 30 days
-  [FILE_CATEGORIES.FLOORPLANS]: 365 * 10, // 10 years for blueprints
-  [FILE_CATEGORIES.DOCUMENTS]: 365 * 5, // 5 years
-  [FILE_CATEGORIES.INVOICES]: 365 * 10, // 10 years (tax compliance)
-  [FILE_CATEGORIES.CONTRACTS]: 365 * 15, // 15 years (legal)
-  [FILE_CATEGORIES.AUDIO]: 30, // Standard 30 days
-  [FILE_CATEGORIES.VIDEOS]: 30, // Standard 30 days
-  [FILE_CATEGORIES.DRAWINGS]: 365 * 10, // 10 years (CAD drawings)
-  [FILE_CATEGORIES.PERMITS]: 365 * 20, // 20 years (building permits)
+export const TRASH_RETENTION_BY_CATEGORY: Record<FileCategory, number> = {
+  [FILE_CATEGORIES.PHOTOS]: 30,
+  [FILE_CATEGORIES.AUDIO]: 30,
+  [FILE_CATEGORIES.VIDEOS]: 30,
+  [FILE_CATEGORIES.DOCUMENTS]: 60,
+  [FILE_CATEGORIES.DRAWINGS]: 90,
+  [FILE_CATEGORIES.FLOORPLANS]: 90,
+  [FILE_CATEGORIES.INVOICES]: 90,
+  [FILE_CATEGORIES.CONTRACTS]: 90,
+  [FILE_CATEGORIES.PERMITS]: 90,
+};
+
+/**
+ * 🏢 ENTERPRISE: Archive retention by file category (legal/compliance)
+ *
+ * Used when files are explicitly archived (not trashed). Compliance-driven.
+ * Construction/real estate specific long retention periods.
+ */
+export const ARCHIVE_RETENTION_BY_CATEGORY: Record<FileCategory, number> = {
+  [FILE_CATEGORIES.PHOTOS]: 365 * 3,
+  [FILE_CATEGORIES.FLOORPLANS]: 365 * 10,
+  [FILE_CATEGORIES.DOCUMENTS]: 365 * 5,
+  [FILE_CATEGORIES.INVOICES]: 365 * 10,
+  [FILE_CATEGORIES.CONTRACTS]: 365 * 15,
+  [FILE_CATEGORIES.AUDIO]: 365 * 3,
+  [FILE_CATEGORIES.VIDEOS]: 365 * 3,
+  [FILE_CATEGORIES.DRAWINGS]: 365 * 10,
+  [FILE_CATEGORIES.PERMITS]: 365 * 20,
 };
 
 /**

@@ -26,7 +26,7 @@ import {
   type HoldType,
   FILE_LIFECYCLE_STATES,
   DEFAULT_RETENTION_POLICIES,
-  RETENTION_BY_CATEGORY,
+  TRASH_TRASH_RETENTION_BY_CATEGORY,
   HOLD_TYPES,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
@@ -44,10 +44,10 @@ const logger = createModuleLogger('FILE_RECORD_LIFECYCLE');
 
 /**
  * Calculate purge date based on category retention policy
- * @enterprise Uses RETENTION_BY_CATEGORY from domain-constants
+ * @enterprise Uses TRASH_RETENTION_BY_CATEGORY from domain-constants
  */
 function calculatePurgeDate(category: FileCategory): Date {
-  const retentionDays = RETENTION_BY_CATEGORY[category] ?? DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS;
+  const retentionDays = TRASH_RETENTION_BY_CATEGORY[category] ?? DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS;
   const purgeDate = new Date();
   purgeDate.setDate(purgeDate.getDate() + retentionDays);
   return purgeDate;
@@ -93,7 +93,7 @@ export async function moveToTrash(fileId: string, trashedBy: string): Promise<vo
   logger.info('FileRecord moved to trash', {
     fileId,
     purgeAt: purgeDate.toISOString(),
-    retentionDays: RETENTION_BY_CATEGORY[category] ?? DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS,
+    retentionDays: TRASH_RETENTION_BY_CATEGORY[category] ?? DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS,
   });
 
   RealtimeService.dispatch('FILE_TRASHED', {
