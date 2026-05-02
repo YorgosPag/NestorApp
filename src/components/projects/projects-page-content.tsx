@@ -30,7 +30,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { deleteProject } from '@/services/projects-client.service';
-import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DeleteConfirmDialog, SoftDeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { useProjectsTrashState } from '@/hooks/useProjectsTrashState';
 import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
@@ -425,12 +425,11 @@ export function ProjectsPageContent() {
         {BlockedDialog}
 
         {/* 🏢 ENTERPRISE: Soft-delete confirmation (move to trash) */}
-        <DeleteConfirmDialog
+        <SoftDeleteConfirmDialog
           open={!!projectToDelete}
           onOpenChange={(open) => { if (!open) setProjectToDelete(null); }}
           title={t('moveToTrash', { ns: 'trash' })}
           description={t('softDeleteDialog.description', { ns: 'trash' })}
-          confirmText={t('softDeleteDialog.confirm', { ns: 'trash' })}
           onConfirm={handleConfirmDelete}
           loading={isDeleting}
           disabled={checkingDeletion}

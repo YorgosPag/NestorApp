@@ -204,6 +204,27 @@ export function DeleteConfirmDialog(
 }
 
 /**
+ * 🏢 ENTERPRISE: Soft-Delete Confirmation Dialog (Move to Trash)
+ *
+ * Pre-configured for reversible soft-delete actions.
+ * Confirm button always reads "Μεταφορά στον Κάδο" — no scattered overrides.
+ * Use this for ALL "move to trash" actions; use DeleteConfirmDialog for permanent deletes.
+ */
+export function SoftDeleteConfirmDialog(
+  props: Omit<ConfirmDialogProps, 'variant'> & { variant?: ConfirmDialogVariant }
+) {
+  const { t } = useTranslation(['common', 'common-actions']);
+
+  return (
+    <ConfirmDialog
+      {...props}
+      variant={props.variant || 'destructive'}
+      confirmText={props.confirmText || t('buttons.moveToTrash', 'Move to Trash')}
+    />
+  );
+}
+
+/**
  * 🏢 ENTERPRISE: Warning Confirmation Dialog
  *
  * Pre-configured for warning actions (unlink, archive, etc.)

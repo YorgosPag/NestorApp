@@ -35,7 +35,7 @@ import { ListContainer, PageContainer, DetailsContainer } from '@/core/container
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DeleteConfirmDialog, SoftDeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
@@ -385,7 +385,7 @@ export function StoragePageContent() {
         </MobileDetailsSlideIn>
 
         {/* Delete Storage Confirmation (move to trash) */}
-        <DeleteConfirmDialog
+        <SoftDeleteConfirmDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           title={tStorage('pages.storage.deleteDialog.title')}

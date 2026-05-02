@@ -42,7 +42,7 @@ import {
 // ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyCompact } from '@/lib/intl-utils';
-import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DeleteConfirmDialog, SoftDeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
@@ -386,7 +386,7 @@ export function ParkingPageContent() {
         </MobileDetailsSlideIn>
 
         {/* Delete Parking Confirmation (move to trash) */}
-        <DeleteConfirmDialog
+        <SoftDeleteConfirmDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           title={t('pages.parking.deleteDialog.title')}

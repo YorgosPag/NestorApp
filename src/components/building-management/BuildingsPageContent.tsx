@@ -35,7 +35,7 @@ import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/A
 import { ListContainer, PageContainer } from '@/core/containers';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DeleteConfirmDialog, SoftDeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Building as BuildingType } from '@/types/building/contracts';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { useBuildingsTrashState } from '@/hooks/useBuildingsTrashState';
@@ -53,7 +53,6 @@ export type { Building } from '@/types/building/contracts';
 export function BuildingsPageContent() {
   // [ENTERPRISE] i18n hook for translations
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
-  const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { success: showSuccess } = useNotifications();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -463,12 +462,11 @@ export function BuildingsPageContent() {
         {BlockedDialog}
 
         {/* 🏢 ENTERPRISE: Delete confirmation (shown only when guard allows) */}
-        <DeleteConfirmDialog
+        <SoftDeleteConfirmDialog
           open={!!buildingToDelete}
           onOpenChange={(open) => { if (!open) setBuildingToDelete(null); }}
           title={t('details.deleteBuilding')}
           description={t('details.confirmDelete', { name: buildingToDelete?.name ?? '' })}
-          confirmText={tCommon('buttons.moveToTrash')}
           onConfirm={handleConfirmDelete}
           loading={isDeleting}
           disabled={checkingDeletion}
