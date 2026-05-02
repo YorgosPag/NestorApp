@@ -359,6 +359,7 @@ export function StoragePageContent() {
                     setSelectedStorage(null);
                   }}
                   onDelete={showTrash ? undefined : () => setShowDeleteDialog(true)}
+                  isInTrash={showTrash}
                 />
               )}
             </>

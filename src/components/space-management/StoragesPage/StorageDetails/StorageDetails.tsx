@@ -21,9 +21,11 @@ interface StorageDetailsProps {
   onNewStorage?: () => void;
   /** Delete the current storage */
   onDelete?: () => void;
+  /** Whether the storage is displayed in the trash view — hides mutating actions */
+  isInTrash?: boolean;
 }
 
-export function StorageDetails({ storage, onNewStorage, onDelete }: StorageDetailsProps) {
+export function StorageDetails({ storage, onNewStorage, onDelete, isInTrash = false }: StorageDetailsProps) {
   const emptyStateMessages = useEmptyStateMessages();
 
   // Inline editing state (lifted for header ↔ tab coordination)
@@ -70,6 +72,7 @@ export function StorageDetails({ storage, onNewStorage, onDelete }: StorageDetai
             onCancel={handleCancel}
             onNewStorage={onNewStorage}
             onDelete={onDelete}
+            isInTrash={isInTrash}
           />
         ) : null
       }

@@ -18,6 +18,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { Storage } from '@/types/storage/contracts';
 import { RealtimeService } from '@/services/realtime';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const logger = createModuleLogger('useStoragesTrashState');
 
@@ -35,6 +37,8 @@ export function useStoragesTrashState({
   forceDataRefresh,
 }: UseStoragesTrashStateParams) {
   const { user, loading: authLoading } = useAuth();
+  const { success: showSuccess } = useNotifications();
+  const { t } = useTranslation('trash');
   const [showTrash, setShowTrash] = useState(false);
   const [trashedStorages, setTrashedStorages] = useState<Storage[]>([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
@@ -75,10 +79,11 @@ export function useStoragesTrashState({
     try {
       await TrashService.bulkRestore('storage', ids);
       handleTrashActionComplete();
+      showSuccess(t('restoreSuccess', { count: ids.length }));
     } catch (error) {
       logger.error('Failed to restore storage units', { ids, error });
     }
-  }, [handleTrashActionComplete]);
+  }, [handleTrashActionComplete, showSuccess, t]);
 
   const handlePermanentDeleteStorages = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
@@ -88,18 +93,20 @@ export function useStoragesTrashState({
 
   const handleConfirmPermanentDelete = useCallback(async () => {
     if (pendingPermanentDeleteIds.length === 0) return;
+    const count = pendingPermanentDeleteIds.length;
     logger.info('Permanently deleting storage units', { ids: pendingPermanentDeleteIds });
     try {
       await TrashService.bulkPermanentDelete('storage', pendingPermanentDeleteIds);
       setShowPermanentDeleteDialog(false);
       setPendingPermanentDeleteIds([]);
       handleTrashActionComplete();
+      showSuccess(t('permanentDeleteSuccess', { count }));
     } catch (error) {
       logger.error('Failed to permanently delete storage units', { ids: pendingPermanentDeleteIds, error });
       setShowPermanentDeleteDialog(false);
       setPendingPermanentDeleteIds([]);
     }
-  }, [pendingPermanentDeleteIds, handleTrashActionComplete]);
+  }, [pendingPermanentDeleteIds, handleTrashActionComplete, showSuccess, t]);
 
   const handleCancelPermanentDelete = useCallback(() => {
     setShowPermanentDeleteDialog(false);

@@ -35,6 +35,8 @@ interface StorageDetailsHeaderProps {
   onNewStorage?: () => void;
   /** Delete the current storage */
   onDelete?: () => void;
+  /** Whether the storage is displayed in the trash view — hides mutating actions */
+  isInTrash?: boolean;
 }
 
 export function StorageDetailsHeader({
@@ -46,16 +48,20 @@ export function StorageDetailsHeader({
   onCancel,
   onNewStorage,
   onDelete,
+  isInTrash = false,
 }: StorageDetailsHeaderProps) {
   const { t } = useTranslation(['storage', 'trash']);
 
   // Edit mode: Save (green), Cancel (white)
   // Normal mode: New (green), Edit (blue), Delete (red)
+  // Trash mode: no mutating actions
   const actions: EntityHeaderAction[] = isEditing
     ? [
         createEntityAction('save', isSaving ? t('header.saving') : t('header.save'), isSaving ? () => {} : onSave),
         createEntityAction('cancel', t('header.cancel'), onCancel),
       ]
+    : isInTrash
+    ? []
     : [
         createEntityAction('new', t('header.newStorage'), () => onNewStorage?.()),
         createEntityAction('edit', t('header.edit'), onStartEdit),
