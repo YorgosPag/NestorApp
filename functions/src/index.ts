@@ -16,7 +16,7 @@
 // 🔍 SEARCH INDEX TRIGGERS (ADR-029) — single writer of search_documents per entity type.
 // Handoff: docs/handoffs/2026-04-22-search-ssot-refactor.md
 export {
-  onProjectWrite, onBuildingWrite, onPropertyWrite, onContactWrite,
+  onProjectWrite, onBuildingWrite, onFloorWrite, onPropertyWrite, onContactWrite,
   onFileWrite, onParkingWrite, onStorageWrite, onOpportunityWrite,
   onCommunicationWrite, onTaskWrite,
 } from './search/indexTriggers';

@@ -35,6 +35,7 @@ export const COLLECTIONS = {
   // 🏢 CORE ENTITIES — indexed for Global Search (ADR-029)
   PROJECTS: 'projects',
   BUILDINGS: 'buildings',
+  FLOORS: 'floors',
   PROPERTIES: 'properties',
   CONTACTS: 'contacts',
   PARKING_SPACES: 'parking_spots',

@@ -71,6 +71,20 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
   },
 
   // =========================================================================
+  // FLOOR
+  // =========================================================================
+  [SEARCH_ENTITY_TYPES.FLOOR]: {
+    collection: COLLECTIONS.FLOORS,
+    titleField: 'name',
+    subtitleFields: ['buildingName'],
+    searchableFields: ['name', 'buildingName'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
+    routeTemplate: '/buildings/{buildingId}',
+  },
+
+  // =========================================================================
   // UNIT
   // =========================================================================
   [SEARCH_ENTITY_TYPES.PROPERTY]: {

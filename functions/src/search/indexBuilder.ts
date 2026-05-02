@@ -159,8 +159,10 @@ function determineAudience(
   return config.audience;
 }
 
-function buildHref(config: SearchIndexConfig, entityId: string): string {
-  return config.routeTemplate.replace('{id}', entityId);
+function buildHref(config: SearchIndexConfig, entityId: string, data: Record<string, unknown>): string {
+  return config.routeTemplate
+    .replace('{id}', entityId)
+    .replace(/\{(\w+)\}/g, (_, field) => (data[field] as string) || entityId);
 }
 
 function extractSearchableText(
@@ -212,7 +214,7 @@ export function buildSearchDocument(
   const normalizedText = normalizeSearchText(searchableText);
   const prefixes = generateSearchPrefixes(normalizedText);
 
-  const href = buildHref(config, entityId);
+  const href = buildHref(config, entityId, data);
 
   return {
     tenantId,

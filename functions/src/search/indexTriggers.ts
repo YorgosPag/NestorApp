@@ -155,6 +155,7 @@ function makeTrigger(entityType: SearchEntityType, collection: string) {
 
 export const onProjectWrite = makeTrigger(SEARCH_ENTITY_TYPES.PROJECT, COLLECTIONS.PROJECTS);
 export const onBuildingWrite = makeTrigger(SEARCH_ENTITY_TYPES.BUILDING, COLLECTIONS.BUILDINGS);
+export const onFloorWrite = makeTrigger(SEARCH_ENTITY_TYPES.FLOOR, COLLECTIONS.FLOORS);
 export const onPropertyWrite = makeTrigger(SEARCH_ENTITY_TYPES.PROPERTY, COLLECTIONS.PROPERTIES);
 export const onContactWrite = makeTrigger(SEARCH_ENTITY_TYPES.CONTACT, COLLECTIONS.CONTACTS);
 export const onFileWrite = makeTrigger(SEARCH_ENTITY_TYPES.FILE, COLLECTIONS.FILES);

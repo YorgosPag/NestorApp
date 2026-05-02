@@ -28,6 +28,7 @@ import type { Timestamp } from 'firebase/firestore';
 export const SEARCH_ENTITY_TYPES = {
   PROJECT: 'project',
   BUILDING: 'building',
+  FLOOR: 'floor',
   PROPERTY: 'property',
   CONTACT: 'contact',
   FILE: 'file',

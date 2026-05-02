@@ -33,6 +33,7 @@ import { COLLECTIONS } from '../config/firestore-collections';
 export const SEARCH_ENTITY_TYPES = {
   PROJECT: 'project',
   BUILDING: 'building',
+  FLOOR: 'floor',
   PROPERTY: 'property',
   CONTACT: 'contact',
   FILE: 'file',
@@ -99,6 +100,16 @@ export const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = 
     },
     requiredPermission: 'buildings:buildings:view',
     routeTemplate: '/buildings/{id}',
+  },
+  [SEARCH_ENTITY_TYPES.FLOOR]: {
+    collection: COLLECTIONS.FLOORS,
+    titleField: 'name',
+    subtitleFields: ['buildingName'],
+    searchableFields: ['name', 'buildingName'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'buildings:buildings:view',
+    routeTemplate: '/buildings/{buildingId}',
   },
   [SEARCH_ENTITY_TYPES.PROPERTY]: {
     collection: COLLECTIONS.PROPERTIES,
