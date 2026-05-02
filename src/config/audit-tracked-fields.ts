@@ -541,6 +541,62 @@ const BUILDING_COLLECTION_DEFS: Record<string, CollectionDef> = {
 export const BUILDING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(BUILDING_TRACKED_FIELDS_RAW, BUILDING_COLLECTION_DEFS);
 
+// ============================================================================
+// FLOOR TRACKED FIELDS
+// ============================================================================
+
+const FLOOR_TRACKED_FIELDS_RAW: Record<string, string> = {
+  name: 'Τίτλος',
+  number: 'Αριθμός Ορόφου',
+  buildingId: 'Κτίριο',
+  projectId: 'Έργο',
+  units: 'Μονάδες',
+  elevation: 'Ύψος (m)',
+};
+
+/** Floor audit registry — `field → TrackedFieldDef`. */
+export const FLOOR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(FLOOR_TRACKED_FIELDS_RAW, {});
+
+// ============================================================================
+// STORAGE TRACKED FIELDS
+// ============================================================================
+
+const STORAGE_TRACKED_FIELDS_RAW: Record<string, string> = {
+  name: 'Τίτλος',
+  type: 'Τύπος',
+  status: 'Κατάσταση',
+  buildingId: 'Κτίριο',
+  floor: 'Όροφος',
+  area: 'Εμβαδόν',
+  code: 'Κωδικός',
+  projectId: 'Έργο',
+};
+
+/** Storage audit registry — `field → TrackedFieldDef`. */
+export const STORAGE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(STORAGE_TRACKED_FIELDS_RAW, {});
+
+// ============================================================================
+// PARKING TRACKED FIELDS
+// ============================================================================
+
+const PARKING_TRACKED_FIELDS_RAW: Record<string, string> = {
+  number: 'Αριθμός Θέσης',
+  type: 'Τύπος',
+  status: 'Κατάσταση',
+  buildingId: 'Κτίριο',
+  floor: 'Όροφος',
+  code: 'Κωδικός',
+  projectId: 'Έργο',
+  area: 'Εμβαδόν',
+  monthlyRent: 'Μηνιαίο Ενοίκιο',
+};
+
+/** Parking audit registry — `field → TrackedFieldDef`. */
+export const PARKING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(PARKING_TRACKED_FIELDS_RAW, {});
+
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
@@ -551,9 +607,7 @@ export const CONTACT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 
 /**
  * Return the tracked-fields registry for a given `AuditEntityType`, or `null`
- * if no registry exists (e.g. `floor`, `storage`, `parking` which are not yet
- * defined here — those will emit `changes: []` on creation until their
- * registries are added).
+ * if no registry exists.
  *
  * Used by `createEntity()` (`entity-creation.service.ts`) to populate the
  * `changes` array on `action: 'created'` audit entries, so the History tab
@@ -565,12 +619,18 @@ export function getTrackedFieldsForEntityAuditType(
   switch (type) {
     case 'building':
       return BUILDING_TRACKED_FIELDS;
+    case 'floor':
+      return FLOOR_TRACKED_FIELDS;
     case 'property':
       return PROPERTY_TRACKED_FIELDS;
     case 'project':
       return PROJECT_TRACKED_FIELDS;
     case 'contact':
       return CONTACT_TRACKED_FIELDS;
+    case 'storage':
+      return STORAGE_TRACKED_FIELDS;
+    case 'parking':
+      return PARKING_TRACKED_FIELDS;
     default:
       return null;
   }
