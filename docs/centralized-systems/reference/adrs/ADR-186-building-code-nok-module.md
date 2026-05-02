@@ -1,7 +1,7 @@
 # ADR-186: Building Code Module — Modular Κανονισμός Δόμησης (ΝΟΚ)
 
-> **Status**: DRAFT — Requirements Gathering
-> **Date**: 2026-02-17
+> **Status**: PARTIAL — Phase 1 Engines Ported (2026-05-02)
+> **Date**: 2026-02-17 (initial), 2026-05-02 (Phase 1 implementation)
 > **Category**: AI Architecture / Building Regulations / DXF Viewer
 > **Parent ADR**: [ADR-185](./ADR-185-ai-powered-dxf-drawing-assistant.md)
 
@@ -149,18 +149,62 @@ interface ValidationResult {
 }
 ```
 
-### 5.2 File Structure (Planned)
+### 5.2 File Structure
+
+#### Phase 1 — IMPLEMENTED (2026-05-02)
+
+Pure ΝΟΚ engines + types + constants, ported from genarc. Zero React, zero Firestore, zero AI.
 
 ```
 src/services/building-code/
-├── types.ts                          — Interfaces (BuildingCodeProvider, BuildingConstraints)
-├── building-code-registry.ts         — Registry of available providers
+├── types/
+│   ├── site.types.ts                 — PlotSite, PlotFrontage, PlotType, AreaRegime, ...
+│   ├── setback.types.ts              — EdgeRole, EdgeSetback, SetbackResult
+│   ├── zone.types.ts                 — ZoneParameters, ZoneArtiotita
+│   ├── bonus.types.ts                — BonusId, A1Scenario, A3Tier, BonusResult
+│   └── gate.types.ts                 — GateStatus, GateCheck, GateResult
+├── constants/
+│   ├── zones.commercial.constants.ts — Γ2, ΓΠ, ΕΚΤ, ΖΟΕ-Α/Β, Κ
+│   ├── zones.residential.constants.ts— Α, Β, Β1, Β2, Γ, Γ1
+│   ├── zones.constants.ts            — Barrel: ZONE_PARAMETERS
+│   ├── setback.constants.ts          — DEFAULT_DELTA_MIN_M, MIN_BUILDABLE_SIDE_M
+│   └── bonuses.constants.ts          — BONUS_A1_COVERAGE_REDUCTION, NZEB_SD_*
+├── utils/
+│   └── geometry.ts                   — inwardNormal, shoelaceArea, polyEdgeLabel
+├── engines/
+│   ├── site-calculator.ts            — calcSyntEfarm, deriveSiteValues
+│   ├── setback-calculator.ts         — classifyEdges, computeSetbackResult
+│   ├── bonus-calculator.ts           — calcA1/A3/A5, applyBonuses
+│   ├── zone-resolver.ts              — normalizeZoneId, lookupZone
+│   ├── gate-checker.ts               — runGate0/3/5/22, runAllGates
+│   ├── gate-bonuses.ts               — runGateBonuses
+│   └── gate-setback.ts               — runGateSetback
+├── __tests__/
+│   ├── setback-calculator.test.ts    — 23 test cases (Jest)
+│   └── bonus-calculator.test.ts      — 23 test cases (Jest)
+└── index.ts                          — Barrel public API
+```
+
+**Exclusions Phase 1** (deferred to Phase 2):
+- `runGateBrief` — depends on `BriefData` type not yet ported
+- `ideaToStereoCalculator` — 3D building envelope, depends on Three.js viewer
+- Zustand store — Nestor uses Firestore (Phase 2)
+- React panels — UI rendering (Phase 2)
+
+#### Phase 2 — PLANNED
+
+Provider Pattern + persistence + UI:
+
+```
+src/services/building-code/
+├── (Phase 1 files above)
 ├── providers/
-│   ├── nok-greece-provider.ts        — ΝΟΚ Ελλάδας implementation
-│   ├── none-provider.ts              — "Ελεύθερη σχεδίαση" (no constraints)
-│   └── [future-providers]/
-├── constraint-validator.ts           — Validates design against constraints
-└── parameter-extractor.ts            — Extract params from PDFs/web (AI Vision)
+│   ├── nok-greece-provider.ts        — Wraps Phase 1 engines as Provider
+│   ├── none-provider.ts              — "Ελεύθερη σχεδίαση"
+│   └── building-code-registry.ts     — Registry of available providers
+├── parameter-extractor.ts            — AI Vision PDF/scan → JSON
+└── persistence/
+    └── building-code.firestore.ts    — Read/write project.buildingCode
 ```
 
 ---
@@ -207,9 +251,84 @@ src/services/building-code/
 
 ---
 
-## 7. Changelog
+## 7. Phase 1 Implementation Notes (2026-05-02)
+
+### 7.1 What was ported
+
+21 files from `C:\genarc\src\` → `C:\Nestor_Pagonis\src\services\building-code\`:
+- 7 engines (pure functions, zero side effects)
+- 5 types files
+- 5 constants files (15 ΝΟΚ zones: Α/Β/Β1/Β2/Γ/Γ1/Γ2/ΓΠ/ΓΠ-1..3/ΕΚΤ/ΖΟΕ-Α/Β/Κ)
+- 1 geometry utils file (`inwardNormal`, `shoelaceArea`, `polyEdgeLabel`)
+- 2 Jest test files (46 test cases, all passing)
+- 1 barrel `index.ts` (public API)
+
+### 7.2 Functional coverage
+
+| Capability | Function | Notes |
+|-----------|----------|-------|
+| ΣΔ_εφαρμοστέος (weighted) | `calcSyntEfarm` | Multi-frontage, multi-zone plots |
+| Max coverage m² | `calcMaxCoverageM2` | area × pct/100 |
+| Mandatory open m² | `calcMandatoryOpenM2` | Υποχρεωτικός Ακάλυπτος |
+| Max buildable m² | `calcMaxBuildableM2` | syntEfarm × area |
+| Per-edge setback | `computeSetbackResult` | Δ rear ≠ δ lateral, polygon inset, 9m rule |
+| Bonus A1 (α–δ) | `calcA1Bonus` | Πολεοδομικά κίνητρα +ΣΔ / −coverage |
+| Bonus A3 (nZEB) | `calcA3Bonus` | +5% / +10% ΣΔ |
+| Bonus A5 (120 m²) | `calcA5Bonus` | Auto-applied min coverage floor |
+| Combo bonuses | `applyBonuses` | C1 separate base, C6 protection zone block |
+| Zone lookup | `lookupZone` | 15 canonical zones + aliases |
+| Gate 0 (αρτιότητα) | `runGate0` | Min area / frontage / elevation |
+| Gate 3 (ΡΓ/ΟΓ/Πρασιά) | `runGate3` | Per-frontage prassia check |
+| Gate 5 (όροι δόμησης) | `runGate5` | ΣΔ / κάλυψη / ύψος display |
+| Gate 22 (ιδεατό στερεό) | `runGate22` | Per-frontage H ≤ max(1.5×Π, 7.5m) |
+| Gate Bonuses | `runGateBonuses` | Eligibility + summary |
+| Gate Setback | `runGateSetback` | Buildable footprint check |
+
+### 7.3 Architectural decisions
+
+- **Path alias `@/...`** — Used throughout, matches Nestor convention (`tsconfig.base.json` paths + `jest.config.js` moduleNameMapper)
+- **Function size ≤40 lines** — `applyBonuses`, `runGate0`, `runGate22` refactored with internal helpers (`applyA1`, `applyA3`, `aggregate`, `buildG0AreaCheck`, `buildG0FrontageCheck`, `buildG0ElevationCheck`, `buildG22FrontageCheck`)
+- **File size ≤500 lines** — All files well under limit (max: gate-checker 250 lines)
+- **Zero `any`, zero `as any`, zero `@ts-ignore`** — Enterprise TypeScript throughout
+- **Test framework**: Jest (Nestor SSoT). Original genarc tests used vitest — migrated by removing `import { describe, it, expect } from 'vitest'` (Jest provides as globals)
+
+### 7.4 What CANNOT be done yet
+
+The Phase 1 module exposes pure functions. Until Phase 2:
+- No data is persisted — every call is stateless
+- No UI surfaces these computations (no Project Settings panel, no DXF Viewer overlay)
+- No cross-country support — only ΝΟΚ Ελλάδας (Provider Pattern not yet wired)
+- AI Vision PDF extraction not implemented
+
+### 7.5 How to use (Phase 1)
+
+```typescript
+import {
+  deriveSiteValues,
+  runAllGates,
+  lookupZone,
+  type PlotSite,
+} from '@/services/building-code';
+
+// 1. Look up a zone
+const zone = lookupZone('Β2'); // { SD: 1.2, coverage_pct: 60, ... }
+
+// 2. Build a PlotSite (manually, or from form/Firestore in Phase 2)
+const partial = { /* ... non-derived fields ... */ };
+const derived = deriveSiteValues(partial);
+const site: PlotSite = { ...partial, ...derived };
+
+// 3. Run all gates
+const gates = runAllGates(site);
+// [{ gateId: 'gate0', status: 'pass', checks: [...] }, ...]
+```
+
+---
+
+## 8. Changelog
 
 | Date | Change | By |
 |------|--------|-----|
 | 2026-02-17 | Initial draft — Modular architecture, ΝΟΚ parameters, provider interface | Claude + Γιώργος |
 | 2026-02-17 | Έλεγχος γραμμή-γραμμή: 4 νέες ερωτήσεις (#7-#10) | Claude |
+| 2026-05-02 | **Phase 1 IMPLEMENTED** — ported 21 files (engines + types + constants + tests) from genarc. Status: DRAFT → PARTIAL. 46/46 tests passing. Refactored `applyBonuses` + `runGate0` + `runGate22` to comply with ≤40-line function rule. | Claude + Γιώργος |
