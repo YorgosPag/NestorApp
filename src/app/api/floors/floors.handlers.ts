@@ -19,7 +19,9 @@ import type {
   FloorsListResponse,
   FloorUpdateResponse,
 } from './floors.types';
-import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
+import { FLOORPLAN_PURPOSES, ENTITY_TYPES } from '@/config/domain-constants';
+import { EntityAuditService } from '@/services/entity-audit.service';
+import type { AuditFieldChange } from '@/types/audit-trail';
 import {
   buildFloorsQuery,
   resolveFloorsListParams,
@@ -139,11 +141,15 @@ export async function handleCreateFloor(
 
     logger.info('[Floors/Create] Creating floor', { companyId: ctx.companyId, userId: ctx.uid });
 
+    const db = getAdminFirestore();
+    const buildingDoc = await db.collection(COLLECTIONS.BUILDINGS).doc(body.buildingId).get();
+    const buildingName = (buildingDoc.data()?.name as string) || body.buildingName || '';
+
     const entitySpecificFields: Record<string, unknown> = {
       number: body.number,
       name: body.name,
       buildingId: body.buildingId,
-      buildingName: body.buildingName || '',
+      buildingName,
       units: body.units || 0,
       elevation: body.elevation ?? null,
       height: body.height ?? null,
@@ -151,7 +157,6 @@ export async function handleCreateFloor(
     if (body.projectId) entitySpecificFields.projectId = String(body.projectId);
     if (body.projectName) entitySpecificFields.projectName = body.projectName;
 
-    const db = getAdminFirestore();
     const duplicateCheck = await db
       .collection(COLLECTIONS.FLOORS)
       .where(FIELDS.BUILDING_ID, '==', body.buildingId)
@@ -172,8 +177,7 @@ export async function handleCreateFloor(
       auditFieldResolvers: {
         buildingId: async (id) => {
           if (!id || typeof id !== 'string') return null;
-          const snap = await db.collection(COLLECTIONS.BUILDINGS).doc(id).get();
-          return snap.exists ? ((snap.data()?.name as string) ?? null) : null;
+          return buildingName || null;
         },
         projectId: async (id) => {
           if (!id || typeof id !== 'string') return null;
@@ -237,6 +241,28 @@ export async function handleUpdateFloor(
       userId: ctx.uid,
     });
     logger.info('[Floors/Update] Floor updated', { floorId: body.floorId, _v: versionResult.newVersion });
+
+    const trackedFields = ['name', 'number', 'elevation', 'height'] as const;
+    const changes: AuditFieldChange[] = trackedFields
+      .filter((field) => updates[field] !== undefined && updates[field] !== floorData?.[field])
+      .map((field) => ({
+        field,
+        oldValue: (floorData?.[field] as AuditFieldChange['oldValue']) ?? null,
+        newValue: updates[field] as AuditFieldChange['newValue'],
+        label: field,
+      }));
+    if (changes.length > 0) {
+      await EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.FLOOR,
+        entityId: body.floorId,
+        entityName: (floorData?.name as string) ?? body.floorId,
+        action: 'updated',
+        changes,
+        performedBy: ctx.uid,
+        performedByName: null,
+        companyId: ctx.companyId!,
+      });
+    }
 
     return NextResponse.json({
       success: true,
