@@ -26,7 +26,7 @@ const VALID_STORAGE_TYPES: readonly string[] = [
 ];
 
 const VALID_STORAGE_STATUSES: readonly string[] = [
-  'available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable',
+  'available', 'occupied', 'maintenance', 'reserved', 'sold', 'unavailable', 'deleted',
 ];
 
 export function isValidStorageType(value: string): value is StorageType {
@@ -83,7 +83,7 @@ const VALID_PARKING_TYPES: readonly string[] = [
 ];
 
 const VALID_PARKING_STATUSES: readonly string[] = [
-  'available', 'occupied', 'reserved', 'sold', 'maintenance',
+  'available', 'occupied', 'reserved', 'sold', 'maintenance', 'deleted',
 ];
 
 const VALID_LOCATION_ZONES: readonly string[] = [
