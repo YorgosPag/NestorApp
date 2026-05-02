@@ -281,7 +281,12 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     const nums = floors.map((f) => f.number);
     const isIntermediate = nums.some((n) => n < floor.number) && nums.some((n) => n > floor.number);
     if (isIntermediate) {
-      notifyError(t('tabs.floors.deleteIntermediate'));
+      await confirm({
+        title: t('tabs.floors.deleteIntermediateTitle'),
+        description: t('tabs.floors.deleteIntermediate'),
+        confirmText: t('tabs.floors.deleteIntermediateAck'),
+        variant: 'warning',
+      });
       return;
     }
 

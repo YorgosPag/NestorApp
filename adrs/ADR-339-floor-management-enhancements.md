@@ -84,3 +84,4 @@ Each floor in the response gains `hasFloorplan: boolean`. The client receives th
 | 2026-05-02 | v1.2 | Cascade elevation update: when editing a floor's elevation, detect delta, show ConfirmDialog warning (count + delta), batch-update all other floors with elevations on confirm |
 | 2026-05-02 | v1.3 | Cascade dialog simplified to confirmation-only (no choice): cancel aborts entire operation (primary floor NOT saved), always cascades on confirm; removed `cascadeElevationSkip` i18n key |
 | 2026-05-02 | v1.4 | Block deletion of intermediate floors (client guard in `handleDelete` + server guard in `handleDeleteFloor` returning 422); only top/bottom floors of the sequence are deletable |
+| 2026-05-02 | v1.5 | Intermediate-floor block UX: replace toast error with modal warning dialog (confirm pattern, single "Εντάξει" intent) — forces user acknowledgment per enterprise UX standards |
