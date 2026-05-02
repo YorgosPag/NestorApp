@@ -134,6 +134,7 @@
   "messages": {
     "created": "Project created successfully",
     "updated": "Project updated successfully",
+    "movedToTrash": "Project moved to trash",
     "deleted": "Project deleted successfully",
     "restored": "Project restored successfully",
     "archived": "Project archived successfully",
