@@ -135,6 +135,7 @@
     "created": "Project created successfully",
     "updated": "Project updated successfully",
     "deleted": "Project deleted successfully",
+    "restored": "Project restored successfully",
     "archived": "Project archived successfully",
     "exported": "Projects exported successfully",
     "noProjects": "No projects found",

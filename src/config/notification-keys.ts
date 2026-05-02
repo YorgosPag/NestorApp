@@ -60,6 +60,7 @@ export const NOTIFICATION_KEYS = {
     updated: 'projects:messages.updated',
     deleted: 'projects:messages.deleted',
     movedToTrash: 'trash:deleteSuccess',
+    restored: 'projects:messages.restored',
     archived: 'projects:messages.archived',
     exported: 'projects:messages.exported',
     loadingError: 'projects:messages.loadingError',

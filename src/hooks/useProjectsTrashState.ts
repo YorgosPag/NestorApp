@@ -16,6 +16,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { TrashService } from '@/services/trash.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useProjectNotifications } from '@/hooks/notifications/useProjectNotifications';
 import type { Project } from '@/types/project';
 
 const logger = createModuleLogger('useProjectsTrashState');
@@ -38,6 +39,7 @@ export function useProjectsTrashState({
   onBeforeToggle,
 }: UseProjectsTrashStateParams) {
   const { user, loading: authLoading } = useAuth();
+  const projectNotifications = useProjectNotifications();
   const [showTrash, setShowTrash] = useState(false);
   const [trashedProjects, setTrashedProjects] = useState<Project[]>([]);
   const [loadingTrash, setLoadingTrash] = useState(false);
@@ -81,11 +83,12 @@ export function useProjectsTrashState({
     logger.info('Restoring projects from trash', { ids });
     try {
       await TrashService.bulkRestore('project', ids);
+      projectNotifications.restored();
       handleTrashActionComplete();
     } catch (error) {
       logger.error('Failed to restore projects', { ids, error });
     }
-  }, [handleTrashActionComplete]);
+  }, [handleTrashActionComplete, projectNotifications]);
 
   const handlePermanentDeleteProjects = useCallback((ids: string[]) => {
     if (ids.length === 0) return;

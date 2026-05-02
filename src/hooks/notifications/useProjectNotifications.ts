@@ -50,6 +50,7 @@ export interface ProjectNotifications {
   readonly updated: () => void;
   readonly deleted: () => void;
   readonly movedToTrash: () => void;
+  readonly restored: () => void;
   readonly archived: () => void;
   readonly exported: () => void;
   readonly loadingError: () => void;
@@ -73,6 +74,7 @@ export function useProjectNotifications(): ProjectNotifications {
       updated: () => success(NOTIFICATION_KEYS.projects.updated),
       deleted: () => success(NOTIFICATION_KEYS.projects.deleted),
       movedToTrash: () => success(NOTIFICATION_KEYS.projects.movedToTrash),
+      restored: () => success(NOTIFICATION_KEYS.projects.restored),
       archived: () => success(NOTIFICATION_KEYS.projects.archived),
       exported: () => success(NOTIFICATION_KEYS.projects.exported),
       loadingError: () => error(NOTIFICATION_KEYS.projects.loadingError),
