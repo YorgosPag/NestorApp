@@ -1093,7 +1093,10 @@
       },
       "storage": {
         "name": "Τίτλος Αποθήκης"
-      }
+      },
+      "_snapshot": "Στιγμιότυπο πριν τη Διαγραφή",
+      "_cascade_deletions": "Αυτόματες Διαγραφές",
+      "_storage_cleanup": "Εκκαθάριση Storage"
     }
   },
   "fullscreen": {

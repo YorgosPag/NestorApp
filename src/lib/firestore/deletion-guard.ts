@@ -296,7 +296,7 @@ export async function executeDeletion(
       field: '_snapshot',
       oldValue: JSON.stringify(entityData),
       newValue: null,
-      label: 'Πλήρες snapshot πριν τη διαγραφή',
+      label: '_snapshot',
     },
   ];
 
@@ -306,7 +306,7 @@ export async function executeDeletion(
       field: '_cascade_deletions',
       oldValue: JSON.stringify(cascadeResult.details),
       newValue: null,
-      label: `Cascade: ${cascadeResult.totalDeleted} εγγραφές διαγράφηκαν αυτόματα`,
+      label: '_cascade_deletions',
     });
   }
 
@@ -316,7 +316,7 @@ export async function executeDeletion(
       field: '_storage_cleanup',
       oldValue: JSON.stringify(storageResult.details),
       newValue: null,
-      label: `Storage: ${storageResult.totalDeleted} αρχεία καθαρίστηκαν`,
+      label: '_storage_cleanup',
     });
   }
 

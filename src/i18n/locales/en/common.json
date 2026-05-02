@@ -1093,7 +1093,10 @@
       },
       "storage": {
         "name": "Storage Title"
-      }
+      },
+      "_snapshot": "Pre-deletion Snapshot",
+      "_cascade_deletions": "Automatic Deletions",
+      "_storage_cleanup": "Storage Cleanup"
     }
   },
   "fullscreen": {
