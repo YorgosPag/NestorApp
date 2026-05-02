@@ -19,8 +19,6 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { mapFirestoreContactToResponse } from './contact-data-mapper';
 import { nowISO } from '@/lib/date-local';
-import { dispatchCrmNotification } from '@/server/notifications/notification-orchestrator';
-import { NOTIFICATION_EVENT_TYPES, NOTIFICATION_ENTITY_TYPES } from '@/config/notification-events';
 
 const logger = createModuleLogger('ContactRoute');
 
@@ -225,20 +223,6 @@ export async function DELETE(
         newValue: { type: 'status', value: { contactId } },
         metadata: { reason: 'Contact moved to trash via API', filesCascaded, filesSkipped },
       });
-
-      void dispatchCrmNotification(
-        NOTIFICATION_EVENT_TYPES.CRM_CONTACT_TRASHED,
-        ctx.uid,
-        ctx.companyId,
-        `Η επαφή μεταφέρθηκε στον κάδο: ${contactName}`,
-        `contact_trash_${contactId}`,
-        {
-          entityId: contactId,
-          entityType: NOTIFICATION_ENTITY_TYPES.CONTACT,
-          titleKey: 'contacts:notifications.contactTrashed',
-          titleParams: { contactName },
-        },
-      );
 
       return apiSuccess<ContactDeleteResponse>(
         { contactId, deleted: true, filesCascaded, filesSkipped },
