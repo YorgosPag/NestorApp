@@ -382,8 +382,8 @@ export function StoragePageContent() {
         <DeleteConfirmDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
-          title={t('pages.storage.deleteDialog.title')}
-          description={t('pages.storage.deleteDialog.description', { name: selectedStorage?.name ?? '' })}
+          title={tStorage('pages.storage.deleteDialog.title')}
+          description={tStorage('pages.storage.deleteDialog.description', { name: selectedStorage?.name ?? '' })}
           onConfirm={handleDeleteStorage}
           loading={isDeleting}
         />
