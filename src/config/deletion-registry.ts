@@ -161,6 +161,10 @@ export const DEPENDENCY_REMEDIATIONS = {
   generic: 'Αφαιρέστε ή επανασυνδέστε πρώτα τις εξαρτώμενες εγγραφές που εμφανίζονται παρακάτω.',
   guardUnavailable: 'Ο έλεγχος εξαρτήσεων δεν ολοκληρώθηκε αξιόπιστα. Δοκιμάστε ξανά και, αν επιμείνει, επικοινωνήστε με διαχειριστή.',
   buildings: 'Διαγράψτε πρώτα όλα τα κτίρια που ανήκουν σε αυτό το έργο. Πηγαίνετε στη σελίδα "Κτίρια", επιλέξτε κάθε κτίριο και διαγράψτε το.',
+  floorProperties: 'Διαγράψτε ή μεταφέρετε πρώτα όλα τα ακίνητα (διαμερίσματα, studio, μεζονέτες) που ανήκουν σε αυτόν τον όροφο.',
+  floorBoqItems: 'Διαγράψτε ή αλλάξτε το εύρος των επιμετρήσεων BOQ που αναφέρονται σε αυτόν τον όροφο (καρτέλα Επιμετρήσεις).',
+  floorParkingSpaces: 'Αποσυνδέστε ή διαγράψτε πρώτα τις θέσεις στάθμευσης που βρίσκονται σε αυτόν τον όροφο.',
+  floorStorage: 'Αποσυνδέστε ή διαγράψτε πρώτα τις αποθήκες που βρίσκονται σε αυτόν τον όροφο.',
 } as const;
 
 export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
@@ -312,8 +316,30 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
       {
         collection: COLLECTIONS.PROPERTIES,
         foreignKey: 'floorId',
-        label: 'Διαμερίσματα ορόφου',
+        label: 'Ακίνητα ορόφου',
         queryType: 'equals',
+        remediation: DEPENDENCY_REMEDIATIONS.floorProperties,
+      },
+      {
+        collection: COLLECTIONS.BOQ_ITEMS,
+        foreignKey: 'linkedFloorId',
+        label: 'Επιμετρήσεις BOQ (ανά πάτωμα)',
+        queryType: 'equals',
+        remediation: DEPENDENCY_REMEDIATIONS.floorBoqItems,
+      },
+      {
+        collection: COLLECTIONS.PARKING_SPACES,
+        foreignKey: 'floorId',
+        label: 'Θέσεις στάθμευσης ορόφου',
+        queryType: 'equals',
+        remediation: DEPENDENCY_REMEDIATIONS.floorParkingSpaces,
+      },
+      {
+        collection: COLLECTIONS.STORAGE,
+        foreignKey: 'floorId',
+        label: 'Αποθήκες ορόφου',
+        queryType: 'equals',
+        remediation: DEPENDENCY_REMEDIATIONS.floorStorage,
       },
     ],
   },
