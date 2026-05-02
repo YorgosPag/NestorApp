@@ -40,6 +40,7 @@ import { NOTIFICATION_KEYS } from '@/config/notification-keys';
 
 export interface FilesUploadNotifications {
   readonly success: (count: number) => void;
+  readonly fileReady: (filename: string) => void;
   readonly notAuthenticated: () => void;
   readonly authFailed: () => void;
   readonly partialSuccess: (params: { success: number; fail: number; total: number }) => void;
@@ -103,6 +104,8 @@ export function useFilesNotifications(): FilesNotifications {
       upload: {
         success: (count) =>
           success(t(NOTIFICATION_KEYS.files.upload.success, { count })),
+        fileReady: (filename) =>
+          success(t(NOTIFICATION_KEYS.files.upload.fileReady, { name: filename })),
         notAuthenticated: () =>
           error(t(NOTIFICATION_KEYS.files.upload.notAuthenticated)),
         authFailed: () =>

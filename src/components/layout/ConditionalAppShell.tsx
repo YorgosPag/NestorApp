@@ -47,6 +47,7 @@ import { WebSocketProvider } from '@/contexts/WebSocketContext';
 // 🏢 ENTERPRISE: Global components that need NotificationProvider
 import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 import { VoiceAIPanel } from '@/components/voice-ai/VoiceAIPanel';
+import { GlobalFileUploadToast } from '@/components/layout/GlobalFileUploadToast';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
@@ -160,6 +161,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
                 {/* 🏢 ENTERPRISE: Global components that need providers */}
                 <NotificationDrawer />
                 <VoiceAIPanel />
+                <GlobalFileUploadToast />
                 <GlobalErrorSetup />
               </SharedPropertiesProvider>
             </WebSocketProvider>

@@ -265,12 +265,14 @@ export class FileRecordService {
         );
     }
 
+    const finalizedDoc = docSnap.data() as { displayName?: string } | undefined;
     RealtimeService.dispatch('FILE_UPDATED', {
       fileId: input.fileId,
       updates: {
         status: coreUpdate.status,
         sizeBytes: input.sizeBytes,
         hasDownloadUrl: !!input.downloadUrl,
+        displayName: finalizedDoc?.displayName,
       },
       timestamp: Date.now(),
     });

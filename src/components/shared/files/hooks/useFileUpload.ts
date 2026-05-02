@@ -257,13 +257,11 @@ export function useFileUpload({
         }
       }
 
-      // Toast notifications
+      // Error notifications (success toast handled centrally by GlobalFileUploadToast)
       if (failCount > 0 && successCount > 0) {
         fileNotifications.upload.partialSuccess({ success: successCount, fail: failCount, total: selectedFiles.length });
       } else if (failCount > 0) {
         fileNotifications.upload.allFailed(failCount);
-      } else if (successCount > 0) {
-        fileNotifications.upload.success(successCount);
       }
 
       await refetch();

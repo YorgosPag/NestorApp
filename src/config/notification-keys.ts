@@ -136,6 +136,7 @@ export const NOTIFICATION_KEYS = {
   files: {
     upload: {
       success: 'files:upload.success',
+      fileReady: 'files:upload.toast.uploadSuccess',
       notAuthenticated: 'files:upload.errors.notAuthenticated',
       authFailed: 'files:upload.errors.authFailed',
       partialSuccess: 'files:upload.errors.partialSuccess',
