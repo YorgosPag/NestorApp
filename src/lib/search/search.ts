@@ -71,12 +71,23 @@ export function generateSearchPrefixes(text: string): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const prefixes = new Set<string>();
   for (const rawWord of words) {
-    // Strip leading/trailing non-alphanumeric chars (e.g. quotes, punctuation)
-    // so "ΩΝΑΣΕΙΟ" → ΩΝΑΣΕΙΟ, PRJ-001 stays intact (internal hyphens kept)
+    // Strip leading/trailing non-alphanumeric chars (e.g. quotes)
     const word = rawWord.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
-    if (word.length < 3) continue;
-    for (let len = 3; len <= Math.min(MAX_PREFIX_LENGTH, word.length); len++) {
-      prefixes.add(word.substring(0, len));
+    if (!word) continue;
+
+    // Collect tokens: full word + sub-tokens split on internal separators
+    // e.g. "prj-001" → ["prj-001", "prj", "001"] so searching "001" finds PRJ-001
+    const tokens: string[] = [word];
+    for (const part of word.split(/[-._/]/)) {
+      const sub = part.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+      if (sub && sub !== word) tokens.push(sub);
+    }
+
+    for (const token of tokens) {
+      if (token.length < 3) continue;
+      for (let len = 3; len <= Math.min(MAX_PREFIX_LENGTH, token.length); len++) {
+        prefixes.add(token.substring(0, len));
+      }
     }
   }
   return Array.from(prefixes);
