@@ -100,7 +100,7 @@ export function ParkingPageContent() {
           id: selectedParking.id,
           name: selectedParking.number,
           spaceType: 'parking',
-          buildingId: selectedParking.buildingId,
+          buildingId: selectedParking.buildingId ?? undefined,
           projectId: selectedParking.projectId ? String(selectedParking.projectId) : undefined,
         }
       : null,
