@@ -1,5 +1,9 @@
+'use client';
+
 import { useState, useCallback, useMemo } from 'react';
 import type { Contact } from '@/types/contacts';
+import { useNotifications } from '@/providers/NotificationProvider';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface UseContactsTrashStateParams {
   contacts: Contact[];
@@ -20,6 +24,8 @@ export function useContactsTrashState({
   refreshContacts,
   setActiveCardFilter,
 }: UseContactsTrashStateParams) {
+  const { success: showSuccess } = useNotifications();
+  const { t } = useTranslation('trash');
   const [showPermanentDeleteDialog, setShowPermanentDeleteDialog] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
 
@@ -46,13 +52,15 @@ export function useContactsTrashState({
   }, [selectedContact?.id, setSelectedContactIds]);
 
   const handleContactsPermanentDeleted = useCallback(async () => {
+    const count = selectedContactIds.length;
     setShowPermanentDeleteDialog(false);
     if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
       setSelectedContact(null);
     }
     setSelectedContactIds([]);
     refreshContacts();
-  }, [selectedContact, selectedContactIds, refreshContacts, setSelectedContact, setSelectedContactIds]);
+    showSuccess(count === 1 ? t('permanentDeleteSuccess_one') : t('permanentDeleteSuccess', { count }));
+  }, [selectedContact, selectedContactIds, refreshContacts, setSelectedContact, setSelectedContactIds, showSuccess, t]);
 
   /** After a trash action (restore/delete), clear selection AND refresh list */
   const handleTrashActionComplete = useCallback(() => {
