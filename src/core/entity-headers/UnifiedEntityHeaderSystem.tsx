@@ -271,6 +271,7 @@ const EntityAction: React.FC<EntityHeaderAction> = ({
   const spacing = useSpacingTokens();
   return (
     <Button
+      type="button"
       variant={variant}
       size="sm"
       onClick={onClick}

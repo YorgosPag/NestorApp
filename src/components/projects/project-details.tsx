@@ -85,8 +85,9 @@ export function ProjectDetails({
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const { user } = useAuth();
 
-  // Use lifted state if available, otherwise fallback to local state
-  const [localIsEditing, setLocalIsEditing] = useState(false);
+  // Use lifted state if available, otherwise fallback to local state.
+  // In create mode there is no "view" phase — start directly in edit mode.
+  const [localIsEditing, setLocalIsEditing] = useState(isCreateMode === true);
   const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
   const isEditing = externalIsEditing ?? localIsEditing;
   const setIsEditing = onSetEditing ?? setLocalIsEditing;
