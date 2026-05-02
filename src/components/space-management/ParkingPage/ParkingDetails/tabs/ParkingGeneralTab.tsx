@@ -361,6 +361,7 @@ export function ParkingGeneralTab({
             <FloorSelectField
               buildingId={buildingLink.linkedId}
               value={form.floorId}
+              fallbackFloor={form.floor}
               onChange={(v: string, payload?: FloorChangePayload) => {
                 updateField('floor', v);
                 updateField('floorId', payload ? payload.floorId : '');

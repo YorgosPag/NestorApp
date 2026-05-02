@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-import { formatFloorLabel } from '@/lib/intl-utils';
+import { formatFloorLabel, formatFloorString } from '@/lib/intl-utils';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -77,6 +77,8 @@ export interface FloorSelectFieldProps {
   placeholder?: string;
   /** Disable the field (e.g. not in edit mode) */
   disabled?: boolean;
+  /** Fallback floor string (e.g. "0", "Ισόγειο") shown when floorId has no match in loaded options */
+  fallbackFloor?: string;
 }
 
 // =============================================================================
@@ -84,6 +86,7 @@ export interface FloorSelectFieldProps {
 // =============================================================================
 
 const NONE_VALUE = '__none__';
+const FALLBACK_VALUE = '__fallback__';
 
 export function FloorSelectField({
   buildingId,
@@ -94,6 +97,7 @@ export function FloorSelectField({
   noBuildingHint,
   placeholder = '—',
   disabled = false,
+  fallbackFloor,
 }: FloorSelectFieldProps) {
   const colors = useSemanticColors();
   const [floors, setFloors] = useState<FloorOption[]>([]);
@@ -134,10 +138,18 @@ export function FloorSelectField({
   }, [buildingId, loadFloors]);
 
   const isDisabled = disabled || !buildingId;
-  const selectValue = value || NONE_VALUE;
+
+  // Determine effective select value — synthetic fallback when floorId has no match
+  const matchedFloor = !loading ? floors.find((f) => f.id === value) : null;
+  const fallbackLabel = !matchedFloor && !loading && fallbackFloor
+    ? formatFloorString(fallbackFloor)
+    : null;
+  const selectValue = value && matchedFloor
+    ? value
+    : (fallbackLabel ? FALLBACK_VALUE : NONE_VALUE);
 
   const handleValueChange = async (v: string) => {
-    if (v === NONE_VALUE) {
+    if (v === NONE_VALUE || v === FALLBACK_VALUE) {
       onChange('');
       return;
     }
@@ -183,6 +195,11 @@ export function FloorSelectField({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NONE_VALUE}>—</SelectItem>
+            {fallbackLabel && (
+              <SelectItem value={FALLBACK_VALUE} disabled>
+                {fallbackLabel}
+              </SelectItem>
+            )}
             {floors.map((f) => (
               <SelectItem key={f.id} value={f.id}>
                 {f.label}
