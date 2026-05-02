@@ -71,6 +71,8 @@ export interface ConfirmDialogProps {
   confirmText?: string;
   /** Cancel button text (defaults to i18n 'buttons.cancel') */
   cancelText?: string;
+  /** Hide the cancel button — use for info/error dialogs that require only acknowledgment */
+  hideCancelButton?: boolean;
   /** Visual variant affecting confirm button styling */
   variant?: ConfirmDialogVariant;
   /** Show loading state on confirm button */
@@ -116,6 +118,7 @@ export function ConfirmDialog({
   onCancel,
   confirmText,
   cancelText,
+  hideCancelButton = false,
   variant = 'default',
   loading = false,
   disabled = false,
@@ -160,9 +163,11 @@ export function ConfirmDialog({
         {children}
 
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={handleCancel}>
-            {resolvedCancelText}
-          </AlertDialogCancel>
+          {!hideCancelButton && (
+            <AlertDialogCancel onClick={handleCancel}>
+              {resolvedCancelText}
+            </AlertDialogCancel>
+          )}
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={disabled || loading}

@@ -285,6 +285,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
         title: t('tabs.floors.deleteIntermediateTitle'),
         description: t('tabs.floors.deleteIntermediate'),
         confirmText: t('tabs.floors.deleteIntermediateAck'),
+        hideCancelButton: true,
         variant: 'warning',
       });
       return;

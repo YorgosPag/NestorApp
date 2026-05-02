@@ -7,6 +7,7 @@ interface ConfirmOptions {
   variant?: ConfirmDialogVariant;
   confirmText?: string;
   cancelText?: string;
+  hideCancelButton?: boolean;
 }
 
 interface UseConfirmDialogReturn {
@@ -15,7 +16,7 @@ interface UseConfirmDialogReturn {
   /** Spread these onto <ConfirmDialog {...dialogProps} /> in your JSX */
   dialogProps: Pick<
     ConfirmDialogProps,
-    'open' | 'onOpenChange' | 'title' | 'description' | 'variant' | 'confirmText' | 'cancelText' | 'onConfirm'
+    'open' | 'onOpenChange' | 'title' | 'description' | 'variant' | 'confirmText' | 'cancelText' | 'hideCancelButton' | 'onConfirm'
   >;
 }
 
@@ -83,6 +84,7 @@ export function useConfirmDialog(): UseConfirmDialogReturn {
     variant: options.variant,
     confirmText: options.confirmText,
     cancelText: options.cancelText,
+    hideCancelButton: options.hideCancelButton,
     onConfirm: handleConfirm,
   };
 
