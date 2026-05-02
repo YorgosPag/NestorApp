@@ -67,6 +67,30 @@ function removeUndefinedValues(obj: Record<string, unknown>): Record<string, unk
 }
 
 /**
+ * Resolve a user UID to their display name from /users/{uid}.
+ * Returns displayName if set, otherwise falls back to emailFallback.
+ * Non-blocking — errors return emailFallback unchanged.
+ *
+ * Use for _lastModifiedByName on Firestore documents.
+ * For audit trail "Name (email)" format use resolvePerformerDisplayName below.
+ */
+export async function resolveUserDisplayName(
+  uid: string,
+  emailFallback: string | null,
+): Promise<string | null> {
+  try {
+    const db = getAdminFirestore();
+    if (!db) return emailFallback;
+    const userDoc = await db.collection(COLLECTIONS.USERS).doc(uid).get();
+    if (!userDoc.exists) return emailFallback;
+    const displayName = (userDoc.data()?.displayName as string | undefined)?.trim();
+    return displayName || emailFallback;
+  } catch {
+    return emailFallback;
+  }
+}
+
+/**
  * Resolve a user UID to "DisplayName (email)" for audit trail display.
  *
  * Strategy:

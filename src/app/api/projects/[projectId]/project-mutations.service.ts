@@ -24,7 +24,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
-import { EntityAuditService } from '@/services/entity-audit.service';
+import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { ProjectUpdateSchema, CACHE_KEY_PREFIX } from './project-mutations.types';
@@ -80,7 +80,7 @@ export async function handleUpdateProject(
   const cleanData = stripUndefinedDeep({ ...safeBody } as Record<string, unknown>);
   cleanData._lastModifiedAt = FieldValue.serverTimestamp();
   cleanData._lastModifiedBy = ctx.uid;
-  cleanData._lastModifiedByName = ctx.email ?? null;
+  cleanData._lastModifiedByName = await resolveUserDisplayName(ctx.uid, ctx.email ?? null);
 
   logger.info('[Projects/Update] Updating fields', { fieldsCount: Object.keys(cleanData).length });
 

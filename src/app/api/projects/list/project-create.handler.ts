@@ -28,7 +28,7 @@ import {
   assertLinkedCompanyExists,
   ProjectMutationPolicyError,
 } from '@/services/projects/project-mutation-policy';
-import { EntityAuditService } from '@/services/entity-audit.service';
+import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import type { AuditFieldChange } from '@/types/audit-trail';
@@ -106,10 +106,10 @@ export const POST = withHighRateLimit(
         // Reuses the same fetch to resolve the display name for the audit trail
         // (ADR-195 — audit entries store human-readable snapshots, not raw IDs).
         const adminDb = getAdminFirestore();
-        const { companyName: linkedCompanyName } = await assertLinkedCompanyExists(
-          adminDb,
-          body.linkedCompanyId as string,
-        );
+        const [{ companyName: linkedCompanyName }, actorName] = await Promise.all([
+          assertLinkedCompanyExists(adminDb, body.linkedCompanyId as string),
+          resolveUserDisplayName(ctx.uid, ctx.email ?? null),
+        ]);
 
         const sanitizedData = {
           ...body,
@@ -120,7 +120,7 @@ export const POST = withHighRateLimit(
           updatedAt: FieldValue.serverTimestamp(),
           createdBy: ctx.uid,
           _lastModifiedBy: ctx.uid,
-          _lastModifiedByName: ctx.email ?? null,
+          _lastModifiedByName: actorName ?? ctx.email ?? null,
           _lastModifiedAt: FieldValue.serverTimestamp(),
         };
 

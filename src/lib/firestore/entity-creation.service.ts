@@ -33,6 +33,7 @@ import { extractBuildingLetter } from '@/config/entity-code-config';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { resolveUserDisplayName } from '@/services/entity-audit.service';
 
 import type { AuthContext } from '@/lib/auth/types';
 import type {
@@ -146,7 +147,7 @@ async function verifyTenantAccess(
 /**
  * Builds the standard fields present on every entity document.
  */
-function buildCommonFields(ctx: AuthContext, companyId: string): Record<string, unknown> {
+function buildCommonFields(ctx: AuthContext, companyId: string, actorName: string | null): Record<string, unknown> {
   return {
     companyId,
     linkedCompanyId: null,
@@ -154,7 +155,7 @@ function buildCommonFields(ctx: AuthContext, companyId: string): Record<string, 
     updatedAt: FieldValue.serverTimestamp(),
     createdBy: ctx.uid,
     _lastModifiedBy: ctx.uid,
-    _lastModifiedByName: ctx.email ?? null,
+    _lastModifiedByName: actorName ?? ctx.email ?? null,
     _lastModifiedAt: FieldValue.serverTimestamp(),
   };
 }
@@ -283,8 +284,9 @@ export async function createEntity(
       ? auth.companyId
       : parentData?.companyId || auth.companyId;
 
-  // --- Step 4: Common fields ---
-  const commonFields = buildCommonFields(auth, companyId);
+  // --- Step 4: Common fields (with resolved display name) ---
+  const actorName = await resolveUserDisplayName(auth.uid, auth.email ?? null);
+  const commonFields = buildCommonFields(auth, companyId, actorName);
 
   // --- Step 5: Entity code generation ---
   let generatedCode: string | null = null;
