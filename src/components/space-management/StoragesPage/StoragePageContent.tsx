@@ -104,6 +104,12 @@ export function StoragePageContent() {
     handleCancelPermanentDelete,
   } = useStoragesTrashState({ forceDataRefresh: refetch, onItemDeleted: () => setSelectedStorage(null) });
 
+  // Clear selection whenever entering or exiting trash view — prevents cross-contamination
+  const handleToggleTrashAndClear = useCallback(async () => {
+    setSelectedStorage(null);
+    await handleToggleTrash();
+  }, [handleToggleTrash, setSelectedStorage]);
+
   // Delete dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -233,7 +239,7 @@ export function StoragePageContent() {
             showFilters={showMobileFilters}
             setShowFilters={setShowMobileFilters}
             showTrash={showTrash}
-            onToggleTrash={handleToggleTrash}
+            onToggleTrash={handleToggleTrashAndClear}
             trashCount={trashCount}
           />
 
@@ -292,7 +298,7 @@ export function StoragePageContent() {
         {showTrash && !loadingTrash && (
           <TrashActionsBar
             selectedIds={selectedStorage ? [selectedStorage.id] : []}
-            onBack={handleToggleTrash}
+            onBack={handleToggleTrashAndClear}
             onRestore={handleRestoreStorages}
             onPermanentDelete={handlePermanentDeleteStorages}
             trashCount={trashCount}
