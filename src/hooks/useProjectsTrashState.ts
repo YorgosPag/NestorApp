@@ -103,6 +103,7 @@ export function useProjectsTrashState({
       await TrashService.bulkPermanentDelete('project', pendingPermanentDeleteIds);
       setShowPermanentDeleteDialog(false);
       setPendingPermanentDeleteIds([]);
+      projectNotifications.permanentlyDeleted();
       handleTrashActionComplete();
     } catch (error) {
       logger.error('Failed to permanently delete projects', { ids: pendingPermanentDeleteIds, error });

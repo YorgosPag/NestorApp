@@ -61,6 +61,7 @@ export const NOTIFICATION_KEYS = {
     deleted: 'projects:messages.deleted',
     movedToTrash: 'projects:messages.movedToTrash',
     restored: 'projects:messages.restored',
+    permanentlyDeleted: 'projects:messages.permanentlyDeleted',
     archived: 'projects:messages.archived',
     exported: 'projects:messages.exported',
     loadingError: 'projects:messages.loadingError',

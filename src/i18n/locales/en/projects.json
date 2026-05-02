@@ -137,6 +137,7 @@
     "movedToTrash": "Project moved to trash",
     "deleted": "Project deleted successfully",
     "restored": "Project restored successfully",
+    "permanentlyDeleted": "Project permanently deleted",
     "archived": "Project archived successfully",
     "exported": "Projects exported successfully",
     "noProjects": "No projects found",
