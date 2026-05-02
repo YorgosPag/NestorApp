@@ -776,7 +776,13 @@
     "saving": "Saving...",
     "success": "Saved!",
     "error": "Error",
-    "noLinkedSpaces": "No linked spaces"
+    "noLinkedSpaces": "No linked spaces",
+    "notifications": {
+      "parkingLinked": "Parking space linked successfully",
+      "storageLinked": "Storage linked successfully",
+      "spaceRemoved": "Space unlinked successfully",
+      "updated": "Linked spaces updated"
+    }
   },
   "mutationPreview": {
     "confirm": "Continue",

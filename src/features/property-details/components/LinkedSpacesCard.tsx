@@ -34,6 +34,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { updatePropertyLinkedSpacesWithPolicy } from '@/services/property/property-mutation-gateway';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { usePropertyNotifications } from '@/hooks/notifications/usePropertyNotifications';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import { useLinkedSpacesData } from './useLinkedSpacesData';
 import '@/lib/design-system';
@@ -70,6 +71,7 @@ export function LinkedSpacesCard({
   const spacing = useSpacingTokens();
   const typography = useTypography();
   const { error: notifyError } = useNotifications();
+  const propertyNotifications = usePropertyNotifications();
   const { checking: previewChecking, runPreviewedMutation, ImpactDialog } = useGuardedPropertyMutation({ id: propertyId });
 
   // 🏢 ENTERPRISE: Data loading (extracted hook)
@@ -100,10 +102,13 @@ export function LinkedSpacesCard({
     prevIsEditingRef.current = isEditing;
   }, [isEditing, currentLinkedSpaces]);
 
+  type LinkedSpaceAction = 'parkingLinked' | 'storageLinked' | 'spaceRemoved' | 'updated';
+
   // Optimistic update + background save
   const persistLinkedSpaces = useCallback(async (
     newDraft: LinkedSpace[],
     rollback: LinkedSpace[],
+    action: LinkedSpaceAction = 'updated',
   ) => {
     if (!propertyId) return;
     setSaving(true);
@@ -116,6 +121,7 @@ export function LinkedSpacesCard({
         });
         logger.info(`[LinkedSpacesCard] Saved ${newDraft.length} linked spaces`);
         setSaveStatus('success');
+        propertyNotifications.linkedSpaces[action]();
         onLinkedSpacesChanged?.(newDraft);
         setTimeout(() => setSaveStatus('idle'), 3000);
       });
@@ -131,7 +137,7 @@ export function LinkedSpacesCard({
     } finally {
       setSaving(false);
     }
-  }, [buildingId, notifyError, onLinkedSpacesChanged, propertyId, runPreviewedMutation, t]);
+  }, [buildingId, notifyError, onLinkedSpacesChanged, propertyId, propertyNotifications, runPreviewedMutation, t]);
 
   const handleParkingSelected = useCallback((parkingId: string) => {
     if (!parkingId || isSelectClearValue(parkingId)) {
@@ -154,7 +160,7 @@ export function LinkedSpacesCard({
     const updated = [...previous, newLinkedSpace];
     setDraftLinkedSpaces(updated);
     setSelectedParkingId(SELECT_CLEAR_VALUE);
-    persistLinkedSpaces(updated, previous);
+    persistLinkedSpaces(updated, previous, 'parkingLinked');
   }, [parkingOptions, draftLinkedSpaces, persistLinkedSpaces]);
 
   const handleStorageSelected = useCallback((storageId: string) => {
@@ -178,14 +184,14 @@ export function LinkedSpacesCard({
     const updated = [...previous, newLinkedSpace];
     setDraftLinkedSpaces(updated);
     setSelectedStorageId(SELECT_CLEAR_VALUE);
-    persistLinkedSpaces(updated, previous);
+    persistLinkedSpaces(updated, previous, 'storageLinked');
   }, [storageOptions, draftLinkedSpaces, persistLinkedSpaces]);
 
   const handleRemoveSpace = useCallback((spaceId: string) => {
     const previous = draftLinkedSpaces;
     const updated = previous.filter(ls => ls.spaceId !== spaceId);
     setDraftLinkedSpaces(updated);
-    persistLinkedSpaces(updated, previous);
+    persistLinkedSpaces(updated, previous, 'spaceRemoved');
   }, [draftLinkedSpaces, persistLinkedSpaces]);
 
   const handleInclusionChanged = useCallback((spaceId: string, inclusion: SpaceInclusionType) => {

@@ -119,6 +119,18 @@ export const NOTIFICATION_KEYS = {
   },
 
   // ==========================================================================
+  // PROPERTIES domain
+  // ==========================================================================
+  properties: {
+    linkedSpaces: {
+      parkingLinked: 'properties:linkedSpaces.notifications.parkingLinked',
+      storageLinked: 'properties:linkedSpaces.notifications.storageLinked',
+      spaceRemoved: 'properties:linkedSpaces.notifications.spaceRemoved',
+      updated: 'properties:linkedSpaces.notifications.updated',
+    },
+  },
+
+  // ==========================================================================
   // FILES domain
   // ==========================================================================
   files: {
