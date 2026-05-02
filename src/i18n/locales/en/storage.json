@@ -35,6 +35,9 @@
       "createDescription": "Create description",
       "nameRequired": "Name is required",
       "buildingRequired": "Please select a building"
+    },
+    "notifications": {
+      "created": "Storage unit created successfully!"
     }
   },
   "sizes": {

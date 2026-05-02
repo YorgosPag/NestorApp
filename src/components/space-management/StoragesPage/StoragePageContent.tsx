@@ -43,6 +43,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
 import { useStoragesTrashState } from '@/hooks/useStoragesTrashState';
 import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
+import { useNotifications } from '@/providers/NotificationProvider';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('StoragePage');
@@ -64,6 +65,7 @@ const EMPTY_STORAGE: import('@/types/storage/contracts').Storage = {
 export function StoragePageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash', 'storage']);
+  const { success } = useNotifications();
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
   const _colors = useSemanticColors();
@@ -345,7 +347,7 @@ export function StoragePageContent() {
                       isEditing
                       createMode
                       onSaveRef={createSaveRef}
-                      onCreated={() => resetCreateForm()}
+                      onCreated={() => { success(tStorage('storages.notifications.created')); resetCreateForm(); }}
                     />
                   }
                 />
