@@ -326,6 +326,11 @@
         "deleted": "Item deleted",
         "statusChanged": "Status changed",
         "error": "Error: {message}"
+      },
+      "coverage": {
+        "floorGapTitle": "Incomplete floor-level measurements",
+        "floorGapDescription": "{count} of {total} floors have no floor-scope entries: {floorNames}",
+        "dismiss": "Dismiss"
       }
     },
     "general": {

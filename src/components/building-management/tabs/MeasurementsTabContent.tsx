@@ -19,6 +19,7 @@ import { useCompanyId } from '@/hooks/useCompanyId';
 import { useBOQItems } from '@/hooks/useBOQItems';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { BOQSummaryCards } from './MeasurementsTabContent/BOQSummaryCards';
+import { BOQCoverageIndicator } from './MeasurementsTabContent/BOQCoverageIndicator';
 import { BOQFilterBar } from './MeasurementsTabContent/BOQFilterBar';
 import { BOQCategoryAccordion, getCategoryCodes } from './MeasurementsTabContent/BOQCategoryAccordion';
 import { BOQItemEditor } from './MeasurementsTabContent/BOQItemEditor';
@@ -227,6 +228,9 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
       <ConfirmDialog {...dialogProps} />
       {/* Summary Cards */}
       <BOQSummaryCards items={items} />
+
+      {/* Floor coverage gap — non-blocking informational banner */}
+      <BOQCoverageIndicator items={items} buildingId={building.id} />
 
       {/* Filter Bar + Actions */}
       <header className="flex flex-col sm:flex-row items-start sm:items-center gap-2">

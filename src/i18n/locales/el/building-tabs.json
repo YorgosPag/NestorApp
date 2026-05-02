@@ -326,6 +326,11 @@
         "deleted": "Η εργασία διαγράφηκε",
         "statusChanged": "Η κατάσταση άλλαξε",
         "error": "Σφάλμα: {message}"
+      },
+      "coverage": {
+        "floorGapTitle": "Ελλιπείς επιμετρήσεις ανά πάτωμα",
+        "floorGapDescription": "{count} από {total} ορόφους χωρίς εργασίες «Ανά Πάτωμα»: {floorNames}",
+        "dismiss": "Παράβλεψη"
       }
     },
     "general": {
