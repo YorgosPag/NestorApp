@@ -37,6 +37,7 @@ import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { nowISO } from '@/lib/date-local';
+import { useProjectNotifications } from '@/hooks/notifications/useProjectNotifications';
 
 const logger = createModuleLogger('ProjectsPageContent');
 
@@ -142,6 +143,8 @@ export function ProjectsPageContent() {
     setSelectedProject(prev => (prev ? { ...prev, status: next } : prev));
   }, [setSelectedProject]);
 
+  const projectNotifications = useProjectNotifications();
+
   // 🛡️ ADR-226 Phase 3: Deletion Guard — replaces cascade preview
   const { checking: checkingDeletion, checkBeforeDelete, BlockedDialog } = useDeletionGuard('project');
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -178,6 +181,7 @@ export function ProjectsPageContent() {
       logger.info('Project deleted', { projectId: projectToDelete.id });
       setSelectedProject(null);
       void fetchTrashedProjects();
+      projectNotifications.movedToTrash();
     } else {
       logger.error('Failed to delete project', { error: result.error });
     }

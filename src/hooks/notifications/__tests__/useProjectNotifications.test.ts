@@ -49,6 +49,12 @@ describe('useProjectNotifications — top-level project lifecycle', () => {
     expect(success).toHaveBeenCalledWith(NOTIFICATION_KEYS.projects.deleted);
   });
 
+  it('movedToTrash → success(NOTIFICATION_KEYS.projects.movedToTrash)', () => {
+    const { result } = renderHook(() => useProjectNotifications());
+    result.current.movedToTrash();
+    expect(success).toHaveBeenCalledWith(NOTIFICATION_KEYS.projects.movedToTrash);
+  });
+
   it('archived → success(NOTIFICATION_KEYS.projects.archived)', () => {
     const { result } = renderHook(() => useProjectNotifications());
     result.current.archived();
