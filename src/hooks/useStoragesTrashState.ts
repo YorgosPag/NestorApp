@@ -25,6 +25,7 @@ const logger = createModuleLogger('useStoragesTrashState');
 
 interface UseStoragesTrashStateParams {
   forceDataRefresh: () => void;
+  onItemDeleted?: () => void;
 }
 
 interface TrashApiResponse {
@@ -35,6 +36,7 @@ interface TrashApiResponse {
 
 export function useStoragesTrashState({
   forceDataRefresh,
+  onItemDeleted,
 }: UseStoragesTrashStateParams) {
   const { user, loading: authLoading } = useAuth();
   const { success: showSuccess } = useNotifications();
@@ -79,11 +81,12 @@ export function useStoragesTrashState({
     try {
       await TrashService.bulkRestore('storage', ids);
       handleTrashActionComplete();
-      showSuccess(t('restoreSuccess', { count: ids.length }));
+      onItemDeleted?.();
+      showSuccess(ids.length === 1 ? t('restoreSuccess_one') : t('restoreSuccess', { count: ids.length }));
     } catch (error) {
       logger.error('Failed to restore storage units', { ids, error });
     }
-  }, [handleTrashActionComplete, showSuccess, t]);
+  }, [handleTrashActionComplete, onItemDeleted, showSuccess, t]);
 
   const handlePermanentDeleteStorages = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
@@ -100,13 +103,14 @@ export function useStoragesTrashState({
       setShowPermanentDeleteDialog(false);
       setPendingPermanentDeleteIds([]);
       handleTrashActionComplete();
-      showSuccess(t('permanentDeleteSuccess', { count }));
+      onItemDeleted?.();
+      showSuccess(count === 1 ? t('permanentDeleteSuccess_one') : t('permanentDeleteSuccess', { count }));
     } catch (error) {
       logger.error('Failed to permanently delete storage units', { ids: pendingPermanentDeleteIds, error });
       setShowPermanentDeleteDialog(false);
       setPendingPermanentDeleteIds([]);
     }
-  }, [pendingPermanentDeleteIds, handleTrashActionComplete, showSuccess, t]);
+  }, [pendingPermanentDeleteIds, handleTrashActionComplete, onItemDeleted, showSuccess, t]);
 
   const handleCancelPermanentDelete = useCallback(() => {
     setShowPermanentDeleteDialog(false);

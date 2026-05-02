@@ -86,7 +86,7 @@ export function useBuildingsTrashState({
     try {
       await TrashService.bulkRestore('building', ids);
       handleTrashActionComplete();
-      showSuccess(t('restoreSuccess', { count: ids.length }));
+      showSuccess(ids.length === 1 ? t('restoreSuccess_one') : t('restoreSuccess', { count: ids.length }));
       onRestoreComplete?.();
     } catch (error) {
       logger.error('Failed to restore buildings', { ids, error });
