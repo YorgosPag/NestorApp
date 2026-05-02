@@ -119,6 +119,9 @@ export const POST = withHighRateLimit(
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
           createdBy: ctx.uid,
+          _lastModifiedBy: ctx.uid,
+          _lastModifiedByName: ctx.email ?? null,
+          _lastModifiedAt: FieldValue.serverTimestamp(),
         };
 
         // 🏢 ENTERPRISE: Remove undefined fields (Firestore doesn't accept undefined)

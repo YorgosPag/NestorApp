@@ -153,6 +153,9 @@ function buildCommonFields(ctx: AuthContext, companyId: string): Record<string, 
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
     createdBy: ctx.uid,
+    _lastModifiedBy: ctx.uid,
+    _lastModifiedByName: ctx.email ?? null,
+    _lastModifiedAt: FieldValue.serverTimestamp(),
   };
 }
 
