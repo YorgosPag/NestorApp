@@ -91,6 +91,21 @@ export const NOTIFICATION_KEYS = {
   },
 
   // ==========================================================================
+  // BUILDINGS domain
+  // ==========================================================================
+  buildings: {
+    created: 'building:dialog.messages.success',
+    updated: 'building:dialog.messages.updateSuccess',
+    createError: 'building:dialog.messages.error',
+    updateError: 'building:dialog.messages.updateError',
+    floor: {
+      created: 'building:dialog.addFloor.messages.success',
+      createError: 'building:dialog.addFloor.messages.error',
+      duplicate: 'building:dialog.addFloor.messages.duplicate',
+    },
+  },
+
+  // ==========================================================================
   // FILES domain
   // ==========================================================================
   files: {

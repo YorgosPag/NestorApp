@@ -28,6 +28,7 @@ import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndic
 import { useVersionedSave } from '@/hooks/useVersionedSave';
 import { createBuildingWithCodeRetry, updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
 import { PolicyErrorBanner } from '@/components/shared/PolicyErrorBanner';
+import { useBuildingNotifications } from '@/hooks/notifications/useBuildingNotifications';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('GeneralTabContent');
@@ -72,6 +73,7 @@ export function GeneralTabContent({
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   // 🏢 ADR-201: Centralized companyId resolution (building → user fallback)
   const resolvedCompanyId = useCompanyId({ building })?.companyId ?? '';
+  const buildingNotifications = useBuildingNotifications();
 
   // Internal editing state (used when no parent controls editing)
   const [internalIsEditing, setInternalIsEditing] = useState(false);
@@ -356,6 +358,7 @@ export function GeneralTabContent({
         logger.info('Building created successfully', { buildingId: result.buildingId });
         didSaveRef.current = true;
         setEffectiveEditing(false);
+        buildingNotifications.created();
         onBuildingCreated?.(result.buildingId);
         return true;
 
@@ -373,6 +376,7 @@ export function GeneralTabContent({
         logger.info('Building updated successfully');
         didSaveRef.current = true;
         setEffectiveEditing(false);
+        buildingNotifications.updated();
         return true;
       }
 
@@ -384,7 +388,7 @@ export function GeneralTabContent({
     } finally {
       setIsSaving(false);
     }
-  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated, projectLink, t]);
+  }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated, projectLink, t, buildingNotifications]);
 
   // Register save function for parent header delegation
   useEffect(() => {
