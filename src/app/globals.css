@@ -311,6 +311,15 @@
     display: none;  /* Safari and Chrome */
   }
 
+  /* 🏢 ENTERPRISE: Brand dark-surface dialog — scopes showcase CSS vars for children (ADR-312) */
+  .dialog-brand {
+    background-color: hsl(var(--showcase-bg));
+    color: hsl(var(--showcase-fg));
+    border-color: hsl(var(--showcase-border));
+    /* Scope --muted-foreground so AlertDialogDescription inherits the right muted color */
+    --muted-foreground: var(--showcase-muted-fg);
+  }
+
   /* ?? ENTERPRISE: Toast severity classes tied to design tokens */
   .toast-status {
     border-radius: var(--radius);

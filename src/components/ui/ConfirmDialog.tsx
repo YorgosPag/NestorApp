@@ -80,6 +80,8 @@ export interface ConfirmDialogProps {
   icon?: React.ReactNode;
   /** Additional content between description and footer (optional) */
   children?: React.ReactNode;
+  /** Extra className applied to the dialog content panel (e.g. 'dialog-brand' for dark surface) */
+  contentClassName?: string;
 }
 
 // ============================================================================
@@ -118,6 +120,7 @@ export function ConfirmDialog({
   disabled = false,
   icon,
   children,
+  contentClassName,
 }: ConfirmDialogProps) {
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
 
@@ -138,7 +141,7 @@ export function ConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className={cn('max-w-md', contentClassName)}>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             {icon}
@@ -220,6 +223,7 @@ export function SoftDeleteConfirmDialog(
       {...props}
       variant={props.variant || 'destructive'}
       confirmText={props.confirmText || t('buttons.moveToTrash', 'Move to Trash')}
+      contentClassName={cn('dialog-brand', props.contentClassName)}
     />
   );
 }
