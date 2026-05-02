@@ -25,6 +25,7 @@ const logger = createModuleLogger('useBuildingsTrashState');
 interface UseBuildingsTrashStateParams {
   forceDataRefresh: () => void;
   onRestoreComplete?: () => void;
+  onBeforeToggle?: () => void;
 }
 
 interface TrashApiResponse {
@@ -36,6 +37,7 @@ interface TrashApiResponse {
 export function useBuildingsTrashState({
   forceDataRefresh,
   onRestoreComplete,
+  onBeforeToggle,
 }: UseBuildingsTrashStateParams) {
   const { user, loading: authLoading } = useAuth();
   const { success: showSuccess } = useNotifications();
@@ -68,12 +70,13 @@ export function useBuildingsTrashState({
   }, []);
 
   const handleToggleTrash = useCallback(async () => {
+    onBeforeToggle?.();
     const next = !showTrash;
     setShowTrash(next);
     if (next) {
       await fetchTrashedBuildings();
     }
-  }, [showTrash, fetchTrashedBuildings]);
+  }, [showTrash, fetchTrashedBuildings, onBeforeToggle]);
 
   const handleTrashActionComplete = useCallback(() => {
     forceDataRefresh();

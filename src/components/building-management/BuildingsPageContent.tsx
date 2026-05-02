@@ -163,6 +163,7 @@ export function BuildingsPageContent() {
   } = useBuildingsTrashState({
     forceDataRefresh: refetchBuildings,
     onRestoreComplete: () => setSelectedBuilding(null),
+    onBeforeToggle: () => setSelectedBuilding(null),
   });
 
   // 🛡️ ADR-226 Phase 3: Deletion Guard — replaces cascade preview

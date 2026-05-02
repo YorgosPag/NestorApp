@@ -29,6 +29,7 @@ interface UsePropertiesTrashStateParams {
   selectedPropertyIds: string[];
   setSelectedProperties: (ids: string[]) => void;
   forceDataRefresh: () => void;
+  onBeforeToggle?: () => void;
 }
 
 interface TrashApiResponse {
@@ -41,6 +42,7 @@ export function usePropertiesTrashState({
   selectedPropertyIds,
   setSelectedProperties,
   forceDataRefresh,
+  onBeforeToggle,
 }: UsePropertiesTrashStateParams) {
   const { t } = useTranslation(['trash']);
   const { notify } = useNotifications();
@@ -69,13 +71,14 @@ export function usePropertiesTrashState({
   }, []);
 
   const handleToggleTrash = useCallback(async () => {
+    onBeforeToggle?.();
     const next = !showTrash;
     setShowTrash(next);
     setSelectedProperties([]);
     if (next) {
       await fetchTrashedProperties();
     }
-  }, [showTrash, setSelectedProperties, fetchTrashedProperties]);
+  }, [showTrash, setSelectedProperties, fetchTrashedProperties, onBeforeToggle]);
 
   const handleTrashActionComplete = useCallback(() => {
     setSelectedProperties([]);

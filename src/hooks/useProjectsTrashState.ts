@@ -23,6 +23,7 @@ const logger = createModuleLogger('useProjectsTrashState');
 interface UseProjectsTrashStateParams {
   forceDataRefresh: () => void;
   setSelectedProject: (project: Project | null) => void;
+  onBeforeToggle?: () => void;
 }
 
 interface TrashApiResponse {
@@ -34,6 +35,7 @@ interface TrashApiResponse {
 export function useProjectsTrashState({
   forceDataRefresh,
   setSelectedProject,
+  onBeforeToggle,
 }: UseProjectsTrashStateParams) {
   const { user, loading: authLoading } = useAuth();
   const [showTrash, setShowTrash] = useState(false);
@@ -58,13 +60,14 @@ export function useProjectsTrashState({
   }, []);
 
   const handleToggleTrash = useCallback(async () => {
+    onBeforeToggle?.();
     const next = !showTrash;
     setShowTrash(next);
     setSelectedProject(null);
     if (next) {
       await fetchTrashedProjects();
     }
-  }, [showTrash, setSelectedProject, fetchTrashedProjects]);
+  }, [showTrash, setSelectedProject, fetchTrashedProjects, onBeforeToggle]);
 
   /** Called after restore/permanent-delete to refresh both lists + clear stale selection */
   const handleTrashActionComplete = useCallback(() => {

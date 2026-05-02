@@ -26,6 +26,7 @@ const logger = createModuleLogger('useStoragesTrashState');
 interface UseStoragesTrashStateParams {
   forceDataRefresh: () => void;
   onItemDeleted?: () => void;
+  onBeforeToggle?: () => void;
 }
 
 interface TrashApiResponse {
@@ -37,6 +38,7 @@ interface TrashApiResponse {
 export function useStoragesTrashState({
   forceDataRefresh,
   onItemDeleted,
+  onBeforeToggle,
 }: UseStoragesTrashStateParams) {
   const { user, loading: authLoading } = useAuth();
   const { success: showSuccess } = useNotifications();
@@ -63,12 +65,13 @@ export function useStoragesTrashState({
   }, []);
 
   const handleToggleTrash = useCallback(async () => {
+    onBeforeToggle?.();
     const next = !showTrash;
     setShowTrash(next);
     if (next) {
       await fetchTrashedStorages();
     }
-  }, [showTrash, fetchTrashedStorages]);
+  }, [showTrash, fetchTrashedStorages, onBeforeToggle]);
 
   const handleTrashActionComplete = useCallback(() => {
     forceDataRefresh();

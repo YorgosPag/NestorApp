@@ -120,7 +120,10 @@ export function ParkingPageContent() {
     handlePermanentDeleteParkingSpots,
     handleConfirmPermanentDelete,
     handleCancelPermanentDelete,
-  } = useParkingTrashState({ forceDataRefresh: refetch });
+  } = useParkingTrashState({
+    forceDataRefresh: refetch,
+    onBeforeToggle: () => setSelectedParking(null),
+  });
 
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');

@@ -22,6 +22,7 @@ const logger = createModuleLogger('useParkingTrashState');
 
 interface UseParkingTrashStateParams {
   forceDataRefresh: () => void;
+  onBeforeToggle?: () => void;
 }
 
 interface TrashApiResponse {
@@ -32,6 +33,7 @@ interface TrashApiResponse {
 
 export function useParkingTrashState({
   forceDataRefresh,
+  onBeforeToggle,
 }: UseParkingTrashStateParams) {
   const { user, loading: authLoading } = useAuth();
   const [showTrash, setShowTrash] = useState(false);
@@ -56,12 +58,13 @@ export function useParkingTrashState({
   }, []);
 
   const handleToggleTrash = useCallback(async () => {
+    onBeforeToggle?.();
     const next = !showTrash;
     setShowTrash(next);
     if (next) {
       await fetchTrashedParkingSpots();
     }
-  }, [showTrash, fetchTrashedParkingSpots]);
+  }, [showTrash, fetchTrashedParkingSpots, onBeforeToggle]);
 
   const handleTrashActionComplete = useCallback(() => {
     forceDataRefresh();
