@@ -95,6 +95,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
           buildingId={building.id}
           projectId={building.projectId}
           existingFloorNumbers={existingFloorNumbers}
+          existingFloors={floors}
           onCreated={() => {
             setShowCreateForm(false);
             void fetchFloors();
@@ -170,14 +171,28 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
                         <>
                           <td className="px-2 py-2 font-mono text-sm font-medium">{floor.number}</td>
                           <td className="px-2 py-2">
-                            <button
-                              type="button"
-                              onClick={() => toggleFloorExpand(floor.id)}
-                              className="flex items-center gap-2 text-left hover:text-primary transition-colors"
-                            >
-                              {floor.name}
-                              <Map className={cn("h-3.5 w-3.5", isExpanded ? "text-primary" : `${colors.text.muted} opacity-70`)} aria-hidden="true" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => toggleFloorExpand(floor.id)}
+                                className="flex items-center gap-2 text-left hover:text-primary transition-colors"
+                              >
+                                {floor.name}
+                                <Map className={cn("h-3.5 w-3.5", isExpanded ? "text-primary" : `${colors.text.muted} opacity-70`)} aria-hidden="true" />
+                              </button>
+                              {!floor.hasFloorplan && (
+                                <TooltipProvider delayDuration={300}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex cursor-help" aria-label={t('tabs.floors.noFloorplan')}>
+                                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" aria-hidden="true" /> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{t('tabs.floors.noFloorplan')}</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
                           </td>
                           <td className={cn("px-2 py-2 font-mono text-xs", colors.text.muted)}>{formatElevation(floor.elevation)}</td>
                           <td className={cn("px-2 py-2 text-center", colors.text.muted)}>{floor.units ?? 0}</td>

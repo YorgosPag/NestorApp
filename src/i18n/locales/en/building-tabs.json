@@ -111,7 +111,8 @@
       "expandFloor": "Show floor plan",
       "collapseFloor": "Hide floor plan",
       "mismatchWarning": "Name doesn't match the level number. Are you sure you want this name?",
-      "gapWarning": "Missing levels: {levels}. Check if you need to add them."
+      "gapWarning": "Missing levels: {levels}. Check if you need to add them.",
+      "nonContiguousWarning": "Non-sequential level — create the adjacent floor first."
     },
     "measurements": {
       "title": "Measurements",

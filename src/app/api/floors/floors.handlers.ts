@@ -19,6 +19,7 @@ import type {
   FloorsListResponse,
   FloorUpdateResponse,
 } from './floors.types';
+import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import {
   buildFloorsQuery,
   resolveFloorsListParams,
@@ -51,13 +52,29 @@ export async function handleListFloors(
     }
 
     const floorsSnapshot = await queryOrResponse.get();
-    const floors = sortFloors(
+    const rawFloors = sortFloors(
       floorsSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       } as FloorDocument)),
       params
     );
+
+    // Enrich each floor with hasFloorplan (batch query, ≤30 floors per Firestore 'in' limit)
+    const db = getAdminFirestore();
+    const floorIds = rawFloors.map((f) => f.id);
+    const floorplanSet = new Set<string>();
+    if (floorIds.length > 0) {
+      const filesSnap = await db.collection(COLLECTIONS.FILES)
+        .where(FIELDS.COMPANY_ID, '==', tenantCompanyId)
+        .where(FIELDS.ENTITY_TYPE, '==', 'floor')
+        .where('purpose', '==', FLOORPLAN_PURPOSES.FLOOR)
+        .where(FIELDS.ENTITY_ID, 'in', floorIds.slice(0, 30))
+        .select(FIELDS.ENTITY_ID)
+        .get();
+      filesSnap.docs.forEach((doc) => floorplanSet.add(doc.data()[FIELDS.ENTITY_ID] as string));
+    }
+    const floors = rawFloors.map((f) => ({ ...f, hasFloorplan: floorplanSet.has(f.id) }));
 
     logger.info('[Floors/List] Found floors', { count: floors.length, companyId: ctx.companyId });
 

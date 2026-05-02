@@ -28,6 +28,7 @@ export interface FloorRecord {
   elevation?: number | null;
   buildingId: string;
   units?: number;
+  hasFloorplan?: boolean;
   _v?: number;
 }
 

@@ -7,6 +7,7 @@ export interface FloorDocument {
   buildingId: string;
   projectId?: string;
   companyId?: string;
+  hasFloorplan?: boolean;
   [key: string]: unknown;
 }
 

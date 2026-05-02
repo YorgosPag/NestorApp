@@ -43,6 +43,8 @@ import { useNotifications } from '@/providers/NotificationProvider';
 /** Residential standard floor-to-floor height (meters). */
 const DEFAULT_STOREY_HEIGHT = 3.0;
 
+type ExistingFloorElevation = { number: number; elevation?: number | null };
+
 interface FloorMutationResponse {
   floorId?: string;
   data?: { floorId: string };
@@ -64,33 +66,79 @@ export interface FloorInlineCreateFormProps {
   onCancel: () => void;
   /** Existing floor numbers — stepper skips these (optional, SSoT). */
   existingFloorNumbers?: ReadonlySet<number>;
+  /** Existing floors with elevations — used for smart elevation suggestion. */
+  existingFloors?: ReadonlyArray<ExistingFloorElevation>;
 }
 
 // =============================================================================
 // HELPERS
 // =============================================================================
 
-/** Compute default elevation for a floor number (0 = ground = 0m). */
-function computeDefaultElevation(floorNumber: number): string {
+/**
+ * Smart elevation: infers start elevation for a new floor from actual existing
+ * floor elevations instead of the fixed 3m-per-floor default.
+ * Falls back to DEFAULT_STOREY_HEIGHT when no elevation data is available.
+ */
+function computeSmartElevation(
+  floorNumber: number,
+  existingFloors: ReadonlyArray<ExistingFloorElevation>,
+): string {
+  const withElev = existingFloors
+    .filter((f): f is { number: number; elevation: number } =>
+      f.elevation != null && Number.isFinite(f.elevation as number))
+    .sort((a, b) => a.number - b.number);
+
+  if (withElev.length === 0) return (floorNumber * DEFAULT_STOREY_HEIGHT).toFixed(2);
+
+  const below = [...withElev].reverse().find((f) => f.number < floorNumber);
+  const above = withElev.find((f) => f.number > floorNumber);
+
+  if (below && above) {
+    const heightPerFloor = (above.elevation - below.elevation) / (above.number - below.number);
+    return (below.elevation + (floorNumber - below.number) * heightPerFloor).toFixed(2);
+  }
+
+  if (below) {
+    const belowBelow = [...withElev].reverse().find((f) => f.number < below.number);
+    const h = belowBelow
+      ? (below.elevation - belowBelow.elevation) / (below.number - belowBelow.number)
+      : DEFAULT_STOREY_HEIGHT;
+    return (below.elevation + (floorNumber - below.number) * h).toFixed(2);
+  }
+
+  if (above) {
+    const aboveAbove = withElev.find((f) => f.number > above.number);
+    const h = aboveAbove
+      ? (aboveAbove.elevation - above.elevation) / (aboveAbove.number - above.number)
+      : DEFAULT_STOREY_HEIGHT;
+    return (above.elevation - (above.number - floorNumber) * h).toFixed(2);
+  }
+
   return (floorNumber * DEFAULT_STOREY_HEIGHT).toFixed(2);
 }
 
-/** Find next available floor number in a direction, skipping existing. */
-function findNextAvailable(current: number, dir: 1 | -1, existing: ReadonlySet<number>): number {
+/** True if floor N is contiguous with at least one existing floor. */
+function isContiguous(n: number, existing: ReadonlySet<number>): boolean {
+  if (existing.size === 0) return true;
+  return existing.has(n - 1) || existing.has(n + 1);
+}
+
+/** Find next available AND contiguous number in direction; returns current if none found. */
+function findNextContiguous(current: number, dir: 1 | -1, existing: ReadonlySet<number>): number {
   let next = current + dir;
-  // Safety: max 100 iterations to avoid infinite loop
   for (let i = 0; i < 100; i++) {
-    if (!existing.has(next)) return next;
+    if (!existing.has(next) && isContiguous(next, existing)) return next;
     next += dir;
   }
-  return next;
+  return current;
 }
 
 /** Find first available number starting from max+1 (or 0 if no existing). */
 function firstAvailableNumber(existing: ReadonlySet<number>): number {
   if (existing.size === 0) return 0;
   const max = Math.max(...existing);
-  return findNextAvailable(max, 1, existing);
+  // Next contiguous above the max is always max+1
+  return max + 1;
 }
 
 // =============================================================================
@@ -105,6 +153,7 @@ export function FloorInlineCreateForm({
   onCreated,
   onCancel,
   existingFloorNumbers = EMPTY_SET,
+  existingFloors = [],
 }: FloorInlineCreateFormProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { success, error: notifyError } = useNotifications();
@@ -115,7 +164,7 @@ export function FloorInlineCreateForm({
   const [createNumber, setCreateNumber] = useState(String(initNum));
   const [createName, setCreateName] = useState(formatFloorLabel(initNum));
   const [createNameManuallyEdited, setCreateNameManuallyEdited] = useState(false);
-  const [createElevation, setCreateElevation] = useState(computeDefaultElevation(initNum));
+  const [createElevation, setCreateElevation] = useState(() => computeSmartElevation(initNum, existingFloors));
   const [createElevationManuallyEdited, setCreateElevationManuallyEdited] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -123,8 +172,8 @@ export function FloorInlineCreateForm({
   const applyNumber = useCallback((num: number) => {
     setCreateNumber(String(num));
     if (!createNameManuallyEdited) setCreateName(formatFloorLabel(num));
-    if (!createElevationManuallyEdited) setCreateElevation(computeDefaultElevation(num));
-  }, [createNameManuallyEdited, createElevationManuallyEdited]);
+    if (!createElevationManuallyEdited) setCreateElevation(computeSmartElevation(num, existingFloors));
+  }, [createNameManuallyEdited, createElevationManuallyEdited, existingFloors]);
 
   const handleNumberChange = useCallback((value: string) => {
     setCreateNumber(value);
@@ -133,20 +182,20 @@ export function FloorInlineCreateForm({
       setCreateName(Number.isNaN(num) ? '' : formatFloorLabel(num));
     }
     if (!createElevationManuallyEdited) {
-      setCreateElevation(Number.isNaN(num) ? '' : computeDefaultElevation(num));
+      setCreateElevation(Number.isNaN(num) ? '' : computeSmartElevation(num, existingFloors));
     }
-  }, [createNameManuallyEdited, createElevationManuallyEdited]);
+  }, [createNameManuallyEdited, createElevationManuallyEdited, existingFloors]);
 
   const handleStepUp = useCallback((e: MouseEvent) => {
     e.preventDefault();
     const cur = parseInt(createNumber, 10) || 0;
-    applyNumber(findNextAvailable(cur, 1, existingFloorNumbers));
+    applyNumber(findNextContiguous(cur, 1, existingFloorNumbers));
   }, [createNumber, existingFloorNumbers, applyNumber]);
 
   const handleStepDown = useCallback((e: MouseEvent) => {
     e.preventDefault();
     const cur = parseInt(createNumber, 10) || 0;
-    applyNumber(findNextAvailable(cur, -1, existingFloorNumbers));
+    applyNumber(findNextContiguous(cur, -1, existingFloorNumbers));
   }, [createNumber, existingFloorNumbers, applyNumber]);
 
   const handleNameChange = useCallback((value: string) => {
@@ -166,6 +215,14 @@ export function FloorInlineCreateForm({
     if (Number.isNaN(num)) return false;
     return createName.trim() !== formatFloorLabel(num);
   }, [createNumber, createName, createNameManuallyEdited]);
+
+  // ── Non-contiguous warning: selected number breaks floor sequence ──
+  const createNumberNonContiguous = useMemo((): boolean => {
+    if (existingFloorNumbers.size === 0) return false;
+    const num = parseInt(createNumber, 10);
+    if (Number.isNaN(num)) return false;
+    return !isContiguous(num, existingFloorNumbers);
+  }, [createNumber, existingFloorNumbers]);
 
   // ── Submit ──
   const handleSubmit = useCallback(async () => {
@@ -260,7 +317,7 @@ export function FloorInlineCreateForm({
           <Button
             type="button"
             size="sm"
-            disabled={!createName.trim() || creating}
+            disabled={!createName.trim() || creating || createNumberNonContiguous}
             className="h-9"
             onClick={handleSubmit}
           >
@@ -282,6 +339,12 @@ export function FloorInlineCreateForm({
         <p className={cn('flex items-center gap-1.5 text-xs', getStatusColor('warning', 'text'))}>
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           {t('tabs.floors.mismatchWarning')}
+        </p>
+      )}
+      {createNumberNonContiguous && (
+        <p className={cn('flex items-center gap-1.5 text-xs', getStatusColor('error', 'text'))}>
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          {t('tabs.floors.nonContiguousWarning')}
         </p>
       )}
     </div>
