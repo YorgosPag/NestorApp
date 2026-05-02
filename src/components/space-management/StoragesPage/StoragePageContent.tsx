@@ -131,6 +131,7 @@ export function StoragePageContent() {
           timestamp: Date.now(),
         });
         setSelectedStorage(null);
+        success(t('deleteSuccess', { ns: 'trash' }));
       }
     } catch (err) {
       logger.error('Failed to delete storage', { error: err });
