@@ -17,6 +17,7 @@ import { TrashService } from '@/services/trash.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { Storage } from '@/types/storage/contracts';
+import { RealtimeService } from '@/services/realtime';
 
 const logger = createModuleLogger('useStoragesTrashState');
 
@@ -109,6 +110,14 @@ export function useStoragesTrashState({
     if (authLoading || !user) return;
     void fetchTrashedStorages();
   }, [fetchTrashedStorages, authLoading, user]);
+
+  // Auto-refresh trash when any storage is soft-deleted from the normal list (ADR-281)
+  useEffect(() => {
+    const unsub = RealtimeService.subscribe('STORAGE_DELETED', () => {
+      void fetchTrashedStorages();
+    });
+    return unsub;
+  }, [fetchTrashedStorages]);
 
   return {
     showTrash,

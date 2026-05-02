@@ -18,6 +18,7 @@ import { firestoreQueryService, type QueryResult } from '@/services/firestore';
 import { mapStorageDoc } from '@/lib/firestore-mappers';
 import type { Storage } from '@/types/storage/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { RealtimeService } from '@/services/realtime';
 
 const logger = createModuleLogger('useFirestoreStorages');
 
@@ -103,6 +104,15 @@ export function useFirestoreStorages(
       unsubscribeRef.current = null;
     };
   }, [enabled, constraints, buildingId]);
+
+  // Instant removal on soft-delete — don't wait for onSnapshot propagation (ADR-281)
+  useEffect(() => {
+    const unsub = RealtimeService.subscribe('STORAGE_DELETED', (payload) => {
+      const { storageId } = payload as { storageId: string };
+      setStorages(prev => prev.filter(s => s.id !== storageId));
+    });
+    return unsub;
+  }, []);
 
   // No-op: onSnapshot delivers updates live. Kept for API backward compat.
   const refetch = useCallback(async () => { /* noop — realtime */ }, []);
