@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { useParkingNotifications } from '@/hooks/notifications/useParkingNotifications';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { getBuildingsList } from '@/services/properties.service';
 import { FloorSelectField } from '@/components/shared/FloorSelectField';
@@ -136,6 +137,7 @@ export function ParkingGeneralTab({
   const colors = useSemanticColors();
   const typography = useTypography();
   const { t } = useTranslation('parking');
+  const parkingNotifications = useParkingNotifications();
 
   // 🏢 SPEC-256A Phase 2: track _v for optimistic concurrency, but any 409 is
   // resolved via silent last-write-wins retry below — never a dialog.
@@ -247,6 +249,7 @@ export function ParkingGeneralTab({
             timestamp: Date.now(),
           });
           logger.info('Parking spot created', { id: result.parkingSpotId });
+          parkingNotifications.created();
           onCreated?.(result.parkingSpotId);
         }
         return true;

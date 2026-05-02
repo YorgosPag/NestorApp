@@ -106,6 +106,16 @@ export const NOTIFICATION_KEYS = {
   },
 
   // ==========================================================================
+  // PARKING domain
+  // ==========================================================================
+  parking: {
+    created: 'parking:messages.created',
+    updated: 'parking:messages.updated',
+    createError: 'parking:messages.createError',
+    updateError: 'parking:messages.updateError',
+  },
+
+  // ==========================================================================
   // FILES domain
   // ==========================================================================
   files: {

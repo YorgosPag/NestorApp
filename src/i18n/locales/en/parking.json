@@ -1,4 +1,10 @@
 {
+  "messages": {
+    "created": "Parking spot created successfully",
+    "updated": "Parking spot updated successfully",
+    "createError": "Error creating parking spot",
+    "updateError": "Error updating parking spot"
+  },
   "card": {
     "stats": {
       "level": "Level",
