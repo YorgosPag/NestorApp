@@ -16,8 +16,6 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { permanentDelete } from '@/lib/firestore/soft-delete-engine';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { dispatchCrmNotification } from '@/server/notifications/notification-orchestrator';
-import { NOTIFICATION_EVENT_TYPES, NOTIFICATION_ENTITY_TYPES } from '@/config/notification-events';
 
 interface PermanentDeleteResponse {
   contactId: string;
@@ -53,20 +51,6 @@ export const DELETE = withStandardRateLimit(
         newValue: { type: 'status', value: { contactId, deleted: true } },
         metadata: { reason: 'Contact permanently deleted from trash' },
       });
-
-      void dispatchCrmNotification(
-        NOTIFICATION_EVENT_TYPES.CRM_CONTACT_PERMANENTLY_DELETED,
-        ctx.uid,
-        ctx.companyId,
-        `Η επαφή διαγράφηκε οριστικά: ${contactName}`,
-        `contact_perm_delete_${contactId}`,
-        {
-          entityId: contactId,
-          entityType: NOTIFICATION_ENTITY_TYPES.CONTACT,
-          titleKey: 'contacts:notifications.contactPermanentlyDeleted',
-          titleParams: { contactName },
-        },
-      );
 
       return apiSuccess<PermanentDeleteResponse>(
         { contactId, deleted: true },
