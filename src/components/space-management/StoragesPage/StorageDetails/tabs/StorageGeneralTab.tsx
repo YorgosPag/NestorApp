@@ -68,6 +68,7 @@ export function StorageGeneralTab({
   // 🏢 SPEC-256A Phase 2: track _v for optimistic concurrency, but any 409 is
   // resolved via silent last-write-wins retry below — never a dialog.
   const versionRef = useRef<number | undefined>((storage as unknown as { _v?: number })._v);
+  const submittingRef = useRef(false);
 
   // Create mode error feedback
   const [createError, setCreateError] = useState<string | null>(null);
@@ -153,9 +154,12 @@ export function StorageGeneralTab({
   // Register save handler with parent via ref
   const handleSave = useCallback(async (): Promise<boolean> => {
     if (createMode) {
+      if (submittingRef.current) return false;
+      submittingRef.current = true;
       setCreateError(null);
 
       if (!form.name.trim()) {
+        submittingRef.current = false;
         setCreateError(t('storages.form.nameRequired'));
         return false;
       }
@@ -194,6 +198,8 @@ export function StorageGeneralTab({
         logger.error('Failed to create storage', { error: err instanceof Error ? err.message : String(err) });
         setCreateError(err instanceof Error ? err.message : t('storages.form.createError'));
         return false;
+      } finally {
+        submittingRef.current = false;
       }
     }
 
