@@ -26,7 +26,7 @@ import {
   type HoldType,
   FILE_LIFECYCLE_STATES,
   DEFAULT_RETENTION_POLICIES,
-  TRASH_TRASH_RETENTION_BY_CATEGORY,
+  TRASH_RETENTION_BY_CATEGORY,
   HOLD_TYPES,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
