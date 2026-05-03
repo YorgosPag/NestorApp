@@ -1,6 +1,6 @@
 # ADR-330 — Procurement Hub Scoped Split (Company-wide vs Project-scoped)
 
-**Status:** 📋 PROPOSED — pending Giorgio answers to §6 open questions (D1–D7)
+**Status:** ✅ APPROVED — all decisions D1-D12 resolved 2026-05-03, ready for Phase 1 implementation planning
 **Date:** 2026-05-03
 **Author:** Claude (Plan Mode, 3 Explore agents) + Γιώργος
 **Supersedes (partially):** ADR-267 §"Αποφάσεις" #1 ("Standalone top-level navigation")
@@ -15,6 +15,14 @@
 | 2026-05-03 | ✅ **D2 RESOLVED** — Sub-tab nel project Procurement: **Opzione A — 4 sub-tab** (Επισκόπηση, Αιτήματα Προσφορών/RFQ, Προσφορές & Σύγκριση/Quote, Παραγγελίες/PO). Motivazione: pattern Procore (Bidding/Commitments come tool separati), separation of concerns chiara, evita confusione "richiesto vs ricevuto" nella stessa surface, Overview merita propria oscreen per KPI/charts del progetto. Eventuale 5° sub-tab "Ανά Κτίριο" rimane opzionale Phase 1.5. |
 | 2026-05-03 | ✅ **D3 RESOLVED** — Building tab Procurement: **Opzione A — NO tab Procurement dentro building**. Motivazione: (a) le Επιμετρήσεις vivono nel building perché *originano* lì (data entry per-building con quantities differenti); le Procurement *consumano* le Επιμετρήσεις aggregate e beneficiano di consolidation per ottenere volume discounts e ridurre delivery costs (es. ordinare 530 sacchi cemento insieme invece che 200+150+180 separati); (b) breakdown per-building disponibile via filter `buildingId` dentro la sub-tab Παραγγελίες/RFQ; (c) single source of truth per le procurement, no duplicazione UX; (d) industry standard (Procore/SAP/Primavera tutti project-level). |
 | 2026-05-03 | ✅ **D4 RESOLVED** — Vendor Master implementation: **Opzione A — vista derivata da Contacts** (no nuova collection). Motivazione: (a) preserva SSoT contatti (ADR-282 Contact Persona Architecture), (b) un contatto può avere multiple personas simultaneamente (es. mechanikos che è sia supplier di servizi che customer di una proprietà — caso comune in Grecia), (c) zero duplicazione: cambio telefono/indirizzo si propaga ovunque, (d) pattern allineato a SAP S/4HANA (Business Partner unificato con role flags). I KPI vendor-specifici (lead time, on-time delivery, total spend, # POs) vivono in tabella laterale `vendor_metrics/` (cached/computed, identità resta in `contacts/`). |
+| 2026-05-03 | ✅ **D5 RESOLVED** — Material Catalog implementation: **Opzione A — greenfield collection `materials/`** (no estensione di `boq-categories`). Motivazione: (a) tutti i 5 maggiori player (Procore Material Library, SAP Material Master, Oracle Primavera material catalog, Autodesk Construction Cloud Materials, Buildertrend Cost Items) tengono i materiali come entità separate dalle work categories, (b) i materiali hanno lifecycle proprio — prezzo/supplier preferito cambiano spesso (mensili), mentre le categorie ΑΤΟΕ sono metadata stabili pluriennali, (c) separation of concerns: `boq-categories` resta SSoT per categorizzazione lavori (ADR-175), `materials/` SSoT per anagrafica materiali con price history e preferred suppliers, (d) query veloci per dashboard "tutti i materiali con vendor preferito" senza join attraverso categorie. Schema target: `{ id: 'mat_*', companyId, code, name, unit, atoeCategoryCode (FK→boq-categories), preferredSupplierContactIds[], avgPrice, lastPrice, lastPurchaseDate, createdAt }`. |
+| 2026-05-03 | 🔍 **Phase 1 deep-dive started** — riletto ADR su richiesta Giorgio. Identificate 5 nuove decisioni Phase 1 che bloccano implementation: D8 (RouteTabs vs StateTabs), D9 (top-level dual-surface durante transizione), D10 (detail page URL durante Phase 1), D11 (Επισκόπηση scope), D12 (create buttons in sub-tab). |
+| 2026-05-03 | ✅ **D8 RESOLVED** — Sub-tab navigation pattern: **Opzione A — RouteTabs** (URL-based, ognuna delle 4 sub-tab ha URL propria). Motivazione: tutti i 5 maggiori player del settore (Procore `/projects/{id}/bidding`, SAP Fiori URL hash, Oracle Primavera deep-link, Autodesk ACC `/projects/{id}/cost`, Buildertrend `/Job/{id}/Selections`) usano routing URL-based. Vantaggi: (a) shareable links tra membri ομάδας έργου (caso d'uso quotidiano costruzioni), (b) browser F5/back/forward funzionano correttamente, (c) bookmarkable per sub-tab, (d) audit/analytics possono misurare uso per sub-tab via URL. URL pattern: `/projects/{projectId}/procurement/{overview\|rfq\|quote\|po}`. Implementazione: `RouteTabs` da ADR-328 SSoT. |
+| 2026-05-03 | ✅ **D9 RESOLVED — Phase 1 + Phase 2 MERGED into single Phase 1** (Opzione Δ — full structural move). Motivazione: Giorgio chiarisce che l'app è in fase pre-launch e l'unico utente attuale è Giorgio stesso. Tutta la logica di "transition gentleness" (status quo, dual-surface, gradual migration) era costruita per proteggere existing users — premessa che non si applica. Pattern industry: greenfield internal tool senza utenti = direct-to-final-state, no transition phase (Procore/SAP/Autodesk usano transition solo perché hanno migliaia di utenti in production). Conseguenze: (a) Phase 1 ora include top-level Hub redesign + detail page migration project-scoped (D1) + ProcurementSubNav semantics change + rimozione vecchie route top-level, (b) D6 auto-risolto (Phase 1 prima, ora include molto più), (c) D7 auto-risolto (no "wait for Phase 3-4" — top-level mostra placeholder cards "Προμηθευτές: έρχεται", "Υλικά: έρχεται"), (d) D10 auto-risolto (link da project tab → direct project-scoped URL, no transition URLs). |
+| 2026-05-03 | ✅ **D11 RESOLVED — Επισκόπηση sub-tab: ALL 5 KPIs in Phase 1** (Opzione A — full enterprise scope). Motivazione: Giorgio attiva GOL + SSOT mandate esplicito ("ENTERPRISE applicazione, non μπακάλικο γειτονιάς"). Time/file-count non sono trade-off accettabili. Phase 1 deve mostrare la full Project Procurement Overview da day 1: (1) # RFQ ανοιχτά, (2) # PO σε έγκριση, (3) Total committed spend, (4) Budget vs Committed bar chart per ΑΤΟΕ, (5) % BOQ καλυμμένο da PO items. Industry pattern: SAP S/4HANA Fiori usa 6-8 KPI tiles dal day 1, Procore 4-5 cards + chart. Implementation requirements: (a) extension `procurementDashboardStats` con `projectScoped: true` flag, (b) nuovo aggregator `projectBoqCoverageStats` (join `purchase_order_items.boqItemId` ↔ `boq_items` per progetto), (c) composite indexes Firestore per query veloci, (d) component-per-KPI sotto 40 LOC ciascuno (CLAUDE.md N.7.1), (e) optimistic updates + zero race conditions (N.7.2), (f) SSoT: nessuna duplicazione di stats logic, riuso `useSupplierMetrics` per #3. |
+| 2026-05-03 | ✅ **D12 RESOLVED — Create button per sub-tab** (Opzione A — kουμπί δημιουργίας in ogni sub-tab). Motivazione: tutti i 5 maggiori player del settore (Procore "+ Create" per tool, SAP Fiori plus shortcut per app card, Oracle Primavera per business process, Autodesk ACC per tool, Buildertrend "New" per section) usano questo pattern. Construction reality richiede sia guided workflow (BOQ → RFQ → Quote → PO) sia ad-hoc creation (post-fact PO da fatture arrivate, emergency orders, direct deals con telefono). Implementation: (a) bottone "+ Νέο" top-right di ciascuna sub-tab RFQ/Quote/PO (Overview no), (b) `projectId` auto-precompilato in tutti i form (no dropdown progetto), (c) bonus link "Δημιουργία RFQ" da Επιμετρήσεις tab del progetto verso `/projects/{projectId}/procurement/rfq?fromBoq={boqItemId}`, (d) Quote sub-tab default è "create from RFQ" (Quote standalone disponibile ma secondario), (e) tutti i bottoni chiamano gli stessi endpoint API esistenti — SSoT. |
+| 2026-05-03 | 🎯 **ALL DECISIONS RESOLVED — ADR APPROVED** — D1-D12 completati. Status: 📋 PROPOSED → ✅ APPROVED. Phase 1 ready for implementation planning. Mandate Giorgio: GOL + SSOT, full enterprise scope, no MVP variants. Phase 1 scope finale: project tab enrichment (1.A) + detail page migration project-scoped (1.B) + top-level Hub redesign con placeholder cards (1.C) + 5 KPIs Επισκόπηση + create buttons in sub-tab + i18n SSoT + composite indexes. |
+| 2026-05-03 | 📋 **Phase 1 SESSION BREAKDOWN added** (§5.1 + §5.2 + §7 popolati). Mandate Giorgio: ogni sessione completabile in **una singola chat session** con context pulito, **Plan Mode preferito** a Orchestrator (controllo + token efficiency). Phase 1 suddivisa in **6 sessioni**: S1 detail page migration (additive), S2 project tab + RouteTabs, S3 Επισκόπηση 5 KPIs, S4 create buttons, S5 top-level Hub redesign + cleanup, S6 verification + finalize. Token budget per sessione ~80-120k. Modello consigliato Opus 4.7 per ogni sessione (architettura + implementazione in stesso Plan Mode). Stima totale: ~60-90 file su 6 sessioni. §7 Implementation tracking pronto a essere popolato sessione per sessione. |
 
 ---
 
@@ -160,28 +168,338 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 
 > **Nota:** dettagli implementativi saranno definiti in plan separati post-discussione. Questa sezione è alto livello.
 
-### Phase 1 — Project tab enrichment (additive, zero rotture)
+### Phase 1 — Full structural move (project tab enrichment + top-level Hub redesign + detail page migration)
 
-- Riscrivere `src/components/projects/tabs/ProcurementProjectTab.tsx` con `RouteTabs`/`StateTabs` (ADR-328) + 4 sub-tab (Overview, RFQ, Quote, PO)
+> **Nota:** Phase 1 e Phase 2 originariamente separate sono state **MERGED** in singola Phase 1 dopo D9 (2026-05-03). Motivazione in changelog. Phase 3-7 invariate.
+
+**1.A — Project tab enrichment (RouteTabs):**
+- Riscrivere `src/components/projects/tabs/ProcurementProjectTab.tsx` con `RouteTabs` (ADR-328 SSoT) + 4 sub-tab (Overview, RFQ, Quote, PO)
+- URL pattern: `/projects/{projectId}/procurement/{overview|rfq|quote|po}` (D8)
+- Default redirect: `/projects/{projectId}/procurement` → `/projects/{projectId}/procurement/overview`
 - Riusare `RfqList`, `QuoteList`, `PurchaseOrderList`, `ComparisonPanel` esistenti con filtro `projectId`
 - Aggiungere variante `procurementDashboardStats` con flag `projectScoped: true`
 - i18n: `src/i18n/locales/{el,en}/projects.json` aggiungere keys `tabs.subtabs.procurement.{overview,rfq,quote,po}`
 
-**Rischio:** minimo. Top-level resta invariato, deep-link funzionano, project tab finalmente utile.
-
-### Phase 2 — Top-level Hub redesign + Detail page migration
-
-- Trasformare `/procurement` da "PO list" a "Hub landing page" con 4 card (Vendor Master, Material Catalog, Framework Agreements, Spend Analytics)
-- **Spostare detail page** (D1 risolta Opzione B):
-  - `/procurement/[poId]` → `/projects/{projectId}/procurement/po/{poId}`
-  - `/procurement/quotes/[id]/review` → `/projects/{projectId}/procurement/quote/{quoteId}/review`
-  - `/procurement/rfqs/[id]` → `/projects/{projectId}/procurement/rfq/{rfqId}`
-- Rimuovere vecchie route top-level (no redirect necessari)
-- Aggiornare `ProcurementSubNav` semantica: tabs diventano [Hub, Vendors, Materials, Agreements, Analytics]
-- Sostituire viste cross-project "All Activity" con la search bar globale (search by `PO-NNNN` o `RFQ-NNNN` ovunque nell'app)
+**1.B — Detail page migration (project-scoped):**
+- Spostare `/procurement/[poId]` → `/projects/{projectId}/procurement/po/{poId}`
+- Spostare `/procurement/quotes/[id]/review` → `/projects/{projectId}/procurement/quote/{quoteId}/review`
+- Spostare `/procurement/rfqs/[id]` → `/projects/{projectId}/procurement/rfq/{rfqId}`
+- Rimuovere vecchie route top-level (no redirect — D9 motivazione: no users to migrate)
 - RBAC enforcement: `withAuth()` middleware verifica `projectId` dell'URL contro permessi utente
+- Update tutti i call-site che linkano alle vecchie URL (Grep esaustivo prima del commit)
 
-**Rischio:** medio. Cambio cognitivo per utenti esistenti, ma allineato a industry standard.
+**1.C — Top-level Hub redesign:**
+- Trasformare `/procurement` da "PO list" a "Hub landing page" con 4 card placeholder:
+  - **Vendor Master** — "Έρχεται (Phase 3)" + count contacts con persona='supplier'
+  - **Material Catalog** — "Έρχεται (Phase 4)"
+  - **Framework Agreements** — "Έρχεται (Phase 5)"
+  - **Cross-project Spend Analytics** — "Έρχεται (Phase 6)" + mini-stats da `procurementDashboardStats` no filter
+- Aggiornare `ProcurementSubNav` semantica: tabs diventano [Hub, Vendors, Materials, Agreements, Analytics] (vendors/materials/agreements/analytics sono "coming soon" placeholder pages)
+- Sostituire viste cross-project "All Activity" con la search bar globale (search by `PO-NNNN` o `RFQ-NNNN` ovunque nell'app)
+
+**Rischio:** medio (più file di un Phase 1 puro additive, ma blast radius accettabile in pre-launch — unico utente è Giorgio).
+
+---
+
+### 5.1 — Phase 1 Session Breakdown (Plan Mode)
+
+> **Mandate Giorgio (2026-05-03):** ogni sessione deve completarsi in **una singola chat session** con context pulito. Plan Mode preferito a Orchestrator per controllo + token efficiency. Modello consigliato per ogni sessione: **Opus 4.7** (architettura + planning), implementazione subito dopo nel medesimo Plan Mode.
+>
+> **Token budget target per sessione:** ~80-120k (entro warning ~70%, sotto soglia /clear ~90%).
+>
+> **Pattern di sessione:**
+> 1. `/clear` per pulire context
+> 2. `cd C:\Nestor_Pagonis` + leggere ADR-330 §5.1 [questa sezione]
+> 3. Entrare in Plan Mode
+> 4. Proporre piano dettagliato (file paths, signatures, SSoT touchpoints)
+> 5. Giorgio approva
+> 6. Esegue implementazione
+> 7. Verifica TypeScript + lint
+> 8. Aggiorna ADR (§7 Implementation tracking + changelog)
+> 9. Commit (no push se non ordinato)
+> 10. Report finale + suggerimento prossima sessione
+
+#### Phase 1 — Sessions overview
+
+| Sessione | Scope | Pre-req | Files (stima) | Risk |
+|----------|-------|---------|---------------|------|
+| **S1** | Detail page migration project-scoped (additive) | — | ~12-18 | Bassa |
+| **S2** | Project tab restructure + RouteTabs + sub-tab wiring | S1 | ~12-18 | Bassa |
+| **S3** | Επισκόπηση 5 KPIs + aggregators + indexes | S2 | ~14-20 | Media |
+| **S4** | Create buttons in sub-tab + bonus link da BOQ | S2 | ~8-12 | Bassa |
+| **S5** | Top-level Hub redesign + ProcurementSubNav + cleanup vecchie route | S1, S2 | ~12-18 | Media |
+| **S6** | Verification end-to-end + ADR §7 finalize + memory update | S1-S5 | ~3-6 | Minima |
+
+**Totale Phase 1: ~60-90 file modificati/creati su 6 sessioni.**
+
+---
+
+#### S1 — Detail page migration project-scoped (additive)
+
+**Goal:** creare le nuove route `/projects/{projectId}/procurement/{po|quote|rfq}/{id}` riusando i componenti detail esistenti. Le vecchie route top-level **restano funzionanti** (no rimozione in S1) — verranno killate in S5.
+
+**Pre-requisiti:** nessuno. Sessione puramente additive.
+
+**Files target (~12-18):**
+- `src/app/(authenticated)/projects/[id]/procurement/po/[poId]/page.tsx` (NEW — wrapper su `PurchaseOrderDetail`)
+- `src/app/(authenticated)/projects/[id]/procurement/quote/[quoteId]/page.tsx` (NEW)
+- `src/app/(authenticated)/projects/[id]/procurement/quote/[quoteId]/review/page.tsx` (NEW — review screen)
+- `src/app/(authenticated)/projects/[id]/procurement/rfq/[rfqId]/page.tsx` (NEW)
+- Eventuali sub-page (edit/duplicate) speculari alle top-level esistenti
+- `src/lib/auth/middleware.ts` o `src/middleware.ts` — RBAC check: `projectId` URL deve appartenere alla company dell'utente
+- Helper `src/lib/navigation/procurement-urls.ts` (NEW SSoT) — funzioni `getPoDetailUrl(projectId, poId)`, `getQuoteDetailUrl`, `getRfqDetailUrl`. Tutti i call-site nel codebase useranno questo helper (no string templating).
+- Refactor call-site nei componenti list (`PurchaseOrderList`, `QuoteList`, `RfqList`, `ComparisonPanel`) per usare il nuovo helper — risolve link agli URL nuovi
+- i18n: nessuna nuova key (riusa esistenti dei detail components)
+
+**Tasks:**
+1. Plan Mode: enumerare call-site con Grep di pattern URL hardcoded (`/procurement/[poId]`, `/procurement/quotes`, `/procurement/rfqs`)
+2. Creare helper `procurement-urls.ts` SSoT (10-15 LOC, 3 funzioni semplici)
+3. Creare le 4 nuove route page (riuso componenti detail esistenti)
+4. Refactor call-site al nuovo helper
+5. Aggiungere RBAC guard nel layout `[id]/procurement/layout.tsx` se non già coperto
+
+**Validation:**
+- Cliccando un PO/Quote/RFQ da QUALSIASI list → apre il detail nella nuova URL
+- Vecchie URL top-level continuano a funzionare (S5 le killerà)
+- `npx tsc --noEmit` clean per i file toccati
+
+**Plan Mode:** sì (architettura URL pattern + helper SSoT + call-site refactor — beneficia di plan upfront).
+
+**Token budget:** ~80-100k.
+
+---
+
+#### S2 — Project tab restructure + RouteTabs + sub-tab wiring
+
+**Goal:** trasformare il `ProcurementProjectTab.tsx` (oggi 22 LOC stub) in surface RouteTabs con 4 sub-tab. Wire delle 3 sub-tab transazionali (RFQ/Quote/PO) alle list esistenti filtrate per `projectId`. Sub-tab Overview = stub temporaneo (sarà popolato in S3).
+
+**Pre-requisiti:** S1 completata (le list devono linkare alle nuove URL project-scoped).
+
+**Files target (~12-18):**
+- `src/app/(authenticated)/projects/[id]/procurement/layout.tsx` (NEW — RouteTabs setup)
+- `src/app/(authenticated)/projects/[id]/procurement/page.tsx` (modify — redirect a `/overview`)
+- `src/app/(authenticated)/projects/[id]/procurement/overview/page.tsx` (NEW — stub "Coming in S3")
+- `src/app/(authenticated)/projects/[id]/procurement/rfq/page.tsx` (NEW — wraps `<RfqList projectId={projectId} />`)
+- `src/app/(authenticated)/projects/[id]/procurement/quote/page.tsx` (NEW — wraps `<QuoteList + ComparisonPanel projectId={projectId} />`)
+- `src/app/(authenticated)/projects/[id]/procurement/po/page.tsx` (NEW — wraps `<PurchaseOrderList projectId={projectId} />`)
+- `src/components/projects/tabs/ProcurementProjectTab.tsx` (modify — diventa thin wrapper o eliminato a favore di pattern Next.js layout/page)
+- `src/i18n/locales/el/projects.json` + `src/i18n/locales/en/projects.json` — nuove keys `tabs.subtabs.procurement.{overview,rfq,quote,po}`
+- Verifica config navigazione `src/components/navigation/config/navigation-entities/entity-config.ts` (project tab Procurement order 12.5 invariato)
+- ADR-328 RouteTabs SSoT verifica: usare il componente esistente, no custom tab impl
+
+**Tasks:**
+1. Plan Mode: scegliere pattern Next.js (layout.tsx + page.tsx per sub-tab) vs single page con state. Vincolato a RouteTabs URL-based (D8) → layout.tsx + page.tsx.
+2. Setup RouteTabs in layout.tsx con definizione delle 4 sub-tab
+3. Creare le 4 sub-page wrapper (Overview = stub, RFQ/Quote/PO = wire list esistenti)
+4. Aggiungere i18n keys
+5. Verificare default redirect overview funziona
+
+**Validation:**
+- Click su tab "Προμήθειες" del progetto → apre `/projects/[id]/procurement/overview` (stub message)
+- Click su sub-tab RFQ → mostra `RfqList` filtrato per `projectId`
+- Stessa cosa per Quote e PO
+- Browser back/forward funziona tra sub-tab
+- F5 mantiene la sub-tab corrente
+- `npx tsc --noEmit` clean
+
+**Plan Mode:** sì (architettura layout/page Next.js + RouteTabs pattern).
+
+**Token budget:** ~80-100k.
+
+---
+
+#### S3 — Επισκόπηση 5 KPIs + aggregators + Firestore indexes
+
+**Goal:** popolare la sub-tab Overview con i 5 KPI definiti in D11. Implementazione GOL-level: component-per-KPI < 40 LOC, optimistic updates, loading skeletons, error boundaries.
+
+**Pre-requisiti:** S2 completata (Overview stub esiste, deve essere riempito).
+
+**Files target (~14-20):**
+- `src/services/procurement/aggregators/projectProcurementStats.ts` (NEW SSoT — extension di `procurementDashboardStats` con flag `projectScoped`)
+- `src/services/procurement/aggregators/projectBoqCoverageStats.ts` (NEW SSoT — join `purchase_order_items.boqItemId` ↔ `boq_items.quantity` per progetto)
+- `src/hooks/useProjectProcurementStats.ts` (NEW — fetch + cache + refresh)
+- `src/components/projects/procurement/overview/ProjectProcurementOverview.tsx` (NEW container, ~40 LOC)
+- `src/components/projects/procurement/overview/kpi/KpiOpenRfqs.tsx` (NEW, <40 LOC)
+- `src/components/projects/procurement/overview/kpi/KpiPendingApprovalPos.tsx` (NEW)
+- `src/components/projects/procurement/overview/kpi/KpiTotalCommittedSpend.tsx` (NEW)
+- `src/components/projects/procurement/overview/kpi/ChartBudgetVsCommitted.tsx` (NEW — bar chart per ΑΤΟΕ, riusa libreria chart già nel progetto)
+- `src/components/projects/procurement/overview/kpi/KpiBoqCoverage.tsx` (NEW)
+- `src/components/projects/procurement/overview/skeleton/KpiSkeleton.tsx` (NEW — shared loading skeleton)
+- `firestore.indexes.json` — composite indexes per query KPI (es. `purchase_orders` su `companyId + projectId + status`)
+- `src/i18n/locales/{el,en}/procurement.json` — keys `overview.kpi.{openRfqs,pendingPos,committedSpend,budgetVsCommitted,boqCoverage}.{label,tooltip,empty}`
+- `src/app/(authenticated)/projects/[id]/procurement/overview/page.tsx` (modify — sostituisce stub con `<ProjectProcurementOverview projectId={projectId} />`)
+
+**Tasks:**
+1. Plan Mode: schema aggregator + index design + component decomposition + ricerca SSoT esistenti (Grep `useSupplierMetrics`, `procurementDashboardStats` per riuso)
+2. Implementare aggregators con tipi forti, no `any`
+3. Implementare hook con SWR pattern o React Query (verificare quale già usato)
+4. Implementare 5 KPI components, ognuno < 40 LOC
+5. Skeleton + error boundary
+6. Deploy Firestore indexes (`firebase deploy --only firestore:indexes` background)
+7. i18n SSoT keys (zero hardcoded)
+8. Wire in Overview page
+
+**Validation:**
+- Sub-tab Overview mostra 5 KPI cards/charts con dati reali
+- Loading skeleton durante fetch
+- Empty state ben gestito (es. progetto senza BOQ → KPI #4/#5 mostrano "δεν υπάρχει BOQ")
+- Error boundary cattura crash di singolo KPI senza rompere la pagina
+- `npx tsc --noEmit` clean
+- Composite indexes deploy success
+
+**Plan Mode:** sì (decomposition + aggregator architecture + index strategy critici).
+
+**Token budget:** ~100-120k (sessione più densa).
+
+---
+
+#### S4 — Create buttons in sub-tab + bonus link da BOQ
+
+**Goal:** aggiungere bottoni "+ Νέο" in ogni sub-tab (RFQ, Quote, PO) con `projectId` auto-precompilato. Aggiungere link "Δημιουργία RFQ" da Επιμετρήσεις tab del progetto.
+
+**Pre-requisiti:** S2 completata (sub-tab esistono).
+
+**Files target (~8-12):**
+- `src/components/projects/procurement/actions/NewRfqButton.tsx` (NEW — bottone + dialog/modal o redirect a form)
+- `src/components/projects/procurement/actions/NewQuoteButton.tsx` (NEW — default "create from RFQ", secondary "standalone")
+- `src/components/projects/procurement/actions/NewPoButton.tsx` (NEW — supporta ad-hoc PO senza RFQ/Quote precedente)
+- Modify sub-tab pages RFQ/Quote/PO per includere il bottone top-right
+- `src/components/projects/measurements/...` (modify) — aggiungere bottone "Δημιουργία RFQ" su BOQ items selezionati → naviga a `/projects/{projectId}/procurement/rfq?fromBoq={boqItemId}`
+- Wire `?fromBoq=` query param nel form RFQ (precompile items)
+- `src/i18n/locales/{el,en}/projects.json` — keys `tabs.subtabs.procurement.actions.{newRfq,newQuote,newPo,createFromBoq}`
+
+**Tasks:**
+1. Plan Mode: identificare se i form RFQ/Quote/PO esistenti accettano `projectId` come prop / query param. Se sì → riuso. Se no → adattare con prop `projectId` defaultato dal URL.
+2. Implementare 3 buttons con design consistent (icon + label, top-right placement)
+3. Aggiungere wire `fromBoq` query param nel form RFQ esistente
+4. Bottone in Επιμετρήσεις tab che apre RFQ form precompilato
+5. i18n SSoT
+
+**Validation:**
+- Click su "+ Νέο RFQ" in sub-tab RFQ → apre form con `projectId` precompilato
+- Stesso per Quote e PO
+- Bottone in Επιμετρήσεις → apre RFQ form con BOQ items precompilati
+- Tutti i create flow chiamano gli endpoint API esistenti (no nuovi endpoint server)
+- `npx tsc --noEmit` clean
+
+**Plan Mode:** sì (verifica riuso form esistenti vs nuovi).
+
+**Token budget:** ~70-90k.
+
+---
+
+#### S5 — Top-level Hub redesign + ProcurementSubNav + cleanup vecchie route
+
+**Goal:** trasformare `/procurement` da PO list a Hub landing con 4 placeholder cards. Aggiornare `ProcurementSubNav` semantica. **Rimuovere** le vecchie route top-level detail (S1 le aveva lasciate vive).
+
+**Pre-requisiti:** S1 (nuove URL detail attive) + S2 (project tab funzionante).
+
+**Files target (~12-18):**
+- `src/components/procurement/pages/ProcurementPageContent.tsx` (modify — diventa Hub landing)
+- `src/components/procurement/hub/HubLanding.tsx` (NEW — container 4 cards)
+- `src/components/procurement/hub/cards/VendorMasterCard.tsx` (NEW — placeholder + count contacts supplier)
+- `src/components/procurement/hub/cards/MaterialCatalogCard.tsx` (NEW — placeholder)
+- `src/components/procurement/hub/cards/FrameworkAgreementsCard.tsx` (NEW — placeholder)
+- `src/components/procurement/hub/cards/SpendAnalyticsCard.tsx` (NEW — placeholder + mini-stats da `procurementDashboardStats` no filter)
+- `src/components/procurement/navigation/ProcurementSubNav.tsx` (modify — tabs [Hub, Vendors, Materials, Agreements, Analytics])
+- `src/app/(authenticated)/procurement/vendors/page.tsx` (NEW — placeholder "Phase 3")
+- `src/app/(authenticated)/procurement/materials/page.tsx` (NEW — placeholder "Phase 4")
+- `src/app/(authenticated)/procurement/agreements/page.tsx` (NEW — placeholder "Phase 5")
+- `src/app/(authenticated)/procurement/analytics/page.tsx` (NEW — placeholder "Phase 6")
+- **DELETE** vecchie route detail top-level:
+  - `src/app/(authenticated)/procurement/[poId]/page.tsx` (delete)
+  - `src/app/(authenticated)/procurement/quotes/[id]/review/page.tsx` (delete + relative folders)
+  - `src/app/(authenticated)/procurement/rfqs/[id]/page.tsx` (delete)
+  - `src/app/(authenticated)/procurement/quotes/page.tsx` (delete — ora le liste vivono nel project tab)
+  - `src/app/(authenticated)/procurement/rfqs/page.tsx` (delete)
+  - `src/app/(authenticated)/procurement/sourcing-events/page.tsx` (valutare: spostare a project o tenere top-level read-only? vedi nota S5.1 sotto)
+- `src/i18n/locales/{el,en}/procurement.json` — keys `hub.cards.{vendorMaster,materialCatalog,frameworkAgreements,spendAnalytics}.{title,description,comingSoon}`
+
+**Note S5.1 — Sourcing Events:** sono già project-scoped (`projectId` REQ). Decidere in S5 se: (a) lasciare top-level in modalità read-only, (b) spostare nel project tab come 5° sub-tab, (c) lasciare per Phase 7 quando diventeranno multi-progetto. **Default proposto: (c) — lasciare invariato, separato dal cleanup.**
+
+**Tasks:**
+1. Plan Mode: enumerare tutte le rimozioni con Grep per confermare zero call-site rimasti
+2. Creare HubLanding + 4 cards
+3. Aggiornare ProcurementSubNav con nuovi tabs
+4. Creare 4 placeholder pages (vendors/materials/agreements/analytics)
+5. Eliminare le vecchie route detail (verifica Grep no orphan link)
+6. i18n SSoT
+
+**Validation:**
+- Sidebar "Προμήθειες" → apre Hub landing con 4 cards
+- ProcurementSubNav mostra [Hub, Vendors, Materials, Agreements, Analytics]
+- Vecchie URL detail → 404 (atteso, no users to break)
+- Tutti i link da project tab list → puntano alle nuove URL project-scoped (verificato in S1)
+- `npx tsc --noEmit` clean
+
+**Plan Mode:** sì (cleanup è la parte più rischiosa, plan upfront riduce blast radius).
+
+**Token budget:** ~80-100k.
+
+---
+
+#### S6 — Verification end-to-end + ADR §7 finalize + memory update
+
+**Goal:** smoke test manuale dei flussi critici, popolamento §7 Implementation tracking con file count reali, eventuale aggiornamento CLAUDE.md memory se sono emersi nuovi pattern.
+
+**Pre-requisiti:** S1-S5 tutte committate.
+
+**Files target (~3-6):**
+- `docs/centralized-systems/reference/adrs/ADR-330-procurement-hub-scoped-split.md` (modify — popola §7 con tabella sessioni completate, file count, LOC actual, test results, date)
+- `docs/centralized-systems/README.md` (verifica se l'ADR-330 entry necessita update)
+- `docs/centralized-systems/reference/adr-index.md` (verifica entry ADR-330 stato APPROVED → IMPLEMENTED)
+- Eventuale memory file in `.claude-rules/` se sono emersi pattern riusabili
+- Smoke test checklist: documentata in §7 sotto sezione "S6 Verification log"
+
+**Tasks:**
+1. Manual smoke test flussi:
+   - Click sidebar Προμήθειες → Hub landing OK
+   - Apri progetto → tab Προμήθειες → sub-tab Overview → 5 KPI render
+   - Sub-tab RFQ → list + "+ Νέο RFQ" funzionante
+   - Sub-tab Quote → list + comparison + "+ Νέα Προσφορά"
+   - Sub-tab PO → list + "+ Νέα Παραγγελία"
+   - Click su PO da list → apre detail nella URL project-scoped
+   - F5 mantiene sub-tab corrente
+   - Browser back funziona tra sub-tab
+   - Επιμετρήσεις tab → "Δημιουργία RFQ" funziona
+2. `npx tsc --noEmit` full check (no nuovi errori vs baseline)
+3. Eseguire `npm run i18n:audit` per verificare zero nuove violazioni i18n
+4. Eseguire `npm run ssot:audit` per verificare zero nuove violazioni SSoT
+5. Aggiornare ADR §7 con dati reali
+6. Aggiornare `adr-index.md` se necessario
+7. Commit finale
+
+**Validation:**
+- Tutti i flussi smoke test passano
+- Zero nuovi errori TypeScript vs baseline
+- Zero nuove violazioni i18n / SSoT
+- ADR §7 popolato con metriche reali
+
+**Plan Mode:** minimo (sessione di verifica + documentazione, no architettura).
+
+**Token budget:** ~50-70k.
+
+---
+
+### 5.2 — Phase 1 cross-session checklist (Giorgio facing)
+
+**Prima di ogni sessione:**
+- [ ] `/clear` per context pulito
+- [ ] Verificare branch `main`, working tree clean
+- [ ] Read questa sezione §5.1 + sessione specifica
+
+**Durante:**
+- [ ] Plan Mode prima dell'implementazione
+- [ ] Approvazione Giorgio del plan
+- [ ] Implementazione + TypeScript check background
+
+**Fine sessione:**
+- [ ] Aggiornare ADR §7 con file/LOC reali
+- [ ] Changelog entry in §changelog
+- [ ] Commit (no push se non ordinato)
+- [ ] Suggerire prossima sessione
+
+---
 
 ### Phase 3 — Vendor Master surface
 
@@ -313,43 +631,240 @@ Le vecchie route `/procurement/[poId]`, `/procurement/quotes/[id]/review`, `/pro
    - Permette query veloci per dashboard senza ricalcolare ogni volta
 3. **UI** → nuovo route `/procurement/vendors` che mostra cards aggregando dati Contact + vendor_metrics
 
-### D5. Material Catalog implementation
+### D5. Material Catalog implementation ✅ RESOLVED 2026-05-03
 
 **Domanda:** greenfield (nuova collection `materials/`) oppure estendere `boq-categories` con campo `materials[]`?
 
-**Trade-off:**
-- **Greenfield** — schema pulito, query indipendenti, ma da zero
-- **Estensione boq-categories** — riusa SSoT esistente, ma `boq-categories` è metadata di catalogazione, materials sarebbero entità con prezzo/supplier
+**Risposta Giorgio:** **Opzione A — greenfield collection `materials/`**.
 
-**Raccomandazione Claude:** greenfield (`materials/` collection nuova, link a `boq-categories.code` per ΑΤΟΕ).
+**Motivazione (industry research):** tutti i 5 maggiori player del settore tengono i materiali come entità **separate** dalle work categories:
 
-### D6. Phase order
+| Vendor | Pattern Material Catalog |
+|--------|---------------------------|
+| Procore | Material Library (entity dedicata, separata da Cost Codes) |
+| SAP S/4HANA | Material Master (entity di prima classe, link a WBS via BOM) |
+| Oracle Primavera | Material catalog separato dalle attività WBS |
+| Autodesk Construction Cloud | Materials list indipendente |
+| Buildertrend | Cost Items library separata da Job Categories |
 
-**Domanda:** Phase 1 (enrichment project tab) per primo è ok? Vantaggio: zero rotture, immediate UX win. Phase 2-6 successive senza urgenza.
+**Vantaggi consolidati:**
+- **Lifecycle separato:** materiali cambiano prezzo/supplier preferito frequentemente (mensili), categorie ΑΤΟΕ sono metadata stabili pluriennali
+- **Separation of concerns:** `boq-categories` resta SSoT per categorizzazione lavori (ADR-175), `materials/` SSoT per anagrafica materiali con price history
+- **Query indipendenti:** dashboard "tutti i materiali con vendor preferito" senza join attraverso categorie
+- **Ricerca diretta** per nome materiale (es. "τσιμέντο 50kg") senza dover prima entrare in una categoria
 
-**Raccomandazione Claude:** sì, Phase 1 prima. Mostra valore immediato.
+**Implementation pattern:**
+1. **Nuova collection** `materials/` + ID generator `mat_*` (registrato in `enterprise-id.service.ts` per N.6)
+2. **Schema target:**
+   ```typescript
+   {
+     id: string;                          // mat_*
+     companyId: string;                   // tenant isolation
+     code: string;                        // codice interno o ΑΤΟΕ-aligned
+     name: string;                        // es. "Τσιμέντο γκρι 50kg"
+     unit: string;                        // σακί, kg, m², τεμ.
+     atoeCategoryCode: string;            // FK → boq-categories.code
+     preferredSupplierContactIds: string[]; // FK → contacts/ (persona='supplier')
+     avgPrice: number;                    // media mobile ultimi N PO
+     lastPrice: number;
+     lastPurchaseDate: Timestamp | null;
+     createdAt: Timestamp;
+     updatedAt: Timestamp;
+   }
+   ```
+3. **Link a `boq-categories.code`** per mantenere coerenza ΑΤΟΕ senza duplicare metadata
+4. **Link a `contacts/`** per preferred suppliers (riusa Vendor Master di D4)
+5. **UI CRUD** `/procurement/materials` (Phase 4)
+6. **Price history** auto-aggiornato da Cloud Function trigger su PO `status: confirmed`
 
-### D7. Top-level cleanup timing
+### D8. Sub-tab navigation pattern (RouteTabs vs StateTabs) ✅ RESOLVED 2026-05-03
 
-**Domanda:** Phase 2 (top-level redesign) può aspettare Phase 3-4 (Vendor Master + Material Catalog pronti) per non lasciare top-level "vuoto"?
+**Domanda:** le 4 sub-tab del project Procurement devono essere RouteTabs (URL-based, ogni sub-tab ha propria URL) oppure StateTabs (state-based, URL invariata)?
 
-**Trade-off:**
-- **Phase 2 subito** — risk: top-level diventa landing page con solo "coming soon" cards
-- **Phase 2 dopo Phase 3-4** — top-level resta invariato finché ha contenuto reale da mostrare (Vendor Master + Catalog)
+**Risposta Giorgio:** **Opzione A — RouteTabs**.
 
-**Raccomandazione Claude:** posticipare Phase 2 fino a Phase 3 completata.
+**Motivazione (industry research):** tutti i 5 maggiori player usano routing URL-based per le sub-tab di tool a livello progetto:
+
+| Vendor | Pattern URL sub-tab |
+|--------|---------------------|
+| Procore | `/projects/{id}/bidding`, `/projects/{id}/commitments`, `/projects/{id}/change_orders` |
+| SAP S/4HANA Fiori | URL hash routing per ogni sub-tool |
+| Oracle Primavera Unifier | Deep-link per ogni business process |
+| Autodesk Construction Cloud | `/projects/{id}/cost`, `/projects/{id}/quality`, `/projects/{id}/safety` |
+| Buildertrend | `/Job/{id}/Selections`, `/Job/{id}/Bids`, `/Job/{id}/PurchaseOrders` |
+
+**Vantaggi consolidati per il caso costruzioni:**
+- **Shareable links:** μηχανικός manda al λογιστήριο link "δες παραγγελίες έργου Παγκράτι" → ανοίγει στη σωστή υπο-καρτέλα
+- **Browser navigation:** F5 mantiene la sub-tab, back/forward navigano tra sub-tab senza uscire dal progetto
+- **Bookmarkable:** utenti management possono bookmarkare "PO ανά έργο" per accesso rapido
+- **Audit/analytics:** GA / Vercel Analytics possono misurare uso per sub-tab via URL pattern
+- **RBAC URL-driven:** `withAuth()` middleware può verificare permission per sub-tab basandosi sul path
+
+**URL pattern adottato:**
+```
+/projects/{projectId}/procurement/overview
+/projects/{projectId}/procurement/rfq
+/projects/{projectId}/procurement/quote
+/projects/{projectId}/procurement/po
+```
+
+**Implementazione:** `RouteTabs` da ADR-328 SSoT (`src/components/ui/tabs/RouteTabs.tsx`). Default sub-tab redirect: `/projects/{projectId}/procurement` → `/projects/{projectId}/procurement/overview`.
+
+### D6. Phase order ✅ RESOLVED 2026-05-03 (auto-resolved by D9)
+
+**Domanda originale:** Phase 1 prima è ok?
+
+**Risposta Giorgio (implicita via D9):** Sì, Phase 1 prima. Phase 1 ora include il merge con Phase 2 (vedi D9). Phase 3-7 a seguire senza urgenza specifica.
+
+### D7. Top-level cleanup timing ✅ RESOLVED 2026-05-03 (auto-resolved by D9)
+
+**Domanda originale:** Phase 2 può aspettare Phase 3-4 per non lasciare top-level "vuoto"?
+
+**Risposta Giorgio (via D9):** No need to wait — Phase 2 è stata mergiata in Phase 1. Top-level mostra placeholder cards ("Προμηθευτές: έρχεται", "Υλικά: έρχεται", "Συμβόλαια: έρχεται", "Στατιστικά: έρχεται") da subito. Premessa "non lasciare top-level vuoto" non si applica perché unico utente è Giorgio (no UX confusion risk).
+
+### D9. Top-level surface during Phase 1 transition ✅ RESOLVED 2026-05-03
+
+**Domanda:** durante Phase 1 (project tab enrichment), cosa succede al top-level `/procurement` che oggi ospita le liste PO/Quote/RFQ cross-project?
+
+**Risposta Giorgio:** **Opzione Δ — Phase 1 + Phase 2 MERGED**.
+
+**Motivazione:** Giorgio chiarisce che l'app è in fase pre-launch e l'unico utente attuale è Giorgio stesso. Tutta la logica di "transition gentleness" (status quo dual-surface, gradual migration) era costruita per proteggere existing users — premessa che non si applica.
+
+**Industry pattern (greenfield internal tool):**
+- Procore/SAP/Autodesk usano transition phases SOLO perché hanno migliaia di utenti in production
+- Greenfield tool senza utenti = direct-to-final-state (no transition)
+- Best practice: build it right da subito, no technical debt da rifattorizzare dopo
+
+**Conseguenze del merge:**
+1. **Phase 1 ora include**: project tab enrichment (1.A) + detail page migration (1.B) + top-level Hub redesign (1.C) — vedi §5
+2. **D6 auto-risolto**: Phase 1 prima, ora più grande
+3. **D7 auto-risolto**: top-level mostra placeholder cards "coming soon" da subito (no wait per Phase 3-4)
+4. **D10 auto-risolto**: link da project tab list → direct project-scoped URL, no transition URLs
+
+**Rischio accettabile:** blast radius più ampio di un Phase 1 puro additive, ma manageabile in pre-launch. Mitigazione: test esaustivo prima del commit, Grep per tutti i call-site delle vecchie URL.
+
+### D10. Detail page URL during Phase 1 ✅ RESOLVED 2026-05-03 (auto-resolved by D9)
+
+**Domanda originale:** durante Phase 1, quando user clicca PO da project tab list, va a vecchia URL top-level o nuova project-scoped?
+
+**Risposta Giorgio (via D9):** Nuova project-scoped da subito. Phase 1 (mergiato con Phase 2) include detail page migration. Le vecchie URL top-level vengono rimosse. Tutti i link da project tab puntano direttamente a `/projects/{projectId}/procurement/{po|quote|rfq}/{id}`.
+
+### D11. Επισκόπηση sub-tab — KPI scope in Phase 1 ✅ RESOLVED 2026-05-03
+
+**Domanda:** quanti KPI mostrare nella sub-tab Επισκόπηση al lancio di Phase 1? Minimal (3 KPI), medio (3 + 1 chart + placeholder), o full (5 KPI complete)?
+
+**Risposta Giorgio:** **Opzione A — full 5 KPI da day 1** (con mandate esplicito GOL + SSOT, "ENTERPRISE applicazione, non μπακάλικο γειτονιάς").
+
+**Motivazione (industry research + Giorgio preference):**
+
+| Vendor | Phase 1 KPI count |
+|--------|-------------------|
+| SAP S/4HANA Fiori | 6-8 KPI tiles dal day 1 |
+| Procore | 4-5 numeric cards + 1 chart |
+| Autodesk ACC Cost | 3 cards + 1 trend chart |
+| Buildertrend | 4 numeric tiles |
+
+Sweet spot industry: 4-6 KPI dal primo release. Giorgio richiede esplicitamente full scope, no MVP variants.
+
+**5 KPI confermati per Phase 1:**
+
+| # | KPI | Source | Difficoltà |
+|---|-----|--------|------------|
+| 1 | **# RFQ ανοιχτά** | count `rfqs` where `projectId == X && status == 'open'` | Bassa |
+| 2 | **# PO σε έγκριση** | count `purchase_orders` where `projectId == X && status == 'pending_approval'` | Bassa |
+| 3 | **Total committed spend** | sum `purchase_orders.totalAmount` where `projectId == X && status IN ('confirmed','partially_received','received')` | Bassa |
+| 4 | **Budget vs Committed bar chart per ΑΤΟΕ** | join `boq_items.budgetAmount` (per category) ↔ `purchase_order_items` aggregated per `atoeCategoryCode` | Media — richiede aggregator nuovo |
+| 5 | **% BOQ καλυμμένο da PO** | join `purchase_order_items.boqItemId` ↔ `boq_items.quantity` per progetto | Media — richiede aggregator nuovo |
+
+**Implementation requirements (GOL + SSOT mandate):**
+
+1. **SSoT extension** — `procurementDashboardStats` con flag `projectScoped: true` (riuso pattern esistente, no duplicazione)
+2. **Nuovo aggregator** — `projectBoqCoverageStats` per #4 e #5 (join PO items ↔ BOQ items)
+3. **Composite indexes Firestore** — necessari per query veloci con multi-field filter
+4. **Component-per-KPI** — ogni KPI come componente separato sotto 40 LOC (N.7.1)
+5. **Optimistic updates** — refresh KPI dopo PO/RFQ status change senza full reload (N.7.2)
+6. **Zero race conditions** — `useEffect` cleanup, abort controller per query (N.7.2)
+7. **Riuso esistente** — `useSupplierMetrics` per parte di #3, no nuovi hook se evitabile (SSoT)
+8. **Loading skeleton + error boundary** per ogni KPI card (Google-level UX)
+9. **i18n SSoT** — tutte le label via `t()`, nessun hardcoded string (N.11)
+10. **TypeScript strict** — no `any`, no `as any`, no `@ts-ignore` (N.2/N.3)
+
+### D12. Create buttons per sub-tab ✅ RESOLVED 2026-05-03
+
+**Domanda:** dove va il pulsante "+ Νέο RFQ / Quote / PO" nel project Procurement? Per-sub-tab (A), unico dropdown in cima (B), o nessun bottone diretto solo workflow guidato (C)?
+
+**Risposta Giorgio:** **Opzione A — pulsante in ogni sub-tab**.
+
+**Motivazione (industry research):**
+
+| Vendor | Pattern create button |
+|--------|------------------------|
+| Procore | "+ Create" dentro ogni tool (Bidding, Commitments, Change Orders) + link da BOQ |
+| SAP S/4HANA Fiori | Plus shortcut top-right per app card |
+| Oracle Primavera Unifier | Bottone create per business process |
+| Autodesk Construction Cloud | "Create" button per tool |
+| Buildertrend | "New" button per section |
+
+**Construction reality:** servono entrambi i flow:
+- **Guided workflow** — BOQ → RFQ → Quote → PO (path ideale, da Επιμετρήσεις)
+- **Ad-hoc creation** — post-fact PO (fatture arrivate prima del flow), emergency orders (telefonata + ordine immediato), direct deals (negoziato senza RFQ formale)
+
+L'opzione C (no buttons) è impossibile in cantiere reale.
+
+**Implementation:**
+1. **Bottone "+ Νέο" top-right** in sub-tab RFQ, Quote, PO (Overview no — è dashboard read-only)
+2. **Auto-precompile `projectId`** dal URL pattern (`/projects/{projectId}/procurement/...`) — utente non sceglie mai progetto
+3. **Bonus link da Επιμετρήσεις** — bottone "Δημιουργία RFQ" su BOQ items selezionati → `/projects/{projectId}/procurement/rfq?fromBoq={boqItemId}` (preserva il guided flow ideale)
+4. **Quote sub-tab default** — "Create from RFQ" (riusa quote workflow esistente da ADR-327), Quote standalone disponibile ma secondario via "Other options"
+5. **API SSoT** — tutti i bottoni chiamano gli stessi endpoint REST esistenti (`POST /api/procurement/rfqs`, `POST /api/procurement/quotes`, `POST /api/procurement/purchase-orders`) — no duplicazione lato server
+6. **i18n keys** — `tabs.subtabs.procurement.actions.{newRfq,newQuote,newPo}` in `projects.json`
 
 ---
 
 ## 7. Implementation tracking
 
-> Verrà popolato dopo conferma D1-D7. Pattern: Phase X.Y con file paths + LOC estimate + test plan.
+### Phase 1 — Session execution log
 
-```
-| Phase | Status | Files | LOC | Tests | Date |
-|-------|--------|-------|-----|-------|------|
-| 1     | 📋 PLANNED | TBD | TBD | TBD  | TBD  |
-```
+| Session | Status | Files actual | LOC actual | TS check | i18n audit | SSoT audit | Commit | Date |
+|---------|--------|--------------|------------|----------|------------|------------|--------|------|
+| **S1** Detail page migration | 📋 PLANNED | — | — | — | — | — | — | — |
+| **S2** Project tab + RouteTabs | 📋 PLANNED | — | — | — | — | — | — | — |
+| **S3** Επισκόπηση 5 KPIs | 📋 PLANNED | — | — | — | — | — | — | — |
+| **S4** Create buttons + BOQ link | 📋 PLANNED | — | — | — | — | — | — | — |
+| **S5** Top-level Hub redesign | 📋 PLANNED | — | — | — | — | — | — | — |
+| **S6** Verification + finalize | 📋 PLANNED | — | — | — | — | — | — | — |
+
+**Aggiornare ogni cella alla fine della sessione corrispondente.**
+
+Status legend: 📋 PLANNED · 🚧 IN_PROGRESS · ✅ COMPLETED · ⚠️ PARTIAL · ❌ BLOCKED
+
+### Phase 3-7 — placeholder
+
+| Phase | Status | Sessioni | Date |
+|-------|--------|----------|------|
+| 3 — Vendor Master surface | 📋 PLANNED post-Phase 1 | TBD (probabile 1-2 sessioni) | — |
+| 4 — Material Catalog | 📋 PLANNED | TBD (probabile 2-3 sessioni) | — |
+| 5 — Framework Agreements | 📋 PLANNED | TBD (probabile 2-3 sessioni) | — |
+| 6 — Cross-project Dashboard | 📋 PLANNED | TBD (probabile 1-2 sessioni) | — |
+| 7 — Sourcing Events globali | 📋 FUTURE | TBD | — |
+
+### S6 Verification log (smoke test checklist)
+
+> Da popolare in S6 con risultati ✅/❌ per ciascun flow.
+
+- [ ] Sidebar Προμήθειες → Hub landing render OK
+- [ ] Progetto → tab Προμήθειες → sub-tab Overview → 5 KPI render
+- [ ] Sub-tab RFQ → list + "+ Νέο RFQ" funzionante
+- [ ] Sub-tab Quote → list + comparison + "+ Νέα Προσφορά"
+- [ ] Sub-tab PO → list + "+ Νέα Παραγγελία"
+- [ ] Click PO da list → detail URL project-scoped
+- [ ] F5 mantiene sub-tab corrente
+- [ ] Browser back funziona tra sub-tab
+- [ ] Επιμετρήσεις tab → "Δημιουργία RFQ" funziona
+- [ ] Vecchie URL detail top-level → 404 (atteso)
+- [ ] `npx tsc --noEmit` zero nuovi errori vs baseline
+- [ ] `npm run i18n:audit` zero nuove violazioni
+- [ ] `npm run ssot:audit` zero nuove violazioni
 
 ---
 
