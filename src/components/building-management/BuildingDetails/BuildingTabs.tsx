@@ -24,9 +24,11 @@ interface BuildingTabsProps {
     isCreateMode?: boolean;
     /** Callback after successful creation — receives real Firestore building ID */
     onBuildingCreated?: (buildingId: string) => void;
+    /** Notifies parent when the active tab changes (used to hide tab-irrelevant header actions). */
+    onActiveTabChange?: (tabId: string) => void;
 }
 
-export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, isCreateMode, onBuildingCreated }: BuildingTabsProps) {
+export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, isCreateMode, onBuildingCreated, onActiveTabChange }: BuildingTabsProps) {
     // Load building floorplans from Firestore
     const {
         buildingFloorplan,
@@ -44,6 +46,11 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
         floorplansError,
         refetchFloorplans
     }), [buildingFloorplan, storageFloorplan, floorplansLoading, floorplansError, refetchFloorplans]);
+
+    // Warning dot on the "locations" tab when no address has been selected yet.
+    const tabWarnings = useMemo(() => ({
+        locations: (building.addresses?.length ?? 0) === 0,
+    }), [building.addresses]);
 
     // ✅ PERF: Memoize globalProps — only changes when editing state or building changes
     const globalProps = useMemo<BuildingTabGlobalProps>(() => ({
@@ -65,6 +72,8 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
             translationNamespace="building"
             additionalData={additionalData}
             globalProps={globalProps}
+            tabWarnings={tabWarnings}
+            onTabChange={onActiveTabChange}
         />
     );
 }

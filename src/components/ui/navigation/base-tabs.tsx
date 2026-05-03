@@ -109,6 +109,9 @@ export function BaseTabs({
             <span className={alwaysShowLabels ? '' : 'hidden sm:inline'}>
               {tab.label}
             </span>
+            {tab.warningDot ? (
+              <span className="ml-1 h-2 w-2 rounded-full bg-amber-500 shrink-0" />
+            ) : null}
           </TabsTrigger>
         ))}
       </TabsList>

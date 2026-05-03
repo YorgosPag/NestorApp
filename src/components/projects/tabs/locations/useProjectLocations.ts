@@ -19,6 +19,7 @@ import {
   extractLegacyFields,
   createProjectAddress,
 } from '@/types/project/address-helpers';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { useProjectNotifications } from '@/hooks/notifications/useProjectNotifications';
 import { toHierarchyValue, fromHierarchyValue, EMPTY_HIERARCHY } from './location-converters';
@@ -61,6 +62,8 @@ export function useProjectLocations(project: Project) {
   const [addBlockSide, setAddBlockSide] = useState<BlockSideDirection | typeof SELECT_CLEAR_VALUE>(SELECT_CLEAR_VALUE);
   const [addLabel, setAddLabel] = useState('');
   const [addIsPrimary, setAddIsPrimary] = useState(false);
+  // Pending pin: position for the draggable preview marker shown while add form is open
+  const [pendingDragCoords, setPendingDragCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Edit form state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -188,8 +191,50 @@ export function useProjectLocations(project: Project) {
   // ADD FORM
   // ---------------------------------------------------------------------------
 
+  /** Open the add form and place the pending pin at a smart reference position. */
+  const handleOpenAddForm = useCallback(() => {
+    const withCoords = localAddresses.filter(a => a.coordinates?.lat && a.coordinates?.lng);
+    let pendingPos: { lat: number; lng: number };
+
+    if (withCoords.length === 0) {
+      pendingPos = {
+        lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
+        lng: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
+      };
+    } else if (withCoords.length === 1) {
+      // ~150m north of the single existing pin
+      pendingPos = {
+        lat: withCoords[0].coordinates!.lat + 0.00135,
+        lng: withCoords[0].coordinates!.lng,
+      };
+    } else {
+      // Centroid of all existing pins (midpoint for 2, triangle center for 3, etc.)
+      const lat = withCoords.reduce((s, a) => s + a.coordinates!.lat, 0) / withCoords.length;
+      const lng = withCoords.reduce((s, a) => s + a.coordinates!.lng, 0) / withCoords.length;
+      pendingPos = { lat, lng };
+    }
+
+    setPendingDragCoords(pendingPos);
+    setIsAddFormOpen(true);
+  }, [localAddresses]);
+
+  /** Called when the pending pin is dragged — reverse-geocode result populates the form. */
+  const handlePendingDragUpdate = useCallback((addressData: Partial<PartialProjectAddress>) => {
+    if (addressData.coordinates) setPendingDragCoords(addressData.coordinates);
+    setAddHierarchy(prev => ({
+      ...prev,
+      ...(addressData.street !== undefined && { street: addressData.street }),
+      ...(addressData.number !== undefined && { number: addressData.number }),
+      ...(addressData.city !== undefined && { settlementName: addressData.city }),
+      ...(addressData.postalCode !== undefined && { postalCode: addressData.postalCode }),
+      ...(addressData.region !== undefined && { regionName: addressData.region }),
+      ...(addressData.neighborhood !== undefined && { communityName: addressData.neighborhood }),
+    }));
+  }, []);
+
   const handleCancelAdd = useCallback(() => {
     setIsAddFormOpen(false);
+    setPendingDragCoords(null);
     setAddHierarchy({});
     setAddType('site');
     setAddBlockSide(SELECT_CLEAR_VALUE);
@@ -212,6 +257,7 @@ export function useProjectLocations(project: Project) {
         city: addressFields.city,
         type: addType,
         isPrimary: isNewPrimary,
+        ...(pendingDragCoords ? { coordinates: pendingDragCoords } : {}),
         ...(addBlockSide !== SELECT_CLEAR_VALUE ? { blockSide: addBlockSide as BlockSideDirection } : {}),
         ...(addLabel ? { label: addLabel } : {}),
       });
@@ -340,7 +386,9 @@ export function useProjectLocations(project: Project) {
 
     // Add
     isAddFormOpen,
-    setIsAddFormOpen,
+    handleOpenAddForm,
+    pendingDragCoords,
+    handlePendingDragUpdate,
     addHierarchy,
     setAddHierarchy,
     addType,

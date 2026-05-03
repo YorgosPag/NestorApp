@@ -19,6 +19,8 @@ interface ProjectDetailsHeaderProps {
     onNewProject?: () => void;
     onDeleteProject?: () => void;
     hideEditControls?: boolean;
+    /** Hides only the Edit button (not Save/Cancel/Showcase/Delete). Used per-tab. */
+    hideEditButton?: boolean;
     /**
      * "Fill then Create" mode — the project has no Firestore id yet. The pill
      * must skip the API call and delegate persistence to `onStatusChange`.
@@ -37,6 +39,7 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
     onNewProject,
     onDeleteProject,
     hideEditControls = false,
+    hideEditButton = false,
     isCreateMode = false,
     onStatusChange,
     onShowcaseProject,
@@ -72,7 +75,7 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
         // Edit Mode Actions
         ...(!hideEditControls ? (
             !isEditing ? [
-                createEntityAction('edit', t('detailsHeader.actions.edit'), () => onStartEdit?.())
+                ...(!hideEditButton ? [createEntityAction('edit', t('detailsHeader.actions.edit'), () => onStartEdit?.())] : [])
             ] : [
                 createEntityAction('save', t('detailsHeader.actions.save'), () => onSaveEdit?.()),
                 createEntityAction('cancel', t('detailsHeader.actions.cancel'), () => onCancelEdit?.())
@@ -86,7 +89,7 @@ export const ProjectDetailsHeader = React.memo(function ProjectDetailsHeader({
         ...(!hideEditControls && onDeleteProject ? [
             createEntityAction('trash', t('moveToTrash', { ns: 'trash' }), () => onDeleteProject())
         ] : [])
-    ], [isEditing, onStartEdit, onSaveEdit, onCancelEdit, onNewProject, onDeleteProject, hideEditControls, onShowcaseProject, t]);
+    ], [isEditing, onStartEdit, onSaveEdit, onCancelEdit, onNewProject, onDeleteProject, hideEditControls, hideEditButton, onShowcaseProject, t]);
 
     return (
         <>

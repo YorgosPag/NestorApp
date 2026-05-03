@@ -558,7 +558,7 @@ export function formatAddressForGeocoding(address: ProjectAddress): StructuredGe
     street: streetParts.length > 0 ? streetParts.join(' ') : undefined,
     city: address.city || undefined,
     neighborhood: address.neighborhood || undefined,
-    postalCode: address.postalCode || undefined,
+    postalCode: address.postalCode?.replace(/\s+/g, '') || undefined,
     county: stripAdminPrefix(address.regionalUnit),
     municipality: stripAdminPrefix(address.municipality),
     region: stripAdminPrefix(address.region),
@@ -579,6 +579,8 @@ export function formatAddressForGeocoding(address: ProjectAddress): StructuredGe
  */
 export function getGeocodableAddresses(addresses: ProjectAddress[]): ProjectAddress[] {
   return addresses.filter(addr =>
-    addr.city?.trim() || (addr.street?.trim() && addr.postalCode?.trim())
+    (addr.coordinates?.lat && addr.coordinates?.lng)
+    || addr.city?.trim()
+    || (addr.street?.trim() && addr.postalCode?.trim())
   );
 }

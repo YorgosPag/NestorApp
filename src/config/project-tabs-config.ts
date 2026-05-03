@@ -344,15 +344,6 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     },
   },
 
-  // =========================================================================
-  // ΠΑΓΩΜΕΝΑ — Disabled tabs (κρυφά, ενεργοποίηση μελλοντικά)
-  // =========================================================================
-
-  // -------------------------------------------------------------------------
-  // ΣΤΟΙΧΕΙΑ ΔΟΜΗΣΗΣ — ΠΑΓΩΜΕΝΟ (2026-03-07)
-  // Ο Γιώργος ζήτησε να μην εμφανίζεται.
-  // Για επανενεργοποίηση: enabled: true
-  // -------------------------------------------------------------------------
   {
     id: 'building-data',
     label: PROJECT_TAB_LABELS.BUILDING_DATA,
@@ -360,7 +351,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     icon: 'bar-chart',
     description: PROJECT_TAB_DESCRIPTIONS.BUILDING_DATA,
     order: 99,
-    enabled: false,
+    enabled: true,
     component: 'BuildingDataTab',
   },
 ];

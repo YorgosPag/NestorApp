@@ -160,15 +160,28 @@ export function useAddressMapGeocoding({
         let successCount = 0;
 
         for (let i = 0; i < geocodable.length; i++) {
+          const addr = geocodable[i];
           try {
-            const query = formatAddressForGeocoding(geocodable[i]);
+            // Use stored coordinates if available — skip Nominatim
+            if (addr.coordinates?.lat && addr.coordinates?.lng) {
+              geocodedMap.set(addr.id, {
+                lat: addr.coordinates.lat,
+                lng: addr.coordinates.lng,
+                accuracy: 'exact',
+                confidence: 1,
+                displayName: [addr.street, addr.number, addr.city].filter(Boolean).join(' '),
+              });
+              successCount++;
+              continue;
+            }
+            const query = formatAddressForGeocoding(addr);
             const result = await geocodeAddress(query);
             if (result) {
-              geocodedMap.set(geocodable[i].id, result);
+              geocodedMap.set(addr.id, result);
               successCount++;
             }
           } catch {
-            logger.warn('Geocoding failed for address', { data: { id: geocodable[i].id } });
+            logger.warn('Geocoding failed for address', { data: { id: addr.id } });
           }
         }
 
@@ -254,19 +267,31 @@ export function useAddressMapGeocoding({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geocodedAddresses, mapReady, draggableMarkers]);
 
-  // Trigger 2 — Entry into edit mode or initial mount in edit mode: fit once
-  // so all pins are visible, then hold the user's zoom until they exit edit.
+  // Trigger 2 — Edit mode: fit on entry + re-fit when pin count increases
+  // (new geocoded address OR pending pin appended). Does NOT re-fit on drag
+  // or repeated calls with same counts.
   const lastEditFitRef = useRef(false);
+  const lastGeocodedCountRef = useRef(0);
+  const lastAddressCountRef = useRef(0);
   useEffect(() => {
     if (!draggableMarkers) {
       lastEditFitRef.current = false;
+      lastGeocodedCountRef.current = 0;
+      lastAddressCountRef.current = 0;
       return;
     }
-    if (lastEditFitRef.current) return;
+    const geocodedCount = geocodedAddresses.size;
+    const addressCount = addresses.length;
+    const countIncreased =
+      geocodedCount > lastGeocodedCountRef.current ||
+      addressCount > lastAddressCountRef.current;
+    lastGeocodedCountRef.current = geocodedCount;
+    lastAddressCountRef.current = addressCount;
+    if (lastEditFitRef.current && !countIncreased) return;
     runFitBounds();
     lastEditFitRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draggableMarkers, mapReady]);
+  }, [draggableMarkers, mapReady, geocodedAddresses, addresses]);
 
   // ===========================================================================
   // AUTO-PAN DURING DRAG

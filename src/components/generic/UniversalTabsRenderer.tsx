@@ -213,6 +213,10 @@ export interface UniversalTabsRendererProps<
   globalProps?: TGlobalProps;
   /** 🌐 i18n: Translation namespace for tab labels (default: 'common') */
   translationNamespace?: string;
+  /** Tab IDs mapped to true show an amber warning dot on their trigger. */
+  tabWarnings?: Record<string, boolean>;
+  /** Called whenever the active tab changes. */
+  onTabChange?: (tabId: string) => void;
 }
 
 // ============================================================================
@@ -259,6 +263,8 @@ export function UniversalTabsRenderer<
   customComponents = {},
   globalProps = {} as TGlobalProps,
   translationNamespace = 'building',
+  tabWarnings = {},
+  onTabChange: onTabChangeProp,
 }: UniversalTabsRendererProps<TData, TTabProps, TAdditionalData, TGlobalProps>) {
   // 🏢 ENTERPRISE: i18n hook for translations
   // currentLanguage is needed in useMemo dependencies for reactivity on language change
@@ -394,17 +400,19 @@ export function UniversalTabsRenderer<
       id: tabConfig.value,
       label: displayLabel,
       icon: getIconComponent(tabConfig.icon ?? ''),
+      warningDot: tabWarnings[tabConfig.value] ?? false,
       content: (
         <ComponentToRender {...renderedComponentProps} />
       )
     };
-  }), [sortedTabs, customComponents, componentMapping, data, additionalData, globalProps, setActiveTab, t, currentLanguage]);
+  }), [sortedTabs, customComponents, componentMapping, data, additionalData, globalProps, setActiveTab, t, currentLanguage, tabWarnings]);
 
   // 🏢 ENTERPRISE: Handle tab change for controlled mode
   const handleTabChange = useCallback((tabId: string) => {
     setActiveTab(tabId);
+    onTabChangeProp?.(tabId);
     logger.info('Tab changed', { tabId });
-  }, []);
+  }, [onTabChangeProp]);
 
   return (
     <TabsOnlyTriggers

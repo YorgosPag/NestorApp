@@ -63,6 +63,7 @@ export async function handleListFloors(
     );
 
     // Enrich each floor with hasFloorplan (batch query, ≤30 floors per Firestore 'in' limit)
+    // Filter out trashed/deleted files post-query to avoid requiring a new composite index.
     const db = getAdminFirestore();
     const floorIds = rawFloors.map((f) => f.id);
     const floorplanSet = new Set<string>();
@@ -72,9 +73,14 @@ export async function handleListFloors(
         .where(FIELDS.ENTITY_TYPE, '==', 'floor')
         .where('purpose', '==', FLOORPLAN_PURPOSES.FLOOR)
         .where(FIELDS.ENTITY_ID, 'in', floorIds.slice(0, 30))
-        .select(FIELDS.ENTITY_ID)
+        .select(FIELDS.ENTITY_ID, 'isDeleted')
         .get();
-      filesSnap.docs.forEach((doc) => floorplanSet.add(doc.data()[FIELDS.ENTITY_ID] as string));
+      filesSnap.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.isDeleted !== true) {
+          floorplanSet.add(data[FIELDS.ENTITY_ID] as string);
+        }
+      });
     }
     const floors = rawFloors.map((f) => ({ ...f, hasFloorplan: floorplanSet.has(f.id) }));
 

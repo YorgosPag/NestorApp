@@ -325,10 +325,332 @@ const gates = runAllGates(site);
 
 ---
 
-## 8. Changelog
+## 8. Phase 2 Decisions (Kickoff 2026-05-02)
+
+> Live decisions during Phase 2 kickoff. Each Q is asked one-at-a-time in Greek with everyday metaphors per `feedback_adr_questions_style.md`. ADR is updated immediately after each answer, BEFORE the next question.
+
+### Q1 — Σχέση με υπάρχον tab `building-data`
+
+**Απόφαση**: **(β) Coexistence — δύο tabs παράλληλα**.
+
+- Το παλιό tab `building-data` (BuildingDataTab.tsx + useBuildingData.ts) **παραμένει ως έχει** για τώρα.
+- Δημιουργείται **νέα ξεχωριστή καρτέλα** για τα στοιχεία ΝΟΚ της Phase 1 module (ζώνη, πρόσωπα, setbacks Δ/δ, bonuses, gates).
+- Αργότερα (μελλοντική φάση) η παλιά καρτέλα **θα κρυφτεί** (όχι deleted, αλλά `enabled: false` ή hide-by-flag) όταν το νέο tab καλύψει όλη τη λειτουργικότητα.
+- **Σημασία**: Δύο διαφορετικά concepts — παλιό = "πραγματικά κτισμένα μεγέθη + λίγοι όροι σε memory only", νέο = "όροι δόμησης από πολεοδομία, persistent στη Firestore".
+
+**Implications**:
+- Νέο component (όνομα προς συζήτηση Q2+).
+- Νέα entry στο `PROJECT_TABS` array (`src/config/project-tabs-config.ts`).
+- Δεν αγγίζουμε το `useBuildingData.ts` ούτε το `BuildingDataTab.tsx` σε αυτή τη φάση.
+- Migration / hide της παλιάς = **out of scope Phase 2**, ξεχωριστό ticket αργότερα.
+
+---
+
+### Q2 — Επίπεδο δεδομένων: project ή building;
+
+**Απόφαση**: **(α) Project-level** — ένα σετ όρων ΝΟΚ ανά έργο.
+
+- Όλα τα κτίρια ενός έργου χρησιμοποιούν τους **ίδιους όρους δόμησης** (ΣΔ, κάλυψη, ύψος, αποστάσεις, ζώνη).
+- Αποθήκευση: `project.buildingCode` object **στο Project document** (επιβεβαιώνει την αρχική απόφαση Q2 από 2026-02-17).
+- **Καλύπτει σενάρια Α + Β** (1 οικόπεδο, 1 ή πολλά κτίρια). Σενάριο Γ (2 οικόπεδα διαφορετικής ζώνης) = εξαιρετικά σπάνιο, **out of scope**.
+- Αν κάποτε προκύψει σενάριο Γ, ο μηχανικός φτιάχνει **2 ξεχωριστά projects** στο Nestor. Καθαρή λύση χωρίς πολυπλοκότητα data model.
+
+**Implications**:
+- `Project` interface (`src/types/project.ts`) θα αποκτήσει νέο πεδίο `buildingCode?: ProjectBuildingCode | null`.
+- Νέος τύπος `ProjectBuildingCode` με `provider`, `enabled`, `params: PlotSite (ή subset)`, `source`, `lastUpdated`.
+- Δεν χρειάζεται override mechanism per-building, δεν χρειάζεται hybrid resolver.
+- DXF Viewer (μελλοντικά) διαβάζει `project.buildingCode` αυτόματα από `projectId` context.
+
+---
+
+### Q3 — Τρόπος εισαγωγής ζώνης + αριθμών
+
+**Απόφαση**: **(γ) Hybrid + provenance tracking + reset-to-default + audit + visual badge**.
+
+Πατέρν εμπνευσμένο από SAP Construction, Primavera P6, Procore, Autodesk Revit, Google Material — όλα τα enterprise συστήματα κάνουν το ίδιο.
+
+**Λειτουργικότητα**:
+
+1. **Optional zone dropdown** — 15 τυπικές ζώνες ΝΟΚ (Α/Β/Β1/Β2/Γ/Γ1/Γ2/ΓΠ/ΓΠ-1..3/ΕΚΤ/ΖΟΕ-Α/Β/Κ) + "—" (none/custom). Πηγή: `ZONE_PARAMETERS` (Phase 1).
+2. **Auto-fill on zone select** — Διαλέγοντας ζώνη, τα πεδία ΣΔ/κάλυψη/ύψος/Δ/δ προγεμίζονται από τα defaults της ζώνης.
+3. **User override anywhere** — Κάθε πεδίο editable. Override = το ξέρει το σύστημα.
+4. **Provenance tracking** — Κάθε πεδίο έχει `{value: number, source: 'zone' | 'user' | 'default'}`. Provenance object χωριστά (πιο clean): `provenance: { sd: 'zone', coverage: 'user', ... }`.
+5. **Reset to default** — Κουμπί ↺ ανά πεδίο: επαναφέρει την τιμή της επιλεγμένης ζώνης, αλλάζει provenance σε `'zone'`.
+6. **Visual badge** — UI δείχνει 🟢 "από ζώνη Β2" ή 🟡 "user override" ή ⚪ "default ΝΟΚ" δίπλα σε κάθε πεδίο.
+7. **Audit trail** — Κάθε change περνάει από `EntityAuditService.recordChange()` (ADR-195) — ποιος/πότε/τι.
+8. **Free input mode** — Αν dropdown ζώνης = "—" (κενό), ο χρήστης γράφει σκέτους αριθμούς, provenance = `'user'` παντού. Δεν μπλοκάρει.
+
+**Implications**:
+- Νέος τύπος `ProjectBuildingCodeProvenance` (provenance map).
+- Αλλαγή στο πώς αποθηκεύουμε `params` — όχι μόνο `PlotSite`, αλλά `{ params: PlotSite, provenance: Record<keyof PlotSite, 'zone' | 'user' | 'default'> }`.
+- UI components: `ProvenanceBadge`, `ResetToDefaultButton`, `ZoneSelector` (optional dropdown).
+- Audit hook: ADR-195 `useEntityAudit`.
+
+**Παράδειγμα UI**:
+```
+Ζώνη ΝΟΚ: [Β2 ▼]  ← optional dropdown
+
+ΣΔ:        [1.2] 🟢 από ζώνη Β2          [↺ reset]
+Κάλυψη %:  [55]  🟡 user override (ήταν 60) [↺ reset]
+Ύψος (m):  [13.5] 🟢 από ζώνη Β2          [↺ reset]
+Δ (m):     [2.5] 🟢 από ζώνη Β2          [↺ reset]
+```
+
+---
+
+### Q4 — Δήλωση τύπου οικοπέδου & αριθμού προσώπων
+
+**Απόφαση**: **(γ) Hybrid — type dropdown + auto-sync αριθμού + ±buttons + provenance**.
+
+Πατέρν εμπνευσμένο από SAP Real Estate, Primavera P6 CBS, Procore Project Templates, Autodesk Revit Family Types, Google Maps Place Types, **ESRI ArcGIS Parcel Fabric** (το πιο σχετικό για γεωμηχανική).
+
+**ΕΠΕΚΤΑΣΗ τύπων οικοπέδου** — η Phase 1 `PlotType` έχει **3 τύπους**, διευρύνεται σε **5**:
+
+| Τύπος | Κωδικός | Πρόσωπα | Περιγραφή |
+|-------|---------|---------|-----------|
+| Μεσαίο | `mesaio` | 1 | Δρόμος μόνο μπροστά |
+| Γωνιακό | `goniako` | 2 | Δύο δρόμοι σε γωνία (π.χ. Πατησίων + Στουρνάρα) |
+| **Δισγωνιαίο** ⭐ NEW | `disgoniaio` | 3 | **Σχήμα "Π" δρόμων** — τρεις δρόμοι γύρω από οικόπεδο σε σχήμα Π |
+| **Τεσσάρων πλευρών** ⭐ NEW | `four_sided` | 4 | Νησιωτικό (block) — δρόμοι και στις 4 πλευρές |
+| Διαμπερές | `diamperes` | 2 | Δύο δρόμοι σε αντικριστές πλευρές (μπροστά + πίσω) |
+
+**Λειτουργικότητα**:
+
+1. **Type dropdown πρώτος** — επιλογή για 95% των περιπτώσεων.
+2. **Auto-fill expected count** — γωνιακό = 2 πρόσωπα έτοιμα, δισγωνιαίο = 3, τέσσερις πλευρές = 4.
+3. **"+ Προσθήκη προσώπου" κουμπί** για σπάνιες περιπτώσεις (γωνιακό+διαμπερές, παράξενη γεωμετρία).
+4. **"× Διαγραφή" ανά πρόσωπο** — αν έγινε λάθος ή άλλαξε γεωμετρία.
+5. **Type ↔ count consistency check** — αν διαγράψεις/προσθέσεις πρόσωπα και ο αριθμός δεν ταιριάζει με τον τύπο → warning + dropdown γίνεται "παράξενο/προσαρμοσμένο" (νέος τύπος `custom`).
+6. **Provenance ανά πρόσωπο** — `{source: 'type-default' | 'user-added'}`.
+
+**Implications (κώδικας)**:
+- `src/services/building-code/types/site.types.ts` line 21: επέκταση `PlotType` union → `'mesaio' | 'goniako' | 'disgoniaio' | 'four_sided' | 'diamperes' | 'custom'`.
+- Update `gate-checker.ts` αν έχει switch/case σε PlotType (TBD).
+- Νέο type `PlotFrontageProvenance` με `source` field.
+- Νέοι i18n keys: `nestor.buildingCode.plotType.disgoniaio`, `nestor.buildingCode.plotType.fourSided`, etc. (el + en).
+- Helper function `expectedFrontagesForPlotType(type): number`.
+- Validation: αν actual count ≠ expected → emit warning, γίνε `custom`.
+
+**Παράδειγμα UI**:
+```
+Τύπος οικοπέδου: [Γωνιακό ▼]  ← drives default count
+
+▼ Πρόσωπο 1 (Πατησίων)         🟢 από τύπο "γωνιακό"  [×]
+   [Π, στάθμη, μήκος, πρασιά, RG=OG, ...]
+
+▼ Πρόσωπο 2 (Στουρνάρα)        🟢 από τύπο "γωνιακό"  [×]
+   [...]
+
+[+ Προσθήκη προσώπου]   ← για σπάνιο 3-4
+```
+
+---
+
+### Q5 — ΝΟΚ Bonuses (Α1/Α3/Α5) στη φόρμα
+
+**Απόφαση**: **OUT-OF-SCOPE Phase 2**. Δεν εμφανίζονται καθόλου στη φόρμα.
+
+- Τα Phase 1 engines (`calcA1Bonus`, `calcA3Bonus`, `calcA5Bonus`, `applyBonuses`) **παραμένουν** στον κώδικα — έτοιμα για μελλοντική φάση.
+- Το πεδίο `PlotSite.bonuses?: BonusSelections` **παραμένει optional στο data model** — όταν προστεθεί UI θα αποθηκεύεται κανονικά.
+- Στη φόρμα Phase 2 **δεν εμφανίζονται καθόλου** Α1/Α3/Α5 fields — ούτε checkboxes, ούτε collapsed sections.
+- `BonusResult` derived field σε `PlotSite` παραμένει — υπολογίζεται με κενά defaults (`{appliedSD: 0, appliedCoverageReduction: 0, lineItems: []}`) όταν δεν υπάρχουν user selections.
+
+**Implications**:
+- Καθαρή φόρμα Phase 2 — λιγότερα πεδία, πιο γρήγορη υλοποίηση.
+- Future ticket: "Phase 2.5 — Add Bonuses UI to building-code form" (ξεχωριστό από Phase 2).
+- Δεν αγγίζουμε bonuses-related types (`BonusSelections`, `BonusResult`, `BonusLineItem`).
+- AI Drawing Assistant (Phase 3) μπορεί να χρειαστεί τα bonuses — θα προστεθούν τότε.
+
+---
+
+### Q6 — Σκοπός Phase 2 form (final scope)
+
+**Απόφαση**: **Σενάριο (β) — 6 πεδία στη φόρμα**. Ultra-minimal CRUD form.
+
+**ΦΟΡΜΑ Phase 2 — μόνο 6 πεδία**:
+
+| # | Πεδίο | Type | Provenance |
+|---|-------|------|------------|
+| 1 | Τύπος οικοπέδου | enum (5 + custom) | — |
+| 2 | Αριθμός προσώπων | integer (1-4) — auto-sync με τύπο, ±buttons | — |
+| 3 | Ζώνη ΝΟΚ (optional) | enum dropdown (15 ζώνες + κενό) | — |
+| 4 | ΣΔ | number | `'zone' \| 'user'` |
+| 5 | Κάλυψη % | number (0-100) | `'zone' \| 'user'` |
+| 6 | Μέγιστο ύψος (m) | number | `'zone' \| 'user'` |
+
+**OUT OF SCOPE Phase 2** (όλα μένουν στον κώδικα Phase 1, αλλά **καμία UI**):
+- Δ (απόσταση πίσω) και δ (πλάγια απόσταση)
+- Bonuses Α1/Α3/Α5
+- ΚΑΕΚ, διεύθυνση, δήμος, νομός
+- Αρτιότητα (rules), βάρη (encumbrances), ρυμοτομία (expropriation)
+- ΣΦΕ, ΟΣΕ, κλίση εδάφους
+- Όμορα κτίρια
+- Πολύγωνο/συντεταγμένες (DXF data)
+- Λεπτομέρειες προσώπου: όνομα δρόμου, πλάτος δρόμου (Π), στάθμη κρασπέδου, πλάτος πεζοδρομίου, μήκος προσώπου, πρασιά, οπίσθια πρασιά, RG=OG
+- Allowed uses, area regime, syntOverride per frontage
+
+**Πρόσωπα — απλοποιημένη μορφή Phase 2**:
+- Κάθε πρόσωπο = **απλώς ένα label** ("Πρόσωπο 1", "Πρόσωπο 2"...) χωρίς εσωτερικά πεδία.
+- Ο αριθμός προσώπων είναι αυτόνομος integer (1-4), driven από τον τύπο οικοπέδου με override.
+- Future ticket: "Phase 2.5 — Add frontage details (street width, prassia, etc.)".
+
+**Implications (κρίσιμες)**:
+- Phase 2 = **καθαρή CRUD φόρμα** — **καθόλου engines runtime**, καθόλου gate computations, καθόλου `runAllGates()`. Απλώς save/read.
+- Δεν χρειάζεται `deriveSiteValues()` calls στη Phase 2 — οι derived τιμές (`syntEfarm`, `maxBuildableM2`, etc.) θα υπολογιστούν σε Phase 3 όταν πάμε σε DXF Viewer/AI integration.
+- **Το data model `PlotSite` είναι υπερβολικά πλούσιο** για τη Phase 2 φόρμα. Χρειαζόμαστε νέο **Phase 2 partial type** που είναι Pick όλων των 6 πεδίων + provenance.
+- Νέος τύπος `ProjectBuildingCodePhase2` ή `BuildingCodeFormData`:
+  ```typescript
+  interface ProjectBuildingCodePhase2 {
+    plotType: PlotType;
+    frontagesCount: number; // 1-4
+    zoneId: string | null;  // null = no zone selected, free input
+    sd: number;
+    coveragePct: number;
+    maxHeight: number;
+    provenance: {
+      sd: 'zone' | 'user';
+      coveragePct: 'zone' | 'user';
+      maxHeight: 'zone' | 'user';
+    };
+    enabled: boolean;
+    lastUpdated: string;  // ISO
+  }
+  ```
+- Όταν έρθει Phase 3, μετατρέπουμε `ProjectBuildingCodePhase2` → full `PlotSite` με sane defaults για όλα τα missing.
+
+**WHY Ultra-minimal**:
+- Γρήγορο shipping (~3-5 ημέρες implementation εκτιμώμενο).
+- Καμία αμφιβολία τι σώζουμε στη Firestore.
+- Μηδέν runtime computation — μηδέν race conditions, μηδέν χρόνος loading.
+- Επόμενες ομάδες πεδίων = ξεχωριστά tickets με δικές τους ερωτήσεις/απαντήσεις.
+
+---
+
+### Q7 — Validation παράλογων τιμών
+
+**Απόφαση**: **(δ) Hybrid validation** — hard block για αδύνατα + soft warning για ασυνήθιστα + audit log overrides + inline feedback.
+
+Πατέρν εμπνευσμένο από SAP 3-tier validation, Procore confidence indicators, TurboTax outlier warnings, Autodesk Revit Code Checker, Snowflake/DataDog anomaly detection.
+
+**Συγκεκριμένα όρια για ΝΟΚ**:
+
+| Πεδίο | Hard block | Soft warning |
+|-------|-----------|--------------|
+| ΣΔ | <0 ή >10 | >5 ("ασυνήθιστα μεγάλο"), <0.4 ("ασυνήθιστα μικρό") |
+| Κάλυψη % | <0 ή >100 | >85 ("ασυνήθιστα μεγάλη") |
+| Ύψος (m) | <0 ή >100 | >30 ("ασυνήθιστα ψηλό κτίριο") |
+| Πρόσωπα count | <1 ή >4 | =3 ("πρέπει να είναι δισγωνιαίο;"), =4 ("νησιωτικό;") |
+
+**Λειτουργικότητα**:
+
+1. **Hard block** — Αν τιμή εκτός hard range, save button γίνεται disabled + inline error message δίπλα στο πεδίο. Δεν περνάει στη Firestore.
+2. **Soft warning** — Αν τιμή εκτός soft range αλλά εντός hard, εμφανίζεται "⚠️" badge + tooltip ("ΣΔ=6.0 ασυνήθιστα μεγάλο, συνήθως 0.4-5"). Save επιτρέπεται.
+3. **Override logging** — Αν αποθηκεύσεις soft-warned τιμή, καταγράφεται στο audit trail μέσω `EntityAuditService.recordChange()` με `metadata: { hadSoftWarning: true, threshold: 'sd>5', originalValue: 6.0 }`. Future analysts μπορούν να δουν πόσες φορές ξεπεράστηκαν τα όρια.
+4. **Inline feedback** — Όλα τα errors/warnings ΔΙΠΛΑ στο πεδίο (όχι popup, όχι top banner, όχι block ολόκληρης φόρμας). Pattern Material Design.
+5. **Configurable thresholds** — Όρια σε νέο `src/services/building-code/constants/validation.constants.ts`:
+   ```typescript
+   export const PHASE2_VALIDATION_LIMITS = {
+     sd:           { hardMin: 0, hardMax: 10, softMin: 0.4, softMax: 5 },
+     coveragePct:  { hardMin: 0, hardMax: 100, softMin: 0, softMax: 85 },
+     maxHeight:    { hardMin: 0, hardMax: 100, softMin: 0, softMax: 30 },
+     frontagesCount: { hardMin: 1, hardMax: 4 },
+   } as const;
+   ```
+
+**Implications**:
+- Νέο file `src/services/building-code/constants/validation.constants.ts`.
+- Νέο utility `validateBuildingCodePhase2(data): { errors: ValidationError[], warnings: ValidationWarning[] }`.
+- Form hook χρησιμοποιεί validator on every change → blocks/flags accordingly.
+- Audit hook (ADR-195) εμπλουτισμένο με `metadata.hadSoftWarning`.
+- i18n keys: `validation.sd.tooLarge`, `validation.coverage.outOfRange`, etc. (el + en).
+
+---
+
+## 8b. Phase 2 Implementation Plan (consolidated post-kickoff)
+
+Βάσει των αποφάσεων Q1-Q7, η Phase 2 έχει συγκεκριμένο, κλειστό scope:
+
+### Files to create
+
+```
+src/
+├── types/
+│   └── project-building-code.ts          — ProjectBuildingCodePhase2, Provenance
+├── services/building-code/
+│   ├── constants/
+│   │   └── validation.constants.ts       — PHASE2_VALIDATION_LIMITS
+│   └── validation/
+│       └── validate-phase2.ts            — validateBuildingCodePhase2()
+├── components/projects/building-code/    — νέα καρτέλα (separate from old building-data)
+│   ├── BuildingCodeTab.tsx               — Container component
+│   ├── BuildingCodeForm.tsx              — Form με 6 πεδία
+│   ├── ZoneSelector.tsx                  — Optional 15-zone dropdown
+│   ├── PlotTypeSelector.tsx              — 5+custom dropdown
+│   ├── FrontagesCounter.tsx              — Counter with ±buttons
+│   ├── ProvenanceBadge.tsx               — 🟢/🟡/⚪ visual badge
+│   ├── ResetToDefaultButton.tsx          — ↺ button per field
+│   └── BuildingCodeValidationDisplay.tsx — Inline errors/warnings
+├── hooks/
+│   └── useProjectBuildingCode.ts         — CRUD + provenance + validation
+└── i18n/locales/
+    ├── el/buildingCode.json              — Greek labels (FIRST)
+    └── en/buildingCode.json              — English labels
+```
+
+### Files to modify
+
+- `src/types/project.ts` — `Project.buildingCode?: ProjectBuildingCodePhase2 | null`
+- `src/services/building-code/types/site.types.ts` — extend `PlotType` union (Q4)
+- `src/config/project-tabs-config.ts` — register new tab (παράλληλα με `building-data`)
+- `src/constants/property-statuses-enterprise.ts` — `PROJECT_TAB_LABELS.BUILDING_CODE`, etc.
+
+### Φόρμα — 6 πεδία τελικά
+
+```
+┌─────────────────────────────────────────────────┐
+│  Όροι Δόμησης (ΝΟΚ)                             │
+├─────────────────────────────────────────────────┤
+│                                                  │
+│  Τύπος οικοπέδου: [Γωνιακό ▼]                   │
+│  Πρόσωπα: [2] [+] [−]                            │
+│                                                  │
+│  Ζώνη ΝΟΚ: [Β2 ▼]  (optional)                   │
+│                                                  │
+│  ΣΔ:        [1.20]  🟢 από ζώνη Β2  [↺]         │
+│  Κάλυψη %:  [60]    🟢 από ζώνη Β2  [↺]         │
+│  Ύψος (m):  [13.5]  🟢 από ζώνη Β2  [↺]         │
+│                                                  │
+│                            [Ακύρωση]  [Αποθήκευση] │
+└─────────────────────────────────────────────────┘
+```
+
+### Permissions
+
+Standard project edit permissions — **όποιος μπορεί να επεξεργαστεί το έργο μπορεί να αλλάξει buildingCode**. Όχι ξεχωριστό RBAC role. Audit μέσω `EntityAuditService` (ADR-195).
+
+### Out-of-scope (future tickets)
+
+- **Phase 2.5** — Add Δ/δ setbacks, frontage details (street, prassia, etc.)
+- **Phase 2.6** — Add Bonuses Α1/Α3/Α5 UI
+- **Phase 2.7** — Add identity (KAEK), legal (αρτιότητα/βάρη/ρυμοτομία), terrain
+- **Phase 3** — DXF Viewer integration, polygon coordinates, gates runtime, AI Drawing Assistant
+- **Phase 3.5** — Hide παλιό `building-data` tab (μόλις νέος καλύπτει χρήση)
+- **Phase 4** — Provider Pattern (multi-country: Γερμανία, Κύπρος)
+
+---
+
+## 9. Changelog
 
 | Date | Change | By |
 |------|--------|-----|
 | 2026-02-17 | Initial draft — Modular architecture, ΝΟΚ parameters, provider interface | Claude + Γιώργος |
 | 2026-02-17 | Έλεγχος γραμμή-γραμμή: 4 νέες ερωτήσεις (#7-#10) | Claude |
 | 2026-05-02 | **Phase 1 IMPLEMENTED** — ported 21 files (engines + types + constants + tests) from genarc. Status: DRAFT → PARTIAL. 46/46 tests passing. Refactored `applyBonuses` + `runGate0` + `runGate22` to comply with ≤40-line function rule. | Claude + Γιώργος |
+| 2026-05-02 | **Phase 2 Kickoff Q1**: Coexistence — νέο tab παράλληλα με παλιό `building-data`. Hide παλιού = ξεχωριστό ticket αργότερα. | Claude + Γιώργος |
+| 2026-05-02 | **Phase 2 Kickoff Q2**: Project-level data — `project.buildingCode` object στο Project document. Σενάρια Α+Β covered, Γ out-of-scope (split projects). | Claude + Γιώργος |
+| 2026-05-02 | **Phase 2 Kickoff Q3**: Hybrid input mode — optional zone dropdown + auto-fill + user override + provenance tracking + reset-to-default + audit + visual badge. Enterprise pattern (SAP/Primavera/Procore/Revit/Google). | Claude + Γιώργος |
+| 2026-05-03 | **Phase 2 Kickoff Q4**: Hybrid plot-type dropdown + auto-sync count + ±buttons + provenance. **PlotType union ΕΠΕΚΤΑΘΗΚΕ**: 3 → 5 τύποι (`mesaio` "Μεσαίο", `goniako` "Γωνιακό", **`disgoniaio` "Δισγωνιαίο" (Π-shape, 3 πρόσωπα)**, **`four_sided` "Τεσσάρων πλευρών" (νησιωτικό, 4 πρόσωπα)**, `diamperes` "Διαμπερές") + `custom` fallback. Απαιτείται type extension στο `site.types.ts`. | Claude + Γιώργος |
+| 2026-05-03 | **Phase 2 Kickoff Q5**: Bonuses Α1/Α3/Α5 **OUT-OF-SCOPE** Phase 2. Engines παραμένουν, types παραμένουν, αλλά **καμία UI για bonuses**. Future ticket: Phase 2.5. | Claude + Γιώργος |
+| 2026-05-03 | **Phase 2 Kickoff Q6**: ULTRA-MINIMAL form scope — **6 πεδία ΜΟΝΟ** (τύπος οικοπέδου, αριθμός προσώπων, ζώνη, ΣΔ, κάλυψη%, ύψος). Καθαρή CRUD φόρμα, καθόλου engines runtime, καθόλου setbacks (Δ/δ), καθόλου legal/terrain/identity/adjacent/polygon. Νέος τύπος `ProjectBuildingCodePhase2`. | Claude + Γιώργος |
+| 2026-05-03 | **Phase 2 Kickoff Q7**: Hybrid validation — hard block για αδύνατα (ΣΔ<0,>10, κάλυψη<0,>100, ύψος<0,>100, count<1,>4) + soft warning για ασυνήθιστα (ΣΔ>5, κάλυψη>85, ύψος>30) + audit log overrides + inline feedback. Νέο `validation.constants.ts`. Enterprise pattern (SAP/Procore/TurboTax/Revit). | Claude + Γιώργος |
+| 2026-05-03 | **Phase 2 Kickoff CLOSED** — 7 αποφάσεις, implementation plan consolidated σε §8b. Έτοιμο για coding (Sonnet 4.6 για implementation). | Claude + Γιώργος |

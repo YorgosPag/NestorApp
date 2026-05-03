@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * Single component for both add and edit modes (DRY: was duplicated before).
- * Includes AddressWithHierarchy + project-specific fields + map preview.
+ * Includes AddressWithHierarchy + project-specific fields.
  *
  * @module components/projects/tabs/locations/LocationInlineForm
  * @enterprise ADR-167
@@ -13,7 +13,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { AddressWithHierarchy, type AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
-import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
+
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -45,7 +45,6 @@ interface LocationInlineFormProps {
   onCancel: () => void;
   t: (key: string) => string;
   tProjects: (key: string) => string;
-  contactId?: string;
 }
 
 // =============================================================================
@@ -69,7 +68,6 @@ export function LocationInlineForm({
   onCancel,
   t,
   tProjects,
-  contactId,
 }: LocationInlineFormProps) {
   const iconSizes = useIconSizes();
   const typography = useTypography();
@@ -80,24 +78,6 @@ export function LocationInlineForm({
     ? t('locations.addNewAddress')
     : tProjects('locations.editAddress');
 
-  const handleDragResolve = (resolved: DragResolvedAddress) => {
-    onHierarchyChange({
-      ...hierarchy,
-      street: resolved.street,
-      number: resolved.number,
-      postalCode: resolved.postalCode,
-      settlementName: resolved.city,
-      settlementId: null,
-      communityName: '',
-      municipalUnitName: '',
-      municipalityName: '',
-      municipalityId: null,
-      regionalUnitName: '',
-      regionName: '',
-      decentAdminName: '',
-      majorGeoName: '',
-    });
-  };
 
   return (
     <div className={cn("border-2 border-primary rounded-lg bg-card", spacing.padding.sm, spacing.spaceBetween.md)}>
@@ -111,8 +91,7 @@ export function LocationInlineForm({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-        <div className="space-y-2">
+      <div className="space-y-2">
           <AddressWithHierarchy
             value={hierarchy}
             onChange={onHierarchyChange}
@@ -137,23 +116,6 @@ export function LocationInlineForm({
             </Button>
           </div>
         </div>
-
-        <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-12rem)]">
-          <ContactAddressMapPreview
-            className="!min-h-0 h-full rounded-lg border shadow-sm"
-            contactId={contactId}
-            street={hierarchy.street}
-            streetNumber={hierarchy.number}
-            city={hierarchy.settlementName}
-            postalCode={hierarchy.postalCode}
-            municipality={hierarchy.municipalityName}
-            regionalUnit={hierarchy.regionalUnitName}
-            region={hierarchy.regionName}
-            draggable
-            onDragResolve={handleDragResolve}
-          />
-        </aside>
-      </div>
     </div>
   );
 }

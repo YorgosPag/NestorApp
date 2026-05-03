@@ -1,8 +1,9 @@
 /* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import type { Project } from '@/types/project';
+import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,38 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
     }
   }, [isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Pending address: draggable preview pin shown while the add form is open.
+  // Appended to the real addresses so AddressMap renders it as a pulsating draggable marker.
+  const PENDING_ID = '__pending_new__';
+  const mapAddresses = useMemo<ProjectAddress[]>(() => {
+    if (!loc.isAddFormOpen || !loc.pendingDragCoords) return loc.localAddresses;
+    return [
+      ...loc.localAddresses,
+      {
+        id: PENDING_ID,
+        street: '',
+        city: '',
+        postalCode: '',
+        country: 'Greece',
+        type: 'site' as const,
+        isPrimary: false,
+        coordinates: loc.pendingDragCoords,
+      },
+    ];
+  }, [loc.isAddFormOpen, loc.pendingDragCoords, loc.localAddresses]);
+
+  // Intercept drag: pending pin → update add form; real pin → persist
+  const handleCombinedDragUpdate = useCallback(async (
+    addressData: Partial<PartialProjectAddress>,
+    index: number,
+  ) => {
+    if (loc.isAddFormOpen && index >= loc.localAddresses.length) {
+      loc.handlePendingDragUpdate(addressData);
+    } else {
+      await loc.handleAddressDragUpdate(addressData, index);
+    }
+  }, [loc.isAddFormOpen, loc.localAddresses.length, loc.handlePendingDragUpdate, loc.handleAddressDragUpdate]);
+
   return (
     <FullscreenOverlay
       isFullscreen={fullscreen.isFullscreen}
@@ -69,7 +102,7 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
         <div className="flex items-center justify-between">
           <FullscreenToggleButton isFullscreen={fullscreen.isFullscreen} onToggle={fullscreen.toggle} />
           {isEditing && !loc.isAddFormOpen && loc.editingIndex === null && (
-            <Button onClick={() => loc.setIsAddFormOpen(true)} variant="default" size="sm">
+            <Button onClick={loc.handleOpenAddForm} variant="default" size="sm">
               <Plus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
               {t('locations.newAddress')}
             </Button>
@@ -115,7 +148,6 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
             isSaving={loc.isSaving}
             onSave={loc.handleSaveEdit}
             onCancel={loc.handleCancelEdit}
-            contactId={loc.localAddresses[loc.editingIndex]?.id}
             t={t}
             tProjects={tProjects}
           />
@@ -173,13 +205,13 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
       {/* RIGHT: Map — always visible, draggable in edit mode */}
       <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-7rem)]">
         <AddressMap
-          addresses={loc.localAddresses}
+          addresses={mapAddresses}
           highlightPrimary
           showGeocodingStatus
           enableClickToFocus
           onMarkerClick={loc.handleMarkerClick}
           draggableMarkers={isEditing}
-          onAddressDragUpdate={loc.handleAddressDragUpdate}
+          onAddressDragUpdate={handleCombinedDragUpdate}
           heightPreset="viewerFullscreen"
           className="rounded-lg border shadow-sm !h-full"
         />

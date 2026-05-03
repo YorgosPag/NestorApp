@@ -38,6 +38,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useLinkRemovalGuard } from '@/hooks/useLinkRemovalGuard';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 const logger = createModuleLogger('WorkersTabContent');
 
@@ -52,6 +54,8 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
   const typography = useTypography();
   const spacing = useSpacingTokens();
 
+  const { user } = useAuth();
+  const { success: notifySuccess, error: notifyError } = useNotifications();
   const { workers, isLoading, error, refetch } = useProjectWorkers(projectId);
   const { confirm, dialogProps } = useConfirmDialog();
   const { checkBeforeRemove, BlockedDialog: LinkRemovalBlockedDialog } = useLinkRemovalGuard();
@@ -82,21 +86,26 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
           targetEntityType: 'project',
           targetEntityId: projectId,
           reason: 'IKA worker assignment',
-          createdBy: 'current_user',
+          createdBy: user?.uid ?? '',
         },
       });
 
       if (result.success) {
+        notifySuccess(t('ika.workersTab.workerAdded'));
         setShowSearch(false);
         setSelectedContact(null);
         refetch();
+      } else {
+        notifyError(result.error ?? t('ika.workersTab.addError'));
+        logger.error('Worker assignment failed', { error: result.error });
       }
     } catch (err) {
+      notifyError(t('ika.workersTab.addError'));
       logger.error('Worker assignment failed', { error: err });
     } finally {
       setIsAssigning(false);
     }
-  }, [selectedContact, projectId, refetch]);
+  }, [selectedContact, projectId, user?.uid, refetch, notifySuccess, notifyError, t]);
 
   const handleRemoveWorker = useCallback(async (worker: ProjectWorker) => {
     const confirmed = await confirm({
@@ -113,18 +122,20 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
       setIsRemoving(worker.contactId);
       const result = await unlinkContactWithPolicy({
         linkId: worker.linkId,
-        updatedBy: 'current_user',
+        updatedBy: user?.uid ?? '',
       });
       if (!result.success) {
         throw new Error(result.error);
       }
+      notifySuccess(t('ika.workersTab.workerRemoved'));
       refetch();
     } catch (err) {
+      notifyError(t('ika.workersTab.removeError'));
       logger.error('Failed to remove worker', { error: err });
     } finally {
       setIsRemoving(null);
     }
-  }, [checkBeforeRemove, confirm, t, refetch]);
+  }, [checkBeforeRemove, confirm, t, refetch, user?.uid, notifySuccess, notifyError]);
 
   const handleCancelSearch = useCallback(() => {
     setShowSearch(false);

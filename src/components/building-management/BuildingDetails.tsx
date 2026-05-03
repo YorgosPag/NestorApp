@@ -53,6 +53,9 @@ export const BuildingDetails = React.memo(function BuildingDetails({
   const emptyStateMessages = useEmptyStateMessages();
   const { user } = useAuth();
 
+  // Active tab — used to hide header actions irrelevant to certain tabs.
+  const [activeTab, setActiveTab] = useState('general');
+
   // Inline editing state — use lifted state if available, otherwise local
   const [localIsEditing, setLocalIsEditing] = useState(false);
   const isEditing = externalIsEditing ?? localIsEditing;
@@ -122,7 +125,7 @@ export const BuildingDetails = React.memo(function BuildingDetails({
             building={building!}
             isEditing={isEditing}
             isSaving={isSaving}
-            onStartEdit={isTrashMode ? undefined : handleStartEdit}
+            onStartEdit={isTrashMode || activeTab !== 'general' ? undefined : handleStartEdit}
             onSave={handleSave}
             onCancel={handleCancel}
             onNewBuilding={isTrashMode ? undefined : onNewBuilding}
@@ -138,6 +141,7 @@ export const BuildingDetails = React.memo(function BuildingDetails({
             saveRef={saveRef}
             isCreateMode={isCreateMode}
             onBuildingCreated={onBuildingCreated}
+            onActiveTabChange={setActiveTab}
           />
         }
         onCreateAction={onNewBuilding}

@@ -97,7 +97,14 @@ export function AddressWithHierarchy({
     [current, onChange],
   );
 
-  const isGreekAddress = !current.country || current.country.trim().toUpperCase() === 'GR';
+  const normalizedCountry = current.country.trim().toLowerCase();
+  const isGreekAddress = !normalizedCountry
+    || normalizedCountry === 'gr'
+    || normalizedCountry === 'greece'
+    || normalizedCountry === 'ελλάδα'
+    || normalizedCountry === 'ελλάς'
+    || normalizedCountry === 'ελλας'
+    || normalizedCountry === 'hellas';
 
   /**
    * Handle settlement selection — auto-fills entire hierarchy.
@@ -212,6 +219,7 @@ export function AddressWithHierarchy({
         const result = await geocodeAddress({
           street: streetWithNumber,
           postalCode: current.postalCode,
+          country: 'gr',
         });
 
         if (result?.resolvedCity && !current.settlementName.trim()) {

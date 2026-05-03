@@ -15,6 +15,8 @@ export interface BaseTabDef {
   icon?: LucideIcon | React.ComponentType<{ className?: string }>;
   iconColor?: string;
   disabled?: boolean;
+  /** Amber dot rendered on the tab trigger to signal a required action inside. */
+  warningDot?: boolean;
 }
 
 export interface TabDefinition extends BaseTabDef {
