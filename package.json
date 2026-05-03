@@ -233,7 +233,7 @@
     "@anthropic-ai/claude-agent-sdk": "0.2.81",
     "@eslint/js": "^9.33.0",
     "@firebase/rules-unit-testing": "5.0.0",
-    "@napi-rs/canvas": "^0.1.80",
+    "@napi-rs/canvas": "^0.1.86",
     "@next/bundle-analyzer": "16.1.0",
     "@playwright/test": "^1.55.1",
     "@swc/core": "^1.13.5",
