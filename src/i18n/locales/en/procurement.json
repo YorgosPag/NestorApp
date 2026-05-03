@@ -258,5 +258,37 @@
     "delivered": "Delivered",
     "closed": "Closed",
     "cancelled": "Cancelled"
+  },
+  "overview": {
+    "kpi": {
+      "openRfqs": {
+        "label": "Open RFQs",
+        "tooltip": "Active requests for quotation awaiting supplier responses",
+        "empty": "No open RFQs"
+      },
+      "pendingPos": {
+        "label": "POs Awaiting Approval",
+        "tooltip": "Draft purchase orders pending manager approval",
+        "empty": "No POs pending approval"
+      },
+      "committedSpend": {
+        "label": "Committed Spend",
+        "tooltip": "Total value of ordered, delivered and closed POs",
+        "empty": "No committed spend"
+      },
+      "budgetVsCommitted": {
+        "label": "Budget vs Committed by Category",
+        "tooltip": "BOQ budget compared to committed PO spend per ATOE category",
+        "noBoq": "No BOQ items — add measurements to see budget comparison",
+        "budget": "Budget",
+        "committed": "Committed"
+      },
+      "boqCoverage": {
+        "label": "BOQ Coverage",
+        "tooltip": "Percentage of BOQ items linked to at least one purchase order",
+        "noBoq": "No BOQ items for this project"
+      },
+      "error": "Failed to load overview data"
+    }
   }
 }
