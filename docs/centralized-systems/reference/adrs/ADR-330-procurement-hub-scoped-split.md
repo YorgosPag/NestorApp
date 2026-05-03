@@ -1,6 +1,6 @@
 # ADR-330 — Procurement Hub Scoped Split (Company-wide vs Project-scoped)
 
-**Status:** ✅ APPROVED — all decisions D1-D12 resolved 2026-05-03, ready for Phase 1 implementation planning
+**Status:** ✅ IMPLEMENTED — Phase 1 (S1-S6) complete 2026-05-04. Phase 3 (Vendor Master) complete 2026-05-04. Hub landing + project-scoped procurement tab + 5 KPIs + create buttons + new routes + vendor directory with KPIs.
 **Date:** 2026-05-03
 **Author:** Claude (Plan Mode, 3 Explore agents) + Γιώργος
 **Supersedes (partially):** ADR-267 §"Αποφάσεις" #1 ("Standalone top-level navigation")
@@ -25,6 +25,8 @@
 | 2026-05-04 | ✅ **S4 COMPLETED** — Create buttons in sub-tab + BOQ→RFQ link. Key findings: (1) All 3 list components (`RfqList`, `PurchaseOrderList`, `QuoteList`) already had `onCreateRfq`/`onCreateNew` callback props — no new button components needed (SSoT reuse); (2) `ProjectPoListClient` had broken URL (`/procurement?new=1` → list page, form never opened) — fixed to `/procurement/new?projectId=X`; (3) `ProjectQuoteListClient` was missing `onCreateNew` → added `handleCreate` → `/procurement/quotes/scan?projectId=X` (scan page already reads `projectId` from URL); (4) `MeasurementsTabContent` BOQ→RFQ link was missing `projectId` — fixed using `building.projectId` (available in Building type); (5) `PurchaseOrderForm` / `usePurchaseOrderForm` / `ProcurementDetailPageContent` chain enhanced with `initialProjectId` prop — reads `?projectId=` URL param on `poId==='new'`, pre-fills project selector. 7 files MODIFY, 0 NEW. |
 | 2026-05-04 | ✅ **S3 COMPLETED** — Επισκόπηση 5 KPIs. Files: 15 (11 NEW + 4 MODIFY). Key findings: (1) `PurchaseOrderStatus` has no `pending_approval` — KPI #2 maps to `status === 'draft'` (awaiting approval) per `PO_STATUS_TRANSITIONS`; (2) `RfqStatus` has no `open` — KPI #1 maps to `status === 'active'`; (3) BOQ costs NOT stored in Firestore — computed server-side from `(materialUnitCost + laborUnitCost + equipmentUnitCost) × estimatedQuantity × (1 + wasteFactor)`; (4) `useSupplierMetrics` is per-supplier hook — not reusable for cross-project KPI #3; (5) PO queries must include `isDeleted == false` filter (soft-delete pattern). Architecture: API route `/api/procurement/project-overview-stats` → 2 server aggregators (`projectProcurementStats` KPIs 1/2/3, `projectBoqCoverageStats` KPIs 4/5) → `useProjectProcurementStats` hook (ADR-300 stale cache) → `ProjectProcurementOverview` container → 5 KPI components each <40 LOC. Recharts `BarChart` for KPI #4. `ComponentErrorBoundary` per-KPI. i18n: 16 keys in `procurement.overview.kpi.*` namespace. Composite indexes: 2 new (purchase_orders + rfqs). |
 | 2026-05-03 | 📋 **Phase 1 SESSION BREAKDOWN added** (§5.1 + §5.2 + §7 popolati). Mandate Giorgio: ogni sessione completabile in **una singola chat session** con context pulito, **Plan Mode preferito** a Orchestrator (controllo + token efficiency). Phase 1 suddivisa in **6 sessioni**: S1 detail page migration (additive), S2 project tab + RouteTabs, S3 Επισκόπηση 5 KPIs, S4 create buttons, S5 top-level Hub redesign + cleanup, S6 verification + finalize. Token budget per sessione ~80-120k. Modello consigliato Opus 4.7 per ogni sessione (architettura + implementazione in stesso Plan Mode). Stima totale: ~60-90 file su 6 sessioni. §7 Implementation tracking pronto a essere popolato sessione per sessione. |
+| 2026-05-04 | ✅ **Phase 3 COMPLETED** — Vendor Master surface at `/procurement/vendors`. Files: 5 (1 NEW component + 1 MODIFY page + 1 MODIFY type + 1 MODIFY service + 2 MODIFY i18n). Key changes: (1) `SupplierMetrics` type extended with `lastOrderDate: string | null` + `tradeSpecialties: string[]`; (2) `supplier-metrics-service.ts` — `fetchSupplierNames` replaced by `fetchSupplierDetails` returning name + tradeSpecialties from `SupplierPersona.tradeSpecialties` (ADR-327 §9.3); `calcLastOrderDate()` added; `calculateSupplierMetrics` + `getSupplierComparison` updated; (3) `VendorCard.tsx` new component — name, trade specialties badges (up to 3 + overflow), orders count, on-time %, total spend, last order date; (4) `vendors/page.tsx` — full grid replacing placeholder: `usePOSupplierContacts` (master contact list) merged with `useSupplierComparison` (KPIs), client-side search, loading skeleton, 3 empty states (no vendors / no search results / loading); (5) 8 new i18n keys in `hub.vendorMaster.*` (el + en). Architecture: contacts SSoT preserved (D4 ADR decision — derived view, no new collection). |
+| 2026-05-04 | ✅ **S6 COMPLETED** — Verification + finalize. Files: 6 (1 NEW + 5 MODIFY). Regressions found and fixed: (1) `ProcurementDetailPageContent` `handleSuccess`+`handleDuplicate` navigated to deleted `/procurement/${id}` — fixed to `getPoDetailUrl` (reads `po.projectId` for edits, `initialProjectId ?? pathProjectId` for create); (2) `params.poId ?? 'new'` fallback added so dedicated `/procurement/new` route works without `[poId]` segment; (3) `/procurement/new/page.tsx` created (restores PO create form deleted with `[poId]` catch-all in S5); (4) `ContactPurchaseOrdersSection.handleView` fixed — was `/procurement/${poId}`, now `getPoDetailUrl(po.projectId, po.id)`; (5) `ProjectPoListClient.handleDuplicate` fixed — was `/procurement/${poId}?duplicate=1`, now `getPoDetailUrl(projectId, poId)?duplicate=1`; (6) `purchase-orders/[id]/page.tsx` fixed — was redirecting to deleted route, now fetches PO server-side via `getPO()` and redirects to canonical project-scoped URL (restores audit trail deep-links). Audits: TS 0 new errors, i18n 0 violations, SSoT 0 violations. ADR status → IMPLEMENTED. adr-index.md → IMPLEMENTED. |
 | 2026-05-04 | ✅ **S5 COMPLETED** — Top-level Hub redesign. Files: 19 (9 NEW + 7 MODIFY + 3 DELETE). Key decisions: (1) Old detail route pages `/procurement/rfqs/[id]` and `/procurement/quotes/[id]/review` kept alive (not deleted) — internal app call-sites (ContactRfqInvitesSection, ManualQuoteDialog, scan page) still reference them; back-nav within client components updated from deleted list pages to `/procurement` Hub; (2) Old LIST pages deleted: `/procurement/[poId]/page.tsx`, `/procurement/quotes/page.tsx`, `/procurement/rfqs/page.tsx`; (3) ProcurementSubNav tabs: [Hub, Vendors, Materials, Agreements, Analytics]; (4) HubLanding grid 4 cards — VendorMasterCard (reuses usePOSupplierContacts supplier count), MaterialCatalogCard (placeholder), FrameworkAgreementsCard (placeholder), SpendAnalyticsCard (reuses usePurchaseOrders for total POs + spend); (5) 4 placeholder pages with ProcurementSubNav for vendor/material/agreements/analytics sections; (6) i18n: 25 new keys in hub.* + nav.*; (7) ProcurementPageContent stripped from ~257 LOC to ~40 LOC (Hub landing only). |
 | 2026-05-03 | ✅ **S1 COMPLETED** — Detail page migration project-scoped (additive). Files: 8 (7 NEW + 1 MODIFY): (1) `src/lib/navigation/procurement-urls.ts` SSoT helper (`getPoDetailUrl` / `getQuoteDetailUrl` / `getRfqDetailUrl`), (2) `src/server/auth/require-project-for-page.ts` server-component tenant guard (riusa `requireProjectInTenant` SSoT), (3) `src/app/projects/[id]/procurement/layout.tsx` RBAC guard via `notFound()` su mismatch, (4) `src/app/projects/[id]/procurement/po/[poId]/page.tsx` riusa `LazyRoutes.ProcurementDetail`, (5) `src/app/projects/[id]/procurement/rfq/[rfqId]/page.tsx` riusa `RfqDetailClient`, (6) `src/app/projects/[id]/procurement/quote/[quoteId]/page.tsx` redirect → `/review`, (7) `src/app/projects/[id]/procurement/quote/[quoteId]/review/page.tsx` riusa `QuoteReviewClient`, (8) `src/subapps/procurement/components/RfqList.tsx` MODIFY — `handleView(rfq)` ora usa `getRfqDetailUrl(rfq.projectId, rfq.id)`. Vecchie URL top-level `/procurement/[poId]`, `/procurement/quotes/[id]/review`, `/procurement/rfqs/[id]` **restano funzionanti** (kill in S5). Zero hardcoded string templating per le nuove URL — helper SSoT enforced. |
 | 2026-05-03 | ✅ **S2 COMPLETED** — Project tab restructure + RouteTabs + 4 sub-tab wiring. Architectural finding: project tabs sono state-based (`UniversalTabsRenderer` in `/projects?projectId=X`), non URL-segments — D8 RouteTabs richiede ejection nella sezione standalone `/projects/[id]/procurement/*`. Files: 12 (10 NEW + 2 MODIFY + 2 i18n MODIFY): (1) `src/components/projects/procurement/ProjectProcurementTabs.tsx` NEW — RouteTabs SSoT con 4 tab dinamiche (`useMemo([projectId])`), (2) `src/components/projects/procurement/BackToProjectLink.tsx` NEW — back link a `/projects?projectId=X` per riprendere project tab strip, (3-5) `src/components/projects/procurement/clients/{ProjectRfqListClient,ProjectQuoteListClient,ProjectPoListClient}.tsx` NEW — thin wrapper che fetchano data filtrata per `projectId` + handle navigation via `procurement-urls` helper (S1), (6) `src/app/projects/[id]/procurement/page.tsx` NEW — server redirect → `/overview`, (7) `src/app/projects/[id]/procurement/overview/page.tsx` NEW — stub "Coming soon" (riempito in S3), (8-10) `src/app/projects/[id]/procurement/{rfq,quote,po}/page.tsx` NEW — server pages che passano `projectId` ai client wrapper, (11) `src/app/projects/[id]/procurement/layout.tsx` MODIFY — RBAC S1 invariato + aggiunge `<BackToProjectLink>` + `<ProjectProcurementTabs>` sopra `{children}`, (12) `src/components/projects/tabs/ProcurementProjectTab.tsx` MODIFY — diventa `router.replace('/projects/X/procurement/overview')` redirect-on-mount + Skeleton fallback (pattern Procore Commitments tool), (13-14) `src/i18n/locales/{el,en}/projects.json` MODIFY — nuove keys `tabs.subtabs.procurement.{overview,rfq,quote,po,backToProject,overviewComingSoon}` (zero hardcoded). ComparisonPanel **deferred** a sessione successiva (richiede ricostruzione `useQuotesPageState` — fuori scope S2); in S2 il click sulla quote naviga direttamente a `getQuoteDetailUrl(projectId, id, {review: true})`. RouteTabs SSoT da ADR-328 (no custom impl). Tutti i file < 500 LOC, function < 40 LOC. |
@@ -837,7 +839,7 @@ L'opzione C (no buttons) è impossibile in cantiere reale.
 | **S3** Επισκόπηση 5 KPIs | ✅ COMPLETED | 15 (11 NEW + 4 MODIFY) | ~380 | ⏳ background | ✅ 16 keys × 2 locale | ✅ useAsyncData+stale-cache (ADR-300), EnterpriseErrorBoundary per-KPI | pending | 2026-05-04 |
 | **S4** Create buttons + BOQ link | ✅ COMPLETED | 7 (0 NEW + 7 MODIFY) | ~55 | ⏳ background | ✅ 4 new keys × 2 locale | ✅ SSoT: existing list buttons via onCreateRfq/onCreateNew callbacks | pending | 2026-05-04 |
 | **S5** Top-level Hub redesign | ✅ COMPLETED | 19 (9 NEW + 7 MODIFY + 3 DELETE) | ~380 | ⏳ background | ✅ 25 new keys × 2 locale (nav.hub/vendors/materials/agreements/analytics + hub.* section) | ✅ usePOSupplierContacts+usePurchaseOrders SSoT reuse, no new queries | pending | 2026-05-04 |
-| **S6** Verification + finalize | 📋 PLANNED | — | — | — | — | — | — | — |
+| **S6** Verification + finalize | ✅ COMPLETED | 6 (1 NEW + 5 MODIFY) | ~65 | ✅ 0 new errors | ✅ 0 violations | ✅ 0 violations | pending | 2026-05-04 |
 
 **Aggiornare ogni cella alla fine della sessione corrispondente.**
 
@@ -847,7 +849,7 @@ Status legend: 📋 PLANNED · 🚧 IN_PROGRESS · ✅ COMPLETED · ⚠️ PARTI
 
 | Phase | Status | Sessioni | Date |
 |-------|--------|----------|------|
-| 3 — Vendor Master surface | 📋 PLANNED post-Phase 1 | TBD (probabile 1-2 sessioni) | — |
+| 3 — Vendor Master surface | ✅ COMPLETED | 1 sessione | 2026-05-04 |
 | 4 — Material Catalog | 📋 PLANNED | TBD (probabile 2-3 sessioni) | — |
 | 5 — Framework Agreements | 📋 PLANNED | TBD (probabile 2-3 sessioni) | — |
 | 6 — Cross-project Dashboard | 📋 PLANNED | TBD (probabile 1-2 sessioni) | — |
@@ -855,21 +857,28 @@ Status legend: 📋 PLANNED · 🚧 IN_PROGRESS · ✅ COMPLETED · ⚠️ PARTI
 
 ### S6 Verification log (smoke test checklist)
 
-> Da popolare in S6 con risultati ✅/❌ per ciascun flow.
+> Completato 2026-05-04. Smoke test UI rimandato a Giorgio (dev server).
 
-- [ ] Sidebar Προμήθειες → Hub landing render OK
-- [ ] Progetto → tab Προμήθειες → sub-tab Overview → 5 KPI render
-- [ ] Sub-tab RFQ → list + "+ Νέο RFQ" funzionante
-- [ ] Sub-tab Quote → list + comparison + "+ Νέα Προσφορά"
-- [ ] Sub-tab PO → list + "+ Νέα Παραγγελία"
-- [ ] Click PO da list → detail URL project-scoped
-- [ ] F5 mantiene sub-tab corrente
-- [ ] Browser back funziona tra sub-tab
-- [ ] Επιμετρήσεις tab → "Δημιουργία RFQ" funziona
-- [ ] Vecchie URL detail top-level → 404 (atteso)
-- [ ] `npx tsc --noEmit` zero nuovi errori vs baseline
-- [ ] `npm run i18n:audit` zero nuove violazioni
-- [ ] `npm run ssot:audit` zero nuove violazioni
+- [ ] Sidebar Προμήθειες → Hub landing render OK (smoke test manuale Giorgio)
+- [ ] Progetto → tab Προμήθειες → sub-tab Overview → 5 KPI render (smoke test manuale Giorgio)
+- [ ] Sub-tab RFQ → list + "+ Νέο RFQ" funzionante (smoke test manuale Giorgio)
+- [ ] Sub-tab Quote → list + comparison + "+ Νέα Προσφορά" (smoke test manuale Giorgio)
+- [ ] Sub-tab PO → list + "+ Νέα Παραγγελία" funzionante (smoke test manuale Giorgio)
+- [ ] Click PO da list → detail URL project-scoped (smoke test manuale Giorgio)
+- [ ] F5 mantiene sub-tab corrente (smoke test manuale Giorgio)
+- [ ] Browser back funziona tra sub-tab (smoke test manuale Giorgio)
+- [ ] Επιμετρήσεις tab → "Δημιουργία RFQ" funziona (smoke test manuale Giorgio)
+- [x] Vecchie URL detail top-level → `/procurement/purchase-orders/[id]` ora fa fetch PO + redirect project-scoped
+- [x] `npx tsc --noEmit` zero nuovi errori vs baseline (file S5+S6 puliti)
+- [x] `npm run i18n:audit` ✅ 0 violazioni (baseline 0, current 0)
+- [x] `npm run ssot:audit` ✅ 0 nuove violazioni
+
+**S6 regressions fixed (5 call-sites, 1 new route):**
+- `ProcurementDetailPageContent` — `handleSuccess` + `handleDuplicate` ora usano `getPoDetailUrl`
+- `/procurement/new/page.tsx` — creato (PO create form ripristinato)
+- `ContactPurchaseOrdersSection` — `handleView` usa `getPoDetailUrl(po.projectId, po.id)`
+- `ProjectPoListClient` — `handleDuplicate` usa `getPoDetailUrl(projectId, poId)`
+- `purchase-orders/[id]/page.tsx` — fetch PO Admin SDK + redirect project-scoped
 
 ---
 

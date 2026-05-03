@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
-**STATUS: ACTIVE**
-**Last updated:** 2026-04-26 (ADR-233 + ADR-314 aggiunti)
+**STATUS: ALL_DONE**
+**Last updated:** 2026-05-04 (ADR-233 + ADR-314 entrambi confirmed implementati)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
@@ -26,9 +26,7 @@
 
 ### 🏗️ FEATURE PENDING
 
-- **ADR-233 Building Code — Uniqueness Validation** [HIGH] — `src/app/api/buildings/route.ts` POST: query `buildings.where(projectId==X).where(code==body.code)` → 409 se duplicate. Anche PATCH in `building-update.handler.ts`. Previene race condition (2 utenti stesso codice auto-suggerito). Dettagli: `memory/project_adr233_building_code_pending.md`.
 
-- **ADR-314 SSoT Discovery** [LOW] — 74 duplicati, 5 anti-pattern (309 `toISOString`!), 96 registry gap. Phase A (~1-2h, zero risk): delete 4 id-wrappers + add 5 SSoT to registry. Dettagli: `.claude-rules/ssot-discovery-pending.md` + `memory/project_adr314_ssot_discovery_pending.md`.
 
 ---
 
@@ -53,6 +51,8 @@
 ## Changelog
 
 | Date       | Change |
+| 2026-05-04 | ADR-233 CLOSED — tutti e 3 gli item già implementati nel codice (POST 409 route.ts:220-233, PATCH 409 building-update.handler.ts:104-119, BuildingListCard formatBuildingLabel, unit tests entity-code-config.test.ts). Ratchet era stale. |
+| 2026-05-04 | ADR-314 CLOSED — CHECK 3.18 baseline 0/0/0 ALL GREEN dal 2026-04-19 (Phase A-E DONE). `.ssot-discover-baseline.json` confirma centralizedFiles=135 protected=135 unprotected=0 duplicateExports=0 antiPatterns=0. STATUS → ALL_DONE. |
 |------------|--------|
 | 2026-04-11 | Initial checklist dump from ADR-299 §4/§5. Scenario A = 21h expected, Scenario B = 64h expected. No task completed yet — B.1 attendance already completed before ADR-299. |
 | 2026-04-11 | CHECK 3.17 baseline ratcheted 20→19 in commit `56d95be4` (production safety hardening: deletion of `properties/admin-link` destructive chain). Was not a CHECK 3.17 cleanup target — was security deletion that reduced baseline as side-effect. Line updated. Hours estimate unchanged. |

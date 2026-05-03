@@ -1,6 +1,6 @@
 # SSoT Discovery Pending Work — Live Checklist
 
-**STATUS: ACTIVE** (CHECK 3.18 ratchet ongoing — Phase E DONE 2026-04-19 — baseline 0/0/0 🎉)
+**STATUS: ALL_DONE** (CHECK 3.18 ratchet COMPLETE — Phase A-E DONE — baseline 0/0/0 🎉 dal 2026-04-20)
 **Created:** 2026-04-18
 **Source of truth:** `docs/centralized-systems/reference/adrs/ADR-314-ssot-discovery-findings-roadmap.md`
 **Snapshot baseline:** `.ssot-discover-baseline.json` (regenerable via `npm run ssot:discover:baseline`)

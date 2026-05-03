@@ -46,7 +46,10 @@ export async function calculateSupplierMetrics(
   supplierId: string,
   supplierName: string
 ): Promise<SupplierMetrics> {
-  const allPOs = await listPurchaseOrders({ companyId, supplierId });
+  const [allPOs, detailsMap] = await Promise.all([
+    listPurchaseOrders({ companyId, supplierId }),
+    fetchSupplierDetails(companyId, [supplierId]),
+  ]);
   const activePOs = allPOs.filter(po => !po.isDeleted);
 
   const nonCancelled = activePOs.filter(po => po.status !== 'cancelled');
@@ -66,6 +69,8 @@ export async function calculateSupplierMetrics(
     averageLeadTimeDays: calcAverageLeadTime(nonCancelled),
     cancellationRate: calcCancellationRate(activePOs, cancelled),
     categoryBreakdown: buildCategoryBreakdown(nonCancelled),
+    lastOrderDate: calcLastOrderDate(nonCancelled),
+    tradeSpecialties: detailsMap.get(supplierId)?.tradeSpecialties ?? [],
   };
 }
 
@@ -88,8 +93,8 @@ export async function getSupplierComparison(
     bySupplier.set(po.supplierId, list);
   }
 
-  // Fetch supplier names
-  const supplierNames = await fetchSupplierNames(
+  // Fetch supplier names + trade specialties
+  const supplierDetails = await fetchSupplierDetails(
     companyId,
     Array.from(bySupplier.keys())
   );
@@ -98,10 +103,11 @@ export async function getSupplierComparison(
   for (const [sId, pos] of bySupplier) {
     const nonCancelled = pos.filter(po => po.status !== 'cancelled');
     const cancelled = pos.filter(po => po.status === 'cancelled');
+    const details = supplierDetails.get(sId);
 
     suppliers.push({
       supplierId: sId,
-      supplierName: supplierNames.get(sId) ?? sId,
+      supplierName: details?.name ?? sId,
       totalOrders: nonCancelled.length,
       totalSpend: sumTotal(nonCancelled),
       averageOrderValue: nonCancelled.length > 0
@@ -111,6 +117,8 @@ export async function getSupplierComparison(
       averageLeadTimeDays: calcAverageLeadTime(nonCancelled),
       cancellationRate: calcCancellationRate(pos, cancelled),
       categoryBreakdown: buildCategoryBreakdown(nonCancelled),
+      lastOrderDate: calcLastOrderDate(nonCancelled),
+      tradeSpecialties: details?.tradeSpecialties ?? [],
     });
   }
 
@@ -196,6 +204,15 @@ function calcAverageLeadTime(pos: PurchaseOrder[]): number | null {
   return Math.round(totalDays / withBothDates.length);
 }
 
+/** Most recent non-cancelled PO dateOrdered (ISO string) or null */
+function calcLastOrderDate(pos: PurchaseOrder[]): string | null {
+  const dates = pos
+    .filter(po => po.dateOrdered)
+    .map(po => po.dateOrdered!);
+  if (dates.length === 0) return null;
+  return dates.reduce((max, d) => (d > max ? d : max));
+}
+
 /** Cancellation rate (0-100) */
 function calcCancellationRate(
   allPOs: PurchaseOrder[],
@@ -229,15 +246,20 @@ function buildCategoryBreakdown(pos: PurchaseOrder[]): CategorySpend[] {
     .sort((a, b) => b.totalSpend - a.totalSpend);
 }
 
-/** Fetch display names for a list of supplier contact IDs */
-async function fetchSupplierNames(
+interface SupplierContactDetails {
+  name: string;
+  tradeSpecialties: string[];
+}
+
+/** Fetch display names + trade specialties for a list of supplier contact IDs */
+async function fetchSupplierDetails(
   companyId: string,
   supplierIds: string[]
-): Promise<Map<string, string>> {
+): Promise<Map<string, SupplierContactDetails>> {
   if (supplierIds.length === 0) return new Map();
 
   const db = getAdminFirestore();
-  const names = new Map<string, string>();
+  const details = new Map<string, SupplierContactDetails>();
 
   // Batch fetch in chunks of 30 (Firestore 'in' limit)
   for (let i = 0; i < supplierIds.length; i += 30) {
@@ -250,9 +272,18 @@ async function fetchSupplierNames(
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
-      names.set(doc.id, String(data.displayName ?? data.companyName ?? doc.id));
+      const name = String(data.displayName ?? data.companyName ?? doc.id);
+      const personas = Array.isArray(data.personas) ? data.personas : [];
+      const supplierPersona = personas.find(
+        (p: Record<string, unknown>) => p.personaType === 'supplier'
+      );
+      const tradeSpecialties: string[] = Array.isArray(supplierPersona?.tradeSpecialties)
+        ? supplierPersona.tradeSpecialties as string[]
+        : [];
+
+      details.set(doc.id, { name, tradeSpecialties });
     }
   }
 
-  return names;
+  return details;
 }

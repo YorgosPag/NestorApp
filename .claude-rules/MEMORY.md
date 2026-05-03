@@ -14,11 +14,10 @@
 - [Never ask about commit/push](feedback_never_ask_commit_push.md) — NEVER ask "do you want a commit?" — Giorgio says so himself
 
 ## Pending Work
-- [Ratchet Backlog — ADR-299 live checklist](pending-ratchet-work.md) — **STATUS: ALL_DONE** (2026-04-14). Scenario A+B completati. Nuovo ratchet? Set STATUS: ACTIVE e aggiungi righe.
-- [SSoT Discovery Pending — ADR-314 baseline](ssot-discovery-pending.md) — **STATUS: ACTIVE** (2026-04-18). 74 duplicates, 5 anti-patterns, 96 registry gaps. Phase A/B/C roadmap.
-- [ADR-233 Building Code — 3 Pending Items](project_adr233_building_code_pending.md) — HIGH: uniqueness validation, MEDIUM: BuildingsList.tsx, LOW: unit tests (2026-04-05)
+- [Ratchet Backlog — ADR-299 live checklist](pending-ratchet-work.md) — **STATUS: ALL_DONE** (2026-05-04). ADR-233 + ADR-314 confermati implementati. Nuovo ratchet? Set STATUS: ACTIVE e aggiungi righe.
+- [SSoT Discovery — ADR-314 baseline](ssot-discovery-pending.md) — **STATUS: ALL_DONE** (2026-04-19, baseline 0/0/0 ALL GREEN dal 2026-04-20). Phase A-E completate.
 - [Notification SSoT — Boy Scout Migration](pending-notification-migration.md) — **STATUS: ACTIVE** (2026-04-22). ~100 file usano ancora `useNotifications()` diretto. 3 domain hook esistenti (contacts/projects/files). Quando tocchi un file con `useNotifications` → menzionalo a Giorgio.
-- [Firestore Orphan Indexes Cleanup](pending-firestore-orphan-indexes.md) — **STATUS: DEFERRED** (2026-04-29). 9 indici orfani in prod non nel JSON dopo deploy step (b) ADR-327. Zero impact. Cleanup post Phase 1 complete (steps c-k). Audit-first protocol; NEVER blind `--force`.
+- [Firestore Orphan Indexes Cleanup](pending-firestore-orphan-indexes.md) — **STATUS: DEFERRED** (2026-04-29). 9 indici orfani in prod non nel JSON dopo deploy step (b) ADR-327. Zero impact. ADR-327 Phase 1 ora COMPLETO (a-i) → cleanup ora valutabile. Audit-first protocol; NEVER blind `--force`.
 
 ## Code Architecture
 - [File size → EXTRACT, never trim](feedback_file_size_extract_not_trim.md) — When hook blocks for size: create new module, NEVER cut comments/code. Google SRP.

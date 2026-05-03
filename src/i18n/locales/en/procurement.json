@@ -303,7 +303,16 @@
       "description": "Supplier directory with performance metrics and trade categorization",
       "comingSoon": "Phase 3 — Coming Soon",
       "phase": "Phase 3",
-      "supplierCount": "{count} suppliers"
+      "supplierCount": "{count} suppliers",
+      "searchPlaceholder": "Search vendors...",
+      "totalOrders": "Orders",
+      "totalSpend": "Total spend",
+      "onTimeRate": "On-time",
+      "lastOrder": "Last order",
+      "noOrders": "No orders yet",
+      "noVendorsYet": "No vendors registered yet",
+      "addVendorHint": "Add contacts with Supplier type in the contacts module",
+      "emptySearch": "No results found"
     },
     "materialCatalog": {
       "title": "Material Catalog",

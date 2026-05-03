@@ -385,6 +385,10 @@ export interface SupplierMetrics {
   averageLeadTimeDays: number | null;
   cancellationRate: number;
   categoryBreakdown: CategorySpend[];
+  /** ISO date string of the most recent non-cancelled PO */
+  lastOrderDate: string | null;
+  /** Trade specialty codes from SupplierPersona (ADR-327 §9.3) */
+  tradeSpecialties: string[];
 }
 
 /** Spend per ΑΤΟΕ category */

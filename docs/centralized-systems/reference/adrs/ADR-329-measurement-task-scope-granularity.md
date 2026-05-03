@@ -1,7 +1,7 @@
 # ADR-329: Measurement Task Scope — Property-Granular Selection
 
-**Status**: ✅ ACCEPTED (2026-05-01) — ready for implementation
-**Date**: 2026-04-30 (initial), 2026-05-01 (multi-level resolution + final unblock)
+**Status**: ✅ IMPLEMENTED (2026-05-01) — commit `daf58568` + 2 follow-ups
+**Date**: 2026-04-30 (initial), 2026-05-01 (multi-level resolution + final unblock + implementation)
 **Author**: Giorgio Pagonis (with Claude Opus 4.7)
 **Extends**: ADR-175 (Quantity Surveying / BOQ System) §4.4.3
 **References**: ADR-145, ADR-175, ADR-233, ADR-236, ADR-326
@@ -821,3 +821,4 @@ interface Property {
 | 2026-05-01 | §9 References: ADR-236 + ADR-261 cross-references προστέθηκαν. |
 | 2026-05-01 | **Status: ⛔ BLOCKED → ✅ ACCEPTED.** All design questions resolved (6/6 original + 3 multi-level + 3 carry-over from handoff = 12/12 total). Ready for implementation phase. |
 | 2026-05-01 | **BLOCKER identified**: multi-floor properties (μεζονέτες, καταστήματα 6μ, μεγάλα καταστήματα 4-επιπέδων). Status → ⛔ BLOCKED. §8.1 added. ADR-330 prerequisite. Implementation order: ADR-330 first → ADR-329 second. |
+| 2026-05-01 | **Status: ✅ ACCEPTED → ✅ IMPLEMENTED.** Commit `daf58568` covers all 17 steps (30 files, +2401 / -162 LOC): types (BOQItem 5-scope schema + cost allocation, Property archived fields), 3 new shared components (`FloorSelectByBuilding`, `PropertySelectByBuilding`, `PropertyMultiSelectByBuilding`), `BOQItemEditor` drawer refactor (Sheet 1200px + 2-column + EntityDetailsHeader + reopen-to-draft), `useBOQEditorState` (5 scopes + draft-lock + validation), `boq-service` (scope mutability lock + reopenToDraft), `cost-engine.allocateCost` (multi-level partial-area aware), `property-deletion-guard` + `PropertyDeletionGuardDialog`, `firestore.rules` (scope enum + immutable scope-fields post-draft + archivedAt/archivedBy allowlist), `firestore.indexes.json` (composite buildingId+companyId), i18n (el+en, scope/costAllocation/scopeLock/deletion), tests (`floor-helpers`, `cost-engine.allocateCost`), ADR-175 + ADR-236 cross-ref changelogs. Follow-ups: `79d0187b` (drawer width + totals layout + property type icons), `ad704b77` (multi-select floor icon SSoT via `NAVIGATION_ENTITIES.floor`). |
