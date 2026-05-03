@@ -17,6 +17,7 @@ import {
 import { Plus, Search, ArrowRight } from 'lucide-react';
 import { cn, getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { getRfqDetailUrl } from '@/lib/navigation/procurement-urls';
 import type { RFQ, RfqStatus } from '@/subapps/procurement/types/rfq';
 
 // ============================================================================
@@ -65,7 +66,7 @@ export function RfqList({ rfqs, loading, onCreateRfq }: RfqListProps) {
   });
 
   const handleCreate = onCreateRfq ?? (() => router.push('/procurement/rfqs/new'));
-  const handleView = (id: string) => router.push(`/procurement/rfqs/${id}`);
+  const handleView = (rfq: RFQ) => router.push(getRfqDetailUrl(rfq.projectId, rfq.id));
 
   return (
     <Card>
@@ -109,7 +110,7 @@ export function RfqList({ rfqs, loading, onCreateRfq }: RfqListProps) {
                 <TableRow
                   key={rfq.id}
                   className="cursor-pointer"
-                  onClick={() => handleView(rfq.id)}
+                  onClick={() => handleView(rfq)}
                 >
                   <TableCell className="font-medium">{rfq.title}</TableCell>
                   <TableCell>
