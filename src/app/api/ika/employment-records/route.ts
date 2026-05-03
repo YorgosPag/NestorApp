@@ -36,9 +36,9 @@ export const maxDuration = 30;
 const WorkerSummarySchema = z.object({
   contactId: z.string().min(1).max(128),
   daysWorked: z.number().int().min(0).max(31),
-  insuranceClassNumber: z.number().int().optional(),
+  insuranceClassNumber: z.number().int().nullable().optional(),
   stampsCount: z.number().int().min(0),
-  imputedDailyWage: z.number().min(0).optional(),
+  imputedDailyWage: z.number().min(0).nullable().optional(),
   employerContribution: z.number().min(0),
   employeeContribution: z.number().min(0),
   totalContribution: z.number().min(0),
