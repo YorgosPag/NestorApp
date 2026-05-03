@@ -230,7 +230,7 @@ check_pattern "Timestamp.now() scattered" \
     "src/lib/firestore-now.ts → nowTimestamp()" 2 \
     "src/lib/firestore-now.ts" \
     "NOT Timestamp" \
-    "firestoreHelpers|firebase-admin/firestore"
+    "firestoreHelpers|firebase-admin"
 
 check_pattern "inline color-by-status" \
     "(status|state)\s*===?\s*['\"].*\?\s*['\"]#[0-9a-fA-F]" \

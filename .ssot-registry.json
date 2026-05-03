@@ -732,6 +732,26 @@
         "src/config/boq-categories.ts"
       ]
     },
+    "boq-subcategories": {
+      "ssotFile": "src/config/boq-subcategories.ts",
+      "description": "BOQ sub-categories (98 curated, Level 2) must use centralized boq-subcategories — no inline sub-category definitions. ADR-337 §4.2.",
+      "forbiddenPatterns": [
+        "(BOQ_SUBCATEGORIES)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/boq-subcategories.ts"
+      ]
+    },
+    "department-codes": {
+      "ssotFile": "src/config/department-codes.ts",
+      "description": "Department codes canonical registry (ADR-326 §3.3) — DEPARTMENT_CODES must not be redeclared inline.",
+      "forbiddenPatterns": [
+        "(DEPARTMENT_CODES)\\s*(=|:)\\s*(\\{|\\[|Record)"
+      ],
+      "allowlist": [
+        "src/config/department-codes.ts"
+      ]
+    },
     "construction-templates": {
       "ssotFile": "src/config/construction-templates.ts",
       "description": "Construction phases/tasks must use centralized templates — no inline phase definitions",
