@@ -8,3 +8,4 @@ export { usePurchaseOrders, type POFilters } from './usePurchaseOrders';
 export { usePurchaseOrderForm, type POFormState } from './usePurchaseOrderForm';
 export { useSupplierMetrics, useSupplierComparison } from './useSupplierMetrics';
 export { usePOSupplierContacts } from './usePOSupplierContacts';
+export { useProcurementDashboard, type ProcurementDashboardStats, type CategorySpend, type MonthlyPoint } from './useProcurementDashboard';

@@ -391,6 +391,17 @@
       "phase": "Phase 6",
       "totalPos": "Total POs",
       "totalSpend": "Total Spend"
+    },
+    "dashboard": {
+      "title": "Company Overview",
+      "totalPOs": "Total Orders",
+      "committed": "Committed",
+      "delivered": "Delivered",
+      "activeSuppliers": "Active Suppliers",
+      "spendByCategory": "Spend by ATOE Category",
+      "monthlyTrend": "Monthly Trend (6 months)",
+      "noPOs": "No purchase orders yet",
+      "noCategoryData": "No category data"
     }
   }
 }
