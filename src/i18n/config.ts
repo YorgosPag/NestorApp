@@ -103,6 +103,7 @@ if (typeof window !== 'undefined') {
       'building-filters',   // 🏢 Split from building (ADR-280)
       'building-timeline',  // 🏢 Split from building (ADR-280)
       'building-tabs',      // 🏢 Split from building (ADR-280)
+      'buildingCode',       // 🏢 Building Code Module — ΝΟΚ Phase 2 (ADR-186)
       'projects',      // Projects module
       'projects-data',      // 🏢 Split from projects (ADR-280)
       'projects-ika',       // 🏢 Split from projects (ADR-280)

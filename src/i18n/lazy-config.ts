@@ -75,6 +75,7 @@ export const SUPPORTED_NAMESPACES = [
   'building-filters',       // 🏢 Building filters (split from building — ADR-280)
   'building-timeline',      // 🏢 Building timeline/analytics (split from building — ADR-280)
   'building-tabs',          // 🏢 Building tab content (split from building — ADR-280)
+  'buildingCode',           // 🏢 Building Code Module — ΝΟΚ Phase 2 (ADR-186)
   'common-sales',           // 🏢 Sales/e-commerce domain (split from common — ADR-280)
   'common-account',         // 🏢 User account/2FA (split from common — ADR-280)
   'common-photos',          // 🏢 Photo management (split from common — ADR-280)
@@ -196,6 +197,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'building-filters',
     'building-timeline',
     'building-tabs',
+    'buildingCode',
     'navigation',
     'navigation-entities',
     'projects',

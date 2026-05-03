@@ -30,6 +30,8 @@ export const PROJECT_TAB_LABELS = {
   OWNERSHIP_TABLE: 'tabs.labels.ownershipTable',
   LANDOWNERS: 'tabs.labels.landowners',
   PROCUREMENT: 'tabs.labels.procurement',
+  // ADR-186 §8b — Phase 2 ΝΟΚ Building Code form
+  BUILDING_CODE: 'tabs.labels.buildingCode',
 } as const;
 
 export const PROJECT_TAB_DESCRIPTIONS = {
@@ -51,6 +53,8 @@ export const PROJECT_TAB_DESCRIPTIONS = {
   OWNERSHIP_TABLE: 'tabs.descriptions.ownershipTable',
   LANDOWNERS: 'tabs.descriptions.landowners',
   PROCUREMENT: 'tabs.descriptions.procurement',
+  // ADR-186 §8b — Phase 2 ΝΟΚ Building Code form
+  BUILDING_CODE: 'tabs.descriptions.buildingCode',
 } as const;
 
 export const PROJECT_COMPONENT_LABELS = {

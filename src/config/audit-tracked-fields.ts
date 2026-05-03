@@ -155,6 +155,11 @@ const PROJECT_TRACKED_FIELDS_RAW: Record<string, string> = {
   // ── ADR-244: Landowners / bartex ──
   landowners: 'landowners',
   bartexPercentage: 'bartexPercentage',
+
+  // ── ADR-186 §8b: Building Code (ΝΟΚ Phase 2) ──
+  // Object-typed field; per-subkey changes surface as `buildingCode → JSON diff`.
+  // Sub-field expansion can be added later via a TrackedFieldDef collection definition.
+  buildingCode: 'buildingCode',
 };
 
 // ============================================================================

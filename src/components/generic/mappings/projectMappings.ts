@@ -48,6 +48,8 @@ import { OwnershipTableTab } from '@/components/projects/tabs/OwnershipTableTab'
 import { ProjectLandownersTab } from '@/components/projects/tabs/ProjectLandownersTab';
 // 🏢 ENTERPRISE: Procurement RFQ tab (ADR-327)
 import { ProcurementProjectTab } from '@/components/projects/tabs/ProcurementProjectTab';
+// 🏢 ADR-186 §8b: Phase 2 ΝΟΚ Building Code CRUD form
+import { BuildingCodeTab } from '@/components/projects/building-code/BuildingCodeTab';
 
 // ============================================================================
 // PROJECT COMPONENT MAPPING
@@ -87,6 +89,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'ProjectLandownersTab': ProjectLandownersTab,
   // 🏢 ENTERPRISE: Procurement RFQ tab (ADR-327)
   'ProcurementProjectTab': ProcurementProjectTab,
+  // 🏢 ADR-186 §8b: Phase 2 ΝΟΚ Building Code form (parallel to legacy BuildingDataTab)
+  'BuildingCodeTab': BuildingCodeTab,
 } as const;
 
 // ============================================================================

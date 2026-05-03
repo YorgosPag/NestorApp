@@ -22,6 +22,8 @@ import { ProjectTimelineTab } from '../../projects/ProjectTimelineTab';
 import { ProjectCustomersTab } from '../../projects/customers-tab';
 import { ProjectStructureTab } from '../../projects/tabs/ProjectStructureTab';
 import { FloorplanViewerTab } from '../../projects/tabs/FloorplanViewerTab';
+// 🏢 ADR-186 §8b: Phase 2 ΝΟΚ Building Code CRUD form
+import { BuildingCodeTab } from '../../projects/building-code/BuildingCodeTab';
 
 export const PROJECT_COMPONENT_MAPPING = {
   'GeneralProjectTab': GeneralProjectTab,
@@ -37,6 +39,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'ProjectCustomersTab': ProjectCustomersTab,
   'ProjectStructureTab': ProjectStructureTab,
   'FloorplanViewerTab': FloorplanViewerTab,
+  // 🏢 ADR-186 §8b: Phase 2 ΝΟΚ Building Code form
+  'BuildingCodeTab': BuildingCodeTab,
 } as const;
 
 // ============================================================================

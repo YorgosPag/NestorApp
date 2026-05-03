@@ -66,6 +66,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'building-filters': return () => import('./locales/el/building-filters.json');
     case 'building-timeline': return () => import('./locales/el/building-timeline.json');
     case 'building-tabs': return () => import('./locales/el/building-tabs.json');
+    case 'buildingCode': return () => import('./locales/el/buildingCode.json');
     case 'communications': return () => import('./locales/el/communications.json');
     case 'contacts': return () => import('./locales/el/contacts.json');
     case 'contacts-core': return () => import('./locales/el/contacts-core.json');
@@ -159,6 +160,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'building-filters': return () => import('./locales/en/building-filters.json');
     case 'building-timeline': return () => import('./locales/en/building-timeline.json');
     case 'building-tabs': return () => import('./locales/en/building-tabs.json');
+    case 'buildingCode': return () => import('./locales/en/buildingCode.json');
     case 'communications': return () => import('./locales/en/communications.json');
     case 'contacts': return () => import('./locales/en/contacts.json');
     case 'contacts-core': return () => import('./locales/en/contacts-core.json');

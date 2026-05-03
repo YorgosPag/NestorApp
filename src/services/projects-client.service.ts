@@ -17,6 +17,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Project, ProjectStatus } from '@/types/project';
 import type { LandownerEntry } from '@/types/ownership-table';
 import type { ProjectAddress } from '@/types/project/addresses';
+import type { ProjectBuildingCodePhase2 } from '@/types/project-building-code';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
@@ -125,6 +126,8 @@ export interface ProjectUpdatePayload {
   bartexPercentage?: number | null;
   /** ADR-244: Denormalized contact IDs for queries */
   landownerContactIds?: string[] | null;
+  /** ADR-186 §8b: Phase 2 ΝΟΚ building-code form data */
+  buildingCode?: ProjectBuildingCodePhase2 | null;
 }
 
 /**

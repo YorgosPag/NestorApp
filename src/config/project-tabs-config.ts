@@ -344,6 +344,21 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     },
   },
 
+  // -------------------------------------------------------------------------
+  // 17. ΌΡΟΙ ΔΟΜΗΣΗΣ ΝΟΚ (ADR-186 §8b) — Phase 2 CRUD form, runs alongside
+  //     legacy `building-data` tab. Hide of legacy tab = future ticket (Phase 3.5).
+  // -------------------------------------------------------------------------
+  {
+    id: 'building-code',
+    label: PROJECT_TAB_LABELS.BUILDING_CODE,
+    value: 'building-code',
+    icon: 'scale',
+    description: PROJECT_TAB_DESCRIPTIONS.BUILDING_CODE,
+    order: 16.5,
+    enabled: true,
+    component: 'BuildingCodeTab',
+  },
+
   {
     id: 'building-data',
     label: PROJECT_TAB_LABELS.BUILDING_DATA,

@@ -1,0 +1,101 @@
+{
+  "tab": {
+    "label": "Building Code (ΝΟΚ)",
+    "description": "Building coefficient, coverage, height and ΝΟΚ zone per project"
+  },
+  "form": {
+    "title": "Building Code (ΝΟΚ)",
+    "subtitle": "Plot data and allowed building parameters",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "savedAt": "Last saved: {date}",
+    "empty": "No building code defined yet. Fill in the form to get started."
+  },
+  "plotType": {
+    "label": "Plot type",
+    "placeholder": "Select type",
+    "options": {
+      "mesaio": "Middle (1 frontage)",
+      "goniako": "Corner (2 frontages)",
+      "disgoniaio": "Π-shape (3 frontages)",
+      "fourSided": "Island block (4 frontages)",
+      "diamperes": "Through (2 opposite frontages)",
+      "custom": "Custom"
+    }
+  },
+  "frontagesCount": {
+    "label": "Frontages count",
+    "increment": "Add frontage",
+    "decrement": "Remove frontage",
+    "value": "{count}"
+  },
+  "zone": {
+    "label": "ΝΟΚ Zone",
+    "placeholder": "Select zone (optional)",
+    "none": "— (No zone)",
+    "displayName": "{id} — {name}"
+  },
+  "sd": {
+    "label": "Building Coefficient (ΣΔ)",
+    "hint": "Ratio of max buildable area to plot area"
+  },
+  "coverage": {
+    "label": "Coverage (%)",
+    "hint": "Maximum plot coverage percentage"
+  },
+  "maxHeight": {
+    "label": "Max height (m)",
+    "hint": "Maximum allowed building height in meters"
+  },
+  "provenance": {
+    "fromZone": "From zone {zoneId}",
+    "userOverride": "User override",
+    "default": "Default",
+    "fromZoneShort": "Zone",
+    "userShort": "User"
+  },
+  "reset": {
+    "tooltip": "Reset to zone value",
+    "aria": "Reset {field} to zone value"
+  },
+  "validation": {
+    "sd": {
+      "hardMin": "ΣΔ must be greater than or equal to zero",
+      "hardMax": "ΣΔ cannot exceed 10",
+      "softMax": "Unusually high ΣΔ — typically between 0.4 and 5",
+      "softMin": "Unusually low ΣΔ — typically between 0.4 and 5"
+    },
+    "coverage": {
+      "hardMin": "Coverage must be greater than or equal to zero",
+      "hardMax": "Coverage cannot exceed 100%",
+      "softMax": "Unusually high coverage — typically up to 85%",
+      "softMin": "Unusually low coverage"
+    },
+    "maxHeight": {
+      "hardMin": "Height must be greater than or equal to zero",
+      "hardMax": "Height cannot exceed 100 meters",
+      "softMax": "Unusually tall building — typically up to 30 meters",
+      "softMin": "Unusually low height"
+    },
+    "frontages": {
+      "hard": "Frontages count must be between 1 and 4",
+      "mismatch": "Frontages count does not match the selected plot type"
+    },
+    "summary": {
+      "errors": "{count} error|{count} errors",
+      "warnings": "{count} warning|{count} warnings",
+      "blocked": "Fix errors to enable save"
+    }
+  },
+  "audit": {
+    "changeReason": "Building code update",
+    "softWarningNote": "Saved with warning: {threshold}"
+  },
+  "toast": {
+    "saveSuccess": "Building code saved",
+    "saveError": "Failed to save building code",
+    "loadError": "Failed to load building code"
+  }
+}

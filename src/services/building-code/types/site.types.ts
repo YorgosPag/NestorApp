@@ -16,9 +16,25 @@ export type TerrainSlope = 'flat' | 'mild' | 'steep'; // <10% / 10-20% / >20%
 /**
  * Plot type per ν.4067/2012.
  * Affects Δ/δ rules, αρτιότητα, and ιδεατό στερεό per frontage.
- * mesaio = 1 frontage | goniako = 2 frontages at intersection | diamperes = 2 on different roads
+ *
+ * mesaio      = 1 frontage  (Μεσαίο — δρόμος μόνο μπροστά)
+ * goniako     = 2 frontages at intersection (Γωνιακό)
+ * diamperes   = 2 frontages on opposite roads (Διαμπερές)
+ * disgoniaio  = 3 frontages (Δισγωνιαίο — Π-shape)
+ * four_sided  = 4 frontages (Τεσσάρων πλευρών — νησιωτικό block)
+ * custom      = irregular geometry, frontage count user-defined
+ *
+ * ADR-186 §8 Q4 (Phase 2 kickoff 2026-05-03): extended from 3 → 6 types.
+ * Engines (setback-calculator) only positive-check 'mesaio' / 'diamperes';
+ * the 3 new types fall through to the generic multi-frontage logic — safe.
  */
-export type PlotType = 'mesaio' | 'goniako' | 'diamperes';
+export type PlotType =
+  | 'mesaio'
+  | 'goniako'
+  | 'disgoniaio'
+  | 'four_sided'
+  | 'diamperes'
+  | 'custom';
 
 /**
  * Expropriation (ρυμοτομία) — portion consumed by public road plan.

@@ -1,6 +1,8 @@
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { ProjectAddress } from './project/addresses';
 import type { LandownerEntry } from '@/types/ownership-table';
+// 🏢 ADR-186 §8b: Project-level ΝΟΚ building-code (Phase 2 CRUD form)
+import type { ProjectBuildingCodePhase2 } from '@/types/project-building-code';
 // ADR-287 — SSoT imports (χρειάζονται locally για use στο Project interface,
 // επιπρόσθετα των κάτωθι `export type {X}` re-exports για backward-compat).
 import type { ProjectStatus } from '@/constants/project-statuses';
@@ -111,6 +113,9 @@ export interface Project extends SoftDeletableFields {
   bartexPercentage?: number | null;
   /** ADR-244: Denormalized contact IDs for Firestore array-contains queries */
   landownerContactIds?: string[] | null;
+
+  /** ADR-186 §8b: Phase 2 ΝΟΚ building-code form data — null = not yet defined */
+  buildingCode?: ProjectBuildingCodePhase2 | null;
 
 }
 

@@ -53,7 +53,8 @@
       "ownershipTable": "Ownership Table",
       "landowners": "Landowners",
       "locations": "Addresses",
-      "procurement": "Procurement"
+      "procurement": "Procurement",
+      "buildingCode": "Building Code"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",
@@ -76,7 +77,8 @@
       "ownershipTable": "Ownership percentage table (millesimal shares) for each property",
       "landowners": "Manage landowners and bartex percentage",
       "locations": "Manage project addresses",
-      "procurement": "RFQ requests and quote evaluation for the project"
+      "procurement": "RFQ requests and quote evaluation for the project",
+      "buildingCode": "Building coefficient, coverage, height and ΝΟΚ zone per project"
     },
     "floors": {
       "title": "Building Floors",

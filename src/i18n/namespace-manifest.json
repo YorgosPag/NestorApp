@@ -256,6 +256,23 @@
       "targetNamespaces": []
     },
     {
+      "namespace": "buildingCode",
+      "owner": "building-code-domain",
+      "primarySurface": "project-building-code-tab",
+      "stringClasses": [
+        "ui-chrome",
+        "forms",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 400,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
       "namespace": "building-timeline",
       "owner": "building-domain",
       "primarySurface": "building-timeline-analytics",
