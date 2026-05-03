@@ -58,7 +58,7 @@ export default function NewRfqPage() {
       <RfqBuilder
         initialState={initialState}
         onSuccess={(id) => router.push(`/procurement/rfqs/${id}`)}
-        onCancel={() => router.push('/procurement/rfqs')}
+        onCancel={() => router.push('/procurement')}
       />
     </main>
   );

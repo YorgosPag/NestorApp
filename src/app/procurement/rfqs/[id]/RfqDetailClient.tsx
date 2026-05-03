@@ -62,7 +62,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
   // Belt-and-suspenders: SC page.tsx has redirect() but Turbopack dev mode may skip it.
   useEffect(() => {
     if (id.startsWith('[')) {
-      router.replace('/procurement/rfqs');
+      router.replace('/procurement');
     }
   }, [id, router]);
   const { quotes, loading, refetch } = useQuotes({ rfqId: id }, { includeSuperseded: true });
@@ -190,7 +190,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     rfq,
     t,
     onChanged: refetchAll,
-    onArchived: () => router.push('/procurement/rfqs'),
+    onArchived: () => router.push('/procurement'),
   });
 
   const lifecycleActions: RfqHeaderAction[] = useMemo(

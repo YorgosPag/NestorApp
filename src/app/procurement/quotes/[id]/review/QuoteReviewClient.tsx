@@ -37,7 +37,7 @@ export function QuoteReviewClient({ id }: QuoteReviewClientProps) {
     if (quote?.rfqId && !quote.rfqId.startsWith('[')) {
       router.push(`/procurement/rfqs/${quote.rfqId}`);
     } else {
-      router.push('/procurement/quotes');
+      router.push('/procurement');
     }
   }, [quote?.rfqId, router]);
 

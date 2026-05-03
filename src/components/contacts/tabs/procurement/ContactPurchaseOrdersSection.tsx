@@ -15,6 +15,7 @@ import { ArrowRight } from 'lucide-react';
 import { cn, getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
+import { getPoDetailUrl } from '@/lib/navigation/procurement-urls';
 import { PO_STATUS_META } from '@/types/procurement';
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
 
@@ -54,7 +55,10 @@ export function ContactPurchaseOrdersSection({
   const router = useRouter();
 
   const visible = purchaseOrders.filter((po) => !po.isDeleted);
-  const handleView = (poId: string) => router.push(`/procurement/${poId}`);
+  const handleView = (poId: string) => {
+    const po = purchaseOrders.find((p) => p.id === poId);
+    if (po) router.push(getPoDetailUrl(po.projectId, po.id));
+  };
 
   return (
     <Card>

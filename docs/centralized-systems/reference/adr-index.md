@@ -348,7 +348,7 @@
 | **ADR-144** | Icon Click Sequence Colors Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-144-icon-click-sequence-colors-centralization.md) |
 | **ADR-328** | Tabs SSoT Consolidation (BaseTabs/StateTabs/RouteTabs) | ✅ APPROVED | [View](./adrs/ADR-328-tabs-ssot-consolidation.md) |
 | **ADR-329** | Measurement Task Scope — Property-Granular Selection (extends ADR-175 §4.4.3) | ✅ ACCEPTED | [View](./adrs/ADR-329-measurement-task-scope-granularity.md) |
-| **ADR-330** | Procurement Hub Scoped Split (Company-wide Hub + Project-scoped Tab, SAP-style hybrid) | 📋 PROPOSED | [View](./adrs/ADR-330-procurement-hub-scoped-split.md) |
+| **ADR-330** | Procurement Hub Scoped Split (Company-wide Hub + Project-scoped Tab, SAP-style hybrid) | ✅ IMPLEMENTED | [View](./adrs/ADR-330-procurement-hub-scoped-split.md) |
 | **ADR-337** | BOQ Categories Level 2 Hierarchy (12 × 5–7 curated sub-categories, extends ADR-175) | 📋 PROPOSED | [View](../../../adrs/ADR-337-boq-categories-level2-hierarchy.md) |
 
 ---

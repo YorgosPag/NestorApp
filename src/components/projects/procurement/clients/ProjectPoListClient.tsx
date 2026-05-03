@@ -38,7 +38,7 @@ export function ProjectPoListClient({ projectId }: ProjectPoListClientProps) {
   };
 
   const handleDuplicate = (poId: string) => {
-    router.push(`/procurement/${poId}?duplicate=1`);
+    router.push(`${getPoDetailUrl(projectId, poId)}?duplicate=1`);
   };
 
   return (

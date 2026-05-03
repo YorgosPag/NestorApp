@@ -239,7 +239,12 @@
   },
   "nav": {
     "purchaseOrders": "Purchase Orders",
-    "quotes": "Quotes"
+    "quotes": "Quotes",
+    "hub": "Procurement Hub",
+    "vendors": "Vendors",
+    "materials": "Materials",
+    "agreements": "Agreements",
+    "analytics": "Analytics"
   },
   "header": {
     "title": "Procurement",
@@ -289,6 +294,36 @@
         "noBoq": "No BOQ items for this project"
       },
       "error": "Failed to load overview data"
+    }
+  },
+  "hub": {
+    "pageLabel": "Procurement Hub",
+    "vendorMaster": {
+      "title": "Vendor Master",
+      "description": "Supplier directory with performance metrics and trade categorization",
+      "comingSoon": "Phase 3 — Coming Soon",
+      "phase": "Phase 3",
+      "supplierCount": "{count} suppliers"
+    },
+    "materialCatalog": {
+      "title": "Material Catalog",
+      "description": "Unified catalog with ATOE codes, price history and preferred suppliers",
+      "comingSoon": "Phase 4 — Coming Soon",
+      "phase": "Phase 4"
+    },
+    "frameworkAgreements": {
+      "title": "Framework Agreements",
+      "description": "Multi-project contracts with auto-applied volume discounts",
+      "comingSoon": "Phase 5 — Coming Soon",
+      "phase": "Phase 5"
+    },
+    "spendAnalytics": {
+      "title": "Cross-project Analytics",
+      "description": "Company-wide spend analysis by vendor, trade and project",
+      "comingSoon": "Phase 6 — Coming Soon",
+      "phase": "Phase 6",
+      "totalPos": "Total POs",
+      "totalSpend": "Total Spend"
     }
   }
 }
