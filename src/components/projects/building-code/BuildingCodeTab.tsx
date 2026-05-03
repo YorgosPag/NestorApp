@@ -79,7 +79,7 @@ export function BuildingCodeTab({ project, data }: BuildingCodeTabProps) {
         </div>
       </div>
 
-      <BuildingCodeForm hook={hook} isEditing={isEditing} />
+      <BuildingCodeForm hook={hook} isEditing={isEditing} project={projectData} />
     </section>
   );
 }
