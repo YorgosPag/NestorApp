@@ -124,6 +124,10 @@
     "emptyTitle": "Select a purchase order",
     "emptyDescription": "Click a purchase order to view its details"
   },
+  "emptyState": {
+    "title": "Create Purchase Order",
+    "description": "Select a purchase order from the list or create a new one."
+  },
   "email": {
     "sendButton": "Send via Email",
     "subject": "Purchase Order {poNumber}",

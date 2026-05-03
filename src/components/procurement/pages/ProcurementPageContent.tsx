@@ -18,8 +18,9 @@ import {
   AdvancedFiltersPanel,
   procurementFiltersConfig,
 } from '@/components/core/AdvancedFilters';
-import { PageContainer, ListContainer } from '@/core/containers';
+import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
 import { PageLoadingState } from '@/core/states';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { ProcurementHeader } from '@/components/procurement/page/ProcurementHeader';
 import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
@@ -160,40 +161,42 @@ export function ProcurementPageContent() {
             onEditPO={() => selectedPO && setEditMode(true)}
           />
 
-          {/* Dettaglio / Form / Empty state */}
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
-            {editMode ? (
+          {/* Dettaglio / Form / Empty state — SSoT via DetailsContainer */}
+          {(editMode || selectedPO) ? (
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
               <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
-                <PurchaseOrderForm
-                  existingPO={selectedPO ?? undefined}
-                  onSuccess={handleFormSuccess}
-                  onCancel={handleCancelEdit}
-                />
+                {editMode ? (
+                  <PurchaseOrderForm
+                    existingPO={selectedPO ?? undefined}
+                    onSuccess={handleFormSuccess}
+                    onCancel={handleCancelEdit}
+                  />
+                ) : (
+                  <PurchaseOrderDetail
+                    po={selectedPO!}
+                    onApprove={() => handleAction('approve')}
+                    onMarkOrdered={() => handleAction('order')}
+                    onRecordDelivery={() => {/* TODO: delivery dialog */}}
+                    onClose={() => handleAction('close')}
+                    onCancel={() => handleAction('cancel', { reason: 'other' })}
+                    onEdit={() => setEditMode(true)}
+                    onDuplicate={() => handleDuplicate(selectedPO!.id)}
+                    onCreateNew={handleCreateNew}
+                  />
+                )}
               </div>
-            ) : selectedPO ? (
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
-                <PurchaseOrderDetail
-                  po={selectedPO}
-                  onApprove={() => handleAction('approve')}
-                  onMarkOrdered={() => handleAction('order')}
-                  onRecordDelivery={() => {/* TODO: delivery dialog */}}
-                  onClose={() => handleAction('close')}
-                  onCancel={() => handleAction('cancel', { reason: 'other' })}
-                  onEdit={() => setEditMode(true)}
-                  onDuplicate={() => handleDuplicate(selectedPO.id)}
-                  onCreateNew={handleCreateNew}
-                />
-              </div>
-            ) : (
-
-              <EmptyDetailState
-                onCreateNew={handleCreateNew}
-                label={t('detail.emptyTitle')}
-                description={t('detail.emptyDescription')}
-                createLabel={t('list.createPO')}
-              />
-            )}
-          </div>
+            </div>
+          ) : (
+            <DetailsContainer
+              selectedItem={null}
+              onCreateAction={handleCreateNew}
+              emptyStateProps={{
+                icon: NAVIGATION_ENTITIES.procurement.icon,
+                title: t('emptyState.title'),
+                description: t('emptyState.description'),
+              }}
+            />
+          )}
         </section>
 
         {/* Mobile: solo lista */}
@@ -251,37 +254,3 @@ export function ProcurementPageContent() {
 }
 
 export default ProcurementPageContent;
-
-// =============================================================================
-// EMPTY STATE (pannello destro quando nessun PO selezionato)
-// =============================================================================
-
-function EmptyDetailState({
-  onCreateNew,
-  label,
-  description,
-  createLabel,
-}: {
-  onCreateNew: () => void;
-  label: string;
-  description: string;
-  createLabel: string;
-}) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-        <Package className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <div className="space-y-1">
-        <p className="font-semibold text-foreground">{label}</p>
-        <p className="text-sm text-muted-foreground max-w-xs">{description}</p>
-      </div>
-      <button
-        onClick={onCreateNew}
-        className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
-        {createLabel}
-      </button>
-    </div>
-  );
-}

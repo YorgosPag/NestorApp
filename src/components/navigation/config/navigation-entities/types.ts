@@ -8,6 +8,8 @@ export type NavigationEntityType =
   | 'floor'
   | 'parking'
   | 'storage'
+  | 'procurement'
+  | 'quote'
   | 'location'
   | 'area'
   | 'price'

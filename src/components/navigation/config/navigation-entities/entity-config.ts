@@ -71,6 +71,20 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
     pluralLabel: 'navigation.entities.storage.plural',
     description: 'navigation.entities.storage.description',
   },
+  procurement: {
+    icon: Package,
+    color: 'text-blue-600',
+    label: 'navigation.entities.procurement.label',
+    pluralLabel: 'navigation.entities.procurement.plural',
+    description: 'navigation.entities.procurement.description',
+  },
+  quote: {
+    icon: FileText,
+    color: 'text-amber-600',
+    label: 'navigation.entities.quote.label',
+    pluralLabel: 'navigation.entities.quote.plural',
+    description: 'navigation.entities.quote.description',
+  },
   location: {
     icon: MapPin,
     color: 'text-red-600',

@@ -287,6 +287,10 @@
       "archivedTooltip": "Archived quotes"
     }
   },
+  "emptyState": {
+    "title": "Create Quote",
+    "description": "Select a quote from the list or create a new one."
+  },
   "detail": {
     "emptyTitle": "No quote selected",
     "emptyDescription": "Select a quote from the list to view details.",

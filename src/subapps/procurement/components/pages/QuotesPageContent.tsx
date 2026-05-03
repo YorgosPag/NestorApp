@@ -22,8 +22,9 @@ import {
   AdvancedFiltersPanel,
   quotesFiltersConfig,
 } from '@/components/core/AdvancedFilters';
-import { PageContainer, ListContainer } from '@/core/containers';
+import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
 import { PageLoadingState } from '@/core/states';
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { QuotesHeader } from '@/subapps/procurement/components/QuotesHeader';
@@ -180,26 +181,29 @@ export function QuotesPageContent() {
             onEditQuote={handleEditQuote}
           />
 
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
-            {selectedQuote ? (
-              <>
-                <QuoteDetailsHeader
-                  quote={selectedQuote}
-                  onCreateNew={handleScanNew}
-                  onEdit={() => handleEditQuote(selectedQuote.id)}
-                  onArchive={() => archiveWithUndo(selectedQuote.id)}
-                />
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                  <QuoteDetailSummary quote={selectedQuote} />
-                </div>
-              </>
-            ) : (
-              <EmptyDetailState
-                label={t('detail.emptyTitle')}
-                description={t('detail.emptyDescription')}
+          {selectedQuote ? (
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
+              <QuoteDetailsHeader
+                quote={selectedQuote}
+                onCreateNew={handleScanNew}
+                onEdit={() => handleEditQuote(selectedQuote.id)}
+                onArchive={() => archiveWithUndo(selectedQuote.id)}
               />
-            )}
-          </div>
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <QuoteDetailSummary quote={selectedQuote} />
+              </div>
+            </div>
+          ) : (
+            <DetailsContainer
+              selectedItem={null}
+              onCreateAction={handleScanNew}
+              emptyStateProps={{
+                icon: NAVIGATION_ENTITIES.quote.icon,
+                title: t('emptyState.title'),
+                description: t('emptyState.description'),
+              }}
+            />
+          )}
         </section>
 
         {/* Mobile: solo lista */}
@@ -259,30 +263,6 @@ export function QuotesPageContent() {
 }
 
 export default QuotesPageContent;
-
-// =============================================================================
-// EMPTY STATE
-// =============================================================================
-
-function EmptyDetailState({
-  label,
-  description,
-}: {
-  label: string;
-  description: string;
-}) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-        <FileText className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <div className="space-y-1">
-        <p className="font-semibold text-foreground">{label}</p>
-        <p className="text-sm text-muted-foreground max-w-xs">{description}</p>
-      </div>
-    </div>
-  );
-}
 
 // =============================================================================
 // ARCHIVED PANEL — minimal restore-only list (auxiliary view)
