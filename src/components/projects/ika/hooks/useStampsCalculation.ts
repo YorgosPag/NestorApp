@@ -103,6 +103,8 @@ export function useStampsCalculation(
         totalContribution: 0,
         workerSummaries: [],
         recordsWithIssues: 0,
+        missingClassCount: 0,
+        noDaysCount: 0,
       };
     }
 
@@ -114,6 +116,8 @@ export function useStampsCalculation(
     let totalEmployeeContrib = 0;
     let totalContrib = 0;
     let issueCount = 0;
+    let missingClassCount = 0;
+    let noDaysCount = 0;
 
     const workerSummaries: WorkerStampsSummary[] = workers.map((worker) => {
       const daysWorked = attendanceDaysMap.get(worker.contactId) ?? 0;
@@ -135,10 +139,12 @@ export function useStampsCalculation(
         hasIssues = true;
         issueDescription = 'missing_class';
         issueCount++;
+        missingClassCount++;
       } else if (daysWorked === 0) {
         hasIssues = true;
         issueDescription = 'no_days';
         issueCount++;
+        noDaysCount++;
       } else if (imputedWage !== null) {
         employerContribution = roundCurrency(stampsCount * imputedWage * (employerRate / 100));
         employeeContribution = roundCurrency(stampsCount * imputedWage * (employeeRate / 100));
@@ -177,6 +183,8 @@ export function useStampsCalculation(
       totalContribution: roundCurrency(totalContrib),
       workerSummaries,
       recordsWithIssues: issueCount,
+      missingClassCount,
+      noDaysCount,
     };
   }, [projectId, month, year, workers, attendanceDaysMap, config]);
 

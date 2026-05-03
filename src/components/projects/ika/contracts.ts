@@ -300,6 +300,10 @@ export interface StampsMonthSummary {
   workerSummaries: WorkerStampsSummary[];
   /** Count of records with issues (missing class, missing days) */
   recordsWithIssues: number;
+  /** Workers with no insurance class assigned */
+  missingClassCount: number;
+  /** Workers with insurance class but 0 days worked this month */
+  noDaysCount: number;
 }
 
 // ============================================================================

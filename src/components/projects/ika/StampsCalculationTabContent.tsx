@@ -274,13 +274,23 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
       {/* Content */}
       {!isLoading && workers.length > 0 && (
         <>
-          {/* Issues warning */}
-          {summary.recordsWithIssues > 0 && (
+          {/* Issues warning — separate messages per issue type */}
+          {summary.missingClassCount > 0 && (
             <Card className={borderTokens.quick.warning}>
               <CardContent className={cn('flex items-center', spacing.padding.md)}>
                 <AlertTriangle className={cn(iconSizes.md, colors.text.warning, spacing.margin.right.sm)} />
                 <p className={cn(typography.body.sm, colors.text.warning)}>
-                  {summary.recordsWithIssues} {t('ika.stampsTab.issues.missingClass')}
+                  {summary.missingClassCount} {t('ika.stampsTab.issues.missingClass')}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+          {summary.noDaysCount > 0 && (
+            <Card className={borderTokens.quick.warning}>
+              <CardContent className={cn('flex items-center', spacing.padding.md)}>
+                <AlertTriangle className={cn(iconSizes.md, colors.text.warning, spacing.margin.right.sm)} />
+                <p className={cn(typography.body.sm, colors.text.warning)}>
+                  {summary.noDaysCount} {t('ika.stampsTab.issues.noDays')}
                 </p>
               </CardContent>
             </Card>
