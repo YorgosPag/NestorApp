@@ -309,6 +309,9 @@ export const COLLECTIONS = {
   // ADR-327 §17 Q28-Q31 Multi-Vendor extension (2026-04-29)
   SOURCING_EVENTS: process.env.NEXT_PUBLIC_SOURCING_EVENTS_COLLECTION || 'sourcing_events',
   RFQ_LINES_SUB: 'lines',
+
+  // 📦 MATERIAL CATALOG (ADR-330 Phase 4)
+  MATERIALS: process.env.NEXT_PUBLIC_MATERIALS_COLLECTION || 'materials',
 } as const;
 
 // ============================================================================

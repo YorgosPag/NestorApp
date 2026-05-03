@@ -182,6 +182,9 @@ export const generateVendorLogoFileId = (quoteId: string) =>
 export const generateSourcingEventId = () => enterpriseIdService.generateSourcingEventId();
 export const generateRfqLineId = () => enterpriseIdService.generateRfqLineId();
 
+// Material Catalog (ADR-330 Phase 4)
+export const generateMaterialId = () => enterpriseIdService.generateMaterialId();
+
 // Reports & Cash Flow (ADR-268)
 export const generateSavedReportId = () => enterpriseIdService.generateSavedReportId();
 export const generateRecurringPaymentId = () => enterpriseIdService.generateRecurringPaymentId();

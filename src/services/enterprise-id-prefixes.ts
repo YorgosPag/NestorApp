@@ -189,6 +189,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   SOURCING_EVENT: 'srcev',    // §17 Q31: parent collection multi-trade RFQ package (HYBRID A-Enhanced)
   RFQ_LINE: 'rfqln',          // §17 Q29: sub-collection rfqs/{rfqId}/lines/{lineId} (HYBRID Γ BOQ-first)
 
+  // Material Catalog (ADR-330 Phase 4)
+  MATERIAL: 'mat',            // company-wide material master with ATOE FK + preferred suppliers
+
   // Reports (ADR-268 Phase 7)
   SAVED_REPORT: 'srpt',
 

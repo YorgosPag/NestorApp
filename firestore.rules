@@ -3396,6 +3396,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ADR-330 Phase 4 — Material Catalog
+    // Company-wide material master with ATOE FK + preferred suppliers.
+    // Tenant-scoped reads via companyId; all writes through Admin SDK in
+    // `material-service` (createMaterial/updateMaterial/softDeleteMaterial).
+    match /materials/{materialId} {
+      allow read: if isSuperAdminOnly()
+                  || (isAuthenticated()
+                      && resource.data.keys().hasAny(['companyId'])
+                      && belongsToCompany(resource.data.companyId));
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
     // Authentication helper
     function isAuthenticated() {
       return request.auth != null;

@@ -23,7 +23,8 @@ export type AuditEntityType =
   | 'parking'
   | 'storage'
   | 'purchase_order'
-  | 'quote';
+  | 'quote'
+  | 'material';
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =
