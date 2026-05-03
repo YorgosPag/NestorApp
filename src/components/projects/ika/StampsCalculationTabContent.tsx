@@ -28,6 +28,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { useProjectWorkers } from './hooks/useProjectWorkers';
 import { useAttendanceEvents } from './hooks/useAttendanceEvents';
 import { useLaborComplianceConfig } from './hooks/useLaborComplianceConfig';
@@ -64,6 +65,7 @@ function getMonthEnd(month: number, year: number): Date {
 export function StampsCalculationTabContent({ projectId }: StampsCalculationTabContentProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const { user } = useAuth();
+  const { success: notifySuccess, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();
@@ -186,7 +188,9 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
     setIsSaving(false);
 
     if (success) {
-      console.info('[StampsCalculation] Records saved successfully');
+      notifySuccess(t('ika.stampsTab.saved'));
+    } else {
+      notifyError(t('ika.stampsTab.saveError'));
     }
   }
 

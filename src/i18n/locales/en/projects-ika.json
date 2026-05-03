@@ -80,7 +80,11 @@
       "noResults": "No results found",
       "searchPlaceholder": "Search by name, specialty or AMKA...",
       "searchError": "Error during search",
-      "noName": "No Name"
+      "noName": "No Name",
+      "workerAdded": "Worker added to the project",
+      "workerRemoved": "Worker removed from the project",
+      "addError": "Error adding worker",
+      "removeError": "Error removing worker"
     },
     "efka": {
       "title": "Project Declaration — EFKA",
@@ -294,6 +298,7 @@
       "saveRecords": "Save Records",
       "saving": "Saving...",
       "saved": "Records saved successfully",
+      "saveError": "Failed to save records",
       "months": {
         "1": "January",
         "2": "February",
