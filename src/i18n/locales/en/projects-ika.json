@@ -299,6 +299,8 @@
       "saving": "Saving...",
       "saved": "Records saved successfully",
       "saveError": "Failed to save records",
+      "insuranceClassSaved": "Insurance class saved",
+      "insuranceClassSaveError": "Failed to save insurance class",
       "months": {
         "1": "January",
         "2": "February",

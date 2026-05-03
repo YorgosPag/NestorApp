@@ -88,6 +88,16 @@ export async function saveGeofenceConfigWithPolicy(
   return apiClient.post<GeofenceApiResponse>(API_ROUTES.ATTENDANCE.GEOFENCE, input);
 }
 
+export async function updateWorkerInsuranceClassWithPolicy(
+  contactId: string,
+  insuranceClassNumber: number,
+): Promise<{ success: boolean }> {
+  return apiClient.patch<{ success: boolean }>(
+    API_ROUTES.IKA.WORKER_INSURANCE_CLASS(contactId),
+    { insuranceClassNumber },
+  );
+}
+
 export async function generateAttendanceQrCodeWithPolicy(
   input: GenerateAttendanceQrCodeInput,
 ): Promise<GenerateAttendanceQrCodeResult> {

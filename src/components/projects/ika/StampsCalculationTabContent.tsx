@@ -41,6 +41,7 @@ import { EmploymentRecordDialog } from './components/EmploymentRecordDialog';
 import type { WorkerStampsSummary } from './contracts';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { updateWorkerInsuranceClassWithPolicy } from '@/services/ika/ika-mutation-gateway';
 import '@/lib/design-system';
 
 interface StampsCalculationTabContentProps {
@@ -83,7 +84,7 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
   const [isSaving, setIsSaving] = useState(false);
 
   // Hooks
-  const { workers, isLoading: workersLoading } = useProjectWorkers(projectId);
+  const { workers, isLoading: workersLoading, refetch: refetchWorkers } = useProjectWorkers(projectId);
   const { config, isLoading: configLoading } = useLaborComplianceConfig();
   const { records, saveRecords } = useEmploymentRecords(projectId, selectedMonth, selectedYear);
   const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
@@ -152,11 +153,16 @@ export function StampsCalculationTabContent({ projectId }: StampsCalculationTabC
 
   const handleSaveInsuranceClass = useCallback(
     (contactId: string, classNumber: number, _notes: string) => {
-      // Update the worker's insurance class in the contact_links
-      // For now, this will be persisted when records are saved
-      console.info(`[StampsCalculation] Set insurance class ${classNumber} for ${contactId}`);
+      updateWorkerInsuranceClassWithPolicy(contactId, classNumber)
+        .then(() => {
+          notifySuccess(t('ika.stampsTab.insuranceClassSaved'));
+          refetchWorkers();
+        })
+        .catch(() => {
+          notifyError(t('ika.stampsTab.insuranceClassSaveError'));
+        });
     },
-    []
+    [notifySuccess, notifyError, t, refetchWorkers],
   );
 
   async function handleSaveRecords() {
