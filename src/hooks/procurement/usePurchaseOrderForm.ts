@@ -61,10 +61,10 @@ function createEmptyItem(): POFormItem {
   return { ...EMPTY_ITEM, tempId: generateTempId() };
 }
 
-function getInitialState(po?: PurchaseOrder | null): POFormState {
+function getInitialState(po?: PurchaseOrder | null, initialProjectId?: string): POFormState {
   if (!po) {
     return {
-      projectId: '',
+      projectId: initialProjectId ?? '',
       buildingId: null,
       supplierId: '',
       items: [createEmptyItem()],
@@ -103,8 +103,8 @@ function getInitialState(po?: PurchaseOrder | null): POFormState {
 // HOOK
 // ============================================================================
 
-export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null) {
-  const [form, setForm] = useState<POFormState>(() => getInitialState(existingPO));
+export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialProjectId?: string) {
+  const [form, setForm] = useState<POFormState>(() => getInitialState(existingPO, initialProjectId));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 

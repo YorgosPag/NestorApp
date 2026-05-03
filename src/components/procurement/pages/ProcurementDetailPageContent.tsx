@@ -6,7 +6,7 @@
  * @lazy ADR-294 Batch 3 — Extracted for dynamic import
  */
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/design-system';
 import { useTypography } from '@/hooks/useTypography';
@@ -29,10 +29,12 @@ async function fetchPO(poId: string): Promise<PurchaseOrder | null> {
 export function ProcurementDetailPageContent() {
   const params = useParams<{ poId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const typography = useTypography();
   const { t } = useTranslation('procurement');
   const poId = params.poId;
   const isNew = poId === 'new';
+  const initialProjectId = isNew ? (searchParams.get('projectId') ?? undefined) : undefined;
   const [editMode, setEditMode] = useState(isNew);
 
   const { data: po, loading, refetch } = useAsyncData<PurchaseOrder | null>({
@@ -93,6 +95,7 @@ export function ProcurementDetailPageContent() {
       <main className="mx-auto max-w-4xl p-4 md:p-6">
         <PurchaseOrderForm
           existingPO={isNew ? undefined : po}
+          initialProjectId={initialProjectId}
           onSuccess={handleSuccess}
           onCancel={handleCancel}
         />

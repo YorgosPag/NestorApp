@@ -37,12 +37,14 @@ import { formatAddressLine } from '@/types/project/address-helpers';
 
 interface PurchaseOrderFormProps {
   existingPO?: PurchaseOrder | null;
+  initialProjectId?: string;
   onSuccess?: (id: string, poNumber: string) => void;
   onCancel?: () => void;
 }
 
 export function PurchaseOrderForm({
   existingPO,
+  initialProjectId,
   onSuccess,
   onCancel,
 }: PurchaseOrderFormProps) {
@@ -60,7 +62,7 @@ export function PurchaseOrderForm({
     submitting,
     submitError,
     submit,
-  } = usePurchaseOrderForm(existingPO);
+  } = usePurchaseOrderForm(existingPO, initialProjectId);
 
   const handleSubmit = async () => {
     const result = await submit(existingPO?.id);

@@ -161,7 +161,7 @@ export function MeasurementsTabContent({ building }: MeasurementsTabContentProps
       if (!proceed) return;
     }
     const ids = filteredItems.map((i) => i.id).join(',');
-    router.push(`/procurement/rfqs/new?boqItems=${encodeURIComponent(ids)}`);
+    router.push(`/procurement/rfqs/new?boqItems=${encodeURIComponent(ids)}&projectId=${encodeURIComponent(building.projectId)}`);
   }, [filteredItems, router, confirm, t]);
 
   // --- LOADING STATE ---

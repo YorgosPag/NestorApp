@@ -587,7 +587,13 @@
         "quote": "Quotes & Comparison",
         "po": "Purchase Orders",
         "backToProject": "Back to Project",
-        "overviewComingSoon": "Overview lands in the next session."
+        "overviewComingSoon": "Overview lands in the next session.",
+        "actions": {
+          "newRfq": "New Request for Quote",
+          "newQuote": "New Quote",
+          "newPo": "New Purchase Order",
+          "createFromBoq": "Create Request for Quote"
+        }
       }
     }
   }

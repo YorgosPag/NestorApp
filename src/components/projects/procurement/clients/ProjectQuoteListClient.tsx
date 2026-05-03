@@ -28,11 +28,16 @@ export function ProjectQuoteListClient({ projectId }: ProjectQuoteListClientProp
     router.push(getQuoteDetailUrl(projectId, quote.id, { review: true }));
   };
 
+  const handleCreate = () => {
+    router.push(`/procurement/quotes/scan?projectId=${projectId}`);
+  };
+
   return (
     <QuoteList
       quotes={quotes}
       loading={loading}
       onSelectQuote={handleSelectQuote}
+      onCreateNew={handleCreate}
     />
   );
 }

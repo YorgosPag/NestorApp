@@ -30,7 +30,7 @@ export function ProjectPoListClient({ projectId }: ProjectPoListClientProps) {
   }, [projectId, setProjectId]);
 
   const handleCreate = () => {
-    router.push(`/procurement?new=1&projectId=${projectId}`);
+    router.push(`/procurement/new?projectId=${projectId}`);
   };
 
   const handleView = (poId: string) => {
