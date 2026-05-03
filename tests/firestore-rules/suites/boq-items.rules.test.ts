@@ -54,6 +54,7 @@ describe('boq_items.rules — tenant_direct (fileTenantFullMatrix)', () => {
             title: 'New BoQ Item',
             unit: 'm2',
             status: 'draft',
+            scope: 'building',
             estimatedQuantity: 50,
             createdBy: uid,
             createdAt: new Date(),

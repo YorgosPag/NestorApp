@@ -79,7 +79,9 @@ jobs:
       # The coverage audit script parses coverage-manifest.ts via the TypeScript
       # compiler API. Install TypeScript without modifying the lockfile.
       - name: 📦 Install TypeScript (required by manifest parser)
-        run: npm install --no-save typescript --legacy-peer-deps --ignore-engines
+        run: npm install --no-save typescript --legacy-peer-deps
+        env:
+          npm_config_engine_strict: 'false'
 
       - name: 🔍 CHECK 3.16 — Coverage + rule shape (full scan)
         run: node scripts/check-firestore-rules-test-coverage.js --all --verbose

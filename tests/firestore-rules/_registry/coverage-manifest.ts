@@ -1083,6 +1083,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // Sub-collection rfqs/{id}/lines parses as 'rfqs' (already pending).
   // Full matrix lands in step (c) once services exist to drive seeding.
   'sourcing_events',        // Admin SDK writes only; read: auth + companyId
+  // — Material Catalog (ADR-330 Phase 2, 2026-05-03) —
+  'materials',              // lines 3403-3411 — tenant read + admin write
 ] as const;
 
 // ---------------------------------------------------------------------------
