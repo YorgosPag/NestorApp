@@ -578,5 +578,17 @@
   },
   "documents": {
     "selectProject": "Select a project to view documents."
+  },
+  "tabs": {
+    "subtabs": {
+      "procurement": {
+        "overview": "Overview",
+        "rfq": "Requests for Quote",
+        "quote": "Quotes & Comparison",
+        "po": "Purchase Orders",
+        "backToProject": "Back to Project",
+        "overviewComingSoon": "Overview lands in the next session."
+      }
+    }
   }
 }
