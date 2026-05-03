@@ -685,9 +685,48 @@ The Phase 1 engines are ported but **never called** by Phase 2 UI:
 - `runAllGates`, `deriveSiteValues`, `computeSetbackResult`, `applyBonuses` — none invoked from form/hook/components.
 - `BonusSelections` / `BonusResult` types untouched — bonuses out-of-scope per Q5.
 - No DXF/polygon coordinates, no Δ/δ setbacks, no αρτιότητα, no terrain, no adjacent buildings.
-- No sub-doc per frontage — `frontagesCount` is just a number; frontage details deferred to Phase 2.5.
+- Phase 2.5 (see below): per-frontage address linking implemented via `PlotFrontage[]` + `project.addresses` SSoT.
 
 Phase 3 will marshal `ProjectBuildingCodePhase2` → full `PlotSite` (with sane defaults for missing fields) before invoking the engines.
+
+### 10.7 Phase 2.5 — Per-Frontage Address Linking + UX Improvements (2026-05-04)
+
+**Q8 — View/Edit Toggle**
+
+Decision: Building Code form is **read-only by default**. Edit mode is activated via an inline ✏️ button rendered in `BuildingCodeTab` header (not in the global project header). Save returns to read-only. Cancel reverts draft to persisted state via `hook.reset()`.
+
+Rationale: ΣΔ/κάλυψη/ύψος are legally binding parameters. Accidental edit risk is high when fields are always enabled. Pattern: Procore, SAP — view mode default for legal data.
+
+Files: `BuildingCodeTab.tsx` (lifted `isEditing` state), `BuildingCodeForm.tsx` (`disabled={!isEditing || isSaving}` on fieldsets).
+
+**Q9 — Reset Button Conditional Rendering**
+
+Decision: `ResetToDefaultButton` renders **only when `isEditing && isFieldResettable(field)`** — i.e., only when in edit mode AND field has a user override AND a zone is selected. Uses Radix `<Tooltip>` (CHECK 3.23 compliant — no native `title=`). Shows zone ID in tooltip text.
+
+Files: `ResetToDefaultButton.tsx` (Radix Tooltip, no `enabled` prop — conditional moved to `BuildingCodeForm`).
+
+**Phase 2.5 — Per-Frontage Address SSoT**
+
+Decision: Each πρόσωπο οικοπέδου can be linked to a `ProjectAddress` with `type='frontage'`. Addresses live in `project.addresses[]` (ADR-167 SSoT). No address data is duplicated in `buildingCode`.
+
+New type `PlotFrontage`:
+```typescript
+interface PlotFrontage {
+  index: number;           // 1-based
+  label?: string;
+  addressId?: string;      // FK → project.addresses[].id
+  isPrimaryFrontage?: boolean;
+}
+```
+
+`ProjectBuildingCodePhase2` extended with `frontages?: readonly PlotFrontage[]`. Backward compat: legacy records with `frontages: undefined` are lazily initialised from `frontagesCount` on hook load.
+
+`ProjectAddressType` extended with `'frontage'`. `isUniqueAddressType('frontage') === false` (multiple per project allowed — one per index).
+
+UI: `FrontagesList` → `FrontageAddressSelector` (dropdown from `project.addresses`) + `FrontageAddressCreateDialog` (Dialog with minimal form: street/number/city/postalCode). Creating from dialog writes to `project.addresses[]` via `updateProjectWithPolicy`. Tab Διευθύνσεις reflects new address automatically via real-time listener.
+
+Files added: `FrontagesList.tsx`, `FrontageAddressSelector.tsx`, `FrontageAddressCreateDialog.tsx`.
+Files modified: `useProjectBuildingCode.ts` (+`setFrontageAddressId`, `save()→Promise<boolean>`), `useProjectBuildingCode.helpers.ts` (+`syncFrontagesArray`, `applyPlotType` frontages sync), `src/types/project-building-code.ts` (+`PlotFrontage`), `src/types/project/addresses.ts` (+`frontage` type, `frontageIndex`), `address-constants.ts` (unique-guard exemption).
 
 ### 10.4 Coexistence with legacy `building-data` tab
 
@@ -731,3 +770,4 @@ Sub-field expansion (per-`sd`/`coverage`/`maxHeight` audit rows instead of one `
 | 2026-05-03 | **Phase 2 Kickoff Q7**: Hybrid validation — hard block για αδύνατα (ΣΔ<0,>10, κάλυψη<0,>100, ύψος<0,>100, count<1,>4) + soft warning για ασυνήθιστα (ΣΔ>5, κάλυψη>85, ύψος>30) + audit log overrides + inline feedback. Νέο `validation.constants.ts`. Enterprise pattern (SAP/Procore/TurboTax/Revit). | Claude + Γιώργος |
 | 2026-05-03 | **Phase 2 Kickoff CLOSED** — 7 αποφάσεις, implementation plan consolidated σε §8b. Έτοιμο για coding (Sonnet 4.6 για implementation). | Claude + Γιώργος |
 | 2026-05-03 | **Phase 2 IMPLEMENTED** — 14 new files + 8 modified. Status PARTIAL → PARTIAL (Phase 1 + Phase 2 CRUD form). PlotType union 3→6. New `buildingCode` i18n namespace (el/en/pseudo). New project tab `building-code` at order 16.5, parallel to legacy `building-data` (per Q1 coexistence). Provenance tracking + zone auto-fill + hybrid validation (hard block + soft warning) + server-side audit via PROJECT_TRACKED_FIELDS. Single-writer pattern: client form → `updateProjectClient` → PATCH `/api/projects/[id]` → `EntityAuditService.recordChange()`. Engines untouched. Details in §10. | Claude + Γιώργος |
+| 2026-05-04 | **Phase 2.5 IMPLEMENTED** — Q8 (view/edit toggle), Q9 (reset button conditional + Radix Tooltip), per-frontage address linking via `PlotFrontage[]` + `project.addresses` SSoT. 3 new files + 10 modified + ADR-167 updated. Details in §10.7. | Claude + Γιώργος |

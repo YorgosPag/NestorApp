@@ -323,11 +323,35 @@ const addresses = migrateLegacyAddress(oldProject);
 
 ---
 
+## Phase 2.5 Extension — Frontage Role (2026-05-04, ADR-186 §10.7)
+
+### New address type: `'frontage'`
+
+`ProjectAddressType` extended with `'frontage'` to represent a plot frontage (πρόσωπο οικοπέδου).
+
+**Unique-guard exemption**: `isUniqueAddressType('frontage') === false` — multiple frontage addresses are allowed per project (one per index: 1–4). Only `'other'` was previously exempt.
+
+**New field on `ProjectAddress`**:
+```typescript
+frontageIndex?: number;  // 1-based, populated only when type === 'frontage'
+```
+
+**Cross-reference**: `PlotFrontage.addressId` (in `ProjectBuildingCodePhase2`) points to a `ProjectAddress.id` where `type === 'frontage'`. The two are kept in sync by `updateProjectWithPolicy` — a single Firestore write updates both `buildingCode.frontages` and `addresses`.
+
+**Files modified**:
+- `src/types/project/addresses.ts` (+`frontage` to `ProjectAddressType`, +`frontageIndex` to `ProjectAddress`)
+- `src/components/projects/tabs/locations/address-constants.ts` (unique-guard exemption, +`frontage` to `ADDRESS_TYPE_KEYS`)
+- `src/i18n/locales/el/addresses.json` (+`types.frontage`)
+- `src/i18n/locales/en/addresses.json` (+`types.frontage`)
+
+---
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
 | 2026-04-27 | `formatAddressForGeocoding`: removed `DEFAULT_COUNTRY` fallback — vendor contacts without country now pass `undefined`, triggering global Nominatim search from attempt 1 instead of wasting 6 attempts restricted to Greece. Paired fix: `geocoding-engine.ts` `countryNameToCode(undefined)` now returns `null` (global) instead of `DEFAULT_COUNTRY_CODE`. |
+| 2026-05-04 | Phase 2.5 extension: `'frontage'` added to `ProjectAddressType`; `frontageIndex?: number` added to `ProjectAddress`; `isUniqueAddressType('frontage') === false`; cross-reference to ADR-186 §10.7. |
 
-**Last Updated**: 2026-04-27
-**Status**: ✅ APPROVED - Implementation Phase 1 Complete
+**Last Updated**: 2026-05-04
+**Status**: ✅ APPROVED - Phase 2.5 Extension Complete

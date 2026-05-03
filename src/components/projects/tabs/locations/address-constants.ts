@@ -12,17 +12,16 @@
 import type { ProjectAddressType, BlockSideDirection } from '@/types/project/addresses';
 
 export const ADDRESS_TYPE_KEYS: readonly ProjectAddressType[] = [
-  'site', 'entrance', 'delivery', 'legal', 'postal', 'billing', 'correspondence', 'other',
+  'site', 'entrance', 'delivery', 'legal', 'postal', 'billing', 'correspondence', 'frontage', 'other',
 ] as const;
 
 /**
- * Address types that may appear at most ONCE per project. Only `other` may
- * appear multiple times (free-form bucket for arbitrary additional addresses).
- * Used by ProjectLocationsTab to filter the type dropdown and suggest the next
- * unused type when opening the add form.
+ * Address types that may appear at most ONCE per project. `other` and
+ * `frontage` are exempt: `other` is a free-form bucket; `frontage` is indexed
+ * (one per πρόσωπο, up to 4) so multiple entries are expected. (ADR-167 Phase 2.5)
  */
 export function isUniqueAddressType(type: ProjectAddressType): boolean {
-  return type !== 'other';
+  return type !== 'other' && type !== 'frontage';
 }
 
 export const BLOCK_SIDE_KEYS: readonly BlockSideDirection[] = [

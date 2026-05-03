@@ -94,6 +94,8 @@
       "uploadCta": "Ανέβασμα Αρχείου",
       "uploadHint": "Εικόνα (JPG/PNG/WEBP/HEIC) ή PDF, έως 10MB.",
       "selectFile": "Επιλογή Αρχείου",
+      "chooseFileButton": "Επιλογή Αρχείου...",
+      "noFileChosen": "Δεν επιλέχθηκε αρχείο",
       "fileSelected": "Επιλέχθηκε: {name} ({size} KB)",
       "uploadAndScan": "Ανέβασμα & Σάρωση",
       "uploading": "Ανέβασμα...",

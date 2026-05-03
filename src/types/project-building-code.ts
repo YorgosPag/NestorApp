@@ -29,6 +29,22 @@ export interface BuildingCodeProvenance {
 }
 
 /**
+ * Per-frontage data — ADR-186 Phase 2.5.
+ * Each entry links a plot frontage to a project address (ADR-167 SSoT).
+ * `frontages.length` must equal `frontagesCount` after sync.
+ */
+export interface PlotFrontage {
+  /** 1-based index matching ProjectAddress.frontageIndex */
+  readonly index: number;
+  /** Optional custom label (e.g. "Κύρια πρόσοψη") */
+  readonly label?: string;
+  /** FK → project.addresses[].id where address.type === 'frontage' */
+  readonly addressId?: string;
+  /** Is this the primary frontage for building permit purposes? */
+  readonly isPrimaryFrontage?: boolean;
+}
+
+/**
  * Phase 2 Building Code data — persisted at `project.buildingCode`.
  *
  * Shape locked by ADR-186 §8b (Phase 2 implementation plan).
@@ -40,6 +56,13 @@ export interface ProjectBuildingCodePhase2 {
 
   /** Number of frontages (1..4). Auto-synced with plotType, user-overridable. */
   readonly frontagesCount: number;
+
+  /**
+   * Per-frontage data — Phase 2.5 (ADR-186 §8b, ADR-167).
+   * Undefined on legacy records — hook initialises lazily from frontagesCount.
+   * length === frontagesCount after init.
+   */
+  readonly frontages?: readonly PlotFrontage[];
 
   /** Selected ΝΟΚ zone ID (e.g. 'Β2'), or null = no zone / free input. */
   readonly zoneId: string | null;

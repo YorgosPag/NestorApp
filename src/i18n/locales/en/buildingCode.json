@@ -57,8 +57,24 @@
     "userShort": "User"
   },
   "reset": {
-    "tooltip": "Reset to zone value",
+    "tooltip": "Reset to Zone {zoneId} default",
     "aria": "Reset {field} to zone value"
+  },
+  "editMode": {
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving..."
+  },
+  "frontages": {
+    "sectionTitle": "Plot Frontages",
+    "frontageLabel": "Frontage {index}",
+    "addressPlaceholder": "Select address...",
+    "addAddress": "New Address",
+    "noAddress": "No address",
+    "addressDeleted": "Address was deleted — select another",
+    "createDialogTitle": "New Address for Frontage {index}",
+    "linkAddress": "Link Address"
   },
   "validation": {
     "sd": {

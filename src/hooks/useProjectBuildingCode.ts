@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import type { Project } from '@/types/project';
 import type {
   BuildingCodeValidationResult,
+  PlotFrontage,
   ProjectBuildingCodePhase2,
 } from '@/types/project-building-code';
 import type { PlotType } from '@/services/building-code/types/site.types';
@@ -35,6 +36,7 @@ import {
   createEmptyDraft,
   isDraftEqual,
   resetFieldToZone,
+  syncFrontagesArray,
 } from './useProjectBuildingCode.helpers';
 
 const logger = createModuleLogger('useProjectBuildingCode');
@@ -58,9 +60,11 @@ export interface UseProjectBuildingCodeResult {
   setMaxHeight(value: number): void;
   resetField(field: NumericFieldKey): void;
   isFieldResettable(field: NumericFieldKey): boolean;
+  setFrontageAddressId(index: number, addressId: string | undefined): void;
 
   reset(): void;
-  save(): Promise<void>;
+  /** Returns true on success, false on error. */
+  save(): Promise<boolean>;
 }
 
 function pickPersisted(project: Project | null): ProjectBuildingCodePhase2 | null {
@@ -73,14 +77,16 @@ export function useProjectBuildingCode(
   const { t } = useTranslation('buildingCode');
 
   const persisted = pickPersisted(project);
-  const initialDraft = useMemo<ProjectBuildingCodePhase2>(
-    () => persisted ?? createEmptyDraft(),
-    // Re-seed only when the project reference itself changes (post-save refetch
-    // or initial hydration). Mid-edit setProject calls won't re-seed because
-    // `project` reference is stable inside detail views.
+  const initialDraft = useMemo<ProjectBuildingCodePhase2>(() => {
+    const base = persisted ?? createEmptyDraft();
+    // Lazily init frontages for legacy records that pre-date Phase 2.5
+    return {
+      ...base,
+      frontages: syncFrontagesArray(base.frontages, base.frontagesCount),
+    };
+    // Re-seed only when the project reference itself changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [project?.id],
-  );
+  }, [project?.id]);
 
   const [draft, setDraft] = useState<ProjectBuildingCodePhase2>(initialDraft);
   const [isSaving, setIsSaving] = useState(false);
@@ -92,7 +98,8 @@ export function useProjectBuildingCode(
     const id = project?.id ?? null;
     if (id !== lastSeededFor.current) {
       lastSeededFor.current = id;
-      setDraft(persisted ?? createEmptyDraft());
+      const base = persisted ?? createEmptyDraft();
+      setDraft({ ...base, frontages: syncFrontagesArray(base.frontages, base.frontagesCount) });
     }
   }, [project?.id, persisted]);
 
@@ -113,8 +120,25 @@ export function useProjectBuildingCode(
   }, []);
 
   const setFrontagesCount = useCallback((count: number) => {
-    setDraft((prev) => ({ ...prev, frontagesCount: count }));
+    setDraft((prev) => ({
+      ...prev,
+      frontagesCount: count,
+      frontages: syncFrontagesArray(prev.frontages, count),
+    }));
   }, []);
+
+  const setFrontageAddressId = useCallback(
+    (index: number, addressId: string | undefined) => {
+      setDraft((prev) => {
+        const existing: readonly PlotFrontage[] = syncFrontagesArray(prev.frontages, prev.frontagesCount);
+        const updated = existing.map((f) =>
+          f.index === index ? { ...f, ...(addressId ? { addressId } : { addressId: undefined }) } : f,
+        );
+        return { ...prev, frontages: updated };
+      });
+    },
+    [],
+  );
 
   const setZoneId = useCallback((zoneId: string | null) => {
     setDraft((prev) => applyZoneSelection(prev, zoneId));
@@ -142,15 +166,16 @@ export function useProjectBuildingCode(
   );
 
   const reset = useCallback(() => {
-    setDraft(persisted ?? createEmptyDraft());
+    const base = persisted ?? createEmptyDraft();
+    setDraft({ ...base, frontages: syncFrontagesArray(base.frontages, base.frontagesCount) });
   }, [persisted]);
 
-  const save = useCallback(async () => {
+  const save = useCallback(async (): Promise<boolean> => {
     if (!project?.id) {
       logger.warn('save() called without a project id — ignoring');
-      return;
+      return false;
     }
-    if (validation.errors.length > 0) return;
+    if (validation.errors.length > 0) return false;
 
     const payload: ProjectBuildingCodePhase2 = {
       ...draft,
@@ -168,14 +193,16 @@ export function useProjectBuildingCode(
           projectId: project.id,
           error: result.error,
         });
-        return;
+        return false;
       }
       // Optimistic local sync — useProjectDetail will reconcile via realtime.
       setDraft(payload);
       toast.success(t('toast.saveSuccess'));
+      return true;
     } catch (error) {
       toast.error(t('toast.saveError'));
       logger.warn('Building code save threw', { projectId: project.id, error });
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -197,6 +224,7 @@ export function useProjectBuildingCode(
     setMaxHeight,
     resetField,
     isFieldResettable,
+    setFrontageAddressId,
     reset,
     save,
   };

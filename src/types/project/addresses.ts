@@ -65,6 +65,7 @@ export type ProjectAddressType =
   | 'postal'         // Ταχυδρομική διεύθυνση
   | 'billing'        // Διεύθυνση τιμολόγησης
   | 'correspondence' // Αλληλογραφία
+  | 'frontage'       // Πρόσωπο οικοπέδου (ADR-167 Phase 2.5 / ADR-186)
   | 'other';         // Άλλο
 
 /**
@@ -78,6 +79,7 @@ export const PROJECT_ADDRESS_TYPES = [
   'postal',
   'billing',
   'correspondence',
+  'frontage',
   'other'
 ] as const;
 
@@ -116,6 +118,8 @@ export interface ProjectAddress {
   isPrimary: boolean;
   /** Optional label (e.g., "Κύρια Είσοδος") */
   label?: string;
+  /** For type='frontage': 1-based index matching PlotFrontage.index (ADR-186 Phase 2.5) */
+  frontageIndex?: number;
 
   // 🏗️ Construction-specific
   /** Which side of the building block */

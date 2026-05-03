@@ -223,6 +223,7 @@ export function createProjectAddress(
     ...(data.municipality ? { municipality: data.municipality } : {}),
     ...(data.neighborhood ? { neighborhood: data.neighborhood } : {}),
     ...(data.coordinates ? { coordinates: data.coordinates } : {}),
+    ...(data.frontageIndex !== undefined ? { frontageIndex: data.frontageIndex } : {}),
   };
 }
 

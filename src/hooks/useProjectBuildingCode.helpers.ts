@@ -7,6 +7,7 @@
  */
 import type {
   BuildingCodeProvenance,
+  PlotFrontage,
   ProjectBuildingCodePhase2,
 } from '@/types/project-building-code';
 import type { PlotType } from '@/services/building-code/types/site.types';
@@ -24,6 +25,7 @@ export function createEmptyDraft(): ProjectBuildingCodePhase2 {
   return {
     plotType: 'mesaio',
     frontagesCount: 1,
+    frontages: [{ index: 1 }],
     zoneId: null,
     sd: 0,
     coveragePct: 0,
@@ -79,10 +81,12 @@ export function applyPlotType(
   plotType: PlotType,
 ): ProjectBuildingCodePhase2 {
   const expected = expectedFrontagesForPlotType(plotType);
+  const newCount = expected ?? draft.frontagesCount;
   return {
     ...draft,
     plotType,
-    frontagesCount: expected ?? draft.frontagesCount,
+    frontagesCount: newCount,
+    frontages: syncFrontagesArray(draft.frontages, newCount),
   };
 }
 
@@ -132,12 +136,16 @@ export function canResetField(
   return draft.zoneId !== null && draft.provenance[field] === 'user';
 }
 
-/** Quick deep-equality for the 6 form values + zone + plotType. */
+/** Quick deep-equality for the 6 form values + zone + plotType + frontages. */
 export function isDraftEqual(
   a: ProjectBuildingCodePhase2,
   b: ProjectBuildingCodePhase2,
 ): boolean {
+  const frontagesEqual =
+    JSON.stringify(a.frontages ?? []) === JSON.stringify(b.frontages ?? []);
+
   return (
+    frontagesEqual &&
     a.plotType === b.plotType &&
     a.frontagesCount === b.frontagesCount &&
     a.zoneId === b.zoneId &&
@@ -149,6 +157,21 @@ export function isDraftEqual(
     a.provenance.coveragePct === b.provenance.coveragePct &&
     a.provenance.maxHeight === b.provenance.maxHeight
   );
+}
+
+/**
+ * Sync the frontages array to match a new count.
+ * Preserves existing entries; adds empty entries for new slots; trims extras.
+ */
+export function syncFrontagesArray(
+  current: readonly PlotFrontage[] | undefined,
+  count: number,
+): readonly PlotFrontage[] {
+  const existing = current ?? [];
+  return Array.from({ length: count }, (_, i) => {
+    const index = i + 1;
+    return existing.find((f) => f.index === index) ?? { index };
+  });
 }
 
 /** All ΝΟΚ zone IDs available for the dropdown. */

@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Upload, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 import { TradeSelector } from '@/subapps/procurement/components/TradeSelector';
 import {
   POProjectSelector,
@@ -34,6 +35,7 @@ export default function ScanQuotePage() {
   const { t } = useTranslation('quotes');
   const router = useRouter();
   const search = useSearchParams();
+  const spacing = useSpacingTokens();
 
   const [form, setForm] = useState<FormState>({
     file: null,
@@ -118,7 +120,7 @@ export default function ScanQuotePage() {
   }, [form.file, form.projectId, form.vendorContactId, form.trade, t]);
 
   return (
-    <main className="container mx-auto max-w-3xl space-y-6 py-6">
+    <main className={`container mx-auto max-w-3xl space-y-6 py-6 ${spacing.padding.x.sm}`}>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="mr-1 h-4 w-4" />
@@ -134,18 +136,21 @@ export default function ScanQuotePage() {
         <CardContent className="space-y-5">
           <section className="space-y-1.5">
             <Label>{t('quotes.scan.selectFile')}</Label>
-            <Input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
-              onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-              disabled={submitting}
-            />
+            <div className="flex items-center gap-3 min-w-0">
+              <FileUploadButton
+                onFileSelect={(file) => handleFile(file)}
+                accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                maxSize={MAX_BYTES}
+                buttonText={t('quotes.scan.chooseFileButton')}
+                disabled={submitting}
+              />
+              <span className="text-sm text-muted-foreground truncate min-w-0">
+                {form.file
+                  ? `${form.file.name} (${fileSize} KB)`
+                  : t('quotes.scan.noFileChosen')}
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground">{t('quotes.scan.uploadHint')}</p>
-            {form.file && (
-              <p className="text-sm text-muted-foreground">
-                {t('quotes.scan.fileSelected', { name: form.file.name, size: fileSize })}
-              </p>
-            )}
           </section>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

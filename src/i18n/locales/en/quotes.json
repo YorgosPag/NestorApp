@@ -94,6 +94,8 @@
       "uploadCta": "Upload File",
       "uploadHint": "Image (JPG/PNG/WEBP/HEIC) or PDF, up to 10MB.",
       "selectFile": "Choose File",
+      "chooseFileButton": "Choose File...",
+      "noFileChosen": "No file chosen",
       "fileSelected": "Selected: {name} ({size} KB)",
       "uploadAndScan": "Upload & Scan",
       "uploading": "Uploading...",

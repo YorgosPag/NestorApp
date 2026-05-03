@@ -57,8 +57,24 @@
     "userShort": "Χρήστης"
   },
   "reset": {
-    "tooltip": "Επαναφορά στην τιμή της ζώνης",
+    "tooltip": "Επαναφορά στην προεπιλογή Ζώνης {zoneId}",
     "aria": "Επαναφορά στην τιμή της ζώνης για το πεδίο {field}"
+  },
+  "editMode": {
+    "edit": "Επεξεργασία",
+    "save": "Αποθήκευση",
+    "cancel": "Ακύρωση",
+    "saving": "Αποθήκευση..."
+  },
+  "frontages": {
+    "sectionTitle": "Πρόσωπα Οικοπέδου",
+    "frontageLabel": "Πρόσωπο {index}",
+    "addressPlaceholder": "Επιλέξτε διεύθυνση...",
+    "addAddress": "Νέα Διεύθυνση",
+    "noAddress": "Χωρίς διεύθυνση",
+    "addressDeleted": "Η διεύθυνση έχει διαγραφεί — επιλέξτε άλλη",
+    "createDialogTitle": "Νέα Διεύθυνση Προσώπου {index}",
+    "linkAddress": "Σύνδεση Διεύθυνσης"
   },
   "validation": {
     "sd": {
