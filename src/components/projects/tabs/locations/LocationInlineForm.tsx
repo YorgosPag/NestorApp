@@ -45,6 +45,8 @@ interface LocationInlineFormProps {
   onCancel: () => void;
   t: (key: string) => string;
   tProjects: (key: string) => string;
+  /** Subset of address types rendered in the type dropdown. */
+  availableTypes?: readonly ProjectAddressType[];
 }
 
 // =============================================================================
@@ -68,6 +70,7 @@ export function LocationInlineForm({
   onCancel,
   t,
   tProjects,
+  availableTypes,
 }: LocationInlineFormProps) {
   const iconSizes = useIconSizes();
   const typography = useTypography();
@@ -106,6 +109,7 @@ export function LocationInlineForm({
             onLabelChange={onLabelChange}
             onIsPrimaryChange={onIsPrimaryChange}
             t={t}
+            availableTypes={availableTypes}
           />
           <div className={cn("flex gap-2 justify-end border-t", spacing.padding.top.md)}>
             <Button variant="outline" onClick={onCancel} disabled={isSaving}>

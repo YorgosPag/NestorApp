@@ -38,6 +38,8 @@ interface ProjectAddressFieldsProps {
   onLabelChange: (val: string) => void;
   onIsPrimaryChange: (val: boolean) => void;
   t: (key: string) => string;
+  /** Subset of ADDRESS_TYPE_KEYS rendered in the dropdown. Defaults to all. */
+  availableTypes?: readonly ProjectAddressType[];
 }
 
 // =============================================================================
@@ -48,6 +50,7 @@ export function ProjectAddressFields({
   type, blockSide, label, isPrimary,
   onTypeChange, onBlockSideChange, onLabelChange, onIsPrimaryChange,
   t,
+  availableTypes = ADDRESS_TYPE_KEYS,
 }: ProjectAddressFieldsProps) {
   const typography = useTypography();
   return (
@@ -59,7 +62,7 @@ export function ProjectAddressFields({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {ADDRESS_TYPE_KEYS.map((key) => (
+            {availableTypes.map((key) => (
               <SelectItem key={key} value={key}>
                 {t(`types.${key}`)}
               </SelectItem>

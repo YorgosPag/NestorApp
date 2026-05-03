@@ -87,8 +87,11 @@ export function ProjectDetails({
   const { user } = useAuth();
 
   // Active tab — Edit button visible only on tabs that own editable fields.
+  // 'locations' is excluded: that tab uses inline-only editing (always-visible
+  // "New Address" button + per-card actions), so the global header Edit toggle
+  // is redundant and confusing.
   const [activeTab, setActiveTab] = useState(initialTab || 'general');
-  const EDIT_TABS = new Set(['general', 'locations', 'measurements']);
+  const EDIT_TABS = new Set(['general', 'measurements']);
   const hideEditButton = !EDIT_TABS.has(activeTab);
 
   // Use lifted state if available, otherwise fallback to local state.

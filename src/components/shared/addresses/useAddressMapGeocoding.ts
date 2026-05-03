@@ -267,9 +267,10 @@ export function useAddressMapGeocoding({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geocodedAddresses, mapReady, draggableMarkers]);
 
-  // Trigger 2 — Edit mode: fit on entry + re-fit when pin count increases
-  // (new geocoded address OR pending pin appended). Does NOT re-fit on drag
-  // or repeated calls with same counts.
+  // Trigger 2 — Edit mode: fit on entry + re-fit when pin count CHANGES
+  // (added pin, deleted pin, pending pin appended/removed). Does NOT re-fit
+  // on drag or repeated calls with same counts — that would fight the user
+  // dragging or panning the map.
   const lastEditFitRef = useRef(false);
   const lastGeocodedCountRef = useRef(0);
   const lastAddressCountRef = useRef(0);
@@ -282,12 +283,12 @@ export function useAddressMapGeocoding({
     }
     const geocodedCount = geocodedAddresses.size;
     const addressCount = addresses.length;
-    const countIncreased =
-      geocodedCount > lastGeocodedCountRef.current ||
-      addressCount > lastAddressCountRef.current;
+    const countChanged =
+      geocodedCount !== lastGeocodedCountRef.current ||
+      addressCount !== lastAddressCountRef.current;
     lastGeocodedCountRef.current = geocodedCount;
     lastAddressCountRef.current = addressCount;
-    if (lastEditFitRef.current && !countIncreased) return;
+    if (lastEditFitRef.current && !countChanged) return;
     runFitBounds();
     lastEditFitRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps

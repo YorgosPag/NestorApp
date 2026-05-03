@@ -1,10 +1,11 @@
 /* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import type { Project } from '@/types/project';
-import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
+import type { ProjectAddress, PartialProjectAddress, ProjectAddressType } from '@/types/project/addresses';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
+import { ADDRESS_TYPE_KEYS, isUniqueAddressType } from './locations/address-constants';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { Button } from '@/components/ui/button';
 import { MapPin, Plus } from 'lucide-react';
@@ -28,6 +29,7 @@ import { useProjectLocations } from './locations/useProjectLocations';
 interface ProjectLocationsTabProps {
   data: Project;
   projectId?: string;
+  /** Ignored — this tab uses always-on inline editing (no global edit toggle). */
   isEditing?: boolean;
 }
 
@@ -35,7 +37,10 @@ interface ProjectLocationsTabProps {
 // COMPONENT
 // =============================================================================
 
-export function ProjectLocationsTab({ data: project, isEditing = false }: ProjectLocationsTabProps) {
+export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps) {
+  // Inline-only editing: New Address button and per-card actions are always
+  // available. The header Edit toggle is hidden for this tab (project-details).
+  const isEditing = true;
   const { t } = useTranslation('addresses');
   const { t: tProjects } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const iconSizes = useIconSizes();
@@ -47,21 +52,54 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
   const loc = useProjectLocations(project);
   const _primary = getPrimaryAddress(loc.localAddresses);
 
-  // Close open forms when global edit mode ends
-  useEffect(() => {
-    if (!isEditing) {
-      loc.handleCancelAdd();
-      loc.handleCancelEdit();
-    }
-  }, [isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Ghost addresses (street='' AND city='') are produced by handleClearPrimaryAddress
+  // to preserve the isPrimary slot. Filter them out of view-mode list AND map —
+  // otherwise edit mode places a fallback pin at the Athens default center.
+  const visibleAddresses = useMemo(
+    () => loc.localAddresses
+      .map((address, originalIndex) => ({ address, originalIndex }))
+      .filter(({ address }) => !((address.street ?? '') === '' && (address.city ?? '') === '')),
+    [loc.localAddresses],
+  );
+
+  // Unique address types already in use. `other` is excluded from this set so
+  // that it can be picked multiple times.
+  const usedUniqueTypes = useMemo(
+    () => new Set(
+      visibleAddresses
+        .map(({ address }) => address.type)
+        .filter(isUniqueAddressType),
+    ),
+    [visibleAddresses],
+  );
+
+  // Add form: drop unique types already used. `other` always remains.
+  const availableTypesForAdd = useMemo<readonly ProjectAddressType[]>(
+    () => ADDRESS_TYPE_KEYS.filter(t => !isUniqueAddressType(t) || !usedUniqueTypes.has(t)),
+    [usedUniqueTypes],
+  );
+
+  // Edit form: drop unique types already used by OTHER addresses, but always
+  // keep the type currently assigned to the address being edited so the
+  // dropdown can render its current selection.
+  const editingType = loc.editingIndex !== null
+    ? loc.localAddresses[loc.editingIndex]?.type
+    : undefined;
+  const availableTypesForEdit = useMemo<readonly ProjectAddressType[]>(
+    () => ADDRESS_TYPE_KEYS.filter(t =>
+      !isUniqueAddressType(t) || !usedUniqueTypes.has(t) || t === editingType,
+    ),
+    [usedUniqueTypes, editingType],
+  );
 
   // Pending address: draggable preview pin shown while the add form is open.
-  // Appended to the real addresses so AddressMap renders it as a pulsating draggable marker.
+  // Appended to the real (non-ghost) addresses so AddressMap renders it as a pulsating draggable marker.
   const PENDING_ID = '__pending_new__';
   const mapAddresses = useMemo<ProjectAddress[]>(() => {
-    if (!loc.isAddFormOpen || !loc.pendingDragCoords) return loc.localAddresses;
+    const real = visibleAddresses.map(({ address }) => address);
+    if (!loc.isAddFormOpen || !loc.pendingDragCoords) return real;
     return [
-      ...loc.localAddresses,
+      ...real,
       {
         id: PENDING_ID,
         street: '',
@@ -73,19 +111,23 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
         coordinates: loc.pendingDragCoords,
       },
     ];
-  }, [loc.isAddFormOpen, loc.pendingDragCoords, loc.localAddresses]);
+  }, [loc.isAddFormOpen, loc.pendingDragCoords, visibleAddresses]);
 
-  // Intercept drag: pending pin → update add form; real pin → persist
+  // Intercept drag: pending pin → update add form; real pin → persist.
+  // Map index points into the filtered mapAddresses; remap to the original
+  // localAddresses index before handing it to handleAddressDragUpdate.
   const handleCombinedDragUpdate = useCallback(async (
     addressData: Partial<PartialProjectAddress>,
     index: number,
   ) => {
-    if (loc.isAddFormOpen && index >= loc.localAddresses.length) {
+    const realCount = visibleAddresses.length;
+    if (loc.isAddFormOpen && index >= realCount) {
       loc.handlePendingDragUpdate(addressData);
-    } else {
-      await loc.handleAddressDragUpdate(addressData, index);
+      return;
     }
-  }, [loc.isAddFormOpen, loc.localAddresses.length, loc.handlePendingDragUpdate, loc.handleAddressDragUpdate]);
+    const originalIndex = visibleAddresses[index]?.originalIndex ?? index;
+    await loc.handleAddressDragUpdate(addressData, originalIndex);
+  }, [loc.isAddFormOpen, visibleAddresses, loc.handlePendingDragUpdate, loc.handleAddressDragUpdate]);
 
   return (
     <FullscreenOverlay
@@ -128,6 +170,7 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
             onCancel={loc.handleCancelAdd}
             t={t}
             tProjects={tProjects}
+            availableTypes={availableTypesForAdd}
           />
         )}
 
@@ -149,6 +192,7 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
             onSave={loc.handleSaveEdit}
             onCancel={loc.handleCancelEdit}
             t={t}
+            availableTypes={availableTypesForEdit}
             tProjects={tProjects}
           />
         )}
@@ -156,7 +200,7 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
         {/* Address Cards (view mode) */}
         {!loc.isInlineFormActive && (
           <>
-            {loc.localAddresses.length === 0 ? (
+            {visibleAddresses.length === 0 ? (
               <div className={cn('text-center border-2 border-dashed rounded-lg', spacing.padding.y['2xl'])}>
                 <MapPin className={cn(iconSizes.xl, 'mx-auto', colors.text.muted, spacing.margin.bottom.md)} />
                 <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>{t('locations.noAddresses')}</h3>
@@ -167,9 +211,9 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
             ) : (
               <aside className={spacing.spaceBetween.md}>
                 <h3 className={typography.heading.md}>
-                  {t('locations.projectAddresses')} ({loc.localAddresses.length})
+                  {t('locations.projectAddresses')} ({visibleAddresses.length})
                 </h3>
-                {loc.localAddresses.map((address, index) => {
+                {visibleAddresses.map(({ address, originalIndex }) => {
                   const streetLine = [address.street, address.number, address.city, address.postalCode]
                     .filter(Boolean)
                     .join(', ');
@@ -184,10 +228,10 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
                       typeLabel={typeLabel}
                       isPrimary={isPrimary}
                       isEditing={isEditing}
-                      onEdit={() => loc.handleStartEdit(index)}
-                      onSetPrimary={!isPrimary ? () => loc.handleSetPrimary(index) : undefined}
-                      onClear={index === 0 ? loc.handleClearPrimaryAddress : undefined}
-                      onDelete={index !== 0 ? () => loc.handleRequestDelete(index) : undefined}
+                      onEdit={() => loc.handleStartEdit(originalIndex)}
+                      onSetPrimary={!isPrimary ? () => loc.handleSetPrimary(originalIndex) : undefined}
+                      onClear={originalIndex === 0 ? loc.handleClearPrimaryAddress : undefined}
+                      onDelete={originalIndex !== 0 ? () => loc.handleRequestDelete(originalIndex) : undefined}
                       editLabel={t('card.edit')}
                       clearLabel={tProjects('locations.clearAddress')}
                       deleteLabel={t('deleteDialog.confirm')}
@@ -202,7 +246,10 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
         )}
       </div>
 
-      {/* RIGHT: Map — always visible, draggable in edit mode */}
+      {/* RIGHT: Map — always visible, draggable in edit mode.
+          Draggable only when there is something to drag (real address or pending add).
+          Disables AddressMap's empty-list fallback marker so no ghost Athens pin
+          appears when entering edit mode with zero addresses. */}
       <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-7rem)]">
         <AddressMap
           addresses={mapAddresses}
@@ -210,7 +257,7 @@ export function ProjectLocationsTab({ data: project, isEditing = false }: Projec
           showGeocodingStatus
           enableClickToFocus
           onMarkerClick={loc.handleMarkerClick}
-          draggableMarkers={isEditing}
+          draggableMarkers={isEditing && mapAddresses.length > 0}
           onAddressDragUpdate={handleCombinedDragUpdate}
           heightPreset="viewerFullscreen"
           className="rounded-lg border shadow-sm !h-full"

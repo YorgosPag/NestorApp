@@ -23,6 +23,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { useProjectNotifications } from '@/hooks/notifications/useProjectNotifications';
 import { toHierarchyValue, fromHierarchyValue, EMPTY_HIERARCHY } from './location-converters';
+import { ADDRESS_TYPE_KEYS, isUniqueAddressType } from './address-constants';
 
 type AddressOp = 'added' | 'updated' | 'deleted' | 'cleared' | 'primaryUpdated';
 
@@ -64,6 +65,11 @@ export function useProjectLocations(project: Project) {
   const [addIsPrimary, setAddIsPrimary] = useState(false);
   // Pending pin: position for the draggable preview marker shown while add form is open
   const [pendingDragCoords, setPendingDragCoords] = useState<{ lat: number; lng: number } | null>(null);
+  // True only after the user actually drags the pending pin. Distinguishes "user
+  // chose this location" from "we placed the pin at a default reference position".
+  // Save uses pendingDragCoords ONLY when this flag is true; otherwise the typed
+  // address is geocoded by the map and the address is persisted without coords.
+  const [pendingHasDragged, setPendingHasDragged] = useState(false);
 
   // Edit form state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -214,13 +220,31 @@ export function useProjectLocations(project: Project) {
       pendingPos = { lat, lng };
     }
 
+    // Suggest the first unused unique type as default. Ghost addresses are
+    // skipped so a cleared primary slot doesn't claim its type. Falls back to
+    // 'other' when every unique type is already used.
+    const usedUniqueTypes = new Set(
+      localAddresses
+        .filter(a => !((a.street ?? '') === '' && (a.city ?? '') === ''))
+        .map(a => a.type)
+        .filter(isUniqueAddressType),
+    );
+    const nextType = ADDRESS_TYPE_KEYS.find(
+      t => !isUniqueAddressType(t) || !usedUniqueTypes.has(t),
+    ) ?? 'other';
+    setAddType(nextType);
+
     setPendingDragCoords(pendingPos);
+    setPendingHasDragged(false);
     setIsAddFormOpen(true);
   }, [localAddresses]);
 
   /** Called when the pending pin is dragged — reverse-geocode result populates the form. */
   const handlePendingDragUpdate = useCallback((addressData: Partial<PartialProjectAddress>) => {
-    if (addressData.coordinates) setPendingDragCoords(addressData.coordinates);
+    if (addressData.coordinates) {
+      setPendingDragCoords(addressData.coordinates);
+      setPendingHasDragged(true);
+    }
     setAddHierarchy(prev => ({
       ...prev,
       ...(addressData.street !== undefined && { street: addressData.street }),
@@ -235,6 +259,7 @@ export function useProjectLocations(project: Project) {
   const handleCancelAdd = useCallback(() => {
     setIsAddFormOpen(false);
     setPendingDragCoords(null);
+    setPendingHasDragged(false);
     setAddHierarchy({});
     setAddType('site');
     setAddBlockSide(SELECT_CLEAR_VALUE);
@@ -257,7 +282,11 @@ export function useProjectLocations(project: Project) {
         city: addressFields.city,
         type: addType,
         isPrimary: isNewPrimary,
-        ...(pendingDragCoords ? { coordinates: pendingDragCoords } : {}),
+        // Persist coordinates ONLY if user dragged the pending pin. If the pin
+        // sat at the default reference position (Athens / centroid), let the
+        // map geocode the typed street/city instead — otherwise the saved
+        // address gets stuck at the default location.
+        ...(pendingDragCoords && pendingHasDragged ? { coordinates: pendingDragCoords } : {}),
         ...(addBlockSide !== SELECT_CLEAR_VALUE ? { blockSide: addBlockSide as BlockSideDirection } : {}),
         ...(addLabel ? { label: addLabel } : {}),
       });
@@ -366,6 +395,10 @@ export function useProjectLocations(project: Project) {
       i !== addressIndex ? addr : {
         ...addr,
         street: addressData.street ?? addr.street,
+        // House number must always reflect the new pin location. Replace
+        // unconditionally — if reverse geocoding returns no number for the
+        // dragged spot, clear the stale value rather than keep the old one.
+        number: addressData.number,
         city: addressData.city ?? addr.city,
         postalCode: addressData.postalCode ?? addr.postalCode,
         coordinates: addressData.coordinates ?? addr.coordinates,
