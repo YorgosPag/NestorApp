@@ -79,7 +79,7 @@ jobs:
       # The coverage audit script parses coverage-manifest.ts via the TypeScript
       # compiler API. Install TypeScript without modifying the lockfile.
       - name: 📦 Install TypeScript (required by manifest parser)
-        run: npm install --no-save typescript --legacy-peer-deps
+        run: npm install --no-save typescript --legacy-peer-deps --ignore-engines
 
       - name: 🔍 CHECK 3.16 — Coverage + rule shape (full scan)
         run: node scripts/check-firestore-rules-test-coverage.js --all --verbose
@@ -142,7 +142,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       # firebase-tools is not a project devDependency (too large). Install
       # globally so `firebase emulators:exec` is available in PATH.
