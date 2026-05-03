@@ -29,6 +29,7 @@ import { ApdPaymentsTabContent } from './ika/ApdPaymentsTabContent';
 import { EfkaDeclarationTabContent } from './ika/EfkaDeclarationTabContent';
 import { LaborComplianceSettingsTabContent } from './ika/LaborComplianceSettingsTabContent';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useIkaTabWarnings } from './ika/hooks/useIkaTabWarnings';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import '@/lib/design-system';
@@ -47,6 +48,9 @@ export function IkaTab({ project, data }: IkaTabProps) {
   // Extract projectId from either prop
   const projectData = project ?? data;
   const projectId = projectData?.id;
+
+  // Cache hit from project-details.tsx — no extra network request.
+  const { hasWorkersWithoutClass } = useIkaTabWarnings(projectId);
 
   const ikaTabs = [
     {
@@ -71,6 +75,7 @@ export function IkaTab({ project, data }: IkaTabProps) {
       id: 'stamps-calculation',
       label: t('ika.stampsCalculation'),
       icon: Calculator,
+      warningDot: hasWorkersWithoutClass,
       content: <StampsCalculationTabContent projectId={projectId} />,
     },
     {

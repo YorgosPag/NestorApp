@@ -30,6 +30,7 @@ import { DetailsContainer } from '@/core/containers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useProjectDetail } from '@/hooks/useProjectDetail';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useIkaTabWarnings } from './ika/hooks/useIkaTabWarnings';
 import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import type { CreateShareInput } from '@/types/sharing';
 
@@ -84,6 +85,11 @@ export function ProjectDetails({
 }: ProjectDetailsProps) {
   const { t } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const { user } = useAuth();
+
+  // Active tab — Edit button visible only on tabs that own editable fields.
+  const [activeTab, setActiveTab] = useState(initialTab || 'general');
+  const EDIT_TABS = new Set(['general', 'locations', 'measurements']);
+  const hideEditButton = !EDIT_TABS.has(activeTab);
 
   // Use lifted state if available, otherwise fallback to local state.
   // In create mode there is no "view" phase — start directly in edit mode.
@@ -144,6 +150,11 @@ export function ProjectDetails({
     saveCallbackRef.current = saveFn;
   }, []);
 
+  // IKA tab warning: amber dot when ≥1 worker has no insurance class.
+  // undefined in create mode → hook returns empty workers (no query).
+  const warningProjectId = isCreateMode ? undefined : (project?.id ?? undefined);
+  const { hasWorkersWithoutClass } = useIkaTabWarnings(warningProjectId);
+
   // Get project tabs from centralized config
   const projectTabs = getSortedProjectTabs();
 
@@ -203,6 +214,7 @@ export function ProjectDetails({
             isCreateMode={isCreateMode}
             onStatusChange={isCreateMode ? onDraftStatusChange : refetchProject}
             hideEditControls={isTrashMode}
+            hideEditButton={hideEditButton}
             onShowcaseProject={displayProject?.id && !isCreateMode ? () => setShowcaseDialogOpen(true) : undefined}
           />
         ) : null
@@ -217,6 +229,8 @@ export function ProjectDetails({
             theme="default"
             translationNamespace="building"
             globalProps={globalProps}
+            onTabChange={setActiveTab}
+            tabWarnings={{ ika: hasWorkersWithoutClass }}
           />
         ) : null
       }
