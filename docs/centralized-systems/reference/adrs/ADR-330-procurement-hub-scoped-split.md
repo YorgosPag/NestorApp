@@ -10,6 +10,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-05-04 | ✅ **Phase C.3 — CF DEPLOYED** — `materialPriceSyncOnPODelivery` deployed to Firebase production (us-central1, Node.js 22, 1st Gen). Commit `da037920`. Phase 4.5 ora fully operational end-to-end. |
 | 2026-05-04 | ✅ **Phase C.1 + C.2 IMPLEMENTED** — Hardening server-side di Phase 4.5 + 5.5. **C.1 (Phase 4.5 → Cloud Function):** `materialPriceSyncOnPODelivery` su `onUpdate('purchase_orders/{poId}')`. Pure helpers `shouldTriggerSync` + `computeNewAvgPrice` testati (11 tests). Route-layer `services/procurement/material-price-sync.ts` rimosso — CF è SSoT canonico. **C.2 (Phase 5.5 → server-side validation in API route):** `loadAndComputeFaDiscount` chiamato in `createPO` + `updatePO` (procurement-service); 4 campi FA dal DTO ignorati e ricalcolati lato server da `framework_agreements`. Pure helpers `computeGrossTotal` + `computeFaDiscountFields` testati (20 tests). Tamper-proof: client non può falsificare `faDiscountPercent`. CF rejected per Phase 5.5 (request-time validation più veloce e standard SAP/Oracle/Procore). |
 | 2026-05-04 | ❌ **Phase 7 DEFERRED (non priority)** — Decisione esplicita di Giorgio: la struttura organizzativa Pagonis Energo ha un εργοταξιάρχης (site manager) per cantiere che gestisce autonomamente le παραγγελίες del proprio progetto. Il procurement è naturalmente project-scoped per design organizzativo, non per limitazione tecnica. Industry pattern construction-native (Procore + Autodesk) conferma project-scoped procurement come scelta corretta per scale mid-size. Phase 5 Framework Agreements copre l'80% del caso d'uso "centralized procurement" realistico (contratti annuali ΤΙΤΑΝ -10% applicati automaticamente cross-project). Casi residui (1-2/anno) gestibili con manual workaround (3 PO separati allo stesso vendor + negoziazione verbale dello sconto volume). Codice sourcing_events esistente (creato in ADR-327 step a-i) preservato per multi-trade packages dentro un singolo progetto. Revisit triggers documentati in §5 Phase 7. Status header e tracking table (§7) aggiornati. Decisione reversibile: schema `projectId: string → projectIds: string[]` migrazione additive non-breaking. |
 | 2026-05-04 | ✅ **Phase 4.5 IMPLEMENTED** — Auto-update Material avgPrice/lastPrice/lastPurchaseDate su PO → delivered. Architecture: server-side (no Cloud Function — Next.js route-layer, fire-and-forget). NEW file: `services/procurement/material-price-sync.ts` (`syncMaterialPricesOnDelivery`). MODIFY: `types/procurement/purchase-order.ts` (+`materialId?: string | null` su `PurchaseOrderItem`), `services/procurement/procurement-service.ts` (chiama sync in `recordPODelivery` quando `newStatus === 'delivered'`). Pattern: explicit FK — solo items con `materialId` impostato vengono aggiornati (no match ambigui). avgPrice = rolling mean `(oldAvg + newPrice) / 2`. Idempotente: trigger unico per delivery (guard `newStatus === 'delivered'`). Tenant-isolation: companyId check + soft-delete guard in sync. UI per link materialId→PO item: fase futura. |
@@ -550,6 +551,7 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 - **Files MODIFY (3):** `functions/src/index.ts` (export), `functions/src/config/firestore-collections.ts` (+`MATERIALS`), `src/services/procurement/procurement-service.ts` (rimossa chiamata fire-and-forget + import).
 - **Files DELETE (1):** `src/services/procurement/material-price-sync.ts` (route-layer obsoleto).
 - **Storia:** v1 (2026-05-03) era route-layer fire-and-forget da `recordPODelivery`. Phase C.1 (2026-05-04) ha convertito a CF per tamper-proof + at-least-once retry; route-layer rimosso (CF unica sorgente, deciso con Giorgio durante Phase C planning).
+- **Deployed:** ✅ `materialPriceSyncOnPODelivery` deployed to Firebase production 2026-05-04 (us-central1, Node.js 22, 1st Gen).
 - **Pendente:** UI per impostare `materialId` sul PO item — fase futura (Phase 4.6).
 
 ### Phase 5 — Framework Agreements ✅ MVP IMPLEMENTED 2026-05-04 (no auto-apply)
@@ -962,8 +964,8 @@ Status legend: 📋 PLANNED · 🚧 IN_PROGRESS · ✅ COMPLETED · ⚠️ PARTI
 | 3 — Vendor Master surface | ✅ COMPLETED | `1536e699` | 2026-05-04 |
 | 4 — Material Catalog | ✅ COMPLETED | `04669a1b` | 2026-05-04 |
 | 5 — Framework Agreements | ✅ COMPLETED (MVP, no auto-apply) | `f050d1ac` | 2026-05-04 |
-| 5.5 — Auto-apply FA discounts in PO | ✅ COMPLETED v2 (client preview + **server-side validation Phase C.2**) | pending commit | 2026-05-04 |
-| 4.5 — Auto-update avgPrice from PO | ✅ COMPLETED v2 (**Cloud Function trigger Phase C.1**, route-layer rimosso) | pending commit | 2026-05-04 |
+| 5.5 — Auto-apply FA discounts in PO | ✅ COMPLETED v2 (client preview + **server-side validation Phase C.2**) | `da037920` | 2026-05-04 |
+| 4.5 — Auto-update avgPrice from PO | ✅ COMPLETED v2 (**CF trigger Phase C.1**, route-layer rimosso, **deployed 2026-05-04**) | `da037920` | 2026-05-04 |
 | 6 — Cross-project Dashboard | ✅ COMPLETED | `b30278e1` | 2026-05-04 |
 | 7 — Sourcing Events globali (multi-project) | ❌ DEFERRED (non priority — vedi §5 Phase 7) | — | 2026-05-04 |
 
