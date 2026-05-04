@@ -1,6 +1,6 @@
 # ADR-330 — Procurement Hub Scoped Split (Company-wide vs Project-scoped)
 
-**Status:** ✅ IMPLEMENTED — Phase 1 (S1-S6) complete 2026-05-04. Phase 3 (Vendor Master) complete 2026-05-04. Phase 4 (Material Catalog) complete 2026-05-04. Phase 5 (Framework Agreements MVP) complete 2026-05-04. Phase 6 (Cross-project Dashboard) complete 2026-05-04. Hub landing + project-scoped procurement tab + 5 KPIs + create buttons + vendor directory + material catalog (CRUD) + framework agreements (breakpoint discounts) + company-wide dashboard widgets (4 KPI, spend-by-category, monthly trend). Phase 5.5, 4.5, 7 deferred (Cloud Functions + multi-project Sourcing Events).
+**Status:** ✅ IMPLEMENTED — Phase 1 (S1-S6) complete 2026-05-04. Phase 3 (Vendor Master) complete 2026-05-04. Phase 4 (Material Catalog) complete 2026-05-04. Phase 5 (Framework Agreements MVP) complete 2026-05-04. Phase 5.5 (Auto-apply FA discounts in PO) complete 2026-05-04. Phase 6 (Cross-project Dashboard) complete 2026-05-04. Hub landing + project-scoped procurement tab + 5 KPIs + create buttons + vendor directory + material catalog (CRUD) + framework agreements (breakpoint discounts + auto-apply in PO form) + company-wide dashboard widgets (4 KPI, spend-by-category, monthly trend). Phase 4.5, 7 deferred (Cloud Functions + multi-project Sourcing Events).
 **Date:** 2026-05-03
 **Author:** Claude (Plan Mode, 3 Explore agents) + Γιώργος
 **Supersedes (partially):** ADR-267 §"Αποφάσεις" #1 ("Standalone top-level navigation")
