@@ -19,6 +19,7 @@ interface AgreementDetailProps {
   agreement: FrameworkAgreement;
   onEdit: (agreement: FrameworkAgreement) => void;
   onDelete: (agreement: FrameworkAgreement) => void;
+  onCreateNew?: () => void;
 }
 
 const STATUS_SEMANTIC: Record<FrameworkAgreementStatus, string> = {
@@ -33,7 +34,7 @@ function daysUntil(ts: { toDate: () => Date }): number {
   return Math.ceil(ms / 86_400_000);
 }
 
-export function AgreementDetail({ agreement, onEdit, onDelete }: AgreementDetailProps) {
+export function AgreementDetail({ agreement, onEdit, onDelete, onCreateNew }: AgreementDetailProps) {
   const { t } = useTranslation('procurement');
   const { suppliers } = usePOSupplierContacts();
 
@@ -66,6 +67,9 @@ export function AgreementDetail({ agreement, onEdit, onDelete }: AgreementDetail
           </Badge>
         }
         actions={[
+          ...(onCreateNew
+            ? [createEntityAction('new', t('hub.frameworkAgreements.create'), onCreateNew)]
+            : []),
           createEntityAction('edit', t('hub.frameworkAgreements.edit'), () => onEdit(agreement)),
           createEntityAction('delete', t('hub.frameworkAgreements.delete'), () => onDelete(agreement)),
         ]}

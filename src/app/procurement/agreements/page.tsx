@@ -160,6 +160,7 @@ export default function AgreementsPage() {
       agreement={selectedAgreement}
       onEdit={handleEdit}
       onDelete={setDeleteTarget}
+      onCreateNew={handleNew}
     />
   ) : null;
 

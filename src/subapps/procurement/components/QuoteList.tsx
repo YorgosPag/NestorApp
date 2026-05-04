@@ -128,7 +128,6 @@ function SupersededVersionRow({ quote }: { quote: Quote }) {
 function formatCurrencyRow(n: number): string {
   return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(n);
 }
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -150,7 +149,6 @@ export function QuoteList({
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-
   // RFQ mode: URL-persistent sort + search (activated when onSelectQuote is provided)
   const isRfqMode = !!onSelectQuote;
 
@@ -160,7 +158,6 @@ export function QuoteList({
     isRfqMode && (VALID_SORT_KEYS as readonly string[]).includes(sortParam ?? '')
       ? (sortParam as SortKey)
       : DEFAULT_SORT_KEY;
-
   const handleUrlSortChange = useCallback(
     (newSort: string) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -170,7 +167,6 @@ export function QuoteList({
     },
     [router, pathname, searchParams],
   );
-
   const handleUrlSearchChange = useCallback(
     (value: string) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -180,7 +176,6 @@ export function QuoteList({
     },
     [router, pathname, searchParams],
   );
-
   // Legacy state (standalone mode + CompactToolbar)
   const { sortBy, sortOrder, onSortChange } = useSortState<'date' | 'number' | 'status' | 'value'>('date');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -271,6 +266,11 @@ export function QuoteList({
   const handleSearchChange = isRfqMode ? handleUrlSearchChange : setSearchTerm;
   const firstNonAction = isRfqMode ? -1 : standaloneSorted.findIndex((e) => !e.isActionRequired);
   const actionRequiredVisible = isRfqMode ? 0 : standaloneSorted.filter((e) => e.isActionRequired).length;
+  const handleStandaloneSelect = useCallback(
+    (q: Quote) => { if (onSelectQuote) onSelectQuote(q); },
+    [onSelectQuote],
+  );
+
   const renderSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
     if (newSortBy === 'date' || newSortBy === 'number' || newSortBy === 'status' || newSortBy === 'value') {
       onSortChange(newSortBy, newSortOrder);
@@ -486,7 +486,7 @@ export function QuoteList({
                 <QuoteListCard
                   quote={entry.q}
                   isSelected={selectedQuoteId === entry.q.id}
-                  onSelect={onSelectQuote ? () => onSelectQuote(entry.q) : undefined}
+                  onSelect={() => handleStandaloneSelect(entry.q)}
                 />
               </React.Fragment>
             ))

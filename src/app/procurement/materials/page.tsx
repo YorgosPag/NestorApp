@@ -140,6 +140,7 @@ export default function MaterialsPage() {
       material={selectedMaterial}
       onEdit={openEdit}
       onDelete={setDeleteTarget}
+      onCreateNew={openCreate}
     />
   ) : null;
 

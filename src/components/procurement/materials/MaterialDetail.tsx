@@ -15,9 +15,10 @@ interface MaterialDetailProps {
   material: Material;
   onEdit: (material: Material) => void;
   onDelete: (material: Material) => void;
+  onCreateNew?: () => void;
 }
 
-export function MaterialDetail({ material, onEdit, onDelete }: MaterialDetailProps) {
+export function MaterialDetail({ material, onEdit, onDelete, onCreateNew }: MaterialDetailProps) {
   const { t } = useTranslation('procurement');
   const { suppliers } = usePOSupplierContacts();
 
@@ -43,6 +44,9 @@ export function MaterialDetail({ material, onEdit, onDelete }: MaterialDetailPro
         subtitle={subtitle}
         variant="detailed"
         actions={[
+          ...(onCreateNew
+            ? [createEntityAction('new', t('hub.materialCatalog.create'), onCreateNew)]
+            : []),
           createEntityAction('edit', t('hub.materialCatalog.edit'), () => onEdit(material)),
           createEntityAction('delete', t('hub.materialCatalog.delete'), () => onDelete(material)),
         ]}
