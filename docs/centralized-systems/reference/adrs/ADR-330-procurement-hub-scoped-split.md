@@ -1,6 +1,6 @@
 # ADR-330 — Procurement Hub Scoped Split (Company-wide vs Project-scoped)
 
-**Status:** ✅ IMPLEMENTED — Phase 1 (S1-S6) complete 2026-05-04. Phase 3 (Vendor Master) complete 2026-05-04. Phase 4 (Material Catalog) complete 2026-05-04. Phase 6 (Cross-project Dashboard) complete 2026-05-04. Hub landing + project-scoped procurement tab + 5 KPIs + create buttons + vendor directory + material catalog (CRUD) + company-wide dashboard widgets (4 KPI, spend-by-category, monthly trend).
+**Status:** ✅ IMPLEMENTED — Phase 1 (S1-S6) complete 2026-05-04. Phase 3 (Vendor Master) complete 2026-05-04. Phase 4 (Material Catalog) complete 2026-05-04. Phase 5 (Framework Agreements MVP) complete 2026-05-04. Phase 6 (Cross-project Dashboard) complete 2026-05-04. Hub landing + project-scoped procurement tab + 5 KPIs + create buttons + vendor directory + material catalog (CRUD) + framework agreements (breakpoint discounts) + company-wide dashboard widgets (4 KPI, spend-by-category, monthly trend). Phase 5.5, 4.5, 7 deferred (Cloud Functions + multi-project Sourcing Events).
 **Date:** 2026-05-03
 **Author:** Claude (Plan Mode, 3 Explore agents) + Γιώργος
 **Supersedes (partially):** ADR-267 §"Αποφάσεις" #1 ("Standalone top-level navigation")
@@ -10,6 +10,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-05-04 | ✅ **ADR §7 FINALIZED** — Session tracking table: commit hashes filled (S1→`29f9c307`, S2→`240fcda0`, S3→`4c93251f`, S5→multi-commit, S6→`f222b0d8`+`b30278e1`). Phase 3-7 table corrected: Phase 4 (Material Catalog) + Phase 6 (Dashboard) aggiornate a ✅ COMPLETED con commit hash. Phase 5.5 + 4.5 aggiunte come DEFERRED. Status header aggiornato a includere Phase 5 (Framework Agreements). |
 | 2026-05-03 | 📋 PROPOSED — bozza iniziale post esplorazione (3 agents Explore + verifica codice + lettura ADR-267/327/328) |
 | 2026-05-03 | ✅ **D1 RESOLVED** — Detail page deep-link: **Opzione B** (project-scoped URLs `/projects/{projectId}/procurement/{po|quote|rfq}/[id]`). Motivazione: tutti i big player del settore (Procore, SAP S/4HANA EPPM, Oracle Primavera Unifier, Autodesk Construction Cloud, Buildertrend) usano URL project-scoped per detail page. Vantaggi: (a) RBAC tenant-isolation enforced dall'URL stesso, (b) breadcrumb completo `Έργο > Προμήθειες > PO-1234`, (c) audit trail chiaro, (d) ricerca globale comunque disponibile via search bar (non dipende dalla URL structure). |
 | 2026-05-03 | ✅ **D2 RESOLVED** — Sub-tab nel project Procurement: **Opzione A — 4 sub-tab** (Επισκόπηση, Αιτήματα Προσφορών/RFQ, Προσφορές & Σύγκριση/Quote, Παραγγελίες/PO). Motivazione: pattern Procore (Bidding/Commitments come tool separati), separation of concerns chiara, evita confusione "richiesto vs ricevuto" nella stessa surface, Overview merita propria oscreen per KPI/charts del progetto. Eventuale 5° sub-tab "Ανά Κτίριο" rimane opzionale Phase 1.5. |
@@ -877,12 +878,12 @@ L'opzione C (no buttons) è impossibile in cantiere reale.
 
 | Session | Status | Files actual | LOC actual | TS check | i18n audit | SSoT audit | Commit | Date |
 |---------|--------|--------------|------------|----------|------------|------------|--------|------|
-| **S1** Detail page migration | ✅ COMPLETED | 8 (7 NEW + 1 MODIFY) | ~165 | ⏳ background | n/a (no new keys) | n/a (helper added to registry in S2) | pending | 2026-05-03 |
-| **S2** Project tab + RouteTabs | ✅ COMPLETED | 14 (10 NEW + 4 MODIFY) | ~290 | ⏳ background | ✅ 6 new keys × 2 locale | ✅ RouteTabs SSoT (ADR-328) | pending | 2026-05-03 |
-| **S3** Επισκόπηση 5 KPIs | ✅ COMPLETED | 15 (11 NEW + 4 MODIFY) | ~380 | ⏳ background | ✅ 16 keys × 2 locale | ✅ useAsyncData+stale-cache (ADR-300), EnterpriseErrorBoundary per-KPI | pending | 2026-05-04 |
-| **S4** Create buttons + BOQ link | ✅ COMPLETED | 7 (0 NEW + 7 MODIFY) | ~55 | ⏳ background | ✅ 4 new keys × 2 locale | ✅ SSoT: existing list buttons via onCreateRfq/onCreateNew callbacks | pending | 2026-05-04 |
-| **S5** Top-level Hub redesign | ✅ COMPLETED | 19 (9 NEW + 7 MODIFY + 3 DELETE) | ~380 | ⏳ background | ✅ 25 new keys × 2 locale (nav.hub/vendors/materials/agreements/analytics + hub.* section) | ✅ usePOSupplierContacts+usePurchaseOrders SSoT reuse, no new queries | pending | 2026-05-04 |
-| **S6** Verification + finalize | ✅ COMPLETED | 6 (1 NEW + 5 MODIFY) | ~65 | ✅ 0 new errors | ✅ 0 violations | ✅ 0 violations | pending | 2026-05-04 |
+| **S1** Detail page migration | ✅ COMPLETED | 8 (7 NEW + 1 MODIFY) | ~165 | ✅ background | n/a (no new keys) | n/a (helper added to registry in S2) | `29f9c307` | 2026-05-03 |
+| **S2** Project tab + RouteTabs | ✅ COMPLETED | 14 (10 NEW + 4 MODIFY) | ~290 | ✅ background | ✅ 6 new keys × 2 locale | ✅ RouteTabs SSoT (ADR-328) | `240fcda0` | 2026-05-03 |
+| **S3** Επισκόπηση 5 KPIs | ✅ COMPLETED | 15 (11 NEW + 4 MODIFY) | ~380 | ✅ background | ✅ 16 keys × 2 locale | ✅ useAsyncData+stale-cache (ADR-300), EnterpriseErrorBoundary per-KPI | `4c93251f` | 2026-05-04 |
+| **S4** Create buttons + BOQ link | ✅ COMPLETED | 7 (0 NEW + 7 MODIFY) | ~55 | ✅ background | ✅ 4 new keys × 2 locale | ✅ SSoT: existing list buttons via onCreateRfq/onCreateNew callbacks | `4c93251f`+`53ceea78` | 2026-05-04 |
+| **S5** Top-level Hub redesign | ✅ COMPLETED | 19 (9 NEW + 7 MODIFY + 3 DELETE) | ~380 | ✅ background | ✅ 25 new keys × 2 locale (nav.hub/vendors/materials/agreements/analytics + hub.* section) | ✅ usePOSupplierContacts+usePurchaseOrders SSoT reuse, no new queries | `1536e699`+`b443b8c2`+`a428f2dc`+`53ceea78` | 2026-05-04 |
+| **S6** Verification + finalize | ✅ COMPLETED | 6 (1 NEW + 5 MODIFY) | ~65 | ✅ 0 new errors | ✅ 0 violations | ✅ 0 violations | `f222b0d8`+`b30278e1` | 2026-05-04 |
 
 **Aggiornare ogni cella alla fine della sessione corrispondente.**
 
@@ -890,13 +891,15 @@ Status legend: 📋 PLANNED · 🚧 IN_PROGRESS · ✅ COMPLETED · ⚠️ PARTI
 
 ### Phase 3-7 — placeholder
 
-| Phase | Status | Sessioni | Date |
-|-------|--------|----------|------|
-| 3 — Vendor Master surface | ✅ COMPLETED | 1 sessione | 2026-05-04 |
-| 4 — Material Catalog | 📋 PLANNED | TBD (probabile 2-3 sessioni) | — |
-| 5 — Framework Agreements | ✅ COMPLETED (MVP, no auto-apply) | 1 sessione | 2026-05-04 |
-| 6 — Cross-project Dashboard | 📋 PLANNED | TBD (probabile 1-2 sessioni) | — |
-| 7 — Sourcing Events globali | 📋 FUTURE | TBD | — |
+| Phase | Status | Commit | Date |
+|-------|--------|--------|------|
+| 3 — Vendor Master surface | ✅ COMPLETED | `1536e699` | 2026-05-04 |
+| 4 — Material Catalog | ✅ COMPLETED | `04669a1b` | 2026-05-04 |
+| 5 — Framework Agreements | ✅ COMPLETED (MVP, no auto-apply) | `f050d1ac` | 2026-05-04 |
+| 5.5 — Auto-apply FA discounts in PO | 📋 DEFERRED | — | Cloud Function future |
+| 4.5 — Auto-update avgPrice from PO | 📋 DEFERRED | — | Cloud Function future |
+| 6 — Cross-project Dashboard | ✅ COMPLETED | `b30278e1` | 2026-05-04 |
+| 7 — Sourcing Events globali | 📋 FUTURE | — | TBD |
 
 ### S6 Verification log (smoke test checklist)
 

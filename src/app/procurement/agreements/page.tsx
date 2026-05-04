@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFrameworkAgreements } from '@/hooks/procurement/useFrameworkAgreements';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
@@ -32,8 +32,6 @@ import type {
 
 export default function AgreementsPage() {
   const { t } = useTranslation('procurement');
-  const { toast } = useToast();
-
   const {
     agreements,
     loading,
@@ -89,10 +87,10 @@ export default function AgreementsPage() {
   ) {
     if (agreementId) {
       await updateAgreement(agreementId, payload as UpdateFrameworkAgreementDTO);
-      toast({ title: t('hub.frameworkAgreements.toast.updated') });
+      toast.success(t('hub.frameworkAgreements.toast.updated'));
     } else {
       await createAgreement(payload as CreateFrameworkAgreementDTO);
-      toast({ title: t('hub.frameworkAgreements.toast.created') });
+      toast.success(t('hub.frameworkAgreements.toast.created'));
     }
   }
 
@@ -100,12 +98,9 @@ export default function AgreementsPage() {
     if (!deleteTarget) return;
     try {
       await deleteAgreement(deleteTarget.id);
-      toast({ title: t('hub.frameworkAgreements.toast.deleted') });
+      toast.success(t('hub.frameworkAgreements.toast.deleted'));
     } catch (err) {
-      toast({
-        title: err instanceof Error ? err.message : String(err),
-        variant: 'destructive',
-      });
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setDeleteTarget(null);
     }
