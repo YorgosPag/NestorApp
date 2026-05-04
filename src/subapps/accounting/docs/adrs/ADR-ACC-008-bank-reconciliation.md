@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | DRAFT |
+| **Status** | IMPLEMENTED |
 | **Date** | 2026-02-09 |
 | **Category** | Accounting / Banking |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -551,6 +551,8 @@ bank_transactions:
 | 2026-02-09 | CSV encoding: windows-1253 (configurable per bank) | Claude Code |
 | 2026-02-09 | Pending payments view: εισπρακτέα + πληρωτέα | Claude Code |
 | 2026-02-09 | 1 bank account Phase 1, modular for more | Γιώργος |
+| 2026-03-30 | **Phase 2d implemented** — ReconciliationPageContent (split-view), CandidatesPanel with confidence badges + tier + match reasons tooltip, BatchActionsToolbar ("Auto-match all" → matchBatch), CandidateGroupCard (N:M), useMatchCandidates/useMatchActions hooks. Engine fully wired UI→API→service. | Claude Code |
+| 2026-05-04 | **Verification** — Phase B audit confirms full wiring: ReconciliationPageContent + BankPageContent both wired to engine. AUDIT-2026-03-29 flag resolved. Status updated DRAFT→IMPLEMENTED. | Claude Code |
 | 2026-02-09 | **Phase 2 implemented** — types/bank.ts: TransactionDirection, MatchStatus (4 states), BankAccountConfig, BankTransaction (~20 fields), CSVParserConfig + CSVColumnMapping (per-bank parsing), MatchCandidate, MatchResult, ImportBatch, BankTransactionFilters. Imports CurrencyCode from contacts/banking. types/interfaces.ts: IMatchingEngine (findCandidates, matchTransaction, matchBatch, unmatchTransaction), ICSVImportService (getSupportedBanks, parseCSV, importTransactions) | Claude Code |
 | 2026-02-09 | **Phase 3 implemented** — services/config/csv-parsers/: 4 bank configs (NBG tab/win1253, Eurobank ;/utf8, Piraeus ,/win1253, Alpha ;/utf8) + index.ts registry. services/external/csv-import-service.ts: `CSVImportService implements ICSVImportService` — `parseCSV()` + `importTransactions()` with batch tracking. services/engines/matching-engine.ts: `MatchingEngine implements IMatchingEngine` — scoring: exact amount +40pts, near ±5% +25pts, exact date +30pts, near ±7d +15pts, counterparty +20pts, EFKA keywords +20pts. Auto-match threshold 85. `findCandidates()`, `matchTransaction()`, `matchBatch()`, `unmatchTransaction()` | Claude Code |
 | 2026-02-09 | **Phase 4 implemented** — API: `GET/POST /api/accounting/bank/transactions`, `POST /api/accounting/bank/match`. Hook: `useBankTransactions(filters)`. UI: `BankPageContent` (3 filters: account/direction/matchStatus + Import CSV button), `TransactionsList` (table: date/description/amount with color credit/debit/matchStatus badges), `ImportCSVDialog` (dialog: bank selection NBG/Eurobank/Piraeus/Alpha + file upload), `MatchingPanel` (split layout: unmatched transactions + match candidates with confidence badges + match button) | Claude Code |
