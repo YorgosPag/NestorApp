@@ -95,6 +95,7 @@ interface MonthlyTrendProps {
 function MonthlyTrend({ trend, loading }: MonthlyTrendProps) {
   const { t } = useTranslation('procurement');
   const max = Math.max(...trend.map((p) => p.total), 1);
+  const hasData = trend.some((p) => p.total > 0);
 
   return (
     <Card>
@@ -105,9 +106,11 @@ function MonthlyTrend({ trend, loading }: MonthlyTrendProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">—</p>
-        ) : (
+        {loading && <p className="text-sm text-muted-foreground">—</p>}
+        {!loading && !hasData && (
+          <p className="text-sm text-muted-foreground">{t('hub.dashboard.noPOs')}</p>
+        )}
+        {!loading && hasData && (
           <figure className="flex h-24 items-end justify-between gap-1" aria-label={t('hub.dashboard.monthlyTrend')}>
             {trend.map(({ month, total }) => {
               const label = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(
@@ -138,12 +141,6 @@ function MonthlyTrend({ trend, loading }: MonthlyTrendProps) {
 export function ProcurementDashboardSection() {
   const { t } = useTranslation('procurement');
   const stats = useProcurementDashboard();
-
-  if (!stats.loading && stats.totalPOs === 0) {
-    return (
-      <p className="px-4 pb-4 text-sm text-muted-foreground">{t('hub.dashboard.noPOs')}</p>
-    );
-  }
 
   return (
     <section aria-label={t('hub.dashboard.title')} className="space-y-4 px-4 pb-6">
