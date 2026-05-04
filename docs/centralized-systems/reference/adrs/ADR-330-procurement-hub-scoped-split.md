@@ -1,6 +1,6 @@
 # ADR-330 — Procurement Hub Scoped Split (Company-wide vs Project-scoped)
 
-**Status:** ✅ IMPLEMENTED — Phase 1 (S1-S6) complete 2026-05-04. Phase 3 (Vendor Master) complete 2026-05-04. Phase 4 (Material Catalog) complete 2026-05-04. Phase 4.5 (Auto-update avgPrice from PO delivery) complete 2026-05-04. Phase 5 (Framework Agreements MVP) complete 2026-05-04. Phase 5.5 (Auto-apply FA discounts in PO) complete 2026-05-04. Phase 6 (Cross-project Dashboard) complete 2026-05-04. Hub landing + project-scoped procurement tab + 5 KPIs + create buttons + vendor directory + material catalog (CRUD) + framework agreements (breakpoint discounts + auto-apply in PO form) + company-wide dashboard widgets (4 KPI, spend-by-category, monthly trend). Phase 7 deferred (multi-project Sourcing Events).
+**Status:** ✅ IMPLEMENTED (Phases 1-6) — Phase 7 ❌ DEFERRED (non priority, 2026-05-04). Phase 1 (S1-S6) complete 2026-05-04. Phase 3 (Vendor Master) complete 2026-05-04. Phase 4 (Material Catalog) complete 2026-05-04. Phase 4.5 (Auto-update avgPrice from PO delivery) complete 2026-05-04. Phase 5 (Framework Agreements MVP) complete 2026-05-04. Phase 5.5 (Auto-apply FA discounts in PO) complete 2026-05-04. Phase 6 (Cross-project Dashboard) complete 2026-05-04. Hub landing + project-scoped procurement tab + 5 KPIs + create buttons + vendor directory + material catalog (CRUD) + framework agreements (breakpoint discounts + auto-apply in PO form) + company-wide dashboard widgets (4 KPI, spend-by-category, monthly trend). Phase 7 (multi-project Sourcing Events) explicitly deferred — decentralized site-manager workflow + Procore/Autodesk pattern + Framework Agreements coverage make centralized cross-project procurement non-priority for current scale (vedi §5 Phase 7 per motivazione completa + revisit triggers).
 **Date:** 2026-05-03
 **Author:** Claude (Plan Mode, 3 Explore agents) + Γιώργος
 **Supersedes (partially):** ADR-267 §"Αποφάσεις" #1 ("Standalone top-level navigation")
@@ -10,6 +10,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-05-04 | ❌ **Phase 7 DEFERRED (non priority)** — Decisione esplicita di Giorgio: la struttura organizzativa Pagonis Energo ha un εργοταξιάρχης (site manager) per cantiere che gestisce autonomamente le παραγγελίες del proprio progetto. Il procurement è naturalmente project-scoped per design organizzativo, non per limitazione tecnica. Industry pattern construction-native (Procore + Autodesk) conferma project-scoped procurement come scelta corretta per scale mid-size. Phase 5 Framework Agreements copre l'80% del caso d'uso "centralized procurement" realistico (contratti annuali ΤΙΤΑΝ -10% applicati automaticamente cross-project). Casi residui (1-2/anno) gestibili con manual workaround (3 PO separati allo stesso vendor + negoziazione verbale dello sconto volume). Codice sourcing_events esistente (creato in ADR-327 step a-i) preservato per multi-trade packages dentro un singolo progetto. Revisit triggers documentati in §5 Phase 7. Status header e tracking table (§7) aggiornati. Decisione reversibile: schema `projectId: string → projectIds: string[]` migrazione additive non-breaking. |
 | 2026-05-04 | ✅ **Phase 4.5 IMPLEMENTED** — Auto-update Material avgPrice/lastPrice/lastPurchaseDate su PO → delivered. Architecture: server-side (no Cloud Function — Next.js route-layer, fire-and-forget). NEW file: `services/procurement/material-price-sync.ts` (`syncMaterialPricesOnDelivery`). MODIFY: `types/procurement/purchase-order.ts` (+`materialId?: string | null` su `PurchaseOrderItem`), `services/procurement/procurement-service.ts` (chiama sync in `recordPODelivery` quando `newStatus === 'delivered'`). Pattern: explicit FK — solo items con `materialId` impostato vengono aggiornati (no match ambigui). avgPrice = rolling mean `(oldAvg + newPrice) / 2`. Idempotente: trigger unico per delivery (guard `newStatus === 'delivered'`). Tenant-isolation: companyId check + soft-delete guard in sync. UI per link materialId→PO item: fase futura. |
 | 2026-05-04 | ✅ **Phase 5.5 IMPLEMENTED** — Auto-apply FA discounts in PO form via client-side hook. Architecture: pure utility `framework-agreement-discount.ts` (`resolveActiveFa` + `computeFaDiscount`) + `usePOFrameworkAgreement` hook + `PurchaseOrder` type extended (4 nullable FA fields) + API schemas + repository + service. UI: emerald banner + discount row + netTotal in PO form totals section. 12 files modified, 2 new. No breaking changes on existing POs (null=no discount applied). |
 | 2026-05-04 | ✅ **ADR §7 FINALIZED** — Session tracking table: commit hashes filled (S1→`29f9c307`, S2→`240fcda0`, S3→`4c93251f`, S5→multi-commit, S6→`f222b0d8`+`b30278e1`). Phase 3-7 table corrected: Phase 4 (Material Catalog) + Phase 6 (Dashboard) aggiornate a ✅ COMPLETED con commit hash. Phase 5.5 + 4.5 aggiunte come DEFERRED. Status header aggiornato a includere Phase 5 (Framework Agreements). |
@@ -609,12 +610,35 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 **Rischio:** basso. Route restoration + UI wiring, nessuna logica nuova.
 **Modello:** Sonnet 4.6
 
-### Phase 7 (futura) — Sourcing Events globali
+### Phase 7 — Sourcing Events globali ❌ DEFERRED (non priority)
 
-- Estendere `SourcingEvent` con `projectIds: string[]` (oggi `projectId: string`)
-- Pacchetti multi-progetto per acquisti centralizzati
+**Status:** DEFERRED — non priority (deciso 2026-05-04 con Giorgio)
 
-**Rischio:** alto, fuori scope iniziale.
+**Decisione:** non implementare. La Phase 7 prevedeva di estendere `SourcingEvent` da single-project (`projectId: string`) a multi-project (`projectIds: string[]`) per acquisti centralizzati su più cantieri (es. 530 sacchi cemento → 200 site A + 150 site B + 180 site C → unico fornitore + sconto volume).
+
+**Motivazione del deferral:**
+
+1. **Organizzazione decentralizzata.** Ogni cantiere ha il proprio εργοταξιάρχης (site manager) che gestisce autonomamente le proprie παραγγελίες. La struttura organizzativa di Pagonis Energo non ha un ruolo "central buyer" — il procurement è naturalmente project-scoped per design organizzativo.
+
+2. **Industry pattern construction-native.** Procore + Autodesk Construction Cloud (i due player dominanti per costruzioni mid-size) tengono il procurement project-scoped. SAP S/4HANA Central Procurement + Oracle Primavera Unifier (che hanno multi-project central RFQ via Quota Arrangement / MSA) servono enterprise multi-plant con decine di sites e ruolo centralizzato di buyer — fuori scala per un architetto/costruttore mid-size.
+
+3. **Phase 5 Framework Agreements copre l'80% del caso d'uso "centralized procurement"** realistico:
+   - Contratto annuale ΤΙΤΑΝ -10% se annual volume > 1000t → applicato automaticamente su ogni PO di qualunque progetto
+   - Volume breakpoints + auto-apply in PO (Phase 5.5) → discount lock-in senza bisogno di sourcing event ad-hoc
+
+4. **Manual workaround accettabile per i casi residui.** Il caso "una tantum 530 sacchi su 3 cantieri" si risolve con 3 PO separati (uno per progetto) allo stesso fornitore + negoziazione verbale dello sconto volume nel email/telefono. ~5 minuti di lavoro manuale vs. ~35-40 file di sviluppo + 6 sub-fasi.
+
+5. **Use case frequency basso.** Giorgio ha confermato che "δεν συμβαίνει πάρα πολύ συχνά" e non ha un workflow ricorrente che lo richieda. Build feature without driving use case = waste.
+
+**Revisit triggers** (condizioni per riaprire la decisione):
+- Crescita organizzativa: introduzione di un ruolo "central buyer" / "responsabile acquisti corporate"
+- Scale-up: >10 cantieri attivi simultanei + >5 multi-project bulk-buy events/anno
+- Esplicita richiesta del business per centralizzare il purchasing
+- Cambio nel pattern di industria (Procore o Autodesk introducono multi-project commitments come prima-classe)
+
+**Codice esistente preservato:** la struttura `sourcing_events/` collection + service + API endpoints (creata in ADR-327 step a-i, 2026-04-29) **rimane attiva** ma con uso limitato a multi-trade packages **dentro un singolo progetto** (es. "Παγκράτι building A — finiture: cemento + intonaco + piastrelle"). Questo caso d'uso è funzionante e non viene rimosso.
+
+**Rischio del deferral:** nessuno. La scelta è reversibile in qualunque momento futuro — il `projectId: string` può diventare `projectIds: string[]` con migrazione additive non-breaking se i revisit triggers si attivano.
 
 ---
 
@@ -923,7 +947,7 @@ Status legend: 📋 PLANNED · 🚧 IN_PROGRESS · ✅ COMPLETED · ⚠️ PARTI
 | 5.5 — Auto-apply FA discounts in PO | ✅ COMPLETED (client-side hook) | pending commit | 2026-05-04 |
 | 4.5 — Auto-update avgPrice from PO | ✅ COMPLETED (server-side, fire-and-forget) | pending commit | 2026-05-04 |
 | 6 — Cross-project Dashboard | ✅ COMPLETED | `b30278e1` | 2026-05-04 |
-| 7 — Sourcing Events globali | 📋 FUTURE | — | TBD |
+| 7 — Sourcing Events globali (multi-project) | ❌ DEFERRED (non priority — vedi §5 Phase 7) | — | 2026-05-04 |
 
 ### S6 Verification log (smoke test checklist)
 
