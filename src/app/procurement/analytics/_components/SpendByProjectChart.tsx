@@ -61,7 +61,7 @@ export function SpendByProjectChart({
   const { t } = useTranslation('procurement');
   const router = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { projects } = useProjectsList({ enabled: !authLoading && isAuthenticated });
+  const { projects, loading: projectsLoading } = useProjectsList({ enabled: !authLoading && isAuthenticated });
 
   const rows = useMemo<ProjectRow[]>(() => {
     const nameById = new Map(projects.map((p) => [p.id, p.name]));
@@ -72,7 +72,7 @@ export function SpendByProjectChart({
     }));
   }, [data, projects]);
 
-  if (isLoading) return <KpiChartSkeleton />;
+  if (isLoading || projectsLoading) return <KpiChartSkeleton />;
 
   return (
     <Card className={className}>

@@ -255,7 +255,15 @@ export async function computeSpendAnalytics(
       : [];
     const nameMap = new Map(contactDocs.map(d => {
       const data = d.data();
-      return [d.id, String(data?.displayName ?? data?.companyName ?? d.id)];
+      const name =
+        data?.displayName ??
+        data?.companyName ??
+        (data?.firstName != null
+          ? [data.firstName, data.lastName].filter(Boolean).join(' ')
+          : null) ??
+        data?.serviceName ??
+        d.id;
+      return [d.id, String(name)];
     }));
 
     const byVendor: VendorPoint[] = topVendorIds.map(id => ({
