@@ -19,6 +19,11 @@ import { AnalyticsKpiTiles } from './AnalyticsKpiTiles';
 import { AnalyticsRefreshButton } from './AnalyticsRefreshButton';
 import { AnalyticsExportButton } from './AnalyticsExportButton';
 import { AnalyticsEmptyState } from './AnalyticsEmptyState';
+import { SpendByCategoryChart } from './SpendByCategoryChart';
+import { SpendByVendorPareto } from './SpendByVendorPareto';
+import { SpendByProjectChart } from './SpendByProjectChart';
+import { MonthlyTrendChart } from './MonthlyTrendChart';
+import { BudgetVsActualChart } from './BudgetVsActualChart';
 
 export function AnalyticsPageContent() {
   const { t } = useTranslation('procurement');
@@ -59,6 +64,47 @@ export function AnalyticsPageContent() {
           isLoading={isLoading}
         />
       </ComponentErrorBoundary>
+
+      {!isEmpty && (
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <ComponentErrorBoundary componentName="SpendByCategoryChart">
+            <SpendByCategoryChart
+              data={data?.current.byCategory ?? []}
+              filters={filters}
+              isLoading={isLoading}
+            />
+          </ComponentErrorBoundary>
+          <ComponentErrorBoundary componentName="SpendByVendorPareto">
+            <SpendByVendorPareto
+              data={data?.current.byVendor ?? []}
+              filters={filters}
+              isLoading={isLoading}
+            />
+          </ComponentErrorBoundary>
+          <ComponentErrorBoundary componentName="BudgetVsActualChart">
+            <BudgetVsActualChart
+              data={data?.current.budgetVsActual ?? []}
+              isLoading={isLoading}
+              className="lg:col-span-2"
+            />
+          </ComponentErrorBoundary>
+          <ComponentErrorBoundary componentName="MonthlyTrendChart">
+            <MonthlyTrendChart
+              data={data?.current.monthlyTrend ?? []}
+              isLoading={isLoading}
+              className="lg:col-span-2"
+            />
+          </ComponentErrorBoundary>
+          <ComponentErrorBoundary componentName="SpendByProjectChart">
+            <SpendByProjectChart
+              data={data?.current.byProject ?? []}
+              filters={filters}
+              isLoading={isLoading}
+              className="lg:col-span-2"
+            />
+          </ComponentErrorBoundary>
+        </section>
+      )}
 
       {isEmpty && <AnalyticsEmptyState />}
     </main>

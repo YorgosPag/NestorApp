@@ -305,6 +305,42 @@
     "errors": {
       "loadFailed": "Failed to load spend analytics",
       "retry": "Retry"
+    },
+    "charts": {
+      "byCategory": {
+        "title": "Spend by ATOE Category",
+        "ariaLabel": "Spend by ATOE category — top 10 horizontal bar chart",
+        "empty": "No category spend for the selected filters"
+      },
+      "byVendor": {
+        "title": "Spend by Vendor (Pareto)",
+        "ariaLabel": "Pareto chart of vendor spend — top 10 with cumulative percentage",
+        "empty": "No vendor spend for the selected filters",
+        "cumulative": "Cumulative %"
+      },
+      "byProject": {
+        "title": "Spend by Project",
+        "ariaLabel": "Spend by project — top 10 bar chart",
+        "empty": "No project spend for the selected filters"
+      },
+      "monthlyTrend": {
+        "title": "Monthly Spend Trend",
+        "ariaLabel": "Monthly spend trend line chart for the current period",
+        "empty": "No monthly data for the selected period",
+        "currentLabel": "Current period",
+        "previousLabel": "Previous period",
+        "previousPending": "Comparison with previous period will be added in a follow-up phase."
+      },
+      "budgetVsActual": {
+        "title": "Budget vs Committed vs Delivered per Category",
+        "ariaLabel": "Comparison of budget, committed and delivered spend per ATOE category",
+        "empty": "No BOQ or spend data available for comparison",
+        "budget": "Budget",
+        "committed": "Committed",
+        "delivered": "Delivered",
+        "offBudget": "Off-budget",
+        "offBudgetTooltip": "Category has spend but no matching BOQ entry — off-budget."
+      }
     }
   },
   "filter": {
