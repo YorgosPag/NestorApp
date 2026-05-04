@@ -192,6 +192,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   // Material Catalog (ADR-330 Phase 4)
   MATERIAL: 'mat',            // company-wide material master with ATOE FK + preferred suppliers
 
+  // Framework Agreements (ADR-330 Phase 5)
+  FRAMEWORK_AGREEMENT: 'fwa', // multi-project vendor contract with volume discount rules
+
   // Reports (ADR-268 Phase 7)
   SAVED_REPORT: 'srpt',
 

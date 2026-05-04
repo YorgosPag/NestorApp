@@ -118,6 +118,8 @@ export const ENTITY_TYPES = {
   QUOTE: 'quote',
   /** Material entity (procurement material catalog — ADR-330 Phase 4) */
   MATERIAL: 'material',
+  /** Framework agreement entity (procurement multi-project vendor contract — ADR-330 Phase 5) */
+  FRAMEWORK_AGREEMENT: 'framework_agreement',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];

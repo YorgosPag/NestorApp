@@ -58,6 +58,7 @@ export {
   generateVendorLogoFileId,
   generateSourcingEventId, generateRfqLineId,
   generateMaterialId,
+  generateFrameworkAgreementId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId, generateNotificationDedupeId,
 } from './enterprise-id-convenience';
@@ -301,6 +302,9 @@ export class EnterpriseIdService {
 
   // Material Catalog (ADR-330 Phase 4)
   generateMaterialId(): string { return this.generateId(P.MATERIAL).id; }
+
+  // Framework Agreements (ADR-330 Phase 5)
+  generateFrameworkAgreementId(): string { return this.generateId(P.FRAMEWORK_AGREEMENT).id; }
 
   // Reports & Cash Flow (ADR-268)
   generateSavedReportId(): string { return this.generateId(P.SAVED_REPORT).id; }

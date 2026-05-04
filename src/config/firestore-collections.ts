@@ -312,6 +312,10 @@ export const COLLECTIONS = {
 
   // 📦 MATERIAL CATALOG (ADR-330 Phase 4)
   MATERIALS: process.env.NEXT_PUBLIC_MATERIALS_COLLECTION || 'materials',
+
+  // 📜 FRAMEWORK AGREEMENTS (ADR-330 Phase 5)
+  FRAMEWORK_AGREEMENTS:
+    process.env.NEXT_PUBLIC_FRAMEWORK_AGREEMENTS_COLLECTION || 'framework_agreements',
 } as const;
 
 // ============================================================================

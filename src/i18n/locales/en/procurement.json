@@ -399,9 +399,73 @@
     },
     "frameworkAgreements": {
       "title": "Framework Agreements",
-      "description": "Multi-project contracts with auto-applied volume discounts",
-      "comingSoon": "Phase 5 — Coming Soon",
-      "phase": "Phase 5"
+      "description": "Multi-project contracts with volume-based discount rules",
+      "phase": "Phase 5",
+      "create": "New Agreement",
+      "edit": "Edit",
+      "delete": "Delete",
+      "activeCount": "{count} active",
+      "noActive": "No active agreements",
+      "validFrom": "Valid From",
+      "validUntil": "Valid Until",
+      "totalCommitment": "Total Commitment",
+      "searchPlaceholder": "Search agreement (number or title)...",
+      "filterByStatus": "Filter by Status",
+      "allStatuses": "All statuses",
+      "noAgreementsYet": "No framework agreements yet",
+      "addAgreementHint": "Click \"New Agreement\" to add the first one",
+      "emptySearch": "No agreements found",
+      "status": {
+        "draft": "Draft",
+        "active": "Active",
+        "expired": "Expired",
+        "terminated": "Terminated"
+      },
+      "discount": {
+        "label": "Discount",
+        "tiers": "{count} tiers",
+        "type": {
+          "flat": "Flat",
+          "volume_breakpoints": "Tiered"
+        }
+      },
+      "deleteConfirm": {
+        "title": "Delete Agreement",
+        "description": "Are you sure you want to delete agreement \"{name}\"? It will be hidden from the list."
+      },
+      "toast": {
+        "created": "Agreement created",
+        "updated": "Agreement updated",
+        "deleted": "Agreement deleted"
+      },
+      "form": {
+        "createTitle": "New Framework Agreement",
+        "editTitle": "Edit Agreement",
+        "description": "Fill in agreement details. Number must be unique.",
+        "agreementNumber": "Agreement Number",
+        "title": "Title",
+        "status": "Status",
+        "vendor": "Vendor",
+        "vendorPlaceholder": "Select vendor...",
+        "noVendor": "No vendors found",
+        "descriptionField": "Description",
+        "validFrom": "Valid From",
+        "validUntil": "Valid Until",
+        "totalCommitment": "Total Commitment (€)",
+        "currency": "Currency",
+        "discountType": "Discount Type",
+        "flatDiscountPercent": "Discount Percent (%)",
+        "breakpoints": "Volume Tiers",
+        "breakpointsEmpty": "No tiers defined. Add one to start.",
+        "thresholdEur": "Threshold (€)",
+        "discountPercent": "Discount (%)",
+        "addBreakpoint": "Add Tier",
+        "removeBreakpoint": "Remove",
+        "save": "Save",
+        "create": "Create",
+        "saving": "Saving...",
+        "cancel": "Cancel"
+      }
     },
     "spendAnalytics": {
       "title": "Cross-project Analytics",

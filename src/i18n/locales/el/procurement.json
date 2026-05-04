@@ -399,9 +399,73 @@
     },
     "frameworkAgreements": {
       "title": "Συμβάσεις-Πλαίσιο",
-      "description": "Συμβόλαια πολλαπλών έργων με αυτόματη εφαρμογή εκπτώσεων όγκου",
-      "comingSoon": "Φάση 5 — Έρχεται",
-      "phase": "Φάση 5"
+      "description": "Συμβόλαια πολλαπλών έργων με κανόνες εκπτώσεων ανά όγκο",
+      "phase": "Φάση 5",
+      "create": "Νέα Σύμβαση",
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή",
+      "activeCount": "{count} ενεργές",
+      "noActive": "Χωρίς ενεργές συμβάσεις",
+      "validFrom": "Ισχύει από",
+      "validUntil": "Ισχύει έως",
+      "totalCommitment": "Συνολική Δέσμευση",
+      "searchPlaceholder": "Αναζήτηση σύμβασης (αριθμός ή τίτλος)...",
+      "filterByStatus": "Φιλτράρισμα ανά Κατάσταση",
+      "allStatuses": "Όλες οι καταστάσεις",
+      "noAgreementsYet": "Δεν υπάρχουν εγγεγραμμένες συμβάσεις",
+      "addAgreementHint": "Πατήστε «Νέα Σύμβαση» για να προσθέσετε την πρώτη",
+      "emptySearch": "Δεν βρέθηκαν συμβάσεις",
+      "status": {
+        "draft": "Πρόχειρη",
+        "active": "Ενεργή",
+        "expired": "Έληξε",
+        "terminated": "Τερματίστηκε"
+      },
+      "discount": {
+        "label": "Έκπτωση",
+        "tiers": "{count} κλιμάκια",
+        "type": {
+          "flat": "Σταθερή",
+          "volume_breakpoints": "Κλιμακωτή"
+        }
+      },
+      "deleteConfirm": {
+        "title": "Διαγραφή Σύμβασης",
+        "description": "Σίγουρα θέλετε να διαγράψετε τη σύμβαση «{name}»; Η ενέργεια αυτή θα κρύψει τη σύμβαση από τη λίστα."
+      },
+      "toast": {
+        "created": "Η σύμβαση δημιουργήθηκε",
+        "updated": "Η σύμβαση ενημερώθηκε",
+        "deleted": "Η σύμβαση διαγράφηκε"
+      },
+      "form": {
+        "createTitle": "Νέα Σύμβαση-Πλαίσιο",
+        "editTitle": "Επεξεργασία Σύμβασης",
+        "description": "Συμπληρώστε τα στοιχεία της σύμβασης. Ο αριθμός πρέπει να είναι μοναδικός.",
+        "agreementNumber": "Αριθμός Σύμβασης",
+        "title": "Τίτλος",
+        "status": "Κατάσταση",
+        "vendor": "Προμηθευτής",
+        "vendorPlaceholder": "Επιλέξτε προμηθευτή...",
+        "noVendor": "Δεν βρέθηκαν προμηθευτές",
+        "descriptionField": "Περιγραφή",
+        "validFrom": "Ισχύει από",
+        "validUntil": "Ισχύει έως",
+        "totalCommitment": "Συνολική Δέσμευση (€)",
+        "currency": "Νόμισμα",
+        "discountType": "Τύπος Έκπτωσης",
+        "flatDiscountPercent": "Ποσοστό Έκπτωσης (%)",
+        "breakpoints": "Κλιμάκια Όγκου",
+        "breakpointsEmpty": "Δεν έχουν οριστεί κλιμάκια. Προσθέστε ένα για να ξεκινήσετε.",
+        "thresholdEur": "Όριο (€)",
+        "discountPercent": "Έκπτωση (%)",
+        "addBreakpoint": "Προσθήκη Κλιμακίου",
+        "removeBreakpoint": "Αφαίρεση",
+        "save": "Αποθήκευση",
+        "create": "Δημιουργία",
+        "saving": "Αποθήκευση...",
+        "cancel": "Ακύρωση"
+      }
     },
     "spendAnalytics": {
       "title": "Αναλυτικά Δαπανών",

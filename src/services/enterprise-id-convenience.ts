@@ -185,6 +185,9 @@ export const generateRfqLineId = () => enterpriseIdService.generateRfqLineId();
 // Material Catalog (ADR-330 Phase 4)
 export const generateMaterialId = () => enterpriseIdService.generateMaterialId();
 
+// Framework Agreements (ADR-330 Phase 5)
+export const generateFrameworkAgreementId = () => enterpriseIdService.generateFrameworkAgreementId();
+
 // Reports & Cash Flow (ADR-268)
 export const generateSavedReportId = () => enterpriseIdService.generateSavedReportId();
 export const generateRecurringPaymentId = () => enterpriseIdService.generateRecurringPaymentId();

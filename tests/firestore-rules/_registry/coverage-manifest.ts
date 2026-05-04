@@ -1085,6 +1085,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'sourcing_events',        // Admin SDK writes only; read: auth + companyId
   // — Material Catalog (ADR-330 Phase 2, 2026-05-03) —
   'materials',              // lines 3403-3411 — tenant read + admin write
+  // — Framework Agreements (ADR-330 Phase 5, 2026-05-04) —
+  'framework_agreements',   // tenant read + admin write
 ] as const;
 
 // ---------------------------------------------------------------------------
