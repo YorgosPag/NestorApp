@@ -257,6 +257,56 @@
     "title": "Procurement",
     "subtitle": "Manage purchase orders"
   },
+  "analytics": {
+    "title": "Spend Analytics",
+    "description": "Filter and explore company-wide spend by vendor, ATOE category and project.",
+    "filters": {
+      "from": "From",
+      "to": "To",
+      "project": "Project",
+      "supplier": "Supplier",
+      "category": "ATOE Category",
+      "status": "Status",
+      "clear": "Clear filters",
+      "toggleMobile": "Filters",
+      "allProjects": "All projects",
+      "allSuppliers": "All suppliers",
+      "allCategories": "All categories",
+      "allStatuses": "All statuses",
+      "statusPresets": {
+        "label": "Status quick presets",
+        "inProgress": "In progress",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
+    },
+    "kpi": {
+      "totalPOs": "Total Orders",
+      "committedAmount": "Committed Spend",
+      "deliveredAmount": "Delivered Spend",
+      "activeSuppliers": "Active Suppliers",
+      "deltaTooltip": "Change vs previous period ({from} – {to})",
+      "noHistorical": "No historical data available for comparison"
+    },
+    "refresh": {
+      "button": "Refresh",
+      "ariaLabel": "Refresh analytics data"
+    },
+    "export": {
+      "button": "Export",
+      "csv": "Export CSV",
+      "excel": "Export Excel"
+    },
+    "empty": {
+      "title": "No purchase orders to analyse",
+      "description": "No purchase orders matched the selected filters. Create a new purchase order to start tracking spend.",
+      "cta": "Create new purchase order"
+    },
+    "errors": {
+      "loadFailed": "Failed to load spend analytics",
+      "retry": "Retry"
+    }
+  },
   "filter": {
     "allStatuses": "All statuses",
     "allProjects": "All projects",

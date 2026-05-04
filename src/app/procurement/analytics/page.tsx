@@ -1,24 +1,45 @@
-'use client';
+/**
+ * /procurement/analytics — Enterprise Spend Analytics Page (ADR-331 Phase D).
+ *
+ * Server component: verifies session cookie + RBAC role (D10) before rendering
+ * the client shell. Forbidden users redirect to `/projects`.
+ *
+ * @see ADR-331 §2.2, §4 D10
+ */
 
-import { BarChart3 } from 'lucide-react';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
-import { PageContainer } from '@/core/containers';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 
-export default function AnalyticsPage() {
-  const { t } = useTranslation('procurement');
+import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
+import { verifySessionCookieToken } from '@/server/admin/admin-guards';
+import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
+import { canViewSpendAnalytics } from '@/lib/auth/permissions/spend-analytics';
 
-  return (
-    <PageContainer ariaLabel={t('hub.spendAnalytics.title')}>
-      <div className="px-2 mt-2">
-        <ProcurementSubNav className="mb-0" />
-      </div>
-      <div className="flex flex-col items-center justify-center gap-4 p-12 text-center">
-        <BarChart3 className="h-16 w-16 text-red-600 opacity-50" aria-hidden />
-        <h2 className="text-2xl font-semibold">{t('hub.spendAnalytics.title')}</h2>
-        <p className="max-w-md text-muted-foreground">{t('hub.spendAnalytics.description')}</p>
-        <p className="text-sm font-medium text-red-600">{t('hub.spendAnalytics.comingSoon')}</p>
-      </div>
-    </PageContainer>
-  );
+import { AnalyticsPageShell } from './_components/AnalyticsPageShell';
+
+const FORBIDDEN_REDIRECT = '/projects';
+const LOGIN_REDIRECT = '/login';
+
+async function resolveGlobalRole(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_CONFIG.NAME)?.value;
+
+  if (!sessionCookie) {
+    return getCurrentRuntimeEnvironment() === 'development' ? 'company_admin' : null;
+  }
+
+  const decoded = await verifySessionCookieToken(sessionCookie);
+  if (!decoded) return null;
+
+  const claimed = (decoded as Record<string, unknown>).globalRole;
+  return typeof claimed === 'string' ? claimed : '';
+}
+
+export default async function SpendAnalyticsPage() {
+  const role = await resolveGlobalRole();
+
+  if (role === null) redirect(LOGIN_REDIRECT);
+  if (!canViewSpendAnalytics(role)) redirect(FORBIDDEN_REDIRECT);
+
+  return <AnalyticsPageShell />;
 }

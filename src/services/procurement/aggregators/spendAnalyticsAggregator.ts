@@ -86,6 +86,7 @@ async function fetchRawPOs(
     .where('isDeleted', '==', false)
     .where('dateCreated', '>=', startUtc)
     .where('dateCreated', '<=', endUtc)
+    .orderBy('dateCreated', 'desc')
     .get();
   return snap.docs.map(d => d.data() as PurchaseOrder);
 }

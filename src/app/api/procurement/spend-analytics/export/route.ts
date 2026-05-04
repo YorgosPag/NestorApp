@@ -82,7 +82,7 @@ async function handleGet(
       });
     }
     const buf = await buildSpendAnalyticsWorkbook(data);
-    return new NextResponse(buf, {
+    return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
