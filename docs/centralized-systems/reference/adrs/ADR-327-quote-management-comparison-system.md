@@ -1,6 +1,6 @@
 # ADR-327: Quote Management & Comparison System (Hybrid Scan + Vendor Portal)
 
-**Status**: ✅ APPROVED — All 20 Q&A answered (Giorgio, 2026-04-25). Ready for Phase 1a implementation.
+**Status**: ✅ IMPLEMENTED (2026-04-29) — Multi-Vendor Architecture Phase 1 steps (a)→(i) complete + Phase G (Original Document Sister Artifact) + Phase H/H.2 (Single-Dialog Vendor Invite Flow) + P1+P2+P3 (Contextual RFQ entry points: form pre-fill, contact tab, project tab). See changelog 2026-04-27→2026-04-29 για λεπτομέρειες ανά step. Q&A approval base (20 + 7 extended) preserved 2026-04-25.
 **Date**: 2026-04-25
 **Author**: Claude (Opus 4.7, Research Agents × 4)
 **Related ADRs**:
@@ -18,6 +18,7 @@
 ### Changelog
 | Date | Changes |
 |------|---------|
+| 2026-05-04 | 📝 **Status header rinfrescato** — ADR header line 3 era stale (`Ready for Phase 1a implementation`) ma il codebase aveva tutti gli step (a)→(i) di Multi-Vendor Architecture Phase 1 completi dal 2026-04-29 (più Phase G/H/H.2 + P1+P2+P3 contextual entry points). Code-as-truth check 2026-05-04 → Status aggiornato a ✅ IMPLEMENTED (2026-04-29). Per CLAUDE.md N.0.1 (ADR-driven workflow) — ADR rinfrescato per riflettere lo stato attuale del codice. Nessun code change. |
 | 2026-04-25 | 📝 Initial draft based on 4 parallel research agents (ADR index + entities + AI pipeline + portal patterns). Awaiting Giorgio Q&A before approval. |
 | 2026-04-25 | ✅ **Q&A EXTENDED** — Clarification Q21–Q27 (currency EUR only, soft-delete, vendor decline button, inline quick-add via ContactService SSoT, attachment policy 5img+1PDF 10MB, audit trail forever + GDPR anonymize, notification prefs extend ProcurementNotificationSettings). §17 updated. |
 | 2026-04-25 | ✅ **APPROVED** — Όλες οι 20 ερωτήσεις του §13 απαντήθηκαν Q&A με Γιώργο (Σενάριο Γ σχεδόν παντού — Google-level + SSoT enforcement). Key decisions: hybrid RFQ model, hierarchical 32-trade taxonomy (8 groups, runtime-extensible), AI scan με per-field confidence + multilingual auto-detect, vendor portal με 3-day edit window + counter-offer (1 round), comparison templates ανά τύπο RFQ (Standard/Commodity/Specialty/Urgent), risk warnings + override-with-reason, multi-channel notifications με smart batching, configurable vendor reminders. **Phase plan**: 6 phases (P1a → P1b → P2 → P4 → P3 → P5), 1 phase = 1 session, deferred production rollout (Google-style incremental build, single cutover at end). Decision log §17 πλήρης. |
