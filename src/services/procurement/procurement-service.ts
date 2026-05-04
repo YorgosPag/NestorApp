@@ -167,6 +167,10 @@ export async function updatePO(
   if (dto.paymentTermsDays !== undefined) updates.paymentTermsDays = dto.paymentTermsDays ?? null;
   if (dto.supplierNotes !== undefined) updates.supplierNotes = dto.supplierNotes ?? null;
   if (dto.internalNotes !== undefined) updates.internalNotes = dto.internalNotes ?? null;
+  if (dto.appliedFaId !== undefined) updates.appliedFaId = dto.appliedFaId ?? null;
+  if (dto.faDiscountPercent !== undefined) updates.faDiscountPercent = dto.faDiscountPercent ?? null;
+  if (dto.faDiscountAmount !== undefined) updates.faDiscountAmount = dto.faDiscountAmount ?? null;
+  if (dto.netTotal !== undefined) updates.netTotal = dto.netTotal ?? null;
 
   // Recalculate items + totals if items changed
   if (dto.items) {

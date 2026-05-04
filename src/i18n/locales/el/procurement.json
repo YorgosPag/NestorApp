@@ -94,7 +94,11 @@
     "saving": "Αποθήκευση...",
     "save": "Αποθήκευση",
     "create": "Δημιουργία PO",
-    "cancel": "Ακύρωση"
+    "cancel": "Ακύρωση",
+    "faBannerApplied": "Σύμβαση Πλαίσιο: {title} · Έκπτωση {percent}%",
+    "faDiscount": "Έκπτωση Σύμβασης",
+    "grossTotal": "Σύνολο",
+    "netTotal": "Τελικό Σύνολο"
   },
   "detail": {
     "supplier": "Προμηθευτής",

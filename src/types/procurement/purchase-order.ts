@@ -218,6 +218,12 @@ export interface PurchaseOrder {
   // Quote link (ADR-327 P5 — auto-generated from awarded quote)
   sourceQuoteId: string | null;
 
+  // Framework Agreement discount (ADR-330 Phase 5.5)
+  appliedFaId: string | null;
+  faDiscountPercent: number | null;
+  faDiscountAmount: number | null;
+  netTotal: number | null;
+
   // Metadata
   createdBy: string;                // userId
   approvedBy: string | null;
@@ -274,6 +280,10 @@ export interface CreatePurchaseOrderDTO {
   supplierNotes?: string | null;
   internalNotes?: string | null;
   sourceQuoteId?: string | null;
+  appliedFaId?: string | null;
+  faDiscountPercent?: number | null;
+  faDiscountAmount?: number | null;
+  netTotal?: number | null;
 }
 
 /** Update PO — partial update payload */
@@ -288,6 +298,10 @@ export interface UpdatePurchaseOrderDTO {
   paymentTermsDays?: number | null;
   supplierNotes?: string | null;
   internalNotes?: string | null;
+  appliedFaId?: string | null;
+  faDiscountPercent?: number | null;
+  faDiscountAmount?: number | null;
+  netTotal?: number | null;
 }
 
 /** Record delivery — per item quantities */

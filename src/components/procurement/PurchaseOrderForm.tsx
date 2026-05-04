@@ -23,10 +23,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/design-system';
-import { Save, X, AlertCircle } from 'lucide-react';
+import { Save, X, AlertCircle, Tag } from 'lucide-react';
 import { PO_VAT_RATES } from '@/types/procurement';
 import type { PurchaseOrder, POVatRate } from '@/types/procurement';
-import { usePurchaseOrderForm } from '@/hooks/procurement';
+import { usePurchaseOrderForm, usePOFrameworkAgreement } from '@/hooks/procurement';
 import { PurchaseOrderItemsTable } from './PurchaseOrderItemsTable';
 import { formatPOCurrency } from './utils/procurement-format';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -64,8 +64,19 @@ export function PurchaseOrderForm({
     submit,
   } = usePurchaseOrderForm(existingPO, initialProjectId);
 
+  const faInfo = usePOFrameworkAgreement(form.supplierId, form.projectId, totals.total);
+
   const handleSubmit = async () => {
-    const result = await submit(existingPO?.id);
+    const faExtra = faInfo.activeFa
+      ? {
+          appliedFaId: faInfo.activeFa.id,
+          faDiscountPercent: faInfo.discountPercent,
+          faDiscountAmount: faInfo.discountAmount,
+          netTotal: faInfo.netTotal,
+        }
+      : { appliedFaId: null, faDiscountPercent: null, faDiscountAmount: null, netTotal: null };
+
+    const result = await submit(existingPO?.id, faExtra);
     if (result.success && result.id && result.poNumber) {
       onSuccess?.(result.id, result.poNumber);
     }
@@ -238,10 +249,35 @@ export function PurchaseOrderForm({
                 </span>
                 <span className="tabular-nums">{formatPOCurrency(totals.taxAmount)}</span>
               </div>
-              <div className="flex justify-between border-t pt-1 font-semibold">
-                <span>{t('form.total')}</span>
+              <div className={cn(
+                'flex justify-between border-t pt-1 font-semibold',
+                faInfo.activeFa && 'text-muted-foreground font-normal text-sm',
+              )}>
+                <span>{t('form.grossTotal')}</span>
                 <span className="tabular-nums">{formatPOCurrency(totals.total)}</span>
               </div>
+
+              {faInfo.activeFa && (
+                <>
+                  <div className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
+                    <Tag className="h-3 w-3 shrink-0" />
+                    <span className="text-left">
+                      {t('form.faBannerApplied', {
+                        title: faInfo.activeFa.title,
+                        percent: faInfo.discountPercent,
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-emerald-600">
+                    <span>{t('form.faDiscount')}</span>
+                    <span className="tabular-nums">−{formatPOCurrency(faInfo.discountAmount)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-1 font-semibold text-emerald-700">
+                    <span>{t('form.netTotal')}</span>
+                    <span className="tabular-nums">{formatPOCurrency(faInfo.netTotal)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </CardContent>

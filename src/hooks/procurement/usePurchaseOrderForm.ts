@@ -202,7 +202,10 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
     internalNotes: form.internalNotes || null,
   }), [form]);
 
-  const submit = useCallback(async (poId?: string): Promise<{
+  const submit = useCallback(async (
+    poId?: string,
+    faExtra?: Pick<CreatePurchaseOrderDTO, 'appliedFaId' | 'faDiscountPercent' | 'faDiscountAmount' | 'netTotal'>,
+  ): Promise<{
     success: boolean;
     id?: string;
     poNumber?: string;
@@ -216,7 +219,7 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
     setSubmitError(null);
 
     try {
-      const dto = buildDTO();
+      const dto = faExtra ? { ...buildDTO(), ...faExtra } : buildDTO();
       const result = await savePurchaseOrderWithPolicy(
         poId ? dto as UpdatePurchaseOrderDTO : dto,
         poId,

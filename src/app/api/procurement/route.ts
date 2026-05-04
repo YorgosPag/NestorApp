@@ -49,6 +49,10 @@ const CreatePOSchema = z.object({
   paymentTermsDays: z.number().int().min(0).max(365).nullable().optional(),
   supplierNotes: z.string().max(2000).nullable().optional(),
   internalNotes: z.string().max(2000).nullable().optional(),
+  appliedFaId: z.string().nullable().optional(),
+  faDiscountPercent: z.number().min(0).max(100).nullable().optional(),
+  faDiscountAmount: z.number().min(0).nullable().optional(),
+  netTotal: z.number().min(0).nullable().optional(),
 });
 
 // ============================================================================

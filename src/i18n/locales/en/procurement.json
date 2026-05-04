@@ -94,7 +94,11 @@
     "saving": "Saving...",
     "save": "Save",
     "create": "Create PO",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "faBannerApplied": "Framework Agreement: {title} · Discount {percent}%",
+    "faDiscount": "Agreement Discount",
+    "grossTotal": "Total",
+    "netTotal": "Net Total"
   },
   "detail": {
     "supplier": "Supplier",
