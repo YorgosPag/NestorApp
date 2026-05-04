@@ -13,6 +13,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getPoDetailUrl } from '@/lib/navigation/procurement-urls';
+import { emitSpendAnalyticsInvalidate } from '@/lib/cache/spend-analytics-bus';
 
 const API_BASE = '/api/procurement';
 const QUERY_ACTION = 'action';
@@ -73,6 +74,7 @@ export function ProcurementDetailPageContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body ?? {}),
     });
+    emitSpendAnalyticsInvalidate();
     await refetch();
   }, [poId, refetch]);
 
@@ -85,6 +87,7 @@ export function ProcurementDetailPageContent() {
     });
     const json = await res.json();
     if (json.success && json.data?.id) {
+      emitSpendAnalyticsInvalidate();
       const pid = po?.projectId ?? pathProjectId;
       if (pid) {
         router.push(getPoDetailUrl(pid, json.data.id));

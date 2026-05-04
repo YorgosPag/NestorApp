@@ -29,15 +29,7 @@ import {
 } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
 import { canViewSpendAnalytics } from '@/lib/auth/permissions/spend-analytics';
 import { getCurrentQuarterRange } from '@/lib/date/quarter-helpers';
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function parseArray(param: string | null): string[] {
-  if (!param) return [];
-  return param.split(',').map(s => s.trim()).filter(Boolean);
-}
+import { parseFilterArray } from '@/lib/url-filters/multi-value';
 
 // ============================================================================
 // GET
@@ -58,10 +50,10 @@ async function handleGet(
   const filters: SpendAnalyticsFilters = {
     from: p.get('from') ?? defaultRange.from,
     to: p.get('to') ?? defaultRange.to,
-    projectId: parseArray(p.get('projectId')),
-    supplierId: parseArray(p.get('supplierId')),
-    categoryCode: parseArray(p.get('categoryCode')),
-    status: parseArray(p.get('status')),
+    projectId: parseFilterArray(p.get('projectId')),
+    supplierId: parseFilterArray(p.get('supplierId')),
+    categoryCode: parseFilterArray(p.get('categoryCode')),
+    status: parseFilterArray(p.get('status')),
   };
 
   try {

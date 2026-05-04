@@ -32,11 +32,7 @@ import { canViewSpendAnalytics } from '@/lib/auth/permissions/spend-analytics';
 import { getCurrentQuarterRange } from '@/lib/date/quarter-helpers';
 import { formatSpendAnalyticsCsv } from '@/lib/export/analytics-csv';
 import { buildSpendAnalyticsWorkbook } from '@/lib/export/analytics-xlsx';
-
-function parseArray(param: string | null): string[] {
-  if (!param) return [];
-  return param.split(',').map((s) => s.trim()).filter(Boolean);
-}
+import { parseFilterArray } from '@/lib/url-filters/multi-value';
 
 function buildFilename(from: string, to: string, ext: 'csv' | 'xlsx'): string {
   return `spend-analytics-${from}_${to}.${ext}`;
@@ -48,10 +44,10 @@ function readFilters(request: NextRequest): SpendAnalyticsFilters {
   return {
     from: p.get('from') ?? defaultRange.from,
     to: p.get('to') ?? defaultRange.to,
-    projectId: parseArray(p.get('projectId')),
-    supplierId: parseArray(p.get('supplierId')),
-    categoryCode: parseArray(p.get('categoryCode')),
-    status: parseArray(p.get('status')),
+    projectId: parseFilterArray(p.get('projectId')),
+    supplierId: parseFilterArray(p.get('supplierId')),
+    categoryCode: parseFilterArray(p.get('categoryCode')),
+    status: parseFilterArray(p.get('status')),
   };
 }
 

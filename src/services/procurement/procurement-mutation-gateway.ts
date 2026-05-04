@@ -1,5 +1,6 @@
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { emitSpendAnalyticsInvalidate } from '@/lib/cache/spend-analytics-bus';
 import type {
   CreatePurchaseOrderDTO,
   UpdatePurchaseOrderDTO,
@@ -33,10 +34,13 @@ export async function savePurchaseOrderWithPolicy(
 ): Promise<PurchaseOrderSaveResult> {
   if (poId) {
     await apiClient.patch(API_ROUTES.PROCUREMENT.ACTION(poId, 'update'), input);
+    emitSpendAnalyticsInvalidate();
     return {};
   }
 
-  return apiClient.post<PurchaseOrderSaveResult>(API_ROUTES.PROCUREMENT.LIST, input);
+  const result = await apiClient.post<PurchaseOrderSaveResult>(API_ROUTES.PROCUREMENT.LIST, input);
+  emitSpendAnalyticsInvalidate();
+  return result;
 }
 
 export async function createPurchaseOrderShareWithPolicy(
