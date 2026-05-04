@@ -6,3 +6,4 @@
  */
 
 export { PurchaseOrderListCard, type PurchaseOrderListCardProps } from './PurchaseOrderListCard';
+export { PurchaseOrderGridCard, type PurchaseOrderGridCardProps } from './PurchaseOrderGridCard';

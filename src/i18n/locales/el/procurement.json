@@ -40,6 +40,43 @@
       "closedTooltip": "Έχουν τιμολογηθεί και κλείσει",
       "cancelled": "Ακυρωμένες",
       "cancelledTooltip": "Ακυρωμένες παραγγελίες"
+    },
+    "vendorStatusAriaLabel": "Φίλτρα κατάστασης προμηθευτή",
+    "vendorStatus": {
+      "all": "Όλοι",
+      "allTooltip": "Εμφάνιση όλων των προμηθευτών",
+      "active": "Ενεργοί",
+      "activeTooltip": "Προμηθευτές με παραγγελίες τους τελευταίους 12 μήνες",
+      "preferred": "Προτιμώμενοι",
+      "preferredTooltip": "Κορυφαίοι προμηθευτές βάσει συνολικής δαπάνης",
+      "inactive": "Ανενεργοί",
+      "inactiveTooltip": "Προμηθευτές χωρίς πρόσφατες παραγγελίες",
+      "new": "Νέοι",
+      "newTooltip": "Προμηθευτές που προστέθηκαν τις τελευταίες 30 ημέρες"
+    },
+    "materialStatusAriaLabel": "Φίλτρα κατάστασης υλικού",
+    "materialStatus": {
+      "all": "Όλα",
+      "allTooltip": "Εμφάνιση όλων των υλικών",
+      "recently_used": "Πρόσφατα",
+      "recently_usedTooltip": "Υλικά με αγορά τις τελευταίες 90 ημέρες",
+      "inactive": "Ανενεργά",
+      "inactiveTooltip": "Υλικά χωρίς αγορές πάνω από 180 ημέρες",
+      "no_supplier": "Χωρίς προμηθευτή",
+      "no_supplierTooltip": "Υλικά χωρίς ορισμένους προτιμώμενους προμηθευτές"
+    },
+    "agreementStatusAriaLabel": "Φίλτρα κατάστασης σύμβασης",
+    "agreementStatus": {
+      "all": "Όλες",
+      "allTooltip": "Εμφάνιση όλων των συμβάσεων",
+      "active": "Ενεργές",
+      "activeTooltip": "Ενεργές συμβάσεις σε ισχύ",
+      "expiring": "Λήγουν",
+      "expiringTooltip": "Συμβάσεις που λήγουν τις επόμενες 30 ημέρες",
+      "expired": "Ληγμένες",
+      "expiredTooltip": "Συμβάσεις που έχουν λήξει",
+      "draft": "Πρόχειρες",
+      "draftTooltip": "Πρόχειρες συμβάσεις (μη ενεργές ακόμη)"
     }
   },
   "items": {
@@ -404,6 +441,11 @@
       "noVendorsYet": "Δεν υπάρχουν εγγεγραμμένοι προμηθευτές",
       "addVendorHint": "Προσθέστε επαφές με τύπο Προμηθευτής στον κατάλογο επαφών",
       "emptySearch": "Δεν βρέθηκαν αποτελέσματα",
+      "cardAriaLabel": "Προμηθευτής {name}",
+      "statusBadge": {
+        "active": "Ενεργός",
+        "inactive": "Ανενεργός"
+      },
       "detail": {
         "emptyTitle": "Επιλέξτε προμηθευτή",
         "emptyDescription": "Επιλέξτε έναν προμηθευτή από τη λίστα για να δείτε τις λεπτομέρειες",
@@ -435,12 +477,14 @@
       "noMaterialsYet": "Δεν υπάρχουν εγγεγραμμένα υλικά",
       "addMaterialHint": "Πατήστε «Νέο Υλικό» για να προσθέσετε το πρώτο",
       "emptySearch": "Δεν βρέθηκαν υλικά",
+      "cardAriaLabel": "Υλικό {name} ({code})",
       "detail": {
         "emptyTitle": "Επιλέξτε υλικό",
         "emptyDescription": "Επιλέξτε ένα υλικό από τη λίστα για να δείτε τις λεπτομέρειες",
         "preferredSuppliers": "Προτιμώμενοι Προμηθευτές",
         "noPreferredSuppliers": "Δεν έχουν οριστεί προτιμώμενοι προμηθευτές",
-        "priceHistory": "Ιστορικό Τιμών"
+        "priceHistory": "Ιστορικό Τιμών",
+        "lastPurchase": "Τελευταία Αγορά"
       },
       "deleteConfirm": {
         "title": "Διαγραφή Υλικού",
@@ -523,6 +567,7 @@
       "noAgreementsYet": "Δεν υπάρχουν εγγεγραμμένες συμβάσεις",
       "addAgreementHint": "Πατήστε «Νέα Σύμβαση» για να προσθέσετε την πρώτη",
       "emptySearch": "Δεν βρέθηκαν συμβάσεις",
+      "cardAriaLabel": "Σύμβαση {number} — {title}",
       "detail": {
         "emptyTitle": "Επιλέξτε σύμβαση",
         "emptyDescription": "Επιλέξτε μια σύμβαση από τη λίστα για να δείτε τις λεπτομέρειες",

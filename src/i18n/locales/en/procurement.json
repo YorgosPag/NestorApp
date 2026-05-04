@@ -40,6 +40,43 @@
       "closedTooltip": "Invoiced and closed",
       "cancelled": "Cancelled",
       "cancelledTooltip": "Cancelled purchase orders"
+    },
+    "vendorStatusAriaLabel": "Vendor status filters",
+    "vendorStatus": {
+      "all": "All",
+      "allTooltip": "Show all vendors",
+      "active": "Active",
+      "activeTooltip": "Vendors with orders in the last 12 months",
+      "preferred": "Preferred",
+      "preferredTooltip": "Top vendors by total spend",
+      "inactive": "Inactive",
+      "inactiveTooltip": "Vendors with no recent orders",
+      "new": "New",
+      "newTooltip": "Vendors added in the last 30 days"
+    },
+    "materialStatusAriaLabel": "Material status filters",
+    "materialStatus": {
+      "all": "All",
+      "allTooltip": "Show all materials",
+      "recently_used": "Recent",
+      "recently_usedTooltip": "Materials purchased in the last 90 days",
+      "inactive": "Inactive",
+      "inactiveTooltip": "Materials with no purchases for 180+ days",
+      "no_supplier": "No supplier",
+      "no_supplierTooltip": "Materials with no preferred suppliers defined"
+    },
+    "agreementStatusAriaLabel": "Agreement status filters",
+    "agreementStatus": {
+      "all": "All",
+      "allTooltip": "Show all agreements",
+      "active": "Active",
+      "activeTooltip": "Currently active agreements",
+      "expiring": "Expiring",
+      "expiringTooltip": "Agreements expiring in the next 30 days",
+      "expired": "Expired",
+      "expiredTooltip": "Agreements past their validity period",
+      "draft": "Draft",
+      "draftTooltip": "Draft agreements (not yet active)"
     }
   },
   "items": {
@@ -404,6 +441,11 @@
       "noVendorsYet": "No vendors registered yet",
       "addVendorHint": "Add contacts with Supplier type in the contacts module",
       "emptySearch": "No results found",
+      "cardAriaLabel": "Vendor {name}",
+      "statusBadge": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
       "detail": {
         "emptyTitle": "Select a vendor",
         "emptyDescription": "Select a vendor from the list to view details",
@@ -435,12 +477,14 @@
       "noMaterialsYet": "No materials registered yet",
       "addMaterialHint": "Click \"New Material\" to add the first one",
       "emptySearch": "No materials found",
+      "cardAriaLabel": "Material {name} ({code})",
       "detail": {
         "emptyTitle": "Select a material",
         "emptyDescription": "Select a material from the list to view details",
         "preferredSuppliers": "Preferred Suppliers",
         "noPreferredSuppliers": "No preferred suppliers defined",
-        "priceHistory": "Price History"
+        "priceHistory": "Price History",
+        "lastPurchase": "Last Purchase"
       },
       "deleteConfirm": {
         "title": "Delete Material",
@@ -523,6 +567,7 @@
       "noAgreementsYet": "No framework agreements yet",
       "addAgreementHint": "Click \"New Agreement\" to add the first one",
       "emptySearch": "No agreements found",
+      "cardAriaLabel": "Agreement {number} — {title}",
       "detail": {
         "emptyTitle": "Select an agreement",
         "emptyDescription": "Select a framework agreement from the list to view details",

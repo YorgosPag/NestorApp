@@ -264,7 +264,11 @@
     "allQuotes": "All quotes",
     "emptyTitle": "No quotes",
     "emptyDescription": "Scan your first vendor quote to get started.",
-    "createQuote": "New Quote"
+    "createQuote": "New Quote",
+    "vendorLabel": "Vendor",
+    "totalLabel": "Total",
+    "validUntilLabel": "Valid until",
+    "dateLabel": "Date"
   },
   "filters": {
     "quoteStatusAriaLabel": "Quote status filters",

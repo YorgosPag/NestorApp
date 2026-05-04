@@ -6,3 +6,4 @@
  */
 
 export { QuoteListCard, type QuoteListCardProps } from './QuoteListCard';
+export { QuoteGridCard, type QuoteGridCardProps } from './QuoteGridCard';

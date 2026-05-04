@@ -264,7 +264,11 @@
     "allQuotes": "Όλες οι προσφορές",
     "emptyTitle": "Δεν υπάρχουν προσφορές",
     "emptyDescription": "Σαρώστε την πρώτη προσφορά για να ξεκινήσετε.",
-    "createQuote": "Νέα Προσφορά"
+    "createQuote": "Νέα Προσφορά",
+    "vendorLabel": "Προμηθευτής",
+    "totalLabel": "Σύνολο",
+    "validUntilLabel": "Ισχύει έως",
+    "dateLabel": "Ημερομηνία"
   },
   "filters": {
     "quoteStatusAriaLabel": "Φίλτρα κατάστασης προσφοράς",

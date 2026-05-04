@@ -45,6 +45,10 @@ import {
   Eye,
   Clock,
   Archive,
+  Sparkles,
+  AlertTriangle,
+  UserX,
+  Star,
   type LucideIcon
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -347,6 +351,74 @@ export function QuoteStatusQuickFilters(props: Omit<TypeQuickFiltersProps, 'opti
       {...props}
       options={QUOTE_STATUS_OPTIONS}
       ariaLabel={props.ariaLabel ?? t('filters.quoteStatusAriaLabel')}
+    />
+  );
+}
+
+/**
+ * Vendor Quick Filters (Procore Directory + SAP MM Vendor Master pattern)
+ * 🏢 ENTERPRISE: All / Active (orders last 12mo) / Preferred (high spend) / Inactive / New (last 30d)
+ */
+export const VENDOR_STATUS_OPTIONS: TypeFilterOption[] = [
+  { value: 'all', label: 'procurement:filters.vendorStatus.all', icon: LayoutGrid, tooltip: 'procurement:filters.vendorStatus.allTooltip' },
+  { value: 'active', label: 'procurement:filters.vendorStatus.active', icon: CheckCircle, tooltip: 'procurement:filters.vendorStatus.activeTooltip' },
+  { value: 'preferred', label: 'procurement:filters.vendorStatus.preferred', icon: Star, tooltip: 'procurement:filters.vendorStatus.preferredTooltip' },
+  { value: 'inactive', label: 'procurement:filters.vendorStatus.inactive', icon: UserX, tooltip: 'procurement:filters.vendorStatus.inactiveTooltip' },
+  { value: 'new', label: 'procurement:filters.vendorStatus.new', icon: Sparkles, tooltip: 'procurement:filters.vendorStatus.newTooltip' },
+];
+
+export function VendorStatusQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+  const { t } = useTranslation(['procurement']);
+  return (
+    <TypeQuickFilters
+      {...props}
+      options={VENDOR_STATUS_OPTIONS}
+      ariaLabel={props.ariaLabel ?? t('filters.vendorStatusAriaLabel')}
+    />
+  );
+}
+
+/**
+ * Material Quick Filters (Procore Materials + SAP MM Material Master pattern)
+ * 🏢 ENTERPRISE: All / Recently Used (last 90d) / Inactive (180d+ or never) / No Supplier (no preferred FK)
+ */
+export const MATERIAL_STATUS_OPTIONS: TypeFilterOption[] = [
+  { value: 'all', label: 'procurement:filters.materialStatus.all', icon: LayoutGrid, tooltip: 'procurement:filters.materialStatus.allTooltip' },
+  { value: 'recently_used', label: 'procurement:filters.materialStatus.recently_used', icon: Sparkles, tooltip: 'procurement:filters.materialStatus.recently_usedTooltip' },
+  { value: 'inactive', label: 'procurement:filters.materialStatus.inactive', icon: Clock, tooltip: 'procurement:filters.materialStatus.inactiveTooltip' },
+  { value: 'no_supplier', label: 'procurement:filters.materialStatus.no_supplier', icon: AlertTriangle, tooltip: 'procurement:filters.materialStatus.no_supplierTooltip' },
+];
+
+export function MaterialStatusQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+  const { t } = useTranslation(['procurement']);
+  return (
+    <TypeQuickFilters
+      {...props}
+      options={MATERIAL_STATUS_OPTIONS}
+      ariaLabel={props.ariaLabel ?? t('filters.materialStatusAriaLabel')}
+    />
+  );
+}
+
+/**
+ * Agreement Quick Filters (SAP MM Outline Agreements + Procore Contracts pattern)
+ * 🏢 ENTERPRISE: All / Active / Expiring (30d) / Expired / Draft
+ */
+export const AGREEMENT_STATUS_OPTIONS: TypeFilterOption[] = [
+  { value: 'all', label: 'procurement:filters.agreementStatus.all', icon: LayoutGrid, tooltip: 'procurement:filters.agreementStatus.allTooltip' },
+  { value: 'active', label: 'procurement:filters.agreementStatus.active', icon: CheckCircle, tooltip: 'procurement:filters.agreementStatus.activeTooltip' },
+  { value: 'expiring', label: 'procurement:filters.agreementStatus.expiring', icon: AlertTriangle, tooltip: 'procurement:filters.agreementStatus.expiringTooltip' },
+  { value: 'expired', label: 'procurement:filters.agreementStatus.expired', icon: Clock, tooltip: 'procurement:filters.agreementStatus.expiredTooltip' },
+  { value: 'draft', label: 'procurement:filters.agreementStatus.draft', icon: FileEdit, tooltip: 'procurement:filters.agreementStatus.draftTooltip' },
+];
+
+export function AgreementStatusQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+  const { t } = useTranslation(['procurement']);
+  return (
+    <TypeQuickFilters
+      {...props}
+      options={AGREEMENT_STATUS_OPTIONS}
+      ariaLabel={props.ariaLabel ?? t('filters.agreementStatusAriaLabel')}
     />
   );
 }

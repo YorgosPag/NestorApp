@@ -76,9 +76,33 @@ export { ConversationListCard, type ConversationListCardProps } from './conversa
 // =============================================================================
 
 export { PurchaseOrderListCard, type PurchaseOrderListCardProps } from './po';
+export { PurchaseOrderGridCard, type PurchaseOrderGridCardProps } from './po';
 
 // =============================================================================
 // 📄 QUOTE (Procurement)
 // =============================================================================
 
 export { QuoteListCard, type QuoteListCardProps } from './quote';
+export { QuoteGridCard, type QuoteGridCardProps } from './quote';
+
+// =============================================================================
+// 🏢 VENDOR (Procurement)
+// =============================================================================
+
+export { VendorListCard, type VendorListCardProps } from './vendor';
+export { VendorGridCard, type VendorGridCardProps } from './vendor';
+export type { VendorCardData } from './vendor';
+
+// =============================================================================
+// 🧱 MATERIAL (Procurement)
+// =============================================================================
+
+export { MaterialListCard, type MaterialListCardProps } from './material';
+export { MaterialGridCard, type MaterialGridCardProps } from './material';
+
+// =============================================================================
+// 📜 FRAMEWORK AGREEMENT (Procurement)
+// =============================================================================
+
+export { AgreementListCard, type AgreementListCardProps } from './agreement';
+export { AgreementGridCard, type AgreementGridCardProps } from './agreement';
