@@ -39,7 +39,7 @@ const DEFAULT_FILTERS: POFilters = {
 // ANALYTICS DRILL HELPERS (ADR-331 Phase F)
 // ============================================================================
 
-function isActiveDrill(f: AnalyticsDrillFilters): boolean {
+export function isActiveDrill(f: AnalyticsDrillFilters): boolean {
   return (
     f.from !== null ||
     f.to !== null ||
@@ -50,7 +50,7 @@ function isActiveDrill(f: AnalyticsDrillFilters): boolean {
   );
 }
 
-function applyAnalyticsDrill(pos: PurchaseOrder[], f: AnalyticsDrillFilters): PurchaseOrder[] {
+export function applyAnalyticsDrill(pos: PurchaseOrder[], f: AnalyticsDrillFilters): PurchaseOrder[] {
   return pos.filter((po) => {
     const dateKey = po.dateCreated.substring(0, 10);
     if (f.from && dateKey < f.from) return false;
