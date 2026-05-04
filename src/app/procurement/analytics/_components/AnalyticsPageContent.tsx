@@ -92,7 +92,6 @@ export function AnalyticsPageContent() {
             <MonthlyTrendChart
               data={data?.current.monthlyTrend ?? []}
               isLoading={isLoading}
-              className="lg:col-span-2"
             />
           </ComponentErrorBoundary>
           <ComponentErrorBoundary componentName="SpendByProjectChart">
@@ -100,7 +99,6 @@ export function AnalyticsPageContent() {
               data={data?.current.byProject ?? []}
               filters={filters}
               isLoading={isLoading}
-              className="lg:col-span-2"
             />
           </ComponentErrorBoundary>
         </section>
