@@ -1,6 +1,6 @@
 # ADR-330 — Procurement Hub Scoped Split (Company-wide vs Project-scoped)
 
-**Status:** ✅ IMPLEMENTED — Phase 1 (S1-S6) complete 2026-05-04. Phase 3 (Vendor Master) complete 2026-05-04. Phase 4 (Material Catalog) complete 2026-05-04. Phase 5 (Framework Agreements MVP) complete 2026-05-04. Phase 5.5 (Auto-apply FA discounts in PO) complete 2026-05-04. Phase 6 (Cross-project Dashboard) complete 2026-05-04. Hub landing + project-scoped procurement tab + 5 KPIs + create buttons + vendor directory + material catalog (CRUD) + framework agreements (breakpoint discounts + auto-apply in PO form) + company-wide dashboard widgets (4 KPI, spend-by-category, monthly trend). Phase 4.5, 7 deferred (Cloud Functions + multi-project Sourcing Events).
+**Status:** ✅ IMPLEMENTED — Phase 1 (S1-S6) complete 2026-05-04. Phase 3 (Vendor Master) complete 2026-05-04. Phase 4 (Material Catalog) complete 2026-05-04. Phase 4.5 (Auto-update avgPrice from PO delivery) complete 2026-05-04. Phase 5 (Framework Agreements MVP) complete 2026-05-04. Phase 5.5 (Auto-apply FA discounts in PO) complete 2026-05-04. Phase 6 (Cross-project Dashboard) complete 2026-05-04. Hub landing + project-scoped procurement tab + 5 KPIs + create buttons + vendor directory + material catalog (CRUD) + framework agreements (breakpoint discounts + auto-apply in PO form) + company-wide dashboard widgets (4 KPI, spend-by-category, monthly trend). Phase 7 deferred (multi-project Sourcing Events).
 **Date:** 2026-05-03
 **Author:** Claude (Plan Mode, 3 Explore agents) + Γιώργος
 **Supersedes (partially):** ADR-267 §"Αποφάσεις" #1 ("Standalone top-level navigation")
@@ -10,6 +10,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-05-04 | ✅ **Phase 4.5 IMPLEMENTED** — Auto-update Material avgPrice/lastPrice/lastPurchaseDate su PO → delivered. Architecture: server-side (no Cloud Function — Next.js route-layer, fire-and-forget). NEW file: `services/procurement/material-price-sync.ts` (`syncMaterialPricesOnDelivery`). MODIFY: `types/procurement/purchase-order.ts` (+`materialId?: string | null` su `PurchaseOrderItem`), `services/procurement/procurement-service.ts` (chiama sync in `recordPODelivery` quando `newStatus === 'delivered'`). Pattern: explicit FK — solo items con `materialId` impostato vengono aggiornati (no match ambigui). avgPrice = rolling mean `(oldAvg + newPrice) / 2`. Idempotente: trigger unico per delivery (guard `newStatus === 'delivered'`). Tenant-isolation: companyId check + soft-delete guard in sync. UI per link materialId→PO item: fase futura. |
 | 2026-05-04 | ✅ **Phase 5.5 IMPLEMENTED** — Auto-apply FA discounts in PO form via client-side hook. Architecture: pure utility `framework-agreement-discount.ts` (`resolveActiveFa` + `computeFaDiscount`) + `usePOFrameworkAgreement` hook + `PurchaseOrder` type extended (4 nullable FA fields) + API schemas + repository + service. UI: emerald banner + discount row + netTotal in PO form totals section. 12 files modified, 2 new. No breaking changes on existing POs (null=no discount applied). |
 | 2026-05-04 | ✅ **ADR §7 FINALIZED** — Session tracking table: commit hashes filled (S1→`29f9c307`, S2→`240fcda0`, S3→`4c93251f`, S5→multi-commit, S6→`f222b0d8`+`b30278e1`). Phase 3-7 table corrected: Phase 4 (Material Catalog) + Phase 6 (Dashboard) aggiornate a ✅ COMPLETED con commit hash. Phase 5.5 + 4.5 aggiunte come DEFERRED. Status header aggiornato a includere Phase 5 (Framework Agreements). |
 | 2026-05-03 | 📋 PROPOSED — bozza iniziale post esplorazione (3 agents Explore + verifica codice + lettura ADR-267/327/328) |
@@ -537,7 +538,7 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 - ✅ Firestore rules (read tenant-scoped, writes Admin-only) + 3 composite indexes
 - ✅ Audit trail via `EntityAuditService.recordChange` (created/updated/soft_deleted)
 
-**Out-of-scope (future Phase 4.5):** auto-update `avgPrice`/`lastPrice`/`lastPurchaseDate` da Cloud Function trigger su PO `delivered`. In MVP Phase 4 i prezzi sono editabili manualmente.
+**Phase 4.5 (implemented 2026-05-04):** auto-update `avgPrice`/`lastPrice`/`lastPurchaseDate` quando PO → `delivered`. Implementato server-side in `services/procurement/material-price-sync.ts` (no Cloud Function). Trigger: `recordPODelivery` nel service. Link via `PurchaseOrderItem.materialId` (explicit FK, opzionale). UI per impostare `materialId` sul PO item: fase futura.
 
 ### Phase 5 — Framework Agreements ✅ MVP IMPLEMENTED 2026-05-04 (no auto-apply)
 
@@ -920,7 +921,7 @@ Status legend: 📋 PLANNED · 🚧 IN_PROGRESS · ✅ COMPLETED · ⚠️ PARTI
 | 4 — Material Catalog | ✅ COMPLETED | `04669a1b` | 2026-05-04 |
 | 5 — Framework Agreements | ✅ COMPLETED (MVP, no auto-apply) | `f050d1ac` | 2026-05-04 |
 | 5.5 — Auto-apply FA discounts in PO | ✅ COMPLETED (client-side hook) | pending commit | 2026-05-04 |
-| 4.5 — Auto-update avgPrice from PO | 📋 DEFERRED | — | Cloud Function future |
+| 4.5 — Auto-update avgPrice from PO | ✅ COMPLETED (server-side, fire-and-forget) | pending commit | 2026-05-04 |
 | 6 — Cross-project Dashboard | ✅ COMPLETED | `b30278e1` | 2026-05-04 |
 | 7 — Sourcing Events globali | 📋 FUTURE | — | TBD |
 

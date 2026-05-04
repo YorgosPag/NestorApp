@@ -6,7 +6,7 @@
  *   searchParams.get('projectId') for the initialProjectId.
  */
 
-import { LazyRoutes } from '@/utils/lazyRoutesAdr294';
+import { LazyRoutes } from '@/utils/lazyRoutes';
 
 export default function NewPurchaseOrderPage() {
   return <LazyRoutes.ProcurementDetail />;

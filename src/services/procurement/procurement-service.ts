@@ -22,6 +22,7 @@ import {
 } from '@/types/procurement';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { notifyPOApproved } from './po-notification-service';
+import { syncMaterialPricesOnDelivery } from './material-price-sync';
 import {
   createPurchaseOrder,
   getPurchaseOrder,
@@ -360,6 +361,11 @@ export async function recordPODelivery(
   }
 
   const result = await recordDelivery(poId, dto);
+
+  // Phase 4.5 — auto-update Material prices on full delivery (fire-and-forget)
+  if (result.newStatus === 'delivered') {
+    syncMaterialPricesOnDelivery(ctx.companyId, poId, po.items, new Date().toISOString()).catch(() => {});
+  }
 
   await audit(ctx, 'procurement.po.delivery_recorded', poId, {
     poNumber: po.poNumber,

@@ -154,6 +154,9 @@ export interface PurchaseOrderItem {
   boqItemId: string | null;         // ref → boq_items (optional)
   categoryCode: string;             // ΑΤΟΕ code (OIK-1...OIK-12) — MANDATORY
 
+  // Material Catalog link (ADR-330 Phase 4.5 — explicit FK, no ambiguous matching)
+  materialId?: string | null;       // ref → materials/ — drives avgPrice auto-update on delivery
+
   // Delivery Tracking — Partial deliveries
   quantityReceived: number;         // default: 0
   quantityRemaining: number;        // quantity - quantityReceived (computed)
