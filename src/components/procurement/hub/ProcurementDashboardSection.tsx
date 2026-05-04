@@ -7,8 +7,9 @@
  * @see ADR-330 §3 Phase 6
  */
 
+import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { BarChart3, ShoppingCart, TrendingUp, Truck, Users } from 'lucide-react';
+import { BarChart3, ChevronRight, ShoppingCart, TrendingUp, Truck, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
@@ -145,7 +146,13 @@ export function ProcurementDashboardSection() {
   return (
     <section aria-label={t('hub.dashboard.title')} className="space-y-4 px-4 pb-6">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {t('hub.dashboard.title')}
+        <Link
+          href="/procurement/analytics"
+          className="group inline-flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          {t('hub.dashboard.title')}
+          <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden />
+        </Link>
       </h2>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
