@@ -1031,6 +1031,7 @@ match /purchase_order_counters/{counterId} {
 
 | Ερώτημα | Απόφαση | Σκεπτικό |
 |---------|---------|----------|
+| Hub master-detail panel per POs (2026-05-04) | ✅ Inline split panel (non navigazione) | Pattern Contacts/GOL: click card = pannello destro con `PurchaseOrderDetail`, URL-persistent `?poId=`. Analytics drill-down params (`from`,`to`,`projectId`,`supplierId`,`categoryCode`,`status`) coesistono. Mobile: `MobileDetailsSlideIn`. `onViewPO` (navigazione) rimane per toolbar edit. |
 | Items: embedded array ή subcollection? | ✅ Embedded array | Τυπικό PO: 1-10 items, σπάνια 10-30. Πάντα read μαζί. Array = simpler + faster |
 | Status: πόσα states; | ✅ 6 states (+ partially_delivered, χωρίς INVOICED) | Procore/SAP pattern. Delivery = auto based on qty. Invoice = action, όχι status |
 | Navigation: under Construction ή standalone? | ✅ Standalone top-level (displayOrder: 55) | Enterprise pattern: Procore/SAP/Oracle — cross-cutting domain |
