@@ -1427,5 +1427,12 @@
       "expiredOld": "expired {absolute}"
     },
     "empty": "—"
+  },
+  "multiCombobox": {
+    "searchPlaceholder": "Search...",
+    "emptyMessage": "No results found",
+    "selectedCount": "{count} selected",
+    "removeChip": "Remove",
+    "clearAll": "Clear all"
   }
 }

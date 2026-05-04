@@ -1427,5 +1427,12 @@
       "expiredOld": "έληξε {absolute}"
     },
     "empty": "—"
+  },
+  "multiCombobox": {
+    "searchPlaceholder": "Αναζήτηση...",
+    "emptyMessage": "Δεν βρέθηκαν αποτελέσματα",
+    "selectedCount": "{count} επιλεγμένα",
+    "removeChip": "Αφαίρεση",
+    "clearAll": "Καθαρισμός"
   }
 }

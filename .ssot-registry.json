@@ -2525,6 +2525,23 @@
         "src/subapps/dxf-viewer/"
       ],
       "tier": 2
+    },
+    "multi-combobox": {
+      "ssotFile": "src/components/ui/multi-combobox.tsx",
+      "description": "MultiCombobox SSoT (ADR-331 D13). Centralized multi-select with search, chips, keyboard nav. Replaces inline rebuilds. Boy Scout post-Phase H: migrate 3 domain duplicates (PropertyMultiSelectByBuilding, FloorMultiSelectField, BOQEditorScopeSection).",
+      "forbiddenPatterns": [
+        "selectedSet\\.has[^;)]*Checkbox|Checkbox[^;)]*selectedSet\\.has",
+        "onCheckedChange.*prev.*includes.*filter"
+      ],
+      "allowlist": [
+        "src/components/ui/multi-combobox.tsx",
+        "src/components/ui/__tests__/multi-combobox.test.tsx",
+        "src/components/properties/shared/PropertyMultiSelectByBuilding.tsx",
+        "src/components/shared/FloorMultiSelectField.tsx"
+      ],
+      "addedDate": "2026-05-04",
+      "addedByAdr": "ADR-331",
+      "tier": 1
     }
   }
 }
