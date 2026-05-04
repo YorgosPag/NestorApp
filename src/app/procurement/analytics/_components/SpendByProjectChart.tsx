@@ -32,10 +32,12 @@ import type {
 } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
 import {
   buildPurchaseOrdersUrl,
+  CHART_FIGURE_CLASSES,
   formatEurShort,
   readClickedRowKey,
   truncateLabel,
 } from './chart-utils';
+import { ChartTooltip } from './chart-tooltip';
 
 interface SpendByProjectChartProps {
   data: readonly ProjectPoint[];
@@ -85,7 +87,7 @@ export function SpendByProjectChart({
             {t('analytics.charts.byProject.empty')}
           </p>
         ) : (
-          <figure aria-label={t('analytics.charts.byProject.ariaLabel')} className="m-0">
+          <figure aria-label={t('analytics.charts.byProject.ariaLabel')} className={CHART_FIGURE_CLASSES}>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={rows} margin={{ top: 8, right: 16, left: 4, bottom: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -99,8 +101,7 @@ export function SpendByProjectChart({
                 />
                 <YAxis tickFormatter={formatEurShort} tick={{ fontSize: 11 }} width={56} />
                 <Tooltip
-                  formatter={(value: number) => formatCurrency(value, 'EUR')}
-                  labelStyle={{ fontWeight: 600 }}
+                  content={<ChartTooltip formatter={(value) => formatCurrency(value, 'EUR')} />}
                 />
                 <Bar
                   dataKey="total"

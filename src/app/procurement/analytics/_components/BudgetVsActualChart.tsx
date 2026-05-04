@@ -28,7 +28,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { KpiChartSkeleton } from '@/components/projects/procurement/overview/skeleton/KpiSkeleton';
 import type { BudgetVsActualPoint } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
-import { formatEurShort, truncateLabel } from './chart-utils';
+import { CHART_FIGURE_CLASSES, formatEurShort, truncateLabel } from './chart-utils';
 
 interface BudgetVsActualChartProps {
   data: readonly BudgetVsActualPoint[];
@@ -62,11 +62,11 @@ function CustomTooltip({
   const row = payload[0]?.payload as BudgetRow | undefined;
   if (!row) return null;
   return (
-    <section className="rounded-md border bg-popover px-3 py-2 text-xs shadow-md">
-      <p className="font-semibold text-foreground">{label}</p>
-      <p className="text-muted-foreground">{`${messages.budget}: ${formatCurrency(row.budget, 'EUR')}`}</p>
-      <p className="text-muted-foreground">{`${messages.committed}: ${formatCurrency(row.committed, 'EUR')}`}</p>
-      <p className="text-muted-foreground">{`${messages.delivered}: ${formatCurrency(row.delivered, 'EUR')}`}</p>
+    <section className="min-w-[140px] rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
+      <p className="mb-1 font-semibold">{label}</p>
+      <p>{`${messages.budget}: ${formatCurrency(row.budget, 'EUR')}`}</p>
+      <p>{`${messages.committed}: ${formatCurrency(row.committed, 'EUR')}`}</p>
+      <p>{`${messages.delivered}: ${formatCurrency(row.delivered, 'EUR')}`}</p>
       {row.isOffBudget && (
         <p className="mt-1 font-medium text-destructive">{messages.offBudgetWarning}</p>
       )}
@@ -123,7 +123,7 @@ export function BudgetVsActualChart({
             {t('analytics.charts.budgetVsActual.empty')}
           </p>
         ) : (
-          <figure aria-label={t('analytics.charts.budgetVsActual.ariaLabel')} className="m-0">
+          <figure aria-label={t('analytics.charts.budgetVsActual.ariaLabel')} className={CHART_FIGURE_CLASSES}>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={rows} margin={{ top: 8, right: 16, left: 4, bottom: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />

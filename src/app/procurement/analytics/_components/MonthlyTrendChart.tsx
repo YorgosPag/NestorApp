@@ -26,7 +26,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { KpiChartSkeleton } from '@/components/projects/procurement/overview/skeleton/KpiSkeleton';
 import type { MonthlyPoint } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
-import { formatEurShort } from './chart-utils';
+import { CHART_FIGURE_CLASSES, formatEurShort } from './chart-utils';
+import { ChartTooltip } from './chart-tooltip';
 
 interface MonthlyTrendChartProps {
   data: readonly MonthlyPoint[];
@@ -82,15 +83,14 @@ export function MonthlyTrendChart({ data, isLoading, className }: MonthlyTrendCh
             {t('analytics.charts.monthlyTrend.empty')}
           </p>
         ) : (
-          <figure aria-label={t('analytics.charts.monthlyTrend.ariaLabel')} className="m-0">
+          <figure aria-label={t('analytics.charts.monthlyTrend.ariaLabel')} className={CHART_FIGURE_CLASSES}>
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={rows} margin={{ top: 8, right: 16, left: 4, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                 <YAxis tickFormatter={formatEurShort} tick={{ fontSize: 11 }} width={56} />
                 <Tooltip
-                  formatter={(value: number) => formatCurrency(value, 'EUR')}
-                  labelStyle={{ fontWeight: 600 }}
+                  content={<ChartTooltip formatter={(value) => formatCurrency(value, 'EUR')} />}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Line

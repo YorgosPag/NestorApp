@@ -56,3 +56,11 @@ export function truncateLabel(label: string, max: number = 20): string {
   if (label.length <= max) return label;
   return `${label.slice(0, Math.max(1, max - 1))}…`;
 }
+
+/**
+ * Tailwind classes applied to every chart <figure> element.
+ * Replaces Recharts default white cursor rectangle/line with the muted theme color.
+ * SSoT: all analytics charts import this constant.
+ */
+export const CHART_FIGURE_CLASSES =
+  'm-0 [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border/70';

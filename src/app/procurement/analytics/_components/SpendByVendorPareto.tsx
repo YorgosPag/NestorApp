@@ -33,10 +33,12 @@ import type {
 } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
 import {
   buildPurchaseOrdersUrl,
+  CHART_FIGURE_CLASSES,
   formatEurShort,
   readClickedRowKey,
   truncateLabel,
 } from './chart-utils';
+import { ChartTooltip } from './chart-tooltip';
 
 interface SpendByVendorParetoProps {
   data: readonly VendorPoint[];
@@ -103,7 +105,7 @@ export function SpendByVendorPareto({
             {t('analytics.charts.byVendor.empty')}
           </p>
         ) : (
-          <figure aria-label={t('analytics.charts.byVendor.ariaLabel')} className="m-0">
+          <figure aria-label={t('analytics.charts.byVendor.ariaLabel')} className={CHART_FIGURE_CLASSES}>
             <ResponsiveContainer width="100%" height={280}>
               <ComposedChart data={rows} margin={{ top: 8, right: 16, left: 4, bottom: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -130,12 +132,15 @@ export function SpendByVendorPareto({
                   width={42}
                 />
                 <Tooltip
-                  formatter={(value: number, key: string) =>
-                    key === 'cumulativePct'
-                      ? `${value.toFixed(1)}%`
-                      : formatCurrency(value, 'EUR')
+                  content={
+                    <ChartTooltip
+                      formatter={(value, key) =>
+                        key === 'cumulativePct'
+                          ? `${value.toFixed(1)}%`
+                          : formatCurrency(value, 'EUR')
+                      }
+                    />
                   }
-                  labelStyle={{ fontWeight: 600 }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar

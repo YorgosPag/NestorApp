@@ -30,10 +30,12 @@ import type {
 } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
 import {
   buildPurchaseOrdersUrl,
+  CHART_FIGURE_CLASSES,
   formatEurShort,
   readClickedRowKey,
   truncateLabel,
 } from './chart-utils';
+import { ChartTooltip } from './chart-tooltip';
 
 interface SpendByCategoryChartProps {
   data: readonly CategoryPoint[];
@@ -85,7 +87,7 @@ export function SpendByCategoryChart({
             {t('analytics.charts.byCategory.empty')}
           </p>
         ) : (
-          <figure aria-label={t('analytics.charts.byCategory.ariaLabel')} className="m-0">
+          <figure aria-label={t('analytics.charts.byCategory.ariaLabel')} className={CHART_FIGURE_CLASSES}>
             <ResponsiveContainer
               width="100%"
               height={Math.max(MIN_HEIGHT_PX, rows.length * ROW_HEIGHT_PX + 40)}
@@ -104,8 +106,7 @@ export function SpendByCategoryChart({
                   width={140}
                 />
                 <Tooltip
-                  formatter={(value: number) => formatCurrency(value, 'EUR')}
-                  labelStyle={{ fontWeight: 600 }}
+                  content={<ChartTooltip formatter={(value) => formatCurrency(value, 'EUR')} />}
                 />
                 <Bar
                   dataKey="total"

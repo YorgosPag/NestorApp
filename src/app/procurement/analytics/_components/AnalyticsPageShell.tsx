@@ -21,10 +21,12 @@ export function AnalyticsPageShell() {
 
   return (
     <PageContainer ariaLabel={t('analytics.title')}>
-      <header className="px-2 mt-2">
+      <header className="shrink-0 px-2 mt-2">
         <ProcurementSubNav className="mb-0" />
       </header>
-      <AnalyticsPageContent />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <AnalyticsPageContent />
+      </div>
     </PageContainer>
   );
 }
