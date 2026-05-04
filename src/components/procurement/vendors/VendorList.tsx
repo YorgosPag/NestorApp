@@ -1,119 +1,197 @@
 'use client';
 
-import { useMemo } from 'react';
+/**
+ * VendorList — Vendor master list panel mirroring Contacts/POs SSoT pattern.
+ *
+ * Composition: GenericListHeader + CompactToolbar + VendorStatusQuickFilters
+ * + ScrollArea[VendorListCard | VendorGridCard].
+ *
+ * @see ADR-267 §Phase J — Procurement SSoT alignment
+ */
+
+import React, { useMemo, useState } from 'react';
 import { Users2 } from 'lucide-react';
+
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { getContactDisplayName } from '@/types/contacts';
-import { cn } from '@/lib/utils';
+
+import { GenericListHeader } from '@/components/shared/GenericListHeader';
+import { CompactToolbar, vendorsConfig } from '@/components/core/CompactToolbar';
+import { VendorStatusQuickFilters } from '@/components/shared/TypeQuickFilters';
+import { VendorListCard, VendorGridCard, type VendorCardData } from '@/domain';
 import { EntityListColumn } from '@/core/containers';
-import type { VendorCardData } from './VendorCard';
+
+import { useSortState } from '@/hooks/useSortState';
+import { matchesSearchTerm } from '@/lib/search/search';
+import { getContactDisplayName } from '@/types/contacts';
+import { makeVendorPredicate, type VendorFilter } from '@/subapps/procurement/utils/quick-filter-predicates';
+
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface VendorListProps {
   vendors: VendorCardData[];
   loading: boolean;
-  search: string;
-  onSearchChange: (v: string) => void;
   selectedVendorId: string | undefined;
   onSelectVendor: (data: VendorCardData) => void;
-}
-
-function ListSkeleton() {
-  return (
-    <div className="flex flex-col gap-2 p-2">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-14 rounded-md" />
-      ))}
-    </div>
-  );
+  viewMode?: 'list' | 'grid';
 }
 
 export function VendorList({
   vendors,
   loading,
-  search,
-  onSearchChange,
   selectedVendorId,
   onSelectVendor,
+  viewMode = 'list',
 }: VendorListProps) {
   const { t } = useTranslation('procurement');
+  const colors = useSemanticColors();
+
+  const { sortBy, sortOrder, onSortChange } = useSortState<'name' | 'value' | 'date'>('name');
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [showToolbar, setShowToolbar] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<string[]>([]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return vendors;
+    const filterValue = (selectedFilter[0] ?? '') as VendorFilter;
+    const predicate = makeVendorPredicate(filterValue, vendors);
+
     return vendors.filter((v) => {
-      const name = getContactDisplayName(v.contact).toLowerCase();
-      return name.includes(q);
+      if (!predicate(v)) return false;
+      if (searchTerm) {
+        const name = getContactDisplayName(v.contact);
+        const specialties = v.metrics?.tradeSpecialties ?? [];
+        return matchesSearchTerm([name, ...specialties, v.contact.id ?? ''], searchTerm);
+      }
+      return true;
     });
-  }, [vendors, search]);
+  }, [vendors, selectedFilter, searchTerm]);
+
+  const sorted = useMemo(() => {
+    const dir = sortOrder === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'value':
+          return ((a.metrics?.totalSpend ?? 0) - (b.metrics?.totalSpend ?? 0)) * dir;
+        case 'date': {
+          const aTs = Date.parse(a.metrics?.lastOrderDate ?? '') || 0;
+          const bTs = Date.parse(b.metrics?.lastOrderDate ?? '') || 0;
+          return (aTs - bTs) * dir;
+        }
+        case 'name':
+        default:
+          return getContactDisplayName(a.contact).localeCompare(getContactDisplayName(b.contact)) * dir;
+      }
+    });
+  }, [filtered, sortBy, sortOrder]);
+
+  const renderSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
+    if (newSortBy === 'name' || newSortBy === 'value' || newSortBy === 'date') {
+      onSortChange(newSortBy, newSortOrder);
+    }
+  };
+
+  const handleNewItem = () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/contacts?type=supplier';
+    }
+  };
 
   return (
-    <EntityListColumn aria-label={t('hub.vendorMaster.title')}>
-      {/* Search */}
-      <div className="p-2 border-b">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-          <Input
-            className="pl-8 h-8 text-sm"
-            placeholder={t('hub.vendorMaster.searchPlaceholder')}
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            aria-label={t('hub.vendorMaster.searchPlaceholder')}
+    <EntityListColumn hasBorder aria-label={t('hub.vendorMaster.title')}>
+      <div>
+        <GenericListHeader
+          icon={Users2}
+          entityName={t('hub.vendorMaster.title')}
+          itemCount={sorted.length}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={t('hub.vendorMaster.searchPlaceholder')}
+          showToolbar={showToolbar}
+          onToolbarToggle={setShowToolbar}
+          hideSearch
+        />
+        <div className="hidden md:block">
+          <CompactToolbar
+            config={vendorsConfig}
+            selectedItems={selectedItems}
+            onSelectionChange={setSelectedItems}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            activeFilters={activeFilters}
+            onFiltersChange={setActiveFilters}
+            sortBy={sortBy}
+            onSortChange={renderSortChange}
+            hasSelectedContact={!!selectedVendorId}
+            onNewItem={handleNewItem}
           />
+        </div>
+        <div className="md:hidden">
+          {showToolbar && (
+            <CompactToolbar
+              config={vendorsConfig}
+              selectedItems={selectedItems}
+              onSelectionChange={setSelectedItems}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              activeFilters={activeFilters}
+              onFiltersChange={setActiveFilters}
+              sortBy={sortBy}
+              onSortChange={renderSortChange}
+              hasSelectedContact={!!selectedVendorId}
+              onNewItem={handleNewItem}
+            />
+          )}
         </div>
       </div>
 
+      <VendorStatusQuickFilters
+        selectedTypes={selectedFilter}
+        onTypeChange={setSelectedFilter}
+        compact
+      />
+
       <ScrollArea className="flex-1">
         {loading ? (
-          <ListSkeleton />
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-12 px-4 text-center">
-            <Users2 className="h-8 w-8 text-muted-foreground opacity-40" aria-hidden />
-            <p className="text-sm text-muted-foreground">
-              {search.trim() ? t('hub.vendorMaster.emptySearch') : t('hub.vendorMaster.noVendorsYet')}
+          <div className="flex flex-col gap-2 p-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 rounded-md" />
+            ))}
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className={cn('flex flex-col items-center gap-2 py-12 px-4 text-center', colors.text.muted)}>
+            <Users2 className="h-8 w-8 opacity-40" aria-hidden />
+            <p className="text-sm">
+              {searchTerm || selectedFilter.length > 0
+                ? t('hub.vendorMaster.emptySearch')
+                : t('hub.vendorMaster.noVendorsYet')}
             </p>
           </div>
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
+            {sorted.map((v) => (
+              <VendorGridCard
+                key={v.contact.id ?? ''}
+                data={v}
+                isSelected={v.contact.id === selectedVendorId}
+                onSelect={() => onSelectVendor(v)}
+              />
+            ))}
+          </div>
         ) : (
-          <ul className="py-1">
-            {filtered.map((v) => {
-              const id = v.contact.id ?? '';
-              const name = getContactDisplayName(v.contact);
-              const isSelected = id === selectedVendorId;
-              const specialties = v.metrics?.tradeSpecialties ?? [];
-
-              return (
-                <li key={id}>
-                  <button
-                    type="button"
-                    className={cn(
-                      'w-full text-left px-3 py-2.5 flex flex-col gap-0.5 hover:bg-accent/60 transition-colors',
-                      isSelected && 'bg-accent',
-                    )}
-                    onClick={() => onSelectVendor(v)}
-                    aria-pressed={isSelected}
-                  >
-                    <span className="text-sm font-medium truncate">{name}</span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {specialties.slice(0, 2).map((code) => (
-                        <Badge key={code} variant="outline" className="text-xs px-1.5 py-0 h-4">
-                          {t(`trades.${code}`, { defaultValue: '' }) || code}
-                        </Badge>
-                      ))}
-                      {v.metrics && v.metrics.totalOrders > 0 && (
-                        <span className="text-xs text-muted-foreground ml-auto shrink-0">
-                          {v.metrics.totalOrders} {t('hub.vendorMaster.detail.kpis.totalOrders')}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="p-2 space-y-2">
+            {sorted.map((v) => (
+              <VendorListCard
+                key={v.contact.id ?? ''}
+                data={v}
+                isSelected={v.contact.id === selectedVendorId}
+                onSelect={() => onSelectVendor(v)}
+              />
+            ))}
+          </div>
         )}
       </ScrollArea>
     </EntityListColumn>

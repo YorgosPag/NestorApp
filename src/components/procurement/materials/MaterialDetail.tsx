@@ -1,14 +1,14 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Layers, Pencil, Trash2, Calendar } from 'lucide-react';
+import { Layers, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { Material } from '@/subapps/procurement/types/material';
 
 interface MaterialDetailProps {
@@ -30,46 +30,23 @@ export function MaterialDetail({ material, onEdit, onDelete }: MaterialDetailPro
 
   const preferredSupplierNames = useMemo(() => {
     const nameMap = new Map(suppliers.map((c) => [c.id ?? '', getContactDisplayName(c)]));
-    return material.preferredSupplierContactIds.map(
-      (id) => nameMap.get(id) ?? id,
-    );
+    return material.preferredSupplierContactIds.map((id) => nameMap.get(id) ?? id);
   }, [suppliers, material.preferredSupplierContactIds]);
 
-  return (
-    <article className="flex flex-col gap-5 p-1">
-      {/* Header */}
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-yellow-100">
-            <Layers className="h-5 w-5 text-yellow-700" aria-hidden />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold truncate">{material.name}</h2>
-            <div className="flex flex-wrap gap-1 mt-0.5">
-              <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
-                {material.code}
-              </code>
-              <Badge variant="outline" className="text-xs">{categoryLabel}</Badge>
-              <Badge variant="secondary" className="text-xs">{unitLabel}</Badge>
-            </div>
-          </div>
-        </div>
+  const subtitle = `${material.code} · ${categoryLabel} · ${unitLabel}`;
 
-        <div className="flex gap-1 shrink-0">
-          <Button size="sm" variant="outline" onClick={() => onEdit(material)}>
-            <Pencil className="h-3.5 w-3.5 mr-1" aria-hidden />
-            {t('hub.materialCatalog.edit')}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-destructive hover:text-destructive"
-            onClick={() => onDelete(material)}
-          >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden />
-          </Button>
-        </div>
-      </header>
+  return (
+    <article className="flex flex-col gap-5">
+      <EntityDetailsHeader
+        icon={Layers}
+        title={material.name}
+        subtitle={subtitle}
+        variant="detailed"
+        actions={[
+          createEntityAction('edit', t('hub.materialCatalog.edit'), () => onEdit(material)),
+          createEntityAction('delete', t('hub.materialCatalog.delete'), () => onDelete(material)),
+        ]}
+      />
 
       {material.description && (
         <p className="text-sm text-muted-foreground">{material.description}</p>
@@ -77,7 +54,6 @@ export function MaterialDetail({ material, onEdit, onDelete }: MaterialDetailPro
 
       <Separator />
 
-      {/* Prices */}
       <section aria-label={t('hub.materialCatalog.detail.priceHistory')}>
         <h3 className="text-sm font-medium mb-3">{t('hub.materialCatalog.detail.priceHistory')}</h3>
         <dl className="grid grid-cols-2 gap-4">
@@ -104,7 +80,6 @@ export function MaterialDetail({ material, onEdit, onDelete }: MaterialDetailPro
 
       <Separator />
 
-      {/* Preferred Suppliers */}
       <section>
         <h3 className="text-sm font-medium mb-3">{t('hub.materialCatalog.detail.preferredSuppliers')}</h3>
         {preferredSupplierNames.length === 0 ? (
@@ -125,6 +100,10 @@ export function MaterialDetail({ material, onEdit, onDelete }: MaterialDetailPro
           </ul>
         )}
       </section>
+
+      <Badge variant="outline" className="self-start text-xs">
+        {unitLabel}
+      </Badge>
     </article>
   );
 }

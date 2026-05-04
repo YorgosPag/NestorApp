@@ -1,15 +1,15 @@
 'use client';
 
 import { useMemo } from 'react';
-import { ScrollText, Pencil, Trash2, Calendar, Building2 } from 'lucide-react';
+import { ScrollText, Calendar, Building2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
-import { cn } from '@/lib/utils';
+import { cn, getStatusColor } from '@/lib/design-system';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type {
   FrameworkAgreement,
   FrameworkAgreementStatus,
@@ -21,11 +21,11 @@ interface AgreementDetailProps {
   onDelete: (agreement: FrameworkAgreement) => void;
 }
 
-const STATUS_STYLE: Record<FrameworkAgreementStatus, string> = {
-  draft:      'bg-gray-100 text-gray-700',
-  active:     'bg-green-100 text-green-700',
-  expired:    'bg-orange-100 text-orange-700',
-  terminated: 'bg-red-100 text-red-700',
+const STATUS_SEMANTIC: Record<FrameworkAgreementStatus, string> = {
+  draft:      'pending',
+  active:     'available',
+  expired:    'reserved',
+  terminated: 'cancelled',
 };
 
 function daysUntil(ts: { toDate: () => Date }): number {
@@ -44,48 +44,32 @@ export function AgreementDetail({ agreement, onEdit, onDelete }: AgreementDetail
 
   const remaining = daysUntil(agreement.validUntil);
   const isExpired = remaining < 0;
+  const sem = STATUS_SEMANTIC[agreement.status];
 
   return (
-    <article className="flex flex-col gap-5 p-1">
-      {/* Header */}
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-100">
-            <ScrollText className="h-5 w-5 text-purple-700" aria-hidden />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold truncate">{agreement.title}</h2>
-            <div className="flex items-center gap-2 mt-0.5">
-              <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
-                {agreement.agreementNumber}
-              </code>
-              <span
-                className={cn(
-                  'text-xs rounded px-1.5 py-0.5 font-medium',
-                  STATUS_STYLE[agreement.status],
-                )}
-              >
-                {t(`hub.frameworkAgreements.status.${agreement.status}`)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-1 shrink-0">
-          <Button size="sm" variant="outline" onClick={() => onEdit(agreement)}>
-            <Pencil className="h-3.5 w-3.5 mr-1" aria-hidden />
-            {t('hub.frameworkAgreements.edit')}
-          </Button>
-          <Button
-            size="sm"
+    <article className="flex flex-col gap-5">
+      <EntityDetailsHeader
+        icon={ScrollText}
+        title={agreement.title}
+        subtitle={agreement.agreementNumber}
+        variant="detailed"
+        titleAdornment={
+          <Badge
             variant="outline"
-            className="text-destructive hover:text-destructive"
-            onClick={() => onDelete(agreement)}
+            className={cn(
+              'text-sm font-medium',
+              getStatusColor(sem, 'bg'),
+              getStatusColor(sem, 'text'),
+            )}
           >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden />
-          </Button>
-        </div>
-      </header>
+            {t(`hub.frameworkAgreements.status.${agreement.status}`)}
+          </Badge>
+        }
+        actions={[
+          createEntityAction('edit', t('hub.frameworkAgreements.edit'), () => onEdit(agreement)),
+          createEntityAction('delete', t('hub.frameworkAgreements.delete'), () => onDelete(agreement)),
+        ]}
+      />
 
       {agreement.description && (
         <p className="text-sm text-muted-foreground">{agreement.description}</p>
@@ -93,7 +77,6 @@ export function AgreementDetail({ agreement, onEdit, onDelete }: AgreementDetail
 
       <Separator />
 
-      {/* Vendor + Validity */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <dt className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
@@ -132,7 +115,6 @@ export function AgreementDetail({ agreement, onEdit, onDelete }: AgreementDetail
 
       <Separator />
 
-      {/* Discount Terms */}
       <section>
         <h3 className="text-sm font-medium mb-3">
           {t('hub.frameworkAgreements.detail.discountTerms')}

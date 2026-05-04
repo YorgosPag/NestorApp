@@ -2,278 +2,42 @@
 // 🏢 ENTERPRISE: 100% CENTRALIZED - ZERO HARDCODED VALUES
 
 import type { CompactToolbarConfig } from './types';
-import {
-  UNIFIED_STATUS_FILTER_LABELS,
-  PROPERTY_BUILDING_TYPE_LABELS,
-  // 🏢 ENTERPRISE: Import additional centralized labels - ZERO HARDCODED VALUES
-  CONTACT_BUSINESS_TYPE_LABELS
-} from '@/constants/property-statuses-enterprise';
-
-// 🏢 ENTERPRISE: Import centralized CompactToolbar search placeholders from modal-select
 import { getCompactToolbarSearchPlaceholders } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
-
-// 🅿️ ENTERPRISE: Import parking labels
 import {
-  PARKING_TYPE_LABELS,
-  PARKING_STATUS_LABELS
-} from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+  type ToolbarType,
+  getFilterCategoriesForType,
+  getSortOptionsForType,
+  NEW_ITEM_LABELS_BY_TYPE,
+  NEW_ITEM_TOOLTIP_BY_TYPE,
+  EDIT_ITEM_TOOLTIP_BY_TYPE,
+  DELETE_ITEM_TOOLTIP_BY_TYPE,
+  SHARE_TOOLTIP_BY_TYPE,
+} from './filter-definitions';
 
-// 🏢 ENTERPRISE: Get centralized search placeholders
 const searchPlaceholders = getCompactToolbarSearchPlaceholders();
 
-// 🏢 ENTERPRISE: Communications channel labels
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-// Labels are translated at runtime by components using useTranslation
-const COMMUNICATIONS_CHANNEL_LABELS = {
-  all: 'toolbar.communications.channels.all',
-  email: 'toolbar.communications.channels.email',
-  sms: 'toolbar.communications.channels.sms',
-  telegram: 'toolbar.communications.channels.telegram'
-} as const;
+// ============================================================================
+// FACTORY
+// ============================================================================
 
-const COMMUNICATIONS_STATUS_LABELS = {
-  all: 'toolbar.communications.status.all',
-  sent: 'toolbar.communications.status.sent',
-  received: 'toolbar.communications.status.received',
-  pending: 'toolbar.communications.status.pending',
-  failed: 'toolbar.communications.status.failed'
-} as const;
-
-// 🚀 ENTERPRISE: Helper functions για filter categories και sort options
-function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications' | 'procurement' | 'quotes') {
-  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-  const baseCategories = [
-    {
-      id: 'status',
-      label: 'toolbar.filters.categories.status',
-      options: [
-        { value: 'available', label: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE },
-        { value: 'occupied', label: UNIFIED_STATUS_FILTER_LABELS.OCCUPIED },
-        { value: 'reserved', label: UNIFIED_STATUS_FILTER_LABELS.RESERVED },
-        { value: 'maintenance', label: UNIFIED_STATUS_FILTER_LABELS.MAINTENANCE }
-      ]
-    }
-  ];
-
-  switch (type) {
-    case 'buildings':
-      return [
-        ...baseCategories,
-        {
-          id: 'type',
-          label: 'toolbar.filters.categories.buildingType',
-          options: [
-            { value: 'residential', label: PROPERTY_BUILDING_TYPE_LABELS.residential },
-            { value: 'commercial', label: PROPERTY_BUILDING_TYPE_LABELS.commercial },
-            { value: 'mixed', label: PROPERTY_BUILDING_TYPE_LABELS.mixed }
-          ]
-        }
-      ];
-    case 'contacts':
-      return [
-        {
-          id: 'type',
-          label: 'toolbar.filters.categories.contactType',
-          options: [
-            { value: 'customer', label: CONTACT_BUSINESS_TYPE_LABELS.customer },
-            { value: 'supplier', label: CONTACT_BUSINESS_TYPE_LABELS.supplier },
-            { value: 'contractor', label: CONTACT_BUSINESS_TYPE_LABELS.contractor }
-          ]
-        }
-      ];
-    case 'parking':
-      return [
-        {
-          id: 'status',
-          label: 'toolbar.filters.categories.status',
-          options: [
-            { value: 'available', label: PARKING_STATUS_LABELS.available },
-            { value: 'occupied', label: PARKING_STATUS_LABELS.occupied },
-            { value: 'reserved', label: PARKING_STATUS_LABELS.reserved },
-            { value: 'sold', label: PARKING_STATUS_LABELS.sold },
-            { value: 'maintenance', label: PARKING_STATUS_LABELS.maintenance }
-          ]
-        },
-        {
-          id: 'type',
-          label: 'toolbar.filters.categories.parkingType',
-          options: [
-            { value: 'standard', label: PARKING_TYPE_LABELS.standard },
-            { value: 'handicapped', label: PARKING_TYPE_LABELS.handicapped },
-            { value: 'motorcycle', label: PARKING_TYPE_LABELS.motorcycle },
-            { value: 'electric', label: PARKING_TYPE_LABELS.electric },
-            { value: 'visitor', label: PARKING_TYPE_LABELS.visitor }
-          ]
-        }
-      ];
-    case 'communications':
-      return [
-        {
-          id: 'channel',
-          label: 'toolbar.filters.categories.channel',
-          options: [
-            { value: 'all', label: COMMUNICATIONS_CHANNEL_LABELS.all },
-            { value: 'email', label: COMMUNICATIONS_CHANNEL_LABELS.email },
-            { value: 'sms', label: COMMUNICATIONS_CHANNEL_LABELS.sms },
-            { value: 'telegram', label: COMMUNICATIONS_CHANNEL_LABELS.telegram }
-          ]
-        },
-        {
-          id: 'status',
-          label: 'toolbar.filters.categories.status',
-          options: [
-            { value: 'all', label: COMMUNICATIONS_STATUS_LABELS.all },
-            { value: 'sent', label: COMMUNICATIONS_STATUS_LABELS.sent },
-            { value: 'received', label: COMMUNICATIONS_STATUS_LABELS.received },
-            { value: 'pending', label: COMMUNICATIONS_STATUS_LABELS.pending },
-            { value: 'failed', label: COMMUNICATIONS_STATUS_LABELS.failed }
-          ]
-        }
-      ];
-    case 'procurement':
-      return [
-        {
-          id: 'status',
-          label: 'toolbar.filters.categories.status',
-          options: [
-            { value: 'draft', label: 'procurement:filters.poStatus.draft' },
-            { value: 'approved', label: 'procurement:filters.poStatus.approved' },
-            { value: 'ordered', label: 'procurement:filters.poStatus.ordered' },
-            { value: 'partially_delivered', label: 'procurement:filters.poStatus.partially_delivered' },
-            { value: 'delivered', label: 'procurement:filters.poStatus.delivered' },
-            { value: 'closed', label: 'procurement:filters.poStatus.closed' },
-            { value: 'cancelled', label: 'procurement:filters.poStatus.cancelled' }
-          ]
-        }
-      ];
-    case 'quotes':
-      return [
-        {
-          id: 'status',
-          label: 'toolbar.filters.categories.status',
-          options: [
-            { value: 'draft', label: 'quotes:filters.quoteStatus.draft' },
-            { value: 'sent_to_vendor', label: 'quotes:filters.quoteStatus.sent_to_vendor' },
-            { value: 'submitted', label: 'quotes:filters.quoteStatus.submitted' },
-            { value: 'under_review', label: 'quotes:filters.quoteStatus.under_review' },
-            { value: 'accepted', label: 'quotes:filters.quoteStatus.accepted' },
-            { value: 'rejected', label: 'quotes:filters.quoteStatus.rejected' },
-            { value: 'expired', label: 'quotes:filters.quoteStatus.expired' },
-            { value: 'archived', label: 'quotes:filters.quoteStatus.archived' }
-          ]
-        }
-      ];
-    default:
-      return baseCategories;
-  }
-}
-
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
-function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications' | 'procurement' | 'quotes') {
-  if (type === 'communications') {
-    return [
-      { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
-      { field: 'channel' as const, ascLabel: 'toolbar.sort.channel.asc', descLabel: 'toolbar.sort.channel.desc' },
-      { field: 'status' as const, ascLabel: 'toolbar.sort.status.asc', descLabel: 'toolbar.sort.status.desc' }
-    ];
-  }
-  if (type === 'procurement' || type === 'quotes') {
-    return [
-      { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
-      { field: 'number' as const, ascLabel: 'toolbar.sort.number.asc', descLabel: 'toolbar.sort.number.desc' },
-      { field: 'status' as const, ascLabel: 'toolbar.sort.status.asc', descLabel: 'toolbar.sort.status.desc' },
-      { field: 'value' as const, ascLabel: 'toolbar.sort.value.asc', descLabel: 'toolbar.sort.value.desc' }
-    ];
-  }
-  return [
-    { field: 'name' as const, ascLabel: 'toolbar.sort.name.asc', descLabel: 'toolbar.sort.name.desc' },
-    { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
-    { field: 'status' as const, ascLabel: 'toolbar.sort.status.asc', descLabel: 'toolbar.sort.status.desc' }
-  ];
-}
-
-// 🏢 ENTERPRISE: Direct i18n key mappings for newItem labels per type
-// NOTE: Keys are relative to 'common' namespace (no 'common.' prefix needed)
-const NEW_ITEM_LABELS_BY_TYPE: Record<string, string> = {
-  buildings: 'actions.newBuilding',
-  projects: 'actions.newProject',
-  contacts: 'actions.newContact',
-  properties: 'actions.newProperty',
-  storages: 'actions.newStorage',
-  parking: 'actions.newParking',
-  communications: 'actions.newMessage',
-  procurement: 'procurement:list.createPO',
-  quotes: 'quotes:list.createQuote'
-};
-
-// 🏢 ENTERPRISE: Direct i18n keys for entity-specific tooltips
-// NOTE: Keys are relative to 'common' namespace (no 'common.' prefix needed)
-const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
-  buildings: 'tooltips.newBuildingShortcut',
-  projects: 'tooltips.newProjectShortcut',
-  contacts: 'tooltips.newContactShortcut',
-  properties: 'tooltips.newPropertyShortcut',
-  storages: 'tooltips.newStorageShortcut',
-  parking: 'tooltips.newParkingShortcut',
-  communications: 'tooltips.newMessageShortcut',
-  procurement: 'procurement:list.createPO',
-  quotes: 'quotes:list.createQuote'
-};
-
-const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
-  buildings: 'toolbar.actions.buildings.edit',
-  projects: 'toolbar.actions.projects.edit',
-  contacts: 'tooltips.editContact',
-  properties: 'toolbar.actions.properties.edit',
-  storages: 'toolbar.actions.storage.edit',
-  parking: 'tooltips.editSelected',
-  communications: 'tooltips.editSelected',
-  procurement: 'tooltips.editSelected',
-  quotes: 'tooltips.editSelected'
-};
-
-const DELETE_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
-  buildings: 'toolbar.actions.buildings.delete',
-  projects: 'toolbar.actions.projects.delete',
-  contacts: 'tooltips.deleteContact',
-  properties: 'toolbar.actions.properties.delete',
-  storages: 'toolbar.actions.storage.delete',
-  parking: 'tooltips.deleteSelected',
-  communications: 'tooltips.deleteSelected',
-  procurement: 'tooltips.deleteSelected',
-  quotes: 'tooltips.deleteSelected'
-};
-
-const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
-  buildings: 'tooltips.shareBuilding',
-  projects: 'tooltips.shareProject',
-  contacts: 'tooltips.shareContact',
-  properties: 'tooltips.shareProperty',
-  storages: 'tooltips.shareStorage',
-  parking: 'toolbar.labels.share',
-  communications: 'toolbar.labels.share',
-  procurement: 'toolbar.labels.share',
-  quotes: 'toolbar.labels.share'
-};
-
-// 🚀 ENTERPRISE: Smart Configuration Factory - No duplicated labels!
-function createToolbarConfig(
-  type: 'buildings' | 'projects' | 'contacts' | 'properties' | 'storages' | 'parking' | 'communications' | 'procurement' | 'quotes'
-): CompactToolbarConfig {
-  // 🏢 ENTERPRISE: Procurement/Quotes use their own namespace; other types pull from centralized modal-select map.
+function createToolbarConfig(type: ToolbarType): CompactToolbarConfig {
   let searchPlaceholder: string;
   if (type === 'procurement') {
     searchPlaceholder = 'procurement:list.searchPlaceholder';
   } else if (type === 'quotes') {
     searchPlaceholder = 'quotes:list.searchPlaceholder';
+  } else if (type === 'vendors') {
+    searchPlaceholder = 'procurement:hub.vendorMaster.searchPlaceholder';
+  } else if (type === 'materials') {
+    searchPlaceholder = 'procurement:hub.materialCatalog.searchPlaceholder';
+  } else if (type === 'agreements') {
+    searchPlaceholder = 'procurement:hub.frameworkAgreements.searchPlaceholder';
   } else {
-    searchPlaceholder = searchPlaceholders[type];
+    searchPlaceholder = searchPlaceholders[type as keyof typeof searchPlaceholders];
   }
 
   return {
     searchPlaceholder,
-
-    // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
     labels: {
       newItem: NEW_ITEM_LABELS_BY_TYPE[type],
       editItem: 'toolbar.actions.edit',
@@ -291,10 +55,8 @@ function createToolbarConfig(
       settings: 'toolbar.actions.settings',
       favoritesManagement: 'toolbar.actions.favoritesManagement',
       help: 'toolbar.actions.help',
-      sorting: 'toolbar.actions.sorting'
+      sorting: 'toolbar.actions.sorting',
     },
-
-    // 🏢 ENTERPRISE: 100% Direct i18n keys - No external function dependency
     tooltips: {
       newItem: NEW_ITEM_TOOLTIP_BY_TYPE[type],
       editItem: EDIT_ITEM_TOOLTIP_BY_TYPE[type],
@@ -312,47 +74,44 @@ function createToolbarConfig(
       settings: 'toolbar.tooltips.settings',
       favoritesManagement: 'toolbar.labels.favoritesManagement',
       help: 'toolbar.tooltips.help',
-      sorting: 'toolbar.tooltips.sorting'
+      sorting: 'toolbar.tooltips.sorting',
     },
-
     filterCategories: getFilterCategoriesForType(type),
     sortOptions: getSortOptionsForType(type),
-
     availableActions: {
       newItem: true,
       editItem: true,
       deleteItems: true,
       filters: true,
       favorites: true,
-      archive: type !== 'properties', // Properties might not need archive
+      archive: type !== 'properties',
       export: true,
       import: true,
       refresh: true,
       sorting: true,
-      preview: type !== 'contacts', // Contacts might not need preview
+      preview: type !== 'contacts',
       copy: true,
       share: true,
       reports: true,
-      settings: type !== 'projects', // Projects might not need settings
+      settings: type !== 'projects',
       favoritesManagement: true,
-      help: true
-    }
+      help: true,
+    },
   };
 }
 
-// 🚀 ENTERPRISE: Buildings Configuration - Using Smart Factory (120+ lines → 1 line!)
-export const buildingsToolbarConfig: CompactToolbarConfig = createToolbarConfig('buildings');
+// ============================================================================
+// EXPORTED CONFIGS
+// ============================================================================
 
-// 🚀 ENTERPRISE: Projects Configuration - Using Smart Factory (90+ lines → 1 line!)
+export const buildingsToolbarConfig: CompactToolbarConfig = createToolbarConfig('buildings');
 export const projectsToolbarConfig: CompactToolbarConfig = createToolbarConfig('projects');
 
-// 🚀 ENTERPRISE: Contacts Configuration - Factory + overrides for dead buttons removal
 const _contactsBase = createToolbarConfig('contacts');
 export const contactsToolbarConfig: CompactToolbarConfig = {
   ..._contactsBase,
   availableActions: {
     ..._contactsBase.availableActions,
-    // Removed: no functionality behind these in contacts
     copy: false,
     refresh: false,
     favorites: false,
@@ -364,18 +123,10 @@ export const contactsToolbarConfig: CompactToolbarConfig = {
   },
 };
 
-// 🚀 ENTERPRISE: Properties Configuration - Using Smart Factory (100+ lines → 1 line!)
 export const propertiesToolbarConfig: CompactToolbarConfig = createToolbarConfig('properties');
-
-
-// 🚀 ENTERPRISE: Storages Configuration - Using Smart Factory (100+ lines → 1 line!)
 export const storagesToolbarConfig: CompactToolbarConfig = createToolbarConfig('storages');
-
-// 🅿️ ENTERPRISE: Parking Configuration - Using Smart Factory (100+ lines → 1 line!)
 export const parkingToolbarConfig: CompactToolbarConfig = createToolbarConfig('parking');
 
-// 📦 ENTERPRISE: Procurement Configuration - Factory + overrides (POs not favoritable, no import flow,
-// delete handled via PO lifecycle "cancel" — not a destructive list action)
 const _procurementBase = createToolbarConfig('procurement');
 export const procurementToolbarConfig: CompactToolbarConfig = {
   ..._procurementBase,
@@ -395,9 +146,6 @@ export const procurementToolbarConfig: CompactToolbarConfig = {
   },
 };
 
-// 📄 ENTERPRISE: Quotes Configuration - Factory + overrides (Quotes not favoritable, no import,
-// "delete" semantically = archive via lifecycle status — triggered by QuoteDetailsHeader, not toolbar.
-// Toolbar archive button is unwired across all entities → matched PO and disabled here too.)
 const _quotesBase = createToolbarConfig('quotes');
 export const quotesToolbarConfig: CompactToolbarConfig = {
   ..._quotesBase,
@@ -418,34 +166,86 @@ export const quotesToolbarConfig: CompactToolbarConfig = {
   },
 };
 
-// 📧 ENTERPRISE: Communications Configuration - WORKFLOW ACTIONS ONLY (not CRUD)
-// Per ChatGPT guidance: Inbox toolbar = WORKFLOW, not CRUD
-// Workflow actions: refresh, filters, sorting, favorites, archive, export, reports, settings, help
-// NO CRUD actions: newItem, editItem, deleteItems, import, preview, copy, share, favoritesManagement
+const _vendorsBase = createToolbarConfig('vendors');
+export const vendorsToolbarConfig: CompactToolbarConfig = {
+  ..._vendorsBase,
+  availableActions: {
+    ..._vendorsBase.availableActions,
+    favorites: false,
+    favoritesManagement: false,
+    import: false,
+    preview: false,
+    copy: false,
+    refresh: false,
+    reports: false,
+    settings: false,
+    help: false,
+    editItem: false,
+    deleteItems: false,
+    archive: false,
+    share: false,
+  },
+};
+
+const _materialsBase = createToolbarConfig('materials');
+export const materialsToolbarConfig: CompactToolbarConfig = {
+  ..._materialsBase,
+  availableActions: {
+    ..._materialsBase.availableActions,
+    favorites: false,
+    favoritesManagement: false,
+    import: false,
+    preview: false,
+    copy: false,
+    refresh: false,
+    reports: false,
+    settings: false,
+    help: false,
+    archive: false,
+    share: false,
+  },
+};
+
+const _agreementsBase = createToolbarConfig('agreements');
+export const agreementsToolbarConfig: CompactToolbarConfig = {
+  ..._agreementsBase,
+  availableActions: {
+    ..._agreementsBase.availableActions,
+    favorites: false,
+    favoritesManagement: false,
+    import: false,
+    preview: false,
+    copy: false,
+    refresh: false,
+    reports: false,
+    settings: false,
+    help: false,
+    archive: false,
+    share: false,
+  },
+};
+
 export const communicationsConfig: CompactToolbarConfig = {
   searchPlaceholder: searchPlaceholders.communications,
-
-  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   labels: {
-    newItem: '', // Not used - workflow only
-    editItem: '', // Not used - workflow only
-    deleteItems: '', // Not used - workflow only
+    newItem: '',
+    editItem: '',
+    deleteItems: '',
     filters: 'toolbar.actions.filters',
     favorites: 'toolbar.communications.important',
     archive: 'toolbar.actions.archive',
     export: 'toolbar.actions.export',
-    import: '', // Not used - workflow only
+    import: '',
     refresh: 'toolbar.actions.refresh',
-    preview: '', // Not used - workflow only
-    copy: '', // Not used - workflow only
-    share: '', // Not used - workflow only
+    preview: '',
+    copy: '',
+    share: '',
     reports: 'toolbar.actions.reports',
     settings: 'toolbar.actions.settings',
-    favoritesManagement: '', // Not used - workflow only
+    favoritesManagement: '',
     help: 'toolbar.actions.help',
-    sorting: 'toolbar.actions.sorting'
+    sorting: 'toolbar.actions.sorting',
   },
-
   tooltips: {
     newItem: '',
     editItem: '',
@@ -463,25 +263,20 @@ export const communicationsConfig: CompactToolbarConfig = {
     settings: 'toolbar.tooltips.settings',
     favoritesManagement: '',
     help: 'toolbar.tooltips.help',
-    sorting: 'toolbar.tooltips.sorting'
+    sorting: 'toolbar.tooltips.sorting',
   },
-
   filterCategories: getFilterCategoriesForType('communications'),
   sortOptions: getSortOptionsForType('communications'),
-
-  // 📧 WORKFLOW ACTIONS ONLY - No CRUD for inbox
   availableActions: {
-    // ✅ WORKFLOW ACTIONS (enabled)
     refresh: true,
     filters: true,
     sorting: true,
-    favorites: true, // For "Important" marking
+    favorites: true,
     archive: true,
     export: true,
     reports: true,
     settings: true,
     help: true,
-    // ❌ CRUD ACTIONS (disabled - not for inbox)
     newItem: false,
     editItem: false,
     deleteItems: false,
@@ -489,6 +284,6 @@ export const communicationsConfig: CompactToolbarConfig = {
     preview: false,
     copy: false,
     share: false,
-    favoritesManagement: false
-  }
+    favoritesManagement: false,
+  },
 };

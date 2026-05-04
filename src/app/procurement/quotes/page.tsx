@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { FileText } from 'lucide-react';
+import { FileText, Inbox, Eye, CheckCircle, Clock } from 'lucide-react';
 import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteRightPane } from '@/subapps/procurement/components/QuoteRightPane';
@@ -10,7 +10,10 @@ import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
 import { buildQuoteHeaderActions } from '@/subapps/procurement/utils/quote-header-actions';
 import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
 import { MobileDetailsSlideIn } from '@/core/layouts';
+import { PageHeader } from '@/core/headers';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { ViewMode } from '@/core/headers';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useFirestoreStatus } from '@/hooks/useFirestoreStatus';
 import { toast } from 'sonner';
@@ -50,6 +53,23 @@ export default function QuotesPage() {
   // ── Local UI state ────────────────────────────────────────────────────────
   const [pdfOpen, setPdfOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [showDashboard, setShowDashboard] = useState(false);
+
+  const dashboardStats = useMemo(() => {
+    const total = quotes.length;
+    const submitted = quotes.filter((q) => q.status === 'submitted').length;
+    const underReview = quotes.filter((q) => q.status === 'under_review').length;
+    const accepted = quotes.filter((q) => q.status === 'accepted').length;
+    const expired = quotes.filter((q) => q.status === 'expired').length;
+    return [
+      { title: tQ('list.entityName'), value: total, icon: FileText, color: 'blue' as const },
+      { title: tQ('filters.quoteStatus.submitted'), value: submitted, icon: Inbox, color: 'green' as const },
+      { title: tQ('filters.quoteStatus.under_review'), value: underReview, icon: Eye, color: 'orange' as const },
+      { title: tQ('filters.quoteStatus.accepted'), value: accepted, icon: CheckCircle, color: 'purple' as const },
+      { title: tQ('filters.quoteStatus.expired'), value: expired, icon: Clock, color: 'red' as const },
+    ];
+  }, [quotes, tQ]);
 
   const handleTogglePdf = useCallback(() => setPdfOpen((v) => !v), []);
   const handleToggleComments = useCallback(() => setCommentsOpen((v) => !v), []);
@@ -127,6 +147,7 @@ export default function QuotesPage() {
     onCreateNew: () => router.push('/procurement/quotes/scan'),
     onSelectQuote: (q: Quote) => handleSelectQuote(q),
     selectedQuoteId: selectedQuoteId ?? undefined,
+    viewMode,
   };
 
   const rightPane = selectedQuote ? (
@@ -149,6 +170,30 @@ export default function QuotesPage() {
       <div className="px-2 mt-2">
         <ProcurementSubNav className="mb-0" />
       </div>
+
+      <PageHeader
+        variant="sticky-rounded"
+        layout="compact"
+        spacing="compact"
+        title={{
+          icon: FileText,
+          title: t('nav.quotes'),
+          subtitle: t('hub.quotes.description'),
+        }}
+        actions={{
+          showDashboard,
+          onDashboardToggle: () => setShowDashboard((v) => !v),
+          viewMode: viewMode as ViewMode,
+          onViewModeChange: (m) => setViewMode(m as 'list' | 'grid'),
+          viewModes: ['list', 'grid'] as ViewMode[],
+        }}
+      />
+
+      {showDashboard && (
+        <section role="region" aria-label={t('nav.quotes')}>
+          <UnifiedDashboard stats={dashboardStats} columns={5} />
+        </section>
+      )}
 
       <ListContainer>
         <>

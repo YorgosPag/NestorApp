@@ -2,24 +2,24 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { ScrollText, Plus } from 'lucide-react';
+import { ScrollText, FileEdit, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { AgreementSlimList } from '@/components/procurement/agreements/AgreementSlimList';
 import { AgreementDetail } from '@/components/procurement/agreements/AgreementDetail';
-import { FrameworkAgreementFilters } from '@/components/procurement/agreements/FrameworkAgreementFilters';
 import { FrameworkAgreementFormDialog } from '@/components/procurement/agreements/FrameworkAgreementFormDialog';
 import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
 import { MobileDetailsSlideIn } from '@/core/layouts';
-import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/core/headers';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFrameworkAgreements } from '@/hooks/procurement/useFrameworkAgreements';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
 import { getContactDisplayName } from '@/types/contacts';
+import type { ViewMode } from '@/core/headers';
 import type {
   FrameworkAgreement,
-  FrameworkAgreementStatus,
   CreateFrameworkAgreementDTO,
   UpdateFrameworkAgreementDTO,
 } from '@/subapps/procurement/types/framework-agreement';
@@ -34,8 +34,8 @@ export default function AgreementsPage() {
     useFrameworkAgreements();
   const { suppliers } = usePOSupplierContacts();
 
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FrameworkAgreementStatus | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [showDashboard, setShowDashboard] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<FrameworkAgreement | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FrameworkAgreement | null>(null);
@@ -48,29 +48,39 @@ export default function AgreementsPage() {
     return map;
   }, [suppliers]);
 
-  const filtered = useMemo(() => {
-    let list = agreements;
-    if (statusFilter) list = list.filter((a) => a.status === statusFilter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (a) =>
-          a.agreementNumber.toLowerCase().includes(q) ||
-          a.title.toLowerCase().includes(q),
-      );
-    }
-    return list;
-  }, [agreements, statusFilter, search]);
-
-  const hasFilters = !!search.trim() || statusFilter !== null;
-
-  // ── Master-detail: URL-persistent selection ──────────────────────────────
   const selectedAgreementId = searchParams.get('agreementId') ?? undefined;
 
   const selectedAgreement = useMemo(
     () => agreements.find((a) => a.id === selectedAgreementId) ?? null,
     [agreements, selectedAgreementId],
   );
+
+  const dashboardStats = useMemo(() => {
+    const now = Date.now();
+    const total = agreements.length;
+    const active = agreements.filter((a) => {
+      const ms = a.validUntil?.toMillis?.() ?? 0;
+      return a.status === 'active' && ms > now;
+    }).length;
+    const expiring = agreements.filter((a) => {
+      if (a.status !== 'active') return false;
+      const ms = a.validUntil?.toMillis?.() ?? 0;
+      const days = (ms - now) / 86400000;
+      return days >= 0 && days <= 30;
+    }).length;
+    const expired = agreements.filter((a) => {
+      const ms = a.validUntil?.toMillis?.() ?? 0;
+      return a.status === 'expired' || ms < now;
+    }).length;
+    const drafts = agreements.filter((a) => a.status === 'draft').length;
+    return [
+      { title: t('hub.frameworkAgreements.title'), value: total, icon: ScrollText, color: 'blue' as const },
+      { title: t('filters.agreementStatus.active'), value: active, icon: CheckCircle, color: 'green' as const },
+      { title: t('filters.agreementStatus.expiring'), value: expiring, icon: AlertTriangle, color: 'orange' as const },
+      { title: t('filters.agreementStatus.expired'), value: expired, icon: Clock, color: 'red' as const },
+      { title: t('filters.agreementStatus.draft'), value: drafts, icon: FileEdit, color: 'gray' as const },
+    ];
+  }, [agreements, t]);
 
   const handleSelectAgreement = useCallback(
     (agreement: FrameworkAgreement) => {
@@ -87,7 +97,6 @@ export default function AgreementsPage() {
     router.replace(`${pathname}?${params.toString()}`);
   }, [router, searchParams, pathname]);
 
-  // ── Mutations ─────────────────────────────────────────────────────────────
   function handleNew() {
     setEditing(null);
     setDialogOpen(true);
@@ -124,13 +133,26 @@ export default function AgreementsPage() {
     }
   }
 
+  const handleEditFromList = useCallback((id: string) => {
+    const a = agreements.find((x) => x.id === id);
+    if (a) handleEdit(a);
+  }, [agreements]);
+
+  const handleDeleteFromList = useCallback((id: string) => {
+    const a = agreements.find((x) => x.id === id);
+    if (a) setDeleteTarget(a);
+  }, [agreements]);
+
   const listProps = {
-    agreements: filtered,
+    agreements,
     vendorNamesById,
     loading,
-    hasFilters,
     selectedAgreementId,
     onSelectAgreement: handleSelectAgreement,
+    onCreateNew: handleNew,
+    onEditAgreement: handleEditFromList,
+    onDeleteAgreement: handleDeleteFromList,
+    viewMode,
   };
 
   const rightPane = selectedAgreement ? (
@@ -147,23 +169,32 @@ export default function AgreementsPage() {
         <ProcurementSubNav className="mb-0" />
       </div>
 
-      {/* Filters bar + Create button above the split */}
-      <div className="px-4 pt-3 pb-2 flex items-center gap-2 border-b">
-        <FrameworkAgreementFilters
-          search={search}
-          onSearchChange={setSearch}
-          status={statusFilter}
-          onStatusChange={setStatusFilter}
-        />
-        <Button onClick={handleNew} size="sm" className="shrink-0">
-          <Plus className="h-4 w-4 mr-1" aria-hidden />
-          {t('hub.frameworkAgreements.create')}
-        </Button>
-      </div>
+      <PageHeader
+        variant="sticky-rounded"
+        layout="compact"
+        spacing="compact"
+        title={{
+          icon: ScrollText,
+          title: t('hub.frameworkAgreements.title'),
+          subtitle: t('hub.frameworkAgreements.description'),
+        }}
+        actions={{
+          showDashboard,
+          onDashboardToggle: () => setShowDashboard((v) => !v),
+          viewMode: viewMode as ViewMode,
+          onViewModeChange: (m) => setViewMode(m as 'list' | 'grid'),
+          viewModes: ['list', 'grid'] as ViewMode[],
+        }}
+      />
+
+      {showDashboard && (
+        <section role="region" aria-label={t('hub.frameworkAgreements.title')}>
+          <UnifiedDashboard stats={dashboardStats} columns={5} />
+        </section>
+      )}
 
       <ListContainer>
         <>
-          {/* ── Desktop: split list + detail ───────────────────────────────── */}
           <section
             className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden"
             aria-label={t('hub.frameworkAgreements.title')}
@@ -186,7 +217,6 @@ export default function AgreementsPage() {
             )}
           </section>
 
-          {/* ── Mobile: list (hidden when agreement selected) ───────────────── */}
           <section
             className={`md:hidden flex-1 min-h-0 overflow-hidden ${selectedAgreement ? 'hidden' : 'block'}`}
             aria-label={t('hub.frameworkAgreements.title')}
@@ -194,7 +224,6 @@ export default function AgreementsPage() {
             <AgreementSlimList {...listProps} />
           </section>
 
-          {/* ── Mobile: slide-in detail overlay ────────────────────────────── */}
           <MobileDetailsSlideIn
             isOpen={!!selectedAgreement}
             onClose={handleDeselectAgreement}

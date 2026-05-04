@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Package } from 'lucide-react';
+import { Package, FileEdit, CheckCircle, Send, AlertTriangle } from 'lucide-react';
 import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { PurchaseOrderList } from '@/components/procurement/PurchaseOrderList';
 import { PurchaseOrderDetail } from '@/components/procurement/PurchaseOrderDetail';
@@ -10,7 +10,10 @@ import { usePurchaseOrders } from '@/hooks/procurement/usePurchaseOrders';
 import { getPoDetailUrl } from '@/lib/navigation/procurement-urls';
 import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
 import { MobileDetailsSlideIn } from '@/core/layouts';
+import { PageHeader } from '@/core/headers';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { ViewMode } from '@/core/headers';
 import { parseFilterArray } from '@/lib/url-filters/multi-value';
 import { emitSpendAnalyticsInvalidate } from '@/lib/cache/spend-analytics-bus';
 import type { PurchaseOrder, AnalyticsDrillFilters } from '@/types/procurement';
@@ -42,6 +45,24 @@ export default function PurchaseOrdersPage() {
   );
 
   const { purchaseOrders, actionRequired, loading } = usePurchaseOrders(analyticsDrill);
+
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [showDashboard, setShowDashboard] = useState(false);
+
+  const dashboardStats = useMemo(() => {
+    const total = purchaseOrders.length;
+    const drafts = purchaseOrders.filter((p) => p.status === 'draft').length;
+    const approved = purchaseOrders.filter((p) => p.status === 'approved').length;
+    const ordered = purchaseOrders.filter((p) => p.status === 'ordered').length;
+    const overdue = actionRequired.length;
+    return [
+      { title: t('list.entityName'), value: total, icon: Package, color: 'blue' as const },
+      { title: t('filters.poStatus.draft'), value: drafts, icon: FileEdit, color: 'gray' as const },
+      { title: t('filters.poStatus.approved'), value: approved, icon: CheckCircle, color: 'green' as const },
+      { title: t('filters.poStatus.ordered'), value: ordered, icon: Send, color: 'orange' as const },
+      { title: t('list.requiresAction'), value: overdue, icon: AlertTriangle, color: 'red' as const },
+    ];
+  }, [purchaseOrders, actionRequired, t]);
 
   // ── Master-detail: URL-persistent selection ──────────────────────────────
   const selectedPoId = searchParams.get('poId');
@@ -158,6 +179,7 @@ export default function PurchaseOrdersPage() {
     onSelectPO: handleSelectPO,
     selectedPOId: selectedPoId ?? undefined,
     onEditPO: handleEditPO,
+    viewMode,
   };
 
   return (
@@ -165,6 +187,30 @@ export default function PurchaseOrdersPage() {
       <div className="px-2 mt-2">
         <ProcurementSubNav className="mb-0" />
       </div>
+
+      <PageHeader
+        variant="sticky-rounded"
+        layout="compact"
+        spacing="compact"
+        title={{
+          icon: Package,
+          title: t('nav.purchaseOrders'),
+          subtitle: t('hub.purchaseOrders.description'),
+        }}
+        actions={{
+          showDashboard,
+          onDashboardToggle: () => setShowDashboard((v) => !v),
+          viewMode: viewMode as ViewMode,
+          onViewModeChange: (m) => setViewMode(m as 'list' | 'grid'),
+          viewModes: ['list', 'grid'] as ViewMode[],
+        }}
+      />
+
+      {showDashboard && (
+        <section role="region" aria-label={t('nav.purchaseOrders')}>
+          <UnifiedDashboard stats={dashboardStats} columns={5} />
+        </section>
+      )}
 
       <ListContainer>
         <>

@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { CompactToolbar, procurementConfig } from '@/components/core/CompactToolbar';
 import { POStatusQuickFilters } from '@/components/shared/TypeQuickFilters';
-import { PurchaseOrderListCard } from '@/domain';
+import { PurchaseOrderListCard, PurchaseOrderGridCard } from '@/domain';
 import { EntityListColumn } from '@/core/containers';
 
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
@@ -52,6 +52,8 @@ interface PurchaseOrderListProps {
   onEditPO?: (poId: string) => void;
   /** Delete currently selected POs */
   onDeletePOs?: (poIds: string[]) => void;
+  /** View mode — 'list' renders default cards, 'grid' renders PurchaseOrderGridCard tiles */
+  viewMode?: 'list' | 'grid';
 }
 
 // ============================================================================
@@ -69,6 +71,7 @@ export function PurchaseOrderList({
   selectedPOId,
   onEditPO,
   onDeletePOs,
+  viewMode = 'list',
 }: PurchaseOrderListProps) {
   const { t } = useTranslation(['procurement', 'common']);
   const colors = useSemanticColors();
@@ -212,6 +215,18 @@ export function PurchaseOrderList({
 
       {/* List */}
       <ScrollArea className="flex-1">
+        {viewMode === 'grid' && !loading && sorted.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
+            {sorted.map((entry) => (
+              <PurchaseOrderGridCard
+                key={entry.po.id}
+                po={entry.po}
+                isSelected={selectedPOId === entry.po.id}
+                onSelect={() => (onSelectPO ? onSelectPO(entry.po) : onViewPO(entry.po.id))}
+              />
+            ))}
+          </div>
+        ) : (
         <div className="p-2 space-y-2">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
@@ -253,6 +268,7 @@ export function PurchaseOrderList({
             ))
           )}
         </div>
+        )}
       </ScrollArea>
     </EntityListColumn>
   );

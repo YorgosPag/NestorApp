@@ -29,7 +29,7 @@ import {
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { CompactToolbar, quotesConfig } from '@/components/core/CompactToolbar';
 import { QuoteStatusQuickFilters } from '@/components/shared/TypeQuickFilters';
-import { QuoteListCard } from '@/domain';
+import { QuoteListCard, QuoteGridCard } from '@/domain';
 import { EntityListColumn } from '@/core/containers';
 
 import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
@@ -66,6 +66,8 @@ interface QuoteListProps {
   scanItems?: ScanQueueItem[];
   onRetryScan?: (clientId: string) => void;
   onRemoveScan?: (clientId: string) => void;
+  /** View mode — 'list' (default) renders QuoteListCard, 'grid' renders QuoteGridCard tiles */
+  viewMode?: 'list' | 'grid';
 }
 
 function ScanPlaceholderRow({
@@ -130,7 +132,6 @@ function formatCurrencyRow(n: number): string {
 // ============================================================================
 // COMPONENT
 // ============================================================================
-
 export function QuoteList({
   quotes,
   actionRequired = [],
@@ -142,6 +143,7 @@ export function QuoteList({
   scanItems = [],
   onRetryScan,
   onRemoveScan,
+  viewMode = 'list',
 }: QuoteListProps) {
   const { t } = useTranslation(['quotes', 'common']);
   const colors = useSemanticColors();
@@ -202,7 +204,6 @@ export function QuoteList({
       return next;
     });
   }, []);
-
   const supersededByParentId = useMemo<Map<string, Quote[]>>(() => {
     if (!isRfqMode) return new Map();
     const map = new Map<string, Quote[]>();
@@ -215,7 +216,6 @@ export function QuoteList({
     }
     return map;
   }, [isRfqMode, quotes]);
-
   // ──────────────────────────────────────────────────────────────
   // RFQ mode: filter active → sort → group
   // ──────────────────────────────────────────────────────────────
@@ -228,12 +228,10 @@ export function QuoteList({
     });
     return sortQuotes(filtered, sortKey);
   }, [isRfqMode, quotes, selectedStatuses, urlSearch, sortKey]);
-
   const rfqGroups = useMemo(
     () => (isRfqMode && sortKey === 'status-price' ? groupByStatus(rfqSorted) : null),
     [isRfqMode, sortKey, rfqSorted],
   );
-
   // ──────────────────────────────────────────────────────────────
   // Standalone mode: filter → sort (legacy behaviour)
   // ──────────────────────────────────────────────────────────────
@@ -271,19 +269,15 @@ export function QuoteList({
   const displayCount = isRfqMode ? rfqSorted.length : standaloneSorted.length;
   const effectiveSearch = isRfqMode ? urlSearch : searchTerm;
   const handleSearchChange = isRfqMode ? handleUrlSearchChange : setSearchTerm;
-
   const firstNonAction = isRfqMode ? -1 : standaloneSorted.findIndex((e) => !e.isActionRequired);
   const actionRequiredVisible = isRfqMode ? 0 : standaloneSorted.filter((e) => e.isActionRequired).length;
-
   const renderSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
     if (newSortBy === 'date' || newSortBy === 'number' || newSortBy === 'status' || newSortBy === 'value') {
       onSortChange(newSortBy, newSortOrder);
     }
   };
-
   const handleNewItem = () => onCreateNew?.();
   const handleEditItem = () => { if (selectedQuoteId && onEditQuote) onEditQuote(selectedQuoteId); };
-
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
       {/* Header + CompactToolbar */}
@@ -377,6 +371,18 @@ export function QuoteList({
 
       {/* List */}
       <ScrollArea className="flex-1">
+        {viewMode === 'grid' && !loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
+            {(isRfqMode ? rfqSorted : standaloneSorted.map((e) => e.q)).map((q) => (
+              <QuoteGridCard
+                key={q.id}
+                quote={q}
+                isSelected={selectedQuoteId === q.id}
+                onSelect={() => onSelectQuote?.(q)}
+              />
+            ))}
+          </div>
+        ) : (
         <div className="p-2 space-y-2">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
@@ -480,12 +486,13 @@ export function QuoteList({
                 <QuoteListCard
                   quote={entry.q}
                   isSelected={selectedQuoteId === entry.q.id}
-                  onSelect={() => onSelectQuote?.(entry.q)}
+                  onSelect={onSelectQuote ? () => onSelectQuote(entry.q) : undefined}
                 />
               </React.Fragment>
             ))
           )}
         </div>
+        )}
       </ScrollArea>
     </EntityListColumn>
   );

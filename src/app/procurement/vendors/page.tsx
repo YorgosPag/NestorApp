@@ -2,24 +2,30 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users2 } from 'lucide-react';
+import { Users2, PackageCheck, DollarSign, TrendingUp, Star } from 'lucide-react';
 import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { VendorList } from '@/components/procurement/vendors/VendorList';
 import { VendorDetail } from '@/components/procurement/vendors/VendorDetail';
 import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
 import { MobileDetailsSlideIn } from '@/core/layouts';
+import { PageHeader } from '@/core/headers';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
 import { useSupplierComparison } from '@/hooks/procurement/useSupplierMetrics';
 import { getContactDisplayName } from '@/types/contacts';
+import { formatCurrency } from '@/lib/intl-formatting';
 import type { Contact } from '@/types/contacts';
+import type { ViewMode } from '@/core/headers';
 import type { VendorCardData } from '@/components/procurement/vendors/VendorCard';
 
 export default function VendorsPage() {
   const { t } = useTranslation('procurement');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState('');
+
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [showDashboard, setShowDashboard] = useState(false);
 
   const { suppliers, loading: contactsLoading } = usePOSupplierContacts();
   const { comparison, isLoading: metricsLoading } = useSupplierComparison();
@@ -40,7 +46,25 @@ export default function VendorsPage() {
     [suppliers, metricsById],
   );
 
-  // ── Master-detail: URL-persistent selection ──────────────────────────────
+  const dashboardStats = useMemo(() => {
+    const totalVendors = vendorCards.length;
+    const activeVendors = vendorCards.filter((v) => (v.metrics?.totalOrders ?? 0) > 0).length;
+    const totalSpend = vendorCards.reduce((sum, v) => sum + (v.metrics?.totalSpend ?? 0), 0);
+    const avgOnTime = comparison?.suppliers.length
+      ? Math.round(
+          comparison.suppliers.reduce((s, m) => s + m.onTimeDeliveryRate, 0) /
+            comparison.suppliers.length,
+        )
+      : 0;
+    return [
+      { title: t('hub.vendorMaster.title'), value: totalVendors, icon: Users2, color: 'blue' as const },
+      { title: t('hub.vendorMaster.statusBadge.active'), value: activeVendors, icon: Star, color: 'green' as const },
+      { title: t('hub.vendorMaster.totalSpend'), value: formatCurrency(totalSpend), icon: DollarSign, color: 'purple' as const },
+      { title: t('hub.vendorMaster.onTimeRate'), value: `${avgOnTime}%`, icon: TrendingUp, color: 'orange' as const },
+      { title: t('hub.vendorMaster.detail.kpis.totalOrders'), value: comparison?.suppliers.reduce((s, m) => s + m.totalOrders, 0) ?? 0, icon: PackageCheck, color: 'cyan' as const },
+    ];
+  }, [vendorCards, comparison, t]);
+
   const selectedVendorId = searchParams.get('vendorId') ?? undefined;
 
   const selectedVendor = useMemo(
@@ -66,10 +90,9 @@ export default function VendorsPage() {
   const listProps = {
     vendors: vendorCards,
     loading: isLoading,
-    search,
-    onSearchChange: setSearch,
     selectedVendorId,
     onSelectVendor: handleSelectVendor,
+    viewMode,
   };
 
   const rightPane = selectedVendor ? <VendorDetail data={selectedVendor} /> : null;
@@ -80,9 +103,32 @@ export default function VendorsPage() {
         <ProcurementSubNav className="mb-0" />
       </div>
 
+      <PageHeader
+        variant="sticky-rounded"
+        layout="compact"
+        spacing="compact"
+        title={{
+          icon: Users2,
+          title: t('hub.vendorMaster.title'),
+          subtitle: t('hub.vendorMaster.description'),
+        }}
+        actions={{
+          showDashboard,
+          onDashboardToggle: () => setShowDashboard((v) => !v),
+          viewMode: viewMode as ViewMode,
+          onViewModeChange: (m) => setViewMode(m as 'list' | 'grid'),
+          viewModes: ['list', 'grid'] as ViewMode[],
+        }}
+      />
+
+      {showDashboard && (
+        <section role="region" aria-label={t('hub.vendorMaster.title')}>
+          <UnifiedDashboard stats={dashboardStats} columns={5} />
+        </section>
+      )}
+
       <ListContainer>
         <>
-          {/* ── Desktop: split list + detail ───────────────────────────────── */}
           <section
             className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden"
             aria-label={t('hub.vendorMaster.title')}
@@ -104,7 +150,6 @@ export default function VendorsPage() {
             )}
           </section>
 
-          {/* ── Mobile: list (hidden when vendor selected) ─────────────────── */}
           <section
             className={`md:hidden flex-1 min-h-0 overflow-hidden ${selectedVendor ? 'hidden' : 'block'}`}
             aria-label={t('hub.vendorMaster.title')}
@@ -112,7 +157,6 @@ export default function VendorsPage() {
             <VendorList {...listProps} />
           </section>
 
-          {/* ── Mobile: slide-in detail overlay ────────────────────────────── */}
           <MobileDetailsSlideIn
             isOpen={!!selectedVendor}
             onClose={handleDeselectVendor}

@@ -3,8 +3,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2, ExternalLink, PackageCheck, TrendingUp, DollarSign, Clock } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -13,6 +11,7 @@ import { useSupplierMetrics } from '@/hooks/procurement/useSupplierMetrics';
 import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
 import { PO_STATUS_META } from '@/types/procurement';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { VendorCardData } from './VendorCard';
 
 interface VendorDetailProps {
@@ -44,44 +43,27 @@ export function VendorDetail({ data }: VendorDetailProps) {
   );
 
   const tradeSpecialties = metrics?.tradeSpecialties ?? data.metrics?.tradeSpecialties ?? [];
+  const subtitle = tradeSpecialties.length > 0
+    ? tradeSpecialties.slice(0, 4).map((c) => t(`trades.${c}`, { defaultValue: '' }) || c).join(' · ')
+    : undefined;
 
   return (
-    <article className="flex flex-col gap-5 p-1">
-      {/* Header */}
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100">
-            <Building2 className="h-5 w-5 text-green-700" aria-hidden />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold truncate">{displayName}</h2>
-            {tradeSpecialties.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-0.5">
-                {tradeSpecialties.slice(0, 4).map((code) => (
-                  <Badge key={code} variant="outline" className="text-xs px-1.5 py-0">
-                    {t(`trades.${code}`, { defaultValue: '' }) || code}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        {contactId && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0"
-            onClick={() => router.push(`/contacts/${contactId}`)}
-          >
-            <ExternalLink className="h-3.5 w-3.5 mr-1" aria-hidden />
-            {t('hub.vendorMaster.detail.viewInCrm')}
-          </Button>
-        )}
-      </header>
+    <article className="flex flex-col gap-5">
+      <EntityDetailsHeader
+        icon={Building2}
+        title={displayName}
+        subtitle={subtitle}
+        variant="detailed"
+        actions={contactId
+          ? [createEntityAction(
+              'view',
+              t('hub.vendorMaster.detail.viewInCrm'),
+              () => router.push(`/contacts/${contactId}`),
+              { icon: ExternalLink },
+            )]
+          : []}
+      />
 
-      <Separator />
-
-      {/* KPIs */}
       {metricsLoading ? (
         <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -123,7 +105,6 @@ export function VendorDetail({ data }: VendorDetailProps) {
 
       <Separator />
 
-      {/* Recent POs */}
       <section>
         <h3 className="text-sm font-medium mb-3">{t('hub.vendorMaster.detail.recentOrders')}</h3>
         {posLoading ? (

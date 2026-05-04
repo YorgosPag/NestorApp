@@ -6,6 +6,9 @@ export {
   propertiesToolbarConfig as propertiesConfig,
   procurementToolbarConfig as procurementConfig,
   quotesToolbarConfig as quotesConfig,
+  vendorsToolbarConfig as vendorsConfig,
+  materialsToolbarConfig as materialsConfig,
+  agreementsToolbarConfig as agreementsConfig,
   communicationsConfig
 } from './configs';
 export { iconColors, getIconColor } from './icon-colors';

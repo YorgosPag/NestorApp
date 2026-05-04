@@ -2,19 +2,20 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Layers, Plus } from 'lucide-react';
+import { Layers, Boxes, Sparkles, Clock, AlertTriangle } from 'lucide-react';
 import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { MaterialSlimList } from '@/components/procurement/materials/MaterialSlimList';
 import { MaterialDetail } from '@/components/procurement/materials/MaterialDetail';
-import { MaterialFilters } from '@/components/procurement/materials/MaterialFilters';
 import { MaterialFormDialog } from '@/components/procurement/materials/MaterialFormDialog';
 import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
 import { MobileDetailsSlideIn } from '@/core/layouts';
-import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/core/headers';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useMaterials } from '@/hooks/procurement/useMaterials';
+import type { ViewMode } from '@/core/headers';
 import type {
   Material,
   CreateMaterialDTO,
@@ -29,32 +30,38 @@ export default function MaterialsPage() {
 
   const { materials, loading, createMaterial, updateMaterial, deleteMaterial } = useMaterials();
 
-  const [search, setSearch] = useState('');
-  const [atoeFilter, setAtoeFilter] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [showDashboard, setShowDashboard] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [formInitial, setFormInitial] = useState<Material | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Material | null>(null);
 
-  const filtered = useMemo(() => {
-    let items = materials;
-    if (atoeFilter) items = items.filter((m) => m.atoeCategoryCode === atoeFilter);
-    const q = search.trim().toLowerCase();
-    if (q)
-      items = items.filter(
-        (m) => m.code.toLowerCase().includes(q) || m.name.toLowerCase().includes(q),
-      );
-    return items;
-  }, [materials, search, atoeFilter]);
-
-  const hasFilters = search.trim().length > 0 || atoeFilter !== null;
-
-  // ── Master-detail: URL-persistent selection ──────────────────────────────
   const selectedMaterialId = searchParams.get('materialId') ?? undefined;
 
   const selectedMaterial = useMemo(
     () => materials.find((m) => m.id === selectedMaterialId) ?? null,
     [materials, selectedMaterialId],
   );
+
+  const dashboardStats = useMemo(() => {
+    const total = materials.length;
+    const now = Date.now();
+    const recent = materials.filter((m) => {
+      const ms = m.lastPurchaseDate?.toMillis?.() ?? 0;
+      return ms && now - ms <= 90 * 86400000;
+    }).length;
+    const inactive = materials.filter((m) => {
+      const ms = m.lastPurchaseDate?.toMillis?.() ?? 0;
+      return !ms || now - ms > 180 * 86400000;
+    }).length;
+    const noSupplier = materials.filter((m) => m.preferredSupplierContactIds.length === 0).length;
+    return [
+      { title: t('hub.materialCatalog.title'), value: total, icon: Boxes, color: 'blue' as const },
+      { title: t('filters.materialStatus.recently_used'), value: recent, icon: Sparkles, color: 'green' as const },
+      { title: t('filters.materialStatus.inactive'), value: inactive, icon: Clock, color: 'orange' as const },
+      { title: t('filters.materialStatus.no_supplier'), value: noSupplier, icon: AlertTriangle, color: 'red' as const },
+    ];
+  }, [materials, t]);
 
   const handleSelectMaterial = useCallback(
     (material: Material) => {
@@ -71,7 +78,6 @@ export default function MaterialsPage() {
     router.replace(`${pathname}?${params.toString()}`);
   }, [router, searchParams, pathname]);
 
-  // ── Mutations ─────────────────────────────────────────────────────────────
   function openCreate() {
     setFormInitial(null);
     setFormOpen(true);
@@ -108,12 +114,25 @@ export default function MaterialsPage() {
     }
   }
 
+  const handleEditFromList = useCallback((id: string) => {
+    const m = materials.find((x) => x.id === id);
+    if (m) openEdit(m);
+  }, [materials]);
+
+  const handleDeleteFromList = useCallback((id: string) => {
+    const m = materials.find((x) => x.id === id);
+    if (m) setDeleteTarget(m);
+  }, [materials]);
+
   const listProps = {
-    materials: filtered,
+    materials,
     loading,
-    hasFilters,
     selectedMaterialId,
     onSelectMaterial: handleSelectMaterial,
+    onCreateNew: openCreate,
+    onEditMaterial: handleEditFromList,
+    onDeleteMaterial: handleDeleteFromList,
+    viewMode,
   };
 
   const rightPane = selectedMaterial ? (
@@ -130,23 +149,32 @@ export default function MaterialsPage() {
         <ProcurementSubNav className="mb-0" />
       </div>
 
-      {/* Filters bar + Create button above the split */}
-      <div className="px-4 pt-3 pb-2 flex items-center gap-2 border-b">
-        <MaterialFilters
-          search={search}
-          onSearchChange={setSearch}
-          atoeCategoryCode={atoeFilter}
-          onCategoryChange={setAtoeFilter}
-        />
-        <Button onClick={openCreate} size="sm" className="shrink-0">
-          <Plus className="h-4 w-4 mr-1" aria-hidden />
-          {t('hub.materialCatalog.create')}
-        </Button>
-      </div>
+      <PageHeader
+        variant="sticky-rounded"
+        layout="compact"
+        spacing="compact"
+        title={{
+          icon: Layers,
+          title: t('hub.materialCatalog.title'),
+          subtitle: t('hub.materialCatalog.description'),
+        }}
+        actions={{
+          showDashboard,
+          onDashboardToggle: () => setShowDashboard((v) => !v),
+          viewMode: viewMode as ViewMode,
+          onViewModeChange: (m) => setViewMode(m as 'list' | 'grid'),
+          viewModes: ['list', 'grid'] as ViewMode[],
+        }}
+      />
+
+      {showDashboard && (
+        <section role="region" aria-label={t('hub.materialCatalog.title')}>
+          <UnifiedDashboard stats={dashboardStats} columns={4} />
+        </section>
+      )}
 
       <ListContainer>
         <>
-          {/* ── Desktop: split list + detail ───────────────────────────────── */}
           <section
             className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden"
             aria-label={t('hub.materialCatalog.title')}
@@ -169,7 +197,6 @@ export default function MaterialsPage() {
             )}
           </section>
 
-          {/* ── Mobile: list (hidden when material selected) ────────────────── */}
           <section
             className={`md:hidden flex-1 min-h-0 overflow-hidden ${selectedMaterial ? 'hidden' : 'block'}`}
             aria-label={t('hub.materialCatalog.title')}
@@ -177,7 +204,6 @@ export default function MaterialsPage() {
             <MaterialSlimList {...listProps} />
           </section>
 
-          {/* ── Mobile: slide-in detail overlay ────────────────────────────── */}
           <MobileDetailsSlideIn
             isOpen={!!selectedMaterial}
             onClose={handleDeselectMaterial}
