@@ -11,7 +11,7 @@
  * @see ADR-328 §RouteTabs API
  */
 
-import { LayoutGrid, Users2, Layers, ScrollText, BarChart3 } from 'lucide-react';
+import { LayoutGrid, Users2, Layers, ScrollText, BarChart3, ClipboardList, FileText } from 'lucide-react';
 import { RouteTabs } from '@/components/ui/navigation/route-tabs';
 import type { TabsNavTab } from '@/components/ui/navigation/tabs-types';
 
@@ -22,6 +22,18 @@ const PROCUREMENT_TABS: readonly TabsNavTab[] = [
     exactMatch: true,
     icon: LayoutGrid,
     iconColor: 'text-blue-600',
+  },
+  {
+    href: '/procurement/rfqs',
+    labelKey: 'nav.rfqs',
+    icon: ClipboardList,
+    iconColor: 'text-teal-600',
+  },
+  {
+    href: '/procurement/quotes',
+    labelKey: 'nav.quotes',
+    icon: FileText,
+    iconColor: 'text-orange-600',
   },
   {
     href: '/procurement/vendors',

@@ -240,6 +240,7 @@
   "nav": {
     "purchaseOrders": "Purchase Orders",
     "quotes": "Quotes",
+    "rfqs": "RFQ",
     "hub": "Procurement Hub",
     "vendors": "Vendors",
     "materials": "Materials",

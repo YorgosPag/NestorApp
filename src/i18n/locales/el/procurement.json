@@ -240,6 +240,7 @@
   "nav": {
     "purchaseOrders": "Παραγγελίες",
     "quotes": "Προσφορές",
+    "rfqs": "RFQ",
     "hub": "Hub Προμηθειών",
     "vendors": "Προμηθευτές",
     "materials": "Υλικά",
