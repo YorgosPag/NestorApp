@@ -22,6 +22,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useAuth } from '@/auth/contexts/AuthContext';
 import { useProjectsList } from '@/hooks/useProjectsList';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { KpiChartSkeleton } from '@/components/projects/procurement/overview/skeleton/KpiSkeleton';
@@ -57,7 +58,8 @@ export function SpendByProjectChart({
 }: SpendByProjectChartProps) {
   const { t } = useTranslation('procurement');
   const router = useRouter();
-  const { projects } = useProjectsList();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { projects } = useProjectsList({ enabled: !authLoading && isAuthenticated });
 
   const rows = useMemo<ProjectRow[]>(() => {
     const nameById = new Map(projects.map((p) => [p.id, p.name]));
