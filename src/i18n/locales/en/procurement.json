@@ -54,7 +54,9 @@
     "descriptionPlaceholder": "e.g. Cement boards 12mm",
     "descriptionShort": "Description",
     "quantityShort": "Qty",
-    "unitPriceShort": "€/unit"
+    "unitPriceShort": "€/unit",
+    "materialColumn": "Material",
+    "materialOptional": "Material (optional)"
   },
   "form": {
     "editTitle": "Edit PO",

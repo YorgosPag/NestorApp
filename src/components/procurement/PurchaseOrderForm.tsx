@@ -28,6 +28,7 @@ import { PO_VAT_RATES } from '@/types/procurement';
 import type { PurchaseOrder, POVatRate } from '@/types/procurement';
 import { usePurchaseOrderForm } from '@/hooks/procurement';
 import { usePOFrameworkAgreement } from '@/hooks/procurement/usePOFrameworkAgreement';
+import { useMaterials } from '@/hooks/procurement/useMaterials';
 import { PurchaseOrderItemsTable } from './PurchaseOrderItemsTable';
 import { formatPOCurrency } from './utils/procurement-format';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -66,6 +67,7 @@ export function PurchaseOrderForm({
   } = usePurchaseOrderForm(existingPO, initialProjectId);
 
   const faInfo = usePOFrameworkAgreement(form.supplierId, form.projectId, totals.total);
+  const { materials } = useMaterials();
 
   const handleSubmit = async () => {
     const faExtra = faInfo.activeFa
@@ -233,6 +235,7 @@ export function PurchaseOrderForm({
             onUpdateItem={updateItem}
             onAddItem={addItem}
             onRemoveItem={removeItem}
+            materials={materials}
           />
 
           {/* Totals */}

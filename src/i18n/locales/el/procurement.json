@@ -54,7 +54,9 @@
     "descriptionPlaceholder": "π.χ. Τσιμεντοσανίδες 12mm",
     "descriptionShort": "Περιγραφή",
     "quantityShort": "Ποσ.",
-    "unitPriceShort": "€/μον."
+    "unitPriceShort": "€/μον.",
+    "materialColumn": "Υλικό",
+    "materialOptional": "Υλικό (προαιρετικό)"
   },
   "form": {
     "editTitle": "Επεξεργασία PO",

@@ -35,6 +35,9 @@ import { Plus, Trash2 } from 'lucide-react';
 import { PROCUREMENT_UNIT_OPTIONS } from '@/config/procurement-units';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { Material } from '@/subapps/procurement/types/material';
+
+const MATERIAL_NONE = '__none__';
 
 interface FormItem {
   tempId: string;
@@ -44,6 +47,7 @@ interface FormItem {
   unitPrice: number;
   boqItemId: string | null;
   categoryCode: string;
+  materialId: string | null;
 }
 
 interface PurchaseOrderItemsTableProps {
@@ -51,6 +55,7 @@ interface PurchaseOrderItemsTableProps {
   onUpdateItem: (tempId: string, updates: Partial<FormItem>) => void;
   onAddItem: () => void;
   onRemoveItem: (tempId: string) => void;
+  materials?: Material[];
   readOnly?: boolean;
 }
 
@@ -59,9 +64,31 @@ export function PurchaseOrderItemsTable({
   onUpdateItem,
   onAddItem,
   onRemoveItem,
+  materials = [],
   readOnly = false,
 }: PurchaseOrderItemsTableProps) {
   const { t } = useTranslation('procurement');
+
+  const materialsForCategory = (categoryCode: string) =>
+    materials.filter((m) => m.atoeCategoryCode === categoryCode);
+
+  const handleMaterialSelect = (tempId: string, materialId: string | null) => {
+    const item = items.find((i) => i.tempId === tempId);
+    if (!item) return;
+    const updates: Partial<FormItem> = { materialId };
+    if (materialId) {
+      const mat = materials.find((m) => m.id === materialId);
+      if (mat) {
+        if (!item.description) updates.description = mat.name;
+        if (item.unit === 'τεμ' && mat.unit) updates.unit = mat.unit;
+        if (!item.unitPrice || item.unitPrice === 0) {
+          const price = mat.lastPrice ?? mat.avgPrice;
+          if (price != null) updates.unitPrice = price;
+        }
+      }
+    }
+    onUpdateItem(tempId, updates);
+  };
 
   return (
     <div className="space-y-3">
@@ -71,7 +98,12 @@ export function PurchaseOrderItemsTable({
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[220px] w-[220px]">{t('items.category')} <span className="text-destructive">*</span></TableHead>
-              <TableHead className="min-w-[200px]">{t('items.description')} <span className="text-destructive">*</span></TableHead>
+              <TableHead className="min-w-[200px]">
+                {t('items.description')} <span className="text-destructive">*</span>
+                {materials.length > 0 && !readOnly && (
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">/ {t('items.materialColumn')}</span>
+                )}
+              </TableHead>
               <TableHead className="w-[100px]">{t('items.quantity')}</TableHead>
               <TableHead className="w-[100px]">{t('items.unit')}</TableHead>
               <TableHead className="w-[120px]">{t('items.unitPrice')}</TableHead>
@@ -103,6 +135,26 @@ export function PurchaseOrderItemsTable({
                   </Select>
                 </TableCell>
                 <TableCell>
+                  {materials.length > 0 && !readOnly && (
+                    <Select
+                      value={item.materialId ?? MATERIAL_NONE}
+                      onValueChange={(v) =>
+                        handleMaterialSelect(item.tempId, v === MATERIAL_NONE ? null : v)
+                      }
+                    >
+                      <SelectTrigger className="mb-1 h-7 text-xs text-muted-foreground">
+                        <SelectValue placeholder={t('items.materialOptional')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={MATERIAL_NONE}>—</SelectItem>
+                        {materialsForCategory(item.categoryCode).map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.code} — {m.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   <Input
                     value={item.description}
                     onChange={(e) =>
@@ -230,6 +282,29 @@ export function PurchaseOrderItemsTable({
                 </SelectContent>
               </Select>
             </div>
+            {materials.length > 0 && !readOnly && (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">{t('items.materialOptional')}</p>
+                <Select
+                  value={item.materialId ?? MATERIAL_NONE}
+                  onValueChange={(v) =>
+                    handleMaterialSelect(item.tempId, v === MATERIAL_NONE ? null : v)
+                  }
+                >
+                  <SelectTrigger className="w-full h-8 text-xs">
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={MATERIAL_NONE}>—</SelectItem>
+                    {materialsForCategory(item.categoryCode).map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.code} — {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">
                 {t('items.description')} <span className="text-destructive">*</span>

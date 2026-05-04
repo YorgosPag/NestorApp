@@ -32,6 +32,7 @@ interface POFormItem {
   unitPrice: number;
   boqItemId: string | null;
   categoryCode: string;
+  materialId: string | null;
 }
 
 export interface POFormState {
@@ -55,6 +56,7 @@ const EMPTY_ITEM: POFormItem = {
   unitPrice: 0,
   boqItemId: null,
   categoryCode: '',
+  materialId: null,
 };
 
 function createEmptyItem(): POFormItem {
@@ -89,6 +91,7 @@ function getInitialState(po?: PurchaseOrder | null, initialProjectId?: string): 
       unitPrice: i.unitPrice,
       boqItemId: i.boqItemId,
       categoryCode: i.categoryCode,
+      materialId: i.materialId ?? null,
     })),
     taxRate: po.taxRate,
     dateNeeded: po.dateNeeded ?? '',
@@ -191,6 +194,7 @@ export function usePurchaseOrderForm(existingPO?: PurchaseOrder | null, initialP
       total: i.quantity * i.unitPrice,
       boqItemId: i.boqItemId,
       categoryCode: i.categoryCode,
+      materialId: i.materialId,
     })),
     taxRate: form.taxRate,
     dateNeeded: form.dateNeeded || null,
