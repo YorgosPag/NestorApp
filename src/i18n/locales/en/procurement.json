@@ -391,6 +391,12 @@
       "pendingCount": "{count} pending",
       "noPending": "No pending quotes"
     },
+    "purchaseOrders": {
+      "title": "Purchase Orders",
+      "description": "Cross-project purchase orders — management overview",
+      "count": "{count} orders",
+      "noOrders": "No purchase orders yet"
+    },
     "frameworkAgreements": {
       "title": "Framework Agreements",
       "description": "Multi-project contracts with auto-applied volume discounts",
