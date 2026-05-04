@@ -394,8 +394,6 @@
     "vendorMaster": {
       "title": "Vendor Master",
       "description": "Supplier directory with performance metrics and trade categorization",
-      "comingSoon": "Phase 3 — Coming Soon",
-      "phase": "Phase 3",
       "supplierCount": "{count} suppliers",
       "searchPlaceholder": "Search vendors...",
       "totalOrders": "Orders",
@@ -410,8 +408,6 @@
     "materialCatalog": {
       "title": "Material Catalog",
       "description": "Unified catalog with ATOE codes, price history and preferred suppliers",
-      "comingSoon": "Phase 4 — Coming Soon",
-      "phase": "Phase 4",
       "create": "New Material",
       "edit": "Edit",
       "delete": "Delete",
@@ -492,7 +488,6 @@
     "frameworkAgreements": {
       "title": "Framework Agreements",
       "description": "Multi-project contracts with volume-based discount rules",
-      "phase": "Phase 5",
       "create": "New Agreement",
       "edit": "Edit",
       "delete": "Delete",
@@ -562,8 +557,6 @@
     "spendAnalytics": {
       "title": "Cross-project Analytics",
       "description": "Company-wide spend analysis by vendor, trade and project",
-      "comingSoon": "Phase 6 — Coming Soon",
-      "phase": "Phase 6",
       "totalPos": "Total POs",
       "totalSpend": "Total Spend"
     },

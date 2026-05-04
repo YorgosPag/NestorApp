@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { Layers } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -22,14 +21,11 @@ export function MaterialCatalogCard() {
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <Layers className="h-8 w-8 text-yellow-600" aria-hidden />
-          <Badge variant="secondary" className="text-xs">{t('hub.materialCatalog.phase')}</Badge>
         </div>
         <CardTitle className="text-lg">{t('hub.materialCatalog.title')}</CardTitle>
         <CardDescription>{t('hub.materialCatalog.description')}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <p className="text-xs text-muted-foreground">{t('hub.materialCatalog.comingSoon')}</p>
-      </CardContent>
+      <CardContent />
     </Card>
   );
 }

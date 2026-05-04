@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { Users2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
@@ -24,7 +23,6 @@ export function VendorMasterCard() {
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <Users2 className="h-8 w-8 text-green-600" aria-hidden />
-          <Badge variant="secondary" className="text-xs">{t('hub.vendorMaster.phase')}</Badge>
         </div>
         <CardTitle className="text-lg">{t('hub.vendorMaster.title')}</CardTitle>
         <CardDescription>{t('hub.vendorMaster.description')}</CardDescription>
@@ -33,7 +31,6 @@ export function VendorMasterCard() {
         <p className="text-2xl font-bold text-foreground">
           {loading ? '—' : t('hub.vendorMaster.supplierCount', { count: suppliers.length })}
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">{t('hub.vendorMaster.comingSoon')}</p>
       </CardContent>
     </Card>
   );
