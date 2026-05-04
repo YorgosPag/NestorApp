@@ -9,10 +9,6 @@ export {
   getPO,
   listPOs,
   updatePO,
-  approvePO,
-  markOrdered,
-  closePO,
-  cancelPO,
   recordPODelivery,
   linkInvoiceToPO,
   deletePO,
@@ -20,6 +16,13 @@ export {
   getPriceHistory,
   type PriceHistoryEntry,
 } from './procurement-service';
+
+export {
+  approvePO,
+  markOrdered,
+  closePO,
+  cancelPO,
+} from './po-status-service';
 
 export {
   getNextPONumber,

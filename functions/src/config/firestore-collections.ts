@@ -49,4 +49,8 @@ export const COLLECTIONS = {
 
   // 👤 USERS — looked up by CDC audit trigger to resolve performer display name
   USERS: 'users',
+
+  // 🧱 PROCUREMENT — Material catalog (ADR-330 Phase 4); written by
+  // materialPriceSyncOnPODelivery trigger when a PO transitions to delivered.
+  MATERIALS: 'materials',
 } as const;

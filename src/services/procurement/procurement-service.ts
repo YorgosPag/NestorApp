@@ -11,18 +11,17 @@
 import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 import {
-  PO_STATUS_TRANSITIONS,
-  type PurchaseOrderStatus,
   type CreatePurchaseOrderDTO,
   type UpdatePurchaseOrderDTO,
   type RecordDeliveryDTO,
   type PurchaseOrder,
-  type POCancellationReason,
   type ProcurementAuditAction,
 } from '@/types/procurement';
 import { EntityAuditService } from '@/services/entity-audit.service';
-import { notifyPOApproved } from './po-notification-service';
-import { syncMaterialPricesOnDelivery } from './material-price-sync';
+import {
+  loadAndComputeFaDiscount,
+  computeGrossTotal,
+} from '@/lib/procurement/recompute-fa-discount';
 import {
   createPurchaseOrder,
   getPurchaseOrder,
@@ -43,18 +42,8 @@ import { nowISO } from '@/lib/date-local';
 // VALIDATION
 // ============================================================================
 
-/** Validate status transition is allowed */
-function assertTransition(
-  from: PurchaseOrderStatus,
-  to: PurchaseOrderStatus
-): void {
-  const allowed = PO_STATUS_TRANSITIONS[from];
-  if (!allowed.includes(to)) {
-    throw new Error(
-      `Invalid status transition: ${from} → ${to}. Allowed: ${allowed.join(', ')}`
-    );
-  }
-}
+// `assertTransition` extracted to po-status-service.ts (2026-05-04) along
+// with the four FSM functions that consumed it.
 
 /** Validate DTO has required fields */
 function validateCreateDTO(dto: CreatePurchaseOrderDTO): string | null {
@@ -100,10 +89,27 @@ export async function createPO(
   const validationError = validateCreateDTO(dto);
   if (validationError) throw new Error(validationError);
 
+  // Phase 5.5 (server-side validation, 2026-05-04) — recompute FA discount
+  // server-side from canonical framework_agreements collection. Any client-
+  // submitted FA fields on `dto` are discarded.
+  const grossTotal = computeGrossTotal(dto.items, dto.taxRate);
+  const faFields = await loadAndComputeFaDiscount(
+    ctx,
+    dto.supplierId,
+    dto.projectId,
+    grossTotal,
+  );
+
   const result = await createPurchaseOrder(
     ctx.companyId,
     ctx.uid,
-    dto
+    {
+      ...dto,
+      appliedFaId: faFields.appliedFaId,
+      faDiscountPercent: faFields.faDiscountPercent,
+      faDiscountAmount: faFields.faDiscountAmount,
+      netTotal: faFields.netTotal,
+    }
   );
 
   await audit(ctx, 'procurement.po.created', result.id, {
@@ -169,10 +175,10 @@ export async function updatePO(
   if (dto.paymentTermsDays !== undefined) updates.paymentTermsDays = dto.paymentTermsDays ?? null;
   if (dto.supplierNotes !== undefined) updates.supplierNotes = dto.supplierNotes ?? null;
   if (dto.internalNotes !== undefined) updates.internalNotes = dto.internalNotes ?? null;
-  if (dto.appliedFaId !== undefined) updates.appliedFaId = dto.appliedFaId ?? null;
-  if (dto.faDiscountPercent !== undefined) updates.faDiscountPercent = dto.faDiscountPercent ?? null;
-  if (dto.faDiscountAmount !== undefined) updates.faDiscountAmount = dto.faDiscountAmount ?? null;
-  if (dto.netTotal !== undefined) updates.netTotal = dto.netTotal ?? null;
+  // Phase 5.5 (server-side validation, 2026-05-04) — the four FA fields
+  // (appliedFaId / faDiscountPercent / faDiscountAmount / netTotal) are NOT
+  // copied from `dto`. They are recomputed authoritatively below from the
+  // canonical framework_agreements collection.
 
   // Recalculate items + totals if items changed
   if (dto.items) {
@@ -200,6 +206,24 @@ export async function updatePO(
     updates.total = Math.round((po.subtotal + taxAmount) * 100) / 100;
   }
 
+  // Phase 5.5 (server-side validation, 2026-05-04) — recompute FA discount
+  // server-side after totals settle. Always runs (cheap query) so any change to
+  // supplierId / projectId / items / taxRate is reflected and the doc cannot
+  // drift from the canonical framework_agreements state.
+  const supplierId = dto.supplierId ?? po.supplierId;
+  const projectId = dto.projectId ?? po.projectId;
+  const grossTotal = updates.total ?? po.total;
+  const faFields = await loadAndComputeFaDiscount(
+    ctx,
+    supplierId,
+    projectId,
+    grossTotal,
+  );
+  updates.appliedFaId = faFields.appliedFaId;
+  updates.faDiscountPercent = faFields.faDiscountPercent;
+  updates.faDiscountAmount = faFields.faDiscountAmount;
+  updates.netTotal = faFields.netTotal;
+
   await updatePurchaseOrder(poId, updates);
 
   await audit(ctx, 'procurement.po.items_edited', poId, {
@@ -211,139 +235,10 @@ export async function updatePO(
 // ============================================================================
 // STATUS TRANSITIONS
 // ============================================================================
-
-export async function approvePO(
-  ctx: AuthContext,
-  poId: string
-): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
-
-  assertTransition(po.status, 'approved');
-
-  await updatePOStatus(poId, 'approved', {
-    approvedBy: ctx.uid,
-  });
-
-  await audit(ctx, 'procurement.po.approved', poId, {
-    poNumber: po.poNumber,
-  });
-
-  // Entity audit trail
-  EntityAuditService.recordChange({
-    entityType: 'purchase_order',
-    entityId: poId,
-    entityName: po.poNumber,
-    action: 'status_changed',
-    changes: [{ field: 'status', oldValue: 'draft', newValue: 'approved', label: 'Status' }],
-    performedBy: ctx.uid,
-    performedByName: null,
-    companyId: ctx.companyId,
-  }).catch(() => {});
-
-  // Notify creator that PO was approved
-  notifyPOApproved(po, po.createdBy).catch(() => {});
-}
-
-export async function markOrdered(
-  ctx: AuthContext,
-  poId: string
-): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
-
-  assertTransition(po.status, 'ordered');
-
-  // Auto-calculate payment due date
-  const paymentDueDate =
-    po.paymentTermsDays != null
-      ? new Date(
-          Date.now() + po.paymentTermsDays * 24 * 60 * 60 * 1000
-        ).toISOString()
-      : null;
-
-  await updatePOStatus(poId, 'ordered', { paymentDueDate });
-
-  await audit(ctx, 'procurement.po.ordered', poId, {
-    poNumber: po.poNumber,
-  });
-
-  EntityAuditService.recordChange({
-    entityType: 'purchase_order',
-    entityId: poId,
-    entityName: po.poNumber,
-    action: 'status_changed',
-    changes: [{ field: 'status', oldValue: 'approved', newValue: 'ordered', label: 'Status' }],
-    performedBy: ctx.uid,
-    performedByName: null,
-    companyId: ctx.companyId,
-  }).catch(() => {});
-}
-
-export async function closePO(
-  ctx: AuthContext,
-  poId: string
-): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
-
-  assertTransition(po.status, 'closed');
-
-  await updatePOStatus(poId, 'closed');
-
-  await audit(ctx, 'procurement.po.status_changed', poId, {
-    poNumber: po.poNumber,
-    from: po.status,
-    to: 'closed',
-  });
-
-  EntityAuditService.recordChange({
-    entityType: 'purchase_order',
-    entityId: poId,
-    entityName: po.poNumber,
-    action: 'status_changed',
-    changes: [{ field: 'status', oldValue: po.status, newValue: 'closed', label: 'Status' }],
-    performedBy: ctx.uid,
-    performedByName: null,
-    companyId: ctx.companyId,
-  }).catch(() => {});
-}
-
-export async function cancelPO(
-  ctx: AuthContext,
-  poId: string,
-  reason: POCancellationReason,
-  comment?: string
-): Promise<void> {
-  const po = await getPurchaseOrder(poId);
-  if (!po) throw new Error(`PO not found: ${poId}`);
-
-  assertTransition(po.status, 'cancelled');
-
-  await updatePOStatus(poId, 'cancelled', {
-    cancellationReason: reason,
-    cancellationComment: comment ?? null,
-  });
-
-  await audit(ctx, 'procurement.po.cancelled', poId, {
-    poNumber: po.poNumber,
-    reason,
-  });
-
-  EntityAuditService.recordChange({
-    entityType: 'purchase_order',
-    entityId: poId,
-    entityName: po.poNumber,
-    action: 'status_changed',
-    changes: [
-      { field: 'status', oldValue: po.status, newValue: 'cancelled', label: 'Status' },
-      { field: 'cancellationReason', oldValue: null, newValue: reason, label: 'Reason' },
-    ],
-    performedBy: ctx.uid,
-    performedByName: null,
-    companyId: ctx.companyId,
-  }).catch(() => {});
-}
+// `approvePO`, `markOrdered`, `closePO`, `cancelPO` were extracted to
+// `po-status-service.ts` on 2026-05-04 to keep this file under the 500-line
+// Google limit (CLAUDE.md N.7.1). They are re-exported via the barrel
+// `./index.ts` so callers see no API change.
 
 // ============================================================================
 // DELIVERY
@@ -363,10 +258,10 @@ export async function recordPODelivery(
 
   const result = await recordDelivery(poId, dto);
 
-  // Phase 4.5 — auto-update Material prices on full delivery (fire-and-forget)
-  if (result.newStatus === 'delivered') {
-    syncMaterialPricesOnDelivery(ctx.companyId, poId, po.items, nowISO()).catch(() => {});
-  }
+  // Phase 4.5 (CF variant, 2026-05-04) — material avgPrice/lastPrice are now
+  // recomputed by the `materialPriceSyncOnPODelivery` Cloud Function trigger
+  // (functions/src/procurement/material-price-sync.cf.ts). The route-layer
+  // fire-and-forget call has been removed; CF is the canonical SSoT.
 
   await audit(ctx, 'procurement.po.delivery_recorded', poId, {
     poNumber: po.poNumber,

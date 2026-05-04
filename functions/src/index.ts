@@ -24,6 +24,8 @@ export {
 // 📜 ENTITY AUDIT CDC TRIGGERS (ADR-195 Phase 1 PoC) — dual-write with source='cdc'
 // for coverage comparison against the service-layer audit during rollout.
 export { auditContactWrite } from './audit/contact-audit-trigger';
+// 🧱 PROCUREMENT (ADR-330 Phase 4.5) — material price sync on PO → delivered.
+export { materialPriceSyncOnPODelivery } from './procurement/material-price-sync.cf';
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
@@ -323,7 +325,6 @@ export const scheduledFilePurge = functions
 // ============================================================================
 // HTTP CALLABLE: MANUAL PURGE (Admin Only)
 // ============================================================================
-
 /**
  * Manually purge a specific file
  * @enterprise For admin use - bypasses purgeAt schedule

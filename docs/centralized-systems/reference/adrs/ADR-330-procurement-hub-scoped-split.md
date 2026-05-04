@@ -10,6 +10,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-05-04 | ✅ **Phase C.1 + C.2 IMPLEMENTED** — Hardening server-side di Phase 4.5 + 5.5. **C.1 (Phase 4.5 → Cloud Function):** `materialPriceSyncOnPODelivery` su `onUpdate('purchase_orders/{poId}')`. Pure helpers `shouldTriggerSync` + `computeNewAvgPrice` testati (11 tests). Route-layer `services/procurement/material-price-sync.ts` rimosso — CF è SSoT canonico. **C.2 (Phase 5.5 → server-side validation in API route):** `loadAndComputeFaDiscount` chiamato in `createPO` + `updatePO` (procurement-service); 4 campi FA dal DTO ignorati e ricalcolati lato server da `framework_agreements`. Pure helpers `computeGrossTotal` + `computeFaDiscountFields` testati (20 tests). Tamper-proof: client non può falsificare `faDiscountPercent`. CF rejected per Phase 5.5 (request-time validation più veloce e standard SAP/Oracle/Procore). |
 | 2026-05-04 | ❌ **Phase 7 DEFERRED (non priority)** — Decisione esplicita di Giorgio: la struttura organizzativa Pagonis Energo ha un εργοταξιάρχης (site manager) per cantiere che gestisce autonomamente le παραγγελίες del proprio progetto. Il procurement è naturalmente project-scoped per design organizzativo, non per limitazione tecnica. Industry pattern construction-native (Procore + Autodesk) conferma project-scoped procurement come scelta corretta per scale mid-size. Phase 5 Framework Agreements copre l'80% del caso d'uso "centralized procurement" realistico (contratti annuali ΤΙΤΑΝ -10% applicati automaticamente cross-project). Casi residui (1-2/anno) gestibili con manual workaround (3 PO separati allo stesso vendor + negoziazione verbale dello sconto volume). Codice sourcing_events esistente (creato in ADR-327 step a-i) preservato per multi-trade packages dentro un singolo progetto. Revisit triggers documentati in §5 Phase 7. Status header e tracking table (§7) aggiornati. Decisione reversibile: schema `projectId: string → projectIds: string[]` migrazione additive non-breaking. |
 | 2026-05-04 | ✅ **Phase 4.5 IMPLEMENTED** — Auto-update Material avgPrice/lastPrice/lastPurchaseDate su PO → delivered. Architecture: server-side (no Cloud Function — Next.js route-layer, fire-and-forget). NEW file: `services/procurement/material-price-sync.ts` (`syncMaterialPricesOnDelivery`). MODIFY: `types/procurement/purchase-order.ts` (+`materialId?: string | null` su `PurchaseOrderItem`), `services/procurement/procurement-service.ts` (chiama sync in `recordPODelivery` quando `newStatus === 'delivered'`). Pattern: explicit FK — solo items con `materialId` impostato vengono aggiornati (no match ambigui). avgPrice = rolling mean `(oldAvg + newPrice) / 2`. Idempotente: trigger unico per delivery (guard `newStatus === 'delivered'`). Tenant-isolation: companyId check + soft-delete guard in sync. UI per link materialId→PO item: fase futura. |
 | 2026-05-04 | ✅ **Phase 5.5 IMPLEMENTED** — Auto-apply FA discounts in PO form via client-side hook. Architecture: pure utility `framework-agreement-discount.ts` (`resolveActiveFa` + `computeFaDiscount`) + `usePOFrameworkAgreement` hook + `PurchaseOrder` type extended (4 nullable FA fields) + API schemas + repository + service. UI: emerald banner + discount row + netTotal in PO form totals section. 12 files modified, 2 new. No breaking changes on existing POs (null=no discount applied). |
@@ -539,7 +540,17 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 - ✅ Firestore rules (read tenant-scoped, writes Admin-only) + 3 composite indexes
 - ✅ Audit trail via `EntityAuditService.recordChange` (created/updated/soft_deleted)
 
-**Phase 4.5 (implemented 2026-05-04):** auto-update `avgPrice`/`lastPrice`/`lastPurchaseDate` quando PO → `delivered`. Implementato server-side in `services/procurement/material-price-sync.ts` (no Cloud Function). Trigger: `recordPODelivery` nel service. Link via `PurchaseOrderItem.materialId` (explicit FK, opzionale). UI per impostare `materialId` sul PO item: fase futura.
+**Phase 4.5 (CF variant, 2026-05-04):** auto-update `avgPrice`/`lastPrice`/`lastPurchaseDate` quando PO → `delivered`.
+
+- **Architettura finale:** Cloud Function trigger `materialPriceSyncOnPODelivery` su `onUpdate('purchase_orders/{poId}')`. CF è SSoT (no fallback, no dual code path).
+- **Trigger contract:** `before.status !== 'delivered' && after.status === 'delivered'` → recompute prezzi per ogni item con `materialId != null`.
+- **Pure helpers** (unit-tested): `shouldTriggerSync`, `computeNewAvgPrice` (rolling mean: `(oldAvg + newPrice) / 2`, round 2 decimali).
+- **Tenant safety:** skip se `material.companyId !== po.companyId`, skip se soft-deleted, skip items senza materialId.
+- **Files NEW (2):** `functions/src/procurement/material-price-sync.cf.ts` + `material-price-sync-pure.ts` + `__tests__/material-price-sync.cf.test.ts` (11 tests).
+- **Files MODIFY (3):** `functions/src/index.ts` (export), `functions/src/config/firestore-collections.ts` (+`MATERIALS`), `src/services/procurement/procurement-service.ts` (rimossa chiamata fire-and-forget + import).
+- **Files DELETE (1):** `src/services/procurement/material-price-sync.ts` (route-layer obsoleto).
+- **Storia:** v1 (2026-05-03) era route-layer fire-and-forget da `recordPODelivery`. Phase C.1 (2026-05-04) ha convertito a CF per tamper-proof + at-least-once retry; route-layer rimosso (CF unica sorgente, deciso con Giorgio durante Phase C planning).
+- **Pendente:** UI per impostare `materialId` sul PO item — fase futura (Phase 4.6).
 
 ### Phase 5 — Framework Agreements ✅ MVP IMPLEMENTED 2026-05-04 (no auto-apply)
 
@@ -552,31 +563,38 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 - File NEW (12): `subapps/procurement/types/framework-agreement.ts`, `subapps/procurement/services/framework-agreement-service.ts`, `app/api/procurement/agreements/{route,[agreementId]/route}.ts`, `hooks/procurement/useFrameworkAgreements.ts`, 4 components in `components/procurement/agreements/{FrameworkAgreementCard,FrameworkAgreementList,FrameworkAgreementFilters,FrameworkAgreementFormDialog,BreakpointsEditor}.tsx`
 - File MODIFY (11): `enterprise-id-prefixes` (`FRAMEWORK_AGREEMENT: 'fwa'`), `enterprise-id.service` + `enterprise-id-convenience` (`generateFrameworkAgreementId`), `firestore-collections` (`FRAMEWORK_AGREEMENTS`), `domain-constants.ENTITY_TYPES.FRAMEWORK_AGREEMENT`, `audit-trail.AuditEntityType` (+'framework_agreement'), `firestore.rules` (`/framework_agreements/{agreementId}` read tenant-scoped, writes Admin-only), `firestore.indexes.json` (3 composite indexes: createdAt-desc, +status, +vendorContactId), `coverage-manifest.ts` (PENDING entry), `el+en/procurement.json` (~50 keys `hub.frameworkAgreements.*`), `hub/cards/FrameworkAgreementsCard.tsx` (placeholder → real `activeCount` stat), `hooks/procurement/index.ts` (barrel)
 
-### Phase 5.5 — Auto-apply FA discounts in PO ✅ IMPLEMENTED 2026-05-04
+### Phase 5.5 — Auto-apply FA discounts in PO ✅ IMPLEMENTED 2026-05-04 (server-side hardened Phase C.2)
 
-**Approach:** client-side hook in PO form (no Cloud Functions needed).
+**Approach:** client-side preview hook (live UX) + server-side authoritative recompute in API route (tamper-proof). NO Cloud Function (rejected during Phase C planning — CF gives ~1-2s delay vs instant request-time validation, e SAP/Oracle/Procore usano tutti il pattern request-time).
 
-**Architecture:**
+**Architecture v2 (Phase C.2, 2026-05-04):**
 - `PurchaseOrder` extended: `appliedFaId`, `faDiscountPercent`, `faDiscountAmount`, `netTotal` (4 nullable fields)
-- `CreatePurchaseOrderDTO` / `UpdatePurchaseOrderDTO`: same 4 optional fields
-- NEW `src/subapps/procurement/utils/framework-agreement-discount.ts`: pure functions `resolveActiveFa()` + `computeFaDiscount()` (no state, no hooks)
-- NEW `src/hooks/procurement/usePOFrameworkAgreement.ts`: hook — uses `useFrameworkAgreements()` list (already live), filters active FA for vendor+project, computes discount reactively when supplierId/projectId/total change
-- `PurchaseOrderForm.tsx`: integrates `usePOFrameworkAgreement`, shows emerald discount banner + `netTotal` row in totals, passes FA fields to `submit()`
-- API routes `POST /api/procurement` + `PATCH /api/procurement/[poId]`: schema extended with 4 optional FA fields
-- Repository `createPurchaseOrder`: stores FA fields in Firestore doc
-- Service `updatePO`: handles FA fields on edit
+- `CreatePurchaseOrderDTO` / `UpdatePurchaseOrderDTO`: same 4 optional fields (informational, server overrides)
+- `src/subapps/procurement/utils/framework-agreement-discount.ts`: pure functions `resolveActiveFa()` + `computeFaDiscount()` (no state, no hooks) — riusati lato server
+- `src/hooks/procurement/usePOFrameworkAgreement.ts`: hook lato client — preview live nella form, NON è la fonte canonica
+- **NEW `src/lib/procurement/recompute-fa-discount-pure.ts`**: pure helpers `computeGrossTotal`, `computeFaDiscountFields`, type `FaDiscountFields` (testabili senza Firebase Admin)
+- **NEW `src/lib/procurement/recompute-fa-discount.ts`**: server-only wrapper `loadAndComputeFaDiscount(ctx, supplierId, projectId, grossTotal)` — fa query `listFrameworkAgreements({ vendorContactId })` + delega ai pure helpers
+- `procurement-service.ts:createPO`: ora chiama `loadAndComputeFaDiscount` PRIMA del repository write, sovrascrive i 4 campi FA del DTO con i valori server-computed
+- `procurement-service.ts:updatePO`: rimosso copy-through dei 4 campi FA dal `dto` (linee 171-174 v1 cancellate); recompute server-side dopo il calcolo dei totals, sovrascrive sempre
+- `PurchaseOrderForm.tsx`: invariato (banner emerald + netTotal preview live)
 
-**Discount logic:**
-- `resolveActiveFa`: status=active + date range (validFrom ≤ today ≤ validUntil) + project scope (null=all, []≠none, list=specific) + not deleted
+**Tamper guarantee:** un client malevolo non può salvare `faDiscountPercent: 50` quando l'FA attiva concede 10% — il server ignora i 4 campi del DTO e li ricalcola.
+
+**Discount logic (invariato):**
+- `resolveActiveFa`: status=active + date range + project scope (null=all, []=none, list=specific) + not deleted
 - Flat discount: `grossTotal × discountPercent/100`
-- Volume breakpoints: finds highest `thresholdEur ≤ grossTotal`, applies that `discountPercent`
-- `total` (gross) unchanged in PO — `netTotal` is new stored field (full audit trail)
+- Volume breakpoints: highest `thresholdEur ≤ grossTotal` wins
+- Picks **first** matching FA (no "best" selection logic — vincolo locked dai test)
 
-**Files modified (10):** `purchase-order.ts` (types), `procurement-repository.ts`, `procurement-service.ts`, `route.ts` (POST), `[poId]/route.ts` (PATCH), `usePurchaseOrderForm.ts`, `PurchaseOrderForm.tsx`, `hooks/procurement/index.ts`, `el+en/procurement.json` (4 keys: `faBannerApplied`, `faDiscount`, `grossTotal`, `netTotal`)
+**Files NEW Phase C.2 (3):** `src/lib/procurement/recompute-fa-discount.ts`, `recompute-fa-discount-pure.ts`, `__tests__/recompute-fa-discount.test.ts` (20 tests).
 
-**Files NEW (2):** `framework-agreement-discount.ts`, `usePOFrameworkAgreement.ts`
+**Files MODIFY Phase C.2 (1):** `src/services/procurement/procurement-service.ts` (createPO + updatePO).
 
-**Rischio:** basso. Logica client-side, campi FA opzionali, nessuna breaking change su PO esistenti (null=no discount).
+**Files NEW v1 (2 — invariati):** `framework-agreement-discount.ts`, `usePOFrameworkAgreement.ts`.
+
+**Storia:** v1 (2026-05-03) era client-only — gap di sicurezza (client può falsificare i 4 campi FA). Phase C.2 (2026-05-04) ha aggiunto server-side recompute in `createPO`/`updatePO` come tamper-proof guarantee.
+
+**Rischio:** basso. Backward-compatible (PO esistenti senza FA: null fields restano null). Cliente preview UX invariata.
 
 ### Phase 6 — Cross-project Dashboard ✅ IMPLEMENTED 2026-05-04
 
@@ -944,8 +962,8 @@ Status legend: 📋 PLANNED · 🚧 IN_PROGRESS · ✅ COMPLETED · ⚠️ PARTI
 | 3 — Vendor Master surface | ✅ COMPLETED | `1536e699` | 2026-05-04 |
 | 4 — Material Catalog | ✅ COMPLETED | `04669a1b` | 2026-05-04 |
 | 5 — Framework Agreements | ✅ COMPLETED (MVP, no auto-apply) | `f050d1ac` | 2026-05-04 |
-| 5.5 — Auto-apply FA discounts in PO | ✅ COMPLETED (client-side hook) | pending commit | 2026-05-04 |
-| 4.5 — Auto-update avgPrice from PO | ✅ COMPLETED (server-side, fire-and-forget) | pending commit | 2026-05-04 |
+| 5.5 — Auto-apply FA discounts in PO | ✅ COMPLETED v2 (client preview + **server-side validation Phase C.2**) | pending commit | 2026-05-04 |
+| 4.5 — Auto-update avgPrice from PO | ✅ COMPLETED v2 (**Cloud Function trigger Phase C.1**, route-layer rimosso) | pending commit | 2026-05-04 |
 | 6 — Cross-project Dashboard | ✅ COMPLETED | `b30278e1` | 2026-05-04 |
 | 7 — Sourcing Events globali (multi-project) | ❌ DEFERRED (non priority — vedi §5 Phase 7) | — | 2026-05-04 |
 
