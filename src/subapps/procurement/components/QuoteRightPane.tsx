@@ -42,6 +42,7 @@ export interface QuoteRightPaneProps {
   primaryActions: QuoteHeaderPrimaryAction[];
   secondaryActions: QuoteHeaderSecondaryAction[];
   overflowActions: QuoteHeaderOverflowAction[];
+  onCreateNew?: () => void;
 }
 
 // ============================================================================
@@ -59,6 +60,7 @@ export function QuoteRightPane({
   primaryActions,
   secondaryActions,
   overflowActions,
+  onCreateNew,
 }: QuoteRightPaneProps) {
   const { t } = useTranslation('quotes');
   const { user } = useAuth();
@@ -69,10 +71,13 @@ export function QuoteRightPane({
   const [editMode, setEditMode] = useState(false);
 
   const editableOverflowActions = useMemo(
-    () => overflowActions.map((a) =>
-      a.id === 'edit' ? { ...a, onClick: () => setEditMode(true) } : a
-    ),
+    () => overflowActions.filter((a) => a.id !== 'edit'),
     [overflowActions]
+  );
+
+  const headerPrimaryActions = useMemo(
+    () => primaryActions.filter((a) => a.id !== 'edit'),
+    [primaryActions]
   );
 
   return (
@@ -89,8 +94,10 @@ export function QuoteRightPane({
 
       <QuoteDetailsHeader
         quote={quote}
+        onCreateNew={onCreateNew}
+        onEdit={() => setEditMode(true)}
         onRequestRenewal={onRequestRenewal}
-        primaryActions={primaryActions}
+        primaryActions={headerPrimaryActions}
         secondaryActions={secondaryActions}
         overflowActions={editableOverflowActions}
         pdfOpen={pdfOpen}

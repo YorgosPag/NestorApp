@@ -162,6 +162,7 @@ export default function QuotesPage() {
       primaryActions={primaryActions}
       secondaryActions={secondaryActions}
       overflowActions={overflowActions}
+      onCreateNew={() => router.push('/procurement/quotes/scan')}
     />
   ) : null;
 
