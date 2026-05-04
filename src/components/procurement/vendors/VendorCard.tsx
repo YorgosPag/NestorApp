@@ -6,7 +6,7 @@ import { Building2, TrendingUp, Clock, PackageCheck } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
 import type { SupplierMetrics } from '@/types/procurement';
-import type { Contact } from '@/types/contacts';
+import { getContactDisplayName, type Contact } from '@/types/contacts';
 
 // ============================================================================
 // TYPES
@@ -29,7 +29,8 @@ export function VendorCard({ data }: VendorCardProps) {
   const { t } = useTranslation('procurement');
   const { contact, metrics } = data;
 
-  const displayName = contact.displayName ?? contact.companyName ?? contact.id ?? '';
+  const resolvedName = contact.displayName || contact.name || getContactDisplayName(contact);
+  const displayName = (resolvedName && resolvedName.replace(/undefined/g, '').trim()) || contact.id || '';
 
   const tradeSpecialties = metrics?.tradeSpecialties ?? [];
   const hasOrders = metrics !== null && metrics.totalOrders > 0;

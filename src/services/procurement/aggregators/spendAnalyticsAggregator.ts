@@ -257,6 +257,7 @@ export async function computeSpendAnalytics(
       const data = d.data();
       const name =
         data?.displayName ??
+        data?.name ??
         data?.companyName ??
         (data?.firstName != null
           ? [data.firstName, data.lastName].filter(Boolean).join(' ')

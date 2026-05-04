@@ -272,7 +272,14 @@ async function fetchSupplierDetails(
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
-      const name = String(data.displayName ?? data.companyName ?? doc.id);
+      const name = String(
+        data.displayName ??
+        data.name ??
+        data.companyName ??
+        (data.firstName ? [data.firstName, data.lastName].filter(Boolean).join(' ') : null) ??
+        data.serviceName ??
+        doc.id
+      );
       const personas = Array.isArray(data.personas) ? data.personas : [];
       const supplierPersona = personas.find(
         (p: Record<string, unknown>) => p.personaType === 'supplier'
