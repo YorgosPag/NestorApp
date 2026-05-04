@@ -10,6 +10,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-05-04 | ✅ **Phase 5.5 IMPLEMENTED** — Auto-apply FA discounts in PO form via client-side hook. Architecture: pure utility `framework-agreement-discount.ts` (`resolveActiveFa` + `computeFaDiscount`) + `usePOFrameworkAgreement` hook + `PurchaseOrder` type extended (4 nullable FA fields) + API schemas + repository + service. UI: emerald banner + discount row + netTotal in PO form totals section. 12 files modified, 2 new. No breaking changes on existing POs (null=no discount applied). |
 | 2026-05-04 | ✅ **ADR §7 FINALIZED** — Session tracking table: commit hashes filled (S1→`29f9c307`, S2→`240fcda0`, S3→`4c93251f`, S5→multi-commit, S6→`f222b0d8`+`b30278e1`). Phase 3-7 table corrected: Phase 4 (Material Catalog) + Phase 6 (Dashboard) aggiornate a ✅ COMPLETED con commit hash. Phase 5.5 + 4.5 aggiunte come DEFERRED. Status header aggiornato a includere Phase 5 (Framework Agreements). |
 | 2026-05-03 | 📋 PROPOSED — bozza iniziale post esplorazione (3 agents Explore + verifica codice + lettura ADR-267/327/328) |
 | 2026-05-03 | ✅ **D1 RESOLVED** — Detail page deep-link: **Opzione B** (project-scoped URLs `/projects/{projectId}/procurement/{po|quote|rfq}/[id]`). Motivazione: tutti i big player del settore (Procore, SAP S/4HANA EPPM, Oracle Primavera Unifier, Autodesk Construction Cloud, Buildertrend) usano URL project-scoped per detail page. Vantaggi: (a) RBAC tenant-isolation enforced dall'URL stesso, (b) breadcrumb completo `Έργο > Προμήθειες > PO-1234`, (c) audit trail chiaro, (d) ricerca globale comunque disponibile via search bar (non dipende dalla URL structure). |
@@ -549,9 +550,31 @@ Sostituisce l'attuale `ProcurementProjectTab.tsx` (oggi 22 LOC, solo `RfqList`).
 - File NEW (12): `subapps/procurement/types/framework-agreement.ts`, `subapps/procurement/services/framework-agreement-service.ts`, `app/api/procurement/agreements/{route,[agreementId]/route}.ts`, `hooks/procurement/useFrameworkAgreements.ts`, 4 components in `components/procurement/agreements/{FrameworkAgreementCard,FrameworkAgreementList,FrameworkAgreementFilters,FrameworkAgreementFormDialog,BreakpointsEditor}.tsx`
 - File MODIFY (11): `enterprise-id-prefixes` (`FRAMEWORK_AGREEMENT: 'fwa'`), `enterprise-id.service` + `enterprise-id-convenience` (`generateFrameworkAgreementId`), `firestore-collections` (`FRAMEWORK_AGREEMENTS`), `domain-constants.ENTITY_TYPES.FRAMEWORK_AGREEMENT`, `audit-trail.AuditEntityType` (+'framework_agreement'), `firestore.rules` (`/framework_agreements/{agreementId}` read tenant-scoped, writes Admin-only), `firestore.indexes.json` (3 composite indexes: createdAt-desc, +status, +vendorContactId), `coverage-manifest.ts` (PENDING entry), `el+en/procurement.json` (~50 keys `hub.frameworkAgreements.*`), `hub/cards/FrameworkAgreementsCard.tsx` (placeholder → real `activeCount` stat), `hooks/procurement/index.ts` (barrel)
 
-**Out-of-scope (Phase 5.5):** auto-apply discount in PO totals via Cloud Function trigger or client-side hook in PO calc. Requires careful breakage testing of PO.calc; not blocking MVP since contracts work as a manual reference layer.
+### Phase 5.5 — Auto-apply FA discounts in PO ✅ IMPLEMENTED 2026-05-04
 
-**Rischio MVP:** basso. Solo CRUD greenfield, nessuna integrazione con PO calc esistente.
+**Approach:** client-side hook in PO form (no Cloud Functions needed).
+
+**Architecture:**
+- `PurchaseOrder` extended: `appliedFaId`, `faDiscountPercent`, `faDiscountAmount`, `netTotal` (4 nullable fields)
+- `CreatePurchaseOrderDTO` / `UpdatePurchaseOrderDTO`: same 4 optional fields
+- NEW `src/subapps/procurement/utils/framework-agreement-discount.ts`: pure functions `resolveActiveFa()` + `computeFaDiscount()` (no state, no hooks)
+- NEW `src/hooks/procurement/usePOFrameworkAgreement.ts`: hook — uses `useFrameworkAgreements()` list (already live), filters active FA for vendor+project, computes discount reactively when supplierId/projectId/total change
+- `PurchaseOrderForm.tsx`: integrates `usePOFrameworkAgreement`, shows emerald discount banner + `netTotal` row in totals, passes FA fields to `submit()`
+- API routes `POST /api/procurement` + `PATCH /api/procurement/[poId]`: schema extended with 4 optional FA fields
+- Repository `createPurchaseOrder`: stores FA fields in Firestore doc
+- Service `updatePO`: handles FA fields on edit
+
+**Discount logic:**
+- `resolveActiveFa`: status=active + date range (validFrom ≤ today ≤ validUntil) + project scope (null=all, []≠none, list=specific) + not deleted
+- Flat discount: `grossTotal × discountPercent/100`
+- Volume breakpoints: finds highest `thresholdEur ≤ grossTotal`, applies that `discountPercent`
+- `total` (gross) unchanged in PO — `netTotal` is new stored field (full audit trail)
+
+**Files modified (10):** `purchase-order.ts` (types), `procurement-repository.ts`, `procurement-service.ts`, `route.ts` (POST), `[poId]/route.ts` (PATCH), `usePurchaseOrderForm.ts`, `PurchaseOrderForm.tsx`, `hooks/procurement/index.ts`, `el+en/procurement.json` (4 keys: `faBannerApplied`, `faDiscount`, `grossTotal`, `netTotal`)
+
+**Files NEW (2):** `framework-agreement-discount.ts`, `usePOFrameworkAgreement.ts`
+
+**Rischio:** basso. Logica client-side, campi FA opzionali, nessuna breaking change su PO esistenti (null=no discount).
 
 ### Phase 6 — Cross-project Dashboard ✅ IMPLEMENTED 2026-05-04
 
@@ -896,7 +919,7 @@ Status legend: 📋 PLANNED · 🚧 IN_PROGRESS · ✅ COMPLETED · ⚠️ PARTI
 | 3 — Vendor Master surface | ✅ COMPLETED | `1536e699` | 2026-05-04 |
 | 4 — Material Catalog | ✅ COMPLETED | `04669a1b` | 2026-05-04 |
 | 5 — Framework Agreements | ✅ COMPLETED (MVP, no auto-apply) | `f050d1ac` | 2026-05-04 |
-| 5.5 — Auto-apply FA discounts in PO | 📋 DEFERRED | — | Cloud Function future |
+| 5.5 — Auto-apply FA discounts in PO | ✅ COMPLETED (client-side hook) | pending commit | 2026-05-04 |
 | 4.5 — Auto-update avgPrice from PO | 📋 DEFERRED | — | Cloud Function future |
 | 6 — Cross-project Dashboard | ✅ COMPLETED | `b30278e1` | 2026-05-04 |
 | 7 — Sourcing Events globali | 📋 FUTURE | — | TBD |
