@@ -7,6 +7,7 @@
 export type {
   PurchaseOrderStatus,
   POFilters,
+  AnalyticsDrillFilters,
   POCancellationReason,
   POVatRate,
   POAttachment,

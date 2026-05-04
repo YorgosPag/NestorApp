@@ -45,6 +45,16 @@ export interface POFilters {
   supplierId: string | null;
 }
 
+/** Analytics drill-down filters — injected from URL params on page load. Read-only overlay applied client-side. @see ADR-331 §2.7 D5 */
+export interface AnalyticsDrillFilters {
+  from: string | null;
+  to: string | null;
+  projectIds: readonly string[];
+  supplierIds: readonly string[];
+  categoryCodes: readonly string[];
+  statuses: readonly string[];
+}
+
 /** Status sets for filtering — SSoT, avoid hardcoding in services */
 export const PO_MATCHABLE_STATUSES: ReadonlySet<PurchaseOrderStatus> = new Set([
   'ordered', 'partially_delivered', 'delivered',
