@@ -349,6 +349,7 @@
 | **ADR-328** | Tabs SSoT Consolidation (BaseTabs/StateTabs/RouteTabs) | ✅ APPROVED | [View](./adrs/ADR-328-tabs-ssot-consolidation.md) |
 | **ADR-329** | Measurement Task Scope — Property-Granular Selection (extends ADR-175 §4.4.3) | ✅ IMPLEMENTED | [View](./adrs/ADR-329-measurement-task-scope-granularity.md) |
 | **ADR-330** | Procurement Hub Scoped Split (Phase 1 + Phase 3 Vendor Master + Phase 4 Material Catalog) | ✅ IMPLEMENTED | [View](./adrs/ADR-330-procurement-hub-scoped-split.md) |
+| **ADR-331** | Enterprise Spend Analytics Page (extends ADR-330 Phase 6) | ✅ APPROVED | [View](./adrs/ADR-331-enterprise-spend-analytics-page.md) |
 | **ADR-337** | BOQ Categories Level 2 Hierarchy (12 × 5–7 curated sub-categories, extends ADR-175) | 📋 PROPOSED | [View](../../../adrs/ADR-337-boq-categories-level2-hierarchy.md) |
 
 ---
