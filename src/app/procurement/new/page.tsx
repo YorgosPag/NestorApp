@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * @module /procurement/new
  * @enterprise ADR-330 S6 — PO create form at dedicated route.
@@ -8,6 +10,8 @@
 
 import { LazyRoutes } from '@/utils/lazyRoutes';
 
+const ProcurementDetail = LazyRoutes.ProcurementDetail;
+
 export default function NewPurchaseOrderPage() {
-  return <LazyRoutes.ProcurementDetail />;
+  return <ProcurementDetail />;
 }

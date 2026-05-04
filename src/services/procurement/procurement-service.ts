@@ -37,6 +37,7 @@ import {
   type PriceHistoryEntry,
 } from './procurement-repository';
 import { generatePOItemId } from '@/services/enterprise-id.service';
+import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
 // VALIDATION
@@ -364,7 +365,7 @@ export async function recordPODelivery(
 
   // Phase 4.5 — auto-update Material prices on full delivery (fire-and-forget)
   if (result.newStatus === 'delivered') {
-    syncMaterialPricesOnDelivery(ctx.companyId, poId, po.items, new Date().toISOString()).catch(() => {});
+    syncMaterialPricesOnDelivery(ctx.companyId, poId, po.items, nowISO()).catch(() => {});
   }
 
   await audit(ctx, 'procurement.po.delivery_recorded', poId, {

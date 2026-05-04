@@ -20,6 +20,7 @@ import admin from 'firebase-admin';
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { normalizeToDate } from '@/lib/date-local';
 import type { PurchaseOrderItem } from '@/types/procurement';
 import type { Material } from '@/subapps/procurement/types/material';
 
@@ -35,7 +36,9 @@ export async function syncMaterialPricesOnDelivery(
   if (linked.length === 0) return;
 
   await safeFirestoreOperation(async (db) => {
-    const deliveredAt = admin.firestore.Timestamp.fromDate(new Date(dateDelivered));
+    const deliveredAt = admin.firestore.Timestamp.fromDate(
+      normalizeToDate(dateDelivered) ?? new Date(),
+    );
 
     for (const item of linked) {
       const materialId = item.materialId!;
