@@ -379,6 +379,18 @@
         "lump": "lump sum"
       }
     },
+    "rfq": {
+      "title": "Requests for Quotation",
+      "description": "RFQs sent to vendors — track and manage per project",
+      "activeCount": "{count} active",
+      "noActive": "No active requests"
+    },
+    "quotes": {
+      "title": "Quotes",
+      "description": "Vendor quotes received — compare and evaluate",
+      "pendingCount": "{count} pending",
+      "noPending": "No pending quotes"
+    },
     "frameworkAgreements": {
       "title": "Framework Agreements",
       "description": "Multi-project contracts with auto-applied volume discounts",
