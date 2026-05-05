@@ -33,6 +33,8 @@ interface AddressMapStatusChipProps {
   geocodableTotal: number;
   staleCount: number;
   onForceRegeocode: () => void;
+  hasConflicts?: boolean;
+  hasSuggestions?: boolean;
 }
 
 export function AddressMapStatusChip({
@@ -41,6 +43,8 @@ export function AddressMapStatusChip({
   geocodableTotal,
   staleCount,
   onForceRegeocode,
+  hasConflicts = false,
+  hasSuggestions = false,
 }: AddressMapStatusChipProps) {
   const { t } = useTranslation('addresses');
 
@@ -76,6 +80,22 @@ export function AddressMapStatusChip({
   }
 
   if (status === 'partial') {
+    if (hasConflicts) {
+      return (
+        <Badge variant="warning" className="shadow-md flex items-center gap-1.5">
+          <AlertTriangle className="w-3 h-3" />
+          {t('mapStatus.conflict')}
+        </Badge>
+      );
+    }
+    if (hasSuggestions) {
+      return (
+        <Badge variant="secondary" className="shadow-md flex items-center gap-1.5">
+          <AlertTriangle className="w-3 h-3" />
+          {t('mapStatus.suggestions')}
+        </Badge>
+      );
+    }
     return (
       <Badge variant="secondary" className="shadow-md flex items-center gap-1.5">
         <AlertTriangle className="w-3 h-3" />
