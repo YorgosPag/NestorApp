@@ -78,7 +78,6 @@ export function AddressesSectionWithFullscreen({
   disabled,
 }: AddressesSectionWithFullscreenProps) {
   const { t: tContacts } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
-  const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const { t: tAddr } = useTranslation('addresses');
   const fullscreen = useFullscreen();
   const { clearHq } = useClearCompanyHqAddress(formData, setFormData);
@@ -155,6 +154,28 @@ export function AddressesSectionWithFullscreen({
       region: addr.region ?? '',
     }, 0);
   }, [applyDragResolve]);
+
+  // Extracted from JSX to keep AddressEditor children concise (ADR-332 Phase 6).
+  const handleHqHierarchyChange = useCallback((addr: AddressWithHierarchyValue) => {
+    if (!setFormData) return;
+    const updatedAddresses = [...effectiveAddresses];
+    if (updatedAddresses.length > 0) {
+      updatedAddresses[0] = { ...updatedAddresses[0], street: addr.street, number: addr.number,
+        city: addr.settlementName || addr.municipalityName, postalCode: addr.postalCode,
+        country: addr.country || undefined, settlementId: addr.settlementId,
+        communityName: addr.communityName, municipalUnitName: addr.municipalUnitName,
+        municipalityName: addr.municipalityName, municipalityId: addr.municipalityId,
+        regionalUnitName: addr.regionalUnitName, regionName: addr.regionName,
+        region: addr.regionName, decentAdminName: addr.decentAdminName, majorGeoName: addr.majorGeoName };
+    }
+    setFormData({ ...formData, street: addr.street, streetNumber: addr.number,
+      postalCode: addr.postalCode, hqAddressCountry: addr.country || undefined,
+      city: addr.settlementName || addr.municipalityName, settlement: addr.settlementName,
+      settlementId: addr.settlementId, community: addr.communityName, municipalUnit: addr.municipalUnitName,
+      municipality: addr.municipalityName, municipalityId: addr.municipalityId,
+      regionalUnit: addr.regionalUnitName, region: addr.regionName,
+      decentAdmin: addr.decentAdminName, majorGeo: addr.majorGeoName, companyAddresses: updatedAddresses });
+  }, [formData, setFormData, effectiveAddresses]);
 
   const isEditing = !disabled;
 
@@ -374,51 +395,7 @@ export function AddressesSectionWithFullscreen({
                   decentAdminName: (formData.decentAdmin as string) || '',
                   majorGeoName: (formData.majorGeo as string) || '',
                 }}
-                onChange={(addr: AddressWithHierarchyValue) => {
-                  if (setFormData) {
-                    const updatedAddresses = [...effectiveAddresses];
-                    const hqIdx = 0;
-                    if (updatedAddresses.length > 0) {
-                      updatedAddresses[hqIdx] = {
-                        ...updatedAddresses[hqIdx],
-                        street: addr.street,
-                        number: addr.number,
-                        city: addr.settlementName || addr.municipalityName,
-                        postalCode: addr.postalCode,
-                        country: addr.country || undefined,
-                        settlementId: addr.settlementId,
-                        communityName: addr.communityName,
-                        municipalUnitName: addr.municipalUnitName,
-                        municipalityName: addr.municipalityName,
-                        municipalityId: addr.municipalityId,
-                        regionalUnitName: addr.regionalUnitName,
-                        regionName: addr.regionName,
-                        region: addr.regionName,
-                        decentAdminName: addr.decentAdminName,
-                        majorGeoName: addr.majorGeoName,
-                      };
-                    }
-                    setFormData({
-                      ...formData,
-                      street: addr.street,
-                      streetNumber: addr.number,
-                      postalCode: addr.postalCode,
-                      hqAddressCountry: addr.country || undefined,
-                      city: addr.settlementName || addr.municipalityName,
-                      settlement: addr.settlementName,
-                      settlementId: addr.settlementId,
-                      community: addr.communityName,
-                      municipalUnit: addr.municipalUnitName,
-                      municipality: addr.municipalityName,
-                      municipalityId: addr.municipalityId,
-                      regionalUnit: addr.regionalUnitName,
-                      region: addr.regionName,
-                      decentAdmin: addr.decentAdminName,
-                      majorGeo: addr.majorGeoName,
-                      companyAddresses: updatedAddresses,
-                    });
-                  }
-                }}
+                onChange={handleHqHierarchyChange}
                 disabled={disabled}
               />
             </AddressEditor>
