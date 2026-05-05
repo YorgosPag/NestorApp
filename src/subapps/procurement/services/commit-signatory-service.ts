@@ -62,6 +62,10 @@ export interface CommitSignatoryFields {
   lastName: string;
   role: string | null;
   profession: string | null;
+  /** ESCO occupation URI (ADR-034). Null when free-text. */
+  escoUri: string | null;
+  escoLabel: string | null;
+  iscoCode: string | null;
   mobile: string | null;
   email: string | null;
   vatNumber: string | null;
@@ -99,7 +103,7 @@ export type CommitSignatoryResult =
 
 async function createIndividualContact(
   sig: SignatoryInput,
-  role: string | null,
+  esco: { escoUri: string | null; escoLabel: string | null; iscoCode: string | null },
   ctx: AuthContext
 ): Promise<string> {
   return safeFirestoreOperation(async (db) => {
@@ -113,6 +117,8 @@ async function createIndividualContact(
       ? [{ email: sig.email, type: 'work', isPrimary: true }]
       : [];
 
+    // SAP/Procore parity: role/job-title belongs to the vendor↔signatory
+    // relationship, not to the IndividualContact master record.
     const contact: Partial<IndividualContact> & {
       type: 'individual';
       companyId: string;
@@ -124,7 +130,9 @@ async function createIndividualContact(
       firstName: sig.firstName ?? '',
       lastName: sig.lastName ?? '',
       profession: sig.profession ?? undefined,
-      position: role ?? undefined,
+      escoUri: esco.escoUri ?? undefined,
+      escoLabel: esco.escoLabel ?? undefined,
+      iscoCode: esco.iscoCode ?? undefined,
       employerId: sig.vendorContactId,
       vatNumber: sig.vatNumber ?? undefined,
       phones,
@@ -283,7 +291,15 @@ export async function commitSignatory(
     } else if (match.kind === 'weak' && !input.forceCreate) {
       return { ok: false, requiresDisambiguation: true, candidates: match.candidates };
     } else {
-      contactId = await createIndividualContact(sigInput, input.signatory.role, ctx);
+      contactId = await createIndividualContact(
+        sigInput,
+        {
+          escoUri: input.signatory.escoUri,
+          escoLabel: input.signatory.escoLabel,
+          iscoCode: input.signatory.iscoCode,
+        },
+        ctx
+      );
       matchKind = match.kind === 'weak' ? 'weak_force_create' : 'none';
       contactReused = false;
     }

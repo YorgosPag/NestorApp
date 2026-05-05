@@ -12,6 +12,12 @@ export interface SignatoryFields {
   lastName: string;
   role: string | null;
   profession: string | null;
+  /** ESCO occupation URI (set when picked from autocomplete, ADR-034) */
+  escoUri: string | null;
+  /** Cached ESCO label */
+  escoLabel: string | null;
+  /** ISCO-08 4-digit code */
+  iscoCode: string | null;
   mobile: string | null;
   email: string | null;
   vatNumber: string | null;

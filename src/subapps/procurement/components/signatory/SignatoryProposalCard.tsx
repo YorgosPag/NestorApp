@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   SIGNATORY_CONFIDENCE_HIGH,
@@ -132,12 +133,59 @@ function EditableField({
   );
 }
 
+interface ProfessionEscoFieldProps {
+  label: string;
+  value: string;
+  escoUri?: string;
+  iscoCode?: string;
+  confidence: number;
+  onChange: (
+    profession: string,
+    escoUri: string | undefined,
+    escoLabel: string | undefined,
+    iscoCode: string | undefined,
+  ) => void;
+  disabled?: boolean;
+}
+
+function ProfessionEscoField({
+  label,
+  value,
+  escoUri,
+  iscoCode,
+  confidence,
+  onChange,
+  disabled,
+}: ProfessionEscoFieldProps) {
+  const band = value ? getSignatoryConfidenceBand(confidence) : 'low';
+  return (
+    <div className={`rounded-md border-l-4 px-3 py-2 ${BAND_BORDER[band]}`}>
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs text-muted-foreground">{label}</Label>
+        <ConfidencePill confidence={confidence} />
+      </div>
+      <div className="mt-1">
+        <EscoOccupationPicker
+          value={value}
+          escoUri={escoUri}
+          iscoCode={iscoCode}
+          disabled={disabled}
+          onChange={(v) => onChange(v.profession, v.escoUri, v.escoLabel, v.iscoCode)}
+        />
+      </div>
+    </div>
+  );
+}
+
 function buildInitialFields(extracted: ExtractedSignatory): SignatoryFields {
   return {
     firstName: extracted.firstName.value ?? '',
     lastName: extracted.lastName.value ?? '',
     role: extracted.role.value,
     profession: extracted.profession.value,
+    escoUri: null,
+    escoLabel: null,
+    iscoCode: null,
     mobile: extracted.mobile.value,
     email: extracted.email.value,
     vatNumber: extracted.vatNumber.value,
@@ -184,6 +232,21 @@ export function SignatoryProposalCard({
     setFields((prev) => ({
       ...prev,
       [key]: value === '' && key !== 'firstName' && key !== 'lastName' ? null : value,
+    }));
+  };
+
+  const setProfessionFromEsco = (
+    profession: string,
+    escoUri: string | undefined,
+    escoLabel: string | undefined,
+    iscoCode: string | undefined,
+  ): void => {
+    setFields((prev) => ({
+      ...prev,
+      profession: profession === '' ? null : profession,
+      escoUri: escoUri ?? null,
+      escoLabel: escoLabel ?? null,
+      iscoCode: iscoCode ?? null,
     }));
   };
 
@@ -269,12 +332,13 @@ export function SignatoryProposalCard({
               onChange={(v) => setField('role', v)}
               disabled={isSubmitting}
             />
-            <EditableField
+            <ProfessionEscoField
               label={t('quotes.signatory.fields.profession')}
-              fieldKey="profession"
               value={fields.profession ?? ''}
+              escoUri={fields.escoUri ?? undefined}
+              iscoCode={fields.iscoCode ?? undefined}
               confidence={signatory.profession.confidence}
-              onChange={(v) => setField('profession', v)}
+              onChange={setProfessionFromEsco}
               disabled={isSubmitting}
             />
             <EditableField
