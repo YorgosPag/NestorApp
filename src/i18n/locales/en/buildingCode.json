@@ -74,7 +74,8 @@
     "noAddress": "No address",
     "addressDeleted": "Address was deleted — select another",
     "createDialogTitle": "New Address for Frontage {index}",
-    "linkAddress": "Link Address"
+    "linkAddress": "Link Address",
+    "cityRequired": "City or municipality is required"
   },
   "validation": {
     "sd": {

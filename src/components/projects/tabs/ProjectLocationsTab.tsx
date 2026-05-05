@@ -1,7 +1,7 @@
 /* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import type { Project } from '@/types/project';
 import type { ProjectAddress, PartialProjectAddress, ProjectAddressType } from '@/types/project/addresses';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
@@ -21,6 +21,28 @@ import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/Ful
 import { cn } from '@/lib/utils';
 import { LocationInlineForm } from './locations/LocationInlineForm';
 import { useProjectLocations } from './locations/useProjectLocations';
+import { AddressDragConfirmDialog } from '@/components/shared/addresses/editor';
+import type { AddressEditorHandle, ResolvedAddressFields } from '@/components/shared/addresses/editor';
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+function toResolvedFields(addr: Partial<PartialProjectAddress>): ResolvedAddressFields {
+  return {
+    street: addr.street || undefined,
+    number: addr.number || undefined,
+    postalCode: addr.postalCode || undefined,
+    city: addr.city || undefined,
+    neighborhood: addr.neighborhood || undefined,
+    region: addr.region || undefined,
+  };
+}
+
+interface PendingViewDrag {
+  addressData: Partial<PartialProjectAddress>;
+  originalIndex: number;
+}
 
 // =============================================================================
 // TYPES
@@ -51,6 +73,11 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
   const loc = useProjectLocations(project);
   const _primary = getPrimaryAddress(loc.localAddresses);
+
+  // ADR-332 Phase 7: editor refs for drag → confirm dialog
+  const addEditorRef = useRef<AddressEditorHandle>(null);
+  const editEditorRef = useRef<AddressEditorHandle>(null);
+  const [pendingViewDrag, setPendingViewDrag] = useState<PendingViewDrag | null>(null);
 
   // Ghost addresses (street='' AND city='') are produced by handleClearPrimaryAddress
   // to preserve the isPrimary slot. Filter them out of view-mode list AND map —
@@ -113,21 +140,36 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
     ];
   }, [loc.isAddFormOpen, loc.pendingDragCoords, visibleAddresses]);
 
-  // Intercept drag: pending pin → update add form; real pin → persist.
-  // Map index points into the filtered mapAddresses; remap to the original
-  // localAddresses index before handing it to handleAddressDragUpdate.
+  // ADR-332 Phase 7: drag → AddressDragConfirmDialog (no silent overwrite).
+  // Pending pin → update coords only + show add-form confirm dialog.
+  // Real pin + edit form open → show edit-form confirm dialog.
+  // Real pin + view mode → local confirm dialog via pendingViewDrag state.
   const handleCombinedDragUpdate = useCallback(async (
     addressData: Partial<PartialProjectAddress>,
     index: number,
   ) => {
     const realCount = visibleAddresses.length;
     if (loc.isAddFormOpen && index >= realCount) {
-      loc.handlePendingDragUpdate(addressData);
+      // Update pin position only (not form fields — confirmed by dialog)
+      loc.handlePendingDragUpdate({ coordinates: addressData.coordinates });
+      addEditorRef.current?.setPendingDrag(toResolvedFields(addressData));
       return;
     }
     const originalIndex = visibleAddresses[index]?.originalIndex ?? index;
-    await loc.handleAddressDragUpdate(addressData, originalIndex);
-  }, [loc.isAddFormOpen, visibleAddresses, loc.handlePendingDragUpdate, loc.handleAddressDragUpdate]);
+    if (loc.editingIndex !== null) {
+      editEditorRef.current?.setPendingDrag(toResolvedFields(addressData));
+    } else {
+      setPendingViewDrag({ addressData, originalIndex });
+    }
+  }, [loc.isAddFormOpen, loc.editingIndex, visibleAddresses, loc.handlePendingDragUpdate]);
+
+  const handleViewDragConfirm = useCallback(async () => {
+    if (!pendingViewDrag) return;
+    await loc.handleAddressDragUpdate(pendingViewDrag.addressData, pendingViewDrag.originalIndex);
+    setPendingViewDrag(null);
+  }, [pendingViewDrag, loc.handleAddressDragUpdate]);
+
+  const handleViewDragCancel = useCallback(() => setPendingViewDrag(null), []);
 
   return (
     <FullscreenOverlay
@@ -151,9 +193,10 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           )}
         </div>
 
-        {/* Inline Add Form */}
+        {/* Inline Add Form — ref routes map drag to confirm dialog */}
         {isEditing && loc.isAddFormOpen && (
           <LocationInlineForm
+            ref={addEditorRef}
             mode="add"
             hierarchy={loc.addHierarchy}
             onHierarchyChange={loc.setAddHierarchy}
@@ -174,9 +217,10 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           />
         )}
 
-        {/* Inline Edit Form */}
+        {/* Inline Edit Form — ref routes map drag to confirm dialog */}
         {isEditing && loc.editingIndex !== null && !loc.isAddFormOpen && (
           <LocationInlineForm
+            ref={editEditorRef}
             mode="edit"
             hierarchy={loc.editHierarchy}
             onHierarchyChange={loc.setEditHierarchy}
@@ -274,6 +318,19 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         confirmText={t('deleteDialog.confirm')}
         cancelText={t('deleteDialog.cancel')}
       />
+
+      {/* View-mode drag confirm — fires when real pin dragged with no form open */}
+      {pendingViewDrag !== null && (
+        <AddressDragConfirmDialog
+          open
+          currentAddress={toResolvedFields(
+            visibleAddresses.find(({ originalIndex }) => originalIndex === pendingViewDrag.originalIndex)?.address ?? {},
+          )}
+          newAddress={toResolvedFields(pendingViewDrag.addressData)}
+          onConfirm={() => { void handleViewDragConfirm(); }}
+          onCancel={handleViewDragCancel}
+        />
+      )}
     </FullscreenOverlay>
   );
 }

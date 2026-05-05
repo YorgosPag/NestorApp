@@ -74,7 +74,8 @@
     "noAddress": "Χωρίς διεύθυνση",
     "addressDeleted": "Η διεύθυνση έχει διαγραφεί — επιλέξτε άλλη",
     "createDialogTitle": "Νέα Διεύθυνση Προσώπου {index}",
-    "linkAddress": "Σύνδεση Διεύθυνσης"
+    "linkAddress": "Σύνδεση Διεύθυνσης",
+    "cityRequired": "Απαιτείται πόλη ή δήμος"
   },
   "validation": {
     "sd": {

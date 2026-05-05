@@ -19,6 +19,7 @@
 
 import React, { useState } from 'react';
 import { AddressCard, AddressListCard, AddressFormSection } from '@/components/shared/addresses';
+import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import {
   createProjectAddress,
   migrateLegacyAddress,
@@ -26,7 +27,7 @@ import {
   formatAddressLine,
   validateAddress
 } from '@/types/project/address-helpers';
-import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
+import type { ProjectAddress } from '@/types/project/addresses';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -72,9 +73,8 @@ export default function AddressesDemoPage() {
     })
   ]);
 
-  const [newAddressData, setNewAddressData] = useState<PartialProjectAddress | null>(null);
+  const [newHierarchy, setNewHierarchy] = useState<Partial<AddressWithHierarchyValue>>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [showFormErrors, setShowFormErrors] = useState(false);
 
   // Legacy migration demo
   const [legacyAddress, setLegacyAddress] = useState('Σαμοθράκης 16');
@@ -87,28 +87,30 @@ export default function AddressesDemoPage() {
   };
 
   const handleAddAddress = () => {
-    setShowFormErrors(true);
+    const hv = newHierarchy as AddressWithHierarchyValue;
+    const city = hv.settlementName || hv.municipalityName || '';
+    const partial = {
+      street: hv.street || '',
+      number: hv.number || undefined,
+      city,
+      postalCode: hv.postalCode || '',
+    };
 
-    if (!newAddressData) {
-      setValidationErrors(['Παρακαλώ συμπληρώστε τη φόρμα']);
-      return;
-    }
-
-    const errors = validateAddress(newAddressData);
+    const errors = validateAddress(partial);
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
     }
 
     const newAddress = createProjectAddress({
-      ...newAddressData,
-      isPrimary: addresses.length === 0, // First address is primary
-      sortOrder: addresses.length
+      ...partial,
+      isPrimary: addresses.length === 0,
+      sortOrder: addresses.length,
     });
 
     setAddresses([...addresses, newAddress]);
+    setNewHierarchy({});
     setValidationErrors([]);
-    setShowFormErrors(false);
   };
 
   const primaryAddress = getPrimaryAddress(addresses);
@@ -230,8 +232,8 @@ export default function AddressesDemoPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <AddressFormSection
-              onChange={(data) => setNewAddressData(data)}
-              showErrors={showFormErrors}
+              value={newHierarchy}
+              onChange={setNewHierarchy}
             />
 
             {validationErrors.length > 0 && (

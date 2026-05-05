@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +12,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Project } from '@/types/project';
 import { createProjectAddress } from '@/types/project/address-helpers';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
+import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
+import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
+import { AddressEditor } from '@/components/shared/addresses/editor';
+import { fromHierarchyValue, EMPTY_HIERARCHY } from '@/components/projects/tabs/locations/location-converters';
 
 interface FrontageAddressCreateDialogProps {
   open: boolean;
@@ -23,20 +25,6 @@ interface FrontageAddressCreateDialogProps {
   onCreated(addressId: string): void;
 }
 
-interface FrontageFormData {
-  street: string;
-  number: string;
-  city: string;
-  postalCode: string;
-}
-
-const EMPTY_FORM: FrontageFormData = {
-  street: '',
-  number: '',
-  city: '',
-  postalCode: '',
-};
-
 export function FrontageAddressCreateDialog({
   open,
   onOpenChange,
@@ -45,15 +33,17 @@ export function FrontageAddressCreateDialog({
   onCreated,
 }: FrontageAddressCreateDialogProps) {
   const { t } = useTranslation('buildingCode');
-  const { t: tAddr } = useTranslation('addresses');
-  const [form, setForm] = useState<FrontageFormData>(EMPTY_FORM);
+  const [hierarchy, setHierarchy] = useState<Partial<AddressWithHierarchyValue>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSave = form.city.trim().length > 0;
+  const canSave = Boolean(
+    (hierarchy as Partial<AddressWithHierarchyValue>).settlementName?.trim() ||
+    (hierarchy as Partial<AddressWithHierarchyValue>).municipalityName?.trim(),
+  );
 
   const handleClose = () => {
-    setForm(EMPTY_FORM);
+    setHierarchy({});
     setError(null);
     onOpenChange(false);
   };
@@ -63,11 +53,17 @@ export function FrontageAddressCreateDialog({
     setIsSaving(true);
     setError(null);
     try {
+      const addressFields = fromHierarchyValue({ ...EMPTY_HIERARCHY, ...hierarchy });
+      if (!addressFields.city) {
+        setError(t('frontages.cityRequired'));
+        return;
+      }
+
       const newAddress = createProjectAddress({
-        street: form.street.trim(),
-        number: form.number.trim() || undefined,
-        city: form.city.trim(),
-        postalCode: form.postalCode.trim(),
+        street: addressFields.street?.trim() ?? '',
+        number: addressFields.number?.trim() || undefined,
+        city: addressFields.city.trim(),
+        postalCode: addressFields.postalCode?.trim() ?? '',
         type: 'frontage',
         frontageIndex,
         isPrimary: false,
@@ -92,9 +88,6 @@ export function FrontageAddressCreateDialog({
     }
   };
 
-  const set = (field: keyof FrontageFormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
@@ -104,59 +97,39 @@ export function FrontageAddressCreateDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2 space-y-1.5">
-              <Label htmlFor="fa-street">{tAddr('form.street')}</Label>
-              <Input
-                id="fa-street"
-                value={form.street}
-                onChange={set('street')}
-                placeholder={tAddr('form.streetPlaceholder')}
-                disabled={isSaving}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="fa-number">{tAddr('form.number')}</Label>
-              <Input
-                id="fa-number"
-                value={form.number}
-                onChange={set('number')}
-                placeholder={tAddr('form.numberPlaceholder')}
-                disabled={isSaving}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="fa-city">
-                {tAddr('form.city')} <span aria-hidden className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="fa-city"
-                value={form.city}
-                onChange={set('city')}
-                placeholder={tAddr('form.cityPlaceholder')}
-                disabled={isSaving}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="fa-postal">{tAddr('form.postalCode')}</Label>
-              <Input
-                id="fa-postal"
-                value={form.postalCode}
-                onChange={set('postalCode')}
-                placeholder={tAddr('form.postalCodePlaceholder')}
-                disabled={isSaving}
-              />
-            </div>
-          </div>
-
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+        <div className="py-2">
+          {/* AddressEditor: activity log, field badges, reconciliation, undo */}
+          <AddressEditor
+            value={{
+              street: hierarchy.street,
+              number: hierarchy.number,
+              postalCode: hierarchy.postalCode,
+              city: hierarchy.settlementName || hierarchy.municipalityName,
+            }}
+            onChange={(resolved) => {
+              setHierarchy((prev) => ({
+                ...prev,
+                street: resolved.street ?? prev.street ?? '',
+                number: resolved.number ?? prev.number ?? '',
+                postalCode: resolved.postalCode ?? prev.postalCode ?? '',
+                settlementName: resolved.city ?? prev.settlementName ?? '',
+              }));
+            }}
+            mode="edit"
+            domain="project"
+            formOptions={{ hideGrid: true }}
+            activityLog={{ collapsed: true }}
+          >
+            <AddressWithHierarchy
+              value={hierarchy}
+              onChange={setHierarchy}
+            />
+          </AddressEditor>
         </div>
+
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={handleClose} disabled={isSaving}>
