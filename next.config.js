@@ -211,42 +211,9 @@ const nextConfig = {
       );
     }
 
-    // Performance optimizations για production — CLIENT-SIDE ONLY
-    // CRITICAL: Custom splitChunks must NOT apply to server bundles (API routes)
-    // because Webpack reorders modules → TDZ errors ("Cannot access 'f' before initialization")
-    if (!dev && !isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          cacheGroups: {
-            // Vendor chunk για libraries
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'all',
-              maxSize: 250000, // 250KB chunks
-            },
-            // DXF-specific chunk
-            dxf: {
-              test: /[\\/]src[\\/]subapps[\\/]dxf-viewer[\\/]/,
-              name: 'dxf-viewer',
-              chunks: 'all',
-              priority: 10,
-              maxSize: 300000, // 300KB για DXF components
-            },
-            // Common UI components
-            ui: {
-              test: /[\\/]src[\\/](components|ui)[\\/]/,
-              name: 'ui-common',
-              chunks: 'all',
-              priority: 5,
-              maxSize: 200000, // 200KB για UI components
-            }
-          }
-        },
-        // Tree shaking optimizations
-        usedExports: true,
-      };
+    // Tree shaking — applies to both client and server
+    if (!dev) {
+      config.optimization.usedExports = true;
     }
 
     // Minification optimizations — applies to both client and server
