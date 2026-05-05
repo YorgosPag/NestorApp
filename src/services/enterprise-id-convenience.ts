@@ -142,6 +142,7 @@ export const generateConstructionBaselineId = () => enterpriseIdService.generate
 export const generateConstructionResourceAssignmentId = () => enterpriseIdService.generateConstructionResourceAssignmentId();
 export const generateAttendanceQrTokenId = () => enterpriseIdService.generateAttendanceQrTokenId();
 export const generateAttendanceEventId = () => enterpriseIdService.generateAttendanceEventId();
+export const generateAddressCorrectionLogId = () => enterpriseIdService.generateAddressCorrectionLogId();
 export const generateEmploymentRecordId = () => enterpriseIdService.generateEmploymentRecordId();
 export const generateAppointmentId = () => enterpriseIdService.generateAppointmentId();
 export const generateFolderId = () => enterpriseIdService.generateFolderId();

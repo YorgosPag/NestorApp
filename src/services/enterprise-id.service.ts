@@ -46,6 +46,7 @@ export {
   generateLearnedPatternId, generateConstructionPhaseId, generateConstructionTaskId,
   generateConstructionBaselineId, generateConstructionResourceAssignmentId,
   generateAttendanceQrTokenId, generateAttendanceEventId,
+  generateAddressCorrectionLogId,
   generateEmploymentRecordId, generateAppointmentId,
   generateOrgStructureId, generateOrgDepartmentId, generateOrgMemberId,
   generateFolderId,
@@ -240,6 +241,9 @@ export class EnterpriseIdService {
   // Attendance (ADR-170)
   generateAttendanceQrTokenId(): string { return this.generateId(P.ATTENDANCE_QR_TOKEN).id; }
   generateAttendanceEventId(): string { return this.generateId(P.ATTENDANCE_EVENT).id; }
+
+  // Address Corrections Telemetry (ADR-332 §3.7 Phase 9)
+  generateAddressCorrectionLogId(): string { return this.generateId(P.ADDRESS_CORRECTION_LOG).id; }
 
   // HR & Employment
   generateEmploymentRecordId(): string { return this.generateId(P.EMPLOYMENT_RECORD).id; }

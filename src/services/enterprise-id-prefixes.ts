@@ -122,6 +122,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   ATTENDANCE_QR_TOKEN: 'qrtok',
   ATTENDANCE_EVENT: 'attev',
 
+  // Address Corrections Telemetry (ADR-332 §3.7 Phase 9)
+  ADDRESS_CORRECTION_LOG: 'acl',
+
   // HR & Employment
   EMPLOYMENT_RECORD: 'emprec',
   APPOINTMENT: 'appt',
