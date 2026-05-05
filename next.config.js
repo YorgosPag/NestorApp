@@ -3,6 +3,10 @@ const { withSentryConfig } = require('@sentry/nextjs');
 /** @type {import('next').NextConfig} */
 // Vercel rebuild trigger: 2026-03-23
 const nextConfig = {
+  // [COOLIFY] Standalone output: self-contained Node server for Docker deployment.
+  // Creates .next/standalone with only necessary files — smaller image, no full node_modules.
+  output: 'standalone',
+
   // [FAST] FAST DEV MODE - Skip checks για άμεσο startup
   typescript: {
     // Skip type checking για ταχύτητα

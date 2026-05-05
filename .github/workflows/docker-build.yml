@@ -1,0 +1,110 @@
+name: Build & Deploy Docker Image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: yorgosPag/nestor-app
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Add swap so Next.js build has enough memory (runner has 7GB RAM + 10GB SSD swap)
+      - name: Configure swap
+        run: |
+          sudo fallocate -l 6G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Next.js app
+        run: pnpm run build
+        env:
+          NODE_OPTIONS: '--max-old-space-size=7168'
+          NODE_ENV: production
+          DISABLE_SENTRY_WEBPACK: 'true'
+          NEXT_TELEMETRY_DISABLED: '1'
+          # Firebase public config (browser-exposed, not secret)
+          NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyAcqK3o-zPmXodFPr-gG328QJHlcEc6g1k
+          NEXT_PUBLIC_FIREBASE_APP_ID: '1:157616068729:web:c7dc1ed6661c895ee19ca8'
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: pagonis-87766.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '157616068729'
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: pagonis-87766
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: pagonis-87766.firebasestorage.app
+          NEXT_PUBLIC_SENTRY_DSN: https://ceba8fb4650f8d54df1b489f6360e109@o4511056899014656.ingest.de.sentry.io/4511056927981648
+          NEXT_PUBLIC_ADMIN_EMAIL: errors@inbound.nestorconstruct.gr
+          NEXT_PUBLIC_ADMIN_EMAILS: 'pagonis.oe@gmail.com,georgios.pagonis@gmail.com,giorgos@pagonis.gr,pagonis@nestorconstruct.gr,info@nestorconstruct.gr'
+          NEXT_PUBLIC_DEFAULT_COMPANY_ID: comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757
+          NEXT_PUBLIC_DEBUG: 'false'
+          NEXT_PUBLIC_DXF_AI_ASSISTANT: 'false'
+          NEXT_PUBLIC_COMPANY_NAME: Pagonis Energo
+          NEXT_PUBLIC_COMPANY_EMAIL: georgios.pagonis@gmail.com
+          NEXT_PUBLIC_COMPANY_PHONE: '6974050023'
+          NEXT_PUBLIC_COMPANY_WEBSITE: https://nestorconstruct.gr
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=main-,format=short
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # No cache: standalone output must be fresh every build
+          no-cache: true
+
+      - name: Trigger Coolify redeploy
+        if: success()
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          echo "Triggering Coolify redeploy..."
+          curl -s -X GET \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            "http://159.195.44.221:8000/api/v1/applications/f661kuiq901llma0o8unhvpi/deploy" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print('Deploy triggered:', d.get('message', d))" \
+            || echo "Deploy trigger sent"

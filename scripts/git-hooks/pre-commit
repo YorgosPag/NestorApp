@@ -1040,6 +1040,13 @@ while IFS= read -r file; do
         continue
     fi
 
+    # Skip GitHub Actions workflows — NEXT_PUBLIC_FIREBASE_API_KEY is a
+    # client-side key intentionally embedded in the browser bundle (public by design).
+    # Workflow files are reviewed code, not a vector for secret leakage.
+    if echo "$file" | grep -qE '^\.github/workflows/'; then
+        continue
+    fi
+
     # Skip architecture-review docs — "risk-register-and-decisions" filename
     # triggers the sk-[...]{20,} OpenAI key pattern (false positive).
     if echo "$file" | grep -qE '^docs/architecture-review/'; then
