@@ -123,6 +123,14 @@
       "vendorPhone": "Phone",
       "vendorEmail": "Email",
       "vendorLogoPreview": "Vendor Logo (extracted from quote)",
+      "vendorEdit": {
+        "button": "Edit",
+        "save": "Save",
+        "cancel": "Cancel",
+        "saved": "Vendor info updated",
+        "saveError": "Failed to save vendor info",
+        "noContact": "No linked vendor contact to update"
+      },
       "quoteDate": "Issue Date",
       "quoteReference": "Quote Ref.",
       "warranty": "Warranty",

@@ -10,11 +10,11 @@
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, CheckCircle2, Loader2, Save, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, Pencil, Save, X } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { computeQuoteTotals } from '@/subapps/procurement/types/quote';
@@ -23,6 +23,7 @@ import { validateQuote } from '@/subapps/procurement/utils/quote-validation';
 import { QuoteLineEditorTable } from '@/subapps/procurement/components/QuoteLineEditorTable';
 import { SignatoryProposalCard } from '@/subapps/procurement/components/signatory/SignatoryProposalCard';
 import { formatEuro } from '@/lib/number/greek-decimal';
+import { ContactsService } from '@/services/contacts.service';
 import type {
   ExtractedQuoteData,
   FieldWithConfidence,
@@ -30,64 +31,8 @@ import type {
   Quote,
 } from '@/subapps/procurement/types/quote';
 import type { Contact } from '@/types/contacts';
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-type ConfidenceLevel = 'high' | 'medium' | 'low' | 'empty';
-
-function levelOf(value: unknown, confidence: number): ConfidenceLevel {
-  if (value === null || value === '' || value === undefined) return 'empty';
-  if (confidence >= 80) return 'high';
-  if (confidence >= 50) return 'medium';
-  return 'low';
-}
-
-function levelClasses(level: ConfidenceLevel): string {
-  switch (level) {
-    case 'high':   return 'border-l-4 border-l-green-500 bg-green-50/40 dark:bg-green-950/20';
-    case 'medium': return 'border-l-4 border-l-yellow-500 bg-yellow-50/40 dark:bg-yellow-950/20';
-    case 'low':    return 'border-l-4 border-l-red-500 bg-red-50/40 dark:bg-red-950/20';
-    case 'empty':  return 'border-l-4 border-l-muted bg-muted/20';
-  }
-}
-
-function ConfidenceBadge({ confidence }: { confidence: number }) {
-  if (confidence >= 80) {
-    return <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400">{confidence}%</Badge>;
-  }
-  if (confidence >= 50) {
-    return <Badge variant="outline" className="border-yellow-500 text-yellow-700 dark:text-yellow-400">{confidence}%</Badge>;
-  }
-  return <Badge variant="outline" className="border-red-500 text-red-700 dark:text-red-400">{confidence}%</Badge>;
-}
-
-// ============================================================================
-// FIELD ROW
-// ============================================================================
-
-interface FieldRowProps<T> {
-  label: string;
-  field: FieldWithConfidence<T>;
-}
-
-function FieldRow<T>({ label, field }: FieldRowProps<T>) {
-  const level = levelOf(field.value, field.confidence);
-  const display = field.value === null || field.value === '' ? '—' : String(field.value);
-
-  return (
-    <div className={`rounded-md px-3 py-2 ${levelClasses(level)}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <Label className="text-xs text-muted-foreground">{label}</Label>
-          <p className="break-words text-sm font-medium">{display}</p>
-        </div>
-        <ConfidenceBadge confidence={field.confidence} />
-      </div>
-    </div>
-  );
-}
+import type { ContactFormData } from '@/types/ContactFormTypes';
+import { ConfidenceBadge, FieldRow, EditableFieldRow } from './extracted-data-review-helpers';
 
 // ============================================================================
 // MAIN PANEL
@@ -132,6 +77,63 @@ export function ExtractedDataReviewPanel({
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [hasLineErrors, setHasLineErrors] = useState(false);
   const savedLinesRef = useRef<QuoteLine[]>(quote.lines);
+
+  // Vendor edit state — allow user to correct AI-extracted vendor info
+  const [isEditingVendor, setIsEditingVendor] = useState(false);
+  const [isSavingVendor, setIsSavingVendor] = useState(false);
+  const [vendorEdits, setVendorEdits] = useState({
+    name: '',
+    vat: '',
+    phone: '',
+    emails: '',
+  });
+
+  const startVendorEdit = useCallback(() => {
+    if (!extracted) return;
+    setVendorEdits({
+      name: extracted.vendorName.value ?? '',
+      vat: extracted.vendorVat.value ?? '',
+      phone: extracted.vendorPhone.value ?? '',
+      emails: (extracted.vendorEmails?.value ?? []).join(', '),
+    });
+    setIsEditingVendor(true);
+  }, [extracted]);
+
+  const cancelVendorEdit = useCallback(() => {
+    setIsEditingVendor(false);
+  }, []);
+
+  const saveVendorEdit = useCallback(async () => {
+    if (!supplierContact?.id) {
+      toast.error(t('quotes.scan.vendorEdit.noContact', { defaultValue: '' }));
+      return;
+    }
+    setIsSavingVendor(true);
+    try {
+      const emailsArray = vendorEdits.emails
+        .split(',')
+        .map((e) => e.trim())
+        .filter(Boolean);
+      const formDataDiff: Partial<ContactFormData> = {
+        companyName: vendorEdits.name,
+        companyVatNumber: vendorEdits.vat,
+        vatNumber: vendorEdits.vat,
+        phone: vendorEdits.phone,
+        emails: emailsArray.map((email, i) => ({
+          email,
+          type: 'work' as const,
+          isPrimary: i === 0,
+        })),
+      };
+      await ContactsService.updateExistingContactFromForm(supplierContact, formDataDiff);
+      toast.success(t('quotes.scan.vendorEdit.saved', { defaultValue: '' }));
+      setIsEditingVendor(false);
+    } catch {
+      toast.error(t('quotes.scan.vendorEdit.saveError', { defaultValue: '' }));
+    } finally {
+      setIsSavingVendor(false);
+    }
+  }, [supplierContact, vendorEdits, t]);
 
   const overall = extracted?.overallConfidence ?? 0;
   const totals = useMemo(() => computeQuoteTotals(lines), [lines]);
@@ -259,22 +261,72 @@ export function ExtractedDataReviewPanel({
         )}
 
         <section>
-          <h3 className="mb-2 text-sm font-semibold">{t('quotes.scan.vendorSection')}</h3>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">{t('quotes.scan.vendorSection')}</h3>
+            {!isEditingVendor && supplierContact?.id && (
+              <Button size="sm" variant="ghost" onClick={startVendorEdit} className="h-7 px-2">
+                <Pencil className="mr-1 h-3.5 w-3.5" />
+                {t('quotes.scan.vendorEdit.button', { defaultValue: '' })}
+              </Button>
+            )}
+            {isEditingVendor && (
+              <div className="flex items-center gap-1">
+                <Button size="sm" onClick={saveVendorEdit} disabled={isSavingVendor} className="h-7 px-2">
+                  {isSavingVendor ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1 h-3.5 w-3.5" />}
+                  {t('quotes.scan.vendorEdit.save', { defaultValue: '' })}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={cancelVendorEdit} disabled={isSavingVendor} className="h-7 px-2">
+                  {t('quotes.scan.vendorEdit.cancel', { defaultValue: '' })}
+                </Button>
+              </div>
+            )}
+          </div>
           {extracted.vendorLogoUrl && (
             <div className="mb-3 flex items-center gap-3 rounded-md border bg-muted/20 px-3 py-2">
               <img src={extracted.vendorLogoUrl} alt="vendor logo" className="h-12 max-w-[180px] rounded object-contain" />
               <span className="text-xs text-muted-foreground">{t('quotes.scan.vendorLogoPreview')}</span>
             </div>
           )}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <FieldRow label={t('quotes.vendor')} field={extracted.vendorName} />
-            <FieldRow label={t('quotes.scan.vendorVat')} field={extracted.vendorVat} />
-            <FieldRow label={t('quotes.scan.vendorPhone')} field={extracted.vendorPhone} />
-            <FieldRow
-              label={t('quotes.scan.vendorEmail')}
-              field={{ value: extracted.vendorEmails?.value?.join(', ') || null, confidence: extracted.vendorEmails?.confidence ?? 0 }}
-            />
-          </div>
+          {isEditingVendor ? (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <EditableFieldRow
+                label={t('quotes.vendor')}
+                value={vendorEdits.name}
+                confidence={extracted.vendorName.confidence}
+                onChange={(v) => setVendorEdits((prev) => ({ ...prev, name: v }))}
+              />
+              <EditableFieldRow
+                label={t('quotes.scan.vendorVat')}
+                value={vendorEdits.vat}
+                confidence={extracted.vendorVat.confidence}
+                onChange={(v) => setVendorEdits((prev) => ({ ...prev, vat: v }))}
+              />
+              <EditableFieldRow
+                label={t('quotes.scan.vendorPhone')}
+                value={vendorEdits.phone}
+                confidence={extracted.vendorPhone.confidence}
+                onChange={(v) => setVendorEdits((prev) => ({ ...prev, phone: v }))}
+                type="tel"
+              />
+              <EditableFieldRow
+                label={t('quotes.scan.vendorEmail')}
+                value={vendorEdits.emails}
+                confidence={extracted.vendorEmails?.confidence ?? 0}
+                onChange={(v) => setVendorEdits((prev) => ({ ...prev, emails: v }))}
+                type="email"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <FieldRow label={t('quotes.vendor')} field={extracted.vendorName} />
+              <FieldRow label={t('quotes.scan.vendorVat')} field={extracted.vendorVat} />
+              <FieldRow label={t('quotes.scan.vendorPhone')} field={extracted.vendorPhone} />
+              <FieldRow
+                label={t('quotes.scan.vendorEmail')}
+                field={{ value: extracted.vendorEmails?.value?.join(', ') || null, confidence: extracted.vendorEmails?.confidence ?? 0 }}
+              />
+            </div>
+          )}
         </section>
 
         {extracted.signatory && (
