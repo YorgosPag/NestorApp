@@ -2324,6 +2324,29 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📍 ADDRESS_CORRECTIONS_LOG - GEOCODING TELEMETRY (ADR-332 §3.7 Phase 9)
+    // =========================================================================
+    // 📅 Added: 2026-05-06 (ADR-332 Phase 9 — Telemetry + Hierarchy Validation)
+    // 🏢 ENTERPRISE: Logs every meaningful correction inside the AddressEditor
+    //    coordinator. Feeds analytics + AI ranking-rule learning loop.
+    // 🔒 READ: Tenant-scoped (any authenticated user of the correction's
+    //    company). Cross-tenant denied. Super admin bypasses tenant check.
+    // 🚫 WRITE: Server-only via Firebase Admin SDK (telemetry service).
+    //    Admin SDK bypasses rules, so `allow write: if false` is safe.
+    // 📎 Canonical writer: src/services/geocoding/address-corrections-telemetry.service.ts
+    // 📎 SSoT: ADR-294 — register `address-editor` module (already present)
+    // ⚙️ Indexes: (companyId, timestamp DESC) + (companyId, contextEntityType, timestamp DESC)
+    match /address_corrections_log/{aclId} {
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+      allow write: if false; // Server-side only (Admin SDK)
+    }
+
+    // =========================================================================
     // 🏢 ADMIN_BUILDING_TEMPLATES - ENTERPRISE TENANT ISOLATION (PR-1D)
     // =========================================================================
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
