@@ -53,6 +53,10 @@ const nextConfig = {
 
   // [ENTERPRISE] PERFORMANCE OPTIMIZATIONS - Fortune 500 Standard
   experimental: {
+    // [COOLIFY] Disable webpack build worker: prevents forking a separate Node.js
+    // worker process for webpack compilation. On low-RAM VPS builds, the extra
+    // fork doubles peak heap usage and triggers OOM killer (exit 137).
+    webpackBuildWorker: false,
     // [ENTERPRISE] Optimized imports - Prevents barrel export overhead
     // These packages have heavy barrel exports that slow down dev compilation
     optimizePackageImports: [
@@ -129,6 +133,12 @@ const nextConfig = {
     // =========================================================================
     // PRODUCTION-ONLY CONFIGURATIONS BELOW
     // =========================================================================
+
+    // [COOLIFY] Sequential compilation to prevent OOM on VPS (8GB RAM).
+    // Next.js spawns N workers (N = CPU count = 4 on Netcup VPS 1000 G12).
+    // Each worker has its own V8 heap → 4 × ~2GB = ~8GB peak.
+    // parallelism:1 → sequential → peak ~2-3GB, safe on 8GB+4GB swap.
+    config.parallelism = 1;
 
     // [CRITICAL] Disable module concatenation on server bundles to prevent
     // TDZ errors ("Cannot access 'f' before initialization").
