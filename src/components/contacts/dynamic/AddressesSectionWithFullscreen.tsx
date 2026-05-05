@@ -15,16 +15,8 @@ import '@/lib/design-system';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from '@/components/ui/alert-dialog';
+import { AddressEditor, AddressSourceLabel } from '@/components/shared/addresses/editor';
+import type { AddressEditorHandle, ResolvedAddressFields } from '@/components/shared/addresses/editor';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
@@ -66,6 +58,16 @@ function formatHqStreetLine(formData: ContactFormData): string {
   return parts.join(', ');
 }
 
+function formDataToResolvedFields(fd: ContactFormData): ResolvedAddressFields {
+  return {
+    street: (fd.street as string) || undefined,
+    number: (fd.streetNumber as string) || undefined,
+    postalCode: (fd.postalCode as string) || undefined,
+    city: (fd.city as string) || (fd.settlement as string) || undefined,
+    region: (fd.region as string) || undefined,
+  };
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -84,6 +86,7 @@ export function AddressesSectionWithFullscreen({
 
   const [isEditingHQ, setIsEditingHQ] = useState(false);
   const branchRef = useRef<CompanyAddressesSectionHandle>(null);
+  const hqEditorRef = useRef<AddressEditorHandle>(null);
 
   // ADR-318: live-derived work addresses from professional relationships.
   // Returns [] for company/service contacts (semantic filter inside hook).
@@ -115,8 +118,43 @@ export function AddressesSectionWithFullscreen({
     if (disabled) setIsEditingHQ(false);
   }, [disabled]);
 
-  // 📍 ADR-277: Pending drag resolve state (map drag may clear hierarchy)
-  const [pendingDrag, setPendingDrag] = useState<{ addr: DragResolvedAddress; index: number } | null>(null);
+  // Stable resolved fields for the HQ AddressEditor (recomputed only when basic fields change).
+  const hqResolvedFields = useMemo(
+    () => formDataToResolvedFields(formData),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formData.street, formData.streetNumber, formData.postalCode, formData.city, formData.region],
+  );
+
+  // Called by AddressEditor when reconciliation/suggestion changes basic fields — keeps hierarchy.
+  const handleHqChange = useCallback((addr: ResolvedAddressFields) => {
+    if (!setFormData) return;
+    setFormData(prev => {
+      const existing = (prev.companyAddresses ?? []) as CompanyAddress[];
+      const updatedAddresses = existing.length > 0
+        ? [{ ...existing[0], street: addr.street ?? existing[0].street, number: addr.number ?? existing[0].number, postalCode: addr.postalCode ?? existing[0].postalCode, city: addr.city ?? existing[0].city }, ...existing.slice(1)]
+        : existing;
+      return {
+        ...prev,
+        street: addr.street ?? (prev.street as string) ?? '',
+        streetNumber: addr.number ?? (prev.streetNumber as string) ?? '',
+        postalCode: addr.postalCode ?? (prev.postalCode as string) ?? '',
+        city: addr.city ?? (prev.city as string) ?? '',
+        ...(updatedAddresses.length > 0 ? { companyAddresses: updatedAddresses } : {}),
+      };
+    });
+  }, [setFormData]);
+
+  // Called by AddressEditor specifically on drag confirm — clears hierarchy (ADR-277).
+  const handleHqDragApplied = useCallback((addr: ResolvedAddressFields) => {
+    applyDragResolve({
+      street: addr.street ?? '',
+      number: addr.number ?? '',
+      postalCode: addr.postalCode ?? '',
+      city: addr.city ?? '',
+      neighborhood: '',
+      region: addr.region ?? '',
+    }, 0);
+  }, [applyDragResolve]);
 
   const isEditing = !disabled;
 
@@ -287,7 +325,7 @@ export function AddressesSectionWithFullscreen({
           {' '}({effectiveAddresses.length + derivedWorkAddresses.length})
         </h3>
 
-        {/* HQ — card view OR inline edit form */}
+        {/* HQ — card view OR inline edit form with AddressEditor (ADR-332 Phase 6) */}
         {!isEditingHQ ? (
           <SharedAddressActionCard
             id="hq"
@@ -310,71 +348,80 @@ export function AddressesSectionWithFullscreen({
                 onChange={handlePrimaryTypeChange}
               />
             </div>
-            <AddressWithHierarchy
-              value={{
-                street: (formData.street as string) || '',
-                number: (formData.streetNumber as string) || '',
-                postalCode: (formData.postalCode as string) || '',
-                country: formData.hqAddressCountry || '',
-                settlementName: (formData.settlement as string) || (formData.city as string) || '',
-                settlementId: (formData.settlementId as string | null) ?? null,
-                communityName: (formData.community as string) || '',
-                municipalUnitName: (formData.municipalUnit as string) || '',
-                municipalityName: (formData.municipality as string) || '',
-                municipalityId: (formData.municipalityId as string | null) ?? null,
-                regionalUnitName: (formData.regionalUnit as string) || '',
-                regionName: (formData.region as string) || '',
-                decentAdminName: (formData.decentAdmin as string) || '',
-                majorGeoName: (formData.majorGeo as string) || '',
-              }}
-              onChange={(addr: AddressWithHierarchyValue) => {
-                if (setFormData) {
-                  const updatedAddresses = [...effectiveAddresses];
-                  // ADR-319: HQ is always index 0 (positional invariant).
-                  const hqIdx = 0;
-                  if (updatedAddresses.length > 0) {
-                    updatedAddresses[hqIdx] = {
-                      ...updatedAddresses[hqIdx],
+            <AddressEditor
+              ref={hqEditorRef}
+              value={hqResolvedFields}
+              onChange={handleHqChange}
+              onDragApplied={handleHqDragApplied}
+              mode="edit"
+              domain="contact"
+              formOptions={{ hideGrid: true }}
+            >
+              <AddressWithHierarchy
+                value={{
+                  street: (formData.street as string) || '',
+                  number: (formData.streetNumber as string) || '',
+                  postalCode: (formData.postalCode as string) || '',
+                  country: formData.hqAddressCountry || '',
+                  settlementName: (formData.settlement as string) || (formData.city as string) || '',
+                  settlementId: (formData.settlementId as string | null) ?? null,
+                  communityName: (formData.community as string) || '',
+                  municipalUnitName: (formData.municipalUnit as string) || '',
+                  municipalityName: (formData.municipality as string) || '',
+                  municipalityId: (formData.municipalityId as string | null) ?? null,
+                  regionalUnitName: (formData.regionalUnit as string) || '',
+                  regionName: (formData.region as string) || '',
+                  decentAdminName: (formData.decentAdmin as string) || '',
+                  majorGeoName: (formData.majorGeo as string) || '',
+                }}
+                onChange={(addr: AddressWithHierarchyValue) => {
+                  if (setFormData) {
+                    const updatedAddresses = [...effectiveAddresses];
+                    const hqIdx = 0;
+                    if (updatedAddresses.length > 0) {
+                      updatedAddresses[hqIdx] = {
+                        ...updatedAddresses[hqIdx],
+                        street: addr.street,
+                        number: addr.number,
+                        city: addr.settlementName || addr.municipalityName,
+                        postalCode: addr.postalCode,
+                        country: addr.country || undefined,
+                        settlementId: addr.settlementId,
+                        communityName: addr.communityName,
+                        municipalUnitName: addr.municipalUnitName,
+                        municipalityName: addr.municipalityName,
+                        municipalityId: addr.municipalityId,
+                        regionalUnitName: addr.regionalUnitName,
+                        regionName: addr.regionName,
+                        region: addr.regionName,
+                        decentAdminName: addr.decentAdminName,
+                        majorGeoName: addr.majorGeoName,
+                      };
+                    }
+                    setFormData({
+                      ...formData,
                       street: addr.street,
-                      number: addr.number,
-                      city: addr.settlementName || addr.municipalityName,
+                      streetNumber: addr.number,
                       postalCode: addr.postalCode,
-                      country: addr.country || undefined,
+                      hqAddressCountry: addr.country || undefined,
+                      city: addr.settlementName || addr.municipalityName,
+                      settlement: addr.settlementName,
                       settlementId: addr.settlementId,
-                      communityName: addr.communityName,
-                      municipalUnitName: addr.municipalUnitName,
-                      municipalityName: addr.municipalityName,
+                      community: addr.communityName,
+                      municipalUnit: addr.municipalUnitName,
+                      municipality: addr.municipalityName,
                       municipalityId: addr.municipalityId,
-                      regionalUnitName: addr.regionalUnitName,
-                      regionName: addr.regionName,
+                      regionalUnit: addr.regionalUnitName,
                       region: addr.regionName,
-                      decentAdminName: addr.decentAdminName,
-                      majorGeoName: addr.majorGeoName,
-                    };
+                      decentAdmin: addr.decentAdminName,
+                      majorGeo: addr.majorGeoName,
+                      companyAddresses: updatedAddresses,
+                    });
                   }
-                  setFormData({
-                    ...formData,
-                    street: addr.street,
-                    streetNumber: addr.number,
-                    postalCode: addr.postalCode,
-                    hqAddressCountry: addr.country || undefined,
-                    city: addr.settlementName || addr.municipalityName,
-                    settlement: addr.settlementName,
-                    settlementId: addr.settlementId,
-                    community: addr.communityName,
-                    municipalUnit: addr.municipalUnitName,
-                    municipality: addr.municipalityName,
-                    municipalityId: addr.municipalityId,
-                    regionalUnit: addr.regionalUnitName,
-                    region: addr.regionName,
-                    decentAdmin: addr.decentAdminName,
-                    majorGeo: addr.majorGeoName,
-                    companyAddresses: updatedAddresses,
-                  });
-                }
-              }}
-              disabled={disabled}
-            />
+                }}
+                disabled={disabled}
+              />
+            </AddressEditor>
             <div className="flex justify-end border-t pt-3">
               <Button type="button" variant="outline" onClick={() => setIsEditingHQ(false)}>
                 {tAddr('deleteDialog.cancel')}
@@ -409,7 +456,7 @@ export function AddressesSectionWithFullscreen({
           }}
         />
 
-        {/* ADR-318: Derived work addresses from professional relationships (read-only) */}
+        {/* ADR-318: Derived work addresses (read-only) — source label shows "derived" */}
         {derivedWorkAddresses.length > 0 && (
           <ul className="space-y-4 pt-2">
             {derivedWorkAddresses.map((addr, i) => (
@@ -420,6 +467,9 @@ export function AddressesSectionWithFullscreen({
                   typeLabel={`${tAddr('types.work')} — ${addr.companyName}`}
                   isEditing={false}
                 />
+                <div className="mt-1 pl-1">
+                  <AddressSourceLabel source="derived" />
+                </div>
               </li>
             ))}
           </ul>
@@ -439,43 +489,24 @@ export function AddressesSectionWithFullscreen({
           readOnlyExtraAddresses={derivedPinAddresses}
           draggable={isEditing}
           onDragResolve={isEditing && setFormData ? (addr: DragResolvedAddress, addressIndex: number) => {
-            // 📍 ADR-277: Check if HQ has hierarchy that would be cleared.
-            // Individuals keep hierarchy on flat formData fields (no companyAddresses entry),
-            // so also look at formData.settlementId when the target pin is the HQ.
-            const targetAddr = effectiveAddresses[addressIndex];
-            // ADR-319: HQ positional invariant — index 0 is always primary.
-            const isHQ = addressIndex === 0;
-            const hasHierarchy = isHQ && (targetAddr?.settlementId || formData.settlementId);
-
-            if (hasHierarchy) {
-              setPendingDrag({ addr, index: addressIndex });
-              return;
+            // ADR-319: HQ is always index 0.
+            // HQ drag → AddressEditor confirm dialog (ADR-332 Phase 6, replaces ADR-277 AlertDialog).
+            // Branch drag → apply directly (no hierarchy to clear for branches).
+            if (addressIndex === 0) {
+              hqEditorRef.current?.setPendingDrag({
+                street: addr.street,
+                number: addr.number,
+                postalCode: addr.postalCode,
+                city: addr.city,
+                neighborhood: addr.neighborhood,
+                region: addr.region,
+              });
+            } else {
+              applyDragResolve(addr, addressIndex);
             }
-            applyDragResolve(addr, addressIndex);
           } : undefined}
         />
       </aside>
-
-      {/* 📍 ADR-277: Map drag hierarchy warning */}
-      <AlertDialog open={pendingDrag !== null} onOpenChange={(open) => { if (!open) setPendingDrag(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{tCommon('contacts.addressImpact.mapDragWarning.title')}</AlertDialogTitle>
-            <AlertDialogDescription>{tCommon('contacts.addressImpact.mapDragWarning.body')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tCommon('contacts.addressImpact.mapDragWarning.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (pendingDrag) {
-                applyDragResolve(pendingDrag.addr, pendingDrag.index);
-                setPendingDrag(null);
-              }
-            }}>
-              {tCommon('contacts.addressImpact.mapDragWarning.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </FullscreenOverlay>
   );
 }

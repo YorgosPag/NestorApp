@@ -101,8 +101,7 @@ jobs:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
           echo "Triggering Coolify redeploy..."
-          curl -s -X GET \
+          RESPONSE=$(curl -s -X GET \
             -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
-            "http://159.195.44.221:8000/api/v1/applications/f661kuiq901llma0o8unhvpi/deploy" \
-            | python3 -c "import json,sys; d=json.load(sys.stdin); print('Deploy triggered:', d.get('message', d))" \
-            || echo "Deploy trigger sent"
+            "http://159.195.44.221:8000/api/v1/applications/f661kuiq901llma0o8unhvpi/start")
+          echo "Coolify response: ${RESPONSE}"
