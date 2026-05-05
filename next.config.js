@@ -389,9 +389,14 @@ const nextConfig = {
 // ADR-259D: Wrap with Sentry for error monitoring + source map upload
 // Source map upload requires SENTRY_ORG + SENTRY_PROJECT env vars.
 // Without them (e.g. self-hosted Coolify deploy), skip upload to avoid exit(255).
+const disableSentryWebpack = process.env.DISABLE_SENTRY_WEBPACK === 'true' ||
+  !process.env.SENTRY_ORG || !process.env.SENTRY_PROJECT;
+
 module.exports = withSentryConfig(nextConfig, {
   silent: true,
   hideSourceMaps: true,
   telemetry: false,
-  disableSourceMapUpload: !process.env.SENTRY_ORG || !process.env.SENTRY_PROJECT,
+  disableSourceMapUpload: disableSentryWebpack,
+  disableServerWebpackPlugin: disableSentryWebpack,
+  disableClientWebpackPlugin: disableSentryWebpack,
 });
