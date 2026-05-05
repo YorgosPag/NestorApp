@@ -12,6 +12,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-05-05 | ✅ **Phase 1 COMPLETED** — state machine + core hooks (Layer 3+4). 9 files NEW + 1 MODIFY (`editor/types.ts` extended `FIELD_EDITED`/`CORRECTION_APPLIED` events with `nowMs` for full purity, added `AddressEditorErrorReason` helper type). State machine pure (no React, no `Date.now()` inside reducer): `addressEditorMachine.ts` exposes `reduce()` + `createAddressEditorMachine()` factory; `transitions.ts` holds the switch + `buildFreshness()` + helpers. Hooks: `useAddressEditor` (master, wires `geocodeAddress` + debounce + diff + activity), `useAddressFieldStatus` (per-field status map), `useAddressActivity` (verbosity-filtered ring buffer, max 200 events). Helper: `diffAddressFields` (case+accent-insensitive via `normalizeGreekText`). Demo page `/demo/addresses-editor-state` = state debugger. Tests: 35 green (27 machine + 8 diff). NO push (CLAUDE.md N.(-1)). |
 | 2026-05-05 | ✅ **Phase 0 COMPLETED** — engine multi-result + foundation types. 5 files (3 NEW + 2 MODIFY). 11 jest tests green. Two commits in same session: (a) ADR file proposed, (b) Layer 1+2 implementation (engine returns top + up to 4 alternatives, resolvedFields normalized, attemptsLog with i18n keys for all 8 variants, per-field match matrix, partialMatch detection, source provenance). Backward compatibility: legacy `GeocodingApiResponse` core fields (lat/lng/accuracy/confidence/displayName/resolvedCity) preserved unchanged — additive enrichment only. NO push (CLAUDE.md N.(-1)). |
 | 2026-05-05 | 📋 PROPOSED — bozza iniziale dopo session di clarificazione (3 round Q&A — coordinator A+optin → coordinator pieno; 1 form → 3 form; trigger 1 → trigger 4). Mandate Giorgio: "πιο προηγμένο σύστημα που μπορεί να υπάρχει… πλήρης πληροφόρηση κάθε στιγμή". 11 phases, 1 phase per session, handoff-driven. |
 
@@ -895,7 +896,7 @@ Sistema considerato `IMPLEMENTED` quando:
 | Phase | Status | Session Date | Commit Hash | Notes |
 |-------|--------|--------------|-------------|-------|
 | Phase 0 — ADR + Foundation Types | ✅ COMPLETED | 2026-05-05 | ADR + multi-result | Two commits: (a) ADR file proposed, (b) engine multi-result + types foundation. 11 tests green. Backward-compat preserved. |
-| Phase 1 — State Machine + Core Hooks | ⏳ PENDING | — | — | — |
+| Phase 1 — State Machine + Core Hooks | ✅ COMPLETED | 2026-05-05 | TBD | 9 NEW + 1 MODIFY. Pure machine + 3 hooks (useAddressEditor, useAddressFieldStatus, useAddressActivity) + diff helper + demo page. 35 jest tests green. `nowMs` added to FIELD_EDITED/CORRECTION_APPLIED events for full reducer purity. |
 | Phase 2 — Suggestions + Reconciliation Logic | ⏳ PENDING | — | — | — |
 | Phase 3 — Presentational Components Set 1 | ⏳ PENDING | — | — | — |
 | Phase 4 — Presentational Components Set 2 | ⏳ PENDING | — | — | — |

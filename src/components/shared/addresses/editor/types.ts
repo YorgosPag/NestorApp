@@ -202,16 +202,18 @@ export type AddressEditorPhase = AddressEditorState['phase'];
  * Events that drive transitions in `addressEditorMachine`. Each event triggers
  * a transition function that returns the next `AddressEditorState`.
  */
+export type AddressEditorErrorReason = Extract<AddressEditorState, { phase: 'error' }>['reason'];
+
 export type AddressEditorEvent =
-  | { type: 'FIELD_EDITED'; field: keyof ResolvedAddressFields; value: string }
+  | { type: 'FIELD_EDITED'; field: keyof ResolvedAddressFields; value: string; nowMs: number }
   | { type: 'DEBOUNCE_TICK'; nowMs: number }
   | { type: 'GEOCODE_STARTED'; attempt: number; totalAttempts: number; variantI18nKey: string }
   | { type: 'GEOCODE_SUCCESS'; result: GeocodingApiResponse; nowMs: number }
-  | { type: 'GEOCODE_FAILED'; reason: AddressEditorState extends { phase: 'error' } ? AddressEditorState['reason'] : never }
+  | { type: 'GEOCODE_FAILED'; reason: AddressEditorErrorReason }
   | { type: 'CONFLICT_DETECTED'; conflicts: AddressFieldConflict[] }
   | { type: 'SUGGESTIONS_TRIGGERED'; candidates: GeocodingApiResponse[]; reason: SuggestionTrigger }
   | { type: 'STALE_FLAGGED' }
-  | { type: 'CORRECTION_APPLIED' }
+  | { type: 'CORRECTION_APPLIED'; nowMs: number }
   | { type: 'RESET' };
 
 // =============================================================================
