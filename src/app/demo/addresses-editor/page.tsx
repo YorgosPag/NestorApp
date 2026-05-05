@@ -1,13 +1,19 @@
 /**
- * Demo — ADR-332 Phase 4: Presentational Components Set 2
+ * Demo — ADR-332 Phase 5: AddressEditor end-to-end + Phase 3-4 component showcase
  *
- * Showcases all 5 panel components + Phase 3 status indicators.
  * Route: /demo/addresses-editor
+ *
+ * Phase 5 section (top): live <AddressEditor> coordinator — type an address and
+ * watch the activity log, confidence meter, and reconciliation panel react in
+ * real time.
+ *
+ * Phase 3-4 sections (bottom): static fixtures for all presentational components.
  */
 
 'use client';
 
 import { useState } from 'react';
+import { AddressEditor } from '@/components/shared/addresses/editor';
 import { AddressFieldBadge } from '@/components/shared/addresses/editor/components/AddressFieldBadge';
 import { AddressConfidenceMeter } from '@/components/shared/addresses/editor/components/AddressConfidenceMeter';
 import { AddressSourceLabel } from '@/components/shared/addresses/editor/components/AddressSourceLabel';
@@ -25,6 +31,7 @@ import type {
   AddressSourceType,
   AddressFreshness,
   GeocodingApiResponse,
+  ResolvedAddressFields,
   SuggestionRanking,
 } from '@/components/shared/addresses/editor/types';
 
@@ -74,6 +81,61 @@ const MOCK_CANDIDATES: SuggestionRanking[] = [
   makeMockCandidate('Σαμοθράκης 16, Καλαμαριά, 55132', 0.75, 4200),
   makeMockCandidate('Σαμοθράκης, Εύοσμος, 56224', 0.61, 8900),
 ];
+
+// --- Phase 5: end-to-end coordinator demo ---
+
+const DEMO_INITIAL_ADDRESS: ResolvedAddressFields = {
+  street: 'Σαμοθράκης',
+  number: '16',
+  city: 'Θεσσαλονίκη',
+  postalCode: '54621',
+};
+
+function AddressEditorDemo() {
+  const [address, setAddress] = useState<ResolvedAddressFields>(DEMO_INITIAL_ADDRESS);
+  const [viewMode, setViewMode] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant={viewMode ? 'outline' : 'default'}
+          onClick={() => setViewMode(false)}
+        >
+          Edit mode
+        </Button>
+        <Button
+          size="sm"
+          variant={viewMode ? 'default' : 'outline'}
+          onClick={() => setViewMode(true)}
+        >
+          View mode
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setAddress(DEMO_INITIAL_ADDRESS)}
+        >
+          Reset
+        </Button>
+      </div>
+      <AddressEditor
+        value={address}
+        onChange={setAddress}
+        mode={viewMode ? 'view' : 'edit'}
+        activityLog={{ enabled: true, verbosity: 'detailed' }}
+        className="border rounded-lg p-4"
+      />
+      <details className="text-xs">
+        <summary className="cursor-pointer text-muted-foreground">Current value (JSON)</summary>
+        <pre className="mt-2 p-2 bg-muted rounded text-[10px] overflow-auto">
+          {JSON.stringify(address, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
 
 // --- Layout helpers ---
 

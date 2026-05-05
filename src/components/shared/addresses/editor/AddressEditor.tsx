@@ -163,6 +163,7 @@ export function AddressEditor({
   mode = 'edit',
   activityLog: activityLogOpts,
   className,
+  children,
 }: AddressEditorProps) {
   const { t } = useTranslation('addresses');
 
@@ -422,6 +423,8 @@ export function AddressEditor({
           onConfirm={handleDragConfirm}
           onCancel={() => setPendingDrag(null)}
         />
+
+        {children}
       </div>
     </AddressEditorContext.Provider>
   );

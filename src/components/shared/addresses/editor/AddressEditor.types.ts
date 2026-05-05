@@ -9,6 +9,8 @@
  * @see ADR-332 §3.3 Coordinator API
  */
 
+import type { ReactNode } from 'react';
+
 export type {
   AddressEditorMode,
   AddressEditorDomain,
@@ -49,4 +51,6 @@ export interface AddressEditorProps {
   /** Telemetry options (reserved for Phase 9). */
   telemetry?: AddressEditorTelemetryOptions;
   className?: string;
+  /** Optional children rendered inside the editor context — can use `useAddressEditorContext()`. */
+  children?: ReactNode;
 }
