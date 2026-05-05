@@ -105,3 +105,22 @@ jobs:
             -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
             "http://159.195.44.221:8000/api/v1/applications/f661kuiq901llma0o8unhvpi/start")
           echo "Coolify response: ${RESPONSE}"
+
+      - name: Telegram notification
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          STATUS="${{ job.status }}"
+          if [ "$STATUS" = "success" ]; then
+            ICON="✅"
+            LABEL="Deploy completato"
+          else
+            ICON="❌"
+            LABEL="Deploy FALLITO"
+          fi
+          COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | head -1)
+          TEXT="${ICON} *NestorApp — ${LABEL}*%0A%0A📝 ${COMMIT_MSG}%0A🔗 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}&text=${TEXT}&parse_mode=Markdown"
