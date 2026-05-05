@@ -44,7 +44,7 @@ jobs:
       - name: Build Next.js app
         run: pnpm run build
         env:
-          NODE_OPTIONS: '--max-old-space-size=10240'
+          NODE_OPTIONS: '--max-old-space-size=12288'
           NODE_ENV: production
           DISABLE_SENTRY_WEBPACK: 'true'
           NEXT_TELEMETRY_DISABLED: '1'

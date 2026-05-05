@@ -144,6 +144,13 @@ const nextConfig = {
     // parallelism:1 → sequential → peak ~2-3GB, safe on 8GB+4GB swap.
     config.parallelism = 1;
 
+    // [CI-OOM] Disable filesystem cache in CI — PackFileCache serializes large
+    // strings (180KB+) and holds them in heap during build, adding ~1-2GB peak.
+    // On CI runners (7GB RAM) the heap already hits 9GB live; cache pushes it over.
+    if (process.env.CI) {
+      config.cache = false;
+    }
+
     // [CRITICAL] Disable module concatenation on server bundles to prevent
     // TDZ errors ("Cannot access 'f' before initialization").
     // Module concatenation inlines modules into a single scope, which can
