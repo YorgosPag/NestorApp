@@ -111,7 +111,9 @@
     "stale": "Παλιές συντεταγμένες σε {count} διεύθυνση",
     "stale_other": "Παλιές συντεταγμένες σε {count} διευθύνσεις",
     "error": "Δεν βρέθηκε καμία διεύθυνση",
-    "forceRegeocode": "Ανανέωση χάρτη"
+    "forceRegeocode": "Ανανέωση χάρτη",
+    "conflict": "Σύγκρουση πεδίων",
+    "suggestions": "Εναλλακτικές τοποθεσίες"
   },
   "hierarchy": {
     "settlementCity": "Οικισμός / Πόλη",
@@ -187,6 +189,65 @@
         "staleTimeElapsed": "Έχει παρέλθει πολύς χρόνος από την επαλήθευση",
         "staleForceRefresh": "Αναμένεται αναγκαστική ανανέωση"
       }
+    },
+    "activity": {
+      "title": "Αρχείο Δραστηριότητας",
+      "clear": "Εκκαθάριση",
+      "copy": "Αντιγραφή JSON",
+      "copied": "Αντιγράφηκε!",
+      "verbosity": {
+        "label": "Λεπτομέρεια",
+        "basic": "Βασικό",
+        "detailed": "Λεπτομερές",
+        "debug": "Αποσφαλμάτωση"
+      },
+      "empty": "Δεν υπάρχουν γεγονότα ακόμα",
+      "collapse": "Σύμπτυξη",
+      "expand": "Ανάπτυξη"
+    },
+    "reconciliation": {
+      "title": "Συμφωνία Πεδίων",
+      "subtitle": "Εντοπίστηκαν διαφορές μεταξύ των τιμών σας και των αποτελεσμάτων γεωκωδικοποίησης",
+      "yourValue": "Τιμή σας",
+      "systemValue": "Τιμή συστήματος",
+      "apply": "Διόρθωση",
+      "keep": "Άφησέ το",
+      "applyAll": "Διόρθωσέ τα όλα",
+      "keepAll": "Άφησέ τα όλα",
+      "trySuggestions": "Δοκίμασε άλλον συνδυασμό",
+      "allResolved": "Όλες οι διαφορές επιλύθηκαν",
+      "pending": "{count} {count, plural, one {εκκρεμής διαφορά} other {εκκρεμείς διαφορές}}"
+    },
+    "suggestions": {
+      "title": "Πιθανές Τοποθεσίες",
+      "triggerReason": {
+        "noResultsAfterRetry": "Δεν βρέθηκε αποτέλεσμα μετά από επαναπροσπάθειες",
+        "lowConfidence": "Χαμηλή βεβαιότητα τοποθεσίας",
+        "multipleCandidatesSimilar": "Πολλαπλές παρόμοιες τοποθεσίες",
+        "partialMatchFlag": "Μερική αντιστοίχιση διεύθυνσης"
+      },
+      "confidence": "Βεβαιότητα: {percent}%",
+      "distance": "{distance}μ",
+      "select": "Επιλογή",
+      "empty": "Δεν υπάρχουν εναλλακτικές",
+      "retryWithout": "Χωρίς {field}",
+      "noMoreRetries": "Εξαντλήθηκαν οι επαναπροσπάθειες"
+    },
+    "diff": {
+      "title": "Σύνοψη Αλλαγών",
+      "noChanges": "Δεν υπάρχουν αλλαγές",
+      "fieldsChanged": "{count} {count, plural, one {πεδίο αλλάζει} other {πεδία αλλάζουν}}"
+    },
+    "dragConfirm": {
+      "title": "Επιβεβαίωση Αλλαγής Θέσης",
+      "description": "Η νέα θέση διαφέρει από την τρέχουσα διεύθυνση. Θέλετε να ενημερωθεί η φόρμα;",
+      "confirm": "Ναι, ενημέρωσε",
+      "cancel": "Ακύρωση",
+      "newAddress": "Νέα θέση",
+      "currentAddress": "Τρέχουσα διεύθυνση"
+    },
+    "fields": {
+      "county": "Νομός / Π.Ε."
     }
   }
 }

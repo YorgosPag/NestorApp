@@ -111,7 +111,9 @@
     "stale": "Stale coordinates on {count} address",
     "stale_other": "Stale coordinates on {count} addresses",
     "error": "No address found",
-    "forceRegeocode": "Refresh map"
+    "forceRegeocode": "Refresh map",
+    "conflict": "Field conflicts",
+    "suggestions": "Location suggestions"
   },
   "hierarchy": {
     "settlementCity": "Settlement / City",
@@ -187,6 +189,65 @@
         "staleTimeElapsed": "Too much time has passed since verification",
         "staleForceRefresh": "Force-refresh pending"
       }
+    },
+    "activity": {
+      "title": "Activity Log",
+      "clear": "Clear",
+      "copy": "Copy as JSON",
+      "copied": "Copied!",
+      "verbosity": {
+        "label": "Verbosity",
+        "basic": "Basic",
+        "detailed": "Detailed",
+        "debug": "Debug"
+      },
+      "empty": "No events yet",
+      "collapse": "Collapse",
+      "expand": "Expand"
+    },
+    "reconciliation": {
+      "title": "Field Reconciliation",
+      "subtitle": "Differences found between your values and the geocoding results",
+      "yourValue": "Your value",
+      "systemValue": "System value",
+      "apply": "Apply",
+      "keep": "Keep",
+      "applyAll": "Apply all",
+      "keepAll": "Keep all",
+      "trySuggestions": "Try other combinations",
+      "allResolved": "All differences resolved",
+      "pending": "{count} {count, plural, one {pending difference} other {pending differences}}"
+    },
+    "suggestions": {
+      "title": "Location Suggestions",
+      "triggerReason": {
+        "noResultsAfterRetry": "No results found after retries",
+        "lowConfidence": "Low confidence in location",
+        "multipleCandidatesSimilar": "Multiple similar locations found",
+        "partialMatchFlag": "Partial address match"
+      },
+      "confidence": "Confidence: {percent}%",
+      "distance": "{distance}m",
+      "select": "Select",
+      "empty": "No alternatives available",
+      "retryWithout": "Without {field}",
+      "noMoreRetries": "All retries exhausted"
+    },
+    "diff": {
+      "title": "Changes Summary",
+      "noChanges": "No changes",
+      "fieldsChanged": "{count} {count, plural, one {field changes} other {fields change}}"
+    },
+    "dragConfirm": {
+      "title": "Confirm Location Change",
+      "description": "The new pin position differs from the current address. Update the form?",
+      "confirm": "Yes, update",
+      "cancel": "Cancel",
+      "newAddress": "New position",
+      "currentAddress": "Current address"
+    },
+    "fields": {
+      "county": "County / Regional Unit"
     }
   }
 }
