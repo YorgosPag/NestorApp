@@ -36,7 +36,10 @@ export async function GET(request: NextRequest) {
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleDownload(req, ctx);
     },
-    { permissions: 'photos:photos:upload' }
+    // Auth only — no role permission required.
+    // Firebase Storage Rules enforce companyId tenant isolation per file.
+    // photos:photos:upload was too restrictive: blocked procurement/quote PDFs.
+    {}
   );
 
   return handler(request);
