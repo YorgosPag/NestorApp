@@ -174,6 +174,17 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     matrix: immutableMatrix(),
   },
   {
+    // ADR-332 §3.7 Phase 9 — geocoding correction telemetry.
+    // Tenant-scoped reads (any authenticated user of the correction's company),
+    // every client write denies. Writes go through Admin SDK in the
+    // address-corrections-telemetry service.
+    collection: 'address_corrections_log',
+    pattern: 'admin_write_only',
+    testFile: 'tests/firestore-rules/suites/address-corrections-log.rules.test.ts',
+    rulesRange: [2339, 2347],
+    matrix: adminWriteOnlyMatrix(),
+  },
+  {
     collection: 'attendance_events',
     pattern: 'tenant_dual_path',
     testFile: 'tests/firestore-rules/suites/attendance-events.rules.test.ts',

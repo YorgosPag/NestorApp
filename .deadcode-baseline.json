@@ -1,13 +1,14 @@
 {
-  "generated": "2026-05-05T21:34:57.344Z",
+  "generated": "2026-05-05T22:29:12.672Z",
   "knipVersion": "6",
   "files": [
     "src/components/contacts/pickers/AdministrativeAddressPicker.tsx",
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
+    "src/components/shared/addresses/editor/hooks/useAddressTelemetry.ts",
     "src/subapps/procurement/components/ConflictDialog.tsx",
     "src/subapps/procurement/hooks/useLiveChangeToasts.ts",
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
     "src/subapps/procurement/services/trade-registry.ts"
   ],
-  "fileCount": 6
+  "fileCount": 7
 }
