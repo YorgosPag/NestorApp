@@ -456,9 +456,10 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
         )}
 
         {/* Live status chip — Google-style real-time feedback (idle/loading/
-            partial/stale/error). Visible in both draggable and read-only mode. */}
+            partial/stale/error). Bottom-left avoids the InteractiveMap
+            top-right control cluster + the bottom-right "Locate me" button. */}
         {showGeocodingStatus && (
-          <div className="absolute top-3 right-3 z-10">
+          <div className="absolute bottom-3 left-3 z-10">
             <AddressMapStatusChip
               status={geocodingStatus}
               geocodedCount={geocodedAddresses.size}
