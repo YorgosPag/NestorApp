@@ -252,25 +252,31 @@ export default function AddressesEditorDemoPage() {
   return (
     <main className="mx-auto max-w-3xl p-6 space-y-10">
       <header>
-        <h1 className="text-2xl font-bold">ADR-332 Phase 4 — Panels</h1>
+        <h1 className="text-2xl font-bold">ADR-332 — Enterprise Address Editor</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Interactive panels: activity log, reconciliation, suggestions, diff, drag confirm.
+          Phase 5: end-to-end coordinator · Phase 3-4: component showcase
         </p>
       </header>
 
-      <DemoSection title="AddressActivityLog — ring buffer + verbosity + collapse">
+      <DemoSection title="Phase 5 — AddressEditor (end-to-end: type → debounce → geocode → activity → undo)">
+        <AddressEditorDemo />
+      </DemoSection>
+
+      <hr className="border-dashed" />
+
+      <DemoSection title="Phase 4 — AddressActivityLog — ring buffer + verbosity + collapse">
         <ActivityLogDemo />
       </DemoSection>
 
-      <DemoSection title="AddressReconciliationPanel — per-field apply/keep">
+      <DemoSection title="Phase 4 — AddressReconciliationPanel — per-field apply/keep">
         <ReconciliationDemo />
       </DemoSection>
 
-      <DemoSection title="AddressSuggestionsPanel — keyboard nav ↑↓ Enter Esc">
+      <DemoSection title="Phase 4 — AddressSuggestionsPanel — keyboard nav ↑↓ Enter Esc">
         <SuggestionsDemo />
       </DemoSection>
 
-      <DemoSection title="AddressDiffSummary — compact before/after">
+      <DemoSection title="Phase 4 — AddressDiffSummary — compact before/after">
         <AddressDiffSummary
           conflicts={[
             { field: 'postalCode', userValue: '54621', resolvedValue: '54635' },
@@ -279,13 +285,13 @@ export default function AddressesEditorDemoPage() {
         />
       </DemoSection>
 
-      <DemoSection title="AddressDragConfirmDialog — Radix Dialog">
+      <DemoSection title="Phase 4 — AddressDragConfirmDialog — Radix Dialog">
         <DragConfirmDemo />
       </DemoSection>
 
       <hr className="border-dashed" />
 
-      <DemoSection title="Phase 3 — AddressFieldBadge (all 5 states)">
+      <DemoSection title="Phase 3 — AddressFieldBadge — all 5 states">
         {FIELD_STATUSES.map(({ label, status }) => (
           <Row key={label} label={label}>
             <AddressFieldBadge status={status} />
