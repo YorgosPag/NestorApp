@@ -57,9 +57,8 @@ export function resolveDisplayName(doc: Record<string, unknown>): string {
   return (
     (doc['displayName'] as string | undefined) ??
     (doc['name'] as string | undefined) ??
-    [doc['firstName'], doc['lastName']].filter(Boolean).join(' ') ||
-    (doc['companyName'] as string | undefined) ??
-    ''
+    ([doc['firstName'], doc['lastName']].filter(Boolean).join(' ') ||
+      ((doc['companyName'] as string | undefined) ?? ''))
   );
 }
 
