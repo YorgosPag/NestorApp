@@ -1,12 +1,15 @@
 {
-  "generated": "2026-05-04T21:21:45.574Z",
+  "generated": "2026-05-05T20:13:19.367Z",
   "knipVersion": "6",
   "files": [
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
+    "src/components/shared/addresses/editor/hooks/useAddressReconciliation.ts",
+    "src/components/shared/addresses/editor/hooks/useAddressSuggestions.ts",
+    "src/components/shared/addresses/editor/hooks/useAddressUndo.ts",
     "src/subapps/procurement/components/ConflictDialog.tsx",
     "src/subapps/procurement/hooks/useLiveChangeToasts.ts",
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
     "src/subapps/procurement/services/trade-registry.ts"
   ],
-  "fileCount": 5
+  "fileCount": 8
 }
