@@ -16,7 +16,7 @@
 
 import React, { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { MapPin, MapPinOff, Star } from 'lucide-react';
+import { MapPin, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -24,9 +24,9 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import {
   AddressSourceLabel,
   AddressFreshnessIndicator,
+  AddressCoordsBadge,
   computeFreshness,
 } from '@/components/shared/addresses/editor';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -112,7 +112,7 @@ export function AddressCard({ address, onEdit, className, hideEnrichment }: Addr
           <div className="mt-3 pt-2 border-t border-border flex flex-wrap items-center gap-2">
             <AddressSourceLabel source={sourceType} />
             <AddressFreshnessIndicator freshness={freshness} />
-            <CoordsBadge hasCoords={hasCoords} />
+            <AddressCoordsBadge hasCoords={hasCoords} />
           </div>
         )}
 
@@ -129,29 +129,5 @@ export function AddressCard({ address, onEdit, className, hideEnrichment }: Addr
         )}
       </CardContent>
     </Card>
-  );
-}
-
-// =============================================================================
-// SUB-COMPONENT — has-coords badge
-// =============================================================================
-
-function CoordsBadge({ hasCoords }: { hasCoords: boolean }) {
-  const { t } = useTranslation('addresses');
-  const Icon = hasCoords ? MapPin : MapPinOff;
-  const variant = hasCoords ? 'success' : 'muted';
-  const labelKey = hasCoords ? 'card.coords.has' : 'card.coords.none';
-  const tooltipKey = hasCoords ? 'card.coords.tooltipHas' : 'card.coords.tooltipNone';
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Badge variant={variant} className="gap-1 cursor-default select-none">
-          <Icon className="h-3 w-3" />
-          <span>{t(labelKey)}</span>
-        </Badge>
-      </TooltipTrigger>
-      <TooltipContent>{t(tooltipKey)}</TooltipContent>
-    </Tooltip>
   );
 }

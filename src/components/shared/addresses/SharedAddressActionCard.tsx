@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Pencil, Eraser, Trash2, Star, MapPin, MapPinOff } from 'lucide-react';
+import { Pencil, Eraser, Trash2, Star, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   AddressSourceLabel,
   AddressFreshnessIndicator,
+  AddressCoordsBadge,
   computeFreshness,
   type AddressSourceType,
 } from '@/components/shared/addresses/editor';
@@ -202,33 +203,9 @@ export function SharedAddressActionCard({
         <div className="mt-2 pl-6 flex flex-wrap items-center gap-2">
           {source !== undefined && <AddressSourceLabel source={source} />}
           {freshness && <AddressFreshnessIndicator freshness={freshness} />}
-          {hasCoordinates !== undefined && <CoordsBadge hasCoords={hasCoordinates} />}
+          {hasCoordinates !== undefined && <AddressCoordsBadge hasCoords={hasCoordinates} />}
         </div>
       )}
     </article>
-  );
-}
-
-// =============================================================================
-// SUB-COMPONENT — has-coords badge (mirrors AddressCard)
-// =============================================================================
-
-function CoordsBadge({ hasCoords }: { hasCoords: boolean }) {
-  const { t } = useTranslation('addresses');
-  const Icon = hasCoords ? MapPin : MapPinOff;
-  const variant = hasCoords ? 'success' : 'muted';
-  const labelKey = hasCoords ? 'card.coords.has' : 'card.coords.none';
-  const tooltipKey = hasCoords ? 'card.coords.tooltipHas' : 'card.coords.tooltipNone';
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Badge variant={variant} className="gap-1 cursor-default select-none">
-          <Icon className="h-3 w-3" />
-          <span>{t(labelKey)}</span>
-        </Badge>
-      </TooltipTrigger>
-      <TooltipContent>{t(tooltipKey)}</TooltipContent>
-    </Tooltip>
   );
 }
