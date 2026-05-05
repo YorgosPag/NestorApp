@@ -10,6 +10,13 @@
  */
 
 import type { ReactNode } from 'react';
+import type { ResolvedAddressFields as _ResolvedAddressFields } from './types';
+
+/** Imperative handle exposed via `ref` on `<AddressEditor>`. */
+export interface AddressEditorHandle {
+  /** Queue an externally-resolved drag address for the confirm dialog. */
+  setPendingDrag(addr: _ResolvedAddressFields): void;
+}
 
 export type {
   AddressEditorMode,
@@ -38,6 +45,11 @@ export interface AddressEditorProps {
   value: ResolvedAddressFields;
   /** Called on every user field change. Keep parent state in sync. */
   onChange: (addr: ResolvedAddressFields) => void;
+  /**
+   * Called specifically when a map drag is confirmed (in addition to `onChange`).
+   * Use this to clear Greek hierarchy fields in the parent — drag data has no hierarchy.
+   */
+  onDragApplied?: (addr: ResolvedAddressFields) => void;
   /** 'edit' shows form + geocoding; 'view' is read-only enriched display. Default: 'edit'. */
   mode?: AddressEditorMode;
   /** Domain context — influences field visibility defaults. Default: 'contact'. */

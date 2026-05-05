@@ -259,6 +259,8 @@ export interface AddressEditorFormOptions {
   showAddressType?: boolean;
   showBlockSide?: boolean;
   showCustomLabel?: boolean;
+  /** When true, the internal flat-field grid is hidden. Pass AddressWithHierarchy (or equivalent) as children instead. */
+  hideGrid?: boolean;
 }
 
 export interface AddressEditorMapOptions {

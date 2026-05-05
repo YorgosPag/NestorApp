@@ -10,7 +10,7 @@
  * @see ADR-332 §3.3 Coordinator API
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Redo2, RotateCcw, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ import { AddressReconciliationPanel } from './components/AddressReconciliationPa
 import { AddressSuggestionsPanel } from './components/AddressSuggestionsPanel';
 import { AddressDragConfirmDialog } from './components/AddressDragConfirmDialog';
 import { AddressEditorContext } from './AddressEditorContext';
-import type { AddressEditorProps } from './AddressEditor.types';
+import type { AddressEditorProps, AddressEditorHandle } from './AddressEditor.types';
 import type {
   AddressEditorState,
   AddressFieldStatus,
@@ -157,14 +157,17 @@ function useEditorKeyboard(
 // Coordinator
 // =============================================================================
 
-export function AddressEditor({
-  value,
-  onChange,
-  mode = 'edit',
-  activityLog: activityLogOpts,
-  className,
-  children,
-}: AddressEditorProps) {
+export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>(
+  function AddressEditor({
+    value,
+    onChange,
+    onDragApplied,
+    mode = 'edit',
+    formOptions,
+    activityLog: activityLogOpts,
+    className,
+    children,
+  }, ref) {
   const { t } = useTranslation('addresses');
 
   // Semi-controlled: internal form state; reset on value identity change.
@@ -185,6 +188,10 @@ export function AddressEditor({
       setUserInput(value);
     }
   }, [value]);
+
+  useImperativeHandle(ref, () => ({
+    setPendingDrag: (addr: ResolvedAddressFields) => setPendingDrag(addr),
+  }), []);
 
   // === Hook wiring ===
   const editor = useAddressEditor(userInput, {
@@ -277,9 +284,10 @@ export function AddressEditor({
     });
     setUserInput(pendingDrag);
     onChange(pendingDrag);
+    onDragApplied?.(pendingDrag);
     editor.markStale();
     setPendingDrag(null);
-  }, [pendingDrag, undoHook, onChange, editor]);
+  }, [pendingDrag, undoHook, onChange, onDragApplied, editor]);
 
   // === Panel visibility ===
   const showReconciliation =
@@ -353,21 +361,23 @@ export function AddressEditor({
           <AddressConfidenceMeter confidence={confidence} />
         )}
 
-        {/* Form grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {FIELD_CONFIGS.map(({ field, labelKey, placeholderKey }) => (
-            <FormFieldRow
-              key={field}
-              field={field}
-              label={t(labelKey)}
-              placeholder={placeholderKey ? t(placeholderKey) : undefined}
-              value={userInput[field] ?? ''}
-              onChange={(v) => handleFieldChange(field, v)}
-              status={editor.fieldStatus[field]}
-              disabled={mode === 'view'}
-            />
-          ))}
-        </div>
+        {/* Form body: internal flat grid OR children (when formOptions.hideGrid) */}
+        {formOptions?.hideGrid ? children : (
+          <div className="grid grid-cols-2 gap-3">
+            {FIELD_CONFIGS.map(({ field, labelKey, placeholderKey }) => (
+              <FormFieldRow
+                key={field}
+                field={field}
+                label={t(labelKey)}
+                placeholder={placeholderKey ? t(placeholderKey) : undefined}
+                value={userInput[field] ?? ''}
+                onChange={(v) => handleFieldChange(field, v)}
+                status={editor.fieldStatus[field]}
+                disabled={mode === 'view'}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Reconciliation panel */}
         {showReconciliation && (
@@ -424,8 +434,10 @@ export function AddressEditor({
           onCancel={() => setPendingDrag(null)}
         />
 
-        {children}
+        {!formOptions?.hideGrid && children}
       </div>
     </AddressEditorContext.Provider>
   );
-}
+});
+
+AddressEditor.displayName = 'AddressEditor';
