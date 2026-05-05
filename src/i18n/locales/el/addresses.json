@@ -248,6 +248,28 @@
     },
     "fields": {
       "county": "Νομός / Π.Ε."
+    },
+    "coordinator": {
+      "phase": {
+        "idle": "Εισάγετε διεύθυνση",
+        "typing": "Καταχώρηση...",
+        "debouncing": "Αναμονή...",
+        "loading": "Αναζήτηση...",
+        "success": "Επαληθεύτηκε",
+        "partial": "Μερική αντιστοίχιση",
+        "conflict": "Απαιτείται επιλογή",
+        "suggestions": "Επιλέξτε τοποθεσία",
+        "stale": "Παλιά δεδομένα",
+        "error": "Σφάλμα αναζήτησης"
+      },
+      "retryGeocode": "Επανάληψη"
+    },
+    "undo": {
+      "fieldCorrection": "Διόρθωση: {field}",
+      "bulkCorrection": "Μαζική διόρθωση",
+      "suggestionAccepted": "Αποδοχή εναλλακτικής",
+      "dragApplied": "Εφαρμογή θέσης χάρτη",
+      "formCleared": "Εκκαθάριση φόρμας"
     }
   }
 }

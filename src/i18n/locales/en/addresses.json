@@ -248,6 +248,28 @@
     },
     "fields": {
       "county": "County / Regional Unit"
+    },
+    "coordinator": {
+      "phase": {
+        "idle": "Enter an address",
+        "typing": "Typing...",
+        "debouncing": "Waiting...",
+        "loading": "Searching...",
+        "success": "Verified",
+        "partial": "Partial match",
+        "conflict": "Resolution required",
+        "suggestions": "Select a location",
+        "stale": "Stale data",
+        "error": "Search error"
+      },
+      "retryGeocode": "Retry"
+    },
+    "undo": {
+      "fieldCorrection": "Correction: {field}",
+      "bulkCorrection": "Bulk correction",
+      "suggestionAccepted": "Suggestion accepted",
+      "dragApplied": "Map position applied",
+      "formCleared": "Form cleared"
     }
   }
 }
