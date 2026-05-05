@@ -126,7 +126,7 @@ function EditableField({
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="mt-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+        className="mt-1 h-8 text-sm"
       />
     </div>
   );
