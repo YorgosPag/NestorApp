@@ -579,9 +579,11 @@ export function formatAddressForGeocoding(address: ProjectAddress): StructuredGe
  * @returns Geocodable addresses
  */
 export function getGeocodableAddresses(addresses: ProjectAddress[]): ProjectAddress[] {
-  return addresses.filter(addr =>
-    (addr.coordinates?.lat && addr.coordinates?.lng)
-    || addr.city?.trim()
-    || (addr.street?.trim() && addr.postalCode?.trim())
-  );
+  return addresses.filter(addr => {
+    if (addr.coordinates?.lat && addr.coordinates?.lng) return true;
+    if (addr.city?.trim()) return true;
+    const street = addr.street?.trim() ?? '';
+    const postal = addr.postalCode?.trim() ?? '';
+    return street.length >= 4 && postal.length >= 4;
+  });
 }

@@ -29,6 +29,16 @@ import {
 } from './contact-details-helpers';
 import { usePersonaToggle } from './usePersonaToggle';
 const logger = createModuleLogger('ContactDetails');
+
+const VALIDATION_FIELD_TAB: Record<string, string> = {
+  companyName: 'basicInfo', tradeName: 'basicInfo',
+  vatNumber: 'basicInfo', companyVatNumber: 'basicInfo',
+  communication: 'communication', phones: 'communication',
+  emails: 'communication', websites: 'communication',
+  firstName: 'basicInfo', lastName: 'basicInfo',
+  birthDate: 'basicInfo', documentIssueDate: 'basicInfo', documentExpiryDate: 'basicInfo',
+  serviceName: 'basicInfo', name: 'basicInfo',
+};
 interface ValidationResult {
   isValid: boolean;
   fieldErrors: Record<string, string>;
@@ -250,8 +260,12 @@ export function useContactDetailsController({
 
     setValidationErrors(validationResult.fieldErrors);
     if (!validationResult.isValid) {
-      contactNotifications.validationReviewFields();
-      focusField(validationResult.firstErrorField);
+      const firstField = validationResult.firstErrorField;
+      const firstErrorKey = firstField ? validationResult.fieldErrors[firstField] : undefined;
+      contactNotifications.validationReviewFieldsWithHint(firstErrorKey ?? '');
+      const errorTab = firstField ? VALIDATION_FIELD_TAB[firstField] : undefined;
+      if (errorTab) setActiveTab(errorTab);
+      focusField(firstField);
       return;
     }
 

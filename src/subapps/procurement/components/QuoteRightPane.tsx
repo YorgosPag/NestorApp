@@ -8,16 +8,17 @@
  * Extracted from RfqDetailClient to keep that file within the 500-line budget.
  */
 
-import { useMemo, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useIsMobile } from '@/hooks/useMobile';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { QuoteDetailsHeader } from './QuoteDetailsHeader';
 import { QuoteDetailSummary } from './QuoteDetailSummary';
-import { QuoteEditMode } from './QuoteEditMode';
+import { QuoteEditMode, type QuoteEditModeHandle } from './QuoteEditMode';
 import { QuoteOriginalDocumentPanel } from './QuoteOriginalDocumentPanel';
 import type { Quote } from '../types/quote';
 import type {
@@ -69,6 +70,14 @@ export function QuoteRightPane({
   const hasPdf = quote.source === 'scan' || quote.source === 'email_inbox';
 
   const [editMode, setEditMode] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editCanSave, setEditCanSave] = useState(true);
+  const editModeRef = useRef<QuoteEditModeHandle>(null);
+
+  const editModeActions = useMemo(() => [
+    { ...createEntityAction('cancel', t('rfqs.editDialog.cancel'), () => setEditMode(false)), disabled: editSaving },
+    { ...createEntityAction('save', editSaving ? t('rfqs.editDialog.saving') : t('rfqs.editDialog.save'), () => editModeRef.current?.triggerSave()), disabled: editSaving || !editCanSave },
+  ], [t, editSaving, editCanSave]);
 
   const editableOverflowActions = useMemo(
     () => overflowActions.filter((a) => a.id !== 'edit'),
@@ -92,24 +101,37 @@ export function QuoteRightPane({
         {t('rfqs.mobile.backToList')}
       </button>
 
-      <QuoteDetailsHeader
-        quote={quote}
-        onCreateNew={onCreateNew}
-        onEdit={() => setEditMode(true)}
-        onRequestRenewal={onRequestRenewal}
-        primaryActions={headerPrimaryActions}
-        secondaryActions={secondaryActions}
-        overflowActions={editableOverflowActions}
-        pdfOpen={pdfOpen}
-        onTogglePdf={onTogglePdf}
-        hasPdf={hasPdf}
-      />
+      {editMode ? (
+        <EntityDetailsHeader
+          icon={FileText}
+          title={t('rfqs.editDialog.title')}
+          subtitle={quote.displayNumber}
+          variant="detailed"
+          actions={editModeActions}
+        />
+      ) : (
+        <QuoteDetailsHeader
+          quote={quote}
+          onCreateNew={onCreateNew}
+          onEdit={() => setEditMode(true)}
+          onRequestRenewal={onRequestRenewal}
+          primaryActions={headerPrimaryActions}
+          secondaryActions={secondaryActions}
+          overflowActions={editableOverflowActions}
+          pdfOpen={pdfOpen}
+          onTogglePdf={onTogglePdf}
+          hasPdf={hasPdf}
+        />
+      )}
 
       {editMode ? (
         <QuoteEditMode
+          ref={editModeRef}
           quote={quote}
           onCancel={() => setEditMode(false)}
           onSaved={() => setEditMode(false)}
+          onSavingChange={setEditSaving}
+          onCanSaveChange={setEditCanSave}
         />
       ) : (
         /* Desktop split: PDF left, summary right */

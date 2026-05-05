@@ -124,104 +124,107 @@ export function useAddressMapGeocoding({
   // ===========================================================================
 
   useEffect(() => {
-    const geocodeAllAddresses = async () => {
-      if (addresses.length === 0) {
-        setGeocodingStatus('idle');
-        setGeocodedAddresses(new Map());
-        setDragPositions(new Map());
-        return;
-      }
-
-      const currentIds = new Set(addresses.map(a => a.id));
-      setGeocodedAddresses(prev => {
-        const next = new Map<string, GeocodingServiceResult>();
-        prev.forEach((v, id) => { if (currentIds.has(id)) next.set(id, v); });
-        return next;
-      });
-      setDragPositions(prev => {
-        const next = new Map<string, DragPosition>();
-        prev.forEach((v, id) => { if (currentIds.has(id)) next.set(id, v); });
-        return next;
-      });
-
-      setGeocodingStatus('loading');
-
-      try {
-        const geocodable = getGeocodableAddresses(addresses);
-
-        if (geocodable.length === 0) {
+    const timer = setTimeout(() => {
+      const geocodeAllAddresses = async () => {
+        if (addresses.length === 0) {
           setGeocodingStatus('idle');
           setGeocodedAddresses(new Map());
           setDragPositions(new Map());
           return;
         }
 
-        const geocodedMap = new Map<string, GeocodingServiceResult>();
-        let successCount = 0;
+        const currentIds = new Set(addresses.map(a => a.id));
+        setGeocodedAddresses(prev => {
+          const next = new Map<string, GeocodingServiceResult>();
+          prev.forEach((v, id) => { if (currentIds.has(id)) next.set(id, v); });
+          return next;
+        });
+        setDragPositions(prev => {
+          const next = new Map<string, DragPosition>();
+          prev.forEach((v, id) => { if (currentIds.has(id)) next.set(id, v); });
+          return next;
+        });
 
-        for (let i = 0; i < geocodable.length; i++) {
-          const addr = geocodable[i];
-          try {
-            // Use stored coordinates if available — skip Nominatim
-            if (addr.coordinates?.lat && addr.coordinates?.lng) {
-              geocodedMap.set(addr.id, {
-                lat: addr.coordinates.lat,
-                lng: addr.coordinates.lng,
-                accuracy: 'exact',
-                confidence: 1,
-                displayName: [addr.street, addr.number, addr.city].filter(Boolean).join(' '),
-              });
-              successCount++;
-              continue;
-            }
-            const query = formatAddressForGeocoding(addr);
-            const result = await geocodeAddress(query);
-            if (result) {
-              geocodedMap.set(addr.id, result);
-              successCount++;
-            }
-          } catch {
-            logger.warn('Geocoding failed for address', { data: { id: addr.id } });
+        setGeocodingStatus('loading');
+
+        try {
+          const geocodable = getGeocodableAddresses(addresses);
+
+          if (geocodable.length === 0) {
+            setGeocodingStatus('idle');
+            setGeocodedAddresses(new Map());
+            setDragPositions(new Map());
+            return;
           }
-        }
 
-        setGeocodedAddresses(geocodedMap);
+          const geocodedMap = new Map<string, GeocodingServiceResult>();
+          let successCount = 0;
 
-        logger.info('Geocoding complete', { data: {
-          totalAddresses: addresses.length,
-          geocodableAddresses: geocodable.length,
-          successCount,
-        } });
-
-        if (successCount === 0) {
-          setGeocodingStatus('error');
-        } else if (successCount < geocodable.length) {
-          setGeocodingStatus('partial');
-        } else {
-          setGeocodingStatus('success');
-        }
-
-        onGeocodingComplete?.(geocodedMap);
-
-        // For draggable mode: initialize drag positions from geocoded results
-        if (draggableMarkers && successCount > 0) {
-          setDragPositions(prev => {
-            const next = new Map(prev);
-            geocodedMap.forEach((result, id) => {
-              if (!next.has(id)) {
-                next.set(id, { lng: result.lng, lat: result.lat });
+          for (let i = 0; i < geocodable.length; i++) {
+            const addr = geocodable[i];
+            try {
+              // Use stored coordinates if available — skip Nominatim
+              if (addr.coordinates?.lat && addr.coordinates?.lng) {
+                geocodedMap.set(addr.id, {
+                  lat: addr.coordinates.lat,
+                  lng: addr.coordinates.lng,
+                  accuracy: 'exact',
+                  confidence: 1,
+                  displayName: [addr.street, addr.number, addr.city].filter(Boolean).join(' '),
+                });
+                successCount++;
+                continue;
               }
-            });
-            return next;
-          });
-        }
-      } catch (error) {
-        logger.error('Geocoding failed:', { error });
-        setGeocodingStatus('error');
-      }
-    };
+              const query = formatAddressForGeocoding(addr);
+              const result = await geocodeAddress(query);
+              if (result) {
+                geocodedMap.set(addr.id, result);
+                successCount++;
+              }
+            } catch {
+              logger.warn('Geocoding failed for address', { data: { id: addr.id } });
+            }
+          }
 
-    geocodeAllAddresses();
+          setGeocodedAddresses(geocodedMap);
+
+          logger.info('Geocoding complete', { data: {
+            totalAddresses: addresses.length,
+            geocodableAddresses: geocodable.length,
+            successCount,
+          } });
+
+          if (successCount === 0) {
+            setGeocodingStatus('error');
+          } else if (successCount < geocodable.length) {
+            setGeocodingStatus('partial');
+          } else {
+            setGeocodingStatus('success');
+          }
+
+          onGeocodingComplete?.(geocodedMap);
+
+          // For draggable mode: initialize drag positions from geocoded results
+          if (draggableMarkers && successCount > 0) {
+            setDragPositions(prev => {
+              const next = new Map(prev);
+              geocodedMap.forEach((result, id) => {
+                if (!next.has(id)) {
+                  next.set(id, { lng: result.lng, lat: result.lat });
+                }
+              });
+              return next;
+            });
+          }
+        } catch (error) {
+          logger.error('Geocoding failed:', { error });
+          setGeocodingStatus('error');
+        }
+      };
+
+      geocodeAllAddresses();
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [addresses, onGeocodingComplete]);
 
   // ===========================================================================

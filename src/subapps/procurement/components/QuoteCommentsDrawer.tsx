@@ -8,7 +8,7 @@ import { X, Pencil, Trash2, SendHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIsMobile } from '@/hooks/useMobile';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -235,7 +235,7 @@ export function QuoteCommentsDrawer({
       <SheetContent
         side={isMobile ? 'bottom' : 'right'}
         className={cn(
-          'flex flex-col p-0 gap-0',
+          'flex flex-col p-0 gap-0 [&>button]:hidden',
           isMobile ? 'max-h-[75dvh] rounded-t-xl' : 'w-80',
         )}
       >
@@ -253,12 +253,10 @@ export function QuoteCommentsDrawer({
               <span className="hidden sm:inline text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded leading-none">
                 {t('rfqs.comments.internalOnly')}
               </span>
-              <SheetClose asChild>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0">
-                  <X className="size-4" />
-                  <span className="sr-only">{t('rfqs.comments.closeAria')}</span>
-                </Button>
-              </SheetClose>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={onClose}>
+                <X className="size-4" />
+                <span className="sr-only">{t('rfqs.comments.closeAria')}</span>
+              </Button>
             </div>
           </div>
         </SheetHeader>

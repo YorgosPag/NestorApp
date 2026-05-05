@@ -1,13 +1,12 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Lock, Save, X } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { QuoteLineEditorTable } from './QuoteLineEditorTable';
 import { computeQuoteTotals } from '../types/quote';
@@ -54,17 +53,24 @@ function resolveFlag(topLevel: boolean | null | undefined, extracted: boolean | 
 // PROPS
 // ============================================================================
 
+export interface QuoteEditModeHandle {
+  triggerSave: () => void;
+}
+
 export interface QuoteEditModeProps {
   quote: Quote;
   onCancel: () => void;
   onSaved: () => void;
+  onSavingChange?: (saving: boolean) => void;
+  onCanSaveChange?: (canSave: boolean) => void;
 }
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
-export function QuoteEditMode({ quote, onCancel, onSaved }: QuoteEditModeProps) {
+export const QuoteEditMode = React.forwardRef<QuoteEditModeHandle, QuoteEditModeProps>(
+function QuoteEditMode({ quote, onCancel, onSaved, onSavingChange, onCanSaveChange }, ref) {
   const { t } = useTranslation('quotes');
 
   const [validUntil, setValidUntil] = useState(() => timestampToDateStr(quote.validUntil));
@@ -81,6 +87,9 @@ export function QuoteEditMode({ quote, onCancel, onSaved }: QuoteEditModeProps) 
   const [lineErrors, setLineErrors] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { onSavingChange?.(saving); }, [saving, onSavingChange]);
+  useEffect(() => { onCanSaveChange?.(!lineErrors); }, [lineErrors, onCanSaveChange]);
 
   const handleValidationChange = useCallback((hasErrors: boolean) => {
     setLineErrors(hasErrors);
@@ -117,6 +126,8 @@ export function QuoteEditMode({ quote, onCancel, onSaved }: QuoteEditModeProps) 
     }
   }, [quote.id, lines, validUntil, paymentTerms, deliveryTerms, warranty, vatIncluded, laborIncluded, lineErrors, onSaved, t]);
 
+  useImperativeHandle(ref, () => ({ triggerSave: () => void handleSave() }), [handleSave]);
+
   const extractedData = quote.extractedData;
   const vatConf = extractedData?.vatIncluded?.confidence ?? null;
   const laborConf = extractedData?.laborIncluded?.confidence ?? null;
@@ -129,21 +140,6 @@ export function QuoteEditMode({ quote, onCancel, onSaved }: QuoteEditModeProps) 
 
   return (
     <article className="flex flex-col gap-5 p-4 sm:p-6">
-      {/* Toolbar */}
-      <header className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">{t('rfqs.editDialog.title')}</h2>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
-            <X className="mr-1 h-4 w-4" />
-            {t('rfqs.editDialog.cancel')}
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving || lineErrors}>
-            <Save className="mr-1 h-4 w-4" />
-            {saving ? t('rfqs.editDialog.saving') : t('rfqs.editDialog.save')}
-          </Button>
-        </div>
-      </header>
-
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -255,7 +251,8 @@ export function QuoteEditMode({ quote, onCancel, onSaved }: QuoteEditModeProps) 
       </section>
     </article>
   );
-}
+});
+QuoteEditMode.displayName = 'QuoteEditMode';
 
 // ============================================================================
 // SUBCOMPONENTS

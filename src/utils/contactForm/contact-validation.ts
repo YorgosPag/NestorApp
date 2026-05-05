@@ -151,7 +151,12 @@ export function validateIndividualContact(formData: ContactFormData): ContactVal
 
   const arrayResult = validateCommunicationArrays(formData);
   if (!arrayResult.valid && arrayResult.errorKey) {
-    setFieldError(fieldErrors, 'communication', arrayResult.errorKey);
+    const k = arrayResult.errorKey;
+    const field = k.toLowerCase().includes('phone') ? 'phones'
+      : k.toLowerCase().includes('email') ? 'emails'
+      : k.toLowerCase().includes('url') ? 'websites'
+      : 'communication';
+    setFieldError(fieldErrors, field, arrayResult.errorKey);
   }
 
   return buildValidationResult(fieldErrors);
@@ -171,7 +176,12 @@ export function validateCompanyContact(formData: ContactFormData): ContactValida
 
   const arrayResult = validateCommunicationArrays(formData);
   if (!arrayResult.valid && arrayResult.errorKey) {
-    setFieldError(fieldErrors, 'communication', arrayResult.errorKey);
+    const k = arrayResult.errorKey;
+    const field = k.toLowerCase().includes('phone') ? 'phones'
+      : k.toLowerCase().includes('email') ? 'emails'
+      : k.toLowerCase().includes('url') ? 'websites'
+      : 'communication';
+    setFieldError(fieldErrors, field, arrayResult.errorKey);
   }
 
   return buildValidationResult(fieldErrors);
@@ -188,7 +198,12 @@ export function validateServiceContact(formData: ContactFormData): ContactValida
 
   const arrayResult = validateCommunicationArrays(formData);
   if (!arrayResult.valid && arrayResult.errorKey) {
-    setFieldError(fieldErrors, 'communication', arrayResult.errorKey);
+    const k = arrayResult.errorKey;
+    const field = k.toLowerCase().includes('phone') ? 'phones'
+      : k.toLowerCase().includes('email') ? 'emails'
+      : k.toLowerCase().includes('url') ? 'websites'
+      : 'communication';
+    setFieldError(fieldErrors, field, arrayResult.errorKey);
   }
 
   return buildValidationResult(fieldErrors);

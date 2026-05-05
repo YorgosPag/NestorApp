@@ -30,6 +30,7 @@
 
 import { useMemo } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { NOTIFICATION_KEYS } from '@/config/notification-keys';
 
 export interface ContactNotifications {
@@ -40,10 +41,12 @@ export interface ContactNotifications {
   readonly uploadsPending: () => void;
   readonly validationUnknownType: () => void;
   readonly validationReviewFields: () => void;
+  readonly validationReviewFieldsWithHint: (firstErrorKey: string) => void;
 }
 
 export function useContactNotifications(): ContactNotifications {
   const { success, error, info } = useNotifications();
+  const { t } = useTranslation('contacts-form');
 
   return useMemo<ContactNotifications>(
     () => ({
@@ -54,7 +57,11 @@ export function useContactNotifications(): ContactNotifications {
       uploadsPending: () => info(NOTIFICATION_KEYS.contacts.form.pendingUploads, { duration: 3000 }),
       validationUnknownType: () => error(NOTIFICATION_KEYS.contacts.validation.unknownType),
       validationReviewFields: () => error(NOTIFICATION_KEYS.contacts.validation.reviewHighlightedFields),
+      validationReviewFieldsWithHint: (firstErrorKey: string) => {
+        const hint = firstErrorKey ? t(firstErrorKey, { defaultValue: '' }) : '';
+        error(NOTIFICATION_KEYS.contacts.validation.reviewHighlightedFields, hint ? { content: hint } : undefined);
+      },
     }),
-    [success, error, info],
+    [success, error, info, t],
   );
 }

@@ -40,6 +40,13 @@ import {
   setContactLogoIfEmpty,
 } from './resolve-helpers';
 
+function splitStreetNumber(raw: string): { street: string; number: string } {
+  const trimmed = raw.trim();
+  const match = /^(.+?)\s+(\d+[α-ωΑ-Ω]?)\s*$/.exec(trimmed);
+  if (match) return { street: match[1].trim(), number: match[2] };
+  return { street: trimmed, number: '' };
+}
+
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
@@ -111,8 +118,10 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         }
 
         if (vendorAddress || vendorCity) {
+          const { street: parsedStreet, number: parsedNumber } = splitStreetNumber(vendorAddress ?? '');
           const addressEntry = {
-            street: vendorAddress ?? '',
+            street: parsedStreet,
+            ...(parsedNumber ? { number: parsedNumber } : {}),
             city: vendorCity ?? '',
             postalCode: vendorPostalCode ?? '',
             country: vendorCountry ?? null,
