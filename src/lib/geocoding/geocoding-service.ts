@@ -1,16 +1,17 @@
 /**
  * =============================================================================
- * 🗺️ GEOCODING SERVICE — Client-side Service Layer
+ * GEOCODING SERVICE — Client-side Service Layer
  * =============================================================================
  *
- * Client-side service that calls the server-side `/api/geocoding` endpoint.
- * Provides in-memory caching and batch geocoding with rate-limit awareness.
+ * Client-side wrapper around the server-side `/api/geocoding` endpoint.
+ * Provides in-memory caching, in-flight deduplication, and reverse-geocoding
+ * helpers for the drag-end flow.
  *
- * Features:
- * - Structured geocoding via server-side Nominatim proxy
- * - In-memory cache with normalized keys (accent-insensitive)
- * - Batch geocoding with sequential 1.2s delays (Nominatim TOS)
- * - Reuses normalizeGreekText for cache key generation
+ * ADR-332 Phase 0: types extracted to `geocoding-types.ts` (SSoT). The
+ * service-level result shape (`GeocodingServiceResult`) is now an alias of
+ * the full `GeocodingApiResponse`, so consumers automatically gain access
+ * to the new transparency fields (resolvedFields, alternatives, partialMatch,
+ * reasoning, source) without any breaking change to existing reads.
  *
  * @module lib/geocoding/geocoding-service
  */
@@ -18,60 +19,23 @@
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import type {
+  StructuredGeocodingQuery,
+  GeocodingServiceResult,
+  ReverseGeocodingResult,
+} from '@/lib/geocoding/geocoding-types';
 
 const logger = createModuleLogger('geocoding-service');
 
 // =============================================================================
-// TYPES
+// LEGACY TYPE RE-EXPORTS (consumers continue to import from this module)
 // =============================================================================
 
-/**
- * Structured geocoding query — used by formatAddressForGeocoding()
- * and the /api/geocoding endpoint.
- */
-export interface StructuredGeocodingQuery {
-  street?: string;
-  city?: string;
-  /** Neighborhood / area — more specific than city (e.g. "Εύοσμος" within "Θεσσαλονίκη") */
-  neighborhood?: string;
-  postalCode?: string;
-  /** Regional Unit / Π.Ε. — maps to Nominatim `county` (e.g. "Π.Ε. Θεσσαλονίκης") */
-  county?: string;
-  /** Municipality / Δήμος (e.g. "Δήμος Καλαμαριάς") — used for free-form fallback */
-  municipality?: string;
-  region?: string;
-  country?: string;
-}
-
-/**
- * Geocoding result returned by the service.
- */
-export interface GeocodingServiceResult {
-  lat: number;
-  lng: number;
-  accuracy: 'exact' | 'interpolated' | 'approximate' | 'center';
-  confidence: number;
-  displayName: string;
-  /** City/town/village resolved by Nominatim — for auto-fill */
-  resolvedCity?: string;
-}
-
-/**
- * Reverse geocoding result — structured address data from coordinates.
- * Returned by the /api/geocoding/reverse endpoint.
- */
-export interface ReverseGeocodingResult {
-  street: string;
-  number: string;
-  city: string;
-  neighborhood: string;
-  postalCode: string;
-  region: string;
-  country: string;
-  displayName: string;
-  lat: number;
-  lng: number;
-}
+export type {
+  StructuredGeocodingQuery,
+  GeocodingServiceResult,
+  ReverseGeocodingResult,
+} from '@/lib/geocoding/geocoding-types';
 
 // =============================================================================
 // CACHE
@@ -80,10 +44,6 @@ export interface ReverseGeocodingResult {
 const geocodingCache = new Map<string, GeocodingServiceResult>();
 const geocodingInFlight = new Map<string, Promise<GeocodingServiceResult | null>>();
 
-/**
- * Generate a cache key from a structured query.
- * Uses normalizeGreekText for accent-insensitive matching.
- */
 function getCacheKey(query: StructuredGeocodingQuery): string {
   return [
     query.street,
@@ -102,11 +62,8 @@ function getCacheKey(query: StructuredGeocodingQuery): string {
 // API CALL
 // =============================================================================
 
-/**
- * Call the server-side geocoding endpoint.
- */
 async function callGeocodingApi(
-  query: StructuredGeocodingQuery
+  query: StructuredGeocodingQuery,
 ): Promise<GeocodingServiceResult | null> {
   try {
     const response = await fetch(GEOGRAPHIC_CONFIG.GEOCODING.API_ENDPOINT, {
@@ -138,14 +95,14 @@ async function callGeocodingApi(
 // =============================================================================
 
 /**
- * Geocode a single structured address.
- * Results are cached in-memory for the session.
+ * Geocode a single structured address. Results are cached in-memory for the
+ * session lifetime.
  *
  * @param query - Structured address fields
- * @returns Geocoding result or null if not found
+ * @returns Geocoding result (with alternatives and reasoning) or null if not found
  */
 export async function geocodeAddress(
-  query: StructuredGeocodingQuery
+  query: StructuredGeocodingQuery,
 ): Promise<GeocodingServiceResult | null> {
   const cacheKey = getCacheKey(query);
 
@@ -155,7 +112,6 @@ export async function geocodeAddress(
     return cached;
   }
 
-  // Dedup concurrent requests for the same address (prevents Nominatim 429)
   const inFlight = geocodingInFlight.get(cacheKey);
   if (inFlight) {
     logger.info('Geocoding in-flight dedup', { data: { key: cacheKey } });
@@ -173,17 +129,12 @@ export async function geocodeAddress(
 }
 
 /**
- * Reverse geocode coordinates to a structured address.
- * Calls the server-side /api/geocoding/reverse endpoint.
- * No caching — drag positions are unique.
- *
- * @param lat - Latitude
- * @param lng - Longitude
- * @returns Structured address or null if not found
+ * Reverse geocode coordinates to a structured address. No caching — drag
+ * positions are unique per gesture.
  */
 export async function reverseGeocode(
   lat: number,
-  lng: number
+  lng: number,
 ): Promise<ReverseGeocodingResult | null> {
   try {
     const params = new URLSearchParams({
@@ -192,7 +143,7 @@ export async function reverseGeocode(
     });
 
     const response = await fetch(
-      `${GEOGRAPHIC_CONFIG.GEOCODING.API_ENDPOINT}/reverse?${params.toString()}`
+      `${GEOGRAPHIC_CONFIG.GEOCODING.API_ENDPOINT}/reverse?${params.toString()}`,
     );
 
     if (response.status === 404) {
