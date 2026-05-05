@@ -39,7 +39,23 @@
   "card": {
     "primary": "Primary",
     "side": "Side",
-    "edit": "Edit"
+    "edit": "Edit",
+    "coords": {
+      "has": "Has coordinates",
+      "none": "No coordinates",
+      "tooltipHas": "This address has stored map coordinates",
+      "tooltipNone": "No map coordinates stored for this address"
+    }
+  },
+  "actionCard": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "clear": "Clear",
+    "setPrimary": "Set as primary",
+    "primary": "Primary"
+  },
+  "procurement": {
+    "selectedFromAddress": "Source address from project"
   },
   "list": {
     "title": "Addresses",

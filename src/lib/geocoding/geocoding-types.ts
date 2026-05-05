@@ -205,6 +205,27 @@ export interface GeocodingSource {
 }
 
 // =============================================================================
+// SOURCE TYPE — provenance label for stored addresses (ADR-332 §3.10 / Phase 8)
+// =============================================================================
+
+/**
+ * Provenance category for a *stored* address record. Drives the
+ * `<AddressSourceLabel>` chip in read-only views and source attribution in
+ * telemetry.
+ *
+ * Distinct from `GeocodingSource` (which describes a single geocoding hit's
+ * origin — Nominatim/cache/manual). `AddressSourceType` is broader and
+ * captures the lifecycle of how a persisted address arrived in the database.
+ */
+export type AddressSourceType =
+  | 'geocoded'   // Resolved automatically via Nominatim
+  | 'dragged'    // Pin moved manually on the map
+  | 'manual'     // Typed without geocoding
+  | 'derived'    // Inherited from a parent record (ADR-318)
+  | 'imported'   // External import (CSV, API, etc.)
+  | 'unknown';   // Pre-ADR-332 records without provenance metadata
+
+// =============================================================================
 // REVERSE GEOCODING (drag-end flow)
 // =============================================================================
 

@@ -14,5 +14,8 @@ export type { AddressEditorProps, AddressEditorHandle } from './AddressEditor.ty
 export type { AddressEditorContextValue } from './AddressEditorContext';
 export { AddressFieldBadge } from './components/AddressFieldBadge';
 export { AddressSourceLabel } from './components/AddressSourceLabel';
+export { AddressFreshnessIndicator } from './components/AddressFreshnessIndicator';
 export { AddressDragConfirmDialog } from './components/AddressDragConfirmDialog';
 export type { AddressDragConfirmDialogProps } from './components/AddressDragConfirmDialog';
+export { computeFreshness } from './helpers/computeFreshness';
+export type { AddressSourceType, AddressFreshness, AddressFreshnessLevel } from './types';

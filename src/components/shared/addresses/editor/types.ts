@@ -38,6 +38,7 @@ export type {
   FieldMatchKind,
   FieldMatchMap,
   ConfidenceBreakdown,
+  AddressSourceType,
 } from '@/lib/geocoding/geocoding-types';
 
 // =============================================================================
@@ -67,13 +68,10 @@ export interface AddressFieldConflict {
 // SOURCE & FRESHNESS (Layer 5 — AddressSourceLabel, AddressFreshnessIndicator)
 // =============================================================================
 
-export type AddressSourceType =
-  | 'geocoded'
-  | 'dragged'
-  | 'manual'
-  | 'derived'
-  | 'imported'
-  | 'unknown';
+// `AddressSourceType` SSoT lives in `@/lib/geocoding/geocoding-types` since
+// Phase 8 — `src/types/project/addresses.ts` consumes it for the persisted
+// `ProjectAddress.source` field. Re-exported above with the other geocoding
+// types so editor consumers keep their single import path.
 
 export type AddressFreshnessLevel =
   | 'never'

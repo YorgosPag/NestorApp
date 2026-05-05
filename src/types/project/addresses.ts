@@ -14,10 +14,16 @@
  * - Block side tracking (north, south, east, west)
  * - Address type taxonomy (site, entrance, delivery, legal)
  * - Greek cadastral code support (ΚΑΕΚ)
+ * - Provenance + freshness metadata (ADR-332 §3.10 / Phase 8)
  *
  * @file addresses.ts
  * @created 2026-02-02
  */
+
+import type {
+  AddressSourceType,
+  GeocodingAccuracy,
+} from '@/lib/geocoding/geocoding-types';
 
 // =============================================================================
 // ADDRESS TYPES & ENUMS
@@ -140,6 +146,31 @@ export interface ProjectAddress {
   coordinates?: {
     lat: number;
     lng: number;
+  };
+
+  // 🔍 Provenance & verification (ADR-332 §3.10 / Phase 8)
+  /**
+   * How this address was acquired. Drives the `<AddressSourceLabel>` chip in
+   * read-only views and source attribution in correction telemetry.
+   * Optional — pre-Phase-8 records fall back to `'unknown'` at render time.
+   */
+  source?: AddressSourceType;
+  /**
+   * Unix-ms timestamp of the last successful geocoding / reverse-geocoding
+   * cycle for this record. Drives `<AddressFreshnessIndicator>` (never /
+   * fresh / recent / aging / stale).
+   */
+  verifiedAt?: number;
+  /**
+   * Frozen geocoding metadata captured at write time. Lets read-only surfaces
+   * show confidence + accuracy + the engine variant that produced this hit
+   * without re-querying Nominatim.
+   */
+  geocodingMetadata?: {
+    confidence: number;
+    accuracy: GeocodingAccuracy;
+    variantUsed: number;
+    osmType?: string;
   };
 
   // 📊 Ordering

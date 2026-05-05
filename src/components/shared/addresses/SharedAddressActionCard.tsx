@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Pencil, Eraser, Trash2, Star, MapPin } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Pencil, Eraser, Trash2, Star, MapPin, MapPinOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import {
+  AddressSourceLabel,
+  AddressFreshnessIndicator,
+  computeFreshness,
+  type AddressSourceType,
+} from '@/components/shared/addresses/editor';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -26,11 +33,25 @@ export interface SharedAddressActionCardProps {
   onClear?: () => void;
   onSetPrimary?: () => void;
   className?: string;
+  /** Override default i18n label for the edit action. */
   editLabel?: string;
+  /** Override default i18n label for the delete action. */
   deleteLabel?: string;
+  /** Override default i18n label for the clear action. */
   clearLabel?: string;
+  /** Override default i18n label for the "set as primary" action. */
   setPrimaryLabel?: string;
+  /** Override default i18n label for the primary chip. */
   primaryLabel?: string;
+  /**
+   * Provenance of this address (ADR-332 §3.10 / Phase 8). When omitted the
+   * source enrichment row is hidden.
+   */
+  source?: AddressSourceType;
+  /** Unix-ms timestamp of last successful geocoding cycle. */
+  verifiedAt?: number | null;
+  /** Whether the address has stored map coordinates. */
+  hasCoordinates?: boolean;
 }
 
 // =============================================================================
@@ -48,15 +69,31 @@ export function SharedAddressActionCard({
   onClear,
   onSetPrimary,
   className,
-  editLabel = 'Επεξεργασία',
-  deleteLabel = 'Διαγραφή',
-  clearLabel = 'Εκκαθάριση',
-  setPrimaryLabel = 'Ορισμός ως κύρια',
-  primaryLabel = 'Κύρια',
+  editLabel,
+  deleteLabel,
+  clearLabel,
+  setPrimaryLabel,
+  primaryLabel,
+  source,
+  verifiedAt,
+  hasCoordinates,
 }: SharedAddressActionCardProps) {
+  const { t } = useTranslation('addresses');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
+
+  const editText = editLabel ?? t('actionCard.edit');
+  const deleteText = deleteLabel ?? t('actionCard.delete');
+  const clearText = clearLabel ?? t('actionCard.clear');
+  const setPrimaryText = setPrimaryLabel ?? t('actionCard.setPrimary');
+  const primaryText = primaryLabel ?? t('actionCard.primary');
+
+  const showEnrichment = source !== undefined || verifiedAt != null || hasCoordinates !== undefined;
+  const freshness = useMemo(
+    () => (verifiedAt !== undefined ? computeFreshness(verifiedAt) : null),
+    [verifiedAt],
+  );
 
   return (
     <article
@@ -73,7 +110,7 @@ export function SharedAddressActionCard({
         {isPrimary ? (
           <Badge variant="default" className="flex items-center gap-1">
             <Star className="h-3 w-3 fill-current" />
-            {primaryLabel}
+            {primaryText}
           </Badge>
         ) : (
           onSetPrimary && (
@@ -89,7 +126,7 @@ export function SharedAddressActionCard({
                   <Star className={iconSizes.sm} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{setPrimaryLabel}</TooltipContent>
+              <TooltipContent>{setPrimaryText}</TooltipContent>
             </Tooltip>
           )
         )}
@@ -103,12 +140,12 @@ export function SharedAddressActionCard({
                 size="sm"
                 onClick={onEdit}
                 disabled={!isEditing}
-                aria-label={editLabel}
+                aria-label={editText}
               >
                 <Pencil className={iconSizes.sm} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{editLabel}</TooltipContent>
+            <TooltipContent>{editText}</TooltipContent>
           </Tooltip>
         )}
 
@@ -121,12 +158,12 @@ export function SharedAddressActionCard({
                 size="sm"
                 onClick={onClear}
                 disabled={!isEditing}
-                aria-label={clearLabel}
+                aria-label={clearText}
               >
                 <Eraser className={iconSizes.sm} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{clearLabel}</TooltipContent>
+            <TooltipContent>{clearText}</TooltipContent>
           </Tooltip>
         )}
 
@@ -139,12 +176,12 @@ export function SharedAddressActionCard({
                 size="sm"
                 onClick={onDelete}
                 disabled={!isEditing}
-                aria-label={deleteLabel}
+                aria-label={deleteText}
               >
                 <Trash2 className={iconSizes.sm} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{deleteLabel}</TooltipContent>
+            <TooltipContent>{deleteText}</TooltipContent>
           </Tooltip>
         )}
       </div>
@@ -159,6 +196,39 @@ export function SharedAddressActionCard({
 
       {/* Type label */}
       <p className={cn('text-xs', colors.text.muted, 'pl-6')}>{typeLabel}</p>
+
+      {/* Enrichment row (ADR-332 Phase 8) */}
+      {showEnrichment && (
+        <div className="mt-2 pl-6 flex flex-wrap items-center gap-2">
+          {source !== undefined && <AddressSourceLabel source={source} />}
+          {freshness && <AddressFreshnessIndicator freshness={freshness} />}
+          {hasCoordinates !== undefined && <CoordsBadge hasCoords={hasCoordinates} />}
+        </div>
+      )}
     </article>
+  );
+}
+
+// =============================================================================
+// SUB-COMPONENT — has-coords badge (mirrors AddressCard)
+// =============================================================================
+
+function CoordsBadge({ hasCoords }: { hasCoords: boolean }) {
+  const { t } = useTranslation('addresses');
+  const Icon = hasCoords ? MapPin : MapPinOff;
+  const variant = hasCoords ? 'success' : 'muted';
+  const labelKey = hasCoords ? 'card.coords.has' : 'card.coords.none';
+  const tooltipKey = hasCoords ? 'card.coords.tooltipHas' : 'card.coords.tooltipNone';
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge variant={variant} className="gap-1 cursor-default select-none">
+          <Icon className="h-3 w-3" />
+          <span>{t(labelKey)}</span>
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>{t(tooltipKey)}</TooltipContent>
+    </Tooltip>
   );
 }
