@@ -135,5 +135,58 @@
     "description": "Are you sure you want to delete this address?",
     "confirm": "Delete",
     "cancel": "Cancel"
+  },
+  "editor": {
+    "field": {
+      "badge": {
+        "match": "Match",
+        "mismatch": "Mismatch",
+        "unknown": "Unknown",
+        "notProvided": "Not provided",
+        "pending": "Searching..."
+      },
+      "tooltip": {
+        "match": "Field matches the geocoding result",
+        "mismatch": "Your value ({userValue}) differs from the system ({resolvedValue})",
+        "unknown": "This field was not recognised by the geocoding system",
+        "notProvided": "Field is empty — system found: {resolvedValue}",
+        "notProvidedEmpty": "Field is empty and no system value available",
+        "pending": "Geocoding in progress..."
+      }
+    },
+    "confidence": {
+      "label": "Confidence",
+      "ariaLabel": "Geocoding confidence score: {percent}%"
+    },
+    "source": {
+      "geocoded": "Geocoded",
+      "dragged": "Pin dragged",
+      "manual": "Manual",
+      "derived": "Derived",
+      "imported": "Imported",
+      "unknown": "Unknown source",
+      "tooltip": {
+        "geocoded": "Location resolved automatically from the address",
+        "dragged": "Location set by dragging the pin on the map",
+        "manual": "Address entered manually without geocoding verification",
+        "derived": "Address inherited automatically from the parent record",
+        "imported": "Address imported from an external source",
+        "unknown": "Address source is unknown"
+      }
+    },
+    "freshness": {
+      "never": "Never verified",
+      "fresh": "Fresh",
+      "recent": "Recent",
+      "aging": "Aging",
+      "stale": "Stale",
+      "tooltip": {
+        "verifiedAt": "Last verified: {when}",
+        "never": "This address has never been geocode-verified",
+        "staleFieldChanged": "Fields changed after the last verification",
+        "staleTimeElapsed": "Too much time has passed since verification",
+        "staleForceRefresh": "Force-refresh pending"
+      }
+    }
   }
 }
