@@ -76,7 +76,7 @@ export interface AddEventInput {
 
 export interface UseAddressActivityResult {
   events: GeocodingActivityEvent[];
-  add: (input: AddEventInput) => void;
+  record: (input: AddEventInput) => void;
   clear: () => void;
   setVerbosity: (verbosity: ActivityVerbosity) => void;
   verbosity: ActivityVerbosity;
@@ -101,7 +101,7 @@ export function useAddressActivity(
   const [events, setEvents] = useState<GeocodingActivityEvent[]>([]);
   const seqRef = useRef(0);
 
-  const add = useCallback(
+  const record = useCallback(
     (input: AddEventInput) => {
       if (!shouldRecord(input.level, input.category, verbosity)) return;
       const event: GeocodingActivityEvent = {
@@ -123,8 +123,8 @@ export function useAddressActivity(
   const clear = useCallback(() => setEvents([]), []);
 
   return useMemo(
-    () => ({ events, add, clear, setVerbosity, verbosity }),
-    [events, add, clear, verbosity],
+    () => ({ events, record, clear, setVerbosity, verbosity }),
+    [events, record, clear, verbosity],
   );
 }
 

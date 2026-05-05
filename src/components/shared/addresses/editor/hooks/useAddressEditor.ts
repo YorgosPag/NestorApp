@@ -139,17 +139,17 @@ export function useAddressEditor(
       totalAttempts: 1,
       variantI18nKey: 'addresses.geocoding.attempts.engine',
     });
-    activity.add({ level: 'info', category: 'request', i18nKey: I18N.requestStarted });
+    activity.record({ level: 'info', category: 'request', i18nKey: I18N.requestStarted });
     try {
       const result = await geocodeAddress(toQuery(snapshot));
       if (seq !== requestSeqRef.current) return; // superseded
       if (!result) {
         dispatch({ type: 'GEOCODE_FAILED', reason: 'no-results' });
-        activity.add({ level: 'warn', category: 'response', i18nKey: I18N.responseEmpty });
+        activity.record({ level: 'warn', category: 'response', i18nKey: I18N.responseEmpty });
         return;
       }
       dispatch({ type: 'GEOCODE_SUCCESS', result, nowMs: Date.now() });
-      activity.add({
+      activity.record({
         level: 'success',
         category: 'response',
         i18nKey: I18N.responseSuccess,
@@ -158,7 +158,7 @@ export function useAddressEditor(
       const conflicts = diffAddressFields(snapshot, result.resolvedFields);
       if (conflicts.length > 0) {
         dispatch({ type: 'CONFLICT_DETECTED', conflicts });
-        activity.add({
+        activity.record({
           level: 'warn',
           category: 'conflict',
           i18nKey: I18N.conflictDetected,
@@ -169,7 +169,7 @@ export function useAddressEditor(
       if (seq !== requestSeqRef.current) return;
       const reason = classifyError(err);
       dispatch({ type: 'GEOCODE_FAILED', reason });
-      activity.add({
+      activity.record({
         level: 'error',
         category: 'response',
         i18nKey: I18N.responseError,
@@ -202,7 +202,7 @@ export function useAddressEditor(
     }
     const now = Date.now();
     dispatch({ type: 'FIELD_EDITED', field: 'street', value: '', nowMs: now });
-    activity.add({ level: 'info', category: 'input', i18nKey: I18N.inputChanged });
+    activity.record({ level: 'info', category: 'input', i18nKey: I18N.inputChanged });
     if (!autoGeocode) return;
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
@@ -226,14 +226,14 @@ export function useAddressEditor(
 
   const applyCorrection = useCallback(() => {
     dispatch({ type: 'CORRECTION_APPLIED', nowMs: Date.now() });
-    activity.add({ level: 'success', category: 'apply', i18nKey: 'addresses.activity.applied' });
+    activity.record({ level: 'success', category: 'apply', i18nKey: 'addresses.activity.applied' });
   }, [activity]);
 
   const reset = useCallback(() => {
     requestSeqRef.current += 1;
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     dispatch({ type: 'RESET' });
-    activity.add({ level: 'info', category: 'undo', i18nKey: I18N.reset });
+    activity.record({ level: 'info', category: 'undo', i18nKey: I18N.reset });
   }, [activity]);
 
   const conflicts = useMemo<AddressFieldConflict[]>(() => {
