@@ -107,8 +107,28 @@ export interface AddressMapProps {
 // GEOCODING TYPES
 // =============================================================================
 
-/** Status of the geocoding process */
-export type GeocodingStatus = 'idle' | 'loading' | 'success' | 'partial' | 'error';
+/** Status of the geocoding process.
+ *
+ * `stale` — at least one address has cached `coordinates` but the user has
+ * since edited an address-relevant field (street/number/city/neighborhood/
+ * postalCode/municipality/region/regionalUnit). The map is showing the OLD
+ * pin position; user must hit "force re-geocode" to refresh. Google-style
+ * staleness indicator (vs silent ignore).
+ */
+export type GeocodingStatus = 'idle' | 'loading' | 'success' | 'partial' | 'stale' | 'error';
+
+/** Fields whose change invalidates cached `coordinates` and triggers stale state. */
+export const ADDRESS_GEOCODING_FIELDS = [
+  'street',
+  'number',
+  'city',
+  'neighborhood',
+  'postalCode',
+  'municipality',
+  'region',
+  'regionalUnit',
+  'country',
+] as const satisfies readonly (keyof import('@/types/project/addresses').ProjectAddress)[];
 
 /** Position for a dragged marker */
 export interface DragPosition {

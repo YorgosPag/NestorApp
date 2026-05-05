@@ -65,6 +65,7 @@ import {
   useAddressMapGeocoding,
   findReferencePosition,
 } from '@/components/shared/addresses/useAddressMapGeocoding';
+import { AddressMapStatusChip } from '@/components/shared/addresses/AddressMapStatusChip';
 
 // Re-exports for backward compatibility
 export { PIN_COLORS, BRANCH_PIN_COLORS, AUTO_PAN, DraggableMarkerPin } from '@/components/shared/addresses/address-map-config';
@@ -118,6 +119,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     dragPositions,
     isReverseGeocoding,
     hasEverRendered,
+    staleAddressIds,
+    forceRegeocodeAll,
     handleDragEnd,
     autoPanRafRef,
     autoPanDeltaRef,
@@ -452,16 +455,17 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
           </div>
         )}
 
-        {/* Geocoding Status Badge (read-only mode) */}
-        {showGeocodingStatus && !draggableMarkers && geocodingStatus === 'partial' && (
-          <div className="absolute top-4 right-4">
-            <Badge variant="secondary" className="shadow-md">
-              <AlertTriangle className="w-3 h-3 mr-1" />
-              {t('map.partialStatus', {
-                count: geocodedAddresses.size,
-                total: getGeocodableAddresses(addresses).length
-              })}
-            </Badge>
+        {/* Live status chip — Google-style real-time feedback (idle/loading/
+            partial/stale/error). Visible in both draggable and read-only mode. */}
+        {showGeocodingStatus && (
+          <div className="absolute top-3 right-3 z-10">
+            <AddressMapStatusChip
+              status={geocodingStatus}
+              geocodedCount={geocodedAddresses.size}
+              geocodableTotal={getGeocodableAddresses(addresses).length}
+              staleCount={staleAddressIds.size}
+              onForceRegeocode={forceRegeocodeAll}
+            />
           </div>
         )}
       </PolygonSystemProvider>

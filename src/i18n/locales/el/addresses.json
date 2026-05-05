@@ -104,6 +104,15 @@
     "locationError": "Δεν ήταν δυνατός ο εντοπισμός",
     "myLocation": "Η θέση μου"
   },
+  "mapStatus": {
+    "idle": "Συμπλήρωσε διεύθυνση για χάρτη",
+    "loading": "Αναζήτηση στον χάρτη…",
+    "partial": "{count} από {total} στον χάρτη",
+    "stale": "Παλιές συντεταγμένες σε {count} διεύθυνση",
+    "stale_other": "Παλιές συντεταγμένες σε {count} διευθύνσεις",
+    "error": "Δεν βρέθηκε καμία διεύθυνση",
+    "forceRegeocode": "Ανανέωση χάρτη"
+  },
   "hierarchy": {
     "settlementCity": "Οικισμός / Πόλη",
     "administrativeDivision": "Διοικητική Διαίρεση Ελλάδας",

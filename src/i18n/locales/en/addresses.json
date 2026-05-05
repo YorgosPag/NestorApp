@@ -104,6 +104,15 @@
     "locationError": "Could not determine location",
     "myLocation": "My location"
   },
+  "mapStatus": {
+    "idle": "Add address fields for map",
+    "loading": "Searching map…",
+    "partial": "{count} of {total} on map",
+    "stale": "Stale coordinates on {count} address",
+    "stale_other": "Stale coordinates on {count} addresses",
+    "error": "No address found",
+    "forceRegeocode": "Refresh map"
+  },
   "hierarchy": {
     "settlementCity": "Settlement / City",
     "administrativeDivision": "Greek Administrative Division",
