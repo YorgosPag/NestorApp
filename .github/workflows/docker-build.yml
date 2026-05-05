@@ -20,13 +20,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Add swap so Next.js build has enough memory (runner has 7GB RAM + 10GB SSD swap)
+      # Add extra swap — GitHub runner already has /swapfile, use /swapfile2
       - name: Configure swap
         run: |
-          sudo fallocate -l 6G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          sudo fallocate -l 6G /swapfile2
+          sudo chmod 600 /swapfile2
+          sudo mkswap /swapfile2
+          sudo swapon /swapfile2
           free -h
 
       - name: Setup pnpm
