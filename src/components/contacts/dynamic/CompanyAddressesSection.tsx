@@ -28,6 +28,8 @@ import { AddressTypeSelector } from '@/components/contacts/addresses/AddressType
 import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { AddressEditor } from '@/components/shared/addresses/editor';
+import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
 
 // ============================================================================
 // TYPES
@@ -109,6 +111,68 @@ function fromHierarchyValue(existing: CompanyAddress, val: AddressWithHierarchyV
 function formatBranchStreetLine(addr: CompanyAddress): string {
   const parts = [addr.street, addr.number, addr.city, addr.postalCode].filter(Boolean);
   return parts.join(', ');
+}
+
+function branchToResolvedFields(addr: CompanyAddress): ResolvedAddressFields {
+  return {
+    street: addr.street || undefined,
+    number: addr.number || undefined,
+    postalCode: addr.postalCode || undefined,
+    city: addr.city || undefined,
+    region: addr.regionName || addr.region || undefined,
+    country: addr.country || undefined,
+  };
+}
+
+function applyResolvedToBranch(resolved: ResolvedAddressFields, existing: CompanyAddress): CompanyAddress {
+  return {
+    ...existing,
+    street: resolved.street ?? existing.street,
+    number: resolved.number ?? existing.number,
+    postalCode: resolved.postalCode ?? existing.postalCode,
+    city: resolved.city ?? existing.city,
+  };
+}
+
+// Wrapper isolates memo + stable callbacks per branch (avoids hook-in-map anti-pattern).
+interface BranchEditorWrapperProps {
+  addr: CompanyAddress;
+  branchVisualIndex: number;
+  disabled: boolean;
+  onUpdate: (idx: number, updated: CompanyAddress) => void;
+}
+
+function BranchEditorWrapper({ addr, branchVisualIndex, disabled, onUpdate }: BranchEditorWrapperProps) {
+  const resolvedFields = React.useMemo(
+    () => branchToResolvedFields(addr),
+    // Only re-compute when basic fields change (keeps AddressEditor.value stable).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [addr.street, addr.number, addr.postalCode, addr.city, addr.region, addr.regionName, addr.country],
+  );
+  const handleResolvedChange = useCallback(
+    (resolved: ResolvedAddressFields) => onUpdate(branchVisualIndex, applyResolvedToBranch(resolved, addr)),
+    [addr, branchVisualIndex, onUpdate],
+  );
+  const handleHierarchyChange = useCallback(
+    (val: AddressWithHierarchyValue) => onUpdate(branchVisualIndex, fromHierarchyValue(addr, val)),
+    [addr, branchVisualIndex, onUpdate],
+  );
+  return (
+    <AddressEditor
+      value={resolvedFields}
+      onChange={handleResolvedChange}
+      mode="edit"
+      domain="contact"
+      formOptions={{ hideGrid: true }}
+      activityLog={{ collapsed: true }}
+    >
+      <AddressWithHierarchy
+        value={toHierarchyValue(addr)}
+        onChange={handleHierarchyChange}
+        disabled={disabled}
+      />
+    </AddressEditor>
+  );
 }
 
 // ============================================================================
@@ -214,7 +278,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
             {branches.map((addr, i) => (
               <li key={i} className="space-y-3">
                 {editingBranchIndex === i ? (
-                  /* Inline edit form */
+                  /* Inline edit form with AddressEditor (ADR-332 Phase 6) */
                   <div className="border-2 border-primary rounded-lg p-3 space-y-3">
                     <div className="flex items-center">
                       <AddressTypeSelector
@@ -225,10 +289,11 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                         onChange={(next) => handleBranchUpdate(i, { ...addr, type: next.type, customLabel: next.customLabel })}
                       />
                     </div>
-                    <AddressWithHierarchy
-                      value={toHierarchyValue(addr)}
-                      onChange={(val) => handleBranchUpdate(i, fromHierarchyValue(addr, val))}
+                    <BranchEditorWrapper
+                      addr={addr}
+                      branchVisualIndex={i}
                       disabled={disabled}
+                      onUpdate={handleBranchUpdate}
                     />
                     <div className="flex justify-end border-t pt-3">
                       <Button

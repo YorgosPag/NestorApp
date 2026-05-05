@@ -37,6 +37,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import '@/lib/design-system';
+import { AddressEditorContext, AddressFieldBadge } from '@/components/shared/addresses/editor';
 
 // Re-exports for backward compatibility — consumers can still import from this file
 export type { AddressWithHierarchyValue, AddressWithHierarchyProps } from './address-with-hierarchy-config';
@@ -57,6 +58,7 @@ export function AddressWithHierarchy({
   const { t } = useTranslation('addresses');
   const colors = useSemanticColors();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(defaultExpanded);
+  const fieldStatus = React.useContext(AddressEditorContext)?.fieldStatus ?? null;
 
   const current = useMemo(
     () => ({ ...EMPTY_VALUE, ...value }),
@@ -346,21 +348,29 @@ export function AddressWithHierarchy({
           <div className="grid grid-cols-3 gap-3">
             <fieldset className="col-span-2 space-y-1">
               <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.street')}</Label>
-              <Input
-                value={current.street}
-                onChange={e => handleBasicChange('street', e.target.value)}
-                placeholder={t('form.streetPlaceholder')}
-                disabled={disabled}
-              />
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={current.street}
+                  onChange={e => handleBasicChange('street', e.target.value)}
+                  placeholder={t('form.streetPlaceholder')}
+                  disabled={disabled}
+                  className="flex-1"
+                />
+                {fieldStatus && <AddressFieldBadge status={fieldStatus.street} />}
+              </div>
             </fieldset>
             <fieldset className="space-y-1">
               <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.number')}</Label>
-              <Input
-                value={current.number}
-                onChange={e => handleBasicChange('number', e.target.value)}
-                placeholder={t('form.numberPlaceholder')}
-                disabled={disabled}
-              />
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={current.number}
+                  onChange={e => handleBasicChange('number', e.target.value)}
+                  placeholder={t('form.numberPlaceholder')}
+                  disabled={disabled}
+                  className="flex-1"
+                />
+                {fieldStatus && <AddressFieldBadge status={fieldStatus.number} />}
+              </div>
             </fieldset>
           </div>
         )}
@@ -369,33 +379,41 @@ export function AddressWithHierarchy({
         <div className="grid grid-cols-3 gap-3">
           <fieldset className="space-y-1">
             <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.postalCode')}</Label>
-            <Input
-              value={current.postalCode}
-              onChange={e => {
-                const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
-                handleBasicChange('postalCode', val);
-              }}
-              placeholder={t('form.postalCodePlaceholder')}
-              maxLength={5}
-              inputMode="numeric"
-              disabled={disabled}
-            />
+            <div className="flex items-center gap-1.5">
+              <Input
+                value={current.postalCode}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 5);
+                  handleBasicChange('postalCode', val);
+                }}
+                placeholder={t('form.postalCodePlaceholder')}
+                maxLength={5}
+                inputMode="numeric"
+                disabled={disabled}
+                className="flex-1"
+              />
+              {fieldStatus && <AddressFieldBadge status={fieldStatus.postalCode} />}
+            </div>
           </fieldset>
           <fieldset className="col-span-2 space-y-1">
             <Label className={cn("text-xs font-medium", colors.text.muted)}>
               {t('hierarchy.settlementCity')}
             </Label>
-            <SearchableCombobox
-              value={current.settlementName}
-              onValueChange={(newValue, option) => handleSettlementChange(newValue, option)}
-              options={settlementOptions}
-              placeholder={t('hierarchy.settlementPlaceholder')}
-              emptyMessage={t('hierarchy.searchPlaceholder')}
-              isLoading={isLoading}
-              allowFreeText
-              disabled={disabled}
-              maxDisplayed={30}
-            />
+            <div className="flex items-center gap-1.5">
+              <SearchableCombobox
+                value={current.settlementName}
+                onValueChange={(newValue, option) => handleSettlementChange(newValue, option)}
+                options={settlementOptions}
+                placeholder={t('hierarchy.settlementPlaceholder')}
+                emptyMessage={t('hierarchy.searchPlaceholder')}
+                isLoading={isLoading}
+                allowFreeText
+                disabled={disabled}
+                maxDisplayed={30}
+                className="flex-1"
+              />
+              {fieldStatus && <AddressFieldBadge status={fieldStatus.city} />}
+            </div>
           </fieldset>
         </div>
 

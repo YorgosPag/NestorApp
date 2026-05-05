@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: yorgosPag/nestor-app
+  IMAGE_NAME: yorgospag/nestor-app
 
 jobs:
   build-and-push:
