@@ -108,26 +108,30 @@ export function taskToCalendarEvent(task: CrmTask): CalendarEvent | null {
  * Returns null if the appointment has no requestedDate (cannot be placed on calendar).
  */
 export function appointmentToCalendarEvent(appt: AppointmentDocument): CalendarEvent | null {
-  const dateStr = appt.appointment.confirmedDate ?? appt.appointment.requestedDate;
+  const dateStr = appt.appointment?.confirmedDate ?? appt.appointment?.requestedDate;
   if (!dateStr) return null;
 
-  const timeStr = appt.appointment.confirmedTime ?? appt.appointment.requestedTime ?? '09:00';
+  const timeStr = appt.appointment?.confirmedTime ?? appt.appointment?.requestedTime ?? '09:00';
   const start = new Date(`${dateStr}T${timeStr}:00`);
   if (isNaN(start.getTime())) return null;
 
   const apptId = appt.id ?? '';
-  const requesterName = appt.requester.name ?? appt.requester.email ?? 'Unknown';
+  const requesterName = appt.requester?.name ?? appt.requester?.email ?? null;
+  const description = appt.appointment?.description ?? '';
+  const title = requesterName
+    ? `${requesterName} — ${stripHtmlToPlainText(description)}`
+    : stripHtmlToPlainText(description) || 'Ραντεβού';
 
   return {
     id: `appt_${apptId}`,
-    title: `${requesterName} — ${stripHtmlToPlainText(appt.appointment.description)}`,
+    title,
     start,
     end: new Date(start.getTime() + DEFAULT_EVENT_DURATION_MS),
     allDay: false,
     source: 'appointment',
     eventType: 'appointment',
     entityId: apptId,
-    description: appt.appointment.description,
+    description: appt.appointment?.description ?? '',
     assignedTo: appt.assignedTo ?? '',
     status: appt.status,
     companyId: appt.companyId,
