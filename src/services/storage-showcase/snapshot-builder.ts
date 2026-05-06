@@ -109,7 +109,7 @@ export const buildStorageShowcaseSnapshot = createShowcaseSnapshotBuilder<
     statusLabel: translateStorageStatus(pickString(raw.status) ?? undefined, locale) ?? null,
     area:        pickNumber(raw.area),
     price:       pickNumber(raw.price),
-    floor:       pickString(raw.floor),
+    floor:       formatFloor(raw.floor, locale),
     buildingName: relations.buildingName,
   }),
   wrapSnapshot: (storage, company) => ({ storage, company }),
