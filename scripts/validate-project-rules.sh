@@ -83,8 +83,8 @@ check_hardcoded_storage_paths() {
 check_inline_uuid() {
   local file="$1"
 
-  # Skip the enterprise-id.service itself
-  if echo "$file" | grep -qE "enterprise-id\.service"; then
+  # Skip the enterprise-id.* internal modules (the only canonical source of UUIDs)
+  if echo "$file" | grep -qE "enterprise-id(\.service|-class|-singleton|-prefixes|-convenience)"; then
     return
   fi
 

@@ -4,7 +4,7 @@
  * Extracted from enterprise-id.service.ts (ADR-065 SRP split).
  */
 
-import { enterpriseIdService } from './enterprise-id.service';
+import { enterpriseIdService } from './enterprise-id-singleton';
 
 // Core Business Entities
 export const generateCompanyId = () => enterpriseIdService.generateCompanyId();

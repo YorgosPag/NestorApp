@@ -60,6 +60,8 @@
       ],
       "allowlist": [
         "src/services/enterprise-id.service.ts",
+        "src/services/enterprise-id-class.ts",
+        "src/services/enterprise-id-singleton.ts",
         "src/services/enterprise-id-convenience.ts",
         "src/services/enterprise-id-prefixes.ts",
         "src/services/enterprise-id-migration.service.ts"
@@ -945,6 +947,8 @@
       ],
       "allowlist": [
         "src/services/enterprise-id.service.ts",
+        "src/services/enterprise-id-class.ts",
+        "src/services/enterprise-id-singleton.ts",
         "src/services/enterprise-id-convenience.ts",
         "src/services/enterprise-id-prefixes.ts",
         "src/services/enterprise-id-migration.service.ts",
