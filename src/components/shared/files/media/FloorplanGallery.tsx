@@ -23,8 +23,10 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { FloorplanGalleryProps, DxfDrawingMode } from '@/components/shared/files/media/floorplan-gallery-config';
 import { ZOOM_CONFIG, filterFloorplanFiles, getFileIcon } from '@/components/shared/files/media/floorplan-gallery-config';
 import { renderDxfToCanvas } from '@/components/shared/files/media/floorplan-dxf-renderer';
+import { renderPdfImageToCanvas } from '@/components/shared/files/media/floorplan-pdf-renderer';
 import { drawOverlayPolygons, computeOverlayAABBs, screenToWorld, hitTestOverlays } from '@/components/shared/files/media/floorplan-overlay-system';
 import { useFloorplanSceneLoader } from '@/components/shared/files/media/useFloorplanSceneLoader';
+import { useFloorplanPdfLoader } from '@/components/shared/files/media/useFloorplanPdfLoader';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 
 // Re-exports for backward compatibility
@@ -71,6 +73,16 @@ export function FloorplanGallery({
   // DXF scene loading (extracted hook)
   const { loadedScene, isLoading, sceneError } = useFloorplanSceneLoader(currentFile, isDxf, fileExt);
 
+  // PDF loading — for SPEC-237D overlay support on PDF backgrounds
+  const { pdfImage, pdfDimensions, isPdfLoading, pdfError } = useFloorplanPdfLoader(currentFile, isPdf);
+
+  // Synthetic CAD bounds for PDF overlays (matches editor's default pdfTransform)
+  const currentBounds = useMemo(() => {
+    if (isDxf) return loadedScene?.bounds ?? null;
+    if (isPdf && pdfDimensions) return { min: { x: 0, y: 0 }, max: { x: pdfDimensions.width, y: pdfDimensions.height } };
+    return null;
+  }, [isDxf, isPdf, loadedScene?.bounds, pdfDimensions]);
+
   // Fullscreen modal state (ADR-241 centralized)
   const fullscreen = useFullscreen();
 
@@ -99,8 +111,7 @@ export function FloorplanGallery({
   // SPEC-237C: Canvas Mouse Handlers (Hit-Testing, Hover, Click)
 
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!loadedScene?.bounds || !overlays?.length || !inlineCanvasRef.current) return;
-    // rAF-throttle for 60fps performance
+    if (!currentBounds || !overlays?.length || !inlineCanvasRef.current) return;
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       const canvas = inlineCanvasRef.current;
@@ -110,28 +121,28 @@ export function FloorplanGallery({
       const scaleY = canvas.height / rect.height;
       const screenX = (e.clientX - rect.left) * scaleX;
       const screenY = (e.clientY - rect.top) * scaleY;
-      const worldPt = screenToWorld(screenX, screenY, canvas, loadedScene.bounds!, inlineZP.zoom, inlineZP.panOffset);
+      const worldPt = screenToWorld(screenX, screenY, canvas, currentBounds, inlineZP.zoom, inlineZP.panOffset);
       const hit = hitTestOverlays(worldPt, overlays, overlayAABBs);
       const propertyId = hit?.linked?.propertyId ?? null;
       setHoveredOverlayUnitId(propertyId);
       onHoverOverlay?.(propertyId);
     });
-  }, [loadedScene?.bounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset, onHoverOverlay]);
+  }, [currentBounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset, onHoverOverlay]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!loadedScene?.bounds || !overlays?.length || !inlineCanvasRef.current) return;
+    if (!currentBounds || !overlays?.length || !inlineCanvasRef.current) return;
     const canvas = inlineCanvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     const screenX = (e.clientX - rect.left) * scaleX;
     const screenY = (e.clientY - rect.top) * scaleY;
-    const worldPt = screenToWorld(screenX, screenY, canvas, loadedScene.bounds!, inlineZP.zoom, inlineZP.panOffset);
+    const worldPt = screenToWorld(screenX, screenY, canvas, currentBounds, inlineZP.zoom, inlineZP.panOffset);
     const hit = hitTestOverlays(worldPt, overlays, overlayAABBs);
     if (hit?.linked?.propertyId) {
       onClickOverlay?.(hit.linked.propertyId);
     }
-  }, [loadedScene?.bounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset, onClickOverlay]);
+  }, [currentBounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset, onClickOverlay]);
 
   const handleCanvasMouseLeave = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
@@ -192,30 +203,44 @@ export function FloorplanGallery({
     fullscreen.exit();
   }, [fullscreen]);
 
-  // DXF CANVAS RENDERING — INLINE
+  // CANVAS RENDERING — INLINE (DXF or PDF)
 
   useEffect(() => {
-    if (!loadedScene || !inlineCanvasRef.current || !isDxf) return;
-    renderDxfToCanvas(inlineCanvasRef.current, loadedScene, inlineZP.zoom, inlineZP.panOffset, drawingMode);
-    if (overlays?.length && loadedScene.bounds) {
-      drawOverlayPolygons(inlineCanvasRef.current, overlays, loadedScene.bounds, inlineZP.zoom, inlineZP.panOffset, effectiveHighlightId);
+    const canvas = inlineCanvasRef.current;
+    if (!canvas) return;
+    if (isDxf && loadedScene) {
+      renderDxfToCanvas(canvas, loadedScene, inlineZP.zoom, inlineZP.panOffset, drawingMode);
+    } else if (isPdf && pdfImage && pdfDimensions) {
+      renderPdfImageToCanvas(canvas, pdfImage, pdfDimensions, inlineZP.zoom, inlineZP.panOffset);
+    } else {
+      return;
     }
-  }, [loadedScene, isDxf, inlineZP.zoom, inlineZP.panOffset, drawingMode, overlays, effectiveHighlightId]);
+    if (overlays?.length && currentBounds) {
+      drawOverlayPolygons(canvas, overlays, currentBounds, inlineZP.zoom, inlineZP.panOffset, effectiveHighlightId);
+    }
+  }, [isDxf, loadedScene, isPdf, pdfImage, pdfDimensions, currentBounds, inlineZP.zoom, inlineZP.panOffset, drawingMode, overlays, effectiveHighlightId]);
 
-  // DXF CANVAS RENDERING — FULLSCREEN MODAL
+  // CANVAS RENDERING — FULLSCREEN MODAL (DXF or PDF)
 
   useEffect(() => {
     if (!fullscreen.isFullscreen) modalCanvasReadyRef.current = false;
   }, [fullscreen.isFullscreen]);
 
   useEffect(() => {
-    if (!fullscreen.isFullscreen || !loadedScene || !isDxf) return;
+    if (!fullscreen.isFullscreen) return;
+    const hasContent = (isDxf && loadedScene) || (isPdf && pdfImage && pdfDimensions);
+    if (!hasContent) return;
 
     const doRender = () => {
-      if (!modalCanvasRef.current) return;
-      renderDxfToCanvas(modalCanvasRef.current, loadedScene, modalZP.zoom, modalZP.panOffset, drawingMode);
-      if (overlays?.length && loadedScene.bounds) {
-        drawOverlayPolygons(modalCanvasRef.current, overlays, loadedScene.bounds, modalZP.zoom, modalZP.panOffset, effectiveHighlightId);
+      const canvas = modalCanvasRef.current;
+      if (!canvas) return;
+      if (isDxf && loadedScene) {
+        renderDxfToCanvas(canvas, loadedScene, modalZP.zoom, modalZP.panOffset, drawingMode);
+      } else if (isPdf && pdfImage && pdfDimensions) {
+        renderPdfImageToCanvas(canvas, pdfImage, pdfDimensions, modalZP.zoom, modalZP.panOffset);
+      }
+      if (overlays?.length && currentBounds) {
+        drawOverlayPolygons(canvas, overlays, currentBounds, modalZP.zoom, modalZP.panOffset, effectiveHighlightId);
       }
       modalCanvasReadyRef.current = true;
     };
@@ -225,7 +250,7 @@ export function FloorplanGallery({
       return () => clearTimeout(timerId);
     }
     doRender();
-  }, [fullscreen.isFullscreen, loadedScene, isDxf, modalZP.zoom, modalZP.panOffset, drawingMode, overlays, effectiveHighlightId]);
+  }, [fullscreen.isFullscreen, isDxf, loadedScene, isPdf, pdfImage, pdfDimensions, currentBounds, modalZP.zoom, modalZP.panOffset, drawingMode, overlays, effectiveHighlightId]);
 
   // ACTIONS
 

@@ -382,8 +382,8 @@ export class FloorFloorplanService {
       const sceneJson = await response.text();
       floorplanLogger.debug('Downloaded + parsing', { bytes: sceneJson.length });
       const scene = safeJsonParse<SceneModel>(sceneJson, null as unknown as SceneModel);
-      if (scene === null) {
-        floorplanLogger.error('Failed to parse floor floorplan JSON', { floorId });
+      if (!scene || !scene.layers || !Array.isArray(scene.entities)) {
+        floorplanLogger.warn('V1/V2: downloaded JSON is not a valid scene (missing layers/entities) — treating as no floorplan', { floorId, hasScene: !!scene });
         return null;
       }
 

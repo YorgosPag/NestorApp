@@ -143,6 +143,7 @@ if (typeof window !== 'undefined') {
       'common-account',     // 🏢 Split from common (ADR-280)
       'common-photos',      // 🏢 Split from common (ADR-280)
       'common-shared',      // 🏢 Split from common (ADR-280)
+      'settings',           // 🏢 Settings pages (shortcuts, etc.)
     ];
 
     const saved = safeGetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, '');
