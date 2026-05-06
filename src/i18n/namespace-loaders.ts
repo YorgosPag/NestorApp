@@ -105,6 +105,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'quotes': return () => import('./locales/el/quotes.json');
     case 'vendor-portal': return () => import('./locales/el/vendor-portal.json');
     case 'onboarding': return () => import('./locales/el/onboarding.json');
+    case 'settings': return () => import('./locales/el/settings.json');
     default: return null;
   }
 }
@@ -199,6 +200,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'quotes': return () => import('./locales/en/quotes.json');
     case 'vendor-portal': return () => import('./locales/en/vendor-portal.json');
     case 'onboarding': return () => import('./locales/en/onboarding.json');
+    case 'settings': return () => import('./locales/en/settings.json');
     default: return null;
   }
 }
