@@ -390,7 +390,7 @@ export function AddressWithHierarchy({
             </fieldset>
           </div>
         )}
-        {neighborhoodField}
+        {neighborhoodFieldNode}
         {/* Row 2: Postal Code + Settlement / City (same line) */}
         <div className="grid grid-cols-3 gap-3">
           <fieldset className="space-y-1">
