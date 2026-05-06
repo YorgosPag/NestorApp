@@ -270,5 +270,10 @@
       "introText": "Σας προωθούμε την αναλυτική παρουσίαση του κτηρίου.",
       "ctaLabel": "Δείτε online"
     }
+  },
+  "storageShowcase": {
+    "actions": {
+      "showcase": "Επίδειξη Αποθήκης"
+    }
   }
 }

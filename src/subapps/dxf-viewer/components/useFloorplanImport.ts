@@ -264,6 +264,7 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
           companyId, projectId: selectedProjectId || undefined,
           buildingId: selectedBuildingId, floorId: selectedFloorId,
           floorNumber: selectedFloorData?.number, data: floorData, createdBy,
+          originalFile: file,
         });
       }
     } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {

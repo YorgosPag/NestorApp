@@ -101,7 +101,7 @@ export function useLevelSceneLoader({
         // Check if this load was cancelled (user switched to another level)
         if (abortController.signal.aborted) return;
 
-        if (fileRecord?.scene) {
+        if (fileRecord?.scene && Array.isArray(fileRecord.scene.entities) && fileRecord.scene.layers != null) {
           sceneManager.setLevelScene(currentLevelId, fileRecord.scene);
           // Set the filename for auto-save context
           if (fileRecord.fileName && sceneManager.setCurrentFileName) {

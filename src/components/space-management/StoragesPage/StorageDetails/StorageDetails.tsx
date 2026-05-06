@@ -14,6 +14,8 @@ import type { Storage } from '@/types/storage/contracts';
 import { StorageDetailsHeader } from './StorageDetailsHeader';
 import { StorageTabs } from './StorageTabs';
 import { DetailsContainer } from '@/core/containers';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 
 interface StorageDetailsProps {
   storage: Storage | null;
@@ -27,16 +29,22 @@ interface StorageDetailsProps {
 
 export function StorageDetails({ storage, onNewStorage, onDelete, isInTrash = false }: StorageDetailsProps) {
   const emptyStateMessages = useEmptyStateMessages();
+  const { user } = useAuth();
 
   // Inline editing state (lifted for header ↔ tab coordination)
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
 
   // Save delegation ref — StorageGeneralTab registers its handleSave here
   const saveRef = useRef<(() => Promise<boolean>) | null>(null);
 
   const handleStartEdit = useCallback(() => {
     setIsEditing(true);
+  }, []);
+
+  const handleShowcaseStorage = useCallback(() => {
+    setShowcaseDialogOpen(true);
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -59,6 +67,7 @@ export function StorageDetails({ storage, onNewStorage, onDelete, isInTrash = fa
   }, [storage?.id]);
 
   return (
+    <>
     <DetailsContainer
       selectedItem={storage}
       header={
@@ -72,6 +81,7 @@ export function StorageDetails({ storage, onNewStorage, onDelete, isInTrash = fa
             onCancel={handleCancel}
             onNewStorage={onNewStorage}
             onDelete={onDelete}
+            onShowcaseStorage={isInTrash || !storage?.id ? undefined : handleShowcaseStorage}
             isInTrash={isInTrash}
           />
         ) : null
@@ -92,5 +102,17 @@ export function StorageDetails({ storage, onNewStorage, onDelete, isInTrash = fa
         ...emptyStateMessages.storage
       }}
     />
+    {storage?.id && user?.companyId && user?.uid && (
+      <UnifiedShareDialog
+        open={showcaseDialogOpen}
+        onOpenChange={setShowcaseDialogOpen}
+        entityType="storage_showcase"
+        entityId={storage.id}
+        entityTitle={storage.name}
+        companyId={user.companyId}
+        userId={user.uid}
+      />
+    )}
+    </>
   );
 }

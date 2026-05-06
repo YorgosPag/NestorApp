@@ -365,9 +365,14 @@ export async function loadFromStorageImpl(fileId: string): Promise<DxfFileRecord
     }
 
     if (!scene) {
-      dxfLogger.error('No valid scene found in any Storage path', {
-        fileId, scenePath, processedPath: processedPath ?? 'none', rawPath,
-      });
+      const isNonDxfFile = /\.(pdf|png|jpg|jpeg|webp|gif|bmp|svg)$/i.test(rawPath);
+      if (isNonDxfFile) {
+        dxfLogger.debug('File is PDF/image, not a DXF scene — skipping', { fileId });
+      } else {
+        dxfLogger.error('No valid scene found in any Storage path', {
+          fileId, scenePath, processedPath: processedPath ?? 'none', rawPath,
+        });
+      }
       return null;
     }
 

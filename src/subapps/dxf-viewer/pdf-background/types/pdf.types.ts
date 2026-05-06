@@ -153,6 +153,7 @@ export const DEFAULT_PDF_STATE: Readonly<PdfBackgroundState> = {
 export interface PdfBackgroundActions {
   // Document actions
   loadPdf: (file: File) => Promise<void>;
+  loadFromUrl: (url: string) => void;
   unloadPdf: () => void;
 
   // Page actions

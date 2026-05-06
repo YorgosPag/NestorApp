@@ -270,5 +270,10 @@
       "introText": "We are sharing the detailed presentation of the building.",
       "ctaLabel": "View online"
     }
+  },
+  "storageShowcase": {
+    "actions": {
+      "showcase": "Storage Showcase"
+    }
   }
 }

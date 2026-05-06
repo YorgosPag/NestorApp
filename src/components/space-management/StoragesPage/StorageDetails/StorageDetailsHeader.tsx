@@ -35,6 +35,8 @@ interface StorageDetailsHeaderProps {
   onNewStorage?: () => void;
   /** Delete the current storage */
   onDelete?: () => void;
+  /** Open the Storage Showcase share dialog */
+  onShowcaseStorage?: () => void;
   /** Whether the storage is displayed in the trash view — hides mutating actions */
   isInTrash?: boolean;
 }
@@ -48,9 +50,10 @@ export function StorageDetailsHeader({
   onCancel,
   onNewStorage,
   onDelete,
+  onShowcaseStorage,
   isInTrash = false,
 }: StorageDetailsHeaderProps) {
-  const { t } = useTranslation(['storage', 'trash']);
+  const { t } = useTranslation(['storage', 'trash', 'showcase']);
 
   // Edit mode: Save (green), Cancel (white)
   // Normal mode: New (green), Edit (blue), Delete (red)
@@ -63,6 +66,7 @@ export function StorageDetailsHeader({
     : isInTrash
     ? []
     : [
+        ...(onShowcaseStorage ? [createEntityAction('showcase', t('storageShowcase.actions.showcase', { ns: 'showcase' }), onShowcaseStorage)] : []),
         createEntityAction('new', t('header.newStorage'), () => onNewStorage?.()),
         createEntityAction('edit', t('header.edit'), onStartEdit),
         createEntityAction('delete', t('moveToTrash', { ns: 'trash' }), () => onDelete?.()),

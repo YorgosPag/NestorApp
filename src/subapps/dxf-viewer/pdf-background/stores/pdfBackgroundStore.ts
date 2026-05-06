@@ -119,6 +119,18 @@ export const usePdfBackgroundStore = create<PdfBackgroundStore>()(
           }
         },
 
+        loadFromUrl: (url: string) => {
+          set((draft) => {
+            draft.renderedImageUrl = url;
+            draft.enabled = true;
+            draft.documentInfo = null;
+            draft.currentPage = 1;
+            draft.pageDimensions = null;
+            draft.isLoading = false;
+            draft.error = null;
+          });
+        },
+
         unloadPdf: () => {
           PdfRenderer.unloadDocument();
           set((draft) => {

@@ -15,7 +15,7 @@ import type { ReactNode } from 'react';
 
 // ============================================================================
 // ADR-315 — Polymorphic unified sharing
-//   file / contact / property_showcase / project_showcase / building_showcase
+//   file / contact / property_showcase / project_showcase / building_showcase / storage_showcase
 // ============================================================================
 
 export type ShareEntityType =
@@ -24,6 +24,7 @@ export type ShareEntityType =
   | 'property_showcase'
   | 'project_showcase'
   | 'building_showcase'
+  | 'storage_showcase'
   | 'vendor_rfq_invite';
 
 export type ShareDispatchChannel =

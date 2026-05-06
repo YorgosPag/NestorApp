@@ -27,6 +27,7 @@ import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import type { FileRecord } from '@/types/file-record';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { dataUrlToBlob } from '@/lib/data-url-utils';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 
@@ -96,6 +97,8 @@ export interface SaveFloorplanParams {
   data: FloorFloorplanData;
   /** User ID who created this */
   createdBy: string;
+  /** Original File object for PDF uploads (preferred over base64 pdfImageUrl) */
+  originalFile?: File;
 }
 
 /**
@@ -129,13 +132,52 @@ export class FloorFloorplanService {
       const isPdfFloorplan = data.fileType === 'pdf' || (!data.scene && data.pdfImageUrl);
 
       if (isPdfFloorplan) {
-        // PDF floorplans: Use FileRecordService for the PDF file itself
-        floorplanLogger.debug(`Saving PDF floor floorplan`, { floorId, buildingId });
+        floorplanLogger.debug('Saving PDF floor floorplan', { floorId, buildingId });
 
-        // For PDF, we assume the PDF is already uploaded and we just need to create/update the FileRecord
-        // This would typically be handled by the upload flow, not here
-        floorplanLogger.warn(`PDF floorplan save not implemented in V2 - use FileRecordService directly`);
-        return false;
+        if (!params.originalFile && !data.pdfImageUrl) {
+          floorplanLogger.warn('PDF save: no file or image URL', { floorId });
+          return false;
+        }
+
+        let uploadFile: File;
+        let ext: string;
+        let contentType: string;
+
+        if (params.originalFile) {
+          uploadFile = params.originalFile;
+          ext = 'pdf';
+          contentType = 'application/pdf';
+        } else {
+          const blob = dataUrlToBlob(data.pdfImageUrl!);
+          const fname = data.fileName || `floor_${floorId}_floorplan.png`;
+          uploadFile = new File([blob], fname, { type: blob.type });
+          ext = 'png';
+          contentType = 'image/png';
+        }
+
+        const result = await FloorplanSaveOrchestrator.save({
+          companyId, projectId,
+          entityType: ENTITY_TYPES.FLOOR, entityId: floorId,
+          purpose: FLOORPLAN_PURPOSES.FLOOR,
+          entityLabel: `Floor ${data.floorNumber || floorId}`,
+          descriptors: [buildingId, `floor-${data.floorNumber || 0}`],
+          createdBy,
+          originalFilename: uploadFile.name,
+          contentType, ext,
+          payload: { kind: 'raw-file', file: uploadFile },
+        });
+
+        floorplanLogger.info('PDF floorplan save complete', {
+          floorId, buildingId, fileId: result.fileId, ext,
+        });
+
+        RealtimeService.dispatch('FLOORPLAN_CREATED', {
+          floorplanId: result.fileId,
+          floorplan: { name: uploadFile.name, entityType: ENTITY_TYPES.FLOOR, entityId: floorId },
+          timestamp: Date.now(),
+        });
+
+        return true;
       }
 
       // DXF floorplans: Save scene JSON using Enterprise pattern

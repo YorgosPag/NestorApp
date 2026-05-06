@@ -22,6 +22,7 @@ import { useLevelSceneLoader } from './hooks/useLevelSceneLoader';
 import { useLevelsFirestoreSync } from './hooks/useLevelsFirestoreSync';
 import { useLevelOperations } from './hooks/useLevelOperations';
 import { useLevelFloorplanSync } from './hooks/useLevelFloorplanSync';
+import { useLevelPdfLoader } from './hooks/useLevelPdfLoader';
 import { useAuth } from '@/auth';
 
 // ============================================================================
@@ -237,6 +238,9 @@ function useLevelsSystemState({
 
   // 🏢 ENTERPRISE: Bidirectional sync — external floorplan deletion clears canvas scene
   useLevelFloorplanSync({ levels, clearLevelScene });
+
+  // Load PDF/image floorplan into background canvas on floor-level switch
+  useLevelPdfLoader({ currentLevelId, levels, companyId });
 
   // Import wizard operations
   const startImportWizard = useCallback(
