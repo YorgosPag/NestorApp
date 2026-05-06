@@ -66,6 +66,8 @@ export function SidebarMenuItem({
     if (!preloadableRoute) return {};
     return preloadOnHover(preloadableRoute);
   };
+  const hasChildWarning = item.subItems?.some((s) => s.warningDot) ?? false
+
   return (
     <SidebarMenuItemPrimitive>
       {item.subItems ? (
@@ -87,6 +89,12 @@ export function SidebarMenuItem({
             />
             <span className="font-medium">{translateTitle(item.title)}</span>
             {item.badge && <SidebarBadge badge={item.badge} />}
+            {hasChildWarning && (
+              <span
+                className="h-2 w-2 shrink-0 rounded-full bg-amber-500" // eslint-disable-line design-system/enforce-semantic-colors
+                aria-hidden
+              />
+            )}
             <ChevronRight
               className={cn(
                 `ml-auto ${iconSizes.sm}`,
