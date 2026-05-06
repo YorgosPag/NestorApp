@@ -111,16 +111,32 @@ function normalizeSource(value: unknown): AuditSource | undefined {
   return value === 'cdc' || value === 'service' ? value : undefined;
 }
 
+/**
+ * Serialize a raw Firestore field that should be a display name string.
+ * CDC Cloud Functions sometimes store floor/entity objects {name, number}
+ * instead of plain strings — this guard prevents React #31 when rendering.
+ */
+function toDisplayString(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v === 'string') return v || null;
+  if (typeof v === 'object') {
+    const obj = v as Record<string, unknown>;
+    if (obj.name != null) return String(obj.name);
+    return JSON.stringify(obj);
+  }
+  return String(v) || null;
+}
+
 function normalizeEntry(doc: DocumentData & { id?: string }): EntityAuditEntry {
   return {
     id: doc.id,
     entityType: doc.entityType as AuditEntityType,
     entityId: doc.entityId as string,
-    entityName: (doc.entityName as string | null | undefined) ?? null,
+    entityName: toDisplayString(doc.entityName),
     action: doc.action as AuditAction,
     changes: Array.isArray(doc.changes) ? doc.changes : [],
     performedBy: doc.performedBy as string,
-    performedByName: (doc.performedByName as string | null | undefined) ?? null,
+    performedByName: toDisplayString(doc.performedByName),
     companyId: doc.companyId as string,
     timestamp: toIsoTimestamp(doc.timestamp),
     source: normalizeSource(doc.source),

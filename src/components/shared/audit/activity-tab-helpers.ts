@@ -246,6 +246,12 @@ export function formatDisplayValue(
   translateValue?: (v: string) => string | undefined,
 ): string {
   if (value === null || value === undefined) return "—";
+  // Runtime guard: CDC may store raw objects even when the type says primitive
+  if (typeof value === 'object') {
+    const formatted = formatKnownEntity(value as Record<string, unknown>);
+    if (formatted) return formatted;
+    return JSON.stringify(value);
+  }
   if (typeof value === "boolean") return value ? "Ναι" : "Όχι";
   if (value === "") return "—";
 
