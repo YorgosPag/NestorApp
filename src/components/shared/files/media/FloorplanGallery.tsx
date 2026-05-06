@@ -22,11 +22,10 @@ import { canvasUtilities } from '@/styles/design-tokens';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { FloorplanGalleryProps, DxfDrawingMode } from '@/components/shared/files/media/floorplan-gallery-config';
 import { ZOOM_CONFIG, filterFloorplanFiles, getFileIcon } from '@/components/shared/files/media/floorplan-gallery-config';
-import { renderDxfToCanvas } from '@/components/shared/files/media/floorplan-dxf-renderer';
-import { renderPdfImageToCanvas } from '@/components/shared/files/media/floorplan-pdf-renderer';
-import { drawOverlayPolygons, computeOverlayAABBs, screenToWorld, hitTestOverlays } from '@/components/shared/files/media/floorplan-overlay-system';
+import { computeOverlayAABBs, screenToWorld, hitTestOverlays } from '@/components/shared/files/media/floorplan-overlay-system';
 import { useFloorplanSceneLoader } from '@/components/shared/files/media/useFloorplanSceneLoader';
 import { useFloorplanPdfLoader } from '@/components/shared/files/media/useFloorplanPdfLoader';
+import { useFloorplanCanvasRender } from '@/components/shared/files/media/useFloorplanCanvasRender';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 
 // Re-exports for backward compatibility
@@ -49,10 +48,9 @@ export function FloorplanGallery({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
-  // Canvas refs for DXF rendering (inline + fullscreen)
+  // Canvas refs for DXF/PDF rendering (inline + fullscreen)
   const inlineCanvasRef = useRef<HTMLCanvasElement>(null);
   const modalCanvasRef = useRef<HTMLCanvasElement>(null);
-  const modalCanvasReadyRef = useRef(false);
 
   // Filter to only floorplan files
   const floorplanFiles = useMemo(() => filterFloorplanFiles(files), [files]);
@@ -203,54 +201,19 @@ export function FloorplanGallery({
     fullscreen.exit();
   }, [fullscreen]);
 
-  // CANVAS RENDERING — INLINE (DXF or PDF)
+  // CANVAS RENDERING — inline + modal (DXF or PDF, overlays unified)
 
-  useEffect(() => {
-    const canvas = inlineCanvasRef.current;
-    if (!canvas) return;
-    if (isDxf && loadedScene) {
-      renderDxfToCanvas(canvas, loadedScene, inlineZP.zoom, inlineZP.panOffset, drawingMode);
-    } else if (isPdf && pdfImage && pdfDimensions) {
-      renderPdfImageToCanvas(canvas, pdfImage, pdfDimensions, inlineZP.zoom, inlineZP.panOffset);
-    } else {
-      return;
-    }
-    if (overlays?.length && currentBounds) {
-      drawOverlayPolygons(canvas, overlays, currentBounds, inlineZP.zoom, inlineZP.panOffset, effectiveHighlightId);
-    }
-  }, [isDxf, loadedScene, isPdf, pdfImage, pdfDimensions, currentBounds, inlineZP.zoom, inlineZP.panOffset, drawingMode, overlays, effectiveHighlightId]);
+  useFloorplanCanvasRender({
+    canvasRef: inlineCanvasRef, enabled: true, isDxf, isPdf, loadedScene, pdfImage, pdfDimensions,
+    currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode, overlays,
+    highlightedUnitId: effectiveHighlightId,
+  });
 
-  // CANVAS RENDERING — FULLSCREEN MODAL (DXF or PDF)
-
-  useEffect(() => {
-    if (!fullscreen.isFullscreen) modalCanvasReadyRef.current = false;
-  }, [fullscreen.isFullscreen]);
-
-  useEffect(() => {
-    if (!fullscreen.isFullscreen) return;
-    const hasContent = (isDxf && loadedScene) || (isPdf && pdfImage && pdfDimensions);
-    if (!hasContent) return;
-
-    const doRender = () => {
-      const canvas = modalCanvasRef.current;
-      if (!canvas) return;
-      if (isDxf && loadedScene) {
-        renderDxfToCanvas(canvas, loadedScene, modalZP.zoom, modalZP.panOffset, drawingMode);
-      } else if (isPdf && pdfImage && pdfDimensions) {
-        renderPdfImageToCanvas(canvas, pdfImage, pdfDimensions, modalZP.zoom, modalZP.panOffset);
-      }
-      if (overlays?.length && currentBounds) {
-        drawOverlayPolygons(canvas, overlays, currentBounds, modalZP.zoom, modalZP.panOffset, effectiveHighlightId);
-      }
-      modalCanvasReadyRef.current = true;
-    };
-
-    if (!modalCanvasReadyRef.current) {
-      const timerId = setTimeout(doRender, 280);
-      return () => clearTimeout(timerId);
-    }
-    doRender();
-  }, [fullscreen.isFullscreen, isDxf, loadedScene, isPdf, pdfImage, pdfDimensions, currentBounds, modalZP.zoom, modalZP.panOffset, drawingMode, overlays, effectiveHighlightId]);
+  useFloorplanCanvasRender({
+    canvasRef: modalCanvasRef, enabled: fullscreen.isFullscreen, isDxf, isPdf, loadedScene,
+    pdfImage, pdfDimensions, currentBounds, zoom: modalZP.zoom, panOffset: modalZP.panOffset,
+    drawingMode, overlays, highlightedUnitId: effectiveHighlightId, firstRenderDelay: 280,
+  });
 
   // ACTIONS
 
@@ -353,6 +316,10 @@ export function FloorplanGallery({
 
   // VIEWER CONTENT — reusable for inline + fullscreen
 
+  const anyLoading = isLoading || isPdfLoading;
+  const anyError = sceneError || pdfError;
+  const showCanvas = (isDxf && loadedScene) || (isPdf && pdfImage && pdfDimensions);
+
   function renderViewerContent(
     zp: ReturnType<typeof useZoomPan>,
     canvasRef: React.Ref<HTMLCanvasElement>,
@@ -365,19 +332,19 @@ export function FloorplanGallery({
         {...zp.handlers}
         className={cn('flex-1 min-h-0 relative overflow-hidden bg-muted/30 select-none', zp.cursorClass, viewClassName)}
       >
-        {isLoading && (
+        {anyLoading && (
           <section className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-10">
             <AnimatedSpinner size="large" />
             <span className="mt-2 text-sm">{t('floorplan.loading')}</span>
           </section>
         )}
-        {sceneError && !isLoading && (
+        {anyError && !anyLoading && (
           <section className="absolute inset-0 flex flex-col items-center justify-center">
             <Map className={cn(iconSizes.xl, 'text-destructive mb-2')} aria-hidden="true" />
-            <span className="text-sm text-destructive">{sceneError}</span>
+            <span className="text-sm text-destructive">{anyError}</span>
           </section>
         )}
-        {isDxf && !isLoading && !sceneError && loadedScene && (
+        {showCanvas && !anyLoading && !anyError && (
           <canvas
             ref={canvasRef}
             className={cn('w-full h-full', enableHitTesting && effectiveHighlightId ? 'cursor-pointer' : '')}
@@ -388,19 +355,16 @@ export function FloorplanGallery({
             onMouseLeave={enableHitTesting ? handleCanvasMouseLeave : undefined}
           />
         )}
-        {isDxf && !isLoading && !sceneError && !loadedScene && currentFile?.processedData && (
+        {isDxf && !anyLoading && !anyError && !loadedScene && currentFile?.processedData && (
           <section className="absolute inset-0 flex flex-col items-center justify-center">
             <Map className={cn(iconSizes.xl, 'text-warning mb-2')} aria-hidden="true" />
             <span className={cn("text-sm", colors.text.muted)}>{t('floorplan.noSceneData')}</span>
           </section>
         )}
-        {isPdf && currentFile?.downloadUrl && (
-          <iframe src={currentFile.downloadUrl} aria-label={currentFile.displayName} className="absolute inset-0 w-full h-full border-0" />
-        )}
         {isImage && currentFile?.downloadUrl && (
           <img src={currentFile.downloadUrl} alt={currentFile.displayName} className="w-full h-full object-contain" style={zp.contentStyle} draggable={false} />
         )}
-        {isDxf && !currentFile?.processedData && !loadedScene && !isLoading && !sceneError && (
+        {isDxf && !currentFile?.processedData && !loadedScene && !anyLoading && !anyError && (
           <section className="flex flex-col items-center justify-center h-full">
             <AnimatedSpinner size="large" />
             <span className="mt-2 text-sm">{t('floorplan.processing')}</span>
