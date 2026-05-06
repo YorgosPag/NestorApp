@@ -77,7 +77,6 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
 
   // Create form visibility (form state managed by PropertyInlineCreateForm)
   const [showCreateForm, setShowCreateForm] = useState(false);
-
   // Delete & Unlink state
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
@@ -89,7 +88,6 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
 
   // Link dialog state
   const [showLinkDialog, setShowLinkDialog] = useState(false);
-
   // Filter & view state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<PropertyType | 'all'>('all');
