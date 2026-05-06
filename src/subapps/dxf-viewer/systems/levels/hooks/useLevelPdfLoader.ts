@@ -31,6 +31,7 @@ export function useLevelPdfLoader({
   companyId,
 }: UseLevelPdfLoaderParams): void {
   const loadFromUrl = usePdfBackgroundStore(s => s.loadFromUrl);
+  const loadPdf = usePdfBackgroundStore(s => s.loadPdf);
   const setEnabled = usePdfBackgroundStore(s => s.setEnabled);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -59,13 +60,31 @@ export function useLevelPdfLoader({
         return;
       }
 
-      if ((floorplan.fileType === 'pdf' || floorplan.fileType === 'image') && floorplan.pdfImageUrl) {
+      if (!floorplan.pdfImageUrl) return;
+
+      if (floorplan.fileType === 'image') {
         loadFromUrl(floorplan.pdfImageUrl);
+        return;
+      }
+
+      if (floorplan.fileType === 'pdf') {
+        const response = await fetch(floorplan.pdfImageUrl, { signal: controller.signal });
+        if (!response.ok) return;
+        const blob = await response.blob();
+        if (controller.signal.aborted) return;
+        const file = new File([blob], floorplan.fileName || 'floorplan.pdf', { type: 'application/pdf' });
+        await loadPdf(file);
+        if (controller.signal.aborted) return;
+        setEnabled(true);
       }
     };
 
-    load();
+    load().catch((err) => {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      // eslint-disable-next-line no-console
+      console.error('[useLevelPdfLoader]', err);
+    });
 
     return () => { controller.abort(); };
-  }, [currentLevelId, levels, companyId, loadFromUrl, setEnabled]);
+  }, [currentLevelId, levels, companyId, loadFromUrl, loadPdf, setEnabled]);
 }
