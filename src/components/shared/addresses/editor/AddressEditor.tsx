@@ -164,6 +164,7 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     mode = 'edit',
     formOptions,
     activityLog: activityLogOpts,
+    telemetry,
     className,
     children,
   }, ref) {

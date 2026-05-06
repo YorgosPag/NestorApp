@@ -119,6 +119,7 @@ export function FrontageAddressCreateDialog({
             domain="project"
             formOptions={{ hideGrid: true }}
             activityLog={{ collapsed: true }}
+            telemetry={{ enabled: true, contextEntityType: 'project', contextEntityId: project.id ?? '' }}
           >
             <AddressWithHierarchy
               value={hierarchy}

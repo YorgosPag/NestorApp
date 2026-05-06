@@ -143,40 +143,6 @@ export function AddressesSectionWithFullscreen({
     });
   }, [setFormData]);
 
-  // Called by AddressEditor specifically on drag confirm — clears hierarchy (ADR-277).
-  const handleHqDragApplied = useCallback((addr: ResolvedAddressFields) => {
-    applyDragResolve({
-      street: addr.street ?? '',
-      number: addr.number ?? '',
-      postalCode: addr.postalCode ?? '',
-      city: addr.city ?? '',
-      neighborhood: '',
-      region: addr.region ?? '',
-    }, 0);
-  }, [applyDragResolve]);
-
-  // Extracted from JSX to keep AddressEditor children concise (ADR-332 Phase 6).
-  const handleHqHierarchyChange = useCallback((addr: AddressWithHierarchyValue) => {
-    if (!setFormData) return;
-    const updatedAddresses = [...effectiveAddresses];
-    if (updatedAddresses.length > 0) {
-      updatedAddresses[0] = { ...updatedAddresses[0], street: addr.street, number: addr.number,
-        city: addr.settlementName || addr.municipalityName, postalCode: addr.postalCode,
-        country: addr.country || undefined, settlementId: addr.settlementId,
-        communityName: addr.communityName, municipalUnitName: addr.municipalUnitName,
-        municipalityName: addr.municipalityName, municipalityId: addr.municipalityId,
-        regionalUnitName: addr.regionalUnitName, regionName: addr.regionName,
-        region: addr.regionName, decentAdminName: addr.decentAdminName, majorGeoName: addr.majorGeoName };
-    }
-    setFormData({ ...formData, street: addr.street, streetNumber: addr.number,
-      postalCode: addr.postalCode, hqAddressCountry: addr.country || undefined,
-      city: addr.settlementName || addr.municipalityName, settlement: addr.settlementName,
-      settlementId: addr.settlementId, community: addr.communityName, municipalUnit: addr.municipalUnitName,
-      municipality: addr.municipalityName, municipalityId: addr.municipalityId,
-      regionalUnit: addr.regionalUnitName, region: addr.regionName,
-      decentAdmin: addr.decentAdminName, majorGeo: addr.majorGeoName, companyAddresses: updatedAddresses });
-  }, [formData, setFormData, effectiveAddresses]);
-
   const isEditing = !disabled;
 
   /** Has any HQ field been filled? Drives disabled state of Clear button. */
@@ -281,6 +247,18 @@ export function AddressesSectionWithFullscreen({
     maybeWarnMissingNumber(addr);
   }, [formData, setFormData, maybeWarnMissingNumber]);
 
+  // Called by AddressEditor specifically on drag confirm — clears hierarchy (ADR-277).
+  const handleHqDragApplied = useCallback((addr: ResolvedAddressFields) => {
+    applyDragResolve({
+      street: addr.street ?? '',
+      number: addr.number ?? '',
+      postalCode: addr.postalCode ?? '',
+      city: addr.city ?? '',
+      neighborhood: '',
+      region: addr.region ?? '',
+    }, 0);
+  }, [applyDragResolve]);
+
   // ADR-319: semantic type for the primary (flat-field) address — resolved from
   // formData or derived from the contact type (`home` for individuals,
   // `headquarters` for companies/services).
@@ -293,6 +271,28 @@ export function AddressesSectionWithFullscreen({
     : formData.street
       ? [{ type: primaryType, customLabel: primaryCustomLabel, street: formData.street as string, number: (formData.streetNumber as string) ?? '', postalCode: (formData.postalCode as string) ?? '', city: (formData.city as string) ?? '' }]
       : [{ type: primaryType, customLabel: primaryCustomLabel, street: '', number: '', postalCode: '', city: '' }];
+
+  // Extracted from JSX to keep AddressEditor children concise (ADR-332 Phase 6).
+  const handleHqHierarchyChange = useCallback((addr: AddressWithHierarchyValue) => {
+    if (!setFormData) return;
+    const updatedAddresses = [...effectiveAddresses];
+    if (updatedAddresses.length > 0) {
+      updatedAddresses[0] = { ...updatedAddresses[0], street: addr.street, number: addr.number,
+        city: addr.settlementName || addr.municipalityName, postalCode: addr.postalCode,
+        country: addr.country || undefined, settlementId: addr.settlementId,
+        communityName: addr.communityName, municipalUnitName: addr.municipalUnitName,
+        municipalityName: addr.municipalityName, municipalityId: addr.municipalityId,
+        regionalUnitName: addr.regionalUnitName, regionName: addr.regionName,
+        region: addr.regionName, decentAdminName: addr.decentAdminName, majorGeoName: addr.majorGeoName };
+    }
+    setFormData({ ...formData, street: addr.street, streetNumber: addr.number,
+      postalCode: addr.postalCode, hqAddressCountry: addr.country || undefined,
+      city: addr.settlementName || addr.municipalityName, settlement: addr.settlementName,
+      settlementId: addr.settlementId, community: addr.communityName, municipalUnit: addr.municipalUnitName,
+      municipality: addr.municipalityName, municipalityId: addr.municipalityId,
+      regionalUnit: addr.regionalUnitName, region: addr.regionName,
+      decentAdmin: addr.decentAdminName, majorGeo: addr.majorGeoName, companyAddresses: updatedAddresses });
+  }, [formData, setFormData, effectiveAddresses]);
 
   const tAddrFn = useCallback((key: string) => tAddr(key) as string, [tAddr]);
   const hqTypeLabel = resolveContactAddressLabel(primaryType, primaryCustomLabel, tAddrFn);
@@ -377,6 +377,7 @@ export function AddressesSectionWithFullscreen({
               mode="edit"
               domain="contact"
               formOptions={{ hideGrid: true }}
+              telemetry={{ enabled: true, contextEntityType: 'contact', contextEntityId: formData.id ?? '' }}
             >
               <AddressWithHierarchy
                 value={{

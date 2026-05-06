@@ -219,7 +219,15 @@
       },
       "empty": "No events yet",
       "collapse": "Collapse",
-      "expand": "Expand"
+      "expand": "Expand",
+      "inputChanged": "Field changed",
+      "requestStarted": "Sending geocoding request...",
+      "responseSuccess": "Result received — Confidence: {confidence}%",
+      "responseEmpty": "No results found",
+      "responseError": "Geocoding error: {reason}",
+      "conflictDetected": "{count, plural, one {# conflict detected} other {# conflicts detected}}",
+      "reset": "Undo applied",
+      "applied": "Applied"
     },
     "reconciliation": {
       "title": "Field Reconciliation",

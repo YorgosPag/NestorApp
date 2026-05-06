@@ -219,7 +219,15 @@
       },
       "empty": "Δεν υπάρχουν γεγονότα ακόμα",
       "collapse": "Σύμπτυξη",
-      "expand": "Ανάπτυξη"
+      "expand": "Ανάπτυξη",
+      "inputChanged": "Αλλαγή πεδίου",
+      "requestStarted": "Αποστολή αιτήματος geocoding...",
+      "responseSuccess": "Αποτέλεσμα ελήφθη — Αξιοπιστία: {confidence}%",
+      "responseEmpty": "Δεν βρέθηκαν αποτελέσματα",
+      "responseError": "Σφάλμα geocoding: {reason}",
+      "conflictDetected": "{count, plural, one {Εντοπίστηκε # σύγκρουση} other {Εντοπίστηκαν # συγκρούσεις}}",
+      "reset": "Αναίρεση εφαρμόστηκε",
+      "applied": "Εφαρμόστηκε"
     },
     "reconciliation": {
       "title": "Συμφωνία Πεδίων",

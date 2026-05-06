@@ -41,13 +41,13 @@ import type {
 } from '../types';
 
 const I18N = {
-  inputChanged: 'addresses.activity.inputChanged',
-  requestStarted: 'addresses.activity.requestStarted',
-  responseSuccess: 'addresses.activity.responseSuccess',
-  responseEmpty: 'addresses.activity.responseEmpty',
-  responseError: 'addresses.activity.responseError',
-  conflictDetected: 'addresses.activity.conflictDetected',
-  reset: 'addresses.activity.reset',
+  inputChanged: 'editor.activity.inputChanged',
+  requestStarted: 'editor.activity.requestStarted',
+  responseSuccess: 'editor.activity.responseSuccess',
+  responseEmpty: 'editor.activity.responseEmpty',
+  responseError: 'editor.activity.responseError',
+  conflictDetected: 'editor.activity.conflictDetected',
+  reset: 'editor.activity.reset',
 } as const;
 
 export interface UseAddressEditorOptions {
@@ -226,7 +226,7 @@ export function useAddressEditor(
 
   const applyCorrection = useCallback(() => {
     dispatch({ type: 'CORRECTION_APPLIED', nowMs: Date.now() });
-    activity.record({ level: 'success', category: 'apply', i18nKey: 'addresses.activity.applied' });
+    activity.record({ level: 'success', category: 'apply', i18nKey: 'editor.activity.applied' });
   }, [activity]);
 
   const reset = useCallback(() => {
