@@ -1092,6 +1092,11 @@
       "photos": "Photos"
     }
   },
+  "warningNoBuildingUnits": {
+    "title": "Buildings Without Units",
+    "hint": "There are buildings that have no units yet.",
+    "add": "New Unit"
+  },
   "deletion": {
     "blockedTitle": "Cannot delete «{propertyName}»",
     "blockedBody": "This property is used in {count} measurement tasks:",

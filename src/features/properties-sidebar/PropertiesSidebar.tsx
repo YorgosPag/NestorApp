@@ -24,6 +24,8 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 
 import { usePropertiesSidebar } from './hooks/usePropertiesSidebar';
 import { PropertyDetailsHeader } from './components/PropertyDetailsHeader';
+import { BuildingSpaceWarningBanner } from '@/components/building-management/shared/BuildingSpaceWarningBanner';
+import { useBuildingsNoUnits } from '@/contexts/BuildingsNoUnitsContext';
 import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { PropertiesSidebarProps } from './types';
@@ -63,6 +65,7 @@ export function PropertiesSidebar({
   } = usePropertiesSidebar(floors, viewerProps, selectedProperty);
 
   const { user } = useAuth();
+  const hasBuildingsWithNoUnits = useBuildingsNoUnits();
   const [isEditMode, setIsEditMode] = useState(false);
   const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
   const [showcasePhotos, setShowcasePhotos] = useState<string[]>([]);
@@ -166,6 +169,14 @@ export function PropertiesSidebar({
   const detailsContent = (
     <DetailsContainer
       selectedItem={selectedProperty}
+      warningBanner={hasBuildingsWithNoUnits ? (
+        <BuildingSpaceWarningBanner
+          title={t('warningNoBuildingUnits.title')}
+          hint={t('warningNoBuildingUnits.hint')}
+          addLabel={t('warningNoBuildingUnits.add')}
+          onAdd={() => onNewProperty?.()}
+        />
+      ) : undefined}
       header={(
         <PropertyDetailsHeader
           property={selectedProperty}

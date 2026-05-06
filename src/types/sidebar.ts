@@ -12,6 +12,7 @@ export interface SubMenuItem {
   title: string
   href: string
   icon: LucideIcon
+  warningDot?: boolean
 }
 
 export interface MenuSection {

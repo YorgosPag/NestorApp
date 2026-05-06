@@ -44,6 +44,7 @@ import { NotificationProvider } from '@/providers/NotificationProvider';
 import { SharedPropertiesProvider } from '@/contexts/SharedPropertiesProvider';
 import { CacheProvider } from '@/contexts/CacheProvider';
 import { WebSocketProvider } from '@/contexts/WebSocketContext';
+import { BuildingsNoUnitsProvider } from '@/contexts/BuildingsNoUnitsContext';
 // 🏢 ENTERPRISE: Global components that need NotificationProvider
 import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 import { VoiceAIPanel } from '@/components/voice-ai/VoiceAIPanel';
@@ -144,17 +145,19 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               <SharedPropertiesProvider>
                 <NavigationProvider>
                   <PhotoPreviewProvider>
-                    <SidebarProvider>
-                      <div className={layout.shellAppContainer}>
-                        <AppSidebar />
-                        <SidebarInset className={layout.shellAppContent}>
-                          <AppHeader />
-                          <MainContentBridge>
-                            {children}
-                          </MainContentBridge>
-                        </SidebarInset>
-                      </div>
-                    </SidebarProvider>
+                    <BuildingsNoUnitsProvider>
+                      <SidebarProvider>
+                        <div className={layout.shellAppContainer}>
+                          <AppSidebar />
+                          <SidebarInset className={layout.shellAppContent}>
+                            <AppHeader />
+                            <MainContentBridge>
+                              {children}
+                            </MainContentBridge>
+                          </SidebarInset>
+                        </div>
+                      </SidebarProvider>
+                    </BuildingsNoUnitsProvider>
                   </PhotoPreviewProvider>
                 </NavigationProvider>
 

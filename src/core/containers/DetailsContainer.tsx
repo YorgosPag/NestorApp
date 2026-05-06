@@ -57,6 +57,8 @@ interface DetailsContainerProps {
   emptyStateProps?: EmptyStateProps;
   /** 🏢 ENTERPRISE: Auto-generate action button in empty state when provided */
   onCreateAction?: () => void;
+  /** Optional banner rendered above the empty state (e.g. warning for buildings with no units) */
+  warningBanner?: React.ReactNode;
 }
 
 /**
@@ -83,7 +85,8 @@ export function DetailsContainer({
   tabsRenderer,
   selectedItem,
   emptyStateProps = {},
-  onCreateAction
+  onCreateAction,
+  warningBanner,
 }: DetailsContainerProps) {
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
@@ -96,6 +99,15 @@ export function DetailsContainer({
         {emptyStateProps.title}
       </Button>
     ) : emptyStateProps.action;
+
+    if (warningBanner) {
+      return (
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
+          {warningBanner}
+          <DefaultEmptyState {...emptyStateProps} action={autoAction} />
+        </div>
+      );
+    }
 
     return <DefaultEmptyState {...emptyStateProps} action={autoAction} />;
   }

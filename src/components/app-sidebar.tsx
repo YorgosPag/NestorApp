@@ -14,6 +14,7 @@ import { SidebarMenuSection } from "@/components/sidebar/sidebar-menu-section"
 // 🗑️ REMOVED (2026-01-11): SidebarUserFooter - User management moved to header dropdown only
 import { getMainMenuItems, getToolsMenuItems, getSettingsMenuItems } from "@/config/navigation"
 import { useSidebarState } from "@/hooks/useSidebarState"
+import { useBuildingsNoUnits } from "@/contexts/BuildingsNoUnitsContext"
 import { useTranslationLazy } from "@/i18n/hooks/useTranslationLazy"
 import { MapPin } from "lucide-react"
 import { useSidebar } from "@/components/ui/sidebar"
@@ -43,9 +44,25 @@ export function AppSidebar() {
 
         return permissions
     }, [user?.permissions, user?.globalRole])
+    const hasBuildingsWithNoUnits = useBuildingsNoUnits();
+
     const mainMenuItems = React.useMemo(
-        () => getMainMenuItems(userPermissions),
-        [userPermissions]
+        () => {
+            const items = getMainMenuItems(userPermissions);
+            if (!hasBuildingsWithNoUnits) return items;
+            return items.map(item => {
+                if (!item.subItems) return item;
+                return {
+                    ...item,
+                    subItems: item.subItems.map(sub =>
+                        sub.href === '/spaces/properties'
+                            ? { ...sub, warningDot: true }
+                            : sub
+                    ),
+                };
+            });
+        },
+        [userPermissions, hasBuildingsWithNoUnits]
     )
     const toolsMenuItems = React.useMemo(
         () => getToolsMenuItems(userPermissions),

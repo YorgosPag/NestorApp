@@ -114,6 +114,12 @@ export function SidebarMenuItem({
                     >
                       <subItem.icon className={iconSizes.sm} />
                       <span>{translateTitle(subItem.title)}</span>
+                      {subItem.warningDot && (
+                        <span
+                          className="ml-auto h-2 w-2 shrink-0 rounded-full bg-amber-500" // eslint-disable-line design-system/enforce-semantic-colors
+                          aria-hidden
+                        />
+                      )}
                     </Link>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
