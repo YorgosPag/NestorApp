@@ -87,13 +87,14 @@ export function AddressWithHierarchy({
   showStreetFields = true,
   hierarchyLevels = [7, 6, 5, 4, 3],
   defaultExpanded = false,
-  neighborhoodField,
 }: AddressWithHierarchyProps) {
   const { isLoading, resolvePath, getByLevel, levelOptions } = useAdministrativeHierarchy();
   const { t } = useTranslation('addresses');
   const colors = useSemanticColors();
   const [isHierarchyOpen, setIsHierarchyOpen] = useState(defaultExpanded);
-  const fieldStatus = React.useContext(AddressEditorContext)?.fieldStatus ?? null;
+  const editorCtx = React.useContext(AddressEditorContext);
+  const fieldStatus = editorCtx?.fieldStatus ?? null;
+  const neighborhoodFieldNode = editorCtx?.neighborhoodFieldNode;
 
   const current = useMemo(
     () => ({ ...EMPTY_VALUE, ...value }),

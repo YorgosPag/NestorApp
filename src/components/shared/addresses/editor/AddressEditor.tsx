@@ -1,5 +1,5 @@
 'use client';
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Redo2, RotateCcw, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -322,6 +322,18 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     !dismissedSuggestions && suggestions.trigger !== null && suggestions.candidates.length > 0;
   const showActivityLog = (activityLogOpts?.enabled ?? true) && mode === 'edit';
   const confidence = currentResult?.confidence;
+  const neighborhoodFieldNode = formOptions?.hideGrid && formOptions.showNeighborhoodRegion
+    ? (
+      <FormFieldRow
+        field="neighborhood"
+        label={t('form.neighborhood')}
+        placeholder={t('form.neighborhoodPlaceholder')}
+        value={userInput.neighborhood ?? ''}
+        onChange={(v) => handleFieldChange('neighborhood', v)}
+        status={editor.fieldStatus.neighborhood}
+        disabled={mode === 'view'}
+      />
+    ) : undefined;
   const contextValue = useMemo(
     () => ({
       editorState: editor.state,
@@ -332,8 +344,10 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
       undo: undoHook,
       userInput,
       mode,
+      neighborhoodFieldNode,
     }),
-    [editor.state, editor.fieldStatus, editor.activity, suggestions, reconciliation, undoHook, userInput, mode],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editor.state, editor.fieldStatus, editor.activity, suggestions, reconciliation, undoHook, userInput, mode, neighborhoodFieldNode],
   );
 
   return (
@@ -400,24 +414,8 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
           <AddressConfidenceMeter confidence={confidence} />
         )}
 
-        {/* Form body: flat grid OR children (neighborhood injected via cloneElement when showNeighborhoodRegion) */}
-        {formOptions?.hideGrid ? (
-          formOptions.showNeighborhoodRegion && React.isValidElement(children)
-            ? React.cloneElement(children as React.ReactElement<{ neighborhoodField?: React.ReactNode }>, {
-                neighborhoodField: (
-                  <FormFieldRow
-                    field="neighborhood"
-                    label={t('form.neighborhood')}
-                    placeholder={t('form.neighborhoodPlaceholder')}
-                    value={userInput.neighborhood ?? ''}
-                    onChange={(v) => handleFieldChange('neighborhood', v)}
-                    status={editor.fieldStatus.neighborhood}
-                    disabled={mode === 'view'}
-                  />
-                ),
-              })
-            : children
-        ) : (
+        {/* Form body: flat grid OR children (neighborhood delivered via context when showNeighborhoodRegion) */}
+        {formOptions?.hideGrid ? children : (
           <div className="grid grid-cols-2 gap-3">
             {FIELD_CONFIGS.map(({ field, labelKey, placeholderKey }) => (
               <FormFieldRow

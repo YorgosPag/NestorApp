@@ -12,6 +12,7 @@
  */
 
 import { createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 import type { UseAddressEditorResult } from './hooks/useAddressEditor';
 import type { UseAddressSuggestionsResult } from './hooks/useAddressSuggestions';
 import type { UseAddressReconciliationResult } from './hooks/useAddressReconciliation';
@@ -28,6 +29,8 @@ export interface AddressEditorContextValue {
   undo: UseAddressUndoResult;
   userInput: ResolvedAddressFields;
   mode: AddressEditorMode;
+  /** Injected by AddressEditor when showNeighborhoodRegion — consumed by AddressWithHierarchy */
+  neighborhoodFieldNode?: ReactNode;
 }
 
 const AddressEditorContext = createContext<AddressEditorContextValue | null>(null);
