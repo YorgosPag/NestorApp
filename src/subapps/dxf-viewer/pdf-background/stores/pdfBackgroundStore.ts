@@ -241,6 +241,8 @@ export const usePdfBackgroundStore = create<PdfBackgroundStore>()(
         // ============================================================
 
         setEnabled: (enabled: boolean) => {
+          // eslint-disable-next-line no-console
+          console.log('[PDF] setEnabled', enabled, '\n', new Error().stack?.split('\n').slice(2, 6).join('\n'));
           set((draft) => {
             draft.enabled = enabled;
           });

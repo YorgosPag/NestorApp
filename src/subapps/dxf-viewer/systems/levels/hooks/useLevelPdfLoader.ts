@@ -37,9 +37,14 @@ export function useLevelPdfLoader({
     const floorId = level?.floorId;
 
     if (!floorId || level?.sceneFileId) {
+      // eslint-disable-next-line no-console
+      console.log('[PDF] useLevelPdfLoader DISABLE', { currentLevelId, floorId, sceneFileId: level?.sceneFileId });
       setEnabled(false);
       return;
     }
+
+    // eslint-disable-next-line no-console
+    console.log('[PDF] useLevelPdfLoader LOAD', { currentLevelId, floorId, companyId });
 
     abortRef.current?.abort();
     const controller = new AbortController();
