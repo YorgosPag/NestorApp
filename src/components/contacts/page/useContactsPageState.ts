@@ -52,7 +52,6 @@ export function useContactsPageState() {
   const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
-
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
@@ -72,7 +71,6 @@ export function useContactsPageState() {
   const [activeCardFilter, setActiveCardFilter] = useState<string | null>(null);
   const [filters, setFilters] = useState<ContactFilterState>(INITIAL_FILTERS);
   const [subscriptionRetry, setSubscriptionRetry] = useState(0);
-
   // ---------------------------------------------------------------------------
   // Data: Firestore real-time subscription
   // ---------------------------------------------------------------------------
@@ -104,7 +102,6 @@ export function useContactsPageState() {
 
     return () => { unsubContacts(); };
   }, [user, authLoading, subscriptionRetry]);
-
   // ---------------------------------------------------------------------------
   // Data: Direct contact fetch for URL-based instant loading
   // ---------------------------------------------------------------------------
@@ -157,7 +154,6 @@ export function useContactsPageState() {
       refreshContacts();
     }
   }, [selectedContact?.id, refreshContacts]);
-
   // ---------------------------------------------------------------------------
   // Effects: URL parameters
   // ---------------------------------------------------------------------------
@@ -180,6 +176,14 @@ export function useContactsPageState() {
   }, [authLoading, user]); // Intentional: run only on auth change, not on every searchParams update
 
   useEffect(() => {
+    if (authLoading || !user || searchParams.get('create') !== 'true') return;
+    setCreationMode('selecting');
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('create');
+    router.replace(params.size > 0 ? `?${params.toString()}` : window.location.pathname, { scroll: false });
+  }, [authLoading, user]); // Intentional: run only on auth change, same pattern as contactId effect
+
+  useEffect(() => {
     const filterParam = searchParams.get('filter');
     const contactIdParam = searchParams.get('contactId');
 
@@ -196,7 +200,6 @@ export function useContactsPageState() {
     setSelectedContact(null);
     router.push('/contacts');
   }, [router]);
-
   // ---------------------------------------------------------------------------
   // Effects: Cache invalidation + Real-time service
   // ---------------------------------------------------------------------------
@@ -266,7 +269,6 @@ export function useContactsPageState() {
       logger.info('Dispatched force avatar re-render event');
     }
   }, [contacts, selectedContact?.id]); // Intentional: avoid triggering on selectedContact object identity changes
-
   // ---------------------------------------------------------------------------
   // Handlers: Creation / Deletion / Archive
   // ---------------------------------------------------------------------------
@@ -339,7 +341,6 @@ export function useContactsPageState() {
   // ---------------------------------------------------------------------------
   // Filtering
   // ---------------------------------------------------------------------------
-
   const filteredContacts = useMemo(() => {
     const contactIdParam = searchParams.get('contactId');
 

@@ -7,6 +7,7 @@
  */
 
 import React from 'react';
+import Link from 'next/link';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   Package,
@@ -103,7 +104,7 @@ export function SpacesHubPageContent() {
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
+              <Link href="/spaces/properties" className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer block`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-primary/10 rounded-lg">
                     {React.createElement(NAVIGATION_ENTITIES.property.icon, { className: `${iconSizes.md} ${NAVIGATION_ENTITIES.property.color}` })}
@@ -117,9 +118,9 @@ export function SpacesHubPageContent() {
                 <p className={`text-xs ${colors.text.muted} mt-1`}>
                   {t('spaces.cards.apartments.details')}
                 </p>
-              </div>
+              </Link>
 
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
+              <Link href="/spaces/storage" className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer block`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
                     <Package className={`${iconSizes.md} ${colors.text.warning}`} />
@@ -133,9 +134,9 @@ export function SpacesHubPageContent() {
                 <p className={`text-xs ${colors.text.muted} mt-1`}>
                   {t('spaces.cards.storage.details')}
                 </p>
-              </div>
+              </Link>
 
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
+              <Link href="/spaces/parking" className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer block`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
                     <Car className={`${iconSizes.md} ${colors.text.info}`} />
@@ -149,9 +150,9 @@ export function SpacesHubPageContent() {
                 <p className={`text-xs ${colors.text.muted} mt-1`}>
                   {t('spaces.cards.parking.details')}
                 </p>
-              </div>
+              </Link>
 
-              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
+              <Link href="/spaces/common" className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer block`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
                     <Users className={`${iconSizes.md} ${colors.text.success}`} />
@@ -165,7 +166,7 @@ export function SpacesHubPageContent() {
                 <p className={`text-xs ${colors.text.muted} mt-1`}>
                   {t('spaces.cards.common.details')}
                 </p>
-              </div>
+              </Link>
             </div>
 
             <div className={`p-4 bg-muted/50 ${quick.card}`}>
