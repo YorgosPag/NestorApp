@@ -29,12 +29,14 @@ These abbreviations can appear anywhere in a prompt (standalone, inline, in task
 
 ---
 
-## 🚨🚨🚨 SOS. SOS. N.(-1) — TERMINAL PROHIBITION: NEVER GIT PUSH WITHOUT ORDER
-**ABSOLUTELY FORBIDDEN** to `git push` without EXPLICIT order from Giorgio.
-- After every `git commit`, **STOP** and **WAIT** for an order.
+## 🚨🚨🚨 SOS. SOS. N.(-1) — TERMINAL PROHIBITION: NEVER GIT COMMIT OR PUSH WITHOUT ORDER
+**ABSOLUTELY FORBIDDEN** to `git commit` or `git push` without EXPLICIT order from Giorgio.
+- **COMMIT** happens ONLY if Giorgio says: "commit", "κάνε commit", "commit it".
+- **PUSH** happens ONLY if Giorgio says: "push", "send it", "upload", "go Vercel" (in Greek: "push", "στείλε", "ανέβασε", "πήγαινε Vercel").
+- DO NOT commit automatically, DO NOT commit "because it's done", DO NOT commit "for convenience".
 - DO NOT push automatically, DO NOT push "for convenience", DO NOT push "because it built".
-- Push happens ONLY if Giorgio says: "push", "send it", "upload", "go Vercel" (in Greek: "push", "στείλε", "ανέβασε", "πήγαινε Vercel").
-- **WHY:** Each push = Vercel build = credits consumption ($). Giorgio pays.
+- **WHY commit:** Giorgio decides when work is ready to be committed — not the agent.
+- **WHY push:** Each push = Vercel build = credits consumption ($). Giorgio pays.
 - **ZERO EXCEPTIONS.** This rule overrides ALL other rules.
 - 📘 Full git/push/backup protocol: `docs/deployment/git-workflow.md`
 
@@ -380,7 +382,7 @@ The agent works **autonomously**. No need to ask before:
 - Creating new files (after searching for existing)
 - Doing Edit/Write
 - Running compilation checks / tests
-- Doing `git commit` (if task completed correctly)
+- ⚠️ **git commit FORBIDDEN** without explicit order (see N.(-1))
 - ⚠️ **git push FORBIDDEN** without explicit order (see N.(-1))
 
 **Before every Edit/Write:**
