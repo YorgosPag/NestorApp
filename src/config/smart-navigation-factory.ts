@@ -380,8 +380,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
           {
             icon: Library,
             href: "/properties",
-            // eslint-disable-next-line custom/no-hardcoded-strings -- development-only badge, not shown in production
-            badge: process.env.NODE_ENV === 'development' ? 'ΝΕΟ' : null,
+            badge: null,
             smartConfig: {
               priority: 'high',
               displayOrder: 10,  // Second section
@@ -491,7 +490,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
           {
             icon: AppWindow,
             href: "/crm",
-            badge: "PRO",
+            badge: null,
             smartConfig: {
               priority: 'medium',
               displayOrder: 70,
@@ -607,7 +606,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
           {
             icon: MapPin,
             href: "/geo/canvas",
-            badge: "ENTERPRISE",
+            badge: null,
             smartConfig: {
               priority: 'medium',
               displayOrder: 100,
