@@ -8,6 +8,7 @@
  * @module components/shared/addresses/address-with-hierarchy-config
  */
 
+import type { ReactNode } from 'react';
 import {
   ADMIN_LEVEL_LABELS,
   type AdminPath,
@@ -55,6 +56,8 @@ export interface AddressWithHierarchyProps {
   hierarchyLevels?: AdminLevel[];
   /** Start with hierarchy section expanded. Default: false */
   defaultExpanded?: boolean;
+  /** Optional field node rendered left of the country input (same row). Used by AddressEditor for neighborhood. */
+  neighborhoodField?: ReactNode;
 }
 
 // =============================================================================

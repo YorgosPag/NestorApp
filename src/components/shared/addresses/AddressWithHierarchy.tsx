@@ -87,6 +87,7 @@ export function AddressWithHierarchy({
   showStreetFields = true,
   hierarchyLevels = [7, 6, 5, 4, 3],
   defaultExpanded = false,
+  neighborhoodField,
 }: AddressWithHierarchyProps) {
   const { isLoading, resolvePath, getByLevel, levelOptions } = useAdministrativeHierarchy();
   const { t } = useTranslation('addresses');
@@ -121,10 +122,6 @@ export function AddressWithHierarchy({
     [hierarchyLevels],
   );
 
-  // =========================================================================
-  // HANDLERS
-  // =========================================================================
-  /** Handle basic text field changes (street, number, postalCode, country) */
   const handleBasicChange = useCallback(
     (field: 'street' | 'number' | 'postalCode' | 'country', val: string) => {
       const formatted = field === 'postalCode' ? formatGreekPostalCode(val) : val;
@@ -357,9 +354,6 @@ export function AddressWithHierarchy({
     onChange(updated);
   }, [current.settlementName, current.settlementId, current.postalCode, isLoading, isGreekAddress]);
 
-  // =========================================================================
-  // RENDER
-  // =========================================================================
   return (
     <section className="space-y-4">
       {/* Section 1: Basic Address Fields (always visible) */}
@@ -433,16 +427,19 @@ export function AddressWithHierarchy({
             </div>
           </fieldset>
         </div>
-        {/* Row 3: Country */}
-        <fieldset className="space-y-1">
-          <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.country')}</Label>
-          <Input
-            value={current.country}
-            onChange={e => handleBasicChange('country', e.target.value)}
-            placeholder={t('form.countryPlaceholder')}
-            disabled={disabled}
-          />
-        </fieldset>
+        {/* Row 3: [Neighborhood (optional)] + Country */}
+        <div className={neighborhoodField ? 'grid grid-cols-2 gap-3' : undefined}>
+          {neighborhoodField}
+          <fieldset className="space-y-1">
+            <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.country')}</Label>
+            <Input
+              value={current.country}
+              onChange={e => handleBasicChange('country', e.target.value)}
+              placeholder={t('form.countryPlaceholder')}
+              disabled={disabled}
+            />
+          </fieldset>
+        </div>
       </div>
       {/* Section 2: Collapsible Greek Administrative Hierarchy — only for GR addresses */}
       {isGreekAddress && (

@@ -1,5 +1,5 @@
 'use client';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Redo2, RotateCcw, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -400,8 +400,24 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
           <AddressConfidenceMeter confidence={confidence} />
         )}
 
-        {/* Form body: internal flat grid OR children (when formOptions.hideGrid) */}
-        {formOptions?.hideGrid ? children : (
+        {/* Form body: flat grid OR children (neighborhood injected via cloneElement when showNeighborhoodRegion) */}
+        {formOptions?.hideGrid ? (
+          formOptions.showNeighborhoodRegion && React.isValidElement(children)
+            ? React.cloneElement(children as React.ReactElement<{ neighborhoodField?: React.ReactNode }>, {
+                neighborhoodField: (
+                  <FormFieldRow
+                    field="neighborhood"
+                    label={t('form.neighborhood')}
+                    placeholder={t('form.neighborhoodPlaceholder')}
+                    value={userInput.neighborhood ?? ''}
+                    onChange={(v) => handleFieldChange('neighborhood', v)}
+                    status={editor.fieldStatus.neighborhood}
+                    disabled={mode === 'view'}
+                  />
+                ),
+              })
+            : children
+        ) : (
           <div className="grid grid-cols-2 gap-3">
             {FIELD_CONFIGS.map(({ field, labelKey, placeholderKey }) => (
               <FormFieldRow
@@ -475,23 +491,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
         />
 
         {!formOptions?.hideGrid && children}
-
-        {formOptions?.hideGrid && formOptions?.showNeighborhoodRegion && (
-          <div className="grid grid-cols-2 gap-3">
-            {FIELD_CONFIGS.filter(c => c.field === 'neighborhood' || c.field === 'region').map(({ field, labelKey, placeholderKey }) => (
-              <FormFieldRow
-                key={field}
-                field={field}
-                label={t(labelKey)}
-                placeholder={placeholderKey ? t(placeholderKey) : undefined}
-                value={userInput[field] ?? ''}
-                onChange={(v) => handleFieldChange(field, v)}
-                status={editor.fieldStatus[field]}
-                disabled={mode === 'view'}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </AddressEditorContext.Provider>
   );
