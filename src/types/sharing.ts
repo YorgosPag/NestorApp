@@ -25,6 +25,7 @@ export type ShareEntityType =
   | 'project_showcase'
   | 'building_showcase'
   | 'storage_showcase'
+  | 'parking_showcase'
   | 'vendor_rfq_invite';
 
 export type ShareDispatchChannel =

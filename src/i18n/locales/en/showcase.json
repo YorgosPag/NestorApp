@@ -294,5 +294,30 @@
       "introText": "We are sharing the detailed presentation of the storage unit.",
       "ctaLabel": "View online"
     }
+  },
+  "parkingShowcase": {
+    "actions": {
+      "showcase": "Parking Spot Showcase"
+    },
+    "header": {
+      "subtitle": "Parking spot showcase"
+    },
+    "specs": {
+      "title": "Parking Spot Details",
+      "code": "Code",
+      "type": "Type",
+      "status": "Status",
+      "area": "Area",
+      "price": "Price",
+      "floor": "Floor",
+      "building": "Building",
+      "locationZone": "Zone",
+      "areaUnit": "m²"
+    },
+    "email": {
+      "subjectPrefix": "Parking Spot Showcase",
+      "introText": "We are sharing the detailed presentation of the parking spot.",
+      "ctaLabel": "View online"
+    }
   }
 }

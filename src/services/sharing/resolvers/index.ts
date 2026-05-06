@@ -17,6 +17,7 @@ import { propertyShowcaseShareResolver } from './property-showcase.resolver';
 import { projectShowcaseShareResolver } from './project-showcase.resolver';
 import { buildingShowcaseShareResolver } from './building-showcase.resolver';
 import { storageShowcaseShareResolver } from './storage-showcase.resolver';
+import { parkingShowcaseShareResolver } from './parking-showcase.resolver';
 
 let registered = false;
 
@@ -28,6 +29,7 @@ export function registerShareResolvers(): void {
   ShareEntityRegistry.register('project_showcase', projectShowcaseShareResolver);
   ShareEntityRegistry.register('building_showcase', buildingShowcaseShareResolver);
   ShareEntityRegistry.register('storage_showcase', storageShowcaseShareResolver);
+  ShareEntityRegistry.register('parking_showcase', parkingShowcaseShareResolver);
   registered = true;
 }
 
@@ -41,6 +43,7 @@ export {
   projectShowcaseShareResolver,
   buildingShowcaseShareResolver,
   storageShowcaseShareResolver,
+  parkingShowcaseShareResolver,
 };
 export type { FileShareResolvedData } from './file.resolver';
 export type { ContactShareResolvedData } from './contact.resolver';
@@ -48,3 +51,4 @@ export type { PropertyShowcaseResolvedData } from './property-showcase.resolver'
 export type { ProjectShowcaseResolvedData } from './project-showcase.resolver';
 export type { BuildingShowcaseResolvedData } from './building-showcase.resolver';
 export type { StorageShowcaseResolvedData } from './storage-showcase.resolver';
+export type { ParkingShowcaseResolvedData } from './parking-showcase.resolver';

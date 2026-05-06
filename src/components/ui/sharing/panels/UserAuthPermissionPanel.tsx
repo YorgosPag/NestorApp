@@ -59,12 +59,14 @@ export interface UserAuthPermissionPanelProps {
    *   - `{ type: 'project',  projectId }`  → ADR-316 project route
    *   - `{ type: 'building', buildingId }` → ADR-320 building route
    *   - `{ type: 'storage',  storageId }`  → ADR-315 storage route
+   *   - `{ type: 'parking',  parkingId }`  → ADR-315 parking route
    */
   showcaseContext?:
     | { type: 'property'; propertyId: string }
     | { type: 'project'; projectId: string }
     | { type: 'building'; buildingId: string }
-    | { type: 'storage'; storageId: string };
+    | { type: 'storage'; storageId: string }
+    | { type: 'parking'; parkingId: string };
   /**
    * Pre-fills `EmailShareForm`'s personal message field with the note already
    * typed in the link-creation dialog (ADR-312 Phase 9.5). Unifies the field
@@ -214,7 +216,9 @@ export function UserAuthPermissionPanel({
               ? `/api/buildings/${encodeURIComponent(showcaseContext.buildingId)}/showcase/email`
               : showcaseContext.type === 'storage'
                 ? `/api/storages/${encodeURIComponent(showcaseContext.storageId)}/showcase/email`
-                : `/api/properties/${encodeURIComponent(showcaseContext.propertyId)}/showcase/email`;
+                : showcaseContext.type === 'parking'
+                  ? `/api/parking/${encodeURIComponent(showcaseContext.parkingId)}/showcase/email`
+                  : `/api/properties/${encodeURIComponent(showcaseContext.propertyId)}/showcase/email`;
           await Promise.all(
             emailData.recipients.map((recipient) =>
               apiClient.post<ShowcaseEmailResponse>(endpoint, {

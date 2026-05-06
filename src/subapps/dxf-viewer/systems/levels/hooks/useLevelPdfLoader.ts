@@ -13,11 +13,15 @@ interface UseLevelPdfLoaderParams {
 
 /**
  * Loads a PDF/image floorplan into the PDF background canvas when switching to
- * a floor-linked level that has no DXF scene (i.e. the floorplan is PDF/image).
+ * a floor-linked level.
  *
- * - Level has floorId + no sceneFileId → query FloorFloorplanService
- * - fileType pdf/image → loadFromUrl into pdfBackgroundStore
- * - Level has sceneFileId (DXF) or no floorId → disable PDF background
+ * Resolution by fileType (FloorFloorplanService.loadFloorplan):
+ * - pdf/image → loadFromUrl into pdfBackgroundStore
+ * - dxf      → disable PDF background (DXF render takes over)
+ * - none     → disable PDF background
+ *
+ * Note: level.sceneFileId may point to a PDF file too, so we cannot use it
+ * as a "this is DXF" signal. fileType is the source of truth.
  *
  * Race-condition safe: cancels pending loads on rapid level switches.
  */
@@ -36,15 +40,10 @@ export function useLevelPdfLoader({
     const level = levels.find(l => l.id === currentLevelId);
     const floorId = level?.floorId;
 
-    if (!floorId || level?.sceneFileId) {
-      // eslint-disable-next-line no-console
-      console.log('[PDF] useLevelPdfLoader DISABLE', { currentLevelId, floorId, sceneFileId: level?.sceneFileId });
+    if (!floorId) {
       setEnabled(false);
       return;
     }
-
-    // eslint-disable-next-line no-console
-    console.log('[PDF] useLevelPdfLoader LOAD', { currentLevelId, floorId, companyId });
 
     abortRef.current?.abort();
     const controller = new AbortController();

@@ -15,6 +15,8 @@ import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { ParkingDetailsHeader } from './ParkingDetailsHeader';
 import { ParkingTabs } from './ParkingTabs';
 import { DetailsContainer } from '@/core/containers';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 
 interface ParkingDetailsProps {
   parking: ParkingSpot | null;
@@ -26,16 +28,22 @@ interface ParkingDetailsProps {
 
 export function ParkingDetails({ parking, onNewParking, onDelete }: ParkingDetailsProps) {
   const emptyStateMessages = useEmptyStateMessages();
+  const { user } = useAuth();
 
   // Inline editing state (lifted for header ↔ tab coordination)
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
 
   // Save delegation ref — ParkingGeneralTab registers its handleSave here
   const saveRef = useRef<(() => Promise<boolean>) | null>(null);
 
   const handleStartEdit = useCallback(() => {
     setIsEditing(true);
+  }, []);
+
+  const handleShowcaseParking = useCallback(() => {
+    setShowcaseDialogOpen(true);
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -58,37 +66,51 @@ export function ParkingDetails({ parking, onNewParking, onDelete }: ParkingDetai
   }, [parking?.id]);
 
   return (
-    <DetailsContainer
-      selectedItem={parking}
-      header={
-        parking ? (
-          <ParkingDetailsHeader
-            parking={parking}
-            isEditing={isEditing}
-            isSaving={isSaving}
-            onStartEdit={handleStartEdit}
-            onSave={handleSave}
-            onCancel={handleCancel}
-            onNewParking={onNewParking}
-            onDelete={onDelete}
-          />
-        ) : null
-      }
-      tabsRenderer={
-        parking ? (
-          <ParkingTabs
-            parking={parking}
-            isEditing={isEditing}
-            onEditingChange={setIsEditing}
-            saveRef={saveRef}
-          />
-        ) : null
-      }
-      onCreateAction={onNewParking}
-      emptyStateProps={{
-        icon: Car,
-        ...emptyStateMessages.parking
-      }}
-    />
+    <>
+      <DetailsContainer
+        selectedItem={parking}
+        header={
+          parking ? (
+            <ParkingDetailsHeader
+              parking={parking}
+              isEditing={isEditing}
+              isSaving={isSaving}
+              onStartEdit={handleStartEdit}
+              onSave={handleSave}
+              onCancel={handleCancel}
+              onNewParking={onNewParking}
+              onDelete={onDelete}
+              onShowcaseParking={!parking?.id ? undefined : handleShowcaseParking}
+            />
+          ) : null
+        }
+        tabsRenderer={
+          parking ? (
+            <ParkingTabs
+              parking={parking}
+              isEditing={isEditing}
+              onEditingChange={setIsEditing}
+              saveRef={saveRef}
+            />
+          ) : null
+        }
+        onCreateAction={onNewParking}
+        emptyStateProps={{
+          icon: Car,
+          ...emptyStateMessages.parking
+        }}
+      />
+      {parking?.id && user?.companyId && user?.uid && (
+        <UnifiedShareDialog
+          open={showcaseDialogOpen}
+          onOpenChange={setShowcaseDialogOpen}
+          entityType="parking_showcase"
+          entityId={parking.id}
+          entityTitle={parking.number}
+          companyId={user.companyId}
+          userId={user.uid}
+        />
+      )}
+    </>
   );
 }

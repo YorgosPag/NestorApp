@@ -35,6 +35,8 @@ interface ParkingDetailsHeaderProps {
   onNewParking?: () => void;
   /** Delete the current parking spot */
   onDelete?: () => void;
+  /** Open the Parking Showcase share dialog */
+  onShowcaseParking?: () => void;
 }
 
 export function ParkingDetailsHeader({
@@ -46,8 +48,9 @@ export function ParkingDetailsHeader({
   onCancel,
   onNewParking,
   onDelete,
+  onShowcaseParking,
 }: ParkingDetailsHeaderProps) {
-  const { t } = useTranslation(['parking', 'trash']);
+  const { t } = useTranslation(['parking', 'trash', 'showcase']);
 
   // 🏢 ENTERPRISE: Actions via centralized presets
   // Edit mode: Save (🟢), Cancel (⚪)
@@ -58,6 +61,7 @@ export function ParkingDetailsHeader({
         createEntityAction('cancel', t('header.cancel'), onCancel),
       ]
     : [
+        ...(onShowcaseParking ? [createEntityAction('showcase', t('parkingShowcase.actions.showcase', { ns: 'showcase' }), onShowcaseParking)] : []),
         createEntityAction('new', t('header.newParking'), () => onNewParking?.()),
         createEntityAction('edit', t('header.edit'), onStartEdit),
         createEntityAction('delete', t('moveToTrash', { ns: 'trash' }), () => onDelete?.()),
