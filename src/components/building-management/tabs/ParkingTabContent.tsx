@@ -44,6 +44,7 @@ import '@/lib/design-system';
 
 import { useParkingTabState } from './useParkingTabState';
 import { getStatusBadgeClasses } from './parking-tab-config';
+import { ParkingQuickCreateSheet } from '../dialogs/ParkingQuickCreateSheet';
 
 // Re-export types for backward compatibility
 export type { ParkingTabContentProps } from './parking-tab-config';
@@ -179,10 +180,12 @@ export function ParkingTabContent({ building }: { building: Building }) {
         </CardContent>
       </Card>
 
-      {/* Create Form */}
-      {state.showCreateForm && (
-        <ParkingCreateForm state={state} t={t} colors={colors} />
-      )}
+      <ParkingQuickCreateSheet
+        open={state.showCreateForm}
+        onOpenChange={(v) => { if (!v) state.setShowCreateForm(false); }}
+        buildingId={building.id}
+        projectId={building.projectId ?? ''}
+      />
 
       {/* View Toggle */}
       <nav className="flex items-center justify-between">

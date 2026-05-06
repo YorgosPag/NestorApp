@@ -264,6 +264,9 @@
   },
   "details": {
     "addBuildingTitle": "Add New Building",
+    "addUnitTitle": "Add New Unit",
+    "addStorageTitle": "Add New Storage Room",
+    "addParkingTitle": "Add New Parking Spot",
     "newBuilding": "New Building",
     "viewBuilding": "View Building",
     "editBuilding": "Edit",

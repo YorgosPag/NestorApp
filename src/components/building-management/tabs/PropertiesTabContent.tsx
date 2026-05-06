@@ -27,7 +27,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { Building } from '@/types/building/contracts';
 import type { Property, PropertyType } from '@/types/property';
-import { PropertyInlineCreateForm } from './PropertyInlineCreateForm';
+import { UnitQuickCreateSheet } from '../dialogs/UnitQuickCreateSheet';
 import { PropertyInlineEditRow } from './PropertyInlineEditRow';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
@@ -385,16 +385,15 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
         </CardContent>
       </Card>
 
-      {showCreateForm && (
-        <PropertyInlineCreateForm
-          buildingId={building.id}
-          buildingName={building.name || ''}
-          projectId={building.projectId || ''}
-          floors={floors}
-          onCreated={handleCreateSuccess}
-          onCancel={() => setShowCreateForm(false)}
-        />
-      )}
+      <UnitQuickCreateSheet
+        open={showCreateForm}
+        onOpenChange={setShowCreateForm}
+        buildingId={building.id}
+        buildingName={building.name || ''}
+        projectId={building.projectId || ''}
+        floors={floors}
+        onCreated={handleCreateSuccess}
+      />
 
       <nav className="flex items-center justify-between">
         <span className={cn("text-sm", colors.text.muted)}>

@@ -32,7 +32,7 @@ import { Warehouse, Plus, Layers, Table as TableIcon, Link2, Check, X } from 'lu
 import { Spinner } from '@/components/ui/spinner';
 import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
-import { StorageCreateForm } from './StorageTab/StorageCreateForm';
+import { StorageQuickCreateSheet } from './dialogs/StorageQuickCreateSheet';
 import { useStorageTabState } from './StorageTab/useStorageTabState';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './shared';
 import type { SpaceColumn, SpaceCardField } from './shared';
@@ -127,24 +127,11 @@ export function StorageTab({ building }: StorageTabProps) {
         onFilterStatusChange={s.setFilterStatus}
       />
 
-      {/* Inline Create Form */}
-      {s.showCreateForm && (
-        <StorageCreateForm
-          code={s.createCode} onCodeChange={s.setCreateCode}
-          type={s.createType} onTypeChange={s.setCreateType}
-          status={s.createStatus} onStatusChange={s.setCreateStatus}
-          floor={s.createFloor} onFloorChange={s.setCreateFloor}
-          area={s.createArea} onAreaChange={s.setCreateArea}
-          price={s.createPrice} onPriceChange={s.setCreatePrice}
-          description={s.createDescription} onDescriptionChange={s.setCreateDescription}
-          creating={s.creating}
-          onSubmit={s.handleCreate}
-          onCancel={s.resetCreateForm}
-          translatedGetTypeLabel={s.translatedGetTypeLabel}
-          translatedGetStatusLabel={s.translatedGetStatusLabel}
-          t={s.t}
-        />
-      )}
+      <StorageQuickCreateSheet
+        open={s.showCreateForm}
+        onOpenChange={(v) => { if (!v) s.setShowCreateForm(false); }}
+        building={building}
+      />
 
       {/* View Toggle */}
       <nav className="flex items-center justify-between">

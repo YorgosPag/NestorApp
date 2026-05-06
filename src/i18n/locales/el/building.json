@@ -264,6 +264,9 @@
   },
   "details": {
     "addBuildingTitle": "Προσθήκη Νέου Κτιρίου",
+    "addUnitTitle": "Προσθήκη Νέας Μονάδας",
+    "addStorageTitle": "Προσθήκη Νέας Αποθήκης",
+    "addParkingTitle": "Προσθήκη Νέας Θέσης Στάθμευσης",
     "newBuilding": "Νέο Κτίριο",
     "viewBuilding": "Προβολή Κτιρίου",
     "editBuilding": "Επεξεργασία",
