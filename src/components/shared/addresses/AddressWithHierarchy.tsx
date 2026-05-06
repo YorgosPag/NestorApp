@@ -389,6 +389,7 @@ export function AddressWithHierarchy({
             </fieldset>
           </div>
         )}
+        {neighborhoodField}
         {/* Row 2: Postal Code + Settlement / City (same line) */}
         <div className="grid grid-cols-3 gap-3">
           <fieldset className="space-y-1">
@@ -427,19 +428,16 @@ export function AddressWithHierarchy({
             </div>
           </fieldset>
         </div>
-        {/* Row 3: [Neighborhood (optional)] + Country */}
-        <div className={neighborhoodField ? 'grid grid-cols-2 gap-3' : undefined}>
-          {neighborhoodField}
-          <fieldset className="space-y-1">
-            <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.country')}</Label>
-            <Input
-              value={current.country}
-              onChange={e => handleBasicChange('country', e.target.value)}
-              placeholder={t('form.countryPlaceholder')}
-              disabled={disabled}
-            />
-          </fieldset>
-        </div>
+        {/* Row 3: Country */}
+        <fieldset className="space-y-1">
+          <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.country')}</Label>
+          <Input
+            value={current.country}
+            onChange={e => handleBasicChange('country', e.target.value)}
+            placeholder={t('form.countryPlaceholder')}
+            disabled={disabled}
+          />
+        </fieldset>
       </div>
       {/* Section 2: Collapsible Greek Administrative Hierarchy — only for GR addresses */}
       {isGreekAddress && (
