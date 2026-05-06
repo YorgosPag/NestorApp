@@ -487,7 +487,7 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
           currentAddress={userInput}
           newAddress={pendingDrag ?? {}}
           onConfirm={handleDragConfirm}
-          onCancel={() => setPendingDrag(null)}
+          onCancel={() => { setPendingDrag(null); onUndoRedo?.(); }}
         />
 
         {!formOptions?.hideGrid && children}

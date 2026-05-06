@@ -93,6 +93,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   onAddressDragUpdate,
   readOnlyAddressIds,
   dragResetKey,
+  activeEditingAddressId,
   className = ''
 }) => {
   // ===========================================================================
@@ -319,6 +320,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                   const isReadOnly = readOnlyAddressIds?.has(addr.id) === true;
                   const translatedLabel = addr.label || t(`types.${addr.type}`);
 
+                  const isActiveEdit = activeEditingAddressId === addr.id;
+
                   // ADR-318: read-only derived pins require real geocoded coords —
                   // no fallback offset (they are not placeholders).
                   if (isReadOnly) {
@@ -357,6 +360,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                       <DraggableMarkerPin
                         isPrimary={addr.isPrimary}
                         pulsate={!hasData}
+                        isEditing={isActiveEdit}
                         label={translatedLabel}
                       />
                     </Marker>

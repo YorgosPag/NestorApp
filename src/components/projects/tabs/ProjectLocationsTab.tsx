@@ -78,6 +78,8 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const addEditorRef = useRef<AddressEditorHandle>(null);
   const editEditorRef = useRef<AddressEditorHandle>(null);
   const [pendingViewDrag, setPendingViewDrag] = useState<PendingViewDrag | null>(null);
+  const [undoRedoCount, setUndoRedoCount] = useState(0);
+  const handleUndoRedo = useCallback(() => setUndoRedoCount(n => n + 1), []);
 
   // Ghost addresses (street='' AND city='') are produced by handleClearPrimaryAddress
   // to preserve the isPrimary slot. Filter them out of view-mode list AND map —
@@ -122,6 +124,33 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   // Pending address: draggable preview pin shown while the add form is open.
   // Appended to the real (non-ghost) addresses so AddressMap renders it as a pulsating draggable marker.
   const PENDING_ID = '__pending_new__';
+
+  // The address whose pin shows amber + bounce (the one currently in the form).
+  const activeEditingAddressId = useMemo<string | undefined>(() => {
+    if (loc.isAddFormOpen) return PENDING_ID;
+    if (loc.editingIndex !== null) return loc.localAddresses[loc.editingIndex]?.id;
+    return undefined;
+  }, [loc.isAddFormOpen, loc.editingIndex, loc.localAddresses]);
+
+  // When a form is open, freeze every pin except the one being worked on.
+  // Add form → only PENDING_ID is draggable; real pins are locked.
+  // Edit form → only the address being edited is draggable; others are locked.
+  // View mode (no form) → all draggable (existing view-drag + confirm flow).
+  const readOnlyAddressIds = useMemo<Set<string> | undefined>(() => {
+    if (loc.isAddFormOpen) {
+      return new Set(visibleAddresses.map(({ address }) => address.id));
+    }
+    if (loc.editingIndex !== null) {
+      const editingId = loc.localAddresses[loc.editingIndex]?.id;
+      if (!editingId) return undefined;
+      return new Set(
+        visibleAddresses
+          .filter(({ address }) => address.id !== editingId)
+          .map(({ address }) => address.id),
+      );
+    }
+    return undefined;
+  }, [loc.isAddFormOpen, loc.editingIndex, loc.localAddresses, visibleAddresses]);
   const mapAddresses = useMemo<ProjectAddress[]>(() => {
     const real = visibleAddresses.map(({ address }) => address);
     if (!loc.isAddFormOpen || !loc.pendingDragCoords) return real;
@@ -169,7 +198,10 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
     setPendingViewDrag(null);
   }, [pendingViewDrag, loc.handleAddressDragUpdate]);
 
-  const handleViewDragCancel = useCallback(() => setPendingViewDrag(null), []);
+  const handleViewDragCancel = useCallback(() => {
+    setPendingViewDrag(null);
+    setUndoRedoCount(n => n + 1);
+  }, []);
 
   return (
     <FullscreenOverlay
@@ -211,6 +243,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             isSaving={loc.isSaving}
             onSave={loc.handleSaveNewAddress}
             onCancel={loc.handleCancelAdd}
+            onUndoRedo={handleUndoRedo}
             t={t}
             tProjects={tProjects}
             availableTypes={availableTypesForAdd}
@@ -235,6 +268,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             isSaving={loc.isSaving}
             onSave={loc.handleSaveEdit}
             onCancel={loc.handleCancelEdit}
+            onUndoRedo={handleUndoRedo}
             t={t}
             availableTypes={availableTypesForEdit}
             tProjects={tProjects}
@@ -303,6 +337,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           onMarkerClick={loc.handleMarkerClick}
           draggableMarkers={isEditing && mapAddresses.length > 0}
           onAddressDragUpdate={handleCombinedDragUpdate}
+          readOnlyAddressIds={readOnlyAddressIds}
+          activeEditingAddressId={activeEditingAddressId}
+          dragResetKey={undoRedoCount}
           heightPreset="viewerFullscreen"
           className="rounded-lg border shadow-sm !h-full"
         />

@@ -51,6 +51,16 @@ export const BRANCH_PIN_COLORS = {
   labelClass: 'bg-background/95 text-foreground border border-border',
 } as const;
 
+/** Active-editing pin colors — yellow, maximally visible during inline edit */
+export const EDITING_PIN_COLORS = {
+  body: colors.yellow['400'],        // #facc15 — yellow signals "you are editing this"
+  stroke: colors.background.primary,
+  innerCircle: colors.background.primary,
+  // eslint-disable-next-line design-system/no-hardcoded-colors
+  shadow: 'rgba(250,204,21,0.5)',
+  labelClass: 'bg-background/95 text-foreground border border-border',
+} as const;
+
 /** Auto-pan configuration for edge dragging */
 export const AUTO_PAN = {
   EDGE_THRESHOLD: 60,   // pixels from viewport edge to start panning
@@ -103,6 +113,12 @@ export interface AddressMapProps {
   className?: string;
 
   /**
+   * ID of the address currently open in the inline edit/add form.
+   * That pin renders in amber + bounce to signal "this is the one you are editing".
+   */
+  activeEditingAddressId?: string;
+
+  /**
    * Increment this counter to clear all drag positions and re-fit bounds.
    * Used to sync the map after undo/redo in the address editor — the pin
    * must revert to the geocoded position for the restored address fields.
@@ -153,13 +169,16 @@ interface DraggableMarkerPinProps {
   pulsate?: boolean;
   /** Label shown below the pin */
   label?: string;
+  /** Amber color + bounce — pin is the active inline-edit target */
+  isEditing?: boolean;
 }
 
 /** SVG map pin component — used for both draggable and read-only markers */
-export function DraggableMarkerPin({ isPrimary, pulsate, label }: DraggableMarkerPinProps) {
+export function DraggableMarkerPin({ isPrimary, pulsate, label, isEditing }: DraggableMarkerPinProps) {
   const size = isPrimary ? 40 : 32;
   const viewBoxHeight = Math.round(size * 1.25);
-  const pinColors = isPrimary ? PIN_COLORS : BRANCH_PIN_COLORS;
+  const pinColors = isEditing ? EDITING_PIN_COLORS : isPrimary ? PIN_COLORS : BRANCH_PIN_COLORS;
+  const shouldAnimate = pulsate || isEditing;
   return (
     <figure className="flex flex-col items-center m-0">
       <svg
@@ -167,7 +186,7 @@ export function DraggableMarkerPin({ isPrimary, pulsate, label }: DraggableMarke
         height={viewBoxHeight}
         viewBox="0 0 40 50"
         xmlns="http://www.w3.org/2000/svg"
-        className={`cursor-grab active:cursor-grabbing drop-shadow-md ${pulsate ? 'animate-bounce' : ''}`}
+        className={`cursor-grab active:cursor-grabbing drop-shadow-md ${shouldAnimate ? 'animate-bounce' : ''}`}
       >
         <ellipse cx="20" cy="47" rx="8" ry="3" fill={pinColors.shadow} />
         <path

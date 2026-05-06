@@ -42,6 +42,8 @@ interface LocationInlineFormProps {
   isSaving: boolean;
   onSave: () => void;
   onCancel: () => void;
+  /** Called after undo/redo — parent uses it to reset the map drag position. */
+  onUndoRedo?: () => void;
   t: (key: string) => string;
   tProjects: (key: string) => string;
   availableTypes?: readonly ProjectAddressType[];
@@ -82,6 +84,7 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
     isSaving,
     onSave,
     onCancel,
+    onUndoRedo,
     t,
     tProjects,
     availableTypes,
@@ -148,24 +151,6 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
         </div>
 
         <div className="space-y-2">
-          {/* AddressEditor provides: activity log, field badges, reconciliation,
-              suggestions, drag confirm dialog, undo/redo */}
-          <AddressEditor
-            ref={ref}
-            value={resolvedValue}
-            onChange={handleEditorChange}
-            onDragApplied={handleDragApplied}
-            mode="edit"
-            domain="project"
-            formOptions={{ hideGrid: true }}
-            activityLog={{ collapsed: true }}
-          >
-            <AddressWithHierarchy
-              value={hierarchy}
-              onChange={onHierarchyChange}
-            />
-          </AddressEditor>
-
           <ProjectAddressFields
             type={type}
             blockSide={blockSide}
@@ -178,6 +163,25 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
             t={t}
             availableTypes={availableTypes}
           />
+
+          {/* AddressEditor provides: activity log, field badges, reconciliation,
+              suggestions, drag confirm dialog, undo/redo */}
+          <AddressEditor
+            ref={ref}
+            value={resolvedValue}
+            onChange={handleEditorChange}
+            onDragApplied={handleDragApplied}
+            onUndoRedo={onUndoRedo}
+            mode="edit"
+            domain="project"
+            formOptions={{ hideGrid: true }}
+            activityLog={{ collapsed: true }}
+          >
+            <AddressWithHierarchy
+              value={hierarchy}
+              onChange={onHierarchyChange}
+            />
+          </AddressEditor>
 
           <div className={cn('flex gap-2 justify-end border-t', spacing.padding.top.md)}>
             <Button variant="outline" onClick={onCancel} disabled={isSaving}>
