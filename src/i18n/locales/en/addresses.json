@@ -287,7 +287,9 @@
         "stale": "Stale data",
         "error": "Search error"
       },
-      "retryGeocode": "Retry"
+      "retryGeocode": "Retry",
+      "undo": "Undo",
+      "redo": "Redo"
     },
     "undo": {
       "fieldCorrection": "Correction: {field}",

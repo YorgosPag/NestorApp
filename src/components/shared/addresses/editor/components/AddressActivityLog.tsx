@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronUp, Copy, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ActivityLevel, ActivityVerbosity, GeocodingActivityEvent } from '../types';
@@ -86,25 +87,35 @@ export function AddressActivityLog({
           ))}
         </select>
 
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-6 w-6"
-          onClick={handleCopy}
-          aria-label={t('editor.activity.copy')}
-        >
-          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6"
+              onClick={handleCopy}
+              aria-label={t('editor.activity.copy')}
+            >
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('editor.activity.copy')}</TooltipContent>
+        </Tooltip>
 
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-6 w-6"
-          onClick={onClear}
-          aria-label={t('editor.activity.clear')}
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6"
+              onClick={onClear}
+              aria-label={t('editor.activity.clear')}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('editor.activity.clear')}</TooltipContent>
+        </Tooltip>
 
         {onToggleCollapsed && (
           <Button

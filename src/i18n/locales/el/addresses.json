@@ -287,7 +287,9 @@
         "stale": "Παλιά δεδομένα",
         "error": "Σφάλμα αναζήτησης"
       },
-      "retryGeocode": "Επανάληψη"
+      "retryGeocode": "Επανάληψη",
+      "undo": "Αναίρεση",
+      "redo": "Επαναφορά"
     },
     "undo": {
       "fieldCorrection": "Διόρθωση: {field}",

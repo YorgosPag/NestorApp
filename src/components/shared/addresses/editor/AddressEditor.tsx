@@ -1,5 +1,4 @@
 'use client';
-
 /**
  * AddressEditor — Layer 6 coordinator (ADR-332 Phase 5)
  *
@@ -9,7 +8,6 @@
  * @module components/shared/addresses/editor/AddressEditor
  * @see ADR-332 §3.3 Coordinator API
  */
-
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Redo2, RotateCcw, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +27,7 @@ import {
   resolveReconciliationAction,
 } from './helpers/coordinatorHelpers';
 import { AddressFieldBadge } from './components/AddressFieldBadge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AddressConfidenceMeter } from './components/AddressConfidenceMeter';
 import { AddressActivityLog } from './components/AddressActivityLog';
 import { AddressReconciliationPanel } from './components/AddressReconciliationPanel';
@@ -46,7 +45,6 @@ import type {
 // =============================================================================
 // Constants
 // =============================================================================
-
 const FIELD_CONFIGS: ReadonlyArray<{
   field: keyof ResolvedAddressFields;
   labelKey: string;
@@ -74,10 +72,6 @@ const PHASE_STATUS_CLASS: Record<AddressEditorState['phase'], string> = {
   stale: 'text-muted-foreground',
   error: 'text-red-600 dark:text-red-400',
 };
-
-// =============================================================================
-// Sub-components (helpers extracted to helpers/coordinatorHelpers.ts)
-// =============================================================================
 
 // =============================================================================
 // Sub-components
@@ -125,7 +119,6 @@ function FormFieldRow({
 // =============================================================================
 // Keyboard hook
 // =============================================================================
-
 function useEditorKeyboard(
   canUndo: boolean,
   canRedo: boolean,
@@ -155,12 +148,12 @@ function useEditorKeyboard(
 // =============================================================================
 // Coordinator
 // =============================================================================
-
 export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>(
   function AddressEditor({
     value,
     onChange,
     onDragApplied,
+    onUndoRedo,
     mode = 'edit',
     formOptions,
     activityLog: activityLogOpts,
@@ -169,7 +162,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     children,
   }, ref) {
   const { t } = useTranslation('addresses');
-
   // Semi-controlled: internal form state; reset on value identity change.
   const [userInput, setUserInput] = useState<ResolvedAddressFields>(() => value);
   const [pendingDrag, setPendingDrag] = useState<ResolvedAddressFields | null>(null);
@@ -177,11 +169,9 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
   const [dismissedSuggestions, setDismissedSuggestions] = useState(false);
   const userInputRef = useRef(userInput);
   const hasStartedEditRef = useRef(false);
-
   useEffect(() => {
     userInputRef.current = userInput;
   }, [userInput]);
-
   // Sync when parent resets the address (e.g. switching entity).
   const valueRef = useRef(value);
   useEffect(() => {
@@ -190,18 +180,15 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
       setUserInput(value);
     }
   }, [value]);
-
   useImperativeHandle(ref, () => ({
     setPendingDrag: (addr: ResolvedAddressFields) => setPendingDrag(addr),
   }), []);
-
   // === Telemetry ===
   const telemetryHook = useAddressTelemetry({
     contextEntityType: (telemetry?.contextEntityType ?? 'contact') as CorrectionContextEntityType,
     contextEntityId: telemetry?.contextEntityId ?? '',
     disabled: !telemetry?.enabled || !telemetry?.contextEntityId,
   });
-
   // === Hook wiring ===
   const editor = useAddressEditor(userInput, {
     autoGeocode: mode === 'edit',
@@ -210,11 +197,9 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
 
   const currentResult = extractResult(editor.state);
   const resolvedFields: ResolvedAddressFields = currentResult?.resolvedFields ?? {};
-
   const suggestions = useAddressSuggestions(currentResult);
   const reconciliation = useAddressReconciliation(userInput, resolvedFields);
   const undoHook = useAddressUndo();
-
   // === Field change ===
   const handleFieldChange = useCallback(
     (field: keyof ResolvedAddressFields, val: string) => {
@@ -237,21 +222,22 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     telemetryHook.markUndoOccurred();
     setUserInput(entry.before);
     onChange(entry.before);
-  }, [undoHook, onChange, telemetryHook]);
+    onUndoRedo?.();
+  }, [undoHook, onChange, telemetryHook, onUndoRedo]);
 
   const handleRedo = useCallback(() => {
     const entry = undoHook.redo();
     if (!entry) return;
     setUserInput(entry.after);
     onChange(entry.after);
-  }, [undoHook, onChange]);
+    onUndoRedo?.();
+  }, [undoHook, onChange, onUndoRedo]);
 
   const handleForceRegeocode = useCallback(() => {
     void editor.triggerGeocode();
   }, [editor]);
 
   useEditorKeyboard(undoHook.canUndo, undoHook.canRedo, handleUndo, handleRedo, handleForceRegeocode);
-
   // === Reconciliation confirm ===
   const handleMergeConfirm = useCallback(() => {
     if (!reconciliation.resolved) return;
@@ -275,7 +261,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     onChange(merged);
     editor.applyCorrection();
   }, [reconciliation, undoHook, onChange, editor, telemetryHook, resolvedFields, currentResult]);
-
   // === Suggestion select ===
   const handleSuggestionSelect = useCallback(
     (candidate: GeocodingApiResponse) => {
@@ -344,7 +329,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     editor.markStale();
     setPendingDrag(null);
   }, [pendingDrag, undoHook, onChange, onDragApplied, editor, telemetryHook, resolvedFields, currentResult]);
-
   // === Panel visibility ===
   const showReconciliation =
     editor.state.phase === 'conflict' || editor.state.phase === 'partial';
@@ -380,35 +364,50 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
             {t(`editor.coordinator.phase.${editor.state.phase}`)}
           </span>
           <div className="flex items-center gap-1" role="toolbar" aria-label="Editor actions">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6"
-              onClick={handleUndo}
-              disabled={!undoHook.canUndo}
-              aria-label="Undo"
-            >
-              <Undo2 className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6"
-              onClick={handleRedo}
-              disabled={!undoHook.canRedo}
-              aria-label="Redo"
-            >
-              <Redo2 className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6"
-              onClick={editor.reset}
-              aria-label={t('editor.coordinator.retryGeocode')}
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6"
+                  onClick={handleUndo}
+                  disabled={!undoHook.canUndo}
+                  aria-label={t('editor.coordinator.undo')}
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('editor.coordinator.undo')}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6"
+                  onClick={handleRedo}
+                  disabled={!undoHook.canRedo}
+                  aria-label={t('editor.coordinator.redo')}
+                >
+                  <Redo2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('editor.coordinator.redo')}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6"
+                  onClick={editor.reset}
+                  aria-label={t('editor.coordinator.retryGeocode')}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('editor.coordinator.retryGeocode')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
 

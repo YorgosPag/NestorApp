@@ -1,5 +1,4 @@
 'use client';
-
 /**
  * AddressesSectionWithFullscreen — Standalone wrapper for company addresses tab
  *
@@ -8,8 +7,8 @@
  *
  * @enterprise ADR-241 (Fullscreen centralization)
  */
-
 import React, { useState, useCallback, useRef, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { useFullscreen } from '@/hooks/useFullscreen';
@@ -34,19 +33,11 @@ import { resolveContactAddressLabel } from '@/components/contacts/addresses/cont
 import { getPrimaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
 import { useNotifications } from '@/providers/NotificationProvider';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 interface AddressesSectionWithFullscreenProps {
   formData: ContactFormData;
   setFormData?: React.Dispatch<React.SetStateAction<ContactFormData>>;
   disabled: boolean;
 }
-
-// ============================================================================
-// HELPERS
-// ============================================================================
 
 function formatHqStreetLine(formData: ContactFormData): string {
   const parts = [
@@ -68,10 +59,6 @@ function formDataToResolvedFields(fd: ContactFormData): ResolvedAddressFields {
   };
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function AddressesSectionWithFullscreen({
   formData,
   setFormData,
@@ -84,8 +71,13 @@ export function AddressesSectionWithFullscreen({
   const { notify } = useNotifications();
 
   const [isEditingHQ, setIsEditingHQ] = useState(false);
+  const [undoRedoCount, setUndoRedoCount] = useState(0);
   const branchRef = useRef<CompanyAddressesSectionHandle>(null);
   const hqEditorRef = useRef<AddressEditorHandle>(null);
+
+  const handleUndoRedo = useCallback(() => {
+    setUndoRedoCount(n => n + 1);
+  }, []);
 
   // ADR-318: live-derived work addresses from professional relationships.
   // Returns [] for company/service contacts (semantic filter inside hook).
@@ -138,6 +130,7 @@ export function AddressesSectionWithFullscreen({
         streetNumber: addr.number ?? (prev.streetNumber as string) ?? '',
         postalCode: addr.postalCode ?? (prev.postalCode as string) ?? '',
         city: addr.city ?? (prev.city as string) ?? '',
+        ...(addr.country !== undefined ? { hqAddressCountry: addr.country } : {}),
         ...(updatedAddresses.length > 0 ? { companyAddresses: updatedAddresses } : {}),
       };
     });
@@ -374,6 +367,7 @@ export function AddressesSectionWithFullscreen({
               value={hqResolvedFields}
               onChange={handleHqChange}
               onDragApplied={handleHqDragApplied}
+              onUndoRedo={handleUndoRedo}
               mode="edit"
               domain="contact"
               formOptions={{ hideGrid: true }}
@@ -466,11 +460,17 @@ export function AddressesSectionWithFullscreen({
           companyAddresses={formData.companyAddresses}
           readOnlyExtraAddresses={derivedPinAddresses}
           draggable={isEditing}
+          dragResetKey={undoRedoCount}
           onDragResolve={isEditing && setFormData ? (addr: DragResolvedAddress, addressIndex: number) => {
             // ADR-319: HQ is always index 0.
             // HQ drag → AddressEditor confirm dialog (ADR-332 Phase 6, replaces ADR-277 AlertDialog).
             // Branch drag → apply directly (no hierarchy to clear for branches).
             if (addressIndex === 0) {
+              // Ensure AddressEditor is mounted before calling setPendingDrag.
+              // If isEditingHQ is false, the editor ref is null — open it synchronously.
+              if (!hqEditorRef.current) {
+                flushSync(() => setIsEditingHQ(true));
+              }
               hqEditorRef.current?.setPendingDrag({
                 street: addr.street,
                 number: addr.number,
@@ -478,6 +478,7 @@ export function AddressesSectionWithFullscreen({
                 city: addr.city,
                 neighborhood: addr.neighborhood,
                 region: addr.region,
+                country: addr.country,
               });
             } else {
               applyDragResolve(addr, addressIndex);

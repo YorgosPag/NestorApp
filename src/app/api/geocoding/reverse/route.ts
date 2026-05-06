@@ -71,7 +71,7 @@ interface ReverseGeocodingApiResponse {
 const NOMINATIM_BASE_URL = process.env.NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org';
 const USER_AGENT = process.env.GEOCODING_USER_AGENT || 'NestorPagonisApp/1.0 (geocoding)';
 const NOMINATIM_TIMEOUT_MS = parseInt(process.env.GEOCODING_TIMEOUT_MS || '8000', 10);
-const { GEOCODING, COUNTRY_BOUNDING_BOX } = GEOGRAPHIC_CONFIG;
+const { GEOCODING } = GEOGRAPHIC_CONFIG;
 
 // =============================================================================
 // VALIDATION
@@ -81,15 +81,6 @@ function isValidLatLon(lat: number, lon: number): boolean {
   if (Number.isNaN(lat) || Number.isNaN(lon)) return false;
   if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return false;
   return true;
-}
-
-function isWithinGreekBounds(lat: number, lon: number): boolean {
-  return (
-    lat >= COUNTRY_BOUNDING_BOX.minLat &&
-    lat <= COUNTRY_BOUNDING_BOX.maxLat &&
-    lon >= COUNTRY_BOUNDING_BOX.minLng &&
-    lon <= COUNTRY_BOUNDING_BOX.maxLng
-  );
 }
 
 // =============================================================================
@@ -202,13 +193,6 @@ async function handleGet(request: NextRequest): Promise<Response> {
     if (!isValidLatLon(lat, lon)) {
       return NextResponse.json(
         { error: 'Invalid lat/lon values' },
-        { status: 400 }
-      );
-    }
-
-    if (!isWithinGreekBounds(lat, lon)) {
-      return NextResponse.json(
-        { error: 'Coordinates outside supported region (Greece)' },
         { status: 400 }
       );
     }

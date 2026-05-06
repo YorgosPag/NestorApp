@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { LngLatBounds } from 'maplibre-gl';
 
 import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
@@ -403,12 +404,17 @@ export function useAddressMapGeocoding({
   ) => {
     stopAutoPan();
     const { lng, lat } = event.lngLat;
-    setDragPositions(prev => {
-      const next = new Map(prev);
-      next.set(addressId, { lng, lat });
-      return next;
+    // flushSync: commit dragPositions synchronously BEFORE maplibre's moveend
+    // event triggers a MapContext re-render with old longitude/latitude props,
+    // which would cause a visible pin snap-back to the previous position.
+    flushSync(() => {
+      setDragPositions(prev => {
+        const next = new Map(prev);
+        next.set(addressId, { lng, lat });
+        return next;
+      });
+      setIsReverseGeocoding(true);
     });
-    setIsReverseGeocoding(true);
 
     try {
       const result = await reverseGeocode(lat, lng);

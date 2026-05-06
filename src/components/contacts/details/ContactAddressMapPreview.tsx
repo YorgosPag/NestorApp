@@ -17,6 +17,7 @@ export interface DragResolvedAddress {
   city: string;
   neighborhood: string;
   region: string;
+  country: string;
 }
 
 interface ContactAddressMapPreviewProps {
@@ -190,6 +191,7 @@ export function ContactAddressMapPreview({
         city: data.neighborhood || data.city || '',
         neighborhood: data.neighborhood ?? '',
         region: data.region ?? '',
+        country: data.country ?? '',
       }, addressIndex);
     };
   }, [draggable, onDragResolve]);
