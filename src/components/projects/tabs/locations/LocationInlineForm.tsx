@@ -111,6 +111,8 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
         number: resolved.number ?? hierarchy.number ?? '',
         postalCode: resolved.postalCode ?? hierarchy.postalCode ?? '',
         settlementName: resolved.city ?? hierarchy.settlementName ?? '',
+        communityName: resolved.neighborhood ?? hierarchy.communityName ?? '',
+        regionName: resolved.region ?? hierarchy.regionName ?? '',
       });
     }, [hierarchy, onHierarchyChange]);
 

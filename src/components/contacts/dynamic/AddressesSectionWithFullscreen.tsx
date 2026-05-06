@@ -130,6 +130,7 @@ export function AddressesSectionWithFullscreen({
         streetNumber: addr.number ?? (prev.streetNumber as string) ?? '',
         postalCode: addr.postalCode ?? (prev.postalCode as string) ?? '',
         city: addr.city ?? (prev.city as string) ?? '',
+        region: addr.region ?? (prev.region as string) ?? '',
         ...(addr.country !== undefined ? { hqAddressCountry: addr.country } : {}),
         ...(updatedAddresses.length > 0 ? { companyAddresses: updatedAddresses } : {}),
       };
