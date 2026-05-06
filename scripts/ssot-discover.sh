@@ -165,9 +165,13 @@ check_pattern() {
         | grep -vE ":[0-9]+:[[:space:]]*(//|\*)" \
         || true)
 
-    # Exclude allowlisted SSoT files from violation counting
+    # Exclude allowlisted SSoT files from violation counting (pipe-separated list)
     if [[ -n "$allowlist_files" ]]; then
-        results=$(echo "$results" | grep -vF "$allowlist_files" || true)
+        IFS='|' read -ra _allow_arr <<< "$allowlist_files"
+        for _af in "${_allow_arr[@]}"; do
+            [[ -z "$_af" ]] && continue
+            results=$(echo "$results" | grep -vF "$_af" || true)
+        done
     fi
 
     # Exclude false-positive patterns (e.g. TypeScript union types)
@@ -214,7 +218,7 @@ check_pattern "hardcoded collection()" \
 check_pattern "crypto.randomUUID()" \
     "crypto\.randomUUID\(\)" \
     "src/services/enterprise-id.service.ts" 1 \
-    "src/services/enterprise-id.service.ts"
+    "src/services/enterprise-id.service.ts|src/services/enterprise-id-class.ts"
 
 check_pattern "addDoc() usage" \
     "addDoc\(" \

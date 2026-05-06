@@ -18,6 +18,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { getErrorMessage } from '@/lib/error-utils';
+import { compareByLocale } from '@/lib/intl-utils';
 import { getContactEmail } from '@/services/contacts/contact-name-resolver-types';
 import { pickContactDisplayName } from '@/subapps/procurement/services/vendor-name-resolver';
 
@@ -59,7 +60,7 @@ async function handleGet(
             email: getContactEmail(data as Parameters<typeof getContactEmail>[0]),
           });
         }
-        vendors.sort((a, b) => a.displayName.localeCompare(b.displayName, 'el'));
+        vendors.sort((a, b) => compareByLocale(a.displayName, b.displayName));
         return NextResponse.json({ success: true, data: vendors });
       } catch (error) {
         return NextResponse.json(

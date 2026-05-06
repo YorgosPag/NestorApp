@@ -9,7 +9,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useVendorPurchaseOrders } from '@/hooks/procurement/useVendorPurchaseOrders';
 import { useSupplierMetrics } from '@/hooks/procurement/useSupplierMetrics';
 import { getContactDisplayName } from '@/types/contacts';
-import { formatCurrency, formatDate } from '@/lib/intl-formatting';
+import { formatCurrency, formatDate, compareByLocale } from '@/lib/intl-formatting';
 import { PO_STATUS_META } from '@/types/procurement';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import type { VendorCardData } from './VendorCard';
@@ -38,7 +38,7 @@ export function VendorDetail({ data }: VendorDetailProps) {
   const { purchaseOrders, loading: posLoading } = useVendorPurchaseOrders(contactId);
 
   const recentPos = useMemo(
-    () => [...purchaseOrders].sort((a, b) => b.dateCreated.localeCompare(a.dateCreated)).slice(0, 5),
+    () => [...purchaseOrders].sort((a, b) => compareByLocale(b.dateCreated, a.dateCreated)).slice(0, 5),
     [purchaseOrders],
   );
 

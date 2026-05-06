@@ -4,6 +4,7 @@ import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PurchaseOrder } from '@/types/procurement';
 import { athensDateRangeToUtc, getPreviousPeriod } from '@/lib/date/quarter-helpers';
+import { compareByLocale } from '@/lib/intl-utils';
 
 // ============================================================================
 // TYPES
@@ -161,7 +162,7 @@ function computeMonthlyTrend(pos: PurchaseOrder[]): MonthlyPoint[] {
   }
   return [...map.entries()]
     .map(([month, total]) => ({ month, total }))
-    .sort((a, b) => a.month.localeCompare(b.month));
+    .sort((a, b) => compareByLocale(a.month, b.month));
 }
 
 function boqItemCost(item: RawBoqItem): number {
@@ -201,7 +202,7 @@ function computeBudgetVsActual(
       committed: committed.get(code) ?? 0,
       delivered: delivered.get(code) ?? 0,
     }))
-    .sort((a, b) => a.categoryCode.localeCompare(b.categoryCode));
+    .sort((a, b) => compareByLocale(a.categoryCode, b.categoryCode));
 }
 
 function computeDeltas(current: SpendKpis, prev: SpendKpis): SpendKpis {

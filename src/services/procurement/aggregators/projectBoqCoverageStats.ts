@@ -22,6 +22,7 @@ import 'server-only';
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PurchaseOrder } from '@/types/procurement';
+import { compareByLocale } from '@/lib/intl-utils';
 
 // ============================================================================
 // TYPES
@@ -128,7 +129,7 @@ export async function computeBoqCoverageStats(
         committed: committedByCategory.get(code) ?? 0,
       });
     }
-    budgetVsCommitted.sort((a, b) => a.categoryCode.localeCompare(b.categoryCode));
+    budgetVsCommitted.sort((a, b) => compareByLocale(a.categoryCode, b.categoryCode));
 
     const totalBoqItemCount = boqSnap.size;
     const coveredBoqItemCount = coveredBoqItemIds.size;
