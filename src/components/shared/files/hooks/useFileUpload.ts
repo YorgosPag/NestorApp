@@ -36,6 +36,7 @@ import type { EntityType, FileDomain, FileCategory } from '@/config/domain-const
 import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
 import { generateUploadThumbnail, buildThumbnailPath } from '../utils/generate-upload-thumbnail';
 import { isAIClassifiable } from './useFileClassification';
+import { META_PHOTO_PURPOSES } from './useEntityFiles-purpose-filter';
 import { RealtimeService } from '@/services/realtime';
 import { useAuth } from '@/auth/hooks/useAuth';
 
@@ -172,10 +173,18 @@ export function useFileUpload({
     setUploading(true);
 
     try {
-      // Entry point overrides for correct tree folder structure
+      // Entry point overrides for correct tree folder structure.
+      // Purpose precedence: tab-specific purpose wins unless it is a meta-photo purpose
+      // (photo, building-photo, …) where entry points supply meaningful sub-purposes
+      // (interior, exterior, …).  Without this guard, the generic 'floorplan' entry
+      // point purpose overwrites 'project-floorplan' / 'parking-floorplan', making
+      // files appear in every *-floorplan tab simultaneously.
       const uploadDomain = selectedEntryPoint?.domain || domain;
       const uploadCategory = selectedEntryPoint?.category || category;
-      const uploadPurpose = selectedEntryPoint?.purpose || purpose;
+      const isTabPurposeOverrideable = !purpose || META_PHOTO_PURPOSES.has(purpose);
+      const uploadPurpose = isTabPurposeOverrideable
+        ? (selectedEntryPoint?.purpose || purpose)
+        : purpose;
 
       let successCount = 0;
       let failCount = 0;
