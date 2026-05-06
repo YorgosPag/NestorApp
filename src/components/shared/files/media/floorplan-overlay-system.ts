@@ -52,9 +52,11 @@ export const OVERLAY_FALLBACK = {
 // ============================================================================
 
 /**
- * Draw polygon overlays on top of a DXF canvas.
- * Uses the SAME coordinate transform as renderDxfToCanvas (Y-flip, scale, offset).
- * Only for DXF floorplans — PDF/Image require calibration data (SPEC-237D).
+ * Draw polygon overlays on top of a DXF or PDF canvas.
+ * Uses the same fit-and-center transform (Y-flip, scale, offset) as
+ * renderDxfToCanvas / renderPdfImageToCanvas. For PDF, callers pass synthetic
+ * CAD bounds {min:{0,0}, max:{pdfWidth, pdfHeight}} — overlay polygons are
+ * stored in DXF world coords matching the editor's default pdfTransform.
  */
 export function drawOverlayPolygons(
   canvas: HTMLCanvasElement,
