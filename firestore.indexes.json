@@ -3429,6 +3429,20 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "boq_system_subcategories",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "parentCode",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sortOrder",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
