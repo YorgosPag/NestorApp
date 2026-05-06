@@ -233,6 +233,7 @@ function PropertiesTabContentAdapter(props: BuildingTabComponentProps) {
 
   const componentProps: React.ComponentProps<typeof PropertiesTabContent> = {
     building: building as React.ComponentProps<typeof PropertiesTabContent>['building'],
+    onActiveUnitsCountChange: props.onActiveUnitsCountChange,
   };
 
   return React.createElement(PropertiesTabContent, componentProps);

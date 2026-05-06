@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Building } from '../BuildingsPageContent';
 import { useBuildingFloorplans } from '../../../hooks/useBuildingFloorplans';
 // ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
@@ -8,6 +8,8 @@ import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/ge
 import type { UniversalTabConfig, BuildingTabAdditionalData, BuildingTabComponentProps, BuildingTabGlobalProps } from '@/components/generic/UniversalTabsRenderer';
 import { BUILDING_COMPONENT_MAPPING } from '@/components/generic/mappings/buildingMappings';
 import { getSortedBuildingTabs } from '../../../config/building-tabs-config';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 
 // ✅ PERF: Module-level stable reference — tabs config is static
 const STABLE_BUILDING_TABS: UniversalTabConfig[] = getSortedBuildingTabs().map(convertToUniversalConfig);
@@ -38,6 +40,30 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
         refetch: refetchFloorplans
     } = useBuildingFloorplans(building?.id || 0);
 
+    // Live counts from subcollections — building.floors / building.units are static fields
+    // set at creation and NOT updated when subcollection records are added/removed.
+    const [actualFloorsCount, setActualFloorsCount] = useState<number | null>(null);
+    const [activeUnitsCount, setActiveUnitsCount] = useState<number | null>(null);
+
+    useEffect(() => {
+        apiClient
+            .get<{ floors: unknown[] }>(`${API_ROUTES.FLOORS.LIST}?buildingId=${building.id}`)
+            .then((r) => setActualFloorsCount(r?.floors?.length ?? 0))
+            .catch(() => {});
+    }, [building.id]);
+
+    useEffect(() => {
+        apiClient
+            .get<{ units: unknown[] }>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${building.id}`)
+            .then((r) => setActiveUnitsCount(r?.units?.length ?? 0))
+            .catch(() => {});
+    }, [building.id]);
+
+    // Callback so PropertiesTabContent can keep count live after unit add/delete
+    const handleActiveUnitsCountChange = useCallback((count: number) => {
+        setActiveUnitsCount(count);
+    }, []);
+
     // ✅ PERF: Memoize additionalData — only changes when floorplan data changes
     const additionalData = useMemo<BuildingTabAdditionalData>(() => ({
         buildingFloorplan,
@@ -47,11 +73,17 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
         refetchFloorplans
     }), [buildingFloorplan, storageFloorplan, floorplansLoading, floorplansError, refetchFloorplans]);
 
-    // Warning dots: locations = no address, floors = no floors registered.
-    const tabWarnings = useMemo(() => ({
-        locations: (building.addresses?.length ?? 0) === 0,
-        floors: (building.floors ?? 0) === 0,
-    }), [building.addresses, building.floors]);
+    // Warning dots — use live subcollection counts, fall back to static building fields
+    // while fetches are in-flight.
+    const tabWarnings = useMemo(() => {
+        const resolvedFloors = actualFloorsCount ?? (building.floors ?? 0);
+        const resolvedUnits = activeUnitsCount ?? (building.units ?? 0);
+        return {
+            locations: (building.addresses?.length ?? 0) === 0,
+            floors: resolvedFloors === 0,
+            units: resolvedFloors > 0 && resolvedUnits === 0,
+        };
+    }, [building.addresses, building.floors, building.units, actualFloorsCount, activeUnitsCount]);
 
     // ✅ PERF: Memoize globalProps — only changes when editing state or building changes
     const globalProps = useMemo<BuildingTabGlobalProps>(() => ({
@@ -61,7 +93,8 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
         onSaveRef: saveRef,
         isCreateMode,
         onBuildingCreated,
-    }), [building.id, isEditing, onEditingChange, saveRef, isCreateMode, onBuildingCreated]);
+        onActiveUnitsCountChange: handleActiveUnitsCountChange,
+    }), [building.id, isEditing, onEditingChange, saveRef, isCreateMode, onBuildingCreated, handleActiveUnitsCountChange]);
 
     return (
         <UniversalTabsRenderer<Building, BuildingTabComponentProps, BuildingTabAdditionalData, BuildingTabGlobalProps>

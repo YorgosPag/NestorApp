@@ -16,6 +16,7 @@ import { RealtimeService } from '@/services/realtime/RealtimeService';
 import type { ParkingSpot } from '@/types/parking';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { createStaleCache } from '@/lib/stale-cache';
+import type { ParkingApiData } from '@/types/api/building-spaces.api.types';
 
 // =============================================================================
 // TYPE RE-EXPORTS — Canonical SSoT from @/types/parking (ADR-191)
@@ -38,12 +39,6 @@ interface UseFirestoreParkingReturn {
   error: string | null;
   refetch: () => Promise<void>;
   cached: boolean;
-}
-
-interface ParkingApiResponse {
-  parkingSpots: ParkingSpot[];
-  count?: number;
-  cached?: boolean;
 }
 
 interface ParkingFetchResult {
@@ -77,7 +72,7 @@ export function useFirestoreParkingSpots(
       if (projectId) params.set('projectId', projectId);
       const url = params.toString() ? `${API_ROUTES.PARKING.LIST}?${params.toString()}` : API_ROUTES.PARKING.LIST;
 
-      const result = await apiClient.get<ParkingApiResponse>(url);
+      const result = await apiClient.get<ParkingApiData>(url);
       logger.info(`Loaded ${result?.parkingSpots?.length || 0} parking spots`, { buildingId });
 
       const fetchResult: ParkingFetchResult = {

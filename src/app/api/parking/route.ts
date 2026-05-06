@@ -15,6 +15,7 @@ import { mapParkingDoc } from '@/lib/firestore-mappers';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import type { ParkingApiData } from '@/types/api/building-spaces.api.types';
 
 const logger = createModuleLogger('ParkingRoute');
 
@@ -213,7 +214,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
 
       return NextResponse.json({
         success: true,
-        data: { parkingSpots, count: parkingSpots.length, cached: false, buildingId: requestedBuildingId }
+        data: { parkingSpots, count: parkingSpots.length, cached: false, buildingId: requestedBuildingId ?? undefined } satisfies ParkingApiData,
       });
     }
 
@@ -246,7 +247,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
 
       return NextResponse.json({
         success: true,
-        data: { parkingSpots, count: parkingSpots.length, cached: false, projectId: requestedProjectId }
+        data: { parkingSpots, count: parkingSpots.length, cached: false, projectId: requestedProjectId ?? undefined } satisfies ParkingApiData,
       });
     }
 
@@ -278,7 +279,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
 
     return NextResponse.json({
       success: true,
-      data: { parkingSpots, count: parkingSpots.length, cached: false }
+      data: { parkingSpots, count: parkingSpots.length, cached: false } satisfies ParkingApiData,
     });
 
   } catch (error) {

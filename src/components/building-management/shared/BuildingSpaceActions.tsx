@@ -12,6 +12,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Eye, Pencil, Unlink2, Trash2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -53,56 +54,74 @@ export function BuildingSpaceActions({
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
 
   return (
-    <nav className="flex justify-end gap-1">
-      {onView && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={onView}
-          title={t('spaceActions.view')}
-        >
-          <Eye className={iconSizes.xs} />
-        </Button>
-      )}
+    <TooltipProvider delayDuration={300}>
+      <nav className="flex justify-end gap-1">
+        {onView && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={onView}
+              >
+                <Eye className={iconSizes.xs} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('spaceActions.view')}</TooltipContent>
+          </Tooltip>
+        )}
 
-      {onEdit && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={onEdit}
-          title={t('spaceActions.edit')}
-        >
-          <Pencil className={iconSizes.xs} />
-        </Button>
-      )}
+        {onEdit && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={onEdit}
+              >
+                <Pencil className={iconSizes.xs} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('spaceActions.edit')}</TooltipContent>
+          </Tooltip>
+        )}
 
-      {onUnlink && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-amber-600 hover:text-amber-700"
-          onClick={onUnlink}
-          disabled={isUnlinking}
-          title={t('spaceActions.unlink')}
-        >
-          {isUnlinking ? <Spinner size="small" color="inherit" /> : <Unlink2 className={iconSizes.xs} />}
-        </Button>
-      )}
+        {onUnlink && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-amber-600 hover:text-amber-700"
+                onClick={onUnlink}
+                disabled={isUnlinking}
+              >
+                {isUnlinking ? <Spinner size="small" color="inherit" /> : <Unlink2 className={iconSizes.xs} />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('spaceActions.unlink')}</TooltipContent>
+          </Tooltip>
+        )}
 
-      {onDelete && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-destructive hover:text-destructive"
-          onClick={onDelete}
-          disabled={isDeleting}
-          title={t('spaceActions.delete')}
-        >
-          {isDeleting ? <Spinner size="small" color="inherit" /> : <Trash2 className={iconSizes.xs} />}
-        </Button>
-      )}
-    </nav>
+        {onDelete && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive"
+                onClick={onDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Spinner size="small" color="inherit" /> : <Trash2 className={iconSizes.xs} />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('spaceActions.delete')}</TooltipContent>
+          </Tooltip>
+        )}
+      </nav>
+    </TooltipProvider>
   );
 }

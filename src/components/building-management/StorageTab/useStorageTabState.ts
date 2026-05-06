@@ -22,16 +22,12 @@ import { RealtimeService } from '@/services/realtime';
 import type { LinkableItem } from '../shared';
 import { getStatusLabel } from '@/lib/status-helpers';
 import { getStorageTypeLabel, filterUnits, calculateStats } from './utils';
+import type { StoragesApiData } from '@/types/api/building-spaces.api.types';
 
 const logger = createModuleLogger('StorageTab');
 
 // ADR-300: Module-level cache — keyed by buildingId, survives re-navigation
 const buildingStorageCache = createStaleCache<StorageUnit[]>('building-storage-tab');
-
-interface StoragesApiResponse {
-  storages: StorageUnit[];
-  count: number;
-}
 
 interface StorageCreateResult {
   storageId: string;
@@ -111,7 +107,7 @@ export function useStorageTabState(building: Building) {
     // ADR-300: Only show spinner on first load — not on re-navigation
     if (!buildingStorageCache.hasLoaded(building.id)) setLoading(true);
     try {
-      const result = await apiClient.get<StoragesApiResponse>(
+      const result = await apiClient.get<StoragesApiData>(
         `${API_ROUTES.STORAGES.LIST}?buildingId=${building.id}`,
       );
 
@@ -126,11 +122,11 @@ export function useStorageTabState(building: Building) {
           price: typeof s.price === 'number' ? s.price : 0,
           description: s.description || '',
           building: s.building || building.name,
-          project: s.project || '',
-          company: s.company || '',
-          linkedProperty: s.linkedProperty ?? null,
-          features: s.features || [],
-          coordinates: s.coordinates || { x: 0, y: 0 },
+          project: '',        // mapStorageDoc does not expose this field
+          company: '',        // mapStorageDoc does not expose this field
+          linkedProperty: null,    // mapStorageDoc does not expose this field
+          features: [],            // mapStorageDoc does not expose this field
+          coordinates: { x: 0, y: 0 },  // mapStorageDoc does not expose this field
         }));
         // ADR-300: Write to module-level cache so next remount skips spinner
         buildingStorageCache.set(storageUnits, building.id);
@@ -317,7 +313,7 @@ export function useStorageTabState(building: Building) {
   // ── Link handlers ──
 
   const fetchUnlinkedStorages = useCallback(async (): Promise<LinkableItem[]> => {
-    const result = await apiClient.get<StoragesApiResponse>(API_ROUTES.STORAGES.LIST);
+    const result = await apiClient.get<StoragesApiData>(API_ROUTES.STORAGES.LIST);
     if (!result?.storages) return [];
     return result.storages
       .filter((s) => !s.buildingId)

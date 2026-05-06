@@ -22,7 +22,7 @@ import type { DashboardStat } from '@/components/property-management/dashboard/U
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 import type { LinkableItem } from '../shared';
 import type {
-  ParkingApiResponse,
+  ParkingApiData,
   ParkingCreateResult,
   ParkingMutationResult,
   ParkingConfirmAction,
@@ -116,7 +116,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
     if (!buildingParkingCache.hasLoaded(buildingId)) setLoading(true);
     setError(null);
     try {
-      const result = await apiClient.get<ParkingApiResponse>(
+      const result = await apiClient.get<ParkingApiData>(
         `${API_ROUTES.PARKING.LIST}?buildingId=${buildingId}`
       );
       if (result?.parkingSpots) {
@@ -342,7 +342,7 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   // ===========================================================================
 
   const fetchUnlinkedParking = useCallback(async (): Promise<LinkableItem[]> => {
-    const result = await apiClient.get<ParkingApiResponse>(API_ROUTES.PARKING.LIST);
+    const result = await apiClient.get<ParkingApiData>(API_ROUTES.PARKING.LIST);
     if (!result?.parkingSpots) return [];
     return result.parkingSpots
       .filter((s) => !s.buildingId)

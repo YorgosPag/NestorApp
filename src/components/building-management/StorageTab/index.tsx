@@ -27,17 +27,13 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Building } from '@/types/building/contracts';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
 import { createStaleCache } from '@/lib/stale-cache';
+import type { StoragesApiData } from '@/types/api/building-spaces.api.types';
 
 const buildingStorageTabContentCache = createStaleCache<Storage[]>('building-storage-tab-content');
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-interface StoragesApiResponse {
-  storages: Storage[];
-  count?: number;
-}
 
 interface StorageMutationResponse {
   success: boolean;
@@ -102,7 +98,7 @@ export function StorageTab({ building }: StorageTabProps) {
     if (!buildingStorageTabContentCache.hasLoaded(cacheKey)) setLoading(true);
     setError(null);
     try {
-      const result = await apiClient.get<StoragesApiResponse>(
+      const result = await apiClient.get<StoragesApiData>(
         `${API_ROUTES.STORAGES.LIST}?buildingId=${building.id}`
       );
       if (result?.storages) {

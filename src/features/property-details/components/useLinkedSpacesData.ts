@@ -12,6 +12,7 @@ import { useState, useEffect, useRef } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import type { UnitsApiData, ParkingApiData, StoragesApiData } from '@/types/api/building-spaces.api.types';
 
 const logger = createModuleLogger('useLinkedSpacesData');
 
@@ -80,19 +81,9 @@ function makeCache<T>() {
   };
 }
 
-interface PropertiesApiResponse {
-  units?: Array<{ id: string; linkedSpaces?: Array<{ spaceId: string }> }>;
-}
-interface ParkingApiResponse {
-  parkingSpots?: Array<{ id: string; number: string; type?: string; status?: string; floor?: string }>;
-}
-interface StorageApiResponse {
-  storages?: Array<{ id: string; name: string; buildingId?: string; type?: string; status?: string; floor?: string; area?: number }>;
-}
-
-const propertiesCache = makeCache<PropertiesApiResponse>();
-const parkingCache    = makeCache<ParkingApiResponse>();
-const storagesCache   = makeCache<StorageApiResponse>();
+const propertiesCache = makeCache<UnitsApiData>();
+const parkingCache    = makeCache<ParkingApiData>();
+const storagesCache   = makeCache<StoragesApiData>();
 
 // ============================================================================
 // Hook
@@ -135,17 +126,17 @@ export function useLinkedSpacesData(
 
     const fetchProperties = propertiesCache(
       buildingId,
-      () => apiClient.get<PropertiesApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`)
+      () => apiClient.get<UnitsApiData>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`)
     );
 
     const fetchParking = parkingCache(
       buildingId,
-      () => apiClient.get<ParkingApiResponse>(`${API_ROUTES.PARKING.LIST}?buildingId=${buildingId}`)
+      () => apiClient.get<ParkingApiData>(`${API_ROUTES.PARKING.LIST}?buildingId=${buildingId}`)
     );
 
     const fetchStorages = storagesCache(
       buildingId,
-      () => apiClient.get<StorageApiResponse>(`${API_ROUTES.STORAGES.LIST}?buildingId=${buildingId}`)
+      () => apiClient.get<StoragesApiData>(`${API_ROUTES.STORAGES.LIST}?buildingId=${buildingId}`)
     );
 
     Promise.allSettled([fetchProperties, fetchParking, fetchStorages]).then(

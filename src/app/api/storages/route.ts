@@ -13,6 +13,7 @@ import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { mapStorageDoc, isValidStorageType, isValidStorageStatus } from '@/lib/firestore-mappers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import type { StoragesApiData } from '@/types/api/building-spaces.api.types';
 
 const CreateStorageSchema = z.object({
   name: z.string().min(1).max(200),
@@ -190,8 +191,8 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
         storages,
         count: storages.length,
         cached: false,
-        projectId: requestedProjectId || undefined
-      }
+        projectId: requestedProjectId || undefined,
+      } satisfies StoragesApiData,
     });
 
   } catch (error) {

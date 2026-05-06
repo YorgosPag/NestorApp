@@ -226,7 +226,9 @@
     "total": "total",
     "cards": "Cards",
     "table": "Table",
-    "autoNamePrefix": "Storage"
+    "autoNamePrefix": "Storage",
+    "warningEmpty": "No storage units registered",
+    "warningEmptyHint": "A building with floors must have storage units. Add storage units to this building."
   },
   "storageStats": {
     "storages": "Storages",
@@ -245,7 +247,9 @@
     "results": "results",
     "cards": "Cards",
     "table": "Table",
-    "total_summary": "total"
+    "total_summary": "total",
+    "warningEmpty": "No parking spots registered",
+    "warningEmptyHint": "A building with floors must have parking spots. Add parking spots to this building."
   },
   "unitStats": {
     "total": "Units",
@@ -262,7 +266,9 @@
     "unlinked": "Unit unlinked",
     "linked": "Unit linked",
     "error": "Error",
-    "retry": "Retry"
+    "retry": "Retry",
+    "warningEmpty": "No units registered",
+    "warningEmptyHint": "A building with floors must have units. Add units to this building."
   },
   "map": {
     "interactiveMap": "Interactive Map"

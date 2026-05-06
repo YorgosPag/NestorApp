@@ -35,7 +35,7 @@ import { UnifiedDashboard } from '@/components/property-management/dashboard/Uni
 import type { Building } from '@/types/building/contracts';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 import { PARKING_TYPES, PARKING_STATUSES, PARKING_LOCATION_ZONES } from '@/types/parking';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from '../shared';
 import type { SpaceColumn, SpaceCardField } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -182,7 +182,12 @@ export function ParkingTabContent({ building }: { building: Building }) {
 
       <ParkingQuickCreateSheet
         open={state.showCreateForm}
-        onOpenChange={(v) => { if (!v) state.setShowCreateForm(false); }}
+        onOpenChange={(v) => {
+          if (!v) {
+            state.setShowCreateForm(false);
+            state.fetchParkingSpots();
+          }
+        }}
         buildingId={building.id}
         projectId={building.projectId ?? ''}
       />
@@ -204,9 +209,18 @@ export function ParkingTabContent({ building }: { building: Building }) {
 
       {/* Content */}
       {state.filteredSpots.length === 0 ? (
-        <p className={cn("py-2 text-center text-sm", colors.text.muted)}>
-          {tBuilding('tabs.labels.parking')} — 0
-        </p>
+        state.parkingSpots.length === 0 && (building.floors ?? 0) > 0 ? (
+          <BuildingSpaceWarningBanner
+            title={tBuilding('parkingStats.warningEmpty')}
+            hint={tBuilding('parkingStats.warningEmptyHint')}
+            addLabel={tBuilding('tabs.labels.parking')}
+            onAdd={() => state.setShowCreateForm(true)}
+          />
+        ) : (
+          <p className={cn("py-2 text-center text-sm", colors.text.muted)}>
+            {tBuilding('tabs.labels.parking')} — 0
+          </p>
+        )
       ) : state.viewMode === 'cards' ? (
         <>
           <BuildingSpaceCardGrid<ParkingSpot>

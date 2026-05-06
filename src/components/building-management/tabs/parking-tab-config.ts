@@ -8,6 +8,7 @@
  */
 
 import type { ParkingSpot, ParkingSpotStatus } from '@/types/parking';
+export type { ParkingApiData } from '@/types/api/building-spaces.api.types';
 
 // ============================================================================
 // TYPES
@@ -16,11 +17,6 @@ import type { ParkingSpot, ParkingSpotStatus } from '@/types/parking';
 export type ParkingConfirmAction =
   | { type: 'delete'; item: ParkingSpot }
   | { type: 'unlink'; item: ParkingSpot };
-
-export interface ParkingApiResponse {
-  parkingSpots: ParkingSpot[];
-  count?: number;
-}
 
 /** POST /api/parking returns { parkingSpotId } via apiSuccess (unwrapped by apiClient) */
 export interface ParkingCreateResult {

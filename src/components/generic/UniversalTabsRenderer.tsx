@@ -153,6 +153,8 @@ export interface BuildingTabGlobalProps {
   onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
   isCreateMode?: boolean;
   onBuildingCreated?: (buildingId: string) => void;
+  /** Reports active (non-deleted) units count back to BuildingTabs for the warning dot */
+  onActiveUnitsCountChange?: (count: number) => void;
 }
 
 export interface BuildingTabComponentProps extends TabComponentProps, Partial<BuildingTabAdditionalData>, Partial<BuildingTabGlobalProps> {

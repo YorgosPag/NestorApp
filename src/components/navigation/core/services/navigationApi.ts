@@ -15,6 +15,7 @@ import type {
   NavigationProperty
 } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
+import type { UnitsApiData } from '@/types/api/building-spaces.api.types';
 
 const logger = createModuleLogger('NavigationApiService');
 
@@ -210,19 +211,7 @@ export class NavigationApiService {
    */
   static async loadPropertiesForFloor(floorId: string, buildingId: string): Promise<NavigationProperty[]> {
     try {
-      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      interface PropertiesApiResponse {
-        units: Array<{
-          id: string;
-          name?: string;
-          type?: string;
-          floor?: number;
-          area?: number;
-          status?: string;
-        }>;
-      }
-
-      const propertiesResult = await apiClient.get<PropertiesApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?floorId=${floorId}&buildingId=${buildingId}`);
+      const propertiesResult = await apiClient.get<UnitsApiData>(`${API_ROUTES.PROPERTIES.LIST}?floorId=${floorId}&buildingId=${buildingId}`);
 
       // 🏢 ENTERPRISE: Map to NavigationProperty with all required fields
       return (propertiesResult?.units || []).map((property): NavigationProperty => ({
@@ -245,19 +234,7 @@ export class NavigationApiService {
    */
   static async loadPropertiesForBuilding(buildingId: string): Promise<NavigationProperty[]> {
     try {
-      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      interface PropertiesApiResponse {
-        units: Array<{
-          id: string;
-          name?: string;
-          type?: string;
-          floor?: number;
-          area?: number;
-          status?: string;
-        }>;
-      }
-
-      const propertiesResult = await apiClient.get<PropertiesApiResponse>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`);
+      const propertiesResult = await apiClient.get<UnitsApiData>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${buildingId}`);
 
       // 🏢 ENTERPRISE: Map to NavigationProperty with all required fields
       return (propertiesResult?.units || []).map((property): NavigationProperty => ({

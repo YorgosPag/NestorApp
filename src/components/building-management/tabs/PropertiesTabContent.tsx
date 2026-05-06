@@ -29,7 +29,7 @@ import type { Building } from '@/types/building/contracts';
 import type { Property, PropertyType } from '@/types/property';
 import { UnitQuickCreateSheet } from '../dialogs/UnitQuickCreateSheet';
 import { PropertyInlineEditRow } from './PropertyInlineEditRow';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from '../shared';
 import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { usePropertyDeletionGuard } from '@/hooks/usePropertyDeletionGuard';
@@ -46,6 +46,7 @@ import {
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createStaleCache } from '@/lib/stale-cache';
+import type { UnitsApiData } from '@/types/api/building-spaces.api.types';
 
 // ADR-300: Module-level caches — keyed by buildingId, survive re-navigation
 const buildingPropertiesCache = createStaleCache<Property[]>('building-properties-tab');
@@ -53,21 +54,16 @@ const buildingFloorsTabCache = createStaleCache<FloorRecord[]>('building-floors-
 
 type PropertyConfirmAction = { type: 'unlink'; item: Property };
 
-interface PropertiesApiResponse {
-  /** API returns `properties` — not `units` */
-  properties: Property[];
-  count?: number;
-}
-
 interface FloorsApiResponse {
   floors: FloorRecord[];
 }
 
 interface PropertiesTabContentProps {
   building: Building;
+  onActiveUnitsCountChange?: (count: number) => void;
 }
 
-export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
+export function PropertiesTabContent({ building, onActiveUnitsCountChange }: PropertiesTabContentProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { t: tUnits } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { success, error: notifyError } = useNotifications();
@@ -123,20 +119,21 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
     if (!buildingPropertiesCache.hasLoaded(building.id)) setLoading(true);
     setError(null);
     try {
-      const result = await apiClient.get<PropertiesApiResponse>(
+      const result = await apiClient.get<UnitsApiData>(
         `${API_ROUTES.PROPERTIES.LIST}?buildingId=${building.id}`
       );
-      if (result?.properties) {
+      if (result?.units) {
         // ADR-300: Write to module-level cache so next remount skips spinner
-        buildingPropertiesCache.set(result.properties, building.id);
-        setUnits(result.properties);
+        buildingPropertiesCache.set(result.units, building.id);
+        setUnits(result.units);
+        onActiveUnitsCountChange?.(result.units.length);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load units');
     } finally {
       setLoading(false);
     }
-  }, [building.id]);
+  }, [building.id, onActiveUnitsCountChange]);
 
   useEffect(() => {
     fetchProperties();
@@ -248,9 +245,9 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
   };
 
   const fetchUnlinkedUnits = useCallback(async (): Promise<LinkableItem[]> => {
-    const result = await apiClient.get<PropertiesApiResponse>(API_ROUTES.PROPERTIES.LIST);
-    if (!result?.properties) return [];
-    return result.properties
+    const result = await apiClient.get<UnitsApiData>(API_ROUTES.PROPERTIES.LIST);
+    if (!result?.units) return [];
+    return result.units
       .filter((u) => !u.buildingId)
       .map((u) => ({
         id: u.id,
@@ -387,7 +384,10 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
 
       <UnitQuickCreateSheet
         open={showCreateForm}
-        onOpenChange={setShowCreateForm}
+        onOpenChange={(open) => {
+          setShowCreateForm(open);
+          if (!open) fetchProperties();
+        }}
         building={building}
         floors={floors}
         onCreated={handleCreateSuccess}
@@ -409,9 +409,18 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
 
       {/* Content — Centralized shared components */}
       {filteredUnits.length === 0 ? (
-        <p className={cn("py-2 text-center text-sm", colors.text.muted)}>
-          {t('tabs.labels.units')} — 0
-        </p>
+        units.length === 0 && floors.length > 0 ? (
+          <BuildingSpaceWarningBanner
+            title={t('unitStats.warningEmpty')}
+            hint={t('unitStats.warningEmptyHint')}
+            addLabel={t('details.addUnitTitle')}
+            onAdd={() => setShowCreateForm(true)}
+          />
+        ) : (
+          <p className={cn("py-2 text-center text-sm", colors.text.muted)}>
+            {t('tabs.labels.units')} — 0
+          </p>
+        )
       ) : viewMode === 'cards' ? (
         <>
           <BuildingSpaceCardGrid<Property>

@@ -13,6 +13,7 @@ export { BuildingSpaceActions } from './BuildingSpaceActions';
 export { BuildingSpaceConfirmDialog } from './BuildingSpaceConfirmDialog';
 export { BuildingSpaceLinkDialog } from './BuildingSpaceLinkDialog';
 export { SpaceFloorplanInline } from './SpaceFloorplanInline';
+export { BuildingSpaceWarningBanner } from './BuildingSpaceWarningBanner';
 export type { LinkableItem } from './BuildingSpaceLinkDialog';
 
 export { buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './buildingSpaceCardFields';

@@ -16,6 +16,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useAsyncData } from '@/hooks/useAsyncData';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
 import { createStaleCache } from '@/lib/stale-cache';
+import type { UnitsApiData } from '@/types/api/building-spaces.api.types';
 
 const logger = createModuleLogger('useFirestoreProperties');
 
@@ -42,11 +43,6 @@ interface UseFirestorePropertiesReturn {
   refetch: () => Promise<void>;
 }
 
-interface PropertiesApiResponse {
-  units: Property[];
-  count?: number;
-}
-
 // =============================================================================
 // HOOK IMPLEMENTATION
 // =============================================================================
@@ -69,7 +65,7 @@ export function useFirestoreProperties(
       const url = queryString ? `${API_ROUTES.PROPERTIES.LIST}?${queryString}` : API_ROUTES.PROPERTIES.LIST;
 
       logger.info('Fetching properties', { buildingId, floorId });
-      const response = await apiClient.get<PropertiesApiResponse>(url);
+      const response = await apiClient.get<UnitsApiData>(url);
       const properties = response?.units || [];
       logger.info(`Loaded ${properties.length} properties`, { buildingId });
 

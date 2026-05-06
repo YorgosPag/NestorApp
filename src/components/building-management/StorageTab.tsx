@@ -34,7 +34,7 @@ import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
 import { StorageQuickCreateSheet } from './dialogs/StorageQuickCreateSheet';
 import { useStorageTabState } from './StorageTab/useStorageTabState';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './shared';
 import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { getStatusColor } from '@/lib/design-system';
@@ -150,9 +150,18 @@ export function StorageTab({ building }: StorageTabProps) {
 
       {/* Content */}
       {s.filteredUnits.length === 0 ? (
-        <p className={cn('py-2 text-center text-sm', colors.text.muted)}>
-          {s.t('tabs.labels.storage')} — 0
-        </p>
+        s.units.length === 0 && (building.floors ?? 0) > 0 ? (
+          <BuildingSpaceWarningBanner
+            title={s.t('storageView.warningEmpty')}
+            hint={s.t('storageView.warningEmptyHint')}
+            addLabel={s.t('tabs.labels.storage')}
+            onAdd={() => s.setShowCreateForm(true)}
+          />
+        ) : (
+          <p className={cn('py-2 text-center text-sm', colors.text.muted)}>
+            {s.t('tabs.labels.storage')} — 0
+          </p>
+        )
       ) : s.viewMode === 'cards' ? (
         <>
           <BuildingSpaceCardGrid<StorageUnit>

@@ -22,14 +22,15 @@ import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import type { UnitsApiData } from '@/types/api/building-spaces.api.types';
+import { mapPropertyDoc } from '@/lib/firestore-mappers';
 
 const logger = createModuleLogger('PropertiesRoute');
 
 // Response types for type-safe withAuth
 type PropertiesListSuccess = {
   success: true;
-  properties: unknown[];
-  count: number;
+  data: UnitsApiData;
 };
 
 type PropertiesListError = {
@@ -40,15 +41,6 @@ type PropertiesListError = {
 
 type PropertiesListResponse = PropertiesListSuccess | PropertiesListError;
 
-function sortPropertiesByName(
-  properties: Array<Record<string, unknown>>
-): Array<Record<string, unknown>> {
-  return properties.sort((left, right) => {
-    const leftName = typeof left.name === 'string' ? left.name : '';
-    const rightName = typeof right.name === 'string' ? right.name : '';
-    return leftName.localeCompare(rightName);
-  });
-}
 
 /**
  * @rateLimit STANDARD (60 req/min) - CRUD
@@ -121,28 +113,27 @@ export const GET = withStandardRateLimit(
 
         const propertiesSnapshot = await unitsQuery.get();
 
-        const rawDocs = propertiesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data() as Record<string, unknown>
-        }));
+        const mappedDocs = propertiesSnapshot.docs.map(doc =>
+          mapPropertyDoc(doc.id, doc.data() as Record<string, unknown>)
+        );
 
         // ADR-281: When floorId path was used, filter deleted in JS (avoids composite index requirement)
         const filteredDocs = floorId
-          ? rawDocs.filter(doc => doc['status'] !== 'deleted')
-          : rawDocs;
+          ? mappedDocs.filter(p => p.status !== 'deleted')
+          : mappedDocs;
 
-        const properties = sortPropertiesByName(filteredDocs);
+        filteredDocs.sort((a, b) => a.name.localeCompare(b.name));
 
-        logger.info('[Properties/List] Found properties', { count: properties.length, companyId: tenantCompanyId, buildingId: buildingId || 'all' });
+        logger.info('[Properties/List] Found properties', { count: filteredDocs.length, companyId: tenantCompanyId, buildingId: buildingId || 'all' });
 
-        logger.info('[Properties/List] Complete', { count: properties.length });
+        logger.info('[Properties/List] Complete', { count: filteredDocs.length });
 
         return NextResponse.json({
           success: true,
           data: {
-            units: properties,
-            count: properties.length,
-          },
+            units: filteredDocs,
+            count: filteredDocs.length,
+          } satisfies UnitsApiData,
         });
 
       } catch (error) {
