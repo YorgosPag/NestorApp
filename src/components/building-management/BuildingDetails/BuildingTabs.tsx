@@ -47,10 +47,11 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
         refetchFloorplans
     }), [buildingFloorplan, storageFloorplan, floorplansLoading, floorplansError, refetchFloorplans]);
 
-    // Warning dot on the "locations" tab when no address has been selected yet.
+    // Warning dots: locations = no address, floors = no floors registered.
     const tabWarnings = useMemo(() => ({
         locations: (building.addresses?.length ?? 0) === 0,
-    }), [building.addresses]);
+        floors: (building.floors ?? 0) === 0,
+    }), [building.addresses, building.floors]);
 
     // ✅ PERF: Memoize globalProps — only changes when editing state or building changes
     const globalProps = useMemo<BuildingTabGlobalProps>(() => ({

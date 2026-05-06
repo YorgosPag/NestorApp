@@ -388,9 +388,7 @@ export function PropertiesTabContent({ building }: PropertiesTabContentProps) {
       <UnitQuickCreateSheet
         open={showCreateForm}
         onOpenChange={setShowCreateForm}
-        buildingId={building.id}
-        buildingName={building.name || ''}
-        projectId={building.projectId || ''}
+        building={building}
         floors={floors}
         onCreated={handleCreateSuccess}
       />

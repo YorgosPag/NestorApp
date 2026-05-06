@@ -90,6 +90,7 @@
       "units": "Units",
       "actions": "Actions",
       "empty": "No floors registered.",
+      "emptyHint": "Add floors to organise the building's units, storage rooms, and parking spaces.",
       "total": "Total: {count} floors",
       "deleteConfirm": "Do you want to delete the floor \"{name}\"?",
       "numberPlaceholder": "e.g. -1, 0, 1",

@@ -21,6 +21,7 @@ import { FloorFloorplanInline } from './FloorFloorplanInline';
 import type { Building } from '@/types/building/contracts';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { getStatusColor } from '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Extracted state hook
@@ -39,6 +40,7 @@ const COLUMN_COUNT = 7;
 export function FloorsTabContent({ building }: FloorsTabContentProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
 
   const {
     floors, loading, error, expandedFloorId, toggleFloorExpand,
@@ -104,8 +106,16 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
         />
       )}
 
-      {floors.length === 0 ? (
-        <p className={cn("py-2 text-center text-sm", colors.text.muted)}>{t('tabs.floors.empty')}</p>
+      {floors.length === 0 && !showCreateForm ? (
+        <section className="text-center py-2 border-2 border-dashed rounded-lg">
+          <AlertTriangle className={`${iconSizes.xl} mx-auto mb-2 text-amber-500`} /> {/* eslint-disable-line design-system/enforce-semantic-colors */}
+          <h3 className="text-lg font-semibold mb-2">{t('tabs.floors.empty')}</h3>
+          <p className={cn('text-sm mb-3', colors.text.muted)}>{t('tabs.floors.emptyHint')}</p>
+          <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)}>
+            <Plus className={`${iconSizes.sm} mr-2`} />
+            {t('tabs.floors.addFloor')}
+          </Button>
+        </section>
       ) : (
         <>
           <table className="w-full text-sm">
