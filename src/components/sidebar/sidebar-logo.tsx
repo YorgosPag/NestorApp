@@ -17,20 +17,28 @@ export function SidebarLogo() {
     setIsMounted(true)
   }, [])
 
+  const isExpanded = state === "expanded"
+
   return (
-    <div className="flex items-center gap-3 px-3 py-2">
+    <div className={cn(
+      "flex items-center py-2",
+      isExpanded ? "gap-3 px-3" : "justify-center px-0"
+    )}>
       <div className="flex items-center justify-center">
-        <LogoPagonis />
+        <LogoPagonis className={cn(
+          "text-current transition-all duration-300",
+          isExpanded ? "h-10 w-10" : "h-6 w-6"
+        )} />
       </div>
       <div
         className={cn(
-          "flex flex-col",
+          "flex flex-col overflow-hidden",
           TRANSITION_PRESETS.STANDARD_OPACITY,
-          state === "expanded" ? "opacity-100" : "opacity-0"
+          isExpanded ? "opacity-100 max-w-xs" : "opacity-0 max-w-0"
         )}
       >
         {isMounted && (
-          <span className="text-base font-bold text-foreground">
+          <span className="text-base font-bold text-foreground whitespace-nowrap">
             {t('user.name')}
           </span>
         )}

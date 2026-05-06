@@ -63,7 +63,7 @@ export function MfaVerificationForm({
             <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
           </figure>
           {/* eslint-disable-next-line custom/no-hardcoded-strings */}
-          <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>Nestor Pagonis</h1>
+          <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>Nestor App</h1>
         </header>
 
         <Card className={layout.cardAuthWidth}>

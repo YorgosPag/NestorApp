@@ -44,7 +44,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Nestor Pagonis",
+  title: "Nestor App",
   description: "Nestor — Enterprise Construction & Property Management Platform",
   icons: {
     icon: '/images/nestor-app-logo.png',
