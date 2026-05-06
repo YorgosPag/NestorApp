@@ -20,10 +20,14 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAddressEditor } from './hooks/useAddressEditor';
 import { useAddressSuggestions } from './hooks/useAddressSuggestions';
 import { useAddressReconciliation } from './hooks/useAddressReconciliation';
-import type { ReconciliationDecisionMap } from './hooks/useAddressReconciliation';
 import { useAddressUndo } from './hooks/useAddressUndo';
 import { useAddressTelemetry } from './hooks/useAddressTelemetry';
-import type { CorrectionAction, CorrectionContextEntityType, FieldActionsMap } from '@/services/geocoding/address-corrections-telemetry.service';
+import type { CorrectionContextEntityType, FieldActionsMap } from '@/services/geocoding/address-corrections-telemetry.service';
+import {
+  extractResult,
+  buildFieldActionsMap,
+  resolveReconciliationAction,
+} from './helpers/coordinatorHelpers';
 import { AddressFieldBadge } from './components/AddressFieldBadge';
 import { AddressConfidenceMeter } from './components/AddressConfidenceMeter';
 import { AddressActivityLog } from './components/AddressActivityLog';
@@ -72,34 +76,8 @@ const PHASE_STATUS_CLASS: Record<AddressEditorState['phase'], string> = {
 };
 
 // =============================================================================
-// Helpers
+// Sub-components (helpers extracted to helpers/coordinatorHelpers.ts)
 // =============================================================================
-
-function extractResult(state: AddressEditorState): GeocodingApiResponse | null {
-  if (
-    state.phase === 'success' ||
-    state.phase === 'partial' ||
-    state.phase === 'conflict'
-  ) {
-    return state.result;
-  }
-  if (state.phase === 'stale') return state.lastResult;
-  return null;
-}
-
-function buildFieldActionsMap(decisions: ReconciliationDecisionMap): FieldActionsMap {
-  const map: FieldActionsMap = {};
-  for (const [field, decision] of Object.entries(decisions) as Array<[keyof ResolvedAddressFields, 'apply' | 'keep']>) {
-    map[field] = decision === 'apply' ? 'corrected-to-resolved' : 'kept';
-  }
-  return map;
-}
-
-function resolveReconciliationAction(decisions: ReconciliationDecisionMap): CorrectionAction {
-  const vals = Object.values(decisions);
-  if (vals.every(v => v === 'keep')) return 'kept-user';
-  return 'mixed-correction';
-}
 
 // =============================================================================
 // Sub-components
@@ -267,7 +245,11 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     onChange(entry.after);
   }, [undoHook, onChange]);
 
-  useEditorKeyboard(undoHook.canUndo, undoHook.canRedo, handleUndo, handleRedo);
+  const handleForceRegeocode = useCallback(() => {
+    void editor.triggerGeocode();
+  }, [editor]);
+
+  useEditorKeyboard(undoHook.canUndo, undoHook.canRedo, handleUndo, handleRedo, handleForceRegeocode);
 
   // === Reconciliation confirm ===
   const handleMergeConfirm = useCallback(() => {
@@ -342,18 +324,31 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
       after: pendingDrag,
       i18nKey: 'addresses.editor.undo.dragApplied',
     });
+    const dragFieldActions: FieldActionsMap = {};
+    for (const k of Object.keys(pendingDrag) as Array<keyof ResolvedAddressFields>) {
+      dragFieldActions[k] = 'corrected-to-resolved';
+    }
+    void telemetryHook.flush('used-drag', {
+      userInput: userInputRef.current,
+      nominatimResolved: resolvedFields,
+      confidence: currentResult?.confidence ?? 0,
+      variantUsed: currentResult?.source?.variantUsed ?? 1,
+      partialMatch: currentResult?.partialMatch ?? false,
+      fieldActions: dragFieldActions,
+      finalAddress: pendingDrag,
+    });
     setUserInput(pendingDrag);
     onChange(pendingDrag);
     onDragApplied?.(pendingDrag);
     editor.markStale();
     setPendingDrag(null);
-  }, [pendingDrag, undoHook, onChange, onDragApplied, editor]);
+  }, [pendingDrag, undoHook, onChange, onDragApplied, editor, telemetryHook, resolvedFields, currentResult]);
 
   // === Panel visibility ===
   const showReconciliation =
     editor.state.phase === 'conflict' || editor.state.phase === 'partial';
   const showSuggestions =
-    suggestions.trigger !== null && suggestions.candidates.length > 0;
+    !dismissedSuggestions && suggestions.trigger !== null && suggestions.candidates.length > 0;
   const showActivityLog = (activityLogOpts?.enabled ?? true) && mode === 'edit';
   const confidence = currentResult?.confidence;
 
@@ -470,6 +465,7 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
             retryExhausted={suggestions.retryExhausted}
             onSelect={handleSuggestionSelect}
             onRetry={suggestions.nextOmitField ? handleSuggestionRetry : undefined}
+            onDismiss={() => setDismissedSuggestions(true)}
           />
         )}
 

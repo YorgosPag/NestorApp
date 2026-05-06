@@ -1,4 +1,5 @@
 // Type definitions for contacts, decoupled from Firebase SDK.
+import type { AddressSourceType } from '@/lib/geocoding/geocoding-types';
 
 export type FirestoreishTimestamp = Date | { toDate: () => Date };
 
@@ -293,6 +294,9 @@ export interface AddressInfo {
   settlementId?: string | null;
   community?: string;
   municipalUnit?: string;
+  // Address enrichment (ADR-332 Phase 10 — additive, retro-compatible)
+  source?: AddressSourceType;
+  verifiedAt?: number;
 }
 
 export interface WebsiteInfo {

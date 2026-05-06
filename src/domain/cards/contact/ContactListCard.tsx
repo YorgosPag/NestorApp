@@ -40,6 +40,8 @@ import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/L
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+// ADR-332 Phase 10 — address enrichment mini-badges
+import { AddressSourceLabel, AddressFreshnessIndicator, computeFreshness } from '@/components/shared/addresses/editor';
 
 // =============================================================================
 // 🏢 TYPES
@@ -185,6 +187,16 @@ export function ContactListCard({
     return undefined;
   }, [contact]);
 
+  /** Address enrichment badges for primary address (ADR-332 Phase 10) */
+  const addressEnrichment = useMemo(() => {
+    const primaryAddr = contact.addresses?.find(a => a.isPrimary) ?? contact.addresses?.[0];
+    if (!primaryAddr?.source && primaryAddr?.verifiedAt == null) return null;
+    return {
+      source: primaryAddr.source,
+      freshness: computeFreshness(primaryAddr.verifiedAt ?? null),
+    };
+  }, [contact.addresses]);
+
   /** 🏢 ENTERPRISE: Get contact icon and color based on type */
   const contactIconConfig = useMemo(() => {
     const contactType = contact.type || 'individual';
@@ -219,7 +231,16 @@ export function ContactListCard({
       compact={compact}
       className={className}
       aria-label={t('list.contactAriaLabel', { name: displayName })}
-    />
+    >
+      {addressEnrichment && (
+        <div className="flex items-center gap-1.5 pt-1">
+          {addressEnrichment.source && (
+            <AddressSourceLabel source={addressEnrichment.source} />
+          )}
+          <AddressFreshnessIndicator freshness={addressEnrichment.freshness} />
+        </div>
+      )}
+    </ListCard>
   );
 }
 
