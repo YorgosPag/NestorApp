@@ -4,6 +4,37 @@
     "description": "View all available keyboard shortcuts",
     "searchPlaceholder": "Search shortcuts...",
     "categoryPlaceholder": "All categories",
-    "print": "Print"
+    "print": "Print",
+    "categories": {
+      "all": "All",
+      "file": "File",
+      "edit": "Edit",
+      "view": "View",
+      "tools": "Tools"
+    },
+    "file": {
+      "save": "Save",
+      "open": "Open",
+      "new": "New"
+    },
+    "edit": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "copy": "Copy",
+      "paste": "Paste",
+      "delete": "Delete"
+    },
+    "view": {
+      "resetZoom": "Reset zoom",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "toggleGrid": "Toggle grid"
+    },
+    "tools": {
+      "select": "Select",
+      "polygon": "Polygon",
+      "line": "Line",
+      "measure": "Measure"
+    }
   }
 }
