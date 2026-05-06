@@ -101,6 +101,13 @@ export interface AddressMapProps {
 
   /** Additional CSS classes */
   className?: string;
+
+  /**
+   * Increment this counter to clear all drag positions and re-fit bounds.
+   * Used to sync the map after undo/redo in the address editor — the pin
+   * must revert to the geocoded position for the restored address fields.
+   */
+  dragResetKey?: number;
 }
 
 // =============================================================================

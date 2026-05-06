@@ -47,6 +47,8 @@ interface ContactAddressMapPreviewProps {
   onDragResolve?: (address: DragResolvedAddress, addressIndex: number) => void;
   /** Additional CSS classes for map container */
   className?: string;
+  /** Increment to clear map drag positions after undo/redo in the address editor. */
+  dragResetKey?: number;
 }
 
 /**
@@ -76,6 +78,7 @@ export function ContactAddressMapPreview({
   draggable = false,
   onDragResolve,
   className,
+  dragResetKey,
 }: ContactAddressMapPreviewProps) {
   const fallbackAddressIdRef = useRef<string>(AddressUtils.generateAddressId());
   const { t: tContactsForm } = useTranslation('contacts-form');
@@ -211,6 +214,7 @@ export function ContactAddressMapPreview({
       onAddressDragUpdate={handleDragUpdate}
       readOnlyAddressIds={readOnlyAddressIds}
       {...(heightPreset ? { heightPreset } : {})}
+      {...(dragResetKey !== undefined ? { dragResetKey } : {})}
       className={className}
     />
   );

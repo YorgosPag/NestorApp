@@ -58,6 +58,8 @@ interface UseAddressMapGeocodingParams {
   mapReady: boolean;
   onGeocodingComplete?: (results: Map<string, GeocodingServiceResult>) => void;
   onAddressDragUpdate?: (addressData: Partial<PartialProjectAddress>, addressIndex: number) => void;
+  /** Increment to clear all drag positions and re-fit bounds (e.g. after undo/redo). */
+  dragResetKey?: number;
 }
 
 interface UseAddressMapGeocodingReturn {
@@ -97,6 +99,7 @@ export function useAddressMapGeocoding({
   mapReady,
   onGeocodingComplete,
   onAddressDragUpdate,
+  dragResetKey,
 }: UseAddressMapGeocodingParams): UseAddressMapGeocodingReturn {
   const [geocodedAddresses, setGeocodedAddresses] = useState<Map<string, GeocodingServiceResult>>(new Map());
   const [geocodingStatus, setGeocodingStatus] = useState<GeocodingStatus>('idle');
@@ -368,6 +371,21 @@ export function useAddressMapGeocoding({
     lastEditFitRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggableMarkers, mapReady, geocodedAddresses, addresses]);
+
+  // ===========================================================================
+  // DRAG RESET — Clear drag positions on undo/redo (dragResetKey increment)
+  // ===========================================================================
+  // When the editor undo/redo restores a previous address, the drag position
+  // must revert so the pin renders at the geocoded (not dragged) position.
+  // Placed after lastEditFitRef declaration so the ref is in scope.
+  const prevDragResetKeyRef = useRef<number>(0);
+  useEffect(() => {
+    if (!dragResetKey) return;
+    if (dragResetKey === prevDragResetKeyRef.current) return;
+    prevDragResetKeyRef.current = dragResetKey;
+    setDragPositions(new Map());
+    lastEditFitRef.current = false;
+  }, [dragResetKey]);
 
   // ===========================================================================
   // AUTO-PAN DURING DRAG

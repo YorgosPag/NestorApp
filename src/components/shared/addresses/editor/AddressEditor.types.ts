@@ -50,6 +50,11 @@ export interface AddressEditorProps {
    * Use this to clear Greek hierarchy fields in the parent — drag data has no hierarchy.
    */
   onDragApplied?: (addr: ResolvedAddressFields) => void;
+  /**
+   * Called after every undo or redo action. Use to reset external state that
+   * depends on the current address value (e.g. clear map drag-pin position).
+   */
+  onUndoRedo?: () => void;
   /** 'edit' shows form + geocoding; 'view' is read-only enriched display. Default: 'edit'. */
   mode?: AddressEditorMode;
   /** Domain context — influences field visibility defaults. Default: 'contact'. */

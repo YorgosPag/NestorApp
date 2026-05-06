@@ -92,6 +92,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   draggableMarkers = false,
   onAddressDragUpdate,
   readOnlyAddressIds,
+  dragResetKey,
   className = ''
 }) => {
   // ===========================================================================
@@ -133,6 +134,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     mapReady,
     onGeocodingComplete,
     onAddressDragUpdate,
+    dragResetKey,
   });
 
   // ===========================================================================
