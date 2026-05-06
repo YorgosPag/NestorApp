@@ -324,7 +324,9 @@ export function UnifiedShareDialog({
                   ? { type: 'project', projectId: entityId }
                   : entityType === 'building_showcase'
                     ? { type: 'building', buildingId: entityId }
-                    : undefined
+                    : entityType === 'storage_showcase'
+                      ? { type: 'storage', storageId: entityId }
+                      : undefined
             }
             initialPersonalMessage={draft.note.trim() || undefined}
             dirtyPolicy={isDirty}
