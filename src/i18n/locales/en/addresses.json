@@ -247,7 +247,8 @@
       "select": "Select",
       "empty": "No alternatives available",
       "retryWithout": "Without {field}",
-      "noMoreRetries": "All retries exhausted"
+      "noMoreRetries": "All retries exhausted",
+      "dismiss": "Dismiss"
     },
     "diff": {
       "title": "Changes Summary",

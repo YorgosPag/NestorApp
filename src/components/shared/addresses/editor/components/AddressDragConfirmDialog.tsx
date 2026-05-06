@@ -53,7 +53,7 @@ export function AddressDragConfirmDialog({
           <Button variant="outline" onClick={onCancel}>
             {t('editor.dragConfirm.cancel')}
           </Button>
-          <Button onClick={onConfirm}>{t('editor.dragConfirm.confirm')}</Button>
+          <Button autoFocus onClick={onConfirm}>{t('editor.dragConfirm.confirm')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

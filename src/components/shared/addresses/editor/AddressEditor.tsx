@@ -20,7 +20,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAddressEditor } from './hooks/useAddressEditor';
 import { useAddressSuggestions } from './hooks/useAddressSuggestions';
 import { useAddressReconciliation } from './hooks/useAddressReconciliation';
+import type { ReconciliationDecisionMap } from './hooks/useAddressReconciliation';
 import { useAddressUndo } from './hooks/useAddressUndo';
+import { useAddressTelemetry } from './hooks/useAddressTelemetry';
+import type { CorrectionAction, CorrectionContextEntityType, FieldActionsMap } from '@/services/geocoding/address-corrections-telemetry.service';
 import { AddressFieldBadge } from './components/AddressFieldBadge';
 import { AddressConfidenceMeter } from './components/AddressConfidenceMeter';
 import { AddressActivityLog } from './components/AddressActivityLog';
@@ -84,6 +87,20 @@ function extractResult(state: AddressEditorState): GeocodingApiResponse | null {
   return null;
 }
 
+function buildFieldActionsMap(decisions: ReconciliationDecisionMap): FieldActionsMap {
+  const map: FieldActionsMap = {};
+  for (const [field, decision] of Object.entries(decisions) as Array<[keyof ResolvedAddressFields, 'apply' | 'keep']>) {
+    map[field] = decision === 'apply' ? 'corrected-to-resolved' : 'kept';
+  }
+  return map;
+}
+
+function resolveReconciliationAction(decisions: ReconciliationDecisionMap): CorrectionAction {
+  const vals = Object.values(decisions);
+  if (vals.every(v => v === 'keep')) return 'kept-user';
+  return 'mixed-correction';
+}
+
 // =============================================================================
 // Sub-components
 // =============================================================================
@@ -136,6 +153,7 @@ function useEditorKeyboard(
   canRedo: boolean,
   onUndo: () => void,
   onRedo: () => void,
+  onForceRegeocode: () => void,
 ): void {
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -146,11 +164,14 @@ function useEditorKeyboard(
       } else if ((e.key === 'y' || (e.key === 'z' && e.shiftKey)) && canRedo) {
         e.preventDefault();
         onRedo();
+      } else if (e.key === 'r' && e.shiftKey) {
+        e.preventDefault();
+        onForceRegeocode();
       }
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [canUndo, canRedo, onUndo, onRedo]);
+  }, [canUndo, canRedo, onUndo, onRedo, onForceRegeocode]);
 }
 
 // =============================================================================
@@ -174,7 +195,9 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
   const [userInput, setUserInput] = useState<ResolvedAddressFields>(() => value);
   const [pendingDrag, setPendingDrag] = useState<ResolvedAddressFields | null>(null);
   const [logCollapsed, setLogCollapsed] = useState(activityLogOpts?.collapsed ?? false);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState(false);
   const userInputRef = useRef(userInput);
+  const hasStartedEditRef = useRef(false);
 
   useEffect(() => {
     userInputRef.current = userInput;
@@ -193,6 +216,13 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     setPendingDrag: (addr: ResolvedAddressFields) => setPendingDrag(addr),
   }), []);
 
+  // === Telemetry ===
+  const telemetryHook = useAddressTelemetry({
+    contextEntityType: (telemetry?.contextEntityType ?? 'contact') as CorrectionContextEntityType,
+    contextEntityId: telemetry?.contextEntityId ?? '',
+    disabled: !telemetry?.enabled || !telemetry?.contextEntityId,
+  });
+
   // === Hook wiring ===
   const editor = useAddressEditor(userInput, {
     autoGeocode: mode === 'edit',
@@ -209,20 +239,26 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
   // === Field change ===
   const handleFieldChange = useCallback(
     (field: keyof ResolvedAddressFields, val: string) => {
+      if (!hasStartedEditRef.current) {
+        hasStartedEditRef.current = true;
+        telemetryHook.markInputStart();
+      }
       const next = { ...userInputRef.current, [field]: val };
       setUserInput(next);
+      setDismissedSuggestions(false);
       onChange(next);
     },
-    [onChange],
+    [onChange, telemetryHook],
   );
 
   // === Undo / Redo ===
   const handleUndo = useCallback(() => {
     const entry = undoHook.undo();
     if (!entry) return;
+    telemetryHook.markUndoOccurred();
     setUserInput(entry.before);
     onChange(entry.before);
-  }, [undoHook, onChange]);
+  }, [undoHook, onChange, telemetryHook]);
 
   const handleRedo = useCallback(() => {
     const entry = undoHook.redo();
@@ -243,26 +279,50 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
       after: merged,
       i18nKey: 'addresses.editor.undo.bulkCorrection',
     });
+    void telemetryHook.flush(resolveReconciliationAction(reconciliation.decisions), {
+      userInput: userInputRef.current,
+      nominatimResolved: resolvedFields,
+      confidence: currentResult?.confidence ?? 0,
+      variantUsed: currentResult?.source?.variantUsed ?? 1,
+      partialMatch: currentResult?.partialMatch ?? false,
+      fieldActions: buildFieldActionsMap(reconciliation.decisions),
+      finalAddress: merged,
+    });
     setUserInput(merged);
     onChange(merged);
     editor.applyCorrection();
-  }, [reconciliation, undoHook, onChange, editor]);
+  }, [reconciliation, undoHook, onChange, editor, telemetryHook, resolvedFields, currentResult]);
 
   // === Suggestion select ===
   const handleSuggestionSelect = useCallback(
     (candidate: GeocodingApiResponse) => {
       const fields = candidate.resolvedFields;
+      const rank = suggestions.candidates.findIndex(r => r.candidate === candidate);
       undoHook.push({
         kind: 'suggestion-accepted',
         before: userInputRef.current,
         after: fields,
         i18nKey: 'addresses.editor.undo.suggestionAccepted',
       });
+      const suggestionFieldActions: FieldActionsMap = {};
+      for (const k of Object.keys(fields) as Array<keyof ResolvedAddressFields>) {
+        suggestionFieldActions[k] = 'corrected-to-suggestion';
+      }
+      void telemetryHook.flush('accepted-suggestion', {
+        userInput: userInputRef.current,
+        nominatimResolved: resolvedFields,
+        confidence: candidate.confidence,
+        variantUsed: candidate.source?.variantUsed ?? 1,
+        partialMatch: candidate.partialMatch ?? false,
+        acceptedSuggestionRank: rank >= 0 ? rank : 0,
+        fieldActions: suggestionFieldActions,
+        finalAddress: fields,
+      });
       setUserInput(fields);
       onChange(fields);
       editor.applyCorrection();
     },
-    [undoHook, onChange, editor],
+    [undoHook, onChange, editor, suggestions.candidates, telemetryHook, resolvedFields],
   );
 
   const handleSuggestionRetry = useCallback(

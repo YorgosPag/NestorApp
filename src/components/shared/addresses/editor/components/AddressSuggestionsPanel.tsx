@@ -78,7 +78,7 @@ export function AddressSuggestionsPanel({
             variant="ghost"
             className="h-6 w-6 shrink-0"
             onClick={onDismiss}
-            aria-label="dismiss"
+            aria-label={t('editor.suggestions.dismiss')}
           >
             <X className="h-3 w-3" />
           </Button>

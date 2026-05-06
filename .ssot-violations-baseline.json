@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-04-28T21:44:33Z",
+    "generated": "2026-05-06T08:48:18Z",
     "totalViolations": 36,
     "totalFiles": 34,
     "rule": "Counts can only decrease. New files = zero tolerance.",
