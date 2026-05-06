@@ -21,6 +21,7 @@ import { LevelsSystemProps, DEFAULT_IMPORT_WIZARD_STATE } from './LevelsSystem.t
 import { useLevelSceneLoader } from './hooks/useLevelSceneLoader';
 import { useLevelsFirestoreSync } from './hooks/useLevelsFirestoreSync';
 import { useLevelOperations } from './hooks/useLevelOperations';
+import { useLevelFloorplanSync } from './hooks/useLevelFloorplanSync';
 import { useAuth } from '@/auth';
 
 // ============================================================================
@@ -233,6 +234,9 @@ function useLevelsSystemState({
     },
     [sceneManager.clearLevelScene]
   );
+
+  // 🏢 ENTERPRISE: Bidirectional sync — external floorplan deletion clears canvas scene
+  useLevelFloorplanSync({ levels, clearLevelScene });
 
   // Import wizard operations
   const startImportWizard = useCallback(
