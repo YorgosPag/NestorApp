@@ -194,6 +194,8 @@
     "title": "Overlays",
     "search": "Search...",
     "deleteConfirm": "Delete overlay?",
+    "deleteConfirmTitle": "Delete overlay",
+    "deleteConfirmDescription": "Are you sure you want to delete this overlay? This action cannot be undone.",
     "notFound": "No overlays found",
     "empty": "No overlays",
     "edit": "Edit",

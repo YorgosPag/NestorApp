@@ -18,6 +18,7 @@ import { useTranslation } from '@/i18n';
 // 🏢 ENTERPRISE: Centralized OverlayListCard from domain cards
 import { OverlayListCard } from '@/domain/cards';
 import { useOverlayStore } from '../overlays/overlay-store';
+import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface OverlayListProps {
   overlays: Overlay[];
@@ -41,6 +42,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   const spacing = useSpacingTokens();
   const overlayStore = useOverlayStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const selectedCardRef = React.useRef<HTMLElement>(null);
 
   // Auto-scroll to selected overlay card when selection changes
@@ -70,10 +72,14 @@ export const OverlayList: React.FC<OverlayListProps> = ({
 
   const handleDelete = (id: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(t('overlayList.deleteConfirm'))) {
-      onDelete(id);
-      if (selectedOverlayId === id) onSelect(null);
-    }
+    setPendingDeleteId(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!pendingDeleteId) return;
+    onDelete(pendingDeleteId);
+    if (selectedOverlayId === pendingDeleteId) onSelect(null);
+    setPendingDeleteId(null);
   };
 
   const handleSelect = (id: string) => () => {
@@ -138,6 +144,13 @@ export const OverlayList: React.FC<OverlayListProps> = ({
           </div>
         </ScrollArea>
       </div>
+      <DeleteConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}
+        title={t('overlayList.deleteConfirmTitle')}
+        description={t('overlayList.deleteConfirmDescription')}
+        onConfirm={handleConfirmDelete}
+      />
     </Card>
   );
 };
