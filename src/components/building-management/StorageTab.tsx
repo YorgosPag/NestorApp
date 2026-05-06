@@ -34,6 +34,7 @@ import { StorageTabStats } from './StorageTab/StorageTabStats';
 import { StorageTabFilters } from './StorageTab/StorageTabFilters';
 import { StorageQuickCreateSheet } from './dialogs/StorageQuickCreateSheet';
 import { useStorageTabState } from './StorageTab/useStorageTabState';
+import { useHasAnyStorages } from '@/hooks/useHasAnyUnits';
 import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from './shared';
 import type { SpaceColumn, SpaceCardField } from './shared';
 import { ENTITY_ROUTES } from '@/lib/routes';
@@ -50,6 +51,7 @@ export function StorageTab({ building }: StorageTabProps) {
   const colors = useSemanticColors();
   const router = useRouter();
   const s = useStorageTabState(building);
+  const hasAnyStorages = useHasAnyStorages();
 
   // ── Column & card definitions ──
 
@@ -98,7 +100,7 @@ export function StorageTab({ building }: StorageTabProps) {
           <span className={cn('text-sm font-normal', colors.text.muted)}>({s.units.length})</span>
         </h2>
         <nav className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => s.setShowLinkDialog(true)}>
+          <Button variant="outline" size="sm" onClick={() => s.setShowLinkDialog(true)} disabled={!hasAnyStorages}>
             <Link2 className="mr-1 h-4 w-4" />
             {s.t('spaceLink.linkExisting')}
           </Button>

@@ -47,6 +47,7 @@ import { translatePropertyMutationError } from '@/services/property/property-mut
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createStaleCache } from '@/lib/stale-cache';
 import type { UnitsApiData } from '@/types/api/building-spaces.api.types';
+import { useHasAnyUnits } from '@/hooks/useHasAnyUnits';
 
 // ADR-300: Module-level caches — keyed by buildingId, survive re-navigation
 const buildingPropertiesCache = createStaleCache<Property[]>('building-properties-tab');
@@ -93,10 +94,9 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
   const [filterType, setFilterType] = useState<PropertyType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-
+  const hasAnyUnits = useHasAnyUnits();
   const fetchFloors = useCallback(async () => {
     try {
       const result = await apiClient.get<FloorsApiResponse>(
@@ -320,7 +320,7 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
           <span className={cn("text-sm font-normal", colors.text.muted)}>({units.length})</span>
         </h2>
         <nav className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowLinkDialog(true)}>
+          <Button variant="outline" size="sm" onClick={() => setShowLinkDialog(true)} disabled={!hasAnyUnits}>
             <Link2 className="mr-1 h-4 w-4" />
             {t('spaceLink.linkExisting')}
           </Button>

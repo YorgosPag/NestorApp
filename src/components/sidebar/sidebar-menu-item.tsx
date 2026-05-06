@@ -17,8 +17,9 @@ import type { MenuItem } from "@/types/sidebar"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy'
-// 🚀 ENTERPRISE: Route prefetching on hover (SAP/Salesforce/Google pattern)
 import { preloadOnHover, getPreloadableRouteFromHref } from '@/utils/preloadRoutes'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import '@/lib/design-system';
 
 interface SidebarMenuItemProps {
@@ -34,40 +35,154 @@ export function SidebarMenuItem({
   isActive,
   onToggleExpanded,
 }: SidebarMenuItemProps) {
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const iconSizes = useIconSizes();
   const { t, isLoading } = useTranslationLazy('navigation');
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 🏢 ENTERPRISE: Translate menu item title
-  // If title contains a dot, it's an i18n key - translate it
-  // Otherwise, return as-is (for fallback/legacy items)
+  const isCollapsed = state === 'collapsed';
+
   const translateTitle = (title: string): string => {
     if (isLoading) return title;
     if (title.includes('.')) {
       const translated = t(title);
-      // If translation returns the key itself, return original title
       return translated === title ? title : translated;
     }
     return title;
   };
 
-  // Handle navigation click with mobile sidebar auto-close
   const handleNavigationClick = () => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
+    if (isMobile) setOpenMobile(false);
   };
 
-  // 🚀 ENTERPRISE: Get hover prefetch handlers for a given href
-  // Pattern: Salesforce Lightning, SAP Fiori - Prefetch routes on hover
-  // Returns empty object if href is not preloadable (safe spreading)
   const getHoverPrefetchHandlers = (href: string) => {
     const preloadableRoute = getPreloadableRouteFromHref(href);
     if (!preloadableRoute) return {};
     return preloadOnHover(preloadableRoute);
   };
-  const hasChildWarning = item.subItems?.some((s) => s.warningDot) ?? false
 
+  // Hover popover — 150ms delay on close prevents gap flicker between trigger and content
+  const openPopover = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    setPopoverOpen(true);
+  };
+  const closePopover = () => {
+    closeTimerRef.current = setTimeout(() => setPopoverOpen(false), 150);
+  };
+
+  const hasChildWarning = item.subItems?.some((s) => s.warningDot) ?? false;
+
+  // ── COLLAPSED + GROUP ITEM → hover popover with sub-links ──────────────────
+  if (isCollapsed && item.subItems) {
+    return (
+      <SidebarMenuItemPrimitive>
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <SidebarMenuButton
+              isActive={isActive}
+              className={cn(
+                "group relative",
+                TRANSITION_PRESETS.STANDARD_ALL,
+                isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+              )}
+              onMouseEnter={openPopover}
+              onMouseLeave={closePopover}
+            >
+              <item.icon
+                className={cn(
+                  TRANSITION_PRESETS.STANDARD_ALL,
+                  isActive && "text-blue-600 dark:text-blue-400" // eslint-disable-line design-system/enforce-semantic-colors
+                )}
+              />
+              {hasChildWarning && (
+                <span
+                  className="absolute right-1 top-1 h-2 w-2 rounded-full bg-amber-500" // eslint-disable-line design-system/enforce-semantic-colors
+                  aria-hidden
+                />
+              )}
+            </SidebarMenuButton>
+          </PopoverTrigger>
+          <PopoverContent
+            side="right"
+            align="start"
+            sideOffset={8}
+            className="w-48 p-1"
+            onMouseEnter={openPopover}
+            onMouseLeave={closePopover}
+          >
+            <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+              {translateTitle(item.title)}
+            </p>
+            <nav className="mt-1 flex flex-col gap-0.5">
+              {item.subItems.map((subItem) => (
+                <Link
+                  key={subItem.href}
+                  href={subItem.href}
+                  onClick={() => { setPopoverOpen(false); handleNavigationClick(); }}
+                  {...getHoverPrefetchHandlers(subItem.href)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    TRANSITION_PRESETS.FAST_ALL
+                  )}
+                >
+                  <subItem.icon className={iconSizes.sm} />
+                  <span>{translateTitle(subItem.title)}</span>
+                  {subItem.warningDot && (
+                    <span
+                      className="ml-auto h-2 w-2 shrink-0 rounded-full bg-amber-500" // eslint-disable-line design-system/enforce-semantic-colors
+                      aria-hidden
+                    />
+                  )}
+                </Link>
+              ))}
+            </nav>
+          </PopoverContent>
+        </Popover>
+      </SidebarMenuItemPrimitive>
+    );
+  }
+
+  // ── COLLAPSED + SIMPLE ITEM → tooltip ──────────────────────────────────────
+  if (isCollapsed) {
+    return (
+      <SidebarMenuItemPrimitive>
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <SidebarMenuButton
+                asChild
+                isActive={isActive}
+                className={cn(
+                  `group relative ${TRANSITION_PRESETS.FAST_ALL}`,
+                  isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+                )}
+              >
+                <Link
+                  href={item.href}
+                  onClick={handleNavigationClick}
+                  {...getHoverPrefetchHandlers(item.href)}
+                >
+                  <item.icon
+                    className={cn(
+                      TRANSITION_PRESETS.STANDARD_ALL,
+                      isActive && "text-blue-600 dark:text-blue-400" // eslint-disable-line design-system/enforce-semantic-colors
+                    )}
+                  />
+                </Link>
+              </SidebarMenuButton>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              {translateTitle(item.title)}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </SidebarMenuItemPrimitive>
+    );
+  }
+
+  // ── EXPANDED → normal rendering ────────────────────────────────────────────
   return (
     <SidebarMenuItemPrimitive>
       {item.subItems ? (
@@ -161,5 +276,5 @@ export function SidebarMenuItem({
         </SidebarMenuButton>
       )}
     </SidebarMenuItemPrimitive>
-  )
+  );
 }

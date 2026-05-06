@@ -44,6 +44,7 @@ import { useParkingTabState } from './useParkingTabState';
 import { getStatusBadgeClasses } from './parking-tab-config';
 import { ParkingQuickCreateSheet } from '../dialogs/ParkingQuickCreateSheet';
 import { ParkingEditRow } from './parking-tab-forms';
+import { useHasAnyParking } from '@/hooks/useHasAnyUnits';
 
 // Re-export types for backward compatibility
 export type { ParkingTabContentProps } from './parking-tab-config';
@@ -62,6 +63,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
   });
 
   const { t, tBuilding } = state;
+  const hasAnyParking = useHasAnyParking();
 
   /** Renders a colored status badge for a parking spot. */
   const getStatusBadge = (status: ParkingSpotStatus | undefined) => {
@@ -119,7 +121,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
           <span className={cn("text-sm font-normal", colors.text.muted)}>({state.parkingSpots.length})</span>
         </h2>
         <nav className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => state.setShowLinkDialog(true)}>
+          <Button variant="outline" size="sm" onClick={() => state.setShowLinkDialog(true)} disabled={!hasAnyParking}>
             <Link2 className="mr-1 h-4 w-4" />
             {tBuilding('spaceLink.linkExisting')}
           </Button>
