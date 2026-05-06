@@ -1,13 +1,4 @@
 'use client';
-/**
- * AddressEditor — Layer 6 coordinator (ADR-332 Phase 5)
- *
- * Wires all Layer 4 hooks + Layer 5 panels into a single enterprise address
- * editing surface. Supports edit and view modes.
- *
- * @module components/shared/addresses/editor/AddressEditor
- * @see ADR-332 §3.3 Coordinator API
- */
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Redo2, RotateCcw, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -42,9 +33,6 @@ import type {
   ResolvedAddressFields,
 } from './types';
 
-// =============================================================================
-// Constants
-// =============================================================================
 const FIELD_CONFIGS: ReadonlyArray<{
   field: keyof ResolvedAddressFields;
   labelKey: string;
@@ -72,10 +60,6 @@ const PHASE_STATUS_CLASS: Record<AddressEditorState['phase'], string> = {
   stale: 'text-muted-foreground',
   error: 'text-red-600 dark:text-red-400',
 };
-
-// =============================================================================
-// Sub-components
-// =============================================================================
 
 interface FormFieldRowProps {
   field: keyof ResolvedAddressFields;
@@ -116,9 +100,6 @@ function FormFieldRow({
   );
 }
 
-// =============================================================================
-// Keyboard hook
-// =============================================================================
 function useEditorKeyboard(
   canUndo: boolean,
   canRedo: boolean,
@@ -145,9 +126,6 @@ function useEditorKeyboard(
   }, [canUndo, canRedo, onUndo, onRedo, onForceRegeocode]);
 }
 
-// =============================================================================
-// Coordinator
-// =============================================================================
 export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>(
   function AddressEditor({
     value,
@@ -183,13 +161,11 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
   useImperativeHandle(ref, () => ({
     setPendingDrag: (addr: ResolvedAddressFields) => setPendingDrag(addr),
   }), []);
-  // === Telemetry ===
   const telemetryHook = useAddressTelemetry({
     contextEntityType: (telemetry?.contextEntityType ?? 'contact') as CorrectionContextEntityType,
     contextEntityId: telemetry?.contextEntityId ?? '',
     disabled: !telemetry?.enabled || !telemetry?.contextEntityId,
   });
-  // === Hook wiring ===
   const editor = useAddressEditor(userInput, {
     autoGeocode: mode === 'edit',
     verbosity: activityLogOpts?.verbosity ?? 'detailed',
@@ -200,7 +176,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
   const suggestions = useAddressSuggestions(currentResult);
   const reconciliation = useAddressReconciliation(userInput, resolvedFields);
   const undoHook = useAddressUndo();
-  // === Field change ===
   const handleFieldChange = useCallback(
     (field: keyof ResolvedAddressFields, val: string) => {
       if (!hasStartedEditRef.current) {
@@ -215,7 +190,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     [onChange, telemetryHook],
   );
 
-  // === Undo / Redo ===
   const handleUndo = useCallback(() => {
     const entry = undoHook.undo();
     if (!entry) return;
@@ -238,7 +212,22 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
   }, [editor]);
 
   useEditorKeyboard(undoHook.canUndo, undoHook.canRedo, handleUndo, handleRedo, handleForceRegeocode);
-  // === Reconciliation confirm ===
+
+  const handleApplyField = useCallback((field: keyof ResolvedAddressFields) => {
+    const conflict = reconciliation.conflicts.find(c => c.field === field);
+    if (!conflict) return;
+    const next = { ...userInputRef.current, [field]: conflict.resolvedValue };
+    undoHook.push({
+      kind: 'field-correction',
+      before: userInputRef.current,
+      after: next,
+      i18nKey: 'addresses.editor.undo.fieldCorrection',
+    });
+    setUserInput(next);
+    onChange(next);
+    reconciliation.applyField(field);
+  }, [reconciliation, undoHook, onChange]);
+
   const handleMergeConfirm = useCallback(() => {
     if (!reconciliation.resolved) return;
     const merged = reconciliation.merged;
@@ -261,7 +250,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     onChange(merged);
     editor.applyCorrection();
   }, [reconciliation, undoHook, onChange, editor, telemetryHook, resolvedFields, currentResult]);
-  // === Suggestion select ===
   const handleSuggestionSelect = useCallback(
     (candidate: GeocodingApiResponse) => {
       const fields = candidate.resolvedFields;
@@ -301,7 +289,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     [suggestions, editor],
   );
 
-  // === Drag confirm ===
   const handleDragConfirm = useCallback(() => {
     if (!pendingDrag) return;
     undoHook.push({
@@ -329,15 +316,12 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     editor.markStale();
     setPendingDrag(null);
   }, [pendingDrag, undoHook, onChange, onDragApplied, editor, telemetryHook, resolvedFields, currentResult]);
-  // === Panel visibility ===
   const showReconciliation =
     editor.state.phase === 'conflict' || editor.state.phase === 'partial';
   const showSuggestions =
     !dismissedSuggestions && suggestions.trigger !== null && suggestions.candidates.length > 0;
   const showActivityLog = (activityLogOpts?.enabled ?? true) && mode === 'edit';
   const confidence = currentResult?.confidence;
-
-  // === Context value ===
   const contextValue = useMemo(
     () => ({
       editorState: editor.state,
@@ -442,7 +426,7 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
               pending={reconciliation.pending}
               decisions={reconciliation.decisions}
               resolved={reconciliation.resolved}
-              applyField={reconciliation.applyField}
+              applyField={handleApplyField}
               keepField={reconciliation.keepField}
               applyAll={reconciliation.applyAll}
               keepAll={reconciliation.keepAll}
@@ -491,6 +475,23 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
         />
 
         {!formOptions?.hideGrid && children}
+
+        {formOptions?.hideGrid && formOptions?.showNeighborhoodRegion && (
+          <div className="grid grid-cols-2 gap-3">
+            {FIELD_CONFIGS.filter(c => c.field === 'neighborhood' || c.field === 'region').map(({ field, labelKey, placeholderKey }) => (
+              <FormFieldRow
+                key={field}
+                field={field}
+                label={t(labelKey)}
+                placeholder={placeholderKey ? t(placeholderKey) : undefined}
+                value={userInput[field] ?? ''}
+                onChange={(v) => handleFieldChange(field, v)}
+                status={editor.fieldStatus[field]}
+                disabled={mode === 'view'}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </AddressEditorContext.Provider>
   );

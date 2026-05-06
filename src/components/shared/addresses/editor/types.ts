@@ -259,6 +259,8 @@ export interface AddressEditorFormOptions {
   showCustomLabel?: boolean;
   /** When true, the internal flat-field grid is hidden. Pass AddressWithHierarchy (or equivalent) as children instead. */
   hideGrid?: boolean;
+  /** When true (and hideGrid=true), renders neighborhood + region as supplementary text inputs below children. */
+  showNeighborhoodRegion?: boolean;
 }
 
 export interface AddressEditorMapOptions {

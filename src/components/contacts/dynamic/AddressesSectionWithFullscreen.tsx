@@ -371,7 +371,7 @@ export function AddressesSectionWithFullscreen({
               onUndoRedo={handleUndoRedo}
               mode="edit"
               domain="contact"
-              formOptions={{ hideGrid: true }}
+              formOptions={{ hideGrid: true, showNeighborhoodRegion: true }}
               telemetry={{ enabled: true, contextEntityType: 'contact', contextEntityId: formData.id ?? '' }}
             >
               <AddressWithHierarchy

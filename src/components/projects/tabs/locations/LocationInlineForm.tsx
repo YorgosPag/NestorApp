@@ -176,7 +176,7 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
             onUndoRedo={onUndoRedo}
             mode="edit"
             domain="project"
-            formOptions={{ hideGrid: true }}
+            formOptions={{ hideGrid: true, showNeighborhoodRegion: true }}
             activityLog={{ collapsed: true }}
           >
             <AddressWithHierarchy

@@ -163,7 +163,7 @@ function BranchEditorWrapper({ addr, branchVisualIndex, disabled, onUpdate }: Br
       onChange={handleResolvedChange}
       mode="edit"
       domain="contact"
-      formOptions={{ hideGrid: true }}
+      formOptions={{ hideGrid: true, showNeighborhoodRegion: true }}
       activityLog={{ collapsed: true }}
     >
       <AddressWithHierarchy
