@@ -256,7 +256,10 @@
     '🎯 [EntityComposite] Found renderer',
 
     // 🏢 DXF VIEWER - CanvasSection entity conversion logs (2026-01-31)
-    '🔵 [CanvasSection] Converting'
+    '🔵 [CanvasSection] Converting',
+
+    // Firebase internal GC coordination (persistentMultipleTabManager) — benign
+    'Failed to obtain primary lease for action'
   ];
 
   // ═══ PERFORMANCE MONITORING NOISE PATTERNS ═══

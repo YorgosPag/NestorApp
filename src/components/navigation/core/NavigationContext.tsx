@@ -6,7 +6,7 @@
  *
  * Realtime subscriptions extracted to hooks/useNavigationSubscriptions.ts
  */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigationData } from './hooks/useNavigationData';
 import { useNavigationActions } from './hooks/useNavigationActions';
 import { useNavigationSubscriptions } from './hooks/useNavigationSubscriptions';
@@ -29,7 +29,9 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('NavigationContext');
 
-interface NavigationContextType extends NavigationState, NavigationActions {}
+interface NavigationContextType extends NavigationState, NavigationActions {
+  hasBuildingsWithNoUnits: boolean;
+}
 
 const NavigationContext = createContext<NavigationContextType | null>(null);
 
@@ -70,12 +72,34 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const {
     getBuildingCount,
     getBuildingsForProject,
+    allBuildings,
   } = useRealtimeBuildings(isAuthReady);
 
   const {
     getPropertyCount,
     getPropertiesForBuilding,
+    allProperties,
   } = useRealtimeProperties(isAuthReady);
+
+  const hasBuildingsWithNoUnits = useMemo(() => {
+    if (allBuildings.length === 0) return false;
+    const activeProperties = allProperties.filter((p) => p.status !== 'deleted');
+    const buildingIdsWithUnits = new Set(
+      activeProperties.map((p) => p.buildingId).filter(Boolean)
+    );
+    return allBuildings.some((b) => !buildingIdsWithUnits.has(b.id));
+  }, [allBuildings, allProperties]);
+
+  const getActivePropertyCount = useCallback(
+    (buildingId: string): number =>
+      allProperties.filter((p) => p.buildingId === buildingId && p.status !== 'deleted').length,
+    [allProperties]
+  );
+
+  const getBuildingById = useCallback(
+    (buildingId: string) => allBuildings.find((b) => b.id === buildingId),
+    [allBuildings]
+  );
 
   const updateState = (updates: Partial<NavigationState>) => {
     setState(prev => ({ ...prev, ...updates }));
@@ -271,6 +295,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const contextValue: NavigationContextType = {
     ...state,
+    hasBuildingsWithNoUnits,
     loadCompanies,
     selectCompany,
     loadProjectsForCompany,
@@ -285,7 +310,9 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     getBuildingCount: getBuildingCountOptimized,
     getBuildingsForProject: getBuildingsForProjectTyped,
     getPropertyCount,
-    getPropertiesForBuilding
+    getPropertiesForBuilding,
+    getActivePropertyCount,
+    getBuildingById,
   };
 
   return (

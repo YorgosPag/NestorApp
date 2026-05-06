@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import type { Building } from '../BuildingsPageContent';
 import { useBuildingFloorplans } from '../../../hooks/useBuildingFloorplans';
 // ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
@@ -8,8 +8,8 @@ import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/ge
 import type { UniversalTabConfig, BuildingTabAdditionalData, BuildingTabComponentProps, BuildingTabGlobalProps } from '@/components/generic/UniversalTabsRenderer';
 import { BUILDING_COMPONENT_MAPPING } from '@/components/generic/mappings/buildingMappings';
 import { getSortedBuildingTabs } from '../../../config/building-tabs-config';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
+import { useNavigation } from '@/components/navigation';
+import { useRealtimeBuildingFloors, useRealtimeBuildingFloorplan } from '@/services/realtime';
 
 // ✅ PERF: Module-level stable reference — tabs config is static
 const STABLE_BUILDING_TABS: UniversalTabConfig[] = getSortedBuildingTabs().map(convertToUniversalConfig);
@@ -40,29 +40,13 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
         refetch: refetchFloorplans
     } = useBuildingFloorplans(building?.id || 0);
 
-    // Live counts from subcollections — building.floors / building.units are static fields
-    // set at creation and NOT updated when subcollection records are added/removed.
-    const [actualFloorsCount, setActualFloorsCount] = useState<number | null>(null);
-    const [activeUnitsCount, setActiveUnitsCount] = useState<number | null>(null);
+    // Real-time data from centralized subscriptions (no API fetches)
+    const { getActivePropertyCount, getBuildingById } = useNavigation();
+    const { floorsCount, hasFloorsWithoutFloorplan } = useRealtimeBuildingFloors(building?.id);
+    const { hasBuildingFloorplan, loading: floorplanPresenceLoading } = useRealtimeBuildingFloorplan(building?.id);
 
-    useEffect(() => {
-        apiClient
-            .get<{ floors: unknown[] }>(`${API_ROUTES.FLOORS.LIST}?buildingId=${building.id}`)
-            .then((r) => setActualFloorsCount(r?.floors?.length ?? 0))
-            .catch(() => {});
-    }, [building.id]);
-
-    useEffect(() => {
-        apiClient
-            .get<{ units: unknown[] }>(`${API_ROUTES.PROPERTIES.LIST}?buildingId=${building.id}`)
-            .then((r) => setActiveUnitsCount(r?.units?.length ?? 0))
-            .catch(() => {});
-    }, [building.id]);
-
-    // Callback so PropertiesTabContent can keep count live after unit add/delete
-    const handleActiveUnitsCountChange = useCallback((count: number) => {
-        setActiveUnitsCount(count);
-    }, []);
+    // Kept for backward compat with PropertiesTabContent — no longer drives tab warnings
+    const handleActiveUnitsCountChange = useCallback((_count: number) => {}, []);
 
     // ✅ PERF: Memoize additionalData — only changes when floorplan data changes
     const additionalData = useMemo<BuildingTabAdditionalData>(() => ({
@@ -73,17 +57,21 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
         refetchFloorplans
     }), [buildingFloorplan, storageFloorplan, floorplansLoading, floorplansError, refetchFloorplans]);
 
-    // Warning dots — use live subcollection counts, fall back to static building fields
-    // while fetches are in-flight.
+    // Warning dots — real-time: floorsCount from onSnapshot, units from NavigationContext
+    // Addresses: use real-time building data with fallback to prop during initial load
     const tabWarnings = useMemo(() => {
-        const resolvedFloors = actualFloorsCount ?? (building.floors ?? 0);
-        const resolvedUnits = activeUnitsCount ?? (building.units ?? 0);
+        const realtimeBuilding = getBuildingById(building.id);
+        const resolvedAddressesCount = realtimeBuilding !== undefined
+            ? realtimeBuilding.addressesCount
+            : (building.addresses?.length ?? 0);
+        const activeUnits = getActivePropertyCount(building.id);
         return {
-            locations: (building.addresses?.length ?? 0) === 0,
-            floors: resolvedFloors === 0,
-            units: resolvedFloors > 0 && resolvedUnits === 0,
+            locations: resolvedAddressesCount === 0,
+            floors: floorsCount === 0 || hasFloorsWithoutFloorplan,
+            floorplan: !floorplanPresenceLoading && !hasBuildingFloorplan,
+            units: floorsCount > 0 && activeUnits === 0,
         };
-    }, [building.addresses, building.floors, building.units, actualFloorsCount, activeUnitsCount]);
+    }, [building.id, building.addresses, floorsCount, hasFloorsWithoutFloorplan, hasBuildingFloorplan, floorplanPresenceLoading, getActivePropertyCount, getBuildingById]);
 
     // ✅ PERF: Memoize globalProps — only changes when editing state or building changes
     const globalProps = useMemo<BuildingTabGlobalProps>(() => ({

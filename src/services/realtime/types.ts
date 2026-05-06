@@ -118,6 +118,7 @@ export interface RealtimeBuilding {
   totalArea?: number;
   floors?: number;
   units?: number;
+  addressesCount: number;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -155,6 +155,7 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
           totalArea: doc.totalArea as number | undefined,
           floors: doc.floors as number | undefined,
           units: doc.units as number | undefined,
+          addressesCount: (doc.addresses as unknown[] | undefined)?.length ?? 0,
           createdAt: doc.createdAt as string | undefined,
           updatedAt: doc.updatedAt as string | undefined,
         })) satisfies RealtimeBuilding[];

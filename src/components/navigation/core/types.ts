@@ -240,6 +240,10 @@ export interface NavigationActions {
   getPropertyCount: (buildingId: string) => number;
   /** 🏢 ENTERPRISE: Get all properties for a building in real-time */
   getPropertiesForBuilding: (buildingId: string) => RealtimePropertyRef[];
+  /** 🏢 ENTERPRISE: Get real-time count of active (non-deleted) properties for a building */
+  getActivePropertyCount: (buildingId: string) => number;
+  /** 🏢 ENTERPRISE: Get building data from real-time subscription (includes addressesCount) */
+  getBuildingById: (buildingId: string) => import('@/services/realtime').RealtimeBuilding | undefined;
 }
 
 /** 🏢 ENTERPRISE: Reference to a building from real-time system */
