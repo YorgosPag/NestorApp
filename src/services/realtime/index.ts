@@ -115,3 +115,7 @@ export { useRealtimeProperties } from './hooks/useRealtimeProperties';
 export { useRealtimeTasks } from './hooks/useRealtimeTasks';
 export type { TaskStats } from './hooks/useRealtimeTasks';
 export { useRealtimeOpportunities } from './hooks/useRealtimeOpportunities';
+export { useRealtimeBuildingFloors } from './hooks/useRealtimeBuildingFloors';
+export { useRealtimeBuildingFloorplan } from './hooks/useRealtimeBuildingFloorplan';
+export { useRealtimePropertiesTrashCount } from './hooks/useRealtimePropertiesTrashCount';
+export type { UseRealtimePropertiesTrashCountReturn } from './hooks/useRealtimePropertiesTrashCount';

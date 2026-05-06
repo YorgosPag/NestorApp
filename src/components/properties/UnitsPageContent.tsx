@@ -25,6 +25,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
 import { createStatusLabelGetter, createTypeLabelGetter } from './properties-page-helpers';
+import { useRealtimePropertiesTrashCount } from '@/services/realtime';
 
 /** @deprecated Alias — use PropertiesManagementContent (ADR-269) */
 export const UnitsPageContent = PropertiesManagementContent;
@@ -152,6 +153,9 @@ export function PropertiesManagementContent() {
     setNewUnitTemplate(null);
     handlePolygonSelect('__none__', false); // eslint-disable-line custom/no-hardcoded-strings
   }, [handlePolygonSelect]);
+
+  // 🗑️ Real-time trash count for badge (always current, no click needed)
+  const { trashCount: realtimeTrashCount } = useRealtimePropertiesTrashCount();
 
   // 🗑️ Trash state
   const {
@@ -387,7 +391,7 @@ export function PropertiesManagementContent() {
           setShowFilters={setShowFilters}
           showTrash={showTrash}
           onToggleTrash={handleToggleTrash}
-          trashCount={trashCount}
+          trashCount={realtimeTrashCount}
         />
 
         {showDashboard && (
