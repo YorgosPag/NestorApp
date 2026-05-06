@@ -274,6 +274,25 @@
   "storageShowcase": {
     "actions": {
       "showcase": "Επίδειξη Αποθήκης"
+    },
+    "header": {
+      "subtitle": "Παρουσίαση αποθήκης"
+    },
+    "specs": {
+      "title": "Στοιχεία Αποθήκης",
+      "code": "Κωδικός",
+      "type": "Τύπος",
+      "status": "Κατάσταση",
+      "area": "Εμβαδόν",
+      "price": "Τιμή",
+      "floor": "Όροφος",
+      "building": "Κτήριο",
+      "areaUnit": "τ.μ."
+    },
+    "email": {
+      "subjectPrefix": "Παρουσίαση Αποθήκης",
+      "introText": "Σας προωθούμε την αναλυτική παρουσίαση της αποθήκης.",
+      "ctaLabel": "Δείτε online"
     }
   }
 }

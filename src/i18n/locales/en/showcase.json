@@ -274,6 +274,25 @@
   "storageShowcase": {
     "actions": {
       "showcase": "Storage Showcase"
+    },
+    "header": {
+      "subtitle": "Storage showcase"
+    },
+    "specs": {
+      "title": "Storage Details",
+      "code": "Code",
+      "type": "Type",
+      "status": "Status",
+      "area": "Area",
+      "price": "Price",
+      "floor": "Floor",
+      "building": "Building",
+      "areaUnit": "m²"
+    },
+    "email": {
+      "subjectPrefix": "Storage Showcase",
+      "introText": "We are sharing the detailed presentation of the storage unit.",
+      "ctaLabel": "View online"
     }
   }
 }
