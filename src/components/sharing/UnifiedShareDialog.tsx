@@ -182,7 +182,7 @@ export function UnifiedShareDialog({
       return {
         shareId: result.shareId,
         token: result.token,
-        url: `${window.location.origin}/shared/${result.token}`,
+        url: `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/shared/${result.token}`,
       };
     },
     [

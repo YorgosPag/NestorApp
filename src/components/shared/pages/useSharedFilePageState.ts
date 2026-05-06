@@ -44,7 +44,9 @@ export type PageState =
   | 'contact'
   | 'showcase'
   | 'project_showcase'
-  | 'building_showcase';
+  | 'building_showcase'
+  | 'storage_showcase'
+  | 'parking_showcase';
 
 export interface SharedFilePageState {
   token: string;
@@ -147,6 +149,16 @@ export function useSharedFilePageState(): SharedFilePageState {
             setState('building_showcase');
             return;
           }
+          if (u.entityType === 'storage_showcase') {
+            await UnifiedSharingService.incrementAccessCount(u.id);
+            setState('storage_showcase');
+            return;
+          }
+          if (u.entityType === 'parking_showcase') {
+            await UnifiedSharingService.incrementAccessCount(u.id);
+            setState('parking_showcase');
+            return;
+          }
           if (u.entityType === 'contact') {
             setContactExpiresAt(u.expiresAt);
             // Resolve contact via registered resolver (respects includedFields)
@@ -242,6 +254,18 @@ export function useSharedFilePageState(): SharedFilePageState {
         await UnifiedSharingService.incrementAccessCount(u.id);
         setPendingUnifiedShare(null);
         setState('building_showcase');
+        return;
+      }
+      if (u.entityType === 'storage_showcase') {
+        await UnifiedSharingService.incrementAccessCount(u.id);
+        setPendingUnifiedShare(null);
+        setState('storage_showcase');
+        return;
+      }
+      if (u.entityType === 'parking_showcase') {
+        await UnifiedSharingService.incrementAccessCount(u.id);
+        setPendingUnifiedShare(null);
+        setState('parking_showcase');
         return;
       }
       if (u.entityType === 'contact') {

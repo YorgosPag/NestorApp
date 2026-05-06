@@ -38,6 +38,8 @@ import { SharedContactPageContent } from '@/components/shared/pages/SharedContac
 import { SharedShowcasePageContent } from '@/components/shared/pages/SharedShowcasePageContent';
 import { SharedProjectShowcasePageContent } from '@/components/shared/pages/SharedProjectShowcasePageContent';
 import { SharedBuildingShowcasePageContent } from '@/components/shared/pages/SharedBuildingShowcasePageContent';
+import { SharedStorageShowcasePageContent } from '@/components/shared/pages/SharedStorageShowcasePageContent';
+import { SharedParkingShowcasePageContent } from '@/components/shared/pages/SharedParkingShowcasePageContent';
 import { formatFileSize } from '@/utils/file-validation';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
 import { getFileCategory, getFileCategoryI18nKey } from '@/lib/file-types/preview-registry';
@@ -105,6 +107,16 @@ export function SharedFilePageContent() {
   // ADR-320: Building Showcase public view.
   if (state === 'building_showcase') {
     return <SharedBuildingShowcasePageContent token={token} />;
+  }
+
+  // ADR-315: Storage Showcase public view.
+  if (state === 'storage_showcase') {
+    return <SharedStorageShowcasePageContent token={token} />;
+  }
+
+  // ADR-315: Parking Showcase public view.
+  if (state === 'parking_showcase') {
+    return <SharedParkingShowcasePageContent token={token} />;
   }
 
   return (

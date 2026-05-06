@@ -273,7 +273,8 @@
   },
   "storageShowcase": {
     "actions": {
-      "showcase": "Storage Showcase"
+      "showcase": "Storage Showcase",
+      "downloadPdf": "Download PDF"
     },
     "header": {
       "subtitle": "Storage showcase"
@@ -293,11 +294,26 @@
       "subjectPrefix": "Storage Showcase",
       "introText": "We are sharing the detailed presentation of the storage unit.",
       "ctaLabel": "View online"
+    },
+    "photos": {
+      "title": "Photos"
+    },
+    "floorplans": {
+      "title": "Floor Plans"
+    },
+    "states": {
+      "expiredTitle": "Link expired",
+      "expiredDescription": "This storage showcase is no longer available. Please contact the sender.",
+      "notFoundTitle": "Link not found",
+      "notFoundDescription": "This storage showcase is not available or has been revoked.",
+      "errorTitle": "Loading error",
+      "errorDescription": "Something went wrong. Please try again later."
     }
   },
   "parkingShowcase": {
     "actions": {
-      "showcase": "Parking Spot Showcase"
+      "showcase": "Parking Spot Showcase",
+      "downloadPdf": "Download PDF"
     },
     "header": {
       "subtitle": "Parking spot showcase"
@@ -318,6 +334,20 @@
       "subjectPrefix": "Parking Spot Showcase",
       "introText": "We are sharing the detailed presentation of the parking spot.",
       "ctaLabel": "View online"
+    },
+    "photos": {
+      "title": "Photos"
+    },
+    "floorplans": {
+      "title": "Floor Plans"
+    },
+    "states": {
+      "expiredTitle": "Link expired",
+      "expiredDescription": "This parking spot showcase is no longer available. Please contact the sender.",
+      "notFoundTitle": "Link not found",
+      "notFoundDescription": "This parking spot showcase is not available or has been revoked.",
+      "errorTitle": "Loading error",
+      "errorDescription": "Something went wrong. Please try again later."
     }
   }
 }
