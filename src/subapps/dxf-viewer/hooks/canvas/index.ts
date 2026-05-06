@@ -131,3 +131,6 @@ export type {
   UseCanvasContainerHandlersParams,
   UseCanvasContainerHandlersReturn,
 } from './useCanvasContainerHandlers';
+
+// === useFitToPdf === (PDF background auto-fit on load)
+export { useFitToPdf } from './useFitToPdf';

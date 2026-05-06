@@ -42,13 +42,13 @@ interface RenderRequest {
 // ============================================================================
 
 /**
- * Z-index for PDF background layer
- * Uses z-50 to ensure visibility above other canvas layers
- * TODO: Investigate proper layering with transparent backgrounds
+ * Z-index for PDF background layer.
+ * z-0 places PDF below LayerCanvas (z-0, later in DOM) and DxfCanvas (z-10),
+ * so DXF entities render visually on top of the PDF background.
  *
  * @see ADR-002 for z-index hierarchy
  */
-const PDF_BACKGROUND_Z_INDEX = 'z-50';
+const PDF_BACKGROUND_Z_INDEX = 'z-0';
 
 // ============================================================================
 // COMPONENT

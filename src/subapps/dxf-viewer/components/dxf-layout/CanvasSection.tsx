@@ -21,7 +21,7 @@ import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/command
 import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
   useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler,
-  useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts,
+  useFitToView, useFitToPdf, usePolygonCompletion, useCanvasKeyboardShortcuts,
   useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
 } from '../../hooks/canvas';
 import { useGuideToolWorkflows } from '../../hooks/guides';
@@ -188,6 +188,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     hiddenOverlayIds: overlayStore.hiddenOverlayIds,
   });
   const { fitToOverlay } = useFitToView({ dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
+  useFitToPdf({ zoomSystem, setTransform, viewport });
 
   const { globalRulerSettings, drawingHandlers, drawingHandlersRef, hasUnifiedDrawingPointsRef } = useCanvasEffects({
     activeTool, overlayMode, currentScene: props.currentScene ?? null,

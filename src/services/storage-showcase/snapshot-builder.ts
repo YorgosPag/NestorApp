@@ -66,6 +66,25 @@ function pickNumber(v: unknown): number | null {
   return null;
 }
 
+function formatFloor(raw: unknown, locale: string): string | null {
+  const s = pickString(raw);
+  if (s === null) return null;
+  const num = parseInt(s, 10);
+  if (!isNaN(num) && String(num) === s.trim()) {
+    if (locale === 'el') {
+      if (num === 0)  return 'Ισόγειο';
+      if (num === -1) return 'Υπόγειο';
+      if (num < -1)   return `${Math.abs(num)}ο Υπόγειο`;
+      return `${num}ος Όροφος`;
+    }
+    if (num === 0)  return 'Ground Floor';
+    if (num === -1) return 'Basement';
+    if (num < -1)   return `${Math.abs(num)}nd Basement`;
+    return `${num}${num === 1 ? 'st' : num === 2 ? 'nd' : num === 3 ? 'rd' : 'th'} Floor`;
+  }
+  return s;
+}
+
 export const buildStorageShowcaseSnapshot = createShowcaseSnapshotBuilder<
   StorageShowcaseInfo,
   StorageRelations,
