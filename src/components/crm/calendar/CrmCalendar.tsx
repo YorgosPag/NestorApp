@@ -32,6 +32,8 @@ import type {
   DateSelectArg,
   DatesSetArg,
   EventContentArg,
+  EventDragStartArg,
+  EventDragStopArg,
 } from '@fullcalendar/core';
 import type { EventDropArg } from '@fullcalendar/core';
 import type { EventResizeDoneArg } from '@fullcalendar/interaction';
@@ -47,6 +49,7 @@ import { TaskEditDialog } from '@/components/crm/dashboard/dialogs/TaskEditDialo
 import type { CrmTask } from '@/types/crm';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useCalendarCrossMonthDrag } from './useCalendarCrossMonthDrag';
 
 // ============================================================================
 // TYPES
@@ -85,6 +88,24 @@ export function CrmCalendar({
   const calendarRef = useRef<FullCalendarRef>(null);
   const isProgrammaticNav = useRef(false);
   const lastReportedDateRef = useRef<string | null>(null);
+
+  // Cross-month drag
+  const {
+    isDragging,
+    isNearLeft,
+    isNearRight,
+    containerRef,
+    handleEventDragStart,
+    handleEventDragStop,
+  } = useCalendarCrossMonthDrag({
+    calendarRef,
+    isProgrammaticNav,
+    onEventUpdated,
+    notifySuccess,
+    notifyError,
+    movedMessage: t('calendarPage.dragDrop.moved'),
+    errorMessage: t('calendarPage.dialog.createError'),
+  });
 
   // Dialog state
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -278,10 +299,27 @@ export function CrmCalendar({
     <>
       <TooltipProvider>
         <section
-          className="fc-wrapper"
+          ref={containerRef}
+          className="fc-wrapper relative"
           aria-label={t('calendarPage.title')}
           aria-busy={loading}
         >
+          {isDragging && (
+            <div
+              aria-hidden="true"
+              className={`fc-cross-month-zone fc-cross-month-zone--prev${isNearLeft ? ' fc-cross-month-zone--active' : ''}`}
+            >
+              ←
+            </div>
+          )}
+          {isDragging && (
+            <div
+              aria-hidden="true"
+              className={`fc-cross-month-zone fc-cross-month-zone--next${isNearRight ? ' fc-cross-month-zone--active' : ''}`}
+            >
+              →
+            </div>
+          )}
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, rrulePlugin]}
@@ -314,6 +352,8 @@ export function CrmCalendar({
             select={handleSelect}
             eventDrop={handleEventDrop}
             eventResize={handleEventResize}
+            eventDragStart={handleEventDragStart}
+            eventDragStop={handleEventDragStop}
             eventContent={renderEventContent}
             eventDisplay="block"
           />
