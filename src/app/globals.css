@@ -604,19 +604,24 @@
     border-radius: 0.375rem;
   }
 
-  /* Oggi */
+  /* Oggi — anello blu, sfondo trasparente (stile Outlook mini-cal) */
   .rdp-today:not(.rdp-selected) .rdp-day_button {
-    font-weight: bold !important;
-    color: #2563eb !important;
+    background-color: transparent !important;
+    box-shadow: 0 0 0 2px #3b82f6 !important;
+    border-radius: 0.375rem !important;
+    font-weight: 700 !important;
+    color: #60a5fa !important;
+  }
+
+  /* Annulla il bg-accent scuro che Tailwind applica sulla <td> di today */
+  .rdp-today.bg-accent,
+  .rdp-root .bg-accent {
+    background-color: transparent !important;
   }
 
   /* Tailwind classes inside Calendar component */
   .rdp-root .text-muted-foreground {
     color: #64748b !important;
-  }
-
-  .rdp-root .bg-accent {
-    background-color: rgba(37, 99, 235, 0.1) !important;
   }
 
   .rdp-root [aria-label] {
