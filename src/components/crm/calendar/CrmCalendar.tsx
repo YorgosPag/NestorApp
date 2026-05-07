@@ -162,6 +162,7 @@ export function CrmCalendar({
   // Navigate when sidebar date changes
   useEffect(() => {
     if (navigateToDate) {
+      console.log('🔵 Effect: navigateToDate changed', navigateToDate);
       isProgrammaticNav.current = true;
       setCurrentDate(navigateToDate);
     }
@@ -362,8 +363,10 @@ export function CrmCalendar({
             onView={setCurrentView}
             date={currentDate}
             onNavigate={(date: Date) => {
+              console.log('🟢 onNavigate called:', date, 'isProgrammaticNav:', isProgrammaticNav.current);
               setCurrentDate(date);
               if (!isProgrammaticNav.current) {
+                console.log('🟡 Calling onDateChange');
                 onDateChange?.(date);
               }
               isProgrammaticNav.current = false;
