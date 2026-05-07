@@ -306,26 +306,40 @@ export interface FloorplanOverlay {
 - Delete `Floor` → cascade delete tutti i `FloorplanBackground` con matching `floorId` → cascade delete relativi overlays.
 - Cancellazione del file in `files`: solo se nessun altro background lo riferisce (reference counting).
 
-### 3.6 Replace flow (Q3 vincolante)
+### 3.6 Replace flow (Q3 + Q8 vincolanti)
 
-User uploads new file su κάτοψη già occupata:
+User uploads new file su κάτοψη già occupata. **Same-type** (PDF→PDF, Image→Image) e **cross-type** (DXF↔PDF/Image, PDF↔Image) seguono lo stesso flow:
 
-1. Detect: `existing = await getBackgroundByFloorId(floorId)`
-2. Se esiste:
-   - `polygonCount = countOverlaysByBackgroundId(existing.id)`
-   - Mostra `ReplaceConfirmDialog`:
-     ```
-     ⚠️ Υπάρχει ήδη background αρχείο "{existing.fileName}".
-     Αν συνεχίσεις, θα διαγραφούν:
-     • Το παλιό αρχείο
-     • {polygonCount} polygons
-     Σίγουρα θες να συνεχίσεις;
+1. Detect via unified service `getFloorPolygonState(floorId)`:
+   ```ts
+   {
+     hasFloorplanBackground: boolean,
+     floorplanOverlayCount: number,
+     hasDxfBackground: boolean,
+     dxfOverlayCount: number,
+   }
+   ```
+2. Se almeno uno è truthy, mostra `ReplaceConfirmDialog`:
+   ```
+   ⚠️ Ο όροφος έχει ήδη background αρχείο "{existingFileName}".
+   Αν συνεχίσεις, θα διαγραφούν:
+   • Το παλιό αρχείο
+   • {floorplanOverlayCount + dxfOverlayCount} polygons συνολικά
+     ({floorplanOverlayCount} από PDF/Image + {dxfOverlayCount} από DXF)
+   Σίγουρα θες να συνεχίσεις;
 
-     [ Ακύρωση ]    [ Διαγραφή και αντικατάσταση ]
-     ```
-   - Conferma → `cascadeDeleteBackground(existing.id)` → `addBackground(newFile)` (atomic via Firestore batch)
-   - Cancel → no-op
-3. Se non esiste: `addBackground(newFile)` direttamente.
+   [ Ακύρωση ]    [ Διαγραφή και αντικατάσταση ]
+   ```
+3. Conferma → `cascadeDeleteAllPolygonsForFloor(floorId)` (Q8 unified service) → `addBackground(newFile)` (atomic via Firestore batch).
+4. Cancel → no-op.
+
+**`cascadeDeleteAllPolygonsForFloor(floorId)` (Q8 NUOVO unified service):**
+- Deve toccare **ENTRAMBI** i polygon systems per garantire single source of truth post-delete:
+  1. Query `floorplan_overlays where floorId == floorId AND companyId == ctx.companyId` → batch delete tutti
+  2. Query DXF polygon system (collection esistente — TBD da grep, candidate: `dxf_overlay_levels` con FK al floor) → batch delete tutti
+  3. Query `floorplan_backgrounds where floorId == floorId AND companyId == ctx.companyId` → delete + reference-decrement file
+- Tutto in una Firestore batch atomic. Failure mid-way = rollback automatico (Firestore guarantee).
+- Idempotente: chiamata due volte → second call no-op (already empty).
 
 ### 3.7 Calibration system (Layer 5 hook + Layer 7 dialog)
 
@@ -351,7 +365,20 @@ User uploads new file su κάτοψη già occupata:
    - `scale = realDist / pixelDist` (uniform — `scaleX === scaleY`)
    - **Optional rotation correction:** se utente checkba "horizontal/vertical", deriva `rotation` da `atan2(B−A)` e roto-trasla.
 6. Aggiorna `background.transform` e `background.calibration`.
-7. **Polygon impact:** se ci sono polygons esistenti, applica `inverse(oldTransform) ∘ newTransform` ai vertices così rimangono nello stesso real-world spot. Confirm dialog opzionale "Anche i polygons saranno scalati di X%, continui?" se delta > 5%.
+7. **Polygon impact (Q10 vincolante = auto-remap + always confirm):** se esistono polygons (`count = countOverlaysByBackgroundId(rbgId)`) > 0:
+   - Mostra `CalibrationPolygonRemapDialog`:
+     ```
+     ℹ️ Calibration θα ενημερώσει {count} polygons για να κρατηθούν
+        στην ίδια πραγματική θέση (real-world position).
+
+     Παράδειγμα: αν έχεις διαμέρισμα 5m × 5m, μετά μένει 5m × 5m
+        (όχι αλλιώς λόγω scale change).
+
+     [ Ακύρωση ]    [ Calibrate και ενημέρωση polygons ]
+     ```
+   - Conferma → applica `vertex_new = inverse(newTransform) ∘ oldTransform(vertex_old)` a tutti i polygons via Firestore batch (atomic con la calibration write).
+   - Cancel → no-op (né calibration né remap).
+   - **Nessuna threshold** (5% delta, etc.) — sempre confirm per Procore-grade transparency.
 
 ### 3.8 Persistence (Layer 3) — strong separation Procore-grade
 
@@ -420,13 +447,12 @@ FLOORPLAN_OVERLAYS: process.env.NEXT_PUBLIC_FLOORPLAN_OVERLAYS_COLLECTION || 'fl
 
 ### 3.10 UI Panel (Layer 7) — single-target
 
-`FloorplanBackgroundPanel` sostituisce `PdfControlsPanel`:
+`FloorplanBackgroundPanel` sostituisce `PdfControlsPanel`. **Q7: niente page navigation (single-page only).**
 
 ```
 ┌─ Background Κάτοψης ───────────────────[ × ]─┐
-│  📄 Floor-A.pdf  (page 2/12)         [ ⋮ ]   │  ← active background
+│  📄 Floor-A.pdf                       [ ⋮ ]  │  ← active background
 ├──────────────────────────────────────────────┤
-│  ▸ Page: [ < 2 / 12 > ]                     │  (pdf-only, hidden for image)
 │  ▸ Scale: [████░░░░] 1.20×    [ Calibrate ] │
 │  ▸ Rotation: [────●───] 15°                 │
 │  ▸ Position: X: 0  Y: 0       [ Reset ]     │
@@ -452,9 +478,10 @@ Pannello vuoto-state (κάτοψη senza background):
 
 UI features:
 - ⋮ menu: Rename, Replace, Calibrate, Export transform, Delete
-- Page navigation visible **only if** `provider.capabilities.multiPage`
+- **Niente page navigation** (Q7 — single-page only). Se l'utente carica un PDF multi-page, render della sola pagina 1, le altre pagine ignorate (e l'utente lo sa: deve caricare PDF separati per ogni κάτοψη).
 - Calibrate button **always visible** (Q4)
-- Replace = trigger `ReplaceConfirmDialog` (Q3)
+- Replace = trigger `ReplaceConfirmDialog` (Q3 + Q8 unified cascade)
+- **Visibilità del Panel (Q9 RBAC):** read-only per ruoli ≠ ADMIN/SUPER_ADMIN/PROJECT_MANAGER (tutti i bottoni di mutation disabilitati con tooltip "Δεν έχεις δικαίωμα").
 
 ### 3.11 Capabilities matrix
 
