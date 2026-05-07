@@ -2,14 +2,19 @@
 
 /**
  * =============================================================================
- * SPEC-237D: Upload Step (Step 6)
+ * SPEC-237D + ADR-340 Phase 4 reborn: Upload Step (Step 6)
  * =============================================================================
  *
- * Wraps FileUploadZone + useFloorplanUpload for the final wizard step.
- * Shows: drag & drop → progress bar → success/error.
+ * Single upload entry point — accepts DXF, PDF, Image. Smart routing internally.
  *
- * When a floorplan already exists for the target entity, shows a replacement
- * warning. On successful upload the old FileRecord is trashed (1 per entity).
+ * Floor-level flow:
+ *   1. Detect format (dxf / pdf / image / unknown).
+ *   2. Fetch wipe preview (polygons + backgrounds + dxf levels + files).
+ *   3. If anything to wipe → confirm dialog ("N polygons, M backgrounds…").
+ *   4. Confirm → HARD wipe → upload via correct backend.
+ *
+ * Non-floor flow (project / building / unit-without-level):
+ *   - Only DXF accepted (legacy pipeline). Existing-file warning preserved.
  *
  * @module features/floorplan-import/components/StepUpload
  */
@@ -17,8 +22,22 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { CheckCircle2, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
-import { useFloorplanUpload } from '@/hooks/useFloorplanUpload';
+import { useFloorplanSmartUpload } from '../hooks/useFloorplanSmartUpload';
+import type {
+  FloorWipePreview,
+  SmartUploadResult,
+} from '../hooks/useFloorplanSmartUpload';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
 import { FileRecordService } from '@/services/file-record.service';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -49,24 +68,44 @@ const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
 // =============================================================================
 
 export function StepUpload({ config, onComplete }: StepUploadProps) {
-  const { uploadFloorplan, isUploading, progress, error, clearError } = useFloorplanUpload(config);
+  const smart = useFloorplanSmartUpload(config);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation(['files', 'files-media']);
 
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const floorId = smart.resolveFloorId();
 
-  // ── Existing floorplan detection ──
+  // ── Wipe preview (floor-level only) ──
+  const [preview, setPreview] = useState<FloorWipePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(Boolean(floorId));
+  const previewRef = useRef(false);
+
+  useEffect(() => {
+    if (!floorId || previewRef.current) return;
+    previewRef.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const p = await smart.fetchPreview(floorId);
+        if (!cancelled) setPreview(p);
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [floorId, smart]);
+
+  // ── Existing-file check (non-floor only — legacy UX) ──
   const [existingFile, setExistingFile] = useState<FileRecord | null>(null);
-  const [checkingExisting, setCheckingExisting] = useState(true);
+  const [checkingExisting, setCheckingExisting] = useState(!floorId);
   const checkedRef = useRef(false);
 
   useEffect(() => {
-    if (checkedRef.current) return;
+    if (floorId || checkedRef.current) return;
     checkedRef.current = true;
-
     let cancelled = false;
-    async function check() {
+    (async () => {
       try {
         const files = await FileRecordService.getFilesByEntity(
           config.entityType,
@@ -78,41 +117,65 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
             levelFloorId: config.levelFloorId,
           },
         );
-        if (!cancelled && files.length > 0) {
-          setExistingFile(files[0]);
-        }
+        if (!cancelled && files.length > 0) setExistingFile(files[0]);
       } finally {
         if (!cancelled) setCheckingExisting(false);
       }
-    }
-    check();
+    })();
     return () => { cancelled = true; };
-  }, [config]);
+  }, [floorId, config]);
 
-  const handleUpload = useCallback(async (files: File[]) => {
-    if (files.length === 0) return;
+  // ── Confirm dialog state ──
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const wipeRequired = preview !== null && (
+    preview.totalPolygons > 0 ||
+    preview.floorplanBackgroundCount > 0 ||
+    preview.dxfLevelCount > 0 ||
+    preview.fileRecordCount > 0
+  );
 
-    const file = files[0];
-    const result = await uploadFloorplan(file);
-
+  const performUpload = useCallback(async (file: File) => {
+    const result: SmartUploadResult = await smart.uploadSmart(file);
     if (result.success) {
-      // Trash old floorplan if replacing
-      if (existingFile) {
+      // Trash legacy non-floor file if replacing (best-effort)
+      if (!floorId && existingFile) {
         try {
           await FileRecordService.moveToTrash(existingFile.id, config.userId);
         } catch {
-          // Non-blocking — old record stays but new one is active
+          // non-blocking
         }
       }
       setUploadSuccess(true);
-      onComplete(file, result.fileRecord?.id);
+      onComplete(file, result.fileId);
     }
-  }, [uploadFloorplan, onComplete, existingFile, config.userId]);
+  }, [smart, floorId, existingFile, config.userId, onComplete]);
+
+  const handleUpload = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+    const file = files[0];
+
+    if (floorId && wipeRequired) {
+      setPendingFile(file);
+      return;
+    }
+    await performUpload(file);
+  }, [floorId, wipeRequired, performUpload]);
+
+  const handleConfirmWipe = useCallback(async () => {
+    if (!pendingFile) return;
+    const file = pendingFile;
+    setPendingFile(null);
+    await performUpload(file);
+  }, [pendingFile, performUpload]);
+
+  const handleCancelWipe = useCallback(() => {
+    setPendingFile(null);
+  }, []);
 
   const handleRetry = useCallback(() => {
-    clearError();
+    smart.clearError();
     setUploadSuccess(false);
-  }, [clearError]);
+  }, [smart]);
 
   // ── Success state ──
   if (uploadSuccess) {
@@ -125,12 +188,12 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
   }
 
   // ── Error state ──
-  if (error && !isUploading) {
+  if (smart.error && !smart.isUploading) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-12">
         <AlertCircle className={`${iconSizes.xl3} text-destructive`} />
         <p className="text-sm font-medium text-destructive">{t('floorplanImport.error')}</p>
-        <p className={`text-xs ${colors.text.muted}`}>{error}</p>
+        <p className={`text-xs ${colors.text.muted}`}>{smart.error}</p>
         <Button variant="outline" size="sm" onClick={handleRetry}>
           {t('floorplanImport.retry')}
         </Button>
@@ -140,30 +203,26 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
 
   return (
     <div className="space-y-4 py-4">
-      {/* ── Existing floorplan warning ── */}
-      {checkingExisting && (
+      {/* ── Floor-level preview banner ── */}
+      {floorId && previewLoading && (
         <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-xs">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>{t('floorplanImport.existingFloorplan.checking')}</span>
         </div>
       )}
-      {!checkingExisting && existingFile && (
-        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm dark:border-amber-700 dark:bg-amber-950/40">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-          <div className="space-y-0.5">
-            <p className="font-medium text-amber-800 dark:text-amber-200">
-              {t('floorplanImport.existingFloorplan.warning')}
-            </p>
-            <p className="text-xs text-amber-700 dark:text-amber-300">
-              {t('floorplanImport.existingFloorplan.details')}
-            </p>
-            {existingFile.originalFilename && (
-              <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                {t('floorplanImport.existingFloorplan.fileName', { fileName: existingFile.originalFilename })}
-              </p>
-            )}
-          </div>
+      {floorId && !previewLoading && wipeRequired && (
+        <PreviewBanner preview={preview!} t={t} />
+      )}
+
+      {/* ── Non-floor existing-file warning (legacy) ── */}
+      {!floorId && checkingExisting && (
+        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-xs">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>{t('floorplanImport.existingFloorplan.checking')}</span>
         </div>
+      )}
+      {!floorId && !checkingExisting && existingFile && (
+        <ExistingFileWarning file={existingFile} t={t} />
       )}
 
       {/* ── Upload zone ── */}
@@ -172,37 +231,148 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
         accept={FLOORPLAN_ACCEPT}
         maxSize={MAX_SIZE_BYTES}
         multiple={false}
-        uploading={isUploading}
+        uploading={smart.isUploading}
         enableCompression={false}
         typesHint={t('floorplanImport.acceptedTypes')}
       />
 
       {/* ── Progress bar ── */}
-      {isUploading && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className={colors.text.muted}>{t('floorplanImport.uploading')}</span>
-            <span className="font-medium">{progress}%</span>
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-300"
-              role="progressbar"
-              aria-valuenow={progress}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
+      {smart.isUploading && (
+        <ProgressBar progress={smart.progress} colors={colors} t={t} />
       )}
 
-      {/* ── Accepted types hint ── */}
-      {!isUploading && (
+      {!smart.isUploading && (
         <p className={`text-center text-xs ${colors.text.muted}`}>
           {t('floorplanImport.acceptedTypes')}
         </p>
       )}
+
+      {/* ── Wipe confirm dialog ── */}
+      <WipeConfirmDialog
+        open={pendingFile !== null}
+        preview={preview}
+        fileName={pendingFile?.name ?? ''}
+        onConfirm={handleConfirmWipe}
+        onCancel={handleCancelWipe}
+        t={t}
+      />
     </div>
+  );
+}
+
+// =============================================================================
+// SUBCOMPONENTS
+// =============================================================================
+
+interface TFn { (key: string, options?: Record<string, unknown>): string; }
+
+function PreviewBanner({ preview, t }: { preview: FloorWipePreview; t: TFn }) {
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm dark:border-amber-700 dark:bg-amber-950/40">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+      <div className="space-y-0.5">
+        <p className="font-medium text-amber-800 dark:text-amber-200">
+          {t('floorplanImport.wipePreview.title')}
+        </p>
+        <p className="text-xs text-amber-700 dark:text-amber-300">
+          {t('floorplanImport.wipePreview.summary', {
+            polygons: preview.totalPolygons,
+            backgrounds: preview.floorplanBackgroundCount + preview.dxfLevelCount,
+            files: preview.fileRecordCount,
+          })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ExistingFileWarning({ file, t }: { file: FileRecord; t: TFn }) {
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm dark:border-amber-700 dark:bg-amber-950/40">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+      <div className="space-y-0.5">
+        <p className="font-medium text-amber-800 dark:text-amber-200">
+          {t('floorplanImport.existingFloorplan.warning')}
+        </p>
+        <p className="text-xs text-amber-700 dark:text-amber-300">
+          {t('floorplanImport.existingFloorplan.details')}
+        </p>
+        {file.originalFilename && (
+          <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+            {t('floorplanImport.existingFloorplan.fileName', { fileName: file.originalFilename })}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ProgressBarProps {
+  progress: number;
+  colors: ReturnType<typeof useSemanticColors>;
+  t: TFn;
+}
+
+function ProgressBar({ progress, colors, t }: ProgressBarProps) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <span className={colors.text.muted}>{t('floorplanImport.uploading')}</span>
+        <span className="font-medium">{progress}%</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-300"
+          role="progressbar"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface WipeConfirmDialogProps {
+  open: boolean;
+  preview: FloorWipePreview | null;
+  fileName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  t: TFn;
+}
+
+function WipeConfirmDialog({
+  open, preview, fileName, onConfirm, onCancel, t,
+}: WipeConfirmDialogProps) {
+  if (!preview) return null;
+  const totalBackgrounds = preview.floorplanBackgroundCount + preview.dxfLevelCount;
+  return (
+    <AlertDialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {t('floorplanImport.wipeDialog.title')}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {t('floorplanImport.wipeDialog.description', {
+              fileName,
+              polygons: preview.totalPolygons,
+              backgrounds: totalBackgrounds,
+              files: preview.fileRecordCount,
+            })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onCancel}>
+            {t('floorplanImport.wipeDialog.cancel')}
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>
+            {t('floorplanImport.wipeDialog.confirm')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

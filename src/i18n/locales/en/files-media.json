@@ -80,6 +80,16 @@
       "fileName": "Existing: {fileName}",
       "checking": "Checking for existing floorplan..."
     },
+    "wipePreview": {
+      "title": "This floor already has content",
+      "summary": "Will be permanently deleted: {polygons} drawings, {backgrounds} backgrounds, {files} files."
+    },
+    "wipeDialog": {
+      "title": "Replace floor floorplan",
+      "description": "Importing '{fileName}' will permanently delete: {polygons} drawings, {backgrounds} backgrounds, {files} files. This cannot be undone. Continue?",
+      "confirm": "Delete and import",
+      "cancel": "Cancel"
+    },
     "noItems": "No items found",
     "autoSelected": "Auto-selected",
     "acceptedTypes": "DXF, PDF, JPG, PNG (up to 50MB)",

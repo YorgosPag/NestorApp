@@ -80,6 +80,16 @@
       "fileName": "Υπάρχουσα: {fileName}",
       "checking": "Έλεγχος υπάρχουσας κάτοψης..."
     },
+    "wipePreview": {
+      "title": "Ο όροφος έχει ήδη περιεχόμενο",
+      "summary": "Θα διαγραφούν οριστικά: {polygons} σχέδια, {backgrounds} υπόβαθρα, {files} αρχεία."
+    },
+    "wipeDialog": {
+      "title": "Αντικατάσταση κάτοψης ορόφου",
+      "description": "Με την εισαγωγή του «{fileName}» θα διαγραφούν οριστικά: {polygons} σχέδια, {backgrounds} υπόβαθρα, {files} αρχεία. Δεν υπάρχει ανάκτηση. Συνέχεια;",
+      "confirm": "Διαγραφή και εισαγωγή",
+      "cancel": "Ακύρωση"
+    },
     "noItems": "Δεν βρέθηκαν στοιχεία",
     "autoSelected": "Αυτόματη επιλογή",
     "acceptedTypes": "DXF, PDF, Εικόνες (μέχρι 50MB)",
