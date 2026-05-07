@@ -18,15 +18,21 @@
 import type { PanOffset } from '@/hooks/useZoomPan';
 import { PdfRenderer } from '@/subapps/dxf-viewer/pdf-background/services/PdfRenderer';
 
+/** Render scale for sharpness — image is rendered at this multiple of PDF points. */
+const PDF_RENDER_SCALE = 2;
+
 export interface PdfPageInfo {
   imageUrl: string;
-  width: number;
-  height: number;
+  /** Page width in unscaled PDF points (1x) — matches editor's overlay world coords. */
+  pageWidth: number;
+  /** Page height in unscaled PDF points (1x). */
+  pageHeight: number;
 }
 
 /**
  * Fetch a PDF from a URL, render its first page to a data URL.
- * Uses the centralized PdfRenderer singleton (pdfjs-dist 4.5.136).
+ * Returns dimensions in unscaled PDF points (1x), matching the world coords
+ * used by the DXF Viewer editor when polygons are drawn over PDF backgrounds.
  */
 export async function loadPdfPage1(url: string): Promise<PdfPageInfo | null> {
   const response = await fetch(url);
@@ -37,15 +43,15 @@ export async function loadPdfPage1(url: string): Promise<PdfPageInfo | null> {
   const loadResult = await PdfRenderer.loadDocument(file);
   if (!loadResult.success) return null;
 
-  const renderResult = await PdfRenderer.renderPage(1, { scale: 2 });
+  const renderResult = await PdfRenderer.renderPage(1, { scale: PDF_RENDER_SCALE });
   if (!renderResult.success || !renderResult.imageUrl || !renderResult.dimensions) {
     return null;
   }
 
   return {
     imageUrl: renderResult.imageUrl,
-    width: renderResult.dimensions.width,
-    height: renderResult.dimensions.height,
+    pageWidth: renderResult.dimensions.width / PDF_RENDER_SCALE,
+    pageHeight: renderResult.dimensions.height / PDF_RENDER_SCALE,
   };
 }
 

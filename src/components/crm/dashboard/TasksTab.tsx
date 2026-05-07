@@ -22,13 +22,14 @@ import {
   User,
   MapPin,
 } from 'lucide-react';
-import { format, isToday, isPast, isTomorrow } from 'date-fns';
+import { format, isToday, isPast, isTomorrow, parse, isValid } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import CreateTaskModal from './dialogs/CreateTaskModal';
 import { TaskEditDialog } from './dialogs/TaskEditDialog';
 import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
+import type { AppointmentDocument } from '@/types/appointment';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -106,15 +107,43 @@ const createFormatDueDate = (t: (key: string) => string) => (dueDate?: Firestore
     return format(date, 'dd/MM/yyyy HH:mm', { locale: el });
 };
 
+type ActivityItem =
+  | { kind: 'task'; task: CrmTask; sortDate: number }
+  | { kind: 'appointment'; appt: AppointmentDocument; sortDate: number; title: string; date: Date | null };
+
+function resolveAppointmentDate(appt: AppointmentDocument): Date | null {
+  const flat = appt as unknown as Record<string, unknown>;
+  const rawDate =
+    appt.appointment?.confirmedDate ??
+    appt.appointment?.requestedDate ??
+    (flat['date'] as string | undefined);
+  if (!rawDate) return null;
+  let dateStr = rawDate;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDate)) {
+    const parsed = parse(rawDate, 'dd/MM/yyyy', new Date());
+    if (!isValid(parsed)) return null;
+    dateStr = format(parsed, 'yyyy-MM-dd');
+  }
+  const timeStr =
+    appt.appointment?.confirmedTime ??
+    appt.appointment?.requestedTime ??
+    (flat['time'] as string | undefined) ??
+    '09:00';
+  const dt = new Date(`${dateStr}T${timeStr}:00`);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
 interface TasksTabProps {
   /** Centralized filters from AdvancedFiltersPanel (page level). Uses defaults if not provided. */
   filters?: TaskFilterState;
   onTaskCreated?: () => void;
   /** Legacy: passed from GenericCRMDashboardTabsRenderer */
   selectedPeriod?: string;
+  /** Appointments to merge into the unified activity list */
+  appointments?: AppointmentDocument[];
 }
 
-export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabProps) {
+export function TasksTab({ filters: externalFilters, onTaskCreated, appointments }: TasksTabProps) {
   // 🏢 ENTERPRISE: Use externally provided filters or defaults
   const filters = externalFilters ?? defaultTaskFilters;
   const { success, error: notifyError } = useNotifications();
@@ -200,6 +229,34 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
     return list;
   }, [tasks, filters]);
 
+  const activityItems = useMemo<ActivityItem[]>(() => {
+    const activityType = filters.activityType ?? 'all';
+    const items: ActivityItem[] = [];
+
+    if (activityType !== 'appointments') {
+      for (const task of filteredTasks) {
+        const d = task.dueDate ? new Date(task.dueDate as string).getTime() : Infinity;
+        items.push({ kind: 'task', task, sortDate: d });
+      }
+    }
+
+    if (activityType !== 'tasks' && appointments?.length) {
+      const q = filters.searchTerm?.toLowerCase() ?? '';
+      for (const appt of appointments) {
+        const flat = appt as unknown as Record<string, unknown>;
+        const desc = appt.appointment?.description ?? (flat['notes'] as string | undefined) ?? '';
+        const name = appt.requester?.name ?? appt.requester?.email ?? null;
+        if (q && !desc.toLowerCase().includes(q) && !(name ?? '').toLowerCase().includes(q)) continue;
+        const date = resolveAppointmentDate(appt);
+        const titleText = name ? `${name} — ${desc.slice(0, 60)}` : desc.slice(0, 80) || 'Ραντεβού';
+        items.push({ kind: 'appointment', appt, sortDate: date?.getTime() ?? Infinity, title: titleText, date });
+      }
+    }
+
+    items.sort((a, b) => a.sortDate - b.sortDate);
+    return items;
+  }, [filteredTasks, appointments, filters.activityType, filters.searchTerm]);
+
   const handleCompleteTask = useCallback(async (taskId?: string, taskTitle?: string) => {
     if (!taskId || !taskTitle) return;
     try {
@@ -243,11 +300,35 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
   return (
     <section className={sp.spaceBetween.md}>
       <ConfirmDialog {...dialogProps} />
-      {/* Task List — filters handled by AdvancedFiltersPanel at page level */}
-      {filteredTasks.length === 0 ? (
-        <div className={`text-center ${sp.padding.y['2xl']}`}><p className={colors.text.muted}>{t('tasks.noTasks')}</p></div>
+      {activityItems.length === 0 ? (
+        <div className={`text-center ${sp.padding.y['2xl']}`}><p className={colors.text.muted}>{t('tasks.noActivities')}</p></div>
       ) : (
-        filteredTasks.map((task) => {
+        activityItems.map((item) => {
+          if (item.kind === 'appointment') {
+            const { appt, title, date } = item;
+            const dateLabel = date ? format(date, 'dd/MM/yyyy HH:mm') : t('tasks.noDate');
+            return (
+              <article key={`appt_${appt.id}`} className={`${colors.bg.infoSubtle} ${sp.padding.md} rounded-lg border border-blue-200 dark:border-blue-800 ${HOVER_SHADOWS.SUBTLE}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className={`flex items-center ${sp.gap.sm} ${sp.margin.bottom.sm}`}>
+                      <div className={`${iconSizes.xl} rounded-full flex items-center justify-center bg-blue-100 dark:bg-blue-900/40`}>
+                        <Calendar className={`${iconSizes.sm} ${colors.text.info}`} />
+                      </div>
+                      <h4 className={`font-medium ${colors.text.primary}`}>{title}</h4>
+                      <Badge variant="info">{appt.status}</Badge>
+                    </div>
+                    <div className={`${typography.body.sm} ${colors.text.muted} flex items-center gap-1`}>
+                      <Clock className={iconSizes.xs} />
+                      <span className={colors.text.info}>{dateLabel}</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          }
+
+          const { task } = item;
           const TaskIcon = TASK_TYPE_ICONS[task.type] || Clock;
           const leadName = getLeadName(task.leadId);
           const meta = (task.metadata || {}) as TaskMetadata;

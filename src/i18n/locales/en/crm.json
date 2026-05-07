@@ -30,7 +30,7 @@
       "description": "Unified inbox and communication history"
     },
     "tasks": {
-      "label": "Tasks",
+      "label": "Activities",
       "description": "Tasks, reminders, and follow-ups"
     },
     "calendar": {
@@ -167,10 +167,11 @@
     }
   },
   "tasks": {
-    "title": "Tasks & Appointments",
+    "title": "Activities",
     "description": "Manage your tasks and appointments",
     "newTask": "New Task",
     "noTasks": "No tasks found",
+    "noActivities": "No activities found",
     "stats": {
       "total": "Total",
       "totalDesc": "All tasks",
@@ -434,7 +435,7 @@
       "description": "Track and manage your sales opportunities"
     },
     "tasks": {
-      "title": "Tasks & Appointments",
+      "title": "Activities",
       "description": "Manage your tasks, reminders and follow-ups"
     },
     "calendar": {

@@ -6,7 +6,7 @@
  * @enterprise Refactored to use centralized systems (2026-02-08)
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Clock,
   Plus,
@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Calendar
 } from 'lucide-react';
+import { subMonths, addMonths } from 'date-fns';
 
 import CreateTaskModal from '@/components/crm/dashboard/dialogs/CreateTaskModal';
 import { TasksTab } from '@/components/crm/dashboard/TasksTab';
@@ -30,6 +31,10 @@ import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/Advanced
 import { taskFiltersConfig, defaultTaskFilters } from '@/components/core/AdvancedFilters/configs';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import type { TaskFilterState } from '@/components/core/AdvancedFilters/configs';
+import { AppointmentsRepository } from '@/services/calendar/AppointmentsRepository';
+import type { AppointmentDocument } from '@/types/appointment';
+
+const appointmentsRepo = new AppointmentsRepository();
 
 export function TasksPageContent() {
   const { t } = useTranslation(['crm', 'crm-inbox']);
@@ -41,6 +46,16 @@ export function TasksPageContent() {
   const [showDashboard, setShowDashboard] = useState(false);
   const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
   const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
+  const [appointments, setAppointments] = useState<AppointmentDocument[]>([]);
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+    const start = subMonths(new Date(), 6);
+    const end = addMonths(new Date(), 6);
+    appointmentsRepo.getByDateRange(start, end)
+      .then(setAppointments)
+      .catch(() => {});
+  }, [authLoading, isAuthenticated]);
 
   const dashboardStats = useMemo<DashboardStat[]>(() => ([
     { title: t('tasks.stats.total'), value: loadingStats ? '...' : stats.total, icon: Clock, color: 'blue', description: t('tasks.stats.totalDesc') },
@@ -124,7 +139,7 @@ export function TasksPageContent() {
 
       <ListContainer>
         <section className={cn(layout.flexColGap4, 'flex-1 min-h-0')}>
-          <TasksTab filters={filters} />
+          <TasksTab filters={filters} appointments={appointments} />
         </section>
       </ListContainer>
 

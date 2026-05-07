@@ -211,16 +211,16 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
   },
 
   tasks: {
-    description: 'Εργασίες και υποχρεώσεις',
+    description: 'Εργασίες και υποχρεώσεις CRM',
     fields: {
       title: 'string',
-      companyId: 'string',
-      assignedTo: 'string?',
-      status: 'pending|in_progress|completed?',
-      priority: 'low|medium|high|critical?',
-      dueDate: 'Timestamp?',
+      companyId: 'string (αυτόματα)',
+      assignedTo: 'string? (userId)',
+      status: 'pending|in_progress|completed',
+      priority: 'low|medium|high|critical',
+      dueDate: 'string YYYY-MM-DD (π.χ. "2026-05-10") — ΜΗΝ χρησιμοποιείς DD/MM/YYYY ή Timestamp',
       description: 'string?',
-      projectId: 'string? (->projects)',
+      projectId: 'string? (->projects — προαιρετικό, παράλειψε αν δεν υπάρχει)',
     },
   },
 

@@ -161,6 +161,12 @@
     "tomorrow": "Tomorrow",
     "week": "This week"
   },
+  "activityType": "Type",
+  "allActivityTypes": "All",
+  "activityTypes": {
+    "tasks": "Tasks",
+    "appointments": "Appointments"
+  },
   "intents": {
     "appointment": "Appointment",
     "invoice": "Invoice",

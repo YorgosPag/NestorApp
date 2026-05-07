@@ -185,7 +185,7 @@ export function CrmCalendar({
   // Uses raw design token CSS values because react-big-calendar requires CSSProperties
   const eventStyleGetter: EventPropGetter<CalendarEvent> = useCallback(
     (event: CalendarEvent) => {
-      const colors = CALENDAR_EVENT_COLORS[event.eventType];
+      const colors = CALENDAR_EVENT_COLORS[event.eventType] ?? CALENDAR_EVENT_COLORS['other'];
       const style: CSSProperties = {
         backgroundColor: colors.bg,
         borderLeft: `${borderWidth.thick} solid ${colors.border}`,

@@ -181,11 +181,22 @@ export const taskFiltersConfig: FilterPanelConfig = {
             { value: "week", label: TASK_TIMEFRAME_LABELS.week },
           ],
         },
+        {
+          id: "activityType",
+          type: "select",
+          label: "filters.activityType",
+          placeholder: "filters.allActivityTypes",
+          width: 1,
+          options: [
+            { value: "all", label: "filters.allActivityTypes" },
+            { value: "tasks", label: "filters.activityTypes.tasks" },
+            { value: "appointments", label: "filters.activityTypes.appointments" },
+          ],
+        },
       ],
     },
   ],
 };
-
 // Task Filter State Interface
 export interface TaskFilterState {
   [key: string]: unknown;
@@ -194,6 +205,7 @@ export interface TaskFilterState {
   priority: string;
   type: string;
   timeframe: string;
+  activityType: string;
 }
 
 // Default Task Filters
@@ -203,13 +215,12 @@ export const defaultTaskFilters: TaskFilterState = {
   priority: "all",
   type: "all",
   timeframe: "all",
+  activityType: "all",
 };
-
 // ====================================================================
 // [ENTERPRISE] CRM Dashboard Filters Configuration — Salesforce/HubSpot Pattern
 // Global filters: Search + Pipeline Stage + Status + Period
 // ====================================================================
-
 export interface CrmDashboardFilterState {
   [key: string]: unknown;
   searchTerm: string;
@@ -217,14 +228,12 @@ export interface CrmDashboardFilterState {
   status: string;
   period: string;
 }
-
 export const defaultCrmDashboardFilters: CrmDashboardFilterState = {
   searchTerm: "",
   stage: "all",
   status: "all",
   period: "all",
 };
-
 export const crmDashboardFiltersConfig: FilterPanelConfig = {
   title: "filters.title",
   searchPlaceholder: SP.general,
@@ -293,7 +302,6 @@ export const crmDashboardFiltersConfig: FilterPanelConfig = {
     },
   ],
 };
-
 // ====================================================================
 // [ENTERPRISE] AI Inbox Filters Configuration
 // ====================================================================
@@ -380,7 +388,6 @@ export const aiInboxFiltersConfig: FilterPanelConfig = {
     },
   ],
 };
-
 export interface AIInboxFilterState {
   [key: string]: unknown;
   searchTerm: string;
@@ -389,7 +396,6 @@ export interface AIInboxFilterState {
   dateFrom: string;
   dateTo: string;
 }
-
 export const defaultAIInboxFilters: AIInboxFilterState = {
   searchTerm: "",
   channel: "all",
@@ -397,7 +403,6 @@ export const defaultAIInboxFilters: AIInboxFilterState = {
   dateFrom: "",
   dateTo: "",
 };
-
 // ====================================================================
 // [ENTERPRISE] Operator Inbox Filters Configuration (UC-009)
 // For AI Pipeline Operator Inbox (/admin/operator-inbox)
@@ -482,7 +487,6 @@ export interface OperatorInboxFilterState {
   dateFrom: string;
   dateTo: string;
 }
-
 export const defaultOperatorInboxFilters: OperatorInboxFilterState = {
   searchTerm: "",
   intent: "all",
@@ -490,7 +494,6 @@ export const defaultOperatorInboxFilters: OperatorInboxFilterState = {
   dateFrom: "",
   dateTo: "",
 };
-
 // ====================================================================
 // [ENTERPRISE] File Manager Filters Configuration
 // For central file manager (/files page)

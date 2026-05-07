@@ -161,6 +161,12 @@
     "tomorrow": "Αύριο",
     "week": "Αυτή την εβδομάδα"
   },
+  "activityType": "Τύπος",
+  "allActivityTypes": "Όλα",
+  "activityTypes": {
+    "tasks": "Εργασίες",
+    "appointments": "Ραντεβού"
+  },
   "intents": {
     "appointment": "Ραντεβού",
     "invoice": "Τιμολόγιο",
