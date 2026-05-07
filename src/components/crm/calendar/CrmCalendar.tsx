@@ -353,6 +353,7 @@ export function CrmCalendar({
           aria-label={t('calendarPage.title')}
           aria-busy={loading}
         >
+          {console.log('🔴 DnDCalendar render — currentDate:', currentDate, 'navigateToDate:', navigateToDate)}
           <DnDCalendar
             localizer={localizer}
             events={events}
