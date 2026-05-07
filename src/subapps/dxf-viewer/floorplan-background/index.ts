@@ -31,3 +31,24 @@ export {
   registerProvider,
   getProvider,
 } from './providers/provider-registry';
+
+export { registerProviders } from './providers/register-providers';
+
+export {
+  useFloorplanBackgroundStore,
+  getFloorProvider,
+  selectFloorSlot,
+  selectActiveFloorId,
+  selectPendingReplaceRequest,
+} from './stores/floorplanBackgroundStore';
+
+export type {
+  FloorSlot,
+  PendingReplaceRequest,
+} from './stores/floorplanBackgroundStore';
+
+export { useFloorplanBackground } from './hooks/useFloorplanBackground';
+export type { UseFloorplanBackgroundResult } from './hooks/useFloorplanBackground';
+
+export { FloorplanBackgroundCanvas } from './components/FloorplanBackgroundCanvas';
+export type { FloorplanBackgroundCanvasProps } from './components/FloorplanBackgroundCanvas';

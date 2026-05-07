@@ -1,97 +1,76 @@
 /* eslint-disable custom/no-hardcoded-strings, design-system/enforce-semantic-colors */
 'use client';
 
-import React, { useRef, useState, useCallback } from 'react';
-import { ImageProvider } from '@/subapps/dxf-viewer/floorplan-background/providers/ImageProvider';
-import { DEFAULT_BACKGROUND_TRANSFORM } from '@/subapps/dxf-viewer/floorplan-background';
-import type { BackgroundTransform } from '@/subapps/dxf-viewer/floorplan-background';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  registerProviders,
+  useFloorplanBackground,
+  FloorplanBackgroundCanvas,
+} from '@/subapps/dxf-viewer/floorplan-background';
 
+const DEMO_FLOOR = 'demo-floor';
 const CANVAS_W = 800;
 const CANVAS_H = 600;
-
-interface LoadState {
-  status: 'idle' | 'loading' | 'loaded' | 'error';
-  bounds: { width: number; height: number } | null;
-  orientation: number;
-  error: string | null;
-}
+const WORLD_TO_CANVAS = { scale: 0.3, offsetX: 20, offsetY: 20 } as const;
+const VIEWPORT = { width: CANVAS_W, height: CANVAS_H } as const;
 
 export default function FloorplanBackgroundImageDemoPage() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const providerRef = useRef<ImageProvider | null>(null);
-  const [loadState, setLoadState] = useState<LoadState>({
-    status: 'idle',
-    bounds: null,
-    orientation: 1,
-    error: null,
-  });
-  const [transform, setTransform] = useState<BackgroundTransform>(DEFAULT_BACKGROUND_TRANSFORM);
+  const {
+    background,
+    isLoading,
+    error,
+    addBackground,
+    removeBackground,
+    setOpacity,
+    setVisible,
+    setTransform,
+  } = useFloorplanBackground(DEMO_FLOOR);
 
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
-    await providerRef.current?.dispose();
-    const provider = new ImageProvider();
-    providerRef.current = provider;
-
-    setLoadState({ status: 'loading', bounds: null, orientation: 1, error: null });
-    setTransform(DEFAULT_BACKGROUND_TRANSFORM);
-
-    const result = await provider.loadAsync({ kind: 'file', file });
-
-    if (!result.success) {
-      setLoadState({ status: 'error', bounds: null, orientation: 1, error: result.error ?? 'Load failed' });
-      return;
-    }
-
-    const orientation = (result.metadata?.imageOrientation as number | undefined) ?? 1;
-    setLoadState({ status: 'loaded', bounds: result.bounds ?? null, orientation, error: null });
-    renderFrame(provider, DEFAULT_BACKGROUND_TRANSFORM);
+  // Register providers once on mount (idempotent)
+  useEffect(() => {
+    registerProviders();
   }, []);
 
-  const renderFrame = useCallback(
-    (provider: ImageProvider, t: BackgroundTransform) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-      provider.render(ctx, {
-        transform: t,
-        worldToCanvas: { scale: 0.3, offsetX: 20, offsetY: 20 },
-        viewport: { width: CANVAS_W, height: CANVAS_H },
-        opacity: 1,
-      });
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setPendingFile(file);
+      await addBackground({ kind: 'file', file }, 'image');
     },
-    [],
+    [addBackground],
   );
 
-  const handleScaleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const scale = parseFloat(e.target.value);
-    const t: BackgroundTransform = { ...transform, scaleX: scale, scaleY: scale };
-    setTransform(t);
-    if (providerRef.current && loadState.status === 'loaded') {
-      renderFrame(providerRef.current, t);
-    }
-  }, [transform, loadState.status, renderFrame]);
+  const handleScaleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const scale = parseFloat(e.target.value);
+      setTransform({ scaleX: scale, scaleY: scale });
+    },
+    [setTransform],
+  );
 
-  const handleRotationChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const rotation = parseInt(e.target.value, 10);
-    const t: BackgroundTransform = { ...transform, rotation };
-    setTransform(t);
-    if (providerRef.current && loadState.status === 'loaded') {
-      renderFrame(providerRef.current, t);
-    }
-  }, [transform, loadState.status, renderFrame]);
+  const handleRotationChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setTransform({ rotation: parseInt(e.target.value, 10) });
+    },
+    [setTransform],
+  );
+
+  const handleOpacityChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setOpacity(parseFloat(e.target.value));
+    },
+    [setOpacity],
+  );
 
   return (
     <main style={{ padding: 24, fontFamily: 'monospace', background: '#0f0f23', minHeight: '100vh', color: '#e0e0e0' }}>
-      <h1 style={{ fontSize: 20, marginBottom: 8 }}>ADR-340 Phase 2 — ImageProvider Demo</h1>
+      <h1 style={{ fontSize: 20, marginBottom: 8 }}>ADR-340 Phase 3 — Store + Hook + Canvas Demo</h1>
       <p style={{ fontSize: 12, color: '#888', marginBottom: 24 }}>
-        PNG / JPEG / WEBP / TIFF (utif.js) · EXIF auto-rotate (exifr)
+        floorplanBackgroundStore · useFloorplanBackground · FloorplanBackgroundCanvas
+        · PNG / JPEG / WEBP / TIFF
       </p>
 
       <section style={{ marginBottom: 24 }}>
@@ -104,52 +83,78 @@ export default function FloorplanBackgroundImageDemoPage() {
             style={{ display: 'block', marginTop: 4 }}
           />
         </label>
+        {background && (
+          <button
+            onClick={() => { void removeBackground(); setPendingFile(null); }}
+            style={{ marginTop: 8, padding: '4px 12px', cursor: 'pointer' }}
+          >
+            Remove background
+          </button>
+        )}
       </section>
 
-      {loadState.status === 'loading' && (
-        <p style={{ color: '#ffd700' }}>Loading…</p>
+      {isLoading && <p style={{ color: '#ffd700' }}>Loading…</p>}
+      {error && <p style={{ color: '#ff4444' }}>Error: {error}</p>}
+
+      {background && (
+        <>
+          <section style={{ marginBottom: 12, fontSize: 12, color: '#aaa' }}>
+            <p>File: {pendingFile?.name ?? '(from store)'}</p>
+            <p>Natural bounds: {background.naturalBounds.width} × {background.naturalBounds.height} px</p>
+            <p>
+              EXIF orientation: {background.providerMetadata.imageOrientation ?? 1}
+              {(background.providerMetadata.imageOrientation ?? 1) !== 1 ? ' (auto-rotated ✓)' : ' (normal)'}
+            </p>
+            <p>ID: <code>{background.id}</code></p>
+          </section>
+
+          <section style={{ marginBottom: 16, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+            <label style={{ fontSize: 12 }}>
+              Scale: {background.transform.scaleX.toFixed(2)}×
+              <input
+                type="range" min="0.1" max="5" step="0.05"
+                value={background.transform.scaleX}
+                onChange={handleScaleChange}
+                style={{ display: 'block', width: 180 }}
+              />
+            </label>
+            <label style={{ fontSize: 12 }}>
+              Rotation: {background.transform.rotation}°
+              <input
+                type="range" min="0" max="360" step="1"
+                value={background.transform.rotation}
+                onChange={handleRotationChange}
+                style={{ display: 'block', width: 180 }}
+              />
+            </label>
+            <label style={{ fontSize: 12 }}>
+              Opacity: {background.opacity.toFixed(2)}
+              <input
+                type="range" min="0" max="1" step="0.01"
+                value={background.opacity}
+                onChange={handleOpacityChange}
+                style={{ display: 'block', width: 180 }}
+              />
+            </label>
+            <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={background.visible}
+                onChange={(e) => setVisible(e.target.checked)}
+              />
+              Visible
+            </label>
+          </section>
+        </>
       )}
 
-      {loadState.status === 'error' && (
-        <p style={{ color: '#ff4444' }}>Error: {loadState.error}</p>
-      )}
-
-      {loadState.status === 'loaded' && loadState.bounds && (
-        <section style={{ marginBottom: 16, fontSize: 12, color: '#aaa' }}>
-          <p>Natural bounds (post-rotation): {loadState.bounds.width} × {loadState.bounds.height} px</p>
-          <p>EXIF orientation tag: {loadState.orientation} {loadState.orientation !== 1 ? '(auto-rotated ✓)' : '(normal)'}</p>
-        </section>
-      )}
-
-      {loadState.status === 'loaded' && (
-        <section style={{ marginBottom: 16, display: 'flex', gap: 24 }}>
-          <label style={{ fontSize: 12 }}>
-            Scale: {transform.scaleX.toFixed(2)}×
-            <input
-              type="range" min="0.1" max="5" step="0.05"
-              value={transform.scaleX}
-              onChange={handleScaleChange}
-              style={{ display: 'block', width: 180 }}
-            />
-          </label>
-          <label style={{ fontSize: 12 }}>
-            Rotation: {transform.rotation}°
-            <input
-              type="range" min="0" max="360" step="1"
-              value={transform.rotation}
-              onChange={handleRotationChange}
-              style={{ display: 'block', width: 180 }}
-            />
-          </label>
-        </section>
-      )}
-
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_W}
-        height={CANVAS_H}
-        style={{ border: '1px solid #333', display: 'block' }}
-      />
+      <div style={{ position: 'relative', width: CANVAS_W, height: CANVAS_H, border: '1px solid #333', background: '#1a1a2e' }}>
+        <FloorplanBackgroundCanvas
+          floorId={DEMO_FLOOR}
+          worldToCanvas={WORLD_TO_CANVAS}
+          viewport={VIEWPORT}
+        />
+      </div>
     </main>
   );
 }
