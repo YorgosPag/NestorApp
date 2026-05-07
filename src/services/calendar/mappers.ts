@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * Pure functions that convert CrmTask and AppointmentDocument into
- * the unified CalendarEvent type for react-big-calendar.
+ * the unified CalendarEvent type for FullCalendar.
  *
  * @module services/calendar/mappers
  */

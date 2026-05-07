@@ -22,7 +22,7 @@ export interface EventColorScheme {
 
 /**
  * Color scheme per event type.
- * Used by `eventStyleGetter` in CrmCalendar for react-big-calendar.
+ * Used by event mapper in CrmCalendar for FullCalendar (backgroundColor/borderColor).
  */
 export const CALENDAR_EVENT_COLORS: Record<CalendarEventType, EventColorScheme> = {
   appointment: {

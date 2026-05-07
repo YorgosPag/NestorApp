@@ -23,6 +23,7 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { FloorplanGalleryProps, DxfDrawingMode } from '@/components/shared/files/media/floorplan-gallery-config';
 import { ZOOM_CONFIG, filterFloorplanFiles, getFileIcon } from '@/components/shared/files/media/floorplan-gallery-config';
 import { computeOverlayAABBs, screenToWorld, hitTestOverlays } from '@/components/shared/files/media/floorplan-overlay-system';
+import { hitTestPdfOverlays } from '@/components/shared/files/media/floorplan-pdf-overlay-renderer';
 import { useFloorplanSceneLoader } from '@/components/shared/files/media/useFloorplanSceneLoader';
 import { useFloorplanPdfLoader } from '@/components/shared/files/media/useFloorplanPdfLoader';
 import { useFloorplanCanvasRender } from '@/components/shared/files/media/useFloorplanCanvasRender';
@@ -74,25 +75,11 @@ export function FloorplanGallery({
   // PDF loading — for SPEC-237D overlay support on PDF backgrounds
   const { pdfImage, pdfDimensions, isPdfLoading, pdfError } = useFloorplanPdfLoader(currentFile, isPdf);
 
-  // Synthetic CAD bounds for PDF overlays (matches editor's default pdfTransform)
+  // DXF bounds (only used for DXF — PDF uses editor-exact transform inside the renderer)
   const currentBounds = useMemo(() => {
     if (isDxf) return loadedScene?.bounds ?? null;
-    if (isPdf && pdfDimensions) return { min: { x: 0, y: 0 }, max: { x: pdfDimensions.width, y: pdfDimensions.height } };
     return null;
-  }, [isDxf, isPdf, loadedScene?.bounds, pdfDimensions]);
-
-  // PDF overlays: editor world coords are A2-relative (2x of A4 PDF points).
-  // No Y pre-mirror — let drawOverlayPolygons' native Y-flip place the polygon
-  // (otherwise top↔bottom invert).
-  const PDF_OVERLAY_SCALE = 2;
-  const renderOverlays = useMemo(() => {
-    if (!isPdf || !pdfDimensions || !overlays?.length) return overlays;
-    const k = PDF_OVERLAY_SCALE;
-    return overlays.map((o) => ({
-      ...o,
-      polygon: o.polygon.map((v) => ({ x: v.x * k, y: v.y * k })),
-    }));
-  }, [overlays, isPdf, pdfDimensions]);
+  }, [isDxf, loadedScene?.bounds]);
 
   // Fullscreen modal state (ADR-241 centralized)
   const fullscreen = useFullscreen();
@@ -106,10 +93,10 @@ export function FloorplanGallery({
   // Zoom + Pan — fullscreen modal (independent instance)
   const modalZP = useZoomPan(ZOOM_CONFIG);
 
-  // SPEC-237C: AABB cache for fast hit-testing (built from render-space overlays)
+  // SPEC-237C: AABB cache for DXF hit-testing (PDF uses dedicated hitTestPdfOverlays)
   const overlayAABBs = useMemo(
-    () => renderOverlays ? computeOverlayAABBs(renderOverlays) : [],
-    [renderOverlays],
+    () => isDxf && overlays ? computeOverlayAABBs(overlays) : [],
+    [isDxf, overlays],
   );
 
   // SPEC-237C: Local hover state for cursor + visual feedback
@@ -121,39 +108,43 @@ export function FloorplanGallery({
 
   // SPEC-237C: Canvas Mouse Handlers (Hit-Testing, Hover, Click)
 
+  const resolveHit = useCallback((screenX: number, screenY: number, canvas: HTMLCanvasElement) => {
+    if (!overlays?.length) return null;
+    if (isDxf && currentBounds) {
+      const worldPt = screenToWorld(screenX, screenY, canvas, currentBounds, inlineZP.zoom, inlineZP.panOffset);
+      return hitTestOverlays(worldPt, overlays, overlayAABBs);
+    }
+    if (isPdf && pdfDimensions) {
+      return hitTestPdfOverlays(screenX, screenY, canvas.width, canvas.height, pdfDimensions, overlays);
+    }
+    return null;
+  }, [isDxf, isPdf, currentBounds, pdfDimensions, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset]);
+
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!currentBounds || !renderOverlays?.length || !inlineCanvasRef.current) return;
+    if (!overlays?.length || !inlineCanvasRef.current) return;
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       const canvas = inlineCanvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      const screenX = (e.clientX - rect.left) * scaleX;
-      const screenY = (e.clientY - rect.top) * scaleY;
-      const worldPt = screenToWorld(screenX, screenY, canvas, currentBounds, inlineZP.zoom, inlineZP.panOffset);
-      const hit = hitTestOverlays(worldPt, renderOverlays!, overlayAABBs);
+      const screenX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const screenY = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const hit = resolveHit(screenX, screenY, canvas);
       const propertyId = hit?.linked?.propertyId ?? null;
       setHoveredOverlayUnitId(propertyId);
       onHoverOverlay?.(propertyId);
     });
-  }, [currentBounds, renderOverlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset, onHoverOverlay]);
+  }, [overlays, resolveHit, onHoverOverlay]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!currentBounds || !renderOverlays?.length || !inlineCanvasRef.current) return;
+    if (!overlays?.length || !inlineCanvasRef.current) return;
     const canvas = inlineCanvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const screenX = (e.clientX - rect.left) * scaleX;
-    const screenY = (e.clientY - rect.top) * scaleY;
-    const worldPt = screenToWorld(screenX, screenY, canvas, currentBounds, inlineZP.zoom, inlineZP.panOffset);
-    const hit = hitTestOverlays(worldPt, renderOverlays!, overlayAABBs);
-    if (hit?.linked?.propertyId) {
-      onClickOverlay?.(hit.linked.propertyId);
-    }
-  }, [currentBounds, renderOverlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset, onClickOverlay]);
+    const screenX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const screenY = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const hit = resolveHit(screenX, screenY, canvas);
+    if (hit?.linked?.propertyId) onClickOverlay?.(hit.linked.propertyId);
+  }, [overlays, resolveHit, onClickOverlay]);
 
   const handleCanvasMouseLeave = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
@@ -219,13 +210,13 @@ export function FloorplanGallery({
   useFloorplanCanvasRender({
     canvasRef: inlineCanvasRef, enabled: true, isDxf, isPdf, loadedScene, pdfImage, pdfDimensions,
     currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode,
-    overlays: renderOverlays, highlightedUnitId: effectiveHighlightId,
+    overlays, highlightedUnitId: effectiveHighlightId,
   });
 
   useFloorplanCanvasRender({
     canvasRef: modalCanvasRef, enabled: fullscreen.isFullscreen, isDxf, isPdf, loadedScene,
     pdfImage, pdfDimensions, currentBounds, zoom: modalZP.zoom, panOffset: modalZP.panOffset,
-    drawingMode, overlays: renderOverlays, highlightedUnitId: effectiveHighlightId,
+    drawingMode, overlays, highlightedUnitId: effectiveHighlightId,
     firstRenderDelay: 280,
   });
 

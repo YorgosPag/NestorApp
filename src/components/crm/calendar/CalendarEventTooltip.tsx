@@ -1,6 +1,6 @@
 /**
  * Calendar event tooltip — hover preview showing event details.
- * Used as custom event component in react-big-calendar.
+ * Used as custom event content renderer in FullCalendar.
  */
 
 'use client';
@@ -14,12 +14,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import type { CalendarEvent } from '@/types/calendar-event';
-import type { EventProps } from 'react-big-calendar';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
-export function CalendarEventTooltip({ event, title }: EventProps<CalendarEvent>) {
+interface CalendarEventTooltipProps {
+  event: CalendarEvent;
+  timeText?: string;
+}
+
+export function CalendarEventTooltip({ event, timeText }: CalendarEventTooltipProps) {
   const { t } = useTranslation(['crm', 'crm-inbox']);
   const colors = useSemanticColors();
 
@@ -32,8 +36,9 @@ export function CalendarEventTooltip({ event, title }: EventProps<CalendarEvent>
   return (
     <Tooltip delayDuration={300}>
       <TooltipTrigger asChild>
-        <span className="block truncate text-xs leading-tight">
-          {title}
+        <span className="block truncate text-xs leading-tight px-1">
+          {timeText ? <span className="font-semibold mr-1">{timeText}</span> : null}
+          {event.title}
         </span>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-xs">
@@ -44,11 +49,11 @@ export function CalendarEventTooltip({ event, title }: EventProps<CalendarEvent>
               {t(`calendarPage.eventTypes.${event.eventType}`)}
             </Badge>
           </header>
-          <time className={cn("block text-xs", colors.text.muted)}>
+          <time className={cn('block text-xs', colors.text.muted)}>
             {format(event.start, 'HH:mm')} — {format(event.end, 'HH:mm')}
           </time>
           {descriptionPreview && (
-            <p className={cn("text-xs leading-relaxed", colors.text.muted)}>
+            <p className={cn('text-xs leading-relaxed', colors.text.muted)}>
               {descriptionPreview}
             </p>
           )}

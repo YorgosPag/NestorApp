@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adr-index.md
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { FileUp, ChevronLeft, ChevronRight, RotateCcw, Eye, EyeOff, Trash2, ZoomIn, ZoomOut, RotateCw, Maximize2 } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/floating';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,6 @@ import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { usePdfBackgroundStore } from '../stores/pdfBackgroundStore';
-import { PDF_RENDER_CONFIG } from '../types/pdf.types';
 // 🏢 ENTERPRISE: Centralized panel dimensions (ADR-029)
 import { PANEL_ANCHORING } from '../../config/panel-tokens';
 // 🏢 ADR-054: Centralized upload component
@@ -107,17 +106,14 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
     opacity,
     documentInfo,
     currentPage,
-    pageDimensions,
     transform,
     isLoading,
     error,
-    viewport,
     loadPdf,
     unloadPdf,
     setCurrentPage,
     nextPage,
     previousPage,
-    setTransform,
     resetTransform,
     setEnabled,
     toggleEnabled,
@@ -181,45 +177,12 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
     setScale(value[0]);
   }, [setScale]);
 
-  /**
-   * 🏢 ENTERPRISE: Calculate scale to fit PDF in viewport
-   * Uses centralized PDF_RENDER_CONFIG constants
-   */
-  const calculateFitScale = useCallback(() => {
-    if (!pageDimensions || viewport.width === 0 || viewport.height === 0) {
-      return PDF_RENDER_CONFIG.MIN_RENDER_SCALE; // Use centralized fallback
-    }
-
-    // PDF is rendered at DEFAULT_RENDER_SCALE (from centralized config)
-    const imgWidth = pageDimensions.width * PDF_RENDER_CONFIG.DEFAULT_RENDER_SCALE;
-    const imgHeight = pageDimensions.height * PDF_RENDER_CONFIG.DEFAULT_RENDER_SCALE;
-
-    // Calculate scale to fit with padding (from centralized config)
-    const scaleX = (viewport.width * PDF_RENDER_CONFIG.FIT_TO_VIEW_PADDING) / imgWidth;
-    const scaleY = (viewport.height * PDF_RENDER_CONFIG.FIT_TO_VIEW_PADDING) / imgHeight;
-
-    return Math.min(scaleX, scaleY);
-  }, [pageDimensions, viewport]);
-
-  /**
-   * Handle fit to view
-   */
+  // pdfTransform is identity by default — PDF lives in world (0,0)→(img.width, img.height)
+  // Camera fit is handled by useFitToPdf (zoomToFit on canvasTransform).
+  // "Fit to view" button resets pdfTransform to identity; auto-fit on load is intentionally absent.
   const handleFitToView = useCallback(() => {
-    const fitScale = calculateFitScale();
-    setScale(fitScale);
-    // Also reset offset to center
-    setTransform({ offsetX: 0, offsetY: 0 });
-    console.log('📐 [PdfControlsPanel] Fit to view:', { fitScale, viewport, pageDimensions });
-  }, [calculateFitScale, setScale, setTransform, viewport, pageDimensions]);
-
-  /**
-   * 🏢 ENTERPRISE: Auto-fit when PDF is loaded
-   */
-  useEffect(() => {
-    if (pageDimensions && viewport.width > 0 && viewport.height > 0) {
-      handleFitToView();
-    }
-  }, [pageDimensions]); // Only trigger when pageDimensions changes (new PDF loaded)
+    resetTransform();
+  }, [resetTransform]);
 
   // ============================================================
   // RENDER

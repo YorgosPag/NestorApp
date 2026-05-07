@@ -6,26 +6,30 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { Views, type View } from 'react-big-calendar';
 
 interface UseCalendarKeyboardShortcutsOptions {
-  onViewChange: (view: View) => void;
-  onNavigateToday: () => void;
-  onNavigateBack: () => void;
-  onNavigateNext: () => void;
+  onMonth: () => void;
+  onWeek: () => void;
+  onDay: () => void;
+  onAgenda: () => void;
+  onToday: () => void;
+  onBack: () => void;
+  onNext: () => void;
   onNewEvent: () => void;
 }
 
 export function useCalendarKeyboardShortcuts({
-  onViewChange,
-  onNavigateToday,
-  onNavigateBack,
-  onNavigateNext,
+  onMonth,
+  onWeek,
+  onDay,
+  onAgenda,
+  onToday,
+  onBack,
+  onNext,
   onNewEvent,
 }: UseCalendarKeyboardShortcutsOptions): void {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      // Skip when focus is in an input, textarea, or contenteditable
       const target = e.target as HTMLElement;
       if (
         target.tagName === 'INPUT' ||
@@ -35,29 +39,28 @@ export function useCalendarKeyboardShortcuts({
         return;
       }
 
-      // Skip when modifier keys are held (allow browser shortcuts)
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
       switch (e.key.toLowerCase()) {
         case 't':
           e.preventDefault();
-          onNavigateToday();
+          onToday();
           break;
         case 'm':
           e.preventDefault();
-          onViewChange(Views.MONTH);
+          onMonth();
           break;
         case 'w':
           e.preventDefault();
-          onViewChange(Views.WEEK);
+          onWeek();
           break;
         case 'd':
           e.preventDefault();
-          onViewChange(Views.DAY);
+          onDay();
           break;
         case 'a':
           e.preventDefault();
-          onViewChange(Views.AGENDA);
+          onAgenda();
           break;
         case 'n':
           e.preventDefault();
@@ -65,15 +68,15 @@ export function useCalendarKeyboardShortcuts({
           break;
         case 'arrowleft':
           e.preventDefault();
-          onNavigateBack();
+          onBack();
           break;
         case 'arrowright':
           e.preventDefault();
-          onNavigateNext();
+          onNext();
           break;
       }
     },
-    [onViewChange, onNavigateToday, onNavigateBack, onNavigateNext, onNewEvent]
+    [onMonth, onWeek, onDay, onAgenda, onToday, onBack, onNext, onNewEvent]
   );
 
   useEffect(() => {

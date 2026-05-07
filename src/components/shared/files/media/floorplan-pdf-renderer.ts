@@ -23,16 +23,17 @@ const PDF_RENDER_SCALE = 2;
 
 export interface PdfPageInfo {
   imageUrl: string;
-  /** Page width in unscaled PDF points (1x) — matches editor's overlay world coords. */
-  pageWidth: number;
-  /** Page height in unscaled PDF points (1x). */
-  pageHeight: number;
+  /** Image pixel width (PDF points × PDF_RENDER_SCALE) — matches editor's world bounds. */
+  imageWidth: number;
+  /** Image pixel height (PDF points × PDF_RENDER_SCALE) — matches editor's world bounds. */
+  imageHeight: number;
 }
 
 /**
  * Fetch a PDF from a URL, render its first page to a data URL.
- * Returns dimensions in unscaled PDF points (1x), matching the world coords
- * used by the DXF Viewer editor when polygons are drawn over PDF backgrounds.
+ * Returns image pixel dimensions (rendered at PDF_RENDER_SCALE) — these match
+ * the bounds the DXF Viewer editor uses for fit-to-view, so polygon world
+ * coords saved by the editor render at the same PDF position here.
  */
 export async function loadPdfPage1(url: string): Promise<PdfPageInfo | null> {
   const response = await fetch(url);
@@ -48,10 +49,15 @@ export async function loadPdfPage1(url: string): Promise<PdfPageInfo | null> {
     return null;
   }
 
+  // Return FULL rendered pixel dimensions — these ARE the world-space bounds.
+  // The DXF Viewer editor places the PDF at world (0,0)→(img.width, img.height).
+  // Overlay vertices are saved in this same space, so bounds must equal image dims.
+  // ctx.drawImage(image, ..., bounds.width*scale, bounds.height*scale) then maps
+  // image pixel px → canvas_x = offsetX + px*scale, matching the overlay formula.
   return {
     imageUrl: renderResult.imageUrl,
-    pageWidth: renderResult.dimensions.width / PDF_RENDER_SCALE,
-    pageHeight: renderResult.dimensions.height / PDF_RENDER_SCALE,
+    imageWidth: renderResult.dimensions.width,
+    imageHeight: renderResult.dimensions.height,
   };
 }
 

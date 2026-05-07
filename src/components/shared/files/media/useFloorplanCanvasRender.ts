@@ -17,8 +17,8 @@ import type { DxfSceneData } from '@/types/file-record';
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
 import type { DxfDrawingMode } from '@/components/shared/files/media/floorplan-gallery-config';
 import { renderDxfToCanvas } from '@/components/shared/files/media/floorplan-dxf-renderer';
-import { renderPdfImageToCanvas } from '@/components/shared/files/media/floorplan-pdf-renderer';
 import { drawOverlayPolygons } from '@/components/shared/files/media/floorplan-overlay-system';
+import { renderPdfWithOverlays } from '@/components/shared/files/media/floorplan-pdf-overlay-renderer';
 
 interface SceneBounds {
   min: { x: number; y: number };
@@ -63,11 +63,12 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
       if (!canvas) return;
       if (isDxf && loadedScene) {
         renderDxfToCanvas(canvas, loadedScene, zoom, panOffset, drawingMode);
+        if (overlays?.length && currentBounds) {
+          drawOverlayPolygons(canvas, overlays, currentBounds, zoom, panOffset, highlightedUnitId);
+        }
       } else if (isPdf && pdfImage && pdfDimensions) {
-        renderPdfImageToCanvas(canvas, pdfImage, pdfDimensions, zoom, panOffset);
-      }
-      if (overlays?.length && currentBounds) {
-        drawOverlayPolygons(canvas, overlays, currentBounds, zoom, panOffset, highlightedUnitId);
+        // PDF + overlays use the editor-exact transform in a single pass
+        renderPdfWithOverlays(canvas, pdfImage, pdfDimensions, overlays ?? [], highlightedUnitId);
       }
       readyRef.current = true;
     };

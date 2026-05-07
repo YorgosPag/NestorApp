@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * Single source of truth type that unifies CrmTask + AppointmentDocument
- * into a format consumable by react-big-calendar.
+ * into a format consumable by FullCalendar.
  *
  * @module types/calendar-event
  * @see CrmTask in types/crm.ts
@@ -34,7 +34,7 @@ export type CalendarEventType =
 // ============================================================================
 
 /**
- * Unified calendar event for react-big-calendar.
+ * Unified calendar event for FullCalendar.
  *
  * Created by mapping functions in `services/calendar/mappers.ts`.
  * The `id` field is prefixed to avoid collisions between tasks and appointments:

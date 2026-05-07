@@ -19,7 +19,7 @@ const logger = createModuleLogger('useFloorplanPdfLoader');
 
 export interface FloorplanPdfLoaderResult {
   pdfImage: HTMLImageElement | null;
-  /** Unscaled PDF page dimensions (1x points) — used for overlay bounds. */
+  /** Image pixel dimensions (PDF points × PDF_RENDER_SCALE) — editor's bounds. */
   pdfDimensions: { width: number; height: number } | null;
   isPdfLoading: boolean;
   pdfError: string | null;
@@ -61,7 +61,7 @@ export function useFloorplanPdfLoader(
         img.onload = () => {
           if (cancelled) return;
           setPdfImage(img);
-          setPdfDimensions({ width: result.pageWidth, height: result.pageHeight });
+          setPdfDimensions({ width: result.imageWidth, height: result.imageHeight });
           setIsPdfLoading(false);
         };
         img.onerror = () => {

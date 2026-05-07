@@ -461,81 +461,115 @@
   }
 
   /* ===================================================================
-   * ENTERPRISE: react-big-calendar theme overrides
-   * Uses .rbc-wrapper parent for higher specificity than the library CSS.
-   * Background: --secondary for cells, --muted for off-range.
+   * ENTERPRISE: FullCalendar v6 — dark theme overrides
+   * Targets .fc-wrapper parent for specificity.
    * =================================================================== */
 
-  /* Main calendar container */
-  .rbc-wrapper .rbc-calendar {
+  .fc-wrapper {
+    --fc-border-color: hsl(var(--border) / 0.2);
+    --fc-page-bg-color: hsl(var(--secondary));
+    --fc-neutral-bg-color: hsl(var(--secondary));
+    --fc-list-event-hover-bg-color: rgba(59, 130, 246, 0.08);
+    --fc-today-bg-color: rgba(59, 130, 246, 0.08);
+    --fc-now-indicator-color: hsl(var(--status-error));
     background: hsl(var(--secondary));
     color: hsl(var(--card-foreground));
     border-radius: var(--radius);
+    padding: 0.75rem;
   }
 
-  /* Toolbar — distinct dark surface with accent border */
-  .rbc-wrapper .rbc-toolbar {
-    background: #1a2332;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.15);
-    padding: 0.75rem 1rem;
-    margin-bottom: 0;
-    border-radius: var(--radius) var(--radius) 0 0;
+  .fc-wrapper .fc-toolbar {
+    margin-bottom: 1rem;
   }
 
-  /* Toolbar title (month/year) — bright white */
-  .rbc-wrapper .rbc-toolbar .rbc-toolbar-label {
+  .fc-wrapper .fc-toolbar-title {
     color: #f1f5f9;
     font-weight: 700;
     font-size: 1.1rem;
     letter-spacing: 0.01em;
   }
 
-  .rbc-wrapper .rbc-toolbar button {
-    color: #94a3b8;
-    border-color: rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.04);
-    transition: all 0.2s ease;
-    cursor: pointer;
+  .fc-wrapper .fc-button {
+    color: #94a3b8 !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
     font-weight: 500;
-    border-radius: 8px;
+    border-radius: 8px !important;
+    text-transform: capitalize;
+    box-shadow: none !important;
+    transition: all 0.2s ease;
   }
 
-  .rbc-wrapper .rbc-toolbar button:hover {
-    background: #3b82f6;
-    color: #ffffff;
-    border-color: #3b82f6;
+  .fc-wrapper .fc-button:hover:not(:disabled) {
+    color: #ffffff !important;
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
   }
 
-  .rbc-wrapper .rbc-toolbar button.rbc-active {
-    background: #3b82f6;
-    color: #ffffff;
-    border-color: #3b82f6;
-    box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+  .fc-wrapper .fc-button-active,
+  .fc-wrapper .fc-button-primary:not(:disabled).fc-button-active {
+    color: #ffffff !important;
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.4) !important;
   }
 
-  .rbc-wrapper .rbc-toolbar button.rbc-active:hover {
-    background: #2563eb;
-    color: #ffffff;
+  .fc-wrapper .fc-col-header-cell {
+    background: transparent;
+    padding: 0.625rem 0.25rem;
+    border-color: transparent;
   }
 
-  /* Month view — no extra border, the wrapper card handles it */
-  .rbc-wrapper .rbc-month-view {
+  .fc-wrapper .fc-col-header-cell-cushion {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-decoration: none !important;
+  }
+
+  .fc-wrapper .fc-daygrid-day {
     background: hsl(var(--secondary));
-    border: none;
-    border-radius: var(--radius);
-    overflow: hidden;
+    transition: background 0.2s ease;
   }
 
-  /* Fix table layout for uniform cell widths */
-  .rbc-wrapper .rbc-month-view table {
-    table-layout: fixed;
-    width: 100%;
-    border-collapse: collapse;
+  .fc-wrapper .fc-daygrid-day:hover {
+    background: rgba(59, 130, 246, 0.06);
   }
 
-  /* Mini-picker calendar (react-big-calendar small instance) — match large calendar background */
-  .rbc-month-view {
-    background: hsl(var(--secondary)) !important;
+  .fc-wrapper .fc-daygrid-day-number {
+    color: hsl(var(--card-foreground));
+    text-decoration: none !important;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .fc-wrapper .fc-day-today {
+    background: rgba(59, 130, 246, 0.06) !important;
+  }
+
+  .fc-wrapper .fc-day-today .fc-daygrid-day-number {
+    background: #3b82f6;
+    color: #ffffff;
+    border-radius: 9999px;
+    padding: 0.125rem 0.5rem;
+    margin: 0.25rem;
+    display: inline-block;
+    box-shadow: 0 0 14px rgba(59, 130, 246, 0.6);
+    font-weight: 700;
+  }
+
+  .fc-wrapper .fc-day-past .fc-daygrid-day-number {
+    color: hsl(var(--muted-foreground) / 0.6);
+  }
+
+  .fc-wrapper .fc-day-other {
+    background: hsl(var(--muted) / 0.5);
+  }
+
+  .fc-wrapper .fc-day-other .fc-daygrid-day-number {
+    color: hsl(var(--muted-foreground) / 0.4);
   }
 
   /* Sidebar Calendar (react-day-picker v9) — dark theme override */
@@ -589,268 +623,111 @@
     color: hsl(var(--card-foreground)) !important;
   }
 
-  /* Day headers (Mon, Tue, etc.) — subtle accent color */
-  .rbc-wrapper .rbc-header {
-    background: transparent;
-    color: #64748b;
-    border-color: transparent;
-    padding: 0.625rem 0.5rem;
-    font-weight: 600;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .rbc-wrapper .rbc-header + .rbc-header {
-    border-left-color: transparent;
-  }
-
-  /* Weekend header columns — SAME color as weekdays (no differentiation) */
-  .rbc-wrapper .rbc-row > .rbc-header:nth-child(6),
-  .rbc-wrapper .rbc-row > .rbc-header:nth-child(7) {
-    background: transparent;
-    color: #64748b;
-  }
-
-  /* Day cells — borderless, uniform background */
-  .rbc-wrapper .rbc-day-bg {
-    background: hsl(var(--secondary));
-    transition: background 0.2s ease;
-    position: relative;
-  }
-
-  .rbc-wrapper .rbc-day-bg + .rbc-day-bg {
-    border-left: none;
-  }
-
-  .rbc-wrapper .rbc-day-bg:hover {
-    background: rgba(59, 130, 246, 0.06);
-  }
-
-  /* NO weekend differentiation — all days same background */
-
-  /* Past day cells — very subtle dim */
-  .rbc-wrapper .rbc-day-bg.rbc-calendar-past {
-    background: hsl(var(--secondary));
-    opacity: 0.7;
-  }
-
-  /* Off-range days (previous/next month) — slightly darker */
-  .rbc-wrapper .rbc-off-range-bg {
-    background: hsl(var(--muted) / 0.5);
-  }
-
-  /* Today highlight — disabled (react-big-calendar bug applies to wrong day) */
-  .rbc-wrapper .rbc-today {
-    background: transparent;
-    box-shadow: none;
-  }
-
-  /* Event dot indicator — green glowing dot on days with events */
-  .rbc-wrapper .rbc-day-bg.rbc-calendar-has-event::after {
-    content: '';
-    position: absolute;
-    bottom: 4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
-    background: #10b981;
-    border-radius: 50%;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
-    pointer-events: none;
-  }
-
-  /* Month row borders — removed for clean look */
-  .rbc-wrapper .rbc-month-row {
-    border-color: transparent;
-  }
-
-  .rbc-wrapper .rbc-month-row + .rbc-month-row {
-    border-top: none;
-  }
-
-  /* Date cell numbers */
-  .rbc-wrapper .rbc-date-cell {
-    color: hsl(var(--card-foreground));
-    padding: 0.25rem 0.5rem;
-  }
-
-  /* Today's date number — badge-style highlight */
-  .rbc-wrapper .rbc-date-cell.rbc-now {
-    font-weight: 700;
-  }
-
-  .rbc-wrapper .rbc-date-cell.rbc-now > * {
-    background: #3b82f6;
-    color: #ffffff;
-    border-radius: 9999px;
-    padding: 0.125rem 0.5rem;
-    display: inline-block;
-    box-shadow: 0 0 14px rgba(59, 130, 246, 0.6);
-  }
-
-  /* Past date numbers — muted via DateCellWrapper */
-  .rbc-wrapper .rbc-calendar-past-date {
-    color: hsl(var(--muted-foreground) / 0.5);
-  }
-
-  .rbc-wrapper .rbc-off-range {
-    color: hsl(var(--muted-foreground) / 0.35);
-  }
-
-  /* Events inside cells — vivid with thicker border */
-  .rbc-wrapper .rbc-event {
+  /* Events */
+  .fc-wrapper .fc-event {
     border-radius: calc(var(--radius) - 2px);
     border-left-width: 3px !important;
-    transition: transform 0.1s ease, box-shadow 0.15s ease;
+    transition: transform 0.1s ease, box-shadow 0.15s ease, filter 0.15s ease;
     font-weight: 500;
-    padding: 0.2rem 0.4rem !important;
+    cursor: pointer;
   }
 
-  .rbc-wrapper .rbc-event:hover {
-    transform: translateY(-1px) scale(1.03);
+  .fc-wrapper .fc-event:hover {
+    transform: translateY(-1px) scale(1.02);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     filter: brightness(1.15);
+    z-index: 10;
   }
 
-  .rbc-wrapper .rbc-event:focus {
+  .fc-wrapper .fc-event:focus {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 1px;
   }
 
-  .rbc-wrapper .rbc-show-more {
+  .fc-wrapper .fc-daygrid-more-link {
     color: hsl(var(--primary));
     font-weight: 500;
+    text-decoration: none;
   }
 
-  /* Week / Day views — subtle borders */
-  .rbc-wrapper .rbc-time-view {
-    background: hsl(var(--secondary));
-    border-color: transparent;
-  }
-
-  .rbc-wrapper .rbc-time-header {
-    border-bottom-color: hsl(var(--border) / 0.2);
-  }
-
-  .rbc-wrapper .rbc-time-content {
-    border-top-color: hsl(var(--border) / 0.2);
+  /* Time grid (week/day view) */
+  .fc-wrapper .fc-timegrid {
     background: hsl(var(--secondary));
   }
 
-  .rbc-wrapper .rbc-time-content > * + * > * {
-    border-left-color: hsl(var(--border) / 0.1);
+  .fc-wrapper .fc-timegrid-slot {
+    border-color: hsl(var(--border) / 0.15);
   }
 
-  .rbc-wrapper .rbc-timeslot-group {
-    border-bottom-color: hsl(var(--border) / 0.15);
+  .fc-wrapper .fc-timegrid-slot-label-cushion {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.75rem;
   }
 
-  .rbc-wrapper .rbc-time-slot {
+  .fc-wrapper .fc-timegrid-axis {
+    border-color: hsl(var(--border) / 0.2);
+  }
+
+  /* Now indicator */
+  .fc-wrapper .fc-timegrid-now-indicator-line {
+    border-color: hsl(var(--status-error));
+    border-width: 2px;
+  }
+
+  .fc-wrapper .fc-timegrid-now-indicator-arrow {
+    border-color: hsl(var(--status-error));
+    color: hsl(var(--status-error));
+  }
+
+  /* List (agenda) view */
+  .fc-wrapper .fc-list {
+    background: hsl(var(--secondary));
+    border-color: hsl(var(--border) / 0.2);
+  }
+
+  .fc-wrapper .fc-list-day-cushion {
+    background: hsl(var(--muted)) !important;
     color: hsl(var(--muted-foreground));
   }
 
-  .rbc-wrapper .rbc-day-slot .rbc-time-slot {
-    border-top-color: hsl(var(--border) / 0.3);
+  .fc-wrapper .fc-list-event:hover td {
+    background: rgba(59, 130, 246, 0.08) !important;
   }
 
-  /* Current time indicator — thicker, more visible */
-  .rbc-wrapper .rbc-current-time-indicator {
-    background-color: hsl(var(--status-error));
-    height: 2px;
-  }
-
-  .rbc-wrapper .rbc-current-time-indicator::before {
-    content: '';
-    position: absolute;
-    left: -5px;
-    top: -4px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background-color: hsl(var(--status-error));
-  }
-
-  /* Current time label in gutter */
-  .rbc-wrapper .rbc-time-gutter .rbc-timeslot-group.rbc-calendar-current-hour .rbc-time-slot .rbc-label {
-    color: hsl(var(--status-error));
-    font-weight: 700;
-  }
-
-  /* Agenda view */
-  .rbc-wrapper .rbc-agenda-view table.rbc-agenda-table {
-    border-color: hsl(var(--border));
+  .fc-wrapper .fc-list-event-title,
+  .fc-wrapper .fc-list-event-time {
     color: hsl(var(--card-foreground));
   }
 
-  .rbc-wrapper .rbc-agenda-view table.rbc-agenda-table thead > tr > th {
-    background: hsl(var(--muted));
+  .fc-wrapper .fc-list-empty {
+    background: hsl(var(--secondary));
     color: hsl(var(--muted-foreground));
-    border-color: hsl(var(--border));
   }
 
-  .rbc-wrapper .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
-    border-color: hsl(var(--border));
+  /* Cell borders */
+  .fc-wrapper .fc-scrollgrid,
+  .fc-wrapper .fc-scrollgrid td,
+  .fc-wrapper .fc-scrollgrid th {
+    border-color: hsl(var(--border) / 0.15);
   }
 
-  .rbc-wrapper .rbc-agenda-view table.rbc-agenda-table tbody > tr + tr {
-    border-top-color: hsl(var(--border));
+  /* Highlight for selected/dragging */
+  .fc-wrapper .fc-highlight {
+    background: rgba(59, 130, 246, 0.15);
   }
 
-  /* Overlay popup ("+N more" events) */
-  .rbc-wrapper .rbc-overlay {
-    background: hsl(var(--popover));
+  /* Popover for "+N more" */
+  .fc-wrapper .fc-popover {
+    background: hsl(var(--popover)) !important;
     color: hsl(var(--popover-foreground));
-    border: 1px solid hsl(var(--border));
+    border: 1px solid hsl(var(--border)) !important;
     border-radius: var(--radius);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   }
 
-  .rbc-wrapper .rbc-overlay-header {
-    border-bottom-color: hsl(var(--border));
-  }
-
-  /* ===================================================================
-   * ENTERPRISE: Drag & Drop addon styles
-   * =================================================================== */
-
-  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-row-body {
-    position: relative;
-  }
-
-  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-drag-row {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-  }
-
-  .rbc-wrapper .rbc-addons-dnd .rbc-event {
-    transition: opacity 0.15s ease;
-  }
-
-  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-dragged-event {
-    opacity: 0;
-  }
-
-  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-drag-preview {
-    opacity: 0.65;
-    border-radius: calc(var(--radius) - 2px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  }
-
-  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-resize-ns-icon {
-    display: none;
-  }
-
-  .rbc-wrapper .rbc-addons-dnd .rbc-addons-dnd-resize-ew-icon {
-    display: none;
-  }
-
-  /* All day cells need position:relative for ::after dot indicators */
-  .rbc-wrapper .rbc-day-bg {
-    position: relative;
+  .fc-wrapper .fc-popover-header {
+    background: hsl(var(--muted)) !important;
+    color: hsl(var(--card-foreground));
   }
 
   /* Mini calendar sidebar — event dot indicator (targets button inside td) */
@@ -878,49 +755,38 @@
    * =================================================================== */
 
   @media print {
-    /* Hide non-essential UI elements */
     nav, aside, header, footer,
-    .rbc-toolbar button:not(.rbc-active),
+    .fc-wrapper .fc-button,
     .no-print {
       display: none !important;
     }
 
-    /* Full width calendar */
-    .rbc-wrapper {
+    .fc-wrapper {
       width: 100% !important;
       min-height: auto !important;
-    }
-
-    .rbc-wrapper .rbc-calendar {
       background: white !important;
       color: black !important;
     }
 
-    .rbc-wrapper .rbc-toolbar {
-      background: white !important;
-      border-bottom: 2px solid #333 !important;
-    }
-
-    .rbc-wrapper .rbc-toolbar .rbc-toolbar-label {
+    .fc-wrapper .fc-toolbar-title {
       color: black !important;
     }
 
-    .rbc-wrapper .rbc-event {
+    .fc-wrapper .fc-event {
       border-left-width: 3px !important;
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }
 
-    .rbc-wrapper .rbc-day-bg {
+    .fc-wrapper .fc-daygrid-day {
       background: white !important;
     }
 
-    .rbc-wrapper .rbc-today {
+    .fc-wrapper .fc-day-today {
       background: #f0f7ff !important;
-      box-shadow: none !important;
     }
 
-    .rbc-wrapper .rbc-header {
+    .fc-wrapper .fc-col-header-cell-cushion {
       color: black !important;
     }
   }
