@@ -485,12 +485,36 @@ UI features:
 
 ### 3.11 Capabilities matrix
 
-| Provider     | multiPage | exifAware | vectorEquiv | calibratable | mimeTypes                                                       |
-|--------------|-----------|-----------|-------------|--------------|------------------------------------------------------------------|
-| `pdf-page`   | ✅        | ❌        | ✅          | ✅           | `application/pdf`                                                |
-| `image`      | ❌        | ✅        | ❌          | ✅           | `image/png`, `image/jpeg`, `image/webp`, `image/tiff`           |
+| Provider     | multiPage      | exifAware | vectorEquiv | calibratable | mimeTypes (input)                                                |
+|--------------|----------------|-----------|-------------|--------------|------------------------------------------------------------------|
+| `pdf-page`   | ❌ (Q7)        | ❌        | ✅          | ✅ (Q4)      | `application/pdf`                                                |
+| `image`      | ❌             | ✅ (Q11)  | ❌          | ✅ (Q4)      | `image/png`, `image/jpeg`, `image/webp`, `image/tiff`*           |
+
+*TIFF input convertito a PNG/JPG durante upload (Q12) — runtime non incontra mai TIFF in storage.
 
 UI panel reagisce alla matrix: nasconde controlli irrilevanti per provider.
+
+### 3.12 RBAC (Q9 vincolante)
+
+**Ruoli autorizzati a write/delete:**
+- `ADMIN`
+- `SUPER_ADMIN`
+- `PROJECT_MANAGER`
+
+**Tutti gli altri ruoli (stessa company):** read-only.
+**Cross-company:** denied.
+
+**Implementazione:**
+- **Client-side (UI):** `useUserRole()` hook → conditional render dei bottoni mutation. Disabled state con tooltip greco.
+- **Server-side (Firestore rules):** `firestore.rules` blocchi `match /floorplan_backgrounds/{rbgId}` e `match /floorplan_overlays/{ovrlId}` con:
+  ```
+  allow read: if belongsToCompany();
+  allow create, update, delete: if belongsToCompany() && hasRole(['admin', 'super_admin', 'project_manager']);
+  ```
+- **API routes:** wrapper `withAuth({ requiredRoles: ['admin', 'super_admin', 'project_manager'] })` su tutte le mutation routes.
+- **Storage rules:** stessa policy ruoli per upload + delete in path `companies/.../floorplans/files/...`.
+
+**Test (CHECK 3.16, ADR-298):** rules suite copre tutti i 9 ruoli × 4 ops × 2 companies = matrix completa.
 
 ---
 
@@ -710,6 +734,12 @@ Tutti ≤500 LOC, target funzioni ≤40 LOC. Helpers estratti se necessario.
 | **Q4** | Calibration scope | **Sempre disponibile** per entrambi PDF e Image. | Bottone Calibrate sempre visibile. Default scale identity se utente non calibra. |
 | **Q5** | Storage / collection / ID | **Strong-separation Procore/SAP-grade.** `files` (esistente, generic) + `floorplan_backgrounds` (NUOVA, domain entity, ID `rbg_<ulid>`) + `floorplan_overlays` (NUOVA, polygons, ID `ovrl_<ulid>` reuse). FK relationships. | Storage path via `buildStoragePath()` esistente, zero modifica. |
 | **Q6** | Image formats | **PNG + JPEG + WEBP + TIFF.** | TIFF via `utif.js` (MIT). Procore-level coverage. AVIF/GIF/BMP esclusi. |
+| **Q7** | Multi-page PDF | **Single-page only.** Ogni κάτοψη = 1 file. PDF multi-page → solo pagina 1 renderizzata. | Niente UI di page navigation. Compositor semplificato. |
+| **Q8** | Cross-type replace (DXF↔PDF/Image) | **Cascade delete unified.** Service `cascadeDeleteAllPolygonsForFloor(floorId)` cancella ENTRAMBI floorplan_overlays + DXF polygon system. | Atomic Firestore batch. Confirm dialog conta polygons di entrambi i sistemi. |
+| **Q9** | RBAC | **ADMIN, SUPER_ADMIN, PROJECT_MANAGER** possono write/delete. | Read = tutti stessa company. Cross-company denied. Enforced UI + Firestore rules + API routes + Storage rules. |
+| **Q10** | Calibration with existing polygons | **Auto-remap + always confirm dialog.** Polygons mantengono real-world position. Nessuna threshold. | `vertex_new = inverse(newT) ∘ oldT(vertex_old)` atomic con calibration write. |
+| **Q11** | EXIF orientation | **Auto-rotate sempre.** Industry-standard. | Pre-render hardware rotation. `naturalBounds` post-orientation. Phone portrait foto sempre orientate correttamente. |
+| **Q12** | File size cap + compression | **50MB cap + in-app compression.** PDF re-render lower DPI; Image canvas resize + JPEG q=0.85; TIFF→PNG/JPG conversion in upload pipeline. | Reject UI se ancora >50MB post-compression. |
 
 ---
 
