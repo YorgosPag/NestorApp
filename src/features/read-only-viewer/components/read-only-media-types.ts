@@ -23,6 +23,8 @@ export interface ReadOnlyMediaViewerProps {
   onHoverOverlay?: (propertyId: string | null) => void;
   onClickOverlay?: (propertyId: string) => void;
   highlightedOverlayUnitId?: string | null;
+  /** Pre-formatted in-polygon hover labels keyed by propertyId (ADR-340 §3.6). */
+  propertyLabels?: ReadonlyMap<string, import('@/components/shared/files/media/overlay-polygon-renderer').OverlayLabel>;
   className?: string;
 }
 

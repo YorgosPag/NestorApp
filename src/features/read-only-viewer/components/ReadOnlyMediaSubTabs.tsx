@@ -85,12 +85,14 @@ interface FloorFloorplanTabContentProps {
   onHoverOverlay?: (propertyId: string | null) => void;
   onClickOverlay?: (propertyId: string) => void;
   highlightedOverlayUnitId?: string | null;
+  propertyLabels?: ReadonlyMap<string, import('@/components/shared/files/media/overlay-polygon-renderer').OverlayLabel>;
 }
 
 export function FloorFloorplanTabContent({
   floorId, buildingId, floorNumber, companyId,
   spacing, iconSizes, t,
   onHoverOverlay, onClickOverlay, highlightedOverlayUnitId,
+  propertyLabels,
 }: FloorFloorplanTabContentProps) {
   const { floorFloorplan, loading, error, refetch } = useFloorFloorplans({
     floorId, buildingId, floorNumber, companyId,
@@ -118,6 +120,7 @@ export function FloorFloorplanTabContent({
         highlightedOverlayUnitId={highlightedOverlayUnitId}
         onHoverOverlay={onHoverOverlay}
         onClickOverlay={onClickOverlay}
+        propertyLabels={propertyLabels}
         emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties' })}
         className="h-full"
       />

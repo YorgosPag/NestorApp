@@ -74,6 +74,7 @@ export function ReadOnlyMediaViewer({
   onHoverOverlay,
   onClickOverlay,
   highlightedOverlayUnitId,
+  propertyLabels,
   className,
 }: ReadOnlyMediaViewerProps) {
   const { t } = useTranslation(['properties', 'properties-viewer', 'properties-enums', 'properties-detail', 'common', 'common-validation', 'common-status', 'common-shared', 'common-sales', 'common-photos', 'common-navigation', 'common-empty-states', 'common-actions', 'common-account', 'files', 'files-media']);
@@ -269,6 +270,7 @@ export function ReadOnlyMediaViewer({
                   spacing={spacing} iconSizes={iconSizes} t={t}
                   onHoverOverlay={onHoverOverlay} onClickOverlay={onClickOverlay}
                   highlightedOverlayUnitId={highlightedOverlayUnitId}
+                  propertyLabels={propertyLabels}
                 />
               </TabsContent>
             ))
@@ -280,6 +282,7 @@ export function ReadOnlyMediaViewer({
                   overlays={singleFloorOverlays}
                   highlightedOverlayUnitId={highlightedOverlayUnitId}
                   onHoverOverlay={onHoverOverlay} onClickOverlay={onClickOverlay}
+                  propertyLabels={propertyLabels}
                   emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties' })}
                   className="h-full"
                 />

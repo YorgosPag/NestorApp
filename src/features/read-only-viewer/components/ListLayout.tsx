@@ -16,6 +16,8 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import type { Property } from '@/types/property-viewer';
 import type { ReadOnlyViewerContextProps } from '../types';
 import '@/lib/design-system';
+import { formatCurrency } from '@/lib/intl-formatting';
+import type { OverlayLabel } from '@/components/shared/files/media/overlay-polygon-renderer';
 
 export function ListLayout({
   isLoading,
@@ -53,6 +55,28 @@ export function ListLayout({
   const showPropertyHoverInfo = activeMediaTab === 'floorplan-floor'
     || activeMediaTab.startsWith('floorplan-floor-');
   const properties = viewerProps.properties ?? [];
+
+  // ADR-340 §3.6 — pre-formatted in-polygon hover labels for FloorplanGallery.
+  // Locale-agnostic strings: caller formats with i18n + currency, the canvas
+  // renderer just draws them. Three lines per property: code (small),
+  // gross sqm (small), sale price (emphasis / larger).
+  const sqmUnit = t('units.sqm', { ns: 'properties-enums' });
+  const propertyLabels = React.useMemo(() => {
+    const map = new Map<string, OverlayLabel>();
+    for (const p of properties) {
+      const grossSqm = p.areas?.gross ?? p.area;
+      const price = p.commercial?.askingPrice ?? p.commercial?.finalPrice ?? p.price;
+      const hasSqm = typeof grossSqm === 'number' && Number.isFinite(grossSqm);
+      const hasPrice = typeof price === 'number' && Number.isFinite(price) && price > 0;
+      map.set(p.id, {
+        primaryText: p.code || undefined,
+        secondaryText: hasSqm ? `${grossSqm} ${sqmUnit}` : undefined,
+        emphasisText: hasPrice ? formatCurrency(price as number) : undefined,
+      });
+    }
+    return map;
+  }, [properties, sqmUnit]);
+
   const handleSelectFloor = React.useCallback(
     (floorId: string | null) => {
       viewerProps.onSelectFloor?.(floorId);
@@ -126,6 +150,7 @@ export function ListLayout({
           onHoverOverlay={onHoverProperty}
           onClickOverlay={(propertyId) => handlePolygonSelect(propertyId, false)}
           highlightedOverlayUnitId={hoveredPropertyId}
+          propertyLabels={propertyLabels}
         />
       </div>
 

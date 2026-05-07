@@ -223,9 +223,9 @@ export function renderOverlayPolygons(
 
 const LABEL_FONT_FAMILY =
   'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const LABEL_BASE_FONT_PX = 12;
-const LABEL_EMPHASIS_FONT_PX = 18;
-const LABEL_LINE_GAP_PX = 4;
+const LABEL_BASE_FONT_PX = 16;
+const LABEL_EMPHASIS_FONT_PX = 24;
+const LABEL_LINE_GAP_PX = 6;
 
 /** Compute screen-space centroid of an overlay polygon (vertex average). */
 function polygonScreenCentroid(
