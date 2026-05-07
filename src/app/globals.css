@@ -531,44 +531,61 @@
     background: hsl(var(--secondary)) !important;
   }
 
-  /* Sidebar date picker (react-day-picker) — match main calendar dark theme */
-  .rdp {
+  /* Sidebar date picker (react-day-picker + shadcn Calendar) — dark theme override */
+  aside [role="application"] {
+    background: hsl(var(--secondary)) !important;
+    color: hsl(var(--card-foreground)) !important;
+  }
+
+  aside .rdp {
     --rdp-background-color: hsl(var(--secondary));
     --rdp-cell-size: 36px;
     --rdp-accent-color: #2563eb;
-    --rdp-background-color: hsl(var(--secondary));
   }
 
-  .rdp-months {
-    background: hsl(var(--secondary));
+  aside .rdp-months {
+    background: hsl(var(--secondary)) !important;
   }
 
-  .rdp-month {
-    background: hsl(var(--secondary));
-    color: hsl(var(--card-foreground));
+  aside .rdp-month {
+    background: hsl(var(--secondary)) !important;
+    color: hsl(var(--card-foreground)) !important;
   }
 
-  .rdp-head_cell {
-    background: transparent;
-    color: #64748b;
+  aside .rdp-head_cell {
+    background: transparent !important;
+    color: #64748b !important;
   }
 
-  .rdp-cell {
-    color: hsl(var(--card-foreground));
+  aside .rdp-cell {
+    color: hsl(var(--card-foreground)) !important;
   }
 
-  .rdp-day {
-    color: hsl(var(--card-foreground));
+  aside .rdp-day {
+    color: hsl(var(--card-foreground)) !important;
   }
 
-  .rdp-day_selected:not([disabled]) {
-    background-color: #2563eb;
-    color: #ffffff;
+  aside .rdp-day_selected:not([disabled]) {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
   }
 
-  .rdp-day_today:not([disabled]) {
-    font-weight: bold;
-    color: #2563eb;
+  aside .rdp-day_today:not([disabled]) {
+    font-weight: bold !important;
+    color: #2563eb !important;
+  }
+
+  /* Tailwind classes inside sidebar Calendar */
+  aside [role="application"] .text-muted-foreground {
+    color: #64748b !important;
+  }
+
+  aside [role="application"] .text-primary {
+    color: hsl(var(--card-foreground)) !important;
+  }
+
+  aside [role="application"] .bg-accent {
+    background-color: rgba(37, 99, 235, 0.1) !important;
   }
 
   /* Day headers (Mon, Tue, etc.) — subtle accent color */
