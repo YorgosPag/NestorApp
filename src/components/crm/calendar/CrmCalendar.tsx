@@ -282,11 +282,16 @@ export function CrmCalendar({
     return <CalendarEventTooltip event={ev} timeText={arg.timeText} />;
   }, []);
 
-  // Outlook-style day header for timegrid views (day name + date number + today circle)
+  // Outlook-style day header: month view = short name only, timegrid = name + date circle
   const renderDayHeader = useCallback((arg: DayHeaderContentArg) => {
-    if (activeViewRef.current === 'dayGridMonth') return { domNodes: [] };
     const locale = i18n.language === 'el' ? 'el-GR' : 'en-GB';
     const dayName = arg.date.toLocaleDateString(locale, { weekday: 'short' }).toUpperCase();
+    if (activeViewRef.current === 'dayGridMonth') {
+      const el = document.createElement('span');
+      el.className = 'fc-otlk-hdr__name';
+      el.textContent = dayName;
+      return { domNodes: [el] };
+    }
     const dayNum = arg.date.getDate();
     const el = document.createElement('div');
     el.className = 'fc-otlk-hdr';

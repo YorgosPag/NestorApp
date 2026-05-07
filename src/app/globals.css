@@ -471,12 +471,12 @@
 
   .fc-wrapper {
     --fc-border-color: hsl(var(--border));
-    --fc-page-bg-color: hsl(var(--secondary));
-    --fc-neutral-bg-color: hsl(var(--secondary));
+    --fc-page-bg-color: hsl(var(--background));
+    --fc-neutral-bg-color: hsl(var(--background));
     --fc-list-event-hover-bg-color: rgba(59, 130, 246, 0.08);
     --fc-today-bg-color: rgba(59, 130, 246, 0.08);
     --fc-now-indicator-color: hsl(var(--status-error));
-    background: hsl(var(--secondary));
+    background: hsl(var(--background));
     color: hsl(var(--card-foreground));
     border-radius: var(--radius);
     padding: 0.75rem;
@@ -533,7 +533,7 @@
   }
 
   .fc-wrapper .fc-daygrid-day {
-    background: hsl(var(--secondary));
+    background: hsl(var(--background));
     transition: background 0.2s ease;
   }
 
@@ -653,7 +653,7 @@
 
   /* Time grid (week/day view) */
   .fc-wrapper .fc-timegrid {
-    background: hsl(var(--secondary));
+    background: hsl(var(--background));
   }
 
   .fc-wrapper .fc-timegrid-slot {
@@ -750,7 +750,7 @@
 
   /* List (agenda) view */
   .fc-wrapper .fc-list {
-    background: hsl(var(--secondary));
+    background: hsl(var(--background));
     border-color: hsl(var(--border));
   }
 
@@ -769,7 +769,7 @@
   }
 
   .fc-wrapper .fc-list-empty {
-    background: hsl(var(--secondary));
+    background: hsl(var(--background));
     color: hsl(var(--muted-foreground));
   }
 
