@@ -96,12 +96,14 @@ function clamp01(v: number): number {
 }
 
 function sanitizeMetadata(meta: ProviderMetadata): ProviderMetadata {
-  return {
-    pdfPageNumber: typeof meta.pdfPageNumber === 'number' ? meta.pdfPageNumber : undefined,
-    imageOrientation: typeof meta.imageOrientation === 'number' ? meta.imageOrientation : undefined,
-    imageMimeType: typeof meta.imageMimeType === 'string' ? meta.imageMimeType : undefined,
+  // Firestore rejects `undefined`. Build only with defined keys.
+  const out: ProviderMetadata = {
     imageDecoderUsed: meta.imageDecoderUsed === 'utif' ? 'utif' : 'native',
   };
+  if (typeof meta.pdfPageNumber === 'number') out.pdfPageNumber = meta.pdfPageNumber;
+  if (typeof meta.imageOrientation === 'number') out.imageOrientation = meta.imageOrientation;
+  if (typeof meta.imageMimeType === 'string') out.imageMimeType = meta.imageMimeType;
+  return out;
 }
 
 function pickTransformPatch(p: Partial<BackgroundTransform>): Partial<BackgroundTransform> {

@@ -5,7 +5,6 @@ import {
   Grid, Crop, Download, Crosshair,
   Maximize, Calculator, Map, Edit, Hexagon, FlaskConical,
   Activity, // 🏢 ENTERPRISE: Performance Monitor icon
-  FileUp, // 🏢 ENTERPRISE: PDF Background icon
   Sparkles, // 🤖 ADR-185: AI Drawing Assistant icon
   BarChart3, // ADR-189: Guide Analysis Panel icon
   RotateCw, // 🏢 ADR-188: Entity Rotation System icon
@@ -471,16 +470,8 @@ export const createActionButtons = (props: {
     colorClass: DXF_ACTION_COLORS.togglePerf,
     onClick: () => props.onAction('toggle-perf')
   },
-  // 🏢 ENTERPRISE: PDF Background Controls (Independent pan/zoom/rotation)
-  // Note: Ctrl+Shift+B is reserved by browser (bookmarks bar)
-  {
-    id: 'toggle-pdf-background',
-    icon: FileUp,
-    label: DXF_UTILITY_TOOL_LABELS.PDF_BACKGROUND,
-    hotkey: getShortcutDisplayLabel('togglePdfBackground'),
-    colorClass: DXF_ACTION_COLORS.pdfBackground,
-    onClick: () => props.onAction('toggle-pdf-background')
-  },
+  // 🏢 ADR-340 Phase 5+ (2026-05-08): toggle-pdf-background MOVED to position 1
+  // in EnhancedDXFToolbar.tsx — was hidden here behind overflow-x-auto.
   // 🤖 ADR-185: AI Drawing Assistant Toggle
   {
     id: 'toggle-ai-assistant',

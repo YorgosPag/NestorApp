@@ -79,16 +79,12 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   selectedOverlayId,
   isOverlaySectionCollapsed = false,
   onToggleOverlaySection,
-
   // ADR-176: Mobile sidebar toggle
   onSidebarToggle,
-
   // ADR-189: Guide visibility
   guidesVisible = true,
-
   // ADR-241: Fullscreen state
   isFullscreen,
-
   layeringDisabled = false,
 }) => {
   // 🌐 i18n
@@ -100,10 +96,8 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   const [showSimpleDialog, setShowSimpleDialog] = React.useState(false);
   // 🏢 SPEC-237D: Floorplan Import Wizard state
   const [showImportWizard, setShowImportWizard] = React.useState(false);
-
   // 📐 ADR-189: Guide chord state — tracks pending chord leader key
   const chordRef = React.useRef<{ timer: ReturnType<typeof setTimeout> } | null>(null);
-
   // Cleanup chord timer on unmount
   React.useEffect(() => {
     return () => {
@@ -131,10 +125,8 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       if (chordRef.current) {
         clearTimeout(chordRef.current.timer);
         chordRef.current = null;
-
         const secondKey = e.key.toUpperCase();
         const chordEntry = DXF_GUIDE_CHORD_MAP[secondKey];
-
         if (chordEntry) {
           e.preventDefault();
           if (chordEntry.toolType) {
@@ -144,12 +136,10 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
           }
           return;
         }
-
         // Not a valid chord → execute the deferred grip-edit
         onToolChange('grip-edit');
         // Don't return — let the current key be processed below
       }
-
       // ⌨️ CTRL SHORTCUTS - Actions with Ctrl/Cmd modifier
       if (matchesShortcut(e, 'undo')) { e.preventDefault(); onAction('undo'); return; }
       if (matchesShortcut(e, 'redo')) { e.preventDefault(); onAction('redo'); return; }
@@ -159,7 +149,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       if (matchesShortcut(e, 'toggleLayers')) { e.preventDefault(); onAction('toggle-layers'); return; }
       if (matchesShortcut(e, 'toggleProperties')) { e.preventDefault(); onAction('toggle-properties'); return; }
       if (matchesShortcut(e, 'export')) { e.preventDefault(); onAction('export'); return; }
-
       // ⌨️ TOOL SHORTCUTS - Single letter tool activation
       if (matchesShortcut(e, 'select')) { e.preventDefault(); onToolChange('select'); return; }
       if (matchesShortcut(e, 'pan')) { e.preventDefault(); onToolChange('pan'); return; }
@@ -189,14 +178,11 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
         };
         return;
       }
-
       if (matchesShortcut(e, 'layering')) { e.preventDefault(); onToolChange('layering'); return; }
-
       // ⌨️ ACTION SHORTCUTS - View toggles (no modifier)
       if (matchesShortcut(e, 'grid')) { e.preventDefault(); onAction('grid'); return; }
       if (matchesShortcut(e, 'fit')) { e.preventDefault(); onAction('fit'); return; }
       if (matchesShortcut(e, 'autocrop')) { e.preventDefault(); onAction('autocrop'); return; }
-
       // ⌨️ SPECIAL SHORTCUTS - Escape, Delete, etc.
       if (matchesShortcut(e, 'escape')) {
         e.preventDefault();
@@ -221,7 +207,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     snapEnabled: contextSnapEnabled,
     toggleSnap
   } = useProSnapIntegration(snapEnabled ?? false);
-  
   const actionButtons = createActionButtons({
     canUndo,
     canRedo,
@@ -234,12 +219,10 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       onAction(action, data as string | number | Record<string, unknown>);
     }
   });
-
   // 🏢 ENTERPRISE: Action names must match useDxfViewerState.ts handleAction() cases
   const handleZoomIn = () => onAction('zoom-in'); // → canvasActions.zoomIn()
   const handleZoomOut = () => onAction('zoom-out'); // → canvasActions.zoomOut()
   const handleSetZoom = (zoom: number) => onAction('set-zoom', zoom);
-  
   // 🏢 ENTERPRISE: Centralized zoom tool handling - ADR-043
   // Uses centralized zoom system from transform-config.ts + useDxfViewerState
   const handleToolChange = (tool: ToolType) => {
@@ -275,21 +258,17 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
       }
       return;
     }
-
     // ✏️ GRIP EDIT: Custom handling
     if (tool === 'grip-edit') {
       onToolChange(tool);
       onAction('grip-edit');
       return;
     }
-
     // 🔧 DEFAULT: Standard tool change
     onToolChange(tool);
   };
-
   // ADR-176: Responsive layout detection
   const { layoutMode } = useResponsiveLayout();
-
   // ADR-176: Mobile/tablet → compact toolbar
   if (layoutMode !== 'desktop') {
     return (
@@ -328,6 +307,27 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     >
       <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.SM}`}>
         <div className={`flex ${PANEL_LAYOUT.GAP.XS} flex-1 min-w-0 overflow-x-auto overflow-y-visible`}>
+          {/* 🏢 ADR-340 Phase 5+: PDF Υπόβαθρο — moved to position 1 for visibility (2026-05-08).
+              Was hidden in the actionButtons cluster behind overflow-x-auto. */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onAction('toggle-pdf-background')}
+                  aria-label={t('tools.pdfBackground')}
+                  className={`${iconSizes.xl} p-0`}
+                >
+                  <FileUp className={`${iconSizes.sm} ${DXF_ACTION_COLORS.pdfBackground}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('tools.pdfBackground')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
+
           {/* 🏢 ENTERPRISE: Upload DXF - Shadcn Button (NO BORDERS) */}
           <UploadDxfButton
             title="Upload DXF File (Legacy)"
