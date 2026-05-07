@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 
 interface CalendarSearchInputProps {
   events: CalendarEvent[];
-  onFilteredEvents: (filtered: CalendarEvent[]) => void;
+  onFilteredEvents: (filtered: CalendarEvent[] | null) => void;
 }
 
 export function CalendarSearchInput({ events, onFilteredEvents }: CalendarSearchInputProps) {
@@ -34,7 +34,7 @@ export function CalendarSearchInput({ events, onFilteredEvents }: CalendarSearch
   // Filter events
   useEffect(() => {
     if (!debouncedQuery.trim()) {
-      onFilteredEvents(events);
+      onFilteredEvents(null);
       return;
     }
     const q = debouncedQuery.toLowerCase();

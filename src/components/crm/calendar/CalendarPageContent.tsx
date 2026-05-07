@@ -59,7 +59,7 @@ export function CalendarPageContent() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
-  const [filteredEvents, setFilteredEvents] = useState<CalendarEvent[]>([]);
+  const [searchFilteredEvents, setSearchFilteredEvents] = useState<CalendarEvent[] | null>(null);
   const [sidebarDate, setSidebarDate] = useState(new Date());
 
   const { events, loading, stats, refresh } = useCalendarEvents({
@@ -100,8 +100,8 @@ export function CalendarPageContent() {
     setSidebarDate(date);
   }, []);
 
-  const handleFilteredEvents = useCallback((filtered: CalendarEvent[]) => {
-    setFilteredEvents(filtered);
+  const handleFilteredEvents = useCallback((filtered: CalendarEvent[] | null) => {
+    setSearchFilteredEvents(filtered);
   }, []);
 
   const advancedFilteredEvents = useMemo(() => {
@@ -151,9 +151,7 @@ export function CalendarPageContent() {
 
   const searchBase = advancedFilteredEvents;
 
-  const displayEvents = filteredEvents.length !== searchBase.length
-    ? filteredEvents
-    : searchBase;
+  const displayEvents = searchFilteredEvents ?? searchBase;
 
   if (authLoading) {
     return (
