@@ -365,10 +365,12 @@ export function CrmCalendar({
             date={currentDate}
             onNavigate={(date: Date) => {
               console.log('🟢 onNavigate called:', date, 'isProgrammaticNav:', isProgrammaticNav.current);
-              setCurrentDate(date);
               if (!isProgrammaticNav.current) {
-                console.log('🟡 Calling onDateChange');
+                console.log('🟡 Calling setCurrentDate + onDateChange');
+                setCurrentDate(date);
                 onDateChange?.(date);
+              } else {
+                console.log('🟢 Skipping setCurrentDate — effect already updated it');
               }
               isProgrammaticNav.current = false;
             }}
