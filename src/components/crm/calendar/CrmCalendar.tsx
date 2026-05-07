@@ -162,7 +162,6 @@ export function CrmCalendar({
   // Navigate when sidebar date changes
   useEffect(() => {
     if (navigateToDate) {
-      console.log('🔵 Effect: navigateToDate changed', navigateToDate);
       isProgrammaticNav.current = true;
       setCurrentDate(navigateToDate);
     }
@@ -353,7 +352,6 @@ export function CrmCalendar({
           aria-label={t('calendarPage.title')}
           aria-busy={loading}
         >
-          {console.log('🔴 DnDCalendar render — currentDate:', currentDate, 'navigateToDate:', navigateToDate)}
           <DnDCalendar
             localizer={localizer}
             events={events}
@@ -364,13 +362,9 @@ export function CrmCalendar({
             onView={setCurrentView}
             date={currentDate}
             onNavigate={(date: Date) => {
-              console.log('🟢 onNavigate called:', date, 'isProgrammaticNav:', isProgrammaticNav.current);
               if (!isProgrammaticNav.current) {
-                console.log('🟡 Calling setCurrentDate + onDateChange');
                 setCurrentDate(date);
                 onDateChange?.(date);
-              } else {
-                console.log('🟢 Skipping setCurrentDate — effect already updated it');
               }
               isProgrammaticNav.current = false;
             }}
