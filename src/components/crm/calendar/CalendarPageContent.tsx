@@ -13,7 +13,7 @@
  * All values from centralized design system hooks — zero hardcoded values.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { startOfMonth, endOfMonth, addMonths, subMonths, isToday, isBefore, startOfDay, endOfDay, addDays, endOfWeek } from 'date-fns';
 import { CalendarDays, Plus, CheckSquare, Clock, CalendarClock } from 'lucide-react';
 
@@ -60,7 +60,8 @@ export function CalendarPageContent() {
   const [showDashboard, setShowDashboard] = useState(false);
   const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
   const [searchFilteredEvents, setSearchFilteredEvents] = useState<CalendarEvent[] | null>(null);
-  const [sidebarDate, setSidebarDate] = useState(new Date());
+  const [sidebarSelectedDate, setSidebarSelectedDate] = useState(new Date());
+  const [sidebarDisplayMonth, setSidebarDisplayMonth] = useState(new Date());
 
   const { events, loading, stats, refresh } = useCalendarEvents({
     dateRange,
@@ -93,11 +94,17 @@ export function CalendarPageContent() {
   }, [refresh]);
 
   const handleSidebarDateSelect = useCallback((date: Date) => {
-    setSidebarDate(date);
+    setSidebarSelectedDate(date);
+    setSidebarDisplayMonth(date);
+  }, []);
+
+  const handleSidebarMonthChange = useCallback((date: Date) => {
+    setSidebarDisplayMonth(date);
   }, []);
 
   const handleMainCalendarDateChange = useCallback((date: Date) => {
-    setSidebarDate(date);
+    setSidebarSelectedDate(date);
+    setSidebarDisplayMonth(date);
   }, []);
 
   const handleFilteredEvents = useCallback((filtered: CalendarEvent[] | null) => {
@@ -208,10 +215,10 @@ export function CalendarPageContent() {
         <section className="flex flex-1 gap-4 overflow-auto p-2">
           <CalendarSidebar
             events={displayEvents}
-            selectedDate={sidebarDate}
+            selectedDate={sidebarSelectedDate}
             onDateSelect={handleSidebarDateSelect}
-            displayMonth={sidebarDate}
-            onMonthChange={handleSidebarDateSelect}
+            displayMonth={sidebarDisplayMonth}
+            onMonthChange={handleSidebarMonthChange}
           />
 
           <article className={cn('flex-1', colors.bg.primary, borders.radiusClass.lg)}>
@@ -221,7 +228,7 @@ export function CalendarPageContent() {
               onRangeChange={handleRangeChange}
               onEventCreated={handleEventCreated}
               onEventUpdated={handleEventCreated}
-              navigateToDate={sidebarDate}
+              navigateToDate={sidebarSelectedDate}
               onDateChange={handleMainCalendarDateChange}
             />
           </article>

@@ -18,7 +18,7 @@
 
 'use client';
 
-import { useState, useCallback, useMemo, useEffect, type CSSProperties, type ComponentType } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, type CSSProperties, type ComponentType } from 'react';
 import {
   Calendar as BigCalendar,
   dateFnsLocalizer,
@@ -156,9 +156,13 @@ export function CrmCalendar({
   const [currentView, setCurrentView] = useState<View>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  // Track programmatic navigation to prevent feedback loop
+  const isProgrammaticNav = useRef(false);
+
   // Navigate when sidebar date changes
   useEffect(() => {
     if (navigateToDate) {
+      isProgrammaticNav.current = true;
       setCurrentDate(navigateToDate);
     }
   }, [navigateToDate]);
@@ -359,7 +363,10 @@ export function CrmCalendar({
             date={currentDate}
             onNavigate={(date: Date) => {
               setCurrentDate(date);
-              onDateChange?.(date);
+              if (!isProgrammaticNav.current) {
+                onDateChange?.(date);
+              }
+              isProgrammaticNav.current = false;
             }}
             onRangeChange={handleRangeChange}
             onSelectEvent={handleSelectEvent}

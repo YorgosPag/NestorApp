@@ -44,8 +44,7 @@ function Calendar({
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
         ),
         range_end: "day-range-end",
-        selected:
-          `bg-primary text-primary-foreground ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_SELECTED_HOVER} focus:bg-primary focus:text-primary-foreground`,
+        selected: "!bg-blue-600 !text-white rounded-md",
         today: "bg-accent text-accent-foreground",
         outside:
           "day-outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
