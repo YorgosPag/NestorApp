@@ -149,13 +149,13 @@
     --link-color-hover: 212 96% 78%;     /* #93c5fd Blue-300 */
     --link-color-visited: 270 95% 75%;   /* #c4b5fd Purple-300 */
     
-    --secondary: 217 33% 25%;
+    --secondary: 217 27% 11%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217 33% 25%; /* Same as secondary */
+    --muted: 217 27% 11%; /* Same as secondary */
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 217 33% 25%;
+    --accent: 217 27% 11%;
     --accent-foreground: 210 40% 98%;
     
     --destructive: 0 62.8% 30.6%;
@@ -184,7 +184,7 @@
     --text-warning: 43 96% 66%;       /* warning text - yellow-400 (lighter for dark mode) */
     --text-info: 217 91% 70%;         /* info text - blue-400 (lighter for dark mode) */
     --bg-primary: 217 33% 17%;        /* ✅ ENTERPRISE: dark primary - Rich slate (no white) */
-    --bg-secondary: 216 30% 20%;      /* ✅ ENTERPRISE: dark secondary - Elegant slate (no light grey) */
+    --bg-secondary: 217 27% 11%;      /* ✅ ENTERPRISE: dark secondary - Elegant slate (no light grey) */
     --bg-hover: 215 28% 23%;          /* ✅ ENTERPRISE: dark hover - Interactive slate */
     --bg-active: 214 25% 26%;         /* ✅ ENTERPRISE: dark active - Deep slate state */
     --bg-elevated: 218 35% 19%;       /* ✅ ENTERPRISE: dark elevated - Sophisticated slate */
