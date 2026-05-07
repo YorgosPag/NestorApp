@@ -72,6 +72,62 @@ jest.mock('@/components/ui/floating', () => ({
   ),
 }));
 
+// Radix Tooltip needs a TooltipProvider in the tree — flatten it for a11y.
+jest.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) =>
+    asChild ? <>{children}</> : <span>{children}</span>,
+  TooltipContent: () => null,
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Radix Select trigger lacks an inferable name in jsdom — flatten to a labeled <select>.
+jest.mock('@/components/ui/select', () => ({
+  Select: ({ children, value, onValueChange }: { children: React.ReactNode; value?: string; onValueChange?: (v: string) => void }) => (
+    <select aria-label="select" value={value} onChange={(e) => onValueChange?.(e.target.value)}>
+      {children}
+    </select>
+  ),
+  SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectValue: () => null,
+  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <option value={value}>{children}</option>
+  ),
+}));
+
+// Radix AlertDialog renders into a portal which makes axe scoping awkward — keep it inline.
+jest.mock('@/components/ui/alert-dialog', () => ({
+  AlertDialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <div role="alertdialog" aria-labelledby="ad-title" aria-describedby="ad-desc">{children}</div> : null,
+  AlertDialogContent: ({ children }: { children: React.ReactNode }) => <section>{children}</section>,
+  AlertDialogHeader: ({ children }: { children: React.ReactNode }) => <header>{children}</header>,
+  AlertDialogTitle: ({ children }: { children: React.ReactNode }) => <h2 id="ad-title">{children}</h2>,
+  AlertDialogDescription: ({ children }: { children: React.ReactNode }) => <p id="ad-desc">{children}</p>,
+  AlertDialogFooter: ({ children }: { children: React.ReactNode }) => <footer>{children}</footer>,
+  AlertDialogAction: ({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) => (
+    <button type="button" onClick={onClick} disabled={disabled}>{children}</button>
+  ),
+  AlertDialogCancel: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+    <button type="button" onClick={onClick}>{children}</button>
+  ),
+}));
+
+// Slider — render a labeled native range input for axe.
+jest.mock('@/components/ui/slider', () => ({
+  Slider: ({ value, min, max, step, onValueChange }: { value: number[]; min: number; max: number; step: number; onValueChange?: (v: number[]) => void }) => (
+    <input
+      type="range"
+      aria-label="slider"
+      value={value[0]}
+      min={min}
+      max={max}
+      step={step}
+      onChange={(e) => onValueChange?.([Number(e.target.value)])}
+    />
+  ),
+}));
+
 const mockUseLevel = jest.fn();
 jest.mock('../../hooks/useFloorplanBackgroundForLevel', () => ({
   useFloorplanBackgroundForLevel: () => mockUseLevel(),
