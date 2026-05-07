@@ -344,7 +344,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         handleDrawingContextMenu={handleDrawingContextMenu}
         drawingState={{ drawingHandlers, draftPolygon, handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc }}
         entityJoin={{ canJoin: entityJoinState.canJoin, joinResultLabel: entityJoinState.joinResultLabel, onJoin: () => entityJoinHook.joinEntities(selectedEntityIds), onDelete: () => handleSmartDelete() }}
-        floorId={levelManager.currentLevelId}
+        floorId={floorplanBg?.floorId ?? null}
         onMouseMove={props.onMouseMove}
         entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
         guides={guideState.guides} guidesVisible={guideState.guidesVisible}
