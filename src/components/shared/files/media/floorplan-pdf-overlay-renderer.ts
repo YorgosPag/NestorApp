@@ -1,76 +1,43 @@
 /**
  * =============================================================================
- * ENTERPRISE: FloorplanGallery — PDF + Overlay Renderer
+ * ENTERPRISE: FloorplanGallery — Raster + Overlay Renderer
  * =============================================================================
  *
- * Coordinate system (Y-UP, CAD convention — matches DXF Viewer editor):
- *   - bounds  = renderDims / (PDF_RENDER_SCALE*2): 421×596 for A3
- *   - polygon vertices are saved in CAD world space, Y-up (Y=0 at bottom)
- *   - fit     = simple aspect-fit centering, no margins
- *              scale = min(canvasW / w, canvasH / h)
- *              offsetX = (canvasW - w*scale) / 2
- *   - worldToScreen: screenX = offsetX + wx*scale
- *                    screenY = offsetY + (boundsH - wy)*scale  (Y-flip)
+ * Renders a raster background (PDF page-1 image OR raw raster image) plus
+ * overlay polygons in a single pass on the supplied canvas. Polygon-draw,
+ * color, highlight, and Y-flip math all delegate to the SSoT in
+ * `overlay-polygon-renderer.ts`. This file is now a thin adapter that maps
+ * the rectangular raster bounds `{width, height}` to the canonical
+ * `SceneBounds {min:{0,0}, max:{w,h}}` and handles image + canvas-clear.
  *
- * PDF image and polygons share the SAME transform → zero drift.
+ * Coordinate convention (Y-UP, CAD — matches DXF Viewer editor): polygon
+ * vertices are stored in raster-pixel world space with Y=0 at bottom.
  *
  * @module components/shared/files/media/floorplan-pdf-overlay-renderer
- * @enterprise SPEC-237D — overlay support on PDF backgrounds
+ * @enterprise SPEC-237D + ADR-340 §3.6 (overlay rendering SSoT)
  */
 
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
 import type { PanOffset } from '@/hooks/useZoomPan';
-import { getStatusColors } from '@/subapps/dxf-viewer/config/color-mapping';
-import { UI_COLORS, withOpacity, OVERLAY_OPACITY } from '@/subapps/dxf-viewer/config/color-config';
 import { isPointInPolygon } from '@core/polygon-system/utils/polygon-utils';
 import type { UniversalPolygon } from '@core/polygon-system/types';
+import {
+  computeFitTransform,
+  rectBoundsToScene,
+  renderOverlayPolygons,
+  screenToWorld,
+} from './overlay-polygon-renderer';
 
 const ZERO_PAN: PanOffset = { x: 0, y: 0 };
-
-const FALLBACK = {
-  stroke: UI_COLORS.DARK_GRAY,
-  fill: withOpacity(UI_COLORS.DARK_GRAY, OVERLAY_OPACITY.MUTED),
-} as const;
 
 interface PdfBounds {
   width: number;
   height: number;
 }
 
-interface FitTransform {
-  scale: number;
-  offsetX: number;
-  offsetY: number;
-}
-
-function calcFit(
-  canvasW: number,
-  canvasH: number,
-  bounds: PdfBounds,
-  zoom: number = 1,
-  pan: PanOffset = ZERO_PAN,
-): FitTransform {
-  const baseScale = Math.min(canvasW / bounds.width, canvasH / bounds.height);
-  const scale = baseScale * zoom;
-  return {
-    scale,
-    offsetX: (canvasW - bounds.width * scale) / 2 + pan.x,
-    offsetY: (canvasH - bounds.height * scale) / 2 + pan.y,
-  };
-}
-
-// Y-UP convention: worldY=0 at bottom, worldY=boundsH at top → Y-flip for canvas
-function toScreen(wx: number, wy: number, boundsH: number, t: FitTransform): { x: number; y: number } {
-  return { x: t.offsetX + wx * t.scale, y: t.offsetY + (boundsH - wy) * t.scale };
-}
-
-function toWorld(sx: number, sy: number, boundsH: number, t: FitTransform): { x: number; y: number } {
-  return { x: (sx - t.offsetX) / t.scale, y: boundsH - (sy - t.offsetY) / t.scale };
-}
-
 /**
- * Hit-test overlays at a canvas-pixel point.
- * Returns the first overlay with a linked propertyId at that point, or null.
+ * Hit-test overlays at a canvas-pixel point. Returns the first overlay
+ * with a linked propertyId at that point, or null.
  */
 export function hitTestPdfOverlays(
   canvasX: number,
@@ -82,8 +49,9 @@ export function hitTestPdfOverlays(
   zoom: number = 1,
   panOffset: PanOffset = ZERO_PAN,
 ): FloorOverlayItem | null {
-  const t = calcFit(canvasWidth, canvasHeight, bounds, zoom, panOffset);
-  const world = toWorld(canvasX, canvasY, bounds.height, t);
+  const scene = rectBoundsToScene(bounds.width, bounds.height);
+  const fit = computeFitTransform(canvasWidth, canvasHeight, scene, zoom, panOffset);
+  const world = screenToWorld(canvasX, canvasY, scene, fit);
   for (const overlay of overlays) {
     if (overlay.polygon.length < 3) continue;
     const universal: UniversalPolygon = {
@@ -99,8 +67,9 @@ export function hitTestPdfOverlays(
 }
 
 /**
- * Render PDF image + overlay polygons in one pass.
- * Sizes the canvas to match its container.
+ * Render raster image + overlay polygons in one pass. Sizes the canvas to
+ * match its container. Polygon rendering delegates to the SSoT in
+ * `overlay-polygon-renderer.ts` — same math/colors/highlight as the DXF path.
  */
 export function renderPdfWithOverlays(
   canvas: HTMLCanvasElement,
@@ -122,51 +91,17 @@ export function renderPdfWithOverlays(
   }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // eslint-disable-next-line design-system/no-hardcoded-colors
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   if (bounds.width <= 0 || bounds.height <= 0) return;
 
-  const t = calcFit(canvas.width, canvas.height, bounds, zoom, panOffset);
+  const scene = rectBoundsToScene(bounds.width, bounds.height);
+  const fit = computeFitTransform(canvas.width, canvas.height, scene, zoom, panOffset);
 
-  // Draw PDF image (Y-DOWN: top-left at world (0,0), bottom-right at (W,H))
-  ctx.drawImage(image, t.offsetX, t.offsetY, bounds.width * t.scale, bounds.height * t.scale);
+  // Draw raster image (Y-DOWN raster: top-left at world (0,0), bottom-right at (W,H))
+  ctx.drawImage(image, fit.offsetX, fit.offsetY, bounds.width * fit.scale, bounds.height * fit.scale);
 
-  if (overlays.length === 0) return;
-
-  ctx.save();
-  for (const overlay of overlays) {
-    if (overlay.polygon.length < 3) continue;
-
-    const colors = getStatusColors(overlay.resolvedStatus) ?? FALLBACK;
-    const isHighlighted = !!(highlightedUnitId && overlay.linked?.propertyId === highlightedUnitId);
-
-    ctx.fillStyle = isHighlighted
-      ? withOpacity(colors.stroke, OVERLAY_OPACITY.GALLERY_FILL)
-      : 'transparent';
-    ctx.strokeStyle = colors.stroke;
-    ctx.lineWidth = isHighlighted ? 4 : 3;
-
-    ctx.beginPath();
-    overlay.polygon.forEach((vertex, i) => {
-      const s = toScreen(vertex.x, vertex.y, bounds.height, t);
-      if (i === 0) ctx.moveTo(s.x, s.y);
-      else ctx.lineTo(s.x, s.y);
-    });
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/** @deprecated use hitTestPdfOverlays */
-export function pdfScreenToWorld(
-  sx: number,
-  sy: number,
-  canvasWidth: number,
-  canvasHeight: number,
-  bounds: PdfBounds,
-): { x: number; y: number } {
-  return toWorld(sx, sy, bounds.height, calcFit(canvasWidth, canvasHeight, bounds));
+  renderOverlayPolygons(ctx, overlays, scene, fit, { highlightedUnitId });
 }

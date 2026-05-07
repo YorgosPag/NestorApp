@@ -12,10 +12,16 @@
 
 import type { PanOffset } from '@/hooks/useZoomPan';
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
-import { getStatusColors } from '@/subapps/dxf-viewer/config/color-mapping';
-import { UI_COLORS, withOpacity, OVERLAY_OPACITY } from '@/subapps/dxf-viewer/config/color-config';
 import { isPointInPolygon } from '@core/polygon-system/utils/polygon-utils';
 import type { UniversalPolygon } from '@core/polygon-system/types';
+import {
+  computeFitTransform,
+  renderOverlayPolygons,
+  screenToWorld as ssotScreenToWorld,
+  type SceneBounds,
+} from './overlay-polygon-renderer';
+
+export { OVERLAY_FALLBACK } from './overlay-polygon-renderer';
 
 // ============================================================================
 // TYPES
@@ -30,22 +36,6 @@ export interface OverlayAABB {
   maxY: number;
   propertyId: string | undefined;
 }
-
-/** Coordinate bounds for DXF scene */
-interface SceneBounds {
-  min: { x: number; y: number };
-  max: { x: number; y: number };
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/** Fallback colors when no status / unlinked — ADR-258 SSoT opacity */
-export const OVERLAY_FALLBACK = {
-  stroke: UI_COLORS.DARK_GRAY,
-  fill: withOpacity(UI_COLORS.DARK_GRAY, OVERLAY_OPACITY.MUTED),
-} as const;
 
 // ============================================================================
 // OVERLAY RENDERING (SPEC-237B)
@@ -68,47 +58,8 @@ export function drawOverlayPolygons(
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx || overlays.length === 0) return;
-
-  const drawingWidth = bounds.max.x - bounds.min.x;
-  const drawingHeight = bounds.max.y - bounds.min.y;
-  const baseScale = Math.min(canvas.width / drawingWidth, canvas.height / drawingHeight);
-  const scale = baseScale * zoom;
-  const offsetX = (canvas.width - drawingWidth * scale) / 2 + panOffset.x;
-  const offsetY = (canvas.height - drawingHeight * scale) / 2 + panOffset.y;
-
-  ctx.save();
-
-  for (const overlay of overlays) {
-    if (overlay.polygon.length < 3) continue;
-
-    // ADR-258D: Dynamic coloring via resolvedStatus (entity.commercialStatus → PropertyStatus)
-    const colors = getStatusColors(overlay.resolvedStatus) ?? OVERLAY_FALLBACK;
-    const isHighlighted = !!(highlightedUnitId && overlay.linked?.propertyId === highlightedUnitId);
-
-    // ADR-258D: No fill on normal, fill on hover only (stroke-only base)
-    ctx.fillStyle = isHighlighted
-      ? withOpacity(colors.stroke, OVERLAY_OPACITY.GALLERY_FILL)
-      : 'transparent';
-    ctx.strokeStyle = colors.stroke;
-    ctx.lineWidth = isHighlighted ? 4 : 3;
-
-    // Draw polygon
-    ctx.beginPath();
-    overlay.polygon.forEach((vertex, i) => {
-      const sx = (vertex.x - bounds.min.x) * scale + offsetX;
-      const sy = (bounds.max.y - vertex.y) * scale + offsetY;
-      if (i === 0) ctx.moveTo(sx, sy);
-      else ctx.lineTo(sx, sy);
-    });
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Label intentionally NOT rendered in FloorplanGallery (ADR-258D)
-    // Labels like "Overlay 1174..." are internal IDs — not useful for end users
-  }
-
-  ctx.restore();
+  const fit = computeFitTransform(canvas.width, canvas.height, bounds, zoom, panOffset);
+  renderOverlayPolygons(ctx, overlays, bounds, fit, { highlightedUnitId });
 }
 
 // ============================================================================
@@ -143,16 +94,8 @@ export function screenToWorld(
   zoom: number,
   panOffset: PanOffset,
 ): { x: number; y: number } {
-  const drawingWidth = bounds.max.x - bounds.min.x;
-  const drawingHeight = bounds.max.y - bounds.min.y;
-  const baseScale = Math.min(canvas.width / drawingWidth, canvas.height / drawingHeight);
-  const scale = baseScale * zoom;
-  const offsetX = (canvas.width - drawingWidth * scale) / 2 + panOffset.x;
-  const offsetY = (canvas.height - drawingHeight * scale) / 2 + panOffset.y;
-
-  const worldX = (screenX - offsetX) / scale + bounds.min.x;
-  const worldY = bounds.max.y - (screenY - offsetY) / scale;
-  return { x: worldX, y: worldY };
+  const fit = computeFitTransform(canvas.width, canvas.height, bounds, zoom, panOffset);
+  return ssotScreenToWorld(screenX, screenY, bounds, fit);
 }
 
 /**

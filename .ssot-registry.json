@@ -2578,6 +2578,19 @@
       ],
       "addedDate": "2026-05-08",
       "tier": 3
+    },
+    "overlay-polygon-renderer": {
+      "ssotFile": "src/components/shared/files/media/overlay-polygon-renderer.ts",
+      "description": "Canonical overlay-polygon renderer for FloorplanGallery (DXF + PDF + Image). SSoT for fit-and-center math (computeFitTransform), Y-UP world↔screen conversion, polygon draw loop with status colors + highlight + ADR-258D opacity. Replaces duplicate inline polygon-draw loops previously in floorplan-overlay-system.ts (DXF) and floorplan-pdf-overlay-renderer.ts (raster). ADR-340 §3.6.",
+      "forbiddenPatterns": [
+        "ctx\\.beginPath\\(\\)[\\s\\S]{0,200}overlay\\.polygon\\.forEach"
+      ],
+      "allowlist": [
+        "src/components/shared/files/media/overlay-polygon-renderer.ts"
+      ],
+      "addedDate": "2026-05-08",
+      "addedByAdr": "ADR-340",
+      "tier": 3
     }
   }
 }
