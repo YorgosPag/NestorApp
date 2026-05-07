@@ -26,6 +26,7 @@ SPEC-237D (overlay support on PDF backgrounds)
 
 | Date | Changes |
 |------|---------|
+| 2026-05-07 | 📋 PROPOSED **revisione 3** — round 2 di clarification (Q7-Q11, ελληνικά). Decisioni vincolanti aggiunte: **(Q7)** PDF = single-page only — ogni floor ha 1 file, niente multi-page navigation, UI semplificata, **(Q8)** cross-type replace (DXF↔PDF/Image) = cascade delete unified — service che cancella **ENTRAMBI** DXF-polygons (sistema esistente) **E** floorplan_overlays per il floor — un solo "delete all polygons of floor" path, **(Q9)** RBAC = solo `ADMIN`, `SUPER_ADMIN`, `PROJECT_MANAGER` possono upload/calibrate/delete; read = tutti i ruoli stessa company, **(Q10)** calibration with existing polygons = **auto-remap + always confirm** (Procore-grade safety — polygons mantengono real-world position, dialog "N polygons saranno aggiornati"), **(Q11)** EXIF orientation = **auto-rotate sempre** (industry-standard AutoCAD/Procore/Google Photos), **(Q12)** file size cap 50MB + **in-app compression**: PDF re-render at lower DPI, Image = canvas resize + JPEG q=0.85, TIFF → convert to PNG durante upload. ADR aggiornato sezioni 3.3, 3.6, 3.7, 3.8, 3.10, 3.11 + nuova §3.12 (RBAC). |
 | 2026-05-07 | 📋 PROPOSED **revisione 2** dopo clarification round (6 Q&A, ελληνικά). Decisioni vincolanti: **(Q1)** scope = per-κάτοψη-ορόφου, niente altrove, multi-level units (μεζονέτες/καταστήματα) = N κατόψεις indipendenti (codice esistente), **(Q2)** single file per κάτοψη — abbandonato multi-layer stack/z-order/reorder, **(Q3)** replace = confirm dialog + cascade delete polygons, **(Q4)** calibration sempre disponibile (PDF + Image), **(Q5)** strong-separation Procore/SAP-grade — `files` SSoT (binary + generic metadata) + nuova `floorplan_backgrounds` (domain entity con calibration/transform/FK→files) + nuova `floorplan_overlays` (polygons con FK→floorplan_backgrounds), nuovo prefix `rbg_<ulid>`, **(Q6)** image formats = PNG + JPEG + WEBP + TIFF (via `utif.js` MIT). Tile provider rimosso dallo scope (non necessario per single-file-per-floor). ADR riscritto end-to-end. |
 | 2026-05-07 | 📋 PROPOSED **revisione 1** — bozza iniziale post bug-fix PDF overlay alignment (`pdfTransform=identity` permanente). Architettura provider-based + multi-layer stack (poi rivista in revisione 2 dopo Q1-Q2 di Giorgio). |
 
@@ -220,16 +221,17 @@ export interface ProviderRenderParams {
 **PdfPageProvider** (Layer 1):
 - Wraps existing `PdfRenderer` (pdfjs-dist 4.5.136). Zero re-implementation.
 - `supportedMimeTypes`: `['application/pdf']`
-- `capabilities`: `{ multiPage: true, exifAware: false, vectorEquivalent: true, calibratable: true }`
-- `setActivePage(n)` chiama `PdfRenderer.renderPage(n)` e aggiorna l'asset rendered.
+- `capabilities`: `{ multiPage: false, exifAware: false, vectorEquivalent: true, calibratable: true }` — **Q7: single-page only**. Se PDF ha N>1 pagine: rende sempre pagina 1, le altre **ignorate** (l'utente carica un PDF distinto per ogni κάτοψη).
 - Render: `ctx.drawImage(this.renderedImageCanvas, 0, 0)` con transform applicato dal compositor.
+- **Compression upload (Q12)**: se `fileSize > 50MB` → re-render a DPI ridotta (`scale=1` invece di `scale=2`), reupload se size ancora >50MB → reject con error UI "Αρχείο πολύ μεγάλο. Συμπίεσε ή χρησιμοποίησε χαμηλότερη DPI."
 
 **ImageProvider** (Layer 1):
 - Carica binary via `fetch(url).blob()`, decodifica a `HTMLImageElement` o `ImageBitmap`.
 - `supportedMimeTypes`: `['image/png', 'image/jpeg', 'image/webp', 'image/tiff']` (Q6).
 - `capabilities`: `{ multiPage: false, exifAware: true, vectorEquivalent: false, calibratable: true }`.
-- **TIFF handling**: rileva mime `image/tiff` o `image/tif` o estensione `.tif/.tiff` → usa `utif.js` (MIT) per decode. Output: `ImageData` → `OffscreenCanvas` → blob URL → `HTMLImageElement`.
-- **EXIF orientation**: legge tag `Orientation` via `exifr` (MIT, ~10KB gzip). Applica rotazione hardware (CSS-style transform pre-render, salvata nel transform metadata) — l'utente non vede mai una foto "ruotata di lato".
+- **TIFF handling (Q6 + Q12)**: rileva mime `image/tiff`/`image/tif` o estensione `.tif/.tiff` → decode via `utif.js` (MIT) → ImageData → OffscreenCanvas. **In upload pipeline il TIFF viene convertito a PNG/JPG** (lossless→PNG se contiene alpha, altrimenti JPG q=0.92) e salvato come PNG/JPG in Storage. Il `mimeType` salvato in `files` riflette il post-conversion type. Provider runtime non incontra mai TIFF in storage path.
+- **EXIF orientation (Q11 vincolante = AUTO-ROTATE)**: legge tag `Orientation` via `exifr` (MIT, ~10KB gzip). Pre-render applica la rotazione hardware al canvas → output `naturalBounds` riflette dimensioni post-rotation (es. portrait phone photo viene salvata già in orientamento corretto). L'utente **non vede mai** una foto "πλάγια". `metadata.imageOrientation` salva il valore EXIF originale per debugging.
+- **Compression upload (Q12)**: se size > 50MB → resize via OffscreenCanvas (max-edge 8192px) + re-encode JPEG q=0.85. Se ancora >50MB → reject UI.
 - Render: `ctx.drawImage(this.image, 0, 0)`.
 
 ### 3.4 Domain entity (Layer 4 store + Layer 3 persistence)
