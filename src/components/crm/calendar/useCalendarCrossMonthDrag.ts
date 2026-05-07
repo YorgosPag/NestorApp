@@ -104,6 +104,8 @@ export function useCalendarCrossMonthDrag({
   const containerRef = useRef<HTMLElement | null>(null);
   const isDraggingRef = useRef(false);
   const draggedEventIdRef = useRef<string | null>(null);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navDirectionRef = useRef<-1 | 1 | null>(null);
 
   // Keep latest callbacks in refs to avoid stale closures
   const eventsRef = useRef(events);
@@ -123,11 +125,31 @@ export function useCalendarCrossMonthDrag({
   });
 
   useEffect(() => {
+    const clearNavTimer = () => {
+      if (navTimerRef.current !== null) {
+        clearTimeout(navTimerRef.current);
+        navTimerRef.current = null;
+      }
+      navDirectionRef.current = null;
+    };
+
+    const startNavTimer = (dir: -1 | 1) => {
+      if (navDirectionRef.current === dir) return;
+      clearNavTimer();
+      navDirectionRef.current = dir;
+      const tick = () => {
+        if (navDirectionRef.current !== dir) return;
+        const api = calendarRef.current?.getApi();
+        if (api) { if (dir === -1) api.prev(); else api.next(); }
+        navTimerRef.current = setTimeout(tick, 1500);
+      };
+      navTimerRef.current = setTimeout(tick, 1500);
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current) {
         const mirrorEl = document.querySelector(FC_DRAG_MIRROR_SELECTOR);
         if (!mirrorEl) return;
-        // Drag just started — capture event ID from mirror (clone of original el)
         const eventId = mirrorEl.getAttribute('data-calendar-event-id');
         draggedEventIdRef.current = eventId;
         isDraggingRef.current = true;
@@ -135,13 +157,19 @@ export function useCalendarCrossMonthDrag({
       }
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
-      setIsNearLeft(e.clientX < rect.left + EDGE_ZONE_PX);
-      setIsNearRight(e.clientX > rect.right - EDGE_ZONE_PX);
+      const nearLeft = e.clientX < rect.left + EDGE_ZONE_PX;
+      const nearRight = e.clientX > rect.right - EDGE_ZONE_PX;
+      setIsNearLeft(nearLeft);
+      setIsNearRight(nearRight);
+      if (nearLeft) startNavTimer(-1);
+      else if (nearRight) startNavTimer(1);
+      else clearNavTimer();
     };
 
     const handleMouseUp = async (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
 
+      clearNavTimer();
       const container = containerRef.current;
       isDraggingRef.current = false;
       setIsDragging(false);
@@ -180,6 +208,7 @@ export function useCalendarCrossMonthDrag({
     document.addEventListener('mouseup', handleMouseUp);
 
     return () => {
+      clearNavTimer();
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };

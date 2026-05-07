@@ -782,10 +782,10 @@
 
   .fc-cross-month-zone--active {
     opacity: 1;
-    background: hsl(var(--primary) / 0.15);
-    color: hsl(var(--primary));
-    border-color: hsl(var(--primary));
-    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.25);
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
   }
 
   /* ===================================================================
