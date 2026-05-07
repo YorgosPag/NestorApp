@@ -617,9 +617,6 @@
     background: hsl(var(--secondary));
     transition: background 0.2s ease;
     position: relative;
-    flex: 1;
-    min-width: 0;
-    border: 2px solid #ffff00;
   }
 
   .rbc-wrapper .rbc-day-bg + .rbc-day-bg {
@@ -627,7 +624,7 @@
   }
 
   .rbc-wrapper .rbc-day-bg:hover {
-    background: red;
+    background: rgba(59, 130, 246, 0.06);
   }
 
   /* NO weekend differentiation — all days same background */
