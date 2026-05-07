@@ -618,6 +618,7 @@
     position: relative;
     flex: 1;
     min-width: 0;
+    border: 2px solid #ffff00;
   }
 
   .rbc-wrapper .rbc-day-bg + .rbc-day-bg {
