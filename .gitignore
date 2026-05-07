@@ -19,6 +19,10 @@
 .DS_Store
 *.pem
 
+# temp SSL/TLS handshake files (dev server artifacts)
+*.sslip.io-*.l
+f661kuiq*.l
+
 # Screenshots - ignore Windows Greek screenshots
 Στιγμιότυπο*
 *.jpg

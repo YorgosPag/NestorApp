@@ -1,0 +1,253 @@
+import { create } from 'zustand';
+import { subscribeWithSelector, devtools } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+import type {
+  FloorplanBackground,
+  ProviderSource,
+  ProviderId,
+  BackgroundTransform,
+  NaturalBounds,
+  ProviderMetadata,
+} from '../providers/types';
+import { DEFAULT_BACKGROUND_TRANSFORM } from '../providers/types';
+import { getProvider } from '../providers/provider-registry';
+import type { IFloorplanBackgroundProvider } from '../providers/IFloorplanBackgroundProvider';
+import { generateFloorplanBackgroundId } from '@/services/enterprise-id.service';
+
+// ── Slot: per-floor state (no provider — class instances live outside immer) ──
+
+export interface FloorSlot {
+  background: FloorplanBackground | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// ── Replace request: emitted when a floor already has a background ─────────────
+
+export interface PendingReplaceRequest {
+  floorId: string;
+  source: ProviderSource;
+  providerId: ProviderId;
+}
+
+// ── Store types ───────────────────────────────────────────────────────────────
+
+interface StoreState {
+  floors: Record<string, FloorSlot>;
+  activeFloorId: string | null;
+  pendingReplaceRequest: PendingReplaceRequest | null;
+}
+
+interface StoreActions {
+  addBackground(floorId: string, source: ProviderSource, providerId: ProviderId): Promise<void>;
+  removeBackground(floorId: string): Promise<void>;
+  setTransform(floorId: string, transform: Partial<BackgroundTransform>): void;
+  setOpacity(floorId: string, opacity: number): void;
+  setVisible(floorId: string, visible: boolean): void;
+  setLocked(floorId: string, locked: boolean): void;
+  setActiveFloor(floorId: string | null): void;
+  confirmReplace(): Promise<void>;
+  cancelReplace(): void;
+  /** Internal: load without replace-check. Use addBackground from outside. */
+  _loadBackground(floorId: string, source: ProviderSource, providerId: ProviderId): Promise<void>;
+}
+
+type FloorplanBackgroundStoreType = StoreState & StoreActions;
+
+// ── Module-level provider map (outside immer — class instances) ───────────────
+
+const _floorProviders = new Map<string, IFloorplanBackgroundProvider>();
+
+export function getFloorProvider(floorId: string): IFloorplanBackgroundProvider | null {
+  return _floorProviders.get(floorId) ?? null;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function buildProviderMetadata(metadata: Record<string, unknown>): ProviderMetadata {
+  return {
+    imageOrientation: typeof metadata.imageOrientation === 'number'
+      ? metadata.imageOrientation
+      : undefined,
+    imageMimeType: typeof metadata.imageMimeType === 'string'
+      ? metadata.imageMimeType
+      : undefined,
+    imageDecoderUsed: metadata.imageDecoderUsed === 'utif' ? 'utif' : 'native',
+    pdfPageNumber: typeof metadata.pdfPageNumber === 'number'
+      ? metadata.pdfPageNumber
+      : undefined,
+  };
+}
+
+function buildBackground(
+  floorId: string,
+  providerId: ProviderId,
+  naturalBounds: NaturalBounds,
+  metadata: Record<string, unknown>,
+): FloorplanBackground {
+  const now = Date.now();
+  return {
+    id: generateFloorplanBackgroundId(),
+    companyId: '',      // Phase 3: in-memory only — populated in Phase 7 (persistence)
+    floorId,
+    fileId: '',         // Phase 3: in-memory only — populated in Phase 7 (persistence)
+    providerId,
+    providerMetadata: buildProviderMetadata(metadata),
+    naturalBounds,
+    transform: { ...DEFAULT_BACKGROUND_TRANSFORM },
+    calibration: null,
+    opacity: 1,
+    visible: true,
+    locked: false,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: '',      // Phase 3: in-memory only
+    updatedBy: '',
+  };
+}
+
+function clampOpacity(v: number): number {
+  return Math.max(0, Math.min(1, v));
+}
+
+// ── Store ─────────────────────────────────────────────────────────────────────
+
+export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>()(
+  devtools(
+    subscribeWithSelector(
+      immer((set, get) => ({
+        // ── Initial state ─────────────────────────────────────────────────────
+
+        floors: {},
+        activeFloorId: null,
+        pendingReplaceRequest: null,
+
+        // ── Public actions ────────────────────────────────────────────────────
+
+        addBackground: async (floorId, source, providerId) => {
+          const existing = get().floors[floorId];
+          if (existing?.background) {
+            set((draft) => {
+              draft.pendingReplaceRequest = { floorId, source, providerId };
+            });
+            return;
+          }
+          await get()._loadBackground(floorId, source, providerId);
+        },
+
+        removeBackground: async (floorId) => {
+          const provider = _floorProviders.get(floorId);
+          if (provider) {
+            await Promise.resolve(provider.dispose());
+            _floorProviders.delete(floorId);
+          }
+          set((draft) => {
+            delete draft.floors[floorId];
+          });
+        },
+
+        setTransform: (floorId, partial) => {
+          set((draft) => {
+            const slot = draft.floors[floorId];
+            if (!slot?.background) return;
+            Object.assign(slot.background.transform, partial);
+            slot.background.updatedAt = Date.now();
+          });
+        },
+
+        setOpacity: (floorId, opacity) => {
+          set((draft) => {
+            const slot = draft.floors[floorId];
+            if (!slot?.background) return;
+            slot.background.opacity = clampOpacity(opacity);
+            slot.background.updatedAt = Date.now();
+          });
+        },
+
+        setVisible: (floorId, visible) => {
+          set((draft) => {
+            const slot = draft.floors[floorId];
+            if (!slot?.background) return;
+            slot.background.visible = visible;
+          });
+        },
+
+        setLocked: (floorId, locked) => {
+          set((draft) => {
+            const slot = draft.floors[floorId];
+            if (!slot?.background) return;
+            slot.background.locked = locked;
+          });
+        },
+
+        setActiveFloor: (floorId) => {
+          set((draft) => {
+            draft.activeFloorId = floorId;
+          });
+        },
+
+        confirmReplace: async () => {
+          const req = get().pendingReplaceRequest;
+          if (!req) return;
+          set((draft) => { draft.pendingReplaceRequest = null; });
+          await get().removeBackground(req.floorId);
+          await get()._loadBackground(req.floorId, req.source, req.providerId);
+        },
+
+        cancelReplace: () => {
+          set((draft) => { draft.pendingReplaceRequest = null; });
+        },
+
+        // ── Internal ─────────────────────────────────────────────────────────
+
+        _loadBackground: async (floorId, source, providerId) => {
+          set((draft) => {
+            draft.floors[floorId] = { background: null, isLoading: true, error: null };
+          });
+
+          try {
+            const provider = getProvider(providerId);
+            const result = await provider.loadAsync(source);
+
+            if (!result.success || !result.bounds) {
+              throw new Error(result.error ?? 'Provider load failed');
+            }
+
+            const background = buildBackground(
+              floorId,
+              providerId,
+              result.bounds,
+              result.metadata ?? {},
+            );
+
+            _floorProviders.set(floorId, provider);
+
+            set((draft) => {
+              draft.floors[floorId] = { background, isLoading: false, error: null };
+            });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            set((draft) => {
+              draft.floors[floorId] = { background: null, isLoading: false, error: message };
+            });
+          }
+        },
+      }))
+    ),
+    {
+      name: 'floorplan-background-store',
+      enabled: process.env.NODE_ENV === 'development',
+    }
+  )
+);
+
+// ── Selectors ─────────────────────────────────────────────────────────────────
+
+export const selectFloorSlot = (floorId: string) =>
+  (s: FloorplanBackgroundStoreType): FloorSlot | undefined => s.floors[floorId];
+
+export const selectActiveFloorId = (s: FloorplanBackgroundStoreType): string | null =>
+  s.activeFloorId;
+
+export const selectPendingReplaceRequest = (s: FloorplanBackgroundStoreType): PendingReplaceRequest | null =>
+  s.pendingReplaceRequest;
