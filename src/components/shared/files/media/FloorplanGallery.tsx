@@ -26,6 +26,7 @@ import { computeOverlayAABBs, screenToWorld, hitTestOverlays } from '@/component
 import { hitTestPdfOverlays } from '@/components/shared/files/media/floorplan-pdf-overlay-renderer';
 import { useFloorplanSceneLoader } from '@/components/shared/files/media/useFloorplanSceneLoader';
 import { useFloorplanPdfLoader } from '@/components/shared/files/media/useFloorplanPdfLoader';
+import { useFloorplanImageLoader } from '@/components/shared/files/media/useFloorplanImageLoader';
 import { useFloorplanCanvasRender } from '@/components/shared/files/media/useFloorplanCanvasRender';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 
@@ -75,7 +76,15 @@ export function FloorplanGallery({
   // PDF loading — for SPEC-237D overlay support on PDF backgrounds
   const { pdfImage, pdfDimensions, isPdfLoading, pdfError } = useFloorplanPdfLoader(currentFile, isPdf);
 
-  // DXF bounds (only used for DXF — PDF uses editor-exact transform inside the renderer)
+  // Raw image loading (PNG/JPEG/WEBP/TIFF) — same canvas+overlay path as PDF.
+  const { imageElement, imageDimensions, isImageLoading, imageError } = useFloorplanImageLoader(currentFile, !!isImage);
+
+  // Unified raster source — PDF page-1 image OR raw image. Renderer is format-agnostic.
+  const isRaster = isPdf || !!isImage;
+  const rasterImage = pdfImage ?? imageElement;
+  const rasterBounds = pdfDimensions ?? imageDimensions;
+
+  // DXF bounds (only used for DXF — raster uses editor-exact transform inside the renderer)
   const currentBounds = useMemo(() => {
     if (isDxf) return loadedScene?.bounds ?? null;
     return null;
@@ -114,11 +123,14 @@ export function FloorplanGallery({
       const worldPt = screenToWorld(screenX, screenY, canvas, currentBounds, inlineZP.zoom, inlineZP.panOffset);
       return hitTestOverlays(worldPt, overlays, overlayAABBs);
     }
-    if (isPdf && pdfDimensions) {
-      return hitTestPdfOverlays(screenX, screenY, canvas.width, canvas.height, pdfDimensions, overlays);
+    if (isRaster && rasterBounds) {
+      return hitTestPdfOverlays(
+        screenX, screenY, canvas.width, canvas.height, rasterBounds, overlays,
+        inlineZP.zoom, inlineZP.panOffset,
+      );
     }
     return null;
-  }, [isDxf, isPdf, currentBounds, pdfDimensions, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset]);
+  }, [isDxf, isRaster, currentBounds, rasterBounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset]);
 
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!overlays?.length || !inlineCanvasRef.current) return;
@@ -208,14 +220,14 @@ export function FloorplanGallery({
   // CANVAS RENDERING — inline + modal (DXF or PDF, overlays unified)
 
   useFloorplanCanvasRender({
-    canvasRef: inlineCanvasRef, enabled: true, isDxf, isPdf, loadedScene, pdfImage, pdfDimensions,
+    canvasRef: inlineCanvasRef, enabled: true, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
     currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode,
     overlays, highlightedUnitId: effectiveHighlightId,
   });
 
   useFloorplanCanvasRender({
-    canvasRef: modalCanvasRef, enabled: fullscreen.isFullscreen, isDxf, isPdf, loadedScene,
-    pdfImage, pdfDimensions, currentBounds, zoom: modalZP.zoom, panOffset: modalZP.panOffset,
+    canvasRef: modalCanvasRef, enabled: fullscreen.isFullscreen, isDxf, isRaster, loadedScene,
+    rasterImage, rasterBounds, currentBounds, zoom: modalZP.zoom, panOffset: modalZP.panOffset,
     drawingMode, overlays, highlightedUnitId: effectiveHighlightId,
     firstRenderDelay: 280,
   });
@@ -321,9 +333,9 @@ export function FloorplanGallery({
 
   // VIEWER CONTENT — reusable for inline + fullscreen
 
-  const anyLoading = isLoading || isPdfLoading;
-  const anyError = sceneError || pdfError;
-  const showCanvas = (isDxf && loadedScene) || (isPdf && pdfImage && pdfDimensions);
+  const anyLoading = isLoading || isPdfLoading || isImageLoading;
+  const anyError = sceneError || pdfError || imageError;
+  const showCanvas = (isDxf && loadedScene) || (isRaster && rasterImage && rasterBounds);
 
   function renderViewerContent(
     zp: ReturnType<typeof useZoomPan>,
@@ -365,9 +377,6 @@ export function FloorplanGallery({
             <Map className={cn(iconSizes.xl, 'text-warning mb-2')} aria-hidden="true" />
             <span className={cn("text-sm", colors.text.muted)}>{t('floorplan.noSceneData')}</span>
           </section>
-        )}
-        {isImage && currentFile?.downloadUrl && (
-          <img src={currentFile.downloadUrl} alt={currentFile.displayName} className="w-full h-full object-contain" style={zp.contentStyle} draggable={false} />
         )}
         {isDxf && !currentFile?.processedData && !loadedScene && !anyLoading && !anyError && (
           <section className="flex flex-col items-center justify-center h-full">

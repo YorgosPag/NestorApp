@@ -19,10 +19,13 @@
  */
 
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
+import type { PanOffset } from '@/hooks/useZoomPan';
 import { getStatusColors } from '@/subapps/dxf-viewer/config/color-mapping';
 import { UI_COLORS, withOpacity, OVERLAY_OPACITY } from '@/subapps/dxf-viewer/config/color-config';
 import { isPointInPolygon } from '@core/polygon-system/utils/polygon-utils';
 import type { UniversalPolygon } from '@core/polygon-system/types';
+
+const ZERO_PAN: PanOffset = { x: 0, y: 0 };
 
 const FALLBACK = {
   stroke: UI_COLORS.DARK_GRAY,
@@ -40,12 +43,19 @@ interface FitTransform {
   offsetY: number;
 }
 
-function calcFit(canvasW: number, canvasH: number, bounds: PdfBounds): FitTransform {
-  const scale = Math.min(canvasW / bounds.width, canvasH / bounds.height);
+function calcFit(
+  canvasW: number,
+  canvasH: number,
+  bounds: PdfBounds,
+  zoom: number = 1,
+  pan: PanOffset = ZERO_PAN,
+): FitTransform {
+  const baseScale = Math.min(canvasW / bounds.width, canvasH / bounds.height);
+  const scale = baseScale * zoom;
   return {
     scale,
-    offsetX: (canvasW - bounds.width * scale) / 2,
-    offsetY: (canvasH - bounds.height * scale) / 2,
+    offsetX: (canvasW - bounds.width * scale) / 2 + pan.x,
+    offsetY: (canvasH - bounds.height * scale) / 2 + pan.y,
   };
 }
 
@@ -69,8 +79,10 @@ export function hitTestPdfOverlays(
   canvasHeight: number,
   bounds: PdfBounds,
   overlays: ReadonlyArray<FloorOverlayItem>,
+  zoom: number = 1,
+  panOffset: PanOffset = ZERO_PAN,
 ): FloorOverlayItem | null {
-  const t = calcFit(canvasWidth, canvasHeight, bounds);
+  const t = calcFit(canvasWidth, canvasHeight, bounds, zoom, panOffset);
   const world = toWorld(canvasX, canvasY, bounds.height, t);
   for (const overlay of overlays) {
     if (overlay.polygon.length < 3) continue;
@@ -96,6 +108,8 @@ export function renderPdfWithOverlays(
   bounds: PdfBounds,
   overlays: ReadonlyArray<FloorOverlayItem>,
   highlightedUnitId?: string | null,
+  zoom: number = 1,
+  panOffset: PanOffset = ZERO_PAN,
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -113,7 +127,7 @@ export function renderPdfWithOverlays(
 
   if (bounds.width <= 0 || bounds.height <= 0) return;
 
-  const t = calcFit(canvas.width, canvas.height, bounds);
+  const t = calcFit(canvas.width, canvas.height, bounds, zoom, panOffset);
 
   // Draw PDF image (Y-DOWN: top-left at world (0,0), bottom-right at (W,H))
   ctx.drawImage(image, t.offsetX, t.offsetY, bounds.width * t.scale, bounds.height * t.scale);

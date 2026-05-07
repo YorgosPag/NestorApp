@@ -29,10 +29,13 @@ export interface FloorplanCanvasRenderParams {
   canvasRef: RefObject<HTMLCanvasElement>;
   enabled: boolean;
   isDxf: boolean;
-  isPdf: boolean;
+  /** True for any raster background (PDF page-1 image OR raster image: PNG/JPEG/WEBP/TIFF). */
+  isRaster: boolean;
   loadedScene: DxfSceneData | null;
-  pdfImage: HTMLImageElement | null;
-  pdfDimensions: { width: number; height: number } | null;
+  /** HTMLImageElement of the raster background (PDF page-1 OR raw image). */
+  rasterImage: HTMLImageElement | null;
+  /** Bounds of the raster background — width × height in image-pixel space (Y-UP overlay convention). */
+  rasterBounds: { width: number; height: number } | null;
   currentBounds: SceneBounds | null;
   zoom: number;
   panOffset: PanOffset;
@@ -45,7 +48,7 @@ export interface FloorplanCanvasRenderParams {
 
 export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): void {
   const {
-    canvasRef, enabled, isDxf, isPdf, loadedScene, pdfImage, pdfDimensions,
+    canvasRef, enabled, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
     currentBounds, zoom, panOffset, drawingMode, overlays, highlightedUnitId,
     firstRenderDelay,
   } = params;
@@ -55,7 +58,7 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
 
   useEffect(() => {
     if (!enabled) return;
-    const hasContent = (isDxf && loadedScene) || (isPdf && pdfImage && pdfDimensions);
+    const hasContent = (isDxf && loadedScene) || (isRaster && rasterImage && rasterBounds);
     if (!hasContent) return;
 
     const doRender = () => {
@@ -66,9 +69,12 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
         if (overlays?.length && currentBounds) {
           drawOverlayPolygons(canvas, overlays, currentBounds, zoom, panOffset, highlightedUnitId);
         }
-      } else if (isPdf && pdfImage && pdfDimensions) {
-        // PDF + overlays use the editor-exact transform in a single pass
-        renderPdfWithOverlays(canvas, pdfImage, pdfDimensions, overlays ?? [], highlightedUnitId);
+      } else if (isRaster && rasterImage && rasterBounds) {
+        // Raster (PDF page-1 or image) + overlays in one pass.
+        // Zoom/pan applied via calcFit (mirrors DXF renderer pattern).
+        renderPdfWithOverlays(
+          canvas, rasterImage, rasterBounds, overlays ?? [], highlightedUnitId, zoom, panOffset,
+        );
       }
       readyRef.current = true;
     };
@@ -79,7 +85,7 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
     }
     doRender();
   }, [
-    canvasRef, enabled, isDxf, loadedScene, isPdf, pdfImage, pdfDimensions,
+    canvasRef, enabled, isDxf, loadedScene, isRaster, rasterImage, rasterBounds,
     currentBounds, zoom, panOffset, drawingMode, overlays, highlightedUnitId,
     firstRenderDelay,
   ]);
