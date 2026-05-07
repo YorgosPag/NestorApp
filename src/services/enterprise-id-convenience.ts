@@ -54,6 +54,9 @@ export const generateJobId = () => enterpriseIdService.generateJobId();
 export const generateOverlayId = () => enterpriseIdService.generateOverlayId();
 export const generateLevelId = () => enterpriseIdService.generateLevelId();
 
+// Floorplan Background System (ADR-340)
+export const generateFloorplanBackgroundId = () => enterpriseIdService.generateFloorplanBackgroundId();
+
 // UI & Visualization
 export const generateLayerId = () => enterpriseIdService.generateLayerId();
 export const generateElementId = () => enterpriseIdService.generateElementId();

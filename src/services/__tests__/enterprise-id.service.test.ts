@@ -33,6 +33,13 @@ describe('EnterpriseIdService', () => {
       expect(uuid).toMatch(UUID_V4_REGEX);
     });
 
+    it('generateFloorplanBackgroundId returns string with rbg_ prefix (ADR-340)', () => {
+      const id = service.generateFloorplanBackgroundId();
+      expect(id).toMatch(/^rbg_/);
+      const uuid = id.replace(/^rbg_/, '');
+      expect(uuid).toMatch(UUID_V4_REGEX);
+    });
+
     it('sample of entity types have correct prefixes', () => {
       const tests: [string, string][] = [
         [service.generateContactId(), ENTERPRISE_ID_PREFIXES.CONTACT],
@@ -41,6 +48,7 @@ describe('EnterpriseIdService', () => {
         [service.generateTaskId(), ENTERPRISE_ID_PREFIXES.TASK],
         [service.generateSessionId(), ENTERPRISE_ID_PREFIXES.SESSION],
         [service.generateErrorId(), ENTERPRISE_ID_PREFIXES.ERROR],
+        [service.generateFloorplanBackgroundId(), ENTERPRISE_ID_PREFIXES.RASTER_BACKGROUND],
       ];
 
       for (const [id, expectedPrefix] of tests) {

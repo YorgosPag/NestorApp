@@ -68,6 +68,7 @@ export {
   generateAddressCorrectionLogId,
   generateEmploymentRecordId, generateAppointmentId,
   generateOrgStructureId, generateOrgDepartmentId, generateOrgMemberId,
+  generateFloorplanBackgroundId,
   generateFolderId,
   generateCommentId, generateApprovalId, generateBankAccountId,
   generateDebtMaturityId, generateBudgetVarianceId, generateQueryStrategyDocId,

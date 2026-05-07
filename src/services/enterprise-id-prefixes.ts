@@ -47,6 +47,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   OVERLAY: 'ovrl',
   LEVEL: 'lvl',
 
+  // Floorplan Background System (ADR-340)
+  RASTER_BACKGROUND: 'rbg',
+
   // UI & Visualization
   LAYER: 'lyr',
   ELEMENT: 'elem',

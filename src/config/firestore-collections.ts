@@ -100,6 +100,10 @@ export const COLLECTIONS = {
   PROJECT_FLOORPLANS: process.env.NEXT_PUBLIC_PROJECT_FLOORPLANS_COLLECTION || 'project_floorplans',
   /** ADR-292 Phase 4 legacy — reads/writes go through `files`; counts only for showcase MVP (ADR-312). */
   UNIT_FLOORPLANS: process.env.NEXT_PUBLIC_UNIT_FLOORPLANS_COLLECTION || 'unit_floorplans',
+  /** ADR-340: Floorplan background domain entities (PDF/Image, 1 per floor, calibration, transform). */
+  FLOORPLAN_BACKGROUNDS: process.env.NEXT_PUBLIC_FLOORPLAN_BACKGROUNDS_COLLECTION || 'floorplan_backgrounds',
+  /** ADR-340: Floorplan polygon overlays (FK → floorplan_backgrounds, tenant-scoped). */
+  FLOORPLAN_OVERLAYS: process.env.NEXT_PUBLIC_FLOORPLAN_OVERLAYS_COLLECTION || 'floorplan_overlays',
 
   // 🅿️ PARKING & SPACES
   // 📍 Collection name: parking_spots (με underscore - όπως στη Firestore)

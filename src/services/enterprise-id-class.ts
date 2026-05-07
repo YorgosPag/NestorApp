@@ -138,6 +138,9 @@ export class EnterpriseIdService {
   generateOverlayId(): string { return this.generateId(P.OVERLAY).id; }
   generateLevelId(): string { return this.generateId(P.LEVEL).id; }
 
+  // Floorplan Background System (ADR-340)
+  generateFloorplanBackgroundId(): string { return this.generateId(P.RASTER_BACKGROUND).id; }
+
   // UI & Visualization
   generateLayerId(): string { return this.generateId(P.LAYER).id; }
   generateElementId(): string { return this.generateId(P.ELEMENT).id; }
