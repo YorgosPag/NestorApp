@@ -85,6 +85,15 @@ export function getFloorProvider(floorId: string): IFloorplanBackgroundProvider 
   return _floorProviders.get(floorId) ?? null;
 }
 
+// ── Hydrate dedup: per-floorId in-flight promise map ──────────────────────────
+// Two parallel call sites (CanvasSection + FloorplanBackgroundPanel) both
+// trigger `_hydratePersistedBackground` for the same floor. Without dedup the
+// PdfPageProvider singleton renders twice concurrently → pdfjs cancels the
+// first render ("Rendering cancelled, page 1"). This map collapses concurrent
+// hydrates into a single shared promise.
+
+const _hydrateInFlight = new Map<string, Promise<void>>();
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildProviderMetadata(metadata: Record<string, unknown>): ProviderMetadata {
@@ -258,30 +267,51 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
         // ── Internal ─────────────────────────────────────────────────────────
 
         _hydratePersistedBackground: async (floorId, persisted, source) => {
-          set((draft) => {
-            draft.floors[floorId] = { background: null, isLoading: true, error: null };
+          // Idempotent short-circuit: same persisted background already loaded.
+          const existingSlot = get().floors[floorId];
+          if (
+            existingSlot?.background?.id === persisted.id &&
+            existingSlot.background.fileId === persisted.fileId &&
+            !existingSlot.isLoading
+          ) {
+            return;
+          }
+
+          // Race-safe dedup: collapse concurrent hydrates for the same floor.
+          const inFlight = _hydrateInFlight.get(floorId);
+          if (inFlight) return inFlight;
+
+          const promise = (async () => {
+            set((draft) => {
+              draft.floors[floorId] = { background: null, isLoading: true, error: null };
+            });
+
+            try {
+              const provider = getProvider(persisted.providerId);
+              const result = await provider.loadAsync(source);
+              if (!result.success || !result.bounds) {
+                throw new Error(result.error ?? 'Provider load failed');
+              }
+              _floorProviders.set(floorId, provider);
+              set((draft) => {
+                draft.floors[floorId] = {
+                  background: { ...persisted },
+                  isLoading: false,
+                  error: null,
+                };
+              });
+            } catch (err) {
+              const message = err instanceof Error ? err.message : String(err);
+              set((draft) => {
+                draft.floors[floorId] = { background: null, isLoading: false, error: message };
+              });
+            }
+          })().finally(() => {
+            _hydrateInFlight.delete(floorId);
           });
 
-          try {
-            const provider = getProvider(persisted.providerId);
-            const result = await provider.loadAsync(source);
-            if (!result.success || !result.bounds) {
-              throw new Error(result.error ?? 'Provider load failed');
-            }
-            _floorProviders.set(floorId, provider);
-            set((draft) => {
-              draft.floors[floorId] = {
-                background: { ...persisted },
-                isLoading: false,
-                error: null,
-              };
-            });
-          } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            set((draft) => {
-              draft.floors[floorId] = { background: null, isLoading: false, error: message };
-            });
-          }
+          _hydrateInFlight.set(floorId, promise);
+          return promise;
         },
 
         _loadBackground: async (floorId, source, providerId) => {
