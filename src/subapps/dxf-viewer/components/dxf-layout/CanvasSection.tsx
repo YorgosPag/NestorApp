@@ -14,14 +14,14 @@ import { useGripStyles } from '../../settings-provider';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import { useZoom } from '../../systems/zoom';
 import { dwarn, derr } from '../../debug';
-import { usePdfBackgroundStore } from '../../pdf-background';
+import { useFloorplanBackgroundForLevel } from '../../floorplan-background';
 import { useEventBus } from '../../systems/events';
 import { useUniversalSelection } from '../../systems/selection';
 import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/commands';
 import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
   useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler,
-  useFitToView, useFitToPdf, usePolygonCompletion, useCanvasKeyboardShortcuts,
+  useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts,
   useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
 } from '../../hooks/canvas';
 import { useGuideToolWorkflows } from '../../hooks/guides';
@@ -78,9 +78,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     derr('CanvasSection', 'setTransform called but CanvasContext not available');
   });
   const containerRef = useRef<HTMLDivElement>(null);
-  const { enabled: pdfEnabled, opacity: pdfOpacity, transform: pdfTransform, renderedImageUrl: pdfImageUrl, setViewport: setPdfViewport } = usePdfBackgroundStore();
   const { viewport, viewportRef, viewportReady, setTransform, transformRef } = useViewportManager({
-    containerRef, transform, setTransform: contextSetTransform, onViewportChange: setPdfViewport,
+    containerRef, transform, setTransform: contextSetTransform,
   });
   const zoomSystem = useZoom({ initialTransform: transform, onTransformChange: setTransform, viewport });
 
@@ -188,7 +187,30 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     hiddenOverlayIds: overlayStore.hiddenOverlayIds,
   });
   const { fitToOverlay } = useFitToView({ dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
-  useFitToPdf({ zoomSystem, setTransform, viewport });
+
+  // ADR-340 Phase 5 — auto-fit camera to newly-loaded floorplan background.
+  // Replaces legacy useFitToPdf. Tracks the last-fitted background ID to avoid
+  // resetting the user's manual zoom on every re-render.
+  const floorplanBg = useFloorplanBackgroundForLevel();
+  const lastFittedBgIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const bg = floorplanBg?.background;
+    if (!bg) return;
+    if (lastFittedBgIdRef.current === bg.id) return;
+    if (viewport.width <= 0 || viewport.height <= 0) return;
+    const result = zoomSystem.zoomToFit(
+      { min: { x: 0, y: 0 }, max: { x: bg.naturalBounds.width, y: bg.naturalBounds.height } },
+      viewport,
+      false,
+    );
+    if (result?.transform) {
+      const { scale, offsetX, offsetY } = result.transform;
+      if (!isNaN(scale) && !isNaN(offsetX) && !isNaN(offsetY)) {
+        lastFittedBgIdRef.current = bg.id;
+        setTransform(result.transform);
+      }
+    }
+  }, [floorplanBg?.background, viewport.width, viewport.height, zoomSystem, setTransform]);
 
   const { globalRulerSettings, drawingHandlers, drawingHandlersRef, hasUnifiedDrawingPointsRef } = useCanvasEffects({
     activeTool, overlayMode, currentScene: props.currentScene ?? null,
@@ -322,7 +344,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         handleDrawingContextMenu={handleDrawingContextMenu}
         drawingState={{ drawingHandlers, draftPolygon, handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc }}
         entityJoin={{ canJoin: entityJoinState.canJoin, joinResultLabel: entityJoinState.joinResultLabel, onJoin: () => entityJoinHook.joinEntities(selectedEntityIds), onDelete: () => handleSmartDelete() }}
-        pdf={{ imageUrl: pdfImageUrl, transform: pdfTransform, enabled: pdfEnabled, opacity: pdfOpacity }}
+        floorId={levelManager.currentLevelId}
         onMouseMove={props.onMouseMove}
         entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
         guides={guideState.guides} guidesVisible={guideState.guidesVisible}
