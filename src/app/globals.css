@@ -526,6 +526,11 @@
     overflow: hidden;
   }
 
+  /* Mini-picker calendar (react-big-calendar small instance) — match large calendar background */
+  .rbc-month-view {
+    background: hsl(var(--secondary)) !important;
+  }
+
   /* Day headers (Mon, Tue, etc.) — subtle accent color */
   .rbc-wrapper .rbc-header {
     background: transparent;
