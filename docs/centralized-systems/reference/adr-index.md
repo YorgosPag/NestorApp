@@ -352,6 +352,7 @@
 | **ADR-331** | Enterprise Spend Analytics Page (extends ADR-330 Phase 6) | ✅ IMPLEMENTED | [View](./adrs/ADR-331-enterprise-spend-analytics-page.md) |
 | **ADR-332** | Enterprise Address Editor System v2.0 (10-phase: coordinator + field badges + telemetry + a11y) | ✅ IMPLEMENTED | [View](./adrs/ADR-332-enterprise-address-editor-system.md) |
 | **ADR-337** | BOQ Categories Level 2 Hierarchy (12 × 5–7 curated sub-categories, extends ADR-175) | 📋 PROPOSED | [View](../../../adrs/ADR-337-boq-categories-level2-hierarchy.md) |
+| **ADR-340** | Floorplan Background System (single-per-floor, provider pattern PDF/Image, calibration, Procore-grade strong separation; supersedes pdf-background subsystem) | 📋 PROPOSED | [View](./adrs/ADR-340-raster-background-layers-system.md) |
 
 ---
 
