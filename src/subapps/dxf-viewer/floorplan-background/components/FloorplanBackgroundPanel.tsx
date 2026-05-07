@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { FileImage, FileText, Trash2, RotateCcw, Eye, EyeOff, Lock, Unlock, Replace } from 'lucide-react';
+import { FileImage, FileText, Trash2, RotateCcw, Eye, EyeOff, Lock, Unlock, Replace, Crosshair, X } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/floating';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -13,6 +13,7 @@ import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 import { PANEL_ANCHORING } from '../../config/panel-tokens';
 import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 import { useFloorplanBackgroundForLevel } from '../hooks/useFloorplanBackgroundForLevel';
+import { useCalibration } from '../hooks/useCalibration';
 import type { ProviderId } from '../providers/types';
 
 const DEFAULT_POSITION = { x: 20, y: 100 };
@@ -34,6 +35,8 @@ export function FloorplanBackgroundPanel({ isOpen, onClose, className }: Floorpl
   const { t } = useTranslation(['dxf-viewer-panels']);
   const colors = useSemanticColors();
   const result = useFloorplanBackgroundForLevel();
+  const floorId = result?.floorId ?? '';
+  const calibration = useCalibration(floorId);
 
   const handleImageSelect = useCallback((file: File) => {
     if (!result) return;
@@ -106,6 +109,8 @@ export function FloorplanBackgroundPanel({ isOpen, onClose, className }: Floorpl
             providerLabel={providerLabel}
             isLoading={result.isLoading}
             error={result.error}
+            isCalibrating={calibration.isActive}
+            hasPointA={calibration.hasPointA}
             onScaleChange={handleScaleChange}
             onRotationChange={handleRotationChange}
             onOpacityChange={handleOpacityChange}
@@ -115,6 +120,8 @@ export function FloorplanBackgroundPanel({ isOpen, onClose, className }: Floorpl
             onRemove={() => { void result.removeBackground(); }}
             onReplaceImage={handleImageSelect}
             onReplacePdf={handlePdfSelect}
+            onCalibrate={calibration.startCalibration}
+            onCancelCalibration={calibration.cancelCalibration}
             t={t}
             colors={colors}
           />
@@ -180,6 +187,8 @@ interface LoadedStateProps {
   providerLabel: string | null;
   isLoading: boolean;
   error: string | null;
+  isCalibrating: boolean;
+  hasPointA: boolean;
   onScaleChange: (v: number[]) => void;
   onRotationChange: (v: number[]) => void;
   onOpacityChange: (v: number[]) => void;
@@ -189,12 +198,14 @@ interface LoadedStateProps {
   onRemove: () => void;
   onReplaceImage: (f: File) => void;
   onReplacePdf: (f: File) => void;
+  onCalibrate: () => void;
+  onCancelCalibration: () => void;
   t: (key: string, opts?: Record<string, unknown>) => string;
   colors: ColorsLike;
 }
 
 function PanelLoadedState(props: LoadedStateProps) {
-  const { background, providerLabel, error, t, colors } = props;
+  const { background, providerLabel, error, isCalibrating, hasPointA, t, colors } = props;
   if (!background) return null;
   return (
     <section className="space-y-4">
@@ -219,33 +230,71 @@ function PanelLoadedState(props: LoadedStateProps) {
         </article>
       </article>
 
-      {/* Transform controls */}
-      <article className="space-y-3 border-t pt-3">
-        <PanelSlider label={t('panels.floorplanBackground.controls.scale')} value={background.transform.scaleX} display={`${background.transform.scaleX.toFixed(2)}×`} onChange={props.onScaleChange} min={0.1} max={5} step={0.05} colors={colors} />
-        <PanelSlider label={t('panels.floorplanBackground.controls.rotation')} value={background.transform.rotation} display={`${Math.round(background.transform.rotation)}°`} onChange={props.onRotationChange} min={0} max={360} step={1} colors={colors} />
-        <PanelSlider label={t('panels.floorplanBackground.controls.opacity')} value={background.opacity} display={formatPercent(background.opacity)} onChange={props.onOpacityChange} min={0} max={1} step={0.05} colors={colors} />
-        <Button variant="ghost" size="sm" onClick={props.onResetTransform} className={`w-full ${colors.text.muted}`}>
-          <RotateCcw className="h-3 w-3 mr-2" />
-          {t('panels.floorplanBackground.controls.resetTransform')}
-        </Button>
-      </article>
+      {/* Calibration mode instructions */}
+      {isCalibrating && (
+        <CalibrationInstructions hasPointA={hasPointA} onCancel={props.onCancelCalibration} t={t} colors={colors} />
+      )}
+
+      {/* Transform controls — hidden while calibrating to reduce visual noise */}
+      {!isCalibrating && (
+        <article className="space-y-3 border-t pt-3">
+          <PanelSlider label={t('panels.floorplanBackground.controls.scale')} value={background.transform.scaleX} display={`${background.transform.scaleX.toFixed(2)}×`} onChange={props.onScaleChange} min={0.1} max={5} step={0.05} colors={colors} />
+          <PanelSlider label={t('panels.floorplanBackground.controls.rotation')} value={background.transform.rotation} display={`${Math.round(background.transform.rotation)}°`} onChange={props.onRotationChange} min={0} max={360} step={1} colors={colors} />
+          <PanelSlider label={t('panels.floorplanBackground.controls.opacity')} value={background.opacity} display={formatPercent(background.opacity)} onChange={props.onOpacityChange} min={0} max={1} step={0.05} colors={colors} />
+          <Button variant="ghost" size="sm" onClick={props.onResetTransform} className={`w-full ${colors.text.muted}`}>
+            <RotateCcw className="h-3 w-3 mr-2" />
+            {t('panels.floorplanBackground.controls.resetTransform')}
+          </Button>
+        </article>
+      )}
 
       {/* Replace / Calibrate */}
-      <article className="space-y-2 border-t pt-3">
-        <FileUploadButton onFileSelect={props.onReplaceImage} accept={IMAGE_ACCEPT} fileType="image" buttonText={t('panels.floorplanBackground.controls.replaceImage')} variant="outline" className="w-full" icon={<Replace className="h-3 w-3 mr-2" />} />
-        <FileUploadButton onFileSelect={props.onReplacePdf} accept={PDF_ACCEPT} fileType="pdf" buttonText={t('panels.floorplanBackground.controls.replacePdf')} variant="outline" className="w-full" icon={<Replace className="h-3 w-3 mr-2" />} />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="block w-full">
-              <Button variant="outline" size="sm" disabled className="w-full">
-                {t('panels.floorplanBackground.controls.calibrate')}
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{t('panels.floorplanBackground.controls.calibratePending')}</TooltipContent>
-        </Tooltip>
-      </article>
+      {!isCalibrating && (
+        <article className="space-y-2 border-t pt-3">
+          <FileUploadButton onFileSelect={props.onReplaceImage} accept={IMAGE_ACCEPT} fileType="image" buttonText={t('panels.floorplanBackground.controls.replaceImage')} variant="outline" className="w-full" icon={<Replace className="h-3 w-3 mr-2" />} />
+          <FileUploadButton onFileSelect={props.onReplacePdf} accept={PDF_ACCEPT} fileType="pdf" buttonText={t('panels.floorplanBackground.controls.replacePdf')} variant="outline" className="w-full" icon={<Replace className="h-3 w-3 mr-2" />} />
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={props.onCalibrate}
+            disabled={background.locked}
+          >
+            <Crosshair className="h-3 w-3 mr-2" />
+            {t('panels.floorplanBackground.controls.calibrate')}
+          </Button>
+        </article>
+      )}
     </section>
+  );
+}
+
+interface CalibrationInstructionsProps {
+  hasPointA: boolean;
+  onCancel: () => void;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+  colors: ColorsLike;
+}
+
+function CalibrationInstructions({ hasPointA, onCancel, t, colors }: CalibrationInstructionsProps) {
+  const key = hasPointA
+    ? 'panels.floorplanBackground.calibration.instructionB'
+    : 'panels.floorplanBackground.calibration.instructionA';
+  return (
+    <article className="border border-blue-400/30 rounded p-3 space-y-2 bg-blue-500/5">
+      <p className={`text-xs font-medium text-blue-400`}>
+        {t(key)}
+      </p>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onCancel}
+        className={`w-full text-xs ${colors.text.muted}`}
+      >
+        <X className="h-3 w-3 mr-1" />
+        {t('panels.floorplanBackground.calibration.instructionCancel')}
+      </Button>
+    </article>
   );
 }
 

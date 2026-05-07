@@ -104,6 +104,20 @@
         "calibrate": "Βαθμονόμηση",
         "calibratePending": "Διαθέσιμο σε επόμενη φάση"
       },
+      "calibration": {
+        "title": "Βαθμονόμηση 2 σημείων",
+        "pixelDist": "Απόσταση σε pixel: {dist} px",
+        "realDist": "Πραγματική απόσταση",
+        "deriveRotation": "Ορισμός ως οριζόντιο",
+        "cancel": "Ακύρωση",
+        "apply": "Εφαρμογή",
+        "remapTitle": "Ενημέρωση polygons",
+        "remapDesc": "{count} polygons θα αναπροσαρμοστούν στη νέα κλίμακα.",
+        "remapConfirm": "Βαθμονόμηση και ενημέρωση",
+        "instructionA": "Κάνε κλικ στο 1ο σημείο στο φόντο",
+        "instructionB": "Κάνε κλικ στο 2ο σημείο στο φόντο",
+        "instructionCancel": "Ακύρωση βαθμονόμησης"
+      },
       "replace": {
         "title": "Αντικατάσταση φόντου",
         "description": "Το υπάρχον φόντο θα αντικατασταθεί με \"{fileName}\". Συνεχίζεις;",

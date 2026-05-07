@@ -104,6 +104,20 @@
         "calibrate": "Calibrate",
         "calibratePending": "Available in next phase"
       },
+      "calibration": {
+        "title": "2-Point Calibration",
+        "pixelDist": "Canvas distance: {dist} px",
+        "realDist": "Real distance",
+        "deriveRotation": "Set as horizontal",
+        "cancel": "Cancel",
+        "apply": "Apply",
+        "remapTitle": "Update polygons",
+        "remapDesc": "{count} polygons will be remapped to the new scale.",
+        "remapConfirm": "Calibrate and update",
+        "instructionA": "Click the first point on the background",
+        "instructionB": "Click the second point on the background",
+        "instructionCancel": "Cancel calibration"
+      },
       "replace": {
         "title": "Replace background",
         "description": "The existing background will be replaced with \"{fileName}\". Continue?",

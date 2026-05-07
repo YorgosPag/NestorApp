@@ -67,9 +67,10 @@ const CentralizedAutoSaveStatus = React.lazy(() => import('../ui/components/Cent
 const OverlayProperties = React.lazy(() => import('../ui/OverlayProperties').then(mod => ({ default: mod.OverlayProperties })));
 const DraggableOverlayToolbar = React.lazy(() => import('../ui/components/DraggableOverlayToolbar').then(mod => ({ default: mod.DraggableOverlayToolbar })));
 const DraggableOverlayProperties = React.lazy(() => import('../ui/components/DraggableOverlayProperties').then(mod => ({ default: mod.DraggableOverlayProperties })));
-// ADR-340 Phase 5 — replaces PdfControlsPanel with multi-provider floorplan-background panel
+// ADR-340 Phase 5-6 — floorplan background panel + dialogs
 const FloorplanBackgroundPanel = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.FloorplanBackgroundPanel })));
 const ReplaceConfirmDialog = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.ReplaceConfirmDialog })));
+const CalibrationDialog = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.CalibrationDialog })));
 const DxfAiChatPanel = React.lazy(() => import('../ai-assistant/components/DxfAiChatPanel'));
 const ToolbarWithCursorCoordinates = React.lazy(() => import('../ui/components/ToolbarWithCursorCoordinates').then(mod => ({ default: mod.ToolbarWithCursorCoordinates })));
 
@@ -378,6 +379,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
       <React.Suspense fallback={<div className="hidden" />}>
         <ReplaceConfirmDialog />
+      </React.Suspense>
+
+      <React.Suspense fallback={<div className="hidden" />}>
+        <CalibrationDialog />
       </React.Suspense>
 
       {USE_AI_DRAWING_ASSISTANT && (

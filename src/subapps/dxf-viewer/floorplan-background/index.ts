@@ -42,17 +42,23 @@ export {
   selectFloorSlot,
   selectActiveFloorId,
   selectPendingReplaceRequest,
+  selectCalibrationSession,
 } from './stores/floorplanBackgroundStore';
 
 export type {
   FloorSlot,
   PendingReplaceRequest,
+  CalibrationSession,
 } from './stores/floorplanBackgroundStore';
 
 export { useFloorplanBackground } from './hooks/useFloorplanBackground';
 export type { UseFloorplanBackgroundResult } from './hooks/useFloorplanBackground';
 
 export { useFloorplanBackgroundForLevel } from './hooks/useFloorplanBackgroundForLevel';
+export type { FloorplanBackgroundForLevelResult } from './hooks/useFloorplanBackgroundForLevel';
+
+export { useCalibration } from './hooks/useCalibration';
+export type { UseCalibrationResult } from './hooks/useCalibration';
 
 export { FloorplanBackgroundCanvas } from './components/FloorplanBackgroundCanvas';
 export type { FloorplanBackgroundCanvasProps } from './components/FloorplanBackgroundCanvas';
@@ -61,3 +67,6 @@ export { FloorplanBackgroundPanel } from './components/FloorplanBackgroundPanel'
 export type { FloorplanBackgroundPanelProps } from './components/FloorplanBackgroundPanel';
 
 export { ReplaceConfirmDialog } from './components/ReplaceConfirmDialog';
+export { CalibrationDialog } from './components/CalibrationDialog';
+export { CalibrationPolygonRemapDialog } from './components/CalibrationPolygonRemapDialog';
+export type { CalibrationPolygonRemapDialogProps } from './components/CalibrationPolygonRemapDialog';
