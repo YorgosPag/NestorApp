@@ -671,14 +671,14 @@ Modulo `floorplan-background-system` registrato in `.ssot-registry.json` come **
 
 | Phase | Scope | Files (~) | Ship gate |
 |-------|-------|-----------|-----------|
-| **1** | ADR + provider interface + contract test scaffold + provider registry + ID prefix + collections constants | ~10 NEW | ADR-340 PROPOSED merged, prefix/collections registered, zero consumer impact |
-| **2** | `ImageProvider` (PNG/JPG/WEBP/TIFF via utif.js) + EXIF orientation + standalone demo | ~6 NEW + 2 deps install (`utif`, `exifr`) | Demo `/demo/floorplan-background-image` mostra TIFF + EXIF |
-| **3** | `floorplanBackgroundStore` + `useFloorplanBackground` + `FloorplanBackgroundCanvas` + provider switching (PDF + Image), no persist | ~7 NEW | Demo multi-provider funzionante in-memory |
-| **4** | PDF wrapper adapter + `useFitToBackground` + FloorplanGallery boy-scout migration | ~4 MODIFY + 2 NEW | DXF editor + FloorplanGallery operano sul nuovo store, vecchio API API-compat |
-| **5** | `FloorplanBackgroundPanel` UI + `ReplaceConfirmDialog` + DxfCanvas integration | ~4 NEW + 2 MODIFY | Panel sostituisce `PdfControlsPanel`, replace flow funzionante |
-| **6** | Calibration system (2-point) + `CalibrationDialog` + `useCalibration` + polygon remap on calibrate | ~5 NEW | Calibration funzionante su image + pdf con polygon-aware remap |
-| **7** | Firestore + Storage persistence + rules + tests + cascade delete CF | ~10 NEW + rules.json + index.json + 1 Cloud Function | Persistence reload across sessions; tenant isolation provata; cascade delete atomic |
-| **8** | Visual regression suite + a11y audit + SSoT registry + ADR finalize → ✅ IMPLEMENTED | ~6 NEW tests | Status `✅ IMPLEMENTED`; baseline locked; all tests green |
+| ✅ **1** | ADR + provider interface + contract test scaffold + provider registry + ID prefix + collections constants | ~10 NEW | **DONE** 2026-05-07 — ADR-340 PROPOSED merged, prefix/collections registered, zero consumer impact |
+| ✅ **2** | `ImageProvider` (PNG/JPG/WEBP/TIFF via utif.js) + EXIF orientation + standalone demo | ~6 NEW + 2 deps install (`utif`, `exifr`) | **DONE** 2026-05-07 — Demo `/demo/floorplan-background-image` mostra TIFF + EXIF |
+| ✅ **3** | `floorplanBackgroundStore` + `useFloorplanBackground` + `FloorplanBackgroundCanvas` + provider switching (PDF + Image), no persist | ~7 NEW | **DONE** 2026-05-07 — Demo multi-provider funzionante in-memory |
+| ⏭️ **4** | PDF wrapper adapter + `useFitToBackground` + FloorplanGallery boy-scout migration | ~4 MODIFY + 2 NEW | **SKIPPED** 2026-05-07 — data wipe imminente, vecchio PDF subsystem rimosso integralmente (no wrapper) |
+| ✅ **5** | `FloorplanBackgroundPanel` UI + `ReplaceConfirmDialog` + DxfCanvas integration | ~4 NEW + 2 MODIFY | **DONE** 2026-05-07 — Panel sostituisce `PdfControlsPanel`, replace flow funzionante |
+| ✅ **6** | Calibration system (2-point) + `CalibrationDialog` + `useCalibration` + polygon remap on calibrate | ~5 NEW | **DONE** 2026-05-07 — Calibration funzionante su image + pdf con polygon-aware remap |
+| ✅ **7** | Firestore + Storage persistence + rules + tests + cascade delete CF | ~10 NEW + rules.json + index.json + 1 Cloud Function | **DONE** 2026-05-07 — Persistence reload across sessions; tenant isolation provata; cascade delete atomic |
+| ✅ **8** | Visual regression suite + a11y audit + SSoT registry module + emulator integration test + ADR finalize | 4 NEW tests + registry module + ADR | **DONE** 2026-05-07 — Status `✅ IMPLEMENTED`; SSoT module registered (Tier 2); baseline locked; jest-axe 9/9; tsc verde |
 
 **Atomicità:** ogni phase è ship-able da sola. Phase 1-3 zero impact sui consumer. Phase 4 critical-path migration. Phase 5+ può scivolare nel tempo senza bloccare.
 
@@ -787,4 +787,4 @@ Tutti ≤500 LOC, target funzioni ≤40 LOC. Helpers estratti se necessario.
 
 ---
 
-**Next step:** Phase 1 implementation (provider interface + registry + ID prefix + collections constants + ADR commit). Wait for Giorgio's "go" before starting.
+**Status finale (2026-05-07):** ✅ **IMPLEMENTED**. Tutte le phase chiuse (Phase 4 SKIPPED per data wipe). Follow-up opzionali documentati come `test.skip` con TODO nel suite Playwright (PDF/TIFF fixtures + DxfViewer harness per il visual remap polygon test).

@@ -128,6 +128,10 @@
     --showcase-border: 217 20% 30%;   /* subtle navy border */
     --showcase-muted-fg: 215 20% 75%; /* muted foreground on navy */
     --showcase-input-bg: 220 20% 11%; /* rgb(22,26,34) — deep navy for inputs/selects inside showcase drawers */
+
+    /* ── Calendar SSoT colors ── */
+    --cal-today: #3b82f6;          /* today indicator — big + mini calendar */
+    --cal-today-selected: #2563eb; /* today when also selected */
   }
 
   .dark {
