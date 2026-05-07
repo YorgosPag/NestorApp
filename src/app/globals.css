@@ -531,6 +531,46 @@
     background: hsl(var(--secondary)) !important;
   }
 
+  /* Sidebar date picker (react-day-picker) — match main calendar dark theme */
+  .rdp {
+    --rdp-background-color: hsl(var(--secondary));
+    --rdp-cell-size: 36px;
+    --rdp-accent-color: #2563eb;
+    --rdp-background-color: hsl(var(--secondary));
+  }
+
+  .rdp-months {
+    background: hsl(var(--secondary));
+  }
+
+  .rdp-month {
+    background: hsl(var(--secondary));
+    color: hsl(var(--card-foreground));
+  }
+
+  .rdp-head_cell {
+    background: transparent;
+    color: #64748b;
+  }
+
+  .rdp-cell {
+    color: hsl(var(--card-foreground));
+  }
+
+  .rdp-day {
+    color: hsl(var(--card-foreground));
+  }
+
+  .rdp-day_selected:not([disabled]) {
+    background-color: #2563eb;
+    color: #ffffff;
+  }
+
+  .rdp-day_today:not([disabled]) {
+    font-weight: bold;
+    color: #2563eb;
+  }
+
   /* Day headers (Mon, Tue, etc.) — subtle accent color */
   .rbc-wrapper .rbc-header {
     background: transparent;
