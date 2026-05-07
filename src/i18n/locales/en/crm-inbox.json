@@ -16,6 +16,11 @@
     "newEvent": "New Event",
     "noEvents": "No events for this period",
     "today": "Today",
+    "toolbar": {
+      "prev": "Previous period",
+      "next": "Next period",
+      "viewSelection": "View selection"
+    },
     "eventTypes": {
       "appointment": "Appointment",
       "call": "Call",

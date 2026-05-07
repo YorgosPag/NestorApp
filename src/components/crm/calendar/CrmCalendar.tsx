@@ -48,6 +48,7 @@ import type { CrmTask } from '@/types/crm';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useCalendarCrossMonthDrag } from './useCalendarCrossMonthDrag';
+import { CalendarToolbar } from './CalendarToolbar';
 
 // ============================================================================
 // TYPES
@@ -105,6 +106,10 @@ export function CrmCalendar({
     errorMessage: t('calendarPage.dialog.createError'),
   });
 
+  // Toolbar state
+  const [calendarTitle, setCalendarTitle] = useState('');
+  const [activeView, setActiveView] = useState('dayGridMonth');
+
   // Dialog state
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
@@ -149,6 +154,8 @@ export function CrmCalendar({
   const handleDatesSet = useCallback(
     (arg: DatesSetArg) => {
       onRangeChange({ start: arg.start, end: arg.end });
+      setCalendarTitle(arg.view.title);
+      setActiveView(arg.view.type);
       const currentIso = arg.view.currentStart.toISOString();
       if (isProgrammaticNav.current) {
         isProgrammaticNav.current = false;
@@ -269,7 +276,7 @@ export function CrmCalendar({
     return <CalendarEventTooltip event={ev} timeText={arg.timeText} />;
   }, []);
 
-  // Keyboard shortcut handlers
+  // View change (toolbar + keyboard shortcuts)
   const goToView = useCallback((view: string) => {
     calendarRef.current?.getApi().changeView(view);
   }, []);
@@ -296,6 +303,15 @@ export function CrmCalendar({
   return (
     <>
       <TooltipProvider>
+        <CalendarToolbar
+          title={calendarTitle}
+          activeView={activeView}
+          onPrev={() => calendarRef.current?.getApi().prev()}
+          onNext={() => calendarRef.current?.getApi().next()}
+          onToday={() => calendarRef.current?.getApi().today()}
+          onViewChange={goToView}
+          onNewEvent={handleNewEvent}
+        />
         <div className="flex items-stretch gap-2">
           {/* Left arrow zone — outside calendar, always reserves space */}
           <div
@@ -315,18 +331,7 @@ export function CrmCalendar({
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, rrulePlugin]}
             initialView="dayGridMonth"
-            headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
-            }}
-            buttonText={{
-              today: t('calendarPage.today'),
-              month: t('calendarPage.views.month'),
-              week: t('calendarPage.views.week'),
-              day: t('calendarPage.views.day'),
-              list: t('calendarPage.views.agenda'),
-            }}
+            headerToolbar={false}
             events={fcEvents}
             editable
             selectable
