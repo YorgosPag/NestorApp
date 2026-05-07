@@ -16,7 +16,7 @@ import { PreviewCanvas } from '../../canvas-v2/preview-canvas';
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
-import { PdfBackgroundCanvas } from '../../pdf-background';
+import { FloorplanBackgroundCanvas } from '../../floorplan-background';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
@@ -47,7 +47,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
   containerHandlers,
   handleOverlayClick, handleMultiOverlayClick, handleCanvasClick, handleUnifiedMouseMove,
   handleDrawingContextMenu,
-  drawingState, entityJoin, pdf, onMouseMove,
+  drawingState, entityJoin, floorId, onMouseMove,
   entityPickingActive,
   guides, guidesVisible, ghostGuide, ghostDiagonalGuide, ghostSegmentLine, highlightedGuideId, selectedGuideIds,
   constructionPoints, highlightedPointId,
@@ -208,15 +208,16 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
           onMouseLeave={containerHandlers.onMouseLeave}
           onContextMenu={handleDrawingContextMenu}
         >
-          {/* PDF Background (z-[-10]) */}
-          <PdfBackgroundCanvas
-            imageUrl={pdf.imageUrl}
-            pdfTransform={pdf.transform}
-            canvasTransform={transform}
-            viewport={viewport}
-            enabled={pdf.enabled}
-            opacity={pdf.opacity}
-          />
+          {/* Floorplan Background (ADR-340 — replaces legacy PdfBackgroundCanvas, z-0) */}
+          {floorId && (
+            <FloorplanBackgroundCanvas
+              floorId={floorId}
+              worldToCanvas={transform}
+              viewport={viewport}
+              cad={{ mode: 'cad-y-up', margins: COORDINATE_LAYOUT.MARGINS }}
+              className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
+            />
+          )}
 
           {/* LayerCanvas (z-0) */}
           {showLayerCanvas && (

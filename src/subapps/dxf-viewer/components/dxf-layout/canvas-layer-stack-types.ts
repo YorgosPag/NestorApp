@@ -8,7 +8,6 @@
 import type { RefObject, MutableRefObject, Dispatch, SetStateAction } from 'react';
 import type { DxfCanvasRef } from '../../canvas-v2';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
-import type { PdfBackgroundTransform } from '../../pdf-background';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import type { OverlayEditorMode } from '../../overlays/types';
@@ -162,13 +161,9 @@ export interface CanvasLayerStackProps {
     onDelete: () => void;
   };
 
-  // === PDF background (grouped) ===
-  pdf: {
-    imageUrl: string | null;
-    transform: PdfBackgroundTransform;
-    enabled: boolean;
-    opacity: number;
-  };
+  // === Floorplan background (ADR-340 — replaces legacy `pdf`) ===
+  /** Active level/floor ID for the floorplan-background system. Null = no level. */
+  floorId: string | null;
 
   // === ADR-189: Construction guides ===
   guides?: readonly Guide[];

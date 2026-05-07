@@ -58,16 +58,45 @@ export class ImageProvider implements IFloorplanBackgroundProvider {
 
   render(ctx: CanvasRenderingContext2D, params: ProviderRenderParams): void {
     if (!this._canvas) return;
-    const { transform, worldToCanvas, opacity } = params;
     ctx.save();
-    ctx.globalAlpha = opacity;
+    ctx.globalAlpha = params.opacity;
+    if (params.cad) {
+      this._applyCadTransform(ctx, params);
+      ctx.drawImage(this._canvas, 0, -this._canvas.height);
+    } else {
+      this._applyScreenTransform(ctx, params);
+      ctx.drawImage(this._canvas, 0, 0);
+    }
+    ctx.restore();
+  }
+
+  private _applyScreenTransform(
+    ctx: CanvasRenderingContext2D,
+    params: ProviderRenderParams,
+  ): void {
+    const { transform, worldToCanvas } = params;
     ctx.translate(worldToCanvas.offsetX, worldToCanvas.offsetY);
     ctx.scale(worldToCanvas.scale, worldToCanvas.scale);
     ctx.translate(transform.translateX, transform.translateY);
     ctx.rotate((transform.rotation * Math.PI) / 180);
     ctx.scale(transform.scaleX, transform.scaleY);
-    ctx.drawImage(this._canvas, 0, 0);
-    ctx.restore();
+  }
+
+  private _applyCadTransform(
+    ctx: CanvasRenderingContext2D,
+    params: ProviderRenderParams,
+  ): void {
+    // Matches PdfBackgroundCanvas pipeline (CAD origin at bottom-left, Y-up)
+    const { transform, worldToCanvas, viewport, cad } = params;
+    if (!cad) return;
+    ctx.translate(cad.margins.left, viewport.height - cad.margins.top);
+    ctx.scale(1, -1); // Y-flip → world Y-up
+    ctx.translate(worldToCanvas.offsetX, worldToCanvas.offsetY);
+    ctx.scale(worldToCanvas.scale, worldToCanvas.scale);
+    ctx.translate(transform.translateX, transform.translateY);
+    ctx.rotate((transform.rotation * Math.PI) / 180);
+    ctx.scale(transform.scaleX, transform.scaleY);
+    ctx.scale(1, -1); // restore upright image after Y-flipped world
   }
 
   getNaturalBounds(): NaturalBounds {

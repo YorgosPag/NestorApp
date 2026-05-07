@@ -34,6 +34,14 @@ export interface ProviderLoadResult {
   error?: string;
 }
 
+// ─── CAD coordinate adaptation ────────────────────────────────────────────────
+
+export interface CadCoordinateAdaptation {
+  mode: 'cad-y-up';
+  /** Ruler/origin margins applied before world transform. Matches DXF subsystem. */
+  margins: { left: number; top: number };
+}
+
 // ─── Render params ────────────────────────────────────────────────────────────
 
 export interface ProviderRenderParams {
@@ -41,6 +49,8 @@ export interface ProviderRenderParams {
   worldToCanvas: ViewTransform;
   viewport: { width: number; height: number };
   opacity: number;
+  /** Optional CAD adaptation. When set, provider applies Y-flip + margins. */
+  cad?: CadCoordinateAdaptation;
 }
 
 // ─── Background transform ─────────────────────────────────────────────────────

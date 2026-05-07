@@ -1,9 +1,11 @@
 export type { IFloorplanBackgroundProvider } from './providers/IFloorplanBackgroundProvider';
 
 export { ImageProvider } from './providers/ImageProvider';
+export { PdfPageProvider } from './providers/PdfPageProvider';
 
 export type {
   BackgroundTransform,
+  CadCoordinateAdaptation,
   CalibrationData,
   CalibrationUnit,
   FloorplanBackground,
@@ -50,5 +52,12 @@ export type {
 export { useFloorplanBackground } from './hooks/useFloorplanBackground';
 export type { UseFloorplanBackgroundResult } from './hooks/useFloorplanBackground';
 
+export { useFloorplanBackgroundForLevel } from './hooks/useFloorplanBackgroundForLevel';
+
 export { FloorplanBackgroundCanvas } from './components/FloorplanBackgroundCanvas';
 export type { FloorplanBackgroundCanvasProps } from './components/FloorplanBackgroundCanvas';
+
+export { FloorplanBackgroundPanel } from './components/FloorplanBackgroundPanel';
+export type { FloorplanBackgroundPanelProps } from './components/FloorplanBackgroundPanel';
+
+export { ReplaceConfirmDialog } from './components/ReplaceConfirmDialog';

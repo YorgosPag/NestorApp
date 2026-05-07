@@ -78,7 +78,40 @@
     "colors": {
       "loading": "Φόρτωση χρωμάτων..."
     },
-    "selectPanel": "Επιλογή πίνακα"
+    "selectPanel": "Επιλογή πίνακα",
+    "floorplanBackground": {
+      "title": "Φόντο Κάτοψης",
+      "providerPdf": "PDF",
+      "providerImage": "Εικόνα",
+      "noLevelSelected": "Δεν έχει επιλεγεί επίπεδο",
+      "loading": "Φόρτωση...",
+      "empty": {
+        "message": "Δεν υπάρχει φόντο σε αυτό το επίπεδο.",
+        "uploadPdf": "Φόρτωση PDF",
+        "uploadImage": "Φόρτωση Εικόνας",
+        "supportedFormats": "Υποστηρίζονται: PDF, PNG, JPG, WEBP, TIFF"
+      },
+      "controls": {
+        "visible": "Ορατότητα",
+        "locked": "Κλείδωμα",
+        "remove": "Αφαίρεση φόντου",
+        "scale": "Κλίμακα",
+        "rotation": "Περιστροφή",
+        "opacity": "Διαφάνεια",
+        "resetTransform": "Επαναφορά μετασχηματισμού",
+        "replaceImage": "Αντικατάσταση με εικόνα",
+        "replacePdf": "Αντικατάσταση με PDF",
+        "calibrate": "Βαθμονόμηση",
+        "calibratePending": "Διαθέσιμο σε επόμενη φάση"
+      },
+      "replace": {
+        "title": "Αντικατάσταση φόντου",
+        "description": "Το υπάρχον φόντο θα αντικατασταθεί με \"{fileName}\". Συνεχίζεις;",
+        "cancel": "Ακύρωση",
+        "confirm": "Αντικατάσταση",
+        "unknownFile": "νέο αρχείο"
+      }
+    }
   },
   "layerActions": {
     "changeColor": "Αλλαγή χρώματος",

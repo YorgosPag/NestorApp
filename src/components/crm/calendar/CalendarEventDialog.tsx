@@ -88,10 +88,10 @@ export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: C
         <article className={sp.spaceBetween.md}>
           {/* Title & Type Badge */}
           <header className={`flex items-start justify-between ${sp.gap.sm}`}>
-            <h3 className={typo.heading.md}>{event.title}</h3>
+            <h3 className={`${typo.heading.md} min-w-0 flex-1`}>{event.title}</h3>
             <Badge
               variant="outline"
-              className="calendar-event-badge"
+              className="calendar-event-badge shrink-0"
               data-event-type={event.eventType}
             >
               {t(`calendarPage.eventTypes.${event.eventType}`)}
@@ -138,7 +138,7 @@ export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: C
           </section>
 
           {/* Actions */}
-          <footer className={`flex justify-end ${sp.gap.sm} ${sp.padding.top.sm} ${borders.quick.borderT}`}>
+          <footer className={`flex flex-wrap justify-end ${sp.gap.sm} ${sp.padding.top.sm} ${borders.quick.borderT}`}>
             {event.source === 'task' && onEditTask && (
               <Button
                 variant="outline"

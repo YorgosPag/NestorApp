@@ -1706,10 +1706,15 @@ export const PANEL_ANCHORING = {
       width: 340,
       height: 500,
     },
-    /** PDF Background Controls Panel (Ρυθμίσεις PDF) */
+    /** PDF Background Controls Panel (Ρυθμίσεις PDF) — legacy ADR-340 supersedes */
     PDF_CONTROLS: {
       width: 280,
       height: 450,
+    },
+    /** Floorplan Background Controls Panel (ADR-340) — PDF + Image + Calibration */
+    FLOORPLAN_BACKGROUND_CONTROLS: {
+      width: 300,
+      height: 520,
     },
     /** Performance Monitor Panel */
     PERFORMANCE_MONITOR: {

@@ -78,7 +78,40 @@
     "colors": {
       "loading": "Loading..."
     },
-    "selectPanel": "Select panel"
+    "selectPanel": "Select panel",
+    "floorplanBackground": {
+      "title": "Floorplan Background",
+      "providerPdf": "PDF",
+      "providerImage": "Image",
+      "noLevelSelected": "No level selected",
+      "loading": "Loading...",
+      "empty": {
+        "message": "No background on this level.",
+        "uploadPdf": "Upload PDF",
+        "uploadImage": "Upload Image",
+        "supportedFormats": "Supports: PDF, PNG, JPG, WEBP, TIFF"
+      },
+      "controls": {
+        "visible": "Visibility",
+        "locked": "Locked",
+        "remove": "Remove background",
+        "scale": "Scale",
+        "rotation": "Rotation",
+        "opacity": "Opacity",
+        "resetTransform": "Reset transform",
+        "replaceImage": "Replace with image",
+        "replacePdf": "Replace with PDF",
+        "calibrate": "Calibrate",
+        "calibratePending": "Available in next phase"
+      },
+      "replace": {
+        "title": "Replace background",
+        "description": "The existing background will be replaced with \"{fileName}\". Continue?",
+        "cancel": "Cancel",
+        "confirm": "Replace",
+        "unknownFile": "new file"
+      }
+    }
   },
   "layerActions": {
     "changeColor": "Change color",

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useFloorplanBackground } from '../hooks/useFloorplanBackground';
-import type { FloorplanBackground, ViewTransform } from '../providers/types';
+import type { CadCoordinateAdaptation, FloorplanBackground, ViewTransform } from '../providers/types';
 import type { IFloorplanBackgroundProvider } from '../providers/IFloorplanBackgroundProvider';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -12,6 +12,8 @@ export interface FloorplanBackgroundCanvasProps {
   floorId: string;
   worldToCanvas: ViewTransform;
   viewport: { width: number; height: number };
+  /** Optional CAD adaptation (Y-flip + margins). Required for DXF integration. */
+  cad?: CadCoordinateAdaptation;
   /** Consumer sets z-index appropriate for their stacking context (ADR-002). */
   className?: string;
 }
@@ -22,6 +24,7 @@ export function FloorplanBackgroundCanvas({
   floorId,
   worldToCanvas,
   viewport,
+  cad,
   className,
 }: FloorplanBackgroundCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -32,11 +35,13 @@ export function FloorplanBackgroundCanvas({
   const providerRef = useRef<IFloorplanBackgroundProvider | null>(provider);
   const worldToCanvasRef = useRef<ViewTransform>(worldToCanvas);
   const viewportRef = useRef<{ width: number; height: number }>(viewport);
+  const cadRef = useRef<CadCoordinateAdaptation | undefined>(cad);
 
   useEffect(() => { backgroundRef.current = background; }, [background]);
   useEffect(() => { providerRef.current = provider; }, [provider]);
   useEffect(() => { worldToCanvasRef.current = worldToCanvas; }, [worldToCanvas]);
   useEffect(() => { viewportRef.current = viewport; }, [viewport]);
+  useEffect(() => { cadRef.current = cad; }, [cad]);
 
   // Resize canvas backing store when viewport changes
   useEffect(() => {
@@ -68,6 +73,7 @@ export function FloorplanBackgroundCanvas({
           worldToCanvas: worldToCanvasRef.current,
           viewport: vp,
           opacity: bg.opacity,
+          cad: cadRef.current,
         });
       }
 
