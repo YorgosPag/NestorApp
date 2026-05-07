@@ -30,6 +30,8 @@ import {
   type Firestore,
 } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { FloorplanCascadeDeleteService } from './floorplan-cascade-delete.service';
@@ -48,6 +50,10 @@ export interface WipeAllForFloorResult {
   fileRecordsDeleted: number;
   storageObjectsDeleted: number;
   storageObjectsFailed: number;
+  /** Extra storage objects removed by canonical floor-category prefix sweep
+   * (orphans not tracked by FileRecord rows; e.g. derivations from earlier
+   * wipes that had already lost their parent FileRecord). */
+  categoryPathSweptCount: number;
 }
 
 export interface FloorWipePreview {
@@ -160,6 +166,73 @@ async function loadFileRows(
   return rows.filter((r): r is FileRow => r !== null);
 }
 
+async function loadFloorProjectId(
+  db: Firestore,
+  companyId: string,
+  floorId: string,
+): Promise<string | null> {
+  try {
+    const snap = await db.collection(COLLECTIONS.FLOORS).doc(floorId).get();
+    if (!snap.exists) return null;
+    const data = snap.data() as { companyId?: string; projectId?: string };
+    if (data.companyId && data.companyId !== companyId) {
+      logger.warn('Cross-tenant floor doc skipped during wipe', { floorId });
+      return null;
+    }
+    return typeof data.projectId === 'string' && data.projectId.length > 0
+      ? data.projectId
+      : null;
+  } catch (err) {
+    logger.warn('Floor projectId lookup failed (non-blocking)', {
+      floorId,
+      error: getErrorMessage(err),
+    });
+    return null;
+  }
+}
+
+async function sweepFloorCategoryPath(
+  companyId: string,
+  projectId: string,
+  floorId: string,
+): Promise<{ deleted: number; failed: number }> {
+  const canonicalPath = buildStoragePath({
+    companyId, projectId, entityType: 'floor', entityId: floorId,
+    domain: FILE_DOMAINS.CONSTRUCTION, category: FILE_CATEGORIES.FLOORPLANS,
+    fileId: '_sweep_', ext: 'bin',
+  }).path;
+  // Strip `_sweep_.bin` to get the `files/` directory prefix.
+  const prefix = canonicalPath.slice(0, canonicalPath.lastIndexOf('/') + 1);
+  const bucket = getAdminStorage().bucket();
+  let deleted = 0;
+  let failed = 0;
+  try {
+    const [matches] = await bucket.getFiles({ prefix });
+    if (matches.length === 0) return { deleted, failed };
+    await Promise.all(
+      matches.map(async (f) => {
+        try {
+          await f.delete({ ignoreNotFound: true });
+          deleted += 1;
+        } catch (innerErr) {
+          failed += 1;
+          logger.warn('Floor-category sweep delete failed (non-blocking)', {
+            path: f.name,
+            error: getErrorMessage(innerErr),
+          });
+        }
+      }),
+    );
+  } catch (err) {
+    failed += 1;
+    logger.warn('Floor-category sweep prefix-list failed (non-blocking)', {
+      prefix,
+      error: getErrorMessage(err),
+    });
+  }
+  return { deleted, failed };
+}
+
 async function deleteStorageObjects(
   storagePaths: string[],
 ): Promise<{ deleted: number; failed: number }> {
@@ -264,9 +337,10 @@ async function executeWipe(
   floorId: string,
 ): Promise<WipeAllForFloorResult> {
   const db = getDb();
-  const [backgrounds, dxfLevels] = await Promise.all([
+  const [backgrounds, dxfLevels, projectId] = await Promise.all([
     listBackgrounds(db, companyId, floorId),
     listDxfLevels(db, companyId, floorId),
+    loadFloorProjectId(db, companyId, floorId),
   ]);
 
   const fileIds = collectFileIds(backgrounds, dxfLevels);
@@ -290,14 +364,23 @@ async function executeWipe(
     .filter((p): p is string => typeof p === 'string' && p.length > 0);
   const storage = await deleteStorageObjects(storagePaths);
 
+  // Extra sweep: catch orphan binaries left under the canonical floor-category
+  // prefix (derivations whose parent FileRecord was already deleted by an
+  // earlier wipe that lacked prefix-list logic). Skipped silently for legacy
+  // floors without a Firestore floor doc / projectId.
+  const sweep = projectId
+    ? await sweepFloorCategoryPath(companyId, projectId, floorId)
+    : { deleted: 0, failed: 0 };
+
   return {
     floorplanOverlaysDeleted: cascade.floorplanOverlaysDeleted,
     dxfOverlayItemsDeleted: cascade.dxfOverlayItemsDeleted,
     dxfLevelsDeleted,
     floorplanBackgroundsDeleted,
     fileRecordsDeleted,
-    storageObjectsDeleted: storage.deleted,
-    storageObjectsFailed: storage.failed,
+    storageObjectsDeleted: storage.deleted + sweep.deleted,
+    storageObjectsFailed: storage.failed + sweep.failed,
+    categoryPathSweptCount: sweep.deleted,
   };
 }
 
