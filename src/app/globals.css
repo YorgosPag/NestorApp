@@ -530,6 +530,7 @@
   .rbc-wrapper .rbc-month-view table {
     table-layout: fixed;
     width: 100%;
+    border-collapse: collapse;
   }
 
   /* Mini-picker calendar (react-big-calendar small instance) — match large calendar background */
@@ -666,8 +667,6 @@
   /* Month row borders — removed for clean look */
   .rbc-wrapper .rbc-month-row {
     border-color: transparent;
-    display: flex !important;
-    width: 100% !important;
   }
 
   .rbc-wrapper .rbc-month-row + .rbc-month-row {
