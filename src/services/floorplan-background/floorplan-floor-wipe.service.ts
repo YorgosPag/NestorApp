@@ -167,14 +167,34 @@ async function deleteStorageObjects(
   const bucket = getAdminStorage().bucket();
   let deleted = 0;
   let failed = 0;
+  // Prefix-list per canonical storagePath to also catch FloorplanProcessService
+  // derivations: `{storagePath}.processed.json`, `{storagePath}.thumbnail.png`,
+  // and any future derivation appended to the canonical path.
   await Promise.all(
     storagePaths.map(async (path) => {
       try {
-        await bucket.file(path).delete({ ignoreNotFound: true });
-        deleted += 1;
+        const [matches] = await bucket.getFiles({ prefix: path });
+        if (matches.length === 0) {
+          await bucket.file(path).delete({ ignoreNotFound: true });
+          return;
+        }
+        await Promise.all(
+          matches.map(async (f) => {
+            try {
+              await f.delete({ ignoreNotFound: true });
+              deleted += 1;
+            } catch (innerErr) {
+              failed += 1;
+              logger.warn('Storage delete failed (derivation, non-blocking)', {
+                path: f.name,
+                error: getErrorMessage(innerErr),
+              });
+            }
+          }),
+        );
       } catch (err) {
         failed += 1;
-        logger.warn('Storage delete failed (non-blocking)', {
+        logger.warn('Storage prefix-list failed (non-blocking)', {
           path,
           error: getErrorMessage(err),
         });

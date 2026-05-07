@@ -39,6 +39,7 @@ import { StepPropertySelector } from './components/StepPropertySelector';
 import { StepUpload } from './components/StepUpload';
 import { StepStoragePicker } from './components/StepStoragePicker';
 import type { FloorplanType } from './hooks/useFloorplanImportState';
+import type { FloorplanFormat } from './hooks/useFloorplanSmartUpload';
 import type { EntityType } from '@/config/domain-constants';
 import '@/lib/design-system';
 
@@ -57,6 +58,9 @@ export interface WizardCompleteMeta {
   entityLabel?: string;
   /** FileRecord ID created by wizard upload — needed for linkSceneToLevel after refresh */
   fileId?: string;
+  /** ADR-340 Phase 4 reborn FOLLOW-UP: payload format — callers must NOT trigger DXF
+   * scene wiring (linkSceneToLevel / cadFiles processor) when format !== 'dxf'. */
+  format?: FloorplanFormat;
 }
 
 interface FloorplanImportWizardProps {
@@ -137,7 +141,7 @@ export function FloorplanImportWizard({
     [t, isNamespaceReady, mode],
   );
 
-  const handleUploadComplete = useCallback((file: File, fileId?: string) => {
+  const handleUploadComplete = useCallback((file: File, fileId?: string, format?: FloorplanFormat) => {
     // 🏢 ADR-240: Build WizardCompleteMeta from uploadConfig so callers can configure auto-save
     const cfg = state.uploadConfig;
     if (cfg && onComplete) {
@@ -149,6 +153,7 @@ export function FloorplanImportWizard({
         purpose: cfg.purpose ?? '',
         entityLabel: cfg.entityLabel,
         fileId,
+        format,
       };
       onComplete(file, meta);
     } else {
@@ -157,6 +162,7 @@ export function FloorplanImportWizard({
         entityType: 'floor',
         entityId: '',
         purpose: '',
+        format,
       });
     }
   }, [onComplete, state.uploadConfig]);
@@ -270,7 +276,7 @@ export function FloorplanImportWizard({
           {mode === 'import' && state.step === 6 && state.uploadConfig && (
             <StepUpload
               config={state.uploadConfig}
-              onComplete={(file, fileId) => handleUploadComplete(file, fileId)}
+              onComplete={(file, fileId, format) => handleUploadComplete(file, fileId, format)}
             />
           )}
 

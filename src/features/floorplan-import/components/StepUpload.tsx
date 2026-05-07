@@ -36,6 +36,7 @@ import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
 import { useFloorplanSmartUpload } from '../hooks/useFloorplanSmartUpload';
 import type {
   FloorWipePreview,
+  FloorplanFormat,
   SmartUploadResult,
 } from '../hooks/useFloorplanSmartUpload';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
@@ -53,8 +54,9 @@ import '@/lib/design-system';
 
 interface StepUploadProps {
   config: FloorplanUploadConfig;
-  /** fileId is the FileRecord ID created during upload — passed so callers can link the scene to the level */
-  onComplete: (file: File, fileId?: string) => void;
+  /** fileId is the FileRecord ID created during upload — passed so callers can link the scene to the level.
+   * `format` lets callers branch on payload type (DXF vs raster) — raster must NOT trigger DXF scene wiring. */
+  onComplete: (file: File, fileId?: string, format?: FloorplanFormat) => void;
 }
 
 // =============================================================================
@@ -146,7 +148,7 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
         }
       }
       setUploadSuccess(true);
-      onComplete(file, result.fileId);
+      onComplete(file, result.fileId, result.format);
     }
   }, [smart, floorId, existingFile, config.userId, onComplete]);
 

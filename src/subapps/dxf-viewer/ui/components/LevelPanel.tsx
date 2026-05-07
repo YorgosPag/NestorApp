@@ -433,6 +433,9 @@ export function LevelPanel({
               entityLabel: meta.entityLabel,
               fileRecordId: meta.fileId,
             };
+            // ADR-340 Phase 4 reborn FOLLOW-UP — context update is safe for any
+            // payload (writes only floorId/buildingId/entityLabel, NOT sceneFileId).
+            // Lets `useFloorplanBackgroundForLevel` resolve the real floor for raster.
             if (currentLevelId) {
               const floorplanType = entityTypeToFloorplanType(meta.entityType);
               if (floorplanType) {
@@ -445,6 +448,11 @@ export function LevelPanel({
                 });
               }
             }
+            // Raster (PDF / image) is already persisted via /api/floorplan-backgrounds
+            // inside the Wizard. The DXF scene importer must NOT run for raster —
+            // it would push the raw bytes through the cadFiles processor and
+            // wire `dxf_viewer_levels.sceneFileId` to a non-DXF file.
+            if (meta.format && meta.format !== 'dxf') return;
             onSceneImported(file, undefined, saveContext);
           }}
         />

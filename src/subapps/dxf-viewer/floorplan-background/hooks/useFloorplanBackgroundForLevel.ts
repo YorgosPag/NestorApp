@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useLevels } from '../../systems/levels/useLevels';
 import { useFloorplanBackground, type UseFloorplanBackgroundResult } from './useFloorplanBackground';
 import { useFloorplanBackgroundPersistence } from './useFloorplanBackgroundPersistence';
@@ -32,27 +32,41 @@ export interface FloorplanBackgroundForLevelResult extends UseFloorplanBackgroun
 
 /**
  * Binds the active DXF level to the floorplan-background store + Phase 7
- * persistence. `levelId` acts as `floorId` — each level has 0..1 background.
+ * persistence.
+ *
+ * ADR-340 keys backgrounds by the **real building floorId** (e.g. `flr_894...`),
+ * NOT by the synthetic `levelId` ("default"). When a Level has been linked to
+ * a building floor (via the import Wizard → `updateLevelContext`), we resolve
+ * `level.floorId` and use it as the canonical key for the store + persistence
+ * + API calls. Backward-compat fallback: if no `floorId` is present, the
+ * `levelId` is used as the key (legacy levels without building linkage).
  */
 export function useFloorplanBackgroundForLevel(): FloorplanBackgroundForLevelResult | null {
-  const { currentLevelId } = useLevels();
+  const { currentLevelId, levels } = useLevels();
   const setActiveFloor = useFloorplanBackgroundStore((s) => s.setActiveFloor);
+
+  // Resolve real floorId from the current Level.
+  const resolvedFloorId = useMemo(() => {
+    if (!currentLevelId) return null;
+    const level = levels.find((l) => l.id === currentLevelId);
+    return level?.floorId ?? currentLevelId;
+  }, [currentLevelId, levels]);
 
   // Idempotent on every render — guard inside registerProviders().
   useEffect(() => { registerProviders(); }, []);
 
   useEffect(() => {
-    setActiveFloor(currentLevelId);
-  }, [currentLevelId, setActiveFloor]);
+    setActiveFloor(resolvedFloorId);
+  }, [resolvedFloorId, setActiveFloor]);
 
   // Phase 7 — hydrate from server + debounced commit on store changes.
-  useFloorplanBackgroundPersistence(currentLevelId);
+  useFloorplanBackgroundPersistence(resolvedFloorId);
 
-  const result = useFloorplanBackground(currentLevelId ?? '__no_level__');
+  const result = useFloorplanBackground(resolvedFloorId ?? '__no_level__');
 
   const uploadBackground = useCallback(
     async (file: File, providerId: ProviderId) => {
-      if (!currentLevelId) throw new Error('No active level — cannot upload background');
+      if (!resolvedFloorId) throw new Error('No active floor — cannot upload background');
 
       // 1) Load provider locally to derive naturalBounds + metadata.
       const provider = getProvider(providerId);
@@ -71,7 +85,7 @@ export function useFloorplanBackgroundForLevel(): FloorplanBackgroundForLevelRes
       // 2) Upload via API.
       const { background, fileRecord } = await FloorplanBackgroundApiClient.upload({
         file,
-        floorId: currentLevelId,
+        floorId: resolvedFloorId,
         providerId,
         naturalWidth: loadResult.bounds.width,
         naturalHeight: loadResult.bounds.height,
@@ -85,20 +99,20 @@ export function useFloorplanBackgroundForLevel(): FloorplanBackgroundForLevelRes
         : { kind: 'file' as const, file };
       await useFloorplanBackgroundStore
         .getState()
-        ._hydratePersistedBackground(currentLevelId, background, source);
+        ._hydratePersistedBackground(resolvedFloorId, background, source);
 
       logger.info('Background uploaded', {
-        floorId: currentLevelId,
+        floorId: resolvedFloorId,
         backgroundId: background.id,
         fileId: background.fileId,
       });
     },
-    [currentLevelId],
+    [resolvedFloorId],
   );
 
   const deleteBackground = useCallback(async () => {
-    if (!currentLevelId) return;
-    const slot = useFloorplanBackgroundStore.getState().floors[currentLevelId];
+    if (!resolvedFloorId) return;
+    const slot = useFloorplanBackgroundStore.getState().floors[resolvedFloorId];
     const bgId = slot?.background?.id;
     if (bgId) {
       try {
@@ -107,9 +121,9 @@ export function useFloorplanBackgroundForLevel(): FloorplanBackgroundForLevelRes
         logger.error('Server delete failed — clearing local state anyway', { bgId, err });
       }
     }
-    await useFloorplanBackgroundStore.getState().removeBackground(currentLevelId);
-  }, [currentLevelId]);
+    await useFloorplanBackgroundStore.getState().removeBackground(resolvedFloorId);
+  }, [resolvedFloorId]);
 
-  if (!currentLevelId) return null;
-  return { ...result, floorId: currentLevelId, uploadBackground, deleteBackground };
+  if (!resolvedFloorId) return null;
+  return { ...result, floorId: resolvedFloorId, uploadBackground, deleteBackground };
 }

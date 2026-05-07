@@ -325,15 +325,12 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
               <TooltipContent>{t('tools.pdfBackground')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-
           <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
-
           {/* 🏢 ENTERPRISE: Upload DXF - Shadcn Button (NO BORDERS) */}
           <UploadDxfButton
             title="Upload DXF File (Legacy)"
             onFileSelect={onSceneImported}
           />
-
           {/* 🏢 ENTERPRISE: Enhanced Import - Shadcn Button (NO BORDERS) */}
           <TooltipProvider>
             <Tooltip>
@@ -370,9 +367,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
               <TooltipContent>{t('toolbar.importFloorplanWizard')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-
           <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
-
           {toolGroups.map((group, groupIndex) => (
             <div key={group.name} className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
               {group.tools.map((tool) => (
@@ -481,6 +476,11 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
         onClose={() => setShowImportWizard(false)}
         onComplete={(file, meta) => {
           setShowImportWizard(false);
+          // ADR-340 Phase 4 reborn FOLLOW-UP — raster (PDF / image) is already
+          // persisted via /api/floorplan-backgrounds inside the Wizard. The
+          // legacy DXF scene importer must NOT run for raster — it would push
+          // the raw PDF bytes through the cadFiles processor.
+          if (meta.format && meta.format !== 'dxf') return;
           // 🏢 ADR-240: Pass entity context so auto-save writes correct entityType/entityId
           const saveContext: DxfSaveContext = {
             companyId: meta.companyId || undefined,
