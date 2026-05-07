@@ -25,7 +25,7 @@ export interface CalendarToolbarProps {
 // CONSTANTS
 // ============================================================================
 
-const RIBBON_BLUE = '#3b82f6';
+const RIBBON_BLUE = 'var(--cal-today)';
 
 const VIEWS = [
   { key: 'timeGridWeek', labelKey: 'calendarPage.views.day' },

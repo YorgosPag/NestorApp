@@ -553,7 +553,7 @@
   }
 
   .fc-wrapper .fc-day-today .fc-daygrid-day-number {
-    background: #3b82f6;
+    background: var(--cal-today);
     color: #ffffff;
     border-radius: 9999px;
     padding: 0.125rem 0.5rem;
@@ -601,7 +601,7 @@
 
   /* Oggi — classe custom via modifiersClassNames (bypassa classNames.today = bg-accent) */
   .mini-cal-today:not([data-selected="true"]) .rdp-day_button {
-    background-color: #3b82f6 !important;
+    background-color: var(--cal-today) !important;
     color: #ffffff !important;
     border-radius: 9999px !important;
     font-weight: 700 !important;
@@ -609,7 +609,7 @@
 
   /* Oggi + selezionato — fill uguale, border-radius cerchio */
   .mini-cal-today[data-selected="true"] .rdp-day_button {
-    background-color: #2563eb !important;
+    background-color: var(--cal-today-selected) !important;
     color: #ffffff !important;
     border-radius: 9999px !important;
     font-weight: 700 !important;
@@ -716,7 +716,7 @@
   }
 
   .fc-otlk-hdr__num--today {
-    background: #3b82f6;
+    background: var(--cal-today);
     color: #ffffff;
     font-weight: 600;
   }
