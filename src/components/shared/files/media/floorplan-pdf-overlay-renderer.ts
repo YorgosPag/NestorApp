@@ -26,6 +26,7 @@ import {
   rectBoundsToScene,
   renderOverlayPolygons,
   screenToWorld,
+  type OverlayLabel,
 } from './overlay-polygon-renderer';
 
 const ZERO_PAN: PanOffset = { x: 0, y: 0 };
@@ -79,6 +80,7 @@ export function renderPdfWithOverlays(
   highlightedUnitId?: string | null,
   zoom: number = 1,
   panOffset: PanOffset = ZERO_PAN,
+  getLabel?: (overlay: FloorOverlayItem) => OverlayLabel | null | undefined,
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -103,5 +105,5 @@ export function renderPdfWithOverlays(
   // Draw raster image (Y-DOWN raster: top-left at world (0,0), bottom-right at (W,H))
   ctx.drawImage(image, fit.offsetX, fit.offsetY, bounds.width * fit.scale, bounds.height * fit.scale);
 
-  renderOverlayPolygons(ctx, overlays, scene, fit, { highlightedUnitId });
+  renderOverlayPolygons(ctx, overlays, scene, fit, { highlightedUnitId, getLabel });
 }

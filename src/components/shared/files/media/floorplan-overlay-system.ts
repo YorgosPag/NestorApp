@@ -19,9 +19,11 @@ import {
   renderOverlayPolygons,
   screenToWorld as ssotScreenToWorld,
   type SceneBounds,
+  type OverlayLabel,
 } from './overlay-polygon-renderer';
 
 export { OVERLAY_FALLBACK } from './overlay-polygon-renderer';
+export type { OverlayLabel } from './overlay-polygon-renderer';
 
 // ============================================================================
 // TYPES
@@ -55,11 +57,12 @@ export function drawOverlayPolygons(
   zoom: number,
   panOffset: PanOffset,
   highlightedUnitId?: string | null,
+  getLabel?: (overlay: FloorOverlayItem) => OverlayLabel | null | undefined,
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx || overlays.length === 0) return;
   const fit = computeFitTransform(canvas.width, canvas.height, bounds, zoom, panOffset);
-  renderOverlayPolygons(ctx, overlays, bounds, fit, { highlightedUnitId });
+  renderOverlayPolygons(ctx, overlays, bounds, fit, { highlightedUnitId, getLabel });
 }
 
 // ============================================================================

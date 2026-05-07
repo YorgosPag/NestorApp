@@ -45,6 +45,7 @@ export function FloorplanGallery({
   highlightedOverlayUnitId,
   onHoverOverlay,
   onClickOverlay,
+  propertyLabels,
 }: FloorplanGalleryProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const iconSizes = useIconSizes();
@@ -53,15 +54,12 @@ export function FloorplanGallery({
   // Canvas refs for DXF/PDF rendering (inline + fullscreen)
   const inlineCanvasRef = useRef<HTMLCanvasElement>(null);
   const modalCanvasRef = useRef<HTMLCanvasElement>(null);
-
   // Filter to only floorplan files
   const floorplanFiles = useMemo(() => filterFloorplanFiles(files), [files]);
-
   // Navigation state
   const [currentIndex, setCurrentIndex] = useState(
     Math.min(initialIndex, Math.max(0, floorplanFiles.length - 1)),
   );
-
   // Current file
   const currentFile = floorplanFiles[currentIndex] || null;
   const fileExt = currentFile?.ext?.toLowerCase() || '';
@@ -69,49 +67,37 @@ export function FloorplanGallery({
   const isDxf = fileExt === 'dxf' || fileExt === 'json';
   const isPdf = fileExt === 'pdf';
   const isImage = currentFile && !isDxf && !isPdf;
-
   // DXF scene loading (extracted hook)
   const { loadedScene, isLoading, sceneError } = useFloorplanSceneLoader(currentFile, isDxf, fileExt);
-
   // PDF loading — for SPEC-237D overlay support on PDF backgrounds
   const { pdfImage, pdfDimensions, isPdfLoading, pdfError } = useFloorplanPdfLoader(currentFile, isPdf);
-
   // Raw image loading (PNG/JPEG/WEBP/TIFF) — same canvas+overlay path as PDF.
   const { imageElement, imageDimensions, isImageLoading, imageError } = useFloorplanImageLoader(currentFile, !!isImage);
-
   // Unified raster source — PDF page-1 image OR raw image. Renderer is format-agnostic.
   const isRaster = isPdf || !!isImage;
   const rasterImage = pdfImage ?? imageElement;
   const rasterBounds = pdfDimensions ?? imageDimensions;
-
   // DXF bounds (only used for DXF — raster uses editor-exact transform inside the renderer)
   const currentBounds = useMemo(() => {
     if (isDxf) return loadedScene?.bounds ?? null;
     return null;
   }, [isDxf, loadedScene?.bounds]);
-
   // Fullscreen modal state (ADR-241 centralized)
   const fullscreen = useFullscreen();
-
   // DXF drawing mode — dark (colored) or light (black & white)
   const [drawingMode, setDrawingMode] = useState<DxfDrawingMode>('dark');
-
   // Zoom + Pan — inline view
   const inlineZP = useZoomPan(ZOOM_CONFIG);
-
   // Zoom + Pan — fullscreen modal (independent instance)
   const modalZP = useZoomPan(ZOOM_CONFIG);
-
   // SPEC-237C: AABB cache for DXF hit-testing (PDF uses dedicated hitTestPdfOverlays)
   const overlayAABBs = useMemo(
     () => isDxf && overlays ? computeOverlayAABBs(overlays) : [],
     [isDxf, overlays],
   );
-
   // SPEC-237C: Local hover state for cursor + visual feedback
   const [hoveredOverlayUnitId, setHoveredOverlayUnitId] = useState<string | null>(null);
   const rafRef = useRef<number>(0);
-
   // SPEC-237C: Effective highlight = external (list hover) OR local (canvas hover)
   const effectiveHighlightId = highlightedOverlayUnitId || hoveredOverlayUnitId;
 
@@ -219,16 +205,26 @@ export function FloorplanGallery({
 
   // CANVAS RENDERING — inline + modal (DXF or PDF, overlays unified)
 
+  // Resolver: propertyLabels Map → OverlayLabel for the highlighted polygon.
+  const getOverlayLabel = useCallback(
+    (overlay: { linked?: { propertyId?: string } }) => {
+      const pid = overlay.linked?.propertyId;
+      if (!pid || !propertyLabels) return null;
+      return propertyLabels.get(pid) ?? null;
+    },
+    [propertyLabels],
+  );
+
   useFloorplanCanvasRender({
     canvasRef: inlineCanvasRef, enabled: true, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
     currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode,
-    overlays, highlightedUnitId: effectiveHighlightId,
+    overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
   });
 
   useFloorplanCanvasRender({
     canvasRef: modalCanvasRef, enabled: fullscreen.isFullscreen, isDxf, isRaster, loadedScene,
     rasterImage, rasterBounds, currentBounds, zoom: modalZP.zoom, panOffset: modalZP.panOffset,
-    drawingMode, overlays, highlightedUnitId: effectiveHighlightId,
+    drawingMode, overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
     firstRenderDelay: 280,
   });
 

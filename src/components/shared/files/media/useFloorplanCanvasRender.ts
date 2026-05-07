@@ -19,6 +19,7 @@ import type { DxfDrawingMode } from '@/components/shared/files/media/floorplan-g
 import { renderDxfToCanvas } from '@/components/shared/files/media/floorplan-dxf-renderer';
 import { drawOverlayPolygons } from '@/components/shared/files/media/floorplan-overlay-system';
 import { renderPdfWithOverlays } from '@/components/shared/files/media/floorplan-pdf-overlay-renderer';
+import type { OverlayLabel } from '@/components/shared/files/media/overlay-polygon-renderer';
 
 interface SceneBounds {
   min: { x: number; y: number };
@@ -42,6 +43,8 @@ export interface FloorplanCanvasRenderParams {
   drawingMode: DxfDrawingMode;
   overlays?: ReadonlyArray<FloorOverlayItem>;
   highlightedUnitId?: string | null;
+  /** Resolver for in-polygon hover label; returns null/undefined to skip. */
+  getOverlayLabel?: (overlay: FloorOverlayItem) => OverlayLabel | null | undefined;
   /** ms delay only on first render after `enabled` flips true (e.g., modal layout) */
   firstRenderDelay?: number;
 }
@@ -50,7 +53,7 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
   const {
     canvasRef, enabled, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
     currentBounds, zoom, panOffset, drawingMode, overlays, highlightedUnitId,
-    firstRenderDelay,
+    getOverlayLabel, firstRenderDelay,
   } = params;
 
   const readyRef = useRef(false);
@@ -67,13 +70,16 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
       if (isDxf && loadedScene) {
         renderDxfToCanvas(canvas, loadedScene, zoom, panOffset, drawingMode);
         if (overlays?.length && currentBounds) {
-          drawOverlayPolygons(canvas, overlays, currentBounds, zoom, panOffset, highlightedUnitId);
+          drawOverlayPolygons(
+            canvas, overlays, currentBounds, zoom, panOffset, highlightedUnitId, getOverlayLabel,
+          );
         }
       } else if (isRaster && rasterImage && rasterBounds) {
         // Raster (PDF page-1 or image) + overlays in one pass.
         // Zoom/pan applied via calcFit (mirrors DXF renderer pattern).
         renderPdfWithOverlays(
           canvas, rasterImage, rasterBounds, overlays ?? [], highlightedUnitId, zoom, panOffset,
+          getOverlayLabel,
         );
       }
       readyRef.current = true;
@@ -87,6 +93,6 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
   }, [
     canvasRef, enabled, isDxf, loadedScene, isRaster, rasterImage, rasterBounds,
     currentBounds, zoom, panOffset, drawingMode, overlays, highlightedUnitId,
-    firstRenderDelay,
+    getOverlayLabel, firstRenderDelay,
   ]);
 }

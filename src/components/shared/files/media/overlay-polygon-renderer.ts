@@ -43,12 +43,31 @@ export interface FitTransform {
   offsetY: number;
 }
 
+/**
+ * In-polygon label drawn ONLY on the highlighted overlay (hover state).
+ * Caller pre-formats strings with i18n + currency formatter — the renderer
+ * is locale-agnostic.
+ */
+export interface OverlayLabel {
+  /** Top line — small (e.g. property code). */
+  primaryText?: string;
+  /** Middle line — small (e.g. "85 τ.μ."). */
+  secondaryText?: string;
+  /** Bottom line — emphasized / larger (e.g. "€ 150.000"). */
+  emphasisText?: string;
+}
+
 export interface RenderOptions {
   highlightedUnitId?: string | null;
   /** Stroke width when not highlighted. Default: 3. */
   strokeWidth?: number;
   /** Stroke width when highlighted. Default: 4. */
   strokeWidthHighlighted?: number;
+  /**
+   * Resolver for the in-polygon label drawn ONLY on the highlighted overlay.
+   * Returns null/undefined to skip text rendering for this overlay.
+   */
+  getLabel?: (overlay: FloorOverlayItem) => OverlayLabel | null | undefined;
 }
 
 // ============================================================================
@@ -162,7 +181,7 @@ export function renderOverlayPolygon(
 /**
  * Render a list of overlay polygons. Wraps `save()/restore()` and iterates.
  * Highlighted overlay (matching `highlightedUnitId.linked.propertyId`) draws
- * with translucent fill + thicker stroke.
+ * with translucent fill + thicker stroke + optional in-polygon label.
  */
 export function renderOverlayPolygons(
   ctx: CanvasRenderingContext2D,
@@ -172,12 +191,107 @@ export function renderOverlayPolygons(
   options: RenderOptions = {},
 ): void {
   if (overlays.length === 0) return;
-  const { highlightedUnitId, strokeWidth = 3, strokeWidthHighlighted = 4 } = options;
+  const {
+    highlightedUnitId,
+    strokeWidth = 3,
+    strokeWidthHighlighted = 4,
+    getLabel,
+  } = options;
 
   ctx.save();
+  // Pass 1 — fill + stroke
   for (const overlay of overlays) {
     const isHighlighted = !!(highlightedUnitId && overlay.linked?.propertyId === highlightedUnitId);
     renderOverlayPolygon(ctx, overlay, bounds, fit, isHighlighted, strokeWidth, strokeWidthHighlighted);
+  }
+  // Pass 2 — labels on top of strokes (only highlighted overlay, only if resolver returns one)
+  if (getLabel) {
+    for (const overlay of overlays) {
+      const isHighlighted = !!(highlightedUnitId && overlay.linked?.propertyId === highlightedUnitId);
+      if (!isHighlighted) continue;
+      const label = getLabel(overlay);
+      if (!label) continue;
+      renderOverlayLabel(ctx, overlay, bounds, fit, label);
+    }
+  }
+  ctx.restore();
+}
+
+// ============================================================================
+// LABEL RENDERING
+// ============================================================================
+
+const LABEL_FONT_FAMILY =
+  'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+const LABEL_BASE_FONT_PX = 12;
+const LABEL_EMPHASIS_FONT_PX = 18;
+const LABEL_LINE_GAP_PX = 4;
+
+/** Compute screen-space centroid of an overlay polygon (vertex average). */
+function polygonScreenCentroid(
+  overlay: FloorOverlayItem,
+  bounds: SceneBounds,
+  fit: FitTransform,
+): { x: number; y: number } | null {
+  if (overlay.polygon.length < 3) return null;
+  let sx = 0;
+  let sy = 0;
+  for (const v of overlay.polygon) {
+    const s = worldToScreen(v.x, v.y, bounds, fit);
+    sx += s.x;
+    sy += s.y;
+  }
+  return { x: sx / overlay.polygon.length, y: sy / overlay.polygon.length };
+}
+
+/**
+ * Draw a 3-line label centered at the polygon centroid. Lines that are empty
+ * are skipped (so a 2-line label still centers cleanly).
+ *
+ * Visuals:
+ *   - White text with 3px black stroke (outline) for max readability against
+ *     any fill/background color.
+ *   - Top + middle line: regular 12px.
+ *   - Bottom (emphasis) line: bold 18px — used for the headline value
+ *     (sale price in the FloorplanGallery use case).
+ */
+function renderOverlayLabel(
+  ctx: CanvasRenderingContext2D,
+  overlay: FloorOverlayItem,
+  bounds: SceneBounds,
+  fit: FitTransform,
+  label: OverlayLabel,
+): void {
+  const center = polygonScreenCentroid(overlay, bounds, fit);
+  if (!center) return;
+
+  const lines: Array<{ text: string; sizePx: number; bold: boolean }> = [];
+  if (label.primaryText) lines.push({ text: label.primaryText, sizePx: LABEL_BASE_FONT_PX, bold: false });
+  if (label.secondaryText) lines.push({ text: label.secondaryText, sizePx: LABEL_BASE_FONT_PX, bold: false });
+  if (label.emphasisText) lines.push({ text: label.emphasisText, sizePx: LABEL_EMPHASIS_FONT_PX, bold: true });
+  if (lines.length === 0) return;
+
+  const totalHeight =
+    lines.reduce((acc, l) => acc + l.sizePx, 0) + LABEL_LINE_GAP_PX * (lines.length - 1);
+  let cursorY = center.y - totalHeight / 2;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  // eslint-disable-next-line design-system/no-hardcoded-colors
+  ctx.strokeStyle = '#000000';
+  // eslint-disable-next-line design-system/no-hardcoded-colors
+  ctx.fillStyle = '#FFFFFF';
+  ctx.lineJoin = 'round';
+
+  for (const line of lines) {
+    const weight = line.bold ? '700' : '500';
+    ctx.font = `${weight} ${line.sizePx}px ${LABEL_FONT_FAMILY}`;
+    ctx.lineWidth = line.bold ? 4 : 3;
+    // Outline first, then fill — outline behind glyph.
+    ctx.strokeText(line.text, center.x, cursorY);
+    ctx.fillText(line.text, center.x, cursorY);
+    cursorY += line.sizePx + LABEL_LINE_GAP_PX;
   }
   ctx.restore();
 }

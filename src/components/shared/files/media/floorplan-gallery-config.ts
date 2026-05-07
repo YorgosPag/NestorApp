@@ -40,6 +40,12 @@ export interface FloorplanGalleryProps {
   onHoverOverlay?: (propertyId: string | null) => void;
   /** Callback: user clicks overlay → passes linked propertyId (SPEC-237C) */
   onClickOverlay?: (propertyId: string) => void;
+  /**
+   * Pre-formatted labels to render inside the highlighted polygon on hover.
+   * Map keyed by `linked.propertyId`. Strings are i18n/currency-formatted by
+   * the caller — the renderer is locale-agnostic.
+   */
+  propertyLabels?: ReadonlyMap<string, import('@/components/shared/files/media/overlay-polygon-renderer').OverlayLabel>;
 }
 
 /**
