@@ -1,5 +1,7 @@
 export type { IFloorplanBackgroundProvider } from './providers/IFloorplanBackgroundProvider';
 
+export { ImageProvider } from './providers/ImageProvider';
+
 export type {
   BackgroundTransform,
   CalibrationData,
