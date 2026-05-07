@@ -366,3 +366,57 @@ export function fileApprovalsMatrix(): readonly CoverageCell[] {
     cell('anonymous', 'delete', 'deny', 'immutable'),
   ];
 }
+
+
+/**
+ * Matrix for `floorplan_backgrounds` (ADR-340 Phase 7 Q9 RBAC).
+ *
+ * Reads: any same-tenant authenticated user (super_admin / company_admin /
+ * internal_user). Writes: super_admin + company_admin + internal_user only.
+ * external_user denied entirely. cross-tenant denied.
+ */
+export function floorplanBackgroundsMatrix(): readonly CoverageCell[] {
+  return [
+    // super_admin: allow all
+    cell('super_admin', 'read', 'allow'),
+    cell('super_admin', 'list', 'allow'),
+    cell('super_admin', 'create', 'allow'),
+    cell('super_admin', 'update', 'allow'),
+    cell('super_admin', 'delete', 'allow'),
+    // same_tenant_admin: allow all
+    cell('same_tenant_admin', 'read', 'allow'),
+    cell('same_tenant_admin', 'list', 'allow'),
+    cell('same_tenant_admin', 'create', 'allow'),
+    cell('same_tenant_admin', 'update', 'allow'),
+    cell('same_tenant_admin', 'delete', 'allow'),
+    // same_tenant_user (internal_user): allow all incl. write/delete (Q9)
+    cell('same_tenant_user', 'read', 'allow'),
+    cell('same_tenant_user', 'list', 'allow'),
+    cell('same_tenant_user', 'create', 'allow'),
+    cell('same_tenant_user', 'update', 'allow'),
+    cell('same_tenant_user', 'delete', 'allow'),
+    // cross_tenant_admin: deny all
+    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
+    // external_user: deny all (insufficient role)
+    cell('external_user', 'read', 'allow'),
+    cell('external_user', 'list', 'allow'),
+    cell('external_user', 'create', 'deny', 'insufficient_role'),
+    cell('external_user', 'update', 'deny', 'insufficient_role'),
+    cell('external_user', 'delete', 'deny', 'insufficient_role'),
+    // anonymous: deny all
+    cell('anonymous', 'read', 'deny', 'missing_claim'),
+    cell('anonymous', 'list', 'deny', 'missing_claim'),
+    cell('anonymous', 'create', 'deny', 'missing_claim'),
+  ];
+}
+
+/**
+ * Matrix for `floorplan_overlays` — same RBAC as floorplan_backgrounds.
+ */
+export function floorplanOverlaysMatrix(): readonly CoverageCell[] {
+  return floorplanBackgroundsMatrix();
+}

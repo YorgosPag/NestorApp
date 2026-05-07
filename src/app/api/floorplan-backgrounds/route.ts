@@ -249,9 +249,27 @@ async function handleGet(
         : Promise.resolve(null),
     ]);
 
+    const background = backgrounds[0] ?? null;
+
+    // Resolve fileRecord.downloadUrl in the same round-trip so the persistence
+    // hook can hydrate the provider via `kind: 'url'` (D1) without an extra
+    // /api/files round-trip.
+    let fileRecord: { id: string; downloadUrl: string | null } | null = null;
+    if (background) {
+      const db = getAdminFirestore();
+      const fileSnap = await db.collection(COLLECTIONS.FILES).doc(background.fileId).get();
+      if (fileSnap.exists) {
+        const fdata = fileSnap.data() as { companyId?: string; downloadUrl?: string } | undefined;
+        if (fdata?.companyId === ctx.companyId) {
+          fileRecord = { id: background.fileId, downloadUrl: fdata.downloadUrl ?? null };
+        }
+      }
+    }
+
     return NextResponse.json({
-      background: backgrounds[0] ?? null,
+      background,
       polygonState,
+      fileRecord,
     });
   } catch (err) {
     logger.error('GET failed', { floorId, error: getErrorMessage(err) });

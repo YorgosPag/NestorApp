@@ -56,6 +56,8 @@ import {
   fileCommentsMatrix,
   fileSharesMatrix,
   fileTenantFullMatrix,
+  floorplanBackgroundsMatrix,
+  floorplanOverlaysMatrix,
   photoSharesMatrix,
 } from './coverage-matrices-dxf';
 import {
@@ -969,6 +971,26 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [2770, 2781],
     // Read: userId==auth.uid — owner only. All writes: if false — server-only.
     matrix: voiceCommandsMatrix(),
+  },
+  {
+    // ADR-340 Phase 7 — raster background per κάτοψη ορόφου.
+    // Reads: any same-tenant authenticated user. Writes: super_admin / company_admin
+    // / internal_user (Q9). Immutables enforced (D6): companyId, floorId, fileId,
+    // providerId, naturalBounds, createdBy.
+    collection: 'floorplan_backgrounds',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/floorplan-backgrounds.rules.test.ts',
+    rulesRange: [1108, 1138],
+    matrix: floorplanBackgroundsMatrix(),
+  },
+  {
+    // ADR-340 Phase 7 — polygon overlays FK→floorplan_backgrounds.
+    // Same RBAC matrix as floorplan_backgrounds.
+    collection: 'floorplan_overlays',
+    pattern: 'role_dual',
+    testFile: 'tests/firestore-rules/suites/floorplan-overlays.rules.test.ts',
+    rulesRange: [1145, 1170],
+    matrix: floorplanOverlaysMatrix(),
   },
 ] as const;
 

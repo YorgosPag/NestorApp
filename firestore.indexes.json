@@ -3489,6 +3489,30 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "floorplan_backgrounds",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "floorId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_overlays",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "backgroundId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_overlays",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "floorId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

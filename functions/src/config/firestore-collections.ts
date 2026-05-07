@@ -53,4 +53,9 @@ export const COLLECTIONS = {
   // 🧱 PROCUREMENT — Material catalog (ADR-330 Phase 4); written by
   // materialPriceSyncOnPODelivery trigger when a PO transitions to delivered.
   MATERIALS: 'materials',
+
+  // 🖼️ FLOORPLAN BACKGROUND SYSTEM (ADR-340 Phase 7) — read by
+  // onDeleteFloorplanBackground trigger for fileId reference counting.
+  FLOORPLAN_BACKGROUNDS: 'floorplan_backgrounds',
+  FLOORPLAN_OVERLAYS: 'floorplan_overlays',
 } as const;

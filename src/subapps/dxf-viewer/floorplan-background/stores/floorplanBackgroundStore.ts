@@ -67,6 +67,12 @@ interface StoreActions {
   applyCalibration(floorId: string, partial: Partial<BackgroundTransform>, calibrationData: CalibrationData): void;
   /** Internal: load without replace-check. Use addBackground from outside. */
   _loadBackground(floorId: string, source: ProviderSource, providerId: ProviderId): Promise<void>;
+  /**
+   * Phase 7: hydrate from a server-persisted background. Loads the provider
+   * binary via the supplied source (typically `kind: 'url'`) and adopts the
+   * server-provided id/companyId/fileId/createdBy/transform/calibration/etc.
+   */
+  _hydratePersistedBackground(floorId: string, persisted: FloorplanBackground, source: ProviderSource): Promise<void>;
 }
 
 type FloorplanBackgroundStoreType = StoreState & StoreActions;
@@ -250,6 +256,33 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
         },
 
         // ── Internal ─────────────────────────────────────────────────────────
+
+        _hydratePersistedBackground: async (floorId, persisted, source) => {
+          set((draft) => {
+            draft.floors[floorId] = { background: null, isLoading: true, error: null };
+          });
+
+          try {
+            const provider = getProvider(persisted.providerId);
+            const result = await provider.loadAsync(source);
+            if (!result.success || !result.bounds) {
+              throw new Error(result.error ?? 'Provider load failed');
+            }
+            _floorProviders.set(floorId, provider);
+            set((draft) => {
+              draft.floors[floorId] = {
+                background: { ...persisted },
+                isLoading: false,
+                error: null,
+              };
+            });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            set((draft) => {
+              draft.floors[floorId] = { background: null, isLoading: false, error: message };
+            });
+          }
+        },
 
         _loadBackground: async (floorId, source, providerId) => {
           set((draft) => {

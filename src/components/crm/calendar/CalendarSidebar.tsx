@@ -1,11 +1,11 @@
 /**
- * Calendar sidebar with mini calendar for date navigation.
+ * Calendar sidebar with 2 stacked mini-calendars (Outlook style).
  *
- * Navigation arrows are rendered BELOW the calendar grid as custom buttons,
- * because the built-in nav arrows overflow in the narrow 280px sidebar.
- *
- * The `month` prop controls which month is displayed — synced bidirectionally
- * with the main calendar via `onMonthChange`.
+ * - First calendar = displayMonth
+ * - Second calendar = displayMonth + 1
+ * - Single pair of nav arrows below both calendars navigate together
+ * - Selecting a date on either calendar fires onDateSelect
+ * - Event dots appear on both calendars
  */
 
 'use client';
@@ -29,6 +29,8 @@ interface CalendarSidebarProps {
   onMonthChange: (month: Date) => void;
 }
 
+const HIDDEN_NAV = { nav: 'hidden' } as const;
+
 export function CalendarSidebar({
   events,
   selectedDate,
@@ -38,7 +40,8 @@ export function CalendarSidebar({
 }: CalendarSidebarProps) {
   const iconSizes = useIconSizes();
 
-  // Dates that have events for highlighting
+  const secondMonth = useMemo(() => addMonths(displayMonth, 1), [displayMonth]);
+
   const eventDates = useMemo(() => {
     const dates: Date[] = [];
     for (const event of events) {
@@ -49,10 +52,6 @@ export function CalendarSidebar({
     return dates;
   }, [events]);
 
-  const handleSelect = (date: Date) => {
-    onDateSelect(date);
-  };
-
   const handlePrevMonth = useCallback(() => {
     onMonthChange(subMonths(displayMonth, 1));
   }, [displayMonth, onMonthChange]);
@@ -61,25 +60,43 @@ export function CalendarSidebar({
     onMonthChange(addMonths(displayMonth, 1));
   }, [displayMonth, onMonthChange]);
 
+  // Second calendar offset: its month = displayMonth+1, so any change needs -1 to sync first calendar
+  const handleSecondMonthChange = useCallback((month: Date) => {
+    onMonthChange(subMonths(month, 1));
+  }, [onMonthChange]);
+
   return (
-    <aside className="hidden lg:block w-[280px] shrink-0" aria-label="Mini Calendar">
+    <aside className="hidden lg:flex lg:flex-col w-[280px] shrink-0 gap-2" aria-label="Mini Calendars">
       <Calendar
         mode="single"
         required
         selected={selectedDate}
-        onSelect={handleSelect}
+        onSelect={onDateSelect}
         month={displayMonth}
         onMonthChange={onMonthChange}
         showWeekNumber={false}
         modifiers={{ hasEvent: eventDates }}
         modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event' }}
         className="rounded-lg border"
-        classNames={{
-          nav: "hidden",
-        }}
+        classNames={HIDDEN_NAV}
       />
-      {/* Navigation arrows BELOW the calendar */}
-      <nav className="flex items-center justify-center gap-6 pt-2" aria-label="Month navigation">
+
+      <Calendar
+        mode="single"
+        required
+        selected={selectedDate}
+        onSelect={onDateSelect}
+        month={secondMonth}
+        onMonthChange={handleSecondMonthChange}
+        showWeekNumber={false}
+        modifiers={{ hasEvent: eventDates }}
+        modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event' }}
+        className="rounded-lg border"
+        classNames={HIDDEN_NAV}
+      />
+
+      {/* Shared navigation arrows — navigate both calendars in sync */}
+      <nav className="flex items-center justify-center gap-6" aria-label="Month navigation">
         <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrevMonth}>
           <ChevronLeft className={iconSizes.sm} />
         </Button>

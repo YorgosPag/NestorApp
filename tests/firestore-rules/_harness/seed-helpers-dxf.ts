@@ -359,3 +359,60 @@ export async function seedFileFolder(
     });
   });
 }
+
+/**
+ * floorplan_backgrounds — ADR-340 Phase 7 (Q9 RBAC).
+ * Tenant-scoped role_dual: read for any same-tenant user; write/delete for
+ * super_admin / company_admin / internal_user.
+ */
+export async function seedFloorplanBackground(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('floorplan_backgrounds').doc(docId).set({
+      id: docId,
+      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
+      floorId: 'floor-test',
+      fileId: 'file-test',
+      providerId: 'pdf-page',
+      providerMetadata: { pdfPageNumber: 1, imageDecoderUsed: 'native' },
+      naturalBounds: { width: 1000, height: 800 },
+      transform: { translateX: 0, translateY: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      calibration: null,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      createdBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      updatedBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
+ * floorplan_overlays — ADR-340 Phase 7 (Q9 RBAC).
+ * Same-shape RBAC as floorplan_backgrounds.
+ */
+export async function seedFloorplanOverlay(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('floorplan_overlays').doc(docId).set({
+      id: docId,
+      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
+      backgroundId: 'rbg-test',
+      floorId: 'floor-test',
+      polygon: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }],
+      zIndex: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      ...opts?.overrides,
+    });
+  });
+}

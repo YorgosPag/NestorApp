@@ -1099,6 +1099,77 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🖼️ FLOORPLAN BACKGROUNDS — ADR-340 Phase 7 (Q9 RBAC)
+    // =========================================================================
+    // Domain entity for raster (PDF/Image) background per κάτοψη ορόφου.
+    // RBAC: super_admin / company_admin / internal_user can write/delete.
+    // Read: any authenticated user belonging to the document's company.
+    // Immutables (D6): companyId, floorId, fileId, providerId, providerMetadata, naturalBounds.
+    match /floorplan_backgrounds/{rbgId} {
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || belongsToCompany(resource.data.companyId)
+                     );
+
+      allow create: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (
+                              isInternalUser()
+                              && request.resource.data.companyId == getUserCompanyId()
+                              && request.resource.data.createdBy == request.auth.uid
+                            )
+                       );
+
+      allow update: if isAuthenticated()
+                    && isInternalUserOfCompany(resource.data.companyId)
+                    // Immutable fields (ADR-340 D6)
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.floorId == resource.data.floorId
+                    && request.resource.data.fileId == resource.data.fileId
+                    && request.resource.data.providerId == resource.data.providerId
+                    && request.resource.data.naturalBounds == resource.data.naturalBounds
+                    && request.resource.data.createdBy == resource.data.createdBy;
+
+      allow delete: if isAuthenticated()
+                    && isInternalUserOfCompany(resource.data.companyId);
+    }
+
+    // =========================================================================
+    // 🖼️ FLOORPLAN OVERLAYS — ADR-340 Phase 7 (polygons FK→floorplan_backgrounds)
+    // =========================================================================
+    // Polygons drawn over a floorplan background. companyId/backgroundId/floorId
+    // immutable; polygon + label + zIndex mutable.
+    match /floorplan_overlays/{ovrlId} {
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || belongsToCompany(resource.data.companyId)
+                     );
+
+      allow create: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (
+                              isInternalUser()
+                              && request.resource.data.companyId == getUserCompanyId()
+                            )
+                       );
+
+      allow update: if isAuthenticated()
+                    && isInternalUserOfCompany(resource.data.companyId)
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.backgroundId == resource.data.backgroundId
+                    && request.resource.data.floorId == resource.data.floorId;
+
+      allow delete: if isAuthenticated()
+                    && isInternalUserOfCompany(resource.data.companyId);
+    }
+
+    // =========================================================================
     // 🎨 LAYERS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
     // 🏢 ENTERPRISE: Legacy layers for property visualization with tenant isolation

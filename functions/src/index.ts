@@ -27,6 +27,10 @@ export { auditContactWrite } from './audit/contact-audit-trigger';
 // 🧱 PROCUREMENT (ADR-330 Phase 4.5) — material price sync on PO → delivered.
 export { materialPriceSyncOnPODelivery } from './procurement/material-price-sync.cf';
 
+// 🖼️ FLOORPLAN BACKGROUND (ADR-340 Phase 7, D4) — ref-count fileId on background
+// delete; if 0 references remain, delete files/{fileId} + Storage object.
+export { onDeleteFloorplanBackground } from './floorplan-background/onDeleteFloorplanBackground';
+
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
@@ -434,7 +438,6 @@ export const manualPurgeFile = functions
 // ============================================================================
 // HTTP CALLABLE: GET TRASH STATS
 // ============================================================================
-
 /**
  * Get trash statistics for a company
  * @enterprise Used in Trash view dashboard
@@ -452,9 +455,7 @@ export const getTrashStats = functions
         'Must be authenticated'
       );
     }
-
     const companyId = data.companyId || context.auth.token.companyId;
-
     if (!companyId) {
       throw new functions.https.HttpsError(
         'invalid-argument',
