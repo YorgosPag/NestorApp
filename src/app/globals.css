@@ -616,6 +616,8 @@
     background: hsl(var(--secondary));
     transition: background 0.2s ease;
     position: relative;
+    flex: 1;
+    min-width: 0;
   }
 
   .rbc-wrapper .rbc-day-bg + .rbc-day-bg {
