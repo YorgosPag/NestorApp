@@ -40,12 +40,12 @@ export function FloorplanBackgroundPanel({ isOpen, onClose, className }: Floorpl
 
   const handleImageSelect = useCallback((file: File) => {
     if (!result) return;
-    void result.addBackground({ kind: 'file', file }, 'image');
+    void result.uploadBackground(file, 'image');
   }, [result]);
 
   const handlePdfSelect = useCallback((file: File) => {
     if (!result) return;
-    void result.addBackground({ kind: 'file', file }, 'pdf-page');
+    void result.uploadBackground(file, 'pdf-page');
   }, [result]);
 
   const handleScaleChange = useCallback((value: number[]) => {
@@ -117,7 +117,7 @@ export function FloorplanBackgroundPanel({ isOpen, onClose, className }: Floorpl
             onResetTransform={handleResetTransform}
             onToggleVisible={() => result.setVisible(!result.background!.visible)}
             onToggleLocked={() => result.setLocked(!result.background!.locked)}
-            onRemove={() => { void result.removeBackground(); }}
+            onRemove={() => { void result.deleteBackground(); }}
             onReplaceImage={handleImageSelect}
             onReplacePdf={handlePdfSelect}
             onCalibrate={calibration.startCalibration}

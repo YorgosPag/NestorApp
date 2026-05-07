@@ -466,7 +466,7 @@
    * =================================================================== */
 
   .fc-wrapper {
-    --fc-border-color: hsl(var(--border) / 0.2);
+    --fc-border-color: hsl(var(--border));
     --fc-page-bg-color: hsl(var(--secondary));
     --fc-neutral-bg-color: hsl(var(--secondary));
     --fc-list-event-hover-bg-color: rgba(59, 130, 246, 0.08);
@@ -656,7 +656,7 @@
   }
 
   .fc-wrapper .fc-timegrid-slot {
-    border-color: hsl(var(--border) / 0.15);
+    border-color: hsl(var(--border));
   }
 
   .fc-wrapper .fc-timegrid-slot-label-cushion {
@@ -665,7 +665,7 @@
   }
 
   .fc-wrapper .fc-timegrid-axis {
-    border-color: hsl(var(--border) / 0.2);
+    border-color: hsl(var(--border));
   }
 
   /* Now indicator */
@@ -727,12 +727,12 @@
 
   /* Major hour slot: slightly more visible divider */
   .fc-wrapper .fc-timegrid-slot-major {
-    border-bottom-color: hsl(var(--border) / 0.35);
+    border-bottom-color: hsl(var(--border));
   }
 
-  /* Minor half-hour slot: barely visible */
+  /* Minor half-hour slot: slightly lighter than full border */
   .fc-wrapper .fc-timegrid-slot-minor {
-    border-bottom-color: hsl(var(--border) / 0.08);
+    border-bottom-color: hsl(var(--border) / 0.45);
   }
 
   /* Time label: right-aligned, small */
@@ -744,13 +744,13 @@
 
   /* Timegrid header row height */
   .fc-wrapper .fc-timegrid .fc-col-header-cell {
-    border-bottom: 1px solid hsl(var(--border) / 0.3);
+    border-bottom: 1px solid hsl(var(--border));
   }
 
   /* List (agenda) view */
   .fc-wrapper .fc-list {
     background: hsl(var(--secondary));
-    border-color: hsl(var(--border) / 0.2);
+    border-color: hsl(var(--border));
   }
 
   .fc-wrapper .fc-list-day-cushion {
@@ -772,11 +772,11 @@
     color: hsl(var(--muted-foreground));
   }
 
-  /* Cell borders */
+  /* Cell borders — same color as mini-calendar borders */
   .fc-wrapper .fc-scrollgrid,
   .fc-wrapper .fc-scrollgrid td,
   .fc-wrapper .fc-scrollgrid th {
-    border-color: hsl(var(--border) / 0.15);
+    border-color: hsl(var(--border));
   }
 
   /* Highlight for selected/dragging */

@@ -57,8 +57,23 @@ export type { UseFloorplanBackgroundResult } from './hooks/useFloorplanBackgroun
 export { useFloorplanBackgroundForLevel } from './hooks/useFloorplanBackgroundForLevel';
 export type { FloorplanBackgroundForLevelResult } from './hooks/useFloorplanBackgroundForLevel';
 
+export { useFloorplanBackgroundPersistence } from './hooks/useFloorplanBackgroundPersistence';
+
 export { useCalibration } from './hooks/useCalibration';
 export type { UseCalibrationResult } from './hooks/useCalibration';
+
+export { FloorplanBackgroundApiClient } from './services/floorplan-background-api-client';
+export type {
+  GetByFloorResponse,
+  UploadResponse,
+  PatchResponse,
+  PatchCalibrationResponse,
+  DeleteResponse,
+  UploadInput,
+  PatchTransformInput,
+  PatchCalibrationInput,
+  FloorPolygonState,
+} from './services/floorplan-background-api-client';
 
 export { FloorplanBackgroundCanvas } from './components/FloorplanBackgroundCanvas';
 export type { FloorplanBackgroundCanvasProps } from './components/FloorplanBackgroundCanvas';
