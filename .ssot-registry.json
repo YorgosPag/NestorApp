@@ -2546,6 +2546,26 @@
       "addedDate": "2026-05-04",
       "addedByAdr": "ADR-331",
       "tier": 1
+    },
+    "floorplan-background-system": {
+      "ssotFile": "src/services/floorplan-background/floorplan-background.service.ts",
+      "description": "Floorplan Background System (ADR-340 Phase 7+8) — server-side persistence for the per-floor raster/PDF background entity. The `floorplan_backgrounds` and `floorplan_overlays` collections are domain-owned by `FloorplanBackgroundService` (Admin SDK CRUD with tenant isolation, immutables guard, transaction semantics) and `FloorplanCascadeDeleteService` (cascade across overlays + dxf_viewer_levels). Calibration polygon remap goes through `CalibrationRemapService.applyCalibration` (atomic batch, affine math). Direct client-side `addDoc/setDoc` on these collections is forbidden — every write must traverse the API route (`/api/floorplan-backgrounds`) which composes the services. Reader-side: client uses `floorplanBackgroundStore` (in-memory SSoT) hydrated by `useFloorplanBackgroundPersistence`. Legacy `pdfBackgroundStore` was removed in Phase 5/6 — `useState.*pdfBackground` is dead-code-shaped and any reintroduction outside the subsystem signals a regression.",
+      "forbiddenPatterns": [
+        "(addDoc|setDoc)\\s*\\([^)]*(floorplan_backgrounds|FLOORPLAN_BACKGROUNDS)",
+        "(addDoc|setDoc)\\s*\\([^)]*(floorplan_overlays|FLOORPLAN_OVERLAYS)",
+        "useState[^;]*pdfBackground"
+      ],
+      "allowlist": [
+        "src/services/floorplan-background/",
+        "src/subapps/dxf-viewer/floorplan-background/",
+        "src/app/api/floorplan-backgrounds/",
+        "functions/src/floorplan-background/",
+        "functions/src/config/firestore-collections.ts",
+        "src/config/firestore-collections.ts"
+      ],
+      "addedDate": "2026-05-07",
+      "addedByAdr": "ADR-340",
+      "tier": 2
     }
   }
 }

@@ -102,9 +102,16 @@ export function CalendarPageContent() {
     setSidebarDisplayMonth(date);
   }, []);
 
+  // Navigation (prev/next) → sync only the displayed month, not the selected day
   const handleMainCalendarDateChange = useCallback((date: Date) => {
-    setSidebarSelectedDate(date);
     setSidebarDisplayMonth(date);
+  }, []);
+
+  // Today button → sync both displayed month AND selected day to actual today
+  const handleTodayClick = useCallback(() => {
+    const today = new Date();
+    setSidebarSelectedDate(today);
+    setSidebarDisplayMonth(today);
   }, []);
 
   const handleFilteredEvents = useCallback((filtered: CalendarEvent[] | null) => {
@@ -230,6 +237,7 @@ export function CalendarPageContent() {
               onEventUpdated={handleEventCreated}
               navigateToDate={sidebarSelectedDate}
               onDateChange={handleMainCalendarDateChange}
+              onTodayClick={handleTodayClick}
             />
           </article>
         </section>

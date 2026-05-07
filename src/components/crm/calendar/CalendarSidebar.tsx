@@ -12,7 +12,9 @@
 
 import { useMemo, useCallback } from 'react';
 import { isSameDay, addMonths, subMonths } from 'date-fns';
+import { el as elLocale, enGB as enLocale } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -38,8 +40,10 @@ export function CalendarSidebar({
   displayMonth,
   onMonthChange,
 }: CalendarSidebarProps) {
+  const { i18n } = useTranslation();
   const iconSizes = useIconSizes();
 
+  const locale = i18n.language === 'el' ? elLocale : enLocale;
   const secondMonth = useMemo(() => addMonths(displayMonth, 1), [displayMonth]);
 
   const eventDates = useMemo(() => {
@@ -74,6 +78,7 @@ export function CalendarSidebar({
         onSelect={onDateSelect}
         month={displayMonth}
         onMonthChange={onMonthChange}
+        locale={locale}
         showWeekNumber={false}
         modifiers={{ hasEvent: eventDates }}
         modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event' }}
@@ -88,6 +93,7 @@ export function CalendarSidebar({
         onSelect={onDateSelect}
         month={secondMonth}
         onMonthChange={handleSecondMonthChange}
+        locale={locale}
         showWeekNumber={false}
         modifiers={{ hasEvent: eventDates }}
         modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event' }}

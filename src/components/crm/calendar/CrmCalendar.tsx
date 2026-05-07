@@ -63,8 +63,10 @@ interface CrmCalendarProps {
   onNewEvent?: () => void;
   onEventUpdated?: () => void;
   navigateToDate?: Date;
-  /** Called when the main calendar date changes (navigation arrows, today button) */
+  /** Called when the main calendar date changes (navigation arrows) */
   onDateChange?: (date: Date) => void;
+  /** Called when user explicitly clicks the Today button */
+  onTodayClick?: () => void;
 }
 
 type FullCalendarRef = ComponentRef<typeof FullCalendar>;
@@ -82,6 +84,7 @@ export function CrmCalendar({
   onEventUpdated,
   navigateToDate,
   onDateChange,
+  onTodayClick,
 }: CrmCalendarProps) {
   const { t, i18n } = useTranslation(['crm', 'crm-inbox']);
   const { success: notifySuccess, error: notifyError } = useNotifications();
@@ -323,7 +326,7 @@ export function CrmCalendar({
           activeView={activeView}
           onPrev={() => calendarRef.current?.getApi().prev()}
           onNext={() => calendarRef.current?.getApi().next()}
-          onToday={() => calendarRef.current?.getApi().today()}
+          onToday={() => { calendarRef.current?.getApi().today(); onTodayClick?.(); }}
           onViewChange={goToView}
           onNewEvent={handleNewEvent}
         />
