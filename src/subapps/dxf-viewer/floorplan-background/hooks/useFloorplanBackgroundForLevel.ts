@@ -6,13 +6,17 @@ import { useFloorplanBackground, type UseFloorplanBackgroundResult } from './use
 import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
 import { registerProviders } from '../providers/register-providers';
 
+export interface FloorplanBackgroundForLevelResult extends UseFloorplanBackgroundResult {
+  floorId: string;
+}
+
 /**
  * Binds the active DXF level to the floorplan-background store.
  *
  * `levelId` acts as `floorId` in the store — each level has 0..1 background.
  * Returns `null` when no level is active (e.g. boot, no level selected).
  */
-export function useFloorplanBackgroundForLevel(): UseFloorplanBackgroundResult | null {
+export function useFloorplanBackgroundForLevel(): FloorplanBackgroundForLevelResult | null {
   const { currentLevelId } = useLevels();
   const setActiveFloor = useFloorplanBackgroundStore((s) => s.setActiveFloor);
 
@@ -26,5 +30,6 @@ export function useFloorplanBackgroundForLevel(): UseFloorplanBackgroundResult |
   // Conditionally call hook (rules-of-hooks safe via constant check)
   // The hook below is always called — we just return null if no level is active.
   const result = useFloorplanBackground(currentLevelId ?? '__no_level__');
-  return currentLevelId ? result : null;
+  if (!currentLevelId) return null;
+  return { ...result, floorId: currentLevelId };
 }

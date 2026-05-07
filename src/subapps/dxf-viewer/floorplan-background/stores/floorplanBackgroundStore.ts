@@ -8,6 +8,8 @@ import type {
   BackgroundTransform,
   NaturalBounds,
   ProviderMetadata,
+  CalibrationData,
+  Point2D,
 } from '../providers/types';
 import { DEFAULT_BACKGROUND_TRANSFORM } from '../providers/types';
 import { getProvider } from '../providers/provider-registry';
@@ -30,12 +32,23 @@ export interface PendingReplaceRequest {
   providerId: ProviderId;
 }
 
+// ── Calibration session: active while user is picking 2 canvas points ──────────
+
+export interface CalibrationSession {
+  floorId: string;
+  pointA: Point2D | null;
+  pointB: Point2D | null;
+  /** worldToCanvas.scale captured at first point click (fixed for the session). */
+  worldToCanvasScale: number;
+}
+
 // ── Store types ───────────────────────────────────────────────────────────────
 
 interface StoreState {
   floors: Record<string, FloorSlot>;
   activeFloorId: string | null;
   pendingReplaceRequest: PendingReplaceRequest | null;
+  calibrationSession: CalibrationSession | null;
 }
 
 interface StoreActions {
@@ -48,6 +61,10 @@ interface StoreActions {
   setActiveFloor(floorId: string | null): void;
   confirmReplace(): Promise<void>;
   cancelReplace(): void;
+  startCalibration(floorId: string): void;
+  setCalibrationPoint(pt: Point2D, scale: number): void;
+  cancelCalibration(): void;
+  applyCalibration(floorId: string, partial: Partial<BackgroundTransform>, calibrationData: CalibrationData): void;
   /** Internal: load without replace-check. Use addBackground from outside. */
   _loadBackground(floorId: string, source: ProviderSource, providerId: ProviderId): Promise<void>;
 }
@@ -121,6 +138,7 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
         floors: {},
         activeFloorId: null,
         pendingReplaceRequest: null,
+        calibrationSession: null,
 
         // ── Public actions ────────────────────────────────────────────────────
 
@@ -198,6 +216,39 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
           set((draft) => { draft.pendingReplaceRequest = null; });
         },
 
+        startCalibration: (floorId) => {
+          set((draft) => {
+            draft.calibrationSession = { floorId, pointA: null, pointB: null, worldToCanvasScale: 1 };
+          });
+        },
+
+        setCalibrationPoint: (pt, scale) => {
+          set((draft) => {
+            if (!draft.calibrationSession) return;
+            if (!draft.calibrationSession.pointA) {
+              draft.calibrationSession.pointA = pt;
+              draft.calibrationSession.worldToCanvasScale = scale;
+            } else if (!draft.calibrationSession.pointB) {
+              draft.calibrationSession.pointB = pt;
+            }
+          });
+        },
+
+        cancelCalibration: () => {
+          set((draft) => { draft.calibrationSession = null; });
+        },
+
+        applyCalibration: (floorId, partial, calibrationData) => {
+          set((draft) => {
+            const slot = draft.floors[floorId];
+            if (!slot?.background) return;
+            Object.assign(slot.background.transform, partial);
+            slot.background.calibration = calibrationData;
+            slot.background.updatedAt = Date.now();
+            draft.calibrationSession = null;
+          });
+        },
+
         // ── Internal ─────────────────────────────────────────────────────────
 
         _loadBackground: async (floorId, source, providerId) => {
@@ -251,3 +302,6 @@ export const selectActiveFloorId = (s: FloorplanBackgroundStoreType): string | n
 
 export const selectPendingReplaceRequest = (s: FloorplanBackgroundStoreType): PendingReplaceRequest | null =>
   s.pendingReplaceRequest;
+
+export const selectCalibrationSession = (s: FloorplanBackgroundStoreType): CalibrationSession | null =>
+  s.calibrationSession;

@@ -32,8 +32,6 @@ import type {
   DateSelectArg,
   DatesSetArg,
   EventContentArg,
-  EventDragStartArg,
-  EventDragStopArg,
 } from '@fullcalendar/core';
 import type { EventDropArg } from '@fullcalendar/core';
 import type { EventResizeDoneArg } from '@fullcalendar/interaction';
@@ -95,9 +93,9 @@ export function CrmCalendar({
     isNearLeft,
     isNearRight,
     containerRef,
-    handleEventDragStart,
-    handleEventDragStop,
+    handleEventDidMount,
   } = useCalendarCrossMonthDrag({
+    events,
     calendarRef,
     isProgrammaticNav,
     onEventUpdated,
@@ -352,8 +350,7 @@ export function CrmCalendar({
             select={handleSelect}
             eventDrop={handleEventDrop}
             eventResize={handleEventResize}
-            eventDragStart={handleEventDragStart}
-            eventDragStop={handleEventDragStop}
+            eventDidMount={handleEventDidMount}
             eventContent={renderEventContent}
             eventDisplay="block"
           />
