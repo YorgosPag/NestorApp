@@ -63,10 +63,8 @@ function createDayPropGetter(events: CalendarEvent[]) {
   return function dayPropGetter(date: Date) {
     const classes: string[] = [];
     if (isBefore(date, today)) classes.push('rbc-calendar-past');
-    // Add event indicator class for dot rendering
-    const hasEvent = events.some(
-      (e) => isSameDay(e.start, date) || (e.end && isSameDay(e.end, date))
-    );
+    // Add event indicator class for dot rendering — match sidebar: only mark start date
+    const hasEvent = events.some((e) => isSameDay(e.start, date));
     if (hasEvent) classes.push('rbc-calendar-has-event');
     return { className: classes.join(' ') };
   };
