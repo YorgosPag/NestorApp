@@ -81,7 +81,7 @@ export function CalendarSidebar({
         locale={locale}
         showWeekNumber={false}
         modifiers={{ hasEvent: eventDates }}
-        modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event' }}
+        modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event', today: 'mini-cal-today' }}
         className="rounded-lg border"
         classNames={HIDDEN_NAV}
       />
@@ -96,7 +96,7 @@ export function CalendarSidebar({
         locale={locale}
         showWeekNumber={false}
         modifiers={{ hasEvent: eventDates }}
-        modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event' }}
+        modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event', today: 'mini-cal-today' }}
         className="rounded-lg border"
         classNames={HIDDEN_NAV}
       />

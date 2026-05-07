@@ -1,6 +1,6 @@
 # ADR-340 — Floorplan Background System (PDF + Image, single-per-floor, Procore-grade separation)
 
-**Status:** 🔨 Phase 7 COMPLETE — server-side persistence (Firestore + Storage + RBAC + cascade delete CF + remap math). Phase 4 SKIPPED. Next: Phase 8 (visual regression + a11y + ✅ IMPLEMENTED finalize). §4 Migration plan è HISTORICAL — wrapper non costruito, vecchio PDF subsystem rimosso integralmente.
+**Status:** ✅ **IMPLEMENTED** (2026-05-07) — Phases 1-3, 5-8 complete. Phase 4 SKIPPED (data wipe imminent → no wrapper). Phase 8 ships the visual regression suite, a11y audit, SSoT registry module, and the Firestore-emulator integration suite (deferred from Phase 7). All ship gates green; baselines locked. §4 Migration plan è HISTORICAL — wrapper non costruito, vecchio PDF subsystem rimosso integralmente.
 **Date:** 2026-05-07
 **Author:** Claude (Opus 4.7) + Γιώργος
 **Mandate:** GOL + SSOT — full enterprise scope, zero MVP variants, completeness over phased-light, industry-standard convergence (Procore / SAP / Bluebeam)

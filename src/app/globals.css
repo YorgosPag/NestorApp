@@ -595,26 +595,20 @@
     color: hsl(var(--card-foreground)) !important;
   }
 
-  /* Oggi — data-today è sul <td> in rdp v9.13 (NON aria-current sul button) */
-  .rdp-root [data-today="true"]:not([data-selected="true"]) .rdp-day_button {
+  /* Oggi — classe custom via modifiersClassNames (bypassa classNames.today = bg-accent) */
+  .mini-cal-today:not([data-selected="true"]) .rdp-day_button {
     background-color: #3b82f6 !important;
     color: #ffffff !important;
     border-radius: 9999px !important;
     font-weight: 700 !important;
   }
 
-  /* Selezionato — aria-selected è sul <td>, button dentro */
-  .rdp-root [data-selected="true"] .rdp-day_button,
-  .rdp-root [aria-selected="true"] .rdp-day_button {
+  /* Oggi + selezionato — fill uguale, border-radius cerchio */
+  .mini-cal-today[data-selected="true"] .rdp-day_button {
     background-color: #2563eb !important;
     color: #ffffff !important;
-    border-radius: 0.375rem !important;
-  }
-
-  /* Annulla il bg-accent scuro che Tailwind applica sulla <td> di today */
-  .rdp-root [data-today].bg-accent,
-  .rdp-root .bg-accent {
-    background-color: transparent !important;
+    border-radius: 9999px !important;
+    font-weight: 700 !important;
   }
 
   /* Tailwind classes inside Calendar component */
