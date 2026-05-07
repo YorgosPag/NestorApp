@@ -9,9 +9,8 @@ import { PropertyFloorplanService, type PropertyFloorplanData } from '../../../s
 import { FloorFloorplanService } from '../../../services/floorplans/FloorFloorplanService';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { resolveCompanyIdForBuilding } from '@/services/company-id-resolver';
-import { usePdfBackgroundStore } from '../pdf-background/stores/pdfBackgroundStore';
+import { PdfRenderer } from '../pdf-background/services/PdfRenderer';
 import { unifiedSceneManager } from '../managers/SceneUpdateManager';
-import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { dlog, dwarn, derr } from '../debug';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -48,7 +47,6 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const { user } = useAuth();
   const { setProjectFloorplan, setParkingFloorplan } = useFloorplan();
-  const { loadPdf: loadPdfToBackground, setEnabled: setPdfEnabled, unloadPdf } = usePdfBackgroundStore();
 
   // DXF Import Modal state
   const [showDxfModal, setShowDxfModal] = useState(false);
@@ -118,10 +116,6 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
   const performFloorplanImport = async (
     file: File, encoding: string, type: FloorplanType
   ) => {
-    dlog('ProjectDialog', '🔺 Clearing PDF background before loading DXF...');
-    unloadPdf();
-    setPdfEnabled(false);
-
     if (onFileImport) {
       await onFileImport(file);
     } else {
@@ -216,19 +210,21 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
   const performPdfFloorplanImport = async (file: File, type: FloorplanType) => {
     dlog('ProjectDialog', '📄 Performing PDF floorplan import:', file.name, type);
     unifiedSceneManager.resetScene('pdf-import');
-    await loadPdfToBackground(file);
-    setPdfEnabled(true);
 
-    await new Promise(resolve => setTimeout(resolve, PANEL_LAYOUT.TIMING.OBSERVER_RETRY));
+    const loadResult = await PdfRenderer.loadDocument(file);
+    if (!loadResult.success) {
+      derr('ProjectDialog', '❌ PDF load failed:', loadResult.error);
+      return;
+    }
 
-    const pdfState = usePdfBackgroundStore.getState();
-    const pdfImageUrl = pdfState.renderedImageUrl;
-    const pdfDimensions = pdfState.pageDimensions;
-
-    if (!pdfImageUrl) {
+    const renderResult = await PdfRenderer.renderPage(1, { scale: 2 });
+    if (!renderResult.success || !renderResult.imageUrl) {
       derr('ProjectDialog', '❌ PDF rendering failed - no image URL');
       return;
     }
+
+    const pdfImageUrl = renderResult.imageUrl;
+    const pdfDimensions = renderResult.dimensions ?? null;
 
     if (pdfImageUrl.length > 900000) {
       const sizeMB = (pdfImageUrl.length / (1024 * 1024)).toFixed(2);

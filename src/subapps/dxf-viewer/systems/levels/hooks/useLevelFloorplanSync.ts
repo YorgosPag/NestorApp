@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { RealtimeService } from '@/services/realtime';
 import type { FileTrashedPayload } from '@/services/realtime';
 import type { Level } from '../config';
-import { usePdfBackgroundStore } from '../../../pdf-background/stores/pdfBackgroundStore';
+import { useFloorplanBackgroundStore } from '../../../floorplan-background/stores/floorplanBackgroundStore';
 
 interface UseLevelFloorplanSyncParams {
   levels: Level[];
@@ -46,9 +46,9 @@ export function useLevelFloorplanSync({
 
         if (matchByFile || matchByFloor) {
           clearLevelScene(level.id);
-          const pdfStore = usePdfBackgroundStore.getState();
-          pdfStore.unloadPdf();
-          pdfStore.setEnabled(false);
+          if (level.floorId) {
+            useFloorplanBackgroundStore.getState().removeBackground(level.floorId).catch(() => undefined);
+          }
         }
       }
     };
