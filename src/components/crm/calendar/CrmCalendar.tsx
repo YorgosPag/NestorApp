@@ -244,7 +244,7 @@ export function CrmCalendar({
   );
 
   // Today's date — recalculated on each render to stay current
-  const today = useMemo(() => startOfDay(new Date()), []);
+  const today = startOfDay(new Date());
 
   // Event-aware dayPropGetter — memoized to avoid re-renders
   const dayPropGetter = useMemo(() => createDayPropGetter(events, today), [events, today]);
