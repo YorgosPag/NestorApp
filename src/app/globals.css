@@ -633,10 +633,10 @@
     background: hsl(var(--muted) / 0.5);
   }
 
-  /* Today highlight — vivid glow effect */
+  /* Today highlight — disabled (react-big-calendar bug applies to wrong day) */
   .rbc-wrapper .rbc-today {
-    background: rgba(59, 130, 246, 0.1);
-    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3), 0 0 20px rgba(59, 130, 246, 0.15);
+    background: transparent;
+    box-shadow: none;
   }
 
   /* Event dot indicator — green glowing dot on days with events */
