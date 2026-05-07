@@ -2566,6 +2566,18 @@
       "addedDate": "2026-05-07",
       "addedByAdr": "ADR-340",
       "tier": 2
+    },
+    "data-url-utils": {
+      "ssotFile": "src/lib/data-url-utils.ts",
+      "description": "Data URL / base64 conversion utility — dataUrlToBlob. Canonical SSoT for converting base64 data-URLs to Blob objects (used by FloorFloorplanService for PDF canvas export). ADR-314 auto-discovered 2026-05-08.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+dataUrlToBlob\\b"
+      ],
+      "allowlist": [
+        "src/lib/data-url-utils.ts"
+      ],
+      "addedDate": "2026-05-08",
+      "tier": 3
     }
   }
 }
