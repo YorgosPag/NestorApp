@@ -32,6 +32,7 @@ import type {
   DateSelectArg,
   DatesSetArg,
   EventContentArg,
+  DayHeaderContentArg,
 } from '@fullcalendar/core';
 import type { EventDropArg } from '@fullcalendar/core';
 import type { EventResizeDoneArg } from '@fullcalendar/interaction';
@@ -87,6 +88,7 @@ export function CrmCalendar({
   const calendarRef = useRef<FullCalendarRef>(null);
   const isProgrammaticNav = useRef(false);
   const lastReportedDateRef = useRef<string | null>(null);
+  const activeViewRef = useRef('dayGridMonth');
 
   // Cross-month drag
   const {
@@ -156,6 +158,7 @@ export function CrmCalendar({
       onRangeChange({ start: arg.start, end: arg.end });
       setCalendarTitle(arg.view.title);
       setActiveView(arg.view.type);
+      activeViewRef.current = arg.view.type;
       const currentIso = arg.view.currentStart.toISOString();
       if (isProgrammaticNav.current) {
         isProgrammaticNav.current = false;
@@ -276,6 +279,18 @@ export function CrmCalendar({
     return <CalendarEventTooltip event={ev} timeText={arg.timeText} />;
   }, []);
 
+  // Outlook-style day header for timegrid views (day name + date number + today circle)
+  const renderDayHeader = useCallback((arg: DayHeaderContentArg) => {
+    if (activeViewRef.current === 'dayGridMonth') return { domNodes: [] };
+    const locale = i18n.language === 'el' ? 'el-GR' : 'en-GB';
+    const dayName = arg.date.toLocaleDateString(locale, { weekday: 'short' }).toUpperCase();
+    const dayNum = arg.date.getDate();
+    const el = document.createElement('div');
+    el.className = 'fc-otlk-hdr';
+    el.innerHTML = `<span class="fc-otlk-hdr__name">${dayName}</span><span class="fc-otlk-hdr__num${arg.isToday ? ' fc-otlk-hdr__num--today' : ''}">${dayNum}</span>`;
+    return { domNodes: [el] };
+  }, [i18n.language]);
+
   // View change (toolbar + keyboard shortcuts)
   const goToView = useCallback((view: string) => {
     calendarRef.current?.getApi().changeView(view);
@@ -351,6 +366,8 @@ export function CrmCalendar({
             eventDidMount={handleEventDidMount}
             eventContent={renderEventContent}
             eventDisplay="block"
+            dayHeaderContent={renderDayHeader}
+            slotLabelFormat={{ hour: 'numeric', minute: '2-digit', omitZeroMinute: true, meridiem: 'short' }}
           />
           </section>
 

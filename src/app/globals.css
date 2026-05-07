@@ -679,6 +679,74 @@
     color: hsl(var(--status-error));
   }
 
+  /* ===================================================================
+   * Outlook-style timegrid day headers (.fc-otlk-hdr)
+   * Used by dayHeaderContent in CrmCalendar for timeGridWeek view.
+   * =================================================================== */
+
+  .fc-otlk-hdr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 4px 8px;
+    gap: 3px;
+    line-height: 1;
+  }
+
+  .fc-otlk-hdr__name {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .fc-otlk-hdr__num {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 300;
+    border-radius: 50%;
+    color: hsl(var(--card-foreground));
+    transition: background 0.15s ease;
+  }
+
+  .fc-otlk-hdr__num--today {
+    background: #3b82f6;
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  /* Today column: subtle blue tint on background */
+  .fc-wrapper .fc-timegrid-col.fc-day-today {
+    background: rgba(59, 130, 246, 0.04) !important;
+  }
+
+  /* Major hour slot: slightly more visible divider */
+  .fc-wrapper .fc-timegrid-slot-major {
+    border-bottom-color: hsl(var(--border) / 0.35);
+  }
+
+  /* Minor half-hour slot: barely visible */
+  .fc-wrapper .fc-timegrid-slot-minor {
+    border-bottom-color: hsl(var(--border) / 0.08);
+  }
+
+  /* Time label: right-aligned, small */
+  .fc-wrapper .fc-timegrid-slot-label-cushion {
+    font-size: 0.7rem;
+    padding-right: 6px;
+    white-space: nowrap;
+  }
+
+  /* Timegrid header row height */
+  .fc-wrapper .fc-timegrid .fc-col-header-cell {
+    border-bottom: 1px solid hsl(var(--border) / 0.3);
+  }
+
   /* List (agenda) view */
   .fc-wrapper .fc-list {
     background: hsl(var(--secondary));

@@ -25,9 +25,10 @@ export interface CalendarToolbarProps {
 // CONSTANTS
 // ============================================================================
 
+const RIBBON_BLUE = '#3b82f6';
+
 const VIEWS = [
-  { key: 'timeGridDay', labelKey: 'calendarPage.views.day' },
-  { key: 'timeGridWeek', labelKey: 'calendarPage.views.week' },
+  { key: 'timeGridWeek', labelKey: 'calendarPage.views.day' },
   { key: 'dayGridMonth', labelKey: 'calendarPage.views.month' },
   { key: 'listWeek', labelKey: 'calendarPage.views.agenda' },
 ] as const;
@@ -37,7 +38,7 @@ const VIEWS = [
 // ============================================================================
 
 function RibbonDivider() {
-  return <div className="w-px bg-border self-stretch my-1" aria-hidden="true" />;
+  return <div className="w-px bg-border self-stretch my-1.5 shrink-0" aria-hidden="true" />;
 }
 
 function RibbonLargeButton({
@@ -53,10 +54,16 @@ function RibbonLargeButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-0.5 h-14 w-[52px] rounded px-1 transition-colors hover:bg-accent text-foreground"
+      className="flex flex-col items-center justify-center gap-1 h-[52px] w-[56px] rounded-md px-1 transition-colors hover:bg-accent"
     >
-      <Icon className="h-6 w-6 text-primary" strokeWidth={1.5} />
-      <span className="text-[10px] leading-tight text-center font-medium">{label}</span>
+      <Icon
+        className="h-6 w-6 shrink-0"
+        strokeWidth={1.5}
+        style={{ color: RIBBON_BLUE }}
+      />
+      <span className="text-[10px] leading-tight text-center text-foreground font-medium whitespace-nowrap">
+        {label}
+      </span>
     </button>
   );
 }
@@ -75,7 +82,7 @@ function RibbonNavButton({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex items-center justify-center h-7 w-7 rounded transition-colors hover:bg-accent text-muted-foreground hover:text-foreground"
+      className="flex items-center justify-center h-7 w-7 rounded transition-colors hover:bg-accent text-foreground"
     >
       <Icon className="h-4 w-4" />
     </button>
@@ -100,7 +107,7 @@ export function CalendarToolbar({
   return (
     <header className="flex items-stretch h-[60px] border-b border-border bg-card px-2 gap-1 shrink-0">
 
-      {/* ── Group 1: New event (large Fluent-style button) ─────────────────── */}
+      {/* ── Group 1: New event ─────────────────────────────────────────────── */}
       <div className="flex items-center px-1">
         <RibbonLargeButton
           icon={CalendarPlus}
@@ -119,22 +126,20 @@ export function CalendarToolbar({
           onClick={onToday}
         />
 
-        <div className="flex flex-col items-center justify-center gap-0.5">
-          <div className="flex items-center gap-0.5">
-            <RibbonNavButton
-              icon={ChevronLeft}
-              onClick={onPrev}
-              label={t('calendarPage.toolbar.prev')}
-            />
-            <span className="min-w-40 text-center text-sm font-semibold select-none px-0.5">
-              {title}
-            </span>
-            <RibbonNavButton
-              icon={ChevronRight}
-              onClick={onNext}
-              label={t('calendarPage.toolbar.next')}
-            />
-          </div>
+        <div className="flex items-center gap-0.5">
+          <RibbonNavButton
+            icon={ChevronLeft}
+            onClick={onPrev}
+            label={t('calendarPage.toolbar.prev')}
+          />
+          <span className="min-w-40 text-center text-sm font-semibold text-foreground select-none px-0.5">
+            {title}
+          </span>
+          <RibbonNavButton
+            icon={ChevronRight}
+            onClick={onNext}
+            label={t('calendarPage.toolbar.next')}
+          />
         </div>
       </div>
 
@@ -152,16 +157,20 @@ export function CalendarToolbar({
               key={key}
               type="button"
               onClick={() => onViewChange(key)}
+              style={isActive ? { color: RIBBON_BLUE } : undefined}
               className={cn(
-                'relative flex flex-col items-center justify-center h-14 min-w-[52px] px-2 rounded transition-colors select-none',
+                'relative flex flex-col items-center justify-center h-[52px] min-w-[52px] px-2 rounded-md transition-colors select-none text-xs',
                 isActive
-                  ? 'bg-primary/10 text-primary font-semibold'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  ? 'font-semibold'
+                  : 'text-foreground hover:bg-accent'
               )}
             >
-              <span className="text-xs">{t(labelKey)}</span>
+              {t(labelKey)}
               {isActive && (
-                <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-primary" />
+                <span
+                  className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full"
+                  style={{ backgroundColor: RIBBON_BLUE }}
+                />
               )}
             </button>
           );

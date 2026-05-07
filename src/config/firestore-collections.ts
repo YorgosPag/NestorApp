@@ -389,6 +389,9 @@ export const SUBCOLLECTIONS = {
 
   // Quote subcollections (ADR-329: Quote Comments)
   QUOTE_COMMENTS: process.env.NEXT_PUBLIC_QUOTE_COMMENTS_SUBCOL || 'quote_comments',
+
+  // DXF overlay level items (subcollection under dxf_overlay_levels/{id})
+  DXF_OVERLAY_LEVEL_ITEMS: process.env.NEXT_PUBLIC_DXF_OVERLAY_LEVEL_ITEMS_SUBCOL || 'items',
 } as const;
 
 // ============================================================================
