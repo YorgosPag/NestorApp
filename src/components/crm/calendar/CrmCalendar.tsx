@@ -140,8 +140,6 @@ export function CrmCalendar({
   const { t, i18n } = useTranslation(['crm', 'crm-inbox']);
   const { success: notifySuccess, error: notifyError } = useNotifications();
 
-  console.log('🟠 CrmCalendar render — navigateToDate:', navigateToDate);
-
   // Dialog state
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
@@ -155,8 +153,6 @@ export function CrmCalendar({
   // View state
   const [currentView, setCurrentView] = useState<View>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
-
-  console.log('🟣 CrmCalendar — currentDate:', currentDate);
 
   // Track programmatic navigation to prevent feedback loop
   const isProgrammaticNav = useRef(false);
