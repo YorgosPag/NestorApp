@@ -666,6 +666,8 @@
   /* Month row borders — removed for clean look */
   .rbc-wrapper .rbc-month-row {
     border-color: transparent;
+    display: flex !important;
+    width: 100% !important;
   }
 
   .rbc-wrapper .rbc-month-row + .rbc-month-row {
