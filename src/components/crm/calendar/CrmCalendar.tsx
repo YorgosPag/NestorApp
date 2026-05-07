@@ -296,28 +296,21 @@ export function CrmCalendar({
   return (
     <>
       <TooltipProvider>
-        <section
-          ref={containerRef}
-          className="fc-wrapper relative"
-          aria-label={t('calendarPage.title')}
-          aria-busy={loading}
-        >
-          {isDragging && (
-            <div
-              aria-hidden="true"
-              className={`fc-cross-month-zone fc-cross-month-zone--prev${isNearLeft ? ' fc-cross-month-zone--active' : ''}`}
-            >
-              ←
-            </div>
-          )}
-          {isDragging && (
-            <div
-              aria-hidden="true"
-              className={`fc-cross-month-zone fc-cross-month-zone--next${isNearRight ? ' fc-cross-month-zone--active' : ''}`}
-            >
-              →
-            </div>
-          )}
+        <div className="flex items-stretch gap-2">
+          {/* Left arrow zone — outside calendar, always reserves space */}
+          <div
+            aria-hidden="true"
+            className={`fc-cross-month-zone fc-cross-month-zone--prev${isDragging ? ' fc-cross-month-zone--visible' : ''}${isNearLeft ? ' fc-cross-month-zone--active' : ''}`}
+          >
+            ←
+          </div>
+
+          <section
+            ref={containerRef}
+            className="fc-wrapper min-w-0 flex-1"
+            aria-label={t('calendarPage.title')}
+            aria-busy={loading}
+          >
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, rrulePlugin]}
@@ -354,7 +347,16 @@ export function CrmCalendar({
             eventContent={renderEventContent}
             eventDisplay="block"
           />
-        </section>
+          </section>
+
+          {/* Right arrow zone — outside calendar */}
+          <div
+            aria-hidden="true"
+            className={`fc-cross-month-zone fc-cross-month-zone--next${isDragging ? ' fc-cross-month-zone--visible' : ''}${isNearRight ? ' fc-cross-month-zone--active' : ''}`}
+          >
+            →
+          </div>
+        </div>
       </TooltipProvider>
 
       <CalendarEventDialog

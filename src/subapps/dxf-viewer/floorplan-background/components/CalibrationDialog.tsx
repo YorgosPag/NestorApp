@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useShallow } from 'zustand/react/shallow';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
 import { useCalibration } from '../hooks/useCalibration';
@@ -44,11 +43,9 @@ export function CalibrationDialog() {
 
   const session = useFloorplanBackgroundStore((s) => s.calibrationSession);
   const floorId = session?.floorId ?? '';
-
   const background = useFloorplanBackgroundStore(
-    useShallow((s) => (floorId ? (s.floors[floorId]?.background ?? null) : null)),
+    (s) => (floorId ? (s.floors[floorId]?.background ?? null) : null),
   );
-
   const calibration = useCalibration(floorId);
   const open = !!(session?.pointA && session?.pointB);
 
