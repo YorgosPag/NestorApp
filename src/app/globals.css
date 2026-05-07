@@ -526,6 +526,12 @@
     overflow: hidden;
   }
 
+  /* Fix table layout for uniform cell widths */
+  .rbc-wrapper .rbc-month-view table {
+    table-layout: fixed;
+    width: 100%;
+  }
+
   /* Mini-picker calendar (react-big-calendar small instance) — match large calendar background */
   .rbc-month-view {
     background: hsl(var(--secondary)) !important;
