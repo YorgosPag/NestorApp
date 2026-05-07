@@ -1,9 +1,11 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-react';
+import type { ComponentType, SVGProps } from 'react';
+import { ChevronLeft, ChevronRight, CalendarPlus, CalendarDays } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+type IconComponent = ComponentType<SVGProps<SVGSVGElement> & { strokeWidth?: number | string }>;
 
 // ============================================================================
 // TYPES
@@ -31,6 +33,56 @@ const VIEWS = [
 ] as const;
 
 // ============================================================================
+// SUB-COMPONENTS
+// ============================================================================
+
+function RibbonDivider() {
+  return <div className="w-px bg-border self-stretch my-1" aria-hidden="true" />;
+}
+
+function RibbonLargeButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: IconComponent;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-center justify-center gap-0.5 h-14 w-[52px] rounded px-1 transition-colors hover:bg-accent text-foreground"
+    >
+      <Icon className="h-6 w-6 text-primary" strokeWidth={1.5} />
+      <span className="text-[10px] leading-tight text-center font-medium">{label}</span>
+    </button>
+  );
+}
+
+function RibbonNavButton({
+  icon: Icon,
+  onClick,
+  label,
+}: {
+  icon: IconComponent;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="flex items-center justify-center h-7 w-7 rounded transition-colors hover:bg-accent text-muted-foreground hover:text-foreground"
+    >
+      <Icon className="h-4 w-4" />
+    </button>
+  );
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -46,50 +98,53 @@ export function CalendarToolbar({
   const { t } = useTranslation('crm-inbox');
 
   return (
-    <header className="flex items-center gap-1 px-3 py-2 border-b border-border bg-card">
-      {/* New event */}
-      <Button onClick={onNewEvent} size="sm" className="gap-1.5 shrink-0">
-        <Plus className="h-4 w-4" />
-        {t('calendarPage.newEvent')}
-      </Button>
+    <header className="flex items-stretch h-[60px] border-b border-border bg-card px-2 gap-1 shrink-0">
 
-      <div className="w-px h-5 bg-border mx-2 shrink-0" />
-
-      {/* Today */}
-      <Button variant="ghost" size="sm" onClick={onToday} className="gap-1.5 shrink-0">
-        <CalendarDays className="h-4 w-4" />
-        {t('calendarPage.today')}
-      </Button>
-
-      {/* Navigation */}
-      <div className="flex items-center gap-0.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onPrev}
-          className="h-8 w-8"
-          aria-label={t('calendarPage.toolbar.prev')}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span className="min-w-36 text-center text-sm font-semibold px-1 select-none">
-          {title}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onNext}
-          className="h-8 w-8"
-          aria-label={t('calendarPage.toolbar.next')}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      {/* ── Group 1: New event (large Fluent-style button) ─────────────────── */}
+      <div className="flex items-center px-1">
+        <RibbonLargeButton
+          icon={CalendarPlus}
+          label={t('calendarPage.newEvent')}
+          onClick={onNewEvent}
+        />
       </div>
 
-      <div className="w-px h-5 bg-border mx-2 shrink-0" />
+      <RibbonDivider />
 
-      {/* View switcher */}
-      <nav className="flex items-center gap-0.5" aria-label={t('calendarPage.toolbar.viewSelection')}>
+      {/* ── Group 2: Today + Navigation ────────────────────────────────────── */}
+      <div className="flex items-center gap-1 px-1">
+        <RibbonLargeButton
+          icon={CalendarDays}
+          label={t('calendarPage.today')}
+          onClick={onToday}
+        />
+
+        <div className="flex flex-col items-center justify-center gap-0.5">
+          <div className="flex items-center gap-0.5">
+            <RibbonNavButton
+              icon={ChevronLeft}
+              onClick={onPrev}
+              label={t('calendarPage.toolbar.prev')}
+            />
+            <span className="min-w-40 text-center text-sm font-semibold select-none px-0.5">
+              {title}
+            </span>
+            <RibbonNavButton
+              icon={ChevronRight}
+              onClick={onNext}
+              label={t('calendarPage.toolbar.next')}
+            />
+          </div>
+        </div>
+      </div>
+
+      <RibbonDivider />
+
+      {/* ── Group 3: View switcher ──────────────────────────────────────────── */}
+      <nav
+        className="flex items-center gap-0.5 px-1"
+        aria-label={t('calendarPage.toolbar.viewSelection')}
+      >
         {VIEWS.map(({ key, labelKey }) => {
           const isActive = activeView === key;
           return (
@@ -98,18 +153,21 @@ export function CalendarToolbar({
               type="button"
               onClick={() => onViewChange(key)}
               className={cn(
-                'relative px-3 py-1.5 text-sm rounded-md transition-colors select-none',
-                'hover:bg-accent hover:text-accent-foreground',
+                'relative flex flex-col items-center justify-center h-14 min-w-[52px] px-2 rounded transition-colors select-none',
                 isActive
-                  ? 'text-primary font-medium after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-4/5 after:h-0.5 after:bg-primary after:rounded-full'
-                  : 'text-muted-foreground'
+                  ? 'bg-primary/10 text-primary font-semibold'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               )}
             >
-              {t(labelKey)}
+              <span className="text-xs">{t(labelKey)}</span>
+              {isActive && (
+                <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-primary" />
+              )}
             </button>
           );
         })}
       </nav>
+
     </header>
   );
 }

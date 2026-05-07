@@ -8,6 +8,11 @@
       "day": "Day",
       "agenda": "Agenda"
     },
+    "toolbar": {
+      "prev": "Previous",
+      "next": "Next",
+      "viewSelection": "Select view"
+    },
     "filters": {
       "allUsers": "All Users",
       "myCalendar": "My Calendar",

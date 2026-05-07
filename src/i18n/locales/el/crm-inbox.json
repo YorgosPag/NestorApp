@@ -8,6 +8,11 @@
       "day": "Ημέρα",
       "agenda": "Ατζέντα"
     },
+    "toolbar": {
+      "prev": "Προηγούμενο",
+      "next": "Επόμενο",
+      "viewSelection": "Επιλογή προβολής"
+    },
     "filters": {
       "allUsers": "Όλοι οι χρήστες",
       "myCalendar": "Το ημερολόγιό μου",
