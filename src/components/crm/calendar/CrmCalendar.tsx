@@ -56,10 +56,8 @@ import { spacing as spacingTokens } from '@/styles/design-tokens/core/spacing';
 // DAY CELL HELPERS — weekend/past detection
 // ============================================================================
 
-const today = startOfDay(new Date());
-
 /** Creates dayPropGetter with event-aware dot indicators */
-function createDayPropGetter(events: CalendarEvent[]) {
+function createDayPropGetter(events: CalendarEvent[], today: Date) {
   return function dayPropGetter(date: Date) {
     const classes: string[] = [];
     if (isBefore(date, today)) classes.push('rbc-calendar-past');
@@ -68,7 +66,7 @@ function createDayPropGetter(events: CalendarEvent[]) {
 }
 
 /** Adds CSS class to date cell numbers for past date styling */
-function DateCellWrapper({ children, value }: DateCellWrapperProps) {
+function DateCellWrapper({ children, value, today }: DateCellWrapperProps & { today: Date }) {
   if (isBefore(value, today)) {
     return (
       <div className="rbc-calendar-past-date">
@@ -245,8 +243,11 @@ export function CrmCalendar({
     [onRangeChange]
   );
 
+  // Today's date — recalculated on each render to stay current
+  const today = useMemo(() => startOfDay(new Date()), []);
+
   // Event-aware dayPropGetter — memoized to avoid re-renders
-  const dayPropGetter = useMemo(() => createDayPropGetter(events), [events]);
+  const dayPropGetter = useMemo(() => createDayPropGetter(events, today), [events, today]);
 
   // Current locale
   const culture = i18n.language === 'el' ? 'el' : 'en';
@@ -378,7 +379,7 @@ export function CrmCalendar({
             eventPropGetter={eventStyleGetter}
             dayPropGetter={dayPropGetter}
             components={{
-              dateCellWrapper: DateCellWrapper as ComponentType<DateCellWrapperProps>,
+              dateCellWrapper: ((props) => <DateCellWrapper {...props} today={today} />) as ComponentType<DateCellWrapperProps>,
               event: CalendarEventTooltip as ComponentType<EventProps<CalendarEvent>>,
             }}
             messages={messages}
