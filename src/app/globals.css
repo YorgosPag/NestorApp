@@ -623,7 +623,7 @@
   }
 
   .rbc-wrapper .rbc-day-bg:hover {
-    background: rgba(59, 130, 246, 0.06);
+    background: red;
   }
 
   /* NO weekend differentiation — all days same background */
