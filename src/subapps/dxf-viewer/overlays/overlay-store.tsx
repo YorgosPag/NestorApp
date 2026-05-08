@@ -78,6 +78,18 @@ interface OverlayStoreActions {
 
 const OverlayStoreContext = createContext<(OverlayStoreState & OverlayStoreActions) | null>(null);
 
+function polygonEquals(
+  a: [number, number][],
+  b: [number, number][],
+): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i][0] !== b[i][0] || a[i][1] !== b[i][1]) return false;
+  }
+  return true;
+}
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function OverlayStoreProvider({ children }: { children: React.ReactNode }) {
@@ -100,18 +112,61 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   // ── Subscribe to multi-kind overlays for the active floor ────────────────
   const { overlays: floorItems, loading: subLoading } = useFloorOverlays(floorId);
 
+  // ── Optimistic polygon overrides ─────────────────────────────────────────
+  // Firestore subscription is the SSoT, but a write → snapshot round-trip can
+  // take seconds. Without a local override the UI flickers back to the old
+  // polygon between drag-release and snapshot arrival. We hold the optimistic
+  // polygon here and drop it as soon as the next snapshot reflects the same
+  // value (or on rollback if the API write fails).
+  const [pendingPolygons, setPendingPolygons] = useState<
+    Record<string, [number, number][]>
+  >({});
+
   // ── Project read items onto the legacy Overlay shape ─────────────────────
   const overlays = useMemo<Record<string, Overlay>>(() => {
     if (!currentLevelId) return {};
     const map: Record<string, Overlay> = {};
     for (const item of floorItems) {
       const legacy = floorItemToLegacyOverlay(item, currentLevelId);
-      if (legacy) {
-        map[legacy.id] = legacy;
-      }
+      if (!legacy) continue;
+      const override = pendingPolygons[legacy.id];
+      map[legacy.id] = override ? { ...legacy, polygon: override } : legacy;
     }
     return map;
-  }, [floorItems, currentLevelId]);
+  }, [floorItems, currentLevelId, pendingPolygons]);
+
+  // ── Reconcile: drop overrides that the snapshot has caught up with ──────
+  useEffect(() => {
+    setPendingPolygons((prev) => {
+      const ids = Object.keys(prev);
+      if (ids.length === 0) return prev;
+      let changed = false;
+      const next: Record<string, [number, number][]> = {};
+      for (const id of ids) {
+        const item = floorItems.find((f) => f.id === id);
+        const override = prev[id];
+        if (item) {
+          // floorItems carry polygon as Point2D[] (back-compat field). Convert
+          // to tuple form for comparison against the override.
+          const itemTuple = item.polygon.map(
+            (p) => [p.x, p.y] as [number, number],
+          );
+          if (polygonEquals(itemTuple, override)) {
+            changed = true;
+            continue;
+          }
+        }
+        next[id] = override;
+      }
+      return changed ? next : prev;
+    });
+  }, [floorItems]);
+
+  // Reset overrides on level change — overrides only make sense for the
+  // active floor's overlays.
+  useEffect(() => {
+    setPendingPolygons({});
+  }, [currentLevelId]);
 
   const isLoading = subLoading;
 
@@ -163,7 +218,28 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   const update = useCallback(
     async (id: string, patch: UpdateOverlayData): Promise<void> => {
       const payload = buildUpdatePayload(id, patch);
-      await updateFloorplanOverlay(payload);
+      // Optimistic polygon override — applied before the API write so the UI
+      // doesn't flicker back to the snapshot value while waiting for the
+      // round-trip. Reconciliation effect drops it when the snapshot catches up.
+      const optimisticPolygon = patch.polygon as
+        | [number, number][]
+        | undefined;
+      if (optimisticPolygon) {
+        setPendingPolygons((prev) => ({ ...prev, [id]: optimisticPolygon }));
+      }
+      try {
+        await updateFloorplanOverlay(payload);
+      } catch (err) {
+        if (optimisticPolygon) {
+          setPendingPolygons((prev) => {
+            if (!(id in prev)) return prev;
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+        }
+        throw err;
+      }
     },
     [],
   );
@@ -247,7 +323,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     setHiddenOverlayIds(new Set());
   }, []);
 
-  // ── Vertex helpers — project on geometry.vertices via update() ───────────
+  // ── Vertex helpers — delegate to update() which owns the optimistic path ──
 
   const addVertex = useCallback(
     async (id: string, insertIndex: number, vertex: [number, number]) => {
