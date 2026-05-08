@@ -122,6 +122,7 @@ export function ReadOnlyMediaViewer({
   const floorplansData = useEntityFiles({
     entityType: ENTITY_TYPES.PROPERTY, entityId: propertyId || '', companyId: effectiveCompanyId,
     category: 'floorplans', autoFetch: !!propertyId && !!effectiveCompanyId,
+    realtime: true,
   });
 
   logger.info('[ReadOnlyMediaViewer] Floor props:', { data: { floorId, buildingId, floorNumber, companyId: effectiveCompanyId, isMultiLevel, levelCount: levels?.length } });
@@ -149,11 +150,13 @@ export function ReadOnlyMediaViewer({
   const photosData = useEntityFiles({
     entityType: ENTITY_TYPES.PROPERTY, entityId: propertyId || '', companyId: effectiveCompanyId,
     category: 'photos', autoFetch: !!propertyId && !!effectiveCompanyId,
+    realtime: true,
   });
 
   const videosData = useEntityFiles({
     entityType: ENTITY_TYPES.PROPERTY, entityId: propertyId || '', companyId: effectiveCompanyId,
     category: 'videos', autoFetch: !!propertyId && !!effectiveCompanyId,
+    realtime: true,
   });
 
   // ==========================================================================

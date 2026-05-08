@@ -87,7 +87,7 @@ const logger = createModuleLogger('FILE_RECORD');
 // POST-QUERY NORMALIZATION HELPER (ADR-214 Phase 3)
 // ============================================================================
 
-function toFileRecord(raw: DocumentData): FileRecord | null {
+export function toFileRecord(raw: DocumentData): FileRecord | null {
   const record = {
     ...raw,
     id: raw.id as string,

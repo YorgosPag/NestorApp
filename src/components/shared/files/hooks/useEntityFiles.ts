@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { where } from 'firebase/firestore';
 import type { DocumentData } from 'firebase/firestore';
-import { FileRecordService } from '@/services/file-record.service';
+import { FileRecordService, toFileRecord } from '@/services/file-record.service';
 import {
   moveFileToTrashWithPolicy,
   renameFileWithPolicy,
@@ -258,7 +258,9 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
         const filterByPurpose = buildPurposeFilter(currentPurpose);
 
         const records = result.documents
-          .map(doc => doc as unknown as FileRecord)
+          .map(doc => toFileRecord(doc))
+          .filter((r): r is FileRecord => r !== null)
+          .filter(FileRecordService.isVisibleInActiveLists)
           .filter(filterByPurpose);
 
         setFiles(records);
