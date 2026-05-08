@@ -113,25 +113,53 @@ export function lerpOpacityTowards(
 /**
  * Compute on-screen minor + major spacings and the minor opacity factor.
  *
- * Semantics (user-aligned):
- *  - The minor step is the user's `settings.size` (world units).
- *  - The major step is `settings.size × settings.majorInterval` (world units).
- *  - The major level is always visible at full opacity, with the user's
- *    chosen major color/weight.
- *  - The minor level fades smoothstep over `[fadeMinPx, fadeMaxPx]` based
- *    on its on-screen spacing — so when the user zooms out and the minor
- *    lines become visually dense, they smoothly disappear instead of
- *    cluttering the canvas. The user's panel choice for "minor color" /
- *    "minor weight" stays meaningful at every zoom and remains visually
- *    distinct from the major lines.
+ * Cascading semantics (industry pattern — AutoCAD `GRIDDISPLAY`,
+ * Fusion 360, tldraw 4-level grid, bgolus log-frac shader, Google Maps
+ * tile LOD):
+ *
+ *  - The user's `settings.size` is the BASE step — the cascade's anchor.
+ *  - At any zoom, the renderer picks the cascade level whose major
+ *    on-screen spacing fits the target window `[fadeMaxPx, fadeMaxPx *
+ *    subDivisions]`. As the user zooms in/out, the cascade level shifts
+ *    by powers of `subDivisions` so the visible step always feels
+ *    natural (~50-100 px on screen for major lines).
+ *  - The role assignments are stable: at any zoom the FINER active
+ *    level is the "minor" (rendered with the user-chosen `minorColor`
+ *    and `minorWeight`), the COARSER active level is the "major"
+ *    (`majorColor` / `majorWeight`). Colors NEVER swap at zoom — they
+ *    follow the role, not the absolute level.
+ *  - The major level is always at full opacity. The minor level fades
+ *    smoothstep over `[fadeMinPx, fadeMaxPx]` based on its own on-screen
+ *    spacing, providing a continuous transition at the moment the
+ *    cascade is about to step up (when minor would become too dense).
  *
  * Pure function — safe inside hot render paths.
  */
 export function computeAdaptiveLevels(input: AdaptiveLevelInputs): AdaptiveLevels {
   const { worldStep, scale, subDivisions, fadeMinPx, fadeMaxPx } = input;
 
-  const minorScreenPx = worldStep * scale;
-  const majorScreenPx = minorScreenPx * subDivisions;
+  // Cascade window: the active major's screen spacing should fall within
+  // `[fadeMaxPx, fadeMaxPx * subDivisions]`. That guarantees the active
+  // minor (= major / subDivisions) lands inside `[fadeMaxPx /
+  // subDivisions, fadeMaxPx]` — i.e. visible at full opacity until the
+  // lower edge where smoothstep takes over.
+  const targetMajorMin = fadeMaxPx;
+  const targetMajorMax = fadeMaxPx * subDivisions;
+
+  let majorWorldStep = worldStep;
+  // Defensive bounds prevent runaway loops when scale is 0 / NaN.
+  let safety = 64;
+  while (majorWorldStep * scale < targetMajorMin && safety-- > 0) {
+    majorWorldStep *= subDivisions;
+  }
+  safety = 64;
+  while (majorWorldStep * scale > targetMajorMax && safety-- > 0) {
+    majorWorldStep /= subDivisions;
+  }
+
+  const minorWorldStep = majorWorldStep / subDivisions;
+  const minorScreenPx = minorWorldStep * scale;
+  const majorScreenPx = majorWorldStep * scale;
 
   const denom = Math.max(0.001, fadeMaxPx - fadeMinPx);
   const t = Math.max(0, Math.min(1, (minorScreenPx - fadeMinPx) / denom));
