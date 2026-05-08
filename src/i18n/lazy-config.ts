@@ -98,6 +98,7 @@ export const SUPPORTED_NAMESPACES = [
   'crm-inbox',              // 🏢 CRM calendar/inbox (split from crm — ADR-280)
   'accounting-setup',       // 🏢 Accounting setup/reconciliation (split from accounting — ADR-280)
   'files-media',            // 🏢 Files floorplan/media/capture (split from files — ADR-280)
+  'floorplan-overlays',     // 🏢 Multi-kind overlay roles + geometry labels (ADR-340 Phase 9)
   'navigation-entities',    // 🏢 Navigation entities/filters (split from navigation — ADR-280)
   'reports-extended',       // 🏢 Reports CRM/spaces (split from reports — ADR-280)
   'trash',                  // 🗑️ Centralized trash/soft-delete strings (ADR-281)

@@ -1,0 +1,19 @@
+{
+  "roles": {
+    "property": "Ακίνητο",
+    "parking": "Στάθμευση",
+    "storage": "Αποθήκη",
+    "footprint": "Περίγραμμα",
+    "annotation": "Σημείωση",
+    "auxiliary": "Βοηθητικό"
+  },
+  "geometry": {
+    "polygon": "Πολύγωνο",
+    "line": "Γραμμή",
+    "circle": "Κύκλος",
+    "arc": "Τόξο",
+    "dimension": "Διάσταση",
+    "measurement": "Μέτρηση",
+    "text": "Κείμενο"
+  }
+}

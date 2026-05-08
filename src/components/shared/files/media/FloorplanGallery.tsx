@@ -8,7 +8,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Trash2, Map, Sun, Moon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Trash2, Map, Sun, Moon, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -32,6 +32,7 @@ import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload
 import { FloorplanGalleryZoomControls } from '@/components/shared/files/media/FloorplanGalleryZoomControls';
 import { MeasureToolbar, type MeasureMode } from '@/components/shared/files/media/MeasureToolbar';
 import { MeasureToolOverlay } from '@/components/shared/files/media/MeasureToolOverlay';
+import { CalibrateScaleDialog } from '@/components/shared/files/media/CalibrateScaleDialog';
 
 // Re-exports for backward compatibility
 export type { FloorplanGalleryProps, DxfDrawingMode };
@@ -50,6 +51,7 @@ export function FloorplanGallery({
   onClickOverlay,
   propertyLabels,
   unitsPerMeter,
+  backgroundId,
 }: FloorplanGalleryProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const iconSizes = useIconSizes();
@@ -104,6 +106,10 @@ export function FloorplanGallery({
   const rafRef = useRef<number>(0);
   // ADR-340 Phase 9 STEP H: transient measure tool mode (distance/area/angle/off)
   const [measureMode, setMeasureMode] = useState<MeasureMode | null>(null);
+  // ADR-340 Phase 9 STEP I: calibration dialog open state (raster only)
+  const [calibrateOpen, setCalibrateOpen] = useState(false);
+  const calibrationImageSrc = isRaster ? (rasterImage?.src ?? currentFile?.downloadUrl ?? null) : null;
+  const canCalibrate = isRaster && !!backgroundId && !!calibrationImageSrc;
   // SPEC-237C: Effective highlight = external (list hover) OR local (canvas hover)
   const effectiveHighlightId = highlightedOverlayUnitId || hoveredOverlayUnitId;
 
@@ -395,6 +401,21 @@ export function FloorplanGallery({
               </>
             )}
             <MeasureToolbar mode={measureMode} onModeChange={setMeasureMode} />
+            {canCalibrate && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCalibrateOpen(true)}
+                    aria-label={t('floorplan.calibrate.openButton', { ns: 'files-media' })}
+                  >
+                    <Compass className={iconSizes.sm} aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('floorplan.calibrate.openButton', { ns: 'files-media' })}</TooltipContent>
+              </Tooltip>
+            )}
             <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
             <FloorplanGalleryZoomControls zp={inlineZP} showFullscreen onOpenFullscreen={handleOpenFullscreen} />
             <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
@@ -444,6 +465,16 @@ export function FloorplanGallery({
           </section>
         </DialogContent>
       </Dialog>
+
+      {/* ADR-340 Phase 9 STEP I — calibration dialog (raster only) */}
+      {canCalibrate && backgroundId && calibrationImageSrc && (
+        <CalibrateScaleDialog
+          open={calibrateOpen}
+          onOpenChange={setCalibrateOpen}
+          backgroundId={backgroundId}
+          imageSrc={calibrationImageSrc}
+        />
+      )}
     </>
   );
 }

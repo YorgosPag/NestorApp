@@ -175,6 +175,12 @@ const UI_COLORS_BASE = {
   DARK_GRAY: '#6b7280',      // Unavailable
   TEAL: '#14b8a6',           // 🩵 For-sale-and-rent (ADR-258: Twin Architecture)
 
+  // 🎨 Layer DRAFT colors — used when drawing OR for overlays not yet linked to an
+  // entity. Distinct from every status color (no clash with for-rent blue / sold red /
+  // for-sale green / reserved orange / for-sale-and-rent teal / landowner purple).
+  LAYER_DRAFT_STROKE: '#ec4899',                    // Pink-500 — vivid, status-neutral
+  LAYER_DRAFT_FILL:   'rgba(236, 72, 153, 0.3)',    // Pink-500 @ 30% — translucent fill
+
   // Constraint system colors (για compatibility με constraints/config.ts)
   YELLOW: '#FFFF00',         // Polar constraints
   ORANGE: '#ffaa00',         // Distance constraints

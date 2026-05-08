@@ -1,0 +1,19 @@
+{
+  "roles": {
+    "property": "Property",
+    "parking": "Parking",
+    "storage": "Storage",
+    "footprint": "Footprint",
+    "annotation": "Annotation",
+    "auxiliary": "Auxiliary"
+  },
+  "geometry": {
+    "polygon": "Polygon",
+    "line": "Line",
+    "circle": "Circle",
+    "arc": "Arc",
+    "dimension": "Dimension",
+    "measurement": "Measurement",
+    "text": "Text"
+  }
+}

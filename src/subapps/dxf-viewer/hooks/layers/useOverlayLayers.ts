@@ -25,6 +25,16 @@ import { getStatusColors } from '../../config/color-mapping';
 import { UI_COLORS } from '../../config/color-config';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
+import { useEntityStatusResolver } from '@/hooks/useEntityStatusResolver';
+
+function getLinkedEntityId(overlay: Overlay): string | undefined {
+  switch (overlay.kind) {
+    case 'property': return overlay.linked?.propertyId;
+    case 'parking': return overlay.linked?.parkingId;
+    case 'storage': return overlay.linked?.storageId;
+    default: return undefined;
+  }
+}
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -185,6 +195,15 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
   } = props;
 
   // ============================================================================
+  // 🏢 ADR-258 SSoT: Real-time entity-driven status resolution
+  // When an overlay is linked to a property/parking/storage, the linked
+  // entity's commercialStatus drives the canvas color (matches the
+  // read-only viewer behavior on the properties index page).
+  // ============================================================================
+
+  const resolvedStatusMap = useEntityStatusResolver(overlays);
+
+  // ============================================================================
   // COLOR LAYERS CONVERSION
   // ============================================================================
 
@@ -199,9 +218,20 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
 
         // Get selection state
         const overlayIsSelected = isSelected(overlay.id);
-        const statusColors = overlay.status ? getStatusColors(overlay.status) : null;
-        const fillColor = overlay.style?.fill || statusColors?.fill || UI_COLORS.BUTTON_PRIMARY;
-        const strokeColor = overlay.style?.stroke || statusColors?.stroke || UI_COLORS.BLACK;
+        const isLinked = !!getLinkedEntityId(overlay);
+        const liveStatus = resolvedStatusMap.get(overlay.id);
+        const effectiveStatus = isLinked ? liveStatus : overlay.status;
+        const statusColors = effectiveStatus ? getStatusColors(effectiveStatus) : null;
+        // 🏢 ADR-258: status colors win over style overrides when entity is linked,
+        // so the canvas always reflects the live commercial status.
+        // Unlinked layers use the status-neutral DRAFT pink so they never clash
+        // with the for-rent blue / for-sale green / etc. status palette.
+        const fillColor = isLinked
+          ? statusColors?.fill || overlay.style?.fill || UI_COLORS.LAYER_DRAFT_FILL
+          : overlay.style?.fill || UI_COLORS.LAYER_DRAFT_FILL;
+        const strokeColor = isLinked
+          ? statusColors?.stroke || overlay.style?.stroke || UI_COLORS.BLACK
+          : overlay.style?.stroke || UI_COLORS.LAYER_DRAFT_STROKE;
 
         // Build drag state if this overlay has dragging vertices
         let dragState: { delta: Point2D; originalPositions: Map<number, Point2D> } | undefined;
@@ -229,7 +259,7 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
           opacity: overlay.style?.opacity ?? 0.7,
           visible: !hiddenOverlayIds?.has(overlay.id),
           zIndex: index,
-          status: overlay.status as RegionStatus | undefined,
+          status: (effectiveStatus ?? overlay.status) as RegionStatus | undefined,
           // Grip visibility
           showGrips: overlayIsSelected,
           showEdgeMidpoints: overlayIsSelected,
@@ -274,6 +304,7 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
     dragPreviewPosition,
     hoveredOverlayId,
     hiddenOverlayIds,
+    resolvedStatusMap,
   ]);
 
   // ============================================================================
@@ -300,9 +331,11 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
   const draftColorLayer: ColorLayer | null = useMemo(() => {
     if (draftPolygon.length < 1) return null;
 
-    const statusColors = getStatusColors(currentStatus);
-    const fillColor = statusColors?.fill ?? UI_COLORS.PRIMARY_FILL_30;
-    const strokeColor = statusColors?.stroke ?? UI_COLORS.BUTTON_PRIMARY;
+    // 🎨 Draft polygon (rubber-band preview) uses the status-neutral DRAFT color
+    // so the in-progress layer never clashes with for-rent blue. The final color
+    // is applied later when the user links the layer to an entity.
+    const fillColor = UI_COLORS.LAYER_DRAFT_FILL;
+    const strokeColor = UI_COLORS.LAYER_DRAFT_STROKE;
 
     // 🏢 ENTERPRISE (2026-02-15): Rubber-band preview — append mouseWorld as virtual last vertex
     // This creates the line from last placed point to the current cursor position

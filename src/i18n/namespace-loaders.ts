@@ -78,6 +78,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'telegram': return () => import('./locales/el/telegram.json');
     case 'files': return () => import('./locales/el/files.json');
     case 'files-media': return () => import('./locales/el/files-media.json');
+    case 'floorplan-overlays': return () => import('./locales/el/floorplan-overlays.json');
     case 'storage': return () => import('./locales/el/storage.json');
     case 'parking': return () => import('./locales/el/parking.json');
     case 'admin': return () => import('./locales/el/admin.json');
@@ -173,6 +174,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'telegram': return () => import('./locales/en/telegram.json');
     case 'files': return () => import('./locales/en/files.json');
     case 'files-media': return () => import('./locales/en/files-media.json');
+    case 'floorplan-overlays': return () => import('./locales/en/floorplan-overlays.json');
     case 'storage': return () => import('./locales/en/storage.json');
     case 'parking': return () => import('./locales/en/parking.json');
     case 'admin': return () => import('./locales/en/admin.json');

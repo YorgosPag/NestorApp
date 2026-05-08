@@ -20,6 +20,7 @@ import type { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import type { useIconSizes } from '@/hooks/useIconSizes';
 import { useFloorFloorplans } from '@/hooks/useFloorFloorplans';
 import { useFloorOverlays } from '@/hooks/useFloorOverlays';
+import { useBackgroundScale } from '@/hooks/useBackgroundScale';
 import { FloorplanGallery } from '@/components/shared/files/media/FloorplanGallery';
 import { adaptFloorFloorplanToFileRecord } from './read-only-media-types';
 import type { FileRecord } from '@/types/file-record';
@@ -99,6 +100,7 @@ export function FloorFloorplanTabContent({
   });
 
   const { overlays } = useFloorOverlays(floorId);
+  const { unitsPerMeter, backgroundId } = useBackgroundScale(floorId);
 
   const files = React.useMemo<FileRecord[]>(() => {
     if (!floorFloorplan) return [];
@@ -121,6 +123,8 @@ export function FloorFloorplanTabContent({
         onHoverOverlay={onHoverOverlay}
         onClickOverlay={onClickOverlay}
         propertyLabels={propertyLabels}
+        unitsPerMeter={unitsPerMeter}
+        backgroundId={backgroundId}
         emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties' })}
         className="h-full"
       />
@@ -154,6 +158,8 @@ export function UnitFloorplanTabContent({
     });
   }, [allUnitFloorplans, levelFloorId, isFirstLevel]);
 
+  const { unitsPerMeter, backgroundId } = useBackgroundScale(levelFloorId || null);
+
   return (
     <TabContentWrapper
       loading={loading} error={error} onRetry={onRetry}
@@ -161,6 +167,8 @@ export function UnitFloorplanTabContent({
     >
       <FloorplanGallery
         files={filteredFiles}
+        unitsPerMeter={unitsPerMeter}
+        backgroundId={backgroundId}
         emptyMessage={t('viewer.media.noFloorplans', { ns: 'properties' })}
         className="h-full"
       />

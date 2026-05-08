@@ -52,6 +52,13 @@ export interface FloorplanGalleryProps {
    * distances in meters / m² / degrees; otherwise it falls back to native pixels.
    */
   unitsPerMeter?: number | null;
+  /**
+   * Active `floorplan_backgrounds` document id for the current floor. When
+   * provided AND the current file is raster (PDF / Image), the gallery header
+   * exposes a calibration affordance that opens `CalibrateScaleDialog`. DXF
+   * files skip this UI (auto-detected via `$INSUNITS`).
+   */
+  backgroundId?: string | null;
 }
 
 /**

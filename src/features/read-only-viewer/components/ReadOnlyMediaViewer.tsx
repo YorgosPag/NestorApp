@@ -27,6 +27,7 @@ import { useAuth } from '@/auth/contexts/AuthContext';
 import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
 import { useFloorFloorplans } from '@/hooks/useFloorFloorplans';
 import { useFloorOverlays } from '@/hooks/useFloorOverlays';
+import { useBackgroundScale } from '@/hooks/useBackgroundScale';
 import { FloorplanGallery } from '@/components/shared/files/media/FloorplanGallery';
 import { MediaGallery } from '@/components/shared/files/media/MediaGallery';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -132,6 +133,7 @@ export function ReadOnlyMediaViewer({
   });
 
   const { overlays: singleFloorOverlays } = useFloorOverlays(floorId || null);
+  const { unitsPerMeter: singleFloorUnitsPerMeter, backgroundId: singleFloorBackgroundId } = useBackgroundScale(floorId || null);
 
   // 🏢 Adapter: FloorFloorplanData → FileRecord[] (shared function from types)
   const floorFloorplansData = React.useMemo(() => {
@@ -286,6 +288,8 @@ export function ReadOnlyMediaViewer({
                   highlightedOverlayUnitId={highlightedOverlayUnitId}
                   onHoverOverlay={onHoverOverlay} onClickOverlay={onClickOverlay}
                   propertyLabels={propertyLabels}
+                  unitsPerMeter={singleFloorUnitsPerMeter}
+                  backgroundId={singleFloorBackgroundId}
                   emptyMessage={t('viewer.media.noFloorFloorplans', { ns: 'properties' })}
                   className="h-full"
                 />

@@ -46,6 +46,7 @@
       "unitPixel": "px"
     },
     "calibrate": {
+      "openButton": "Calibrate scale",
       "title": "Calibrate floorplan scale",
       "instructions": "Click two points on the floorplan whose real-world distance you know, then enter that distance.",
       "points": "Picked points: {count} of 2",
@@ -66,6 +67,12 @@
   "floorplanImport": {
     "title": "Import Floorplan",
     "loadTitle": "Load Floorplan",
+    "calibratePrompt": {
+      "title": "Calibrate scale?",
+      "description": "Click two points on the image and enter the real-world distance so measurements display in meters.",
+      "calibrate": "Calibrate now",
+      "skip": "Skip"
+    },
     "steps": {
       "company": "Company",
       "project": "Project",

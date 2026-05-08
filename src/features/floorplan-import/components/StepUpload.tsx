@@ -20,7 +20,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { CheckCircle2, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, AlertTriangle, Loader2, Compass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -33,6 +33,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
+import { CalibrateScaleDialog } from '@/components/shared/files/media/CalibrateScaleDialog';
+import { useBackgroundScale } from '@/hooks/useBackgroundScale';
 import { useFloorplanSmartUpload } from '../hooks/useFloorplanSmartUpload';
 import type {
   FloorWipePreview,
@@ -77,6 +79,25 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
 
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const floorId = smart.resolveFloorId();
+
+  // ── ADR-340 Phase 9 STEP I follow-up (a): post-upload calibration prompt ──
+  // Image only (v1). PDF + DXF defer to gallery Compass affordance — PDF can't
+  // be rendered as <img> directly; DXF requires server-side $INSUNITS parsing.
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFormat, setUploadedFormat] = useState<FloorplanFormat | null>(null);
+  const [calibrateOpen, setCalibrateOpen] = useState(false);
+  const [calibrateSkipped, setCalibrateSkipped] = useState(false);
+  const calibrateFloorId = uploadSuccess && uploadedFormat === 'image' ? floorId : null;
+  const { backgroundId: calibrateBackgroundId, isCalibrated } = useBackgroundScale(calibrateFloorId);
+  const calibrateImageSrc = React.useMemo(() => {
+    if (!uploadedFile || uploadedFormat !== 'image') return null;
+    return URL.createObjectURL(uploadedFile);
+  }, [uploadedFile, uploadedFormat]);
+  useEffect(() => {
+    return () => {
+      if (calibrateImageSrc) URL.revokeObjectURL(calibrateImageSrc);
+    };
+  }, [calibrateImageSrc]);
 
   // ── Wipe preview (floor-level only) ──
   const [preview, setPreview] = useState<FloorWipePreview | null>(null);
@@ -147,6 +168,8 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
           // non-blocking
         }
       }
+      setUploadedFile(file);
+      setUploadedFormat(result.format ?? null);
       setUploadSuccess(true);
       onComplete(file, result.fileId, result.format);
     }
@@ -181,11 +204,46 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
 
   // ── Success state ──
   if (uploadSuccess) {
+    const showCalibratePrompt =
+      uploadedFormat === 'image' &&
+      !!calibrateBackgroundId &&
+      !!calibrateImageSrc &&
+      !isCalibrated &&
+      !calibrateSkipped;
+
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-12">
-        <CheckCircle2 className={`${iconSizes.xl3} text-emerald-500`} />
-        <p className="text-sm font-medium">{t('floorplanImport.success')}</p>
-      </div>
+      <>
+        <div className="flex flex-col items-center justify-center gap-3 py-12">
+          <CheckCircle2 className={`${iconSizes.xl3} text-emerald-500`} />
+          <p className="text-sm font-medium">{t('floorplanImport.success')}</p>
+          {showCalibratePrompt && (
+            <section className="mt-4 flex flex-col items-center gap-2 rounded-md border border-border bg-muted/30 px-4 py-3 text-sm">
+              <p className="font-medium">{t('floorplanImport.calibratePrompt.title')}</p>
+              <p className={`text-xs ${colors.text.muted} text-center max-w-xs`}>
+                {t('floorplanImport.calibratePrompt.description')}
+              </p>
+              <div className="mt-2 flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setCalibrateSkipped(true)}>
+                  {t('floorplanImport.calibratePrompt.skip')}
+                </Button>
+                <Button size="sm" onClick={() => setCalibrateOpen(true)}>
+                  <Compass className="mr-1 h-4 w-4" aria-hidden="true" />
+                  {t('floorplanImport.calibratePrompt.calibrate')}
+                </Button>
+              </div>
+            </section>
+          )}
+        </div>
+        {calibrateBackgroundId && calibrateImageSrc && (
+          <CalibrateScaleDialog
+            open={calibrateOpen}
+            onOpenChange={setCalibrateOpen}
+            backgroundId={calibrateBackgroundId}
+            imageSrc={calibrateImageSrc}
+            onCalibrated={() => setCalibrateSkipped(true)}
+          />
+        )}
+      </>
     );
   }
 

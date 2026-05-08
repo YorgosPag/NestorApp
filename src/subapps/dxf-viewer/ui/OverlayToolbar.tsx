@@ -19,7 +19,8 @@ import { STATUS_LABELS, KIND_LABELS, OVERLAY_STATUS_KEYS, type Status, type Over
 import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { useUnifiedOverlayCreation } from '../hooks/overlay/useUnifiedOverlayCreation';
 import { toolStyleStore, type ToolStyle } from '../stores/ToolStyleStore';
-import { STATUS_COLORS_MAPPING, getKindFromLabel } from '../config/color-mapping';
+import { getKindFromLabel } from '../config/color-mapping';
+import { UI_COLORS } from '../config/color-config';
 import { useOverlayStore } from '../overlays/overlay-store';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '../../../components/ui/effects';
 import {
@@ -101,19 +102,15 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
       // Ενημέρωση του overlayMode state πρώτα για toolbar visibility
       onModeChange(newMode);
       
-      // Χρήση ενιαίου STATUS_COLORS_MAPPING
-      const validStatus = Object.keys(STATUS_COLORS_MAPPING).includes(currentStatus as string) 
-        ? currentStatus as PropertyStatus 
-        : 'for-sale';
-      const statusColors = STATUS_COLORS_MAPPING[validStatus];
-      
-      // Ρύθμιση ToolStyleStore με ενιαίο mapping
+      // 🎨 ADR-258: drawing color is status-neutral until the layer is linked
+      // to an entity. After linking, useOverlayLayers repaints with the live
+      // commercialStatus color (ADR-340 part 10). Avoids clash with for-rent blue.
       const toolStyle = {
-        strokeColor: statusColors.stroke,  // Status stroke color
-        fillColor: statusColors.fill,      // Status fill color (με διαφάνεια)
-        lineWidth: 2,                      // Διακριτή γραμμή
+        strokeColor: UI_COLORS.LAYER_DRAFT_STROKE,
+        fillColor: UI_COLORS.LAYER_DRAFT_FILL,
+        lineWidth: 2,
         opacity: 1,
-        lineType: 'solid'                  // Overlay γραμμές solid για καθαρότητα
+        lineType: 'solid'
       };
       toolStyleStore.set(toolStyle as Partial<ToolStyle>);
 
