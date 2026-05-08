@@ -13,6 +13,7 @@ import {
 import { createDefaultCursorState } from './utils';
 import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { ImmediatePositionStore } from './ImmediatePositionStore';
 
 // Context type that combines state and actions
 interface CursorContextType extends CursorState {
@@ -43,9 +44,14 @@ interface CursorContextType extends CursorState {
 }
 
 // ✅ PROFESSIONAL CAD ACTIONS
+// 🚀 PERF (2026-05-08): UPDATE_POSITION / UPDATE_WORLD_POSITION removed from
+// the reducer. Position now lives in `ImmediatePositionStore` (singleton with
+// useSyncExternalStore-compatible API). The reducer no longer fires on every
+// mousemove → CursorSystem context value is stable across mousemoves → the
+// 8+ provider/component subtree below CursorSystem stops cascading on each
+// frame. Position-reading consumers must use `useCursorPosition()` /
+// `useCursorWorldPosition()` hooks instead of `cursor.position`.
 type CursorAction =
-  | { type: 'UPDATE_POSITION'; position: Point2D | null }
-  | { type: 'UPDATE_WORLD_POSITION'; position: Point2D | null }
   | { type: 'UPDATE_VIEWPORT'; viewport: Viewport }
   | { type: 'SET_MOUSE_DOWN'; down: boolean; button?: number }
   | { type: 'SET_ACTIVE'; active: boolean }
@@ -60,18 +66,6 @@ type CursorAction =
 // Cursor reducer
 function cursorReducer(state: CursorState & { settings: CursorSettings }, action: CursorAction) {
   switch (action.type) {
-    case 'UPDATE_POSITION':
-      // ✅ OPTIMIZATION: Skip update if position unchanged to prevent infinite cycles
-      if (state.position?.x === action.position?.x && state.position?.y === action.position?.y) {
-        return state;
-      }
-      return { ...state, position: action.position };
-    case 'UPDATE_WORLD_POSITION':
-      // ✅ OPTIMIZATION: Skip update if world position unchanged
-      if (state.worldPosition?.x === action.position?.x && state.worldPosition?.y === action.position?.y) {
-        return state;
-      }
-      return { ...state, worldPosition: action.position };
     case 'UPDATE_VIEWPORT':
       return { ...state, viewport: action.viewport };
     case 'SET_MOUSE_DOWN':
@@ -158,13 +152,16 @@ export function CursorSystem({ children }: { children: React.ReactNode }) {
       cursorConfig.resetToDefaults();
     },
     // ✅ CORE MOUSE ACTIONS (Professional CAD Interface)
+    // 🚀 PERF (2026-05-08): no React dispatch — write to ImmediatePositionStore
+    // singleton. Subscribers use useCursorPosition / useCursorWorldPosition
+    // (useSyncExternalStore) for selective re-render. The CursorContext value
+    // no longer changes on mousemove, eliminating the subtree cascade.
     updatePosition: (position: Point2D | null) =>
-      dispatch({ type: 'UPDATE_POSITION', position }),
+      ImmediatePositionStore.setPosition(position),
     updateWorldPosition: (position: Point2D | null) =>
-      dispatch({ type: 'UPDATE_WORLD_POSITION', position }),
-    // ✅ ENTERPRISE: Alias for updateWorldPosition (used in CanvasOverlays)
+      ImmediatePositionStore.setWorldPosition(position),
     setWorldPosition: (position: Point2D | null) =>
-      dispatch({ type: 'UPDATE_WORLD_POSITION', position }),
+      ImmediatePositionStore.setWorldPosition(position),
     updateViewport: (viewport: Viewport) =>
       dispatch({ type: 'UPDATE_VIEWPORT', viewport }),
 
@@ -191,10 +188,19 @@ export function CursorSystem({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'CANCEL_SELECTION' }),
   }), []);
 
-  // Combine state and actions
+  // Combine state and actions.
+  // 🚀 PERF (2026-05-08): position / worldPosition expose getters that read
+  // live from ImmediatePositionStore. The context value identity is stable
+  // across mousemoves (state no longer carries position), so React doesn't
+  // re-render the subtree. Event handlers / non-React renderers calling
+  // `cursor.position` still see the latest value. React components that
+  // need to *re-render* on position change use `useCursorPosition()` /
+  // `useCursorWorldPosition()` (useSyncExternalStore) explicitly.
   const contextValue = useMemo((): CursorContextType => ({
     ...state,
     ...actions,
+    get position() { return ImmediatePositionStore.getPosition(); },
+    get worldPosition() { return ImmediatePositionStore.getWorldPosition(); },
   }), [state, actions]);
 
   return (

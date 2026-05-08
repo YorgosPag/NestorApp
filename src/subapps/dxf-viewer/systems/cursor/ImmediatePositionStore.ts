@@ -40,6 +40,12 @@ class ImmediatePositionStoreClass {
   // 🚀 DIRECT RENDER: Callback για immediate crosshair render (no RAF)
   private directRenderCallback: DirectRenderCallback | null = null;
 
+  // 🏢 World-coordinate companion store (2026-05-08): consumed by toolbar
+  // coordinate display + tools that need world coords. Updated alongside
+  // screen position from the throttled mouse handler.
+  private worldPosition: Point2D | null = null;
+  private worldListeners: Set<PositionListener> = new Set();
+
   // 🏢 PAN LOCK (2026-01-25): Lock crosshair to WORLD position during pan
   private isPanning = false;
   private lockedWorldPosition: Point2D | null = null;
@@ -191,6 +197,26 @@ class ImmediatePositionStoreClass {
     };
   }
 
+  // ─── World position channel (2026-05-08) ───────────────────────────────
+  setWorldPosition(pos: Point2D | null): void {
+    if (this.worldPosition?.x === pos?.x && this.worldPosition?.y === pos?.y) {
+      return;
+    }
+    this.worldPosition = pos ? { x: pos.x, y: pos.y } : null;
+    this.worldListeners.forEach((l) => {
+      try { l(this.worldPosition); } catch (e) { console.error('worldPosition listener error:', e); }
+    });
+  }
+
+  getWorldPosition(): Point2D | null {
+    return this.worldPosition;
+  }
+
+  subscribeWorldPosition(listener: PositionListener): () => void {
+    this.worldListeners.add(listener);
+    return () => { this.worldListeners.delete(listener); };
+  }
+
   /**
    * 🧹 CLEAR: Reset position to null
    */
@@ -213,6 +239,21 @@ export function getImmediatePosition(): Point2D | null {
 
 export function subscribeToImmediatePosition(listener: (position: Point2D | null) => void): () => void {
   return ImmediatePositionStore.subscribe(listener);
+}
+
+// 🌍 World position convenience (2026-05-08)
+export function setImmediateWorldPosition(pos: Point2D | null): void {
+  ImmediatePositionStore.setWorldPosition(pos);
+}
+
+export function getImmediateWorldPosition(): Point2D | null {
+  return ImmediatePositionStore.getWorldPosition();
+}
+
+export function subscribeToImmediateWorldPosition(
+  listener: (position: Point2D | null) => void,
+): () => void {
+  return ImmediatePositionStore.subscribeWorldPosition(listener);
 }
 
 /**

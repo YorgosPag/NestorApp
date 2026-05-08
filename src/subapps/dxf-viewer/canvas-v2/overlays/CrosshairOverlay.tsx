@@ -21,7 +21,7 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { getCursorSettings, subscribeToCursorSettings, type CursorSettings } from '../../systems/cursor/config';
-import { useCursorState } from '../../systems/cursor/useCursor';
+import { useCursorPosition } from '../../systems/cursor/useCursor';
 import { useGripContext } from '../../providers/GripProvider';
 import { portalComponents } from '@/styles/design-tokens';
 import type { Point2D } from '../../rendering/types/Types';
@@ -73,7 +73,7 @@ export default function CrosshairOverlay({
   // Pattern: Autodesk/Adobe - Single Source of Truth
   // ============================================================================
 
-  const { position: cursorPosition } = useCursorState();
+  const cursorPosition = useCursorPosition();
 
   // ✅ ENTERPRISE: Combine component isActive with cursor position
   const effectiveIsActive = isActive && cursorPosition !== null;

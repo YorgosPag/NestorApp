@@ -12,6 +12,7 @@ import type { LayerRenderer } from './LayerRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene } from '../dxf-canvas/dxf-types';
+import { ImmediatePositionStore } from '../../systems/cursor/ImmediatePositionStore';
 import type {
   ColorLayer,
   LayerRenderOptions,
@@ -175,7 +176,11 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
             } as const)
           : null;
 
-      const centralizedPosition = cursor.position;
+      // 🚀 PERF (2026-05-08): read live position from ImmediatePositionStore
+      // instead of cursor.position (which on the new architecture is a getter
+      // backed by the same store). Direct read avoids any context indirection
+      // inside the hot render path.
+      const centralizedPosition = ImmediatePositionStore.getPosition();
       const isPanToolActive = activeTool === 'pan';
 
       // Filter layers based on visibility + draft state

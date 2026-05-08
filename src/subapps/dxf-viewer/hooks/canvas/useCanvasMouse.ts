@@ -170,10 +170,15 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     // 🏢 SSoT FIX (2026-02-15): setImmediatePosition REMOVED from container handler.
     // The DxfCanvas handler (useCentralizedMouseHandlers:304) already calls setImmediatePosition.
     // Due to event bubbling, container's handler fires AFTER DxfCanvas's handler, overwriting
-    // the position with container-relative coords. Since click (handleMouseUp) uses DxfCanvas
-    // element (e.currentTarget), crosshair must also use DxfCanvas coords for alignment.
-    // React state update (for components that need it)
-    updatePosition(screenPos);
+    // the position with container-relative coords.
+    //
+    // 🚀 PERF FIX (2026-05-08): updatePosition(screenPos) REMOVED here too. The DxfCanvas
+    // handler in `mouse-handler-move.ts:60` already dispatches UPDATE_POSITION through
+    // `useCentralizedMouseHandlers`, throttled to 50ms (CURSOR_UPDATE_THROTTLE). Calling
+    // it again unthrottled from this container-level handler doubled the dispatch
+    // frequency and caused a render cascade through the entire CursorSystem subtree on
+    // every mousemove → visible crosshair lag. Container handler now only updates DOM
+    // CSS vars (cheap) and handles drag-preview / guide-drag world-coord work.
     // Update CSS coordinates
     updateMouseCss(screenPos);
 
@@ -212,7 +217,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
         }
       }
     }
-  }, [containerRef, updatePosition, updateMouseCss, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint, draggingGuide, transform, setDragPreviewPosition]);
+  }, [containerRef, updateMouseCss, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint, draggingGuide, transform, setDragPreviewPosition]);
 
   /**
    * 🏢 ENTERPRISE: Container mouse enter handler
