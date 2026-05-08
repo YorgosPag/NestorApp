@@ -55,6 +55,7 @@ export interface GridContextSettings {
     smoothFade?: boolean;
     smoothFadeMinPx?: number;
     smoothFadeMaxPx?: number;
+    smoothFadeDurationMs?: number;
   };
 }
 
@@ -283,6 +284,7 @@ export function useCanvasSettings(props: UseCanvasSettingsProps): UseCanvasSetti
     smoothFade: gridContextSettings?.behavior?.smoothFade ?? true,
     smoothFadeMinPx: gridContextSettings?.behavior?.smoothFadeMinPx ?? 8,
     smoothFadeMaxPx: gridContextSettings?.behavior?.smoothFadeMaxPx ?? 32,
+    smoothFadeDurationMs: gridContextSettings?.behavior?.smoothFadeDurationMs ?? 200,
   }), [gridContextSettings, showGrid]);
 
   /**

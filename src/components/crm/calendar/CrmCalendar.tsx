@@ -17,6 +17,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef, type ComponentRef } from 'react';
+import { addDays } from 'date-fns';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -67,6 +68,8 @@ interface CrmCalendarProps {
   onDateChange?: (date: Date) => void;
   /** Called when user explicitly clicks the Today button */
   onTodayClick?: () => void;
+  /** Multi-day selection from mini calendar: 2+ days → custom timeGrid range view */
+  selectedDays?: Date[];
 }
 
 type FullCalendarRef = ComponentRef<typeof FullCalendar>;
@@ -85,6 +88,7 @@ export function CrmCalendar({
   navigateToDate,
   onDateChange,
   onTodayClick,
+  selectedDays,
 }: CrmCalendarProps) {
   const { t, i18n } = useTranslation(['crm', 'crm-inbox']);
   const { success: notifySuccess, error: notifyError } = useNotifications();
@@ -92,6 +96,7 @@ export function CrmCalendar({
   const isProgrammaticNav = useRef(false);
   const lastReportedDateRef = useRef<string | null>(null);
   const activeViewRef = useRef('dayGridMonth');
+  const preMultiDayViewRef = useRef('dayGridMonth');
 
   // Cross-month drag
   const {
@@ -145,6 +150,22 @@ export function CrmCalendar({
       }),
     [events]
   );
+
+  // Multi-day selection from mini calendar → switch to custom timeGridDay range
+  useEffect(() => {
+    if (!selectedDays || !calendarRef.current) return;
+    const api = calendarRef.current.getApi();
+    if (selectedDays.length >= 2) {
+      preMultiDayViewRef.current = activeViewRef.current;
+      const sorted = [...selectedDays].sort((a, b) => a.getTime() - b.getTime());
+      isProgrammaticNav.current = true;
+      api.changeView('timeGridDay', { start: sorted[0], end: addDays(sorted[sorted.length - 1], 1) });
+    } else if (selectedDays.length === 1) {
+      isProgrammaticNav.current = true;
+      api.changeView(preMultiDayViewRef.current, selectedDays[0]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDays]);
 
   // Programmatic navigation when sidebar date changes
   useEffect(() => {

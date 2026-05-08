@@ -20,8 +20,10 @@ import { addCirclePath } from '../../primitives/canvasPaths';
 import { WORLD_ORIGIN } from '../../../config/geometry-constants';
 // 🏢 ADR-088: Pixel-perfect alignment for crisp 1px rendering
 import { pixelPerfect } from '../../entities/shared/geometry-rendering-utils';
-// 🌊 Adaptive grid math (pure helper, extracted for SRP + 500-line limit)
-import { computeAdaptiveLevels } from './grid-adaptive';
+// 🌊 Adaptive grid math + 2-pass render (extracted for SRP + 500-line limit)
+import { renderAdaptiveGridLines } from './grid-adaptive';
+// Mark dxf-canvas dirty while temporal lerp is still settling.
+import { markSystemsDirty } from '../../core/UnifiedFrameScheduler';
 
 /**
  * 🔺 CENTRALIZED GRID RENDERER
@@ -33,6 +35,11 @@ export class GridRenderer implements UIRenderer {
 
   private renderCount = 0;
   private lastRenderTime = 0;
+  // 🌊 Temporal lerp state for adaptive minor opacity. Smooths zoom-induced
+  // jumps (e.g. mouse-wheel deltas) into a gradual transition over
+  // `smoothFadeDurationMs` ms instead of snapping each frame.
+  private renderedMinorOpacity = 0;
+  private lastFrameTimestampMs = 0;
 
   /**
    * Main render method - Implements UIRenderer interface
@@ -137,72 +144,53 @@ export class GridRenderer implements UIRenderer {
     this.lastRenderTime = performance.now() - startTime;
   }
 
-  /**
-   * Render grid as lines.
-   *
-   * 🌊 ADAPTIVE GRID (2026-05-08): when `settings.smoothFade` is on, we draw
-   * minor + major as two passes whose world-space steps are computed by
-   * `calculateAdaptiveLevels`. The minor pass receives a smoothstep opacity
-   * factor based on its screen spacing, so as the user zooms the finer
-   * subdivision appears/disappears continuously instead of snapping.
-   * Industry pattern (AutoCAD / Fusion 360 / OnShape / Figma / Miro).
-   *
-   * When `smoothFade` is off, falls back to the legacy fixed-step rendering.
-   */
+  /** 🌊 Render grid as lines: 2-pass adaptive (smoothstep + temporal lerp). */
   private renderGridLines(
     ctx: CanvasRenderingContext2D,
     viewport: Viewport,
     settings: GridSettings,
     transform: { scale: number; offsetX: number; offsetY: number }
   ): void {
-    if (!settings.smoothFade) {
-      // Legacy single-step rendering (preserved for backward compatibility).
+    if (!settings.smoothFade || settings.majorInterval <= 1) {
       const gridSize = settings.size * transform.scale;
-      if (settings.showMinorGrid) {
+      if (settings.showMinorGrid && settings.smoothFade && settings.majorInterval > 1) {
+        ctx.strokeStyle = settings.minorGridColor;
+        ctx.lineWidth = settings.minorGridWeight;
+        this.drawGridLines(ctx, viewport, transform, gridSize);
+      } else if (settings.showMinorGrid && !settings.smoothFade) {
         ctx.strokeStyle = settings.minorGridColor;
         ctx.lineWidth = settings.minorGridWeight;
         this.drawGridLines(ctx, viewport, transform, gridSize);
       }
       if (settings.showMajorGrid) {
-        const majorGridSize = gridSize * settings.majorInterval;
+        const majorSize = settings.smoothFade ? gridSize : gridSize * settings.majorInterval;
         ctx.strokeStyle = settings.majorGridColor;
         ctx.lineWidth = settings.majorGridWeight;
-        this.drawGridLines(ctx, viewport, transform, majorGridSize);
+        this.drawGridLines(ctx, viewport, transform, majorSize);
       }
       return;
     }
-
-    // 🌊 Adaptive 2-pass rendering with smoothstep fade.
-    // Defensive fallback when majorInterval ≤ 1 (no minor level exists).
-    if (settings.majorInterval <= 1) {
-      const gridSize = settings.size * transform.scale;
-      ctx.strokeStyle = settings.majorGridColor;
-      ctx.lineWidth = settings.majorGridWeight;
-      this.drawGridLines(ctx, viewport, transform, gridSize);
-      return;
-    }
-    const { majorScreenPx, minorScreenPx, minorOpacity } = computeAdaptiveLevels({
+    const result = renderAdaptiveGridLines({
+      ctx,
+      drawLines: (g) => this.drawGridLines(ctx, viewport, transform, g),
       worldStep: settings.size,
       scale: transform.scale,
       subDivisions: settings.majorInterval,
       fadeMinPx: settings.smoothFadeMinPx,
       fadeMaxPx: settings.smoothFadeMaxPx,
+      fadeDurationMs: settings.smoothFadeDurationMs,
+      minorColor: settings.minorGridColor,
+      minorWeight: settings.minorGridWeight,
+      majorColor: settings.majorGridColor,
+      majorWeight: settings.majorGridWeight,
+      showMinor: settings.showMinorGrid,
+      showMajor: settings.showMajorGrid,
+      previousOpacity: this.renderedMinorOpacity,
+      previousTimestampMs: this.lastFrameTimestampMs,
+      markDirty: () => markSystemsDirty(['dxf-canvas']),
     });
-
-    const baseAlpha = ctx.globalAlpha;
-    if (settings.showMinorGrid && minorOpacity > 0.001) {
-      ctx.globalAlpha = baseAlpha * minorOpacity;
-      ctx.strokeStyle = settings.minorGridColor;
-      ctx.lineWidth = settings.minorGridWeight;
-      this.drawGridLines(ctx, viewport, transform, minorScreenPx);
-    }
-    if (settings.showMajorGrid) {
-      ctx.globalAlpha = baseAlpha;
-      ctx.strokeStyle = settings.majorGridColor;
-      ctx.lineWidth = settings.majorGridWeight;
-      this.drawGridLines(ctx, viewport, transform, majorScreenPx);
-    }
-    ctx.globalAlpha = baseAlpha;
+    this.renderedMinorOpacity = result.renderedOpacity;
+    this.lastFrameTimestampMs = result.timestampMs;
   }
 
   /**

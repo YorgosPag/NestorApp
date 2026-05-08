@@ -4,7 +4,8 @@
  * - First calendar = displayMonth
  * - Second calendar = displayMonth + 1
  * - Single pair of nav arrows below both calendars navigate together
- * - Selecting a date on either calendar fires onDateSelect
+ * - Drag on days → select consecutive range
+ * - Ctrl+click → toggle non-consecutive days
  * - Event dots appear on both calendars
  */
 
@@ -23,11 +24,10 @@ import '@/lib/design-system';
 
 interface CalendarSidebarProps {
   events: CalendarEvent[];
-  selectedDate: Date;
-  onDateSelect: (date: Date) => void;
-  /** Currently displayed month — synced from main calendar */
+  selectedDays: Date[];
+  onDayMouseDown: (day: Date, e: React.MouseEvent) => void;
+  onDayMouseEnter: (day: Date) => void;
   displayMonth: Date;
-  /** Called when user navigates months in the mini calendar */
   onMonthChange: (month: Date) => void;
 }
 
@@ -35,8 +35,9 @@ const HIDDEN_NAV = { nav: 'hidden' } as const;
 
 export function CalendarSidebar({
   events,
-  selectedDate,
-  onDateSelect,
+  selectedDays,
+  onDayMouseDown,
+  onDayMouseEnter,
   displayMonth,
   onMonthChange,
 }: CalendarSidebarProps) {
@@ -64,18 +65,48 @@ export function CalendarSidebar({
     onMonthChange(addMonths(displayMonth, 1));
   }, [displayMonth, onMonthChange]);
 
-  // Second calendar offset: its month = displayMonth+1, so any change needs -1 to sync first calendar
   const handleSecondMonthChange = useCallback((month: Date) => {
     onMonthChange(subMonths(month, 1));
   }, [onMonthChange]);
 
+  // Intercept DayPicker's default click handler; handle selection via mouseDown
+  const DayButtonComponent = useCallback(
+    ({
+      day,
+      modifiers: _m,
+      className,
+      children,
+      onClick: _suppressed,
+      ...rest
+    }: {
+      day: { date: Date };
+      modifiers: Record<string, boolean>;
+      className?: string;
+      children?: React.ReactNode;
+      onClick?: React.MouseEventHandler<HTMLButtonElement>;
+    } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'>) => (
+      <button
+        {...rest}
+        className={className}
+        onMouseDown={(e) => { e.preventDefault(); onDayMouseDown(day.date, e); }}
+        onMouseEnter={() => onDayMouseEnter(day.date)}
+      >
+        {children}
+      </button>
+    ),
+    [onDayMouseDown, onDayMouseEnter]
+  );
+
+  const calendarComponents = useMemo(
+    () => ({ DayButton: DayButtonComponent }),
+    [DayButtonComponent]
+  );
+
   return (
     <aside className="hidden lg:flex lg:flex-col w-[280px] shrink-0 gap-2" aria-label="Mini Calendars">
       <Calendar
-        mode="single"
-        required
-        selected={selectedDate}
-        onSelect={onDateSelect}
+        mode="multiple"
+        selected={selectedDays}
         month={displayMonth}
         onMonthChange={onMonthChange}
         locale={locale}
@@ -84,13 +115,12 @@ export function CalendarSidebar({
         modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event', today: 'mini-cal-today' }}
         className="rounded-lg border"
         classNames={HIDDEN_NAV}
+        components={calendarComponents}
       />
 
       <Calendar
-        mode="single"
-        required
-        selected={selectedDate}
-        onSelect={onDateSelect}
+        mode="multiple"
+        selected={selectedDays}
         month={secondMonth}
         onMonthChange={handleSecondMonthChange}
         locale={locale}
@@ -99,6 +129,7 @@ export function CalendarSidebar({
         modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event', today: 'mini-cal-today' }}
         className="rounded-lg border"
         classNames={HIDDEN_NAV}
+        components={calendarComponents}
       />
 
       {/* Shared navigation arrows — navigate both calendars in sync */}

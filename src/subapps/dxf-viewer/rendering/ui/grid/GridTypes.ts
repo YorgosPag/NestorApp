@@ -46,6 +46,7 @@ export interface GridSettings extends UIElementSettings {
   readonly smoothFade: boolean;       // Enable per-level smooth opacity transition
   readonly smoothFadeMinPx: number;   // Screen px where minor opacity = 0
   readonly smoothFadeMaxPx: number;   // Screen px where minor opacity = 1
+  readonly smoothFadeDurationMs: number; // Temporal lerp duration (0 = instant)
 
   // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon (consolidated from rulers-grid/config.ts)
   readonly showOrigin: boolean;     // Show origin crosshair at world (0,0)
@@ -110,6 +111,7 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   smoothFade: true,
   smoothFadeMinPx: 8,
   smoothFadeMaxPx: 32,
+  smoothFadeDurationMs: 200,
 
   zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
 };

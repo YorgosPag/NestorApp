@@ -117,6 +117,13 @@ export interface GridSettings {
     smoothFadeMinPx: number;
     /** Screen px above which minor lines are at full opacity. */
     smoothFadeMaxPx: number;
+    /**
+     * Duration (ms) of the temporal lerp applied to the minor opacity
+     * between frames. 0 = instant per-frame fade (raw zoom mapping);
+     * higher values smooth abrupt zoom jumps (mouse wheel ticks) into a
+     * gradual transition. Default 200ms.
+     */
+    smoothFadeDurationMs: number;
   };
 }
 
@@ -226,6 +233,7 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     smoothFade: true,
     smoothFadeMinPx: 8,
     smoothFadeMaxPx: 32,
+    smoothFadeDurationMs: 200,
     fadeAtDistance: true,
     fadeThreshold: 0.1
   }

@@ -31,6 +31,7 @@ import type { CalendarEvent } from '@/types/calendar-event';
 import { CrmCalendar } from '@/components/crm/calendar/CrmCalendar';
 import { CalendarCreateDialog } from '@/components/crm/calendar/CalendarCreateDialog';
 import { CalendarSidebar } from '@/components/crm/calendar/CalendarSidebar';
+import { useMiniCalendarSelection } from '@/components/crm/calendar/useMiniCalendarSelection';
 import { CalendarSearchInput } from '@/components/crm/calendar/CalendarSearchInput';
 import { CalendarExportButton } from '@/components/crm/calendar/CalendarExportButton';
 
@@ -60,8 +61,14 @@ export function CalendarPageContent() {
   const [showDashboard, setShowDashboard] = useState(false);
   const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
   const [searchFilteredEvents, setSearchFilteredEvents] = useState<CalendarEvent[] | null>(null);
-  const [sidebarSelectedDate, setSidebarSelectedDate] = useState(new Date());
   const [sidebarDisplayMonth, setSidebarDisplayMonth] = useState(new Date());
+
+  const {
+    selectedDays,
+    setSelectedDays,
+    handleDayMouseDown: handleSidebarDayMouseDown,
+    handleDayMouseEnter: handleSidebarDayMouseEnter,
+  } = useMiniCalendarSelection();
 
   const { events, loading, stats, refresh } = useCalendarEvents({
     dateRange,
@@ -93,26 +100,22 @@ export function CalendarPageContent() {
     refresh();
   }, [refresh]);
 
-  const handleSidebarDateSelect = useCallback((date: Date) => {
-    setSidebarSelectedDate(date);
-    setSidebarDisplayMonth(date);
-  }, []);
-
   const handleSidebarMonthChange = useCallback((date: Date) => {
     setSidebarDisplayMonth(date);
   }, []);
 
-  // Navigation (prev/next) → sync only the displayed month, not the selected day
+  // Navigation (prev/next) → sync month + reset multi-day selection to single day
   const handleMainCalendarDateChange = useCallback((date: Date) => {
     setSidebarDisplayMonth(date);
-  }, []);
+    setSelectedDays([date]);
+  }, [setSelectedDays]);
 
   // Today button → sync both displayed month AND selected day to actual today
   const handleTodayClick = useCallback(() => {
     const today = new Date();
-    setSidebarSelectedDate(today);
+    setSelectedDays([today]);
     setSidebarDisplayMonth(today);
-  }, []);
+  }, [setSelectedDays]);
 
   const handleFilteredEvents = useCallback((filtered: CalendarEvent[] | null) => {
     setSearchFilteredEvents(filtered);
@@ -222,8 +225,9 @@ export function CalendarPageContent() {
         <section className="flex flex-1 gap-4 overflow-auto p-2">
           <CalendarSidebar
             events={displayEvents}
-            selectedDate={sidebarSelectedDate}
-            onDateSelect={handleSidebarDateSelect}
+            selectedDays={selectedDays}
+            onDayMouseDown={handleSidebarDayMouseDown}
+            onDayMouseEnter={handleSidebarDayMouseEnter}
             displayMonth={sidebarDisplayMonth}
             onMonthChange={handleSidebarMonthChange}
           />
@@ -235,9 +239,10 @@ export function CalendarPageContent() {
               onRangeChange={handleRangeChange}
               onEventCreated={handleEventCreated}
               onEventUpdated={handleEventCreated}
-              navigateToDate={sidebarSelectedDate}
+              navigateToDate={selectedDays.length === 1 ? selectedDays[0] : undefined}
               onDateChange={handleMainCalendarDateChange}
               onTodayClick={handleTodayClick}
+              selectedDays={selectedDays}
             />
           </article>
         </section>

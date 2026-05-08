@@ -322,7 +322,9 @@
       "fadeMinLabel": "Fade-out below",
       "fadeMinDescription": "Minor lines disappear when their on-screen spacing drops below this many pixels",
       "fadeMaxLabel": "Full opacity above",
-      "fadeMaxDescription": "Minor lines reach full visibility when their on-screen spacing exceeds this many pixels"
+      "fadeMaxDescription": "Minor lines reach full visibility when their on-screen spacing exceeds this many pixels",
+      "fadeDurationLabel": "Fade duration",
+      "fadeDurationDescription": "How long the opacity transition takes after a sudden zoom change. 0 = instant, higher values = slower fade"
     }
   },
   "selectionSettings": {
