@@ -42,6 +42,11 @@ export interface GridSettings extends UIElementSettings {
   readonly majorGridWeight: number; // Major grid line thickness
   readonly minorGridWeight: number; // Minor grid line thickness
 
+  // 🌊 ADAPTIVE GRID — multi-level smooth fade
+  readonly smoothFade: boolean;       // Enable per-level smooth opacity transition
+  readonly smoothFadeMinPx: number;   // Screen px where minor opacity = 0
+  readonly smoothFadeMaxPx: number;   // Screen px where minor opacity = 1
+
   // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon (consolidated from rulers-grid/config.ts)
   readonly showOrigin: boolean;     // Show origin crosshair at world (0,0)
   readonly showAxes: boolean;       // Show X/Y axis lines through origin
@@ -100,6 +105,11 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   showAxes: true,        // Show X/Y axis lines through origin
   axesColor: UI_COLORS.RULER_DARK_GRAY, // Neutral gray for axes
   axesWeight: 2,         // Prominent axis lines
+
+  // 🌊 Adaptive grid defaults — sensible smooth fade window
+  smoothFade: true,
+  smoothFadeMinPx: 8,
+  smoothFadeMaxPx: 32,
 
   zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
 };

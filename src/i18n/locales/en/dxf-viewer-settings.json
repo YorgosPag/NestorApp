@@ -315,6 +315,14 @@
     "weight": {
       "label": "{type} Weight",
       "description": "Weight of the {type} grid"
+    },
+    "adaptive": {
+      "title": "Adaptive grid",
+      "description": "Smoothly fade grid lines in/out as you zoom",
+      "fadeMinLabel": "Fade-out below",
+      "fadeMinDescription": "Minor lines disappear when their on-screen spacing drops below this many pixels",
+      "fadeMaxLabel": "Full opacity above",
+      "fadeMaxDescription": "Minor lines reach full visibility when their on-screen spacing exceeds this many pixels"
     }
   },
   "selectionSettings": {

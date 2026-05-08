@@ -115,6 +115,28 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
     });
   };
 
+  // ─── 🌊 Adaptive grid (smooth fade) handlers ────────────────────────────
+  const handleSmoothFadeToggle = (enabled: boolean) => {
+    updateGridSettings({
+      behavior: { ...gridSettings.behavior, smoothFade: enabled },
+    });
+  };
+
+  const handleSmoothFadeMinChange = (px: number) => {
+    // Keep min < max with at least 1px gap.
+    const cappedMin = Math.min(px, gridSettings.behavior.smoothFadeMaxPx - 1);
+    updateGridSettings({
+      behavior: { ...gridSettings.behavior, smoothFadeMinPx: cappedMin },
+    });
+  };
+
+  const handleSmoothFadeMaxChange = (px: number) => {
+    const cappedMax = Math.max(px, gridSettings.behavior.smoothFadeMinPx + 1);
+    updateGridSettings({
+      behavior: { ...gridSettings.behavior, smoothFadeMaxPx: cappedMax },
+    });
+  };
+
   // ============================================================================
   // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
   // ============================================================================
@@ -239,6 +261,81 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           theme="dark"
           alwaysShowLabels
         />
+      </section>
+
+      {/* 🌊 ADAPTIVE GRID — smooth fade between zoom levels (industry pattern) */}
+      <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>
+              {t('gridSettings.adaptive.title')}
+            </h4>
+            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
+              {t('gridSettings.adaptive.description')}
+            </p>
+          </div>
+          <Switch
+            checked={gridSettings.behavior.smoothFade}
+            onCheckedChange={handleSmoothFadeToggle}
+            variant="status"
+          />
+        </div>
+
+        {gridSettings.behavior.smoothFade && (
+          <>
+            {/* Fade min (px) */}
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.muted} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>
+                  {t('gridSettings.adaptive.fadeMinLabel')}
+                </div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>
+                  {t('gridSettings.adaptive.fadeMinDescription')}
+                </div>
+              </div>
+              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+                <input
+                  type="range"
+                  min="2"
+                  max="32"
+                  step="1"
+                  value={gridSettings.behavior.smoothFadeMinPx}
+                  onChange={(e) => handleSmoothFadeMinChange(parseFloat(e.target.value))}
+                  className="flex-1"
+                />
+                <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.primary} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
+                  {gridSettings.behavior.smoothFadeMinPx}px
+                </div>
+              </div>
+            </div>
+
+            {/* Fade max (px) */}
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.muted} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>
+                  {t('gridSettings.adaptive.fadeMaxLabel')}
+                </div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>
+                  {t('gridSettings.adaptive.fadeMaxDescription')}
+                </div>
+              </div>
+              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+                <input
+                  type="range"
+                  min="8"
+                  max="128"
+                  step="1"
+                  value={gridSettings.behavior.smoothFadeMaxPx}
+                  onChange={(e) => handleSmoothFadeMaxChange(parseFloat(e.target.value))}
+                  className="flex-1"
+                />
+                <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.primary} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
+                  {gridSettings.behavior.smoothFadeMaxPx}px
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
       {/* 🏢 ENTERPRISE: Grid Lines Sub-tabs - className moved directly to component (ADR-003) */}

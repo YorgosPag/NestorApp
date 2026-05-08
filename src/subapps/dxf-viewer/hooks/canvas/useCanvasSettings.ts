@@ -50,6 +50,12 @@ export interface GridContextSettings {
     axesColor?: string;
     axesWeight?: number;
   };
+  // 🌊 ADAPTIVE behaviour — smooth fade between levels (industry pattern)
+  behavior?: {
+    smoothFade?: boolean;
+    smoothFadeMinPx?: number;
+    smoothFadeMaxPx?: number;
+  };
 }
 
 /**
@@ -272,6 +278,11 @@ export function useCanvasSettings(props: UseCanvasSettingsProps): UseCanvasSetti
     showAxes: gridContextSettings?.visual?.showAxes ?? true,
     axesColor: gridContextSettings?.visual?.axesColor ?? UI_COLORS.RULER_DARK_GRAY,
     axesWeight: gridContextSettings?.visual?.axesWeight ?? 2,
+
+    // 🌊 ADAPTIVE GRID — smooth fade thresholds (industry pattern)
+    smoothFade: gridContextSettings?.behavior?.smoothFade ?? true,
+    smoothFadeMinPx: gridContextSettings?.behavior?.smoothFadeMinPx ?? 8,
+    smoothFadeMaxPx: gridContextSettings?.behavior?.smoothFadeMaxPx ?? 32,
   }), [gridContextSettings, showGrid]);
 
   /**

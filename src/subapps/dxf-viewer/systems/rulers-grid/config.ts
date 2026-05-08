@@ -105,6 +105,18 @@ export interface GridSettings {
     adaptiveGrid: boolean;
     fadeAtDistance: boolean;
     fadeThreshold: number;
+    /**
+     * 🌊 ADAPTIVE GRID — multi-level smooth fade (Industry pattern: AutoCAD /
+     * Fusion 360 / OnShape / Figma / Miro). When enabled, the renderer draws
+     * minor + major grid simultaneously, fading the minor in/out smoothly as
+     * zoom crosses the screen-spacing thresholds — instead of the discrete
+     * step jump of the legacy adaptiveGrid logic.
+     */
+    smoothFade: boolean;
+    /** Screen px below which minor lines are invisible (opacity 0). */
+    smoothFadeMinPx: number;
+    /** Screen px above which minor lines are at full opacity. */
+    smoothFadeMaxPx: number;
   };
 }
 
@@ -211,6 +223,9 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     minGridSpacing: 5,
     maxGridSpacing: 100,
     adaptiveGrid: true,
+    smoothFade: true,
+    smoothFadeMinPx: 8,
+    smoothFadeMaxPx: 32,
     fadeAtDistance: true,
     fadeThreshold: 0.1
   }

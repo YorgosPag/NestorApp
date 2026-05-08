@@ -20,6 +20,8 @@ import { addCirclePath } from '../../primitives/canvasPaths';
 import { WORLD_ORIGIN } from '../../../config/geometry-constants';
 // 🏢 ADR-088: Pixel-perfect alignment for crisp 1px rendering
 import { pixelPerfect } from '../../entities/shared/geometry-rendering-utils';
+// 🌊 Adaptive grid math (pure helper, extracted for SRP + 500-line limit)
+import { computeAdaptiveLevels } from './grid-adaptive';
 
 /**
  * 🔺 CENTRALIZED GRID RENDERER
@@ -136,7 +138,16 @@ export class GridRenderer implements UIRenderer {
   }
 
   /**
-   * Render grid as lines
+   * Render grid as lines.
+   *
+   * 🌊 ADAPTIVE GRID (2026-05-08): when `settings.smoothFade` is on, we draw
+   * minor + major as two passes whose world-space steps are computed by
+   * `calculateAdaptiveLevels`. The minor pass receives a smoothstep opacity
+   * factor based on its screen spacing, so as the user zooms the finer
+   * subdivision appears/disappears continuously instead of snapping.
+   * Industry pattern (AutoCAD / Fusion 360 / OnShape / Figma / Miro).
+   *
+   * When `smoothFade` is off, falls back to the legacy fixed-step rendering.
    */
   private renderGridLines(
     ctx: CanvasRenderingContext2D,
@@ -144,22 +155,54 @@ export class GridRenderer implements UIRenderer {
     settings: GridSettings,
     transform: { scale: number; offsetX: number; offsetY: number }
   ): void {
-    const gridSize = settings.size * transform.scale;
-
-    // Render minor grid
-    if (settings.showMinorGrid) {
-      ctx.strokeStyle = settings.minorGridColor;
-      ctx.lineWidth = settings.minorGridWeight; // ✅ FIX: Χρήση minorGridWeight
-      this.drawGridLines(ctx, viewport, transform, gridSize);
+    if (!settings.smoothFade) {
+      // Legacy single-step rendering (preserved for backward compatibility).
+      const gridSize = settings.size * transform.scale;
+      if (settings.showMinorGrid) {
+        ctx.strokeStyle = settings.minorGridColor;
+        ctx.lineWidth = settings.minorGridWeight;
+        this.drawGridLines(ctx, viewport, transform, gridSize);
+      }
+      if (settings.showMajorGrid) {
+        const majorGridSize = gridSize * settings.majorInterval;
+        ctx.strokeStyle = settings.majorGridColor;
+        ctx.lineWidth = settings.majorGridWeight;
+        this.drawGridLines(ctx, viewport, transform, majorGridSize);
+      }
+      return;
     }
 
-    // Render major grid
-    if (settings.showMajorGrid) {
-      const majorGridSize = gridSize * settings.majorInterval;
+    // 🌊 Adaptive 2-pass rendering with smoothstep fade.
+    // Defensive fallback when majorInterval ≤ 1 (no minor level exists).
+    if (settings.majorInterval <= 1) {
+      const gridSize = settings.size * transform.scale;
       ctx.strokeStyle = settings.majorGridColor;
-      ctx.lineWidth = settings.majorGridWeight; // ✅ FIX: Χρήση majorGridWeight
-      this.drawGridLines(ctx, viewport, transform, majorGridSize);
+      ctx.lineWidth = settings.majorGridWeight;
+      this.drawGridLines(ctx, viewport, transform, gridSize);
+      return;
     }
+    const { majorScreenPx, minorScreenPx, minorOpacity } = computeAdaptiveLevels({
+      worldStep: settings.size,
+      scale: transform.scale,
+      subDivisions: settings.majorInterval,
+      fadeMinPx: settings.smoothFadeMinPx,
+      fadeMaxPx: settings.smoothFadeMaxPx,
+    });
+
+    const baseAlpha = ctx.globalAlpha;
+    if (settings.showMinorGrid && minorOpacity > 0.001) {
+      ctx.globalAlpha = baseAlpha * minorOpacity;
+      ctx.strokeStyle = settings.minorGridColor;
+      ctx.lineWidth = settings.minorGridWeight;
+      this.drawGridLines(ctx, viewport, transform, minorScreenPx);
+    }
+    if (settings.showMajorGrid) {
+      ctx.globalAlpha = baseAlpha;
+      ctx.strokeStyle = settings.majorGridColor;
+      ctx.lineWidth = settings.majorGridWeight;
+      this.drawGridLines(ctx, viewport, transform, majorScreenPx);
+    }
+    ctx.globalAlpha = baseAlpha;
   }
 
   /**
