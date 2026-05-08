@@ -148,11 +148,11 @@ fi
 # Registry: .ssot-registry.json | Baseline: .ssot-violations-baseline.json
 # =============================================================================
 
-SSOT_SCRIPT="scripts/check-ssot-imports.sh"
+SSOT_SCRIPT="scripts/check-ssot-imports.js"
 if [[ -f "$SSOT_SCRIPT" && -n "$TS_FILES" ]]; then
     echo -e "${YELLOW}🔍 Checking SSoT imports (centralized module ratchet)...${NC}"
 
-    SSOT_OUTPUT=$(bash "$SSOT_SCRIPT" $TS_FILES 2>&1)
+    SSOT_OUTPUT=$(node "$SSOT_SCRIPT" $TS_FILES 2>&1)
     SSOT_EXIT=$?
 
     if [[ $SSOT_EXIT -ne 0 ]]; then
