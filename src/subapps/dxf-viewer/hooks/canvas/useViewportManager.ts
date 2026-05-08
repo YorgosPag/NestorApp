@@ -85,6 +85,7 @@ export function useViewportManager({
   // ── Refs (synchronous, zero React lag) ─────────────────────────────────
   const viewportRef = useRef<Viewport>({ width: 0, height: 0 });
   const transformRef = useRef<ViewTransform>(transform);
+  const resizeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep transformRef in sync every render (for ResizeObserver callback)
   transformRef.current = transform;
@@ -125,38 +126,28 @@ export function useViewportManager({
           const { width, height } = entry.contentRect;
           if (width <= 0 || height <= 0) continue;
 
-          // ── Adjust transform.offsetY when height changes ──────────
-          // Keeps world origin at same screen position when toolbar opens/closes
+          // ── Update refs synchronously — canvas reads these immediately ──
           const oldHeight = viewportRef.current.height;
           const deltaHeight = height - oldHeight;
+          viewportRef.current = { width, height };
+          canvasBoundsService.clearCache();
 
           if (oldHeight > 0 && Math.abs(deltaHeight) > 0.5) {
             const currentTransform = transformRef.current;
             const newOffsetY = currentTransform.offsetY + deltaHeight;
-            const newTransform = {
-              ...currentTransform,
-              offsetY: newOffsetY,
-            };
-
-            const timestamp = performance.now().toFixed(0);
-            dlog('Canvas', `[${timestamp}ms][ResizeObserver] ADJUSTING:
-  oldHeight=${oldHeight.toFixed(1)}, newHeight=${height.toFixed(1)}, deltaHeight=${deltaHeight.toFixed(1)}
-  oldOffsetY=${currentTransform.offsetY.toFixed(1)}, newOffsetY=${newOffsetY.toFixed(1)}
-  transformRef.current.offsetY BEFORE=${transformRef.current.offsetY.toFixed(1)}`);
-
-            // Update ref synchronously FIRST, then React state
-            transformRef.current = newTransform;
-            externalSetTransform(newTransform);
-
-            dlog('Canvas', `[${timestamp}ms][ResizeObserver] AFTER: transformRef.current.offsetY=${transformRef.current.offsetY.toFixed(1)}`);
+            transformRef.current = { ...currentTransform, offsetY: newOffsetY };
+            dlog('Canvas', `[ResizeObserver] deltaHeight=${deltaHeight.toFixed(1)} offsetY ${currentTransform.offsetY.toFixed(1)}→${newOffsetY.toFixed(1)}`);
           } else {
-            dlog('Canvas', `[ResizeObserver] SKIP adjust: oldHeight=${oldHeight.toFixed(1)}, deltaHeight=${deltaHeight.toFixed(1)}`);
+            dlog('Canvas', `[ResizeObserver] SKIP adjust: deltaHeight=${deltaHeight.toFixed(1)}`);
           }
 
-          // Apply new viewport dimensions
-          applyViewport({ width, height });
-          // Clear cached canvas bounds on resize
-          canvasBoundsService.clearCache();
+          // ── Debounce React state updates — prevents 60fps re-renders during window drag ──
+          if (resizeDebounceRef.current) clearTimeout(resizeDebounceRef.current);
+          resizeDebounceRef.current = setTimeout(() => {
+            externalSetTransform(transformRef.current);
+            applyViewport(viewportRef.current);
+            resizeDebounceRef.current = null;
+          }, 100);
         }
       });
 
@@ -187,9 +178,8 @@ export function useViewportManager({
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', updateViewport);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
+      if (resizeObserver) resizeObserver.disconnect();
+      if (resizeDebounceRef.current) clearTimeout(resizeDebounceRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Setup once — ResizeObserver handles updates

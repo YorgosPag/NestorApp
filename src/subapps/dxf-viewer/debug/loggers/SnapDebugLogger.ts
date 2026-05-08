@@ -84,19 +84,13 @@ export class SnapDebugLogger {
   }
 
   logFindSnapPoint(cursorPoint: Point2D): void {
+    if (!DEBUG_SNAP_DEBUG_LOGGER) return;
     this.lastCursorPosition = cursorPoint;
-    
-    // Minimal logging for debugging
+
     const now = Date.now();
-    if (now - this.lastLogTime > 500) { // Log every 500ms
+    if (now - this.lastLogTime > 500) {
       this.logDebugInfo(cursorPoint);
       this.lastLogTime = now;
-    }
-
-    // Debug logging only occasionally
-    if (now - this.lastLogTime > 2000) {
-      const settings = this.engine.getSettings();
-
     }
   }
 

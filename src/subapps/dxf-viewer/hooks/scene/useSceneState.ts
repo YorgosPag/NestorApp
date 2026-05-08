@@ -21,6 +21,8 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { EMPTY_BOUNDS } from '../../config/geometry-constants';
 import { dlog, dwarn, derr } from '../../debug';
 
+const DEBUG_SCENE_STATE = false;
+
 export function useSceneState() {
   const canvasOps = useCanvasOperations();
   const notifications = useNotifications();
@@ -40,8 +42,8 @@ export function useSceneState() {
   // Direct call ensures fresh scene on every render
   const currentScene = currentLevelId ? getLevelScene(currentLevelId) : null;
 
-  // 🔍 DEBUG (2026-01-31): Log currentScene for circle debugging
-  dlog('SceneState', '📊 [useSceneState] currentScene computed', {
+  // 🔍 DEBUG (2026-01-31): Log currentScene for circle debugging — guarded (fires on every render)
+  if (DEBUG_SCENE_STATE) dlog('SceneState', '📊 [useSceneState] currentScene computed', {
     currentLevelId,
     hasScene: !!currentScene,
     entityCount: currentScene?.entities?.length || 0

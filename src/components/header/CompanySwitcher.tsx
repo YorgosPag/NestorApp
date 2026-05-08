@@ -23,7 +23,7 @@ export function CompanySwitcher() {
   const { t } = useTranslation(['admin']);
   const { isSuperAdmin, activeCompanyId, companies, loading, setActiveCompanyId } = useSuperAdminCompany();
 
-  if (!isSuperAdmin) return null;
+  if (!isSuperAdmin || (!loading && companies.length <= 1)) return null;
 
   return (
     <div className="flex items-center gap-1.5 px-2">

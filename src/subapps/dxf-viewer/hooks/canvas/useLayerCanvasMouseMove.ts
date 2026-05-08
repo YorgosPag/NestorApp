@@ -115,12 +115,22 @@ export function useLayerCanvasMouseMove(
       // 🚀 EARLY RETURN: Skip all grip-related work if not in select/layering mode
       const isGripMode = activeTool === 'select' || activeTool === 'layering';
 
-      // 🚀 THROTTLED: Mouse position updates (was causing re-renders on every move)
+      // 🏢 FIX (2026-02-15): Use pre-calculated worldPoint from useCentralizedMouseHandlers
+      // BEFORE: Recalculated via containerRef (different element rect → Y-offset mismatch)
+      // AFTER: Use worldPoint computed from the SAME element that produced screenPoint (SSoT)
+      const worldPoint = worldPointFromHandler;
+
+      // Cursor CSS + coordinate readout always run at full rate — crosshair must be smooth.
+      // Only grip detection (expensive loop) is throttled below.
+      updateMouseCss(screenPoint);
+      updateMouseWorld(worldPoint);
+
+      // 🚀 THROTTLED: grip hover detection (expensive — O(n) over overlay vertices)
       const now = performance.now();
       const throttle = gripHoverThrottleRef.current;
+      throttle.lastWorldPoint = worldPoint;
 
-      // 🚀 PERFORMANCE (2026-01-27): Increase throttle from 33ms to 100ms (10fps)
-      // Grip hover detection doesn't need 30fps - 10fps is smooth enough for visual feedback.
+      // 🚀 PERFORMANCE (2026-01-27): 100ms throttle (10fps) for grip work only.
       // IMPORTANT: Apply this throttle ONLY in grip modes; drawing tools need full-rate hover updates
       // for smooth preview rendering (line/rectangle/circle rubber-band feedback).
       const GRIP_HOVER_THROTTLE_MS = 100;
@@ -128,23 +138,12 @@ export function useLayerCanvasMouseMove(
         isGripMode && (now - throttle.lastCheckTime < GRIP_HOVER_THROTTLE_MS);
 
       if (shouldThrottleGripWork) {
-        // 🚀 PERFORMANCE (2026-01-27): During drag, use RAF-throttled preview update
-        // Instead of setState on every mousemove, we use a ref + RAF for smooth animation
-        return; // Skip all other work until throttle period passes
+        return;
       }
 
       if (isGripMode) {
         throttle.lastCheckTime = now;
       }
-
-      // Now do the throttled work
-      updateMouseCss(screenPoint);
-      // 🏢 FIX (2026-02-15): Use pre-calculated worldPoint from useCentralizedMouseHandlers
-      // BEFORE: Recalculated via containerRef (different element rect → Y-offset mismatch)
-      // AFTER: Use worldPoint computed from the SAME element that produced screenPoint (SSoT)
-      const worldPoint = worldPointFromHandler;
-      updateMouseWorld(worldPoint);
-      throttle.lastWorldPoint = worldPoint;
 
       // 🚀 PERFORMANCE: Skip grip detection entirely if not in grip mode
       if (!isGripMode) {

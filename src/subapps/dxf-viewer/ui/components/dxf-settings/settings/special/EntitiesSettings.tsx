@@ -1,5 +1,5 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ACI_PALETTE } from '../../../../../settings/standards/aci';
 import { Minus, Square, Pen, Hexagon, Ruler, Triangle } from 'lucide-react';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
@@ -182,11 +182,14 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
 
   // Sync: when override is active, global text changes propagate to specific settings
+  const updateTextSettingsRef = useRef(updateTextSettings);
+  updateTextSettingsRef.current = updateTextSettings;
   useEffect(() => {
     if (specificTextSettings.overrideGlobalSettings && globalTextSettings?.settings) {
-      updateTextSettings(globalTextSettings.settings);
+      updateTextSettingsRef.current(globalTextSettings.settings);
     }
-  }, [globalTextSettings?.settings, specificTextSettings.overrideGlobalSettings, updateTextSettings]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalTextSettings?.settings, specificTextSettings.overrideGlobalSettings]);
 
   // Mock text settings (ISO 3098 standards)
   const [mockTextSettings] = useState({
