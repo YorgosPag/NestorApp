@@ -8,6 +8,12 @@ interface VoiceTranscriptionResult {
   error?: string;
 }
 
+interface VoicePolishResult {
+  success: boolean;
+  text: string;
+  error?: string;
+}
+
 export async function transcribeVoiceWithPolicy(
   formData: FormData,
 ): Promise<VoiceTranscriptionResult> {
@@ -18,4 +24,10 @@ export async function submitVoiceCommandWithPolicy(
   text: string,
 ): Promise<SubmitCommandResult> {
   return apiClient.post<SubmitCommandResult>(API_ROUTES.VOICE.COMMAND, { text });
+}
+
+export async function polishVoiceTextWithPolicy(
+  text: string,
+): Promise<VoicePolishResult> {
+  return apiClient.post<VoicePolishResult>(API_ROUTES.VOICE.POLISH, { text });
 }

@@ -66,6 +66,15 @@
         "cancel": "Ακύρωση",
         "complete": "Ολοκλήρωση",
         "viewOriginal": "Προβολή Πρωτοτύπου"
+      },
+      "voiceInput": {
+        "startRecording": "Έναρξη ηχογράφησης",
+        "stopRecording": "Διακοπή ηχογράφησης",
+        "recording": "Ηχογράφηση...",
+        "transcribing": "Μεταγραφή...",
+        "polishing": "Επεξεργασία...",
+        "errorPermission": "Απαιτείται πρόσβαση στο μικρόφωνο",
+        "errorGeneric": "Σφάλμα εγγραφής"
       }
     },
     "stats": {

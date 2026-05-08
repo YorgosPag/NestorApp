@@ -833,6 +833,7 @@ export const API_ROUTES = {
   VOICE: {
     TRANSCRIBE: '/api/voice/transcribe',
     COMMAND: '/api/voice/command',
+    POLISH: '/api/voice/polish',
   },
   CALENDAR: {
     PARSE_EVENT: '/api/calendar/parse-event',

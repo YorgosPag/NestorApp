@@ -66,6 +66,15 @@
         "cancel": "Cancel",
         "complete": "Complete",
         "viewOriginal": "View Original"
+      },
+      "voiceInput": {
+        "startRecording": "Start recording",
+        "stopRecording": "Stop recording",
+        "recording": "Recording...",
+        "transcribing": "Transcribing...",
+        "polishing": "Processing...",
+        "errorPermission": "Microphone access required",
+        "errorGeneric": "Recording error"
       }
     },
     "stats": {

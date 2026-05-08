@@ -58,6 +58,7 @@ import type { Contact } from '@/types/contacts/contracts';
 import { getContactDisplayName } from '@/types/contacts/helpers';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
+import { VoiceMicButton } from '@/components/voice-input/VoiceMicButton';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import type { CrmTask } from '@/types/crm';
 import '@/lib/design-system';
@@ -357,9 +358,17 @@ export function CalendarCreateDialog({
 
           {/* Description */}
           <fieldset className={sp.spaceBetween.sm}>
-            <Label htmlFor="event-description">
-              {t('calendarPage.dialog.fields.description')}
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="event-description">
+                {t('calendarPage.dialog.fields.description')}
+              </Label>
+              <VoiceMicButton
+                onResult={(text) =>
+                  setDescription((prev) => (prev ? `${prev}\n${text}` : text))
+                }
+                disabled={submitting}
+              />
+            </div>
             <Textarea
               id="event-description"
               value={description}
