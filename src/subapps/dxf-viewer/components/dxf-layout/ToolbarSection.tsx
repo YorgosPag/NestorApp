@@ -69,12 +69,19 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
 
   const layeringDisabled = React.useMemo(() => {
     const levelId = levelManager.currentLevelId;
-    if (!levelId) return false;
+    // 🐛 FIX (2026-05-09): no current level = can't draw layers (polygon save
+    // would silently fail in usePolygonCompletion with 'no-level-selected'
+    // error). User must load a floorplan via wizard first.
+    if (!levelId) return true;
     const level = levelManager.levels.find(l => l.id === levelId);
-    if (!level?.floorId) return false;
+    // Level not linked to a floor → drawing not meaningful, disable.
+    if (!level?.floorId) return true;
     const floorPropertyCount = properties.filter(p => p.floorId === level.floorId).length;
+    // No properties on floor yet → allow drawing (user might create properties
+    // later, or draw freeform layers).
     if (floorPropertyCount === 0) return false;
     const overlayCount = Object.values(overlayStore.overlays).filter(o => o.levelId === levelId).length;
+    // All properties already have overlays → nothing more to draw.
     return overlayCount >= floorPropertyCount;
   }, [levelManager.currentLevelId, levelManager.levels, properties, overlayStore.overlays]);
 
