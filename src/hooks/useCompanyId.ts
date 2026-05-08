@@ -20,6 +20,7 @@ import { useMemo } from 'react';
 
 import { useAuth } from '@/auth/hooks/useAuth';
 import { tryResolveCompanyId, type CompanyIdResult } from '@/services/company-id-resolver';
+import { useSuperAdminCompany } from '@/contexts/SuperAdminCompanyContext';
 
 interface UseCompanyIdOptions {
   /** Building document — highest priority source */
@@ -49,13 +50,15 @@ interface UseCompanyIdOptions {
  */
 export function useCompanyId(options?: UseCompanyIdOptions): CompanyIdResult | undefined {
   const { user } = useAuth();
+  const { activeCompanyId: superAdminCompanyId } = useSuperAdminCompany();
 
   return useMemo(
     () => tryResolveCompanyId({
       building: options?.building,
       user,
-      selectedCompanyId: options?.selectedCompanyId,
+      // Super admin active company takes effect when user has no own companyId
+      selectedCompanyId: options?.selectedCompanyId ?? superAdminCompanyId ?? undefined,
     }),
-    [options?.building?.companyId, user?.companyId, options?.selectedCompanyId]
+    [options?.building?.companyId, user?.companyId, options?.selectedCompanyId, superAdminCompanyId]
   );
 }

@@ -28,10 +28,20 @@ export interface CalendarToolbarProps {
 const RIBBON_BLUE = 'var(--cal-today)';
 
 const VIEWS = [
-  { key: 'timeGridWeek', labelKey: 'calendarPage.views.day' },
+  { key: 'timeGridDay',  labelKey: 'calendarPage.views.day' },
+  { key: 'workWeek',     labelKey: 'calendarPage.views.workWeek' },
+  { key: 'timeGridWeek', labelKey: 'calendarPage.views.week' },
   { key: 'dayGridMonth', labelKey: 'calendarPage.views.month' },
-  { key: 'listWeek', labelKey: 'calendarPage.views.agenda' },
-] as const;
+  { key: 'listWeek',     labelKey: 'calendarPage.views.agenda' },
+];
+
+function getIsActive(key: string, activeView: string): boolean {
+  // multiDay = mini-calendar custom range → highlighted on the Day button
+  if (key === 'timeGridDay') {
+    return activeView === 'timeGridDay' || activeView === 'multiDay';
+  }
+  return activeView === key;
+}
 
 // ============================================================================
 // SUB-COMPONENTS
@@ -151,7 +161,7 @@ export function CalendarToolbar({
         aria-label={t('calendarPage.toolbar.viewSelection')}
       >
         {VIEWS.map(({ key, labelKey }) => {
-          const isActive = activeView === key;
+          const isActive = getIsActive(key, activeView);
           return (
             <button
               key={key}

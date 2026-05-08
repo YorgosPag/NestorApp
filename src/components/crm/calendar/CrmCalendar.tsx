@@ -35,8 +35,6 @@ import type {
   EventContentArg,
   DayHeaderContentArg,
 } from '@fullcalendar/core';
-import type { EventDropArg } from '@fullcalendar/core';
-import type { EventResizeDoneArg } from '@fullcalendar/interaction';
 
 import type { CalendarEvent } from '@/types/calendar-event';
 import { CALENDAR_EVENT_COLORS } from './calendar-event-colors';
@@ -44,8 +42,8 @@ import { CalendarEventDialog } from './CalendarEventDialog';
 import { CalendarCreateDialog } from './CalendarCreateDialog';
 import { CalendarEventTooltip } from './CalendarEventTooltip';
 import { useCalendarKeyboardShortcuts } from './useCalendarKeyboardShortcuts';
-import { updateTaskWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import { TaskEditDialog } from '@/components/crm/dashboard/dialogs/TaskEditDialog';
+import { useCrmCalendarMutations } from './useCrmCalendarMutations';
 import type { CrmTask } from '@/types/crm';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -93,10 +91,10 @@ export function CrmCalendar({
   const { t, i18n } = useTranslation(['crm', 'crm-inbox']);
   const { success: notifySuccess, error: notifyError } = useNotifications();
   const calendarRef = useRef<FullCalendarRef>(null);
-  const isProgrammaticNav = useRef(false);
+  // true on first render: swallows the initial datesSet so it doesn't overwrite selectedDays
+  const isProgrammaticNav = useRef(true);
   const lastReportedDateRef = useRef<string | null>(null);
   const activeViewRef = useRef('dayGridMonth');
-  const preMultiDayViewRef = useRef('dayGridMonth');
   const isMultiDayActiveRef = useRef(false);
   const selectedDaysRef = useRef<Date[] | undefined>(selectedDays);
   useEffect(() => { selectedDaysRef.current = selectedDays; }, [selectedDays]);
@@ -141,7 +139,7 @@ export function CrmCalendar({
     );
 
     container.querySelectorAll<HTMLElement>(
-      '.fc-col-header-cell[data-date], .fc-timegrid-col[data-date]'
+      '.fc-col-header-cell[data-date], .fc-timegrid-col[data-date], .fc-daygrid-day[data-date]'
     ).forEach(el => {
       const dateStr = el.dataset.date;
       if (!dateStr) return;
@@ -184,14 +182,15 @@ export function CrmCalendar({
     [events]
   );
 
-  // Multi-day selection from mini calendar → switch to custom timeGridDay range.
+  // Multi-day selection from mini calendar → switch to custom multiDay view.
+  // 'multiDay' is defined in FullCalendar views prop as type:'timeGrid' (no fixed duration),
+  // so changeView('multiDay', {start,end}) renders exactly the selected days as columns.
+  // 'timeGridDay' has duration=1d and silently ignores the end → only 1 column appears.
   // setTimeout(0) defers changeView outside React's commit cycle (FullCalendar uses flushSync internally).
-  // isMultiDayActiveRef guards against firing changeView on initial mount (single day).
   useEffect(() => {
     if (!selectedDays) return;
 
     if (selectedDays.length >= 2) {
-      preMultiDayViewRef.current = activeViewRef.current;
       isMultiDayActiveRef.current = true;
       const sorted = [...selectedDays].sort((a, b) => a.getTime() - b.getTime());
       const start = sorted[0];
@@ -199,7 +198,7 @@ export function CrmCalendar({
       const timer = setTimeout(() => {
         if (!calendarRef.current) return;
         isProgrammaticNav.current = true;
-        calendarRef.current.getApi().changeView('timeGridDay', { start, end });
+        calendarRef.current.getApi().changeView('multiDay', { start, end });
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -207,21 +206,26 @@ export function CrmCalendar({
     if (selectedDays.length === 1 && isMultiDayActiveRef.current) {
       isMultiDayActiveRef.current = false;
       const target = selectedDays[0];
-      const restoreView = preMultiDayViewRef.current;
       const timer = setTimeout(() => {
         if (!calendarRef.current) return;
         isProgrammaticNav.current = true;
-        calendarRef.current.getApi().changeView(restoreView, target);
+        calendarRef.current.getApi().changeView('timeGridDay', target);
       }, 0);
       return () => clearTimeout(timer);
     }
   }, [selectedDays]);
 
-  // Programmatic navigation when sidebar date changes
+  // Programmatic navigation when sidebar date changes.
+  // Compare date-only (strip time) — api.getDate() is midnight, navigateToDate has time component.
   useEffect(() => {
     if (!navigateToDate || !calendarRef.current) return;
     const api = calendarRef.current.getApi();
-    if (api.getDate().getTime() === navigateToDate.getTime()) return;
+    const calDate = api.getDate();
+    const sameDay =
+      calDate.getFullYear() === navigateToDate.getFullYear() &&
+      calDate.getMonth() === navigateToDate.getMonth() &&
+      calDate.getDate() === navigateToDate.getDate();
+    if (sameDay) return;
     isProgrammaticNav.current = true;
     api.gotoDate(navigateToDate);
   }, [navigateToDate]);
@@ -236,7 +240,7 @@ export function CrmCalendar({
       const currentIso = arg.view.currentStart.toISOString();
 
       // After FullCalendar renders, hide non-selected columns in multi-day mode
-      if (arg.view.type === 'timeGridDay') {
+      if (arg.view.type === 'multiDay') {
         const days = selectedDaysRef.current;
         if (days && days.length >= 2) {
           requestAnimationFrame(() => applyMultiDayColumnVisibility(days));
@@ -289,69 +293,12 @@ export function CrmCalendar({
     setEditDialogOpen(true);
   }, []);
 
-  // Drag-drop handler — update task date in Firestore
-  const handleEventDrop = useCallback(
-    async (arg: EventDropArg) => {
-      const ev = arg.event.extendedProps.calendarEvent as CalendarEvent | undefined;
-      if (!ev) return;
-      if (ev.source === 'appointment') {
-        arg.revert();
-        notifyError(t('calendarPage.dragDrop.appointmentReadOnly'));
-        return;
-      }
-      try {
-        const newStart = arg.event.start;
-        const newEnd = arg.event.end;
-        if (!newStart) return;
-        await updateTaskWithPolicy({
-          taskId: ev.entityId,
-          updates: {
-            dueDate: newStart.toISOString(),
-            ...(newEnd && (ev.allDay || newStart.toDateString() !== newEnd.toDateString())
-              ? { endDate: newEnd.toISOString() }
-              : {}),
-          },
-        });
-        notifySuccess(t('calendarPage.dragDrop.moved'));
-        onEventUpdated?.();
-      } catch {
-        arg.revert();
-        notifyError(t('calendarPage.dialog.createError'));
-      }
-    },
-    [t, notifySuccess, notifyError, onEventUpdated]
-  );
-
-  // Resize handler — same logic as drop
-  const handleEventResize = useCallback(
-    async (arg: EventResizeDoneArg) => {
-      const ev = arg.event.extendedProps.calendarEvent as CalendarEvent | undefined;
-      if (!ev) return;
-      if (ev.source === 'appointment') {
-        arg.revert();
-        notifyError(t('calendarPage.dragDrop.appointmentReadOnly'));
-        return;
-      }
-      try {
-        const newStart = arg.event.start;
-        const newEnd = arg.event.end;
-        if (!newStart || !newEnd) return;
-        await updateTaskWithPolicy({
-          taskId: ev.entityId,
-          updates: {
-            dueDate: newStart.toISOString(),
-            endDate: newEnd.toISOString(),
-          },
-        });
-        notifySuccess(t('calendarPage.dragDrop.resized'));
-        onEventUpdated?.();
-      } catch {
-        arg.revert();
-        notifyError(t('calendarPage.dialog.createError'));
-      }
-    },
-    [t, notifySuccess, notifyError, onEventUpdated]
-  );
+  const { handleEventDrop, handleEventResize } = useCrmCalendarMutations({
+    onEventUpdated,
+    notifySuccess,
+    notifyError,
+    t,
+  });
 
   // Custom event content with tooltip
   const renderEventContent = useCallback((arg: EventContentArg) => {
@@ -379,10 +326,18 @@ export function CrmCalendar({
     return { domNodes: [el] };
   }, [i18n.language]);
 
-  // View change (toolbar + keyboard shortcuts)
+  // View change (toolbar + keyboard shortcuts) — clears multi-day state on explicit switch.
+  // isProgrammaticNav prevents datesSet from overwriting mini-calendar selection on view switch.
   const goToView = useCallback((view: string) => {
+    if (isMultiDayActiveRef.current) {
+      isMultiDayActiveRef.current = false;
+      containerRef.current?.querySelectorAll<HTMLElement>('[data-date]').forEach(el => {
+        el.style.display = '';
+      });
+    }
+    isProgrammaticNav.current = true;
     calendarRef.current?.getApi().changeView(view);
-  }, []);
+  }, [containerRef]);
   const handleNewEvent = useCallback(() => {
     if (onNewEvent) {
       onNewEvent();
@@ -411,11 +366,25 @@ export function CrmCalendar({
           activeView={activeView}
           onPrev={() => calendarRef.current?.getApi().prev()}
           onNext={() => calendarRef.current?.getApi().next()}
-          onToday={() => { calendarRef.current?.getApi().today(); onTodayClick?.(); }}
+          onToday={() => {
+              if (isMultiDayActiveRef.current) {
+                // Exit multi-day → navigate to today in single-day view
+                isMultiDayActiveRef.current = false;
+                containerRef.current?.querySelectorAll<HTMLElement>('[data-date]').forEach(el => {
+                  el.style.display = '';
+                });
+                isProgrammaticNav.current = true;
+                calendarRef.current?.getApi().changeView('timeGridDay', new Date());
+              } else {
+                isProgrammaticNav.current = true;
+                calendarRef.current?.getApi().today();
+              }
+              onTodayClick?.();
+            }}
           onViewChange={goToView}
           onNewEvent={handleNewEvent}
         />
-        <div className="flex items-stretch gap-2">
+        <div className="flex flex-1 min-h-0 items-stretch gap-2">
           {/* Left arrow zone — outside calendar, always reserves space */}
           <div
             aria-hidden="true"
@@ -434,6 +403,10 @@ export function CrmCalendar({
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, rrulePlugin]}
             initialView="dayGridMonth"
+            views={{
+              multiDay: { type: 'timeGrid' },
+              workWeek: { type: 'timeGrid', duration: { weeks: 1 }, weekends: false },
+            }}
             headerToolbar={false}
             events={fcEvents}
             editable
@@ -444,7 +417,8 @@ export function CrmCalendar({
             weekNumbers
             weekNumberFormat={{ week: 'numeric' }}
             nowIndicator
-            height="auto"
+            height="100%"
+            expandRows
             locale={i18n.language === 'el' ? elLocale : enLocale}
             datesSet={handleDatesSet}
             eventClick={handleEventClick}

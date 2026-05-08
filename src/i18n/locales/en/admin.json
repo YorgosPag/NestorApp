@@ -780,5 +780,12 @@
       "configSaveFailed": "Failed to save configuration",
       "deleteBackupFailed": "Failed to delete backup"
     }
+  },
+  "companySwitcher": {
+    "label": "Company",
+    "selectCompany": "Select company",
+    "noCompanies": "No companies found",
+    "loadError": "Error loading companies",
+    "noSelection": "No selection"
   }
 }

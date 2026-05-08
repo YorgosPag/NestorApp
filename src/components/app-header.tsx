@@ -10,6 +10,7 @@ import { UserMenu } from "@/components/header/user-menu"
 import { LanguageSwitcher } from "@/components/header/language-switcher"
 import { HelpButton } from "@/components/header/help-button"
 import { VoiceAssistantButton } from "@/components/header/voice-assistant-button"
+import { CompanySwitcher } from "@/components/header/CompanySwitcher"
 import { NotificationBell } from "@/components/NotificationBell.enterprise"
 import { useFirestoreNotifications } from "@/hooks/useFirestoreNotifications"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
@@ -94,6 +95,7 @@ export function AppHeader() {
         </button>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <CompanySwitcher />
           <LanguageSwitcher />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <NotificationBell />

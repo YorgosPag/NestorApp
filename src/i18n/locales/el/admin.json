@@ -780,5 +780,12 @@
       "configSaveFailed": "Αποτυχία αποθήκευσης ρυθμίσεων",
       "deleteBackupFailed": "Αποτυχία διαγραφής αντιγράφου"
     }
+  },
+  "companySwitcher": {
+    "label": "Εταιρεία",
+    "selectCompany": "Επιλογή εταιρείας",
+    "noCompanies": "Δεν βρέθηκαν εταιρείες",
+    "loadError": "Σφάλμα φόρτωσης εταιρειών",
+    "noSelection": "Χωρίς επιλογή"
   }
 }

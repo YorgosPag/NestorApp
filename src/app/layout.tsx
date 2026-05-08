@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { TourProvider, TourRenderer } from '@/components/ui/ProductTour';
 import { ConditionalAppShell } from '@/components/layout/ConditionalAppShell';
+import { SuperAdminCompanyProvider } from '@/contexts/SuperAdminCompanyContext';
 
 /**
  * =============================================================================
@@ -75,6 +76,7 @@ export default function RootLayout({
             {/* 🏢 ENTERPRISE: TourProvider needed by ErrorBoundary's useTour() */}
             <TourProvider>
               <AuthProvider>
+                <SuperAdminCompanyProvider>
                 <UserRoleProvider>
                   {/* 🏢 ENTERPRISE: ConditionalAppShell handles:
                       - Route-based layout (auth vs app)
@@ -84,6 +86,7 @@ export default function RootLayout({
                     {children}
                   </ConditionalAppShell>
                 </UserRoleProvider>
+                </SuperAdminCompanyProvider>
               </AuthProvider>
               {/* 🏢 ENTERPRISE: TourRenderer needs TourProvider, stays at root */}
               <TourRenderer />

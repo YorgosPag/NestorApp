@@ -12,8 +12,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
+import { el as elDateLocale, enGB as enGBDateLocale } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import { Calendar as CalendarIcon, Plus } from 'lucide-react';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -51,6 +52,12 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 
 import { addTask } from '@/services/tasks.service';
+import { subscribeToContacts } from '@/services/contacts-query.service';
+import { useProjectsList } from '@/hooks/useProjectsList';
+import type { Contact } from '@/types/contacts/contracts';
+import { getContactDisplayName } from '@/types/contacts/helpers';
+import { SearchableCombobox } from '@/components/ui/searchable-combobox';
+import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import type { CrmTask } from '@/types/crm';
 import '@/lib/design-system';
@@ -94,9 +101,10 @@ export function CalendarCreateDialog({
   initialDate,
   onCreated,
 }: CalendarCreateDialogProps) {
-  const { t } = useTranslation(['crm', 'crm-inbox']);
+  const { t, i18n } = useTranslation(['crm', 'crm-inbox']);
   const { success, error: notifyError } = useNotifications();
   const { user } = useAuth();
+  const dateFnsLocale = i18n.language === 'el' ? elDateLocale : enGBDateLocale;
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();
   const layout = useLayoutClasses();
@@ -111,6 +119,23 @@ export function CalendarCreateDialog({
   const [projectId, setProjectId] = useState<string>('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const { projects, loading: projectsLoading } = useProjectsList({ enabled: open });
+
+  useEffect(() => {
+    if (!open) return;
+    return subscribeToContacts(setContacts);
+  }, [open]);
+
+  const contactOptions = useMemo<ComboboxOption[]>(
+    () => contacts.map(c => ({ value: c.id, label: getContactDisplayName(c) })),
+    [contacts]
+  );
+
+  const projectOptions = useMemo<ComboboxOption[]>(
+    () => projects.map(p => ({ value: p.id, label: p.name })),
+    [projects]
+  );
 
   const resetForm = () => {
     setTitle('');
@@ -243,10 +268,10 @@ export function CalendarCreateDialog({
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className={`${sp.margin.right.sm} ${iconSizes.sm}`} />
-                  {date ? format(date, 'PPP') : t('calendarPage.dialog.fields.date')}
+                  {date ? format(date, 'PPP', { locale: dateFnsLocale }) : t('calendarPage.dialog.fields.date')}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className={`w-auto ${sp.padding.none}`}>
+              <PopoverContent className="w-[300px] p-0">
                 <Calendar
                   mode="single"
                   selected={date}
@@ -277,10 +302,10 @@ export function CalendarCreateDialog({
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className={`${sp.margin.right.sm} ${iconSizes.sm}`} />
-                  {endDate ? format(endDate, 'PPP') : t('calendarPage.dialog.fields.endDatePlaceholder')}
+                  {endDate ? format(endDate, 'PPP', { locale: dateFnsLocale }) : t('calendarPage.dialog.fields.endDatePlaceholder')}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className={`w-auto ${sp.padding.none}`}>
+              <PopoverContent className="w-[300px] p-0">
                 <Calendar
                   mode="single"
                   selected={endDate}
@@ -309,22 +334,23 @@ export function CalendarCreateDialog({
 
           {/* Contact */}
           <fieldset className={sp.spaceBetween.sm}>
-            <Label htmlFor="event-contact">{t('calendarPage.dialog.fields.contact')}</Label>
-            <Input
-              id="event-contact"
+            <Label>{t('calendarPage.dialog.fields.contact')}</Label>
+            <SearchableCombobox
               value={contactId}
-              onChange={(e) => setContactId(e.target.value)}
+              onValueChange={(v) => setContactId(v)}
+              options={contactOptions}
               placeholder={t('calendarPage.dialog.fields.contactPlaceholder')}
             />
           </fieldset>
 
           {/* Project */}
           <fieldset className={sp.spaceBetween.sm}>
-            <Label htmlFor="event-project">{t('calendarPage.dialog.fields.project')}</Label>
-            <Input
-              id="event-project"
+            <Label>{t('calendarPage.dialog.fields.project')}</Label>
+            <SearchableCombobox
               value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
+              onValueChange={(v) => setProjectId(v)}
+              options={projectOptions}
+              isLoading={projectsLoading}
               placeholder={t('calendarPage.dialog.fields.projectPlaceholder')}
             />
           </fieldset>
