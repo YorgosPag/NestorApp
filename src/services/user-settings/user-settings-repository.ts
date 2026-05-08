@@ -64,6 +64,9 @@ interface PendingWrite {
 
 class UserSettingsRepository {
   private currentDoc: UserSettingsDoc | null = null;
+  /** True iff the latest Firestore snapshot reported a real document (not the
+   * synthesized skeleton). Drives the create-vs-update branch in flush. */
+  private docExistsRemote: boolean = false;
   private docId: string | null = null;
   private userId: string | null = null;
   private companyId: string | null = null;
@@ -118,6 +121,7 @@ class UserSettingsRepository {
       this.firestoreUnsubscribe = null;
     }
     this.currentDoc = null;
+    this.docExistsRemote = false;
     this.docId = null;
     this.userId = null;
     this.companyId = null;
@@ -198,10 +202,12 @@ class UserSettingsRepository {
     if (!raw) {
       // First-time user — start with an empty (schema-valid) skeleton.
       this.currentDoc = buildEmptyUserSettings(this.userId, this.companyId);
+      this.docExistsRemote = false;
       this.notifyListeners();
       return;
     }
 
+    this.docExistsRemote = true;
     const migrated = migrateUserSettings(raw as unknown as Record<string, unknown>);
     const parsed = userSettingsSchema.safeParse(migrated.data);
     if (!parsed.success) {
@@ -260,37 +266,34 @@ class UserSettingsRepository {
       return;
     }
 
+    // Firestore rules evaluate the `update` path against `resource.data`
+    // (the existing doc), which doesn't exist on first write and surfaces as
+    // PERMISSION_DENIED — NOT `not-found`. We pick create vs update based on
+    // `docExistsRemote` (set by the snapshot listener) so the rules'
+    // `create` path is exercised for the first session, then `update` after.
     try {
-      // Use create(setDoc) on first write, update afterward. We branch on
-      // whether the doc has been hydrated by the listener yet; if not, the
-      // first ever write must be a create — but since we always operate
-      // post-bind (which kicks off the snapshot listener), `currentDoc` is
-      // populated by the time the debounce fires. We use update unconditionally
-      // and rely on Firestore rules + setDoc-on-first-write upstream.
-      await firestoreQueryService.update<UserSettingsDoc>(
-        'USER_PREFERENCES',
-        this.docId,
-        validated.data,
-      );
-      logger.info('Flushed', { count: writes.length, paths: writes.map((w) => w.path) });
-    } catch (err) {
-      // If the doc doesn't exist yet, fall back to create.
-      const code = (err as { code?: string })?.code;
-      if (code === 'not-found' || (err as Error)?.message?.includes('No document to update')) {
-        try {
-          await firestoreQueryService.create<UserSettingsDoc>(
-            'USER_PREFERENCES',
-            validated.data,
-            { documentId: this.docId, addTenantContext: false, addTimestamps: true },
-          );
-          logger.info('Created', { count: writes.length });
-        } catch (createErr) {
-          logger.error('Create-on-first-write failed', {
-            error: (createErr as Error)?.message,
-          });
-        }
-        return;
+      if (this.docExistsRemote) {
+        await firestoreQueryService.update<UserSettingsDoc>(
+          'USER_PREFERENCES',
+          this.docId,
+          validated.data,
+        );
+        logger.info('Flushed (update)', {
+          count: writes.length,
+          paths: writes.map((w) => w.path),
+        });
+      } else {
+        await firestoreQueryService.create<UserSettingsDoc>(
+          'USER_PREFERENCES',
+          validated.data,
+          { documentId: this.docId, addTenantContext: false, addTimestamps: true },
+        );
+        logger.info('Flushed (create)', {
+          count: writes.length,
+          paths: writes.map((w) => w.path),
+        });
       }
+    } catch (err) {
       logger.error('Flush failed', { error: (err as Error)?.message });
     }
   }

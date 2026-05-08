@@ -1453,35 +1453,34 @@ service cloud.firestore {
     // user has exactly one preferences blob per tenant. The body MUST carry
     // both `userId` and `companyId` fields matching the auth context.
     //
-    // 🔒 OWNERSHIP + TENANT: read/write only when the caller owns the doc AND
-    // belongs to the same company. companyId is immutable on update.
+    // 🔒 PATH-BASED OWNERSHIP: the docId itself encodes the owner — we check
+    // it starts with `{auth.uid}_`. This works for non-existent docs too
+    // (which is required for the snapshot listener to resolve before first
+    // write — `resource.data` is null on a non-existent doc).
     match /user_preferences/{docId} {
-      // 📖 READ: ownership + tenant scope
+      // 📖 READ: docId must start with caller's uid (works for non-existent docs)
       allow read: if isAuthenticated()
-                  && resource.data.keys().hasAll(['userId', 'companyId'])
-                  && isOwner(resource.data.userId)
-                  && belongsToCompany(resource.data.companyId);
+                  && docId.matches('^' + request.auth.uid + '_.+');
 
-      // ✍️ CREATE: caller must claim ownership of the new doc and set
-      //    immutable userId/companyId/schemaVersion that match auth context.
+      // ✍️ CREATE: caller must own the docId path AND set body userId/companyId
+      //    matching auth context, with valid schemaVersion.
       allow create: if isAuthenticated()
+                    && docId.matches('^' + request.auth.uid + '_.+')
                     && request.resource.data.keys().hasAll(['userId', 'companyId', 'schemaVersion'])
                     && isOwner(request.resource.data.userId)
                     && belongsToCompany(request.resource.data.companyId)
                     && request.resource.data.schemaVersion is number;
 
-      // ✍️ UPDATE: ownership + tenant; userId / companyId / schemaVersion floor invariants.
+      // ✍️ UPDATE: ownership via docId; userId / companyId / schemaVersion floor invariants.
       allow update: if isAuthenticated()
-                    && isOwner(resource.data.userId)
-                    && belongsToCompany(resource.data.companyId)
+                    && docId.matches('^' + request.auth.uid + '_.+')
                     && request.resource.data.userId == resource.data.userId
                     && request.resource.data.companyId == resource.data.companyId
                     && request.resource.data.schemaVersion >= resource.data.schemaVersion;
 
-      // 🗑️ DELETE: ownership + tenant (rare — used only for account cleanup)
+      // 🗑️ DELETE: ownership via docId (rare — used only for account cleanup)
       allow delete: if isAuthenticated()
-                    && isOwner(resource.data.userId)
-                    && belongsToCompany(resource.data.companyId);
+                    && docId.matches('^' + request.auth.uid + '_.+');
     }
 
     // =========================================================================
