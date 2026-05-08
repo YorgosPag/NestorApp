@@ -7,7 +7,7 @@
  */
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ExtendedSnapType } from '../extended-types';
-import { userSettingsRepository } from '@/services/user-settings';
+import { userSettingsRepository, stableHash } from '@/services/user-settings';
 import { useAuth } from '@/auth/contexts/AuthContext';
 
 // ✅ ENTERPRISE FIX: Define SnapState locally since ../types doesn't exist
@@ -135,13 +135,18 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     });
   }, []);
 
-  // 🏢 ADR-XXX UserSettings SSoT — persist active snap modes (which snap types
+  // 🏢 ADR-341 UserSettings SSoT — persist active snap modes (which snap types
   // are checked) per user. The master `snapEnabled` flag stays ephemeral
   // (default OFF on every refresh, intentional industry-CAD UX).
+  // Echo-loop guard: lastWrittenHashRef tracks our last write so the
+  // optimistic notification round-trip doesn't feed our value back.
   const { user } = useAuth();
   const snapUserId = user?.uid ?? null;
   const snapCompanyId = user?.companyId ?? null;
-  const isHydratingSnapRef = useRef(false);
+  const lastSnapHashRef = useRef<string>('');
+  const snapStateRef = useRef(snapState);
+  snapStateRef.current = snapState;
+
   useEffect(() => {
     if (!snapUserId || !snapCompanyId) return;
     userSettingsRepository.bind(snapUserId, snapCompanyId);
@@ -151,16 +156,17 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
       (remote) => {
         const blob = remote as { activeTypes?: string[] } | undefined;
         if (blob?.activeTypes) {
-          isHydratingSnapRef.current = true;
+          const remoteHash = stableHash(blob.activeTypes);
+          if (remoteHash === lastSnapHashRef.current) return; // own echo
+          lastSnapHashRef.current = remoteHash;
           setSnapState(() => {
             const next = {} as SnapState;
             ALL_MODES.forEach(m => { next[m] = blob.activeTypes!.includes(m); });
             return next;
           });
-          queueMicrotask(() => { isHydratingSnapRef.current = false; });
         } else if (firstSnapshot) {
-          // First session — push current local state upstream.
-          const activeTypes = ALL_MODES.filter(m => snapState[m]);
+          const activeTypes = ALL_MODES.filter(m => snapStateRef.current[m]);
+          lastSnapHashRef.current = stableHash(activeTypes);
           userSettingsRepository.updateSlice('dxfViewer.snap', { activeTypes });
         }
         firstSnapshot = false;
@@ -172,8 +178,10 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
 
   useEffect(() => {
     if (!snapUserId || !snapCompanyId) return;
-    if (isHydratingSnapRef.current) return;
     const activeTypes = ALL_MODES.filter(m => snapState[m]);
+    const activeHash = stableHash(activeTypes);
+    if (activeHash === lastSnapHashRef.current) return;
+    lastSnapHashRef.current = activeHash;
     userSettingsRepository.updateSlice('dxfViewer.snap', { activeTypes });
   }, [snapUserId, snapCompanyId, snapState]);
 

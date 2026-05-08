@@ -9,6 +9,7 @@ export { userSettingsRepository } from './user-settings-repository';
 export type { SliceListener } from './user-settings-repository';
 export { applySliceToDoc, getSliceFromDoc } from './user-settings-paths';
 export type { SliceValueMap } from './user-settings-paths';
+export { stableHash } from './user-settings-hash';
 export {
   USER_SETTINGS_SCHEMA_VERSION,
   userSettingsSchema,
