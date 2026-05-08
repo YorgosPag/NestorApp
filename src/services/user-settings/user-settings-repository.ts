@@ -245,7 +245,11 @@ class UserSettingsRepository {
       schemaVersion: USER_SETTINGS_SCHEMA_VERSION,
     };
     for (const w of writes) {
-      payload = applySliceToDoc(payload, w.path, w.value);
+      payload = applySliceToDoc(
+        payload,
+        w.path,
+        w.value as SliceValueMap[typeof w.path],
+      );
     }
 
     const validated = userSettingsSchema.safeParse(payload);

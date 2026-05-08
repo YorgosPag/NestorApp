@@ -46,6 +46,8 @@ import { useStorageSave } from './storage/useStorageSave';
 
 // State & Actions hooks
 import { useEnterpriseSettingsState } from './hooks/useEnterpriseSettingsState';
+import { useUserSettingsRepoSync } from './storage/useUserSettingsRepoSync';
+import { useAuth } from '@/auth/contexts/AuthContext';
 import { useEnterpriseActions } from './hooks/useEnterpriseActions';
 import { useEffectiveSettings } from './hooks/useEffectiveSettings';
 
@@ -234,6 +236,19 @@ export function EnterpriseDxfSettingsProvider({
     onSaveSuccess,
     onSaveError
   );
+
+  // 🏢 ADR-XXX UserSettings SSoT — server-side mirror via Firestore-backed
+  // userSettingsRepository (cross-device sync + audit trail). Local IndexedDB
+  // remains as fast boot cache; Firestore is the source of truth.
+  const { user } = useAuth();
+  useUserSettingsRepoSync({
+    userId: user?.uid ?? null,
+    companyId: user?.companyId ?? null,
+    enabled,
+    isLoaded: state.isLoaded,
+    settings: state.settings,
+    onRemoteHydrate: onLoadSuccess,
+  });
 
   // Actions
   const actions = useEnterpriseActions(dispatch);

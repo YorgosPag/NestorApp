@@ -5,8 +5,10 @@
  * @see docs/features/snapping/SNAP_INDICATOR_LINE.md - Βήμα 3: Αποθήκευση στο Context
  * @see docs/features/snapping/ARCHITECTURE.md - Αρχιτεκτονική snap system
  */
-import React, { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ExtendedSnapType } from '../extended-types';
+import { userSettingsRepository } from '@/services/user-settings';
+import { useAuth } from '@/auth/contexts/AuthContext';
 
 // ✅ ENTERPRISE FIX: Define SnapState locally since ../types doesn't exist
 type SnapState = Record<ExtendedSnapType, boolean>;
@@ -132,6 +134,48 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
       return next;
     });
   }, []);
+
+  // 🏢 ADR-XXX UserSettings SSoT — persist active snap modes (which snap types
+  // are checked) per user. The master `snapEnabled` flag stays ephemeral
+  // (default OFF on every refresh, intentional industry-CAD UX).
+  const { user } = useAuth();
+  const snapUserId = user?.uid ?? null;
+  const snapCompanyId = user?.companyId ?? null;
+  const isHydratingSnapRef = useRef(false);
+  useEffect(() => {
+    if (!snapUserId || !snapCompanyId) return;
+    userSettingsRepository.bind(snapUserId, snapCompanyId);
+    let firstSnapshot = true;
+    const unsubscribe = userSettingsRepository.subscribeSlice(
+      'dxfViewer.snap',
+      (remote) => {
+        const blob = remote as { activeTypes?: string[] } | undefined;
+        if (blob?.activeTypes) {
+          isHydratingSnapRef.current = true;
+          setSnapState(() => {
+            const next = {} as SnapState;
+            ALL_MODES.forEach(m => { next[m] = blob.activeTypes!.includes(m); });
+            return next;
+          });
+          queueMicrotask(() => { isHydratingSnapRef.current = false; });
+        } else if (firstSnapshot) {
+          // First session — push current local state upstream.
+          const activeTypes = ALL_MODES.filter(m => snapState[m]);
+          userSettingsRepository.updateSlice('dxfViewer.snap', { activeTypes });
+        }
+        firstSnapshot = false;
+      },
+    );
+    return () => { unsubscribe(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapUserId, snapCompanyId]);
+
+  useEffect(() => {
+    if (!snapUserId || !snapCompanyId) return;
+    if (isHydratingSnapRef.current) return;
+    const activeTypes = ALL_MODES.filter(m => snapState[m]);
+    userSettingsRepository.updateSlice('dxfViewer.snap', { activeTypes });
+  }, [snapUserId, snapCompanyId, snapState]);
 
   // 🚀 PERF: Stabilized context value — only changes when snap state/enabled actually change.
   // BEFORE: New object every render → consumers cascade re-render on every SnapProvider render.

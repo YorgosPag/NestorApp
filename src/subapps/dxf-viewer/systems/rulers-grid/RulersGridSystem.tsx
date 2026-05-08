@@ -41,6 +41,7 @@ import type { RulersGridHookReturn, RulersGridContextType } from './types';
 import { RulersGridSystemProps, DEFAULT_ORIGIN } from './types';
 import { useRulerManagement } from './useRulerManagement';
 import { useGridManagement } from './useGridManagement';
+import { useUserSettingsRulersGridSync } from './useUserSettingsRulersGridSync';
 import { useSnapManagement } from './useSnapManagement';
 import { useRenderingCalculations } from './useRenderingCalculations';
 import { globalGridStore, globalRulerStore } from '../../settings-provider';
@@ -292,6 +293,21 @@ function useRulersGridSystemIntegration({
       storageSet(persistenceKey, dataToStore);
     }
   }, [rulers, grid, origin, isVisible, enablePersistence, persistenceKey]);
+
+  // 🏢 ADR-XXX UserSettings SSoT — Firestore-backed mirror of rulers/grid.
+  // Cross-device sync + survives hard refresh even if localStorage is cleared.
+  // Local IndexedDB/localStorage remains as instant boot cache.
+  useUserSettingsRulersGridSync({
+    enabled: enablePersistence,
+    rulers,
+    grid,
+    origin,
+    isVisible,
+    setRulers: setRulersInternal,
+    setGrid: setGridInternal,
+    setOriginState,
+    setIsVisible,
+  });
 
   // Bounds calculation when view changes
   useEffect(() => {
