@@ -36,6 +36,12 @@ interface UseRulersGridSyncParams {
   grid: GridSettings;
   origin: Point2D;
   isVisible: boolean;
+  /** True if the React state was hydrated from a persisted localStorage
+   * blob on mount. When true, the hook treats the initial Firestore
+   * snapshot as potentially stale and force-pushes local up instead of
+   * hydrating remote — closes the race where a setting toggled <500ms
+   * before refresh would be lost to the debounce timer. */
+  hasLocalPersistedState: boolean;
   setRulers: React.Dispatch<React.SetStateAction<RulerSettings>>;
   setGrid: React.Dispatch<React.SetStateAction<GridSettings>>;
   setOriginState: React.Dispatch<React.SetStateAction<Point2D>>;
@@ -51,6 +57,7 @@ export function useUserSettingsRulersGridSync(
     grid,
     origin,
     isVisible,
+    hasLocalPersistedState,
     setRulers,
     setGrid,
     setOriginState,
@@ -76,6 +83,25 @@ export function useUserSettingsRulersGridSync(
       'dxfViewer.rulersGrid',
       (remote) => {
         const blob = remote as RulersGridBlob | undefined;
+        // 🐛 First Firestore snapshot is potentially stale relative to
+        // what's in localStorage — when the user toggled a setting and
+        // refreshed before the 500ms debounce fired, Firestore still has
+        // the old value. localStorage already has the user's intent.
+        // When the React state was hydrated from a persisted blob on
+        // mount, prefer local: ignore the first remote and force-push
+        // local up so Firestore gets repaired.
+        // (Fresh device / first session has no localStorage → hydrate
+        // remote normally so cross-device sync works.)
+        if (firstSnapshot && hasLocalPersistedState) {
+          firstSnapshot = false;
+          const init = localRef.current;
+          lastWrittenHashRef.current = stableHash(init);
+          userSettingsRepository.updateSlice(
+            'dxfViewer.rulersGrid',
+            init as unknown as never,
+          );
+          return;
+        }
         if (blob && (blob.rulers || blob.grid || blob.origin || typeof blob.isVisible === 'boolean')) {
           const remoteHash = stableHash(blob);
           if (remoteHash === lastWrittenHashRef.current) return; // own echo

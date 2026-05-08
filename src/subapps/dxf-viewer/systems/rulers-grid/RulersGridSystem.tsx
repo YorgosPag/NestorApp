@@ -303,6 +303,12 @@ function useRulersGridSystemIntegration({
     grid,
     origin,
     isVisible,
+    // True when this mount started from a localStorage blob (the user has
+    // a previous session on this device). Tells the sync hook to treat
+    // the initial Firestore snapshot as potentially stale and force-push
+    // local up — closes the race where a setting toggled <500ms before
+    // refresh would be lost to the debounce timer.
+    hasLocalPersistedState: persistedData !== null && persistedData !== undefined,
     setRulers: setRulersInternal,
     setGrid: setGridInternal,
     setOriginState,

@@ -72,6 +72,7 @@ class UserSettingsRepository {
   private companyId: string | null = null;
 
   private firestoreUnsubscribe: Unsubscribe | null = null;
+  private beforeUnloadHandler: (() => void) | null = null;
   private isBound = false;
 
   private listeners: Set<() => void> = new Set();
@@ -107,18 +108,52 @@ class UserSettingsRepository {
       },
       { tenantOverride: 'skip' },
     );
+
+    // 🐛 Best-effort flush on page unload. Browsers don't await async work
+    // here, but Firestore's HTTPS request often completes before the
+    // connection is torn down. Combined with the unbind()-side flush this
+    // closes the window where a setting toggled <500ms before refresh
+    // would be lost to the debounce timer.
+    if (typeof window !== 'undefined') {
+      this.beforeUnloadHandler = () => {
+        if (this.flushTimer) {
+          clearTimeout(this.flushTimer);
+          this.flushTimer = null;
+          void this.flushPendingWrites().catch(() => { /* noop */ });
+        }
+      };
+      window.addEventListener('beforeunload', this.beforeUnloadHandler);
+      window.addEventListener('pagehide', this.beforeUnloadHandler);
+    }
   }
 
-  /** Tear down subscription + clear in-memory state. Safe to call multiple times. */
+  /** Tear down subscription + clear in-memory state. Safe to call multiple times.
+   *
+   * 🐛 FIX: previously cleared `pendingWrites` without flushing them — the
+   * 500ms debounce caused settings changes made shortly before unmount /
+   * page refresh to be silently lost (Firestore never received them, and
+   * on next load Firestore's stale value overrode the localStorage cache).
+   * Now we fire-and-forget the pending writes BEFORE tearing down.
+   */
   unbind(): void {
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;
     }
-    this.pendingWrites.clear();
+    if (this.pendingWrites.size > 0) {
+      // Best-effort flush — fire-and-forget, the network may continue
+      // briefly after the React tree unmounts. Most often the user
+      // hasn't actually unloaded the page yet (provider remount cycle).
+      void this.flushPendingWrites().catch(() => { /* noop */ });
+    }
     if (this.firestoreUnsubscribe) {
       this.firestoreUnsubscribe();
       this.firestoreUnsubscribe = null;
+    }
+    if (this.beforeUnloadHandler && typeof window !== 'undefined') {
+      window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+      window.removeEventListener('pagehide', this.beforeUnloadHandler);
+      this.beforeUnloadHandler = null;
     }
     this.currentDoc = null;
     this.docExistsRemote = false;
@@ -198,6 +233,15 @@ class UserSettingsRepository {
 
   private handleFirestoreSnapshot(raw: UserSettingsDoc | null): void {
     if (!this.userId || !this.companyId) return;
+
+    // 🐛 Race guard: when local has unflushed writes, the incoming remote
+    // is by definition older than our pending state. Skip the hydrate so
+    // we don't clobber the user's recent change with stale Firestore data
+    // — the pending flush will fire shortly and we'll receive a fresh
+    // snapshot with our own value (echo-guarded by the consumer hook).
+    if (this.pendingWrites.size > 0) {
+      return;
+    }
 
     if (!raw) {
       // First-time user — start with an empty (schema-valid) skeleton.
