@@ -370,15 +370,25 @@ export function useUnifiedGripInteraction(
     isFollowingGrip: phase === 'dragging' && activeGrip?.source === 'dxf',
     handleGripMouseMove: (worldPos: Point2D, screenPos: Point2D) => {
       handleMouseMove(worldPos, screenPos);
-      return phase === 'dragging' && activeGrip?.source === 'dxf';
+      // Suppress upstream handlers (drawing preview, hover, etc.) for ANY active
+      // grip drag, not only DXF — overlay grips also flow through DxfCanvas.
+      return phase === 'dragging' || draggingVertices !== null || draggingEdgeMidpoint !== null || draggingOverlayBody !== null;
     },
     handleGripMouseDown: (worldPos: Point2D) => handleMouseDown(worldPos, false),
-    handleGripMouseUp: (worldPos: Point2D) => { handleMouseUp(worldPos); return phase === 'dragging' && activeGrip?.source === 'dxf'; },
+    handleGripMouseUp: (worldPos: Point2D) => {
+      // Capture drag state BEFORE handleMouseUp resets it. Returning truthy here
+      // tells the canvas mouse-up handler to skip onCanvasClick — otherwise the
+      // active drawing tool (e.g. layering / polygon) registers a stray click
+      // and creates a new polygon point while a vertex was being dragged.
+      const wasDragging = phase === 'dragging' || draggingVertices !== null || draggingEdgeMidpoint !== null || draggingOverlayBody !== null;
+      handleMouseUp(worldPos);
+      return wasDragging;
+    },
     handleGripClick: (_worldPos: Point2D) => false,
     handleGripEscape: handleEscape,
     handleGripRightClick: handleEscape,
     dragPreview: dxfDragPreview,
-  }), [gripInteractionState, phase, activeGrip, handleMouseMove, handleMouseDown, handleMouseUp, handleEscape, dxfDragPreview]);
+  }), [gripInteractionState, phase, activeGrip, handleMouseMove, handleMouseDown, handleMouseUp, handleEscape, dxfDragPreview, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody]);
 
   const overlayHoveredVertex = useMemo(() => buildOverlayHoveredVertex(hoveredGrip), [hoveredGrip]);
   const overlayHoveredEdge = useMemo(() => buildOverlayHoveredEdge(hoveredGrip, currentOverlays), [hoveredGrip, currentOverlays]);
