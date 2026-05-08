@@ -154,7 +154,8 @@
     "orientation": "Orientation",
     "parking": "Parking",
     "storageFull": "Storage",
-    "price": "Price"
+    "price": "Price",
+    "monthlyRent": "Monthly rent"
   },
   "connectionPanel": {
     "title": "Connections & Grouping",

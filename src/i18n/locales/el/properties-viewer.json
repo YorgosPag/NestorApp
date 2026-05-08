@@ -154,7 +154,8 @@
     "orientation": "Προσανατολισμός",
     "parking": "Στάθμευση",
     "storageFull": "Αποθήκη",
-    "price": "Τιμή"
+    "price": "Τιμή",
+    "monthlyRent": "Μηνιαίο ενοίκιο"
   },
   "connectionPanel": {
     "title": "Συνδέσεις & Ομαδοποίηση",

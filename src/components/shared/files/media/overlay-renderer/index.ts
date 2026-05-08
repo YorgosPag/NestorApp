@@ -32,7 +32,6 @@ export { renderOverlay } from './dispatch';
 export { renderOverlayPolygon, renderOverlayPolygons } from './legacy';
 
 export {
-  formatNumber,
   formatDistance,
   formatArea,
   formatAngle,

@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PropertyList } from '@/components/property-viewer/PropertyList';
 import { PropertyDetailsPanel } from '@/components/property-viewer/PropertyDetailsPanel';
 import { PropertyHoverInfo } from '@/components/property-viewer/PropertyHoverInfo';
+import { PropertyStatusLegend } from '@/components/property-viewer/PropertyStatusLegend';
 import { ReadOnlyMediaViewer, MEDIA_TAB_PARAM, parseMediaTabParam } from './ReadOnlyMediaViewer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -18,6 +19,9 @@ import type { ReadOnlyViewerContextProps } from '../types';
 import '@/lib/design-system';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { OverlayLabel } from '@/components/shared/files/media/overlay-polygon-renderer';
+import { PROPERTY_STATUS_LABELS } from '@/constants/domains/property-status-core';
+import type { PropertyStatus } from '@/constants/domains/property-status-core';
+import { getEffectivePrice } from '@/lib/properties/price-resolver';
 
 export function ListLayout({
   isLoading,
@@ -65,17 +69,20 @@ export function ListLayout({
     const map = new Map<string, OverlayLabel>();
     for (const p of properties) {
       const grossSqm = p.areas?.gross ?? p.area;
-      const price = p.commercial?.askingPrice ?? p.commercial?.finalPrice ?? p.price;
       const hasSqm = typeof grossSqm === 'number' && Number.isFinite(grossSqm);
-      const hasPrice = typeof price === 'number' && Number.isFinite(price) && price > 0;
+      const effectivePrice = getEffectivePrice(p);
+      const statusKey = (p.commercialStatus ?? p.status) as PropertyStatus | undefined;
+      const statusI18nKey = statusKey ? PROPERTY_STATUS_LABELS[statusKey] : undefined;
+      const statusText = statusI18nKey ? t(statusI18nKey).toUpperCase() : undefined;
       map.set(p.id, {
+        statusText,
         primaryText: p.code || undefined,
         secondaryText: hasSqm ? `${grossSqm} ${sqmUnit}` : undefined,
-        emphasisText: hasPrice ? formatCurrency(price as number) : undefined,
+        emphasisText: effectivePrice ? formatCurrency(effectivePrice.amount) : undefined,
       });
     }
     return map;
-  }, [properties, sqmUnit]);
+  }, [properties, sqmUnit, t]);
 
   const handleSelectFloor = React.useCallback(
     (floorId: string | null) => {
@@ -111,7 +118,13 @@ export function ListLayout({
       </div>
 
       {/* Center Panel - ReadOnlyMediaViewer for floorplans/photos/videos */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 relative">
+        {showPropertyHoverInfo && (
+          <PropertyStatusLegend
+            properties={filteredProperties}
+            className="absolute bottom-2 left-2 z-10"
+          />
+        )}
         <ReadOnlyMediaViewer
           propertyId={selectedPropertyIds[0] ?? null}
           propertyName={

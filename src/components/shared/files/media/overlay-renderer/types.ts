@@ -46,6 +46,8 @@ export interface FitTransform {
  * Renderer is locale-agnostic.
  */
 export interface OverlayLabel {
+  /** Top line — e.g. "ΠΡΟΣ ΠΩΛΗΣΗ" (commercial status). */
+  statusText?: string;
   primaryText?: string;
   secondaryText?: string;
   emphasisText?: string;

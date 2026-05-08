@@ -14,7 +14,7 @@
  */
 
 import { worldToScreen } from './transform';
-import { formatNumber } from './format-utils';
+import { formatArea, formatDistance, formatAngle } from './format-utils';
 import type { Point2D, SceneBounds, FitTransform } from './types';
 
 const LABEL_FONT = '12px system-ui, sans-serif';
@@ -54,7 +54,13 @@ export function drawMeasurement(
   }
 
   const labelPos = pickLabelPosition(screen, input.mode);
-  if (labelPos) drawLabel(ctx, labelPos, `${formatNumber(input.value)} ${input.unit}`);
+  if (labelPos) drawLabel(ctx, labelPos, formatLabel(input));
+}
+
+function formatLabel(input: MeasurementInput): string {
+  if (input.mode === 'area') return formatArea(input.value, input.unit);
+  if (input.mode === 'angle') return formatAngle(input.value);
+  return formatDistance(input.value, input.unit);
 }
 
 function drawPolylinePath(

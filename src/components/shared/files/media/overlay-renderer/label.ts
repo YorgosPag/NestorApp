@@ -2,11 +2,12 @@
 /**
  * Overlay renderer — in-polygon hover label.
  *
- * Centered 3-line text drawn at the polygon vertex centroid. White fill +
- * black outline for max readability against any underlying color. Lines:
- *   1. primary  (12px regular)  — e.g. property code
- *   2. secondary (12px regular) — e.g. "85 τ.μ."
- *   3. emphasis  (18px bold)    — e.g. "€ 150.000"
+ * Centered up-to-4-line text drawn at the polygon vertex centroid. White fill
+ * + black outline for max readability against any underlying color. Lines:
+ *   0. status    (16px bold)    — e.g. "ΠΡΟΣ ΠΩΛΗΣΗ" (commercial status)
+ *   1. primary   (16px regular) — e.g. property code
+ *   2. secondary (16px regular) — e.g. "85 τ.μ."
+ *   3. emphasis  (24px bold)    — e.g. "€ 150.000"
  *
  * @module components/shared/files/media/overlay-renderer/label
  * @enterprise ADR-340 §3.6 / Phase 9 STEP E
@@ -82,6 +83,7 @@ interface RenderLine {
 
 function collectLines(label: OverlayLabel): RenderLine[] {
   const lines: RenderLine[] = [];
+  if (label.statusText) lines.push({ text: label.statusText, sizePx: LABEL_BASE_FONT_PX, bold: true });
   if (label.primaryText) lines.push({ text: label.primaryText, sizePx: LABEL_BASE_FONT_PX, bold: false });
   if (label.secondaryText) lines.push({ text: label.secondaryText, sizePx: LABEL_BASE_FONT_PX, bold: false });
   if (label.emphasisText) lines.push({ text: label.emphasisText, sizePx: LABEL_EMPHASIS_FONT_PX, bold: true });
