@@ -2326,7 +2326,7 @@
       "description": "Quote entity + FSM SSoT (ADR-327). All quote CRUD goes through quote-service.ts. FORBIDDEN: addDoc() on quotes collection, inline status transitions, direct Firestore writes from API routes.",
       "forbiddenPatterns": [
         "collection.*quotes.*addDoc",
-        "collection.*quotes.*add("
+        "collection.*quotes.*\\.add\\("
       ],
       "allowlist": [
         "src/subapps/procurement/types/quote.ts",
@@ -2342,7 +2342,7 @@
       "description": "RFQ entity + lifecycle SSoT (ADR-327). All RFQ CRUD goes through rfq-service.ts. FORBIDDEN: direct Firestore writes from API routes.",
       "forbiddenPatterns": [
         "collection.*rfqs.*addDoc",
-        "collection.*rfqs.*add("
+        "collection.*rfqs.*\\.add\\("
       ],
       "allowlist": [
         "src/subapps/procurement/types/rfq.ts",
@@ -2602,6 +2602,42 @@
         "src/components/shared/files/media/overlay-renderer/label.ts",
         "src/components/shared/files/media/overlay-renderer/dispatch.ts",
         "src/components/shared/files/media/overlay-renderer/legacy.ts"
+      ],
+      "addedDate": "2026-05-08",
+      "addedByAdr": "ADR-340",
+      "tier": 3
+    },
+    "floorplan-overlay-gateway": {
+      "ssotFile": "src/services/floorplan-overlay-mutation-gateway.ts",
+      "description": "Sole client write path for `floorplan_overlays` (multi-kind overlays — ADR-340 Phase 9). Blocks ad-hoc Firestore access to the collection from outside the gateway, the canonical API route+handlers, and the two server-side cascade services that legitimately need direct admin-SDK access (calibration-remap world-coord rewrites, cascade-delete on background/floor wipe). Pattern 1 forbids `COLLECTIONS.FLOORPLAN_OVERLAYS` references; pattern 2 forbids the raw `'floorplan_overlays'` literal in `.collection()`/`.doc()` calls (belt-and-suspenders with the firestore-collections module).",
+      "forbiddenPatterns": [
+        "\\bCOLLECTIONS\\.FLOORPLAN_OVERLAYS\\b",
+        "\\b(doc|collection)\\(\\s*['\"]floorplan_overlays['\"]"
+      ],
+      "allowlist": [
+        "src/services/floorplan-overlay-mutation-gateway.ts",
+        "src/app/api/floorplan-overlays/route.ts",
+        "src/app/api/floorplan-overlays/floorplan-overlays.handlers.ts",
+        "src/app/api/floorplan-overlays/floorplan-overlays.types.ts",
+        "src/services/floorplan-background/calibration-remap.service.ts",
+        "src/services/floorplan-background/floorplan-cascade-delete.service.ts",
+        "src/config/firestore-collections.ts"
+      ],
+      "addedDate": "2026-05-08",
+      "addedByAdr": "ADR-340",
+      "tier": 3
+    },
+    "floorplan-overlay-types": {
+      "ssotFile": "src/types/floorplan-overlays.ts",
+      "description": "Canonical TypeScript SSoT for multi-kind floorplan overlay shape (ADR-340 Phase 9). Blocks redeclarations of `FloorplanOverlay`, `OverlayGeometry`, `OverlayRole`, `OverlayLinked` outside the canonical types file + 3 legitimate sites: the polygon-only domain projection consumed by the DXF Viewer layering store, the provider-types re-export bridge (`type FloorplanOverlay = SharedFloorplanOverlay`), and the renderer re-export module. The pattern requires the identifier to be followed by `<`, `=`, or `{` (definition syntax) so inline type-import modifiers (`import { type FloorplanOverlay, ... }`) — comma-trailing — are NOT false positives. `OverlayStyle` is intentionally excluded — the DXF Viewer projection ships a structurally different `OverlayStyle` (lineWidth-based vs strokeWidth/dashed) and that's by design.",
+      "forbiddenPatterns": [
+        "\\b(interface|type)\\s+(FloorplanOverlay|OverlayGeometry|OverlayRole|OverlayLinked)\\s*[<={]"
+      ],
+      "allowlist": [
+        "src/types/floorplan-overlays.ts",
+        "src/subapps/dxf-viewer/overlays/types.ts",
+        "src/subapps/dxf-viewer/floorplan-background/providers/types.ts",
+        "src/components/shared/files/media/overlay-renderer/types.ts"
       ],
       "addedDate": "2026-05-08",
       "addedByAdr": "ADR-340",

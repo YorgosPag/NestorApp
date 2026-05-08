@@ -179,4 +179,40 @@ const result = await uploadPublicFile({ storagePath, buffer, contentType });
 const proxyUrl = result.url;
 const altHost = 'pagonis-87766.firebasestorage.app';`,
   },
+
+  'floorplan-overlay-gateway': {
+    shouldMatch: `// Scanner must catch direct Firestore access to floorplan_overlays:
+const ref = db.collection(COLLECTIONS.FLOORPLAN_OVERLAYS).doc(overlayId);
+const raw = adminDb.collection('floorplan_overlays');
+const docRef = adminDb.doc("floorplan_overlays/abc123");
+await deleteDoc(doc(db, COLLECTIONS.FLOORPLAN_OVERLAYS, id));`,
+    shouldSkip: `// Scanner must pass gateway-routed mutations:
+import { createFloorplanOverlay, updateFloorplanOverlay, deleteFloorplanOverlay } from '@/services/floorplan-overlay-mutation-gateway';
+await createFloorplanOverlay({ backgroundId, floorId, geometry, role });
+await updateFloorplanOverlay({ overlayId, label: 'A-12' });
+await deleteFloorplanOverlay({ overlayId });
+const meta = COLLECTIONS.PROPERTIES;
+const otherCol = db.collection('properties');`,
+  },
+
+  'floorplan-overlay-types': {
+    shouldMatch: `// Scanner must catch redeclarations of canonical overlay types:
+export interface FloorplanOverlay { id: string; }
+export type OverlayGeometry = { type: 'polygon' };
+type OverlayRole = 'property' | 'parking';
+interface OverlayLinked { propertyId?: string; }`,
+    shouldSkip: `// Scanner must pass type imports + re-exports + value-position usage:
+import type { FloorplanOverlay, OverlayGeometry, OverlayRole, OverlayLinked } from '@/types/floorplan-overlays';
+import {
+  type FloorplanOverlay as Overlay,
+  type OverlayGeometry,
+  type OverlayRole,
+  type OverlayLinked,
+} from '@/types/floorplan-overlays';
+export type { FloorplanOverlay, OverlayGeometry } from '@/types/floorplan-overlays';
+const overlay: FloorplanOverlay = readOverlay();
+function isProperty(role: OverlayRole): boolean { return role === 'property'; }
+const link: OverlayLinked = { propertyId: 'p1' };
+type ExtendedFloorplanOverlay = FloorplanOverlay & { extra: string };`,
+  },
 };
