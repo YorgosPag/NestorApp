@@ -1,10 +1,10 @@
 {
-  "generated": "2026-05-05T22:29:12.672Z",
+  "generated": "2026-05-08T14:01:51.891Z",
   "knipVersion": "6",
   "files": [
     "src/components/contacts/pickers/AdministrativeAddressPicker.tsx",
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
-    "src/components/shared/addresses/editor/hooks/useAddressTelemetry.ts",
+    "src/services/dxf-overlay-item-mutation-gateway.ts",
     "src/subapps/procurement/components/ConflictDialog.tsx",
     "src/subapps/procurement/hooks/useLiveChangeToasts.ts",
     "src/subapps/procurement/hooks/useTradeRegistry.ts",

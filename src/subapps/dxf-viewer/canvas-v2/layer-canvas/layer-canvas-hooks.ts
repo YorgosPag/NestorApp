@@ -275,6 +275,10 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
   }, [renderLayers, viewport.width, viewport.height, rendererRef]);
 
   // Mark dirty when dependencies change
+  // 🏢 ADR-030: settings deps included so panel changes (crosshair / cursor
+  // pickbox / selection box / grid / ruler) flag the canvas dirty without
+  // requiring a mouse move. Pairs with `markAllCanvasDirty()` in
+  // CursorConfiguration.notifyListeners (singleton-side belt-and-suspenders).
   useEffect(() => {
     isDirtyRef.current = true;
   }, [
@@ -289,6 +293,11 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     layersVisible,
     activeTool,
     draggingOverlay,
+    crosshairSettings,
+    cursorSettings,
+    selectionSettings,
+    gridSettings,
+    rulerSettings,
   ]);
 
   return { isDirtyRef };

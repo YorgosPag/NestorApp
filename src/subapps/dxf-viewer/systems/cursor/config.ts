@@ -8,6 +8,10 @@ import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-092: Centralized localStorage Service
 import { storageGet, storageSet, STORAGE_KEYS } from '../../utils/storage-utils';
+// 🏢 ADR-030: UnifiedFrameScheduler — flag every canvas overlay dirty when
+// cursor/crosshair/selection settings change so they repaint on the next RAF
+// tick instead of waiting for a mouse move.
+import { markAllCanvasDirty } from '../../rendering/core/frame-scheduler-api';
 
 // ===== TYPES =====
 export interface CursorSettings {
@@ -232,7 +236,12 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
   // Override notifyListeners to include legacy compatibility
   protected notifyListeners(settings: CursorSettings): void {
     super.notifyListeners(settings);
-    
+
+    // 🏢 ADR-030 SSoT: settings change → all canvas overlays must repaint.
+    // Single source covering every entry point (panel updateSettings, reset,
+    // provider sync). Without this, overlays only redraw on mouse move.
+    markAllCanvasDirty();
+
     // Legacy compatibility - dispatch global event
     window.dispatchEvent(new CustomEvent('autocad-cursor-change', {
       detail: settings
