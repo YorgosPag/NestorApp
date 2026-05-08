@@ -220,28 +220,21 @@ export function createStoreSync(deps: SyncDependencies): StoreSync {
       }
 
       // ===== WIRE GRID PORT =====
-      if (deps.grid) {
-        const { push, subscriptions } = wirePort(
-          deps.grid,
-          () => ({ enabled: true, spacing: 10, color: UI_COLORS.LIGHT_GRAY, opacity: 0.5 }), // TODO: Map from settings
-          deps,
-          getEffective
-        );
-        pushers.push(push);
-        allSubscriptions.push(...subscriptions);
-      }
+      // 🐛 FIX (2026-05-08): the previous getter hardcoded `enabled: true`
+      // and pushed it to globalGridStore on every effective-settings sync,
+      // which silently overwrote the user's grid visibility (and any other
+      // grid setting) every time line/text/grip changed. RulersGridSystem
+      // is the SSoT for grid + ruler — these legacy ports are kept for
+      // backward compat with consumers that still subscribe to
+      // globalGridStore / globalRulerStore, but storeSync no longer
+      // PUSHES into them. The bidirectional store→React sync inside
+      // RulersGridSystem (lines 259-279) handles the global-store
+      // notifications without involving storeSync.
+      // TODO: remove deps.grid / deps.ruler entirely once all legacy
+      // consumers migrate to useRulersGridContext.
 
       // ===== WIRE RULER PORT =====
-      if (deps.ruler) {
-        const { push, subscriptions } = wirePort(
-          deps.ruler,
-          () => ({ enabled: true, units: 'mm', color: UI_COLORS.WHITE, opacity: 1.0 }), // TODO: Map from settings
-          deps,
-          getEffective
-        );
-        pushers.push(push);
-        allSubscriptions.push(...subscriptions);
-      }
+      // (see grid port comment above)
 
       // ===== INITIAL PUSH (Settings → Ports) =====
       const pushFromSettings = () => {

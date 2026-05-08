@@ -92,7 +92,7 @@ export function CalendarSidebar({
 
   return (
     <aside
-      className="hidden lg:flex lg:flex-col w-[280px] shrink-0 gap-2 select-none"
+      className="hidden lg:flex lg:flex-col w-[280px] shrink-0 gap-2 select-none overflow-y-auto"
       aria-label="Mini Calendars"
       onMouseDown={handleContainerMouseDown}
       onMouseMove={handleContainerMouseMove}

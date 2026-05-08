@@ -5,6 +5,7 @@
     "views": {
       "month": "Month",
       "week": "Week",
+      "workWeek": "Work Week",
       "day": "Day",
       "agenda": "Agenda"
     },

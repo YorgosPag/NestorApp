@@ -25,15 +25,10 @@ export function useGridManagement(
   }, [setGrid]);
 
   const setGridVisibility = useCallback((visible: boolean) => {
-
-    setGrid(prev => {
-      const newGrid = {
-        ...prev,
-        visual: { ...prev.visual, enabled: visible }
-      };
-
-      return newGrid;
-    });
+    setGrid(prev => ({
+      ...prev,
+      visual: { ...prev.visual, enabled: visible },
+    }));
   }, [setGrid, grid]);
 
   const updateGridSettings = useCallback((updates: GridSettingsUpdate) => {

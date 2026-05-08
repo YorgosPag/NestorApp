@@ -222,7 +222,7 @@ export function CalendarPageContent() {
           />
         </aside>
 
-        <section className="flex flex-1 gap-4 overflow-auto p-2">
+        <section className="flex flex-1 min-h-0 gap-4 overflow-hidden p-2">
           <CalendarSidebar
             events={displayEvents}
             selectedDays={selectedDays}
@@ -232,7 +232,7 @@ export function CalendarPageContent() {
             onMonthChange={handleSidebarMonthChange}
           />
 
-          <article className={cn('flex-1', colors.bg.primary, borders.radiusClass.lg)}>
+          <article className={cn('flex flex-col flex-1 min-h-0', colors.bg.primary, borders.radiusClass.lg)}>
             <CrmCalendar
               events={displayEvents}
               loading={loading}
