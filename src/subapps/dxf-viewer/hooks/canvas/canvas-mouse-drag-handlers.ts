@@ -61,21 +61,28 @@ export async function handleVertexDragEnd(
       y: worldPos.y - draggingVertices[0].startPoint.y
     };
 
-    // Command Pattern for multi-grip movement (imported dynamically to avoid circular deps)
-    const movements: VertexMovement[] = draggingVertices.map(drag => ({
-      overlayId: drag.overlayId,
-      vertexIndex: drag.vertexIndex,
-      oldPosition: [drag.originalPosition.x, drag.originalPosition.y] as [number, number],
-      newPosition: [
-        drag.originalPosition.x + delta.x,
-        drag.originalPosition.y + delta.y
-      ] as [number, number]
-    }));
+    // 🐛 FIX (2026-05-09): Click-without-drag teleported vertex to worldPos.
+    // If user just clicked a grip (no movement above threshold), do not commit.
+    // Mirrors handleOverlayBodyDragEnd pattern.
+    const hasMovement = Math.abs(delta.x) > ctx.movementDetectionThreshold ||
+                       Math.abs(delta.y) > ctx.movementDetectionThreshold;
 
-    // Execute through command history
-    const { MoveMultipleOverlayVerticesCommand } = await import('../../core/commands');
-    const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore);
-    ctx.executeCommand(command);
+    if (hasMovement) {
+      // Command Pattern for multi-grip movement (imported dynamically to avoid circular deps)
+      const movements: VertexMovement[] = draggingVertices.map(drag => ({
+        overlayId: drag.overlayId,
+        vertexIndex: drag.vertexIndex,
+        oldPosition: [drag.originalPosition.x, drag.originalPosition.y] as [number, number],
+        newPosition: [
+          drag.originalPosition.x + delta.x,
+          drag.originalPosition.y + delta.y
+        ] as [number, number]
+      }));
+
+      const { MoveMultipleOverlayVerticesCommand } = await import('../../core/commands');
+      const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore);
+      ctx.executeCommand(command);
+    }
   }
 
   // Clear drag states but NOT selectedGrips

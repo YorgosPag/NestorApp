@@ -346,22 +346,36 @@ export async function commitOverlayVertexDrag(
   delta: Point2D,
   deps: OverlayCommitDeps,
 ): Promise<void> {
-  const { overlayStore, executeCommand } = deps;
+  const { overlayStore, executeCommand, movementDetectionThreshold } = deps;
 
-  const movements: VertexMovement[] = grips.map(grip => {
+  // 🐛 FIX (2026-05-09): Click-without-drag teleported vertex to (0,0).
+  // Two root causes: (1) no movement threshold guard so a bare click committed
+  // a zero-delta move that, combined with (2) the `?? 0` fallback when the
+  // vertex was missing in the store, produced (0,0) targets. Now: skip commit
+  // entirely if there is no real movement, and skip any grip whose vertex is
+  // not currently in the polygon (no silent (0,0) substitution).
+  const hasMovement = Math.abs(delta.x) > movementDetectionThreshold ||
+                      Math.abs(delta.y) > movementDetectionThreshold;
+  if (!hasMovement) return;
+
+  const movements: VertexMovement[] = [];
+  for (const grip of grips) {
     const overlay = overlayStore.overlays[grip.overlayId!];
     const polygon = overlay?.polygon;
     const vertexIndex = grip.gripIndex;
-    const oldX = polygon?.[vertexIndex]?.[0] ?? 0;
-    const oldY = polygon?.[vertexIndex]?.[1] ?? 0;
-
-    return {
+    const vertex = polygon?.[vertexIndex];
+    if (!vertex) continue;
+    const oldX = vertex[0];
+    const oldY = vertex[1];
+    movements.push({
       overlayId: grip.overlayId!,
       vertexIndex,
       oldPosition: [oldX, oldY] as [number, number],
       newPosition: [oldX + delta.x, oldY + delta.y] as [number, number],
-    };
-  });
+    });
+  }
+
+  if (movements.length === 0) return;
 
   const { MoveMultipleOverlayVerticesCommand } = await import('../../core/commands');
   const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore);
