@@ -129,7 +129,29 @@ export function createInitialGridSettings(
     result.visual.style = 'lines';
   }
 
-  return result;
+  return migrateAdaptiveFadeDefaults(result);
+}
+
+/**
+ * Migrate legacy adaptive fade defaults (8/32) to the new visibility-biased
+ * defaults (2/10). The original window made the minor grid invisible at
+ * typical zoom levels, which made minor/major colors indistinguishable. This
+ * one-shot migration runs every time the settings are loaded — both from
+ * localStorage (createInitialGridSettings) and from the Firestore UserSettings
+ * repository (useUserSettingsRulersGridSync hydrate callback).
+ */
+export function migrateAdaptiveFadeDefaults(grid: GridSettings): GridSettings {
+  const b = grid.behavior;
+  const isLegacyFadeWindow = b.smoothFadeMinPx === 8 && b.smoothFadeMaxPx === 32;
+  if (!isLegacyFadeWindow) return grid;
+  return {
+    ...grid,
+    behavior: {
+      ...b,
+      smoothFadeMinPx: 2,
+      smoothFadeMaxPx: 10,
+    },
+  };
 }
 
 // ── Settings Validation ──────────────────────────────────────────────

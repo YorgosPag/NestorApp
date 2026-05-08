@@ -107,10 +107,12 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   axesColor: UI_COLORS.RULER_DARK_GRAY, // Neutral gray for axes
   axesWeight: 2,         // Prominent axis lines
 
-  // 🌊 Adaptive grid defaults — sensible smooth fade window
+  // 🌊 Adaptive grid defaults — fade window biased toward visibility:
+  // minor lines disappear only when truly dense (≤2px), reach full opacity
+  // at typical zoom levels (≥10px). Keeps minor/major visually distinct.
   smoothFade: true,
-  smoothFadeMinPx: 8,
-  smoothFadeMaxPx: 32,
+  smoothFadeMinPx: 2,
+  smoothFadeMaxPx: 10,
   smoothFadeDurationMs: 200,
 
   zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)

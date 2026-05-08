@@ -282,8 +282,8 @@ export function useCanvasSettings(props: UseCanvasSettingsProps): UseCanvasSetti
 
     // 🌊 ADAPTIVE GRID — smooth fade thresholds (industry pattern)
     smoothFade: gridContextSettings?.behavior?.smoothFade ?? true,
-    smoothFadeMinPx: gridContextSettings?.behavior?.smoothFadeMinPx ?? 8,
-    smoothFadeMaxPx: gridContextSettings?.behavior?.smoothFadeMaxPx ?? 32,
+    smoothFadeMinPx: gridContextSettings?.behavior?.smoothFadeMinPx ?? 2,
+    smoothFadeMaxPx: gridContextSettings?.behavior?.smoothFadeMaxPx ?? 10,
     smoothFadeDurationMs: gridContextSettings?.behavior?.smoothFadeDurationMs ?? 200,
   }), [gridContextSettings, showGrid]);
 

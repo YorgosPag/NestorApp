@@ -21,6 +21,7 @@ import { userSettingsRepository, stableHash } from '@/services/user-settings';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import type { Point2D } from '../../rendering/types/Types';
 import type { GridSettings, RulerSettings } from './config';
+import { migrateAdaptiveFadeDefaults } from './rulers-grid-state-init';
 
 interface RulersGridBlob {
   rulers?: RulerSettings;
@@ -80,7 +81,7 @@ export function useUserSettingsRulersGridSync(
           if (remoteHash === lastWrittenHashRef.current) return; // own echo
           lastWrittenHashRef.current = remoteHash;
           if (blob.rulers) setRulers(blob.rulers);
-          if (blob.grid) setGrid(blob.grid);
+          if (blob.grid) setGrid(migrateAdaptiveFadeDefaults(blob.grid));
           if (blob.origin) setOriginState(blob.origin);
           if (typeof blob.isVisible === 'boolean') setIsVisible(blob.isVisible);
         } else if (firstSnapshot) {

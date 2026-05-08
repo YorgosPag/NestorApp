@@ -122,8 +122,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   // written before these fields existed (controlled-input contract).
   const adaptiveFade = {
     smoothFade: gridSettings.behavior.smoothFade ?? true,
-    smoothFadeMinPx: gridSettings.behavior.smoothFadeMinPx ?? 8,
-    smoothFadeMaxPx: gridSettings.behavior.smoothFadeMaxPx ?? 32,
+    smoothFadeMinPx: gridSettings.behavior.smoothFadeMinPx ?? 2,
+    smoothFadeMaxPx: gridSettings.behavior.smoothFadeMaxPx ?? 10,
     smoothFadeDurationMs: gridSettings.behavior.smoothFadeDurationMs ?? 200,
   };
 

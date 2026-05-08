@@ -97,6 +97,7 @@ export function CrmCalendar({
   const lastReportedDateRef = useRef<string | null>(null);
   const activeViewRef = useRef('dayGridMonth');
   const preMultiDayViewRef = useRef('dayGridMonth');
+  const isMultiDayActiveRef = useRef(false);
 
   // Cross-month drag
   const {
@@ -151,20 +152,37 @@ export function CrmCalendar({
     [events]
   );
 
-  // Multi-day selection from mini calendar → switch to custom timeGridDay range
+  // Multi-day selection from mini calendar → switch to custom timeGridDay range.
+  // setTimeout(0) defers changeView outside React's commit cycle (FullCalendar uses flushSync internally).
+  // isMultiDayActiveRef guards against firing changeView on initial mount (single day).
   useEffect(() => {
-    if (!selectedDays || !calendarRef.current) return;
-    const api = calendarRef.current.getApi();
+    if (!selectedDays) return;
+
     if (selectedDays.length >= 2) {
       preMultiDayViewRef.current = activeViewRef.current;
+      isMultiDayActiveRef.current = true;
       const sorted = [...selectedDays].sort((a, b) => a.getTime() - b.getTime());
-      isProgrammaticNav.current = true;
-      api.changeView('timeGridDay', { start: sorted[0], end: addDays(sorted[sorted.length - 1], 1) });
-    } else if (selectedDays.length === 1) {
-      isProgrammaticNav.current = true;
-      api.changeView(preMultiDayViewRef.current, selectedDays[0]);
+      const start = sorted[0];
+      const end = addDays(sorted[sorted.length - 1], 1);
+      const timer = setTimeout(() => {
+        if (!calendarRef.current) return;
+        isProgrammaticNav.current = true;
+        calendarRef.current.getApi().changeView('timeGridDay', { start, end });
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    if (selectedDays.length === 1 && isMultiDayActiveRef.current) {
+      isMultiDayActiveRef.current = false;
+      const target = selectedDays[0];
+      const restoreView = preMultiDayViewRef.current;
+      const timer = setTimeout(() => {
+        if (!calendarRef.current) return;
+        isProgrammaticNav.current = true;
+        calendarRef.current.getApi().changeView(restoreView, target);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
   }, [selectedDays]);
 
   // Programmatic navigation when sidebar date changes
