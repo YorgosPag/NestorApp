@@ -2,28 +2,48 @@
 
 /**
  * =============================================================================
- * ENTERPRISE: Floor Overlays Hook (Read-Only Bridge)
+ * ENTERPRISE: Floor Overlays Hook (Read-Only Bridge — Multi-Kind)
  * =============================================================================
  *
- * Loads polygon overlays from Firestore based on `floorId`.
- * Read-only — never writes to `dxf_overlay_levels`.
+ * Loads multi-kind overlays from `floorplan_overlays` for a given `floorId`.
+ * Read-only — never writes. Single-collection subscription via the SSoT
+ * tenant-aware `firestoreQueryService` (auto-injects `where('companyId','==',ctx)`).
  *
- * 2-Step Firestore Query:
- * 1. Query `dxf_viewer_levels` where floorId == targetFloorId → get level IDs
- * 2. Per level: onSnapshot on `dxf_overlay_levels/{levelId}/items` → merge results
+ * Phase 9 STEP F (ADR-340) replaces the legacy 2-step level fan-out
+ * (dxf_viewer_levels → dxf_overlay_levels/{levelId}/items) with a single
+ * subscription on `floorplan_overlays` indexed by `(companyId, floorId, createdAt)`.
+ *
+ * Output `FloorOverlayItem` extends the SSoT `FloorplanOverlay` and augments
+ * with two back-compat fields:
+ *   - `polygon: Point2D[]` — vertices for polygon geometry, `[]` for non-polygon.
+ *     Kept so the existing legacy renderer / hit-test code keeps working until
+ *     STEP G migrates them to `geometry`-aware dispatch.
+ *   - `kind: OverlayKind` — derived from `role` (property/parking/storage map
+ *     1:1; footprint maps to 'footprint'; annotation/auxiliary map to 'property'
+ *     fallback to keep legacy enum bound — but those overlays are filtered out
+ *     before reaching status-resolver consumers).
+ *
+ * Footprints (`role: 'footprint'`) are filtered out — not shown on public page.
  *
  * @module hooks/useFloorOverlays
- * @enterprise ADR-237 / SPEC-237B — Overlay Bridge Core
+ * @enterprise ADR-340 §3.6 / Phase 9 STEP F
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { where, orderBy, type Unsubscribe } from 'firebase/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
-import { useCompanyId } from '@/hooks/useCompanyId';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useEntityStatusResolver } from './useEntityStatusResolver';
 import type { OverlayKind } from '@/subapps/dxf-viewer/overlays/types';
 import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
+import {
+  OVERLAY_GEOMETRY_TYPES,
+  type FloorplanOverlay,
+  type OverlayGeometry,
+  type OverlayRole,
+  type OverlayLinked,
+  type Point2D,
+} from '@/types/floorplan-overlays';
 
 const logger = createModuleLogger('useFloorOverlays');
 
@@ -31,26 +51,18 @@ const logger = createModuleLogger('useFloorOverlays');
 // TYPES
 // ============================================================================
 
-/** Internal raw overlay item — before entity status enrichment */
-interface RawFloorOverlayItem {
-  id: string;
-  polygon: Array<{ x: number; y: number }>;
+/** Internal raw overlay — matches the Firestore document shape (post-Phase-9). */
+interface RawFloorOverlayItem extends FloorplanOverlay {
+  /** @deprecated Phase 9 back-compat — vertices for polygon kind, [] otherwise. */
+  polygon: Point2D[];
+  /** @deprecated Phase 9 back-compat — derived from `role`. */
   kind: OverlayKind;
+  /** @deprecated ADR-258 — superseded by `resolvedStatus`. */
   status?: PropertyStatus;
-  label?: string;
-  linked?: {
-    propertyId?: string;
-    parkingId?: string;
-    storageId?: string;
-  };
-  levelId: string;
 }
 
-/** Public enriched overlay item — includes dynamic resolvedStatus (ADR-258 SPEC-258C) */
+/** Public enriched overlay — adds `resolvedStatus` (ADR-258 SPEC-258C). */
 export interface FloorOverlayItem extends RawFloorOverlayItem {
-  /** @deprecated ADR-258: Use resolvedStatus instead — static status baked at draw-time */
-  status?: PropertyStatus;
-  /** Dynamic status resolved from linked entity's commercialStatus (ADR-258 SPEC-258C) */
   resolvedStatus: PropertyStatus;
 }
 
@@ -64,41 +76,66 @@ interface UseFloorOverlaysReturn {
 // HELPERS
 // ============================================================================
 
+/** Map SSoT `role` → legacy `OverlayKind` for back-compat consumers. */
+function roleToKind(role: OverlayRole): OverlayKind {
+  switch (role) {
+    case 'property':
+    case 'parking':
+    case 'storage':
+    case 'footprint':
+      return role;
+    default:
+      // annotation / auxiliary — no exact legacy match. Use 'property' as
+      // neutral fallback; status-resolver only acts when linked.<x>Id exists.
+      return 'property';
+  }
+}
+
+/** Extract polygon vertices for back-compat `polygon` field. */
+function extractPolygon(geometry: OverlayGeometry): Point2D[] {
+  return geometry.type === 'polygon' ? [...geometry.vertices] : [];
+}
+
+/** Validate the raw Firestore document against the SSoT geometry whitelist. */
+function isValidGeometry(geometry: unknown): geometry is OverlayGeometry {
+  if (!geometry || typeof geometry !== 'object') return false;
+  const g = geometry as { type?: unknown };
+  return typeof g.type === 'string' &&
+    (OVERLAY_GEOMETRY_TYPES as ReadonlyArray<string>).includes(g.type);
+}
+
 /**
- * Normalize polygon from Firestore to {x, y}[] format.
- * Handles 3 storage formats (same as overlay-store.tsx):
- * 1. {x, y} objects (preferred) → pass through
- * 2. flat [x1, y1, x2, y2, ...] → pair up
- * 3. [[x,y], [x,y], ...] tuples → convert
+ * Normalize a raw Firestore overlay document into the local item shape.
+ * Returns null for malformed / unsupported documents.
  */
-function normalizePolygon(raw: unknown): Array<{ x: number; y: number }> {
-  if (!Array.isArray(raw) || raw.length === 0) return [];
-
-  const first = raw[0];
-
-  // Format 1: {x, y} objects
-  if (typeof first === 'object' && first !== null && 'x' in first && 'y' in first) {
-    return raw as Array<{ x: number; y: number }>;
+function normalizeOverlay(raw: Record<string, unknown>): RawFloorOverlayItem | null {
+  if (!isValidGeometry(raw.geometry)) {
+    logger.debug('Skipping overlay with invalid geometry', { data: { id: raw.id } });
+    return null;
   }
+  if (typeof raw.role !== 'string') return null;
 
-  // Format 2: flat numbers [x1, y1, x2, y2, ...]
-  if (typeof first === 'number') {
-    const result: Array<{ x: number; y: number }> = [];
-    for (let i = 0; i < raw.length; i += 2) {
-      result.push({ x: raw[i] as number, y: raw[i + 1] as number });
-    }
-    return result;
-  }
+  const geometry = raw.geometry;
+  const role = raw.role as OverlayRole;
 
-  // Format 3: nested tuples [[x,y], [x,y], ...]
-  if (Array.isArray(first) && first.length === 2) {
-    return raw.map((pair) => ({
-      x: (pair as [number, number])[0],
-      y: (pair as [number, number])[1],
-    }));
-  }
-
-  return [];
+  return {
+    id: raw.id as string,
+    companyId: (raw.companyId as string) ?? '',
+    backgroundId: (raw.backgroundId as string) ?? '',
+    floorId: (raw.floorId as string) ?? '',
+    geometry,
+    role,
+    linked: raw.linked as OverlayLinked | undefined,
+    label: raw.label as string | undefined,
+    style: raw.style as FloorplanOverlay['style'],
+    layer: raw.layer as string | undefined,
+    createdAt: (raw.createdAt ?? 0) as RawFloorOverlayItem['createdAt'],
+    updatedAt: (raw.updatedAt ?? 0) as RawFloorOverlayItem['updatedAt'],
+    createdBy: (raw.createdBy as string) ?? '',
+    polygon: extractPolygon(geometry),
+    kind: roleToKind(role),
+    status: raw.status as PropertyStatus | undefined,
+  };
 }
 
 // ============================================================================
@@ -106,135 +143,62 @@ function normalizePolygon(raw: unknown): Array<{ x: number; y: number }> {
 // ============================================================================
 
 /**
- * ENTERPRISE: Read-Only Floor Overlays Hook
+ * ENTERPRISE: Read-only multi-kind floor overlays.
  *
- * Loads overlays from Firestore for all levels mapped to a given floorId.
- * Real-time via onSnapshot — changes in DXF Viewer appear automatically.
+ * Subscribes to `floorplan_overlays` filtered by `floorId` (companyId
+ * auto-injected). Footprints are filtered out for the public viewer.
  *
- * @param floorId - The floor ID to load overlays for (from Level.floorId)
+ * @param floorId - Floor ID to load overlays for
  */
 export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn {
   const [rawOverlays, setRawOverlays] = useState<ReadonlyArray<RawFloorOverlayItem>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const companyId = useCompanyId()?.companyId;
-
-  // Track active overlay subscriptions for cleanup
-  const overlayUnsubsRef = useRef<Unsubscribe[]>([]);
 
   useEffect(() => {
-    // Cleanup helper
-    const cleanupOverlaySubs = () => {
-      overlayUnsubsRef.current.forEach((unsub) => unsub());
-      overlayUnsubsRef.current = [];
-    };
-
-    if (!floorId || !companyId) {
+    if (!floorId) {
       setRawOverlays([]);
       setLoading(false);
       setError(null);
-      return cleanupOverlaySubs;
+      return;
     }
 
     setLoading(true);
     setError(null);
 
-    // Accumulator: levelId → overlay items (for merge across levels)
-    const overlaysByLevel = new Map<string, RawFloorOverlayItem[]>();
-
-    const mergeAndSet = () => {
-      const merged: RawFloorOverlayItem[] = [];
-      overlaysByLevel.forEach((items) => merged.push(...items));
-      setRawOverlays(merged);
-    };
-
-    // Step 1: Query levels where floorId matches (companyId auto-injected by service)
-    const unsubLevels = firestoreQueryService.subscribe<{ id: string }>(
-      'DXF_VIEWER_LEVELS',
+    const unsubscribe: Unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
+      'FLOORPLAN_OVERLAYS',
       (result) => {
-        // Clean up previous overlay subscriptions
-        cleanupOverlaySubs();
-        overlaysByLevel.clear();
-
-        const levelIds = result.documents.map((d) => d.id);
-
-        if (levelIds.length === 0) {
-          setRawOverlays([]);
-          setLoading(false);
-          logger.debug('No levels found for floor', { data: { floorId } });
-          return;
+        const items: RawFloorOverlayItem[] = [];
+        for (const raw of result.documents) {
+          const normalized = normalizeOverlay(raw);
+          if (!normalized) continue;
+          if (normalized.role === 'footprint') continue;
+          items.push(normalized);
         }
-
-        logger.debug('Found levels for floor', { data: { floorId, levelCount: levelIds.length } });
-
-        // Step 2: Subscribe to overlay items per level
-        let pendingInitial = levelIds.length;
-
-        levelIds.forEach((levelId) => {
-          const unsubItems = firestoreQueryService.subscribeSubcollection<Record<string, unknown>>(
-            'DXF_OVERLAY_LEVELS',
-            levelId,
-            'items',
-            (itemsResult) => {
-              const items: RawFloorOverlayItem[] = [];
-
-              itemsResult.documents.forEach((data) => {
-                const kind = data.kind as OverlayKind | undefined;
-
-                // Filter out footprints — not shown on public page
-                if (kind === 'footprint') return;
-
-                const polygon = normalizePolygon(data.polygon);
-                if (polygon.length < 3) return; // Skip invalid polygons
-
-                items.push({
-                  id: data.id as string,
-                  polygon,
-                  kind: kind ?? 'property',
-                  status: data.status as PropertyStatus | undefined,
-                  label: data.label as string | undefined,
-                  linked: data.linked as FloorOverlayItem['linked'] | undefined,
-                  levelId,
-                });
-              });
-
-              overlaysByLevel.set(levelId, items);
-              mergeAndSet();
-
-              // Track initial loading
-              if (pendingInitial > 0) {
-                pendingInitial--;
-                if (pendingInitial === 0) {
-                  setLoading(false);
-                }
-              }
-            },
-            (err) => {
-              logger.error('Overlay subscription error', { error: err, data: { levelId } });
-              setError(err.message);
-              setLoading(false);
-            },
-            { constraints: [orderBy('createdAt', 'asc')] },
-          );
-
-          overlayUnsubsRef.current.push(unsubItems);
-        });
+        setRawOverlays(items);
+        setLoading(false);
+        logger.debug('Floor overlays loaded', { data: { floorId, count: items.length } });
       },
       (err) => {
-        logger.error('Levels query error', { error: err, data: { floorId } });
+        logger.error('Floorplan overlays subscription error', { error: err, data: { floorId } });
         setError(err.message);
         setLoading(false);
       },
-      { constraints: [where('floorId', '==', floorId)] },
+      {
+        constraints: [
+          where('floorId', '==', floorId),
+          orderBy('createdAt', 'asc'),
+        ],
+      },
     );
 
     return () => {
-      unsubLevels();
-      cleanupOverlaySubs();
+      unsubscribe();
     };
-  }, [floorId, companyId]);
+  }, [floorId]);
 
-  // ── ADR-258 SPEC-258C: Resolve entity statuses in real-time ─────────
+  // ── ADR-258 SPEC-258C: resolve entity statuses in real-time ────────────
   const statusMap = useEntityStatusResolver(rawOverlays);
 
   const enrichedOverlays = useMemo<ReadonlyArray<FloorOverlayItem>>(() =>
@@ -242,7 +206,7 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
       ...overlay,
       resolvedStatus: statusMap.get(overlay.id) ?? overlay.status ?? 'unavailable',
     })),
-    [rawOverlays, statusMap]
+    [rawOverlays, statusMap],
   );
 
   return { overlays: enrichedOverlays, loading, error };

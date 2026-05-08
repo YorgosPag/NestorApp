@@ -36,6 +36,7 @@ import type {
   CalibrationData,
   Point2D,
 } from '@/subapps/dxf-viewer/floorplan-background/providers/types';
+import type { OverlayGeometry } from '@/types/floorplan-overlays';
 
 const logger = createModuleLogger('CalibrationRemapService');
 
@@ -115,6 +116,141 @@ function remapPolygon(
   return polygon.map((v) => remapVertex(v, oldT, newT));
 }
 
+/**
+ * Remap geometry coordinates across an affine transform change (ADR-340 Phase 9).
+ *
+ * Handles the discriminated union by remapping each shape's coordinate-bearing
+ * fields (x,y points) via `remapVertex`. Scalar fields (radius, fontSize,
+ * rotation) preserved as-is — uniform-scale calibrations keep them visually
+ * consistent; non-uniform calibrations on circle/arc/text are a known v1
+ * limitation (auxiliary kinds; ADR §"Out of scope").
+ *
+ * Returns null if the geometry is malformed; caller skips the doc.
+ */
+function remapGeometry(
+  raw: unknown,
+  oldT: BackgroundTransform,
+  newT: BackgroundTransform,
+): OverlayGeometry | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const g = raw as { type?: string } & Record<string, unknown>;
+  switch (g.type) {
+    case 'polygon': {
+      const verts = readPolygon((g as { vertices?: unknown }).vertices);
+      if (verts.length === 0) return null;
+      const remapped = verts.map((v) => remapVertex(v, oldT, newT));
+      const out: OverlayGeometry = { type: 'polygon', vertices: remapped };
+      if (typeof (g as { closed?: unknown }).closed === 'boolean') {
+        (out as { closed?: boolean }).closed = (g as { closed?: boolean }).closed;
+      }
+      return out;
+    }
+    case 'line': {
+      const start = (g as { start?: unknown }).start;
+      const end = (g as { end?: unknown }).end;
+      if (!isPoint(start) || !isPoint(end)) return null;
+      return {
+        type: 'line',
+        start: remapVertex(start, oldT, newT),
+        end: remapVertex(end, oldT, newT),
+      };
+    }
+    case 'circle': {
+      const center = (g as { center?: unknown }).center;
+      const radius = (g as { radius?: unknown }).radius;
+      if (!isPoint(center) || typeof radius !== 'number') return null;
+      return {
+        type: 'circle',
+        center: remapVertex(center, oldT, newT),
+        radius,
+      };
+    }
+    case 'arc': {
+      const center = (g as { center?: unknown }).center;
+      const radius = (g as { radius?: unknown }).radius;
+      const startAngle = (g as { startAngle?: unknown }).startAngle;
+      const endAngle = (g as { endAngle?: unknown }).endAngle;
+      if (
+        !isPoint(center) ||
+        typeof radius !== 'number' ||
+        typeof startAngle !== 'number' ||
+        typeof endAngle !== 'number'
+      ) {
+        return null;
+      }
+      const out: OverlayGeometry = {
+        type: 'arc',
+        center: remapVertex(center, oldT, newT),
+        radius,
+        startAngle,
+        endAngle,
+      };
+      const ccw = (g as { counterclockwise?: unknown }).counterclockwise;
+      if (typeof ccw === 'boolean') {
+        (out as { counterclockwise?: boolean }).counterclockwise = ccw;
+      }
+      return out;
+    }
+    case 'dimension': {
+      const from = (g as { from?: unknown }).from;
+      const to = (g as { to?: unknown }).to;
+      if (!isPoint(from) || !isPoint(to)) return null;
+      const out: OverlayGeometry = {
+        type: 'dimension',
+        from: remapVertex(from, oldT, newT),
+        to: remapVertex(to, oldT, newT),
+      };
+      const offset = (g as { offset?: unknown }).offset;
+      const value = (g as { value?: unknown }).value;
+      const unit = (g as { unit?: unknown }).unit;
+      if (typeof offset === 'number') (out as { offset?: number }).offset = offset;
+      if (typeof value === 'string') (out as { value?: string }).value = value;
+      if (unit === 'm' || unit === 'cm' || unit === 'mm') {
+        (out as { unit?: 'm' | 'cm' | 'mm' }).unit = unit;
+      }
+      return out;
+    }
+    case 'measurement': {
+      const points = readPolygon((g as { points?: unknown }).points);
+      const mode = (g as { mode?: unknown }).mode;
+      const value = (g as { value?: unknown }).value;
+      const unit = (g as { unit?: unknown }).unit;
+      if (
+        points.length === 0 ||
+        (mode !== 'distance' && mode !== 'area' && mode !== 'angle') ||
+        typeof value !== 'number' ||
+        typeof unit !== 'string'
+      ) {
+        return null;
+      }
+      return {
+        type: 'measurement',
+        points: points.map((p) => remapVertex(p, oldT, newT)),
+        mode,
+        value,
+        unit,
+      };
+    }
+    case 'text': {
+      const position = (g as { position?: unknown }).position;
+      const text = (g as { text?: unknown }).text;
+      if (!isPoint(position) || typeof text !== 'string') return null;
+      const out: OverlayGeometry = {
+        type: 'text',
+        position: remapVertex(position, oldT, newT),
+        text,
+      };
+      const fontSize = (g as { fontSize?: unknown }).fontSize;
+      const rotation = (g as { rotation?: unknown }).rotation;
+      if (typeof fontSize === 'number') (out as { fontSize?: number }).fontSize = fontSize;
+      if (typeof rotation === 'number') (out as { rotation?: number }).rotation = rotation;
+      return out;
+    }
+    default:
+      return null;
+  }
+}
+
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -167,10 +303,13 @@ export class CalibrationRemapService {
         const batch = db.batch();
         for (const doc of overlayDocs) {
           const data = doc.data();
-          const polygon = readPolygon(data.polygon);
-          if (polygon.length === 0) continue;
-          const remapped = remapPolygon(polygon, input.oldTransform, input.newTransform);
-          batch.update(doc.ref, { polygon: remapped, updatedAt: now });
+          const remappedGeometry = remapGeometry(
+            data.geometry,
+            input.oldTransform,
+            input.newTransform,
+          );
+          if (!remappedGeometry) continue;
+          batch.update(doc.ref, { geometry: remappedGeometry, updatedAt: now });
         }
         batch.update(backgroundRef(input.backgroundId), {
           transform: input.newTransform,
@@ -186,10 +325,13 @@ export class CalibrationRemapService {
           const batch = db.batch();
           for (const doc of chunk) {
             const data = doc.data();
-            const polygon = readPolygon(data.polygon);
-            if (polygon.length === 0) continue;
-            const remapped = remapPolygon(polygon, input.oldTransform, input.newTransform);
-            batch.update(doc.ref, { polygon: remapped, updatedAt: now });
+            const remappedGeometry = remapGeometry(
+              data.geometry,
+              input.oldTransform,
+              input.newTransform,
+            );
+            if (!remappedGeometry) continue;
+            batch.update(doc.ref, { geometry: remappedGeometry, updatedAt: now });
           }
           await batch.commit();
         }
@@ -227,4 +369,5 @@ export const __test__ = {
   applyInverseTransform,
   remapVertex,
   remapPolygon,
+  remapGeometry,
 };

@@ -1,25 +1,57 @@
 'use client';
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { orderBy } from 'firebase/firestore';
+
+/**
+ * 🔷 OVERLAY STORE (ADR-340 Phase 9 STEP G — multi-kind backend)
+ *
+ * Layering tool's local state holder. Subscribes via the shared
+ * `useFloorOverlays(floorId)` hook (single `floorplan_overlays` collection,
+ * companyId auto-injected by the tenant-aware query service) and writes via
+ * `floorplan-overlay-mutation-gateway` (sole client write path enforced by
+ * SSoT registry module `floorplan-overlay-gateway`).
+ *
+ * Public surface remains the legacy `Overlay`/`UpdateOverlayData` API so that
+ * the 33 existing callers keep compiling. Mappers in `overlay-store-mappers.ts`
+ * translate between the two shapes — the store itself is plumbing only.
+ *
+ * Non-polygon kinds (line/circle/arc/measurement/text) are persisted via
+ * `completeEntity({ persistToOverlays })` and never enter this store.
+ */
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import {
-  createOverlayItemWithPolicy,
-  updateOverlayItemWithPolicy,
-  deleteOverlayItemWithPolicy,
-  upsertOverlayItemWithPolicy,
-} from '@/services/dxf-overlay-item-mutation-gateway';
-import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
-import type { Overlay, CreateOverlayData, UpdateOverlayData, Status, OverlayKind } from './types';
-// 🏢 ENTERPRISE: Debug system for production-silent logging
+  createFloorplanOverlay,
+  updateFloorplanOverlay,
+  deleteFloorplanOverlay,
+  upsertFloorplanOverlay,
+} from '@/services/floorplan-overlay-mutation-gateway';
+import { useFloorOverlays } from '@/hooks/useFloorOverlays';
+import { useLevels } from '../systems/levels';
+import { useFloorplanBackgroundStore } from '../floorplan-background/stores/floorplanBackgroundStore';
 import { dlog, dwarn, derr } from '../debug';
-import { SYSTEM_IDENTITY } from '@/config/domain-constants';
-import { isNonEmptyArray } from '@/lib/type-guards';
+import {
+  buildCreatePayload,
+  buildUpdatePayload,
+  buildUpsertPayload,
+  floorItemToLegacyOverlay,
+} from './overlay-store-mappers';
+import type {
+  CreateOverlayData,
+  Overlay,
+  OverlayKind,
+  Status,
+  UpdateOverlayData,
+} from './types';
 
 interface OverlayStoreState {
   overlays: Record<string, Overlay>;
-  // 🏢 ENTERPRISE (2026-01-25): Selection state REMOVED - ADR-030
-  // Selection is now handled by the universal selection system in systems/selection/
-  // Use useUniversalSelection() hook instead
   isLoading: boolean;
   currentLevelId: string | null;
   hiddenOverlayIds: Set<string>;
@@ -35,390 +67,279 @@ interface OverlayStoreActions {
   setLabel: (id: string, label: string) => Promise<void>;
   setKind: (id: string, kind: OverlayKind) => Promise<void>;
   setCurrentLevel: (levelId: string | null) => void;
-  // 🏢 ENTERPRISE (2026-01-25): Vertex manipulation for polygon editing
   addVertex: (id: string, insertIndex: number, vertex: [number, number]) => Promise<void>;
   updateVertex: (id: string, vertexIndex: number, newPosition: [number, number]) => Promise<void>;
   removeVertex: (id: string, vertexIndex: number) => Promise<boolean>;
-  // 🏢 ENTERPRISE (2026-01-26): Restore overlay for undo support - ADR-032
   restore: (overlay: Overlay) => Promise<void>;
   toggleHidden: (id: string) => void;
-  // 🏢 ENTERPRISE (2026-01-25): Selection REMOVED - ADR-030
-  // Selection is now handled by systems/selection/
-  // Use useUniversalSelection() hook for: select, selectMultiple, deselect, toggle, clearAll, clearByType, isSelected, getAll, getByType
-  // Legacy getSelectedOverlay kept for backward compatibility during migration
+  /** @deprecated ADR-030 — universal selection system replaces overlay-local selection. */
   getSelectedOverlay: () => Overlay | null;
 }
 
 const OverlayStoreContext = createContext<(OverlayStoreState & OverlayStoreActions) | null>(null);
 
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
 export function OverlayStoreProvider({ children }: { children: React.ReactNode }) {
-  // 🔧 FIX (2026-02-13): Get authenticated user for companyId/createdBy — Firestore rules require these
   const { user } = useAuth();
+  const { levels } = useLevels();
 
-  const [state, setState] = useState<OverlayStoreState>({
-    overlays: {},
-    // 🏢 ENTERPRISE (2026-01-25): Selection state REMOVED - ADR-030
-    // Use useUniversalSelection() from systems/selection/ instead
-    isLoading: false,
-    currentLevelId: null,
-    hiddenOverlayIds: new Set<string>(),
-  });
+  const [currentLevelId, setCurrentLevelState] = useState<string | null>(null);
+  const [hiddenOverlayIds, setHiddenOverlayIds] = useState<Set<string>>(new Set());
 
-  // Firestore subscription — requires both authenticated user AND a selected level
-  // 🏢 ADR-214 (C.5.29): subscribe via firestoreQueryService SSoT (no direct onSnapshot)
-  useEffect(() => {
-    if (!state.currentLevelId || !user) {
-      return;
-    }
+  // ── Resolve floorId + backgroundId from the active level ─────────────────
+  const currentLevel = useMemo(
+    () => levels.find((l) => l.id === currentLevelId) ?? null,
+    [levels, currentLevelId],
+  );
+  const floorId = currentLevel?.floorId ?? null;
+  const backgroundId = useFloorplanBackgroundStore(
+    (s) => (floorId ? s.floors[floorId]?.background?.id ?? null : null),
+  );
 
-    setState(prev => ({ ...prev, isLoading: true }));
+  // ── Subscribe to multi-kind overlays for the active floor ────────────────
+  const { overlays: floorItems, loading: subLoading } = useFloorOverlays(floorId);
 
-    const unsubscribe = firestoreQueryService.subscribeSubcollection<Record<string, unknown> & { id: string }>(
-      'DXF_OVERLAY_LEVELS',
-      state.currentLevelId,
-      'items',
-      (result) => {
-        const overlays: Record<string, Overlay> = {};
-        result.documents.forEach(data => {
-          let polygon = data.polygon;
-
-          // 🔧 FIX (2026-01-24): Normalize polygon format from various storage formats
-          if (isNonEmptyArray(polygon)) {
-            const firstElement = (polygon as unknown[])[0];
-
-            // Format 1: Array of {x, y} objects (new Firebase-compatible format)
-            if (typeof firstElement === 'object' && firstElement !== null && 'x' in firstElement) {
-              polygon = (polygon as Array<{x: number, y: number}>).map(p => [p.x, p.y] as [number, number]);
-            }
-            // Format 2: Flat array [x1, y1, x2, y2, ...] (legacy format)
-            else if (typeof firstElement === 'number') {
-              const nums = polygon as unknown as number[];
-              const coordPairs: [number, number][] = [];
-              for (let i = 0; i < nums.length; i += 2) {
-                coordPairs.push([nums[i], nums[i + 1]]);
-              }
-              polygon = coordPairs;
-            }
-            // Format 3: Already [[x,y], [x,y], ...] - use as-is
-          }
-
-          // ✅ ENTERPRISE FIX: Type-safe overlay creation with proper polygon type
-          overlays[data.id] = {
-            ...data,
-            polygon: polygon as [number, number][]
-          } as Overlay;
-        });
-
-        setState(prev => ({ ...prev, overlays, isLoading: false }));
-      },
-      (error) => {
-        // 🏢 ENTERPRISE: Handle Firestore permission errors gracefully (Fixes NESTOR-APP-3)
-        derr('Overlay subscription failed — user may lack permissions', error.message);
-        setState(prev => ({ ...prev, isLoading: false }));
-      },
-      {
-        constraints: [orderBy('createdAt', 'asc')],
+  // ── Project read items onto the legacy Overlay shape ─────────────────────
+  const overlays = useMemo<Record<string, Overlay>>(() => {
+    if (!currentLevelId) return {};
+    const map: Record<string, Overlay> = {};
+    for (const item of floorItems) {
+      const legacy = floorItemToLegacyOverlay(item, currentLevelId);
+      if (legacy) {
+        map[legacy.id] = legacy;
       }
-    );
-
-    return () => unsubscribe();
-  }, [state.currentLevelId, user]);
-
-  // Actions
-  const getByLevel = useCallback((levelId: string): Overlay[] => {
-    return Object.values(state.overlays).filter(overlay => overlay.levelId === levelId);
-  }, [state.overlays]);
-
-  const add = useCallback(async (overlayData: CreateOverlayData): Promise<string> => {
-    if (!state.currentLevelId) throw new Error('No current level selected');
-    if (!user?.uid) {
-      dwarn('OverlayStore', '⚠️ Cannot create overlay without authenticated user');
-      throw new Error('Cannot create overlay without authenticated user');
     }
+    return map;
+  }, [floorItems, currentLevelId]);
 
-    // 🔧 Convert nested array [[x,y], ...] to array of objects [{x,y}, ...]
-    // Firebase doesn't support nested arrays, but supports array of objects
-    const polygonForFirestore = overlayData.polygon.map(([x, y]) => ({ x, y }));
+  const isLoading = subLoading;
 
-    // 🔒 ADR-289: Route overlay creation through centralized API gateway.
-    // Server handles companyId/createdBy stamping + enterprise ID generation.
-    // ADR-258: status δεν αποθηκεύεται πλέον σε νέα overlays (only if provided).
-    const result = await createOverlayItemWithPolicy({
-      levelId: state.currentLevelId,
-      kind: overlayData.kind || 'property',
-      polygon: polygonForFirestore,
-      ...(overlayData.status ? { status: overlayData.status } : {}),
-      ...(overlayData.label !== undefined ? { label: overlayData.label } : {}),
-      ...(overlayData.linked !== undefined ? { linked: overlayData.linked } : {}),
-    });
+  // ── Actions ──────────────────────────────────────────────────────────────
 
-    return result.overlayId;
-  }, [state.currentLevelId, user]);
+  const getByLevel = useCallback(
+    (levelId: string): Overlay[] => {
+      if (levelId !== currentLevelId) return [];
+      return Object.values(overlays);
+    },
+    [overlays, currentLevelId],
+  );
 
-  const update = useCallback(async (id: string, patch: UpdateOverlayData): Promise<void> => {
-    if (!state.currentLevelId) return;
-
-    // Optimistic update: reflect non-polygon changes instantly so cross-overlay
-    // linked-entity detection (duplicate-link guard) sees the new state immediately.
-    // Polygon is excluded because it requires [number,number][] → {x,y} conversion.
-    const optimisticPatch: Partial<Overlay> = {};
-    if (patch.kind !== undefined) optimisticPatch.kind = patch.kind;
-    if (patch.status !== undefined) optimisticPatch.status = patch.status ?? undefined;
-    if (patch.label !== undefined) optimisticPatch.label = patch.label;
-    if (patch.linked !== undefined) optimisticPatch.linked = patch.linked as Overlay['linked'];
-    if (patch.style !== undefined) optimisticPatch.style = patch.style;
-    if (Object.keys(optimisticPatch).length > 0) {
-      setState(prev => {
-        if (!prev.overlays[id]) return prev;
-        return { ...prev, overlays: { ...prev.overlays, [id]: { ...prev.overlays[id], ...optimisticPatch } } };
-      });
+  const ensurePersistContext = useCallback((): { backgroundId: string; floorId: string } | null => {
+    if (!floorId) {
+      dwarn('OverlayStore', '⚠️ No floorId for current level — overlay write skipped');
+      return null;
     }
-
-    // 🔒 ADR-289: Route update through centralized API gateway. The gateway
-    // payload supports polygon/kind/status/label/linked/style; unknown/undefined
-    // fields are skipped. `linked: null` explicitly clears the link.
-    const payload: Parameters<typeof updateOverlayItemWithPolicy>[0] = {
-      levelId: state.currentLevelId,
-      overlayId: id,
-    };
-
-    if (patch.polygon !== undefined) {
-      payload.polygon = (patch.polygon as [number, number][]).map(([x, y]) => ({ x, y }));
+    if (!backgroundId) {
+      dwarn('OverlayStore', '⚠️ No backgroundId for current floor — overlay write skipped');
+      return null;
     }
-    if (patch.kind !== undefined) payload.kind = patch.kind;
-    if (patch.status !== undefined) payload.status = patch.status;
-    if (patch.label !== undefined) payload.label = patch.label;
-    if (patch.linked !== undefined) payload.linked = patch.linked;
-    if (patch.style !== undefined) payload.style = patch.style;
+    return { backgroundId, floorId };
+  }, [floorId, backgroundId]);
 
-    await updateOverlayItemWithPolicy(payload);
-  }, [state.currentLevelId]);
+  const add = useCallback(
+    async (overlayData: CreateOverlayData): Promise<string> => {
+      const ctx = ensurePersistContext();
+      if (!ctx) throw new Error('Cannot create overlay without floor + background context');
+      if (!user?.uid) throw new Error('Cannot create overlay without authenticated user');
+
+      const payload = buildCreatePayload(
+        {
+          kind: overlayData.kind || 'property',
+          polygon: overlayData.polygon,
+          ...(overlayData.label !== undefined ? { label: overlayData.label } : {}),
+          ...(overlayData.linked ? { linked: overlayData.linked } : {}),
+          ...(overlayData.style ? { style: overlayData.style } : {}),
+        },
+        ctx,
+      );
+
+      const result = await createFloorplanOverlay(payload);
+      return result.overlayId;
+    },
+    [ensurePersistContext, user],
+  );
+
+  const update = useCallback(
+    async (id: string, patch: UpdateOverlayData): Promise<void> => {
+      const payload = buildUpdatePayload(id, patch);
+      await updateFloorplanOverlay(payload);
+    },
+    [],
+  );
 
   const remove = useCallback(async (id: string): Promise<void> => {
-    if (!state.currentLevelId) return;
-    // 🔒 ADR-289: Delete via centralized API gateway.
-    await deleteOverlayItemWithPolicy({ levelId: state.currentLevelId, overlayId: id });
-  }, [state.currentLevelId]);
+    await deleteFloorplanOverlay({ overlayId: id });
+  }, []);
 
-  /**
-   * 🏢 ENTERPRISE (2026-01-26): Restore overlay for undo support - ADR-032
-   * Uses setDoc to restore overlay with its ORIGINAL ID
-   * Pattern: SAP/Salesforce - Soft delete with restore capability
-   */
-  const restore = useCallback(async (overlay: Overlay): Promise<void> => {
-    if (!overlay.levelId) {
-      derr('OverlayStore', '❌ restore: Overlay has no levelId');
-      return;
-    }
+  const restore = useCallback(
+    async (overlay: Overlay): Promise<void> => {
+      const ctx = ensurePersistContext();
+      if (!ctx) {
+        derr('OverlayStore', '❌ restore: missing floor/background context');
+        return;
+      }
+      const payload = buildUpsertPayload(
+        { ...overlay, createdBy: overlay.createdBy || user?.uid || 'system' },
+        ctx,
+      );
+      await upsertFloorplanOverlay(payload);
+      dlog('OverlayStore', `✅ restore: overlay ${overlay.id} upserted`);
+    },
+    [ensurePersistContext, user],
+  );
 
-    // 🔧 Convert polygon to Firebase-compatible format
-    const polygonForFirestore = overlay.polygon.map(([x, y]) => ({ x, y }));
+  const duplicate = useCallback(
+    async (id: string): Promise<string | null> => {
+      const overlay = overlays[id];
+      if (!overlay) return null;
+      const offsetPolygon = overlay.polygon.map(
+        ([x, y]) => [x + 10, y + 10] as [number, number],
+      );
+      return add({
+        levelId: overlay.levelId,
+        kind: overlay.kind,
+        polygon: offsetPolygon,
+        ...(overlay.label ? { label: `${overlay.label}_copy` } : {}),
+        ...(overlay.linked ? { linked: overlay.linked } : {}),
+        ...(overlay.style ? { style: overlay.style } : {}),
+      });
+    },
+    [overlays, add],
+  );
 
-    // 🔒 ADR-289: Route restore through centralized API gateway upsert endpoint.
-    // Preserves original overlayId + createdAt to keep chronology intact.
-    // Server stamps companyId; createdBy falls back to original then to ctx.uid.
-    await upsertOverlayItemWithPolicy({
-      levelId: overlay.levelId,
-      overlayId: overlay.id,
-      kind: overlay.kind || 'property',
-      polygon: polygonForFirestore,
-      // ADR-258: status δεν αποθηκεύεται σε νέα overlays — backward compat για restore
-      ...(overlay.status ? { status: overlay.status } : {}),
-      ...(overlay.label !== undefined ? { label: overlay.label } : {}),
-      ...(overlay.linked !== undefined ? { linked: overlay.linked } : {}),
-      ...(typeof overlay.createdAt === 'number' ? { createdAtMs: overlay.createdAt } : {}),
-      createdBy: overlay.createdBy || user?.uid || SYSTEM_IDENTITY.ID,
-    });
+  const setStatus = useCallback(
+    async (id: string, status: Status): Promise<void> => {
+      await update(id, { status });
+    },
+    [update],
+  );
 
-    dlog('OverlayStore', `✅ restore: Overlay ${overlay.id} restored successfully`);
-  }, [user]);
+  const setLabel = useCallback(
+    async (id: string, label: string): Promise<void> => {
+      await update(id, { label });
+    },
+    [update],
+  );
 
-  const duplicate = useCallback(async (id: string): Promise<string | null> => {
-    const overlay = state.overlays[id];
-    if (!overlay) return null;
+  const setKind = useCallback(
+    async (id: string, kind: OverlayKind): Promise<void> => {
+      await update(id, { kind });
+    },
+    [update],
+  );
 
-    const offsetPolygon = overlay.polygon.map(([x, y]) => [x + 10, y + 10] as [number, number]);
-    const duplicateData: CreateOverlayData = {
-      levelId: overlay.levelId,
-      kind: overlay.kind,
-      polygon: offsetPolygon,
-      status: overlay.status,
-      label: overlay.label ? `${overlay.label}_copy` : undefined,
-      ...(overlay.linked && { linked: overlay.linked }), // Only include linked if it exists
-    };
-
-    return await add(duplicateData);
-  }, [state.overlays, add]);
-
-  const setStatus = useCallback(async (id: string, status: Status): Promise<void> => {
-    await update(id, { status });
-  }, [update]);
-
-  const setLabel = useCallback(async (id: string, label: string): Promise<void> => {
-    await update(id, { label });
-  }, [update]);
-
-  const setKind = useCallback(async (id: string, kind: OverlayKind): Promise<void> => {
-    await update(id, { kind });
-  }, [update]);
-
-  // 🏢 ENTERPRISE (2026-01-25): getSelectedOverlay kept for backward compatibility - ADR-030
-  // Returns null - use useUniversalSelection().getPrimaryId() to get selected overlay ID
-  // then use overlayStore.overlays[id] to get the overlay object
   const getSelectedOverlay = useCallback((): Overlay | null => {
-    dwarn('OverlayStore', '⚠️ DEPRECATED: getSelectedOverlay() - Use useUniversalSelection() instead');
+    dwarn('OverlayStore', '⚠️ DEPRECATED: getSelectedOverlay() — use useUniversalSelection()');
     return null;
   }, []);
 
   const toggleHidden = useCallback((id: string) => {
-    setState(prev => {
-      const next = new Set(prev.hiddenOverlayIds);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return { ...prev, hiddenOverlayIds: next };
+    setHiddenOverlayIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
     });
   }, []);
 
   const setCurrentLevel = useCallback((levelId: string | null) => {
-    setState(prev => ({
-      ...prev,
-      currentLevelId: levelId,
-      // 🏢 ENTERPRISE (2026-01-25): Selection clearing moved to universal selection system
-      // Components should call universalSelection.clearByType('overlay') when level changes
-      overlays: {},
-      hiddenOverlayIds: new Set<string>(),
-    }));
+    setCurrentLevelState(levelId);
+    setHiddenOverlayIds(new Set());
   }, []);
 
-  // 🏢 ENTERPRISE (2026-01-25): Add vertex to polygon at specified index
-  const addVertex = useCallback(async (id: string, insertIndex: number, vertex: [number, number]) => {
-    const overlay = state.overlays[id];
-    if (!overlay) {
-      derr('OverlayStore', '❌ addVertex: Overlay not found:', id);
-      return;
-    }
+  // ── Vertex helpers — project on geometry.vertices via update() ───────────
 
-    const currentPolygon = overlay.polygon;
-    if (!Array.isArray(currentPolygon)) {
-      derr('OverlayStore', '❌ addVertex: Invalid polygon format');
-      return;
-    }
+  const addVertex = useCallback(
+    async (id: string, insertIndex: number, vertex: [number, number]) => {
+      const overlay = overlays[id];
+      if (!overlay) {
+        derr('OverlayStore', '❌ addVertex: overlay not found:', id);
+        return;
+      }
+      const next = [...overlay.polygon];
+      next.splice(insertIndex, 0, vertex);
+      await update(id, { polygon: next });
+    },
+    [overlays, update],
+  );
 
-    // Insert vertex at specified index
-    const newPolygon = [...currentPolygon];
-    newPolygon.splice(insertIndex, 0, vertex);
+  const updateVertex = useCallback(
+    async (id: string, vertexIndex: number, newPosition: [number, number]) => {
+      const overlay = overlays[id];
+      if (!overlay) return;
+      if (vertexIndex < 0 || vertexIndex >= overlay.polygon.length) return;
+      const next = [...overlay.polygon];
+      next[vertexIndex] = newPosition;
+      await update(id, { polygon: next });
+    },
+    [overlays, update],
+  );
 
-    // Use existing update function
-    await update(id, { polygon: newPolygon });
-    dlog('OverlayStore', '✅ addVertex: Vertex added at index', insertIndex);
-  }, [state.overlays, update]);
+  const removeVertex = useCallback(
+    async (id: string, vertexIndex: number): Promise<boolean> => {
+      const { MIN_POLY_POINTS } = await import('../config/tolerance-config');
+      const overlay = overlays[id];
+      if (!overlay) return false;
+      if (overlay.polygon.length <= MIN_POLY_POINTS) return false;
+      if (vertexIndex < 0 || vertexIndex >= overlay.polygon.length) return false;
+      const next = [...overlay.polygon];
+      next.splice(vertexIndex, 1);
+      await update(id, { polygon: next });
+      return true;
+    },
+    [overlays, update],
+  );
 
-  // 🏢 ENTERPRISE (2026-01-25): Update vertex position (for drag operations)
-  const updateVertex = useCallback(async (id: string, vertexIndex: number, newPosition: [number, number]) => {
-    const overlay = state.overlays[id];
-    if (!overlay) {
-      derr('OverlayStore', '❌ updateVertex: Overlay not found:', id);
-      return;
-    }
+  // ── Reset on level change ────────────────────────────────────────────────
 
-    const currentPolygon = overlay.polygon;
-    if (!Array.isArray(currentPolygon)) {
-      derr('OverlayStore', '❌ updateVertex: Invalid polygon format');
-      return;
-    }
+  useEffect(() => {
+    setHiddenOverlayIds(new Set());
+  }, [currentLevelId]);
 
-    if (vertexIndex < 0 || vertexIndex >= currentPolygon.length) {
-      derr('OverlayStore', '❌ updateVertex: Invalid vertex index:', vertexIndex);
-      return;
-    }
-
-    // Update vertex at specified index
-    const newPolygon = [...currentPolygon];
-    newPolygon[vertexIndex] = newPosition;
-
-    // Use existing update function
-    await update(id, { polygon: newPolygon });
-  }, [state.overlays, update]);
-
-  // 🏢 ENTERPRISE (2026-01-25): Remove vertex from polygon at specified index
-  // 🏢 ADR-145: Use centralized MIN_POLY_POINTS from tolerance-config
-  const removeVertex = useCallback(async (id: string, vertexIndex: number): Promise<boolean> => {
-    // Import dynamically to avoid circular dependencies at module level
-    const { MIN_POLY_POINTS } = await import('../config/tolerance-config');
-
-    const overlay = state.overlays[id];
-    if (!overlay) {
-      derr('OverlayStore', '❌ removeVertex: Overlay not found:', id);
-      return false;
-    }
-
-    const currentPolygon = overlay.polygon;
-    if (!Array.isArray(currentPolygon)) {
-      derr('OverlayStore', '❌ removeVertex: Invalid polygon format');
-      return false;
-    }
-
-    // 🏢 ADR-145: Minimum vertices for valid polygon - centralized constant
-    if (currentPolygon.length <= MIN_POLY_POINTS) {
-      dwarn('OverlayStore', '⚠️ removeVertex: Cannot remove - minimum vertices reached');
-      return false;
-    }
-
-    if (vertexIndex < 0 || vertexIndex >= currentPolygon.length) {
-      derr('OverlayStore', '❌ removeVertex: Invalid vertex index:', vertexIndex);
-      return false;
-    }
-
-    // Remove vertex at specified index
-    const newPolygon = [...currentPolygon];
-    newPolygon.splice(vertexIndex, 1);
-
-    // Use existing update function
-    await update(id, { polygon: newPolygon });
-    dlog('OverlayStore', '✅ removeVertex: Vertex removed at index', vertexIndex);
-    return true;
-  }, [state.overlays, update]);
-
-  // ============================================================================
-  // 🏢 ENTERPRISE (2026-01-25): Selection Functions REMOVED - ADR-030
-  // Selection is now handled by the universal selection system in systems/selection/
-  //
-  // MIGRATION GUIDE:
-  // OLD: overlayStore.setSelectedOverlays(ids)  → NEW: universalSelection.selectMultiple(ids.map(id => ({id, type: 'overlay'})))
-  // OLD: overlayStore.addToSelection(id)        → NEW: universalSelection.add(id, 'overlay')
-  // OLD: overlayStore.removeFromSelection(id)   → NEW: universalSelection.deselect(id)
-  // OLD: overlayStore.toggleSelection(id)       → NEW: universalSelection.toggle(id, 'overlay')
-  // OLD: overlayStore.clearSelection()          → NEW: universalSelection.clearByType('overlay')
-  // OLD: overlayStore.getSelectedOverlays()     → NEW: universalSelection.getByType('overlay').map(e => overlays[e.id])
-  // OLD: overlayStore.isSelected(id)            → NEW: universalSelection.isSelected(id)
-  // OLD: overlayStore.selectedOverlayId         → NEW: universalSelection.getPrimaryId()
-  // OLD: overlayStore.selectedOverlayIds        → NEW: new Set(universalSelection.getIdsByType('overlay'))
-  // ============================================================================
-
-  const contextValue = {
-    ...state,
-    getByLevel,
-    add,
-    update,
-    remove,
-    restore, // 🏢 ENTERPRISE (2026-01-26): Restore for undo support - ADR-032
-    toggleHidden,
-    duplicate,
-    setStatus,
-    setLabel,
-    setKind,
-    getSelectedOverlay,
-    setCurrentLevel,
-    // 🏢 ENTERPRISE (2026-01-25): Vertex manipulation
-    addVertex,
-    updateVertex,
-    removeVertex,
-    // 🏢 ENTERPRISE (2026-01-25): Selection REMOVED - ADR-030
-    // Use useUniversalSelection() from systems/selection/ for all selection operations
-  };
+  const contextValue = useMemo(
+    () => ({
+      overlays,
+      isLoading,
+      currentLevelId,
+      hiddenOverlayIds,
+      getByLevel,
+      add,
+      update,
+      remove,
+      restore,
+      duplicate,
+      setStatus,
+      setLabel,
+      setKind,
+      setCurrentLevel,
+      toggleHidden,
+      addVertex,
+      updateVertex,
+      removeVertex,
+      getSelectedOverlay,
+    }),
+    [
+      overlays,
+      isLoading,
+      currentLevelId,
+      hiddenOverlayIds,
+      getByLevel,
+      add,
+      update,
+      remove,
+      restore,
+      duplicate,
+      setStatus,
+      setLabel,
+      setKind,
+      setCurrentLevel,
+      toggleHidden,
+      addVertex,
+      updateVertex,
+      removeVertex,
+      getSelectedOverlay,
+    ],
+  );
 
   return (
     <OverlayStoreContext.Provider value={contextValue}>
@@ -434,12 +355,3 @@ export function useOverlayStore() {
   }
   return context;
 }
-
-// ============================================================================
-// 🏢 ENTERPRISE (2026-01-25): Selection Logic REMOVED - ADR-030
-//
-// Selection is now fully handled by the universal selection system.
-// For all selection operations, use useUniversalSelection() from systems/selection/
-//
-// MIGRATION COMPLETE - Phase 3 done (2026-01-25)
-// ============================================================================

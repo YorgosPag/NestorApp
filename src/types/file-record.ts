@@ -369,6 +369,19 @@ export interface FileRecord {
   levelFloorId?: string;
 
   /**
+   * 🏢 ENTERPRISE: Hierarchy labels — denormalized at upload time (SAP/Procore pattern).
+   * Human-readable names captured when the file is created.
+   * Enables zero-query tree building in the file manager.
+   */
+  projectLabel?: string;
+
+  /**
+   * 🏢 ENTERPRISE: Building label — denormalized at upload time.
+   * Only set for floor-scoped files (entityType='floor').
+   */
+  buildingLabel?: string;
+
+  /**
    * 🏢 ENTERPRISE: Thumbnail preview URL (generated at upload time)
    * Small PNG image (~300x200px) stored in Firebase Storage.
    * Used for file card previews in FilesList and galleries.

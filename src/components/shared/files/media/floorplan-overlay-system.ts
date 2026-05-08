@@ -1,19 +1,22 @@
 /**
  * =============================================================================
- * ENTERPRISE: FloorplanGallery Overlay System
+ * ENTERPRISE: FloorplanGallery Overlay System (Multi-Kind)
  * =============================================================================
  *
- * Overlay rendering, hit-testing, and coordinate transforms for DXF floorplans.
- * Implements SPEC-237B (Overlay Bridge Core) and SPEC-237C (Interactive Overlays).
- * Extracted from FloorplanGallery.tsx for SRP compliance (ADR-033).
+ * Overlay rendering, hit-testing, and coordinate transforms for floorplans
+ * (DXF / PDF / Image). Implements SPEC-237B (Overlay Bridge Core) and
+ * SPEC-237C (Interactive Overlays). Phase 9 STEP F (ADR-340) extends
+ * `computeOverlayAABBs` and `hitTestOverlays` to dispatch on `geometry.type`
+ * via the SSoT helpers in `overlay-hit-test.ts`.
+ *
+ * Polygon-only inputs still flow through the legacy renderer in
+ * `overlay-polygon-renderer` (compat shim → `overlay-renderer/legacy`).
  *
  * @module components/shared/files/media/floorplan-overlay-system
  */
 
 import type { PanOffset } from '@/hooks/useZoomPan';
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
-import { isPointInPolygon } from '@core/polygon-system/utils/polygon-utils';
-import type { UniversalPolygon } from '@core/polygon-system/types';
 import {
   computeFitTransform,
   renderOverlayPolygons,
@@ -21,6 +24,12 @@ import {
   type SceneBounds,
   type OverlayLabel,
 } from './overlay-polygon-renderer';
+import {
+  computeGeometryAABB,
+  hitTestGeometry,
+  DEFAULT_HIT_TOLERANCE,
+  type GeometryAABB,
+} from './overlay-hit-test';
 
 export { OVERLAY_FALLBACK } from './overlay-polygon-renderer';
 export type { OverlayLabel } from './overlay-polygon-renderer';
@@ -29,13 +38,9 @@ export type { OverlayLabel } from './overlay-polygon-renderer';
 // TYPES
 // ============================================================================
 
-/** AABB (Axis-Aligned Bounding Box) for fast pre-filtering */
-export interface OverlayAABB {
+/** AABB (world-space) plus indexing metadata for fast hit-test pre-filter. */
+export interface OverlayAABB extends GeometryAABB {
   overlayIndex: number;
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
   propertyId: string | undefined;
 }
 
@@ -44,11 +49,11 @@ export interface OverlayAABB {
 // ============================================================================
 
 /**
- * Draw polygon overlays on top of a DXF or PDF canvas.
- * Uses the same fit-and-center transform (Y-flip, scale, offset) as
- * renderDxfToCanvas / renderPdfImageToCanvas. For PDF, callers pass synthetic
- * CAD bounds {min:{0,0}, max:{pdfWidth, pdfHeight}} — overlay polygons are
- * stored in DXF world coords matching the editor's default pdfTransform.
+ * Draw polygon overlays on top of a DXF or PDF canvas. Same fit-and-center
+ * transform (Y-flip, scale, offset) as `renderDxfToCanvas` /
+ * `renderPdfImageToCanvas`. For PDF, callers pass synthetic CAD bounds
+ * `{min:{0,0}, max:{pdfWidth, pdfHeight}}` — overlay polygons are stored in
+ * world coords matching the editor's default `pdfTransform`.
  */
 export function drawOverlayPolygons(
   canvas: HTMLCanvasElement,
@@ -66,26 +71,27 @@ export function drawOverlayPolygons(
 }
 
 // ============================================================================
-// HIT-TESTING UTILITIES (SPEC-237C)
+// HIT-TESTING UTILITIES (SPEC-237C — multi-kind, Phase 9 STEP F)
 // ============================================================================
 
-/** Compute AABBs for all overlays (memoized externally) */
+/** Compute world-space AABBs for all overlays — dispatches on geometry kind. */
 export function computeOverlayAABBs(overlays: ReadonlyArray<FloorOverlayItem>): OverlayAABB[] {
   return overlays.map((overlay, index) => {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const v of overlay.polygon) {
-      if (v.x < minX) minX = v.x;
-      if (v.y < minY) minY = v.y;
-      if (v.x > maxX) maxX = v.x;
-      if (v.y > maxY) maxY = v.y;
-    }
-    return { overlayIndex: index, minX, minY, maxX, maxY, propertyId: overlay.linked?.propertyId };
+    const aabb = computeGeometryAABB(overlay.geometry);
+    return {
+      overlayIndex: index,
+      minX: aabb.minX,
+      minY: aabb.minY,
+      maxX: aabb.maxX,
+      maxY: aabb.maxY,
+      propertyId: overlay.linked?.propertyId,
+    };
   });
 }
 
 /**
- * Inverse coordinate transform: screen (canvas) pixels → DXF world coordinates.
- * Reverses the math in renderDxfToCanvas:
+ * Inverse coordinate transform: screen (canvas) pixels → world coordinates.
+ * Reverses `worldToScreen`:
  *   screenX = (worldX - bounds.min.x) * scale + offsetX
  *   screenY = (bounds.max.y - worldY) * scale + offsetY
  */
@@ -102,33 +108,26 @@ export function screenToWorld(
 }
 
 /**
- * Hit-test overlays at a world-space point.
- * Uses AABB pre-filter + centralized isPointInPolygon (ray casting).
- * Returns the first overlay with a linked propertyId, or null.
+ * Hit-test overlays at a world-space point. AABB pre-filter then per-geometry
+ * dispatch via `hitTestGeometry`. Returns the first matching overlay or null.
+ *
+ * `tolerance` (world units) controls non-polygon dispatch (line/circle/arc/
+ * dimension/measurement). Polygon ray-cast ignores it. Default 1 world unit.
  */
 export function hitTestOverlays(
   worldPoint: { x: number; y: number },
   overlays: ReadonlyArray<FloorOverlayItem>,
   aabbs: OverlayAABB[],
+  tolerance: number = DEFAULT_HIT_TOLERANCE,
 ): FloorOverlayItem | null {
   for (const aabb of aabbs) {
-    // AABB pre-filter
-    if (worldPoint.x < aabb.minX || worldPoint.x > aabb.maxX ||
-        worldPoint.y < aabb.minY || worldPoint.y > aabb.maxY) {
+    if (worldPoint.x < aabb.minX - tolerance || worldPoint.x > aabb.maxX + tolerance ||
+        worldPoint.y < aabb.minY - tolerance || worldPoint.y > aabb.maxY + tolerance) {
       continue;
     }
 
     const overlay = overlays[aabb.overlayIndex];
-    // Wrap in UniversalPolygon for isPointInPolygon (ZERO `as any`)
-    const universalPolygon: UniversalPolygon = {
-      id: overlay.id,
-      type: 'simple',
-      points: overlay.polygon,
-      isClosed: true,
-      style: { strokeColor: '', fillColor: '', strokeWidth: 0, fillOpacity: 0, strokeOpacity: 0 },
-    };
-
-    if (isPointInPolygon(worldPoint, universalPolygon)) {
+    if (hitTestGeometry(worldPoint, overlay.geometry, overlay.id, tolerance)) {
       return overlay;
     }
   }

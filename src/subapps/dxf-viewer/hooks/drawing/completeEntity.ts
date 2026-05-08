@@ -41,6 +41,23 @@ import type { ToolType } from '../../ui/toolbar/types';
 import { applyCompletionStyles } from '../useLineCompletionStyle';
 import { EventBus } from '../../systems/events';
 import { toolStateStore } from '../../stores/ToolStateStore';
+import type { DrawingTool } from './drawing-types';
+import type { PersistEntityOptions, PersistEntityResult } from './useOverlayPersistence';
+
+/**
+ * ADR-340 Phase 9 STEP G — opt-in persistence to floorplan_overlays.
+ * Caller (typically useUnifiedDrawing) injects the `persist` callback from
+ * `useOverlayPersistence()`; the persistence runs as a non-blocking side
+ * effect after the entity has been added to the scene. Layering tools do
+ * NOT use this — they persist via the overlay store directly.
+ */
+export interface PersistToOverlaysOptions extends PersistEntityOptions {
+  persist: (
+    entity: Entity,
+    tool: DrawingTool,
+    options: PersistEntityOptions,
+  ) => Promise<PersistEntityResult>;
+}
 
 /**
  * Options for entity completion
@@ -69,6 +86,14 @@ export interface CompleteEntityOptions {
 
   /** Optional: Skip applyCompletionStyles (for AI-created entities with explicit colors) */
   skipStyles?: boolean;
+
+  /**
+   * ADR-340 Phase 9 STEP G — opt-in Firestore persistence on `floorplan_overlays`.
+   * When provided, fires a non-blocking call to the gateway after the entity
+   * has been added to the scene. Persistence failures are logged but do not
+   * abort the completion (scene state remains authoritative for the session).
+   */
+  persistToOverlays?: PersistToOverlaysOptions;
 }
 
 /**
@@ -130,7 +155,17 @@ export function completeEntity(
     return { success: false, entityId: entityId, error: 'Entity has invalid type' };
   }
 
-  const { tool, levelId, getScene, setScene, trackForUndo, skipToolPersistence, skipEvent, skipStyles } = options;
+  const {
+    tool,
+    levelId,
+    getScene,
+    setScene,
+    trackForUndo,
+    skipToolPersistence,
+    skipEvent,
+    skipStyles,
+    persistToOverlays,
+  } = options;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 1: Apply completion styles (ADR-056)
@@ -179,6 +214,12 @@ export function completeEntity(
   // STEP 5: Handle tool persistence
   if (!skipToolPersistence) {
     toolStateStore.handleToolCompletion(tool);
+  }
+
+  // STEP 6: ADR-340 Phase 9 STEP G — opt-in Firestore persistence
+  if (persistToOverlays) {
+    const { persist, ...persistOpts } = persistToOverlays;
+    void persist(entity, tool as DrawingTool, persistOpts);
   }
 
   return { success: true, entityId: entity.id };

@@ -8,7 +8,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Trash2, ZoomIn, ZoomOut, Maximize2, Expand, X, Map, Sun, Moon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Trash2, Map, Sun, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -29,6 +29,9 @@ import { useFloorplanPdfLoader } from '@/components/shared/files/media/useFloorp
 import { useFloorplanImageLoader } from '@/components/shared/files/media/useFloorplanImageLoader';
 import { useFloorplanCanvasRender } from '@/components/shared/files/media/useFloorplanCanvasRender';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
+import { FloorplanGalleryZoomControls } from '@/components/shared/files/media/FloorplanGalleryZoomControls';
+import { MeasureToolbar, type MeasureMode } from '@/components/shared/files/media/MeasureToolbar';
+import { MeasureToolOverlay } from '@/components/shared/files/media/MeasureToolOverlay';
 
 // Re-exports for backward compatibility
 export type { FloorplanGalleryProps, DxfDrawingMode };
@@ -46,6 +49,7 @@ export function FloorplanGallery({
   onHoverOverlay,
   onClickOverlay,
   propertyLabels,
+  unitsPerMeter,
 }: FloorplanGalleryProps) {
   const { t } = useTranslation(['files', 'files-media']);
   const iconSizes = useIconSizes();
@@ -98,6 +102,8 @@ export function FloorplanGallery({
   // SPEC-237C: Local hover state for cursor + visual feedback
   const [hoveredOverlayUnitId, setHoveredOverlayUnitId] = useState<string | null>(null);
   const rafRef = useRef<number>(0);
+  // ADR-340 Phase 9 STEP H: transient measure tool mode (distance/area/angle/off)
+  const [measureMode, setMeasureMode] = useState<MeasureMode | null>(null);
   // SPEC-237C: Effective highlight = external (list hover) OR local (canvas hover)
   const effectiveHighlightId = highlightedOverlayUnitId || hoveredOverlayUnitId;
 
@@ -265,68 +271,6 @@ export function FloorplanGallery({
     );
   }
 
-  // ZOOM CONTROLS — reusable toolbar builder
-
-  function renderZoomControls(
-    zp: ReturnType<typeof useZoomPan>,
-    options?: { showFullscreen?: boolean; showClose?: boolean },
-  ) {
-    return (
-      <>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" onClick={zp.zoomOut} disabled={zp.zoom <= ZOOM_CONFIG.minZoom} aria-label={t('floorplan.zoomOut')}>
-              <ZoomOut className={iconSizes.sm} aria-hidden="true" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('floorplan.zoomOut')}</TooltipContent>
-        </Tooltip>
-        <span className={cn('text-xs min-w-[40px] text-center', colors.text.muted)}>
-          {Math.round(zp.zoom * 100)}%
-        </span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" onClick={zp.zoomIn} disabled={zp.zoom >= ZOOM_CONFIG.maxZoom} aria-label={t('floorplan.zoomIn')}>
-              <ZoomIn className={iconSizes.sm} aria-hidden="true" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('floorplan.zoomIn')}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" onClick={zp.resetAll} aria-label={t('floorplan.resetZoom')}>
-              <Maximize2 className={iconSizes.sm} aria-hidden="true" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('floorplan.resetZoom')}</TooltipContent>
-        </Tooltip>
-        {options?.showFullscreen && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" onClick={handleOpenFullscreen} aria-label={t('floorplan.fullscreen')}>
-                <Expand className={iconSizes.sm} aria-hidden="true" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('floorplan.fullscreen')}</TooltipContent>
-          </Tooltip>
-        )}
-        {options?.showClose && (
-          <>
-            <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={handleCloseFullscreen} aria-label={t('floorplan.close')}>
-                  <X className={iconSizes.sm} aria-hidden="true" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('floorplan.close')}</TooltipContent>
-            </Tooltip>
-          </>
-        )}
-      </>
-    );
-  }
-
   // VIEWER CONTENT — reusable for inline + fullscreen
 
   const anyLoading = isLoading || isPdfLoading || isImageLoading;
@@ -363,9 +307,19 @@ export function FloorplanGallery({
             className={cn('w-full h-full', enableHitTesting && effectiveHighlightId ? 'cursor-pointer' : '')}
             style={canvasUtilities.geoInteractive.canvasFullDisplay()}
             aria-label={t('floorplan.canvasAlt', { fileName: currentFile?.displayName })}
-            onMouseMove={enableHitTesting ? handleCanvasMouseMove : undefined}
-            onClick={enableHitTesting ? handleCanvasClick : undefined}
-            onMouseLeave={enableHitTesting ? handleCanvasMouseLeave : undefined}
+            onMouseMove={enableHitTesting && !measureMode ? handleCanvasMouseMove : undefined}
+            onClick={enableHitTesting && !measureMode ? handleCanvasClick : undefined}
+            onMouseLeave={enableHitTesting && !measureMode ? handleCanvasMouseLeave : undefined}
+          />
+        )}
+        {showCanvas && !anyLoading && !anyError && measureMode && (
+          <MeasureToolOverlay
+            mode={measureMode}
+            sceneBounds={isDxf ? currentBounds : null}
+            rasterSize={isRaster ? rasterBounds : null}
+            zoom={zp.zoom}
+            panOffset={zp.panOffset}
+            unitsPerMeter={unitsPerMeter ?? null}
           />
         )}
         {isDxf && !anyLoading && !anyError && !loadedScene && currentFile?.processedData && (
@@ -440,7 +394,9 @@ export function FloorplanGallery({
                 <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
               </>
             )}
-            {renderZoomControls(inlineZP, { showFullscreen: true })}
+            <MeasureToolbar mode={measureMode} onModeChange={setMeasureMode} />
+            <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
+            <FloorplanGalleryZoomControls zp={inlineZP} showFullscreen onOpenFullscreen={handleOpenFullscreen} />
             <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
             <Tooltip>
               <TooltipTrigger asChild>
@@ -480,7 +436,7 @@ export function FloorplanGallery({
               </Tooltip>
             </span>
             <nav className="flex items-center gap-1 ml-auto" aria-label={t('floorplan.actions')}>
-              {renderZoomControls(modalZP, { showClose: true })}
+              <FloorplanGalleryZoomControls zp={modalZP} showClose onCloseFullscreen={handleCloseFullscreen} />
             </nav>
           </header>
           <section className="flex-1 min-h-0 flex flex-col overflow-auto">

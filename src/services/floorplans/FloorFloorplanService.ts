@@ -159,8 +159,8 @@ export class FloorFloorplanService {
           companyId, projectId,
           entityType: ENTITY_TYPES.FLOOR, entityId: floorId,
           purpose: FLOORPLAN_PURPOSES.FLOOR,
-          entityLabel: `Floor ${data.floorNumber || floorId}`,
-          descriptors: [buildingId, `floor-${data.floorNumber || 0}`],
+          entityLabel: `Όροφος ${data.floorNumber ?? 0}`,
+          descriptors: [`floor-${data.floorNumber ?? 0}`],
           createdBy,
           originalFilename: uploadFile.name,
           contentType, ext,
@@ -197,8 +197,8 @@ export class FloorFloorplanService {
         entityType: ENTITY_TYPES.FLOOR,
         entityId: floorId,
         purpose: FLOORPLAN_PURPOSES.FLOOR,
-        entityLabel: `Floor ${data.floorNumber || floorId}`,
-        descriptors: [buildingId, `floor-${data.floorNumber || 0}`],
+        entityLabel: `Όροφος ${data.floorNumber ?? 0}`,
+        descriptors: [`floor-${data.floorNumber ?? 0}`],
         createdBy,
         originalFilename: fileName,
         contentType: 'application/json',
@@ -311,16 +311,15 @@ export class FloorFloorplanService {
       // DXF scene JSON = not PDF and not image (saved by DXF wizard as application/json)
       const isDxfScene = !isPdf && !isImage;
 
-      // Extract buildingId from descriptors (first element)
-      const buildingId = fileRecord.purpose === FLOORPLAN_PURPOSES.FLOOR &&
-                         Array.isArray((fileRecord as FileRecord & { descriptors?: string[] }).descriptors)
-                           ? (fileRecord as FileRecord & { descriptors?: string[] }).descriptors?.[0] || ''
-                           : '';
-
-      // Extract floorNumber from descriptors (second element, format: "floor-N")
-      const floorNumberDescriptor = Array.isArray((fileRecord as FileRecord & { descriptors?: string[] }).descriptors)
-        ? (fileRecord as FileRecord & { descriptors?: string[] }).descriptors?.[1] || ''
-        : '';
+      const descriptors = (fileRecord as FileRecord & { descriptors?: string[] }).descriptors;
+      // New format: ["floor-N"] — descriptor[0] starts with "floor-"
+      // Old format: [buildingId, "floor-N"] — descriptor[0] is an opaque ID
+      const desc0 = Array.isArray(descriptors) ? descriptors[0] || '' : '';
+      const isNewDescriptorFormat = desc0.startsWith('floor-');
+      const buildingId = isNewDescriptorFormat ? '' : desc0;
+      const floorNumberDescriptor = isNewDescriptorFormat
+        ? desc0
+        : (Array.isArray(descriptors) ? descriptors[1] || '' : '');
       const floorNumber = parseInt(floorNumberDescriptor.replace('floor-', ''), 10) || 0;
 
       // Helper: build timestamp from FileRecord

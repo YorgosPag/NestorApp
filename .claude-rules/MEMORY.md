@@ -14,6 +14,7 @@
 - [Never ask about commit/push](feedback_never_ask_commit_push.md) — NEVER ask "do you want a commit?" — Giorgio says so himself
 
 ## Pending Work
+- [ADR-340 Phase 9 — Multi-Kind Overlays — handoff after STEP G](handoff-adr340-phase9-after-step-g.md) — **STATUS: IN-FLIGHT** (2026-05-08). STEPS A/B/C/D/E/F/G done in working tree (NOT committed). 6 STEPS pending (H-M). Next: STEP H (FloorplanGallery transient measure tool, NEVER writes Firestore). Plan: `C:\Users\user\.claude\plans\declarative-snuggling-kay.md`. tsc verde su STEP G files; full tsc errori solo in procurement/contacts pre-esistenti.
 - [Ratchet Backlog — ADR-299 live checklist](pending-ratchet-work.md) — **STATUS: ALL_DONE** (2026-05-04). ADR-233 + ADR-314 confermati implementati. Nuovo ratchet? Set STATUS: ACTIVE e aggiungi righe.
 - [SSoT Discovery — ADR-314 baseline](ssot-discovery-pending.md) — **STATUS: ALL_DONE** (2026-04-19, baseline 0/0/0 ALL GREEN dal 2026-04-20). Phase A-E completate.
 - [Notification SSoT — Boy Scout Migration](pending-notification-migration.md) — **STATUS: ACTIVE** (2026-04-22). ~100 file usano ancora `useNotifications()` diretto. 3 domain hook esistenti (contacts/projects/files). Quando tocchi un file con `useNotifications` → menzionalo a Giorgio.

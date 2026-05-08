@@ -17,7 +17,6 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { downloadFileFromProxyWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 
 // ============================================================================
 // PDF.JS TYPES (minimal — avoid importing full pdfjs-dist types)
@@ -135,7 +134,9 @@ export function usePdfThumbnail(downloadUrl: string | undefined, enabled = true)
         const lib = await loadPdfJs();
         if (cancelled) return;
 
-        const pdfBlob = await downloadFileFromProxyWithPolicy(resolvedDownloadUrl, 'thumb.pdf');
+        const fetchRes = await fetch(resolvedDownloadUrl, { credentials: 'include' });
+        if (!fetchRes.ok) throw new Error(`Fetch failed: ${fetchRes.status}`);
+        const pdfBlob = await fetchRes.blob();
         if (cancelled) return;
 
         const data = new Uint8Array(await pdfBlob.arrayBuffer());

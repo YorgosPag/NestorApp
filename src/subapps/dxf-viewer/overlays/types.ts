@@ -1,5 +1,11 @@
 // src/subapps/dxf-viewer/overlays/types.ts
-// Overlay types, constants και enums για το DXF Viewer Βήμα 2
+// Layering store view types — POLYGON-ONLY projection of the multi-kind SSoT
+// (`FloorplanOverlay` in src/types/floorplan-overlays.ts). The layering tool
+// in the DXF Viewer subapp only ever creates closed polygons with a kind in
+// {property, parking, storage, footprint}; this file describes the shape the
+// `useOverlayStore()` provider exposes to its 33 callers. Multi-kind drawing
+// entities (line/circle/arc/measurement/text) bypass this store entirely
+// and persist via `completeEntity({ persistToOverlays })`.
 
 import { PropertyStatus, ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS, DEFAULT_PROPERTY_STATUS } from '../../../constants/property-statuses-enterprise';
 // 🏢 ADR-044: Centralized line widths (import at top of file to avoid hoisting issues)
@@ -14,8 +20,10 @@ export type OverlayKind = 'property' | 'parking' | 'storage' | 'footprint';
 export type Status = PropertyStatus;
 
 /**
- * Κύριο Overlay interface
- * Κάθε overlay είναι ένα κλειστό polygon με status, label και metadata
+ * Layering Overlay — store-view projection of `FloorplanOverlay` for the
+ * polygon/role subset consumed by the DXF Viewer layering tool. `levelId`
+ * is synthesized from the active level (overlays in the store are always
+ * for the current floor/level).
  */
 export interface OverlayStyle {
   stroke?: string;
@@ -161,12 +169,6 @@ export interface BoundingBox {
 export const DEFAULT_STATUS: Status = DEFAULT_PROPERTY_STATUS;
 export const DEFAULT_KIND: OverlayKind = 'property';
 export const UNDO_STACK_SIZE = 50;
-
-/**
- * Firestore collection names — SSoT from centralized config
- */
-import { COLLECTIONS } from '@/config/firestore-collections';
-export const OVERLAY_COLLECTION_PREFIX = COLLECTIONS.DXF_OVERLAY_LEVELS;
 
 /**
  * Shared overlay handler functions to eliminate duplicates

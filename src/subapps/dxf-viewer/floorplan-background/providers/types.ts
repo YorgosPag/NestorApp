@@ -1,6 +1,11 @@
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type {
+  FloorplanOverlay as SharedFloorplanOverlay,
+  BackgroundScale,
+} from '@/types/floorplan-overlays';
 
 export type { ViewTransform, Point2D };
+export type { BackgroundScale } from '@/types/floorplan-overlays';
 
 // ─── Natural bounds ───────────────────────────────────────────────────────────
 
@@ -111,6 +116,11 @@ export interface FloorplanBackground {
   naturalBounds: NaturalBounds;
   transform: BackgroundTransform;
   calibration: CalibrationData | null;
+  /**
+   * Conversion metadata for dimensions/measurements (ADR-340 Phase 8).
+   * Native units → real-world meters. Set by `floorplan-scale.service`.
+   */
+  scale?: BackgroundScale;
   opacity: number;
   visible: boolean;
   locked: boolean;
@@ -121,20 +131,12 @@ export interface FloorplanBackground {
 }
 
 // ─── Domain entity: FloorplanOverlay ─────────────────────────────────────────
+//
+// SSoT moved to `@/types/floorplan-overlays` (ADR-340 Phase 8 — multi-kind
+// discriminated union). This file re-exports the shared type to keep the
+// `floorplan-background` barrel stable for existing consumers.
 
-export interface FloorplanOverlay {
-  id: string;
-  companyId: string;
-  backgroundId: string;
-  floorId: string;
-  polygon: ReadonlyArray<Point2D>;
-  linkedPropertyId?: string;
-  resolvedStatus?: string;
-  label?: string;
-  zIndex: number;
-  createdAt: number;
-  updatedAt: number;
-}
+export type FloorplanOverlay = SharedFloorplanOverlay;
 
 // ─── Type guards ──────────────────────────────────────────────────────────────
 

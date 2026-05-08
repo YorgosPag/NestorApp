@@ -115,6 +115,78 @@ export const ENTITY_SINGULAR_LABELS: Record<FileEntityType, string> = {
 };
 
 // ============================================================================
+// FLOOR HIERARCHY BUILDER (Project → Building → Floor → files)
+// ============================================================================
+
+function buildFloorHierarchyNodes(
+  floorFiles: FileRecord[],
+  translateDisplayName: DisplayNameTranslator | undefined,
+  companyName: string,
+): TreeNodeData[] {
+  if (floorFiles.length === 0) return [];
+
+  type FloorBucket = { label: string; files: FileRecord[] };
+  type BuildingBucket = { label: string; floors: Map<string, FloorBucket> };
+  type ProjectBucket = { label: string; buildings: Map<string, BuildingBucket> };
+
+  const byProject = new Map<string, ProjectBucket>();
+
+  for (const file of floorFiles) {
+    const projKey = file.projectId ?? '__no_project__';
+    const projLabel = file.projectLabel
+      ?? (file.projectId ? `Έργο #${file.projectId.slice(-6)}` : 'Χωρίς Έργο');
+    const bldLabel = file.buildingLabel ?? 'Κτίριο';
+    const bldKey = `${projKey}::${bldLabel}`;
+    const floorLabel = (file as FileRecord & { entityLabel?: string }).entityLabel ?? 'Όροφος';
+
+    if (!byProject.has(projKey)) {
+      byProject.set(projKey, { label: projLabel, buildings: new Map() });
+    }
+    const project = byProject.get(projKey)!;
+
+    if (!project.buildings.has(bldKey)) {
+      project.buildings.set(bldKey, { label: bldLabel, floors: new Map() });
+    }
+    const building = project.buildings.get(bldKey)!;
+
+    if (!building.floors.has(file.entityId)) {
+      building.floors.set(file.entityId, { label: floorLabel, files: [] });
+    }
+    building.floors.get(file.entityId)!.files.push(file);
+  }
+
+  return [...byProject.entries()].map(([projKey, { label: projLabel, buildings }]) => ({
+    id: `fp-proj-${projKey}`,
+    label: projLabel,
+    type: 'folder' as const,
+    icon: ENTITY_ICONS.project,
+    path: [companyName, projLabel],
+    children: [...buildings.entries()].map(([bldKey, { label: bldLabel, floors }]) => ({
+      id: `fp-bld-${bldKey}`,
+      label: bldLabel,
+      type: 'folder' as const,
+      icon: ENTITY_ICONS.building,
+      path: [companyName, projLabel, bldLabel],
+      children: [...floors.entries()].map(([floorId, { label: floorLabel, files: fFiles }]) => ({
+        id: `fp-floor-${floorId}`,
+        label: floorLabel,
+        type: 'folder' as const,
+        icon: <MapIcon className="h-4 w-4 text-teal-500" />,
+        path: [companyName, projLabel, bldLabel, floorLabel],
+        children: fFiles.map(file => ({
+          id: file.id,
+          label: translateDisplayName ? translateDisplayName(file) : (file.displayName || file.originalFilename),
+          type: 'file' as const,
+          icon: getFileIcon(file),
+          path: [companyName, projLabel, bldLabel, floorLabel, file.displayName],
+          file,
+        })),
+      })),
+    })),
+  }));
+}
+
+// ============================================================================
 // TREE BUILDING FUNCTIONS
 // ============================================================================
 
@@ -134,9 +206,13 @@ export function buildTreeByEntity(
   lang: string = 'el',
   t?: TranslationFn,
 ): TreeNodeData {
+  // Floor files get their own Project→Building→Floor hierarchy
+  const floorFiles = files.filter(f => f.entityType === 'floor');
+  const nonFloorFiles = files.filter(f => f.entityType !== 'floor');
+
   const groupedByType = createEmptyEntityBuckets();
 
-  for (const file of files) {
+  for (const file of nonFloorFiles) {
     const entityType = file.entityType as string;
     const entityId = file.entityId;
 
@@ -225,13 +301,15 @@ export function buildTreeByEntity(
     });
   }
 
+  const floorHierarchyNodes = buildFloorHierarchyNodes(floorFiles, translateDisplayName, companyName);
+
   return {
     id: 'root',
     label: companyName,
     type: 'root' as const,
     icon: React.createElement(NAVIGATION_ENTITIES.company.icon, { className: `h-4 w-4 ${NAVIGATION_ENTITIES.company.color}` }),
     path: [companyName],
-    children: entityChildren,
+    children: [...floorHierarchyNodes, ...entityChildren],
   };
 }
 

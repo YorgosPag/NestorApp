@@ -19,8 +19,6 @@
 
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
 import type { PanOffset } from '@/hooks/useZoomPan';
-import { isPointInPolygon } from '@core/polygon-system/utils/polygon-utils';
-import type { UniversalPolygon } from '@core/polygon-system/types';
 import {
   computeFitTransform,
   rectBoundsToScene,
@@ -28,6 +26,7 @@ import {
   screenToWorld,
   type OverlayLabel,
 } from './overlay-polygon-renderer';
+import { hitTestGeometry, DEFAULT_HIT_TOLERANCE } from './overlay-hit-test';
 
 const ZERO_PAN: PanOffset = { x: 0, y: 0 };
 
@@ -54,15 +53,9 @@ export function hitTestPdfOverlays(
   const fit = computeFitTransform(canvasWidth, canvasHeight, scene, zoom, panOffset);
   const world = screenToWorld(canvasX, canvasY, scene, fit);
   for (const overlay of overlays) {
-    if (overlay.polygon.length < 3) continue;
-    const universal: UniversalPolygon = {
-      id: overlay.id,
-      type: 'simple',
-      points: overlay.polygon,
-      isClosed: true,
-      style: { strokeColor: '', fillColor: '', strokeWidth: 0, fillOpacity: 0, strokeOpacity: 0 },
-    };
-    if (isPointInPolygon(world, universal)) return overlay;
+    if (hitTestGeometry(world, overlay.geometry, overlay.id, DEFAULT_HIT_TOLERANCE)) {
+      return overlay;
+    }
   }
   return null;
 }

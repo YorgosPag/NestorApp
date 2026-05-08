@@ -5,6 +5,7 @@ export { PdfPageProvider } from './providers/PdfPageProvider';
 
 export type {
   BackgroundTransform,
+  BackgroundScale,
   CadCoordinateAdaptation,
   CalibrationData,
   CalibrationUnit,

@@ -1131,18 +1131,94 @@ service cloud.firestore {
                     && request.resource.data.fileId == resource.data.fileId
                     && request.resource.data.providerId == resource.data.providerId
                     && request.resource.data.naturalBounds == resource.data.naturalBounds
-                    && request.resource.data.createdBy == resource.data.createdBy;
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    // Optional scale calibration (ADR-340 Phase 9 — structural check only)
+                    && (
+                         !request.resource.data.keys().hasAny(['scale'])
+                         || (
+                              request.resource.data.scale.unitsPerMeter is number
+                              && request.resource.data.scale.unitsPerMeter > 0
+                              && (
+                                   request.resource.data.scale.sourceUnit == 'mm'
+                                   || request.resource.data.scale.sourceUnit == 'cm'
+                                   || request.resource.data.scale.sourceUnit == 'm'
+                                   || request.resource.data.scale.sourceUnit == 'pixel'
+                                 )
+                            )
+                       );
 
       allow delete: if isAuthenticated()
                     && isInternalUserOfCompany(resource.data.companyId);
     }
 
     // =========================================================================
-    // 🖼️ FLOORPLAN OVERLAYS — ADR-340 Phase 7 (polygons FK→floorplan_backgrounds)
+    // 🖼️ FLOORPLAN OVERLAYS — ADR-340 Phase 9 (multi-kind discriminated union)
     // =========================================================================
-    // Polygons drawn over a floorplan background. companyId/backgroundId/floorId
-    // immutable; polygon + label + zIndex mutable.
+    // geometry: discriminated union {polygon|line|circle|arc|dimension|measurement|text}
+    // role: semantic {property|parking|storage|footprint|annotation|auxiliary}
+    // Immutables (D6): id, companyId, backgroundId, floorId.
+    // role↔geometry consistency + linked entity required for role business types.
     match /floorplan_overlays/{ovrlId} {
+
+      function _validGeometryType() {
+        let t = request.resource.data.geometry.type;
+        return t == 'polygon'
+            || t == 'line'
+            || t == 'circle'
+            || t == 'arc'
+            || t == 'dimension'
+            || t == 'measurement'
+            || t == 'text';
+      }
+
+      function _validRole() {
+        let r = request.resource.data.role;
+        return r == 'property'
+            || r == 'parking'
+            || r == 'storage'
+            || r == 'footprint'
+            || r == 'annotation'
+            || r == 'auxiliary';
+      }
+
+      function _polygonOnlyRole(r) {
+        return r == 'property' || r == 'parking' || r == 'storage' || r == 'footprint';
+      }
+
+      function _annotationGeometry(t) {
+        return t == 'line' || t == 'circle' || t == 'arc'
+            || t == 'dimension' || t == 'measurement' || t == 'text';
+      }
+
+      // role → allowed geometry.type
+      function _roleGeometryConsistent() {
+        let r = request.resource.data.role;
+        let t = request.resource.data.geometry.type;
+        return (_polygonOnlyRole(r) && t == 'polygon')
+            || (r == 'annotation' && _annotationGeometry(t))
+            || (r == 'auxiliary');
+      }
+
+      // role → required linked.<x>Id
+      function _linkedConsistent() {
+        let r = request.resource.data.role;
+        let d = request.resource.data;
+        let hasLinked = d.keys().hasAny(['linked']);
+        let linked = hasLinked ? d.linked : {};
+        let linkedKeys = hasLinked ? linked.keys() : [];
+        return (r == 'property'  && hasLinked && linkedKeys.hasAny(['propertyId']) && linked.propertyId is string)
+            || (r == 'parking'   && hasLinked && linkedKeys.hasAny(['parkingId'])  && linked.parkingId  is string)
+            || (r == 'storage'   && hasLinked && linkedKeys.hasAny(['storageId']) && linked.storageId is string)
+            || r == 'footprint' || r == 'annotation' || r == 'auxiliary';
+      }
+
+      function _overlayWriteValid() {
+        return _validGeometryType()
+            && _validRole()
+            && _roleGeometryConsistent()
+            && _linkedConsistent();
+      }
+
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
@@ -1155,6 +1231,7 @@ service cloud.firestore {
                          || (
                               isInternalUser()
                               && request.resource.data.companyId == getUserCompanyId()
+                              && _overlayWriteValid()
                             )
                        );
 
@@ -1163,7 +1240,8 @@ service cloud.firestore {
                     && request.resource.data.id == resource.data.id
                     && request.resource.data.companyId == resource.data.companyId
                     && request.resource.data.backgroundId == resource.data.backgroundId
-                    && request.resource.data.floorId == resource.data.floorId;
+                    && request.resource.data.floorId == resource.data.floorId
+                    && _overlayWriteValid();
 
       allow delete: if isAuthenticated()
                     && isInternalUserOfCompany(resource.data.companyId);

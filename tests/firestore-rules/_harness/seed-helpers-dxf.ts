@@ -394,8 +394,8 @@ export async function seedFloorplanBackground(
 }
 
 /**
- * floorplan_overlays — ADR-340 Phase 7 (Q9 RBAC).
- * Same-shape RBAC as floorplan_backgrounds.
+ * floorplan_overlays — ADR-340 Phase 9 (multi-kind discriminated union).
+ * Same-shape RBAC as floorplan_backgrounds; geometry+role schema.
  */
 export async function seedFloorplanOverlay(
   env: RulesTestEnvironment,
@@ -408,8 +408,12 @@ export async function seedFloorplanOverlay(
       companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
       backgroundId: 'rbg-test',
       floorId: 'floor-test',
-      polygon: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }],
-      zIndex: 0,
+      geometry: {
+        type: 'polygon',
+        vertices: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }],
+      },
+      role: 'auxiliary',
+      createdBy: 'seed-user',
       createdAt: Date.now(),
       updatedAt: Date.now(),
       ...opts?.overrides,

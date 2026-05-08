@@ -29,7 +29,39 @@
     "processing": "Processing floorplan...",
     "canvasAlt": "Floorplan: {fileName}",
     "lightMode": "Light background",
-    "darkMode": "Dark background"
+    "darkMode": "Dark background",
+    "measure": {
+      "toolbar": "Measure tools",
+      "distance": "Distance",
+      "area": "Area",
+      "angle": "Angle",
+      "disable": "Disable measure",
+      "clearHint": "Press ESC to clear",
+      "modeDistanceHint": "Two clicks to measure distance",
+      "modeAreaHint": "Three or more clicks for area",
+      "modeAngleHint": "Vertex first, then two sides",
+      "unitMeter": "m",
+      "unitSquareMeter": "m²",
+      "unitDegree": "°",
+      "unitPixel": "px"
+    },
+    "calibrate": {
+      "title": "Calibrate floorplan scale",
+      "instructions": "Click two points on the floorplan whose real-world distance you know, then enter that distance.",
+      "points": "Picked points: {count} of 2",
+      "realDistanceLabel": "Real distance",
+      "realDistancePlaceholder": "e.g. 5",
+      "unitLabel": "Unit",
+      "unitMm": "Millimeters (mm)",
+      "unitCm": "Centimeters (cm)",
+      "unitM": "Meters (m)",
+      "reset": "Clear points",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "errorZeroDistance": "The two points coincide. Pick two distinct points.",
+      "errorInvalidDistance": "The real distance must be greater than zero."
+    }
   },
   "floorplanImport": {
     "title": "Import Floorplan",

@@ -46,6 +46,12 @@ export interface FloorplanGalleryProps {
    * the caller — the renderer is locale-agnostic.
    */
   propertyLabels?: ReadonlyMap<string, import('@/components/shared/files/media/overlay-polygon-renderer').OverlayLabel>;
+  /**
+   * Native units per real-world meter, sourced from `floorplan_backgrounds.scale.unitsPerMeter`
+   * (ADR-340 Phase 9 STEP D). When provided, the transient measure tool labels
+   * distances in meters / m² / degrees; otherwise it falls back to native pixels.
+   */
+  unitsPerMeter?: number | null;
 }
 
 /**

@@ -618,6 +618,16 @@ export const API_ROUTES = {
     LIST: '/api/dxf-overlay-items',
   },
 
+  // ── Floorplan Overlays (ADR-340 Phase 8 — multi-kind SSoT) ────────────
+  FLOORPLAN_OVERLAYS: {
+    LIST: '/api/floorplan-overlays',
+  },
+
+  // ── Floorplan Backgrounds (ADR-340) ───────────────────────────────────
+  FLOORPLAN_BACKGROUNDS: {
+    CALIBRATE: (id: string) => `/api/floorplan-backgrounds/${id}/calibrate` as const,
+  },
+
   // ── Properties ────────────────────────────────────────────────────────
   PROPERTIES: {
     LIST: '/api/properties',
