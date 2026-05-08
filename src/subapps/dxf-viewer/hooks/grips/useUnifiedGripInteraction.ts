@@ -127,6 +127,12 @@ export function useUnifiedGripInteraction(
   // a wrong worldPos and teleports the vertex toward (0,0). See ADR-031.
   const mouseUpInProgressRef = useRef(false);
 
+  // Same race exists on mouseDown — canvas and container both call
+  // handleMouseDown. The container's call uses a stale `mouseWorldRef`, so it
+  // typically resolves no nearGrip and would `setSelectedGrips([])`, clobbering
+  // the correct selection set by the canvas's call (every other click).
+  const mouseDownInProgressRef = useRef(false);
+
   const markDragFinished = useCallback(() => {
     justFinishedDragRef.current = true;
     setTimeout(() => { justFinishedDragRef.current = false; }, PANEL_LAYOUT.TIMING.DRAG_FINISH_RESET);
@@ -200,7 +206,13 @@ export function useUnifiedGripInteraction(
 
   const handleMouseDown = useCallback(
     (worldPos: Point2D, isShift: boolean): boolean => {
+      if (mouseDownInProgressRef.current) return false;
       if (!isGripMode || allGrips.length === 0 || phase === 'dragging') return false;
+      mouseDownInProgressRef.current = true;
+      // The handler is fully synchronous, so a microtask is enough to release
+      // the mutex once the current event tick (canvas + bubbled container)
+      // has finished dispatching.
+      Promise.resolve().then(() => { mouseDownInProgressRef.current = false; });
 
       const nearGrip = findNearestGrip(worldPos, allGrips, effectiveTolerance, transform.scale);
       if (!nearGrip) {
@@ -309,6 +321,10 @@ export function useUnifiedGripInteraction(
             position: dv.originalPosition, movesEntity: false,
           }));
           await commitOverlayVertexDrag(vertexGrips, delta, overlayCommitDeps);
+          // Clear selection so the dragged grip drops out of the 'hot' visual
+          // state on release — otherwise the renderer keeps painting it red
+          // because `isSelected` maps to the hot color in layer-polygon-renderer.
+          setSelectedGrips([]);
           setDraggingVertices(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
           return true;
         }
@@ -321,6 +337,7 @@ export function useUnifiedGripInteraction(
             position: worldPos, movesEntity: false, edgeInsertIndex: draggingEdgeMidpoint.insertIndex,
           };
           await commitOverlayEdgeMidpointDrag(edgeGrip, worldPos, draggingEdgeMidpoint.newVertexCreated, overlayCommitDeps);
+          setSelectedGrips([]);
           setDraggingEdgeMidpoint(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
           return true;
         }
@@ -328,6 +345,7 @@ export function useUnifiedGripInteraction(
         if (draggingOverlayBody) {
           const delta = { x: worldPos.x - draggingOverlayBody.startPoint.x, y: worldPos.y - draggingOverlayBody.startPoint.y };
           await commitOverlayBodyDrag(draggingOverlayBody.overlayId, delta, overlayCommitDeps);
+          setSelectedGrips([]);
           setDraggingOverlayBody(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
           return true;
         }
