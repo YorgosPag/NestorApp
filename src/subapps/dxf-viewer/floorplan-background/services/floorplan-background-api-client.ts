@@ -27,7 +27,6 @@ import type {
 
 export interface FloorPolygonState {
   floorplanOverlayCount: number;
-  dxfOverlayCount: number;
   total: number;
 }
 

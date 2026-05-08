@@ -53,9 +53,7 @@ export type FloorplanFormat = 'dxf' | 'pdf' | 'image' | 'unknown';
 
 export interface FloorWipePreview {
   floorplanOverlayCount: number;
-  dxfOverlayCount: number;
   floorplanBackgroundCount: number;
-  dxfLevelCount: number;
   fileRecordCount: number;
   totalPolygons: number;
 }

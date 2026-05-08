@@ -1,6 +1,6 @@
 # Handoff — ADR-340 Phase 9 — POST STEP K (2026-05-08)
 
-**Status**: STEP A → M committati su `main`. STEP L gated post-WIPE. Phase 9 CLOSED.
+**Status**: STEP A → M + STEP L COMPLETI. ADR-340 Phase 9 FULLY CLOSED.
 
 ## STEP K — DONE (this commit)
 

@@ -153,7 +153,6 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
   const wipeRequired = preview !== null && (
     preview.totalPolygons > 0 ||
     preview.floorplanBackgroundCount > 0 ||
-    preview.dxfLevelCount > 0 ||
     preview.fileRecordCount > 0
   );
 
@@ -337,7 +336,7 @@ function PreviewBanner({ preview, t }: { preview: FloorWipePreview; t: TFn }) {
         <p className="text-xs text-amber-700 dark:text-amber-300">
           {t('floorplanImport.wipePreview.summary', {
             polygons: preview.totalPolygons,
-            backgrounds: preview.floorplanBackgroundCount + preview.dxfLevelCount,
+            backgrounds: preview.floorplanBackgroundCount,
             files: preview.fileRecordCount,
           })}
         </p>
@@ -407,7 +406,7 @@ function WipeConfirmDialog({
   open, preview, fileName, onConfirm, onCancel, t,
 }: WipeConfirmDialogProps) {
   if (!preview) return null;
-  const totalBackgrounds = preview.floorplanBackgroundCount + preview.dxfLevelCount;
+  const totalBackgrounds = preview.floorplanBackgroundCount;
   return (
     <AlertDialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
       <AlertDialogContent>

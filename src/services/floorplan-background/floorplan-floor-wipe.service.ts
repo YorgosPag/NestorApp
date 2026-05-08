@@ -44,7 +44,6 @@ const logger = createModuleLogger('FloorplanFloorWipeService');
 
 export interface WipeAllForFloorResult {
   floorplanOverlaysDeleted: number;
-  dxfOverlayItemsDeleted: number;
   dxfLevelsDeleted: number;
   floorplanBackgroundsDeleted: number;
   fileRecordsDeleted: number;
@@ -58,9 +57,7 @@ export interface WipeAllForFloorResult {
 
 export interface FloorWipePreview {
   floorplanOverlayCount: number;
-  dxfOverlayCount: number;
   floorplanBackgroundCount: number;
-  dxfLevelCount: number;
   fileRecordCount: number;
   totalPolygons: number;
 }
@@ -301,9 +298,7 @@ export class FloorplanFloorWipeService {
 
     return {
       floorplanOverlayCount: polygonState.floorplanOverlayCount,
-      dxfOverlayCount: polygonState.dxfOverlayCount,
       floorplanBackgroundCount: backgrounds.length,
-      dxfLevelCount: dxfLevels.length,
       fileRecordCount: fileIds.length,
       totalPolygons: polygonState.total,
     };
@@ -374,7 +369,6 @@ async function executeWipe(
 
   return {
     floorplanOverlaysDeleted: cascade.floorplanOverlaysDeleted,
-    dxfOverlayItemsDeleted: cascade.dxfOverlayItemsDeleted,
     dxfLevelsDeleted,
     floorplanBackgroundsDeleted,
     fileRecordsDeleted,
