@@ -12,6 +12,12 @@ import { storageGet, storageSet, STORAGE_KEYS } from '../../utils/storage-utils'
 // cursor/crosshair/selection settings change so they repaint on the next RAF
 // tick instead of waiting for a mouse move.
 import { markAllCanvasDirty } from '../../rendering/core/frame-scheduler-api';
+// 🏢 ADR-XXX UserSettings SSoT — Firestore-backed industry pattern.
+// Cursor settings persist to user_preferences/{userId}_{companyId}, sync
+// across devices, schema-validated. localStorage is used only as boot-time
+// cache (instant first paint) and for one-shot legacy migration.
+import { userSettingsRepository } from '../../../../services/user-settings';
+import type { CursorSettingsSlice } from '../../../../services/user-settings';
 
 // ===== TYPES =====
 export interface CursorSettings {
@@ -164,6 +170,14 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
   private static instance: CursorConfiguration;
   private settings: CursorSettings;
   private isSyncingFromProvider: boolean = false; // 🔄 Flag για αποφυγή loops
+  // ─── UserSettings repository binding state ───────────────────────────────
+  // The repository becomes the SSoT once auth is ready and `bindToRepository`
+  // is called. Until then, `loadSettings()` (localStorage) provides the boot
+  // value. Once bound, every subsequent local change writes to the repository
+  // and remote changes hydrate this.settings + notifyListeners().
+  private repositoryBound: boolean = false;
+  private repositoryUnsubscribe: (() => void) | null = null;
+  private isHydratingFromRepository: boolean = false;
 
   private constructor() {
     super();
@@ -200,6 +214,51 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
       CursorConfiguration.instance = new CursorConfiguration();
     }
     return CursorConfiguration.instance;
+  }
+
+  // ─── Repository binding (UserSettings SSoT) ────────────────────────────
+  /**
+   * Bind to `userSettingsRepository` for the active user/tenant. Called from
+   * `CursorSystem` provider once `useAuth().user` resolves. On the first
+   * Firestore snapshot we hydrate `this.settings` (overwriting the localStorage
+   * boot value); if no document exists yet, the current local value is written
+   * back so the user's first session creates the doc with their migrated prefs.
+   */
+  bindToRepository(userId: string, companyId: string): void {
+    if (this.repositoryBound) return;
+    this.repositoryBound = true;
+
+    userSettingsRepository.bind(userId, companyId);
+
+    let firstSnapshot = true;
+    this.repositoryUnsubscribe = userSettingsRepository.subscribeSlice(
+      'dxfViewer.cursor',
+      (remoteSettings) => {
+        if (remoteSettings) {
+          // Remote (or own debounced write) → hydrate local state without
+          // re-firing saveSettings (avoid feedback loop).
+          this.isHydratingFromRepository = true;
+          this.settings = remoteSettings as CursorSettings;
+          this.notifyListeners(this.settings);
+          this.isHydratingFromRepository = false;
+        } else if (firstSnapshot) {
+          // Doc empty / first session for this (user, tenant) — push the
+          // current localStorage-derived settings up to Firestore so the
+          // doc materializes with the user's existing preferences.
+          userSettingsRepository.updateSlice('dxfViewer.cursor', this.settings);
+        }
+        firstSnapshot = false;
+      },
+    );
+  }
+
+  /** Tear down the repository subscription. Called on auth change / logout. */
+  unbindFromRepository(): void {
+    if (this.repositoryUnsubscribe) {
+      this.repositoryUnsubscribe();
+      this.repositoryUnsubscribe = null;
+    }
+    this.repositoryBound = false;
   }
 
   // Settings management
@@ -315,24 +374,21 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
 
   private saveSettings(): void {
     // 🔄 SKIP SAVE: Αν συγχρονίζουμε από provider, δεν κάνουμε save
-    if (this.isSyncingFromProvider) {
-
+    if (this.isSyncingFromProvider || this.isHydratingFromRepository) {
       return;
     }
 
-    try {
-      // 🆕 UNIFIED AUTOSAVE: Χρήση του κεντρικοποιημένου autosave system
-      // Αντί για direct localStorage, χρησιμοποιούμε το DxfSettingsProvider
-      this.delegateToUnifiedAutosave();
-    } catch (error) {
-      console.warn('Failed to save cursor settings:', error);
-      // 🔄 FALLBACK: Αν αποτύχει το unified system, χρησιμοποιούμε το centralized storage
-      // 🏢 ADR-092: Using centralized storageSet
-      const saved = storageSet(STORAGE_KEYS.CURSOR_SETTINGS, this.settings);
-      if (!saved) {
-        console.error('❌ [CursorSystem] Both unified and fallback saves failed');
-      }
+    // 🏢 PRIMARY PATH (UserSettings SSoT): once the repository is bound,
+    // it owns persistence (debounced 500ms autosave to Firestore + IndexedDB
+    // cache + cross-device sync + schema validation + audit trail).
+    if (this.repositoryBound) {
+      userSettingsRepository.updateSlice('dxfViewer.cursor', this.settings);
     }
+
+    // 🔄 BOOT-CACHE: also mirror to localStorage so the next page reload has
+    // an instant warm value before auth resolves. The repository takes over
+    // on first snapshot and overrides this value if newer.
+    storageSet(STORAGE_KEYS.CURSOR_SETTINGS, this.settings);
   }
 
   /**

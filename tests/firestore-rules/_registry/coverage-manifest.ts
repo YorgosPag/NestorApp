@@ -1120,6 +1120,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'materials',              // lines 3403-3411 — tenant read + admin write
   // — Framework Agreements (ADR-330 Phase 5, 2026-05-04) —
   'framework_agreements',   // tenant read + admin write
+  // — UserSettings SSoT (2026-05-08) —
+  'user_preferences',       // lines 1458-1485 — ownership + tenant isolation, schemaVersion floor
 ] as const;
 
 // ---------------------------------------------------------------------------

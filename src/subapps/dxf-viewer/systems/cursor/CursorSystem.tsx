@@ -12,6 +12,7 @@ import {
 } from './config';
 import { createDefaultCursorState } from './utils';
 import type { Point2D, Viewport } from '../../rendering/types/Types';
+import { useAuth } from '@/auth/contexts/AuthContext';
 
 // Context type that combines state and actions
 interface CursorContextType extends CursorState {
@@ -131,6 +132,21 @@ export function CursorSystem({ children }: { children: React.ReactNode }) {
     });
     return unsubscribe;
   }, []);
+
+  // 🏢 ADR-XXX UserSettings SSoT — bind cursor singleton to the Firestore-backed
+  // repository once auth is ready. From this point on, cursor settings persist
+  // server-side, sync across devices, and survive hard refresh. Until auth
+  // resolves, the singleton uses its localStorage boot value.
+  const { user } = useAuth();
+  const userId = user?.uid ?? null;
+  const companyId = user?.companyId ?? null;
+  useEffect(() => {
+    if (!userId || !companyId) return;
+    cursorConfig.bindToRepository(userId, companyId);
+    return () => {
+      cursorConfig.unbindFromRepository();
+    };
+  }, [userId, companyId]);
 
   // Action creators
   const actions = useMemo(() => ({

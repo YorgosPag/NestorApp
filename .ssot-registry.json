@@ -309,6 +309,20 @@
         "src/config/audit-tracked-fields.ts"
       ]
     },
+    "user-settings-repository": {
+      "ssotFile": "src/services/user-settings/user-settings-repository.ts",
+      "description": "Per-user UI settings (cursor / rulers-grid / dxf line+text+grip / snap modes) are owned by `userSettingsRepository` (UserSettings SSoT — Firestore-backed industry pattern). Every read on USER_PREFERENCES must go through `userSettingsRepository.subscribeSlice()` / `getSlice()` and every write through `userSettingsRepository.updateSlice()` (debounced 500ms autosave + Zod validation + audit trail via EntityAuditService). Direct addDoc/setDoc/updateDoc/onSnapshot calls against `user_preferences` outside the allowlist are forbidden — they bypass the schema validator, the migration pipeline, and the audit trail.",
+      "forbiddenPatterns": [
+        "(addDoc|setDoc|updateDoc)\\s*\\([^)]*(user_preferences|USER_PREFERENCES)",
+        "collection\\s*\\(\\s*(COLLECTIONS\\.USER_PREFERENCES|['\"]user_preferences['\"])",
+        "onSnapshot\\s*\\([^)]*(USER_PREFERENCES|user_preferences)"
+      ],
+      "allowlist": [
+        "src/services/user-settings/",
+        "src/config/firestore-collections.ts"
+      ],
+      "tier": 3
+    },
     "entity-audit-trail": {
       "ssotFile": "src/services/entity-audit.service.ts",
       "description": "Entity audit trail is a closed SSoT (ADR-195 Phase 10). Server writes go through EntityAuditService.recordChange(). Client reads go through EntityAuditClientService.subscribeGlobal()/subscribeEntity(), which compose firestoreQueryService. The canonical hooks are useEntityAudit + useGlobalAuditTrail. Forbidden (reader-side, enforced by regex below): direct writes to entity_audit_trail, inline collection() queries on ENTITY_AUDIT_TRAIL, re-implementation of either hook, manual RealtimeService event lists like GLOBAL_AUDIT_WATCH_EVENTS/ENTITY_EVENT_MAP, or bypassing firestoreQueryService with raw onSnapshot on the collection. Writer-side coverage (positive requirement — any write to a tracked entity must also call recordChange) is enforced by CHECK 3.17 via scripts/check-entity-audit-coverage.js + .entity-audit-coverage-baseline.json. The two together guarantee the audit trail is both untamperable (reader gate) and complete (writer gate).",

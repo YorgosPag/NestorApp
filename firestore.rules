@@ -1443,6 +1443,48 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // ⚙️ USER_PREFERENCES COLLECTION - Per-user UI Settings (SSoT)
+    // =========================================================================
+    // 🏢 ENTERPRISE: Server-side single source of truth for ALL UI settings
+    // (cursor / crosshair / selection / rulers / grid / dxf line+text+grip / snap).
+    // 📅 Created: 2026-05-08 (industry-standard pattern: Google Drive / Procore / SAP UME)
+    //
+    // Doc ID convention: deterministic composite `{userId}_{companyId}` so each
+    // user has exactly one preferences blob per tenant. The body MUST carry
+    // both `userId` and `companyId` fields matching the auth context.
+    //
+    // 🔒 OWNERSHIP + TENANT: read/write only when the caller owns the doc AND
+    // belongs to the same company. companyId is immutable on update.
+    match /user_preferences/{docId} {
+      // 📖 READ: ownership + tenant scope
+      allow read: if isAuthenticated()
+                  && resource.data.keys().hasAll(['userId', 'companyId'])
+                  && isOwner(resource.data.userId)
+                  && belongsToCompany(resource.data.companyId);
+
+      // ✍️ CREATE: caller must claim ownership of the new doc and set
+      //    immutable userId/companyId/schemaVersion that match auth context.
+      allow create: if isAuthenticated()
+                    && request.resource.data.keys().hasAll(['userId', 'companyId', 'schemaVersion'])
+                    && isOwner(request.resource.data.userId)
+                    && belongsToCompany(request.resource.data.companyId)
+                    && request.resource.data.schemaVersion is number;
+
+      // ✍️ UPDATE: ownership + tenant; userId / companyId / schemaVersion floor invariants.
+      allow update: if isAuthenticated()
+                    && isOwner(resource.data.userId)
+                    && belongsToCompany(resource.data.companyId)
+                    && request.resource.data.userId == resource.data.userId
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.schemaVersion >= resource.data.schemaVersion;
+
+      // 🗑️ DELETE: ownership + tenant (rare — used only for account cleanup)
+      allow delete: if isAuthenticated()
+                    && isOwner(resource.data.userId)
+                    && belongsToCompany(resource.data.companyId);
+    }
+
+    // =========================================================================
     // 🏢 WORKSPACES COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)

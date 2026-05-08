@@ -297,6 +297,17 @@ export class EnterpriseIdService {
     return `${P.OWNERSHIP_TABLE}_${projectId}`;
   }
 
+  /**
+   * UserSettings SSoT: deterministic 1:1 key — one preferences blob per
+   * (user, tenant). Used by `user_preferences/{docId}` Firestore collection
+   * and by `userSettingsRepository.bind(userId, companyId)`.
+   */
+  generateUserPreferencesId(userId: string, companyId: string): string {
+    if (!userId) throw new Error('generateUserPreferencesId: userId is required');
+    if (!companyId) throw new Error('generateUserPreferencesId: companyId is required');
+    return `${userId}_${companyId}`;
+  }
+
   /** ADR-235: Deterministic revision key — one revision per version */
   generateOwnershipRevisionId(version: number): string {
     return `${P.OWNERSHIP_TABLE}_rev_v${version}`;

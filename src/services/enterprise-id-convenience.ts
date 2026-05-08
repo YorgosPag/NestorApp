@@ -169,6 +169,10 @@ export const generateOwnershipTableId = (projectId: string) =>
 export const generateOwnershipRevisionId = (version: number) =>
   enterpriseIdService.generateOwnershipRevisionId(version);
 
+// UserSettings — Deterministic Composite Key (per-user-per-tenant SSoT)
+export const generateUserPreferencesId = (userId: string, companyId: string) =>
+  enterpriseIdService.generateUserPreferencesId(userId, companyId);
+
 // Procurement (ADR-267)
 export const generatePurchaseOrderId = () => enterpriseIdService.generatePurchaseOrderId();
 export const generatePOItemId = () => enterpriseIdService.generatePOItemId();

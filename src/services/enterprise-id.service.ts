@@ -73,6 +73,7 @@ export {
   generateCommentId, generateApprovalId, generateBankAccountId,
   generateDebtMaturityId, generateBudgetVarianceId, generateQueryStrategyDocId,
   generateChatHistoryDocId, generateOwnershipTableId, generateOwnershipRevisionId,
+  generateUserPreferencesId,
   generatePurchaseOrderId, generatePOItemId,
   generatePOAttachmentId, generateSavedReportId, generateRecurringPaymentId,
   generateQuoteId, generateRfqId, generateVendorInviteId, generateTradeId,

@@ -20,6 +20,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   FLOOR: 'flr',
   DOCUMENT: 'doc',
   USER: 'usr',
+  USER_PREFERENCES: 'usrprf',  // ADR-XXX: per-user UI settings (deterministic {userId}_{companyId})
   ASSET: 'ast',
   RELATIONSHIP: 'rel',
   MEMBER: 'mbr',
