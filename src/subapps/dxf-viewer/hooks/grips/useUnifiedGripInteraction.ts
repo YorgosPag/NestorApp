@@ -121,6 +121,12 @@ export function useUnifiedGripInteraction(
   const gripHoverThrottleRef = useRef<GripHoverThrottle>({ lastCheckTime: 0, lastWorldPoint: null });
   const justFinishedDragRef = useRef(false);
 
+  // Sync mutex: canvas onMouseUp + container onMouseUp both fire in the same
+  // tick and would both pass the state check (setState is async, so closure
+  // values are stale). Without a sync guard the second call commits again with
+  // a wrong worldPos and teleports the vertex toward (0,0). See ADR-031.
+  const mouseUpInProgressRef = useRef(false);
+
   const markDragFinished = useCallback(() => {
     justFinishedDragRef.current = true;
     setTimeout(() => { justFinishedDragRef.current = false; }, PANEL_LAYOUT.TIMING.DRAG_FINISH_RESET);
@@ -285,45 +291,51 @@ export function useUnifiedGripInteraction(
 
   const handleMouseUp = useCallback(
     async (worldPos: Point2D): Promise<boolean> => {
-      if (phase === 'dragging' && activeGrip?.source === 'dxf' && anchorRef.current) {
-        const delta: Point2D = { x: worldPos.x - anchorRef.current.x, y: worldPos.y - anchorRef.current.y };
-        commitDxfGripDrag(activeGrip, delta, dxfCommitDeps);
-        resetToIdle();
-        return true;
-      }
+      if (mouseUpInProgressRef.current) return false;
+      mouseUpInProgressRef.current = true;
+      try {
+        if (phase === 'dragging' && activeGrip?.source === 'dxf' && anchorRef.current) {
+          const delta: Point2D = { x: worldPos.x - anchorRef.current.x, y: worldPos.y - anchorRef.current.y };
+          commitDxfGripDrag(activeGrip, delta, dxfCommitDeps);
+          resetToIdle();
+          return true;
+        }
 
-      if (draggingVertices && draggingVertices.length > 0) {
-        const delta = { x: worldPos.x - draggingVertices[0].startPoint.x, y: worldPos.y - draggingVertices[0].startPoint.y };
-        const vertexGrips: UnifiedGripInfo[] = draggingVertices.map((dv) => ({
-          id: `overlay_${dv.overlayId}_v${dv.vertexIndex}`, source: 'overlay' as const,
-          overlayId: dv.overlayId, gripIndex: dv.vertexIndex, type: 'vertex' as const,
-          position: dv.originalPosition, movesEntity: false,
-        }));
-        await commitOverlayVertexDrag(vertexGrips, delta, overlayCommitDeps);
-        setDraggingVertices(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
-        return true;
-      }
+        if (draggingVertices && draggingVertices.length > 0) {
+          const delta = { x: worldPos.x - draggingVertices[0].startPoint.x, y: worldPos.y - draggingVertices[0].startPoint.y };
+          const vertexGrips: UnifiedGripInfo[] = draggingVertices.map((dv) => ({
+            id: `overlay_${dv.overlayId}_v${dv.vertexIndex}`, source: 'overlay' as const,
+            overlayId: dv.overlayId, gripIndex: dv.vertexIndex, type: 'vertex' as const,
+            position: dv.originalPosition, movesEntity: false,
+          }));
+          await commitOverlayVertexDrag(vertexGrips, delta, overlayCommitDeps);
+          setDraggingVertices(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
+          return true;
+        }
 
-      if (draggingEdgeMidpoint) {
-        const edgeGrip: UnifiedGripInfo = {
-          id: `overlay_${draggingEdgeMidpoint.overlayId}_e${draggingEdgeMidpoint.edgeIndex}`,
-          source: 'overlay', overlayId: draggingEdgeMidpoint.overlayId,
-          gripIndex: draggingEdgeMidpoint.edgeIndex, type: 'edge',
-          position: worldPos, movesEntity: false, edgeInsertIndex: draggingEdgeMidpoint.insertIndex,
-        };
-        await commitOverlayEdgeMidpointDrag(edgeGrip, worldPos, draggingEdgeMidpoint.newVertexCreated, overlayCommitDeps);
-        setDraggingEdgeMidpoint(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
-        return true;
-      }
+        if (draggingEdgeMidpoint) {
+          const edgeGrip: UnifiedGripInfo = {
+            id: `overlay_${draggingEdgeMidpoint.overlayId}_e${draggingEdgeMidpoint.edgeIndex}`,
+            source: 'overlay', overlayId: draggingEdgeMidpoint.overlayId,
+            gripIndex: draggingEdgeMidpoint.edgeIndex, type: 'edge',
+            position: worldPos, movesEntity: false, edgeInsertIndex: draggingEdgeMidpoint.insertIndex,
+          };
+          await commitOverlayEdgeMidpointDrag(edgeGrip, worldPos, draggingEdgeMidpoint.newVertexCreated, overlayCommitDeps);
+          setDraggingEdgeMidpoint(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
+          return true;
+        }
 
-      if (draggingOverlayBody) {
-        const delta = { x: worldPos.x - draggingOverlayBody.startPoint.x, y: worldPos.y - draggingOverlayBody.startPoint.y };
-        await commitOverlayBodyDrag(draggingOverlayBody.overlayId, delta, overlayCommitDeps);
-        setDraggingOverlayBody(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
-        return true;
-      }
+        if (draggingOverlayBody) {
+          const delta = { x: worldPos.x - draggingOverlayBody.startPoint.x, y: worldPos.y - draggingOverlayBody.startPoint.y };
+          await commitOverlayBodyDrag(draggingOverlayBody.overlayId, delta, overlayCommitDeps);
+          setDraggingOverlayBody(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
+          return true;
+        }
 
-      return false;
+        return false;
+      } finally {
+        mouseUpInProgressRef.current = false;
+      }
     },
     [phase, activeGrip, dxfCommitDeps, overlayCommitDeps, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, resetToIdle, markDragFinished],
   );

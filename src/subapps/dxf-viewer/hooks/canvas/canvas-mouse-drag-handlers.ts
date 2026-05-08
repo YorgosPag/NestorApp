@@ -7,7 +7,6 @@
  */
 
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import type { VertexMovement } from '../../core/commands';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import {
@@ -37,55 +36,23 @@ export interface DragEndContext {
 // ============================================================================
 
 /**
- * 🏢 ENTERPRISE: Handle multi-vertex drag end
- * ADR-031: Multi-Grip Selection System - updates all dragged vertices
+ * 🏢 ENTERPRISE: Handle multi-vertex drag end (state cleanup only)
+ * ADR-031: Multi-Grip Selection System
+ *
+ * 🐛 FIX (2026-05-09): The actual commit is owned by `commitOverlayVertexDrag`
+ * via `useUnifiedGripInteraction.handleMouseUp` (driven by `mouse-handler-up`,
+ * which calculates `worldPos` correctly from the live MouseEvent). This handler
+ * previously also committed using `ctx.transform`, which can be stale and made
+ * `screenToWorldWithSnapshot` return (0,0) — producing a duplicate commit that
+ * teleported the dragged vertex to world origin. Commit removed; only the
+ * legacy state cleanup remains so existing call-sites don't leak drag state.
  */
 export async function handleVertexDragEnd(
   ctx: DragEndContext,
   draggingVertices: DraggingVertexState[],
   setDraggingVertices: (state: DraggingVertexState[] | null) => void,
 ): Promise<void> {
-  const overlayStore = ctx.overlayStoreRef.current;
-  if (!overlayStore) return;
-
-  const container = ctx.containerRef.current;
-  if (container) {
-    const snap = getPointerSnapshotFromElement(container);
-    if (!snap) return;
-    const screenPos = getScreenPosFromEvent(ctx.e, snap);
-    const worldPos = screenToWorldWithSnapshot(screenPos, ctx.transform, snap);
-
-    // Calculate delta from first grip's start point
-    const delta = {
-      x: worldPos.x - draggingVertices[0].startPoint.x,
-      y: worldPos.y - draggingVertices[0].startPoint.y
-    };
-
-    // 🐛 FIX (2026-05-09): Click-without-drag teleported vertex to worldPos.
-    // If user just clicked a grip (no movement above threshold), do not commit.
-    // Mirrors handleOverlayBodyDragEnd pattern.
-    const hasMovement = Math.abs(delta.x) > ctx.movementDetectionThreshold ||
-                       Math.abs(delta.y) > ctx.movementDetectionThreshold;
-
-    if (hasMovement) {
-      // Command Pattern for multi-grip movement (imported dynamically to avoid circular deps)
-      const movements: VertexMovement[] = draggingVertices.map(drag => ({
-        overlayId: drag.overlayId,
-        vertexIndex: drag.vertexIndex,
-        oldPosition: [drag.originalPosition.x, drag.originalPosition.y] as [number, number],
-        newPosition: [
-          drag.originalPosition.x + delta.x,
-          drag.originalPosition.y + delta.y
-        ] as [number, number]
-      }));
-
-      const { MoveMultipleOverlayVerticesCommand } = await import('../../core/commands');
-      const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore);
-      ctx.executeCommand(command);
-    }
-  }
-
-  // Clear drag states but NOT selectedGrips
+  void draggingVertices;
   setDraggingVertices(null);
   ctx.setDragPreviewPosition(null);
   ctx.markDragFinished();
