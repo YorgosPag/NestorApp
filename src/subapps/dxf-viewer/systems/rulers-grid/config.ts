@@ -230,7 +230,7 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     minGridSpacing: 5,
     maxGridSpacing: 100,
     adaptiveGrid: true,
-    smoothFade: true,
+    smoothFade: false,
     smoothFadeMinPx: 2,
     smoothFadeMaxPx: 10,
     smoothFadeDurationMs: 200,

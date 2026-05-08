@@ -133,12 +133,17 @@ export function createInitialGridSettings(
 }
 
 /**
- * Migrate legacy adaptive fade defaults (8/32) to the new visibility-biased
- * defaults (2/10). The original window made the minor grid invisible at
- * typical zoom levels, which made minor/major colors indistinguishable. This
- * one-shot migration runs every time the settings are loaded — both from
- * localStorage (createInitialGridSettings) and from the Firestore UserSettings
- * repository (useUserSettingsRulersGridSync hydrate callback).
+ * Migrate legacy adaptive fade defaults to safe values + force-disable
+ * smoothFade. The original window (8/32) made the minor grid invisible at
+ * typical zooms which made minor/major colors indistinguishable. Disabling
+ * smoothFade restores the pre-feature behaviour (legacy 2-pass minor+major
+ * draw with the user's panel colors directly).
+ *
+ * The user can opt back into adaptive via the Δυναμικό πλέγμα toggle.
+ *
+ * Runs at every load — both from localStorage (createInitialGridSettings)
+ * and from the Firestore UserSettings repository
+ * (useUserSettingsRulersGridSync hydrate callback).
  */
 export function migrateAdaptiveFadeDefaults(grid: GridSettings): GridSettings {
   const b = grid.behavior;
@@ -148,6 +153,7 @@ export function migrateAdaptiveFadeDefaults(grid: GridSettings): GridSettings {
     ...grid,
     behavior: {
       ...b,
+      smoothFade: false,
       smoothFadeMinPx: 2,
       smoothFadeMaxPx: 10,
     },

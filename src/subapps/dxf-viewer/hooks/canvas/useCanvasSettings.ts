@@ -280,8 +280,10 @@ export function useCanvasSettings(props: UseCanvasSettingsProps): UseCanvasSetti
     axesColor: gridContextSettings?.visual?.axesColor ?? UI_COLORS.RULER_DARK_GRAY,
     axesWeight: gridContextSettings?.visual?.axesWeight ?? 2,
 
-    // 🌊 ADAPTIVE GRID — smooth fade thresholds (industry pattern)
-    smoothFade: gridContextSettings?.behavior?.smoothFade ?? true,
+    // 🌊 ADAPTIVE GRID — opt-in (default OFF). When OFF, legacy minor+major
+    // 2-pass renders with user's panel colors directly. When ON, smoothstep
+    // fade based on screen-space spacing (industry pattern).
+    smoothFade: gridContextSettings?.behavior?.smoothFade ?? false,
     smoothFadeMinPx: gridContextSettings?.behavior?.smoothFadeMinPx ?? 2,
     smoothFadeMaxPx: gridContextSettings?.behavior?.smoothFadeMaxPx ?? 10,
     smoothFadeDurationMs: gridContextSettings?.behavior?.smoothFadeDurationMs ?? 200,

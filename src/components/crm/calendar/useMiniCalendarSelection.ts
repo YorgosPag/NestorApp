@@ -3,6 +3,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { isSameDay, eachDayOfInterval, min, max } from 'date-fns';
 
+const MAX_SELECTED_DAYS = 14;
+
 export interface MiniCalendarSelectionReturn {
   selectedDays: Date[];
   setSelectedDays: React.Dispatch<React.SetStateAction<Date[]>>;
@@ -24,6 +26,7 @@ export function useMiniCalendarSelection(initialDate?: Date): MiniCalendarSelect
           const next = prev.filter(d => !isSameDay(d, day));
           return next.length > 0 ? next : [day];
         }
+        if (prev.length >= MAX_SELECTED_DAYS) return prev;
         return [...prev, day];
       });
       return;
@@ -37,7 +40,8 @@ export function useMiniCalendarSelection(initialDate?: Date): MiniCalendarSelect
     if (!isDraggingRef.current || !dragAnchorRef.current) return;
     const start = min([dragAnchorRef.current, day]);
     const end = max([dragAnchorRef.current, day]);
-    setSelectedDays(eachDayOfInterval({ start, end }));
+    const range = eachDayOfInterval({ start, end });
+    setSelectedDays(range.slice(0, MAX_SELECTED_DAYS));
   }, []);
 
   useEffect(() => {

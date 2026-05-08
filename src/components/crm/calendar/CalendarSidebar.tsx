@@ -1,18 +1,15 @@
 /**
  * Calendar sidebar with 2 stacked mini-calendars (Outlook style).
  *
- * - First calendar = displayMonth
- * - Second calendar = displayMonth + 1
- * - Single pair of nav arrows below both calendars navigate together
- * - Drag on days → select consecutive range
- * - Ctrl+click → toggle non-consecutive days
- * - Event dots appear on both calendars
+ * - Drag on days → select consecutive range (max 14)
+ * - Ctrl+click → toggle non-consecutive days (max 14)
+ * - Uses container-level event delegation on data-day attribute (more reliable than DayButton override)
  */
 
 'use client';
 
-import { useMemo, useCallback } from 'react';
-import { isSameDay, addMonths, subMonths } from 'date-fns';
+import { useMemo, useCallback, useRef } from 'react';
+import { isSameDay, addMonths, subMonths, parseISO } from 'date-fns';
 import { el as elLocale, enGB as enLocale } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +40,7 @@ export function CalendarSidebar({
 }: CalendarSidebarProps) {
   const { i18n } = useTranslation();
   const iconSizes = useIconSizes();
+  const lastHoveredIsoRef = useRef<string | null>(null);
 
   const locale = i18n.language === 'el' ? elLocale : enLocale;
   const secondMonth = useMemo(() => addMonths(displayMonth, 1), [displayMonth]);
@@ -69,44 +67,40 @@ export function CalendarSidebar({
     onMonthChange(subMonths(month, 1));
   }, [onMonthChange]);
 
-  // Intercept DayPicker's default click handler; handle selection via mouseDown
-  const DayButtonComponent = useCallback(
-    ({
-      day,
-      modifiers: _m,
-      className,
-      children,
-      onClick: _suppressed,
-      ...rest
-    }: {
-      day: { date: Date };
-      modifiers: Record<string, boolean>;
-      className?: string;
-      children?: React.ReactNode;
-      onClick?: React.MouseEventHandler<HTMLButtonElement>;
-    } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'>) => (
-      <button
-        {...rest}
-        className={className}
-        onMouseDown={(e) => { e.preventDefault(); onDayMouseDown(day.date, e); }}
-        onMouseEnter={() => onDayMouseEnter(day.date)}
-      >
-        {children}
-      </button>
-    ),
-    [onDayMouseDown, onDayMouseEnter]
-  );
+  // Container-level mousedown: read data-day attribute set by DayPicker on each <td>
+  const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (e.button !== 0) return;
+    const dayEl = (e.target as Element).closest('[data-day]') as HTMLElement | null;
+    if (!dayEl) return;
+    const isoDate = dayEl.dataset.day;
+    if (!isoDate) return;
+    e.preventDefault();
+    lastHoveredIsoRef.current = isoDate;
+    onDayMouseDown(parseISO(isoDate), e);
+  }, [onDayMouseDown]);
 
-  const calendarComponents = useMemo(
-    () => ({ DayButton: DayButtonComponent }),
-    [DayButtonComponent]
-  );
+  // Container-level mousemove: fires reliably during drag (button held), unlike onMouseEnter on children
+  const handleContainerMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (!(e.buttons & 1)) return;
+    const dayEl = (e.target as Element).closest('[data-day]') as HTMLElement | null;
+    if (!dayEl) return;
+    const isoDate = dayEl.dataset.day;
+    if (!isoDate || isoDate === lastHoveredIsoRef.current) return;
+    lastHoveredIsoRef.current = isoDate;
+    onDayMouseEnter(parseISO(isoDate));
+  }, [onDayMouseEnter]);
 
   return (
-    <aside className="hidden lg:flex lg:flex-col w-[280px] shrink-0 gap-2" aria-label="Mini Calendars">
+    <aside
+      className="hidden lg:flex lg:flex-col w-[280px] shrink-0 gap-2 select-none"
+      aria-label="Mini Calendars"
+      onMouseDown={handleContainerMouseDown}
+      onMouseMove={handleContainerMouseMove}
+    >
       <Calendar
         mode="multiple"
         selected={selectedDays}
+        onSelect={() => {}}
         month={displayMonth}
         onMonthChange={onMonthChange}
         locale={locale}
@@ -115,12 +109,12 @@ export function CalendarSidebar({
         modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event', today: 'mini-cal-today' }}
         className="rounded-lg border"
         classNames={HIDDEN_NAV}
-        components={calendarComponents}
       />
 
       <Calendar
         mode="multiple"
         selected={selectedDays}
+        onSelect={() => {}}
         month={secondMonth}
         onMonthChange={handleSecondMonthChange}
         locale={locale}
@@ -129,7 +123,6 @@ export function CalendarSidebar({
         modifiersClassNames={{ hasEvent: 'calendar-sidebar-has-event', today: 'mini-cal-today' }}
         className="rounded-lg border"
         classNames={HIDDEN_NAV}
-        components={calendarComponents}
       />
 
       {/* Shared navigation arrows — navigate both calendars in sync */}

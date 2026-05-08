@@ -107,10 +107,10 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   axesColor: UI_COLORS.RULER_DARK_GRAY, // Neutral gray for axes
   axesWeight: 2,         // Prominent axis lines
 
-  // 🌊 Adaptive grid defaults — fade window biased toward visibility:
-  // minor lines disappear only when truly dense (≤2px), reach full opacity
-  // at typical zoom levels (≥10px). Keeps minor/major visually distinct.
-  smoothFade: true,
+  // 🌊 Adaptive grid — opt-in. Default OFF so the renderer uses the legacy
+  // 2-pass minor+major draw with the user's panel colors directly. When
+  // enabled, fade window is biased toward visibility (2-10px screen window).
+  smoothFade: false,
   smoothFadeMinPx: 2,
   smoothFadeMaxPx: 10,
   smoothFadeDurationMs: 200,

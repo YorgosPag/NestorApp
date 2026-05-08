@@ -98,6 +98,8 @@ export function CrmCalendar({
   const activeViewRef = useRef('dayGridMonth');
   const preMultiDayViewRef = useRef('dayGridMonth');
   const isMultiDayActiveRef = useRef(false);
+  const selectedDaysRef = useRef<Date[] | undefined>(selectedDays);
+  useEffect(() => { selectedDaysRef.current = selectedDays; }, [selectedDays]);
 
   // Cross-month drag
   const {
@@ -116,6 +118,36 @@ export function CrmCalendar({
     movedMessage: t('calendarPage.dragDrop.moved'),
     errorMessage: t('calendarPage.dialog.createError'),
   });
+
+  // Hide FullCalendar time-grid columns that are not in the selected days set.
+  // Uses data-date attribute on .fc-col-header-cell and .fc-timegrid-col.
+  const applyMultiDayColumnVisibility = useCallback((days: Date[]) => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+
+    // Reset all columns first
+    container.querySelectorAll<HTMLElement>('[data-date]').forEach(el => {
+      el.style.display = '';
+    });
+
+    if (days.length < 2) return;
+
+    const selectedIso = new Set(
+      days.map(d => [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, '0'),
+        String(d.getDate()).padStart(2, '0'),
+      ].join('-'))
+    );
+
+    container.querySelectorAll<HTMLElement>(
+      '.fc-col-header-cell[data-date], .fc-timegrid-col[data-date]'
+    ).forEach(el => {
+      const dateStr = el.dataset.date;
+      if (!dateStr) return;
+      el.style.display = selectedIso.has(dateStr) ? '' : 'none';
+    });
+  }, [containerRef]);
 
   // Toolbar state
   const [calendarTitle, setCalendarTitle] = useState('');
@@ -202,6 +234,15 @@ export function CrmCalendar({
       setActiveView(arg.view.type);
       activeViewRef.current = arg.view.type;
       const currentIso = arg.view.currentStart.toISOString();
+
+      // After FullCalendar renders, hide non-selected columns in multi-day mode
+      if (arg.view.type === 'timeGridDay') {
+        const days = selectedDaysRef.current;
+        if (days && days.length >= 2) {
+          requestAnimationFrame(() => applyMultiDayColumnVisibility(days));
+        }
+      }
+
       if (isProgrammaticNav.current) {
         isProgrammaticNav.current = false;
         lastReportedDateRef.current = currentIso;
@@ -211,7 +252,7 @@ export function CrmCalendar({
       lastReportedDateRef.current = currentIso;
       onDateChange?.(arg.view.currentStart);
     },
-    [onRangeChange, onDateChange]
+    [onRangeChange, onDateChange, applyMultiDayColumnVisibility]
   );
 
   // Event click → open detail dialog

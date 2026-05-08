@@ -121,7 +121,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   // Defaults shadow DEFAULT_GRID_SETTINGS.behavior to handle persisted blobs
   // written before these fields existed (controlled-input contract).
   const adaptiveFade = {
-    smoothFade: gridSettings.behavior.smoothFade ?? true,
+    smoothFade: gridSettings.behavior.smoothFade ?? false,
     smoothFadeMinPx: gridSettings.behavior.smoothFadeMinPx ?? 2,
     smoothFadeMaxPx: gridSettings.behavior.smoothFadeMaxPx ?? 10,
     smoothFadeDurationMs: gridSettings.behavior.smoothFadeDurationMs ?? 200,
