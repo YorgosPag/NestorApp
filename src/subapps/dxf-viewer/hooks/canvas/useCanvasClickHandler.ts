@@ -39,7 +39,7 @@ import { pointToLineDistance } from '../../rendering/entities/shared/geometry-ut
 import { pointToArcDistance } from '../../utils/angle-entity-math';
 import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import { TOLERANCE_CONFIG, POLYGON_TOLERANCES } from '../../config/tolerance-config';
 import { dlog, dwarn } from '../../debug';
 
 // ── Re-exports for backward compatibility ───────────────────────────────────
@@ -73,7 +73,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     rotationIsActive = false, handleRotationClick,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
-    isNearFirstPoint, finishDrawingWithPolygonRef,
+    finishDrawingWithPolygonRef,
     drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection,
     hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
@@ -124,8 +124,18 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     if (overlayMode === 'draw') {
       if (isSavingPolygon) return;
 
-      // Auto-close: click near first point with 3+ points → save
-      if (isNearFirstPoint && draftPolygon.length >= 3) {
+      // Auto-close: click near first point with 3+ points → save.
+      // 🚀 PERF (2026-05-09): isNearFirstPoint computed inline at click time
+      // (was a reactive prop forcing CanvasSection to re-render on mousemove).
+      const isNearFirst = (() => {
+        if (draftPolygon.length < 3) return false;
+        const [fx, fy] = draftPolygon[0];
+        const dx = worldPoint.x - fx;
+        const dy = worldPoint.y - fy;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance < (POLYGON_TOLERANCES.CLOSE_DETECTION / transform.scale);
+      })();
+      if (isNearFirst && draftPolygon.length >= 3) {
         setIsSavingPolygon(true);
         finishDrawingWithPolygonRef.current(draftPolygon).then(success => {
           setIsSavingPolygon(false);
@@ -182,7 +192,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     rotationIsActive, handleRotationClick,
     levelManager,
-    draftPolygon, isSavingPolygon, isNearFirstPoint,
+    draftPolygon, isSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection,
     hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,

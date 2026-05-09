@@ -6,9 +6,10 @@
  * Handles: guide drag initiation, guide drag completion (MoveGuideCommand),
  * and unified grip mouseDown/mouseUp delegation.
  */
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import type { GridAxis } from '../../systems/guides/guide-types';
 import { MoveGuideCommand } from '../../systems/guides/commands';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
@@ -25,7 +26,6 @@ export interface UseCanvasContainerHandlersParams {
   activeTool: string;
   transform: { scale: number; offsetX: number; offsetY: number };
   containerRef: React.RefObject<HTMLDivElement | null>;
-  mouseWorld: Point2D | null;
   executeCommand: (cmd: ICommand) => void;
   unified: {
     handleMouseDown: (worldPos: Point2D, shiftKey: boolean) => boolean;
@@ -49,11 +49,11 @@ export interface UseCanvasContainerHandlersReturn {
 export function useCanvasContainerHandlers(
   params: UseCanvasContainerHandlersParams,
 ): UseCanvasContainerHandlersReturn {
-  const { activeTool, transform, containerRef, mouseWorld, executeCommand, unified } = params;
+  const { activeTool, transform, containerRef, executeCommand, unified } = params;
 
-  // Ref to avoid stale mouseWorld in callbacks (mouseWorld may be null initially)
-  const mouseWorldRef = useRef(mouseWorld);
-  mouseWorldRef.current = mouseWorld;
+  // 🚀 PERF (2026-05-09): mouse world pos read live from ImmediatePositionStore
+  // instead of CanvasSection useState — avoids full subtree re-render on
+  // mousemove. Store updates synchronously from mouse-handler-move.
 
   // ADR-189 B5: Guide drag & drop state
   const [draggingGuide, setDraggingGuide] = useState<DraggingGuideState | null>(null);
@@ -115,7 +115,7 @@ export function useCanvasContainerHandlers(
     }
 
     const consumed = unified.handleMouseDown(
-      mouseWorldRef.current ?? { x: 0, y: 0 },
+      getImmediateWorldPosition() ?? { x: 0, y: 0 },
       e.shiftKey,
     );
     if (consumed) {
@@ -170,7 +170,7 @@ export function useCanvasContainerHandlers(
     }
 
     // Snap-aligned mouseUp for overlay grip alignment
-    let worldPos = mouseWorldRef.current ?? { x: 0, y: 0 };
+    let worldPos = getImmediateWorldPosition() ?? { x: 0, y: 0 };
     const snapResult = getImmediateSnap();
     if (snapResult?.found && snapResult.point) {
       worldPos = snapResult.point;

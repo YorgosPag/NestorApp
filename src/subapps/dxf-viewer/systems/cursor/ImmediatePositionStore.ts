@@ -29,7 +29,13 @@ import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 
 // 🏢 ENTERPRISE: Canvas IDs to mark dirty on cursor position change
 // EXCLUDES 'preview-canvas' - managed by PreviewRenderer with immediate render
-const CURSOR_SYNC_CANVAS_IDS = ['dxf-canvas', 'layer-canvas', 'crosshair-overlay'];
+//
+// Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): 'dxf-canvas' removed from the
+// cursor sync group. Cursor mousemove no longer invalidates the DXF entity
+// bitmap cache (transform unchanged). Pan still invalidates dxf-canvas because
+// the transform changes — see PAN_SYNC_CANVAS_IDS used by updateTransform().
+const CURSOR_SYNC_CANVAS_IDS = ['layer-canvas', 'crosshair-overlay'];
+const PAN_SYNC_CANVAS_IDS = ['dxf-canvas', 'layer-canvas', 'crosshair-overlay'];
 
 type PositionListener = (position: Point2D | null) => void;
 type DirectRenderCallback = (position: Point2D | null) => void;
@@ -147,7 +153,9 @@ class ImmediatePositionStoreClass {
       if (this.directRenderCallback) {
         this.directRenderCallback(screenPos);
         // 🏢 ADR-163: Canvas Layer Synchronization Fix
-        markSystemsDirty(CURSOR_SYNC_CANVAS_IDS);
+        // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): include dxf-canvas in pan
+        // because the transform changes invalidates the entity bitmap cache.
+        markSystemsDirty(PAN_SYNC_CANVAS_IDS);
       }
     }
   }

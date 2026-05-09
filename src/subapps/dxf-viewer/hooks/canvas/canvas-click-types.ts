@@ -115,7 +115,8 @@ export interface UseCanvasClickHandlerParams {
   setDraftPolygon: React.Dispatch<React.SetStateAction<Array<[number, number]>>>;
   isSavingPolygon: boolean;
   setIsSavingPolygon: (val: boolean) => void;
-  isNearFirstPoint: boolean;
+  // 🚀 PERF (2026-05-09): isNearFirstPoint REMOVED — computed inline at click
+  // time inside the handler using `worldPoint` + `transform.scale`.
   finishDrawingWithPolygonRef: MutableRefObject<(polygon: Array<[number, number]>) => Promise<boolean>>;
 
   // ── Refs (mutable, avoids stale closures) ─────────────────────────────

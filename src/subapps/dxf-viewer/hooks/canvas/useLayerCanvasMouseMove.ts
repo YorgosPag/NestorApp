@@ -25,6 +25,10 @@ import type { VertexHoverInfo, EdgeHoverInfo, GripHoverThrottle } from './useCan
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
 import { squaredDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
+import {
+  setImmediatePosition,
+  setImmediateWorldPosition,
+} from '../../systems/cursor/ImmediatePositionStore';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -36,11 +40,6 @@ export interface UseLayerCanvasMouseMoveParams {
 
   /** Current view transform (scale used for tolerance calculation) */
   transform: ViewTransform;
-
-  /** Update CSS-space mouse position (from useCanvasMouse) */
-  updateMouseCss: (point: Point2D) => void;
-  /** Update world-space mouse position (from useCanvasMouse) */
-  updateMouseWorld: (point: Point2D) => void;
 
   /** Current vertex hover state (from useGripSystem) */
   hoveredVertexInfo: VertexHoverInfo | null;
@@ -90,8 +89,6 @@ export function useLayerCanvasMouseMove(
   const {
     activeTool,
     transform,
-    updateMouseCss,
-    updateMouseWorld,
     hoveredVertexInfo,
     setHoveredVertexInfo,
     hoveredEdgeInfo,
@@ -120,10 +117,11 @@ export function useLayerCanvasMouseMove(
       // AFTER: Use worldPoint computed from the SAME element that produced screenPoint (SSoT)
       const worldPoint = worldPointFromHandler;
 
-      // Cursor CSS + coordinate readout always run at full rate — crosshair must be smooth.
-      // Only grip detection (expensive loop) is throttled below.
-      updateMouseCss(screenPoint);
-      updateMouseWorld(worldPoint);
+      // 🚀 PERF (2026-05-09): Write directly to ImmediatePositionStore (SSoT).
+      // Subscribers (useCursorPosition / useCursorWorldPosition) re-render
+      // selectively without a CanvasSection-level cascade.
+      setImmediatePosition(screenPoint);
+      setImmediateWorldPosition(worldPoint);
 
       // 🚀 THROTTLED: grip hover detection (expensive — O(n) over overlay vertices)
       const now = performance.now();
@@ -244,8 +242,6 @@ export function useLayerCanvasMouseMove(
     [
       activeTool,
       transform.scale,
-      updateMouseCss,
-      updateMouseWorld,
       hoveredVertexInfo,
       setHoveredVertexInfo,
       hoveredEdgeInfo,

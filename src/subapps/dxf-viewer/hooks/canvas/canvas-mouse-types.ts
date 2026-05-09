@@ -171,20 +171,13 @@ export interface UseCanvasMouseProps {
 
 /**
  * Return type of useCanvasMouse hook
+ *
+ * 🚀 PERF (2026-05-09): mouseCss / mouseWorld React state REMOVED.
+ * Position SSoT lives in `ImmediatePositionStore`. Consumers re-rendering on
+ * position change use `useCursorPosition()` / `useCursorWorldPosition()`
+ * (useSyncExternalStore) directly — no prop drilling, no parent re-render.
  */
 export interface UseCanvasMouseReturn {
-  // Mouse position states
-  mouseCss: Point2D | null;
-  mouseWorld: Point2D | null;
-
-  // Update functions
-  updateMouseCss: (point: Point2D) => void;
-  updateMouseWorld: (point: Point2D) => void;
-
-  // Refs (mouse-specific only - grip refs come from useGripSystem)
-  lastMouseCssRef: React.RefObject<Point2D | null>;
-  lastMouseWorldRef: React.RefObject<Point2D | null>;
-
   // Event handlers
   handleContainerMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
   handleContainerMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;

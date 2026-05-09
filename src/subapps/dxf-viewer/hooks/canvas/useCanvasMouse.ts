@@ -16,7 +16,7 @@
  * Extracted from: CanvasSection.tsx (2,463 lines → ~800 lines target)
  */
 
-import { useRef, useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import { setImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import {
@@ -46,8 +46,6 @@ export type {
  * @example
  * ```tsx
  * const {
- *   mouseCss,
- *   mouseWorld,
  *   handleContainerMouseMove,
  *   handleContainerMouseDown,
  *   handleContainerMouseUp,
@@ -98,55 +96,13 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
   } = props;
 
   // ============================================================================
-  // STATE
+  // 🚀 PERF (2026-05-09): mouseCss / mouseWorld React state REMOVED.
+  // Position SSoT lives in `ImmediatePositionStore` (set by mouse-handler-move
+  // and useLayerCanvasMouseMove). Consumers that need to *re-render* on
+  // position change use `useCursorPosition()` / `useCursorWorldPosition()`
+  // (useSyncExternalStore). CanvasSection no longer re-renders on every
+  // mousemove — was causing a full subtree cascade through 13+ hooks.
   // ============================================================================
-
-  const [mouseCss, setMouseCss] = useState<Point2D | null>(null);
-  const [mouseWorld, setMouseWorld] = useState<Point2D | null>(null);
-
-  // ============================================================================
-  // REFS (mouse-specific only - grip refs come from useGripSystem)
-  // ============================================================================
-
-  // 🚀 PERFORMANCE: Refs to skip unnecessary state updates
-  const lastMouseCssRef = useRef<Point2D | null>(null);
-  const lastMouseWorldRef = useRef<Point2D | null>(null);
-
-  // 🏢 ENTERPRISE: gripHoverThrottleRef and justFinishedDragRef are now INJECTED
-  // from useGripSystem via props - NO duplicates here!
-
-  // ============================================================================
-  // MEMOIZED UPDATE FUNCTIONS
-  // ============================================================================
-
-  /**
-   * 🚀 PERFORMANCE: Update CSS mouse position only when changed significantly
-   * Mouse position updates only when changed by more than 0.5 pixels
-   */
-  const updateMouseCss = useCallback((point: Point2D) => {
-    const last = lastMouseCssRef.current;
-    if (!last || Math.abs(point.x - last.x) > 0.5 || Math.abs(point.y - last.y) > 0.5) {
-      lastMouseCssRef.current = point;
-      setMouseCss(point);
-    }
-  }, []);
-
-  /**
-   * 🚀 PERFORMANCE: Update World mouse position only when changed significantly
-   * World position updates only when changed by more than 0.1 world units
-   *
-   * 🏢 ENTERPRISE (2026-02-02): onMouseCoordinatesChange REMOVED
-   * ToolbarStatusBar now uses CursorContext.worldPosition directly (SSoT)
-   * The worldPosition is updated by useCentralizedMouseHandlers → cursor.updateWorldPosition()
-   */
-  const updateMouseWorld = useCallback((point: Point2D) => {
-    const last = lastMouseWorldRef.current;
-    if (!last || Math.abs(point.x - last.x) > 0.1 || Math.abs(point.y - last.y) > 0.1) {
-      lastMouseWorldRef.current = point;
-      setMouseWorld(point);
-      // 🏢 ENTERPRISE (2026-02-02): onMouseCoordinatesChange REMOVED - using CursorContext (SSoT)
-    }
-  }, []);
 
   // ============================================================================
   // EVENT HANDLERS
@@ -174,13 +130,13 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     //
     // 🚀 PERF FIX (2026-05-08): updatePosition(screenPos) REMOVED here too. The DxfCanvas
     // handler in `mouse-handler-move.ts:60` already dispatches UPDATE_POSITION through
-    // `useCentralizedMouseHandlers`, throttled to 50ms (CURSOR_UPDATE_THROTTLE). Calling
-    // it again unthrottled from this container-level handler doubled the dispatch
-    // frequency and caused a render cascade through the entire CursorSystem subtree on
-    // every mousemove → visible crosshair lag. Container handler now only updates DOM
-    // CSS vars (cheap) and handles drag-preview / guide-drag world-coord work.
-    // Update CSS coordinates
-    updateMouseCss(screenPos);
+    // `useCentralizedMouseHandlers`, throttled to 50ms (CURSOR_UPDATE_THROTTLE).
+    //
+    // 🚀 PERF FIX (2026-05-09): updateMouseCss(screenPos) REMOVED. Container coords are
+    // relative to the container element while DxfCanvas/LayerCanvas coords are relative
+    // to their own element — they do not match. ImmediatePositionStore is updated by
+    // the canvas-level handlers (mouse-handler-move) with element-correct coords.
+    // Container handler now only handles drag-preview / guide-drag world-coord work.
 
     // 🏢 ENTERPRISE (2026-02-02): World coordinates calculation REMOVED for status bar (SSoT in CursorContext)
     // 🔧 FIX (2026-02-13): BUT we still need world coords for drag preview updates.
@@ -217,7 +173,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
         }
       }
     }
-  }, [containerRef, updateMouseCss, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint, draggingGuide, transform, setDragPreviewPosition]);
+  }, [containerRef, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint, draggingGuide, transform, setDragPreviewPosition]);
 
   /**
    * 🏢 ENTERPRISE: Container mouse enter handler
@@ -440,19 +396,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
   // ============================================================================
 
   return {
-    // Mouse position states
-    mouseCss,
-    mouseWorld,
-
-    // Update functions
-    updateMouseCss,
-    updateMouseWorld,
-
-    // Refs (mouse-specific only - grip refs come from useGripSystem)
-    lastMouseCssRef,
-    lastMouseWorldRef,
-
-    // Event handlers
+    // Event handlers — position state SSoT lives in ImmediatePositionStore.
     handleContainerMouseMove,
     handleContainerMouseDown,
     handleContainerMouseUp,

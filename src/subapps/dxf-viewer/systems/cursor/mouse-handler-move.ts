@@ -15,6 +15,8 @@ import { isInDrawingMode } from '../tools/ToolStateManager';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { setImmediatePosition } from './ImmediatePositionStore';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
+import { setHoveredEntity, setHoveredOverlay } from '../hover/HoverStore';
+import { withPerf, perfTick } from './mouse-handler-perf';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { dperf } from '../../debug';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI, SnapResultItem, DEBUG_MOUSE_HANDLERS } from './mouse-handler-types';
@@ -42,14 +44,16 @@ export function useMouseMoveHandler({
   return useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (debugEnabled) dperf('Performance', 'NATIVE_MOUSEMOVE');
 
-    const pointerSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+    const pointerSnap = withPerf('coord-calc-snapshot', () =>
+      getPointerSnapshotFromElement(e.currentTarget as HTMLElement),
+    );
     if (!pointerSnap) return;
 
-    const screenPos = getScreenPosFromEvent(e, pointerSnap);
+    const screenPos = withPerf('coord-calc-screen', () => getScreenPosFromEvent(e, pointerSnap));
     const freshViewport = pointerSnap.viewport;
 
     // Zero-latency crosshair (bypasses React)
-    setImmediatePosition(screenPos);
+    withPerf('set-immediate-position', () => setImmediatePosition(screenPos));
 
     // Throttled React Context updates (~20fps)
     const CURSOR_UPDATE_THROTTLE_MS = PANEL_LAYOUT.TIMING.CURSOR_UPDATE_THROTTLE;
@@ -57,19 +61,25 @@ export function useMouseMoveHandler({
 
     if (now - refs.cursorThrottleRef.current.lastUpdateTime >= CURSOR_UPDATE_THROTTLE_MS) {
       refs.cursorThrottleRef.current.lastUpdateTime = now;
-      cursor.updatePosition(screenPos);
+      withPerf('cursor-update-pos', () => cursor.updatePosition(screenPos));
 
-      const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport);
-      cursor.updateWorldPosition(worldPos);
+      const throttledWorldPos = withPerf('cursor-screen-to-world', () =>
+        CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport),
+      );
+      withPerf('cursor-update-world', () => cursor.updateWorldPosition(throttledWorldPos));
 
       if (freshViewport.width !== cursor.viewport.width || freshViewport.height !== cursor.viewport.height) {
-        cursor.updateViewport(freshViewport);
+        withPerf('cursor-update-viewport', () => cursor.updateViewport(freshViewport));
       }
 
-      canvasEventBus.emit(CANVAS_EVENTS.MOUSE_MOVE, { screenPos, worldPos, canvas: 'dxf' });
+      withPerf('eventbus-emit', () =>
+        canvasEventBus.emit(CANVAS_EVENTS.MOUSE_MOVE, { screenPos, worldPos: throttledWorldPos, canvas: 'dxf' }),
+      );
     }
 
-    const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport);
+    const worldPos = withPerf('world-coord-calc', () =>
+      CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport),
+    );
 
     if (debugEnabled) {
       console.log('[MouseHandlers] COORDS', {
@@ -99,7 +109,7 @@ export function useMouseMoveHandler({
 
     if (onDrawingHover && inDrawingMode) {
       if (debugEnabled) console.log('[MouseHandlers] CALLING onDrawingHover', { worldX: worldPos.x, worldY: worldPos.y });
-      onDrawingHover(worldPos);
+      withPerf('drawing-hover-callback', () => onDrawingHover(worldPos));
     }
 
     // Throttled snap detection (~60fps)
@@ -114,7 +124,7 @@ export function useMouseMoveHandler({
         snapThrottle.lastSnapTime = snapNow;
 
         try {
-          const snapResult = findSnapPoint(worldPos.x, worldPos.y);
+          const snapResult = withPerf('snap-find', () => findSnapPoint(worldPos.x, worldPos.y));
 
           if (snapResult && snapResult.found && snapResult.snappedPoint) {
             const sx = snapResult.snappedPoint.x;
@@ -125,19 +135,21 @@ export function useMouseMoveHandler({
             if (snapMoved || !snapThrottle.lastSnapFound) {
               snapThrottle.lastSnapX = sx;
               snapThrottle.lastSnapY = sy;
-              setSnapResults([{
-                point: snapResult.snappedPoint,
-                type: snapResult.activeMode || 'default',
-                entityId: snapResult.snapPoint?.entityId || null,
-                distance: snapResult.snapPoint?.distance || 0,
-                priority: 0
-              }]);
-              setFullSnapResult(snapResult);
-              setImmediateSnap({
-                found: true,
-                point: snapResult.snappedPoint,
-                mode: snapResult.activeMode || 'endpoint',
-                entityId: snapResult.snapPoint?.entityId,
+              withPerf('snap-results-set', () => {
+                setSnapResults([{
+                  point: snapResult.snappedPoint!,
+                  type: snapResult.activeMode || 'default',
+                  entityId: snapResult.snapPoint?.entityId || null,
+                  distance: snapResult.snapPoint?.distance || 0,
+                  priority: 0,
+                }]);
+                setFullSnapResult(snapResult);
+                setImmediateSnap({
+                  found: true,
+                  point: snapResult.snappedPoint!,
+                  mode: snapResult.activeMode || 'endpoint',
+                  entityId: snapResult.snapPoint?.entityId,
+                });
               });
             }
             snapThrottle.lastSnapFound = true;
@@ -175,34 +187,48 @@ export function useMouseMoveHandler({
 
     // Unified hover highlighting — DXF entities > overlay priority
     if ((activeTool === 'select' || entityPickingActive) && !refs.panStateRef.current.isPanning && !cursor.isSelecting) {
-      const HOVER_THROTTLE_MS = 32;
+      const HOVER_THROTTLE_MS = 50;
       const hoverNow = performance.now();
       if (hoverNow - refs.hoverThrottleRef.current >= HOVER_THROTTLE_MS) {
         refs.hoverThrottleRef.current = hoverNow;
 
         let hitEntityId: string | null = null;
-        if (onHoverEntity && hitTestCallback) {
-          hitEntityId = hitTestCallback(scene, screenPos, transform, freshViewport);
-          onHoverEntity(hitEntityId);
+        if (hitTestCallback) {
+          hitEntityId = withPerf('hit-test-entity', () =>
+            hitTestCallback(scene, screenPos, transform, freshViewport),
+          );
+          // Write to HoverStore (zero-React-state update). Backward-compat callback kept.
+          setHoveredEntity(hitEntityId);
+          if (onHoverEntity) {
+            withPerf('hover-entity-callback', () => onHoverEntity(hitEntityId));
+          }
         }
 
-        if (onHoverOverlay && colorLayers && colorLayers.length > 0) {
+        if (colorLayers && colorLayers.length > 0) {
           if (hitEntityId) {
-            onHoverOverlay(null);
+            // Entity wins — clear overlay hover.
+            setHoveredOverlay(null);
+            if (onHoverOverlay) {
+              withPerf('hover-overlay-callback', () => onHoverOverlay(null));
+            }
           } else {
-            let hitOverlayId: string | null = null;
-            for (let i = colorLayers.length - 1; i >= 0; i--) {
-              const layer = colorLayers[i];
-              if (!layer.visible || layer.polygons.length === 0) continue;
-              for (const polygon of layer.polygons) {
-                if (polygon.vertices.length >= 3 && isPointInPolygon(worldPos, polygon.vertices)) {
-                  hitOverlayId = layer.id;
-                  break;
+            const hitOverlayId = withPerf('hit-test-overlay', () => {
+              for (let i = colorLayers.length - 1; i >= 0; i--) {
+                const layer = colorLayers[i];
+                if (!layer.visible || layer.polygons.length === 0) continue;
+                for (const polygon of layer.polygons) {
+                  if (polygon.vertices.length >= 3 && isPointInPolygon(worldPos, polygon.vertices)) {
+                    return layer.id;
+                  }
                 }
               }
-              if (hitOverlayId) break;
+              return null;
+            });
+            // Write to HoverStore. Backward-compat callback kept.
+            setHoveredOverlay(hitOverlayId);
+            if (onHoverOverlay) {
+              withPerf('hover-overlay-callback', () => onHoverOverlay(hitOverlayId));
             }
-            onHoverOverlay(hitOverlayId);
           }
         }
       }
@@ -210,26 +236,30 @@ export function useMouseMoveHandler({
 
     // Selection update
     if (cursor.isSelecting && activeTool !== 'pan') {
-      cursor.updateSelection(screenPos);
+      withPerf('selection-update', () => cursor.updateSelection(screenPos));
     }
 
     // High-performance panning (rAF)
     const panState = refs.panStateRef.current;
     if (panState.isPanning && panState.lastMousePos) {
-      const deltaX = screenPos.x - panState.lastMousePos.x;
-      const deltaY = screenPos.y - panState.lastMousePos.y;
+      withPerf('pan-pending', () => {
+        const deltaX = screenPos.x - panState.lastMousePos!.x;
+        const deltaY = screenPos.y - panState.lastMousePos!.y;
 
-      panState.pendingTransform = {
-        scale: transform.scale,
-        offsetX: transform.offsetX + deltaX,
-        offsetY: transform.offsetY - deltaY
-      };
+        panState.pendingTransform = {
+          scale: transform.scale,
+          offsetX: transform.offsetX + deltaX,
+          offsetY: transform.offsetY - deltaY,
+        };
 
-      panState.lastMousePos = screenPos;
+        panState.lastMousePos = screenPos;
 
-      if (!panState.animationId) {
-        panState.animationId = requestAnimationFrame(applyPendingTransform);
-      }
+        if (!panState.animationId) {
+          panState.animationId = requestAnimationFrame(applyPendingTransform);
+        }
+      });
     }
+
+    perfTick();
   }, [transform, viewport, onMouseMove, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover, onHoverEntity, onHoverOverlay, hitTestCallback, scene, colorLayers, isGripDragging, entityPickingActive, debugEnabled, refs, setSnapResults]);
 }
