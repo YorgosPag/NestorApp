@@ -20,8 +20,6 @@ import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 
-
-
 /**
  * ✅ ENTERPRISE TYPE-SAFE MAPPING: DXF → Centralized LineType
  * Εξασφαλίζει enterprise compatibility χωρίς hardcoded values
@@ -39,7 +37,6 @@ function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 
   const key = dxfLineType || 'solid';
   return mapping[key] || 'solid';
 }
-
 export class DxfRenderer {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
@@ -101,9 +98,22 @@ export class DxfRenderer {
     // ✅ ΝΕΟ: Update composite settings
     this.entityComposite.setTransform(transform);
 
+    // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache passes skipInteractive=true
+    // to render entities in pure normal-state. Interactive overlays are drawn separately.
+    const effectiveOptions: DxfRenderOptions = options.skipInteractive
+      ? {
+          showGrid: options.showGrid,
+          showLayerNames: options.showLayerNames,
+          wireframeMode: options.wireframeMode,
+          selectedEntityIds: [],
+          hoveredEntityId: null,
+          gripInteractionState: undefined,
+          dragPreview: undefined,
+        }
+      : options;
+
     // 🏢 GRIP EDITING: Update grip interaction state for visual feedback (always set, even when empty)
-    // Map DxfRenderOptions field names (hoveredGrip/activeGrip) → pipeline field names (hovered/active)
-    const gripOpts = options.gripInteractionState;
+    const gripOpts = effectiveOptions.gripInteractionState;
     this.setGripInteractionState(gripOpts
       ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip }
       : {}
@@ -112,11 +122,62 @@ export class DxfRenderer {
     // Render all entities
     for (const entity of scene.entities) {
       if (!entity.visible) continue;
-      this.renderEntityUnified(entity, transform, actualViewport, options);
+      this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
     }
 
-    // Render selection highlights
-    this.renderSelectionHighlights(scene, transform, actualViewport, options);
+    // Render selection highlights (no-op currently, kept for call-site stability)
+    this.renderSelectionHighlights(scene, transform, actualViewport, effectiveOptions);
+
+    this.ctx.restore();
+  }
+
+  /**
+   * Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): render a single entity with
+   * a forced visual mode. Used as a single-entity overlay drawn on top of the
+   * cached bitmap to avoid invalidating the bitmap on every hover/selection/drag tick.
+   *
+   * Architectural rule: bitmap cache layers MUST contain only normal-state content;
+   * interactive state (hover, selection grips, drag preview) is rendered here.
+   */
+  renderSingleEntity(
+    entity: DxfEntityUnion,
+    transform: ViewTransform,
+    viewport: Viewport,
+    mode: 'hovered' | 'selected' | 'drag-preview',
+    interaction: {
+      gripInteractionState?: DxfRenderOptions['gripInteractionState'];
+      dragPreview?: DxfRenderOptions['dragPreview'];
+    } = {},
+  ): void {
+    if (!entity.visible) return;
+
+    // Refresh bounds — keep parity with render() so clear/draw use the same viewport
+    const canvasRect = canvasBoundsService.refreshBounds(this.canvas);
+    const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
+
+    this.ctx.save();
+    this.entityComposite.setTransform(transform);
+
+    // Apply grip interaction state only for selected/drag-preview modes
+    const gripOpts = mode === 'selected' || mode === 'drag-preview'
+      ? interaction.gripInteractionState
+      : undefined;
+    this.setGripInteractionState(gripOpts
+      ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip }
+      : {}
+    );
+
+    const syntheticOptions: DxfRenderOptions = {
+      showGrid: false,
+      showLayerNames: false,
+      wireframeMode: false,
+      selectedEntityIds: mode === 'selected' || mode === 'drag-preview' ? [entity.id] : [],
+      hoveredEntityId: mode === 'hovered' ? entity.id : null,
+      gripInteractionState: gripOpts,
+      dragPreview: mode === 'drag-preview' ? interaction.dragPreview : undefined,
+    };
+
+    this.renderEntityUnified(entity, transform, actualViewport, syntheticOptions);
 
     this.ctx.restore();
   }
@@ -435,6 +496,4 @@ export class DxfRenderer {
         return null;
     }
   }
-
-
 }

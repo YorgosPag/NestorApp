@@ -93,6 +93,13 @@ export interface DxfRenderOptions {
     /** For edge grips: which 2 vertex indices to move together (edge-stretch preview) */
     edgeVertexIndices?: [number, number];
   };
+  /**
+   * Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): when true, render entities in
+   * pure normal-state (no hover, no selection, no grips, no drag preview).
+   * Used by the bitmap cache layer — interactive state is rendered separately
+   * via DxfRenderer.renderSingleEntity() as a single-entity overlay on top.
+   */
+  skipInteractive?: boolean;
 }
 
 // === DXF SELECTION ===

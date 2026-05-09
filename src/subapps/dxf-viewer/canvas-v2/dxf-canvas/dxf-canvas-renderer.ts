@@ -9,7 +9,8 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DxfRenderer } from './DxfRenderer';
-import type { DxfScene, DxfRenderOptions } from './dxf-types';
+import type { DxfScene, DxfRenderOptions, DxfEntityUnion } from './dxf-types';
+import { DxfBitmapCache } from './dxf-bitmap-cache';
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
 import type { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
@@ -95,6 +96,8 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   } = params;
 
   const isDirtyRef = useRef(true);
+  // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): hybrid bitmap cache for entities
+  const bitmapCacheRef = useRef<DxfBitmapCache | null>(null);
 
   const renderScene = useCallback(() => {
     const renderer = refs.rendererRef.current;
@@ -107,8 +110,68 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       const hitTesting = serviceRegistry.get('hit-testing');
       hitTesting.updateScene(scene);
 
-      // 1: Scene
-      renderer.render(scene, currentTransform, currentViewport, renderOptions);
+      // 1a: Scene bitmap cache — entities in pure normal-state.
+      // Cache invalidates ONLY on scene/transform/viewport change (NOT on hover/selection/grip).
+      const cache = bitmapCacheRef.current;
+      const visibleCtx = refs.canvasRef.current?.getContext('2d');
+      if (cache && visibleCtx) {
+        if (cache.isDirty(scene, currentTransform, currentViewport)) {
+          cache.rebuild(scene, currentTransform, currentViewport, {
+            showGrid: renderOptions.showGrid,
+            showLayerNames: renderOptions.showLayerNames,
+            wireframeMode: renderOptions.wireframeMode,
+          });
+        }
+        // Clear visible canvas, then blit cached bitmap on top.
+        visibleCtx.save();
+        visibleCtx.setTransform(1, 0, 0, 1, 0, 0);
+        visibleCtx.clearRect(0, 0, refs.canvasRef.current!.width, refs.canvasRef.current!.height);
+        visibleCtx.restore();
+        cache.blit(visibleCtx, currentViewport);
+      } else {
+        // Fallback (cache not yet initialized): render directly without interactive state
+        renderer.render(scene, currentTransform, currentViewport, {
+          ...renderOptions,
+          skipInteractive: true,
+        });
+      }
+
+      // 1b: Single-entity interactive overlays (hover, selection grips, drag preview).
+      // Drawn on top of the cached bitmap — does NOT trigger cache invalidation.
+      if (scene) {
+        const findEntity = (id: string): DxfEntityUnion | undefined =>
+          scene.entities.find((e) => e.id === id);
+
+        if (renderOptions.hoveredEntityId) {
+          const ent = findEntity(renderOptions.hoveredEntityId);
+          if (ent) {
+            renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
+              gripInteractionState: renderOptions.gripInteractionState,
+            });
+          }
+        }
+
+        for (const selId of renderOptions.selectedEntityIds) {
+          // Drag preview takes priority for the dragged entity to avoid double-render.
+          if (renderOptions.dragPreview && renderOptions.dragPreview.entityId === selId) continue;
+          const ent = findEntity(selId);
+          if (ent) {
+            renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {
+              gripInteractionState: renderOptions.gripInteractionState,
+            });
+          }
+        }
+
+        if (renderOptions.dragPreview) {
+          const ent = findEntity(renderOptions.dragPreview.entityId);
+          if (ent) {
+            renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'drag-preview', {
+              gripInteractionState: renderOptions.gripInteractionState,
+              dragPreview: renderOptions.dragPreview,
+            });
+          }
+        }
+      }
 
       // 2: Grid
       if (refs.gridRendererRef.current && gridSettings?.enabled) {
@@ -194,6 +257,15 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       logger.error('Failed to render DXF scene', { error });
     }
   }, [scene, renderOptions, gridSettings, rulerSettings, refs]);
+
+  // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache lifecycle
+  useEffect(() => {
+    bitmapCacheRef.current = new DxfBitmapCache();
+    return () => {
+      bitmapCacheRef.current?.dispose();
+      bitmapCacheRef.current = null;
+    };
+  }, []);
 
   // Register with UnifiedFrameScheduler (ADR-119)
   useEffect(() => {
