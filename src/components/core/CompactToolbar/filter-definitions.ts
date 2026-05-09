@@ -62,7 +62,7 @@ export const NEW_ITEM_LABELS_BY_TYPE: Record<string, string> = {
   vendors: 'procurement:hub.vendorMaster.addVendorHint',
   materials: 'procurement:hub.materialCatalog.create',
   agreements: 'procurement:hub.frameworkAgreements.create',
-  tasks: 'tasks.newTask',
+  tasks: 'crm:tasks.newTask',
 };
 
 export const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
@@ -78,7 +78,7 @@ export const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   vendors: 'procurement:hub.vendorMaster.addVendorHint',
   materials: 'procurement:hub.materialCatalog.create',
   agreements: 'procurement:hub.frameworkAgreements.create',
-  tasks: 'tasks.newTask',
+  tasks: 'crm:tasks.newTask',
 };
 
 export const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
