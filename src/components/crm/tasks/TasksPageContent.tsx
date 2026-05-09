@@ -37,6 +37,7 @@ import type { AppointmentDocument } from '@/types/appointment';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { SearchInput } from '@/components/ui/search';
 import { TaskQuickFilters } from '@/components/shared/TypeQuickFilters';
+import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { getOpportunitiesClient } from '@/services/opportunities-client.service';
 import type { Opportunity } from '@/types/crm';
 
@@ -61,6 +62,7 @@ export function TasksPageContent() {
   const [appointments, setAppointments] = useState<AppointmentDocument[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
   const [leads, setLeads] = useState<Opportunity[]>([]);
+  const [activityCount, setActivityCount] = useState(0);
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
@@ -185,10 +187,12 @@ export function TasksPageContent() {
         >
           {/* Left panel — activity list */}
           <EntityListColumn hasBorder aria-label={t('tasks.title')}>
-            <div className="flex items-center gap-2 px-3 py-2.5 border-b bg-muted/30">
-              <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="font-semibold text-sm">{t('tasks.title')}</span>
-            </div>
+            <GenericListHeader
+              icon={Clock}
+              entityName={t('tasks.title')}
+              itemCount={activityCount}
+              hideSearch
+            />
             <div className="px-2 py-1.5 border-b">
               <SearchInput
                 value={filters.searchTerm}
@@ -212,6 +216,7 @@ export function TasksPageContent() {
                 selectionMode
                 selectedActivityId={selectedActivityId}
                 onSelectActivity={setSelectedActivity}
+                onCountChange={setActivityCount}
               />
             </div>
           </EntityListColumn>
@@ -254,6 +259,7 @@ export function TasksPageContent() {
             selectionMode
             selectedActivityId={selectedActivityId}
             onSelectActivity={setSelectedActivity}
+            onCountChange={setActivityCount}
           />
         </section>
 

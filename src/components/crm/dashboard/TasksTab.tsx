@@ -186,6 +186,10 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
     return items;
   }, [filteredTasks, appointments, filters.activityType, filters.searchTerm]);
 
+  useEffect(() => {
+    onCountChange?.(activityItems.length);
+  }, [activityItems.length, onCountChange]);
+
   const handleCompleteTask = useCallback(async (taskId?: string, taskTitle?: string) => {
     if (!taskId || !taskTitle) return;
     try {
@@ -256,4 +260,10 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
         <TaskEditDialog
           task={editingTask}
           open={!!editingTask}
-          onOpenChange={(open) => { if (!o
+          onOpenChange={(open) => { if (!open) setEditingTask(null); }}
+          onUpdated={() => { setEditingTask(null); }}
+        />
+      )}
+    </div>
+  );
+}
