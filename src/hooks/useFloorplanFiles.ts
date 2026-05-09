@@ -178,7 +178,7 @@ export function useFloorplanFiles(config: UseFloorplanFilesConfig): UseFloorplan
             ...doc,
           } as unknown as FileRecord));
 
-          logger.info(`Received ${fileRecords.length} files`);
+          logger.debug(`Received ${fileRecords.length} files`);
 
           // Filter by purpose if specified
           let filteredFiles = fileRecords;

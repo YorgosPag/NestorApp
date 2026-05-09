@@ -160,7 +160,7 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
           updatedAt: doc.updatedAt as string | undefined,
         })) satisfies RealtimeBuilding[];
 
-        logger.info('Received buildings in real-time', { count: buildings.length });
+        logger.debug('Received buildings in real-time', { count: buildings.length });
 
         setAllBuildings(buildings);
         setBuildingsByProject(groupBuildingsByProject(buildings));
@@ -179,7 +179,7 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
     unsubscribeRef.current = unsubscribe;
 
     return () => {
-      logger.info('Cleaning up subscription');
+      logger.debug('Cleaning up subscription');
       unsubscribe();
     };
   }, [enabled, refreshTriggerRef.current, groupBuildingsByProject]);

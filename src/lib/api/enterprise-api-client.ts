@@ -353,14 +353,14 @@ export class EnterpriseApiClient {
   private logRequest(context: RequestContext, attempt: number, maxRetries: number): void {
     if (process.env.NODE_ENV === 'development') {
       const retryInfo = maxRetries > 1 ? ` (attempt ${attempt}/${maxRetries})` : '';
-      logger.info(`[API] ${context.method} ${context.url}${retryInfo}`);
+      logger.debug(`[API] ${context.method} ${context.url}${retryInfo}`);
     }
   }
 
   private logSuccess(context: RequestContext, status: number): void {
     if (process.env.NODE_ENV === 'development') {
       const duration = Date.now() - context.startTime;
-      logger.info(`[API] ${context.method} ${context.url} - ${status} (${duration}ms)`);
+      logger.debug(`[API] ${context.method} ${context.url} - ${status} (${duration}ms)`);
     }
   }
 

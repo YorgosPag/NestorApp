@@ -45,7 +45,7 @@ export function useObligations() {
   const { data, loading, error, refetch: refreshObligations } = useAsyncData({
     fetcher: async () => {
       const result = await repository.getAll();
-      logger.info('Loaded obligations from Firebase', { count: result.length });
+      logger.debug('Loaded obligations from Firebase', { count: result.length });
       // ADR-300: Write to module-level cache so next remount skips spinner
       obligationsCache.set(result);
       return result;
@@ -142,7 +142,7 @@ export function useObligationTemplates() {
   const { data, loading, error } = useAsyncData({
     fetcher: async () => {
       const result = await repository.getTemplates();
-      logger.info('Loaded obligation templates from Firebase', { count: result.length });
+      logger.debug('Loaded obligation templates from Firebase', { count: result.length });
       return result;
     },
     deps: [repository],
@@ -161,7 +161,7 @@ export function useObligationStats() {
   const { data, loading, error } = useAsyncData({
     fetcher: async () => {
       const result = await repository.getStatistics();
-      logger.info('Loaded obligation statistics from Firebase', { data: result });
+      logger.debug('Loaded obligation statistics from Firebase', { data: result });
       return result;
     },
     deps: [repository],

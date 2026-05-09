@@ -69,7 +69,7 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
           .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
           .map(doc => doc as unknown as Building);
 
-        logger.info('Buildings updated via real-time subscription', { count: mapped.length });
+        logger.debug('Buildings updated via real-time subscription', { count: mapped.length });
         // ADR-300: Write to module-level cache so next remount skips spinner
         buildingsCache.set(mapped);
         setBuildings(mapped);
