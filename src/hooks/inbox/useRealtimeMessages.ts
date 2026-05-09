@@ -136,7 +136,7 @@ export function useRealtimeMessages(
     const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
       'MESSAGES',
       (result: QueryResult<DocumentData>) => {
-        logger.info('Received messages', { count: result.documents.length, conversationId });
+        logger.debug('Received messages', { count: result.documents.length, conversationId });
 
         // Convert + reverse for chronological display (query is DESC)
         const newMessages = result.documents.map(doc =>
