@@ -266,6 +266,7 @@ export function TasksPageContent() {
             filters={filters}
             appointments={appointments}
             externalLeads={leads}
+            externalTasks={realtimeTasks}
             selectionMode
             selectedActivityId={selectedActivityId}
             onSelectActivity={setSelectedActivity}
