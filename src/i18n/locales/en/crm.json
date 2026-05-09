@@ -243,6 +243,10 @@
       "loadError": "Error loading tasks",
       "deleteConfirm": "Are you sure you want to delete task \"{title}\"?"
     },
+    "emptyState": {
+      "title": "New Task",
+      "description": "Select an activity from the list or create a new one."
+    },
     "panel": {
       "selectTask": "Select an activity",
       "selectTaskDesc": "Click on an activity to view its details",

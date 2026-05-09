@@ -8,6 +8,7 @@ import {
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
+import { DetailsContainer } from '@/core/containers';
 import { Badge } from '@/components/ui/badge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -30,9 +31,10 @@ interface TaskDetailPanelProps {
   activity: ActivityItem | null;
   leads?: Opportunity[];
   onActionCompleted?: () => void;
+  onCreateTask?: () => void;
 }
 
-export function TaskDetailPanel({ activity, leads = [], onActionCompleted }: TaskDetailPanelProps) {
+export function TaskDetailPanel({ activity, leads = [], onActionCompleted, onCreateTask }: TaskDetailPanelProps) {
   const { t } = useTranslation(['crm']);
   const colors = useSemanticColors();
   const sp = useSpacingTokens();
@@ -95,75 +97,64 @@ export function TaskDetailPanel({ activity, leads = [], onActionCompleted }: Tas
     }
   }, [t, confirm, success, notifyError, onActionCompleted]);
 
-  if (!activity) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-8">
-        <div className="rounded-full bg-muted p-4">
-          <Clock className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <div>
-          <p className={`font-medium ${colors.text.primary}`}>{t('tasks.panel.selectTask')}</p>
-          <p className={`text-sm mt-1 ${colors.text.muted}`}>{t('tasks.panel.selectTaskDesc')}</p>
-        </div>
-      </div>
-    );
-  }
+  // Derive header and body for DetailsContainer
+  let headerEl: React.ReactNode = undefined;
+  let bodyEl: React.ReactNode = undefined;
 
-  if (activity.kind === 'appointment') {
+  if (activity?.kind === 'appointment') {
     const { appt, title, date } = activity;
     const dateLabel = date
       ? format(date, 'dd/MM/yyyy HH:mm', { locale: el })
       : t('tasks.noDate');
-    return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <EntityDetailsHeader
-          icon={Calendar}
-          title={title}
-          variant="detailed"
-        />
-        <div className={`flex-1 overflow-y-auto ${sp.padding.md} space-y-3`}>
-          <div className={`flex items-center gap-2 text-sm ${colors.text.muted}`}>
-            <Clock className="h-4 w-4 flex-shrink-0" />
-            <span className={colors.text.info}>{dateLabel}</span>
-          </div>
-          {appt.requester?.name && (
-            <div className={`flex items-center gap-2 text-sm ${colors.text.muted}`}>
-              <User className="h-4 w-4 flex-shrink-0" />
-              <span>{appt.requester.name}</span>
-            </div>
-          )}
+    headerEl = (
+      <EntityDetailsHeader
+        icon={Calendar}
+        title={title}
+        variant="detailed"
+      />
+    );
+    bodyEl = (
+      <div className={`${sp.padding.md} space-y-3`}>
+        <div className={`flex items-center gap-2 text-sm ${colors.text.muted}`}>
+          <Clock className="h-4 w-4 flex-shrink-0" />
+          <span className={colors.text.info}>{dateLabel}</span>
         </div>
+        {appt.requester?.name && (
+          <div className={`flex items-center gap-2 text-sm ${colors.text.muted}`}>
+            <User className="h-4 w-4 flex-shrink-0" />
+            <span>{appt.requester.name}</span>
+          </div>
+        )}
       </div>
     );
-  }
+  } else if (activity?.kind === 'task') {
+    const { task } = activity;
+    const TaskIcon = (TASK_TYPE_ICONS[task.type] ?? Clock) as LucideIcon;
+    const leadName = getLeadName(task.leadId);
+    const meta = (task.metadata ?? {}) as Record<string, unknown>;
+    const location = typeof meta.location === 'string' ? meta.location : null;
+    const dueDate = task.dueDate ? new Date(task.dueDate as string) : null;
+    const dueDateLabel = dueDate
+      ? format(dueDate, 'dd/MM/yyyy HH:mm', { locale: el })
+      : t('tasks.noDate');
+    const isCompleted = task.status === 'completed';
 
-  const { task } = activity;
-  const TaskIcon = (TASK_TYPE_ICONS[task.type] ?? Clock) as LucideIcon;
-  const leadName = getLeadName(task.leadId);
-  const meta = (task.metadata ?? {}) as Record<string, unknown>;
-  const location = typeof meta.location === 'string' ? meta.location : null;
-  const dueDate = task.dueDate ? new Date(task.dueDate as string) : null;
-  const dueDateLabel = dueDate
-    ? format(dueDate, 'dd/MM/yyyy HH:mm', { locale: el })
-    : t('tasks.noDate');
-  const isCompleted = task.status === 'completed';
+    const headerActions = [
+      ...(!isCompleted ? [createEntityAction('complete', t('tasks.actions.complete'), () => handleComplete(task))] : []),
+      createEntityAction('edit', t('tasks.actions.edit'), () => setEditingTask(task)),
+      createEntityAction('delete', t('tasks.actions.delete'), () => handleDelete(task)),
+    ];
 
-  const headerActions = [
-    ...(!isCompleted ? [createEntityAction('complete', t('tasks.actions.complete'), () => handleComplete(task))] : []),
-    createEntityAction('edit', t('tasks.actions.edit'), () => setEditingTask(task)),
-    createEntityAction('delete', t('tasks.actions.delete'), () => handleDelete(task)),
-  ];
-
-  return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <ConfirmDialog {...dialogProps} />
+    headerEl = (
       <EntityDetailsHeader
         icon={TaskIcon}
         title={task.title}
         actions={headerActions}
         variant="detailed"
       />
-      <div className={`flex-1 overflow-y-auto ${sp.padding.md} space-y-4`}>
+    );
+    bodyEl = (
+      <div className={`${sp.padding.md} space-y-4`}>
         <dl className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <dt className={`text-xs font-medium uppercase tracking-wide ${colors.text.muted} mb-1`}>{t('tasks.panel.dueDate')}</dt>
@@ -206,7 +197,23 @@ export function TaskDetailPanel({ activity, leads = [], onActionCompleted }: Tas
           </div>
         )}
       </div>
+    );
+  }
 
+  return (
+    <>
+      <ConfirmDialog {...dialogProps} />
+      <DetailsContainer
+        selectedItem={activity ? { id: 'activity' } : null}
+        emptyStateProps={{
+          icon: Clock,
+          title: t('tasks.emptyState.title'),
+          description: t('tasks.emptyState.description'),
+        }}
+        onCreateAction={onCreateTask}
+        header={headerEl}
+        tabsRenderer={bodyEl}
+      />
       {editingTask && (
         <TaskEditDialog
           task={editingTask}
@@ -215,7 +222,7 @@ export function TaskDetailPanel({ activity, leads = [], onActionCompleted }: Tas
           onUpdated={() => { setEditingTask(null); onActionCompleted?.(); }}
         />
       )}
-    </div>
+    </>
   );
 }
 

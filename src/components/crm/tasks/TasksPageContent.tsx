@@ -222,13 +222,12 @@ export function TasksPageContent() {
           </EntityListColumn>
 
           {/* Right panel — activity detail */}
-          <div className="flex-1 min-h-0 overflow-hidden rounded-lg border bg-card shadow-sm">
-            <TaskDetailPanel
-              activity={selectedActivity}
-              leads={leads}
-              onActionCompleted={handleActivityAction}
-            />
-          </div>
+          <TaskDetailPanel
+            activity={selectedActivity}
+            leads={leads}
+            onActionCompleted={handleActivityAction}
+            onCreateTask={() => setShowCreateModal(true)}
+          />
         </section>
 
         {/* Mobile — full width list */}
