@@ -23,6 +23,7 @@ import type { SortField } from '@/components/core/CompactToolbar/types';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { StorageStatusQuickFilters } from '@/components/shared/SpaceStatusQuickFilters';
 
 interface StoragesListProps {
   storages: Storage[];
@@ -47,6 +48,7 @@ export function StoragesList({
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
 
   const toggleFavorite = (storageId: string) => {
     setFavorites(prev =>
@@ -56,25 +58,28 @@ export function StoragesList({
     );
   };
 
-  // 🏢 ENTERPRISE: Filter storages using centralized search
+  // 🏢 ENTERPRISE: Filter storages using centralized search + status quick filter
   const filteredStorages = useMemo(() => {
-    return storages.filter(storage =>
-      matchesSearchTerm(
+    return storages.filter(storage => {
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(storage.status)) {
+        return false;
+      }
+      return matchesSearchTerm(
         [
           storage.name,
           storage.description,
           storage.building,
-          storage.floor,      // number OK
+          storage.floor,
           storage.type,
           storage.status,
           storage.owner,
-          storage.area,       // number OK
-          storage.price       // number OK
+          storage.area,
+          storage.price
         ],
         searchTerm
-      )
-    );
-  }, [storages, searchTerm]);
+      );
+    });
+  }, [storages, searchTerm, selectedStatuses]);
 
   const sortedStorages = [...filteredStorages].sort((a, b) => {
     let aValue: string | number;
@@ -179,6 +184,13 @@ export function StoragesList({
           />
         )}
       </div>
+
+      {/* 🏢 ENTERPRISE: Quick Filters for Storage Status */}
+      <StorageStatusQuickFilters
+        selectedTypes={selectedStatuses}
+        onTypeChange={setSelectedStatuses}
+        compact
+      />
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">

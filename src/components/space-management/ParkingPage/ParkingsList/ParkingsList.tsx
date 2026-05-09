@@ -30,6 +30,7 @@ import type { SortField } from '@/components/core/CompactToolbar/types';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { ParkingStatusQuickFilters } from '@/components/shared/SpaceStatusQuickFilters';
 
 interface ParkingsListProps {
   parkingSpots: ParkingSpot[];
@@ -54,6 +55,7 @@ export function ParkingsList({
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
 
   const toggleFavorite = (parkingId: string) => {
     setFavorites(prev =>
@@ -63,10 +65,13 @@ export function ParkingsList({
     );
   };
 
-  // 🏢 ENTERPRISE: Filter parking spots using centralized search
+  // 🏢 ENTERPRISE: Filter parking spots using centralized search + status quick filter
   const filteredParkingSpots = useMemo(() => {
-    return parkingSpots.filter(parking =>
-      matchesSearchTerm(
+    return parkingSpots.filter(parking => {
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(parking.status)) {
+        return false;
+      }
+      return matchesSearchTerm(
         [
           parking.number,
           parking.location,
@@ -74,13 +79,13 @@ export function ParkingsList({
           parking.type,
           parking.status,
           parking.notes,
-          parking.area,       // number OK
-          parking.price       // number OK
+          parking.area,
+          parking.price
         ],
         searchTerm
-      )
-    );
-  }, [parkingSpots, searchTerm]);
+      );
+    });
+  }, [parkingSpots, searchTerm, selectedStatuses]);
 
   const sortedParkingSpots = [...filteredParkingSpots].sort((a, b) => {
     let aValue: string | number;
@@ -185,6 +190,13 @@ export function ParkingsList({
           />
         )}
       </div>
+
+      {/* 🏢 ENTERPRISE: Quick Filters for Parking Status */}
+      <ParkingStatusQuickFilters
+        selectedTypes={selectedStatuses}
+        onTypeChange={setSelectedStatuses}
+        compact
+      />
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">

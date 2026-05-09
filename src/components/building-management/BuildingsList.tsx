@@ -15,6 +15,7 @@ import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolba
 import type { SortField } from '@/components/core/CompactToolbar/types';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { BuildingStatusQuickFilters } from '@/components/shared/SpaceStatusQuickFilters';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 
@@ -49,6 +50,7 @@ export const BuildingsList = React.memo(function BuildingsList({
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
 
   const toggleFavorite = useCallback((buildingId: string) => {
     setFavorites(prev =>
@@ -58,24 +60,27 @@ export const BuildingsList = React.memo(function BuildingsList({
     );
   }, []);
 
-  // [ENTERPRISE] Filter buildings using centralized search
+  // [ENTERPRISE] Filter buildings using centralized search + status quick filter
   const filteredBuildings = useMemo(() => {
-    return buildings.filter(building =>
-      matchesSearchTerm(
+    return buildings.filter(building => {
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(building.status)) {
+        return false;
+      }
+      return matchesSearchTerm(
         [
-          building.code,    // 🏢 ADR-233 §3.4: locked building identifier ("Κτήριο Α")
+          building.code,
           building.name,
           building.description,
           building.location,
           building.address,
           building.status,
-          building.floors,  // number OK
-          building.units    // number OK
+          building.floors,
+          building.units
         ],
         searchTerm
-      )
-    );
-  }, [buildings, searchTerm]);
+      );
+    });
+  }, [buildings, searchTerm, selectedStatuses]);
 
   const sortedBuildings = useMemo(() => {
     return [...filteredBuildings].sort((a, b) => {
@@ -174,6 +179,13 @@ export const BuildingsList = React.memo(function BuildingsList({
           />
         )}
       </div>
+
+      {/* 🏢 ENTERPRISE: Quick Filters for Building Status */}
+      <BuildingStatusQuickFilters
+        selectedTypes={selectedStatuses}
+        onTypeChange={setSelectedStatuses}
+        compact
+      />
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">

@@ -15,6 +15,8 @@ import { EntityListColumn } from '@/core/containers';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
+import { ProjectStatusQuickFilters } from '@/components/shared/SpaceStatusQuickFilters';
+import { matchesSearchTerm } from '@/lib/search/search';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: ADR-147 unified share surface + project formatter SSoT
@@ -51,6 +53,8 @@ export function ProjectsList({
   // 🏢 ENTERPRISE: Using string IDs for Firebase compatibility
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // 🏢 ENTERPRISE: ADR-147 Phase C — Project sharing via unified share surface
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -74,11 +78,21 @@ export function ProjectsList({
     );
   };
 
-  // 🏢 ENTERPRISE: Sorted projects with memoization
+  // 🏢 ENTERPRISE: Filtered + sorted projects with memoization
   const displayProjects = useMemo(() => {
     if (!projects || projects.length === 0) return [];
 
-    const sorted = [...projects].sort((a, b) => {
+    const filtered = projects.filter(project => {
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(project.status)) {
+        return false;
+      }
+      return matchesSearchTerm(
+        [project.name, project.title, project.address, project.city, project.status, project.type],
+        searchTerm
+      );
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
       let comparison = 0;
 
       switch (sortBy) {
@@ -103,7 +117,7 @@ export function ProjectsList({
     });
 
     return sorted;
-  }, [projects, sortBy, sortOrder]);
+  }, [projects, sortBy, sortOrder, selectedStatuses, searchTerm]);
 
 
   return (
@@ -123,6 +137,8 @@ export function ProjectsList({
           selectedItems={selectedProject ? [selectedProject.id] : []}
           hasSelectedContact={!!selectedProject}
           sortBy={sortBy}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
           onFiltersChange={() => {}}
           onSortChange={onSortChange}
           onNewItem={onNewProject}
@@ -140,6 +156,8 @@ export function ProjectsList({
             selectedItems={selectedProject ? [selectedProject.id] : []}
             hasSelectedContact={!!selectedProject}
             sortBy={sortBy}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
             onFiltersChange={() => {}}
             onSortChange={onSortChange}
             onNewItem={onNewProject}
@@ -148,6 +166,13 @@ export function ProjectsList({
           />
         )}
       </div>
+
+      {/* 🏢 ENTERPRISE: Quick Filters for Project Status */}
+      <ProjectStatusQuickFilters
+        selectedTypes={selectedStatuses}
+        onTypeChange={setSelectedStatuses}
+        compact
+      />
 
       <ScrollArea className="flex-1 overflow-y-auto w-full">
         <div className={cn(spacing.padding.sm, spacing.spaceBetween.sm, "min-h-0 w-full")}>

@@ -61,7 +61,7 @@ interface TaskMetadata {
     [key: string]: unknown;
 }
 
-const TASK_TYPE_ICONS: Record<CrmTaskType, React.ElementType> = {
+export const TASK_TYPE_ICONS: Record<CrmTaskType, React.ElementType> = {
   call: Phone,
   meeting: Users,
   viewing: Calendar,
@@ -73,14 +73,14 @@ const TASK_TYPE_ICONS: Record<CrmTaskType, React.ElementType> = {
 };
 
 // 🏢 ENTERPRISE: Badge variant mappings for centralized Badge component
-const PRIORITY_BADGE_VARIANT: Record<CrmTaskPriority, 'success' | 'warning' | 'info' | 'error'> = {
+export const PRIORITY_BADGE_VARIANT: Record<CrmTaskPriority, 'success' | 'warning' | 'info' | 'error'> = {
   low: 'success',
   medium: 'warning',
   high: 'info',
   urgent: 'error',
 };
 
-const STATUS_BADGE_VARIANT: Record<CrmTaskStatus, 'info' | 'warning' | 'success' | 'muted'> = {
+export const STATUS_BADGE_VARIANT: Record<CrmTaskStatus, 'info' | 'warning' | 'success' | 'muted'> = {
   pending: 'info',
   in_progress: 'warning',
   completed: 'success',
@@ -107,11 +107,11 @@ const createFormatDueDate = (t: (key: string) => string) => (dueDate?: Firestore
     return format(date, 'dd/MM/yyyy HH:mm', { locale: el });
 };
 
-type ActivityItem =
+export type ActivityItem =
   | { kind: 'task'; task: CrmTask; sortDate: number }
   | { kind: 'appointment'; appt: AppointmentDocument; sortDate: number; title: string; date: Date | null };
 
-function resolveAppointmentDate(appt: AppointmentDocument): Date | null {
+export function resolveAppointmentDate(appt: AppointmentDocument): Date | null {
   const flat = appt as unknown as Record<string, unknown>;
   const rawDate =
     appt.appointment?.confirmedDate ??
@@ -141,9 +141,15 @@ interface TasksTabProps {
   selectedPeriod?: string;
   /** Appointments to merge into the unified activity list */
   appointments?: AppointmentDocument[];
+  /** External leads from parent — skips internal fetch when provided */
+  externalLeads?: Opportunity[];
+  /** Split-layout mode: cards become clickable, inline actions hidden */
+  selectionMode?: boolean;
+  selectedActivityId?: string;
+  onSelectActivity?: (item: ActivityItem) => void;
 }
 
-export function TasksTab({ filters: externalFilters, onTaskCreated, appointments }: TasksTabProps) {
+export function TasksTab({ filters: externalFilters, onTaskCreated, appointments, externalLeads, selectionMode = false, selectedActivityId, onSelectActivity }: TasksTabProps) {
   // 🏢 ENTERPRISE: Use externally provided filters or defaults
   const filters = externalFilters ?? defaultTaskFilters;
   const { success, error: notifyError } = useNotifications();
@@ -158,8 +164,13 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
   const formatDueDate = useMemo(() => createFormatDueDate(t), [t]);
   // 🏢 ENTERPRISE: Real-time tasks (ADR-227 Phase 1) — replaces one-time getTasks()
   const { tasks, loading: tasksLoading, error: tasksError } = useRealtimeTasks(!authLoading && isAuthenticated);
-  const [leads, setLeads] = useState<Opportunity[]>(crmDashboardLeadsCache.get() ?? []);
-  const [leadsLoading, setLeadsLoading] = useState(!crmDashboardLeadsCache.hasLoaded());
+  const [internalLeads, setInternalLeads] = useState<Opportunity[]>(
+    externalLeads !== undefined ? [] : (crmDashboardLeadsCache.get() ?? [])
+  );
+  const [leadsLoading, setLeadsLoading] = useState(
+    externalLeads === undefined && !crmDashboardLeadsCache.hasLoaded()
+  );
+  const effectiveLeads = externalLeads ?? internalLeads;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CrmTask | null>(null);
 
@@ -170,7 +181,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
       if (!crmDashboardLeadsCache.hasLoaded()) setLeadsLoading(true);
       const leadsData = await getOpportunities();
       crmDashboardLeadsCache.set(leadsData);
-      setLeads(leadsData);
+      setInternalLeads(leadsData);
     } catch (err) {
       logger.error('Error fetching leads', { error: err });
     } finally {
@@ -179,10 +190,11 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (externalLeads !== undefined) return;
     if (!authLoading && isAuthenticated) {
       fetchLeads();
     }
-  }, [authLoading, isAuthenticated, fetchLeads]);
+  }, [authLoading, isAuthenticated, fetchLeads, externalLeads]);
 
   const loading = tasksLoading || leadsLoading;
   const error = tasksError;
@@ -286,7 +298,7 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
     }
   }, [t, confirm, success, notifyError]);
 
-  const getLeadName = useCallback((leadId?: string) => leads.find(l => l.id === leadId)?.fullName || null, [leads]);
+  const getLeadName = useCallback((leadId?: string) => effectiveLeads.find(l => l.id === leadId)?.fullName || null, [effectiveLeads]);
 
   // ADR-229 Phase 2: Centralized loading/error states
   if (loading) {
@@ -308,7 +320,14 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
             const { appt, title, date } = item;
             const dateLabel = date ? format(date, 'dd/MM/yyyy HH:mm') : t('tasks.noDate');
             return (
-              <article key={`appt_${appt.id}`} className={`${colors.bg.infoSubtle} ${sp.padding.md} rounded-lg border border-blue-200 dark:border-blue-800 ${HOVER_SHADOWS.SUBTLE}`}>
+              <article
+                key={`appt_${appt.id}`}
+                className={`${colors.bg.infoSubtle} ${sp.padding.md} rounded-lg border border-blue-200 dark:border-blue-800 ${HOVER_SHADOWS.SUBTLE}${selectionMode ? ' cursor-pointer hover:shadow-md transition-shadow' : ''}${selectionMode && selectedActivityId === `appt_${appt.id}` ? ' ring-2 ring-primary' : ''}`}
+                onClick={selectionMode ? () => onSelectActivity?.(item) : undefined}
+                role={selectionMode ? 'button' : undefined}
+                tabIndex={selectionMode ? 0 : undefined}
+                onKeyDown={selectionMode ? (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectActivity?.(item); } } : undefined}
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className={`flex items-center ${sp.gap.sm} ${sp.margin.bottom.sm}`}>
@@ -333,7 +352,14 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
           const leadName = getLeadName(task.leadId);
           const meta = (task.metadata || {}) as TaskMetadata;
           return (
-            <article key={task.id} className={`${colors.bg.primary} ${sp.padding.md} rounded-lg border ${HOVER_SHADOWS.SUBTLE}`}>
+            <article
+              key={task.id}
+              className={`${colors.bg.primary} ${sp.padding.md} rounded-lg border ${HOVER_SHADOWS.SUBTLE}${selectionMode ? ' cursor-pointer hover:shadow-md transition-shadow' : ''}${selectionMode && selectedActivityId === task.id ? ' ring-2 ring-primary border-primary/50' : ''}`}
+              onClick={selectionMode ? () => onSelectActivity?.(item) : undefined}
+              role={selectionMode ? 'button' : undefined}
+              tabIndex={selectionMode ? 0 : undefined}
+              onKeyDown={selectionMode ? (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectActivity?.(item); } } : undefined}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className={`flex items-center ${sp.gap.sm} ${sp.margin.bottom.sm}`}>
@@ -353,11 +379,13 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
                     {task.description && <div className={`${colors.text.primary} ${sp.margin.top.sm}`}><SafeHTMLContent html={task.description} /></div>}
                   </div>
                 </div>
-                <div className={`flex items-center ${sp.gap.sm} ${sp.margin.left.md}`}>
-                  {task.status !== 'completed' && <Button size="sm" variant="ghost" className={colors.text.success} onClick={() => handleCompleteTask(task.id, task.title)} aria-label={t('tasks.actions.complete')}><CheckCircle className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.complete')}</Button>}
-                  <Button size="sm" variant="ghost" onClick={() => setEditingTask(task)} aria-label={t('tasks.actions.edit')}><Edit3 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.edit')}</Button>
-                  <Button size="sm" variant="ghost" className={colors.text.error} onClick={() => handleDeleteTask(task.id, task.title)} aria-label={t('tasks.actions.delete')}><Trash2 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.delete')}</Button>
-                </div>
+                {!selectionMode && (
+                  <div className={`flex items-center ${sp.gap.sm} ${sp.margin.left.md}`}>
+                    {task.status !== 'completed' && <Button size="sm" variant="ghost" className={colors.text.success} onClick={() => handleCompleteTask(task.id, task.title)} aria-label={t('tasks.actions.complete')}><CheckCircle className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.complete')}</Button>}
+                    <Button size="sm" variant="ghost" onClick={() => setEditingTask(task)} aria-label={t('tasks.actions.edit')}><Edit3 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.edit')}</Button>
+                    <Button size="sm" variant="ghost" className={colors.text.error} onClick={() => handleDeleteTask(task.id, task.title)} aria-label={t('tasks.actions.delete')}><Trash2 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.delete')}</Button>
+                  </div>
+                )}
               </div>
             </article>
           );

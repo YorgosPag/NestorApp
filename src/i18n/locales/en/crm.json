@@ -211,6 +211,7 @@
       "low": "Low"
     },
     "type": {
+      "label": "Type",
       "all": "All types",
       "call": "Call",
       "meeting": "Meeting",
@@ -241,6 +242,20 @@
       "updateError": "❌ Error updating task",
       "loadError": "Error loading tasks",
       "deleteConfirm": "Are you sure you want to delete task \"{title}\"?"
+    },
+    "panel": {
+      "selectTask": "Select an activity",
+      "selectTaskDesc": "Click on an activity to view its details",
+      "dueDate": "Due date",
+      "description": "Description"
+    },
+    "quickFilters": {
+      "all": "All",
+      "pending": "Pending",
+      "inProgress": "In progress",
+      "completed": "Completed",
+      "overdue": "Overdue",
+      "today": "Today"
     }
   },
   "leads": {

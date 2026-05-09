@@ -425,6 +425,7 @@ export function AgreementStatusQuickFilters(props: Omit<TypeQuickFiltersProps, '
 
 // =============================================================================
 // 🏢 ENTERPRISE: Exports
+// Space/Project status filters → @/components/shared/SpaceStatusQuickFilters
 // =============================================================================
 
 export default TypeQuickFilters;
