@@ -27,7 +27,12 @@ import type {
 import type { UseDxfGripInteractionReturn } from '../../hooks/useDxfGripInteraction';
 import type { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
 import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types';
-import type { GridAxis } from '../../ai-assistant/grid-types';
+import type { GuideWorkflowState } from '../../hooks/guides/guide-workflow-types';
+import type { RotationPhase } from '../../hooks/tools/useRotationTool';
+import type { useLevels } from '../../systems/levels';
+import type { RegionStatus } from '../../types/overlay';
+import type { UseConstructionPointStateReturn } from '../../hooks/state/useConstructionPointState';
+import type { UseGuideStateReturn } from '../../hooks/state/useGuideState';
 
 type DrawingHandlersReturn = ReturnType<typeof useDrawingHandlers>;
 
@@ -80,7 +85,11 @@ export interface CanvasLayerStackProps {
   // === Canvas data ===
   dxfScene: DxfScene | null;
   colorLayers: ColorLayer[];
-  colorLayersWithDraft: ColorLayer[];
+  // 🚀 PERF (2026-05-09): colorLayersWithDraft computed via
+  // `useDraftPolygonLayer` inside CanvasLayerStack — was previously prop-drilled
+  // from CanvasSection where it caused parent re-render on every mousemove.
+  draftPolygon: Array<[number, number]>;
+  currentStatus: RegionStatus;
 
   // === Settings (grouped) ===
   settings: {
@@ -106,13 +115,13 @@ export interface CanvasLayerStackProps {
   };
 
   // === Entity interaction state (grouped) ===
+  // 🚀 PERF (2026-05-09 Phase E): hoveredEntityId + hoveredOverlayId REMOVED.
+  // They now live in HoverStore (systems/hover/HoverStore.ts) and are read
+  // via useHoveredEntity() / useHoveredOverlay() inside nano-leaf subscribers,
+  // so CanvasSection and CanvasLayerStack do NOT re-render on hover changes.
   entityState: {
     selectedEntityIds: string[];
     setSelectedEntityIds: Dispatch<SetStateAction<string[]>>;
-    hoveredEntityId: string | null;
-    setHoveredEntityId: (id: string | null) => void;
-    hoveredOverlayId: string | null;
-    setHoveredOverlayId: (id: string | null) => void;
   };
 
   // === System objects ===
@@ -121,10 +130,10 @@ export interface CanvasLayerStackProps {
   universalSelection: UniversalSelectionForStack;
   setTransform: (t: ViewTransform) => void;
 
-  // === Mouse state ===
-  mouseCss: Point2D | null;
-  updateMouseCss: (pos: Point2D) => void;
-  updateMouseWorld: (pos: Point2D) => void;
+  // 🚀 PERF (2026-05-09): mouseCss / updateMouseCss / updateMouseWorld
+  // REMOVED. Position SSoT lives in `ImmediatePositionStore`. Components that
+  // need to react to position use `useCursorPosition()` /
+  // `useCursorWorldPosition()` (useSyncExternalStore) directly.
 
   // === Container event handlers (grouped) ===
   containerHandlers: {
@@ -166,15 +175,30 @@ export interface CanvasLayerStackProps {
   floorId: string | null;
 
   // === ADR-189: Construction guides ===
+  // 🚀 PERF (2026-05-09): ghostGuide / ghostDiagonalGuide / ghostSegmentLine /
+  // highlightedGuideId / highlightedPointId REMOVED — computed inside
+  // CanvasLayerStack via `useGuideWorkflowComputed` (subscribes to mouse
+  // position locally to avoid CanvasSection re-render).
   guides?: readonly Guide[];
   guidesVisible?: boolean;
-  ghostGuide?: { axis: GridAxis; offset: number } | null;
-  ghostDiagonalGuide?: { start: Point2D; end: Point2D } | null;
-  highlightedGuideId?: string | null;
   selectedGuideIds?: ReadonlySet<string>;
   constructionPoints?: readonly ConstructionPoint[];
-  highlightedPointId?: string | null;
-  ghostSegmentLine?: { start: Point2D; end: Point2D } | null;
+  /** Guide tool workflow state — passed to `useGuideWorkflowComputed` inside CanvasLayerStack */
+  guideWorkflowState: GuideWorkflowState;
+  /** Live guide state object (needed by useGuideWorkflowComputed for guide list) */
+  guideStateObj: UseGuideStateReturn;
+  /** Construction-point state object (needed by useGuideWorkflowComputed for delete-point highlight) */
+  cpStateObj: UseConstructionPointStateReturn;
+
+  // === ADR-188: Rotation tool preview ===
+  rotationPreview: {
+    phase: RotationPhase;
+    basePoint: Point2D | null;
+    referencePoint: Point2D | null;
+    currentAngle: number;
+  };
+  /** Level manager — needed by useRotationPreview for entity reads */
+  levelManager: ReturnType<typeof useLevels>;
 
   // === Entity-picking mode ===
   entityPickingActive?: boolean;

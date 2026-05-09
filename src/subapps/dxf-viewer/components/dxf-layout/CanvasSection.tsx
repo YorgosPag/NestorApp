@@ -2,6 +2,7 @@
 import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { CanvasLayerStack } from './CanvasLayerStack';
 import { useCanvasContext } from '../../contexts/CanvasContext';
+import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLiveOverlaysForLevel } from '../../hooks/useLiveOverlaysForLevel';
 import { useLevels } from '../../systems/levels';
@@ -26,9 +27,9 @@ import {
 } from '../../hooks/canvas';
 import { useGuideToolWorkflows } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
+import { useHoveredOverlay } from '../../systems/hover/useHover';
 import { useSpecialTools } from '../../hooks/tools';
 import { useRotationTool } from '../../hooks/tools/useRotationTool';
-import { useRotationPreview } from '../../hooks/tools/useRotationPreview';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 import { useGuideState } from '../../hooks/state/useGuideState';
@@ -104,9 +105,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // === Entity interaction state ===
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
-  const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
   const entitySelectedOnMouseDownRef = useRef(false);
-  const [hoveredOverlayId, setHoveredOverlayId] = useState<string | null>(null);
+  // 🚀 PERF (2026-05-09 Phase E): hoveredEntityId + hoveredOverlayId REMOVED from
+  // useState. They now live in HoverStore (zero-React-state updates).
+  // hoveredOverlayId is read here only for useOverlayLayers (colorLayers computation).
+  // hoveredEntityId is read inside DxfCanvasSubscriber (CanvasLayerStack leaf).
+  const hoveredOverlayId = useHoveredOverlay();
   const eventBus = useEventBus();
 
   // === Settings ===
@@ -144,13 +148,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   useTouchGestures({ targetRef: containerRef, enabled: canvasLayoutMode !== 'desktop', activeTool, transform, setTransform: contextSetTransform });
 
   // === Mouse event handling ===
-  // draggingGuide/handleGuideDragComplete declared here (before useCanvasMouse which needs them)
+  // 🚀 PERF (2026-05-09): mouseCss / mouseWorld React state REMOVED.
+  // SSoT lives in ImmediatePositionStore — see ADR-040.
   const containerHandlerHook = useCanvasContainerHandlers({
-    activeTool, transform, containerRef, mouseWorld: null, executeCommand,
+    activeTool, transform, containerRef, executeCommand,
     unified: { handleMouseDown: unified.handleMouseDown, handleMouseUp: unified.handleMouseUp },
   });
   const { draggingGuide, setDraggingGuide, handleGuideDragComplete, handleContainerMouseDown, handleContainerMouseUp } = containerHandlerHook;
-  const { mouseCss, mouseWorld, updateMouseCss, updateMouseWorld, handleContainerMouseMove, handleContainerMouseEnter, handleContainerMouseLeave } = useCanvasMouse({
+  const { handleContainerMouseMove, handleContainerMouseEnter, handleContainerMouseLeave } = useCanvasMouse({
     transform, viewport, activeTool, updatePosition, setActive, containerRef,
     hoveredVertexInfo: unified.overlayProjection.hoveredVertexInfo,
     hoveredEdgeInfo: unified.overlayProjection.hoveredEdgeInfo,
@@ -168,22 +173,26 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   });
 
   // === Guide tool workflows ===
+  // 🚀 PERF (2026-05-09): mouseWorld removed — `useGuideWorkflowComputed` now
+  // runs inside CanvasLayerStack and subscribes to ImmediatePositionStore.
   const guideWorkflows = useGuideToolWorkflows({
     activeTool, guideState, cpState, showPromptDialog, t, executeCommand,
     notifyWarning, notifySuccess, universalSelection,
-    currentScene: props.currentScene ?? null, transform, mouseWorld, eventBus,
+    currentScene: props.currentScene ?? null, eventBus,
   });
 
   // === Layer visibility ===
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
 
   // === Overlay → ColorLayer ===
+  // 🚀 PERF (2026-05-09): useOverlayLayers now produces ONLY the static
+  // colorLayers. The mouse-driven `colorLayersWithDraft` / `isNearFirstPoint`
+  // moved to `useDraftPolygonLayer` invoked inside CanvasLayerStack.
   const { hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, selectedGrip, draggingVertex, draggingVertices, draggingEdgeMidpoint, dragPreviewPosition, draggingOverlayBody } = unified.overlayProjection;
-  const { colorLayers, colorLayersWithDraft, isNearFirstPoint } = useOverlayLayers({
+  const { colorLayers } = useOverlayLayers({
     overlays: currentOverlays, isSelected: universalSelection.isSelected,
     hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, draggingVertex, draggingVertices,
-    draggingEdgeMidpoint, dragPreviewPosition, draftPolygon, mouseWorld,
-    transformScale: transform.scale, currentStatus, hoveredOverlayId, overlayMode,
+    draggingEdgeMidpoint, dragPreviewPosition, hoveredOverlayId,
     hiddenOverlayIds: overlayStore.hiddenOverlayIds,
   });
   const { fitToOverlay } = useFitToView({ dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
@@ -263,7 +272,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     dxfGripInteraction: unified.dxfProjection,
     rotationIsActive: rotationTool.isCollectingInput, handleRotationClick: rotationTool.handleRotationClick,
     levelManager, draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
-    isNearFirstPoint, finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
+    finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
     selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
     justFinishedDragRef: unified.justFinishedDragRef, draggingOverlayBody: unified.draggingOverlayBody,
@@ -304,15 +313,17 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     return { canJoin, joinResultLabel: preview?.resultType !== 'not-joinable' ? preview?.resultType : undefined };
   }, [entityJoinHook, selectedEntityIds]);
 
-  // === Rotation preview ===
-  useRotationPreview({
-    phase: rotationTool.phase, basePoint: rotationTool.basePoint, referencePoint: rotationTool.referencePoint,
-    currentAngle: rotationTool.currentAngle, selectedEntityIds, levelManager, transform,
-    getCanvas: () => previewCanvasRef.current?.getCanvas() ?? null,
-    getViewportElement: () => { const canvas = dxfCanvasRef?.current?.getCanvas?.(); return canvas instanceof HTMLElement ? canvas : null; },
-    cursorWorld: mouseWorld,
-  });
-  useEffect(() => { if (rotationTool.isActive && mouseWorld) rotationTool.handleRotationMouseMove(mouseWorld); }, [mouseWorld, rotationTool.isActive, rotationTool.handleRotationMouseMove]);
+  // 🚀 PERF (2026-05-09): useRotationPreview MOVED into CanvasLayerStack
+  // (subscribes to ImmediatePositionStore locally — no parent re-render).
+  // The `handleRotationMouseMove` callback now subscribes to the world
+  // position store directly instead of a useEffect that depends on a
+  // mouseWorld React state value.
+  useEffect(() => {
+    if (!rotationTool.isActive) return;
+    return subscribeToImmediateWorldPosition((pos) => {
+      if (pos) rotationTool.handleRotationMouseMove(pos);
+    });
+  }, [rotationTool.isActive, rotationTool.handleRotationMouseMove]);
 
   const handleExitDrawMode = useCallback(() => { if (overlayMode === 'draw' && setOverlayMode) setOverlayMode('select'); }, [overlayMode, setOverlayMode]);
   useCanvasKeyboardShortcuts({
@@ -332,12 +343,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         containerRef={containerRef} dxfCanvasRef={dxfCanvasRef} overlayCanvasRef={overlayCanvasRef}
         previewCanvasRef={previewCanvasRef} drawingHandlersRef={drawingHandlersRef}
         entitySelectedOnMouseDownRef={entitySelectedOnMouseDownRef} dxfScene={dxfScene}
-        colorLayers={colorLayers} colorLayersWithDraft={colorLayersWithDraft}
+        colorLayers={colorLayers}
+        draftPolygon={draftPolygon} currentStatus={currentStatus}
         settings={{ crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings }}
         gripState={unified.gripStateForStack}
-        entityState={{ selectedEntityIds, setSelectedEntityIds, hoveredEntityId, setHoveredEntityId, hoveredOverlayId, setHoveredOverlayId }}
+        entityState={{ selectedEntityIds, setSelectedEntityIds }}
         zoomSystem={zoomSystem} dxfGripInteraction={unified.dxfProjection} universalSelection={universalSelection}
-        setTransform={setTransform} mouseCss={mouseCss} updateMouseCss={updateMouseCss} updateMouseWorld={updateMouseWorld}
+        setTransform={setTransform}
         containerHandlers={{ onMouseMove: handleContainerMouseMove, onMouseDown: handleContainerMouseDown, onMouseUp: handleContainerMouseUp, onMouseEnter: handleContainerMouseEnter, onMouseLeave: handleContainerMouseLeave }}
         handleOverlayClick={handleOverlayClick} handleMultiOverlayClick={handleMultiOverlayClick}
         handleCanvasClick={handleCanvasClick} handleUnifiedMouseMove={unified.handleMouseMove}
@@ -348,10 +360,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onMouseMove={props.onMouseMove}
         entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
         guides={guideState.guides} guidesVisible={guideState.guidesVisible}
-        ghostGuide={guideWorkflows.ghostGuide} ghostDiagonalGuide={guideWorkflows.ghostDiagonalGuide}
-        ghostSegmentLine={guideWorkflows.ghostSegmentLine} highlightedGuideId={guideWorkflows.effectiveHighlightedGuideId}
         selectedGuideIds={guideWorkflows.selectedGuideIds} constructionPoints={cpState.points}
-        highlightedPointId={guideWorkflows.highlightedPointId ?? guideWorkflows.panelHighlightPointId}
+        guideWorkflowState={guideWorkflows.state}
+        guideStateObj={guideState} cpStateObj={cpState}
+        rotationPreview={{ phase: rotationTool.phase, basePoint: rotationTool.basePoint, referencePoint: rotationTool.referencePoint, currentAngle: rotationTool.currentAngle }}
+        levelManager={levelManager}
       />
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}
         pointCount={overlayMode === 'draw' ? draftPolygon.length : (drawingHandlers?.drawingState?.tempPoints?.length ?? 0)}

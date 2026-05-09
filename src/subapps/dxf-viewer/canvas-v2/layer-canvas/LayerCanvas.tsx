@@ -25,7 +25,6 @@ import { useCanvasResize } from '../../hooks/canvas';
 import { LayerRenderer } from './LayerRenderer';
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
 import { useCursor } from '../../systems/cursor/CursorSystem';
-import { useCursorPosition } from '../../systems/cursor/useCursor';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { createUnifiedCanvasSystem } from '../../rendering/canvas';
 import type { CanvasManager, CanvasInstance } from '../../rendering/canvas/core/CanvasManager';
@@ -142,7 +141,6 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   resolvedViewportRef.current = viewport;
 
   const cursor = useCursor();
-  const cursorPosition = useCursorPosition();
 
   // ── Hit testing + selection (extracted hook) ───────────────────────
   const { layerHitTestCallback, handleLayerSelection } = useLayerHitTest({
@@ -150,7 +148,6 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     activeTool,
     rendererRef,
     onLayerClick,
-    cursorPosition,
   });
 
   // ── Centralized mouse handlers ─────────────────────────────────────

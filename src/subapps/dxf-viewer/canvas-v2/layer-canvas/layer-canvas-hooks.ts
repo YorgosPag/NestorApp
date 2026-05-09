@@ -44,7 +44,6 @@ interface LayerHitTestParams {
   activeTool?: string;
   rendererRef: React.MutableRefObject<LayerRenderer | null>;
   onLayerClick?: (layerId: string, point: Point2D) => void;
-  cursorPosition: Point2D | null;
 }
 
 interface LayerCanvasRendererParams {
@@ -80,7 +79,6 @@ export function useLayerHitTest({
   activeTool,
   rendererRef,
   onLayerClick,
-  cursorPosition,
 }: LayerHitTestParams) {
   const layerHitTestCallback = useCallback(
     (_scene: DxfScene | null, screenPos: Point2D, transform: ViewTransform, viewport: Viewport): string | null => {
@@ -104,12 +102,13 @@ export function useLayerHitTest({
         onLayerClick &&
         (activeTool === 'select' || activeTool === 'layering' || activeTool === 'move')
       ) {
-        if (cursorPosition) {
-          onLayerClick(layerId, cursorPosition);
+        const pos = ImmediatePositionStore.getPosition();
+        if (pos) {
+          onLayerClick(layerId, pos);
         }
       }
     },
-    [onLayerClick, activeTool, cursorPosition],
+    [onLayerClick, activeTool],
   );
 
   return { layerHitTestCallback, handleLayerSelection };
@@ -240,7 +239,6 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     }
   }, [
     layers,
-    cursor.position,
     cursor.isSelecting,
     cursor.selectionStart,
     cursor.selectionCurrent,
@@ -290,7 +288,6 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     layers,
     transform,
     viewport,
-    cursor.position,
     cursor.isSelecting,
     cursor.selectionStart,
     cursor.selectionCurrent,

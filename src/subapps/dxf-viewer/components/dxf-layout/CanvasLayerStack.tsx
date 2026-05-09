@@ -6,16 +6,22 @@
  * CrosshairOverlay → SnapIndicator → RulerCornerBox → DrawingContextMenu
  *
  * EXTRACTED FROM: CanvasSection.tsx — ~334 lines of JSX
+ *
+ * 🚀 PERF (2026-05-09 Phase E): Micro-leaf subscriber pattern (Excalidraw/Figma).
+ * Components that subscribe to high-frequency stores are isolated as nano-leaves:
+ * - SnapIndicatorSubscriber  — subscribeSnapResult (useSyncExternalStore)
+ * - DraftLayerSubscriber     — useDraftPolygonLayer → useCursorWorldPosition
+ * - DxfCanvasSubscriber      — useGuideWorkflowComputed + useHoveredEntity
+ * - RotationPreviewMount     — useRotationPreview → useCursorWorldPosition
+ * CanvasLayerStack shell itself does NOT subscribe to any high-frequency store.
  */
 
 'use client';
 
-import React, { useSyncExternalStore } from 'react';
-import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
+import React, { useCallback, useMemo } from 'react';
 import { PreviewCanvas } from '../../canvas-v2/preview-canvas';
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
-import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
 import { FloorplanBackgroundCanvas } from '../../floorplan-background';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
@@ -26,42 +32,64 @@ import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
 import { isInDrawingMode } from '../../systems/tools/ToolStateManager';
 import { dwarn } from '../../debug';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
-import { subscribeSnapResult, getFullSnapResult } from '../../systems/cursor/ImmediateSnapStore';
+import { getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
+import { setHoveredEntity, setHoveredOverlay } from '../../systems/hover/HoverStore';
+import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
+import type { DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { CanvasLayerStackProps } from './canvas-layer-stack-types';
+import {
+  SnapIndicatorSubscriber,
+  DraftLayerSubscriber,
+  DxfCanvasSubscriber,
+  RotationPreviewMount,
+  type LayerCanvasPassthroughProps,
+} from './canvas-layer-stack-leaves';
 
 // Re-export props type for consumers
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 
 // ============================================================================
-// COMPONENT
+// MAIN COMPONENT (shell — no high-frequency subscriptions)
 // ============================================================================
 
-export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
+export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   transform, viewport, activeTool, overlayMode, showLayers,
   showDxfCanvas, showLayerCanvas,
   containerRef, dxfCanvasRef, overlayCanvasRef, previewCanvasRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
-  dxfScene, colorLayers, colorLayersWithDraft,
+  dxfScene, colorLayers, draftPolygon, currentStatus,
   settings, gripState, entityState,
   zoomSystem, dxfGripInteraction, universalSelection, setTransform,
-  mouseCss, updateMouseCss, updateMouseWorld,
   containerHandlers,
   handleOverlayClick, handleMultiOverlayClick, handleCanvasClick, handleUnifiedMouseMove,
   handleDrawingContextMenu,
   drawingState, entityJoin, floorId, onMouseMove,
   entityPickingActive,
-  guides, guidesVisible, ghostGuide, ghostDiagonalGuide, ghostSegmentLine, highlightedGuideId, selectedGuideIds,
-  constructionPoints, highlightedPointId,
-}) => {
-  const currentSnapResult = useSyncExternalStore(subscribeSnapResult, getFullSnapResult);
-
+  guides, guidesVisible, selectedGuideIds, constructionPoints,
+  guideWorkflowState, guideStateObj, cpStateObj,
+  rotationPreview, levelManager,
+}: CanvasLayerStackProps) {
   // --- Destructure grouped props ---
-  const { crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings, ruler: rulerSettings, grid: gridSettings, gridMajorInterval, selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings } = settings;
-  const { draggingVertex, draggingEdgeMidpoint, hoveredVertexInfo, hoveredEdgeInfo, draggingOverlayBody, dragPreviewPosition } = gripState;
-  const { selectedEntityIds, setSelectedEntityIds, hoveredEntityId, setHoveredEntityId, hoveredOverlayId, setHoveredOverlayId } = entityState;
-  const { drawingHandlers, draftPolygon, handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc } = drawingState;
+  const {
+    crosshair: crosshairSettings, cursor: cursorCanvasSettings, snap: snapSettings,
+    ruler: rulerSettings, grid: gridSettings, gridMajorInterval,
+    selection: selectionSettings, grip: gripSettings, globalRuler: globalRulerSettings,
+  } = settings;
+  const {
+    draggingVertex, draggingEdgeMidpoint, hoveredVertexInfo, hoveredEdgeInfo,
+    draggingOverlayBody, dragPreviewPosition,
+  } = gripState;
+  const { selectedEntityIds, setSelectedEntityIds } = entityState;
+  const {
+    drawingHandlers, handleDrawingFinish, handleDrawingClose,
+    handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc,
+  } = drawingState;
 
   // --- Computed values ---
-  const isGripDragging = draggingVertex !== null || draggingEdgeMidpoint !== null || hoveredVertexInfo !== null || hoveredEdgeInfo !== null;
+  const isGripDragging =
+    draggingVertex !== null ||
+    draggingEdgeMidpoint !== null ||
+    hoveredVertexInfo !== null ||
+    hoveredEdgeInfo !== null;
 
   // --- Named callbacks ---
   const handleTransformChange = (newTransform: ViewTransform) => {
@@ -74,22 +102,28 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
     universalSelection.clearByType('dxf-entity');
     if (entityIds.length > 0) {
       universalSelection.selectMultiple(
-        entityIds.map(id => ({ id, type: 'dxf-entity' as const }))
+        entityIds.map((id) => ({ id, type: 'dxf-entity' as const })),
       );
     }
   };
 
-  const handleUnifiedMarqueeResult = ({ layerIds, entityIds }: { layerIds: string[]; entityIds: string[] }) => {
+  const handleUnifiedMarqueeResult = ({
+    layerIds,
+    entityIds,
+  }: {
+    layerIds: string[];
+    entityIds: string[];
+  }) => {
     universalSelection.clearAll();
     if (layerIds.length > 0) {
       universalSelection.addMultiple(
-        layerIds.map(id => ({ id, type: 'overlay' as const }))
+        layerIds.map((id) => ({ id, type: 'overlay' as const })),
       );
     }
     setSelectedEntityIds(entityIds);
     if (entityIds.length > 0) {
       universalSelection.addMultiple(
-        entityIds.map(id => ({ id, type: 'dxf-entity' as const }))
+        entityIds.map((id) => ({ id, type: 'dxf-entity' as const })),
       );
     }
   };
@@ -106,7 +140,7 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
 
   const handleDxfEntitySelect = (entityId: string | null) => {
     if (entityId) {
-      setSelectedEntityIds(prev => {
+      setSelectedEntityIds((prev) => {
         if (prev.length === 1 && prev[0] === entityId) return prev;
         return [entityId];
       });
@@ -118,57 +152,64 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
     }
   };
 
-  const handleDxfMouseMove = (screenPos: Point2D, worldPos: Point2D) => {
-    if (worldPos) {
-      handleUnifiedMouseMove(worldPos, screenPos);
-    }
+  const handleDxfMouseMove = useCallback(
+    (screenPos: Point2D, worldPos: Point2D) => {
+      if (worldPos) {
+        handleUnifiedMouseMove(worldPos, screenPos);
+      }
 
-    if (onMouseMove && worldPos) {
-      const mockEvent = {
-        clientX: screenPos.x,
-        clientY: screenPos.y,
-        preventDefault: () => {},
-        stopPropagation: () => {}
-      } as React.MouseEvent;
-      onMouseMove(worldPos, mockEvent);
-    }
+      if (onMouseMove && worldPos) {
+        const mockEvent = {
+          clientX: screenPos.x,
+          clientY: screenPos.y,
+          preventDefault: () => {},
+          stopPropagation: () => {},
+        } as React.MouseEvent;
+        onMouseMove(worldPos, mockEvent);
+      }
 
-    updateMouseCss(screenPos);
-    updateMouseWorld(worldPos);
-
-    if (isInDrawingMode(activeTool, overlayMode) && worldPos && drawingHandlersRef.current?.onDrawingHover) {
-      drawingHandlersRef.current.onDrawingHover(worldPos);
-    }
-  };
+      // 🚀 PERF (2026-05-09): ImmediatePositionStore updated upstream.
+      if (isInDrawingMode(activeTool, overlayMode) && worldPos && drawingHandlersRef.current?.onDrawingHover) {
+        drawingHandlersRef.current.onDrawingHover(worldPos);
+      }
+    },
+    [handleUnifiedMouseMove, onMouseMove, activeTool, overlayMode, drawingHandlersRef],
+  );
 
   const handleRulerZoomToFit = () => {
     const combinedBounds = createCombinedBounds(dxfScene, colorLayers, true);
     if (combinedBounds && viewport.width > 0 && viewport.height > 0) {
       zoomSystem.zoomToFit(combinedBounds, viewport, true);
     } else {
-      dwarn('CanvasLayerStack', 'ZoomToFit: Invalid bounds or viewport!', { combinedBounds, viewport });
+      dwarn('CanvasLayerStack', 'ZoomToFit: Invalid bounds or viewport!', {
+        combinedBounds,
+        viewport,
+      });
     }
   };
 
   const handleRulerWheelZoom = (delta: number) => {
-    if (mouseCss) {
-      zoomSystem.handleWheelZoom(delta, mouseCss);
+    const cssPos = getImmediatePosition();
+    if (cssPos) {
+      zoomSystem.handleWheelZoom(delta, cssPos);
     }
   };
 
   // --- Computed props ---
-  const draggingOverlayDelta = draggingOverlayBody && dragPreviewPosition
-    ? {
-        overlayId: draggingOverlayBody.overlayId,
-        delta: {
-          x: dragPreviewPosition.x - draggingOverlayBody.startPoint.x,
-          y: dragPreviewPosition.y - draggingOverlayBody.startPoint.y,
-        },
-      }
-    : null;
+  const draggingOverlayDelta =
+    draggingOverlayBody && dragPreviewPosition
+      ? {
+          overlayId: draggingOverlayBody.overlayId,
+          delta: {
+            x: dragPreviewPosition.x - draggingOverlayBody.startPoint.x,
+            y: dragPreviewPosition.y - draggingOverlayBody.startPoint.y,
+          },
+        }
+      : null;
 
   const dxfRulerSettings = {
-    enabled: (globalRulerSettings?.horizontal?.enabled && globalRulerSettings?.vertical?.enabled) ?? true,
+    enabled:
+      (globalRulerSettings?.horizontal?.enabled && globalRulerSettings?.vertical?.enabled) ?? true,
     visible: true,
     opacity: 1.0,
     unit: globalRulerSettings.units as 'mm' | 'cm' | 'm',
@@ -195,6 +236,73 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
     borderWidth: 1,
   };
 
+  // --- LayerCanvas passthrough props (ref and layers excluded — injected by DraftLayerSubscriber) ---
+  const layerCanvasPassthroughProps: LayerCanvasPassthroughProps = {
+    transform,
+    viewport,
+    activeTool,
+    overlayMode,
+    layersVisible: showLayers,
+    dxfScene,
+    enableUnifiedCanvas: true,
+    isGripDragging,
+    onContextMenu: handleDrawingContextMenu,
+    onTransformChange: handleTransformChange,
+    onWheelZoom: zoomSystem.handleWheelZoom,
+    crosshairSettings,
+    cursorSettings: cursorCanvasSettings,
+    snapSettings,
+    gridSettings: { ...gridSettings, enabled: false },
+    rulerSettings: { ...rulerSettings, enabled: false },
+    selectionSettings,
+    renderOptions: {
+      showCrosshair: true,
+      showCursor: true,
+      showSnapIndicators: true,
+      showGrid: false,
+      showRulers: false,
+      showSelectionBox: false,
+      crosshairPosition: null,
+      cursorPosition: null,
+      snapResults: [],
+      selectionBox: null,
+      gripSettings,
+    },
+    onLayerClick: handleOverlayClickWithEntityClear,
+    onMultiLayerClick: handleMultiOverlayClickWithEntityClear,
+    onCanvasClick: handleCanvasClick,
+    onDrawingHover: drawingHandlersRef.current?.onDrawingHover,
+    draggingOverlay: draggingOverlayDelta,
+    onMouseMove: (screenPos: Point2D, worldPos: Point2D) =>
+      handleUnifiedMouseMove(worldPos, screenPos),
+    className: `absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`,
+    style: canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled),
+  };
+
+  // DxfCanvas renderOptions base (hoveredEntityId injected by DxfCanvasSubscriber).
+  // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): memoized for stable identity so
+  // DxfCanvasSubscriber's useMemo on { ...base, hoveredEntityId } stays effective.
+  const dxfRenderOptionsBase = useMemo<Omit<DxfRenderOptions, 'hoveredEntityId'>>(
+    () => ({
+      showGrid: false,
+      showLayerNames: false,
+      wireframeMode: false,
+      selectedEntityIds,
+      gripInteractionState: dxfGripInteraction.gripInteractionState,
+      dragPreview: dxfGripInteraction.dragPreview ?? undefined,
+    }),
+    [selectedEntityIds, dxfGripInteraction.gripInteractionState, dxfGripInteraction.dragPreview],
+  );
+
+  // Guide workflow computed params (passed to DxfCanvasSubscriber)
+  const guideComputedParams = {
+    activeTool,
+    guideState: guideStateObj,
+    cpState: cpStateObj,
+    transform,
+    state: guideWorkflowState,
+  };
+
   return (
     <>
       <div className="flex-1 relative">
@@ -219,113 +327,83 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
             />
           )}
 
-          {/* LayerCanvas (z-0) */}
+          {/* LayerCanvas (z-0) — rubber-band draft computed in subscriber */}
           {showLayerCanvas && (
-            <LayerCanvas
-              ref={overlayCanvasRef as React.RefObject<HTMLCanvasElement>}
-              layers={colorLayersWithDraft}
-              transform={transform}
-              viewport={viewport}
-              activeTool={activeTool}
+            <DraftLayerSubscriber
+              canvasRef={overlayCanvasRef as React.RefObject<HTMLCanvasElement>}
+              colorLayers={colorLayers}
+              draftPolygon={draftPolygon}
+              currentStatus={currentStatus}
               overlayMode={overlayMode}
-              layersVisible={showLayers}
-              dxfScene={dxfScene}
-              enableUnifiedCanvas
-              isGripDragging={isGripDragging}
-              data-canvas-type="layer"
-              onContextMenu={handleDrawingContextMenu}
-              onTransformChange={handleTransformChange}
-              onWheelZoom={zoomSystem.handleWheelZoom}
-              crosshairSettings={crosshairSettings}
-              cursorSettings={cursorCanvasSettings}
-              snapSettings={snapSettings}
-              gridSettings={{ ...gridSettings, enabled: false }}
-              rulerSettings={{ ...rulerSettings, enabled: false }}
-              selectionSettings={selectionSettings}
-              renderOptions={{
-                showCrosshair: true,
-                showCursor: true,
-                showSnapIndicators: true,
-                showGrid: false,
-                showRulers: false,
-                showSelectionBox: false,
-                crosshairPosition: null,
-                cursorPosition: null,
-                snapResults: [],
-                selectionBox: null,
-                gripSettings,
-              }}
-              onLayerClick={handleOverlayClickWithEntityClear}
-              onMultiLayerClick={handleMultiOverlayClickWithEntityClear}
-              onCanvasClick={handleCanvasClick}
-              onDrawingHover={drawingHandlersRef.current?.onDrawingHover}
-              draggingOverlay={draggingOverlayDelta}
-              onMouseMove={(screenPos, worldPos) => handleUnifiedMouseMove(worldPos, screenPos)}
-              className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`}
-              style={canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled)}
+              transformScale={transform.scale}
+              layerCanvasPassthroughProps={layerCanvasPassthroughProps}
             />
           )}
 
-          {/* DxfCanvas (z-10) */}
+          {/* DxfCanvas (z-10) — guide computed + hoveredEntityId injected in subscriber */}
           {showDxfCanvas && (
-            <DxfCanvas
-              ref={dxfCanvasRef}
+            <DxfCanvasSubscriber
+              dxfCanvasRef={dxfCanvasRef}
               scene={dxfScene}
               transform={transform}
               viewport={viewport}
               activeTool={activeTool}
               overlayMode={overlayMode}
               colorLayers={colorLayers}
-              renderOptions={{
-                showGrid: false,
-                showLayerNames: false,
-                wireframeMode: false,
-                selectedEntityIds,
-                hoveredEntityId,
-                gripInteractionState: dxfGripInteraction.gripInteractionState,
-                dragPreview: dxfGripInteraction.dragPreview ?? undefined,
-              }}
+              renderOptionsBase={dxfRenderOptionsBase}
               crosshairSettings={crosshairSettings}
               gridSettings={gridSettings}
               rulerSettings={dxfRulerSettings}
               guides={guides}
               guidesVisible={guidesVisible}
-              ghostGuide={ghostGuide}
-              ghostDiagonalGuide={ghostDiagonalGuide}
-              ghostSegmentLine={ghostSegmentLine}
-              highlightedGuideId={highlightedGuideId}
               selectedGuideIds={selectedGuideIds}
               constructionPoints={constructionPoints}
-              highlightedPointId={highlightedPointId}
+              panelHighlightPointId={guideWorkflowState.panelHighlightPointId}
+              guideWorkflowComputedParams={guideComputedParams}
+              isGripDragging={isGripDragging || dxfGripInteraction.isDraggingGrip}
+              entityPickingActive={entityPickingActive}
               onLayerSelected={handleOverlayClickWithEntityClear}
               onMultiLayerSelected={handleMultiOverlayClickWithEntityClear}
               onEntitiesSelected={handleDxfEntitiesSelected}
               onUnifiedMarqueeResult={handleUnifiedMarqueeResult}
-              onHoverEntity={setHoveredEntityId}
-              onHoverOverlay={setHoveredOverlayId}
+              onHoverEntity={(id) => setHoveredEntity(id)}
+              onHoverOverlay={(id) => setHoveredOverlay(id)}
               onEntitySelect={handleDxfEntitySelect}
-              isGripDragging={isGripDragging || dxfGripInteraction.isDraggingGrip}
               onGripMouseDown={(worldPos) => dxfGripInteraction.handleGripMouseDown(worldPos)}
               onGripMouseUp={(worldPos) => dxfGripInteraction.handleGripMouseUp(worldPos)}
-              entityPickingActive={entityPickingActive}
-              data-canvas-type="dxf"
-              className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`}
               onContextMenu={handleDrawingContextMenu}
               onCanvasClick={handleCanvasClick}
               onTransformChange={handleTransformChange}
               onWheelZoom={zoomSystem.handleWheelZoom}
               onMouseMove={handleDxfMouseMove}
+              className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`}
             />
           )}
 
           {/* PreviewCanvas (pointer-events: none) */}
           <PreviewCanvas
-            ref={previewCanvasRef as React.RefObject<import('../../canvas-v2/preview-canvas').PreviewCanvasHandle>}
+            ref={previewCanvasRef as React.RefObject<PreviewCanvasHandle>}
             transform={transform}
             viewport={viewport}
             isActive={isInDrawingMode(activeTool, overlayMode)}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             defaultOptions={PREVIEW_DEFAULTS}
+          />
+
+          {/* RotationPreviewMount — draws on PreviewCanvas via imperative API */}
+          <RotationPreviewMount
+            phase={rotationPreview.phase}
+            basePoint={rotationPreview.basePoint}
+            referencePoint={rotationPreview.referencePoint}
+            currentAngle={rotationPreview.currentAngle}
+            selectedEntityIds={selectedEntityIds}
+            levelManager={levelManager}
+            transform={transform}
+            getCanvas={() => previewCanvasRef.current?.getCanvas() ?? null}
+            getViewportElement={() => {
+              const canvas = dxfCanvasRef?.current?.getCanvas?.();
+              return canvas instanceof HTMLElement ? canvas : null;
+            }}
           />
 
           {/* CrosshairOverlay (z-20) */}
@@ -337,17 +415,15 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
               bottom: 0,
             }}
             className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
-            style={{ height: `calc(100% - ${rulerSettings.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)` }}
+            style={{
+              height: `calc(100% - ${rulerSettings.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)`,
+            }}
           />
 
-          {/* SnapIndicatorOverlay (z-30) */}
-          <SnapIndicatorOverlay
-            snapResult={currentSnapResult ? {
-              point: currentSnapResult.snappedPoint,
-              type: currentSnapResult.activeMode || 'endpoint',
-            } : null}
+          {/* SnapIndicatorOverlay (z-30) — nano-leaf subscriber */}
+          <SnapIndicatorSubscriber
             viewport={viewport}
-            canvasRect={dxfCanvasRef?.current?.getCanvas?.()?.getBoundingClientRect() ?? null}
+            dxfCanvasRef={dxfCanvasRef}
             transform={transform}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
           />
@@ -373,4 +449,4 @@ export const CanvasLayerStack: React.FC<CanvasLayerStackProps> = ({
       </div>
     </>
   );
-};
+});
