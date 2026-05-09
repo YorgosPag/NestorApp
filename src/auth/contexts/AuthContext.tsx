@@ -70,7 +70,7 @@ async function syncActiveSession(firebaseUser: FirebaseUser): Promise<void> {
 
     if (existingSessionId) {
       await sessionService.updateSessionActivity(firebaseUser.uid, existingSessionId);
-      logger.info('[AuthContext] Session activity updated:', { sessionId: existingSessionId });
+      logger.debug('[AuthContext] Session activity updated:', { sessionId: existingSessionId });
       return;
     }
 
@@ -82,7 +82,7 @@ async function syncActiveSession(firebaseUser: FirebaseUser): Promise<void> {
       userId: firebaseUser.uid,
       loginMethod,
     });
-    logger.info('[AuthContext] New session created for Active Sessions tracking');
+    logger.debug('[AuthContext] New session created for Active Sessions tracking');
   } catch (sessionError) {
     logger.warn('[AuthContext] Failed to manage session (non-blocking)', { error: sessionError });
   }
@@ -109,10 +109,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     void ensureDevUserProfile();
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      logger.info('[AuthContext] Auth state changed:', { uid: firebaseUser?.uid || 'No user' });
+      logger.debug('[AuthContext] Auth state changed:', { uid: firebaseUser?.uid || 'No user' });
 
       const validation = validateSession(firebaseUser);
-      logger.info('[AuthContext] Session validation:', { status: validation.status });
+      logger.debug('[AuthContext] Session validation:', { status: validation.status });
 
       if (!validation.isValid && validation.recommendation === 'LOGOUT') {
         logger.error('[AuthContext] INVALID SESSION DETECTED:', { status: validation.status });
@@ -123,7 +123,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         try {
-          logger.info('[AuthContext] Auto-logout triggered for security');
+          logger.debug('[AuthContext] Auto-logout triggered for security');
           await auth.signOut();
         } catch (logoutError) {
           logger.error('[AuthContext] Auto-logout failed', { error: logoutError });
@@ -137,7 +137,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (!firebaseUser) {
         try {
           await clearServerSessionCookie();
-          logger.info('[AuthContext] Server session cookie cleared');
+          logger.debug('[AuthContext] Server session cookie cleared');
         } catch (sessionError) {
           logger.warn('[AuthContext] Failed to clear server session cookie (non-blocking)', { error: sessionError });
         }
@@ -150,7 +150,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const idTokenResult = await firebaseUser.getIdTokenResult(true);
         customClaims = idTokenResult.claims;
-        logger.info('[AuthContext] Custom claims loaded:', {
+        logger.debug('[AuthContext] Custom claims loaded:', {
           globalRole: customClaims.globalRole,
           companyId: customClaims.companyId,
           permissions: Array.isArray(customClaims.permissions) ? customClaims.permissions.length : 0,
@@ -168,7 +168,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       try {
         await syncServerSession(firebaseUser);
-        logger.info('[AuthContext] Server session cookie synced');
+        logger.debug('[AuthContext] Server session cookie synced');
       } catch (sessionError) {
         logger.warn('[AuthContext] Failed to sync server session cookie (non-blocking)', { error: sessionError });
       }
@@ -202,7 +202,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       try {
         await syncServerSession(auth.currentUser);
-        logger.info('[AuthContext] Server session cookie refreshed (event)');
+        logger.debug('[AuthContext] Server session cookie refreshed (event)');
         const idTokenResult = await auth.currentUser.getIdTokenResult(true);
         const updatedUser = buildAuthUser(auth.currentUser, idTokenResult.claims);
         setUser(updatedUser);
@@ -237,7 +237,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await actions.signOut();
       try {
         await clearServerSessionCookie();
-        logger.info('[AuthContext] Server session cookie cleared on sign-out');
+        logger.debug('[AuthContext] Server session cookie cleared on sign-out');
       } catch (sessionError) {
         logger.warn('[AuthContext] Failed to clear server session cookie on sign-out', { error: sessionError });
       }
@@ -256,7 +256,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         setLoading(true);
         setError(null);
-        logger.info('[AuthContext] Verifying MFA code...');
+        logger.debug('[AuthContext] Verifying MFA code...');
         const result = await twoFactorService.verifyTotpForSignIn(mfaResolver, code, 0);
         if (result.result === 'success') {
           logger.info('[AuthContext] MFA verification successful');

@@ -147,7 +147,7 @@ export function useRealtimeTasks(enabled = true): UseRealtimeTasksReturn {
         // Exclude cancelled (same filter as TasksRepository.getStats)
         const activeTasks = mapped.filter((t) => t.status !== 'cancelled');
 
-        logger.info('Received tasks in real-time', { count: activeTasks.length });
+        logger.debug('Received tasks in real-time', { count: activeTasks.length });
 
         // ADR-300: Write to module-level cache so next remount skips spinner
         tasksCache.set(activeTasks);
@@ -165,7 +165,7 @@ export function useRealtimeTasks(enabled = true): UseRealtimeTasksReturn {
     );
 
     return () => {
-      logger.info('Cleaning up tasks subscription');
+      logger.debug('Cleaning up tasks subscription');
       unsubscribe();
     };
   }, [enabled, refreshTriggerRef.current]);
@@ -173,12 +173,12 @@ export function useRealtimeTasks(enabled = true): UseRealtimeTasksReturn {
   // 🏢 ENTERPRISE: Event bus subscribers for optimistic UI updates (ADR-227 Phase 3)
   useEffect(() => {
     const handleTaskCreated = (_payload: TaskCreatedPayload) => {
-      logger.info('Task created, triggering refetch');
+      logger.debug('Task created, triggering refetch');
       refetch();
     };
 
     const handleTaskUpdated = (payload: TaskUpdatedPayload) => {
-      logger.info('Applying optimistic update for task', { taskId: payload.taskId });
+      logger.debug('Applying optimistic update for task', { taskId: payload.taskId });
       setTasks(prev => prev.map(task =>
         task.id === payload.taskId
           ? applyUpdates(task, payload.updates as Partial<CrmTask>)
@@ -187,7 +187,7 @@ export function useRealtimeTasks(enabled = true): UseRealtimeTasksReturn {
     };
 
     const handleTaskDeleted = (payload: TaskDeletedPayload) => {
-      logger.info('Removing deleted task from list', { taskId: payload.taskId });
+      logger.debug('Removing deleted task from list', { taskId: payload.taskId });
       setTasks(prev => prev.filter(task => task.id !== payload.taskId));
     };
 

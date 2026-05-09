@@ -95,7 +95,7 @@ export function useRealtimeOpportunities(enabled = true): UseRealtimeOpportuniti
           toOpportunity(doc as DocumentData & { id: string })
         );
 
-        logger.info('Received opportunities in real-time', { count: mapped.length });
+        logger.debug('Received opportunities in real-time', { count: mapped.length });
 
         // ADR-300: Write to module-level cache so next remount skips spinner
         opportunitiesCache.set(mapped);
@@ -113,7 +113,7 @@ export function useRealtimeOpportunities(enabled = true): UseRealtimeOpportuniti
     );
 
     return () => {
-      logger.info('Cleaning up opportunities subscription');
+      logger.debug('Cleaning up opportunities subscription');
       unsubscribe();
     };
   }, [enabled, refreshTriggerRef.current]);
@@ -121,12 +121,12 @@ export function useRealtimeOpportunities(enabled = true): UseRealtimeOpportuniti
   // 🏢 ENTERPRISE: Event bus subscribers for optimistic UI updates (ADR-227 Phase 3)
   useEffect(() => {
     const handleCreated = (_payload: OpportunityCreatedPayload) => {
-      logger.info('Opportunity created, triggering refetch');
+      logger.debug('Opportunity created, triggering refetch');
       refetch();
     };
 
     const handleUpdated = (payload: OpportunityUpdatedPayload) => {
-      logger.info('Applying optimistic update for opportunity', { opportunityId: payload.opportunityId });
+      logger.debug('Applying optimistic update for opportunity', { opportunityId: payload.opportunityId });
       setOpportunities(prev => prev.map(opp =>
         opp.id === payload.opportunityId
           ? applyUpdates(opp, payload.updates as Partial<Opportunity>)
@@ -135,7 +135,7 @@ export function useRealtimeOpportunities(enabled = true): UseRealtimeOpportuniti
     };
 
     const handleDeleted = (payload: OpportunityDeletedPayload) => {
-      logger.info('Removing deleted opportunity from list', { opportunityId: payload.opportunityId });
+      logger.debug('Removing deleted opportunity from list', { opportunityId: payload.opportunityId });
       setOpportunities(prev => prev.filter(opp => opp.id !== payload.opportunityId));
     };
 

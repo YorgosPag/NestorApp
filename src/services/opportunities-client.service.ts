@@ -27,7 +27,7 @@ const logger = createModuleLogger('OpportunitiesClientService');
  */
 export async function getOpportunitiesClient(limitCount: number = 100): Promise<Opportunity[]> {
   try {
-    logger.info('Starting Firestore query');
+    logger.debug('Starting Firestore query');
 
     const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OPPORTUNITIES', {
       constraints: [orderBy('createdAt', 'desc')],
@@ -36,7 +36,7 @@ export async function getOpportunitiesClient(limitCount: number = 100): Promise<
 
     const opportunities = result.documents as unknown as Opportunity[];
 
-    logger.info('Loaded opportunities from Firebase', { count: opportunities.length });
+    logger.debug('Loaded opportunities from Firebase', { count: opportunities.length });
     return opportunities;
 
   } catch (error) {
