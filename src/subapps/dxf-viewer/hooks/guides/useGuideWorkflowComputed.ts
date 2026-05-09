@@ -5,9 +5,9 @@
  * Extracted from useGuideToolWorkflows.ts (SRP: derived/computed only).
  */
 import { useMemo } from 'react';
-import type { Point2D } from '../../rendering/types/Types';
 import { pointToSegmentDistance } from '../../systems/guides/guide-types';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { UseGuideStateReturn } from '../state/useGuideState';
 import type { UseConstructionPointStateReturn } from '../state/useConstructionPointState';
@@ -18,12 +18,18 @@ interface UseGuideWorkflowComputedParams {
   guideState: UseGuideStateReturn;
   cpState: UseConstructionPointStateReturn;
   transform: { scale: number; offsetX: number; offsetY: number };
-  mouseWorld: Point2D | null;
   state: GuideWorkflowState;
 }
 
+/**
+ * 🚀 PERF (2026-05-09): mouseWorld now read via `useCursorWorldPosition()`
+ * (useSyncExternalStore on ImmediatePositionStore). The hook MUST be invoked
+ * in a leaf component (CanvasLayerStack) so that mousemove-triggered
+ * re-renders stay scoped to the canvas tree, not CanvasSection.
+ */
 export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams) {
-  const { activeTool, guideState, cpState, transform, mouseWorld, state } = params;
+  const { activeTool, guideState, cpState, transform, state } = params;
+  const mouseWorld = useCursorWorldPosition();
 
   // ─── Highlight computation ───
   const highlightedGuideId = useMemo<string | null>(() => {

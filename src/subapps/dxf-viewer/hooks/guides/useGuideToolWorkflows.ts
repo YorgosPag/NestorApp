@@ -12,16 +12,22 @@
 import { useGuideWorkflowState } from './useGuideWorkflowState';
 import { useGuideWorkflowHandlers } from './useGuideWorkflowHandlers';
 import { useGuideEntityHandlers } from './useGuideEntityHandlers';
-import { useGuideWorkflowComputed } from './useGuideWorkflowComputed';
 import type { GuideToolWorkflowsParams } from './guide-workflow-types';
 
 export type { ArcPickableEntity, LinePickableEntity } from './guide-workflow-types';
 
+/**
+ * 🚀 PERF (2026-05-09): mouse-driven computed values (ghost previews,
+ * highlight detection) MOVED to `useGuideWorkflowComputed` invoked downstream
+ * (CanvasLayerStack), so subscribing to world position re-renders only the
+ * leaf canvas tree instead of the full CanvasSection. This hook now exposes
+ * `state` directly so the downstream computed hook can read it.
+ */
 export function useGuideToolWorkflows(params: GuideToolWorkflowsParams) {
   const {
     activeTool, guideState, cpState, showPromptDialog, t,
     notifyWarning, notifySuccess,
-    universalSelection, currentScene, transform, mouseWorld, eventBus,
+    universalSelection, currentScene, eventBus,
   } = params;
 
   // 1. State management (multi-step tool state + reset effects + tool hint sync)
@@ -38,12 +44,10 @@ export function useGuideToolWorkflows(params: GuideToolWorkflowsParams) {
     notifyWarning, notifySuccess, universalSelection, currentScene, state,
   });
 
-  // 4. Computed values (highlights + ghost previews)
-  const computed = useGuideWorkflowComputed({
-    activeTool, guideState, cpState, transform, mouseWorld, state,
-  });
-
   return {
+    // Full workflow state — passed to `useGuideWorkflowComputed` downstream
+    state,
+
     // Multi-step tool state (needed by useCanvasClickHandler)
     parallelRefGuideId: state.parallelRefGuideId,
     perpRefGuideId: state.perpRefGuideId,
@@ -61,12 +65,10 @@ export function useGuideToolWorkflows(params: GuideToolWorkflowsParams) {
     circleIntersectStep: state.circleIntersectStep,
     selectedGuideIds: state.selectedGuideIds,
     setSelectedGuideIds: state.setSelectedGuideIds,
+    panelHighlightPointId: state.panelHighlightPointId,
 
     // All handlers
     ...coreHandlers,
     ...entityHandlers,
-
-    // Computed values for rendering
-    ...computed,
   } as const;
 }

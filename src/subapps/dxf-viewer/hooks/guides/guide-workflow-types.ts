@@ -34,8 +34,9 @@ export interface GuideToolWorkflowsParams {
   notifySuccess: (msg: string, opts?: { duration?: number; actions?: Array<{ label: string; onClick: () => void }> }) => void;
   universalSelection: { getIds: () => string[] };
   currentScene: SceneModel | null;
-  transform: { scale: number; offsetX: number; offsetY: number };
-  mouseWorld: Point2D | null;
+  // 🚀 PERF (2026-05-09): mouseWorld + transform REMOVED. Mouse-driven computed
+  // values (ghost previews, highlights) moved to `useGuideWorkflowComputed`
+  // invoked downstream — see CanvasLayerStack.
   eventBus: ReturnType<typeof import('../../systems/events').useEventBus>;
 }
 

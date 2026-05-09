@@ -212,7 +212,14 @@ class UnifiedFrameSchedulerImpl {
 
     // ADR-156 + ADR-163: Canvas synchronization pre-check
     // preview-canvas excluded from sync group (managed independently by PreviewRenderer)
-    const canvasIds = ['dxf-canvas', 'layer-canvas', 'crosshair-overlay'];
+    //
+    // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): 'dxf-canvas' removed from the
+    // sync group. dxf-canvas owns its own dirty logic (bitmap cache invalidation
+    // tied to scene/transform/viewport only). Forcing it dirty on every cursor
+    // move would defeat the cache and reintroduce the 150ms mousemove violation.
+    // Pan still marks it dirty explicitly via PAN_SYNC_CANVAS_IDS in
+    // ImmediatePositionStore.updateTransform().
+    const canvasIds = ['layer-canvas', 'crosshair-overlay'];
     const immediateSyncedIds = ['dxf-canvas', 'layer-canvas'];
     const wasImmediateRenderedThisFrame = this.immediateRenderFrame === this.frameNumber;
 

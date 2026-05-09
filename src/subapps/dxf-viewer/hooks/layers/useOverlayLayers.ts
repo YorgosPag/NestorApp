@@ -3,17 +3,20 @@
 /**
  * 🏢 ENTERPRISE: useOverlayLayers Hook
  *
- * @description Converts overlay data to Canvas V2 ColorLayer format
- * @see ADR-XXX: CanvasSection Decomposition
+ * @description Converts overlay data to Canvas V2 ColorLayer format (static)
+ * @see ADR-040 (mouse position SSoT)
+ *
+ * 🚀 PERF (2026-05-09): mouse-driven outputs (`draftColorLayer`,
+ * `colorLayersWithDraft`, `isNearFirstPoint`) MOVED to `useDraftPolygonLayer`,
+ * invoked downstream (CanvasLayerStack). Keeping the static colorLayers
+ * computation here lets CanvasSection memoize without subscribing to mouse
+ * position — the cascade that re-rendered 13+ hooks per mousemove is gone.
  *
  * Responsibilities:
  * - Convert Overlay[] to ColorLayer[]
  * - Handle selection state (grips, hover, drag)
- * - Create draft polygon preview layer
- * - Combine saved layers with draft preview
  *
  * Pattern: Single Responsibility Principle - Pure Data Transformation
- * Extracted from: CanvasSection.tsx
  */
 
 import { useMemo } from 'react';
@@ -23,8 +26,6 @@ import type { RegionStatus } from '../../types/overlay';
 import type { Point2D } from '../../rendering/types/Types';
 import { getStatusColors } from '../../config/color-mapping';
 import { UI_COLORS } from '../../config/color-config';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 import { useEntityStatusResolver } from '@/hooks/useEntityStatusResolver';
 
 function getLinkedEntityId(overlay: Overlay): string | undefined {
@@ -84,11 +85,6 @@ interface DraggingEdgeMidpointState {
 }
 
 /**
- * Status type for overlays — SSoT: uses centralized PropertyStatus (ADR-258)
- */
-type OverlayStatus = RegionStatus;
-
-/**
  * Props for useOverlayLayers hook
  */
 export interface UseOverlayLayersProps {
@@ -110,18 +106,8 @@ export interface UseOverlayLayersProps {
   draggingEdgeMidpoint: DraggingEdgeMidpointState | null;
   /** Drag preview position */
   dragPreviewPosition: Point2D | null;
-  /** Draft polygon points */
-  draftPolygon: Array<[number, number]>;
-  /** Current mouse world position */
-  mouseWorld: Point2D | null;
-  /** Current transform scale */
-  transformScale: number;
-  /** Current status for draft polygon */
-  currentStatus: OverlayStatus;
   /** 🏢 ENTERPRISE (2026-02-15): ID of hovered overlay for yellow glow highlight */
   hoveredOverlayId?: string | null;
-  /** 🏢 ENTERPRISE (2026-02-15): Overlay mode for rubber-band preview in draw mode */
-  overlayMode?: 'select' | 'draw' | 'edit';
   /** Set of overlay IDs hidden by user via eye toggle */
   hiddenOverlayIds?: Set<string>;
 }
@@ -132,12 +118,6 @@ export interface UseOverlayLayersProps {
 export interface UseOverlayLayersReturn {
   /** Converted color layers from overlays */
   colorLayers: ColorLayer[];
-  /** Draft polygon preview layer (null if no draft) */
-  draftColorLayer: ColorLayer | null;
-  /** Combined layers (colorLayers + draftColorLayer) */
-  colorLayersWithDraft: ColorLayer[];
-  /** Whether mouse is near first point of draft polygon */
-  isNearFirstPoint: boolean;
 }
 
 // ============================================================================
@@ -152,25 +132,12 @@ export interface UseOverlayLayersReturn {
  *
  * @example
  * ```tsx
- * const {
- *   colorLayers,
- *   draftColorLayer,
- *   colorLayersWithDraft,
- *   isNearFirstPoint,
- * } = useOverlayLayers({
+ * const { colorLayers } = useOverlayLayers({
  *   overlays: currentOverlays,
  *   isSelected: universalSelection.isSelected,
- *   hoveredVertexInfo,
- *   hoveredEdgeInfo,
- *   selectedGrips,
- *   draggingVertex,
- *   draggingVertices,
- *   draggingEdgeMidpoint,
- *   dragPreviewPosition,
- *   draftPolygon,
- *   mouseWorld,
- *   transformScale: transform.scale,
- *   currentStatus,
+ *   hoveredVertexInfo, hoveredEdgeInfo, selectedGrips,
+ *   draggingVertex, draggingVertices, draggingEdgeMidpoint,
+ *   dragPreviewPosition, hoveredOverlayId,
  * });
  * ```
  */
@@ -185,12 +152,7 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
     draggingVertices,
     draggingEdgeMidpoint,
     dragPreviewPosition,
-    draftPolygon,
-    mouseWorld,
-    transformScale,
-    currentStatus,
     hoveredOverlayId,
-    overlayMode,
     hiddenOverlayIds,
   } = props;
 
@@ -308,84 +270,10 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
   ]);
 
   // ============================================================================
-  // DRAFT POLYGON DETECTION
-  // ============================================================================
-
-  /**
-   * Check if mouse is near first point of draft polygon (for closing)
-   */
-  const isNearFirstPoint = useMemo(() => {
-    if (draftPolygon.length < 3 || !mouseWorld) return false;
-    const firstPoint = draftPolygon[0];
-    const distance = calculateDistance(mouseWorld, { x: firstPoint[0], y: firstPoint[1] });
-    return distance < (POLYGON_TOLERANCES.CLOSE_DETECTION / transformScale);
-  }, [draftPolygon, mouseWorld, transformScale]);
-
-  // ============================================================================
-  // DRAFT COLOR LAYER
-  // ============================================================================
-
-  /**
-   * Create draft polygon preview layer
-   */
-  const draftColorLayer: ColorLayer | null = useMemo(() => {
-    if (draftPolygon.length < 1) return null;
-
-    // 🎨 Draft polygon (rubber-band preview) uses the status-neutral DRAFT color
-    // so the in-progress layer never clashes with for-rent blue. The final color
-    // is applied later when the user links the layer to an entity.
-    const fillColor = UI_COLORS.LAYER_DRAFT_FILL;
-    const strokeColor = UI_COLORS.LAYER_DRAFT_STROKE;
-
-    // 🏢 ENTERPRISE (2026-02-15): Rubber-band preview — append mouseWorld as virtual last vertex
-    // This creates the line from last placed point to the current cursor position
-    const previewVertices: Array<[number, number]> = (mouseWorld && overlayMode === 'draw')
-      ? [...draftPolygon, [mouseWorld.x, mouseWorld.y]]
-      : draftPolygon;
-
-    return {
-      id: 'draft-polygon-preview',
-      name: 'Draft Polygon (Preview)',
-      color: fillColor,
-      opacity: 0.5,
-      visible: true,
-      zIndex: 999,
-      status: currentStatus as RegionStatus,
-      isDraft: true,
-      showGrips: true,
-      isNearFirstPoint: isNearFirstPoint,
-      polygons: [{
-        id: 'draft-polygon-preview-0',
-        vertices: previewVertices.map(([x, y]) => ({ x, y })),
-        fillColor: fillColor,
-        strokeColor: strokeColor,
-        strokeWidth: 2,
-        selected: false
-      }]
-    };
-  }, [draftPolygon, currentStatus, isNearFirstPoint, mouseWorld, overlayMode]);
-
-  // ============================================================================
-  // COMBINED LAYERS
-  // ============================================================================
-
-  /**
-   * Combine saved layers with draft preview
-   */
-  const colorLayersWithDraft = useMemo(() => {
-    return draftColorLayer ? [...colorLayers, draftColorLayer] : colorLayers;
-  }, [colorLayers, draftColorLayer]);
-
-  // ============================================================================
   // RETURN
   // ============================================================================
 
-  return {
-    colorLayers,
-    draftColorLayer,
-    colorLayersWithDraft,
-    isNearFirstPoint,
-  };
+  return { colorLayers };
 }
 
 export default useOverlayLayers;

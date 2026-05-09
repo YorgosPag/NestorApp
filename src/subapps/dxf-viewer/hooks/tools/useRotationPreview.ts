@@ -21,6 +21,7 @@ import type { AnySceneEntity } from '../../types/entities';
 import { rotatePoint } from '../../utils/rotation-math';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
+import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import type { RotationPhase } from './useRotationTool';
 import type { useLevels } from '../../systems/levels';
 
@@ -46,8 +47,9 @@ export interface UseRotationPreviewProps {
    *  to ensure worldToScreen uses the SAME dimensions as the click handler.
    *  Falls back to getCanvas() if not provided. */
   getViewportElement?: () => HTMLElement | null;
-  /** Current cursor world position */
-  cursorWorld: Point2D | null;
+  // 🚀 PERF (2026-05-09): cursorWorld read internally via
+  // `useCursorWorldPosition()` so the rotation preview re-renders only this
+  // hook's leaf consumer, not CanvasSection.
 }
 
 // ============================================================================
@@ -59,8 +61,8 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     phase, basePoint, referencePoint, currentAngle,
     selectedEntityIds, levelManager,
     transform, getCanvas, getViewportElement,
-    cursorWorld,
   } = props;
+  const cursorWorld = useCursorWorldPosition();
 
   const rafRef = useRef<number>(0);
   /** Track previous phase to clear canvas ONLY on transition out of awaiting-angle */
