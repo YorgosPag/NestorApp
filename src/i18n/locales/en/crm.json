@@ -251,11 +251,18 @@
     },
     "quickFilters": {
       "all": "All",
+      "allTooltip": "Show all activities",
       "pending": "Pending",
+      "pendingTooltip": "Pending tasks",
       "inProgress": "In progress",
+      "inProgressTooltip": "Tasks in progress",
       "completed": "Completed",
+      "completedTooltip": "Completed tasks",
       "overdue": "Overdue",
-      "today": "Today"
+      "overdueTooltip": "Overdue tasks",
+      "today": "Today",
+      "todayTooltip": "Tasks due today",
+      "ariaLabel": "Task quick filters"
     }
   },
   "leads": {

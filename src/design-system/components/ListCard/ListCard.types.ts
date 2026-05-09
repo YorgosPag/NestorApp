@@ -31,7 +31,8 @@ export type ListCardBadgeVariant =
   | 'outline'
   | 'success'
   | 'warning'
-  | 'info';
+  | 'info'
+  | 'muted';
 
 /**
  * Badge configuration for ListCard

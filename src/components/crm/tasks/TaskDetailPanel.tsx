@@ -2,12 +2,12 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  Clock, CheckCircle, Edit3, Trash2,
-  Calendar, User, MapPin,
+  Clock,
+  Calendar, User, MapPin, type LucideIcon,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale';
-import { EntityDetailsHeader } from '@/core/entity-headers';
+import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 import { Badge } from '@/components/ui/badge';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -119,9 +119,7 @@ export function TaskDetailPanel({ activity, leads = [], onActionCompleted }: Tas
         <EntityDetailsHeader
           icon={Calendar}
           title={title}
-          subtitle={dateLabel}
-          badges={[{ type: 'status', value: appt.status }]}
-          variant="default"
+          variant="detailed"
         />
         <div className={`flex-1 overflow-y-auto ${sp.padding.md} space-y-3`}>
           <div className={`flex items-center gap-2 text-sm ${colors.text.muted}`}>
@@ -140,9 +138,10 @@ export function TaskDetailPanel({ activity, leads = [], onActionCompleted }: Tas
   }
 
   const { task } = activity;
-  const TaskIcon = TASK_TYPE_ICONS[task.type] ?? Clock;
+  const TaskIcon = (TASK_TYPE_ICONS[task.type] ?? Clock) as LucideIcon;
   const leadName = getLeadName(task.leadId);
   const meta = (task.metadata ?? {}) as Record<string, unknown>;
+  const location = typeof meta.location === 'string' ? meta.location : null;
   const dueDate = task.dueDate ? new Date(task.dueDate as string) : null;
   const dueDateLabel = dueDate
     ? format(dueDate, 'dd/MM/yyyy HH:mm', { locale: el })
@@ -150,26 +149,9 @@ export function TaskDetailPanel({ activity, leads = [], onActionCompleted }: Tas
   const isCompleted = task.status === 'completed';
 
   const headerActions = [
-    ...(!isCompleted ? [{
-      label: t('tasks.actions.complete'),
-      icon: CheckCircle,
-      onClick: () => handleComplete(task),
-      variant: 'ghost' as const,
-      className: colors.text.success,
-    }] : []),
-    {
-      label: t('tasks.actions.edit'),
-      icon: Edit3,
-      onClick: () => setEditingTask(task),
-      variant: 'ghost' as const,
-    },
-    {
-      label: t('tasks.actions.delete'),
-      icon: Trash2,
-      onClick: () => handleDelete(task),
-      variant: 'ghost' as const,
-      className: colors.text.error,
-    },
+    ...(!isCompleted ? [createEntityAction('complete', t('tasks.actions.complete'), () => handleComplete(task))] : []),
+    createEntityAction('edit', t('tasks.actions.edit'), () => setEditingTask(task)),
+    createEntityAction('delete', t('tasks.actions.delete'), () => handleDelete(task)),
   ];
 
   return (
@@ -178,13 +160,8 @@ export function TaskDetailPanel({ activity, leads = [], onActionCompleted }: Tas
       <EntityDetailsHeader
         icon={TaskIcon}
         title={task.title}
-        subtitle={dueDateLabel}
-        badges={[
-          { type: 'status', value: priorityLabels[task.priority] ?? task.priority },
-          { type: 'progress', value: statusLabels[task.status] ?? task.status },
-        ]}
         actions={headerActions}
-        variant="default"
+        variant="detailed"
       />
       <div className={`flex-1 overflow-y-auto ${sp.padding.md} space-y-4`}>
         <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -213,10 +190,10 @@ export function TaskDetailPanel({ activity, leads = [], onActionCompleted }: Tas
           </div>
         )}
 
-        {meta.location && typeof meta.location === 'string' && (
+        {location && (
           <div className={`flex items-center gap-2 text-sm ${colors.text.muted}`}>
             <MapPin className="h-4 w-4 flex-shrink-0" />
-            <span>{meta.location}</span>
+            <span>{location}</span>
           </div>
         )}
 

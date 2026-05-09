@@ -49,6 +49,8 @@ import {
   AlertTriangle,
   UserX,
   Star,
+  TrendingUp,
+  Calendar,
   type LucideIcon
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -419,6 +421,34 @@ export function AgreementStatusQuickFilters(props: Omit<TypeQuickFiltersProps, '
       {...props}
       options={AGREEMENT_STATUS_OPTIONS}
       ariaLabel={props.ariaLabel ?? t('filters.agreementStatusAriaLabel')}
+    />
+  );
+}
+
+/**
+ * Task Quick Filter Options (για Εργασίες/Tasks CRM)
+ * Values: 'all' | 'pending' | 'in_progress' | 'completed' | 'today' | 'overdue'
+ * Parent maps value → { status, timeframe } in TaskFilterState.
+ */
+export const TASK_QUICK_FILTER_OPTIONS: TypeFilterOption[] = [
+  { value: 'all',         label: 'crm:tasks.quickFilters.all',         icon: LayoutGrid,    tooltip: 'crm:tasks.quickFilters.allTooltip' },
+  { value: 'pending',     label: 'crm:tasks.quickFilters.pending',      icon: Clock,         tooltip: 'crm:tasks.quickFilters.pendingTooltip' },
+  { value: 'in_progress', label: 'crm:tasks.quickFilters.inProgress',   icon: TrendingUp,    tooltip: 'crm:tasks.quickFilters.inProgressTooltip' },
+  { value: 'completed',   label: 'crm:tasks.quickFilters.completed',    icon: CheckCircle,   tooltip: 'crm:tasks.quickFilters.completedTooltip' },
+  { value: 'today',       label: 'crm:tasks.quickFilters.today',        icon: Calendar,      tooltip: 'crm:tasks.quickFilters.todayTooltip' },
+  { value: 'overdue',     label: 'crm:tasks.quickFilters.overdue',      icon: AlertTriangle, tooltip: 'crm:tasks.quickFilters.overdueTooltip' },
+];
+
+/**
+ * Task Quick Filters - Pre-configured for CRM Tasks
+ */
+export function TaskQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
+  const { t } = useTranslation(['crm']);
+  return (
+    <TypeQuickFilters
+      {...props}
+      options={TASK_QUICK_FILTER_OPTIONS}
+      ariaLabel={props.ariaLabel ?? t('tasks.quickFilters.ariaLabel')}
     />
   );
 }

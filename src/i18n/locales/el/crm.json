@@ -251,11 +251,18 @@
     },
     "quickFilters": {
       "all": "Όλα",
+      "allTooltip": "Εμφάνιση όλων των δραστηριοτήτων",
       "pending": "Εκκρεμείς",
+      "pendingTooltip": "Εκκρεμείς εργασίες",
       "inProgress": "Σε εξέλιξη",
+      "inProgressTooltip": "Εργασίες σε εξέλιξη",
       "completed": "Ολοκληρωμένα",
+      "completedTooltip": "Ολοκληρωμένες εργασίες",
       "overdue": "Εκπρόθεσμα",
-      "today": "Σήμερα"
+      "overdueTooltip": "Εκπρόθεσμες εργασίες",
+      "today": "Σήμερα",
+      "todayTooltip": "Εργασίες για σήμερα",
+      "ariaLabel": "Γρήγορα φίλτρα εργασιών"
     }
   },
   "leads": {

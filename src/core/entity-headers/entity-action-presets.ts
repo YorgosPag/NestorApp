@@ -15,16 +15,17 @@
  * | view    | Primary | PRIMARY_BUTTON   |
  * | print   | Gray    | GRAY             |
  * | showcase| Violet  | VIOLET           | ADR-312 Property Showcase
+ * | complete| Green   | GREEN            | task/item completion
  */
 
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
-import { Pencil, Save, X, Trash2, Plus, Eye, Printer, Share2 } from 'lucide-react';
+import { Pencil, Save, X, Trash2, Plus, Eye, Printer, Share2, CheckCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { EntityHeaderAction } from './UnifiedEntityHeaderSystem';
 
 // ===== TYPES =====
 
-type ActionType = 'edit' | 'save' | 'cancel' | 'delete' | 'trash' | 'new' | 'view' | 'print' | 'showcase';
+type ActionType = 'edit' | 'save' | 'cancel' | 'delete' | 'trash' | 'new' | 'view' | 'print' | 'showcase' | 'complete';
 
 interface EntityActionPreset {
   icon: LucideIcon;
@@ -43,7 +44,8 @@ const ENTITY_ACTION_PRESETS: Record<ActionType, EntityActionPreset> = {
   view:     { icon: Eye,     className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON },
   print:    { icon: Printer, className: `${GRADIENT_HOVER_EFFECTS.GRAY} text-white` },
   // ADR-312: Violet gradient literal (kept inline to avoid growing hover-effects.ts past its size budget).
-  showcase: { icon: Share2,  className: 'bg-gradient-to-r from-violet-500 to-fuchsia-600 hover:from-violet-600 hover:to-fuchsia-700 text-white' },
+  showcase: { icon: Share2,       className: 'bg-gradient-to-r from-violet-500 to-fuchsia-600 hover:from-violet-600 hover:to-fuchsia-700 text-white' },
+  complete: { icon: CheckCircle,  className: `${GRADIENT_HOVER_EFFECTS.GREEN} text-white` },
 };
 
 // ===== FACTORY =====

@@ -1,12 +1,13 @@
 #!/bin/bash
-# ENTERPRISE PRE-COMMIT HOOK — Parallel Execution Engine (Google-level)
+# ENTERPRISE PRE-COMMIT HOOK — Node.js Worker Threads Engine (Google-level)
 #
 # Architecture:
-#   Phase 0  (sync)     Windows reserved names, project rules
-#   Phase 1  (parallel) All independent checks (3.5–3.25, 4, 10) — ~3-5x speedup
-#   Phase 2  (sync)     Dead-code check with interactive prompt (3.22)
-#   Phase 3  (sync)     Test runners (5, 5B)
-#   Phase 4  (info)     Warnings + bookkeeping (ADR, bundle, license, commit-msg)
+#   Phase 0  (sync bash)  Windows reserved names, project rules
+#   Phase 1  (node)       All independent checks via worker_threads
+#                         → 1 node process, zero spawn overhead, shared OS file cache
+#   Phase 2  (sync bash)  Dead-code check (interactive /dev/tty prompt)
+#   Phase 3  (sync bash)  Test runners (jest manages its own parallelism)
+#   Phase 4  (sync bash)  Warnings + bookkeeping (non-blocking)
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -15,7 +16,7 @@ NC='\033[0m'
 
 echo -e "${YELLOW}🔍 Running pre-commit checks...${NC}"
 
-# ─── Staged file sets (used by multiple checks) ───────────────────────────────
+# ─── Staged file sets ─────────────────────────────────────────────────────────
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
 TS_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx)$' | grep -v 'node_modules' | grep -v '\.d\.ts')
 LOCALE_FILES=$(echo "$STAGED_FILES" | grep -E 'src/i18n/locales/(el|en)/.*\.json$')
@@ -69,7 +70,7 @@ if [[ -f "$CUSTOM_SCRIPT" && -n "$TS_FILES" ]]; then
     echo -e "${GREEN}  ✅ Project rules passed${NC}"
 fi
 
-# ─── Precompute trigger variables for conditional checks ──────────────────────
+# ─── Precompute trigger variables ─────────────────────────────────────────────
 NAV_TRIGGER_FILES=$(echo "$STAGED_FILES" | grep -E '(src/config/smart-navigation-factory\.ts|src/i18n/locales/(el|en)/navigation\.json)$' || true)
 RULES_COVERAGE_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^firestore\.rules$|^tests/firestore-rules/' || true)
 STORAGE_COVERAGE_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^storage\.rules$|^tests/storage-rules/' || true)
@@ -77,249 +78,47 @@ NOTIF_LOCALE_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^src/config/notification
 AUDIT_CATALOGS_TRIGGER=$(echo "$STAGED_FILES" | grep -E '(src/config/audit-value-catalogs\.ts|src/i18n/locales/(el|en)/.*\.json)' || true)
 SRC_TS_FILES=$(echo "$STAGED_FILES" | grep -E '^src/.*\.(ts|tsx)$' || true)
 
-# Firestore companyId: only files containing query() + where()
+# Firestore companyId: only files containing both query() and where()
 QUERY_FILES=""
 for f in $TS_STAGED; do
-    [[ -f "$f" ]] && grep -q "query(" "$f" 2>/dev/null && grep -q "where(" "$f" 2>/dev/null && QUERY_FILES="$QUERY_FILES $f"
+    [[ -f "$f" ]] && grep -q "query(" "$f" 2>/dev/null && grep -q "where(" "$f" 2>/dev/null && QUERY_FILES="$QUERY_FILES
+$f"
 done
-QUERY_FILES="${QUERY_FILES# }"
+QUERY_FILES=$(echo "$QUERY_FILES" | grep -v '^$' || true)
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Parallel runner infrastructure
-# ═══════════════════════════════════════════════════════════════════════════════
-_PIDS=(); _OUTFILES=(); _NAMES=()
-
-# Launch an external command as a background job, capturing output to a temp file.
-_launch() {
-    local name="$1"; shift
-    local outfile
-    outfile=$(mktemp)
-    "$@" >"$outfile" 2>&1 &
-    _PIDS+=($!)
-    _OUTFILES+=("$outfile")
-    _NAMES+=("$name")
-}
-
-# Wait for all background jobs. Print each captured output in launch order.
-# Returns 1 if any job failed, 0 if all passed.
-_await_all() {
-    local FAILED=0
-    for i in "${!_PIDS[@]}"; do
-        wait "${_PIDS[$i]}"
-        local code=$?
-        [[ -s "${_OUTFILES[$i]}" ]] && cat "${_OUTFILES[$i]}"
-        rm -f "${_OUTFILES[$i]}"
-        [[ $code -ne 0 ]] && FAILED=1
-    done
-    return $FAILED
-}
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Inline check functions (run as ( subshell ) — inherit all parent variables)
+# PHASE 1: Node.js worker_threads orchestrator
+# — one node process, all checks run in parallel threads (JS) or processes (.sh)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# CHECK 4: Google-style file size limits
-_check_file_sizes() {
-    get_max_lines() {
-        local f="$1"
-        echo "$f" | grep -qE '(\.config\.|\.d\.ts$|\.test\.|\.spec\.|\.stories\.|\.qa\.|/config/|/types/|/data/|/_registry/|/__tests__/|/docs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|-definitions\.|-schema|-constants|enterprise-id\.service\.ts)' && echo 0 && return
-        echo "$f" | grep -qE '\.(tsx)$' && echo "$f" | grep -qE '(/components/|/ui/)' && echo 500 && return
-        echo "$f" | grep -qE '/use[A-Z][^/]*\.ts$' && echo 500 && return
-        echo "$f" | grep -qE '\.service\.ts$' && echo 500 && return
-        echo "$f" | grep -qE '/api/.*route\.ts$' && echo 300 && return
-        echo 500
-    }
-    get_file_type() {
-        local f="$1"
-        echo "$f" | grep -qE '\.(tsx)$' && echo "$f" | grep -qE '(/components/|/ui/)' && echo "Component" && return
-        echo "$f" | grep -qE '/use[A-Z][^/]*\.ts$' && echo "Hook" && return
-        echo "$f" | grep -qE '\.service\.ts$' && echo "Service" && return
-        echo "$f" | grep -qE '/api/.*route\.ts$' && echo "API Route" && return
-        echo "General"
-    }
-    local OVERSIZED=""
-    while IFS= read -r file; do
-        [[ -z "$file" ]] && continue
-        local MAX; MAX=$(get_max_lines "$file")
-        [[ "$MAX" -eq 0 ]] && continue
-        if [[ -f "$file" ]]; then
-            local LC; LC=$(wc -l < "$file" | tr -d ' ')
-            if [[ "$LC" -gt "$MAX" ]]; then
-                local FT; FT=$(get_file_type "$file")
-                OVERSIZED="${OVERSIZED}  ❌ ${file} (${LC}/${MAX} lines — ${FT})\n"
-            fi
-        fi
-    done <<< "$TS_FILES"
-    if [[ -n "$OVERSIZED" ]]; then
-        echo ""
-        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-        echo -e "${RED}  🚫 COMMIT BLOCKED - File Size Exceeds Type-Specific Limit${NC}"
-        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-        echo ""
-        echo -e "${YELLOW}Limits: Component 500 | Hook 500 | Service 500 | API 300 | General 500${NC}"
-        echo -e "$OVERSIZED"
-        echo -e "${YELLOW}Fix: Split into smaller, focused modules (Single Responsibility).${NC}"
-        echo -e "${YELLOW}Exempt: config/, types/, data/, tests, definitions, schemas, i18n${NC}"
-        echo ""
-        exit 1
-    fi
-    echo -e "${GREEN}  ✅ File sizes OK${NC}"
-}
+export STAGED_TS_FILES="$TS_FILES"
+export STAGED_LOCALE_FILES="$LOCALE_FILES"
+export STAGED_QUERY_FILES="$QUERY_FILES"
+export STAGED_SRC_TS_FILES="$SRC_TS_FILES"
+export STAGED_ALL_FILES="$STAGED_FILES"
+export STAGED_NAV_TRIGGER_FILES="$NAV_TRIGGER_FILES"
+export STAGED_RULES_COVERAGE_TRIGGERS="$RULES_COVERAGE_TRIGGERS"
+export STAGED_STORAGE_COVERAGE_TRIGGERS="$STORAGE_COVERAGE_TRIGGERS"
+export STAGED_NOTIF_LOCALE_TRIGGERS="$NOTIF_LOCALE_TRIGGERS"
+export STAGED_AUDIT_CATALOGS_TRIGGER="$AUDIT_CATALOGS_TRIGGER"
+# Pass through any existing env overrides (SSOT_DISCOVER_FULL, SKIP_*, etc.)
 
-# CHECK 10: Secret scan (no credentials in code)
-_check_secret_scan() {
-    local SECRET_VIOLATIONS=""
-    while IFS= read -r file; do
-        [[ -z "$file" || ! -f "$file" ]] && continue
-        echo "$file" | grep -qE '(\.png$|\.jpg$|\.ico$|\.woff|\.lock$|\.env\.example|\.env\.sample|node_modules)' && continue
-        echo "$file" | grep -qE '^scripts/git-hooks/' && continue
-        echo "$file" | grep -qE '^\.github/workflows/' && continue
-        echo "$file" | grep -qE '^docs/architecture-review/' && continue
-        local MATCHES
-        MATCHES=$(grep -nE "(sk-[a-zA-Z0-9_-]{20,}|sk_live_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_-]{35}|ghp_[a-zA-Z0-9]{36}|xoxb-[a-zA-Z0-9-]+|AAAA[a-zA-Z0-9_-]{100,})" "$file" 2>/dev/null | grep -vE "^\s*(//|\*|#)" | head -3)
-        [[ -n "$MATCHES" ]] && SECRET_VIOLATIONS="${SECRET_VIOLATIONS}  ❌ API key pattern in ${file}\n$(echo "$MATCHES" | sed 's/^/     /')\n"
-        MATCHES=$(grep -nEi "(password|secret|private_key|api_key)\s*[:=]\s*['\"][^'\"]{8,}['\"]" "$file" 2>/dev/null | grep -vE "^\s*(//|\*|#)|\.env|process\.env|example|placeholder|schema|type|interface|dummy|test|mock" | head -3)
-        [[ -n "$MATCHES" ]] && SECRET_VIOLATIONS="${SECRET_VIOLATIONS}  ❌ Hardcoded secret in ${file}\n$(echo "$MATCHES" | sed 's/^/     /')\n"
-        MATCHES=$(grep -n "BEGIN.*PRIVATE KEY" "$file" 2>/dev/null | head -1)
-        [[ -n "$MATCHES" ]] && SECRET_VIOLATIONS="${SECRET_VIOLATIONS}  ❌ Private key in ${file}\n"
-    done <<< "$STAGED_FILES"
-    if [[ -n "$SECRET_VIOLATIONS" ]]; then
-        echo ""
-        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-        echo -e "${RED}  🚫 COMMIT BLOCKED — Potential secrets detected${NC}"
-        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-        echo ""
-        echo -e "$SECRET_VIOLATIONS"
-        echo -e "${YELLOW}  Move secrets to .env files or environment variables.${NC}"
-        echo -e "${YELLOW}  If false positive, add to .gitignore or refactor.${NC}"
-        echo ""
-        exit 1
-    fi
-    echo -e "${GREEN}  ✅ Secret scan: clean${NC}"
-}
+node scripts/run-checks-parallel.js
+PHASE1_EXIT=$?
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PHASE 1: Launch all parallelizable checks
-# ═══════════════════════════════════════════════════════════════════════════════
-
-if [[ -n "$TS_FILES" ]]; then
-    # CHECK 3.5: hardcoded i18n defaultValue (CLAUDE.md N.11)
-    [[ -f "scripts/check-hardcoded-strings.sh" ]] && \
-        _launch "3.5" bash "scripts/check-hardcoded-strings.sh" $TS_FILES
-
-    # CHECK 3.6: hardcoded UI strings (JSX/attrs/errors/toasts)
-    [[ -f "scripts/check-ui-hardcoded-strings.sh" ]] && \
-        _launch "3.6" bash "scripts/check-ui-hardcoded-strings.sh" $TS_FILES
-
-    # CHECK 3.7: SSoT import violations (centralized module ratchet)
-    [[ -f "scripts/check-ssot-imports.js" ]] && \
-        _launch "3.7" node "scripts/check-ssot-imports.js" $TS_FILES
-
-    # CHECK 3.8: missing i18n keys (t('key') without locale entry) — typically slowest
-    [[ -f "scripts/check-i18n-missing-keys.js" ]] && \
-        _launch "3.8" node "scripts/check-i18n-missing-keys.js" $TS_FILES
-
-    # CHECK 3.12: option-label i18n key integrity
-    [[ -f "scripts/check-option-i18n-keys.js" ]] && \
-        _launch "3.12" node "scripts/check-option-i18n-keys.js" $TS_FILES
-
-    # CHECK 3.13: i18n runtime resolver reachability (ADR-279/280)
-    [[ -f "scripts/check-i18n-resolver-reachability.js" ]] && \
-        _launch "3.13" node "scripts/check-i18n-resolver-reachability.js" $TS_FILES
-
-    # CHECK 3.23: native HTML tooltip ratchet (AST-based)
-    [[ -z "${SKIP_NATIVE_TOOLTIP:-}" && -f "scripts/check-native-tooltip.js" ]] && \
-        _launch "3.23" node "scripts/check-native-tooltip.js" $TS_FILES
-
-    # CHECK 3.24: Tabs SSoT import ratchet (ADR-328)
-    [[ -z "${SKIP_TABS_IMPORT:-}" && -f "scripts/check-tabs-import-ratchet.js" ]] && \
-        _launch "3.24" node "scripts/check-tabs-import-ratchet.js" $TS_FILES
-
-    # CHECK 3.25: no-navigation-flash ratchet (ADR-267/300)
-    [[ -z "${SKIP_NO_FLASH:-}" && -f "scripts/check-no-flash-ratchet.js" ]] && \
-        _launch "3.25" node "scripts/check-no-flash-ratchet.js" $TS_FILES
-
-    # CHECK 4: file size limits (subshell — inherits $TS_FILES)
-    _of=$(mktemp); (_check_file_sizes) >"$_of" 2>&1 &
-    _PIDS+=($!); _OUTFILES+=("$_of"); _NAMES+=("4-file-sizes")
-fi
-
-# CHECK 3.9: ICU interpolation {{var}} → {var} (locale files only)
-[[ -f "scripts/check-icu-interpolation.sh" && -n "$LOCALE_FILES" ]] && \
-    _launch "3.9" bash "scripts/check-icu-interpolation.sh" $LOCALE_FILES
-
-# CHECK 3.10: Firestore queries must include companyId
-[[ -f "scripts/check-firestore-companyid.sh" && -n "$QUERY_FILES" ]] && \
-    _launch "3.10" bash "scripts/check-firestore-companyid.sh" $QUERY_FILES
-
-# CHECK 3.11: Navigation label completeness
-[[ -f "scripts/check-navigation-labels.js" && -n "$NAV_TRIGGER_FILES" ]] && \
-    _launch "3.11" node "scripts/check-navigation-labels.js"
-
-# CHECK 3.14: Audit value catalogs parity (ADR-195)
-[[ -f "scripts/check-audit-value-catalogs.js" && -n "$AUDIT_CATALOGS_TRIGGER" ]] && \
-    _launch "3.14" node "scripts/check-audit-value-catalogs.js"
-
-if [[ -n "$SRC_TS_FILES" ]]; then
-    # CHECK 3.15: Firestore index coverage
-    [[ -f "scripts/check-firestore-index-coverage.js" ]] && \
-        _launch "3.15" node "scripts/check-firestore-index-coverage.js" $SRC_TS_FILES
-
-    # CHECK 3.17: Entity audit coverage (ADR-195)
-    [[ -f "scripts/check-entity-audit-coverage.js" ]] && \
-        _launch "3.17" node "scripts/check-entity-audit-coverage.js" $SRC_TS_FILES
-
-    # CHECK 3.18: SSoT Discover ratchet (ADR-314)
-    if [[ -f "scripts/check-ssot-discover-ratchet.js" ]]; then
-        if [[ "${SSOT_DISCOVER_FULL:-0}" == "1" ]]; then
-            _launch "3.18" node "scripts/check-ssot-discover-ratchet.js" --full
-        else
-            _launch "3.18" node "scripts/check-ssot-discover-ratchet.js"
-        fi
-    fi
-
-    # CHECK 3.20: Notification keys ratchet (SSoT Notifications)
-    [[ -f "scripts/check-notification-keys-ratchet.js" ]] && \
-        _launch "3.20" node "scripts/check-notification-keys-ratchet.js" $SRC_TS_FILES
-fi
-
-# CHECK 3.16: Firestore rules test coverage (ADR-298)
-[[ -f "scripts/check-firestore-rules-test-coverage.js" && -n "$RULES_COVERAGE_TRIGGERS" ]] && \
-    _launch "3.16" node "scripts/check-firestore-rules-test-coverage.js" $RULES_COVERAGE_TRIGGERS
-
-# CHECK 3.19: Storage rules test coverage (ADR-301)
-[[ -f "scripts/check-storage-rules-test-coverage.js" && -n "$STORAGE_COVERAGE_TRIGGERS" ]] && \
-    _launch "3.19" node "scripts/check-storage-rules-test-coverage.js" $STORAGE_COVERAGE_TRIGGERS
-
-# CHECK 3.21: Notification keys locale integrity
-[[ -f "scripts/check-notification-keys-locale.js" && -n "$NOTIF_LOCALE_TRIGGERS" ]] && \
-    _launch "3.21" node "scripts/check-notification-keys-locale.js"
-
-# CHECK 10: Secret scan (subshell — inherits $STAGED_FILES)
-_of=$(mktemp); (_check_secret_scan) >"$_of" 2>&1 &
-_PIDS+=($!); _OUTFILES+=("$_of"); _NAMES+=("10-secrets")
-
-# ─── Await all parallel jobs ──────────────────────────────────────────────────
-_COUNT="${#_PIDS[@]}"
-[[ $_COUNT -gt 0 ]] && echo -e "${YELLOW}⚡ ${_COUNT} checks running in parallel...${NC}"
-
-if ! _await_all; then
+if [[ $PHASE1_EXIT -ne 0 ]]; then
     echo ""
     exit 1
 fi
 
-[[ $_COUNT -gt 0 ]] && echo -e "${GREEN}  ✅ All ${_COUNT} parallel checks passed${NC}"
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 2: SYNC — Dead-code ratchet (CHECK 3.22)
 # Sequential because of interactive /dev/tty prompt.
-# Skipped entirely if no .ts/.tsx staged (same as before).
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if [[ -z "${SKIP_DEADCODE_CHECK:-}" ]] && [[ -n "$TS_FILES" ]] && [[ -f ".deadcode-baseline.json" ]]; then
     echo -e "${YELLOW}🔍 Checking dead-code ratchet (CHECK 3.22)...${NC}"
 
-    # Part A: block staging modifications to files already in the dead-code baseline.
     BASELINE_FILES=$(node -e "
       const b = require('./.deadcode-baseline.json');
       console.log((b.files || []).join('\n'));
@@ -377,7 +176,6 @@ if [[ -z "${SKIP_DEADCODE_CHECK:-}" ]] && [[ -n "$TS_FILES" ]] && [[ -f ".deadco
         exit 1
     fi
 
-    # Part B: block if new unused files appear beyond baseline.
     DEADCODE_OUTPUT=$(node scripts/check-deadcode-ratchet.js 2>&1)
     DEADCODE_EXIT=$?
 
@@ -401,8 +199,7 @@ fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 3: SYNC — Test runners (CHECK 5, 5B)
-# Jest manages its own internal parallelism; running suites in parallel here
-# would create resource contention — keep sequential.
+# Jest manages its own internal parallelism — keep sequential.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # CHECK 5: AI Pipeline Tests

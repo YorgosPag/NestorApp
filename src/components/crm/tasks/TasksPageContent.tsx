@@ -24,7 +24,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn, getSpacingClass } from '@/lib/design-system';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useRealtimeTasks } from '@/services/realtime';
-import { PageContainer, ListContainer } from '@/core/containers';
+import { PageContainer, ListContainer, EntityListColumn } from '@/core/containers';
 import { PageHeader } from '@/core/headers';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -36,7 +36,7 @@ import { AppointmentsRepository } from '@/services/calendar/AppointmentsReposito
 import type { AppointmentDocument } from '@/types/appointment';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { SearchInput } from '@/components/ui/search';
-import { Button } from '@/components/ui/button';
+import { TaskQuickFilters } from '@/components/shared/TypeQuickFilters';
 import { getOpportunitiesClient } from '@/services/opportunities-client.service';
 import type { Opportunity } from '@/types/crm';
 
@@ -104,27 +104,26 @@ export function TasksPageContent() {
     }
   }, [activeCardIndex]);
 
-  const quickFilterOptions = useMemo(() => [
-    { key: 'all', label: t('tasks.quickFilters.all'), status: 'all', timeframe: 'all' },
-    { key: 'pending', label: t('tasks.quickFilters.pending'), status: 'pending', timeframe: 'all' },
-    { key: 'inProgress', label: t('tasks.quickFilters.inProgress'), status: 'in_progress', timeframe: 'all' },
-    { key: 'completed', label: t('tasks.quickFilters.completed'), status: 'completed', timeframe: 'all' },
-    { key: 'today', label: t('tasks.quickFilters.today'), status: 'all', timeframe: 'today' },
-    { key: 'overdue', label: t('tasks.quickFilters.overdue'), status: 'all', timeframe: 'overdue' },
-  ], [t]);
-
-  const activeQuickFilter = useMemo(() => {
-    if (filters.timeframe === 'today') return 'today';
-    if (filters.timeframe === 'overdue') return 'overdue';
-    if (filters.status === 'pending') return 'pending';
-    if (filters.status === 'in_progress') return 'inProgress';
-    if (filters.status === 'completed') return 'completed';
-    return 'all';
+  const selectedQuickFilterTypes = useMemo<string[]>(() => {
+    if (filters.timeframe === 'today') return ['today'];
+    if (filters.timeframe === 'overdue') return ['overdue'];
+    if (filters.status === 'pending') return ['pending'];
+    if (filters.status === 'in_progress') return ['in_progress'];
+    if (filters.status === 'completed') return ['completed'];
+    return [];
   }, [filters]);
 
-  const handleQuickFilter = useCallback((qf: { status: string; timeframe: string }) => {
-    setFilters(prev => ({ ...prev, status: qf.status, timeframe: qf.timeframe }));
+  const handleQuickFilterChange = useCallback((types: string[]) => {
     setSelectedActivity(null);
+    const key = types[0] ?? 'all';
+    switch (key) {
+      case 'pending':     setFilters({ ...defaultTaskFilters, status: 'pending' }); break;
+      case 'in_progress': setFilters({ ...defaultTaskFilters, status: 'in_progress' }); break;
+      case 'completed':   setFilters({ ...defaultTaskFilters, status: 'completed' }); break;
+      case 'today':       setFilters({ ...defaultTaskFilters, timeframe: 'today' }); break;
+      case 'overdue':     setFilters({ ...defaultTaskFilters, timeframe: 'overdue' }); break;
+      default:            setFilters(defaultTaskFilters);
+    }
   }, []);
 
   const selectedActivityId = selectedActivity ? getActivityId(selectedActivity) : undefined;
@@ -141,12 +140,12 @@ export function TasksPageContent() {
     <PageContainer ariaLabel={t('tasks.title')}>
       <PageHeader
         variant="sticky-rounded"
-        layout="single-row"
+        layout="compact"
+        spacing="compact"
         breadcrumb={<ModuleBreadcrumb />}
         title={{
           icon: Clock,
           title: t('tasks.title'),
-          subtitle: t('tasks.description'),
         }}
         actions={{
           showDashboard,
@@ -185,7 +184,7 @@ export function TasksPageContent() {
           aria-label={t('tasks.title')}
         >
           {/* Left panel — activity list */}
-          <div className="flex flex-col w-80 min-w-72 border rounded-lg bg-card shadow-sm min-h-0 overflow-hidden">
+          <EntityListColumn hasBorder aria-label={t('tasks.title')}>
             <div className="flex items-center gap-2 px-3 py-2.5 border-b bg-muted/30">
               <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span className="font-semibold text-sm">{t('tasks.title')}</span>
@@ -200,19 +199,11 @@ export function TasksPageContent() {
                 className="h-7 text-xs"
               />
             </div>
-            <div className="flex gap-1 px-2 py-1.5 flex-wrap border-b bg-muted/10">
-              {quickFilterOptions.map(qf => (
-                <Button
-                  key={qf.key}
-                  size="sm"
-                  variant={activeQuickFilter === qf.key ? 'default' : 'ghost'}
-                  className="h-6 text-xs px-2 rounded-full"
-                  onClick={() => handleQuickFilter(qf)}
-                >
-                  {qf.label}
-                </Button>
-              ))}
-            </div>
+            <TaskQuickFilters
+              selectedTypes={selectedQuickFilterTypes}
+              onTypeChange={handleQuickFilterChange}
+              compact
+            />
             <div className="flex-1 overflow-y-auto">
               <TasksTab
                 filters={filters}
@@ -223,7 +214,7 @@ export function TasksPageContent() {
                 onSelectActivity={setSelectedActivity}
               />
             </div>
-          </div>
+          </EntityListColumn>
 
           {/* Right panel — activity detail */}
           <div className="flex-1 min-h-0 overflow-hidden rounded-lg border bg-card shadow-sm">
@@ -251,6 +242,11 @@ export function TasksPageContent() {
               className="h-8 text-sm"
             />
           </div>
+          <TaskQuickFilters
+            selectedTypes={selectedQuickFilterTypes}
+            onTypeChange={handleQuickFilterChange}
+            compact
+          />
           <TasksTab
             filters={filters}
             appointments={appointments}

@@ -8,129 +8,48 @@ import { completeTaskWithPolicy, deleteTaskWithPolicy } from '@/services/crm/crm
 import { getOpportunitiesClient as getOpportunities } from '@/services/opportunities-client.service';
 // 🏢 ENTERPRISE: Real-time tasks (ADR-227 Phase 1)
 import { useRealtimeTasks } from '@/services/realtime';
-import {
-  Clock,
-  CheckCircle,
-  Phone,
-  Users,
-  Calendar,
-  Mail,
-  FileText,
-  AlertCircle,
-  Edit3,
-  Trash2,
-  User,
-  MapPin,
-} from 'lucide-react';
-import { format, isToday, isPast, isTomorrow, parse, isValid } from 'date-fns';
-import { el } from 'date-fns/locale';
+import { Clock } from 'lucide-react';
+import { isPast, isToday, isTomorrow } from 'date-fns';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { Button } from '@/components/ui/button';
 import CreateTaskModal from './dialogs/CreateTaskModal';
 import { TaskEditDialog } from './dialogs/TaskEditDialog';
-import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
+import type { CrmTask, Opportunity } from '@/types/crm';
 import type { AppointmentDocument } from '@/types/appointment';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('TasksTab');
 // ADR-229 Phase 2: Centralized loading/error states
 import { PageLoadingState, PageErrorState } from '@/core/states';
-import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
-import { HOVER_SHADOWS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Auth hook for race condition prevention
 import { useAuth } from '@/auth/contexts/AuthContext';
-import { SafeHTMLContent } from '@/components/shared/email/EmailContentRenderer';
 import { createStaleCache } from '@/lib/stale-cache';
 
 const crmDashboardLeadsCache = createStaleCache<Opportunity[]>('crm-dashboard-tasks');
-// 🏢 ENTERPRISE: Centralized Badge component (replaces raw <span> badges)
-import { Badge } from '@/components/ui/badge';
+
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-// 🏢 ENTERPRISE: Centralized typography & spacing tokens
-import { useTypography } from '@/hooks/useTypography';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: Centralized filter state (from AdvancedFiltersPanel configs)
 import { defaultTaskFilters } from '@/components/core/AdvancedFilters/configs';
 import type { TaskFilterState } from '@/components/core/AdvancedFilters/configs';
+// 🏢 ENTERPRISE: SSoT card + shared activity types
+import { TaskListCard } from '@/domain/cards/task';
+import {
+  TASK_TYPE_ICONS,
+  PRIORITY_BADGE_VARIANT,
+  STATUS_BADGE_VARIANT,
+  resolveAppointmentDate,
+} from '@/components/crm/tasks/task-activity';
+import type { ActivityItem } from '@/components/crm/tasks/task-activity';
+
+// Re-export for backward compat (TaskDetailPanel imports these from here)
+export { TASK_TYPE_ICONS, PRIORITY_BADGE_VARIANT, STATUS_BADGE_VARIANT, resolveAppointmentDate };
+export type { ActivityItem };
 
 interface TaskMetadata {
     location?: string;
     [key: string]: unknown;
-}
-
-export const TASK_TYPE_ICONS: Record<CrmTaskType, React.ElementType> = {
-  call: Phone,
-  meeting: Users,
-  viewing: Calendar,
-  follow_up: AlertCircle,
-  email: Mail,
-  document: FileText,
-  complaint: AlertCircle,
-  other: Clock,
-};
-
-// 🏢 ENTERPRISE: Badge variant mappings for centralized Badge component
-export const PRIORITY_BADGE_VARIANT: Record<CrmTaskPriority, 'success' | 'warning' | 'info' | 'error'> = {
-  low: 'success',
-  medium: 'warning',
-  high: 'info',
-  urgent: 'error',
-};
-
-export const STATUS_BADGE_VARIANT: Record<CrmTaskStatus, 'info' | 'warning' | 'success' | 'muted'> = {
-  pending: 'info',
-  in_progress: 'warning',
-  completed: 'success',
-  cancelled: 'muted',
-};
-
-const getDateColor = (dueDate?: FirestoreishTimestamp, status?: CrmTaskStatus, colors?: ReturnType<typeof useSemanticColors>) => {
-    if (!colors) return 'text-gray-600'; // Fallback
-    if (status === 'completed') return colors.text.success;
-    if (!dueDate) return colors.text.muted;
-    const date = new Date(dueDate as string); // Assuming string | Date
-    if (isPast(date) && !isToday(date)) return colors.text.error;
-    if (isToday(date)) return colors.text.info;
-    if (isTomorrow(date)) return colors.text.accent;
-    return colors.text.muted;
-};
-
-const createFormatDueDate = (t: (key: string) => string) => (dueDate?: FirestoreishTimestamp) => {
-    if (!dueDate) return t('tasks.noDate');
-    const date = new Date(dueDate as string);
-    if (isToday(date)) return `${t('tasks.today')} ${format(date, 'HH:mm')}`;
-    if (isTomorrow(date)) return `${t('tasks.tomorrow')} ${format(date, 'HH:mm')}`;
-    if (isPast(date)) return `${t('tasks.overdue')} ${format(date, 'dd/MM HH:mm')}`;
-    return format(date, 'dd/MM/yyyy HH:mm', { locale: el });
-};
-
-export type ActivityItem =
-  | { kind: 'task'; task: CrmTask; sortDate: number }
-  | { kind: 'appointment'; appt: AppointmentDocument; sortDate: number; title: string; date: Date | null };
-
-export function resolveAppointmentDate(appt: AppointmentDocument): Date | null {
-  const flat = appt as unknown as Record<string, unknown>;
-  const rawDate =
-    appt.appointment?.confirmedDate ??
-    appt.appointment?.requestedDate ??
-    (flat['date'] as string | undefined);
-  if (!rawDate) return null;
-  let dateStr = rawDate;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDate)) {
-    const parsed = parse(rawDate, 'dd/MM/yyyy', new Date());
-    if (!isValid(parsed)) return null;
-    dateStr = format(parsed, 'yyyy-MM-dd');
-  }
-  const timeStr =
-    appt.appointment?.confirmedTime ??
-    appt.appointment?.requestedTime ??
-    (flat['time'] as string | undefined) ??
-    '09:00';
-  const dt = new Date(`${dateStr}T${timeStr}:00`);
-  return isNaN(dt.getTime()) ? null : dt;
 }
 
 interface TasksTabProps {
@@ -147,21 +66,20 @@ interface TasksTabProps {
   selectionMode?: boolean;
   selectedActivityId?: string;
   onSelectActivity?: (item: ActivityItem) => void;
+  /** Callback fired when the visible activity count changes */
+  onCountChange?: (count: number) => void;
 }
 
-export function TasksTab({ filters: externalFilters, onTaskCreated, appointments, externalLeads, selectionMode = false, selectedActivityId, onSelectActivity }: TasksTabProps) {
+export function TasksTab({ filters: externalFilters, onTaskCreated, appointments, externalLeads, selectionMode = false, selectedActivityId, onSelectActivity, onCountChange }: TasksTabProps) {
   // 🏢 ENTERPRISE: Use externally provided filters or defaults
   const filters = externalFilters ?? defaultTaskFilters;
   const { success, error: notifyError } = useNotifications();
-  const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation(['crm', 'crm-inbox']);
   // 🏢 ENTERPRISE: Auth context for race condition prevention
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const typography = useTypography();
   const sp = useSpacingTokens();
   const { confirm, dialogProps } = useConfirmDialog();
-  const formatDueDate = useMemo(() => createFormatDueDate(t), [t]);
   // 🏢 ENTERPRISE: Real-time tasks (ADR-227 Phase 1) — replaces one-time getTasks()
   const { tasks, loading: tasksLoading, error: tasksError } = useRealtimeTasks(!authLoading && isAuthenticated);
   const [internalLeads, setInternalLeads] = useState<Opportunity[]>(
@@ -171,7 +89,6 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
     externalLeads === undefined && !crmDashboardLeadsCache.hasLoaded()
   );
   const effectiveLeads = externalLeads ?? internalLeads;
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CrmTask | null>(null);
 
   // Leads remain one-time fetch (no real-time needed for lead name lookup)
@@ -274,7 +191,6 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
     try {
       await completeTaskWithPolicy({ taskId });
       success(t('tasks.messages.completed', { title: taskTitle }));
-      // Real-time subscription auto-updates — no manual refetch needed
     } catch {
       notifyError(t('tasks.messages.completeError'));
     }
@@ -291,14 +207,19 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
       try {
         await deleteTaskWithPolicy({ taskId });
         success(t('tasks.messages.deleted', { title: taskTitle }));
-        // Real-time subscription auto-updates — no manual refetch needed
       } catch {
         notifyError(t('tasks.messages.deleteError'));
       }
     }
   }, [t, confirm, success, notifyError]);
 
-  const getLeadName = useCallback((leadId?: string) => effectiveLeads.find(l => l.id === leadId)?.fullName || null, [effectiveLeads]);
+  const getLeadName = useCallback(
+    (leadId?: string) => effectiveLeads.find(l => l.id === leadId)?.fullName ?? null,
+    [effectiveLeads]
+  );
+
+  const getItemId = (item: ActivityItem) =>
+    item.kind === 'task' ? item.task.id : `appt_${item.appt.id}`;
 
   // ADR-229 Phase 2: Centralized loading/error states
   if (loading) {
@@ -310,96 +231,29 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
   }
 
   return (
-    <section className={sp.spaceBetween.md}>
+    <div className={`${sp.padding.sm} ${sp.spaceBetween.sm}`}>
       <ConfirmDialog {...dialogProps} />
       {activityItems.length === 0 ? (
-        <div className={`text-center ${sp.padding.y['2xl']}`}><p className={colors.text.muted}>{t('tasks.noActivities')}</p></div>
+        <div className={`text-center ${sp.padding.y['2xl']}`}>
+          <p className={colors.text.muted}>{t('tasks.noActivities')}</p>
+        </div>
       ) : (
-        activityItems.map((item) => {
-          if (item.kind === 'appointment') {
-            const { appt, title, date } = item;
-            const dateLabel = date ? format(date, 'dd/MM/yyyy HH:mm') : t('tasks.noDate');
-            return (
-              <article
-                key={`appt_${appt.id}`}
-                className={`${colors.bg.infoSubtle} ${sp.padding.md} rounded-lg border border-blue-200 dark:border-blue-800 ${HOVER_SHADOWS.SUBTLE}${selectionMode ? ' cursor-pointer hover:shadow-md transition-shadow' : ''}${selectionMode && selectedActivityId === `appt_${appt.id}` ? ' ring-2 ring-primary' : ''}`}
-                onClick={selectionMode ? () => onSelectActivity?.(item) : undefined}
-                role={selectionMode ? 'button' : undefined}
-                tabIndex={selectionMode ? 0 : undefined}
-                onKeyDown={selectionMode ? (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectActivity?.(item); } } : undefined}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className={`flex items-center ${sp.gap.sm} ${sp.margin.bottom.sm}`}>
-                      <div className={`${iconSizes.xl} rounded-full flex items-center justify-center bg-blue-100 dark:bg-blue-900/40`}>
-                        <Calendar className={`${iconSizes.sm} ${colors.text.info}`} />
-                      </div>
-                      <h4 className={`font-medium ${colors.text.primary}`}>{title}</h4>
-                      <Badge variant="info">{appt.status}</Badge>
-                    </div>
-                    <div className={`${typography.body.sm} ${colors.text.muted} flex items-center gap-1`}>
-                      <Clock className={iconSizes.xs} />
-                      <span className={colors.text.info}>{dateLabel}</span>
-                    </div>
-                  </div>
-                </div>
-              </article>
-            );
-          }
-
-          const { task } = item;
-          const TaskIcon = TASK_TYPE_ICONS[task.type] || Clock;
-          const leadName = getLeadName(task.leadId);
-          const meta = (task.metadata || {}) as TaskMetadata;
-          return (
-            <article
-              key={task.id}
-              className={`${colors.bg.primary} ${sp.padding.md} rounded-lg border ${HOVER_SHADOWS.SUBTLE}${selectionMode ? ' cursor-pointer hover:shadow-md transition-shadow' : ''}${selectionMode && selectedActivityId === task.id ? ' ring-2 ring-primary border-primary/50' : ''}`}
-              onClick={selectionMode ? () => onSelectActivity?.(item) : undefined}
-              role={selectionMode ? 'button' : undefined}
-              tabIndex={selectionMode ? 0 : undefined}
-              onKeyDown={selectionMode ? (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectActivity?.(item); } } : undefined}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className={`flex items-center ${sp.gap.sm} ${sp.margin.bottom.sm}`}>
-                    <div className={`${iconSizes.xl} rounded-full flex items-center justify-center ${task.status === 'completed' ? colors.bg.successSubtle : colors.bg.infoSubtle}`}>
-                      <TaskIcon className={`${iconSizes.sm} ${task.status === 'completed' ? colors.text.success : colors.text.info}`} />
-                    </div>
-                    <h4 className={`font-medium ${task.status === 'completed' ? `line-through ${colors.text.muted}` : colors.text.primary}`}>{task.title}</h4>
-                    <Badge variant={PRIORITY_BADGE_VARIANT[task.priority]}>{task.priority}</Badge>
-                    <Badge variant={STATUS_BADGE_VARIANT[task.status]}>{task.status}</Badge>
-                  </div>
-                  <div className={`${sp.spaceBetween.xs} ${typography.body.sm} ${colors.text.muted}`}>
-                    <div className={`flex items-center ${sp.gap.md}`}>
-                      <span className={`flex items-center gap-1 ${getDateColor(task.dueDate ?? undefined, task.status, colors)}`}><Clock className={iconSizes.xs} />{formatDueDate(task.dueDate ?? undefined)}</span>
-                      {leadName && <span className="flex items-center gap-1"><User className={iconSizes.xs} />{leadName}</span>}
-                      {meta.location && <span className="flex items-center gap-1"><MapPin className={iconSizes.xs} />{meta.location}</span>}
-                    </div>
-                    {task.description && <div className={`${colors.text.primary} ${sp.margin.top.sm}`}><SafeHTMLContent html={task.description} /></div>}
-                  </div>
-                </div>
-                {!selectionMode && (
-                  <div className={`flex items-center ${sp.gap.sm} ${sp.margin.left.md}`}>
-                    {task.status !== 'completed' && <Button size="sm" variant="ghost" className={colors.text.success} onClick={() => handleCompleteTask(task.id, task.title)} aria-label={t('tasks.actions.complete')}><CheckCircle className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.complete')}</Button>}
-                    <Button size="sm" variant="ghost" onClick={() => setEditingTask(task)} aria-label={t('tasks.actions.edit')}><Edit3 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.edit')}</Button>
-                    <Button size="sm" variant="ghost" className={colors.text.error} onClick={() => handleDeleteTask(task.id, task.title)} aria-label={t('tasks.actions.delete')}><Trash2 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.delete')}</Button>
-                  </div>
-                )}
-              </div>
-            </article>
-          );
-        })
+        activityItems.map((item) => (
+          <TaskListCard
+            key={getItemId(item)}
+            item={item}
+            isSelected={selectionMode && selectedActivityId === getItemId(item)}
+            onSelect={onSelectActivity ? () => onSelectActivity(item) : undefined}
+            getLeadName={getLeadName}
+            onComplete={!selectionMode ? (task) => handleCompleteTask(task.id, task.title) : undefined}
+            onEdit={!selectionMode ? setEditingTask : undefined}
+            onDelete={!selectionMode ? (task) => handleDeleteTask(task.id, task.title) : undefined}
+          />
+        ))
       )}
-      <CreateTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onTaskCreated={() => { onTaskCreated?.(); }} />
+      <CreateTaskModal isOpen={false} onClose={() => {}} onTaskCreated={() => { onTaskCreated?.(); }} />
       {editingTask && (
         <TaskEditDialog
           task={editingTask}
           open={!!editingTask}
-          onOpenChange={(open) => { if (!open) setEditingTask(null); }}
-          onUpdated={() => { setEditingTask(null); }}
-        />
-      )}
-    </section>
-  );
-}
+          onOpenChange={(open) => { if (!o

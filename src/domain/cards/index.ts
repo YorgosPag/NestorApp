@@ -106,3 +106,9 @@ export { MaterialGridCard, type MaterialGridCardProps } from './material';
 
 export { AgreementListCard, type AgreementListCardProps } from './agreement';
 export { AgreementGridCard, type AgreementGridCardProps } from './agreement';
+
+// =============================================================================
+// ✅ TASK (CRM)
+// =============================================================================
+
+export { TaskListCard, type TaskListCardProps } from './task';
