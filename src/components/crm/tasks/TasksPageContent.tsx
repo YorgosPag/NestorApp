@@ -54,7 +54,7 @@ export function TasksPageContent() {
   const layout = useLayoutClasses();
   const sectionSpacing = getSpacingClass('m', 'md', 'b');
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { stats, loading: loadingStats } = useRealtimeTasks(!authLoading && isAuthenticated);
+  const { tasks: realtimeTasks, stats, loading: loadingStats } = useRealtimeTasks(!authLoading && isAuthenticated);
   const [isCreating, setIsCreating] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
@@ -221,6 +221,7 @@ export function TasksPageContent() {
                 filters={filters}
                 appointments={appointments}
                 externalLeads={leads}
+                externalTasks={realtimeTasks}
                 selectionMode
                 selectedActivityId={selectedActivityId}
                 onSelectActivity={setSelectedActivity}

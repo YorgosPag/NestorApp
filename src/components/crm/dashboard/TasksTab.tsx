@@ -62,6 +62,8 @@ interface TasksTabProps {
   appointments?: AppointmentDocument[];
   /** External leads from parent — skips internal fetch when provided */
   externalLeads?: Opportunity[];
+  /** External tasks from parent — skips internal real-time subscription when provided */
+  externalTasks?: CrmTask[];
   /** Split-layout mode: cards become clickable, inline actions hidden */
   selectionMode?: boolean;
   selectedActivityId?: string;
@@ -70,7 +72,7 @@ interface TasksTabProps {
   onCountChange?: (count: number) => void;
 }
 
-export function TasksTab({ filters: externalFilters, onTaskCreated, appointments, externalLeads, selectionMode = false, selectedActivityId, onSelectActivity, onCountChange }: TasksTabProps) {
+export function TasksTab({ filters: externalFilters, onTaskCreated, appointments, externalLeads, externalTasks, selectionMode = false, selectedActivityId, onSelectActivity, onCountChange }: TasksTabProps) {
   // 🏢 ENTERPRISE: Use externally provided filters or defaults
   const filters = externalFilters ?? defaultTaskFilters;
   const { success, error: notifyError } = useNotifications();
@@ -81,7 +83,12 @@ export function TasksTab({ filters: externalFilters, onTaskCreated, appointments
   const sp = useSpacingTokens();
   const { confirm, dialogProps } = useConfirmDialog();
   // 🏢 ENTERPRISE: Real-time tasks (ADR-227 Phase 1) — replaces one-time getTasks()
-  const { tasks, loading: tasksLoading, error: tasksError } = useRealtimeTasks(!authLoading && isAuthenticated);
+  // Skip own subscription when parent provides tasks (eliminates duplicate Firestore listeners
+  // on pages that mount TasksTab multiple times, e.g. desktop + mobile sections of /crm/tasks).
+  const { tasks: internalTasks, loading: tasksLoading, error: tasksError } = useRealtimeTasks(
+    !authLoading && isAuthenticated && externalTasks === undefined
+  );
+  const tasks = externalTasks ?? internalTasks;
   const [internalLeads, setInternalLeads] = useState<Opportunity[]>(
     externalLeads !== undefined ? [] : (crmDashboardLeadsCache.get() ?? [])
   );

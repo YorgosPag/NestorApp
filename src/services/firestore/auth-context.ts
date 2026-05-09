@@ -47,6 +47,14 @@ export function waitForAuthReady(): Promise<boolean> {
  * @returns Promise resolving to TenantContext
  */
 export async function requireAuthContext(): Promise<TenantContext> {
+  // Wait for Firebase Auth to finish initializing (handles SSR/hydration race)
+  // — early-mounted consumers (NotificationDrawer, opportunities, navigation) hit
+  // requireAuthContext before AuthContext finishes wiring; without this gate they
+  // throw AUTHENTICATION_ERROR even though the user IS logged in.
+  if (!auth.currentUser) {
+    await waitForAuthReady();
+  }
+
   const currentUser = auth.currentUser;
 
   if (!currentUser) {
