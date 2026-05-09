@@ -231,6 +231,8 @@
     "actions": {
       "complete": "Complete",
       "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
       "delete": "Delete"
     },
     "messages": {
@@ -241,7 +243,9 @@
       "updated": "✅ Task \"{title}\" updated!",
       "updateError": "❌ Error updating task",
       "loadError": "Error loading tasks",
-      "deleteConfirm": "Are you sure you want to delete task \"{title}\"?"
+      "deleteConfirm": "Are you sure you want to delete task \"{title}\"?",
+      "created": "✅ Task \"{title}\" created!",
+      "createError": "❌ Error creating task"
     },
     "emptyState": {
       "title": "New Task",
@@ -267,6 +271,19 @@
       "today": "Today",
       "todayTooltip": "Tasks due today",
       "ariaLabel": "Task quick filters"
+    },
+    "form": {
+      "fields": {
+        "title": "Title",
+        "type": "Type",
+        "date": "Date",
+        "time": "Time",
+        "description": "Description"
+      },
+      "placeholders": {
+        "date": "DD/MM/YYYY",
+        "time": "HH:MM"
+      }
     }
   },
   "leads": {

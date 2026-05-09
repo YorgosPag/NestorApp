@@ -9,7 +9,8 @@ export {
   vendorsToolbarConfig as vendorsConfig,
   materialsToolbarConfig as materialsConfig,
   agreementsToolbarConfig as agreementsConfig,
-  communicationsConfig
+  communicationsConfig,
+  tasksToolbarConfig as tasksConfig,
 } from './configs';
 export { iconColors, getIconColor } from './icon-colors';
 export type {

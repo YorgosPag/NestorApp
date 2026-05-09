@@ -225,6 +225,30 @@ export const agreementsToolbarConfig: CompactToolbarConfig = {
   },
 };
 
+const _tasksBase = createToolbarConfig('tasks');
+export const tasksToolbarConfig: CompactToolbarConfig = {
+  ..._tasksBase,
+  availableActions: {
+    newItem: true,
+    editItem: false,
+    deleteItems: false,
+    filters: false,
+    favorites: false,
+    archive: false,
+    export: true,
+    import: false,
+    refresh: true,
+    sorting: true,
+    preview: false,
+    copy: false,
+    share: false,
+    reports: false,
+    settings: false,
+    favoritesManagement: false,
+    help: false,
+  },
+};
+
 export const communicationsConfig: CompactToolbarConfig = {
   searchPlaceholder: searchPlaceholders.communications,
   labels: {

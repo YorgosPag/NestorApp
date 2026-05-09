@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { subMonths, addMonths } from 'date-fns';
 
-import CreateTaskModal from '@/components/crm/dashboard/dialogs/CreateTaskModal';
 import { TasksTab, type ActivityItem } from '@/components/crm/dashboard/TasksTab';
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -38,6 +37,7 @@ import { MobileDetailsSlideIn } from '@/core/layouts';
 import { SearchInput } from '@/components/ui/search';
 import { TaskQuickFilters } from '@/components/shared/TypeQuickFilters';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
+import { CompactToolbar, tasksConfig } from '@/components/core/CompactToolbar';
 import { getOpportunitiesClient } from '@/services/opportunities-client.service';
 import type { Opportunity } from '@/types/crm';
 
@@ -55,7 +55,7 @@ export function TasksPageContent() {
   const sectionSpacing = getSpacingClass('m', 'md', 'b');
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { stats, loading: loadingStats } = useRealtimeTasks(!authLoading && isAuthenticated);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
   const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
@@ -136,7 +136,10 @@ export function TasksPageContent() {
     ? selectedActivity.title
     : t('tasks.title');
 
-  const handleActivityAction = useCallback(() => setSelectedActivity(null), []);
+  const handleActivityAction = useCallback(() => {
+    setSelectedActivity(null);
+    setIsCreating(false);
+  }, []);
 
   return (
     <PageContainer ariaLabel={t('tasks.title')}>
@@ -154,7 +157,7 @@ export function TasksPageContent() {
           onDashboardToggle: () => setShowDashboard(!showDashboard),
           addButton: {
             label: t('tasks.newTask'),
-            onClick: () => setShowCreateModal(true),
+            onClick: () => { setIsCreating(true); setSelectedActivity(null); },
             icon: Plus,
           },
         }}
@@ -193,6 +196,11 @@ export function TasksPageContent() {
               itemCount={activityCount}
               hideSearch
             />
+            <CompactToolbar
+              config={tasksConfig}
+              onNewItem={() => { setIsCreating(true); setSelectedActivity(null); }}
+              onRefresh={() => { setFilters(defaultTaskFilters); setActiveCardIndex(null); }}
+            />
             <div className="px-2 py-1.5 border-b">
               <SearchInput
                 value={filters.searchTerm}
@@ -226,7 +234,9 @@ export function TasksPageContent() {
             activity={selectedActivity}
             leads={leads}
             onActionCompleted={handleActivityAction}
-            onCreateTask={() => setShowCreateModal(true)}
+            onCreateTask={() => { setIsCreating(true); setSelectedActivity(null); }}
+            isCreating={isCreating}
+            onCreateCancel={() => setIsCreating(false)}
           />
         </section>
 
@@ -263,25 +273,22 @@ export function TasksPageContent() {
         </section>
 
         <MobileDetailsSlideIn
-          isOpen={!!selectedActivity}
-          onClose={() => setSelectedActivity(null)}
-          title={mobileTitle}
+          isOpen={!!selectedActivity || isCreating}
+          onClose={() => { setSelectedActivity(null); setIsCreating(false); }}
+          title={isCreating ? t('tasks.newTask') : mobileTitle}
         >
-          {selectedActivity && (
+          {(selectedActivity ?? isCreating) && (
             <TaskDetailPanel
               activity={selectedActivity}
               leads={leads}
               onActionCompleted={handleActivityAction}
+              isCreating={isCreating}
+              onCreateCancel={() => setIsCreating(false)}
             />
           )}
         </MobileDetailsSlideIn>
       </ListContainer>
 
-      <CreateTaskModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onTaskCreated={() => { /* real-time subscription auto-updates */ }}
-      />
     </PageContainer>
   );
 }

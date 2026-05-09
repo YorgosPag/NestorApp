@@ -27,7 +27,8 @@ export type ToolbarType =
   | 'quotes'
   | 'vendors'
   | 'materials'
-  | 'agreements';
+  | 'agreements'
+  | 'tasks';
 
 // ============================================================================
 // LABEL MAPS
@@ -61,6 +62,7 @@ export const NEW_ITEM_LABELS_BY_TYPE: Record<string, string> = {
   vendors: 'procurement:hub.vendorMaster.addVendorHint',
   materials: 'procurement:hub.materialCatalog.create',
   agreements: 'procurement:hub.frameworkAgreements.create',
+  tasks: 'tasks.newTask',
 };
 
 export const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
@@ -76,6 +78,7 @@ export const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   vendors: 'procurement:hub.vendorMaster.addVendorHint',
   materials: 'procurement:hub.materialCatalog.create',
   agreements: 'procurement:hub.frameworkAgreements.create',
+  tasks: 'tasks.newTask',
 };
 
 export const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
@@ -91,6 +94,7 @@ export const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   vendors: 'tooltips.editSelected',
   materials: 'tooltips.editSelected',
   agreements: 'tooltips.editSelected',
+  tasks: 'tooltips.editSelected',
 };
 
 export const DELETE_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
@@ -106,6 +110,7 @@ export const DELETE_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   vendors: 'tooltips.deleteSelected',
   materials: 'tooltips.deleteSelected',
   agreements: 'tooltips.deleteSelected',
+  tasks: 'tooltips.deleteSelected',
 };
 
 export const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
@@ -121,6 +126,7 @@ export const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
   vendors: 'toolbar.labels.share',
   materials: 'toolbar.labels.share',
   agreements: 'toolbar.labels.share',
+  tasks: 'toolbar.labels.share',
 };
 
 // ============================================================================
@@ -287,6 +293,18 @@ export function getFilterCategoriesForType(type: ToolbarType) {
           ],
         },
       ];
+    case 'tasks':
+      return [
+        {
+          id: 'status',
+          label: 'toolbar.filters.categories.status',
+          options: [
+            { value: 'pending',     label: 'tasks.status.pending' },
+            { value: 'in_progress', label: 'tasks.status.in_progress' },
+            { value: 'completed',   label: 'tasks.status.completed' },
+          ],
+        },
+      ];
     default:
       return baseCategories;
   }
@@ -333,6 +351,13 @@ export function getSortOptionsForType(type: ToolbarType) {
       { field: 'number' as const, ascLabel: 'toolbar.sort.number.asc', descLabel: 'toolbar.sort.number.desc' },
       { field: 'status' as const, ascLabel: 'toolbar.sort.status.asc', descLabel: 'toolbar.sort.status.desc' },
       { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
+    ];
+  }
+  if (type === 'tasks') {
+    return [
+      { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
+      { field: 'priority' as const, ascLabel: 'toolbar.sort.priority.asc', descLabel: 'toolbar.sort.priority.desc' },
+      { field: 'status' as const, ascLabel: 'toolbar.sort.status.asc', descLabel: 'toolbar.sort.status.desc' },
     ];
   }
   return [

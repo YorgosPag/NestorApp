@@ -33,18 +33,15 @@
 // ============================================================================
 // LOG LEVELS
 // ============================================================================
-
 export enum LogLevel {
   ERROR = 0,
   WARN = 1,
   INFO = 2,
   DEBUG = 3
 }
-
 // ============================================================================
 // LOG ENTRY
 // ============================================================================
-
 export interface LogEntry {
   level: LogLevel;
   message: string;
@@ -52,15 +49,12 @@ export interface LogEntry {
   correlationId?: string;
   metadata?: Record<string, unknown>;
 }
-
 // ============================================================================
 // LOG OUTPUT INTERFACE
 // ============================================================================
-
 export interface LogOutput {
   write(entry: LogEntry): void;
 }
-
 // ============================================================================
 // CONSOLE OUTPUT
 // ============================================================================
@@ -153,21 +147,17 @@ export class ConsoleOutput implements LogOutput {
     }
   }
 }
-
 // ============================================================================
 // DEVNULL OUTPUT (SILENT)
 // ============================================================================
-
 export class DevNullOutput implements LogOutput {
   write(_entry: LogEntry): void {
     // Do nothing (silent)
   }
 }
-
 // ============================================================================
 // COMPOSITE OUTPUT (multiple outputs)
 // ============================================================================
-
 export class CompositeOutput implements LogOutput {
   private outputs: LogOutput[];
 
@@ -181,7 +171,6 @@ export class CompositeOutput implements LogOutput {
     }
   }
 }
-
 // ============================================================================
 // ERROR NORMALIZATION
 // ============================================================================
@@ -430,7 +419,6 @@ export class Logger {
 // ============================================================================
 // GLOBAL LOGGER INSTANCE
 // ============================================================================
-
 let globalLogger: Logger | null = null;
 
 /**
@@ -477,7 +465,17 @@ export function createLogger(correlationId?: string): Logger {
  * ```
  */
 export function createModuleLogger(moduleName: string, level?: LogLevel): Logger {
-  const defaultLevel = process.env.NODE_ENV === 'production' ? LogLevel.WARN : LogLevel.DEBUG;
+  // Dev default = DEBUG (verbose for local debugging).
+  // Prod default = INFO (significant business events only).
+  // Override globally via env: NEXT_PUBLIC_LOG_LEVEL=debug|info|warn|error
+  const envLevel = (process.env.NEXT_PUBLIC_LOG_LEVEL || '').toLowerCase();
+  const fromEnv = envLevel === 'debug' ? LogLevel.DEBUG
+    : envLevel === 'info' ? LogLevel.INFO
+    : envLevel === 'warn' ? LogLevel.WARN
+    : envLevel === 'error' ? LogLevel.ERROR
+    : null;
+  const isProd = process.env.NODE_ENV === 'production';
+  const defaultLevel = fromEnv ?? (isProd ? LogLevel.INFO : LogLevel.DEBUG);
 
   // Lazy-register Telegram alerts (one-time, server-side, production only)
   ensureTelegramAlertRegistered();

@@ -3,7 +3,7 @@
 import type { Opportunity } from '@/types/crm';
 import type { CrmTask } from '@/types/crm';
 import { deleteOpportunity, updateOpportunity } from '@/services/opportunities.service';
-import { completeTask, deleteTask, updateTask } from '@/services/tasks.service';
+import { addTask, completeTask, deleteTask, updateTask } from '@/services/tasks.service';
 
 interface GuardedOpportunityUpdateInput {
   readonly opportunityId: string;
@@ -59,4 +59,12 @@ export async function completeTaskWithPolicy({
   notes,
 }: GuardedTaskCompleteInput): Promise<void> {
   return completeTask(taskId, notes);
+}
+
+interface GuardedTaskCreateInput {
+  readonly data: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>;
+}
+
+export async function createTaskWithPolicy({ data }: GuardedTaskCreateInput): Promise<string> {
+  return addTask(data);
 }

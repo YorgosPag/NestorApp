@@ -47,6 +47,10 @@
       "channel": {
         "asc": "Channel (A-Z)",
         "desc": "Channel (Z-A)"
+      },
+      "priority": {
+        "asc": "Priority (Low→High)",
+        "desc": "Priority (High→Low)"
       }
     },
     "ui": {
