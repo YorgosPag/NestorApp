@@ -4,8 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useFloorplanBackground } from '../hooks/useFloorplanBackground';
 import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
-import type { CadCoordinateAdaptation, FloorplanBackground, ViewTransform } from '../providers/types';
-import type { IFloorplanBackgroundProvider } from '../providers/IFloorplanBackgroundProvider';
+import type { CadCoordinateAdaptation, ViewTransform } from '../providers/types';
 import type { CalibrationSession } from '../stores/floorplanBackgroundStore';
 import type { Point2D } from '../providers/types';
 
@@ -35,23 +34,6 @@ export function FloorplanBackgroundCanvas({
   const calibrationSession = useFloorplanBackgroundStore((s) => s.calibrationSession);
   const isCalibrating = calibrationSession?.floorId === floorId;
 
-  // Refs for RAF loop — avoid stale closures without restarting the loop
-  const backgroundRef = useRef<FloorplanBackground | null>(background);
-  const providerRef = useRef<IFloorplanBackgroundProvider | null>(provider);
-  const worldToCanvasRef = useRef<ViewTransform>(worldToCanvas);
-  const viewportRef = useRef<{ width: number; height: number }>(viewport);
-  const cadRef = useRef<CadCoordinateAdaptation | undefined>(cad);
-  const calibrationSessionRef = useRef<CalibrationSession | null>(calibrationSession);
-  const floorIdRef = useRef<string>(floorId);
-
-  useEffect(() => { backgroundRef.current = background; }, [background]);
-  useEffect(() => { providerRef.current = provider; }, [provider]);
-  useEffect(() => { worldToCanvasRef.current = worldToCanvas; }, [worldToCanvas]);
-  useEffect(() => { viewportRef.current = viewport; }, [viewport]);
-  useEffect(() => { cadRef.current = cad; }, [cad]);
-  useEffect(() => { calibrationSessionRef.current = calibrationSession; }, [calibrationSession]);
-  useEffect(() => { floorIdRef.current = floorId; }, [floorId]);
-
   // Resize canvas backing store when viewport changes
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -60,46 +42,42 @@ export function FloorplanBackgroundCanvas({
     canvas.height = viewport.height;
   }, [viewport.width, viewport.height]);
 
-  // Single RAF loop for the component lifetime — reads refs each frame
+  // Render only when inputs change — Phase G: eliminated continuous 60fps RAF loop.
+  // Previous implementation re-rendered every frame even in idle (~6s/11s per trace 2026-05-09).
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let rafId: number;
+    ctx.clearRect(0, 0, viewport.width, viewport.height);
 
-    const draw = () => {
-      const bg = backgroundRef.current;
-      const prov = providerRef.current;
-      const vp = viewportRef.current;
+    if (background?.visible && provider) {
+      provider.render(ctx, {
+        transform: background.transform,
+        worldToCanvas,
+        viewport,
+        opacity: background.opacity,
+        cad,
+      });
+    }
 
-      ctx.clearRect(0, 0, vp.width, vp.height);
-
-      if (bg?.visible && prov) {
-        prov.render(ctx, {
-          transform: bg.transform,
-          worldToCanvas: worldToCanvasRef.current,
-          viewport: vp,
-          opacity: bg.opacity,
-          cad: cadRef.current,
-        });
-      }
-
-      _drawCalibrationMarkers(ctx, calibrationSessionRef.current, floorIdRef.current);
-
-      rafId = requestAnimationFrame(draw);
-    };
-
-    rafId = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafId);
-  }, []); // single mount — loop reads latest values from refs
+    _drawCalibrationMarkers(ctx, calibrationSession, floorId);
+  }, [
+    background,
+    provider,
+    worldToCanvas,
+    viewport,
+    cad,
+    calibrationSession,
+    floorId,
+  ]);
 
   // Click handler for calibration point picking — reads fresh store state
   const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const { calibrationSession: session, setCalibrationPoint } =
       useFloorplanBackgroundStore.getState();
-    if (session?.floorId !== floorIdRef.current) return;
+    if (session?.floorId !== floorId) return;
     if (session.pointA && session.pointB) return; // both already set, waiting for dialog
     const canvas = e.currentTarget;
     const rect = canvas.getBoundingClientRect();
@@ -108,9 +86,9 @@ export function FloorplanBackgroundCanvas({
     const scaleY = canvas.height / rect.height;
     setCalibrationPoint(
       { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY },
-      worldToCanvasRef.current.scale,
+      worldToCanvas.scale,
     );
-  }, []);
+  }, [floorId, worldToCanvas]);
 
   return (
     <canvas
