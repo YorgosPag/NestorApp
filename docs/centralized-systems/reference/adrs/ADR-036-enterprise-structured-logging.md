@@ -61,5 +61,38 @@ Override globally with `NEXT_PUBLIC_LOG_LEVEL=debug|info|warn|error`. Per-module
 |------|--------|
 | 2026-02-12 | Migrated 6 unconditional `console.log` in `DxfViewerContent.tsx` (core render flow) to `dlog('DxfViewerContent', ...)` |
 | 2026-05-09 | Codified Log Level Semantics + default thresholds. Reverted `createModuleLogger` default from `WARN` (silenced everything) back to dev-DEBUG / prod-INFO. Demoted per-snapshot / per-event `info` logs in `useRealtimeTasks`, `useRealtimeOpportunities`, `AuthContext`, `opportunities-client.service` to `debug`. |
+| 2026-05-09 | **Deprecated `public/suppress-console.js`** (597-line global console monkey-patch, 250+ hardcoded `BLOCKED_*_PATTERNS` arrays, `unhandledrejection` filter masking Firestore permission errors, `?showErrors=1` opt-in bypass). Replaced by `public/react-bugfix-guards.js` (preserves only the React 19.2.1 `String.prototype.repeat` guard). Production silence now via `NEXT_PUBLIC_LOG_LEVEL=warn` env var on Netcup — no global console override. React DevTools "Default levels" dropdown handles user-side noise filtering. Migration: layout.tsx Script src updated; `window.__ENTERPRISE_CONSOLE__` global removed (no callsites). Firestore "Missing or insufficient permissions" errors now surface in console — fix at source via Firestore rules, do not re-suppress. |
+
+---
+
+## Migration Notes — Console Suppression Removal (2026-05-09)
+
+### What changed
+- `public/suppress-console.js` — **deleted**
+- `public/react-bugfix-guards.js` — **new** (~20 lines, only React repeat guard)
+- `src/app/layout.tsx` — `<Script src>` updated to new file
+- `.env.example` — documented `NEXT_PUBLIC_LOG_LEVEL` (default: dev-DEBUG, prod-INFO; recommended prod = `warn`)
+
+### Why
+The old `suppress-console.js` was a layered hack:
+1. Monkey-patched `console.log/warn/error/info/debug/group/groupCollapsed`
+2. 250+ hardcoded string patterns in 4 arrays (DXF, performance, production, React) — high maintenance burden
+3. Global `window.__ENTERPRISE_CONSOLE__` escape hatch (no callsites — only self-reference)
+4. `unhandledrejection` filter swallowing `"Missing or insufficient permissions"` Firestore errors, masking rules bugs
+5. CSS chunk `SyntaxError` filter (stale Vercel cache hack — Vercel paused, Netcup deploy)
+6. `?showErrors=1` URL opt-in to bypass own filter — symptom of fragile architecture
+
+### What stays
+- React 19.2.1 `String.prototype.repeat` guard (browser side: `react-bugfix-guards.js`; server side: `instrumentation.ts`)
+- Logger SSoT (`createModuleLogger`) with per-module prefix + level via `NEXT_PUBLIC_LOG_LEVEL`
+- ESLint `custom/no-console-log` rule (warn mode)
+
+### Production silence pattern
+- Set `NEXT_PUBLIC_LOG_LEVEL=warn` on Netcup env vars
+- Logger drops `debug`/`info` calls at threshold check (Logger.ts L403)
+- No global console override — `console.error` from third-party code surfaces normally
+
+### React internal noise
+Filter at the user side via DevTools → Console → "Default levels" dropdown. Not the app's responsibility.
 
 ---

@@ -61,7 +61,7 @@ export default function RootLayout({
   return (
     <html lang="el" className="overflow-x-hidden" suppressHydrationWarning>
       <head>
-        <Script src="/suppress-console.js" strategy="beforeInteractive" />
+        <Script src="/react-bugfix-guards.js" strategy="beforeInteractive" />
       </head>
       <body className={cn("font-sans overflow-x-hidden", roboto.variable)}>
         {/* 🏢 ENTERPRISE: Minimal provider stack - essential providers only */}

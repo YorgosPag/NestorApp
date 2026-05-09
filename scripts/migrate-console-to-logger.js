@@ -33,8 +33,8 @@ const CONFIG = {
   extensions: ['.ts', '.tsx', '.js', '.jsx'],
   excludeDirs: ['node_modules', '.next', 'dist', '__tests__', 'test', 'spec'],
   excludeFiles: [
-    'Logger.ts',           // Logger itself uses console
-    'suppress-console.js', // Console suppression
+    'Logger.ts',                // Logger itself uses console
+    'react-bugfix-guards.js',   // Public asset, not source code
   ],
 };
 

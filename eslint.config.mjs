@@ -163,7 +163,6 @@ export default defineConfig([
     // 🏢 ENTERPRISE: Specific exception for Logger implementation itself
     files: [
       "src/lib/telemetry/**/*",         // Logger uses console internally
-      "public/suppress-console.js",     // Console suppression system
     ],
     rules: {
       "custom/no-console-log": "off",
