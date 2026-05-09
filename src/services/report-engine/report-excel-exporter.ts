@@ -13,7 +13,7 @@
  * @see ADR-265 §8.16 (Export Best Practices)
  */
 
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import { designTokens } from '@/styles/design-tokens';
 import { triggerBlobDownload } from '@/services/gantt-export/gantt-export-utils';
 import { formatDateShort } from '@/lib/intl-utils';
@@ -330,7 +330,8 @@ function buildRawDataSheet(
  * 4. Raw Data
  */
 export async function exportReportToExcel(config: ReportExcelConfig): Promise<void> {
-  const workbook = new ExcelJS.Workbook();
+  const ExcelJSLib = (await import('exceljs')).default;
+  const workbook = new ExcelJSLib.Workbook();
   workbook.creator = 'Nestor Pagonis';
   workbook.created = new Date();
 

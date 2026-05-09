@@ -14,7 +14,7 @@
  * @see ADR-268 §11 Phase 3, SPEC-003-export.md, QA.md Q57-Q72
  */
 
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import { designTokens } from '@/styles/design-tokens';
 import { triggerBlobDownload } from '@/services/gantt-export/gantt-export-utils';
 import { formatDateShort } from '@/lib/intl-utils';
@@ -389,7 +389,8 @@ function buildRawSheet(
 // ============================================================================
 
 export async function exportBuilderToExcel(params: BuilderExportParams): Promise<void> {
-  const workbook = new ExcelJS.Workbook();
+  const ExcelJSLib = (await import('exceljs')).default;
+  const workbook = new ExcelJSLib.Workbook();
   workbook.creator = params.userName || 'Nestor Report Builder';
   workbook.created = new Date();
 

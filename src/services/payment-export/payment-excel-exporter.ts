@@ -10,7 +10,7 @@
  * @module services/payment-export/payment-excel-exporter
  */
 
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import { designTokens } from '@/styles/design-tokens';
 import { triggerBlobDownload } from '@/services/gantt-export/gantt-export-utils';
 import { formatDateShort } from '@/lib/intl-utils';
@@ -220,7 +220,8 @@ function buildSummarySheet(workbook: ExcelJS.Workbook, data: PaymentReportData):
 // =============================================================================
 
 export async function exportPaymentReportToExcel(data: PaymentReportData): Promise<void> {
-  const workbook = new ExcelJS.Workbook();
+  const ExcelJSLib = (await import('exceljs')).default;
+  const workbook = new ExcelJSLib.Workbook();
   workbook.creator = 'Nestor Pagonis';
   workbook.created = new Date();
 

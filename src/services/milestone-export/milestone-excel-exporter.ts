@@ -8,7 +8,7 @@
  * Uses ExcelJS (MIT license) — same pattern as gantt-excel-exporter.ts.
  */
 
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import type { MilestoneExportOptions } from './types';
 import { formatDateShort } from '@/lib/intl-utils';
 import { triggerBlobDownload } from '../gantt-export/gantt-export-utils';
@@ -68,7 +68,8 @@ const STATUS_TEXT: Record<string, string> = {
 
 export async function exportMilestonesToExcel(options: MilestoneExportOptions): Promise<void> {
   const { milestones, buildingName, filename, companyName, projectName } = options;
-  const workbook = new ExcelJS.Workbook();
+  const ExcelJSLib = (await import('exceljs')).default;
+  const workbook = new ExcelJSLib.Workbook();
   workbook.creator = 'Nestor App';
   workbook.created = new Date();
 

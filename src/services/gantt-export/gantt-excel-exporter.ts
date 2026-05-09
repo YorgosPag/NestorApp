@@ -8,7 +8,7 @@
  * Uses exceljs (MIT license) for styled Excel generation.
  */
 
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import type { GanttExportOptions } from './types';
 import { designTokens } from '@/styles/design-tokens';
 import { formatDateShort } from '@/lib/intl-utils';
@@ -35,7 +35,8 @@ const HEADER_FONT: Partial<ExcelJS.Font> = {
  */
 export async function exportGanttToExcel(options: GanttExportOptions): Promise<void> {
   const { taskGroups, buildingName, filename } = options;
-  const workbook = new ExcelJS.Workbook();
+  const ExcelJSLib = (await import('exceljs')).default;
+  const workbook = new ExcelJSLib.Workbook();
   workbook.creator = 'Nestor Pagonis';
   workbook.created = new Date();
 

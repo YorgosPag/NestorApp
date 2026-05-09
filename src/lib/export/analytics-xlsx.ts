@@ -6,7 +6,7 @@
  * @see ADR-331 Phase B2
  */
 
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import type { SpendAnalyticsResult } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
 
 const HEADER_FILL: ExcelJS.Fill = {
@@ -116,7 +116,8 @@ function buildBudgetVsActualSheet(wb: ExcelJS.Workbook, result: SpendAnalyticsRe
 }
 
 export async function buildSpendAnalyticsWorkbook(result: SpendAnalyticsResult): Promise<Buffer> {
-  const wb = new ExcelJS.Workbook();
+  const ExcelJSLib = (await import('exceljs')).default;
+  const wb = new ExcelJSLib.Workbook();
   wb.creator = 'Nestor App';
   wb.created = new Date();
   buildOverviewSheet(wb, result);

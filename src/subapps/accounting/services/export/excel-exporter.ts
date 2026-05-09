@@ -7,7 +7,7 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import type { ReportType, ReportDataMap, ResolvedPeriods } from '../../types/reports';
 import { flattenReportForExport } from './report-table-adapter';
 import type { CellValue } from './report-table-adapter';
@@ -71,7 +71,8 @@ export async function exportReportExcel(
 ): Promise<void> {
   const tableData = flattenReportForExport(reportType, data);
 
-  const workbook = new ExcelJS.Workbook();
+  const ExcelJSLib = (await import('exceljs')).default;
+  const workbook = new ExcelJSLib.Workbook();
   workbook.creator = 'Nestor App';
   workbook.created = new Date();
 

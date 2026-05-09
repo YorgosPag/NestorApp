@@ -6,7 +6,7 @@
  * Builds Sheet 3 "Ανάλυση" with COUNTIFS/SUMIFS/AVERAGEIFS formulas.
  */
 
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import { designTokens } from '@/styles/design-tokens';
 import type { BuilderExportParams } from './builder-export-types';
 import type { FieldDefinition } from '@/config/report-builder/report-builder-types';
