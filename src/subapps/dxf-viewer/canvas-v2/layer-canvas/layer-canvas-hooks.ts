@@ -8,6 +8,7 @@
  */
 
 import { useRef, useCallback, useEffect } from 'react';
+import type { SelectionState } from '../../systems/cursor/SelectionStore';
 import type { LayerRenderer } from './LayerRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
@@ -35,9 +36,8 @@ interface SnapResult {
 
 interface CursorState {
   position: Point2D | null;
-  isSelecting: boolean;
-  selectionStart: Point2D | null;
-  selectionCurrent: Point2D | null;
+  // isSelecting/selectionStart/selectionCurrent moved to selectionRef param
+  // (imperative subscription — zero React re-renders on selection drag)
 }
 
 interface LayerHitTestParams {
@@ -57,6 +57,7 @@ interface LayerCanvasRendererParams {
   layersVisible: boolean;
   draggingOverlay: { overlayId: string; delta: Point2D } | null;
   cursor: CursorState;
+  selectionRef: React.MutableRefObject<SelectionState>;
   snapResults: SnapResult[];
   crosshairSettings: CrosshairSettings;
   cursorSettings: CursorSettings;
@@ -132,6 +133,7 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     layersVisible,
     draggingOverlay,
     cursor,
+    selectionRef,
     snapResults,
     crosshairSettings,
     cursorSettings,
@@ -166,13 +168,14 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     if (!renderer || !viewport.width || !viewport.height) return;
 
     try {
-      // Selection box from cursor state
+      // Selection box from imperative ref (zero React re-renders on drag)
+      const sel = selectionRef.current;
       const currentSelectionBox =
-        cursor.isSelecting && cursor.selectionStart && cursor.selectionCurrent
+        sel.isSelecting && sel.selectionStart && sel.selectionCurrent
           ? ({
-              startPoint: cursor.selectionStart,
-              endPoint: cursor.selectionCurrent,
-              type: cursor.selectionCurrent.x > cursor.selectionStart.x ? 'window' : 'crossing',
+              startPoint: sel.selectionStart,
+              endPoint: sel.selectionCurrent,
+              type: sel.selectionCurrent.x > sel.selectionStart.x ? 'window' : 'crossing',
             } as const)
           : null;
 
@@ -217,7 +220,7 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
         showCursor: renderOptions.showCursor && !isPanToolActive,
         crosshairPosition: isPanToolActive ? null : centralizedPosition,
         cursorPosition: isPanToolActive ? null : centralizedPosition,
-        showSelectionBox: !isPanToolActive && cursor.isSelecting && currentSelectionBox !== null,
+        showSelectionBox: !isPanToolActive && sel.isSelecting && currentSelectionBox !== null,
         selectionBox: isPanToolActive ? null : currentSelectionBox,
         snapResults: layerSnapResults,
       };
@@ -240,9 +243,6 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     }
   }, [
     layers,
-    cursor.isSelecting,
-    cursor.selectionStart,
-    cursor.selectionCurrent,
     snapResults,
     activeTool,
     layersVisible,
@@ -289,9 +289,6 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     layers,
     transform,
     viewport,
-    cursor.isSelecting,
-    cursor.selectionStart,
-    cursor.selectionCurrent,
     snapResults,
     layersVisible,
     activeTool,

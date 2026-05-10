@@ -25,7 +25,8 @@ import { useCanvasResize } from '../../hooks/canvas';
 import { LayerRenderer } from './LayerRenderer';
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
 import { useCursor } from '../../systems/cursor/CursorSystem';
-import { useSelectionState } from '../../systems/cursor/useCursor';
+import { SelectionStore } from '../../systems/cursor/SelectionStore';
+import type { SelectionState } from '../../systems/cursor/SelectionStore';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { createUnifiedCanvasSystem } from '../../rendering/canvas';
 import type { CanvasManager, CanvasInstance } from '../../rendering/canvas/core/CanvasManager';
@@ -142,8 +143,8 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   resolvedViewportRef.current = viewport;
 
   const cursor = useCursor();
-  // 🚀 PERF (2026-05-10): direct SelectionStore subscription (ADR-040 Phase III).
-  const selectionState = useSelectionState();
+  // 🚀 PERF (2026-05-10 Phase III corrected): selection ref updated imperatively.
+  const selectionRef = useRef<SelectionState>(SelectionStore.getSnapshot());
 
   // ── Hit testing + selection (extracted hook) ───────────────────────
   const { layerHitTestCallback, handleLayerSelection } = useLayerHitTest({
@@ -279,10 +280,8 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     draggingOverlay,
     cursor: {
       position: cursor.position,
-      isSelecting: selectionState.isSelecting,
-      selectionStart: selectionState.selectionStart,
-      selectionCurrent: selectionState.selectionCurrent,
     },
+    selectionRef,
     snapResults,
     crosshairSettings,
     cursorSettings,
@@ -294,6 +293,16 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     useUnifiedUIRendering,
     transform,
   });
+
+  // 🚀 PERF (2026-05-10): imperative SelectionStore subscription for LayerCanvas.
+  // Updates selectionRef + marks canvas dirty — zero React re-renders on drag.
+  useEffect(() => {
+    selectionRef.current = SelectionStore.getSnapshot();
+    return SelectionStore.subscribe(() => {
+      selectionRef.current = SelectionStore.getSnapshot();
+      isDirtyRef.current = true;
+    });
+  }, [isDirtyRef, selectionRef]);
 
   // Viewport resize → re-setup canvas backing store
   useEffect(() => {

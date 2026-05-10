@@ -109,126 +109,110 @@ if (!window.globalCoordinateCopy) {
 }
 
 export default function CoordinateDebugOverlay({ className = '' }: CoordinateDebugOverlayProps) {
-  // ✅ ENTERPRISE ARCHITECTURE: Use Context for transform (Single Source of Truth)
   const contextTransform = useTransformValue();
 
-  const [mouseScreen, setMouseScreen] = useState<Point2D>({ x: 0, y: 0 });
-  const [mouseWorld, setMouseWorld] = useState<Point2D>({ x: 0, y: 0 });
-  const [viewport, setViewport] = useState<Viewport>({ width: 0, height: 0 });
-  const [canvasRect, setCanvasRect] = useState<DOMRect | null>(null);
-
-  // ✅ FIX: Χρήση useRef για current values που δεν προκαλούν re-renders
-  const currentValues = useRef({
-    mouseScreen: { x: 0, y: 0 },
-    mouseWorld: { x: 0, y: 0 },
+  // 🚀 PERF: Single state object → 1 re-render per tick, not 4.
+  // Throttled to 100ms (10fps) — sufficient for a debug readout.
+  const [displayData, setDisplayData] = useState({
+    mouseScreen: { x: 0, y: 0 } as Point2D,
+    mouseWorld: { x: 0, y: 0 } as Point2D,
+    viewport: { width: 0, height: 0 } as Viewport,
     canvasRect: null as DOMRect | null,
-    transform: contextTransform // ✅ ENTERPRISE: Use Context transform
   });
 
-  // ✅ SYNC: Update ref when context transform changes
+  // Refs: always-fresh data for clipboard copy (never stale)
+  const currentValues = useRef({
+    mouseScreen: { x: 0, y: 0 } as Point2D,
+    mouseWorld: { x: 0, y: 0 } as Point2D,
+    canvasRect: null as DOMRect | null,
+    transform: contextTransform,
+    lastRenderTime: 0,
+  });
+
   useEffect(() => {
     currentValues.current.transform = contextTransform;
   }, [contextTransform]);
 
-  // ✅ PURE EXTERNAL LOGIC - Στο window πριν από το React
   useEffect(() => {
+    const THROTTLE_MS = 100; // 10fps for debug display
 
-    // ✅ ENHANCED GLOBAL MOUSE TRACKING
-    const enhancedMouseMove = (e: MouseEvent) => {
-      // Αποθηκεύω το event με timestamp
-      window.lastMouseEvent = e;
-      window.lastMouseUpdate = Date.now();
-    };
-
-    // ⚡ SIMPLE HANDLER - Καλεί την εξωτερική global function
     const handleKeyPress = (e: KeyboardEvent) => {
-      // 🔥 SIMPLE F-KEY SHORTCUTS - Δεν συγκρούονται με browser
       const key = e.key;
-      let copyKey = null;
-
-      if (key === 'F1') copyKey = 'c'; // F1 = All data
-      else if (key === 'F2') copyKey = 's'; // F2 = Screen coords
-      else if (key === 'F3') copyKey = 'w'; // F3 = World coords
-      else if (key === 'F4') copyKey = 't'; // F4 = Transform
+      let copyKey: string | null = null;
+      if (key === 'F1') copyKey = 'c';
+      else if (key === 'F2') copyKey = 's';
+      else if (key === 'F3') copyKey = 'w';
+      else if (key === 'F4') copyKey = 't';
 
       if (copyKey) {
-        // 🔥 AGGRESSIVE PREVENTION: Σταματάω ΑΜΕΣΑ το event
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-
-        // Καλώ την copy function
         window.globalCoordinateCopy?.(copyKey);
-
         return false;
       }
     };
 
-    // Legacy handleMouseMove για UI state
     const handleMouseMove = (e: MouseEvent) => {
-      enhancedMouseMove(e); // Global tracking πρώτα
+      window.lastMouseEvent = e;
+      window.lastMouseUpdate = Date.now();
 
       const screenPos = { x: e.clientX, y: e.clientY };
-
-      // ✅ FIXED: Ενημέρωση currentValues για immediate access
       currentValues.current.mouseScreen = screenPos;
 
-      // Update screen coordinates για UI
-      setMouseScreen(screenPos);
+      // Throttle React re-renders to 10fps
+      const now = performance.now();
+      if (now - currentValues.current.lastRenderTime < THROTTLE_MS) return;
+      currentValues.current.lastRenderTime = now;
 
-      // Update viewport
-      setViewport({ width: window.innerWidth, height: window.innerHeight });
+      // getBoundingClientRect only at throttle rate (avoids forced reflow every frame)
+      let newRect = currentValues.current.canvasRect;
+      let newWorldPos = currentValues.current.mouseWorld;
 
-      // Try to get canvas bounds
       const dxfCanvas = document.querySelector('.dxf-canvas') as HTMLCanvasElement;
       if (dxfCanvas) {
-        const rect = dxfCanvas.getBoundingClientRect();
-        currentValues.current.canvasRect = rect;
-        setCanvasRect(rect);
-
-        // Calculate relative to canvas
-        const canvasX = e.clientX - rect.left;
-        const canvasY = e.clientY - rect.top;
-
-        // ✅ FIXED: Χρήση διορθωμένου CoordinateTransforms με current transform
-        const canvasPoint = { x: canvasX, y: canvasY };
-        const canvasViewport = { width: rect.width, height: rect.height };
-        const worldPos = CoordinateTransforms.screenToWorld(canvasPoint, currentValues.current.transform, canvasViewport);
-
-        // Ενημέρωση και currentValues και state
-        currentValues.current.mouseWorld = worldPos;
-        setMouseWorld(worldPos);
+        newRect = dxfCanvas.getBoundingClientRect();
+        currentValues.current.canvasRect = newRect;
+        const canvasPoint = { x: e.clientX - newRect.left, y: e.clientY - newRect.top };
+        newWorldPos = CoordinateTransforms.screenToWorld(
+          canvasPoint,
+          currentValues.current.transform,
+          { width: newRect.width, height: newRect.height },
+        );
+        currentValues.current.mouseWorld = newWorldPos;
       }
-    };
 
-    // ✅ ENTERPRISE: No need for updateTransform - Context handles this!
-    // Transform updates are automatic via useTransformValue() hook
+      setDisplayData({
+        mouseScreen: screenPos,
+        mouseWorld: newWorldPos,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        canvasRect: newRect,
+      });
+    };
 
     window.addEventListener('mousemove', handleMouseMove);
-    // 🔥 AGGRESSIVE EVENT CAPTURE: Capture στην capture phase για να πιάσουμε πρώτα το event
-    document.addEventListener('keydown', handleKeyPress, true); // true = capture phase
-    window.addEventListener('keydown', handleKeyPress); // backup στο bubbling phase
-
+    document.addEventListener('keydown', handleKeyPress, true);
+    window.addEventListener('keydown', handleKeyPress);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('keydown', handleKeyPress, true); // cleanup capture phase
-      window.removeEventListener('keydown', handleKeyPress); // cleanup bubbling phase
+      document.removeEventListener('keydown', handleKeyPress, true);
+      window.removeEventListener('keydown', handleKeyPress);
     };
-  }, []); // ✅ FIXED: Κενό dependency array - το event listener δημιουργείται μόνο μία φορά
+  }, []);
+
+  const { mouseScreen, mouseWorld, canvasRect } = displayData;
 
   return (
     <div className={cn(styles.debugOverlay, className)}>
-      {/* Real-time cursor info - κάτω αριστερή γωνία (bottom: 0, left: 6) */}
+      {/* Real-time cursor info */}
       <div className={styles.overlayPositioned}>
         <div className={styles.sectionTitle}>🎯 LIVE COORDINATES</div>
 
-        {/* Screen Coordinates */}
         <div className={styles.coordinateGroup}>
           <span className={styles.coordinateLabel}>Screen:</span>
           <span className={styles.coordinateValue}>X: {Math.round(mouseScreen.x)}, Y: {Math.round(mouseScreen.y)}</span>
         </div>
 
-        {/* Canvas Relative */}
         {canvasRect && (
           <div className={styles.coordinateGroup}>
             <span className={styles.coordinateLabelCanvas}>Canvas:</span>
@@ -239,7 +223,6 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
           </div>
         )}
 
-        {/* World Coordinates */}
         <div className={styles.coordinateGroup}>
           <span className={styles.coordinateLabelWorld}>World:</span>
           <span className={styles.coordinateValue}>
@@ -247,14 +230,12 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
           </span>
         </div>
 
-        {/* Transform Info */}
         <div className={styles.dividerSection}>
           <div className={styles.subsectionTitle}>TRANSFORM</div>
           <div>Scale: {contextTransform.scale.toFixed(3)}</div>
           <div>Offset: ({contextTransform.offsetX.toFixed(1)}, {contextTransform.offsetY.toFixed(1)})</div>
         </div>
 
-        {/* Canvas Info */}
         {canvasRect && (
           <div className={styles.dividerSection}>
             <div className={styles.subsectionTitle}>CANVAS BOUNDS</div>
@@ -263,7 +244,6 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
           </div>
         )}
 
-        {/* Copy Shortcuts */}
         <div className={styles.shortcutsSection}>
           <div className={styles.subsectionTitle}>📋 COPY SHORTCUTS</div>
           <div className={styles.shortcutItem}>F1: All data</div>
@@ -273,16 +253,13 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
         </div>
       </div>
 
-      {/* Crosshair cursor indicator */}
+      {/* Crosshair: updates at throttled rate (10fps) — fine for debug */}
       <div
         className={styles.crosshairContainer}
         style={canvasUtilities.geoInteractive.debugCrosshairPosition(mouseScreen.x, mouseScreen.y)}
       >
-        {/* Horizontal line */}
         <div className={styles.crosshairHorizontal} />
-        {/* Vertical line */}
         <div className={styles.crosshairVertical} />
-        {/* Center dot */}
         <div className={styles.crosshairCenter} />
       </div>
     </div>

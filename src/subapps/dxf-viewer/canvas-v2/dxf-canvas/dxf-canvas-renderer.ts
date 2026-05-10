@@ -77,11 +77,9 @@ export interface DxfCanvasRendererParams {
   constructionPoints?: readonly ConstructionPoint[];
   highlightedPointId?: string | null;
   ghostSegmentLine?: { start: Point2D; end: Point2D } | null;
-  cursorIsSelecting: boolean;
-  cursorSelectionStartX?: number;
-  cursorSelectionStartY?: number;
-  cursorSelectionCurrentX?: number;
-  cursorSelectionCurrentY?: number;
+  // 🚀 PERF (2026-05-10): selection state removed — read from selectionStateRef
+  // directly in RAF via refs.selectionStateRef. Imperative subscription in
+  // DxfCanvas updates the ref + isDirtyRef without triggering React re-renders.
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────
@@ -92,8 +90,6 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     transform, guides, guidesVisible, showGuideDimensions,
     ghostGuide, ghostDiagonalGuide, highlightedGuideId,
     constructionPoints, highlightedPointId, ghostSegmentLine,
-    cursorIsSelecting, cursorSelectionStartX, cursorSelectionStartY,
-    cursorSelectionCurrentX, cursorSelectionCurrentY,
   } = params;
 
   const isDirtyRef = useRef(true);
@@ -265,10 +261,8 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     isDirtyRef.current = true;
   }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, showGuideDimensions, ghostGuide, ghostDiagonalGuide, highlightedGuideId, constructionPoints, highlightedPointId, ghostSegmentLine]);
 
-  // Mark dirty when selection state changes
-  useEffect(() => {
-    isDirtyRef.current = true;
-  }, [cursorIsSelecting, cursorSelectionStartX, cursorSelectionStartY, cursorSelectionCurrentX, cursorSelectionCurrentY]);
+  // Selection dirty-marking handled by DxfCanvas imperative SelectionStore
+  // subscription — no useEffect dep array needed here.
 
   return { isDirtyRef };
 }

@@ -15,7 +15,7 @@ import { DxfRenderer } from './DxfRenderer';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
 import { useCursor } from '../../systems/cursor/CursorSystem';
-import { useSelectionState } from '../../systems/cursor/useCursor';
+import { SelectionStore } from '../../systems/cursor/SelectionStore';
 import { SelectionRenderer } from '../layer-canvas/selection/SelectionRenderer';
 import type { ViewTransform, Viewport, Point2D, CanvasConfig } from '../../rendering/types/Types';
 import type { DxfScene, DxfRenderOptions } from './dxf-types';
@@ -144,19 +144,12 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   resolvedViewportRef.current = viewport;
 
   const cursor = useCursor();
-  // 🚀 PERF (2026-05-10): direct SelectionStore subscription — DxfCanvas
-  // re-renders on selection change without going through the CursorSystem provider.
-  const selectionState = useSelectionState();
 
-  // Selection state ref for RAF-synchronized rendering
+  // 🚀 PERF (2026-05-10 Phase III corrected): selection ref updated via
+  // imperative SelectionStore callback — zero React re-renders on selection drag.
   const selectionStateRef = useRef<{ isSelecting: boolean; selectionStart: Point2D | null; selectionCurrent: Point2D | null }>({
     isSelecting: false, selectionStart: null, selectionCurrent: null
   });
-  selectionStateRef.current = {
-    isSelecting: selectionState.isSelecting,
-    selectionStart: selectionState.selectionStart ?? null,
-    selectionCurrent: selectionState.selectionCurrent ?? null
-  };
 
   const activeToolRef = useRef(activeTool);
   activeToolRef.current = activeTool;
@@ -279,11 +272,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     transform, guides, guidesVisible, showGuideDimensions,
     ghostGuide, ghostDiagonalGuide, highlightedGuideId,
     constructionPoints, highlightedPointId, ghostSegmentLine,
-    cursorIsSelecting: selectionState.isSelecting,
-    cursorSelectionStartX: selectionState.selectionStart?.x,
-    cursorSelectionStartY: selectionState.selectionStart?.y,
-    cursorSelectionCurrentX: selectionState.selectionCurrent?.x,
-    cursorSelectionCurrentY: selectionState.selectionCurrent?.y,
+    // selection state read imperatively from selectionStateRef via subscription below
   });
 
   // Setup on mount
@@ -291,6 +280,18 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     setupCanvas();
     isDirtyRef.current = true;
   }, [setupCanvas, isDirtyRef]);
+
+  // 🚀 PERF (2026-05-10): imperative SelectionStore subscription.
+  // Updates selectionStateRef + marks canvas dirty — zero React re-renders.
+  useEffect(() => {
+    const snap = SelectionStore.getSnapshot();
+    selectionStateRef.current = { isSelecting: snap.isSelecting, selectionStart: snap.selectionStart, selectionCurrent: snap.selectionCurrent };
+    return SelectionStore.subscribe(() => {
+      const s = SelectionStore.getSnapshot();
+      selectionStateRef.current = { isSelecting: s.isSelecting, selectionStart: s.selectionStart, selectionCurrent: s.selectionCurrent };
+      isDirtyRef.current = true;
+    });
+  }, [isDirtyRef]);
 
   // Viewport resize → re-setup backing store
   const prevViewportRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });

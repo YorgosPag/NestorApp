@@ -379,9 +379,9 @@ if [[ -n "$ORCHESTRATOR_STAGED" ]]; then
   fi
 fi
 
-# CHECK 6B: DXF Viewer performance-critical files → ADR-040 reminder (warning only)
-# These files implement the micro-leaf subscriber architecture (Phase E, ADR-040).
-# Any change to them should be documented in the ADR changelog.
+# CHECK 6B: DXF Viewer architecture files → ADR-040 required (BLOCKING)
+# These files implement the micro-leaf subscriber architecture (ADR-040).
+# Commit is BLOCKED unless ADR-040 is staged alongside these changes.
 DXF_PERF_CRITICAL_FILES=$(echo "$STAGED_FILES" | grep -E \
   'src/subapps/dxf-viewer/(components/dxf-layout/(CanvasSection|CanvasLayerStack|canvas-layer-stack-leaves|canvas-layer-stack-types)|canvas-v2/dxf-canvas/(DxfRenderer|dxf-canvas-renderer|dxf-bitmap-cache)|hooks/(state/useGuideActions|state/useGuideState|canvas/guide-click-handlers|canvas/useCanvasContextMenu|canvas/canvas-click-types)|systems/(hover/HoverStore|cursor/ImmediatePositionStore|cursor/ImmediateSnapStore)|rendering/core/UnifiedFrameScheduler)' \
   || true)
@@ -390,17 +390,46 @@ ADR040_STAGED=$(echo "$STAGED_FILES" | grep -i "ADR-040" || true)
 if [[ -n "$DXF_PERF_CRITICAL_FILES" && -z "$ADR040_STAGED" ]]; then
     DXF_COUNT=$(echo "$DXF_PERF_CRITICAL_FILES" | grep -c . || echo 0)
     echo ""
-    echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
-    echo -e "${YELLOW}  ⚠️  DXF PERF ARCHITECTURE — ${DXF_COUNT} critical file(s) modified, ADR-040 not staged${NC}"
-    echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
-    echo -e "${YELLOW}  Files touched:${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 6B: DXF Architecture — ADR-040 not staged${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${YELLOW}  ${DXF_COUNT} micro-leaf architecture file(s) modified without ADR-040:${NC}"
     echo "$DXF_PERF_CRITICAL_FILES" | while read -r f; do echo -e "${YELLOW}    • $f${NC}"; done
     echo ""
     echo -e "${YELLOW}  These files implement the micro-leaf subscriber pattern (ADR-040).${NC}"
-    echo -e "${YELLOW}  If your change is architectural, update the changelog:${NC}"
+    echo -e "${YELLOW}  Update the changelog before committing:${NC}"
     echo -e "${YELLOW}    docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md${NC}"
-    echo -e "${YELLOW}  Skip if this is a trivial fix (typo, rename, etc.).${NC}"
     echo ""
+    exit 1
+fi
+
+# CHECK 6D: DXF Canvas Drawing files → ANY doc required (BLOCKING)
+# Covers entity renderers (colors, shapes), DxfCanvas, LayerCanvas, cursor/selection,
+# hover, rulers/grid, snap, keyboard shortcuts, and main DXF app entry points.
+# Any behavioral change to canvas drawing MUST be accompanied by ADR documentation.
+DXF_CANVAS_DRAW_FILES=$(echo "$STAGED_FILES" | grep -E \
+  'src/subapps/dxf-viewer/(rendering/entities/|canvas-v2/dxf-canvas/DxfCanvas|canvas-v2/layer-canvas/LayerCanvas|systems/(cursor|hover|rulers-grid|snap)/|hooks/useKeyboardShortcuts|app/DxfViewerContent|app/useDxfViewerEffects)' \
+  | grep -v '__tests__' | grep -v '\.test\.' | grep -v '\.spec\.' || true)
+
+if [[ -n "$DXF_CANVAS_DRAW_FILES" && -z "$DOC_FILES" ]]; then
+    DRAW_COUNT=$(echo "$DXF_CANVAS_DRAW_FILES" | grep -c . || echo 0)
+    echo ""
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 6D: DXF Canvas Drawing — no ADR staged${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${YELLOW}  ${DRAW_COUNT} canvas drawing file(s) changed without any ADR documentation:${NC}"
+    echo "$DXF_CANVAS_DRAW_FILES" | while read -r f; do echo -e "${YELLOW}    • $f${NC}"; done
+    echo ""
+    echo -e "${YELLOW}  Changes to entity rendering, colors, selection, zoom, cursor,${NC}"
+    echo -e "${YELLOW}  rulers, or snap behavior MUST be documented in the relevant ADR.${NC}"
+    echo ""
+    echo -e "${YELLOW}  Stage any file matching docs/, adrs/, or ADR- to proceed.${NC}"
+    echo -e "${YELLOW}  Primary ADR: ADR-040${NC}"
+    echo -e "${YELLOW}    docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md${NC}"
+    echo ""
+    exit 1
 fi
 
 # CHECK 11: Install commit-msg hook (Conventional Commits) if missing

@@ -71,6 +71,28 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-10: TOOLING — CHECK 6B upgraded to BLOCK + CHECK 6D added (canvas drawing regression prevention)
+
+**Problem**: CHECK 6B was WARN-only — developers (and AI agents) could commit changes to DXF micro-leaf architecture files without updating ADR-040. No enforcement existed for canvas drawing behavior files (entity renderers, DxfCanvas, LayerCanvas, cursor/selection, rulers/grid, zoom/pan).
+
+**Fix — two-tier enforcement in `scripts/git-hooks/pre-commit`**:
+- **CHECK 6B (upgraded WARN→BLOCK)**: staging any micro-leaf architecture file (DxfRenderer, HoverStore, ImmediatePositionStore, UnifiedFrameScheduler, guide hooks, CanvasSection/CanvasLayerStack shell, bitmap cache) without ADR-040 staged → `exit 1`. Error message guides developer to this ADR changelog.
+- **CHECK 6D (new BLOCK)**: staging any canvas drawing behavior file — `rendering/entities/`, `DxfCanvas.tsx`, `LayerCanvas.tsx`, `systems/cursor/`, `systems/hover/`, `systems/rulers-grid/`, `systems/snap/`, `DxfViewerContent.tsx`, `useDxfViewerEffects.ts`, `useKeyboardShortcuts.ts` — without any ADR/doc staged → `exit 1`. Covers entity colors, shapes, selection box, zoom, pan, snap, keyboard shortcuts.
+
+**Two-tier architecture**:
+| Check | Files | Requirement | Scope |
+|-------|-------|-------------|-------|
+| CHECK 6B | Micro-leaf arch (12 patterns) | ADR-040 specifically | Performance architecture |
+| CHECK 6D | Canvas drawing behavior (10 patterns) | ANY ADR/doc staged | Visual behavior |
+
+**Result**: Neither Claude Code agents nor human developers can commit canvas drawing changes without documenting them. Regression risk from undocumented behavioral changes is eliminated at the commit gate.
+
+**Files modified**: `scripts/git-hooks/pre-commit`, `CLAUDE.md`.
+
+✅ Google-level: YES — two complementary blocking checks cover all DXF canvas change paths; CHECK 6B (strict, specific ADR) + CHECK 6D (broad, any doc) = belt-and-suspenders; no false negatives for behavioral canvas changes.
+
+---
+
 ### 2026-05-10: PERF — Phase IV: CoordinateDebugOverlay throttle (debug tool)
 
 **Incident (70/140 commits from debug overlay)**: React DevTools profiler showed `CoordinateDebugOverlay` as the updater in 70 of 140 commits (50% of all re-renders) with durations up to 31ms. The overlay was the dominant performance noise in every profiling session, masking the real application hotspots.
@@ -111,6 +133,12 @@ Mouse Event → DxfCanvas.onMouseMove
 **Files modified**: `systems/cursor/useCursor.ts`, `systems/cursor/CursorSystem.tsx`, `canvas-v2/dxf-canvas/DxfCanvas.tsx`, `canvas-v2/layer-canvas/LayerCanvas.tsx`.
 
 ✅ Google-level: YES — selection state decoupled from React provider; only 2 leaf canvases re-render; equality guard prevents no-op notifies; getters ensure event handlers always read live data; idempotent (calling updateSelection twice with same point = 1 notify).
+
+**⚠️ CORRECTION (2026-05-10 — same day)**: Profiling after Phase III revealed a regression: DxfCanvas 5→42 commits, LayerCanvas 5→42 commits. `useSelectionState()` (useSyncExternalStore) added NEW subscriptions that caused React re-renders on every SelectionStore.notify() during drag. The canvas renderers read from refs in RAF loops and do NOT need React re-renders — only `isDirtyRef.current = true` is needed.
+
+**Correction fix**: replaced `useSelectionState()` with imperative `SelectionStore.subscribe()` callbacks in both canvases. DxfCanvas and LayerCanvas now update their refs directly and set `isDirtyRef.current = true` without triggering any React re-render. `layer-canvas-hooks.ts` updated to accept `selectionRef: MutableRefObject<SelectionState>` and read from `selectionRef.current` inside `renderLayers` (removed from useCallback deps). `dxf-canvas-renderer.ts` `cursorIsSelecting/cursorSelectionStartX/Y/CurrentX/Y` params and the `isDirtyRef = true` useEffect removed (handled by imperative subscription). **Expected result**: DxfCanvas/LayerCanvas return to ~5 commits (selection-independent).
+
+**Files modified (correction)**: `canvas-v2/dxf-canvas/DxfCanvas.tsx`, `canvas-v2/dxf-canvas/dxf-canvas-renderer.ts`, `canvas-v2/layer-canvas/LayerCanvas.tsx`, `canvas-v2/layer-canvas/layer-canvas-hooks.ts`.
 
 ---
 

@@ -536,8 +536,10 @@ powershell.exe -ExecutionPolicy Bypass -File "C:\Nestor_Pagonis\enterprise-backu
 3. **Bitmap cache (dxf-bitmap-cache.ts) MUST NOT include `hoveredEntityId` / `selectedEntityIds` / `gripInteractionState` in its cache key** — causes 60fps full-scene rebuild → FPS 1
 4. **Each leaf subscriber renders ≤1 canvas element and calls ≤2 high-frequency hooks**
 
-### Pre-commit check:
-The pre-commit hook (CHECK 6B) WARNS automatically when you modify these files without staging ADR-040.
+### Pre-commit checks (BLOCKING):
+- **CHECK 6B (BLOCK)**: Modifying micro-leaf architecture files (CanvasSection, DxfRenderer, HoverStore, ImmediatePositionStore, UnifiedFrameScheduler, etc.) **without staging ADR-040** → commit blocked.
+- **CHECK 6C (BLOCK)**: `useSyncExternalStore` in `CanvasSection.tsx` / `CanvasLayerStack.tsx` → commit blocked.
+- **CHECK 6D (BLOCK)**: Modifying canvas drawing files (entity renderers, DxfCanvas, LayerCanvas, cursor/, hover/, rulers-grid/, snap/, DxfViewerContent, useDxfViewerEffects, useKeyboardShortcuts) **without any ADR/doc staged** → commit blocked.
 
 ---
 
