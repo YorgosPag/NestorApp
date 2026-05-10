@@ -71,6 +71,49 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-11: PERF — Phase XI: Render callback identity stabilization + CanvasBounds cache reuse
+
+**Incident (Firefox profiler, mouse hover/snap/drag on layer canvas)**: `RefreshDriverTick` at **36% CPU** with two sibling hot bands: `useLayerCanvasRenderer.useEffect.unsubscribe` **13%** and `useLayerCanvasRenderer.useCallback[renderScene]` **13%**, plus `refreshBounds`/`getBounds`/`updateBounds` summing **~23%** under "Update the rendering Layout". GC sawtooth visible in memory track. Top track filled with red bars (frames >16ms). DXF-side had been partially mitigated in Phase E (2026-05-09) but layer-side and DxfRenderer entity-overlay path were never converted.
+
+**Root causes (two orthogonal architectural bugs):**
+
+1. **Render-callback registration storm (60Hz)** — `useLayerCanvasRenderer` (`layer-canvas-hooks.ts:244-262`) declared 15 dependencies on its `renderLayers` `useCallback`: `[layers, snapResults, activeTool, layersVisible, draggingOverlay, renderOptions, crosshairSettings, cursorSettings, snapSettings, gridSettings, rulerSettings, selectionSettings, viewport.width, viewport.height, rendererRef, transformRef, resolvedViewportRef]`. `snapResults` is rebuilt on every mouse-move tick during snapping, `draggingOverlay` mutates during drag, `renderOptions` is an inline object recomputed in the parent on every hover update. Each new identity → new `renderLayers` → the downstream `useEffect([renderLayers, ...])` (lines 265-279) ran its cleanup (`unsubscribe()`) and re-registered the RAF callback with `UnifiedFrameScheduler`. At ~60Hz this generated the observed unsubscribe/re-register pair in the profiler and the GC churn from closure allocation per frame. `useDxfCanvasRenderer` (`dxf-canvas-renderer.ts:237`) had the same shape with `[renderOptions, gridSettings, rulerSettings]` — masked in the May 2026-05-09 recording only because the active interaction was over the layer canvas, but latent identical bug.
+
+2. **Per-frame layout reflow via `refreshBounds`** — `LayerRenderer.render()` (`LayerRenderer.ts:180`), `DxfRenderer.render()` (`DxfRenderer.ts:83`), and `DxfRenderer.renderSingleEntity()` (`DxfRenderer.ts:158`) all called `canvasBoundsService.refreshBounds(this.canvas)`. `refreshBounds` deletes the cache entry then calls `getBounds`, which forces a fresh `getBoundingClientRect()` — a synchronous **layout-trigger DOM API**. Every frame paid one forced reflow; every selected/hovered entity overlay added an additional reflow on top (the loop in `renderScene` calls `renderSingleEntity` per selected/hovered/drag-preview entity). With 5 selected entities → 6 forced reflows per frame. The 2026-02-15 comment ("use FRESH bounds for both clear AND draw — single source of truth") was correct in intent (one rect for clear + draw) but achieved single-source by **wrongly invalidating the cache**; the rect was already kept identical by computing it once and threading it through both call sites. `CanvasBoundsService` has resize/scroll/orientation listeners that auto-invalidate the cache plus a 5000ms TTL safety net — `getBounds` is sufficient.
+
+**Fix (GOL + SSoT, 4 files):**
+
+1. **`layer-canvas-hooks.ts`** — replaced the multi-dep `useCallback` with a single `paramsRef` synced render-by-render (latest-props ref pattern, React docs §refs-as-escape-hatch). `renderLayers` reads `paramsRef.current.X` for every volatile field; deps shrink to `[rendererRef, resolvedViewportRef, selectionRef]` — only structural refs, never re-allocated → stable callback identity → register effect runs **once per mount**, not once per frame. Dirty-mark effect (lines 286-301) unchanged: still triggers on prop changes, which is correct (cheap boolean set, not the storm path).
+
+2. **`dxf-canvas-renderer.ts`** — same pattern, scoped to volatile fields only (`renderOptions`, `gridSettings`, `rulerSettings`). `scene` and `entityMap` remain in the deps array because they drive the O(1) entity-lookup memo and change on actual data transitions, not per frame. `renderScene` deps: `[scene, refs, entityMap]`.
+
+3. **`LayerRenderer.ts:180`** — `refreshBounds` → `getBounds`. Comment updated to document why caching is safe (event-based invalidation + TTL).
+
+4. **`DxfRenderer.ts:83, 158`** — same swap at both render entry points. The `renderSingleEntity` call site is particularly load-bearing: prior code paid N+1 forced reflows per frame for N overlays.
+
+**Why latest-props ref pattern (not split into N refs)**: each volatile prop in a separate `useRef` + `useEffect` would multiply the boilerplate without functional gain. The single-ref pattern is React-docs-canonical for "RAF callback that reads the latest props" — the assignment `paramsRef.current = params` during render is observable only by the RAF callback, never during render itself, so it satisfies React's render-purity rule.
+
+**Why `getBounds` is safe in the hot path**: `CanvasBoundsService` (`src/subapps/dxf-viewer/services/CanvasBoundsService.ts`) registers global listeners on first call — `resize` (debounced 150ms), `scroll` (throttled 100ms, capture phase), `orientationchange` — and clears the cache on each. Plus `MAX_AGE_MS = 5000` TTL. Any DOM layout change that would invalidate the cached rect within a frame would also have triggered one of these events; the cache cannot drift undetected. The Feb 2026 comment about "implicit dependency" via `CanvasUtils.clearCanvas` no longer applies because the renderer computes `canvasRect` once per frame and passes it explicitly to both `clearRect` and the render call.
+
+**Expected impact (from profiler baseline 36% RefreshDriverTick / 60fps unattainable):**
+- `useLayerCanvasRenderer.unsubscribe` 13% → ~0% (effect no longer fires per frame)
+- `useLayerCanvasRenderer.renderScene` 13% → still present but no longer rebuilt; pure render cost only
+- `refreshBounds` + `getBounds` + `updateBounds` ~23% → ~1% (cache hit path is a Map.get + timestamp compare)
+- Closure allocation per frame → eliminated → GC sawtooth flattens
+- Total RefreshDriverTick: 36% → estimated **~8-12%**, FPS unlock to 60 stable on a typical hover/drag scenario
+
+**Architectural rule added (CHECK 6B / 6D enforcement target)**: render-loop hooks (`use*CanvasRenderer`, `use*Renderer`) MUST follow the latest-props ref pattern. The `useCallback` for the render function MUST have a deps array containing only `useRef` refs (never props or memoized objects). Violations will be added to CHECK 6C scope in a follow-up commit.
+
+**Files**:
+- `src/subapps/dxf-viewer/canvas-v2/layer-canvas/layer-canvas-hooks.ts` (renderLayers ref pattern)
+- `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` (renderScene ref pattern for volatile params)
+- `src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerRenderer.ts` (refreshBounds → getBounds)
+- `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts` (refreshBounds → getBounds, 2 sites)
+
+**✅ Google-level: YES** — root cause fix at architectural layer (callback identity + cache semantics), no patch, no fallback. Pattern documented for enforcement.
+
+---
+
 ### 2026-05-11: PERF — Phase IX: DxfRenderer viewport culling (per-entity AABB)
 
 **Incident (PERF_LINE console dump, initial scene paint on 3263-entity DXF)**: `DxfCanvasRenderer.renderScene` ran in **9488ms** with `CanvasSection.commit` at 8326ms — every scene-set, fit-to-view, viewport-resize, or transform settle re-paid a full 3263-entity render. Single line completion was already fixed by Phase VIII (1498→48ms commit), but cold-load and pan/zoom remained CPU-bound on entity count.

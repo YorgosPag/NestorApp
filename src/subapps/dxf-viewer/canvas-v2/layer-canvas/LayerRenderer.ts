@@ -176,8 +176,10 @@ export class LayerRenderer {
 
     this.currentGripSettings = options.gripSettings ?? null;
 
-    // 🏢 ENTERPRISE FIX: Use ACTUAL canvas dimensions, refresh BEFORE clearCanvas
-    const canvasRect = canvasBoundsService.refreshBounds(this.canvas);
+    // 🚀 PERF (ADR-040, 2026-05-11): getBounds (cached) instead of refreshBounds
+    // (which deletes cache → forced getBoundingClientRect → layout reflow per frame).
+    // CanvasBoundsService auto-invalidates on resize/scroll + 5s TTL safety net.
+    const canvasRect = canvasBoundsService.getBounds(this.canvas);
     const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
 
     this.transform = transform;

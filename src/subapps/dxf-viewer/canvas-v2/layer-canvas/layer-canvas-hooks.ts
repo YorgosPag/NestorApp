@@ -124,28 +124,21 @@ export function useLayerHitTest({
  */
 export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
   const {
-    layers,
     rendererRef,
     transformRef,
     resolvedViewportRef,
     viewport,
-    activeTool,
-    layersVisible,
-    draggingOverlay,
-    cursor,
     selectionRef,
-    snapResults,
-    crosshairSettings,
-    cursorSettings,
-    snapSettings,
-    gridSettings,
-    rulerSettings,
-    selectionSettings,
-    renderOptions,
-    transform,
   } = params;
 
   const isDirtyRef = useRef(true);
+
+  // 🚀 PERF (ADR-040, 2026-05-11): all volatile params held in a single ref
+  // synced render-by-render. This breaks the unsubscribe/re-register storm
+  // observed in profiler (13% unsubscribe + 13% renderScene at 60Hz on hover/snap/drag).
+  // Stable `renderLayers` identity → registerRenderCallback effect runs ONCE per mount.
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   // Event listeners that mark dirty
   useEffect(() => {
@@ -162,13 +155,13 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     };
   }, []);
 
-  // Core render callback
+  // Core render callback — STABLE identity (deps = [refs only])
   const renderLayers = useCallback(() => {
     const renderer = rendererRef.current;
-    if (!renderer || !viewport.width || !viewport.height) return;
+    const current = paramsRef.current;
+    if (!renderer || !current.viewport.width || !current.viewport.height) return;
 
     try {
-      // Selection box from imperative ref (zero React re-renders on drag)
       const sel = selectionRef.current;
       const currentSelectionBox =
         sel.isSelecting && sel.selectionStart && sel.selectionCurrent
@@ -179,27 +172,24 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
             } as const)
           : null;
 
-      // 🚀 PERF (2026-05-08): read live position from ImmediatePositionStore
-      // instead of cursor.position (which on the new architecture is a getter
-      // backed by the same store). Direct read avoids any context indirection
-      // inside the hot render path.
       const centralizedPosition = ImmediatePositionStore.getPosition();
-      const isPanToolActive = activeTool === 'pan';
+      const isPanToolActive = current.activeTool === 'pan';
 
-      // Filter layers based on visibility + draft state
-      let filteredLayers = layersVisible ? layers : layers.filter((l) => l.isDraft);
+      let filteredLayers = current.layersVisible
+        ? current.layers
+        : current.layers.filter((l) => l.isDraft);
 
-      // Ghost rendering during move tool drag
-      if (draggingOverlay?.delta) {
+      if (current.draggingOverlay?.delta) {
+        const drag = current.draggingOverlay;
         filteredLayers = filteredLayers.map((layer) => {
-          if (layer.id === draggingOverlay.overlayId) {
+          if (layer.id === drag.overlayId) {
             return {
               ...layer,
               polygons: layer.polygons.map((poly) => ({
                 ...poly,
                 vertices: poly.vertices.map((vertex: Point2D) => ({
-                  x: vertex.x + draggingOverlay.delta.x,
-                  y: vertex.y + draggingOverlay.delta.y,
+                  x: vertex.x + drag.delta.x,
+                  y: vertex.y + drag.delta.y,
                 })),
               })),
             };
@@ -208,16 +198,16 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
         });
       }
 
-      const layerSnapResults: LayerRenderOptions['snapResults'] = snapResults.map((snap) => ({
+      const layerSnapResults: LayerRenderOptions['snapResults'] = current.snapResults.map((snap) => ({
         point: snap.point,
         type: snap.type as LayerRenderOptions['snapResults'][number]['type'],
         entityId: snap.entityId ?? undefined,
       }));
 
       const finalRenderOptions = {
-        ...renderOptions,
-        showCrosshair: renderOptions.showCrosshair && !isPanToolActive,
-        showCursor: renderOptions.showCursor && !isPanToolActive,
+        ...current.renderOptions,
+        showCrosshair: current.renderOptions.showCrosshair && !isPanToolActive,
+        showCursor: current.renderOptions.showCursor && !isPanToolActive,
         crosshairPosition: isPanToolActive ? null : centralizedPosition,
         cursorPosition: isPanToolActive ? null : centralizedPosition,
         showSelectionBox: !isPanToolActive && sel.isSelecting && currentSelectionBox !== null,
@@ -225,43 +215,24 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
         snapResults: layerSnapResults,
       };
 
-      // Use refs for transform/viewport — prevents RAF stale closure issue
       renderer.render(
         filteredLayers,
-        getImmediateTransform(), // Phase I: zero-lag (ADR-040)
+        getImmediateTransform(),
         resolvedViewportRef.current,
-        crosshairSettings,
-        cursorSettings,
-        snapSettings,
-        gridSettings,
-        rulerSettings,
-        selectionSettings,
+        current.crosshairSettings,
+        current.cursorSettings,
+        current.snapSettings,
+        current.gridSettings,
+        current.rulerSettings,
+        current.selectionSettings,
         finalRenderOptions,
       );
     } catch (error) {
       console.error('Failed to render Layer canvas:', error);
     }
-  }, [
-    layers,
-    snapResults,
-    activeTool,
-    layersVisible,
-    draggingOverlay,
-    renderOptions,
-    crosshairSettings,
-    cursorSettings,
-    snapSettings,
-    gridSettings,
-    rulerSettings,
-    selectionSettings,
-    viewport.width,
-    viewport.height,
-    rendererRef,
-    transformRef,
-    resolvedViewportRef,
-  ]);
+  }, [rendererRef, resolvedViewportRef, selectionRef]);
 
-  // Register with UnifiedFrameScheduler (ADR-119)
+  // Register with UnifiedFrameScheduler (ADR-119) — runs ONCE per mount
   useEffect(() => {
     if (viewport.width > 0 && viewport.height > 0 && rendererRef.current) {
       const unsubscribe = registerRenderCallback(
@@ -286,18 +257,18 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
   useEffect(() => {
     isDirtyRef.current = true;
   }, [
-    layers,
-    transform,
-    viewport,
-    snapResults,
-    layersVisible,
-    activeTool,
-    draggingOverlay,
-    crosshairSettings,
-    cursorSettings,
-    selectionSettings,
-    gridSettings,
-    rulerSettings,
+    params.layers,
+    params.transform,
+    params.viewport,
+    params.snapResults,
+    params.layersVisible,
+    params.activeTool,
+    params.draggingOverlay,
+    params.crosshairSettings,
+    params.cursorSettings,
+    params.selectionSettings,
+    params.gridSettings,
+    params.rulerSettings,
   ]);
 
   return { isDirtyRef };

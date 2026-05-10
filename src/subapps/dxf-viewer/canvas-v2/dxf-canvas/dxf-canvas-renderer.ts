@@ -87,15 +87,22 @@ export interface DxfCanvasRendererParams {
 
 export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   const {
-    scene, renderOptions, gridSettings, rulerSettings, viewport, refs,
+    scene, viewport, refs,
     transform, guides, guidesVisible, showGuideDimensions,
     ghostGuide, ghostDiagonalGuide, highlightedGuideId,
     constructionPoints, highlightedPointId, ghostSegmentLine,
+    renderOptions, gridSettings, rulerSettings,
   } = params;
 
   const isDirtyRef = useRef(true);
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): hybrid bitmap cache for entities
   const bitmapCacheRef = useRef<DxfBitmapCache | null>(null);
+
+  // 🚀 PERF (ADR-040, 2026-05-11): hold volatile per-frame params in a single ref
+  // synced render-by-render. Keeps `renderScene` identity stable so the
+  // registerRenderCallback effect runs ONCE per mount instead of every hover tick.
+  const volatileRef = useRef({ renderOptions, gridSettings, rulerSettings });
+  volatileRef.current = { renderOptions, gridSettings, rulerSettings };
 
   // O(1) entity lookup — rebuilt only when scene changes, not every frame
   const entityMap = useMemo<Map<string, DxfEntityUnion>>(() => {
@@ -110,9 +117,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     const _perfPaintStart = perfStart();
 
     const currentTransform = getImmediateTransform();
-    // Canvas ctx retrieved once per frame — avoids repeated DOM getContext() calls
     const ctx = refs.canvasRef.current?.getContext('2d') ?? null;
-    // uiTransform built once — reused for grid + ruler
     const uiTransform = ctx ? {
       scale: currentTransform.scale,
       offsetX: currentTransform.offsetX,
@@ -120,51 +125,54 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       rotation: 0,
     } : null;
 
+    // 🚀 PERF (ADR-040, 2026-05-11): read latest volatile params from ref
+    const { renderOptions: curRenderOptions, gridSettings: curGrid, rulerSettings: curRuler } = volatileRef.current;
+
     try {
       const hitTesting = serviceRegistry.get('hit-testing');
       hitTesting.updateScene(scene);
 
       renderer.render(scene, currentTransform, currentViewport, {
-        ...renderOptions,
+        ...curRenderOptions,
         skipInteractive: true,
       });
 
       // 1b: Single-entity interactive overlays (O(1) via entityMap)
       if (scene) {
-        if (renderOptions.hoveredEntityId) {
-          const ent = entityMap.get(renderOptions.hoveredEntityId);
+        if (curRenderOptions.hoveredEntityId) {
+          const ent = entityMap.get(curRenderOptions.hoveredEntityId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
-              gripInteractionState: renderOptions.gripInteractionState,
+              gripInteractionState: curRenderOptions.gripInteractionState,
             });
           }
         }
 
-        for (const selId of renderOptions.selectedEntityIds) {
-          if (renderOptions.dragPreview && renderOptions.dragPreview.entityId === selId) continue;
+        for (const selId of curRenderOptions.selectedEntityIds) {
+          if (curRenderOptions.dragPreview && curRenderOptions.dragPreview.entityId === selId) continue;
           const ent = entityMap.get(selId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {
-              gripInteractionState: renderOptions.gripInteractionState,
+              gripInteractionState: curRenderOptions.gripInteractionState,
             });
           }
         }
 
-        if (renderOptions.dragPreview) {
-          const ent = entityMap.get(renderOptions.dragPreview.entityId);
+        if (curRenderOptions.dragPreview) {
+          const ent = entityMap.get(curRenderOptions.dragPreview.entityId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'drag-preview', {
-              gripInteractionState: renderOptions.gripInteractionState,
-              dragPreview: renderOptions.dragPreview,
+              gripInteractionState: curRenderOptions.gripInteractionState,
+              dragPreview: curRenderOptions.dragPreview,
             });
           }
         }
       }
 
       // 2: Grid
-      if (ctx && uiTransform && refs.gridRendererRef.current && gridSettings?.enabled) {
+      if (ctx && uiTransform && refs.gridRendererRef.current && curGrid?.enabled) {
         const context = createUIRenderContext(ctx, currentViewport, uiTransform);
-        refs.gridRendererRef.current.render(context, currentViewport, gridSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
+        refs.gridRendererRef.current.render(context, currentViewport, curGrid as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
       }
 
       // 2.5: Guides
@@ -201,9 +209,9 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       }
 
       // 3: Rulers
-      if (ctx && uiTransform && refs.rulerRendererRef.current && rulerSettings?.enabled) {
+      if (ctx && uiTransform && refs.rulerRendererRef.current && curRuler?.enabled) {
         const context = createUIRenderContext(ctx, currentViewport, uiTransform);
-        refs.rulerRendererRef.current.render(context, currentViewport, rulerSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
+        refs.rulerRendererRef.current.render(context, currentViewport, curRuler as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
       }
 
       // 3.5: Guide overlays (bubbles + dimensions)
@@ -234,7 +242,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       logger.error('Failed to render DXF scene', { error });
     }
     perfEnd('DxfCanvasRenderer.renderScene', _perfPaintStart);
-  }, [scene, renderOptions, gridSettings, rulerSettings, refs, entityMap]);
+  }, [scene, refs, entityMap]);
 
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache lifecycle
   useEffect(() => {
