@@ -1,0 +1,33 @@
+{
+  "entities": [
+    {
+      "id": "angle-90deg",
+      "type": "angle-measurement",
+      "layer": "0",
+      "color": "#e2e24a",
+      "lineWidth": 1,
+      "visible": true,
+      "vertex": { "x": 200, "y": 200 },
+      "point1": { "x": 320, "y": 200 },
+      "point2": { "x": 200, "y": 100 },
+      "angle": 90
+    },
+    {
+      "id": "angle-45deg",
+      "type": "angle-measurement",
+      "layer": "0",
+      "color": "#4ae2e2",
+      "lineWidth": 1,
+      "visible": true,
+      "vertex": { "x": 200, "y": 200 },
+      "point1": { "x": 320, "y": 200 },
+      "point2": { "x": 285, "y": 115 },
+      "angle": 45
+    }
+  ],
+  "layers": ["0"],
+  "bounds": {
+    "min": { "x": 150, "y": 80 },
+    "max": { "x": 350, "y": 240 }
+  }
+}

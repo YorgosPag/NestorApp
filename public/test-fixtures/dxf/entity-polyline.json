@@ -1,0 +1,40 @@
+{
+  "entities": [
+    {
+      "id": "polyline-closed",
+      "type": "polyline",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 2,
+      "visible": true,
+      "vertices": [
+        { "x": 100, "y": 120 },
+        { "x": 300, "y": 120 },
+        { "x": 300, "y": 260 },
+        { "x": 200, "y": 300 },
+        { "x": 100, "y": 260 }
+      ],
+      "closed": true
+    },
+    {
+      "id": "polyline-open",
+      "type": "polyline",
+      "layer": "0",
+      "color": "#4ae24a",
+      "lineWidth": 1,
+      "visible": true,
+      "vertices": [
+        { "x": 130, "y": 160 },
+        { "x": 200, "y": 140 },
+        { "x": 270, "y": 160 },
+        { "x": 240, "y": 220 }
+      ],
+      "closed": false
+    }
+  ],
+  "layers": ["0"],
+  "bounds": {
+    "min": { "x": 100, "y": 120 },
+    "max": { "x": 300, "y": 300 }
+  }
+}

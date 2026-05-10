@@ -1,0 +1,39 @@
+{
+  "entities": [
+    {
+      "id": "line-horizontal",
+      "type": "line",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 2,
+      "visible": true,
+      "start": { "x": 50, "y": 200 },
+      "end": { "x": 350, "y": 200 }
+    },
+    {
+      "id": "line-diagonal",
+      "type": "line",
+      "layer": "0",
+      "color": "#4a90e2",
+      "lineWidth": 1,
+      "visible": true,
+      "start": { "x": 50, "y": 100 },
+      "end": { "x": 350, "y": 300 }
+    },
+    {
+      "id": "line-vertical",
+      "type": "line",
+      "layer": "0",
+      "color": "#e24a4a",
+      "lineWidth": 1,
+      "visible": true,
+      "start": { "x": 200, "y": 100 },
+      "end": { "x": 200, "y": 300 }
+    }
+  ],
+  "layers": ["0"],
+  "bounds": {
+    "min": { "x": 50, "y": 100 },
+    "max": { "x": 350, "y": 300 }
+  }
+}

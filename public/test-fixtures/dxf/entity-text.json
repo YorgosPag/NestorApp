@@ -1,0 +1,32 @@
+{
+  "entities": [
+    {
+      "id": "text-normal",
+      "type": "text",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 1,
+      "visible": true,
+      "position": { "x": 80, "y": 200 },
+      "text": "ABCDEF 123",
+      "height": 20
+    },
+    {
+      "id": "text-rotated",
+      "type": "text",
+      "layer": "0",
+      "color": "#e2e24a",
+      "lineWidth": 1,
+      "visible": true,
+      "position": { "x": 220, "y": 160 },
+      "text": "ROTATE",
+      "height": 15,
+      "rotation": 45
+    }
+  ],
+  "layers": ["0"],
+  "bounds": {
+    "min": { "x": 80, "y": 120 },
+    "max": { "x": 360, "y": 270 }
+  }
+}

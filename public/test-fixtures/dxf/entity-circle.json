@@ -1,0 +1,29 @@
+{
+  "entities": [
+    {
+      "id": "circle-large",
+      "type": "circle",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 2,
+      "visible": true,
+      "center": { "x": 200, "y": 200 },
+      "radius": 100
+    },
+    {
+      "id": "circle-small",
+      "type": "circle",
+      "layer": "0",
+      "color": "#4a90e2",
+      "lineWidth": 1,
+      "visible": true,
+      "center": { "x": 200, "y": 200 },
+      "radius": 40
+    }
+  ],
+  "layers": ["0"],
+  "bounds": {
+    "min": { "x": 100, "y": 100 },
+    "max": { "x": 300, "y": 300 }
+  }
+}

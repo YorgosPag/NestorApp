@@ -80,3 +80,41 @@ test.describe('DXF Canvas Visual Regression', () => {
     await expect(page).toHaveScreenshot('ruler-grid.png', SCREENSHOT_OPTIONS);
   });
 });
+
+test.describe('Phase 2 — Entity Rendering', () => {
+  test('entity-line — horizontal + diagonal + vertical lines', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=entity-line`);
+    await fitAndWait(page);
+    await expect(page).toHaveScreenshot('entity-line.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('entity-circle — large + small concentric circles', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=entity-circle`);
+    await fitAndWait(page);
+    await expect(page).toHaveScreenshot('entity-circle.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('entity-arc — semicircle + quarter arc (CCW flag)', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=entity-arc`);
+    await fitAndWait(page);
+    await expect(page).toHaveScreenshot('entity-arc.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('entity-polyline — closed polygon + open path', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=entity-polyline`);
+    await fitAndWait(page);
+    await expect(page).toHaveScreenshot('entity-polyline.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('entity-text — normal label + 45° rotated text', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=entity-text`);
+    await fitAndWait(page);
+    await expect(page).toHaveScreenshot('entity-text.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('entity-angle — 90° + 45° angle measurements', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=entity-angle`);
+    await fitAndWait(page);
+    await expect(page).toHaveScreenshot('entity-angle.png', SCREENSHOT_OPTIONS);
+  });
+});

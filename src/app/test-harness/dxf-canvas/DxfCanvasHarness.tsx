@@ -64,22 +64,23 @@ export default function DxfCanvasHarness() {
   const [scene, setScene] = useState<DxfScene | null>(null);
   const [transform, setTransform] = useState<ViewTransform>(INITIAL_TRANSFORM);
   const [error, setError] = useState<string | null>(null);
-  const [urlParams, setUrlParams] = useState({ rulers: false, grid: false });
+  const [urlParams, setUrlParams] = useState({ rulers: false, grid: false, fixture: 'regression-scene' });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setUrlParams({
       rulers: params.get('rulers') === '1',
       grid: params.get('grid') === '1',
+      fixture: params.get('fixture') ?? 'regression-scene',
     });
   }, []);
 
   useEffect(() => {
-    fetch('/test-fixtures/dxf/regression-scene.json')
+    fetch(`/test-fixtures/dxf/${urlParams.fixture}.json`)
       .then(r => r.json())
       .then((data: DxfScene) => setScene(data))
       .catch(e => setError(String(e)));
-  }, []);
+  }, [urlParams.fixture]);
 
   const handleTransformChange = useCallback((t: ViewTransform) => {
     setTransform(t);
