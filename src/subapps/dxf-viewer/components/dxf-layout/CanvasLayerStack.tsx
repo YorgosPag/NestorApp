@@ -48,6 +48,10 @@ import {
 // Re-export props type for consumers
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 
+// Stable empty array — passed to renderOptions.snapResults to avoid
+// creating a new array literal on every render.
+const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
+
 // ============================================================================
 // MAIN COMPONENT (shell — no high-frequency subscriptions)
 // ============================================================================
@@ -207,7 +211,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
         }
       : null;
 
-  const dxfRulerSettings = {
+  const dxfRulerSettings = useMemo(() => ({
     enabled:
       (globalRulerSettings?.horizontal?.enabled && globalRulerSettings?.vertical?.enabled) ?? true,
     visible: true,
@@ -234,10 +238,45 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     labelPrecision: 1,
     borderColor: globalRulerSettings.horizontal.color,
     borderWidth: 1,
-  };
+  }), [globalRulerSettings, gridSettings.size, gridMajorInterval]);
+
+  // --- Stable references for downstream memos (avoid fresh-spread per render) ---
+  const gridSettingsDisabled = useMemo(
+    () => ({ ...gridSettings, enabled: false }),
+    [gridSettings],
+  );
+  const rulerSettingsDisabled = useMemo(
+    () => ({ ...rulerSettings, enabled: false }),
+    [rulerSettings],
+  );
+  const layerRenderOptions = useMemo(
+    () => ({
+      showCrosshair: true,
+      showCursor: true,
+      showSnapIndicators: true,
+      showGrid: false,
+      showRulers: false,
+      showSelectionBox: false,
+      crosshairPosition: null,
+      cursorPosition: null,
+      snapResults: EMPTY_SNAP_RESULTS as never[],
+      selectionBox: null,
+      gripSettings,
+    }),
+    [gripSettings],
+  );
+  const layerClassName = `absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`;
+  const layerStyle = useMemo(
+    () => canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled),
+    [activeTool, crosshairSettings.enabled],
+  );
+  const onMouseMoveStable = useCallback(
+    (screenPos: Point2D, worldPos: Point2D) => handleUnifiedMouseMove(worldPos, screenPos),
+    [handleUnifiedMouseMove],
+  );
 
   // --- LayerCanvas passthrough props (ref and layers excluded — injected by DraftLayerSubscriber) ---
-  const layerCanvasPassthroughProps: LayerCanvasPassthroughProps = {
+  const layerCanvasPassthroughProps: LayerCanvasPassthroughProps = useMemo(() => ({
     transform,
     viewport,
     activeTool,
@@ -252,32 +291,27 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     crosshairSettings,
     cursorSettings: cursorCanvasSettings,
     snapSettings,
-    gridSettings: { ...gridSettings, enabled: false },
-    rulerSettings: { ...rulerSettings, enabled: false },
+    gridSettings: gridSettingsDisabled,
+    rulerSettings: rulerSettingsDisabled,
     selectionSettings,
-    renderOptions: {
-      showCrosshair: true,
-      showCursor: true,
-      showSnapIndicators: true,
-      showGrid: false,
-      showRulers: false,
-      showSelectionBox: false,
-      crosshairPosition: null,
-      cursorPosition: null,
-      snapResults: [],
-      selectionBox: null,
-      gripSettings,
-    },
+    renderOptions: layerRenderOptions,
     onLayerClick: handleOverlayClickWithEntityClear,
     onMultiLayerClick: handleMultiOverlayClickWithEntityClear,
     onCanvasClick: handleCanvasClick,
     onDrawingHover: drawingHandlersRef.current?.onDrawingHover,
     draggingOverlay: draggingOverlayDelta,
-    onMouseMove: (screenPos: Point2D, worldPos: Point2D) =>
-      handleUnifiedMouseMove(worldPos, screenPos),
-    className: `absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`,
-    style: canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled),
-  };
+    onMouseMove: onMouseMoveStable,
+    className: layerClassName,
+    style: layerStyle,
+  }), [
+    transform, viewport, activeTool, overlayMode, showLayers, dxfScene,
+    isGripDragging, handleDrawingContextMenu, handleTransformChange,
+    zoomSystem.handleWheelZoom, crosshairSettings, cursorCanvasSettings,
+    snapSettings, gridSettingsDisabled, rulerSettingsDisabled, selectionSettings,
+    layerRenderOptions, handleOverlayClickWithEntityClear,
+    handleMultiOverlayClickWithEntityClear, handleCanvasClick,
+    draggingOverlayDelta, onMouseMoveStable, layerClassName, layerStyle,
+  ]);
 
   // DxfCanvas renderOptions base (hoveredEntityId injected by DxfCanvasSubscriber).
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): memoized for stable identity so
@@ -295,13 +329,13 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   );
 
   // Guide workflow computed params (passed to DxfCanvasSubscriber)
-  const guideComputedParams = {
+  const guideComputedParams = useMemo(() => ({
     activeTool,
     guideState: guideStateObj,
     cpState: cpStateObj,
     transform,
     state: guideWorkflowState,
-  };
+  }), [activeTool, guideStateObj, cpStateObj, transform, guideWorkflowState]);
 
   return (
     <>
