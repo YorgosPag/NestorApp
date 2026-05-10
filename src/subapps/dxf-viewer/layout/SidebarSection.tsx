@@ -167,7 +167,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
 
           <div className={`flex justify-between items-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
             <span>Sidebar Status</span>
-            <span>Zoom: {currentZoom}%</span>
+            <span>Zoom: {Math.round(currentZoom * 100)}%</span>
           </div>
         </footer>
       </section>

@@ -48,6 +48,8 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const loadedFilesRef = useRef<Set<string>>(new Set());
   // Cache fileName → enterpriseId mapping to avoid generating new IDs on every save
   const fileIdCacheRef = useRef<Map<string, string>>(new Map());
+  // Cache fileName → canonicalScenePath so subsequent saves don't re-derive it
+  const scenePathCacheRef = useRef<Map<string, string>>(new Map());
   // 🏢 ENTERPRISE: Injected FileRecord ID (from wizard/upload) — ensures cadFiles uses the same ID
   const injectedFileRecordIdRef = useRef<string | null>(null);
   // 🏢 ADR-240: Injected save context from Wizard — carries entityType/floorId/purpose for dual-write
@@ -134,7 +136,10 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
           // 4. New enterprise ID (first standalone save — no wizard involved)
           let fileId = injectedFileRecordIdRef.current
             ?? fileIdCacheRef.current.get(fileName);
-          let canonicalScenePath: string | undefined;
+          // Pull canonicalScenePath from wizard context or cache first
+          let canonicalScenePath: string | undefined =
+            injectedSaveContextRef.current?.canonicalScenePath
+            ?? scenePathCacheRef.current.get(fileName);
 
           if (!fileId) {
             // Check if wizard already created a FileRecord for this filename (tenant-scoped)
@@ -147,13 +152,18 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
             if (existing) {
               fileId = existing.id;
               // Derive scene path next to the original DXF in canonical storage
-              if (existing.storagePath) {
+              if (existing.storagePath && !canonicalScenePath) {
                 canonicalScenePath = DxfFirestoreService.deriveScenePath(existing.storagePath);
               }
             } else {
               fileId = DxfFirestoreService.generateFileId(fileName);
             }
             fileIdCacheRef.current.set(fileName, fileId);
+          }
+
+          // Cache for subsequent saves of this file
+          if (canonicalScenePath) {
+            scenePathCacheRef.current.set(fileName, canonicalScenePath);
           }
 
           // 🚀 PHASE 4: Use Storage-based auto-save with canonical path
