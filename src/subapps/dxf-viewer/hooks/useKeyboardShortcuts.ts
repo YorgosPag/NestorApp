@@ -105,10 +105,11 @@ export const useKeyboardShortcuts = ({
 
       // ⌨️ ZOOM SHORTCUTS - Using centralized matchesShortcut()
 
-      // Shift+1 → Fit to view
-      if (matchesShortcut(e, 'fitToView')) {
-        if (inputFocused || !zoomManager) return;
+      // Shift+1 or Home → Fit to view
+      if (matchesShortcut(e, 'fitToView') || e.key === 'Home') {
+        if (inputFocused) return;
         e.preventDefault();
+        console.log('[useKeyboardShortcuts] Home/Shift+1 → emitting canvas-fit-to-view');
         // 🏢 ENTERPRISE: Unified EventBus — reaches both EventBus.on AND window CustomEvent listeners
         EventBus.emit('canvas-fit-to-view', {
           source: 'keyboard',

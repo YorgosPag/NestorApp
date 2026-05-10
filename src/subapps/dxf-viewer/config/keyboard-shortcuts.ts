@@ -458,6 +458,13 @@ export const DXF_ZOOM_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'zoom:fit-to-view',
     category: 'zoom',
   },
+  fitToViewHome: {
+    key: 'Home',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.zoom.fitToView',
+    action: 'zoom:fit-to-view',
+    category: 'zoom',
+  },
   zoom100: {
     key: '0',
     modifier: 'shift',
@@ -809,7 +816,7 @@ export const matchesShortcut = (
   if (shortcut.key.startsWith('F') && shortcut.key.length > 1) {
     return event.key === shortcut.key;
   }
-  if (shortcut.key === 'Escape' || shortcut.key === 'Delete' || shortcut.key === 'Backspace') {
+  if (shortcut.key === 'Escape' || shortcut.key === 'Delete' || shortcut.key === 'Backspace' || shortcut.key === 'Home' || shortcut.key === 'End') {
     return event.key === shortcut.key;
   }
   if (shortcut.key.startsWith('Arrow')) {
