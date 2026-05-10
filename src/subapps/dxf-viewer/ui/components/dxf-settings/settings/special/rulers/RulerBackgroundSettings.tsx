@@ -119,9 +119,13 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
 
   const handleBackgroundVisibilityChange = (visible: boolean) => {
     setBackgroundVisible(visible);
+    // Also flip the `enabled` master flag together with `showBackground`. The
+    // ruler renderer (CanvasLayerStack `dxfRulerSettings.enabled`) gates on
+    // both axes' `enabled` flags, but no other UI surface toggles `enabled`,
+    // so users who only see this checkbox were stuck with rulers hidden.
     updateRulerSettings({
-      horizontal: { ...rulerSettings.horizontal, showBackground: visible },
-      vertical: { ...rulerSettings.vertical, showBackground: visible }
+      horizontal: { ...rulerSettings.horizontal, enabled: visible, showBackground: visible },
+      vertical: { ...rulerSettings.vertical, enabled: visible, showBackground: visible }
     });
   };
 
