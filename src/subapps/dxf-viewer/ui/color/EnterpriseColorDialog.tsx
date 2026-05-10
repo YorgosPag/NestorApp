@@ -115,21 +115,33 @@ export function EnterpriseColorDialog({
 }: EnterpriseColorDialogProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation('dxf-viewer-panels');
-  // ✅ FIX: Store original value for Cancel functionality
+  // Local color state: updates immediately for responsive UI
+  const [localColor, setLocalColor] = useState(value);
   const [originalValue, setOriginalValue] = React.useState(value);
+  // RAF throttle: limits external onChange to 1 call per animation frame
+  const rafRef = useRef<number | null>(null);
+  const pendingColorRef = useRef<string>(value);
   const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
 
   // ✅ ENTERPRISE: Draggable functionality
   const { position, isDragging, handleMouseDown, resetPosition } = useDraggable({ x: 0, y: 0 });
 
-  // ✅ FIX: Store original value when dialog opens
+  // Sync local state when dialog opens
   React.useEffect(() => {
     if (isOpen) {
+      setLocalColor(value);
       setOriginalValue(value);
-      resetPosition(); // Reset position when reopening
+      resetPosition();
     }
-  }, [isOpen, resetPosition]); // ✅ FIX: Remove value from deps to avoid loop
+  }, [isOpen, resetPosition]); // value intentionally excluded: only sync on open
+
+  // Cleanup pending RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   // ✅ ENTERPRISE: Stop propagation και prevent default για να μην περνάνε τα events στον canvas
   const handleContainerEvents = useCallback((e: React.MouseEvent | React.PointerEvent) => {
@@ -143,20 +155,35 @@ export function EnterpriseColorDialog({
     // Don't prevent default - allow clicks inside dialog
   }, []);
 
-  // ✅ FIX: Handle live color change (updates preview immediately)
+  // Local state updates immediately; external onChange throttled to 1 per RAF frame
   const handleColorChange = useCallback((newColor: string) => {
-    onChange(newColor); // Update immediately for live preview
+    setLocalColor(newColor);
+    pendingColorRef.current = newColor;
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      onChange(pendingColorRef.current);
+      rafRef.current = null;
+    });
   }, [onChange]);
 
-  // Handle apply (just close, color is already applied)
+  // Handle apply
   const handleApply = useCallback(() => {
-    onChangeEnd?.(value);
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    onChange(localColor);
+    onChangeEnd?.(localColor);
     onClose();
-  }, [value, onChangeEnd, onClose]);
+  }, [localColor, onChange, onChangeEnd, onClose]);
 
   // Handle cancel - restore original color
   const handleCancel = useCallback(() => {
-    onChange(originalValue); // Restore original color
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    onChange(originalValue);
     onClose();
   }, [originalValue, onChange, onClose]);
 
@@ -251,7 +278,7 @@ export function EnterpriseColorDialog({
               <div className={`${PANEL_LAYOUT.SPACING.NONE} cursor-default pointer-events-auto`}>
                 <EnterpriseColorPicker
                   {...pickerProps}
-                  value={value}
+                  value={localColor}
                   onChange={handleColorChange}
                   className="border-0"
                 />

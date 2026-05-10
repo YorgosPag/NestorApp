@@ -31,6 +31,7 @@ import {
 import type { ViewTransform } from '../../rendering/types/Types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameScheduler';
+import { updateImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
 import { dlog, dwarn } from '../../debug';
 
@@ -93,6 +94,7 @@ export function useViewportManager({
   // ── setTransform wrapper (sync ref + async React) ──────────────────────
   const setTransform = useCallback((newTransform: ViewTransform) => {
     transformRef.current = newTransform;
+    updateImmediateTransform(newTransform); // Phase I: zero-lag canvas read (ADR-040)
     externalSetTransform(newTransform);
   }, [externalSetTransform]);
 

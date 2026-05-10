@@ -217,8 +217,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     backgroundColor: globalRulerSettings.horizontal.backgroundColor,
     fontSize: globalRulerSettings.horizontal.fontSize,
     textColor: globalRulerSettings.horizontal.textColor,
-    height: 30,
-    width: 30,
+    height: globalRulerSettings.horizontal.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT,
+    width: globalRulerSettings.vertical.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH,
     showLabels: globalRulerSettings.horizontal.showLabels,
     showUnits: globalRulerSettings.horizontal.showUnits,
     showBackground: globalRulerSettings.horizontal.showBackground,
@@ -410,13 +410,13 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <CrosshairOverlay
             isActive={crosshairSettings.enabled}
             rulerMargins={{
-              left: rulerSettings.width ?? COORDINATE_LAYOUT.RULER_LEFT_WIDTH,
+              left: rulerSettings.vertical?.width ?? COORDINATE_LAYOUT.RULER_LEFT_WIDTH,
               top: 0,
               bottom: 0,
             }}
             className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             style={{
-              height: `calc(100% - ${rulerSettings.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)`,
+              height: `calc(100% - ${rulerSettings.horizontal?.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)`,
             }}
           />
 
@@ -430,8 +430,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
 
           {/* RulerCornerBox (z-30) */}
           <RulerCornerBox
-            rulerWidth={rulerSettings.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}
-            rulerHeight={rulerSettings.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT}
+            rulerWidth={rulerSettings.vertical?.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}
+            rulerHeight={rulerSettings.horizontal?.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT}
             currentScale={transform.scale}
             backgroundColor={globalRulerSettings.horizontal.backgroundColor}
             textColor={globalRulerSettings.horizontal.textColor}

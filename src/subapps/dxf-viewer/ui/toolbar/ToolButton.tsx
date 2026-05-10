@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { useClickOutside } from '@/hooks/useClickOutside';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ToolDefinition, ActionDefinition } from './types';
 import { ChevronDown } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -37,24 +37,53 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
       IconComponent = activeOption.icon;
     }
   }
+
   const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  // Ref for the button group (trigger area)
+  const buttonGroupRef = useRef<HTMLDivElement>(null);
+  // Ref for the portal dropdown (set via callback ref)
+  const portalNodeRef = useRef<HTMLElement | null>(null);
 
   const hasDropdown = tool.dropdownOptions && tool.dropdownOptions.length > 0;
 
-  useClickOutside(dropdownRef, () => setShowDropdown(false));
+  // Close on outside click — covers both button group and portal content
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        !buttonGroupRef.current?.contains(target) &&
+        !portalNodeRef.current?.contains(target)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showDropdown]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowDropdown(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showDropdown]);
 
   const handleMainClick = () => {
-    if (!hasDropdown) {
-      onClick();
-    } else {
-      onClick(); // Default action (first tool)
-    }
+    onClick();
   };
 
   const handleDropdownToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowDropdown(!showDropdown);
+    if (!showDropdown && buttonGroupRef.current) {
+      const rect = buttonGroupRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setShowDropdown(prev => !prev);
   };
 
   const handleDropdownItemClick = (toolId: string) => {
@@ -97,9 +126,10 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
   }
 
   // 🏢 ENTERPRISE: Button with dropdown (split button pattern)
+  // Dropdown rendered via React portal to escape overflow-x:auto container clip
   return (
     <TooltipProvider>
-      <div className="relative" ref={dropdownRef}>
+      <div className="relative" ref={buttonGroupRef}>
         <div className="flex">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -139,9 +169,13 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           </Tooltip>
         </div>
 
-        {/* 🏢 ENTERPRISE: Dropdown menu with grouped sections (ADR-189 §37) */}
-        {showDropdown && (
-          <nav className="absolute top-full left-0 mt-1 bg-popover text-popover-foreground rounded-md shadow-lg z-50 min-w-max border border-border py-1 max-h-[70vh] overflow-y-auto">
+        {/* 🏢 ENTERPRISE: Dropdown via React portal — escapes overflow-x:auto clip on toolbar container */}
+        {showDropdown && createPortal(
+          <nav
+            ref={(el) => { portalNodeRef.current = el; }}
+            className="fixed bg-popover text-popover-foreground rounded-md shadow-lg z-[9999] min-w-max border border-border py-1 max-h-[70vh] overflow-y-auto"
+            style={{ top: dropdownPos.top, left: dropdownPos.left }}
+          >
             {tool.dropdownOptions!.map((option, index) => {
               const OptionIcon = option.icon;
               const prevGroup = index > 0 ? tool.dropdownOptions![index - 1].group : undefined;
@@ -165,7 +199,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
                 </React.Fragment>
               );
             })}
-          </nav>
+          </nav>,
+          document.body
         )}
       </div>
     </TooltipProvider>
@@ -216,4 +251,3 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
     </TooltipProvider>
   );
 };
-

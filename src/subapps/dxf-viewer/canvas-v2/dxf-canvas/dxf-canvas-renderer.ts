@@ -23,6 +23,7 @@ import type { GridSettings, RulerSettings } from '../layer-canvas/layer-types';
 import { getCursorSettings } from '../../systems/cursor/config';
 import { serviceRegistry } from '../../services';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 
 const logger = createModuleLogger('DxfCanvasRenderer');
 
@@ -104,7 +105,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     const currentViewport = refs.resolvedViewportRef.current;
     if (!renderer || !currentViewport.width || !currentViewport.height) return;
 
-    const currentTransform = refs.transformRef.current;
+    const currentTransform = getImmediateTransform(); // Phase I: zero-lag (ADR-040)
 
     try {
       const hitTesting = serviceRegistry.get('hit-testing');

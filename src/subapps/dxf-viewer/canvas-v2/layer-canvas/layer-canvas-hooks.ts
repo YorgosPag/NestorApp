@@ -13,6 +13,7 @@ import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene } from '../dxf-canvas/dxf-types';
 import { ImmediatePositionStore } from '../../systems/cursor/ImmediatePositionStore';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type {
   ColorLayer,
   LayerRenderOptions,
@@ -224,7 +225,7 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
       // Use refs for transform/viewport — prevents RAF stale closure issue
       renderer.render(
         filteredLayers,
-        transformRef.current,
+        getImmediateTransform(), // Phase I: zero-lag (ADR-040)
         resolvedViewportRef.current,
         crosshairSettings,
         cursorSettings,

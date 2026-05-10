@@ -19,7 +19,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -72,6 +72,8 @@ export function EnterpriseColorPicker({
   const { quick, getStatusBorder, radius, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const { t } = useTranslation('dxf-viewer-panels');
+  // Deferred value: ContrastPanel and SwatchesPalette skip re-renders mid-drag
+  const deferredValue = useDeferredValue(value);
 
   // Handle color change
   const handleChange = useCallback(
@@ -214,7 +216,7 @@ export function EnterpriseColorPicker({
       <SwatchesPalette
         paletteIds={palettes}
         showRecent={recent}
-        value={value}
+        value={deferredValue}
         onChange={(color) => {
           handleChange(color);
           handleChangeEnd(color);
@@ -226,7 +228,7 @@ export function EnterpriseColorPicker({
       {/* === CONTRAST PANEL === */}
       {showContrast && (
         <ContrastPanel
-          foreground={value}
+          foreground={deferredValue}
           background={contrastBackground}
         />
       )}
