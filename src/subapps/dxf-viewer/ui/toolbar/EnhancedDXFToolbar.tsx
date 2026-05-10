@@ -14,7 +14,6 @@ import { useProSnapIntegration } from '../../hooks/common/useProSnapIntegration'
 import { ZoomControls } from './ZoomControls';
 import { ToolButton, ActionButton } from './ToolButton';
 import { ToolbarStatusBar } from './ToolbarStatusBar';
-import CadStatusBar from '../../statusbar/CadStatusBar';
 // 🏢 ENTERPRISE: Shadcn Button (same as CompactToolbar - NO BORDERS)
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -53,7 +52,7 @@ interface EnhancedDXFToolbarProps {
   showCoordinates?: boolean;
 }
 
-export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
+const EnhancedDXFToolbarInner: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   activeTool,
   onToolChange,
   onAction,
@@ -204,7 +203,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     snapEnabled: contextSnapEnabled,
     toggleSnap
   } = useProSnapIntegration();
-  const actionButtons = createActionButtons({
+  const actionButtons = React.useMemo(() => createActionButtons({
     canUndo,
     canRedo,
     snapEnabled: contextSnapEnabled,
@@ -215,7 +214,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     onAction: (action, data) => {
       onAction(action, data as string | number | Record<string, unknown>);
     }
-  });
+  }), [canUndo, canRedo, contextSnapEnabled, showGrid, autoCrop, showCursorSettings, guidesVisible, onAction]);
   // 🏢 ENTERPRISE: Action names must match useDxfViewerState.ts handleAction() cases
   const handleZoomIn = () => onAction('zoom-in'); // → canvasActions.zoomIn()
   const handleZoomOut = () => onAction('zoom-out'); // → canvasActions.zoomOut()
@@ -447,8 +446,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
         showCoordinates={showCoordinates}
       />
 
-      <CadStatusBar />
-
       {/* Simple Project Dialog */}
       <SimpleProjectDialog
         isOpen={showSimpleDialog}
@@ -487,3 +484,5 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     </div>
   );
 };
+
+export const EnhancedDXFToolbar = React.memo(EnhancedDXFToolbarInner);

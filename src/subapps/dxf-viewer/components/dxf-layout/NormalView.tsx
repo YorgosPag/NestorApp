@@ -3,6 +3,7 @@ import React from 'react';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
+import CadStatusBar from '../../statusbar/CadStatusBar';
 import type { OverlayEditorMode } from '../../overlays/types';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
@@ -43,7 +44,7 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
         />
       </div>
 
-      {/* FloatingPanel μετακινήθηκε στο DXFViewerLayout */}
+      <CadStatusBar />
     </div>
   );
 };

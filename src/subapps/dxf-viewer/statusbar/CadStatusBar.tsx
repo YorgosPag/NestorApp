@@ -45,7 +45,7 @@ export default function CadStatusBar() {
     <TooltipProvider>
       <aside
         data-testid="cad-status-bar"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm"
+        className="w-full border-t border-border bg-background/95 backdrop-blur-sm shrink-0"
       >
         <div className="flex items-center gap-4 px-4 py-1.5 overflow-x-auto">
           {toggleDefs.map(({ key, toggle, shortcut, labelKey, descKey }) =>
@@ -95,7 +95,7 @@ function CadToggleRow({ id, label, fkey, description, toggle }: {
             htmlFor={id}
             className="flex items-center gap-1 cursor-pointer select-none"
           >
-            <span className="text-xs font-medium text-foreground leading-none">{label}</span>
+            <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-green-400' : 'text-muted-foreground'}`}>{label}</span>
             {fkey && (
               <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
                 {fkey}
@@ -106,7 +106,7 @@ function CadToggleRow({ id, label, fkey, description, toggle }: {
             id={id}
             checked={toggle.on}
             onCheckedChange={() => toggle.toggle()}
-            className="scale-75 origin-left"
+            className="scale-75 origin-left data-[state=checked]:bg-green-500"
           />
         </div>
       </TooltipTrigger>
@@ -135,7 +135,7 @@ function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledM
               htmlFor={id}
               className="flex items-center gap-1 cursor-pointer select-none"
             >
-              <span className="text-xs font-medium text-foreground leading-none">{label}</span>
+              <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-green-400' : 'text-muted-foreground'}`}>{label}</span>
               {fkey && (
                 <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
                   {fkey}
@@ -146,7 +146,7 @@ function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledM
               id={id}
               checked={toggle.on}
               onCheckedChange={() => toggle.toggle()}
-              className="scale-75 origin-left"
+              className="scale-75 origin-left data-[state=checked]:bg-green-500"
             />
           </div>
         </TooltipTrigger>
@@ -161,7 +161,7 @@ function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledM
             <ChevronUp className="h-3 w-3" />
           </button>
         </PopoverTrigger>
-        <PopoverContent side="top" align="start" className="w-auto p-2">
+        <PopoverContent side="top" align="center" className="z-[1800] w-auto p-2">
           <ProSnapToolbar
             enabledModes={enabledModes}
             onToggleMode={onToggleMode}
