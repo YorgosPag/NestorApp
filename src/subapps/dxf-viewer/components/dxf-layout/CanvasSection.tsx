@@ -1,3 +1,9 @@
+/**
+ * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 BEFORE EDITING
+ * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
+ * RULE: MUST NOT call useSyncExternalStore — push subscriptions to canvas-layer-stack-leaves.tsx.
+ * After any architectural change → update the ADR changelog (same commit).
+ */
 'use client';
 import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { CanvasLayerStack } from './CanvasLayerStack';
@@ -27,12 +33,14 @@ import {
 } from '../../hooks/canvas';
 import { useGuideToolWorkflows } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
-import { useHoveredOverlay } from '../../systems/hover/useHover';
+// useHoveredOverlay REMOVED from orchestrator — ADR-040 Phase II micro-leaf pattern.
+// Subscription lives in DraftLayerSubscriber (canvas-layer-stack-leaves.tsx).
 import { useSpecialTools } from '../../hooks/tools';
 import { useRotationTool } from '../../hooks/tools/useRotationTool';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
-import { useGuideState } from '../../hooks/state/useGuideState';
+import { useGuideActions } from '../../hooks/state/useGuideActions';
+import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { useConstructionPointState } from '../../hooks/state/useConstructionPointState';
 import { PromptDialog, usePromptDialog } from '../../systems/prompt-dialog';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -106,11 +114,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // === Entity interaction state ===
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const entitySelectedOnMouseDownRef = useRef(false);
-  // 🚀 PERF (2026-05-09 Phase E): hoveredEntityId + hoveredOverlayId REMOVED from
-  // useState. They now live in HoverStore (zero-React-state updates).
-  // hoveredOverlayId is read here only for useOverlayLayers (colorLayers computation).
-  // hoveredEntityId is read inside DxfCanvasSubscriber (CanvasLayerStack leaf).
-  const hoveredOverlayId = useHoveredOverlay();
+  // 🚀 PERF (2026-05-09 Phase E → 2026-05-10 Phase II): hoveredEntityId +
+  // hoveredOverlayId both removed from CanvasSection. HoverStore subscriptions
+  // live exclusively in micro-leaves (DxfCanvasSubscriber, DraftLayerSubscriber).
   const eventBus = useEventBus();
 
   // === Settings ===
@@ -122,7 +128,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const gripSettings = useGripStyles();
 
   // === Guide + Construction Point state ===
-  const guideState = useGuideState();
+  const guideState = useGuideActions();
+  // ADR-040: stable getter — reads from GuideStore at click time, prevents stale snapshot
+  const getGuides = useCallback(() => getGlobalGuideStore().getGuides(), []);
   const cpState = useConstructionPointState();
   const { prompt: showPromptDialog } = usePromptDialog();
 
@@ -189,10 +197,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // colorLayers. The mouse-driven `colorLayersWithDraft` / `isNearFirstPoint`
   // moved to `useDraftPolygonLayer` invoked inside CanvasLayerStack.
   const { hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, selectedGrip, draggingVertex, draggingVertices, draggingEdgeMidpoint, dragPreviewPosition, draggingOverlayBody } = unified.overlayProjection;
+  // hoveredOverlayId intentionally omitted — subscription moved to DraftLayerSubscriber
+  // (ADR-040 Phase II). CanvasSection no longer re-renders on overlay hover.
   const { colorLayers } = useOverlayLayers({
     overlays: currentOverlays, isSelected: universalSelection.isSelected,
     hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, draggingVertex, draggingVertices,
-    draggingEdgeMidpoint, dragPreviewPosition, hoveredOverlayId,
+    draggingEdgeMidpoint, dragPreviewPosition,
     hiddenOverlayIds: overlayStore.hiddenOverlayIds,
   });
   const { fitToOverlay } = useFitToView({ dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
@@ -254,7 +264,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { handleDrawingContextMenu } = useCanvasContextMenu({
     containerRef, activeTool, overlayMode, hasUnifiedDrawingPointsRef, draftPolygonRef,
     selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase: rotationTool.phase,
-    onRotationAnglePrompt: handleRotationAnglePrompt, guideMenuRef, guides: guideState.guides,
+    onRotationAnglePrompt: handleRotationAnglePrompt, guideMenuRef, getGuides,
     transformRef, guideBatchMenuRef, selectedGuideIds: guideWorkflows.selectedGuideIds,
   });
   const { handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc } = useDrawingUIHandlers({
@@ -277,7 +287,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
     justFinishedDragRef: unified.justFinishedDragRef, draggingOverlayBody: unified.draggingOverlayBody,
     setSelectedEntityIds, currentOverlays, handleOverlayClick,
-    guideAddGuide: guideState.addGuide, guideRemoveGuide: guideState.removeGuide, guides: guideState.guides,
+    guideAddGuide: guideState.addGuide, guideRemoveGuide: guideState.removeGuide, getGuides,
     parallelRefGuideId: guideWorkflows.parallelRefGuideId, onParallelRefSelected: guideWorkflows.handleParallelRefSelected, onParallelSideChosen: guideWorkflows.handleParallelSideChosen,
     guideAddDiagonalGuide: guideState.addDiagonalGuide, diagonalStep: guideWorkflows.diagonalStep, diagonalStartPoint: guideWorkflows.diagonalStartPoint, diagonalDirectionPoint: guideWorkflows.diagonalDirectionPoint,
     onDiagonalStartSet: guideWorkflows.handleDiagonalStartSet, onDiagonalDirectionSet: guideWorkflows.handleDiagonalDirectionSet, onDiagonalComplete: guideWorkflows.handleDiagonalComplete,
@@ -359,7 +369,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         floorId={floorplanBg?.floorId ?? null}
         onMouseMove={props.onMouseMove}
         entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
-        guides={guideState.guides} guidesVisible={guideState.guidesVisible}
         selectedGuideIds={guideWorkflows.selectedGuideIds} constructionPoints={cpState.points}
         guideWorkflowState={guideWorkflows.state}
         guideStateObj={guideState} cpStateObj={cpState}

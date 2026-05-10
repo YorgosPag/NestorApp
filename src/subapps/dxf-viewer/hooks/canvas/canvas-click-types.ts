@@ -142,6 +142,8 @@ export interface UseCanvasClickHandlerParams {
   guideAddGuide?: (axis: GridAxis, offset: number) => CreateGuideCommand;
   guideRemoveGuide?: (guideId: string) => DeleteGuideCommand;
   guides?: readonly Guide[];
+  /** ADR-040: getter reads from GuideStore at click time — prevents stale snapshot when CanvasSection skips re-render during guide drag */
+  getGuides?: () => readonly Guide[];
   /** Currently selected reference guide for parallel creation (null = step 1) */
   parallelRefGuideId?: string | null;
   /** Step 1 callback: user clicked near a guide → select as reference */

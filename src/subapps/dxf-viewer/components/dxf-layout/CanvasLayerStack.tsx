@@ -1,4 +1,8 @@
 /**
+ * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 BEFORE EDITING
+ * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
+ * After any architectural change → update the ADR changelog (same commit).
+ *
  * 🏢 ENTERPRISE: CanvasLayerStack — Extraction #13
  *
  * @description All 9 canvas layers and their inline callbacks, extracted from CanvasSection.
@@ -68,7 +72,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   handleDrawingContextMenu,
   drawingState, entityJoin, floorId, onMouseMove,
   entityPickingActive,
-  guides, guidesVisible, selectedGuideIds, constructionPoints,
+  selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
   rotationPreview, levelManager,
 }: CanvasLayerStackProps) {
@@ -388,8 +392,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               crosshairSettings={crosshairSettings}
               gridSettings={gridSettings}
               rulerSettings={dxfRulerSettings}
-              guides={guides}
-              guidesVisible={guidesVisible}
               selectedGuideIds={selectedGuideIds}
               constructionPoints={constructionPoints}
               panelHighlightPointId={guideWorkflowState.panelHighlightPointId}

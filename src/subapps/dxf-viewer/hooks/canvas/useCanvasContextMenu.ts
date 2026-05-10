@@ -57,6 +57,8 @@ export interface UseCanvasContextMenuParams {
   guideMenuRef?: RefObject<GuideContextMenuHandle | null>;
   /** Current construction guides (for hit-testing on right-click) */
   guides?: readonly Guide[];
+  /** ADR-040: getter reads from GuideStore at event time — prevents stale snapshot */
+  getGuides?: () => readonly Guide[];
   /** Current canvas transform (for world-to-screen conversion during hit-testing) */
   transformRef?: MutableRefObject<ViewTransform>;
   // ADR-189 B14: Batch guide context menu
@@ -87,7 +89,8 @@ export function useCanvasContextMenu({
   rotationPhase,
   onRotationAnglePrompt,
   guideMenuRef,
-  guides,
+  guides: guidesSnapshot,
+  getGuides,
   transformRef,
   guideBatchMenuRef,
   selectedGuideIds,
@@ -106,6 +109,12 @@ export function useCanvasContextMenu({
     if (!container) return;
 
     const handleNativeContextMenu = (e: MouseEvent) => {
+      // RulerCornerBox owns its own context menu — let the event pass through to React
+      if ((e.target as Element)?.closest('[data-ruler-corner-box]')) {
+        e.preventDefault();
+        return;
+      }
+
       e.preventDefault();
       e.stopPropagation();
 
@@ -122,6 +131,8 @@ export function useCanvasContextMenu({
       }
 
       // PRIORITY 0.5: ADR-189 — Guide context menu (right-click near a construction guide)
+      // ADR-040: resolve from store at event time to avoid stale snapshot
+      const guides = getGuides?.() ?? guidesSnapshot;
       if (guideMenuRef?.current && guides && guides.length > 0 && transformRef?.current && container) {
         const rect = container.getBoundingClientRect();
         const screenX = e.clientX - rect.left;
@@ -177,7 +188,7 @@ export function useCanvasContextMenu({
     return () => {
       container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
     };
-  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt, guideMenuRef, guides, transformRef, guideBatchMenuRef, selectedGuideIds]);
+  }, [activeTool, overlayMode, containerRef, hasUnifiedDrawingPointsRef, draftPolygonRef, selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase, onRotationAnglePrompt, guideMenuRef, getGuides, guidesSnapshot, transformRef, guideBatchMenuRef, selectedGuideIds]);
 
   return {
     handleDrawingContextMenu,

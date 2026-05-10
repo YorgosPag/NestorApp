@@ -1,4 +1,8 @@
 /**
+ * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 BEFORE EDITING
+ * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
+ * After any architectural change → update the ADR changelog (same commit).
+ *
  * CanvasLayerStack — Micro-leaf subscriber components (Phase E, ADR-040).
  *
  * Each leaf subscribes to a single high-frequency store so that only the
@@ -11,6 +15,7 @@
 'use client';
 
 import React, { useMemo, useSyncExternalStore } from 'react';
+import { useHoveredOverlay } from '../../systems/hover/useHover';
 import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
 import { subscribeSnapResult, getFullSnapResult } from '../../systems/cursor/ImmediateSnapStore';
@@ -18,13 +23,23 @@ import { useGuideWorkflowComputed } from '../../hooks/guides/useGuideWorkflowCom
 import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { useRotationPreview } from '../../hooks/tools/useRotationPreview';
 import { useHoveredEntity } from '../../systems/hover/useHover';
+import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { DxfCanvasRef } from '../../canvas-v2';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import type { DxfScene, DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types';
+import type { ConstructionPoint } from '../../systems/guides/guide-types';
 import type { GridSettings, RulerSettings } from '../../canvas-v2';
 import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
+
+// ─── Stable guide store subscriptions (module-level = stable across renders) ──
+// ADR-040: micro-leaf pattern — DxfCanvasSubscriber is the ONLY React subscriber
+// to guide position changes. CanvasSection uses useGuideActions() (no subscription)
+// so guide drag no longer causes CanvasSection to re-render at 60fps.
+const _guideStore = getGlobalGuideStore();
+const _subscribeGuideStore = (cb: () => void) => _guideStore.subscribe(cb);
+const _getGuides = () => _guideStore.getGuides();
+const _getGuidesVisible = () => _guideStore.isVisible();
 
 // ============================================================================
 // SNAP INDICATOR SUBSCRIBER
@@ -98,11 +113,23 @@ export const DraftLayerSubscriber = React.memo(function DraftLayerSubscriber({
     overlayMode,
     transformScale,
   });
+
+  // 🚀 PERF (ADR-040 Phase II): useHoveredOverlay moved here from CanvasSection.
+  // This leaf already re-renders every mousemove (useDraftPolygonLayer → useCursorWorldPosition),
+  // so the subscription is free. CanvasSection no longer re-renders on overlay hover.
+  const hoveredOverlayId = useHoveredOverlay();
+  const finalLayers = useMemo(() => {
+    if (!hoveredOverlayId) return colorLayersWithDraft;
+    return colorLayersWithDraft.map(l =>
+      l.id === hoveredOverlayId ? { ...l, isHovered: true } : l
+    );
+  }, [colorLayersWithDraft, hoveredOverlayId]);
+
   return (
     <LayerCanvas
       ref={canvasRef as React.RefObject<HTMLCanvasElement>}
       {...layerCanvasPassthroughProps}
-      layers={colorLayersWithDraft}
+      layers={finalLayers}
     />
   );
 });
@@ -123,8 +150,8 @@ interface DxfCanvasSubscriberProps {
   crosshairSettings?: CrosshairSettings;
   gridSettings?: GridSettings;
   rulerSettings?: RulerSettings;
-  guides?: readonly Guide[];
-  guidesVisible?: boolean;
+  // guides / guidesVisible REMOVED from props — subscribed directly from
+  // guide store inside this component (ADR-040 micro-leaf pattern).
   selectedGuideIds?: ReadonlySet<string>;
   constructionPoints?: readonly ConstructionPoint[];
   panelHighlightPointId?: string | null;
@@ -158,13 +185,25 @@ interface DxfCanvasSubscriberProps {
 export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   dxfCanvasRef, scene, transform, viewport, activeTool, overlayMode, colorLayers,
   renderOptionsBase, crosshairSettings, gridSettings, rulerSettings,
-  guides, guidesVisible, selectedGuideIds, constructionPoints, panelHighlightPointId,
+  selectedGuideIds, constructionPoints, panelHighlightPointId,
   guideWorkflowComputedParams, isGripDragging, entityPickingActive,
   onLayerSelected, onMultiLayerSelected, onEntitiesSelected, onUnifiedMarqueeResult,
   onHoverEntity, onHoverOverlay, onEntitySelect, onGripMouseDown, onGripMouseUp,
   onContextMenu, onCanvasClick, onTransformChange, onWheelZoom, onMouseMove, className,
 }: DxfCanvasSubscriberProps) {
-  const guideComputed = useGuideWorkflowComputed(guideWorkflowComputedParams);
+  // 🚀 PERF: Subscribe to guide store DIRECTLY here (micro-leaf pattern, ADR-040).
+  // CanvasSection uses useGuideActions() (no subscription) → guide drag at 60fps
+  // no longer re-renders CanvasSection. Only this leaf re-renders on guide changes.
+  const guides = useSyncExternalStore(_subscribeGuideStore, _getGuides, _getGuides);
+  const guidesVisible = useSyncExternalStore(_subscribeGuideStore, _getGuidesVisible, _getGuidesVisible);
+
+  // Override guideState.guides in computed params with fresh subscribed data.
+  const localComputedParams = useMemo(() => ({
+    ...guideWorkflowComputedParams,
+    guideState: { ...guideWorkflowComputedParams.guideState, guides, guidesVisible },
+  }), [guideWorkflowComputedParams, guides, guidesVisible]);
+
+  const guideComputed = useGuideWorkflowComputed(localComputedParams);
   const hoveredEntityId = useHoveredEntity();
 
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): stable identity prevents the

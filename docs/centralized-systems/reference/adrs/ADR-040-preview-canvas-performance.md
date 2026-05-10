@@ -4,7 +4,7 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Updated** | 2026-05-09 |
+| **Last Updated** | 2026-05-10 |
 | **Category** | Drawing System |
 | **Canonical Location** | `canvas-v2/preview-canvas/` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -70,6 +70,60 @@ Mouse Event → DxfCanvas.onMouseMove
 ---
 
 ## Changelog
+
+### 2026-05-10: PERF — Phase II: HoverStore (overlay) subscription moved to DraftLayerSubscriber leaf + pre-commit CHECK 6C
+
+**Incident (zoom + marquee 37-45% CPU)**: After Phase I, profiler still showed `scheduleImmediateRootScheduleTask → flushSyncWorkAcrossRoots → renderRootSync → CanvasSection → updateMemo` at 37-45% CPU during zoom + marquee selection drag. Path confirmed triggered by `useSyncExternalStore` (not `useState`).
+
+**Root cause**: `useHoveredOverlay()` remained in CanvasSection (line 120, Phase E compromise). During marquee drag, `DxfCanvas.onHoverOverlay` callback fires at 60fps → `HoverStore.setHoveredOverlay()` → `subscribeHoveredOverlay` notification → `useSyncExternalStore` in CanvasSection fires → full CanvasSection re-render cascade (13+ hooks, `useOverlayLayers` recompute, new `colorLayers` ref → CanvasLayerStack → DraftLayerSubscriber → LayerCanvas all reconcile).
+
+**Fix — move `useHoveredOverlay` to `DraftLayerSubscriber` leaf**:
+- `CanvasSection.tsx`: `useHoveredOverlay()` call + import removed entirely. `useOverlayLayers` called without `hoveredOverlayId` → `colorLayers` is now stable across all mouse events (overlay hover no longer invalidates it).
+- `canvas-layer-stack-leaves.tsx` (`DraftLayerSubscriber`): added `useHoveredOverlay()` subscription directly in the leaf. After `useDraftPolygonLayer` computes `colorLayersWithDraft`, a `useMemo` merges `isHovered: true` on the matching layer. The leaf already re-renders every mousemove via `useCursorWorldPosition` → the hover subscription adds zero extra renders. `LayerCanvas` receives `finalLayers`.
+- `scripts/git-hooks/pre-commit` (CHECK 6C, BLOCKING): scans staged `CanvasSection.tsx` + `CanvasLayerStack.tsx` for any `useSyncExternalStore` call. Blocks commit if found. Ratchet ensures no developer can reintroduce an orchestrator subscription without the hook catching it at commit time.
+
+**Result**: During zoom + marquee — CanvasSection renders 0 times. Only `DraftLayerSubscriber` (already rendering every frame for other reasons) handles the hover visual. `colorLayers` reference is stable across all mouse activity.
+
+**Architectural rule** (added to CHECK 6C):
+> **`CanvasSection.tsx` and `CanvasLayerStack.tsx` are permanently subscription-free.** Any `useSyncExternalStore` call in these files = pre-commit BLOCK. All HoverStore, GuideStore, ImmediatePositionStore, ImmediateSnapStore subscriptions live exclusively in micro-leaf components.
+
+**Files modified**: `components/dxf-layout/CanvasSection.tsx`, `components/dxf-layout/canvas-layer-stack-leaves.tsx`, `scripts/git-hooks/pre-commit`.
+
+✅ Google-level: YES — subscription moved to leaf that already re-renders; pre-commit ratchet prevents regression; CanvasSection has zero `useSyncExternalStore` calls.
+
+---
+
+### 2026-05-10: PERF — Phase I: GuideStore subscription moved to DxfCanvasSubscriber leaf + click-handler stale-data fix
+
+**Incident (guide drag 60fps re-render)**: Profiler showed `scheduleImmediateRootScheduleTask → flushSyncWorkAcrossRoots → CanvasSection → updateMemo` at 33% CPU over 2036ms during guide drag. CanvasSection re-rendered at ~60fps even though Phase E had already moved mousemove subscriptions to leaves.
+
+**Root cause A — guide drag**: `useGuideState()` in CanvasSection held 4× `useSyncExternalStore` on GuideStore. During drag, `moveGuideById()` → `GuideStore.notify()` on every mouse event → all 4 subscriptions fired → `scheduleImmediateRootScheduleTask` (React's synchronous flush path for useSyncExternalStore) → CanvasSection re-rendered with 13+ hooks including `useGuideToolWorkflows` (5 useMemo), `useOverlayLayers`, `useCommandHistory`, etc.
+
+**Root cause B — stale click-handler data (regression found and fixed)**: After fix A, `guideState.guides` in CanvasSection became a snapshot read (imperative, not reactive) passed to `useCanvasContextMenu` and `useCanvasClickHandler`. Click handlers used this snapshot for hit-testing (`findNearestGuide`). If a guide was added/deleted and CanvasSection had not re-rendered since, the stale snapshot caused the new guide to be invisible to click operations.
+
+**Fix A — `useGuideActions` (new hook)**:
+- `src/subapps/dxf-viewer/hooks/state/useGuideActions.ts` (NEW, 236 lines): mutations-only drop-in replacement for `useGuideState()`. Returns `UseGuideStateReturn` type. All mutation callbacks identical (CommandHistory, EventBus). `guides` / `guidesVisible` / `snapEnabled` / `guideCount` are imperative reads via `store.getGuides()` etc. — NOT `useSyncExternalStore`. CanvasSection no longer subscribes to GuideStore.
+- `CanvasSection.tsx`: `useGuideState()` → `useGuideActions()`. GuideStore 4× `useSyncExternalStore` eliminated from CanvasSection.
+- `canvas-layer-stack-leaves.tsx` (`DxfCanvasSubscriber`): added module-level stable subscriptions (`_subscribeGuideStore`, `_getGuides`, `_getGuidesVisible`) + `useSyncExternalStore` calls directly in the leaf. `localComputedParams` useMemo overrides `guideState.guides` and `guidesVisible` with freshly subscribed data before passing to `useGuideWorkflowComputed`. Removed `guides` / `guidesVisible` from `DxfCanvasSubscriberProps` (subscribed directly from store, not passed as props).
+- `CanvasLayerStack.tsx`: removed `guides={guides}` and `guidesVisible={guidesVisible}` from `DxfCanvasSubscriber` JSX.
+
+**Fix B — `getGuides` getter (stale click-handler data)**:
+- `canvas-click-types.ts`: added `getGuides?: () => readonly Guide[]` alongside `guides?`.
+- `guide-click-handlers.ts` (`handleGuideToolClick`): resolves `freshGuides = params.getGuides?.() ?? params.guides ?? []` at entry, creates `p = { ...params, guides: freshGuides }`, passes `p` to all 31 sub-handlers. Sub-handlers unchanged — still access `p.guides`.
+- `useCanvasContextMenu.ts`: added `getGuides?: () => readonly Guide[]`. Inside `handleNativeContextMenu` DOM event: `const guides = getGuides?.() ?? guidesSnapshot` — reads from store at event time, not from stale React snapshot.
+- `CanvasSection.tsx`: `getGuides = useCallback(() => getGlobalGuideStore().getGuides(), [])` — zero deps, stable reference, always returns current store state. Passed to both hooks instead of `guides: guideState.guides`.
+
+**Result**: During guide drag — only `DxfCanvasSubscriber` re-renders (tiny leaf). CanvasSection, CanvasLayerStack, all 13+ hooks skipped. Click handlers always read current guide data from store regardless of when CanvasSection last rendered.
+
+**Architectural rule** (added to micro-leaf pattern):
+> **Orchestrator components (CanvasSection) MUST NOT pass reactive store snapshots to event handlers.** Event handlers that need current store data MUST receive a getter `() => store.getData()` instead of a value snapshot. Snapshot values in event handlers become stale when the orchestrator skips re-renders by design.
+
+**Files created**: `hooks/state/useGuideActions.ts`.
+**Files modified**: `hooks/state/useGuideState.ts`, `components/dxf-layout/CanvasSection.tsx`, `components/dxf-layout/CanvasLayerStack.tsx`, `components/dxf-layout/canvas-layer-stack-leaves.tsx`, `hooks/canvas/canvas-click-types.ts`, `hooks/canvas/guide-click-handlers.ts`, `hooks/canvas/useCanvasContextMenu.ts`.
+
+✅ Google-level: YES — zero stale data, zero 60fps CanvasSection re-renders during guide drag, stable getGuides getter is idempotent and SSoT-backed.
+
+---
 
 ### 2026-05-10: PERF — Phase H: Move cursor world-position subscription to leaf (toolbar)
 

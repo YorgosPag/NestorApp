@@ -1,4 +1,8 @@
 /**
+ * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 BEFORE EDITING
+ * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
+ * RULE: handlers MUST receive getGuides() getter — never a snapshot value.
+ *
  * 🏢 ENTERPRISE: Guide Tool Click Handlers
  *
  * @description Pure functions handling ALL guide-* tool click events.
@@ -95,38 +99,44 @@ export function handleGuideToolClick(
   const { activeTool } = params;
   if (!activeTool.startsWith('guide-')) return false;
 
+  // ADR-040: resolve guides from store at click time (not from stale React snapshot).
+  const freshGuides = params.getGuides?.() ?? params.guides ?? [];
+  const p: UseCanvasClickHandlerParams = freshGuides !== params.guides
+    ? { ...params, guides: freshGuides }
+    : params;
+
   switch (activeTool) {
-    case 'guide-xz':       return handleDiagonalGuide(ctx, params);
-    case 'guide-x':        return handleAxisGuide(ctx, params, 'X');
-    case 'guide-z':        return handleAxisGuide(ctx, params, 'Y');
-    case 'guide-delete':   return handleGuideDelete(ctx, params);
-    case 'guide-parallel':      return handleGuideParallel(ctx, params);
-    case 'guide-perpendicular': return handleGuidePerpendicular(ctx, params);
-    case 'guide-add-point':     return handleAddPoint(ctx.worldPoint, params);
-    case 'guide-delete-point':  return handleDeletePoint(ctx, params);
-    case 'guide-segments':      return handleSegments(ctx.worldPoint, params);
-    case 'guide-distance':      return handleDistance(ctx.worldPoint, params);
+    case 'guide-xz':       return handleDiagonalGuide(ctx, p);
+    case 'guide-x':        return handleAxisGuide(ctx, p, 'X');
+    case 'guide-z':        return handleAxisGuide(ctx, p, 'Y');
+    case 'guide-delete':   return handleGuideDelete(ctx, p);
+    case 'guide-parallel':      return handleGuideParallel(ctx, p);
+    case 'guide-perpendicular': return handleGuidePerpendicular(ctx, p);
+    case 'guide-add-point':     return handleAddPoint(ctx.worldPoint, p);
+    case 'guide-delete-point':  return handleDeletePoint(ctx, p);
+    case 'guide-segments':      return handleSegments(ctx.worldPoint, p);
+    case 'guide-distance':      return handleDistance(ctx.worldPoint, p);
     // Entity-picking handlers (delegated to guide-entity-handlers.ts)
-    case 'guide-arc-segments':       return handleArcSegments(ctx, params);
-    case 'guide-arc-distance':       return handleArcDistance(ctx, params);
-    case 'guide-arc-line-intersect': return handleArcLineIntersect(ctx, params);
-    case 'guide-circle-intersect':   return handleCircleIntersect(ctx, params);
-    case 'guide-line-midpoint':      return handleLineMidpoint(ctx, params);
-    case 'guide-circle-center':      return handleCircleCenter(ctx, params);
-    case 'guide-from-entity':        return handleFromEntity(ctx, params);
-    case 'guide-offset-entity':      return handleOffsetEntity(ctx, params);
+    case 'guide-arc-segments':       return handleArcSegments(ctx, p);
+    case 'guide-arc-distance':       return handleArcDistance(ctx, p);
+    case 'guide-arc-line-intersect': return handleArcLineIntersect(ctx, p);
+    case 'guide-circle-intersect':   return handleCircleIntersect(ctx, p);
+    case 'guide-line-midpoint':      return handleLineMidpoint(ctx, p);
+    case 'guide-circle-center':      return handleCircleCenter(ctx, p);
+    case 'guide-from-entity':        return handleFromEntity(ctx, p);
+    case 'guide-offset-entity':      return handleOffsetEntity(ctx, p);
     // Simple guide tools
-    case 'guide-rect-center':   return handleRectCenter(ctx.worldPoint, params);
-    case 'guide-grid':          return handleGrid(ctx.worldPoint, params);
-    case 'guide-rotate':        return handleGuideRotate(ctx, params);
-    case 'guide-rotate-all':    return handleRotateAll(ctx.worldPoint, params);
-    case 'guide-rotate-group':  return handleRotateGroup(ctx, params);
-    case 'guide-equalize':      return handleEqualize(ctx, params);
-    case 'guide-polar-array':   return handlePolarArray(ctx.worldPoint, params);
-    case 'guide-scale':         return handleScale(ctx.worldPoint, params);
-    case 'guide-angle':         return handleAngle(ctx.worldPoint, params);
-    case 'guide-mirror':        return handleMirror(ctx, params);
-    case 'guide-select':        return handleGuideSelect(ctx, params);
+    case 'guide-rect-center':   return handleRectCenter(ctx.worldPoint, p);
+    case 'guide-grid':          return handleGrid(ctx.worldPoint, p);
+    case 'guide-rotate':        return handleGuideRotate(ctx, p);
+    case 'guide-rotate-all':    return handleRotateAll(ctx.worldPoint, p);
+    case 'guide-rotate-group':  return handleRotateGroup(ctx, p);
+    case 'guide-equalize':      return handleEqualize(ctx, p);
+    case 'guide-polar-array':   return handlePolarArray(ctx.worldPoint, p);
+    case 'guide-scale':         return handleScale(ctx.worldPoint, p);
+    case 'guide-angle':         return handleAngle(ctx.worldPoint, p);
+    case 'guide-mirror':        return handleMirror(ctx, p);
+    case 'guide-select':        return handleGuideSelect(ctx, p);
     default: return false;
   }
 }

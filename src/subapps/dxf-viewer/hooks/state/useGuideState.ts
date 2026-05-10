@@ -339,3 +339,7 @@ export function useGuideState(): UseGuideStateReturn {
     getStore,
   };
 }
+
+// useGuideActions() lives in useGuideActions.ts (mutations-only, no subscriptions).
+// Import directly from that file for orchestrators that must not re-render on guide drag.
+
