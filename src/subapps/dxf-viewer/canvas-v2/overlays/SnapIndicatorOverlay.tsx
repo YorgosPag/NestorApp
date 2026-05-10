@@ -21,7 +21,6 @@ import {
   SNAP_ICON_GEOMETRY,
   getSnapIconQuarter,
   getTangentCircleRadius,
-  getGridDotRadius,
   getNodeDotRadius
 } from '../../rendering/ui/snap/snap-icon-config';
 
@@ -175,15 +174,6 @@ function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
-    // • GRID: Filled dot - Standard grid snap indicator
-    case 'grid':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* 🏢 ADR-137: Using centralized grid dot radius (UNIFIED: was 3 vs 2) */}
-          <circle cx={half} cy={half} r={getGridDotRadius()} fill={color} />
-        </svg>
-      );
-
     // ↗ EXTENSION: Arrow extension line
     case 'extension':
       return (
@@ -250,6 +240,8 @@ export default function SnapIndicatorOverlay({
   className = ''
 }: SnapIndicatorOverlayProps) {
   if (!snapResult || !snapResult.point || !transform) return null;
+  // AutoCAD standard: grid snap has no floating visual marker — cursor snaps silently
+  if (snapResult.type === 'grid') return null;
 
   const { point, type } = snapResult;
   const snapColor = canvasUI.overlay.colors.snap.border;
