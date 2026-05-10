@@ -505,6 +505,42 @@ powershell.exe -ExecutionPolicy Bypass -File "C:\Nestor_Pagonis\enterprise-backu
 
 ---
 
+## 🚨 DXF VIEWER ARCHITECTURE — MANDATORY READ/UPDATE RULE
+
+**BEFORE touching ANY of these files, READ ADR-040:**
+`docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md`
+
+**AFTER any architectural change, UPDATE the ADR-040 changelog (same commit).**
+
+### Performance-critical files (micro-leaf subscriber pattern, ADR-040):
+
+| File | Architecture role |
+|------|------------------|
+| `components/dxf-layout/CanvasSection.tsx` | Orchestrator — MUST NOT subscribe to high-freq stores |
+| `components/dxf-layout/CanvasLayerStack.tsx` | Shell — MUST NOT subscribe to high-freq stores |
+| `components/dxf-layout/canvas-layer-stack-leaves.tsx` | Micro-leaves — the ONLY subscribers to high-freq stores |
+| `canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` | Bitmap cache — invalidation rules in ADR-040 |
+| `canvas-v2/dxf-canvas/DxfRenderer.ts` | Entity render pipeline |
+| `hooks/state/useGuideActions.ts` | Mutations-only — NO useSyncExternalStore |
+| `hooks/state/useGuideState.ts` | Reactive — ONLY for leaf renderers |
+| `hooks/canvas/guide-click-handlers.ts` | Click-time reads — MUST use getter, not snapshot |
+| `hooks/canvas/useCanvasContextMenu.ts` | Event-time reads — MUST use getter, not snapshot |
+| `systems/hover/HoverStore.ts` | Hover SSoT — zero React state |
+| `systems/cursor/ImmediatePositionStore.ts` | Cursor SSoT — zero React state |
+| `rendering/core/UnifiedFrameScheduler.ts` | RAF orchestrator |
+
+### Cardinal rules (violations cause 60fps re-renders or stale data):
+
+1. **Orchestrators (CanvasSection, CanvasLayerStack) MUST NOT call `useSyncExternalStore`** — push subscriptions to leaves
+2. **Event handlers MUST receive `getX: () => store.getX()` getters**, not snapshot values — snapshots become stale when orchestrator skips re-renders
+3. **Bitmap cache (dxf-bitmap-cache.ts) MUST NOT include `hoveredEntityId` / `selectedEntityIds` / `gripInteractionState` in its cache key** — causes 60fps full-scene rebuild → FPS 1
+4. **Each leaf subscriber renders ≤1 canvas element and calls ≤2 high-frequency hooks**
+
+### Pre-commit check:
+The pre-commit hook (CHECK 6B) WARNS automatically when you modify these files without staging ADR-040.
+
+---
+
 ## 📌 DXF Viewer Subapp Pending Tasks
 
 Pending tasks for the DXF Viewer (ServiceRegistry V2 migration, Grid Testing Suite, Transform Constants hotfixes): **`src/subapps/dxf-viewer/PENDING.md`**
