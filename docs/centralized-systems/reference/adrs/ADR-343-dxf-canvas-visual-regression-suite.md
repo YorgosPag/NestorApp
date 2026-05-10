@@ -201,7 +201,7 @@ Phase 3: 5 PNG baselines
 Phase 4: 5 PNG baselines  
 Phase 5: 5 PNG baselines  
 Phase 6: 6 PNG baselines
-Phase 7: 5 PNG baselines (pending `npm run test:visual:dxf:update`)  
+Phase 7: 5 PNG baselines  
 
 ---
 
