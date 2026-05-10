@@ -52,6 +52,8 @@ Tests run **locally** (`npm run test:visual:dxf`). CI integration requires one G
 | `entity-polyline.json` | Polyline renderer: closed + open |
 | `entity-text.json` | Text renderer: normal + rotated |
 | `entity-angle.json` | Angle-measurement renderer |
+| `empty-scene.json` | Edge case: no entities, `bounds: null` |
+| `dense-scene.json` | Edge case: 34 entities across 9 layers (floor plan fragment) |
 
 ### Playwright Config
 

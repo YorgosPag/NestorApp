@@ -281,18 +281,11 @@ export class LayerRenderer {
     this.renderColorLayers(layers, transform, viewport);
     this.ctx.restore();
 
-    // 3. Render snap indicators
-    if (options.showSnapIndicators && snapSettings.enabled && options.snapResults.length) {
-      if (typeof window !== 'undefined') {
-        window.__debugSnapResults = options.snapResults as unknown as typeof window.__debugSnapResults;
-        (window as Window & { __debugViewport?: Viewport }).__debugViewport = viewport;
-      }
-      this.snapRenderer.render(options.snapResults, viewport, snapSettings, transform);
-    } else {
-      if (typeof window !== 'undefined') {
-        window.__debugSnapResults = [];
-        (window as Window & { __debugViewport?: Viewport }).__debugViewport = viewport;
-      }
+    // 3. Snap indicators — rendered exclusively by SnapIndicatorOverlay (SVG, ADR-040 leaf pattern).
+    // Legacy canvas SnapRenderer disabled: used world coords as canvas pixels → wrong positions.
+    if (typeof window !== 'undefined') {
+      window.__debugSnapResults = options.showSnapIndicators ? options.snapResults as unknown as typeof window.__debugSnapResults : [];
+      (window as Window & { __debugViewport?: Viewport }).__debugViewport = viewport;
     }
 
     // 4. Render selection box
