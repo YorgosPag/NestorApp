@@ -14,6 +14,11 @@ const PreviewCanvas = dynamic(
   { ssr: false }
 ) as typeof PreviewCanvasType;
 
+const SnapIndicatorOverlay = dynamic(
+  () => import('@/subapps/dxf-viewer/canvas-v2/overlays/SnapIndicatorOverlay'),
+  { ssr: false }
+);
+
 declare global {
   interface Window {
     __dxfTest: {
@@ -29,6 +34,11 @@ declare global {
       drawPreview: (entity: Record<string, unknown>) => void;
       clearPreview: () => void;
       setActiveTool: (tool: string) => void;
+      updateSceneEntity: (id: string, patch: Record<string, unknown>) => void;
+      addSceneEntity: (entity: Record<string, unknown>) => void;
+      removeSceneEntity: (id: string) => void;
+      showSnap: (type: string, wx: number, wy: number) => void;
+      hideSnap: () => void;
     };
   }
 }
@@ -84,6 +94,7 @@ export default function DxfCanvasHarness() {
   const [urlParams, setUrlParams] = useState({ rulers: false, grid: false, fixture: 'regression-scene' });
   const [activeTool, setActiveTool] = useState<string>('select');
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
+  const [snapResult, setSnapResult] = useState<{ point: { x: number; y: number }; type: string } | null>(null);
   const selectedEntityIdsRef = useRef<string[]>([]);
   selectedEntityIdsRef.current = selectedEntityIds;
 
@@ -174,6 +185,14 @@ export default function DxfCanvasHarness() {
         previewCanvasRef.current?.drawPreview(entity as unknown as ExtendedSceneEntity),
       clearPreview: () => previewCanvasRef.current?.clear(),
       setActiveTool: (tool: string) => setActiveTool(tool),
+      updateSceneEntity: (id: string, patch: Record<string, unknown>) =>
+        setScene(s => s ? { ...s, entities: s.entities.map(e => e.id === id ? { ...e, ...patch } as typeof e : e) } : null),
+      addSceneEntity: (entity: Record<string, unknown>) =>
+        setScene(s => s ? { ...s, entities: [...s.entities, entity as DxfScene['entities'][number]] } : null),
+      removeSceneEntity: (id: string) =>
+        setScene(s => s ? { ...s, entities: s.entities.filter(e => e.id !== id) } : null),
+      showSnap: (type: string, wx: number, wy: number) => setSnapResult({ point: { x: wx, y: wy }, type }),
+      hideSnap: () => setSnapResult(null),
     };
   });
 
@@ -207,6 +226,13 @@ export default function DxfCanvasHarness() {
             transform={transform}
             viewport={HARNESS_VIEWPORT}
             isActive
+          />
+          <SnapIndicatorOverlay
+            snapResult={snapResult}
+            viewport={HARNESS_VIEWPORT}
+            canvasRect={null}
+            transform={transform}
+            className="absolute inset-0"
           />
         </section>
       ) : (
