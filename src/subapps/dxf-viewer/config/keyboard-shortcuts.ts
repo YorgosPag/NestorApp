@@ -385,9 +385,9 @@ export const DXF_FUNCTION_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'snap:object-snap',
     category: 'snap',
   },
-  // F12 - Dynamic Input (AutoCAD standard)
+  // Dynamic Input — F12 omitted: browser-reserved (DevTools). AutoCAD web pattern: status-bar toggle only.
   dynamicInput: {
-    key: 'F12',
+    key: '',
     modifier: 'none',
     descriptionKey: 'shortcuts.snap.dynamicInput',
     action: 'snap:dynamic-input',

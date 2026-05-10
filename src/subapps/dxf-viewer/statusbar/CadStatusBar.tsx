@@ -96,9 +96,11 @@ function CadToggleRow({ id, label, fkey, description, toggle }: {
             className="flex items-center gap-1 cursor-pointer select-none"
           >
             <span className="text-xs font-medium text-foreground leading-none">{label}</span>
-            <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
-              {fkey}
-            </span>
+            {fkey && (
+              <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
+                {fkey}
+              </span>
+            )}
           </label>
           <Switch
             id={id}
@@ -134,9 +136,11 @@ function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledM
               className="flex items-center gap-1 cursor-pointer select-none"
             >
               <span className="text-xs font-medium text-foreground leading-none">{label}</span>
-              <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
-                {fkey}
-              </span>
+              {fkey && (
+                <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
+                  {fkey}
+                </span>
+              )}
             </label>
             <Switch
               id={id}
