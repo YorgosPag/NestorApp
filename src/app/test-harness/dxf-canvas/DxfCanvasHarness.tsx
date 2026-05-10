@@ -6,6 +6,9 @@ import type { DxfScene } from '@/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-typ
 import type { ViewTransform, Point2D } from '@/subapps/dxf-viewer/rendering/types/Types';
 import type { DxfCanvas as DxfCanvasType, DxfCanvasRef } from '@/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas';
 import type { GridSettings, RulerSettings } from '@/subapps/dxf-viewer/canvas-v2/layer-canvas/layer-types';
+import { PreviewCanvas } from '@/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas';
+import type { PreviewCanvasHandle } from '@/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas';
+import type { ExtendedSceneEntity } from '@/subapps/dxf-viewer/hooks/drawing/drawing-types';
 
 declare global {
   interface Window {
@@ -19,9 +22,14 @@ declare global {
       clearSelection: () => void;
       getSelectedEntityIds: () => string[];
       worldToScreen: (wx: number, wy: number) => { x: number; y: number };
+      drawPreview: (entity: Record<string, unknown>) => void;
+      clearPreview: () => void;
+      setActiveTool: (tool: string) => void;
     };
   }
 }
+
+const HARNESS_VIEWPORT = { width: 1280, height: 800 };
 
 const DxfCanvas = dynamic(
   () => import('@/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas').then(m => m.DxfCanvas),
@@ -65,10 +73,12 @@ const RULER_SETTINGS: RulerSettings = {
 
 export default function DxfCanvasHarness() {
   const canvasRef = useRef<DxfCanvasRef>(null);
+  const previewCanvasRef = useRef<PreviewCanvasHandle>(null);
   const [scene, setScene] = useState<DxfScene | null>(null);
   const [transform, setTransform] = useState<ViewTransform>(INITIAL_TRANSFORM);
   const [error, setError] = useState<string | null>(null);
   const [urlParams, setUrlParams] = useState({ rulers: false, grid: false, fixture: 'regression-scene' });
+  const [activeTool, setActiveTool] = useState<string>('select');
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const selectedEntityIdsRef = useRef<string[]>([]);
   selectedEntityIdsRef.current = selectedEntityIds;
@@ -156,6 +166,10 @@ export default function DxfCanvasHarness() {
         const t = canvasRef.current?.getTransform() ?? transform;
         return { x: wx * t.scale + t.offsetX, y: t.offsetY - wy * t.scale };
       },
+      drawPreview: (entity: Record<string, unknown>) =>
+        previewCanvasRef.current?.drawPreview(entity as unknown as ExtendedSceneEntity),
+      clearPreview: () => previewCanvasRef.current?.clear(),
+      setActiveTool: (tool: string) => setActiveTool(tool),
     };
   });
 
@@ -182,7 +196,13 @@ export default function DxfCanvasHarness() {
             renderOptions={renderOptions}
             rulerSettings={urlParams.rulers ? RULER_SETTINGS : undefined}
             gridSettings={urlParams.grid ? GRID_SETTINGS : undefined}
-            activeTool="select"
+            activeTool={activeTool}
+          />
+          <PreviewCanvas
+            ref={previewCanvasRef}
+            transform={transform}
+            viewport={HARNESS_VIEWPORT}
+            isActive
           />
         </section>
       ) : (
