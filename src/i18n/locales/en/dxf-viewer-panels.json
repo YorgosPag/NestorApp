@@ -480,5 +480,32 @@
       "blue": "Blue",
       "alpha": "Alpha"
     }
+  },
+  "rulerCornerBox": {
+    "tooltip": {
+      "click": "Click:",
+      "zoomToFit": "Zoom to Fit",
+      "double": "Double:",
+      "zoom100": "Zoom 100%",
+      "ctrlClick": "Ctrl+Click:",
+      "previousView": "Previous View",
+      "rightClick": "Right-Click:",
+      "zoomMenu": "Zoom Menu",
+      "scroll": "Scroll:",
+      "quickZoom": "Quick Zoom"
+    },
+    "menu": {
+      "zoomToFit": "Zoom to Fit",
+      "zoom100": "Zoom 100%",
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "previousView": "Previous View",
+      "zoomPresets": "Zoom Presets"
+    },
+    "aria": {
+      "cornerBox": "Zoom controls. Current zoom: {zoomPercent}%. Click to fit, double-click for 100%, right-click for menu.",
+      "zoomPresets": "Zoom presets",
+      "srOnly": "Corner box zoom controls"
+    }
   }
 }

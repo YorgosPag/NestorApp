@@ -18,20 +18,15 @@
  * @see ADR-009 in docs/centralized-systems/reference/adr-index.md
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useTranslation } from '@/i18n';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import styles from './RulerCornerBox.module.css';
 // 🏢 ADR-079: Centralized Movement Detection Constants (Zoom Preset Matching)
@@ -112,7 +107,13 @@ export default function RulerCornerBox({
   className,
   viewport,
 }: RulerCornerBoxProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { t } = useTranslation('dxf-viewer-panels');
+  // menuPos: fixed-pixel anchor for the portal menu (bottom-left of menu = bottom-right of button)
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const isMenuOpen = menuPos !== null;
+
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const lastClickRef = useRef<number>(0);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -120,13 +121,34 @@ export default function RulerCornerBox({
   const zoomPercent = Math.round(currentScale * 100);
   const zoomDisplay = zoomPercent >= 1000 ? `${(zoomPercent / 1000).toFixed(1)}k%` : formatPercent(currentScale);
 
+  // Close menu on outside pointerdown or Escape
+  useEffect(() => {
+    if (!menuPos) return;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuPos(null);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuPos(null);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuPos]);
+
+  const closeMenu = useCallback(() => setMenuPos(null), []);
+
   // ===== CLICK HANDLERS =====
 
   const handleClick = useCallback((e: React.MouseEvent) => {
-    // Prevent if right-click menu is open
     if (isMenuOpen) return;
 
-    // Ctrl+Click = Zoom Previous
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       onZoomPrevious();
@@ -136,21 +158,16 @@ export default function RulerCornerBox({
     const now = Date.now();
     const timeSinceLastClick = now - lastClickRef.current;
 
-    // Double-click detection (within DOUBLE_CLICK_WINDOW ms)
     if (timeSinceLastClick < PANEL_LAYOUT.TIMING.DOUBLE_CLICK_WINDOW) {
-      // Clear single-click timeout
       if (clickTimeoutRef.current) {
         clearTimeout(clickTimeoutRef.current);
         clickTimeoutRef.current = null;
       }
-      // Double-click = Zoom 100%
       onZoom100();
       lastClickRef.current = 0;
     } else {
-      // Potential single-click, wait to confirm
       lastClickRef.current = now;
       clickTimeoutRef.current = setTimeout(() => {
-        // Single-click = Zoom to Fit
         onZoomToFit();
         clickTimeoutRef.current = null;
       }, PANEL_LAYOUT.TIMING.DOUBLE_CLICK_WINDOW);
@@ -166,7 +183,6 @@ export default function RulerCornerBox({
     if (onWheelZoom) {
       onWheelZoom(e.deltaY);
     } else {
-      // Default behavior: zoom in/out
       if (e.deltaY < 0) {
         onZoomIn();
       } else {
@@ -211,12 +227,16 @@ export default function RulerCornerBox({
   }, [onZoomToFit, onZoom100, onZoomIn, onZoomOut, onZoomPrevious]);
 
   // ===== CONTEXT MENU HANDLER =====
+  // Uses getBoundingClientRect() so overflow:hidden on the canvas container can't interfere.
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // 🏢 FIX (2026-01-04): Right-click MUST open the menu as per ADR-009 documentation
-    setIsMenuOpen(true);
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      // bottom-left of menu aligns with bottom-right of button
+      setMenuPos({ x: rect.right, y: rect.bottom });
+    }
   }, []);
 
   // ===== TOOLTIP CONTENT =====
@@ -224,161 +244,81 @@ export default function RulerCornerBox({
   const tooltipContent = (
     <section className={styles.tooltipContent}>
       <div className={styles.tooltipLine}>
-        <span className={styles.tooltipKey}>Click:</span>
-        <span className={styles.tooltipAction}>Zoom to Fit</span>
+        <span className={styles.tooltipKey}>{t('rulerCornerBox.tooltip.click')}</span>
+        <span className={styles.tooltipAction}>{t('rulerCornerBox.tooltip.zoomToFit')}</span>
       </div>
       <div className={styles.tooltipLine}>
-        <span className={styles.tooltipKey}>Double:</span>
-        <span className={styles.tooltipAction}>Zoom 100%</span>
+        <span className={styles.tooltipKey}>{t('rulerCornerBox.tooltip.double')}</span>
+        <span className={styles.tooltipAction}>{t('rulerCornerBox.tooltip.zoom100')}</span>
       </div>
       <div className={styles.tooltipLine}>
-        <span className={styles.tooltipKey}>Ctrl+Click:</span>
-        <span className={styles.tooltipAction}>Previous View</span>
+        <span className={styles.tooltipKey}>{t('rulerCornerBox.tooltip.ctrlClick')}</span>
+        <span className={styles.tooltipAction}>{t('rulerCornerBox.tooltip.previousView')}</span>
       </div>
       <div className={styles.tooltipLine}>
-        <span className={styles.tooltipKey}>Right-Click:</span>
-        <span className={styles.tooltipAction}>Zoom Menu</span>
+        <span className={styles.tooltipKey}>{t('rulerCornerBox.tooltip.rightClick')}</span>
+        <span className={styles.tooltipAction}>{t('rulerCornerBox.tooltip.zoomMenu')}</span>
       </div>
       <div className={styles.tooltipLine}>
-        <span className={styles.tooltipKey}>Scroll:</span>
-        <span className={styles.tooltipAction}>Quick Zoom</span>
+        <span className={styles.tooltipKey}>{t('rulerCornerBox.tooltip.scroll')}</span>
+        <span className={styles.tooltipAction}>{t('rulerCornerBox.tooltip.quickZoom')}</span>
       </div>
     </section>
   );
 
-  // ===== RENDER =====
+  // ===== PORTAL MENU =====
+  // Rendered directly to document.body with position:fixed so overflow:hidden cannot clip it.
 
-  // 🏢 FIX (2026-01-04): Use ref to position menu relative to button
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  return (
-    <TooltipProvider delayDuration={500}>
-      {/* 🏢 FIX (2026-01-04): Simplified structure - Tooltip wraps button directly */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            ref={buttonRef}
-            type="button"
-            className={cn(styles.cornerBox, className)}
-            style={{
-              left: 0,
-              bottom: 0,
-              width: rulerWidth,
-              height: rulerHeight,
-              backgroundColor,
-              color: textColor,
-            }}
-            onClick={handleClick}
-            onContextMenu={handleContextMenu}
-            onWheel={handleWheel}
-            onKeyDown={handleKeyDown}
-            aria-label={`Zoom controls. Current zoom: ${zoomPercent}%. Click to fit, double-click for 100%, right-click for menu.`}
-            aria-haspopup="menu"
-            aria-expanded={isMenuOpen}
-            tabIndex={0}
-          >
-            <div className={styles.content}>
-              <span className={styles.originMarker}>
-                <OriginMarkerIcon color={textColor} />
-              </span>
-              <span className={styles.zoomLevel} aria-live="polite">
-                {zoomDisplay}
-              </span>
-            </div>
-            <span className={styles.srOnly}>
-              Corner box zoom controls
-            </span>
-          </button>
-        </TooltipTrigger>
-
-        <TooltipContent side="right" sideOffset={8}>
-          {tooltipContent}
-        </TooltipContent>
-      </Tooltip>
-
-      {/* 🏢 FIX (2026-01-04): DropdownMenu SEPARATE from Tooltip - no nesting conflict */}
-      <DropdownMenu
-        open={isMenuOpen}
-        onOpenChange={(open) => {
-          if (!open) setIsMenuOpen(false);
-        }}
-      >
-        {/* Hidden trigger - menu positioned via CSS */}
-        <DropdownMenuTrigger asChild>
-          <span
-            className={styles.hiddenTrigger}
-            style={{
-              position: 'absolute',
-              left: rulerWidth,
-              bottom: rulerHeight,
-              width: 1,
-              height: 1,
-              pointerEvents: 'none',
-            }}
-          />
-        </DropdownMenuTrigger>
-
-        {/* ===== CONTEXT MENU ===== */}
-        <DropdownMenuContent
+  const portalMenu = menuPos
+    ? createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label={t('rulerCornerBox.menu.zoomPresets')}
           className={styles.menuContent}
-          side="top"
-          align="start"
-          sideOffset={4}
+          style={{
+            position: 'fixed',
+            left: menuPos.x,
+            bottom: window.innerHeight - menuPos.y,
+            zIndex: 1800,
+          }}
         >
-          {/* Primary Actions */}
-          <DropdownMenuItem
-            className={styles.menuItem}
-            onClick={onZoomToFit}
-          >
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomToFit(); closeMenu(); }}>
             <span className={styles.menuItemIcon}><FitIcon /></span>
-            <span className={styles.menuItemLabel}>Zoom to Fit</span>
+            <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.zoomToFit')}</span>
             <span className={styles.menuItemShortcut}>F</span>
-          </DropdownMenuItem>
+          </button>
 
-          <DropdownMenuItem
-            className={styles.menuItem}
-            onClick={onZoom100}
-          >
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoom100(); closeMenu(); }}>
             <span className={styles.menuItemIcon}><Zoom100Icon /></span>
-            <span className={styles.menuItemLabel}>Zoom 100%</span>
+            <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.zoom100')}</span>
             <span className={styles.menuItemShortcut}>0</span>
-          </DropdownMenuItem>
+          </button>
 
-          <DropdownMenuSeparator className={styles.menuSeparator} />
+          <div role="separator" className={styles.menuSeparator} />
 
-          {/* Zoom In/Out */}
-          <DropdownMenuItem
-            className={styles.menuItem}
-            onClick={onZoomIn}
-          >
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomIn(); closeMenu(); }}>
             <span className={styles.menuItemIcon}><ZoomInIcon /></span>
-            <span className={styles.menuItemLabel}>Zoom In</span>
+            <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.zoomIn')}</span>
             <span className={styles.menuItemShortcut}>+</span>
-          </DropdownMenuItem>
+          </button>
 
-          <DropdownMenuItem
-            className={styles.menuItem}
-            onClick={onZoomOut}
-          >
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomOut(); closeMenu(); }}>
             <span className={styles.menuItemIcon}><ZoomOutIcon /></span>
-            <span className={styles.menuItemLabel}>Zoom Out</span>
+            <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.zoomOut')}</span>
             <span className={styles.menuItemShortcut}>-</span>
-          </DropdownMenuItem>
+          </button>
 
-          <DropdownMenuItem
-            className={styles.menuItem}
-            onClick={onZoomPrevious}
-          >
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomPrevious(); closeMenu(); }}>
             <span className={styles.menuItemIcon}><HistoryIcon /></span>
-            <span className={styles.menuItemLabel}>Previous View</span>
+            <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.previousView')}</span>
             <span className={styles.menuItemShortcut}>P</span>
-          </DropdownMenuItem>
+          </button>
 
-          <DropdownMenuSeparator className={styles.menuSeparator} />
+          <div role="separator" className={styles.menuSeparator} />
 
-          {/* Zoom Presets */}
-          <div className={styles.menuSection}>Zoom Presets</div>
-          <nav className={styles.zoomPresets} aria-label="Zoom presets">
+          <div className={styles.menuSection}>{t('rulerCornerBox.menu.zoomPresets')}</div>
+          <nav className={styles.zoomPresets} aria-label={t('rulerCornerBox.aria.zoomPresets')}>
             {ZOOM_PRESETS.map(({ label, scale }) => (
               <button
                 key={label}
@@ -390,7 +330,7 @@ export default function RulerCornerBox({
                 )}
                 onClick={() => {
                   onZoomToScale(scale);
-                  setIsMenuOpen(false);
+                  closeMenu();
                 }}
                 aria-pressed={Math.abs(currentScale - scale) < MOVEMENT_DETECTION.ZOOM_PRESET_MATCH}
               >
@@ -398,8 +338,59 @@ export default function RulerCornerBox({
               </button>
             ))}
           </nav>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </TooltipProvider>
+        </div>,
+        document.body
+      )
+    : null;
+
+  // ===== RENDER =====
+
+  return (
+    <>
+      <TooltipProvider delayDuration={500}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              ref={buttonRef}
+              type="button"
+              className={cn(styles.cornerBox, className)}
+              style={{
+                left: 0,
+                bottom: 0,
+                width: rulerWidth,
+                height: rulerHeight,
+                backgroundColor,
+                color: textColor,
+              }}
+              onClick={handleClick}
+              onContextMenu={handleContextMenu}
+              onWheel={handleWheel}
+              onKeyDown={handleKeyDown}
+              aria-label={t('rulerCornerBox.aria.cornerBox', { zoomPercent })}
+              aria-haspopup="menu"
+              aria-expanded={isMenuOpen}
+              tabIndex={0}
+            >
+              <div className={styles.content}>
+                <span className={styles.originMarker}>
+                  <OriginMarkerIcon color={textColor} />
+                </span>
+                <span className={styles.zoomLevel} aria-live="polite">
+                  {zoomDisplay}
+                </span>
+              </div>
+              <span className={styles.srOnly}>
+                {t('rulerCornerBox.aria.srOnly')}
+              </span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {tooltipContent}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      {portalMenu}
+    </>
   );
 }
