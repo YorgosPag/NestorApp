@@ -671,6 +671,11 @@ if (this.canvas.width === newWidth && this.canvas.height === newHeight && this.d
 - `useDrawingHandlers.ts`: `hardOrtho()` helper projects incoming point onto H or V axis from last reference point; applied before snap on both `addPoint` and `updatePreview` paths; reads `ortho.on` via ref to avoid callback recreation on every toggle
 - `extended-types.ts`: `DEFAULT_PRO_SNAP_SETTINGS.snapDistance` raised 7→10 to match AutoCAD APERTURE default; all `perModePxTolerance` values unified at 10px (except GUIDE=12 for easy grab)
 
+### 2026-05-11: Fix setState-in-render error in handleDxfEntitySelect
+
+- `universalSelection.add/deselect` were called inside a `setSelectedEntityIds` updater; React runs updaters during reconciliation → "Cannot update SelectionSystem while rendering CanvasSection" error
+- Fix: read `selectedEntityIds` from closure directly (event handlers always see current state), call `universalSelection` and `setSelectedEntityIds` as sibling statements outside any updater
+
 ### 2026-05-10: Fix Ctrl+click double-toggle bug in additive multi-select
 
 - Root cause: `onEntitySelect` was called on BOTH mousedown AND mouseup; additive toggle fired twice → entity added then immediately removed

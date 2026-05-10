@@ -149,20 +149,19 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   const handleDxfEntitySelect = (entityId: string | null, additive?: boolean) => {
     if (entityId) {
       if (additive) {
-        setSelectedEntityIds((prev) => {
-          if (prev.includes(entityId)) {
-            const next = prev.filter(id => id !== entityId);
-            universalSelection.deselect(entityId);
-            return next;
-          }
+        // Read current state directly — universalSelection calls must NOT go inside
+        // a setState updater (that runs during render → "update while rendering" error).
+        if (selectedEntityIds.includes(entityId)) {
+          setSelectedEntityIds(prev => prev.filter(id => id !== entityId));
+          universalSelection.deselect(entityId);
+        } else {
+          setSelectedEntityIds(prev => [...prev, entityId]);
           universalSelection.add(entityId, 'dxf-entity');
-          return [...prev, entityId];
-        });
+        }
       } else {
-        setSelectedEntityIds((prev) => {
-          if (prev.length === 1 && prev[0] === entityId) return prev;
-          return [entityId];
-        });
+        if (!(selectedEntityIds.length === 1 && selectedEntityIds[0] === entityId)) {
+          setSelectedEntityIds([entityId]);
+        }
         universalSelection.clearByType('dxf-entity');
         universalSelection.select(entityId, 'dxf-entity');
       }
