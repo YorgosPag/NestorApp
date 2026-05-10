@@ -737,10 +737,11 @@ export const PREVIEW_DEFAULTS = {
  * @see guide-renderer.ts — drawGuideLine() with glow
  */
 export const HOVER_HIGHLIGHT = {
-  /** Entity hover — AutoCAD-style shadow glow (soft, diffuse) */
+  /** Entity hover — double-stroke glow (GPU-free, replaces shadowBlur) */
   ENTITY: {
     glowColor: UI_COLORS.ENTITY_HOVER_GLOW,  // '#FFFF00' yellow
-    shadowBlur: 8,
+    glowExtraWidth: 6,  // extra pixels on top of entity lineWidth for glow layer
+    glowOpacity: 0.35,  // semi-transparent so entity color shows through
     opacity: OPACITY.OPAQUE,
   },
   /** Guide hover — soft glow effect, keeps original guide color (AutoCAD-style) */

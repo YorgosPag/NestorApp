@@ -13,7 +13,7 @@ import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import type { Entity } from '../../types/entities';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
 // 🏢 ADR-119: Centralized Opacity Constants
-import { UI_COLORS, OPACITY } from '../../config/color-config';
+import { UI_COLORS, OPACITY, HOVER_HIGHLIGHT } from '../../config/color-config';
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
 import { buildUIFont } from '../../config/text-rendering-config';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
@@ -50,6 +50,8 @@ export abstract class BaseEntityRenderer {
     active?: { entityId: string; gripIndex: number };
   } = {};
   protected phaseManager: PhaseManager;
+  private _viewportCache: Viewport | null = null;
+  private _viewportCacheTime = 0;
 
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
@@ -88,17 +90,23 @@ export abstract class BaseEntityRenderer {
     };
   }
 
+  private getViewport(): Viewport {
+    const now = performance.now();
+    if (!this._viewportCache || now - this._viewportCacheTime > 16) {
+      const rect = this.ctx.canvas.getBoundingClientRect();
+      this._viewportCache = { width: rect.width, height: rect.height };
+      this._viewportCacheTime = now;
+    }
+    return this._viewportCache;
+  }
+
   // ✅ ΦΑΣΗ 7: Unified coordinate transformations
   protected worldToScreen(point: Point2D): Point2D {
-    const rect = this.ctx.canvas.getBoundingClientRect();
-    const viewport: Viewport = { width: rect.width, height: rect.height };
-    return CoordinateTransforms.worldToScreen(point, this.transform, viewport);
+    return CoordinateTransforms.worldToScreen(point, this.transform, this.getViewport());
   }
 
   protected screenToWorld(point: Point2D): Point2D {
-    const rect = this.ctx.canvas.getBoundingClientRect();
-    const viewport: Viewport = { width: rect.width, height: rect.height };
-    return CoordinateTransforms.screenToWorld(point, this.transform, viewport);
+    return CoordinateTransforms.screenToWorld(point, this.transform, this.getViewport());
   }
 
   // Abstract methods to be implemented by subclasses
@@ -226,16 +234,14 @@ export abstract class BaseEntityRenderer {
   }
 
   private drawGripAtWorld(worldPt: Point2D, state: 'cold'|'warm'|'hot', gripType?: string) {
-    const rect = this.ctx.canvas.getBoundingClientRect();
-    const viewport: Viewport = { width: rect.width, height: rect.height };
-    const screenPoint = CoordinateTransforms.worldToScreen(worldPt, this.transform, viewport);
+    const screenPoint = CoordinateTransforms.worldToScreen(worldPt, this.transform, this.getViewport());
     this.drawGrip(screenPoint, state, gripType);
   }
 
   // viewport culling για grips - κερδίζουμε πολλά όταν έχουμε χιλιάδες
   private onScreen = (p: Point2D) => {
-    const rect = this.ctx.canvas.getBoundingClientRect();
-    return p.x >= 0 && p.y >= 0 && p.x <= rect.width && p.y <= rect.height;
+    const vp = this.getViewport();
+    return p.x >= 0 && p.y >= 0 && p.x <= vp.width && p.y <= vp.height;
   };
 
 
@@ -307,6 +313,9 @@ export abstract class BaseEntityRenderer {
     this.ctx.setLineDash([]);
     this.ctx.lineCap = 'butt';
     this.ctx.lineJoin = 'miter';
+    // Shadow reset: prevents bleed from guide-renderer or any previous shadow context
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowColor = 'transparent';
 
     // Determine current phase and apply appropriate styling
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
@@ -337,19 +346,33 @@ export abstract class BaseEntityRenderer {
    * Handles all entities uniformly through PhaseManager
    */
   protected renderWithPhases(
-    entity: EntityModel, 
-    options: RenderOptions = {}, 
+    entity: EntityModel,
+    options: RenderOptions = {},
     renderGeometry: () => void,
     renderMeasurements?: () => void,
     renderYellowDots?: () => void
   ): void {
     // 1. Determine current phase
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-    
-    // 2. Setup phase-appropriate style
+
+    // 2. Glow pre-pass for highlighted entities — double-stroke replaces shadowBlur (GPU-free)
+    if (phaseState.phase === 'highlighted') {
+      const entityLineWidth = Math.max(1, (entity as EntityModel & { lineWidth?: number }).lineWidth || 1);
+      this.ctx.save();
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+      this.ctx.lineWidth = entityLineWidth + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
+      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
+      this.ctx.setLineDash([]);
+      renderGeometry();
+      this.ctx.restore();
+    }
+
+    // 3. Setup phase-appropriate style
     this.setupStyle(entity, options);
-    
-    // 3. Render geometry (always)
+
+    // 4. Render geometry (always)
     renderGeometry();
     
     // 4. Render measurements if phase requires them

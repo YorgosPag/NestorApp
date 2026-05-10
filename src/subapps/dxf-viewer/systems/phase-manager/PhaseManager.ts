@@ -322,12 +322,10 @@ export class PhaseManager {
    */
   private applyHighlightedStyle(entity: Entity): void {
     this.ctx.strokeStyle = entity.color || '#FFFFFF';
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044: Slightly thicker than normal
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     this.ctx.setLineDash([]);
     this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.opacity;
-    // AutoCAD-style glow — centralized in HOVER_HIGHLIGHT config
-    this.ctx.shadowColor = HOVER_HIGHLIGHT.ENTITY.glowColor;
-    this.ctx.shadowBlur = HOVER_HIGHLIGHT.ENTITY.shadowBlur;
+    // Glow is rendered as a double-stroke pre-pass in renderWithPhases (shadowBlur removed — GPU-expensive)
   }
 
   // ==========================================================================

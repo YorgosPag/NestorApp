@@ -7,7 +7,7 @@ import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Typ
 import type { ColorLayer } from './layer-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { getStatusColors } from '../../config/color-mapping';
-import { UI_COLORS } from '../../config/color-config';
+import { UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 // 🏢 ADR-042/044/097/154: Centralized rendering constants
 import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 // 🏢 ADR-073: Centralized Midpoint Calculation
@@ -141,15 +141,17 @@ export function renderPolygonToCanvas(params: PolygonRenderParams): void {
     ctx.setLineDash([]);
   }
 
-  // 🏢 ENTERPRISE (2026-02-15): Hover highlight — yellow glow (AutoCAD-style)
+  // 🏢 HOVER_HIGHLIGHT SSoT: double-stroke (no shadowBlur — GPU-expensive)
   if (layer.isHovered && !polygon.selected) {
     ctx.save();
-    ctx.shadowColor = UI_COLORS.ENTITY_HOVER_GLOW;
-    ctx.shadowBlur = 8;
-    ctx.strokeStyle = layer.color || UI_COLORS.WHITE;
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+    ctx.lineWidth = polygon.strokeWidth + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
+    ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
     ctx.stroke();
     ctx.restore();
+    ctx.strokeStyle = layer.color || UI_COLORS.WHITE;
+    ctx.lineWidth = polygon.strokeWidth;
+    ctx.stroke();
   }
 
   // 🏢 ENTERPRISE (2026-01-25): Vertex grips using CENTRALIZED GripSettings
