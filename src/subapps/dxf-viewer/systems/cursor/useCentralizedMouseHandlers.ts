@@ -168,13 +168,15 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
     // Entity hit-test (select tool only, not drawing)
     if (hitTestCallback && onEntitySelect && !isToolInteractive && activeTool === 'select') {
       const hitEntityId = hitTestCallback(scene, screenPos, transform, pointerSnap.viewport);
-      onEntitySelect(hitEntityId);
+      const isAdditive = e.shiftKey || e.ctrlKey || e.metaKey;
+      onEntitySelect(hitEntityId, isAdditive);
     }
 
-    // Marquee selection start (left button, not pan, not drawing, not grip)
+    // Marquee selection start (left button, not pan, not drawing, not grip, not additive-click)
     const isRotationActive = activeTool === 'rotate';
     const isGuideToolActive = activeTool?.startsWith('guide-') ?? false;
-    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isToolInteractive && !shouldStartPan && !isGripDragging && !isRotationActive && !isGuideToolActive) {
+    const isAdditiveClick = e.shiftKey || e.ctrlKey || e.metaKey;
+    if (e.button === 0 && !isAdditiveClick && activeTool !== 'pan' && !isToolInteractive && !shouldStartPan && !isGripDragging && !isRotationActive && !isGuideToolActive) {
       cursor.startSelection(screenPos);
     }
   }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown]);

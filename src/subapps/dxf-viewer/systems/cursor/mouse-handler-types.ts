@@ -33,7 +33,7 @@ export interface CentralizedMouseHandlersProps {
   activeTool?: string;
   overlayMode?: 'select' | 'draw' | 'edit';
   onTransformChange?: (transform: ViewTransform) => void;
-  onEntitySelect?: (entityId: string | null) => void;
+  onEntitySelect?: (entityId: string | null, additive?: boolean) => void;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
   onWheelZoom?: (wheelDelta: number, center: Point2D, constraints?: ZoomConstraints, modifiers?: { ctrlKey?: boolean; shiftKey?: boolean }) => void;
   hitTestCallback?: (scene: DxfScene | null, screenPos: Point2D, transform: ViewTransform, viewport: Viewport) => string | null;

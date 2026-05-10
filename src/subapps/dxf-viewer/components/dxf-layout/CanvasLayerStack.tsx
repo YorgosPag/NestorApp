@@ -146,16 +146,28 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     handleMultiOverlayClick(layerIds);
   };
 
-  const handleDxfEntitySelect = (entityId: string | null) => {
+  const handleDxfEntitySelect = (entityId: string | null, additive?: boolean) => {
     if (entityId) {
-      setSelectedEntityIds((prev) => {
-        if (prev.length === 1 && prev[0] === entityId) return prev;
-        return [entityId];
-      });
-      universalSelection.clearByType('dxf-entity');
-      universalSelection.select(entityId, 'dxf-entity');
+      if (additive) {
+        setSelectedEntityIds((prev) => {
+          if (prev.includes(entityId)) {
+            const next = prev.filter(id => id !== entityId);
+            universalSelection.deselect(entityId);
+            return next;
+          }
+          universalSelection.add(entityId, 'dxf-entity');
+          return [...prev, entityId];
+        });
+      } else {
+        setSelectedEntityIds((prev) => {
+          if (prev.length === 1 && prev[0] === entityId) return prev;
+          return [entityId];
+        });
+        universalSelection.clearByType('dxf-entity');
+        universalSelection.select(entityId, 'dxf-entity');
+      }
       entitySelectedOnMouseDownRef.current = true;
-    } else {
+    } else if (!additive) {
       entitySelectedOnMouseDownRef.current = false;
     }
   };

@@ -47,7 +47,9 @@ interface UniversalSelectionForStack {
   clearAll: () => void;
   select: (id: string, type: 'overlay' | 'dxf-entity') => void;
   selectMultiple: (items: Array<{ id: string; type: 'overlay' | 'dxf-entity' }>) => void;
+  add: (id: string, type: 'overlay' | 'dxf-entity') => void;
   addMultiple: (items: Array<{ id: string; type: 'overlay' | 'dxf-entity' }>) => void;
+  deselect: (id: string) => void;
 }
 
 /** Zoom system methods used by CanvasLayerStack */

@@ -114,7 +114,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         const hitSnap = getPointerSnapshotFromElement(canvasForHit);
         if (!hitSnap) return;
         const hitResult = hitTestCallback(scene, cursor.position, transform, hitSnap.viewport);
-        if (onEntitySelect) onEntitySelect(hitResult);
+        if (onEntitySelect) onEntitySelect(hitResult, e.shiftKey || e.ctrlKey || e.metaKey);
       }
     }
   }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef, onCanvasClick, activeTool, overlayMode, snapEnabled, findSnapPoint, onGripMouseUp, onEntitiesSelected, onUnifiedMarqueeResult, refs]);
@@ -249,7 +249,7 @@ function processPointClick(
     const isDrawing = isInDrawingMode(activeTool, overlayMode);
     if (!isDrawing) {
       const hitResult = hitTestCallback(scene, freshScreenPos, transform, hitTestSnap.viewport);
-      if (hitResult) onEntitySelect(hitResult);
+      if (hitResult) onEntitySelect(hitResult, e.shiftKey || e.ctrlKey || e.metaKey);
     }
     if (onCanvasClick) onCanvasClick(worldPoint, e.shiftKey);
   } else if (onCanvasClick) {

@@ -665,3 +665,11 @@ if (this.canvas.width === newWidth && this.canvas.height === newHeight && this.d
 - `PreviewRenderer` class with direct canvas 2D API
 - `useImperativeHandle` exposes `drawPreview()` / `clear()` API
 - Performance: ~250ms → <16ms per frame
+
+### 2026-05-10: Shift/Ctrl+click additive multi-select for DXF entities
+
+- `mouse-handler-types.ts`: `onEntitySelect` signature extended — `additive?: boolean` 2nd param
+- `useCentralizedMouseHandlers.ts`: mousedown passes `e.shiftKey || e.ctrlKey || e.metaKey` as additive; marquee blocked when any modifier key is held
+- `mouse-handler-up.ts`: both mouseup paths (single-click + marquee fallback) pass additive flag
+- `CanvasLayerStack.tsx`: `handleDxfEntitySelect(entityId, additive?)` — additive=true → toggle (add if absent, remove if present); additive=false → replace (existing behavior)
+- `canvas-layer-stack-types.ts`: `UniversalSelectionForStack` now includes `add` and `deselect` (already implemented in `useUniversalSelection`)
