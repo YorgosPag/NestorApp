@@ -3,8 +3,8 @@
  * SLIDER INPUT — SSoT per tutti gli slider del DXF Viewer (ADR-342-ext)
  * =============================================================================
  *
- * Unico componente per range slider usato in Settings, Palettes, Panels.
- * Rimpiazza 8+ occorrenze di <input type="range"> sparse nel codebase.
+ * Wrapper attorno a @/components/ui/slider (Radix UI Slider primitivo).
+ * Zero inline styles. Filled track cross-browser via bg-primary su SliderRange.
  *
  * Varianti:
  *   - Solo slider (default)
@@ -13,6 +13,7 @@
  */
 
 import React from 'react';
+import { Slider } from '@/components/ui/slider';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
@@ -60,21 +61,21 @@ export function SliderInput({
   className = '',
 }: SliderInputProps) {
   const colors = useSemanticColors();
-  const { quick, radius } = useBorderTokens();
+  const { quick } = useBorderTokens();
 
   const displayValue = formatValue ? formatValue(value) : String(value);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    onChange(parseFloat(e.target.value));
+  const handleSliderChange = (values: number[]) => onChange(values[0]);
 
-  const rangeClassName = `flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : PANEL_LAYOUT.CURSOR.POINTER}`;
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    onChange(parseFloat(e.target.value));
 
   const numberClassName = `${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`;
 
   return (
     <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`} title={tooltip}>
       {(label || showValue) && (
-        <div className={`flex justify-between items-center`}>
+        <div className="flex justify-between items-center">
           {label && (
             <label
               className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}
@@ -84,7 +85,7 @@ export function SliderInput({
           )}
           {showValue && (
             <span
-              className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}
+              className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}
             >
               {displayValue}
             </span>
@@ -93,15 +94,14 @@ export function SliderInput({
       )}
 
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
-        <input
-          type="range"
+        <Slider
+          value={[value]}
           min={min}
           max={max}
           step={step}
-          value={value}
-          onChange={handleChange}
+          onValueChange={handleSliderChange}
           disabled={disabled}
-          className={rangeClassName}
+          className="flex-1"
         />
         {showNumberInput && (
           <input
@@ -110,7 +110,7 @@ export function SliderInput({
             max={max}
             step={step}
             value={value}
-            onChange={handleChange}
+            onChange={handleNumberChange}
             disabled={disabled}
             className={numberClassName}
           />
