@@ -42,6 +42,34 @@ export function renderLine(
 
 // ===== CIRCLE =====
 
+function renderCircleMeasurementLine(
+  ctx: CanvasRenderingContext2D, entity: ExtendedCircleEntity,
+  transform: ViewTransform, center: Point2D, h: PreviewRenderHelpers,
+): void {
+  const radius = entity.radius;
+  const cursorWorld: Point2D = entity.previewCursorPoint ?? { x: entity.center.x + radius, y: entity.center.y };
+  const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, h.viewport);
+
+  if (entity.diameterMode && entity.previewCursorPoint) {
+    const oppositeWorld: Point2D = {
+      x: 2 * entity.center.x - cursorWorld.x,
+      y: 2 * entity.center.y - cursorWorld.y,
+    };
+    const oppositeScreen = CoordinateTransforms.worldToScreen(oppositeWorld, transform, h.viewport);
+    ctx.beginPath();
+    ctx.moveTo(oppositeScreen.x, oppositeScreen.y);
+    ctx.lineTo(cursorScreen.x, cursorScreen.y);
+    ctx.stroke();
+    h.renderDistanceLabelFromWorld(ctx, oppositeWorld, cursorWorld, oppositeScreen, cursorScreen);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(center.x, center.y);
+    ctx.lineTo(cursorScreen.x, cursorScreen.y);
+    ctx.stroke();
+    h.renderDistanceLabelFromWorld(ctx, entity.center, cursorWorld, center, cursorScreen);
+  }
+}
+
 export function renderCircle(
   ctx: CanvasRenderingContext2D, entity: ExtendedCircleEntity,
   transform: ViewTransform, opts: Required<PreviewRenderOptions>, h: PreviewRenderHelpers,
@@ -56,13 +84,9 @@ export function renderCircle(
   if (opts.showGrips) h.renderGrip(ctx, center, opts);
 
   if (entity.showPreviewMeasurements && entity.radius > 0) {
-    const radius = entity.radius;
-    const radiusEndWorld: Point2D = { x: entity.center.x + radius, y: entity.center.y };
-    const radiusEndScreen = CoordinateTransforms.worldToScreen(radiusEndWorld, transform, h.viewport);
-    h.renderDistanceLabelFromWorld(ctx, entity.center, radiusEndWorld, center, radiusEndScreen);
-
-    const circumference = TAU * radius;
-    const area = Math.PI * radius * radius;
+    renderCircleMeasurementLine(ctx, entity, transform, center, h);
+    const circumference = TAU * entity.radius;
+    const area = Math.PI * entity.radius * entity.radius;
     h.renderInfoLabel(ctx, center, [
       `Περ: ${formatDistance(circumference)}`,
       `Ε: ${formatDistance(area)}`,

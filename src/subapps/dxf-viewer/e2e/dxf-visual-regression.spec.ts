@@ -8,6 +8,10 @@ declare global {
       zoomOut: () => void;
       getRef: () => unknown;
       isReady: () => boolean;
+      selectEntities: (ids: string[]) => void;
+      clearSelection: () => void;
+      getSelectedEntityIds: () => string[];
+      worldToScreen: (wx: number, wy: number) => { x: number; y: number };
     };
   }
 }
@@ -116,5 +120,52 @@ test.describe('Phase 2 — Entity Rendering', () => {
     await loadHarness(page, `${BASE_URL}?fixture=entity-angle`);
     await fitAndWait(page);
     await expect(page).toHaveScreenshot('entity-angle.png', SCREENSHOT_OPTIONS);
+  });
+});
+
+test.describe('Phase 3 — Selection', () => {
+  test('click-to-select — click on circle entity selects it', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    const pos = await page.evaluate(() => window.__dxfTest.worldToScreen(250, 200));
+    await page.mouse.click(pos.x, pos.y);
+    await page.waitForTimeout(300);
+    await expect(page).toHaveScreenshot('click-to-select.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('multi-select — two entities selected programmatically', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.selectEntities(['line-bottom', 'circle-1']));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('multi-select.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('select-all — Ctrl+A selects every entity', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.keyboard.press('Control+a');
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('select-all.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('deselect — clearSelection returns to unselected state', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.selectEntities(['circle-1']));
+    await page.waitForTimeout(200);
+    await page.evaluate(() => window.__dxfTest.clearSelection());
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('deselect.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('select-then-delete — Delete key removes selected entity', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.selectEntities(['circle-1']));
+    await page.waitForTimeout(200);
+    await page.keyboard.press('Delete');
+    await page.waitForTimeout(300);
+    await expect(page).toHaveScreenshot('select-then-delete.png', SCREENSHOT_OPTIONS);
   });
 });

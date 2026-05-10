@@ -80,6 +80,14 @@ export function applyPreviewStyling(
     extCircle.preview = true;
     extCircle.showPreviewGrips = true;
     extCircle.showPreviewMeasurements = true;
+    // For tools where cursor defines the radius/diameter, store cursor for directional line in renderCircle
+    if (tool === 'circle' || tool === 'circle-diameter') {
+      extCircle.previewCursorPoint = cursorPoint;
+    }
+    // Diameter mode: line extends through center to opposite edge, label shows full diameter
+    if (tool === 'circle-diameter') {
+      extCircle.diameterMode = true;
+    }
     applySettings(extCircle as unknown as Record<string, unknown>);
   } else if (entity.type === 'rectangle') {
     const extRect = entity as unknown as {

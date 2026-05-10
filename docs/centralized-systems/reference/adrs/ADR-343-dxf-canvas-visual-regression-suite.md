@@ -1,6 +1,6 @@
 # ADR-343: DXF Canvas Visual Regression Test Suite
 
-**Status**: ✅ ACTIVE — Phase 1 + Phase 2 implemented  
+**Status**: ✅ ACTIVE — Phase 1 + Phase 2 + Phase 3 implemented  
 **Date**: 2026-05-10  
 **Domain**: DXF Viewer / Testing Infrastructure  
 **Author**: Giorgio Pagonis  
@@ -35,7 +35,7 @@ Tests run **locally** (`npm run test:visual:dxf`). CI integration requires one G
 - Dev-only page at `/test-harness/dxf-canvas`
 - Supports `?fixture=NAME` → loads `/test-fixtures/dxf/{NAME}.json`
 - Supports `?rulers=1&grid=1` for overlay tests
-- Exposes `window.__dxfTest` API: `fitToView`, `zoomIn`, `zoomOut`, `getRef`, `isReady`
+- Exposes `window.__dxfTest` API: `fitToView`, `zoomIn`, `zoomOut`, `getRef`, `isReady`, `selectEntities`, `clearSelection`, `getSelectedEntityIds`, `worldToScreen`
 - Production guard: `DxfCanvasHarness.prod.ts` stub + webpack alias in `next.config.js` → zero production bundle impact
 
 ### Scene Fixtures
@@ -91,9 +91,21 @@ One isolated fixture per entity type. Each test: load fixture → fitToView → 
 | `entity-text` | `entity-text.json` | DxfText renderer (normal + 45° rotation) |
 | `entity-angle` | `entity-angle.json` | DxfAngleMeasurement renderer |
 
-### Phase 3 — Selection (planned, ~5 tests)
+### Phase 3 — Selection ✅ (2026-05-10, 5 tests)
 
-Click-to-select, multi-select, Ctrl+A select-all, deselect, select+delete visual state.
+| Test | What it covers |
+|------|---------------|
+| `click-to-select` | Real click at world→screen coords, entity highlight via hit-test pipeline |
+| `multi-select` | Programmatic `selectEntities(['line-bottom','circle-1'])` — two entities highlighted |
+| `select-all` | Ctrl+A keyboard → all 7 entities highlighted |
+| `deselect` | selectEntities then clearSelection → back to no-selection state |
+| `select-then-delete` | selectEntities then Delete key → entity removed from scene |
+
+**Harness extensions**:
+- `selectedEntityIds` state + `renderOptions={{ selectedEntityIds }}` → visual highlight wired
+- `onEntitySelect` + `onEntitiesSelected` wired to state
+- `keydown` listener: Delete removes selected entities, Ctrl+A selects all
+- `__dxfTest.selectEntities`, `clearSelection`, `getSelectedEntityIds`, `worldToScreen`
 
 ### Phase 4 — Drawing Tools (planned, ~8 tests)
 
@@ -142,6 +154,7 @@ Location: `src/subapps/dxf-viewer/e2e/__snapshots__/`
 Generated: 2026-05-10  
 Phase 1: 7 PNG baselines  
 Phase 2: 6 PNG baselines  
+Phase 3: 5 PNG baselines (pending `npm run test:visual:dxf:update`)  
 
 ---
 
@@ -163,6 +176,14 @@ Related ADRs:
 ---
 
 ## Changelog
+
+### 2026-05-10: Phase 3 implemented
+
+- Phase 3: 5 selection tests added
+- Harness: `selectedEntityIds` state + `renderOptions` wired, keyboard handlers (Delete/Ctrl+A), `__dxfTest` extended with `selectEntities`/`clearSelection`/`getSelectedEntityIds`/`worldToScreen`
+- `onEntitySelect` + `onEntitiesSelected` wired to selection state
+- Spec: Phase 3 test.describe block added (18 tests total)
+- ADR-343 updated
 
 ### 2026-05-10: Phase 1 + Phase 2 implemented
 

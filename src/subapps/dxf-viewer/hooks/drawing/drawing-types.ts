@@ -33,6 +33,8 @@ export interface ExtendedCircleEntity extends CircleEntity {
   twoPointDiameter?: boolean;
   /** Show radius/circumference/area labels during drawing preview */
   showPreviewMeasurements?: boolean;
+  /** Cursor world position during preview — used to draw radius line toward cursor */
+  previewCursorPoint?: Point2D;
 }
 
 export interface ExtendedLineEntity extends LineEntity {

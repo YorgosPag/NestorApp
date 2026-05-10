@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import type { DxfScene } from '@/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Point2D } from '@/subapps/dxf-viewer/rendering/types/Types';
@@ -15,6 +15,10 @@ declare global {
       zoomOut: () => void;
       getRef: () => DxfCanvasRef | null;
       isReady: () => boolean;
+      selectEntities: (ids: string[]) => void;
+      clearSelection: () => void;
+      getSelectedEntityIds: () => string[];
+      worldToScreen: (wx: number, wy: number) => { x: number; y: number };
     };
   }
 }
@@ -65,6 +69,9 @@ export default function DxfCanvasHarness() {
   const [transform, setTransform] = useState<ViewTransform>(INITIAL_TRANSFORM);
   const [error, setError] = useState<string | null>(null);
   const [urlParams, setUrlParams] = useState({ rulers: false, grid: false, fixture: 'regression-scene' });
+  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
+  const selectedEntityIdsRef = useRef<string[]>([]);
+  selectedEntityIdsRef.current = selectedEntityIds;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -86,6 +93,42 @@ export default function DxfCanvasHarness() {
     setTransform(t);
   }, []);
 
+  const handleEntitySelect = useCallback((entityId: string | null) => {
+    setSelectedEntityIds(entityId ? [entityId] : []);
+  }, []);
+
+  const handleEntitiesSelected = useCallback((ids: string[]) => {
+    setSelectedEntityIds(ids);
+  }, []);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Delete') {
+      const ids = selectedEntityIdsRef.current;
+      if (ids.length === 0) return;
+      setScene(s => s ? { ...s, entities: s.entities.filter(ent => !ids.includes(ent.id)) } : null);
+      setSelectedEntityIds([]);
+    } else if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      setScene(s => {
+        if (!s) return s;
+        setSelectedEntityIds(s.entities.map(ent => ent.id));
+        return s;
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  const renderOptions = useMemo(() => ({
+    showGrid: false,
+    showLayerNames: false,
+    wireframeMode: false,
+    selectedEntityIds,
+  }), [selectedEntityIds]);
+
   const handleWheelZoom = useCallback((wheelDelta: number, center: Point2D) => {
     setTransform(prev => {
       const factor = wheelDelta < 0 ? 1.5 : 0.667;
@@ -106,6 +149,13 @@ export default function DxfCanvasHarness() {
       zoomOut: () => canvasRef.current?.zoomAtScreenPoint(0.5, { x: 640, y: 400 }),
       getRef: () => canvasRef.current,
       isReady: () => !!(canvasRef.current && scene),
+      selectEntities: (ids: string[]) => setSelectedEntityIds(ids),
+      clearSelection: () => setSelectedEntityIds([]),
+      getSelectedEntityIds: () => selectedEntityIdsRef.current,
+      worldToScreen: (wx: number, wy: number) => {
+        const t = canvasRef.current?.getTransform() ?? transform;
+        return { x: wx * t.scale + t.offsetX, y: t.offsetY - wy * t.scale };
+      },
     };
   });
 
@@ -127,6 +177,9 @@ export default function DxfCanvasHarness() {
             transform={transform}
             onTransformChange={handleTransformChange}
             onWheelZoom={handleWheelZoom}
+            onEntitySelect={handleEntitySelect}
+            onEntitiesSelected={handleEntitiesSelected}
+            renderOptions={renderOptions}
             rulerSettings={urlParams.rulers ? RULER_SETTINGS : undefined}
             gridSettings={urlParams.grid ? GRID_SETTINGS : undefined}
             activeTool="select"
