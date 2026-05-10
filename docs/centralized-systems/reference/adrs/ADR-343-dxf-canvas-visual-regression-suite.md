@@ -1,6 +1,6 @@
 # ADR-343: DXF Canvas Visual Regression Test Suite
 
-**Status**: ✅ ACTIVE — Phase 1 + Phase 2 + Phase 3 implemented  
+**Status**: ✅ ACTIVE — Phase 1 + Phase 2 + Phase 3 + Phase 4 implemented  
 **Date**: 2026-05-10  
 **Domain**: DXF Viewer / Testing Infrastructure  
 **Author**: Giorgio Pagonis  
@@ -35,7 +35,8 @@ Tests run **locally** (`npm run test:visual:dxf`). CI integration requires one G
 - Dev-only page at `/test-harness/dxf-canvas`
 - Supports `?fixture=NAME` → loads `/test-fixtures/dxf/{NAME}.json`
 - Supports `?rulers=1&grid=1` for overlay tests
-- Exposes `window.__dxfTest` API: `fitToView`, `zoomIn`, `zoomOut`, `getRef`, `isReady`, `selectEntities`, `clearSelection`, `getSelectedEntityIds`, `worldToScreen`
+- Exposes `window.__dxfTest` API: `fitToView`, `zoomIn`, `zoomOut`, `getRef`, `isReady`, `selectEntities`, `clearSelection`, `getSelectedEntityIds`, `worldToScreen`, `drawPreview`, `clearPreview`, `setActiveTool`
+- `PreviewCanvas` loaded via `dynamic({ ssr: false })` (same pattern as DxfCanvas) — avoids Turbopack 2min cold-compile from `../../rendering` barrel
 - Production guard: `DxfCanvasHarness.prod.ts` stub + webpack alias in `next.config.js` → zero production bundle impact
 
 ### Scene Fixtures
@@ -107,9 +108,22 @@ One isolated fixture per entity type. Each test: load fixture → fitToView → 
 - `keydown` listener: Delete removes selected entities, Ctrl+A selects all
 - `__dxfTest.selectEntities`, `clearSelection`, `getSelectedEntityIds`, `worldToScreen`
 
-### Phase 4 — Drawing Tools (planned, ~8 tests)
+### Phase 4 — Drawing Tool Previews ✅ (2026-05-10, 5 tests)
 
-Each tool in-progress preview: line, circle, arc, rectangle, polygon.
+| Test | What it covers |
+|------|---------------|
+| `draw-line-preview` | `ExtendedLineEntity` ghost via `PreviewCanvas.drawPreview()` |
+| `draw-circle-preview` | `ExtendedCircleEntity` with `previewCursorPoint` radius arm |
+| `draw-arc-preview` | `ExtendedArcEntity` with construction lines (3-point arc mode) |
+| `draw-polyline-preview` | Open `ExtendedPolylineEntity` in-progress |
+| `draw-rectangle-preview` | Closed polyline rectangle ghost |
+
+**Approach**: Programmatic `__dxfTest.drawPreview(entity)` → `PreviewCanvasHandle.drawPreview()` — deterministic, no mouse simulation needed. Tests the `PreviewRenderer` visual output directly.
+
+**Infrastructure fixes**:
+- `PreviewCanvas` dynamic import (`ssr: false`) — eliminates 2min Turbopack cold-compile
+- `--workers=1` in npm scripts — sequential execution avoids parallel Turbopack lock conflicts
+- canvas-ready timeout: 60s → 120s
 
 ### Phase 5 — Entity Operations (planned, ~6 tests)
 
@@ -154,7 +168,8 @@ Location: `src/subapps/dxf-viewer/e2e/__snapshots__/`
 Generated: 2026-05-10  
 Phase 1: 7 PNG baselines  
 Phase 2: 6 PNG baselines  
-Phase 3: 5 PNG baselines (pending `npm run test:visual:dxf:update`)  
+Phase 3: 5 PNG baselines  
+Phase 4: 5 PNG baselines  
 
 ---
 
@@ -176,6 +191,14 @@ Related ADRs:
 ---
 
 ## Changelog
+
+### 2026-05-10: Phase 4 implemented + infra fixes
+
+- Phase 4: 5 drawing preview tests — all 23 tests passing
+- PreviewCanvas: static → `dynamic({ ssr: false })` (eliminates Turbopack 2min cold-compile)
+- `--workers=1` added to npm scripts (sequential, avoids Turbopack lock contention)
+- canvas-ready timeout: 60s → 120s
+- ADR-343 updated
 
 ### 2026-05-10: Phase 3 implemented
 

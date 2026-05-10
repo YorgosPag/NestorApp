@@ -25,7 +25,7 @@ const SCREENSHOT_OPTIONS = { threshold: 0.01, maxDiffPixelRatio: 0.001 };
 
 async function loadHarness(page: Page, path = BASE_URL): Promise<void> {
   await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await page.locator(CANVAS_READY).waitFor({ timeout: 60000 });
+  await page.locator(CANVAS_READY).waitFor({ timeout: 120000 });
   await page.waitForTimeout(300);
 }
 
