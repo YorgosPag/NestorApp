@@ -71,6 +71,19 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-11: ARCH — Phase XIII: ImmediateTransformStore granular subscribers + TransformStore facade
+
+**Change:** Extend `ImmediateTransformStore` to act as full React SSoT for viewport transform, eliminating `useState` in `useCanvasTransformState`. Added three granular subscriber sets (`fullListeners`, `scaleListeners`, `offsetListeners`) notified only on relevant delta. Added `useSyncExternalStore`-compatible hooks: `useTransformValue()` (full) and `useTransformScale()` (scale-only). Exported canonical `TransformStore` facade (`get / set / subscribe / subscribeScale / subscribeOffset`).
+
+**Why:** `useState` for transform caused orchestrator re-renders on every wheel/pan event — same root cause as HoverStore / ImmediatePositionStore migrations. Granular subscriptions prevent toolbar/ZoomControl components from re-rendering when only offset changes (pan), and prevent ruler/grid from re-rendering when only scale changes (zoom into center).
+
+**Files modified:**
+- `src/subapps/dxf-viewer/systems/cursor/ImmediateTransformStore.ts` (Phase XIII core)
+
+**Architectural pattern:** Identical to `ImmediatePositionStore` / `HoverStore` / `SelectionStore`. All high-frequency stores in this subapp expose `subscribe*` + `useSyncExternalStore` hooks for selective React leaf subscriptions. The `TransformStore` facade is now the canonical import for new consumers.
+
+---
+
 ### 2026-05-11: PERF — Phase XII: DxfCanvas register-effect once-per-mount via paramsRef SSoT
 
 **Incident (Firefox profiler, post-Phase XI baseline)**: After Phase XI eliminated the LayerCanvas render-callback storm (`useLayerCanvasRenderer.useEffect.unsubscribe` 13% → 0.1%) and the `refreshBounds` reflow (23% → 0%), a residual hot band remained on `useDxfCanvasRenderer.useEffect.unsubscribe` at **7.8%** (68 unsubscribe samples / 5.2s ≈ **13Hz**) inside `RefreshDriverTick` (still ~34%). FPS stabilized but not yet at flat 60.
