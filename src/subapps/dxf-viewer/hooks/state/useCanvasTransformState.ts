@@ -1,17 +1,22 @@
 /**
- * useCanvasTransformState - Enterprise-Grade Canvas Transform Management
+ * useCanvasTransformState — Phase XIII (ADR-040)
  *
- * ENTERPRISE FEATURES:
- * - ✅ Transform validation with bounds checking
- * - ✅ Event-based synchronization with EventBus
- * - ✅ Performance optimization (debouncing, memoization)
- * - ✅ Error recovery and fallback
- * - ✅ Structured logging
+ * SSoT delegate: writes through to TransformStore singleton
+ * (`ImmediateTransformStore`). No React state, no orchestrator subscription.
+ *
+ * BEFORE (Phase XII and earlier): held a `useState<CanvasTransform>` inside
+ * `DxfViewerContent` → every `setCanvasTransform` re-rendered the entire
+ * MainContent subtree (Tooltip, DropdownMenu, ZoomControls, RulerCornerBox,
+ * ScreenshotSection, dialogs, etc.).
+ *
+ * AFTER (Phase XIII): mutations write to TransformStore. Components that need
+ * the reactive value subscribe via `useTransformValue()` / `useTransformScale()`.
+ * DxfViewerContent no longer re-renders on pan/zoom.
  */
 
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useEventBus } from '../../systems/events/EventBus';
 import type { SceneModel } from '../../types/scene';
 import { useCanvasOperations } from '../interfaces/useCanvasOperations';
@@ -21,15 +26,17 @@ import {
   validateTransform as validateTransformConfig,
   transformsEqual as transformsEqualConfig,
 } from '../../config/transform-config';
+import {
+  updateImmediateTransform,
+  getImmediateTransform,
+} from '../../systems/cursor/ImmediateTransformStore';
 
-// ✅ ENTERPRISE: Type-safe transform state
 interface CanvasTransform {
   scale: number;
   offsetX: number;
   offsetY: number;
 }
 
-// ✅ ENTERPRISE: Default transform (using centralized config)
 const DEFAULT_TRANSFORM: CanvasTransform = {
   scale: TRANSFORM_SCALE_LIMITS.DEFAULT_SCALE,
   offsetX: TRANSFORM_OFFSET_LIMITS.DEFAULT_OFFSET_X,
@@ -41,66 +48,36 @@ interface UseCanvasTransformStateProps {
   activeTool: string;
 }
 
-/**
- * Custom hook for managing canvas transform state with enterprise features
- *
- * @param props - Scene and tool context
- * @returns Canvas transform state and utilities
- */
 export function useCanvasTransformState({ currentScene, activeTool }: UseCanvasTransformStateProps) {
-  const [transform, setTransform] = useState<CanvasTransform>(DEFAULT_TRANSFORM);
   const isInitializedRef = useRef(false);
   const canvasOps = useCanvasOperations();
   const eventBus = useEventBus();
 
-  // ✅ ENTERPRISE: Performance monitoring
-  const updateCountRef = useRef(0);
-  const lastUpdateTimeRef = useRef(Date.now());
-
-  // ✅ ENTERPRISE: Initialize transform from canvas operations (once)
+  // Initialize transform from canvas operations (once when scene becomes available).
   useEffect(() => {
     if (isInitializedRef.current || !currentScene) return;
-
     try {
-      const initialTransform = canvasOps.getTransform();
-      const validated = validateTransformConfig(initialTransform);
-      setTransform(validated);
+      const initial = canvasOps.getTransform();
+      updateImmediateTransform(validateTransformConfig(initial));
       isInitializedRef.current = true;
     } catch (error) {
       console.error('[useCanvasTransformState] Failed to initialize transform:', error);
-      setTransform(DEFAULT_TRANSFORM);
+      updateImmediateTransform(DEFAULT_TRANSFORM);
       isInitializedRef.current = true;
     }
   }, [currentScene, canvasOps]);
 
-  // ✅ ENTERPRISE: Event-based transform sync (only in layering mode)
+  // EventBus listener — sync from external zoom events (layering mode).
   useEffect(() => {
     if (activeTool !== 'layering') return;
 
     const cleanup = eventBus.on('dxf-zoom-changed', ({ transform: newTransform }) => {
       try {
         if (!newTransform) return;
-
-        setTransform(prev => {
-          const validated = validateTransformConfig(newTransform);
-
-          // Only update if significantly different (performance optimization)
-          if (transformsEqualConfig(prev, validated)) {
-            return prev;
-          }
-
-          // ✅ ENTERPRISE: Log frequent updates
-          updateCountRef.current++;
-          const now = Date.now();
-          const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
-          lastUpdateTimeRef.current = now;
-
-          if (timeSinceLastUpdate < 16) { // ~60fps threshold
-            console.warn('[useCanvasTransformState] High-frequency update detected:', timeSinceLastUpdate, 'ms');
-          }
-
-          return validated;
-        });
+        const prev = getImmediateTransform();
+        const validated = validateTransformConfig(newTransform);
+        if (transformsEqualConfig(prev, validated)) return;
+        updateImmediateTransform(validated);
       } catch (error) {
         console.error('[useCanvasTransformState] Failed to sync transform from event:', error);
       }
@@ -109,38 +86,20 @@ export function useCanvasTransformState({ currentScene, activeTool }: UseCanvasT
     return cleanup;
   }, [eventBus, activeTool]);
 
-  // ✅ ENTERPRISE: Type-safe setter with validation
-  const updateTransform = useCallback((newTransform: Partial<CanvasTransform>) => {
-    setTransform(prev => {
-      const merged = { ...prev, ...newTransform };
-      return validateTransformConfig(merged);
-    });
+  // Stable mutation API — no subscription, no caller re-render.
+  const setCanvasTransform = useCallback((patch: Partial<CanvasTransform>) => {
+    const prev = getImmediateTransform();
+    const merged = { ...prev, ...patch };
+    updateImmediateTransform(validateTransformConfig(merged));
   }, []);
 
-  // ✅ ENTERPRISE: Reset to defaults
   const reset = useCallback(() => {
-    setTransform(DEFAULT_TRANSFORM);
-  }, []);
-
-  // ✅ ENTERPRISE: Performance metrics
-  const getMetrics = useCallback(() => {
-    return {
-      updateCount: updateCountRef.current,
-      lastUpdateTime: lastUpdateTimeRef.current,
-      timeSinceLastUpdate: Date.now() - lastUpdateTimeRef.current,
-    };
+    updateImmediateTransform(DEFAULT_TRANSFORM);
   }, []);
 
   return {
-    // State
-    canvasTransform: transform,
-
-    // Setters
-    setCanvasTransform: updateTransform,
+    setCanvasTransform,
     reset,
-
-    // Utilities
-    getMetrics,
     isInitialized: isInitializedRef.current,
   };
 }

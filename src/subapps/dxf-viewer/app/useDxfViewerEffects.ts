@@ -12,14 +12,13 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
-import { MOVEMENT_DETECTION } from '../config/tolerance-config';
 import { matchesShortcut } from '../config/keyboard-shortcuts';
 import { dxfPerformanceOptimizer } from '../performance/DxfPerformanceOptimizer';
 import { useEventBus, EventBus } from '../systems/events/EventBus';
 import type { DrawingEventPayload } from '../systems/events/EventBus';
 import { preservesOverlayMode } from '../systems/tools/ToolStateManager';
 import { dlog } from '../debug';
-import type { ViewTransform, Point2D } from '../rendering/types/Types';
+import type { Point2D } from '../rendering/types/Types';
 import type { SceneModel } from '../types/scene';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import type { ToolType } from '../ui/toolbar/types';
@@ -48,13 +47,11 @@ export interface DxfViewerEffectsParams {
   activeTool: ToolType;
   overlayMode: OverlayEditorMode;
   currentScene: SceneModel | null;
-  canvasTransform: { scale: number; offsetX: number; offsetY: number };
   showLayers: boolean;
   selectedEntityIds: string[];
   primarySelectedId: string | null;
 
   setOverlayMode: (mode: OverlayEditorMode) => void;
-  setCanvasTransform: (t: { scale: number; offsetX: number; offsetY: number }) => void;
   setSelectedEntityIds: React.Dispatch<React.SetStateAction<string[]>>;
   handleToolChange: (tool: ToolType) => void;
   handleAction: (action: string, data?: string | number | Record<string, unknown>) => void;
@@ -64,7 +61,6 @@ export interface DxfViewerEffectsParams {
 
   eventBus: ReturnType<typeof useEventBus>;
   notifications: NotificationContextValue;
-  canvasOps: { getTransform: () => ViewTransform };
 
   levelManager: LevelsHookReturn;
   overlayStore: {
@@ -75,8 +71,6 @@ export interface DxfViewerEffectsParams {
   universalSelection: UniversalSelectionHook;
 
   floatingRef: React.RefObject<FloatingPanelHandle | null>;
-  isInitializedRef: React.MutableRefObject<boolean>;
-  canvasTransformRef: React.MutableRefObject<{ scale: number; offsetX: number; offsetY: number }>;
   prevGripStateRef: React.MutableRefObject<{ shouldEnableGrips: boolean } | null>;
   prevPrimarySelectedIdRef: React.MutableRefObject<string | null>;
   levelManagerRef: React.MutableRefObject<LevelsHookReturn>;
@@ -90,14 +84,14 @@ export interface DxfViewerEffectsParams {
 export function useDxfViewerEffects(params: DxfViewerEffectsParams): void {
   const { t } = useTranslation('dxf-viewer');
   const {
-    activeTool, overlayMode, currentScene, canvasTransform,
+    activeTool, overlayMode, currentScene,
     showLayers, selectedEntityIds, primarySelectedId,
-    setOverlayMode, setCanvasTransform, setSelectedEntityIds,
+    setOverlayMode, setSelectedEntityIds,
     handleToolChange, handleAction, handleSceneChange,
     updateGripSettings, showCopyableNotification,
-    eventBus, notifications, canvasOps,
+    eventBus, notifications,
     levelManager, overlayStore, universalSelection,
-    floatingRef, isInitializedRef, canvasTransformRef,
+    floatingRef,
     prevGripStateRef, prevPrimarySelectedIdRef,
     levelManagerRef, handleSceneChangeRef,
   } = params;
@@ -245,51 +239,8 @@ Check console for detailed metrics`;
     };
   }, [activeTool, handleToolChange, overlayMode, setOverlayMode, eventBus, showCopyableNotification]);
 
-  // 🚨 Canvas transform initialization (once when scene becomes available)
-  React.useEffect(() => {
-    if (isInitializedRef.current || !currentScene) return;
-    try {
-      const initialTransform = canvasOps.getTransform();
-      setCanvasTransform({
-        scale: initialTransform.scale || 1,
-        offsetX: initialTransform.offsetX || 0,
-        offsetY: initialTransform.offsetY || 0,
-      });
-      isInitializedRef.current = true;
-    } catch {
-      // Swallow silently - not critical
-    }
-  }, [currentScene]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ✅ PERFORMANCE: Keep canvasTransformRef in sync
-  React.useEffect(() => {
-    canvasTransformRef.current = canvasTransform;
-  }, [canvasTransform, canvasTransformRef]);
-
-  // Zoom listener — sync canvasTransform from EventBus
-  React.useEffect(() => {
-    if (activeTool !== 'layering') return;
-
-    const cleanup = eventBus.on('dxf-zoom-changed', ({ transform: newTransform }) => {
-      try {
-        if (!newTransform) return;
-        const currentTransform = canvasTransformRef.current;
-        if (Math.abs(currentTransform.scale - newTransform.scale) > MOVEMENT_DETECTION.ZOOM_PRESET_MATCH ||
-            Math.abs(currentTransform.offsetX - newTransform.offsetX) > MOVEMENT_DETECTION.OFFSET_CHANGE ||
-            Math.abs(currentTransform.offsetY - newTransform.offsetY) > MOVEMENT_DETECTION.OFFSET_CHANGE) {
-          setCanvasTransform({
-            scale: newTransform.scale || 1,
-            offsetX: newTransform.offsetX || 0,
-            offsetY: newTransform.offsetY || 0,
-          });
-        }
-      } catch {
-        // Swallow silently - not critical
-      }
-    });
-
-    return cleanup;
-  }, [activeTool, eventBus, setCanvasTransform, canvasTransformRef]);
+  // ADR-040 Phase XIII: canvas transform initialization, ref sync, and zoom
+  // listener are owned by `useCanvasTransformState` (TransformStore-backed).
 
   // Auto-expand selection in levels panel when selection changes
   // Skip for large selections (Ctrl+A) — expanding 3000+ nodes causes 0 FPS

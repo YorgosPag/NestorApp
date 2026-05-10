@@ -37,8 +37,9 @@ interface MainContentSectionProps {
   currentScene: SceneModel | null;
   handleFileImportWithEncoding: (file: File, encoding?: string, saveContext?: DxfSaveContext) => Promise<void>;
 
-  // Transform management
-  canvasTransform: { scale: number; offsetX: number; offsetY: number };
+  // Transform management — ADR-040 Phase XIII: transform value is read from
+  // TransformStore SSoT by leaf consumers (no prop drilling). Only the change
+  // handler is plumbed through.
   wrappedHandleTransformChange: (transform: ViewTransform) => void;
 
   // Event handlers
@@ -89,7 +90,6 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
   state,
   currentScene,
   handleFileImportWithEncoding,
-  canvasTransform,
   wrappedHandleTransformChange,
   handleRegionClick,
   handleCanvasMouseMove,
@@ -167,7 +167,6 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
           handleTransformChange={wrappedHandleTransformChange}
           handleFileImport={handleFileImportWithEncoding}
           onSceneImported={handleFileImportWithEncoding}
-          transform={canvasTransform}
           onTransformChange={wrappedHandleTransformChange}
           onRegionClick={handleRegionClick}
           onMouseMove={(worldPoint: Point2D, event: React.MouseEvent) => {

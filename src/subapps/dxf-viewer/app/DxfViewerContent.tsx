@@ -84,6 +84,8 @@ const FloatingPanelsSection = React.lazy(() => import('../layout/FloatingPanelsS
 
 // ✅ ENTERPRISE ARCHITECTURE: Transform Context (Single Source of Truth)
 import { TransformProvider } from '../contexts/TransformContext';
+// ADR-040 Phase XIII: TransformStore SSoT — used for initialTransform read
+import { getImmediateTransform } from '../systems/cursor/ImmediateTransformStore';
 
 // 🧪 UNIFIED TEST RUNNER
 import { type UnifiedTestReport } from '../debug/unified-test-runner';
@@ -128,7 +130,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   // ✅ ENTERPRISE: State Management Hooks (PHASE 4)
   const { overlayMode, overlayStatus, overlayKind, setOverlayMode, setOverlayStatus, setOverlayKind } = useOverlayState();
-  const { canvasTransform, setCanvasTransform } = useCanvasTransformState({ currentScene: state.currentScene, activeTool: state.activeTool });
+  // ADR-040 Phase XIII: setCanvasTransform writes through to TransformStore.
+  // DxfViewerContent does NOT subscribe to the transform value → no re-render
+  // on pan/zoom. Leaf consumers subscribe via useTransformValue / useTransformScale.
+  const { setCanvasTransform } = useCanvasTransformState({ currentScene: state.currentScene, activeTool: state.activeTool });
   const { colorMenu, openColorMenu, closeColorMenu, colorMenuRef } = useColorMenuState();
 
   // 🎯 Canvas visibility states
@@ -165,8 +170,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   // Refs for effects hook
   const contextSetTransformRef = React.useRef<((t: ViewTransform) => void) | null>(null);
-  const isInitializedRef = React.useRef(false);
-  const canvasTransformRef = React.useRef(canvasTransform);
   const prevGripStateRef = React.useRef<{ shouldEnableGrips: boolean } | null>(null);
   const prevPrimarySelectedIdRef = React.useRef<string | null>(null);
   const levelManagerRef = React.useRef(levelManager);
@@ -193,14 +196,14 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   // ✅ ADR-065 SRP: Extracted effects
   useDxfViewerEffects({
-    activeTool, overlayMode, currentScene, canvasTransform,
+    activeTool, overlayMode, currentScene,
     showLayers, selectedEntityIds, primarySelectedId,
-    setOverlayMode, setCanvasTransform, setSelectedEntityIds,
+    setOverlayMode, setSelectedEntityIds,
     handleToolChange, handleAction, handleSceneChange,
     updateGripSettings, showCopyableNotification,
-    eventBus, notifications, canvasOps,
+    eventBus, notifications,
     levelManager, overlayStore, universalSelection,
-    floatingRef, isInitializedRef, canvasTransformRef,
+    floatingRef,
     prevGripStateRef, prevPrimarySelectedIdRef,
     levelManagerRef, handleSceneChangeRef,
   });
@@ -225,7 +228,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       setLevelScene: levelManager.setLevelScene,
       getLevelScene: levelManager.getLevelScene
     },
-    canvasTransform,
     onOverlaySelect: (id: string | null) => {
       if (id) {
         universalSelection.select(id, 'overlay');
@@ -258,7 +260,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   return (
       <TransformProvider
-        initialTransform={canvasTransform}
+        initialTransform={getImmediateTransform()}
         onTransformReady={handleTransformReady}
       >
       <section
@@ -301,7 +303,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           state={wrappedState}
           currentScene={currentScene}
           handleFileImportWithEncoding={handleFileImportWithEncoding}
-          canvasTransform={canvasTransform}
           wrappedHandleTransformChange={wrappedHandleTransformChange}
           handleRegionClick={handleRegionClick}
           handleCanvasMouseMove={handleCanvasMouseMove}

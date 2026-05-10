@@ -78,7 +78,9 @@ Mouse Event → DxfCanvas.onMouseMove
 **Why:** `useState` for transform caused orchestrator re-renders on every wheel/pan event — same root cause as HoverStore / ImmediatePositionStore migrations. Granular subscriptions prevent toolbar/ZoomControl components from re-rendering when only offset changes (pan), and prevent ruler/grid from re-rendering when only scale changes (zoom into center).
 
 **Files modified:**
-- `src/subapps/dxf-viewer/systems/cursor/ImmediateTransformStore.ts` (Phase XIII core)
+- `src/subapps/dxf-viewer/systems/cursor/ImmediateTransformStore.ts` (Phase XIII store)
+- `src/subapps/dxf-viewer/hooks/state/useCanvasTransformState.ts` (migrate from `useState` → `updateImmediateTransform`; remove `getMetrics`, remove `canvasTransform` return value)
+- `src/subapps/dxf-viewer/app/useDxfViewerEffects.ts` (remove `canvasTransform`, `setCanvasTransform`, `canvasOps`, `isInitializedRef`, `canvasTransformRef` props — all owned by `useCanvasTransformState` directly)
 
 **Architectural pattern:** Identical to `ImmediatePositionStore` / `HoverStore` / `SelectionStore`. All high-frequency stores in this subapp expose `subscribe*` + `useSyncExternalStore` hooks for selective React leaf subscriptions. The `TransformStore` facade is now the canonical import for new consumers.
 

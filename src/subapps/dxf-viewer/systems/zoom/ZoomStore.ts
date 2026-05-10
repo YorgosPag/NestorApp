@@ -1,28 +1,29 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import {
+  getImmediateTransform,
+  updateImmediateTransform,
+  useTransformScale,
+  subscribeTransformScale,
+} from '../cursor/ImmediateTransformStore';
 
-// ADR-040 Phase VII: external store for current zoom scale.
-// Written imperatively by wrappedHandleTransformChange — only leaf display
-// components subscribe. Prevents DxfViewerContent cascade on every zoom.
-let currentScale = 1;
-const listeners = new Set<() => void>();
+// ADR-040 Phase XIII: ZoomStore is now a thin facade over TransformStore
+// (the canonical SSoT for `scale + offsetX + offsetY`). Both ZoomStore.setScale
+// and useCanvasTransformState write through to the same underlying state, so
+// `useCurrentZoom` and `useTransformValue` always agree.
 
 export const ZoomStore = {
-  getScale: (): number => currentScale,
+  getScale: (): number => getImmediateTransform().scale,
 
   setScale: (scale: number): void => {
-    if (currentScale === scale) return;
-    currentScale = scale;
-    listeners.forEach(l => l());
+    const prev = getImmediateTransform();
+    if (prev.scale === scale) return;
+    updateImmediateTransform({ ...prev, scale });
   },
 
-  subscribe: (listener: () => void): (() => void) => {
-    listeners.add(listener);
-    return () => { listeners.delete(listener); };
-  },
+  subscribe: (listener: () => void): (() => void) => subscribeTransformScale(listener),
 };
 
 export function useCurrentZoom(): number {
-  return useSyncExternalStore(ZoomStore.subscribe, ZoomStore.getScale);
+  return useTransformScale();
 }

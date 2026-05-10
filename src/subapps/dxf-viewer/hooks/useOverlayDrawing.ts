@@ -5,6 +5,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useTransformScale } from "../systems/cursor/ImmediateTransformStore";
 import { useSnapManager } from "../snapping/hooks/useSnapManager";
 import { calculateDistance } from "../rendering/entities/shared/geometry-rendering-utils";
 import { MIN_POLY_POINTS } from "../overlays/types";
@@ -59,7 +60,6 @@ interface UseOverlayDrawingConfig {
     setLevelScene: (levelId: string, scene: SceneModel) => void;
     getLevelScene: (levelId: string) => SceneModel | null;
   } | null;
-  canvasTransform: { scale: number; offsetX: number; offsetY: number };
 }
 
 export const useOverlayDrawing = ({
@@ -69,9 +69,11 @@ export const useOverlayDrawing = ({
   overlayStatus,
   overlayStore,
   levelManager,
-  canvasTransform,
   onOverlaySelect,
 }: UseOverlayDrawingConfig) => {
+  // ADR-040 Phase XIII: subscribe to scale via TransformStore selector — only
+  // re-renders when scale changes (not on offset/pan).
+  const transformScale = useTransformScale();
   // Overlay canvas ref for snap manager
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -86,7 +88,7 @@ export const useOverlayDrawing = ({
   // Snap manager
   // 🏢 FIX (2026-02-20): Pass current zoom scale for correct pixel→world tolerance conversion
   const snapManager = useSnapManager(overlayCanvasRef, {
-    scale: canvasTransform.scale,
+    scale: transformScale,
     onSnapPoint: (point: { x: number; y: number } | null) => {
       setSnapPoint(point);
     },
@@ -108,7 +110,7 @@ export const useOverlayDrawing = ({
 
         // 🏢 ADR-099: Centralized polygon close tolerance - converts pixels to world units
         const worldTolerance =
-          POLYGON_TOLERANCES.OVERLAY_CLOSE_PIXELS / canvasTransform.scale;
+          POLYGON_TOLERANCES.OVERLAY_CLOSE_PIXELS / transformScale;
 
         if (distance < worldTolerance) {
           finishDrawing();
@@ -119,7 +121,7 @@ export const useOverlayDrawing = ({
       // Add new point to draft polygon
       setDraftPolygon((prev) => [...prev, [point.x, point.y]]);
     },
-    [overlayMode, activeTool, draftPolygon, canvasTransform.scale],
+    [overlayMode, activeTool, draftPolygon, transformScale],
   );
 
   // Finish drawing function
