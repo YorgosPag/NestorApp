@@ -287,6 +287,21 @@
     "showPdf": "Show PDF"
   },
   "cadDock": {
+    "statusBar": {
+      "osnap": "OSNAP",
+      "grid": "GRID",
+      "snap": "SNAP",
+      "ortho": "ORTHO",
+      "polar": "POLAR",
+      "dynInput": "DYN",
+      "osnapDesc": "Object Snap",
+      "gridDesc": "Grid Display",
+      "snapDesc": "Grid Snap",
+      "orthoDesc": "Orthogonal Mode",
+      "polarDesc": "Polar Tracking",
+      "dynInputDesc": "Dynamic Input",
+      "modeInfo": "CAD Mode | F-keys"
+    },
     "panels": {
       "objectSnap": "Object Snap",
       "layers": "Layers",

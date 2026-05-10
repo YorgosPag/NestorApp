@@ -287,6 +287,21 @@
     "showPdf": "Εμφάνιση PDF"
   },
   "cadDock": {
+    "statusBar": {
+      "osnap": "OSNAP",
+      "grid": "ΠΛΕΓΜΑ",
+      "snap": "SNAP",
+      "ortho": "ΟΡΘΟ",
+      "polar": "POLAR",
+      "dynInput": "ΔΥΝ",
+      "osnapDesc": "Σημεία Πρόσδεσης",
+      "gridDesc": "Εμφάνιση Πλέγματος",
+      "snapDesc": "Πρόσδεση Πλέγματος",
+      "orthoDesc": "Ορθογώνια Λειτουργία",
+      "polarDesc": "Πολική Ιχνηλάτηση",
+      "dynInputDesc": "Δυναμική Εισαγωγή",
+      "modeInfo": "CAD Mode | F-keys"
+    },
     "panels": {
       "objectSnap": "Σημεία Πρόσδεσης",
       "layers": "Επίπεδα",
