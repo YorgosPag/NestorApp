@@ -82,6 +82,8 @@ const EnhancedDXFToolbarInner: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   onSidebarToggle,
   // ADR-189: Guide visibility
   guidesVisible = true,
+  // ADR-189 §4.13: Guide panel open state
+  showGuidePanel = false,
   // ADR-241: Fullscreen state
   isFullscreen,
   layeringDisabled = false,
@@ -216,10 +218,11 @@ const EnhancedDXFToolbarInner: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     autoCrop,
     showCursorSettings: showCursorSettings || false,
     guidesVisible,
+    showGuidePanel,
     onAction: (action, data) => {
       onAction(action, data as string | number | Record<string, unknown>);
     }
-  }), [canUndo, canRedo, contextSnapEnabled, showGrid, autoCrop, showCursorSettings, guidesVisible, onAction]);
+  }), [canUndo, canRedo, contextSnapEnabled, showGrid, autoCrop, showCursorSettings, guidesVisible, showGuidePanel, onAction]);
   // 🏢 ENTERPRISE: Action names must match useDxfViewerState.ts handleAction() cases
   const handleZoomIn = () => onAction('zoom-in'); // → canvasActions.zoomIn()
   const handleZoomOut = () => onAction('zoom-out'); // → canvasActions.zoomOut()
@@ -288,6 +291,7 @@ const EnhancedDXFToolbarInner: React.FC<EnhancedDXFToolbarPropsExtended> = ({
           snapEnabled={snapEnabled}
           commandCount={commandCount}
           onSidebarToggle={onSidebarToggle ?? (() => {})}
+          showGuidePanel={showGuidePanel}
         />
         <ToolbarStatusBar
           activeTool={activeTool}

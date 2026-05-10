@@ -24,6 +24,7 @@ import { getCursorSettings } from '../../systems/cursor/config';
 import { serviceRegistry } from '../../services';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { perfStart, perfEnd } from '../../debug/perf-line-profile';
 
 const logger = createModuleLogger('DxfCanvasRenderer');
 
@@ -106,6 +107,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     const renderer = refs.rendererRef.current;
     const currentViewport = refs.resolvedViewportRef.current;
     if (!renderer || !currentViewport.width || !currentViewport.height) return;
+    const _perfPaintStart = perfStart();
 
     const currentTransform = getImmediateTransform();
     // Canvas ctx retrieved once per frame — avoids repeated DOM getContext() calls
@@ -231,6 +233,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     } catch (error) {
       logger.error('Failed to render DXF scene', { error });
     }
+    perfEnd('DxfCanvasRenderer.renderScene', _perfPaintStart);
   }, [scene, renderOptions, gridSettings, rulerSettings, refs, entityMap]);
 
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache lifecycle

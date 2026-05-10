@@ -125,6 +125,12 @@ export function useDxfViewerState() {
   // Enhanced tool change handler
   const handleToolChange = useCallback((tool: ToolType) => {
 
+    // Delete is an action, not a persistent tool — fire and return
+    if (tool === 'delete') {
+      EventBus.emit('toolbar:delete', undefined as unknown as void);
+      return;
+    }
+
     setActiveTool(tool);
 
     // 📐 ADR-189: Auto-open Guide Panel for tools that create/manage construction points

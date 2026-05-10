@@ -44,6 +44,7 @@ interface MobileToolbarLayoutProps {
   snapEnabled: boolean;
   commandCount?: number;
   onSidebarToggle: () => void;
+  showGuidePanel?: boolean;
 }
 
 export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
@@ -56,6 +57,7 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
   canRedo,
   snapEnabled,
   onSidebarToggle,
+  showGuidePanel = false,
 }) => {
   const currentZoom = useCurrentZoom();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -95,6 +97,7 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
     canUndo,
     canRedo,
     snapEnabled,
+    showGuidePanel,
     onAction: (action: string) => {
       onAction(action);
       setMoreOpen(false);

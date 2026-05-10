@@ -71,6 +71,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     rotationIsActive = false, handleRotationClick,
+    moveIsActive = false, handleMoveClick,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef,
@@ -103,6 +104,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.5: ADR-188 — Rotation tool click (base point or angle confirmation)
     if (rotationIsActive && handleRotationClick) {
       handleRotationClick(worldPoint);
+      return;
+    }
+
+    // PRIORITY 1.55: ADR-049 — Move tool click (base point or destination)
+    if (moveIsActive && handleMoveClick) {
+      handleMoveClick(worldPoint);
       return;
     }
 
@@ -191,6 +198,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     rotationIsActive, handleRotationClick,
+    moveIsActive, handleMoveClick,
     levelManager,
     draftPolygon, isSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,

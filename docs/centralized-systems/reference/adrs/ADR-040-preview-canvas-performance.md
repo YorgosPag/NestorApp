@@ -4,7 +4,7 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Updated** | 2026-05-10 |
+| **Last Updated** | 2026-05-11 |
 | **Category** | Drawing System |
 | **Canonical Location** | `canvas-v2/preview-canvas/` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -70,6 +70,35 @@ Mouse Event → DxfCanvas.onMouseMove
 ---
 
 ## Changelog
+
+### 2026-05-11: PERF — Phase VIII: SnapEngine SSoT singleton + non-blocking scene-init
+
+**Incident (1498ms React commit + ~3500–6000ms cumulative CPU per line completion — profiling-data.11-05-2026.01-16-24 + PERF_LINE console dump)**: Drawing a single line on a 3262-entity DXF froze the UI for ~1.5s of React commit and triggered **four** sequential `useSnapManager.initialize(n=3263)` runs (855 + 524 + 2223 + 2433 ms) — each rebuilding spatial indices for all 17 sub-engines. `completeEntity.TOTAL` was 44ms, `DxfRenderer.renderScene` was 79ms; **the only hot path was `SnapManager.initialize()`**.
+
+**Root cause — TWO violations:**
+1. **SSoT violation**: `useSnapManager()` instantiated `new ProSnapEngineV2()` per call. Three active call sites (`useDrawingHandlers`, `useOverlayDrawing`, `useCentralizedMouseHandlers`) → 3 engines, 3 spatial indices, 3 fingerprint refs, 3 `useEffect [scene, overlayEntities]` chains. Every scene change → up to 3× full O(N) rebuild.
+2. **Critical-path violation**: `initialize(allEntities)` ran synchronously inside a React useEffect — blocking the commit's passive-effect phase. Combined with (1), the user-perceived freeze was multiplied by the number of consumer hooks.
+
+**Fix (GOL + SSoT, 4 files + 2 new):**
+- **NEW `snapping/global-snap-engine.ts`**: Module-level singleton (`getGlobalSnapEngine()` + shared fingerprint state). Identical pattern to `getGlobalGuideStore`, `HoverStore`, `ImmediatePositionStore`.
+- **NEW `snapping/hooks/useGlobalSnapSceneSync.ts`**: Sole owner of scene-initialize lifecycle. Fingerprint guard (length + first-5 + last-5 entity ids) skips redundant runs when scene ref changes but geometry is identical. **Calls `initialize()` inside `requestIdleCallback` (250ms timeout fallback)** — moves the remaining O(N) rebuild OFF React's critical path. Snap may be stale for ≤1 frame after a scene change, which is acceptable: the user is not snapping while clicking to commit the entity that triggered the change.
+- **`snapping/hooks/useSnapManager.tsx`**: Refactored from 267 to 99 lines. No `new ProSnapEngineV2()`. No scene-initialize useEffect. Returns the singleton. Per-canvas viewport sync (scale → engine) and SnapContext settings sync retained — both are O(1) and idempotent across consumers.
+- **`components/dxf-layout/CanvasSection.tsx`**: Added one call to `useGlobalSnapSceneSync({ scene: props.currentScene })` next to `useDxfSceneConversion`. CanvasSection is the sole lifecycle owner (matches the orchestrator role established earlier in this ADR).
+
+**Result**: 3 instances × O(N) sync rebuild → 1 instance × O(N) idle-callback rebuild. React commit unblocked. Expected: ~1500ms → <100ms perceived line-completion latency at N=3263; cumulative CPU on scene change reduced ~75%.
+
+**New rules (this ADR):**
+> **Snap Engine SSoT**: `ProSnapEngineV2` is a module-level singleton accessed via `getGlobalSnapEngine()`. Direct instantiation (`new ProSnapEngineV2()`, `new SnapManager()`) is FORBIDDEN outside `global-snap-engine.ts` (enforced by ssot-registry module `snap-engine`).
+>
+> **Scene initialize is owned by ONE hook**: `useGlobalSnapSceneSync()` is the sole caller of `snapEngine.initialize(entities)` and must be invoked exactly once per app — from `CanvasSection`. Other call sites are forbidden.
+>
+> **Scene-init runs off React's critical path**: the rebuild is scheduled via `requestIdleCallback` (`setTimeout` fallback). Snap consumers must tolerate ≤1 frame of staleness after a scene change.
+
+**Files modified**: `snapping/global-snap-engine.ts` (NEW), `snapping/hooks/useGlobalSnapSceneSync.ts` (NEW), `snapping/hooks/useSnapManager.tsx`, `components/dxf-layout/CanvasSection.tsx`, `.ssot-registry.json`.
+
+✅ Google-level: YES — root cause SSoT violation (3 engines for 1 scene); fix matches existing canonical patterns (`getGlobalGuideStore`/HoverStore/ImmediatePositionStore singletons + module-level fingerprint state); idle-callback deferral mirrors AutoCAD's "snap index rebuilt opportunistically" behaviour; backward-compatible (`useSnapManager` signature preserved, deprecated fields kept on options); ratchet-enforced in ssot-registry.
+
+---
 
 ### 2026-05-10: PERF — Phase VII: CanvasContext split + ZoomStore — eliminates DxfViewerContent cascade on zoom
 
@@ -681,6 +710,17 @@ if (this.canvas.width === newWidth && this.canvas.height === newHeight && this.d
 - Root cause: `onEntitySelect` was called on BOTH mousedown AND mouseup; additive toggle fired twice → entity added then immediately removed
 - Fix: removed `onEntitySelect` hit-test from `handleMouseDown`; mouseup is now the sole authority (AutoCAD standard: select on click, not press)
 - `entitySelectedOnMouseDownRef` guard in `useCanvasClickHandler` still works — it is set during the mouseup `onEntitySelect` call, which fires before the browser's click event
+
+### 2026-05-11: AutoCAD-style 2-click Move Tool — MovePreviewMount micro-leaf
+
+- `hooks/tools/useMoveTool.ts` (NEW): 4-phase state machine (`idle → awaiting-entity → awaiting-base-point → awaiting-destination`); uses `MoveEntityCommand` / `MoveMultipleEntitiesCommand`; toolHintOverrideStore for status bar
+- `hooks/tools/useMovePreview.ts` (NEW): RAF ghost preview — base point crosshair, rubber band line, displacement tooltip, semi-transparent ghost entities translated by delta; reads cursor from `useCursorWorldPosition()` (ImmediatePositionStore)
+- `canvas-layer-stack-leaves.tsx`: `MovePreviewMount` micro-leaf — mirrors `RotationPreviewMount` pattern; only this component re-renders on mousemove when move tool is active
+- `CanvasLayerStack.tsx`: renders `<MovePreviewMount>` after `<RotationPreviewMount>` — both share the same `PreviewCanvas`
+- `canvas-layer-stack-types.ts`: `movePreview: { phase, basePoint }` prop
+- `useCanvasClickHandler.ts`: Priority 1.55 intercepts move tool clicks (between rotation 1.5 and guides 1.6)
+- `canvas-click-types.ts`: `moveIsActive` + `handleMoveClick` optional params
+- `useCanvasKeyboardShortcuts.ts`: Escape cancels move tool before rotation tool
 
 ### 2026-05-10: Shift/Ctrl+click additive multi-select for DXF entities
 

@@ -3,7 +3,7 @@
  *
  * @description Window-level keyboard shortcuts for canvas operations:
  * - Delete/Backspace → context-aware smart delete
- * - Escape → cancel grip interaction / clear draft polygon / clear grips
+ * - Escape → cancel rotation / cancel grip interaction / clear draft polygon / clear grips / deselect entities
  * - Enter → finish continuous drawing tool or overlay polygon
  * - X → flip arc direction during arc drawing
  *
@@ -60,6 +60,12 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleRotationEscape?: () => void;
   /** ADR-188: Whether the rotation tool is active */
   rotationIsActive?: boolean;
+  /** ADR-049: Move tool cancel handler */
+  handleMoveEscape?: () => void;
+  /** ADR-049: Whether the move tool is active and collecting input */
+  moveIsActive?: boolean;
+  /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
+  clearEntitySelection?: () => void;
 }
 
 // ============================================================================
@@ -83,6 +89,9 @@ export function useCanvasKeyboardShortcuts({
   onExitDrawMode,
   handleRotationEscape,
   rotationIsActive = false,
+  handleMoveEscape,
+  moveIsActive = false,
+  clearEntitySelection,
 }: UseCanvasKeyboardShortcutsParams): void {
 
   // Handle keyboard shortcuts for drawing, delete, and local operations
@@ -108,7 +117,12 @@ export function useCanvasKeyboardShortcuts({
 
       switch (e.key) {
         case 'Escape':
-          // ADR-188: Escape cancels rotation tool first (highest priority when active)
+          // ADR-049: Move tool cancel (highest priority — intercepts before rotation)
+          if (moveIsActive && handleMoveEscape) {
+            handleMoveEscape();
+            break;
+          }
+          // ADR-188: Escape cancels rotation tool
           if (rotationIsActive && handleRotationEscape) {
             handleRotationEscape();
             break;
@@ -125,6 +139,10 @@ export function useCanvasKeyboardShortcuts({
           // 🏢 ENTERPRISE: Escape also clears grip selection
           if (selectedGrips.length > 0) {
             setSelectedGrips([]);
+          }
+          // SSoT deselect-all: Escape clears entity selection (AutoCAD/BricsCAD pattern)
+          if (selectedEntityIds.length > 0) {
+            clearEntitySelection?.();
           }
           break;
         case 'Enter': {
@@ -163,5 +181,5 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive]);
 }

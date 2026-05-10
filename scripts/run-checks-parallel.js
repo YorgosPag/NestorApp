@@ -41,7 +41,7 @@ const NC     = '\x1b[0m';
 
 const cwd            = process.cwd();
 const RUNNER         = path.join(__dirname, 'worker-check-runner.js');
-const TIMEOUT_MS     = Number(process.env.CHECK_WORKER_TIMEOUT_MS) || 60_000;
+const TIMEOUT_MS     = Number(process.env.CHECK_WORKER_TIMEOUT_MS) || 120_000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

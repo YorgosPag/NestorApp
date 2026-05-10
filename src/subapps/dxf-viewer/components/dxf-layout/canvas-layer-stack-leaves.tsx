@@ -14,7 +14,8 @@
 
 'use client';
 
-import React, { useMemo, useSyncExternalStore } from 'react';
+import React, { useMemo, useSyncExternalStore, useEffect } from 'react';
+import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
 import { useHoveredOverlay } from '../../systems/hover/useHover';
 import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
@@ -22,6 +23,8 @@ import { subscribeSnapResult, getFullSnapResult } from '../../systems/cursor/Imm
 import { useGuideWorkflowComputed } from '../../hooks/guides/useGuideWorkflowComputed';
 import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { useRotationPreview } from '../../hooks/tools/useRotationPreview';
+import { useMovePreview } from '../../hooks/tools/useMovePreview';
+import type { MovePhase } from '../../hooks/tools/useMoveTool';
 import { useHoveredEntity } from '../../systems/hover/useHover';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
@@ -191,6 +194,10 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   onHoverEntity, onHoverOverlay, onEntitySelect, onGripMouseDown, onGripMouseUp,
   onContextMenu, onCanvasClick, onTransformChange, onWheelZoom, onMouseMove, className,
 }: DxfCanvasSubscriberProps) {
+  const _perfRenderStart = perfStart();
+  useEffect(() => {
+    if (PERF_LINE_PROFILE) perfEnd('DxfCanvasSubscriber.commit', _perfRenderStart);
+  });
   // 🚀 PERF: Subscribe to guide store DIRECTLY here (micro-leaf pattern, ADR-040).
   // CanvasSection uses useGuideActions() (no subscription) → guide drag at 60fps
   // no longer re-renders CanvasSection. Only this leaf re-renders on guide changes.
@@ -285,5 +292,31 @@ export const RotationPreviewMount = React.memo(function RotationPreviewMount(
   props: RotationPreviewMountProps,
 ) {
   useRotationPreview(props);
+  return null;
+});
+
+// ============================================================================
+// MOVE PREVIEW MOUNT (ADR-049)
+// ============================================================================
+
+interface MovePreviewMountProps {
+  phase: MovePhase;
+  basePoint: Point2D | null;
+  selectedEntityIds: string[];
+  levelManager: Parameters<typeof useMovePreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+/**
+ * Mounts useMovePreview. No JSX — draws to PreviewCanvas via imperative API.
+ * Subscribes to useCursorWorldPosition internally.
+ * Only this component re-renders on mousemove when move tool is active.
+ */
+export const MovePreviewMount = React.memo(function MovePreviewMount(
+  props: MovePreviewMountProps,
+) {
+  useMovePreview(props);
   return null;
 });

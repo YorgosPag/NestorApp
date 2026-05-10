@@ -10,3 +10,13 @@ export type {
   UseSpecialToolsProps,
   UseSpecialToolsReturn,
 } from './useSpecialTools';
+
+export { useMoveTool } from './useMoveTool';
+export type {
+  UseMoveToolProps,
+  UseMoveToolReturn,
+  MovePhase,
+} from './useMoveTool';
+
+export { useMovePreview } from './useMovePreview';
+export type { UseMovePreviewProps } from './useMovePreview';

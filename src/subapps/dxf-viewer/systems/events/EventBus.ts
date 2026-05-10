@@ -61,6 +61,7 @@ export interface DrawingEventMap {
     source?: string; // 'middle-double-click' | 'keyboard' | 'auto' | undefined
     viewport?: { width: number; height: number };
   };
+  'canvas:select-all': void;
   'overlay:polygon-update': {
     regionId: string;
     newVertices: Point2D[];

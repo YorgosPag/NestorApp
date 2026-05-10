@@ -1,23 +1,12 @@
 /**
- * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 BEFORE EDITING
+ * ⚠️ ARCHITECTURE-CRITICAL — READ ADR-040 BEFORE EDITING (update changelog same commit)
  * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
- * After any architectural change → update the ADR changelog (same commit).
  *
- * 🏢 ENTERPRISE: CanvasLayerStack — Extraction #13
- *
- * @description All 9 canvas layers and their inline callbacks, extracted from CanvasSection.
- * Renders the visual canvas stack: PDF → LayerCanvas → DxfCanvas → PreviewCanvas →
- * CrosshairOverlay → SnapIndicator → RulerCornerBox → DrawingContextMenu
- *
- * EXTRACTED FROM: CanvasSection.tsx — ~334 lines of JSX
- *
- * 🚀 PERF (2026-05-09 Phase E): Micro-leaf subscriber pattern (Excalidraw/Figma).
- * Components that subscribe to high-frequency stores are isolated as nano-leaves:
- * - SnapIndicatorSubscriber  — subscribeSnapResult (useSyncExternalStore)
- * - DraftLayerSubscriber     — useDraftPolygonLayer → useCursorWorldPosition
- * - DxfCanvasSubscriber      — useGuideWorkflowComputed + useHoveredEntity
- * - RotationPreviewMount     — useRotationPreview → useCursorWorldPosition
- * CanvasLayerStack shell itself does NOT subscribe to any high-frequency store.
+ * Shell renders 9 canvas layers extracted from CanvasSection (~334 lines JSX).
+ * ADR-040 micro-leaf pattern: high-freq subscriptions pushed into named leaves:
+ * - SnapIndicatorSubscriber, DraftLayerSubscriber, DxfCanvasSubscriber
+ * - RotationPreviewMount (ADR-188), MovePreviewMount (ADR-049)
+ * Shell itself MUST NOT call useSyncExternalStore (enforced: CHECK 6C).
  */
 
 'use client';
@@ -46,6 +35,7 @@ import {
   DraftLayerSubscriber,
   DxfCanvasSubscriber,
   RotationPreviewMount,
+  MovePreviewMount,
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
 
@@ -74,7 +64,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   entityPickingActive,
   selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
-  rotationPreview, levelManager,
+  rotationPreview, movePreview, levelManager,
 }: CanvasLayerStackProps) {
   // --- Destructure grouped props ---
   const {
@@ -365,7 +355,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           onMouseLeave={containerHandlers.onMouseLeave}
           onContextMenu={handleDrawingContextMenu}
         >
-          {/* Floorplan Background (ADR-340 — replaces legacy PdfBackgroundCanvas, z-0) */}
           {floorId && (
             <FloorplanBackgroundCanvas
               floorId={floorId}
@@ -376,7 +365,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             />
           )}
 
-          {/* LayerCanvas (z-0) — rubber-band draft computed in subscriber */}
           {showLayerCanvas && (
             <DraftLayerSubscriber
               canvasRef={overlayCanvasRef as React.RefObject<HTMLCanvasElement>}
@@ -389,7 +377,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             />
           )}
 
-          {/* DxfCanvas (z-10) — guide computed + hoveredEntityId injected in subscriber */}
           {showDxfCanvas && (
             <DxfCanvasSubscriber
               dxfCanvasRef={dxfCanvasRef}
@@ -427,7 +414,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             />
           )}
 
-          {/* PreviewCanvas (pointer-events: none) */}
           <PreviewCanvas
             ref={previewCanvasRef as React.RefObject<PreviewCanvasHandle>}
             transform={transform}
@@ -453,7 +439,20 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             }}
           />
 
-          {/* CrosshairOverlay (z-20) */}
+          {/* MovePreviewMount — draws ghost entities on PreviewCanvas (ADR-049) */}
+          <MovePreviewMount
+            phase={movePreview.phase}
+            basePoint={movePreview.basePoint}
+            selectedEntityIds={selectedEntityIds}
+            levelManager={levelManager}
+            transform={transform}
+            getCanvas={() => previewCanvasRef.current?.getCanvas() ?? null}
+            getViewportElement={() => {
+              const canvas = dxfCanvasRef?.current?.getCanvas?.();
+              return canvas instanceof HTMLElement ? canvas : null;
+            }}
+          />
+
           <CrosshairOverlay
             isActive={crosshairSettings.enabled}
             rulerMargins={{
@@ -467,7 +466,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             }}
           />
 
-          {/* SnapIndicatorOverlay (z-30) — nano-leaf subscriber */}
           <SnapIndicatorSubscriber
             viewport={viewport}
             dxfCanvasRef={dxfCanvasRef}
@@ -475,7 +473,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
           />
 
-          {/* RulerCornerBox (z-30) */}
           <RulerCornerBox
             rulerWidth={rulerSettings.vertical?.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}
             rulerHeight={rulerSettings.horizontal?.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT}

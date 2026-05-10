@@ -7,6 +7,7 @@
 'use client';
 import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { CanvasLayerStack } from './CanvasLayerStack';
+import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { useOverlayStore } from '../../overlays/overlay-store';
@@ -31,12 +32,14 @@ import {
   useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts,
   useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
 } from '../../hooks/canvas';
-import { useGuideToolWorkflows } from '../../hooks/guides';
+import { useGuideToolWorkflows, useEntityCompleteGuideListener } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
+import { useGlobalSnapSceneSync } from '../../snapping/hooks/useGlobalSnapSceneSync';
 // useHoveredOverlay REMOVED from orchestrator — ADR-040 Phase II micro-leaf pattern.
 // Subscription lives in DraftLayerSubscriber (canvas-layer-stack-leaves.tsx).
 import { useSpecialTools } from '../../hooks/tools';
 import { useRotationTool } from '../../hooks/tools/useRotationTool';
+import { useMoveTool } from '../../hooks/tools/useMoveTool';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 import { useGuideActions } from '../../hooks/state/useGuideActions';
@@ -61,12 +64,16 @@ import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/component
  * ADR-189 B5: Container handlers — useCanvasContainerHandlers (hooks/canvas/).
  */
 export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: OverlayEditorMode, currentStatus: Status, currentKind: OverlayKind }> = (props) => {
+  const _perfRenderStart = perfStart();
   const {
     activeTool, showGrid, showLayers,
     overlayMode = 'select', setOverlayMode,
     currentStatus = 'for-sale', currentKind = 'property',
     ...restProps
   } = props;
+  useEffect(() => {
+    if (PERF_LINE_PROFILE) perfEnd('CanvasSection.commit', _perfRenderStart);
+  });
 
   // === Canvas context ===
   const canvasContext = useCanvasContext();
@@ -136,6 +143,26 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // === DXF scene ===
   const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null });
+  const dxfSceneRef = useRef(dxfScene);
+  dxfSceneRef.current = dxfScene;
+
+  // === Snap engine scene-sync (SSoT, sole owner — ADR-040) ===
+  // The SnapEngine singleton's `initialize(allEntities)` is owned exclusively
+  // by this hook. `useSnapManager` instances are now consumers only.
+  useGlobalSnapSceneSync({ scene: props.currentScene ?? null });
+
+  // Ctrl+A: select all DXF entities — fired via EventBus from useKeyboardShortcuts
+  // Updates both local visual state AND universalSelection (SSOT for delete)
+  useEffect(() => {
+    return eventBus.on('canvas:select-all', () => {
+      const entities = dxfSceneRef.current?.entities;
+      if (!entities?.length) return;
+      const ids = entities.map(e => e.id);
+      setSelectedEntityIds(ids);
+      universalSelectionRef.current.clearAll();
+      universalSelectionRef.current.selectMultiple(ids.map(id => ({ id, type: 'dxf-entity' as const })));
+    });
+  }, [eventBus]);
 
   // === Unified Grip System ===
   const unified = useUnifiedGripInteraction({
@@ -188,6 +215,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     notifyWarning, notifySuccess, universalSelection,
     currentScene: props.currentScene ?? null, eventBus,
   });
+
+  // B39 (ADR-189): "Create Guides" prompt for every drawn entity via
+  // unified completion pipeline (ADR-057 EventBus). Measurement tools are
+  // excluded — they already raise the prompt through `handleMeasurementComplete`.
+  useEntityCompleteGuideListener(guideWorkflows.handleEntityComplete);
 
   // === Layer visibility ===
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
@@ -252,6 +284,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
     currentOverlays, overlayUpdate: overlayStore.update,
   });
+
+  // === Move Tool (ADR-049: AutoCAD-style 2-click) ===
+  const moveTool = useMoveTool({
+    activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
+  });
   const handleRotationAnglePrompt = useCallback(async () => {
     const result = await showPromptDialog({
       title: t('promptDialog.rotationAngle'), label: t('promptDialog.enterAngle'),
@@ -281,6 +319,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement,
     dxfGripInteraction: unified.dxfProjection,
     rotationIsActive: rotationTool.isCollectingInput, handleRotationClick: rotationTool.handleRotationClick,
+    moveIsActive: moveTool.isCollectingInput, handleMoveClick: moveTool.handleMoveClick,
     levelManager, draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
@@ -341,7 +380,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setDraftPolygon, draftPolygon, selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
     activeTool, handleDrawingFinish, handleFlipArc, finishDrawing, selectedEntityIds,
     handleEntityJoin: () => entityJoinHook.joinEntities(selectedEntityIds), canEntityJoin: entityJoinState.canJoin,
-    onExitDrawMode: handleExitDrawMode, handleRotationEscape: rotationTool.handleRotationEscape, rotationIsActive: rotationTool.isCollectingInput,
+    onExitDrawMode: handleExitDrawMode,
+    handleRotationEscape: rotationTool.handleRotationEscape, rotationIsActive: rotationTool.isCollectingInput,
+    handleMoveEscape: moveTool.handleMoveEscape, moveIsActive: moveTool.isCollectingInput,
+    // SSoT deselect-all: clears both the local entity state and the UniversalSelection
+    // registry (same pattern as `canvas:select-all` at line 144).
+    clearEntitySelection: () => {
+      setSelectedEntityIds([]);
+      universalSelectionRef.current.clearAll();
+    },
   });
 
   // === Render ===
@@ -368,11 +415,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         entityJoin={{ canJoin: entityJoinState.canJoin, joinResultLabel: entityJoinState.joinResultLabel, onJoin: () => entityJoinHook.joinEntities(selectedEntityIds), onDelete: () => handleSmartDelete() }}
         floorId={floorplanBg?.floorId ?? null}
         onMouseMove={props.onMouseMove}
-        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
+        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || moveTool.phase === 'awaiting-entity' || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
         selectedGuideIds={guideWorkflows.selectedGuideIds} constructionPoints={cpState.points}
         guideWorkflowState={guideWorkflows.state}
         guideStateObj={guideState} cpStateObj={cpState}
         rotationPreview={{ phase: rotationTool.phase, basePoint: rotationTool.basePoint, referencePoint: rotationTool.referencePoint, currentAngle: rotationTool.currentAngle }}
+        movePreview={{ phase: moveTool.phase, basePoint: moveTool.basePoint }}
         levelManager={levelManager}
       />
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}

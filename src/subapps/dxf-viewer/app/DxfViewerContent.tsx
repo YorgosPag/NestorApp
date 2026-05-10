@@ -35,7 +35,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useOverlayDrawing } from '../hooks/useOverlayDrawing';
 import { useSnapContext } from '../snapping/context/SnapContext';
 import { useCanvasOperations } from '../hooks/interfaces/useCanvasOperations';
-import { useEventBus } from '../systems/events/EventBus';
+import { useEventBus, EventBus } from '../systems/events/EventBus';
 // 🏢 ENTERPRISE (2026-01-30): ADR-055 Entity Creation Manager
 import { useEntityCreationManager } from '../systems/entity-creation';
 
@@ -235,11 +235,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     }
   });
 
-  // Ctrl+A → select all entities in the current scene
+  // Ctrl+A → select all entities via EventBus so CanvasSection updates its own state
   const handleSelectAll = React.useCallback(() => {
-    if (!currentScene) return;
-    setSelectedEntityIds(currentScene.entities.map(e => e.id));
-  }, [currentScene, setSelectedEntityIds]);
+    EventBus.emit('canvas:select-all', undefined as unknown as void);
+  }, []);
 
   // Keyboard shortcuts hook
   const { handleCanvasMouseMove } = useKeyboardShortcuts({

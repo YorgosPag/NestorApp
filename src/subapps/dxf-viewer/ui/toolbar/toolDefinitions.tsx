@@ -31,6 +31,7 @@ import {
   CopyCheck, // ADR-189 B17: Copy/offset pattern icon
   Grid3x3, // ADR-189 B23: Structural preset grid icon
   Layers, // ADR-189 B37: Guide from selection icon
+  PanelRight, // ADR-189 §4.13: Guide panel toggle icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -364,6 +365,7 @@ export const createActionButtons = (props: {
   autoCrop: boolean;
   showCursorSettings?: boolean;
   guidesVisible?: boolean;
+  showGuidePanel?: boolean;
   onAction: (action: string, data?: number | string | boolean) => void;
 }): ActionDefinition[] => [
   // ⌨️ ENTERPRISE: All hotkeys from centralized keyboard-shortcuts.ts
@@ -415,6 +417,16 @@ export const createActionButtons = (props: {
     active: props.guidesVisible,
     colorClass: DXF_ACTION_COLORS.grid,
     onClick: () => props.onAction('toggle-guides')
+  },
+  // ADR-189 §4.13: Toggle guide list panel (keyboard: G→L)
+  {
+    id: 'toggle-guide-panel',
+    icon: PanelRight,
+    label: props.showGuidePanel ? 'actionButtons.hideGuidePanel' : 'actionButtons.showGuidePanel',
+    hotkey: 'G→L',
+    active: props.showGuidePanel,
+    colorClass: DXF_ACTION_COLORS.grid,
+    onClick: () => props.onAction('toggle-guide-panel')
   },
   // ADR-189: Guide Analysis Panel (10 services → 4 tabs)
   {

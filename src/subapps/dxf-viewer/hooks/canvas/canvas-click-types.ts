@@ -107,6 +107,12 @@ export interface UseCanvasClickHandlerParams {
   /** Click handler for rotation state machine */
   handleRotationClick?: (worldPoint: Point2D) => void;
 
+  // ── ADR-049: Move tool (2-click AutoCAD-style) ────────────────────────
+  /** Whether the move tool is active and collecting base/destination point */
+  moveIsActive?: boolean;
+  /** Click handler for move state machine */
+  handleMoveClick?: (worldPoint: Point2D) => void;
+
   // ── Level / Scene ─────────────────────────────────────────────────────
   levelManager: LevelManagerLike;
 

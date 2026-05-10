@@ -199,7 +199,12 @@ export interface CanvasLayerStackProps {
     referencePoint: Point2D | null;
     currentAngle: number;
   };
-  /** Level manager — needed by useRotationPreview for entity reads */
+  // === ADR-049: Move tool preview ===
+  movePreview: {
+    phase: import('../../hooks/tools/useMoveTool').MovePhase;
+    basePoint: Point2D | null;
+  };
+  /** Level manager — needed by useRotationPreview + useMovePreview for entity reads */
   levelManager: ReturnType<typeof useLevels>;
 
   // === Entity-picking mode ===
