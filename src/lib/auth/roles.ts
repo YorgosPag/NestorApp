@@ -91,6 +91,11 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "units:units:delete",
       // Floors
       "projects:floors:delete",
+      // CRM — company admin has full contact access (required by floorplan wizard + CRM module)
+      "crm:contacts:view",
+      "crm:contacts:create",
+      "crm:contacts:update",
+      "crm:contacts:delete",
       // Communications
       "comm:conversations:list",
       "comm:conversations:view",
