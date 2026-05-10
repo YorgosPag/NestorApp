@@ -19,7 +19,8 @@ import type {
 } from './drawing-types';
 import { circleBestFit } from '../../rendering/entities/shared';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-import { UI_COLORS } from '../../config/color-config';
+import { ICON_CLICK_COLORS } from '../../config/color-config';
+import type { PreviewGripPoint } from '../../types/entities';
 import type { ApplySettingsFn } from './drawing-preview-generator';
 
 // ─── Preview Styling ─────────────────────────────────────────────────────────
@@ -55,12 +56,6 @@ export function applyPreviewStyling(
     extPoly.isOverlayPreview = isOverlayMode;
     applySettings(extPoly as unknown as Record<string, unknown>);
 
-    if ((tool === 'measure-area' || tool === 'polygon') && worldPoints.length >= 3) {
-      extPoly.previewGripPoints = [
-        { position: worldPoints[0], type: 'close', color: UI_COLORS.BRIGHT_GREEN },
-        { position: cursorPoint, type: 'cursor' },
-      ];
-    }
   } else if (entity.type === 'line') {
     const extLine = entity as ExtendedLineEntity;
     extLine.preview = true;
@@ -68,13 +63,6 @@ export function applyPreviewStyling(
     extLine.showPreviewGrips = true;
     extLine.isOverlayPreview = isOverlayMode;
     applySettings(extLine as unknown as Record<string, unknown>);
-
-    if ((tool === 'line' || tool === 'measure-distance-continuous') && worldPoints.length >= 2) {
-      extLine.previewGripPoints = [
-        { position: worldPoints[0], type: 'start' },
-        { position: cursorPoint, type: 'cursor' },
-      ];
-    }
   } else if (entity.type === 'circle') {
     const extCircle = entity as ExtendedCircleEntity;
     extCircle.preview = true;
@@ -130,6 +118,20 @@ export function applyPreviewStyling(
     } else if (entity.type === 'circle') {
       (entity as ExtendedCircleEntity).measurement = true;
     }
+  }
+
+  // ── Colored preview grips — matches icon click sequence (ADR-142: FIRST=red, SECOND=orange, THIRD=green)
+  // worldPoints = [...tempPoints, cursor], so slice(0,-1) = clicked points, last = cursor
+  if (worldPoints.length >= 2 && !isMeasurementTool) {
+    const clickedPts = worldPoints.slice(0, -1);
+    const grips: PreviewGripPoint[] = [
+      { position: clickedPts[0], type: 'start', color: ICON_CLICK_COLORS.FIRST },
+    ];
+    for (let i = 1; i < clickedPts.length; i++) {
+      grips.push({ position: clickedPts[i], type: 'vertex', color: ICON_CLICK_COLORS.SECOND });
+    }
+    grips.push({ position: cursorPoint, type: 'cursor', color: ICON_CLICK_COLORS.THIRD });
+    (entity as Record<string, unknown>).previewGripPoints = grips;
   }
 }
 

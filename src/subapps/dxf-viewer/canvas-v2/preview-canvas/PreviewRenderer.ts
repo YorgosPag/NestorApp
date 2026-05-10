@@ -12,6 +12,8 @@ import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/ent
 import { getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { UI_COLORS, OPACITY } from '../../config/color-config';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import type { PreviewGripPoint } from '../../types/entities';
 
 // Re-export types for consumers
 export type { PreviewRenderOptions } from './preview-renderer-types';
@@ -142,6 +144,12 @@ export class PreviewRenderer {
     const transform = this.currentTransform;
     const opts = this.currentOptions;
 
+    // Colored preview grips override entity-renderer grips (ADR-142 icon click sequence)
+    const entityMeta = entity as { previewGripPoints?: Array<PreviewGripPoint>; showPreviewGrips?: boolean };
+    const coloredGrips = entityMeta.showPreviewGrips && entityMeta.previewGripPoints?.length
+      ? entityMeta.previewGripPoints
+      : null;
+
     // Setup context style
     ctx.strokeStyle = opts.color;
     ctx.fillStyle = opts.gripColor;
@@ -150,6 +158,9 @@ export class PreviewRenderer {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.setLineDash(opts.dashPattern.length > 0 ? opts.dashPattern : []);
+
+    // Suppress entity-level grips when colored grips handle rendering
+    const renderOpts = coloredGrips ? { ...opts, showGrips: false } : opts;
 
     // Build helpers object for entity renderers
     const helpers: PreviewRenderHelpers = {
@@ -161,13 +172,21 @@ export class PreviewRenderer {
 
     // Dispatch to entity renderer
     switch (entity.type) {
-      case 'line': renderLine(ctx, entity as ExtendedLineEntity, transform, opts, helpers); break;
-      case 'circle': renderCircle(ctx, entity as ExtendedCircleEntity, transform, opts, helpers); break;
-      case 'polyline': renderPolyline(ctx, entity as ExtendedPolylineEntity, transform, opts, helpers); break;
-      case 'rectangle': renderRectangle(ctx, entity, transform, opts, helpers); break;
-      case 'angle-measurement': renderAngleMeasurement(ctx, entity as AngleMeasurementEntity, transform, opts, helpers); break;
-      case 'point': renderPoint(ctx, entity as PreviewPoint, transform, opts, helpers); break;
-      case 'arc': renderArc(ctx, entity as ArcPreviewEntity, transform, opts, helpers); break;
+      case 'line': renderLine(ctx, entity as ExtendedLineEntity, transform, renderOpts, helpers); break;
+      case 'circle': renderCircle(ctx, entity as ExtendedCircleEntity, transform, renderOpts, helpers); break;
+      case 'polyline': renderPolyline(ctx, entity as ExtendedPolylineEntity, transform, renderOpts, helpers); break;
+      case 'rectangle': renderRectangle(ctx, entity, transform, renderOpts, helpers); break;
+      case 'angle-measurement': renderAngleMeasurement(ctx, entity as AngleMeasurementEntity, transform, renderOpts, helpers); break;
+      case 'point': renderPoint(ctx, entity as PreviewPoint, transform, renderOpts, helpers); break;
+      case 'arc': renderArc(ctx, entity as ArcPreviewEntity, transform, renderOpts, helpers); break;
+    }
+
+    // Render colored preview grips (FIRST=red P1, SECOND=orange intermediates, THIRD=green cursor)
+    if (coloredGrips) {
+      for (const grip of coloredGrips) {
+        const screenPos = CoordinateTransforms.worldToScreen(grip.position, transform, this.currentViewport!);
+        this.renderGrip(ctx, screenPos, opts, grip.color);
+      }
     }
 
     // Reset context
@@ -179,11 +198,12 @@ export class PreviewRenderer {
 
   private renderGrip(
     ctx: CanvasRenderingContext2D, screenPos: Point2D, opts: Required<PreviewRenderOptions>,
+    customColor?: string,
   ): void {
     const path = getGripPath(opts.gripSize);
     ctx.save();
     ctx.translate(screenPos.x, screenPos.y);
-    ctx.fillStyle = opts.gripColor;
+    ctx.fillStyle = customColor ?? opts.gripColor;
     ctx.fill(path);
     ctx.strokeStyle = UI_COLORS.BLACK;
     ctx.lineWidth = RENDER_LINE_WIDTHS.GRIP_OUTLINE;

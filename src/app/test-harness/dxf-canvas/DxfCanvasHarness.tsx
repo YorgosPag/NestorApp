@@ -6,9 +6,13 @@ import type { DxfScene } from '@/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-typ
 import type { ViewTransform, Point2D } from '@/subapps/dxf-viewer/rendering/types/Types';
 import type { DxfCanvas as DxfCanvasType, DxfCanvasRef } from '@/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas';
 import type { GridSettings, RulerSettings } from '@/subapps/dxf-viewer/canvas-v2/layer-canvas/layer-types';
-import { PreviewCanvas } from '@/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas';
-import type { PreviewCanvasHandle } from '@/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas';
+import type { PreviewCanvas as PreviewCanvasType, PreviewCanvasHandle } from '@/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas';
 import type { ExtendedSceneEntity } from '@/subapps/dxf-viewer/hooks/drawing/drawing-types';
+
+const PreviewCanvas = dynamic(
+  () => import('@/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas').then(m => m.PreviewCanvas),
+  { ssr: false }
+) as typeof PreviewCanvasType;
 
 declare global {
   interface Window {
