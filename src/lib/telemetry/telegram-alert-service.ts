@@ -48,6 +48,11 @@ const LIMITS = {
   MAX_PER_HOUR: 10,
   MAX_PER_DAY: 50,
   DEDUP_COOLDOWN_MS: 5 * 60 * 1000, // 5 minutes
+  MAX_MESSAGE_LEN: 1500,
+  MAX_STACK_LEN: 1500,
+  MAX_STACK_FRAMES: 8,
+  MAX_META_VALUE: 400,
+  TELEGRAM_MAX_LEN: 4000, // Telegram hard cap = 4096, leave headroom
 } as const;
 
 const state: RateLimitState = {
@@ -111,59 +116,88 @@ function recordAlert(fingerprint: string): void {
 // MESSAGE FORMATTING
 // ============================================================================
 
+const EMOJI_MAP: Record<AlertLevel, string> = {
+  'error': '\u{1F6A8}',
+  'client-error': '\u{1F534}',
+  'slow': '\u{1F422}',
+};
+
+const LABEL_MAP: Record<AlertLevel, string> = {
+  'error': 'ERROR',
+  'client-error': 'CLIENT ERROR',
+  'slow': 'SLOW',
+};
+
+function formatStack(stack: string): string {
+  const frames = stack.split('\n').slice(0, LIMITS.MAX_STACK_FRAMES);
+  return frames.join('\n').substring(0, LIMITS.MAX_STACK_LEN);
+}
+
+function formatMetadataDetails(metadata: AlertMetadata): string[] {
+  const skipKeys = new Set(['stack', 'url', 'userEmail', 'test']);
+  return Object.entries(metadata)
+    .filter(([k, v]) => !skipKeys.has(k) && v !== undefined && v !== null && v !== '')
+    .map(([k, v]) => `\u2022 ${k}: ${String(v).substring(0, LIMITS.MAX_META_VALUE)}`);
+}
+
+function formatEnvFooter(): string {
+  const env = process.env.VERCEL_ENV || process.env.NODE_ENV || 'unknown';
+  const sha = (
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.NEXT_PUBLIC_COMMIT_SHA ||
+    process.env.GIT_COMMIT_SHA ||
+    ''
+  ).substring(0, 7);
+  return sha ? `env: ${env} | sha: ${sha}` : `env: ${env}`;
+}
+
 function formatAlertMessage(
   level: AlertLevel,
   module: string,
   message: string,
   metadata?: AlertMetadata
 ): string {
-  const emojiMap: Record<AlertLevel, string> = {
-    'error': '\u{1F6A8}',        // siren
-    'client-error': '\u{1F534}', // red circle
-    'slow': '\u{1F422}',         // turtle
-  };
-  const labelMap: Record<AlertLevel, string> = {
-    'error': 'ERROR',
-    'client-error': 'CLIENT ERROR',
-    'slow': 'SLOW',
-  };
-  const emoji = emojiMap[level];
-  const label = labelMap[level];
+  const emoji = EMOJI_MAP[level];
+  const label = LABEL_MAP[level];
   const timestamp = nowISO().replace('T', ' ').substring(0, 19) + ' UTC';
 
   const lines: string[] = [
     `${emoji} ${label} \u2014 ${module}`,
-    `\u{1F4CD} ${message.substring(0, 200)}`,
+    `\u{1F4CD} ${message.substring(0, LIMITS.MAX_MESSAGE_LEN)}`,
   ];
 
   if (metadata?.stack) {
-    const shortStack = metadata.stack.split('\n').slice(0, 2).join('\n');
-    lines.push(`\u274C ${shortStack.substring(0, 150)}`);
+    lines.push(`\u274C STACK:\n${formatStack(metadata.stack)}`);
   }
 
-  if (metadata?.url) {
-    lines.push(`\u{1F310} ${metadata.url}`);
-  }
+  if (metadata?.url) lines.push(`\u{1F310} ${metadata.url}`);
+  if (metadata?.userEmail) lines.push(`\u{1F464} ${metadata.userEmail}`);
 
-  if (metadata?.userEmail) {
-    lines.push(`\u{1F464} ${metadata.userEmail}`);
-  }
-
-  // Show relevant metadata fields (error details, IDs, etc.)
   if (metadata) {
-    const skipKeys = new Set(['stack', 'url', 'userEmail', 'test']);
-    const details = Object.entries(metadata)
-      .filter(([k, v]) => !skipKeys.has(k) && v !== undefined && v !== null && v !== '')
-      .map(([k, v]) => `${k}: ${String(v).substring(0, 100)}`)
-      .slice(0, 5);
+    const details = formatMetadataDetails(metadata);
     if (details.length > 0) {
-      lines.push(`\u{1F4CB} ${details.join(' | ')}`);
+      lines.push(`\u{1F4CB} META:\n${details.join('\n')}`);
     }
   }
 
   lines.push(`\u{1F550} ${timestamp}`);
+  lines.push(`\u{1F3F7}\uFE0F  ${formatEnvFooter()}`);
 
   return lines.join('\n');
+}
+
+function splitForTelegram(text: string): string[] {
+  if (text.length <= LIMITS.TELEGRAM_MAX_LEN) return [text];
+  const parts: string[] = [];
+  let remaining = text;
+  while (remaining.length > LIMITS.TELEGRAM_MAX_LEN) {
+    let cut = remaining.lastIndexOf('\n', LIMITS.TELEGRAM_MAX_LEN);
+    if (cut < LIMITS.TELEGRAM_MAX_LEN / 2) cut = LIMITS.TELEGRAM_MAX_LEN;
+    parts.push(remaining.substring(0, cut));
+    remaining = remaining.substring(cut).replace(/^\n/, '');
+  }
+  if (remaining.length > 0) parts.push(remaining);
+  return parts.map((p, i) => `(${i + 1}/${parts.length})\n${p}`);
 }
 
 // ============================================================================
@@ -195,18 +229,20 @@ export async function sendTelegramAlert(
     if (!botToken) return;
 
     const text = formatAlertMessage(level, module, message, metadata);
+    const chunks = splitForTelegram(text);
 
-    // Direct fetch to avoid circular imports with telegram-service
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: undefined }),
-    });
-
-    if (response.ok) {
-      recordAlert(fingerprint);
+    let allOk = true;
+    for (const chunk of chunks) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: chunk, parse_mode: undefined }),
+      });
+      if (!response.ok) { allOk = false; break; }
     }
+
+    if (allOk) recordAlert(fingerprint);
   } catch {
     // Swallow all errors — alerting must NEVER break the application
   }

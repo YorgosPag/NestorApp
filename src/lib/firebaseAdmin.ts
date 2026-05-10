@@ -217,7 +217,9 @@ export async function safeFirestoreOperation<T>(
     return await operation(db);
   } catch (error) {
     logger.error('[Firebase Admin] Operation failed', {
-      error: getErrorMessage(error)
+      error: getErrorMessage(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      code: (error as { code?: string | number })?.code,
     });
     return fallback;
   }
