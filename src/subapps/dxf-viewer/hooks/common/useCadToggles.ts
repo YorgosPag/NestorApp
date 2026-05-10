@@ -1,4 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { userSettingsRepository, stableHash } from '@/services/user-settings';
+import { useAuth } from '@/auth/contexts/AuthContext';
+import type { CadTogglesSettingsSlice } from '@/services/user-settings/user-settings-schema';
 
 export interface CadToggle {
   on: boolean;
@@ -15,73 +18,94 @@ export interface CadToggles {
   dynInput: CadToggle;
 }
 
+const DEFAULTS: CadTogglesSettingsSlice = {
+  osnap: true,
+  grid: true,
+  snap: false,
+  ortho: false,
+  polar: false,
+  dynInput: false,
+};
+
 export const useCadToggles = (): CadToggles => {
-  const [osnap, setOsnap] = useState(true);
-  const [grid, setGrid] = useState(true);
-  const [snap, setSnap] = useState(false);
-  const [ortho, setOrtho] = useState(false);
-  const [polar, setPolar] = useState(false);
-  const [dynInput, setDynInput] = useState(false);
+  const { user } = useAuth();
+  const userId = user?.uid ?? null;
+  const companyId = user?.companyId ?? null;
 
-  // 🔄 ORTHO/POLAR mutual exclusion (AutoCAD-like)
-  const toggleOrtho = useCallback(() => {
-    setOrtho(prev => {
-      const newOrtho = !prev;
-      if (newOrtho) {
-        setPolar(false); // Disable POLAR when ORTHO is enabled
+  const [state, setState] = useState<CadTogglesSettingsSlice>(DEFAULTS);
+  const lastHashRef = useRef<string>('');
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
-      }
-      return newOrtho;
-    });
-  }, []);
+  // Subscribe to Firestore slice — hydrate on load, guard echo-loops
+  useEffect(() => {
+    if (!userId || !companyId) return;
+    userSettingsRepository.bind(userId, companyId);
+    let firstSnapshot = true;
+    const unsubscribe = userSettingsRepository.subscribeSlice(
+      'dxfViewer.cadToggles',
+      (remote) => {
+        if (remote) {
+          const remoteHash = stableHash(remote);
+          if (remoteHash === lastHashRef.current) return;
+          lastHashRef.current = remoteHash;
+          setState(remote);
+        } else if (firstSnapshot) {
+          const hash = stableHash(DEFAULTS);
+          lastHashRef.current = hash;
+          userSettingsRepository.updateSlice('dxfViewer.cadToggles', DEFAULTS);
+        }
+        firstSnapshot = false;
+      },
+    );
+    return () => { unsubscribe(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, companyId]);
 
-  const togglePolar = useCallback(() => {
-    setPolar(prev => {
-      const newPolar = !prev;
-      if (newPolar) {
-        setOrtho(false); // Disable ORTHO when POLAR is enabled
+  // Persist state changes to Firestore (debounced 500ms by repository)
+  useEffect(() => {
+    if (!userId || !companyId) return;
+    const hash = stableHash(state);
+    if (hash === lastHashRef.current) return;
+    lastHashRef.current = hash;
+    userSettingsRepository.updateSlice('dxfViewer.cadToggles', state);
+  }, [userId, companyId, state]);
 
-      }
-      return newPolar;
-    });
-  }, []);
+  const toggleOsnap = useCallback(() => setState(prev => ({ ...prev, osnap: !prev.osnap })), []);
+  const setOsnap = useCallback((v: boolean) => setState(prev => ({ ...prev, osnap: v })), []);
+
+  const toggleGrid = useCallback(() => setState(prev => ({ ...prev, grid: !prev.grid })), []);
+  const setGrid = useCallback((v: boolean) => setState(prev => ({ ...prev, grid: v })), []);
+
+  const toggleSnap = useCallback(() => setState(prev => ({ ...prev, snap: !prev.snap })), []);
+  const setSnap = useCallback((v: boolean) => setState(prev => ({ ...prev, snap: v })), []);
+
+  // ORTHO/POLAR mutual exclusion — AutoCAD-like
+  const toggleOrtho = useCallback(() => setState(prev => {
+    const next = !prev.ortho;
+    return { ...prev, ortho: next, ...(next ? { polar: false } : {}) };
+  }), []);
+  const setOrtho = useCallback((v: boolean) => setState(prev => ({
+    ...prev, ortho: v, ...(v ? { polar: false } : {})
+  })), []);
+
+  const togglePolar = useCallback(() => setState(prev => {
+    const next = !prev.polar;
+    return { ...prev, polar: next, ...(next ? { ortho: false } : {}) };
+  }), []);
+  const setPolar = useCallback((v: boolean) => setState(prev => ({
+    ...prev, polar: v, ...(v ? { ortho: false } : {})
+  })), []);
+
+  const toggleDynInput = useCallback(() => setState(prev => ({ ...prev, dynInput: !prev.dynInput })), []);
+  const setDynInput = useCallback((v: boolean) => setState(prev => ({ ...prev, dynInput: v })), []);
 
   return {
-    osnap: {
-      on: osnap,
-      toggle: () => setOsnap(prev => !prev),
-      set: setOsnap
-    },
-    grid: {
-      on: grid,
-      toggle: () => setGrid(prev => !prev),
-      set: setGrid
-    },
-    snap: {
-      on: snap,
-      toggle: () => setSnap(prev => !prev),
-      set: setSnap
-    },
-    ortho: {
-      on: ortho,
-      toggle: toggleOrtho,
-      set: (value: boolean) => {
-        setOrtho(value);
-        if (value) setPolar(false);
-      }
-    },
-    polar: {
-      on: polar,
-      toggle: togglePolar,
-      set: (value: boolean) => {
-        setPolar(value);
-        if (value) setOrtho(false);
-      }
-    },
-    dynInput: {
-      on: dynInput,
-      toggle: () => setDynInput(prev => !prev),
-      set: setDynInput
-    }
+    osnap:    { on: state.osnap,    toggle: toggleOsnap,    set: setOsnap    },
+    grid:     { on: state.grid,     toggle: toggleGrid,     set: setGrid     },
+    snap:     { on: state.snap,     toggle: toggleSnap,     set: setSnap     },
+    ortho:    { on: state.ortho,    toggle: toggleOrtho,    set: setOrtho    },
+    polar:    { on: state.polar,    toggle: togglePolar,    set: setPolar    },
+    dynInput: { on: state.dynInput, toggle: toggleDynInput, set: setDynInput },
   };
 };

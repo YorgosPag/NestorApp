@@ -8,7 +8,7 @@
  * subsystem incrementally without forcing other phases to ship same-time.
  *
  * @module services/user-settings/user-settings-schema
- * @enterprise ADR-XXX (UserSettings SSoT — Firestore-backed industry pattern)
+ * @enterprise ADR-341 (UserSettings SSoT — Firestore-backed industry pattern)
  */
 
 import { z } from 'zod';
@@ -100,6 +100,17 @@ const snapSettingsSchema = z.object({
   tolerance: z.number().min(0).max(100).optional(),
 });
 
+// ─── CAD Toggles (toolbar toggles — persisted per user) ─────────────────────
+
+const cadTogglesSchema = z.object({
+  osnap: z.boolean(),
+  grid: z.boolean(),
+  snap: z.boolean(),
+  ortho: z.boolean(),
+  polar: z.boolean(),
+  dynInput: z.boolean(),
+});
+
 // ─── Top-level document ─────────────────────────────────────────────────────
 
 export const USER_SETTINGS_SCHEMA_VERSION = 1 as const;
@@ -114,6 +125,7 @@ export const userSettingsSchema = z.object({
       rulersGrid: rulersGridSettingsSchema.optional(),
       dxfSettings: dxfSettingsSliceSchema.optional(),
       snap: snapSettingsSchema.optional(),
+      cadToggles: cadTogglesSchema.optional(),
     })
     .optional(),
   updatedAt: z.unknown().optional(),
@@ -125,10 +137,12 @@ export type CursorSettingsSlice = z.infer<typeof cursorSettingsSchema>;
 export type RulersGridSettingsSlice = z.infer<typeof rulersGridSettingsSchema>;
 export type DxfSettingsSlice = z.infer<typeof dxfSettingsSliceSchema>;
 export type SnapSettingsSlice = z.infer<typeof snapSettingsSchema>;
+export type CadTogglesSettingsSlice = z.infer<typeof cadTogglesSchema>;
 
 /** All known slice paths under `dxfViewer`. Used by repository.update<T>(path, ...). */
 export type DxfViewerSlicePath =
   | 'dxfViewer.cursor'
   | 'dxfViewer.rulersGrid'
   | 'dxfViewer.dxfSettings'
-  | 'dxfViewer.snap';
+  | 'dxfViewer.snap'
+  | 'dxfViewer.cadToggles';

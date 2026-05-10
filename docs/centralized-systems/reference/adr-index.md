@@ -353,6 +353,7 @@
 | **ADR-332** | Enterprise Address Editor System v2.0 (10-phase: coordinator + field badges + telemetry + a11y) | ✅ IMPLEMENTED | [View](./adrs/ADR-332-enterprise-address-editor-system.md) |
 | **ADR-337** | BOQ Categories Level 2 Hierarchy (12 × 5–7 curated sub-categories, extends ADR-175) | 📋 PROPOSED | [View](../../../adrs/ADR-337-boq-categories-level2-hierarchy.md) |
 | **ADR-340** | Floorplan Background System (single-per-floor, provider pattern PDF/Image, calibration, Procore-grade strong separation; supersedes pdf-background subsystem) | 📋 PROPOSED | [View](./adrs/ADR-340-raster-background-layers-system.md) |
+| **ADR-341** | UserSettings SSoT — Firestore-backed per-user DXF viewer settings (cursor, rulers/grid, snap, cadToggles). Singleton repository, subscribeSlice/updateSlice, echo-loop guard. | ✅ IMPLEMENTED | [View](../../../adrs/ADR-341-user-settings-ssot.md) |
 | **ADR-342** | Voice Input Field SSoT (useVoiceInput + VoiceMicButton + /api/voice/polish — inline field voice-to-text with AI polish) | ✅ IMPLEMENTED | [View](./adrs/ADR-342-voice-input-field-ssot.md) |
 
 ---

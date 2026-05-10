@@ -11,6 +11,7 @@
  */
 
 import type {
+  CadTogglesSettingsSlice,
   CursorSettingsSlice,
   DxfSettingsSlice,
   DxfViewerSlicePath,
@@ -24,6 +25,7 @@ export type SliceValueMap = {
   'dxfViewer.rulersGrid': RulersGridSettingsSlice;
   'dxfViewer.dxfSettings': DxfSettingsSlice;
   'dxfViewer.snap': SnapSettingsSlice;
+  'dxfViewer.cadToggles': CadTogglesSettingsSlice;
 };
 
 /** Read a slice from the in-memory doc by its `dxfViewer.<key>` path. */

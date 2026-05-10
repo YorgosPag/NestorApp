@@ -19,7 +19,7 @@
  *   sanitized (undefined → null per Firestore contract), audit-logged.
  *
  * @module services/user-settings/user-settings-repository
- * @enterprise ADR-XXX (UserSettings SSoT — Firestore-backed industry pattern)
+ * @enterprise ADR-341 (UserSettings SSoT — Firestore-backed industry pattern)
  *             ADR-195 (EntityAuditService for change history)
  *             ADR-214 (firestoreQueryService SSoT for reads/writes)
  *             N.6 (deterministic composite ID via user-settings-id helper)
