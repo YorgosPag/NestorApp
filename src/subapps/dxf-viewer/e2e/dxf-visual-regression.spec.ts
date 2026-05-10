@@ -12,6 +12,9 @@ declare global {
       clearSelection: () => void;
       getSelectedEntityIds: () => string[];
       worldToScreen: (wx: number, wy: number) => { x: number; y: number };
+      drawPreview: (entity: Record<string, unknown>) => void;
+      clearPreview: () => void;
+      setActiveTool: (tool: string) => void;
     };
   }
 }
@@ -167,5 +170,86 @@ test.describe('Phase 3 — Selection', () => {
     await page.keyboard.press('Delete');
     await page.waitForTimeout(300);
     await expect(page).toHaveScreenshot('select-then-delete.png', SCREENSHOT_OPTIONS);
+  });
+});
+
+test.describe('Phase 4 — Drawing Tool Previews', () => {
+  test('draw-line-preview — in-progress line ghost', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.setActiveTool('line'));
+    await page.evaluate(() => window.__dxfTest.drawPreview({
+      id: 'preview-line', type: 'line', layer: '0', color: '#00ff00',
+      lineWidth: 2, visible: true,
+      start: { x: 150, y: 150 }, end: { x: 350, y: 220 },
+    }));
+    await page.waitForTimeout(300);
+    await expect(page).toHaveScreenshot('draw-line-preview.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('draw-circle-preview — circle with radius arm cursor', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.setActiveTool('circle'));
+    await page.evaluate(() => window.__dxfTest.drawPreview({
+      id: 'preview-circle', type: 'circle', layer: '0', color: '#00ff00',
+      lineWidth: 2, visible: true,
+      center: { x: 250, y: 200 }, radius: 70,
+      previewCursorPoint: { x: 320, y: 200 },
+      showPreviewMeasurements: true,
+    }));
+    await page.waitForTimeout(300);
+    await expect(page).toHaveScreenshot('draw-circle-preview.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('draw-arc-preview — 3-point arc with construction lines', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.setActiveTool('arc-3p'));
+    await page.evaluate(() => window.__dxfTest.drawPreview({
+      id: 'preview-arc', type: 'arc', layer: '0', color: '#00ff00',
+      lineWidth: 2, visible: true,
+      center: { x: 250, y: 200 }, radius: 80,
+      startAngle: 0, endAngle: 120, counterclockwise: false,
+      constructionVertices: [{ x: 330, y: 200 }, { x: 210, y: 269 }, { x: 210, y: 269 }],
+      showConstructionLines: true,
+      constructionLineMode: 'polyline',
+    }));
+    await page.waitForTimeout(300);
+    await expect(page).toHaveScreenshot('draw-arc-preview.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('draw-polyline-preview — open polyline in progress', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.setActiveTool('polyline'));
+    await page.evaluate(() => window.__dxfTest.drawPreview({
+      id: 'preview-poly', type: 'polyline', layer: '0', color: '#00ff00',
+      lineWidth: 2, visible: true,
+      vertices: [
+        { x: 130, y: 150 }, { x: 200, y: 250 },
+        { x: 300, y: 250 }, { x: 360, y: 150 },
+      ],
+      closed: false,
+    }));
+    await page.waitForTimeout(300);
+    await expect(page).toHaveScreenshot('draw-polyline-preview.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('draw-rectangle-preview — closed polyline rectangle', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.setActiveTool('rectangle'));
+    await page.evaluate(() => window.__dxfTest.drawPreview({
+      id: 'preview-rect', type: 'polyline', layer: '0', color: '#00ff00',
+      lineWidth: 2, visible: true,
+      vertices: [
+        { x: 150, y: 150 }, { x: 350, y: 150 },
+        { x: 350, y: 260 }, { x: 150, y: 260 },
+      ],
+      closed: true,
+    }));
+    await page.waitForTimeout(300);
+    await expect(page).toHaveScreenshot('draw-rectangle-preview.png', SCREENSHOT_OPTIONS);
   });
 });
