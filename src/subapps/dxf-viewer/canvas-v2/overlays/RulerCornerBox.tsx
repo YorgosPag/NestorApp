@@ -18,8 +18,7 @@
  * @see ADR-009 in docs/centralized-systems/reference/adr-index.md
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import {
   Tooltip,
@@ -27,6 +26,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import styles from './RulerCornerBox.module.css';
 // 🏢 ADR-079: Centralized Movement Detection Constants (Zoom Preset Matching)
@@ -108,12 +112,7 @@ export default function RulerCornerBox({
   viewport,
 }: RulerCornerBoxProps) {
   const { t } = useTranslation('dxf-viewer-panels');
-  // menuPos: fixed-pixel anchor for the portal menu (bottom-left of menu = bottom-right of button)
-  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
-  const isMenuOpen = menuPos !== null;
-
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const lastClickRef = useRef<number>(0);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -121,28 +120,7 @@ export default function RulerCornerBox({
   const zoomPercent = Math.round(currentScale * 100);
   const zoomDisplay = zoomPercent >= 1000 ? `${(zoomPercent / 1000).toFixed(1)}k%` : formatPercent(currentScale);
 
-  // Close menu on outside pointerdown or Escape
-  useEffect(() => {
-    if (!menuPos) return;
-
-    const handlePointerDown = (e: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuPos(null);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuPos(null);
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [menuPos]);
-
-  const closeMenu = useCallback(() => setMenuPos(null), []);
+  const closeMenu = useCallback(() => setIsMenuOpen(false), []);
 
   // ===== CLICK HANDLERS =====
 
@@ -227,16 +205,11 @@ export default function RulerCornerBox({
   }, [onZoomToFit, onZoom100, onZoomIn, onZoomOut, onZoomPrevious]);
 
   // ===== CONTEXT MENU HANDLER =====
-  // Uses getBoundingClientRect() so overflow:hidden on the canvas container can't interfere.
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (rect) {
-      // bottom-left of menu aligns with bottom-right of button
-      setMenuPos({ x: rect.right, y: rect.bottom });
-    }
+    setIsMenuOpen(true);
   }, []);
 
   // ===== TOOLTIP CONTENT =====
@@ -266,22 +239,64 @@ export default function RulerCornerBox({
     </section>
   );
 
-  // ===== PORTAL MENU =====
-  // Rendered directly to document.body with position:fixed so overflow:hidden cannot clip it.
+  // ===== RENDER =====
+  // PopoverAnchor wraps the button: positions the PopoverContent without adding click handlers.
+  // Tooltip wraps the same button for hover behavior — both use the same anchor element.
 
-  const portalMenu = menuPos
-    ? createPortal(
-        <div
-          ref={menuRef}
-          role="menu"
-          aria-label={t('rulerCornerBox.menu.zoomPresets')}
-          className={styles.menuContent}
-          style={{
-            position: 'fixed',
-            left: menuPos.x,
-            bottom: window.innerHeight - menuPos.y,
-            zIndex: 1800,
-          }}
+  return (
+    <TooltipProvider delayDuration={500}>
+      <Popover open={isMenuOpen} onOpenChange={(open) => { if (!open) setIsMenuOpen(false); }}>
+        <Tooltip>
+          <PopoverAnchor asChild>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                data-ruler-corner-box="true"
+                className={cn(styles.cornerBox, className)}
+                style={{
+                  left: 0,
+                  bottom: 0,
+                  width: rulerWidth,
+                  height: rulerHeight,
+                  backgroundColor,
+                  color: textColor,
+                }}
+                onClick={handleClick}
+                onContextMenu={handleContextMenu}
+                onWheel={handleWheel}
+                onKeyDown={handleKeyDown}
+                aria-label={t('rulerCornerBox.aria.cornerBox', { zoomPercent })}
+                aria-haspopup="menu"
+                aria-expanded={isMenuOpen}
+                tabIndex={0}
+              >
+                <div className={styles.content}>
+                  <span className={styles.originMarker}>
+                    <OriginMarkerIcon color={textColor} />
+                  </span>
+                  <span className={styles.zoomLevel} aria-live="polite">
+                    {zoomDisplay}
+                  </span>
+                </div>
+                <span className={styles.srOnly}>
+                  {t('rulerCornerBox.aria.srOnly')}
+                </span>
+              </button>
+            </TooltipTrigger>
+          </PopoverAnchor>
+
+          <TooltipContent side="right" sideOffset={8}>
+            {tooltipContent}
+          </TooltipContent>
+        </Tooltip>
+
+        <PopoverContent
+          side="right"
+          align="end"
+          sideOffset={8}
+          alignOffset={80}
+          className={`${styles.menuContent} z-[1800]`}
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomToFit(); closeMenu(); }}>
             <span className={styles.menuItemIcon}><FitIcon /></span>
@@ -325,72 +340,17 @@ export default function RulerCornerBox({
                 type="button"
                 className={cn(
                   styles.zoomPresetButton,
-                  // 🏢 ADR-079: Use centralized zoom preset matching threshold
                   Math.abs(currentScale - scale) < MOVEMENT_DETECTION.ZOOM_PRESET_MATCH && styles.active
                 )}
-                onClick={() => {
-                  onZoomToScale(scale);
-                  closeMenu();
-                }}
+                onClick={() => { onZoomToScale(scale); closeMenu(); }}
                 aria-pressed={Math.abs(currentScale - scale) < MOVEMENT_DETECTION.ZOOM_PRESET_MATCH}
               >
                 {label}
               </button>
             ))}
           </nav>
-        </div>,
-        document.body
-      )
-    : null;
-
-  // ===== RENDER =====
-
-  return (
-    <>
-      <TooltipProvider delayDuration={500}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              ref={buttonRef}
-              type="button"
-              className={cn(styles.cornerBox, className)}
-              style={{
-                left: 0,
-                bottom: 0,
-                width: rulerWidth,
-                height: rulerHeight,
-                backgroundColor,
-                color: textColor,
-              }}
-              onClick={handleClick}
-              onContextMenu={handleContextMenu}
-              onWheel={handleWheel}
-              onKeyDown={handleKeyDown}
-              aria-label={t('rulerCornerBox.aria.cornerBox', { zoomPercent })}
-              aria-haspopup="menu"
-              aria-expanded={isMenuOpen}
-              tabIndex={0}
-            >
-              <div className={styles.content}>
-                <span className={styles.originMarker}>
-                  <OriginMarkerIcon color={textColor} />
-                </span>
-                <span className={styles.zoomLevel} aria-live="polite">
-                  {zoomDisplay}
-                </span>
-              </div>
-              <span className={styles.srOnly}>
-                {t('rulerCornerBox.aria.srOnly')}
-              </span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
-            {tooltipContent}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      {portalMenu}
-    </>
+        </PopoverContent>
+      </Popover>
+    </TooltipProvider>
   );
 }
