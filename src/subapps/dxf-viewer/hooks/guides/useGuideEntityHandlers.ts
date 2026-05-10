@@ -11,7 +11,9 @@ import type { UseConstructionPointStateReturn } from '../state/useConstructionPo
 import type { PromptDialogOptions } from '../../systems/prompt-dialog';
 import type { SceneModel } from '../../types/scene';
 import type { ToolType } from '../../ui/toolbar/types';
+import type { Entity } from '../../types/entities';
 import type { GuideWorkflowState, ArcPickableEntity, LinePickableEntity } from './guide-workflow-types';
+import { extractEntityKeyPoints } from './extract-entity-key-points';
 
 interface UseGuideEntityHandlersParams {
   activeTool: ToolType | string;
@@ -356,10 +358,13 @@ export function useGuideEntityHandlers(params: UseGuideEntityHandlersParams) {
     store.setGuideColor(guideId, color);
   }, [guideState]);
 
-  // ─── Measurement → Guide notification ───
-  const handleMeasurementComplete = useCallback((points: ReadonlyArray<{ x: number; y: number }>, _tool: ToolType) => {
-    if (points.length < 2) return;
-    notifySuccess(t('guides.measureToGuide'), {
+  // ─── Shared: prompt to materialize X/Y guides at the given points ───
+  const promptCreateGuidesAtPoints = useCallback((
+    points: ReadonlyArray<Point2D>,
+    messageKey: string,
+  ) => {
+    if (points.length === 0) return;
+    notifySuccess(t(messageKey), {
       duration: 5000,
       actions: [{
         label: t('guides.createGuides'),
@@ -377,6 +382,22 @@ export function useGuideEntityHandlers(params: UseGuideEntityHandlersParams) {
     });
   }, [notifySuccess, t, guideState]);
 
+  // ─── Measurement → Guide notification (B36) ───
+  const handleMeasurementComplete = useCallback((points: ReadonlyArray<Point2D>, _tool: ToolType) => {
+    if (points.length < 2) return;
+    promptCreateGuidesAtPoints(points, 'guides.measureToGuide');
+  }, [promptCreateGuidesAtPoints]);
+
+  // ─── Entity → Guide notification (B121 — ADR-189) ───
+  // Fired by `EventBus.on('drawing:complete', ...)` for every entity created via
+  // the unified completion pipeline (ADR-057). Measurement tools are excluded
+  // (handled by handleMeasurementComplete above).
+  const handleEntityComplete = useCallback((entity: Entity, _tool: ToolType | string) => {
+    const points = extractEntityKeyPoints(entity);
+    if (points.length === 0) return;
+    promptCreateGuidesAtPoints(points, 'guides.entityToGuide');
+  }, [promptCreateGuidesAtPoints]);
+
   return {
     handleGuideFromEntity, handleGuideOffsetFromEntity,
     handleGuideSelectToggle, handleGuideDeselectAll,
@@ -387,5 +408,6 @@ export function useGuideEntityHandlers(params: UseGuideEntityHandlersParams) {
     handleGuideContextDelete, handleGuideContextToggleLock,
     handleGuideContextEditLabel, handleGuideContextChangeColor,
     handleMeasurementComplete,
+    handleEntityComplete,
   } as const;
 }

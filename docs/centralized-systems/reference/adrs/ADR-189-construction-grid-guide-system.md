@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements (31): B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B4 Lock ✅, B5 Drag ✅, B6 Colors ✅, B7 Groups ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B11 Info Panel ✅, B12 Snap Midpoint ✅, B13 Keyboard Shortcuts ✅, B14 Multi-select ✅, B15 Toggle Visibility ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B20 Undo/Redo ✅, B22 Context Menu ✅, B23 Structural Presets ✅, B24 Offset from Entity ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B35 Construction Line ✅, B36 Measure→Guide ✅, B37 Guide from Selection ✅, B38 Custom Labels ✅. 14/14 commands + 31 enhancements. |
+| **Status** | ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements (32): B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B4 Lock ✅, B5 Drag ✅, B6 Colors ✅, B7 Groups ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B11 Info Panel ✅, B12 Snap Midpoint ✅, B13 Keyboard Shortcuts ✅, B14 Multi-select ✅, B15 Toggle Visibility ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B20 Undo/Redo ✅, B22 Context Menu ✅, B23 Structural Presets ✅, B24 Offset from Entity ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B35 Construction Line ✅, B36 Measure→Guide ✅, B37 Guide from Selection ✅, B38 Custom Labels ✅, B121 Entity→Guide ✅. 14/14 commands + 32 enhancements. |
 | **Date** | 2026-02-22 |
 | **Module** | DXF Viewer / Grid System |
 | **Inspiration** | LH Λογισμική — Fespa / Τέκτων (Master) |
@@ -507,6 +507,7 @@
 | B36 | **Measure → Guide** ✅ | Μετά μέτρηση: notification με "Create Guides" button → αυτόματη δημιουργία X/Y οδηγών στα σημεία μέτρησης | ⭐ Υψηλή |
 | B37 | **Guide from selection** ✅ | `BatchGuideFromEntitiesCommand`: selected entities → guides per entity (same logic as B8). G→0 | ✅ Υλοποιήθηκε |
 | B38 | **Custom labels** ✅ | `guide.label` field + context menu edit. Bubbles render custom text. `setGuideLabel()` στο GuideStore | ✅ Υλοποιήθηκε |
+| B121 | **Entity → Guide** ✅ | Γενίκευση του B36 σε **όλες** τις οντότητες (line/circle/arc/polyline/rectangle/text/dimension/spline). EventBus subscription σε `drawing:complete` (ADR-057). `extract-entity-key-points.ts` = SSOT για key-points/entity. Notification με ίδιο "Create Guides" action ⇒ X/Y guides. Measurement tools εξαιρούνται (handled by B36) | ⭐ Υψηλή |
 
 ### 4.10 Context-Aware Guides — Έξυπνοι Οδηγοί Βάσει Γεωμετρίας (Γιώργος ✅)
 
@@ -1885,6 +1886,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-02-22 | **B32: Scale Grid (G→3)**: 1-click origin → PromptDialog scale factor → `ScaleAllGuidesCommand` scales all visible/unlocked guides. X/Y keep axis type (linear offset scaling), XZ scales both endpoints. Preserves axis type unlike rotation. Scaling icon. 14 files, 223 lines added |
 | 2026-02-22 | **B16: Guide at Angle (G→4)**: 1-click origin → PromptDialog angle (degrees) → creates XZ guide through origin at typed angle. Reuses `addDiagonalGuide` (no new command). Compass icon. 11 files, 81 lines added |
 | 2026-02-23 | **B19: Mirror Guides (G→5)**: 1-click on X/Y guide → `MirrorGuidesCommand` creates mirrored copies of all visible/unlocked guides. X guides mirror offset, XZ mirror endpoints. FlipHorizontal2 icon. Hover highlight. 14 files, 219 lines |
+| 2026-05-11 | **B121: Entity → Guide notification**: Γενίκευση του B36 σε όλες τις οντότητες. `EventBus.on('drawing:complete', ...)` listener στο `useEntityCompleteGuideListener` → `handleEntityComplete(entity, tool)` → notification "Create guides at entity points?" → X/Y guides στα entity key-points. SSOT extractor `extract-entity-key-points.ts` (line: start+end / circle+ellipse: center / arc: center+endpoints / polyline+spline: vertices / rectangle: 4 corners / text+point: position / dimension: 2 endpoints). Measurement tools εξαιρούνται (skip via `MEASURE_TOOLS_FOR_GUIDES` set εξαγόμενο από `useDrawingHandlers.ts`). `promptCreateGuidesAtPoints()` helper εξάγει το common X/Y guide creation logic μεταξύ B36 και B121 (DRY/SSOT). i18n key: `guides.entityToGuide`. 7 files modified |
 
 ---
 

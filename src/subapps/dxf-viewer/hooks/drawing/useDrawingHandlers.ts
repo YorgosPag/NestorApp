@@ -97,8 +97,13 @@ function handleToolCompletion(
 
 // 🏢 ENTERPRISE: Type-safe entity created callback
 // 🏢 ADR-040: Optional previewCanvasRef for direct preview rendering (performance optimization)
-/** B36 (ADR-189): Measurement tools that support "Create Guides" prompt */
-const MEASURE_TOOLS_FOR_GUIDES = new Set<string>([
+/**
+ * B36 (ADR-189): Measurement tools that support "Create Guides" prompt via
+ * the dedicated `onMeasurementComplete` callback (raw point list, no entity).
+ * Re-exported so the B39 entity→guide listener can skip these tools and
+ * avoid raising a second notification on the same completion.
+ */
+export const MEASURE_TOOLS_FOR_GUIDES = new Set<string>([
   'measure-distance', 'measure-distance-continuous', 'measure-angle',
 ]);
 

@@ -16,6 +16,7 @@
 
 import { useMemo, useRef } from 'react';
 
+import { perfMark } from '../../debug/perf-line-profile';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/entities';
@@ -146,7 +147,7 @@ export function useDxfSceneConversion({
   // (the common case for incremental scene updates), conversion is skipped.
   const cacheRef = useRef<WeakMap<object, DxfEntityUnion>>(new WeakMap());
 
-  const dxfScene = useMemo<DxfScene>(() => {
+  const dxfScene = useMemo<DxfScene>(() => perfMark('useDxfSceneConversion.memo', () => {
     const entities = currentScene?.entities ?? [];
     const layers = currentScene?.layers ?? {};
     const cache = cacheRef.current;
@@ -169,7 +170,7 @@ export function useDxfSceneConversion({
       layers: Object.keys(layers),
       bounds: currentScene?.bounds ?? null,
     };
-  }, [currentScene]);
+  }), [currentScene]);
 
   return { dxfScene };
 }
