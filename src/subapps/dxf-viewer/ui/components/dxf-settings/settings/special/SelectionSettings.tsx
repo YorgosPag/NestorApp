@@ -13,6 +13,7 @@ import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 // 🏢 ADR-081: Centralized percentage formatting
+const I18N_NAMESPACES = ['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell'] as const;
 import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 import { SliderInput } from '../../../shared/SliderInput';
 
@@ -24,7 +25,7 @@ export function SelectionSettings() {
   const { getStatusBorder, getElementBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // 🌐 i18n
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation(I18N_NAMESPACES);
 
   // 🏢 ENTERPRISE: Type-safe selection field value type
   type SelectionFieldValue = string | number | 'solid' | 'dashed' | 'dotted' | 'dash-dot';

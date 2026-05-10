@@ -57,6 +57,8 @@ import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { useTranslation } from '@/i18n';
 import { SliderInput } from '../../../shared/SliderInput';
 
+const I18N_NAMESPACES = ['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell'] as const;
+
 export interface CrosshairAppearanceSettingsProps {
   className?: string;
   cursorColors: CursorColors;
@@ -87,7 +89,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
   const { quick, getStatusBorder, radius, radiusClass } = useBorderTokens();
   const colors = useSemanticColors();
   // 🌐 i18n
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+  const { t } = useTranslation(I18N_NAMESPACES);
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -139,7 +141,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => {
               updateSettings({ crosshair: { ...settings.crosshair, line_style: 'solid' } });
             }}
-            className={`${PANEL_LAYOUT.SPACING.SM} flex flex-col items-center ${quick.button} ${radiusClass.sm} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
+            className={`${PANEL_LAYOUT.SPACING.SM} flex flex-col items-center ${radiusClass.sm} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
               (settings.crosshair.line_style || 'solid') === 'solid'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -153,7 +155,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dashed' } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} flex flex-col items-center ${quick.button} ${radiusClass.sm} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
+            className={`${PANEL_LAYOUT.SPACING.SM} flex flex-col items-center ${radiusClass.sm} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
               (settings.crosshair.line_style || 'solid') === 'dashed'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -167,7 +169,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dotted' } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} flex flex-col items-center ${quick.button} ${radiusClass.sm} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
+            className={`${PANEL_LAYOUT.SPACING.SM} flex flex-col items-center ${radiusClass.sm} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
               (settings.crosshair.line_style || 'solid') === 'dotted'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
@@ -181,7 +183,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dash-dot' } })}
-            className={`${PANEL_LAYOUT.SPACING.SM} flex flex-col items-center ${quick.button} ${radiusClass.sm} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
+            className={`${PANEL_LAYOUT.SPACING.SM} flex flex-col items-center ${radiusClass.sm} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
               (settings.crosshair.line_style || 'solid') === 'dash-dot'
                 ? `${colors.bg.primary} ${getStatusBorder('info')}`
                 : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`

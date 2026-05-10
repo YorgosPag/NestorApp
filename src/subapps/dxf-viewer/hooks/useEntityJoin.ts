@@ -157,5 +157,8 @@ export function useEntityJoin({
     return mergeService.getJoinPreview(entityIds, scene);
   }, [getScene, mergeService]);
 
-  return { joinEntities, canJoin, getJoinPreview };
+  return useMemo(
+    () => ({ joinEntities, canJoin, getJoinPreview }),
+    [joinEntities, canJoin, getJoinPreview],
+  );
 }

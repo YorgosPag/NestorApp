@@ -33,7 +33,7 @@ import { LegacySnapAdapter } from '../../rendering/ui/snap/LegacySnapAdapter';
 import { SelectionRenderer } from './selection/SelectionRenderer';
 import { UIRendererComposite } from '../../rendering/ui/core/UIRendererComposite';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/core/UIRenderContext';
-import type { UIElementSettings, UIRenderMetrics } from '../../rendering/ui/core/UIRenderer';
+import type { UIRenderMetrics } from '../../rendering/ui/core/UIRenderer';
 // 🏢 ENTERPRISE: Centralized GripSettings type
 import type { GripSettings } from '../../types/gripSettings';
 
@@ -297,12 +297,7 @@ export class LayerRenderer {
 
     // 4. Render selection box
     if (options.showSelectionBox && options.selectionBox) {
-      const selectionContext = createUIRenderContext(this.ctx, viewport, DEFAULT_UI_TRANSFORM);
-      this.selectionRenderer.render(
-        selectionContext,
-        viewport,
-        { ...selectionSettings, enabled: true, visible: true, opacity: 1.0 } as UIElementSettings
-      );
+      this.selectionRenderer.renderSelection(options.selectionBox, viewport, selectionSettings);
     }
 
     // 5. Debug: Ruler calibration grid (enterprise calibration & verification)

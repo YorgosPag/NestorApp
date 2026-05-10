@@ -12,7 +12,7 @@
  *   - Valore mostrato accanto alla label (showValue + formatValue)
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -65,6 +65,9 @@ export function SliderInput({
 
   const displayValue = formatValue ? formatValue(value) : String(value);
 
+  // Stable array ref — Radix Slider's internal useMemo has this as a dep
+  const sliderValues = useMemo(() => [value], [value]);
+
   const handleSliderChange = (values: number[]) => onChange(values[0]);
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -95,7 +98,7 @@ export function SliderInput({
 
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
         <Slider
-          value={[value]}
+          value={sliderValues}
           min={min}
           max={max}
           step={step}

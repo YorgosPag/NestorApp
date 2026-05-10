@@ -131,9 +131,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
       <ToolbarWithCursorCoordinates
           activeTool={dxfProps.activeTool}
           onToolChange={dxfProps.onToolChange}
-          onAction={(action, data) => {
-            dxfProps.onAction(action, data);
-          }}
+          onAction={dxfProps.onAction}
           showGrid={dxfProps.showGrid}
           autoCrop={false}
           canUndo={dxfProps.canUndo}

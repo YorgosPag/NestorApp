@@ -23,7 +23,7 @@ interface ToolButtonProps {
   activeTool?: string;
 }
 
-export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, onDropdownSelect, disabled, activeTool }) => {
+const ToolButtonInner: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, onDropdownSelect, disabled, activeTool }) => {
   // 🏢 ENTERPRISE HOOKS: Zero duplicates - using existing centralized systems
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -207,11 +207,13 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
   );
 };
 
+export const ToolButton = React.memo(ToolButtonInner);
+
 interface ActionButtonProps {
   action: ActionDefinition;
 }
 
-export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
+const ActionButtonInner: React.FC<ActionButtonProps> = ({ action }) => {
   const iconSizes = useIconSizes();
   // 🌐 i18n
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
@@ -251,3 +253,5 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
     </TooltipProvider>
   );
 };
+
+export const ActionButton = React.memo(ActionButtonInner);
