@@ -48,6 +48,8 @@ import {
   HistoryIcon,
   OriginMarkerIcon,
 } from '../../ui/icons/MenuIcons';
+// ADR-040 Phase VIII: micro-leaf subscribes to ZoomStore directly
+import { useCurrentZoom } from '../../systems/zoom/ZoomStore';
 
 // ===== TYPES =====
 
@@ -56,8 +58,6 @@ interface RulerCornerBoxProps {
   rulerWidth: number;
   /** Height of the horizontal ruler (bottom) */
   rulerHeight: number;
-  /** Current zoom scale (1.0 = 100%) */
-  currentScale: number;
   /** Background color (from ruler settings) */
   backgroundColor: string;
   /** Text color (from ruler settings) */
@@ -98,7 +98,6 @@ const ZOOM_PRESETS = [
 export default function RulerCornerBox({
   rulerWidth,
   rulerHeight,
-  currentScale,
   backgroundColor,
   textColor,
   onZoomToFit,
@@ -112,6 +111,8 @@ export default function RulerCornerBox({
   viewport,
 }: RulerCornerBoxProps) {
   const { t } = useTranslation('dxf-viewer-panels');
+  // ADR-040 Phase VIII: subscribe to ZoomStore directly (micro-leaf pattern)
+  const currentScale = useCurrentZoom();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const lastClickRef = useRef<number>(0);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);

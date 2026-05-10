@@ -106,6 +106,29 @@ Result: `CanvasContext` transform change → `DxfViewerContent` re-renders (it c
 
 ---
 
+### 2026-05-10: REFACTOR — Phase VIII: Zoom path centralization
+
+**Problem**: Zoom logic dispersed across 5 paths with inconsistent clamping and bypassed ZoomManager:
+1. `useTouchGestures.ts`: pinch clamp hardcoded `[0.01, 1000]` instead of `ZOOM_LIMITS`
+2. `useCentralizedMouseHandlers.ts`: wheel fallback used hardcoded `0.9/1.1` factors instead of `ZOOM_FACTORS`
+3. `useDxfViewerState.ts`: `set-zoom` action called `setTransform({scale})` directly — no clamping, no imperative path
+4. `RulerCornerBox.tsx`: received `currentScale` as prop from `CanvasLayerStack` — violated micro-leaf pattern (ADR-040 Phase VII)
+5. `useCanvasOperations.ts`: no `zoomToScale` method — forced callers to bypass canonical path
+
+**Fix (6 files)**:
+- **`hooks/gestures/useTouchGestures.ts`**: Clamp now uses `ZOOM_LIMITS.MIN_SCALE` / `ZOOM_LIMITS.MAX_SCALE` from `transform-config`
+- **`systems/cursor/useCentralizedMouseHandlers.ts`**: Wheel fallback factors → `ZOOM_FACTORS.WHEEL_OUT` / `ZOOM_FACTORS.WHEEL_IN`; added scale clamping via `TRANSFORM_SCALE_LIMITS`
+- **`hooks/interfaces/useCanvasOperations.ts`**: Added `zoomToScale(scale, center?)` — clamped, computes factor from current transform, delegates to `zoomAtScreenPoint`
+- **`hooks/useDxfViewerState.ts`**: `set-zoom` action → `canvasActions.zoomToScale(data)` (canonical imperative path + clamping)
+- **`canvas-v2/overlays/RulerCornerBox.tsx`**: Removed `currentScale` prop; subscribes to `useCurrentZoom()` internally (micro-leaf SSoT pattern)
+- **`components/dxf-layout/CanvasLayerStack.tsx`**: Removed `currentScale={transform.scale}` prop from `<RulerCornerBox>` JSX
+
+**Result**: All zoom paths (button, pinch, toolbar input, wheel fallback) use consistent clamping from `transform-config`. `RulerCornerBox` is a proper micro-leaf subscriber — no prop drilling through orchestrator.
+
+✅ Google-level: YES — consistent constants (one source), proper clamping everywhere, micro-leaf pattern completed.
+
+---
+
 ### 2026-05-10: TOOLING — Visual regression test suite for DXF canvas
 
 **Infrastructure added** to prevent future regressions on the ADR-040 performance architecture:

@@ -105,6 +105,7 @@ export function useDxfViewerState() {
   const canvasActions = {
     zoomIn: canvasOps.zoomIn,
     zoomOut: canvasOps.zoomOut,
+    zoomToScale: canvasOps.zoomToScale,
     fitToView: canvasOps.fitToView,
     resetToOrigin: canvasOps.resetToOrigin,
     getTransform: canvasOps.getTransform,
@@ -207,14 +208,10 @@ export function useDxfViewerState() {
         canvasActions.resetToOrigin();
         break;
       case 'set-zoom':
-        // 🏢 ENTERPRISE: Direct scale setting from ZoomControls input
         // data is a decimal value (e.g., 1.0 = 100%, 0.5 = 50%)
-        if (typeof data === 'number' && !isNaN(data)) {
-          const currentTransform = canvasActions.getTransform();
-          canvasActions.setTransform({
-            ...currentTransform,
-            scale: data
-          });
+        // Routes through zoomToScale — clamped, centered, via canonical imperative path
+        if (typeof data === 'number' && !isNaN(data) && data > 0) {
+          canvasActions.zoomToScale(data);
         }
         break;
       case 'zoom-window':

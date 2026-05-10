@@ -468,7 +468,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <RulerCornerBox
             rulerWidth={rulerSettings.vertical?.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}
             rulerHeight={rulerSettings.horizontal?.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT}
-            currentScale={transform.scale}
             backgroundColor={globalRulerSettings.horizontal.backgroundColor}
             textColor={globalRulerSettings.horizontal.textColor}
             onZoomToFit={handleRulerZoomToFit}
