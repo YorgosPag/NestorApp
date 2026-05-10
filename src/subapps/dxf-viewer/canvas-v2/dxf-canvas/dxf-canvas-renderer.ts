@@ -6,7 +6,7 @@
  * dirty-flag management for RAF loop.
  */
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useMemo } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { DxfRenderer } from './DxfRenderer';
 import type { DxfScene, DxfRenderOptions, DxfEntityUnion } from './dxf-types';
@@ -100,33 +100,41 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): hybrid bitmap cache for entities
   const bitmapCacheRef = useRef<DxfBitmapCache | null>(null);
 
+  // O(1) entity lookup — rebuilt only when scene changes, not every frame
+  const entityMap = useMemo<Map<string, DxfEntityUnion>>(() => {
+    if (!scene) return new Map();
+    return new Map(scene.entities.map((e) => [e.id, e]));
+  }, [scene]);
+
   const renderScene = useCallback(() => {
     const renderer = refs.rendererRef.current;
     const currentViewport = refs.resolvedViewportRef.current;
     if (!renderer || !currentViewport.width || !currentViewport.height) return;
 
-    const currentTransform = getImmediateTransform(); // Phase I: zero-lag (ADR-040)
+    const currentTransform = getImmediateTransform();
+    // Canvas ctx retrieved once per frame — avoids repeated DOM getContext() calls
+    const ctx = refs.canvasRef.current?.getContext('2d') ?? null;
+    // uiTransform built once — reused for grid + ruler
+    const uiTransform = ctx ? {
+      scale: currentTransform.scale,
+      offsetX: currentTransform.offsetX,
+      offsetY: currentTransform.offsetY,
+      rotation: 0,
+    } : null;
 
     try {
       const hitTesting = serviceRegistry.get('hit-testing');
       hitTesting.updateScene(scene);
 
-      // 1a: Direct render (Phase D bitmap cache disabled — DPR/transform mismatch bug).
-      // The cache (DxfBitmapCache) causes a blank canvas due to entityComposite.setTransform()
-      // overwriting the DPR transform set on the offscreen canvas. Disabled until fixed.
       renderer.render(scene, currentTransform, currentViewport, {
         ...renderOptions,
         skipInteractive: true,
       });
 
-      // 1b: Single-entity interactive overlays (hover, selection grips, drag preview).
-      // Drawn on top of the cached bitmap — does NOT trigger cache invalidation.
+      // 1b: Single-entity interactive overlays (O(1) via entityMap)
       if (scene) {
-        const findEntity = (id: string): DxfEntityUnion | undefined =>
-          scene.entities.find((e) => e.id === id);
-
         if (renderOptions.hoveredEntityId) {
-          const ent = findEntity(renderOptions.hoveredEntityId);
+          const ent = entityMap.get(renderOptions.hoveredEntityId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
               gripInteractionState: renderOptions.gripInteractionState,
@@ -135,9 +143,8 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         }
 
         for (const selId of renderOptions.selectedEntityIds) {
-          // Drag preview takes priority for the dragged entity to avoid double-render.
           if (renderOptions.dragPreview && renderOptions.dragPreview.entityId === selId) continue;
-          const ent = findEntity(selId);
+          const ent = entityMap.get(selId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {
               gripInteractionState: renderOptions.gripInteractionState,
@@ -146,7 +153,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         }
 
         if (renderOptions.dragPreview) {
-          const ent = findEntity(renderOptions.dragPreview.entityId);
+          const ent = entityMap.get(renderOptions.dragPreview.entityId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'drag-preview', {
               gripInteractionState: renderOptions.gripInteractionState,
@@ -157,44 +164,38 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       }
 
       // 2: Grid
-      if (refs.gridRendererRef.current && gridSettings?.enabled) {
-        const ctx = refs.canvasRef.current?.getContext('2d');
-        if (ctx) {
-          const uiTransform = { scale: currentTransform.scale, offsetX: currentTransform.offsetX, offsetY: currentTransform.offsetY, rotation: 0 };
-          const context = createUIRenderContext(ctx, currentViewport, uiTransform);
-          refs.gridRendererRef.current.render(context, currentViewport, gridSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
-        }
+      if (ctx && uiTransform && refs.gridRendererRef.current && gridSettings?.enabled) {
+        const context = createUIRenderContext(ctx, currentViewport, uiTransform);
+        refs.gridRendererRef.current.render(context, currentViewport, gridSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
       }
 
       // 2.5: Guides
-      if (refs.guideRendererRef.current && refs.guidesVisibleRef.current) {
+      if (ctx && refs.guideRendererRef.current && refs.guidesVisibleRef.current) {
         const currentGuides = refs.guidesRef.current;
-        const ctx = refs.canvasRef.current?.getContext('2d');
-        if (ctx && currentGuides && currentGuides.length > 0) {
+        if (currentGuides && currentGuides.length > 0) {
           refs.guideRendererRef.current.renderGuides(
             ctx, currentGuides, currentTransform, currentViewport,
             refs.highlightedGuideIdRef.current, refs.selectedGuideIdsRef.current,
           );
         }
         const currentGhost = refs.ghostGuideRef.current;
-        if (ctx && currentGhost) {
+        if (currentGhost) {
           refs.guideRendererRef.current.renderGhostGuide(ctx, currentGhost.axis, currentGhost.offset, currentTransform, currentViewport);
         }
         const currentGhostDiagonal = refs.ghostDiagonalGuideRef.current;
-        if (ctx && currentGhostDiagonal) {
+        if (currentGhostDiagonal) {
           refs.guideRendererRef.current.renderGhostDiagonalGuide(ctx, currentGhostDiagonal.start, currentGhostDiagonal.end, currentTransform, currentViewport);
         }
         const currentGhostSegment = refs.ghostSegmentLineRef.current;
-        if (ctx && currentGhostSegment) {
+        if (currentGhostSegment) {
           refs.guideRendererRef.current.renderGhostDiagonalGuide(ctx, currentGhostSegment.start, currentGhostSegment.end, currentTransform, currentViewport);
         }
       }
 
       // 2.6: Construction points
-      if (refs.guideRendererRef.current) {
+      if (ctx && refs.guideRendererRef.current) {
         const currentCPs = refs.constructionPointsRef.current;
-        const ctx = refs.canvasRef.current?.getContext('2d');
-        if (ctx && currentCPs && currentCPs.length > 0) {
+        if (currentCPs && currentCPs.length > 0) {
           refs.guideRendererRef.current.renderConstructionPoints(
             ctx, currentCPs, currentTransform, currentViewport, refs.highlightedPointIdRef.current ?? undefined,
           );
@@ -202,20 +203,15 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       }
 
       // 3: Rulers
-      if (refs.rulerRendererRef.current && rulerSettings?.enabled) {
-        const ctx = refs.canvasRef.current?.getContext('2d');
-        if (ctx) {
-          const uiTransform = { scale: currentTransform.scale, offsetX: currentTransform.offsetX, offsetY: currentTransform.offsetY, rotation: 0 };
-          const context = createUIRenderContext(ctx, currentViewport, uiTransform);
-          refs.rulerRendererRef.current.render(context, currentViewport, rulerSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
-        }
+      if (ctx && uiTransform && refs.rulerRendererRef.current && rulerSettings?.enabled) {
+        const context = createUIRenderContext(ctx, currentViewport, uiTransform);
+        refs.rulerRendererRef.current.render(context, currentViewport, rulerSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
       }
 
-      // 3.5: Guide overlays (bubbles + dimensions — on top of rulers)
-      if (refs.guideRendererRef.current && refs.guidesVisibleRef.current) {
+      // 3.5: Guide overlays (bubbles + dimensions)
+      if (ctx && refs.guideRendererRef.current && refs.guidesVisibleRef.current) {
         const currentGuides = refs.guidesRef.current;
-        const ctx = refs.canvasRef.current?.getContext('2d');
-        if (ctx && currentGuides && currentGuides.length > 0) {
+        if (currentGuides && currentGuides.length > 0) {
           refs.guideRendererRef.current.renderGuideBubbles(ctx, currentGuides, currentTransform, currentViewport);
           if (refs.showGuideDimensionsRef.current && currentGuides.length >= 2) {
             refs.guideRendererRef.current.renderGuideDimensions(ctx, currentGuides, currentTransform, currentViewport);
@@ -223,7 +219,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         }
       }
 
-      // 4: Selection box (on top of everything)
+      // 4: Selection box
       const selState = refs.selectionStateRef.current;
       const currentActiveTool = refs.activeToolRef.current;
       if (refs.selectionRendererRef.current && currentActiveTool !== 'pan' &&
@@ -239,7 +235,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     } catch (error) {
       logger.error('Failed to render DXF scene', { error });
     }
-  }, [scene, renderOptions, gridSettings, rulerSettings, refs]);
+  }, [scene, renderOptions, gridSettings, rulerSettings, refs, entityMap]);
 
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache lifecycle
   useEffect(() => {

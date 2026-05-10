@@ -10,7 +10,7 @@
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('DxfCanvas');
 
-import React, { useRef, useEffect, useCallback, useImperativeHandle } from 'react';
+import React, { useRef, useEffect, useCallback, useImperativeHandle, useMemo } from 'react';
 import { DxfRenderer } from './DxfRenderer';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
@@ -257,17 +257,21 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     }
   }, []);
 
+  // Refs are stable for component lifetime — bundle once to keep `renderScene`
+  // useCallback dep stable across renders (was the dominant invalidation cause).
+  const rendererRefs = useMemo(() => ({
+    rendererRef, canvasRef, gridRendererRef, rulerRendererRef,
+    guideRendererRef, selectionRendererRef, transformRef, resolvedViewportRef,
+    selectionStateRef, activeToolRef,
+    guidesRef, guidesVisibleRef, showGuideDimensionsRef, highlightedGuideIdRef,
+    selectedGuideIdsRef, ghostGuideRef, ghostDiagonalGuideRef,
+    constructionPointsRef, highlightedPointIdRef, ghostSegmentLineRef,
+  }), []);
+
   // Rendering (extracted hook)
   const { isDirtyRef } = useDxfCanvasRenderer({
     scene, renderOptions, gridSettings, rulerSettings, viewport,
-    refs: {
-      rendererRef, canvasRef, gridRendererRef, rulerRendererRef,
-      guideRendererRef, selectionRendererRef, transformRef, resolvedViewportRef,
-      selectionStateRef, activeToolRef,
-      guidesRef, guidesVisibleRef, showGuideDimensionsRef, highlightedGuideIdRef,
-      selectedGuideIdsRef, ghostGuideRef, ghostDiagonalGuideRef,
-      constructionPointsRef, highlightedPointIdRef, ghostSegmentLineRef,
-    },
+    refs: rendererRefs,
     transform, guides, guidesVisible, showGuideDimensions,
     ghostGuide, ghostDiagonalGuide, highlightedGuideId,
     constructionPoints, highlightedPointId, ghostSegmentLine,
