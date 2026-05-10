@@ -71,6 +71,32 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-11: PERF — Phase XII: DxfCanvas register-effect once-per-mount via paramsRef SSoT
+
+**Incident (Firefox profiler, post-Phase XI baseline)**: After Phase XI eliminated the LayerCanvas render-callback storm (`useLayerCanvasRenderer.useEffect.unsubscribe` 13% → 0.1%) and the `refreshBounds` reflow (23% → 0%), a residual hot band remained on `useDxfCanvasRenderer.useEffect.unsubscribe` at **7.8%** (68 unsubscribe samples / 5.2s ≈ **13Hz**) inside `RefreshDriverTick` (still ~34%). FPS stabilized but not yet at flat 60.
+
+**Root cause:** Phase XI applied the `volatileRef` partial fix to `useDxfCanvasRenderer` (`renderOptions` / `gridSettings` / `rulerSettings` consolidated), but `renderScene` `useCallback` deps were left as `[scene, refs, entityMap]`. `entityMap` is a `useMemo([scene])`, so any new `scene` identity propagated through `entityMap → renderScene → registerRenderCallback effect`. Combined with `viewport.width / viewport.height` in the register-effect deps, sub-pixel viewport oscillation (HiDPI / `ResizeObserver` float `contentRect`) plus parent-side `scene` reference churn produced the 13Hz unsubscribe/re-register cadence.
+
+**Fix (Strategy B — single ref SSoT, mirrors Phase XI layer-canvas pattern):**
+
+1. **`paramsRef` consolidation** (`dxf-canvas-renderer.ts:107-113`) — collapse `volatileRef` (3 fields) into a single `paramsRef` holding **all** per-frame volatile state: `{ scene, entityMap, renderOptions, gridSettings, rulerSettings }`. Synced render-by-render. Same SSoT pattern as `paramsRef` in `layer-canvas-hooks.ts:140-141`.
+2. **`renderScene` deps reduced to `[refs]`** (line 245) — was `[scene, refs, entityMap]`. Reads everything from `paramsRef.current` at frame time. `refs` is `useMemo([], ...)` in `DxfCanvas.tsx:259-266` → stable. `renderScene` identity now **invariant** for hook lifetime.
+3. **Register effect runs once per mount** (`dxf-canvas-renderer.ts:268-283`) — deps reduced from `[renderScene, viewport.width, viewport.height, refs.rendererRef]` to `[renderScene, refs]`. Viewport + renderer guards moved **inside** the frame callback (read from `refs.resolvedViewportRef.current` / `refs.rendererRef.current` at frame time, not at effect time). Killed the last source of unsubscribe churn — viewport sub-pixel oscillation no longer triggers re-registration.
+
+**Files modified:**
+- `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` (Phase XII core fix)
+
+**Expected profiler delta:**
+- `useDxfCanvasRenderer.useEffect.unsubscribe`: **7.8% → <1%** (single subscribe at mount, single unsubscribe at unmount)
+- `RefreshDriverTick`: 34% → expected ~25-28% (residual is now legitimate frame work + GC)
+- FPS: stable 60 across hover / pan / snap
+
+**Architectural rule reinforced (cross-reference layer-canvas Phase XI):** Render callbacks registered with `UnifiedFrameScheduler` MUST run **once per mount**. All volatile per-frame state lives in a single `paramsRef` synced render-by-render. `useCallback` deps for the registered render function MUST be `[refs]` only (where `refs` itself is a stable `useMemo([], ...)` bundle). Register-effect deps MUST be `[renderFn, refs]`. Never include primitive viewport dimensions in register-effect deps — read from `resolvedViewportRef.current` inside the frame callback instead. This is now the canonical SSoT pattern for all canvas renderers in this subapp.
+
+**Pre-existing `renderScene` size violation (N.7.1):** `renderScene` is ~130 lines (limit 40). Unchanged by Phase XII — pre-existing, not introduced. Extraction deferred to a dedicated refactor phase to keep Phase XII focused on the perf root cause.
+
+---
+
 ### 2026-05-11: PERF — Phase XI: Render callback identity stabilization + CanvasBounds cache reuse
 
 **Incident (Firefox profiler, mouse hover/snap/drag on layer canvas)**: `RefreshDriverTick` at **36% CPU** with two sibling hot bands: `useLayerCanvasRenderer.useEffect.unsubscribe` **13%** and `useLayerCanvasRenderer.useCallback[renderScene]` **13%**, plus `refreshBounds`/`getBounds`/`updateBounds` summing **~23%** under "Update the rendering Layout". GC sawtooth visible in memory track. Top track filled with red bars (frames >16ms). DXF-side had been partially mitigated in Phase E (2026-05-09) but layer-side and DxfRenderer entity-overlay path were never converted.

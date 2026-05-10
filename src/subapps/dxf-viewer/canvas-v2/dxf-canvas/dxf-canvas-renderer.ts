@@ -98,17 +98,19 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): hybrid bitmap cache for entities
   const bitmapCacheRef = useRef<DxfBitmapCache | null>(null);
 
-  // 🚀 PERF (ADR-040, 2026-05-11): hold volatile per-frame params in a single ref
-  // synced render-by-render. Keeps `renderScene` identity stable so the
-  // registerRenderCallback effect runs ONCE per mount instead of every hover tick.
-  const volatileRef = useRef({ renderOptions, gridSettings, rulerSettings });
-  volatileRef.current = { renderOptions, gridSettings, rulerSettings };
-
   // O(1) entity lookup — rebuilt only when scene changes, not every frame
   const entityMap = useMemo<Map<string, DxfEntityUnion>>(() => {
     if (!scene) return new Map();
     return new Map(scene.entities.map((e) => [e.id, e]));
   }, [scene]);
+
+  // 🚀 PERF (ADR-040, 2026-05-11 Phase XII): single paramsRef holds ALL volatile
+  // per-frame state (scene, entityMap, renderOptions, grid, ruler), synced
+  // render-by-render. Mirrors Phase XI pattern in layer-canvas-hooks.ts.
+  // → renderScene useCallback deps = [refs] only → STABLE identity
+  // → registerRenderCallback effect runs ONCE per mount (was ~13Hz before)
+  const paramsRef = useRef({ scene, entityMap, renderOptions, gridSettings, rulerSettings });
+  paramsRef.current = { scene, entityMap, renderOptions, gridSettings, rulerSettings };
 
   const renderScene = useCallback(() => {
     const renderer = refs.rendererRef.current;
@@ -125,22 +127,28 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       rotation: 0,
     } : null;
 
-    // 🚀 PERF (ADR-040, 2026-05-11): read latest volatile params from ref
-    const { renderOptions: curRenderOptions, gridSettings: curGrid, rulerSettings: curRuler } = volatileRef.current;
+    // 🚀 PERF (ADR-040 Phase XII): read latest volatile params from single ref
+    const {
+      scene: curScene,
+      entityMap: curEntityMap,
+      renderOptions: curRenderOptions,
+      gridSettings: curGrid,
+      rulerSettings: curRuler,
+    } = paramsRef.current;
 
     try {
       const hitTesting = serviceRegistry.get('hit-testing');
-      hitTesting.updateScene(scene);
+      hitTesting.updateScene(curScene);
 
-      renderer.render(scene, currentTransform, currentViewport, {
+      renderer.render(curScene, currentTransform, currentViewport, {
         ...curRenderOptions,
         skipInteractive: true,
       });
 
       // 1b: Single-entity interactive overlays (O(1) via entityMap)
-      if (scene) {
+      if (curScene) {
         if (curRenderOptions.hoveredEntityId) {
-          const ent = entityMap.get(curRenderOptions.hoveredEntityId);
+          const ent = curEntityMap.get(curRenderOptions.hoveredEntityId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
               gripInteractionState: curRenderOptions.gripInteractionState,
@@ -150,7 +158,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
 
         for (const selId of curRenderOptions.selectedEntityIds) {
           if (curRenderOptions.dragPreview && curRenderOptions.dragPreview.entityId === selId) continue;
-          const ent = entityMap.get(selId);
+          const ent = curEntityMap.get(selId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {
               gripInteractionState: curRenderOptions.gripInteractionState,
@@ -159,7 +167,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         }
 
         if (curRenderOptions.dragPreview) {
-          const ent = entityMap.get(curRenderOptions.dragPreview.entityId);
+          const ent = curEntityMap.get(curRenderOptions.dragPreview.entityId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'drag-preview', {
               gripInteractionState: curRenderOptions.gripInteractionState,
@@ -242,7 +250,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       logger.error('Failed to render DXF scene', { error });
     }
     perfEnd('DxfCanvasRenderer.renderScene', _perfPaintStart);
-  }, [scene, refs, entityMap]);
+  }, [refs]);
 
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache lifecycle
   useEffect(() => {
@@ -254,18 +262,25 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   }, []);
 
   // Register with UnifiedFrameScheduler (ADR-119)
+  // 🚀 PERF (ADR-040 Phase XII): deps reduced to [renderScene, refs] (both
+  // stable). Viewport/renderer guards moved INSIDE callback (read from refs
+  // at frame time). Effect runs ONCE per mount, killing the 7.8% unsubscribe
+  // residual observed in Phase XI profiler.
   useEffect(() => {
-    if (viewport.width > 0 && viewport.height > 0 && refs.rendererRef.current) {
-      const unsubscribe = registerRenderCallback(
-        'dxf-canvas',
-        'DXF Entity Renderer',
-        RENDER_PRIORITIES.NORMAL,
-        () => { renderScene(); isDirtyRef.current = false; },
-        () => isDirtyRef.current,
-      );
-      return unsubscribe;
-    }
-  }, [renderScene, viewport.width, viewport.height, refs.rendererRef]);
+    const unsubscribe = registerRenderCallback(
+      'dxf-canvas',
+      'DXF Entity Renderer',
+      RENDER_PRIORITIES.NORMAL,
+      () => {
+        const vp = refs.resolvedViewportRef.current;
+        if (!refs.rendererRef.current || !vp.width || !vp.height) return;
+        renderScene();
+        isDirtyRef.current = false;
+      },
+      () => isDirtyRef.current,
+    );
+    return unsubscribe;
+  }, [renderScene, refs]);
 
   // Mark dirty when dependencies change
   useEffect(() => {
