@@ -120,19 +120,44 @@ export function applyPreviewStyling(
     }
   }
 
-  // ── Colored preview grips — matches icon click sequence (ADR-142: FIRST=red, SECOND=orange, THIRD=green)
+  // ── Colored preview grips — matches icon click sequence (ADR-142)
   // worldPoints = [...tempPoints, cursor], so slice(0,-1) = clicked points, last = cursor
-  if (worldPoints.length >= 2 && !isMeasurementTool) {
-    const clickedPts = worldPoints.slice(0, -1);
-    const grips: PreviewGripPoint[] = [
-      { position: clickedPts[0], type: 'start', color: ICON_CLICK_COLORS.FIRST },
-    ];
-    for (let i = 1; i < clickedPts.length; i++) {
-      grips.push({ position: clickedPts[i], type: 'vertex', color: ICON_CLICK_COLORS.SECOND });
+  // FIRST=teal (P1 / cursor at step 0), SECOND=yellow (cursor at intermediate steps), THIRD=red (cursor at final step)
+  if (!isMeasurementTool) {
+    if (worldPoints.length >= 2) {
+      const clickedPts = worldPoints.slice(0, -1);
+      const grips: PreviewGripPoint[] = [
+        { position: clickedPts[0], type: 'start', color: ICON_CLICK_COLORS.FIRST },
+      ];
+      for (let i = 1; i < clickedPts.length; i++) {
+        grips.push({ position: clickedPts[i], type: 'vertex', color: ICON_CLICK_COLORS.SECOND });
+      }
+      grips.push({ position: cursorPoint, type: 'cursor', color: cursorStepColor(tool, clickedPts.length) });
+      (entity as Record<string, unknown>).previewGripPoints = grips;
+    } else {
+      // 0 clicks: cursor dot = FIRST (teal) — step-0 indicator
+      (entity as Record<string, unknown>).previewGripPoints = [
+        { position: cursorPoint, type: 'cursor', color: ICON_CLICK_COLORS.FIRST },
+      ];
     }
-    grips.push({ position: cursorPoint, type: 'cursor', color: ICON_CLICK_COLORS.THIRD });
-    (entity as Record<string, unknown>).previewGripPoints = grips;
   }
+}
+
+/**
+ * Color of the cursor grip based on how many clicks are already placed.
+ * SECOND (yellow) while intermediate steps remain, THIRD (red) at the final step.
+ */
+function cursorStepColor(tool: DrawingTool, clickedCount: number): string {
+  // Maps tool → index of the final click (0-based, counting from P1)
+  const FINAL_STEP: Partial<Record<DrawingTool, number>> = {
+    'line': 1, 'rectangle': 1, 'circle': 1, 'circle-diameter': 1,
+    'circle-2p-diameter': 1, 'polygon': 1,
+    'arc-3p': 2, 'arc-cse': 2, 'arc-sce': 2,
+    'circle-3p': 2, 'circle-chord-sagitta': 2, 'circle-2p-radius': 2,
+  };
+  const final = FINAL_STEP[tool];
+  if (final === undefined) return ICON_CLICK_COLORS.SECOND; // polyline/variable → always yellow
+  return clickedCount >= final ? ICON_CLICK_COLORS.THIRD : ICON_CLICK_COLORS.SECOND;
 }
 
 // ─── Partial Preview ─────────────────────────────────────────────────────────

@@ -181,7 +181,7 @@ export class PreviewRenderer {
       case 'arc': renderArc(ctx, entity as ArcPreviewEntity, transform, renderOpts, helpers); break;
     }
 
-    // Render colored preview grips (FIRST=red P1, SECOND=orange intermediates, THIRD=green cursor)
+    // Render colored preview grips (FIRST=teal P1/cursor-start, SECOND=yellow intermediates, THIRD=red cursor)
     if (coloredGrips) {
       for (const grip of coloredGrips) {
         const screenPos = CoordinateTransforms.worldToScreen(grip.position, transform, this.currentViewport!);

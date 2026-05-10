@@ -5,6 +5,7 @@ import { useCursor } from '../../systems/cursor';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { ICON_CLICK_COLORS } from '../../config/color-config';
 import { useTranslation } from '@/i18n';
 // 🏢 ADR-081: Centralized percentage formatting
 // 🏢 ADR-090: Centralized Number Formatting
@@ -39,7 +40,12 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   const colors = useSemanticColors();
 
   // 🏢 ADR-082: Tool hints system
-  const { hint, currentStepText, hasHints, isReady } = useToolHints(activeTool);
+  const { hint, currentStepText, currentStep, totalSteps, hasHints, isReady } = useToolHints(activeTool);
+  const stepColor = currentStep === 0
+    ? ICON_CLICK_COLORS.FIRST
+    : currentStep >= totalSteps - 1
+      ? ICON_CLICK_COLORS.THIRD
+      : ICON_CLICK_COLORS.SECOND;
 
   // Λειτουργία ακρίβειας: περισσότερα δεκαδικά ψηφία
   const precision = settings.performance.precision_mode ? 4 : 2;
@@ -153,8 +159,8 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${colors.text.muted}`}>
         {hasHints && isReady ? (
           <>
-            {/* Current step instruction */}
-            <span className={`${colors.text.primary} font-medium`}>
+            {/* Current step instruction — colored to match grip dot (ADR-142) */}
+            <span className="font-medium" style={{ color: stepColor }}>
               {currentStepText}
             </span>
             {/* Tool shortcuts */}

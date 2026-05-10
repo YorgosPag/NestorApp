@@ -250,6 +250,7 @@ export function renderPoint(
   ctx: CanvasRenderingContext2D, entity: PreviewPoint,
   transform: ViewTransform, opts: Required<PreviewRenderOptions>, h: PreviewRenderHelpers,
 ): void {
+  if (!opts.showGrips) return;
   const pos = CoordinateTransforms.worldToScreen(entity.position, transform, h.viewport);
   h.renderGrip(ctx, pos, opts);
 }
