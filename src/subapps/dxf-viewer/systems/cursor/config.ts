@@ -299,7 +299,7 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
     // 🏢 ADR-030 SSoT: settings change → all canvas overlays must repaint.
     // Single source covering every entry point (panel updateSettings, reset,
     // provider sync). Without this, overlays only redraw on mouse move.
-    markSystemsDirty(['crosshair-overlay', 'layer-canvas']);
+    markSystemsDirty(['crosshair-overlay', 'layer-canvas', 'dxf-canvas']);
 
     // Legacy compatibility - dispatch global event
     window.dispatchEvent(new CustomEvent('autocad-cursor-change', {

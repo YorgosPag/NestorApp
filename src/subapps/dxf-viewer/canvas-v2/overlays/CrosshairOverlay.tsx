@@ -32,6 +32,7 @@ import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ✅ ADR-030: UnifiedFrameScheduler Integration
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
+import { LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 // 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
 import { registerDirectRender, getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
@@ -98,6 +99,7 @@ export default function CrosshairOverlay({
 
   // === GRIP SETTINGS INTEGRATION ===
   const { gripSettings } = useGripContext();
+  const { pickBoxSize } = gripSettings;
 
   // ============================================================================
   // 🏢 ADR-146: Centralized Canvas Size Observer
@@ -178,7 +180,7 @@ export default function CrosshairOverlay({
     const crosshairHalfHeight = halfBase;
 
     // Center gap calculation
-    const pickboxSize = gripSettings.pickBoxSize * dpr;
+    const pickboxSize = pickBoxSize * dpr;
     const centerGap = Math.max(pickboxSize + 4, settings.crosshair.center_gap_px || 5);
 
     // Setup drawing style
@@ -186,6 +188,14 @@ export default function CrosshairOverlay({
     ctx.lineWidth = activeSettings.line_width;
     ctx.lineCap = 'square';
     ctx.globalAlpha = activeSettings.opacity || 1.0;
+
+    // Apply line style (ADR-083 centralized patterns)
+    switch (activeSettings.line_style) {
+      case 'dashed':   ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASHED]);  break;
+      case 'dotted':   ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DOTTED]);  break;
+      case 'dash-dot': ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASH_DOT]); break;
+      default:         ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);               break;
+    }
 
     // ✅ CAD-GRADE: Visibility check
     const bottomLimit = canvasHeight - (margins.bottom ?? 0);
@@ -241,8 +251,9 @@ export default function CrosshairOverlay({
       ctx.stroke();
     }
 
+    ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
     ctx.globalAlpha = 1;
-  }, [gripSettings]);
+  }, [pickBoxSize]);
 
   // ============================================================================
   // 🏢 ENTERPRISE: UnifiedFrameScheduler Integration (ADR-030)
