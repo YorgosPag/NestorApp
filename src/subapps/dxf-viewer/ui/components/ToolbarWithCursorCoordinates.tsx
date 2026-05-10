@@ -3,19 +3,17 @@
 import React from 'react';
 import type { EnhancedDXFToolbarPropsExtended } from '../toolbar/types';
 import { EnhancedDXFToolbar } from '../toolbar/EnhancedDXFToolbar';
-import { useCursor, useCursorWorldPosition } from '../../systems/cursor';
+import { useCursor } from '../../systems/cursor';
 
+// ADR-040 Phase H (2026-05-10): cursor world position is now subscribed inside
+// ToolbarCoordinatesDisplay (leaf) — reading it here re-rendered the whole
+// toolbar tree on every mousemove (Tooltip 30% / useTranslation 29% in profile).
 export function ToolbarWithCursorCoordinates(props: EnhancedDXFToolbarPropsExtended) {
   const { settings } = useCursor();
-  // 🚀 PERF: read worldPosition via useSyncExternalStore to avoid re-rendering
-  // the parent toolbar on every mousemove (otherwise the entire toolbar
-  // subtree re-renders @ 20fps from cursor reducer dispatch).
-  const worldPosition = useCursorWorldPosition();
 
   return (
     <EnhancedDXFToolbar
       {...props}
-      mouseCoordinates={worldPosition}
       showCoordinates={settings.behavior.coordinate_display}
     />
   );

@@ -71,6 +71,38 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-10: PERF — Phase H: Move cursor world-position subscription to leaf (toolbar)
+
+**Incident**: Firefox profile (clean recording) of hover interaction on DXF canvas showed two adjacent hotspots dominating the frame: `Tooltip` 30% and `useTranslation.useMemoized.wrapped` (→ `fixedT`) 29%, both reached via `RefreshDriverTick → WorkFunction → renderRootSync → renderWithHooks → Tooltip`. Cumulative 9 mousemove samples in 200ms decaying from 126ms → 53ms. Chrome trace of the same scenario showed 750 `commitMutationEffectsOnFiber` + 127 `commitPassiveUnmountOnFiber` samples in the same 200ms range — i.e. a full toolbar reconcile/commit per mousemove.
+
+**Root cause**: `src/subapps/dxf-viewer/ui/components/ToolbarWithCursorCoordinates.tsx` subscribed to `useCursorWorldPosition()` at the toolbar root, then passed the value down as a prop to `EnhancedDXFToolbar`, which forwarded it through to `ToolbarStatusBar.mouseCoordinates`. The wrapper's comment said "to avoid re-rendering the parent toolbar on every mousemove" — but the implementation did exactly that: every `setImmediateWorldPosition()` notified the wrapper, the wrapper re-rendered, and `EnhancedDXFToolbar` re-rendered with a new `mouseCoordinates` reference. Because the toolbar holds **N** `ToolButton` + `ActionButton` children with no `React.memo`, each child re-ran:
+- `useTranslation` over **6 namespaces** (`['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']`),
+- `useIconSizes`, `useSemanticColors`, `useClickOutside`,
+- a per-button `TooltipProvider` + `Tooltip` + `TooltipTrigger` + `TooltipContent` subtree.
+
+That subtree-per-button × N buttons × mousemove rate was the source of the Tooltip 30% + i18n 29% cluster, the long mousemove latencies, and the mount/unmount churn observed in the Chrome trace.
+
+**Fix** — push the subscription to a leaf:
+
+- `src/subapps/dxf-viewer/ui/toolbar/ToolbarCoordinatesDisplay.tsx` (new, `React.memo`): the **only** component that subscribes to `useCursorWorldPosition()`. Renders the formatted X/Y `<strong>`. Receives `precision` + `className` as stable props.
+- `src/subapps/dxf-viewer/ui/toolbar/ToolbarStatusBar.tsx`: dropped `mouseCoordinates` prop, removed `useRef`/`useMemo` throttle (no longer needed — leaf reads the store directly), renders `<ToolbarCoordinatesDisplay>` when `showCoordinates` is true.
+- `src/subapps/dxf-viewer/ui/components/ToolbarWithCursorCoordinates.tsx`: removed `useCursorWorldPosition()` and the `mouseCoordinates` pass-through. Wrapper now reads only the static `coordinate_display` setting.
+- `src/subapps/dxf-viewer/ui/toolbar/EnhancedDXFToolbar.tsx`: dropped `mouseCoordinates` from props/destructure and from the `<ToolbarStatusBar>` invocation.
+- `src/subapps/dxf-viewer/ui/toolbar/types.ts`: removed `mouseCoordinates` from `EnhancedDXFToolbarPropsExtended`.
+
+**Result**: mousemove now re-renders only `ToolbarCoordinatesDisplay` (one tiny `<strong>` reading the store). The toolbar root, all `ToolButton`s/`ActionButton`s, all per-button `Tooltip` subtrees, and `useTranslation` over 6 namespaces are skipped on hover. Tooltip 30% + i18n 29% cluster is expected to disappear from the hover frame; mount/unmount churn in `commitMutationEffectsOnFiber` should drop sharply.
+
+**Why same SSoT pattern as Phase E**: identical to the Phase E micro-leaf pattern (`HoverStore`, `ImmediatePositionStore` subscribers). The cursor store was already designed for selective subscription via `useSyncExternalStore`; the previous code accidentally re-introduced cascade by reading the value at the toolbar root instead of at the consumer.
+
+**Google-level checklist** (N.7.2):
+- Proactive: yes — coordinate read happens at the only consumer.
+- Race-free: yes — `useSyncExternalStore` snapshot is consistent per commit.
+- Idempotent: yes — same store value → same render.
+- SSoT: yes — `ImmediatePositionStore` remains the single owner; only the read site moved.
+- Lifecycle owner: explicit — leaf component owns its subscription.
+
+✅ Google-level: YES.
+
 ### 2026-05-09: PERF — Phase G: Eliminate continuous RAF loop in FloorplanBackgroundCanvas
 
 **Incident**: Performance trace post-Phase F (clean) showed `FloorplanBackgroundCanvas.useEffect.draw` consuming **6091.8ms / 11s trace = 54.6% Self Time** — top single hotspot. Console-task overhead added another 33%. Total: ~88% of trace burned in this component, even when scene was idle.

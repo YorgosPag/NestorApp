@@ -9,7 +9,6 @@ import { useBorderTokens } from '../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '../../../../hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { ToolType } from './types';
-import type { Point2D } from '../../rendering/types/Types';
 import { toolGroups, createActionButtons } from './toolDefinitions';
 import { useProSnapIntegration } from '../../hooks/common/useProSnapIntegration';
 import { ZoomControls } from './ZoomControls';
@@ -51,7 +50,6 @@ interface EnhancedDXFToolbarProps {
   commandCount?: number;
   className?: string;
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
-  mouseCoordinates?: Point2D | null;
   showCoordinates?: boolean;
 }
 
@@ -69,7 +67,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   commandCount,
   className = '',
   onSceneImported,
-  mouseCoordinates,
   showCoordinates = false,
 
   // 🏢 ADR-050: Overlay toolbar props (optional)
@@ -456,7 +453,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
         currentZoom={currentZoom}
         snapEnabled={contextSnapEnabled}
         commandCount={commandCount}
-        mouseCoordinates={mouseCoordinates}
         showCoordinates={showCoordinates}
       />
 

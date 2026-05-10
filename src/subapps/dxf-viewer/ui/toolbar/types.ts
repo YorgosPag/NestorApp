@@ -291,7 +291,6 @@ export interface EnhancedDXFToolbarPropsExtended {
   commandCount?: number;
   className?: string;
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
-  mouseCoordinates?: { x: number; y: number } | null;
   showCoordinates?: boolean;
 
   // 🏢 ADR-050: Overlay toolbar integration (optional for feature flag)

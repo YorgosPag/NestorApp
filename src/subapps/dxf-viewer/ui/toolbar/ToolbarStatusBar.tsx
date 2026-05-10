@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useMemo } from 'react';
+import React from 'react';
 import { useCursor } from '../../systems/cursor';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -8,18 +8,18 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useTranslation } from '@/i18n';
 // 🏢 ADR-081: Centralized percentage formatting
 // 🏢 ADR-090: Centralized Number Formatting
-import { formatPercent, formatCoordinate } from '../../rendering/entities/shared/distance-label-utils';
+import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 // 🏢 ADR-082: Step-by-step tool hints
 import { useToolHints } from '../../hooks/useToolHints';
+// ADR-040 Phase H: leaf subscriber for live cursor coordinates
+import { ToolbarCoordinatesDisplay } from './ToolbarCoordinatesDisplay';
 import type { ToolType } from './types';
-import type { Point2D } from '../../rendering/types/Types';
 
 interface ToolbarStatusBarProps {
   activeTool: ToolType;
   currentZoom: number;
   snapEnabled: boolean;
   commandCount?: number;
-  mouseCoordinates?: Point2D | null;
   showCoordinates?: boolean;
   /** ADR-176: Compact mode — shows only tool name + zoom percentage */
   compact?: boolean;
@@ -30,7 +30,6 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   currentZoom,
   snapEnabled,
   commandCount = 0,
-  mouseCoordinates = null,
   showCoordinates = false,
   compact = false,
 }) => {
@@ -44,23 +43,6 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
 
   // Λειτουργία ακρίβειας: περισσότερα δεκαδικά ψηφία
   const precision = settings.performance.precision_mode ? 4 : 2;
-
-  // ✅ Throttle coordinate updates για performance
-  const lastCoordinatesRef = useRef<Point2D | null>(null);
-
-  const throttledCoordinates = useMemo(() => {
-    if (!mouseCoordinates) return null;
-
-    // Only update if coordinates changed significantly (>1px)
-    if (lastCoordinatesRef.current &&
-        Math.abs(lastCoordinatesRef.current.x - mouseCoordinates.x) < 1 &&
-        Math.abs(lastCoordinatesRef.current.y - mouseCoordinates.y) < 1) {
-      return lastCoordinatesRef.current;
-    }
-
-    lastCoordinatesRef.current = mouseCoordinates;
-    return mouseCoordinates;
-  }, [mouseCoordinates]);
 
   const toolLabelMap: Partial<Record<ToolType, string>> = {
     select: 'tools.select',
@@ -157,11 +139,11 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
           <>
             <span className={`${colors.text.muted}`}>|</span>
             <span>
-              {t('toolbarStatus.coordinates')}: <strong className={`${colors.text.accent}`}>
-                {throttledCoordinates ?
-                  `X: ${formatCoordinate(throttledCoordinates.x, precision)}, Y: ${formatCoordinate(throttledCoordinates.y, precision)}` :
-                  `X: ${formatCoordinate(0, precision)}, Y: ${formatCoordinate(0, precision)}`}
-              </strong>
+              {t('toolbarStatus.coordinates')}:{' '}
+              <ToolbarCoordinatesDisplay
+                precision={precision}
+                className={colors.text.accent}
+              />
             </span>
           </>
         )}
