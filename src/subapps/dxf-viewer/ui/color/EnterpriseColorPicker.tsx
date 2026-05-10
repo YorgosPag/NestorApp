@@ -20,13 +20,15 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../config/color-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { EnterpriseColorArea } from './EnterpriseColorArea';
-import { HueSlider, AlphaSlider } from './EnterpriseColorSlider';
+import { HueSlider, AlphaSlider, BrightnessSlider, SaturationSlider } from './EnterpriseColorSlider';
+import { useContrast } from './hooks/useContrast';
 import { EnterpriseColorField } from './EnterpriseColorField';
 import { SwatchesPalette } from './SwatchesPalette';
 import { useRecentColors } from './RecentColorsStore';
@@ -61,7 +63,7 @@ export function EnterpriseColorPicker({
   readOnly = false,
   labels = {},
   className = '',
-  showContrast = false,
+  showContrast = true,
   contrastBackground = UI_COLORS.WHITE,
   onModeChange,
 }: EnterpriseColorPickerProps) {
@@ -69,6 +71,7 @@ export function EnterpriseColorPicker({
   const { addColor } = useRecentColors();
   const { quick, getStatusBorder, radius, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer-panels');
 
   // Handle color change
   const handleChange = useCallback(
@@ -114,12 +117,40 @@ export function EnterpriseColorPicker({
           size={192}
         />
 
-        <HueSlider
+        <div className={`flex items-end ${PANEL_LAYOUT.GAP.SM}`}>
+          <HueSlider
+            value={value}
+            onChange={handleChange}
+            onChangeEnd={handleChangeEnd}
+            disabled={disabled}
+            width={192}
+            label={t('colorPicker.channels.hue')}
+          />
+          {/* Color preview swatch */}
+          <div
+            className={`${PANEL_LAYOUT.ICON.SWATCH} flex-shrink-0 ${PANEL_LAYOUT.ROUNDED.DEFAULT} border border-white/20`}
+            style={{ backgroundColor: value }}
+            role="img"
+            aria-label={t('colorPicker.colorPreview')}
+          />
+        </div>
+
+        <BrightnessSlider
           value={value}
           onChange={handleChange}
           onChangeEnd={handleChangeEnd}
           disabled={disabled}
           width={192}
+          label={t('colorPicker.channels.brightness')}
+        />
+
+        <SaturationSlider
+          value={value}
+          onChange={handleChange}
+          onChangeEnd={handleChangeEnd}
+          disabled={disabled}
+          width={192}
+          label={t('colorPicker.channels.saturation')}
         />
 
         {alpha && (
@@ -129,6 +160,7 @@ export function EnterpriseColorPicker({
             onChangeEnd={handleChangeEnd}
             disabled={disabled}
             width={192}
+            label={t('colorPicker.channels.alpha')}
           />
         )}
       </div>
@@ -193,7 +225,7 @@ export function EnterpriseColorPicker({
 
       {/* === CONTRAST PANEL === */}
       {showContrast && (
-        <ContrastPanelPlaceholder
+        <ContrastPanel
           foreground={value}
           background={contrastBackground}
         />
@@ -213,6 +245,7 @@ interface EyedropperButtonProps {
 function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonProps) {
   const [isActive, setIsActive] = useState(false);
   const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer-panels');
 
   const handleClick = async () => {
     if (disabled || typeof window === 'undefined' || !('EyeDropper' in window)) {
@@ -271,30 +304,74 @@ function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonP
           strokeLinejoin="round"
         />
       </svg>
-      {isActive ? 'Click to pick a color...' : 'Pick color from screen'}
+      {isActive ? t('colorPicker.pickingColor') : t('colorPicker.pickColor')}
     </button>
   );
 }
 
-// ===== CONTRAST PANEL PLACEHOLDER =====
+// ===== CONTRAST PANEL =====
 
-interface ContrastPanelPlaceholderProps {
+interface ContrastPanelProps {
   foreground: string;
   background: string;
 }
 
-function ContrastPanelPlaceholder({ foreground, background }: ContrastPanelPlaceholderProps) {
+interface ContrastRowProps {
+  label: string;
+  ratio: string;
+  passAA: boolean;
+  passAAA: boolean;
+  textColor: string;
+  bgColor: string;
+}
+
+function ContrastRow({ label, ratio, passAA, passAAA, textColor, bgColor }: ContrastRowProps) {
+  const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer-panels');
+  return (
+    <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+      <div
+        className={`${PANEL_LAYOUT.ICON.SWATCH} flex-shrink-0 ${PANEL_LAYOUT.ROUNDED.SM} flex items-center justify-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}
+        style={{ backgroundColor: bgColor, color: textColor }}
+      >
+        Aa
+      </div>
+      <span className={`flex-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.secondary}`}>{label}</span>
+      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_FAMILY.CODE} ${colors.text.primary}`}>{ratio}</span>
+      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${passAA ? 'text-green-500' : 'text-red-500'}`}>AA</span>
+      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${passAAA ? 'text-green-500' : 'text-red-500'}`}>AAA</span>
+    </div>
+  );
+}
+
+function ContrastPanel({ foreground }: ContrastPanelProps) {
   const colors = useSemanticColors();
   const { radius, getStatusBorder } = useBorderTokens();
+  const { t } = useTranslation('dxf-viewer-panels');
+  const vsBlack = useContrast('#000000', foreground);
+  const vsWhite = useContrast('#ffffff', foreground);
   return (
     <div className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${radius.md} border ${getStatusBorder('muted')}`}>
-      <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Contrast Checker</h4>
-      <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
-        <div>Foreground: {foreground}</div>
-        <div>Background: {background}</div>
-        <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${colors.text.secondary}`}>
-          Full WCAG contrast checker coming soon...
-        </div>
+      <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
+        {t('colorPicker.contrastChecker')}
+      </h4>
+      <div className={`${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+        <ContrastRow
+          label={t('colorPicker.vsBlack')}
+          ratio={vsBlack.ratioString}
+          passAA={vsBlack.passAA}
+          passAAA={vsBlack.passAAA}
+          textColor="#000000"
+          bgColor={foreground}
+        />
+        <ContrastRow
+          label={t('colorPicker.vsWhite')}
+          ratio={vsWhite.ratioString}
+          passAA={vsWhite.passAA}
+          passAAA={vsWhite.passAAA}
+          textColor="#ffffff"
+          bgColor={foreground}
+        />
       </div>
     </div>
   );

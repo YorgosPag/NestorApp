@@ -18,6 +18,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -67,6 +68,7 @@ export function SwatchesPalette({
 }: SwatchesPaletteProps) {
   const { colors: recentColors } = useRecentColors();
   const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer-panels');
 
   // Get palettes
   const palettes = getPalettesByIds(paletteIds);
@@ -76,7 +78,7 @@ export function SwatchesPalette({
       {/* Recent Colors */}
       {showRecent && recentColors.length > 0 && (
         <div>
-          <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Recent</h4>
+          <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('colorPicker.recent')}</h4>
           <SwatchGrid
             swatches={recentColors.map((color) => ({
               color,
@@ -94,7 +96,7 @@ export function SwatchesPalette({
       {palettes.map((palette) => (
         <div key={palette.id}>
           <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
-            {palette.name}
+            {t(`colorPicker.palettes.${palette.id}`, { defaultValue: '' }) || palette.name}
           </h4>
           <SwatchGrid
             swatches={palette.colors}

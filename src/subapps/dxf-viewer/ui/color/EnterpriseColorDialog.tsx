@@ -17,8 +17,9 @@
 
 'use client';
 
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useRef, useCallback, useState, useEffect, useDeferredValue } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { useDialog } from '@react-aria/dialog';
 import { useOverlay, usePreventScroll } from '@react-aria/overlays';
 import { FocusScope } from '@react-aria/focus';
@@ -113,6 +114,7 @@ export function EnterpriseColorDialog({
   ...pickerProps
 }: EnterpriseColorDialogProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation('dxf-viewer-panels');
   // ✅ FIX: Store original value for Cancel functionality
   const [originalValue, setOriginalValue] = React.useState(value);
   const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
@@ -262,13 +264,13 @@ export function EnterpriseColorDialog({
                     onClick={handleCancel}
                     className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
                   >
-                    Cancel
+                    {t('colorPicker.cancel')}
                   </button>
                   <button
                     onClick={handleApply}
                     className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.primary} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
                   >
-                    Apply
+                    {t('colorPicker.apply')}
                   </button>
                 </div>
               )}

@@ -435,6 +435,35 @@
     "placeholder": "Import Category (Placeholder)"
   },
   "colorPicker": {
-    "title": "Color Selection for Selected Entities"
+    "title": "Color Selection for Selected Entities",
+    "cancel": "Cancel",
+    "apply": "Apply",
+    "recent": "Recent",
+    "pickColor": "Pick color from screen",
+    "pickingColor": "Click to pick a color...",
+    "colorPreview": "Color preview",
+    "contrastChecker": "WCAG Contrast Checker",
+    "vsWhite": "vs White",
+    "vsBlack": "vs Black",
+    "normalText": "Normal",
+    "largeText": "Large",
+    "passes": "Pass",
+    "fails": "Fail",
+    "palettes": {
+      "dxf": "DXF Colors",
+      "semantic": "Semantic Colors",
+      "material": "Material Design",
+      "brand": "Brand Colors"
+    },
+    "channels": {
+      "hue": "Hue",
+      "saturation": "Saturation",
+      "brightness": "Brightness",
+      "lightness": "Lightness",
+      "red": "Red",
+      "green": "Green",
+      "blue": "Blue",
+      "alpha": "Alpha"
+    }
   }
 }

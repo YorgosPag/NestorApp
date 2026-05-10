@@ -435,6 +435,35 @@
     "placeholder": "Κατηγορία Εισαγωγής"
   },
   "colorPicker": {
-    "title": "Επιλογή Χρώματος για Επιλεγμένες Οντότητες"
+    "title": "Επιλογή Χρώματος για Επιλεγμένες Οντότητες",
+    "cancel": "Ακύρωση",
+    "apply": "Εφαρμογή",
+    "recent": "Πρόσφατα",
+    "pickColor": "Επιλογή χρώματος από οθόνη",
+    "pickingColor": "Κάντε κλικ για επιλογή χρώματος...",
+    "colorPreview": "Προεπισκόπηση χρώματος",
+    "contrastChecker": "Έλεγχος Αντίθεσης WCAG",
+    "vsWhite": "vs Λευκό",
+    "vsBlack": "vs Μαύρο",
+    "normalText": "Κανονικό",
+    "largeText": "Μεγάλο",
+    "passes": "Περνά",
+    "fails": "Αποτυγχάνει",
+    "palettes": {
+      "dxf": "Χρώματα DXF",
+      "semantic": "Σημασιολογικά Χρώματα",
+      "material": "Material Design",
+      "brand": "Χρώματα Εταιρείας"
+    },
+    "channels": {
+      "hue": "Απόχρωση",
+      "saturation": "Κορεσμός",
+      "brightness": "Φωτεινότητα",
+      "lightness": "Φωτεινότητα",
+      "red": "Κόκκινο",
+      "green": "Πράσινο",
+      "blue": "Μπλε",
+      "alpha": "Διαφάνεια"
+    }
   }
 }
