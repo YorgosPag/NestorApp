@@ -671,6 +671,12 @@ if (this.canvas.width === newWidth && this.canvas.height === newHeight && this.d
 - `useDrawingHandlers.ts`: `hardOrtho()` helper projects incoming point onto H or V axis from last reference point; applied before snap on both `addPoint` and `updatePreview` paths; reads `ortho.on` via ref to avoid callback recreation on every toggle
 - `extended-types.ts`: `DEFAULT_PRO_SNAP_SETTINGS.snapDistance` raised 7→10 to match AutoCAD APERTURE default; all `perModePxTolerance` values unified at 10px (except GUIDE=12 for easy grab)
 
+### 2026-05-10: Fix Ctrl+click double-toggle bug in additive multi-select
+
+- Root cause: `onEntitySelect` was called on BOTH mousedown AND mouseup; additive toggle fired twice → entity added then immediately removed
+- Fix: removed `onEntitySelect` hit-test from `handleMouseDown`; mouseup is now the sole authority (AutoCAD standard: select on click, not press)
+- `entitySelectedOnMouseDownRef` guard in `useCanvasClickHandler` still works — it is set during the mouseup `onEntitySelect` call, which fires before the browser's click event
+
 ### 2026-05-10: Shift/Ctrl+click additive multi-select for DXF entities
 
 - `mouse-handler-types.ts`: `onEntitySelect` signature extended — `additive?: boolean` 2nd param

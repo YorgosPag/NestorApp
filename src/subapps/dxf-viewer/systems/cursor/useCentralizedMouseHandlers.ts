@@ -165,21 +165,17 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
       return;
     }
 
-    // Entity hit-test (select tool only, not drawing)
-    if (hitTestCallback && onEntitySelect && !isToolInteractive && activeTool === 'select') {
-      const hitEntityId = hitTestCallback(scene, screenPos, transform, pointerSnap.viewport);
-      const isAdditive = e.shiftKey || e.ctrlKey || e.metaKey;
-      onEntitySelect(hitEntityId, isAdditive);
-    }
-
     // Marquee selection start (left button, not pan, not drawing, not grip, not additive-click)
+    // NOTE: entity hit-test intentionally moved to mouseup — AutoCAD selects on click (press+release),
+    // not press alone. Calling onEntitySelect on both mousedown AND mouseup caused a double-toggle
+    // bug with additive (Ctrl/Shift) clicks: entity was added then immediately removed on mouseup.
     const isRotationActive = activeTool === 'rotate';
     const isGuideToolActive = activeTool?.startsWith('guide-') ?? false;
     const isAdditiveClick = e.shiftKey || e.ctrlKey || e.metaKey;
     if (e.button === 0 && !isAdditiveClick && activeTool !== 'pan' && !isToolInteractive && !shouldStartPan && !isGripDragging && !isRotationActive && !isGuideToolActive) {
       cursor.startSelection(screenPos);
     }
-  }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown]);
+  }, [transform, cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown]);
 
   // ===== MOUSE MOVE (delegated) =====
   const handleMouseMove = useMouseMoveHandler({
