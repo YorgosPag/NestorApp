@@ -14,6 +14,7 @@ import { createDefaultCursorState } from './utils';
 import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { ImmediatePositionStore } from './ImmediatePositionStore';
+import { SelectionStore } from './SelectionStore';
 
 // Context type that combines state and actions
 interface CursorContextType extends CursorState {
@@ -51,16 +52,15 @@ interface CursorContextType extends CursorState {
 // 8+ provider/component subtree below CursorSystem stops cascading on each
 // frame. Position-reading consumers must use `useCursorPosition()` /
 // `useCursorWorldPosition()` hooks instead of `cursor.position`.
+// 🚀 PERF (2026-05-10): Selection actions removed from reducer — routed to
+// SelectionStore singleton. START/UPDATE/END/CANCEL_SELECTION no longer dispatch
+// to React state, eliminating the ~60fps re-render cascade during selection drag.
 type CursorAction =
   | { type: 'UPDATE_VIEWPORT'; viewport: Viewport }
   | { type: 'SET_MOUSE_DOWN'; down: boolean; button?: number }
   | { type: 'SET_ACTIVE'; active: boolean }
   | { type: 'SET_TOOL'; tool: string }
   | { type: 'SET_SNAP_POINT'; point: Point2D | null }
-  | { type: 'START_SELECTION'; startPoint: Point2D }
-  | { type: 'UPDATE_SELECTION'; currentPoint: Point2D }
-  | { type: 'END_SELECTION' }
-  | { type: 'CANCEL_SELECTION' }
   | { type: 'UPDATE_SETTINGS'; settings: CursorSettings };
 
 // Cursor reducer
@@ -76,26 +76,6 @@ function cursorReducer(state: CursorState & { settings: CursorSettings }, action
       return { ...state, tool: action.tool };
     case 'SET_SNAP_POINT':
       return { ...state, snapPoint: action.point };
-    case 'START_SELECTION':
-      return {
-        ...state,
-        isSelecting: true,
-        selectionStart: action.startPoint,
-        selectionCurrent: action.startPoint
-      };
-    case 'UPDATE_SELECTION':
-      return {
-        ...state,
-        selectionCurrent: action.currentPoint
-      };
-    case 'END_SELECTION':
-    case 'CANCEL_SELECTION':
-      return {
-        ...state,
-        isSelecting: false,
-        selectionStart: null,
-        selectionCurrent: null
-      };
     case 'UPDATE_SETTINGS':
       return { ...state, settings: action.settings };
     default:
@@ -177,15 +157,15 @@ export function CursorSystem({ children }: { children: React.ReactNode }) {
     setSnapPoint: (point: Point2D | null) =>
       dispatch({ type: 'SET_SNAP_POINT', point }),
 
-    // ✅ SELECTION ACTIONS (CAD Selection System)
+    // ✅ SELECTION ACTIONS (ADR-040 Phase III — SelectionStore, no React dispatch)
     startSelection: (startPoint: Point2D) =>
-      dispatch({ type: 'START_SELECTION', startPoint }),
+      SelectionStore.startSelection(startPoint),
     updateSelection: (currentPoint: Point2D) =>
-      dispatch({ type: 'UPDATE_SELECTION', currentPoint }),
+      SelectionStore.updateSelection(currentPoint),
     endSelection: () =>
-      dispatch({ type: 'END_SELECTION' }),
+      SelectionStore.endSelection(),
     cancelSelection: () =>
-      dispatch({ type: 'CANCEL_SELECTION' }),
+      SelectionStore.cancelSelection(),
   }), []);
 
   // Combine state and actions.
@@ -201,6 +181,12 @@ export function CursorSystem({ children }: { children: React.ReactNode }) {
     ...actions,
     get position() { return ImmediatePositionStore.getPosition(); },
     get worldPosition() { return ImmediatePositionStore.getWorldPosition(); },
+    // 🚀 PERF (2026-05-10): Selection state via SelectionStore getters.
+    // Event handlers (mouse-handler-move/up) read live values. React components
+    // that need re-renders on selection change must use useSelectionState().
+    get isSelecting() { return SelectionStore.getIsSelecting(); },
+    get selectionStart() { return SelectionStore.getSelectionStart(); },
+    get selectionCurrent() { return SelectionStore.getSelectionCurrent(); },
   }), [state, actions]);
 
   return (

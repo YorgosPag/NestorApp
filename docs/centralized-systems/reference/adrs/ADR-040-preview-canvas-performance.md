@@ -71,6 +71,49 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-10: PERF — Phase IV: CoordinateDebugOverlay throttle (debug tool)
+
+**Incident (70/140 commits from debug overlay)**: React DevTools profiler showed `CoordinateDebugOverlay` as the updater in 70 of 140 commits (50% of all re-renders) with durations up to 31ms. The overlay was the dominant performance noise in every profiling session, masking the real application hotspots.
+
+**Root cause**: `window.addEventListener('mousemove', ...)` fired at native mouse rate (~120fps). Inside the handler: 4 separate `setState` calls (`setMouseScreen`, `setMouseWorld`, `setViewport`, `setCanvasRect`) + `getBoundingClientRect()` on every event. React 18 batches the 4 calls into 1 commit, but still 1 re-render per mousemove = ~120 commits/sec while active.
+
+**Fix**:
+- `debug/layout-debug/CoordinateDebugOverlay.tsx`: merged 4 `useState` into 1 `displayData` object. Added 100ms throttle gate in the handler — `setDisplayData` only fires when `performance.now() - lastRenderTime >= 100`. `getBoundingClientRect()` moved inside the throttle gate (avoids forced reflow every native frame). `currentValues` ref updated on every mousemove for clipboard copy accuracy (F1-F4 shortcuts always read fresh data).
+- `systems/cursor/index.ts`: added `useSelectionState`, `SelectionStore`, `SelectionState` exports (missing from Phase III).
+
+**Result**: CoordinateDebugOverlay commits reduced from ~70 → ~4 per 4s interaction (10fps tick). Profiling sessions now show application hotspots cleanly without debug overlay noise. Clipboard shortcuts (F1-F4) unaffected — they read from `currentValues` ref which updates at native rate.
+
+**Files modified**: `debug/layout-debug/CoordinateDebugOverlay.tsx`, `systems/cursor/index.ts`.
+
+✅ Google-level: YES — debug tool throttled to appropriate rate; clipboard reads ref (always fresh); single setState prevents multiple reconcile passes; getBoundingClientRect batched with render tick.
+
+---
+
+### 2026-05-10: PERF — Phase III: SelectionStore — selection state removed from React reducer
+
+**Incident (135 re-renders / 4104ms during selection drag)**: Profiler showed CursorSystem re-rendering ~30ms each (above 16ms threshold), 135 times during user interaction. At 33 re-renders/sec this is essentially 30fps reconciliation of the entire CursorSystem subtree.
+
+**Root cause**: `cursor.updateSelection(screenPos)` in `mouse-handler-move.ts:239` dispatched `UPDATE_SELECTION` to `useReducer` on every mousemove during selection drag → new `state` object → new `contextValue` (memoized on `[state, actions]`) → `CursorContext.Provider` re-rendered its entire subtree (DxfCanvas, LayerCanvas, toolbar, all panel components).
+
+**Fix — `SelectionStore` singleton (same pattern as `ImmediatePositionStore`)**:
+- `systems/cursor/SelectionStore.ts` (NEW): pure TS singleton holding `isSelecting`, `selectionStart`, `selectionCurrent`. `updateSelection` has equality guard (no notify if same point). `subscribe/getSnapshot` are `useSyncExternalStore`-compatible.
+- `systems/cursor/useCursor.ts`: added `useSelectionState()` hook via `useSyncExternalStore(SelectionStore.subscribe, SelectionStore.getSnapshot)`.
+- `systems/cursor/CursorSystem.tsx`: removed `START_SELECTION`, `UPDATE_SELECTION`, `END_SELECTION`, `CANCEL_SELECTION` from `CursorAction` type and `cursorReducer`. Action creators route to `SelectionStore` instead. `contextValue` exposes `get isSelecting/selectionStart/selectionCurrent` getters (live reads from store) — event handlers (`mouse-handler-move/up`) get fresh data without triggering re-renders.
+- `canvas-v2/dxf-canvas/DxfCanvas.tsx`: added `useSelectionState()` subscription. `selectionStateRef` and `useDxfCanvasRenderer` params now read from `selectionState` instead of `cursor`.
+- `canvas-v2/layer-canvas/LayerCanvas.tsx`: added `useSelectionState()` subscription. `useLayerCanvasRenderer` cursor selection fields read from `selectionState`.
+
+**Result**: During selection drag — CursorSystem provider stays stable (state unchanged). Only `DxfCanvas` and `LayerCanvas` re-render (they have the direct `SelectionStore` subscription). The remaining ~130 cascaded re-renders of all other CursorSystem subtree children are eliminated.
+
+**Architectural rule** (extends micro-leaf pattern):
+> **High-frequency state that triggers re-renders must live outside the CursorContext reducer.** `SelectionStore` and `ImmediatePositionStore` are the canonical stores for mousemove-driven data. React components that need to *react* to these changes subscribe directly via `useSyncExternalStore`. Event handlers read via getters on the contextValue object.
+
+**Files created**: `systems/cursor/SelectionStore.ts`.
+**Files modified**: `systems/cursor/useCursor.ts`, `systems/cursor/CursorSystem.tsx`, `canvas-v2/dxf-canvas/DxfCanvas.tsx`, `canvas-v2/layer-canvas/LayerCanvas.tsx`.
+
+✅ Google-level: YES — selection state decoupled from React provider; only 2 leaf canvases re-render; equality guard prevents no-op notifies; getters ensure event handlers always read live data; idempotent (calling updateSelection twice with same point = 1 notify).
+
+---
+
 ### 2026-05-10: PERF — Phase II: HoverStore (overlay) subscription moved to DraftLayerSubscriber leaf + pre-commit CHECK 6C
 
 **Incident (zoom + marquee 37-45% CPU)**: After Phase I, profiler still showed `scheduleImmediateRootScheduleTask → flushSyncWorkAcrossRoots → renderRootSync → CanvasSection → updateMemo` at 37-45% CPU during zoom + marquee selection drag. Path confirmed triggered by `useSyncExternalStore` (not `useState`).

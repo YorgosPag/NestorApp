@@ -6,6 +6,7 @@
 import { useContext, useSyncExternalStore } from 'react';
 import { CursorContext } from './CursorSystem';
 import { ImmediatePositionStore } from './ImmediatePositionStore';
+import { SelectionStore } from './SelectionStore';
 
 export function useCursor() {
   const context = useContext(CursorContext);
@@ -73,6 +74,15 @@ export function useCursorActions() {
     setSnapPoint: cursor.setSnapPoint,
     setWorldPosition: cursor.setWorldPosition,
   };
+}
+
+// 🚀 PERF (2026-05-10): Selection state via useSyncExternalStore.
+// Only DxfCanvas and LayerCanvas subscribe; CursorSystem provider stays stable
+// across mousemove-during-selection (no reducer dispatch, no cascade).
+const subscribeSelection = (cb: () => void) => SelectionStore.subscribe(cb);
+const getSelectionSnapshot = () => SelectionStore.getSnapshot();
+export function useSelectionState() {
+  return useSyncExternalStore(subscribeSelection, getSelectionSnapshot, getSelectionSnapshot);
 }
 
 // Backward compatibility

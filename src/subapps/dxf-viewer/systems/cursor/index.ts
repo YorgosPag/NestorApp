@@ -17,7 +17,11 @@ export {
   useCursorActions,
   useCursorPosition,
   useCursorWorldPosition,
+  useSelectionState,
 } from './useCursor';
+
+export { SelectionStore } from './SelectionStore';
+export type { SelectionState } from './SelectionStore';
 
 // Components need to be imported from .tsx files directly
 // For components, import directly: import { CursorSystem } from './systems/cursor/CursorSystem';

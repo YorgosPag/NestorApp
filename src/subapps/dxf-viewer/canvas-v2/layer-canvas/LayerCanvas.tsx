@@ -25,6 +25,7 @@ import { useCanvasResize } from '../../hooks/canvas';
 import { LayerRenderer } from './LayerRenderer';
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
 import { useCursor } from '../../systems/cursor/CursorSystem';
+import { useSelectionState } from '../../systems/cursor/useCursor';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { createUnifiedCanvasSystem } from '../../rendering/canvas';
 import type { CanvasManager, CanvasInstance } from '../../rendering/canvas/core/CanvasManager';
@@ -141,6 +142,8 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   resolvedViewportRef.current = viewport;
 
   const cursor = useCursor();
+  // 🚀 PERF (2026-05-10): direct SelectionStore subscription (ADR-040 Phase III).
+  const selectionState = useSelectionState();
 
   // ── Hit testing + selection (extracted hook) ───────────────────────
   const { layerHitTestCallback, handleLayerSelection } = useLayerHitTest({
@@ -276,9 +279,9 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     draggingOverlay,
     cursor: {
       position: cursor.position,
-      isSelecting: cursor.isSelecting,
-      selectionStart: cursor.selectionStart,
-      selectionCurrent: cursor.selectionCurrent,
+      isSelecting: selectionState.isSelecting,
+      selectionStart: selectionState.selectionStart,
+      selectionCurrent: selectionState.selectionCurrent,
     },
     snapResults,
     crosshairSettings,

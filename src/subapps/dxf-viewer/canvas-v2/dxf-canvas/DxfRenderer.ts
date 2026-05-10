@@ -4,7 +4,6 @@
  * ❌ ΠΡΙΝ: Direct switch statement με duplicate rendering methods
  * ✅ ΜΕΤΑ: Centralized composite pattern
  */
-
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -12,14 +11,12 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 // 🏢 ENTERPRISE: Refresh cached bounds before render to prevent stale clear/draw mismatch
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
 // 🏢 Origin markers consolidated into GridRenderer (eliminates OriginMarkerUtils duplication)
-
 // ✅ ΝΕΟ: Import unified rendering system
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
 import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DContext';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-
 /**
  * ✅ ENTERPRISE TYPE-SAFE MAPPING: DXF → Centralized LineType
  * Εξασφαλίζει enterprise compatibility χωρίς hardcoded values
@@ -42,6 +39,8 @@ export class DxfRenderer {
   private canvas: HTMLCanvasElement;
   private entityComposite: EntityRendererComposite; // ✅ ΝΕΟ: Centralized rendering
   private renderContext: Canvas2DContext; // ✅ ΝΕΟ: Backend abstraction
+  // O(1) selection lookup — rebuilt before each render pass to avoid O(n²) Array.includes
+  private _selectionSet: Set<string> = new Set();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -87,7 +86,6 @@ export class DxfRenderer {
     this.ctx.clearRect(0, 0, canvasRect.width, canvasRect.height);
 
     // 🏢 Origin marker now rendered by GridRenderer (consolidated — no duplication)
-
     // Early return if no scene
       if (!scene || !scene.entities.length) {
         return;
@@ -119,12 +117,13 @@ export class DxfRenderer {
       : {}
     );
 
+    // Rebuild selection Set for O(1) lookups in renderEntityUnified
+    this._selectionSet = new Set(effectiveOptions.selectedEntityIds);
     // Render all entities
     for (const entity of scene.entities) {
       if (!entity.visible) continue;
       this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
     }
-
     // Render selection highlights (no-op currently, kept for call-site stability)
     this.renderSelectionHighlights(scene, transform, actualViewport, effectiveOptions);
 
@@ -177,6 +176,7 @@ export class DxfRenderer {
       dragPreview: mode === 'drag-preview' ? interaction.dragPreview : undefined,
     };
 
+    this._selectionSet = new Set(syntheticOptions.selectedEntityIds);
     this.renderEntityUnified(entity, transform, actualViewport, syntheticOptions);
 
     this.ctx.restore();
@@ -192,7 +192,7 @@ export class DxfRenderer {
     viewport: Viewport,
     options: DxfRenderOptions
   ): void {
-    const isSelected = options.selectedEntityIds.includes(entity.id);
+    const isSelected = this._selectionSet.has(entity.id);
     const isHovered = options.hoveredEntityId === entity.id;
 
     // 🏢 GRIP EDITING: Apply drag preview delta to entity geometry before rendering
