@@ -50,39 +50,6 @@ const getClientPosition = () => {
 // SSR-safe fallback position
 const SSR_FALLBACK_POSITION = { x: 100, y: 100 };
 
-function SliderRow({
-  label, value, min, max, step = 1, onChange, disabled = false, colors, quick
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  onChange: (v: number) => void;
-  disabled?: boolean;
-  colors: ReturnType<typeof useSemanticColors>;
-  quick: ReturnType<typeof useBorderTokens>['quick'];
-}) {
-  return (
-    <div className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
-      <div className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>
-        <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.tertiary}`}>{label}</label>
-        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{value}</span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        disabled={disabled}
-        className={`${PANEL_LAYOUT.WIDTH.FULL} ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.hover} ${quick.input} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER} slider`}
-      />
-    </div>
-  );
-}
-
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρησιμοποιεί το Enterprise Color System
 // ColorPicker function αντικαταστάθηκε με SimpleColorPicker από το κεντρικό σύστημα
 

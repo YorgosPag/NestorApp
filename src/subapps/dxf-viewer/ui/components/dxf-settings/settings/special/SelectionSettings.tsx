@@ -14,6 +14,7 @@ import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation
 import { useTranslation } from '@/i18n';
 // 🏢 ADR-081: Centralized percentage formatting
 import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
+import { SliderInput } from '../../../shared/SliderInput';
 
 export function SelectionSettings() {
   const [activeSelectionTab, setActiveSelectionTab] = useState<'window' | 'crossing'>('window');
@@ -155,20 +156,15 @@ export function SelectionSettings() {
               <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.fillOpacity')}</div>
               <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.fillOpacityDesc')}</div>
             </div>
-            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={settings.selection.window.fillOpacity}
-                onChange={(e) => handleWindowSelectionChange('fillOpacity', parseFloat(e.target.value))}
-                className="flex-1"
-              />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                {formatPercent(settings.selection.window.fillOpacity)}
-              </div>
-            </div>
+            <SliderInput
+              value={settings.selection.window.fillOpacity}
+              min={0}
+              max={1}
+              step={0.1}
+              onChange={(v) => handleWindowSelectionChange('fillOpacity', v)}
+              showValue
+              formatValue={formatPercent}
+            />
           </div>
 
           {/* Window Border Color */}
@@ -193,20 +189,15 @@ export function SelectionSettings() {
               <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.borderOpacity')}</div>
               <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.borderOpacityDesc')}</div>
             </div>
-            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={settings.selection.window.borderOpacity}
-                onChange={(e) => handleWindowSelectionChange('borderOpacity', parseFloat(e.target.value))}
-                className="flex-1"
-              />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                {formatPercent(settings.selection.window.borderOpacity)}
-              </div>
-            </div>
+            <SliderInput
+              value={settings.selection.window.borderOpacity}
+              min={0}
+              max={1}
+              step={0.1}
+              onChange={(v) => handleWindowSelectionChange('borderOpacity', v)}
+              showValue
+              formatValue={formatPercent}
+            />
           </div>
 
           {/* Window Border Width */}
@@ -215,20 +206,15 @@ export function SelectionSettings() {
               <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.borderWidth')}</div>
               <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.borderWidthDesc')}</div>
             </div>
-            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-              <input
-                type="range"
-                min="1"
-                max="5"
-                step="1"
-                value={settings.selection.window.borderWidth}
-                onChange={(e) => handleWindowSelectionChange('borderWidth', parseInt(e.target.value))}
-                className="flex-1"
-              />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                {settings.selection.window.borderWidth}px
-              </div>
-            </div>
+            <SliderInput
+              value={settings.selection.window.borderWidth}
+              min={1}
+              max={5}
+              step={1}
+              onChange={(v) => handleWindowSelectionChange('borderWidth', v)}
+              showValue
+              formatValue={(v) => `${v}px`}
+            />
           </div>
 
           {/* Window Border Style */}
@@ -315,20 +301,15 @@ export function SelectionSettings() {
               <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.fillOpacity')}</div>
               <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.fillOpacityDesc')}</div>
             </div>
-            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={settings.selection.crossing.fillOpacity}
-                onChange={(e) => handleCrossingSelectionChange('fillOpacity', parseFloat(e.target.value))}
-                className="flex-1"
-              />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                {formatPercent(settings.selection.crossing.fillOpacity)}
-              </div>
-            </div>
+            <SliderInput
+              value={settings.selection.crossing.fillOpacity}
+              min={0}
+              max={1}
+              step={0.1}
+              onChange={(v) => handleCrossingSelectionChange('fillOpacity', v)}
+              showValue
+              formatValue={formatPercent}
+            />
           </div>
 
           {/* Crossing Border Color */}
@@ -353,20 +334,15 @@ export function SelectionSettings() {
               <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.borderOpacity')}</div>
               <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.borderOpacityDesc')}</div>
             </div>
-            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={settings.selection.crossing.borderOpacity}
-                onChange={(e) => handleCrossingSelectionChange('borderOpacity', parseFloat(e.target.value))}
-                className="flex-1"
-              />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                {formatPercent(settings.selection.crossing.borderOpacity)}
-              </div>
-            </div>
+            <SliderInput
+              value={settings.selection.crossing.borderOpacity}
+              min={0}
+              max={1}
+              step={0.1}
+              onChange={(v) => handleCrossingSelectionChange('borderOpacity', v)}
+              showValue
+              formatValue={formatPercent}
+            />
           </div>
 
           {/* Crossing Border Width */}
@@ -375,20 +351,15 @@ export function SelectionSettings() {
               <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('selectionSettings.common.borderWidth')}</div>
               <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('selectionSettings.common.borderWidthDesc')}</div>
             </div>
-            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-              <input
-                type="range"
-                min="1"
-                max="5"
-                step="1"
-                value={settings.selection.crossing.borderWidth}
-                onChange={(e) => handleCrossingSelectionChange('borderWidth', parseInt(e.target.value))}
-                className="flex-1"
-              />
-              <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                {settings.selection.crossing.borderWidth}px
-              </div>
-            </div>
+            <SliderInput
+              value={settings.selection.crossing.borderWidth}
+              min={1}
+              max={5}
+              step={1}
+              onChange={(v) => handleCrossingSelectionChange('borderWidth', v)}
+              showValue
+              formatValue={(v) => `${v}px`}
+            />
           </div>
 
           {/* Crossing Border Style */}

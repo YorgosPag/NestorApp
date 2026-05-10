@@ -12,6 +12,7 @@ import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+import { SliderInput } from '../../../shared/SliderInput';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props
@@ -25,6 +26,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const [activeTab, setActiveTab] = useState<'outlines' | 'fills'>('outlines');
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
+  const [fillsOpacity, setFillsOpacity] = useState<number>(1.0);
 
   // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ: Χρησιμοποιούμε τα centralized constants αντί για διάσπαρτα
   const presetColors = [
@@ -190,19 +192,15 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                 <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('layersSettings.fills.opacityTitle')}</div>
                 <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('layersSettings.fills.opacityDescription')}</div>
               </div>
-              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.1"
-                  defaultValue="1.0"
-                  className="flex-1"
-                />
-                <div className={`${iconSizes.xl3} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
-                  100%
-                </div>
-              </div>
+              <SliderInput
+                value={fillsOpacity}
+                min={0.1}
+                max={1}
+                step={0.1}
+                onChange={setFillsOpacity}
+                showValue
+                formatValue={(v) => `${Math.round(v * 100)}%`}
+              />
             </div>
 
             {/* Fill Settings */}

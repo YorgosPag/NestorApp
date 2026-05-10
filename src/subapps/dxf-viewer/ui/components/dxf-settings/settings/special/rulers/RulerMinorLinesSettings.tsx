@@ -53,6 +53,7 @@ import { Switch } from '@/components/ui/switch';
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+import { SliderInput } from '../../../../shared/SliderInput';
 
 export interface RulerMinorLinesSettingsProps {
   className?: string;
@@ -201,20 +202,15 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.minorLines.opacity.title')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.minorLines.opacity.description')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="0.1"
-            max="1"
-            step="0.1"
-            value={getOpacityFromColor(rulerSettings.horizontal.minorTickColor)}
-            onChange={(e) => handleMinorTickOpacityChange(parseFloat(e.target.value))}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
-            {Math.round(getOpacityFromColor(rulerSettings.horizontal.minorTickColor) * 100)}%
-          </div>
-        </div>
+        <SliderInput
+          value={getOpacityFromColor(rulerSettings.horizontal.minorTickColor)}
+          min={0.1}
+          max={1}
+          step={0.1}
+          onChange={handleMinorTickOpacityChange}
+          showValue
+          formatValue={(v) => `${Math.round(v * 100)}%`}
+        />
       </div>
 
       {/* Minor Lines Color */}
@@ -240,20 +236,15 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.minorLines.width.title')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.minorLines.width.description')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="0.5"
-            max="3"
-            step="0.5"
-            value={rulerSettings.horizontal.minorTickLength / 10}
-            onChange={(e) => handleMinorTickThicknessChange(parseFloat(e.target.value))}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
-            {rulerSettings.horizontal.minorTickLength / 10}px
-          </div>
-        </div>
+        <SliderInput
+          value={rulerSettings.horizontal.minorTickLength / 10}
+          min={0.5}
+          max={3}
+          step={0.5}
+          onChange={handleMinorTickThicknessChange}
+          showValue
+          formatValue={(v) => `${v}px`}
+        />
       </div>
     </div>
   );

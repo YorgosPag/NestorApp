@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+import { SliderInput } from '../../../../shared/SliderInput';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -181,20 +182,15 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.units.sizeTitle')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.units.sizeDescription')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="8"
-            max="25"
-            step="1"
-            value={rulerSettings.horizontal.unitsFontSize || 10}
-            onChange={(e) => handleRulerUnitsFontSizeChange(parseInt(e.target.value))}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
-            {rulerSettings.horizontal.unitsFontSize || 10}px
-          </div>
-        </div>
+        <SliderInput
+          value={rulerSettings.horizontal.unitsFontSize || 10}
+          min={8}
+          max={25}
+          step={1}
+          onChange={handleRulerUnitsFontSizeChange}
+          showValue
+          formatValue={(v) => `${v}px`}
+        />
       </div>
 
       {/* Units Color */}

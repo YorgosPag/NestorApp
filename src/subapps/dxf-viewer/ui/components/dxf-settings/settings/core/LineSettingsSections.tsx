@@ -35,6 +35,7 @@ import {
   SwatchIcon,
 } from './line-settings-icons';
 import type { LineSettingsState } from './useLineSettingsState';
+import { SliderInput } from '../../../shared/SliderInput';
 
 type SectionProps = Pick<LineSettingsState,
   'settings' | 'settingsUpdater' | 'colors' | 'borderTokens' | 'iconSizes' | 't'
@@ -125,15 +126,12 @@ export function BasicSection({
         </div>
 
         {/* Line Width */}
-        <RangeWithNumber
+        <SliderInput
           label={t('settings.line.labels.widthValue', { value: settings.lineWidth })}
-          min={LINE_WIDTH_RANGE.min}
-          max={LINE_WIDTH_RANGE.max}
-          step={LINE_WIDTH_RANGE.step}
+          min={LINE_WIDTH_RANGE.min} max={LINE_WIDTH_RANGE.max} step={LINE_WIDTH_RANGE.step}
           value={settings.lineWidth}
-          onChange={settingsUpdater.createNumberInputHandler('lineWidth', { parseType: 'float' })}
-          colors={colors}
-          borderTokens={borderTokens}
+          onChange={(v) => settingsUpdater.updateSetting('lineWidth', v)}
+          showNumberInput
         />
 
         {/* Color */}
@@ -153,15 +151,12 @@ export function BasicSection({
         </div>
 
         {/* Opacity */}
-        <RangeWithNumber
+        <SliderInput
           label={t('settings.line.labels.opacityValue', { value: formatPercent(settings.opacity, false) })}
-          min={OPACITY_RANGE.min}
-          max={OPACITY_RANGE.max}
-          step={OPACITY_RANGE.step}
+          min={OPACITY_RANGE.min} max={OPACITY_RANGE.max} step={OPACITY_RANGE.step}
           value={settings.opacity}
-          onChange={settingsUpdater.createNumberInputHandler('opacity', { parseType: 'float' })}
-          colors={colors}
-          borderTokens={borderTokens}
+          onChange={(v) => settingsUpdater.updateSetting('opacity', v)}
+          showNumberInput
         />
 
         {/* Break at Center */}
@@ -215,27 +210,21 @@ export function HoverSection({
         </div>
 
         {/* Hover Width */}
-        <RangeWithNumber
+        <SliderInput
           label={t('settings.line.labels.hoverWidthValue', { value: settings.hoverWidth })}
-          min={LINE_WIDTH_RANGE.min}
-          max={LINE_WIDTH_RANGE.max}
-          step={LINE_WIDTH_RANGE.step}
+          min={LINE_WIDTH_RANGE.min} max={LINE_WIDTH_RANGE.max} step={LINE_WIDTH_RANGE.step}
           value={settings.hoverWidth}
-          onChange={settingsUpdater.createNumberInputHandler('hoverWidth', { parseType: 'float' })}
-          colors={colors}
-          borderTokens={borderTokens}
+          onChange={(v) => settingsUpdater.updateSetting('hoverWidth', v)}
+          showNumberInput
         />
 
         {/* Hover Opacity */}
-        <RangeWithNumber
+        <SliderInput
           label={t('settings.line.labels.hoverOpacityValue', { value: formatPercent(settings.hoverOpacity, false) })}
-          min={OPACITY_RANGE.min}
-          max={OPACITY_RANGE.max}
-          step={OPACITY_RANGE.step}
+          min={OPACITY_RANGE.min} max={OPACITY_RANGE.max} step={OPACITY_RANGE.step}
           value={settings.hoverOpacity}
-          onChange={settingsUpdater.createNumberInputHandler('hoverOpacity', { parseType: 'float' })}
-          colors={colors}
-          borderTokens={borderTokens}
+          onChange={(v) => settingsUpdater.updateSetting('hoverOpacity', v)}
+          showNumberInput
         />
       </div>
     </AccordionSection>
@@ -274,27 +263,21 @@ export function FinalSection({
         </div>
 
         {/* Final Width */}
-        <RangeWithNumber
+        <SliderInput
           label={t('settings.line.labels.finalWidthValue', { value: settings.finalWidth })}
-          min={LINE_WIDTH_RANGE.min}
-          max={LINE_WIDTH_RANGE.max}
-          step={LINE_WIDTH_RANGE.step}
+          min={LINE_WIDTH_RANGE.min} max={LINE_WIDTH_RANGE.max} step={LINE_WIDTH_RANGE.step}
           value={settings.finalWidth}
-          onChange={settingsUpdater.createNumberInputHandler('finalWidth', { parseType: 'float' })}
-          colors={colors}
-          borderTokens={borderTokens}
+          onChange={(v) => settingsUpdater.updateSetting('finalWidth', v)}
+          showNumberInput
         />
 
         {/* Final Opacity */}
-        <RangeWithNumber
+        <SliderInput
           label={t('settings.line.labels.finalOpacityValue', { value: formatPercent(settings.finalOpacity, false) })}
-          min={OPACITY_RANGE.min}
-          max={OPACITY_RANGE.max}
-          step={OPACITY_RANGE.step}
+          min={OPACITY_RANGE.min} max={OPACITY_RANGE.max} step={OPACITY_RANGE.step}
           value={settings.finalOpacity}
-          onChange={settingsUpdater.createNumberInputHandler('finalOpacity', { parseType: 'float' })}
-          colors={colors}
-          borderTokens={borderTokens}
+          onChange={(v) => settingsUpdater.updateSetting('finalOpacity', v)}
+          showNumberInput
         />
       </div>
     </AccordionSection>
@@ -318,15 +301,12 @@ export function AdvancedSection({
       <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
         {/* Dash Scale (only for non-solid lines) */}
         {settings.lineType !== 'solid' && (
-          <RangeWithNumber
+          <SliderInput
             label={t('settings.line.labels.dashScaleValue', { value: settings.dashScale })}
-            min={DASH_SCALE_RANGE.min}
-            max={DASH_SCALE_RANGE.max}
-            step={DASH_SCALE_RANGE.step}
+            min={DASH_SCALE_RANGE.min} max={DASH_SCALE_RANGE.max} step={DASH_SCALE_RANGE.step}
             value={settings.dashScale}
-            onChange={settingsUpdater.createNumberInputHandler('dashScale', { parseType: 'float' })}
-            colors={colors}
-            borderTokens={borderTokens}
+            onChange={(v) => settingsUpdater.updateSetting('dashScale', v)}
+            showNumberInput
           />
         )}
 
@@ -376,15 +356,12 @@ export function AdvancedSection({
 
         {/* Dash Offset (only for non-solid lines) */}
         {settings.lineType !== 'solid' && (
-          <RangeWithNumber
+          <SliderInput
             label={t('settings.line.labels.dashOffsetValue', { value: settings.dashOffset })}
-            min={DASH_OFFSET_RANGE.min}
-            max={DASH_OFFSET_RANGE.max}
-            step={DASH_OFFSET_RANGE.step}
+            min={DASH_OFFSET_RANGE.min} max={DASH_OFFSET_RANGE.max} step={DASH_OFFSET_RANGE.step}
             value={settings.dashOffset}
-            onChange={settingsUpdater.createNumberInputHandler('dashOffset', { parseType: 'float' })}
-            colors={colors}
-            borderTokens={borderTokens}
+            onChange={(v) => settingsUpdater.updateSetting('dashOffset', v)}
+            showNumberInput
           />
         )}
       </div>
@@ -454,46 +431,3 @@ export function FactoryResetModal({
   );
 }
 
-// ===== SHARED: Range + Number Input =====
-
-function RangeWithNumber({
-  label, min, max, step, value, onChange, colors, borderTokens,
-}: {
-  label: string;
-  min: number;
-  max: number;
-  step: number;
-  value: number;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  colors: LineSettingsState['colors'];
-  borderTokens: LineSettingsState['borderTokens'];
-}) {
-  const { quick, radius } = borderTokens;
-  return (
-    <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-      <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-        {label}
-      </label>
-      <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={onChange}
-          className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
-        />
-        <input
-          type="number"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={onChange}
-          className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
-        />
-      </div>
-    </div>
-  );
-}

@@ -14,6 +14,7 @@ import { useProSnapIntegration } from '../../hooks/common/useProSnapIntegration'
 import { ZoomControls } from './ZoomControls';
 import { ToolButton, ActionButton } from './ToolButton';
 import { ToolbarStatusBar } from './ToolbarStatusBar';
+import CadStatusBar from '../../statusbar/CadStatusBar';
 import { ProSnapToolbar } from '../components/ProSnapToolbar';
 // 🏢 ENTERPRISE: Shadcn Button (same as CompactToolbar - NO BORDERS)
 import { Button } from '@/components/ui/button';
@@ -455,6 +456,8 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
         commandCount={commandCount}
         showCoordinates={showCoordinates}
       />
+
+      <CadStatusBar />
 
       {/* Simple Project Dialog */}
       <SimpleProjectDialog

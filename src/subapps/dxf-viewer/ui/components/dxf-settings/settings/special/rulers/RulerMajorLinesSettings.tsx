@@ -54,6 +54,7 @@ import { Switch } from '@/components/ui/switch';
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+import { SliderInput } from '../../../../shared/SliderInput';
 
 export interface RulerMajorLinesSettingsProps {
   className?: string;
@@ -202,20 +203,15 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.majorLines.opacity.title')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.majorLines.opacity.description')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="0.1"
-            max="1"
-            step="0.1"
-            value={getOpacityFromColor(rulerSettings.horizontal.majorTickColor)}
-            onChange={(e) => handleMajorTickOpacityChange(parseFloat(e.target.value))}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
-            {Math.round(getOpacityFromColor(rulerSettings.horizontal.majorTickColor) * 100)}%
-          </div>
-        </div>
+        <SliderInput
+          value={getOpacityFromColor(rulerSettings.horizontal.majorTickColor)}
+          min={0.1}
+          max={1}
+          step={0.1}
+          onChange={handleMajorTickOpacityChange}
+          showValue
+          formatValue={(v) => `${Math.round(v * 100)}%`}
+        />
       </div>
 
       {/* Major Lines Color */}
@@ -241,20 +237,15 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.majorLines.width.title')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.majorLines.width.description')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="0.5"
-            max="3"
-            step="0.5"
-            value={rulerSettings.horizontal.majorTickLength / 10}
-            onChange={(e) => handleMajorTickThicknessChange(parseFloat(e.target.value))}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>
-            {rulerSettings.horizontal.majorTickLength / 10}px
-          </div>
-        </div>
+        <SliderInput
+          value={rulerSettings.horizontal.majorTickLength / 10}
+          min={0.5}
+          max={3}
+          step={0.5}
+          onChange={handleMajorTickThicknessChange}
+          showValue
+          formatValue={(v) => `${v}px`}
+        />
       </div>
     </div>
   );

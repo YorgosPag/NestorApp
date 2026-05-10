@@ -7,6 +7,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../config/color-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+import { SliderInput } from '../shared/SliderInput';
 
 export interface CursorColors {
   crosshairColor: string;
@@ -82,20 +83,16 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           placeholder={UI_COLORS.WHITE}
         />
         {opacityKey && (
-          <>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={colors[opacityKey] as number}
-              onChange={(e) => handleColorChange(opacityKey, String(parseFloat(e.target.value)))}
-              className={`flex-1 ${PANEL_LAYOUT.WIDTH.MD}`}
-            />
-            <div className={`${PANEL_LAYOUT.WIDTH.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${semanticColors.text.secondary} text-center`}>
-              {Math.round((colors[opacityKey] as number) * 100)}%
-            </div>
-          </>
+          <SliderInput
+            value={colors[opacityKey] as number}
+            min={0}
+            max={1}
+            step={0.1}
+            onChange={(v) => handleColorChange(opacityKey, String(v))}
+            showValue
+            formatValue={(v) => `${Math.round(v * 100)}%`}
+            className="flex-1"
+          />
         )}
       </div>
     </div>

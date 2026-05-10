@@ -53,6 +53,7 @@ import { Switch } from '@/components/ui/switch';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+import { SliderInput } from '../../../shared/SliderInput';
 
 export interface CrosshairBehaviorSettingsProps {
   className?: string;
@@ -131,20 +132,15 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('crosshairSettings.behavior.opacityTitle')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('crosshairSettings.behavior.opacityDescription')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="0.1"
-            max="1"
-            step="0.1"
-            value={settings.crosshair.opacity || 0.9}
-            onChange={(e) => updateSettings({ crosshair: { ...settings.crosshair, opacity: parseFloat(e.target.value) } })}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.XS} text-center`}>
-            {Math.round((settings.crosshair.opacity || 0.9) * 100)}%
-          </div>
-        </div>
+        <SliderInput
+          value={settings.crosshair.opacity || 0.9}
+          min={0.1}
+          max={1}
+          step={0.1}
+          onChange={(v) => updateSettings({ crosshair: { ...settings.crosshair, opacity: v } })}
+          showValue
+          formatValue={(v) => `${Math.round(v * 100)}%`}
+        />
       </div>
 
       {/* 🏢 ENTERPRISE: Cursor Gap Toggle - Using centralized Switch component */}

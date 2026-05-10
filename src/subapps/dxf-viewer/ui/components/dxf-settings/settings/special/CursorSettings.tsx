@@ -20,6 +20,7 @@ import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { useTranslation } from '@/i18n';
 // 🏢 ADR-081: Centralized percentage formatting
 import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
+import { SliderInput } from '../../../shared/SliderInput';
 
 export function CursorSettings() {
   const iconSizes = useIconSizes();
@@ -206,18 +207,15 @@ export function CursorSettings() {
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.lineWidth.title')}</h4>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.lineWidth.description')}</p>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="1"
-            max="5"
-            step="0.5"
-            value={settings.cursor.line_width || 1}
-            onChange={(e) => handleCursorLineWidthChange(parseFloat(e.target.value))}
-            className="flex-1"
-          />
-          <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>{settings.cursor.line_width || 1}px</div>
-        </div>
+        <SliderInput
+          value={settings.cursor.line_width || 1}
+          min={1}
+          max={5}
+          step={0.5}
+          onChange={handleCursorLineWidthChange}
+          showValue
+          formatValue={(v) => `${v}px`}
+        />
         <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
           {[1, 1.5, 2, 3, 4, 5].map(width => (
             <button
@@ -243,18 +241,15 @@ export function CursorSettings() {
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.size.title')}</h4>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.size.description')}</p>
-            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-              <input
-                type="range"
-                min="3"
-                max="50"
-                step="1"
-                value={settings.cursor.size}
-                onChange={(e) => handleCursorSizeChange(parseInt(e.target.value))}
-                className="flex-1"
-              />
-              <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>{settings.cursor.size}px</div>
-            </div>
+            <SliderInput
+              value={settings.cursor.size}
+              min={3}
+              max={50}
+              step={1}
+              onChange={handleCursorSizeChange}
+              showValue
+              formatValue={(v) => `${v}px`}
+            />
             <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
               {[5, 10, 15, 25, 50].map(size => (
                 <button
@@ -280,18 +275,15 @@ export function CursorSettings() {
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.opacity.title')}</h4>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.opacity.description')}</p>
-            <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-              <input
-                type="range"
-                min="0.1"
-                max="1"
-                step="0.1"
-                value={settings.cursor.opacity}
-                onChange={(e) => handleCursorOpacityChange(parseFloat(e.target.value))}
-                className="flex-1"
-              />
-              <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>{formatPercent(settings.cursor.opacity)}</div>
-        </div>
+            <SliderInput
+              value={settings.cursor.opacity}
+              min={0.1}
+              max={1}
+              step={0.1}
+              onChange={handleCursorOpacityChange}
+              showValue
+              formatValue={formatPercent}
+            />
       </section>
 
       {/* Show/Hide Cursor - 🏢 ENTERPRISE: Semantic section */}

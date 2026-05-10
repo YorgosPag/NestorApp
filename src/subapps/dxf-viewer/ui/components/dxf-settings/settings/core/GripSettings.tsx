@@ -21,6 +21,7 @@ import { formatPercent } from '../../../../../rendering/entities/shared/distance
 import { UI_SIZE_DEFAULTS } from '../../../../../config/text-rendering-config';
 import { CogIcon, ColorSwatchIcon, ViewGridIcon, AdjustmentsIcon } from './grip-settings-icons';
 import { GripFactoryResetModal } from './GripFactoryResetModal';
+import { SliderInput } from '../../../shared/SliderInput';
 
 export function GripSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
@@ -129,36 +130,14 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 {t('settings.grip.labels.size')}: {gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE}px
               </label>
-              <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
-                <input type="range" min="4" max="16" step="1"
-                  value={gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE}
-                  onChange={(e) => updateSettings({ gripSize: parseInt(e.target.value) })}
-                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
-                />
-                <input type="number" min="4" max="16" step="1"
-                  value={gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE}
-                  onChange={(e) => updateSettings({ gripSize: parseInt(e.target.value) })}
-                  className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
-                />
-              </div>
+              <SliderInput value={gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE} min={4} max={16} step={1} onChange={(v) => updateSettings({ gripSize: v })} showNumberInput />
             </div>
             {/* Opacity */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 {t('settings.grip.labels.opacity')}: {formatPercent(gripSettings.opacity)}
               </label>
-              <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
-                <input type="range" min="0.1" max="1" step="0.1"
-                  value={gripSettings.opacity}
-                  onChange={(e) => updateSettings({ opacity: parseFloat(e.target.value) })}
-                  className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
-                />
-                <input type="number" min="0.1" max="1" step="0.1"
-                  value={gripSettings.opacity}
-                  onChange={(e) => updateSettings({ opacity: parseFloat(e.target.value) })}
-                  className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
-                />
-              </div>
+              <SliderInput value={gripSettings.opacity} min={0.1} max={1} step={0.1} onChange={(v) => updateSettings({ opacity: v })} showNumberInput />
             </div>
           </div>
         </AccordionSection>
@@ -232,30 +211,21 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 {t('settings.grip.labels.pickBoxSize')}: {gripSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE}px
               </label>
-              <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
-                <input type="range" min="1" max="8" step="1" value={gripSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE} onChange={(e) => updateSettings({ pickBoxSize: parseInt(e.target.value) })} className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`} />
-                <input type="number" min="1" max="8" step="1" value={gripSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE} onChange={(e) => updateSettings({ pickBoxSize: parseInt(e.target.value) })} className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`} />
-              </div>
+              <SliderInput value={gripSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE} min={1} max={8} step={1} onChange={(v) => updateSettings({ pickBoxSize: v })} showNumberInput />
             </div>
             {/* Aperture Size */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 {t('settings.grip.labels.apertureSize')}: {gripSettings.apertureSize || 16}px
               </label>
-              <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
-                <input type="range" min="8" max="32" step="2" value={gripSettings.apertureSize || 16} onChange={(e) => updateSettings({ apertureSize: parseInt(e.target.value) })} className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`} />
-                <input type="number" min="8" max="32" step="2" value={gripSettings.apertureSize || 16} onChange={(e) => updateSettings({ apertureSize: parseInt(e.target.value) })} className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`} />
-              </div>
+              <SliderInput value={gripSettings.apertureSize || 16} min={8} max={32} step={2} onChange={(v) => updateSettings({ apertureSize: v })} showNumberInput />
             </div>
             {/* Max Grips */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 {t('settings.grip.labels.maxGrips')}: {gripSettings.maxGripsPerEntity || 50}
               </label>
-              <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
-                <input type="range" min="10" max="200" step="10" value={gripSettings.maxGripsPerEntity || 50} onChange={(e) => updateSettings({ maxGripsPerEntity: parseInt(e.target.value) })} className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`} />
-                <input type="number" min="10" max="200" step="10" value={gripSettings.maxGripsPerEntity || 50} onChange={(e) => updateSettings({ maxGripsPerEntity: parseInt(e.target.value) })} className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`} />
-              </div>
+              <SliderInput value={gripSettings.maxGripsPerEntity || 50} min={10} max={200} step={10} onChange={(v) => updateSettings({ maxGripsPerEntity: v })} showNumberInput />
             </div>
             {/* Advanced Checkboxes */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>

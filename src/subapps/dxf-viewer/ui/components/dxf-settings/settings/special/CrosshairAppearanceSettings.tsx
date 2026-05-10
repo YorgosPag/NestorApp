@@ -55,6 +55,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+import { SliderInput } from '../../../shared/SliderInput';
 
 export interface CrosshairAppearanceSettingsProps {
   className?: string;
@@ -199,18 +200,15 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('crosshairSettings.appearance.lineWidthTitle')}</h4>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('crosshairSettings.appearance.lineWidthDescription')}</p>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="1"
-            max="5"
-            step="0.5"
-            value={settings.crosshair.line_width}
-            onChange={(e) => updateSettings({ crosshair: { ...settings.crosshair, line_width: parseFloat(e.target.value) } })}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center`}>{settings.crosshair.line_width}px</div>
-        </div>
+        <SliderInput
+          value={settings.crosshair.line_width}
+          min={1}
+          max={5}
+          step={0.5}
+          onChange={(v) => updateSettings({ crosshair: { ...settings.crosshair, line_width: v } })}
+          showValue
+          formatValue={(v) => `${v}px`}
+        />
         <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
           {[1, 1.5, 2, 3, 4, 5].map(width => (
             <button

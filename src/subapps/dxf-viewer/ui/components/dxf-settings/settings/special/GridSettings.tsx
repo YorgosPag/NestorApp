@@ -32,6 +32,7 @@ import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { useTranslation } from '@/i18n';
 // 🌊 Extracted adaptive-grid section (SRP + 500-line limit)
 import { GridAdaptiveFadeSection } from './GridAdaptiveFadeSection';
+import { SliderInput } from '../../../shared/SliderInput';
 
 export interface GridSettingsProps {
   className?: string;
@@ -250,20 +251,15 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('gridSettings.size.title')}</h4>
         <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.size.description')}</p>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="0.5"
-            max="50"
-            step="0.5"
-            value={gridSettings.visual.step}
-            onChange={(e) => handleGridSizeChange(parseFloat(e.target.value))}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-            {gridSettings.visual.step}
-          </div>
-        </div>
+        <SliderInput
+          value={gridSettings.visual.step}
+          min={0.5}
+          max={50}
+          step={0.5}
+          onChange={handleGridSizeChange}
+          showValue
+          formatValue={String}
+        />
       </section>
 
       {/* 🏢 ENTERPRISE: Grid Style Selector - Using centralized TabsOnlyTriggers */}
@@ -325,20 +321,15 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                 <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('gridSettings.weight.label', { type: gridLinesLabels.major })}</div>
                 <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('gridSettings.weight.description', { type: gridLinesLabels.major.toLowerCase() })}</div>
               </div>
-              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="5"
-                  step="0.5"
-                  value={gridSettings.visual.majorGridWeight}
-                  onChange={(e) => handleMajorGridWeightChange(parseFloat(e.target.value))}
-                  className="flex-1"
-                />
-                <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                  {gridSettings.visual.majorGridWeight}
-                </div>
-              </div>
+              <SliderInput
+                value={gridSettings.visual.majorGridWeight}
+                min={0.5}
+                max={5}
+                step={0.5}
+                onChange={handleMajorGridWeightChange}
+                showValue
+                formatValue={String}
+              />
             </div>
           </div>
         ) : (
@@ -367,20 +358,15 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                 <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('gridSettings.weight.label', { type: gridLinesLabels.minor })}</div>
                 <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('gridSettings.weight.description', { type: gridLinesLabels.minor.toLowerCase() })}</div>
               </div>
-              <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="3"
-                  step="0.1"
-                  value={gridSettings.visual.minorGridWeight}
-                  onChange={(e) => handleMinorGridWeightChange(parseFloat(e.target.value))}
-                  className="flex-1"
-                />
-                <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${quick.button} ${PANEL_LAYOUT.SPACING.XS} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                  {gridSettings.visual.minorGridWeight}
-                </div>
-              </div>
+              <SliderInput
+                value={gridSettings.visual.minorGridWeight}
+                min={0.1}
+                max={3}
+                step={0.1}
+                onChange={handleMinorGridWeightChange}
+                showValue
+                formatValue={String}
+              />
             </div>
           </div>
         )}

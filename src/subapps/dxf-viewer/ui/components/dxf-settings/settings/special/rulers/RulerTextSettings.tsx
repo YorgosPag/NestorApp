@@ -23,6 +23,7 @@ import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+import { SliderInput } from '../../../../shared/SliderInput';
 
 export interface RulerTextSettingsProps {
   className?: string;
@@ -129,20 +130,15 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.text.sizeTitle')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.text.sizeDescription')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="8"
-            max="25"
-            step="1"
-            value={rulerSettings.horizontal.fontSize}
-            onChange={(e) => handleRulerFontSizeChange(parseInt(e.target.value))}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} text-center ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY}`}>
-            {rulerSettings.horizontal.fontSize}px
-          </div>
-        </div>
+        <SliderInput
+          value={rulerSettings.horizontal.fontSize}
+          min={8}
+          max={25}
+          step={1}
+          onChange={handleRulerFontSizeChange}
+          showValue
+          formatValue={(v) => `${v}px`}
+        />
       </div>
 
       {/* 🏢 ENTERPRISE: Text Visibility Toggle - Using centralized Switch component */}

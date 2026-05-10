@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+import { SliderInput } from '../../../../shared/SliderInput';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -225,34 +226,22 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.background.opacity.title')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.background.opacity.description')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="0.1"
-            max="1"
-            step="0.1"
-            value={(() => {
-              const bgColor = rulerSettings.horizontal.backgroundColor;
-              if (bgColor.includes('rgba')) {
-                const match = bgColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
-                return match ? parseFloat(match[1]) : 0.8;
-              }
-              return 0.8;
-            })()}
-            onChange={(e) => handleRulerOpacityChange(parseFloat(e.target.value))}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.XS} text-center`}>
-            {Math.round(((() => {
-              const bgColor = rulerSettings.horizontal.backgroundColor;
-              if (bgColor.includes('rgba')) {
-                const match = bgColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
-                return match ? parseFloat(match[1]) : 0.8;
-              }
-              return 0.8;
-            })()) * 100)}%
-          </div>
-        </div>
+        <SliderInput
+          value={(() => {
+            const bgColor = rulerSettings.horizontal.backgroundColor;
+            if (bgColor.includes('rgba')) {
+              const match = bgColor.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
+              return match ? parseFloat(match[1]) : 0.8;
+            }
+            return 0.8;
+          })()}
+          min={0.1}
+          max={1}
+          step={0.1}
+          onChange={handleRulerOpacityChange}
+          showValue
+          formatValue={(v) => `${Math.round(v * 100)}%`}
+        />
       </div>
 
       {/* Ruler Width */}
@@ -261,20 +250,15 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.background.width.title')}</div>
           <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.background.width.description')}</div>
         </div>
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <input
-            type="range"
-            min="20"
-            max="60"
-            step="5"
-            value={rulerSettings.horizontal.height}
-            onChange={(e) => handleRulerWidthChange(parseInt(e.target.value))}
-            className="flex-1"
-          />
-          <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} rounded ${PANEL_LAYOUT.SPACING.XS} text-center`}>
-            {rulerSettings.horizontal.height}px
-          </div>
-        </div>
+        <SliderInput
+          value={rulerSettings.horizontal.height}
+          min={20}
+          max={60}
+          step={5}
+          onChange={handleRulerWidthChange}
+          showValue
+          formatValue={(v) => `${v}px`}
+        />
       </div>
 
       {/* 🏢 ENTERPRISE: Ruler Lines Visibility Toggle - Using centralized Switch component */}
