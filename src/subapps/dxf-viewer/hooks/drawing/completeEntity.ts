@@ -41,6 +41,7 @@ import type { ToolType } from '../../ui/toolbar/types';
 import { applyCompletionStyles } from '../useLineCompletionStyle';
 import { EventBus } from '../../systems/events';
 import { toolStateStore } from '../../stores/ToolStateStore';
+import { perfMark, perfStart, perfEnd } from '../../debug/perf-line-profile';
 import type { DrawingTool } from './drawing-types';
 import type { PersistEntityOptions, PersistEntityResult } from './useOverlayPersistence';
 
@@ -176,24 +177,20 @@ export function completeEntity(
   }
 
   // STEP 2: Add entity to scene
+  const _perfTotal = perfStart();
   const scene = getScene(levelId);
-  let finalScene: SceneModel;
-
-  if (scene) {
-    finalScene = {
-      ...scene,
-      entities: [...scene.entities, entity as AnySceneEntity]
-    };
-    setScene(levelId, finalScene);
-  } else {
-    finalScene = {
-      entities: [entity as AnySceneEntity],
-      layers: { [DXF_DEFAULT_LAYER]: { name: DXF_DEFAULT_LAYER, color: UI_COLORS.WHITE, visible: true, locked: false } },
-      bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
-      units: 'mm',
-    };
-    setScene(levelId, finalScene);
-  }
+  const finalScene: SceneModel = perfMark('completeEntity.setScene', () => {
+    const next: SceneModel = scene
+      ? { ...scene, entities: [...scene.entities, entity as AnySceneEntity] }
+      : {
+          entities: [entity as AnySceneEntity],
+          layers: { [DXF_DEFAULT_LAYER]: { name: DXF_DEFAULT_LAYER, color: UI_COLORS.WHITE, visible: true, locked: false } },
+          bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
+          units: 'mm',
+        };
+    setScene(levelId, next);
+    return next;
+  });
 
   // STEP 3: Track for undo (optional)
   if (trackForUndo && entity.id) {
@@ -202,19 +199,24 @@ export function completeEntity(
 
   // STEP 4: Emit completion event
   if (!skipEvent) {
-    EventBus.emit('drawing:complete', {
-      tool,
-      entityId: entity.id,
-      entity,
-      updatedScene: finalScene,
-      levelId,
+    perfMark('completeEntity.emit(drawing:complete)', () => {
+      EventBus.emit('drawing:complete', {
+        tool,
+        entityId: entity.id,
+        entity,
+        updatedScene: finalScene,
+        levelId,
+      });
     });
   }
 
   // STEP 5: Handle tool persistence
   if (!skipToolPersistence) {
-    toolStateStore.handleToolCompletion(tool);
+    perfMark('completeEntity.toolStateStore.handleToolCompletion', () => {
+      toolStateStore.handleToolCompletion(tool);
+    });
   }
+  perfEnd('completeEntity.TOTAL', _perfTotal);
 
   // STEP 6: ADR-340 Phase 9 STEP G — opt-in Firestore persistence
   if (persistToOverlays) {
