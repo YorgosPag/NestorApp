@@ -54,6 +54,8 @@
     "autoCropOff": "Αυτόματη Περικοπή ΕΞ",
     "showGuides": "Εμφάνιση Οδηγών",
     "hideGuides": "Απόκρυψη Οδηγών",
+    "showGuidePanel": "Άνοιγμα Πίνακα Οδηγών",
+    "hideGuidePanel": "Κλείσιμο Πίνακα Οδηγών",
     "enterFullscreen": "Πλήρης Οθόνη",
     "exitFullscreen": "Έξοδος Πλήρους Οθόνης"
   },

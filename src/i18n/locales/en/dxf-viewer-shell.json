@@ -54,6 +54,8 @@
     "autoCropOff": "Auto-Crop OFF",
     "showGuides": "Show Guides",
     "hideGuides": "Hide Guides",
+    "showGuidePanel": "Open Guide Panel",
+    "hideGuidePanel": "Close Guide Panel",
     "enterFullscreen": "Fullscreen",
     "exitFullscreen": "Exit Fullscreen"
   },

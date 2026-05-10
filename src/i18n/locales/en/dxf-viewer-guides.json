@@ -46,6 +46,7 @@
   },
   "guides": {
     "measureToGuide": "Create guides at measurement points?",
+    "entityToGuide": "Create guides at entity points?",
     "createGuides": "Create Guides",
     "equalizeRequiresSameAxis": "Equalize requires 3+ guides on the same axis (X or Y)"
   },
@@ -141,5 +142,10 @@
     "error": "Error during execution",
     "toggleOpen": "Open AI assistant",
     "toggleClose": "Close AI assistant"
+  },
+  "moveTool": {
+    "selectEntity": "Select entity to move",
+    "selectBasePoint": "Click: base point",
+    "selectDestination": "Click: destination point — Esc: cancel"
   }
 }
