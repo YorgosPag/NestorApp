@@ -15,6 +15,7 @@ import type {
   GripTemperature,
   Entity
 } from '../types';
+import type { GripSettings } from '../../../rendering/grips/types';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -48,7 +49,8 @@ import { UnifiedGripRenderer } from '../../../rendering/grips';
 export class GripPhaseRenderer {
   private ctx: CanvasRenderingContext2D;
   private worldToScreen: (point: Point2D) => Point2D;
-  private gripRenderer: UnifiedGripRenderer; // 🏢 ADR-048: Unified renderer
+  private gripRenderer: UnifiedGripRenderer;
+  private identityRenderer: UnifiedGripRenderer; // screen-space renderer, reused per frame
 
   constructor(
     ctx: CanvasRenderingContext2D,
@@ -56,7 +58,8 @@ export class GripPhaseRenderer {
   ) {
     this.ctx = ctx;
     this.worldToScreen = worldToScreen;
-    this.gripRenderer = new UnifiedGripRenderer(ctx, worldToScreen); // 🏢 ADR-048
+    this.gripRenderer = new UnifiedGripRenderer(ctx, worldToScreen);
+    this.identityRenderer = new UnifiedGripRenderer(ctx, (p: Point2D) => p);
   }
 
   // ==========================================================================
@@ -142,19 +145,19 @@ export class GripPhaseRenderer {
     previewGrips: PreviewGripPointInput[],
     state: PhaseRenderingState
   ): void {
+    const style = getGripPreviewStyleWithOverride();
+    const cachedSettings: Partial<GripSettings> = {
+      colors: style.colors,
+      gripSize: style.gripSize,
+      dpiScale: 1.0,
+    };
     for (let i = 0; i < previewGrips.length; i++) {
       const gripPoint = previewGrips[i];
       const point2D = this.extractPoint2DFromGripPoint(gripPoint);
       const screenPos = this.worldToScreen(point2D);
-
-      // 🎯 ADR-047: Check if gripPoint has custom color (PreviewGripPoint with color property)
       const customColor = ('color' in gripPoint && gripPoint.color) ? gripPoint.color : undefined;
-
-      // 🎯 ADR-047: Check if it's a 'close' type grip (for polygon closing)
       const gripType = ('type' in gripPoint && gripPoint.type) ? gripPoint.type : undefined;
-
-      // Preview grips use cold color from settings (or custom color if provided)
-      this.drawGrip(screenPos, 'cold', state, gripType, customColor);
+      this.drawGrip(screenPos, 'cold', state, gripType, customColor, cachedSettings);
     }
   }
 
@@ -166,14 +169,17 @@ export class GripPhaseRenderer {
     grips: GripInfo[],
     state: PhaseRenderingState
   ): void {
+    const style = getGripPreviewStyleWithOverride();
+    const cachedSettings: Partial<GripSettings> = {
+      colors: style.colors,
+      gripSize: style.gripSize,
+      dpiScale: 1.0,
+    };
     for (let i = 0; i < grips.length; i++) {
       const grip = grips[i];
       const screenPos = this.worldToScreen(grip.position);
-
-      // Determine grip temperature based on interaction state
       const temperature = this.getGripTemperature(entity.id, grip.gripIndex ?? i, state);
-
-      this.drawGrip(screenPos, temperature, state, grip.type);
+      this.drawGrip(screenPos, temperature, state, grip.type, undefined, cachedSettings);
     }
   }
 
@@ -221,31 +227,21 @@ export class GripPhaseRenderer {
     temperature: GripTemperature,
     state: PhaseRenderingState,
     gripType: string | undefined,
-    customColor?: string // 🎯 ADR-047: Custom color support
+    customColor?: string,
+    cachedSettings?: Partial<GripSettings>
   ): void {
-    // Get grip style from centralized hook (respects override settings)
-    const gripPreviewStyle = getGripPreviewStyleWithOverride();
-
-    // 🏢 ADR-048: Use UnifiedGripRenderer
-    // Note: Position is already in screen coords, so we use identity transform
-    const identityTransform = (p: Point2D) => p;
-    const tempRenderer = new UnifiedGripRenderer(this.ctx, identityTransform);
-
-    // Convert GripPreviewStyle to GripSettings format
-    const gripSettings = {
-      colors: gripPreviewStyle.colors,
-      gripSize: gripPreviewStyle.gripSize,
-      dpiScale: 1.0, // Default DPI scale
-    };
-
-    tempRenderer.renderGrip(
+    const settings = cachedSettings ?? (() => {
+      const style = getGripPreviewStyleWithOverride();
+      return { colors: style.colors, gripSize: style.gripSize, dpiScale: 1.0 };
+    })();
+    this.identityRenderer.renderGrip(
       {
         position,
         type: (gripType || 'vertex') as 'vertex' | 'edge' | 'midpoint' | 'center' | 'corner' | 'close',
         temperature,
         customColor,
       },
-      gripSettings
+      settings
     );
   }
 

@@ -31,6 +31,11 @@ import { clamp } from '../entities/shared/geometry-utils';
  * ```
  */
 export class GripSizeCalculator {
+  private static readonly TEMP_MULTIPLIER: Record<GripTemperature, number> = {
+    cold: GRIP_SIZE_MULTIPLIERS.COLD,
+    warm: GRIP_SIZE_MULTIPLIERS.WARM,
+    hot:  GRIP_SIZE_MULTIPLIERS.HOT,
+  };
   /**
    * Calculate final grip size with all scaling factors
    *
@@ -84,8 +89,7 @@ export class GripSizeCalculator {
    * @returns Size multiplier (1.0, 1.25, or 1.5)
    */
   private getSizeMultiplier(temperature: GripTemperature): number {
-    const multiplierKey = temperature.toUpperCase() as keyof typeof GRIP_SIZE_MULTIPLIERS;
-    return GRIP_SIZE_MULTIPLIERS[multiplierKey];
+    return GripSizeCalculator.TEMP_MULTIPLIER[temperature];
   }
 
   /**

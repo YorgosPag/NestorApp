@@ -37,6 +37,12 @@ import { DEFAULT_GRIP_COLORS, EDGE_GRIP_COLOR } from './constants';
  * ```
  */
 export class GripColorManager {
+  private static readonly HEX_COLOR_RE = /^#([0-9A-F]{3}){1,2}$/i;
+  private static readonly DEFAULT_COLOR: Record<GripTemperature, string> = {
+    cold: DEFAULT_GRIP_COLORS.COLD,
+    warm: DEFAULT_GRIP_COLORS.WARM,
+    hot:  DEFAULT_GRIP_COLORS.HOT,
+  };
   /**
    * Get grip fill color based on priority system
    *
@@ -103,20 +109,10 @@ export class GripColorManager {
    * @returns Default hex color
    */
   private getDefaultColor(temperature: GripTemperature): string {
-    const colorKey = temperature.toUpperCase() as keyof typeof DEFAULT_GRIP_COLORS;
-    return DEFAULT_GRIP_COLORS[colorKey] || DEFAULT_GRIP_COLORS.COLD;
+    return GripColorManager.DEFAULT_COLOR[temperature];
   }
 
-  /**
-   * Validate hex color format
-   * Ensures color is valid hex string
-   *
-   * @param color - Color string to validate
-   * @returns Valid hex color or fallback
-   */
   private validateColor(color: string): string {
-    // Validate hex color format (#RRGGBB or #RGB)
-    const isValidHex = /^#([0-9A-F]{3}){1,2}$/i.test(color);
-    return isValidHex ? color : DEFAULT_GRIP_COLORS.COLD;
+    return GripColorManager.HEX_COLOR_RE.test(color) ? color : DEFAULT_GRIP_COLORS.COLD;
   }
 }

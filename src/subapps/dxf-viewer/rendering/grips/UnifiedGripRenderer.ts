@@ -100,12 +100,12 @@ export class UnifiedGripRenderer {
    * @param config - Grip render configuration
    * @param settings - Optional grip settings (can be partial)
    */
-  renderGrip(config: GripRenderConfig, settings?: Partial<GripSettings>): void {
+  renderGrip(config: GripRenderConfig, settings?: Partial<GripSettings>, temperatureOverride?: GripTemperature): void {
     // Step 1: Transform to screen coordinates
     const screenPos = this.worldToScreen(config.position);
 
     // Step 2: Detect/use temperature
-    const temperature = config.temperature ||
+    const temperature = temperatureOverride ?? config.temperature ??
       (config.entityId !== undefined && config.gripIndex !== undefined
         ? this.interactionDetector.detectTemperature(
             config.entityId,
@@ -171,14 +171,8 @@ export class UnifiedGripRenderer {
         );
       }
 
-      // Render grip with detected temperature
-      this.renderGrip(
-        {
-          ...grip,
-          temperature,
-        },
-        settings
-      );
+      // Render grip with detected temperature (pass as override to avoid object spread)
+      this.renderGrip(grip, settings, temperature);
     }
   }
 
