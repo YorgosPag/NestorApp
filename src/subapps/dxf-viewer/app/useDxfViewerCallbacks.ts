@@ -10,7 +10,6 @@
  */
 
 import React from 'react';
-import { ZoomStore } from '../systems/zoom/ZoomStore';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
@@ -151,19 +150,17 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     contextSetTransformRef.current = setTransform;
   }, [contextSetTransformRef]);
 
-  // Wrap handleTransformChange to also update canvasTransform state
+  // Wrap handleTransformChange to also update canvasTransform state.
+  // ADR-040 Phase XIII: setCanvasTransform writes through TransformStore SSoT,
+  // which fans out scale/offset notifications. The redundant ZoomStore.setScale
+  // call removed — ZoomStore is now a facade over TransformStore.
   const wrappedHandleTransformChange = React.useCallback((transform: ViewTransform) => {
     const normalizedTransform = {
       scale: transform.scale || 1,
       offsetX: transform.offsetX || 0,
       offsetY: transform.offsetY || 0,
     };
-    // ADR-040 Phase VII: write to ZoomStore first — leaf display components
-    // (SidebarSection, EnhancedDXFToolbar) subscribe via useSyncExternalStore.
-    ZoomStore.setScale(normalizedTransform.scale);
-    // Update the canvas transform state for OverlayLayer
     setCanvasTransform(normalizedTransform);
-    // ✅ UPDATE CONTEXT: Ενημέρωση του Transform Context (Single Source of Truth)
     if (contextSetTransformRef.current) {
       contextSetTransformRef.current(normalizedTransform);
     }

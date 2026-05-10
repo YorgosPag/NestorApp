@@ -71,18 +71,39 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
-### 2026-05-11: ARCH — Phase XIII: ImmediateTransformStore granular subscribers + TransformStore facade
+### 2026-05-11: ARCH — Phase XIII: TransformStore SSoT — kill DxfViewerContent / MainContentSection re-render storm on pan/zoom
 
-**Change:** Extend `ImmediateTransformStore` to act as full React SSoT for viewport transform, eliminating `useState` in `useCanvasTransformState`. Added three granular subscriber sets (`fullListeners`, `scaleListeners`, `offsetListeners`) notified only on relevant delta. Added `useSyncExternalStore`-compatible hooks: `useTransformValue()` (full) and `useTransformScale()` (scale-only). Exported canonical `TransformStore` facade (`get / set / subscribe / subscribeScale / subscribeOffset`).
+**Incident (Firefox profiler, hover/pan, post-Phase XII baseline):** `RefreshDriverTick` stuck at **32-38%**. Chain dominated by `VoidFunction → scheduleImmediateRootScheduleTask → renderRootSync → workLoopSync → performUnitOfWork → updatePerformanceWithHooks → beginWork` with a **22% Provider** sub-band cascading into Menu / Tooltip / TooltipPortal / DropdownMenu / ZoomControls / ScreenshotSection / FloorpianImportWizard / RulerCornerBox / CentralizedAutoSaveStatus / DialogPortal / ResizeConfirmDialog. None of those are inside the canvas drawing path — they are UI siblings, toolbars, and dialogs.
 
-**Why:** `useState` for transform caused orchestrator re-renders on every wheel/pan event — same root cause as HoverStore / ImmediatePositionStore migrations. Granular subscriptions prevent toolbar/ZoomControl components from re-rendering when only offset changes (pan), and prevent ruler/grid from re-rendering when only scale changes (zoom into center).
+**Root cause:** `useCanvasTransformState` (called from `DxfViewerContent` line 131) held the viewport transform in a `useState`. Every pan RAF frame fired `wrappedHandleTransformChange` → `setCanvasTransform(normalizedTransform)` → `DxfViewerContent` re-rendered → `MainContentSection` (React.memo) bailed because the `canvasTransform` prop carried a fresh object reference → the entire MainContent subtree (DXFViewerLayout → NormalView → ToolbarSection + CanvasSection + CadStatusBar) cascaded. The visible Provider 22% in the profile was the cumulative cost of those subtree renders triggered by the orchestrator state change, **not** a Context.Provider value problem.
 
-**Files modified:**
-- `src/subapps/dxf-viewer/systems/cursor/ImmediateTransformStore.ts` (Phase XIII store)
-- `src/subapps/dxf-viewer/hooks/state/useCanvasTransformState.ts` (migrate from `useState` → `updateImmediateTransform`; remove `getMetrics`, remove `canvasTransform` return value)
-- `src/subapps/dxf-viewer/app/useDxfViewerEffects.ts` (remove `canvasTransform`, `setCanvasTransform`, `canvasOps`, `isInitializedRef`, `canvasTransformRef` props — all owned by `useCanvasTransformState` directly)
+**Fix:** Promote viewport transform from `useState` to the existing `ImmediateTransformStore` singleton (the same store already used by DxfRenderer / LayerRenderer for zero-lag synchronous canvas reads). React leaves that need the value subscribe via `useSyncExternalStore`; orchestrators read getters at event time. Pattern is identical to Phase III/V/XI: `ImmediatePositionStore` (cursor), `HoverStore` (hover), `SelectionStore` (drag selection).
 
-**Architectural pattern:** Identical to `ImmediatePositionStore` / `HoverStore` / `SelectionStore`. All high-frequency stores in this subapp expose `subscribe*` + `useSyncExternalStore` hooks for selective React leaf subscriptions. The `TransformStore` facade is now the canonical import for new consumers.
+**Store changes (`systems/cursor/ImmediateTransformStore.ts`):**
+
+1. Three granular subscriber sets — `fullListeners`, `scaleListeners`, `offsetListeners` — notified only on the relevant delta. `updateImmediateTransform` compares prev vs next per field.
+2. `useSyncExternalStore`-compatible hooks: `useTransformValue()` (full) and `useTransformScale()` (scale-only).
+3. `subscribeTransform` / `subscribeTransformScale` / `subscribeTransformOffset` exports.
+4. Canonical `TransformStore` facade — `{ get, set, subscribe, subscribeScale, subscribeOffset }` — for new consumers.
+
+**Orchestrator changes:**
+
+- `hooks/state/useCanvasTransformState.ts` — `useState` removed. The hook now writes through `updateImmediateTransform` and returns only `{ setCanvasTransform, reset, isInitialized }`. Init effect (from `canvasOps.getTransform()`) and the `dxf-zoom-changed` EventBus listener (layering mode) both write directly to the store. `getMetrics` removed (was unused).
+- `app/DxfViewerContent.tsx` — destructures only `setCanvasTransform`. `canvasTransformRef` and `isInitializedRef` removed. `canvasTransform` prop dropped from `MainContentSection` call. `TransformProvider initialTransform` reads `getImmediateTransform()` once.
+- `app/useDxfViewerEffects.ts` — `canvasTransform`, `setCanvasTransform`, `canvasOps`, `isInitializedRef`, `canvasTransformRef` params removed. Three duplicate effects deleted (transform init, ref sync, layering-mode zoom listener) — all logic now owned by `useCanvasTransformState` and writes directly to the store.
+- `app/useDxfViewerCallbacks.ts` — `wrappedHandleTransformChange` drops the redundant `ZoomStore.setScale` call. `setCanvasTransform` writes through the store, which fans out scale subscribers automatically.
+- `layout/MainContentSection.tsx` — `canvasTransform` prop removed from `MainContentSectionProps`. `transform` no longer passed to `DXFViewerLayout` (downstream consumers — `CanvasSection`, `CanvasLayerStack` — already read transform from `CanvasContext` or the store).
+- `hooks/useOverlayDrawing.ts` — `canvasTransform` prop removed. Hook subscribes to `useTransformScale()` for the scale-only reads (`useSnapManager` tolerance, polygon-close pixel→world conversion). Re-renders only when scale changes, not on pan.
+- `systems/zoom/ZoomStore.ts` — `ZoomStore` is now a thin facade over `ImmediateTransformStore`: `getScale` reads from `getImmediateTransform()`, `setScale` writes via `updateImmediateTransform`, `subscribe` delegates to `subscribeTransformScale`. Single SSoT — `useCurrentZoom` and `useTransformValue` always agree.
+
+**Expected impact (validation pending profiler re-run):**
+
+- `DxfViewerContent` no longer re-renders on pan/zoom — it does not subscribe to the transform value.
+- `MainContentSection` React.memo stays stable across transform updates — `canvasTransform` is no longer a memo-busting prop.
+- ToolbarSection / CadStatusBar / SidebarSection / FloatingPanelsSection / TestsModal / FloorplanBackgroundPanel / dialogs are siblings outside the canvas subtree and inherit the win — they skip rendering entirely on pan.
+- `CanvasSection` still re-renders on pan via its `useCanvasContext()` subscription to `CanvasContext.transform` (cardinal-rule-#1 violation remaining). That cascade is now scoped to the canvas subtree only and is deferred to Phase XIV (orchestrator → leaf subscription split for canvas-side too).
+
+**Architectural pattern:** Identical to `ImmediatePositionStore` / `HoverStore` / `SelectionStore`. All high-frequency state in this subapp is owned by a module-level singleton with selective `useSyncExternalStore` hooks; orchestrators read via getters at event time and never `useState` high-freq values.
 
 ---
 
