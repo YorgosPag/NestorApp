@@ -545,14 +545,14 @@ export type CanvasThemeValue = typeof CANVAS_THEME[CanvasThemeKey];
  * @since 2026-02-01
  */
 export const ICON_CLICK_COLORS = {
-  /** 🔴 Red - 1st click (start point) */
-  FIRST: '#ef4444',
+  /** 🩵 Teal/Turquoise - 1st click (start point) */
+  FIRST: '#06b6d4',
 
-  /** 🟠 Orange - 2nd click (intermediate point) */
-  SECOND: '#f97316',
+  /** 🟡 Yellow - 2nd click (intermediate point) */
+  SECOND: '#eab308',
 
-  /** 🟢 Green - 3rd/last click (end point/result) */
-  THIRD: '#22c55e',
+  /** 🔴 Red - 3rd/last click (end point/cursor) */
+  THIRD: '#ef4444',
 
   /** Gray - Reference line (for perpendicular/parallel tools) */
   REFERENCE: '#9ca3af',
