@@ -71,6 +71,28 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-11: PERF — Phase IX: DxfRenderer viewport culling (per-entity AABB)
+
+**Incident (PERF_LINE console dump, initial scene paint on 3263-entity DXF)**: `DxfCanvasRenderer.renderScene` ran in **9488ms** with `CanvasSection.commit` at 8326ms — every scene-set, fit-to-view, viewport-resize, or transform settle re-paid a full 3263-entity render. Single line completion was already fixed by Phase VIII (1498→48ms commit), but cold-load and pan/zoom remained CPU-bound on entity count.
+
+**Root cause**: `DxfRenderer.render()` iterated **every** entity in `scene.entities` regardless of viewport. Industry-standard CAD viewers cull entities whose world-space bbox falls outside the visible viewport — typical hit rate on construction-grade DXF is 10–30% of entities visible per frame. The renderer had no culling path at all.
+
+**Note on bitmap cache (Phase D, 2026-05-09)**: `DxfBitmapCache` is allocated in `dxf-canvas-renderer.ts:98` but is **not currently invoked** by `renderScene`. Activating it is deferred — the cache invalidates on every `transform.scale/offsetX/offsetY` change (i.e. every pan/zoom frame), so it primarily benefits hover/selection re-renders at a stable transform, not cold-load. Phase IX targets the actual hot path: the per-frame entity loop. Bitmap-cache activation may follow as Phase X if hover/selection profiling warrants it.
+
+**Fix (GOL + SSoT, 2 files + 1 new):**
+- **NEW `canvas-v2/dxf-canvas/dxf-viewport-culling.ts`** (~120 LOC): sole authority for entity bbox + viewport intersection. Exports `getEntityBBox(entity)` (O(1) for line/circle/arc/text/angle-measurement; O(vertices) for polyline), `viewportToWorldBBox(transform, viewport)` (inverse of the screen=world*scale+offset convention, padded by 32 screen pixels to avoid edge artefacts), `bboxIntersects(a, b)` (AABB overlap), and the high-level `isEntityInViewport(entity, worldViewport)` predicate. Arc bbox is conservative (full enclosing circle) — tighter quadrant-extrema math is not worth the per-entity CPU for a culling test. Text bbox uses a generous `height × length × 0.7` width estimate so partially-visible glyphs are never culled. Degenerate transform (`scale === 0`) returns an infinite bbox → culling auto-disables instead of crashing.
+- **CHANGED `canvas-v2/dxf-canvas/DxfRenderer.ts:render()`**: compute `worldViewport` once per frame (just before the entity loop), then `if (!isEntityInViewport(entity, worldViewport)) continue;` between the existing `visible` guard and `renderEntityUnified`. Padding is screen-pixel based so culling tightens automatically at high zoom. Selection set rebuild is unchanged.
+
+**Why proactive single SSoT module (not inlined in renderer)**: hit-testing, snap engine, and grip-rendering also iterate entities and may benefit from the same bbox helpers. A single canonical file means future culling-aware paths cannot drift from the renderer's intersection rules.
+
+**Expected impact**: on a 3263-entity scene with viewport showing ~15-25% of entities, renderScene drops proportionally (estimated 9.5s → 1.5–2.5s cold, scaled by visible fraction). Pan/zoom intermediate frames see the same multiplier. No effect on cold-load CPU if the entire scene fits in the initial viewport (e.g. immediately after `fit-to-view`) — for that scenario, Phase X bitmap activation or off-main-thread tessellation would be the next lever.
+
+**Files**:
+- `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-viewport-culling.ts` (new)
+- `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts` (+culling call in render loop)
+
+---
+
 ### 2026-05-11: PERF — Phase VIII: SnapEngine SSoT singleton + non-blocking scene-init
 
 **Incident (1498ms React commit + ~3500–6000ms cumulative CPU per line completion — profiling-data.11-05-2026.01-16-24 + PERF_LINE console dump)**: Drawing a single line on a 3262-entity DXF froze the UI for ~1.5s of React commit and triggered **four** sequential `useSnapManager.initialize(n=3263)` runs (855 + 524 + 2223 + 2433 ms) — each rebuilding spatial indices for all 17 sub-engines. `completeEntity.TOTAL` was 44ms, `DxfRenderer.renderScene` was 79ms; **the only hot path was `SnapManager.initialize()`**.

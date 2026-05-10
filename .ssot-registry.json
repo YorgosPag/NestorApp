@@ -2667,6 +2667,35 @@
       "addedDate": "2026-05-08",
       "addedByAdr": "ADR-340",
       "tier": 3
+    },
+    "snap-engine": {
+      "ssotFile": "src/subapps/dxf-viewer/snapping/global-snap-engine.ts",
+      "description": "ProSnapEngineV2 / SnapManager singleton SSoT (ADR-040 Phase VIII, 2026-05-11). Prior architecture instantiated `new ProSnapEngineV2()` inside every `useSnapManager()` hook call — three active call sites produced three independent engines, each rebuilding spatial indices for all 17 sub-engines on every scene change (verified: 1498ms React commit blocked + 4 redundant initialize runs at N=3263 entities). Canonical access: `getGlobalSnapEngine()`. Scene-initialize lifecycle is owned exclusively by `useGlobalSnapSceneSync` (called once from CanvasSection); other call sites are forbidden. Direct construction (`new ProSnapEngineV2(`, `new SnapManager(`) outside the canonical file is a SSoT violation.",
+      "forbiddenPatterns": [
+        "new\\s+ProSnapEngineV2\\s*\\(",
+        "new\\s+SnapManager\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/snapping/global-snap-engine.ts",
+        "src/subapps/dxf-viewer/snapping/ProSnapEngineV2.ts"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-040",
+      "tier": 2
+    },
+    "dxf-viewport-culling": {
+      "ssotFile": "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-viewport-culling.ts",
+      "description": "Sole authority for per-entity viewport intersection in the DxfRenderer (ADR-040 Phase IX). Forbids alternate bbox / culling implementations.",
+      "forbiddenPatterns": [
+        "function\\s+getEntityBBox\\s*\\(",
+        "function\\s+isEntityInViewport\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-viewport-culling.ts"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-040",
+      "tier": 2
     }
   }
 }

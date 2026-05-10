@@ -1,26 +1,13 @@
-/**
- * CANVAS V2 - UNIFIED DXF RENDERER
- * ✅ ΕΞΑΛΕΙΨΗ ΔΙΠΛΟΓΡΑΦΙΩΝ: Χρησιμοποιεί EntityRendererComposite
- * ❌ ΠΡΙΝ: Direct switch statement με duplicate rendering methods
- * ✅ ΜΕΤΑ: Centralized composite pattern
- */
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-// UI_COLORS, RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS — removed: dashed selection overlay replaced by inline grips
-// 🏢 ENTERPRISE: Refresh cached bounds before render to prevent stale clear/draw mismatch
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
-// 🏢 Origin markers consolidated into GridRenderer (eliminates OriginMarkerUtils duplication)
-// ✅ ΝΕΟ: Import unified rendering system
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
 import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DContext';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-/**
- * ✅ ENTERPRISE TYPE-SAFE MAPPING: DXF → Centralized LineType
- * Εξασφαλίζει enterprise compatibility χωρίς hardcoded values
- */
+import { viewportToWorldBBox, isEntityInViewport } from './dxf-viewport-culling';
 function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
   const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
     'solid': 'solid',
@@ -76,10 +63,12 @@ export class DxfRenderer {
       selectedEntityIds: []
     }
   ): void {
-    // 🔧 FIX (2026-02-15): Use FRESH bounds for both clear AND draw — single source of truth
-    // Root cause: CanvasUtils.clearCanvas re-fetches from cache internally, which is fragile.
-    // Direct clearRect with the same rect used for rendering eliminates any implicit dependency.
-    const canvasRect = canvasBoundsService.refreshBounds(this.canvas);
+    // 🚀 PERF (ADR-040, 2026-05-11): getBounds (cached) instead of refreshBounds.
+    // Prior comment cited "fresh bounds" but cache is auto-invalidated on resize/scroll
+    // + 5s TTL safety net, so getBounds returns identical value with zero layout cost.
+    // Single `canvasRect` is computed once per frame and passed to both clear + draw,
+    // preserving the original single-source-of-truth invariant.
+    const canvasRect = canvasBoundsService.getBounds(this.canvas);
     const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
 
     // Clear canvas using exact same fresh dimensions as rendering viewport
@@ -119,9 +108,12 @@ export class DxfRenderer {
 
     // Rebuild selection Set for O(1) lookups in renderEntityUnified
     this._selectionSet = new Set(effectiveOptions.selectedEntityIds);
-    // Render all entities
+    // ADR-040 Phase IX: viewport culling — skip entities whose bbox does not
+    // intersect the screen-space viewport. Computed once per frame.
+    const worldViewport = viewportToWorldBBox(transform, actualViewport);
     for (const entity of scene.entities) {
       if (!entity.visible) continue;
+      if (!isEntityInViewport(entity, worldViewport)) continue;
       this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
     }
     // Render selection highlights (no-op currently, kept for call-site stability)
@@ -150,8 +142,9 @@ export class DxfRenderer {
   ): void {
     if (!entity.visible) return;
 
-    // Refresh bounds — keep parity with render() so clear/draw use the same viewport
-    const canvasRect = canvasBoundsService.refreshBounds(this.canvas);
+    // 🚀 PERF (ADR-040, 2026-05-11): getBounds (cached). Called per selected/hovered
+    // entity — using refreshBounds here forced N+1 layout reflows per frame (one per overlay).
+    const canvasRect = canvasBoundsService.getBounds(this.canvas);
     const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
 
     this.ctx.save();
