@@ -52,6 +52,7 @@ const DEBUG_DRAWING_HANDLERS = false; // 🔧 DISABLED (2026-02-02) - performanc
 
 import { useCallback, useRef } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
+import { useCadToggles } from '../common/useCadToggles';
 // 🏢 ENTERPRISE (2026-01-30): Centralized tool metadata for continuous mode
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
 import { toolStateStore } from '../../stores/ToolStateStore';
@@ -101,6 +102,15 @@ const MEASURE_TOOLS_FOR_GUIDES = new Set<string>([
   'measure-distance', 'measure-distance-continuous', 'measure-angle',
 ]);
 
+/** AutoCAD-style hard ortho: projects point onto H or V axis from referencePoint */
+function hardOrtho(point: Pt, ref: Pt): Pt {
+  const dx = point.x - ref.x;
+  const dy = point.y - ref.y;
+  return Math.abs(dx) >= Math.abs(dy)
+    ? { x: point.x, y: ref.y }
+    : { x: ref.x, y: point.y };
+}
+
 export function useDrawingHandlers(
   activeTool: ToolType,
   onEntityCreated: (entity: Entity) => void,
@@ -132,6 +142,11 @@ export function useDrawingHandlers(
   const { snapEnabled, enabledModes } = useSnapContext();
   const canvasElement = canvasOps.getCanvas();
   const canvasRef = { current: canvasElement };
+
+  // Ortho mode (F8) — read via ref to avoid recreating callbacks on every toggle
+  const { ortho } = useCadToggles();
+  const orthoOnRef = useRef(ortho.on);
+  orthoOnRef.current = ortho.on;
 
   // 🔲 GRID SNAP: Get grid step from RulersGrid context for grid snapping
   const { state: rulersGridState } = useRulersGridContext();
@@ -230,7 +245,9 @@ export function useDrawingHandlers(
     }
 
     // Normal point addition (not closing)
-    const snappedPoint = applySnap(p);
+    const lastRef = drawingState.tempPoints[drawingState.tempPoints.length - 1];
+    const orthoConstrained = orthoOnRef.current && lastRef ? hardOrtho(p, lastRef) : p;
+    const snappedPoint = applySnap(orthoConstrained);
 
     const transformUtils = canvasOps.getTransformUtils();
     const completed = addPoint(snappedPoint, transformUtils);
@@ -274,8 +291,12 @@ export function useDrawingHandlers(
       const transformUtils = canvasOps.getTransformUtils();
       const t1 = performance.now();
 
+      // Apply ortho constraint (F8) before preview — hard H/V lock like AutoCAD
+      const lastRefPt = drawingState.tempPoints[drawingState.tempPoints.length - 1];
+      const previewPt = orthoOnRef.current && lastRefPt ? hardOrtho(p, lastRefPt) : p;
+
       // Update the preview entity (calculates geometry, updates ref)
-      updatePreview(p, transformUtils);
+      updatePreview(previewPt, transformUtils);
       const t2 = performance.now();
 
       // 🏢 ADR-040: Direct rendering to PreviewCanvas (ZERO React overhead)
@@ -315,7 +336,7 @@ export function useDrawingHandlers(
         previewCanvasRef.current.clear();
       }
     }
-  }, [updatePreview, canvasOps, getLatestPreviewEntity, previewCanvasRef, activeTool]);
+  }, [updatePreview, canvasOps, getLatestPreviewEntity, previewCanvasRef, activeTool, drawingState.tempPoints]);
   
   const onDrawingCancel = useCallback(() => {
     cancelDrawing();

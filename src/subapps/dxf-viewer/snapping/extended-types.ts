@@ -100,7 +100,7 @@ export interface ProSnapSettings {
 // Default settings για Pro Snap Engine
 export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
   enabled: true,  // 🏢 FIX (2026-02-21): Default to true — SnapContext.snapEnabled is the real gate
-  snapDistance: 7,
+  snapDistance: 10,
   enabledTypes: new Set([
     ExtendedSnapType.AUTO,
     ExtendedSnapType.ENDPOINT,
@@ -136,23 +136,20 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
   gridStep: 50,
   orthogonalOnly: false,
   tabCycling: true,
-  // 🏢 Βελτιστοποιημένες ανοχές ανά mode (AutoCAD dense-drawing standards)
-  // AutoCAD APERTURE default = 10px, experienced users: 3-5px for dense drawings
-  // Reduced ~50% from initial values to prevent excessive snap attraction on
-  // plans with 3,000+ entities (typical apartment floor plan).
+  // AutoCAD APERTURE default = 10px — matched across all types
   perModePxTolerance: {
-    [ExtendedSnapType.ENDPOINT]: 5,       // tight — precision snapping
-    [ExtendedSnapType.INTERSECTION]: 6,   // slightly wider for intersections
-    [ExtendedSnapType.MIDPOINT]: 5,       // tight — precision snapping
-    [ExtendedSnapType.CENTER]: 5,         // tight — precision snapping
-    [ExtendedSnapType.PERPENDICULAR]: 8,  // wider for geometric construction
-    [ExtendedSnapType.TANGENT]: 8,        // wider for geometric construction
-    [ExtendedSnapType.GRID]: 8,           // wider for grid (fewer candidates)
-    [ExtendedSnapType.NEAREST]: 5,        // tight — avoid grabbing everything
-    [ExtendedSnapType.QUADRANT]: 6,       // slightly wider for quadrants
-    [ExtendedSnapType.PARALLEL]: 8,       // wider for parallel detection
-    [ExtendedSnapType.GUIDE]: 12,          // ADR-189: guide snap tolerance (wide for easy grab)
-    [ExtendedSnapType.CONSTRUCTION_POINT]: 8  // ADR-189: construction point snap tolerance
+    [ExtendedSnapType.ENDPOINT]: 10,
+    [ExtendedSnapType.INTERSECTION]: 10,
+    [ExtendedSnapType.MIDPOINT]: 10,
+    [ExtendedSnapType.CENTER]: 10,
+    [ExtendedSnapType.PERPENDICULAR]: 10,
+    [ExtendedSnapType.TANGENT]: 10,
+    [ExtendedSnapType.GRID]: 10,
+    [ExtendedSnapType.NEAREST]: 10,
+    [ExtendedSnapType.QUADRANT]: 10,
+    [ExtendedSnapType.PARALLEL]: 10,
+    [ExtendedSnapType.GUIDE]: 12,          // ADR-189: intentionally wider for easy grab
+    [ExtendedSnapType.CONSTRUCTION_POINT]: 10
   }
 };
 
