@@ -111,31 +111,13 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       const hitTesting = serviceRegistry.get('hit-testing');
       hitTesting.updateScene(scene);
 
-      // 1a: Scene bitmap cache — entities in pure normal-state.
-      // Cache invalidates ONLY on scene/transform/viewport change (NOT on hover/selection/grip).
-      const cache = bitmapCacheRef.current;
-      const visibleCtx = refs.canvasRef.current?.getContext('2d');
-      if (cache && visibleCtx) {
-        if (cache.isDirty(scene, currentTransform, currentViewport)) {
-          cache.rebuild(scene, currentTransform, currentViewport, {
-            showGrid: renderOptions.showGrid,
-            showLayerNames: renderOptions.showLayerNames,
-            wireframeMode: renderOptions.wireframeMode,
-          });
-        }
-        // Clear visible canvas, then blit cached bitmap on top.
-        visibleCtx.save();
-        visibleCtx.setTransform(1, 0, 0, 1, 0, 0);
-        visibleCtx.clearRect(0, 0, refs.canvasRef.current!.width, refs.canvasRef.current!.height);
-        visibleCtx.restore();
-        cache.blit(visibleCtx, currentViewport);
-      } else {
-        // Fallback (cache not yet initialized): render directly without interactive state
-        renderer.render(scene, currentTransform, currentViewport, {
-          ...renderOptions,
-          skipInteractive: true,
-        });
-      }
+      // 1a: Direct render (Phase D bitmap cache disabled — DPR/transform mismatch bug).
+      // The cache (DxfBitmapCache) causes a blank canvas due to entityComposite.setTransform()
+      // overwriting the DPR transform set on the offscreen canvas. Disabled until fixed.
+      renderer.render(scene, currentTransform, currentViewport, {
+        ...renderOptions,
+        skipInteractive: true,
+      });
 
       // 1b: Single-entity interactive overlays (hover, selection grips, drag preview).
       // Drawn on top of the cached bitmap — does NOT trigger cache invalidation.
