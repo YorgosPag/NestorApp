@@ -15,7 +15,6 @@ import { ZoomControls } from './ZoomControls';
 import { ToolButton, ActionButton } from './ToolButton';
 import { ToolbarStatusBar } from './ToolbarStatusBar';
 import CadStatusBar from '../../statusbar/CadStatusBar';
-import { ProSnapToolbar } from '../components/ProSnapToolbar';
 // 🏢 ENTERPRISE: Shadcn Button (same as CompactToolbar - NO BORDERS)
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -198,13 +197,13 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTool, onToolChange, onAction]);
 
-  // Χρήση του ενοποιημένου snap system
+  // Χρήση του ενοποιημένου snap system (snapEnabled SSoT = cadToggles.osnap via SnapContext)
   const {
     enabledModes,
     toggleMode,
     snapEnabled: contextSnapEnabled,
     toggleSnap
-  } = useProSnapIntegration(snapEnabled ?? false);
+  } = useProSnapIntegration();
   const actionButtons = createActionButtons({
     canUndo,
     canRedo,
@@ -402,15 +401,6 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
         </div>
 
         <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} flex items-center`}>
-          <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_SM} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
-          <ProSnapToolbar
-            enabledModes={enabledModes}
-            onToggleMode={toggleMode}
-            snapEnabled={contextSnapEnabled}
-            onToggleSnap={toggleSnap}
-            compact
-            className={PANEL_LAYOUT.FLEX_SHRINK.NONE}
-          />
           {/* 🏢 ADR-241: Standalone fullscreen toggle — always visible at toolbar end */}
           <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
           <TooltipProvider>

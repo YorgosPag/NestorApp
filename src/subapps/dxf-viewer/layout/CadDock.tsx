@@ -27,12 +27,7 @@ type PanelId = keyof typeof PANEL_TITLE_KEYS;
 // 🔺 FIXED SNAPPING PANEL με ProSnapToolbar
 const SnappingView = memo(() => {
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const {
-    enabledModes,
-    toggleMode,
-    snapEnabled,
-    toggleSnap
-  } = useProSnapIntegration();
+  const { enabledModes, toggleMode } = useProSnapIntegration();
   const colors = useSemanticColors();
 
   return (
@@ -44,8 +39,6 @@ const SnappingView = memo(() => {
       <ProSnapToolbar
         enabledModes={enabledModes}
         onToggleMode={toggleMode}
-        snapEnabled={snapEnabled}
-        onToggleSnap={toggleSnap}
         compact={false}
         className="w-full"
       />

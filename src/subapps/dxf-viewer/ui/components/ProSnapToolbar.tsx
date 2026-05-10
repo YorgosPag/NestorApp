@@ -114,8 +114,9 @@ const ADVANCED_MODES = [
 interface ProSnapToolbarProps {
   enabledModes: Set<ExtendedSnapType>;
   onToggleMode: (mode: ExtendedSnapType, enabled: boolean) => void;
-  snapEnabled: boolean;
-  onToggleSnap: (enabled: boolean) => void;
+  /** If omitted, the master SNAP toggle button is hidden (CadStatusBar OSNAP is the canonical toggle). */
+  snapEnabled?: boolean;
+  onToggleSnap?: (enabled: boolean) => void;
   className?: string;
   compact?: boolean;
 }
@@ -137,7 +138,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleMasterToggle = useCallback(() => {
-    onToggleSnap(!snapEnabled);
+    if (onToggleSnap !== undefined) onToggleSnap(!(snapEnabled ?? false));
   }, [snapEnabled, onToggleSnap]);
 
   const handleModeToggle = useCallback((mode: ExtendedSnapType) => {
@@ -161,26 +162,28 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
 
   return (
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${className}`}>
-      {/* 🏢 ENTERPRISE: Master SNAP toggle - Shadcn Button */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={snapEnabled ? 'default' : 'ghost'}
-            size="sm"
-            onClick={handleMasterToggle}
-            className={`${PANEL_LAYOUT.GAP.XS} ${snapEnabled ? HOVER_TEXT_EFFECTS.CYAN : ''}`}
-          >
-            <Target className={`${iconSizes.sm} ${HOVER_TEXT_EFFECTS.CYAN}`} />
-            <span className={PANEL_LAYOUT.FONT_WEIGHT.BOLD}>SNAP</span>
-            {enabledCount > 0 && (
-              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.OPACITY['80']}`}>
-                ({enabledCount})
-              </span>
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('overlayToolbar.objectSnap')}</TooltipContent>
-      </Tooltip>
+      {/* Master SNAP toggle — shown only when caller passes snapEnabled/onToggleSnap (e.g. CadDock panel) */}
+      {onToggleSnap !== undefined && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={(snapEnabled ?? false) ? 'default' : 'ghost'}
+              size="sm"
+              onClick={handleMasterToggle}
+              className={`${PANEL_LAYOUT.GAP.XS} ${(snapEnabled ?? false) ? HOVER_TEXT_EFFECTS.CYAN : ''}`}
+            >
+              <Target className={`${iconSizes.sm} ${HOVER_TEXT_EFFECTS.CYAN}`} />
+              <span className={PANEL_LAYOUT.FONT_WEIGHT.BOLD}>SNAP</span>
+              {enabledCount > 0 && (
+                <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.OPACITY['80']}`}>
+                  ({enabledCount})
+                </span>
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('overlayToolbar.objectSnap')}</TooltipContent>
+        </Tooltip>
+      )}
 
       {/* 🏢 ENTERPRISE: Core snap modes */}
       <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>

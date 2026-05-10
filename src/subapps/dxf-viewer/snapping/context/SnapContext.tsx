@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ExtendedSnapType } from '../extended-types';
 import { userSettingsRepository, stableHash } from '@/services/user-settings';
+import type { CadTogglesSettingsSlice } from '@/services/user-settings/user-settings-schema';
 import { useAuth } from '@/auth/contexts/AuthContext';
 
 // ✅ ENTERPRISE FIX: Define SnapState locally since ../types doesn't exist
@@ -135,9 +136,8 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     });
   }, []);
 
-  // 🏢 ADR-341 UserSettings SSoT — persist active snap modes (which snap types
-  // are checked) per user. The master `snapEnabled` flag stays ephemeral
-  // (default OFF on every refresh, intentional industry-CAD UX).
+  // 🏢 ADR-341 UserSettings SSoT — persist active snap modes + snapEnabled.
+  // snapEnabled is synced with cadToggles.osnap (CadStatusBar OSNAP = canonical master toggle).
   // Echo-loop guard: lastWrittenHashRef tracks our last write so the
   // optimistic notification round-trip doesn't feed our value back.
   const { user } = useAuth();
@@ -184,6 +184,36 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     lastSnapHashRef.current = activeHash;
     userSettingsRepository.updateSlice('dxfViewer.snap', { activeTypes });
   }, [snapUserId, snapCompanyId, snapState]);
+
+  // Sync snapEnabled ↔ cadToggles.osnap (CadStatusBar OSNAP = canonical SSoT)
+  const lastCadTogglesRef = useRef<CadTogglesSettingsSlice | null>(null);
+  const snapEnabledRef = useRef(snapEnabled);
+  snapEnabledRef.current = snapEnabled;
+
+  useEffect(() => {
+    if (!snapUserId || !snapCompanyId) return;
+    const unsubscribe = userSettingsRepository.subscribeSlice(
+      'dxfViewer.cadToggles',
+      (remote) => {
+        if (!remote) return;
+        lastCadTogglesRef.current = remote;
+        if (remote.osnap !== snapEnabledRef.current) {
+          setSnapEnabled(remote.osnap);
+        }
+      },
+    );
+    return () => { unsubscribe(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapUserId, snapCompanyId]);
+
+  useEffect(() => {
+    if (!snapUserId || !snapCompanyId) return;
+    const current = lastCadTogglesRef.current;
+    if (!current || current.osnap === snapEnabled) return;
+    const updated = { ...current, osnap: snapEnabled };
+    lastCadTogglesRef.current = updated;
+    userSettingsRepository.updateSlice('dxfViewer.cadToggles', updated);
+  }, [snapUserId, snapCompanyId, snapEnabled]);
 
   // 🚀 PERF: Stabilized context value — only changes when snap state/enabled actually change.
   // BEFORE: New object every render → consumers cascade re-render on every SnapProvider render.
