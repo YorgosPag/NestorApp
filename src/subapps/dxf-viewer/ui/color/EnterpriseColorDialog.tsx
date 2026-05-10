@@ -326,7 +326,7 @@ export function ColorDialogTrigger({
   onDialogClose?: () => void;
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const { quick, getStatusBorder, radius } = useBorderTokens();
+  const { quick, getStatusBorder, radius, radiusClass } = useBorderTokens();
   const colors = useSemanticColors();
   // 🔧 FIX: Hook must be called at top-level, not inside JSX
   const dynamicBgClass = useDynamicBackgroundClass(value);
@@ -342,8 +342,8 @@ export function ColorDialogTrigger({
         onClick={() => setIsOpen(true)}
         disabled={disabled}
         className={`
-          flex items-center ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}
-          ${colors.text.inverted} ${quick.button} ${getStatusBorder('default')} ${PANEL_LAYOUT.TRANSITION.COLORS}
+          flex items-center ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}
+          ${colors.text.inverted} ${quick.button} ${radiusClass.sm} ${getStatusBorder('default')} ${PANEL_LAYOUT.TRANSITION.COLORS}
           disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
         `}
       >

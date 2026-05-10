@@ -11,7 +11,7 @@ import { storageGet, storageSet, STORAGE_KEYS } from '../../utils/storage-utils'
 // 🏢 ADR-030: UnifiedFrameScheduler — flag every canvas overlay dirty when
 // cursor/crosshair/selection settings change so they repaint on the next RAF
 // tick instead of waiting for a mouse move.
-import { markAllCanvasDirty } from '../../rendering/core/frame-scheduler-api';
+import { markSystemsDirty } from '../../rendering/core/frame-scheduler-api';
 // 🏢 ADR-XXX UserSettings SSoT — Firestore-backed industry pattern.
 // Cursor settings persist to user_preferences/{userId}_{companyId}, sync
 // across devices, schema-validated. localStorage is used only as boot-time
@@ -299,7 +299,7 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
     // 🏢 ADR-030 SSoT: settings change → all canvas overlays must repaint.
     // Single source covering every entry point (panel updateSettings, reset,
     // provider sync). Without this, overlays only redraw on mouse move.
-    markAllCanvasDirty();
+    markSystemsDirty(['crosshair-overlay', 'layer-canvas']);
 
     // Legacy compatibility - dispatch global event
     window.dispatchEvent(new CustomEvent('autocad-cursor-change', {

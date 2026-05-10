@@ -172,9 +172,10 @@ export default function CrosshairOverlay({
     const mouseX = pixelPerfect(pos.x);
     const mouseY = pixelPerfect(pos.y);
 
-    // Calculate crosshair dimensions
-    const crosshairHalfWidth = (canvasWidth / 2) * (sizePercent / 100);
-    const crosshairHalfHeight = (canvasHeight / 2) * (sizePercent / 100);
+    // Calculate crosshair dimensions — equal arms regardless of canvas aspect ratio (AutoCAD behavior)
+    const halfBase = (Math.min(canvasWidth, canvasHeight) / 2) * (sizePercent / 100);
+    const crosshairHalfWidth = halfBase;
+    const crosshairHalfHeight = halfBase;
 
     // Center gap calculation
     const pickboxSize = gripSettings.pickBoxSize * dpr;
@@ -198,8 +199,8 @@ export default function CrosshairOverlay({
       let actualHalfHeight: number;
 
       if (sizePercent === 100) {
-        actualHalfWidth = Math.max(mouseX - margins.left, canvasWidth - mouseX);
-        actualHalfHeight = Math.max(mouseY - margins.top, bottomLimit - mouseY);
+        actualHalfWidth = canvasWidth;
+        actualHalfHeight = canvasHeight;
       } else {
         actualHalfWidth = crosshairHalfWidth;
         actualHalfHeight = crosshairHalfHeight;
