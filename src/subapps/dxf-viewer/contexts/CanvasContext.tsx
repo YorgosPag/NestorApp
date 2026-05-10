@@ -23,66 +23,92 @@ type OverlayCanvasImperativeAPI = {
   render: () => void;
 };
 
-interface CanvasContextType {
+// ADR-040 Phase VII: split stable refs (never changes) from volatile transform
+// (changes on every zoom/pan). Consumers that only need refs subscribe to the
+// stable context → they never re-render on zoom.
+
+// ── Stable refs context ────────────────────────────────────────────────────
+interface CanvasRefsContextType {
   dxfRef: React.RefObject<DxfCanvasRef>;
   overlayRef: React.RefObject<OverlayCanvasImperativeAPI>;
-  transform: ViewTransform;
-  setTransform: (transform: ViewTransform) => void;
-  // ✅ ENTERPRISE: Alias for dxfRef (used in DxfCanvas.tsx)
   canvasRef: React.RefObject<DxfCanvasRef>;
+  setTransform: (transform: ViewTransform) => void;
+}
 
-  // ✅ ENTERPRISE FIX: Missing zoomManager for useKeyboardShortcuts TS2339 error
+const CanvasRefsContext = createContext<CanvasRefsContextType | null>(null);
+
+export const useCanvasRefs = (): CanvasRefsContextType | null =>
+  useContext(CanvasRefsContext);
+
+// ── Transform context (changes on zoom/pan) ─────────────────────────────
+interface CanvasTransformContextType {
+  transform: ViewTransform;
+}
+
+const CanvasTransformContext = createContext<CanvasTransformContextType | null>(null);
+
+export const useCanvasTransformContext = (): CanvasTransformContextType | null =>
+  useContext(CanvasTransformContext);
+
+// ── Legacy merged context (backward compat — use only where transform is needed) ──
+interface CanvasContextType extends CanvasRefsContextType {
+  transform: ViewTransform;
   zoomManager?: {
     zoomIn: () => void;
     zoomOut: () => void;
     zoomToFit: () => void;
     zoomTo100: (center?: { x: number; y: number }) => void;
-    zoomToScale: (scale: number, center?: { x: number; y: number }) => void; // ✅ ENTERPRISE FIX: Added zoomToScale method
+    zoomToScale: (scale: number, center?: { x: number; y: number }) => void;
     resetZoom: () => void;
   };
 }
 
 const CanvasContext = createContext<CanvasContextType | null>(null);
 
-export const useCanvasContext = () => {
-  const context = useContext(CanvasContext);
-  if (!context) {
-    // Return null instead of throwing error to allow fallback behavior
-    return null;
-  }
-  return context;
-};
+export const useCanvasContext = (): CanvasContextType | null =>
+  useContext(CanvasContext);
 
 interface CanvasProviderProps {
   children: ReactNode;
 }
 
 export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
-  // ✅ ENTERPRISE MIGRATION: Using DxfCanvasRef from canvas-v2
   const dxfRef = useRef<DxfCanvasRef>(null);
   const overlayRef = useRef<OverlayCanvasImperativeAPI>(null);
-  // 🏢 ENTERPRISE FIX (2026-01-27): Use canonical ViewTransform format (scale, offsetX, offsetY only)
   const [transform, setTransformInternal] = useState<ViewTransform>({ scale: 1, offsetX: 0, offsetY: 0 });
 
-  // 🏢 ENTERPRISE (2026-01-27): Stable setTransform reference
-  // ADR: Context transform is TELEMETRY only, imperative API is control plane
+  // ADR-040 Phase VII: stable callback — created once on mount
   const setTransform = useCallback((newTransform: ViewTransform) => {
     setTransformInternal(newTransform);
   }, []);
 
-  // 🏢 ENTERPRISE (2026-01-27): Memoize context value to prevent DxfCanvas from unmounting
-  // Only recreate when transform changes, not on every render
-  const contextValue = useMemo(() => ({
+  // ADR-040 Phase VII: stable refs value — never recreated (empty deps)
+  const refsValue = useMemo<CanvasRefsContextType>(() => ({
     dxfRef,
     overlayRef,
-    transform,
+    canvasRef: dxfRef,
     setTransform,
-    canvasRef: dxfRef
-  }), [transform]);
+  }), [setTransform]);
+
+  // Transform context — recreated only when transform changes
+  const transformValue = useMemo<CanvasTransformContextType>(
+    () => ({ transform }),
+    [transform],
+  );
+
+  // Legacy merged context — for CanvasSection which needs both
+  const contextValue = useMemo<CanvasContextType>(
+    () => ({ ...refsValue, transform }),
+    [refsValue, transform],
+  );
 
   return (
-    <CanvasContext.Provider value={contextValue}>
-      {children}
-    </CanvasContext.Provider>
+    <CanvasRefsContext.Provider value={refsValue}>
+      <CanvasTransformContext.Provider value={transformValue}>
+        <CanvasContext.Provider value={contextValue}>
+          {children}
+        </CanvasContext.Provider>
+      </CanvasTransformContext.Provider>
+    </CanvasRefsContext.Provider>
   );
 };

@@ -34,6 +34,8 @@ import type { EnhancedDXFToolbarPropsExtended } from './types';
 // ADR-176: Responsive layout
 import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 import { MobileToolbarLayout } from './MobileToolbarLayout';
+// ADR-040 Phase VII: subscribe to ZoomStore — no re-render cascade from DxfViewerContent
+import { useCurrentZoom } from '../../systems/zoom/ZoomStore';
 
 interface EnhancedDXFToolbarProps {
   activeTool: ToolType;
@@ -45,7 +47,8 @@ interface EnhancedDXFToolbarProps {
   canRedo: boolean;
   snapEnabled: boolean;
   showCursorSettings?: boolean;
-  currentZoom: number;
+  /** ADR-040 Phase VII: ignored — zoom comes from ZoomStore internally */
+  currentZoom?: number;
   commandCount?: number;
   className?: string;
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
@@ -62,7 +65,7 @@ const EnhancedDXFToolbarInner: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   canRedo,
   snapEnabled,
   showCursorSettings = false,
-  currentZoom,
+  currentZoom: _currentZoomProp,
   commandCount,
   className = '',
   onSceneImported,
@@ -83,6 +86,8 @@ const EnhancedDXFToolbarInner: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   isFullscreen,
   layeringDisabled = false,
 }) => {
+  // ADR-040 Phase VII: subscribe to ZoomStore directly — independent of DxfViewerContent renders
+  const currentZoom = useCurrentZoom();
   // 🌐 i18n
   const { t } = useTranslation('dxf-viewer-shell');
   // 🏢 ENTERPRISE HOOKS: Design system integration
@@ -281,7 +286,6 @@ const EnhancedDXFToolbarInner: React.FC<EnhancedDXFToolbarPropsExtended> = ({
           canUndo={canUndo}
           canRedo={canRedo}
           snapEnabled={snapEnabled}
-          currentZoom={currentZoom}
           commandCount={commandCount}
           onSidebarToggle={onSidebarToggle ?? (() => {})}
         />

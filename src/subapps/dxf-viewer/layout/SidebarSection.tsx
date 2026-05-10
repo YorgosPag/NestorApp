@@ -42,6 +42,8 @@ import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveS
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
+// ADR-040 Phase VII: subscribe to ZoomStore directly — no prop drilling through DxfViewerContent
+import { useCurrentZoom } from '../systems/zoom/ZoomStore';
 
 // ============================================================================
 // 🎯 LAYOUT CONSTANTS - Centralized, maintainable
@@ -69,7 +71,6 @@ interface SidebarSectionProps {
   currentScene: SceneModel | null;
   selectedEntityIds: string[];
   setSelectedEntityIds: (ids: string[]) => void;
-  currentZoom: number;
   activeTool: string;
   // ADR-309 Phase 2: Wizard button in LevelPanel
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
@@ -91,10 +92,11 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   currentScene,
   selectedEntityIds,
   setSelectedEntityIds,
-  currentZoom,
   activeTool,
   onSceneImported,
 }) => {
+  // ADR-040 Phase VII: subscribe to ZoomStore — re-renders only this leaf on zoom
+  const currentZoom = useCurrentZoom();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 

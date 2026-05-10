@@ -11,7 +11,6 @@ import { useEffect, useRef, useCallback } from 'react';
 import type { Point2D } from '../rendering/types/Types';
 import type { SceneModel } from '../types/scene';
 import type { Overlay, CreateOverlayData, UpdateOverlayData } from '../overlays/types';
-import { useCanvasContext } from '../contexts/CanvasContext';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import { matchesShortcut } from '../config/keyboard-shortcuts';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
@@ -56,10 +55,6 @@ export const useKeyboardShortcuts = ({
   overlayMode,
   overlayStore
 }: KeyboardShortcutsConfig) => {
-  // 🏢 ENTERPRISE: Get centralized zoom system from context
-  const canvasContext = useCanvasContext();
-  const zoomManager = canvasContext?.zoomManager;
-
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
   const universalSelection = useUniversalSelection();
 
@@ -120,29 +115,9 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      // Shift+0 → 100% zoom
-      if (matchesShortcut(e, 'zoom100')) {
-        if (inputFocused || !zoomManager) return;
-        e.preventDefault();
-        zoomManager.zoomTo100(lastMouseRef.current || undefined);
-        return;
-      }
-
-      // +/= → Zoom in (bare key, no modifiers)
-      if (matchesShortcut(e, 'zoomIn') || matchesShortcut(e, 'zoomInNumpad')) {
-        if (inputFocused || !zoomManager) return;
-        e.preventDefault();
-        zoomManager.zoomIn();
-        return;
-      }
-
-      // - → Zoom out (bare key, no modifiers)
-      if (matchesShortcut(e, 'zoomOut') || matchesShortcut(e, 'zoomOutNumpad')) {
-        if (inputFocused || !zoomManager) return;
-        e.preventDefault();
-        zoomManager.zoomOut();
-        return;
-      }
+      // ADR-040 Phase VII: zoom100/zoomIn/zoomOut keyboard shortcuts removed.
+      // zoomManager was always undefined (never set in CanvasContext value) — dead code.
+      // Future: wire via EventBus like canvas-fit-to-view.
 
       // Ctrl+A → Select all DXF entities (e.code = layout-independent)
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyA') {
@@ -205,7 +180,7 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [selectedEntityIds, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, onSelectAll, zoomManager]);
+  }, [selectedEntityIds, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, onSelectAll]);
 
   return {
     handleCanvasMouseMove

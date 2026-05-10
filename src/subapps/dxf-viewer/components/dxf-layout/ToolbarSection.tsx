@@ -139,7 +139,6 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           snapEnabled={dxfProps.snapEnabled ?? false}
           showLayers={dxfProps.showLayers}
           showCursorSettings={dxfProps.showCursorSettings}
-          currentZoom={dxfProps.currentZoom}
           commandCount={0}
           onSceneImported={dxfProps.onSceneImported}
           // 🏢 ADR-050: Overlay toolbar integration (only if feature flag enabled)

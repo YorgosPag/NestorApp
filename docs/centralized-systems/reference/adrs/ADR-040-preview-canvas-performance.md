@@ -100,6 +100,10 @@ Result: `CanvasContext` transform change → `DxfViewerContent` re-renders (it c
 
 ✅ Google-level: YES — root cause correctly identified (context broadcast to non-subscribers); fix uses SSoT pattern (ZoomStore singleton + useSyncExternalStore, identical to SelectionStore/ImmediatePositionStore); no functionality removed; zoom% display still live via ZoomStore subscription; backward compat maintained via legacy useCanvasContext().
 
+**Implementation notes (tsc verification)**:
+- `useCanvasOperations` fallback in `zoomAtScreenPoint`: replaced `context.transform` (removed from `CanvasRefsContextType`) with `dxfRef.current?.getTransform?.()` — stays on the imperative-API path consistent with the primary flow.
+- `useKeyboardShortcuts` dead zoom branches: `zoomManager` was typed as `never` after the TypeScript constant-fold of `null`. Branches removed entirely (they were unreachable — `zoomManager` was never populated in `contextValue`).
+
 ---
 
 ### 2026-05-10: PERF — Phase VI: DrawingStateMachine.moveCursor() — removed from updatePreview hot path

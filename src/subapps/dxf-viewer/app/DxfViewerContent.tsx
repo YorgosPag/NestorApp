@@ -140,7 +140,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     activeTool, handleToolChange, handleAction, showGrid, toggleGrid,
     canUndo, canRedo, snapEnabled, showLayers, showCalibration,
     showCursorSettings, showGuidePanel, showGuideAnalysisPanel,
-    currentZoom, handleFileImport, currentScene, selectedEntityIds,
+    handleFileImport, currentScene, selectedEntityIds,
     setSelectedEntityIds, handleSceneChange, handleCalibrationToggle,
     drawingState, onMeasurementPoint, onMeasurementHover, onMeasurementCancel,
     onDrawingPoint, onDrawingHover, onDrawingCancel, onDrawingDoubleClick,
@@ -273,7 +273,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           currentScene={currentScene}
           selectedEntityIds={selectedEntityIds}
           setSelectedEntityIds={setSelectedEntityIds}
-          currentZoom={currentZoom}
           activeTool={activeTool}
           onSceneImported={handleFileImportWithEncoding}
         />
@@ -285,7 +284,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           currentScene={currentScene}
           selectedEntityIds={selectedEntityIds}
           setSelectedEntityIds={setSelectedEntityIds}
-          currentZoom={currentZoom}
           activeTool={activeTool}
           onSceneImported={handleFileImportWithEncoding}
         />

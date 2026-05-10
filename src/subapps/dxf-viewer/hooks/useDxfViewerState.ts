@@ -19,8 +19,6 @@ import type { MeasurementType } from '../types/measurements';
 import { useCommandHistory } from '../core/commands';
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
 import { useToolState, toolStateStore } from '../stores/ToolStateStore';
-// 🏢 ENTERPRISE FIX (2026-02-02): Get reactive transform from CanvasContext
-import { useCanvasContext } from '../contexts/CanvasContext';
 // 📐 ADR-189: Guide visibility toggle via keyboard chord (G → V)
 import { getGlobalGuideStore } from '../systems/guides';
 // 🏢 FIX: Grid visibility toggle — use RulersGridContext (single source of truth)
@@ -40,8 +38,6 @@ const GUIDE_TOOLS_NEEDING_PANEL: ReadonlySet<ToolType> = new Set<ToolType>([
 export function useDxfViewerState() {
   const { gripSettings } = useGripContext();
   const canvasOps = useCanvasOperations();
-  // 🏢 ENTERPRISE FIX (2026-02-02): Get reactive transform for zoom display
-  const canvasContext = useCanvasContext();
   // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
   const { undo, redo, canUndo, canRedo } = useCommandHistory();
 
@@ -277,9 +273,8 @@ export function useDxfViewerState() {
     // 🏢 ENTERPRISE (2026-01-26): Undo/Redo from Command History - ADR-032
     canUndo,
     canRedo,
-    // 🏢 ENTERPRISE FIX (2026-02-02): Get REACTIVE zoom from CanvasContext transform
-    // Using canvasContext.transform directly (not getTransform()) for proper re-renders
-    currentZoom: canvasContext?.transform?.scale ?? 1,
+    // ADR-040 Phase VII: currentZoom removed from state — leaf components
+    // (SidebarSection, EnhancedDXFToolbar) subscribe to ZoomStore directly.
     handleCalibrationToggle: toolbarState.toggleCalibration
   };
 }

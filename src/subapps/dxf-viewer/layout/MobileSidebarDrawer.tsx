@@ -29,7 +29,6 @@ interface MobileSidebarDrawerProps {
   currentScene: SceneModel | null;
   selectedEntityIds: string[];
   setSelectedEntityIds: (ids: string[]) => void;
-  currentZoom: number;
   activeTool: string;
   // ADR-309 Phase 2: Wizard button in LevelPanel
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
@@ -42,7 +41,6 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   currentScene,
   selectedEntityIds,
   setSelectedEntityIds,
-  currentZoom,
   activeTool,
   onSceneImported,
 }) => {
@@ -64,7 +62,6 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
             currentScene={currentScene}
             selectedEntityIds={selectedEntityIds}
             setSelectedEntityIds={setSelectedEntityIds}
-            currentZoom={currentZoom}
             activeTool={activeTool}
             onSceneImported={onSceneImported}
           />

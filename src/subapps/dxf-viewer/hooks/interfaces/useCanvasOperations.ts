@@ -16,7 +16,8 @@
 import { useCallback } from 'react';
 // ✅ ENTERPRISE FIX: Import from centralized types
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import { useCanvasContext } from '../../contexts/CanvasContext';
+// ADR-040 Phase VII: use stable refs context — never re-renders on zoom
+import { useCanvasRefs } from '../../contexts/CanvasContext';
 // ✅ ENTERPRISE: Import zoom constants for consistent zoom factors
 import { ZOOM_FACTORS } from '../../config/transform-config';
 // 🏢 ADR-151: Centralized Simple Coordinate Transforms
@@ -45,8 +46,8 @@ export interface CanvasOperations {
  * Falls back to event-based approach if context not available
  */
 export const useCanvasOperations = (): CanvasOperations => {
-  // 🎯 PHASE 1: Ενοποιημένο API με κοινό transform για DXF+Overlays
-  const context = useCanvasContext();
+  // ADR-040 Phase VII: useCanvasRefs() is stable (never re-renders on zoom)
+  const context = useCanvasRefs();
 
   // 🏢 ENTERPRISE FIX (2026-01-27): Don't store refs in variables - causes stale closures!
   // Always read from context to get the LATEST ref value inside callbacks
@@ -65,16 +66,7 @@ export const useCanvasOperations = (): CanvasOperations => {
   }, [context]);
 
   const getTransform = useCallback((): ViewTransform => {
-    if (context?.transform) {
-      // Ensure all properties are defined with proper defaults
-      return {
-        scale: context.transform.scale,
-        offsetX: context.transform.offsetX ?? 0,
-        offsetY: context.transform.offsetY ?? 0
-      };
-    }
-    // Fallback: get from DxfCanvasCore
-    // 🏢 ENTERPRISE FIX: Read from context to avoid stale closure
+    // ADR-040 Phase VII: primary path via imperative ref (no React state dependency)
     const dxfRef = context?.dxfRef;
     if (dxfRef?.current?.getTransform) {
       return dxfRef.current.getTransform();
@@ -172,10 +164,10 @@ export const useCanvasOperations = (): CanvasOperations => {
     const dxfRef = context?.dxfRef;
     if (dxfRef?.current?.zoomAtScreenPoint) {
       dxfRef.current.zoomAtScreenPoint(factor, screenPt);
-    } else if (context?.setTransform && context?.transform) {
-      // Fallback: simple scale update (without point preservation)
-      const newScale = context.transform.scale * factor;
-      context.setTransform({ ...context.transform, scale: newScale });
+    } else if (context?.setTransform) {
+      // Fallback: simple scale update via EventBus (transform read imperatively)
+      const current = dxfRef?.current?.getTransform?.() ?? { scale: 1, offsetX: 0, offsetY: 0 };
+      context.setTransform({ ...current, scale: current.scale * factor });
     }
   }, [context]);
 

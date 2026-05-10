@@ -114,7 +114,8 @@ export interface ToolbarState {
     snapEnabled: boolean;
     showLayers: boolean;
     showCalibration?: boolean;
-    currentZoom: number;
+    /** ADR-040 Phase VII: optional — EnhancedDXFToolbar reads from ZoomStore directly */
+    currentZoom?: number;
     commandCount?: number;
 }
 
@@ -287,7 +288,8 @@ export interface EnhancedDXFToolbarPropsExtended {
   snapEnabled: boolean;
   showLayers?: boolean;
   showCursorSettings?: boolean;
-  currentZoom: number;
+  /** ADR-040 Phase VII: optional — reads from ZoomStore internally */
+  currentZoom?: number;
   commandCount?: number;
   className?: string;
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;

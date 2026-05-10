@@ -35,3 +35,6 @@ export {
 
 // === UTILITIES ===
 export * from './utils';
+
+// === ZOOM STORE (ADR-040 Phase VII) ===
+export { ZoomStore, useCurrentZoom } from './ZoomStore';

@@ -21,7 +21,7 @@ declare module './ui/toolbar/EnhancedDXFToolbar' {
     showLayers: boolean;
     showProperties: boolean;
     showCalibration: boolean;
-    currentZoom: number;
+    currentZoom?: number;
     commandCount: number;
     onSceneImported: (file: File, encoding?: string) => void;
   }
@@ -160,7 +160,7 @@ declare module './hooks/useDxfViewerState' {
     showLayers: boolean;
     showProperties: boolean;
     showCalibration: boolean;
-    currentZoom: number;
+    currentZoom?: number;
     handleFileImport: (file: File) => void;
     currentScene: SceneModel | null;
     selectedEntityIds: string[];
