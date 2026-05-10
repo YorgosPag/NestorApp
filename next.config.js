@@ -138,6 +138,14 @@ const nextConfig = {
     // PRODUCTION-ONLY CONFIGURATIONS BELOW
     // =========================================================================
 
+    // [TEST-HARNESS] Replace heavy DxfCanvasHarness with empty stub in production.
+    // Prevents the entire DXF viewer tree from entering the production bundle.
+    // In dev (Turbopack), the real file is used normally — no impact on dev server.
+    const path = require('path');
+    config.resolve.alias[
+      path.resolve(__dirname, 'src/app/test-harness/dxf-canvas/DxfCanvasHarness.tsx')
+    ] = path.resolve(__dirname, 'src/app/test-harness/dxf-canvas/DxfCanvasHarness.prod.ts');
+
     // [COOLIFY] Sequential compilation to prevent OOM on VPS (8GB RAM).
     // Next.js spawns N workers (N = CPU count = 4 on Netcup VPS 1000 G12).
     // Each worker has its own V8 heap → 4 × ~2GB = ~8GB peak.

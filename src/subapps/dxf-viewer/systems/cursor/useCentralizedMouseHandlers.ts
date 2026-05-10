@@ -18,7 +18,7 @@ import type { Entity } from '../../types/entities';
 import { isInDrawingMode } from '../tools/ToolStateManager';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
-import { TRANSFORM_SCALE_LIMITS } from '../../config/transform-config';
+import { TRANSFORM_SCALE_LIMITS, ZOOM_FACTORS } from '../../config/transform-config';
 import { EventBus } from '../../systems/events';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
@@ -234,13 +234,18 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
     if (props.onWheelZoom) {
       props.onWheelZoom(e.deltaY, zoomCenter, undefined, modifiers);
     } else {
-      // Fallback: Basic wheel zoom
-      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      // Fallback: Basic wheel zoom — canonical factors from transform-config
+      const zoomFactor = e.deltaY > 0 ? ZOOM_FACTORS.WHEEL_OUT : ZOOM_FACTORS.WHEEL_IN;
       const canvas = e.currentTarget;
-      const newTransform = CoordinateTransforms.calculateZoomTransform(
+      const rawTransform = CoordinateTransforms.calculateZoomTransform(
         transform, zoomFactor, zoomCenter,
         { width: canvas?.width || 0, height: canvas?.height || 0 }
       );
+      const clampedScale = Math.max(
+        TRANSFORM_SCALE_LIMITS.MIN_SCALE,
+        Math.min(rawTransform.scale, TRANSFORM_SCALE_LIMITS.MAX_SCALE)
+      );
+      const newTransform = { ...rawTransform, scale: clampedScale };
       onTransformChange?.(newTransform);
       canvasEventBus.emitTransformChange(
         { scale: newTransform.scale, offsetX: newTransform.offsetX, offsetY: newTransform.offsetY },

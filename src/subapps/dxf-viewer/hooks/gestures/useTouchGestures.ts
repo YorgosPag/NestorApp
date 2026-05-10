@@ -9,6 +9,7 @@ import { useCallback } from 'react';
 import { usePinchZoom } from './usePinchZoom';
 import { useTouchPan } from './useTouchPan';
 import type { ViewTransform } from '../../rendering/types/Types';
+import { ZOOM_LIMITS } from '../../config/transform-config';
 
 export interface UseTouchGesturesParams {
   targetRef: React.RefObject<HTMLElement | null>;
@@ -28,7 +29,7 @@ export function useTouchGestures({
 
   const handlePinchZoom = useCallback((delta: number, center: { x: number; y: number }) => {
     const newScale = transform.scale * delta;
-    const clampedScale = Math.max(0.01, Math.min(newScale, 1000));
+    const clampedScale = Math.max(ZOOM_LIMITS.MIN_SCALE, Math.min(newScale, ZOOM_LIMITS.MAX_SCALE));
     setTransform({
       scale: clampedScale,
       offsetX: center.x - (center.x - transform.offsetX) * (clampedScale / transform.scale),

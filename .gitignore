@@ -137,6 +137,11 @@ ngrok-bin/
 
 # Visual regression reports (generated locally)
 reports/visual/
+reports/junit/
+
+# Playwright generated artifacts (ephemeral test run output)
+/playwright-report/
+/test-results/
 
 # pnpm state (local cache)
 .pnpm-state/

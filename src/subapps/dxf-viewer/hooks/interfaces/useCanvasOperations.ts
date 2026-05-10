@@ -19,7 +19,7 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 // ADR-040 Phase VII: use stable refs context — never re-renders on zoom
 import { useCanvasRefs } from '../../contexts/CanvasContext';
 // ✅ ENTERPRISE: Import zoom constants for consistent zoom factors
-import { ZOOM_FACTORS } from '../../config/transform-config';
+import { ZOOM_FACTORS, ZOOM_LIMITS } from '../../config/transform-config';
 // 🏢 ADR-151: Centralized Simple Coordinate Transforms
 import { worldToScreenSimple, screenToWorldSimple } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
@@ -37,6 +37,7 @@ export interface CanvasOperations {
   zoomIn: () => void;
   zoomOut: () => void;
   zoomAtScreenPoint: (factor: number, screenPt: Point2D) => void;
+  zoomToScale: (scale: number, center?: Point2D) => void;
   resetToOrigin: () => void;
   fitToView: () => void;
 }
@@ -171,6 +172,15 @@ export const useCanvasOperations = (): CanvasOperations => {
     }
   }, [context]);
 
+  const zoomToScale = useCallback((targetScale: number, center?: Point2D) => {
+    const clamped = Math.max(ZOOM_LIMITS.MIN_SCALE, Math.min(targetScale, ZOOM_LIMITS.MAX_SCALE));
+    const current = getTransform();
+    if (current.scale === 0) return;
+    const factor = clamped / current.scale;
+    const zoomCenter = center || getCanvasCenter();
+    zoomAtScreenPoint(factor, zoomCenter);
+  }, [getTransform, getCanvasCenter, zoomAtScreenPoint]);
+
   /**
    * 🏢 ENTERPRISE: Reset To Origin
    * Sets transform to identity (scale: 1, offset: 0,0)
@@ -222,6 +232,7 @@ export const useCanvasOperations = (): CanvasOperations => {
     zoomIn,
     zoomOut,
     zoomAtScreenPoint,
+    zoomToScale,
     resetToOrigin,
     fitToView,
   };

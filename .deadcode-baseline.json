@@ -1,7 +1,8 @@
 {
-  "generated": "2026-05-08T15:21:28.960Z",
+  "generated": "2026-05-10T17:58:47.712Z",
   "knipVersion": "6",
   "files": [
+    "src/app/test-harness/dxf-canvas/DxfCanvasHarness.prod.ts",
     "src/components/contacts/pickers/AdministrativeAddressPicker.tsx",
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
     "src/services/dxf-overlay-item-mutation-gateway.ts",
@@ -10,5 +11,5 @@
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
     "src/subapps/procurement/services/trade-registry.ts"
   ],
-  "fileCount": 7
+  "fileCount": 8
 }

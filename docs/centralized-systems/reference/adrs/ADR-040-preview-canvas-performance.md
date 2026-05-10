@@ -106,6 +106,21 @@ Result: `CanvasContext` transform change → `DxfViewerContent` re-renders (it c
 
 ---
 
+### 2026-05-10: TOOLING — Visual regression test suite for DXF canvas
+
+**Infrastructure added** to prevent future regressions on the ADR-040 performance architecture:
+
+- `src/subapps/dxf-viewer/e2e/dxf-visual-regression.spec.ts` — 7 visual states: idle, fit-to-view, zoom-2×, zoom-0.5×, hover-entity (crosshair), selection-box, ruler-grid
+- `src/app/test-harness/dxf-canvas/DxfCanvasHarness.tsx` — isolated dev-only harness; loads static JSON scene (no Web Worker), exposes `window.__dxfTest` API (fitToView, zoomIn, zoomOut)
+- `public/test-fixtures/dxf/regression-scene.json` — deterministic scene fixture (4 lines, circle, arc, text)
+- `playwright.config.ts` — `visual-dxf` project (Chromium 1280×800, 120s timeout, dedicated snapshot path)
+- **Production guard**: `DxfCanvasHarness.prod.ts` stub + webpack alias in `next.config.js` — DXF viewer tree excluded from production bundle (zero CI/memory impact)
+- **Baseline snapshots**: `src/subapps/dxf-viewer/e2e/__snapshots__/` (7 PNG, generated 2026-05-10)
+
+Run: `npm run test:visual:dxf` | Update baselines: `npm run test:visual:dxf:update`
+
+---
+
 ### 2026-05-10: PERF — Phase VI: DrawingStateMachine.moveCursor() — removed from updatePreview hot path
 
 **Incident (38-102ms commits during circle/any entity drawing)**: Profiling file `profiling-data.10-05-2026.16-57-14.json` showed commits of 38-102ms (up to 6.4x the 16ms frame budget) during circle creation, triggered by 9 components simultaneously: ToolbarCoordinatesDisplay, ToolbarStatusBar, DraftLayerSubscriber, DxfCanvas, DxfCanvasSubscriber, RotationPreviewMount, SnapIndicatorSubscriber, **CanvasSection**, Anonymous. CanvasSection was silent (2 commits) during normal mousemove but appeared in EVERY commit during drawing.

@@ -1,0 +1,82 @@
+{
+  "entities": [
+    {
+      "id": "line-bottom",
+      "type": "line",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 1,
+      "visible": true,
+      "start": { "x": 100, "y": 100 },
+      "end": { "x": 400, "y": 100 }
+    },
+    {
+      "id": "line-right",
+      "type": "line",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 1,
+      "visible": true,
+      "start": { "x": 400, "y": 100 },
+      "end": { "x": 400, "y": 300 }
+    },
+    {
+      "id": "line-top",
+      "type": "line",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 1,
+      "visible": true,
+      "start": { "x": 400, "y": 300 },
+      "end": { "x": 100, "y": 300 }
+    },
+    {
+      "id": "line-left",
+      "type": "line",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 1,
+      "visible": true,
+      "start": { "x": 100, "y": 300 },
+      "end": { "x": 100, "y": 100 }
+    },
+    {
+      "id": "circle-1",
+      "type": "circle",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 1,
+      "visible": true,
+      "center": { "x": 250, "y": 200 },
+      "radius": 50
+    },
+    {
+      "id": "arc-1",
+      "type": "arc",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 1,
+      "visible": true,
+      "center": { "x": 250, "y": 200 },
+      "radius": 80,
+      "startAngle": 45,
+      "endAngle": 135
+    },
+    {
+      "id": "text-1",
+      "type": "text",
+      "layer": "0",
+      "color": "#ffffff",
+      "lineWidth": 1,
+      "visible": true,
+      "position": { "x": 150, "y": 150 },
+      "text": "TEST",
+      "height": 10
+    }
+  ],
+  "layers": ["0"],
+  "bounds": {
+    "min": { "x": 100, "y": 100 },
+    "max": { "x": 400, "y": 300 }
+  }
+}

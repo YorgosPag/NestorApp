@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001';
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -51,12 +51,25 @@ export default defineConfig({
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
     },
+    {
+      name: 'visual-dxf',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        deviceScaleFactor: 1,
+        navigationTimeout: 90000,
+        actionTimeout: 30000,
+      },
+      snapshotPathTemplate: 'src/subapps/dxf-viewer/e2e/__snapshots__/{testFilePath}/{arg}{ext}',
+      testMatch: ['**/dxf-viewer/e2e/dxf-visual-regression.spec.ts'],
+      timeout: 120000,
+    },
   ],
   webServer: {
     command: 'npm run dev:fast',
-    url: `${baseURL}/test-harness/contact-mutation`,
+    url: `${baseURL}/test-harness/dxf-canvas`,
     reuseExistingServer: true,
-    timeout: 360 * 1000,
+    timeout: 600 * 1000,
     stderr: 'pipe',
     stdout: 'pipe',
   },
