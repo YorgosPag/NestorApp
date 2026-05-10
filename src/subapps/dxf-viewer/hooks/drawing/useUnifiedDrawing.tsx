@@ -95,7 +95,6 @@ export function useUnifiedDrawing() {
     deselectTool: machineDeselectTool,
     addPoint: machineAddPoint,
     undoPoint: machineUndoPoint,
-    moveCursor: machineMoveCursor,
     complete: machineComplete,
     cancel: machineCancel,
     reset: machineReset,
@@ -232,7 +231,10 @@ export function useUnifiedDrawing() {
     const currentTool = (machineContext.toolType as DrawingTool) || 'select';
     if (!currentTool || currentTool === 'select') return;
 
-    machineMoveCursor(mousePoint);
+    // machineMoveCursor intentionally removed — it updated cursorPosition in machine context
+    // (never read by any component) and notified React useSyncExternalStore subscribers on
+    // every mousemove → 80-102ms commits on CanvasSection + 8 children during drawing.
+    // Preview entity is generated from mousePoint directly (no machine cursor read needed).
     const tempPoints = machineContext.points;
 
     const previewEntity = generatePreviewEntity(
@@ -247,7 +249,7 @@ export function useUnifiedDrawing() {
     }
 
     previewEntityRef.current = previewEntity;
-  }, [machineContext.toolType, machineContext.points, machineMoveCursor, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings]);
+  }, [machineContext.toolType, machineContext.points, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
     setMode('preview');

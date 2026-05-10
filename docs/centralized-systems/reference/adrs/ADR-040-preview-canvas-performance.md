@@ -71,6 +71,89 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-10: PERF — Phase VII: CanvasContext split + ZoomStore — eliminates DxfViewerContent cascade on zoom
+
+**Incident (121-234ms per zoom click + 56 Tooltip mass re-render — profiling-data.10-05-2026.19-22-34.json)**: React DevTools showed 5 pure `CanvasProvider` commits each taking 121-234ms during zoom in/out. Commit 23 showed 57 simultaneous updaters (56× `Tooltip` + 1× `CanvasProvider`) taking 131ms. Total: every zoom click triggered a full re-render of `DxfViewerContent` and ALL its children including the 56-tooltip sidebar.
+
+**Root cause**: `CanvasContext` stored `transform` (scale, offsetX, offsetY) in React state via a single `useMemo([transform])`. Any component calling `useCanvasContext()` subscribed to ALL context changes including zoom. Three hooks called inside `DxfViewerContent` all subscribed:
+1. `useDxfViewerState` → read `canvasContext.transform.scale` for `currentZoom` display
+2. `useKeyboardShortcuts` → read `canvasContext.zoomManager` (always `undefined` — not in contextValue)
+3. `useCanvasOperations` → read `context.dxfRef` and `context.transform` inside callbacks
+
+Result: `CanvasContext` transform change → `DxfViewerContent` re-renders (it called all three hooks) → `SidebarSection` re-renders (prop `currentZoom` changed) → 56 `Tooltip` children inside sidebar re-render → 121-234ms total reconciliation per zoom click.
+
+**Fix (7 files + 1 new)**:
+- **NEW `systems/zoom/ZoomStore.ts`**: Module-level singleton (same pattern as `SelectionStore`). `ZoomStore.setScale(scale)` notifies `useSyncExternalStore` subscribers. `useCurrentZoom()` hook for leaf components.
+- **`contexts/CanvasContext.tsx`**: Added `CanvasRefsContext` (stable, never changes) with `{ dxfRef, overlayRef, canvasRef, setTransform }`. Added `useCanvasRefs()` hook. Added `CanvasTransformContext` with `{ transform }`. `CanvasProvider` provides all three contexts. Legacy `useCanvasContext()` unchanged for `CanvasSection`.
+- **`hooks/useKeyboardShortcuts.ts`**: Removed `useCanvasContext()` call (`zoomManager` was always `undefined` — was dead code).
+- **`hooks/interfaces/useCanvasOperations.ts`**: Switched to `useCanvasRefs()` (stable). `getTransform()` now uses imperative `dxfRef.current.getTransform()` as primary path.
+- **`hooks/useDxfViewerState.ts`**: Removed `useCanvasContext()` call. Removed `currentZoom` from return (leaf components subscribe to ZoomStore directly).
+- **`app/useDxfViewerCallbacks.ts`**: `wrappedHandleTransformChange` now calls `ZoomStore.setScale(scale)` before updating CanvasContext.
+- **Leaf components** (`layout/SidebarSection.tsx`, `ui/toolbar/EnhancedDXFToolbar.tsx`, `ui/toolbar/MobileToolbarLayout.tsx`): `useCurrentZoom()` called internally. `currentZoom` prop removed from their interfaces. Prop chain cleaned up in `DxfViewerContent.tsx`, `MobileSidebarDrawer.tsx`, `ToolbarSection.tsx`, `types/dxf-modules.d.ts`, `ui/toolbar/types.ts`.
+
+**Result**: `DxfViewerContent` no longer subscribes to `CanvasContext` on zoom. Only `CanvasSection` (which genuinely needs transform) still subscribes. Zoom re-render scope reduced to `CanvasSection` subtree only. `SidebarSection` + 56 `Tooltip` → **zero re-renders on zoom**. `EnhancedDXFToolbar` subscribes to `ZoomStore` (lightweight `useSyncExternalStore`) — updates only the zoom% display text. Expected: 121-234ms → ~20-40ms per zoom click.
+
+**New rule (extends ADR-040 context pattern)**:
+> **Display-only values derived from high-frequency state (zoom%, cursor coordinates) MUST use external stores (`useSyncExternalStore`) and be consumed only by leaf display components.** Never thread them through orchestrator props — each prop change causes a full re-render of the receiving component and all its children.
+
+**Files modified**: `systems/zoom/ZoomStore.ts` (NEW), `contexts/CanvasContext.tsx`, `hooks/useKeyboardShortcuts.ts`, `hooks/interfaces/useCanvasOperations.ts`, `hooks/useDxfViewerState.ts`, `app/useDxfViewerCallbacks.ts`, `app/DxfViewerContent.tsx`, `layout/SidebarSection.tsx`, `layout/MobileSidebarDrawer.tsx`, `ui/toolbar/EnhancedDXFToolbar.tsx`, `ui/toolbar/MobileToolbarLayout.tsx`, `components/dxf-layout/ToolbarSection.tsx`, `ui/toolbar/types.ts`, `types/dxf-modules.d.ts`.
+
+✅ Google-level: YES — root cause correctly identified (context broadcast to non-subscribers); fix uses SSoT pattern (ZoomStore singleton + useSyncExternalStore, identical to SelectionStore/ImmediatePositionStore); no functionality removed; zoom% display still live via ZoomStore subscription; backward compat maintained via legacy useCanvasContext().
+
+---
+
+### 2026-05-10: PERF — Phase VI: DrawingStateMachine.moveCursor() — removed from updatePreview hot path
+
+**Incident (38-102ms commits during circle/any entity drawing)**: Profiling file `profiling-data.10-05-2026.16-57-14.json` showed commits of 38-102ms (up to 6.4x the 16ms frame budget) during circle creation, triggered by 9 components simultaneously: ToolbarCoordinatesDisplay, ToolbarStatusBar, DraftLayerSubscriber, DxfCanvas, DxfCanvasSubscriber, RotationPreviewMount, SnapIndicatorSubscriber, **CanvasSection**, Anonymous. CanvasSection was silent (2 commits) during normal mousemove but appeared in EVERY commit during drawing.
+
+**Root cause**: `updatePreview()` in `useUnifiedDrawing.tsx` called `machineMoveCursor(mousePoint)` on every mousemove during drawing. `DrawingStateMachine.moveCursor()` sends a `MOVE_CURSOR` event → `computeNewContext()` produces new context with `cursorPosition` → `executeTransition()` → `notifyListeners()`. `useDrawingMachine` subscribes via `useSyncExternalStore` → fires on every notify → `machineContext` updates → `state` useMemo in `useUnifiedDrawing` recomputes → `drawingHandlers` new ref → CanvasSection re-renders (13+ hooks) → cascade to 8 children → 40-100ms reconciliation at mousemove rate.
+
+**Investigation**: `machineMoveCursor` was called with NO snap arguments (`snapped=false`, default), so `snapInfo` in machine context was always `{snapped: false, snapPoint: null, snapType: null}` — useless. `machineContext.cursorPosition` is defined in `DrawingContext` interface but never READ by any React component (grep confirmed zero reads). The machine cursor position served NO observable purpose — preview entity generation uses `mousePoint` directly (parameter to `generatePreviewEntity`, line 238-240).
+
+**Fix** — `hooks/drawing/useUnifiedDrawing.tsx`:
+- Removed `machineMoveCursor(mousePoint)` call from `updatePreview` (line 235)
+- Removed `moveCursor: machineMoveCursor` from `useDrawingMachine` destructuring (now unused)
+- Removed `machineMoveCursor` from `updatePreview`'s useCallback deps array
+- Left comment explaining the intentional removal and why it's safe
+
+**Result**: During drawing (circle/line/rectangle/etc.) — `DrawingStateMachine.notifyListeners()` no longer fires on every mousemove. `useDrawingMachine` useSyncExternalStore subscription stays silent. CanvasSection stays stable. Expected commits per mousemove-frame: 0 from CanvasSection (down from participating in every ~40-100ms commit). Only the correct micro-leaf subscribers (ImmediatePositionStore: ToolbarCoordinatesDisplay, DraftLayerSubscriber, etc.) update.
+
+**Key rule** (extends drawing perf pattern):
+> **`updatePreview` is a synchronous, imperative, zero-React function.** It writes to refs and calls canvas APIs directly. Any state machine notification inside it causes React re-renders on every mousemove during drawing. Machine state updates (moveCursor, addPoint) must only be called when they convey information actually consumed by React state — not as a side effect of the hot preview path.
+
+**Files modified**: `hooks/drawing/useUnifiedDrawing.tsx`.
+
+✅ Google-level: YES — root cause is state machine notification in hot path; fix is precise (single line removal); no functionality lost (cursorPosition in machine was never read; snapInfo was always false/null from this call); zero React re-renders during preview mousemove.
+
+---
+
+### 2026-05-10: PERF — Phase V: CrosshairOverlay — removed useSyncExternalStore subscription
+
+**Incident (158 commits during mousemove — profiling-data.10-05-2026.16-37-33.json)**: React DevTools profiler showed `CrosshairOverlay` as the top updater component with 158 React commits (74.5% of all 212 commits) during a standard mouse-movement + selection interaction. This was MORE than `DxfCanvasSubscriber` (77) and `ToolbarCoordinatesDisplay` (76) combined.
+
+**Root cause**: `CrosshairOverlay.tsx` called `useCursorPosition()` (line 77) which wraps `useSyncExternalStore(ImmediatePositionStore.subscribe, ImmediatePositionStore.getPosition)`. On every mousemove, `ImmediatePositionStore.setPosition()` notified all `useSyncExternalStore` subscribers → `CrosshairOverlay` re-rendered at native mouse rate (~120fps). The re-renders were entirely wasted: `CrosshairOverlay` rendering is already handled by two independent mechanisms:
+1. `registerDirectRender` callback — called synchronously from `ImmediatePositionStore.setPosition()` (no RAF wait, no React reconciliation)
+2. `registerRenderCallback` in UnifiedFrameScheduler — RAF fallback with `isDirty()` check
+
+Neither mechanism needs a React re-render. The `cursorPosition` React value was used only to compute `effectiveIsActive = isActive && cursorPosition !== null` and to populate `renderArgsRef.current.pos` — both of which were already handled correctly by the direct render and RAF callbacks.
+
+**Fix** — `CrosshairOverlay.tsx`:
+- Removed `import { useCursorPosition }` from `useCursor`
+- Removed `const cursorPosition = useCursorPosition()` (line 77)
+- Removed `const effectiveIsActive = isActive && cursorPosition !== null` (line 80)
+- Changed `renderArgsRef.current = { isActive: effectiveIsActive, pos: cursorPosition, margins }` → `{ isActive: isActive, pos: null, margins }`. RAF callback already reads `getImmediatePosition()` as primary source (line 367); `renderArgsRef.current.pos` was only a fallback and can safely be `null`.
+
+**Result**: CrosshairOverlay will re-render ONLY on prop changes (`isActive`, `viewport`, `rulerMargins`, `className`, `style`) — all rare, user-driven. Zero React re-renders during mousemove. Crosshair canvas updates remain zero-latency via `registerDirectRender`.
+
+**Key rule** (extends micro-leaf pattern):
+> **Components that render via `registerDirectRender` or `registerRenderCallback` MUST NOT subscribe to `ImmediatePositionStore` via `useSyncExternalStore`.** The synchronous direct-render callback already fires at native mouse rate. Adding a React subscription only causes wasteful reconciliation without any visual benefit. Read position imperatively (`getImmediatePosition()`) inside the direct-render callback instead.
+
+**Files modified**: `canvas-v2/overlays/CrosshairOverlay.tsx`.
+
+✅ Google-level: YES — removed redundant React subscription; zero mousemove re-renders; crosshair rendering unaffected (handled by direct-render callback); `isActive` prop still correctly gates rendering via `renderArgsRef`; RAF fallback correctly reads `getImmediatePosition()`.
+
+---
+
 ### 2026-05-10: FEAT — Ctrl+A select-all with >50 entity guard + rulers default-on + crash recovery
 
 **Ctrl+A select-all** (`useKeyboardShortcuts.ts`, `DxfViewerContent.tsx`, `useDxfViewerEffects.ts`):

@@ -21,7 +21,6 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { getCursorSettings, subscribeToCursorSettings, type CursorSettings } from '../../systems/cursor/config';
-import { useCursorPosition } from '../../systems/cursor/useCursor';
 import { useGripContext } from '../../providers/GripProvider';
 import { portalComponents } from '@/styles/design-tokens';
 import type { Point2D } from '../../rendering/types/Types';
@@ -68,16 +67,6 @@ export default function CrosshairOverlay({
   style,
 }: CrosshairOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // ============================================================================
-  // 🏢 ENTERPRISE: Centralized Cursor Position from CursorSystem
-  // Pattern: Autodesk/Adobe - Single Source of Truth
-  // ============================================================================
-
-  const cursorPosition = useCursorPosition();
-
-  // ✅ ENTERPRISE: Combine component isActive with cursor position
-  const effectiveIsActive = isActive && cursorPosition !== null;
 
   // ✅ ADR-030: Track previous state for dirty check
   const prevPositionRef = useRef<Point2D | null>(null);
@@ -274,10 +263,12 @@ export default function CrosshairOverlay({
   });
 
   // ✅ SYNCHRONOUS UPDATE: Write to ref during render phase (not in useEffect)
-  // This ensures the RAF callback always reads the current React state
+  // isActive prop only — pos read live from getImmediatePosition() in RAF callback.
+  // No useSyncExternalStore here: rendering is handled by registerDirectRender (synchronous)
+  // + registerRenderCallback (RAF fallback). Zero React re-renders on mousemove.
   renderArgsRef.current = {
-    isActive: effectiveIsActive,
-    pos: cursorPosition,
+    isActive: isActive,
+    pos: null,
     margins: rulerMargins
   };
 
