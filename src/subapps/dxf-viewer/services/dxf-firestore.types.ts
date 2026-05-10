@@ -79,6 +79,12 @@ export interface DxfFileRecord {
   lastModified: Timestamp;
   version: number;
   checksum?: string;
+  /**
+   * ADR-293: canonical storagePath of the FileRecord. Propagated by
+   * loadFromStorageImpl so callers can derive the scene JSON path without
+   * a second Firestore round-trip (e.g. injecting DxfSaveContext on load).
+   */
+  storagePath?: string;
 }
 
 // =============================================================================

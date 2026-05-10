@@ -69,6 +69,7 @@ export async function getFileImpl(fileId: string): Promise<DxfFileRecord | null>
     lastModified: metadata.lastModified,
     version: metadata.version,
     checksum: metadata.checksum,
+    storagePath: metadata.storagePath,
   };
 }
 
@@ -387,6 +388,7 @@ export async function loadFromStorageImpl(fileId: string): Promise<DxfFileRecord
       lastModified: metadata.lastModified,
       version: metadata.version,
       checksum: metadata.checksum,
+      storagePath: metadata.storagePath,
     };
   } catch (error: unknown) {
     if (error instanceof Error) {

@@ -107,6 +107,15 @@ export function useLevelSceneLoader({
           if (fileRecord.fileName && sceneManager.setCurrentFileName) {
             sceneManager.setCurrentFileName(fileRecord.fileName);
           }
+          // 🏢 ADR-293: Inject FileRecord ID + canonicalScenePath so auto-save
+          // writes to the SAME storage path as the loaded scene (no lookup,
+          // no race, no "canonicalScenePath is required" throw on line completion).
+          sceneManager.setFileRecordId?.(sceneFileId);
+          if (fileRecord.storagePath) {
+            sceneManager.setSaveContext?.({
+              canonicalScenePath: DxfFirestoreService.deriveScenePath(fileRecord.storagePath),
+            });
+          }
           loadedSceneLevelsRef.current.add(currentLevelId);
         } else {
           // File exists in Firestore but scene couldn't be loaded (corrupted/deleted)
