@@ -15,6 +15,11 @@ declare global {
       drawPreview: (entity: Record<string, unknown>) => void;
       clearPreview: () => void;
       setActiveTool: (tool: string) => void;
+      updateSceneEntity: (id: string, patch: Record<string, unknown>) => void;
+      addSceneEntity: (entity: Record<string, unknown>) => void;
+      removeSceneEntity: (id: string) => void;
+      showSnap: (type: string, wx: number, wy: number) => void;
+      hideSnap: () => void;
     };
   }
 }
@@ -251,5 +256,158 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
     }));
     await page.waitForTimeout(300);
     await expect(page).toHaveScreenshot('draw-rectangle-preview.png', SCREENSHOT_OPTIONS);
+  });
+});
+
+test.describe('Phase 5 — Entity Operations', () => {
+  test('entity-moved — circle translated to new position', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.updateSceneEntity('circle-1', {
+      center: { x: 340, y: 260 },
+    }));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('entity-moved.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('entity-copied — line duplicated with offset', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.addSceneEntity({
+      id: 'line-bottom-copy', type: 'line', layer: '0',
+      color: '#ffff00', lineWidth: 2, visible: true,
+      start: { x: 100, y: 130 }, end: { x: 400, y: 130 },
+    }));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('entity-copied.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('entity-multi-removed — arc and text removed from scene', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => {
+      window.__dxfTest.removeSceneEntity('arc-1');
+      window.__dxfTest.removeSceneEntity('text-1');
+    });
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('entity-multi-removed.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('entity-color-changed — circle color updated to cyan', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.updateSceneEntity('circle-1', {
+      color: '#00ffff', lineWidth: 3,
+    }));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('entity-color-changed.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('entity-added — new large circle added to scene', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.addSceneEntity({
+      id: 'circle-new', type: 'circle', layer: '0',
+      color: '#ff6600', lineWidth: 2, visible: true,
+      center: { x: 250, y: 200 }, radius: 120,
+    }));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('entity-added.png', SCREENSHOT_OPTIONS);
+  });
+});
+
+test.describe('Phase 6 — Snap Indicators', () => {
+  test('snap-endpoint — square marker at line corner', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.showSnap('endpoint', 100, 100));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('snap-endpoint.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('snap-midpoint — triangle marker at line midpoint', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.showSnap('midpoint', 250, 100));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('snap-midpoint.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('snap-center — circle marker at entity center', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.showSnap('center', 250, 200));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('snap-center.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('snap-intersection — X marker at corner intersection', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.showSnap('intersection', 400, 300));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('snap-intersection.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('snap-perpendicular — right-angle marker on line', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.showSnap('perpendicular', 100, 200));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('snap-perpendicular.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('snap-grid — dot marker at grid point', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    await page.evaluate(() => window.__dxfTest.showSnap('grid', 200, 150));
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('snap-grid.png', SCREENSHOT_OPTIONS);
+  });
+});
+
+test.describe('Phase 7 — Edge Cases', () => {
+  test('empty-scene — canvas renders with no entities', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=empty-scene`);
+    await expect(page).toHaveScreenshot('empty-scene.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('extreme-zoom-in — 16× zoom shows sub-entity detail', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    for (let i = 0; i < 4; i++) {
+      await page.evaluate(() => window.__dxfTest.zoomIn());
+      await page.waitForTimeout(100);
+    }
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('extreme-zoom-in.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('extreme-zoom-out — 0.06× zoom shows scene as small cluster', async ({ page }) => {
+    await loadHarness(page);
+    await fitAndWait(page);
+    for (let i = 0; i < 4; i++) {
+      await page.evaluate(() => window.__dxfTest.zoomOut());
+      await page.waitForTimeout(100);
+    }
+    await page.waitForTimeout(200);
+    await expect(page).toHaveScreenshot('extreme-zoom-out.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('dense-scene — 34 overlapping entities render without corruption', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=dense-scene`);
+    await fitAndWait(page);
+    await expect(page).toHaveScreenshot('dense-scene.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('loading-state — blank canvas before fixture resolves', async ({ page }) => {
+    await page.route('**/test-fixtures/dxf/regression-scene.json', async route => {
+      await new Promise<void>(resolve => setTimeout(resolve, 10000));
+      await route.continue();
+    });
+    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.locator('[data-testid="loading"]').waitFor({ timeout: 15000 });
+    await page.waitForTimeout(300);
+    await expect(page).toHaveScreenshot('loading-state.png', SCREENSHOT_OPTIONS);
   });
 });

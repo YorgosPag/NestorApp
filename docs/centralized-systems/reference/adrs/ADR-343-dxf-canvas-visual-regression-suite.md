@@ -1,6 +1,6 @@
 # ADR-343: DXF Canvas Visual Regression Test Suite
 
-**Status**: ✅ ACTIVE — Phase 1 + Phase 2 + Phase 3 + Phase 4 implemented  
+**Status**: ✅ ACTIVE — Phase 1–7 implemented (39 tests)  
 **Date**: 2026-05-10  
 **Domain**: DXF Viewer / Testing Infrastructure  
 **Author**: Giorgio Pagonis  
@@ -125,17 +125,44 @@ One isolated fixture per entity type. Each test: load fixture → fitToView → 
 - `--workers=1` in npm scripts — sequential execution avoids parallel Turbopack lock conflicts
 - canvas-ready timeout: 60s → 120s
 
-### Phase 5 — Entity Operations (planned, ~6 tests)
+### Phase 5 — Entity Operations ✅ (2026-05-10, 5 tests)
 
-Move, delete, copy, rotate — visual state before/after.
+| Test | What it covers |
+|------|---------------|
+| `entity-moved` | `updateSceneEntity('circle-1', { center: newPos })` → circle at new world position |
+| `entity-copied` | `addSceneEntity(offsetLine)` → original + copy both visible |
+| `entity-multi-removed` | `removeSceneEntity` × 2 → arc + text gone |
+| `entity-color-changed` | `updateSceneEntity` color/lineWidth patch → cyan circle |
+| `entity-added` | `addSceneEntity(largeCircle)` → new entity in scene |
 
-### Phase 6 — Snap Indicators (planned, ~5 tests)
+**New `__dxfTest` API**: `updateSceneEntity(id, patch)`, `addSceneEntity(entity)`, `removeSceneEntity(id)`
 
-Endpoint, midpoint, center, perpendicular snap visual indicators.
+### Phase 6 — Snap Indicators ✅ (2026-05-10, 6 tests)
 
-### Phase 7 — Edge Cases (planned, ~5 tests)
+| Test | Snap Type | Visual |
+|------|-----------|--------|
+| `snap-endpoint` | `endpoint` | Square outline at line corner |
+| `snap-midpoint` | `midpoint` | Triangle at line midpoint |
+| `snap-center` | `center` | Circle at entity center |
+| `snap-intersection` | `intersection` | X at corner |
+| `snap-perpendicular` | `perpendicular` | Right-angle symbol on line |
+| `snap-grid` | `grid` | Dot at grid point |
 
-Empty scene, extreme zoom, dense entity count, loading state.
+**Approach**: `SnapIndicatorOverlay` (dynamic import, SVG-based) added to harness. `__dxfTest.showSnap(type, wx, wy)` / `hideSnap()` expose world-coords snap positioning.
+
+### Phase 7 — Edge Cases ✅ (2026-05-10, 5 tests)
+
+| Test | Fixture | What it covers |
+|------|---------|---------------|
+| `empty-scene` | `empty-scene.json` | Canvas with `entities: [], bounds: null` — blank dark frame |
+| `extreme-zoom-in` | `regression-scene.json` | 4× `zoomIn()` = 16× from fit — partial entity, thick strokes |
+| `extreme-zoom-out` | `regression-scene.json` | 4× `zoomOut()` = ~0.06× from fit — scene as tiny cluster |
+| `dense-scene` | `dense-scene.json` | 34 overlapping entities (walls, arcs, circles, text, polylines, hatch) |
+| `loading-state` | — | `page.route()` holds fixture fetch; captures `data-testid="loading"` dark frame |
+
+**New fixtures**:
+- `empty-scene.json` — `{ entities: [], layers: ['0'], bounds: null }` — verifies graceful empty render
+- `dense-scene.json` — floor plan with 34 entities across 9 layers: outer/inner walls, door arcs, windows, furniture circles, text labels, hatch lines, staircase polyline, dimension lines, WC polyline
 
 ---
 
@@ -170,6 +197,9 @@ Phase 1: 7 PNG baselines
 Phase 2: 6 PNG baselines  
 Phase 3: 5 PNG baselines  
 Phase 4: 5 PNG baselines  
+Phase 5: 5 PNG baselines  
+Phase 6: 6 PNG baselines
+Phase 7: 5 PNG baselines (pending `npm run test:visual:dxf:update`)  
 
 ---
 
@@ -191,6 +221,12 @@ Related ADRs:
 ---
 
 ## Changelog
+
+### 2026-05-10: Phase 5 implemented
+
+- Phase 5: 5 entity operation tests — 28/28 passing
+- New `__dxfTest` API: `updateSceneEntity`, `addSceneEntity`, `removeSceneEntity`
+- ADR-343 updated
 
 ### 2026-05-10: Phase 4 implemented + infra fixes
 
