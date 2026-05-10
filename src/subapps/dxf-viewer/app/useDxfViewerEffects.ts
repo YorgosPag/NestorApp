@@ -292,8 +292,10 @@ Check console for detailed metrics`;
   }, [activeTool, eventBus, setCanvasTransform, canvasTransformRef]);
 
   // Auto-expand selection in levels panel when selection changes
+  // Skip for large selections (Ctrl+A) — expanding 3000+ nodes causes 0 FPS
   React.useEffect(() => {
     if (!selectedEntityIds?.length) return;
+    if (selectedEntityIds.length > 50) return;
     floatingRef.current?.expandForSelection(selectedEntityIds, currentScene);
   }, [selectedEntityIds, currentScene, floatingRef]);
 

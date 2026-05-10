@@ -71,6 +71,24 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-10: FEAT — Ctrl+A select-all with >50 entity guard + rulers default-on + crash recovery
+
+**Ctrl+A select-all** (`useKeyboardShortcuts.ts`, `DxfViewerContent.tsx`, `useDxfViewerEffects.ts`):
+- `useKeyboardShortcuts` handles `(e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyA'` → calls `onSelectAll?.()`
+- `DxfViewerContent` provides `handleSelectAll = useCallback(() => setSelectedEntityIds(currentScene.entities.map(e => e.id)), [...])`
+- `useDxfViewerEffects` guard: `if (selectedEntityIds.length > 50) return;` — prevents O(N²) grip rendering at 0fps when 3000+ entities selected
+
+**Rulers default-on** (`systems/rulers-grid/config.ts`):
+- `DEFAULT_RULER_SETTINGS.horizontal.enabled: false → true`
+- `DEFAULT_RULER_SETTINGS.vertical.enabled: false → true`
+- Rulers now visible on first load without requiring user action
+
+**Rulers crash recovery** (`useUserSettingsRulersGridSync.ts`):
+- If `firstSnapshot && !hasLocalPersistedState` and both rulers disabled → repair + write back to Firestore
+- Prevents stale Firestore state overriding new defaults for existing users
+
+---
+
 ### 2026-05-10: TOOLING — CHECK 6B upgraded to BLOCK + CHECK 6D added (canvas drawing regression prevention)
 
 **Problem**: CHECK 6B was WARN-only — developers (and AI agents) could commit changes to DXF micro-leaf architecture files without updating ADR-040. No enforcement existed for canvas drawing behavior files (entity renderers, DxfCanvas, LayerCanvas, cursor/selection, rulers/grid, zoom/pan).

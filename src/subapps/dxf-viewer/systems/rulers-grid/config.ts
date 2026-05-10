@@ -145,7 +145,7 @@ export interface RulersGridState {
 // ===== DEFAULT SETTINGS =====
 export const DEFAULT_RULER_SETTINGS: RulerSettings = {
   horizontal: {
-    enabled: false,  // 🔧 FIX: Start disabled to prevent race condition with localStorage
+    enabled: true,
     height: 30,
     position: 'top',
     color: UI_COLORS.RULER_NEUTRAL_GRAY, // Ουδέτερο γκρι
@@ -169,7 +169,7 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
     showBackground: true  // Default: show background
   },
   vertical: {
-    enabled: false,  // 🔧 FIX: Start disabled to prevent race condition with localStorage
+    enabled: true,
     width: 30,
     position: 'left',
     color: UI_COLORS.RULER_NEUTRAL_GRAY, // Ουδέτερο γκρι

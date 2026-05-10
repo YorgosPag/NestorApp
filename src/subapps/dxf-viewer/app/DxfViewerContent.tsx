@@ -235,12 +235,19 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     }
   });
 
+  // Ctrl+A → select all entities in the current scene
+  const handleSelectAll = React.useCallback(() => {
+    if (!currentScene) return;
+    setSelectedEntityIds(currentScene.entities.map(e => e.id));
+  }, [currentScene, setSelectedEntityIds]);
+
   // Keyboard shortcuts hook
   const { handleCanvasMouseMove } = useKeyboardShortcuts({
     selectedEntityIds, currentScene,
     onNudgeSelection: nudgeSelection,
     onColorMenuClose: closeColorMenu,
     onDrawingCancel: state.onDrawingCancel,
+    onSelectAll: handleSelectAll,
     activeTool, overlayMode, overlayStore
   });
 

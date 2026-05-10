@@ -26,6 +26,7 @@ interface KeyboardShortcutsConfig {
   onNudgeSelection: (dx: number, dy: number) => void;
   onColorMenuClose: () => void;
   onDrawingCancel?: () => void; // 🎯 ADR-047: Cancel drawing on Escape
+  onSelectAll?: () => void;    // Ctrl+A → select all DXF entities
   activeTool: string;
   overlayMode: string;
   overlayStore: {
@@ -50,6 +51,7 @@ export const useKeyboardShortcuts = ({
   onNudgeSelection,
   onColorMenuClose,
   onDrawingCancel, // 🎯 ADR-047: Cancel drawing on Escape
+  onSelectAll,
   activeTool,
   overlayMode,
   overlayStore
@@ -142,6 +144,14 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
+      // Ctrl+A → Select all DXF entities (e.code = layout-independent)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyA') {
+        if (inputFocused) return;
+        e.preventDefault();
+        onSelectAll?.();
+        return;
+      }
+
       // ⌨️ NAVIGATION SHORTCUTS - Arrow keys for nudging
       if (!selectedEntityIds?.length) return;
 
@@ -195,7 +205,7 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [selectedEntityIds, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, zoomManager]);
+  }, [selectedEntityIds, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, onSelectAll, zoomManager]);
 
   return {
     handleCanvasMouseMove

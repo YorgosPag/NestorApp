@@ -105,6 +105,31 @@ export function useUserSettingsRulersGridSync(
         if (blob && (blob.rulers || blob.grid || blob.origin || typeof blob.isVisible === 'boolean')) {
           const remoteHash = stableHash(blob);
           if (remoteHash === lastWrittenHashRef.current) return; // own echo
+
+          // 🐛 CRASH RECOVERY (2026-05-10): If this is the first Firestore snapshot on a
+          // fresh/cleared localStorage, and BOTH rulers are disabled, treat as crash-
+          // corrupted state (e.g. React DevTools crash during bulk selectMultiple).
+          // Re-enable both rulers and repair Firestore so the next boot is clean.
+          const remoteRulers = blob.rulers;
+          if (firstSnapshot && !hasLocalPersistedState && remoteRulers &&
+              remoteRulers.horizontal?.enabled === false &&
+              remoteRulers.vertical?.enabled === false) {
+            const repairedRulers: RulerSettings = {
+              ...remoteRulers,
+              horizontal: { ...remoteRulers.horizontal, enabled: true },
+              vertical:   { ...remoteRulers.vertical,   enabled: true },
+            };
+            const repairedBlob = { ...blob, rulers: repairedRulers };
+            lastWrittenHashRef.current = stableHash(repairedBlob);
+            userSettingsRepository.updateSlice('dxfViewer.rulersGrid', repairedBlob as unknown as never);
+            setRulers(repairedRulers);
+            if (blob.grid) setGrid(migrateAdaptiveFadeDefaults(blob.grid));
+            if (blob.origin) setOriginState(blob.origin);
+            if (typeof blob.isVisible === 'boolean') setIsVisible(blob.isVisible);
+            firstSnapshot = false;
+            return;
+          }
+
           lastWrittenHashRef.current = remoteHash;
           if (blob.rulers) setRulers(blob.rulers);
           if (blob.grid) setGrid(migrateAdaptiveFadeDefaults(blob.grid));
