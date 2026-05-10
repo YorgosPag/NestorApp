@@ -694,6 +694,10 @@
       "lighting": {
         "title": "Φωτισμός (Lighting)",
         "description": "Ρυθμίσεις φωτισμού (σύντομα)"
+      },
+      "background": {
+        "title": "Φόντο Καμβά",
+        "description": "Χρώμα φόντου καμβά DXF"
       }
     }
   },
@@ -726,6 +730,16 @@
     "styleDashed": "Διακεκομμένη",
     "styleDotted": "Κουκίδες",
     "styleDashDot": "Παύλ��-Τελεία"
+  },
+  "backgroundCategory": {
+    "themeLabel": "Θέμα καμβά",
+    "themes": {
+      "autocadClassic": "AutoCAD Classic",
+      "autocadDark": "AutoCAD Dark",
+      "solidworks": "SolidWorks",
+      "blender": "Blender",
+      "light": "Ανοιχτό"
+    }
   },
   "canvasSettings": {
     "title": "Ρυθμίσεις Καμ��ά",

@@ -51,6 +51,9 @@ export const STORAGE_KEYS = {
 
   // Command Persistence (dynamic key - used with prefix)
   COMMAND_HISTORY_PREFIX: 'dxf-command-history',
+
+  // Canvas Background Theme
+  CANVAS_BACKGROUND: 'dxf-viewer:canvas-background-theme',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string;

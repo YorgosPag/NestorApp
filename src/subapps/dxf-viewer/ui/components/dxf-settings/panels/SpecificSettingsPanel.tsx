@@ -27,7 +27,8 @@ import {
   GripsIcon,
   LayersIcon,
   EntitiesIcon,
-  LightingIcon
+  LightingIcon,
+  CanvasIcon
 } from '../icons/DxfSettingsIcons';
 
 /**
@@ -79,6 +80,7 @@ const LazyLayersCategory = lazy(() => import('../categories/LayersCategory'));
 const LazyEntitiesCategory = lazy(() => import('../categories/EntitiesCategory'));
 const LazyGripsCategory = lazy(() => import('../categories/GripsCategory'));
 const LazyLightingCategory = lazy(() => import('../categories/LightingCategory'));
+const LazyBackgroundCategory = lazy(() => import('../categories/BackgroundCategory'));
 
 // ============================================================================
 // TYPES
@@ -89,7 +91,7 @@ export interface SpecificSettingsPanelProps {
   defaultCategory?: ColorCategory;
 }
 
-type ColorCategory = 'cursor' | 'selection' | 'grid' | 'grips' | 'layers' | 'entities' | 'lighting';
+type ColorCategory = 'cursor' | 'selection' | 'grid' | 'grips' | 'layers' | 'entities' | 'lighting' | 'background';
 
 interface CategoryConfig {
   id: ColorCategory;
@@ -164,6 +166,12 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
       description: t('specificSettings.categories.lighting.description'),
       icon: <LightingIcon />,
       comingSoon: true
+    },
+    {
+      id: 'background',
+      title: t('specificSettings.categories.background.title'),
+      description: t('specificSettings.categories.background.description'),
+      icon: <CanvasIcon />
     }
   ];
 
@@ -187,6 +195,8 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
         return <LazyGripsCategory />;
       case 'lighting':
         return <LazyLightingCategory />;
+      case 'background':
+        return <LazyBackgroundCategory />;
       default:
         return <LazySelectionCategory />;
     }

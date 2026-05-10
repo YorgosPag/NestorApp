@@ -694,6 +694,10 @@
       "lighting": {
         "title": "Lighting",
         "description": "Lighting settings (coming soon)"
+      },
+      "background": {
+        "title": "Canvas Background",
+        "description": "DXF canvas background color"
       }
     }
   },
@@ -726,6 +730,16 @@
     "styleDashed": "Dashed",
     "styleDotted": "Dotted",
     "styleDashDot": "Dash-Dot"
+  },
+  "backgroundCategory": {
+    "themeLabel": "Canvas theme",
+    "themes": {
+      "autocadClassic": "AutoCAD Classic",
+      "autocadDark": "AutoCAD Dark",
+      "solidworks": "SolidWorks",
+      "blender": "Blender",
+      "light": "Light"
+    }
   },
   "canvasSettings": {
     "title": "Canvas Settings",
