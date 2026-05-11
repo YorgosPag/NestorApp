@@ -42,6 +42,10 @@ import { applyCompletionStyles } from '../useLineCompletionStyle';
 import { EventBus } from '../../systems/events';
 import { toolStateStore } from '../../stores/ToolStateStore';
 import { perfMark, perfStart, perfEnd } from '../../debug/perf-line-profile';
+import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
+import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateEntityCommand';
+import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import type { SceneEntity } from '../../core/commands/interfaces';
 import type { DrawingTool } from './drawing-types';
 import type { PersistEntityOptions, PersistEntityResult } from './useOverlayPersistence';
 
@@ -176,25 +180,43 @@ export function completeEntity(
     applyCompletionStyles(entity as unknown as Record<string, unknown>);
   }
 
-  // STEP 2: Add entity to scene
+  // STEP 2: Add entity to scene via Command Pattern (ADR-031 + ADR-057).
+  // Going through CreateEntityCommand + global CommandHistory is what wires
+  // Ctrl+Z / undo-button to drawing tools — direct setScene() bypasses the
+  // undo stack and leaves the user unable to revert a freshly drawn shape.
   const _perfTotal = perfStart();
-  const scene = getScene(levelId);
-  const finalScene: SceneModel = perfMark('completeEntity.setScene', () => {
-    const next: SceneModel = scene
-      ? { ...scene, entities: [...scene.entities, entity as AnySceneEntity] }
-      : {
-          entities: [entity as AnySceneEntity],
-          layers: { [DXF_DEFAULT_LAYER]: { name: DXF_DEFAULT_LAYER, color: UI_COLORS.WHITE, visible: true, locked: false } },
-          bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
-          units: 'mm',
-        };
-    setScene(levelId, next);
-    return next;
+  const sceneBefore = getScene(levelId);
+  const styledEntity = entity as Entity & Record<string, unknown>;
+  const { id: existingId, ...entityWithoutId } = styledEntity as { id: string } & Record<string, unknown>;
+  const adapter = new LevelSceneManagerAdapter(getScene, setScene, levelId);
+  const command = new CreateEntityCommand(
+    entityWithoutId as unknown as Omit<SceneEntity, 'id'>,
+    adapter,
+    {
+      existingId,
+      layer: typeof styledEntity.layer === 'string' ? styledEntity.layer : undefined,
+      color: typeof styledEntity.color === 'string' ? styledEntity.color : undefined,
+      lineweight: typeof styledEntity.lineweight === 'number' ? styledEntity.lineweight : undefined,
+      opacity: typeof styledEntity.opacity === 'number' ? styledEntity.opacity : undefined,
+    }
+  );
+  perfMark('completeEntity.execute(CreateEntityCommand)', () => {
+    getGlobalCommandHistory().execute(command);
   });
+  const createdEntity = (command.getEntity() ?? entity) as AnySceneEntity;
+  const finalEntityId = createdEntity.id;
+  const finalScene: SceneModel = sceneBefore
+    ? { ...sceneBefore, entities: [...sceneBefore.entities, createdEntity] }
+    : {
+        entities: [createdEntity],
+        layers: { [DXF_DEFAULT_LAYER]: { name: DXF_DEFAULT_LAYER, color: UI_COLORS.WHITE, visible: true, locked: false } },
+        bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
+        units: 'mm',
+      };
 
-  // STEP 3: Track for undo (optional)
-  if (trackForUndo && entity.id) {
-    trackForUndo(entity.id);
+  // STEP 3: Track for undo (optional — used by continuous-measurement session bookkeeping)
+  if (trackForUndo) {
+    trackForUndo(finalEntityId);
   }
 
   // STEP 4: Emit completion event
@@ -202,8 +224,8 @@ export function completeEntity(
     perfMark('completeEntity.emit(drawing:complete)', () => {
       EventBus.emit('drawing:complete', {
         tool,
-        entityId: entity.id,
-        entity,
+        entityId: finalEntityId,
+        entity: createdEntity,
         updatedScene: finalScene,
         levelId,
       });
@@ -221,10 +243,10 @@ export function completeEntity(
   // STEP 6: ADR-340 Phase 9 STEP G — opt-in Firestore persistence
   if (persistToOverlays) {
     const { persist, ...persistOpts } = persistToOverlays;
-    void persist(entity, tool as DrawingTool, persistOpts);
+    void persist(createdEntity as unknown as Entity, tool as DrawingTool, persistOpts);
   }
 
-  return { success: true, entityId: entity.id };
+  return { success: true, entityId: finalEntityId };
 }
 
 /**

@@ -35,10 +35,11 @@ export class CreateEntityCommand implements ICommand {
    */
   execute(): void {
     if (!this.entity) {
-      // First execution - create entity with new ID
+      // First execution - reuse caller-provided id when present (ADR-057),
+      // otherwise generate a fresh one.
       this.entity = {
         ...this.entityData,
-        id: generateEntityId(),
+        id: this.options.existingId ?? generateEntityId(),
         layer: this.options.layer ?? this.entityData.layer ?? '0',
         visible: true,
       } as SceneEntity;

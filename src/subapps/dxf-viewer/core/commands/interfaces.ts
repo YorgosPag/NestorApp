@@ -184,77 +184,8 @@ export interface ITransaction {
   addCommand(command: ICommand): void;
 }
 
-// ============================================================================
-// AUDIT TRAIL
-// ============================================================================
-
-/**
- * 🏢 ENTERPRISE: Audit log entry for compliance
- * SAP/Salesforce requirement for enterprise applications
- */
-export interface AuditLogEntry {
-  /** Entry ID */
-  id: string;
-
-  /** Command that was executed */
-  commandId: string;
-
-  /** Command type */
-  commandType: string;
-
-  /** Command description */
-  description: string;
-
-  /** Timestamp */
-  timestamp: number;
-
-  /** Action type */
-  action: 'execute' | 'undo' | 'redo';
-
-  /** User ID (if available) */
-  userId?: string;
-
-  /** Session ID */
-  sessionId: string;
-
-  /** Affected entity IDs */
-  affectedEntities: string[];
-
-  /** Success/failure status */
-  success: boolean;
-
-  /** Error message if failed */
-  error?: string;
-}
-
-/**
- * 🏢 ENTERPRISE: Audit trail interface
- */
-export interface IAuditTrail {
-  /** Log a command execution */
-  log(entry: Omit<AuditLogEntry, 'id' | 'timestamp' | 'sessionId'>): void;
-
-  /** Get audit log entries */
-  getEntries(filter?: AuditLogFilter): AuditLogEntry[];
-
-  /** Export audit log */
-  export(format: 'json' | 'csv'): string;
-
-  /** Clear old entries */
-  prune(olderThan: Date): number;
-}
-
-/**
- * Filter for audit log queries
- */
-export interface AuditLogFilter {
-  commandType?: string;
-  action?: 'execute' | 'undo' | 'redo';
-  startDate?: Date;
-  endDate?: Date;
-  entityId?: string;
-  limit?: number;
-}
+// AUDIT TRAIL types moved to ./types/audit-types.ts (ADR-031 file-size split)
+export type { AuditLogEntry, IAuditTrail, AuditLogFilter } from './types/audit-types';
 
 // ============================================================================
 // PERSISTENCE
@@ -376,15 +307,8 @@ export interface EntityRef {
   type: string;
 }
 
-/**
- * Options for creating entities
- */
-export interface CreateEntityOptions {
-  layer?: string;
-  color?: string;
-  lineweight?: number;
-  opacity?: number;
-}
+// CreateEntityOptions moved to ./types/create-entity-options.ts (ADR-031 file-size split)
+export type { CreateEntityOptions } from './types/create-entity-options';
 
 /**
  * Scene manager interface for commands
