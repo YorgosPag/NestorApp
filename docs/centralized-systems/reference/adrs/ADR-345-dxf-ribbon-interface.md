@@ -1,6 +1,6 @@
 # ADR-345: DXF Viewer — Ribbon Interface (AutoCAD-style)
 
-**Status**: PROPOSED
+**Status**: ACCEPTED
 **Date**: 2026-05-11
 **Author**: Claude Sonnet 4.6 + Georgios Pagonis
 **Supersedes**: Floating panel toolbar (gradual migration)
@@ -74,11 +74,13 @@ Ordine da sinistra a destra:
 
 ## 3. Struttura dettagliata — Tab HOME
 
-Panel in ordine da sinistra a destra:
+Panel in ordine da sinistra a destra — **tutti 9 confermati (2026-05-11)**:
 
 ```
-[Draw] | [Modify] | [Annotation] | [Layers] | [Block] | [Properties] | [Groups] | [Utilities] | [Clipboard]
+[Draw] | [Modify] | [Annotation] | [Layers] | [Properties] | [Block] | [Groups] | [Utilities] | [Clipboard]
 ```
+
+Nota: Block, Groups, Utilities, Clipboard non esistono ancora nel DXF viewer — saranno **nuova funzionalità** implementata insieme al ribbon (non migrazione dal floating panel).
 
 ### 3.1 Panel DRAW
 
@@ -255,9 +257,12 @@ Larghezza variabile (es. Layer ~200px, Scale ~80px). Per: Layer selector, Text S
 
 ## 5. Comportamento interattivo
 
-### 5.1 Tab click
+### 5.1 Tab click + drag & drop reorder — DECISIONE CONFERMATA (2026-05-11)
 - Click su tab → mostra panel di quel tab
 - Tab attivo: underline o sfondo leggermente diverso
+- **Drag & drop tab reorder**: l'utente può trascinare le tab per cambiare l'ordine
+- Ordine salvato in localStorage: `dxf-ribbon:tabOrder → string[]` (array di tab id)
+- Al mount: legge ordine da localStorage → fallback ordine default `['home','layers','view','annotate','settings']`
 
 ### 5.2 Panel Flyout (espansione)
 - Ogni panel ha una **label bar** in fondo (16px, testo nome panel + chevron ▾)
@@ -288,7 +293,7 @@ Appaiono automaticamente (con colore accent diverso) quando:
 
 Scompaiono automaticamente su deselect o ESC.
 
-### 5.5 Right-click ribbon
+### 5.5 Right-click ribbon — IMPLEMENTATO IN V1 (DECISIONE CONFERMATA 2026-05-11)
 - Minimize the Ribbon (toggle)
 - Show Tabs → checklist tab visibili
 - Show Panels → checklist panel tab corrente
@@ -312,21 +317,23 @@ Scompaiono automaticamente su deselect o ESC.
 | Small button row | ~20px altezza |
 | Panel separator | 1px verticale |
 
-### 6.2 Color scheme — Dark theme
+### 6.2 Color scheme — Theme-aware (DECISIONE CONFERMATA 2026-05-11)
 
-| Elemento | Colore |
-|----------|--------|
-| App frame background | `#1E1E1E` |
-| Ribbon background | `#2D2D2D` |
-| Tab bar background | `#252525` |
-| Tab attivo | `#3C3C3C` |
-| Panel background | `#2D2D2D` |
-| Panel label area | `#363636` |
-| Panel separator | `#404040` |
-| Button hover | `#4A4A4A` |
-| Button attivo/selezionato | `#1464A0` (accent blu Autodesk) |
-| Testo labels | `#CCCCCC` |
-| Tab text attivo | `#FFFFFF` |
+Il ribbon segue il theme dell'applicazione. NON hardcoded — usa CSS variables del design system esistente.
+
+| Token CSS | Dark value | Light value |
+|-----------|-----------|-------------|
+| `--ribbon-bg` | `#2D2D2D` | `#F0F0F0` |
+| `--ribbon-tab-bar-bg` | `#252525` | `#E0E0E0` |
+| `--ribbon-tab-active` | `#3C3C3C` | `#FFFFFF` |
+| `--ribbon-panel-label` | `#363636` | `#D8D8D8` |
+| `--ribbon-separator` | `#404040` | `#C0C0C0` |
+| `--ribbon-btn-hover` | `#4A4A4A` | `#D0D0D0` |
+| `--ribbon-btn-active` | `#1464A0` | `#1464A0` |
+| `--ribbon-text` | `#CCCCCC` | `#1A1A1A` |
+| `--ribbon-tab-text-active` | `#FFFFFF` | `#000000` |
+
+Implementazione: `data-theme="dark"` / `data-theme="light"` sul root → CSS variables cambiano automaticamente.
 
 ### 6.3 Layout panel (struttura visiva)
 
@@ -342,26 +349,19 @@ Scompaiono automaticamente su deselect o ESC.
 
 ---
 
-## 7. Status Bar (bottom)
+## 7. Status Bar (bottom) — DECISIONE CONFERMATA (2026-05-11)
 
-Da sinistra a destra (selezionabili con right-click):
+Tutti gli elementi implementati. Da sinistra a destra:
 
-| Elemento | Default |
-|----------|---------|
-| Coordinates (X, Y) | ON |
-| Model/Layout tabs | — |
-| Grid Display (F7) | OFF |
-| Snap Mode (F9) | OFF |
-| Dynamic Input (F12) | ON |
-| Ortho Mode (F8) | OFF |
-| Polar Tracking (F10) | ON |
-| Object Snap Tracking (F11) | ON |
-| Object Snap (F3) | ON |
-| Lineweight Display | OFF |
-| Selection Cycling | OFF |
-| Annotation Scale | 1:1 |
-| Workspace Switcher | — |
-| Clean Screen (CTRL+0) | OFF |
+| Elemento | Default | Shortcut |
+|----------|---------|----------|
+| **Coordinates (X, Y)** | ON | — |
+| **Grid Display** | OFF | F7 |
+| **Snap Mode** | OFF | F9 |
+| **Ortho Mode** | OFF | F8 |
+| **Polar Tracking** | ON | F10 |
+| **Annotation Scale** | 1:1 | — |
+| **Layer name (current)** | ON | — |
 
 ---
 
@@ -405,12 +405,13 @@ FINALE (floating panel + DXF toolbar rimossi):
 ### 8.1 Cosa adottiamo
 
 1. **Ribbon orizzontale** sopra il canvas, sotto l'app header globale — inserito tra header e DXF toolbar esistente
-2. **Tab bar** con tab iniziali: Home, View, Annotate, Layers, Settings
+2. **Tab bar** — ordine e nomi confermati: `Home | Layers | View | Annotate | Settings` — label via i18n (el default, en se cambia lingua). Pattern identico al resto dell'app (N.11).
 3. **Panel structure** per ogni tab con large + small + split buttons
-4. **Flyout** per tool secondari (panel espanso al click del label)
-5. **Contextual tabs** per selezione entità (es. Hatch Editor, Text Editor)
-6. **4 stati minimize** via doppio-click
-7. **Deprecazione graduale** del floating panel mentre il ribbon copre gli stessi tool
+4. **Layers: tab dedicato** (non panel dentro Home) — contenuto troppo ricco per un panel. Home ha solo un mini-panel con layer dropdown + 2-3 quick actions. Revit pattern.
+5. **Flyout** per tool secondari (panel espanso al click del label)
+6. **Contextual tabs** per selezione entità (es. Text Editor)
+7. **4 stati minimize** via doppio-click
+8. **Deprecazione graduale** del floating panel mentre il ribbon copre gli stessi tool
 
 ### 8.1b Icone — DECISIONE CONFERMATA (2026-05-11)
 
@@ -436,6 +437,7 @@ dxf-ribbon:activeTabId        → es. "home"
 dxf-ribbon:minimizeState      → "full" | "panel-buttons" | "panel-titles" | "tab-names"
 dxf-ribbon:pinnedPanelIds     → string[] (flyout pinned)
 dxf-ribbon:splitLastUsed      → Record<commandId, variantId>
+dxf-ribbon:tabOrder           → string[] (es. ['home','layers','view','annotate','settings'])
 ```
 
 Al mount: legge da localStorage → fallback su default (`activeTabId: "home"`, `minimizeState: "full"`).
@@ -446,6 +448,23 @@ Al mount: legge da localStorage → fallback su default (`activeTabId: "home"`, 
 - QAT standalone — funzionalità già nella app header
 - CUI editor — ribbon non customizzabile da utente in v1
 - Command line persistente — già gestito via tooltip/status bar
+
+### 8.1d Contenuto floating panel attuale — RICERCA 2026-05-11
+
+Il floating panel ha **3 tab** (non 2):
+
+| Tab | File | Contenuto principale |
+|-----|------|----------------------|
+| **Levels** | `LevelPanel.tsx` | Livelli/layer: visibilità, colori, rename, delete, merge, import floorplan, grip settings |
+| **DXF Settings** | `DxfSettingsPanel.tsx` | General (Lines/Text/Grips) + Specific 8 categorie (Selection, Cursor, Grid+Rulers, Layers, Entities, Grips⚠️, Lighting⚠️, Background) |
+| **Text Properties** | `TextPropertiesPanel.tsx` | Editor testo ADR-344: font, bold/italic/underline, paragraph, layer selector, annotation scales, insert symbols |
+
+⚠️ = "Coming Soon" — disabilitato.
+
+**Strategia migrazione verso ribbon:**
+- **Levels tab** → ribbon tab `Layers` (Fase 2) — già strutturato, migrazione rapida
+- **DXF Settings** → ribbon tab `Settings` (Fase 5+) — complesso, richiede redesign UX
+- **Text Properties** → ribbon tab contestuale `Text Editor` (Fase 5) — già è un pannello contestuale
 
 ### 8.3 Motivazione
 
@@ -553,37 +572,43 @@ interface RibbonState {
 
 ## 11. Piano di implementazione — Fasi
 
-### Fase 1 — Scaffold ribbon (struttura vuota)
+### Fase 1 — Scaffold ribbon + Status Bar
 - `RibbonRoot`, `RibbonTabBar`, `RibbonTabItem`, `RibbonBody`, `RibbonPanel`, `PanelLabel`
 - Stile dark theme, dimensioni corrette, animate tab switch
-- Nessun tool funzionante — solo struttura
+- localStorage persistence (activeTabId, minimizeState)
+- **Status Bar** (bottom) — implementata insieme al ribbon scaffold
+- Nessun tool funzionante — solo struttura visiva
 
-### Fase 2 — Tab HOME, panel DRAW
+### Fase 2 — Tab LAYERS (migrazione rapida dal floating panel) ← PRIORITÀ CONFERMATA
+- Migrazione contenuto `LevelPanel.tsx` nel ribbon tab Layers
+- Layer visibility, colori, rename, delete, merge
+- Import floorplan + Load from Storage buttons
+- **Floating panel: tab Levels disabilitato**
+
+### Fase 3 — Tab HOME, panel DRAW
 - `LargeButton`, `SmallButton`, `SplitButton` con split-last-used persistence
 - Line, Polyline, Circle (split), Arc (split), Rectangle, Polygon, Ellipse (split)
 - Collegamento ai comandi DXF viewer esistenti
 - **Floating panel disabilitato per questi tool**
 
-### Fase 3 — Panel MODIFY + LAYERS
+### Fase 4 — Panel MODIFY
 - Move, Copy, Rotate, Mirror, Scale, Trim, Extend, Offset, Fillet, Array
-- Layer dropdown (combobox) — legge da DXF layer store
-- **Floating panel ulteriormente svuotato**
-
-### Fase 4 — Panel ANNOTATION + PROPERTIES
-- Text, Dimension variants, Leader
-- Color/Linetype/Lineweight dropdowns
 
 ### Fase 5 — Tab VIEW + contextual tabs
 - Visual styles, zoom, pan controls
-- Hatch Editor tab contestuale
-- Text Editor tab contestuale
+- Text Editor tab contestuale (migrazione TextPropertiesPanel.tsx)
 
-### Fase 6 — Flyout expand + minimize states
+### Fase 6 — Tab SETTINGS (migrazione DXF Settings)
+- Redesign UX rispetto al floating panel (più semplice)
+- Lines, Grips, Cursor, Grid, Background
+- **Floating panel: tab DXF Settings disabilitato**
+
+### Fase 7 — Flyout expand + minimize states
 - Panel flyout con slide-down animation
 - Pin button
 - 4 stati minimize con doppio-click
 
-### Fase 7 — Floating panel removal
+### Fase 8 — Floating panel removal
 - Rimozione completa floating panel
 - Verifica coverage 100% tool migrati
 
@@ -607,7 +632,7 @@ interface RibbonState {
 - [ ] Tab contestuali su selezione hatch/text
 - [ ] Floating panel completamente rimosso (Fase 7)
 - [ ] 0 TypeScript errors
-- [ ] Ribbon responsive (minimizzato su viewport < 900px)
+- [ ] Ribbon responsive: viewport < 900px → auto-minimize a "tab-names-only". Click su tab → mostra panels temporaneamente. Click sul canvas → panels scompaiono.
 - [ ] i18n completo (nessuna stringa hardcoded)
 
 ---
@@ -620,6 +645,19 @@ interface RibbonState {
 | 2026-05-11 | §8.0 aggiunto — Layout position confermato: ribbon full-width tra global header e DXF toolbar. Coesistenza transitoria con floating panel + DXF toolbar durante migrazione. |
 | 2026-05-11 | §8.1b aggiunto — Icone: SVG custom CAD-specific da Tabler Icons (MIT) / Iconoir (MIT) / Iconbuddy (verifica per icona). Copiate come file SVG nell'asset folder. NO Lucide per ribbon. |
 | 2026-05-11 | §8.1c aggiunto — Persistenza stato: localStorage (industry standard AutoCAD/Revit/Office). 4 chiavi: activeTabId, minimizeState, pinnedPanelIds, splitLastUsed. |
+| 2026-05-11 | §8.1d aggiunto — Ricerca floating panel: 3 tab (Levels, DXF Settings, Text Properties). Strategia migrazione per ciascuno. |
+| 2026-05-11 | §11 rivisitato — Fasi riordinate: F1 scaffold → F2 Layers (quick win) → F3 Draw → F4 Modify → F5 View+contextual → F6 Settings → F7 Flyout/minimize → F8 Remove floating panel. |
+| 2026-05-11 | §8.1 aggiornato — Layers: tab dedicato (non panel in Home). Home mantiene mini-panel con layer dropdown + quick actions. Revit pattern. |
+| 2026-05-11 | §11 Fase 1 aggiornata — Status Bar implementata in Fase 1 insieme al ribbon scaffold. |
+| 2026-05-11 | §7 aggiornato — Status Bar: tutti 7 elementi (X/Y, Grid, Snap, Ortho, Polar, Scale, Layer). |
+| 2026-05-11 | §8.1 aggiornato — Label ribbon via i18n (el default, en se cambia lingua). Stesso pattern N.11. |
+| 2026-05-11 | §8.1 tab order confermato: Home | Layers | View | Annotate | Settings. |
+| 2026-05-11 | §13 responsive aggiornato — viewport < 900px: auto-minimize tab-names-only. Click tab → panels temporanei. Click canvas → chiude. |
+| 2026-05-11 | §6.2 aggiornato — Colori theme-aware via CSS variables, NON hardcoded. Dark + Light token table. |
+| 2026-05-11 | §5.5 confermato — Right-click ribbon menu implementato in v1: minimize toggle, show tabs, show panels, undock. |
+| 2026-05-11 | §3 confermato — Tutti 9 panels Home tab approvati. Block/Groups/Utilities/Clipboard = nuova funzionalità (non migrazione). |
+| 2026-05-11 | Status → ACCEPTED. Sessione Q&A completata (14 domande). Tutte le decisioni architetturali prese. Pronto per implementazione Fase 1. |
+| 2026-05-11 | §5.1 + §8.1c — Tab drag & drop reorder aggiunto. Ordine persiste in localStorage (dxf-ribbon:tabOrder). |
 
 ---
 
