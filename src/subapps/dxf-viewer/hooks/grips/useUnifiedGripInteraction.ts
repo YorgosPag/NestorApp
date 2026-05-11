@@ -17,6 +17,7 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Overlay } from '../../overlays/types';
 import { lockGripSnapPosition, unlockGripSnapPosition } from '../../systems/cursor/GripSnapStore';
+import { gripStyleStore } from '../../stores/GripStyleStore';
 import { GRIP_CONFIG } from '../useGripMovement';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
@@ -190,7 +191,7 @@ export function useUnifiedGripInteraction(
       if (nearGrip) {
         if (!hoveredGrip || hoveredGrip.id !== nearGrip.id) {
           setHoveredGrip(nearGrip);
-          lockGripSnapPosition(nearGrip.position);
+          if (gripStyleStore.get().snapToGrips) lockGripSnapPosition(nearGrip.position);
           setPhase('hovering');
           if (warmTimerRef.current) clearTimeout(warmTimerRef.current);
           warmTimerRef.current = setTimeout(() => { setPhase('warm'); warmTimerRef.current = null; }, WARM_DELAY_MS);

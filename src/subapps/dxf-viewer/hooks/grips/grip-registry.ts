@@ -17,6 +17,7 @@ import type { GripInfo } from '../useGripMovement';
 import { computeDxfEntityGrips } from '../useDxfGripInteraction';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
 import type { UnifiedGripInfo } from './unified-grip-types';
+import { useGripStyle } from '../../stores/GripStyleStore';
 
 // ============================================================================
 // PURE: Wrap DXF GripInfo → UnifiedGripInfo
@@ -98,13 +99,15 @@ interface UseGripRegistryParams {
 
 /**
  * Memoized collection of ALL grips (DXF + overlay) as UnifiedGripInfo[].
- * Recomputes only when selection or scene data changes.
+ * Recomputes only when selection, scene data, or grip style settings change.
  */
 export function useGripRegistry({
   dxfScene,
   selectedEntityIds,
   selectedOverlays,
 }: UseGripRegistryParams): UnifiedGripInfo[] {
+  const { showMidpoints, showCenters, maxGripsPerEntity } = useGripStyle();
+
   return useMemo(() => {
     const result: UnifiedGripInfo[] = [];
 
@@ -118,8 +121,14 @@ export function useGripRegistry({
         const entity = entityMap.get(entityId);
         if (entity) {
           const dxfGrips = computeDxfEntityGrips(entity);
+          let count = 0;
           for (const grip of dxfGrips) {
-            result.push(wrapDxfGrip(grip));
+            if (count >= maxGripsPerEntity) break;
+            const wrapped = wrapDxfGrip(grip);
+            if (!showMidpoints && (wrapped.type === 'edge' || wrapped.type === 'midpoint')) continue;
+            if (!showCenters && wrapped.type === 'center') continue;
+            result.push(wrapped);
+            count++;
           }
         }
       }
@@ -128,10 +137,14 @@ export function useGripRegistry({
     // 2. Overlay grips
     for (const overlay of selectedOverlays) {
       if (overlay.polygon && overlay.polygon.length >= 2) {
-        result.push(...computeOverlayGrips(overlay.id, overlay.polygon));
+        const overlayGrips = computeOverlayGrips(overlay.id, overlay.polygon);
+        for (const grip of overlayGrips) {
+          if (!showMidpoints && grip.type === 'edge') continue;
+          result.push(grip);
+        }
       }
     }
 
     return result;
-  }, [dxfScene, selectedEntityIds, selectedOverlays]);
+  }, [dxfScene, selectedEntityIds, selectedOverlays, showMidpoints, showCenters, maxGripsPerEntity]);
 }
