@@ -20,12 +20,11 @@ import { GripSizeCalculator } from './GripSizeCalculator';
 import { GripColorManager } from './GripColorManager';
 import { GripInteractionDetector } from './GripInteractionDetector';
 import { GripShapeRenderer } from './GripShapeRenderer';
-import { MIDPOINT_SIZE_FACTOR } from './constants';
+import { MIDPOINT_SIZE_FACTOR, EDGE_GRIP_SIZE_MULTIPLIERS } from './constants';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { calculateMidpoint } from '../entities/shared/geometry-rendering-utils';
 // 🏢 ADR-107: Centralized UI Size Defaults
 import { UI_SIZE_DEFAULTS, RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { EDGE_GRIP_SIZE_MULTIPLIERS } from './constants';
 
 // ============================================================================
 // UNIFIED GRIP RENDERER CLASS (MAIN ORCHESTRATOR)

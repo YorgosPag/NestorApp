@@ -134,4 +134,10 @@ private drawGrip(position, temperature, ...) {
 - ADR-047: Close-on-First-Point (green grip) - Now works automatically!
 - `docs/systems/grip-rendering.md` - Full 850-line technical spec
 
+## 📋 CHANGELOG
+
+| Date | Version | Change |
+|------|---------|--------|
+| 2026-05-11 | v2.0 | **Sistema B + C migration** — Eliminated 2 remaining duplicate grip systems. `layer-polygon-renderer.ts` (Sistema B): replaced `renderVertexGrips` + `renderEdgeMidpointGrips` inline draw with `UnifiedGripRenderer`. New methods added: `renderEdgeMidpointGrip()` (diamond + outer ring), `renderSquareRing()`, `showCloseRing`/`showSelectionRing` flags on `GripRenderConfig`. `PreviewRenderer.ts` (Sistema C): removed `getGripPath()` Path2D cache, uses `UnifiedGripRenderer` with identity worldToScreen. `grip-rendering` module added to `.ssot-registry.json`. |
+
 ---

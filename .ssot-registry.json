@@ -2896,6 +2896,23 @@
       "addedDate": "2026-05-11",
       "addedByAdr": "ADR-344",
       "tier": 4
+    },
+    "grip-rendering": {
+      "ssotFile": "src/subapps/dxf-viewer/rendering/grips/UnifiedGripRenderer.ts",
+      "description": "All grip drawing (vertex squares, edge midpoint diamonds, close/selection rings) must go through UnifiedGripRenderer (ADR-048). renderGrip() for world-coord grips, renderEdgeMidpointGrip() for polygon edge diamonds, renderSquareRing() for overlay rings. Callers with screen coords pass identity worldToScreen. Forbidden: re-implementing getGripPath() and GRIP_PATH_CACHE outside the centralized system.",
+      "forbiddenPatterns": [
+        "function getGripPath\\s*\\(",
+        "GRIP_PATH_CACHE\\s*="
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/rendering/grips/",
+        "src/subapps/dxf-viewer/canvas-v2/layer-canvas/layer-polygon-renderer.ts",
+        "src/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewRenderer.ts",
+        "src/subapps/dxf-viewer/rendering/entities/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-048",
+      "tier": 3
     }
   }
 }
