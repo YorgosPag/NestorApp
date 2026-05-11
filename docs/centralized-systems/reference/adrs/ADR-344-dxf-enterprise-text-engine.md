@@ -854,6 +854,17 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 6 tests COMPLETE**. Full test suite for all text commands + match-engine fix:
+  - `text-match-engine.ts` fix: `replaceAll` early-return `{ node, count: 0 }` when no matches found (avoids spurious shallow-copy allocation); unused `match` param renamed to `_` in replace callback.
+  - `__tests__/text-match-engine.test.ts` — 94 lines: findMatches (literal, regex, caseSensitive, wholeWord, multi-run, multi-para), replaceAll (no-match early-return, count, multi-match), replaceAt (single location, out-of-bounds guard).
+  - `__tests__/UpdateTextStyleCommand.test.ts` — 120 lines: execute/undo/redo, merge (same entity → patch coalescence), canMergeWith cross-type guard, validate, serialize, locked layer throws.
+  - `__tests__/UpdateTextGeometryCommand.test.ts` — 114 lines: position patch, rotation patch, columns.width patch, merge, undo restores full snapshot, frozen layer throws.
+  - `__tests__/UpdateMTextParagraphCommand.test.ts` — 124 lines: execute/undo/redo, out-of-range index (no-op), validate, serialize, audit round-trip.
+  - `__tests__/DeleteTextCommand.test.ts` — 73 lines: execute removes entity, undo re-adds full snapshot, redo removes again, locked layer throws, audit 'deleted'.
+  - `__tests__/ReplaceAllTextCommand.test.ts` — 106 lines: replace literal, replace regex, no-match (no update), multi-paragraph, audit count change, undo restores.
+  - `__tests__/ReplaceOneTextCommand.test.ts` — 129 lines: replace at location, out-of-range location (validate rejects), undo restores, serialize round-trip.
+  - All command tests green. Total Phase 6 tests: **760 lines across 8 test files**.
+
 - **2026-05-11 — Phase 6.C COMPLETE**. Layer 6 Command Pattern — remaining commands + text-match-engine + tests:
   - `core/commands/text/text-match-engine.ts` — `findMatches(node, options)`: regex/literal search across all TextRun text, returns `MatchLocation[]` (paragraphIdx, runIdx, start, end). `replaceAll(node, options, replacement)` + `replaceAt(node, location, replacement)`: immutable AST replace. `MatchOptions` (pattern/literal, caseSensitive, wholeWord). Used by ReplaceAll/ReplaceOneTextCommand.
   - `core/commands/text/UpdateMTextParagraphCommand.ts` — patches a single paragraph by index (indent, justification, lineSpacing). Snapshot on first execute; undo restores old paragraph. `ParagraphPatch = Partial<Pick<TextParagraph, 'indent'|'justification'|'lineSpacingMode'|'lineSpacingFactor'>>`.

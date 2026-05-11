@@ -81,13 +81,14 @@ export function replaceAll(
     runs: para.runs.map((item) => {
       if (isStack(item)) return item;
       const run = item as TextRun;
-      const next = run.text.replace(re, (match) => {
+      const next = run.text.replace(re, () => {
         count += 1;
         return replacement;
       });
       return next === run.text ? run : { ...run, text: next };
     }),
   }));
+  if (count === 0) return { node, count: 0 };
   return { node: { ...node, paragraphs }, count };
 }
 
