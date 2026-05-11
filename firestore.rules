@@ -3831,5 +3831,57 @@ service cloud.firestore {
              && request.resource.data.id == resource.data.id;
     }
 
+    // =========================================================================
+    // 🔤 COMPANY_FONTS COLLECTION — DXF TEXT ENGINE (ADR-344 Phase 6.E)
+    // =========================================================================
+    // 🔒 SECURITY: Tenant-scoped via companyId. Read = any member of the
+    //              company. Write = company admin / super admin only.
+    // 📅 Added: 2026-05-11 (ADR-344 Phase 6.E)
+    //
+    // Security Model:
+    //   - READ:   Any authenticated member of the font's company
+    //   - CREATE: Company admin (or super admin) writing for own company
+    //   - UPDATE: Company admin / super admin, companyId immutable
+    //   - DELETE: Company admin / super admin
+    // =========================================================================
+    match /company_fonts/{fontId} {
+
+      // 📖 READ: Tenant-scoped — every member of the company can list its fonts
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      // ✍️ CREATE: Company admin (or super admin) creating for own company
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll(['companyId'])
+                    && request.resource.data.companyId is string
+                    && (
+                         isSuperAdminOnly()
+                         || (request.resource.data.companyId == getUserCompanyId()
+                             && isCompanyAdminOfCompany(request.resource.data.companyId))
+                       );
+
+      // 📝 UPDATE: Company admin / super admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       )
+                    && request.resource.data.companyId == resource.data.companyId;
+
+      // 🗑️ DELETE: Company admin / super admin
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       );
+    }
+
   }
 }

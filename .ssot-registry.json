@@ -2793,9 +2793,10 @@
     },
     "text-commands": {
       "ssotFile": "src/subapps/dxf-viewer/core/commands/text/",
-      "description": "ICommand implementations for text mutations: CreateText, UpdateTextStyle, UpdateTextGeometry, UpdateMTextParagraph, DeleteText, ReplaceAll/One (ADR-344 + ADR-031). All text mutations must flow through CommandHistory via these commands to preserve undo/redo and audit trail integration (ADR-195 Q12).",
+      "description": "ICommand implementations for text mutations: CreateText, UpdateTextStyle, UpdateTextGeometry, UpdateMTextParagraph, DeleteText, ReplaceAll/One (ADR-344 + ADR-031). All text mutations must flow through CommandHistory via these commands to preserve undo/redo and audit trail integration (ADR-195 Q12). Phase 6.A also centralizes the layer-edit guard (assertCanEditLayer) and the find/replace match engine here.",
       "forbiddenPatterns": [
-        "class\\s+(UpdateTextStyleCommand|CreateTextCommand|DeleteTextCommand|ReplaceAllTextCommand)\\s*"
+        "class\\s+(CreateTextCommand|UpdateTextStyleCommand|UpdateTextGeometryCommand|UpdateMTextParagraphCommand|DeleteTextCommand|ReplaceAllTextCommand|ReplaceOneTextCommand)\\s*",
+        "function\\s+assertCanEditLayer\\s*\\("
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/core/commands/text/"
@@ -2892,6 +2893,33 @@
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/text-engine/ai/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-snap": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/interaction/TextSnapProvider.ts",
+      "description": "Canonical 8-point snap provider for DXF TEXT/MTEXT entities (ADR-344 Phase 6.B / Q21). Returns insertion + 4 corners + center + top-mid + bottom-mid, with entity rotation pre-applied. Reimplementing the snap-point taxonomy inline drifts from the SnapEngine priority ladder and breaks rotation handling.",
+      "forbiddenPatterns": [
+        "function\\s+getTextSnapPoints\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/interaction/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-grip": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/interaction/TextGripHandler.ts",
+      "description": "TextGripHandler + TextGripGeometry + DirectDistanceEntry — drag orchestrator, grip taxonomy/hit-testing, and AutoCAD-style numeric input for DXF TEXT/MTEXT (ADR-344 Phase 6.C / Q19). Commits flow through UpdateTextGeometryCommand + CommandHistory for undo/redo + audit. Reimplementing grip math or direct-distance buffering inline breaks the Command pipeline and the rotation/resize geometry contract.",
+      "forbiddenPatterns": [
+        "class\\s+(TextGripHandler|DirectDistanceEntry)\\s*",
+        "function\\s+(computeGrips|hitTestGrips)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/interaction/"
       ],
       "addedDate": "2026-05-11",
       "addedByAdr": "ADR-344",

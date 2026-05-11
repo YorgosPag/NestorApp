@@ -1122,6 +1122,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'framework_agreements',   // tenant read + admin write
   // — UserSettings SSoT (2026-05-08) —
   'user_preferences',       // lines 1458-1485 — ownership + tenant isolation, schemaVersion floor
+  // — DXF Text Engine fonts (ADR-344 Phase 6.E, 2026-05-11) —
+  'company_fonts',          // tenant read + company-admin write; companyId immutable
 ] as const;
 
 // ---------------------------------------------------------------------------
