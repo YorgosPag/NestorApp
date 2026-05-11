@@ -17,6 +17,7 @@
  */
 
 import { createLoupe, type LoupeHandle } from './eyedropper-loupe';
+import { setupScreenCapture, type ScreenCapture } from './eyedropper-screen-capture';
 
 export interface EyedropperResult {
   sRGBHex: string;
@@ -54,7 +55,12 @@ export function openEyedropper(): Promise<EyedropperResult> {
 
 // ─── DOM/canvas fallback with loupe magnifier ────────────────────────────────
 
-function openDomEyedropper(): Promise<EyedropperResult> {
+async function openDomEyedropper(): Promise<EyedropperResult> {
+  // Screen capture (optional). Requires user gesture — eyedropper button click
+  // satisfies this. User chooses what to share; null if denied.
+  // With capture: tainted canvases / cross-origin images read correctly.
+  const capture = await setupScreenCapture();
+
   return new Promise((resolve, reject) => {
     // Session styles: hide OS cursor + hide DXF CAD overlays.
     const sessionStyle = document.createElement('style');
@@ -82,21 +88,27 @@ function openDomEyedropper(): Promise<EyedropperResult> {
     let lastX = 0;
     let lastY = 0;
 
+    let lastScreenX = 0;
+    let lastScreenY = 0;
+
     const cleanup = (): void => {
       sessionStyle.remove();
       captureOverlay.remove();
       loupe.destroy();
+      capture?.destroy();
       document.removeEventListener('keydown', onKey, true);
     };
 
     const onMouseMove = (e: MouseEvent): void => {
       lastX = e.clientX;
       lastY = e.clientY;
+      lastScreenX = e.screenX;
+      lastScreenY = e.screenY;
       if (rafPending) return;
       rafPending = true;
       requestAnimationFrame(() => {
         rafPending = false;
-        const p = pickAt(lastX, lastY);
+        const p = pickAt(lastX, lastY, lastScreenX, lastScreenY, capture);
         loupe.update(lastX, lastY, p.source, p.snapX, p.snapY, p.hex);
       });
     };
@@ -104,7 +116,7 @@ function openDomEyedropper(): Promise<EyedropperResult> {
     const onClick = (e: MouseEvent): void => {
       e.preventDefault();
       e.stopPropagation();
-      const p = pickAt(e.clientX, e.clientY);
+      const p = pickAt(e.clientX, e.clientY, e.screenX, e.screenY, capture);
       cleanup();
       resolve({ sRGBHex: p.hex });
     };
@@ -144,15 +156,25 @@ interface PickPayload {
 /**
  * Resolve the pixel/color at viewport position (x, y).
  *
- * Walks `elementsFromPoint` top-down. The first opaque layer wins:
- *  - `<canvas>` with non-transparent pixel → real zoom + canvas pixel
- *  - `<img>` with non-transparent pixel → real zoom + image pixel
- *  - Any HTMLElement with opaque background-color → solid fill + CSS color
- *  - Otherwise skip (transparent, look at next layer)
+ * Priority (top-down stack):
+ *  1. `<canvas>` with opaque pixel → real zoom + canvas pixel (exact)
+ *  2. `<img>` with opaque pixel → real zoom + image pixel (exact)
+ *  3. Any HTMLElement with opaque background-color → solid fill + CSS color
+ *  4. **Fallback**: screen capture (handles CORS-tainted canvases & cross-origin)
+ *  5. '#000000'
+ *
+ * DOM-first because it's pixel-exact. Screen capture is approximated (video
+ * compression + coordinate mapping rounding) so used only when DOM exhausts.
  *
  * Excludes the eyedropper's own capture overlay so it doesn't shadow the page.
  */
-function pickAt(x: number, y: number): PickPayload {
+function pickAt(
+  x: number,
+  y: number,
+  screenX: number,
+  screenY: number,
+  capture: ScreenCapture | null
+): PickPayload {
   const elements = elementsAtPointFiltered(x, y);
 
   for (const el of elements) {
@@ -182,6 +204,14 @@ function pickAt(x: number, y: number): PickPayload {
         return { source: null, snapX: 0, snapY: 0, hex: rgbToHex(rgb.r, rgb.g, rgb.b) };
       }
     }
+  }
+
+  // DOM exhausted — try screen capture (tainted canvas / cross-origin pixels)
+  if (capture) {
+    capture.refresh();
+    const { bx, by } = capture.mapToBuffer(x, y, screenX, screenY);
+    const hex = readCanvasPixelAt(capture.buffer, bx, by);
+    if (hex !== null) return { source: capture.buffer, snapX: bx, snapY: by, hex };
   }
 
   return { source: null, snapX: 0, snapY: 0, hex: '#000000' };
