@@ -144,6 +144,11 @@ The following decisions cannot be made by the agent alone. They shape the entire
 - TEXT-only = simpler, single-line, no inline codes
 - MTEXT-only = the richer surface, but more complex
 
+**✅ DECISION (2026-05-11, Giorgio)**: **Both TEXT + MTEXT from day 1**.
+- Rationale: full compatibility with any third-party DXF file from external offices. Real-world DXF files mix both entity types — partial support would break round-trip integrity.
+- Scope: Layer 1 parser handles both `AcDbText` and `AcDbMText` entity types. Serializer emits correct entity per DxfTextNode complexity (single run + no formatting → TEXT; otherwise MTEXT).
+- Phase 1 estimate locked at **~5-6 days** (TEXT + MTEXT + STYLE table + MTEXT inline tokenizer).
+
 ### Q3 — SHX font support: drop, substitute, or full SHP parser?
 - **Drop**: TTF/OTF only, error on SHX files
 - **Substitute**: map common SHX (romans, ISOCPEUR, txt, simplex) → open equivalents (LFF/TTF)
