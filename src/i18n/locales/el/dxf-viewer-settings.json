@@ -738,8 +738,10 @@
       "autocadDark": "AutoCAD Dark",
       "solidworks": "SolidWorks",
       "blender": "Blender",
-      "light": "Ανοιχτό"
-    }
+      "light": "Ανοιχτό",
+      "custom": "Προσαρμοσμένο"
+    },
+    "customDialogTitle": "Επιλογή χρώματος φόντου"
   },
   "canvasSettings": {
     "title": "Ρυθμίσεις Καμ��ά",

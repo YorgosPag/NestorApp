@@ -54,6 +54,8 @@ export const STORAGE_KEYS = {
 
   // Canvas Background Theme
   CANVAS_BACKGROUND: 'dxf-viewer:canvas-background-theme',
+  // Custom canvas background color (hex) — used when CANVAS_BACKGROUND === 'custom'
+  CANVAS_BACKGROUND_CUSTOM: 'dxf-viewer:canvas-background-custom',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string;

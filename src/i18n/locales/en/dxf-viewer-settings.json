@@ -738,8 +738,10 @@
       "autocadDark": "AutoCAD Dark",
       "solidworks": "SolidWorks",
       "blender": "Blender",
-      "light": "Light"
-    }
+      "light": "Light",
+      "custom": "Custom"
+    },
+    "customDialogTitle": "Pick background color"
   },
   "canvasSettings": {
     "title": "Canvas Settings",
