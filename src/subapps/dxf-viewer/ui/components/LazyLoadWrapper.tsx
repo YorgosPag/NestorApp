@@ -21,6 +21,7 @@ type FullLayoutDebugComponent = typeof import('../../debug/layout-debug').FullLa
 type AdminLayerManagerComponent = typeof import('./AdminLayerManager').AdminLayerManager;
 type LevelPanelComponent = typeof import('./LevelPanel').LevelPanel;
 type DxfSettingsPanelComponent = typeof import('./DxfSettingsPanel').DxfSettingsPanel;
+type TextPropertiesPanelHostComponent = typeof import('../text-toolbar/TextPropertiesPanelHost').TextPropertiesPanelHost;
 type GlobalPerformanceDashboardComponent = typeof import('@/core/performance/components/GlobalPerformanceDashboard').default;
 
 type LazyLoadableComponent<P extends object> =
@@ -34,6 +35,7 @@ type FullLayoutDebugProps = NoProps;
 type AdminLayerManagerProps = React.ComponentPropsWithoutRef<AdminLayerManagerComponent>;
 type LevelPanelProps = NonNullable<React.ComponentPropsWithoutRef<LevelPanelComponent>>;
 type DxfSettingsPanelProps = React.ComponentPropsWithoutRef<DxfSettingsPanelComponent>;
+type TextPropertiesPanelHostProps = React.ComponentPropsWithoutRef<TextPropertiesPanelHostComponent>;
 type GlobalPerformanceDashboardProps = React.ComponentPropsWithoutRef<GlobalPerformanceDashboardComponent>;
 
 interface LazyLoadWrapperProps {
@@ -187,6 +189,11 @@ export const LazyLevelPanel = withLazyLoad<LevelPanelProps>(
 
 export const LazyColorPalettePanel = withLazyLoad<DxfSettingsPanelProps>(
   () => import('./DxfSettingsPanel').then(m => ({ default: m.DxfSettingsPanel }))
+);
+
+// ADR-344 Phase 5.F — Text Properties tab
+export const LazyTextPropertiesPanel = withLazyLoad<TextPropertiesPanelHostProps>(
+  () => import('../text-toolbar/TextPropertiesPanelHost').then(m => ({ default: m.TextPropertiesPanelHost }))
 );
 
 /**

@@ -1,2 +1,8 @@
-// TODO Phase 5: TextToolbar.tsx (root ribbon), panels/, controls/, responsive/MobileTextToolbar.tsx
-export {};
+export { TextToolbar } from './TextToolbar';
+export { TextPropertiesPanel } from './TextPropertiesPanel';
+export { TextPropertiesPanelHost } from './TextPropertiesPanelHost';
+export { TextEditorOverlay } from './TextEditorOverlay';
+export { MissingFontBanner } from './MissingFontBanner';
+export * from './controls';
+export * from './panels';
+export * from './responsive';
