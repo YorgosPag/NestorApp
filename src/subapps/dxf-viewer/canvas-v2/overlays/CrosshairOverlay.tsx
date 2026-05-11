@@ -88,7 +88,7 @@ export default function CrosshairOverlay({
 
   // === GRIP SETTINGS INTEGRATION ===
   const { gripSettings } = useGripContext();
-  const { pickBoxSize } = gripSettings;
+  const { pickBoxSize, showAperture, apertureSize } = gripSettings;
 
   // ============================================================================
   // 🏢 ADR-146: Centralized Canvas Size Observer
@@ -245,6 +245,18 @@ export default function CrosshairOverlay({
     ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
     ctx.globalAlpha = 1;
 
+    // Aperture box (AutoCAD APBOX) — snap acquisition zone indicator
+    if (showAperture && apertureSize > 0) {
+      const halfAperture = apertureSize / 2;
+      ctx.save();
+      ctx.strokeStyle = activeSettings.color;
+      ctx.lineWidth = 1;
+      ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
+      ctx.globalAlpha = activeSettings.opacity || 1.0;
+      ctx.strokeRect(mouseX - halfAperture, mouseY - halfAperture, apertureSize, apertureSize);
+      ctx.restore();
+    }
+
     // Cursor pick box (circle or square at crosshair center)
     const cursorCfg = settings.cursor;
     if (cursorCfg?.enabled) {
@@ -268,7 +280,7 @@ export default function CrosshairOverlay({
       }
       ctx.restore();
     }
-  }, [pickBoxSize]);
+  }, [pickBoxSize, showAperture, apertureSize]);
 
   // ============================================================================
   // 🏢 ENTERPRISE: UnifiedFrameScheduler Integration (ADR-030)

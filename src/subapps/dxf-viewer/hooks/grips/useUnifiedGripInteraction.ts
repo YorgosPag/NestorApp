@@ -249,7 +249,7 @@ export function useUnifiedGripInteraction(
             (g) => g.type === 'vertex' && g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index,
           );
 
-          if (isShift) {
+          if (isShift && gripStyleStore.get().multiGripEdit) {
             if (isAlreadySelected) {
               setSelectedGrips(selectedGrips.filter(
                 (g) => !(g.type === 'vertex' && g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index),
