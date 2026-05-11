@@ -39,6 +39,27 @@ global.requestAnimationFrame = (callback) => {
 
 global.cancelAnimationFrame = jest.fn();
 
+// TextEncoder / TextDecoder — available in Node but not always exposed in jsdom
+if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util');
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}
+
+// Mock για Path2D (Canvas 2D API — not in jsdom)
+class Path2DMock {
+  moveTo() {}
+  lineTo() {}
+  quadraticCurveTo() {}
+  bezierCurveTo() {}
+  closePath() {}
+  addPath() {}
+  rect() {}
+  arc() {}
+  ellipse() {}
+}
+global.Path2D = Path2DMock;
+
 // Mock για ResizeObserver
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
