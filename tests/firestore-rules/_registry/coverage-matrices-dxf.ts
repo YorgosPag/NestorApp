@@ -420,3 +420,57 @@ export function floorplanBackgroundsMatrix(): readonly CoverageCell[] {
 export function floorplanOverlaysMatrix(): readonly CoverageCell[] {
   return floorplanBackgroundsMatrix();
 }
+
+// ---------------------------------------------------------------------------
+// ADR-344 Phase 7.E — DXF Text Engine: text_templates + company_fonts
+// ---------------------------------------------------------------------------
+
+/**
+ * Matrix for `text_templates` (and the identical `company_fonts`) collections.
+ *
+ * Pattern: tenant_admin_write
+ *   - read:   `isSuperAdminOnly() || belongsToCompany(companyId)` — any tenant member
+ *   - create: `isSuperAdminOnly() || (companyId match && isCompanyAdminOfCompany)` — admin only
+ *   - update: `isSuperAdminOnly() || isCompanyAdminOfCompany + companyId immutable` — admin only
+ *   - delete: `isSuperAdminOnly() || isCompanyAdminOfCompany` — admin only
+ *
+ * Key delta from `fileTenantFullMatrix()`:
+ *   `same_tenant_user × create/update/delete` → DENY (insufficient_role).
+ *   Regular tenant users can read but not mutate these resource-type collections.
+ *
+ * Used by: `text_templates` (Phase 7.E), `company_fonts` (future Phase 6.F).
+ * See ADR-344 §8 Phase 7.E (2026-05-11).
+ */
+export function textTemplateMatrix(): readonly CoverageCell[] {
+  return [
+    // Read: isSuperAdminOnly || belongsToCompany — all tenant members
+    cell('super_admin', 'read', 'allow'),
+    cell('super_admin', 'list', 'allow'),
+    cell('same_tenant_admin', 'read', 'allow'),
+    cell('same_tenant_admin', 'list', 'allow'),
+    cell('same_tenant_user', 'read', 'allow'),
+    cell('same_tenant_user', 'list', 'allow'),
+    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
+    cell('anonymous', 'read', 'deny', 'missing_claim'),
+    cell('anonymous', 'list', 'deny', 'missing_claim'),
+    // Create: isSuperAdminOnly || (companyId match && isCompanyAdminOfCompany)
+    cell('super_admin', 'create', 'allow'),
+    cell('same_tenant_admin', 'create', 'allow'),
+    cell('same_tenant_user', 'create', 'deny', 'insufficient_role'),
+    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
+    cell('anonymous', 'create', 'deny', 'missing_claim'),
+    // Update: isSuperAdminOnly || isCompanyAdminOfCompany (+ companyId immutable guard)
+    cell('super_admin', 'update', 'allow'),
+    cell('same_tenant_admin', 'update', 'allow'),
+    cell('same_tenant_user', 'update', 'deny', 'insufficient_role'),
+    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
+    cell('anonymous', 'update', 'deny', 'missing_claim'),
+    // Delete: isSuperAdminOnly || isCompanyAdminOfCompany
+    cell('super_admin', 'delete', 'allow'),
+    cell('same_tenant_admin', 'delete', 'allow'),
+    cell('same_tenant_user', 'delete', 'deny', 'insufficient_role'),
+    cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
+    cell('anonymous', 'delete', 'deny', 'missing_claim'),
+  ];
+}

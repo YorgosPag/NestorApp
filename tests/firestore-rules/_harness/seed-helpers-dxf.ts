@@ -394,6 +394,32 @@ export async function seedFloorplanBackground(
 }
 
 /**
+ * text_templates — ADR-344 Phase 7.B (DXF Text Engine).
+ * Tenant read, admin write. createdBy = same_tenant_admin (only admins create).
+ */
+export async function seedTextTemplate(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('text_templates').doc(docId).set({
+      id: docId,
+      name: `Text Template ${docId}`,
+      category: 'label',
+      content: 'Hello {{name}}',
+      placeholders: [{ key: 'name', label: 'Name', type: 'text' }],
+      isDefault: false,
+      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
+      createdBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_admin.uid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
  * floorplan_overlays — ADR-340 Phase 9 (multi-kind discriminated union).
  * Same-shape RBAC as floorplan_backgrounds; geometry+role schema.
  */

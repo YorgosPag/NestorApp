@@ -59,6 +59,7 @@ import {
   floorplanBackgroundsMatrix,
   floorplanOverlaysMatrix,
   photoSharesMatrix,
+  textTemplateMatrix,
 } from './coverage-matrices-dxf';
 import {
   boqCategoriesMatrix,
@@ -96,7 +97,8 @@ export type RulesPattern =
   | 'system_global'        // read-only for every authenticated user
   | 'role_dual'            // user-created vs system-generated split
   | 'field_allowlist'      // update restricted to a set of allowed fields
-  | 'deny_all';            // allow read,write: if false — no client access (Admin SDK only)
+  | 'deny_all'             // allow read,write: if false — no client access (Admin SDK only)
+  | 'tenant_admin_write';  // tenant-scoped reads, writes restricted to company_admin / super_admin
 
 /** One (persona × operation) cell of a collection's coverage matrix. */
 export interface CoverageCell {
@@ -992,6 +994,16 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [1145, 1170],
     matrix: floorplanOverlaysMatrix(),
   },
+  {
+    // ADR-344 Phase 7.E — DXF Text Engine user-authored text templates.
+    // Read: any same-tenant authenticated user. Write: company_admin / super_admin only.
+    // companyId immutable on update. Graduated from FIRESTORE_RULES_PENDING (Phase 7.E).
+    collection: 'text_templates',
+    pattern: 'tenant_admin_write',
+    testFile: 'tests/firestore-rules/suites/text_templates.rules.test.ts',
+    rulesRange: [3904, 3941],
+    matrix: textTemplateMatrix(),
+  },
 ] as const;
 
 /**
@@ -1123,9 +1135,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // — UserSettings SSoT (2026-05-08) —
   'user_preferences',       // lines 1458-1485 — ownership + tenant isolation, schemaVersion floor
   // — DXF Text Engine fonts (ADR-344 Phase 6.E, 2026-05-11) —
-  'company_fonts',          // tenant read + company-admin write; companyId immutable
-  // — DXF Text Engine templates (ADR-344 Phase 7.B, 2026-05-11) —
-  'text_templates',         // tenant read + company-admin write; companyId immutable; full suite to land in Phase 7.E
+  'company_fonts',          // tenant read + company-admin write; companyId immutable; suite to land in Phase 6.F
+  // text_templates → moved to COVERAGE (ADR-344 Phase 7.E, 2026-05-11)
 ] as const;
 
 // ---------------------------------------------------------------------------
