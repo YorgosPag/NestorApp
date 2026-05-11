@@ -41,6 +41,9 @@ export const ToolbarTabs = TabsContainer;
  * with `fillHeight={true}`. Renders only the trigger strip; consumer owns
  * `<TabsContent>` via children. ADR-328.
  */
-export function TabsOnlyTriggers(props: AliasProps) {
-  return <StateTabs {...props} fillHeight />;
+export function TabsOnlyTriggers({ children, ...props }: AliasProps) {
+  // children ?? null: BaseTabs renders TabsContent only when children===undefined.
+  // Passing null suppresses the empty TabsContent (mt-3 + flex-1) that creates
+  // unwanted space below the trigger strip.
+  return <StateTabs {...props} fillHeight>{children ?? null}</StateTabs>;
 }

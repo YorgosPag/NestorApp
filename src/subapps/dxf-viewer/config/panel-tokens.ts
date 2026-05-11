@@ -141,7 +141,7 @@ export function createPanelTokens(
 
     // Tab navigation with dynamic borders
     TAB_NAVIGATION: {
-      CONTAINER: `border-b mb-4`,                     // Layout only
+      CONTAINER: `border-b mb-2`,                     // Layout only (8px centralized)
       BORDER: borderTokens.getStatusBorder('default'), // Dynamic borders
     },
 
@@ -1477,7 +1477,7 @@ export const GENERAL_SETTINGS_TOKENS = {
   },
 
   TAB_NAVIGATION: {
-    CONTAINER: `border-b mb-4`, // Enterprise: Use borderTokens.getStatusBorder() in components
+    CONTAINER: `border-b ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`, // 8px centralized (PANEL_LAYOUT.MARGIN.BOTTOM_SM)
     BORDER_CLASS: COLOR_BRIDGE.border.default, // ✅ ENTERPRISE: Centralized border from COLOR_BRIDGE
   },
 

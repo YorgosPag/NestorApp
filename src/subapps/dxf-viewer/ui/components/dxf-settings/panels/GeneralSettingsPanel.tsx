@@ -238,15 +238,13 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
       </div>
 
       {/* 🏢 ENTERPRISE: Tab Navigation - Using centralized TabsOnlyTriggers */}
-      <div className={PANEL_TOKENS.GENERAL_SETTINGS.TAB_NAVIGATION.CONTAINER}>
-        <TabsOnlyTriggers
-          tabs={generalTabs}
-          value={activeTab}
-          onTabChange={handleTabChange}
-          theme="dark"
-          alwaysShowLabels
-        />
-      </div>
+      <TabsOnlyTriggers
+        tabs={generalTabs}
+        value={activeTab}
+        onTabChange={handleTabChange}
+        theme="dark"
+        alwaysShowLabels
+      />
 
       {/* Tab Content (Lazy Loaded) */}
       <Suspense
