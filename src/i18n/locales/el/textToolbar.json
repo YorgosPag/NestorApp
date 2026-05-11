@@ -1,0 +1,108 @@
+{
+  "rootLabel": "Εργαλειοθήκη κειμένου",
+  "denyReason": {
+    "insufficientRole": "Δεν επιτρέπεται η επεξεργασία κειμένου για τον ρόλο σας",
+    "notAuthenticated": "Πρέπει να συνδεθείτε για να επεξεργαστείτε κείμενο"
+  },
+  "section": {
+    "style": "Στυλ",
+    "formatting": "Μορφοποίηση",
+    "paragraph": "Παράγραφος",
+    "layer": "Επίπεδο",
+    "insert": "Εισαγωγή",
+    "tools": "Εργαλεία"
+  },
+  "properties": {
+    "label": "Ιδιότητες κειμένου",
+    "title": "Ιδιότητες"
+  },
+  "annotationScale": {
+    "title": "Κλίμακα Σχολιασμού",
+    "activeLabel": "Ενεργή κλίμακα",
+    "activePlaceholder": "Επιλογή κλίμακας…",
+    "listLabel": "Διαθέσιμες κλίμακες",
+    "add": "Προσθήκη κλίμακας",
+    "addStandard": "Προσθήκη τυπικής κλίμακας",
+    "remove": "Αφαίρεση",
+    "customNameLabel": "Όνομα κλίμακας",
+    "customNamePlaceholder": "π.χ. 1:50",
+    "customFactorLabel": "Συντελεστής κλίμακας",
+    "customFactorPlaceholder": "π.χ. 50"
+  },
+  "color": {
+    "label": "Χρώμα",
+    "mixed": "Μεικτό",
+    "byLayer": "Από Επίπεδο",
+    "byBlock": "Από Μπλοκ",
+    "tabsLabel": "Λειτουργία χρώματος",
+    "tab": {
+      "aci": "Ευρετήριο",
+      "true": "Αληθινό χρώμα",
+      "inherited": "Κληρονομημένο"
+    },
+    "aciGridLabel": "Ευρετήριο Χρώματος AutoCAD",
+    "aciIndex": "ACI {index}",
+    "eyedropper": "Επιλογή χρώματος"
+  },
+  "font": {
+    "label": "Γραμματοσειρά",
+    "mixed": "Μεικτή",
+    "empty": "Δεν υπάρχουν γραμματοσειρές",
+    "searchPlaceholder": "Αναζήτηση γραμματοσειρών…",
+    "uploadAction": "Ανέβασμα γραμματοσειράς",
+    "heightLabel": "Ύψος",
+    "widthFactorLabel": "Πλάτος",
+    "obliqueLabel": "Κλίση",
+    "trackingLabel": "Διάστιχο"
+  },
+  "style": {
+    "bold": "Έντονα",
+    "italic": "Πλάγια",
+    "underline": "Υπογράμμιση",
+    "overline": "Υπεργράμμιση",
+    "strikethrough": "Διαγράμμιση"
+  },
+  "justification": {
+    "label": "Στοίχιση",
+    "TL": "Πάνω αριστερά",
+    "TC": "Πάνω κέντρο",
+    "TR": "Πάνω δεξιά",
+    "ML": "Μέση αριστερά",
+    "MC": "Μέση κέντρο",
+    "MR": "Μέση δεξιά",
+    "BL": "Κάτω αριστερά",
+    "BC": "Κάτω κέντρο",
+    "BR": "Κάτω δεξιά"
+  },
+  "lineSpacing": {
+    "label": "Διάστιχο",
+    "mixed": "Μεικτό",
+    "modeLabel": "Λειτουργία",
+    "presetLabel": "Προεπιλογή",
+    "single": "Μονό",
+    "oneAndHalf": "1,5 γραμμή",
+    "double": "Διπλό",
+    "mode": {
+      "multiple": "Πολλαπλό",
+      "exact": "Ακριβές",
+      "at-least": "Τουλάχιστον"
+    }
+  },
+  "layer": {
+    "label": "Επίπεδο",
+    "mixed": "Μεικτό",
+    "placeholder": "Επιλογή επιπέδου…",
+    "zeroFallback": "Επίπεδο 0"
+  },
+  "insert": {
+    "stack": "Εισαγωγή στοίβας",
+    "diameter": "Διάμετρος",
+    "degree": "Μοίρες",
+    "plusMinus": "Συν-Πλήν"
+  },
+  "tools": {
+    "eyedropper": "Αντιστοίχιση ιδιοτήτων",
+    "findReplace": "Εύρεση / Αντικατάσταση",
+    "voice": "Φωνητική εισαγωγή"
+  }
+}

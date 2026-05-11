@@ -1,0 +1,108 @@
+{
+  "rootLabel": "Text toolbar",
+  "denyReason": {
+    "insufficientRole": "Your role does not allow text editing",
+    "notAuthenticated": "Sign in to edit text"
+  },
+  "section": {
+    "style": "Style",
+    "formatting": "Formatting",
+    "paragraph": "Paragraph",
+    "layer": "Layer",
+    "insert": "Insert",
+    "tools": "Tools"
+  },
+  "properties": {
+    "label": "Text properties",
+    "title": "Properties"
+  },
+  "annotationScale": {
+    "title": "Annotation Scale",
+    "activeLabel": "Active scale",
+    "activePlaceholder": "Select scale…",
+    "listLabel": "Available scales",
+    "add": "Add scale",
+    "addStandard": "Add standard scale",
+    "remove": "Remove",
+    "customNameLabel": "Scale name",
+    "customNamePlaceholder": "e.g. 1:50",
+    "customFactorLabel": "Scale factor",
+    "customFactorPlaceholder": "e.g. 50"
+  },
+  "color": {
+    "label": "Color",
+    "mixed": "Mixed",
+    "byLayer": "By Layer",
+    "byBlock": "By Block",
+    "tabsLabel": "Color mode",
+    "tab": {
+      "aci": "Index",
+      "true": "True color",
+      "inherited": "Inherited"
+    },
+    "aciGridLabel": "AutoCAD Color Index",
+    "aciIndex": "ACI {index}",
+    "eyedropper": "Pick color"
+  },
+  "font": {
+    "label": "Font",
+    "mixed": "Mixed",
+    "empty": "No fonts installed",
+    "searchPlaceholder": "Search fonts…",
+    "uploadAction": "Upload font",
+    "heightLabel": "Height",
+    "widthFactorLabel": "Width",
+    "obliqueLabel": "Oblique",
+    "trackingLabel": "Tracking"
+  },
+  "style": {
+    "bold": "Bold",
+    "italic": "Italic",
+    "underline": "Underline",
+    "overline": "Overline",
+    "strikethrough": "Strikethrough"
+  },
+  "justification": {
+    "label": "Justification",
+    "TL": "Top left",
+    "TC": "Top center",
+    "TR": "Top right",
+    "ML": "Middle left",
+    "MC": "Middle center",
+    "MR": "Middle right",
+    "BL": "Bottom left",
+    "BC": "Bottom center",
+    "BR": "Bottom right"
+  },
+  "lineSpacing": {
+    "label": "Line spacing",
+    "mixed": "Mixed",
+    "modeLabel": "Mode",
+    "presetLabel": "Preset",
+    "single": "Single",
+    "oneAndHalf": "1.5 lines",
+    "double": "Double",
+    "mode": {
+      "multiple": "Multiple",
+      "exact": "Exact",
+      "at-least": "At least"
+    }
+  },
+  "layer": {
+    "label": "Layer",
+    "mixed": "Mixed",
+    "placeholder": "Select layer…",
+    "zeroFallback": "Layer 0"
+  },
+  "insert": {
+    "stack": "Insert stack",
+    "diameter": "Diameter",
+    "degree": "Degree",
+    "plusMinus": "Plus-Minus"
+  },
+  "tools": {
+    "eyedropper": "Match properties",
+    "findReplace": "Find / Replace",
+    "voice": "Voice input"
+  }
+}
