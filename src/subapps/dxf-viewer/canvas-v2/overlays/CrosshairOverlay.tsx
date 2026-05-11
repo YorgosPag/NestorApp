@@ -242,6 +242,30 @@ export default function CrosshairOverlay({
 
     ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
     ctx.globalAlpha = 1;
+
+    // Cursor pick box (circle or square at crosshair center)
+    const cursorCfg = settings.cursor;
+    if (cursorCfg?.enabled) {
+      const halfBox = cursorCfg.size / 2;
+      ctx.save();
+      ctx.globalAlpha = cursorCfg.opacity ?? 1;
+      ctx.strokeStyle = cursorCfg.color;
+      ctx.lineWidth = cursorCfg.line_width || 1;
+      switch (cursorCfg.line_style) {
+        case 'dashed':   ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASHED]);  break;
+        case 'dotted':   ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DOTTED]);  break;
+        case 'dash-dot': ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASH_DOT]); break;
+        default:         ctx.setLineDash(LINE_DASH_PATTERNS.SOLID); break;
+      }
+      if (cursorCfg.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, halfBox, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(mouseX - halfBox, mouseY - halfBox, cursorCfg.size, cursorCfg.size);
+      }
+      ctx.restore();
+    }
   }, [pickBoxSize]);
 
   // ============================================================================

@@ -135,6 +135,16 @@ export function CursorSettings() {
               recent
               eyedropper
         />
+        <button
+          onClick={() => handleCursorColorChange(settings.crosshair.color)}
+          className={`w-full ${PANEL_LAYOUT.SPACING.XS} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center ${PANEL_LAYOUT.GAP.XS}`}
+        >
+          <span
+            className="inline-block w-3 h-3 rounded-sm border border-current flex-shrink-0"
+            style={{ backgroundColor: settings.crosshair.color }}
+          />
+          {t('cursorSettings.color.sameAsCrosshair')}
+        </button>
       </section>
 
       {/* Cursor Line Style - 🏢 ENTERPRISE: Semantic section */}
@@ -237,40 +247,6 @@ export function CursorSettings() {
         </div>
       </section>
 
-      {/* Cursor Size - 🏢 ENTERPRISE: Semantic section */}
-      <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.size.title')}</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.size.description')}</p>
-            <SliderInput
-              value={settings.cursor.size}
-              min={3}
-              max={50}
-              step={1}
-              onChange={handleCursorSizeChange}
-              showValue
-              formatValue={(v) => `${v}px`}
-            />
-            <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
-              {[5, 10, 15, 25, 50].map(size => (
-                <button
-                  key={size}
-                  onClick={() => handleCursorSizeChange(size)}
-                  className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
-                    settings.cursor.size === size
-                      ? `${getStatusBorder('info')} ${colors.bg.primary}`
-                      : `${getStatusBorder('default')} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
-                  }`}
-                >
-                  <div
-                    className="mx-auto border"
-                    style={getCursorDimensionPreviewStyles(settings.cursor.color, settings.cursor.shape, size)}
-                   />
-                  <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{size}px</span>
-                </button>
-              ))}
-        </div>
-      </section>
-
       {/* Cursor Opacity - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.opacity.title')}</h4>
@@ -311,6 +287,40 @@ export function CursorSettings() {
               >
                 {t('cursorSettings.display.disabled')}
               </button>
+        </div>
+      </section>
+
+      {/* Cursor Size - moved to bottom so it doesn't push Opacity/Display out of view */}
+      <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.size.title')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.size.description')}</p>
+            <SliderInput
+              value={settings.cursor.size}
+              min={3}
+              max={50}
+              step={1}
+              onChange={handleCursorSizeChange}
+              showValue
+              formatValue={(v) => `${v}px`}
+            />
+            <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
+              {[5, 10, 15, 25, 50].map(size => (
+                <button
+                  key={size}
+                  onClick={() => handleCursorSizeChange(size)}
+                  className={`flex-1 ${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
+                    settings.cursor.size === size
+                      ? `${getStatusBorder('info')} ${colors.bg.primary}`
+                      : `${getStatusBorder('default')} ${colors.bg.muted} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+                  }`}
+                >
+                  <div
+                    className="mx-auto border"
+                    style={getCursorDimensionPreviewStyles(settings.cursor.color, settings.cursor.shape, size)}
+                   />
+                  <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{size}px</span>
+                </button>
+              ))}
         </div>
       </section>
     </article>
