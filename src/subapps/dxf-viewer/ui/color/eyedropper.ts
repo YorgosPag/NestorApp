@@ -1,7 +1,6 @@
 /**
  * Hybrid Eyedropper — native `EyeDropper` API where supported, DOM/canvas
- * fallback otherwise. Same Promise-based contract as the native API so
- * callers don't branch on browser capabilities.
+ * fallback with enterprise loupe magnifier otherwise.
  *
  * Coverage matrix:
  * | Source                | Native API | Fallback |
@@ -12,6 +11,8 @@
  *
  * Pattern: Figma / Canva / Adobe Express in-browser color sampling.
  */
+
+import { createLoupe, type LoupeHandle } from './eyedropper-loupe';
 
 export interface EyedropperResult {
   sRGBHex: string;
@@ -26,33 +27,69 @@ export function hasNativeEyedropper(): boolean {
   return typeof window !== 'undefined' && 'EyeDropper' in window;
 }
 
+/** Firefox has EyeDropper API but no built-in loupe — force custom fallback. */
+function prefersCustomFallback(): boolean {
+  return typeof navigator !== 'undefined' && /Firefox/i.test(navigator.userAgent);
+}
+
 /**
  * Open the eyedropper. Resolves with the picked color, rejects on cancel.
- * Native API if available, otherwise DOM/canvas pick within the current page.
+ * Chrome/Edge → native API (built-in loupe). Firefox + no-API → DOM/canvas
+ * fallback with enterprise loupe magnifier.
  */
 export function openEyedropper(): Promise<EyedropperResult> {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Eyedropper unavailable: no window'));
   }
   const NativeCtor = (window as Window & { EyeDropper?: NativeEyeDropperCtor }).EyeDropper;
-  if (NativeCtor) {
+  if (NativeCtor && !prefersCustomFallback()) {
     return new NativeCtor().open();
   }
   return openDomEyedropper();
 }
 
-// ─── DOM/canvas fallback ─────────────────────────────────────────────────────
+// ─── DOM/canvas fallback with loupe magnifier ────────────────────────────────
 
 function openDomEyedropper(): Promise<EyedropperResult> {
   return new Promise((resolve, reject) => {
     const prevCursor = document.body.style.cursor;
     document.body.style.cursor = 'crosshair';
 
+    let loupe: LoupeHandle | null = null;
+    let snapshot: HTMLCanvasElement | null = null;
+    let rafPending = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    // Snapshot + loupe: fire-and-forget — degrade gracefully if it fails
+    initLoupeAsync()
+      .then((h) => {
+        snapshot = h.snapshot;
+        loupe = h.loupe;
+      })
+      .catch(() => { /* loupe unavailable — crosshair cursor still active */ });
+
     const cleanup = (): void => {
       document.body.style.cursor = prevCursor;
+      loupe?.destroy();
+      loupe = null;
+      document.removeEventListener('mousemove', onMouseMove, true);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKey, true);
       document.removeEventListener('contextmenu', onContextMenu, true);
+    };
+
+    const onMouseMove = (e: MouseEvent): void => {
+      lastX = e.clientX;
+      lastY = e.clientY;
+      if (rafPending || !loupe || !snapshot) return;
+      rafPending = true;
+      requestAnimationFrame(() => {
+        rafPending = false;
+        if (!loupe || !snapshot) return;
+        const hex = readSnapshotPixel(snapshot, lastX, lastY) ?? '#000000';
+        loupe.update(lastX, lastY, snapshot, hex);
+      });
     };
 
     const onClick = (e: MouseEvent): void => {
@@ -77,11 +114,37 @@ function openDomEyedropper(): Promise<EyedropperResult> {
       }
     };
 
+    document.addEventListener('mousemove', onMouseMove, true);
     document.addEventListener('click', onClick, true);
     document.addEventListener('contextmenu', onContextMenu, true);
     document.addEventListener('keydown', onKey, true);
   });
 }
+
+async function initLoupeAsync(): Promise<{ loupe: LoupeHandle; snapshot: HTMLCanvasElement }> {
+  const { domToCanvas } = await import('modern-screenshot');
+  const canvas = await domToCanvas(document.body, {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    scale: 1,
+  });
+  return { loupe: createLoupe(), snapshot: canvas };
+}
+
+function readSnapshotPixel(snapshot: HTMLCanvasElement, x: number, y: number): string | null {
+  const cx = Math.max(0, Math.min(Math.round(x), snapshot.width - 1));
+  const cy = Math.max(0, Math.min(Math.round(y), snapshot.height - 1));
+  try {
+    const ctx = snapshot.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    const d = ctx.getImageData(cx, cy, 1, 1).data;
+    return rgbToHex(d[0], d[1], d[2]);
+  } catch {
+    return null;
+  }
+}
+
+// ─── DOM color reading ───────────────────────────────────────────────────────
 
 function readColorAtPoint(x: number, y: number): string | null {
   const el = document.elementFromPoint(x, y);
