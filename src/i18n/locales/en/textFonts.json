@@ -1,0 +1,35 @@
+{
+  "panel": {
+    "title": "Fonts",
+    "empty": "No fonts installed",
+    "upload": "Upload font",
+    "uploadHint": "TTF, OTF, WOFF, WOFF2 or SHX",
+    "dragDrop": "Drag here or click to select",
+    "preview": "Preview",
+    "delete": "Delete",
+    "deleteConfirm": "Delete font?",
+    "deleteConfirmBody": "Deletion is permanent. Documents using this font will display a substitute.",
+    "cancel": "Cancel",
+    "name": "Name",
+    "format": "Format",
+    "size": "Size",
+    "uploadedBy": "Uploaded by",
+    "uploadedAt": "Date",
+    "uploading": "Uploading…",
+    "uploadSuccess": "Font uploaded",
+    "uploadError": "Font upload failed",
+    "deleteSuccess": "Font deleted",
+    "deleteError": "Font deletion failed",
+    "invalidFormat": "Unsupported format. Allowed: TTF, OTF, WOFF, WOFF2, SHX"
+  },
+  "missingBanner": {
+    "title_one": "{count} font not found",
+    "title_other": "{count} fonts not found",
+    "subtitle": "Automatically replaced with similar fonts.",
+    "viewAffected": "View affected",
+    "upload": "Upload",
+    "dismiss": "Dismiss",
+    "affectedCount_one": "{count} entity affected",
+    "affectedCount_other": "{count} entities affected"
+  }
+}
