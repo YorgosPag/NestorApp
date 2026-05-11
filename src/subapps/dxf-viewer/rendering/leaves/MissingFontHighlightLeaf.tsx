@@ -19,7 +19,6 @@ import {
   subscribeMissingFontReport,
   getMissingFontReport,
 } from '../../text-engine/fonts/missing-font-store';
-import type { ViewTransform } from '../types/Types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
