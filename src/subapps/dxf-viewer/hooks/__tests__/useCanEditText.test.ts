@@ -55,18 +55,18 @@ describe('capabilitiesForRole — ADR-344 Q8 role matrix', () => {
     expect(caps.canEdit).toBe(false);
     expect(caps.canDelete).toBe(false);
     expect(caps.canUnlockLayer).toBe(false);
-    expect(caps.denyReason).toBe('textToolbar.denyReason.insufficientRole');
+    expect(caps.denyReason).toBe('textToolbar:denyReason.insufficientRole');
   });
 
   it.each([null, undefined, ''])('unauthenticated (%s) returns notAuthenticated reason', (role) => {
     const caps = capabilitiesForRole(role);
     expect(caps.canCreate).toBe(false);
-    expect(caps.denyReason).toBe('textToolbar.denyReason.notAuthenticated');
+    expect(caps.denyReason).toBe('textToolbar:denyReason.notAuthenticated');
   });
 
   it('unknown role defaults to NONE', () => {
     const caps = capabilitiesForRole('mystery_role');
     expect(caps.canCreate).toBe(false);
-    expect(caps.denyReason).toBe('textToolbar.denyReason.insufficientRole');
+    expect(caps.denyReason).toBe('textToolbar:denyReason.insufficientRole');
   });
 });

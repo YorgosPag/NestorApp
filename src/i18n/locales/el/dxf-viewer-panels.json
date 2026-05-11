@@ -78,6 +78,10 @@
     "colors": {
       "loading": "Φόρτωση χρωμάτων..."
     },
+    "textProperties": {
+      "title": "Ιδιότητες Κειμένου",
+      "loading": "Φόρτωση ιδιοτήτων κειμένου..."
+    },
     "selectPanel": "Επιλογή πίνακα",
     "floorplanBackground": {
       "title": "Φόντο Κάτοψης",

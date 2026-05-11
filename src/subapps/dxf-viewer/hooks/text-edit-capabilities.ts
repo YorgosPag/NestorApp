@@ -44,7 +44,7 @@ const NONE: TextEditCapabilities = {
   canEdit: false,
   canDelete: false,
   canUnlockLayer: false,
-  denyReason: 'textToolbar.denyReason.insufficientRole',
+  denyReason: 'textToolbar:denyReason.insufficientRole',
 };
 
 const UNAUTH: TextEditCapabilities = {
@@ -52,7 +52,7 @@ const UNAUTH: TextEditCapabilities = {
   canEdit: false,
   canDelete: false,
   canUnlockLayer: false,
-  denyReason: 'textToolbar.denyReason.notAuthenticated',
+  denyReason: 'textToolbar:denyReason.notAuthenticated',
 };
 
 export function capabilitiesForRole(role: string | null | undefined): TextEditCapabilities {

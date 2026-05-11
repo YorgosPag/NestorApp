@@ -78,6 +78,10 @@
     "colors": {
       "loading": "Loading..."
     },
+    "textProperties": {
+      "title": "Text Properties",
+      "loading": "Loading text properties..."
+    },
     "selectPanel": "Select panel",
     "floorplanBackground": {
       "title": "Floorplan Background",
