@@ -86,6 +86,12 @@ export interface GripRenderConfig {
 
   /** Size multiplier override (default: 1.0) */
   sizeMultiplier?: number;
+
+  /** Render outer square ring +6px (polygon first-vertex close hint) */
+  showCloseRing?: boolean;
+
+  /** Render outer square ring +4px (selected vertex indicator) */
+  showSelectionRing?: boolean;
 }
 
 /**

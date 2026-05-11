@@ -82,6 +82,55 @@ export class GripShapeRenderer {
   }
 
   /**
+   * Render outer square ring overlay (close indicator or selection indicator)
+   *
+   * @param ctx - Canvas context
+   * @param position - Center position
+   * @param outerSize - Total outer size (grip size + extra pixels)
+   * @param color - Ring stroke color
+   * @param lineWidth - Ring stroke width
+   */
+  renderSquareRing(
+    ctx: CanvasRenderingContext2D,
+    position: Point2D,
+    outerSize: number,
+    color: string,
+    lineWidth: number
+  ): void {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    const half = outerSize / 2;
+    ctx.strokeRect(position.x - half, position.y - half, outerSize, outerSize);
+    ctx.restore();
+  }
+
+  /**
+   * Render outer diamond ring overlay (edge midpoint warm/hot indicator)
+   *
+   * @param ctx - Canvas context
+   * @param position - Center position
+   * @param halfSize - Distance from center to each diamond point
+   * @param color - Ring stroke color
+   * @param lineWidth - Ring stroke width
+   */
+  renderDiamondRing(
+    ctx: CanvasRenderingContext2D,
+    position: Point2D,
+    halfSize: number,
+    color: string,
+    lineWidth: number
+  ): void {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    addDiamondPath(ctx, position, halfSize * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /**
    * Render circle grip
    * Alternative to standard square grip
    *

@@ -24,7 +24,8 @@ import { MIDPOINT_SIZE_FACTOR } from './constants';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { calculateMidpoint } from '../entities/shared/geometry-rendering-utils';
 // 🏢 ADR-107: Centralized UI Size Defaults
-import { UI_SIZE_DEFAULTS } from '../../config/text-rendering-config';
+import { UI_SIZE_DEFAULTS, RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { EDGE_GRIP_SIZE_MULTIPLIERS } from './constants';
 
 // ============================================================================
 // UNIFIED GRIP RENDERER CLASS (MAIN ORCHESTRATOR)
@@ -95,17 +96,28 @@ export class UnifiedGripRenderer {
   // ==========================================================================
 
   /**
-   * Render a single grip point
+   * Render a single grip point (world coordinates — transforms internally)
    *
    * @param config - Grip render configuration
    * @param settings - Optional grip settings (can be partial)
    */
   renderGrip(config: GripRenderConfig, settings?: Partial<GripSettings>, temperatureOverride?: GripTemperature): void {
-    // Step 1: Transform to screen coordinates
     const screenPos = this.worldToScreen(config.position);
+    this._renderGripCore(screenPos, config, settings, temperatureOverride);
+  }
 
-    // Step 2: Detect/use temperature
-    const temperature = temperatureOverride ?? config.temperature ??
+  /**
+   * Core grip render — takes pre-computed screen position.
+   * Used internally and by layer-polygon-renderer (screen coords already computed).
+   */
+  private _renderGripCore(
+    screenPos: GripRenderConfig['position'],
+    config: Omit<GripRenderConfig, 'position'>,
+    settings?: Partial<GripSettings>,
+    temperatureOverride?: GripTemperature
+  ): void {
+    // Step 1: Detect/use temperature
+    const temperature = temperatureOverride ?? (config as GripRenderConfig).temperature ??
       (config.entityId !== undefined && config.gripIndex !== undefined
         ? this.interactionDetector.detectTemperature(
             config.entityId,
@@ -114,7 +126,7 @@ export class UnifiedGripRenderer {
           )
         : 'cold');
 
-    // Step 3: Calculate size
+    // Step 2: Calculate size
     const baseSize = settings?.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE;
     const dpiScale = settings?.dpiScale || 1.0;
     const size = this.sizeCalculator.calculateSize(
@@ -124,7 +136,7 @@ export class UnifiedGripRenderer {
       config.sizeMultiplier
     );
 
-    // Step 4: Get colors
+    // Step 3: Get colors
     const fillColor = this.colorManager.getColor(
       temperature,
       config.type,
@@ -133,7 +145,7 @@ export class UnifiedGripRenderer {
     );
     const outlineColor = this.colorManager.getOutlineColor(settings);
 
-    // Step 5: Render shape
+    // Step 4: Render shape
     const shape = config.shape || 'square';
     this.shapeRenderer.renderShape(
       this.ctx,
@@ -142,8 +154,71 @@ export class UnifiedGripRenderer {
       shape,
       fillColor,
       outlineColor,
-      1 // Outline width
+      1
     );
+
+    // Step 5: Overlay rings (polygon-specific indicators)
+    if (config.showCloseRing) {
+      this.shapeRenderer.renderSquareRing(
+        this.ctx, screenPos, size + 6, fillColor, RENDER_LINE_WIDTHS.NORMAL
+      );
+    } else if (config.showSelectionRing) {
+      this.shapeRenderer.renderSquareRing(
+        this.ctx, screenPos, size + 4, fillColor, RENDER_LINE_WIDTHS.NORMAL
+      );
+    }
+  }
+
+  /**
+   * Render a polygon edge-midpoint diamond grip at a pre-computed screen position.
+   * Handles cold/warm/hot states, colors, and warm+hot outer diamond ring.
+   * Uses Sistema A sizing convention (0.6× base, EDGE multipliers).
+   *
+   * @param screenPos - Screen position of the midpoint
+   * @param gripState - Temperature state
+   * @param settings - Grip settings (null treated as defaults)
+   */
+  renderEdgeMidpointGrip(
+    screenPos: GripRenderConfig['position'],
+    gripState: 'cold' | 'warm' | 'hot',
+    settings?: Partial<GripSettings> | null
+  ): void {
+    const safeSettings = settings ?? undefined;
+    const dpiScale = safeSettings?.dpiScale ?? 1.0;
+    const baseHalf = ((safeSettings?.gripSize ?? UI_SIZE_DEFAULTS.GRIP_SIZE) * 0.6) * dpiScale;
+    const key = gripState.toUpperCase() as 'COLD' | 'WARM' | 'HOT';
+    const halfSize = Math.round(baseHalf * EDGE_GRIP_SIZE_MULTIPLIERS[key]);
+    const fillColor = this.colorManager.getColor(gripState, 'edge', undefined, safeSettings);
+    const outlineColor = gripState !== 'cold'
+      ? fillColor
+      : this.colorManager.getOutlineColor(safeSettings);
+    const lineWidth = gripState !== 'cold'
+      ? RENDER_LINE_WIDTHS.GRIP_OUTLINE_ACTIVE
+      : RENDER_LINE_WIDTHS.GRIP_OUTLINE;
+
+    // Diamond: halfSize * 2 = full span (addDiamondPath uses full-span convention)
+    this.shapeRenderer.renderShape(
+      this.ctx, screenPos, halfSize * 2, 'diamond', fillColor, outlineColor, lineWidth
+    );
+
+    if (gripState !== 'cold') {
+      this.shapeRenderer.renderDiamondRing(
+        this.ctx, screenPos, halfSize + 4, fillColor, RENDER_LINE_WIDTHS.NORMAL
+      );
+    }
+  }
+
+  /**
+   * Render an outer square ring at a screen position.
+   * Used for close/selection indicators when the caller manages position.
+   */
+  renderSquareRing(
+    screenPos: GripRenderConfig['position'],
+    outerSize: number,
+    color: string,
+    lineWidth = RENDER_LINE_WIDTHS.NORMAL
+  ): void {
+    this.shapeRenderer.renderSquareRing(this.ctx, screenPos, outerSize, color, lineWidth);
   }
 
   /**
@@ -171,8 +246,8 @@ export class UnifiedGripRenderer {
         );
       }
 
-      // Render grip with detected temperature (pass as override to avoid object spread)
-      this.renderGrip(grip, settings, temperature);
+      const screenPos = this.worldToScreen(grip.position);
+      this._renderGripCore(screenPos, grip, settings, temperature);
     }
   }
 
