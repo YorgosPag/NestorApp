@@ -50,7 +50,7 @@ export function AppHeader() {
 
   return (
     <header className={`sticky top-0 z-50 w-full max-w-full border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60 overflow-hidden`}>
-      <div className="flex h-16 items-center justify-between px-1 sm:px-4 w-full max-w-full overflow-hidden">
+      <div className="flex items-center justify-between px-1 sm:px-4 py-1 w-full max-w-full overflow-hidden">
         <SidebarTrigger />
 
         {/* 🔍 Global Search Button */}

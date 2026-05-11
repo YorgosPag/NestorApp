@@ -44,6 +44,32 @@ export {
   collectIssues,
 } from './text-template.zod';
 
+// Phase 7.C — Placeholder resolver (pure) + variable registry + scope types.
+// `scope-builder` is NOT re-exported (server-only).
+export {
+  resolvePlaceholdersInString,
+  resolvePlaceholdersInNode,
+  resolveTemplate,
+  classifyPlaceholders,
+  PLACEHOLDER_REGISTRY,
+  ALL_PLACEHOLDER_PATHS,
+  isKnownPlaceholder,
+  getPlaceholderMetadata,
+  EMPTY_PLACEHOLDER_SCOPE,
+} from './resolver';
+export type {
+  PlaceholderPath,
+  PlaceholderSource,
+  PlaceholderMetadata,
+  PlaceholderScope,
+  PlaceholderScopeCompany,
+  PlaceholderScopeProject,
+  PlaceholderScopeDrawing,
+  PlaceholderScopeUser,
+  PlaceholderScopeRevision,
+  PlaceholderScopeFormatting,
+} from './resolver';
+
 export {
   BUILT_IN_TEXT_TEMPLATES,
   BUILT_IN_TEXT_TEMPLATES_BY_ID,

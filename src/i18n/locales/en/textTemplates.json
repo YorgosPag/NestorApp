@@ -1,0 +1,33 @@
+{
+  "placeholders": {
+    "company": {
+      "name": "Company Name"
+    },
+    "project": {
+      "name": "Project Name",
+      "code": "Project Code",
+      "owner": "Project Owner"
+    },
+    "drawing": {
+      "title": "Drawing Title",
+      "scale": "Scale",
+      "sheetNumber": "Sheet Number",
+      "units": "Units"
+    },
+    "user": {
+      "fullName": "Author Full Name",
+      "checkerName": "Checker Full Name",
+      "title": "Title / Discipline",
+      "licenseNumber": "License Number"
+    },
+    "revision": {
+      "number": "Revision Number",
+      "date": "Revision Date",
+      "author": "Revision Author",
+      "description": "Revision Description"
+    },
+    "date": {
+      "today": "Today's Date"
+    }
+  }
+}
