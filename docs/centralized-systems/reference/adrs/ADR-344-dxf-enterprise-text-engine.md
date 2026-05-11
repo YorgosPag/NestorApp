@@ -854,6 +854,17 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 6.C COMPLETE**. Layer 6 Command Pattern — remaining commands + text-match-engine + tests:
+  - `core/commands/text/text-match-engine.ts` — `findMatches(node, options)`: regex/literal search across all TextRun text, returns `MatchLocation[]` (paragraphIdx, runIdx, start, end). `replaceAll(node, options, replacement)` + `replaceAt(node, location, replacement)`: immutable AST replace. `MatchOptions` (pattern/literal, caseSensitive, wholeWord). Used by ReplaceAll/ReplaceOneTextCommand.
+  - `core/commands/text/UpdateMTextParagraphCommand.ts` — patches a single paragraph by index (indent, justification, lineSpacing). Snapshot on first execute; undo restores old paragraph. `ParagraphPatch = Partial<Pick<TextParagraph, 'indent'|'justification'|'lineSpacingMode'|'lineSpacingFactor'>>`.
+  - `core/commands/text/DeleteTextCommand.ts` — removes entity from scene. Snapshot stores full `DxfTextSceneEntity`; undo re-adds it (full revert). Pre-execute `assertCanEditLayer` (Q8). Audit `'deleted'`.
+  - `core/commands/text/ReplaceAllTextCommand.ts` — replaces all matches via `replaceAll` from text-match-engine. Snapshot entire textNode. Non-idempotent redo: re-runs search on current entity state. Audit `'updated'` with match-count change entry.
+  - `core/commands/text/ReplaceOneTextCommand.ts` — replaces single match at `MatchLocation`. Snapshot textNode. Audit `'updated'`.
+  - `core/commands/text/__tests__/test-fixtures.ts` — shared fixtures: `makeRun`, `makeParagraph`, `makeSimpleNode`, `makeRichNode`, `makeScene`, `makeRecorder`, `makeLayerProvider`.
+  - `core/commands/text/__tests__/CanEditLayerGuard.test.ts` — 10 tests: missing layer (editable), unlocked (editable), locked+canUnlock (editable), locked+noUnlock (throws), frozen (always throws).
+  - `core/commands/text/index.ts` — updated by linter to full barrel with JSDoc header, type-only exports, all 6 commands + text-match-engine. SSoT Tier 4 entry point.
+  - ADR-344 changelog updated.
+
 - **2026-05-11 — Phase 6.B COMPLETE**. Layer 6 Command Pattern — `UpdateTextStyleCommand` + `UpdateTextGeometryCommand` + `diff-helpers`:
   - `core/commands/text/diff-helpers.ts` — `buildShallowDiff(before, after)`: shallow field comparison for audit entries; emits `DxfTextAuditChange[]` for all keys with changed primitive references.
   - `core/commands/text/UpdateTextStyleCommand.ts` — patches `TextRunStyle` uniformly across all runs of all paragraphs (toolbar-level bulk apply). Pre-execute `assertCanEditLayer` (Q8). Snapshot on first execute; undo restores snapshot. `canMergeWith` + `mergeWith`: consecutive style patches on same entity collapse (last patch wins). Fire-and-forget audit `'updated'` with `buildShallowDiff`. `TextStylePatch = Partial<TextRunStyle>`.
