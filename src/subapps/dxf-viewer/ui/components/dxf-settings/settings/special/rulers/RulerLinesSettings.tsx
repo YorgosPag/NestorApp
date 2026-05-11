@@ -116,17 +116,15 @@ export const RulerLinesSettings: React.FC<RulerLinesSettingsProps> = ({ classNam
   // ============================================================================
 
   return (
-    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {/* 🏢 ENTERPRISE: Lines Sub-tabs - Using centralized TabsOnlyTriggers */}
-      <div className={`${PANEL_LAYOUT.SPACING.XS} ${colors.bg.primary} rounded`}>
-        <TabsOnlyTriggers
-          tabs={linesTabs}
-          value={activeLinesTab}
-          onTabChange={handleTabChange}
-          theme="dark"
-          alwaysShowLabels
-        />
-      </div>
+      <TabsOnlyTriggers
+        tabs={linesTabs}
+        value={activeLinesTab}
+        onTabChange={handleTabChange}
+        theme="dark"
+        alwaysShowLabels
+      />
 
       {/* Lines Content */}
       {renderTabContent()}

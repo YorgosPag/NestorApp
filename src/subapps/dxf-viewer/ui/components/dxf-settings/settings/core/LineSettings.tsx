@@ -108,7 +108,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       </fieldset>
 
       {/* Accordion Sections */}
-      <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${!settings.enabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}` : ''}`}>
+      <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${!settings.enabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}` : ''}`}>
         <TemplatesSection {...sectionProps} templateGroupedOptions={templateGroupedOptions} handleTemplateSelect={handleTemplateSelect} accordion={accordion} />
         <BasicSection {...sectionProps} handleColorChange={handleColorChange} accordion={accordion} />
         <HoverSection {...sectionProps} accordion={accordion} />
@@ -123,7 +123,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       {isEmbedded ? (
         settingsContent
       ) : (
-        <section className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG}`} aria-label={t('settings.line.ariaLabel')}>
+        <section className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.SPACING.LG}`} aria-label={t('settings.line.ariaLabel')}>
           {settingsContent}
         </section>
       )}

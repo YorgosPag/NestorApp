@@ -1454,7 +1454,7 @@ export const SPECIFIC_SETTINGS_TOKENS = {
   },
 
   // 🏢 ENTERPRISE: Content wrapper για consistent padding με GeneralSettingsPanel
-  CONTENT_WRAPPER: PANEL_LAYOUT.CONTAINER.PADDING,
+  CONTENT_WRAPPER: PANEL_LAYOUT.SPACING.SM,
 
   COMING_SOON_BADGE: {
     BASE: `absolute -top-1 -right-1 w-3 h-3 ${PANEL_COLORS.ACTIVE_BG} rounded-full text-[8px] flex items-center justify-center ${PANEL_COLORS.ACTIVE_TEXT} font-bold`,

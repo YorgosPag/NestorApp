@@ -174,7 +174,7 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
   // ============================================================================
 
   return (
-    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {/* 🏢 ENTERPRISE: Minor Lines Visibility Toggle - Using centralized Switch component */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
@@ -216,7 +216,7 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
       {/* Minor Lines Color */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('rulerSettings.minorLines.color.title')}</label>
-        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('rulerSettings.minorLines.color.description')}</div>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('rulerSettings.minorLines.color.description')}</div>
         <ColorDialogTrigger
           value={getBaseColor(rulerSettings.horizontal.minorTickColor)}
           onChange={handleMinorTickColorChange}

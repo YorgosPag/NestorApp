@@ -202,7 +202,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   // ============================================================================
 
   return (
-    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {/* 🏢 ENTERPRISE: Background Visibility Toggle - Using centralized Switch component */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">

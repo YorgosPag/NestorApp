@@ -223,17 +223,15 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
   // ============================================================================
 
   return (
-    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {/* 🏢 ENTERPRISE: Sub-tabs - Using centralized TabsOnlyTriggers */}
-      <div className={`${PANEL_LAYOUT.SPACING.XS} ${colors.bg.primary} rounded`}>
-        <TabsOnlyTriggers
-          tabs={crosshairTabs}
-          value={activeTab}
-          onTabChange={handleTabChange}
-          theme="dark"
-          alwaysShowLabels
-        />
-      </div>
+      <TabsOnlyTriggers
+        tabs={crosshairTabs}
+        value={activeTab}
+        onTabChange={handleTabChange}
+        theme="dark"
+        alwaysShowLabels
+      />
 
       {/* Tab Content */}
       {renderTabContent()}

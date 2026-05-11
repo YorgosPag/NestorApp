@@ -120,7 +120,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
       />
 
       {/* Tab Content */}
-      <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+      <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
         {activeTab === 'outlines' && (
           <>
             {/* Preset Outline Colors */}

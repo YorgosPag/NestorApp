@@ -146,7 +146,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
 
       {/* ✅ ENTERPRISE: Centralized spacing from PANEL_LAYOUT (ADR-003) */}
       {/* 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds */}
-      <div className={`${colors.bg.card} ${colors.text.primary} ${PANEL_LAYOUT.CONTAINER.PADDING}`}>
+      <div className={`${colors.bg.card} ${colors.text.primary} ${PANEL_LAYOUT.SPACING.SM}`}>
         {renderPanelContent()}
       </div>
 

@@ -205,7 +205,7 @@ export function FactoryResetModal({ isOpen, onConfirm, onCancel }: FactoryResetM
       closeOnBackdrop={false}
       zIndex={10000}
     >
-      <article className={PANEL_LAYOUT.SPACING.GAP_LG}>
+      <article className={PANEL_LAYOUT.SPACING.GAP_SM}>
         {/* Warning */}
         <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${radius.md}`} role="alert">
           <p className={`${colors.text.error} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>

@@ -214,7 +214,7 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
   return (
     <div className={className}>
       {/* Preview and Current Settings Display - 🏢 ENTERPRISE: Centralized spacing */}
-      <div className={`${PANEL_LAYOUT.CONTAINER.PADDING} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.GAP_LG}`}>
+      <div className={`${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         {/* Line Preview Canvas */}
         <LinePreview
           lineSettings={lineSettings.settings}
@@ -254,7 +254,7 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
           </div>
         }
       >
-        <div className={PANEL_LAYOUT.CONTAINER.PADDING}>{renderTabContent()}</div>
+        <div className={PANEL_LAYOUT.SPACING.SM}>{renderTabContent()}</div>
       </Suspense>
     </div>
   );

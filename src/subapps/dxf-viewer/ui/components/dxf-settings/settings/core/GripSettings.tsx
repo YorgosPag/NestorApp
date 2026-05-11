@@ -124,7 +124,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={false}
           badge={3}
         >
-          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             {/* Grip Size */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
@@ -205,7 +205,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={false}
           badge={6}
         >
-          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             {/* Pick Box Size */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>

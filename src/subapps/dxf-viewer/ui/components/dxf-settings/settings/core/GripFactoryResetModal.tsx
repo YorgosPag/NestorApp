@@ -38,7 +38,7 @@ export function GripFactoryResetModal({ isOpen, onClose, onConfirm }: GripFactor
       closeOnBackdrop={false}
       zIndex={10000}
     >
-      <article className={PANEL_LAYOUT.SPACING.GAP_LG}>
+      <article className={PANEL_LAYOUT.SPACING.GAP_SM}>
         <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="alert">
           <p className={`${colors.text.error} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
             ⚠️ {t('settings.grip.factoryReset.warning')}

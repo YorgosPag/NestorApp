@@ -104,7 +104,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
   // ============================================================================
 
   return (
-    <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
+    <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {/* Ruler Text Color */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${radius.md} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>

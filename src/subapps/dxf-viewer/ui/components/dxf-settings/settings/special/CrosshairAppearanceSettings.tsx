@@ -114,11 +114,11 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
   // ============================================================================
 
   return (
-    <article className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
+    <article className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {/* Crosshair Color - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('crosshairSettings.appearance.colorTitle')}</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('crosshairSettings.appearance.colorDescription')}</p>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('crosshairSettings.appearance.colorDescription')}</p>
         <ColorDialogTrigger
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}

@@ -55,7 +55,7 @@ export function TemplatesSection({
       onToggle={() => accordion.toggleSection('templates')}
       disabled={!settings.enabled}
     >
-      <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+      <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
             {t('settings.line.labels.templates')}
@@ -102,7 +102,7 @@ export function BasicSection({
       disabled={!settings.enabled}
       badge={5}
     >
-      <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+      <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
         {/* Line Type */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
@@ -192,7 +192,7 @@ export function HoverSection({
       disabled={!settings.enabled}
       badge={3}
     >
-      <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+      <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
         {/* Hover Color */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('settings.line.labels.hoverColor')}</label>
@@ -245,7 +245,7 @@ export function FinalSection({
       disabled={!settings.enabled}
       badge={3}
     >
-      <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+      <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
         {/* Final Color */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('settings.line.labels.finalColor')}</label>
@@ -298,7 +298,7 @@ export function AdvancedSection({
       onToggle={() => accordion.toggleSection('advanced')}
       disabled={!settings.enabled}
     >
-      <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+      <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
         {/* Dash Scale (only for non-solid lines) */}
         {settings.lineType !== 'solid' && (
           <SliderInput
@@ -385,7 +385,7 @@ export function FactoryResetModal({
       closeOnBackdrop={false}
       zIndex={10000}
     >
-      <article className={PANEL_LAYOUT.SPACING.GAP_LG}>
+      <article className={PANEL_LAYOUT.SPACING.GAP_SM}>
         <aside className={`${colors.bg.errorSubtle} ${getStatusBorder('error')} ${PANEL_LAYOUT.ALERT.PADDING_LG} ${PANEL_LAYOUT.ALERT.BORDER_RADIUS}`} role="alert">
           <p className={`${colors.text.error} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>
             {t('settings.line.factoryReset.warning')}

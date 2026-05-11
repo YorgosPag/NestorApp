@@ -254,7 +254,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
       </fieldset>
 
       {/* ACCORDION SECTIONS */}
-      <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${!textSettings.enabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}` : ''}`}>
+      <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${!textSettings.enabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}` : ''}`}>
 
         {/* 1. ΒΑΣΙΚΕΣ ΡΥΘΜΙΣΕΙΣ ΚΕΙΜΕΝΟΥ */}
         <AccordionSection
@@ -266,7 +266,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           badge={4}
           className={PANEL_LAYOUT.OVERFLOW.VISIBLE}
         >
-          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             {/* 🏢 ADR-001: Radix Select - Font Family */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
@@ -381,7 +381,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={!textSettings.enabled}
           badge={4}
         >
-          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             {/* Text Style Toggles */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>
@@ -404,7 +404,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={!textSettings.enabled}
           badge={2}
         >
-          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             {/* Script Toggles */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('settings.text.labels.scriptStyle')}</label>
@@ -425,7 +425,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
           onToggle={() => toggleSection('preview')}
           disabled={!textSettings.enabled}
         >
-          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             {/* Live Preview */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>
@@ -470,7 +470,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
       {isEmbedded ? (
         settingsContent
       ) : (
-        <section className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.SPACING.LG}`} aria-label={t('settings.text.ariaLabel')}>
+        <section className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.SPACING.LG}`} aria-label={t('settings.text.ariaLabel')}>
           {settingsContent}
         </section>
       )}

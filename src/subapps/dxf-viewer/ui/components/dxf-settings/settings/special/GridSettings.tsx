@@ -226,7 +226,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   // ============================================================================
 
   return (
-    <article className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
+    <article className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>
       {/* 🏢 ENTERPRISE: Grid Visibility Toggle - Using centralized Switch component */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
@@ -297,11 +297,11 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
         {/* Major Lines Tab Content */}
         {activeGridLinesTab === 'major' ? (
-          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             {/* Major Grid Color */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('gridSettings.color.label', { type: gridLinesLabels.major })}</label>
-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('gridSettings.color.description', { type: gridLinesLabels.major.toLowerCase() })}</div>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.color.description', { type: gridLinesLabels.major.toLowerCase() })}</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.majorGridColor}
                 onChange={handleMajorGridColorChange}
@@ -334,11 +334,11 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           </div>
         ) : (
           /* Minor Lines Tab Content */
-          <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+          <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             {/* Minor Grid Color */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('gridSettings.color.label', { type: gridLinesLabels.minor })}</label>
-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('gridSettings.color.description', { type: gridLinesLabels.minor.toLowerCase() })}</div>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.color.description', { type: gridLinesLabels.minor.toLowerCase() })}</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.minorGridColor}
                 onChange={handleMinorGridColorChange}
