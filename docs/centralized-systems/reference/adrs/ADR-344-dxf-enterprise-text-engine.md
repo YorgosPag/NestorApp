@@ -854,6 +854,13 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 6.D wiring COMPLETE**. `TextPropertiesPanelHost` real data sources + 4 hooks:
+  - `ui/text-toolbar/hooks/useCurrentSceneModel.ts` — reads current scene model ref from context (shared accessor for all panel hooks).
+  - `ui/text-toolbar/hooks/useTextPanelLayers.ts` — `useTextPanelLayers()`: subscribes to LayerStore, maps to `LayerSelectorEntry[]` for TextPropertiesPanel.
+  - `ui/text-toolbar/hooks/useTextPanelFonts.ts` — `useTextPanelFonts()`: merges `fontCache` company fonts + scene STYLE table fonts → deduped `string[]`.
+  - `ui/text-toolbar/hooks/useTextPanelDocumentVersion.ts` — `useTextPanelDocumentVersion()`: reads `$ACADVER` from scene header → `DxfDocumentVersion` enum.
+  - `TextPropertiesPanelHost.tsx` — stub-data replaced with real hooks. `onRequestFontUpload` + `onInsertToken` remain stubs → Phase 7 (portaled modal + live TipTap handle).
+
 - **2026-05-11 — Phase 6.D COMPLETE**. Layer 6 Interaction — grip geometry, grip handler, snap provider, direct distance entry:
   - `text-engine/interaction/TextGripGeometry.ts` — `computeTextGrips(entity, viewMatrix)`: derives grip hit-areas (insertion point, width handle, rotation handle) from `DxfTextSceneEntity` + current view scale. Returns `TextGrip[]` with `kind` (insert/width/rotate), world position, screen rect. `transformWorldToScreen` helper.
   - `text-engine/interaction/TextGripHandler.ts` — `TextGripHandler` class: `onGripHover`, `onGripPress`, `onGripDrag`, `onGripRelease`. Dispatches `UpdateTextGeometryCommand` on release (ADR-031 command pattern). Drag-preview updates `GripSnapStore` (ADR-040) to snap crosshair. 261 lines (≤500 limit).

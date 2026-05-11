@@ -1,44 +1,49 @@
 'use client';
 
 /**
- * ADR-344 Phase 5.F — Host wrapper for Text Properties tab.
+ * ADR-344 Phase 6.D — Host wrapper for Text Properties tab.
  *
  * Bridges the FloatingPanelContainer to the pure `TextPropertiesPanel`
- * component. Sources its data (layer list, font list, document version,
- * annotation scales) from stores / scene model.
+ * component. Sources its data from real stores / scene model:
  *
- * Phase 5: stub-default data sources (empty layers, empty fonts, R2018).
- * Phase 6 wires real LayerStore + FontCache + scene version.
+ *   - layers           ← `useTextPanelLayers`   (current scene's STYLE table)
+ *   - availableFonts   ← `useTextPanelFonts`    (fontCache + scene fonts)
+ *   - documentVersion  ← `useTextPanelDocumentVersion` ($ACADVER lookup)
+ *   - annotationScales ← local state owned by the panel (per-edit UX)
+ *
+ * The two callback wirings (font upload modal, token insert into editor)
+ * remain deferred to Phase 7: they require a portaled modal container
+ * and a live TipTap editor handle respectively, both of which arrive
+ * with the canvas-side text editor integration in the next phase.
  */
 
 import React, { useCallback, useState } from 'react';
 import { TextPropertiesPanel } from './TextPropertiesPanel';
-import { DxfDocumentVersion } from '../../text-engine/types';
 import type { AnnotationScale } from '../../text-engine/types';
-import type { LayerSelectorEntry } from './controls';
-
-const STUB_LAYERS: readonly LayerSelectorEntry[] = [
-  { id: '0', name: '0', locked: false, frozen: false },
-];
-
-const STUB_FONTS: readonly string[] = ['Arial', 'Times New Roman', 'Liberation Sans'];
+import { useTextPanelLayers } from './hooks/useTextPanelLayers';
+import { useTextPanelFonts } from './hooks/useTextPanelFonts';
+import { useTextPanelDocumentVersion } from './hooks/useTextPanelDocumentVersion';
 
 export function TextPropertiesPanelHost() {
+  const layers = useTextPanelLayers();
+  const availableFonts = useTextPanelFonts();
+  const documentVersion = useTextPanelDocumentVersion();
   const [scales, setScales] = useState<readonly AnnotationScale[]>([]);
 
   const onRequestFontUpload = useCallback(() => {
-    // Phase 6 — open FontManagerPanel (Phase 2 SSoT)
+    // Phase 7 — open FontManagerPanel via the floating-panel modal portal.
   }, []);
 
   const onInsertToken = useCallback((_token: string) => {
-    // Phase 6 — dispatch into active TipTap editor session
+    // Phase 7 — dispatch into the active TipTap editor session via a
+    // shared editor handle published by the in-canvas text overlay.
   }, []);
 
   return (
     <TextPropertiesPanel
-      layers={STUB_LAYERS}
-      availableFonts={STUB_FONTS}
-      documentVersion={DxfDocumentVersion.R2018}
+      layers={layers}
+      availableFonts={availableFonts}
+      documentVersion={documentVersion}
       annotationScales={scales}
       paperHeightDefault={2.5}
       onRequestFontUpload={onRequestFontUpload}
