@@ -76,6 +76,11 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   // Ruler background color state (για εύκολο syncing με color picker)
   const [rulerBackgroundColor, setRulerBackgroundColor] = useState<string>(UI_COLORS.WHITE);
 
+  // Border color state
+  const [borderColor, setBorderColor] = useState<string>(
+    rulerSettings?.horizontal?.borderColor ?? UI_COLORS.LIGHT_GRAY
+  );
+
   // Sync local state with ruler settings
   useEffect(() => {
     setBackgroundVisible(rulerSettings?.horizontal?.showBackground ?? true);
@@ -112,6 +117,9 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       // Unknown format - use default
       setRulerBackgroundColor(UI_COLORS.WHITE);
     }
+
+    // Sync border color
+    setBorderColor(rulerSettings.horizontal.borderColor ?? UI_COLORS.LIGHT_GRAY);
   }, [rulerSettings]);
 
   // ============================================================================
@@ -171,6 +179,21 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
     updateRulerSettings({
       horizontal: { ...rulerSettings.horizontal, showMinorTicks: enabled },
       vertical: { ...rulerSettings.vertical, showMinorTicks: enabled }
+    });
+  };
+
+  const handleBorderColorChange = (color: string) => {
+    setBorderColor(color);
+    updateRulerSettings({
+      horizontal: { ...rulerSettings.horizontal, borderColor: color },
+      vertical: { ...rulerSettings.vertical, borderColor: color }
+    });
+  };
+
+  const handleBorderWidthChange = (width: number) => {
+    updateRulerSettings({
+      horizontal: { ...rulerSettings.horizontal, borderWidth: width },
+      vertical: { ...rulerSettings.vertical, borderWidth: width }
     });
   };
 
@@ -280,6 +303,42 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             />
           </div>
         </div>
+      </div>
+
+      {/* Ruler Border Color */}
+      <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.background.borderColor.title')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.background.borderColor.description')}</div>
+        </div>
+        <ColorDialogTrigger
+          value={borderColor}
+          onChange={handleBorderColorChange}
+          label={borderColor}
+          title={t('rulerSettings.background.borderColor.colorPicker')}
+          alpha={false}
+          modes={['hex', 'rgb', 'hsl']}
+          palettes={['dxf', 'semantic', 'material']}
+          recent
+          eyedropper
+        />
+      </div>
+
+      {/* Ruler Border Width */}
+      <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.background.borderWidth.title')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.background.borderWidth.description')}</div>
+        </div>
+        <SliderInput
+          value={rulerSettings.horizontal.borderWidth}
+          min={0}
+          max={5}
+          step={1}
+          onChange={handleBorderWidthChange}
+          showValue
+          formatValue={(v) => `${v}px`}
+        />
       </div>
     </div>
   );

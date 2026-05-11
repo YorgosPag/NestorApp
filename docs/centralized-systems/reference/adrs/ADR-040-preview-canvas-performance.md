@@ -71,6 +71,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-11: MINOR — Ruler border config wiring (CanvasLayerStack)
+
+`CanvasLayerStack.tsx` `coreSettings` memo now reads `borderColor` / `borderWidth`
+from `globalRulerSettings.horizontal.*` instead of hardcoding `borderWidth: 1`
+and reusing the ruler's general `color`. No architectural change — the shell
+still does not subscribe to high-frequency stores. Settings flow only.
+
 ### 2026-05-11: ARCH — Phase XIII: TransformStore SSoT — kill DxfViewerContent / MainContentSection re-render storm on pan/zoom
 
 **Incident (Firefox profiler, hover/pan, post-Phase XII baseline):** `RefreshDriverTick` stuck at **32-38%**. Chain dominated by `VoidFunction → scheduleImmediateRootScheduleTask → renderRootSync → workLoopSync → performUnitOfWork → updatePerformanceWithHooks → beginWork` with a **22% Provider** sub-band cascading into Menu / Tooltip / TooltipPortal / DropdownMenu / ZoomControls / ScreenshotSection / FloorpianImportWizard / RulerCornerBox / CentralizedAutoSaveStatus / DialogPortal / ResizeConfirmDialog. None of those are inside the canvas drawing path — they are UI siblings, toolbars, and dialogs.

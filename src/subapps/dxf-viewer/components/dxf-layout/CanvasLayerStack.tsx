@@ -241,8 +241,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     unitsFontSize: 10,
     unitsColor: globalRulerSettings.horizontal.textColor,
     labelPrecision: 1,
-    borderColor: globalRulerSettings.horizontal.color,
-    borderWidth: 1,
+    borderColor: globalRulerSettings.horizontal.borderColor,
+    borderWidth: globalRulerSettings.horizontal.borderWidth,
   }), [globalRulerSettings, gridSettings.size, gridMajorInterval]);
 
   // --- Stable references for downstream memos (avoid fresh-spread per render) ---
