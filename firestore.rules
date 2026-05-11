@@ -3883,5 +3883,62 @@ service cloud.firestore {
                        );
     }
 
+    // =========================================================================
+    // ✏️ TEXT_TEMPLATES COLLECTION — DXF TEXT ENGINE (ADR-344 Phase 7.B)
+    // =========================================================================
+    // 🔒 SECURITY: Tenant-scoped via companyId. Read = any member of the
+    //              company. Write = company admin / super admin only.
+    //              Server-side authoring also goes through the Admin SDK
+    //              service (text-template.service.ts) which calls
+    //              EntityAuditService.recordChange on every mutation.
+    // 📅 Added: 2026-05-11 (ADR-344 Phase 7.B)
+    //
+    // Security Model:
+    //   - READ:   Any authenticated member of the template's company
+    //   - CREATE: Company admin (or super admin) writing for own company
+    //   - UPDATE: Company admin / super admin, companyId immutable
+    //   - DELETE: Company admin / super admin
+    //
+    // Test coverage: pending entry in coverage-manifest.ts (Phase 7.E).
+    // =========================================================================
+    match /text_templates/{templateId} {
+
+      // 📖 READ: Tenant-scoped — every member of the company can list its templates
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      // ✍️ CREATE: Company admin (or super admin) creating for own company
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll(['companyId'])
+                    && request.resource.data.companyId is string
+                    && (
+                         isSuperAdminOnly()
+                         || (request.resource.data.companyId == getUserCompanyId()
+                             && isCompanyAdminOfCompany(request.resource.data.companyId))
+                       );
+
+      // 📝 UPDATE: Company admin / super admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       )
+                    && request.resource.data.companyId == resource.data.companyId;
+
+      // 🗑️ DELETE: Company admin / super admin
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       );
+    }
+
   }
 }

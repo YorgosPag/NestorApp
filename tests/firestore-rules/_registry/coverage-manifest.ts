@@ -1124,6 +1124,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'user_preferences',       // lines 1458-1485 — ownership + tenant isolation, schemaVersion floor
   // — DXF Text Engine fonts (ADR-344 Phase 6.E, 2026-05-11) —
   'company_fonts',          // tenant read + company-admin write; companyId immutable
+  // — DXF Text Engine templates (ADR-344 Phase 7.B, 2026-05-11) —
+  'text_templates',         // tenant read + company-admin write; companyId immutable; full suite to land in Phase 7.E
 ] as const;
 
 // ---------------------------------------------------------------------------

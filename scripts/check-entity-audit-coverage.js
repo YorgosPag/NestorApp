@@ -82,6 +82,8 @@ const TRACKED_COLLECTION_KEYS = new Set([
   'PARKING_SPACES',
   'STORAGE',
   'PURCHASE_ORDERS',
+  // ADR-344 Phase 7.B — DXF text templates (audit entityType: 'text_template')
+  'TEXT_TEMPLATES',
 ]);
 
 /**

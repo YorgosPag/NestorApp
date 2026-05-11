@@ -2847,17 +2847,20 @@
       "tier": 4
     },
     "text-templates": {
-      "ssotFile": "src/subapps/dxf-viewer/text-engine/templates/",
-      "description": "Hybrid text template system: TS built-in defaults + Firestore text_templates collection + placeholder resolver (ADR-344 Q5). Canonical placeholder resolver for {{project.name}}, {{date.today}}, {{user.fullName}} etc. Inline resolvers drift from the variable registry and miss tenant-scoped overrides.",
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/templates/text-template.service.ts",
+      "description": "Hybrid text template system: TS built-in defaults + Firestore text_templates collection + placeholder resolver (ADR-344 Q5/Phase 7.B). Canonical placeholder resolver for {{project.name}}, {{date.today}}, {{user.fullName}} etc. AND canonical CRUD service for the Firestore text_templates collection — all writes flow through text-template.service.ts (Admin SDK + EntityAuditService). Inline resolvers drift from the variable registry, and direct setDoc/addDoc on text_templates bypasses the audit trail (CLAUDE.md N.11 baseline 3.17).",
       "forbiddenPatterns": [
-        "function\\s+(resolvePlaceholders|expandTemplatePlaceholders|buildTextTemplate)\\s*\\("
+        "function\\s+(resolvePlaceholders|expandTemplatePlaceholders|buildTextTemplate)\\s*\\(",
+        "COLLECTIONS\\.TEXT_TEMPLATES",
+        "['\"]text_templates['\"]"
       ],
       "allowlist": [
-        "src/subapps/dxf-viewer/text-engine/templates/"
+        "src/subapps/dxf-viewer/text-engine/templates/",
+        "src/config/firestore-collections.ts"
       ],
       "addedDate": "2026-05-11",
       "addedByAdr": "ADR-344",
-      "tier": 4
+      "tier": 3
     },
     "text-spell": {
       "ssotFile": "src/subapps/dxf-viewer/text-engine/spell/spell-checker.ts",
