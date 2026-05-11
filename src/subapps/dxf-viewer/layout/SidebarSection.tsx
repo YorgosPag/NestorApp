@@ -161,7 +161,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
             ${PANEL_LAYOUT.ROUNDED.BOTTOM_LG}
             ${colors.bg.card}
             ${quick.separatorH}
-            ${PANEL_LAYOUT.SPACING.LG}
+            ${PANEL_LAYOUT.SPACING.SM}
           `}
         >
           <AutoSaveStatus />
