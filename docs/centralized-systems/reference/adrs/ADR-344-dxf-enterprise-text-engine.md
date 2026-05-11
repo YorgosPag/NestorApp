@@ -854,6 +854,26 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 2 COMPLETE**. Layer 2 Font Engine — opentype.js + SHX/SHP parser + Firebase font manager + missing-font UI:
+  - `opentype.js@^2.0.0` (MIT) added to dependencies via pnpm.
+  - `text-engine/fonts/font-cache.ts` — `FontCache` class: `WeakMap<ArrayBuffer, Font>` + `Map<string, Font>` by name. Module-level singleton `fontCache`.
+  - `text-engine/fonts/font-loader.ts` — `loadFont(url)`, `loadFontFromBuffer(buf)`, `loadCompanyFont(companyId, fileName)` (Firebase Storage signed URL + cache), `buildMissingFontReport(missingNames, entities)` → `MissingFontReport`, `listCompanyFontsMeta(companyId)`.
+  - `text-engine/fonts/glyph-renderer.ts` — `glyphToPath2D(font, char, x, y, size)` → `Path2D | null`, `stringToPath2D(font, text, x, y, size)` → `Path2D`, `measureText(font, text, size)` → `{ width, ascent, descent }`. Converts opentype.js PathCommand array → browser `Path2D` via M/L/Q/C/Z commands.
+  - `text-engine/fonts/missing-font-store.ts` — module-level singleton (HoverStore/ImmediateSnapStore pattern, ADR-040): `setMissingFontReport`, `clearMissingFontReport`, `subscribeMissingFontReport`, `getMissingFontReport`. Low-frequency update (once per DXF open).
+  - `text-engine/fonts/shx-parser/shp-types.ts` — `ShpVector`, `ShpRecord`, `ShpFont` types.
+  - `text-engine/fonts/shx-parser/shp-parser.ts` — `parseShpFile(buffer)` → `ShpFont`, `parseShpRecord(view, offset)`. Binary SHP format: CRLF header + defCount + (code 2B + defBytes + above + below + vectors + 0x0000 terminator).
+  - `text-engine/fonts/shx-parser/shx-renderer.ts` — `shxGlyphToPath2D`, `shxStringToPath2D`, `measureShxText`. Pen-up flag via `0x80` high bit. Canvas y-axis flip (SHP y-up → canvas y-down).
+  - `text-engine/fonts/font-manager/font-upload.service.ts` — `uploadCompanyFont(companyId, file, userId)` → `CompanyFontRecord` (Storage upload + `setDoc` with `generateCompanyFontId()`). `deleteCompanyFont`, `listCompanyFonts`, `getCompanyFontUrl`. Enterprise IDs: `fnt_*` prefix (CLAUDE.md N.6).
+  - `text-engine/fonts/font-manager/FontManagerPanel.tsx` — list + upload + delete UI. Radix `AlertDialog` for delete confirmation. Admin-only actions via `canManage` prop. i18n: `textFonts:panel.*`.
+  - `ui/text-toolbar/MissingFontBanner.tsx` — non-blocking status banner. Props: `report`, `onViewAffected`, `onUpload`, `onDismiss`. i18n: `textFonts:missingBanner.*`.
+  - `rendering/leaves/MissingFontHighlightLeaf.tsx` — ADR-040 micro-leaf. `useSyncExternalStore(subscribeMissingFontReport, getMissingFontReport)`. Draws dashed orange outlines (6/4 dash, 1.5px, Tailwind `orange-500`) on canvas when `highlightActive=true`. `entityBounds: Map<string, EntityScreenBounds>` provided by Phase 3 layout engine. Zero inline styles (N.3). `pointer-events-none absolute inset-0`.
+  - `src/i18n/locales/el/textFonts.json` + `en/textFonts.json` — 22 i18n keys each (panel + missingBanner).
+  - `jest.setup.js` — added `global.Path2D` mock + `global.TextEncoder/TextDecoder` polyfill for canvas tests in jsdom.
+  - Barrel `fonts/index.ts` updated with all Phase 2 exports.
+  - Unit tests: `fonts/__tests__/glyph-renderer.test.ts` (9 tests) + `shx-parser/__tests__/shp-parser.test.ts` (8 tests) + `shx-renderer.test.ts` (9 tests) — **26/26 green**.
+  - Total text-engine tests: **94/94 green** (Phase 1 + Phase 2).
+  - All files ≤200 lines (max: font-upload.service.ts ~135), all functions ≤40 lines, zero `any`/`@ts-ignore`, zero inline styles.
+
 - **2026-05-11 — Phase 1 COMPLETE**. Layer 1 DXF I/O — parser + tokenizer + STYLE table + serializer:
   - `text-engine/types/text-toolbar.types.ts` — `DxfColor` discriminated union, `MixedValue<T>`, `DxfDocumentVersion` enum (R12→R2018), version feature-gate utilities (`versionSupportsMtext`, `versionSupportsTrueColor`, `versionSupportsAnnotativeXData`, `versionAtLeast`, `parseDocumentVersion`, `parseTrueColorInt`, `encodeTrueColorInt`).
   - `text-engine/types/text-ast.types.ts` — `DxfTextNode` root AST node, `TextParagraph`, `TextRun`, `TextStack`, `TextRunStyle`, `TextJustification`, `LineSpacingMode`, `AnnotationScale`, `DxfStyleTableEntry`.
