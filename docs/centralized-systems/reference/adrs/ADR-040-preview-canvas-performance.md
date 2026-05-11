@@ -71,6 +71,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-11: MINOR — Gate crosshair overlay on dxfScene readiness
+
+`CanvasLayerStack.tsx` now passes `crosshairSettings.enabled && !!dxfScene`
+to `CrosshairOverlay isActive`. Prevents the overlay from rendering / running
+its RAF loop before a scene is loaded. No subscription change, no new
+high-frequency reads — pure guard.
+
 ### 2026-05-11: MINOR — Ruler border config wiring (CanvasLayerStack)
 
 `CanvasLayerStack.tsx` `coreSettings` memo now reads `borderColor` / `borderWidth`

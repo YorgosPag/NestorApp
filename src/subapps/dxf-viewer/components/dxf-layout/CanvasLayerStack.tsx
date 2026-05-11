@@ -454,7 +454,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           />
 
           <CrosshairOverlay
-            isActive={crosshairSettings.enabled}
+            isActive={crosshairSettings.enabled && !!dxfScene}
             rulerMargins={{
               left: rulerSettings.vertical?.width ?? COORDINATE_LAYOUT.RULER_LEFT_WIDTH,
               top: 0,
