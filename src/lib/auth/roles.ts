@@ -79,6 +79,11 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "settings:settings:manage",
       "notifications:notifications:view",
       "floorplans:floorplans:process",
+      // ADR-344 text engine
+      "dxf:layers:unlock",
+      "dxf:text:create",
+      "dxf:text:edit",
+      "dxf:text:delete",
       // Properties (ADR-269 rename from Units)
       "properties:properties:view",
       "properties:properties:create",
@@ -134,6 +139,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "dxf:files:view",
       "dxf:files:upload",
       "dxf:layers:view",
+      "dxf:text:create",
+      "dxf:text:edit",
+      "dxf:text:delete",
       "reports:reports:view",
       "reports:reports:create",
       "photos:photos:upload",
@@ -151,6 +159,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     permissions: [
       "dxf:files:view",
       "dxf:layers:view",
+      "dxf:text:create",
+      "dxf:text:edit",
+      "dxf:text:delete",
       "projects:floors:view",
       "properties:properties:view",
       "units:units:view",
@@ -166,6 +177,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     permissions: [
       "dxf:files:view",
       "dxf:layers:view",
+      "dxf:text:create",
+      "dxf:text:edit",
+      "dxf:text:delete",
       "projects:floors:view",
       "properties:properties:view",
       "units:units:view",
@@ -180,6 +194,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: "auth.roles.siteManager.name",
     description: "auth.roles.siteManager.description",
     permissions: [
+      "dxf:text:create",
+      "dxf:text:edit",
       "photos:photos:upload",
       "progress:progress:update",
       "reports:reports:view",

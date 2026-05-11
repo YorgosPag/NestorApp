@@ -79,7 +79,12 @@ export const PERMISSIONS = {
   "dxf:files:upload": true,
   "dxf:layers:view": true,
   "dxf:layers:manage": true,
+  "dxf:layers:unlock": true, // ADR-344 Q8 — unlock locked layers to write
   "dxf:annotations:edit": true,
+  // ADR-344 text engine — TEXT/MTEXT entity permissions
+  "dxf:text:create": true,
+  "dxf:text:edit": true,
+  "dxf:text:delete": true,
 
   // CRM
   "crm:contacts:view": true,
