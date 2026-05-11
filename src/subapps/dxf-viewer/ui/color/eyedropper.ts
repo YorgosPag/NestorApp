@@ -3,13 +3,17 @@
  * fallback with enterprise loupe magnifier otherwise.
  *
  * Coverage matrix:
- * | Source                | Native API | Fallback |
- * |-----------------------|------------|----------|
- * | Anywhere on screen    | ✅         | ❌       |
- * | Page DOM (any color)  | ✅         | ✅       |
- * | Canvas element pixels | ✅         | ✅       |
+ * | Source                                  | Native API | Fallback |
+ * |-----------------------------------------|------------|----------|
+ * | Browser chrome / OS desktop / other apps| ✅         | ❌       |
+ * | Any element in the page DOM             | ✅         | ✅       |
+ * | Canvas element pixels                   | ✅         | ✅       |
+ * | Image element pixels                    | ✅         | ✅       |
+ * | CSS background-color (buttons, etc.)    | ✅         | ✅       |
  *
  * Pattern: Figma / Canva / Adobe Express in-browser color sampling.
+ * For OS-level "anywhere on screen" coverage in the fallback, a future
+ * enhancement could integrate `getDisplayMedia()` screen capture.
  */
 
 import { createLoupe, type LoupeHandle } from './eyedropper-loupe';
@@ -52,15 +56,26 @@ export function openEyedropper(): Promise<EyedropperResult> {
 
 function openDomEyedropper(): Promise<EyedropperResult> {
   return new Promise((resolve, reject) => {
-    // Hide OS cursor + DXF CAD overlays (crosshair canvas, snap indicator).
-    // The CrosshairOverlay is a <canvas> at z-20 that draws opaque lines under
-    // the cursor — without hiding it, findCanvasAtPoint would pick it as the
-    // zoom source instead of the DxfCanvas beneath.
+    // Session styles: hide OS cursor + hide DXF CAD overlays.
     const sessionStyle = document.createElement('style');
     sessionStyle.textContent = '*{cursor:none!important}[data-dxf-overlay]{visibility:hidden!important}';
     document.head.appendChild(sessionStyle);
 
-    // Loupe appears immediately — no DOM snapshot needed
+    // Capture overlay blocks ALL pointer interaction with underlying UI
+    // (no hover state on buttons, no accidental click-through). Loupe stays
+    // above the overlay via higher z-index.
+    const captureOverlay = document.createElement('div');
+    captureOverlay.setAttribute('data-eyedropper-capture', 'true');
+    captureOverlay.setAttribute('aria-hidden', 'true');
+    Object.assign(captureOverlay.style, {
+      position: 'fixed',
+      inset: '0',
+      pointerEvents: 'all',
+      background: 'transparent',
+      zIndex: '2147483646',
+    });
+    document.body.appendChild(captureOverlay);
+
     const loupe: LoupeHandle = createLoupe();
 
     let rafPending = false;
@@ -69,11 +84,9 @@ function openDomEyedropper(): Promise<EyedropperResult> {
 
     const cleanup = (): void => {
       sessionStyle.remove();
+      captureOverlay.remove();
       loupe.destroy();
-      document.removeEventListener('mousemove', onMouseMove, true);
-      document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKey, true);
-      document.removeEventListener('contextmenu', onContextMenu, true);
     };
 
     const onMouseMove = (e: MouseEvent): void => {
@@ -83,18 +96,17 @@ function openDomEyedropper(): Promise<EyedropperResult> {
       rafPending = true;
       requestAnimationFrame(() => {
         rafPending = false;
-        const payload = resolveZoomSource(lastX, lastY);
-        loupe.update(lastX, lastY, payload.source, payload.snapX, payload.snapY, payload.hex);
+        const p = pickAt(lastX, lastY);
+        loupe.update(lastX, lastY, p.source, p.snapX, p.snapY, p.hex);
       });
     };
 
     const onClick = (e: MouseEvent): void => {
       e.preventDefault();
       e.stopPropagation();
+      const p = pickAt(e.clientX, e.clientY);
       cleanup();
-      const color = readColorAtPoint(e.clientX, e.clientY);
-      if (color) resolve({ sRGBHex: color });
-      else reject(new Error('Eyedropper: could not read pixel'));
+      resolve({ sRGBHex: p.hex });
     };
 
     const onContextMenu = (e: MouseEvent): void => {
@@ -110,66 +122,89 @@ function openDomEyedropper(): Promise<EyedropperResult> {
       }
     };
 
-    document.addEventListener('mousemove', onMouseMove, true);
-    document.addEventListener('click', onClick, true);
-    document.addEventListener('contextmenu', onContextMenu, true);
+    captureOverlay.addEventListener('mousemove', onMouseMove);
+    captureOverlay.addEventListener('click', onClick);
+    captureOverlay.addEventListener('contextmenu', onContextMenu);
     document.addEventListener('keydown', onKey, true);
   });
 }
 
-// ─── Zoom source resolution ──────────────────────────────────────────────────
+// ─── Pick resolution ─────────────────────────────────────────────────────────
 
-interface ZoomPayload {
-  source: HTMLCanvasElement | null;
+interface PickPayload {
+  /** Zoom source for loupe (canvas or image). null → loupe shows solid fill. */
+  source: CanvasImageSource | null;
+  /** Source-space coords for zoom rectangle center. */
   snapX: number;
   snapY: number;
+  /** Hex color at exactly (clientX, clientY). */
   hex: string;
 }
 
 /**
- * Resolve zoom source and hex color at cursor (x, y).
+ * Resolve the pixel/color at viewport position (x, y).
  *
- * Uses `elementsFromPoint` (all layers) to penetrate transparent overlays.
- * Skips canvases with transparent pixels (alpha < 10) so overlay guide
- * canvases don't shadow the main DXF rendering canvas beneath them.
+ * Walks `elementsFromPoint` top-down. The first opaque layer wins:
+ *  - `<canvas>` with non-transparent pixel → real zoom + canvas pixel
+ *  - `<img>` with non-transparent pixel → real zoom + image pixel
+ *  - Any HTMLElement with opaque background-color → solid fill + CSS color
+ *  - Otherwise skip (transparent, look at next layer)
  *
- * If no opaque canvas found → source = null, loupe renders a solid-color fill.
+ * Excludes the eyedropper's own capture overlay so it doesn't shadow the page.
  */
-function resolveZoomSource(x: number, y: number): ZoomPayload {
-  const elements = document.elementsFromPoint(x, y);
+function pickAt(x: number, y: number): PickPayload {
+  const elements = elementsAtPointFiltered(x, y);
 
   for (const el of elements) {
-    if (!(el instanceof HTMLCanvasElement)) continue;
+    if (el instanceof HTMLCanvasElement) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      const snapX = (x - rect.left) * (el.width / rect.width);
+      const snapY = (y - rect.top) * (el.height / rect.height);
+      const hex = readCanvasPixelAt(el, snapX, snapY);
+      if (hex !== null) return { source: el, snapX, snapY, hex };
+      continue;
+    }
 
-    const rect = el.getBoundingClientRect();
-    const scaleX = el.width / rect.width;
-    const scaleY = el.height / rect.height;
-    const snapX = (x - rect.left) * scaleX;
-    const snapY = (y - rect.top) * scaleY;
+    if (el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      const snapX = (x - rect.left) * (el.naturalWidth / rect.width);
+      const snapY = (y - rect.top) * (el.naturalHeight / rect.height);
+      const hex = readImagePixelAt(el, snapX, snapY);
+      if (hex !== null) return { source: el, snapX, snapY, hex };
+      continue;
+    }
 
-    const pixel = readCanvasPixelAt(el, snapX, snapY);
-    if (pixel === null) continue; // transparent — keep searching
-
-    return { source: el, snapX, snapY, hex: pixel };
+    if (el instanceof HTMLElement) {
+      const rgb = parseRgbColor(getComputedStyle(el).backgroundColor);
+      if (rgb && rgb.a >= 0.5) {
+        return { source: null, snapX: 0, snapY: 0, hex: rgbToHex(rgb.r, rgb.g, rgb.b) };
+      }
+    }
   }
 
-  // No opaque canvas found — fall back to CSS color, loupe shows solid fill
-  const hex = readCssColorAtPoint(x, y) ?? '#000000';
-  return { source: null, snapX: 0, snapY: 0, hex };
+  return { source: null, snapX: 0, snapY: 0, hex: '#000000' };
 }
 
-// ─── Canvas pixel reading ────────────────────────────────────────────────────
+/** elementsFromPoint, minus the eyedropper's own capture overlay. */
+function elementsAtPointFiltered(x: number, y: number): Element[] {
+  return document.elementsFromPoint(x, y).filter(
+    (el) => !(el instanceof HTMLElement) || el.dataset.eyedropperCapture !== 'true'
+  );
+}
+
+// ─── Pixel reading helpers ───────────────────────────────────────────────────
 
 /**
- * Read pixel at canvas coordinates (cx, cy) already scaled to canvas space.
+ * Read pixel from a canvas at canvas-space coords (cx, cy).
  * Returns null for transparent pixels (alpha < 10) or read errors.
- * Uses an offscreen copy to avoid SecurityError on willReadFrequently mismatch.
+ * Uses 1×1 offscreen copy to avoid willReadFrequently context conflicts.
  */
 function readCanvasPixelAt(canvas: HTMLCanvasElement, cx: number, cy: number): string | null {
   const x = Math.max(0, Math.min(Math.round(cx), canvas.width - 1));
   const y = Math.max(0, Math.min(Math.round(cy), canvas.height - 1));
   try {
-    // Copy 1×1 pixel to a fresh offscreen canvas — avoids context-option conflicts
     const offscreen = document.createElement('canvas');
     offscreen.width = 1;
     offscreen.height = 1;
@@ -177,47 +212,33 @@ function readCanvasPixelAt(canvas: HTMLCanvasElement, cx: number, cy: number): s
     if (!ctx) return null;
     ctx.drawImage(canvas, x, y, 1, 1, 0, 0, 1, 1);
     const d = ctx.getImageData(0, 0, 1, 1).data;
-    if (d[3] < 10) return null; // transparent — skip
+    if (d[3] < 10) return null;
     return rgbToHex(d[0], d[1], d[2]);
   } catch {
     return null;
   }
 }
 
-// ─── DOM color reading ───────────────────────────────────────────────────────
-
 /**
- * Read color at viewport point for the final committed value on click.
- * Traverses all stacked elements so canvas beneath overlays is not missed.
+ * Read pixel from an <img> at natural-pixel coords (ix, iy).
+ * Returns null for transparent pixels or CORS-tainted images.
  */
-function readColorAtPoint(x: number, y: number): string | null {
-  const elements = document.elementsFromPoint(x, y);
-  for (const el of elements) {
-    if (el instanceof HTMLCanvasElement) {
-      const rect = el.getBoundingClientRect();
-      const cx = (x - rect.left) * (el.width / rect.width);
-      const cy = (y - rect.top) * (el.height / rect.height);
-      const pixel = readCanvasPixelAt(el, cx, cy);
-      if (pixel !== null) return pixel;
-    }
+function readImagePixelAt(img: HTMLImageElement, ix: number, iy: number): string | null {
+  const x = Math.max(0, Math.min(Math.round(ix), img.naturalWidth - 1));
+  const y = Math.max(0, Math.min(Math.round(iy), img.naturalHeight - 1));
+  try {
+    const offscreen = document.createElement('canvas');
+    offscreen.width = 1;
+    offscreen.height = 1;
+    const ctx = offscreen.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(img, x, y, 1, 1, 0, 0, 1, 1);
+    const d = ctx.getImageData(0, 0, 1, 1).data;
+    if (d[3] < 10) return null;
+    return rgbToHex(d[0], d[1], d[2]);
+  } catch {
+    return null;
   }
-  return readCssColorAtPoint(x, y);
-}
-
-function readCssColorAtPoint(x: number, y: number): string | null {
-  const elements = document.elementsFromPoint(x, y);
-  const top = elements[0];
-  return top ? readBackgroundUp(top) : null;
-}
-
-function readBackgroundUp(start: Element): string | null {
-  let current: Element | null = start;
-  while (current) {
-    const rgb = parseRgbColor(getComputedStyle(current).backgroundColor);
-    if (rgb && rgb.a > 0) return rgbToHex(rgb.r, rgb.g, rgb.b);
-    current = current.parentElement;
-  }
-  return null;
 }
 
 function parseRgbColor(css: string): { r: number; g: number; b: number; a: number } | null {
