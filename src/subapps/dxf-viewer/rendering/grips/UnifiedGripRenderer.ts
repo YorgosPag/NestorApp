@@ -116,7 +116,7 @@ export class UnifiedGripRenderer {
     temperatureOverride?: GripTemperature
   ): void {
     // Step 1: Detect/use temperature
-    const temperature = temperatureOverride ?? (config as GripRenderConfig).temperature ??
+    const temperature = temperatureOverride ?? config.temperature ??
       (config.entityId !== undefined && config.gripIndex !== undefined
         ? this.interactionDetector.detectTemperature(
             config.entityId,
