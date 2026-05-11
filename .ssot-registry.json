@@ -2825,7 +2825,21 @@
         "new\\s+Y\\.Doc\\s*\\("
       ],
       "allowlist": [
-        "src/subapps/dxf-viewer/text-engine/collab/"
+        "src/subapps/dxf-viewer/text-engine/collab/",
+        "scripts/y-websocket-server/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-edit": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/edit/",
+      "description": "TipTap (ProseMirror) JSON ↔ DxfTextNode serializer + canonical TipTap extension set (custom Marks for \\O \\H \\W \\Q \\T \\C/\\c, custom inline Node for \\S) for DXF inline codes (ADR-344 Phase 4). Direct Editor.create() outside this module bypasses the canonical DXF extension set; reimplementing the serializers risks asymmetric encoding/decoding and silent data loss on roundtrip.",
+      "forbiddenPatterns": [
+        "function\\s+(dxfTextToTipTap|tipTapToDxfText)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/edit/"
       ],
       "addedDate": "2026-05-11",
       "addedByAdr": "ADR-344",
