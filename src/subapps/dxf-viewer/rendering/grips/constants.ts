@@ -58,7 +58,7 @@ export const EDGE_GRIP_SIZE_MULTIPLIERS = {
  * - CONTOUR: Black - Grip outline
  */
 export const DEFAULT_GRIP_COLORS = {
-  COLD: '#ff0000',   // 🧪 TEST: red (was #5F9ED1 AutoCAD blue)
+  COLD: '#5F9ED1',   // AutoCAD blue (ACI 5)
   WARM: '#FF7F00',   // Orange (hover feedback)
   HOT: '#FF0000',    // Red (AutoCAD ACI 1)
   CONTOUR: '#000000', // Black outline
@@ -79,7 +79,7 @@ export const MIDPOINT_SIZE_FACTOR = 0.75;
  * Edge grips when cold (not hovered) use green color for distinction
  * Following existing GripPhaseRenderer pattern
  */
-export const EDGE_GRIP_COLOR = UI_COLORS.ORANGE; // 🧪 TEST: orange midpoints (was SUCCESS_BRIGHT green)
+export const EDGE_GRIP_COLOR = UI_COLORS.SUCCESS_BRIGHT; // Green for midpoint/edge grips (AutoCAD standard)
 
 /**
  * Minimum grip size (pixels)

@@ -41,7 +41,7 @@ type Listener = () => void;
 let current: GripStyle = {
   enabled: true,
   colors: {
-    cold: UI_COLORS.SNAP_ENDPOINT,   // 🧪 TEST: red vertices (was BLUE_DEFAULT)
+    cold: UI_COLORS.BLUE_DEFAULT,
     warm: UI_COLORS.SNAP_INTERSECTION,   // ✅ AutoCAD standard: Hot Pink - hover grips
     hot: UI_COLORS.SNAP_ENDPOINT,    // ✅ AutoCAD standard: Red (ACI 1) - selected grips
     contour: UI_COLORS.BLACK // ✅ AutoCAD standard: Black contour

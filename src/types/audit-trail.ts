@@ -25,7 +25,8 @@ export type AuditEntityType =
   | 'purchase_order'
   | 'quote'
   | 'material'
-  | 'framework_agreement';
+  | 'framework_agreement'
+  | 'text_template';
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =

@@ -75,10 +75,6 @@ export class GripColorManager {
       return EDGE_GRIP_COLOR;
     }
 
-    // 🧪 TEST: Force cold=red, warm=magenta (bypasses Firestore — remove after test)
-    if (temperature === 'cold') return '#FF0000';
-    if (temperature === 'warm') return '#FF00FF';
-
     // Priority 3: Temperature color from settings
     if (settings?.colors) {
       const settingsColor = settings.colors[temperature];

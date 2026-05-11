@@ -94,7 +94,16 @@ export function GripProvider({ children }: GripProviderProps) {
       pickBoxSize: gripSettings.pickBoxSize,
       apertureSize: gripSettings.apertureSize,
       showGrips: gripSettings.showGrips,
-      opacity: gripSettings.opacity || 1.0
+      opacity: gripSettings.opacity || 1.0,
+      showAperture: gripSettings.showAperture,
+      multiGripEdit: gripSettings.multiGripEdit,
+      snapToGrips: gripSettings.snapToGrips,
+      showGripTips: gripSettings.showGripTips,
+      dpiScale: gripSettings.dpiScale ?? 1.0,
+      showMidpoints: gripSettings.showMidpoints,
+      showCenters: gripSettings.showCenters,
+      showQuadrants: gripSettings.showQuadrants,
+      maxGripsPerEntity: gripSettings.maxGripsPerEntity,
     });
   }, [gripSettings]);
 
@@ -124,7 +133,16 @@ export function GripProvider({ children }: GripProviderProps) {
         pickBoxSize: next.pickBoxSize,
         apertureSize: next.apertureSize,
         showGrips: next.showGrips,
-        opacity: next.opacity || 1.0
+        opacity: next.opacity || 1.0,
+        showAperture: next.showAperture,
+        multiGripEdit: next.multiGripEdit,
+        snapToGrips: next.snapToGrips,
+        showGripTips: next.showGripTips,
+        dpiScale: next.dpiScale ?? 1.0,
+        showMidpoints: next.showMidpoints,
+        showCenters: next.showCenters,
+        showQuadrants: next.showQuadrants,
+        maxGripsPerEntity: next.maxGripsPerEntity,
       });
       return;
     }
@@ -145,7 +163,16 @@ export function GripProvider({ children }: GripProviderProps) {
         pickBoxSize: next.pickBoxSize,
         apertureSize: next.apertureSize,
         showGrips: next.showGrips,
-        opacity: next.opacity || 1.0
+        opacity: next.opacity || 1.0,
+        showAperture: next.showAperture,
+        multiGripEdit: next.multiGripEdit,
+        snapToGrips: next.snapToGrips,
+        showGripTips: next.showGripTips,
+        dpiScale: next.dpiScale ?? 1.0,
+        showMidpoints: next.showMidpoints,
+        showCenters: next.showCenters,
+        showQuadrants: next.showQuadrants,
+        maxGripsPerEntity: next.maxGripsPerEntity,
       });
 
       return next;
