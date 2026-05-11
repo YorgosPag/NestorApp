@@ -366,7 +366,7 @@ export const CAD_UI_COLORS = {
     outline_color: '#ffffff',
     outline_width: 1,
     // ✅ AutoCAD standard grip colors for consistency with international standards
-    cold: '#0000FF',     // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
+    cold: '#FF0000',     // 🧪 TEST: red (was '#0000FF' AutoCAD blue)
     warm: '#FF69B4',     // ✅ AutoCAD standard: Hot Pink - hover grips
     hot: '#FF0000',      // ✅ AutoCAD standard: Red (ACI 1) - selected grips
   },
