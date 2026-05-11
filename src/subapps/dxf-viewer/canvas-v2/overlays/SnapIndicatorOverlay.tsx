@@ -259,6 +259,7 @@ export default function SnapIndicatorOverlay({
   return (
     // 🏢 ENTERPRISE: pointer-events-none για να μην εμποδίζει mouse events στο canvas κάτω
     <div
+      data-dxf-overlay="snap"
       className={`${className} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
       style={{ zIndex: portalComponents.overlay.snap.zIndex() }}
     >

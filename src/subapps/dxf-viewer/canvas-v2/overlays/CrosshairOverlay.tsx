@@ -388,6 +388,7 @@ export default function CrosshairOverlay({
   return (
     <canvas
       ref={canvasRef}
+      data-dxf-overlay="crosshair"
       className={`${className} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
       style={{
         ...style,

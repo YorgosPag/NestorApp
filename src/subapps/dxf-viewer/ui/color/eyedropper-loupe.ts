@@ -6,11 +6,11 @@
 
 const LOUPE_SIZE = 120;
 const ZOOM_SOURCE = 12; // 12×12 px → 120×120 = 10× zoom
-const OFFSET_X = 16;
 const LABEL_HEIGHT = 22;
 
 export interface LoupeHandle {
-  update(x: number, y: number, snapshot: HTMLCanvasElement, hex: string): void;
+  /** source=null → solid color fill. source=canvas/image → zoomed pixel content. */
+  update(screenX: number, screenY: number, source: CanvasImageSource | null, snapX: number, snapY: number, hex: string): void;
   destroy(): void;
 }
 
@@ -33,10 +33,14 @@ export function createLoupe(): LoupeHandle {
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
 
   return {
-    update(x: number, y: number, snapshot: HTMLCanvasElement, hex: string): void {
-      placeLoupe(container, x, y);
-      renderZoom(ctx, snapshot, x, y);
-      renderCrosshair(ctx);
+    update(screenX: number, screenY: number, source: CanvasImageSource | null, snapX: number, snapY: number, hex: string): void {
+      placeLoupe(container, screenX, screenY);
+      if (source) {
+        renderZoom(ctx, source, snapX, snapY);
+        renderCrosshair(ctx);
+      } else {
+        renderSolidColor(ctx, hex);
+      }
       label.textContent = hex;
     },
     destroy(): void {
@@ -76,31 +80,33 @@ function applyLabelStyles(el: HTMLDivElement): void {
   });
 }
 
+/**
+ * Center the loupe CANVAS (not the full container) on the cursor.
+ * The label sits below the loupe inside the same container.
+ * Chrome native EyeDropper style: loupe is the cursor indicator.
+ */
 function placeLoupe(container: HTMLDivElement, x: number, y: number): void {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const totalH = LOUPE_SIZE + LABEL_HEIGHT;
-  let left = x + OFFSET_X;
-  let top = y - LOUPE_SIZE - OFFSET_X;
+  container.style.left = `${Math.round(x - LOUPE_SIZE / 2)}px`;
+  container.style.top = `${Math.round(y - LOUPE_SIZE / 2)}px`;
+}
 
-  if (left + LOUPE_SIZE > vw - 4) left = x - LOUPE_SIZE - OFFSET_X;
-  if (top < 4) top = y + OFFSET_X;
-  if (top + totalH > vh - 4) top = y - totalH - 4;
-
-  container.style.left = `${Math.round(left)}px`;
-  container.style.top = `${Math.round(top)}px`;
+function renderSolidColor(ctx: CanvasRenderingContext2D, hex: string): void {
+  ctx.clearRect(0, 0, LOUPE_SIZE, LOUPE_SIZE);
+  ctx.fillStyle = hex;
+  ctx.fillRect(0, 0, LOUPE_SIZE, LOUPE_SIZE);
+  renderCrosshair(ctx);
 }
 
 function renderZoom(
   ctx: CanvasRenderingContext2D,
-  snapshot: HTMLCanvasElement,
+  source: CanvasImageSource,
   x: number,
   y: number
 ): void {
   ctx.clearRect(0, 0, LOUPE_SIZE, LOUPE_SIZE);
   ctx.imageSmoothingEnabled = false;
   const half = Math.floor(ZOOM_SOURCE / 2);
-  ctx.drawImage(snapshot, Math.round(x) - half, Math.round(y) - half, ZOOM_SOURCE, ZOOM_SOURCE, 0, 0, LOUPE_SIZE, LOUPE_SIZE);
+  ctx.drawImage(source, Math.round(x) - half, Math.round(y) - half, ZOOM_SOURCE, ZOOM_SOURCE, 0, 0, LOUPE_SIZE, LOUPE_SIZE);
 }
 
 function renderCrosshair(ctx: CanvasRenderingContext2D): void {
