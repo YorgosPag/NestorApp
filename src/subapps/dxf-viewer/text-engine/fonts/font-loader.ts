@@ -12,7 +12,7 @@ import * as opentype from 'opentype.js';
 import type { Font } from 'opentype.js';
 import { fontCache } from './font-cache';
 import { lookupSubstitute } from './font-substitution-table';
-import { FIRESTORE_COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getDownloadURL, ref } from 'firebase/storage';
@@ -114,7 +114,7 @@ export async function listCompanyFontsMeta(
   companyId: string,
 ): Promise<CompanyFontMeta[]> {
   const q = query(
-    collection(db, FIRESTORE_COLLECTIONS.COMPANY_FONTS),
+    collection(db, COLLECTIONS.COMPANY_FONTS),
     where('companyId', '==', companyId),
   );
   const snap = await getDocs(q);

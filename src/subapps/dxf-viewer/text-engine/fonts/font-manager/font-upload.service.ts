@@ -25,7 +25,7 @@ import {
   getDownloadURL,
 } from 'firebase/storage';
 import { generateCompanyFontId } from '@/services/enterprise-id.service';
-import { FIRESTORE_COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,7 +96,7 @@ export async function uploadCompanyFont(
   };
 
   await setDoc(
-    doc(db, FIRESTORE_COLLECTIONS.COMPANY_FONTS, fontId),
+    doc(db, COLLECTIONS.COMPANY_FONTS, fontId),
     record,
   );
 
@@ -111,7 +111,7 @@ export async function deleteCompanyFont(
 ): Promise<void> {
   const storageRef = ref(storage, storagePath(companyId, fileName));
   await deleteObject(storageRef);
-  await deleteDoc(doc(db, FIRESTORE_COLLECTIONS.COMPANY_FONTS, fontId));
+  await deleteDoc(doc(db, COLLECTIONS.COMPANY_FONTS, fontId));
 }
 
 /** List all registered fonts for a company (metadata only, no binary data). */
@@ -119,7 +119,7 @@ export async function listCompanyFonts(
   companyId: string,
 ): Promise<CompanyFontRecord[]> {
   const q = query(
-    collection(db, FIRESTORE_COLLECTIONS.COMPANY_FONTS),
+    collection(db, COLLECTIONS.COMPANY_FONTS),
     where('companyId', '==', companyId),
   );
   const snap = await getDocs(q);
