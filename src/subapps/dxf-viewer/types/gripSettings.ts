@@ -56,7 +56,7 @@ export interface GripInteractionState {
 
 // === DEFAULT AUTOCAD-STYLE SETTINGS (International Standards) ===
 const defaultGripSettings = {
-  gripSize: 5,       // ✅ AutoCAD GRIPSIZE default: 5 DIP
+  gripSize: 10,      // ✅ AutoCAD GRIPSIZE=5 half-width → 10px total box (radius = size/2)
   pickBoxSize: 3,    // ✅ AutoCAD PICKBOX default: 3 DIP
   apertureSize: 10,  // ✅ AutoCAD APERTURE default: 10 pixels
   showAperture: true, // ✅ AutoCAD APBOX default: enabled

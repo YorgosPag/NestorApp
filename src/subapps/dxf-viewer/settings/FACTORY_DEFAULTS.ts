@@ -155,8 +155,8 @@ const TEXT_COMPLETION_DEFAULTS = {
 
 const GRIP_DEFAULTS = {
   enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
-  gripSize: 8,                  // 8px (standard CAD grip) - ✅ FIX: renamed from size
-  size: 8,                      // ✅ ENTERPRISE FIX: Add backward compatibility
+  gripSize: 10,                 // 10px = AutoCAD GRIPSIZE 5 (half-width 5px, total box 10×10px)
+  size: 10,                     // ✅ ENTERPRISE FIX: Add backward compatibility
   color: ACI_PALETTE[5] as string,        // ✅ ENTERPRISE FIX: Add backward compatibility
   hoverColor: ACI_PALETTE[4] as string,   // ✅ ENTERPRISE FIX: Add backward compatibility
   pickBoxSize: 3,               // ✅ FIX: Added pickBoxSize (AutoCAD PICKBOX default: 3 DIP)
@@ -180,12 +180,12 @@ const GRIP_DEFAULTS = {
 };
 
 const GRIP_DRAFT_DEFAULTS = {
-  gripSize: 6,                  // Smaller for draft - ✅ FIX: renamed from size
+  gripSize: 8,                  // Draft mode (proportional to new base 10px)
   opacity: 0.7
 };
 
 const GRIP_HOVER_DEFAULTS = {
-  gripSize: 10,                 // Larger on hover - ✅ FIX: renamed from size
+  gripSize: 12,                 // Hover state (proportional to new base 10px)
   opacity: 1.0
 };
 
@@ -196,7 +196,7 @@ const GRIP_SELECTION_DEFAULTS = {
     hot: ACI_PALETTE[1] as string,        // Red (ACI 1) - selected
     contour: UI_COLORS.BLACK              // Black contour
   },
-  gripSize: 10,                 // ✅ FIX: renamed from size
+  gripSize: 12,                 // Selection state (proportional to new base 10px)
   opacity: 1.0
 };
 
