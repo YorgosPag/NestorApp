@@ -168,9 +168,11 @@ export default function CrosshairOverlay({
     const crosshairHalfWidth = halfBase;
     const crosshairHalfHeight = halfBase;
 
-    // Center gap calculation
+    // Center gap calculation — zero when use_cursor_gap is disabled
     const pickboxSize = pickBoxSize * dpr;
-    const centerGap = Math.max(pickboxSize + 4, settings.crosshair.center_gap_px || 5);
+    const centerGap = settings.crosshair.use_cursor_gap
+      ? Math.max(pickboxSize + 4, settings.crosshair.center_gap_px || 5)
+      : 0;
 
     // Setup drawing style
     ctx.strokeStyle = activeSettings.color;

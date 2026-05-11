@@ -71,6 +71,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-11: BUGFIX — Cursor gap toggle now respected by CrosshairOverlay
+
+`CrosshairOverlay.tsx:173` — `centerGap` calculation now gates on `settings.crosshair.use_cursor_gap`.
+When `false` → `centerGap = 0` → lines continuous through center (AutoCAD-style).
+When `true` → existing `max(pickboxSize+4, center_gap_px||5)` logic unchanged.
+Bug: toggle wrote to `use_cursor_gap` correctly but overlay never read the flag.
+
 ### 2026-05-11: MINOR — Gate crosshair overlay on dxfScene readiness
 
 `CanvasLayerStack.tsx` now passes `crosshairSettings.enabled && !!dxfScene`
