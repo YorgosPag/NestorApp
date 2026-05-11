@@ -1,0 +1,70 @@
+name: 🪦 Dead-code Ratchet (CHECK 3.22)
+
+# =============================================================================
+# Layer 2 of Defense in Depth — CI-authoritative dead-code gate.
+#
+# Why this exists
+# ---------------
+# CHECK 3.22 in scripts/git-hooks/pre-commit blocks commits that:
+#   (a) modify a file already in .deadcode-baseline.json (Layer 0, ~5ms), and
+#   (b) introduce NEW unused files beyond baseline (Layer 1).
+#
+# The Layer 1 full-graph scan invokes `npx knip` which takes ~52s on Windows
+# Git Bash because it must build the full TypeScript program. To keep the
+# pre-commit hot-path fast, the local hook runs knip ONLY when the staged
+# diff can possibly produce a new orphan (file added/deleted, or import
+# line removed). Most commits skip knip entirely.
+#
+# This workflow re-runs the full knip scan on every PR / push to main so
+# the gate is guaranteed regardless of local hook coverage.
+#
+# Pattern mirrors .github/workflows/ssot-discover.yml (CHECK 3.18).
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'knip.json'
+      - 'scripts/check-deadcode-ratchet.js'
+      - '.deadcode-baseline.json'
+      - '.github/workflows/deadcode-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'knip.json'
+      - 'scripts/check-deadcode-ratchet.js'
+      - '.deadcode-baseline.json'
+
+concurrency:
+  group: deadcode-ratchet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deadcode:
+    name: 🔒 Dead-code Ratchet (CHECK 3.22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies (knip + TypeScript)
+        run: npm ci --no-audit --no-fund --prefer-offline
+
+      - name: 🪦 CHECK 3.22 — Dead-code ratchet (full knip scan)
+        run: node scripts/check-deadcode-ratchet.js
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Dead-code Ratchet::No new unused files vs .deadcode-baseline.json"
