@@ -14,6 +14,7 @@
 - [Never ask about commit/push](feedback_never_ask_commit_push.md) — NEVER ask "do you want a commit?" — Giorgio says so himself
 
 ## Pending Work
+- [ADR-344 DEFERRED — DIMENSION + LEADER text editing](pending-adr344-dimension-leader.md) — **STATUS: DEFERRED** (2026-05-11, Q9 decision). ADR-344 (Enterprise Text Engine) ships TEXT/MTEXT only. DIMENSION + LEADER + MLEADER editing deferred to dedicated future ADR. They render read-only in current scope. **Reminder at every session start until implemented.** Full context: `src/subapps/dxf-viewer/PENDING.md` §0 + `docs/centralized-systems/reference/adrs/ADR-344-dxf-enterprise-text-engine.md` §4-BIS Q9.
 - [ADR-340 Phase 9 — Multi-Kind Overlays — handoff after STEP G](handoff-adr340-phase9-after-step-g.md) — **STATUS: IN-FLIGHT** (2026-05-08). STEPS A/B/C/D/E/F/G done in working tree (NOT committed). 6 STEPS pending (H-M). Next: STEP H (FloorplanGallery transient measure tool, NEVER writes Firestore). Plan: `C:\Users\user\.claude\plans\declarative-snuggling-kay.md`. tsc verde su STEP G files; full tsc errori solo in procurement/contacts pre-esistenti.
 - [Ratchet Backlog — ADR-299 live checklist](pending-ratchet-work.md) — **STATUS: ALL_DONE** (2026-05-04). ADR-233 + ADR-314 confermati implementati. Nuovo ratchet? Set STATUS: ACTIVE e aggiungi righe.
 - [SSoT Discovery — ADR-314 baseline](ssot-discovery-pending.md) — **STATUS: ALL_DONE** (2026-04-19, baseline 0/0/0 ALL GREEN dal 2026-04-20). Phase A-E completate.

@@ -81,6 +81,7 @@ export {
   generateSourcingEventId, generateRfqLineId,
   generateMaterialId,
   generateFrameworkAgreementId,
+  generateTextTemplateId, generateCompanyFontId, generateDictEntryId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId, generateNotificationDedupeId,
 } from './enterprise-id-convenience';

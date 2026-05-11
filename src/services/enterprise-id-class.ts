@@ -277,6 +277,11 @@ export class EnterpriseIdService {
   generateSavedReportId(): string { return this.generateId(P.SAVED_REPORT).id; }
   generateRecurringPaymentId(): string { return this.generateId(P.RECURRING_PAYMENT).id; }
 
+  // DXF Text Engine (ADR-344)
+  generateTextTemplateId(): string { return this.generateId(P.TEXT_TEMPLATE).id; }
+  generateCompanyFontId(): string { return this.generateId(P.COMPANY_FONT).id; }
+  generateDictEntryId(): string { return this.generateId(P.DICT_ENTRY).id; }
+
   // --- Deterministic Composite Key Generators ---
 
   generateAiUsageDocId(channel: string, userId: string, month: string): string {

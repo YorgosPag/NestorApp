@@ -1,9 +1,34 @@
 # DXF Viewer Subapp — Pending Tasks
 
-**Last updated:** 2026-04-13
+**Last updated:** 2026-05-11
 **Referenced from:** `CLAUDE.md`
 
 Εκκρεμείς εργασίες ειδικά για το DXF Viewer subapp. Δεν υπάρχει deadline — όλες είναι low-priority και δουλεύουν incrementally όταν αγγίζεις σχετικά αρχεία.
+
+---
+
+## 0. 🔴 DEFERRED FROM ADR-344 — DIMENSION + LEADER Text Editing (HIGH PRIORITY when ADR-344 is implemented)
+
+**Status:** 📌 DEFERRED (2026-05-11, decision Q9)
+**Referenced from:** `docs/centralized-systems/reference/adrs/ADR-344-dxf-enterprise-text-engine.md` §4-BIS Q9
+
+ADR-344 (Enterprise Text Engine) **explicitly excludes DIMENSION + LEADER + MLEADER entity editing** from its scope. They will render correctly (read-only via the new font engine) but their text cannot be modified through the TextToolbar.
+
+### What's deferred:
+- DIMENSION entity editing (linear, aligned, radial, diameter, angular, ordinate)
+- LEADER entity editing
+- MLEADER entity editing (multi-leader with multiple endpoints)
+- DIMSTYLE table management
+- Auto-recalculation of dimension geometry on parent change
+- Anonymous `*D` block regeneration
+
+### When to act:
+- After ADR-344 is **fully implemented and shipped** (Phases 0-10 complete)
+- When Giorgio explicitly requests dimension/leader editing
+- When opening a new ADR for this work, **reuse**: Font engine (Layer 2), Layout engine (Layer 3), TextToolbar UI (Layer 5), CommandHistory (Layer 4)
+
+### Reminder protocol:
+At the **start of every new session**, this gap must be surfaced (per CLAUDE.md N.0.0 + N.13). Pointer in `.claude-rules/MEMORY.md` under "Pending Work" section.
 
 ---
 

@@ -2696,6 +2696,206 @@
       "addedDate": "2026-05-11",
       "addedByAdr": "ADR-040",
       "tier": 2
+    },
+    "_comment_dxf_text_engine": "=== DXF TEXT ENGINE MODULES — ADR-344 (bypass = text rendering violations) ===",
+    "mtext-parser": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/parser/mtext-parser.ts",
+      "description": "DXF MTEXT/TEXT entity → DxfTextNode AST (ADR-344 Layer 1). Handles both AcDbText and AcDbMText, STYLE table reading, MTEXT inline code tokenization for R12→R2018. Reimplementing tokenizeMText/parseMText inline bypasses version-conditional parsing branches and breaks round-trip integrity.",
+      "forbiddenPatterns": [
+        "function\\s+(tokenizeMText|parseMText|parseDxfTextEntity)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/parser/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "mtext-serializer": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/serializer/mtext-serializer.ts",
+      "description": "DxfTextNode AST → DXF MTEXT inline string (ADR-344 Layer 1). Emits correct entity type (TEXT vs MTEXT) based on node complexity, handles R12 graceful downgrade. Inline serializers drift from the spec and break interoperability.",
+      "forbiddenPatterns": [
+        "function\\s+(serializeMText|mTextNodeToString|textNodeToDxf)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/serializer/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "font-engine": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/fonts/font-loader.ts",
+      "description": "opentype.js font loading, glyph path cache, font substitution table (ADR-344 Layer 2). All font-to-glyph resolution must go through FontLoader — direct opentype.load() calls outside this module bypass the WeakMap cache, substitution table, and signed-URL fetch logic.",
+      "forbiddenPatterns": [
+        "opentype\\.load\\s*\\(",
+        "await\\s+opentype\\.load"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/fonts/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "shx-parser": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/fonts/shx-parser/",
+      "description": "SHP stroke-vector playback for SHX font files (ADR-344 Layer 2, Q3). ~400-line TypeScript implementation of AutoCAD SHP format. Reimplementing parseShp/playbackShp inline produces glyph drift and breaks ISOCPEUR/romans rendering parity.",
+      "forbiddenPatterns": [
+        "function\\s+(parseShp|playbackShp|readShxGlyph)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/fonts/shx-parser/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-layout": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/layout/",
+      "description": "UAX #14 line-breaking, column layout, stacking (\\\\S), 9-point attachment-point anchoring (ADR-344 Layer 3). Canonical layout pipeline for MTEXT. Inline layout bypasses UAX #14 and column/stacking spec, producing visual drift in multi-paragraph drawings.",
+      "forbiddenPatterns": [
+        "function\\s+(layoutMText|wrapTextToWidth|breakTextLines|computeAttachmentPoint)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/layout/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-renderer": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/render/text-renderer.ts",
+      "description": "Canvas 2D Path2D orchestrator for DXF text entities (ADR-344 Layer 3 + ADR-040 micro-leaf pattern). Coordinates glyph path, background-mask, and decoration rendering. Inline renderTextEntity/drawMTextEntity implementations violate ADR-040 bitmap-cache rules.",
+      "forbiddenPatterns": [
+        "function\\s+(renderTextEntity|drawMTextEntity|paintTextNode)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/render/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-toolbar": {
+      "ssotFile": "src/subapps/dxf-viewer/ui/text-toolbar/TextToolbar.tsx",
+      "description": "Enterprise text ribbon toolbar (ADR-344 Layer 5). Canonical UI for font/size/color/bold/italic/justification/layer controls. All Radix Toolbar primitives per ADR-001. New text UI surfaces must compose from this component, not reimplement.",
+      "forbiddenPatterns": [
+        "function\\s+TextToolbar\\s*\\(",
+        "const\\s+TextToolbar\\s*="
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/ui/text-toolbar/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-commands": {
+      "ssotFile": "src/subapps/dxf-viewer/core/commands/text/",
+      "description": "ICommand implementations for text mutations: CreateText, UpdateTextStyle, UpdateTextGeometry, UpdateMTextParagraph, DeleteText, ReplaceAll/One (ADR-344 + ADR-031). All text mutations must flow through CommandHistory via these commands to preserve undo/redo and audit trail integration (ADR-195 Q12).",
+      "forbiddenPatterns": [
+        "class\\s+(UpdateTextStyleCommand|CreateTextCommand|DeleteTextCommand|ReplaceAllTextCommand)\\s*"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/core/commands/text/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-types": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/types/",
+      "description": "DxfColor discriminated union, MixedValue<T>, DxfTextNode AST, TextRun, TextRunStyle, TextJustification, AnnotationScale types (ADR-344 Appendix C). Type redeclaration scatters the DXF color model and breaks the ACI/TrueColor/ByLayer discriminated union.",
+      "forbiddenPatterns": [
+        "type\\s+DxfColor\\s*=",
+        "interface\\s+DxfTextNode\\s*\\{"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/types/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-collab": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/collab/",
+      "description": "Yjs Y.Doc/Y.Text binding + y-websocket auth integration for collaborative DXF text editing (ADR-344 Q4). Direct Y.Doc construction outside this module bypasses Firebase Auth token validation and the session lifecycle managed by the collab service.",
+      "forbiddenPatterns": [
+        "new\\s+Y\\.Doc\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/collab/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-templates": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/templates/",
+      "description": "Hybrid text template system: TS built-in defaults + Firestore text_templates collection + placeholder resolver (ADR-344 Q5). Canonical placeholder resolver for {{project.name}}, {{date.today}}, {{user.fullName}} etc. Inline resolvers drift from the variable registry and miss tenant-scoped overrides.",
+      "forbiddenPatterns": [
+        "function\\s+(resolvePlaceholders|expandTemplatePlaceholders|buildTextTemplate)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/templates/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-spell": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/spell/spell-checker.ts",
+      "description": "nspell worker + el_GR/en_US dictionaries + custom Firestore dictionary CRUD (ADR-344 Q6). Lazy-loaded on first text edit. Direct nspell imports outside this module break the lazy-load strategy and duplicate dictionary loading.",
+      "forbiddenPatterns": [
+        "import\\s+nspell\\s+from"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/spell/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-draft": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/draft/DraftRecoveryService.ts",
+      "description": "IndexedDB auto-save (30s debounce + beforeunload) + crash recovery service (ADR-344 Q15). Store key `dxf_text_draft_{companyId}_{drawingId}`. Direct IndexedDB writes using this key bypass the expiry policy (7-day auto-delete) and Yjs snapshot integration.",
+      "forbiddenPatterns": [
+        "dxf_text_draft_"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/draft/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "text-ai": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/ai/TextAICommandRouter.ts",
+      "description": "NL → text command router using ADR-185 AIAnalysisProvider + ADR-156 voice hook (ADR-344 Q16). Maps natural language instructions to CreateTextCommand/UpdateTextStyleCommand/ReplaceAllTextCommand. Reimplementing the router inline creates duplicate AI intent mapping and bypasses CommandHistory.",
+      "forbiddenPatterns": [
+        "class\\s+TextAICommandRouter\\s*"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/ai/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
+    },
+    "viewport-system": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/viewport/ViewportStore.ts",
+      "description": "ViewportStore + ViewportContext for annotative text scaling (ADR-344 Q11). Zustand store owns the active annotation scale name and viewport list. Canvas text renderer reads scale via getter per ADR-040 cardinal rules. Reimplementing viewport state creates stale-snapshot bugs in text rendering.",
+      "forbiddenPatterns": [
+        "const\\s+(viewportStore|ViewportStore)\\s*=.*create\\s*\\(",
+        "new\\s+ViewportStore\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/viewport/"
+      ],
+      "addedDate": "2026-05-11",
+      "addedByAdr": "ADR-344",
+      "tier": 4
     }
   }
 }

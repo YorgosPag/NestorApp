@@ -323,6 +323,14 @@ export const COLLECTIONS = {
   // 📜 FRAMEWORK AGREEMENTS (ADR-330 Phase 5)
   FRAMEWORK_AGREEMENTS:
     process.env.NEXT_PUBLIC_FRAMEWORK_AGREEMENTS_COLLECTION || 'framework_agreements',
+
+  // ✏️ DXF TEXT ENGINE — ADR-344 (companyId-scoped, Phase 0)
+  /** Hybrid text templates: TS built-in defaults + per-company overrides. Schema: { id, companyId, name, category, content (DxfTextNode), placeholders[], isDefault }. IDs via tpl_text_* prefix. */
+  TEXT_TEMPLATES: process.env.NEXT_PUBLIC_TEXT_TEMPLATES_COLLECTION || 'text_templates',
+  /** Per-company CAD/architectural term additions for the nspell spell-checker (Q6). Schema: { id, companyId, term, addedBy, addedAt }. IDs via dict_* prefix. */
+  TEXT_CUSTOM_DICTIONARY: process.env.NEXT_PUBLIC_TEXT_CUSTOM_DICTIONARY_COLLECTION || 'text_custom_dictionary',
+  /** Company-uploaded TTF/OTF/SHX fonts served via Firebase Storage signed URL (Q18). Schema: { id, companyId, name, fileName, format, uploadedBy, uploadedAt, size }. IDs via fnt_* prefix. */
+  COMPANY_FONTS: process.env.NEXT_PUBLIC_COMPANY_FONTS_COLLECTION || 'company_fonts',
 } as const;
 
 // ============================================================================

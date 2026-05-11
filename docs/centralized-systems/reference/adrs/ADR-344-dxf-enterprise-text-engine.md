@@ -1,6 +1,6 @@
 # ADR-344: DXF Enterprise Text Engine (Autodesk-Grade Text Creation & Editing Suite)
 
-- **Status**: 📝 PROPOSED — Awaiting Giorgio's design decisions before implementation
+- **Status**: ✅ FULLY APPROVED — All design decisions (Q1-Q17) confirmed by Giorgio 2026-05-11. Ready for Phase 0 kickoff.
 - **Date**: 2026-05-11
 - **Scope**: `src/subapps/dxf-viewer/`
 - **Related ADRs**: ADR-026 (DXF Toolbar Colors), ADR-031 (Command Pattern Undo/Redo), ADR-040 (Preview Canvas Performance), ADR-042 (UI Fonts Centralization), ADR-050 (Unified Toolbar Integration), ADR-082 (Number Formatting), ADR-091 (Fonts Centralization), ADR-001 (Select/Dropdown Component)
@@ -99,16 +99,23 @@ LAYER 1 — DXF I/O
 
 All new modules registered in `.ssot-registry.json` under Tier 4 (`dxf-text-engine`):
 
-| Module | Path | Responsibility |
-|---|---|---|
-| `mtext-parser` | `src/subapps/dxf-viewer/text-engine/parser/` | DXF MTEXT/TEXT entity → AST |
-| `mtext-serializer` | `src/subapps/dxf-viewer/text-engine/serializer/` | AST → MTEXT inline codes |
-| `font-engine` | `src/subapps/dxf-viewer/text-engine/fonts/` | Glyph paths, font cache, substitution |
-| `text-layout` | `src/subapps/dxf-viewer/text-engine/layout/` | Line-break, columns, attachment-point |
-| `text-renderer` | `src/subapps/dxf-viewer/text-engine/render/` | Canvas 2D Path2D rendering |
-| `text-toolbar` | `src/subapps/dxf-viewer/ui/text-toolbar/` | Ribbon UI + state |
-| `text-commands` | `src/subapps/dxf-viewer/core/commands/text/` | ICommand impl (UpdateTextStyle, etc.) |
-| `text-types` | `src/subapps/dxf-viewer/text-engine/types/` | DxfColor, MixedValue, TextNode AST types |
+| Module | Path | Responsibility | Added in |
+|---|---|---|---|
+| `mtext-parser` | `src/subapps/dxf-viewer/text-engine/parser/` | DXF MTEXT/TEXT entity → AST | Core |
+| `mtext-serializer` | `src/subapps/dxf-viewer/text-engine/serializer/` | AST → MTEXT inline codes | Core |
+| `font-engine` | `src/subapps/dxf-viewer/text-engine/fonts/` | Glyph paths, font cache, substitution | Core |
+| `shx-parser` | `src/subapps/dxf-viewer/text-engine/fonts/shx-parser/` | SHP stroke-vector playback (~400 lines) | Q3 |
+| `text-layout` | `src/subapps/dxf-viewer/text-engine/layout/` | Line-break, columns, attachment-point | Core |
+| `text-renderer` | `src/subapps/dxf-viewer/text-engine/render/` | Canvas 2D Path2D rendering | Core |
+| `text-toolbar` | `src/subapps/dxf-viewer/ui/text-toolbar/` | Ribbon UI + state | Core |
+| `text-commands` | `src/subapps/dxf-viewer/core/commands/text/` | ICommand impl (UpdateTextStyle, etc.) | Core |
+| `text-types` | `src/subapps/dxf-viewer/text-engine/types/` | DxfColor, MixedValue, TextNode AST types | Core |
+| `text-collab` | `src/subapps/dxf-viewer/text-engine/collab/` | Yjs Y.Doc/Y.Text binding + y-websocket auth | Q4 |
+| `text-templates` | `src/subapps/dxf-viewer/text-engine/templates/` | TS defaults + Firestore resolver + placeholder engine | Q5 |
+| `text-spell` | `src/subapps/dxf-viewer/text-engine/spell/` | nspell worker + custom dictionary CRUD | Q6 |
+| `text-draft` | `src/subapps/dxf-viewer/text-engine/draft/` | IndexedDB auto-save + crash recovery service | Q15 |
+| `text-ai` | `src/subapps/dxf-viewer/text-engine/ai/` | NL → text command router (ADR-185 + ADR-156) | Q16 |
+| `viewport-system` | `src/subapps/dxf-viewer/systems/viewport/` | ViewportStore + ViewportContext for annotative scaling | Q11 |
 
 ### 3.3 State Architecture
 
@@ -154,21 +161,343 @@ The following decisions cannot be made by the agent alone. They shape the entire
 - **Substitute**: map common SHX (romans, ISOCPEUR, txt, simplex) → open equivalents (LFF/TTF)
 - **Full parser**: implement SHP stroke playback (~400 lines, complete AutoCAD compatibility)
 
+**✅ DECISION (2026-05-11, Giorgio)**: **Full SHP parser (enterprise-grade)**.
+- Rationale: Greek architectural firms heavily use ISOCPEUR.shx and romans.shx. Drop = unusable for real-world DXF. Substitution = visible glyph drift breaks dimension boxes. Only full parser gives AutoCAD-identical rendering.
+- Implementation: native SHP stroke-vector playback in TypeScript (~400 lines). Bundle common open SHX-equivalents (LibreCAD LFF fonts) as fallback when SHX file is missing from the user's font directory.
+- New module: `src/subapps/dxf-viewer/text-engine/fonts/shx-parser/` — registered in `.ssot-registry.json` Tier 4.
+- Phase 2 estimate revised to **~5-6 days** (opentype.js + SHX parser + font cache + substitution table).
+
 ### Q4 — Collaborative editing (Yjs) day 1 or deferred?
 - Day 1: architect with Y.Doc/Y.Text from the start (correct, slightly more code)
 - Deferred: single-user first, Yjs retrofit when needed (faster MVP — but Giorgio explicit "no MVP" per memory)
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Day 1 — collaborative editing built in from start**.
+- Rationale: aligns with `completeness over MVP` (memory: feedback_completeness_over_mvp). Future-proof for multi-architect teams. Avoids costly retrofit (5-7 days) later.
+- Stack: **Yjs** (MIT) + `y-prosemirror` (MIT, integrates with TipTap) + `y-websocket` (MIT, self-hostable) — fully free, zero proprietary dependencies.
+- Architecture: DxfTextNode AST mirrors a `Y.Map`, text runs use `Y.Text`. Yjs observer drives canvas re-render. Same architecture supports later expansion to full DXF entity collaboration (not just text).
+- New infra: self-hosted `y-websocket` server (~100 lines Node.js, runs on Vercel Edge or Cloud Run). Auth via existing Firebase Auth token validation.
+- New modules: `src/subapps/dxf-viewer/text-engine/collab/` — registered in `.ssot-registry.json` Tier 4.
+- Phase 4 estimate revised: **~4-5 days** (TipTap + Yjs binding + y-websocket setup + auth integration).
 
 ### Q5 — Stamps & title blocks: data-driven templates or hardcoded?
 - Template system: Firestore `text_templates` collection with placeholder variables (`{{project.name}}`, `{{revision.number}}`)
 - Hardcoded: ship a few enterprise templates as TypeScript constants
 - Hybrid: ship defaults as TS, allow override via Firestore
 
+**✅ DECISION (2026-05-11, Giorgio)**: **Hybrid (Path C)**.
+- Rationale: best of both worlds. Ship-ready defaults for immediate use + per-tenant customization for branded title blocks.
+- Architecture:
+  - **Built-in defaults** (~5-10 templates): Greek + English title blocks, revision table, sign-off stamps. Stored as TypeScript constants in `src/subapps/dxf-viewer/text-engine/templates/defaults/`.
+  - **User templates**: Firestore collection `text_templates` (companyId-scoped per ADR-326). Schema: `{ id, companyId, name, category, content (DxfTextNode), placeholders[], isDefault, createdAt, updatedAt }`.
+  - **Placeholder resolver** (~150 lines): variable substitution engine for `{{project.name}}`, `{{project.owner}}`, `{{date.today}}`, `{{user.fullName}}`, `{{company.name}}`, etc. Source: existing project/contact/user stores.
+  - **Conflict resolution**: user-created templates with same name override built-in defaults (clearly marked in UI).
+- New collection registered in `src/config/firestore-collections.ts` SSoT. Firestore rules added per ADR-298 pattern. Enterprise IDs via `enterprise-id.service.ts` (CLAUDE.md N.6) — new prefix `tpl_text_*`.
+- New management UI: `src/subapps/dxf-viewer/ui/text-templates/TextTemplateManager.tsx` — list/create/edit/delete templates.
+- New i18n keys under `src/i18n/locales/{el,en}/textTemplates.json` (CLAUDE.md N.11).
+- **Phase 7 estimate locked at ~4-5 days** (defaults + Firestore schema + resolver + management UI + i18n).
+
 ### Q6 — Spell check: client-side (typo.js, MIT) or skip?
 - Adds ~150 KB Greek+English dictionaries
 - Greek dictionary quality varies in OSS
 
+**✅ DECISION (2026-05-11, Giorgio)**: **Include client-side spell check (Path A)**.
+- Rationale: enterprise-grade deliverables (sign-off documents, owner-facing drawings) demand professional spelling. Browser's built-in spell check is unreliable across browsers and may be disabled by end users.
+- Stack: **nspell** (MIT) — Node.js + browser spell checker using Hunspell dictionaries.
+- Dictionaries: **el_GR** + **en_US** Hunspell dicts from LibreOffice (MIT/LGPL? — VERIFY: must confirm dictionary license is MIT/BSD/Apache/MPL-2.0; LGPL acceptable only for dictionaries-as-data per CLAUDE.md N.5). Fallback: `dictionary-el` + `dictionary-en` npm packages (BSD-2-Clause, confirmed).
+- Architecture:
+  - Dictionaries **lazy-loaded on demand** (only when user opens text editor — not blocking initial bundle).
+  - Custom user dictionary stored per-company in Firestore (`text_custom_dictionary` collection, companyId-scoped). Allows adding CAD/architectural terms (e.g. «οπτοπλινθοδομή», «κουφώματα PVC»).
+  - Spell check runs on `worker` thread to avoid blocking edit UX.
+  - Red underline rendered via TipTap decoration extension (custom).
+- New modules:
+  - `src/subapps/dxf-viewer/text-engine/spell/spell-checker.ts` (worker + nspell)
+  - `src/subapps/dxf-viewer/text-engine/spell/custom-dictionary.service.ts` (Firestore CRUD)
+  - `src/subapps/dxf-viewer/ui/text-toolbar/SpellCheckToggle.tsx`
+- Bundle impact: ~200 KB (el_GR + en_US dictionaries, gzip), lazy-loaded — does NOT affect initial app load.
+- **Phase 8 (NEW) estimate: ~3 days** (spell engine + custom dict UI + worker + i18n + tests).
+
 ### Q7 — Find & Replace scope: current text entity, current drawing, or all drawings?
 - Scope affects undo granularity and command design
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Scope = current drawing (Path B, "FIND")**.
+- Rationale: matches AutoCAD's standard FIND command — covers 90% of real-world use cases. Cross-drawing search (SHEET SET MANAGER) is power-user feature, deferred.
+- Architecture:
+  - `FindReplaceDialog` (Radix Dialog) iterates all TEXT/MTEXT entities in the current `dxfScene`
+  - Match modes: case-sensitive toggle, whole-word toggle, regex toggle
+  - Preview list with click-to-zoom-and-highlight per match
+  - **Replace All** wrapped in **single composite command** (`ReplaceAllTextCommand` implements ICommand per ADR-031) — one undo step reverses all replacements atomically
+  - **Replace Next** = one command per replacement (granular undo)
+- New module: `src/subapps/dxf-viewer/ui/text-toolbar/FindReplaceDialog.tsx` + `core/commands/text/ReplaceAllTextCommand.ts` + `ReplaceOneTextCommand.ts`.
+- i18n keys under `src/i18n/locales/{el,en}/textFindReplace.json`.
+- **Phase 9 (NEW) estimate: ~2 days** (dialog UI + match engine + commands + tests).
+
+**🔮 Deferred (future ADR)**: Cross-drawing Find & Replace (Path C "SHEET SET MANAGER") — to be opened as separate ADR when needed, building on top of this foundation without architectural disruption.
+
+---
+
+## 4-BIS. ADDITIONAL DESIGN QUESTIONS (gaps identified on re-review 2026-05-11)
+
+After Q1-Q7 resolution, re-reading the ADR surfaced 10 architectural gaps not previously discussed. These cover RBAC, related entities (DIMENSION/LEADER), mobile UX, annotative scaling, audit trail, eyedropper reuse, DXF version range, auto-save, AI integration, and layer assignment.
+
+### Q8 — Permissions: who can create/edit text?
+
+**✅ DECISION (2026-05-11, Giorgio)**:
+- **Sub-Q A — Who can create/edit text**: **Professionals only** (architect, engineer, foreman, admin, super-admin). Clients and external read-only collaborators see text but cannot create/edit.
+- **Sub-Q B — Locked layers**: **Admin-level unlock allowed**. Locked layers block edits by default; users with `layer.unlock` permission (admin / super-admin) can unlock to write, then re-lock.
+- **Implementation**:
+  - New permission keys in `src/lib/auth/roles.ts`: `text.create`, `text.edit`, `text.delete`, `layer.unlock`.
+  - Role matrix:
+    | Role | text.create | text.edit | text.delete | layer.unlock |
+    |---|---|---|---|---|
+    | super-admin | ✅ | ✅ | ✅ | ✅ |
+    | admin | ✅ | ✅ | ✅ | ✅ |
+    | architect | ✅ | ✅ | ✅ | ❌ |
+    | engineer | ✅ | ✅ | ✅ | ❌ |
+    | foreman | ✅ | ✅ | own only | ❌ |
+    | accountant | ❌ | ❌ | ❌ | ❌ |
+    | client | ❌ | ❌ | ❌ | ❌ |
+    | viewer | ❌ | ❌ | ❌ | ❌ |
+  - UI guard: `useCanEditText()` hook returns `{ canCreate, canEdit, canDelete, canUnlockLayer }`; toolbar buttons disabled with tooltip when denied.
+  - Firestore rules: `text_templates` write restricted via `request.auth.token.permissions.text_create` claim.
+  - Locked layer enforcement: `CanEditLayerGuard` in command pre-execute hook — blocks `UpdateTextStyleCommand` if `layer.locked && !user.canUnlockLayer`.
+- **Phase 5 impact**: +0.5 day for permission integration in toolbar UI.
+
+### Q9 — DIMENSION + LEADER entities in scope?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path A — TEXT/MTEXT only in this ADR. DIMENSION + LEADER deferred to dedicated future ADR.**
+- Rationale: keep ADR-344 scope focused. DIMENSION/LEADER require DIMSTYLE handling, anonymous *D blocks, auto-recalculation of dimension lines/arrows/extension lines, leader path geometry — separate architectural concern.
+- **Behavior in current scope**: DIMENSION/LEADER entities found in opened DXF files will render correctly (text via this engine's font layer), but their text is **NOT editable** through the TextToolbar. Selection on dimension/leader shows a read-only badge "Edit dimension geometry → coming soon (deferred ADR)".
+- **🚨 PERSISTENT REMINDER**: Added to `src/subapps/dxf-viewer/PENDING.md` AND `.claude-rules/MEMORY.md` so this gap is surfaced at start of every new session per CLAUDE.md N.0.0 + N.13.
+- **Future ADR placeholder**: `ADR-XXX DXF Dimension & Leader Text Editing System` — to be opened when Giorgio approves. Will reuse:
+  - Font engine (Layer 2 of this ADR)
+  - Text layout engine (Layer 3)
+  - TextToolbar UI (Layer 5) — with DIMSTYLE-specific extensions
+  - CommandHistory integration (Layer 4)
+- **Scope of deferred ADR**: DIMENSION entity (linear, aligned, radial, diameter, angular, ordinate), LEADER entity, MLEADER entity (multi-leader with multiple endpoints), DIMSTYLE table, auto-recalculation on parent geometry change.
+
+### Q10 — Mobile/touch text editing UX?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path B — Full mobile/touch text editing**.
+- Rationale: aligns with completeness-over-MVP pattern (consistent with Q2-Q6 choices). Foreman role (Q8) implies real construction-site use case. Industry convergence to "Path Γ" (PlanGrid/Procore) is driven by SaaS pricing tiers — irrelevant for internal enterprise tool. Matches "AutoCAD-grade" original brief.
+- **Implementation scope**:
+  - Touch-friendly toolbar: larger tap targets (min 44×44 px per Apple HIG, 48×48 dp per Material), `aria-pressed` state visible at touch sizes.
+  - Drag-scrubbing on numeric inputs via touch (pointer events, not mouse).
+  - Soft keyboard handling: `visualViewport` API listener to reposition TipTap overlay above the on-screen keyboard.
+  - Gesture disambiguation: pinch-zoom on canvas vs. text selection — `touch-action: pan-x pan-y` on edit overlay; pinch captured by canvas layer below.
+  - Responsive toolbar: collapsible into groups (Style / Formatting / Paragraph / Insert / Tools) via Radix Accordion on narrow viewports (<768 px).
+  - Native context menu suppression on long-press inside text editor (`oncontextmenu={e=>e.preventDefault()}`).
+- **Integrates with ADR-176** (DXF Viewer Mobile Responsive) — text-toolbar uses same breakpoint tokens.
+- **New module**: `src/subapps/dxf-viewer/ui/text-toolbar/responsive/MobileTextToolbar.tsx`.
+- **Phase 5 estimate revised: ~9-11 days** (was 4 days desktop-only → +5-7 days mobile/touch).
+- **Total ADR-344 revised estimate: ~42-48 working days** (was 36-41).
+
+### Q11 — Annotative scaling (per-viewport text size)?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path B — Full annotative scaling (AutoCAD-grade)**.
+- Rationale: aligns with completeness-over-MVP pattern and "Autodesk-grade" brief. Real architectural drawings have multiple viewports (floor plan 1:100 + detail 1:20) — text must read correctly at every scale without manual adjustment.
+- **Data model**: each `DxfTextNode` gains an `annotationScales: AnnotationScale[]` field:
+  ```typescript
+  interface AnnotationScale {
+    name: string;          // e.g. "1:100", "1:50", "1:20"
+    paperHeight: number;   // desired paper-space height in mm
+    modelHeight: number;   // = paperHeight × scale factor
+  }
+  isAnnotative: boolean;   // mirrors DXF ANNOT flag on TEXT/MTEXT
+  currentScale: string;    // active scale name for this viewport
+  ```
+- **Rendering logic**: when viewport system is active, text renderer reads `currentScale` from the viewport context and looks up the matching `modelHeight`. When no viewport is active (single-view mode), renders at the first scale's `modelHeight`.
+- **Viewport system prerequisite**: full annotative scaling requires a paper-space / viewport infrastructure. ADR-344 will include a **minimal viewport context system** (not full paper-space layout — that is a future ADR):
+  - `ViewportStore` (Zustand) — active scale name, viewport list
+  - `ViewportContext` (React context) — propagates current scale to text renderer leaf nodes
+  - UI: scale selector dropdown in TextToolbar (add/remove annotation scales per entity)
+  - DXF I/O: read/write `ANNOTATIVE` extended data (XDATA group codes 1000/1070/1071) per AutoCAD convention
+- **Integration**: `dxf-canvas-renderer.ts` reads `ViewportStore.activeScale` (via getter, per ADR-040 cardinal rules — no snapshot). Text leaf (`TextEntityLeaf.tsx`) subscribes to scale changes → triggers re-render via `UnifiedFrameScheduler`.
+- **Scale list management UI**: `AnnotationScaleManager.tsx` panel — add standard scales (1:1, 1:2, 1:5, 1:10, 1:20, 1:50, 1:100, 1:200, 1:500, 1:1000) + custom input.
+- **New modules**:
+  - `src/subapps/dxf-viewer/systems/viewport/ViewportStore.ts`
+  - `src/subapps/dxf-viewer/systems/viewport/ViewportContext.tsx`
+  - `src/subapps/dxf-viewer/ui/text-toolbar/AnnotationScaleManager.tsx`
+  - `src/subapps/dxf-viewer/text-engine/types/annotation-scale.ts`
+- **Phase impact**: +3-4 days for viewport context system + annotative data model + scale picker UI + DXF XDATA I/O.
+- **Phase 11 (NEW) estimate: ~3-4 days** (ViewportStore + AnnotationScaleManager UI + DXF XDATA round-trip + tests).
+- **Total ADR-344 revised estimate: ~45-52 working days** (was 42-48).
+
+### Q12 — Audit trail integration (ADR-195)?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path Γ — Full audit trail (create + edit + delete)**.
+- Rationale: text entities in architectural drawings carry legal and contractual weight (room labels, dimensions, annotations on permit-submission sets). Full audit is required for accountability. Reuses existing `EntityAuditService` (ADR-195) — zero new infrastructure.
+- **Integration points** (all via `EntityAuditService.recordChange()`):
+  - `CreateTextCommand.execute()` → `recordChange({ entityType: 'dxf_text', action: 'CREATE', entityId, snapshot: { content, position, style } })`
+  - `UpdateTextStyleCommand.execute()` → `recordChange({ action: 'UPDATE', diff: { before, after } })`
+  - `UpdateTextGeometryCommand.execute()` → `recordChange({ action: 'UPDATE', diff: { before, after } })`
+  - `UpdateMTextParagraphCommand.execute()` → `recordChange({ action: 'UPDATE', diff: { before, after } })`
+  - `DeleteTextCommand.execute()` → `recordChange({ action: 'DELETE', snapshot })`
+  - `ReplaceAllTextCommand.execute()` → `recordChange({ action: 'BULK_UPDATE', count, search, replacement })`
+- **Undo/redo behavior**: audit records the **final committed state only** — undo/redo do NOT create audit entries (they revert within the CommandHistory session; only `commit()` writes to audit).
+- **No new modules**: audit calls added inline in text command classes (Phase 6). Zero additional files.
+- **Phase 6 impact**: +0.5 day for audit integration in each text command.
+- **Entity audit coverage ratchet** (CHECK 3.17): `entity-audit-coverage-baseline.json` must be updated after Phase 6 to reflect new `dxf_text` entity type coverage.
+
+### Q13 — Reuse existing OS-level eyedropper?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path A — Reuse existing eyedropper service (SSOT)**.
+- Rationale: existing eyedropper (OS-level + `getDisplayMedia` fallback, ADR-040 area) is already implemented and battle-tested. Reusing it = zero new code, zero maintenance cost, guaranteed consistent UX across all tools.
+- **Integration**: `TextToolbar` color picker (`react-colorful`) gains an eyedropper button that calls the existing eyedropper service hook. Returned hex color → mapped to nearest ACI 256-color index (or kept as true-color if DXF R2004+).
+- **No new modules.** Integration is one import + one button in `TextToolbar` (Phase 5, ~1 hour).
+- **ACI mapping**: `hexToAci(hex: string): DxfColor` utility added to `text-types` module — maps #RRGGBB → closest ACI index via Euclidean distance in RGB space.
+
+### Q14 — DXF version range supported?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path B — Full range R12 to R2018 (AC1009–AC1032)**.
+- Rationale: Greek architectural firms exchange DXF files spanning 30 years of production. Partial support breaks interoperability with legacy project archives. AutoCAD-grade brief demands opening anything.
+- **Version-specific handling matrix**:
+  | Version range | AC code | Text features enabled |
+  |---|---|---|
+  | R12 | AC1009 | TEXT only (no MTEXT entity) — parser reads `AcDbText`, serializer writes `AcDbText` |
+  | R2000 | AC1015 | + MTEXT, basic inline codes (`\f`, `\H`, `\C`, `\P`) |
+  | R2004 | AC1018 | + True-color (group 420 `TRUECOLOR`) → enables `DxfColor.trueColor` branch |
+  | R2007 | AC1021 | + MTEXT columns (group 73/74/45), `ANNOTATIVE` XDATA (Q11 annotative scaling) |
+  | R2010 | AC1024 | + `MLEADER` entity (deferred ADR per Q9), paragraph borders, `\pxq` paragraph formatting |
+  | R2013+ | AC1027+ | + `MULTILEADER` improvements, `ACAD_ANNOTATIVE_DATA` block |
+  | R2018 | AC1032 | + `FIELD` entity partial support, `ACAD_PROXY_ENTITY` passthrough |
+- **R12 graceful mode**: when serializing an R12-target DXF, MTEXT entities with rich formatting are downgraded to TEXT with plain content + warning in the export dialog ("Formatting lost — target version R12 does not support MTEXT").
+- **Version detection**: parser reads header group 9 `$ACADVER` → sets `DxfDocumentVersion` enum → propagates to serializer and toolbar (disables true-color picker for AC1009/AC1012 targets).
+- **True-color fallback**: for AC1015/AC1018, `hexToAci()` (Q13) maps to closest ACI index.
+- **Phase 1 impact**: +1 day for version-conditional parsing branches + R12 downgrade logic.
+- **New type**: `DxfDocumentVersion` enum in `text-types` module.
+
+### Q15 — Auto-save & crash recovery?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path Γ — Local browser auto-save (IndexedDB)**.
+- Rationale: self-contained, zero cloud infrastructure dependency. Solves the 90% crash/browser-close scenario without requiring DXF cloud persistence (which may not exist yet). Industry pattern: VS Code, Figma, Notion all use local draft state as safety net independent of cloud sync.
+- **Implementation**:
+  - **Storage**: `IndexedDB` via `idb` (MIT, ~1 KB) — structured object store, survives browser refresh + crash. `localStorage` rejected: 5 MB limit insufficient for large DXF text sets.
+  - **Store key**: `dxf_text_draft_${companyId}_${drawingId}` — company-scoped, drawing-scoped.
+  - **Snapshot contents**: serialized `DxfTextNode[]` array (all text entities modified in the current session) + `CommandHistory` delta (for undo stack restore).
+  - **Save trigger**: debounced 30 s after last edit (not every keystroke). Also saves on `beforeunload` event (catches intentional tab close).
+  - **Recovery UI**: on next open of the same drawing, `DraftRecoveryBanner` component checks IndexedDB → if draft exists + is newer than last cloud save → shows non-blocking banner: "Βρέθηκε μη αποθηκευμένη εργασία (30 Απρ, 14:32). Επαναφορά;" with [Ναι] / [Απόρριψη] actions.
+  - **Draft expiry**: auto-delete after 7 days (stale drafts cleaned on app open via `idb` cursor scan).
+  - **Yjs awareness** (Q4): if Yjs session is active → draft is the Y.Doc snapshot (binary, compact). On recovery → re-apply snapshot to Y.Doc before rendering.
+- **New module**: `src/subapps/dxf-viewer/text-engine/draft/DraftRecoveryService.ts` + `ui/DraftRecoveryBanner.tsx`.
+- **Phase 10 impact**: +1 day for draft service + recovery banner + i18n keys + tests.
+- **New i18n keys**: `src/i18n/locales/{el,en}/textDraft.json`.
+
+### Q16 — AI Assistant integration (ADR-185 + ADR-156 voice)?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path Γ — Voice-to-text + AI commands (full integration)**.
+- Rationale: ADR-185 (AI pipeline) and ADR-156 (voice input) are already implemented — reusing them is SSoT. Construction-site foreman role (Q8) benefits enormously from hands-free text entry. AI commands remove friction for power-user operations (bulk reformatting, find-replace by description).
+- **Integration scope**:
+  - **Voice-to-text**: ADR-156 voice hook wired to TipTap editor's `insertContent()` API. Microphone button in TextToolbar activates voice session → transcription streams into the active cursor position in the editor.
+  - **AI text commands** (natural language → structured action):
+    | User says / types | AI resolves to |
+    |---|---|
+    | «κάνε bold» | `UpdateTextStyleCommand({ bold: true })` |
+    | «άλλαξε χρώμα σε κόκκινο» | `UpdateTextStyleCommand({ color: ACI.RED })` |
+    | «αύξησε μέγεθος στα 5mm» | `UpdateTextStyleCommand({ height: 5.0 })` |
+    | «βρες ΣΑΛΟΝΙ και άλλαξε σε ΚΑΘΙΣΤΙΚΟ» | `ReplaceAllTextCommand({ search: 'ΣΑΛΟΝΙ', replacement: 'ΚΑΘΙΣΤΙΚΟ' })` |
+    | «κεντράρισε το κείμενο» | `UpdateTextStyleCommand({ justification: 'CENTER' })` |
+    | «δημιούργησε τίτλο ΙΣΟΓΕΙΟ, Arial 5mm, bold» | `CreateTextCommand({ content: 'ΙΣΟΓΕΙΟ', fontName: 'Arial', height: 5, bold: true })` |
+  - **AI command router**: new module `text-engine/ai/TextAICommandRouter.ts` — receives NL string from ADR-185 pipeline, maps to one of the text commands, dispatches via `CommandHistory`. Uses existing `AIAnalysisProvider` (ADR-185), not a new LLM call.
+  - **UI entry point**: AI button in TextToolbar opens a slim `TextAIBar` input field (or activates voice). Same pattern as existing AI command bars in other subapps.
+- **New modules**:
+  - `src/subapps/dxf-viewer/text-engine/ai/TextAICommandRouter.ts`
+  - `src/subapps/dxf-viewer/ui/text-toolbar/TextAIBar.tsx`
+- **No new AI infrastructure** — calls existing ADR-185 `AIAnalysisProvider` + ADR-156 voice hook.
+- **Phase 12 (NEW) estimate: ~2-3 days** (router + intent mapping + TextAIBar UI + i18n + tests).
+- **Total ADR-344 revised estimate: ~47-55 working days** (was 45-52).
+
+### Q21 — Text snap participation (insertion + bounding box)?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path Γ — Snap at all text geometry points**.
+- Rationale: title blocks, annotation grids, and room label tables require precise text alignment. Snapping only to insertion point loses 80% of the alignment use case (aligning columns of text, aligning to bounding box edges). Full snap = professional layout capability.
+- **Snap points exposed per text entity**:
+  | Snap point | Type | Description |
+  |---|---|---|
+  | Insertion point | `endpoint` | The DXF group 10/20/30 anchor |
+  | Top-left corner | `endpoint` | Bounding box TL |
+  | Top-right corner | `endpoint` | Bounding box TR |
+  | Bottom-left corner | `endpoint` | Bounding box BL |
+  | Bottom-right corner | `endpoint` | Bounding box BR |
+  | Center | `midpoint` | Bounding box centroid |
+  | Top-center | `midpoint` | Bounding box top edge mid |
+  | Bottom-center | `midpoint` | Bounding box bottom edge mid |
+- **Integration**: `TextSnapProvider` implements the existing `ISnapProvider` interface (already used by line/arc/circle entities in the snap system). Registered in `SnapEngine` during Phase 6. No changes to `SnapEngine` itself — purely additive.
+- **Bounding box requirement**: Layout engine (Phase 3) must expose `getBoundingBox(entityId): Rect` — this is a natural output of the layout engine and costs zero extra work.
+- **Performance**: snap point computation is O(n) over visible entities — text entities add 8 points each. At 500 text entities = 4000 snap candidates. Existing spatial index (R-tree or grid) in `SnapEngine` handles this without degradation.
+- **Phase 6 impact**: +0.5 day for `TextSnapProvider` implementation + registration.
+- **New file**: `text-engine/interaction/TextSnapProvider.ts`.
+
+### Q20 — Missing SHX font behavior?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path Γ — Substitution + notification + canvas highlight of affected entities**.
+- Rationale: silent substitution masks data integrity issues. The architect needs to know which entities are affected so they can decide whether to upload the correct font or accept the substitute. Full AutoCAD-grade: AutoCAD also warns about missing fonts on open.
+- **Implementation**:
+  - **Substitution table** (in `font-substitution-table.ts`): maps well-known SHX names → open equivalents:
+    | Missing SHX | Substitute | Notes |
+    |---|---|---|
+    | `romans.shx` | `Liberation Sans` | Stroke simplex → clean sans |
+    | `romand.shx` | `Liberation Sans Bold` | Stroke duplex → bold sans |
+    | `isocpeur.shx` | `ISO 3098` (bundled LFF) | Engineering lettering standard |
+    | `txt.shx` | `Liberation Mono` | Monospaced stroke |
+    | `simplex.shx` | `Liberation Sans` | Simplex stroke → sans |
+    | `gothicg.shx` / `gothice.shx` | `UnifrakturMaguntia` (MIT, Google Fonts) | Gothic stroke → open gothic |
+    | _unknown SHX_ | `Liberation Sans` | Generic fallback |
+  - **Missing font report**: on DXF open, `FontLoader` collects all missing fonts → emits `MissingFontReport` object: `{ missing: string[], substitutions: Record<string, string>, affectedEntityIds: string[] }`.
+  - **Non-blocking banner** (`MissingFontBanner.tsx`): appears below toolbar — «X γραμματοσειρές δεν βρέθηκαν (fonts). Αντικαταστάθηκαν αυτόματα. [Δες επηρεαζόμενα] [Ανέβασε]»
+    - «Δες επηρεαζόμενα» → triggers **canvas highlight**: affected text entities get a dashed orange outline overlay (`MissingFontHighlightLeaf.tsx`, ADR-040 micro-leaf pattern).
+    - «Ανέβασε» → opens `FontManagerPanel` (Q18) pre-filtered to show upload for the missing font names.
+  - **Persistent state**: `MissingFontReport` stored in `useTextEditingStore` — banner dismissible (persists until next file open).
+  - **Phase 2 impact**: +0.5 day for substitution table + report generation + banner UI + canvas highlight leaf.
+  - **New components**: `MissingFontBanner.tsx`, `MissingFontHighlightLeaf.tsx`.
+
+### Q19 — Text geometry interaction: grip handles + snap + numeric input?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path Γ — Grip handles + snap-to-grid + direct numeric input**.
+- Rationale: AutoCAD-grade brief demands AutoCAD-grade geometry editing UX. Grip handles are the industry-standard interaction model — all AutoCAD users already know them. Direct distance/angle entry eliminates precision errors from free-hand dragging.
+- **Grip handle set per text entity**:
+  | Handle | Position | Action |
+  |---|---|---|
+  | Move grip | Insertion point | Drag → translate entity |
+  | Resize grips (×4) | MTEXT bounding box corners | Drag → resize text frame width/height |
+  | Rotation grip | Above bounding box (offset 20px) | Drag arc → rotate entity around insertion point |
+  | Mirror grip | Right edge midpoint | Drag → mirror text horizontally (for symmetric layouts) |
+- **Snap integration**: during grip drag, insertion point + corners participate in existing snap system (endpoint, midpoint, intersection, grid snap, polar tracking). Uses the existing `SnapEngine` — no new snap infrastructure.
+- **Direct numeric input**: while dragging, user can type a number on keyboard to commit exact value:
+  - Move drag → type `500` → move exactly 500 mm in drag direction (relative distance)
+  - Rotation drag → type `45` → rotate to exactly 45° (absolute angle or relative, toggleable via Tab)
+  - Resize drag → type `150` → set frame dimension to exactly 150 mm
+  - Pattern: same `DirectDistanceEntry` system used in existing CAD tools in the app (or new module if not yet present).
+- **Command integration**: grip interaction commits via `UpdateTextGeometryCommand` (Phase 6) — fully undo/redo-able. Drag preview rendered as ghost overlay during drag (before commit).
+- **Rotation field in DxfTextNode**: `rotation: number` (degrees, 0 = horizontal, CCW positive) added to `DxfTextNode` type — maps to DXF group code 50 on TEXT entities and group code 50 on MTEXT.
+- **Phase 6 impact**: +1.5 days for grip handle renderer + drag interaction + snap integration + numeric input overlay.
+- **New sub-module**: `text-engine/interaction/TextGripHandler.ts` — grip hit-testing, drag state machine, numeric input capture.
+
+### Q18 — Custom font upload (TTF/OTF/SHX per company)?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path Γ — Upload TTF/OTF + SHX (full font management)**.
+- Rationale: enterprise firms have branded fonts and legacy SHX font libraries. Full upload support = zero font mismatch when sharing DXF files internally.
+- **Implementation**:
+  - **Storage**: Firebase Storage at `fonts/{companyId}/{filename}` — company-scoped, served via signed URL (short-lived, cached in IndexedDB for offline use).
+  - **Supported formats**: `.ttf`, `.otf`, `.woff`, `.woff2` (→ opentype.js), `.shx` (→ SHP parser from Q3).
+  - **Font registry**: Firestore collection `company_fonts` (companyId-scoped) — schema: `{ id, companyId, name, fileName, format, uploadedBy, uploadedAt, size }`. Enterprise ID prefix `fnt_*`.
+  - **Upload UI**: `FontManagerPanel.tsx` — list installed fonts, upload button (drag-drop or file picker), delete (admin only), preview glyph sample.
+  - **Font loader**: `font-loader.ts` fetches from Storage signed URL → passes ArrayBuffer to opentype.js or SHP parser → stores parsed font in `FontCache` (WeakMap, survives hot reload).
+  - **Permissions**: upload/delete restricted to `admin` + `super-admin`. All roles can use installed fonts.
+  - **Firestore rules**: `company_fonts` write = `request.auth.token.role in ['admin', 'super-admin']`.
+  - **Phase 2 impact**: +1 day for Storage upload pipeline + FontManagerPanel + Firestore schema + rules.
+  - **New module additions**: `text-engine/fonts/font-manager/` (upload service + FontManagerPanel).
+
+### Q17 — Default layer for new text entities?
+
+**✅ DECISION (2026-05-11, Giorgio)**: **Path Γ — Current layer default + layer picker in toolbar**.
+- Rationale: mirrors AutoCAD default (current layer) while improving on it by eliminating the need to switch the global current layer just to place text on a different one. Power-user ergonomic that reduces layer switching overhead during annotation sessions.
+- **Implementation**:
+  - **Default**: `CreateTextCommand` reads `LayerStore.currentLayer` as the default target layer for new entities.
+  - **Toolbar picker**: `LayerSelectorDropdown` (reuses Radix Select per ADR-001) added to TextToolbar — shows all non-frozen, non-locked layers (or locked layers with unlock badge for `layer.unlock` users per Q8). Selection is **session-local** (persists for the duration of the text tool activation, resets to current layer on tool exit).
+  - **Locked layer guard** (Q8): if selected layer is locked + user lacks `layer.unlock` → picker shows lock icon + tooltip «Αυτό το layer είναι κλειδωμένο». Admin users see unlock toggle inline.
+  - **Layer 0 behavior**: if current layer is `0` (AutoCAD default unset layer) → picker highlights it with a warning badge «Layer 0 — χρησιμοποιείται ως fallback» encouraging the user to select a named layer.
+  - **No new modules**: `LayerSelectorDropdown` reuses existing `LayerStore` and layer list hook (already present in DXF viewer). Zero infrastructure additions.
+- **Phase 5 impact**: +0.5 day for `LayerSelectorDropdown` in TextToolbar.
 
 ---
 
@@ -220,24 +549,134 @@ The following decisions cannot be made by the agent alone. They shape the entire
 
 ---
 
-## 8. Implementation Plan (HIGH-LEVEL — pending Q1-Q7 answers)
+## 7-BIS. NON-NEGOTIABLE IMPLEMENTATION STANDARDS (Giorgio — mandatory for every phase)
 
-**NOT a commitment — implementation only after Giorgio approves design.**
+> **These rules are ABSOLUTE and apply to every line of code written in this ADR. No exceptions. No shortcuts. Verified at every phase gate before moving to the next.**
+
+---
+
+### 🔴 STANDARD 1 — SINGLE SOURCE OF TRUTH (SSOT) — ZERO DUPLICATES
+
+**Before writing ANY new code, the developer MUST:**
+
+1. **Search** `docs/centralized-systems/README.md` + `.ssot-registry.json` for existing centralized systems
+2. **Grep** the codebase for existing implementations of the needed functionality
+3. **Read** the relevant ADRs (listed in §1 Related ADRs above)
+4. **Decide**: extend existing → or → create new centralized module (register in `.ssot-registry.json`)
+
+**Absolute prohibitions:**
+- ❌ NEVER duplicate an existing service, hook, store, or utility — find it and import it
+- ❌ NEVER create a local copy of something that exists in `src/services/`, `src/hooks/`, `src/lib/`, `src/config/`
+- ❌ NEVER inline logic that belongs in a centralized module (auth checks, Firestore queries, ID generation, audit trail)
+- ❌ NEVER use `addDoc()` / `.add()` / `crypto.randomUUID()` for Firestore IDs — use `enterprise-id.service.ts` (CLAUDE.md N.6)
+- ❌ NEVER write `any`, `as any`, `@ts-ignore` — use proper types, generics, discriminated unions (CLAUDE.md N.2)
+
+**Mandatory integrations with existing centralized systems:**
+
+| System | Where it lives | Use it for |
+|---|---|---|
+| CommandHistory (ADR-031) | `src/subapps/dxf-viewer/core/CommandHistory.ts` | Every text mutation — create, edit, delete, replace |
+| EntityAuditService (ADR-195) | `src/services/entity-audit.service.ts` | Audit trail calls in every text command |
+| enterprise-id.service (ADR-017) | `src/services/enterprise-id.service.ts` | All Firestore document IDs (`tpl_text_*`, `fnt_*`, etc.) |
+| FloatingPanelContainer (ADR-003) | existing DXF viewer UI | Text Properties tab — do NOT create a new panel system |
+| SnapEngine | existing DXF snap system | Text snap points — implement `ISnapProvider`, register there |
+| LayerStore | existing DXF layer system | Current layer for new text entities — read from existing store |
+| HoverStore / ImmediatePositionStore | ADR-040 | Grip hover state — use existing stores, never new React state |
+| UnifiedFrameScheduler (ADR-040) | `rendering/core/UnifiedFrameScheduler.ts` | All canvas re-renders — never call `requestAnimationFrame` directly |
+| ADR-040 micro-leaf pattern | `canvas-layer-stack-leaves.tsx` | Text rendering leaf — must follow the leaf subscriber pattern |
+| ADR-001 Radix Select | `@/components/ui/select` | ALL dropdowns in TextToolbar — never new dropdown primitives |
+| ADR-156 voice hook | existing voice input system | Voice-to-text in TextAIBar — import existing hook |
+| ADR-185 AIAnalysisProvider | existing AI pipeline | NL → text command router — call existing provider |
+| Firestore collections SSoT | `src/config/firestore-collections.ts` | Register `text_templates`, `text_custom_dictionary`, `company_fonts` here |
+| i18n locales (ADR-280) | `src/i18n/locales/{el,en}/` | ALL user-facing strings — never hardcoded (CLAUDE.md N.11) |
+| Firebase Auth / RBAC | `src/lib/auth/roles.ts` | Permission checks — extend existing role matrix (Q8) |
+| Firestore rules | `firestore.rules` | Extend existing rules — never bypass |
+
+**Pre-commit enforcement (automatic — cannot be bypassed):**
+- CHECK 3.7 — SSoT ratchet: new violations in `.ssot-registry.json` modules → BLOCK
+- CHECK 3.8 — i18n missing keys → BLOCK
+- CHECK 3.17 — entity audit coverage → update baseline after Phase 6
+- CHECK 6B — ADR-040 architecture files modified without ADR staged → BLOCK
+- CHECK 6C — `useSyncExternalStore` in orchestrator components → BLOCK
+- CHECK N.7.1 — file >500 lines → BLOCK; function >40 lines → EXTRACT
+
+---
+
+### 🔴 STANDARD 2 — GOOGLE-LEVEL QUALITY (GOL)
+
+**Every implementation must pass this checklist before moving to the next phase:**
+
+| # | Question | Required answer |
+|---|---|---|
+| 1 | Is the solution proactive (data created at correct lifecycle moment)? | **YES** — never as a side effect |
+| 2 | Is there a race condition possible? | **NO** — primary path runs before dependent actions |
+| 3 | Is the operation idempotent? | **YES** — calling twice = same result, no duplicates |
+| 4 | Is there a belt-and-suspenders fallback? | **YES** — primary path + safety net |
+| 5 | Is there a Single Source of Truth? | **YES** — one module owns the data, all others read it |
+| 6 | Are async operations awaited where correctness requires it? | **YES** — fire-and-forget only for non-blocking side effects |
+| 7 | Who owns the lifecycle of each piece of data? | **Explicit** — one service/command is responsible |
+| 8 | Functions ≤40 lines? | **YES** — extract helpers if exceeded |
+| 9 | Files ≤500 lines (logic files)? | **YES** — split if exceeded |
+| 10 | Zero `any` / `as any` / `@ts-ignore`? | **YES** — proper types only |
+| 11 | Optimistic UI updates where applicable? | **YES** — same pattern as Google Docs / Gmail |
+| 12 | Zero hardcoded strings in `.ts`/`.tsx`? | **YES** — all via `t('key')` i18n calls |
+
+**After completing each Phase, the developer declares explicitly:**
+```
+✅ Google-level: YES — [one-line reason]
+⚠️ Google-level: PARTIAL — [gap + urgency]
+❌ Google-level: NO — [what must change before proceeding]
+```
+
+**If PARTIAL or NO → phase is NOT complete. Fix before starting the next phase.**
+
+---
+
+### 🔴 STANDARD 3 — ADR-040 CANVAS ARCHITECTURE (DXF-specific)
+
+Text rendering integrates with the existing high-performance canvas pipeline. These rules are **cardinal** (ADR-040 §4):
+
+1. **Text leaf component** (`TextEntityLeaf.tsx`) — subscribes to `useSyncExternalStore` for text entity data. CanvasSection and CanvasLayerStack MUST NOT subscribe.
+2. **Grip handle overlay** — separate leaf (`TextGripLeaf.tsx`), subscribes only to selection store.
+3. **Missing font highlight** — separate leaf (`MissingFontHighlightLeaf.tsx`), subscribes only to missing font report store.
+4. **HoverStore** — grip hover state goes in `HoverStore` (existing), never in React state.
+5. **UnifiedFrameScheduler** — all canvas redraws (text content change, scale change, grip drag) MUST be scheduled via existing RAF orchestrator.
+6. **Bitmap cache key** — text renderer's bitmap cache MUST NOT include `hoveredGripId` or `selectedEntityIds` in its key — these are handled by overlay leaves, not the base renderer.
+
+---
+
+## 8. Implementation Plan (FINAL — all design decisions confirmed)
 
 | Phase | Scope | Estimate |
 |---|---|---|
-| **Phase 0** | ADR finalization (Q1-Q7 answered), `.ssot-registry.json` entry, font asset selection | 1 day |
-| **Phase 1** | Layer 1: DXF parsing (entities + STYLE table + MTEXT tokenizer) + unit tests | 3-4 days |
-| **Phase 2** | Layer 2: opentype.js font engine + cache + substitution table | 2 days |
-| **Phase 3** | Layer 3: Layout engine (line-break, columns, attachment-point) + tests | 4-5 days |
-| **Phase 4** | Layer 4: Edit engine integration (TipTap headless OR canvas-native per Q1) | 2 days (TipTap) / 4-6 weeks (custom) |
-| **Phase 5** | Layer 5: TextToolbar UI (Radix + react-colorful + cmdk) | 4 days |
-| **Phase 6** | Text commands (CommandHistory integration) + undo/redo tests | 2 days |
-| **Phase 7** | Stamps/templates system (per Q5) | 2-3 days |
-| **Phase 8** | i18n (el/en locale keys, per ADR-280) + visual regression tests (ADR-343) | 2 days |
+| **Phase 0** | `.ssot-registry.json` entries (15 modules), font asset selection (LFF fallbacks), Yjs server skeleton, Firestore collection schema (`text_templates`, `text_custom_dictionary`) | 1 day |
+| **Phase 1** | Layer 1: DXF parsing — TEXT + MTEXT entities + STYLE table + MTEXT inline tokenizer + version-conditional branches (R12→R2018, Q14) + unit tests | 6-7 days |
+| **Phase 2** | Layer 2: opentype.js font engine + **SHX/SHP parser** + glyph cache + substitution table + LFF fallback bundle + **font upload (TTF/OTF/SHX → Firebase Storage, Q18)** + FontManagerPanel + **missing font banner + canvas highlight (Q20)** | 7-8 days |
+| **Phase 3** | Layer 3: Layout engine (UAX #14 line-break, columns, stacking `\S`, attachment-point anchoring) + tests | 4-5 days |
+| **Phase 4** | Layer 4: TipTap v3 headless integration + **Yjs binding + y-websocket auth/server** + DxfTextNode ↔ MTEXT serializer | 4-5 days |
+| **Phase 5** | Layer 5: TextToolbar UI (Radix Toolbar + react-colorful + cmdk + ACI palette + LayerSelectorDropdown + permissions guard) + Mobile/touch toolbar + Text Properties FloatingPanel tab | 10-12 days |
+| **Phase 6** | Text commands (CreateText, UpdateTextStyle, UpdateTextGeometry, UpdateMTextParagraph, DeleteText, ReplaceAll/One) + CommandHistory integration + **EntityAuditService integration (Q12)** + **Grip handles + snap + numeric input (Q19)** + **TextSnapProvider (Q21)** + undo/redo tests | 4-5 days |
+| **Phase 7** | **Hybrid templates**: built-in defaults (TS constants) + Firestore `text_templates` + placeholder resolver + management UI | 4-5 days |
+| **Phase 8** | **Spell check**: nspell + el_GR + en_US dictionaries (lazy-load, worker) + custom dictionary CRUD + TipTap decoration | 3 days |
+| **Phase 9** | **Find & Replace** (current drawing scope): dialog UI + match engine + composite ReplaceAll command | 2 days |
+| **Phase 10** | i18n (el/en locale keys per ADR-280) + **IndexedDB draft/recovery (Q15)** + visual regression tests (ADR-343) + ADR-040 update for text rendering path | 3 days |
+| **Phase 11** | **Annotative scaling** (Q11): ViewportStore + ViewportContext + AnnotationScaleManager UI + DXF XDATA round-trip + scale-aware text renderer | 3-4 days |
+| **Phase 12** | **AI integration** (Q16): TextAICommandRouter + TextAIBar UI + ADR-156 voice binding + intent-to-command mapping + i18n + tests | 2-3 days |
 
-**Total** (TipTap path): ~22-25 days
-**Total** (canvas-native path): ~7-10 weeks
+**Total estimate**: **~52-62 working days** (~12-13 weeks for one developer)
+
+> Breakdown: Ph0(1) + Ph1(6-7) + Ph2(7-8) + Ph3(4-5) + Ph4(4-5) + Ph5(10-12) + Ph6(4-5) + Ph7(4-5) + Ph8(3) + Ph9(2) + Ph10(3) + Ph11(3-4) + Ph12(2-3)
+
+### Phase Ordering & Dependencies
+
+```
+Phase 0 ──┬──→ Phase 1 ──→ Phase 3 ──→ Phase 4 ──→ Phase 5 ──→ Phase 6 ──→ Phase 7 ──→ Phase 8 ──→ Phase 9 ──→ Phase 10 ──→ Phase 11 ──→ Phase 12
+          └──→ Phase 2 ─────────┘
+```
+- Phases 1 + 2 parallel (different layers, no shared state)
+- Phase 3 blocks on both 1 + 2
+- Phase 11 (annotative) blocks on Phase 3 (layout engine) + Phase 5 (toolbar)
+- Phase 12 (AI) blocks on Phase 5 (toolbar exists) + Phase 6 (commands exist)
 
 ---
 
@@ -415,4 +854,35 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
-- **2026-05-11** — Initial PROPOSED draft. Research complete (4 parallel deep-dive agents). Awaiting Giorgio's answers to Q1-Q7 before implementation begins.
+- **2026-05-11 — Phase 0 COMPLETE**. Setup & configuration:
+  - 15 SSoT modules registered in `.ssot-registry.json` (`_comment_dxf_text_engine` group, tier 4): `mtext-parser`, `mtext-serializer`, `font-engine`, `shx-parser`, `text-layout`, `text-renderer`, `text-toolbar`, `text-commands`, `text-types`, `text-collab`, `text-templates`, `text-spell`, `text-draft`, `text-ai`, `viewport-system`.
+  - 3 Firestore collections added to `src/config/firestore-collections.ts`: `TEXT_TEMPLATES` (`text_templates`), `TEXT_CUSTOM_DICTIONARY` (`text_custom_dictionary`), `COMPANY_FONTS` (`company_fonts`).
+  - 3 enterprise ID prefixes in `enterprise-id-prefixes.ts`: `TEXT_TEMPLATE` (`tpl_text`), `COMPANY_FONT` (`fnt`), `DICT_ENTRY` (`dict`). Generators wired through class + convenience + service facade.
+  - `font-substitution-table.ts` created with 8 SHX→open-font entries + `lookupSubstitute()` utility.
+  - Folder scaffold (`index.ts` barrels) created for all 15 modules under `text-engine/`, `ui/text-toolbar/`, `core/commands/text/`, `systems/viewport/`.
+- **2026-05-11 — Initial PROPOSED draft**. Research complete (4 parallel deep-dive agents). Awaiting Giorgio's answers to Q1-Q7 before implementation begins.
+- **2026-05-11 — Q8-Q21 RESOLVED, status → FULLY APPROVED**:
+  - Q8: Permissions = professionals only + admin layer unlock
+  - Q9: DIMENSION/LEADER = deferred ADR (read-only in current scope)
+  - Q10: Mobile = full touch editing (ADR-176 integration)
+  - Q11: Annotative scaling = full (ViewportStore + per-entity scale list)
+  - Q12: Audit trail = full (create+edit+delete via EntityAuditService ADR-195)
+  - Q13: Eyedropper = reuse existing (SSOT)
+  - Q14: DXF version range = R12→R2018 (full, graceful downgrade)
+  - Q15: Auto-save = IndexedDB local + DraftRecoveryBanner
+  - Q16: AI = voice-to-text + AI commands (ADR-185 + ADR-156)
+  - Q17: Default layer = current layer + LayerSelectorDropdown in toolbar
+  - Q18: Font upload = TTF/OTF/SHX → Firebase Storage + FontManagerPanel
+  - Q19: Text geometry = grip handles + snap integration + numeric direct input
+  - Q20: Missing SHX = substitution + MissingFontBanner + canvas highlight
+  - Q21: Text snap = all points (insertion + 4 corners + center + edge mids)
+  - Total estimate revised: **~52-62 working days** (12 phases + 15 SSoT modules)
+- **2026-05-11 — Q1-Q7 RESOLVED, status → APPROVED**:
+  - Q1: Edit engine = **TipTap v3** (Path A, fast delivery)
+  - Q2: DXF scope = **Both TEXT + MTEXT** from day 1 (full compatibility)
+  - Q3: SHX support = **Full SHP parser** (enterprise-grade, AutoCAD-identical rendering)
+  - Q4: Collaborative editing = **Day 1 (Yjs + y-websocket)** (completeness over MVP)
+  - Q5: Stamps/templates = **Hybrid** (TS defaults + Firestore user templates + placeholder resolver)
+  - Q6: Spell check = **nspell + el_GR + en_US** (lazy-loaded, worker, custom dictionary)
+  - Q7: Find & Replace scope = **Current drawing** (Path B "FIND"); cross-drawing deferred to future ADR
+  - Implementation plan revised: ~36-41 days total, 10 phases. Phase 0 ready to kick off pending Giorgio's go-ahead.

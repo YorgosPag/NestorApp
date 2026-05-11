@@ -208,6 +208,11 @@ export const ENTERPRISE_ID_PREFIXES = {
   // Cash Flow (ADR-268 Phase 8)
   RECURRING_PAYMENT: 'rpay',
 
+  // DXF Text Engine (ADR-344)
+  TEXT_TEMPLATE: 'tpl_text',   // text_templates collection — hybrid title block / stamp templates
+  COMPANY_FONT: 'fnt',         // company_fonts collection — uploaded TTF/OTF/SHX fonts per company
+  DICT_ENTRY: 'dict',          // text_custom_dictionary collection — per-company spell-check terms
+
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
   TEMP: 'tmp',

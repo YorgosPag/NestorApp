@@ -205,6 +205,11 @@ export const generateOrgStructureId = () => enterpriseIdService.generateOrgStruc
 export const generateOrgDepartmentId = () => enterpriseIdService.generateOrgDepartmentId();
 export const generateOrgMemberId = () => enterpriseIdService.generateOrgMemberId();
 
+// DXF Text Engine (ADR-344)
+export const generateTextTemplateId = () => enterpriseIdService.generateTextTemplateId();
+export const generateCompanyFontId = () => enterpriseIdService.generateCompanyFontId();
+export const generateDictEntryId = () => enterpriseIdService.generateDictEntryId();
+
 // Optimistic & Temporary
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
 export const generateTempId = () => enterpriseIdService.generateTempId();
