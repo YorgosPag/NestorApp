@@ -1,0 +1,22 @@
+{
+  "name": "nestor-yjs-sync-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted Yjs sync server for DXF text collaborative editing (ADR-344 Phase 4)",
+  "license": "MIT",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "lib0": "^0.2.99",
+    "ws": "^8.18.0",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.30"
+  }
+}
