@@ -4,13 +4,25 @@
 
 import { describe, it, expect } from '@jest/globals';
 import { renderHook } from '@testing-library/react';
+import type { SceneModel } from '../../../../types/scene';
 
-jest.mock('../useCurrentSceneModel');
+jest.mock('../useCurrentSceneModel', () => {
+  let scene: SceneModel | null = null;
+  return {
+    __esModule: true,
+    __setSceneForTest: (s: SceneModel | null) => {
+      scene = s;
+    },
+    useCurrentSceneModel: () => scene,
+  };
+});
 
 import { useTextPanelFonts } from '../useTextPanelFonts';
-import { __setMockScene } from '../__mocks__/useCurrentSceneModel';
 import { fontCache } from '../../../../text-engine/fonts';
-import type { SceneModel } from '../../../../types/scene';
+
+const { __setSceneForTest } = jest.requireMock('../useCurrentSceneModel') as {
+  __setSceneForTest: (s: SceneModel | null) => void;
+};
 
 function seedCache(names: string[]): void {
   const cacheUnknown = fontCache as unknown as { byName?: Map<string, unknown> };
@@ -38,26 +50,26 @@ function makeScene(fonts: string[]): SceneModel {
 
 describe('useTextPanelFonts', () => {
   afterEach(() => {
-    __setMockScene(null);
+    __setSceneForTest(null);
     seedCache([]);
   });
 
   it('returns an empty list when neither cache nor scene have fonts', () => {
-    __setMockScene(null);
+    __setSceneForTest(null);
     seedCache([]);
     const { result } = renderHook(() => useTextPanelFonts());
     expect(result.current).toEqual([]);
   });
 
   it('reports every cached font name', () => {
-    __setMockScene(null);
+    __setSceneForTest(null);
     seedCache(['arial', 'times']);
     const { result } = renderHook(() => useTextPanelFonts());
     expect(result.current).toEqual(['arial', 'times']);
   });
 
   it('unions cached names with scene-referenced fontFamily values', () => {
-    __setMockScene(makeScene(['Roboto', 'Arial']));
+    __setSceneForTest(makeScene(['Roboto', 'Arial']));
     seedCache(['arial', 'times']);
     const { result } = renderHook(() => useTextPanelFonts());
     expect(result.current).toContain('Roboto');
@@ -66,7 +78,7 @@ describe('useTextPanelFonts', () => {
   });
 
   it('returns names sorted', () => {
-    __setMockScene(null);
+    __setSceneForTest(null);
     seedCache(['zeta', 'alpha', 'beta']);
     const { result } = renderHook(() => useTextPanelFonts());
     expect(result.current).toEqual(['alpha', 'beta', 'zeta']);
