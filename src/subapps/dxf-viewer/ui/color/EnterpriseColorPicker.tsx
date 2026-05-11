@@ -32,6 +32,7 @@ import { useContrast } from './hooks/useContrast';
 import { EnterpriseColorField } from './EnterpriseColorField';
 import { SwatchesPalette } from './SwatchesPalette';
 import { useRecentColors } from './RecentColorsStore';
+import { openEyedropper } from './eyedropper';
 import type { EnterpriseColorPickerProps, ColorMode } from './types';
 
 /**
@@ -101,9 +102,9 @@ export function EnterpriseColorPicker({
     [onModeChange]
   );
 
-  // Eyedropper support check
-  const supportsEyedropper = typeof window !== 'undefined' && 'EyeDropper' in window;
-  const showEyedropper = eyedropper && supportsEyedropper;
+  // Hybrid eyedropper — native API or DOM/canvas fallback, always available
+  // when `eyedropper` prop is true. See `eyedropper.ts`.
+  const showEyedropper = eyedropper;
 
   return (
     <div
@@ -250,24 +251,16 @@ function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonP
   const { t } = useTranslation('dxf-viewer-panels');
 
   const handleClick = async () => {
-    if (disabled || typeof window === 'undefined' || !('EyeDropper' in window)) {
-      return;
-    }
-
+    if (disabled) return;
     try {
       setIsActive(true);
-      // EyeDropper API - using proper type declaration
-      const EyeDropper = (window as Window & { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper;
-      if (!EyeDropper) throw new Error('EyeDropper not supported');
-      const eyeDropper = new EyeDropper();
-      const result = await eyeDropper.open();
-
+      const result = await openEyedropper();
       if (result?.sRGBHex) {
         onChange(result.sRGBHex);
         onChangeEnd(result.sRGBHex);
       }
     } catch (error) {
-      // User cancelled or error occurred
+      // User cancelled or pixel read failed — silent
       console.warn('[Eyedropper] Error:', error);
     } finally {
       setIsActive(false);
