@@ -14,6 +14,7 @@ import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
 // 🏢 ADR-034: Centralized Empty Spatial Bounds
 import { createInfinityBounds, EMPTY_SPATIAL_BOUNDS } from '../../../config/geometry-constants';
+import { TEXT_METRICS_RATIOS } from '../../../config/text-rendering-config';
 
 /**
  * Calculate bounding box for entities
@@ -203,6 +204,39 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
       const maxY = Math.max(vertex.y, point1.y, point2.y);
       
       return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
+    }
+    case 'text':
+    case 'mtext': {
+      const textEntity = entity as unknown as { position?: Point2D; text?: string; height?: number; fontSize?: number; rotation?: number };
+      const pos = textEntity.position;
+      const textStr = textEntity.text;
+      if (!pos || !textStr) return null;
+
+      const height = (typeof textEntity.height === 'number' && textEntity.height > 0)
+        ? textEntity.height
+        : (typeof textEntity.fontSize === 'number' && textEntity.fontSize > 0)
+          ? textEntity.fontSize
+          : 2.5;
+
+      const width = textStr.length * height * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
+      const rotation = typeof textEntity.rotation === 'number' ? textEntity.rotation : 0;
+
+      if (rotation === 0) {
+        return { min: { x: pos.x, y: pos.y - height }, max: { x: pos.x + width, y: pos.y } };
+      }
+
+      // Rotated text: compute AABB from all 4 rotated corners
+      const rad = rotation * Math.PI / 180;
+      const cosA = Math.cos(rad);
+      const sinA = Math.sin(rad);
+      const localCorners: Point2D[] = [
+        { x: 0, y: 0 }, { x: width, y: 0 }, { x: width, y: -height }, { x: 0, y: -height },
+      ];
+      const worldCorners = localCorners.map(c => ({
+        x: pos.x + c.x * cosA - c.y * sinA,
+        y: pos.y + c.x * sinA + c.y * cosA,
+      }));
+      return calculateVerticesBounds(worldCorners);
     }
     default:
       return null;
