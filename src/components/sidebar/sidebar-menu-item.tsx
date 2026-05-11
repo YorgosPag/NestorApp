@@ -35,7 +35,7 @@ export function SidebarMenuItem({
   isActive,
   onToggleExpanded,
 }: SidebarMenuItemProps) {
-  const { state, isMobile, setOpenMobile } = useSidebar();
+  const { state, isMobile, setOpenMobile, setOpen } = useSidebar();
   const iconSizes = useIconSizes();
   const { t, isLoading } = useTranslationLazy('navigation');
   const [popoverOpen, setPopoverOpen] = React.useState(false);
@@ -52,8 +52,12 @@ export function SidebarMenuItem({
     return title;
   };
 
-  const handleNavigationClick = () => {
-    if (isMobile) setOpenMobile(false);
+  const handleNavigationClick = (href: string) => {
+    if (isMobile) {
+      setOpenMobile(false);
+    } else if (href === '/dxf/viewer' || href === '/geo/canvas') {
+      setOpen(false);
+    }
   };
 
   const getHoverPrefetchHandlers = (href: string) => {
@@ -119,7 +123,7 @@ export function SidebarMenuItem({
                 <Link
                   key={subItem.href}
                   href={subItem.href}
-                  onClick={() => { setPopoverOpen(false); handleNavigationClick(); }}
+                  onClick={() => { setPopoverOpen(false); handleNavigationClick(subItem.href); }}
                   {...getHoverPrefetchHandlers(subItem.href)}
                   className={cn(
                     "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
@@ -161,7 +165,7 @@ export function SidebarMenuItem({
               >
                 <Link
                   href={item.href}
-                  onClick={handleNavigationClick}
+                  onClick={() => handleNavigationClick(item.href)}
                   {...getHoverPrefetchHandlers(item.href)}
                 >
                   <item.icon
@@ -232,7 +236,7 @@ export function SidebarMenuItem({
                   >
                     <Link
                       href={subItem.href}
-                      onClick={handleNavigationClick}
+                      onClick={() => handleNavigationClick(subItem.href)}
                       {...getHoverPrefetchHandlers(subItem.href)}
                     >
                       <subItem.icon className={iconSizes.sm} />
@@ -261,7 +265,7 @@ export function SidebarMenuItem({
         >
           <Link
             href={item.href}
-            onClick={handleNavigationClick}
+            onClick={() => handleNavigationClick(item.href)}
             {...getHoverPrefetchHandlers(item.href)}
           >
             <item.icon

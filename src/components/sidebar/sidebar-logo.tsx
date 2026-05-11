@@ -21,8 +21,8 @@ export function SidebarLogo() {
 
   return (
     <div className={cn(
-      "flex items-center py-2",
-      isExpanded ? "gap-3 px-3" : "justify-center px-0"
+      "flex items-center",
+      isExpanded ? "gap-2 px-2" : "justify-center px-0"
     )}>
       <div className="flex items-center justify-center">
         <LogoPagonis className={cn(
