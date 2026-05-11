@@ -854,6 +854,15 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 6.E + 6.F COMPLETE**. Firestore rules for `company_fonts` + SSoT registry update — closes Phase 6.
+  - `firestore.rules` — new `match /company_fonts/{fontId}` block (before the closing braces of `match /databases/{database}/documents`): tenant-scoped READ via `belongsToCompany(companyId)`, CREATE/UPDATE/DELETE restricted to `isCompanyAdminOfCompany` (or `isSuperAdminOnly`), `companyId` immutable on update. `text_templates` + `text_custom_dictionary` deferred to Phase 7 (collection schema lives there).
+  - `.ssot-registry.json` — `text-commands` module extended: `forbiddenPatterns` now covers every Phase 6.A command class (Create/UpdateStyle/UpdateGeometry/UpdateMTextParagraph/Delete/ReplaceAll/ReplaceOne) plus `assertCanEditLayer`; description mentions the layer guard + match engine SSoT.
+  - `.ssot-registry.json` — new `text-snap` module: forbids re-implementing `getTextSnapPoints` outside `text-engine/interaction/`. Tier 4, addedByAdr ADR-344.
+  - `.ssot-registry.json` — new `text-grip` module: forbids re-implementing `TextGripHandler` / `DirectDistanceEntry` / `computeGrips` / `hitTestGrips` outside `text-engine/interaction/`. Tier 4, addedByAdr ADR-344.
+  - Phase 6 status: **all sub-phases (6.A–6.F) complete**. Pending follow-ups:
+    - SSoT discovery baseline (CHECK 3.18) may need refresh after these registry edits — run `npm run ssot:discover:baseline` once Phase 6 is committed.
+    - Entity audit coverage baseline (CHECK 3.17) update is still tracked for Phase 7 when DXF text entities persist to Firestore and the audit recorder is wired to `/api/audit-trail/record`.
+
 - **2026-05-11 — Phase 6.D wiring COMPLETE**. `TextPropertiesPanelHost` real data sources + 4 hooks:
   - `ui/text-toolbar/hooks/useCurrentSceneModel.ts` — reads current scene model ref from context (shared accessor for all panel hooks).
   - `ui/text-toolbar/hooks/useTextPanelLayers.ts` — `useTextPanelLayers()`: subscribes to LayerStore, maps to `LayerSelectorEntry[]` for TextPropertiesPanel.

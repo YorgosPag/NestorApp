@@ -273,5 +273,14 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     params.rulerSettings,
   ]);
 
+  // Mark dirty when grip style settings change (size, colors, etc.)
+  // Without this subscription, grip panel changes have no effect until the
+  // next unrelated re-render that happens to set isDirtyRef = true.
+  useEffect(() => {
+    return gripStyleStore.subscribe(() => {
+      isDirtyRef.current = true;
+    });
+  }, []);
+
   return { isDirtyRef };
 }
