@@ -25,6 +25,7 @@ import type {
 } from './layer-types';
 import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
 import type { CursorSettings } from '../../systems/cursor/config';
+import { gripStyleStore } from '../../stores/GripStyleStore';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -213,6 +214,7 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
         showSelectionBox: !isPanToolActive && sel.isSelecting && currentSelectionBox !== null,
         selectionBox: isPanToolActive ? null : currentSelectionBox,
         snapResults: layerSnapResults,
+        gripSettings: gripStyleStore.get(),
       };
 
       renderer.render(
