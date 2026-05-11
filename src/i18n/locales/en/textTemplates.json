@@ -29,5 +29,93 @@
     "date": {
       "today": "Today's Date"
     }
+  },
+  "manager": {
+    "title": "Text Templates",
+    "ariaLabel": "Text Templates Manager",
+    "listAriaLabel": "Templates List",
+    "previewAriaLabel": "Template Preview",
+    "newButton": "New",
+    "refresh": "Refresh",
+    "search": "Search...",
+    "categoryFilter": "Category",
+    "builtInSection": "Built-in",
+    "userSection": "Yours",
+    "builtinBadge": "System",
+    "builtinReadOnlyTooltip": "Built-in template is read-only. Use \"Duplicate\" to create an editable copy.",
+    "loading": "Loading...",
+    "emptyState": "No personal templates yet. Create one or duplicate a built-in.",
+    "previewEmptyTitle": "Preview",
+    "previewEmptyLabel": "Select a template from the list",
+    "placeholdersCount": "{count} placeholders",
+    "duplicate": "Duplicate",
+    "edit": "Edit",
+    "delete": "Delete",
+    "category": {
+      "all": "All",
+      "title-block": "Title Block",
+      "stamp": "Stamp",
+      "revision": "Revision",
+      "notes": "Notes",
+      "scale-bar": "Scale Bar",
+      "custom": "Custom"
+    },
+    "deletePrompt": {
+      "title": "Delete template \"{name}\"?",
+      "body": "This action cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "deleting": "Deleting..."
+    },
+    "permission": {
+      "requiresRole": "Requires a role with text-edit permissions."
+    }
+  },
+  "editor": {
+    "title": {
+      "create": "New Text Template",
+      "edit": "Edit Template"
+    },
+    "name": {
+      "label": "Name",
+      "placeholder": "e.g. Project Title Block",
+      "error": {
+        "empty": "Name is required.",
+        "tooLong": "Name cannot exceed {max} characters."
+      }
+    },
+    "category": {
+      "label": "Category"
+    },
+    "content": {
+      "label": "Content (use {{namespace.key}} for placeholders)",
+      "error": {
+        "empty": "Content is required."
+      },
+      "helpUnknown": "Unknown placeholders: {tokens}. They will render as literal text."
+    },
+    "placeholderPicker": {
+      "title": "Placeholders",
+      "source": {
+        "company": "Company",
+        "project": "Project",
+        "drawing": "Drawing",
+        "user": "User",
+        "revision": "Revision",
+        "date": "Date"
+      }
+    },
+    "previewAriaLabel": "Preview",
+    "previewPlaceholderName": "Untitled",
+    "submit": "Save",
+    "submitting": "Saving...",
+    "cancel": "Cancel",
+    "dirtyConfirm": "You have unsaved changes. Discard?"
+  },
+  "errors": {
+    "notFound": "Template not found.",
+    "validation": "Invalid data.",
+    "crossTenant": "Access denied.",
+    "generic": "Error. Please try again."
   }
 }

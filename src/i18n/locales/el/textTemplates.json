@@ -29,5 +29,93 @@
     "date": {
       "today": "Σημερινή Ημερομηνία"
     }
+  },
+  "manager": {
+    "title": "Πρότυπα Κειμένου",
+    "ariaLabel": "Διαχείριση Προτύπων Κειμένου",
+    "listAriaLabel": "Λίστα Προτύπων",
+    "previewAriaLabel": "Προεπισκόπηση Προτύπου",
+    "newButton": "Νέο",
+    "refresh": "Ανανέωση",
+    "search": "Αναζήτηση...",
+    "categoryFilter": "Κατηγορία",
+    "builtInSection": "Ενσωματωμένα",
+    "userSection": "Δικά μου",
+    "builtinBadge": "Σύστημα",
+    "builtinReadOnlyTooltip": "Ενσωματωμένο πρότυπο μόνο ανάγνωσης. Πάτησε «Διπλασιασμός» για επεξεργάσιμο αντίγραφο.",
+    "loading": "Φόρτωση...",
+    "emptyState": "Δεν υπάρχουν δικά σας πρότυπα ακόμα. Φτιάξτε νέο ή διπλασιάστε ενσωματωμένο.",
+    "previewEmptyTitle": "Προεπισκόπηση",
+    "previewEmptyLabel": "Επιλέξτε πρότυπο από τη λίστα",
+    "placeholdersCount": "{count} placeholders",
+    "duplicate": "Διπλασιασμός",
+    "edit": "Επεξεργασία",
+    "delete": "Διαγραφή",
+    "category": {
+      "all": "Όλες",
+      "title-block": "Τίτλος Σχεδίου",
+      "stamp": "Σφραγίδα",
+      "revision": "Αναθεώρηση",
+      "notes": "Σημειώσεις",
+      "scale-bar": "Κλιμακόμετρο",
+      "custom": "Προσαρμοσμένο"
+    },
+    "deletePrompt": {
+      "title": "Διαγραφή προτύπου «{name}»;",
+      "body": "Η ενέργεια δεν μπορεί να αναιρεθεί.",
+      "confirm": "Διαγραφή",
+      "cancel": "Άκυρο",
+      "deleting": "Διαγραφή..."
+    },
+    "permission": {
+      "requiresRole": "Απαιτείται ρόλος με δικαιώματα επεξεργασίας κειμένου."
+    }
+  },
+  "editor": {
+    "title": {
+      "create": "Νέο Πρότυπο Κειμένου",
+      "edit": "Επεξεργασία Προτύπου"
+    },
+    "name": {
+      "label": "Όνομα",
+      "placeholder": "π.χ. Πινακίδα Έργου",
+      "error": {
+        "empty": "Το όνομα είναι υποχρεωτικό.",
+        "tooLong": "Το όνομα δεν μπορεί να ξεπερνά τους {max} χαρακτήρες."
+      }
+    },
+    "category": {
+      "label": "Κατηγορία"
+    },
+    "content": {
+      "label": "Περιεχόμενο (χρήση {{namespace.key}} για placeholders)",
+      "error": {
+        "empty": "Το περιεχόμενο είναι υποχρεωτικό."
+      },
+      "helpUnknown": "Άγνωστα placeholders: {tokens}. Θα εμφανιστούν ως κείμενο."
+    },
+    "placeholderPicker": {
+      "title": "Placeholders",
+      "source": {
+        "company": "Εταιρεία",
+        "project": "Έργο",
+        "drawing": "Σχέδιο",
+        "user": "Χρήστης",
+        "revision": "Αναθεώρηση",
+        "date": "Ημερομηνία"
+      }
+    },
+    "previewAriaLabel": "Προεπισκόπηση",
+    "previewPlaceholderName": "Χωρίς όνομα",
+    "submit": "Αποθήκευση",
+    "submitting": "Αποθήκευση...",
+    "cancel": "Άκυρο",
+    "dirtyConfirm": "Υπάρχουν μη αποθηκευμένες αλλαγές. Απόρριψη;"
+  },
+  "errors": {
+    "notFound": "Το πρότυπο δεν βρέθηκε.",
+    "validation": "Μη έγκυρα δεδομένα.",
+    "crossTenant": "Δεν επιτρέπεται η πρόσβαση.",
+    "generic": "Σφάλμα. Δοκιμάστε ξανά."
   }
 }
