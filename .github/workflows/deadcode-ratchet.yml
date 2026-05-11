@@ -38,6 +38,8 @@ on:
       - 'knip.json'
       - 'scripts/check-deadcode-ratchet.js'
       - '.deadcode-baseline.json'
+      - '.github/workflows/deadcode-ratchet.yml'
+  workflow_dispatch:
 
 concurrency:
   group: deadcode-ratchet-${{ github.ref }}
