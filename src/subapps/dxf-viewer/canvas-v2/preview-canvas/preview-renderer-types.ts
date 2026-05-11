@@ -45,19 +45,6 @@ export const DEFAULT_PREVIEW_OPTIONS: Required<PreviewRenderOptions> = {
   gripColor: UI_COLORS.BRIGHT_GREEN,
 };
 
-/** Cached Path2D for grip points (performance optimization) */
-const GRIP_PATH_CACHE = new Map<number, Path2D>();
-
-export function getGripPath(size: number): Path2D {
-  if (!GRIP_PATH_CACHE.has(size)) {
-    const path = new Path2D();
-    const half = size / 2;
-    path.rect(-half, -half, size, size);
-    GRIP_PATH_CACHE.set(size, path);
-  }
-  return GRIP_PATH_CACHE.get(size)!;
-}
-
 /** Helpers passed to entity render functions */
 export interface PreviewRenderHelpers {
   viewport: import('../../rendering/types/Types').Viewport;

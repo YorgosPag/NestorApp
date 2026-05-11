@@ -10,15 +10,15 @@ import type { AngleMeasurementEntity } from '../../types/scene';
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
 import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
 import { getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { UI_COLORS, OPACITY } from '../../config/color-config';
+import { OPACITY } from '../../config/color-config';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { PreviewGripPoint } from '../../types/entities';
 
 // Re-export types for consumers
 export type { PreviewRenderOptions } from './preview-renderer-types';
 import type { PreviewRenderOptions, ArcPreviewEntity, PreviewRenderHelpers } from './preview-renderer-types';
-import { DEFAULT_PREVIEW_OPTIONS, getGripPath } from './preview-renderer-types';
+import { DEFAULT_PREVIEW_OPTIONS } from './preview-renderer-types';
+import { UnifiedGripRenderer } from '../../rendering/grips/UnifiedGripRenderer';
 import {
   renderLine, renderCircle, renderPolyline, renderRectangle,
   renderAngleMeasurement, renderPoint, renderArc,
@@ -27,6 +27,7 @@ import {
 export class PreviewRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
   private canvas: HTMLCanvasElement | null = null;
+  private _gripRenderer: UnifiedGripRenderer | null = null;
   private currentPreview: ExtendedSceneEntity | null = null;
   private currentTransform: ViewTransform | null = null;
   private currentViewport: Viewport | null = null;
@@ -45,6 +46,7 @@ export class PreviewRenderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
     this.dpr = getDevicePixelRatio();
+    this._gripRenderer = this.ctx ? new UnifiedGripRenderer(this.ctx, (p) => p) : null;
   }
 
   updateSize(width: number, height: number): void {
@@ -197,18 +199,20 @@ export class PreviewRenderer {
   // ===== PRIVATE HELPERS =====
 
   private renderGrip(
-    ctx: CanvasRenderingContext2D, screenPos: Point2D, opts: Required<PreviewRenderOptions>,
+    _ctx: CanvasRenderingContext2D, screenPos: Point2D, opts: Required<PreviewRenderOptions>,
     customColor?: string,
   ): void {
-    const path = getGripPath(opts.gripSize);
-    ctx.save();
-    ctx.translate(screenPos.x, screenPos.y);
-    ctx.fillStyle = customColor ?? opts.gripColor;
-    ctx.fill(path);
-    ctx.strokeStyle = UI_COLORS.BLACK;
-    ctx.lineWidth = RENDER_LINE_WIDTHS.GRIP_OUTLINE;
-    ctx.stroke(path);
-    ctx.restore();
+    if (!this._gripRenderer) return;
+    this._gripRenderer.renderGrip(
+      {
+        position: screenPos,
+        type: 'vertex',
+        shape: 'square',
+        temperature: 'cold',
+        customColor: customColor ?? opts.gripColor,
+      },
+      { gripSize: opts.gripSize, dpiScale: 1.0 }
+    );
   }
 
   private renderDistanceLabelFromWorld(
@@ -249,5 +253,6 @@ export class PreviewRenderer {
     this.clear();
     this.ctx = null;
     this.canvas = null;
+    this._gripRenderer = null;
   }
 }

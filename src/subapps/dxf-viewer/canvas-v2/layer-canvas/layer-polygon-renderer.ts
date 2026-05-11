@@ -12,10 +12,8 @@ import { UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-rendering-utils';
-// 🏢 ADR-075/106: Centralized Grip Size Multipliers
-import { GRIP_SIZE_MULTIPLIERS, EDGE_GRIP_SIZE_MULTIPLIERS, EDGE_GRIP_COLOR, DEFAULT_GRIP_COLORS } from '../../rendering/grips/constants';
-// 🏢 ADR-077: Centralized TAU Constant
-import { TAU } from '../../rendering/primitives/canvasPaths';
+// 🏢 ADR-048: Unified Grip Rendering System (SSoT for all grip drawing)
+import { UnifiedGripRenderer } from '../../rendering/grips/UnifiedGripRenderer';
 // 🏢 ENTERPRISE: Centralized GripSettings type
 import type { GripSettings } from '../../types/gripSettings';
 
@@ -167,6 +165,7 @@ export function renderPolygonToCanvas(params: PolygonRenderParams): void {
 
 /**
  * Render vertex grips (square) for a polygon.
+ * Delegates to UnifiedGripRenderer (ADR-048 SSoT).
  */
 function renderVertexGrips(
   ctx: CanvasRenderingContext2D,
@@ -175,66 +174,34 @@ function renderVertexGrips(
   gripSettings: GripSettings | null,
   selectedVertexGripIndices: number[]
 ): void {
-  const dpiScale = gripSettings?.dpiScale ?? 1.0;
-  const baseSize = (gripSettings?.gripSize ?? 5) * dpiScale;
-
-  // 🏢 ADR-075: Centralized grip size multipliers (cold->warm->hot)
-  const GRIP_SIZE_COLD = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.COLD);
-  const GRIP_SIZE_WARM = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.WARM);
-  const GRIP_SIZE_HOT = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.HOT);
-
-  // 🏢 FIX (2026-02-16): Centralized DEFAULT_GRIP_COLORS (same as DXF GripColorManager)
-  const GRIP_COLOR_COLD = gripSettings?.colors?.cold ?? DEFAULT_GRIP_COLORS.COLD;
-  const GRIP_COLOR_WARM = gripSettings?.colors?.warm ?? DEFAULT_GRIP_COLORS.WARM;
-  const GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? DEFAULT_GRIP_COLORS.HOT;
-  const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? DEFAULT_GRIP_COLORS.CONTOUR;
+  const gripRenderer = new UnifiedGripRenderer(ctx, (p) => p);
+  const settings = gripSettings ?? undefined;
 
   for (let i = 0; i < screenVertices.length; i++) {
     const vertex = screenVertices[i];
-    const isFirstGrip = i === 0;
-    const isCloseHighlighted = isFirstGrip && layer.isNearFirstPoint;
+    const isCloseHighlighted = i === 0 && !!layer.isNearFirstPoint;
     const isHovered = layer.hoveredVertexIndex === i;
     const isSelected = selectedVertexGripIndices.includes(i);
+    const temperature: 'cold' | 'warm' | 'hot' =
+      isCloseHighlighted || isSelected ? 'hot' : isHovered ? 'warm' : 'cold';
 
-    const gripState: 'cold' | 'warm' | 'hot' = (isCloseHighlighted || isSelected) ? 'hot' : isHovered ? 'warm' : 'cold';
-    const gripSize = gripState === 'hot' ? GRIP_SIZE_HOT : gripState === 'warm' ? GRIP_SIZE_WARM : GRIP_SIZE_COLD;
-    const fillColor = gripState === 'hot' ? GRIP_COLOR_HOT : gripState === 'warm' ? GRIP_COLOR_WARM : GRIP_COLOR_COLD;
-
-    ctx.save();
-    ctx.fillStyle = fillColor;
-    ctx.strokeStyle = GRIP_COLOR_CONTOUR;
-    ctx.lineWidth = gripState !== 'cold'
-      ? RENDER_LINE_WIDTHS.GRIP_OUTLINE_ACTIVE
-      : RENDER_LINE_WIDTHS.GRIP_OUTLINE;
-
-    const halfSize = gripSize / 2;
-    ctx.fillRect(vertex.x - halfSize, vertex.y - halfSize, gripSize, gripSize);
-    ctx.strokeRect(vertex.x - halfSize, vertex.y - halfSize, gripSize, gripSize);
-
-    // "Close" indicator for first grip when highlighted
-    if (isCloseHighlighted) {
-      ctx.strokeStyle = GRIP_COLOR_HOT;
-      ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-      const outerSize = gripSize + 6;
-      const outerHalf = outerSize / 2;
-      ctx.strokeRect(vertex.x - outerHalf, vertex.y - outerHalf, outerSize, outerSize);
-    }
-
-    // Selection indicator for HOT grip (without close)
-    if (isSelected && !isCloseHighlighted) {
-      ctx.strokeStyle = GRIP_COLOR_HOT;
-      ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-      const outerSize = gripSize + 4;
-      const outerHalf = outerSize / 2;
-      ctx.strokeRect(vertex.x - outerHalf, vertex.y - outerHalf, outerSize, outerSize);
-    }
-
-    ctx.restore();
+    gripRenderer.renderGrip(
+      {
+        position: vertex,
+        type: 'vertex',
+        shape: 'square',
+        showCloseRing: isCloseHighlighted,
+        showSelectionRing: isSelected && !isCloseHighlighted,
+      },
+      settings,
+      temperature
+    );
   }
 }
 
 /**
- * Render edge midpoint grips (diamond/rhombus) for a polygon.
+ * Render edge midpoint grips (diamond) for a polygon.
+ * Delegates to UnifiedGripRenderer.renderEdgeMidpointGrip (ADR-048 SSoT).
  */
 function renderEdgeMidpointGrips(
   ctx: CanvasRenderingContext2D,
@@ -245,78 +212,30 @@ function renderEdgeMidpointGrips(
   storedViewport: Viewport | null,
   worldToScreenFn: (point: Point2D, transform: ViewTransform, viewport: Viewport | null) => Point2D
 ): void {
-  const dpiScale = gripSettings?.dpiScale ?? 1.0;
-  const baseEdgeSize = ((gripSettings?.gripSize ?? 5) * 0.6) * dpiScale;
-
-  // 🏢 ADR-106: Centralized edge grip multipliers
-  const EDGE_GRIP_SIZE_COLD = Math.round(baseEdgeSize * EDGE_GRIP_SIZE_MULTIPLIERS.COLD);
-  const EDGE_GRIP_SIZE_WARM = Math.round(baseEdgeSize * EDGE_GRIP_SIZE_MULTIPLIERS.WARM);
-
-  // 🏢 FIX (2026-02-16): Edge grips use GREEN cold (matching DXF GripColorManager)
-  const EDGE_GRIP_COLOR_COLD = EDGE_GRIP_COLOR;
-  const EDGE_GRIP_COLOR_WARM = DEFAULT_GRIP_COLORS.WARM;
-  const GRIP_COLOR_CONTOUR = DEFAULT_GRIP_COLORS.CONTOUR;
-
+  const gripRenderer = new UnifiedGripRenderer(ctx, (p) => p);
   const edgeCount = screenVertices.length;
+
   for (let i = 0; i < edgeCount; i++) {
     const startVertex = screenVertices[i];
     const endVertex = screenVertices[(i + 1) % screenVertices.length];
     const mid = calculateMidpoint(startVertex, endVertex);
 
     const isHovered = layer.hoveredEdgeIndex === i;
-
     const selectedEdgeMidpointIdx = layer.selectedEdgeMidpointIndices ??
-      (layer.selectedGripType === 'edge-midpoint' && layer.selectedGripIndex !== undefined ? [layer.selectedGripIndex] : []);
+      (layer.selectedGripType === 'edge-midpoint' && layer.selectedGripIndex !== undefined
+        ? [layer.selectedGripIndex]
+        : []);
     const isSelected = selectedEdgeMidpointIdx.includes(i);
 
-    const EDGE_GRIP_SIZE_HOT = Math.round(baseEdgeSize * EDGE_GRIP_SIZE_MULTIPLIERS.HOT);
-    const EDGE_GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SNAP_ENDPOINT;
-
     // Real-time drag preview for edge midpoint
-    let drawMidX = mid.x;
-    let drawMidY = mid.y;
+    let drawMid: Point2D = mid;
     if (isSelected && layer.isDragging && layer.dragPreviewPosition && storedTransform) {
       const previewScreen = worldToScreenFn(layer.dragPreviewPosition, storedTransform, storedViewport);
-      drawMidX = previewScreen.x;
-      drawMidY = previewScreen.y;
+      drawMid = previewScreen;
     }
 
     const gripState: 'cold' | 'warm' | 'hot' = isSelected ? 'hot' : isHovered ? 'warm' : 'cold';
-    const gripSize = gripState === 'hot' ? EDGE_GRIP_SIZE_HOT : gripState === 'warm' ? EDGE_GRIP_SIZE_WARM : EDGE_GRIP_SIZE_COLD;
-    const fillColor = gripState === 'hot' ? EDGE_GRIP_COLOR_HOT : gripState === 'warm' ? EDGE_GRIP_COLOR_WARM : EDGE_GRIP_COLOR_COLD;
-
-    // Draw diamond/rhombus grip at midpoint
-    ctx.save();
-    ctx.fillStyle = fillColor;
-    ctx.strokeStyle = gripState !== 'cold' ? fillColor : GRIP_COLOR_CONTOUR;
-    ctx.lineWidth = gripState !== 'cold'
-      ? RENDER_LINE_WIDTHS.GRIP_OUTLINE_ACTIVE
-      : RENDER_LINE_WIDTHS.GRIP_OUTLINE;
-
-    ctx.beginPath();
-    ctx.moveTo(drawMidX, drawMidY - gripSize);
-    ctx.lineTo(drawMidX + gripSize, drawMidY);
-    ctx.lineTo(drawMidX, drawMidY + gripSize);
-    ctx.lineTo(drawMidX - gripSize, drawMidY);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Highlight for WARM or HOT grips
-    if (gripState !== 'cold') {
-      ctx.strokeStyle = fillColor;
-      ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-      const outerSize = gripSize + 4;
-      ctx.beginPath();
-      ctx.moveTo(drawMidX, drawMidY - outerSize);
-      ctx.lineTo(drawMidX + outerSize, drawMidY);
-      ctx.lineTo(drawMidX, drawMidY + outerSize);
-      ctx.lineTo(drawMidX - outerSize, drawMidY);
-      ctx.closePath();
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    gripRenderer.renderEdgeMidpointGrip(drawMid, gripState, gripSettings);
   }
 }
 
@@ -359,42 +278,21 @@ function renderDraftPartialToCanvas(params: {
     ctx.restore();
   }
 
-  // Draw vertex grips
+  // Draw vertex grips (ADR-048 SSoT)
   if (layer.showGrips) {
-    const dpiScale = gripSettings?.dpiScale ?? 1.0;
-    const baseSize = (gripSettings?.gripSize ?? 5) * dpiScale;
-
-    const GRIP_SIZE_COLD = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.COLD);
-    const GRIP_SIZE_HOT = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.HOT);
-    const GRIP_COLOR_COLD = gripSettings?.colors?.cold ?? UI_COLORS.SNAP_CENTER;
-    const GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SNAP_ENDPOINT;
-    const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK;
+    const gripRenderer = new UnifiedGripRenderer(ctx, (p) => p);
+    const settings = gripSettings ?? undefined;
 
     for (let i = 0; i < screenVertices.length; i++) {
       const vertex = screenVertices[i];
-      const isFirstGrip = i === 0;
-      const isCloseHighlighted = isFirstGrip && layer.isNearFirstPoint;
-      const gripSize = isCloseHighlighted ? GRIP_SIZE_HOT : GRIP_SIZE_COLD;
-      const fillColor = isCloseHighlighted ? GRIP_COLOR_HOT : GRIP_COLOR_COLD;
+      const isCloseHighlighted = i === 0 && !!layer.isNearFirstPoint;
+      const temperature: 'cold' | 'hot' = isCloseHighlighted ? 'hot' : 'cold';
 
-      ctx.save();
-      ctx.fillStyle = fillColor;
-      ctx.strokeStyle = GRIP_COLOR_CONTOUR;
-      ctx.lineWidth = RENDER_LINE_WIDTHS.GRIP_OUTLINE;
-
-      const halfSize = gripSize / 2;
-      ctx.fillRect(vertex.x - halfSize, vertex.y - halfSize, gripSize, gripSize);
-      ctx.strokeRect(vertex.x - halfSize, vertex.y - halfSize, gripSize, gripSize);
-
-      if (isCloseHighlighted) {
-        ctx.strokeStyle = GRIP_COLOR_HOT;
-        ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-        const outerSize = gripSize + 6;
-        const outerHalf = outerSize / 2;
-        ctx.strokeRect(vertex.x - outerHalf, vertex.y - outerHalf, outerSize, outerSize);
-      }
-
-      ctx.restore();
+      gripRenderer.renderGrip(
+        { position: vertex, type: 'vertex', shape: 'square', showCloseRing: isCloseHighlighted },
+        settings,
+        temperature
+      );
     }
   }
 }
