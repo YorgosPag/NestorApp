@@ -854,6 +854,14 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 6.D COMPLETE**. Layer 6 Interaction — grip geometry, grip handler, snap provider, direct distance entry:
+  - `text-engine/interaction/TextGripGeometry.ts` — `computeTextGrips(entity, viewMatrix)`: derives grip hit-areas (insertion point, width handle, rotation handle) from `DxfTextSceneEntity` + current view scale. Returns `TextGrip[]` with `kind` (insert/width/rotate), world position, screen rect. `transformWorldToScreen` helper.
+  - `text-engine/interaction/TextGripHandler.ts` — `TextGripHandler` class: `onGripHover`, `onGripPress`, `onGripDrag`, `onGripRelease`. Dispatches `UpdateTextGeometryCommand` on release (ADR-031 command pattern). Drag-preview updates `GripSnapStore` (ADR-040) to snap crosshair. 261 lines (≤500 limit).
+  - `text-engine/interaction/TextSnapProvider.ts` — `getTextSnapPoints(entity, layout)`: returns snap points (insertion, mid-frame, corners, baseline-end) as `TextSnapPoint[]`. `toSnapCandidates`: converts to `ISnapCandidate` for the unified snap bus (Q21). `TextSnapKind` union.
+  - `text-engine/interaction/DirectDistanceEntry.ts` — `parseDDE(input)`: parses `<distance><angle>` polar notation (e.g. `10<45`) → `{ distance, angleRad }`. `applyDDE(origin, dde)` → `Point2D`. Used by text placement workflow for keyboard-driven positioning (Q19).
+  - `text-engine/interaction/index.ts` — barrel updated: exports `getTextSnapPoints`, `toSnapCandidates`, `TextSnapKind`, `TextSnapPoint`.
+  - `__tests__/TextGripGeometry.test.ts` — 120 lines. `__tests__/TextGripHandler.test.ts` — 248 lines. `__tests__/TextSnapProvider.test.ts` — 201 lines. `__tests__/DirectDistanceEntry.test.ts` — 102 lines. Total: **671 test lines**.
+
 - **2026-05-11 — Phase 6 tests COMPLETE**. Full test suite for all text commands + match-engine fix:
   - `text-match-engine.ts` fix: `replaceAll` early-return `{ node, count: 0 }` when no matches found (avoids spurious shallow-copy allocation); unused `match` param renamed to `_` in replace callback.
   - `__tests__/text-match-engine.test.ts` — 94 lines: findMatches (literal, regex, caseSensitive, wholeWord, multi-run, multi-para), replaceAll (no-match early-return, count, multi-match), replaceAt (single location, out-of-bounds guard).

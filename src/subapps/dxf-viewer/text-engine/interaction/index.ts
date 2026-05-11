@@ -1,2 +1,35 @@
-// TODO Phase 6: TextGripHandler.ts (grip handles, Q19), TextSnapProvider.ts (ISnapProvider, Q21)
-export {};
+/**
+ * ADR-344 Phase 6 — Text interaction barrel.
+ *
+ * Snap (6.B) + grip (6.C) primitives for DXF TEXT/MTEXT entities.
+ */
+
+export {
+  getTextSnapPoints,
+  toSnapCandidates,
+  type TextSnapKind,
+  type TextSnapPoint,
+} from './TextSnapProvider';
+
+export {
+  computeGrips,
+  hitTestGrips,
+  type TextGrip,
+  type TextGripKind,
+  type ComputeGripsOptions,
+} from './TextGripGeometry';
+
+export {
+  DirectDistanceEntry,
+  type DDEStatus,
+  type DDESnapshot,
+} from './DirectDistanceEntry';
+
+export {
+  TextGripHandler,
+  type GripDragStatus,
+  type GripGhost,
+  type BeginDragInput,
+  type UpdateDragInput,
+  type TextGripHandlerDependencies,
+} from './TextGripHandler';
