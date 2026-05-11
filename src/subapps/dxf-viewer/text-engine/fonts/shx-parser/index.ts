@@ -1,2 +1,3 @@
-// TODO Phase 2: SHP stroke-vector parser (~400 lines) for SHX font files
-export {};
+export { parseShpFile, parseShpRecord } from './shp-parser';
+export { shxGlyphToPath2D, shxStringToPath2D, measureShxText } from './shx-renderer';
+export type { ShpFont, ShpRecord, ShpVector } from './shp-types';
