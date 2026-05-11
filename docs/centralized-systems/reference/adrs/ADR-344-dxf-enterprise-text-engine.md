@@ -854,6 +854,14 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 6.A COMPLETE**. Layer 6 Command Pattern — `CreateTextCommand` + `CanEditLayerGuard` types:
+  - `core/commands/text/types.ts` — `DxfTextSceneEntity` (scene-bridge carrying `DxfTextNode` AST), `DxfTextAuditAction/Change/Event/IDxfTextAuditRecorder` (Q12 audit abstraction), `LayerSnapshot/ILayerAccessProvider/CanEditLayerError` (Q8 layer guard types), `noopAuditRecorder` singleton.
+  - `core/commands/text/CanEditLayerGuard.ts` — `assertCanEditLayer({ layerName, provider })`: throws `CanEditLayerError` for locked layer when user lacks `canUnlockLayer`, throws unconditionally for frozen layers (AutoCAD parity). Used as pre-execute hook by Update*/Delete commands.
+  - `core/commands/text/CreateTextCommand.ts` — implements `ICommand` (ADR-031). `pickEntityType` selects `'text'` for single-para/single-run/no-columns ASTs, `'mtext'` otherwise. Entity instance reused across undo/redo (idempotent). Audit recorder injected via constructor; defaults to `noopAuditRecorder` (fire-and-forget on execute/redo → `'created'`; on undo → `'deleted'`). `existingId` param for undo/redo replay (ADR-057). `serialize()` captures `position/layer/textNode/entityId` at `version: 1`.
+  - `core/commands/text/index.ts` — updated barrel: exports `CreateTextCommand`, `assertCanEditLayer`, all types; retains TODO for Phase 6.B commands.
+  - Unit tests: `core/commands/text/__tests__/CreateTextCommand.test.ts` (13 tests: type-selection × 3, execute/undo/redo round-trip × 2, audit × 2, validate × 3, serialize × 1, affectedIds × 1, canMerge × 1). **13/13 green**.
+  - Deferred to Phase 6.B: `UpdateTextStyleCommand`, `UpdateTextGeometryCommand`, `UpdateMTextParagraphCommand`, `DeleteTextCommand`, `ReplaceAllTextCommand`, `ReplaceOneTextCommand`.
+
 - **2026-05-11 — Phase 5 COMPLETE**. Layer 5 Toolbar UI desktop + mobile + Text Properties FloatingPanel tab + TipTap editor overlay mount:
   - Deps installed (pnpm `-w`, all MIT, vetted per CLAUDE.md N.5): `@tiptap/react@^3`, `@tiptap/starter-kit@^3`, `@tiptap/extension-color@^3`, `@tiptap/extension-text-style@^3`, `@tiptap/extension-font-family@^3`, `react-colorful@^5`, `cmdk@^1`, `@radix-ui/react-toolbar@^1`, `@radix-ui/react-toggle@^1`, `@radix-ui/react-toggle-group@^1`.
   - **5.A Zustand stores** — `state/text-toolbar/useTextToolbarStore.ts` (TextToolbarValues + MixedValue fields for every toolbar surface), `useTextSelectionStore.ts` (selectedIds of text entities), `useTextEditingStore.ts` (active edit session + DxfTextNode draft), `textToolbarSelectors.ts` (`computeMixedValues(selection)` collapses agreement → value, disagreement → null). Barrel `state/text-toolbar/index.ts`.
