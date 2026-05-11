@@ -854,6 +854,17 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 1 COMPLETE**. Layer 1 DXF I/O — parser + tokenizer + STYLE table + serializer:
+  - `text-engine/types/text-toolbar.types.ts` — `DxfColor` discriminated union, `MixedValue<T>`, `DxfDocumentVersion` enum (R12→R2018), version feature-gate utilities (`versionSupportsMtext`, `versionSupportsTrueColor`, `versionSupportsAnnotativeXData`, `versionAtLeast`, `parseDocumentVersion`, `parseTrueColorInt`, `encodeTrueColorInt`).
+  - `text-engine/types/text-ast.types.ts` — `DxfTextNode` root AST node, `TextParagraph`, `TextRun`, `TextStack`, `TextRunStyle`, `TextJustification`, `LineSpacingMode`, `AnnotationScale`, `DxfStyleTableEntry`.
+  - `text-engine/parser/mtext-tokenizer.ts` — full tokenizer for all 22 MTEXT inline codes from Appendix B: `\f/\F`, `\H`, `\W`, `\T`, `\Q`, `\C`, `\c`, `\L/\l`, `\O/\o`, `\K/\k`, `\P`, `\N`, `\S`, `\A`, `\p`, `\~`, `%%c/d/p`, `\U+XXXX`, `{`, `}`. Token type is a discriminated union — zero `any`.
+  - `text-engine/parser/mtext-parser.ts` — token list → `DxfTextNode` AST using style stack for `{...}` group scopes. `parseMtext()` for MTEXT, `parseText()` for simple TEXT entities. Style flush-before-change semantics (correct MTEXT behaviour).
+  - `text-engine/parser/style-table-reader.ts` — DXF STYLE symbol table reader (group-code scan, R12→R2018 compatible). `parseStyleTable()` + `styleEntryDefaults()` helper.
+  - `text-engine/serializer/mtext-serializer.ts` — `DxfTextNode` → MTEXT inline-code string. Version-gated: R12 graceful downgrade to plain TEXT entity + warning. R2004+ true-color `\c` enabled. Paragraph codes, style diffs, stack fractions, escape.
+  - Barrel `index.ts` updated for types, parser, serializer modules.
+  - Unit tests: `parser/__tests__/mtext-tokenizer.test.ts` (46 tests) + `mtext-parser.test.ts` (22 tests) — **68/68 green**.
+  - All files ≤300 lines, all functions ≤40 lines, zero `any`/`@ts-ignore`.
+
 - **2026-05-11 — Phase 0 COMPLETE**. Setup & configuration:
   - 15 SSoT modules registered in `.ssot-registry.json` (`_comment_dxf_text_engine` group, tier 4): `mtext-parser`, `mtext-serializer`, `font-engine`, `shx-parser`, `text-layout`, `text-renderer`, `text-toolbar`, `text-commands`, `text-types`, `text-collab`, `text-templates`, `text-spell`, `text-draft`, `text-ai`, `viewport-system`.
   - 3 Firestore collections added to `src/config/firestore-collections.ts`: `TEXT_TEMPLATES` (`text_templates`), `TEXT_CUSTOM_DICTIONARY` (`text_custom_dictionary`), `COMPANY_FONTS` (`company_fonts`).

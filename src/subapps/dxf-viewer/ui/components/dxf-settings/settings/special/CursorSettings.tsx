@@ -98,7 +98,7 @@ export function CursorSettings() {
                 }`}
               >
                 <div
-                  className={`${iconSizes.sm} mx-auto ${radius.full} border`}
+                  className={`${iconSizes.sm} mx-auto rounded-full border`}
                   style={getCursorPreviewBorderStyles(settings.cursor.color)}
                  />
                 <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.shape.circle')}</span>
