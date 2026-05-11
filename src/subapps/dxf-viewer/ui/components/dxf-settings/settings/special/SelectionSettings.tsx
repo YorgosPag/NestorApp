@@ -4,10 +4,9 @@ import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { UI_COLORS } from '../../../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
-import { RotateCcw, Square, SquareDashed } from 'lucide-react';
+import { Square, SquareDashed } from 'lucide-react';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/DxfSettingsPanel)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 // 🏢 ENTERPRISE: i18n support
@@ -49,29 +48,6 @@ export function SelectionSettings() {
     });
   };
 
-  const handleResetSelectionSettings = () => {
-    updateSettings({
-      selection: {
-        window: {
-          fillColor: UI_COLORS.GRID_BLUE,
-          fillOpacity: 0.2,
-          borderColor: UI_COLORS.GRID_BLUE,
-          borderOpacity: 1.0,
-          borderStyle: 'solid' as const,
-          borderWidth: 2
-        },
-        crossing: {
-          fillColor: UI_COLORS.DRAWING_PREVIEW,
-          fillOpacity: 0.2,
-          borderColor: UI_COLORS.DRAWING_PREVIEW,
-          borderOpacity: 1.0,
-          borderStyle: 'dashed' as const,
-          borderWidth: 2
-        }
-      }
-    });
-  };
-
   // 🏢 ENTERPRISE: Selection tab type
   type SelectionTab = 'window' | 'crossing';
 
@@ -108,30 +84,15 @@ export function SelectionSettings() {
         className={PANEL_LAYOUT.MARGIN.BOTTOM_LG}
       />
 
-      {/* TEMPORARY DEBUG BUTTON */}
-      {/* ✅ ENTERPRISE: Κεντρικοποιημένα colors και Lucide icon */}
-      <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${getStatusBorder('warning')} ${PANEL_LAYOUT.ROUNDED.DEFAULT}`}>
-        <button
-          onClick={handleResetSelectionSettings}
-          className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.XS} flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.card} ${colors.text.primary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${getStatusBorder('default')} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-        >
-          <RotateCcw className={PANEL_LAYOUT.ICON.REGULAR} />
-          <span>{t('selectionSettings.resetButton')}</span>
-        </button>
-        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
-          {t('selectionSettings.resetDescription')}
-        </div>
-      </div>
-
       {/* Tab Content */}
       {activeSelectionTab === 'window' ? (
-        <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           {/* 🏢 ENTERPRISE: Icon color using semantic tokens */}
-          <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <Square className={`${PANEL_LAYOUT.ICON.REGULAR} ${colors.text.info}`} />
             <span>{t('selectionSettings.window.title')}</span>
           </h4>
-          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
             {t('selectionSettings.window.description')}
           </div>
 
@@ -270,13 +231,13 @@ export function SelectionSettings() {
           </div>
         </div>
       ) : (
-        <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           {/* 🏢 ENTERPRISE: Icon color using semantic tokens */}
-          <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <SquareDashed className={`${PANEL_LAYOUT.ICON.REGULAR} ${colors.text.success}`} />
             <span>{t('selectionSettings.crossing.title')}</span>
           </h4>
-          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
+          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
             {t('selectionSettings.crossing.description')}
           </div>
 
