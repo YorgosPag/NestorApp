@@ -1,10 +1,17 @@
 /**
  * ADR-344 Phase 7 — Text Templates barrel.
  *
- * Phase 7.A (this commit): types + built-in defaults + placeholder extractor.
- * Phase 7.B (next):         Firestore CRUD service.
+ * Phase 7.A: types + built-in defaults + placeholder extractor.
+ * Phase 7.B (this commit): Firestore doc types + Zod schemas. The CRUD
+ *                          service is server-only (`import 'server-only'`)
+ *                          and therefore imported directly from
+ *                          `./text-template.service` by API routes — never
+ *                          via this barrel, which is reachable from client
+ *                          bundles.
  * Phase 7.C:                placeholder resolver.
  * Phase 7.D:                management UI.
+ * Phase 7.E:                rules emulator test (currently in
+ *                          FIRESTORE_RULES_PENDING).
  */
 
 export type {
@@ -16,6 +23,26 @@ export type {
 export { TextTemplatePlaceholderMismatchError } from './template.types';
 
 export { extractPlaceholders, extractPlaceholdersFromString } from './extract-placeholders';
+
+// Phase 7.B — Firestore boundary types + Zod validators (safe for both client
+// and server bundles; the Admin-SDK service itself is NOT re-exported here).
+export type {
+  UserTextTemplateDoc,
+  CreateTextTemplateInput,
+  UpdateTextTemplateInput,
+  TextTemplateActor,
+} from './text-template.types';
+export {
+  TextTemplateNotFoundError,
+  TextTemplateCrossTenantError,
+  TextTemplateValidationError,
+} from './text-template.types';
+export {
+  TEXT_TEMPLATE_NAME_MAX,
+  createTextTemplateInputSchema,
+  updateTextTemplateInputSchema,
+  collectIssues,
+} from './text-template.zod';
 
 export {
   BUILT_IN_TEXT_TEMPLATES,

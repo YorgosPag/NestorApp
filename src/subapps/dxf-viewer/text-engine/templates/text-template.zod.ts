@@ -39,9 +39,16 @@ const justificationSchema = z.enum([
   'BL', 'BC', 'BR',
 ]);
 
-const finiteNumber = z.number().refine((n) => Number.isFinite(n), {
+const isFiniteNumber = (n: number) => Number.isFinite(n);
+
+const finiteNumber = z.number().refine(isFiniteNumber, {
   message: 'must be a finite number',
 });
+
+const finitePositiveNumber = z
+  .number()
+  .positive()
+  .refine(isFiniteNumber, { message: 'must be a finite number' });
 
 // ── Content shape (lightweight DxfTextNode gate) ──────────────────────────────
 
@@ -56,7 +63,7 @@ const dxfTextNodeSchema = z
     attachment: justificationSchema,
     lineSpacing: z.object({
       mode: z.enum(['multiple', 'exact', 'at-least']),
-      factor: finiteNumber.positive(),
+      factor: finitePositiveNumber,
     }),
     rotation: finiteNumber,
     isAnnotative: z.boolean(),
