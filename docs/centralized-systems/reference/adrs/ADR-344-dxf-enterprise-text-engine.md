@@ -854,6 +854,22 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 7.A COMPLETE**. Built-in template TypeScript constants + placeholder extractor (no Firestore, no UI yet):
+  - `text-engine/templates/template.types.ts` — `TextTemplate` (canonical shape for built-ins + Firestore docs), `BuiltInTextTemplate` (narrowed view: `companyId: null`, `isDefault: true`, locale tag), `TextTemplateCategory` union (`title-block` | `stamp` | `revision` | `notes` | `scale-bar` | `custom`), `TextTemplateLocale` (`el` | `en` | `multi`), `TextTemplatePlaceholderMismatchError`. Built-ins use `id: "builtin/<slug>"` (never an enterprise ID — keeps Firestore prefix `tpl_text` free for user-created records).
+  - `text-engine/templates/extract-placeholders.ts` — `extractPlaceholdersFromString(text)` (regex `\{\{\s*<dot.path>\s*\}\}`, tolerates whitespace, rejects single-segment & malformed forms) + `extractPlaceholders(node)` (DxfTextNode walker that also descends into `TextStack.top` / `TextStack.bottom`). Returns sorted, deduped paths.
+  - `text-engine/templates/defaults/template-helpers.ts` — compact builders: `DEFAULT_RUN_STYLE` / `HEADING_RUN_STYLE` / `CAPTION_RUN_STYLE`, `makeRun` / `makeParagraph` / `makeNode`, `makeBuiltIn({...})` (auto-extracts placeholders, freezes them).
+  - `text-engine/templates/defaults/title-blocks.ts` — `TITLE_BLOCK_EL` + `TITLE_BLOCK_EN` (bottom-right corner placement, 11 paragraphs each, placeholders: `company.name`, `project.name`/`code`/`owner`, `drawing.title`/`scale`/`sheetNumber`, `user.fullName`/`checkerName`, `revision.number`/`date`, `date.today`).
+  - `text-engine/templates/defaults/stamps.ts` — `SIGNOFF_STAMP_EL` + `SIGNOFF_STAMP_EN` + `APPROVAL_STAMP_EL` (top-left placement, placeholders: `user.fullName`/`title`/`licenseNumber`, `project.name`, `date.today`).
+  - `text-engine/templates/defaults/notes.ts` — `GENERAL_NOTES_EL` + `GENERAL_NOTES_EN` (7 numbered paragraphs, 1.2× line spacing for readability).
+  - `text-engine/templates/defaults/revision.ts` — `REVISION_TABLE_EL` + `REVISION_TABLE_EN` (top-right, header + 1 placeholder row + 2 empty rows for manual entry).
+  - `text-engine/templates/defaults/scale-bar.ts` — `SCALE_BAR_MULTI` (bilingual caption, locale `multi`).
+  - `text-engine/templates/defaults/index.ts` — registry: `BUILT_IN_TEXT_TEMPLATES` (10 templates, frozen array) + `BUILT_IN_TEXT_TEMPLATES_BY_ID` (Map) + `BUILT_IN_TEXT_TEMPLATES_BY_CATEGORY` (Map per category, each bucket frozen).
+  - `text-engine/templates/index.ts` — barrel: types + `extractPlaceholders*` + every built-in plus registry maps.
+  - `__tests__/extract-placeholders.test.ts` — 14 tests: whitespace, single-segment rejection, deep paths, regex state reset, DxfTextNode walk, TextStack scan.
+  - `__tests__/defaults.test.ts` — 16 tests: category coverage, companyId/isDefault/timestamps invariants, id uniqueness + `builtin/<slug>` format, i18n key prefix, paragraph non-empty, **placeholder declared = scanned exactly**, sorted+unique, registry/category map consistency, per-template anchor/locale spot checks.
+  - **30/30 tests green.** No `any`, no `@ts-ignore`, no inline styles, every file ≤170 lines (N.7.1).
+  - `tpl_text` prefix + `generateTextTemplateId` already in `enterprise-id-prefixes` / `enterprise-id-convenience` (added by an earlier scaffold). `COLLECTIONS.TEXT_TEMPLATES` / `TEXT_CUSTOM_DICTIONARY` already in `firestore-collections.ts`. Phase 7.B will wire Firestore service + rules + entity audit; Phase 7.C the resolver; Phase 7.D the management UI; Phase 7.E i18n locales (`textTemplates.json`).
+
 - **2026-05-11 — Phase 6.E + 6.F COMPLETE**. Firestore rules for `company_fonts` + SSoT registry update — closes Phase 6.
   - `firestore.rules` — new `match /company_fonts/{fontId}` block (before the closing braces of `match /databases/{database}/documents`): tenant-scoped READ via `belongsToCompany(companyId)`, CREATE/UPDATE/DELETE restricted to `isCompanyAdminOfCompany` (or `isSuperAdminOnly`), `companyId` immutable on update. `text_templates` + `text_custom_dictionary` deferred to Phase 7 (collection schema lives there).
   - `.ssot-registry.json` — `text-commands` module extended: `forbiddenPatterns` now covers every Phase 6.A command class (Create/UpdateStyle/UpdateGeometry/UpdateMTextParagraph/Delete/ReplaceAll/ReplaceOne) plus `assertCanEditLayer`; description mentions the layer guard + match engine SSoT.
