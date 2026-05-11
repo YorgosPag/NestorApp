@@ -394,6 +394,32 @@ export async function seedFloorplanBackground(
 }
 
 /**
+ * company_fonts — ADR-344 Phase 6 (DXF Text Engine font management).
+ * Tenant read, admin write. createdBy = same_tenant_admin (only admins upload).
+ */
+export async function seedCompanyFont(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('company_fonts').doc(docId).set({
+      id: docId,
+      name: `Font ${docId}`,
+      fileName: `${docId}.ttf`,
+      fileSize: 102400,
+      mimeType: 'font/ttf',
+      storageUrl: `gs://bucket/company_fonts/${docId}.ttf`,
+      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
+      createdBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_admin.uid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
  * text_templates — ADR-344 Phase 7.B (DXF Text Engine).
  * Tenant read, admin write. createdBy = same_tenant_admin (only admins create).
  */

@@ -953,6 +953,11 @@ src/subapps/dxf-viewer/
   - **30/30 tests green.** No `any`, no `@ts-ignore`, no inline styles, every file ≤170 lines (N.7.1).
   - `tpl_text` prefix + `generateTextTemplateId` already in `enterprise-id-prefixes` / `enterprise-id-convenience` (added by an earlier scaffold). `COLLECTIONS.TEXT_TEMPLATES` / `TEXT_CUSTOM_DICTIONARY` already in `firestore-collections.ts`. Phase 7.B will wire Firestore service + rules + entity audit; Phase 7.C the resolver; Phase 7.D the management UI; Phase 7.E i18n locales (`textTemplates.json`).
 
+- **2026-05-11 — Phase 6.F addendum — company_fonts rules emulator test**. Graduates `company_fonts` from `FIRESTORE_RULES_PENDING` to `FIRESTORE_RULES_COVERAGE` (ADR-298 CHECK 3.16). Implemented alongside Phase 7.E to reuse the newly created `textTemplateMatrix()`.
+  - **New test file**: `tests/firestore-rules/suites/company_fonts.rules.test.ts` — 27 tests (25 matrix + 2 companyId-immutability), reusing `textTemplateMatrix()` from `coverage-matrices-dxf.ts` (identical rule shape to `text_templates`).
+  - **New seed helper**: `seedCompanyFont()` in `tests/firestore-rules/_harness/seed-helpers-dxf.ts`.
+  - **Manifest**: `company_fonts` added to `FIRESTORE_RULES_COVERAGE` (rulesRange [3847, 3885]); removed from `FIRESTORE_RULES_PENDING`.
+
 - **2026-05-11 — Phase 6.E + 6.F COMPLETE**. Firestore rules for `company_fonts` + SSoT registry update — closes Phase 6.
   - `firestore.rules` — new `match /company_fonts/{fontId}` block (before the closing braces of `match /databases/{database}/documents`): tenant-scoped READ via `belongsToCompany(companyId)`, CREATE/UPDATE/DELETE restricted to `isCompanyAdminOfCompany` (or `isSuperAdminOnly`), `companyId` immutable on update. `text_templates` + `text_custom_dictionary` deferred to Phase 7 (collection schema lives there).
   - `.ssot-registry.json` — `text-commands` module extended: `forbiddenPatterns` now covers every Phase 6.A command class (Create/UpdateStyle/UpdateGeometry/UpdateMTextParagraph/Delete/ReplaceAll/ReplaceOne) plus `assertCanEditLayer`; description mentions the layer guard + match engine SSoT.

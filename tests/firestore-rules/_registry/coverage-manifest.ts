@@ -1004,6 +1004,17 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [3904, 3941],
     matrix: textTemplateMatrix(),
   },
+  {
+    // ADR-344 Phase 6.F — DXF Text Engine company-uploaded custom fonts.
+    // Identical rule shape to text_templates: read = any tenant member,
+    // write = company_admin / super_admin only. companyId immutable on update.
+    // Graduated from FIRESTORE_RULES_PENDING (Phase 6.F).
+    collection: 'company_fonts',
+    pattern: 'tenant_admin_write',
+    testFile: 'tests/firestore-rules/suites/company_fonts.rules.test.ts',
+    rulesRange: [3847, 3885],
+    matrix: textTemplateMatrix(),
+  },
 ] as const;
 
 /**
@@ -1134,8 +1145,7 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'framework_agreements',   // tenant read + admin write
   // — UserSettings SSoT (2026-05-08) —
   'user_preferences',       // lines 1458-1485 — ownership + tenant isolation, schemaVersion floor
-  // — DXF Text Engine fonts (ADR-344 Phase 6.E, 2026-05-11) —
-  'company_fonts',          // tenant read + company-admin write; companyId immutable; suite to land in Phase 6.F
+  // company_fonts  → moved to COVERAGE (ADR-344 Phase 6.F, 2026-05-11)
   // text_templates → moved to COVERAGE (ADR-344 Phase 7.E, 2026-05-11)
 ] as const;
 

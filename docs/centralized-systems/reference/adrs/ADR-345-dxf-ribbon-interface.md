@@ -367,15 +367,78 @@ Da sinistra a destra (selezionabili con right-click):
 
 ## 8. Decision — Adozione Ribbon per DXF Viewer
 
+### 8.0 Posizione nel layout — DECISIONE CONFERMATA (2026-05-11)
+
+```
+ADESSO:
+┌──────────────────────────────────────────────────────┐
+│              GLOBAL HEADER                            │
+├────────────┬─────────────────────────────────────────┤
+│            │   [DXF TOOLBAR]                         │
+│  FLOATING  ├─────────────────────────────────────────┤
+│   PANEL    │   CANVAS + RULERS + GRID                │
+└────────────┴─────────────────────────────────────────┘
+
+TRANSITORIO (ribbon inserito tra header e toolbar):
+┌──────────────────────────────────────────────────────┐
+│              GLOBAL HEADER                            │
+├──────────────────────────────────────────────────────┤
+│              RIBBON (full width)  ← NUOVO            │
+├────────────┬─────────────────────────────────────────┤
+│  FLOATING  │   [DXF TOOLBAR — ancora presente]       │
+│   PANEL    ├─────────────────────────────────────────┤
+│  (ancora)  │   CANVAS + RULERS + GRID                │
+└────────────┴─────────────────────────────────────────┘
+
+FINALE (floating panel + DXF toolbar rimossi):
+┌──────────────────────────────────────────────────────┐
+│              GLOBAL HEADER                            │
+├──────────────────────────────────────────────────────┤
+│              RIBBON (full width)                      │
+├──────────────────────────────────────────────────────┤
+│              CANVAS + RULERS + GRID (full width)      │
+└──────────────────────────────────────────────────────┘
+```
+
+**Regola**: Il ribbon si inserisce come riga full-width tra il global header e il resto del DXF viewer layout. Coesiste con floating panel + DXF toolbar durante la migrazione graduale per tab/fase.
+
 ### 8.1 Cosa adottiamo
 
-1. **Ribbon orizzontale** sopra il canvas, sotto l'app header globale
+1. **Ribbon orizzontale** sopra il canvas, sotto l'app header globale — inserito tra header e DXF toolbar esistente
 2. **Tab bar** con tab iniziali: Home, View, Annotate, Layers, Settings
 3. **Panel structure** per ogni tab con large + small + split buttons
 4. **Flyout** per tool secondari (panel espanso al click del label)
 5. **Contextual tabs** per selezione entità (es. Hatch Editor, Text Editor)
 6. **4 stati minimize** via doppio-click
 7. **Deprecazione graduale** del floating panel mentre il ribbon copre gli stessi tool
+
+### 8.1b Icone — DECISIONE CONFERMATA (2026-05-11)
+
+SVG personalizzate CAD-specific, selezionate da queste librerie open-source:
+
+| Libreria | Licenza | URL |
+|----------|---------|-----|
+| Tabler Icons | MIT ✅ | https://tabler.io/icons |
+| Iconoir | MIT ✅ | https://iconoir.com/ |
+| Iconbuddy (aggregatore) | varia — verificare per icona | https://iconbuddy.com/ |
+
+**Regola**: per ogni tool ribbon, si sceglie l'icona più CAD-like tra le tre fonti. Le icone vengono copiate come file SVG nell'asset folder del DXF viewer subapp — nessun npm package di icone da installare (evita bundle bloat). NON usare Lucide (già presente nel project) per il ribbon: look troppo generico, non CAD.
+
+**Check N.5 pre-installazione**: se si sceglie un'icona da Iconbuddy, verificare licenza originale prima di usarla.
+
+### 8.1c Persistenza stato ribbon — DECISIONE CONFERMATA (2026-05-11)
+
+**localStorage** — industry standard (AutoCAD, Revit, MS Office, BricsCAD tutti ricordano).
+
+Chiavi salvate:
+```
+dxf-ribbon:activeTabId        → es. "home"
+dxf-ribbon:minimizeState      → "full" | "panel-buttons" | "panel-titles" | "tab-names"
+dxf-ribbon:pinnedPanelIds     → string[] (flyout pinned)
+dxf-ribbon:splitLastUsed      → Record<commandId, variantId>
+```
+
+Al mount: legge da localStorage → fallback su default (`activeTabId: "home"`, `minimizeState: "full"`).
 
 ### 8.2 Cosa NON adottiamo (v1)
 
@@ -554,6 +617,9 @@ interface RibbonState {
 | Data | Modifica |
 |------|----------|
 | 2026-05-11 | ADR-345 PROPOSED — Research Autodesk ribbon architecture + struttura completa tool Home tab. Migration plan in 7 fasi. |
+| 2026-05-11 | §8.0 aggiunto — Layout position confermato: ribbon full-width tra global header e DXF toolbar. Coesistenza transitoria con floating panel + DXF toolbar durante migrazione. |
+| 2026-05-11 | §8.1b aggiunto — Icone: SVG custom CAD-specific da Tabler Icons (MIT) / Iconoir (MIT) / Iconbuddy (verifica per icona). Copiate come file SVG nell'asset folder. NO Lucide per ribbon. |
+| 2026-05-11 | §8.1c aggiunto — Persistenza stato: localStorage (industry standard AutoCAD/Revit/Office). 4 chiavi: activeTabId, minimizeState, pinnedPanelIds, splitLastUsed. |
 
 ---
 
