@@ -854,6 +854,18 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 3 COMPLETE**. Layer 3 Layout Engine — line-breaking, paragraph formatting, columns, stacking, attachment-point anchoring:
+  - `text-engine/layout/line-breaker.ts` — `breakLines(runs, maxWidth, font): TextLine[]`. UAX #14 simplified: tokenizes on spaces, hyphens, `\n`. Overflow-safe (single token > maxWidth starts own line). Never promotes whitespace to head of new line. Exports `TextLine` interface.
+  - `text-engine/layout/paragraph-formatter.ts` — `formatParagraph(para, options): FormattedParagraph`. Applies left/right margins + outer indent to effective maxWidth. Separates `TextStack` items from `TextRun` items before calling `breakLines`. `lineSpacingMode`: `multiple` = naturalHeight × factor; `exact` = fixed factor; `at-least` = max(natural, factor). Exports `ParagraphOptions` (with `font: Font` field), `FormattedParagraph` (with `indentWidth` for renderer first-line offset).
+  - `text-engine/layout/column-layout.ts` — `layoutColumns(paragraphs, config): ColumnLayout`. `static`: contiguous distribution across N columns (⌈len/N⌉ per column). `dynamic`: fills each column to ≈ totalHeight/count, overflow to next. Exports `ColumnConfig`, `ColumnEntry`, `ColumnLayout`.
+  - `text-engine/layout/stacking-renderer.ts` — `layoutStack(stack, font, size): StackLayout`. Sub-text at 65 % of surrounding height (AutoCAD convention). `tolerance` (^): centered num/den, no separator. `horizontal` (#): centered num/den + horizontal rule at midpoint. `diagonal` (/): side-by-side + slash Path2D. Exports `StackLayout`.
+  - `text-engine/layout/attachment-point.ts` — `resolveAttachmentPoint(justification, bounds): Point2D` + `offsetForJustification(justification, bounds): {dx, dy}`. Maps all 9 `TextJustification` values (TL/TC/TR/ML/MC/MR/BL/BC/BR) to absolute coordinates and insertion-point offsets. Exports `Rect`, `Point2D`.
+  - `text-engine/layout/text-layout-engine.ts` — `layoutTextNode(node, opts): TextLayout` orchestrator + `getBoundingBox(node, opts): Rect`. Pipeline: formatParagraph × N → layoutColumns (R2007+ gated) → computeDimensions → offsetForJustification → world-space Rect. `getBoundingBox` consumed by `MissingFontHighlightLeaf` (Phase 2) and `TextSnapProvider` (Phase 6).
+  - `text-engine/layout/index.ts` barrel updated with all Phase 3 exports.
+  - Unit tests: `layout/__tests__/line-breaker.test.ts` (20 tests) + `attachment-point.test.ts` (22 tests, incl. roundtrip) + `text-layout-engine.test.ts` (9 tests) — **51/51 green**.
+  - Total text-engine tests: **145/145 green** (Phase 1 + Phase 2 + Phase 3).
+  - All files ≤150 lines, all functions ≤40 lines, zero `any`/`@ts-ignore`/inline styles.
+
 - **2026-05-11 — Phase 2 COMPLETE**. Layer 2 Font Engine — opentype.js + SHX/SHP parser + Firebase font manager + missing-font UI:
   - `opentype.js@^2.0.0` (MIT) added to dependencies via pnpm.
   - `text-engine/fonts/font-cache.ts` — `FontCache` class: `WeakMap<ArrayBuffer, Font>` + `Map<string, Font>` by name. Module-level singleton `fontCache`.
