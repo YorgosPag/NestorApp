@@ -71,6 +71,15 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-11: NEW — GripSnapStore: crosshair lock-to-grip on hover
+
+`systems/cursor/GripSnapStore.ts` — module-level store (ADR-040 pattern:
+no React state, subscriber-free, read at event time).
+`lockGripSnapPosition(worldPos)` called on grip hover enter;
+`unlockGripSnapPosition()` on hover exit and drag start.
+Mouse-move handler reads `getLockedGripSnapPosition()` to override
+`setImmediatePosition` so the crosshair snaps to the grip center.
+
 ### 2026-05-11: BUGFIX — Cursor gap toggle now respected by CrosshairOverlay
 
 `CrosshairOverlay.tsx:173` — `centerGap` calculation now gates on `settings.crosshair.use_cursor_gap`.

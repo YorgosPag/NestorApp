@@ -16,6 +16,7 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Overlay } from '../../overlays/types';
+import { lockGripSnapPosition, unlockGripSnapPosition } from '../../systems/cursor/GripSnapStore';
 import { GRIP_CONFIG } from '../useGripMovement';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
@@ -189,12 +190,14 @@ export function useUnifiedGripInteraction(
       if (nearGrip) {
         if (!hoveredGrip || hoveredGrip.id !== nearGrip.id) {
           setHoveredGrip(nearGrip);
+          lockGripSnapPosition(nearGrip.position);
           setPhase('hovering');
           if (warmTimerRef.current) clearTimeout(warmTimerRef.current);
           warmTimerRef.current = setTimeout(() => { setPhase('warm'); warmTimerRef.current = null; }, WARM_DELAY_MS);
         }
       } else if (hoveredGrip && phase !== 'dragging') {
         setHoveredGrip(null);
+        unlockGripSnapPosition();
         setPhase('idle');
         if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
       }
@@ -224,6 +227,7 @@ export function useUnifiedGripInteraction(
       if (nearGrip.source === 'dxf') {
         setActiveGrip(nearGrip);
         setPhase('dragging');
+        unlockGripSnapPosition();
         anchorRef.current = nearGrip.position;
         setCurrentWorldPos(nearGrip.position);
         if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
@@ -271,6 +275,7 @@ export function useUnifiedGripInteraction(
             setDragPreviewPosition(worldPos);
             setActiveGrip(nearGrip);
             setPhase('dragging');
+            unlockGripSnapPosition();
             anchorRef.current = nearGrip.position;
             setCurrentWorldPos(nearGrip.position);
           }
@@ -288,6 +293,7 @@ export function useUnifiedGripInteraction(
           setDragPreviewPosition(worldPos);
           setActiveGrip(nearGrip);
           setPhase('dragging');
+          unlockGripSnapPosition();
           anchorRef.current = nearGrip.position;
           setCurrentWorldPos(nearGrip.position);
           if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
