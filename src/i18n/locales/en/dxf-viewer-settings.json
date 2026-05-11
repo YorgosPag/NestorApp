@@ -400,7 +400,8 @@
     },
     "color": {
       "title": "Cursor Color",
-      "description": "Cursor border color"
+      "description": "Cursor border color",
+      "sameAsCrosshair": "Same as Crosshair"
     },
     "lineStyle": {
       "title": "Line Type",
@@ -536,6 +537,15 @@
       "lines": {
         "title": "Show Lines",
         "description": "Show/hide measurement lines on rulers"
+      },
+      "borderColor": {
+        "title": "Border Color",
+        "description": "Ruler border line color",
+        "colorPicker": "Select Ruler Border Color"
+      },
+      "borderWidth": {
+        "title": "Border Width",
+        "description": "Ruler border line width in pixels"
       }
     },
     "text": {
