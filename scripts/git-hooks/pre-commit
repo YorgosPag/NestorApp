@@ -176,25 +176,59 @@ if [[ -z "${SKIP_DEADCODE_CHECK:-}" ]] && [[ -n "$TS_FILES" ]] && [[ -f ".deadco
         exit 1
     fi
 
-    DEADCODE_OUTPUT=$(node scripts/check-deadcode-ratchet.js 2>&1)
-    DEADCODE_EXIT=$?
+    # ─── Smart-skip: knip only when commit can produce a NEW orphan ──────────
+    # A new dead-code file can only appear via:
+    #   (a) a NEW .ts/.tsx file that nothing imports,
+    #   (b) a DELETED .ts/.tsx that was the sole importer of another file,
+    #   (c) a removed `import …` / `from '…'` line in a modified file.
+    # Otherwise the dead-code set is provably unchanged → skip the ~52s knip.
+    # Layer 2 (.github/workflows/deadcode-ratchet.yml) is the authoritative gate.
+    DEADCODE_NEEDED=0
+    if [[ -n "${SKIP_DEADCODE_SMART:-}" ]]; then
+        DEADCODE_NEEDED=1
+    else
+        ADDED_TS=$(git diff --cached --name-only --diff-filter=A -- '*.ts' '*.tsx' 2>/dev/null | grep -v '\.d\.ts' || true)
+        DELETED_TS=$(git diff --cached --name-only --diff-filter=D -- '*.ts' '*.tsx' 2>/dev/null | grep -v '\.d\.ts' || true)
+        REMOVED_IMPORTS=""
+        if [[ -n "$TS_FILES" ]]; then
+            REMOVED_IMPORTS=$(git diff --cached -U0 -- '*.ts' '*.tsx' 2>/dev/null \
+                | grep '^-' | grep -v '^---' \
+                | grep -E "^-[[:space:]]*(import[[:space:]]|from[[:space:]]+['\"]|require\()" \
+                | head -1 || true)
+        fi
 
-    if [[ $DEADCODE_EXIT -ne 0 ]]; then
-        echo ""
-        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-        echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 3.22: new dead code introduced${NC}"
-        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-        echo ""
-        echo "$DEADCODE_OUTPUT"
-        echo ""
-        echo -e "${YELLOW}  Fix: import or delete the listed file(s), then run:${NC}"
-        echo -e "${YELLOW}    npm run deadcode:baseline${NC}"
-        echo -e "${YELLOW}  Emergency skip: SKIP_DEADCODE_CHECK=1 git commit ...${NC}"
-        echo ""
-        exit 1
+        if [[ -n "$ADDED_TS" || -n "$DELETED_TS" || -n "$REMOVED_IMPORTS" ]]; then
+            DEADCODE_NEEDED=1
+        fi
     fi
 
-    echo -e "${GREEN}  $(echo "$DEADCODE_OUTPUT" | tail -1)${NC}"
+    if [[ $DEADCODE_NEEDED -eq 0 ]]; then
+        echo -e "${GREEN}  ✅ Dead-code skipped — no added/deleted .ts files and no removed imports (Layer 2 CI authoritative)${NC}"
+        # Skip the rest of CHECK 3.22 by jumping out of this block
+        DEADCODE_OUTPUT=""
+        DEADCODE_EXIT=0
+    else
+        DEADCODE_OUTPUT=$(node scripts/check-deadcode-ratchet.js 2>&1)
+        DEADCODE_EXIT=$?
+
+        if [[ $DEADCODE_EXIT -ne 0 ]]; then
+            echo ""
+            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+            echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 3.22: new dead code introduced${NC}"
+            echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+            echo ""
+            echo "$DEADCODE_OUTPUT"
+            echo ""
+            echo -e "${YELLOW}  Fix: import or delete the listed file(s), then run:${NC}"
+            echo -e "${YELLOW}    npm run deadcode:baseline${NC}"
+            echo -e "${YELLOW}  Emergency skip: SKIP_DEADCODE_CHECK=1 git commit ...${NC}"
+            echo -e "${YELLOW}  Force full scan even if smart-skip would skip: SKIP_DEADCODE_SMART=1 git commit ...${NC}"
+            echo ""
+            exit 1
+        fi
+
+        echo -e "${GREEN}  $(echo "$DEADCODE_OUTPUT" | tail -1)${NC}"
+    fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
