@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 283 ADRs | Last Updated: 2026-04-24
+**📊 Stats**: 288 ADRs | Last Updated: 2026-05-11
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 91 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 96 | [View](#uncategorized) |
 
 ---
 
@@ -211,7 +211,7 @@
 | **ADR-187** | Floor-Level Floorplans (IFC-Compliant) | ✅ Accepted | 2026-02-19 | Architecture / Building Management | [📄](./adrs/ADR-187-floor-level-floorplans.md) |
 | **ADR-188** | Angle Measurement Variants — Line-Arc, Two-Arcs, MeasureGeom, Constraint | ✅ Accepted | 2026-02-19 | DXF Viewer / Measurement System | [📄](./adrs/ADR-188-angle-measurement-variants.md) |
 | **ADR-188** | Entity Rotation System — DXF Viewer | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-188-entity-rotation-system.md) |
-| **ADR-189** | Construction Grid & Guide System (Κάνναβος & Οδηγοί) | ✅ ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements (31): B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B4 Lock ✅, B5 Drag ✅, B6 Colors ✅, B7 Groups ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B11 Info Panel ✅, B12 Snap Midpoint ✅, B13 Keyboard Shortcuts ✅, B14 Multi-select ✅, B15 Toggle Visibility ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B20 Undo/Redo ✅, B22 Context Menu ✅, B23 Structural Presets ✅, B24 Offset from Entity ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B35 Construction Line ✅, B36 Measure→Guide ✅, B37 Guide from Selection ✅, B38 Custom Labels ✅. 14/14 commands + 31 enhancements. | 2026-02-22 | Uncategorized | [📄](./adrs/ADR-189-construction-grid-guide-system.md) |
+| **ADR-189** | Construction Grid & Guide System (Κάνναβος & Οδηγοί) | ✅ ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements (32): B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B4 Lock ✅, B5 Drag ✅, B6 Colors ✅, B7 Groups ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B11 Info Panel ✅, B12 Snap Midpoint ✅, B13 Keyboard Shortcuts ✅, B14 Multi-select ✅, B15 Toggle Visibility ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B20 Undo/Redo ✅, B22 Context Menu ✅, B23 Structural Presets ✅, B24 Offset from Entity ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B35 Construction Line ✅, B36 Measure→Guide ✅, B37 Guide from Selection ✅, B38 Custom Labels ✅, B121 Entity→Guide ✅. 14/14 commands + 32 enhancements. | 2026-02-22 | Uncategorized | [📄](./adrs/ADR-189-construction-grid-guide-system.md) |
 | **ADR-190** | Photo/Logo Upload System — SSoT Consolidation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-190-photo-upload-ssot-consolidation.md) |
 | **ADR-191** | Enterprise Document Management System | ✅ PHASES_1-5_COMPLETE | 2026-03-09 | File Management / Document Governance | [📄](./adrs/ADR-191-enterprise-document-management.md) |
 | **ADR-191** | Ιεραρχικό Σύστημα Upload Μελετών Οικοδομικής Άδειας | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-191-hierarchical-study-upload.md) |
@@ -318,6 +318,11 @@
 | **ADR-296** | File-Type Classification SSoT Unification | ✅ ✅ IMPLEMENTED | 2026-04-21 | File Management / Architectural Integrity | [📄](./adrs/ADR-296-file-type-classification-ssot.md) |
 | **ADR-297** | HQ Address Clear + Undo — Google-level Single-Click UX | ✅ ✅ IMPLEMENTED | 2026-04-21 | Frontend UX / Contacts Form | [📄](./adrs/ADR-297-hq-clear-undo-pattern.md) |
 | **ADR-314** | SSoT Discovery Findings & Centralization Roadmap | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-314-ssot-discovery-findings-roadmap.md) |
+| **ADR-327** | Quote Management & Comparison System (Hybrid Scan + Vendor Portal) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-327-quote-management-comparison-system.md) |
+| **ADR-329** | Measurement Task Scope — Property-Granular Selection | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-329-measurement-task-scope-granularity.md) |
+| **ADR-342** | Voice Input Field SSoT | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-342-voice-input-field-ssot.md) |
+| **ADR-343** | DXF Canvas Visual Regression Test Suite | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-343-dxf-canvas-visual-regression-suite.md) |
+| **ADR-344** | DXF Enterprise Text Engine (Autodesk-Grade Text Creation & Editing Suite) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-344-dxf-enterprise-text-engine.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -346,16 +351,6 @@
 | **ADR-128** | Switch Status Variant (Green ON / Red OFF) | ✅ APPROVED | [View](./adrs/ADR-128-switch-status-variant-green-on-red-off.md) |
 | **ADR-135** | Menu Icons Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-135-menu-icons-centralization.md) |
 | **ADR-144** | Icon Click Sequence Colors Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-144-icon-click-sequence-colors-centralization.md) |
-| **ADR-328** | Tabs SSoT Consolidation (BaseTabs/StateTabs/RouteTabs) | ✅ APPROVED | [View](./adrs/ADR-328-tabs-ssot-consolidation.md) |
-| **ADR-329** | Measurement Task Scope — Property-Granular Selection (extends ADR-175 §4.4.3) | ✅ IMPLEMENTED | [View](./adrs/ADR-329-measurement-task-scope-granularity.md) |
-| **ADR-330** | Procurement Hub Scoped Split (Phase 1 + Phase 3 Vendor Master + Phase 4 Material Catalog) | ✅ IMPLEMENTED | [View](./adrs/ADR-330-procurement-hub-scoped-split.md) |
-| **ADR-331** | Enterprise Spend Analytics Page (extends ADR-330 Phase 6) | ✅ IMPLEMENTED | [View](./adrs/ADR-331-enterprise-spend-analytics-page.md) |
-| **ADR-332** | Enterprise Address Editor System v2.0 (10-phase: coordinator + field badges + telemetry + a11y) | ✅ IMPLEMENTED | [View](./adrs/ADR-332-enterprise-address-editor-system.md) |
-| **ADR-337** | BOQ Categories Level 2 Hierarchy (12 × 5–7 curated sub-categories, extends ADR-175) | 📋 PROPOSED | [View](../../../adrs/ADR-337-boq-categories-level2-hierarchy.md) |
-| **ADR-340** | Floorplan Background System (single-per-floor, provider pattern PDF/Image, calibration, Procore-grade strong separation; supersedes pdf-background subsystem) | 📋 PROPOSED | [View](./adrs/ADR-340-raster-background-layers-system.md) |
-| **ADR-341** | UserSettings SSoT — Firestore-backed per-user DXF viewer settings (cursor, rulers/grid, snap, cadToggles). Singleton repository, subscribeSlice/updateSlice, echo-loop guard. | ✅ IMPLEMENTED | [View](../../../adrs/ADR-341-user-settings-ssot.md) |
-| **ADR-342** | Voice Input Field SSoT (useVoiceInput + VoiceMicButton + /api/voice/polish — inline field voice-to-text with AI polish) | ✅ IMPLEMENTED | [View](./adrs/ADR-342-voice-input-field-ssot.md) |
-| **ADR-343** | DXF Canvas Visual Regression Test Suite — Playwright `toHaveScreenshot`, 7 view-state + 6 entity-rendering tests, `?fixture=NAME` harness, production webpack stub, phased roadmap to ~45 tests | ✅ ACTIVE | [View](./adrs/ADR-343-dxf-canvas-visual-regression-suite.md) |
 
 ---
 
@@ -588,7 +583,7 @@
 | **ADR-185** | AI-Powered DXF Drawing Assistant | ✅ APPROVED | [View](./adrs/ADR-185-ai-powered-dxf-drawing-assistant.md) |
 | **ADR-186** | Building Code Module — Modular Κανονισμός Δόμησης (ΝΟΚ) | ✅ APPROVED | [View](./adrs/ADR-186-building-code-nok-module.md) |
 | **ADR-188** | Entity Rotation System — DXF Viewer | ✅ APPROVED | [View](./adrs/ADR-188-entity-rotation-system.md) |
-| **ADR-189** | Construction Grid & Guide System (Κάνναβος & Οδηγοί) | ✅ ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements (31): B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B4 Lock ✅, B5 Drag ✅, B6 Colors ✅, B7 Groups ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B11 Info Panel ✅, B12 Snap Midpoint ✅, B13 Keyboard Shortcuts ✅, B14 Multi-select ✅, B15 Toggle Visibility ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B20 Undo/Redo ✅, B22 Context Menu ✅, B23 Structural Presets ✅, B24 Offset from Entity ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B35 Construction Line ✅, B36 Measure→Guide ✅, B37 Guide from Selection ✅, B38 Custom Labels ✅. 14/14 commands + 31 enhancements. | [View](./adrs/ADR-189-construction-grid-guide-system.md) |
+| **ADR-189** | Construction Grid & Guide System (Κάνναβος & Οδηγοί) | ✅ ALL COMMANDS COMPLETE ✅ + Phase 2 Enhancements (32): B1 Bubbles ✅, B2 Auto Grid ✅, B3 Dimensions ✅, B4 Lock ✅, B5 Drag ✅, B6 Colors ✅, B7 Groups ✅, B8 Guide from Entity ✅, B9 Polar Start Angle ✅, B11 Info Panel ✅, B12 Snap Midpoint ✅, B13 Keyboard Shortcuts ✅, B14 Multi-select ✅, B15 Toggle Visibility ✅, B16 Guide at Angle ✅, B17 Copy/Offset Pattern ✅, B19 Mirror ✅, B20 Undo/Redo ✅, B22 Context Menu ✅, B23 Structural Presets ✅, B24 Offset from Entity ✅, B28 Rotation ✅, B29 Rotate Group ✅, B30 Rotate All ✅, B31 Polar Array ✅, B32 Scale Grid ✅, B33 Equalize ✅, B35 Construction Line ✅, B36 Measure→Guide ✅, B37 Guide from Selection ✅, B38 Custom Labels ✅, B121 Entity→Guide ✅. 14/14 commands + 32 enhancements. | [View](./adrs/ADR-189-construction-grid-guide-system.md) |
 | **ADR-190** | Photo/Logo Upload System — SSoT Consolidation | ✅ APPROVED | [View](./adrs/ADR-190-photo-upload-ssot-consolidation.md) |
 | **ADR-191** | Ιεραρχικό Σύστημα Upload Μελετών Οικοδομικής Άδειας | ✅ APPROVED | [View](./adrs/ADR-191-hierarchical-study-upload.md) |
 | **ADR-193** | Εμφάνιση Πεδίων ανά Domain — Χώροι vs Πωλήσεις | ✅ APPROVED | [View](./adrs/ADR-193-field-display-domain-separation.md) |
@@ -646,6 +641,11 @@
 | **ADR-294** | SSoT Ratchet Enforcement System | ✅ APPROVED | [View](./adrs/ADR-294-ssot-ratchet-enforcement.md) |
 | **ADR-295** | Multi-Channel Photo Sharing to CRM Contacts | ✅ APPROVED | [View](./adrs/ADR-295-multi-channel-photo-sharing.md) |
 | **ADR-314** | SSoT Discovery Findings & Centralization Roadmap | ✅ APPROVED | [View](./adrs/ADR-314-ssot-discovery-findings-roadmap.md) |
+| **ADR-327** | Quote Management & Comparison System (Hybrid Scan + Vendor Portal) | ✅ APPROVED | [View](./adrs/ADR-327-quote-management-comparison-system.md) |
+| **ADR-329** | Measurement Task Scope — Property-Granular Selection | ✅ APPROVED | [View](./adrs/ADR-329-measurement-task-scope-granularity.md) |
+| **ADR-342** | Voice Input Field SSoT | ✅ APPROVED | [View](./adrs/ADR-342-voice-input-field-ssot.md) |
+| **ADR-343** | DXF Canvas Visual Regression Test Suite | ✅ APPROVED | [View](./adrs/ADR-343-dxf-canvas-visual-regression-suite.md) |
+| **ADR-344** | DXF Enterprise Text Engine (Autodesk-Grade Text Creation & Editing Suite) | ✅ APPROVED | [View](./adrs/ADR-344-dxf-enterprise-text-engine.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
