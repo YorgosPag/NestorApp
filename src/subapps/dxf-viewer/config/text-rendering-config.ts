@@ -778,9 +778,9 @@ export const UI_SIZE_DEFAULTS = {
   /**
    * Default grip point size (px)
    * Used when settings.gripSize is not provided
-   * AutoCAD standard: GRIPSIZE system variable default
+   * AutoCAD GRIPSIZE=5 half-width → 10px total box (radius = size/2)
    */
-  GRIP_SIZE: 8,
+  GRIP_SIZE: 14,
 
   /**
    * Default pick box size (px)

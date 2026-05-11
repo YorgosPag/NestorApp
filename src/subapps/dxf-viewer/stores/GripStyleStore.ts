@@ -46,7 +46,7 @@ let current: GripStyle = {
     hot: UI_COLORS.SNAP_ENDPOINT,    // ✅ AutoCAD standard: Red (ACI 1) - selected grips
     contour: UI_COLORS.BLACK // ✅ AutoCAD standard: Black contour
   },
-  gripSize: 10,
+  gripSize: 14,
   pickBoxSize: 3,
   apertureSize: 20,
   showGrips: true,

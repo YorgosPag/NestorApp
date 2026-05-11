@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import type { GripSettings } from '../types/gripSettings';
 import { validateGripSettings, DEFAULT_GRIP_SETTINGS } from '../types/gripSettings';
 import { gripStyleStore } from '../stores/GripStyleStore';
@@ -83,6 +83,20 @@ export function GripProvider({ children }: GripProviderProps) {
   }, [centralGripHook?.settings, fallbackSettings]);
   const renderCount = useRef(0);
   renderCount.current++;
+
+  // Sync persisted gripSettings → GripStyleStore on mount and on every settings change.
+  // Without this, GripStyleStore keeps its module-level default and ignores user/persisted settings.
+  useEffect(() => {
+    gripStyleStore.set({
+      enabled: gripSettings.showGrips,
+      colors: gripSettings.colors,
+      gripSize: gripSettings.gripSize,
+      pickBoxSize: gripSettings.pickBoxSize,
+      apertureSize: gripSettings.apertureSize,
+      showGrips: gripSettings.showGrips,
+      opacity: gripSettings.opacity || 1.0
+    });
+  }, [gripSettings]);
 
   // ✅ FIX (ChatGPT-5): JSON-based deep equal guard
   const isEqual = useCallback((a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b), []);

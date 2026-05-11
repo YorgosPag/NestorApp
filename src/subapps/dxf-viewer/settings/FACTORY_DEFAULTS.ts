@@ -155,8 +155,8 @@ const TEXT_COMPLETION_DEFAULTS = {
 
 const GRIP_DEFAULTS = {
   enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
-  gripSize: 10,                 // 10px = AutoCAD GRIPSIZE 5 (half-width 5px, total box 10×10px)
-  size: 10,                     // ✅ ENTERPRISE FIX: Add backward compatibility
+  gripSize: 14,                 // 14px = comfortable CAD grip (AutoCAD GRIPSIZE 7 equivalent)
+  size: 14,                     // ✅ ENTERPRISE FIX: Add backward compatibility
   color: ACI_PALETTE[5] as string,        // ✅ ENTERPRISE FIX: Add backward compatibility
   hoverColor: ACI_PALETTE[4] as string,   // ✅ ENTERPRISE FIX: Add backward compatibility
   pickBoxSize: 3,               // ✅ FIX: Added pickBoxSize (AutoCAD PICKBOX default: 3 DIP)

@@ -20,6 +20,28 @@ import { migrateFromLegacyProvider, isLegacyFormat } from '../../settings/io/leg
 import type { StorageDriver } from '../../settings/io/StorageDriver';
 import type { SettingsState } from '../../settings/core/types';
 
+// Minimum grip size introduced in standards_version 2.
+// Old defaults (5, 8) are too small on modern displays — bump on first load.
+const GRIP_SIZE_V2 = 14;
+
+function applyV2Migration(s: SettingsState): { settings: SettingsState; changed: boolean } {
+  if ((s.__standards_version ?? 1) >= 2) return { settings: s, changed: false };
+  const oldSize = (s.grip?.general as { gripSize?: number })?.gripSize ?? 0;
+  const newSize = oldSize < GRIP_SIZE_V2 ? GRIP_SIZE_V2 : oldSize;
+  const migrated: SettingsState = {
+    ...s,
+    __standards_version: 2,
+    grip: {
+      ...s.grip,
+      general: {
+        ...s.grip.general,
+        gripSize: newSize,
+      },
+    },
+  };
+  return { settings: migrated, changed: true };
+}
+
 /**
  * Load settings from storage (with automatic legacy migration)
  *
@@ -63,19 +85,21 @@ export function useStorageLoad(
     loadOrDefault(driver, 'settings_state')
       .then(enterpriseData => {
         // Check if this is enterprise format or legacy
+        let finalData: SettingsState;
+
         if (isLegacyFormat(enterpriseData)) {
-          // Migrate legacy → enterprise
-          const migratedData = migrateFromLegacyProvider(enterpriseData);
-
-          // Save migrated data immediately (one-time migration)
-          safeSave(driver, migratedData, 'settings_state')
-            .catch(() => { /* Silent failure */ });
-
-          onLoadSuccess(migratedData);
+          finalData = migrateFromLegacyProvider(enterpriseData);
         } else {
-          // Already enterprise format
-          onLoadSuccess(enterpriseData);
+          finalData = enterpriseData;
         }
+
+        // v2 migration: bump gripSize if below comfortable threshold
+        const { settings: v2Data, changed } = applyV2Migration(finalData);
+        if (changed) {
+          safeSave(driver, v2Data, 'settings_state').catch(() => { /* Silent failure */ });
+        }
+
+        onLoadSuccess(v2Data);
 
         // ✅ ENTERPRISE: Mark as loaded successfully
         hasLoadedRef.current = true;

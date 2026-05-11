@@ -130,7 +130,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
                 {t('settings.grip.labels.size')}: {gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE}px
               </label>
-              <SliderInput value={gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE} min={4} max={16} step={1} onChange={(v) => updateSettings({ gripSize: v })} showNumberInput />
+              <SliderInput value={gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE} min={4} max={30} step={1} onChange={(v) => updateSettings({ gripSize: v })} showNumberInput />
             </div>
             {/* Opacity */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>

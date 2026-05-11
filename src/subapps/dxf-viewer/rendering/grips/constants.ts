@@ -91,4 +91,4 @@ export const MIN_GRIP_SIZE = 3;
  * Maximum grip size (pixels)
  * Prevents grips from becoming too large at high DPI scales
  */
-export const MAX_GRIP_SIZE = 20;
+export const MAX_GRIP_SIZE = 30;
