@@ -251,6 +251,78 @@ Dedicated `jest.config.firestore-rules.js` (node env, isolated from main suite).
 
 ---
 
+## CHECK 3.22 — Dead-code Ratchet (knip + smart-skip)
+
+### Rule
+Δύο ratchet rules σε σειρά:
+1. **Layer 0 — Modify-baselined-file gate**: αν staged file υπάρχει στο `.deadcode-baseline.json` → **block** (το αρχείο είναι ήδη unused, ή το διαγράφεις, ή το συνδέεις).
+2. **Layer 1 — New-orphan gate**: αν μετά το commit εμφανίζεται νέο unused file πέρα από το baseline → **block**. Ratchet down only.
+
+### Why
+`knip` είναι authoritative dead-code detector (full TypeScript program graph). Το full scan κοστίζει ~52s σε Windows Git Bash. Αν τρέχει σε ΚΑΘΕ commit, ο hook γίνεται unusable. Smart-skip + Layer 2 CI κρατάνε hot-path γρήγορο και authoritative gate βέβαιο.
+
+### Enforcement (Defense in Depth, ίδιο pattern με CHECK 3.18)
+
+| Layer | Where | Mode | Speed |
+|-------|-------|------|-------|
+| **Layer 0 — pre-commit** | `scripts/git-hooks/pre-commit` (baseline membership) | **lookup** | ~5ms |
+| **Layer 1 — pre-commit + smart-skip** | `scripts/check-deadcode-ratchet.js` via knip | **full graph scan** ή **skip** | ~52s ή ~10ms |
+| **Layer 2 — CI** | `.github/workflows/deadcode-ratchet.yml` | **full scan** authoritative | ~1-2 min Linux |
+| **Layer 3 — local on demand** | `npm run deadcode:check` ή `SKIP_DEADCODE_SMART=1 git commit …` | **full** | ~52s |
+
+**Smart-skip logic (Layer 1 hot-path):** ένα νέο orphan μπορεί να εμφανιστεί ΜΟΝΟ αν:
+- (a) γίνεται add ένα νέο `.ts/.tsx` file (`git diff --cached --diff-filter=A`)
+- (b) γίνεται delete ένα `.ts/.tsx` file (`git diff --cached --diff-filter=D`)
+- (c) σε modified file αφαιρέθηκε γραμμή `import …` / `from '…'` / `require(…)` (`git diff --cached -U0` με `^-import`/`^-from`/`^-require`)
+
+Αν τίποτα από αυτά → ο dead-code set δεν μπορεί να αλλάξει → skip ✅. Atteso skip rate: ~70-80% των local commits.
+
+**Why not pure CI:** το Layer 0 (modify baselined file) πρέπει να μείνει local — αλλιώς ο dev κάνει commit-αλλαγές σε αρχεία που πρέπει να σβηστούν, δουλεύει πάνω σε zombie code, και το βρίσκει στο PR. Η Layer 0 είναι ~5ms, no reason να μετακινηθεί.
+
+### Scope (pre-commit)
+- Trigger: staged `.ts/.tsx` files (όχι `.d.ts`, όχι `node_modules`)
+- Layer 0 script: inline στο `scripts/git-hooks/pre-commit` lines ~119-177
+- Layer 1 script: `scripts/check-deadcode-ratchet.js` invokes `npx knip --reporter json`
+- Smart-skip detector: inline lines ~179-203 (3 git diff calls, no extra spawn)
+
+### Scope (CI)
+- Workflow: `.github/workflows/deadcode-ratchet.yml`
+- Triggers: `src/**/*.{ts,tsx}`, `knip.json`, `scripts/check-deadcode-ratchet.js`, `.deadcode-baseline.json`
+- Ubuntu runner, Node 20, `npm ci` required (knip is a node_module)
+- Exits 1 on baseline regression
+
+### Baseline
+`.deadcode-baseline.json` — `{ files: string[], fileCount: number }`. Frozen list των γνωστών unused files. Ratchet down only.
+
+### Commands
+| Command | Purpose |
+|---------|---------|
+| `npm run deadcode:audit` | Full knip report (compact) |
+| `npm run deadcode:audit:files` | Only unused files report |
+| `npm run deadcode:audit:exports` | Only unused exports/types |
+| `npm run deadcode:audit:deps` | Only unused dependencies |
+| `npm run deadcode:check` | Layer 1 ratchet vs baseline (exits 1 on regression) |
+| `npm run deadcode:baseline` | Refresh baseline after legitimate cleanup |
+| `npm run deadcode:delete -- <file>` | Delete unused file (curated) |
+| `SKIP_DEADCODE_SMART=1 git commit …` | Force full Layer 1 scan even if smart-skip would skip |
+| `SKIP_DEADCODE_CHECK=1 git commit …` | Emergency skip BOTH layers |
+
+### Remediation flow
+1. **Import the file** somewhere (legitimate use found) → `npm run deadcode:baseline` → commit
+2. **Delete the file** (truly unused) → `npm run deadcode:delete -- <path>` → commit
+3. **Archive** before delete: pre-commit prompt offers `C:\Nestor_Pagonis_Dead_Files` archive
+
+### Knip configuration
+`knip.json` — entry points include all Next.js `app/**/page.tsx`, `route.ts`, layouts, error pages, sentry configs, build configs. Project scope: `src/**/*.{ts,tsx}` minus tests. Ignored: dxf-viewer + dxf-viewer-10-backup (excluded — too dynamic), `src/ai/**`, `recovery/**`, `functions/**`, `scripts/**`, `packages/**`, `.d.ts`, migration scripts.
+
+### Relationship with other checks
+- **CHECK 3.7** (SSoT Ratchet) → blocks duplicate / scattered usage of *registered* patterns
+- **CHECK 3.18** (SSoT Discover) → blocks NEW duplicates / anti-patterns not in registry
+- **CHECK 3.22** (this one) → blocks NEW unused files (orphans) — orthogonal to SSoT, καθαρή dead-code ratchet
+- Όλες ratchet down only, baseline-driven, με Layer 2 CI authoritative
+
+---
+
 ## CHECK 3.23 — Native HTML Tooltip Ratchet (AST-based)
 
 **Goal:** Block `title=` props on HTML (lowercase) JSX elements — these render browser-native grey tooltips instead of the centralized Radix dark-bg/white-text tooltip.
