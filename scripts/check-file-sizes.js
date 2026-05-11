@@ -48,6 +48,8 @@ const EXEMPT_RE = new RegExp([
   /\/data\//,
   /\/_registry\//,
   /\/__tests__\//,
+  /\/_harness\//,
+  /^tests\//,
   /\/docs\//,
   /\/adrs\//,
   /\/i18n\/locales\//,

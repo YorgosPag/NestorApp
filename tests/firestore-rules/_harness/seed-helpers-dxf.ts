@@ -446,6 +446,35 @@ export async function seedTextTemplate(
 }
 
 /**
+ * text_custom_dictionary — ADR-344 Phase 8 (DXF Text Engine spell-check).
+ * Per-company custom dictionary entries (single-word vocabulary). Same
+ * tenant_admin_write shape as text_templates / company_fonts: tenant read,
+ * admin write. createdBy = same_tenant_admin (only admins create direct via
+ * Firestore SDK; clients normally go through the API).
+ */
+export async function seedCustomDictionaryEntry(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('text_custom_dictionary').doc(docId).set({
+      id: docId,
+      term: `οπτοπλινθοδομή-${docId}`,
+      language: 'el',
+      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
+      createdBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_admin.uid,
+      createdByName: 'Admin User',
+      updatedBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_admin.uid,
+      updatedByName: 'Admin User',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
  * floorplan_overlays — ADR-340 Phase 9 (multi-kind discriminated union).
  * Same-shape RBAC as floorplan_backgrounds; geometry+role schema.
  */

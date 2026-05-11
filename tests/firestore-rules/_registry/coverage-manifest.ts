@@ -1015,6 +1015,18 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [3847, 3885],
     matrix: textTemplateMatrix(),
   },
+  {
+    // ADR-344 Phase 8 — DXF Text Engine per-company custom dictionary entries.
+    // Identical rule shape to text_templates / company_fonts: read = any tenant
+    // member, write = company_admin / super_admin only. companyId immutable on
+    // update. Defense-in-depth — the canonical writer is the
+    // /api/dxf/custom-dictionary route (Admin SDK + audit + Zod).
+    collection: 'text_custom_dictionary',
+    pattern: 'tenant_admin_write',
+    testFile: 'tests/firestore-rules/suites/text_custom_dictionary.rules.test.ts',
+    rulesRange: [3944, 4007],
+    matrix: textTemplateMatrix(),
+  },
 ] as const;
 
 /**

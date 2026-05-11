@@ -85,6 +85,9 @@ export const PERMISSIONS = {
   "dxf:text:create": true,
   "dxf:text:edit": true,
   "dxf:text:delete": true,
+  // ADR-344 Phase 8 — custom dictionary (company-scoped spell-check terms)
+  "dxf:dictionary:view": true,
+  "dxf:dictionary:manage": true,
 
   // CRM
   "crm:contacts:view": true,

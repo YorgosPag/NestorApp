@@ -3940,5 +3940,66 @@ service cloud.firestore {
                        );
     }
 
+    // =========================================================================
+    // ADR-344 Phase 8 — DXF Text Engine custom dictionary
+    //
+    // Per-company spell-check terms (CAD/architectural vocabulary, e.g.
+    // «οπτοπλινθοδομή»). Owner: company_admin. Visible to: any tenant member
+    // (drives client-side spell-check decoration). Identical rule shape to
+    // `text_templates` (Phase 7.E) — tenant_admin_write.
+    //
+    // Permission split happens at the HTTP layer (`dxf:text:edit` for CREATE
+    // via API, `dxf:dictionary:manage` for UPDATE/DELETE via API). The rule
+    // here is defense-in-depth — clients are expected to write via the
+    // `/api/dxf/custom-dictionary` routes (Admin SDK + audit + Zod), not
+    // directly via Firestore SDK.
+    //
+    //   - READ:   Any tenant member (super admin or same-tenant).
+    //   - CREATE: Company admin / super admin (defense-in-depth — direct
+    //             client writes bypass audit).
+    //   - UPDATE: Company admin / super admin (companyId immutable).
+    //   - DELETE: Company admin / super admin.
+    //
+    // Test coverage: tests/firestore-rules/suites/text_custom_dictionary.rules.test.ts
+    // =========================================================================
+    match /text_custom_dictionary/{entryId} {
+
+      // 📖 READ: Tenant-scoped — every member of the company can list its entries
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                     );
+
+      // ✍️ CREATE: Company admin (or super admin) creating for own company
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll(['companyId'])
+                    && request.resource.data.companyId is string
+                    && (
+                         isSuperAdminOnly()
+                         || (request.resource.data.companyId == getUserCompanyId()
+                             && isCompanyAdminOfCompany(request.resource.data.companyId))
+                       );
+
+      // 📝 UPDATE: Company admin / super admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       )
+                    && request.resource.data.companyId == resource.data.companyId;
+
+      // 🗑️ DELETE: Company admin / super admin
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       );
+    }
+
   }
 }

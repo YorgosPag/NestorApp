@@ -84,6 +84,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "dxf:text:create",
       "dxf:text:edit",
       "dxf:text:delete",
+      // ADR-344 Phase 8 — custom dictionary (manage = admin-only)
+      "dxf:dictionary:view",
+      "dxf:dictionary:manage",
       // Properties (ADR-269 rename from Units)
       "properties:properties:view",
       "properties:properties:create",
@@ -142,6 +145,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "dxf:text:create",
       "dxf:text:edit",
       "dxf:text:delete",
+      "dxf:dictionary:view",
       "reports:reports:view",
       "reports:reports:create",
       "photos:photos:upload",
@@ -162,6 +166,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "dxf:text:create",
       "dxf:text:edit",
       "dxf:text:delete",
+      "dxf:dictionary:view",
       "projects:floors:view",
       "properties:properties:view",
       "units:units:view",
@@ -180,6 +185,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "dxf:text:create",
       "dxf:text:edit",
       "dxf:text:delete",
+      "dxf:dictionary:view",
       "projects:floors:view",
       "properties:properties:view",
       "units:units:view",
@@ -196,6 +202,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     permissions: [
       "dxf:text:create",
       "dxf:text:edit",
+      "dxf:dictionary:view",
       "photos:photos:upload",
       "progress:progress:update",
       "reports:reports:view",
