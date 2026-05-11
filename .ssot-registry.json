@@ -2848,7 +2848,7 @@
     },
     "text-templates": {
       "ssotFile": "src/subapps/dxf-viewer/text-engine/templates/text-template.service.ts",
-      "description": "Hybrid text template system: TS built-in defaults + Firestore text_templates collection + placeholder resolver (ADR-344 Q5/Phase 7.B + 7.C). Canonical CRUD service for the Firestore text_templates collection — all writes flow through text-template.service.ts (Admin SDK + EntityAuditService). Canonical placeholder resolver in text-engine/templates/resolver/: PLACEHOLDER_REGISTRY (variables.ts) is the SSoT for every supported {{namespace.key}}; resolver.ts performs pure substitution; scope-builder.ts is server-only and hydrates the scope from Firestore. Inline resolvers drift from the variable registry, and direct setDoc/addDoc on text_templates bypasses the audit trail (CLAUDE.md N.11 baseline 3.17).",
+      "description": "Hybrid text template system: TS built-in defaults + Firestore text_templates collection + placeholder resolver + management UI (ADR-344 Q5/Phase 7.B + 7.C + 7.D). Canonical CRUD service for the Firestore text_templates collection — all writes flow through text-template.service.ts (Admin SDK + EntityAuditService). Canonical placeholder resolver in text-engine/templates/resolver/: PLACEHOLDER_REGISTRY (variables.ts) is the SSoT for every supported {{namespace.key}}; resolver.ts performs pure substitution; scope-builder.ts is server-only and hydrates the scope from Firestore. Management UI in src/subapps/dxf-viewer/ui/text-templates/ (TextTemplateManager + list/preview/editor/delete-dialog + hooks); thin API routes in src/app/api/dxf/text-templates/ proxy to the service. Inline resolvers drift from the variable registry, direct setDoc/addDoc on text_templates bypasses the audit trail (CLAUDE.md N.11 baseline 3.17), and inline templates list/editor outside ui/text-templates/ duplicate the manager (Phase 7.D).",
       "forbiddenPatterns": [
         "function\\s+(resolvePlaceholders|expandTemplatePlaceholders|buildTextTemplate)\\s*\\(",
         "COLLECTIONS\\.TEXT_TEMPLATES",
@@ -2856,6 +2856,8 @@
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/text-engine/templates/",
+        "src/subapps/dxf-viewer/ui/text-templates/",
+        "src/app/api/dxf/text-templates/",
         "src/config/firestore-collections.ts"
       ],
       "addedDate": "2026-05-11",

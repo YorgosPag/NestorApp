@@ -32,7 +32,12 @@ import {
   type UpdateTemplatePatch,
 } from './hooks/useTextTemplateMutations';
 import { useTextTemplatePreviewScope } from './hooks/useTextTemplatePreviewScope';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ManagerProps {
   readonly previewLocale?: 'el' | 'en';
@@ -116,6 +121,7 @@ export const TextTemplateManager: React.FC<ManagerProps> = ({ previewLocale = 'e
   );
 
   return (
+    <TooltipProvider delayDuration={300}>
     <article aria-label={t('textTemplates:manager.ariaLabel')} className="tt-manager flex flex-col h-full bg-white dark:bg-zinc-950">
       <header className="flex items-center justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
         <h2 className="text-sm font-semibold">{t('textTemplates:manager.title')}</h2>
@@ -217,5 +223,6 @@ export const TextTemplateManager: React.FC<ManagerProps> = ({ previewLocale = 'e
         onConfirm={handleDeleteConfirm}
       />
     </article>
+    </TooltipProvider>
   );
 };

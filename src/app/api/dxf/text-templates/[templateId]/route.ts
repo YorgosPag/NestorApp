@@ -67,14 +67,15 @@ export async function PATCH(request: NextRequest, segmentData: SegmentData) {
       async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
         try {
           const body = (await req.json()) as PatchBody;
-          const patch: UpdateTextTemplateInput = {};
-          if (typeof body.name === 'string') patch.name = body.name;
-          if (body.category !== undefined) {
-            patch.category = body.category as UpdateTextTemplateInput['category'];
-          }
-          if (body.content !== undefined) {
-            patch.content = body.content as UpdateTextTemplateInput['content'];
-          }
+          const patch: UpdateTextTemplateInput = {
+            ...(typeof body.name === 'string' ? { name: body.name } : {}),
+            ...(body.category !== undefined
+              ? { category: body.category as UpdateTextTemplateInput['category'] }
+              : {}),
+            ...(body.content !== undefined
+              ? { content: body.content as UpdateTextTemplateInput['content'] }
+              : {}),
+          };
           const updated = await updateTextTemplate(
             ctx.companyId,
             templateId,
