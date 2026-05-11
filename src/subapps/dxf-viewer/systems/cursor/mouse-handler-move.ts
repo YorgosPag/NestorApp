@@ -15,6 +15,7 @@ import { isInDrawingMode } from '../tools/ToolStateManager';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { setImmediatePosition } from './ImmediatePositionStore';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
+import { getLockedGripWorldPos } from './GripSnapStore';
 import { setHoveredEntity, setHoveredOverlay } from '../hover/HoverStore';
 import { withPerf, perfTick } from './mouse-handler-perf';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
@@ -53,7 +54,16 @@ export function useMouseMoveHandler({
     const freshViewport = pointerSnap.viewport;
 
     // Zero-latency crosshair (bypasses React)
-    withPerf('set-immediate-position', () => setImmediatePosition(screenPos));
+    // If hovering over a grip, lock crosshair to grip center (world→screen)
+    withPerf('set-immediate-position', () => {
+      const gripWorldLock = getLockedGripWorldPos();
+      if (gripWorldLock) {
+        const gripScreenPos = CoordinateTransforms.worldToScreen(gripWorldLock, transform, freshViewport);
+        setImmediatePosition(gripScreenPos);
+      } else {
+        setImmediatePosition(screenPos);
+      }
+    });
 
     // Throttled React Context updates (~20fps)
     const CURSOR_UPDATE_THROTTLE_MS = PANEL_LAYOUT.TIMING.CURSOR_UPDATE_THROTTLE;

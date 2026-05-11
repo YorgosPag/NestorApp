@@ -71,6 +71,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-11: NEW — mouse-handler-move reads GripSnapStore for crosshair snap
+
+`mouse-handler-move.ts`: on every mouse-move, if `getLockedGripWorldPos()`
+returns a position (grip hovered), convert world→screen via
+`CoordinateTransforms.worldToScreen` and call `setImmediatePosition` with
+the grip screen position instead of the raw cursor. Crosshair locks to grip.
+
 ### 2026-05-11: NEW — GripSnapStore: crosshair lock-to-grip on hover
 
 `systems/cursor/GripSnapStore.ts` — module-level store (ADR-040 pattern:
