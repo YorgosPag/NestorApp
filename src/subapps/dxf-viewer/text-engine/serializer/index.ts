@@ -1,2 +1,2 @@
-// TODO Phase 1: mtext-serializer.ts
-export {};
+export { serializeDxfTextNode } from './mtext-serializer';
+export type { MtextSerializerOptions, MtextSerializerResult } from './mtext-serializer';
