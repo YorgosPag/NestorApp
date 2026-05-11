@@ -854,6 +854,13 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-11 — Phase 6.B COMPLETE**. Layer 6 Command Pattern — `UpdateTextStyleCommand` + `UpdateTextGeometryCommand` + `diff-helpers`:
+  - `core/commands/text/diff-helpers.ts` — `buildShallowDiff(before, after)`: shallow field comparison for audit entries; emits `DxfTextAuditChange[]` for all keys with changed primitive references.
+  - `core/commands/text/UpdateTextStyleCommand.ts` — patches `TextRunStyle` uniformly across all runs of all paragraphs (toolbar-level bulk apply). Pre-execute `assertCanEditLayer` (Q8). Snapshot on first execute; undo restores snapshot. `canMergeWith` + `mergeWith`: consecutive style patches on same entity collapse (last patch wins). Fire-and-forget audit `'updated'` with `buildShallowDiff`. `TextStylePatch = Partial<TextRunStyle>`.
+  - `core/commands/text/UpdateTextGeometryCommand.ts` — patches `position` (insertion point), `rotation`, and `columns.width` (MTEXT frame resize). Geometry snapshot captured on first execute; undo restores `position + textNode`. `canMergeWith` + `mergeWith`: consecutive geometry patches on same entity collapse (smooth drag undo). `GeometrySnapshot` interface bundles `position/rotation/width/textNode`.
+  - `core/commands/text/index.ts` barrel updated with Phase 6.B exports; Phase 6.C TODO retained.
+  - Deferred to Phase 6.C: `UpdateMTextParagraphCommand`, `DeleteTextCommand`, `ReplaceAllTextCommand`, `ReplaceOneTextCommand`.
+
 - **2026-05-11 — Phase 6.A COMPLETE**. Layer 6 Command Pattern — `CreateTextCommand` + `CanEditLayerGuard` types:
   - `core/commands/text/types.ts` — `DxfTextSceneEntity` (scene-bridge carrying `DxfTextNode` AST), `DxfTextAuditAction/Change/Event/IDxfTextAuditRecorder` (Q12 audit abstraction), `LayerSnapshot/ILayerAccessProvider/CanEditLayerError` (Q8 layer guard types), `noopAuditRecorder` singleton.
   - `core/commands/text/CanEditLayerGuard.ts` — `assertCanEditLayer({ layerName, provider })`: throws `CanEditLayerError` for locked layer when user lacks `canUnlockLayer`, throws unconditionally for frozen layers (AutoCAD parity). Used as pre-execute hook by Update*/Delete commands.
