@@ -52,27 +52,24 @@ export function openEyedropper(): Promise<EyedropperResult> {
 
 function openDomEyedropper(): Promise<EyedropperResult> {
   return new Promise((resolve, reject) => {
-    const prevCursor = document.body.style.cursor;
-    document.body.style.cursor = 'crosshair';
+    // Hide OS cursor + DXF CAD overlays (crosshair canvas, snap indicator).
+    // The CrosshairOverlay is a <canvas> at z-20 that draws opaque lines under
+    // the cursor — without hiding it, findCanvasAtPoint would pick it as the
+    // zoom source instead of the DxfCanvas beneath.
+    const sessionStyle = document.createElement('style');
+    sessionStyle.textContent = '*{cursor:none!important}[data-dxf-overlay]{visibility:hidden!important}';
+    document.head.appendChild(sessionStyle);
 
-    let loupe: LoupeHandle | null = null;
-    let snapshot: HTMLCanvasElement | null = null;
+    // Loupe appears immediately — no DOM snapshot needed
+    const loupe: LoupeHandle = createLoupe();
+
     let rafPending = false;
     let lastX = 0;
     let lastY = 0;
 
-    // Snapshot + loupe: fire-and-forget — degrade gracefully if it fails
-    initLoupeAsync()
-      .then((h) => {
-        snapshot = h.snapshot;
-        loupe = h.loupe;
-      })
-      .catch(() => { /* loupe unavailable — crosshair cursor still active */ });
-
     const cleanup = (): void => {
-      document.body.style.cursor = prevCursor;
-      loupe?.destroy();
-      loupe = null;
+      sessionStyle.remove();
+      loupe.destroy();
       document.removeEventListener('mousemove', onMouseMove, true);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKey, true);
@@ -82,13 +79,12 @@ function openDomEyedropper(): Promise<EyedropperResult> {
     const onMouseMove = (e: MouseEvent): void => {
       lastX = e.clientX;
       lastY = e.clientY;
-      if (rafPending || !loupe || !snapshot) return;
+      if (rafPending) return;
       rafPending = true;
       requestAnimationFrame(() => {
         rafPending = false;
-        if (!loupe || !snapshot) return;
-        const hex = readSnapshotPixel(snapshot, lastX, lastY) ?? '#000000';
-        loupe.update(lastX, lastY, snapshot, hex);
+        const payload = resolveZoomSource(lastX, lastY);
+        loupe.update(lastX, lastY, payload.source, payload.snapX, payload.snapY, payload.hex);
       });
     };
 
@@ -121,23 +117,67 @@ function openDomEyedropper(): Promise<EyedropperResult> {
   });
 }
 
-async function initLoupeAsync(): Promise<{ loupe: LoupeHandle; snapshot: HTMLCanvasElement }> {
-  const { domToCanvas } = await import('modern-screenshot');
-  const canvas = await domToCanvas(document.body, {
-    width: window.innerWidth,
-    height: window.innerHeight,
-    scale: 1,
-  });
-  return { loupe: createLoupe(), snapshot: canvas };
+// ─── Zoom source resolution ──────────────────────────────────────────────────
+
+interface ZoomPayload {
+  source: HTMLCanvasElement | null;
+  snapX: number;
+  snapY: number;
+  hex: string;
 }
 
-function readSnapshotPixel(snapshot: HTMLCanvasElement, x: number, y: number): string | null {
-  const cx = Math.max(0, Math.min(Math.round(x), snapshot.width - 1));
-  const cy = Math.max(0, Math.min(Math.round(y), snapshot.height - 1));
+/**
+ * Resolve zoom source and hex color at cursor (x, y).
+ *
+ * Uses `elementsFromPoint` (all layers) to penetrate transparent overlays.
+ * Skips canvases with transparent pixels (alpha < 10) so overlay guide
+ * canvases don't shadow the main DXF rendering canvas beneath them.
+ *
+ * If no opaque canvas found → source = null, loupe renders a solid-color fill.
+ */
+function resolveZoomSource(x: number, y: number): ZoomPayload {
+  const elements = document.elementsFromPoint(x, y);
+
+  for (const el of elements) {
+    if (!(el instanceof HTMLCanvasElement)) continue;
+
+    const rect = el.getBoundingClientRect();
+    const scaleX = el.width / rect.width;
+    const scaleY = el.height / rect.height;
+    const snapX = (x - rect.left) * scaleX;
+    const snapY = (y - rect.top) * scaleY;
+
+    const pixel = readCanvasPixelAt(el, snapX, snapY);
+    if (pixel === null) continue; // transparent — keep searching
+
+    return { source: el, snapX, snapY, hex: pixel };
+  }
+
+  // No opaque canvas found — fall back to CSS color, loupe shows solid fill
+  const hex = readCssColorAtPoint(x, y) ?? '#000000';
+  return { source: null, snapX: 0, snapY: 0, hex };
+}
+
+// ─── Canvas pixel reading ────────────────────────────────────────────────────
+
+/**
+ * Read pixel at canvas coordinates (cx, cy) already scaled to canvas space.
+ * Returns null for transparent pixels (alpha < 10) or read errors.
+ * Uses an offscreen copy to avoid SecurityError on willReadFrequently mismatch.
+ */
+function readCanvasPixelAt(canvas: HTMLCanvasElement, cx: number, cy: number): string | null {
+  const x = Math.max(0, Math.min(Math.round(cx), canvas.width - 1));
+  const y = Math.max(0, Math.min(Math.round(cy), canvas.height - 1));
   try {
-    const ctx = snapshot.getContext('2d', { willReadFrequently: true });
+    // Copy 1×1 pixel to a fresh offscreen canvas — avoids context-option conflicts
+    const offscreen = document.createElement('canvas');
+    offscreen.width = 1;
+    offscreen.height = 1;
+    const ctx = offscreen.getContext('2d');
     if (!ctx) return null;
-    const d = ctx.getImageData(cx, cy, 1, 1).data;
+    ctx.drawImage(canvas, x, y, 1, 1, 0, 0, 1, 1);
+    const d = ctx.getImageData(0, 0, 1, 1).data;
+    if (d[3] < 10) return null; // transparent — skip
     return rgbToHex(d[0], d[1], d[2]);
   } catch {
     return null;
@@ -146,30 +186,28 @@ function readSnapshotPixel(snapshot: HTMLCanvasElement, x: number, y: number): s
 
 // ─── DOM color reading ───────────────────────────────────────────────────────
 
+/**
+ * Read color at viewport point for the final committed value on click.
+ * Traverses all stacked elements so canvas beneath overlays is not missed.
+ */
 function readColorAtPoint(x: number, y: number): string | null {
-  const el = document.elementFromPoint(x, y);
-  if (!el) return null;
-
-  if (el instanceof HTMLCanvasElement) {
-    const pixel = readCanvasPixel(el, x, y);
-    if (pixel) return pixel;
-    // Tainted canvas falls through to background scan.
+  const elements = document.elementsFromPoint(x, y);
+  for (const el of elements) {
+    if (el instanceof HTMLCanvasElement) {
+      const rect = el.getBoundingClientRect();
+      const cx = (x - rect.left) * (el.width / rect.width);
+      const cy = (y - rect.top) * (el.height / rect.height);
+      const pixel = readCanvasPixelAt(el, cx, cy);
+      if (pixel !== null) return pixel;
+    }
   }
-  return readBackgroundUp(el);
+  return readCssColorAtPoint(x, y);
 }
 
-function readCanvasPixel(canvas: HTMLCanvasElement, x: number, y: number): string | null {
-  try {
-    const rect = canvas.getBoundingClientRect();
-    const px = Math.round(((x - rect.left) / rect.width) * canvas.width);
-    const py = Math.round(((y - rect.top) / rect.height) * canvas.height);
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return null;
-    const data = ctx.getImageData(px, py, 1, 1).data;
-    return rgbToHex(data[0], data[1], data[2]);
-  } catch {
-    return null;
-  }
+function readCssColorAtPoint(x: number, y: number): string | null {
+  const elements = document.elementsFromPoint(x, y);
+  const top = elements[0];
+  return top ? readBackgroundUp(top) : null;
 }
 
 function readBackgroundUp(start: Element): string | null {
