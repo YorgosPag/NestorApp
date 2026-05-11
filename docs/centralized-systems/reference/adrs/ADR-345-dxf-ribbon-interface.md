@@ -1,6 +1,6 @@
 # ADR-345: DXF Viewer — Ribbon Interface (AutoCAD-style)
 
-**Status**: ACCEPTED
+**Status**: ACTIVE
 **Date**: 2026-05-11
 **Author**: Claude Sonnet 4.6 + Georgios Pagonis
 **Supersedes**: Floating panel toolbar (gradual migration)
@@ -658,6 +658,7 @@ interface RibbonState {
 | 2026-05-11 | §3 confermato — Tutti 9 panels Home tab approvati. Block/Groups/Utilities/Clipboard = nuova funzionalità (non migrazione). |
 | 2026-05-11 | Status → ACCEPTED. Sessione Q&A completata (14 domande). Tutte le decisioni architetturali prese. Pronto per implementazione Fase 1. |
 | 2026-05-11 | §5.1 + §8.1c — Tab drag & drop reorder aggiunto. Ordine persiste in localStorage (dxf-ribbon:tabOrder). |
+| 2026-05-12 | Status → ACTIVE. **Fase 1 IMPLEMENTATA**: ribbon scaffold + status bar inseriti in `DxfViewerContent.tsx` (full-width tra global header e section esistente). 11 nuovi file: `src/subapps/dxf-viewer/ui/ribbon/{components/RibbonRoot,RibbonTabBar,RibbonTabItem,RibbonBody,RibbonPanel,PanelLabel,RibbonMinimizeButton,RibbonContextMenu, status-bar/DxfStatusBar, hooks/useRibbonState,useRibbonTabDrag, styles/ribbon-tokens.css, types/ribbon-types.ts, data/ribbon-default-tabs.ts}`. 5 tab vuote (Home/Layers/View/Annotate/Settings) con i18n via `dxf-viewer-shell`. localStorage persistence (activeTabId, minimizeState, tabOrder). Drag&drop reorder. 4 stati minimize ciclici (full → panel-buttons → panel-titles → tab-names). Right-click context menu (minimize toggle attivo, altri voci disabled v1). Responsive: viewport <900px → auto-minimize tab-names. Status bar 7 elementi: coordinate (placeholder 0.00/0.00), Grid/Snap/Ortho/Polar (toggle locali), Annotation Scale 1:1, Layer 0. Theme-aware via CSS variables (dark + light tokens). Coesistenza con floating panel + DXF toolbar (transitorio). NESSUN tool funzionante — solo struttura visiva. Floating panel ancora presente, sarà rimosso in Fase 8. |
 
 ---
 

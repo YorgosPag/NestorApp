@@ -7,6 +7,9 @@
 
 import type { Metadata, Viewport } from 'next';
 
+// ADR-345 Fase 1: ribbon design tokens (theme-aware CSS variables)
+import '@/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css';
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,

@@ -283,5 +283,54 @@
   },
   "debug": {
     "noUnitsAvailable": "Δεν υπάρχουν διαθέσιμα units"
+  },
+  "ribbon": {
+    "tabs": {
+      "home": "Αρχική",
+      "layers": "Επίπεδα",
+      "view": "Προβολή",
+      "annotate": "Επισημείωση",
+      "settings": "Ρυθμίσεις"
+    },
+    "panels": {
+      "draw": "Σχεδίαση",
+      "modify": "Τροποποίηση",
+      "annotation": "Επισημείωση",
+      "layerManager": "Διαχειριστής Επιπέδων",
+      "navigate": "Πλοήγηση",
+      "text": "Κείμενο",
+      "general": "Γενικά",
+      "placeholder": "Σε φάση ανάπτυξης"
+    },
+    "minimizeStates": {
+      "full": "Πλήρης Προβολή",
+      "panelButtons": "Μόνο Εικονίδια Πανελ",
+      "panelTitles": "Μόνο Τίτλοι Πανελ",
+      "tabNames": "Μόνο Καρτέλες"
+    },
+    "ariaLabels": {
+      "ribbon": "Γραμμή Εργαλείων DXF",
+      "tabBar": "Καρτέλες Γραμμής Εργαλείων",
+      "tabBody": "Περιεχόμενο Καρτέλας",
+      "minimize": "Σύμπτυξη Γραμμής Εργαλείων",
+      "expandPanel": "Επέκταση Πάνελ"
+    },
+    "statusBar": {
+      "coordinates": "X: {x} Y: {y}",
+      "grid": "Πλέγμα",
+      "snap": "Πρόσδεση",
+      "ortho": "Ορθο",
+      "polar": "Πολικό",
+      "scale": "Κλίμακα",
+      "layer": "Επίπεδο",
+      "defaultLayer": "0",
+      "defaultScale": "1:1"
+    },
+    "contextMenu": {
+      "minimize": "Σύμπτυξη Γραμμής Εργαλείων",
+      "showTabs": "Εμφάνιση Καρτελών",
+      "showPanels": "Εμφάνιση Πανελ",
+      "undock": "Αποκόλληση"
+    }
   }
 }

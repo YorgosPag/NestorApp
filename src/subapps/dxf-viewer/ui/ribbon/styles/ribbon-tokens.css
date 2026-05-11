@@ -1,0 +1,305 @@
+/**
+ * ADR-345 — DXF Ribbon Interface design tokens.
+ * Light defaults on :root, dark overrides on .dark + [data-theme="dark"].
+ */
+
+:root {
+  --ribbon-bg: #F0F0F0;
+  --ribbon-tab-bar-bg: #E0E0E0;
+  --ribbon-tab-active: #FFFFFF;
+  --ribbon-panel-label: #D8D8D8;
+  --ribbon-separator: #C0C0C0;
+  --ribbon-btn-hover: #D0D0D0;
+  --ribbon-btn-active: #1464A0;
+  --ribbon-text: #1A1A1A;
+  --ribbon-text-muted: #4A4A4A;
+  --ribbon-tab-text-active: #000000;
+  --ribbon-tab-contextual: #C45C2E;
+
+  --ribbon-height-full: 100px;
+  --ribbon-height-panel-buttons: 46px;
+  --ribbon-height-panel-titles: 30px;
+  --ribbon-tab-bar-height: 26px;
+  --ribbon-panel-label-height: 16px;
+  --ribbon-status-bar-height: 26px;
+
+  --ribbon-radius: 2px;
+  --ribbon-z-context-menu: 1100;
+}
+
+.dark,
+[data-theme="dark"] {
+  --ribbon-bg: #2D2D2D;
+  --ribbon-tab-bar-bg: #252525;
+  --ribbon-tab-active: #3C3C3C;
+  --ribbon-panel-label: #363636;
+  --ribbon-separator: #404040;
+  --ribbon-btn-hover: #4A4A4A;
+  --ribbon-btn-active: #1464A0;
+  --ribbon-text: #CCCCCC;
+  --ribbon-text-muted: #888888;
+  --ribbon-tab-text-active: #FFFFFF;
+  --ribbon-tab-contextual: #E07B45;
+}
+
+.dxf-ribbon-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--ribbon-bg);
+  color: var(--ribbon-text);
+  border-bottom: 1px solid var(--ribbon-separator);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.dxf-ribbon-tab-bar {
+  display: flex;
+  align-items: stretch;
+  height: var(--ribbon-tab-bar-height);
+  background: var(--ribbon-tab-bar-bg);
+  border-bottom: 1px solid var(--ribbon-separator);
+}
+
+.dxf-ribbon-tab-list {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dxf-ribbon-tab-list::-webkit-scrollbar {
+  display: none;
+}
+
+.dxf-ribbon-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 12px;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  color: var(--ribbon-text);
+  cursor: pointer;
+  border-right: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.dxf-ribbon-tab:hover {
+  background: var(--ribbon-btn-hover);
+}
+
+.dxf-ribbon-tab[data-active="true"] {
+  background: var(--ribbon-tab-active);
+  color: var(--ribbon-tab-text-active);
+  font-weight: 600;
+}
+
+.dxf-ribbon-tab[data-contextual="true"] {
+  color: var(--ribbon-tab-contextual);
+}
+
+.dxf-ribbon-tab[data-dragging="true"] {
+  opacity: 0.4;
+}
+
+.dxf-ribbon-tab[data-drop-target="true"] {
+  outline: 2px solid var(--ribbon-btn-active);
+  outline-offset: -2px;
+}
+
+.dxf-ribbon-minimize-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--ribbon-text);
+  cursor: pointer;
+}
+
+.dxf-ribbon-minimize-button:hover {
+  background: var(--ribbon-btn-hover);
+}
+
+.dxf-ribbon-body {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  background: var(--ribbon-bg);
+}
+
+.dxf-ribbon-body[data-minimize="full"] {
+  height: calc(var(--ribbon-height-full) - var(--ribbon-tab-bar-height));
+}
+
+.dxf-ribbon-body[data-minimize="panel-buttons"] {
+  height: calc(var(--ribbon-height-panel-buttons) - var(--ribbon-tab-bar-height));
+}
+
+.dxf-ribbon-body[data-minimize="panel-titles"] {
+  height: calc(var(--ribbon-height-panel-titles) - var(--ribbon-tab-bar-height));
+}
+
+.dxf-ribbon-body[data-minimize="tab-names"] {
+  display: none;
+}
+
+/* ADR-345 Fase 2 — Layers tab expanded workspace mode */
+.dxf-ribbon-body[data-tab-mode="expanded"] {
+  display: block;
+  height: auto;
+  min-height: 240px;
+  max-height: min(720px, 70vh);
+  overflow-y: auto;
+  padding: 0;
+}
+
+.dxf-ribbon-body[data-tab-mode="expanded"][data-minimize="tab-names"] {
+  display: none;
+}
+
+.dxf-ribbon-layers-tab {
+  width: 100%;
+  display: block;
+}
+
+.dxf-ribbon-panel {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--ribbon-separator);
+  min-width: 96px;
+  flex-shrink: 0;
+}
+
+.dxf-ribbon-panel-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--ribbon-text-muted);
+  font-style: italic;
+}
+
+.dxf-ribbon-body[data-minimize="panel-titles"] .dxf-ribbon-panel-body {
+  display: none;
+}
+
+.dxf-ribbon-panel-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  height: var(--ribbon-panel-label-height);
+  background: var(--ribbon-panel-label);
+  font-size: 11px;
+  color: var(--ribbon-text-muted);
+}
+
+.dxf-ribbon-panel-label button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.dxf-ribbon-panel-label button:hover {
+  color: var(--ribbon-text);
+}
+
+.dxf-status-bar {
+  display: flex;
+  align-items: center;
+  height: var(--ribbon-status-bar-height);
+  padding: 0 8px;
+  gap: 4px;
+  background: var(--ribbon-tab-bar-bg);
+  color: var(--ribbon-text);
+  border-top: 1px solid var(--ribbon-separator);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.dxf-status-bar-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  height: 20px;
+  border-radius: var(--ribbon-radius);
+  background: transparent;
+  color: inherit;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+}
+
+.dxf-status-bar-item:hover {
+  background: var(--ribbon-btn-hover);
+}
+
+.dxf-status-bar-item[data-on="true"] {
+  background: var(--ribbon-btn-active);
+  color: #FFFFFF;
+}
+
+.dxf-status-bar-item[data-static="true"] {
+  cursor: default;
+}
+
+.dxf-status-bar-item[data-static="true"]:hover {
+  background: transparent;
+}
+
+.dxf-status-bar-separator {
+  width: 1px;
+  height: 14px;
+  background: var(--ribbon-separator);
+  margin: 0 4px;
+}
+
+.dxf-ribbon-context-menu {
+  position: fixed;
+  z-index: var(--ribbon-z-context-menu);
+  background: var(--ribbon-bg);
+  border: 1px solid var(--ribbon-separator);
+  border-radius: var(--ribbon-radius);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+  padding: 4px 0;
+  min-width: 200px;
+}
+
+.dxf-ribbon-context-menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--ribbon-text);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.dxf-ribbon-context-menu-item:hover {
+  background: var(--ribbon-btn-hover);
+}
+
+.dxf-ribbon-context-menu-item[data-checked="true"]::before {
+  content: "✓";
+  margin-right: 6px;
+}
+
+.dxf-ribbon-context-menu-item[data-disabled="true"] {
+  color: var(--ribbon-text-muted);
+  cursor: not-allowed;
+}

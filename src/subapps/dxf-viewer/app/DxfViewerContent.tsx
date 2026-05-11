@@ -99,6 +99,10 @@ import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/Cl
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
 
+// 📐 ADR-345 Fase 1: Ribbon interface scaffold + status bar
+import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
+import { DxfStatusBar } from '../ui/ribbon/status-bar/DxfStatusBar';
+
 // ✅ PERFORMANCE: Memoize the main component
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const floatingRef = React.useRef<FloatingPanelHandle>(null);
@@ -263,8 +267,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         initialTransform={getImmediateTransform()}
         onTransformReady={handleTransformReady}
       >
+      <div className="flex flex-col h-full min-h-0">
+        {/* ADR-345 Fase 1: ribbon inserito tra global header e layout viewer */}
+        <RibbonRoot />
       <section
-        className={`flex h-full ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}
+        className={`flex flex-1 min-h-0 ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}
       >
       {/* ✅ PHASE 5: Sidebar Section — ADR-176: Responsive */}
       {/* ADR-309 Phase 2: handleFileImportWithEncoding passed so LevelPanel can show wizard */}
@@ -413,6 +420,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         />
       )}
       </section>
+        <DxfStatusBar />
+      </div>
       </TransformProvider>
   );
 });

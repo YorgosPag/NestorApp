@@ -283,5 +283,54 @@
   },
   "debug": {
     "noUnitsAvailable": "No units available"
+  },
+  "ribbon": {
+    "tabs": {
+      "home": "Home",
+      "layers": "Layers",
+      "view": "View",
+      "annotate": "Annotate",
+      "settings": "Settings"
+    },
+    "panels": {
+      "draw": "Draw",
+      "modify": "Modify",
+      "annotation": "Annotation",
+      "layerManager": "Layer Manager",
+      "navigate": "Navigate",
+      "text": "Text",
+      "general": "General",
+      "placeholder": "Coming soon"
+    },
+    "minimizeStates": {
+      "full": "Full Ribbon",
+      "panelButtons": "Panel Buttons Only",
+      "panelTitles": "Panel Titles Only",
+      "tabNames": "Tab Names Only"
+    },
+    "ariaLabels": {
+      "ribbon": "DXF Ribbon",
+      "tabBar": "Ribbon Tab Bar",
+      "tabBody": "Ribbon Tab Content",
+      "minimize": "Minimize Ribbon",
+      "expandPanel": "Expand Panel"
+    },
+    "statusBar": {
+      "coordinates": "X: {x} Y: {y}",
+      "grid": "Grid",
+      "snap": "Snap",
+      "ortho": "Ortho",
+      "polar": "Polar",
+      "scale": "Scale",
+      "layer": "Layer",
+      "defaultLayer": "0",
+      "defaultScale": "1:1"
+    },
+    "contextMenu": {
+      "minimize": "Minimize the Ribbon",
+      "showTabs": "Show Tabs",
+      "showPanels": "Show Panels",
+      "undock": "Undock"
+    }
   }
 }
