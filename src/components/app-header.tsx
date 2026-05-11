@@ -94,7 +94,7 @@ export function AppHeader() {
           <Search className="h-5 w-5" />
         </button>
 
-        <div className="flex items-center gap-2 p-2 flex-shrink-0">
+        <div className="flex items-center gap-2 px-2 flex-shrink-0">
           <CompanySwitcher />
           <LanguageSwitcher />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
