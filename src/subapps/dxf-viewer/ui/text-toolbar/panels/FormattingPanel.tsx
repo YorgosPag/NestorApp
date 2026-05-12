@@ -70,6 +70,7 @@ export function FormattingPanel({
         step={0.1}
         unitLabelKey="textToolbar:font.heightLabel"
         disabled={disabled}
+        inputClassName="w-20"
       />
       <ColorPickerPopover
         value={color}

@@ -21,6 +21,7 @@ interface SizeInputProps {
   readonly step?: number;
   readonly unitLabelKey: string;
   readonly disabled?: boolean;
+  readonly inputClassName?: string;
 }
 
 export function SizeInput({
@@ -31,6 +32,7 @@ export function SizeInput({
   step = 0.1,
   unitLabelKey,
   disabled,
+  inputClassName,
 }: SizeInputProps) {
   const { t } = useTranslation(['textToolbar']);
   const dragOriginX = useRef<number | null>(null);
@@ -95,6 +97,7 @@ export function SizeInput({
           'h-9 w-16 min-h-[44px] sm:min-h-[36px] rounded border px-2 text-sm',
           'bg-background focus:outline-none focus:ring-2',
           disabled && 'opacity-40',
+          inputClassName,
         )}
         data-state={value === null ? 'indeterminate' : 'determinate'}
         aria-label={t(unitLabelKey)}
