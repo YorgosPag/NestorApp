@@ -15,6 +15,12 @@ export interface RibbonCommand {
   commandKey: string;
   shortcut?: string;
   tooltipKey?: string;
+  /**
+   * ADR-345 §3.2 Fase 4 — Tool listed in ADR but underlying ToolType /
+   * DXF command not yet implemented. Click shows a "Coming Soon" toast
+   * instead of dispatching the tool.
+   */
+  comingSoon?: boolean;
 }
 
 export interface RibbonButton {

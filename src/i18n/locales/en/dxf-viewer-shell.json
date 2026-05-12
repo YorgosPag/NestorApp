@@ -340,6 +340,19 @@
       "rectangle": "Rectangle",
       "polygon": "Polygon",
       "ellipse": "Ellipse",
+      "move": "Move",
+      "copy": "Copy",
+      "rotate": "Rotate",
+      "mirror": "Mirror",
+      "scale": "Scale",
+      "stretch": "Stretch",
+      "trim": "Trim",
+      "extend": "Extend",
+      "offset": "Offset",
+      "fillet": "Fillet",
+      "array": "Array",
+      "explode": "Explode",
+      "comingSoon": "Coming soon: {label}",
       "circleVariants": {
         "radius": "Center, Radius",
         "diameter": "Center, Diameter",
@@ -350,6 +363,15 @@
         "threePoint": "3-Point",
         "startCenterEnd": "Start, Center, End",
         "centerStartEnd": "Center, Start, End"
+      },
+      "filletVariants": {
+        "fillet": "Fillet",
+        "chamfer": "Chamfer"
+      },
+      "arrayVariants": {
+        "rectangular": "Rectangular",
+        "path": "Path",
+        "polar": "Polar"
       },
       "dropdown": {
         "openVariants": "Open variants"

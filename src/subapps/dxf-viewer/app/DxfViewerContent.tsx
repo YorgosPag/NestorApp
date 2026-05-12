@@ -104,12 +104,21 @@ import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
 import { DxfStatusBar } from '../ui/ribbon/status-bar/DxfStatusBar';
 // 📐 ADR-345 Fase 2: Layers tab content (LevelPanel migrated from floating panel)
 import { LayersTabContent } from '../ui/ribbon/tabs/LayersTabContent';
+// 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ✅ PERFORMANCE: Memoize the main component
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const floatingRef = React.useRef<FloatingPanelHandle>(null);
   const state = useDxfViewerState();
   const notifications = useNotifications();
+  const { t: tShell } = useTranslation('dxf-viewer-shell');
+  const handleRibbonComingSoon = React.useCallback(
+    (label: string) => {
+      notifications.info(tShell('ribbon.commands.comingSoon', { label }));
+    },
+    [notifications, tShell],
+  );
   const eventBus = useEventBus();
   const colors = useSemanticColors();
   const { copy: copyToClipboard } = useCopyToClipboard();
@@ -273,7 +282,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         {/* ADR-345 Fase 1: ribbon inserito tra global header e layout viewer */}
         {/* ADR-345 Fase 2: Layers tab content wired with scene/tool/selection state */}
         <RibbonRoot
-          commands={{ onToolChange: handleToolChange }}
+          commands={{
+            onToolChange: handleToolChange,
+            onComingSoon: handleRibbonComingSoon,
+          }}
           layersTabContent={
             <LayersTabContent
               scene={currentScene}

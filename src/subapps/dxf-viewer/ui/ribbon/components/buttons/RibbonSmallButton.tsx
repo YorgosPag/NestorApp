@@ -20,14 +20,18 @@ export const RibbonSmallButton: React.FC<RibbonSmallButtonProps> = ({
   command,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange } = useRibbonCommand();
-
-  const handleClick = useCallback(() => {
-    onToolChange(command.commandKey as ToolType);
-  }, [onToolChange, command.commandKey]);
+  const { onToolChange, onComingSoon } = useRibbonCommand();
 
   const label = t(command.labelKey);
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
+
+  const handleClick = useCallback(() => {
+    if (command.comingSoon) {
+      onComingSoon(label);
+      return;
+    }
+    onToolChange(command.commandKey as ToolType);
+  }, [onToolChange, onComingSoon, command.commandKey, command.comingSoon, label]);
 
   return (
     <Tooltip>
@@ -37,6 +41,7 @@ export const RibbonSmallButton: React.FC<RibbonSmallButtonProps> = ({
           className="dxf-ribbon-btn dxf-ribbon-btn-small"
           onClick={handleClick}
           data-command-id={command.id}
+          data-coming-soon={command.comingSoon ? 'true' : undefined}
         >
           <RibbonButtonIcon icon={command.iconSmall ?? command.icon} size="small" />
           <span className="dxf-ribbon-btn-label-inline">{label}</span>

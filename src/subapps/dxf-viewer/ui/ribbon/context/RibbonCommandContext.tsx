@@ -12,10 +12,13 @@ import { useSplitLastUsed } from '../hooks/useSplitLastUsed';
 
 export interface RibbonCommandsApi {
   onToolChange: (tool: ToolType) => void;
+  /** ADR-345 §3.2 Fase 4 — fires when a button marked `comingSoon` is clicked. */
+  onComingSoon: (label: string) => void;
 }
 
 interface RibbonCommandContextValue {
   onToolChange: (tool: ToolType) => void;
+  onComingSoon: (label: string) => void;
   splitLastUsed: Record<string, string>;
   setSplitLastUsed: (commandId: string, variantId: string) => void;
 }
@@ -38,10 +41,11 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
   const value = useMemo<RibbonCommandContextValue>(
     () => ({
       onToolChange: commands.onToolChange,
+      onComingSoon: commands.onComingSoon,
       splitLastUsed,
       setSplitLastUsed,
     }),
-    [commands.onToolChange, splitLastUsed, setSplitLastUsed],
+    [commands.onToolChange, commands.onComingSoon, splitLastUsed, setSplitLastUsed],
   );
 
   return (

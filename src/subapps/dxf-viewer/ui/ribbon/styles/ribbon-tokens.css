@@ -360,6 +360,19 @@
   visibility: hidden;
 }
 
+.dxf-ribbon-btn[data-coming-soon="true"],
+.dxf-ribbon-btn-split[data-coming-soon="true"],
+.dxf-ribbon-split-dropdown-item[data-coming-soon="true"] {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+.dxf-ribbon-btn[data-coming-soon="true"]:hover,
+.dxf-ribbon-btn-split[data-coming-soon="true"]:hover,
+.dxf-ribbon-split-dropdown-item[data-coming-soon="true"]:hover {
+  opacity: 0.85;
+}
+
 .dxf-ribbon-split-dropdown li {
   display: block;
 }

@@ -6,6 +6,7 @@
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { HOME_DRAW_PANEL } from './home-tab-draw';
+import { HOME_MODIFY_PANEL } from './home-tab-modify';
 
 export const DEFAULT_RIBBON_TAB_ORDER: readonly string[] = [
   'home',
@@ -21,7 +22,7 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
     labelKey: 'ribbon.tabs.home',
     panels: [
       HOME_DRAW_PANEL,
-      { id: 'modify', labelKey: 'ribbon.panels.modify', rows: [] },
+      HOME_MODIFY_PANEL,
       { id: 'annotation', labelKey: 'ribbon.panels.annotation', rows: [] },
     ],
   },

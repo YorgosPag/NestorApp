@@ -340,6 +340,19 @@
       "rectangle": "Ορθογώνιο",
       "polygon": "Πολύγωνο",
       "ellipse": "Έλλειψη",
+      "move": "Μετακίνηση",
+      "copy": "Αντιγραφή",
+      "rotate": "Περιστροφή",
+      "mirror": "Καθρέπτης",
+      "scale": "Κλιμάκωση",
+      "stretch": "Επιμήκυνση",
+      "trim": "Αποκοπή",
+      "extend": "Επέκταση",
+      "offset": "Παράλληλη Μετατόπιση",
+      "fillet": "Συναρμογή",
+      "array": "Πίνακας",
+      "explode": "Διάλυση",
+      "comingSoon": "Σύντομα διαθέσιμο: {label}",
       "circleVariants": {
         "radius": "Κέντρο και Ακτίνα",
         "diameter": "Κέντρο και Διάμετρος",
@@ -350,6 +363,15 @@
         "threePoint": "3 Σημεία",
         "startCenterEnd": "Αρχή, Κέντρο, Τέλος",
         "centerStartEnd": "Κέντρο, Αρχή, Τέλος"
+      },
+      "filletVariants": {
+        "fillet": "Συναρμογή",
+        "chamfer": "Λοξοτομή"
+      },
+      "arrayVariants": {
+        "rectangular": "Ορθογώνιος",
+        "path": "Κατά Διαδρομή",
+        "polar": "Πολικός"
       },
       "dropdown": {
         "openVariants": "Άνοιγμα παραλλαγών"

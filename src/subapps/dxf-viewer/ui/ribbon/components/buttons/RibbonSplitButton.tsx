@@ -34,7 +34,7 @@ export const RibbonSplitButton: React.FC<RibbonSplitButtonProps> = ({
   button,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, splitLastUsed } = useRibbonCommand();
+  const { onToolChange, onComingSoon, splitLastUsed } = useRibbonCommand();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -46,8 +46,12 @@ export const RibbonSplitButton: React.FC<RibbonSplitButtonProps> = ({
 
   const handleTopClick = useCallback(() => {
     if (!active) return;
+    if (active.comingSoon) {
+      onComingSoon(t(active.labelKey));
+      return;
+    }
     onToolChange(active.commandKey as ToolType);
-  }, [onToolChange, active]);
+  }, [onToolChange, onComingSoon, active, t]);
 
   const toggleDropdown = useCallback(() => setOpen((p) => !p), []);
   const closeDropdown = useCallback(() => setOpen(false), []);
@@ -66,6 +70,7 @@ export const RibbonSplitButton: React.FC<RibbonSplitButtonProps> = ({
       ref={wrapperRef}
       className={wrapperClass}
       data-command-id={button.command.id}
+      data-coming-soon={active.comingSoon ? 'true' : undefined}
     >
       <Tooltip>
       <TooltipTrigger asChild>

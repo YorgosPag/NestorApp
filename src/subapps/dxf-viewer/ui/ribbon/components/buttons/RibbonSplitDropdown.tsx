@@ -40,7 +40,7 @@ export const RibbonSplitDropdown: React.FC<RibbonSplitDropdownProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, setSplitLastUsed } = useRibbonCommand();
+  const { onToolChange, onComingSoon, setSplitLastUsed } = useRibbonCommand();
   const rootRef = useRef<HTMLMenuElement>(null);
   const [ready, setReady] = useState(false);
 
@@ -80,10 +80,14 @@ export const RibbonSplitDropdown: React.FC<RibbonSplitDropdownProps> = ({
   const handleSelect = useCallback(
     (variant: RibbonCommand) => {
       setSplitLastUsed(parentCommandId, variant.id);
-      onToolChange(variant.commandKey as ToolType);
+      if (variant.comingSoon) {
+        onComingSoon(t(variant.labelKey));
+      } else {
+        onToolChange(variant.commandKey as ToolType);
+      }
       onClose();
     },
-    [parentCommandId, onToolChange, setSplitLastUsed, onClose],
+    [parentCommandId, onToolChange, onComingSoon, setSplitLastUsed, onClose, t],
   );
 
   if (typeof document === 'undefined') return null;
@@ -104,6 +108,7 @@ export const RibbonSplitDropdown: React.FC<RibbonSplitDropdownProps> = ({
             className="dxf-ribbon-split-dropdown-item"
             role="menuitem"
             onClick={() => handleSelect(variant)}
+            data-coming-soon={variant.comingSoon ? 'true' : undefined}
           >
             <RibbonButtonIcon icon={variant.icon} size="small" />
             <span className="dxf-ribbon-btn-label-inline">
