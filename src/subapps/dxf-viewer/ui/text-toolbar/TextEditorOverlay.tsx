@@ -22,6 +22,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
+import type { Content } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 // TipTap v3: TextStyle, Color and FontFamily are all named exports of the
 // consolidated `@tiptap/extension-text-style` package — the standalone
@@ -67,8 +68,8 @@ export function TextEditorOverlay({
   const extensions = useMemo(() => {
     const base = [
       StarterKit.configure({
-        // Yjs handles history when collab is active.
-        history: yDoc ? false : undefined,
+        // Yjs handles undo/redo when collab is active — disable StarterKit's.
+        undoRedo: yDoc ? false : undefined,
       }),
       TextStyle,
       Color,
@@ -76,7 +77,7 @@ export function TextEditorOverlay({
       ...dxfTextExtensions,
     ];
     if (yDoc) {
-      base.push(createYjsTipTapExtension({ yDoc }));
+      base.push(createYjsTipTapExtension({ doc: yDoc }));
     }
     return base;
   }, [yDoc]);
@@ -88,8 +89,9 @@ export function TextEditorOverlay({
 
   const editor: Editor | null = useEditor(
     {
+      immediatelyRender: false,
       extensions,
-      content: initialContent,
+      content: initialContent as Content | undefined,
       autofocus: 'end',
       editorProps: {
         attributes: {
@@ -101,9 +103,9 @@ export function TextEditorOverlay({
         },
       },
       onUpdate: ({ editor: e }) => {
-        const json = e.getJSON() as TipTapDoc;
+        const json = e.getJSON() as unknown as TipTapDoc;
         try {
-          const draft = tipTapToDxfText(json, initial);
+          const draft = tipTapToDxfText(json);
           updateDraft(draft);
         } catch {
           // Mid-edit invalid state — ignore until next tick.
@@ -124,10 +126,10 @@ export function TextEditorOverlay({
   const commit = useCallback(() => {
     if (!editor || committedRef.current) return;
     committedRef.current = true;
-    const json = editor.getJSON() as TipTapDoc;
-    const next = tipTapToDxfText(json, initial);
+    const json = editor.getJSON() as unknown as TipTapDoc;
+    const next = tipTapToDxfText(json);
     onCommit(next);
-  }, [editor, initial, onCommit]);
+  }, [editor, onCommit]);
 
   const cancel = useCallback(() => {
     if (committedRef.current) return;

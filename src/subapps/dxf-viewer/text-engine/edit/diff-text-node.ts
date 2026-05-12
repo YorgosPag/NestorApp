@@ -124,23 +124,15 @@ function paragraphPatchOf(
   prev: TextParagraph,
   next: TextParagraph,
 ): ParagraphPatch | null {
-  const patch: ParagraphPatch = {};
-  if (!Object.is(prev.indent, next.indent)) patch.indent = next.indent;
-  if (!Object.is(prev.leftMargin, next.leftMargin)) patch.leftMargin = next.leftMargin;
-  if (!Object.is(prev.rightMargin, next.rightMargin)) patch.rightMargin = next.rightMargin;
-  if (!Object.is(prev.justification, next.justification)) {
-    patch.justification = next.justification;
-  }
-  if (!Object.is(prev.lineSpacingMode, next.lineSpacingMode)) {
-    patch.lineSpacingMode = next.lineSpacingMode;
-  }
-  if (!Object.is(prev.lineSpacingFactor, next.lineSpacingFactor)) {
-    patch.lineSpacingFactor = next.lineSpacingFactor;
-  }
-  if (JSON.stringify(prev.tabs) !== JSON.stringify(next.tabs)) {
-    patch.tabs = next.tabs;
-  }
-  return Object.keys(patch).length > 0 ? patch : null;
+  const acc: Record<string, unknown> = {};
+  if (!Object.is(prev.indent, next.indent)) acc['indent'] = next.indent;
+  if (!Object.is(prev.leftMargin, next.leftMargin)) acc['leftMargin'] = next.leftMargin;
+  if (!Object.is(prev.rightMargin, next.rightMargin)) acc['rightMargin'] = next.rightMargin;
+  if (!Object.is(prev.justification, next.justification)) acc['justification'] = next.justification;
+  if (!Object.is(prev.lineSpacingMode, next.lineSpacingMode)) acc['lineSpacingMode'] = next.lineSpacingMode;
+  if (!Object.is(prev.lineSpacingFactor, next.lineSpacingFactor)) acc['lineSpacingFactor'] = next.lineSpacingFactor;
+  if (JSON.stringify(prev.tabs) !== JSON.stringify(next.tabs)) acc['tabs'] = next.tabs;
+  return Object.keys(acc).length > 0 ? (acc as ParagraphPatch) : null;
 }
 
 /**

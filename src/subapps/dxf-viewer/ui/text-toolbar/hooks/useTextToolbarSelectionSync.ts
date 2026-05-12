@@ -61,7 +61,7 @@ function resolveTextEntities(
     out.push({
       id: entity.id,
       node: ensureTextNode(entity as unknown as Parameters<typeof ensureTextNode>[0]),
-      layerId: entity.layer,
+      layerId: entity.layer ?? '',
     });
   }
   return out;
