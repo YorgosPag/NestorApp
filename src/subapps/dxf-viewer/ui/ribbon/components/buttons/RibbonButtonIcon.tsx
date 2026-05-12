@@ -300,6 +300,14 @@ const TEXT_PLACEHOLDER_PATH = (
     <line x1="9" y1="20" x2="15" y2="20" />
   </>
 );
+// AutoCAD-style "A" icon for text creation tool
+const TEXT_CREATE_PATH = (
+  <>
+    <path d="M12 4 L4 20" strokeLinecap="round" />
+    <path d="M12 4 L20 20" strokeLinecap="round" />
+    <line x1="7" y1="14" x2="17" y2="14" />
+  </>
+);
 const EXPLODE_PATH = (
   <>
     <line x1="12" y1="3" x2="12" y2="9" />
@@ -413,6 +421,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({
       return inlineSvg(size, VIEWPORT_FOUR_PATH);
     case 'text-placeholder':
       return inlineSvg(size, TEXT_PLACEHOLDER_PATH);
+    case 'text-create':
+      return inlineSvg(size, TEXT_CREATE_PATH);
     default:
       return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }

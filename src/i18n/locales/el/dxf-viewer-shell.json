@@ -166,6 +166,7 @@
     "polyline": "Πολυγραμμή",
     "polygon": "Πολύγωνο",
     "text": "Κείμενο",
+    "mtext": "Πολλαπλές Γραμμές",
     "arc": "Τόξο",
     "arc3p": "Τόξο (3 Σημεία)",
     "arcCenterStartEnd": "Τόξο (Κέντρο-Αρχή-Τέλος)",
@@ -367,6 +368,11 @@
         "diameter": "Κέντρο και Διάμετρος",
         "twoPoint": "2 Σημεία",
         "threePoint": "3 Σημεία"
+      },
+      "text": "Κείμενο",
+      "textVariants": {
+        "singleLine": "Κείμενο Μιας Γραμμής",
+        "multiLine": "Πολλαπλές Γραμμές"
       },
       "arcVariants": {
         "threePoint": "3 Σημεία",

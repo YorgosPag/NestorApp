@@ -79,12 +79,14 @@ export const RibbonSplitDropdown: React.FC<RibbonSplitDropdownProps> = ({
 
   const handleSelect = useCallback(
     (variant: RibbonCommand) => {
-      setSplitLastUsed(parentCommandId, variant.id);
       if (variant.comingSoon) {
+        // comingSoon variants never become last-used default — top button must stay functional
         onComingSoon(t(variant.labelKey));
       } else if (variant.action) {
+        setSplitLastUsed(parentCommandId, variant.id);
         onAction(variant.action, variant.actionData);
       } else {
+        setSplitLastUsed(parentCommandId, variant.id);
         onToolChange(variant.commandKey as ToolType);
       }
       onClose();

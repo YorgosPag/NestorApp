@@ -166,6 +166,7 @@
     "polyline": "Polyline",
     "polygon": "Polygon",
     "text": "Text",
+    "mtext": "Multiline Text",
     "arc": "Arc",
     "arc3p": "Arc (3 Points)",
     "arcCenterStartEnd": "Arc (Center-Start-End)",
@@ -367,6 +368,11 @@
         "diameter": "Center, Diameter",
         "twoPoint": "2-Point",
         "threePoint": "3-Point"
+      },
+      "text": "Text",
+      "textVariants": {
+        "singleLine": "Single Line Text",
+        "multiLine": "Multiline Text"
       },
       "arcVariants": {
         "threePoint": "3-Point",

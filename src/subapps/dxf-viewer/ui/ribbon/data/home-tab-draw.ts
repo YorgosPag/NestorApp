@@ -118,6 +118,31 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
             shortcut: 'REC',
           },
         },
+        {
+          type: 'split',
+          size: 'large',
+          command: {
+            id: 'draw.text',
+            labelKey: 'ribbon.commands.text',
+            icon: 'text-create',
+            commandKey: 'text',
+            shortcut: 'T',
+          },
+          variants: [
+            {
+              id: 'text.singleline',
+              labelKey: 'ribbon.commands.textVariants.singleLine',
+              icon: 'text-create',
+              commandKey: 'text',
+            },
+            {
+              id: 'text.multiline',
+              labelKey: 'ribbon.commands.textVariants.multiLine',
+              icon: 'text-placeholder',
+              commandKey: 'mtext',
+            },
+          ],
+        },
       ],
     },
     {

@@ -48,8 +48,9 @@ export const DXF_DRAWING_TOOL_LABELS = {
   POLYLINE: 'tools.polyline',
   POLYGON: 'tools.polygon',
   LAYERING: 'tools.layering',
-  // ADR-344 Phase 6.E follow-up: text creation tool
+  // ADR-344 Phase 6.E/6.F: text/mtext creation tools
   TEXT: 'tools.text',
+  MTEXT: 'tools.mtext',
   // Arc drawing tool variations (ADR-059)
   ARC: 'tools.arc',
   ARC_3P: 'tools.arc3p',
