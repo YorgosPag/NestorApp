@@ -1,5 +1,7 @@
 export { dxfTextToTipTap } from './dxf-to-tiptap';
 export { tipTapToDxfText } from './tiptap-to-dxf';
+export { ensureTextNode } from './ensure-text-node';
+export { diffTextNode, type DiffServices } from './diff-text-node';
 export { dxfTextExtensions, DXF_MARK_NAMES, type DxfMarkName } from './tiptap-config';
 export type {
   TipTapDoc,

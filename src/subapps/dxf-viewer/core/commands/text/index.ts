@@ -58,3 +58,6 @@ export type { ReplaceAllTextCommandInput } from './ReplaceAllTextCommand';
 
 export { ReplaceOneTextCommand } from './ReplaceOneTextCommand';
 export type { ReplaceOneTextCommandInput } from './ReplaceOneTextCommand';
+
+export { ReplaceTextNodeCommand } from './ReplaceTextNodeCommand';
+export type { ReplaceTextNodeCommandInput } from './ReplaceTextNodeCommand';
