@@ -34,6 +34,9 @@ import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import { LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 // 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
 import { registerDirectRender, getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
+import { getHoveredEntity, subscribeHoveredEntity } from '../../systems/hover/HoverStore';
+import { drawSelectionIndicator } from './crosshair-selection-indicator';
+import type { SelectionIndicatorMode } from './crosshair-selection-indicator';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
 // 🏢 ADR-117: DPI-Aware Pixel Calculations Centralization
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
@@ -57,6 +60,8 @@ interface CrosshairOverlayProps {
   };
   /** ✅ ADR-007: Style prop για CAD-grade layout (height excludes ruler) */
   style?: React.CSSProperties;
+  /** AutoCAD-style selection indicator: returns true if entity is currently selected */
+  isEntitySelected?: (id: string) => boolean;
 }
 
 export default function CrosshairOverlay({
@@ -65,8 +70,14 @@ export default function CrosshairOverlay({
   viewport = { width: 0, height: 0 },
   rulerMargins = COORDINATE_LAYOUT.MARGINS,
   style,
+  isEntitySelected,
 }: CrosshairOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Selection indicator refs — read inside renderCrosshair without causing re-renders
+  const hoveredEntityIdRef = useRef<string | null>(getHoveredEntity());
+  const shiftHeldRef = useRef<boolean>(false);
+  const isEntitySelectedRef = useRef<(id: string) => boolean>(isEntitySelected ?? (() => false));
 
   // ✅ ADR-030: Track previous state for dirty check
   const prevPositionRef = useRef<Point2D | null>(null);
@@ -280,6 +291,13 @@ export default function CrosshairOverlay({
       }
       ctx.restore();
     }
+
+    // AutoCAD-style "+" / "−" badge at top-right of crosshair center gap
+    const hoveredId = hoveredEntityIdRef.current;
+    if (hoveredId) {
+      const mode: SelectionIndicatorMode = shiftHeldRef.current ? '−' : '+';
+      drawSelectionIndicator(ctx, mouseX, mouseY, centerGap || 6, mode);
+    }
   }, [pickBoxSize, showAperture, apertureSize]);
 
   // ============================================================================
@@ -309,6 +327,7 @@ export default function CrosshairOverlay({
     pos: null,
     margins: rulerMargins
   };
+  isEntitySelectedRef.current = isEntitySelected ?? (() => false);
 
   // ============================================================================
   // 🚀 PERFORMANCE (2026-01-27): IMMEDIATE RENDER via ImmediatePositionStore
@@ -339,6 +358,32 @@ export default function CrosshairOverlay({
 
     return () => {
       unregister();
+    };
+  }, [renderCrosshair, isActive, rulerMargins]);
+
+  // Selection indicator: subscribe to hover changes + Shift key
+  useEffect(() => {
+    const triggerRender = (): void => {
+      const pos = getImmediatePosition();
+      renderCrosshair({ isActive, pos, margins: rulerMargins });
+    };
+
+    const unsubHover = subscribeHoveredEntity(() => {
+      hoveredEntityIdRef.current = getHoveredEntity();
+      triggerRender();
+    });
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Shift') { shiftHeldRef.current = true; triggerRender(); }
+    };
+    const onKeyUp = (e: KeyboardEvent): void => {
+      if (e.key === 'Shift') { shiftHeldRef.current = false; triggerRender(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      unsubHover();
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
     };
   }, [renderCrosshair, isActive, rulerMargins]);
 
@@ -438,18 +483,3 @@ export default function CrosshairOverlay({
   );
 }
 
-/**
- * 🏢 ENTERPRISE COMPLIANCE CHECKLIST:
- *
- * ✅ Uses centralized CursorSystem for mouse position (ZERO duplicate tracking)
- * ✅ Uses UnifiedFrameScheduler for coordinated rendering (ADR-030)
- * ✅ ADR-008 compliant: CSS→Canvas coordinate contract
- * ✅ Dirty-flag optimization (skips render if position unchanged)
- * ✅ CRITICAL priority (renders every frame when dirty)
- * ✅ ResizeObserver for canvas sizing
- * ✅ High-DPI support with setTransform(dpr)
- * ✅ Pixel-perfect alignment (+0.5 for crisp lines)
- * ✅ Full TypeScript support (ZERO any)
- * ✅ Settings via singleton pattern with subscription
- * ✅ Proper cleanup via unsubscribe
- */
