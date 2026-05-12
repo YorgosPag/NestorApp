@@ -29,9 +29,9 @@
 
 .dark,
 [data-theme="dark"] {
-  --ribbon-bg: #2D2D2D;
-  --ribbon-tab-bar-bg: #252525;
-  --ribbon-tab-active: #3C3C3C;
+  --ribbon-bg: hsl(var(--showcase-bg)); /* #1D283A navy brand (globals.css SSoT) */
+  --ribbon-tab-bar-bg: #141A24;
+  --ribbon-tab-active: hsl(var(--showcase-bg)); /* #1D283A navy — match ribbon body */
   --ribbon-panel-label: #363636;
   --ribbon-separator: #404040;
   --ribbon-btn-hover: #4A4A4A;
@@ -94,6 +94,22 @@
   background: var(--ribbon-tab-active);
   color: var(--ribbon-tab-text-active);
   font-weight: 600;
+  position: relative;
+  z-index: 1;
+}
+
+/* ADR-345 §6 — Active tab fuses with ribbon body: a 1px overlay
+   covers the tab-bar border-bottom directly under the active chip,
+   so the chip flows visually into the panel area below. */
+.dxf-ribbon-tab[data-active="true"]::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--ribbon-tab-active);
+  pointer-events: none;
 }
 
 .dxf-ribbon-tab[data-contextual="true"] {

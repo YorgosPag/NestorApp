@@ -9,10 +9,8 @@
 import type { TextToolbarValues } from '../../../../state/text-toolbar';
 import type { AnnotationScale } from '../../../../text-engine/types';
 import type { LayerSelectorEntry } from '../../../text-toolbar/controls';
-import type {
-  RibbonComboboxOption,
-  RibbonComboboxState,
-} from '../../types/ribbon-types';
+import type { RibbonComboboxOption } from '../../types/ribbon-types';
+import type { RibbonComboboxState } from '../../context/RibbonCommandContext';
 import { TEXT_RIBBON_KEYS } from './command-keys';
 
 export interface ComboboxSources {
