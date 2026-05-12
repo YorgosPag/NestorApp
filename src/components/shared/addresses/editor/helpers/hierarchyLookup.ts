@@ -110,7 +110,7 @@ export async function loadHierarchyLookup(): Promise<HierarchyLookup> {
   if (cachedLookup) return cachedLookup;
   if (loadingPromise) return loadingPromise;
   loadingPromise = (async () => {
-    const raw = (await import('@/data/administrative-hierarchy.json')) as unknown as RawData;
+    const raw = (await fetch('/data/administrative-hierarchy.json').then(r => r.json())) as RawData;
     const entities = raw.data.map(rawToEntity);
     cachedLookup = buildHierarchyLookup(entities);
     return cachedLookup;

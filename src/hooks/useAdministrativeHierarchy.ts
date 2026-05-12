@@ -131,7 +131,7 @@ async function loadHierarchy(): Promise<void> {
   }
 
   loadingPromise = (async () => {
-    const rawData: RawData = await import('@/data/administrative-hierarchy.json');
+    const rawData: RawData = await fetch('/data/administrative-hierarchy.json').then(r => r.json());
     const entityMap = new Map<string, AdminEntity>();
     const levelMap = new Map<number, AdminEntity[]>();
 
