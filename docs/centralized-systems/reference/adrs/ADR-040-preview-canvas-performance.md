@@ -4,7 +4,7 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Updated** | 2026-05-11 |
+| **Last Updated** | 2026-05-12 |
 | **Category** | Drawing System |
 | **Canonical Location** | `canvas-v2/preview-canvas/` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |

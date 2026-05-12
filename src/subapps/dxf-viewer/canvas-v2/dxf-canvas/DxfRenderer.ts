@@ -194,18 +194,21 @@ export class DxfRenderer {
     const entityModel: EntityModel = this.toEntityModel(renderedEntity, isSelected);
 
     // ✅ COMPOSITE RENDERING: Ένα κεντρικό call αντί για switch
+    const isDragGhost = options.dragPreview?.entityId === entity.id;
     const renderOptions: RenderOptions = {
       phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',
       transform,
       viewport,
-      showGrips: isSelected,
-      grips: isSelected, // ✅ FIX: Enables grip rendering in renderWithPhases
-      hovered: isHovered, // AutoCAD-style hover highlighting
+      showGrips: isSelected && !isDragGhost,
+      grips: isSelected && !isDragGhost,
+      hovered: isHovered,
       alpha: entity.visible ? 1.0 : 0.3
     };
 
-    // 🚀 ΑΥΤΟ ΑΝΤΙΚΑΘΙΣΤΑ ΤΟ SWITCH STATEMENT!
+    // 🏢 GHOST PREVIEW: Semi-transparent blue overlay during grip drag (ADR-040 bitmap overlay pattern)
+    if (isDragGhost) this.ctx.globalAlpha = 0.45;
     this.entityComposite.render(entityModel, renderOptions);
+    if (isDragGhost) this.ctx.globalAlpha = 1.0;
   }
 
   /**
@@ -489,7 +492,6 @@ export class DxfRenderer {
           max: { x: textPos.x + screenHeight * 4, y: textPos.y } // Approximate width = 4x height
         };
       }
-
       default:
         return null;
     }

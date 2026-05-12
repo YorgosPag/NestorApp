@@ -245,13 +245,28 @@ function drawTranslatedGhostEntity(
       break;
     }
 
-    case 'text': {
-      const pos = toScreen(entity.position);
+    case 'text':
+    case 'mtext': {
+      // Cast wide to support both imported entities (.text flat string) and
+      // TEXT-tool-created entities (.textNode rich AST, no flat .text).
+      const e = entity as DxfEntityUnion & {
+        textNode?: { paragraphs?: Array<{ runs?: Array<{ text?: string }> }> };
+      };
+      if (!e.position) break;
+      const pos = toScreen(e.position);
+      const flatText = e.text
+        ?? e.textNode?.paragraphs
+             ?.flatMap(p => p.runs ?? [])
+             .map(r => r.text ?? '')
+             .join('')
+        ?? '';
+      if (!flatText) break;
       ctx.save();
-      const fontSize = Math.max(8, entity.height * transform.scale);
+      const height = (e as { height?: number }).height ?? 12;
+      const fontSize = Math.max(8, height * transform.scale);
       ctx.font = `${fontSize}px sans-serif`;
       ctx.fillStyle = '#00BFFF';
-      ctx.fillText(entity.text, pos.x, pos.y);
+      ctx.fillText(flatText, pos.x, pos.y);
       ctx.restore();
       break;
     }
