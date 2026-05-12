@@ -156,10 +156,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
-    // PRIORITY 5.5: ADR-344 Phase 6.E follow-up — text creation tool
-    // The text tool opens an in-canvas TipTap overlay at the click point;
-    // not routed through drawing handlers (which are geometry-multi-point).
-    if (activeTool === 'text' && params.onTextToolClick) {
+    // PRIORITY 5.5: ADR-344 Phase 6.E/6.F — text / mtext creation tool
+    // Both 'text' and 'mtext' open an in-canvas TipTap overlay at the click point.
+    if ((activeTool === 'text' || activeTool === 'mtext') && params.onTextToolClick) {
       if (params.onTextToolClick(worldPoint)) return;
     }
 

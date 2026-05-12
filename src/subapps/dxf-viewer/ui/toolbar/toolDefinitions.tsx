@@ -2,7 +2,7 @@
 import {
   MousePointer, Hand, ZoomIn, ZoomOut, Square, Pen,
   Move, Copy, Trash2, Ruler, Undo, Redo, Focus, Maximize2,
-  Grid, Crop, Download, Crosshair, Type,
+  Grid, Crop, Download, Crosshair, Type, AlignLeft,
   Maximize, Calculator, Map, Edit, Hexagon, FlaskConical,
   Activity, // 🏢 ENTERPRISE: Performance Monitor icon
   Sparkles, // 🤖 ADR-185: AI Drawing Assistant icon
@@ -235,8 +235,9 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
       },
       { id: 'polyline' as ToolType, icon: Pen, label: DXF_DRAWING_TOOL_LABELS.POLYLINE, hotkey: getShortcutDisplayLabel('polyline'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
       { id: 'polygon' as ToolType, icon: Hexagon, label: DXF_DRAWING_TOOL_LABELS.POLYGON, hotkey: getShortcutDisplayLabel('polygon'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
-      // ADR-344 Phase 6.E follow-up: text creation tool
+      // ADR-344 Phase 6.E/6.F: text/mtext creation tools
       { id: 'text' as ToolType, icon: Type, label: DXF_DRAWING_TOOL_LABELS.TEXT, hotkey: getShortcutDisplayLabel('text'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
+      { id: 'mtext' as ToolType, icon: AlignLeft, label: DXF_DRAWING_TOOL_LABELS.MTEXT, hotkey: getShortcutDisplayLabel('mtext'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
       { id: 'layering' as ToolType, icon: Map, label: DXF_DRAWING_TOOL_LABELS.LAYERING, hotkey: getShortcutDisplayLabel('layering'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING }
     ]
   },

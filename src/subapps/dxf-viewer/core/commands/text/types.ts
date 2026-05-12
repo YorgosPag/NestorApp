@@ -22,6 +22,8 @@ export interface DxfTextSceneEntity extends SceneEntity {
   position: Point2D;
   /** Authoritative source for text content & formatting. */
   textNode: DxfTextNode;
+  /** MTEXT bounding box width in world units. Undefined for TEXT entities. */
+  width?: number;
 }
 
 // ── Audit (Q12) ───────────────────────────────────────────────────────────────

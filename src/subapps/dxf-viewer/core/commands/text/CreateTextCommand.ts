@@ -34,6 +34,10 @@ export interface CreateTextCommandInput {
   readonly textNode: DxfTextNode;
   /** Reuse an existing ID (ADR-057). When omitted, generateEntityId() is used. */
   readonly existingId?: string;
+  /** Force MTEXT type regardless of AST shape (e.g. mtext creation tool). */
+  readonly forceType?: 'mtext';
+  /** MTEXT bounding box width in world units. Only meaningful when forceType='mtext'. */
+  readonly width?: number;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -69,7 +73,7 @@ export class CreateTextCommand implements ICommand {
 
   execute(): void {
     if (!this.entity) {
-      const entityType = pickEntityType(this.input.textNode);
+      const entityType = this.input.forceType ?? pickEntityType(this.input.textNode);
       this.entity = {
         id: this.input.existingId ?? generateEntityId(),
         type: entityType,
@@ -77,6 +81,7 @@ export class CreateTextCommand implements ICommand {
         visible: true,
         position: this.input.position,
         textNode: this.input.textNode,
+        ...(entityType === 'mtext' && this.input.width != null ? { width: this.input.width } : {}),
       };
     }
     this.sceneManager.addEntity(this.entity);

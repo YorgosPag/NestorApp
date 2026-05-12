@@ -30,7 +30,8 @@ export type ToolType =
   | 'polyline'
   | 'polygon'
   | 'ellipse'
-  | 'text'                 // ADR-344 Phase 6.E follow-up: TEXT/MTEXT creation tool
+  | 'text'                 // ADR-344 Phase 6.E follow-up: TEXT creation tool (single-line)
+  | 'mtext'               // ADR-344 Phase 6.F: MTEXT creation tool (multiline, width-bounded)
 
   | 'move'
   | 'rotate'

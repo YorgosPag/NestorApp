@@ -2,7 +2,6 @@
  * Tool State Manager - Centralized tool lifecycle and state management
  * Unifies scattered tool validation, state transitions, and category logic
  */
-
 import { useState, useCallback, useRef } from 'react';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -40,6 +39,7 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'polygon': { id: 'polygon', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'ellipse': { id: 'ellipse', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'text': { id: 'text', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'mtext': { id: 'mtext', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'arc': { id: 'arc', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'arc-3p': { id: 'arc-3p', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'arc-cse': { id: 'arc-cse', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },

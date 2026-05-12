@@ -172,10 +172,12 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers): DxfEntityUnion
       const e = entity as typeof entity & { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise?: boolean };
       return { ...base, type: 'arc' as const, center: e.center, radius: e.radius, startAngle: e.startAngle, endAngle: e.endAngle, counterclockwise: e.counterclockwise } as DxfEntityUnion;
     }
+    case 'mtext':
     case 'text': {
       const e = entity as typeof entity & { position: Point2D; text?: string; rotation?: number };
       const withNode = entity as { textNode?: DxfTextNode };
       // ADR-344 Phase 6.E: entities from CreateTextCommand have no flat text — derive it.
+      // mtext normalised to 'text' because DxfEntityUnion has no mtext variant.
       const flatText = e.text ?? (withNode.textNode ? extractFlatText(withNode.textNode) : '');
       const textHeight = resolveTextHeight(entity);
       const textStyle = extractFirstRunStyle(entity);

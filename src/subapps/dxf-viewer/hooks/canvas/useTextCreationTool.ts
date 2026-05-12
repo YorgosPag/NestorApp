@@ -1,13 +1,14 @@
 'use client';
 
 /**
- * ADR-344 Phase 6.E follow-up — Text creation tool.
+ * ADR-344 Phase 6.E/6.F — Text + MText creation tool.
  *
- * Parallel to `useTextDoubleClickEditor` but for NEW entity creation:
- * user activates the 'text' tool → clicks on the canvas → in-canvas
- * TipTap overlay opens at the click position with an empty AST → on
- * commit, a CreateTextCommand is dispatched and the tool returns to
- * 'select' (allowsContinuous=false on the text tool definition).
+ * Handles both 'text' (single-line) and 'mtext' (multiline, width-bounded):
+ *   'text'  → click → narrow overlay (width=200px) → TEXT entity (auto) or MTEXT if multiline
+ *   'mtext' → click → wide overlay (width=40% canvas) → MTEXT entity (forced)
+ *
+ * On commit, CreateTextCommand is dispatched and the tool returns to 'select'
+ * (allowsContinuous=false on both tool definitions).
  *
  * ADR-040 note: local React state only, no useSyncExternalStore.
  * Safe to mount in the orchestrator (CanvasSection).
@@ -34,6 +35,10 @@ interface CreatingState {
     readonly width: number;
     readonly height: number;
   };
+  /** World-space width for MTEXT bounding box. Undefined for TEXT. */
+  readonly worldWidth?: number;
+  /** Force MTEXT type on commit (mtext tool mode). */
+  readonly forceMText?: boolean;
 }
 
 interface CanvasTransform {
@@ -97,19 +102,27 @@ function makeEmptyTextNode(): DxfTextNode {
   };
 }
 
+const TEXT_OVERLAY_WIDTH_PX = 200;
+// MTEXT overlay: 40% of canvas width, clamped to [280, 600]px screen
+function mtextOverlayWidth(containerWidth: number): number {
+  return Math.min(600, Math.max(280, Math.round(containerWidth * 0.4)));
+}
+
 function computeAnchorRect(
   worldPoint: Point2D,
   transform: CanvasTransform,
   container: HTMLDivElement,
-): CreatingState['anchorRect'] {
+  isMText: boolean,
+): CreatingState['anchorRect'] & { worldWidth: number } {
   const containerRect = container.getBoundingClientRect();
   // Same Y-flip as useTextDoubleClickEditor.computeAnchorRect (ADR-040 worldToScreen parity).
   const left = containerRect.left + worldPoint.x * transform.scale + transform.offsetX;
   const canvasY = container.clientHeight - worldPoint.y * transform.scale - transform.offsetY;
   const top = containerRect.top + canvasY;
-  // Default height: 2.5mm × scale × 4 visual buffer, min 24px (parity with double-click overlay).
   const height = Math.max(24, 2.5 * transform.scale * 4);
-  return { left, top, width: 200, height };
+  const screenWidth = isMText ? mtextOverlayWidth(container.clientWidth) : TEXT_OVERLAY_WIDTH_PX;
+  const worldWidth = screenWidth / transform.scale;
+  return { left, top, width: screenWidth, height, worldWidth };
 }
 
 export function useTextCreationTool(
@@ -121,17 +134,20 @@ export function useTextCreationTool(
 
   const handleCanvasClick = useCallback(
     (worldPoint: Point2D): boolean => {
-      if (activeTool !== 'text') return false;
+      if (activeTool !== 'text' && activeTool !== 'mtext') return false;
       if (creatingState) return false; // Already creating; let overlay handle it.
       const container = containerRef.current;
       const transform = transformRef.current;
       if (!container || !transform) return false;
-      const anchorRect = computeAnchorRect(worldPoint, transform, container);
+      const isMText = activeTool === 'mtext';
+      const { worldWidth, ...anchorRect } = computeAnchorRect(worldPoint, transform, container, isMText);
       setCreatingState({
         entityId: generateEntityId(),
         position: worldPoint,
         initial: makeEmptyTextNode(),
         anchorRect,
+        worldWidth,
+        forceMText: isMText,
       });
       return true;
     },
@@ -168,6 +184,8 @@ export function useTextCreationTool(
           layer: DXF_DEFAULT_LAYER,
           textNode: next,
           existingId: state.entityId,
+          ...(state.forceMText ? { forceType: 'mtext' as const } : {}),
+          ...(state.forceMText && state.worldWidth != null ? { width: state.worldWidth } : {}),
         },
         services.sceneManager,
         services.auditRecorder,
