@@ -128,7 +128,7 @@ function paragraphToDxf(para: TipTapParagraph): TextParagraph {
   const runs: Array<TextRun | TextStack> = [];
   const accum: RunAccum = { text: '', style: defaultStyle(), active: false };
 
-  for (const item of para.content) {
+  for (const item of para.content ?? []) {
     if (item.type === 'text') {
       const style = marksToStyle(item.marks);
       if (accum.active && stylesEqual(style, accum.style)) {
