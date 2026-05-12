@@ -226,7 +226,7 @@ export function useDrawingHandlers(
       const firstPoint = drawingState.tempPoints[0];
       const distance = calculateDistance(p, firstPoint); // ✅ Use RAW point, NOT snapped!
 
-      if (distance < POLYGON_TOLERANCES.CLOSE_DETECTION) {
+      if (distance < POLYGON_TOLERANCES.CLOSE_DETECTION / canvasOps.getTransform().scale) {
         // 🎯 AUTO-CLOSE: User clicked near first point - close the polygon!
         // Ίδιο pattern με onDrawingDoubleClick — overlay completion first
         const { toolStyleStore } = require('../../stores/ToolStyleStore');
