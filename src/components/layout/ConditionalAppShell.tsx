@@ -63,6 +63,13 @@ import '@/lib/design-system';
  */
 const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/action'] as const;
 
+/** Routes where sidebar must always start collapsed on page load / refresh */
+const SIDEBAR_COLLAPSED_ROUTES = ['/dxf/viewer', '/geo/canvas'] as const;
+
+function isSidebarCollapsedRoute(pathname: string): boolean {
+  return SIDEBAR_COLLAPSED_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`));
+}
+
 interface ConditionalAppShellProps {
   children: React.ReactNode;
 }
@@ -97,7 +104,7 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
  * 🚀 ENTERPRISE: Activates route prefetching on mount
  * Pattern: Salesforce Lightning, SAP Fiori, Google Cloud Console
  */
-function AppLayout({ children }: { children: React.ReactNode }) {
+function AppLayout({ children, sidebarDefaultOpen }: { children: React.ReactNode; sidebarDefaultOpen: boolean }) {
   const layout = useLayoutClasses();
   const { user } = useAuth();
   const prefetchInitialized = useRef(false);
@@ -146,7 +153,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavigationProvider>
                   <PhotoPreviewProvider>
                     <BuildingsNoUnitsProvider>
-                      <SidebarProvider>
+                      <SidebarProvider defaultOpen={sidebarDefaultOpen}>
                         <div className={layout.shellAppContainer}>
                           <AppSidebar />
                           <SidebarInset className={layout.shellAppContent}>
@@ -187,11 +194,13 @@ export function ConditionalAppShell({ children }: ConditionalAppShellProps) {
   const pathname = usePathname();
   const isStandaloneRoute = isAuthRoute(pathname);
 
+  const sidebarDefaultOpen = !isSidebarCollapsedRoute(pathname);
+
   return (
     <TooltipProvider delayDuration={300}>
       {isStandaloneRoute
         ? <AuthLayout>{children}</AuthLayout>
-        : <AppLayout>{children}</AppLayout>
+        : <AppLayout sidebarDefaultOpen={sidebarDefaultOpen}>{children}</AppLayout>
       }
     </TooltipProvider>
   );
