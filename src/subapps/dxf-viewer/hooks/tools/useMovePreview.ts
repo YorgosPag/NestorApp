@@ -28,6 +28,7 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import type { MovePhase } from './useMoveTool';
 import type { useLevels } from '../../systems/levels';
+import type { Overlay } from '../../overlays/types';
 import {
   applyEntityPreview,
   drawGhostEntity,
@@ -48,6 +49,8 @@ export interface UseMovePreviewProps {
   phase: MovePhase;
   basePoint: Point2D | null;
   selectedEntityIds: string[];
+  selectedOverlayIds?: string[];
+  getOverlay?: (id: string) => Overlay | null;
   levelManager: LevelManagerLike;
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
@@ -68,6 +71,8 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     phase,
     basePoint,
     selectedEntityIds,
+    selectedOverlayIds,
+    getOverlay,
     levelManager,
     transform,
     getCanvas,
@@ -78,12 +83,20 @@ export function useMovePreview(props: UseMovePreviewProps): void {
   const rafRef = useRef<number>(0);
   const prevPhaseRef = useRef<MovePhase>('idle');
 
+  // O(1) entity lookup — map rebuilt only when entities array ref changes (not every RAF frame)
+  const entityMapRef = useRef<Map<string, AnySceneEntity>>(new Map());
+  const entityArrayRef = useRef<AnySceneEntity[] | undefined>(undefined);
+
   const getEntity = useCallback(
     (entityId: string): AnySceneEntity | null => {
       if (!levelManager.currentLevelId) return null;
       const scene = levelManager.getLevelScene(levelManager.currentLevelId);
       if (!scene?.entities) return null;
-      return scene.entities.find(e => e.id === entityId) ?? null;
+      if (scene.entities !== entityArrayRef.current) {
+        entityArrayRef.current = scene.entities;
+        entityMapRef.current = new Map(scene.entities.map(e => [e.id, e]));
+      }
+      return entityMapRef.current.get(entityId) ?? null;
     },
     [levelManager],
   );
@@ -169,8 +182,29 @@ export function useMovePreview(props: UseMovePreviewProps): void {
       }
 
       ctx.restore();
+
+      // Ghost overlays (stroke-only outline)
+      if (selectedOverlayIds && selectedOverlayIds.length > 0 && getOverlay) {
+        ctx.save();
+        ctx.globalAlpha = GHOST_DEFAULTS.alpha;
+        ctx.strokeStyle = GHOST_DEFAULTS.color;
+        ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
+        for (const ovId of selectedOverlayIds) {
+          const ov = getOverlay(ovId);
+          if (!ov || ov.polygon.length < 2) continue;
+          const pts = ov.polygon.map(([x, y]) =>
+            CoordinateTransforms.worldToScreen({ x: x + delta.x, y: y + delta.y }, transform, vp)
+          );
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.closePath();
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
     }
-  }, [phase, basePoint, cursorWorld, selectedEntityIds, getEntity, transform, getCanvas, getViewportElement]);
+  }, [phase, basePoint, cursorWorld, selectedEntityIds, selectedOverlayIds, getOverlay, getEntity, transform, getCanvas, getViewportElement]);
 
   // Clear canvas when leaving preview phase
   useEffect(() => {

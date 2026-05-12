@@ -22,7 +22,7 @@ import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
-import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../../core/commands';
+import { MoveEntityCommand, MoveMultipleEntitiesCommand, CompoundCommand } from '../../core/commands';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
@@ -45,8 +45,12 @@ type LevelManagerLike = Pick<
 export interface UseMoveToolProps {
   activeTool: string;
   selectedEntityIds: string[];
+  selectedOverlayIds?: string[];
   levelManager: LevelManagerLike;
   executeCommand: (cmd: ICommand) => void;
+  executeOverlayMove?: (ids: string[], delta: Point2D) => void;
+  /** Factory that builds the overlay move ICommand without executing it — used for mixed-selection CompoundCommand. */
+  createOverlayMoveCommand?: (ids: string[], delta: Point2D) => ICommand;
   previewCanvasRef: React.RefObject<PreviewCanvasHandle | null>;
   onToolChange?: (tool: string) => void;
 }
@@ -69,8 +73,11 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
   const {
     activeTool,
     selectedEntityIds,
+    selectedOverlayIds = [],
     levelManager,
     executeCommand,
+    executeOverlayMove,
+    createOverlayMoveCommand,
     previewCanvasRef,
     onToolChange,
   } = props;
@@ -82,9 +89,10 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
   const prevEntityCountRef = useRef(0);
 
   const isActive = activeTool === 'move';
+  const hasAnySelected = selectedEntityIds.length > 0 || selectedOverlayIds.length > 0;
   const isCollectingInput =
     isActive &&
-    selectedEntityIds.length > 0 &&
+    hasAnySelected &&
     (phase === 'awaiting-base-point' || phase === 'awaiting-destination');
 
   const getSceneManager = useCallback(() => {
@@ -99,7 +107,7 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
   // ── State machine transitions ────────────────────────────────────────────
   useEffect(() => {
     const toolIsMove = activeTool === 'move';
-    const hasEntities = selectedEntityIds.length > 0;
+    const hasEntities = selectedEntityIds.length > 0 || selectedOverlayIds.length > 0;
 
     if (toolIsMove && !wasActiveRef.current) {
       setPhase(hasEntities ? 'awaiting-base-point' : 'awaiting-entity');
@@ -122,8 +130,8 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
     }
 
     wasActiveRef.current = toolIsMove;
-    prevEntityCountRef.current = selectedEntityIds.length;
-  }, [activeTool, selectedEntityIds.length, phase, previewCanvasRef]);
+    prevEntityCountRef.current = selectedEntityIds.length + selectedOverlayIds.length;
+  }, [activeTool, selectedEntityIds.length, selectedOverlayIds.length, phase, previewCanvasRef]);
 
   // ── Click handler ────────────────────────────────────────────────────────
   const handleMoveClick = useCallback(
@@ -143,21 +151,37 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
         };
         if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) return;
 
-        const sm = getSceneManager();
-        if (!sm) return;
+        const commands: ICommand[] = [];
 
-        const cmd: ICommand =
-          selectedEntityIds.length === 1
-            ? new MoveEntityCommand(selectedEntityIds[0], delta, sm, false)
-            : new MoveMultipleEntitiesCommand(selectedEntityIds, delta, sm, false);
+        if (selectedEntityIds.length > 0) {
+          const sm = getSceneManager();
+          if (sm) {
+            commands.push(
+              selectedEntityIds.length === 1
+                ? new MoveEntityCommand(selectedEntityIds[0], delta, sm, false)
+                : new MoveMultipleEntitiesCommand(selectedEntityIds, delta, sm, false),
+            );
+          }
+        }
 
-        executeCommand(cmd);
+        if (selectedOverlayIds.length > 0 && createOverlayMoveCommand) {
+          commands.push(createOverlayMoveCommand(selectedOverlayIds, delta));
+        } else if (selectedOverlayIds.length > 0) {
+          executeOverlayMove?.(selectedOverlayIds, delta);
+        }
+
+        if (commands.length === 1) {
+          executeCommand(commands[0]);
+        } else if (commands.length > 1) {
+          executeCommand(new CompoundCommand('Move', commands));
+        }
+
         previewCanvasRef.current?.clear();
         setPhase('awaiting-base-point');
         setBasePoint(null);
       }
     },
-    [isCollectingInput, phase, basePoint, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef],
+    [isCollectingInput, phase, basePoint, getSceneManager, selectedEntityIds, selectedOverlayIds, executeCommand, executeOverlayMove, createOverlayMoveCommand, previewCanvasRef],
   );
 
   // ── Escape handler ───────────────────────────────────────────────────────

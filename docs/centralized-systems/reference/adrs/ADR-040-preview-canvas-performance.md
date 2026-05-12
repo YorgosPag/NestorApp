@@ -71,6 +71,25 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-12: SSoT unification — `selectedEntityIds` derived from `universalSelection`
+
+`CanvasSection.tsx`: rimosso `useState<string[]>([])` per `selectedEntityIds`. La selezione delle entità DXF ora è **derivata** da `universalSelection.getIdsByType('dxf-entity')` (Context-based, già reattivo nell'orchestratore — niente `useSyncExternalStore`, CHECK 6C rispettato).
+
+- **Nuovo pattern**: `selectedEntityIds = useMemo(() => universalSelection.getIdsByType('dxf-entity'), [universalSelection])`.
+- `setSelectedEntityIds` ora è un `useCallback` che dispatcha attraverso `universalSelection.clearByType('dxf-entity')` + `addMultiple(...)` — scrive direttamente nello SSoT.
+- `getSelectedEntityIds` (getter ADR-040 cardinal rule 2 per event-time reads in `useTextDoubleClickEditor`) ora legge `universalSelectionRef.current.getIdsByType('dxf-entity')` — niente più `selectedEntityIdsRef`.
+- Listener `canvas:select-all`: rimossa la doppia scrittura manuale a `universalSelection.clearAll/selectMultiple`; ora basta `setSelectedEntityIds(ids)` (SSoT-aware).
+- Escape guard: `hasAnySelection: universalSelection.count() > selectedEntityIds.length` sostituisce il check overlay-only — copre tutti i tipi non-DXF (overlay, color-layer, ecc.).
+- `clearEntitySelection`: semplificato a `universalSelectionRef.current.clearAll()` — un solo dispatch.
+
+**Perché**: eliminata la doppia-scrittura manuale (local React state + `universalSelection`) che richiedeva sync esplicito ad ogni call-site. La selezione DXF ha ora **una sola fonte di verità**. I bug come "Escape non deseleziona overlay" (Fix 4 del 2026-05-12) sono root-cause-fixed: non più dipendenti dal sync corretto fra due contenitori.
+
+**Constraint preservato**: `CanvasSection` non chiama `useSyncExternalStore` (CHECK 6C OK). La reattività viene da `useContext(SelectionContext)` interno a `useUniversalSelection` — Context si rerenderizza solo su selection change (frequenza basse, non high-freq), quindi acceptable nell'orchestratore.
+
+**File modificati**: `CanvasSection.tsx`.
+
+---
+
 ### 2026-05-12: AutoCAD-style selection indicator on crosshair
 
 `CrosshairOverlay.tsx`: aggiunto indicatore "+" / "−" in stile AutoCAD all'angolo
@@ -1062,3 +1081,21 @@ ADR-344 (DXF Enterprise Text Engine) introduces a parallel text editing stack th
 **Files touched** (8): new `rendering/ghost/{apply-entity-preview,draw-ghost-entity,index}.ts`, new `hooks/tools/useGripGhostPreview.ts`, refactored `hooks/tools/useMovePreview.ts`, modified `canvas-v2/dxf-canvas/{DxfRenderer.ts, dxf-canvas-renderer.ts, dxf-types.ts}`, modified `components/dxf-layout/{canvas-layer-stack-leaves.tsx, CanvasLayerStack.tsx}`.
 
 **Google-level: YES** — proactive (preview lives on the same overlay layer for every drag path, no special cases scattered across renderers), idempotent (`applyEntityPreview` returns the same reference on zero-delta → no redundant frame), race-free (each preview hook owns its own RAF + clear policy; mutually exclusive states in practice), SSoT (one `applyEntityPreview`, one `drawGhostEntity`, one `GHOST_DEFAULTS` constant set), belt-and-suspenders (snap to entity → guard via `getEntity()`; zero-delta short-circuits in `applyEntityPreview` and `drawGhostEntity`), explicit owner (`rendering/ghost/` is the documented home; pre-commit `.ssot-registry.json` should pick this up on the next baseline pass).
+
+---
+
+## 2026-05-12: Auto Area Measurement (ADR-346)
+
+Added `AutoAreaResultPanel` to `CanvasLayerStack.tsx` as a **non-canvas HTML overlay** (position: fixed, z-index 9999). This component reads from `AutoAreaResultStore` via `useSyncExternalStore` — **the subscription is inside the leaf component, not in the shell**. The shell (`CanvasLayerStack`) merely renders `<AutoAreaResultPanel />` which satisfies CHECK 6C (shell itself has zero new store subscriptions).
+
+**ADR-040 cardinal rules preserved**: no bitmap cache changes, no high-frequency subscriptions in the shell, `AutoAreaResultStore` is module-level (same pattern as HoverStore / ImmediatePositionStore).
+
+## 2026-05-13: Auto Area Hover Preview (ADR-346 extension)
+
+Added `AutoAreaPreviewOverlay` (SVG) to `CanvasLayerStack.tsx` for real-time polygon highlight on hover. Same ADR-040 compliance pattern as `AutoAreaResultPanel`: the SVG component subscribes to `AutoAreaPreviewStore` independently — the shell renders it without subscribing itself. Mouse-move logic lives in `useAutoAreaMouseMove` (hooks/canvas), called from `CanvasSection` as a wrapper around `unified.handleMouseMove`. Throttled at 50ms (20fps) — no impact on grip or rendering paths.
+
+---
+
+## 2026-05-13: Move tool — overlay zone support (ADR-049 extension)
+
+`canvas-layer-stack-leaves.tsx`: added `onMoveOverlay` + `onMoveMultipleOverlays` callback props forwarded from `CanvasSection` to the interaction leaf. `canvas-layer-stack-types.ts`: extended `CanvasLayerStackLeafProps` with the two new optional callbacks. Enables mixed DXF-entity + overlay-zone moves in a single undo step via `MoveOverlayCommand` / `MoveMultipleOverlaysCommand` (both wrapped in `CompoundCommand`). ADR-040 cardinal rules preserved: no new store subscriptions in the shell; callbacks are props, not state.

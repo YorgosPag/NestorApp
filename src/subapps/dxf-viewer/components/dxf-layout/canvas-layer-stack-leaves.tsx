@@ -305,6 +305,8 @@ interface MovePreviewMountProps {
   phase: MovePhase;
   basePoint: Point2D | null;
   selectedEntityIds: string[];
+  selectedOverlayIds?: string[];
+  getOverlay?: Parameters<typeof useMovePreview>[0]['getOverlay'];
   levelManager: Parameters<typeof useMovePreview>[0]['levelManager'];
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;

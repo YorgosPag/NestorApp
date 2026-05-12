@@ -4,7 +4,7 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Updated** | 2026-05-11 |
+| **Last Updated** | 2026-05-12 |
 | **Category** | Drawing System |
 | **Canonical Location** | `MoveOverlayCommand.ts` + `hooks/tools/useMoveTool.ts` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -63,3 +63,6 @@ Draws:
 |------|--------|
 | 2026-01-01 | Initial: overlay drag move (`MoveOverlayCommand`) |
 | 2026-05-11 | Added AutoCAD-style 2-click DXF entity move: `useMoveTool` + `useMovePreview` |
+| 2026-05-12 | Fix: pre-selected overlay ignored by Move tool. `useMoveTool` now accepts `selectedOverlayIds` + `executeOverlayMove` props. `hasAnySelected` includes overlays; state machine enters `awaiting-base-point` when overlay(s) pre-selected. `handleMoveClick` dispatches `MoveOverlayCommand`/`MoveMultipleOverlaysCommand` when no DXF entities selected. `CanvasSection` passes `universalSelection.getIdsByType('overlay')` + `executeOverlayMove` callback. |
+| 2026-05-12 | Fix: mixed selection (DXF + overlay) — entrambi i tipi ora si muovono insieme. `useMoveTool` accetta `createOverlayMoveCommand` factory; selezione mista → `CompoundCommand([MoveEntityCommand, MoveOverlayCommand])` → unico undo con Ctrl+Z. `CanvasSection` espone `createOverlayMoveCommand` callback. |
+| 2026-05-12 | Fix: overlay vertex grips now illuminate in Move mode. `useLayerCanvasMouseMove` `isGripMode` extended to include `'move'` tool. Snap engine now receives overlay vertices: `useGlobalSnapSceneSync` upgraded to accept `overlays: Overlay[]` (converts via `overlaysToRegions` + `regionsToSnapEntities` internally); `CanvasSection` passes `currentOverlays`. |

@@ -205,6 +205,8 @@ export interface CanvasLayerStackProps {
   movePreview: {
     phase: import('../../hooks/tools/useMoveTool').MovePhase;
     basePoint: Point2D | null;
+    selectedOverlayIds?: string[];
+    getOverlay?: (id: string) => import('../../overlays/types').Overlay | null;
   };
   /** Level manager — needed by useRotationPreview + useMovePreview for entity reads */
   levelManager: ReturnType<typeof useLevels>;
