@@ -127,24 +127,32 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
             injectedSaveContextRef.current?.canonicalScenePath
             ?? scenePathCacheRef.current.get(fileName);
 
-          if (!fileId) {
-            // Check if wizard already created a FileRecord for this filename (tenant-scoped)
+          // Enter also when canonicalScenePath is missing — even if fileId is already
+          // known (injected by wizard/loader), the scene path may not have been wired
+          // yet (e.g. fresh import where setSaveContext was called without a path).
+          if (!fileId || !canonicalScenePath) {
             const lookupCompanyId = injectedSaveContextRef.current?.companyId ?? user?.companyId;
-            if (!lookupCompanyId) {
+            if (!lookupCompanyId && !fileId) {
+              // No company ID and no fileId — cannot resolve either; abort save
               setSaveStatus('error');
               return;
             }
-            const existing = await DxfFirestoreService.findExistingFileRecord(lookupCompanyId, fileName);
-            if (existing) {
-              fileId = existing.id;
-              // Derive scene path next to the original DXF in canonical storage
-              if (existing.storagePath && !canonicalScenePath) {
-                canonicalScenePath = DxfFirestoreService.deriveScenePath(existing.storagePath);
+            if (lookupCompanyId) {
+              const existing = await DxfFirestoreService.findExistingFileRecord(lookupCompanyId, fileName);
+              if (existing) {
+                // Prefer the injected/cached fileId; fall back to Firestore record
+                fileId = fileId ?? existing.id;
+                // Derive scene path next to the original DXF in canonical storage
+                if (existing.storagePath && !canonicalScenePath) {
+                  canonicalScenePath = DxfFirestoreService.deriveScenePath(existing.storagePath);
+                }
+              } else if (!fileId) {
+                fileId = DxfFirestoreService.generateFileId(fileName);
               }
-            } else {
-              fileId = DxfFirestoreService.generateFileId(fileName);
+              fileIdCacheRef.current.set(fileName, fileId!);
             }
-            fileIdCacheRef.current.set(fileName, fileId);
+            // If lookupCompanyId is missing but fileId IS known, fall through —
+            // saveToStorageImpl will surface the missing-path error explicitly.
           }
 
           // Cache for subsequent saves of this file
