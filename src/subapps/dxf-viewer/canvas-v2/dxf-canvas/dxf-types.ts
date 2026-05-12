@@ -44,12 +44,31 @@ export interface DxfArc extends DxfEntity {
   counterclockwise?: boolean;
 }
 
+/**
+ * ADR-344 Phase 6.E — Rich-text style derived from the first run of textNode.
+ * Carries only what Canvas2D can render: font family, weight, italic, per-run color.
+ */
+export interface DxfTextStyle {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  fontFamily?: string;
+  /** Per-run color override (overrides entity.color when set). */
+  runColor?: string;
+  /** Derived from textNode.attachment horizontal component (L/C/R). */
+  textAlign?: 'left' | 'center' | 'right';
+  /** Derived from textNode.attachment vertical component (T/M/B). */
+  textBaseline?: 'top' | 'middle' | 'bottom';
+}
+
 export interface DxfText extends DxfEntity {
   type: 'text';
   position: Point2D;
   text: string;
   height: number;
   rotation?: number; // in degrees
+  /** ADR-344 Phase 6.E: style derived from textNode first-run, used by TextRenderer. */
+  textStyle?: DxfTextStyle;
 }
 
 export interface DxfAngleMeasurement extends DxfEntity {

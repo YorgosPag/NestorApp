@@ -67,31 +67,29 @@ export class TextRenderer extends BaseEntityRenderer {
     // Setup style
     this.setupStyle(entity, options);
 
-    // ╔════════════════════════════════════════════════════════════════════════╗
-    // ║ ✅ ZOOM-RESPONSIVE TEXT (2026-01-03)                                   ║
-    // ║ Τα κείμενα κλιμακώνονται με το zoom όπως όλες οι άλλες οντότητες.     ║
-    // ║ Χρησιμοποιεί: screenHeight = worldHeight × scale                       ║
-    // ║ Έτσι τα κείμενα διαστάσεων ακολουθούν τις γραμμές τους.               ║
-    // ╚════════════════════════════════════════════════════════════════════════╝
     const screenPos = this.worldToScreen(position);
     const screenHeight = height * this.transform.scale;
 
+    // ADR-344 Phase 6.E: rich text style from textNode first run (if present).
+    const richStyle = ('textStyle' in entity)
+      ? entity.textStyle as { bold?: boolean; italic?: boolean; fontFamily?: string; runColor?: string; textAlign?: 'left' | 'center' | 'right'; textBaseline?: 'top' | 'middle' | 'bottom'; underline?: boolean } | undefined
+      : undefined;
+    const fontFamily = richStyle?.fontFamily || 'arial';
+    const weight: 'normal' | 'bold' = richStyle?.bold ? 'bold' : 'normal';
+    const italic = richStyle?.italic;
+
     this.ctx.save();
 
-    // ✅ SIMPLIFIED: Direct font setting
-    this.ctx.font = buildUIFont(screenHeight, 'arial');
-    this.ctx.fillStyle = ('color' in entity ? entity.color : undefined) || UI_COLORS.DEFAULT_ENTITY;
-    this.ctx.textAlign = 'left';
+    this.ctx.font = buildUIFont(screenHeight, fontFamily, weight, italic);
+    const baseColor = ('color' in entity ? entity.color : undefined) as string | undefined;
+    this.ctx.fillStyle = richStyle?.runColor || baseColor || UI_COLORS.DEFAULT_ENTITY;
+    this.ctx.textAlign = richStyle?.textAlign ?? 'left';
     // ╔════════════════════════════════════════════════════════════════════════╗
-    // ║ 🔧 DXF BASELINE FIX (2026-01-03)                                       ║
-    // ║                                                                        ║
-    // ║ DXF: insertion point = baseline (κάτω από τα γράμματα)                ║
-    // ║ Canvas με Y-flip (worldToScreen): Πρέπει να χρησιμοποιήσουμε 'top'    ║
-    // ║                                                                        ║
-    // ║ ΠΡΙΝ: 'bottom' → κείμενα εμφανίζονταν ΠΑΝΩ από το insertion point    ║
-    // ║ ΤΩΡΑ: 'top' → κείμενα εμφανίζονται ΚΑΤΩ (σωστό μετά Y-flip!)         ║
+    // ║ 🔧 DXF BASELINE FIX (2026-01-03) + ADR-344 Phase 6.E vertical align  ║
+    // ║ textBaseline derived from textNode.attachment[0]: T→top, M→middle,   ║
+    // ║ B→bottom. Default 'top' preserves the original DXF baseline fix.     ║
     // ╚════════════════════════════════════════════════════════════════════════╝
-    this.ctx.textBaseline = 'top';
+    this.ctx.textBaseline = richStyle?.textBaseline ?? 'top';
 
     // Apply rotation if needed
     // ╔════════════════════════════════════════════════════════════════════════╗
@@ -109,6 +107,11 @@ export class TextRenderer extends BaseEntityRenderer {
     let normalizedRotation = rotation % 360;
     if (normalizedRotation < 0) normalizedRotation += 360;
 
+    const textAlignMode = richStyle?.textAlign ?? 'left';
+    // Underline Y offset relative to anchor: top→+0.9h, middle→+0.4h, bottom→-0.1h
+    const baselineVOffset = richStyle?.textBaseline === 'middle' ? 0.5 : richStyle?.textBaseline === 'bottom' ? 1.0 : 0;
+    const underlineYOff = screenHeight * (0.9 - baselineVOffset);
+
     if (normalizedRotation !== 0) {
       this.ctx.translate(screenPos.x, screenPos.y);
       // ΑΝΤΙΣΤΡΟΦΗ γωνίας λόγω Y-flip στο worldToScreen
@@ -116,8 +119,20 @@ export class TextRenderer extends BaseEntityRenderer {
       // 🏢 ADR-067: Use centralized angle conversion
       this.ctx.rotate(degToRad(-normalizedRotation));
       this.ctx.fillText(text, 0, 0);
+      if (richStyle?.underline) {
+        const w = this.ctx.measureText(text).width;
+        const thickness = Math.max(1, screenHeight * 0.07);
+        const xOff = textAlignMode === 'center' ? -w / 2 : textAlignMode === 'right' ? -w : 0;
+        this.ctx.fillRect(xOff, underlineYOff, w, thickness);
+      }
     } else {
       this.ctx.fillText(text, screenPos.x, screenPos.y);
+      if (richStyle?.underline) {
+        const w = this.ctx.measureText(text).width;
+        const thickness = Math.max(1, screenHeight * 0.07);
+        const xOff = textAlignMode === 'center' ? -w / 2 : textAlignMode === 'right' ? -w : 0;
+        this.ctx.fillRect(screenPos.x + xOff, screenPos.y + underlineYOff, w, thickness);
+      }
     }
 
     this.ctx.restore();

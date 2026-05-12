@@ -17,9 +17,10 @@
 import { useMemo, useRef } from 'react';
 
 import { perfMark } from '../../debug/perf-line-profile';
-import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/entities';
+import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { getLayerNameOrDefault } from '../../config/layer-config';
 import { UI_COLORS } from '../../config/color-config';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
@@ -81,6 +82,63 @@ function rectangleToVertices(e: {
   return null;
 }
 
+/**
+ * ADR-344 Phase 6.E — Extract canvas-renderable style from the first run of textNode.
+ * Returns undefined when textNode is absent or yields no style fields.
+ */
+function extractFirstRunStyle(entity: SceneEntity): DxfTextStyle | undefined {
+  const withNode = entity as { textNode?: DxfTextNode };
+  if (!withNode.textNode) return undefined;
+  const result: DxfTextStyle = {};
+
+  // Node-level: attachment → textAlign (H) + textBaseline (V).
+  const attachment = withNode.textNode.attachment;
+  if (attachment) {
+    const row = attachment[0]; // 'TL'[0]='T', 'ML'[0]='M', 'BL'[0]='B'
+    const col = attachment[1]; // 'TL'[1]='L', 'TC'[1]='C', 'TR'[1]='R'
+    if (col === 'C') result.textAlign = 'center';
+    else if (col === 'R') result.textAlign = 'right';
+    // 'L' = default 'left', omit
+    if (row === 'M') result.textBaseline = 'middle';
+    else if (row === 'B') result.textBaseline = 'bottom';
+    // 'T' = default 'top', omit
+  }
+
+  // Run-level: first run style (bold / italic / underline / font / color).
+  const para = withNode.textNode.paragraphs?.[0];
+  const run = para?.runs?.[0];
+  if (run && !('top' in run)) {
+    const s = (run as TextRun).style;
+    if (s) {
+      if (s.bold !== undefined) result.bold = s.bold;
+      if (s.italic !== undefined) result.italic = s.italic;
+      if (s.underline !== undefined) result.underline = s.underline;
+      if (s.fontFamily) result.fontFamily = s.fontFamily;
+      if (s.color) {
+        // DxfColor can be a truthy string (#rrggbb) or DXF-special constant.
+        const c = s.color;
+        if (typeof c === 'string' && c) result.runColor = c;
+      }
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/**
+ * ADR-344 Phase 6.E — Resolve text height: prefer first run's textNode height,
+ * fall back to flat entity.height / entity.fontSize / default.
+ */
+function resolveTextHeight(entity: SceneEntity): number {
+  const withNode = entity as { textNode?: DxfTextNode; height?: number; fontSize?: number };
+  const run = withNode.textNode?.paragraphs?.[0]?.runs?.[0];
+  if (run && !('top' in run)) {
+    const h = (run as TextRun).style?.height;
+    if (h !== undefined && h > 0) return h;
+  }
+  return withNode.height || withNode.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
+}
+
 function convertEntity(entity: SceneEntity, layers: SceneLayers): DxfEntityUnion | null {
   const base = buildBase(entity, layers);
 
@@ -102,10 +160,19 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers): DxfEntityUnion
       return { ...base, type: 'arc' as const, center: e.center, radius: e.radius, startAngle: e.startAngle, endAngle: e.endAngle, counterclockwise: e.counterclockwise } as DxfEntityUnion;
     }
     case 'text': {
-      // ⚠️ VERIFIED WORKING: height || fontSize || DEFAULT_FONT_SIZE — DO NOT swap order (ADR-142)
-      const e = entity as typeof entity & { position: Point2D; text: string; fontSize?: number; height?: number; rotation?: number };
-      const textHeight = e.height || e.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
-      return { ...base, type: 'text' as const, position: e.position, text: e.text, height: textHeight, rotation: e.rotation } as DxfEntityUnion;
+      const e = entity as typeof entity & { position: Point2D; text: string; rotation?: number };
+      // ADR-344 Phase 6.E: textNode height takes priority; falls back to flat fields (ADR-142).
+      const textHeight = resolveTextHeight(entity);
+      const textStyle = extractFirstRunStyle(entity);
+      return {
+        ...base,
+        type: 'text' as const,
+        position: e.position,
+        text: e.text,
+        height: textHeight,
+        rotation: e.rotation,
+        ...(textStyle && { textStyle }),
+      } as DxfEntityUnion;
     }
     case 'angle-measurement': {
       const e = entity as typeof entity & { vertex: Point2D; point1: Point2D; point2: Point2D; angle: number };

@@ -251,10 +251,12 @@ export type UIFontFamily = 'monospace' | 'Arial' | 'arial' | 'system-ui' | 'Inte
 export function buildUIFont(
   size: number,
   family: UIFontFamily | string = 'monospace',
-  weight: 'normal' | 'bold' = 'normal'
+  weight: 'normal' | 'bold' = 'normal',
+  italic?: boolean,
 ): string {
+  const italicPrefix = italic ? 'italic ' : '';
   const weightPrefix = weight === 'bold' ? 'bold ' : '';
-  return `${weightPrefix}${size}px ${family}`;
+  return `${italicPrefix}${weightPrefix}${size}px ${family}`;
 }
 
 // ============================================

@@ -966,3 +966,15 @@ ADR-344 (DXF Enterprise Text Engine) introduces a parallel text editing stack th
 - `mouse-handler-up.ts`: both mouseup paths (single-click + marquee fallback) pass additive flag
 - `CanvasLayerStack.tsx`: `handleDxfEntitySelect(entityId, additive?)` — additive=true → toggle (add if absent, remove if present); additive=false → replace (existing behavior)
 - `canvas-layer-stack-types.ts`: `UniversalSelectionForStack` now includes `add` and `deselect` (already implemented in `useUniversalSelection`)
+
+### 2026-05-12: ADR-344 Phase 6.E — rich text style pipeline in DxfRenderer + TextRenderer
+
+`dxf-types.ts`: new `DxfTextStyle` interface (bold/italic/underline/fontFamily/runColor/textAlign/textBaseline). `DxfText` entity gains optional `textStyle?: DxfTextStyle` field — rendering hint derived from `textNode`, not domain data, so it does not affect CommandHistory or bitmap cache keys.
+
+`useDxfSceneConversion.ts`: `extractFirstRunStyle(entity)` reads `textNode.paragraphs[0].runs[0].style` + `textNode.attachment` and builds a `DxfTextStyle`. `resolveTextHeight(entity)` prefers `textNode` run height, falls back to flat `height`/`fontSize`/default (ADR-142 order preserved). Both utilities are pure functions called once per entity in `sceneToCanvas()` — no new store subscriptions.
+
+`DxfRenderer.ts`: `case 'text'` block spreads `te.textStyle` (if present) into the canvas entity object. No subscription change, no bitmap cache key change.
+
+`TextRenderer.ts`: `renderText()` reads `richStyle` from `entity.textStyle`, derives `fontFamily`/`weight`/`italic`, and passes `italic` to the updated `buildUIFont()` helper. Underline rendered as a post-draw rect below the baseline.
+
+**ADR-040 compliance**: no new `useSyncExternalStore` calls; `textStyle` is NOT added to the bitmap cache key (per cardinal rule 3 — it changes only on selection/edit, not on pan/zoom); all reads are at conversion time (scene→canvas), not at render tick.

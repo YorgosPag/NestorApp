@@ -1,5 +1,5 @@
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
-import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
+import type { DxfScene, DxfEntityUnion, DxfRenderOptions, DxfText } from './dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
@@ -371,15 +371,20 @@ export class DxfRenderer {
           endAngle: entity.endAngle,
           counterclockwise: entity.counterclockwise
         };
-      case 'text':
+      case 'text': {
+        const te = entity as DxfText;
+        // ADR-344 Phase 6.E: spread textStyle so TextRenderer can apply rich styling.
+        // Cast required — Entity/TextEntity predates textStyle (rendering hint, not domain).
         return {
           ...base,
           type: 'text',
-          position: entity.position,
-          text: entity.text,
-          height: entity.height,
-          rotation: entity.rotation
-        };
+          position: te.position,
+          text: te.text,
+          height: te.height,
+          rotation: te.rotation,
+          ...(te.textStyle && { textStyle: te.textStyle }),
+        } as unknown as Entity;
+      }
       case 'angle-measurement':
         return {
           ...base,
