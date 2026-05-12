@@ -233,6 +233,15 @@ export function convertEllipse(
 /**
  * Convert TEXT entity with full CAD property extraction
  * DXF Codes: 10,20 = Position; 1 = Content; 40 = Height; 50 = Rotation; 72 = H-justification
+ *
+ * 🏢 ADR-344 Phase 11.D TODO (out of scope this commit):
+ * When the parser is upgraded to preserve XDATA pairs (AcDbAnnotativeData,
+ * group codes 1001/1070/1071) the conversion should call
+ * `parseAnnotativeXData(pairs, scaleResolver)` from
+ * `text-engine/parser/xdata-annotative-codec.ts` and populate
+ * `isAnnotative` / `annotationScales` on the returned TextEntity.
+ * Current parser flattens DXF into Record<string,string> which is lossy for
+ * XDATA — full wire-up requires upstream parser refactor (separate task).
  */
 export function convertText(
   data: Record<string, string>,
@@ -273,6 +282,8 @@ export function convertText(
 /**
  * Convert MTEXT/MULTILINETEXT entity
  * DXF Codes: 10,20 = Position; 1/3 = Content; 40 = Height; 50 = Rotation; 71 = Attachment
+ *
+ * 🏢 ADR-344 Phase 11.D TODO: same XDATA wire-up note as convertText() above.
  */
 export function convertMText(
   data: Record<string, string>,

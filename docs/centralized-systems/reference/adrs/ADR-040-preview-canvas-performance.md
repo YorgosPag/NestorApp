@@ -71,12 +71,33 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
-### 2026-05-12: ADR-344 Phase 11 — bitmap cache invalidates on annotation scale change
+### 2026-05-12: ADR-344 Phase 11.C — annotative scaling pipeline integration
+
+`rendering/core/EntityRendererComposite.ts`: `render()` now passes every entity
+through `resolveAnnotativeEntity()` (new helper in
+`rendering/entities/annotative-resolver.ts`) before dispatching to the
+entity-specific renderer. For annotative TEXT/MTEXT entities the helper
+returns a shallow clone with `height` replaced by the viewport-active scale's
+`modelHeight`; all other entities pass through unchanged.
+
+`TextRenderer.ts` is intentionally untouched — its file-level lockdown comment
+forbids embedding annotation scaling inside the renderer. The pre-render
+resolver pattern keeps the renderer simple-path (`height × scale`) intact.
+
+`systems/viewport/ViewportStore.ts`: `setActiveScale` / `setScaleList` now call
+`markSystemsDirty(['dxf-canvas'])` so that a viewport scale change triggers an
+immediate frame redraw — mirrors `ImmediateTransformStore` Phase XIII pattern.
 
 `dxf-bitmap-cache.ts`: added `activeAnnotationScale: string` to `CacheKey`.
 `isDirty()` now reads `getActiveScaleName()` from `ViewportStore` and compares
 against cached value. Cache invalidates when viewport annotation scale changes,
 preventing stale renders after scale switch (e.g. 1:50 → 1:100).
+
+**Micro-leaf catalog**: `ViewportStore` is a new plain-singleton SSoT for the
+viewport annotation scale; it conforms to ADR-040 cardinal rules — getter at
+event time (no `useSyncExternalStore` in `EntityRendererComposite` or
+`dxf-bitmap-cache`), granular `subscribeActiveScale` / `subscribeScaleList`
+for React leaves via `ViewportContext.tsx` hooks.
 
 ### 2026-05-11: NEW — mouse-handler-move reads GripSnapStore for crosshair snap
 
