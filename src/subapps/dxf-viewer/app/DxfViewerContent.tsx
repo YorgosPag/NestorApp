@@ -1,14 +1,5 @@
 'use client';
 
-/**
- * DxfViewerContent — Main orchestrator component for the DXF Viewer.
- * ADR-065 SRP split: delegates logic to useDxfViewerCallbacks + useDxfViewerEffects.
- *
- * Related files:
- * - useDxfViewerCallbacks.ts (callbacks/memos)
- * - useDxfViewerEffects.ts (useEffect subscriptions)
- */
-
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_DXF_VIEWER_CONTENT = false;
 
@@ -113,6 +104,9 @@ import {
 } from '../ui/ribbon/data/contextual-text-editor-tab';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
 import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEditorBridge';
+// ADR-344 Phase 6.E: selection→toolbar + toolbar→CommandHistory always-on bridges
+import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
+import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToolbarCommandBridge';
 
 // ✅ PERFORMANCE: Memoize the main component
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
@@ -149,6 +143,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   );
   // ADR-345 Fase 5.5 — text editor bridge (toggle/combobox state + handlers).
   const textEditorBridge = useRibbonTextEditorBridge();
+  // ADR-344 Phase 6.E — selection → toolbar populate (Layer 1) + toolbar → CommandHistory (Layer 2).
+  // Mounted here (always-on orchestrator) so both the ribbon and the floating panel stay in sync
+  // regardless of which UI surface the user has open.
+  useTextToolbarSelectionSync();
+  useTextToolbarCommandBridge();
   const eventBus = useEventBus();
   const colors = useSemanticColors();
   const { copy: copyToClipboard } = useCopyToClipboard();
