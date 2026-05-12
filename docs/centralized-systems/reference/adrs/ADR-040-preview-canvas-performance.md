@@ -71,6 +71,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-12: Grid axis/origin defaults — SSoT centralization
+
+`config/grid-axis-defaults.ts` creato come unico SSoT per `showAxes`, `showOrigin`,
+`axesColor`, `axesWeight`. Tutti e 5 i punti di consumo ora importano da lì:
+`GridTypes.ts`, `rulers-grid/config.ts`, `CanvasSettings.ts`,
+`useCanvasSettings.ts` (fallback), `LegacyGridAdapter.ts` (fallback).
+`rulers-grid-state-init.ts`: migration `migrateAdaptiveFadeDefaults` forza il
+valore SSoT anche su sessioni persistite (Firestore/localStorage).
+Default: `showAxes: false` (linee assi infinite disabilitate — distraggono).
+
+---
+
 ### 2026-05-12: TEXT entity hover glow — fill-based pre-pass
 
 `TextRenderer.ts`: aggiunto glow pre-pass per hover delle entità TEXT/MTEXT.

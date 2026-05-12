@@ -70,45 +70,14 @@ export class TextRenderer extends BaseEntityRenderer {
     let normalizedRotation = rotation % 360;
     if (normalizedRotation < 0) normalizedRotation += 360;
 
-    // Glow pre-pass for hover — fill-based analog of renderWithPhases stroke pre-pass
-    if (options.hovered) {
-      this.renderTextGlowPrePass(text, screenPos, screenHeight, normalizedRotation, fontFamily, weight, italic);
-    }
-
     this.setupStyle(entity, options);
-    this.renderTextContent(entity, text, screenPos, screenHeight, normalizedRotation, richStyle, fontFamily, weight, italic);
+    this.renderTextContent(entity, text, screenPos, screenHeight, normalizedRotation, richStyle, fontFamily, weight, italic, options.hovered);
     this.finalizeRendering(entity, options);
   }
 
   private extractRichStyle(entity: EntityModel): TextRichStyle {
     if (!('textStyle' in entity)) return undefined;
     return entity.textStyle as TextRichStyle;
-  }
-
-  // ╔════════════════════════════════════════════════════════════════════════╗
-  // ║ Hover glow pre-pass for TEXT entities                                 ║
-  // ║ Mirrors renderWithPhases stroke pre-pass but uses fillText.           ║
-  // ║ Draws text in yellow at low opacity before the main pass so the       ║
-  // ║ character shapes themselves glow — no extra bounding box needed.      ║
-  // ╚════════════════════════════════════════════════════════════════════════╝
-  private renderTextGlowPrePass(
-    text: string, screenPos: Point2D, screenHeight: number,
-    normalizedRotation: number, fontFamily: string,
-    weight: 'normal' | 'bold', italic: boolean | undefined
-  ): void {
-    this.ctx.save();
-    this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-    this.ctx.fillStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-    this.ctx.font = buildUIFont(screenHeight, fontFamily, weight, italic);
-    this.ctx.textBaseline = 'top';
-    if (normalizedRotation !== 0) {
-      this.ctx.translate(screenPos.x, screenPos.y);
-      this.ctx.rotate(degToRad(-normalizedRotation));
-      this.ctx.fillText(text, 0, 0);
-    } else {
-      this.ctx.fillText(text, screenPos.x, screenPos.y);
-    }
-    this.ctx.restore();
   }
 
   // ╔════════════════════════════════════════════════════════════════════════╗
@@ -120,7 +89,8 @@ export class TextRenderer extends BaseEntityRenderer {
   private renderTextContent(
     entity: EntityModel, text: string, screenPos: Point2D,
     screenHeight: number, normalizedRotation: number, richStyle: TextRichStyle,
-    fontFamily: string, weight: 'normal' | 'bold', italic: boolean | undefined
+    fontFamily: string, weight: 'normal' | 'bold', italic: boolean | undefined,
+    isHovered = false
   ): void {
     const baseColor = ('color' in entity ? entity.color : undefined) as string | undefined;
     const textAlignMode = richStyle?.textAlign ?? 'left';
@@ -130,7 +100,10 @@ export class TextRenderer extends BaseEntityRenderer {
 
     this.ctx.save();
     this.ctx.font = buildUIFont(screenHeight, fontFamily, weight, italic);
-    this.ctx.fillStyle = richStyle?.runColor || baseColor || UI_COLORS.DEFAULT_ENTITY;
+    // Hover: turn text yellow (matches AutoCAD behaviour — entity turns yellow on hover).
+    this.ctx.fillStyle = isHovered
+      ? HOVER_HIGHLIGHT.ENTITY.glowColor
+      : (richStyle?.runColor || baseColor || UI_COLORS.DEFAULT_ENTITY);
     this.ctx.textAlign = richStyle?.textAlign ?? 'left';
     // textBaseline from textNode.attachment[0]: T→top, M→middle, B→bottom. Default 'top' per DXF baseline fix.
     this.ctx.textBaseline = richStyle?.textBaseline ?? 'top';

@@ -258,13 +258,15 @@ export class BoundsCalculator {
       const cos = Math.cos(rad);
       const sin = Math.sin(rad);
 
-      // Text rectangle corners relative to position (origin)
-      // DXF: insertion = baseline-left, text extends right and up
+      // Text rectangle corners relative to position (origin).
+      // TextRenderer uses textBaseline='top': position is the TOP of the text in screen
+      // space, so text extends DOWNWARD on screen = NEGATIVE Y in world coords (Y-up).
+      // Corners: (0,0)=top-left, (w,0)=top-right, (w,-h)=bottom-right, (0,-h)=bottom-left.
       const corners = [
         { x: 0, y: 0 },
         { x: estimatedWidth, y: 0 },
-        { x: estimatedWidth, y: estimatedHeight },
-        { x: 0, y: estimatedHeight },
+        { x: estimatedWidth, y: -estimatedHeight },
+        { x: 0, y: -estimatedHeight },
       ];
 
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -285,12 +287,13 @@ export class BoundsCalculator {
       );
     }
 
-    // Non-rotated: simple axis-aligned box
+    // Non-rotated: text goes DOWN from position (textBaseline='top' → position = top).
+    // World Y range: [position.y - estimatedHeight, position.y].
     return this.createBoundingBox(
       position.x - tolerance,
-      position.y - tolerance,
+      position.y - estimatedHeight - tolerance,
       position.x + estimatedWidth + tolerance,
-      position.y + estimatedHeight + tolerance
+      position.y + tolerance
     );
   }
 
