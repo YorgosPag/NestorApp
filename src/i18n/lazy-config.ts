@@ -108,6 +108,7 @@ export const SUPPORTED_NAMESPACES = [
   'vendor-portal',          // 🏢 Public vendor portal (ADR-327 §7)
   'onboarding',             // 🏢 New tenant onboarding wizard (ADR-326 Phase 8)
   'settings',               // 🏢 App settings pages (shortcuts, etc.)
+  'textToolbar',            // 🏢 DXF text toolbar / Properties panel (ADR-344)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
@@ -225,6 +226,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'dxf-viewer-settings',
     'dxf-viewer-wizard',
     'dxf-viewer-guides',
+    'textToolbar',
     'geo-canvas',
     'geo-canvas-drawing',
     'files',

@@ -144,6 +144,7 @@ if (typeof window !== 'undefined') {
       'common-photos',      // 🏢 Split from common (ADR-280)
       'common-shared',      // 🏢 Split from common (ADR-280)
       'settings',           // 🏢 Settings pages (shortcuts, etc.)
+      'textToolbar',        // 🏢 DXF text toolbar / Properties panel (ADR-344)
     ];
 
     const saved = safeGetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, '');

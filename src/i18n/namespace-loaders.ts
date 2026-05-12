@@ -107,6 +107,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'vendor-portal': return () => import('./locales/el/vendor-portal.json');
     case 'onboarding': return () => import('./locales/el/onboarding.json');
     case 'settings': return () => import('./locales/el/settings.json');
+    case 'textToolbar': return () => import('./locales/el/textToolbar.json');
     default: return null;
   }
 }
@@ -203,6 +204,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'vendor-portal': return () => import('./locales/en/vendor-portal.json');
     case 'onboarding': return () => import('./locales/en/onboarding.json');
     case 'settings': return () => import('./locales/en/settings.json');
+    case 'textToolbar': return () => import('./locales/en/textToolbar.json');
     default: return null;
   }
 }

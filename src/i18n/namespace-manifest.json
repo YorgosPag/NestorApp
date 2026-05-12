@@ -1415,6 +1415,22 @@
       "targetNamespaces": []
     },
     {
+      "namespace": "textToolbar",
+      "owner": "dxf-subapp",
+      "primarySurface": "dxf-text-toolbar-properties",
+      "stringClasses": [
+        "ui-chrome",
+        "domain-vocabulary"
+      ],
+      "budget": {
+        "maxLines": 200,
+        "warnOnly": false
+      },
+      "status": "governed",
+      "splitRequired": false,
+      "targetNamespaces": []
+    },
+    {
       "namespace": "org-structure",
       "owner": "platform-tenant",
       "primarySurface": "settings-company-org-structure",
