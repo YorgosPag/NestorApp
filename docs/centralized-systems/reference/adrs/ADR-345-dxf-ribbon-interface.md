@@ -462,9 +462,14 @@ Il floating panel ha **3 tab** (non 2):
 ⚠️ = "Coming Soon" — disabilitato.
 
 **Strategia migrazione verso ribbon:**
-- **Levels tab** → ribbon tab `Layers` (Fase 2) — già strutturato, migrazione rapida
+- **Levels tab** → ribbon tab `Layers` (Fase 2) ✅ MIGRATA 2026-05-12 — tab `levels` disabilitata in sidebar
 - **DXF Settings** → ribbon tab `Settings` (Fase 5+) — complesso, richiede redesign UX
 - **Text Properties** → ribbon tab contestuale `Text Editor` (Fase 5) — già è un pannello contestuale
+
+**Stato attuale floating panel sidebar (post-Fase 2):**
+- ❌ `levels` — DISABLED (LevelPanel ora nel ribbon)
+- ✅ `colors` — DxfSettingsPanel (attiva, da migrare in Fase 6)
+- ✅ `text-properties` — TextPropertiesPanel (attiva, da migrare in Fase 5)
 
 ### 8.3 Motivazione
 
@@ -579,17 +584,22 @@ interface RibbonState {
 - **Status Bar** (bottom) — implementata insieme al ribbon scaffold
 - Nessun tool funzionante — solo struttura visiva
 
-### Fase 2 — Tab LAYERS (migrazione rapida dal floating panel) ← PRIORITÀ CONFERMATA
-- Migrazione contenuto `LevelPanel.tsx` nel ribbon tab Layers
-- Layer visibility, colori, rename, delete, merge
-- Import floorplan + Load from Storage buttons
-- **Floating panel: tab Levels disabilitato**
+### Fase 2 — Tab LAYERS (migrazione rapida dal floating panel) ✅ COMPLETATA 2026-05-12
+- ✅ Migrazione contenuto `LevelPanel.tsx` nel ribbon tab Layers (composition pattern via prop `layersTabContent`)
+- ✅ Layer visibility, colori, rename, delete, merge (via `useLayerOperations` wired in `LayersTabContent`)
+- ✅ Import floorplan wizard + Load from Storage buttons (via `onSceneImported` da `handleFileImportWithEncoding`)
+- ✅ **Floating panel: tab `levels` disabilitato** (`usePanelNavigation.getDisabledPanels() = { levels: true }`)
+- ✅ Expanded workspace mode (body 240px-720px, scroll) — pattern Revit
+- File: `LayersTabContent.tsx` (75 righe), modifiche minimal a `RibbonRoot`/`RibbonBody`/CSS
 
-### Fase 3 — Tab HOME, panel DRAW
-- `LargeButton`, `SmallButton`, `SplitButton` con split-last-used persistence
-- Line, Polyline, Circle (split), Arc (split), Rectangle, Polygon, Ellipse (split)
-- Collegamento ai comandi DXF viewer esistenti
-- **Floating panel disabilitato per questi tool**
+### Fase 3 — Tab HOME, panel DRAW ✅ COMPLETATA 2026-05-12
+- ✅ `RibbonLargeButton`, `RibbonSmallButton`, `RibbonSplitButton` + `RibbonSplitDropdown`
+- ✅ Split-last-used persistence via `dxf-ribbon:splitLastUsed` (hook `useSplitLastUsed`)
+- ✅ `RibbonCommandContext` bridge (`onToolChange` + split map) wired da `DxfViewerContent`
+- ✅ Line, Polyline, Rectangle, Polygon, Ellipse (simple) — wireati a `ToolType` reali
+- ✅ Circle ▾ (4 varianti: radius/diameter/2P/3P), Arc ▾ (3 varianti: 3P/SCE/CSE)
+- ⏳ Floating panel NON ancora disabilitato per questi tool (rimozione → Fase 8)
+- ⚠️ Varianti rinviate (manca `ToolType` mappabile): Circle TTR, Arc SCA/SEA, Ellipse Axis+End/Arc
 
 ### Fase 4 — Panel MODIFY
 - Move, Copy, Rotate, Mirror, Scale, Trim, Extend, Offset, Fillet, Array
@@ -658,6 +668,8 @@ interface RibbonState {
 | 2026-05-11 | §3 confermato — Tutti 9 panels Home tab approvati. Block/Groups/Utilities/Clipboard = nuova funzionalità (non migrazione). |
 | 2026-05-11 | Status → ACCEPTED. Sessione Q&A completata (14 domande). Tutte le decisioni architetturali prese. Pronto per implementazione Fase 1. |
 | 2026-05-11 | §5.1 + §8.1c — Tab drag & drop reorder aggiunto. Ordine persiste in localStorage (dxf-ribbon:tabOrder). |
+| 2026-05-12 | **Fase 2 IMPLEMENTATA** — Migrazione `LevelPanel.tsx` nel ribbon tab `Layers`. Decisione UX: tab Layers usa **expanded workspace mode** (body height auto, max 720px / 70vh, scroll) invece di panels orizzontali — pattern Revit-style per contenuto ricco. Nuovo file `src/subapps/dxf-viewer/ui/ribbon/tabs/LayersTabContent.tsx` che wireare `LevelPanel` via `useLayerOperations` + `useLevels` + `useFloatingPanelState` (stesso wiring di `FloatingPanelContainer`). Composition pattern: `RibbonRoot` accetta prop `layersTabContent?: ReactNode`, `DxfViewerContent` istanzia `<LayersTabContent>` con scene/tool/selection/onSceneImported wired da `useDxfViewerState`. `RibbonBody` aggiunge `data-tab-mode="expanded"` quando layers tab attivo. CSS `.dxf-ribbon-body[data-tab-mode="expanded"]` con height auto + max 720px. `ribbon-default-tabs.ts`: Layers tab → `panels: []` (no horizontal panels). **Floating panel sidebar sx**: tab `levels` DISABILITATA via `usePanelNavigation.getDisabledPanels()` (LevelPanel ora vive solo nel ribbon, no duplicazione). Tab `colors` e `text-properties` restano attive in sidebar. Funzionalità preservate: visibility/colori/rename/delete/merge layers, import floorplan wizard, load from storage, livelli list, overlay list. |
+| 2026-05-12 | **Fase 3 IMPLEMENTATA** — Home tab → panel DRAW wired ai comandi DXF reali. 7 file nuovi: `ui/ribbon/{context/RibbonCommandContext.tsx, hooks/useSplitLastUsed.ts, components/buttons/{RibbonButtonIcon,RibbonLargeButton,RibbonSmallButton,RibbonSplitButton,RibbonSplitDropdown}.tsx, data/home-tab-draw.ts}`. Modifiche: `RibbonPanel.tsx` ora renderizza `panel.rows` (row-size aware: large=row, small=column), `RibbonRoot.tsx` accetta nuova prop `commands: { onToolChange }` e wrappa con `<RibbonCommandProvider>`, `ribbon-default-tabs.ts` importa `HOME_DRAW_PANEL`, `DxfViewerContent.tsx` passa `commands={{ onToolChange: handleToolChange }}`. CSS in `ribbon-tokens.css`: large/small/split button styles + dropdown + minimize-aware label hiding. i18n: `ribbon.commands.{line,polyline,circle,arc,rectangle,polygon,ellipse}` + `circleVariants.{radius,diameter,twoPoint,threePoint}` + `arcVariants.{threePoint,startCenterEnd,centerStartEnd}` + `dropdown.openVariants` (el+en). Persistenza split last-used via `dxf-ribbon:splitLastUsed → Record<commandId, variantId>` (hook `useSplitLastUsed`). Click top-half split = esegue last-used (default = prima variante); click ▾ = dropdown; selezione promuove variante in cima. Icone: riuso `LineIcon`, `CircleIcon` (4 varianti), `ArcIcon` (3 varianti) dal `toolbar/icons/`. Polyline/Polygon/Rectangle/Ellipse → SVG inline primitivi in `RibbonButtonIcon.tsx`. **Scope variants vs §3.1**: implementate solo varianti mappabili a `ToolType` reale (`src/subapps/dxf-viewer/ui/toolbar/types.ts`). Circle: radius / diameter / 2-Point / 3-Point (TTR rinviata — manca ToolType). Arc: 3-Point / Start-Center-End / Center-Start-End (Start+Center+Angle, Start+End+Angle rinviati). Ellipse: variante singola (no split) — Axis+End / Elliptical Arc rinviati. Polygon: singolo. **Test manuali**: 7 button visibili in panel Draw, Line/Polyline/Rectangle/Polygon/Ellipse → tool attivato, Circle▾ / Arc▾ → dropdown varianti, selezione variante = nuovo default persistito su refresh. Tab Layers / drag&drop / minimize states / context menu = nessuna regressione (Fase 1+2 stabile). |
 | 2026-05-12 | Status → ACTIVE. **Fase 1 IMPLEMENTATA**: ribbon scaffold + status bar inseriti in `DxfViewerContent.tsx` (full-width tra global header e section esistente). 11 nuovi file: `src/subapps/dxf-viewer/ui/ribbon/{components/RibbonRoot,RibbonTabBar,RibbonTabItem,RibbonBody,RibbonPanel,PanelLabel,RibbonMinimizeButton,RibbonContextMenu, status-bar/DxfStatusBar, hooks/useRibbonState,useRibbonTabDrag, styles/ribbon-tokens.css, types/ribbon-types.ts, data/ribbon-default-tabs.ts}`. 5 tab vuote (Home/Layers/View/Annotate/Settings) con i18n via `dxf-viewer-shell`. localStorage persistence (activeTabId, minimizeState, tabOrder). Drag&drop reorder. 4 stati minimize ciclici (full → panel-buttons → panel-titles → tab-names). Right-click context menu (minimize toggle attivo, altri voci disabled v1). Responsive: viewport <900px → auto-minimize tab-names. Status bar 7 elementi: coordinate (placeholder 0.00/0.00), Grid/Snap/Ortho/Polar (toggle locali), Annotation Scale 1:1, Layer 0. Theme-aware via CSS variables (dark + light tokens). Coesistenza con floating panel + DXF toolbar (transitorio). NESSUN tool funzionante — solo struttura visiva. Floating panel ancora presente, sarà rimosso in Fase 8. |
 
 ---

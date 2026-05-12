@@ -5,6 +5,7 @@
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
+import { HOME_DRAW_PANEL } from './home-tab-draw';
 
 export const DEFAULT_RIBBON_TAB_ORDER: readonly string[] = [
   'home',
@@ -19,7 +20,7 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
     id: 'home',
     labelKey: 'ribbon.tabs.home',
     panels: [
-      { id: 'draw', labelKey: 'ribbon.panels.draw', rows: [] },
+      HOME_DRAW_PANEL,
       { id: 'modify', labelKey: 'ribbon.panels.modify', rows: [] },
       { id: 'annotation', labelKey: 'ribbon.panels.annotation', rows: [] },
     ],
@@ -27,9 +28,9 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
   {
     id: 'layers',
     labelKey: 'ribbon.tabs.layers',
-    panels: [
-      { id: 'layer-manager', labelKey: 'ribbon.panels.layerManager', rows: [] },
-    ],
+    // Fase 2 — Layers tab uses expanded workspace mode (LevelPanel),
+    // no horizontal panels. Body content comes from layersTabContent prop.
+    panels: [],
   },
   {
     id: 'view',

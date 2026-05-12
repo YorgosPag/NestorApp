@@ -331,6 +331,29 @@
       "showTabs": "Εμφάνιση Καρτελών",
       "showPanels": "Εμφάνιση Πανελ",
       "undock": "Αποκόλληση"
+    },
+    "commands": {
+      "line": "Γραμμή",
+      "polyline": "Πολυγραμμή",
+      "circle": "Κύκλος",
+      "arc": "Τόξο",
+      "rectangle": "Ορθογώνιο",
+      "polygon": "Πολύγωνο",
+      "ellipse": "Έλλειψη",
+      "circleVariants": {
+        "radius": "Κέντρο και Ακτίνα",
+        "diameter": "Κέντρο και Διάμετρος",
+        "twoPoint": "2 Σημεία",
+        "threePoint": "3 Σημεία"
+      },
+      "arcVariants": {
+        "threePoint": "3 Σημεία",
+        "startCenterEnd": "Αρχή, Κέντρο, Τέλος",
+        "centerStartEnd": "Κέντρο, Αρχή, Τέλος"
+      },
+      "dropdown": {
+        "openVariants": "Άνοιγμα παραλλαγών"
+      }
     }
   }
 }

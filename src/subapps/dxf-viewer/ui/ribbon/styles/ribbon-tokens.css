@@ -179,12 +179,213 @@
 .dxf-ribbon-panel-body {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 8px;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 4px 6px;
   font-size: 11px;
   color: var(--ribbon-text-muted);
+  gap: 4px;
+}
+
+.dxf-ribbon-panel-body[data-empty="true"] {
+  align-items: center;
+  justify-content: center;
   font-style: italic;
+}
+
+.dxf-ribbon-panel-row {
+  display: flex;
+  gap: 2px;
+}
+
+.dxf-ribbon-panel-row[data-row-size="large"] {
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.dxf-ribbon-panel-row[data-row-size="small"] {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+.dxf-ribbon-btn {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ribbon-text);
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  border-radius: var(--ribbon-radius);
+}
+
+.dxf-ribbon-btn:hover {
+  background: var(--ribbon-btn-hover);
+}
+
+.dxf-ribbon-btn-large {
+  flex-direction: column;
+  justify-content: flex-start;
+  width: 56px;
+  padding: 4px 2px 2px;
+  font-size: 11px;
+  line-height: 1.1;
+  gap: 2px;
+}
+
+.dxf-ribbon-btn-small {
+  flex-direction: row;
+  height: 20px;
+  padding: 0 6px;
+  gap: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.dxf-ribbon-btn-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.dxf-ribbon-btn-icon-large {
+  width: 28px;
+  height: 28px;
+}
+
+.dxf-ribbon-btn-icon-small {
+  width: 16px;
+  height: 16px;
+}
+
+.dxf-ribbon-btn-label {
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  color: inherit;
+}
+
+.dxf-ribbon-btn-label-inline {
+  font-size: 11px;
+  color: inherit;
+}
+
+.dxf-ribbon-btn-split {
+  position: relative;
+  display: inline-flex;
+  border: 1px solid transparent;
+  border-radius: var(--ribbon-radius);
+}
+
+.dxf-ribbon-btn-split:hover {
+  border-color: var(--ribbon-separator);
+}
+
+.dxf-ribbon-btn-split-large {
+  flex-direction: column;
+  width: 56px;
+}
+
+.dxf-ribbon-btn-split-small {
+  flex-direction: row;
+  height: 20px;
+}
+
+.dxf-ribbon-btn-split-top,
+.dxf-ribbon-btn-split-arrow {
+  background: transparent;
+  border: none;
+  color: var(--ribbon-text);
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}
+
+.dxf-ribbon-btn-split-large .dxf-ribbon-btn-split-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px 2px;
+  flex: 1;
+  border-bottom: 1px solid var(--ribbon-separator);
+}
+
+.dxf-ribbon-btn-split-large .dxf-ribbon-btn-split-arrow {
+  height: 14px;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.dxf-ribbon-btn-split-small .dxf-ribbon-btn-split-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  flex: 1;
+}
+
+.dxf-ribbon-btn-split-small .dxf-ribbon-btn-split-arrow {
+  width: 16px;
+  border-left: 1px solid var(--ribbon-separator);
+  font-size: 10px;
+}
+
+.dxf-ribbon-btn-split-top:hover,
+.dxf-ribbon-btn-split-arrow:hover {
+  background: var(--ribbon-btn-hover);
+}
+
+.dxf-ribbon-split-dropdown[data-portal="true"] {
+  position: fixed;
+  top: var(--dxf-dropdown-top, -9999px);
+  left: var(--dxf-dropdown-left, -9999px);
+  z-index: var(--ribbon-z-context-menu);
+  background: var(--ribbon-bg);
+  color: var(--ribbon-text);
+  border: 1px solid var(--ribbon-separator);
+  border-radius: var(--ribbon-radius);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+  margin: 0;
+  padding: 4px 0;
+  min-width: 220px;
+  list-style: none;
+}
+
+.dxf-ribbon-split-dropdown[data-ready="false"] {
+  visibility: hidden;
+}
+
+.dxf-ribbon-split-dropdown li {
+  display: block;
+}
+
+.dxf-ribbon-split-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: var(--ribbon-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  text-align: left;
+}
+
+.dxf-ribbon-split-dropdown-item:hover {
+  background: var(--ribbon-btn-hover);
+}
+
+.dxf-ribbon-body[data-minimize="panel-buttons"] .dxf-ribbon-btn-label,
+.dxf-ribbon-body[data-minimize="panel-buttons"] .dxf-ribbon-btn-label-inline {
+  display: none;
 }
 
 .dxf-ribbon-body[data-minimize="panel-titles"] .dxf-ribbon-panel-body {

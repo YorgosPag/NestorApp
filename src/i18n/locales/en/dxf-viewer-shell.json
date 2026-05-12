@@ -331,6 +331,29 @@
       "showTabs": "Show Tabs",
       "showPanels": "Show Panels",
       "undock": "Undock"
+    },
+    "commands": {
+      "line": "Line",
+      "polyline": "Polyline",
+      "circle": "Circle",
+      "arc": "Arc",
+      "rectangle": "Rectangle",
+      "polygon": "Polygon",
+      "ellipse": "Ellipse",
+      "circleVariants": {
+        "radius": "Center, Radius",
+        "diameter": "Center, Diameter",
+        "twoPoint": "2-Point",
+        "threePoint": "3-Point"
+      },
+      "arcVariants": {
+        "threePoint": "3-Point",
+        "startCenterEnd": "Start, Center, End",
+        "centerStartEnd": "Center, Start, End"
+      },
+      "dropdown": {
+        "openVariants": "Open variants"
+      }
     }
   }
 }

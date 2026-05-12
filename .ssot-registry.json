@@ -2866,12 +2866,19 @@
     },
     "text-spell": {
       "ssotFile": "src/subapps/dxf-viewer/text-engine/spell/spell-checker.ts",
-      "description": "nspell worker + el_GR/en_US dictionaries + custom Firestore dictionary CRUD (ADR-344 Q6). Lazy-loaded on first text edit. Direct nspell imports outside this module break the lazy-load strategy and duplicate dictionary loading.",
+      "description": "nspell worker + el_GR (MPL-1.1 LibreOffice asset) / en_US (dictionary-en BSD-2) dictionaries + custom Firestore dictionary CRUD (ADR-344 Q6, Phase 8). Lazy-loaded on first text edit. Direct nspell / dictionary-en imports outside this module break the lazy-load strategy and duplicate dictionary loading. Custom dictionary writes go through /api/dxf/custom-dictionary (Admin SDK + audit + Zod).",
       "forbiddenPatterns": [
-        "import\\s+nspell\\s+from"
+        "import\\s+nspell\\s+from",
+        "import\\s+.*from\\s+['\"]dictionary-en['\"]",
+        "from\\s+['\"]nspell['\"]"
       ],
       "allowlist": [
-        "src/subapps/dxf-viewer/text-engine/spell/"
+        "src/subapps/dxf-viewer/text-engine/spell/",
+        "src/subapps/dxf-viewer/text-engine/edit/spell-check-extension.ts",
+        "src/subapps/dxf-viewer/ui/text-dictionary/",
+        "src/subapps/dxf-viewer/ui/text-toolbar/SpellCheckToggle.tsx",
+        "src/subapps/dxf-viewer/ui/text-toolbar/SpellCheckContextMenu.tsx",
+        "src/app/api/dxf/custom-dictionary/"
       ],
       "addedDate": "2026-05-11",
       "addedByAdr": "ADR-344",

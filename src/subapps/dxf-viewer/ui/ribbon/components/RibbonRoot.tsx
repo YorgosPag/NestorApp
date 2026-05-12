@@ -21,8 +21,22 @@ import {
   RibbonContextMenu,
   type ContextMenuPosition,
 } from './RibbonContextMenu';
+import {
+  RibbonCommandProvider,
+  type RibbonCommandsApi,
+} from '../context/RibbonCommandContext';
 
-export const RibbonRoot: React.FC = () => {
+interface RibbonRootProps {
+  /** ADR-345 Fase 2 — slot for the Layers tab expanded workspace (LevelPanel). */
+  layersTabContent?: React.ReactNode;
+  /** ADR-345 Fase 3 — command bridge to the DXF viewer state. */
+  commands: RibbonCommandsApi;
+}
+
+export const RibbonRoot: React.FC<RibbonRootProps> = ({
+  layersTabContent,
+  commands,
+}) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const state = useRibbonState();
   const drag = useRibbonTabDrag(state.tabOrder, state.setTabOrder);
@@ -49,35 +63,38 @@ export const RibbonRoot: React.FC = () => {
   }, [state]);
 
   return (
-    <div
-      className="dxf-ribbon-root"
-      role="region"
-      aria-label={t('ribbon.ariaLabels.ribbon')}
-      onContextMenu={handleContextMenu}
-    >
-      <RibbonTabBar
-        tabs={orderedTabs}
-        activeTabId={activeTab?.id ?? ''}
-        minimizeState={state.effectiveMinimizeState}
-        onTabActivate={state.setActiveTabId}
-        onTabDoubleClick={state.cycleMinimizeState}
-        onTabContextMenu={handleContextMenu}
-        onCycleMinimize={state.cycleMinimizeState}
-        drag={drag}
-      />
-      <RibbonBody
-        activeTab={activeTab}
-        minimizeState={state.effectiveMinimizeState}
-      />
-      {menuPos && (
-        <RibbonContextMenu
-          position={menuPos}
-          isMinimized={state.userMinimizeState !== 'full'}
-          onClose={closeMenu}
-          onToggleMinimize={toggleMinimize}
+    <RibbonCommandProvider commands={commands}>
+      <div
+        className="dxf-ribbon-root"
+        role="region"
+        aria-label={t('ribbon.ariaLabels.ribbon')}
+        onContextMenu={handleContextMenu}
+      >
+        <RibbonTabBar
+          tabs={orderedTabs}
+          activeTabId={activeTab?.id ?? ''}
+          minimizeState={state.effectiveMinimizeState}
+          onTabActivate={state.setActiveTabId}
+          onTabDoubleClick={state.cycleMinimizeState}
+          onTabContextMenu={handleContextMenu}
+          onCycleMinimize={state.cycleMinimizeState}
+          drag={drag}
         />
-      )}
-    </div>
+        <RibbonBody
+          activeTab={activeTab}
+          minimizeState={state.effectiveMinimizeState}
+          layersTabContent={layersTabContent}
+        />
+        {menuPos && (
+          <RibbonContextMenu
+            position={menuPos}
+            isMinimized={state.userMinimizeState !== 'full'}
+            onClose={closeMenu}
+            onToggleMinimize={toggleMinimize}
+          />
+        )}
+      </div>
+    </RibbonCommandProvider>
   );
 };
 

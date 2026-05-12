@@ -26,8 +26,9 @@ export function usePanelNavigation({
 }: UsePanelNavigationParams): PanelNavigationMethods {
 
   // ✅ Panel disabled state logic
+  // ADR-345 Fase 2: 'levels' tab disabled — content migrated to ribbon tab "Layers".
   const getDisabledPanels = (): Partial<Record<PanelType, boolean>> => {
-    return {};
+    return { levels: true };
   };
 
   const disabledPanels = useMemo(() => getDisabledPanels(), []);

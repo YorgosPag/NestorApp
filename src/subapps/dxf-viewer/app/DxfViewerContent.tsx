@@ -102,6 +102,8 @@ import { useDxfViewerEffects } from './useDxfViewerEffects';
 // 📐 ADR-345 Fase 1: Ribbon interface scaffold + status bar
 import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
 import { DxfStatusBar } from '../ui/ribbon/status-bar/DxfStatusBar';
+// 📐 ADR-345 Fase 2: Layers tab content (LevelPanel migrated from floating panel)
+import { LayersTabContent } from '../ui/ribbon/tabs/LayersTabContent';
 
 // ✅ PERFORMANCE: Memoize the main component
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
@@ -269,7 +271,20 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       >
       <div className="flex flex-col h-full min-h-0">
         {/* ADR-345 Fase 1: ribbon inserito tra global header e layout viewer */}
-        <RibbonRoot />
+        {/* ADR-345 Fase 2: Layers tab content wired with scene/tool/selection state */}
+        <RibbonRoot
+          commands={{ onToolChange: handleToolChange }}
+          layersTabContent={
+            <LayersTabContent
+              scene={currentScene}
+              currentTool={activeTool}
+              onToolChange={handleToolChange}
+              selectedEntityIds={selectedEntityIds}
+              setSelectedEntityIds={setSelectedEntityIds}
+              onSceneImported={handleFileImportWithEncoding}
+            />
+          }
+        />
       <section
         className={`flex flex-1 min-h-0 ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}
       >
