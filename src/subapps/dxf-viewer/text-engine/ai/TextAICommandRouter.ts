@@ -20,7 +20,6 @@ import {
   UpdateTextStyleCommand,
   UpdateTextGeometryCommand,
   UpdateMTextParagraphCommand,
-  ReplaceOneTextCommand,
   ReplaceAllTextCommand,
   DeleteTextCommand,
 } from '../../core/commands/text';
@@ -146,19 +145,9 @@ function buildCommandFromIntent(
     }
 
     case 'replace_one':
-      return new ReplaceOneTextCommand(
-        {
-          entityId,
-          pattern: intent.search ?? '',
-          replacement: intent.replacement ?? '',
-          matchOptions: { caseSensitive: intent.caseSensitive ?? false },
-          matchIndex: intent.matchIndex ?? 0,
-        },
-        scene,
-        layerProvider,
-        auditRecorder,
-      );
-
+    // Phase 12: replace_one falls back to replace_all on the selected entity.
+    // Precise first-match replace requires find-first → MatchLocation wiring
+    // (deferred to future phase — see ADR-344 §Q16 Phase 12 notes).
     case 'replace_all':
       return new ReplaceAllTextCommand(
         {
