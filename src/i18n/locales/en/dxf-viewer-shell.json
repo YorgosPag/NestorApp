@@ -165,6 +165,7 @@
     "circleTTT": "Circle (Tangent to 3 Lines)",
     "polyline": "Polyline",
     "polygon": "Polygon",
+    "text": "Text",
     "arc": "Arc",
     "arc3p": "Arc (3 Points)",
     "arcCenterStartEnd": "Arc (Center-Start-End)",

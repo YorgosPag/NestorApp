@@ -978,3 +978,9 @@ ADR-344 (DXF Enterprise Text Engine) introduces a parallel text editing stack th
 `TextRenderer.ts`: `renderText()` reads `richStyle` from `entity.textStyle`, derives `fontFamily`/`weight`/`italic`, and passes `italic` to the updated `buildUIFont()` helper. Underline rendered as a post-draw rect below the baseline.
 
 **ADR-040 compliance**: no new `useSyncExternalStore` calls; `textStyle` is NOT added to the bitmap cache key (per cardinal rule 3 — it changes only on selection/edit, not on pan/zoom); all reads are at conversion time (scene→canvas), not at render tick.
+
+### 2026-05-12: ADR-344 Phase 6.E follow-up — text creation tool wired in CanvasSection
+
+`CanvasSection.tsx`: mounts `useTextCreationTool({ transformRef, containerRef, activeTool, onToolChange, executeCommand })` before `useCanvasClickHandler`. The hook returns `handleCanvasClick` which is passed as `onTextToolClick` to `useCanvasClickHandler` — fires only when `activeTool === 'text'`. On click: opens `TextEditorOverlay` at the canvas hit point with an empty AST; on commit dispatches `CreateTextCommand`; tool returns to `'select'`. `useTextCreationTool` uses `useState` (local edit state) + `useCallback` — no `useSyncExternalStore`, no subscription to high-frequency stores.
+
+**ADR-040 compliance**: cardinal rule 1 preserved — CanvasSection still does not subscribe to any high-frequency store; `useTextCreationTool` is pure local state + props.

@@ -7,8 +7,6 @@ import { useState, useCallback, useRef } from 'react';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { ToolType } from '../../ui/toolbar/types';
 
-// Tool categories and validation
-// 🏢 ENTERPRISE (Phase 3): Added 'editing' category for move/copy/delete operations
 export type ToolCategory = 'selection' | 'drawing' | 'measurement' | 'zoom' | 'utility' | 'editing';
 
 export interface ToolInfo {
@@ -21,18 +19,12 @@ export interface ToolInfo {
   preservesOverlayMode: boolean;
 }
 
-// Centralized tool definitions
-// 🏢 ENTERPRISE (2026-01-26): ADR-033 - Added preservesOverlayMode metadata for overlay draw mode lifecycle
 const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // Selection tools - preserve overlay mode for editing
   'select': { id: 'select', category: 'selection', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: true },
 
   // Drawing tools - cancel overlay mode (CAD drawing ≠ overlay drawing)
-  // 🏢 ENTERPRISE (2026-01-30): allowsContinuous=true for all drawing tools
-  // Pattern: User preference - tool stays active after entity creation for rapid drawing
   'line': { id: 'line', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
-  // 🏢 ENTERPRISE (2026-01-31): Line Perpendicular & Parallel tools - ADR-060
-  // Entity selection mode: user picks reference line, then clicks to create new line
   'line-perpendicular': { id: 'line-perpendicular', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'line-parallel': { id: 'line-parallel', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'rectangle': { id: 'rectangle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
@@ -43,14 +35,11 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'circle-chord-sagitta': { id: 'circle-chord-sagitta', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'circle-2p-radius': { id: 'circle-2p-radius', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'circle-best-fit': { id: 'circle-best-fit', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
-  // 🏢 ENTERPRISE (2026-01-31): Circle Tangent to 3 Lines (AutoCAD TTT style)
-  // Uses entity selection mode - user picks 3 lines, system calculates incircle
   'circle-ttt': { id: 'circle-ttt', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'polyline': { id: 'polyline', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'polygon': { id: 'polygon', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'ellipse': { id: 'ellipse', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
-  // 🏢 ENTERPRISE (2026-01-31): Arc drawing tools - ADR-059
-  // AutoCAD pattern: Arc tools require 3 points (or 2 + input for some variants)
+  'text': { id: 'text', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'arc': { id: 'arc', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'arc-3p': { id: 'arc-3p', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'arc-cse': { id: 'arc-cse', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },

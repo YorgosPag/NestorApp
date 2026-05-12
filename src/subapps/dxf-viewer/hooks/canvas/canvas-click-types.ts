@@ -303,6 +303,10 @@ export interface UseCanvasClickHandlerParams {
   onGuideSelectToggle?: (guideId: string, addToSelection: boolean) => void;
   /** Deselect all guides (click on empty space) */
   onGuideDeselectAll?: () => void;
+
+  // ── ADR-344 Phase 6.E follow-up: Text creation tool ──
+  /** Click handler for the 'text' tool — returns true if click was consumed. */
+  onTextToolClick?: (worldPoint: Point2D) => boolean;
 }
 
 export interface UseCanvasClickHandlerReturn {

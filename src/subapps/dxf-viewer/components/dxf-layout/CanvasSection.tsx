@@ -55,9 +55,9 @@ import GuideBatchContextMenu, { type GuideBatchContextMenuHandle } from '../../u
 import type { ToolType } from '../../ui/toolbar/types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
-// ADR-344 Phase 6.E — in-canvas text editor (DBLCLKEDIT)
 import { useTextDoubleClickEditor } from '../../ui/text-toolbar/hooks/useTextDoubleClickEditor';
 import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
+import { useTextCreationTool } from '../../hooks/canvas/useTextCreationTool';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -325,6 +325,17 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setDraggingOverlayBody: unified.setDraggingOverlayBody, setDragPreviewPosition: unified.setDragPreviewPosition,
   });
 
+  // ADR-344 Phase 6.E follow-up — text creation tool.
+  // Mounted before useCanvasClickHandler so `handleCanvasClick` is available
+  // to route 'text' tool clicks to the in-canvas TipTap creation overlay.
+  const textCreation = useTextCreationTool({
+    transformRef,
+    containerRef,
+    activeTool,
+    onToolChange: (tool) => props.onToolChange?.(tool),
+    executeCommand,
+  });
+
   const { handleCanvasClick } = useCanvasClickHandler({
     viewportReady, viewport, transform, activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement,
@@ -360,6 +371,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onGuideAngleOriginSet: guideWorkflows.handleGuideAngleOriginSet, onMirrorAxisSelected: guideWorkflows.handleMirrorAxisSelected,
     onGuideFromEntity: guideWorkflows.handleGuideFromEntity, onGuideOffsetFromEntity: guideWorkflows.handleGuideOffsetFromEntity,
     onGuideSelectToggle: guideWorkflows.handleGuideSelectToggle, onGuideDeselectAll: guideWorkflows.handleGuideDeselectAll,
+    // ADR-344 Phase 6.E follow-up — text creation tool click handler
+    onTextToolClick: textCreation.handleCanvasClick,
   });
 
   const { handleSmartDelete } = useSmartDelete({
@@ -470,6 +483,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           anchorRect={textEditor.editingState.anchorRect}
           onCommit={textEditor.onCommit}
           onCancel={textEditor.onCancel}
+        />
+      )}
+      {textCreation.creatingState && (
+        <TextEditorOverlay
+          entityId={textCreation.creatingState.entityId}
+          initial={textCreation.creatingState.initial}
+          anchorRect={textCreation.creatingState.anchorRect}
+          onCommit={textCreation.onCommit}
+          onCancel={textCreation.onCancel}
         />
       )}
     </>
