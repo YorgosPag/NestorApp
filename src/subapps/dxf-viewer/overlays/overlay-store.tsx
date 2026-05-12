@@ -108,6 +108,10 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   const backgroundId = useFloorplanBackgroundStore(
     (s) => (floorId ? s.floors[floorId]?.background?.id ?? null : null),
   );
+  // DXF fallback: when a floorplan background image isn't loaded yet, use the
+  // level's sceneFileId (the DXF itself is the drawing reference). This lets
+  // overlay zones be saved on DXF-only floors without requiring a separate image.
+  const effectiveBackgroundId = backgroundId ?? currentLevel?.sceneFileId ?? null;
 
   // ── Subscribe to multi-kind overlays for the active floor ────────────────
   const { overlays: floorItems, loading: subLoading } = useFloorOverlays(floorId);
@@ -185,12 +189,12 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
       dwarn('OverlayStore', '⚠️ No floorId for current level — overlay write skipped');
       return null;
     }
-    if (!backgroundId) {
-      dwarn('OverlayStore', '⚠️ No backgroundId for current floor — overlay write skipped');
+    if (!effectiveBackgroundId) {
+      dwarn('OverlayStore', '⚠️ No backgroundId or sceneFileId for current floor — overlay write skipped');
       return null;
     }
-    return { backgroundId, floorId };
-  }, [floorId, backgroundId]);
+    return { backgroundId: effectiveBackgroundId, floorId };
+  }, [floorId, effectiveBackgroundId]);
 
   const add = useCallback(
     async (overlayData: CreateOverlayData): Promise<string> => {

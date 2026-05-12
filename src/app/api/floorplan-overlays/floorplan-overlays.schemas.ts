@@ -122,7 +122,7 @@ export const BackgroundScaleSchema = z.object({
  * Server generates id via `generateOverlayId()` and stamps companyId/createdBy/timestamps.
  */
 export const CreateFloorplanOverlaySchema = z.object({
-  backgroundId: z.string().min(1).max(128),
+  backgroundId: z.string().min(1).max(128).nullish(),
   floorId: z.string().min(1).max(128),
   geometry: OverlayGeometrySchema,
   role: OverlayRoleSchema,
@@ -140,7 +140,7 @@ export type CreateFloorplanOverlayInput = z.infer<typeof CreateFloorplanOverlayS
  */
 export const UpsertFloorplanOverlaySchema = z.object({
   overlayId: z.string().min(1).max(128),
-  backgroundId: z.string().min(1).max(128),
+  backgroundId: z.string().min(1).max(128).nullish(),
   floorId: z.string().min(1).max(128),
   geometry: OverlayGeometrySchema,
   role: OverlayRoleSchema,

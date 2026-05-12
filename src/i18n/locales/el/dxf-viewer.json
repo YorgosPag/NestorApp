@@ -98,7 +98,8 @@
     "copyFailed": "Αποτυχία αντιγραφής",
     "perfMonitorOn": "Μετρήσεις FPS, Memory, Rendering ενεργές",
     "perfMonitorOff": "Καλύτερη απόδοση - παρακολούθηση απενεργοποιημένη",
-    "selectLevelForPolygon": "Επιλέξτε πρώτα ένα επίπεδο (Level) για να αποθηκευτεί το polygon"
+    "selectLevelForPolygon": "Επιλέξτε πρώτα ένα επίπεδο (Level) για να αποθηκευτεί το polygon",
+    "overlayNeedsBackground": "Δεν βρέθηκε αρχείο αναφοράς για αυτό το επίπεδο. Βεβαιωθείτε ότι έχετε εισάγει σχέδιο DXF ή εικόνα κάτοψης."
   },
   "toolbar": {
     "actions": {

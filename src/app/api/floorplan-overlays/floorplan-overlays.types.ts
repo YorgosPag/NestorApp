@@ -15,7 +15,7 @@ import type {
 export interface FloorplanOverlayDocument {
   id: string;
   companyId: string;
-  backgroundId: string;
+  backgroundId?: string | null;
   floorId: string;
   geometry: OverlayGeometry;
   role: OverlayRole;

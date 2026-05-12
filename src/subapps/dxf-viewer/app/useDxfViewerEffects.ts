@@ -352,6 +352,8 @@ Check console for detailed metrics`;
     const cleanup = eventBus.on('overlay:save-error', ({ reason }) => {
       if (reason === 'no-level-selected') {
         notifications.warning(t('callbacks.selectLevelForPolygon'), { duration: 4000 });
+      } else if (reason === 'no-background-context') {
+        notifications.warning(t('callbacks.overlayNeedsBackground'), { duration: 5000 });
       }
     });
     return cleanup;

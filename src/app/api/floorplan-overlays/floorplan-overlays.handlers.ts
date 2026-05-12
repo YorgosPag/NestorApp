@@ -111,7 +111,7 @@ export async function handleCreateFloorplanOverlay(
     const doc: Record<string, unknown> = {
       id: overlayId,
       companyId: ctx.companyId,
-      backgroundId: body.backgroundId,
+      ...(body.backgroundId != null ? { backgroundId: body.backgroundId } : {}),
       floorId: body.floorId,
       geometry: body.geometry,
       role: body.role,
@@ -189,7 +189,7 @@ export async function handleUpsertFloorplanOverlay(
     const doc: Record<string, unknown> = {
       id: body.overlayId,
       companyId: ctx.companyId,
-      backgroundId: body.backgroundId,
+      ...(body.backgroundId != null ? { backgroundId: body.backgroundId } : {}),
       floorId: body.floorId,
       geometry: body.geometry,
       role: body.role,

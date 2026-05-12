@@ -135,6 +135,7 @@ export function usePolygonCompletion({
       return true;
     } catch (error) {
       derr('usePolygonCompletion', 'Failed to create overlay:', error);
+      eventBus.emit('overlay:save-error', { reason: 'no-background-context' });
       return false;
     }
     // Note: setDraftPolygon([]) is done in the calling setDraftPolygon callback

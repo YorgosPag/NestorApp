@@ -98,7 +98,8 @@
     "copyFailed": "Copy failed",
     "perfMonitorOn": "FPS, Memory, Rendering metrics active",
     "perfMonitorOff": "Better performance - monitoring disabled",
-    "selectLevelForPolygon": "Please select a Level first to save the polygon"
+    "selectLevelForPolygon": "Please select a Level first to save the polygon",
+    "overlayNeedsBackground": "No reference file found for this floor. Make sure you have imported a DXF drawing or a floorplan image."
   },
   "toolbar": {
     "actions": {
