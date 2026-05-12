@@ -34,8 +34,7 @@ import {
   SnapIndicatorSubscriber,
   DraftLayerSubscriber,
   DxfCanvasSubscriber,
-  RotationPreviewMount,
-  MovePreviewMount,
+  PreviewCanvasMounts,
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
 
@@ -139,6 +138,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   const handleDxfEntitySelect = (entityId: string | null, additive?: boolean) => {
     if (entityId) {
       if (additive) {
+        // Shift held: toggle entity in/out of selection
         // Read current state directly — universalSelection calls must NOT go inside
         // a setState updater (that runs during render → "update while rendering" error).
         if (selectedEntityIds.includes(entityId)) {
@@ -148,7 +148,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           setSelectedEntityIds(prev => [...prev, entityId]);
           universalSelection.add(entityId, 'dxf-entity');
         }
+      } else if (selectedEntityIds.length > 0) {
+        // Existing selection, no Shift: ADD to selection (AutoCAD PICKADD=1 behavior)
+        if (!selectedEntityIds.includes(entityId)) {
+          setSelectedEntityIds(prev => [...prev, entityId]);
+          universalSelection.add(entityId, 'dxf-entity');
+        }
       } else {
+        // No existing selection, no Shift: single select
         if (!(selectedEntityIds.length === 1 && selectedEntityIds[0] === entityId)) {
           setSelectedEntityIds([entityId]);
         }
@@ -279,6 +286,15 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     (screenPos: Point2D, worldPos: Point2D) => handleUnifiedMouseMove(worldPos, screenPos),
     [handleUnifiedMouseMove],
   );
+  // Shared getters consumed by all 3 PreviewCanvas mounts (Rotation / Move / GripDrag).
+  const getPreviewCanvas = useCallback(
+    () => previewCanvasRef.current?.getCanvas() ?? null,
+    [previewCanvasRef],
+  );
+  const getViewportEl = useCallback(() => {
+    const canvas = dxfCanvasRef?.current?.getCanvas?.();
+    return canvas instanceof HTMLElement ? canvas : null;
+  }, [dxfCanvasRef]);
 
   // --- LayerCanvas passthrough props (ref and layers excluded — injected by DraftLayerSubscriber) ---
   const layerCanvasPassthroughProps: LayerCanvasPassthroughProps = useMemo(() => ({
@@ -321,6 +337,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   // DxfCanvas renderOptions base (hoveredEntityId injected by DxfCanvasSubscriber).
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): memoized for stable identity so
   // DxfCanvasSubscriber's useMemo on { ...base, hoveredEntityId } stays effective.
+  // ADR-049 SSOT: dragPreview removed — grip-drag ghost lives on PreviewCanvas
+  // via GripDragPreviewMount, same path as toolbar Move tool.
   const dxfRenderOptionsBase = useMemo<Omit<DxfRenderOptions, 'hoveredEntityId'>>(
     () => ({
       showGrid: false,
@@ -328,9 +346,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       wireframeMode: false,
       selectedEntityIds,
       gripInteractionState: dxfGripInteraction.gripInteractionState,
-      dragPreview: dxfGripInteraction.dragPreview ?? undefined,
     }),
-    [selectedEntityIds, dxfGripInteraction.gripInteractionState, dxfGripInteraction.dragPreview],
+    [selectedEntityIds, dxfGripInteraction.gripInteractionState],
   );
 
   // Guide workflow computed params (passed to DxfCanvasSubscriber)
@@ -424,34 +441,16 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             defaultOptions={PREVIEW_DEFAULTS}
           />
 
-          {/* RotationPreviewMount — draws on PreviewCanvas via imperative API */}
-          <RotationPreviewMount
-            phase={rotationPreview.phase}
-            basePoint={rotationPreview.basePoint}
-            referencePoint={rotationPreview.referencePoint}
-            currentAngle={rotationPreview.currentAngle}
+          {/* PreviewCanvas mounts: Rotation / Move / GripDrag (ADR-049 SSOT) */}
+          <PreviewCanvasMounts
+            rotation={rotationPreview}
+            move={movePreview}
+            gripDragPreview={dxfGripInteraction.dragPreview}
             selectedEntityIds={selectedEntityIds}
             levelManager={levelManager}
             transform={transform}
-            getCanvas={() => previewCanvasRef.current?.getCanvas() ?? null}
-            getViewportElement={() => {
-              const canvas = dxfCanvasRef?.current?.getCanvas?.();
-              return canvas instanceof HTMLElement ? canvas : null;
-            }}
-          />
-
-          {/* MovePreviewMount — draws ghost entities on PreviewCanvas (ADR-049) */}
-          <MovePreviewMount
-            phase={movePreview.phase}
-            basePoint={movePreview.basePoint}
-            selectedEntityIds={selectedEntityIds}
-            levelManager={levelManager}
-            transform={transform}
-            getCanvas={() => previewCanvasRef.current?.getCanvas() ?? null}
-            getViewportElement={() => {
-              const canvas = dxfCanvasRef?.current?.getCanvas?.();
-              return canvas instanceof HTMLElement ? canvas : null;
-            }}
+            getCanvas={getPreviewCanvas}
+            getViewportElement={getViewportEl}
           />
 
           <CrosshairOverlay
@@ -461,6 +460,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               top: 0,
               bottom: 0,
             }}
+            isEntitySelected={(id) => selectedEntityIds.includes(id)}
             className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             style={{
               height: `calc(100% - ${rulerSettings.horizontal?.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)`,

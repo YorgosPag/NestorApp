@@ -24,7 +24,9 @@ import { useGuideWorkflowComputed } from '../../hooks/guides/useGuideWorkflowCom
 import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { useRotationPreview } from '../../hooks/tools/useRotationPreview';
 import { useMovePreview } from '../../hooks/tools/useMovePreview';
+import { useGripGhostPreview } from '../../hooks/tools/useGripGhostPreview';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
+import type { DxfGripDragPreview } from '../../hooks/grip-computation';
 import { useHoveredEntity } from '../../systems/hover/useHover';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
@@ -319,4 +321,84 @@ export const MovePreviewMount = React.memo(function MovePreviewMount(
 ) {
   useMovePreview(props);
   return null;
+});
+
+// ============================================================================
+// GRIP DRAG PREVIEW MOUNT (ADR-049 SSOT — paired with Move tool)
+// ============================================================================
+
+interface GripDragPreviewMountProps {
+  dragPreview: DxfGripDragPreview | null;
+  levelManager: Parameters<typeof useGripGhostPreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+/**
+ * Mounts useGripGhostPreview. No JSX — draws to PreviewCanvas via imperative
+ * API. Renders a blue translucent ghost of the entity being grip-dragged
+ * (center / vertex / edge handle), using the same SSOT primitives as the
+ * toolbar Move tool. The original entity stays painted at its source
+ * position in the main canvas — the bitmap cache is NOT invalidated during
+ * drag (ADR-040 cardinal rule 3).
+ */
+export const GripDragPreviewMount = React.memo(function GripDragPreviewMount(
+  props: GripDragPreviewMountProps,
+) {
+  useGripGhostPreview(props);
+  return null;
+});
+
+// ============================================================================
+// PREVIEW CANVAS MOUNTS — composite of the 3 zero-jsx preview mounts
+// ============================================================================
+
+interface PreviewCanvasMountsProps {
+  rotation: Omit<RotationPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  move: Omit<MovePreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  gripDragPreview: DxfGripDragPreview | null;
+  selectedEntityIds: string[];
+  levelManager: MovePreviewMountProps['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+/**
+ * Renders the 3 PreviewCanvas mounts (Rotation / Move / GripDrag) sharing
+ * the same `getCanvas` / `getViewportElement` getters. Keeps the shell
+ * CanvasLayerStack lean (single JSX node instead of 30 lines of props).
+ */
+export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
+  props: PreviewCanvasMountsProps,
+) {
+  const { rotation, move, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  return (
+    <>
+      <RotationPreviewMount
+        {...rotation}
+        selectedEntityIds={selectedEntityIds}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MovePreviewMount
+        {...move}
+        selectedEntityIds={selectedEntityIds}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <GripDragPreviewMount
+        dragPreview={gripDragPreview}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+    </>
+  );
 });

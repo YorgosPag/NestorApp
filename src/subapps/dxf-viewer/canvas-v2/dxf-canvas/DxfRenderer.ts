@@ -6,7 +6,6 @@ import { EntityRendererComposite } from '../../rendering/core/EntityRendererComp
 import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DContext';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { viewportToWorldBBox, isEntityInViewport } from './dxf-viewport-culling';
 function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
   const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
@@ -95,7 +94,6 @@ export class DxfRenderer {
           selectedEntityIds: [],
           hoveredEntityId: null,
           gripInteractionState: undefined,
-          dragPreview: undefined,
         }
       : options;
 
@@ -134,10 +132,9 @@ export class DxfRenderer {
     entity: DxfEntityUnion,
     transform: ViewTransform,
     viewport: Viewport,
-    mode: 'hovered' | 'selected' | 'drag-preview',
+    mode: 'hovered' | 'selected',
     interaction: {
       gripInteractionState?: DxfRenderOptions['gripInteractionState'];
-      dragPreview?: DxfRenderOptions['dragPreview'];
     } = {},
   ): void {
     if (!entity.visible) return;
@@ -150,10 +147,11 @@ export class DxfRenderer {
     this.ctx.save();
     this.entityComposite.setTransform(transform);
 
-    // Apply grip interaction state only for selected/drag-preview modes
-    const gripOpts = mode === 'selected' || mode === 'drag-preview'
-      ? interaction.gripInteractionState
-      : undefined;
+    // Apply grip interaction state only for selected mode.
+    // ADR-049 SSOT (2026-05-12): the 'drag-preview' mode was removed — the
+    // dragged entity now renders as 'selected' here and the translucent
+    // ghost lives on PreviewCanvas via useGripGhostPreview.
+    const gripOpts = mode === 'selected' ? interaction.gripInteractionState : undefined;
     this.setGripInteractionState(gripOpts
       ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip }
       : {}
@@ -163,10 +161,9 @@ export class DxfRenderer {
       showGrid: false,
       showLayerNames: false,
       wireframeMode: false,
-      selectedEntityIds: mode === 'selected' || mode === 'drag-preview' ? [entity.id] : [],
+      selectedEntityIds: mode === 'selected' ? [entity.id] : [],
       hoveredEntityId: mode === 'hovered' ? entity.id : null,
       gripInteractionState: gripOpts,
-      dragPreview: mode === 'drag-preview' ? interaction.dragPreview : undefined,
     };
 
     this._selectionSet = new Set(syntheticOptions.selectedEntityIds);
@@ -188,155 +185,23 @@ export class DxfRenderer {
     const isSelected = this._selectionSet.has(entity.id);
     const isHovered = options.hoveredEntityId === entity.id;
 
-    // 🏢 GRIP EDITING: Apply drag preview delta to entity geometry before rendering
-    const renderedEntity = this.applyDragPreview(entity, options.dragPreview);
+    // ADR-049 SSOT (2026-05-12): grip-drag ghost is rendered on PreviewCanvas
+    // by useGripGhostPreview, identical to the Move tool. The main canvas
+    // always paints entities at their CURRENT scene-state position — no more
+    // applyDragPreview mutation, no per-frame globalAlpha tweak.
+    const entityModel: EntityModel = this.toEntityModel(entity, isSelected);
 
-    const entityModel: EntityModel = this.toEntityModel(renderedEntity, isSelected);
-
-    // ✅ COMPOSITE RENDERING: Ένα κεντρικό call αντί για switch
-    const isDragGhost = options.dragPreview?.entityId === entity.id;
     const renderOptions: RenderOptions = {
       phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',
       transform,
       viewport,
-      showGrips: isSelected && !isDragGhost,
-      grips: isSelected && !isDragGhost,
+      showGrips: isSelected,
+      grips: isSelected,
       hovered: isHovered,
       alpha: entity.visible ? 1.0 : 0.3
     };
 
-    // 🏢 GHOST PREVIEW: Semi-transparent blue overlay during grip drag (ADR-040 bitmap overlay pattern)
-    if (isDragGhost) this.ctx.globalAlpha = 0.45;
     this.entityComposite.render(entityModel, renderOptions);
-    if (isDragGhost) this.ctx.globalAlpha = 1.0;
-  }
-
-  /**
-   * Apply drag preview delta to an entity for live preview during grip editing.
-   * Returns a cloned entity with modified geometry (original entity is NOT mutated).
-   *
-   * - movesEntity=true: offset ALL coordinates by delta (move entire entity)
-   * - movesEntity=false: offset only the specific vertex/grip by delta (stretch)
-   */
-  private applyDragPreview(
-    entity: DxfEntityUnion,
-    preview?: DxfRenderOptions['dragPreview']
-  ): DxfEntityUnion {
-    if (!preview || preview.entityId !== entity.id) return entity;
-
-    const { delta, gripIndex, movesEntity } = preview;
-    if (delta.x === 0 && delta.y === 0) return entity;
-
-    const offsetPoint = (p: Point2D): Point2D => ({
-      x: p.x + delta.x,
-      y: p.y + delta.y,
-    });
-
-    if (movesEntity) {
-      // Move ALL coordinates
-      switch (entity.type) {
-        case 'line':
-          return { ...entity, start: offsetPoint(entity.start), end: offsetPoint(entity.end) };
-        case 'circle':
-          return { ...entity, center: offsetPoint(entity.center) };
-        case 'polyline':
-          return { ...entity, vertices: entity.vertices.map(offsetPoint) };
-        case 'arc':
-          return { ...entity, center: offsetPoint(entity.center) };
-        case 'text':
-          return { ...entity, position: offsetPoint(entity.position) };
-        case 'angle-measurement':
-          return {
-            ...entity,
-            vertex: offsetPoint(entity.vertex),
-            point1: offsetPoint(entity.point1),
-            point2: offsetPoint(entity.point2),
-          };
-      }
-    }
-
-    // 🏢 FIX (2026-02-15): Edge-stretch preview — move both vertices of the edge
-    const edgeIndices = (preview as { edgeVertexIndices?: [number, number] }).edgeVertexIndices;
-    if (edgeIndices && entity.type === 'polyline') {
-      const [v1, v2] = edgeIndices;
-      const vertices = [...entity.vertices];
-      if (v1 < vertices.length) vertices[v1] = offsetPoint(vertices[v1]);
-      if (v2 < vertices.length) vertices[v2] = offsetPoint(vertices[v2]);
-      return { ...entity, vertices };
-    }
-    if (edgeIndices && entity.type === 'line') {
-      const [v1, v2] = edgeIndices;
-      let result = { ...entity };
-      if (v1 === 0 || v2 === 0) result = { ...result, start: offsetPoint(entity.start) };
-      if (v1 === 1 || v2 === 1) result = { ...result, end: offsetPoint(entity.end) };
-      return result;
-    }
-
-    // Stretch: move only the specific vertex
-    switch (entity.type) {
-      case 'line': {
-        if (gripIndex === 0) return { ...entity, start: offsetPoint(entity.start) };
-        if (gripIndex === 1) return { ...entity, end: offsetPoint(entity.end) };
-        return entity;
-      }
-      case 'polyline': {
-        if (gripIndex < entity.vertices.length) {
-          const vertices = [...entity.vertices];
-          vertices[gripIndex] = offsetPoint(vertices[gripIndex]);
-          return { ...entity, vertices };
-        }
-        return entity;
-      }
-      case 'circle': {
-        // Quadrant grip drag → change radius (center stays fixed)
-        const newQuadrantPos = offsetPoint(this.getCircleQuadrant(entity, gripIndex));
-        return { ...entity, radius: calculateDistance(entity.center, newQuadrantPos) };
-      }
-      case 'arc': {
-        // Start/end grip drag → change angle + radius
-        if (gripIndex === 1 || gripIndex === 2) {
-          const arcPoint = gripIndex === 1
-            ? this.getArcPoint(entity, entity.startAngle)
-            : this.getArcPoint(entity, entity.endAngle);
-          const newPos = offsetPoint(arcPoint);
-          const newRadius = calculateDistance(entity.center, newPos);
-          let angleDeg = Math.atan2(newPos.y - entity.center.y, newPos.x - entity.center.x) * (180 / Math.PI);
-          if (angleDeg < 0) angleDeg += 360;
-          if (gripIndex === 1) return { ...entity, startAngle: angleDeg, radius: newRadius };
-          return { ...entity, endAngle: angleDeg, radius: newRadius };
-        }
-        return entity;
-      }
-      case 'angle-measurement': {
-        if (gripIndex === 0) return { ...entity, vertex: offsetPoint(entity.vertex) };
-        if (gripIndex === 1) return { ...entity, point1: offsetPoint(entity.point1) };
-        if (gripIndex === 2) return { ...entity, point2: offsetPoint(entity.point2) };
-        return entity;
-      }
-      default:
-        return entity;
-    }
-  }
-
-  /** Get quadrant point position for a circle grip (gripIndex 1-4) */
-  private getCircleQuadrant(entity: { center: Point2D; radius: number }, gripIndex: number): Point2D {
-    const { center, radius } = entity;
-    switch (gripIndex) {
-      case 1: return { x: center.x + radius, y: center.y };
-      case 2: return { x: center.x, y: center.y + radius };
-      case 3: return { x: center.x - radius, y: center.y };
-      case 4: return { x: center.x, y: center.y - radius };
-      default: return center;
-    }
-  }
-
-  /** Get point on arc at given angle (degrees) */
-  private getArcPoint(entity: { center: Point2D; radius: number }, angleDeg: number): Point2D {
-    const rad = (angleDeg * Math.PI) / 180;
-    return {
-      x: entity.center.x + entity.radius * Math.cos(rad),
-      y: entity.center.y + entity.radius * Math.sin(rad),
-    };
   }
 
   private toEntityModel(entity: DxfEntityUnion, isSelected: boolean): Entity {

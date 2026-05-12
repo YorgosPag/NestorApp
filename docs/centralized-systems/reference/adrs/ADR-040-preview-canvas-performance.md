@@ -71,6 +71,20 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-12: AutoCAD-style selection indicator on crosshair
+
+`CrosshairOverlay.tsx`: aggiunto indicatore "+" / "−" in stile AutoCAD all'angolo
+superiore destro del gap centrale del crosshair.
+- Nuovo file `canvas-v2/overlays/crosshair-selection-indicator.ts`: funzione pura
+  `drawSelectionIndicator(ctx, cx, cy, gap, mode)` — sfondo scuro semitrasparente
+  + simbolo verde ("+" add) o rosso ("−" remove).
+- `CrosshairOverlay`: subscribe a `HoverStore.subscribeHoveredEntity()` — quando
+  mouse entra su entità, badge appare immediatamente (trigger re-render diretto via
+  `getImmediatePosition()` + `renderCrosshair()`). Subscribe a `keydown/keyup` per
+  Shift: `shiftHeldRef` → mode '−' quando Shift tenuto, '+' altrimenti.
+- `CanvasLayerStack.tsx`: passa `isEntitySelected={(id) => selectedEntityIds.includes(id)}`
+  a CrosshairOverlay.
+
 ### 2026-05-12: Ghost preview — grip drag + new TEXT entities
 
 **Bug 1 — Grip drag ghost:** `DxfRenderer.renderEntityUnified()`: quando `options.dragPreview?.entityId === entity.id`, applica `ctx.globalAlpha = 0.45` attorno a `entityComposite.render()`. L'entità ora appare semi-trasparente durante grip drag (coerente con MOVE tool).
@@ -1019,3 +1033,32 @@ ADR-344 (DXF Enterprise Text Engine) introduces a parallel text editing stack th
 `CanvasSection.tsx`: mounts `useTextCreationTool({ transformRef, containerRef, activeTool, onToolChange, executeCommand })` before `useCanvasClickHandler`. The hook returns `handleCanvasClick` which is passed as `onTextToolClick` to `useCanvasClickHandler` — fires only when `activeTool === 'text'`. On click: opens `TextEditorOverlay` at the canvas hit point with an empty AST; on commit dispatches `CreateTextCommand`; tool returns to `'select'`. `useTextCreationTool` uses `useState` (local edit state) + `useCallback` — no `useSyncExternalStore`, no subscription to high-frequency stores.
 
 **ADR-040 compliance**: cardinal rule 1 preserved — CanvasSection still does not subscribe to any high-frequency store; `useTextCreationTool` is pure local state + props.
+
+### 2026-05-12: ADR-049 SSOT — unified ghost preview for Move tool + grip drag
+
+**Decision.** A single source of truth now governs every drag-time "ghost" rendered by the DXF viewer. Both the toolbar Move tool and the grip-drag path (center / vertex / edge handles) draw onto the dedicated PreviewCanvas overlay through the same primitives, with identical visual style (cyan-blue `#00BFFF`, α=0.45). The bitmap cache is no longer invalidated during grip drag because `DxfRenderer` no longer mutates the dragging entity.
+
+**New SSOT module** `src/subapps/dxf-viewer/rendering/ghost/`:
+- `apply-entity-preview.ts` — pure `applyEntityPreview(entity, preview) → entity` (line/circle/arc/polyline/text/angle-measurement). Handles whole-entity translation (`movesEntity=true`), edge stretch (`edgeVertexIndices`), vertex stretch, circle quadrant → radius, arc end → angle+radius. Extracted verbatim from the old `DxfRenderer.applyDragPreview` private method.
+- `draw-ghost-entity.ts` — pure `drawGhostEntity(ctx, entity, transform, viewport)`. Single Canvas2D switch; caller pre-applies `strokeStyle`/`fillStyle`/`globalAlpha`/`lineWidth` so multiple ghosts batch under one save/restore.
+- `index.ts` — barrel + `GHOST_DEFAULTS` style constants (`color: '#00BFFF'`, `alpha: 0.45`, `lineWidth: 1.5`).
+
+**New micro-leaf** `useGripGhostPreview` + `GripDragPreviewMount` (`canvas-layer-stack-leaves.tsx`): mirrors `useMovePreview` / `MovePreviewMount` exactly — zero JSX, RAF-driven, clears the PreviewCanvas when `dragPreview` is null. Receives `dragPreview` (the `DxfGripDragPreview` projection from `useUnifiedGripInteraction`) as a prop; resolves the entity from `levelManager`, applies the transform, draws on the shared PreviewCanvas.
+
+**Composite mount** `PreviewCanvasMounts` (same leaves file): groups Rotation + Move + GripDrag mounts under one shared `getCanvas`/`getViewportElement` pair. Keeps `CanvasLayerStack` under the 500-line ceiling.
+
+**`DxfRenderer` cleanup** (`canvas-v2/dxf-canvas/DxfRenderer.ts`):
+- Removed: `applyDragPreview()`, `getCircleQuadrant()`, `getArcPoint()` private methods (~120 lines).
+- `renderSingleEntity()` mode union narrowed: `'hovered' | 'selected' | 'drag-preview'` → `'hovered' | 'selected'`.
+- `renderEntityUnified()` no longer toggles `globalAlpha = 0.45` for drag ghosts — the entity is painted at its source position in normal style.
+- `dxf-canvas-renderer.ts`: the third render pass (drag-preview overlay) is gone; selected entities (including the one being dragged) all flow through the same `'selected'` overlay.
+- `DxfRenderOptions.dragPreview` field removed from `dxf-types.ts`.
+
+**ADR-040 cardinal rules preserved.**
+1. **Orchestrators (`CanvasSection`, `CanvasLayerStack`) still do not call `useSyncExternalStore`.** `GripDragPreviewMount` is the only new subscriber; the shell passes `dxfGripInteraction.dragPreview` through props (same shape as the existing rotation/move preview props).
+2. **Bitmap cache key unchanged.** It already excluded `dragPreview`; removing it from `DxfRenderOptions` makes that invariant structural rather than convention-based.
+3. **Bitmap cache no longer needs to invalidate during grip drag.** Previously the main canvas had to refresh the live overlay for the dragging entity every mousemove; now the main canvas is idle during drag and only the PreviewCanvas RAF runs.
+
+**Files touched** (8): new `rendering/ghost/{apply-entity-preview,draw-ghost-entity,index}.ts`, new `hooks/tools/useGripGhostPreview.ts`, refactored `hooks/tools/useMovePreview.ts`, modified `canvas-v2/dxf-canvas/{DxfRenderer.ts, dxf-canvas-renderer.ts, dxf-types.ts}`, modified `components/dxf-layout/{canvas-layer-stack-leaves.tsx, CanvasLayerStack.tsx}`.
+
+**Google-level: YES** — proactive (preview lives on the same overlay layer for every drag path, no special cases scattered across renderers), idempotent (`applyEntityPreview` returns the same reference on zero-delta → no redundant frame), race-free (each preview hook owns its own RAF + clear policy; mutually exclusive states in practice), SSoT (one `applyEntityPreview`, one `drawGhostEntity`, one `GHOST_DEFAULTS` constant set), belt-and-suspenders (snap to entity → guard via `getEntity()`; zero-delta short-circuits in `applyEntityPreview` and `drawGhostEntity`), explicit owner (`rendering/ghost/` is the documented home; pre-commit `.ssot-registry.json` should pick this up on the next baseline pass).

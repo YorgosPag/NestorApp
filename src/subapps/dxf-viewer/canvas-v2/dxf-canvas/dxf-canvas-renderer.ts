@@ -156,22 +156,16 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           }
         }
 
+        // ADR-049 SSOT: dragging entity stays painted at its ORIGINAL position
+        // here (rendered as 'selected'). The translucent ghost at the drag
+        // delta is drawn on the dedicated PreviewCanvas overlay by
+        // GripDragPreviewMount → useGripGhostPreview, identical to the Move
+        // tool path. No drag-preview branch lives in this renderer anymore.
         for (const selId of curRenderOptions.selectedEntityIds) {
-          if (curRenderOptions.dragPreview && curRenderOptions.dragPreview.entityId === selId) continue;
           const ent = curEntityMap.get(selId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {
               gripInteractionState: curRenderOptions.gripInteractionState,
-            });
-          }
-        }
-
-        if (curRenderOptions.dragPreview) {
-          const ent = curEntityMap.get(curRenderOptions.dragPreview.entityId);
-          if (ent) {
-            renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'drag-preview', {
-              gripInteractionState: curRenderOptions.gripInteractionState,
-              dragPreview: curRenderOptions.dragPreview,
             });
           }
         }

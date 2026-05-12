@@ -6,9 +6,13 @@
  *
  * Renders semi-transparent translated copies of selected entities on the
  * PreviewCanvas overlay. Also draws:
- * - Base point crosshair marker (red)
- * - Rubber band line: base point → cursor (dashed gold)
- * - Displacement tooltip near cursor showing Δx, Δy
+ *   - Base point crosshair marker (red)
+ *   - Rubber band line: base point → cursor (dashed gold)
+ *   - Displacement tooltip near cursor showing Δx, Δy
+ *
+ * Ghost rendering itself is delegated to `rendering/ghost` (SSOT) — the same
+ * primitives used by `useGripGhostPreview` so the two preview paths cannot
+ * visually diverge.
  *
  * Uses requestAnimationFrame for 60fps — NO React re-renders.
  * Cursor position read via useCursorWorldPosition() (ImmediatePositionStore).
@@ -24,6 +28,12 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import type { MovePhase } from './useMoveTool';
 import type { useLevels } from '../../systems/levels';
+import {
+  applyEntityPreview,
+  drawGhostEntity,
+  makeTranslationPreview,
+  GHOST_DEFAULTS,
+} from '../../rendering/ghost';
 
 // ============================================================================
 // TYPES
@@ -43,6 +53,11 @@ export interface UseMovePreviewProps {
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
+
+const PREVIEW_PHASES: ReadonlySet<MovePhase> = new Set([
+  'awaiting-base-point',
+  'awaiting-destination',
+]);
 
 // ============================================================================
 // HOOK
@@ -84,7 +99,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    if (phase !== 'awaiting-base-point' && phase !== 'awaiting-destination') return;
+    if (!PREVIEW_PHASES.has(phase)) return;
     if (!basePoint) return;
 
     const viewportEl = getViewportElement?.() ?? canvas;
@@ -92,7 +107,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     const vp = { width: rect.width, height: rect.height };
     const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, transform, vp);
 
-    // Base point crosshair
+    // Base point crosshair (red)
     const markerSize = 8;
     ctx.save();
     ctx.strokeStyle = '#FF4444';
@@ -109,7 +124,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
 
     const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, vp);
 
-    // Rubber band line (dashed gold)
+    // Rubber band (dashed gold)
     ctx.save();
     ctx.strokeStyle = '#FFD700';
     ctx.lineWidth = 1;
@@ -121,7 +136,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     ctx.setLineDash([]);
     ctx.restore();
 
-    // Only draw ghost + tooltip during awaiting-destination
+    // Ghost + tooltip only during awaiting-destination
     if (phase !== 'awaiting-destination') return;
 
     const delta: Point2D = {
@@ -137,17 +152,20 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     ctx.fillText(tooltipText, cursorScreen.x + 15, cursorScreen.y - 10);
     ctx.restore();
 
-    // Ghost entities (semi-transparent translated copies)
+    // Ghost entities — SSOT via rendering/ghost
     if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
       ctx.save();
-      ctx.globalAlpha = 0.4;
-      ctx.strokeStyle = '#00BFFF';
-      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = GHOST_DEFAULTS.alpha;
+      ctx.strokeStyle = GHOST_DEFAULTS.color;
+      ctx.fillStyle = GHOST_DEFAULTS.color;
+      ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
 
       for (const entityId of selectedEntityIds) {
         const entity = getEntity(entityId);
         if (!entity) continue;
-        drawTranslatedGhostEntity(ctx, entity as unknown as DxfEntityUnion, delta, transform, vp);
+        const preview = makeTranslationPreview(entityId, delta);
+        const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
+        drawGhostEntity(ctx, transformed, transform, vp);
       }
 
       ctx.restore();
@@ -155,7 +173,6 @@ export function useMovePreview(props: UseMovePreviewProps): void {
   }, [phase, basePoint, cursorWorld, selectedEntityIds, getEntity, transform, getCanvas, getViewportElement]);
 
   // Clear canvas when leaving preview phase
-  const PREVIEW_PHASES: ReadonlySet<MovePhase> = new Set(['awaiting-base-point', 'awaiting-destination']);
   useEffect(() => {
     const wasPreview = PREVIEW_PHASES.has(prevPhaseRef.current);
     const isPreview = PREVIEW_PHASES.has(phase);
@@ -176,115 +193,8 @@ export function useMovePreview(props: UseMovePreviewProps): void {
 
   // Schedule RAF during preview phases
   useEffect(() => {
-    if (phase !== 'awaiting-base-point' && phase !== 'awaiting-destination') return;
+    if (!PREVIEW_PHASES.has(phase)) return;
     rafRef.current = requestAnimationFrame(drawFrame);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [phase, drawFrame]);
-}
-
-// ============================================================================
-// GHOST ENTITY DRAWING (translated by delta)
-// ============================================================================
-
-function drawTranslatedGhostEntity(
-  ctx: CanvasRenderingContext2D,
-  entity: DxfEntityUnion,
-  delta: Point2D,
-  transform: ViewTransform,
-  viewport: { width: number; height: number },
-): void {
-  const toScreen = (p: Point2D) =>
-    CoordinateTransforms.worldToScreen(
-      { x: p.x + delta.x, y: p.y + delta.y },
-      transform,
-      viewport,
-    );
-
-  switch (entity.type) {
-    case 'line': {
-      const s = toScreen(entity.start);
-      const e = toScreen(entity.end);
-      ctx.beginPath();
-      ctx.moveTo(s.x, s.y);
-      ctx.lineTo(e.x, e.y);
-      ctx.stroke();
-      break;
-    }
-
-    case 'circle': {
-      const c = toScreen(entity.center);
-      const r = entity.radius * transform.scale;
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
-      ctx.stroke();
-      break;
-    }
-
-    case 'arc': {
-      const c = toScreen(entity.center);
-      const r = entity.radius * transform.scale;
-      const startRad = (entity.startAngle * Math.PI) / 180;
-      const endRad = (entity.endAngle * Math.PI) / 180;
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, r, -startRad, -endRad, entity.counterclockwise ?? false);
-      ctx.stroke();
-      break;
-    }
-
-    case 'polyline': {
-      if (entity.vertices.length < 2) break;
-      ctx.beginPath();
-      const first = toScreen(entity.vertices[0]);
-      ctx.moveTo(first.x, first.y);
-      for (let i = 1; i < entity.vertices.length; i++) {
-        const p = toScreen(entity.vertices[i]);
-        ctx.lineTo(p.x, p.y);
-      }
-      if (entity.closed) ctx.closePath();
-      ctx.stroke();
-      break;
-    }
-
-    case 'text':
-    case 'mtext': {
-      // Cast wide to support both imported entities (.text flat string) and
-      // TEXT-tool-created entities (.textNode rich AST, no flat .text).
-      const e = entity as DxfEntityUnion & {
-        textNode?: { paragraphs?: Array<{ runs?: Array<{ text?: string }> }> };
-      };
-      if (!e.position) break;
-      const pos = toScreen(e.position);
-      const flatText = e.text
-        ?? e.textNode?.paragraphs
-             ?.flatMap(p => p.runs ?? [])
-             .map(r => r.text ?? '')
-             .join('')
-        ?? '';
-      if (!flatText) break;
-      ctx.save();
-      const height = (e as { height?: number }).height ?? 12;
-      const fontSize = Math.max(8, height * transform.scale);
-      ctx.font = `${fontSize}px sans-serif`;
-      ctx.textBaseline = 'top'; // match TextRenderer default (position = TOP of text)
-      ctx.fillStyle = '#00BFFF';
-      ctx.fillText(flatText, pos.x, pos.y);
-      ctx.restore();
-      break;
-    }
-
-    case 'angle-measurement': {
-      const v = toScreen(entity.vertex);
-      const p1 = toScreen(entity.point1);
-      const p2 = toScreen(entity.point2);
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(v.x, v.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.stroke();
-      break;
-    }
-
-    default:
-      break;
-  }
 }

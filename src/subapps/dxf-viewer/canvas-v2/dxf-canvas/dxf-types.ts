@@ -52,6 +52,8 @@ export interface DxfTextStyle {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  overline?: boolean;
+  strikethrough?: boolean;
   fontFamily?: string;
   /** Per-run color override (overrides entity.color when set). */
   runColor?: string;
@@ -103,15 +105,11 @@ export interface DxfRenderOptions {
     hoveredGrip?: { entityId: string; gripIndex: number };
     activeGrip?: { entityId: string; gripIndex: number };
   };
-  /** Live preview data during grip following mode */
-  dragPreview?: {
-    entityId: string;
-    gripIndex: number;
-    delta: Point2D;
-    movesEntity: boolean;
-    /** For edge grips: which 2 vertex indices to move together (edge-stretch preview) */
-    edgeVertexIndices?: [number, number];
-  };
+  // ADR-049 SSOT (2026-05-12): the `dragPreview` field used to live here so
+  // DxfRenderer could mutate the entity in-place during grip drag. It has
+  // been removed — drag-time ghost rendering is now exclusively handled by
+  // `useGripGhostPreview` on the PreviewCanvas overlay, mirroring the Move
+  // tool path and freeing the bitmap cache from 60fps invalidation.
   /**
    * Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): when true, render entities in
    * pure normal-state (no hover, no selection, no grips, no drag preview).
