@@ -384,7 +384,9 @@ export class DxfFirestoreService {
    * This ensures scene JSON lives next to the original DXF in the canonical path.
    */
   static deriveScenePath(fileRecordStoragePath: string): string {
-    // Replace extension with .scene.json
+    // Already a scene.json path (e.g. storagePath was previously overwritten by auto-save)
+    if (fileRecordStoragePath.endsWith('.scene.json')) return fileRecordStoragePath;
+    // Replace last extension (e.g. .dxf → .scene.json)
     const withoutExt = fileRecordStoragePath.replace(/\.[^/.]+$/, '');
     return `${withoutExt}.scene.json`;
   }

@@ -107,6 +107,9 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
     }
     const scenePath = context.canonicalScenePath;
 
+    // Use provided entity context OR fall back to defaults for display-name generation only.
+    // CRITICAL: entity-linking fields (entityType/entityId/category/storagePath) are only
+    // written when explicitly provided — merge: true preserves wizard-set values on auto-save.
     const resolvedEntityType = (context?.entityType ?? 'building') as
       | 'project'
       | 'building'
@@ -130,13 +133,21 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
     const fileRecord = {
       id: fileId,
       companyId,
-      projectId: context?.projectId ?? null,
-      entityType: resolvedEntityType,
-      entityId: resolvedEntityId,
+      // projectId: only write if explicitly provided (don't null-out wizard value on auto-save)
+      ...(context?.projectId ? { projectId: context.projectId } : {}),
+      // entityType/entityId: only write if wizard provided them (don't default to building/standalone)
+      ...(context?.entityType ? {
+        entityType: resolvedEntityType,
+        entityId: resolvedEntityId,
+      } : {}),
       domain: 'construction' as const,
-      category: resolvedCategory,
+      // category: only write if explicitly provided — prevents overwriting 'floorplans' with
+      // 'drawings' default on DXF Viewer auto-save (would hide file from FloorplanGallery query)
+      ...(context?.filesCategory ? { category: context.filesCategory } : {}),
       ...(context?.purpose ? { purpose: context.purpose } : {}),
-      storagePath: scenePath,
+      // storagePath: intentionally NOT included — merge: true preserves original DXF file path.
+      // Auto-save writes the scene JSON path to processedData.processedDataPath only.
+      // Overwriting storagePath with .scene.json breaks deriveScenePath on the next session reload.
       displayName: generatedDisplayName,
       originalFilename: fileName,
       ext: 'dxf',

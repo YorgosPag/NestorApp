@@ -78,8 +78,8 @@ export class DxfImportService {
             const result = event.data as DxfImportResult;
             
             if (result.success && result.scene) {
-              // 🏢 ENTERPRISE: Use centralized bounds calculation with normalization
-              const perfectBounds = calculateTightBounds(result.scene.entities, false);
+              // Normalize to positive quadrant: bottom-left corner → (0,0)
+              const perfectBounds = calculateTightBounds(result.scene.entities, true);
               result.scene.bounds = perfectBounds;
             }
             
@@ -161,9 +161,9 @@ export class DxfImportService {
         };
       }
 
-      // 🏢 ENTERPRISE: Use centralized bounds calculation with normalization
+      // Normalize to positive quadrant: bottom-left corner → (0,0)
       if (scene.entities.length > 0) {
-        const perfectBounds = calculateTightBounds(scene.entities, false);
+        const perfectBounds = calculateTightBounds(scene.entities, true);
         scene.bounds = perfectBounds;
       }
 
