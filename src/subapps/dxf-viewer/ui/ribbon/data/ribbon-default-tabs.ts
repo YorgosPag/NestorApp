@@ -7,6 +7,9 @@
 import type { RibbonTab } from '../types/ribbon-types';
 import { HOME_DRAW_PANEL } from './home-tab-draw';
 import { HOME_MODIFY_PANEL } from './home-tab-modify';
+import { VIEW_NAVIGATE_PANEL } from './view-tab-navigate';
+import { VIEW_VISUAL_STYLES_PANEL } from './view-tab-visual-styles';
+import { VIEW_VIEWPORTS_PANEL } from './view-tab-viewports';
 
 export const DEFAULT_RIBBON_TAB_ORDER: readonly string[] = [
   'home',
@@ -37,7 +40,9 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
     id: 'view',
     labelKey: 'ribbon.tabs.view',
     panels: [
-      { id: 'navigate', labelKey: 'ribbon.panels.navigate', rows: [] },
+      VIEW_NAVIGATE_PANEL,
+      VIEW_VISUAL_STYLES_PANEL,
+      VIEW_VIEWPORTS_PANEL,
     ],
   },
   {
