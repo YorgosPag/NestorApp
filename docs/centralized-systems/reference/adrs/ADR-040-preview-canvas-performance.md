@@ -71,6 +71,15 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-12: Ghost preview — grip drag + new TEXT entities
+
+**Bug 1 — Grip drag ghost:** `DxfRenderer.renderEntityUnified()`: quando `options.dragPreview?.entityId === entity.id`, applica `ctx.globalAlpha = 0.45` attorno a `entityComposite.render()`. L'entità ora appare semi-trasparente durante grip drag (coerente con MOVE tool).
+Nascosti grip durante drag ghost (`showGrips: false`, `grips: false`).
+
+**Bug 2 — New TEXT entity ghost:** `useMovePreview.drawTranslatedGhostEntity()`: `case 'text':` ora gestisce sia `.text` (flat, entità importate) che `.textNode.paragraphs` (AST, entità create dal TEXT tool). Aggiunto `case 'mtext':` che condivide la stessa logica. Ghost ora appare per tutte le entità testo durante MOVE tool multi-select.
+
+---
+
 ### 2026-05-12: Grid axis/origin defaults — SSoT centralization
 
 `config/grid-axis-defaults.ts` creato come unico SSoT per `showAxes`, `showOrigin`,

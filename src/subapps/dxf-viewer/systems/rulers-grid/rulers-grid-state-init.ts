@@ -20,6 +20,8 @@ import {
   DEFAULT_GRID_SETTINGS,
 } from './config';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 SSoT: Axis/origin defaults — single source of truth
+import { GRID_AXES_DEFAULTS } from '../../config/grid-axis-defaults';
 import { storageGet } from '../../utils/storage-utils';
 import { SettingsValidationUtils } from './utils';
 import type { Point2D } from './config';
@@ -148,16 +150,22 @@ export function createInitialGridSettings(
 export function migrateAdaptiveFadeDefaults(grid: GridSettings): GridSettings {
   const b = grid.behavior;
   const isLegacyFadeWindow = b.smoothFadeMinPx === 8 && b.smoothFadeMaxPx === 32;
-  if (!isLegacyFadeWindow) return grid;
-  return {
-    ...grid,
-    behavior: {
-      ...b,
-      smoothFade: false,
-      smoothFadeMinPx: 2,
-      smoothFadeMaxPx: 10,
-    },
-  };
+  const migrated = isLegacyFadeWindow
+    ? {
+        ...grid,
+        behavior: {
+          ...b,
+          smoothFade: false,
+          smoothFadeMinPx: 2,
+          smoothFadeMaxPx: 10,
+        },
+      }
+    : grid;
+  // Sync axes to SSoT default on load.
+  if (migrated.visual.showAxes !== GRID_AXES_DEFAULTS.showAxes) {
+    return { ...migrated, visual: { ...migrated.visual, showAxes: GRID_AXES_DEFAULTS.showAxes } };
+  }
+  return migrated;
 }
 
 // ── Settings Validation ──────────────────────────────────────────────

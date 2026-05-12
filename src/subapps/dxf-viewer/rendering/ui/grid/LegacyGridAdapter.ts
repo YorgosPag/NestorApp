@@ -11,6 +11,8 @@ import { GridRenderer } from './GridRenderer';
 import { parseHex, rgbToHex } from '../../../ui/color/utils';
 // 🏢 ADR-034: Centralized Rendering Z-Index
 import { RENDERING_ZINDEX } from '../../../config/tolerance-config';
+// 🏢 SSoT: Axis/origin defaults — single source of truth
+import { GRID_AXES_DEFAULTS } from '../../../config/grid-axis-defaults';
 
 /**
  * 🔺 LEGACY ADAPTER
@@ -56,11 +58,11 @@ export class LegacyGridAdapter {
       majorGridWeight: 2,
       minorGridWeight: 1,
 
-      // 🏢 ORIGIN & AXES: Use settings from legacy input (or defaults)
-      showOrigin: settings.showOrigin ?? true,
-      showAxes: settings.showAxes ?? true,
-      axesColor: settings.axesColor ?? '#555555',
-      axesWeight: settings.axesWeight ?? 2,
+      // 🏢 ORIGIN & AXES: fallback to SSoT — config/grid-axis-defaults.ts
+      showOrigin: settings.showOrigin ?? GRID_AXES_DEFAULTS.showOrigin,
+      showAxes: settings.showAxes ?? GRID_AXES_DEFAULTS.showAxes,
+      axesColor: settings.axesColor ?? GRID_AXES_DEFAULTS.axesColor,
+      axesWeight: settings.axesWeight ?? GRID_AXES_DEFAULTS.axesWeight,
 
       zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
     };

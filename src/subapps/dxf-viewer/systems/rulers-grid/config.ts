@@ -10,6 +10,8 @@ export type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// 🏢 SSoT: Axis/origin defaults — single source of truth
+import { GRID_AXES_DEFAULTS } from '../../config/grid-axis-defaults';
 
 export interface BoundingBox {
   min: Point2D;
@@ -208,10 +210,10 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     color: UI_COLORS.GRID_BLUE, // Μπλε για καλύτερη ορατότητα
     style: 'lines', // ✅ NEW: Default grid style (lines/dots/crosses)
     subDivisions: 5, // 🏢 ADR-110: Canonical value defined in RULERS_GRID_CONFIG.DEFAULT_SUBDIVISIONS
-    showOrigin: true,
-    showAxes: true,
-    axesColor: UI_COLORS.RULER_DARK_GRAY, // Σκουρότερο γκρι για τους άξονες
-    axesWeight: 2,
+    showOrigin: GRID_AXES_DEFAULTS.showOrigin,
+    showAxes: GRID_AXES_DEFAULTS.showAxes,
+    axesColor: GRID_AXES_DEFAULTS.axesColor,
+    axesWeight: GRID_AXES_DEFAULTS.axesWeight,
     majorGridColor: UI_COLORS.GRID_MAJOR, // Γκρι για τις κύριες γραμμές
     minorGridColor: UI_COLORS.GRID_MINOR, // Ανοιχτότερο γκρι για τις δευτερεύουσες γραμμές
     majorGridWeight: 1,

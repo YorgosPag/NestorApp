@@ -8,6 +8,8 @@ import type { UIElementSettings } from '../core/UIRenderer';
 import { UI_COLORS, OPACITY } from '../../../config/color-config';
 // 🏢 ADR-034: Centralized Rendering Z-Index
 import { RENDERING_ZINDEX } from '../../../config/tolerance-config';
+// 🏢 SSoT: Axis/origin defaults — single source of truth
+import { GRID_AXES_DEFAULTS } from '../../../config/grid-axis-defaults';
 
 /**
  * 🔺 GRID STYLES
@@ -101,11 +103,11 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   majorGridWeight: 2,    // Thicker major grid lines
   minorGridWeight: 1,    // Standard minor grid lines
 
-  // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon defaults
-  showOrigin: true,      // Show origin crosshair at world (0,0) — AutoCAD always shows UCS icon
-  showAxes: true,        // Show X/Y axis lines through origin
-  axesColor: UI_COLORS.RULER_DARK_GRAY, // Neutral gray for axes
-  axesWeight: 2,         // Prominent axis lines
+  // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon defaults — SSoT: config/grid-axis-defaults.ts
+  showOrigin: GRID_AXES_DEFAULTS.showOrigin,
+  showAxes: GRID_AXES_DEFAULTS.showAxes,
+  axesColor: GRID_AXES_DEFAULTS.axesColor,
+  axesWeight: GRID_AXES_DEFAULTS.axesWeight,
 
   // 🌊 Adaptive grid — opt-in. Default OFF so the renderer uses the legacy
   // 2-pass minor+major draw with the user's panel colors directly. When
