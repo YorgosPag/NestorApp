@@ -32,6 +32,7 @@ import {
   Grid3x3, // ADR-189 B23: Structural preset grid icon
   Layers, // ADR-189 B37: Guide from selection icon
   PanelRight, // ADR-189 §4.13: Guide panel toggle icon
+  ScanLine, // ADR-auto-area: Auto area detection icon
 } from "lucide-react";
 
 // 🏢 ENTERPRISE: Import centralized DXF tool labels - ZERO HARDCODED VALUES
@@ -328,7 +329,17 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'measure-distance-continuous' as ToolType, icon: Ruler, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_DISTANCE_CONTINUOUS }
         ]
       },
-      { id: 'measure-area' as ToolType, icon: Calculator, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_AREA, hotkey: getShortcutDisplayLabel('measureArea'), colorClass: DXF_TOOL_GROUP_COLORS.MEASUREMENTS },
+      {
+        id: 'measure-area' as ToolType,
+        icon: Calculator,
+        label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_AREA,
+        hotkey: getShortcutDisplayLabel('measureArea'),
+        colorClass: DXF_TOOL_GROUP_COLORS.MEASUREMENTS,
+        dropdownOptions: [
+          { id: 'measure-area' as ToolType, icon: Calculator, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_AREA_MANUAL },
+          { id: 'auto-measure-area' as ToolType, icon: ScanLine, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_AREA_AUTO }
+        ]
+      },
       {
         id: 'measure-angle' as ToolType,
         icon: AngleIconAdapter,
@@ -360,140 +371,4 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
   }
 ];
 
-export const createActionButtons = (props: {
-  canUndo: boolean;
-  canRedo: boolean;
-  snapEnabled: boolean;
-  showGrid: boolean;
-  autoCrop: boolean;
-  showCursorSettings?: boolean;
-  guidesVisible?: boolean;
-  showGuidePanel?: boolean;
-  onAction: (action: string, data?: number | string | boolean) => void;
-}): ActionDefinition[] => [
-  // ⌨️ ENTERPRISE: All hotkeys from centralized keyboard-shortcuts.ts
-  {
-    id: 'undo',
-    icon: Undo,
-    // ✅ CENTRALIZED: Using DXF_UTILITY_TOOL_LABELS from central system - ZERO HARDCODED VALUES
-    label: DXF_UTILITY_TOOL_LABELS.UNDO,
-    hotkey: getShortcutDisplayLabel('undo'),
-    disabled: !props.canUndo,
-    // 🎨 ENTERPRISE: Auto-assigned from DXF_ACTION_COLORS
-    colorClass: DXF_ACTION_COLORS.undo,
-    onClick: () => props.onAction('undo')
-  },
-  {
-    id: 'redo',
-    icon: Redo,
-    label: DXF_UTILITY_TOOL_LABELS.REDO,
-    hotkey: getShortcutDisplayLabel('redo'),
-    disabled: !props.canRedo,
-    colorClass: DXF_ACTION_COLORS.redo,
-    onClick: () => props.onAction('redo')
-  },
-  {
-    id: 'cursor-settings',
-    icon: Crosshair,
-    label: DXF_UTILITY_TOOL_LABELS.CURSOR_SETTINGS,
-    hotkey: getShortcutDisplayLabel('toggleCursorSettings'),
-    active: props.showCursorSettings,
-    colorClass: DXF_ACTION_COLORS.cursorSettings,
-    onClick: () => props.onAction('toggle-cursor-settings')
-  },
-  {
-    id: 'grid',
-    icon: Grid,
-    // 🏢 ENTERPRISE: i18n key - translated in ActionButton component
-    label: props.showGrid ? 'actionButtons.hideGrid' : 'actionButtons.showGrid',
-    hotkey: getShortcutDisplayLabel('grid'),
-    active: props.showGrid,
-    colorClass: DXF_ACTION_COLORS.grid,
-    onClick: () => props.onAction('grid')
-  },
-  // ADR-189: Toggle construction guide visibility
-  {
-    id: 'toggle-guides',
-    icon: props.guidesVisible ? EyeOff : Eye,
-    label: props.guidesVisible ? 'actionButtons.hideGuides' : 'actionButtons.showGuides',
-    hotkey: 'G→V',
-    active: props.guidesVisible,
-    colorClass: DXF_ACTION_COLORS.grid,
-    onClick: () => props.onAction('toggle-guides')
-  },
-  // ADR-189 §4.13: Toggle guide list panel (keyboard: G→L)
-  {
-    id: 'toggle-guide-panel',
-    icon: PanelRight,
-    label: props.showGuidePanel ? 'actionButtons.hideGuidePanel' : 'actionButtons.showGuidePanel',
-    hotkey: 'G→L',
-    active: props.showGuidePanel,
-    colorClass: DXF_ACTION_COLORS.grid,
-    onClick: () => props.onAction('toggle-guide-panel')
-  },
-  // ADR-189: Guide Analysis Panel (10 services → 4 tabs)
-  {
-    id: 'toggle-guide-analysis',
-    icon: BarChart3,
-    label: DXF_UTILITY_TOOL_LABELS.GUIDE_ANALYSIS,
-    hotkey: '',
-    colorClass: DXF_ACTION_COLORS.grid,
-    onClick: () => props.onAction('toggle-guide-analysis-panel')
-  },
-  {
-    id: 'autocrop',
-    icon: Crop,
-    // 🏢 ENTERPRISE: i18n key - translated in ActionButton component
-    label: props.autoCrop ? 'actionButtons.autoCropOn' : 'actionButtons.autoCropOff',
-    hotkey: getShortcutDisplayLabel('autocrop'),
-    active: props.autoCrop,
-    colorClass: DXF_ACTION_COLORS.autocrop,
-    onClick: () => props.onAction('autocrop')
-  },
-  {
-    id: 'fit',
-    icon: Focus,
-    label: DXF_UTILITY_TOOL_LABELS.FIT_TO_VIEW,
-    hotkey: getShortcutDisplayLabel('fit'),
-    active: false, // 🔥 Add active state - στιγμιαίο action, όχι toggle
-    disabled: false, // 🔥 Ensure it's not disabled
-    colorClass: DXF_ACTION_COLORS.fit,
-    onClick: () => props.onAction('fit-to-view')
-  },
-  {
-    id: 'export',
-    icon: Download,
-    label: DXF_UTILITY_TOOL_LABELS.EXPORT,
-    hotkey: getShortcutDisplayLabel('export'),
-    colorClass: DXF_ACTION_COLORS.export,
-    onClick: () => props.onAction('export')
-  },
-  {
-    id: 'tests',
-    icon: FlaskConical,
-    label: DXF_UTILITY_TOOL_LABELS.RUN_TESTS,
-    hotkey: getShortcutDisplayLabel('runTests'),
-    colorClass: DXF_ACTION_COLORS.tests,
-    onClick: () => props.onAction('run-tests')
-  },
-  // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
-  {
-    id: 'toggle-perf',
-    icon: Activity,
-    label: DXF_UTILITY_TOOL_LABELS.TOGGLE_PERF,
-    hotkey: getShortcutDisplayLabel('togglePerf'),
-    colorClass: DXF_ACTION_COLORS.togglePerf,
-    onClick: () => props.onAction('toggle-perf')
-  },
-  // 🏢 ADR-340 Phase 5+ (2026-05-08): toggle-pdf-background MOVED to position 1
-  // in EnhancedDXFToolbar.tsx — was hidden here behind overflow-x-auto.
-  // 🤖 ADR-185: AI Drawing Assistant Toggle
-  {
-    id: 'toggle-ai-assistant',
-    icon: Sparkles,
-    label: DXF_UTILITY_TOOL_LABELS.AI_ASSISTANT,
-    hotkey: '',
-    colorClass: DXF_ACTION_COLORS.aiAssistant,
-    onClick: () => props.onAction('toggle-ai-assistant')
-  }
-];
+export { createActionButtons } from './action-button-definitions';

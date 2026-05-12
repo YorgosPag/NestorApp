@@ -41,6 +41,7 @@ export type ToolType =
   | 'measure-distance'
   | 'measure-distance-continuous'
   | 'measure-area'
+  | 'auto-measure-area'
   | 'measure-angle'
   | 'measure-angle-line-arc'
   | 'measure-angle-two-arcs'
@@ -127,7 +128,8 @@ export type MeasurementTool =
   | 'measure-distance'
   | 'measure-distance-continuous'
   | 'measure-area'
-  | 'measure-angle' 
+  | 'auto-measure-area'
+  | 'measure-angle'
   | 'measure-angle-line-arc'
   | 'measure-angle-two-arcs'
   | 'measure-angle-measuregeom'
@@ -169,9 +171,17 @@ export const MEASUREMENT_TOOL_CONFIGS: Record<MeasurementTool, MeasurementToolCo
     id: 'measure-area',
     name: 'Εμβαδό',
     icon: 'Square',
-    shortcut: 'A', 
+    shortcut: 'A',
     description: 'Μέτρηση εμβαδού πολυγώνου (3+ σημεία)',
     requiredPoints: 3
+  },
+  'auto-measure-area': {
+    id: 'auto-measure-area',
+    name: 'Αυτόματο Εμβαδό',
+    icon: 'ScanLine',
+    shortcut: '',
+    description: 'Κλικ εντός κλειστού πολυγώνου — αυτόματος υπολογισμός',
+    requiredPoints: 1
   },
   'measure-angle': {
     id: 'measure-angle',

@@ -1099,3 +1099,15 @@ Added `AutoAreaPreviewOverlay` (SVG) to `CanvasLayerStack.tsx` for real-time pol
 ## 2026-05-13: Move tool — overlay zone support (ADR-049 extension)
 
 `canvas-layer-stack-leaves.tsx`: added `onMoveOverlay` + `onMoveMultipleOverlays` callback props forwarded from `CanvasSection` to the interaction leaf. `canvas-layer-stack-types.ts`: extended `CanvasLayerStackLeafProps` with the two new optional callbacks. Enables mixed DXF-entity + overlay-zone moves in a single undo step via `MoveOverlayCommand` / `MoveMultipleOverlaysCommand` (both wrapped in `CompoundCommand`). ADR-040 cardinal rules preserved: no new store subscriptions in the shell; callbacks are props, not state.
+
+---
+
+## 2026-05-13: useGlobalSnapSceneSync — overlay injection
+
+`useGlobalSnapSceneSync` now receives `overlays` prop from `CanvasSection` and passes them to `SnapSceneManager` for endpoint/midpoint snapping on overlay polygon vertices. Snap engine upgrade: overlay zone vertices are now first-class snap targets alongside DXF entities. Passed as a single array — no new stores, no new subscriptions.
+
+---
+
+## 2026-05-13: Keyboard shortcut + command history — DXF viewer cleanup
+
+`useCanvasKeyboardShortcuts.ts`: Escape now checks `universalSelection.count() > 0` (covers all selection types, not just DXF entities). `useCommandHistory.ts`: extracted from inline hook usage; now stable module with proper undo/redo cycle. `useLayerCanvasMouseMove.ts`: consolidated mouse-move dispatch paths. `dxf-firestore.service.ts`: tightened null-guard on auto-save. All changes preserve the micro-leaf subscription model: no new `useSyncExternalStore` in orchestrators.

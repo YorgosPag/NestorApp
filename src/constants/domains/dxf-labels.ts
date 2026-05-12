@@ -114,6 +114,8 @@ export const DXF_MEASUREMENT_TOOL_LABELS = {
   MEASURE_DISTANCE_2P: 'tools.measureDistance2P',
   MEASURE_DISTANCE_CONTINUOUS: 'tools.measureDistanceContinuous',
   MEASURE_AREA: 'tools.measureArea',
+  MEASURE_AREA_MANUAL: 'tools.measureAreaManual',
+  MEASURE_AREA_AUTO: 'tools.measureAreaAuto',
   MEASURE_ANGLE: 'tools.measureAngle',
   MEASURE_ANGLE_BASIC: 'tools.measureAngleBasic',
   MEASURE_ANGLE_LINE_ARC: 'tools.measureAngleLineArc',

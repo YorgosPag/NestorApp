@@ -91,6 +91,9 @@ export type {
   UseLayerCanvasMouseMoveReturn,
 } from './useLayerCanvasMouseMove';
 
+// === useAutoAreaMouseMove === (auto-area hover preview)
+export { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
+
 // === useFitToView === (CanvasSection decomposition #8 — fit-to-view zoom functionality)
 export { useFitToView } from './useFitToView';
 export type {

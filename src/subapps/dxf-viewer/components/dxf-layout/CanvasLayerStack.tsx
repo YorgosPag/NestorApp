@@ -8,9 +8,7 @@
  * - RotationPreviewMount (ADR-188), MovePreviewMount (ADR-049)
  * Shell itself MUST NOT call useSyncExternalStore (enforced: CHECK 6C).
  */
-
 'use client';
-
 import React, { useCallback, useMemo } from 'react';
 import { PreviewCanvas } from '../../canvas-v2/preview-canvas';
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
@@ -37,6 +35,8 @@ import {
   PreviewCanvasMounts,
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
+import { AutoAreaResultPanel } from './AutoAreaResultPanel';
+import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 
 // Re-export props type for consumers
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
@@ -489,8 +489,11 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             viewport={viewport}
             className={PANEL_LAYOUT.Z_INDEX['30']}
           />
+
+          <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
         </div>
       </div>
+      <AutoAreaResultPanel />
     </>
   );
 });

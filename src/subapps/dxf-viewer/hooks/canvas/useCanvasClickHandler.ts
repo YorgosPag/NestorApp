@@ -40,6 +40,9 @@ import { pointToArcDistance } from '../../utils/angle-entity-math';
 import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { TOLERANCE_CONFIG, POLYGON_TOLERANCES } from '../../config/tolerance-config';
+import { setAutoAreaState } from '../../systems/auto-area/AutoAreaResultStore';
+import { collectAreaCandidates, collectHoleAreas } from '../../systems/auto-area/auto-area-hit';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { dlog, dwarn } from '../../debug';
 
 // ── Re-exports for backward compatibility ───────────────────────────────────
@@ -116,6 +119,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.6: ADR-189 — Construction guide tools
     const guideCtx: GuideClickContext = { worldPoint, shiftKey, transform, levelManager };
     if (handleGuideToolClick(guideCtx, params)) {
+      return;
+    }
+
+    // PRIORITY 1.7: Auto area measurement — point-in-polygon click
+    if (activeTool === 'auto-measure-area') {
+      handleAutoAreaClick(worldPoint, params);
       return;
     }
 
@@ -214,7 +223,6 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     draggingOverlayBody, setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
     setDraftPolygon, setIsSavingPolygon,
-    // Pass full params to delegated handlers
     params,
   ]);
 
@@ -345,6 +353,39 @@ function testEntityHit(
   }
 
   return false;
+}
+
+// ============================================================================
+// AUTO AREA CLICK (PRIORITY 1.7)
+// ============================================================================
+
+/** Finds smallest closed polygon at worldPoint → writes result to AutoAreaResultStore. */
+function handleAutoAreaClick(worldPoint: Point2D, p: UseCanvasClickHandlerParams): void {
+  const screen = CoordinateTransforms.worldToScreen(worldPoint, p.transform, p.viewport);
+  const scene = p.levelManager.currentLevelId
+    ? p.levelManager.getLevelScene(p.levelManager.currentLevelId)
+    : null;
+  const candidates = collectAreaCandidates(worldPoint, scene?.entities ?? [], p.currentOverlays, p.transform.scale);
+  if (candidates.length === 0) {
+    setAutoAreaState({ found: false, screenX: screen.x, screenY: screen.y });
+    return;
+  }
+  const best = candidates.reduce((a, b) => a.area < b.area ? a : b);
+  const holes = collectHoleAreas(best.polygon, best.area, scene?.entities ?? [], p.currentOverlays, p.transform.scale);
+  const holesArea = holes.reduce((sum, h) => sum + h.area, 0);
+  setAutoAreaState({
+    found: true,
+    area: best.area,
+    netArea: best.area - holesArea,
+    holesCount: holes.length,
+    holesArea,
+    perimeter: best.perimeter,
+    source: best.source,
+    layerName: best.layerName,
+    screenX: screen.x,
+    screenY: screen.y,
+  });
+  dlog('handleAutoAreaClick', `area=${best.area.toFixed(2)} netArea=${(best.area - holesArea).toFixed(2)} holes=${holes.length} source=${best.source}`);
 }
 
 /** Helper: Test if point hits a polyline (vertices + optional closed) */

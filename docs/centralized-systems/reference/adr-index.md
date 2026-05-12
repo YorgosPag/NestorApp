@@ -324,6 +324,7 @@
 | **ADR-343** | DXF Canvas Visual Regression Test Suite | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-343-dxf-canvas-visual-regression-suite.md) |
 | **ADR-344** | DXF Enterprise Text Engine (Autodesk-Grade Text Creation & Editing Suite) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-344-dxf-enterprise-text-engine.md) |
 | **ADR-345** | DXF Ribbon Interface (AutoCAD-style) — migrazione da floating panel | 🟡 PROPOSED | 2026-05-11 | DXF Viewer | [📄](./adrs/ADR-345-dxf-ribbon-interface.md) |
+| **ADR-346** | Auto Area Measurement — point-and-click polygon area detection | ✅ IMPLEMENTED | 2026-05-12 | DXF Viewer | [📄](./adrs/ADR-346-auto-area-measurement.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

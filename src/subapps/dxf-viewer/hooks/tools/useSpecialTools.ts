@@ -18,6 +18,8 @@
 
 import { useEffect } from 'react';
 import { useCircleTTT } from '../drawing/useCircleTTT';
+import { clearAutoAreaState } from '../../systems/auto-area/AutoAreaResultStore';
+import { clearAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore';
 import { useLinePerpendicular } from '../drawing/useLinePerpendicular';
 import { useLineParallel } from '../drawing/useLineParallel';
 import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
@@ -217,6 +219,17 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       deactivateAngle();
     }
   }, [activeTool, activateAngle, deactivateAngle]);
+
+  // ============================================================================
+  // AUTO AREA — clear result panel when tool changes away
+  // ============================================================================
+
+  useEffect(() => {
+    if (activeTool !== 'auto-measure-area') {
+      clearAutoAreaState();
+      clearAutoAreaPreview();
+    }
+  }, [activeTool]);
 
   // ============================================================================
   // RETURN

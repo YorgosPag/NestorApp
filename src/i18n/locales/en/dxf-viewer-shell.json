@@ -181,6 +181,8 @@
     "measureDistance2P": "Distance Between 2 Points",
     "measureDistanceContinuous": "Continuous Distance Measurement",
     "measureArea": "Measure Area",
+    "measureAreaManual": "Measure Area (Polygon)",
+    "measureAreaAuto": "Auto Area Detection",
     "measureAngle": "Measure Angle",
     "measureAngleBasic": "Basic Angle",
     "measureAngleLineArc": "Line-Arc Angle",
@@ -285,6 +287,18 @@
   },
   "debug": {
     "noUnitsAvailable": "No units available"
+  },
+  "autoArea": {
+    "title": "Auto Area Measurement",
+    "area": "Area",
+    "grossArea": "Gross Area",
+    "deductions": "Deductions ({count} shapes, -{area})",
+    "perimeter": "Perimeter",
+    "layer": "Layer",
+    "noPolygon": "No closed polygon found at this point",
+    "dismiss": "Dismiss",
+    "sourceDxf": "DXF Polyline",
+    "sourceOverlay": "Overlay"
   },
   "ribbon": {
     "tabs": {
