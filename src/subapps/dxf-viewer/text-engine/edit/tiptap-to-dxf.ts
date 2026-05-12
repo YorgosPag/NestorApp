@@ -71,7 +71,11 @@ function applyMark(style: TextRunStyle, mark: TipTapMark): void {
     case 'underline':    style.underline = true; break;
     case 'strike':       style.strikethrough = true; break;
     case 'overline':     style.overline = true; break;
-    case 'fontFamily':   style.fontFamily = mark.attrs.family; break;
+    case 'textStyle': {
+      const ff = mark.attrs.fontFamily;
+      if (typeof ff === 'string' && ff) style.fontFamily = ff;
+      break;
+    }
     case 'fontHeight':   style.height = mark.attrs.height; break;
     case 'widthFactor':  style.widthFactor = mark.attrs.factor; break;
     case 'obliqueAngle': style.obliqueAngle = mark.attrs.angle; break;

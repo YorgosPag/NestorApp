@@ -66,7 +66,7 @@ export type TipTapMark =
   | { readonly type: 'underline' }
   | { readonly type: 'strike' }
   | { readonly type: 'overline' }
-  | { readonly type: 'fontFamily';   readonly attrs: { readonly family: string } }
+  | { readonly type: 'textStyle';     readonly attrs: { readonly fontFamily?: string | null } }
   | { readonly type: 'fontHeight';   readonly attrs: { readonly height: number } }
   | { readonly type: 'widthFactor';  readonly attrs: { readonly factor: number } }
   | { readonly type: 'obliqueAngle'; readonly attrs: { readonly angle: number } }

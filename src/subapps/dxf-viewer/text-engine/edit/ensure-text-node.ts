@@ -56,7 +56,7 @@ function buildFallbackNode(entity: LegacyTextLike): DxfTextNode {
   const run: TextRun = {
     text: entity.text ?? '',
     style: {
-      fontFamily: entity.fontFamily ?? 'Standard',
+      fontFamily: entity.fontFamily ?? '',
       bold: false,
       italic: false,
       underline: false,

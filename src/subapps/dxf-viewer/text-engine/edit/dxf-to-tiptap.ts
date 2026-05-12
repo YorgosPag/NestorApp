@@ -40,7 +40,7 @@ function styleToMarks(style: TextRunStyle): TipTapMark[] {
   if (style.underline)     marks.push({ type: 'underline' });
   if (style.strikethrough) marks.push({ type: 'strike' });
   if (style.overline)      marks.push({ type: 'overline' });
-  if (style.fontFamily)    marks.push({ type: 'fontFamily',   attrs: { family: style.fontFamily } });
+  if (style.fontFamily)    marks.push({ type: 'textStyle',    attrs: { fontFamily: style.fontFamily } });
   if (style.height > 0)    marks.push({ type: 'fontHeight',   attrs: { height: style.height } });
   if (style.widthFactor !== 1)  marks.push({ type: 'widthFactor',  attrs: { factor: style.widthFactor } });
   if (style.obliqueAngle !== 0) marks.push({ type: 'obliqueAngle', attrs: { angle: style.obliqueAngle } });

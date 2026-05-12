@@ -76,7 +76,7 @@ export const DXF_MARK_NAMES = [
   'underline',
   'strike',
   'overline',
-  'fontFamily',
+  'textStyle',
   'fontHeight',
   'widthFactor',
   'obliqueAngle',
