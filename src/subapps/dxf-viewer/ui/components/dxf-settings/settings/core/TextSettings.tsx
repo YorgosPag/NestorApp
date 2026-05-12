@@ -60,16 +60,16 @@ import { HOVER_BACKGROUND_EFFECTS } from '../../../../../../../components/ui/eff
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { TEXT_METRICS_RATIOS, UI_TEXT_INPUT_CONSTRAINTS } from '../../../../../config/text-rendering-config';
 import { useTranslation } from '@/i18n';
-// 🏢 ADR-065: Extracted icons, constants, sub-components, and FactoryResetModal
 import {
   DocumentTextIcon, PaintbrushIcon, SparklesIcon, EyeIcon,
   FREE_FONTS, FONT_SIZE_OPTIONS,
   TextStyleButtons, ScriptStyleButtons, FactoryResetModal,
 } from './text-settings-helpers';
 import { useDxfTextServices, type DxfTextServices } from '../../../../text-toolbar/hooks/useDxfTextServices';
-import { useTextSelectionStore } from '../../../../../state/text-toolbar';
+import { useTextSelectionStore, useTextToolbarStore } from '../../../../../state/text-toolbar';
 import { getGlobalCommandHistory } from '../../../../../core/commands';
 import { UpdateTextStyleCommand, type TextStylePatch } from '../../../../../core/commands/text/UpdateTextStyleCommand';
+import type { DxfColor } from '../../../../../text-engine/types';
 
 function applyStylePatch(patch: TextStylePatch, svc: DxfTextServices, ids: readonly string[]): void {
   const h = getGlobalCommandHistory();
@@ -85,21 +85,14 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
   // Το useUnifiedTextPreview() ενημερώνει localStorage 'dxf-text-preview-settings' (WRONG!)
   // Θέλουμε να ενημερώσουμε το 'dxf-text-general-settings' (CORRECT!)
   const { settings: textSettings, updateSettings: updateTextSettings, resetToDefaults, resetToFactory } = useTextSettingsFromProvider();
-  // Notifications for factory reset feedback
   const notifications = useNotifications();
-  // Factory reset modal state
   const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
-  // Accordion state management
   const { toggleSection, isOpen } = useAccordion('basic');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const services = useDxfTextServices();
   const selectedIds = useTextSelectionStore((s) => s.selectedIds);
   const applyStyle = (p: TextStylePatch) => services && selectedIds.length ? applyStylePatch(p, services, selectedIds) : undefined;
 
-  // 🏢 ENTERPRISE: Removed ~150 lines of duplicate dropdown code
-  // Now using EnterpriseComboBox with built-in search, positioning, ARIA, etc.
-
-  // Handlers
   const STYLE_TO_PATCH: Partial<Record<string, keyof TextStylePatch>> = { isBold: 'bold', isItalic: 'italic', isUnderline: 'underline', isStrikethrough: 'strikethrough' };
   const toggleTextStyle = (style: keyof Pick<typeof textSettings, 'isBold' | 'isItalic' | 'isUnderline' | 'isStrikethrough'>) => {
     const newValue = !textSettings[style];
@@ -121,7 +114,13 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
   };
   const handleColorChange = (color: string) => {
     updateTextSettings({ color });
-    applyStyle({ color });
+    if (selectedIds.length > 0) {
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+      const dxfColor: DxfColor = { kind: 'TrueColor', r, g, b };
+      useTextToolbarStore.getState().setMany({ color: dxfColor });
+    }
   };
   const handleFontFamilyChange = (fontFamily: string) => {
     updateTextSettings({ fontFamily });

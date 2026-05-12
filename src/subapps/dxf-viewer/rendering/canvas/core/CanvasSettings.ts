@@ -10,6 +10,8 @@ import { getDevicePixelRatio } from '../../../systems/cursor/utils';
 // 🏢 ADR-095: Centralized Snap Tolerance
 // 🏢 ADR-034: Centralized Rendering Z-Index
 import { SNAP_TOLERANCE, RENDERING_ZINDEX } from '../../../config/tolerance-config';
+// 🏢 SSoT: Axis/origin defaults — single source of truth
+import { GRID_AXES_DEFAULTS } from '../../../config/grid-axis-defaults';
 
 import type { CrosshairSettings } from '../../ui/crosshair/CrosshairTypes';
 import type { UICursorSettings } from '../../ui/cursor/CursorTypes';
@@ -136,11 +138,11 @@ export class CanvasSettings {
         majorGridWeight: 1.5,
         minorGridWeight: 0.5,
         opacity: 0.5,
-        // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon
-        showOrigin: true,
-        showAxes: true,
-        axesColor: UI_COLORS.RULER_DARK_GRAY,
-        axesWeight: 2,
+        // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon — SSoT: config/grid-axis-defaults.ts
+        showOrigin: GRID_AXES_DEFAULTS.showOrigin,
+        showAxes: GRID_AXES_DEFAULTS.showAxes,
+        axesColor: GRID_AXES_DEFAULTS.axesColor,
+        axesWeight: GRID_AXES_DEFAULTS.axesWeight,
         zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
       },
       rulers: {

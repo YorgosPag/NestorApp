@@ -23,6 +23,8 @@ import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTy
 import type { CursorSettings } from '../../systems/cursor/config';
 import type { GridSettings, RulerSettings, SnapSettings, SelectionSettings } from '../../canvas-v2';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 SSoT: Axis/origin defaults — single source of truth
+import { GRID_AXES_DEFAULTS } from '../../config/grid-axis-defaults';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -274,11 +276,11 @@ export function useCanvasSettings(props: UseCanvasSettingsProps): UseCanvasSetti
     adaptiveOpacity: false, // ❌ DISABLE to always show
     minVisibleSize: 0, // ✅ ALWAYS SHOW regardless of zoom
 
-    // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon (from panel settings)
-    showOrigin: gridContextSettings?.visual?.showOrigin ?? true,
-    showAxes: gridContextSettings?.visual?.showAxes ?? true,
-    axesColor: gridContextSettings?.visual?.axesColor ?? UI_COLORS.RULER_DARK_GRAY,
-    axesWeight: gridContextSettings?.visual?.axesWeight ?? 2,
+    // 🏢 ORIGIN & AXES: fallback to SSoT — config/grid-axis-defaults.ts
+    showOrigin: gridContextSettings?.visual?.showOrigin ?? GRID_AXES_DEFAULTS.showOrigin,
+    showAxes: gridContextSettings?.visual?.showAxes ?? GRID_AXES_DEFAULTS.showAxes,
+    axesColor: gridContextSettings?.visual?.axesColor ?? GRID_AXES_DEFAULTS.axesColor,
+    axesWeight: gridContextSettings?.visual?.axesWeight ?? GRID_AXES_DEFAULTS.axesWeight,
 
     // 🌊 ADAPTIVE GRID — opt-in (default OFF). When OFF, legacy minor+major
     // 2-pass renders with user's panel colors directly. When ON, smoothstep
