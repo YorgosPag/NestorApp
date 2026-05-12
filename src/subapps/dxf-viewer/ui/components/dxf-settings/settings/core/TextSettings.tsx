@@ -66,6 +66,15 @@ import {
   FREE_FONTS, FONT_SIZE_OPTIONS,
   TextStyleButtons, ScriptStyleButtons, FactoryResetModal,
 } from './text-settings-helpers';
+import { useDxfTextServices, type DxfTextServices } from '../../../../text-toolbar/hooks/useDxfTextServices';
+import { useTextSelectionStore } from '../../../../../state/text-toolbar';
+import { getGlobalCommandHistory } from '../../../../../core/commands';
+import { UpdateTextStyleCommand, type TextStylePatch } from '../../../../../core/commands/text/UpdateTextStyleCommand';
+
+function applyStylePatch(patch: TextStylePatch, svc: DxfTextServices, ids: readonly string[]): void {
+  const h = getGlobalCommandHistory();
+  ids.forEach(id => h.execute(new UpdateTextStyleCommand({ entityId: id, patch }, svc.sceneManager, svc.layerProvider, svc.auditRecorder)));
+}
 
 export function TextSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
   const iconSizes = useIconSizes();
@@ -76,27 +85,27 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
   // Το useUnifiedTextPreview() ενημερώνει localStorage 'dxf-text-preview-settings' (WRONG!)
   // Θέλουμε να ενημερώσουμε το 'dxf-text-general-settings' (CORRECT!)
   const { settings: textSettings, updateSettings: updateTextSettings, resetToDefaults, resetToFactory } = useTextSettingsFromProvider();
-
   // Notifications for factory reset feedback
   const notifications = useNotifications();
-
   // Factory reset modal state
   const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
-
   // Accordion state management
   const { toggleSection, isOpen } = useAccordion('basic');
-
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const services = useDxfTextServices();
+  const selectedIds = useTextSelectionStore((s) => s.selectedIds);
+  const applyStyle = (p: TextStylePatch) => services && selectedIds.length ? applyStylePatch(p, services, selectedIds) : undefined;
 
   // 🏢 ENTERPRISE: Removed ~150 lines of duplicate dropdown code
   // Now using EnterpriseComboBox with built-in search, positioning, ARIA, etc.
 
   // Handlers
-
+  const STYLE_TO_PATCH: Partial<Record<string, keyof TextStylePatch>> = { isBold: 'bold', isItalic: 'italic', isUnderline: 'underline', isStrikethrough: 'strikethrough' };
   const toggleTextStyle = (style: keyof Pick<typeof textSettings, 'isBold' | 'isItalic' | 'isUnderline' | 'isStrikethrough'>) => {
-    updateTextSettings({ [style]: !textSettings[style] });
+    const newValue = !textSettings[style];
+    updateTextSettings({ [style]: newValue });
+    const key = STYLE_TO_PATCH[style as string]; if (key) applyStyle({ [key]: newValue } as TextStylePatch);
   };
-
   const handleScriptChange = (scriptType: 'superscript' | 'subscript') => {
     if (scriptType === 'superscript') {
       updateTextSettings({
@@ -110,11 +119,14 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
       });
     }
   };
-
   const handleColorChange = (color: string) => {
     updateTextSettings({ color });
+    applyStyle({ color });
   };
-
+  const handleFontFamilyChange = (fontFamily: string) => {
+    updateTextSettings({ fontFamily });
+    applyStyle({ fontFamily });
+  };
   const increaseFontSize = () => {
     // 🏢 ADR-141: Centralized UI text input constraints
     const newSize = Math.min(UI_TEXT_INPUT_CONSTRAINTS.FONT_SIZE_MAX, textSettings.fontSize + 1);
@@ -274,7 +286,7 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
               </label>
               <Select
                 value={textSettings.fontFamily}
-                onValueChange={(fontFamily) => updateTextSettings({ fontFamily })}
+                onValueChange={handleFontFamilyChange}
               >
                 <SelectTrigger className={`w-full ${colors.bg.secondary}`}>
                   <SelectValue placeholder={t('settings.text.labels.searchFonts')} />
