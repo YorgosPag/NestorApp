@@ -192,14 +192,21 @@ export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
       e.preventDefault();
       e.stopPropagation();
 
-      const delta = -e.deltaY * wheelSensitivity;
-      const factor = 1 + delta;
+      const rect = containerEl.getBoundingClientRect();
+      // Cursor position relative to container center (the zoom origin)
+      const mouseX = e.clientX - rect.left - rect.width / 2;
+      const mouseY = e.clientY - rect.top - rect.height / 2;
 
-      setZoomRaw(prev => {
-        const next = clampZoom(prev * factor);
-        if (next <= 1) setPanOffset(ZERO_OFFSET);
-        return next;
-      });
+      const prevZoom = zoomRef.current;
+      const nextZoom = clampZoom(prevZoom * (1 + -e.deltaY * wheelSensitivity));
+      const ratio = nextZoom / prevZoom;
+      const prevPan = panRef.current;
+
+      // Keep the world point under the cursor fixed after zoom
+      const nextPan = { x: mouseX * (1 - ratio) + prevPan.x * ratio, y: mouseY * (1 - ratio) + prevPan.y * ratio };
+
+      setZoomRaw(nextZoom);
+      setPanOffset(nextPan);
     };
 
     containerEl.addEventListener('wheel', handleWheel, { passive: false });
@@ -211,7 +218,7 @@ export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
   // =========================================================================
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
-    if (e.button !== 0 || zoomRef.current <= 1) return;
+    if (e.button !== 0) return;
     e.preventDefault();
     isPanningRef.current = true;
     setIsPanning(true);
@@ -249,7 +256,7 @@ export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
       pinchZoomRef.current = zoomRef.current;
       isPanningRef.current = false;
       setIsPanning(false);
-    } else if (e.touches.length === 1 && zoomRef.current > 1) {
+    } else if (e.touches.length === 1) {
       // Touch pan start
       isPanningRef.current = true;
       setIsPanning(true);
@@ -294,9 +301,7 @@ export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
     transition: isPanning ? 'none' : 'transform 0.15s ease-out',
   };
 
-  const cursorClass = zoom > 1
-    ? (isPanning ? 'cursor-grabbing' : 'cursor-grab')
-    : 'cursor-default';
+  const cursorClass = isPanning ? 'cursor-grabbing' : 'cursor-grab';
 
   // =========================================================================
   // RETURN
