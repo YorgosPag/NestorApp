@@ -24,6 +24,7 @@
   --ribbon-status-bar-height: 26px;
 
   --ribbon-radius: 2px;
+  --ribbon-tab-radius: 6px;
   --ribbon-z-context-menu: 1100;
 }
 
@@ -58,7 +59,10 @@
   align-items: stretch;
   height: var(--ribbon-tab-bar-height);
   background: var(--ribbon-tab-bar-bg);
-  border-bottom: 1px solid var(--ribbon-separator);
+  /* ADR-345 §6 — No border-bottom: the colour change between
+     --ribbon-tab-bar-bg and --ribbon-bg already separates the bar from
+     the body, AND the active tab (same colour as body) can flow into
+     the panel without a slicing line. AutoCAD/Office 365 pattern. */
 }
 
 .dxf-ribbon-tab-list {
@@ -84,6 +88,8 @@
   cursor: pointer;
   border-right: 1px solid transparent;
   white-space: nowrap;
+  border-top-left-radius: var(--ribbon-tab-radius);
+  border-top-right-radius: var(--ribbon-tab-radius);
 }
 
 .dxf-ribbon-tab:hover {
@@ -94,22 +100,6 @@
   background: var(--ribbon-tab-active);
   color: var(--ribbon-tab-text-active);
   font-weight: 600;
-  position: relative;
-  z-index: 1;
-}
-
-/* ADR-345 §6 — Active tab fuses with ribbon body: a 1px overlay
-   covers the tab-bar border-bottom directly under the active chip,
-   so the chip flows visually into the panel area below. */
-.dxf-ribbon-tab[data-active="true"]::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 1px;
-  background: var(--ribbon-tab-active);
-  pointer-events: none;
 }
 
 .dxf-ribbon-tab[data-contextual="true"] {
