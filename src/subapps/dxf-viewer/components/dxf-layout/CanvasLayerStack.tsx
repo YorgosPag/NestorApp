@@ -353,6 +353,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           onMouseUp={containerHandlers.onMouseUp}
           onMouseEnter={containerHandlers.onMouseEnter}
           onMouseLeave={containerHandlers.onMouseLeave}
+          onDoubleClick={containerHandlers.onDoubleClick}
           onContextMenu={handleDrawingContextMenu}
         >
           {floorId && (

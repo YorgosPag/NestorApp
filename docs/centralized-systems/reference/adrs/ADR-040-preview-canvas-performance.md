@@ -71,6 +71,41 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-12: ADR-344 Phase 6.E — in-canvas TipTap text editor (DBLCLKEDIT)
+
+`components/dxf-layout/CanvasSection.tsx`: mounts `useTextDoubleClickEditor`.
+The hook holds `editingState: { entityId, initial, anchorRect } | null` with
+`useState` and exposes a `handleDoubleClick` callback. CanvasSection threads
+the callback through `containerHandlers.onDoubleClick` (new optional field on
+`canvas-layer-stack-types.ts`) and renders `<TextEditorOverlay>` conditionally
+when `editingState != null`.
+
+Selection is passed via a getter (`getSelectedEntityIds: () =>
+selectedEntityIdsRef.current`), not a snapshot — cardinal rule 2. The ref is
+refreshed every render so event-time reads always observe the latest
+selection even if the orchestrator skips an upstream render. The double-click
+handler activates only when `selectedEntityIds.length === 1` and the entity is
+TEXT/MTEXT; picking-at-point for unselected entities arrives once the canvas
+exposes a public hit-test API (deferred — outside ADR-040 scope).
+
+`CanvasLayerStack.tsx`: the wrapper `<div>` now binds
+`containerHandlers.onDoubleClick` next to the existing mouse handlers. No new
+subscription added — `onDoubleClick` is a DOM event handler that fires only on
+an actual user double-click.
+
+**ADR-040 compliance verified**:
+- Cardinal rule 1 (no orchestrator subscriptions): unchanged. The hook uses
+  `useState` + `useCallback` + `useCurrentSceneModel` (low-rate scene swap)
+  + `useDxfTextServices` (memoised on level/scene change). No
+  `useSyncExternalStore` introduced anywhere in the new path.
+- Cardinal rule 2 (event-time reads): `getSelectedEntityIds` is a getter,
+  never a snapshot.
+- Cardinal rule 3 (bitmap cache key): untouched — the TipTap overlay is a
+  React DOM element on top of the canvas; the bitmap cache is unaware of it,
+  so selection / editing state cannot pollute its key.
+- Cardinal rule 4 (leaf subscriber load): unchanged — the new code paths run
+  only on user double-click and Enter+Ctrl commit (human-event rate).
+
 ### 2026-05-12: ADR-344 Phase 11.C — annotative scaling pipeline integration
 
 `rendering/core/EntityRendererComposite.ts`: `render()` now passes every entity

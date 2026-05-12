@@ -23,8 +23,15 @@ import type { AnnotationScale } from '../../text-engine/types';
 import { useTextPanelLayers } from './hooks/useTextPanelLayers';
 import { useTextPanelFonts } from './hooks/useTextPanelFonts';
 import { useTextPanelDocumentVersion } from './hooks/useTextPanelDocumentVersion';
+import { useTextToolbarSelectionSync } from './hooks/useTextToolbarSelectionSync';
+import { useTextToolbarCommandBridge } from './hooks/useTextToolbarCommandBridge';
 
 export function TextPropertiesPanelHost() {
+  // Phase 6.E — Pick-set → toolbar populate (AutoCAD Properties pattern).
+  useTextToolbarSelectionSync();
+  // Phase 6.E — Toolbar mutations → CommandHistory dispatch.
+  useTextToolbarCommandBridge();
+
   const layers = useTextPanelLayers();
   const availableFonts = useTextPanelFonts();
   const documentVersion = useTextPanelDocumentVersion();

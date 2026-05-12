@@ -144,6 +144,8 @@ export interface CanvasLayerStackProps {
     onMouseUp: (e: React.MouseEvent<HTMLDivElement>) => void;
     onMouseEnter: () => void;
     onMouseLeave: () => void;
+    /** ADR-344 Phase 6.E — double-click → in-canvas text editor (DBLCLKEDIT). */
+    onDoubleClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   };
 
   // === Canvas interaction handlers ===

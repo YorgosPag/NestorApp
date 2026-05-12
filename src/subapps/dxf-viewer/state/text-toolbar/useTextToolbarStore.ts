@@ -62,14 +62,29 @@ export const DEFAULT_TOOLBAR_VALUES: TextToolbarValues = {
 };
 
 interface TextToolbarStore extends TextToolbarValues {
+  /**
+   * True while the toolbar is being populated from the current selection
+   * (Phase 6.E — useTextToolbarSelectionSync). The command bridge
+   * (useTextToolbarCommandBridge) ignores `setValue` / `setMany` events
+   * fired while this flag is on, so populate cycles never re-enter the
+   * CommandHistory.
+   */
+  isPopulating: boolean;
   setValue: <K extends keyof TextToolbarValues>(key: K, value: TextToolbarValues[K]) => void;
   setMany: (values: Partial<TextToolbarValues>) => void;
+  /** Populate the store atomically (sets isPopulating true → false). */
+  populate: (values: Partial<TextToolbarValues>) => void;
   reset: () => void;
 }
 
 export const useTextToolbarStore = create<TextToolbarStore>((set) => ({
   ...DEFAULT_TOOLBAR_VALUES,
+  isPopulating: false,
   setValue: (key, value) => set((state) => ({ ...state, [key]: value })),
   setMany: (values) => set((state) => ({ ...state, ...values })),
-  reset: () => set(() => ({ ...DEFAULT_TOOLBAR_VALUES })),
+  populate: (values) => {
+    set((state) => ({ ...state, ...values, isPopulating: true }));
+    queueMicrotask(() => set(() => ({ isPopulating: false })));
+  },
+  reset: () => set(() => ({ ...DEFAULT_TOOLBAR_VALUES, isPopulating: false })),
 }));

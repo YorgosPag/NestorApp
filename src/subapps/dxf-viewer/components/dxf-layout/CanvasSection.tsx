@@ -55,6 +55,9 @@ import GuideBatchContextMenu, { type GuideBatchContextMenuHandle } from '../../u
 import type { ToolType } from '../../ui/toolbar/types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
+// ADR-344 Phase 6.E — in-canvas text editor (DBLCLKEDIT)
+import { useTextDoubleClickEditor } from '../../ui/text-toolbar/hooks/useTextDoubleClickEditor';
+import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -120,6 +123,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // === Entity interaction state ===
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
+  // ADR-040 cardinal rule 2 — getter (not snapshot) for event-time reads
+  // from sub-orchestrators (e.g. useTextDoubleClickEditor).
+  const selectedEntityIdsRef = useRef<string[]>(selectedEntityIds);
+  selectedEntityIdsRef.current = selectedEntityIds;
+  const getSelectedEntityIds = useCallback(
+    () => selectedEntityIdsRef.current,
+    [],
+  );
   const entitySelectedOnMouseDownRef = useRef(false);
   // 🚀 PERF (2026-05-09 Phase E → 2026-05-10 Phase II): hoveredEntityId +
   // hoveredOverlayId both removed from CanvasSection. HoverStore subscriptions
@@ -391,6 +402,17 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     },
   });
 
+  // === ADR-344 Phase 6.E — In-canvas text editor (DBLCLKEDIT) ===
+  // Holds local React state only — no useSyncExternalStore, no high-freq
+  // subscription. Overlay renders only when a TEXT/MTEXT entity is being
+  // edited. Selection passed via getter (ADR-040 cardinal rule 2).
+  const textEditor = useTextDoubleClickEditor({
+    transformRef,
+    containerRef,
+    executeCommand,
+    getSelectedEntityIds,
+  });
+
   // === Render ===
   return (
     <>
@@ -407,7 +429,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         entityState={{ selectedEntityIds, setSelectedEntityIds }}
         zoomSystem={zoomSystem} dxfGripInteraction={unified.dxfProjection} universalSelection={universalSelection}
         setTransform={setTransform}
-        containerHandlers={{ onMouseMove: handleContainerMouseMove, onMouseDown: handleContainerMouseDown, onMouseUp: handleContainerMouseUp, onMouseEnter: handleContainerMouseEnter, onMouseLeave: handleContainerMouseLeave }}
+        containerHandlers={{ onMouseMove: handleContainerMouseMove, onMouseDown: handleContainerMouseDown, onMouseUp: handleContainerMouseUp, onMouseEnter: handleContainerMouseEnter, onMouseLeave: handleContainerMouseLeave, onDoubleClick: textEditor.handleDoubleClick }}
         handleOverlayClick={handleOverlayClick} handleMultiOverlayClick={handleMultiOverlayClick}
         handleCanvasClick={handleCanvasClick} handleUnifiedMouseMove={unified.handleMouseMove}
         handleDrawingContextMenu={handleDrawingContextMenu}
@@ -441,6 +463,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onGroupSelected={() => { const store = guideState.getStore(); const group = store.addGroup(`Group ${Date.now()}`); if (group) { for (const gid of guideWorkflows.selectedGuideIds) store.setGuideGroupId(gid, group.id); } }}
         onCancel={() => guideBatchMenuRef.current?.close()} />
       <PromptDialog />
+      {textEditor.editingState && (
+        <TextEditorOverlay
+          entityId={textEditor.editingState.entityId}
+          initial={textEditor.editingState.initial}
+          anchorRect={textEditor.editingState.anchorRect}
+          onCommit={textEditor.onCommit}
+          onCancel={textEditor.onCancel}
+        />
+      )}
     </>
   );
 };
