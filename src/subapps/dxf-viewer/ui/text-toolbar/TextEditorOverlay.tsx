@@ -23,9 +23,11 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import TextStyle from '@tiptap/extension-text-style';
-import Color from '@tiptap/extension-color';
-import FontFamily from '@tiptap/extension-font-family';
+// TipTap v3: TextStyle, Color and FontFamily are all named exports of the
+// consolidated `@tiptap/extension-text-style` package — the standalone
+// `@tiptap/extension-color` / `extension-font-family` modules no longer
+// expose a default export. See ADR-344 Phase 6.E commit.
+import { TextStyle, Color, FontFamily } from '@tiptap/extension-text-style';
 import type { Doc as YDoc } from 'yjs';
 import { cn } from '@/lib/utils';
 import { dxfTextExtensions } from '../../text-engine/edit';
