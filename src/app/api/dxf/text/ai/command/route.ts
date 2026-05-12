@@ -17,7 +17,6 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { isRecord } from '@/lib/type-guards';
-import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { TEXT_AI_SYSTEM_PROMPT } from '@/subapps/dxf-viewer/text-engine/ai/system-prompt';
@@ -101,7 +100,12 @@ async function callOpenAIIntent(
     const rawText = extractOutputText(payload);
     if (!rawText) throw new Error('Empty OpenAI response');
 
-    const parsed = safeJsonParse(rawText) as TextAIIntentFlat | null;
+    let parsed: TextAIIntentFlat | null;
+    try {
+      parsed = JSON.parse(rawText) as TextAIIntentFlat;
+    } catch {
+      parsed = null;
+    }
     if (!parsed || typeof parsed.command !== 'string') throw new Error('Invalid intent shape');
     return parsed;
   } finally {

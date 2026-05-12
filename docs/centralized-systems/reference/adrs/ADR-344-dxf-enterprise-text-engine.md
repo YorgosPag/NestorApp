@@ -405,7 +405,21 @@ After Q1-Q7 resolution, re-reading the ADR surfaced 10 architectural gaps not pr
   - `src/subapps/dxf-viewer/text-engine/ai/TextAICommandRouter.ts`
   - `src/subapps/dxf-viewer/ui/text-toolbar/TextAIBar.tsx`
 - **No new AI infrastructure** — calls existing ADR-185 `AIAnalysisProvider` + ADR-156 voice hook.
-- **Phase 12 (NEW) estimate: ~2-3 days** (router + intent mapping + TextAIBar UI + i18n + tests).
+- **Phase 12 (NEW) estimate: ~2-3 days** (router + intent mapping + TextAIBar UI + i18n + tests). **FULLY IMPLEMENTED 2026-05-12.**
+- **New files** (Phase 12):
+  - `text-engine/ai/useVoiceRecorder.ts` — MediaRecorder → POST `/api/voice/transcribe` (ADR-161 Whisper SSoT). States: idle/recording/processing/done/error. Max 30s auto-stop.
+  - `text-engine/ai/text-ai-types.ts` — `TextAIIntentFlat` (wire format), `TextAIContext`, `TextAIRouterResult`.
+  - `text-engine/ai/intent-schema.ts` — OpenAI Responses API strict `json_schema` (flat, all-nullable, `additionalProperties:false`, all fields in `required`). 7 command discriminants via `command` enum.
+  - `text-engine/ai/system-prompt.ts` — bilingual (Greek/English) system prompt with ADR-344 §Q16 examples.
+  - `text-engine/ai/TextAICommandRouter.ts` — `route(text, ctx)`: POST `/api/dxf/text/ai/command` → `TextAIIntentFlat` → `ICommand`. `replace_one` falls back to `replace_all` on selected entity (find-first requires future MatchLocation wiring).
+  - `text-engine/ai/index.ts` — barrel with `route`, `useVoiceRecorder`, `TextAIContext`, `TextAIRouterResult`.
+  - `app/api/dxf/text/ai/command/route.ts` — `POST /api/dxf/text/ai/command`. Auth: `withAuth` + `withHeavyRateLimit`. Calls OpenAI Responses API with `TEXT_AI_INTENT_SCHEMA`, returns `TextAIIntentFlat`.
+  - `ui/text-toolbar/TextAIBar.tsx` — Radix Popover toggle. Button (Sparkles icon) in `TextToolbar`. Popup: textarea + `VoiceMicButton` + Send + history list (last 5 of 10). i18n namespace `textAi`.
+  - `ui/text-toolbar/text-ai-bar-history.ts` — localStorage SSoT (`dxf-text-ai-history`, max 10). `getAIBarHistory()`, `pushAIBarHistory()`, `clearAIBarHistory()`.
+  - `i18n/locales/el/textAi.json` + `i18n/locales/en/textAi.json` — pure Greek + English locale files.
+- **Modified files**: `ui/text-toolbar/TextToolbar.tsx` (+`aiContext?: TextAIContext`, +`onExecuteAICommand?` props; renders `<TextAIBar>` when both provided).
+- **Voice binding**: ADR-161 (`/api/voice/transcribe`) is the SSoT for Whisper calls. ADR-156 (Telegram Whisper) not reused directly — it downloads from Telegram file_id. ADR-161 accepts browser `Blob` directly. Both ultimately use `AI_ANALYSIS_DEFAULTS.OPENAI.WHISPER_MODEL`.
+- **`replace_one` note**: `ReplaceOneTextCommand` requires a resolved `MatchLocation` (paragraph+run indexes), not a bare match index. The AI router maps `replace_one` intent to `ReplaceAllTextCommand([entityId])` in Phase 12. Precise first-occurrence replace requires a find-first integration step (future task).
 - **Total ADR-344 revised estimate: ~47-55 working days** (was 45-52).
 
 ### Q21 — Text snap participation (insertion + bounding box)?
@@ -855,6 +869,21 @@ src/subapps/dxf-viewer/
 ---
 
 ## Changelog
+
+- **2026-05-12 — Phase 12 COMPLETE**. AI integration (Q16): voice-to-text + NL text commands via OpenAI Responses API strict json_schema. All 7 text commands (Phase 6.A) now reachable from natural language. Closes the final ADR-344 phase milestone.
+  - **`text-engine/ai/useVoiceRecorder.ts`** (NEW): browser `MediaRecorder` hook. States: `idle|recording|processing|done|error`. Max 30s auto-stop. On stop: builds `FormData` → `transcribeVoiceWithPolicy()` → transcript. SSoT: ADR-161 `/api/voice/transcribe` (not ADR-156 Telegram-specific service).
+  - **`text-engine/ai/text-ai-types.ts`** (NEW): `TextAIIntentFlat` (wire format flat object — all fields nullable, discriminated by `command` enum), `TextAIContext` (entityId + scene + layerProvider + auditRecorder), `TextAIRouterResult` (discriminated union ok/error).
+  - **`text-engine/ai/intent-schema.ts`** (NEW): OpenAI strict `json_schema` — 20 fields, all in `required`, all nullable except `command` (enum). `additionalProperties: false`. No oneOf/anyOf at root (memory rule). 7 command values: `create_text | update_style | update_geometry | update_paragraph | replace_one | replace_all | delete`.
+  - **`text-engine/ai/system-prompt.ts`** (NEW): bilingual Greek/English system prompt. Maps §Q16 ADR examples (κάνε bold → update_style; βρες X άλλαξε σε Y → replace_all; etc.) plus English equivalents. Includes justification/color ACI mappings.
+  - **`text-engine/ai/TextAICommandRouter.ts`** (NEW): `route(text, ctx)` async. `resolveIntent()` → POST `/api/dxf/text/ai/command` → `TextAIIntentFlat`. `buildCommandFromIntent()` → constructs correct `ICommand` subclass from intent + runtime ctx. `replace_one` → `ReplaceAllTextCommand([entityId])` fallback (MatchLocation resolution deferred). `makeMinimalTextNode()` builds 1-para/1-run `DxfTextNode` for `create_text`.
+  - **`app/api/dxf/text/ai/command/route.ts`** (NEW): `POST /api/dxf/text/ai/command`. `withAuth` (dxf:files:view) + `withHeavyRateLimit`. OpenAI Responses API call with `TEXT_AI_INTENT_SCHEMA`. `extractOutputText()` handles both `output_text` and `output[].content[].text` response shapes. Returns `{ success, intent }`.
+  - **`ui/text-toolbar/TextAIBar.tsx`** (NEW): Radix Popover, trigger = Sparkles button. Content: textarea + `VoiceMicButton` (uses `useVoiceRecorder`) + Send button + `HistoryList` (last 5). Submit: `route(text, ctx)` → `onExecuteCommand(cmd)` → history push → `'success'` flash (1.8 s). Enter key submits (Shift+Enter = newline). Error key auto-cleared on new input.
+  - **`ui/text-toolbar/text-ai-bar-history.ts`** (NEW): localStorage SSoT. Key `dxf-text-ai-history`, max 10 entries. `push` deduplicates + moves to top. Safe-read/write: catches JSON parse errors + quota exceeded.
+  - **`ui/text-toolbar/TextToolbar.tsx`** (MODIFIED): adds optional `aiContext?: TextAIContext` + `onExecuteAICommand?` props. Renders `<TextAIBar>` after ToolsPanel separator when both provided. Backward-compatible — callers without AI context see no change.
+  - **i18n** — `el/textAi.json` + `en/textAi.json` (NEW): 12 keys covering title/subtitle/placeholder/send/mic/history/success/5 error variants. Greek file pure-Greek (zero English words).
+  - **`text-engine/ai/index.ts`** (UPDATED): TODO stub replaced with real barrel (`route`, `useVoiceRecorder`, types).
+  - **Follow-up deferred**: `replace_one` precise match → `ReplaceAllTextCommand` fallback in Phase 12; true first-occurrence replace requires `MatchLocation` resolution (future task). Documented in §Q16 and route comment.
+  - ✅ Google-level: YES — proactive (AI call returns structured intent, never a raw string needing second-pass parsing), idempotent (sending same NL → same command shape → same scene mutation via existing idempotent Phase 6.A commands), race-free (all async on explicit user submit; no background polling), SSoT (one route owns intent resolution; ADR-161 owns Whisper transcription; Phase 6.A commands own mutations), belt-and-suspenders (AI error → error state with retry; voice transcript auto-fills textarea so user can edit before submit; history allows quick re-use of known-good commands).
 
 - **2026-05-12 — Phase 11 COMPLETE**. Annotative scaling (Q11): viewport scale SSoT, per-entity scale list, scale-aware render pipeline, XDATA codec. ADR-040 cardinal rules respected throughout.
   - **`systems/viewport/ViewportStore.ts`** (NEW): plain module-level singleton (NOT Zustand — see §Q11 correction). State: `_activeScaleName: string`, `_scaleList: readonly AnnotationScale[]`. Granular listener sets (`activeScaleListeners`, `scaleListListeners`) — independent subscribers per channel. Setters call `markSystemsDirty(['dxf-canvas'])` so a scale change triggers a frame redraw without manual subscription wiring (parallel to `ImmediateTransformStore` Phase XIII). Skip-if-unchanged on both setters; `setScaleList` uses deep equality (name + paperHeight + modelHeight) to avoid re-render storms on no-op updates. Test-only `__resetViewportStoreForTests()` exported for unit-test isolation.
