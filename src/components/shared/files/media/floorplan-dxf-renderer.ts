@@ -34,6 +34,28 @@ export const DRAWING_MODE_CONFIG = {
 } as const;
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Extract the explicit run-level color from a textNode AST (ADR-344).
+ * Mirrors useDxfSceneConversion.extractFirstRunStyle — reads only the TrueColor
+ * from the first run so the gallery matches the DXF-viewer canvas color exactly.
+ * Returns undefined for ByLayer / ByBlock (inherit from entity/layer color chain).
+ */
+function extractTextNodeColor(e: Record<string, unknown>): string | undefined {
+  type TrueColor = { kind: string; r: number; g: number; b: number };
+  type TextRun = { style?: { color?: TrueColor } };
+  type TextParagraph = { runs?: TextRun[] };
+  type TextNodeShape = { paragraphs?: TextParagraph[] };
+  const textNode = e.textNode as TextNodeShape | undefined;
+  const run = textNode?.paragraphs?.[0]?.runs?.[0];
+  const color = run?.style?.color;
+  if (!color || color.kind !== 'TrueColor') return undefined;
+  return `#${color.r.toString(16).padStart(2, '0')}${color.g.toString(16).padStart(2, '0')}${color.b.toString(16).padStart(2, '0')}`;
+}
+
+// ============================================================================
 // CANVAS RENDERING
 // ============================================================================
 
@@ -77,9 +99,12 @@ export function renderDxfToCanvas(
   const offsetX = (canvas.width - drawingWidth * scale) / 2 + panOffset.x;
   const offsetY = (canvas.height - drawingHeight * scale) / 2 + panOffset.y;
 
-  // Layer color helper — respects drawing mode
-  const getLayerColor = (layerName: string): string =>
-    modeConfig.entityColor || scene.layers?.[layerName]?.color || '#e2e8f0';
+  // Entity color helper — resolution order: mode override → entity.color → layer.color → fallback.
+  // Light mode forces '#1a1a1a' for all entities (print readability).
+  // Dark mode uses entity.color when set (preserves user-chosen colors from DXF Viewer),
+  // then falls back to layer color.
+  const getEntityColor = (layerName: string, entityColor?: string): string =>
+    modeConfig.entityColor || entityColor || scene.layers?.[layerName]?.color || '#e2e8f0';
 
   ctx.lineWidth = 1;
 
@@ -87,10 +112,9 @@ export function renderDxfToCanvas(
   scene.entities.forEach((entity) => {
     if (scene.layers?.[entity.layer]?.visible === false) return;
 
-    const layerColor = getLayerColor(entity.layer);
-    ctx.strokeStyle = layerColor;
-
     const e = entity as Record<string, unknown>;
+    const resolvedColor = getEntityColor(entity.layer, e.color as string | undefined);
+    ctx.strokeStyle = resolvedColor;
 
     switch (entity.type) {
       case 'line': {
@@ -192,7 +216,9 @@ export function renderDxfToCanvas(
         }
         const height = e.height as number | undefined;
         if (position && text) {
-          ctx.fillStyle = layerColor;
+          // Text color priority: mode override → textNode TrueColor → entity.color → layer → fallback
+          const textRunColor = extractTextNodeColor(e);
+          ctx.fillStyle = modeConfig.entityColor || textRunColor || resolvedColor;
           ctx.font = `${Math.max(8, (height || 10) * scale)}px Arial`;
           ctx.fillText(
             text,
