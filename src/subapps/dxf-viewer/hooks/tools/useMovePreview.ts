@@ -265,6 +265,7 @@ function drawTranslatedGhostEntity(
       const height = (e as { height?: number }).height ?? 12;
       const fontSize = Math.max(8, height * transform.scale);
       ctx.font = `${fontSize}px sans-serif`;
+      ctx.textBaseline = 'top'; // match TextRenderer default (position = TOP of text)
       ctx.fillStyle = '#00BFFF';
       ctx.fillText(flatText, pos.x, pos.y);
       ctx.restore();
