@@ -214,6 +214,20 @@ const nextConfig = {
               from: path.join(pdfjsDistPath, 'build/pdf.worker.min.mjs'),
               to: path.join(__dirname, 'public/pdf.worker.min.mjs'),
             },
+            // [ADR-344 Phase 8] Greek Hunspell dictionary (MPL 1.1 LibreOffice).
+            // The spell-check Web Worker fetches these at runtime via
+            // /_next/static/dxf/dictionaries/el_GR/*. They are intentionally
+            // shipped as data assets, not bundled into JS chunks, so the
+            // dictionary load stays lazy and out of the initial bundle.
+            {
+              from: path.join(
+                __dirname,
+                'src/subapps/dxf-viewer/text-engine/spell/dictionaries/el_GR',
+              ),
+              to: path.join(__dirname, 'public/_next/static/dxf/dictionaries/el_GR'),
+              filter: (resourcePath) =>
+                resourcePath.endsWith('.aff') || resourcePath.endsWith('.dic'),
+            },
           ],
         })
       );

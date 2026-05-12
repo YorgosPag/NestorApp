@@ -1826,3 +1826,23 @@ body [data-navigation-scroll="true"]::-webkit-scrollbar-corner {
 .dscr-adequate { @apply text-blue-700 dark:text-blue-400; }
 .dscr-warning  { @apply text-amber-700 dark:text-amber-400; }
 .dscr-danger   { @apply text-red-700 dark:text-red-400; }
+
+/* =============================================================================
+ * ✍️ DXF TEXT ENGINE — Spell Check (ADR-344 Phase 8)
+ * ============================================================================= */
+
+/**
+ * Red wavy underline for mis-spelled words inside the TipTap editor.
+ * Applied by the `dxfSpellCheck` ProseMirror plugin via DecorationSet.
+ * Class is co-located with the TipTap extension that emits it
+ * (`src/subapps/dxf-viewer/text-engine/edit/spell-check-extension.ts`).
+ */
+.spell-error {
+  text-decoration: underline wavy #ef4444;
+  text-underline-offset: 2px;
+  text-decoration-skip-ink: none;
+  cursor: help;
+}
+.dark .spell-error {
+  text-decoration-color: #f87171;
+}
