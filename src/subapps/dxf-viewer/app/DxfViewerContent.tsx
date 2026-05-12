@@ -111,6 +111,8 @@ import {
   CONTEXTUAL_TEXT_EDITOR_TAB,
   TEXT_EDITOR_CONTEXTUAL_TRIGGER,
 } from '../ui/ribbon/data/contextual-text-editor-tab';
+// 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
+import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEditorBridge';
 
 // ✅ PERFORMANCE: Memoize the main component
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
@@ -129,6 +131,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     () => [CONTEXTUAL_TEXT_EDITOR_TAB],
     [],
   );
+  // ADR-345 Fase 5.5 — text editor bridge (toggle/combobox state + handlers).
+  const textEditorBridge = useRibbonTextEditorBridge();
   const eventBus = useEventBus();
   const colors = useSemanticColors();
   const { copy: copyToClipboard } = useCopyToClipboard();
@@ -308,6 +312,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
             onToolChange: handleToolChange,
             onComingSoon: handleRibbonComingSoon,
             onAction: handleAction,
+            onToggle: textEditorBridge.onToggle,
+            onComboboxChange: textEditorBridge.onComboboxChange,
+            getToggleState: textEditorBridge.getToggleState,
+            getComboboxState: textEditorBridge.getComboboxState,
           }}
           contextualTabs={ribbonContextualTabs}
           activeContextualTrigger={activeContextualTrigger}

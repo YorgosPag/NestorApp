@@ -406,11 +406,33 @@
         "four": "Four Viewports"
       },
       "textEditor": {
-        "fontPlaceholder": "Font (soon)",
-        "paragraphPlaceholder": "Paragraph (soon)",
-        "propertiesPlaceholder": "Properties (soon)",
-        "insertPlaceholder": "Insert (soon)",
-        "editorPlaceholder": "Editor (soon)"
+        "font": {
+          "family": "Font",
+          "height": "Height"
+        },
+        "style": {
+          "bold": "Bold",
+          "italic": "Italic",
+          "underline": "Underline"
+        },
+        "paragraph": {
+          "alignLeft": "Align Left",
+          "alignCenter": "Align Center",
+          "alignRight": "Align Right",
+          "lineSpacing": "Line Spacing"
+        },
+        "properties": {
+          "layer": "Layer",
+          "annotationScale": "Annotation Scale"
+        },
+        "insert": {
+          "symbol": "Symbol",
+          "field": "Field"
+        },
+        "editor": {
+          "findReplace": "Find and Replace",
+          "spellCheck": "Spell Check"
+        }
       },
       "dropdown": {
         "openVariants": "Open variants"

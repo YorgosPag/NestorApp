@@ -7,6 +7,22 @@
 export type ButtonSize = 'large' | 'small';
 export type ButtonType = 'simple' | 'split' | 'toggle' | 'dropdown' | 'combobox';
 
+/**
+ * ADR-345 §4.5 Fase 5.5 — One option entry for a RibbonCombobox button.
+ * Static option lists (e.g. lineSpacing 1.0/1.5/2.0) live on the data
+ * declaration. Dynamic option lists (fonts, layers, scales) come from
+ * the bridge via `getComboboxState(commandKey).options` and override
+ * the static list at runtime.
+ */
+export interface RibbonComboboxOption {
+  /** Stable value passed through onComboboxChange. */
+  value: string;
+  /** i18n key OR ready-to-render label (used for dynamic options like font names). */
+  labelKey: string;
+  /** When true, `labelKey` is already a literal — do NOT pass through t(). */
+  isLiteralLabel?: boolean;
+}
+
 export interface RibbonCommand {
   id: string;
   labelKey: string;
@@ -29,6 +45,18 @@ export interface RibbonCommand {
    */
   action?: string;
   actionData?: number | string | Record<string, unknown>;
+  /**
+   * ADR-345 §4.5 Fase 5.5 — Static option list for a combobox button.
+   * Used when options are known at data-declaration time (e.g. line
+   * spacing presets). For dynamic lists (fonts, layers, scales) leave
+   * undefined and rely on the bridge's getComboboxState().options.
+   */
+  options?: readonly RibbonComboboxOption[];
+  /**
+   * ADR-345 §4.5 Fase 5.5 — Trigger width in px for a combobox button.
+   * Applied as a CSS variable on the trigger element. Defaults to 140.
+   */
+  comboboxWidthPx?: number;
 }
 
 export interface RibbonButton {

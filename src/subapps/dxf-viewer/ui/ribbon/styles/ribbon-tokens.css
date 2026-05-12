@@ -525,3 +525,40 @@
   color: var(--ribbon-text-muted);
   cursor: not-allowed;
 }
+
+/* ─── ADR-345 §4.4 Fase 5.5 — Toggle button pressed/mixed states ─── */
+
+.dxf-ribbon-btn-toggle[data-pressed="true"] {
+  background: var(--ribbon-btn-active);
+  color: #FFFFFF;
+}
+
+.dxf-ribbon-btn-toggle[data-pressed="true"]:hover {
+  background: var(--ribbon-btn-active);
+  filter: brightness(1.1);
+}
+
+.dxf-ribbon-btn-toggle[data-mixed="true"] {
+  border: 1px dashed var(--ribbon-separator);
+  background: transparent;
+  color: var(--ribbon-text);
+}
+
+/* ─── ADR-345 §4.5 Fase 5.5 — Combobox trigger sizing ─── */
+
+.dxf-ribbon-combobox-trigger {
+  width: var(--ribbon-combobox-width, 140px);
+  min-width: 60px;
+  height: 24px;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+.dxf-ribbon-combobox-trigger[data-mixed="true"] {
+  border-style: dashed;
+}
+
+.dxf-ribbon-combobox-trigger[data-coming-soon="true"] {
+  opacity: 0.55;
+  font-style: italic;
+}

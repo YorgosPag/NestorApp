@@ -11,6 +11,8 @@ import { PanelLabel } from './PanelLabel';
 import { RibbonLargeButton } from './buttons/RibbonLargeButton';
 import { RibbonSmallButton } from './buttons/RibbonSmallButton';
 import { RibbonSplitButton } from './buttons/RibbonSplitButton';
+import { RibbonToggleButton } from './buttons/RibbonToggleButton';
+import { RibbonCombobox } from './buttons/RibbonCombobox';
 
 interface RibbonPanelProps {
   panel: RibbonPanelDef;
@@ -20,6 +22,13 @@ function renderButton(button: RibbonButton): React.ReactNode {
   const key = button.command.id;
   if (button.type === 'split') {
     return <RibbonSplitButton key={key} button={button} />;
+  }
+  // ADR-345 §4.4-4.5 Fase 5.5 — toggle/combobox sit alongside simple types.
+  if (button.type === 'toggle') {
+    return <RibbonToggleButton key={key} command={button.command} />;
+  }
+  if (button.type === 'combobox') {
+    return <RibbonCombobox key={key} command={button.command} />;
   }
   if (button.size === 'large') {
     return <RibbonLargeButton key={key} command={button.command} />;

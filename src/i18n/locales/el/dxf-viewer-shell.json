@@ -406,11 +406,33 @@
         "four": "Τέσσερα Παράθυρα"
       },
       "textEditor": {
-        "fontPlaceholder": "Γραμματοσειρά (σύντομα)",
-        "paragraphPlaceholder": "Παράγραφος (σύντομα)",
-        "propertiesPlaceholder": "Ιδιότητες (σύντομα)",
-        "insertPlaceholder": "Εισαγωγή (σύντομα)",
-        "editorPlaceholder": "Επεξεργαστής (σύντομα)"
+        "font": {
+          "family": "Γραμματοσειρά",
+          "height": "Ύψος"
+        },
+        "style": {
+          "bold": "Έντονα",
+          "italic": "Πλάγια",
+          "underline": "Υπογράμμιση"
+        },
+        "paragraph": {
+          "alignLeft": "Στοίχιση Αριστερά",
+          "alignCenter": "Στοίχιση Κέντρο",
+          "alignRight": "Στοίχιση Δεξιά",
+          "lineSpacing": "Διάστιχο"
+        },
+        "properties": {
+          "layer": "Επίπεδο",
+          "annotationScale": "Κλίμακα Σχολιασμού"
+        },
+        "insert": {
+          "symbol": "Σύμβολο",
+          "field": "Πεδίο"
+        },
+        "editor": {
+          "findReplace": "Εύρεση και Αντικατάσταση",
+          "spellCheck": "Ορθογραφικός Έλεγχος"
+        }
       },
       "dropdown": {
         "openVariants": "Άνοιγμα παραλλαγών"
