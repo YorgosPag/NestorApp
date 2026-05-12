@@ -22,6 +22,7 @@ import {
   type ILayerAccessProvider,
 } from './types';
 import { assertCanEditLayer } from './CanEditLayerGuard';
+import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
 
 export interface ReplaceTextNodeCommandInput {
   readonly entityId: string;
@@ -54,7 +55,7 @@ export class ReplaceTextNodeCommand implements ICommand {
     if (!entity) return;
     assertCanEditLayer({ layerName: entity.layer, provider: this.layerProvider });
 
-    if (!this.snapshot) this.snapshot = entity.textNode;
+    if (!this.snapshot) this.snapshot = ensureTextNode(entity);
     this.sceneManager.updateEntity(this.input.entityId, {
       textNode: this.input.nextNode,
     });

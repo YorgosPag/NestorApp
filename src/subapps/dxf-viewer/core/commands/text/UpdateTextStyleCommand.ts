@@ -22,6 +22,7 @@ import {
 } from './types';
 import { assertCanEditLayer } from './CanEditLayerGuard';
 import { buildShallowDiff } from './diff-helpers';
+import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
 
 export type TextStylePatch = Partial<TextRunStyle>;
 
@@ -73,10 +74,11 @@ export class UpdateTextStyleCommand implements ICommand {
     if (!entity) return;
     assertCanEditLayer({ layerName: entity.layer, provider: this.layerProvider });
 
-    if (!this.snapshot) this.snapshot = entity.textNode;
+    const safeNode = ensureTextNode(entity);
+    if (!this.snapshot) this.snapshot = safeNode;
     const nextNode: DxfTextNode = {
-      ...entity.textNode,
-      paragraphs: applyToRuns(entity.textNode.paragraphs, this.input.patch),
+      ...safeNode,
+      paragraphs: applyToRuns(safeNode.paragraphs, this.input.patch),
     };
     this.sceneManager.updateEntity(this.input.entityId, { textNode: nextNode });
     this.wasExecuted = true;

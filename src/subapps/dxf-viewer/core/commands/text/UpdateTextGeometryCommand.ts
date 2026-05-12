@@ -21,6 +21,7 @@ import {
 } from './types';
 import { assertCanEditLayer } from './CanEditLayerGuard';
 import { buildShallowDiff } from './diff-helpers';
+import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
 
 export interface GeometryPatch {
   /** Absolute insertion point (drawing units). */
@@ -69,22 +70,23 @@ export class UpdateTextGeometryCommand implements ICommand {
     if (!entity) return;
     assertCanEditLayer({ layerName: entity.layer, provider: this.layerProvider });
 
+    const safeNode = ensureTextNode(entity);
     if (!this.snapshot) {
       this.snapshot = {
         position: entity.position,
-        rotation: entity.textNode.rotation,
-        width: entity.textNode.columns?.width,
-        textNode: entity.textNode,
+        rotation: safeNode.rotation,
+        width: safeNode.columns?.width,
+        textNode: safeNode,
       };
     }
 
     const { patch } = this.input;
     const nextNode: DxfTextNode = {
-      ...entity.textNode,
-      rotation: patch.rotation ?? entity.textNode.rotation,
-      columns: entity.textNode.columns && patch.width !== undefined
-        ? { ...entity.textNode.columns, width: patch.width }
-        : entity.textNode.columns,
+      ...safeNode,
+      rotation: patch.rotation ?? safeNode.rotation,
+      columns: safeNode.columns && patch.width !== undefined
+        ? { ...safeNode.columns, width: patch.width }
+        : safeNode.columns,
     };
     const nextPosition = patch.position ?? entity.position;
     this.sceneManager.updateEntity(this.input.entityId, {

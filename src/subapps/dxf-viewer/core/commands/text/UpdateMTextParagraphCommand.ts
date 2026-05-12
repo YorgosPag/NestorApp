@@ -21,6 +21,7 @@ import {
 } from './types';
 import { assertCanEditLayer } from './CanEditLayerGuard';
 import { buildShallowDiff } from './diff-helpers';
+import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
 
 type ParagraphFields = Omit<TextParagraph, 'runs'>;
 export type ParagraphPatch = Partial<ParagraphFields>;
@@ -69,16 +70,17 @@ export class UpdateMTextParagraphCommand implements ICommand {
       | undefined;
     if (!entity) return;
     assertCanEditLayer({ layerName: entity.layer, provider: this.layerProvider });
-    if (!this.snapshot) this.snapshot = entity.textNode;
+    const safeNode = ensureTextNode(entity);
+    if (!this.snapshot) this.snapshot = safeNode;
 
     const nextNode: DxfTextNode = {
-      ...entity.textNode,
+      ...safeNode,
       paragraphs: applyParagraphPatch(
-        entity.textNode.paragraphs,
+        safeNode.paragraphs,
         this.input.patch,
         this.input.paragraphIndex,
       ),
-      columns: this.input.columns ?? entity.textNode.columns,
+      columns: this.input.columns ?? safeNode.columns,
     };
     this.sceneManager.updateEntity(this.input.entityId, { textNode: nextNode });
     this.wasExecuted = true;
