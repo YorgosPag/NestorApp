@@ -1,0 +1,75 @@
+{
+  "toolbar": {
+    "toggle": "Spell check",
+    "toggleOn": "Enable spell check",
+    "toggleOff": "Disable spell check"
+  },
+  "contextMenu": {
+    "addToDictionary": "Add to dictionary",
+    "suggestions": "Suggestions",
+    "noSuggestions": "No suggestions available",
+    "addedToDictionary": "Added to dictionary",
+    "removeFromDictionary": "Remove from dictionary"
+  },
+  "manager": {
+    "title": "Company dictionary",
+    "subtitle": "Manage spell-check terms",
+    "empty": "No dictionary entries yet.",
+    "addButton": "Add term",
+    "filterByLanguage": "Filter by language",
+    "allLanguages": "All languages",
+    "columns": {
+      "term": "Term",
+      "language": "Language",
+      "createdBy": "Added by",
+      "createdAt": "Date",
+      "actions": "Actions"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    }
+  },
+  "languages": {
+    "el": "Greek",
+    "en": "English"
+  },
+  "editorDialog": {
+    "addTitle": "New dictionary term",
+    "editTitle": "Edit term",
+    "termLabel": "Term",
+    "termPlaceholder": "e.g. masonry",
+    "termHint": "A single word without spaces (max 80 characters).",
+    "languageLabel": "Language",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…"
+  },
+  "deleteDialog": {
+    "title": "Delete term",
+    "message": "Are you sure you want to delete the term '{term}'? This cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
+  },
+  "validation": {
+    "termEmpty": "Term cannot be empty.",
+    "termTooLong": "Term exceeds the {max}-character limit.",
+    "termHasWhitespace": "Term must be a single word, no spaces.",
+    "termHasLeadingOrTrailingWhitespace": "Term cannot start or end with whitespace."
+  },
+  "errors": {
+    "duplicate": "The term '{term}' already exists in your dictionary.",
+    "forbidden": "You do not have permission to perform this action.",
+    "notFound": "Term not found. It may have been deleted by another user.",
+    "generic": "An error occurred. Please try again."
+  },
+  "feedback": {
+    "addedSuccess": "Term '{term}' added to dictionary.",
+    "updatedSuccess": "Term updated.",
+    "deletedSuccess": "Term '{term}' deleted."
+  },
+  "engine": {
+    "loadingDictionary": "Loading dictionary…",
+    "dictionaryLoadFailed": "Failed to load the dictionary. Spell check is unavailable."
+  }
+}

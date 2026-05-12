@@ -24,6 +24,8 @@ import {
   DxfColorMark,
 } from './marks';
 import { StackNode } from './nodes';
+import { createSpellCheckExtension } from './spell-check-extension';
+import type { CustomTermPayload, SpellLanguage } from '../spell';
 
 /**
  * All DXF-specific TipTap extensions in canonical order.
@@ -41,6 +43,28 @@ export const dxfTextExtensions: Extensions = [
   // Inline nodes
   StackNode,
 ];
+
+/**
+ * Build the DXF text extension list including the ADR-344 Phase 8 spell
+ * check extension. Callers that already mount `dxfTextExtensions` opt into
+ * spell check by switching to this builder + passing the company's custom
+ * dictionary entries.
+ */
+export function buildDxfTextExtensionsWithSpell(opts: {
+  readonly languages?: readonly SpellLanguage[];
+  readonly initialCustomTerms: readonly CustomTermPayload[];
+  readonly spellEnabled: boolean;
+}): Extensions {
+  return [
+    ...dxfTextExtensions,
+    createSpellCheckExtension({
+      languages: opts.languages ?? ['el', 'en'],
+      initialCustomTerms: opts.initialCustomTerms,
+      enabled: opts.spellEnabled,
+      debounceMs: 300,
+    }),
+  ];
+}
 
 /**
  * Stable list of mark names this engine knows about.
