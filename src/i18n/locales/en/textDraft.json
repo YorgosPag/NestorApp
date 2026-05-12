@@ -1,0 +1,10 @@
+{
+  "banner": {
+    "message": "Unsaved work found ({date})",
+    "restore": "Restore",
+    "discard": "Discard",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "ariaLabel": "Draft recovery notification"
+  }
+}

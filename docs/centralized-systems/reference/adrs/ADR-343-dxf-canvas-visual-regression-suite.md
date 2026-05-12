@@ -152,6 +152,19 @@ One isolated fixture per entity type. Each test: load fixture → fitToView → 
 
 **Approach**: `SnapIndicatorOverlay` (dynamic import, SVG-based) added to harness. `__dxfTest.showSnap(type, wx, wy)` / `hideSnap()` expose world-coords snap positioning.
 
+### Phase 8 — Text Rendering ✅ (2026-05-12, 4 tests)
+
+| Test | Fixture | What it covers |
+|------|---------|---------------|
+| `text-entity-normal` | `entity-text.json` | Plain TEXT entity — position, height, color |
+| `text-entity-rotated` | `entity-text.json` | TEXT entity at 45° rotation |
+| `text-mtext-multiline` | `text-mtext-multiline.json` | MTEXT block (3 lines) + colored text + small label |
+| `text-layer-hidden` | `text-mtext-multiline.json` | Entity on hidden layer (`visible: false`) is not rendered |
+
+**New fixture**: `text-mtext-multiline.json` — 3 entities (MTEXT block, colored TEXT, small label), 2 layers (`TEXT`, `DIMS`).
+
+---
+
 ### Phase 7 — Edge Cases ✅ (2026-05-10, 5 tests)
 
 | Test | Fixture | What it covers |
@@ -200,8 +213,9 @@ Phase 2: 6 PNG baselines
 Phase 3: 5 PNG baselines  
 Phase 4: 5 PNG baselines  
 Phase 5: 5 PNG baselines  
-Phase 6: 6 PNG baselines
+Phase 6: 6 PNG baselines  
 Phase 7: 5 PNG baselines  
+Phase 8: 4 PNG baselines (generate with `npm run test:visual:dxf:update`)
 
 ---
 
@@ -223,6 +237,12 @@ Related ADRs:
 ---
 
 ## Changelog
+
+### 2026-05-12: Phase 8 implemented (ADR-344 Phase 10)
+
+- Phase 8: 4 text rendering tests — baselines generated on first `npm run test:visual:dxf:update`
+- New fixture: `public/test-fixtures/dxf/text-mtext-multiline.json`
+- ADR-343 + ADR-040 updated
 
 ### 2026-05-10: Phase 5 implemented
 

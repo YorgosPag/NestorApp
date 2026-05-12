@@ -26,7 +26,8 @@ export type AuditEntityType =
   | 'quote'
   | 'material'
   | 'framework_agreement'
-  | 'text_template';
+  | 'text_template'
+  | 'custom_dictionary_entry';
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =

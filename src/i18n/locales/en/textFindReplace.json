@@ -1,0 +1,32 @@
+{
+  "dialog": {
+    "title": "Find & Replace"
+  },
+  "search": {
+    "label": "Find",
+    "placeholder": "Text to find…"
+  },
+  "replace": {
+    "label": "Replace",
+    "placeholder": "Replacement text…"
+  },
+  "options": {
+    "caseSensitive": "Case sensitive",
+    "wholeWord": "Whole word",
+    "regex": "Regular expressions"
+  },
+  "results": {
+    "count_one": "{count} match",
+    "count_other": "{count} matches",
+    "noMatches": "No matches found",
+    "noSearch": "Enter text to search",
+    "entityLabel": "Entity {id}",
+    "matchLocation": "Par. {paragraph}, Run {run}"
+  },
+  "actions": {
+    "replaceOne": "Replace",
+    "replaceAll": "Replace All",
+    "close": "Close"
+  },
+  "invalidRegex": "Invalid regular expression"
+}

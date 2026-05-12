@@ -411,3 +411,33 @@ test.describe('Phase 7 — Edge Cases', () => {
     await expect(page).toHaveScreenshot('loading-state.png', SCREENSHOT_OPTIONS);
   });
 });
+
+test.describe('Phase 8 — Text Rendering', () => {
+  test('text-entity-normal — plain text entity with height + color', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=entity-text`);
+    await fitAndWait(page);
+    await expect(page).toHaveScreenshot('text-entity-normal.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('text-entity-rotated — text rotated 45 degrees', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=entity-text`);
+    await fitAndWait(page);
+    await expect(page).toHaveScreenshot('text-entity-rotated.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('text-mtext-multiline — mtext block + colored text + small label', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=text-mtext-multiline`);
+    await fitAndWait(page);
+    await expect(page).toHaveScreenshot('text-mtext-multiline.png', SCREENSHOT_OPTIONS);
+  });
+
+  test('text-layer-hidden — text on hidden layer not rendered', async ({ page }) => {
+    await loadHarness(page, `${BASE_URL}?fixture=text-mtext-multiline`);
+    await fitAndWait(page);
+    await page.evaluate(() =>
+      window.__dxfTest.updateSceneEntity('text-small', { visible: false }),
+    );
+    await page.waitForTimeout(150);
+    await expect(page).toHaveScreenshot('text-layer-hidden.png', SCREENSHOT_OPTIONS);
+  });
+});

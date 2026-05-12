@@ -1,0 +1,44 @@
+{
+  "entities": [
+    {
+      "id": "mtext-block",
+      "type": "mtext",
+      "layer": "TEXT",
+      "color": "#ffffff",
+      "lineWidth": 1,
+      "visible": true,
+      "position": { "x": 50, "y": 250 },
+      "text": "ΣΑΛΟNI\nΚΑΘΙΣΤΙΚΟ\nΤΡΑΠΕΖΑΡΙΑ",
+      "height": 18,
+      "width": 200,
+      "attachment": 1
+    },
+    {
+      "id": "text-colored",
+      "type": "text",
+      "layer": "TEXT",
+      "color": "#4a9eff",
+      "lineWidth": 1,
+      "visible": true,
+      "position": { "x": 280, "y": 220 },
+      "text": "PLAN A",
+      "height": 22
+    },
+    {
+      "id": "text-small",
+      "type": "text",
+      "layer": "DIMS",
+      "color": "#aaaaaa",
+      "lineWidth": 1,
+      "visible": true,
+      "position": { "x": 280, "y": 170 },
+      "text": "scale 1:100",
+      "height": 10
+    }
+  ],
+  "layers": ["TEXT", "DIMS"],
+  "bounds": {
+    "min": { "x": 40, "y": 140 },
+    "max": { "x": 400, "y": 290 }
+  }
+}

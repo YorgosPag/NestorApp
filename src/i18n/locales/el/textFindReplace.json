@@ -1,0 +1,32 @@
+{
+  "dialog": {
+    "title": "Εύρεση και Αντικατάσταση"
+  },
+  "search": {
+    "label": "Εύρεση",
+    "placeholder": "Κείμενο προς εύρεση…"
+  },
+  "replace": {
+    "label": "Αντικατάσταση",
+    "placeholder": "Κείμενο αντικατάστασης…"
+  },
+  "options": {
+    "caseSensitive": "Διάκριση πεζών-κεφαλαίων",
+    "wholeWord": "Ολόκληρη λέξη",
+    "regex": "Κανονικές εκφράσεις"
+  },
+  "results": {
+    "count_one": "{count} αποτέλεσμα",
+    "count_other": "{count} αποτελέσματα",
+    "noMatches": "Δεν βρέθηκαν αποτελέσματα",
+    "noSearch": "Εισάγετε κείμενο για αναζήτηση",
+    "entityLabel": "Οντότητα {id}",
+    "matchLocation": "Παρ. {paragraph}, Εκτ. {run}"
+  },
+  "actions": {
+    "replaceOne": "Αντικατάσταση",
+    "replaceAll": "Αντικατάσταση Όλων",
+    "close": "Κλείσιμο"
+  },
+  "invalidRegex": "Μη έγκυρη κανονική έκφραση"
+}

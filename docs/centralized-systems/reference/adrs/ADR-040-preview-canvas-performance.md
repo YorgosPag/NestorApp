@@ -886,6 +886,16 @@ if (this.canvas.width === newWidth && this.canvas.height === newHeight && this.d
 - `canvas-click-types.ts`: `moveIsActive` + `handleMoveClick` optional params
 - `useCanvasKeyboardShortcuts.ts`: Escape cancels move tool before rotation tool
 
+### 2026-05-12: Text rendering path — ADR-344 Layers 1-8 (no micro-leaf impact)
+
+ADR-344 (DXF Enterprise Text Engine) introduces a parallel text editing stack that coexists with the ADR-040 canvas architecture without violating Cardinal Rules:
+
+- **TipTap overlay (Layer 5)** — `TextEditorOverlay.tsx` is a separate `<div>` positioned absolute over the canvas via CSS (not a canvas element). It does NOT subscribe to `HoverStore` / `ImmediatePositionStore` and does NOT call `useSyncExternalStore`. Cardinal Rule 1 is not violated.
+- **Text toolbar (Layer 5)** — `TextToolbar.tsx` is a fixed-position React tree outside the `CanvasLayerStack` hierarchy. It subscribes only to `useTextToolbarStore` (low-frequency Zustand store, not a high-freq canvas store). Zero ADR-040 performance impact.
+- **Bitmap cache (Cardinal Rule 3)** — `textNode` AST stored in scene entities is NOT included in the bitmap cache key. TEXT/MTEXT entities render via `DxfText`/`DxfMText` renderers inside the normal entity pass.
+- **Spell-check decorations** — ProseMirror `DecorationSet` lives entirely inside TipTap's React tree. No RAF interaction.
+- **CommandHistory (Phase 6)** — text mutation commands call `sceneManager.updateEntity()`, triggering the same re-render path as any other entity mutation. No new subscription pattern.
+
 ### 2026-05-10: Shift/Ctrl+click additive multi-select for DXF entities
 
 - `mouse-handler-types.ts`: `onEntitySelect` signature extended — `additive?: boolean` 2nd param
