@@ -81,8 +81,13 @@ function computeAnchorRect(
   const containerRect = container.getBoundingClientRect();
   const position = (entity as unknown as { position?: { x: number; y: number } })
     .position ?? { x: 0, y: 0 };
+  // X: standard formula (CoordinateTransforms.worldToScreen line 72).
+  // Y: Y-flip required — DXF Y-axis points up, screen Y-axis points down
+  //    (CoordinateTransforms.worldToScreen line 73):
+  //    screenY = (canvasHeight - top_margin) - worldY × scale - offsetY
   const left = containerRect.left + position.x * transform.scale + transform.offsetX;
-  const top = containerRect.top + position.y * transform.scale + transform.offsetY;
+  const canvasY = container.clientHeight - position.y * transform.scale - transform.offsetY;
+  const top = containerRect.top + canvasY;
   // Approximate the overlay footprint from the first run's height — refined
   // by TipTap's intrinsic content sizing once mounted.
   const firstRun = node.paragraphs[0]?.runs[0];

@@ -43,6 +43,8 @@ import {
   type GeometryPatch,
 } from '../../../core/commands/text/UpdateTextGeometryCommand';
 import { UpdateTextCurrentScaleCommand } from '../../../core/commands/text/UpdateTextCurrentScaleCommand';
+import { UpdateMTextParagraphCommand } from '../../../core/commands/text/UpdateMTextParagraphCommand';
+import type { TextJustification } from '../../../text-engine/types';
 import { getGlobalCommandHistory } from '../../../core/commands';
 import { setActiveScale } from '../../../systems/viewport';
 import { useDxfTextServices, type DxfTextServices } from './useDxfTextServices';
@@ -159,9 +161,21 @@ function diffAndDispatch(
       history.execute(cmd);
     }
   }
-  // justification / lineSpacing* / layerId — deferred,
-  // pending dedicated commands (attachment-point + paragraph node-level
-  // line-spacing + layer-change follow-ups).
+  // Justification (9-point attachment) — updates textNode.attachment → canvas textAlign.
+  if (!Object.is(next.justification, prev.justification) && next.justification !== null) {
+    const attachment = next.justification as TextJustification;
+    const history = getGlobalCommandHistory();
+    for (const entityId of ids) {
+      const cmd = new UpdateMTextParagraphCommand(
+        { entityId, patch: {}, attachment },
+        services.sceneManager,
+        services.layerProvider,
+        services.auditRecorder,
+      );
+      history.execute(cmd);
+    }
+  }
+  // lineSpacing* / layerId — deferred.
 }
 
 export function useTextToolbarCommandBridge(): void {

@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import * as Toolbar from '@radix-ui/react-toolbar';
+import * as Toggle from '@radix-ui/react-toggle';
 import { Bold, Italic, Underline, Strikethrough } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -37,8 +37,7 @@ function ToggleButton({
 }) {
   const isIndeterminate = pressed === null;
   return (
-    <Toolbar.ToggleItem
-      value={ariaLabel}
+    <Toggle.Root
       pressed={pressed ?? false}
       onPressedChange={onPressedChange}
       disabled={disabled}
@@ -54,7 +53,7 @@ function ToggleButton({
       )}
     >
       {children}
-    </Toolbar.ToggleItem>
+    </Toggle.Root>
   );
 }
 
@@ -72,7 +71,7 @@ export function StylePanel({ disabled }: StylePanelProps) {
   };
 
   return (
-    <Toolbar.ToolbarToggleGroup type="multiple" className="inline-flex gap-1">
+    <div className="inline-flex gap-1">
       <ToggleButton
         pressed={bold}
         onPressedChange={set('bold')}
@@ -113,6 +112,6 @@ export function StylePanel({ disabled }: StylePanelProps) {
       >
         <Strikethrough className="h-4 w-4" />
       </ToggleButton>
-    </Toolbar.ToolbarToggleGroup>
+    </div>
   );
 }

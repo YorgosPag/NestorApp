@@ -27,10 +27,9 @@ export function usePanelNavigation({
 
   // ✅ Panel disabled state logic
   // ADR-345 Fase 2: 'levels' tab disabled — content migrated to ribbon tab "Layers".
-  // ADR-345 Fase 5.5: 'text-properties' tab disabled — content migrated to ribbon
-  // contextual tab "Text Editor" (wired toggles + comboboxes via useRibbonTextEditorBridge).
+  // ADR-345 Fase 5.5: 'text-properties' tab re-enabled for evaluation (Giorgio, 2026-05-12).
   const getDisabledPanels = (): Partial<Record<PanelType, boolean>> => {
-    return { levels: true, 'text-properties': true };
+    return { levels: true };
   };
 
   const disabledPanels = useMemo(() => getDisabledPanels(), []);

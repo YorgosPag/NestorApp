@@ -17,6 +17,8 @@ import type {
   TipTapParagraph,
   TipTapStackNode,
   TipTapMark,
+  ParagraphAttrs,
+  DocAttrs,
 } from './tiptap-json.types';
 import type {
   DxfTextNode,
@@ -28,6 +30,19 @@ import type {
 import type { DxfColor } from '../types/text-toolbar.types';
 
 const DEFAULT_COLOR: DxfColor = { kind: 'ByLayer' };
+
+// TipTap v3 omits `attrs` on the root doc node when no custom attrs are set.
+// Same pattern as DEFAULT_PARA_ATTRS — all fields must have safe defaults.
+const DEFAULT_DOC_ATTRS: DocAttrs = {
+  attachment: 'TL',
+  lineSpacing: { mode: 'at-least', factor: 1.0 },
+  rotation: 0,
+  isAnnotative: false,
+  annotationScales: [],
+  currentScale: '',
+  bgMask: null,
+  columns: null,
+};
 
 // ── Default factories ─────────────────────────────────────────────────────────
 
@@ -124,9 +139,21 @@ function flushAccum(accum: RunAccum, runs: Array<TextRun | TextStack>): void {
   }
 }
 
+const DEFAULT_PARA_ATTRS: ParagraphAttrs = {
+  indent: 0,
+  leftMargin: 0,
+  rightMargin: 0,
+  tabs: [],
+  justification: 0,
+  lineSpacingMode: 'multiple',
+  lineSpacingFactor: 1,
+};
+
 function paragraphToDxf(para: TipTapParagraph): TextParagraph {
   const runs: Array<TextRun | TextStack> = [];
   const accum: RunAccum = { text: '', style: defaultStyle(), active: false };
+  // TipTap v3 omits `attrs` on plain paragraphs (no custom attributes).
+  const attrs = para.attrs ?? DEFAULT_PARA_ATTRS;
 
   for (const item of para.content ?? []) {
     if (item.type === 'text') {
@@ -156,13 +183,13 @@ function paragraphToDxf(para: TipTapParagraph): TextParagraph {
 
   return {
     runs,
-    indent: para.attrs.indent,
-    leftMargin: para.attrs.leftMargin,
-    rightMargin: para.attrs.rightMargin,
-    tabs: para.attrs.tabs,
-    justification: para.attrs.justification,
-    lineSpacingMode: para.attrs.lineSpacingMode,
-    lineSpacingFactor: para.attrs.lineSpacingFactor,
+    indent: attrs.indent,
+    leftMargin: attrs.leftMargin,
+    rightMargin: attrs.rightMargin,
+    tabs: attrs.tabs,
+    justification: attrs.justification,
+    lineSpacingMode: attrs.lineSpacingMode,
+    lineSpacingFactor: attrs.lineSpacingFactor,
   };
 }
 
@@ -176,7 +203,7 @@ function paragraphToDxf(para: TipTapParagraph): TextParagraph {
  * run's text (matching the DXF `\N` soft-break convention).
  */
 export function tipTapToDxfText(doc: TipTapDoc): DxfTextNode {
-  const a = doc.attrs;
+  const a = doc.attrs ?? DEFAULT_DOC_ATTRS;
   return {
     paragraphs: doc.content.map(paragraphToDxf),
     attachment: a.attachment,

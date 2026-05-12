@@ -12,7 +12,7 @@
 
 import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import type { DxfTextNode, TextParagraph } from '../../../text-engine/types';
+import type { DxfTextNode, TextParagraph, TextJustification } from '../../../text-engine/types';
 import {
   noopAuditRecorder,
   type DxfTextSceneEntity,
@@ -30,6 +30,8 @@ export interface UpdateMTextParagraphCommandInput {
   readonly entityId: string;
   readonly patch: ParagraphPatch;
   readonly columns?: DxfTextNode['columns'];
+  /** 9-point attachment point (node-level). Updates textNode.attachment. */
+  readonly attachment?: TextJustification;
   /** When set, only this paragraph index is patched. Otherwise all paragraphs. */
   readonly paragraphIndex?: number;
 }
@@ -81,6 +83,7 @@ export class UpdateMTextParagraphCommand implements ICommand {
         this.input.paragraphIndex,
       ),
       columns: this.input.columns ?? safeNode.columns,
+      ...(this.input.attachment !== undefined && { attachment: this.input.attachment }),
     };
     this.sceneManager.updateEntity(this.input.entityId, { textNode: nextNode });
     this.wasExecuted = true;
@@ -138,7 +141,8 @@ export class UpdateMTextParagraphCommand implements ICommand {
     if (!this.input.entityId) return 'entityId is required';
     const hasParaPatch = this.input.patch && Object.keys(this.input.patch).length > 0;
     const hasColumns = this.input.columns !== undefined;
-    if (!hasParaPatch && !hasColumns) return 'patch or columns is required';
+    const hasAttachment = this.input.attachment !== undefined;
+    if (!hasParaPatch && !hasColumns && !hasAttachment) return 'patch, columns, or attachment is required';
     return null;
   }
 
