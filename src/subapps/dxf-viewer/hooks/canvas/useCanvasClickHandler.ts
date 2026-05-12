@@ -185,7 +185,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
-    // PRIORITY 8: Deselect on empty canvas click
+    // PRIORITY 8: Clear overlay + grip selection on empty canvas click.
+    // DXF entity selection is intentionally preserved — deselect happens only on Escape
+    // (AutoCAD / BricsCAD pattern: Escape is the canonical deselect trigger).
     {
       const isClickOnGrip = hoveredVertexInfo !== null || hoveredEdgeInfo !== null;
       const hasSelectedGrip = selectedGrip !== null;
@@ -193,9 +195,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
 
       if (!isClickOnGrip && !hasSelectedGrip && !justFinishedDrag && !entitySelectedOnMouseDownRef.current) {
         universalSelection.clearByType('overlay');
-        universalSelection.clearByType('dxf-entity');
         setSelectedGrips([]);
-        setSelectedEntityIds([]);
       }
       entitySelectedOnMouseDownRef.current = false;
     }
