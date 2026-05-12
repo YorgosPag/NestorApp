@@ -1111,3 +1111,9 @@ Added `AutoAreaPreviewOverlay` (SVG) to `CanvasLayerStack.tsx` for real-time pol
 ## 2026-05-13: Keyboard shortcut + command history — DXF viewer cleanup
 
 `useCanvasKeyboardShortcuts.ts`: Escape now checks `universalSelection.count() > 0` (covers all selection types, not just DXF entities). `useCommandHistory.ts`: extracted from inline hook usage; now stable module with proper undo/redo cycle. `useLayerCanvasMouseMove.ts`: consolidated mouse-move dispatch paths. `dxf-firestore.service.ts`: tightened null-guard on auto-save. All changes preserve the micro-leaf subscription model: no new `useSyncExternalStore` in orchestrators.
+
+---
+
+## 2026-05-13: CanvasSection.tsx — universalSelection-driven selectedEntityIds (implementation)
+
+`CanvasSection.tsx` implementation commit: `selectedEntityIds` now derives from `universalSelection` (see 2026-05-12 SSoT entry for design rationale). `setSelectedEntityIds` dispatches through `universalSelection.clearByType/addMultiple`. `getSelectedEntityIds` getter reads from `universalSelectionRef` — no snapshot staleness. `useAutoAreaMouseMove` + `useGlobalSnapSceneSync({ overlays })` wired here. `CrosshairOverlay` receives `isEntitySelected` pred derived from `selectedEntityIds`. ADR-040 cardinal rules: CanvasSection is orchestrator — zero `useSyncExternalStore` calls, all store subscriptions remain in leaves.

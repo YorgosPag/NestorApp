@@ -66,6 +66,8 @@ export interface UseCanvasKeyboardShortcutsParams {
   moveIsActive?: boolean;
   /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
   clearEntitySelection?: () => void;
+  /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
+  hasAnySelection?: boolean;
 }
 
 // ============================================================================
@@ -92,6 +94,7 @@ export function useCanvasKeyboardShortcuts({
   handleMoveEscape,
   moveIsActive = false,
   clearEntitySelection,
+  hasAnySelection = false,
 }: UseCanvasKeyboardShortcutsParams): void {
 
   // Handle keyboard shortcuts for drawing, delete, and local operations
@@ -141,7 +144,8 @@ export function useCanvasKeyboardShortcuts({
             setSelectedGrips([]);
           }
           // SSoT deselect-all: Escape clears entity selection (AutoCAD/BricsCAD pattern)
-          if (selectedEntityIds.length > 0) {
+          // hasAnySelection covers non-DXF selections (e.g. overlays)
+          if (selectedEntityIds.length > 0 || hasAnySelection) {
             clearEntitySelection?.();
           }
           break;
@@ -181,5 +185,5 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, clearEntitySelection, hasAnySelection]);
 }

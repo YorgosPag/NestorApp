@@ -34,7 +34,7 @@ import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import { LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 // 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
 import { registerDirectRender, getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
-import { getHoveredEntity, subscribeHoveredEntity } from '../../systems/hover/HoverStore';
+import { getHoveredEntity, subscribeHoveredEntity, getHoveredOverlay, subscribeHoveredOverlay } from '../../systems/hover/HoverStore';
 import { drawSelectionIndicator } from './crosshair-selection-indicator';
 import type { SelectionIndicatorMode } from './crosshair-selection-indicator';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
@@ -76,6 +76,7 @@ export default function CrosshairOverlay({
 
   // Selection indicator refs — read inside renderCrosshair without causing re-renders
   const hoveredEntityIdRef = useRef<string | null>(getHoveredEntity());
+  const hoveredOverlayIdRef = useRef<string | null>(getHoveredOverlay());
   const shiftHeldRef = useRef<boolean>(false);
   const isEntitySelectedRef = useRef<(id: string) => boolean>(isEntitySelected ?? (() => false));
 
@@ -293,7 +294,7 @@ export default function CrosshairOverlay({
     }
 
     // AutoCAD-style "+" / "−" badge at top-right of crosshair center gap
-    const hoveredId = hoveredEntityIdRef.current;
+    const hoveredId = hoveredEntityIdRef.current || hoveredOverlayIdRef.current;
     if (hoveredId) {
       const mode: SelectionIndicatorMode = shiftHeldRef.current ? '−' : '+';
       drawSelectionIndicator(ctx, mouseX, mouseY, centerGap || 6, mode);
@@ -372,6 +373,10 @@ export default function CrosshairOverlay({
       hoveredEntityIdRef.current = getHoveredEntity();
       triggerRender();
     });
+    const unsubOverlayHover = subscribeHoveredOverlay(() => {
+      hoveredOverlayIdRef.current = getHoveredOverlay();
+      triggerRender();
+    });
     const onKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Shift') { shiftHeldRef.current = true; triggerRender(); }
     };
@@ -382,6 +387,7 @@ export default function CrosshairOverlay({
     window.addEventListener('keyup', onKeyUp);
     return () => {
       unsubHover();
+      unsubOverlayHover();
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };

@@ -109,8 +109,8 @@ export function useLayerCanvasMouseMove(
       // 🚀 PERFORMANCE (2026-01-27): ENTERPRISE OPTIMIZATION
       // Reduced unnecessary work in mousemove handler to achieve <16ms per frame
 
-      // 🚀 EARLY RETURN: Skip all grip-related work if not in select/layering mode
-      const isGripMode = activeTool === 'select' || activeTool === 'layering';
+      // 🚀 EARLY RETURN: Skip all grip-related work if not in select/layering/move mode
+      const isGripMode = activeTool === 'select' || activeTool === 'layering' || activeTool === 'move';
 
       // 🏢 FIX (2026-02-15): Use pre-calculated worldPoint from useCentralizedMouseHandlers
       // BEFORE: Recalculated via containerRef (different element rect → Y-offset mismatch)

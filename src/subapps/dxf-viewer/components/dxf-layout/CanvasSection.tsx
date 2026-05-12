@@ -5,7 +5,7 @@
  * After any architectural change → update the ADR changelog (same commit).
  */
 'use client';
-import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useRef, useCallback, useMemo, useEffect } from 'react';
 import { CanvasLayerStack } from './CanvasLayerStack';
 import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
 import { useCanvasContext } from '../../contexts/CanvasContext';
@@ -25,12 +25,13 @@ import { dwarn, derr } from '../../debug';
 import { useFloorplanBackgroundForLevel } from '../../floorplan-background';
 import { useEventBus } from '../../systems/events';
 import { useUniversalSelection } from '../../systems/selection';
-import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/commands';
+import { useCommandHistory, useCommandHistoryKeyboard, MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
 import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
   useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler,
   useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts,
   useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
+  useAutoAreaMouseMove,
 } from '../../hooks/canvas';
 import { useGuideToolWorkflows, useEntityCompleteGuideListener } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
@@ -121,16 +122,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ADR-281: filter out overlays linked to soft-deleted properties
   const currentOverlays = useLiveOverlaysForLevel(levelManager.currentLevelId);
 
-  // === Entity interaction state ===
-  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
-  // ADR-040 cardinal rule 2 — getter (not snapshot) for event-time reads
-  // from sub-orchestrators (e.g. useTextDoubleClickEditor).
-  const selectedEntityIdsRef = useRef<string[]>(selectedEntityIds);
-  selectedEntityIdsRef.current = selectedEntityIds;
-  const getSelectedEntityIds = useCallback(
-    () => selectedEntityIdsRef.current,
-    [],
-  );
+  // === Selection (SSoT: UniversalSelection — selectedEntityIds derived, no local state) ===
+  const selectedEntityIds = useMemo(() => universalSelection.getIdsByType('dxf-entity'), [universalSelection]);
+  const setSelectedEntityIds = useCallback((value: string[] | ((prev: string[]) => string[])) => {
+    const us = universalSelectionRef.current;
+    const next = typeof value === 'function' ? value(us.getIdsByType('dxf-entity')) : value;
+    us.clearByType('dxf-entity');
+    if (next.length > 0) us.addMultiple(next.map(id => ({ id, type: 'dxf-entity' as const })));
+  }, []);
+  // ADR-040 rule 2 — getter for event-time reads (useTextDoubleClickEditor).
+  const getSelectedEntityIds = useCallback(() => universalSelectionRef.current.getIdsByType('dxf-entity'), []);
   const entitySelectedOnMouseDownRef = useRef(false);
   // 🚀 PERF (2026-05-09 Phase E → 2026-05-10 Phase II): hoveredEntityId +
   // hoveredOverlayId both removed from CanvasSection. HoverStore subscriptions
@@ -160,20 +161,17 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // === Snap engine scene-sync (SSoT, sole owner — ADR-040) ===
   // The SnapEngine singleton's `initialize(allEntities)` is owned exclusively
   // by this hook. `useSnapManager` instances are now consumers only.
-  useGlobalSnapSceneSync({ scene: props.currentScene ?? null });
+  useGlobalSnapSceneSync({ scene: props.currentScene ?? null, overlays: currentOverlays });
 
-  // Ctrl+A: select all DXF entities — fired via EventBus from useKeyboardShortcuts
-  // Updates both local visual state AND universalSelection (SSOT for delete)
+  // Ctrl+A: select all DXF entities — fired via EventBus from useKeyboardShortcuts.
+  // setSelectedEntityIds writes through universalSelection (SSoT).
   useEffect(() => {
     return eventBus.on('canvas:select-all', () => {
       const entities = dxfSceneRef.current?.entities;
       if (!entities?.length) return;
-      const ids = entities.map(e => e.id);
-      setSelectedEntityIds(ids);
-      universalSelectionRef.current.clearAll();
-      universalSelectionRef.current.selectMultiple(ids.map(id => ({ id, type: 'dxf-entity' as const })));
+      setSelectedEntityIds(entities.map(e => e.id));
     });
-  }, [eventBus]);
+  }, [eventBus, setSelectedEntityIds]);
 
   // === Unified Grip System ===
   const unified = useUnifiedGripInteraction({
@@ -297,9 +295,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   });
 
   // === Move Tool (ADR-049: AutoCAD-style 2-click) ===
+  const executeOverlayMove = useCallback((ids: string[], delta: {x:number;y:number}) => { executeCommand(ids.length===1 ? new MoveOverlayCommand(ids[0],delta,overlayStore,false) : new MoveMultipleOverlaysCommand(ids,delta,overlayStore,false)); }, [overlayStore, executeCommand]);
+  const createOverlayMoveCommand = useCallback((ids: string[], delta: {x:number;y:number}) => ids.length===1 ? new MoveOverlayCommand(ids[0],delta,overlayStore,false) : new MoveMultipleOverlaysCommand(ids,delta,overlayStore,false), [overlayStore]);
   const moveTool = useMoveTool({
-    activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
-    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
+    activeTool, selectedEntityIds, selectedOverlayIds: universalSelection.getIdsByType('overlay'), levelManager, executeCommand, previewCanvasRef,
+    executeOverlayMove, createOverlayMoveCommand, onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
   });
   const handleRotationAnglePrompt = useCallback(async () => {
     const result = await showPromptDialog({
@@ -407,12 +407,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onExitDrawMode: handleExitDrawMode,
     handleRotationEscape: rotationTool.handleRotationEscape, rotationIsActive: rotationTool.isCollectingInput,
     handleMoveEscape: moveTool.handleMoveEscape, moveIsActive: moveTool.isCollectingInput,
-    // SSoT deselect-all: clears both the local entity state and the UniversalSelection
-    // registry (same pattern as `canvas:select-all` at line 144).
-    clearEntitySelection: () => {
-      setSelectedEntityIds([]);
-      universalSelectionRef.current.clearAll();
-    },
+    hasAnySelection: universalSelection.count() > selectedEntityIds.length,
+    clearEntitySelection: () => universalSelectionRef.current.clearAll(),
   });
 
   // === ADR-344 Phase 6.E — In-canvas text editor (DBLCLKEDIT) ===
@@ -425,6 +421,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     executeCommand,
     getSelectedEntityIds,
   });
+
+  // === Auto-area hover preview ===
+  const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove: unified.handleMouseMove, activeTool, levelManager, currentOverlays, transformScale: transform.scale });
 
   // === Render ===
   return (
@@ -444,7 +443,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         setTransform={setTransform}
         containerHandlers={{ onMouseMove: handleContainerMouseMove, onMouseDown: handleContainerMouseDown, onMouseUp: handleContainerMouseUp, onMouseEnter: handleContainerMouseEnter, onMouseLeave: handleContainerMouseLeave, onDoubleClick: textEditor.handleDoubleClick }}
         handleOverlayClick={handleOverlayClick} handleMultiOverlayClick={handleMultiOverlayClick}
-        handleCanvasClick={handleCanvasClick} handleUnifiedMouseMove={unified.handleMouseMove}
+        handleCanvasClick={handleCanvasClick} handleUnifiedMouseMove={handleMouseMoveWithAutoArea}
         handleDrawingContextMenu={handleDrawingContextMenu}
         drawingState={{ drawingHandlers, draftPolygon, handleDrawingFinish, handleDrawingClose, handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc }}
         entityJoin={{ canJoin: entityJoinState.canJoin, joinResultLabel: entityJoinState.joinResultLabel, onJoin: () => entityJoinHook.joinEntities(selectedEntityIds), onDelete: () => handleSmartDelete() }}
@@ -455,7 +454,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         guideWorkflowState={guideWorkflows.state}
         guideStateObj={guideState} cpStateObj={cpState}
         rotationPreview={{ phase: rotationTool.phase, basePoint: rotationTool.basePoint, referencePoint: rotationTool.referencePoint, currentAngle: rotationTool.currentAngle }}
-        movePreview={{ phase: moveTool.phase, basePoint: moveTool.basePoint }}
+        movePreview={{ phase: moveTool.phase, basePoint: moveTool.basePoint, selectedOverlayIds: universalSelection.getIdsByType('overlay'), getOverlay: (id) => overlayStore.overlays[id] ?? null }}
         levelManager={levelManager}
       />
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}

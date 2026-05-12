@@ -155,8 +155,8 @@ export function useCommandHistoryKeyboard(options: UseCommandHistoryOptions = {}
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Check for Ctrl+Z (Undo)
-      if (event.ctrlKey && event.key === 'z' && !event.shiftKey) {
+      // Check for Ctrl+Z (Undo) — event.code is layout-independent (works on Greek/any keyboard)
+      if (event.ctrlKey && event.code === 'KeyZ' && !event.shiftKey) {
         event.preventDefault();
         if (canUndo) {
           undo();
@@ -166,9 +166,8 @@ export function useCommandHistoryKeyboard(options: UseCommandHistoryOptions = {}
 
       // Check for Ctrl+Y or Ctrl+Shift+Z (Redo)
       if (
-        (event.ctrlKey && event.key === 'y') ||
-        (event.ctrlKey && event.shiftKey && event.key === 'z') ||
-        (event.ctrlKey && event.shiftKey && event.key === 'Z')
+        (event.ctrlKey && event.code === 'KeyY') ||
+        (event.ctrlKey && event.shiftKey && event.code === 'KeyZ')
       ) {
         event.preventDefault();
         if (canRedo) {

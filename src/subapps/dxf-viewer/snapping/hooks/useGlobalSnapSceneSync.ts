@@ -32,10 +32,13 @@ import {
 } from '../global-snap-engine';
 import type { Entity } from '../extended-types';
 import type { SceneModel } from '../../types/scene';
+import type { Overlay } from '../../overlays/types';
+import { overlaysToRegions } from '../../overlays/overlay-adapter';
+import { regionsToSnapEntities } from '../../overlays/snap-adapter';
 
 interface UseGlobalSnapSceneSyncParams {
   scene: SceneModel | null;
-  overlayEntities?: readonly Entity[];
+  overlays?: readonly Overlay[];
 }
 
 /** Sample-based fingerprint: length + first-5 ids + last-5 ids. O(1) compare. */
@@ -72,17 +75,19 @@ function getIdleScheduler(): IdleScheduler {
 
 export function useGlobalSnapSceneSync({
   scene,
-  overlayEntities,
+  overlays,
 }: UseGlobalSnapSceneSyncParams): void {
   const dxfEntities = scene?.entities;
   const dxfLen = dxfEntities?.length ?? 0;
-  const overlayLen = overlayEntities?.length ?? 0;
+  const overlayLen = overlays?.length ?? 0;
   const pendingIdleHandleRef = useRef<IdleHandle | null>(null);
   const scheduler = useRef(getIdleScheduler()).current;
 
   useEffect(() => {
     const dxfEnts = (scene?.entities ?? []) as readonly Entity[];
-    const overlayEnts = (overlayEntities ?? []) as readonly Entity[];
+    const overlayEnts: Entity[] = overlays?.length
+      ? regionsToSnapEntities(overlaysToRegions([...overlays]))
+      : [];
     const allEntities: Entity[] = [...dxfEnts, ...overlayEnts];
 
     const fingerprint = computeFingerprint(allEntities);
@@ -109,5 +114,5 @@ export function useGlobalSnapSceneSync({
         pendingIdleHandleRef.current = null;
       }
     };
-  }, [dxfLen, overlayLen, scene, overlayEntities, scheduler]);
+  }, [dxfLen, overlayLen, scene, overlays, scheduler]);
 }
