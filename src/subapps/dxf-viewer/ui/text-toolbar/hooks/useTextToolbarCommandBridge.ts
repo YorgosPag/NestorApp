@@ -42,7 +42,9 @@ import {
   UpdateTextGeometryCommand,
   type GeometryPatch,
 } from '../../../core/commands/text/UpdateTextGeometryCommand';
+import { UpdateTextCurrentScaleCommand } from '../../../core/commands/text/UpdateTextCurrentScaleCommand';
 import { getGlobalCommandHistory } from '../../../core/commands';
+import { setActiveScale } from '../../../systems/viewport';
 import { useDxfTextServices, type DxfTextServices } from './useDxfTextServices';
 
 const STYLE_FIELDS = [
@@ -143,9 +145,23 @@ function diffAndDispatch(
   if (!Object.is(next.rotation, prev.rotation) && next.rotation !== null) {
     dispatchGeometryPatch(ids, { rotation: next.rotation }, services);
   }
-  // justification / lineSpacing* / layerId / currentScale — deferred,
+  // Annotation scale — sync viewport + update entity textNode.currentScale.
+  if (!Object.is(next.currentScale, prev.currentScale) && next.currentScale !== null) {
+    setActiveScale(next.currentScale);
+    const history = getGlobalCommandHistory();
+    for (const entityId of ids) {
+      const cmd = new UpdateTextCurrentScaleCommand(
+        { entityId, scaleName: next.currentScale },
+        services.sceneManager,
+        services.layerProvider,
+        services.auditRecorder,
+      );
+      history.execute(cmd);
+    }
+  }
+  // justification / lineSpacing* / layerId — deferred,
   // pending dedicated commands (attachment-point + paragraph node-level
-  // line-spacing + layer-change + annotative scale follow-ups).
+  // line-spacing + layer-change follow-ups).
 }
 
 export function useTextToolbarCommandBridge(): void {

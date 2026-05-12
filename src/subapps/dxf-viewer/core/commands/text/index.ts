@@ -61,3 +61,9 @@ export type { ReplaceOneTextCommandInput } from './ReplaceOneTextCommand';
 
 export { ReplaceTextNodeCommand } from './ReplaceTextNodeCommand';
 export type { ReplaceTextNodeCommandInput } from './ReplaceTextNodeCommand';
+
+export { UpdateTextAnnotationScalesCommand } from './UpdateTextAnnotationScalesCommand';
+export type { UpdateTextAnnotationScalesCommandInput } from './UpdateTextAnnotationScalesCommand';
+
+export { UpdateTextCurrentScaleCommand } from './UpdateTextCurrentScaleCommand';
+export type { UpdateTextCurrentScaleCommandInput } from './UpdateTextCurrentScaleCommand';
