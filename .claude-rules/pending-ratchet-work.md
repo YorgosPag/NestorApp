@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
-**STATUS: ALL_DONE**
-**Last updated:** 2026-05-04 (ADR-233 + ADR-314 entrambi confirmed implementati)
+**STATUS: ACTIVE**
+**Last updated:** 2026-05-12 (ADR-345 Fase 5.5 pending ribbon items added)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
@@ -24,9 +24,24 @@
 - [x] **CHECK 3.17 Entity Audit Coverage** — COMPLETATO. Baseline 9→0. _(Batch 4: 4 wire-up server-side + 5 HARD_EXEMPT nel scanner.)_
 
 
-### 🏗️ FEATURE PENDING
+### 🏗️ FEATURE PENDING — ADR-345 DXF Ribbon Interface
 
+**ADR:** `docs/centralized-systems/reference/adrs/ADR-345-dxf-ribbon-interface.md`
+**Bridge hook:** `src/subapps/dxf-viewer/ui/ribbon/hooks/useRibbonTextEditorBridge.ts`
+**Data decl:** `src/subapps/dxf-viewer/ui/ribbon/data/contextual-text-editor-tab.ts`
 
+#### Fase 5.5 — comingSoon stubs (priorità media)
+- [ ] **findReplace button** → deve montare `FindReplaceDialog` (ADR-344 Phase 9, uncommitted work di altro agent). Attualmente `comingSoon: true`.
+- [ ] **spellCheck toggle** → engine assente. Rimane `comingSoon: true` fino a engine disponibile.
+- [ ] **insert.symbol button** → symbol picker dialog non ancora creato. `comingSoon: true`.
+
+#### ADR-344 / Commit chain (priorità alta, Phase 6+)
+- [ ] **Commit chain store → UpdateTextStyleCommand → CommandHistory** — il bridge Fase 5.5 scrive solo lo store. Il chain verso CommandHistory appartiene ad ADR-344 Phase 6+ (TipTap session close). Quando ADR-344 Phase 6 atterrerà, il bridge ribbon ne beneficia automaticamente.
+
+#### Fasi future ADR-345 (in ordine)
+- [ ] **Fase 6: Tab SETTINGS** — migrazione DXF Settings, disabilitazione floating 'colors' tab
+- [ ] **Fase 7: Panel flyout** — expand + pin button + minimize states refinement
+- [ ] **Fase 8: Floating panel removal** — rimozione completa panel flottanti legacy
 
 ---
 
@@ -51,6 +66,7 @@
 ## Changelog
 
 | Date       | Change |
+| 2026-05-12 | ADR-345 Fase 5.5 pending items aggiunti (findReplace/spellCheck/symbol comingSoon, commit chain ADR-344 Ph6+, Fasi 6/7/8). STATUS → ACTIVE. |
 | 2026-05-04 | ADR-233 CLOSED — tutti e 3 gli item già implementati nel codice (POST 409 route.ts:220-233, PATCH 409 building-update.handler.ts:104-119, BuildingListCard formatBuildingLabel, unit tests entity-code-config.test.ts). Ratchet era stale. |
 | 2026-05-04 | ADR-314 CLOSED — CHECK 3.18 baseline 0/0/0 ALL GREEN dal 2026-04-19 (Phase A-E DONE). `.ssot-discover-baseline.json` confirma centralizedFiles=135 protected=135 unprotected=0 duplicateExports=0 antiPatterns=0. STATUS → ALL_DONE. |
 |------------|--------|
