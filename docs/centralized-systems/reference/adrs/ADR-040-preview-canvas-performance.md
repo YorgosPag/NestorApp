@@ -71,6 +71,20 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-12: TEXT entity hover glow — fill-based pre-pass
+
+`TextRenderer.ts`: aggiunto glow pre-pass per hover delle entità TEXT/MTEXT.
+Il pre-pass disegna il testo in giallo (`HOVER_HIGHLIGHT.ENTITY.glowColor`) a
+bassa opacità (`glowOpacity = 0.35`) prima del pass principale — analogo al
+double-stroke pre-pass usato da LINE/ARC in `renderWithPhases()`, ma adattato
+per `fillText` invece di `strokePath`.
+
+`render()` refactored: estratti `extractRichStyle()`, `renderTextGlowPrePass()`,
+`renderTextContent()` per rispettare il limite 40 righe/funzione (N.7.1).
+Rimosso il commento fuorviante "glow only from PhaseManager" (era già falso).
+
+---
+
 ### 2026-05-12: ADR-344 Phase 6.E — in-canvas TipTap text editor (DBLCLKEDIT)
 
 `components/dxf-layout/CanvasSection.tsx`: mounts `useTextDoubleClickEditor`.

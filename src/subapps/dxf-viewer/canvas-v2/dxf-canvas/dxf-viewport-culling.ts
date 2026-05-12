@@ -79,7 +79,7 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
     case 'text': {
       // Text width is renderer-dependent; use a generous estimate based on
       // height × text length so we never cull a partially-visible glyph.
-      const w = entity.height * Math.max(1, entity.text.length) * 0.7;
+      const w = entity.height * Math.max(1, entity.text?.length ?? 0) * 0.7;
       return {
         minX: entity.position.x,
         minY: entity.position.y - entity.height,

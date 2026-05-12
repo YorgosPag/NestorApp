@@ -32,7 +32,7 @@ import type { Point2D } from '../types/Types';
 import type { Entity } from '../../types/entities';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isTextEntity, isMTextEntity } from '../../types/entities';
-import { UI_COLORS } from '../../config/color-config';
+import { UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from './shared/geometry-utils';
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
@@ -42,81 +42,101 @@ import { buildUIFont, TEXT_METRICS_RATIOS } from '../../config/text-rendering-co
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 
+// ADR-344 Phase 6.E: rich text style shape
+type TextRichStyle = {
+  bold?: boolean; italic?: boolean; fontFamily?: string;
+  runColor?: string; textAlign?: 'left' | 'center' | 'right';
+  textBaseline?: 'top' | 'middle' | 'bottom'; underline?: boolean;
+} | undefined;
+
 export class TextRenderer extends BaseEntityRenderer {
-  /**
-   * Text Rendering - Simplified approach from working backup
-   *
-   * Uses direct height × scale calculation for proper text sizing
-   */
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    // 🏢 ADR-102: Use centralized type guards
     const e = entity as Entity;
     if (!isTextEntity(e) && !isMTextEntity(e)) return;
-
-    // Type guards for safe property access
     if (!('position' in entity) || !('text' in entity)) return;
+
     const position = entity.position as Point2D;
     const text = entity.text as string;
-
-    // ✅ SIMPLIFIED: Extract height with fallback to 12 (like old backup)
-    const height = this.extractTextHeight(entity);
-    const rotation = ('rotation' in entity) ? entity.rotation as number : 0;
-
     if (!position || !text) return;
 
-    // Setup style
-    this.setupStyle(entity, options);
-
+    const height = this.extractTextHeight(entity);
+    const rotation = ('rotation' in entity) ? entity.rotation as number : 0;
     const screenPos = this.worldToScreen(position);
     const screenHeight = height * this.transform.scale;
-
-    // ADR-344 Phase 6.E: rich text style from textNode first run (if present).
-    const richStyle = ('textStyle' in entity)
-      ? entity.textStyle as { bold?: boolean; italic?: boolean; fontFamily?: string; runColor?: string; textAlign?: 'left' | 'center' | 'right'; textBaseline?: 'top' | 'middle' | 'bottom'; underline?: boolean } | undefined
-      : undefined;
+    const richStyle = this.extractRichStyle(entity);
     const fontFamily = richStyle?.fontFamily || 'arial';
     const weight: 'normal' | 'bold' = richStyle?.bold ? 'bold' : 'normal';
     const italic = richStyle?.italic;
-
-    this.ctx.save();
-
-    this.ctx.font = buildUIFont(screenHeight, fontFamily, weight, italic);
-    const baseColor = ('color' in entity ? entity.color : undefined) as string | undefined;
-    this.ctx.fillStyle = richStyle?.runColor || baseColor || UI_COLORS.DEFAULT_ENTITY;
-    this.ctx.textAlign = richStyle?.textAlign ?? 'left';
-    // ╔════════════════════════════════════════════════════════════════════════╗
-    // ║ 🔧 DXF BASELINE FIX (2026-01-03) + ADR-344 Phase 6.E vertical align  ║
-    // ║ textBaseline derived from textNode.attachment[0]: T→top, M→middle,   ║
-    // ║ B→bottom. Default 'top' preserves the original DXF baseline fix.     ║
-    // ╚════════════════════════════════════════════════════════════════════════╝
-    this.ctx.textBaseline = richStyle?.textBaseline ?? 'top';
-
-    // Apply rotation if needed
-    // ╔════════════════════════════════════════════════════════════════════════╗
-    // ║ 🔧 DXF ROTATION FIX v3 (2026-01-03)                                    ║
-    // ║ Βάσει έρευνας: ezdxf, FreeCAD, libdxfrw                               ║
-    // ║                                                                        ║
-    // ║ DXF: Counter-clockwise (CCW), 0° = +X direction                       ║
-    // ║ Canvas: Clockwise (CW) - positive angles rotate clockwise             ║
-    // ║ worldToScreen: Y-flip (screenY = height - worldY)                     ║
-    // ║                                                                        ║
-    // ║ ΚΡΙΣΙΜΟ: Λόγω Y-flip, πρέπει να ΑΝΤΙΣΤΡΕΨΟΥΜΕ τη γωνία!              ║
-    // ║ DXF CCW 90° → Canvas -90° (ή 270°)                                    ║
-    // ╚════════════════════════════════════════════════════════════════════════╝
-    // Normalize rotation angle (DXF μπορεί να έχει -360, -315, κλπ)
     let normalizedRotation = rotation % 360;
     if (normalizedRotation < 0) normalizedRotation += 360;
 
+    // Glow pre-pass for hover — fill-based analog of renderWithPhases stroke pre-pass
+    if (options.hovered) {
+      this.renderTextGlowPrePass(text, screenPos, screenHeight, normalizedRotation, fontFamily, weight, italic);
+    }
+
+    this.setupStyle(entity, options);
+    this.renderTextContent(entity, text, screenPos, screenHeight, normalizedRotation, richStyle, fontFamily, weight, italic);
+    this.finalizeRendering(entity, options);
+  }
+
+  private extractRichStyle(entity: EntityModel): TextRichStyle {
+    if (!('textStyle' in entity)) return undefined;
+    return entity.textStyle as TextRichStyle;
+  }
+
+  // ╔════════════════════════════════════════════════════════════════════════╗
+  // ║ Hover glow pre-pass for TEXT entities                                 ║
+  // ║ Mirrors renderWithPhases stroke pre-pass but uses fillText.           ║
+  // ║ Draws text in yellow at low opacity before the main pass so the       ║
+  // ║ character shapes themselves glow — no extra bounding box needed.      ║
+  // ╚════════════════════════════════════════════════════════════════════════╝
+  private renderTextGlowPrePass(
+    text: string, screenPos: Point2D, screenHeight: number,
+    normalizedRotation: number, fontFamily: string,
+    weight: 'normal' | 'bold', italic: boolean | undefined
+  ): void {
+    this.ctx.save();
+    this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
+    this.ctx.fillStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+    this.ctx.font = buildUIFont(screenHeight, fontFamily, weight, italic);
+    this.ctx.textBaseline = 'top';
+    if (normalizedRotation !== 0) {
+      this.ctx.translate(screenPos.x, screenPos.y);
+      this.ctx.rotate(degToRad(-normalizedRotation));
+      this.ctx.fillText(text, 0, 0);
+    } else {
+      this.ctx.fillText(text, screenPos.x, screenPos.y);
+    }
+    this.ctx.restore();
+  }
+
+  // ╔════════════════════════════════════════════════════════════════════════╗
+  // ║ 🔧 DXF ROTATION FIX v3 (2026-01-03)                                   ║
+  // ║ DXF: Counter-clockwise (CCW), 0° = +X                                 ║
+  // ║ Canvas: Clockwise (CW) with Y-flip → negate angle                     ║
+  // ║ DO NOT change the rotation calculation.                                ║
+  // ╚════════════════════════════════════════════════════════════════════════╝
+  private renderTextContent(
+    entity: EntityModel, text: string, screenPos: Point2D,
+    screenHeight: number, normalizedRotation: number, richStyle: TextRichStyle,
+    fontFamily: string, weight: 'normal' | 'bold', italic: boolean | undefined
+  ): void {
+    const baseColor = ('color' in entity ? entity.color : undefined) as string | undefined;
     const textAlignMode = richStyle?.textAlign ?? 'left';
-    // Underline Y offset relative to anchor: top→+0.9h, middle→+0.4h, bottom→-0.1h
+    // Underline Y offset: top→+0.9h, middle→+0.4h, bottom→-0.1h
     const baselineVOffset = richStyle?.textBaseline === 'middle' ? 0.5 : richStyle?.textBaseline === 'bottom' ? 1.0 : 0;
     const underlineYOff = screenHeight * (0.9 - baselineVOffset);
 
+    this.ctx.save();
+    this.ctx.font = buildUIFont(screenHeight, fontFamily, weight, italic);
+    this.ctx.fillStyle = richStyle?.runColor || baseColor || UI_COLORS.DEFAULT_ENTITY;
+    this.ctx.textAlign = richStyle?.textAlign ?? 'left';
+    // textBaseline from textNode.attachment[0]: T→top, M→middle, B→bottom. Default 'top' per DXF baseline fix.
+    this.ctx.textBaseline = richStyle?.textBaseline ?? 'top';
+
     if (normalizedRotation !== 0) {
       this.ctx.translate(screenPos.x, screenPos.y);
-      // ΑΝΤΙΣΤΡΟΦΗ γωνίας λόγω Y-flip στο worldToScreen
-      // DXF CCW → Canvas CW με αντιστροφή
-      // 🏢 ADR-067: Use centralized angle conversion
       this.ctx.rotate(degToRad(-normalizedRotation));
       this.ctx.fillText(text, 0, 0);
       if (richStyle?.underline) {
@@ -134,15 +154,7 @@ export class TextRenderer extends BaseEntityRenderer {
         this.ctx.fillRect(screenPos.x + xOff, screenPos.y + underlineYOff, w, thickness);
       }
     }
-
     this.ctx.restore();
-
-    // 🏢 FIX (2026-02-20): Text hover uses PhaseManager glow (shadowColor/shadowBlur)
-    // from setupStyle(). No additional bounding box overlay needed — the yellow dashed
-    // rectangle was visually distracting and non-standard. AutoCAD-style: glow only.
-
-    // Use centralized finalization
-    this.finalizeRendering(entity, options);
   }
 
   /**

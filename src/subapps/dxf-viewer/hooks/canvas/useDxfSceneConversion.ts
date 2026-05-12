@@ -83,6 +83,19 @@ function rectangleToVertices(e: {
 }
 
 /**
+ * ADR-344 Phase 6.E — Extract plain text string from textNode paragraphs.
+ * Used when the scene entity (e.g. from CreateTextCommand) has no flat `text` field.
+ */
+function extractFlatText(textNode: DxfTextNode): string {
+  return textNode.paragraphs
+    .map(p => (p.runs ?? [])
+      .filter(r => !('top' in r))
+      .map(r => (r as TextRun).text)
+      .join(''))
+    .join('\n');
+}
+
+/**
  * ADR-344 Phase 6.E — Extract canvas-renderable style from the first run of textNode.
  * Returns undefined when textNode is absent or yields no style fields.
  */
@@ -160,15 +173,17 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers): DxfEntityUnion
       return { ...base, type: 'arc' as const, center: e.center, radius: e.radius, startAngle: e.startAngle, endAngle: e.endAngle, counterclockwise: e.counterclockwise } as DxfEntityUnion;
     }
     case 'text': {
-      const e = entity as typeof entity & { position: Point2D; text: string; rotation?: number };
-      // ADR-344 Phase 6.E: textNode height takes priority; falls back to flat fields (ADR-142).
+      const e = entity as typeof entity & { position: Point2D; text?: string; rotation?: number };
+      const withNode = entity as { textNode?: DxfTextNode };
+      // ADR-344 Phase 6.E: entities from CreateTextCommand have no flat text — derive it.
+      const flatText = e.text ?? (withNode.textNode ? extractFlatText(withNode.textNode) : '');
       const textHeight = resolveTextHeight(entity);
       const textStyle = extractFirstRunStyle(entity);
       return {
         ...base,
         type: 'text' as const,
         position: e.position,
-        text: e.text,
+        text: flatText,
         height: textHeight,
         rotation: e.rotation,
         ...(textStyle && { textStyle }),
