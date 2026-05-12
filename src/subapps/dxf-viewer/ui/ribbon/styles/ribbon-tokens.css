@@ -28,6 +28,16 @@
   --ribbon-z-context-menu: 1100;
 }
 
+/* ADR-345 — Route-scoped global-header tweak.
+   On /dxf/viewer the ribbon sits directly under the app header; the
+   header's own border-bottom would draw a separator above the ribbon.
+   Hide it ONLY on this route. Other routes keep their separator.
+   Trigger: `document.documentElement.dataset.appRoute = 'dxf-viewer'`
+   set/cleared by DxfViewerContent's lifecycle. */
+html[data-app-route="dxf-viewer"] header.sticky.top-0 {
+  border-bottom-width: 0;
+}
+
 .dark,
 [data-theme="dark"] {
   --ribbon-bg: hsl(var(--showcase-bg)); /* #1D283A navy brand (globals.css SSoT) */

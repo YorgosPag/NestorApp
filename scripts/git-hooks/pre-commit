@@ -87,6 +87,25 @@ done
 QUERY_FILES=$(echo "$QUERY_FILES" | grep -v '^$' || true)
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 0.5: SYNC — bash checks that deadlock inside the Node worker+spawn combo
+# CHECK 3.5: Hardcoded i18n defaultValue strings
+# CHECK 3.6: Hardcoded UI strings
+# Run sequentially here instead of inside run-checks-parallel.js to avoid a
+# Node.js bug where child_process.spawn hangs when worker threads are active.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if [[ -n "$TS_FILES" ]]; then
+    if [[ -f "scripts/check-hardcoded-strings.sh" ]]; then
+        bash scripts/check-hardcoded-strings.sh $TS_FILES
+        if [[ $? -ne 0 ]]; then exit 1; fi
+    fi
+    if [[ -f "scripts/check-ui-hardcoded-strings.sh" ]]; then
+        bash scripts/check-ui-hardcoded-strings.sh $TS_FILES
+        if [[ $? -ne 0 ]]; then exit 1; fi
+    fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 1: Node.js worker_threads orchestrator
 # — one node process, all checks run in parallel threads (JS) or processes (.sh)
 # ═══════════════════════════════════════════════════════════════════════════════

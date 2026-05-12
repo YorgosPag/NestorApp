@@ -116,6 +116,22 @@ import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEdito
 
 // ✅ PERFORMANCE: Memoize the main component
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
+  // ADR-345 — mark the document root while the DXF viewer route is mounted
+  // so route-scoped CSS (e.g. hiding the global header border-bottom) only
+  // applies here. Cleanup restores the previous value when leaving the route.
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const previous = root.dataset.appRoute;
+    root.dataset.appRoute = 'dxf-viewer';
+    return () => {
+      if (previous === undefined) {
+        delete root.dataset.appRoute;
+      } else {
+        root.dataset.appRoute = previous;
+      }
+    };
+  }, []);
+
   const floatingRef = React.useRef<FloatingPanelHandle>(null);
   const state = useDxfViewerState();
   const notifications = useNotifications();
@@ -441,22 +457,18 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           showCopyableNotification={showCopyableNotification}
         />
       </React.Suspense>
-
       <React.Suspense fallback={<div className="hidden" />}>
         <FloorplanBackgroundPanel
           isOpen={pdfPanelOpen}
           onClose={() => setPdfPanelOpen(false)}
         />
       </React.Suspense>
-
       <React.Suspense fallback={<div className="hidden" />}>
         <ReplaceConfirmDialog />
       </React.Suspense>
-
       <React.Suspense fallback={<div className="hidden" />}>
         <CalibrationDialog />
       </React.Suspense>
-
       {USE_AI_DRAWING_ASSISTANT && (
         <React.Suspense fallback={<div className="hidden" />}>
           <DxfAiChatPanel
@@ -468,7 +480,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           />
         </React.Suspense>
       )}
-
       {perfMonitorEnabled && (
         <ClientOnlyPerformanceDashboard
           showDetails
@@ -485,5 +496,4 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       </TransformProvider>
   );
 });
-
 export default DxfViewerContent;

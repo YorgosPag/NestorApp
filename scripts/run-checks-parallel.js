@@ -91,8 +91,7 @@ function addBash(id, name, shScript, args = []) {
 }
 
 if (tsFiles.length > 0) {
-  addBash  ('3.5',  'Hardcoded i18n',          'scripts/check-hardcoded-strings.sh',          tsFiles);
-  addBash  ('3.6',  'Hardcoded UI strings',     'scripts/check-ui-hardcoded-strings.sh',       tsFiles);
+  // 3.5 + 3.6 run in Phase 0.5 (sync bash) — spawn deadlocks alongside worker threads
   addThread('3.7',  'SSoT imports',             'scripts/check-ssot-imports.js',               tsFiles);
   addThread('3.8',  'i18n missing keys',        'scripts/check-i18n-missing-keys.js',          tsFiles);
   addThread('3.12', 'Option i18n keys',         'scripts/check-option-i18n-keys.js',           tsFiles);
