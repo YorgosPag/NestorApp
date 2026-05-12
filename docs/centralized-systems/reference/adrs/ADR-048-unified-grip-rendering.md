@@ -139,5 +139,6 @@ private drawGrip(position, temperature, ...) {
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-05-11 | v2.0 | **Sistema B + C migration** — Eliminated 2 remaining duplicate grip systems. `layer-polygon-renderer.ts` (Sistema B): replaced `renderVertexGrips` + `renderEdgeMidpointGrips` inline draw with `UnifiedGripRenderer`. New methods added: `renderEdgeMidpointGrip()` (diamond + outer ring), `renderSquareRing()`, `showCloseRing`/`showSelectionRing` flags on `GripRenderConfig`. `PreviewRenderer.ts` (Sistema C): removed `getGripPath()` Path2D cache, uses `UnifiedGripRenderer` with identity worldToScreen. `grip-rendering` module added to `.ssot-registry.json`. |
+| 2026-05-13 | v2.1 | **Batch rendering perf fix** — `GripShapeRenderer.renderSquareGripsBatch()`: N square grips with single `ctx.save()/restore()`. `UnifiedGripRenderer.renderGripSetBatched()`: groups by (temperature × shape × customColor), O(groups) canvas state changes vs O(n). `GripPhaseRenderer.renderStandardGrips()`: pre-resolves temperatures, delegates to `renderGripSetBatched`. Reduces canvas API calls ~6× for typical selections (500 cold square grips: 3000 → 1002 calls). |
 
 ---

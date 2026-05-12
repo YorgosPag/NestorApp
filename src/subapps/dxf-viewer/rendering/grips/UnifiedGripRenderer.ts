@@ -221,6 +221,54 @@ export class UnifiedGripRenderer {
   }
 
   /**
+   * Batch-optimized grip set rendering.
+   * Groups grips by (temperature × shape × customColor) and renders each group
+   * with a single ctx.save()/restore() — O(groups) vs O(n) canvas state changes.
+   *
+   * Precondition: grips must have `temperature` pre-resolved (no interaction state lookup).
+   * Falls back to per-grip rendering for non-square shapes.
+   */
+  renderGripSetBatched(
+    grips: GripRenderConfig[],
+    settings?: Partial<GripSettings>
+  ): void {
+    if (grips.length === 0) return;
+    const baseSize = settings?.gripSize ?? UI_SIZE_DEFAULTS.GRIP_SIZE;
+    const dpiScale = settings?.dpiScale ?? 1.0;
+
+    type BatchGroup = { positions: Point2D[]; config: GripRenderConfig };
+    const groups = new Map<string, BatchGroup>();
+
+    for (const grip of grips) {
+      const temperature = grip.temperature ?? 'cold';
+      const shape = grip.shape ?? 'square';
+      const key = `${temperature}\0${shape}\0${grip.customColor ?? ''}`;
+      let g = groups.get(key);
+      if (!g) {
+        g = { positions: [], config: grip };
+        groups.set(key, g);
+      }
+      g.positions.push(this.worldToScreen(grip.position));
+    }
+
+    for (const { positions, config } of groups.values()) {
+      const temperature = config.temperature ?? 'cold';
+      const shape = config.shape ?? 'square';
+      const size = this.sizeCalculator.calculateSize(baseSize, temperature, dpiScale, config.sizeMultiplier);
+      const fillColor = this.colorManager.getColor(temperature, config.type, config.customColor, settings);
+      const outlineColor = this.colorManager.getOutlineColor(settings);
+
+      if (shape === 'square') {
+        this.shapeRenderer.renderSquareGripsBatch(this.ctx, positions, size, fillColor, outlineColor);
+      } else {
+        for (const pos of positions) {
+          this.shapeRenderer.renderShape(this.ctx, pos, size, shape, fillColor, outlineColor, 1);
+        }
+      }
+    }
+  }
+
+  /**
    * Render a set of grips (e.g., all vertices of an entity)
    *
    * @param grips - Array of grip configurations

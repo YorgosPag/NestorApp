@@ -12,6 +12,7 @@ import type { GripShape } from './types';
 import { renderSquareGrip } from '../entities/shared/geometry-rendering-utils';
 // 🏢 ADR-058/064: Centralized Canvas Primitives
 import { addCirclePath, addDiamondPath } from '../primitives/canvasPaths';
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 
 // ============================================================================
 // GRIP SHAPE RENDERER CLASS
@@ -52,6 +53,30 @@ export class GripShapeRenderer {
    * @param outlineColor - Outline color (hex string)
    * @param outlineWidth - Outline width in pixels
    */
+  /**
+   * Batch-render N square grips with a single ctx.save()/restore().
+   * O(1) state changes instead of O(n) — use when rendering many same-colored grips.
+   */
+  renderSquareGripsBatch(
+    ctx: CanvasRenderingContext2D,
+    positions: Point2D[],
+    size: number,
+    fillColor: string,
+    outlineColor: string
+  ): void {
+    if (positions.length === 0) return;
+    const half = size / 2;
+    ctx.save();
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = outlineColor;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.GRIP_OUTLINE;
+    for (const pos of positions) {
+      ctx.fillRect(pos.x - half, pos.y - half, size, size);
+      ctx.strokeRect(pos.x - half, pos.y - half, size, size);
+    }
+    ctx.restore();
+  }
+
   renderShape(
     ctx: CanvasRenderingContext2D,
     position: Point2D,

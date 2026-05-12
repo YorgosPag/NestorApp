@@ -15,7 +15,7 @@ import type {
   GripTemperature,
   Entity
 } from '../types';
-import type { GripSettings } from '../../../rendering/grips/types';
+import type { GripSettings, GripRenderConfig } from '../../../rendering/grips/types';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -162,25 +162,28 @@ export class GripPhaseRenderer {
   }
 
   /**
-   * Render standard grips from GripInfo array
+   * Render standard grips from GripInfo array — batched by temperature group.
+   * One ctx.save()/restore() per (temperature × shape) group instead of per grip.
    */
   private renderStandardGrips(
     entity: Entity,
     grips: GripInfo[],
     state: PhaseRenderingState
   ): void {
+    if (grips.length === 0) return;
     const style = getGripPreviewStyleWithOverride();
-    const cachedSettings: Partial<GripSettings> = {
+    const settings: Partial<GripSettings> = {
       colors: style.colors,
       gripSize: style.gripSize,
       dpiScale: 1.0,
     };
-    for (let i = 0; i < grips.length; i++) {
-      const grip = grips[i];
-      const screenPos = this.worldToScreen(grip.position);
-      const temperature = this.getGripTemperature(entity.id, grip.gripIndex ?? i, state);
-      this.drawGrip(screenPos, temperature, state, grip.type, undefined, cachedSettings);
-    }
+    const gripConfigs: GripRenderConfig[] = grips.map((grip, i) => ({
+      position: grip.position,
+      type: ((grip.type ?? 'vertex') as GripRenderConfig['type']),
+      temperature: this.getGripTemperature(entity.id, grip.gripIndex ?? i, state),
+      shape: 'square' as const,
+    }));
+    this.gripRenderer.renderGripSetBatched(gripConfigs, settings);
   }
 
   /**
