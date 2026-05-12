@@ -71,6 +71,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-12: ADR-344 Phase 11 — bitmap cache invalidates on annotation scale change
+
+`dxf-bitmap-cache.ts`: added `activeAnnotationScale: string` to `CacheKey`.
+`isDirty()` now reads `getActiveScaleName()` from `ViewportStore` and compares
+against cached value. Cache invalidates when viewport annotation scale changes,
+preventing stale renders after scale switch (e.g. 1:50 → 1:100).
+
 ### 2026-05-11: NEW — mouse-handler-move reads GripSnapStore for crosshair snap
 
 `mouse-handler-move.ts`: on every mouse-move, if `getLockedGripWorldPos()`

@@ -290,7 +290,8 @@
       "layers": "Layers",
       "view": "View",
       "annotate": "Annotate",
-      "settings": "Settings"
+      "settings": "Settings",
+      "textEditor": "Text Editor"
     },
     "panels": {
       "draw": "Draw",
@@ -298,8 +299,15 @@
       "annotation": "Annotation",
       "layerManager": "Layer Manager",
       "navigate": "Navigate",
+      "visualStyles": "Visual Styles",
+      "viewports": "Viewports",
       "text": "Text",
       "general": "General",
+      "font": "Font",
+      "paragraph": "Paragraph",
+      "textProperties": "Properties",
+      "insert": "Insert",
+      "editor": "Editor Tools",
       "placeholder": "Coming soon"
     },
     "minimizeStates": {
@@ -372,6 +380,37 @@
         "rectangular": "Rectangular",
         "path": "Path",
         "polar": "Polar"
+      },
+      "pan": "Pan",
+      "zoom": "Zoom",
+      "zoomExtents": "Zoom Extents",
+      "zoomPrevious": "Previous View",
+      "zoomRealtime": "Realtime Zoom",
+      "zoomReset": "Reset Zoom",
+      "zoomVariants": {
+        "window": "Zoom Window",
+        "zoomIn": "Zoom In",
+        "zoomOut": "Zoom Out"
+      },
+      "visualStyles": {
+        "wireframe2d": "2D Wireframe",
+        "hidden": "Hidden",
+        "realistic": "Realistic",
+        "shaded": "Shaded",
+        "conceptual": "Conceptual"
+      },
+      "viewports": {
+        "single": "Single Viewport",
+        "two": "Two Viewports",
+        "three": "Three Viewports",
+        "four": "Four Viewports"
+      },
+      "textEditor": {
+        "fontPlaceholder": "Font (soon)",
+        "paragraphPlaceholder": "Paragraph (soon)",
+        "propertiesPlaceholder": "Properties (soon)",
+        "insertPlaceholder": "Insert (soon)",
+        "editorPlaceholder": "Editor (soon)"
       },
       "dropdown": {
         "openVariants": "Open variants"

@@ -22,6 +22,8 @@ import { DxfRenderer } from './DxfRenderer';
 import type { DxfScene, DxfRenderOptions } from './dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
+// 🏢 ADR-344 Phase 11: bitmap cache must invalidate on viewport annotation scale change
+import { getActiveScaleName } from '../../systems/viewport/ViewportStore';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('DxfBitmapCache');
@@ -34,6 +36,8 @@ interface CacheKey {
   width: number;
   height: number;
   dpr: number;
+  /** ADR-344 Phase 11: invalidate cache when viewport annotation scale changes. */
+  activeAnnotationScale: string;
 }
 
 export class DxfBitmapCache {
@@ -46,6 +50,7 @@ export class DxfBitmapCache {
     if (!this.offscreenCanvas || !this.cacheKey) return true;
 
     const dpr = getDevicePixelRatio();
+    const activeAnnotationScale = getActiveScaleName();
     return (
       this.cacheKey.sceneRef !== scene ||
       this.cacheKey.scale !== transform.scale ||
@@ -53,7 +58,8 @@ export class DxfBitmapCache {
       this.cacheKey.offsetY !== transform.offsetY ||
       this.cacheKey.width !== viewport.width ||
       this.cacheKey.height !== viewport.height ||
-      this.cacheKey.dpr !== dpr
+      this.cacheKey.dpr !== dpr ||
+      this.cacheKey.activeAnnotationScale !== activeAnnotationScale
     );
   }
 
@@ -92,6 +98,7 @@ export class DxfBitmapCache {
         width: viewport.width,
         height: viewport.height,
         dpr,
+        activeAnnotationScale: getActiveScaleName(),
       };
     } catch (error) {
       logger.error('Bitmap cache rebuild failed', { error });

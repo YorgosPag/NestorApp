@@ -106,6 +106,11 @@ import { DxfStatusBar } from '../ui/ribbon/status-bar/DxfStatusBar';
 import { LayersTabContent } from '../ui/ribbon/tabs/LayersTabContent';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 📐 ADR-345 Fase 5B: contextual tab Text Editor (scaffolding — placeholders)
+import {
+  CONTEXTUAL_TEXT_EDITOR_TAB,
+  TEXT_EDITOR_CONTEXTUAL_TRIGGER,
+} from '../ui/ribbon/data/contextual-text-editor-tab';
 
 // ✅ PERFORMANCE: Memoize the main component
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
@@ -118,6 +123,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       notifications.info(tShell('ribbon.commands.comingSoon', { label }));
     },
     [notifications, tShell],
+  );
+  // ADR-345 Fase 5B — contextual tab list (Text Editor scaffolding).
+  const ribbonContextualTabs = React.useMemo(
+    () => [CONTEXTUAL_TEXT_EDITOR_TAB],
+    [],
   );
   const eventBus = useEventBus();
   const colors = useSemanticColors();
@@ -192,6 +202,18 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   // 🏢 Universal selection primary ID
   const primarySelectedId = universalSelection.getPrimaryId();
+
+  // ADR-345 Fase 5B — derive contextual ribbon trigger from selection.
+  // Text/MTEXT primary selection → show Text Editor contextual tab.
+  const activeContextualTrigger = React.useMemo<string | null>(() => {
+    if (!primarySelectedId || !currentScene) return null;
+    const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
+    if (!entity) return null;
+    if (entity.type === 'text' || entity.type === 'mtext') {
+      return TEXT_EDITOR_CONTEXTUAL_TRIGGER;
+    }
+    return null;
+  }, [primarySelectedId, currentScene]);
 
   // ✅ ADR-065 SRP: Extracted callbacks
   const {
@@ -285,7 +307,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           commands={{
             onToolChange: handleToolChange,
             onComingSoon: handleRibbonComingSoon,
+            onAction: handleAction,
           }}
+          contextualTabs={ribbonContextualTabs}
+          activeContextualTrigger={activeContextualTrigger}
           layersTabContent={
             <LayersTabContent
               scene={currentScene}

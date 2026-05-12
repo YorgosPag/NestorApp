@@ -1,19 +1,21 @@
 'use client';
 
 /**
- * ADR-344 Phase 5.C + Q11 — Per-entity annotation scale manager.
+ * ADR-344 Phase 5.C + Phase 11 — Annotation scale manager.
  *
- * Manages the `annotationScales` array on the selected `DxfTextNode`(s).
- * Standard scales preset list + custom input. The active scale dropdown
- * picks `currentScale` from the entity's own list.
+ * Two responsibilities:
+ *   1) Per-entity scales: edits `annotationScales` and `currentScale` on the
+ *      selected `DxfTextNode`(s). (Phase 5.C — entity-level)
+ *   2) Viewport scale: reads/writes the global `ViewportStore` active scale
+ *      and list. Sync buttons copy between entity and viewport. (Phase 11)
  *
- * NOTE: the actual viewport context binding (Phase 11) is out of scope
- * here — this component edits node-level data only.
+ * Rendering uses `useActiveScale` / `useScaleList` from ViewportContext —
+ * leaf-level subscription per ADR-040.
  */
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, ArrowDownToLine, ArrowUpFromLine, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -24,19 +26,13 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { AnnotationScale, MixedValue } from '../../../text-engine/types';
-
-const STANDARD_SCALES: ReadonlyArray<{ readonly name: string; readonly factor: number }> = [
-  { name: '1:1', factor: 1 },
-  { name: '1:2', factor: 2 },
-  { name: '1:5', factor: 5 },
-  { name: '1:10', factor: 10 },
-  { name: '1:20', factor: 20 },
-  { name: '1:50', factor: 50 },
-  { name: '1:100', factor: 100 },
-  { name: '1:200', factor: 200 },
-  { name: '1:500', factor: 500 },
-  { name: '1:1000', factor: 1000 },
-] as const;
+import {
+  useActiveScale,
+  useScaleList,
+  setActiveScale,
+  setScaleList,
+} from '../../../systems/viewport';
+import { STANDARD_SCALE_PRESETS } from '../../../systems/viewport/standard-scales';
 
 interface AnnotationScaleManagerProps {
   readonly scales: readonly AnnotationScale[];
@@ -59,6 +55,14 @@ export function AnnotationScaleManager({
   const [customName, setCustomName] = useState('');
   const [customFactor, setCustomFactor] = useState('');
 
+  // Viewport state (leaf subscriptions — ADR-040)
+  const viewportActive = useActiveScale();
+  const viewportScales = useScaleList();
+
+  const entityCurrentScaleStr = typeof currentScale === 'string' ? currentScale : null;
+  const entityOverridesViewport =
+    entityCurrentScaleStr !== null && entityCurrentScaleStr !== viewportActive;
+
   const addScale = (name: string, factor: number) => {
     if (scales.some((s) => s.name === name)) return;
     onScalesChange([
@@ -79,14 +83,41 @@ export function AnnotationScaleManager({
     setCustomFactor('');
   };
 
+  const handleSyncToViewport = () => {
+    setScaleList(scales);
+    if (entityCurrentScaleStr !== null) setActiveScale(entityCurrentScaleStr);
+  };
+
+  const handleSyncFromViewport = () => {
+    onScalesChange(viewportScales);
+    onCurrentScaleChange(viewportActive);
+  };
+
   return (
     <section className={cn('flex flex-col gap-3 p-2', disabled && 'opacity-40')}>
       <header>
         <h3 className="text-sm font-medium">{t('textToolbar:annotationScale.title')}</h3>
       </header>
 
+      <ViewportSection
+        activeName={viewportActive}
+        scaleList={viewportScales}
+        disabled={disabled}
+        onActiveChange={setActiveScale}
+        onSyncFromViewport={handleSyncFromViewport}
+        canSyncFromViewport={viewportScales.length > 0}
+        t={t}
+      />
+
+      {entityOverridesViewport && (
+        <p className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="h-3 w-3" aria-hidden />
+          {t('textToolbar:annotationScale.entityOverride')}
+        </p>
+      )}
+
       <Select
-        value={currentScale ?? undefined}
+        value={typeof currentScale === 'string' ? currentScale : undefined}
         onValueChange={onCurrentScaleChange}
         disabled={disabled || scales.length === 0}
       >
@@ -123,7 +154,7 @@ export function AnnotationScaleManager({
       <div className="flex flex-col gap-1">
         <span className="text-xs text-muted-foreground">{t('textToolbar:annotationScale.addStandard')}</span>
         <div className="flex flex-wrap gap-1">
-          {STANDARD_SCALES.map((s) => (
+          {STANDARD_SCALE_PRESETS.map((s) => (
             <Button
               key={s.name}
               variant="outline"
@@ -170,6 +201,71 @@ export function AnnotationScaleManager({
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleSyncToViewport}
+        disabled={disabled || scales.length === 0}
+        className="min-h-[44px] sm:min-h-[32px] gap-1"
+      >
+        <ArrowUpFromLine className="h-3 w-3" />
+        {t('textToolbar:annotationScale.syncToViewport')}
+      </Button>
+    </section>
+  );
+}
+
+interface ViewportSectionProps {
+  readonly activeName: string;
+  readonly scaleList: readonly AnnotationScale[];
+  readonly disabled?: boolean;
+  readonly onActiveChange: (name: string) => void;
+  readonly onSyncFromViewport: () => void;
+  readonly canSyncFromViewport: boolean;
+  readonly t: ReturnType<typeof useTranslation>['t'];
+}
+
+function ViewportSection({
+  activeName,
+  scaleList,
+  disabled,
+  onActiveChange,
+  onSyncFromViewport,
+  canSyncFromViewport,
+  t,
+}: ViewportSectionProps) {
+  return (
+    <section className="flex flex-col gap-2 rounded border bg-muted/30 p-2">
+      <h4 className="text-xs font-medium uppercase text-muted-foreground">
+        {t('textToolbar:annotationScale.viewportSectionTitle')}
+      </h4>
+      <Select
+        value={activeName}
+        onValueChange={onActiveChange}
+        disabled={disabled || scaleList.length === 0}
+      >
+        <SelectTrigger size="md" aria-label={t('textToolbar:annotationScale.viewportActive')}>
+          <SelectValue placeholder={t('textToolbar:annotationScale.viewportActivePlaceholder')} />
+        </SelectTrigger>
+        <SelectContent>
+          {scaleList.map((s) => (
+            <SelectItem key={s.name} value={s.name}>
+              {s.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onSyncFromViewport}
+        disabled={disabled || !canSyncFromViewport}
+        className="min-h-[44px] sm:min-h-[32px] gap-1"
+      >
+        <ArrowDownToLine className="h-3 w-3" />
+        {t('textToolbar:annotationScale.syncFromViewport')}
+      </Button>
     </section>
   );
 }

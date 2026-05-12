@@ -27,7 +27,13 @@
     "customNameLabel": "Scale name",
     "customNamePlaceholder": "e.g. 1:50",
     "customFactorLabel": "Scale factor",
-    "customFactorPlaceholder": "e.g. 50"
+    "customFactorPlaceholder": "e.g. 50",
+    "viewportActive": "Active viewport scale",
+    "viewportActivePlaceholder": "Select viewport scale…",
+    "syncToViewport": "Sync to viewport",
+    "syncFromViewport": "Pull from viewport",
+    "entityOverride": "Entity uses a scale different from the viewport",
+    "viewportSectionTitle": "Viewport"
   },
   "color": {
     "label": "Color",

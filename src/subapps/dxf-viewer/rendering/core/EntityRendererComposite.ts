@@ -23,6 +23,8 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 // 🏢 ADR-151: Centralized grip tolerance
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { hitTestingService } from '../../services/HitTestingService';
+// 🏢 ADR-344 Phase 11: Annotative scaling resolver — upstream of TextRenderer
+import { resolveAnnotativeEntity } from '../entities/annotative-resolver';
 
 const logger = createModuleLogger('EntityRendererComposite');
 
@@ -91,7 +93,10 @@ export class EntityRendererComposite {
   render(entity: Entity, options: RenderOptions = {}): void {
     const renderer = this.getRenderer(entity.type);
     if (renderer) {
-      renderer.render(entity, options);
+      // 🏢 ADR-344 Phase 11: resolve annotative height before render (no-op
+      // for non-annotative entities). Keeps TextRenderer simple-path intact.
+      const resolved = resolveAnnotativeEntity(entity);
+      renderer.render(resolved, options);
     } else {
       logger.warn(`No renderer found for entity type: ${entity.type}`);
       this.renderFallback(entity, options);

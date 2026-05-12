@@ -27,7 +27,13 @@
     "customNameLabel": "Όνομα κλίμακας",
     "customNamePlaceholder": "π.χ. 1:50",
     "customFactorLabel": "Συντελεστής κλίμακας",
-    "customFactorPlaceholder": "π.χ. 50"
+    "customFactorPlaceholder": "π.χ. 50",
+    "viewportActive": "Ενεργή κλίμακα προβολής",
+    "viewportActivePlaceholder": "Επιλογή κλίμακας προβολής…",
+    "syncToViewport": "Συγχρονισμός με προβολή",
+    "syncFromViewport": "Λήψη από προβολή",
+    "entityOverride": "Η οντότητα χρησιμοποιεί διαφορετική κλίμακα από την προβολή",
+    "viewportSectionTitle": "Προβολή"
   },
   "color": {
     "label": "Χρώμα",

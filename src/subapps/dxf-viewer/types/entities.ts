@@ -167,6 +167,16 @@ export interface PointEntity extends BaseEntity {
   style?: 'dot' | 'cross' | 'plus' | 'circle';
 }
 
+/**
+ * ADR-344 Phase 11 — One entry in the per-entity annotation-scale list.
+ * Persisted via DXF XDATA group codes 1000/1070/1071 on ANNOTATIVE entities.
+ */
+export interface EntityAnnotationScale {
+  readonly name: string;        // e.g. "1:100"
+  readonly paperHeight: number; // paper-space height in mm
+  readonly modelHeight: number; // model-space height = paperHeight × scaleFactor
+}
+
 export interface TextEntity extends BaseEntity {
   type: 'text';
   position: Point2D;
@@ -176,6 +186,9 @@ export interface TextEntity extends BaseEntity {
   fontFamily?: string;
   alignment?: 'left' | 'center' | 'right';
   rotation?: number;
+  // 🏢 ADR-344 Phase 11 — Annotative scaling (optional, populated by XDATA parser)
+  isAnnotative?: boolean;
+  annotationScales?: readonly EntityAnnotationScale[];
 }
 
 export interface MTextEntity extends BaseEntity {
@@ -191,6 +204,9 @@ export interface MTextEntity extends BaseEntity {
   lineSpacing?: number;       // ✅ ENTERPRISE: AutoCAD line spacing factor
   paragraphSpacing?: number;  // ✅ ENTERPRISE: AutoCAD paragraph spacing
   wordWrap?: boolean;         // ✅ ENTERPRISE: AutoCAD word wrap option
+  // 🏢 ADR-344 Phase 11 — Annotative scaling (optional, populated by XDATA parser)
+  isAnnotative?: boolean;
+  annotationScales?: readonly EntityAnnotationScale[];
 }
 
 export interface SplineEntity extends BaseEntity {

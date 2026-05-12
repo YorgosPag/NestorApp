@@ -24,8 +24,12 @@
 
 import type { AnnotationScale } from '../../text-engine/types';
 import { buildDefaultScaleList } from './standard-scales';
+import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 
 type ViewportListener = () => void;
+
+// Canvas IDs that depend on viewport annotation scale (text rendering pipeline).
+const VIEWPORT_DIRTY_CANVAS_IDS = ['dxf-canvas'] as const;
 
 // ─── Internal mutable state ───────────────────────────────────────────────────
 
@@ -47,6 +51,7 @@ const scaleListListeners = new Set<ViewportListener>();
 export function setActiveScale(name: string): void {
   if (name === _activeScaleName) return;
   _activeScaleName = name;
+  markSystemsDirty([...VIEWPORT_DIRTY_CANVAS_IDS]);
   activeScaleListeners.forEach((cb) => cb());
 }
 
@@ -58,6 +63,7 @@ export function setActiveScale(name: string): void {
 export function setScaleList(next: readonly AnnotationScale[]): void {
   if (sameScaleList(_scaleList, next)) return;
   _scaleList = next;
+  markSystemsDirty([...VIEWPORT_DIRTY_CANVAS_IDS]);
   scaleListListeners.forEach((cb) => cb());
 }
 

@@ -290,7 +290,8 @@
       "layers": "Επίπεδα",
       "view": "Προβολή",
       "annotate": "Επισημείωση",
-      "settings": "Ρυθμίσεις"
+      "settings": "Ρυθμίσεις",
+      "textEditor": "Επεξεργαστής Κειμένου"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -298,8 +299,15 @@
       "annotation": "Επισημείωση",
       "layerManager": "Διαχειριστής Επιπέδων",
       "navigate": "Πλοήγηση",
+      "visualStyles": "Στυλ Προβολής",
+      "viewports": "Παράθυρα Προβολής",
       "text": "Κείμενο",
       "general": "Γενικά",
+      "font": "Γραμματοσειρά",
+      "paragraph": "Παράγραφος",
+      "textProperties": "Ιδιότητες",
+      "insert": "Εισαγωγή",
+      "editor": "Εργαλεία Επεξεργαστή",
       "placeholder": "Σε φάση ανάπτυξης"
     },
     "minimizeStates": {
@@ -372,6 +380,37 @@
         "rectangular": "Ορθογώνιος",
         "path": "Κατά Διαδρομή",
         "polar": "Πολικός"
+      },
+      "pan": "Μετακίνηση Προβολής",
+      "zoom": "Μεγέθυνση",
+      "zoomExtents": "Εστίαση Ορίων",
+      "zoomPrevious": "Προηγούμενη Προβολή",
+      "zoomRealtime": "Διαδραστική Μεγέθυνση",
+      "zoomReset": "Επαναφορά Μεγέθυνσης",
+      "zoomVariants": {
+        "window": "Παράθυρο Μεγέθυνσης",
+        "zoomIn": "Μεγέθυνση",
+        "zoomOut": "Σμίκρυνση"
+      },
+      "visualStyles": {
+        "wireframe2d": "Δισδιάστατο Σύρμα",
+        "hidden": "Κρυφές Γραμμές",
+        "realistic": "Ρεαλιστικό",
+        "shaded": "Σκιασμένο",
+        "conceptual": "Εννοιολογικό"
+      },
+      "viewports": {
+        "single": "Μονό Παράθυρο",
+        "two": "Δύο Παράθυρα",
+        "three": "Τρία Παράθυρα",
+        "four": "Τέσσερα Παράθυρα"
+      },
+      "textEditor": {
+        "fontPlaceholder": "Γραμματοσειρά (σύντομα)",
+        "paragraphPlaceholder": "Παράγραφος (σύντομα)",
+        "propertiesPlaceholder": "Ιδιότητες (σύντομα)",
+        "insertPlaceholder": "Εισαγωγή (σύντομα)",
+        "editorPlaceholder": "Επεξεργαστής (σύντομα)"
       },
       "dropdown": {
         "openVariants": "Άνοιγμα παραλλαγών"
