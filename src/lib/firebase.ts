@@ -4,6 +4,7 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
+  memoryLocalCache,
   connectFirestoreEmulator,
   type Firestore,
 } from 'firebase/firestore';
@@ -21,20 +22,21 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// ── Firestore w/ IndexedDB persistent cache (ADR-328 §5.J / §5.5 offline support) ──
-// On the client we initialize Firestore with persistentLocalCache so onSnapshot
-// continues delivering cached data while offline and queued writes flush on reconnect.
-// SSR / Node falls back to plain getFirestore (no IndexedDB available).
-// Multi-tab manager: allows multiple browser tabs to share the IndexedDB cache
-// without competing for exclusive ownership (fixes "Failed to obtain exclusive
-// access to the persistence layer" console error in multi-tab sessions).
+// ── Firestore cache strategy (ADR-328 §5.J / §5.5 offline support) ──
+// Production: persistentLocalCache + multi-tab manager → offline support, shared IndexedDB.
+// Development: memoryLocalCache → no IndexedDB lease, eliminates "Failed to obtain primary
+//   lease for action 'Release target'" warnings caused by Turbopack HMR reinitializing
+//   the Firestore module while the previous instance tries to release query targets.
+// SSR / Node: plain getFirestore (no IndexedDB available).
 const isClient = typeof window !== 'undefined';
+const isDev = process.env.NODE_ENV === 'development';
 function createDb(): Firestore {
   if (!isClient) return getFirestore(app);
   try {
-    return initializeFirestore(app, {
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-    });
+    const localCache = isDev
+      ? memoryLocalCache()
+      : persistentLocalCache({ tabManager: persistentMultipleTabManager() });
+    return initializeFirestore(app, { localCache });
   } catch {
     // initializeFirestore already called (HMR / repeat import) — reuse existing.
     return getFirestore(app);
