@@ -18,18 +18,28 @@ import { UI_FONTS, buildUIFont, LINE_DASH_PATTERNS } from '../../config/text-ren
 import { formatAngle } from '../../rendering/entities/shared/distance-label-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
-import { isTextEntity } from '../../types/entities';
 
 export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
-  // ✅ ENTERPRISE FIX: Use type guard to ensure entity is TextEntity
-  if (!isTextEntity(entity)) return;
+  if (entity.type !== 'text' && entity.type !== 'mtext') return;
 
-  const position = entity.position;
-  const text = entity.text;
-  // 🏢 FIX (2026-02-20): DXF entities use `height` (e.g. 2.5), NOT `fontSize`
-  // Priority: height → fontSize → 2.5 (AutoCAD Standard DIMTXT default)
-  const height = entity.height || entity.fontSize || 2.5;
-  const rotation = entity.rotation ?? 0;
+  const e = entity as Record<string, unknown>;
+  const position = e.position as Point2D | undefined;
+
+  // Support flat `text` (DXF-imported) and `textNode` AST (CreateTextCommand).
+  let text = e.text as string | undefined;
+  if (!text) {
+    type TextNodeShape = { paragraphs?: Array<{ runs?: Array<{ text?: string }> }> };
+    const node = e.textNode as TextNodeShape | undefined;
+    if (node?.paragraphs) {
+      text = node.paragraphs
+        .flatMap(p => p.runs ?? [])
+        .map(r => r.text ?? '')
+        .join('') || undefined;
+    }
+  }
+
+  const height = (e.height as number | undefined) || (e.fontSize as number | undefined) || 2.5;
+  const rotation = (e.rotation as number | undefined) ?? 0;
 
   if (!position || !text) return;
 

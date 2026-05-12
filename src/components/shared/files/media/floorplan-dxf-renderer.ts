@@ -175,9 +175,21 @@ export function renderDxfToCanvas(
         break;
       }
 
-      case 'text': {
+      case 'text':
+      case 'mtext': {
         const position = e.position as { x: number; y: number } | undefined;
-        const text = e.text as string | undefined;
+        // Support flat `text` field (DXF-imported) and `textNode` AST (CreateTextCommand).
+        let text = e.text as string | undefined;
+        if (!text) {
+          type TextNodeShape = { paragraphs?: Array<{ runs?: Array<{ text?: string }> }> };
+          const textNode = e.textNode as TextNodeShape | undefined;
+          if (textNode?.paragraphs) {
+            text = textNode.paragraphs
+              .map(p => (p.runs ?? []).map(r => r.text ?? '').join(''))
+              .join('\n')
+              .trim() || undefined;
+          }
+        }
         const height = e.height as number | undefined;
         if (position && text) {
           ctx.fillStyle = layerColor;

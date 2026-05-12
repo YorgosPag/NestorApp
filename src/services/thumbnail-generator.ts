@@ -196,9 +196,20 @@ export async function generateDxfThumbnail(
         break;
       }
 
-      case 'text': {
+      case 'text':
+      case 'mtext': {
         const position = e.position as { x: number; y: number } | undefined;
-        const text = e.text as string | undefined;
+        let text = e.text as string | undefined;
+        if (!text) {
+          type TextNodeShape = { paragraphs?: Array<{ runs?: Array<{ text?: string }> }> };
+          const textNode = e.textNode as TextNodeShape | undefined;
+          if (textNode?.paragraphs) {
+            text = textNode.paragraphs
+              .map(p => (p.runs ?? []).map(r => r.text ?? '').join(''))
+              .join('\n')
+              .trim() || undefined;
+          }
+        }
         const textHeight = e.height as number | undefined;
         if (position && text) {
           ctx.fillStyle = layerColor;
@@ -371,7 +382,8 @@ function calculateBounds(scene: ThumbnailSceneInput): { min: { x: number; y: num
         }
         break;
       }
-      case 'text': {
+      case 'text':
+      case 'mtext': {
         const position = e.position as { x: number; y: number } | undefined;
         if (position) expand(position.x, position.y);
         break;

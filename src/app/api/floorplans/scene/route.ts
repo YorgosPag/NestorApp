@@ -28,19 +28,17 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-
 const logger = createModuleLogger('FloorplanSceneRoute');
-
 // ============================================================================
 // TYPES
 // ============================================================================
-
 /**
  * 🏢 ENTERPRISE: FileRecord shape from Firestore (minimal for this endpoint)
  */
 interface FileRecordData {
   id: string;
   companyId?: string;
+  storagePath?: string;
   processedData?: {
     processedDataPath?: string;
     fileType?: string;
@@ -61,16 +59,12 @@ interface SceneErrorResponse {
 // ============================================================================
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-
-/** Cache TTL for scene data - immutable once processed */
-const SCENE_CACHE_TTL_SECONDS = 86400; // 24 hours (scene data is immutable)
-
+/** Cache TTL — ETag handles invalidation when user edits are present */
+const SCENE_CACHE_TTL_SECONDS = 300; // 5 min: short enough to pick up user edits
 // ============================================================================
 // FORCE DYNAMIC
 // ============================================================================
-
 export const dynamic = 'force-dynamic';
-
 // ============================================================================
 // MAIN HANDLER
 // ============================================================================
@@ -187,45 +181,68 @@ async function handleGetScene(
     }
 
     // =========================================================================
-    // 5. CHECK IF PROCESSED
+    // 5. 3-TIER SCENE RESOLUTION (mirrors DxfFirestoreStorage.loadFromStorageImpl)
+    //    Tier 1: .scene.json  — DXF viewer auto-save (latest user edits, plain JSON)
+    //    Tier 2: .processed.json — wizard initial processing (gzip compressed)
     // =========================================================================
 
-    const processedDataPath = fileData.processedData?.processedDataPath;
+    const processedDataPath = fileData.processedData?.processedDataPath ?? null;
+    const rawStoragePath = fileData.storagePath ?? '';
 
-    if (!processedDataPath) {
-      // File exists but not yet processed
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'File not yet processed',
-          errorCode: 'NOT_PROCESSED',
-        },
-        { status: 202 } // 202 Accepted - processing in progress or needs processing
-      );
+    // Derive .scene.json path: if storagePath already is a .scene.json use it directly;
+    // otherwise strip all extensions (.dxf, .processed.json, etc.) and append .scene.json.
+    const sceneJsonPath: string | null = rawStoragePath
+      ? rawStoragePath.endsWith('.scene.json')
+        ? rawStoragePath
+        : rawStoragePath.replace(/(\.[a-zA-Z0-9]+)+$/, '') + '.scene.json'
+      : null;
+
+    let resolvedPath: string | null = null;
+    let resolvedIsGzip = false;
+
+    // Tier 1: .scene.json (user-edited scene — plain JSON, no decompression)
+    if (sceneJsonPath) {
+      const [sceneExists] = await bucket.file(sceneJsonPath).exists();
+      if (sceneExists) {
+        resolvedPath = sceneJsonPath;
+        resolvedIsGzip = false;
+      }
     }
 
-    // =========================================================================
-    // 6. DOWNLOAD SCENE JSON FROM STORAGE
-    // =========================================================================
+    // Tier 2: .processed.json (wizard-processed — gzip compressed)
+    if (!resolvedPath && processedDataPath) {
+      const [processedExists] = await bucket.file(processedDataPath).exists();
+      if (processedExists) {
+        resolvedPath = processedDataPath;
+        resolvedIsGzip = true;
+      }
+    }
 
-    logger.info('[FloorplanScene] Downloading from storage', { processedDataPath });
-
-    const fileRef = bucket.file(processedDataPath);
-
-    // Check if file exists
-    const [exists] = await fileRef.exists();
-    if (!exists) {
-      logger.error('[FloorplanScene] Processed file not found in Storage', { processedDataPath });
+    if (!resolvedPath) {
+      if (!processedDataPath) {
+        // File uploaded but DXF processing hasn't run yet
+        return NextResponse.json(
+          { success: false, error: 'File not yet processed', errorCode: 'NOT_PROCESSED' },
+          { status: 202 }
+        );
+      }
+      logger.error('[FloorplanScene] Processed file not found in Storage', {
+        sceneJsonPath: sceneJsonPath ?? 'none',
+        processedDataPath,
+      });
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Processed scene file not found',
-          errorCode: 'SCENE_NOT_FOUND',
-        },
+        { success: false, error: 'Processed scene file not found', errorCode: 'SCENE_NOT_FOUND' },
         { status: 404 }
       );
     }
 
+    // =========================================================================
+    // 6. DOWNLOAD FROM RESOLVED STORAGE PATH
+    // =========================================================================
+
+    logger.info('[FloorplanScene] Downloading from storage', { resolvedPath });
+
+    const fileRef = bucket.file(resolvedPath);
     const [fileBuffer] = await fileRef.download();
 
     // =========================================================================
@@ -242,13 +259,14 @@ async function handleGetScene(
       return new NextResponse(null, { status: 304 });
     }
 
-    // Decompress if gzip compressed (new processing uses compression)
+    // Decompress only when serving .processed.json (gzip); .scene.json is plain JSON.
     const customMeta = (metadata.metadata ?? {}) as Record<string, unknown>;
-    const isCompressed = customMeta.compressed === 'gzip';
+    const isCompressed = resolvedIsGzip || customMeta.compressed === 'gzip';
     const rawBuffer = isCompressed ? gunzipSync(fileBuffer) : fileBuffer;
 
     logger.info('[FloorplanScene] Downloaded', {
       bytes: fileBuffer.length,
+      resolvedPath,
       ...(isCompressed && { decompressed: rawBuffer.length }),
     });
 

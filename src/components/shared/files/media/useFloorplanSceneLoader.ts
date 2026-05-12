@@ -97,7 +97,7 @@ export function useFloorplanSceneLoader(
           if (!cancelled) setLoadedScene(sceneData);
         } catch (err) {
           if (!cancelled) {
-            logger.error('Failed to load scene via API', { error: err });
+            logger.warn('Failed to load scene via API', { error: err });
             setSceneError(err instanceof Error ? err.message : 'Unknown error');
           }
         } finally {

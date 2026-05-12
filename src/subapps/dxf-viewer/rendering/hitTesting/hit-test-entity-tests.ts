@@ -134,10 +134,22 @@ function hitTestRectangle(entity: Entity, point: Point2D, tolerance: number): Pa
 // ===== TEXT / MTEXT =====
 
 function hitTestText(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
-  if (!('position' in entity) || !('text' in entity)) return null;
+  if (!('position' in entity)) return null;
   const position = entity.position as Point2D;
-  const text = entity.text as string;
-  if (!position || !text) return null;
+  if (!position) return null;
+
+  // Support flat `text` field (DXF-imported) and `textNode` AST (CreateTextCommand).
+  let text = ('text' in entity ? entity.text : undefined) as string | undefined;
+  if (!text) {
+    type TextNodeShape = { paragraphs?: Array<{ runs?: Array<{ text?: string }> }> };
+    const textNode = ('textNode' in entity ? entity.textNode : undefined) as TextNodeShape | undefined;
+    if (textNode?.paragraphs) {
+      text = textNode.paragraphs
+        .map(p => (p.runs ?? []).map(r => r.text ?? '').join(''))
+        .join('') || undefined;
+    }
+  }
+  if (!text) return null;
 
   const height = ('height' in entity && typeof entity.height === 'number' && entity.height > 0)
     ? entity.height as number

@@ -294,6 +294,7 @@ onComplete={(file, meta) => {
 |------|--------|
 | 2026-03-17 | Initial implementation — Phase 1 (DxfSaveContext + writeToFilesCollection fix) + Phase 3 (EntityFilesManager auto-processing). Phase 2 (Wizard context propagation) pending next session. |
 | 2026-03-17 | ADR δημιουργήθηκε — ευρήματα + βήματα υλοποίησης |
+| 2026-05-12 | Bug fix (Phase 6.F): removed incorrect early-return in `useAutoSaveSceneManager` that skipped all saves when `injectedFileRecordIdRef` or `fileIdCacheRef` had a value — i.e. for every scene loaded from Firestore/Storage. Text entities created by `CreateTextCommand` were never persisted to `.scene.json`. Also fixed `floorplan-dxf-renderer.ts` + `thumbnail-generator.ts` to extract flat text from `textNode` AST and handle `mtext` type (properties page canvas render). Fixed `hit-test-entity-tests.ts`: `hitTestText` guard required flat `text` field — new entities only have `textNode` → unselectable. Now extracts text from `textNode.paragraphs` for bounding-box hit-test. |
 
 ---
 
