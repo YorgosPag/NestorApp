@@ -22,6 +22,7 @@ import { canvasUtilities } from '@/styles/design-tokens';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { FloorplanGalleryProps, DxfDrawingMode } from '@/components/shared/files/media/floorplan-gallery-config';
 import { ZOOM_CONFIG, filterFloorplanFiles, getFileIcon } from '@/components/shared/files/media/floorplan-gallery-config';
+import { computeActualBounds } from '@/components/shared/files/media/floorplan-dxf-renderer';
 import { computeOverlayAABBs, screenToWorld, hitTestOverlays } from '@/components/shared/files/media/floorplan-overlay-system';
 import { hitTestPdfOverlays } from '@/components/shared/files/media/floorplan-pdf-overlay-renderer';
 import { useFloorplanSceneLoader } from '@/components/shared/files/media/useFloorplanSceneLoader';
@@ -33,10 +34,12 @@ import { FloorplanGalleryZoomControls } from '@/components/shared/files/media/Fl
 import { MeasureToolbar, type MeasureMode } from '@/components/shared/files/media/MeasureToolbar';
 import { MeasureToolOverlay } from '@/components/shared/files/media/MeasureToolOverlay';
 import { CalibrateScaleDialog } from '@/components/shared/files/media/CalibrateScaleDialog';
+import { useMeasureSnapFinder } from '@/components/shared/files/media/measure-snap-bridge';
 
 // Re-exports for backward compatibility
 export type { FloorplanGalleryProps, DxfDrawingMode };
 export { ZOOM_CONFIG, filterFloorplanFiles, getFileIcon };
+
 export function FloorplanGallery({
   files,
   onDelete,
@@ -83,11 +86,15 @@ export function FloorplanGallery({
   const isRaster = isPdf || !!isImage;
   const rasterImage = pdfImage ?? imageElement;
   const rasterBounds = pdfDimensions ?? imageDimensions;
-  // DXF bounds (only used for DXF — raster uses editor-exact transform inside the renderer)
+  // DXF bounds — computed from ALL entities so new entities drawn outside the original
+  // DXF extents are included. Consistent with renderDxfToCanvas (same computeActualBounds
+  // call) so overlay hit-testing uses the exact same coordinate transform as the renderer.
   const currentBounds = useMemo(() => {
-    if (isDxf) return loadedScene?.bounds ?? null;
+    if (isDxf && loadedScene?.entities?.length) {
+      return computeActualBounds(loadedScene.entities);
+    }
     return null;
-  }, [isDxf, loadedScene?.bounds]);
+  }, [isDxf, loadedScene]);
   // Fullscreen modal state (ADR-241 centralized)
   const fullscreen = useFullscreen();
   // DXF drawing mode — dark (colored) or light (black & white)
@@ -106,6 +113,7 @@ export function FloorplanGallery({
   const rafRef = useRef<number>(0);
   // ADR-340 Phase 9 STEP H: transient measure tool mode (distance/area/angle/off)
   const [measureMode, setMeasureMode] = useState<MeasureMode | null>(null);
+  const snapFinder = useMeasureSnapFinder(loadedScene?.entities, isDxf);
   // ADR-340 Phase 9 STEP I: calibration dialog open state (raster only)
   const [calibrateOpen, setCalibrateOpen] = useState(false);
   const calibrationImageSrc = isRaster ? (rasterImage?.src ?? currentFile?.downloadUrl ?? null) : null;
@@ -326,6 +334,7 @@ export function FloorplanGallery({
             zoom={zp.zoom}
             panOffset={zp.panOffset}
             unitsPerMeter={unitsPerMeter ?? null}
+            findSnapPoint={(worldPt) => snapFinder(worldPt, zp.zoom)}
           />
         )}
         {isDxf && !anyLoading && !anyError && !loadedScene && currentFile?.processedData && (

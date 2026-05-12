@@ -34,6 +34,103 @@ export const DRAWING_MODE_CONFIG = {
 } as const;
 
 // ============================================================================
+// BOUNDS COMPUTATION
+// ============================================================================
+
+type BoundsPoint = { x: number; y: number };
+type SceneBounds = { min: BoundsPoint; max: BoundsPoint };
+
+/**
+ * Compute the actual bounding box from all entities in the scene.
+ * Always returns bounds that include every entity, regardless of scene.bounds.
+ * Adds 5% padding so entities at the edge are not clipped.
+ *
+ * WHY: scene.bounds comes from the original DXF parsing and is never updated
+ * when the user adds entities outside the original drawing bounds in the DXF
+ * Viewer. This function derives the true viewport from the live entity data.
+ */
+export function computeActualBounds(entities: DxfSceneData['entities']): SceneBounds {
+  if (!entities || entities.length === 0) {
+    return { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } };
+  }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const expand = (x: number, y: number) => {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  };
+
+  for (const entity of entities) {
+    const e = entity as Record<string, unknown>;
+    switch (entity.type) {
+      case 'line': {
+        const s = e.start as BoundsPoint | undefined;
+        const en = e.end as BoundsPoint | undefined;
+        if (s) expand(s.x, s.y);
+        if (en) expand(en.x, en.y);
+        break;
+      }
+      case 'polyline':
+      case 'lwpolyline': {
+        const verts = e.vertices as BoundsPoint[] | undefined;
+        if (verts) for (const v of verts) expand(v.x, v.y);
+        break;
+      }
+      case 'rectangle': {
+        const c1 = e.corner1 as BoundsPoint | undefined;
+        const c2 = e.corner2 as BoundsPoint | undefined;
+        if (c1) expand(c1.x, c1.y);
+        if (c2) expand(c2.x, c2.y);
+        break;
+      }
+      case 'circle': {
+        const c = e.center as BoundsPoint | undefined;
+        const r = e.radius as number | undefined;
+        if (c && r != null) {
+          expand(c.x - r, c.y - r);
+          expand(c.x + r, c.y + r);
+        }
+        break;
+      }
+      case 'arc': {
+        const c = e.center as BoundsPoint | undefined;
+        const r = e.radius as number | undefined;
+        // Conservative: full circle AABB (avoids angle-sweep math for a simple viewer)
+        if (c && r != null) {
+          expand(c.x - r, c.y - r);
+          expand(c.x + r, c.y + r);
+        }
+        break;
+      }
+      case 'text':
+      case 'mtext': {
+        const pos = e.position as BoundsPoint | undefined;
+        if (!pos) break;
+        expand(pos.x, pos.y);
+        // T-tool entities (textNode) use TL attachment: text body extends DOWNWARD
+        // in DXF space (smaller Y). Expand to include the full glyph so stems don't
+        // get clipped at canvas bottom. Use same height fallback as renderDxfToCanvas.
+        type TN = { paragraphs?: unknown[] };
+        if ((e.textNode as TN | undefined)?.paragraphs) {
+          const eH = e.height as number | undefined;
+          expand(pos.x, pos.y - (eH || 10));
+        }
+        break;
+      }
+    }
+  }
+
+  if (!isFinite(minX)) return { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } };
+
+  return {
+    min: { x: minX, y: minY },
+    max: { x: maxX, y: maxY },
+  };
+}
+
+// ============================================================================
 // HELPERS
 // ============================================================================
 
@@ -90,8 +187,8 @@ export function renderDxfToCanvas(
   ctx.fillStyle = modeConfig.background;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Calculate bounds, scale, and offset (including pan)
-  const bounds = scene.bounds || { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } };
+  // Compute bounds from ALL entities — never trust scene.bounds (stale after DXF Viewer edits).
+  const bounds = computeActualBounds(scene.entities);
   const drawingWidth = bounds.max.x - bounds.min.x;
   const drawingHeight = bounds.max.y - bounds.min.y;
   const baseScale = Math.min(canvas.width / drawingWidth, canvas.height / drawingHeight);
@@ -204,27 +301,38 @@ export function renderDxfToCanvas(
         const position = e.position as { x: number; y: number } | undefined;
         // Support flat `text` field (DXF-imported) and `textNode` AST (CreateTextCommand).
         let text = e.text as string | undefined;
-        if (!text) {
-          type TextNodeShape = { paragraphs?: Array<{ runs?: Array<{ text?: string }> }> };
-          const textNode = e.textNode as TextNodeShape | undefined;
-          if (textNode?.paragraphs) {
-            text = textNode.paragraphs
-              .map(p => (p.runs ?? []).map(r => r.text ?? '').join(''))
-              .join('\n')
-              .trim() || undefined;
-          }
+        type TextNodeShape = { paragraphs?: Array<{ runs?: Array<{ text?: string; style?: { height?: number } }> }> };
+        const textNode = e.textNode as TextNodeShape | undefined;
+        if (!text && textNode?.paragraphs) {
+          text = textNode.paragraphs
+            .map(p => (p.runs ?? []).map(r => r.text ?? '').join(''))
+            .join('\n')
+            .trim() || undefined;
         }
         const height = e.height as number | undefined;
         if (position && text) {
           // Text color priority: mode override → textNode TrueColor → entity.color → layer → fallback
           const textRunColor = extractTextNodeColor(e);
           ctx.fillStyle = modeConfig.entityColor || textRunColor || resolvedColor;
-          ctx.font = `${Math.max(8, (height || 10) * scale)}px Arial`;
+          if (textNode) {
+            // T-tool entity: position = TL (top of text, TL attachment from DXF viewer).
+            // Use 'top' baseline so canvas renders text BELOW canvasY, matching DXF viewer.
+            // Font size uses same formula as DXF-imported path — runHeight (2.5mm default)
+            // is too small to be legible at gallery scale (~1.35 px/mm for A4).
+            ctx.textBaseline = 'top';
+            ctx.font = `${Math.max(8, (height || 10) * scale)}px Arial`;
+          } else {
+            // DXF-imported entity: position = BL (baseline, standard DXF TEXT anchor).
+            // 'alphabetic' matches the baseline rendering in the DXF viewer.
+            ctx.textBaseline = 'alphabetic';
+            ctx.font = `${Math.max(8, (height || 10) * scale)}px Arial`;
+          }
           ctx.fillText(
             text,
             (position.x - bounds.min.x) * scale + offsetX,
             (bounds.max.y - position.y) * scale + offsetY,
           );
+          ctx.textBaseline = 'alphabetic';
         }
         break;
       }
