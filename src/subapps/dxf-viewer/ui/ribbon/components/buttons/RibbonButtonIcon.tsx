@@ -172,6 +172,134 @@ const ARRAY_POLAR_PATH = (
     <circle cx="6" cy="8" r="1.5" />
   </>
 );
+const PAN_PATH = (
+  <>
+    <path d="M 9 5 L 9 13 L 6 11 Q 4 10 5 13 L 8 18 Q 9 20 12 20 L 15 20 Q 18 20 18 17 L 18 11 Q 18 9 16 9 Q 14 9 14 11 L 14 9 Q 14 7 12 7 Q 10 7 10 9 L 10 5 Q 10 3 9 3 Q 8 3 8 5 Z" fill="none" />
+  </>
+);
+const ZOOM_PATH = (
+  <>
+    <circle cx="10" cy="10" r="6" fill="none" />
+    <line x1="14.5" y1="14.5" x2="20" y2="20" />
+  </>
+);
+const ZOOM_IN_PATH = (
+  <>
+    <circle cx="10" cy="10" r="6" fill="none" />
+    <line x1="14.5" y1="14.5" x2="20" y2="20" />
+    <line x1="7" y1="10" x2="13" y2="10" />
+    <line x1="10" y1="7" x2="10" y2="13" />
+  </>
+);
+const ZOOM_OUT_PATH = (
+  <>
+    <circle cx="10" cy="10" r="6" fill="none" />
+    <line x1="14.5" y1="14.5" x2="20" y2="20" />
+    <line x1="7" y1="10" x2="13" y2="10" />
+  </>
+);
+const ZOOM_WINDOW_PATH = (
+  <>
+    <rect x="3" y="3" width="14" height="10" fill="none" strokeDasharray="2,2" />
+    <circle cx="14" cy="14" r="4" fill="none" />
+    <line x1="17" y1="17" x2="21" y2="21" />
+  </>
+);
+const ZOOM_EXTENTS_PATH = (
+  <>
+    <rect x="4" y="4" width="16" height="16" fill="none" strokeDasharray="2,2" />
+    <polyline points="4,8 4,4 8,4" fill="none" />
+    <polyline points="16,4 20,4 20,8" fill="none" />
+    <polyline points="20,16 20,20 16,20" fill="none" />
+    <polyline points="8,20 4,20 4,16" fill="none" />
+    <rect x="9" y="9" width="6" height="6" fill="none" />
+  </>
+);
+const ZOOM_PREV_PATH = (
+  <>
+    <circle cx="10" cy="10" r="6" fill="none" />
+    <line x1="14.5" y1="14.5" x2="20" y2="20" />
+    <polyline points="11,7 8,10 11,13" fill="none" />
+  </>
+);
+const ZOOM_REALTIME_PATH = (
+  <>
+    <circle cx="10" cy="10" r="6" fill="none" />
+    <line x1="14.5" y1="14.5" x2="20" y2="20" />
+    <polyline points="8,8 8,12 12,12" fill="none" />
+    <polyline points="12,8 8,12" fill="none" />
+  </>
+);
+const ZOOM_RESET_PATH = (
+  <>
+    <circle cx="10" cy="10" r="6" fill="none" />
+    <line x1="14.5" y1="14.5" x2="20" y2="20" />
+    <circle cx="10" cy="10" r="1.5" fill="currentColor" stroke="none" />
+  </>
+);
+const VISUAL_STYLE_2D_PATH = (
+  <>
+    <rect x="4" y="6" width="16" height="12" fill="none" />
+    <line x1="4" y1="6" x2="20" y2="18" />
+    <line x1="20" y1="6" x2="4" y2="18" />
+  </>
+);
+const VISUAL_STYLE_HIDDEN_PATH = (
+  <>
+    <polygon points="4,18 8,6 16,6 20,18" fill="none" />
+    <line x1="8" y1="6" x2="20" y2="18" strokeDasharray="2,2" />
+  </>
+);
+const VISUAL_STYLE_REALISTIC_PATH = (
+  <>
+    <circle cx="12" cy="12" r="8" fill="none" />
+    <path d="M 6 9 Q 12 5 18 9" fill="none" />
+    <path d="M 6 15 Q 12 19 18 15" fill="none" />
+  </>
+);
+const VISUAL_STYLE_SHADED_PATH = (
+  <>
+    <polygon points="4,18 12,4 20,18" fill="currentColor" stroke="none" opacity="0.3" />
+    <polygon points="4,18 12,4 20,18" fill="none" />
+  </>
+);
+const VISUAL_STYLE_CONCEPTUAL_PATH = (
+  <>
+    <circle cx="12" cy="12" r="7" fill="none" strokeDasharray="3,2" />
+    <circle cx="12" cy="12" r="3" fill="none" />
+  </>
+);
+const VIEWPORT_SINGLE_PATH = (
+  <rect x="4" y="5" width="16" height="14" fill="none" />
+);
+const VIEWPORT_TWO_PATH = (
+  <>
+    <rect x="4" y="5" width="7" height="14" fill="none" />
+    <rect x="13" y="5" width="7" height="14" fill="none" />
+  </>
+);
+const VIEWPORT_THREE_PATH = (
+  <>
+    <rect x="4" y="5" width="7" height="14" fill="none" />
+    <rect x="13" y="5" width="7" height="6" fill="none" />
+    <rect x="13" y="13" width="7" height="6" fill="none" />
+  </>
+);
+const VIEWPORT_FOUR_PATH = (
+  <>
+    <rect x="4" y="5" width="7" height="6" fill="none" />
+    <rect x="13" y="5" width="7" height="6" fill="none" />
+    <rect x="4" y="13" width="7" height="6" fill="none" />
+    <rect x="13" y="13" width="7" height="6" fill="none" />
+  </>
+);
+const TEXT_PLACEHOLDER_PATH = (
+  <>
+    <line x1="4" y1="6" x2="20" y2="6" />
+    <line x1="12" y1="6" x2="12" y2="20" />
+    <line x1="9" y1="20" x2="15" y2="20" />
+  </>
+);
 const EXPLODE_PATH = (
   <>
     <line x1="12" y1="3" x2="12" y2="9" />
@@ -247,6 +375,44 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({
       return inlineSvg(size, ARRAY_POLAR_PATH);
     case 'explode':
       return inlineSvg(size, EXPLODE_PATH);
+    case 'pan':
+      return inlineSvg(size, PAN_PATH);
+    case 'zoom':
+      return inlineSvg(size, ZOOM_PATH);
+    case 'zoom-in':
+      return inlineSvg(size, ZOOM_IN_PATH);
+    case 'zoom-out':
+      return inlineSvg(size, ZOOM_OUT_PATH);
+    case 'zoom-window':
+      return inlineSvg(size, ZOOM_WINDOW_PATH);
+    case 'zoom-extents':
+      return inlineSvg(size, ZOOM_EXTENTS_PATH);
+    case 'zoom-previous':
+      return inlineSvg(size, ZOOM_PREV_PATH);
+    case 'zoom-realtime':
+      return inlineSvg(size, ZOOM_REALTIME_PATH);
+    case 'zoom-reset':
+      return inlineSvg(size, ZOOM_RESET_PATH);
+    case 'visual-2d':
+      return inlineSvg(size, VISUAL_STYLE_2D_PATH);
+    case 'visual-hidden':
+      return inlineSvg(size, VISUAL_STYLE_HIDDEN_PATH);
+    case 'visual-realistic':
+      return inlineSvg(size, VISUAL_STYLE_REALISTIC_PATH);
+    case 'visual-shaded':
+      return inlineSvg(size, VISUAL_STYLE_SHADED_PATH);
+    case 'visual-conceptual':
+      return inlineSvg(size, VISUAL_STYLE_CONCEPTUAL_PATH);
+    case 'viewport-single':
+      return inlineSvg(size, VIEWPORT_SINGLE_PATH);
+    case 'viewport-two':
+      return inlineSvg(size, VIEWPORT_TWO_PATH);
+    case 'viewport-three':
+      return inlineSvg(size, VIEWPORT_THREE_PATH);
+    case 'viewport-four':
+      return inlineSvg(size, VIEWPORT_FOUR_PATH);
+    case 'text-placeholder':
+      return inlineSvg(size, TEXT_PLACEHOLDER_PATH);
     default:
       return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }

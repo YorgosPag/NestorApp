@@ -98,6 +98,14 @@
 
 .dxf-ribbon-tab[data-contextual="true"] {
   color: var(--ribbon-tab-contextual);
+  border-top: 2px solid var(--ribbon-tab-contextual);
+  margin-left: 4px;
+  font-weight: 600;
+}
+
+.dxf-ribbon-tab[data-contextual="true"][data-active="true"] {
+  background: var(--ribbon-tab-active);
+  color: var(--ribbon-tab-contextual);
 }
 
 .dxf-ribbon-tab[data-dragging="true"] {

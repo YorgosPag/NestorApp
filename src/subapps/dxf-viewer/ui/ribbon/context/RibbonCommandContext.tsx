@@ -10,15 +10,24 @@ import React, { createContext, useContext, useMemo } from 'react';
 import type { ToolType } from '../../toolbar/types';
 import { useSplitLastUsed } from '../hooks/useSplitLastUsed';
 
+export type RibbonActionPayload = number | string | Record<string, unknown>;
+
 export interface RibbonCommandsApi {
   onToolChange: (tool: ToolType) => void;
   /** ADR-345 §3.2 Fase 4 — fires when a button marked `comingSoon` is clicked. */
   onComingSoon: (label: string) => void;
+  /**
+   * ADR-345 Fase 5 — generic action dispatcher for non-ToolType commands
+   * (zoom-extents, undo, redo, fit-to-view, toggle-snap…). Forwarded to
+   * `handleAction(action, data)` in `useDxfViewerState`.
+   */
+  onAction: (action: string, data?: RibbonActionPayload) => void;
 }
 
 interface RibbonCommandContextValue {
   onToolChange: (tool: ToolType) => void;
   onComingSoon: (label: string) => void;
+  onAction: (action: string, data?: RibbonActionPayload) => void;
   splitLastUsed: Record<string, string>;
   setSplitLastUsed: (commandId: string, variantId: string) => void;
 }
@@ -42,10 +51,17 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
     () => ({
       onToolChange: commands.onToolChange,
       onComingSoon: commands.onComingSoon,
+      onAction: commands.onAction,
       splitLastUsed,
       setSplitLastUsed,
     }),
-    [commands.onToolChange, commands.onComingSoon, splitLastUsed, setSplitLastUsed],
+    [
+      commands.onToolChange,
+      commands.onComingSoon,
+      commands.onAction,
+      splitLastUsed,
+      setSplitLastUsed,
+    ],
   );
 
   return (

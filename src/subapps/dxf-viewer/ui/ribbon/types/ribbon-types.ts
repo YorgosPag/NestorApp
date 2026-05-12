@@ -21,6 +21,14 @@ export interface RibbonCommand {
    * instead of dispatching the tool.
    */
   comingSoon?: boolean;
+  /**
+   * ADR-345 Fase 5 — Non-ToolType action (e.g. 'zoom-extents', 'undo',
+   * 'redo'). When present, the button fires `onAction(action, data)`
+   * instead of `onToolChange(commandKey)`. `data` is an optional payload
+   * forwarded to handleAction.
+   */
+  action?: string;
+  actionData?: number | string | Record<string, unknown>;
 }
 
 export interface RibbonButton {

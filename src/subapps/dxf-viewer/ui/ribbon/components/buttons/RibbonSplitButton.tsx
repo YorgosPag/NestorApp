@@ -34,7 +34,7 @@ export const RibbonSplitButton: React.FC<RibbonSplitButtonProps> = ({
   button,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, onComingSoon, splitLastUsed } = useRibbonCommand();
+  const { onToolChange, onComingSoon, onAction, splitLastUsed } = useRibbonCommand();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -50,8 +50,12 @@ export const RibbonSplitButton: React.FC<RibbonSplitButtonProps> = ({
       onComingSoon(t(active.labelKey));
       return;
     }
+    if (active.action) {
+      onAction(active.action, active.actionData);
+      return;
+    }
     onToolChange(active.commandKey as ToolType);
-  }, [onToolChange, onComingSoon, active, t]);
+  }, [onToolChange, onComingSoon, onAction, active, t]);
 
   const toggleDropdown = useCallback(() => setOpen((p) => !p), []);
   const closeDropdown = useCallback(() => setOpen(false), []);

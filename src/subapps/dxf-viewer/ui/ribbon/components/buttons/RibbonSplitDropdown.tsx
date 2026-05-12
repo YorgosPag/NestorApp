@@ -40,7 +40,7 @@ export const RibbonSplitDropdown: React.FC<RibbonSplitDropdownProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, onComingSoon, setSplitLastUsed } = useRibbonCommand();
+  const { onToolChange, onComingSoon, onAction, setSplitLastUsed } = useRibbonCommand();
   const rootRef = useRef<HTMLMenuElement>(null);
   const [ready, setReady] = useState(false);
 
@@ -82,12 +82,14 @@ export const RibbonSplitDropdown: React.FC<RibbonSplitDropdownProps> = ({
       setSplitLastUsed(parentCommandId, variant.id);
       if (variant.comingSoon) {
         onComingSoon(t(variant.labelKey));
+      } else if (variant.action) {
+        onAction(variant.action, variant.actionData);
       } else {
         onToolChange(variant.commandKey as ToolType);
       }
       onClose();
     },
-    [parentCommandId, onToolChange, onComingSoon, setSplitLastUsed, onClose, t],
+    [parentCommandId, onToolChange, onComingSoon, onAction, setSplitLastUsed, onClose, t],
   );
 
   if (typeof document === 'undefined') return null;

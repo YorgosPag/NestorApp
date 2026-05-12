@@ -21,7 +21,7 @@ export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
   command,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, onComingSoon } = useRibbonCommand();
+  const { onToolChange, onComingSoon, onAction } = useRibbonCommand();
 
   const label = t(command.labelKey);
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
@@ -31,8 +31,21 @@ export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
       onComingSoon(label);
       return;
     }
+    if (command.action) {
+      onAction(command.action, command.actionData);
+      return;
+    }
     onToolChange(command.commandKey as ToolType);
-  }, [onToolChange, onComingSoon, command.commandKey, command.comingSoon, label]);
+  }, [
+    onToolChange,
+    onComingSoon,
+    onAction,
+    command.commandKey,
+    command.comingSoon,
+    command.action,
+    command.actionData,
+    label,
+  ]);
 
   return (
     <Tooltip>
