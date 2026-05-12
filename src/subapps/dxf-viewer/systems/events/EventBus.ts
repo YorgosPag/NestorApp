@@ -80,7 +80,7 @@ export interface DrawingEventMap {
   // 🏢 ADR-258B: Auto-select new overlay after polygon save → opens Properties Panel
   'overlay:polygon-saved': { overlayId: string };
   // 🏢 ENTERPRISE: Polygon save error → centralized notification (replaces browser alert)
-  'overlay:save-error': { reason: 'no-level-selected' };
+  'overlay:save-error': { reason: 'no-level-selected' | 'no-background-context' };
   // 🏢 ENTERPRISE (2026-01-26): Toolbar delete command - ADR-032
   'toolbar:delete': void; // Signal to delete selected grips/overlays with undo support
 

@@ -112,6 +112,12 @@ export class TextRenderer extends BaseEntityRenderer {
     this.ctx.textAlign = richStyle?.textAlign ?? 'left';
     // textBaseline from textNode.attachment[0]: T→top, M→middle, B→bottom. Default 'top' per DXF baseline fix.
     this.ctx.textBaseline = richStyle?.textBaseline ?? 'top';
+    // Hover glow: shadowBlur creates visible halo even for sub-pixel text (SHX/unknown fonts).
+    // GPU cost acceptable: single entity hover path, not all-entity 60fps render.
+    if (isHovered) {
+      this.ctx.shadowBlur = HOVER_HIGHLIGHT.TEXT.glowShadowBlur;
+      this.ctx.shadowColor = HOVER_HIGHLIGHT.TEXT.glowColor;
+    }
 
     if (normalizedRotation !== 0) {
       this.ctx.translate(screenPos.x, screenPos.y);

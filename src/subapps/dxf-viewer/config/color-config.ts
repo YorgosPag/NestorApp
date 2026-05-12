@@ -752,4 +752,13 @@ export const HOVER_HIGHLIGHT = {
     opacity: 0.9,           // Near-opaque during hover for clarity
     dashPattern: [] as readonly number[],
   },
+  /**
+   * Text hover — shadowBlur glow (acceptable: single entity, not 60fps all-entity path).
+   * GPU cost is ~0.1ms/frame for 1 entity vs ~6ms/frame for all-entity shadowBlur.
+   * Solves sub-pixel text appearing as outline-only on hover (Canvas2D anti-aliasing).
+   */
+  TEXT: {
+    glowColor: UI_COLORS.ENTITY_HOVER_GLOW,  // '#FFFF00' — reuses entity SSOT color
+    glowShadowBlur: 6,                         // soft halo radius (pixels)
+  },
 } as const;

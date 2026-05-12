@@ -870,6 +870,12 @@ src/subapps/dxf-viewer/
 
 ## Changelog
 
+- **2026-05-12 — Text hover glow fix (sub-pixel / SHX font outline problem)**.
+  - **Root cause**: `fillText` with yellow `fillStyle` at very small `screenHeight` (1–3 px) produces anti-aliased thin strokes that visually resemble outlines rather than filled glyphs. Canvas2D cannot distinguish SHX from any other unknown font — they all fall back to the system default — but the sub-pixel rendering is the same regardless of font family.
+  - **Fix**: `renderTextContent` now sets `ctx.shadowBlur = 6` + `ctx.shadowColor = '#FFFF00'` when `isHovered = true` (inside the inner `ctx.save/restore`). The shadow creates a visible yellow halo around every glyph, including tiny ones. GPU cost is acceptable: this code path runs for exactly 1 entity at hover time, not the full scene 60fps render.
+  - **`config/color-config.ts`** (MOD): `HOVER_HIGHLIGHT.TEXT` added — `{ glowColor, glowShadowBlur }` — SSOT for text hover glow constants.
+  - **`rendering/entities/TextRenderer.ts`** (MOD): `renderTextContent` applies `HOVER_HIGHLIGHT.TEXT` shadow when hovered.
+
 - **2026-05-12 — Overline/Strikethrough rendering + Height field width fix**.
   - **Root cause (overline/strikethrough)**: `TextRenderer.ts` rendered only `underline`; `DxfTextStyle` interface and `extractFirstRunStyle` in `useDxfSceneConversion.ts` did not include `overline`/`strikethrough` fields. The MTEXT parser (`\O`/`\K` codes), serializer, tiptap-to-dxf, and dxf-to-tiptap were already correct.
   - **`canvas-v2/dxf-canvas/dxf-types.ts`** (MOD): `DxfTextStyle` gains `overline?: boolean; strikethrough?: boolean;`.
