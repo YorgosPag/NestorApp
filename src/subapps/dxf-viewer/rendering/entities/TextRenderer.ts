@@ -46,7 +46,8 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 type TextRichStyle = {
   bold?: boolean; italic?: boolean; fontFamily?: string;
   runColor?: string; textAlign?: 'left' | 'center' | 'right';
-  textBaseline?: 'top' | 'middle' | 'bottom'; underline?: boolean;
+  textBaseline?: 'top' | 'middle' | 'bottom';
+  underline?: boolean; overline?: boolean; strikethrough?: boolean;
 } | undefined;
 
 export class TextRenderer extends BaseEntityRenderer {
@@ -94,9 +95,13 @@ export class TextRenderer extends BaseEntityRenderer {
   ): void {
     const baseColor = ('color' in entity ? entity.color : undefined) as string | undefined;
     const textAlignMode = richStyle?.textAlign ?? 'left';
-    // Underline Y offset: top→+0.9h, middle→+0.4h, bottom→-0.1h
+    // Y offsets relative to text origin, accounting for textBaseline.
+    // baselineVOffset: 0=top, 0.5=middle, 1.0=bottom (fraction of screenHeight shift from 'top').
     const baselineVOffset = richStyle?.textBaseline === 'middle' ? 0.5 : richStyle?.textBaseline === 'bottom' ? 1.0 : 0;
-    const underlineYOff = screenHeight * (0.9 - baselineVOffset);
+    const underlineYOff   = screenHeight * ( 0.90 - baselineVOffset);
+    const overlineYOff    = screenHeight * (-0.05 - baselineVOffset);
+    const strikethroughYOff = screenHeight * (0.40 - baselineVOffset);
+    const hasDecoration = richStyle?.underline || richStyle?.overline || richStyle?.strikethrough;
 
     this.ctx.save();
     this.ctx.font = buildUIFont(screenHeight, fontFamily, weight, italic);
@@ -112,19 +117,23 @@ export class TextRenderer extends BaseEntityRenderer {
       this.ctx.translate(screenPos.x, screenPos.y);
       this.ctx.rotate(degToRad(-normalizedRotation));
       this.ctx.fillText(text, 0, 0);
-      if (richStyle?.underline) {
+      if (hasDecoration) {
         const w = this.ctx.measureText(text).width;
         const thickness = Math.max(1, screenHeight * 0.07);
         const xOff = textAlignMode === 'center' ? -w / 2 : textAlignMode === 'right' ? -w : 0;
-        this.ctx.fillRect(xOff, underlineYOff, w, thickness);
+        if (richStyle?.underline)     this.ctx.fillRect(xOff, underlineYOff,    w, thickness);
+        if (richStyle?.overline)      this.ctx.fillRect(xOff, overlineYOff,     w, thickness);
+        if (richStyle?.strikethrough) this.ctx.fillRect(xOff, strikethroughYOff, w, thickness);
       }
     } else {
       this.ctx.fillText(text, screenPos.x, screenPos.y);
-      if (richStyle?.underline) {
+      if (hasDecoration) {
         const w = this.ctx.measureText(text).width;
         const thickness = Math.max(1, screenHeight * 0.07);
         const xOff = textAlignMode === 'center' ? -w / 2 : textAlignMode === 'right' ? -w : 0;
-        this.ctx.fillRect(screenPos.x + xOff, screenPos.y + underlineYOff, w, thickness);
+        if (richStyle?.underline)     this.ctx.fillRect(screenPos.x + xOff, screenPos.y + underlineYOff,     w, thickness);
+        if (richStyle?.overline)      this.ctx.fillRect(screenPos.x + xOff, screenPos.y + overlineYOff,      w, thickness);
+        if (richStyle?.strikethrough) this.ctx.fillRect(screenPos.x + xOff, screenPos.y + strikethroughYOff, w, thickness);
       }
     }
     this.ctx.restore();

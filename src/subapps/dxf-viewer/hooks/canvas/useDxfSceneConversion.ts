@@ -127,6 +127,8 @@ function extractFirstRunStyle(entity: SceneEntity): DxfTextStyle | undefined {
       if (s.bold !== undefined) result.bold = s.bold;
       if (s.italic !== undefined) result.italic = s.italic;
       if (s.underline !== undefined) result.underline = s.underline;
+      if (s.overline !== undefined) result.overline = s.overline;
+      if (s.strikethrough !== undefined) result.strikethrough = s.strikethrough;
       if (s.fontFamily) result.fontFamily = s.fontFamily;
       if (s.color) {
         const c = s.color as DxfColor;
