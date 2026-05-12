@@ -14,9 +14,11 @@
  * @module components/shared/files/media/useFloorplanSceneLoader
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { auth } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord, DxfSceneData, DxfSceneEntity } from '@/types/file-record';
@@ -57,6 +59,29 @@ export function useFloorplanSceneLoader(
   const [loadedScene, setLoadedScene] = useState<DxfSceneData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sceneError, setSceneError] = useState<string | null>(null);
+
+  // Live-sync: when the DXF auto-save updates files/{id} in Firestore (version bump),
+  // increment refetchToken so the scene-load effect re-runs and fetches new content.
+  const [refetchToken, setRefetchToken] = useState(0);
+  const initialSnapshotSeenRef = useRef(false);
+
+  useEffect(() => {
+    if (!currentFile?.id || !isDxf) return;
+    initialSnapshotSeenRef.current = false;
+    const unsub = firestoreQueryService.subscribeDoc(
+      'FILES',
+      currentFile.id,
+      () => {
+        if (!initialSnapshotSeenRef.current) {
+          initialSnapshotSeenRef.current = true;
+          return;
+        }
+        setRefetchToken((n) => n + 1);
+      },
+      () => { /* version-bump listener — errors are non-critical */ },
+    );
+    return unsub;
+  }, [currentFile?.id, isDxf]);
 
   useEffect(() => {
     // Guard: only DXF/JSON files
@@ -171,7 +196,8 @@ export function useFloorplanSceneLoader(
     loadScene();
     return () => { cancelled = true; };
   }, [currentFile?.id, currentFile?.processedData, currentFile?.downloadUrl,
-      currentFile?.status, currentFile?.originalFilename, isDxf, fileExt, t]);
+      currentFile?.status, currentFile?.originalFilename, isDxf, fileExt, t,
+      refetchToken]);
 
   return { loadedScene, isLoading, sceneError };
 }
