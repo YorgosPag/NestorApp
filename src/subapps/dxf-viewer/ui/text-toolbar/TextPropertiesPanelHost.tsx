@@ -29,6 +29,7 @@ import { useCurrentSceneModel } from './hooks/useCurrentSceneModel';
 import { useDxfTextServices } from './hooks/useDxfTextServices';
 import { ensureTextNode } from '../../text-engine/edit';
 import { UpdateTextAnnotationScalesCommand } from '../../core/commands/text/UpdateTextAnnotationScalesCommand';
+import { InsertTextTokenCommand } from '../../core/commands/text/InsertTextTokenCommand';
 import { getGlobalCommandHistory } from '../../core/commands';
 import type { AnySceneEntity } from '../../types/scene';
 
@@ -79,10 +80,18 @@ export function TextPropertiesPanelHost() {
     // Phase 7 — open FontManagerPanel via the floating-panel modal portal.
   }, []);
 
-  const onInsertToken = useCallback((_token: string) => {
-    // Phase 7 — dispatch into the active TipTap editor session via a
-    // shared editor handle published by the in-canvas text overlay.
-  }, []);
+  const onInsertToken = useCallback((token: string) => {
+    if (!services || selectedIds.length === 0) return;
+    const h = getGlobalCommandHistory();
+    for (const entityId of selectedIds) {
+      h.execute(new InsertTextTokenCommand(
+        { entityId, token },
+        services.sceneManager,
+        services.layerProvider,
+        services.auditRecorder,
+      ));
+    }
+  }, [services, selectedIds]);
 
   return (
     <TextPropertiesPanel

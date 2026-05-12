@@ -67,3 +67,6 @@ export type { UpdateTextAnnotationScalesCommandInput } from './UpdateTextAnnotat
 
 export { UpdateTextCurrentScaleCommand } from './UpdateTextCurrentScaleCommand';
 export type { UpdateTextCurrentScaleCommandInput } from './UpdateTextCurrentScaleCommand';
+
+export { InsertTextTokenCommand } from './InsertTextTokenCommand';
+export type { InsertTextTokenCommandInput } from './InsertTextTokenCommand';
