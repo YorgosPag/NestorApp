@@ -18,6 +18,7 @@ import { useMemo, useRef } from 'react';
 
 import { perfMark } from '../../debug/perf-line-profile';
 import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/entities';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
@@ -128,9 +129,11 @@ function extractFirstRunStyle(entity: SceneEntity): DxfTextStyle | undefined {
       if (s.underline !== undefined) result.underline = s.underline;
       if (s.fontFamily) result.fontFamily = s.fontFamily;
       if (s.color) {
-        // DxfColor can be a truthy string (#rrggbb) or DXF-special constant.
-        const c = s.color;
-        if (typeof c === 'string' && c) result.runColor = c;
+        const c = s.color as DxfColor;
+        if (c.kind === 'TrueColor') {
+          result.runColor = `#${c.r.toString(16).padStart(2, '0')}${c.g.toString(16).padStart(2, '0')}${c.b.toString(16).padStart(2, '0')}`;
+        }
+        // ByLayer / ByBlock → inherit entity color, omit runColor
       }
     }
   }
