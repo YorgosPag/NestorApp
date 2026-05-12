@@ -663,7 +663,7 @@ Text rendering integrates with the existing high-performance canvas pipeline. Th
 | **Phase 9** | **Find & Replace** (current drawing scope): dialog UI + match engine + composite ReplaceAll command | 2 days |
 | **Phase 10** | i18n (el/en locale keys per ADR-280) + **IndexedDB draft/recovery (Q15)** + visual regression tests (ADR-343) + ADR-040 update for text rendering path | 3 days |
 | **Phase 11** ✅ | **Annotative scaling** (Q11): ViewportStore + ViewportContext + AnnotationScaleManager UI + DXF XDATA round-trip + scale-aware text renderer (via EntityRendererComposite resolver — TextRenderer stays sealed) | 3-4 days — **DONE 2026-05-12** |
-| **Phase 12** | **AI integration** (Q16): TextAICommandRouter + TextAIBar UI + ADR-156 voice binding + intent-to-command mapping + i18n + tests | 2-3 days |
+| **Phase 12** ✅ | **AI integration** (Q16): TextAICommandRouter + TextAIBar UI + ADR-161 Whisper voice binding + intent-to-command mapping (strict json_schema) + i18n + tests | 2-3 days — **DONE 2026-05-12** |
 
 **Total estimate**: **~52-62 working days** (~12-13 weeks for one developer)
 

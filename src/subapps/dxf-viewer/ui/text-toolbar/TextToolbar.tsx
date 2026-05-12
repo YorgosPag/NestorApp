@@ -32,6 +32,9 @@ import {
 } from './controls';
 import { useTextToolbarStore } from '../../state/text-toolbar';
 import { DxfDocumentVersion } from '../../text-engine/types';
+import { TextAIBar } from './TextAIBar';
+import type { TextAIContext } from '../../text-engine/ai/text-ai-types';
+import type { ICommand } from '../../core/commands/interfaces';
 
 interface TextToolbarProps {
   readonly layers: readonly LayerSelectorEntry[];
@@ -42,6 +45,9 @@ interface TextToolbarProps {
   readonly onEyedropper: () => void;
   readonly onVoice?: () => void;
   readonly onFindReplace?: () => void;
+  /** Phase 12: when provided, shows the AI button. Caller owns CommandHistory. */
+  readonly aiContext?: TextAIContext;
+  readonly onExecuteAICommand?: (cmd: ICommand) => void;
 }
 
 export function TextToolbar({
@@ -53,6 +59,8 @@ export function TextToolbar({
   onEyedropper,
   onVoice,
   onFindReplace,
+  aiContext,
+  onExecuteAICommand,
 }: TextToolbarProps) {
   const { t } = useTranslation(['textToolbar']);
   const caps = useCanEditText();
@@ -102,6 +110,16 @@ export function TextToolbar({
         onFindReplace={onFindReplace}
         disabled={disabled}
       />
+      {aiContext && onExecuteAICommand && (
+        <>
+          <Toolbar.Separator className="mx-1 h-6 w-px bg-border" />
+          <TextAIBar
+            aiContext={aiContext}
+            onExecuteCommand={onExecuteAICommand}
+            disabled={disabled}
+          />
+        </>
+      )}
     </Toolbar.Root>
   );
 }

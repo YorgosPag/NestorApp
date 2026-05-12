@@ -1,0 +1,19 @@
+{
+  "title": "AI Text Commands",
+  "subtitle": "Type or speak a command",
+  "placeholder": "e.g. make it bold, change color to red...",
+  "openAI": "Open AI text commands",
+  "send": "Send",
+  "startRecording": "Start recording",
+  "stopRecording": "Stop recording",
+  "recentCommands": "Recent commands",
+  "history": "Command history",
+  "success": "Command executed",
+  "errors": {
+    "ai_error": "Processing error. Please try again.",
+    "ai_timeout": "Request timed out. Please try again.",
+    "ai_unavailable": "AI service unavailable.",
+    "no_intent": "Could not recognise command.",
+    "unknown_error": "Unknown error."
+  }
+}
