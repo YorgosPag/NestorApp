@@ -295,9 +295,11 @@ const VIEWPORT_FOUR_PATH = (
 );
 const TEXT_PLACEHOLDER_PATH = (
   <>
-    <line x1="4" y1="6" x2="20" y2="6" />
-    <line x1="12" y1="6" x2="12" y2="20" />
-    <line x1="9" y1="20" x2="15" y2="20" />
+    <polyline points="4 6 4 3 20 3 20 6" />
+    <line x1="12" y1="3" x2="12" y2="11" />
+    <line x1="4" y1="14" x2="20" y2="14" />
+    <line x1="4" y1="17" x2="16" y2="17" />
+    <line x1="4" y1="20" x2="12" y2="20" />
   </>
 );
 const TEXT_CREATE_PATH = (
