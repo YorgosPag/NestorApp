@@ -1,6 +1,6 @@
 'use client';
 import {
-  MousePointer, Hand, ZoomIn, ZoomOut, Square, Pen,
+  MousePointer, Hand, ZoomIn, ZoomOut, Square,
   Move, Copy, Trash2, Ruler, Undo, Redo, Focus, Maximize2,
   Grid, Crop, Download, Crosshair,
   Maximize, Calculator, Map, Edit, Hexagon, FlaskConical,
@@ -216,7 +216,6 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'arc-sce' as ToolType, icon: ArcSCEIcon, label: DXF_DRAWING_TOOL_LABELS.ARC_START_CENTER_END }
         ]
       },
-      { id: 'polyline' as ToolType, icon: Pen, label: DXF_DRAWING_TOOL_LABELS.POLYLINE, hotkey: getShortcutDisplayLabel('polyline'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
       { id: 'polygon' as ToolType, icon: Hexagon, label: DXF_DRAWING_TOOL_LABELS.POLYGON, hotkey: getShortcutDisplayLabel('polygon'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
       { id: 'layering' as ToolType, icon: Map, label: DXF_DRAWING_TOOL_LABELS.LAYERING, hotkey: getShortcutDisplayLabel('layering'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING }
     ]
