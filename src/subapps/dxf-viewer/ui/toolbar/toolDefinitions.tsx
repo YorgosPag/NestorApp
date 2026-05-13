@@ -61,11 +61,6 @@ import {
   ArcSCEIcon
 } from './icons/ArcIcon';
 // 🏢 ENTERPRISE (2026-01-31): Line drawing tool icons - ADR-060
-import {
-  LineNormalIcon,
-  LinePerpendicularIcon,
-  LineParallelIcon
-} from './icons/LineIcon';
 import { AngleIcon } from './icons/AngleIcon';
 import { AngleLineArcIcon } from './icons/AngleLineArcIcon';
 import { AngleTwoArcsIcon } from './icons/AngleTwoArcsIcon';
@@ -188,19 +183,6 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
       // ✅ CENTRALIZED: Using DXF_DRAWING_TOOL_LABELS from central system - ZERO HARDCODED VALUES
       // 🎨 ENTERPRISE: Auto-assigned from DXF_TOOL_GROUP_COLORS.DRAWING
       // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
-      // 🏢 ENTERPRISE (2026-01-31): Line tool with dropdown - ADR-060
-      {
-        id: 'line' as ToolType,
-        icon: LineNormalIcon,
-        label: DXF_DRAWING_TOOL_LABELS.LINE,
-        hotkey: getShortcutDisplayLabel('line'),
-        colorClass: DXF_TOOL_GROUP_COLORS.DRAWING,
-        dropdownOptions: [
-          { id: 'line' as ToolType, icon: LineNormalIcon, label: DXF_DRAWING_TOOL_LABELS.LINE },
-          { id: 'line-perpendicular' as ToolType, icon: LinePerpendicularIcon, label: DXF_DRAWING_TOOL_LABELS.LINE_PERPENDICULAR },
-          { id: 'line-parallel' as ToolType, icon: LineParallelIcon, label: DXF_DRAWING_TOOL_LABELS.LINE_PARALLEL }
-        ]
-      },
       { id: 'rectangle' as ToolType, icon: Square, label: DXF_DRAWING_TOOL_LABELS.RECTANGLE, hotkey: getShortcutDisplayLabel('rectangle'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
       {
         id: 'circle' as ToolType,
