@@ -3,7 +3,7 @@
  *
  * Loads + caches one nspell instance per language. Both el_GR (MPL-1.1
  * LibreOffice) and en_US (MIT/BSD, extracted from dictionary-en@4) are
- * served as static data assets under `/_next/static/dxf/dictionaries/`.
+ * served as static data assets under `/static/dxf/dictionaries/`.
  * The worker fetches them at runtime so the ~550 KB dictionary buffers
  * never appear in the initial JS bundle (see ADR-344 Phase 8).
  *
@@ -12,7 +12,7 @@
  *   That Node.js built-in cannot be bundled for browser/worker contexts by
  *   Turbopack (dev) or webpack (prod). The en_US files are therefore shipped
  *   as static fetch-able assets (same pattern as el_GR) — see next.config.js
- *   CopyPlugin and public/_next/static/dxf/dictionaries/en_US/.
+ *   CopyPlugin and public/static/dxf/dictionaries/en_US/.
  *
  * @module text-engine/spell/dictionary-loader
  */
@@ -27,7 +27,7 @@ const cache: Partial<Record<SpellLanguage, Promise<NSpell>>> = {};
  * (production) and public/ directory (development) both serve them here.
  * Adjust if the deployment puts static assets behind a CDN prefix.
  */
-const ASSET_BASE = '/_next/static/dxf/dictionaries' as const;
+const ASSET_BASE = '/static/dxf/dictionaries' as const;
 
 const DICT_URLS: Record<SpellLanguage, { aff: string; dic: string }> = {
   el: {

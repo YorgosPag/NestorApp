@@ -216,17 +216,18 @@ const nextConfig = {
             },
             // [ADR-344 Phase 8] Hunspell dictionaries (el_GR MPL-1.1 + en_US MIT).
             // The spell-check Web Worker fetches these at runtime via
-            // /_next/static/dxf/dictionaries/{lang}/*. Shipped as data assets,
+            // /static/dxf/dictionaries/{lang}/*. Shipped as data assets,
             // not bundled into JS chunks — dictionary load stays lazy and out of
             // the initial bundle. Note: dictionary-en npm is NOT imported in the
             // worker (node:fs/promises not available in browser/worker context);
             // the .aff/.dic files are served statically instead.
+            // NOTE: public/_next/ is forbidden by Next.js (conflicts with /_next route).
             {
               from: path.join(
                 __dirname,
                 'src/subapps/dxf-viewer/text-engine/spell/dictionaries/el_GR',
               ),
-              to: path.join(__dirname, 'public/_next/static/dxf/dictionaries/el_GR'),
+              to: path.join(__dirname, 'public/static/dxf/dictionaries/el_GR'),
               filter: (resourcePath) =>
                 resourcePath.endsWith('.aff') || resourcePath.endsWith('.dic'),
             },
@@ -235,7 +236,7 @@ const nextConfig = {
                 __dirname,
                 'src/subapps/dxf-viewer/text-engine/spell/dictionaries/en_US',
               ),
-              to: path.join(__dirname, 'public/_next/static/dxf/dictionaries/en_US'),
+              to: path.join(__dirname, 'public/static/dxf/dictionaries/en_US'),
               filter: (resourcePath) =>
                 resourcePath.endsWith('.aff') || resourcePath.endsWith('.dic'),
             },

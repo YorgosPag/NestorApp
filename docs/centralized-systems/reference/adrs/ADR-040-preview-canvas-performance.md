@@ -1117,3 +1117,9 @@ Added `AutoAreaPreviewOverlay` (SVG) to `CanvasLayerStack.tsx` for real-time pol
 ## 2026-05-13: CanvasSection.tsx — universalSelection-driven selectedEntityIds (implementation)
 
 `CanvasSection.tsx` implementation commit: `selectedEntityIds` now derives from `universalSelection` (see 2026-05-12 SSoT entry for design rationale). `setSelectedEntityIds` dispatches through `universalSelection.clearByType/addMultiple`. `getSelectedEntityIds` getter reads from `universalSelectionRef` — no snapshot staleness. `useAutoAreaMouseMove` + `useGlobalSnapSceneSync({ overlays })` wired here. `CrosshairOverlay` receives `isEntitySelected` pred derived from `selectedEntityIds`. ADR-040 cardinal rules: CanvasSection is orchestrator — zero `useSyncExternalStore` calls, all store subscriptions remain in leaves.
+
+---
+
+## 2026-05-13: Phase X — LINE batch rendering in `DxfRenderer`
+
+`DxfRenderer.renderScene()`: normal-state solid LINE entities are now grouped by `(strokeColor × lineWidth)` and rendered as a single canvas path per group — one `ctx.stroke()` call per color/width group instead of one per entity. Reduces canvas API calls from O(n) to O(groups) for the most common case. Excluded from batch (rendered individually as before): selected, hovered, measurement, non-solid line types. Two-pass strategy: (1) collect + batch-flush normal lines, (2) per-entity loop for everything else skips `batchedIds`. No change to `LineRenderer` — the batch path bypasses the full renderer stack and directly draws to ctx, matching `applyEntityStyle` semantics (`entity.color || CAD_UI_COLORS.entity.default`, `lineWidth ≥ 1`, solid dash, `lineCap: butt`).

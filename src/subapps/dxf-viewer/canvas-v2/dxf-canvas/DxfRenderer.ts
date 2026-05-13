@@ -7,6 +7,7 @@ import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DConte
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { viewportToWorldBBox, isEntityInViewport } from './dxf-viewport-culling';
+import { CAD_UI_COLORS } from '../../config/color-config';
 function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
   const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
     'solid': 'solid',
@@ -109,9 +110,57 @@ export class DxfRenderer {
     // ADR-040 Phase IX: viewport culling — skip entities whose bbox does not
     // intersect the screen-space viewport. Computed once per frame.
     const worldViewport = viewportToWorldBBox(transform, actualViewport);
+
+    // ADR-040 Phase X: LINE batch rendering.
+    // Normal-state solid LINE entities are grouped by (strokeColor × lineWidth) and
+    // rendered as single paths — one ctx.stroke() per group instead of per entity.
+    // Excludes: selected, hovered, measurement, non-solid line types.
+    type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number };
+    const lineBatches = new Map<string, LineBatch>();
+    const batchedIds = new Set<string>();
+
+    for (const entity of scene.entities) {
+      if (entity.type !== 'line') continue;
+      if (!entity.visible) continue;
+      if (!isEntityInViewport(entity, worldViewport)) continue;
+      if (this._selectionSet.has(entity.id)) continue;
+      if (effectiveOptions.hoveredEntityId === entity.id) continue;
+      const meta = entity as typeof entity & { measurement?: boolean; lineType?: string };
+      if (meta.measurement) continue;
+      if (meta.lineType && meta.lineType !== 'solid') continue;
+
+      const color = entity.color || CAD_UI_COLORS.entity.default;
+      const lw = Math.max(1, entity.lineWidth || 1);
+      const key = `${color}\0${lw}`;
+      let batch = lineBatches.get(key);
+      if (!batch) { batch = { starts: [], ends: [], lw }; lineBatches.set(key, batch); }
+      batch.starts.push(CoordinateTransforms.worldToScreen(entity.start, transform, actualViewport));
+      batch.ends.push(CoordinateTransforms.worldToScreen(entity.end, transform, actualViewport));
+      batchedIds.add(entity.id);
+    }
+
+    for (const [key, batch] of lineBatches) {
+      const color = key.split('\0')[0];
+      this.ctx.save();
+      this.ctx.strokeStyle = color;
+      this.ctx.lineWidth = batch.lw;
+      this.ctx.setLineDash([]);
+      this.ctx.globalAlpha = 1;
+      this.ctx.lineCap = 'butt';
+      this.ctx.beginPath();
+      for (let i = 0; i < batch.starts.length; i++) {
+        this.ctx.moveTo(batch.starts[i].x, batch.starts[i].y);
+        this.ctx.lineTo(batch.ends[i].x, batch.ends[i].y);
+      }
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+
+    // Per-entity rendering — non-line entities + interactive lines (selected/hovered/measurement)
     for (const entity of scene.entities) {
       if (!entity.visible) continue;
       if (!isEntityInViewport(entity, worldViewport)) continue;
+      if (batchedIds.has(entity.id)) continue;
       this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
     }
     // Render selection highlights (no-op currently, kept for call-site stability)
