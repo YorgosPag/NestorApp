@@ -44,34 +44,38 @@ function inlineSvg(
   );
 }
 
+function dot(cx: number, cy: number, color: string): React.ReactElement {
+  return <circle cx={cx} cy={cy} r="2.5" fill={color} stroke="none" />;
+}
+
 const POLYLINE_PATH = (
   <>
     <polyline points="3,18 9,10 14,14 21,5" fill="none" />
-    <circle cx="3" cy="18" r="2.5" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
-    <circle cx="9" cy="10" r="2.5" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
-    <circle cx="14" cy="14" r="2.5" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
-    <circle cx="21" cy="5" r="2.5" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
+    {dot(3, 18, ICON_CLICK_COLORS.FIRST)}
+    {dot(9, 10, ICON_CLICK_COLORS.SECOND)}
+    {dot(14, 14, ICON_CLICK_COLORS.SECOND)}
+    {dot(21, 5, ICON_CLICK_COLORS.THIRD)}
   </>
 );
 const POLYGON_PATH = (
   <>
     <polygon points="12,3 21,9 18,20 6,20 3,9" fill="none" />
-    <circle cx="12" cy="12" r="2.5" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
-    <circle cx="12" cy="3" r="2.5" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
+    {dot(12, 12, ICON_CLICK_COLORS.FIRST)}
+    {dot(12, 3, ICON_CLICK_COLORS.THIRD)}
   </>
 );
 const RECTANGLE_PATH = (
   <>
     <rect x="4" y="6" width="16" height="12" rx="0.5" fill="none" />
-    <circle cx="4" cy="6" r="2.5" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
-    <circle cx="20" cy="18" r="2.5" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
+    {dot(4, 6, ICON_CLICK_COLORS.FIRST)}
+    {dot(20, 18, ICON_CLICK_COLORS.THIRD)}
   </>
 );
 const ELLIPSE_PATH = (
   <>
     <ellipse cx="12" cy="12" rx="9" ry="6" fill="none" />
-    <circle cx="12" cy="12" r="2.5" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
-    <circle cx="21" cy="12" r="2.5" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
+    {dot(12, 12, ICON_CLICK_COLORS.FIRST)}
+    {dot(21, 12, ICON_CLICK_COLORS.THIRD)}
   </>
 );
 
