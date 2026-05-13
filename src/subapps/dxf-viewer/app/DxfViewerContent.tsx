@@ -234,6 +234,35 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     return null;
   }, [primarySelectedId, currentScene]);
 
+  // Open text-properties panel when text/mtext tool activates via ribbon
+  React.useEffect(() => {
+    if (activeTool === 'text' || activeTool === 'mtext') {
+      floatingRef.current?.showTab('text-properties');
+    }
+  }, [activeTool]);
+
+  // Open text-properties panel when a text/mtext entity is selected
+  React.useEffect(() => {
+    if (!primarySelectedId || !currentScene) return;
+    const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
+    if (entity && (entity.type === 'text' || entity.type === 'mtext')) {
+      floatingRef.current?.showTab('text-properties');
+    }
+  }, [primarySelectedId, currentScene]);
+
+  // Auto fit-to-view when a DXF scene loads for the first time (null → SceneModel).
+  // Matches AutoCAD / BricsCAD behaviour: Zoom Extents on file open.
+  // 200ms delay lets the canvas mount and register its EventBus listener before firing.
+  const prevSceneRef = React.useRef<typeof currentScene>(null);
+  React.useEffect(() => {
+    if (currentScene !== null && prevSceneRef.current === null) {
+      const timer = setTimeout(() => handleAction('fit-to-view'), 200);
+      prevSceneRef.current = currentScene;
+      return () => clearTimeout(timer);
+    }
+    prevSceneRef.current = currentScene;
+  }, [currentScene, handleAction]);
+
   // ✅ ADR-065 SRP: Extracted callbacks
   const {
     showCopyableNotification, wrappedHandleAction, handleTransformReady,

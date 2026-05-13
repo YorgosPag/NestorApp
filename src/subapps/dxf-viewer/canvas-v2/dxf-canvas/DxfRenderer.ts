@@ -64,15 +64,18 @@ export class DxfRenderer {
     }
   ): void {
     // 🚀 PERF (ADR-040, 2026-05-11): getBounds (cached) instead of refreshBounds.
-    // Prior comment cited "fresh bounds" but cache is auto-invalidated on resize/scroll
-    // + 5s TTL safety net, so getBounds returns identical value with zero layout cost.
-    // Single `canvasRect` is computed once per frame and passed to both clear + draw,
-    // preserving the original single-source-of-truth invariant.
+    // CSS-space dimensions: prefer live getBoundingClientRect (main canvas in DOM);
+    // fall back to the caller-supplied viewport for off-screen canvases (bitmap cache)
+    // where getBoundingClientRect returns 0×0 — a 0×0 clearRect is a no-op and causes
+    // ghost-trail artifacts as accumulated frames are never erased.
     const canvasRect = canvasBoundsService.getBounds(this.canvas);
-    const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
+    const cssW = canvasRect.width || viewport.width;
+    const cssH = canvasRect.height || viewport.height;
+    const actualViewport: Viewport = { width: cssW, height: cssH };
 
-    // Clear canvas using exact same fresh dimensions as rendering viewport
-    this.ctx.clearRect(0, 0, canvasRect.width, canvasRect.height);
+    // Clear canvas using exact same CSS-space dimensions as rendering viewport.
+    // DPR ctx.setTransform is active → clearRect in CSS coords = full physical clear.
+    this.ctx.clearRect(0, 0, cssW, cssH);
 
     // 🏢 Origin marker now rendered by GridRenderer (consolidated — no duplication)
     // Early return if no scene

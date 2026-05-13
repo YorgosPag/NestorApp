@@ -16,6 +16,7 @@ import {
   MultiFactorResolver,
   MultiFactorError,
 } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { doc, setDoc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
 import type { UserCredential } from 'firebase/auth';
@@ -237,11 +238,11 @@ export async function verifyTotpForSignIn(
   } catch (error) {
     logger.error('❌ [2FA] MFA verification failed:', error);
 
-    if (error instanceof Error) {
-      if (error.message.includes('invalid') || error.message.includes('incorrect')) {
+    if (error instanceof FirebaseError) {
+      if (error.code === 'auth/invalid-verification-code') {
         return { result: 'invalid_code', error: 'Invalid verification code' };
       }
-      if (error.message.includes('expired')) {
+      if (error.code === 'auth/code-expired') {
         return { result: 'expired', error: 'Code has expired' };
       }
     }
