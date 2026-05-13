@@ -54,7 +54,11 @@ const POLYLINE_PATH = (
   </>
 );
 const POLYGON_PATH = (
-  <polygon points="12,3 21,9 18,20 6,20 3,9" fill="none" />
+  <>
+    <polygon points="12,3 21,9 18,20 6,20 3,9" fill="none" />
+    <circle cx="12" cy="12" r="2.5" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
+    <circle cx="12" cy="3" r="2.5" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
+  </>
 );
 const RECTANGLE_PATH = (
   <>
