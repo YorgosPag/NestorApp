@@ -358,6 +358,11 @@
     },
     "commands": {
       "line": "Line",
+      "lineVariants": {
+        "line": "Line",
+        "perpendicular": "Perpendicular Line",
+        "parallel": "Parallel Line"
+      },
       "polyline": "Polyline",
       "circle": "Circle",
       "arc": "Arc",

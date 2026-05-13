@@ -331,6 +331,10 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({
   switch (icon) {
     case 'line':
       return <LineIcon variant="normal" className={className} />;
+    case 'line-perpendicular':
+      return <LineIcon variant="perpendicular" className={className} />;
+    case 'line-parallel':
+      return <LineIcon variant="parallel" className={className} />;
     case 'circle-radius':
       return <CircleIcon variant="radius" className={className} />;
     case 'circle-diameter':

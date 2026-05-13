@@ -18,7 +18,7 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
       isInFlyout: false,
       buttons: [
         {
-          type: 'simple',
+          type: 'split',
           size: 'large',
           command: {
             id: 'draw.line',
@@ -27,6 +27,26 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
             commandKey: 'line',
             shortcut: 'L',
           },
+          variants: [
+            {
+              id: 'line.line',
+              labelKey: 'ribbon.commands.lineVariants.line',
+              icon: 'line',
+              commandKey: 'line',
+            },
+            {
+              id: 'line.perpendicular',
+              labelKey: 'ribbon.commands.lineVariants.perpendicular',
+              icon: 'line-perpendicular',
+              commandKey: 'line-perpendicular',
+            },
+            {
+              id: 'line.parallel',
+              labelKey: 'ribbon.commands.lineVariants.parallel',
+              icon: 'line-parallel',
+              commandKey: 'line-parallel',
+            },
+          ],
         },
         {
           type: 'simple',

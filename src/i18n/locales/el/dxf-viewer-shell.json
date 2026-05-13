@@ -358,6 +358,11 @@
     },
     "commands": {
       "line": "Γραμμή",
+      "lineVariants": {
+        "line": "Γραμμή",
+        "perpendicular": "Κάθετη Γραμμή",
+        "parallel": "Παράλληλη Γραμμή"
+      },
       "polyline": "Πολυγραμμή",
       "circle": "Κύκλος",
       "arc": "Τόξο",
