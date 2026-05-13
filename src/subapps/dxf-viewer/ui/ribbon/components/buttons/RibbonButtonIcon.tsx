@@ -11,6 +11,7 @@ import React from 'react';
 import { LineIcon } from '../../../toolbar/icons/LineIcon';
 import { CircleIcon } from '../../../toolbar/icons/CircleIcon';
 import { ArcIcon } from '../../../toolbar/icons/ArcIcon';
+import { ICON_CLICK_COLORS } from '../../../../config/color-config';
 
 export type RibbonIconSize = 'large' | 'small';
 
@@ -50,10 +51,18 @@ const POLYGON_PATH = (
   <polygon points="12,3 21,9 18,20 6,20 3,9" fill="none" />
 );
 const RECTANGLE_PATH = (
-  <rect x="4" y="6" width="16" height="12" rx="0.5" fill="none" />
+  <>
+    <rect x="4" y="6" width="16" height="12" rx="0.5" fill="none" />
+    <circle cx="4" cy="6" r="2" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
+    <circle cx="20" cy="18" r="2" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
+  </>
 );
 const ELLIPSE_PATH = (
-  <ellipse cx="12" cy="12" rx="9" ry="6" fill="none" />
+  <>
+    <ellipse cx="12" cy="12" rx="9" ry="6" fill="none" />
+    <circle cx="12" cy="12" r="2" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
+    <circle cx="21" cy="12" r="2" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
+  </>
 );
 
 const MOVE_PATH = (
