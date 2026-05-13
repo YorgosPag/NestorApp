@@ -94,6 +94,30 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'circle-3p',
               commandKey: 'circle-3p',
             },
+            {
+              id: 'circle.chord-sagitta',
+              labelKey: 'ribbon.commands.circleVariants.chordSagitta',
+              icon: 'circle-chord-sagitta',
+              commandKey: 'circle-chord-sagitta',
+            },
+            {
+              id: 'circle.2p-radius',
+              labelKey: 'ribbon.commands.circleVariants.twoPointRadius',
+              icon: 'circle-2p-radius',
+              commandKey: 'circle-2p-radius',
+            },
+            {
+              id: 'circle.best-fit',
+              labelKey: 'ribbon.commands.circleVariants.bestFit',
+              icon: 'circle-best-fit',
+              commandKey: 'circle-best-fit',
+            },
+            {
+              id: 'circle.ttt',
+              labelKey: 'ribbon.commands.circleVariants.ttt',
+              icon: 'circle-ttt',
+              commandKey: 'circle-ttt',
+            },
           ],
         },
         {

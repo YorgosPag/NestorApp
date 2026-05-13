@@ -386,7 +386,11 @@
         "radius": "Κέντρο και Ακτίνα",
         "diameter": "Κέντρο και Διάμετρος",
         "twoPoint": "2 Σημεία",
-        "threePoint": "3 Σημεία"
+        "threePoint": "3 Σημεία",
+        "chordSagitta": "Χορδή και Βέλος",
+        "twoPointRadius": "2 Σημεία και Ακτίνα",
+        "bestFit": "Βέλτιστη Προσαρμογή",
+        "ttt": "Εφαπτόμενος σε 3 Γραμμές"
       },
       "text": "Κείμενο",
       "textVariants": {

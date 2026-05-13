@@ -386,7 +386,11 @@
         "radius": "Center, Radius",
         "diameter": "Center, Diameter",
         "twoPoint": "2-Point",
-        "threePoint": "3-Point"
+        "threePoint": "3-Point",
+        "chordSagitta": "Chord and Sagitta",
+        "twoPointRadius": "2-Point, Radius",
+        "bestFit": "Best Fit",
+        "ttt": "Tangent to 3 Lines"
       },
       "text": "Text",
       "textVariants": {

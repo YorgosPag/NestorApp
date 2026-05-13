@@ -353,6 +353,14 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({
       return <CircleIcon variant="2point-diameter" className={className} />;
     case 'circle-3p':
       return <CircleIcon variant="3point" className={className} />;
+    case 'circle-chord-sagitta':
+      return <CircleIcon variant="chord-sagitta" className={className} />;
+    case 'circle-2p-radius':
+      return <CircleIcon variant="2point-radius" className={className} />;
+    case 'circle-best-fit':
+      return <CircleIcon variant="best-fit" className={className} />;
+    case 'circle-ttt':
+      return <CircleIcon variant="ttt" className={className} />;
     case 'arc-3p':
       return <ArcIcon variant="3point" className={className} />;
     case 'arc-cse':
