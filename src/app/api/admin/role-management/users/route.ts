@@ -114,8 +114,9 @@ export const GET = withSensitiveRateLimit(
           }
         }
 
-        // 3. Batch-fetch Firebase Auth user records for lastSignIn, disabled, mfaInfo
+        // 3. Batch-fetch Firebase Auth user records for lastSignIn, disabled, mfaInfo, email
         const authMap = new Map<string, {
+          email: string | null;
           lastSignIn: string | null;
           disabled: boolean;
           mfaEnrolled: boolean;
@@ -125,6 +126,7 @@ export const GET = withSensitiveRateLimit(
           const authResult = await auth.getUsers(identifiers);
           for (const userRecord of authResult.users) {
             authMap.set(userRecord.uid, {
+              email: userRecord.email ?? null,
               lastSignIn: userRecord.metadata.lastSignInTime ?? null,
               disabled: userRecord.disabled,
               mfaEnrolled: (userRecord.multiFactor?.enrolledFactors?.length ?? 0) > 0,
@@ -139,7 +141,7 @@ export const GET = withSensitiveRateLimit(
 
           return {
             uid: member.uid,
-            email: profile?.email ?? authInfo ? '' : '',
+            email: profile?.email ?? authInfo?.email ?? '',
             displayName: profile?.displayName ?? null,
             photoURL: profile?.photoURL ?? null,
             globalRole: member.globalRole,
@@ -151,16 +153,9 @@ export const GET = withSensitiveRateLimit(
             lastSignIn: authInfo?.lastSignIn ?? null,
             disabled: authInfo?.disabled ?? false,
             mfaEnrolled: authInfo?.mfaEnrolled ?? false,
-            companyId: ctx.companyId, // Already assigned to this company
+            companyId: ctx.companyId,
           };
         });
-
-        // Fix email: prefer profile email, fallback to Auth email
-        for (const user of users) {
-          const profile = profileMap.get(user.uid);
-          const authRecord = authResult.users.find((u) => u.uid === user.uid);
-          user.email = profile?.email ?? authRecord?.email ?? '';
-        }
 
         // 5. Fetch unassigned users (companyId == null or missing) for admin to assign
         const unassignedSnap = await db

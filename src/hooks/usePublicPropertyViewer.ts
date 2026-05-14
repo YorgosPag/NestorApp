@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
+import { usePublicProperties } from '@/services/realtime/hooks/usePublicProperties';
 import type { Property } from '@/types/property-viewer';
 import type { FilterState } from '@/types/property-viewer';
 import { tallyBy } from '@/utils/collection-utils';
@@ -42,8 +43,12 @@ const DEFAULT_PUBLIC_FILTERS: FilterState = {
  * Απενεργοποιεί όλες τις edit capabilities
  */
 export function usePublicPropertyViewer() {
-  // Παίρνουμε δεδομένα από το shared context
-  const { properties: allProperties, floors, isLoading } = useSharedProperties();
+  const { properties: allProperties, floors, isLoading: authLoading } = useSharedProperties();
+  const { properties: publicProps, loading: publicLoading } = usePublicProperties();
+
+  // When user is not authenticated (allProperties empty), fall back to public Firestore query
+  const isLoading = allProperties.length > 0 ? authLoading : publicLoading;
+  const sourceProperties = allProperties.length > 0 ? allProperties : (publicProps as unknown as Property[]);
 
   // Local state για UI controls
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
@@ -57,9 +62,9 @@ export function usePublicPropertyViewer() {
   // Φιλτράρουμε properties για public view μέσω SSoT gate.
   // ADR-287 Batch 18: ενιαίος κανόνας εμφάνισης σε public vetrina & sales dashboards.
   const publicProperties = useMemo(() => {
-    if (!Array.isArray(allProperties)) return [];
+    if (!Array.isArray(sourceProperties)) return [];
 
-    return allProperties.filter((property: Property) => {
+    return sourceProperties.filter((property: Property) => {
       // ADR-197: commercialStatus is source of truth. Legacy `status`
       // normalized as migration fallback.
       const commercialStatus =

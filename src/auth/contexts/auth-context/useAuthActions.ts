@@ -58,7 +58,12 @@ export function useAuthActions(params: UseAuthActionsParams) {
       setLoading(true);
       setError(null);
       logger.info('[AuthContext] Signing in:', { email });
-      await signInWithEmailAndPassword(auth, email, password);
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      // Force-refresh token so latest custom claims (companyId, globalRole) are
+      // available immediately without waiting for the 1-hour auto-refresh cycle.
+      if (credential.user) {
+        await credential.user.getIdToken(true);
+      }
       logger.info('[AuthContext] Sign in successful');
     } catch (error) {
       handleError(error);
