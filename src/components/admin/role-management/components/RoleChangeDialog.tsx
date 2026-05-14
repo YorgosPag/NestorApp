@@ -56,17 +56,6 @@ interface RoleChangeDialogProps {
 }
 
 // =============================================================================
-// ROLE DISPLAY LABELS
-// =============================================================================
-
-const ROLE_LABELS: Record<GlobalRole, string> = {
-  super_admin: 'Super Admin',
-  company_admin: 'Company Admin',
-  internal_user: 'Internal User',
-  external_user: 'External User',
-};
-
-// =============================================================================
 // COMPONENT
 // =============================================================================
 
@@ -103,12 +92,10 @@ export function RoleChangeDialog({
         API_ROUTES.ADMIN.ROLE_MANAGEMENT.USER_ROLE(user.uid),
         { newRole, reason }
       );
-      success(
-        t('roleManagement.roleChanged', 'Role changed successfully. User must re-login to see changes.')
-      );
+      success(t('roleManagement.roleChanged'));
       onSuccess();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to change role';
+      const message = err instanceof Error ? err.message : t('roleManagement.roleChange.error');
       notifyError(message);
     } finally {
       setIsSubmitting(false);
@@ -123,13 +110,10 @@ export function RoleChangeDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {t('roleManagement.changeRole', 'Change Global Role')}
+            {t('roleManagement.changeRole')}
           </DialogTitle>
           <DialogDescription>
-            {t(
-              'roleManagement.changeRoleDescription',
-              'Change the global role for this user. This affects their access across the entire organization.'
-            )}
+            {t('roleManagement.changeRoleDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -146,16 +130,16 @@ export function RoleChangeDialog({
 
           {/* Current role */}
           <fieldset className="space-y-2">
-            <Label>{t('roleManagement.currentRole', 'Current Role')}</Label>
+            <Label>{t('roleManagement.currentRole')}</Label>
             <Badge variant={ROLE_BADGE_VARIANT[user.globalRole]}>
-              {ROLE_LABELS[user.globalRole]}
+              {t(`roleManagement.roleNames.${user.globalRole}`)}
             </Badge>
           </fieldset>
 
           {/* New role */}
           <fieldset className="space-y-2">
             <Label htmlFor="new-role-select">
-              {t('roleManagement.newRole', 'New Role')}
+              {t('roleManagement.newRole')}
             </Label>
             <Select
               value={newRole}
@@ -171,10 +155,10 @@ export function RoleChangeDialog({
                   return (
                     <SelectItem key={role} value={role}>
                       <span className="flex flex-col">
-                        <span>{ROLE_LABELS[role]}</span>
+                        <span>{t(`roleManagement.roleNames.${role}`)}</span>
                         {roleDef && (
                           <span className={cn("text-xs", colors.text.muted)}>
-                            L{roleDef.level} — {roleDef.description}
+                            L{roleDef.level} — {t(`roleManagement.roleDescriptions.${role}`)}
                           </span>
                         )}
                       </span>
@@ -188,14 +172,14 @@ export function RoleChangeDialog({
           {/* Reason */}
           <fieldset className="space-y-2">
             <Label htmlFor="role-change-reason">
-              {t('roleManagement.reason', 'Reason')} ({t('roleManagement.minChars', 'min 10 characters')})
+              {t('roleManagement.reason')} ({t('roleManagement.minChars')})
             </Label>
             <Textarea
               id="role-change-reason"
               rows={3}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder={t('roleManagement.reasonPlaceholder', 'Explain why this role change is needed...')}
+              placeholder={t('roleManagement.reasonPlaceholder')}
             />
           </fieldset>
 
@@ -203,7 +187,7 @@ export function RoleChangeDialog({
           {isSelf && (
             <Alert variant="destructive">
               <p className="text-sm">
-                {t('roleManagement.cannotChangeOwnRole', 'You cannot change your own role.')}
+                {t('roleManagement.cannotChangeOwnRole')}
               </p>
             </Alert>
           )}
@@ -212,10 +196,7 @@ export function RoleChangeDialog({
           {!isUnchanged && !isSelf && (
             <Alert>
               <p className="text-sm">
-                {t(
-                  'roleManagement.reLoginWarning',
-                  'The user must sign out and sign back in for the new role to take effect.'
-                )}
+                {t('roleManagement.reLoginWarning')}
               </p>
             </Alert>
           )}
@@ -223,12 +204,12 @@ export function RoleChangeDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            {t('common.cancel', 'Cancel')}
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
             {isSubmitting
-              ? t('common.saving', 'Saving...')
-              : t('roleManagement.confirmRoleChange', 'Change Role')}
+              ? t('common.saving')
+              : t('roleManagement.confirmRoleChange')}
           </Button>
         </DialogFooter>
       </DialogContent>

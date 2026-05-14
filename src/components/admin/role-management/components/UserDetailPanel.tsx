@@ -33,7 +33,6 @@ import { PREDEFINED_ROLES } from '@/lib/auth/roles';
 import type { RoleDefinition } from '@/lib/auth/roles';
 import { PERMISSION_SETS, computeEffectivePermissions } from '@/lib/auth/permission-sets';
 import type { PermissionId } from '@/lib/auth/types';
-import type { GlobalRole } from '@/lib/auth/types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
@@ -48,19 +47,19 @@ interface UserDetailPanelProps {
 }
 
 // =============================================================================
-// ROLE LABELS
-// =============================================================================
-
-const ROLE_LABELS: Record<GlobalRole, string> = {
-  super_admin: 'Super Admin',
-  company_admin: 'Company Admin',
-  internal_user: 'Internal User',
-  external_user: 'External User',
-};
-
-// =============================================================================
 // COMPONENT
 // =============================================================================
+
+function translatePermissionId(perm: string, t: ReturnType<typeof useTranslation>['t']): string {
+  const parts = perm.split(':');
+  if (parts.length >= 3) {
+    const [domain, ...rest] = parts;
+    const key = `roleManagement.permissionNames.${domain}.${rest.join('_')}`;
+    const translated = t(key);
+    return translated !== key ? translated : perm;
+  }
+  return perm;
+}
 
 export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
   const { t } = useTranslation('admin');
@@ -112,7 +111,7 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
       <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>
-            {t('roleManagement.userDetails', 'User Details')}
+            {t('roleManagement.userDetails')}
           </DialogTitle>
         </DialogHeader>
 
@@ -120,39 +119,42 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
           {/* Section 1: User Info */}
           <section>
             <h3 className={cn("text-sm font-semibold mb-3 uppercase tracking-wide", colors.text.muted)}>
-              {t('roleManagement.userInfo', 'User Information')}
+              {t('roleManagement.userInfo')}
             </h3>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <dt className={colors.text.muted}>{t('roleManagement.name', 'Name')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.name')}</dt>
               <dd className="font-medium">{user.displayName ?? '—'}</dd>
 
-              <dt className={colors.text.muted}>{t('roleManagement.email', 'Email')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.email')}</dt>
               <dd>{user.email}</dd>
 
-              <dt className={colors.text.muted}>{t('roleManagement.uid', 'UID')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.uid')}</dt>
               <dd className="font-mono text-xs break-all">{user.uid}</dd>
 
-              <dt className={colors.text.muted}>{t('roleManagement.globalRole', 'Global Role')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.globalRole')}</dt>
               <dd>
                 <Badge variant={ROLE_BADGE_VARIANT[user.globalRole]}>
-                  {ROLE_LABELS[user.globalRole]}
+                  {t(`roleManagement.roleNames.${user.globalRole}`)}
                 </Badge>
               </dd>
 
-              <dt className={colors.text.muted}>{t('roleManagement.table.status', 'Status')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.table.status')}</dt>
               <dd>
                 <Badge variant={STATUS_BADGE_VARIANT[user.status]}>
-                  {user.status}
+                  {t(`roleManagement.statusLabels.${user.status}`)}
                 </Badge>
               </dd>
 
-              <dt className={colors.text.muted}>{t('roleManagement.mfaLabel')}</dt>
-              <dd>{user.mfaEnrolled ? 'Enabled' : 'Not enrolled'}</dd>
+              <dt className={colors.text.muted}>{t('roleManagement.userDetail.mfa')}</dt>
+              <dd>{user.mfaEnrolled
+                ? t('roleManagement.userDetail.mfaEnrolled')
+                : t('roleManagement.userDetail.mfaNotEnrolled')}
+              </dd>
 
-              <dt className={colors.text.muted}>{t('roleManagement.lastSignIn', 'Last Sign-In')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.lastSignIn')}</dt>
               <dd>{user.lastSignIn ? formatRelativeTime(user.lastSignIn) : t('users.activity.never')}</dd>
 
-              <dt className={colors.text.muted}>{t('roleManagement.projects', 'Projects')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.projects')}</dt>
               <dd>{user.projectCount}</dd>
             </dl>
           </section>
@@ -160,20 +162,26 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
           {/* Section 2: Org-Level Permission Sets */}
           <section>
             <h3 className={cn("text-sm font-semibold mb-3 uppercase tracking-wide", colors.text.muted)}>
-              {t('roleManagement.orgPermissionSets', 'Org-Level Permission Sets')}
+              {t('roleManagement.orgPermissionSets')}
             </h3>
             {user.permissionSetIds.length === 0 ? (
               <p className={cn("text-sm", colors.text.muted)}>
-                {t('roleManagement.noPermissionSets', 'No org-level permission sets assigned.')}
+                {t('roleManagement.noPermissionSets')}
               </p>
             ) : (
               <ul className="flex flex-wrap gap-2">
                 {user.permissionSetIds.map((setId) => {
                   const definition = PERMISSION_SETS[setId];
+                  const name = definition
+                    ? t(`roleManagement.definitions.${setId}.name`)
+                    : setId;
+                  const description = definition
+                    ? t(`roleManagement.definitions.${setId}.description`)
+                    : setId;
                   return (
                     <li key={setId}>
-                      <Badge variant="secondary" title={definition?.description ?? setId}>
-                        {definition?.name ?? setId}
+                      <Badge variant="secondary" title={description}>
+                        {name}
                       </Badge>
                     </li>
                   );
@@ -185,19 +193,19 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
           {/* Section 3: Project Memberships */}
           <section>
             <h3 className={cn("text-sm font-semibold mb-3 uppercase tracking-wide", colors.text.muted)}>
-              {t('roleManagement.projectMemberships', 'Project Memberships')}
+              {t('roleManagement.projectMemberships')}
             </h3>
             {user.projectMemberships.length === 0 ? (
               <p className={cn("text-sm", colors.text.muted)}>
-                {t('roleManagement.noProjectMemberships', 'Not a member of any projects.')}
+                {t('roleManagement.noProjectMemberships')}
               </p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('roleManagement.project', 'Project')}</TableHead>
-                    <TableHead>{t('roleManagement.projectRole', 'Role')}</TableHead>
-                    <TableHead>{t('roleManagement.extraSets', 'Extra Sets')}</TableHead>
+                    <TableHead>{t('roleManagement.project')}</TableHead>
+                    <TableHead>{t('roleManagement.projectRole')}</TableHead>
+                    <TableHead>{t('roleManagement.extraSets')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -207,7 +215,9 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
                         {membership.projectName}
                       </TableCell>
                       <TableCell className="text-sm">
-                        <Badge variant="secondary">{membership.roleId}</Badge>
+                        <Badge variant="secondary">
+                          {t(`roleManagement.roleNames.${membership.roleId}`, membership.roleId)}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-sm">
                         {membership.permissionSetIds.length === 0
@@ -224,31 +234,28 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
           {/* Section 4: Effective Permissions */}
           <section>
             <h3 className={cn("text-sm font-semibold mb-3 uppercase tracking-wide", colors.text.muted)}>
-              {t('roleManagement.effectivePermissions', 'Effective Permissions')}
+              {t('roleManagement.effectivePermissions')}
             </h3>
 
             {isBypass ? (
               <p className={cn("text-sm", colors.text.muted)}>
-                {t(
-                  'roleManagement.bypassRole',
-                  'This user has a bypass role (super_admin) — all permission checks are granted.'
-                )}
+                {t('roleManagement.bypassRole')}
               </p>
             ) : effectivePermissions.length === 0 ? (
               <p className={cn("text-sm", colors.text.muted)}>
-                {t('roleManagement.noPermissions', 'No permissions computed.')}
+                {t('roleManagement.noPermissions')}
               </p>
             ) : (
               <nav>
                 {Object.entries(groupedPermissions).map(([domain, perms]) => (
                   <details key={domain} className="mb-2">
-                    <summary className="cursor-pointer text-sm font-medium capitalize">
-                      {domain} ({perms.length})
+                    <summary className="cursor-pointer text-sm font-medium">
+                      {t(`roleManagement.domains.${domain}`, domain)} ({perms.length})
                     </summary>
                     <ul className="ml-4 mt-1 space-y-0.5">
                       {perms.map((perm) => (
-                        <li key={perm} className={cn("text-xs font-mono", colors.text.muted)}>
-                          {perm}
+                        <li key={perm} className={cn("text-xs", colors.text.muted)}>
+                          {translatePermissionId(perm, t)}
                         </li>
                       ))}
                     </ul>
