@@ -9,6 +9,7 @@
  */
 
 import React, { useCallback } from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useTextToolbarStore } from '../../../state/text-toolbar';
 import { useTextPanelDocumentVersion } from '../../text-toolbar/hooks/useTextPanelDocumentVersion';
 import { ColorPickerPopover } from '../../text-toolbar/controls/ColorPickerPopover';
@@ -16,6 +17,7 @@ import { versionSupportsTrueColor } from '../../../text-engine/types';
 import type { DxfColor } from '../../../text-engine/types';
 
 export function RibbonColorSwatchWidget() {
+  const { t } = useTranslation('dxf-viewer-shell');
   const color = useTextToolbarStore((s) => s.color);
   const setValue = useTextToolbarStore((s) => s.setValue);
   const documentVersion = useTextPanelDocumentVersion();
@@ -27,10 +29,17 @@ export function RibbonColorSwatchWidget() {
   );
 
   return (
-    <ColorPickerPopover
-      value={color}
-      onChange={handleChange}
-      trueColorSupported={trueColor}
-    />
+    <span className="dxf-ribbon-combobox-row">
+      <span className="dxf-ribbon-combobox-label">
+        {t('ribbon.commands.textEditor.font.color')}
+      </span>
+      <span className="dxf-ribbon-widget-compact">
+        <ColorPickerPopover
+          value={color}
+          onChange={handleChange}
+          trueColorSupported={trueColor}
+        />
+      </span>
+    </span>
   );
 }

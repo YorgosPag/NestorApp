@@ -66,6 +66,42 @@ export const CONTEXTUAL_TEXT_EDITOR_TAB: RibbonTab = {
   contextualTrigger: TEXT_EDITOR_CONTEXTUAL_TRIGGER,
   panels: [
     {
+      id: 'text-tool',
+      labelKey: 'ribbon.panels.text',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'split',
+              size: 'large',
+              command: {
+                id: 'draw.text',
+                labelKey: 'ribbon.commands.text',
+                icon: 'text-create',
+                commandKey: 'text',
+                shortcut: 'T',
+              },
+              variants: [
+                {
+                  id: 'text.singleline',
+                  labelKey: 'ribbon.commands.textVariants.singleLine',
+                  icon: 'text-create',
+                  commandKey: 'text',
+                },
+                {
+                  id: 'text.multiline',
+                  labelKey: 'ribbon.commands.textVariants.multiLine',
+                  icon: 'text-placeholder',
+                  commandKey: 'mtext',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'text-font',
       labelKey: 'ribbon.panels.font',
       rows: [

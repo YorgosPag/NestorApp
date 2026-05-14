@@ -48,7 +48,9 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const loadedFilesRef = useRef<Set<string>>(new Set());
   // Cache fileName → enterpriseId mapping to avoid generating new IDs on every save
   const fileIdCacheRef = useRef<Map<string, string>>(new Map());
-  // Cache fileName → canonicalScenePath so subsequent saves don't re-derive it
+  // Cache fileId → canonicalScenePath so subsequent saves don't re-derive it.
+  // MUST be keyed by fileId (unique), NOT fileName — two different files can share the same
+  // originalFilename, which would cause the wrong scene path to be written to Firestore.
   const scenePathCacheRef = useRef<Map<string, string>>(new Map());
   // 🏢 ENTERPRISE: Injected FileRecord ID (from wizard/upload) — ensures cadFiles uses the same ID
   const injectedFileRecordIdRef = useRef<string | null>(null);
@@ -122,10 +124,12 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
           // 4. New enterprise ID (first standalone save — no wizard involved)
           let fileId = injectedFileRecordIdRef.current
             ?? fileIdCacheRef.current.get(fileName);
-          // Pull canonicalScenePath from wizard context or cache first
+          // Pull canonicalScenePath from wizard context or cache first.
+          // Cache is keyed by fileId (unique) — never by fileName to avoid cross-file
+          // contamination when two files share the same originalFilename.
           let canonicalScenePath: string | undefined =
             injectedSaveContextRef.current?.canonicalScenePath
-            ?? scenePathCacheRef.current.get(fileName);
+            ?? (fileId ? scenePathCacheRef.current.get(fileId) : undefined);
 
           // Enter also when canonicalScenePath is missing — even if fileId is already
           // known (injected by wizard/loader), the scene path may not have been wired
@@ -164,9 +168,9 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
             // saveToStorageImpl will surface the missing-path error explicitly.
           }
 
-          // Cache for subsequent saves of this file
-          if (canonicalScenePath) {
-            scenePathCacheRef.current.set(fileName, canonicalScenePath);
+          // Cache for subsequent saves of this file (keyed by fileId, not fileName)
+          if (canonicalScenePath && fileId) {
+            scenePathCacheRef.current.set(fileId, canonicalScenePath);
           }
 
           // 🚀 PHASE 4: Use Storage-based auto-save with canonical path

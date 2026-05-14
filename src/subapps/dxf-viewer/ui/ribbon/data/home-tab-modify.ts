@@ -80,7 +80,6 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             icon: 'mirror',
             commandKey: 'mirror',
             shortcut: 'MI',
-            comingSoon: true,
           },
         },
         {

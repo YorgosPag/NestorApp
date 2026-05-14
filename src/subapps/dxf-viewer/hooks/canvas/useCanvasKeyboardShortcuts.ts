@@ -64,6 +64,14 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleMoveEscape?: () => void;
   /** ADR-049: Whether the move tool is active and collecting input */
   moveIsActive?: boolean;
+  /** Mirror tool cancel handler */
+  handleMirrorEscape?: () => void;
+  /** Whether the mirror tool is active and collecting axis points */
+  mirrorIsActive?: boolean;
+  /** Mirror tool Y/N confirm handler (keepOriginals: true = keep, false = discard) */
+  handleMirrorConfirm?: (keepOriginals: boolean) => void;
+  /** True when mirror tool is in awaiting-keep-originals phase */
+  mirrorAwaitingConfirm?: boolean;
   /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
   clearEntitySelection?: () => void;
   /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
@@ -93,6 +101,10 @@ export function useCanvasKeyboardShortcuts({
   rotationIsActive = false,
   handleMoveEscape,
   moveIsActive = false,
+  handleMirrorEscape,
+  mirrorIsActive = false,
+  handleMirrorConfirm,
+  mirrorAwaitingConfirm = false,
   clearEntitySelection,
   hasAnySelection = false,
 }: UseCanvasKeyboardShortcutsParams): void {
@@ -123,6 +135,11 @@ export function useCanvasKeyboardShortcuts({
           // ADR-049: Move tool cancel (highest priority — intercepts before rotation)
           if (moveIsActive && handleMoveEscape) {
             handleMoveEscape();
+            break;
+          }
+          // Mirror tool cancel
+          if (mirrorIsActive && handleMirrorEscape) {
+            handleMirrorEscape();
             break;
           }
           // ADR-188: Escape cancels rotation tool
@@ -179,11 +196,26 @@ export function useCanvasKeyboardShortcuts({
             handleEntityJoin();
           }
           break;
+        // Mirror keep-originals confirm: Y = keep, N = discard
+        case 'y':
+        case 'Y':
+          if (mirrorAwaitingConfirm && handleMirrorConfirm) {
+            e.preventDefault();
+            handleMirrorConfirm(true);
+          }
+          break;
+        case 'n':
+        case 'N':
+          if (mirrorAwaitingConfirm && handleMirrorConfirm) {
+            e.preventDefault();
+            handleMirrorConfirm(false);
+          }
+          break;
       }
     };
 
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, clearEntitySelection, hasAnySelection]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, clearEntitySelection, hasAnySelection]);
 }

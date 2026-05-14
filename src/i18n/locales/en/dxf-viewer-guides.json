@@ -147,5 +147,14 @@
     "selectEntity": "Select entity to move",
     "selectBasePoint": "Click: base point",
     "selectDestination": "Click: destination point — Esc: cancel"
+  },
+  "mirrorTool": {
+    "selectEntity": "Select entities → Click: first axis point → second axis point",
+    "selectFirstPoint": "Click: first point of mirror axis",
+    "selectSecondPoint": "Click: second point of mirror axis — Esc: cancel",
+    "keepOriginals": "Keep source objects? [Y] Yes / [N] No — Esc: cancel",
+    "confirmTitle": "Keep original objects?",
+    "confirmYes": "Yes",
+    "confirmNo": "No"
   }
 }

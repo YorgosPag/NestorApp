@@ -63,7 +63,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   entityPickingActive,
   selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
-  rotationPreview, movePreview, levelManager,
+  rotationPreview, movePreview, mirrorPreview, levelManager,
 }: CanvasLayerStackProps) {
   // --- Destructure grouped props ---
   const {
@@ -445,6 +445,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <PreviewCanvasMounts
             rotation={rotationPreview}
             move={movePreview}
+            mirror={mirrorPreview}
             gripDragPreview={dxfGripInteraction.dragPreview}
             selectedEntityIds={selectedEntityIds}
             levelManager={levelManager}
@@ -473,7 +474,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             transform={transform}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
           />
-
           <RulerCornerBox
             rulerWidth={rulerSettings.vertical?.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}
             rulerHeight={rulerSettings.horizontal?.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT}

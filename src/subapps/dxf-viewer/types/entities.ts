@@ -4,6 +4,7 @@
  */
 
 import type { Point2D } from '../rendering/types/Types';
+import type { DxfTextNode } from '../text-engine/types';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
 // 🏢 ADR-142: Centralized Default Font Size
 import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
@@ -181,6 +182,8 @@ export interface TextEntity extends BaseEntity {
   type: 'text';
   position: Point2D;
   text: string;
+  /** SSoT for content when present — populated by DXF import (ADR-344 unification) and CreateTextCommand. */
+  textNode?: DxfTextNode;
   fontSize?: number;
   height?: number;           // 🏢 ENTERPRISE: DXF text height (alias for fontSize, used by converters)
   fontFamily?: string;
@@ -195,6 +198,8 @@ export interface MTextEntity extends BaseEntity {
   type: 'mtext';
   position: Point2D;
   text: string;
+  /** SSoT for content when present — populated by DXF import (ADR-344 unification) and CreateTextCommand. */
+  textNode?: DxfTextNode;
   width: number;              // ✅ ENTERPRISE: AutoCAD multiline text width boundary
   height?: number;            // ✅ ENTERPRISE: AutoCAD multiline text height boundary
   fontSize?: number;

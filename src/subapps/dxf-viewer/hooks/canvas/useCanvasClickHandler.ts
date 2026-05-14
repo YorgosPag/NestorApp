@@ -75,6 +75,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     rotationIsActive = false, handleRotationClick,
     moveIsActive = false, handleMoveClick,
+    mirrorIsActive = false, handleMirrorClick,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef,
@@ -113,6 +114,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.55: ADR-049 — Move tool click (base point or destination)
     if (moveIsActive && handleMoveClick) {
       handleMoveClick(worldPoint);
+      return;
+    }
+
+    // PRIORITY 1.56: Mirror tool click (axis point 1 or 2)
+    if (mirrorIsActive && handleMirrorClick) {
+      handleMirrorClick(worldPoint);
       return;
     }
 
@@ -214,6 +221,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     rotationIsActive, handleRotationClick,
     moveIsActive, handleMoveClick,
+    mirrorIsActive, handleMirrorClick,
     levelManager,
     draftPolygon, isSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,

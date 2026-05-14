@@ -580,3 +580,17 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
   opacity: 0.55;
   font-style: italic;
 }
+
+/* ─── ADR-345 Fase 6 — Widget compact wrapper ─── */
+/* Forces the direct-child trigger button to ribbon-combobox height (24px).
+   Scoped to direct child only so dropdown list buttons are unaffected. */
+.dxf-ribbon-widget-compact > button {
+  height: 24px;
+  min-height: 24px !important;
+  max-height: 24px;
+  font-size: 12px;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 6px;
+  padding-right: 6px;
+}

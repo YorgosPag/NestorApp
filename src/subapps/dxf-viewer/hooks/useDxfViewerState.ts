@@ -26,7 +26,9 @@ import { useRulersGridContext } from '../systems/rulers-grid/RulersGridSystem';
 // 📐 ADR-189: EventBus for guide→snap auto-enable
 import { EventBus } from '../systems/events/EventBus';
 import { ClipToRegionService } from '../services/ClipToRegionService';
+import { ClipToRegionCommand, type OverlayClipChange } from '../core/commands/ClipToRegionCommand';
 import { useOverlayStore } from '../overlays/overlay-store';
+import { useLevels } from '../systems/levels';
 
 const clipService = new ClipToRegionService();
 
@@ -43,7 +45,9 @@ export function useDxfViewerState() {
   const { gripSettings } = useGripContext();
   const canvasOps = useCanvasOperations();
   // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
-  const { undo, redo, canUndo, canRedo } = useCommandHistory();
+  const { undo, redo, canUndo, canRedo, execute: executeCommand } = useCommandHistory();
+  const executeCommandRef = useRef(executeCommand);
+  executeCommandRef.current = executeCommand;
 
   // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State from ToolStateStore
   // SINGLE SOURCE OF TRUTH: All components subscribe to this store
@@ -63,6 +67,9 @@ export function useDxfViewerState() {
   const overlayStore = useOverlayStore();
   const overlayStoreRef = useRef(overlayStore);
   overlayStoreRef.current = overlayStore;
+  const { setLevelScene } = useLevels();
+  const setLevelSceneRef = useRef(setLevelScene);
+  setLevelSceneRef.current = setLevelScene;
 
   // 🎯 CENTRALIZED SNAP SYSTEM
   const { snapEnabled, setSnapEnabled } = useSnapContext();
@@ -111,31 +118,38 @@ export function useDxfViewerState() {
 
   // Crop-window: EventBus delivers world-space rect after user draws marquee.
   // Clips DXF entities (SceneModel) AND overlay polygons (ColorLayers) to the rect.
-  // Ref pattern: single subscription; refs always have fresh state/store.
+  // Wrapped in ClipToRegionCommand so undo/redo works via CommandHistory.
   useEffect(() => {
     return EventBus.on('crop:marquee-rect', (rect) => {
-      // 1. Clip DXF scene entities
-      const { currentScene, handleSceneChange, currentLevelId } = sceneStateRef.current;
-      if (currentScene) {
-        handleSceneChange(clipService.clip(currentScene, rect));
+      const { currentScene, currentLevelId } = sceneStateRef.current;
+      if (!currentScene || !currentLevelId) {
+        setActiveTool('select');
+        return;
       }
 
-      // 2. Clip overlay polygons (colored layers)
-      if (currentLevelId) {
-        const store = overlayStoreRef.current;
-        const overlays = store.getByLevel(currentLevelId);
-        for (const overlay of overlays) {
-          const clipped = clipService.clipOverlayPolygon(overlay.polygon, rect);
-          if (clipped === null) {
-            // Fully outside — remove overlay
-            void store.remove(overlay.id);
-          } else if (clipped !== overlay.polygon) {
-            // Partially inside — update with clipped boundary vertices
-            void store.update(overlay.id, { polygon: clipped });
+      // Pre-compute clip results before creating the command.
+      const clippedScene = clipService.clip(currentScene, rect);
+      const store = overlayStoreRef.current;
+      const overlayChanges: OverlayClipChange[] = store
+        .getByLevel(currentLevelId)
+        .reduce<OverlayClipChange[]>((acc, overlay) => {
+          const after = clipService.clipOverlayPolygon(overlay.polygon, rect);
+          if (after !== overlay.polygon) {
+            // null = removed, new array = updated; same ref = fully inside (skip)
+            acc.push({ before: overlay, after });
           }
-          // Same reference = fully inside, no update needed
-        }
-      }
+          return acc;
+        }, []);
+
+      const cmd = new ClipToRegionCommand(
+        currentLevelId,
+        currentScene,
+        clippedScene,
+        overlayChanges,
+        setLevelSceneRef.current,
+        store,
+      );
+      executeCommandRef.current(cmd);
 
       setActiveTool('select');
     });

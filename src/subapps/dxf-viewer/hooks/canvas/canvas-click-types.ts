@@ -113,6 +113,12 @@ export interface UseCanvasClickHandlerParams {
   /** Click handler for move state machine */
   handleMoveClick?: (worldPoint: Point2D) => void;
 
+  // ── Mirror tool (2-click axis definition) ─────────────────────────────
+  /** Whether the mirror tool is collecting axis points */
+  mirrorIsActive?: boolean;
+  /** Click handler for mirror state machine */
+  handleMirrorClick?: (worldPoint: Point2D) => void;
+
   // ── Level / Scene ─────────────────────────────────────────────────────
   levelManager: LevelManagerLike;
 

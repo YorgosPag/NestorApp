@@ -11,12 +11,17 @@
  */
 
 import React, { useCallback } from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useTextToolbarStore } from '../../../state/text-toolbar';
 import { useTextPanelFonts } from '../../text-toolbar/hooks/useTextPanelFonts';
 import { FontFamilyCombobox } from '../../text-toolbar/controls/FontFamilyCombobox';
 
 export function RibbonFontFamilyWidget() {
-  const fontFamily = useTextToolbarStore((s) => s.fontFamily);
+  const { t } = useTranslation('dxf-viewer-shell');
+  const rawFontFamily = useTextToolbarStore((s) => s.fontFamily);
+  // Empty string = entity has no explicit fontFamily (inherits DXF style). Treat as null
+  // so FontFamilyCombobox shows a placeholder instead of a blank trigger button.
+  const fontFamily = rawFontFamily === '' ? null : rawFontFamily;
   const setValue = useTextToolbarStore((s) => s.setValue);
   const fonts = useTextPanelFonts();
 
@@ -26,12 +31,19 @@ export function RibbonFontFamilyWidget() {
   );
 
   return (
-    <FontFamilyCombobox
-      value={fontFamily}
-      availableFonts={fonts}
-      onChange={handleChange}
-      onRequestUpload={() => {}}
-      canUpload={true}
-    />
+    <span className="dxf-ribbon-combobox-row">
+      <span className="dxf-ribbon-combobox-label">
+        {t('ribbon.commands.textEditor.font.family')}
+      </span>
+      <span className="dxf-ribbon-widget-compact">
+        <FontFamilyCombobox
+          value={fontFamily}
+          availableFonts={fonts}
+          onChange={handleChange}
+          onRequestUpload={() => {}}
+          canUpload={true}
+        />
+      </span>
+    </span>
   );
 }

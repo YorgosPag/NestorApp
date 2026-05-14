@@ -20,3 +20,13 @@ export type {
 
 export { useMovePreview } from './useMovePreview';
 export type { UseMovePreviewProps } from './useMovePreview';
+
+export { useMirrorTool } from './useMirrorTool';
+export type {
+  UseMirrorToolProps,
+  UseMirrorToolReturn,
+  MirrorPhase,
+} from './useMirrorTool';
+
+export { useMirrorPreview } from './useMirrorPreview';
+export type { UseMirrorPreviewProps } from './useMirrorPreview';

@@ -10,11 +10,13 @@
  */
 
 import React, { useCallback } from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useTextToolbarStore } from '../../../state/text-toolbar';
 import { LineSpacingMenu } from '../../text-toolbar/controls/LineSpacingMenu';
 import type { LineSpacingMode } from '../../../text-engine/types';
 
 export function RibbonLineSpacingWidget() {
+  const { t } = useTranslation('dxf-viewer-shell');
   const lineSpacingMode = useTextToolbarStore((s) => s.lineSpacingMode);
   const lineSpacingFactor = useTextToolbarStore((s) => s.lineSpacingFactor);
   const setMany = useTextToolbarStore((s) => s.setMany);
@@ -26,10 +28,17 @@ export function RibbonLineSpacingWidget() {
   );
 
   return (
-    <LineSpacingMenu
-      mode={lineSpacingMode}
-      factor={lineSpacingFactor}
-      onChange={handleChange}
-    />
+    <span className="dxf-ribbon-combobox-row">
+      <span className="dxf-ribbon-combobox-label">
+        {t('ribbon.commands.textEditor.paragraph.lineSpacing')}
+      </span>
+      <span className="dxf-ribbon-widget-compact">
+        <LineSpacingMenu
+          mode={lineSpacingMode}
+          factor={lineSpacingFactor}
+          onChange={handleChange}
+        />
+      </span>
+    </span>
   );
 }

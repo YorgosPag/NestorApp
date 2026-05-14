@@ -581,6 +581,16 @@
       ],
       "shortcuts": "G→4 | Ctrl+Z=Undo | ESC=Cancel"
     },
+    "mirror": {
+      "name": "Mirror",
+      "description": "Mirror selected entities across an axis",
+      "steps": [
+        "Select entities",
+        "Click for first axis point",
+        "Click for second axis point"
+      ],
+      "shortcuts": "MI | ESC=Cancel"
+    },
     "guide-mirror": {
       "name": "Mirror Guides",
       "description": "Click on X/Y guide to mirror all others across it",

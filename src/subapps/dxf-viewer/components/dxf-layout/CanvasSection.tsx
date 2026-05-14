@@ -41,6 +41,7 @@ import { useGlobalSnapSceneSync } from '../../snapping/hooks/useGlobalSnapSceneS
 import { useSpecialTools } from '../../hooks/tools';
 import { useRotationTool } from '../../hooks/tools/useRotationTool';
 import { useMoveTool } from '../../hooks/tools/useMoveTool';
+import { useMirrorTool } from '../../hooks/tools/useMirrorTool';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 import { useGuideActions } from '../../hooks/state/useGuideActions';
@@ -59,6 +60,7 @@ import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/component
 import { useTextDoubleClickEditor } from '../../ui/text-toolbar/hooks/useTextDoubleClickEditor';
 import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 import { useTextCreationTool } from '../../hooks/canvas/useTextCreationTool';
+import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -102,7 +104,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     containerRef, transform, setTransform: contextSetTransform,
   });
   const zoomSystem = useZoom({ initialTransform: transform, onTransformChange: setTransform, viewport });
-
   // === Visibility ===
   const showDxfCanvas = props.dxfCanvasVisible ?? true;
   const showLayerCanvasDebug = props.layerCanvasVisible ?? true;
@@ -157,7 +158,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null });
   const dxfSceneRef = useRef(dxfScene);
   dxfSceneRef.current = dxfScene;
-
   // === Snap engine scene-sync (SSoT, sole owner — ADR-040) ===
   // The SnapEngine singleton's `initialize(allEntities)` is owned exclusively
   // by this hook. `useSnapManager` instances are now consumers only.
@@ -229,7 +229,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // unified completion pipeline (ADR-057 EventBus). Measurement tools are
   // excluded — they already raise the prompt through `handleMeasurementComplete`.
   useEntityCompleteGuideListener(guideWorkflows.handleEntityComplete);
-
   // === Layer visibility ===
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
 
@@ -286,13 +285,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const entityMenuRef = useRef<EntityContextMenuHandle>(null);
   const guideMenuRef = useRef<GuideContextMenuHandle>(null);
   const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
-
-  // === Rotation Tool ===
-  const rotationTool = useRotationTool({
-    activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
-    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
-    currentOverlays, overlayUpdate: overlayStore.update,
-  });
+  const rotationTool = useRotationTool({ activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined, currentOverlays, overlayUpdate: overlayStore.update });
+  const mirrorTool = useMirrorTool({ activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined });
 
   // === Move Tool (ADR-049: AutoCAD-style 2-click) ===
   const executeOverlayMove = useCallback((ids: string[], delta: {x:number;y:number}) => { executeCommand(ids.length===1 ? new MoveOverlayCommand(ids[0],delta,overlayStore,false) : new MoveMultipleOverlaysCommand(ids,delta,overlayStore,false)); }, [overlayStore, executeCommand]);
@@ -342,6 +338,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     dxfGripInteraction: unified.dxfProjection,
     rotationIsActive: rotationTool.isCollectingInput, handleRotationClick: rotationTool.handleRotationClick,
     moveIsActive: moveTool.isCollectingInput, handleMoveClick: moveTool.handleMoveClick,
+    mirrorIsActive: mirrorTool.isCollectingInput, handleMirrorClick: mirrorTool.handleMirrorClick,
     levelManager, draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
@@ -407,6 +404,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onExitDrawMode: handleExitDrawMode,
     handleRotationEscape: rotationTool.handleRotationEscape, rotationIsActive: rotationTool.isCollectingInput,
     handleMoveEscape: moveTool.handleMoveEscape, moveIsActive: moveTool.isCollectingInput,
+    handleMirrorEscape: mirrorTool.handleMirrorEscape, mirrorIsActive: mirrorTool.isCollectingInput,
+    handleMirrorConfirm: mirrorTool.handleMirrorConfirm, mirrorAwaitingConfirm: mirrorTool.phase === 'awaiting-keep-originals',
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     clearEntitySelection: () => universalSelectionRef.current.clearAll(),
   });
@@ -449,12 +448,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         entityJoin={{ canJoin: entityJoinState.canJoin, joinResultLabel: entityJoinState.joinResultLabel, onJoin: () => entityJoinHook.joinEntities(selectedEntityIds), onDelete: () => handleSmartDelete() }}
         floorId={floorplanBg?.floorId ?? null}
         onMouseMove={props.onMouseMove}
-        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || moveTool.phase === 'awaiting-entity' || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
+        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || moveTool.phase === 'awaiting-entity' || mirrorTool.phase === 'awaiting-entity' || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
         selectedGuideIds={guideWorkflows.selectedGuideIds} constructionPoints={cpState.points}
         guideWorkflowState={guideWorkflows.state}
         guideStateObj={guideState} cpStateObj={cpState}
         rotationPreview={{ phase: rotationTool.phase, basePoint: rotationTool.basePoint, referencePoint: rotationTool.referencePoint, currentAngle: rotationTool.currentAngle }}
         movePreview={{ phase: moveTool.phase, basePoint: moveTool.basePoint, selectedOverlayIds: universalSelection.getIdsByType('overlay'), getOverlay: (id) => overlayStore.overlays[id] ?? null }}
+        mirrorPreview={{ phase: mirrorTool.phase, firstPoint: mirrorTool.firstPoint, secondPoint: mirrorTool.secondPoint }}
         levelManager={levelManager}
       />
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}
@@ -475,6 +475,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onGroupSelected={() => { const store = guideState.getStore(); const group = store.addGroup(`Group ${Date.now()}`); if (group) { for (const gid of guideWorkflows.selectedGuideIds) store.setGuideGroupId(gid, group.id); } }}
         onCancel={() => guideBatchMenuRef.current?.close()} />
       <PromptDialog />
+      {mirrorTool.phase === 'awaiting-keep-originals' && <MirrorConfirmOverlay onConfirm={mirrorTool.handleMirrorConfirm} onCancel={mirrorTool.handleMirrorEscape} />}
       {textEditor.editingState && (
         <TextEditorOverlay
           entityId={textEditor.editingState.entityId}

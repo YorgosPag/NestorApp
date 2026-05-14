@@ -34,6 +34,8 @@ import {
 } from './dxf-converter-helpers';
 
 import { dwarn } from '../debug';
+import type { DxfTextNode, TextJustification, TextParagraph, TextRun } from '../text-engine/types';
+import { DXF_COLOR_BY_LAYER } from '../text-engine/types';
 
 // Re-export types for backward compatibility
 export type { EntityData, TextAlignment, EntityConverter } from './dxf-converter-helpers';
@@ -226,6 +228,62 @@ export function convertEllipse(
   };
 }
 
+// ── Text node builder (ADR-344 SSOT unification) ──────────────────────────────
+
+const ALIGNMENT_TO_ATTACHMENT: Record<'left' | 'center' | 'right', TextJustification> = {
+  left: 'BL', center: 'BC', right: 'BR',
+};
+
+const MTEXT_ATTACHMENT_MAP: Record<number, TextJustification> = {
+  1: 'TL', 2: 'TC', 3: 'TR',
+  4: 'ML', 5: 'MC', 6: 'MR',
+  7: 'BL', 8: 'BC', 9: 'BR',
+};
+
+function buildTextNodeFromFlat(
+  text: string,
+  height: number,
+  rotation: number,
+  alignment: 'left' | 'center' | 'right',
+  attachment?: TextJustification,
+): DxfTextNode {
+  const run: TextRun = {
+    text,
+    style: {
+      fontFamily: '',
+      bold: false,
+      italic: false,
+      underline: false,
+      overline: false,
+      strikethrough: false,
+      height,
+      widthFactor: 1,
+      obliqueAngle: 0,
+      tracking: 1,
+      color: DXF_COLOR_BY_LAYER,
+    },
+  };
+  const para: TextParagraph = {
+    runs: [run],
+    indent: 0,
+    leftMargin: 0,
+    rightMargin: 0,
+    tabs: [],
+    justification: alignment === 'center' ? 1 : alignment === 'right' ? 2 : 0,
+    lineSpacingMode: 'multiple',
+    lineSpacingFactor: 1,
+  };
+  return {
+    paragraphs: [para],
+    attachment: attachment ?? ALIGNMENT_TO_ATTACHMENT[alignment],
+    lineSpacing: { mode: 'multiple', factor: 1 },
+    rotation,
+    isAnnotative: false,
+    annotationScales: [],
+    currentScale: '',
+  };
+}
+
 // ============================================================================
 // 🏢 ENTERPRISE: TEXT CONVERTERS
 // ============================================================================
@@ -275,6 +333,7 @@ export function convertText(
     height,
     rotation,
     alignment,
+    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment),
     ...(color && { color })
   };
 }
@@ -317,6 +376,10 @@ export function convertMText(
     height,
     rotation,
     alignment,
+    textNode: buildTextNodeFromFlat(
+      text.trim(), height, rotation, alignment,
+      MTEXT_ATTACHMENT_MAP[attachmentPoint],
+    ),
     ...(color && { color })
   };
 }

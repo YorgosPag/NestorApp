@@ -208,6 +208,12 @@ export interface CanvasLayerStackProps {
     selectedOverlayIds?: string[];
     getOverlay?: (id: string) => import('../../overlays/types').Overlay | null;
   };
+  // === Mirror tool preview ===
+  mirrorPreview: {
+    phase: import('../../hooks/tools/useMirrorTool').MirrorPhase;
+    firstPoint: Point2D | null;
+    secondPoint: Point2D | null;
+  };
   /** Level manager — needed by useRotationPreview + useMovePreview for entity reads */
   levelManager: ReturnType<typeof useLevels>;
 

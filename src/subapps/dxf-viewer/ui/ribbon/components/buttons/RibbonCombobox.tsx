@@ -71,10 +71,16 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
 
   const dynamicState = getComboboxState(command.commandKey);
   const dynamicOpts = dynamicState?.options;
-  const options: readonly RibbonComboboxOption[] =
+  const baseOptions: readonly RibbonComboboxOption[] =
     (dynamicOpts && dynamicOpts.length > 0 ? dynamicOpts : null) ?? command.options ?? [];
   const value = dynamicState?.value ?? null;
   const isMixed = value === null;
+  // Inject current value as first option if not already present — ensures
+  // free-form values (e.g. height=500) are always visible, not replaced by '—'.
+  const valueInOptions = value === null || baseOptions.some((o) => o.value === value);
+  const options: readonly RibbonComboboxOption[] = valueInOptions
+    ? baseOptions
+    : [{ value, labelKey: value, isLiteralLabel: true as const }, ...baseOptions];
 
   const ariaLabel = t(command.labelKey);
 

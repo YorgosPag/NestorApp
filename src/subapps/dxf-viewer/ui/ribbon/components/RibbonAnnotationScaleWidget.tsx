@@ -12,7 +12,7 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Popover,
   PopoverTrigger,
@@ -24,7 +24,7 @@ import { useTextAnnotationScaleSync } from '../../text-toolbar/hooks/useTextAnno
 import { AnnotationScaleManager } from '../../text-toolbar/controls/AnnotationScaleManager';
 
 export function RibbonAnnotationScaleWidget() {
-  const { t } = useTranslation(['textToolbar']);
+  const { t } = useTranslation(['dxf-viewer-shell', 'textToolbar']);
   const currentScale = useTextToolbarStore((s) => s.currentScale);
   const setValue = useTextToolbarStore((s) => s.setValue);
   const { scales, handleScalesChange } = useTextAnnotationScaleSync();
@@ -41,30 +41,36 @@ export function RibbonAnnotationScaleWidget() {
       : (currentScale ?? t('textToolbar:annotationScale.activePlaceholder'));
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          aria-label={t('textToolbar:annotationScale.activeLabel')}
-          className="min-w-[100px] justify-between text-xs"
-        >
-          <span className="truncate">{label}</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        side="bottom"
-        align="start"
-        className="w-80 max-h-[70vh] overflow-y-auto p-0"
-      >
-        <AnnotationScaleManager
-          scales={scales}
-          currentScale={currentScale}
-          paperHeightDefault={2.5}
-          onScalesChange={handleScalesChange}
-          onCurrentScaleChange={handleCurrentScaleChange}
-        />
-      </PopoverContent>
-    </Popover>
+    <span className="dxf-ribbon-combobox-row">
+      <span className="dxf-ribbon-combobox-label">
+        {t('ribbon.commands.textEditor.properties.annotationScale')}
+      </span>
+      <span className="dxf-ribbon-widget-compact">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              aria-label={t('textToolbar:annotationScale.activeLabel')}
+              className="min-w-[100px] justify-between"
+            >
+              <span className="truncate">{label}</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            side="bottom"
+            align="start"
+            className="w-80 max-h-[70vh] overflow-y-auto p-0"
+          >
+            <AnnotationScaleManager
+              scales={scales}
+              currentScale={currentScale}
+              paperHeightDefault={2.5}
+              onScalesChange={handleScalesChange}
+              onCurrentScaleChange={handleCurrentScaleChange}
+            />
+          </PopoverContent>
+        </Popover>
+      </span>
+    </span>
   );
 }

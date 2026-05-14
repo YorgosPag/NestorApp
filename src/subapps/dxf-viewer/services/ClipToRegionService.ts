@@ -23,6 +23,7 @@ import type {
   EllipseEntity, PointEntity, SplineEntity,
 } from '../types/entities';
 import type { Point2D } from '../rendering/types/Types';
+import { TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
 
 export interface ClipRect {
   xMin: number;
@@ -223,29 +224,29 @@ function clipRectangleBox(e: RectangleEntity | RectEntity, r: ClipRect): Entity[
     corner1: { x: ix1, y: iy1 }, corner2: { x: ix2, y: iy2 } } as Entity];
 }
 
-// Duck-type shapes for DxfTextSceneEntity (has textNode instead of text string).
-// Avoids importing text-engine types into the clip service.
-type _RunLike = { text?: string };
-type _ParaLike = { runs: _RunLike[] };
-type _TextNodeLike = { paragraphs: _ParaLike[] };
-
 function clipText(e: TextEntity, r: ClipRect): Entity[] {
-  // DxfTextSceneEntity (drawn text) stores content in textNode, not e.text.
-  const withNode = e as unknown as { textNode?: _TextNodeLike };
-  const textNode = withNode.textNode;
+  const textNode = e.textNode;
 
   const plainText = textNode
-    ? textNode.paragraphs.flatMap(p => p.runs).map(run => run.text ?? '').join('')
+    ? textNode.paragraphs.flatMap(p => p.runs)
+        .map(run => ('top' in run ? '' : run.text))
+        .join('')
     : (e.text ?? '');
 
   if (!plainText) return inRect(e.position, r) ? [e] : [];
 
-  // charH: mirrors TextRenderer.extractTextHeight() priority order.
-  // DxfTextSceneEntity lacks entity-level height/fontSize → default 2.5 (AutoCAD DIMTXT).
-  const sized = e as unknown as { height?: number; fontSize?: number };
-  const charH = (sized.height && sized.height > 0 ? sized.height : 0)
-             || (sized.fontSize && sized.fontSize > 0 ? sized.fontSize : 0)
-             || 2.5;
+  // charH mirrors resolveTextHeight() (ADR-344 Phase 6.E).
+  // TipTap-produced runs carry height=0 → fall back to DEFAULT_FONT_SIZE (12).
+  let charH: number;
+  if (textNode) {
+    const run0 = textNode.paragraphs[0]?.runs[0];
+    const runH = (run0 && !('top' in run0)) ? (run0.style.height ?? 0) : 0;
+    charH = runH > 0 ? runH : TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
+  } else {
+    charH = (e.height && e.height > 0 ? e.height : 0)
+         || (e.fontSize && e.fontSize > 0 ? e.fontSize : 0)
+         || 2.5;
+  }
   const charW = charH * 0.6;
   const chars = [...plainText]; // Unicode-aware split
   if (chars.length === 0) return [];
@@ -283,21 +284,20 @@ function clipText(e: TextEntity, r: ClipRect): Entity[] {
   const firstIdx = keptIndices[0];
   const newPos = toWorld(localStart + firstIdx * charW, 0);
 
-  // Reconstruct entity with trimmed text content.
   if (textNode) {
     const paras = textNode.paragraphs;
-    if (paras.length === 1 && paras[0].runs.length === 1) {
-      // Simple case (type='text'): single paragraph + single run — trim the run.
-      const newTextNode: _TextNodeLike = {
+    if (paras.length === 1 && paras[0].runs.length === 1 && !('top' in paras[0].runs[0])) {
+      // Single paragraph + single run — trim the run text.
+      const newTextNode = {
         ...textNode,
         paragraphs: [{ ...paras[0], runs: [{ ...paras[0].runs[0], text: keptText }] }],
       };
-      return [{ ...e, position: newPos, textNode: newTextNode } as unknown as Entity];
+      return [{ ...e, position: newPos, textNode: newTextNode } as Entity];
     }
-    // Complex mtext: move insertion point only (conservative).
+    // Complex multi-run mtext: move insertion point only (conservative).
     return [{ ...e, position: newPos } as Entity];
   }
-  // Plain TextEntity from DXF import.
+  // Legacy TextEntity without textNode (pre-SSOT entities).
   return [{ ...e, text: keptText, position: newPos, alignment: 'left' } as Entity];
 }
 

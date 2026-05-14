@@ -1302,6 +1302,11 @@ src/subapps/dxf-viewer/
   - Q20: Missing SHX = substitution + MissingFontBanner + canvas highlight
   - Q21: Text snap = all points (insertion + 4 corners + center + edge mids)
   - Total estimate revised: **~52-62 working days** (12 phases + 15 SSoT modules)
+- **2026-05-14 — SSOT Unification Phase A COMPLETE** (ADR-344 + GOL+SSOT order):
+  - `types/entities.ts`: Added `textNode?: DxfTextNode` to `TextEntity` + `MTextEntity`. DXF-imported entities now carry the canonical AST alongside legacy flat fields. Single representation for all text going forward.
+  - `utils/dxf-entity-converters.ts`: Added `buildTextNodeFromFlat(text, height, rotation, alignment, attachment?)` helper. `convertText()` + `convertMText()` now populate `textNode` on every imported entity. MTEXT preserves full 9-point attachment (TL/TC/TR/ML/MC/MR/BL/BC/BR) via `MTEXT_ATTACHMENT_MAP`.
+  - `services/ClipToRegionService.ts`: Removed duck-type aliases (`_RunLike/_ParaLike/_TextNodeLike`) + `as unknown as` cast. `clipText()` accesses `e.textNode` directly via `TextEntity` type. `e.height`/`e.fontSize` accessed directly (no `sized` cast). `run0.style.height` accessed without intermediary cast.
+  - All three code paths (DXF import, ribbon creation, clip service) now use the same `DxfTextNode` AST — no more dual representation at runtime.
 - **2026-05-11 — Q1-Q7 RESOLVED, status → APPROVED**:
   - Q1: Edit engine = **TipTap v3** (Path A, fast delivery)
   - Q2: DXF scope = **Both TEXT + MTEXT** from day 1 (full compatibility)
