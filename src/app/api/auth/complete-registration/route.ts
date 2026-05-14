@@ -127,7 +127,7 @@ async function handleCompleteRegistration(
         companyId: defaultCompanyId,
         globalRole: 'external_user',
         mfaEnrolled: false,
-        permissions: [],
+        permissions: ['properties:properties:view'],
       };
 
       await getAdminAuth().setCustomUserClaims(uid, newClaims);
@@ -159,7 +159,7 @@ async function handleCompleteRegistration(
         email: userEmail,
         companyId: defaultCompanyId,
         globalRole: 'external_user',
-        permissions: [],
+        permissions: ['properties:properties:view'],
         status: 'active',
         updatedAt: AdminFieldValue.serverTimestamp(),
       };
