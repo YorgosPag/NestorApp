@@ -85,7 +85,8 @@ export type ToolType =
   | 'guide-offset-entity'     // ADR-189 B24: Guide offset from entity edge
   | 'guide-preset-grid'       // ADR-189 B23: Structural preset grid
   | 'guide-from-selection'    // ADR-189 B37: Batch guide from selection
-  | 'crop-window';            // Crop scene to drawn window region
+  | 'crop-window'             // Crop scene to drawn window region
+  | 'lasso-crop';             // Crop scene to freehand polygon region
 
 
 export interface ToolDefinition {

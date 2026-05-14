@@ -104,6 +104,17 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             shortcut: 'CR',
           },
         },
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'modify.lassoCrop',
+            labelKey: 'ribbon.commands.lassoCrop',
+            icon: 'lasso-crop',
+            commandKey: 'lasso-crop',
+            shortcut: 'LC',
+          },
+        },
       ],
     },
     {
