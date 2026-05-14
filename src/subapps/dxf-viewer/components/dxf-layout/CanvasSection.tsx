@@ -45,6 +45,8 @@ import { useMirrorTool } from '../../hooks/tools/useMirrorTool';
 import { useScaleTool } from '../../hooks/tools/useScaleTool';
 import { useStretchTool } from '../../hooks/tools/useStretchTool';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
+import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuController';
+import { GripHoverMenu } from '../grip/GripHoverMenu';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 import { useGuideActions } from '../../hooks/state/useGuideActions';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
@@ -172,6 +174,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     overlayStore, overlayStoreRef, activeTool, gripSettings, executeCommand,
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
   });
+  useGripHoverMenuController({ hoveredGrip: unified.hoveredGrip, phase: unified.phase, activeTool, levelManager, executeCommand, showPromptDialog, t });
   // === Polygon drawing ===
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
@@ -216,14 +219,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     notifyWarning, notifySuccess, universalSelection,
     currentScene: props.currentScene ?? null, eventBus,
   });
-
   // B39 (ADR-189): "Create Guides" prompt for every drawn entity via
   // unified completion pipeline (ADR-057 EventBus). Measurement tools are
   // excluded — they already raise the prompt through `handleMeasurementComplete`.
   useEntityCompleteGuideListener(guideWorkflows.handleEntityComplete);
   // === Layer visibility ===
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
-
   // === Overlay → ColorLayer ===
   // 🚀 PERF (2026-05-09): useOverlayLayers now produces ONLY the static
   // colorLayers. The mouse-driven `colorLayersWithDraft` / `isNearFirstPoint`
@@ -238,7 +239,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     hiddenOverlayIds: overlayStore.hiddenOverlayIds,
   });
   const { fitToOverlay } = useFitToView({ dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
-
   // ADR-340 Phase 5 — auto-fit camera to newly-loaded floorplan background.
   // Replaces legacy useFitToPdf. Tracks the last-fitted background ID to avoid
   // resetting the user's manual zoom on every re-render.
@@ -262,7 +262,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       }
     }
   }, [floorplanBg?.background, viewport.width, viewport.height, zoomSystem, setTransform]);
-
   const { globalRulerSettings, drawingHandlers, drawingHandlersRef, hasUnifiedDrawingPointsRef } = useCanvasEffects({
     activeTool, overlayMode, currentScene: props.currentScene ?? null,
     handleSceneChange: props.handleSceneChange, onToolChange: props.onToolChange, previewCanvasRef,
@@ -475,6 +474,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onGroupSelected={() => { const store = guideState.getStore(); const group = store.addGroup(`Group ${Date.now()}`); if (group) { for (const gid of guideWorkflows.selectedGuideIds) store.setGuideGroupId(gid, group.id); } }}
         onCancel={() => guideBatchMenuRef.current?.close()} />
       <PromptDialog />
+      <GripHoverMenu />
       {mirrorTool.phase === 'awaiting-keep-originals' && <MirrorConfirmOverlay onConfirm={mirrorTool.handleMirrorConfirm} onCancel={mirrorTool.handleMirrorEscape} />}
       {textEditor.editingState && (
         <TextEditorOverlay

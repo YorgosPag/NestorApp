@@ -167,6 +167,10 @@ export interface UseUnifiedGripInteractionReturn {
   handleMouseDown: (worldPos: Point2D, isShift: boolean) => boolean;
   handleMouseUp: (worldPos: Point2D) => Promise<boolean>;
   handleEscape: () => boolean;
+  /** Currently hovered grip (cold/hovering/warm phases) — null in idle/dragging. ADR-349 Phase 1b.2. */
+  hoveredGrip: UnifiedGripInfo | null;
+  /** Current state machine phase — needed by grip menu controller to skip during drags. ADR-349 Phase 1b.2. */
+  phase: UnifiedGripPhase;
   dxfProjection: DxfProjection;
   overlayProjection: OverlayProjection;
   gripStateForStack: {

@@ -1161,3 +1161,7 @@ New `CanvasNumericInputOverlay` micro-leaf in `systems/canvas-numeric-input/Canv
 ## 2026-05-15: Stretch Command + LassoFreehandPreviewSubscriber (ADR-349 Phase 1a)
 
 `LassoFreehandPreviewSubscriber` re-mounted in `CanvasLayerStack` (had been deferred from scale commit). `useStretchTool` wired into `CanvasSection` (click + keyboard handlers: ST key, ESC, Enter/Space to confirm). `StretchToolStore` FSM: idle→lasso→confirm. Crossing-window capture via `stretch-crossing-capture.ts`; vertex classification via `stretch-vertex-classifier.ts`; entity deformation via `stretch-entity-transform.ts` (7 entity types). Cardinal rules maintained: `CanvasLayerStack` and `CanvasSection` have zero `useSyncExternalStore` calls.
+
+## 2026-05-15: Grip Hover Menu — GripHoverMenu micro-leaf (ADR-349 Phase 1b.2)
+
+`GripHoverMenu` added as a micro-leaf sibling of `<PromptDialog />` in `CanvasSection`. Subscribes ONLY to `GripHoverMenuStore` (module-level pub/sub — low-frequency visibility transitions). `useGripHoverMenuController` hook invoked in `CanvasSection` orchestrator (no store subscriptions in the hook — fires timer effects only). Cardinal rules maintained: `CanvasSection` orchestrator has zero `useSyncExternalStore` calls; all store reads in `GripHoverMenu` leaf.

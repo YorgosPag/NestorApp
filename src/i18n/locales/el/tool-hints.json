@@ -608,6 +608,21 @@
     "mstretchSelectFirst": "Σχεδιάστε 1ο crossing window",
     "mstretchSelectNext": "Επόμενο crossing window ή ENTER για ολοκλήρωση"
   },
+  "gripMenu": {
+    "ariaLabel": "Μενού επεξεργασίας λαβής",
+    "stretch": "Έλξη",
+    "lengthen": "Μήκος",
+    "addVertex": "Προσθήκη κορυφής",
+    "removeVertex": "Διαγραφή κορυφής",
+    "radius": "Ακτίνα",
+    "prompt": {
+      "lengthenTitle": "Επιμήκυνση κατά μήκος",
+      "lengthenLabel": "Δώστε μεταβολή μήκους",
+      "radiusTitle": "Νέα ακτίνα τόξου",
+      "radiusLabel": "Δώστε νέα ακτίνα",
+      "radiusInvalid": "Η ακτίνα πρέπει να είναι θετικός αριθμός"
+    }
+  },
   "common": {
     "step": "Βήμα",
     "of": "από",

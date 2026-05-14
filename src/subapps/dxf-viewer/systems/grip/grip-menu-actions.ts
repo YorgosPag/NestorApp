@@ -16,7 +16,7 @@
 
 import type { ICommand, ISceneManager } from '../../core/commands/interfaces';
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
-import type { Entity, LineEntity, ArcEntity, PolylineEntity, LWPolylineEntity } from '../../types/entities';
+import type { Entity, ArcEntity, PolylineEntity, LWPolylineEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import type { PromptDialogOptions } from '../prompt-dialog';
 import { LengthenCommand } from '../../core/commands/entity-commands/LengthenCommand';
@@ -72,7 +72,6 @@ async function actionLengthen(
     label: ctx.t('gripMenu.prompt.lengthenLabel'),
     inputType: 'number',
     defaultValue: '',
-    unit: ctx.t('gripMenu.prompt.unit'),
   });
   const delta = parseFiniteFloat(raw);
   if (delta === null || delta === 0) return;
@@ -93,7 +92,6 @@ async function actionRadius(
     label: ctx.t('gripMenu.prompt.radiusLabel'),
     inputType: 'number',
     defaultValue: arc.radius.toFixed(3),
-    unit: ctx.t('gripMenu.prompt.unit'),
     validate: (v) => {
       const n = parseFiniteFloat(v);
       return n !== null && n > 0 ? null : ctx.t('gripMenu.prompt.radiusInvalid');

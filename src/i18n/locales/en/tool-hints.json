@@ -636,6 +636,21 @@
     "mstretchSelectFirst": "Draw 1st crossing window",
     "mstretchSelectNext": "Next crossing window or ENTER to finish"
   },
+  "gripMenu": {
+    "ariaLabel": "Grip edit menu",
+    "stretch": "Stretch",
+    "lengthen": "Lengthen",
+    "addVertex": "Add Vertex",
+    "removeVertex": "Remove Vertex",
+    "radius": "Radius",
+    "prompt": {
+      "lengthenTitle": "Lengthen by amount",
+      "lengthenLabel": "Enter length change",
+      "radiusTitle": "New arc radius",
+      "radiusLabel": "Enter new radius",
+      "radiusInvalid": "Radius must be a positive number"
+    }
+  },
   "common": {
     "step": "Step",
     "of": "of",
