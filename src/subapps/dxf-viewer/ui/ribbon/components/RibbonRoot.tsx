@@ -28,8 +28,6 @@ import {
 import type { RibbonTab } from '../types/ribbon-types';
 
 interface RibbonRootProps {
-  /** ADR-345 Fase 2 — slot for the Layers tab expanded workspace (LevelPanel). */
-  layersTabContent?: React.ReactNode;
   /** ADR-345 Fase 3 — command bridge to the DXF viewer state. */
   commands: RibbonCommandsApi;
   /**
@@ -46,7 +44,6 @@ interface RibbonRootProps {
 }
 
 export const RibbonRoot: React.FC<RibbonRootProps> = ({
-  layersTabContent,
   commands,
   contextualTabs,
   activeContextualTrigger = null,
@@ -124,7 +121,6 @@ export const RibbonRoot: React.FC<RibbonRootProps> = ({
         <RibbonBody
           activeTab={activeTab}
           minimizeState={state.effectiveMinimizeState}
-          layersTabContent={layersTabContent}
         />
         {menuPos && (
           <RibbonContextMenu

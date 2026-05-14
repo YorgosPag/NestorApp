@@ -5,7 +5,7 @@
  */
 
 export type ButtonSize = 'large' | 'small';
-export type ButtonType = 'simple' | 'split' | 'toggle' | 'dropdown' | 'combobox';
+export type ButtonType = 'simple' | 'split' | 'toggle' | 'dropdown' | 'combobox' | 'widget' | 'color-swatch';
 
 /**
  * ADR-345 §4.5 Fase 5.5 — One option entry for a RibbonCombobox button.
@@ -66,6 +66,8 @@ export interface RibbonButton {
   variants?: RibbonCommand[];
   lastVariantId?: string;
   isActive?: boolean;
+  /** Only used when type === 'widget'. Identifies which inline widget to render. */
+  widgetId?: string;
 }
 
 export interface RibbonRow {

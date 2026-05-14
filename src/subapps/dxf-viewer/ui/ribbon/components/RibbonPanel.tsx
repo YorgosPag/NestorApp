@@ -7,12 +7,18 @@ import type {
   RibbonPanelDef,
   RibbonRow,
 } from '../types/ribbon-types';
-import { PanelLabel } from './PanelLabel';
 import { RibbonLargeButton } from './buttons/RibbonLargeButton';
 import { RibbonSmallButton } from './buttons/RibbonSmallButton';
 import { RibbonSplitButton } from './buttons/RibbonSplitButton';
 import { RibbonToggleButton } from './buttons/RibbonToggleButton';
 import { RibbonCombobox } from './buttons/RibbonCombobox';
+import { ZoomControlsWidget } from './ZoomControlsWidget';
+import { RibbonColorSwatchWidget } from './RibbonColorSwatchWidget';
+import { RibbonJustificationGridWidget } from './RibbonJustificationGridWidget';
+import { RibbonFontFamilyWidget } from './RibbonFontFamilyWidget';
+import { RibbonLineSpacingWidget } from './RibbonLineSpacingWidget';
+import { RibbonAnnotationScaleWidget } from './RibbonAnnotationScaleWidget';
+import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 
 interface RibbonPanelProps {
   panel: RibbonPanelDef;
@@ -20,6 +26,30 @@ interface RibbonPanelProps {
 
 function renderButton(button: RibbonButton): React.ReactNode {
   const key = button.command.id;
+  if (button.type === 'color-swatch') {
+    return <RibbonColorSwatchWidget key={button.command.id} />;
+  }
+  if (button.type === 'widget') {
+    if (button.widgetId === 'zoom-controls') {
+      return <ZoomControlsWidget key="zoom-controls-widget" />;
+    }
+    if (button.widgetId === 'justification-grid') {
+      return <RibbonJustificationGridWidget key="justification-grid-widget" />;
+    }
+    if (button.widgetId === 'font-family') {
+      return <RibbonFontFamilyWidget key="font-family-widget" />;
+    }
+    if (button.widgetId === 'line-spacing') {
+      return <RibbonLineSpacingWidget key="line-spacing-widget" />;
+    }
+    if (button.widgetId === 'annotation-scale') {
+      return <RibbonAnnotationScaleWidget key="annotation-scale-widget" />;
+    }
+    if (button.widgetId === 'insert-tokens') {
+      return <RibbonInsertTokenWidget key="insert-tokens-widget" />;
+    }
+    return null;
+  }
   if (button.type === 'split') {
     return <RibbonSplitButton key={key} button={button} />;
   }
@@ -63,7 +93,6 @@ export const RibbonPanel: React.FC<RibbonPanelProps> = ({ panel }) => {
               ))
           : t('ribbon.panels.placeholder')}
       </div>
-      <PanelLabel labelKey={panel.labelKey} />
     </section>
   );
 };

@@ -8,19 +8,18 @@
   --ribbon-tab-bar-bg: #E0E0E0;
   --ribbon-tab-active: #FFFFFF;
   --ribbon-panel-label: #D8D8D8;
-  --ribbon-separator: #C0C0C0;
-  --ribbon-btn-hover: #D0D0D0;
+  --ribbon-separator: rgba(0, 0, 0, 0.14);
+  --ribbon-btn-hover: rgba(0, 0, 0, 0.08);
   --ribbon-btn-active: #1464A0;
   --ribbon-text: #1A1A1A;
   --ribbon-text-muted: #4A4A4A;
   --ribbon-tab-text-active: #000000;
   --ribbon-tab-contextual: #C45C2E;
 
-  --ribbon-height-full: 100px;
+  --ribbon-height-full: 136px;
   --ribbon-height-panel-buttons: 46px;
   --ribbon-height-panel-titles: 30px;
   --ribbon-tab-bar-height: 26px;
-  --ribbon-panel-label-height: 16px;
   --ribbon-status-bar-height: 26px;
 
   --ribbon-radius: 2px;
@@ -44,8 +43,8 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
   --ribbon-tab-bar-bg: #141A24;
   --ribbon-tab-active: hsl(var(--showcase-bg)); /* #1D283A navy — match ribbon body */
   --ribbon-panel-label: #363636;
-  --ribbon-separator: #404040;
-  --ribbon-btn-hover: #4A4A4A;
+  --ribbon-separator: rgba(255, 255, 255, 0.12);
+  --ribbon-btn-hover: rgba(255, 255, 255, 0.10);
   --ribbon-btn-active: #1464A0;
   --ribbon-text: #CCCCCC;
   --ribbon-text-muted: #888888;
@@ -252,10 +251,10 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
 .dxf-ribbon-btn-large {
   flex-direction: column;
   justify-content: flex-start;
-  width: 56px;
+  width: 60px;
   padding: 4px 2px 2px;
   font-size: 11px;
-  line-height: 1.1;
+  line-height: 1.4;
   gap: 2px;
 }
 
@@ -311,7 +310,7 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
 
 .dxf-ribbon-btn-split-large {
   flex-direction: column;
-  width: 56px;
+  width: 60px;
 }
 
 .dxf-ribbon-btn-split-small {
@@ -340,9 +339,18 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
 }
 
 .dxf-ribbon-btn-split-large .dxf-ribbon-btn-split-arrow {
-  height: 14px;
-  font-size: 10px;
-  line-height: 1;
+  height: 30px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dxf-ribbon-btn-split-large .dxf-ribbon-btn-split-arrow span,
+.dxf-ribbon-btn-split-small .dxf-ribbon-btn-split-arrow span {
+  display: inline-block;
+  transform: scaleX(2.0);
+  transform-origin: center;
 }
 
 .dxf-ribbon-btn-split-small .dxf-ribbon-btn-split-top {
@@ -354,9 +362,13 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
 }
 
 .dxf-ribbon-btn-split-small .dxf-ribbon-btn-split-arrow {
-  width: 16px;
+  width: 20px;
+  padding: 4px 0;
   border-left: 1px solid var(--ribbon-separator);
-  font-size: 10px;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dxf-ribbon-btn-split-top:hover,
@@ -427,29 +439,6 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
 
 .dxf-ribbon-body[data-minimize="panel-titles"] .dxf-ribbon-panel-body {
   display: none;
-}
-
-.dxf-ribbon-panel-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 8px;
-  height: var(--ribbon-panel-label-height);
-  background: var(--ribbon-panel-label);
-  font-size: 11px;
-  color: var(--ribbon-text-muted);
-}
-
-.dxf-ribbon-panel-label button {
-  background: transparent;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  font-size: 10px;
-}
-
-.dxf-ribbon-panel-label button:hover {
-  color: var(--ribbon-text);
 }
 
 .dxf-status-bar {
@@ -561,6 +550,19 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
 }
 
 /* ─── ADR-345 §4.5 Fase 5.5 — Combobox trigger sizing ─── */
+
+.dxf-ribbon-combobox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dxf-ribbon-combobox-label {
+  font-size: 11px;
+  color: var(--ribbon-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 .dxf-ribbon-combobox-trigger {
   width: var(--ribbon-combobox-width, 140px);

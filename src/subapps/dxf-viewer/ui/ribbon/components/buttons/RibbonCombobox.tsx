@@ -70,8 +70,9 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
   }, [widthPx]);
 
   const dynamicState = getComboboxState(command.commandKey);
+  const dynamicOpts = dynamicState?.options;
   const options: readonly RibbonComboboxOption[] =
-    dynamicState?.options ?? command.options ?? [];
+    (dynamicOpts && dynamicOpts.length > 0 ? dynamicOpts : null) ?? command.options ?? [];
   const value = dynamicState?.value ?? null;
   const isMixed = value === null;
 
@@ -89,29 +90,34 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
   );
 
   return (
-    <Select
-      value={value ?? undefined}
-      onValueChange={handleValueChange}
-      disabled={command.comingSoon}
-    >
-      <SelectTrigger
-        ref={triggerRef}
-        size="sm"
-        aria-label={ariaLabel}
-        className="dxf-ribbon-combobox-trigger"
-        data-command-id={command.id}
-        data-mixed={isMixed ? 'true' : undefined}
-        data-coming-soon={command.comingSoon ? 'true' : undefined}
+    <div className="dxf-ribbon-combobox-row">
+      <span className="dxf-ribbon-combobox-label" aria-hidden="true">
+        {ariaLabel}
+      </span>
+      <Select
+        value={value ?? undefined}
+        onValueChange={handleValueChange}
+        disabled={command.comingSoon}
       >
-        <SelectValue placeholder={isMixed ? MIXED_PLACEHOLDER : ariaLabel} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {resolveLabel(opt, t)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+        <SelectTrigger
+          ref={triggerRef}
+          size="sm"
+          aria-label={ariaLabel}
+          className="dxf-ribbon-combobox-trigger"
+          data-command-id={command.id}
+          data-mixed={isMixed ? 'true' : undefined}
+          data-coming-soon={command.comingSoon ? 'true' : undefined}
+        >
+          <SelectValue placeholder={MIXED_PLACEHOLDER} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {resolveLabel(opt, t)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
