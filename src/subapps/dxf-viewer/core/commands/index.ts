@@ -108,6 +108,12 @@ export { ScaleEntityCommand } from './entity-commands/ScaleEntityCommand';
 export type { ScaleParams } from './entity-commands/ScaleEntityCommand';
 export { StretchEntityCommand } from './entity-commands/StretchEntityCommand';
 export type { StretchParams, StretchVertexMove } from './entity-commands/StretchEntityCommand';
+export { LengthenCommand } from './entity-commands/LengthenCommand';
+export type { LengthenParams } from './entity-commands/LengthenCommand';
+export { ArcRadiusEditCommand } from './entity-commands/ArcRadiusEditCommand';
+export type { ArcRadiusEditParams, ArcRadiusInput } from './entity-commands/ArcRadiusEditCommand';
+export { PolylineVertexCommand } from './entity-commands/PolylineVertexCommand';
+export type { PolylineVertexParams, PolylineVertexOp } from './entity-commands/PolylineVertexCommand';
 
 // Vertex Commands
 export { MoveVertexCommand } from './vertex-commands/MoveVertexCommand';
