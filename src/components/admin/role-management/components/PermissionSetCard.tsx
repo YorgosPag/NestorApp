@@ -38,21 +38,23 @@ export function PermissionSetCard({ setId, definition }: PermissionSetCardProps)
   return (
     <Card className="p-4">
       <header className="flex items-center justify-between mb-2">
-        <h4 className="font-semibold text-sm">{definition.name}</h4>
+        <h4 className="font-semibold text-sm">
+          {t(`roleManagement.definitions.${setId}.name`)}
+        </h4>
         {needsMfa && (
           <Badge variant="warning" className="text-[10px]">
-            {t('roleManagement.mfaRequired', 'MFA Required')}
+            {t('roleManagement.mfaRequired')}
           </Badge>
         )}
       </header>
 
       <p className={cn("text-xs mb-3", colors.text.muted)}>
-        {definition.description}
+        {t(`roleManagement.definitions.${setId}.description`)}
       </p>
 
       <section>
         <h5 className={cn("text-[10px] font-medium uppercase tracking-wider mb-1", colors.text.muted)}>
-          {t('roleManagement.includedPermissions', 'Included Permissions')} ({definition.permissions.length})
+          {t('roleManagement.includedPermissions')} ({definition.permissions.length})
         </h5>
         <ul className="space-y-0.5">
           {definition.permissions.map((perm) => (

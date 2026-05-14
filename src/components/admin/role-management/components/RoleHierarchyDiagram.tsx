@@ -21,7 +21,6 @@ import { cn } from '@/lib/utils';
 
 interface HierarchyNode {
   roleId: string;
-  label: string;
   level: number;
   badgeVariant: BadgeVariant;
   children: HierarchyNode[];
@@ -29,78 +28,27 @@ interface HierarchyNode {
 
 const HIERARCHY: HierarchyNode = {
   roleId: 'super_admin',
-  label: 'Super Admin',
   level: 0,
   badgeVariant: 'destructive',
   children: [
     {
       roleId: 'company_admin',
-      label: 'Company Admin',
       level: 1,
       badgeVariant: 'default',
       children: [
         {
           roleId: 'project_manager',
-          label: 'Project Manager',
           level: 2,
           badgeVariant: 'success',
           children: [
-            {
-              roleId: 'architect',
-              label: 'Architect',
-              level: 3,
-              badgeVariant: 'secondary',
-              children: [],
-            },
-            {
-              roleId: 'engineer',
-              label: 'Engineer',
-              level: 3,
-              badgeVariant: 'secondary',
-              children: [],
-            },
-            {
-              roleId: 'site_manager',
-              label: 'Site Manager',
-              level: 4,
-              badgeVariant: 'secondary',
-              children: [],
-            },
-            {
-              roleId: 'accountant',
-              label: 'Accountant',
-              level: 4,
-              badgeVariant: 'secondary',
-              children: [],
-            },
-            {
-              roleId: 'sales_agent',
-              label: 'Sales Agent',
-              level: 4,
-              badgeVariant: 'secondary',
-              children: [],
-            },
-            {
-              roleId: 'data_entry',
-              label: 'Data Entry',
-              level: 5,
-              badgeVariant: 'secondary',
-              children: [],
-            },
-            {
-              roleId: 'vendor',
-              label: 'Vendor',
-              level: 5,
-              badgeVariant: 'warning',
-              children: [],
-            },
-            {
-              roleId: 'viewer',
-              label: 'Viewer',
-              level: 6,
-              badgeVariant: 'secondary',
-              children: [],
-            },
+            { roleId: 'architect',     level: 3, badgeVariant: 'secondary', children: [] },
+            { roleId: 'engineer',      level: 3, badgeVariant: 'secondary', children: [] },
+            { roleId: 'site_manager',  level: 4, badgeVariant: 'secondary', children: [] },
+            { roleId: 'accountant',    level: 4, badgeVariant: 'secondary', children: [] },
+            { roleId: 'sales_agent',   level: 4, badgeVariant: 'secondary', children: [] },
+            { roleId: 'data_entry',    level: 5, badgeVariant: 'secondary', children: [] },
+            { roleId: 'vendor',        level: 5, badgeVariant: 'warning',   children: [] },
+            { roleId: 'viewer',        level: 6, badgeVariant: 'secondary', children: [] },
           ],
         },
       ],
@@ -113,11 +61,10 @@ const HIERARCHY: HierarchyNode = {
 // =============================================================================
 
 function TreeNode({ node }: { node: HierarchyNode }) {
+  const { t } = useTranslation('admin');
   const colors = useSemanticColors();
   const roleDef = PREDEFINED_ROLES[node.roleId];
-  const permCount = roleDef?.isBypass
-    ? 'all'
-    : `${roleDef?.permissions.length ?? 0}`;
+  const permCount = roleDef?.permissions.length ?? 0;
 
   return (
     <li className="relative pl-6 pt-2">
@@ -135,13 +82,15 @@ function TreeNode({ node }: { node: HierarchyNode }) {
         <Badge variant={node.badgeVariant}>
           L{node.level}
         </Badge>
-        <span className="font-medium text-sm">{node.label}</span>
+        <span className="font-medium text-sm">
+          {t(`roleManagement.roleNames.${node.roleId}`)}
+        </span>
         <span className={cn("text-[10px]", colors.text.muted)}>
-          ({permCount} perms)
+          ({permCount} {t('roleManagement.hierarchy.permsSuffix')})
         </span>
         {roleDef?.isProjectRole && (
           <span className={cn("text-[10px] italic", colors.text.muted)}>
-            project-scoped
+            {t('roleManagement.hierarchy.projectScoped')}
           </span>
         )}
       </article>
@@ -167,7 +116,7 @@ export function RoleHierarchyDiagram() {
 
   return (
     <nav
-      aria-label={t('roleManagement.hierarchy.title', 'Role Hierarchy')}
+      aria-label={t('roleManagement.hierarchy.title')}
       className="pb-6"
     >
       <ul className="list-none pb-4" role="tree">
@@ -176,9 +125,11 @@ export function RoleHierarchyDiagram() {
             <Badge variant={HIERARCHY.badgeVariant}>
               L{HIERARCHY.level}
             </Badge>
-            <span className="font-medium text-sm">{HIERARCHY.label}</span>
+            <span className="font-medium text-sm">
+              {t(`roleManagement.roleNames.${HIERARCHY.roleId}`)}
+            </span>
             <span className={cn("text-[10px]", colors.text.muted)}>
-              (all perms — bypass)
+              ({t('roleManagement.hierarchy.allPermsLabel')})
             </span>
           </article>
 
@@ -194,10 +145,7 @@ export function RoleHierarchyDiagram() {
 
       <footer className="mt-2 p-3 rounded-lg bg-muted/50">
         <p className={cn("text-xs", colors.text.muted)}>
-          {t(
-            'roleManagement.hierarchyNote',
-            'Lower level numbers mean higher access. Global roles (L0-L1) are organization-wide. Project roles (L2-L6) are scoped per project.'
-          )}
+          {t('roleManagement.hierarchyNote')}
         </p>
       </footer>
     </nav>

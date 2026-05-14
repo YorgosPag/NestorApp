@@ -39,12 +39,6 @@ const GLOBAL_ROLE_IDS: GlobalRole[] = [
   'external_user',
 ];
 
-const ROLE_LABELS: Record<GlobalRole, string> = {
-  super_admin: 'Super Admin',
-  company_admin: 'Company Admin',
-  internal_user: 'Internal',
-  external_user: 'External',
-};
 
 // =============================================================================
 // HELPERS
@@ -96,11 +90,6 @@ const ACCESS_ICON: Record<AccessLevel, string> = {
   none: '\u274C',     // red cross
 };
 
-const ACCESS_LABEL: Record<AccessLevel, string> = {
-  full: 'Full access',
-  partial: 'Partial access',
-  none: 'No access',
-};
 
 // =============================================================================
 // COMPONENT
@@ -118,11 +107,11 @@ export function RolePermissionMatrix() {
         <TableHeader>
           <TableRow>
             <TableHead className="min-w-[150px]">
-              {t('roleManagement.domain', 'Domain')}
+              {t('roleManagement.domain')}
             </TableHead>
             {GLOBAL_ROLE_IDS.map((roleId) => (
               <TableHead key={roleId} className="text-center min-w-[100px]">
-                {ROLE_LABELS[roleId]}
+                {t(`roleManagement.roleNames.${roleId}`)}
               </TableHead>
             ))}
           </TableRow>
@@ -133,18 +122,24 @@ export function RolePermissionMatrix() {
             <TableRow key={group.domain}>
               <TableCell>
                 <details>
-                  <summary className="cursor-pointer font-medium text-sm capitalize">
-                    {group.domain}
+                  <summary className="cursor-pointer font-medium text-sm">
+                    {t(`roleManagement.domains.${group.domain}`)}
                     <span className={cn("text-xs ml-1", colors.text.muted)}>
                       ({group.permissions.length})
                     </span>
                   </summary>
                   <ul className="ml-2 mt-1 space-y-0.5">
-                    {group.permissions.map((perm) => (
-                      <li key={perm} className={cn("text-[10px] font-mono", colors.text.muted)}>
-                        {perm}
-                      </li>
-                    ))}
+                    {group.permissions.map((perm) => {
+                      const parts = perm.split(':');
+                      const label = parts.length === 3
+                        ? (t(`roleManagement.permissionNames.${parts[0]}.${parts[1]}_${parts[2]}`, { defaultValue: '' }) || perm)
+                        : perm;
+                      return (
+                        <li key={perm} className={cn("text-[10px]", colors.text.muted)}>
+                          {label}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </details>
               </TableCell>
@@ -158,11 +153,13 @@ export function RolePermissionMatrix() {
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span aria-label={ACCESS_LABEL[level]}>
+                          <span aria-label={t(`roleManagement.matrix.legend.${level}`)}>
                             {ACCESS_ICON[level]}
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent>{ACCESS_LABEL[level]}</TooltipContent>
+                        <TooltipContent>
+                          {t(`roleManagement.matrix.legend.${level}`)}
+                        </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </TableCell>

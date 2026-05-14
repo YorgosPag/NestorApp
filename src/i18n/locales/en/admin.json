@@ -541,6 +541,132 @@
         "description": "Create and view reports"
       }
     },
+    "permissionNames": {
+      "admin": {
+        "migrations_execute": "Execute Migrations",
+        "data_fix": "Fix Data",
+        "direct_operations": "Direct DB Operations",
+        "debug_read": "Read Debug Info",
+        "system_configure": "Configure System",
+        "backup_execute": "Execute Backup"
+      },
+      "buildings": {
+        "buildings_view": "View Buildings",
+        "buildings_create": "Create Buildings",
+        "buildings_update": "Update Buildings",
+        "buildings_delete": "Delete Buildings"
+      },
+      "comm": {
+        "conversations_list": "List Conversations",
+        "conversations_view": "View Conversations",
+        "conversations_update": "Update Conversations",
+        "messages_view": "View Messages",
+        "messages_send": "Send Messages",
+        "messages_delete": "Delete Messages"
+      },
+      "projects": {
+        "projects_view": "View Projects",
+        "projects_create": "Create Projects",
+        "projects_update": "Update Projects",
+        "projects_delete": "Delete Projects",
+        "members_view": "View Members",
+        "members_manage": "Manage Members",
+        "floors_view": "View Floors",
+        "floors_delete": "Delete Floors"
+      },
+      "properties": {
+        "properties_view": "View Properties",
+        "properties_create": "Create Properties",
+        "properties_update": "Update Properties",
+        "properties_delete": "Delete Properties"
+      },
+      "units": {
+        "units_view": "View Units",
+        "units_create": "Create Units",
+        "units_update": "Update Units",
+        "units_delete": "Delete Units"
+      },
+      "dxf": {
+        "files_view": "View DXF Files",
+        "files_upload": "Upload DXF Files",
+        "layers_view": "View Layers",
+        "layers_manage": "Manage Layers",
+        "layers_unlock": "Unlock Layers",
+        "annotations_edit": "Edit Annotations",
+        "text_create": "Create Text",
+        "text_edit": "Edit Text",
+        "text_delete": "Delete Text",
+        "dictionary_view": "View Dictionary",
+        "dictionary_manage": "Manage Dictionary"
+      },
+      "crm": {
+        "contacts_view": "View Contacts",
+        "contacts_create": "Create Contacts",
+        "contacts_update": "Update Contacts",
+        "contacts_delete": "Delete Contacts",
+        "contacts_export": "Export Contacts",
+        "opportunities_view": "View Opportunities",
+        "opportunities_create": "Create Opportunities",
+        "opportunities_update": "Update Opportunities",
+        "communications_view": "View Communications",
+        "tasks_view": "View Tasks",
+        "tasks_create": "Create Tasks",
+        "tasks_update": "Update Tasks"
+      },
+      "notifications": {
+        "notifications_view": "View Notifications"
+      },
+      "finance": {
+        "invoices_view": "View Invoices",
+        "invoices_update": "Update Invoices",
+        "invoices_approve": "Approve Invoices"
+      },
+      "legal": {
+        "documents_view": "View Documents",
+        "ownership_view": "View Ownership",
+        "ownership_manage": "Manage Ownership",
+        "grants_view": "View Grants",
+        "grants_create": "Create Grants",
+        "grants_revoke": "Revoke Grants",
+        "contracts_view": "View Contracts"
+      },
+      "listings": {
+        "listings_publish": "Publish Listings"
+      },
+      "users": {
+        "users_view": "View Users",
+        "users_manage": "Manage Users"
+      },
+      "settings": {
+        "settings_view": "View Settings",
+        "settings_manage": "Manage Settings"
+      },
+      "reports": {
+        "reports_view": "View Reports",
+        "reports_create": "Create Reports"
+      },
+      "search": {
+        "global_execute": "Global Search"
+      },
+      "photos": {
+        "photos_upload": "Upload Photos"
+      },
+      "progress": {
+        "progress_update": "Update Progress"
+      },
+      "floorplans": {
+        "floorplans_process": "Process Floor Plans"
+      },
+      "orders": {
+        "orders_view": "View Orders"
+      },
+      "deliveries": {
+        "deliveries_view": "View Deliveries"
+      },
+      "specs": {
+        "specs_view": "View Specifications"
+      }
+    },
     "domains": {
       "admin": "System Administration",
       "buildings": "Buildings",
