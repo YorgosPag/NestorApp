@@ -13,11 +13,16 @@ import { EventBus } from '../events/EventBus';
 
 type Listener = () => void;
 
+type Snapshot = { points: Array<[number, number]>; nearClose: boolean };
+
 let _active = false;
+let _nearClose = false;
 let _points: Array<[number, number]> = [];
+let _snapshot: Snapshot = { points: _points, nearClose: _nearClose };
 const _listeners = new Set<Listener>();
 
 function _notify(): void {
+  _snapshot = { points: _points, nearClose: _nearClose };
   _listeners.forEach(fn => fn());
 }
 
@@ -26,12 +31,21 @@ export const LassoFreehandStore = {
     return _active;
   },
 
+  isNearClose(): boolean {
+    return _nearClose;
+  },
+
   getPoints(): Array<[number, number]> {
     return _points;
   },
 
+  getSnapshot(): Snapshot {
+    return _snapshot;
+  },
+
   startAt(x: number, y: number): void {
     _active = true;
+    _nearClose = false;
     _points = [[x, y]];
     _notify();
   },
@@ -42,12 +56,19 @@ export const LassoFreehandStore = {
     _notify();
   },
 
+  setNearClose(v: boolean): void {
+    if (_nearClose === v) return;
+    _nearClose = v;
+    _notify();
+  },
+
   /** Emits crop:lasso-polygon if ≥ 3 points, then clears. */
   finish(): void {
     if (_active && _points.length >= 3) {
       EventBus.emit('crop:lasso-polygon', { polygon: _points });
     }
     _active = false;
+    _nearClose = false;
     _points = [];
     _notify();
   },
@@ -56,6 +77,7 @@ export const LassoFreehandStore = {
   cancel(): void {
     if (!_active && _points.length === 0) return;
     _active = false;
+    _nearClose = false;
     _points = [];
     _notify();
   },

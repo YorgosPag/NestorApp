@@ -43,6 +43,7 @@ import { useRotationTool } from '../../hooks/tools/useRotationTool';
 import { useMoveTool } from '../../hooks/tools/useMoveTool';
 import { useMirrorTool } from '../../hooks/tools/useMirrorTool';
 import { useScaleTool } from '../../hooks/tools/useScaleTool';
+import { useStretchTool } from '../../hooks/tools/useStretchTool';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 import { useGuideActions } from '../../hooks/state/useGuideActions';
@@ -120,7 +121,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const levelManager = useLevels();
   // ADR-281: filter out overlays linked to soft-deleted properties
   const currentOverlays = useLiveOverlaysForLevel(levelManager.currentLevelId);
-
   // === Selection (SSoT: UniversalSelection — selectedEntityIds derived, no local state) ===
   const selectedEntityIds = useMemo(() => universalSelection.getIdsByType('dxf-entity'), [universalSelection]);
   const setSelectedEntityIds = useCallback((value: string[] | ((prev: string[]) => string[])) => {
@@ -149,7 +149,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const getGuides = useCallback(() => getGlobalGuideStore().getGuides(), []);
   const cpState = useConstructionPointState();
   const { prompt: showPromptDialog } = usePromptDialog();
-
   // === DXF scene ===
   const { dxfScene } = useDxfSceneConversion({ currentScene: props.currentScene ?? null });
   const dxfSceneRef = useRef(dxfScene);
@@ -158,7 +157,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // The SnapEngine singleton's `initialize(allEntities)` is owned exclusively
   // by this hook. `useSnapManager` instances are now consumers only.
   useGlobalSnapSceneSync({ scene: props.currentScene ?? null, overlays: currentOverlays });
-
   // Ctrl+A: select all DXF entities — fired via EventBus from useKeyboardShortcuts.
   // setSelectedEntityIds writes through universalSelection (SSoT).
   useEffect(() => {
@@ -168,14 +166,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setSelectedEntityIds(entities.map(e => e.id));
     });
   }, [eventBus, setSelectedEntityIds]);
-
   // === Unified Grip System ===
   const unified = useUnifiedGripInteraction({
     selectedEntityIds, dxfScene, transform, currentOverlays, universalSelection,
     overlayStore, overlayStoreRef, activeTool, gripSettings, executeCommand,
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
   });
-
   // === Polygon drawing ===
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
@@ -287,6 +283,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined });
   const scaleTool = useScaleTool({ activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined });
+  const stretchTool = useStretchTool({ activeTool, selectedEntityIds, levelManager, executeCommand,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined });
   // === Move Tool (ADR-049: AutoCAD-style 2-click) ===
   const executeOverlayMove = useCallback((ids: string[], delta: {x:number;y:number}) => { executeCommand(ids.length===1 ? new MoveOverlayCommand(ids[0],delta,overlayStore,false) : new MoveMultipleOverlaysCommand(ids,delta,overlayStore,false)); }, [overlayStore, executeCommand]);
   const createOverlayMoveCommand = useCallback((ids: string[], delta: {x:number;y:number}) => ids.length===1 ? new MoveOverlayCommand(ids[0],delta,overlayStore,false) : new MoveMultipleOverlaysCommand(ids,delta,overlayStore,false), [overlayStore]);
@@ -337,6 +335,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     moveIsActive: moveTool.isCollectingInput, handleMoveClick: moveTool.handleMoveClick,
     mirrorIsActive: mirrorTool.isCollectingInput, handleMirrorClick: mirrorTool.handleMirrorClick,
     scaleIsActive: scaleTool.isCollectingInput, handleScaleClick: scaleTool.handleScaleClick,
+    stretchIsActive: stretchTool.isCollectingInput, handleStretchClick: stretchTool.handleStretchClick,
     levelManager, draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
@@ -405,6 +404,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleMirrorEscape: mirrorTool.handleMirrorEscape, mirrorIsActive: mirrorTool.isCollectingInput,
     handleMirrorConfirm: mirrorTool.handleMirrorConfirm, mirrorAwaitingConfirm: mirrorTool.phase === 'awaiting-keep-originals',
     handleScaleEscape: scaleTool.handleScaleEscape, handleScaleKeyDown: scaleTool.handleScaleKeyDown, scaleIsActive: scaleTool.isCollectingInput,
+    handleStretchEscape: stretchTool.handleStretchEscape, handleStretchKeyDown: stretchTool.handleStretchKeyDown, stretchIsActive: stretchTool.isCollectingInput,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     clearEntitySelection: () => universalSelectionRef.current.clearAll(),
   });

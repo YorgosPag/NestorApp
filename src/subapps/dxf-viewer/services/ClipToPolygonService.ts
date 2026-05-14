@@ -8,7 +8,8 @@
  *   Circles/Arcs      → 72-step sampling + point-in-polygon
  *   Ellipses          → 72-step parametric sampling + point-in-polygon
  *   Rectangles        → Sutherland-Hodgman generalised (same as closed polyline)
- *   Text/MText/Points → point-in-polygon on anchor position
+ *   Text/MText         → character-level clip (keeps only fully-inside chars)
+ *   Points             → point-in-polygon on anchor position
  *   Splines           → control-point bbox inside test (conservative)
  *   AngleMeasurement  → vertex must be inside polygon
  *   hatch/block/…     → kept unchanged (conservative)
@@ -231,7 +232,7 @@ function clipRectByPoly(e: RectangleEntity | RectEntity, poly: Array<[number, nu
   return [{ ...e, x: x1, y: y1, width: x2 - x1, height: y2 - y1, corner1: { x: x1, y: y1 }, corner2: { x: x2, y: y2 } } as Entity];
 }
 
-function clipTextByPoly(e: TextEntity, poly: Array<[number, number]>): Entity[] {
+function clipTextByPoly(e: TextEntity | MTextEntity, poly: Array<[number, number]>): Entity[] {
   const plainText = e.textNode
     ? e.textNode.paragraphs.flatMap(p => p.runs).map(r => ('top' in r ? '' : r.text)).join('')
     : (e.text ?? '');
@@ -319,7 +320,7 @@ function clipEntityByPoly(entity: Entity, poly: Array<[number, number]>): Entity
     case 'rectangle': return clipRectByPoly(entity as RectangleEntity, poly);
     case 'rect': return clipRectByPoly(entity as RectEntity, poly);
     case 'text': return clipTextByPoly(entity as TextEntity, poly);
-    case 'mtext': return pointInPolygon((entity as MTextEntity).position, poly) ? [entity] : [];
+    case 'mtext': return clipTextByPoly(entity as MTextEntity, poly);
     case 'point': return pointInPolygon((entity as PointEntity).position, poly) ? [entity] : [];
     case 'spline': {
       const s = entity as SplineEntity;

@@ -18,7 +18,7 @@ interface LassoFreehandPreviewSubscriberProps {
 }
 
 // Module-level stable accessors (ADR-040 pattern)
-const _getPoints = () => LassoFreehandStore.getPoints();
+const _getSnapshot = () => LassoFreehandStore.getSnapshot();
 const _subscribe = (cb: () => void) => LassoFreehandStore.subscribe(cb);
 
 /**
@@ -29,7 +29,7 @@ const _subscribe = (cb: () => void) => LassoFreehandStore.subscribe(cb);
 export const LassoFreehandPreviewSubscriber = React.memo(function LassoFreehandPreviewSubscriber({
   transform, viewport, className,
 }: LassoFreehandPreviewSubscriberProps) {
-  const points = useSyncExternalStore(_subscribe, _getPoints);
+  const { points, nearClose } = useSyncExternalStore(_subscribe, _getSnapshot);
 
   if (points.length < 2) return null;
 
@@ -55,10 +55,20 @@ export const LassoFreehandPreviewSubscriber = React.memo(function LassoFreehandP
         <line
           x1={last.x} y1={last.y}
           x2={first.x} y2={first.y}
-          stroke="#0e7490" strokeWidth={1} strokeDasharray="2 4" strokeOpacity={0.4}
+          stroke="#0e7490" strokeWidth={1} strokeDasharray="2 4" strokeOpacity={nearClose ? 0.9 : 0.4}
         />
       )}
-      <circle cx={first.x} cy={first.y} r={5} fill="#0e7490" fillOpacity={0.8} />
+      {/* Snap-to-close: outer ring when near start */}
+      {nearClose && (
+        <circle cx={first.x} cy={first.y} r={14} fill="none" stroke="#0e7490" strokeWidth={1.5} strokeOpacity={0.5} />
+      )}
+      <circle
+        cx={first.x} cy={first.y}
+        r={nearClose ? 8 : 5}
+        fill="#0e7490"
+        fillOpacity={nearClose ? 1 : 0.8}
+        style={{ transition: 'r 0.1s ease' }}
+      />
     </svg>
   );
 });

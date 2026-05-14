@@ -325,6 +325,9 @@
 | **ADR-344** | DXF Enterprise Text Engine (Autodesk-Grade Text Creation & Editing Suite) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-344-dxf-enterprise-text-engine.md) |
 | **ADR-345** | DXF Ribbon Interface (AutoCAD-style) — migrazione da floating panel | 🟡 PROPOSED | 2026-05-11 | DXF Viewer | [📄](./adrs/ADR-345-dxf-ribbon-interface.md) |
 | **ADR-346** | Auto Area Measurement — point-and-click polygon area detection | ✅ IMPLEMENTED | 2026-05-12 | DXF Viewer | [📄](./adrs/ADR-346-auto-area-measurement.md) |
+| **ADR-347** | Admin Console Sidebar | ✅ APPROVED | 2026-05-14 | DXF Viewer | [📄](./adrs/ADR-347-admin-console-sidebar.md) |
+| **ADR-348** | Scale Command (Κλιμάκωση) — uniform + non-uniform + copy + reference | ✅ IMPLEMENTED | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-348-scale-command.md) |
+| **ADR-349** | Stretch Command (Επιμήκυνση) — crossing-window deformation + MSTRETCH + grip menu | 🚧 Phase 1a + 1b.1 IMPLEMENTED | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-349-stretch-command.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

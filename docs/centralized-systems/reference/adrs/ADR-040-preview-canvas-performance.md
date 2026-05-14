@@ -1153,3 +1153,11 @@ New `CanvasNumericInputOverlay` micro-leaf in `systems/canvas-numeric-input/Canv
 ## 2026-05-14: AutoCAD-style Mirror Tool — MirrorPreviewMount micro-leaf
 
 `MirrorPreviewMount` added to `canvas-layer-stack-leaves.tsx` following the established micro-leaf subscriber pattern (same as `MovePreviewMount`, `RotationPreviewMount`). `useMirrorPreview` runs 60fps RAF on PreviewCanvas — draws dashed axis line, first-point marker, and ghost entity copies. `CanvasSection` (orchestrator) receives `mirrorPreview: { phase, firstPoint, secondPoint }` props and passes them to `CanvasLayerStack` → `PreviewCanvasMounts` → `MirrorPreviewMount`. Ortho snap (`orthoSnap` from `mirror-math.ts`) applied to cursor position in both `useMirrorTool` (click commit) and `useMirrorPreview` (real-time RAF) when Ortho mode active or Shift held. `MirrorConfirmOverlay` (fixed bottom-center UI) mounted in `CanvasSection` when `phase === 'awaiting-keep-originals'` — pure static UI, zero store subscriptions, no re-render impact. Cardinal rules maintained: CanvasSection orchestrator has zero `useSyncExternalStore` calls.
+
+## 2026-05-15: Scale Command — ScalePreviewMount micro-leaf (ADR-348)
+
+`ScalePreviewMount` added to `canvas-layer-stack-leaves.tsx`. `useScalePreview` runs 60fps RAF on PreviewCanvas — draws ghost copies of selected entities at current scale factor around the base point. `ScaleToolStore` 3-phase FSM (idle→base→scale). `useScaleTool` wired into `CanvasSection` (click + keyboard handlers: S key, ESC, C for copy mode, Enter to confirm). `CanvasSection` orchestrator zero `useSyncExternalStore` calls maintained.
+
+## 2026-05-15: Stretch Command + LassoFreehandPreviewSubscriber (ADR-349 Phase 1a)
+
+`LassoFreehandPreviewSubscriber` re-mounted in `CanvasLayerStack` (had been deferred from scale commit). `useStretchTool` wired into `CanvasSection` (click + keyboard handlers: ST key, ESC, Enter/Space to confirm). `StretchToolStore` FSM: idle→lasso→confirm. Crossing-window capture via `stretch-crossing-capture.ts`; vertex classification via `stretch-vertex-classifier.ts`; entity deformation via `stretch-entity-transform.ts` (7 entity types). Cardinal rules maintained: `CanvasLayerStack` and `CanvasSection` have zero `useSyncExternalStore` calls.

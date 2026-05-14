@@ -9,7 +9,7 @@
  *  Ellipses      → 72-step parametric sampling with rotation support
  *  Rectangles    → axis-aligned intersection of two boxes
  *  Text          → character-level clip (keeps only fully-inside chars; mid-char = discard)
- *  MText         → position-in-rect (keep or discard whole label)
+ *  MText         → character-level clip (same algorithm as Text)
  *  Points        → position-in-rect
  *  Splines       → control-point bounding box (conservative)
  *  AngleMeasurement → all three key points must be inside rect
@@ -224,7 +224,7 @@ function clipRectangleBox(e: RectangleEntity | RectEntity, r: ClipRect): Entity[
     corner1: { x: ix1, y: iy1 }, corner2: { x: ix2, y: iy2 } } as Entity];
 }
 
-function clipText(e: TextEntity, r: ClipRect): Entity[] {
+function clipText(e: TextEntity | MTextEntity, r: ClipRect): Entity[] {
   const textNode = e.textNode;
 
   const plainText = textNode
@@ -348,7 +348,7 @@ function clipPoint(e: PointEntity, r: ClipRect): Entity[] {
 }
 
 function clipMText(e: MTextEntity, r: ClipRect): Entity[] {
-  return inRect(e.position, r) ? [e] : [];
+  return clipText(e, r);
 }
 
 function clipSpline(e: SplineEntity, r: ClipRect): Entity[] {

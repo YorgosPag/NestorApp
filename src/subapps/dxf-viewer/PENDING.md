@@ -7,47 +7,21 @@
 
 ---
 
-## 0-BIS. 🟡 Text Entity SSOT Unification — Phase B (ADR-344 GOL+SSOT)
+## 0-BIS. ✅ Text Entity SSOT Unification — Phase B (ADR-344 GOL+SSOT)
 
-**Status:** 📌 DEFERRED (2026-05-14) — Phase A complete, Phase B pending  
-**ADR:** `docs/centralized-systems/reference/adrs/ADR-344-dxf-enterprise-text-engine.md` changelog 2026-05-14
+**Status:** ✅ COMPLETED (2026-05-15) — Phase A + Phase B done  
+**ADR:** `docs/centralized-systems/reference/adrs/ADR-344-dxf-enterprise-text-engine.md` changelog 2026-05-15
 
 ### Τι έγινε (Phase A ✅)
 - `types/entities.ts`: `TextEntity` + `MTextEntity` αποκτούν `textNode?: DxfTextNode`
 - `utils/dxf-entity-converters.ts`: `buildTextNodeFromFlat()` — DXF import πλέον παράγει `textNode`
 - `services/ClipToRegionService.ts`: Αφαίρεση duck-typing — `e.textNode` απευθείας
 
-### Τι μένει (Phase B ⏸️)
-
-**Στόχος:** Πλήρες merge `TextEntity` + `DxfTextSceneEntity` σε ένα interface. Διαγραφή flat fields (`text: string`, `height?`, `fontSize?`) από `TextEntity`.
-
-**Αρχεία που έχουν ακόμα duck-typing / flat-field dependencies:**
-
-| Αρχείο | Πρόβλημα | Fix |
-|--------|----------|-----|
-| `hooks/canvas/useDxfSceneConversion.ts` line 183 | `entity as { textNode?: DxfTextNode }` cast | `(entity as TextEntity).textNode` |
-| `rendering/hitTesting/Bounds.ts` line 237 | `textEntity.text \|\| ''` → `''` για ribbon text (zero-width bounds) | Extract `plainText` από `textNode` (flatMap paragraphs→runs, skip `TextStack` via `'top' in run`) |
-| `hooks/canvas/useCanvasClickHandler.ts` lines 346-356 | `entity.text.length` → throws για ribbon `DxfTextSceneEntity` | Ίδιο: extract plainText από `textNode` |
-
-**Pattern για plainText extraction** (ίδιος με `ClipToRegionService.clipText`):
-```typescript
-const plainText = entity.textNode
-  ? entity.textNode.paragraphs.flatMap(p => p.runs)
-      .map(run => ('top' in run ? '' : run.text))
-      .join('')
-  : (entity.text ?? '');
-```
-
-**Pattern για charH** (mirrors `resolveTextHeight()` in `useDxfSceneConversion`):
-```typescript
-const run0 = entity.textNode?.paragraphs[0]?.runs[0];
-const runH = (run0 && !('top' in run0)) ? run0.style.height : 0;
-const charH = runH > 0 ? runH : TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE; // 12
-```
-
-### Πότε να ενεργήσεις
-- Όταν αγγίξεις `Bounds.ts`, `useCanvasClickHandler.ts`, ή `useDxfSceneConversion.ts`
-- Ή όταν ο Giorgio πει "Phase B text SSOT"
+### Τι έγινε (Phase B ✅ 2026-05-15)
+- `utils/text-node-utils.ts`: Νέο SSoT utility — `extractFlatText()` + `resolveEntityText()` (shared, no duplication)
+- `hooks/canvas/useDxfSceneConversion.ts`: Local `extractFlatText` αφαιρέθηκε → import από SSoT. Duck-typing `entity as { textNode?: DxfTextNode }` → `entity as TextEntity`.
+- `rendering/hitTesting/Bounds.ts`: `textEntity.text || ''` → `resolveEntityText(textEntity)`. `TextEntityProperties` αποκτά `textNode?: DxfTextNode`.
+- `hooks/canvas/useCanvasClickHandler.ts`: `entity.text.length` → `resolveEntityText(entity).length` σε text + mtext blocks.
 
 ---
 

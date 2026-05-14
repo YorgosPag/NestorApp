@@ -36,6 +36,7 @@ import {
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
 import { PolygonCropPreviewSubscriber } from './LassoCropPreviewSubscriber';
+import { LassoFreehandPreviewSubscriber } from './LassoFreehandPreviewSubscriber';
 import { AutoAreaResultPanel } from './AutoAreaResultPanel';
 import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay';
@@ -481,11 +482,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             className={PANEL_LAYOUT.Z_INDEX['30']}
           />
           <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
-          <PolygonCropPreviewSubscriber
-            transform={transform}
-            viewport={viewport}
-            className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`}
-          />
+          <PolygonCropPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
+          <LassoFreehandPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <CanvasNumericInputOverlay />
         </div>
       </div>
