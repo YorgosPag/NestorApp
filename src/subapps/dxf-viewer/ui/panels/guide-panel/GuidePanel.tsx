@@ -36,7 +36,7 @@ import { ConstructionPointSection } from './ConstructionPointSection';
 
 const GUIDE_PANEL_DIMENSIONS = {
   width: 320,
-  height: 480,
+  height: 850,
 } as const;
 
 const SSR_FALLBACK_POSITION = { x: 100, y: 100 };
@@ -214,102 +214,103 @@ export const GuidePanel: React.FC<GuidePanelProps> = ({ isVisible, onClose }) =>
       dimensions={GUIDE_PANEL_DIMENSIONS}
       onClose={onClose}
       isVisible={isVisible}
-      className="w-[320px]"
+      className="w-[320px] flex flex-col max-h-[850px]"
       draggableOptions={{ getClientPosition }}
     >
       <FloatingPanel.Header
         title={t('guidePanel.title')}
         icon={<Ruler />}
       />
-      <FloatingPanel.Content className="flex flex-col overflow-hidden flex-1">
-        <section className="space-y-3 overflow-y-auto overflow-x-hidden flex-1">
-          {/* Global Actions Bar */}
-          <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS} flex-wrap`}>
-            {/* Toggle all visibility */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={guidesVisible ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-7"
-                  onClick={toggleVisibility}
-                >
-                  {guidesVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
-                  <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guidePanel.toggleAll')}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('guidePanel.toggleAll')}</TooltipContent>
-            </Tooltip>
+      <FloatingPanel.Content className="flex flex-col overflow-hidden flex-1 min-h-0">
+        {/* Global Actions Bar — fixed, does not scroll */}
+        <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS} flex-wrap flex-shrink-0 pb-2 border-b border-border`}>
+          {/* Toggle all visibility */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={guidesVisible ? 'default' : 'ghost'}
+                size="sm"
+                className="h-7"
+                onClick={toggleVisibility}
+              >
+                {guidesVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
+                <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guidePanel.toggleAll')}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('guidePanel.toggleAll')}</TooltipContent>
+          </Tooltip>
 
-            {/* Snap toggle */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={guideSnapEnabled ? 'default' : 'ghost'}
-                  size="sm"
-                  className="h-7"
-                  onClick={toggleSnap}
-                >
-                  <Magnet className={iconSizes.xs} />
-                  <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guidePanel.snapToGuides')}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('guidePanel.snapToGuides')}</TooltipContent>
-            </Tooltip>
+          {/* Snap toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={guideSnapEnabled ? 'default' : 'ghost'}
+                size="sm"
+                className="h-7"
+                onClick={toggleSnap}
+              >
+                <Magnet className={iconSizes.xs} />
+                <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guidePanel.snapToGuides')}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('guidePanel.snapToGuides')}</TooltipContent>
+          </Tooltip>
 
-            {/* B7: Create Group */}
+          {/* B7: Create Group */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7"
+                onClick={handleCreateGroup}
+              >
+                <FolderPlus className={iconSizes.xs} />
+                <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guideGroups.create')}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('guideGroups.create')}</TooltipContent>
+          </Tooltip>
+
+          {/* Delete all guides */}
+          {guideCount > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7"
-                  onClick={handleCreateGroup}
+                  className="h-7 text-destructive"
+                  onClick={handleDeleteAllGuides}
                 >
-                  <FolderPlus className={iconSizes.xs} />
-                  <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guideGroups.create')}</span>
+                  <Trash2 className={iconSizes.xs} />
+                  <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guidePanel.deleteAllGuides')}</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{t('guideGroups.create')}</TooltipContent>
+              <TooltipContent>{t('guidePanel.deleteAllGuides')}</TooltipContent>
             </Tooltip>
+          )}
 
-            {/* Delete all guides */}
-            {guideCount > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-destructive"
-                    onClick={handleDeleteAllGuides}
-                  >
-                    <Trash2 className={iconSizes.xs} />
-                    <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guidePanel.deleteAllGuides')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('guidePanel.deleteAllGuides')}</TooltipContent>
-              </Tooltip>
-            )}
+          {/* Delete all points */}
+          {pointCount > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-destructive"
+                  onClick={handleDeleteAllPoints}
+                >
+                  <Trash2 className={iconSizes.xs} />
+                  <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guidePanel.deleteAllPoints')}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('guidePanel.deleteAllPoints')}</TooltipContent>
+            </Tooltip>
+          )}
+        </nav>
 
-            {/* Delete all points */}
-            {pointCount > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-destructive"
-                    onClick={handleDeleteAllPoints}
-                  >
-                    <Trash2 className={iconSizes.xs} />
-                    <span className={`ml-1 ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('guidePanel.deleteAllPoints')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('guidePanel.deleteAllPoints')}</TooltipContent>
-              </Tooltip>
-            )}
-          </nav>
-
+        {/* Scrollable guide list */}
+        <section className="space-y-3 overflow-y-auto overflow-x-hidden flex-1 min-h-0 pt-2">
           {/* Empty state */}
           {totalCount === 0 && (
             <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted} text-center py-6`}>

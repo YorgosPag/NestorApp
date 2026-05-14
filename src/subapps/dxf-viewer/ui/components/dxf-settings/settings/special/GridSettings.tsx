@@ -323,9 +323,9 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
               </div>
               <SliderInput
                 value={gridSettings.visual.majorGridWeight}
-                min={0.5}
+                min={0.1}
                 max={5}
-                step={0.5}
+                step={0.1}
                 onChange={handleMajorGridWeightChange}
                 showValue
                 formatValue={String}

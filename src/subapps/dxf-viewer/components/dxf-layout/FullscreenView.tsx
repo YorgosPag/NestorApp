@@ -10,37 +10,21 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
-import type { OverlayEditorMode, OverlayKind } from '../../overlays/types';
-import type { PropertyStatus } from '../../../../constants/property-statuses-enterprise';
-import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { StandaloneStatusBar } from '../../ui/toolbar/StandaloneStatusBar';
 
-/**
- * Renders the DXF viewer in a fullscreen, immersive layout.
- */
 export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
   const iconSizes = useIconSizes();
   const { quick, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
-  // 🏢 ADR-050: Overlay section collapse state (fullscreen mode)
-  const [isOverlaySectionCollapsed, setIsOverlaySectionCollapsed] = React.useState(false);
-  const showOverlayToolbar = false;
-
   return (
   <div className={`fixed ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.Z_INDEX['50']} ${colors.bg.accent} flex flex-col`}>
-    <ToolbarSection
-      {...props}
-      overlayMode={"draw" as OverlayEditorMode}
-      setOverlayMode={(_mode) => {}}
-      currentStatus={"for-sale" as PropertyStatus}
-      setCurrentStatus={(_status) => {}}
-      currentKind={"unit" as OverlayKind}
-      setCurrentKind={(_kind) => {}}
-      showOverlayToolbar={showOverlayToolbar}
-      isOverlaySectionCollapsed={isOverlaySectionCollapsed}
-      onToggleOverlaySection={() => setIsOverlaySectionCollapsed(prev => !prev)}
+    <StandaloneStatusBar
+      activeTool={props.activeTool}
+      onToolChange={props.onToolChange}
+      onAction={props.onAction}
     />
     <div className={`flex justify-between items-center ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${getDirectionalBorder('muted', 'bottom')}`}>
       <div className={`flex ${PANEL_LAYOUT.GAP.SM} items-center`}>

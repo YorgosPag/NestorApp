@@ -1,21 +1,16 @@
 'use client';
 import React from 'react';
 import type { DXFViewerLayoutProps } from '../../integration/types';
-import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
 import CadStatusBar from '../../statusbar/CadStatusBar';
-import type { OverlayEditorMode } from '../../overlays/types';
-// 🏢 ENTERPRISE: Centralized spacing tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-// ⚠️ PANEL_COLORS REMOVED (2026-01-03): BG_SECONDARY → bg-muted caused canvas visibility issues
+import { StandaloneStatusBar } from '../../ui/toolbar/StandaloneStatusBar';
+import { useDxfToolbarShortcuts } from '../../hooks/useDxfToolbarShortcuts';
+import type { OverlayEditorMode } from '../../overlays/types';
 
-/**
- * Renders the DXF viewer in its normal, non-fullscreen layout.
- * Overlay toolbar removed — clicking "layering" activates draw mode directly.
- */
 export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
-  // Derive overlay mode from active tool: layering = draw, anything else = select
   const overlayMode: OverlayEditorMode = props.activeTool === 'layering' ? 'draw' : 'select';
+  useDxfToolbarShortcuts(props.activeTool, props.onToolChange, props.onAction);
 
   return (
     // ╔════════════════════════════════════════════════════════════════════════╗
@@ -25,15 +20,11 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
     // ║ Background πρέπει να είναι transparent για σωστή απεικόνιση canvas.    ║
     // ╚════════════════════════════════════════════════════════════════════════╝
     <div className="relative flex flex-col h-full">
-      <ToolbarSection
-        {...props}
-        overlayMode={overlayMode}
-        setOverlayMode={() => {}}
-        currentStatus="for-sale"
-        setCurrentStatus={() => {}}
-        currentKind="property"
-        setCurrentKind={() => {}}
-        showOverlayToolbar={false}
+      <StandaloneStatusBar
+        activeTool={props.activeTool}
+        onToolChange={props.onToolChange}
+        onAction={props.onAction}
+        onSidebarToggle={props.onSidebarToggle}
       />
       <div className={`flex-1 flex ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
         <CanvasSection
@@ -43,7 +34,6 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
           currentKind="property"
         />
       </div>
-
       <CadStatusBar />
     </div>
   );

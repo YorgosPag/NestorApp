@@ -1,8 +1,6 @@
 'use client';
-
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_DXF_VIEWER_CONTENT = false;
-
 import { useNotifications } from '../../../providers/NotificationProvider';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 // 🤖 ADR-185: AI Drawing Assistant feature flag
@@ -12,14 +10,11 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 // 🏢 ADR-241: Centralized fullscreen — Portal-based, zero remount
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
-
 import React from 'react';
-
 // Types
 import type { DxfViewerAppProps } from '../types';
 import type { ViewTransform } from '../rendering/types/Types';
 import type { ToolType } from '../ui/toolbar/types';
-
 // Hooks
 import { useDxfViewerState } from '../hooks/useDxfViewerState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -29,12 +24,10 @@ import { useCanvasOperations } from '../hooks/interfaces/useCanvasOperations';
 import { useEventBus, EventBus } from '../systems/events/EventBus';
 // 🏢 ENTERPRISE (2026-01-30): ADR-055 Entity Creation Manager
 import { useEntityCreationManager } from '../systems/entity-creation';
-
 // ✅ ENTERPRISE: State Management Hooks (PHASE 4)
 import { useOverlayState } from '../hooks/state/useOverlayState';
 import { useCanvasTransformState } from '../hooks/state/useCanvasTransformState';
 import { useColorMenuState } from '../hooks/state/useColorMenuState';
-
 // Stores and Managers
 import { useOverlayStore } from '../overlays/overlay-store';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
@@ -42,10 +35,8 @@ import { useUniversalSelection } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
 import { useGripContext } from '../providers/GripProvider';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-
 // ⚡ LCP OPTIMIZATION: Critical UI Components
 import { type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
-
 // 🚀 LAZY LOADED: Non-Critical UI Components
 const OverlayToolbar = React.lazy(() => import('../ui/OverlayToolbar').then(mod => ({ default: mod.OverlayToolbar })));
 const ColorManager = React.lazy(() => import('../ui/components/ColorManager').then(mod => ({ default: mod.ColorManager })));
@@ -63,38 +54,31 @@ const FloorplanBackgroundPanel = React.lazy(() => import('../floorplan-backgroun
 const ReplaceConfirmDialog = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.ReplaceConfirmDialog })));
 const CalibrationDialog = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.CalibrationDialog })));
 const DxfAiChatPanel = React.lazy(() => import('../ai-assistant/components/DxfAiChatPanel'));
-const ToolbarWithCursorCoordinates = React.lazy(() => import('../ui/components/ToolbarWithCursorCoordinates').then(mod => ({ default: mod.ToolbarWithCursorCoordinates })));
-
+// ADR-345 Fase 6: Import dialogs lifted from EnhancedDXFToolbar (SSOT)
+const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
+const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
+const FloorplanImportWizard = React.lazy(() => import('@/features/floorplan-import').then(mod => ({ default: mod.FloorplanImportWizard })));
 // Layout Components - Canvas V2
 import { SidebarSection } from '../layout/SidebarSection';
 import { MobileSidebarDrawer } from '../layout/MobileSidebarDrawer';
 import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
-
 const MainContentSection = React.lazy(() => import('../layout/MainContentSection').then(mod => ({ default: mod.MainContentSection })));
 const FloatingPanelsSection = React.lazy(() => import('../layout/FloatingPanelsSection').then(mod => ({ default: mod.FloatingPanelsSection })));
-
 // ✅ ENTERPRISE ARCHITECTURE: Transform Context (Single Source of Truth)
 import { TransformProvider } from '../contexts/TransformContext';
 // ADR-040 Phase XIII: TransformStore SSoT — used for initialTransform read
 import { getImmediateTransform } from '../systems/cursor/ImmediateTransformStore';
-
 // 🧪 UNIFIED TEST RUNNER
 import { type UnifiedTestReport } from '../debug/unified-test-runner';
-
 // 🏢 ENTERPRISE: Performance Monitor
 import { usePerformanceMonitorToggle } from '../hooks/usePerformanceMonitorToggle';
 import { PerformanceCategory } from '@/core/performance/types/performance.types';
 import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
-
 // ✅ ADR-065 SRP: Extracted hooks
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
-
-// 📐 ADR-345 Fase 1: Ribbon interface scaffold + status bar
+// 📐 ADR-345 Fase 1: Ribbon interface scaffold
 import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
-import { DxfStatusBar } from '../ui/ribbon/status-bar/DxfStatusBar';
-// 📐 ADR-345 Fase 2: Layers tab content (LevelPanel migrated from floating panel)
-import { LayersTabContent } from '../ui/ribbon/tabs/LayersTabContent';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 📐 ADR-345 Fase 5B: contextual tab Text Editor (scaffolding — placeholders)
@@ -107,7 +91,6 @@ import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEdito
 // ADR-344 Phase 6.E: selection→toolbar + toolbar→CommandHistory always-on bridges
 import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
 import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToolbarCommandBridge';
-
 // ✅ PERFORMANCE: Memoize the main component
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-345 — mark the document root while the DXF viewer route is mounted
@@ -125,7 +108,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       }
     };
   }, []);
-
   const floatingRef = React.useRef<FloatingPanelHandle>(null);
   const state = useDxfViewerState();
   const notifications = useNotifications();
@@ -151,27 +133,25 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const eventBus = useEventBus();
   const colors = useSemanticColors();
   const { copy: copyToClipboard } = useCopyToClipboard();
-
   // 🏢 ADR-241: Centralized fullscreen
   const fullscreen = useFullscreen();
-
   // ADR-176: Responsive layout + sidebar drawer state
   const { layoutMode } = useResponsiveLayout();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-
   // 🧪 Test runner state
   const [testModalOpen, setTestModalOpen] = React.useState(false);
   const [testReport, setTestReport] = React.useState<UnifiedTestReport | null>(null);
   const [formattedTestReport, setFormattedTestReport] = React.useState<string>('');
   const [testsModalOpen, setTestsModalOpen] = React.useState(false);
-
   // 🏢 PDF + AI panel state
   const [pdfPanelOpen, setPdfPanelOpen] = React.useState(false);
   const [aiChatOpen, setAiChatOpen] = React.useState(false);
-
+  // ADR-345 Fase 6: Import dialog state (lifted from EnhancedDXFToolbar — SSOT)
+  const [showEnhancedImport, setShowEnhancedImport] = React.useState(false);
+  const [showImportWizard, setShowImportWizard] = React.useState(false);
+  const [showLegacyImport, setShowLegacyImport] = React.useState(false);
   // 🏢 Performance Monitor Toggle
   const { isEnabled: perfMonitorEnabled, toggle: togglePerfMonitor } = usePerformanceMonitorToggle();
-
   // ✅ ENTERPRISE: State Management Hooks (PHASE 4)
   const { overlayMode, overlayStatus, overlayKind, setOverlayMode, setOverlayStatus, setOverlayKind } = useOverlayState();
   // ADR-040 Phase XIII: setCanvasTransform writes through to TransformStore.
@@ -179,11 +159,9 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // on pan/zoom. Leaf consumers subscribe via useTransformValue / useTransformScale.
   const { setCanvasTransform } = useCanvasTransformState({ currentScene: state.currentScene, activeTool: state.activeTool });
   const { colorMenu, openColorMenu, closeColorMenu, colorMenuRef } = useColorMenuState();
-
   // 🎯 Canvas visibility states
   const [dxfCanvasVisible, setDxfCanvasVisible] = React.useState(true);
   const [layerCanvasVisible, setLayerCanvasVisible] = React.useState(true);
-
   // Destructure state
   const {
     activeTool, handleToolChange, handleAction, showGrid, toggleGrid,
@@ -195,7 +173,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     onDrawingPoint, onDrawingHover, onDrawingCancel, onDrawingDoubleClick,
     onEntityCreated, gripSettings
   } = state;
-
   // Stores and managers
   const overlayStore = useOverlayStore();
   const universalSelection = useUniversalSelection();
@@ -203,7 +180,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const { updateGripSettings } = useGripContext();
   const { enabledModes, toggleMode } = useSnapContext();
   const canvasOps = useCanvasOperations();
-
   // 🏢 ADR-055: Entity Creation Manager
   useEntityCreationManager({
     getLevelScene: levelManager.getLevelScene,
@@ -211,17 +187,14 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     defaultLevelId: levelManager.currentLevelId || '0',
     debug: false,
   });
-
   // Refs for effects hook
   const contextSetTransformRef = React.useRef<((t: ViewTransform) => void) | null>(null);
   const prevGripStateRef = React.useRef<{ shouldEnableGrips: boolean } | null>(null);
   const prevPrimarySelectedIdRef = React.useRef<string | null>(null);
   const levelManagerRef = React.useRef(levelManager);
   const handleSceneChangeRef = React.useRef(handleSceneChange);
-
   // 🏢 Universal selection primary ID
   const primarySelectedId = universalSelection.getPrimaryId();
-
   // ADR-345 Fase 5B — derive contextual ribbon trigger from selection.
   // Text/MTEXT primary selection → show Text Editor contextual tab.
   const activeContextualTrigger = React.useMemo<string | null>(() => {
@@ -233,23 +206,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     }
     return null;
   }, [primarySelectedId, currentScene]);
-
-  // Open text-properties panel when text/mtext tool activates via ribbon
-  React.useEffect(() => {
-    if (activeTool === 'text' || activeTool === 'mtext') {
-      floatingRef.current?.showTab('text-properties');
-    }
-  }, [activeTool]);
-
-  // Open text-properties panel when a text/mtext entity is selected
-  React.useEffect(() => {
-    if (!primarySelectedId || !currentScene) return;
-    const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
-    if (entity && (entity.type === 'text' || entity.type === 'mtext')) {
-      floatingRef.current?.showTab('text-properties');
-    }
-  }, [primarySelectedId, currentScene]);
-
   // Auto fit-to-view when a DXF scene loads for the first time (null → SceneModel).
   // Matches AutoCAD / BricsCAD behaviour: Zoom Extents on file open.
   // 200ms delay lets the canvas mount and register its EventBus listener before firing.
@@ -262,7 +218,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     }
     prevSceneRef.current = currentScene;
   }, [currentScene, handleAction]);
-
   // ✅ ADR-065 SRP: Extracted callbacks
   const {
     showCopyableNotification, wrappedHandleAction, handleTransformReady,
@@ -272,13 +227,13 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     notifications, copyToClipboard, handleAction,
     togglePerfMonitor, perfMonitorEnabled, fullscreen,
     setTestsModalOpen, setPdfPanelOpen, setAiChatOpen,
+    setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
     setCanvasTransform, contextSetTransformRef,
     currentScene, selectedEntityIds, handleSceneChange,
     handleFileImport, levelManager, overlayStore,
     universalSelection, setOverlayStatus, setOverlayKind,
     showLayers, floatingRef,
   });
-
   // ✅ ADR-065 SRP: Extracted effects
   useDxfViewerEffects({
     activeTool, overlayMode, currentScene,
@@ -292,14 +247,12 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     prevGripStateRef, prevPrimarySelectedIdRef,
     levelManagerRef, handleSceneChangeRef,
   });
-
   // ✅ PERFORMANCE: Memoize wrappedState
   const wrappedState = React.useMemo(() => ({
     ...state,
     handleAction: wrappedHandleAction,
     onAction: wrappedHandleAction
   }), [state, wrappedHandleAction]);
-
   // Overlay drawing hook
   const {
     overlayCanvasRef, draftPolygon, snapPoint,
@@ -321,12 +274,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       }
     }
   });
-
   // Ctrl+A → select all entities via EventBus so CanvasSection updates its own state
   const handleSelectAll = React.useCallback(() => {
     EventBus.emit('canvas:select-all', undefined as unknown as void);
   }, []);
-
   // Keyboard shortcuts hook
   const { handleCanvasMouseMove } = useKeyboardShortcuts({
     selectedEntityIds, currentScene,
@@ -336,13 +287,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     onSelectAll: handleSelectAll,
     activeTool, overlayMode, overlayStore
   });
-
   // Pointer events class for desktop layering mode
   const rootPointerEventsClass =
     layoutMode === 'desktop' && activeTool === 'layering'
       ? PANEL_LAYOUT.POINTER_EVENTS.NONE
       : PANEL_LAYOUT.POINTER_EVENTS.AUTO;
-
   return (
       <TransformProvider
         initialTransform={getImmediateTransform()}
@@ -355,7 +304,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           commands={{
             onToolChange: handleToolChange,
             onComingSoon: handleRibbonComingSoon,
-            onAction: handleAction,
+            onAction: wrappedHandleAction,
             onToggle: textEditorBridge.onToggle,
             onComboboxChange: textEditorBridge.onComboboxChange,
             getToggleState: textEditorBridge.getToggleState,
@@ -363,16 +312,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           }}
           contextualTabs={ribbonContextualTabs}
           activeContextualTrigger={activeContextualTrigger}
-          layersTabContent={
-            <LayersTabContent
-              scene={currentScene}
-              currentTool={activeTool}
-              onToolChange={handleToolChange}
-              selectedEntityIds={selectedEntityIds}
-              setSelectedEntityIds={setSelectedEntityIds}
-              onSceneImported={handleFileImportWithEncoding}
-            />
-          }
         />
       <section
         className={`flex flex-1 min-h-0 ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}
@@ -400,7 +339,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           onSceneImported={handleFileImportWithEncoding}
         />
       )}
-
       {/* 🏢 ADR-241: FullscreenOverlay */}
       <FullscreenOverlay
         isFullscreen={fullscreen.isFullscreen}
@@ -444,7 +382,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           isFullscreen={fullscreen.isFullscreen}
           />
         </React.Suspense>
-
         <React.Suspense fallback={<div className={`${PANEL_LAYOUT.WIDTH.PANEL_SM} ${colors.bg.skeleton} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />}>
           <FloatingPanelsSection
           colorMenu={colorMenu}
@@ -477,7 +414,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           />
         </React.Suspense>
       </FullscreenOverlay>
-
       <React.Suspense fallback={<div className="hidden" />}>
         <TestsModal
           isOpen={testsModalOpen}
@@ -496,6 +432,42 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       </React.Suspense>
       <React.Suspense fallback={<div className="hidden" />}>
         <CalibrationDialog />
+      </React.Suspense>
+      {/* ADR-345 Fase 6: Import dialogs — SSOT owner (migrated from EnhancedDXFToolbar) */}
+      <React.Suspense fallback={<div className="hidden" />}>
+        <DxfImportModal
+          isOpen={showLegacyImport}
+          onClose={() => setShowLegacyImport(false)}
+          onImport={(file, encoding) => { void handleFileImportWithEncoding(file, encoding); }}
+        />
+      </React.Suspense>
+      <React.Suspense fallback={<div className="hidden" />}>
+        <SimpleProjectDialog
+          isOpen={showEnhancedImport}
+          onClose={() => setShowEnhancedImport(false)}
+          onFileImport={async (file, encoding) => { await handleFileImportWithEncoding(file, encoding); }}
+        />
+      </React.Suspense>
+      <React.Suspense fallback={<div className="hidden" />}>
+        <FloorplanImportWizard
+          isOpen={showImportWizard}
+          onClose={() => setShowImportWizard(false)}
+          onComplete={(file, meta) => {
+            setShowImportWizard(false);
+            if (meta.format && meta.format !== 'dxf') return;
+            const saveContext = {
+              companyId: meta.companyId || undefined,
+              projectId: meta.projectId || undefined,
+              ...(meta.entityType === 'floor' ? { floorId: meta.entityId } : {}),
+              ...(meta.entityType === 'building' ? { buildingId: meta.entityId } : {}),
+              entityType: meta.entityType as import('../services/dxf-firestore.service').DxfSaveContext['entityType'],
+              filesCategory: 'floorplans' as const,
+              purpose: meta.purpose || undefined,
+              entityLabel: meta.entityLabel,
+            };
+            void handleFileImportWithEncoding(file, undefined, saveContext);
+          }}
+        />
       </React.Suspense>
       {USE_AI_DRAWING_ASSISTANT && (
         <React.Suspense fallback={<div className="hidden" />}>
@@ -519,7 +491,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         />
       )}
       </section>
-        <DxfStatusBar />
       </div>
       </TransformProvider>
   );

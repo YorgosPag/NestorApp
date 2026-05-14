@@ -28,6 +28,7 @@
  * @description
  * - 'levels': Επίπεδα - Level management panel (+ wizard button, ADR-309)
  * - 'colors': Ρυθμίσεις DXF - DXF settings (lines, text, grips)
+ * (ADR-345 Fase 6: 'text-properties' removed — all controls migrated to Ribbon contextual tab)
  *
  * @example
  * ```tsx
@@ -36,7 +37,7 @@
  * const [activePanel, setActivePanel] = useState<FloatingPanelType>('levels');
  * ```
  */
-export type FloatingPanelType = 'levels' | 'colors' | 'text-properties';
+export type FloatingPanelType = 'levels' | 'colors';
 
 /**
  * 🏢 ENTERPRISE: All Panel Types (including future/hidden)
@@ -83,7 +84,7 @@ export type PanelType = FloatingPanelType;
 export function isFloatingPanelType(value: unknown): value is FloatingPanelType {
   return (
     typeof value === 'string' &&
-    ['levels', 'colors', 'text-properties'].includes(value)
+    ['levels', 'colors'].includes(value)
   );
 }
 
@@ -95,7 +96,6 @@ export function isFloatingPanelType(value: unknown): value is FloatingPanelType 
 export const FLOATING_PANEL_TYPES: readonly FloatingPanelType[] = [
   'levels',
   'colors',
-  'text-properties',
 ] as const;
 
 // ============================================================================
@@ -113,7 +113,7 @@ export interface PanelMetadata {
   /** Fallback label (Greek) */
   fallbackLabel: string;
   /** Lucide icon name */
-  iconName: 'BarChart' | 'Settings' | 'Type';
+  iconName: 'BarChart' | 'Settings';
   /** Whether panel can be disabled */
   canBeDisabled: boolean;
 }
@@ -138,13 +138,6 @@ export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata> = {
     iconName: 'Settings',
     canBeDisabled: false,
   },
-  'text-properties': {
-    type: 'text-properties',
-    labelKey: 'panels.textProperties.title',
-    fallbackLabel: 'Ιδιότητες Κειμένου',
-    iconName: 'Type',
-    canBeDisabled: true,
-  },
 } as const;
 
 // ============================================================================
@@ -157,8 +150,8 @@ export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata> = {
  * Defines how panels are arranged in the tab rows.
  */
 export const PANEL_LAYOUT = {
-  /** Top row panels (ADR-309: 2 tabs + ADR-344 text-properties) */
-  topRow: ['levels', 'colors', 'text-properties'] as const satisfies readonly FloatingPanelType[],
+  /** Top row panels (ADR-309: 2 tabs) */
+  topRow: ['levels', 'colors'] as const satisfies readonly FloatingPanelType[],
   /** Bottom row panels — empty after ADR-309 Phase 1 */
   bottomRow: [] as const satisfies readonly FloatingPanelType[],
 } as const;

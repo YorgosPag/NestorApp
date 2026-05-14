@@ -42,6 +42,9 @@ export interface DxfViewerCallbacksParams {
   setTestsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setPdfPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setAiChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowEnhancedImport: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowImportWizard: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowLegacyImport: React.Dispatch<React.SetStateAction<boolean>>;
   setCanvasTransform: (t: { scale: number; offsetX: number; offsetY: number }) => void;
   contextSetTransformRef: React.MutableRefObject<((t: ViewTransform) => void) | null>;
   currentScene: SceneModel | null;
@@ -83,6 +86,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     notifications, copyToClipboard, handleAction,
     togglePerfMonitor, perfMonitorEnabled, fullscreen,
     setTestsModalOpen, setPdfPanelOpen, setAiChatOpen,
+    setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
     setCanvasTransform, contextSetTransformRef,
     currentScene, selectedEntityIds, handleSceneChange,
     handleFileImport, levelManager, overlayStore,
@@ -140,10 +144,25 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       fullscreen.toggle();
       return;
     }
+    // ADR-345 Fase 6: Import/export dialog actions (migrated from toolbar)
+    if (action === 'import-dxf-enhanced') {
+      setShowEnhancedImport(true);
+      return;
+    }
+    if (action === 'import-floorplan-wizard') {
+      setShowImportWizard(true);
+      floatingRef.current?.showTab('levels');
+      return;
+    }
+    if (action === 'import-dxf-legacy') {
+      setShowLegacyImport(true);
+      return;
+    }
     // Pass all other actions to original handleAction
     handleAction(action, data);
   }, [handleAction, togglePerfMonitor, perfMonitorEnabled, notifications, fullscreen,
-      setTestsModalOpen, setPdfPanelOpen, setAiChatOpen]);
+      setTestsModalOpen, setPdfPanelOpen, setAiChatOpen,
+      setShowEnhancedImport, setShowImportWizard, setShowLegacyImport]);
 
   // ✅ STABLE CALLBACK: handleTransformReady
   const handleTransformReady = React.useCallback((setTransform: (t: ViewTransform) => void) => {

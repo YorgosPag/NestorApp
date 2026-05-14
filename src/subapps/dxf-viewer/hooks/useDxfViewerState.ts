@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCanvasOperations } from './interfaces/useCanvasOperations';
 import type { ToolType } from '../ui/toolbar/types';
 import type { DrawingTool } from './drawing/useUnifiedDrawing';
@@ -25,6 +25,10 @@ import { getGlobalGuideStore } from '../systems/guides';
 import { useRulersGridContext } from '../systems/rulers-grid/RulersGridSystem';
 // 📐 ADR-189: EventBus for guide→snap auto-enable
 import { EventBus } from '../systems/events/EventBus';
+import { ClipToRegionService } from '../services/ClipToRegionService';
+import { useOverlayStore } from '../overlays/overlay-store';
+
+const clipService = new ClipToRegionService();
 
 // ADR-189: ALL guide tools auto-open GL panel when selected
 const GUIDE_TOOLS_NEEDING_PANEL: ReadonlySet<ToolType> = new Set<ToolType>([
@@ -54,6 +58,11 @@ export function useDxfViewerState() {
   // Use specialized hooks
   const toolbarState = useToolbarState();
   const sceneState = useSceneState();
+  const sceneStateRef = useRef(sceneState);
+  sceneStateRef.current = sceneState;
+  const overlayStore = useOverlayStore();
+  const overlayStoreRef = useRef(overlayStore);
+  overlayStoreRef.current = overlayStore;
 
   // 🎯 CENTRALIZED SNAP SYSTEM
   const { snapEnabled, setSnapEnabled } = useSnapContext();
@@ -76,6 +85,8 @@ export function useDxfViewerState() {
     };
   }, [snapEnabled, setSnapEnabled]);
 
+  const [autoCrop, setAutoCrop] = useState(false);
+
   // 🏢 FIX: Grid visibility from RulersGridContext (single source of truth)
   // Previously, toolbar used a disconnected local state (useToolbarState.showGrid)
   // while the settings panel used RulersGridContext — they were never synchronized.
@@ -86,7 +97,6 @@ export function useDxfViewerState() {
   const drawingHandlers = useDrawingHandlers(
     activeTool,
     (entity) => {
-      // Handle entity creation - add to scene
       if (sceneState.currentScene) {
         const updatedScene = {
           ...sceneState.currentScene,
@@ -98,6 +108,38 @@ export function useDxfViewerState() {
     setActiveTool,
     sceneState.currentScene || undefined
   );
+
+  // Crop-window: EventBus delivers world-space rect after user draws marquee.
+  // Clips DXF entities (SceneModel) AND overlay polygons (ColorLayers) to the rect.
+  // Ref pattern: single subscription; refs always have fresh state/store.
+  useEffect(() => {
+    return EventBus.on('crop:marquee-rect', (rect) => {
+      // 1. Clip DXF scene entities
+      const { currentScene, handleSceneChange, currentLevelId } = sceneStateRef.current;
+      if (currentScene) {
+        handleSceneChange(clipService.clip(currentScene, rect));
+      }
+
+      // 2. Clip overlay polygons (colored layers)
+      if (currentLevelId) {
+        const store = overlayStoreRef.current;
+        const overlays = store.getByLevel(currentLevelId);
+        for (const overlay of overlays) {
+          const clipped = clipService.clipOverlayPolygon(overlay.polygon, rect);
+          if (clipped === null) {
+            // Fully outside — remove overlay
+            void store.remove(overlay.id);
+          } else if (clipped !== overlay.polygon) {
+            // Partially inside — update with clipped boundary vertices
+            void store.update(overlay.id, { polygon: clipped });
+          }
+          // Same reference = fully inside, no update needed
+        }
+      }
+
+      setActiveTool('select');
+    });
+  }, [setActiveTool]);
 
   // Canvas actions through new API
   // 🏢 ENTERPRISE (2026-01-26): Undo/Redo connected to Command History - ADR-032
@@ -124,6 +166,14 @@ export function useDxfViewerState() {
 
   // Enhanced tool change handler
   const handleToolChange = useCallback((tool: ToolType) => {
+
+    // Crop-window: just activate the tool — canvas sees it as marquee selection mode
+    // (not in isInDrawingMode set), so mouse drag shows the selection box visual.
+    // processMarqueeSelection intercepts activeTool==='crop-window' and emits crop:marquee-rect.
+    if (tool === 'crop-window') {
+      setActiveTool('crop-window');
+      return;
+    }
 
     // Delete is an action, not a persistent tool — fire and return
     if (tool === 'delete') {
@@ -202,7 +252,7 @@ export function useDxfViewerState() {
         break;
       case 'fit-to-view':
       case 'zoom-extents':
-        canvasActions.fitToView();
+        EventBus.emit('canvas-fit-to-view', { source: 'toolbar' });
         break;
       case 'zoom-in':
         canvasActions.zoomIn();
@@ -228,6 +278,12 @@ export function useDxfViewerState() {
         // Pan tool is handled by tool change, not action
         handleToolChange('pan');
         break;
+      case 'autocrop': {
+        const next = !autoCrop;
+        setAutoCrop(next);
+        if (next) EventBus.emit('canvas-fit-to-view', { source: 'autocrop' });
+        break;
+      }
       // 📐 ADR-189: Toggle construction guide visibility (chord: G → V)
       case 'toggle-guides': {
         const guideStore = getGlobalGuideStore();
@@ -245,7 +301,7 @@ export function useDxfViewerState() {
       default:
         console.warn('Unknown action:', action);
     }
-  }, [toolbarState, canvasActions, snapEnabled, setSnapEnabled, handleToolChange, rulersGridContext, gridVisible]);
+  }, [toolbarState, canvasActions, snapEnabled, setSnapEnabled, handleToolChange, rulersGridContext, gridVisible, autoCrop]);
 
   return {
     ...sceneState,
@@ -271,6 +327,7 @@ export function useDxfViewerState() {
     onMeasurementPoint: drawingHandlers.onDrawingPoint,
     onMeasurementHover: drawingHandlers.onDrawingHover,
     onMeasurementCancel: drawingHandlers.onDrawingCancel,
+    autoCrop,
     // ✅ CENTRALIZED: Snap system from SnapContext
     snapEnabled,
     // 🏢 ENTERPRISE (2026-01-26): Undo/Redo from Command History - ADR-032

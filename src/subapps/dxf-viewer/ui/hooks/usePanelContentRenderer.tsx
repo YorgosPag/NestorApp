@@ -19,7 +19,6 @@ import { useTranslation } from '@/i18n';
 import {
   LazyLevelPanel as LevelPanel,
   LazyColorPalettePanel as ColorPalettePanel,
-  LazyTextPropertiesPanel,
 } from '../components/LazyLoadWrapper';
 
 // EntitiesSettings removed - content moved to colors panel
@@ -107,15 +106,7 @@ export function usePanelContentRenderer({
           </LazyPanelWrapper>
         );
 
-      case 'text-properties':
-        // ADR-344 Phase 5.F — Text Properties tab.
-        // Lazy-loaded; host fills `availableFonts`, `layers`, etc. via context wiring (Phase 6).
-        return (
-          <LazyPanelWrapper loadingText={t('panels.textProperties.loading')}>
-            <LazyTextPropertiesPanel />
-          </LazyPanelWrapper>
-        );
-
+      // ADR-345 Fase 6: 'text-properties' case removed — tab eliminated, controls in Ribbon
       // canvas case removed - merged into colors panel
 
       default:
