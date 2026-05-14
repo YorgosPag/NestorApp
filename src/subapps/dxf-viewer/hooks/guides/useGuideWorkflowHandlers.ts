@@ -31,12 +31,10 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
   }, [state]);
 
   const handleParallelSideChosen = useCallback((refGuideId: string, sign: 1 | -1) => {
-    console.log('[handleParallelSideChosen] activate()', { refGuideId, sign });
     CanvasNumericInputStore.activate(
       sign,
       refGuideId,
       (distance, s, id) => {
-        console.log('[handleParallelSideChosen] callback invoked', { id, distance, sign: s, offsetDistance: distance * s });
         guideState.addParallelGuide(id, distance * s);
         state.setParallelRefGuideId(null);
       },

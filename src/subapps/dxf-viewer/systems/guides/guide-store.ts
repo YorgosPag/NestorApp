@@ -151,10 +151,7 @@ export class GuideStore implements IGridHeadlessAPI {
     const duplicate = this.guides.find(
       g => g.axis === axis && Math.abs(g.offset - offset) < GUIDE_LIMITS.MIN_OFFSET_DELTA
     );
-    if (duplicate) {
-      console.log('[GuideStore] addGuideRaw() — DUPLICATE REJECTED', { axis, offset, existing: duplicate.offset });
-      return undefined;
-    }
+    if (duplicate) return undefined;
 
     const guide: Guide = {
       id: `guide_${generateEntityId()}`,
@@ -170,7 +167,6 @@ export class GuideStore implements IGridHeadlessAPI {
       ...(temporary ? { temporary: true } : {}),
     };
 
-    console.log('[GuideStore] addGuideRaw() — creating guide', { axis, offset, id: guide.id });
     // CRITICAL: New array — useSyncExternalStore uses Object.is()
     this.guides = [...this.guides, guide];
     this.notify();

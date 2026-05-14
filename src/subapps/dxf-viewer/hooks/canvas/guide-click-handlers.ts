@@ -218,7 +218,7 @@ function handleGuideParallel(ctx: GuideClickContext, p: UseCanvasClickHandlerPar
   } else {
     sign = guide.axis === 'X'
       ? (ctx.worldPoint.x >= guide.offset ? 1 : -1)
-      : (ctx.worldPoint.y >= guide.offset ? 1 : -1);
+      : (ctx.worldPoint.y >= guide.offset ? -1 : 1);  // Inverted for Y axis (ADR-189 coordinate semantics)
   }
 
   p.onParallelSideChosen(guide.id, sign);

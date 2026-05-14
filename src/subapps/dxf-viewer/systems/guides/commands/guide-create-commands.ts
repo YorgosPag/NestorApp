@@ -129,11 +129,7 @@ export class CreateParallelGuideCommand implements ICommand {
     }
 
     const reference = this.store.getGuideById(this.referenceGuideId);
-    console.log('[CreateParallelGuideCommand] execute()', { referenceId: this.referenceGuideId, offsetDistance: this.offsetDistance, reference: reference ? { axis: reference.axis, offset: reference.offset } : null });
-    if (!reference) {
-      console.log('[CreateParallelGuideCommand] execute() — reference not found!');
-      return;
-    }
+    if (!reference) return;
 
     if (reference.axis === 'XZ' && reference.startPoint && reference.endPoint) {
       // Parallel to diagonal: shift start/end perpendicularly
@@ -148,10 +144,8 @@ export class CreateParallelGuideCommand implements ICommand {
       const newStart = { x: reference.startPoint.x + nx * shift, y: reference.startPoint.y + ny * shift };
       const newEnd = { x: reference.endPoint.x + nx * shift, y: reference.endPoint.y + ny * shift };
       this.createdGuide = this.store.addDiagonalGuideRaw(newStart, newEnd, null, reference.style) ?? null;
-      console.log('[CreateParallelGuideCommand] diagonal guide created:', this.createdGuide?.id ?? 'FAILED');
     } else {
       const newOffset = reference.offset + this.offsetDistance;
-      console.log('[CreateParallelGuideCommand] axis-aligned guide', { axis: reference.axis, refOffset: reference.offset, offsetDistance: this.offsetDistance, newOffset });
       this.createdGuide = this.store.addGuideRaw(
         reference.axis,
         newOffset,
@@ -161,7 +155,6 @@ export class CreateParallelGuideCommand implements ICommand {
         false,
         reference.style,
       ) ?? null;
-      console.log('[CreateParallelGuideCommand] axis-aligned guide created:', this.createdGuide?.id ?? 'FAILED');
     }
   }
 

@@ -60,9 +60,7 @@ export const CanvasNumericInputStore = {
   /** Commits buffer. Returns false if buffer is empty/zero (no-op). */
   confirm(): boolean {
     const value = _dde.commit();
-    console.log('[CanvasNumericInputStore] confirm()', { value, refGuideId: _refGuideId, sign: _sign, hasCallback: !!_onConfirm });
     if (value === null || Math.abs(value) < 0.001) {
-      console.log('[CanvasNumericInputStore] confirm() — buffer empty/zero, skipping callback');
       _dde.reset();
       _notify();
       return false;
@@ -74,7 +72,6 @@ export const CanvasNumericInputStore = {
     _onConfirm = null;
     _onCancel = null;
     _notify();
-    console.log('[CanvasNumericInputStore] confirm() — calling callback', { value: Math.abs(value), sign, refGuideId });
     cb?.(Math.abs(value), sign, refGuideId);
     return true;
   },
