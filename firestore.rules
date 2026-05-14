@@ -630,9 +630,9 @@ service cloud.firestore {
     // 🔐 Invariants: project, buildingId, floorId, name, id cannot be changed by client
     // 📅 Implemented: 2026-01-24
     match /properties/{propertyId} {
-      // 📖 READ PUBLIC: Anyone can read if status='available' (public listing)
-      // 🔒 SECURITY: No companyId leak - only available properties exposed
-      allow read: if resource.data.status == 'available';
+      // 📖 READ PUBLIC: Anyone can read if listed for sale/rent (public listing)
+      // 🔒 SECURITY: Only publicly-listed properties exposed — no companyId leak
+      allow read: if resource.data.commercialStatus in ['for-sale', 'for-rent', 'for-sale-and-rent'];
 
       // 📖 READ PRIVATE: Authenticated users from project's company
       // 🔒 SECURITY: Tenant-scoped - prevents cross-tenant data leak

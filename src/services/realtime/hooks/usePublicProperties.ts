@@ -19,7 +19,7 @@ export function usePublicProperties() {
     setError(null);
 
     try {
-      const constraints: QueryConstraint[] = [where('status', '==', 'available')];
+      const constraints: QueryConstraint[] = [where('commercialStatus', 'in', ['for-sale', 'for-rent', 'for-sale-and-rent'])];
       const q = query(collection(db, 'properties'), ...constraints);
 
       const unsubscribe = onSnapshot(
