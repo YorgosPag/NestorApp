@@ -82,11 +82,7 @@ export const GET = withSensitiveRateLimit(
         const membersPath = `${COLLECTIONS.COMPANIES}/${ctx.companyId}/${SUBCOLLECTIONS.COMPANY_MEMBERS}`;
         const membersSnap = await db.collection(membersPath).get();
 
-        if (membersSnap.empty) {
-          return NextResponse.json({ success: true, data: { users: [], total: 0 } });
-        }
-
-        const memberDocs: MemberDoc[] = membersSnap.docs.map((doc) => {
+        const memberDocs: MemberDoc[] = membersSnap.empty ? [] : membersSnap.docs.map((doc) => {
           const d = doc.data();
           return {
             uid: doc.id,
