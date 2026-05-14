@@ -137,12 +137,21 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
               setSaveStatus('error');
               return;
             }
-            if (lookupCompanyId) {
+            if (fileId && !canonicalScenePath) {
+              // fileId is known but path is not — fetch THIS specific file's storagePath
+              // by ID. Do NOT use findExistingFileRecord (queries by fileName) because
+              // another file with the same originalFilename may be returned, causing
+              // canonicalScenePath to point to a different file's storage path.
+              const storagePath = await DxfFirestoreService.getFileStoragePath(fileId);
+              if (storagePath) {
+                canonicalScenePath = DxfFirestoreService.deriveScenePath(storagePath);
+              }
+              fileIdCacheRef.current.set(fileName, fileId);
+            } else if (lookupCompanyId) {
+              // fileId unknown — fall back to name-based lookup or generate new ID
               const existing = await DxfFirestoreService.findExistingFileRecord(lookupCompanyId, fileName);
               if (existing) {
-                // Prefer the injected/cached fileId; fall back to Firestore record
                 fileId = fileId ?? existing.id;
-                // Derive scene path next to the original DXF in canonical storage
                 if (existing.storagePath && !canonicalScenePath) {
                   canonicalScenePath = DxfFirestoreService.deriveScenePath(existing.storagePath);
                 }

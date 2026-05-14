@@ -14,6 +14,7 @@ import {
 import { canvasEventBus } from '../../rendering/canvas/core/CanvasEventSystem';
 import { isInDrawingMode } from '../tools/ToolStateManager';
 import { UniversalMarqueeSelector } from '../selection/UniversalMarqueeSelection';
+import { EventBus } from '../events/EventBus';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI } from './mouse-handler-types';
 
@@ -151,6 +152,19 @@ function processMarqueeSelection(
 
   const canvas = canvasRef?.current ?? null;
   const marqueeSnap = getPointerSnapshotFromElement(canvas);
+
+  // Crop-window: intercept marquee → emit world-space rect, skip normal selection
+  if (activeTool === 'crop-window' && marqueeSnap) {
+    const worldStart = screenToWorldWithSnapshot(cursor.selectionStart!, transform, marqueeSnap);
+    const worldEnd = screenToWorldWithSnapshot(cursor.position!, transform, marqueeSnap);
+    EventBus.emit('crop:marquee-rect', {
+      xMin: Math.min(worldStart.x, worldEnd.x),
+      yMin: Math.min(worldStart.y, worldEnd.y),
+      xMax: Math.max(worldStart.x, worldEnd.x),
+      yMax: Math.max(worldStart.y, worldEnd.y),
+    });
+    return;
+  }
 
   const hasMultiCallback = !!onMultiLayerSelected;
   const hasSingleCallback = !!onLayerSelected;

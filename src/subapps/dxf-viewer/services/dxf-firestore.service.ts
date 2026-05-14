@@ -390,4 +390,21 @@ export class DxfFirestoreService {
     const base = fileRecordStoragePath.replace(/(\.[a-zA-Z0-9]+)+$/, '');
     return `${base}.scene.json`;
   }
+
+  /**
+   * Fetch storagePath for a known fileId (direct by-ID lookup).
+   * Used by auto-save when fileId is injected but canonicalScenePath is missing.
+   * Avoids findExistingFileRecord which queries by filename and may return a
+   * different file with the same name → wrong canonicalScenePath written to Firestore.
+   */
+  static async getFileStoragePath(fileId: string): Promise<string | null> {
+    try {
+      const { doc, getDoc } = await import('firebase/firestore');
+      const snap = await getDoc(doc(db, COLLECTIONS.FILES, fileId));
+      if (!snap.exists()) return null;
+      return (snap.data().storagePath as string) ?? null;
+    } catch {
+      return null;
+    }
+  }
 }

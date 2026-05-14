@@ -341,16 +341,25 @@ export async function loadFromStorageImpl(fileId: string): Promise<DxfFileRecord
       if (scene) source = 'scene.json';
     }
 
-    // ── Tier 2: .processed.json (server wizard — gzip compressed) ──
+    // ── Tier 2: processedDataPath — gzip (.processed.json) or plain JSON (.scene.json) ──
+    // .processed.json = server wizard output (gzip). .scene.json = auto-save (plain JSON).
+    // A bug (fixed 2026-05-14) could write a .scene.json path here → must handle plain JSON.
     if (!scene && processedPath) {
-      const compressedBytes = await tryGetBytes(processedPath);
-      if (compressedBytes) {
-        try {
-          const text = pako.ungzip(new Uint8Array(compressedBytes), { to: 'string' }) as unknown as string;
+      const processedBytes = await tryGetBytes(processedPath);
+      if (processedBytes) {
+        if (processedPath.endsWith('.scene.json')) {
+          // Plain JSON — treat as Tier 1 equivalent
+          const text = new TextDecoder().decode(processedBytes);
           scene = parseAndValidateScene(text);
-          if (scene) source = 'processed.json';
-        } catch {
-          dxfLogger.warn('Failed to decompress processed scene', { fileId, processedPath });
+          if (scene) source = 'processed-scene.json';
+        } else {
+          try {
+            const text = pako.ungzip(new Uint8Array(processedBytes), { to: 'string' }) as unknown as string;
+            scene = parseAndValidateScene(text);
+            if (scene) source = 'processed.json';
+          } catch {
+            dxfLogger.warn('Failed to decompress processed scene', { fileId, processedPath });
+          }
         }
       }
     }

@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-14: fit-to-view dopo import DXF — EventBus path
+
+`useSceneState.ts`: rimpiazzato `canvasOps.fitToView()` (path via `dxfRef.current`) con `EventBus.emit('canvas-fit-to-view', { source: 'auto' })` nel timeout post-import (200ms). Il path EventBus è canonico (`useFitToView` listener legge `dxfScene` dallo stato React — sempre fresco dopo il commit), eliminando la dipendenza da `dxfRef.current` che poteva essere null/stale durante il re-render. Questo assicura il fit-to-view automatico dopo ogni import DXF (wizard incluso).
+
 ### 2026-05-12: SSoT unification — `selectedEntityIds` derived from `universalSelection`
 
 `CanvasSection.tsx`: rimosso `useState<string[]>([])` per `selectedEntityIds`. La selezione delle entità DXF ora è **derivata** da `universalSelection.getIdsByType('dxf-entity')` (Context-based, già reattivo nell'orchestratore — niente `useSyncExternalStore`, CHECK 6C rispettato).

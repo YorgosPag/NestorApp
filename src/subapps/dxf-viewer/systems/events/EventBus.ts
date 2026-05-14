@@ -174,6 +174,8 @@ export interface DrawingEventMap {
     };
     offsetPoint: { x: number; y: number };
   };
+  // Crop-window: marquee drawn by user → clip scene to that world-space rectangle
+  'crop:marquee-rect': { xMin: number; yMin: number; xMax: number; yMax: number };
 }
 
 export type DrawingEventType = keyof DrawingEventMap;

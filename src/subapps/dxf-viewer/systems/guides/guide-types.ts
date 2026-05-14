@@ -90,7 +90,7 @@ export interface GuideRenderStyle {
 
 /** Default colors per guide axis — construction-industry standard */
 export const GUIDE_COLORS = {
-  /** Cyan — vertical (X-axis) guides */
+  /** Electric cyan — vertical (X-axis) guides */
   X: '#00BCD4',
   /** Tomato — horizontal (Z/Y-axis) guides */
   Y: '#FF6347',
@@ -117,9 +117,9 @@ export const GUIDE_COLOR_PALETTE = [
 /** Default rendering style for construction guides */
 export const DEFAULT_GUIDE_STYLE: GuideRenderStyle = {
   color: GUIDE_COLORS.X,
-  lineWidth: 0.5,
+  lineWidth: 0.8,
   dashPattern: [6, 3],
-  opacity: 0.4,
+  opacity: 0.9,
 };
 
 /** Guide rendering style for ghost (preview) state */

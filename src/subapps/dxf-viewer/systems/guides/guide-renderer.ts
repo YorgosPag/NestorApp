@@ -19,7 +19,6 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import type { Guide, GuideRenderStyle, ConstructionPoint } from './guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import { GUIDE_COLORS, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, LOCKED_GUIDE_OPACITY_FACTOR, LOCKED_GUIDE_DASH_PATTERN, SELECTED_GUIDE_STYLE, TEMPORARY_GUIDE_STYLE } from './guide-types';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { WORLD_ORIGIN } from '../../config/geometry-constants';
 
@@ -201,11 +200,9 @@ export class GuideRenderer {
     ctx.setLineDash(style.dashPattern);
 
     if (highlighted) {
-      ctx.lineWidth = HOVER_HIGHLIGHT.GUIDE.lineWidth;
-      ctx.globalAlpha = HOVER_HIGHLIGHT.GUIDE.opacity;
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = 1.0;
       ctx.setLineDash([]);
-      ctx.shadowColor = HOVER_HIGHLIGHT.GUIDE.glowColor;
-      ctx.shadowBlur = HOVER_HIGHLIGHT.GUIDE.shadowBlur;
     } else {
       ctx.lineWidth = style.lineWidth;
       ctx.globalAlpha = style.opacity;
@@ -223,10 +220,8 @@ export class GuideRenderer {
 
     ctx.stroke();
 
-    if (highlighted) {
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-    }
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
     ctx.setLineDash([]);
   }
 
@@ -249,11 +244,9 @@ export class GuideRenderer {
     ctx.setLineDash(style.dashPattern);
 
     if (highlighted) {
-      ctx.lineWidth = HOVER_HIGHLIGHT.GUIDE.lineWidth;
-      ctx.globalAlpha = HOVER_HIGHLIGHT.GUIDE.opacity;
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = 1.0;
       ctx.setLineDash([]);
-      ctx.shadowColor = HOVER_HIGHLIGHT.GUIDE.glowColor;
-      ctx.shadowBlur = HOVER_HIGHLIGHT.GUIDE.shadowBlur;
     } else {
       ctx.lineWidth = style.lineWidth;
       ctx.globalAlpha = style.opacity;
@@ -264,10 +257,8 @@ export class GuideRenderer {
     ctx.lineTo(screenEnd.x, screenEnd.y);
     ctx.stroke();
 
-    if (highlighted) {
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-    }
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
     ctx.setLineDash([]);
     return { screenStart, screenEnd };
   }

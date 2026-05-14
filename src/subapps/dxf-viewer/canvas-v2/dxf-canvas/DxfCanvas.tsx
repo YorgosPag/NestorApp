@@ -183,7 +183,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     fitToView: () => {
       if (!onTransformChange) { logger.warn('fitToView: No onTransformChange callback'); return; }
       const fitToViewService = serviceRegistry.get('fit-to-view');
-      const success = fitToViewService.performFitToView(scene, colorLayers, viewport, onTransformChange, { padding: 0.1, maxScale: 20, alignToOrigin: true });
+      const success = fitToViewService.performFitToView(scene, colorLayers, viewport, onTransformChange, { padding: 0.1, maxScale: 20, alignToOrigin: false });
       if (!success) logger.warn('fitToView: FitToViewService failed');
     },
     zoomAtScreenPoint: (factor: number, screenPoint: Point2D) => {

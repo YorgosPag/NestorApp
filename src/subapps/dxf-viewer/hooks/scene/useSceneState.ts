@@ -6,8 +6,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useCanvasOperations } from '../interfaces/useCanvasOperations';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
+import { EventBus } from '../../systems/events';
 import { useLevels } from '../../systems/levels';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 // ✅ ΦΑΣΗ 7: useDxfImport μεταφέρθηκε στο hooks/ folder
@@ -24,7 +24,6 @@ import { dlog, dwarn, derr } from '../../debug';
 const DEBUG_SCENE_STATE = false;
 
 export function useSceneState() {
-  const canvasOps = useCanvasOperations();
   const notifications = useNotifications();
   const { t } = useTranslation('dxf-viewer');
   // ✅ ENTERPRISE: 2 separate copy instances for error notification actions
@@ -143,7 +142,7 @@ export function useSceneState() {
 
         setLevelScene(targetLevelId, scene);
         // Scene rendering is handled by Canvas V2 system
-        setTimeout(() => canvasOps.fitToView(), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
+        setTimeout(() => EventBus.emit('canvas-fit-to-view', { source: 'auto' }), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
       } else {
         derr('SceneState', '❌ DXF import returned null scene');
         const errorMessage = importError ? `DXF Import Error: ${importError}` : 'Failed to import DXF file. Please check the file format and try again.';
@@ -173,7 +172,7 @@ export function useSceneState() {
         }]
       });
     }
-  }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem, copyErrorMessage, copyImportError, notifications, importError, canvasOps, t]);
+  }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem, copyErrorMessage, copyImportError, notifications, importError, t]);
 
   return {
     // State
