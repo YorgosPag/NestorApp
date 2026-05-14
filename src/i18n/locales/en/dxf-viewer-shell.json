@@ -125,7 +125,9 @@
     "zoomOut": "Zoom Out (-{percentage}%) - Keyboard: -",
     "zoomIn": "Zoom In (+{percentage}%) - Keyboard: +",
     "inputTitle": "Zoom percentage (1-99999%, decimals with . or ,) - Press Enter or click away to apply",
-    "invalidInput": "Invalid zoom input: \"{value}\". Reverting to {percentage}%"
+    "invalidInput": "Invalid zoom input: \"{value}\". Reverting to {percentage}%",
+    "badgeAriaLabel": "Zoom: {percentage}% — Select zoom level",
+    "customInputPlaceholder": "e.g. 150"
   },
   "overlayToolbar": {
     "objectSnap": "Enable/Disable Object Snap (F3)",
@@ -207,7 +209,7 @@
     "guideZ": "Horizontal Guide",
     "guideXZ": "Diagonal Guide",
     "guideParallel": "Parallel Guide",
-    "guidePerpendicular": "Perpendicular Guide",
+    "guidePerpendicular": "Perpendicular to Existing",
     "guideSegments": "Segment Points",
     "guideDistance": "Distance Points",
     "guideAddPoint": "Add Point",
@@ -303,7 +305,7 @@
   "ribbon": {
     "tabs": {
       "home": "Home",
-      "layers": "Layers",
+      "insert": "Insert",
       "view": "View",
       "annotate": "Annotate",
       "settings": "Settings",
@@ -318,13 +320,24 @@
       "visualStyles": "Visual Styles",
       "viewports": "Viewports",
       "text": "Text",
+      "measure": "Measure",
       "general": "General",
       "font": "Font",
       "paragraph": "Paragraph",
       "textProperties": "Properties",
       "insert": "Insert",
       "editor": "Editor Tools",
-      "placeholder": "Coming soon"
+      "placeholder": "Coming soon",
+      "history": "History",
+      "guides": "Guides",
+      "display": "Display",
+      "dxfFiles": "DXF Files",
+      "background": "Background",
+      "exportPanel": "Export",
+      "cursor": "Cursor",
+      "developer": "Developer",
+      "ai": "AI",
+      "window": "Window"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -338,17 +351,6 @@
       "tabBody": "Ribbon Tab Content",
       "minimize": "Minimize Ribbon",
       "expandPanel": "Expand Panel"
-    },
-    "statusBar": {
-      "coordinates": "X: {x} Y: {y}",
-      "grid": "Grid",
-      "snap": "Snap",
-      "ortho": "Ortho",
-      "polar": "Polar",
-      "scale": "Scale",
-      "layer": "Layer",
-      "defaultLayer": "0",
-      "defaultScale": "1:1"
     },
     "contextMenu": {
       "minimize": "Minimize the Ribbon",
@@ -369,6 +371,8 @@
       "rectangle": "Rectangle",
       "polygon": "Polygon",
       "ellipse": "Ellipse",
+      "select": "Select",
+      "gripEdit": "Grip Edit",
       "move": "Move",
       "copy": "Copy",
       "rotate": "Rotate",
@@ -381,6 +385,7 @@
       "fillet": "Fillet",
       "array": "Array",
       "explode": "Explode",
+      "delete": "Delete",
       "comingSoon": "Coming soon: {label}",
       "circleVariants": {
         "radius": "Center, Radius",
@@ -438,24 +443,32 @@
       "textEditor": {
         "font": {
           "family": "Font",
-          "height": "Height"
+          "height": "Height",
+          "color": "Color",
+          "widthFactor": "Width",
+          "obliqueAngle": "Oblique",
+          "tracking": "Tracking"
         },
         "style": {
           "bold": "Bold",
           "italic": "Italic",
-          "underline": "Underline"
+          "underline": "Underline",
+          "overline": "Overline",
+          "strikethrough": "Strikethrough"
         },
         "paragraph": {
           "alignLeft": "Align Left",
           "alignCenter": "Align Center",
           "alignRight": "Align Right",
-          "lineSpacing": "Line Spacing"
+          "lineSpacing": "Line Spacing",
+          "justification": "Justification"
         },
         "properties": {
           "layer": "Layer",
           "annotationScale": "Annotation Scale"
         },
         "insert": {
+          "tokens": "Characters",
           "symbol": "Symbol",
           "field": "Field"
         },
@@ -464,9 +477,48 @@
           "spellCheck": "Spell Check"
         }
       },
+      "measureAngle": "Angle",
+      "measureAngleVariants": {
+        "basic": "Basic Angle",
+        "lineArc": "Line-Arc Angle",
+        "twoArcs": "Two Arcs Angle",
+        "measureGeom": "MeasureGeom",
+        "constraint": "Angle Constraint"
+      },
+      "guides": "Guides",
+      "measureDistance": "Distance",
+      "measureDistanceVariants": {
+        "twoPoint": "Distance Between 2 Points",
+        "continuous": "Continuous Distance"
+      },
+      "measureArea": "Area",
+      "measureAreaVariants": {
+        "manual": "Measure Area (Polygon)",
+        "auto": "Auto Area Detection"
+      },
       "dropdown": {
         "openVariants": "Open variants"
-      }
+      },
+      "undo": "Undo (Ctrl+Z)",
+      "redo": "Redo (Ctrl+Y)",
+      "zoomLevel": "Zoom Level",
+      "openGuidePanel": "Guide Panel",
+      "toggleGuides": "Show/Hide Guides",
+      "guideAnalysis": "Guide Analysis",
+      "displayGrid": "Grid",
+      "displayAutoCrop": "Auto Crop",
+      "cropWindow": "Crop Region",
+      "floorplanWizard": "Floorplan (Wizard)",
+      "uploadDxfLegacy": "Upload DXF (Legacy)",
+      "enhancedImport": "Enhanced DXF Import",
+      "pdfBackground": "PDF Background",
+      "exportDxf": "Export",
+      "cursorSettings": "Cursor Settings",
+      "runTests": "Run Tests",
+      "togglePerf": "Performance Monitor",
+      "aiAssistant": "AI Assistant",
+      "layering": "Layer Drawing",
+      "fullscreen": "Full Screen"
     }
   }
 }
