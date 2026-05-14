@@ -3,15 +3,38 @@
 /**
  * ADR-345 §8.1b — Icon renderer for ribbon buttons.
  * Resolves a string `icon` token from RibbonCommand to a React node.
- * Reuses existing CAD icons in `toolbar/icons/`; falls back to inline
- * SVG primitives for tools that don't have a dedicated icon yet.
+ * Path constants live in RibbonButtonIconPaths.tsx (data file, SRP split).
  */
 
 import React from 'react';
+import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough } from 'lucide-react';
 import { LineIcon } from '../../../toolbar/icons/LineIcon';
 import { CircleIcon } from '../../../toolbar/icons/CircleIcon';
 import { ArcIcon } from '../../../toolbar/icons/ArcIcon';
-import { ICON_CLICK_COLORS } from '../../../../config/color-config';
+import {
+  POLYLINE_PATH, POLYGON_PATH, RECTANGLE_PATH, ELLIPSE_PATH,
+  TEXT_PLACEHOLDER_PATH, TEXT_CREATE_PATH,
+  MOVE_PATH, COPY_PATH, ROTATE_PATH, MIRROR_PATH, SCALE_PATH,
+  STRETCH_PATH, TRIM_PATH, EXTEND_PATH, OFFSET_PATH,
+  FILLET_PATH, CHAMFER_PATH,
+  ARRAY_RECT_PATH, ARRAY_PATH_PATH, ARRAY_POLAR_PATH,
+  EXPLODE_PATH, SELECT_PATH, GRIP_EDIT_PATH,
+  PAN_PATH, ZOOM_PATH, ZOOM_IN_PATH, ZOOM_OUT_PATH,
+  ZOOM_WINDOW_PATH, ZOOM_EXTENTS_PATH, ZOOM_PREV_PATH,
+  ZOOM_REALTIME_PATH, ZOOM_RESET_PATH,
+  VISUAL_STYLE_2D_PATH, VISUAL_STYLE_HIDDEN_PATH,
+  VISUAL_STYLE_REALISTIC_PATH, VISUAL_STYLE_SHADED_PATH,
+  VISUAL_STYLE_CONCEPTUAL_PATH,
+  VIEWPORT_SINGLE_PATH, VIEWPORT_TWO_PATH,
+  VIEWPORT_THREE_PATH, VIEWPORT_FOUR_PATH,
+  MEASURE_ANGLE_PATH, MEASURE_ANGLE_LINE_ARC_PATH,
+  MEASURE_ANGLE_TWO_ARCS_PATH, MEASURE_ANGLE_MEASUREGEOM_PATH,
+  MEASURE_ANGLE_CONSTRAINT_PATH,
+  GUIDE_X_PATH, GUIDE_Z_PATH, GUIDE_XZ_PATH,
+  GUIDE_PARALLEL_PATH, GUIDE_PERPENDICULAR_PATH,
+  MEASURE_DISTANCE_PATH, MEASURE_DISTANCE_CONTINUOUS_PATH,
+  MEASURE_AREA_PATH, MEASURE_AREA_AUTO_PATH,
+} from './RibbonButtonIconPaths';
 
 export type RibbonIconSize = 'large' | 'small';
 
@@ -44,422 +67,108 @@ function inlineSvg(
   );
 }
 
-function dot(cx: number, cy: number, color: string): React.ReactElement {
-  return <circle cx={cx} cy={cy} r="2.5" fill={color} stroke="none" />;
-}
-
-const POLYLINE_PATH = (
-  <>
-    <polyline points="3,18 9,10 14,14 21,5" fill="none" />
-    {dot(3, 18, ICON_CLICK_COLORS.FIRST)}
-    {dot(9, 10, ICON_CLICK_COLORS.SECOND)}
-    {dot(14, 14, ICON_CLICK_COLORS.SECOND)}
-    {dot(21, 5, ICON_CLICK_COLORS.THIRD)}
-  </>
-);
-const POLYGON_PATH = (
-  <>
-    <polygon points="12,3 21,9 18,20 6,20 3,9" fill="none" />
-    {dot(12, 12, ICON_CLICK_COLORS.FIRST)}
-    {dot(12, 3, ICON_CLICK_COLORS.THIRD)}
-  </>
-);
-const RECTANGLE_PATH = (
-  <>
-    <rect x="4" y="6" width="16" height="12" rx="0.5" fill="none" />
-    {dot(4, 6, ICON_CLICK_COLORS.FIRST)}
-    {dot(20, 18, ICON_CLICK_COLORS.THIRD)}
-  </>
-);
-const ELLIPSE_PATH = (
-  <>
-    <ellipse cx="12" cy="12" rx="9" ry="6" fill="none" />
-    {dot(12, 12, ICON_CLICK_COLORS.FIRST)}
-    {dot(21, 12, ICON_CLICK_COLORS.THIRD)}
-  </>
-);
-
-const MOVE_PATH = (
-  <>
-    <line x1="12" y1="4" x2="12" y2="20" />
-    <line x1="4" y1="12" x2="20" y2="12" />
-    <polyline points="9,7 12,4 15,7" fill="none" />
-    <polyline points="9,17 12,20 15,17" fill="none" />
-    <polyline points="7,9 4,12 7,15" fill="none" />
-    <polyline points="17,9 20,12 17,15" fill="none" />
-  </>
-);
-const COPY_PATH = (
-  <>
-    <rect x="4" y="4" width="13" height="13" rx="1" fill="none" />
-    <rect x="8" y="8" width="13" height="13" rx="1" fill="none" />
-  </>
-);
-const ROTATE_PATH = (
-  <>
-    <path d="M 5 12 A 7 7 0 1 1 12 19" fill="none" />
-    <polyline points="2,9 5,12 8,9" fill="none" />
-  </>
-);
-const MIRROR_PATH = (
-  <>
-    <line x1="12" y1="3" x2="12" y2="21" strokeDasharray="2,2" />
-    <polygon points="3,7 9,12 3,17" fill="none" />
-    <polygon points="21,7 15,12 21,17" fill="none" />
-  </>
-);
-const SCALE_PATH = (
-  <>
-    <rect x="4" y="4" width="9" height="9" rx="0.5" fill="none" />
-    <rect x="11" y="11" width="9" height="9" rx="0.5" strokeDasharray="2,2" fill="none" />
-    <polyline points="14,7 20,7 20,13" fill="none" />
-  </>
-);
-const STRETCH_PATH = (
-  <>
-    <rect x="6" y="9" width="12" height="6" fill="none" strokeDasharray="2,2" />
-    <line x1="2" y1="12" x2="22" y2="12" />
-    <polyline points="5,9 2,12 5,15" fill="none" />
-    <polyline points="19,9 22,12 19,15" fill="none" />
-  </>
-);
-const TRIM_PATH = (
-  <>
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="8" y1="6" x2="14" y2="18" />
-    <line x1="6" y1="14" x2="10" y2="10" />
-    <line x1="6" y1="10" x2="10" y2="14" />
-  </>
-);
-const EXTEND_PATH = (
-  <>
-    <line x1="3" y1="12" x2="14" y2="12" strokeDasharray="2,2" />
-    <line x1="14" y1="12" x2="21" y2="12" />
-    <polyline points="18,9 21,12 18,15" fill="none" />
-    <line x1="6" y1="5" x2="6" y2="19" />
-  </>
-);
-const OFFSET_PATH = (
-  <>
-    <line x1="3" y1="8" x2="21" y2="8" />
-    <line x1="3" y1="16" x2="21" y2="16" strokeDasharray="2,2" />
-    <line x1="6" y1="9" x2="6" y2="15" />
-    <polyline points="4,11 6,9 8,11" fill="none" />
-    <polyline points="4,13 6,15 8,13" fill="none" />
-  </>
-);
-const FILLET_PATH = (
-  <>
-    <path d="M 4 4 L 4 12 Q 4 20 12 20 L 20 20" fill="none" />
-    <line x1="4" y1="4" x2="4" y2="8" strokeDasharray="1,2" />
-    <line x1="20" y1="20" x2="20" y2="16" strokeDasharray="1,2" />
-  </>
-);
-const CHAMFER_PATH = (
-  <>
-    <polyline points="4,4 4,14 14,20 20,20" fill="none" />
-    <line x1="4" y1="4" x2="4" y2="8" strokeDasharray="1,2" />
-    <line x1="20" y1="20" x2="20" y2="16" strokeDasharray="1,2" />
-  </>
-);
-const ARRAY_RECT_PATH = (
-  <>
-    <rect x="3" y="3" width="5" height="5" fill="none" />
-    <rect x="10" y="3" width="5" height="5" fill="none" />
-    <rect x="17" y="3" width="5" height="5" fill="none" />
-    <rect x="3" y="10" width="5" height="5" fill="none" />
-    <rect x="10" y="10" width="5" height="5" fill="none" />
-    <rect x="17" y="10" width="5" height="5" fill="none" />
-    <rect x="3" y="17" width="5" height="5" fill="none" />
-    <rect x="10" y="17" width="5" height="5" fill="none" />
-    <rect x="17" y="17" width="5" height="5" fill="none" />
-  </>
-);
-const ARRAY_PATH_PATH = (
-  <>
-    <path d="M 3 18 Q 8 4 16 12 T 21 6" fill="none" />
-    <circle cx="3" cy="18" r="1.5" />
-    <circle cx="9" cy="9" r="1.5" />
-    <circle cx="14" cy="13" r="1.5" />
-    <circle cx="20" cy="7" r="1.5" />
-  </>
-);
-const ARRAY_POLAR_PATH = (
-  <>
-    <circle cx="12" cy="12" r="8" fill="none" strokeDasharray="2,2" />
-    <circle cx="12" cy="4" r="1.5" />
-    <circle cx="18" cy="8" r="1.5" />
-    <circle cx="18" cy="16" r="1.5" />
-    <circle cx="12" cy="20" r="1.5" />
-    <circle cx="6" cy="16" r="1.5" />
-    <circle cx="6" cy="8" r="1.5" />
-  </>
-);
-const PAN_PATH = (
-  <>
-    <path d="M 9 5 L 9 13 L 6 11 Q 4 10 5 13 L 8 18 Q 9 20 12 20 L 15 20 Q 18 20 18 17 L 18 11 Q 18 9 16 9 Q 14 9 14 11 L 14 9 Q 14 7 12 7 Q 10 7 10 9 L 10 5 Q 10 3 9 3 Q 8 3 8 5 Z" fill="none" />
-  </>
-);
-const ZOOM_PATH = (
-  <>
-    <circle cx="10" cy="10" r="6" fill="none" />
-    <line x1="14.5" y1="14.5" x2="20" y2="20" />
-  </>
-);
-const ZOOM_IN_PATH = (
-  <>
-    <circle cx="10" cy="10" r="6" fill="none" />
-    <line x1="14.5" y1="14.5" x2="20" y2="20" />
-    <line x1="7" y1="10" x2="13" y2="10" />
-    <line x1="10" y1="7" x2="10" y2="13" />
-  </>
-);
-const ZOOM_OUT_PATH = (
-  <>
-    <circle cx="10" cy="10" r="6" fill="none" />
-    <line x1="14.5" y1="14.5" x2="20" y2="20" />
-    <line x1="7" y1="10" x2="13" y2="10" />
-  </>
-);
-const ZOOM_WINDOW_PATH = (
-  <>
-    <rect x="3" y="3" width="14" height="10" fill="none" strokeDasharray="2,2" />
-    <circle cx="14" cy="14" r="4" fill="none" />
-    <line x1="17" y1="17" x2="21" y2="21" />
-  </>
-);
-const ZOOM_EXTENTS_PATH = (
-  <>
-    <rect x="4" y="4" width="16" height="16" fill="none" strokeDasharray="2,2" />
-    <polyline points="4,8 4,4 8,4" fill="none" />
-    <polyline points="16,4 20,4 20,8" fill="none" />
-    <polyline points="20,16 20,20 16,20" fill="none" />
-    <polyline points="8,20 4,20 4,16" fill="none" />
-    <rect x="9" y="9" width="6" height="6" fill="none" />
-  </>
-);
-const ZOOM_PREV_PATH = (
-  <>
-    <circle cx="10" cy="10" r="6" fill="none" />
-    <line x1="14.5" y1="14.5" x2="20" y2="20" />
-    <polyline points="11,7 8,10 11,13" fill="none" />
-  </>
-);
-const ZOOM_REALTIME_PATH = (
-  <>
-    <circle cx="10" cy="10" r="6" fill="none" />
-    <line x1="14.5" y1="14.5" x2="20" y2="20" />
-    <polyline points="8,8 8,12 12,12" fill="none" />
-    <polyline points="12,8 8,12" fill="none" />
-  </>
-);
-const ZOOM_RESET_PATH = (
-  <>
-    <circle cx="10" cy="10" r="6" fill="none" />
-    <line x1="14.5" y1="14.5" x2="20" y2="20" />
-    <circle cx="10" cy="10" r="1.5" fill="currentColor" stroke="none" />
-  </>
-);
-const VISUAL_STYLE_2D_PATH = (
-  <>
-    <rect x="4" y="6" width="16" height="12" fill="none" />
-    <line x1="4" y1="6" x2="20" y2="18" />
-    <line x1="20" y1="6" x2="4" y2="18" />
-  </>
-);
-const VISUAL_STYLE_HIDDEN_PATH = (
-  <>
-    <polygon points="4,18 8,6 16,6 20,18" fill="none" />
-    <line x1="8" y1="6" x2="20" y2="18" strokeDasharray="2,2" />
-  </>
-);
-const VISUAL_STYLE_REALISTIC_PATH = (
-  <>
-    <circle cx="12" cy="12" r="8" fill="none" />
-    <path d="M 6 9 Q 12 5 18 9" fill="none" />
-    <path d="M 6 15 Q 12 19 18 15" fill="none" />
-  </>
-);
-const VISUAL_STYLE_SHADED_PATH = (
-  <>
-    <polygon points="4,18 12,4 20,18" fill="currentColor" stroke="none" opacity="0.3" />
-    <polygon points="4,18 12,4 20,18" fill="none" />
-  </>
-);
-const VISUAL_STYLE_CONCEPTUAL_PATH = (
-  <>
-    <circle cx="12" cy="12" r="7" fill="none" strokeDasharray="3,2" />
-    <circle cx="12" cy="12" r="3" fill="none" />
-  </>
-);
-const VIEWPORT_SINGLE_PATH = (
-  <rect x="4" y="5" width="16" height="14" fill="none" />
-);
-const VIEWPORT_TWO_PATH = (
-  <>
-    <rect x="4" y="5" width="7" height="14" fill="none" />
-    <rect x="13" y="5" width="7" height="14" fill="none" />
-  </>
-);
-const VIEWPORT_THREE_PATH = (
-  <>
-    <rect x="4" y="5" width="7" height="14" fill="none" />
-    <rect x="13" y="5" width="7" height="6" fill="none" />
-    <rect x="13" y="13" width="7" height="6" fill="none" />
-  </>
-);
-const VIEWPORT_FOUR_PATH = (
-  <>
-    <rect x="4" y="5" width="7" height="6" fill="none" />
-    <rect x="13" y="5" width="7" height="6" fill="none" />
-    <rect x="4" y="13" width="7" height="6" fill="none" />
-    <rect x="13" y="13" width="7" height="6" fill="none" />
-  </>
-);
-const TEXT_PLACEHOLDER_PATH = (
-  <>
-    <polyline points="4 6 4 3 20 3 20 6" />
-    <line x1="12" y1="3" x2="12" y2="11" />
-    <line x1="4" y1="14" x2="20" y2="14" />
-    <line x1="4" y1="17" x2="16" y2="17" />
-    <line x1="4" y1="20" x2="12" y2="20" />
-  </>
-);
-const TEXT_CREATE_PATH = (
-  <>
-    <polyline points="4 7 4 4 20 4 20 7" />
-    <line x1="12" y1="4" x2="12" y2="20" />
-    <line x1="9" y1="20" x2="15" y2="20" />
-  </>
-);
-const EXPLODE_PATH = (
-  <>
-    <line x1="12" y1="3" x2="12" y2="9" />
-    <line x1="12" y1="15" x2="12" y2="21" />
-    <line x1="3" y1="12" x2="9" y2="12" />
-    <line x1="15" y1="12" x2="21" y2="12" />
-    <line x1="5" y1="5" x2="9" y2="9" />
-    <line x1="15" y1="15" x2="19" y2="19" />
-    <line x1="5" y1="19" x2="9" y2="15" />
-    <line x1="15" y1="9" x2="19" y2="5" />
-    <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
-  </>
-);
-
-export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({
-  icon,
-  size,
-}) => {
+export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }) => {
   const className = size === 'large' ? 'dxf-ribbon-btn-icon-large' : 'dxf-ribbon-btn-icon-small';
-
   switch (icon) {
-    case 'line':
-      return <LineIcon variant="normal" className={className} />;
-    case 'line-perpendicular':
-      return <LineIcon variant="perpendicular" className={className} />;
-    case 'line-parallel':
-      return <LineIcon variant="parallel" className={className} />;
-    case 'circle-radius':
-      return <CircleIcon variant="radius" className={className} />;
-    case 'circle-diameter':
-      return <CircleIcon variant="diameter" className={className} />;
-    case 'circle-2p':
-      return <CircleIcon variant="2point-diameter" className={className} />;
-    case 'circle-3p':
-      return <CircleIcon variant="3point" className={className} />;
-    case 'circle-chord-sagitta':
-      return <CircleIcon variant="chord-sagitta" className={className} />;
-    case 'circle-2p-radius':
-      return <CircleIcon variant="2point-radius" className={className} />;
-    case 'circle-best-fit':
-      return <CircleIcon variant="best-fit" className={className} />;
-    case 'circle-ttt':
-      return <CircleIcon variant="ttt" className={className} />;
-    case 'arc-3p':
-      return <ArcIcon variant="3point" className={className} />;
-    case 'arc-cse':
-      return <ArcIcon variant="center-start-end" className={className} />;
-    case 'arc-sce':
-      return <ArcIcon variant="start-center-end" className={className} />;
-    case 'polyline':
-      return inlineSvg(size, POLYLINE_PATH);
-    case 'polygon':
-      return inlineSvg(size, POLYGON_PATH);
-    case 'rectangle':
-      return inlineSvg(size, RECTANGLE_PATH);
-    case 'ellipse':
-      return inlineSvg(size, ELLIPSE_PATH);
-    case 'move':
-      return inlineSvg(size, MOVE_PATH);
-    case 'copy':
-      return inlineSvg(size, COPY_PATH);
-    case 'rotate':
-      return inlineSvg(size, ROTATE_PATH);
-    case 'mirror':
-      return inlineSvg(size, MIRROR_PATH);
-    case 'scale':
-      return inlineSvg(size, SCALE_PATH);
-    case 'stretch':
-      return inlineSvg(size, STRETCH_PATH);
-    case 'trim':
-      return inlineSvg(size, TRIM_PATH);
-    case 'extend':
-      return inlineSvg(size, EXTEND_PATH);
-    case 'offset':
-      return inlineSvg(size, OFFSET_PATH);
-    case 'fillet':
-      return inlineSvg(size, FILLET_PATH);
-    case 'chamfer':
-      return inlineSvg(size, CHAMFER_PATH);
-    case 'array-rect':
-      return inlineSvg(size, ARRAY_RECT_PATH);
-    case 'array-path':
-      return inlineSvg(size, ARRAY_PATH_PATH);
-    case 'array-polar':
-      return inlineSvg(size, ARRAY_POLAR_PATH);
-    case 'explode':
-      return inlineSvg(size, EXPLODE_PATH);
-    case 'pan':
-      return inlineSvg(size, PAN_PATH);
-    case 'zoom':
-      return inlineSvg(size, ZOOM_PATH);
-    case 'zoom-in':
-      return inlineSvg(size, ZOOM_IN_PATH);
-    case 'zoom-out':
-      return inlineSvg(size, ZOOM_OUT_PATH);
-    case 'zoom-window':
-      return inlineSvg(size, ZOOM_WINDOW_PATH);
-    case 'zoom-extents':
-      return inlineSvg(size, ZOOM_EXTENTS_PATH);
-    case 'zoom-previous':
-      return inlineSvg(size, ZOOM_PREV_PATH);
-    case 'zoom-realtime':
-      return inlineSvg(size, ZOOM_REALTIME_PATH);
-    case 'zoom-reset':
-      return inlineSvg(size, ZOOM_RESET_PATH);
-    case 'visual-2d':
-      return inlineSvg(size, VISUAL_STYLE_2D_PATH);
-    case 'visual-hidden':
-      return inlineSvg(size, VISUAL_STYLE_HIDDEN_PATH);
-    case 'visual-realistic':
-      return inlineSvg(size, VISUAL_STYLE_REALISTIC_PATH);
-    case 'visual-shaded':
-      return inlineSvg(size, VISUAL_STYLE_SHADED_PATH);
-    case 'visual-conceptual':
-      return inlineSvg(size, VISUAL_STYLE_CONCEPTUAL_PATH);
-    case 'viewport-single':
-      return inlineSvg(size, VIEWPORT_SINGLE_PATH);
-    case 'viewport-two':
-      return inlineSvg(size, VIEWPORT_TWO_PATH);
-    case 'viewport-three':
-      return inlineSvg(size, VIEWPORT_THREE_PATH);
-    case 'viewport-four':
-      return inlineSvg(size, VIEWPORT_FOUR_PATH);
-    case 'text-placeholder':
-      return inlineSvg(size, TEXT_PLACEHOLDER_PATH);
-    case 'text-create':
-      return inlineSvg(size, TEXT_CREATE_PATH);
-    default:
-      return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
+    case 'line': return <LineIcon variant="normal" className={className} />;
+    case 'line-perpendicular': return <LineIcon variant="perpendicular" className={className} />;
+    case 'line-parallel': return <LineIcon variant="parallel" className={className} />;
+    case 'circle-radius': return <CircleIcon variant="radius" className={className} />;
+    case 'circle-diameter': return <CircleIcon variant="diameter" className={className} />;
+    case 'circle-2p': return <CircleIcon variant="2point-diameter" className={className} />;
+    case 'circle-3p': return <CircleIcon variant="3point" className={className} />;
+    case 'circle-chord-sagitta': return <CircleIcon variant="chord-sagitta" className={className} />;
+    case 'circle-2p-radius': return <CircleIcon variant="2point-radius" className={className} />;
+    case 'circle-best-fit': return <CircleIcon variant="best-fit" className={className} />;
+    case 'circle-ttt': return <CircleIcon variant="ttt" className={className} />;
+    case 'arc-3p': return <ArcIcon variant="3point" className={className} />;
+    case 'arc-cse': return <ArcIcon variant="center-start-end" className={className} />;
+    case 'arc-sce': return <ArcIcon variant="start-center-end" className={className} />;
+    case 'polyline': return inlineSvg(size, POLYLINE_PATH);
+    case 'polygon': return inlineSvg(size, POLYGON_PATH);
+    case 'rectangle': return inlineSvg(size, RECTANGLE_PATH);
+    case 'ellipse': return inlineSvg(size, ELLIPSE_PATH);
+    case 'text-placeholder': return inlineSvg(size, TEXT_PLACEHOLDER_PATH);
+    case 'text-create': return inlineSvg(size, TEXT_CREATE_PATH);
+    case 'text-bold': return <Bold width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'text-italic': return <Italic width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'text-underline': return <Underline width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'text-strikethrough': return <Strikethrough width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'text-overline': return inlineSvg(size, (
+      <>
+        <line x1="4" y1="4" x2="20" y2="4" />
+        <text x="12" y="18" textAnchor="middle" fontSize="13" fontWeight="600" stroke="none" fill="currentColor">O</text>
+      </>
+    ));
+    case 'move': return inlineSvg(size, MOVE_PATH);
+    case 'copy': return inlineSvg(size, COPY_PATH);
+    case 'rotate': return inlineSvg(size, ROTATE_PATH);
+    case 'mirror': return inlineSvg(size, MIRROR_PATH);
+    case 'scale': return inlineSvg(size, SCALE_PATH);
+    case 'stretch': return inlineSvg(size, STRETCH_PATH);
+    case 'trim': return inlineSvg(size, TRIM_PATH);
+    case 'extend': return inlineSvg(size, EXTEND_PATH);
+    case 'offset': return inlineSvg(size, OFFSET_PATH);
+    case 'fillet': return inlineSvg(size, FILLET_PATH);
+    case 'chamfer': return inlineSvg(size, CHAMFER_PATH);
+    case 'array-rect': return inlineSvg(size, ARRAY_RECT_PATH);
+    case 'array-path': return inlineSvg(size, ARRAY_PATH_PATH);
+    case 'array-polar': return inlineSvg(size, ARRAY_POLAR_PATH);
+    case 'explode': return inlineSvg(size, EXPLODE_PATH);
+    case 'select': return inlineSvg(size, SELECT_PATH);
+    case 'grip-edit': return inlineSvg(size, GRIP_EDIT_PATH);
+    case 'pan': return inlineSvg(size, PAN_PATH);
+    case 'zoom': return inlineSvg(size, ZOOM_PATH);
+    case 'zoom-in': return inlineSvg(size, ZOOM_IN_PATH);
+    case 'zoom-out': return inlineSvg(size, ZOOM_OUT_PATH);
+    case 'zoom-window': return inlineSvg(size, ZOOM_WINDOW_PATH);
+    case 'zoom-extents': return inlineSvg(size, ZOOM_EXTENTS_PATH);
+    case 'zoom-previous': return inlineSvg(size, ZOOM_PREV_PATH);
+    case 'zoom-realtime': return inlineSvg(size, ZOOM_REALTIME_PATH);
+    case 'zoom-reset': return inlineSvg(size, ZOOM_RESET_PATH);
+    case 'visual-2d': return inlineSvg(size, VISUAL_STYLE_2D_PATH);
+    case 'visual-hidden': return inlineSvg(size, VISUAL_STYLE_HIDDEN_PATH);
+    case 'visual-realistic': return inlineSvg(size, VISUAL_STYLE_REALISTIC_PATH);
+    case 'visual-shaded': return inlineSvg(size, VISUAL_STYLE_SHADED_PATH);
+    case 'visual-conceptual': return inlineSvg(size, VISUAL_STYLE_CONCEPTUAL_PATH);
+    case 'viewport-single': return inlineSvg(size, VIEWPORT_SINGLE_PATH);
+    case 'viewport-two': return inlineSvg(size, VIEWPORT_TWO_PATH);
+    case 'viewport-three': return inlineSvg(size, VIEWPORT_THREE_PATH);
+    case 'viewport-four': return inlineSvg(size, VIEWPORT_FOUR_PATH);
+    case 'measure-angle': return inlineSvg(size, MEASURE_ANGLE_PATH);
+    case 'measure-angle-line-arc': return inlineSvg(size, MEASURE_ANGLE_LINE_ARC_PATH);
+    case 'measure-angle-two-arcs': return inlineSvg(size, MEASURE_ANGLE_TWO_ARCS_PATH);
+    case 'measure-angle-measuregeom': return inlineSvg(size, MEASURE_ANGLE_MEASUREGEOM_PATH);
+    case 'measure-angle-constraint': return inlineSvg(size, MEASURE_ANGLE_CONSTRAINT_PATH);
+    case 'guide-x': return inlineSvg(size, GUIDE_X_PATH);
+    case 'guide-z': return inlineSvg(size, GUIDE_Z_PATH);
+    case 'guide-xz': return inlineSvg(size, GUIDE_XZ_PATH);
+    case 'guide-parallel': return inlineSvg(size, GUIDE_PARALLEL_PATH);
+    case 'guide-perpendicular': return inlineSvg(size, GUIDE_PERPENDICULAR_PATH);
+    case 'measure-distance': return inlineSvg(size, MEASURE_DISTANCE_PATH);
+    case 'measure-distance-continuous': return inlineSvg(size, MEASURE_DISTANCE_CONTINUOUS_PATH);
+    case 'measure-area': return inlineSvg(size, MEASURE_AREA_PATH);
+    case 'measure-area-auto': return inlineSvg(size, MEASURE_AREA_AUTO_PATH);
+    case 'undo': return <Undo width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'redo': return <Redo width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'delete': return <Trash2 width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'guide-panel': return <PanelRight width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'guide-visibility': return <Eye width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'guide-analysis': return <BarChart3 width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'display-grid': return <Grid3X3 width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'display-autocrop': return <Crop width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'crop-window': return <Scissors width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'pdf-background': return <FileImage width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'import-legacy': return <Upload width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'import-enhanced': return <FolderUp width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'import-wizard': return <Wand2 width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'export-dxf': return <Download width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'cursor-settings': return <Crosshair width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'run-tests': return <FlaskConical width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'toggle-perf': return <Activity width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'ai-assistant': return <Sparkles width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'layering': return <Layers width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'fullscreen': return <Maximize2 width={sizePx[size]} height={sizePx[size]} className={className} />;
+    default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };
