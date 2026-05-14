@@ -1302,6 +1302,12 @@ src/subapps/dxf-viewer/
   - Q20: Missing SHX = substitution + MissingFontBanner + canvas highlight
   - Q21: Text snap = all points (insertion + 4 corners + center + edge mids)
   - Total estimate revised: **~52-62 working days** (12 phases + 15 SSoT modules)
+- **2026-05-15 — SSOT Unification Phase B COMPLETE** (ADR-344 + GOL+SSOT):
+  - `utils/text-node-utils.ts` (NEW): SSoT utility — `extractFlatText(textNode)` + `resolveEntityText(entity)`. Shared across the entire subapp — zero duplication.
+  - `hooks/canvas/useDxfSceneConversion.ts`: Local `extractFlatText` removed → imported from SSoT. Duck-typing cast `entity as { textNode?: DxfTextNode }` replaced with type-safe `entity as TextEntity`.
+  - `rendering/hitTesting/Bounds.ts`: `TextEntityProperties` gains `textNode?: DxfTextNode`. `calculateTextBounds` now calls `resolveEntityText(textEntity)` instead of `textEntity.text || ''` — fixes zero-width bounds for ribbon-created `DxfTextSceneEntity` entities.
+  - `hooks/canvas/useCanvasClickHandler.ts`: `entity.text.length` → `resolveEntityText(entity).length` in both `isTextEntity` and `isMTextEntity` hit-test branches — fixes unclickable text entities created via the ribbon (whose content lives only in `textNode`).
+
 - **2026-05-14 — SSOT Unification Phase A COMPLETE** (ADR-344 + GOL+SSOT order):
   - `types/entities.ts`: Added `textNode?: DxfTextNode` to `TextEntity` + `MTextEntity`. DXF-imported entities now carry the canonical AST alongside legacy flat fields. Single representation for all text going forward.
   - `utils/dxf-entity-converters.ts`: Added `buildTextNodeFromFlat(text, height, rotation, alignment, attachment?)` helper. `convertText()` + `convertMText()` now populate `textNode` on every imported entity. MTEXT preserves full 9-point attachment (TL/TC/TR/ML/MC/MR/BL/BC/BR) via `MTEXT_ATTACHMENT_MAP`.

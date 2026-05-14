@@ -20,8 +20,9 @@ import { perfMark } from '../../debug/perf-line-profile';
 import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
-import type { SceneModel } from '../../types/entities';
+import type { SceneModel, TextEntity } from '../../types/entities';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
+import { extractFlatText } from '../../utils/text-node-utils';
 import { getLayerNameOrDefault } from '../../config/layer-config';
 import { UI_COLORS } from '../../config/color-config';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
@@ -83,18 +84,6 @@ function rectangleToVertices(e: {
   return null;
 }
 
-/**
- * ADR-344 Phase 6.E — Extract plain text string from textNode paragraphs.
- * Used when the scene entity (e.g. from CreateTextCommand) has no flat `text` field.
- */
-function extractFlatText(textNode: DxfTextNode): string {
-  return textNode.paragraphs
-    .map(p => (p.runs ?? [])
-      .filter(r => !('top' in r))
-      .map(r => (r as TextRun).text)
-      .join(''))
-    .join('\n');
-}
 
 /**
  * ADR-344 Phase 6.E — Extract canvas-renderable style from the first run of textNode.
@@ -180,7 +169,7 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers): DxfEntityUnion
     case 'mtext':
     case 'text': {
       const e = entity as typeof entity & { position: Point2D; text?: string; rotation?: number };
-      const withNode = entity as { textNode?: DxfTextNode };
+      const withNode = entity as TextEntity;
       // ADR-344 Phase 6.E: entities from CreateTextCommand have no flat text — derive it.
       // mtext normalised to 'text' because DxfEntityUnion has no mtext variant.
       const flatText = e.text ?? (withNode.textNode ? extractFlatText(withNode.textNode) : '');

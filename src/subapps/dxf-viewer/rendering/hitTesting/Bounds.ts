@@ -4,9 +4,11 @@
  */
 
 import type { EntityModel, Point2D } from '../types/Types';
+import type { DxfTextNode } from '../../text-engine/types';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
 // 🏢 ADR-142: Centralized Default Font Size
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
+import { resolveEntityText } from '../../utils/text-node-utils';
 
 // 🏢 ENTERPRISE: Entity-specific type interfaces for safe type casting
 interface LineEntityProperties {
@@ -33,6 +35,7 @@ interface EllipseEntityProperties {
 interface TextEntityProperties {
   position: Point2D;
   text: string;
+  textNode?: DxfTextNode;
   fontSize?: number;
   height?: number;      // 🏢 DXF text height (primary property from DXF parser)
   rotation?: number;    // 🏢 DXF text rotation in degrees (for rotated AABB)
@@ -234,7 +237,7 @@ export class BoundsCalculator {
     // 🏢 ENTERPRISE: Type-safe casting for TextEntity properties
     const textEntity = entity as EntityWithText;
     const position = textEntity.position;
-    const text = textEntity.text || '';
+    const text = resolveEntityText(textEntity);
 
     // 🏢 FIX (2026-02-20): Priority chain matching TextRenderer.extractTextHeight()
     // DXF entities store text size in `height`, NOT `fontSize`
