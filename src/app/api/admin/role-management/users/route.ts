@@ -98,34 +98,38 @@ export const GET = withSensitiveRateLimit(
         const uids = memberDocs.map((m) => m.uid);
 
         // 2. Batch-fetch user profile docs from users/{uid}
-        const userRefs = uids.map((uid) => db.doc(`${COLLECTIONS.USERS}/${uid}`));
-        const userSnapshots = await db.getAll(...userRefs);
         const profileMap = new Map<string, UserProfileDoc>();
-        for (const snap of userSnapshots) {
-          if (snap.exists) {
-            const d = snap.data();
-            profileMap.set(snap.id, {
-              email: (d?.email as string) ?? undefined,
-              displayName: (d?.displayName as string) ?? undefined,
-              photoURL: (d?.photoURL as string) ?? undefined,
-            });
+        if (uids.length > 0) {
+          const userRefs = uids.map((uid) => db.doc(`${COLLECTIONS.USERS}/${uid}`));
+          const userSnapshots = await db.getAll(...userRefs);
+          for (const snap of userSnapshots) {
+            if (snap.exists) {
+              const d = snap.data();
+              profileMap.set(snap.id, {
+                email: (d?.email as string) ?? undefined,
+                displayName: (d?.displayName as string) ?? undefined,
+                photoURL: (d?.photoURL as string) ?? undefined,
+              });
+            }
           }
         }
 
         // 3. Batch-fetch Firebase Auth user records for lastSignIn, disabled, mfaInfo
-        const identifiers = uids.map((uid) => ({ uid }));
-        const authResult = await auth.getUsers(identifiers);
         const authMap = new Map<string, {
           lastSignIn: string | null;
           disabled: boolean;
           mfaEnrolled: boolean;
         }>();
-        for (const userRecord of authResult.users) {
-          authMap.set(userRecord.uid, {
-            lastSignIn: userRecord.metadata.lastSignInTime ?? null,
-            disabled: userRecord.disabled,
-            mfaEnrolled: (userRecord.multiFactor?.enrolledFactors?.length ?? 0) > 0,
-          });
+        if (uids.length > 0) {
+          const identifiers = uids.map((uid) => ({ uid }));
+          const authResult = await auth.getUsers(identifiers);
+          for (const userRecord of authResult.users) {
+            authMap.set(userRecord.uid, {
+              lastSignIn: userRecord.metadata.lastSignInTime ?? null,
+              disabled: userRecord.disabled,
+              mfaEnrolled: (userRecord.multiFactor?.enrolledFactors?.length ?? 0) > 0,
+            });
+          }
         }
 
         // 4. Merge all sources into CompanyUser[]
