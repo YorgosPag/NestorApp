@@ -193,8 +193,8 @@ export function UsersTab({ canEdit }: UsersTabProps) {
       );
       success(
         action === 'suspend'
-          ? t('roleManagement.userSuspended', 'User suspended successfully.')
-          : t('roleManagement.userActivated', 'User activated successfully.')
+          ? t('roleManagement.status.suspendSuccess')
+          : t('roleManagement.status.reactivateSuccess')
       );
       handleDialogSuccess();
     } catch (err) {
@@ -221,7 +221,7 @@ export function UsersTab({ canEdit }: UsersTabProps) {
       {/* Filters bar */}
       <nav className="flex flex-wrap items-center gap-3 mb-4" aria-label="User filters">
         <Input
-          placeholder={t('roleManagement.searchPlaceholder', 'Search by name or email...')}
+          placeholder={t('roleManagement.usersTab.search')}
           value={filters.search}
           onChange={(e) => updateFilter('search', e.target.value)}
           className="max-w-xs"
@@ -232,13 +232,13 @@ export function UsersTab({ canEdit }: UsersTabProps) {
           onValueChange={(value) => updateFilter('globalRole', value as GlobalRole | 'all')}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t('roleManagement.allRoles', 'All Roles')} />
+            <SelectValue placeholder={t('roleManagement.usersTab.allRoles')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('roleManagement.allRoles', 'All Roles')}</SelectItem>
+            <SelectItem value="all">{t('roleManagement.usersTab.allRoles')}</SelectItem>
             {GLOBAL_ROLES.map((role) => (
               <SelectItem key={role} value={role}>
-                {role.replace(/_/g, ' ')}
+                {t(`roleManagement.roleNames.${role}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -249,12 +249,12 @@ export function UsersTab({ canEdit }: UsersTabProps) {
           onValueChange={(value) => updateFilter('status', value as 'all' | 'active' | 'suspended')}
         >
           <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder={t('roleManagement.allStatuses', 'All Statuses')} />
+            <SelectValue placeholder={t('roleManagement.usersTab.filterStatus')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('roleManagement.allStatuses', 'All Statuses')}</SelectItem>
-            <SelectItem value="active">{t('roleManagement.active', 'Active')}</SelectItem>
-            <SelectItem value="suspended">{t('roleManagement.suspended', 'Suspended')}</SelectItem>
+            <SelectItem value="all">{t('roleManagement.usersTab.allStatuses')}</SelectItem>
+            <SelectItem value="active">{t('roleManagement.statusLabels.active')}</SelectItem>
+            <SelectItem value="suspended">{t('roleManagement.statusLabels.suspended')}</SelectItem>
           </SelectContent>
         </Select>
       </nav>
@@ -318,13 +318,13 @@ export function UsersTab({ canEdit }: UsersTabProps) {
             <DialogHeader>
               <DialogTitle>
                 {selectedUser.status === 'active'
-                  ? t('roleManagement.suspendUser', 'Suspend User')
-                  : t('roleManagement.activateUser', 'Activate User')}
+                  ? t('roleManagement.status.suspendTitle')
+                  : t('roleManagement.status.reactivateTitle')}
               </DialogTitle>
               <DialogDescription>
                 {selectedUser.status === 'active'
-                  ? t('roleManagement.suspendDescription', 'This will disable the user\'s account. They will not be able to sign in.')
-                  : t('roleManagement.activateDescription', 'This will re-enable the user\'s account.')}
+                  ? t('roleManagement.status.suspendConfirm')
+                  : t('roleManagement.status.reactivateConfirm')}
               </DialogDescription>
             </DialogHeader>
 
@@ -335,21 +335,21 @@ export function UsersTab({ canEdit }: UsersTabProps) {
               </p>
               <label className="block">
                 <span className="text-sm font-medium">
-                  {t('roleManagement.reason', 'Reason')} ({t('roleManagement.minChars', 'min 10 characters')})
+                  {t('roleManagement.status.reason')} ({t('roleManagement.permissionSets.minChars')})
                 </span>
                 <Textarea
                   className="mt-1"
                   rows={3}
                   value={suspendReason}
                   onChange={(e) => setSuspendReason(e.target.value)}
-                  placeholder={t('roleManagement.reasonPlaceholder', 'Explain why this action is needed...')}
+                  placeholder={t('roleManagement.status.reasonPlaceholder')}
                 />
               </label>
             </section>
 
             <DialogFooter>
               <Button variant="outline" onClick={handleCloseDialog}>
-                {t('common.cancel', 'Cancel')}
+                {t('roleManagement.permissionSets.cancel')}
               </Button>
               <Button
                 variant={selectedUser.status === 'active' ? 'destructive' : 'default'}
@@ -357,8 +357,8 @@ export function UsersTab({ canEdit }: UsersTabProps) {
                 onClick={handleSuspendConfirm}
               >
                 {selectedUser.status === 'active'
-                  ? t('roleManagement.suspend', 'Suspend')
-                  : t('roleManagement.activate', 'Activate')}
+                  ? t('roleManagement.actions.suspend')
+                  : t('roleManagement.actions.activate')}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -39,10 +39,7 @@ export function AuditFilters({ filters, onFiltersChange, onReset }: AuditFilters
   const { t } = useTranslation('admin');
   const colors = useSemanticColors();
 
-  const actionOptions = Object.entries(AUDIT_ACTION_DISPLAY).map(([key, config]) => ({
-    value: key,
-    label: config.label,
-  }));
+  const actionOptions = Object.keys(AUDIT_ACTION_DISPLAY);
 
   return (
     <section className="flex flex-wrap items-end gap-3 rounded-lg border bg-muted/30 p-4">
@@ -79,15 +76,15 @@ export function AuditFilters({ filters, onFiltersChange, onReset }: AuditFilters
           onValueChange={(value) => onFiltersChange({ ...filters, action: value as FilterType['action'] })}
         >
           <SelectTrigger className="w-48">
-            <SelectValue placeholder={t('roleManagement.auditTab.allActions', 'All Actions')} />
+            <SelectValue placeholder={t('roleManagement.auditActions.all')} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">
-              {t('roleManagement.auditTab.allActions', 'All Actions')}
+              {t('roleManagement.auditActions.all')}
             </SelectItem>
-            {actionOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+            {actionOptions.map((action) => (
+              <SelectItem key={action} value={action}>
+                {t(`roleManagement.auditActions.${action}`)}
               </SelectItem>
             ))}
           </SelectContent>

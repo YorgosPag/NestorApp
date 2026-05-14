@@ -27,7 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { CompanyUser, UserListFilters } from '../types';
 import { ROLE_BADGE_VARIANT, STATUS_BADGE_VARIANT } from '../types';
 import { formatRelativeTime } from '@/lib/intl-formatting';
-import type { GlobalRole } from '@/lib/auth/types';
+
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
@@ -83,17 +83,6 @@ function getInitials(displayName: string | null, email: string): string {
 }
 
 // =============================================================================
-// ROLE DISPLAY LABELS
-// =============================================================================
-
-const ROLE_LABELS: Record<GlobalRole, string> = {
-  super_admin: 'Super Admin',
-  company_admin: 'Company Admin',
-  internal_user: 'Internal User',
-  external_user: 'External User',
-};
-
-// =============================================================================
 // SORT ICON
 // =============================================================================
 
@@ -146,7 +135,7 @@ export function UserTable({
     return (
       <section className="flex items-center justify-center py-16">
         <p className={cn("animate-pulse", colors.text.muted)}>
-          {t('roleManagement.loadingUsers', 'Loading users...')}
+          {t('roleManagement.usersTab.loadingUsers')}
         </p>
       </section>
     );
@@ -159,7 +148,7 @@ export function UserTable({
     return (
       <section className="flex items-center justify-center py-16 rounded-lg border">
         <p className={colors.text.muted}>
-          {t('roleManagement.noUsersFound', 'No users found matching your filters.')}
+          {t('roleManagement.usersTab.noUsers')}
         </p>
       </section>
     );
@@ -173,15 +162,15 @@ export function UserTable({
       <Table>
         <TableHeader>
           <TableRow>
-            {renderSortableHead('name', t('roleManagement.columns.name', 'Name'))}
-            {renderSortableHead('email', t('roleManagement.columns.email', 'Email'))}
-            {renderSortableHead('globalRole', t('roleManagement.columns.role', 'Role'))}
-            <TableHead>{t('roleManagement.columns.status', 'Status')}</TableHead>
-            <TableHead>{t('roleManagement.columns.mfa', 'MFA')}</TableHead>
-            <TableHead>{t('roleManagement.columns.projects', 'Projects')}</TableHead>
-            {renderSortableHead('lastSignIn', t('roleManagement.columns.lastSignIn', 'Last Sign-In'))}
+            {renderSortableHead('name', t('roleManagement.table.user'))}
+            {renderSortableHead('email', t('roleManagement.table.email'))}
+            {renderSortableHead('globalRole', t('roleManagement.table.role'))}
+            <TableHead>{t('roleManagement.table.status')}</TableHead>
+            <TableHead>{t('roleManagement.table.mfa')}</TableHead>
+            <TableHead>{t('roleManagement.table.projects')}</TableHead>
+            {renderSortableHead('lastSignIn', t('roleManagement.table.lastSignIn'))}
             <TableHead className="text-right">
-              {t('roleManagement.columns.actions', 'Actions')}
+              {t('roleManagement.table.actions')}
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -210,10 +199,10 @@ export function UserTable({
                     </Avatar>
                     <figcaption className="flex flex-col">
                       <span className="font-medium text-sm">
-                        {companyUser.displayName ?? t('roleManagement.unnamed', 'Unnamed')}
+                        {companyUser.displayName ?? t('roleManagement.unnamed')}
                         {isSelf && (
                           <span className={cn("ml-1 text-xs", colors.text.muted)}>
-                            ({t('roleManagement.you', 'you')})
+                            ({t('roleManagement.you')})
                           </span>
                         )}
                       </span>
@@ -229,14 +218,14 @@ export function UserTable({
                 {/* Global Role */}
                 <TableCell>
                   <Badge variant={ROLE_BADGE_VARIANT[companyUser.globalRole]}>
-                    {ROLE_LABELS[companyUser.globalRole]}
+                    {t(`roleManagement.roleNames.${companyUser.globalRole}`)}
                   </Badge>
                 </TableCell>
 
                 {/* Status */}
                 <TableCell>
                   <Badge variant={STATUS_BADGE_VARIANT[companyUser.status]}>
-                    {companyUser.status}
+                    {t(`roleManagement.statusLabels.${companyUser.status}`)}
                   </Badge>
                 </TableCell>
 
@@ -250,13 +239,13 @@ export function UserTable({
                             'text-sm',
                             companyUser.mfaEnrolled ? 'text-green-600' : colors.text.muted
                           )}
-                          aria-label={companyUser.mfaEnrolled ? 'MFA Enabled' : 'MFA Not Enabled'}
+                          aria-label={companyUser.mfaEnrolled ? t('roleManagement.mfa.enabled') : t('roleManagement.mfa.notEnabled')}
                         >
                           {companyUser.mfaEnrolled ? '🔒' : '—'}
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {companyUser.mfaEnrolled ? 'MFA Enabled' : 'MFA Not Enabled'}
+                        {companyUser.mfaEnrolled ? t('roleManagement.mfa.enabled') : t('roleManagement.mfa.notEnabled')}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -282,27 +271,27 @@ export function UserTable({
                           size="sm"
                           onClick={() => onChangeRole(companyUser)}
                           disabled={isSelf}
-                          title={isSelf ? t('roleManagement.cannotChangeOwnRole', 'Cannot change your own role') : ''}
+                          title={isSelf ? t('roleManagement.roleChange.selfProtection') : ''}
                         >
-                          {t('roleManagement.actions.changeRole', 'Role')}
+                          {t('roleManagement.actions.changeRole')}
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onManagePermissions(companyUser)}
                         >
-                          {t('roleManagement.actions.permissions', 'Perms')}
+                          {t('roleManagement.actions.permissions')}
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onSuspend(companyUser)}
                           disabled={isSelf}
-                          title={isSelf ? t('roleManagement.cannotSuspendSelf', 'Cannot suspend yourself') : ''}
+                          title={isSelf ? t('roleManagement.cannotSuspendSelf') : ''}
                         >
                           {companyUser.status === 'active'
-                            ? t('roleManagement.actions.suspend', 'Suspend')
-                            : t('roleManagement.actions.activate', 'Activate')}
+                            ? t('roleManagement.actions.suspend')
+                            : t('roleManagement.actions.activate')}
                         </Button>
                       </>
                     )}
@@ -311,7 +300,7 @@ export function UserTable({
                       size="sm"
                       onClick={() => onViewDetails(companyUser)}
                     >
-                      {t('roleManagement.actions.details', 'Details')}
+                      {t('roleManagement.actions.details')}
                     </Button>
                   </nav>
                 </TableCell>

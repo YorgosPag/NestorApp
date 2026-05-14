@@ -146,7 +146,7 @@ export function UserDetailPanel({ user, open, onClose }: UserDetailPanelProps) {
                 </Badge>
               </dd>
 
-              <dt className={colors.text.muted}>{t('roleManagement.mfa', 'MFA')}</dt>
+              <dt className={colors.text.muted}>{t('roleManagement.mfaLabel')}</dt>
               <dd>{user.mfaEnrolled ? 'Enabled' : 'Not enrolled'}</dd>
 
               <dt className={colors.text.muted}>{t('roleManagement.lastSignIn', 'Last Sign-In')}</dt>

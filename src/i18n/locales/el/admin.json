@@ -435,6 +435,7 @@
       "suspendTitle": "Αναστολή Χρήστη",
       "suspendConfirm": "Είστε σίγουροι ότι θέλετε να αναστείλετε αυτόν τον χρήστη; Δεν θα μπορεί να συνδεθεί.",
       "reactivateTitle": "Επανενεργοποίηση Χρήστη",
+      "reactivateConfirm": "Αυτό θα επανενεργοποιήσει τον λογαριασμό του χρήστη.",
       "reason": "Αιτιολογία",
       "reasonPlaceholder": "Εξηγήστε γιατί (min 10 χαρ.)...",
       "suspendSuccess": "Ο χρήστης ανεστάλη επιτυχώς",
@@ -442,16 +443,19 @@
       "error": "Αποτυχία ενημέρωσης κατάστασης"
     },
     "permissionSets": {
-      "title": "Διαχείριση Σετ Δικαιωμάτων",
-      "orgLevel": "Σετ Δικαιωμάτων Επιπέδου Οργανισμού",
-      "description": "Αυτά τα σετ ισχύουν σε ΟΛΑ τα έργα",
+      "title": "Διαχείριση Συνόλων Δικαιωμάτων",
+      "orgLevel": "Σύνολα Δικαιωμάτων Επιπέδου Οργανισμού",
+      "description": "Αυτά τα σύνολα ισχύουν σε ΟΛΑ τα έργα",
+      "dialogDescription": "Επιλέξτε τα σύνολα δικαιωμάτων για τον/την {name}. Εφαρμόζονται σε όλα τα έργα.",
       "mfaRequired": "Απαιτείται MFA",
-      "reason": "Αιτιολογία αλλαγής",
-      "reasonPlaceholder": "Εξηγήστε γιατί (min 10 χαρ.)...",
-      "save": "Αποθήκευση",
+      "reason": "Αιτιολογία",
+      "minChars": "ελάχ. 10 χαρακτήρες",
+      "reasonPlaceholder": "Εισάγετε αιτιολογία...",
+      "save": "Αποθήκευση συνόλων δικαιωμάτων",
+      "saving": "Αποθήκευση...",
       "cancel": "Ακύρωση",
-      "success": "Τα σετ δικαιωμάτων ενημερώθηκαν",
-      "error": "Αποτυχία ενημέρωσης σετ δικαιωμάτων",
+      "success": "Τα σύνολα δικαιωμάτων ενημερώθηκαν",
+      "error": "Αποτυχία ενημέρωσης",
       "noChanges": "Δεν έγιναν αλλαγές"
     },
     "userDetail": {
@@ -469,6 +473,10 @@
       "projectMemberships": "Συμμετοχές σε Έργα",
       "noProjects": "Καμία συμμετοχή σε έργο",
       "effectivePermissions": "Ενεργά Δικαιώματα"
+    },
+    "mfa": {
+      "enabled": "MFA Ενεργό",
+      "notEnabled": "MFA Ανενεργό"
     },
     "matrix": {
       "title": "Πίνακας Δικαιωμάτων",
@@ -489,6 +497,7 @@
       "permissions": "Δικαιώματα"
     },
     "roleNames": {
+      "admin": "Διαχειριστής",
       "super_admin": "Υπερδιαχειριστής",
       "company_admin": "Διαχειριστής Εταιρείας",
       "project_manager": "Υπεύθυνος Έργου",
@@ -502,6 +511,12 @@
       "viewer": "Θεατής",
       "internal_user": "Εσωτερικός",
       "external_user": "Εξωτερικός"
+    },
+    "roleDescriptions": {
+      "super_admin": "Πλήρης πρόσβαση στο σύστημα — παράκαμψη όλων των ελέγχων δικαιωμάτων",
+      "company_admin": "Διαχειρίζεται ολόκληρο τον οργανισμό",
+      "internal_user": "Εσωτερικός χρήστης οργανισμού",
+      "external_user": "Εξωτερικός χρήστης με περιορισμένη πρόσβαση"
     },
     "definitions": {
       "dxf_editor": {
@@ -541,6 +556,132 @@
         "description": "Δημιουργία και προβολή αναφορών"
       }
     },
+    "permissionNames": {
+      "admin": {
+        "migrations_execute": "Εκτέλεση Μεταναστεύσεων",
+        "data_fix": "Διόρθωση Δεδομένων",
+        "direct_operations": "Άμεσες Λειτουργίες ΒΔ",
+        "debug_read": "Ανάγνωση Πληροφοριών Debug",
+        "system_configure": "Ρύθμιση Συστήματος",
+        "backup_execute": "Εκτέλεση Αντιγράφου Ασφαλείας"
+      },
+      "buildings": {
+        "buildings_view": "Προβολή Κτηρίων",
+        "buildings_create": "Δημιουργία Κτηρίων",
+        "buildings_update": "Ενημέρωση Κτηρίων",
+        "buildings_delete": "Διαγραφή Κτηρίων"
+      },
+      "comm": {
+        "conversations_list": "Λίστα Συνομιλιών",
+        "conversations_view": "Προβολή Συνομιλιών",
+        "conversations_update": "Ενημέρωση Συνομιλιών",
+        "messages_view": "Προβολή Μηνυμάτων",
+        "messages_send": "Αποστολή Μηνυμάτων",
+        "messages_delete": "Διαγραφή Μηνυμάτων"
+      },
+      "projects": {
+        "projects_view": "Προβολή Έργων",
+        "projects_create": "Δημιουργία Έργων",
+        "projects_update": "Ενημέρωση Έργων",
+        "projects_delete": "Διαγραφή Έργων",
+        "members_view": "Προβολή Μελών",
+        "members_manage": "Διαχείριση Μελών",
+        "floors_view": "Προβολή Ορόφων",
+        "floors_delete": "Διαγραφή Ορόφων"
+      },
+      "properties": {
+        "properties_view": "Προβολή Ακινήτων",
+        "properties_create": "Δημιουργία Ακινήτων",
+        "properties_update": "Ενημέρωση Ακινήτων",
+        "properties_delete": "Διαγραφή Ακινήτων"
+      },
+      "units": {
+        "units_view": "Προβολή Μονάδων",
+        "units_create": "Δημιουργία Μονάδων",
+        "units_update": "Ενημέρωση Μονάδων",
+        "units_delete": "Διαγραφή Μονάδων"
+      },
+      "dxf": {
+        "files_view": "Προβολή Αρχείων DXF",
+        "files_upload": "Μεταφόρτωση DXF",
+        "layers_view": "Προβολή Επιπέδων",
+        "layers_manage": "Διαχείριση Επιπέδων",
+        "layers_unlock": "Ξεκλείδωμα Επιπέδων",
+        "annotations_edit": "Επεξεργασία Σχολίων",
+        "text_create": "Δημιουργία Κειμένου",
+        "text_edit": "Επεξεργασία Κειμένου",
+        "text_delete": "Διαγραφή Κειμένου",
+        "dictionary_view": "Προβολή Λεξικού",
+        "dictionary_manage": "Διαχείριση Λεξικού"
+      },
+      "crm": {
+        "contacts_view": "Προβολή Επαφών",
+        "contacts_create": "Δημιουργία Επαφών",
+        "contacts_update": "Ενημέρωση Επαφών",
+        "contacts_delete": "Διαγραφή Επαφών",
+        "contacts_export": "Εξαγωγή Επαφών",
+        "opportunities_view": "Προβολή Ευκαιριών",
+        "opportunities_create": "Δημιουργία Ευκαιριών",
+        "opportunities_update": "Ενημέρωση Ευκαιριών",
+        "communications_view": "Προβολή Επικοινωνιών",
+        "tasks_view": "Προβολή Εργασιών",
+        "tasks_create": "Δημιουργία Εργασιών",
+        "tasks_update": "Ενημέρωση Εργασιών"
+      },
+      "notifications": {
+        "notifications_view": "Προβολή Ειδοποιήσεων"
+      },
+      "finance": {
+        "invoices_view": "Προβολή Τιμολογίων",
+        "invoices_update": "Ενημέρωση Τιμολογίων",
+        "invoices_approve": "Έγκριση Τιμολογίων"
+      },
+      "legal": {
+        "documents_view": "Προβολή Εγγράφων",
+        "ownership_view": "Προβολή Ιδιοκτησίας",
+        "ownership_manage": "Διαχείριση Ιδιοκτησίας",
+        "grants_view": "Προβολή Παραχωρήσεων",
+        "grants_create": "Δημιουργία Παραχωρήσεων",
+        "grants_revoke": "Ανάκληση Παραχωρήσεων",
+        "contracts_view": "Προβολή Συμβολαίων"
+      },
+      "listings": {
+        "listings_publish": "Δημοσίευση Αγγελιών"
+      },
+      "users": {
+        "users_view": "Προβολή Χρηστών",
+        "users_manage": "Διαχείριση Χρηστών"
+      },
+      "settings": {
+        "settings_view": "Προβολή Ρυθμίσεων",
+        "settings_manage": "Διαχείριση Ρυθμίσεων"
+      },
+      "reports": {
+        "reports_view": "Προβολή Αναφορών",
+        "reports_create": "Δημιουργία Αναφορών"
+      },
+      "search": {
+        "global_execute": "Γενική Αναζήτηση"
+      },
+      "photos": {
+        "photos_upload": "Μεταφόρτωση Φωτογραφιών"
+      },
+      "progress": {
+        "progress_update": "Ενημέρωση Προόδου"
+      },
+      "floorplans": {
+        "floorplans_process": "Επεξεργασία Κατόψεων"
+      },
+      "orders": {
+        "orders_view": "Προβολή Παραγγελιών"
+      },
+      "deliveries": {
+        "deliveries_view": "Προβολή Παραδόσεων"
+      },
+      "specs": {
+        "specs_view": "Προβολή Προδιαγραφών"
+      }
+    },
     "domains": {
       "admin": "Διαχείριση Συστήματος",
       "buildings": "Κτήρια",
@@ -566,6 +707,18 @@
       "units": "Μονάδες",
       "users": "Χρήστες & Ρόλοι"
     },
+    "unnamed": "Χωρίς Όνομα",
+    "you": "εσείς",
+    "cannotSuspendSelf": "Δεν μπορείτε να αναστείλετε τον εαυτό σας",
+    "statusLabels": {
+      "active": "Ενεργός",
+      "suspended": "Ανεσταλμένος",
+      "inactive": "Ανενεργός"
+    },
+    "mfa": {
+      "enabled": "MFA Ενεργό",
+      "notEnabled": "MFA Ανενεργό"
+    },
     "comingSoon": "Σύντομα — Φάση Β",
     "accessDenied": "Πρόσβαση Απορρίφθηκε",
     "accessDeniedDescription": "Χρειάζεστε ρόλο super_admin ή company_admin για πρόσβαση σε αυτή τη σελίδα.",
@@ -588,6 +741,21 @@
       "projects": "Έργα",
       "lastSignIn": "Τελ. Σύνδεση",
       "actions": "Ενέργειες"
+    },
+    "auditActions": {
+      "all": "Όλες οι Ενέργειες",
+      "role_changed": "Αλλαγή Ρόλου",
+      "permission_granted": "Παροχή Δικαιώματος",
+      "permission_revoked": "Ανάκληση Δικαιώματος",
+      "user_suspended": "Αναστολή Χρήστη",
+      "user_activated": "Ενεργοποίηση Χρήστη",
+      "permission_set_granted": "Παροχή Συνόλου Δικαιωμάτων",
+      "permission_set_revoked": "Ανάκληση Συνόλου Δικαιωμάτων",
+      "member_added": "Προσθήκη Μέλους",
+      "member_removed": "Αφαίρεση Μέλους",
+      "member_updated": "Ενημέρωση Μέλους",
+      "claims_updated": "Ενημέρωση Αξιώσεων",
+      "system_bootstrap": "Εκκίνηση Συστήματος"
     },
     "auditTab": {
       "title": "Αρχείο Ενεργειών",
@@ -649,17 +817,17 @@
     "permissionSetsDescription": "Επιλέξτε τα σύνολα δικαιωμάτων για αυτόν τον χρήστη",
     "permissions": "Δικαιώματα",
     "reason": "Αιτιολογία",
-    "minChars": "Ελάχιστοι χαρακτήρες",
-    "reasonPlaceholder": "Εισάγετε αιτιολογία...",
+    "minChars": "ελάχ. 10 χαρακτήρες",
+    "reasonPlaceholder": "Εξηγήστε γιατί χρειάζεται αυτή η αλλαγή ρόλου...",
     "savePermissionSets": "Αποθήκευση συνόλων δικαιωμάτων",
-    "roleChanged": "Ο ρόλος άλλαξε",
-    "changeRole": "Αλλαγή ρόλου",
-    "changeRoleDescription": "Επιλέξτε τον νέο ρόλο για αυτόν τον χρήστη",
-    "currentRole": "Τρέχων ρόλος",
-    "newRole": "Νέος ρόλος",
-    "cannotChangeOwnRole": "Δεν μπορείτε να αλλάξετε τον δικό σας ρόλο",
-    "reLoginWarning": "Ο χρήστης πρέπει να επανασυνδεθεί για να ισχύσουν οι αλλαγές",
-    "confirmRoleChange": "Επιβεβαίωση αλλαγής ρόλου",
+    "roleChanged": "Ο ρόλος άλλαξε επιτυχώς. Ο χρήστης πρέπει να αποσυνδεθεί για να δει τις αλλαγές.",
+    "changeRole": "Αλλαγή Καθολικού Ρόλου",
+    "changeRoleDescription": "Αλλάξτε τον καθολικό ρόλο για αυτόν τον χρήστη. Αυτό επηρεάζει την πρόσβασή του σε ολόκληρο τον οργανισμό.",
+    "currentRole": "Τρέχων Ρόλος",
+    "newRole": "Νέος Ρόλος",
+    "cannotChangeOwnRole": "Δεν μπορείτε να αλλάξετε τον δικό σας ρόλο.",
+    "reLoginWarning": "Ο χρήστης πρέπει να αποσυνδεθεί και να συνδεθεί ξανά για να ισχύσει ο νέος ρόλος.",
+    "confirmRoleChange": "Αλλαγή Ρόλου",
     "hierarchyNote": "Οι μικρότεροι αριθμοί επιπέδου σημαίνουν μεγαλύτερη πρόσβαση. Οι καθολικοί ρόλοι (L0–L1) ισχύουν για ολόκληρο τον οργανισμό. Οι ρόλοι έργου (L2–L6) ισχύουν ανά έργο.",
     "domain": "Τομέας",
     "userDetails": "Στοιχεία χρήστη",
@@ -668,7 +836,7 @@
     "email": "Email",
     "uid": "UID",
     "globalRole": "Γενικός ρόλος",
-    "mfa": "MFA",
+    "mfaLabel": "MFA",
     "lastSignIn": "Τελευταία σύνδεση",
     "projects": "Έργα",
     "orgPermissionSets": "Σύνολα δικαιωμάτων οργανισμού",

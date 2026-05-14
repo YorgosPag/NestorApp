@@ -165,7 +165,7 @@ export function AuditTimeline({ entries, onFilterByActor, onFilterByTarget }: Au
                         </Tooltip>
                       </TooltipProvider>
                       <span className={cn("mx-1.5", colors.text.muted)}>
-                        {actionConfig?.label ?? entry.action}
+                        {t(`roleManagement.auditActions.${entry.action}`, { defaultValue: '' }) || entry.action}
                       </span>
                       {entry.targetType === 'user' ? (
                         <TooltipProvider delayDuration={300}>

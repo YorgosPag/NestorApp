@@ -435,6 +435,7 @@
       "suspendTitle": "Suspend User",
       "suspendConfirm": "Are you sure you want to suspend this user? They will be unable to sign in.",
       "reactivateTitle": "Reactivate User",
+      "reactivateConfirm": "This will re-enable the user's account.",
       "reason": "Reason",
       "reasonPlaceholder": "Explain why (min 10 chars)...",
       "suspendSuccess": "User suspended successfully",
@@ -445,10 +446,13 @@
       "title": "Manage Permission Sets",
       "orgLevel": "Organization-Level Permission Sets",
       "description": "These permission sets apply to ALL projects",
+      "dialogDescription": "Assign org-level permission sets to {name}. These apply across all projects.",
       "mfaRequired": "MFA Required",
       "reason": "Reason for change",
+      "minChars": "min 10 characters",
       "reasonPlaceholder": "Explain why (min 10 chars)...",
       "save": "Save Changes",
+      "saving": "Saving...",
       "cancel": "Cancel",
       "success": "Permission sets updated successfully",
       "error": "Failed to update permission sets",
@@ -470,6 +474,10 @@
       "noProjects": "No project memberships",
       "effectivePermissions": "Effective Permissions"
     },
+    "mfa": {
+      "enabled": "MFA Enabled",
+      "notEnabled": "MFA Not Enabled"
+    },
     "matrix": {
       "title": "Permission Matrix",
       "legend": {
@@ -489,6 +497,7 @@
       "permissions": "Permissions"
     },
     "roleNames": {
+      "admin": "Administrator",
       "super_admin": "Super Admin",
       "company_admin": "Company Admin",
       "project_manager": "Project Manager",
@@ -502,6 +511,12 @@
       "viewer": "Viewer",
       "internal_user": "Internal",
       "external_user": "External"
+    },
+    "roleDescriptions": {
+      "super_admin": "Full system access — bypasses all permission checks",
+      "company_admin": "Manages the entire organization",
+      "internal_user": "Internal organization user",
+      "external_user": "External user with limited access"
     },
     "definitions": {
       "dxf_editor": {
@@ -692,6 +707,18 @@
       "units": "Units",
       "users": "Users & Roles"
     },
+    "unnamed": "Unnamed",
+    "you": "you",
+    "cannotSuspendSelf": "Cannot suspend yourself",
+    "statusLabels": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "inactive": "Inactive"
+    },
+    "mfa": {
+      "enabled": "MFA Enabled",
+      "notEnabled": "MFA Not Enabled"
+    },
     "comingSoon": "Coming soon — Phase B",
     "accessDenied": "Access Denied",
     "accessDeniedDescription": "You need super_admin or company_admin role to access this page.",
@@ -714,6 +741,21 @@
       "projects": "Projects",
       "lastSignIn": "Last Sign-In",
       "actions": "Actions"
+    },
+    "auditActions": {
+      "all": "All Actions",
+      "role_changed": "Role Changed",
+      "permission_granted": "Permission Granted",
+      "permission_revoked": "Permission Revoked",
+      "user_suspended": "User Suspended",
+      "user_activated": "User Activated",
+      "permission_set_granted": "Permission Set Granted",
+      "permission_set_revoked": "Permission Set Revoked",
+      "member_added": "Member Added",
+      "member_removed": "Member Removed",
+      "member_updated": "Member Updated",
+      "claims_updated": "Claims Updated",
+      "system_bootstrap": "System Bootstrap"
     },
     "auditTab": {
       "title": "Audit Log",
@@ -775,17 +817,17 @@
     "permissionSetsDescription": "Permission sets description",
     "permissions": "Permissions",
     "reason": "Reason",
-    "minChars": "Min chars",
-    "reasonPlaceholder": "Reason placeholder",
+    "minChars": "min 10 characters",
+    "reasonPlaceholder": "Explain why this role change is needed...",
     "savePermissionSets": "Save permission sets",
-    "roleChanged": "Role changed",
-    "changeRole": "Change role",
-    "changeRoleDescription": "Change role description",
-    "currentRole": "Current role",
-    "newRole": "New role",
-    "cannotChangeOwnRole": "Cannot change own role",
-    "reLoginWarning": "Re login warning",
-    "confirmRoleChange": "Confirm role change",
+    "roleChanged": "Role changed successfully. User must re-login to see changes.",
+    "changeRole": "Change Global Role",
+    "changeRoleDescription": "Change the global role for this user. This affects their access across the entire organization.",
+    "currentRole": "Current Role",
+    "newRole": "New Role",
+    "cannotChangeOwnRole": "You cannot change your own role.",
+    "reLoginWarning": "The user must sign out and sign back in for the new role to take effect.",
+    "confirmRoleChange": "Change Role",
     "hierarchyNote": "Lower level numbers mean higher access. Global roles (L0–L1) are organization-wide. Project roles (L2–L6) are scoped per project.",
     "domain": "Domain",
     "userDetails": "User details",
@@ -794,7 +836,7 @@
     "email": "Email",
     "uid": "Uid",
     "globalRole": "Global role",
-    "mfa": "Mfa",
+    "mfaLabel": "MFA",
     "lastSignIn": "Last sign in",
     "projects": "Projects",
     "orgPermissionSets": "Org permission sets",
