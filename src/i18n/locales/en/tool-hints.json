@@ -597,7 +597,44 @@
         "Click on an X or Y guide to use as mirror axis"
       ],
       "shortcuts": "G→5 | Ctrl+Z=Undo | ESC=Cancel"
+    },
+    "scale": {
+      "name": "Scale",
+      "description": "Scale selected entities",
+      "steps": [
+        "Select entities",
+        "Specify base point",
+        "Enter scale factor"
+      ],
+      "shortcuts": "SC | C=Copy | R=Reference | N=Non-uniform | ESC=Cancel"
     }
+  },
+  "scaleTool": {
+    "selectObjects": "Select objects → ENTER",
+    "specifyBasePoint": "Specify base point",
+    "enterScaleFactor": "Enter scale factor [C=Copy / R=Reference / N=Non-uniform]",
+    "enterScaleX": "Enter X scale factor (horizontal)",
+    "enterScaleY": "Enter Y scale factor (vertical)",
+    "refPoint1": "Click 1st reference point",
+    "refPoint2": "Click 2nd reference point",
+    "refNewLength": "Specify new length",
+    "lockedLayerSkipped": "{count} objects on locked layers were skipped",
+    "allLockedAbort": "All objects are on locked layers — cancelled",
+    "invalidZeroFactor": "Scale factor cannot be zero",
+    "copyModeOn": "Copy mode: ON",
+    "nonUniformOn": "Non-uniform scale: ON"
+  },
+  "stretchTool": {
+    "selectObjects": "Select objects with crossing window → ENTER",
+    "specifyBasePoint": "Specify base point",
+    "specifyDisplacement": "Specify second displacement point",
+    "enterDisplacement": "Enter displacement (dx,dy)",
+    "nothingToStretch": "Nothing selected to stretch",
+    "lockedLayerSkipped": "{count} objects on locked layers were skipped",
+    "allLockedAbort": "All objects are on locked layers — cancelled",
+    "invalidZeroDisplacement": "Displacement cannot be zero",
+    "mstretchSelectFirst": "Draw 1st crossing window",
+    "mstretchSelectNext": "Next crossing window or ENTER to finish"
   },
   "common": {
     "step": "Step",

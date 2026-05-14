@@ -75,6 +75,18 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleMirrorConfirm?: (keepOriginals: boolean) => void;
   /** True when mirror tool is in awaiting-keep-originals phase */
   mirrorAwaitingConfirm?: boolean;
+  /** ADR-348: Scale tool cancel handler */
+  handleScaleEscape?: () => void;
+  /** ADR-348: Scale tool key handler — returns true if key was consumed */
+  handleScaleKeyDown?: (key: string) => boolean;
+  /** ADR-348: Whether the scale tool is active and collecting input */
+  scaleIsActive?: boolean;
+  /** ADR-349: Stretch / MStretch tool cancel handler */
+  handleStretchEscape?: () => void;
+  /** ADR-349: Stretch / MStretch tool key handler — returns true if key was consumed */
+  handleStretchKeyDown?: (key: string) => boolean;
+  /** ADR-349: Whether the stretch / mstretch tool is active and collecting input */
+  stretchIsActive?: boolean;
   /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
   clearEntitySelection?: () => void;
   /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
@@ -108,6 +120,12 @@ export function useCanvasKeyboardShortcuts({
   mirrorIsActive = false,
   handleMirrorConfirm,
   mirrorAwaitingConfirm = false,
+  handleScaleEscape,
+  handleScaleKeyDown,
+  scaleIsActive = false,
+  handleStretchEscape,
+  handleStretchKeyDown,
+  stretchIsActive = false,
   clearEntitySelection,
   hasAnySelection = false,
 }: UseCanvasKeyboardShortcutsParams): void {
@@ -119,6 +137,18 @@ export function useCanvasKeyboardShortcuts({
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
         return;
+      }
+
+      // ADR-348: Scale tool — intercepts before global shortcuts when active
+      if (scaleIsActive && handleScaleKeyDown) {
+        const consumed = handleScaleKeyDown(e.key);
+        if (consumed) { e.preventDefault(); return; }
+      }
+
+      // ADR-349: Stretch / MStretch tool — intercepts before global shortcuts when active
+      if (stretchIsActive && handleStretchKeyDown) {
+        const consumed = handleStretchKeyDown(e.key);
+        if (consumed) { e.preventDefault(); return; }
       }
 
       // Canvas numeric input — intercepts before generic Delete/Backspace/Escape (ADR-189)
@@ -163,6 +193,16 @@ export function useCanvasKeyboardShortcuts({
           // Mirror tool cancel
           if (mirrorIsActive && handleMirrorEscape) {
             handleMirrorEscape();
+            break;
+          }
+          // ADR-348: Scale tool cancel
+          if (scaleIsActive && handleScaleEscape) {
+            handleScaleEscape();
+            break;
+          }
+          // ADR-349: Stretch / MStretch tool cancel
+          if (stretchIsActive && handleStretchEscape) {
+            handleStretchEscape();
             break;
           }
           // ADR-188: Escape cancels rotation tool
@@ -244,5 +284,5 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, clearEntitySelection, hasAnySelection]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, clearEntitySelection, hasAnySelection]);
 }

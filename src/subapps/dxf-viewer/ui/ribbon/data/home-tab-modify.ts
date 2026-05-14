@@ -138,7 +138,6 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             icon: 'scale',
             commandKey: 'scale',
             shortcut: 'SC',
-            comingSoon: true,
           },
         },
         {
@@ -150,7 +149,17 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             icon: 'stretch',
             commandKey: 'stretch',
             shortcut: 'S',
-            comingSoon: true,
+          },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'modify.mstretch',
+            labelKey: 'ribbon.commands.mstretch',
+            icon: 'stretch',
+            commandKey: 'mstretch',
+            shortcut: 'MS',
           },
         },
         {
@@ -279,12 +288,12 @@ export const HOME_MODIFY_EDIT_PANEL: RibbonPanelDef = {
         {
           type: 'simple',
           size: 'small',
-          command: { id: 'edit.scale', labelKey: 'ribbon.commands.scale', icon: 'scale', commandKey: 'scale', shortcut: 'SC', comingSoon: true },
+          command: { id: 'edit.scale', labelKey: 'ribbon.commands.scale', icon: 'scale', commandKey: 'scale', shortcut: 'SC' },
         },
         {
           type: 'simple',
           size: 'small',
-          command: { id: 'edit.stretch', labelKey: 'ribbon.commands.stretch', icon: 'stretch', commandKey: 'stretch', shortcut: 'S', comingSoon: true },
+          command: { id: 'edit.stretch', labelKey: 'ribbon.commands.stretch', icon: 'stretch', commandKey: 'stretch', shortcut: 'S' },
         },
         {
           type: 'simple',

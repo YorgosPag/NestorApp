@@ -42,6 +42,7 @@ import { useSpecialTools } from '../../hooks/tools';
 import { useRotationTool } from '../../hooks/tools/useRotationTool';
 import { useMoveTool } from '../../hooks/tools/useMoveTool';
 import { useMirrorTool } from '../../hooks/tools/useMirrorTool';
+import { useScaleTool } from '../../hooks/tools/useScaleTool';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useEntityJoin } from '../../hooks/useEntityJoin';
 import { useGuideActions } from '../../hooks/state/useGuideActions';
@@ -80,7 +81,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   useEffect(() => {
     if (PERF_LINE_PROFILE) perfEnd('CanvasSection.commit', _perfRenderStart);
   });
-
   // === Canvas context ===
   const canvasContext = useCanvasContext();
   if (process.env.NODE_ENV === 'development' && !canvasContext) {
@@ -92,7 +92,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<PreviewCanvasHandle>(null);
-
   // === Transform + Viewport ===
   const defaultTransform = useMemo(() => ({ scale: 1, offsetX: 0, offsetY: 0 }), []);
   const transform = canvasContext?.transform || defaultTransform;
@@ -107,7 +106,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // === Visibility ===
   const showDxfCanvas = props.dxfCanvasVisible ?? true;
   const showLayerCanvasDebug = props.layerCanvasVisible ?? true;
-
   // === Core stores + state ===
   const overlayStore = useOverlayStore();
   const universalSelection = useUniversalSelection();
@@ -138,7 +136,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // hoveredOverlayId both removed from CanvasSection. HoverStore subscriptions
   // live exclusively in micro-leaves (DxfCanvasSubscriber, DraftLayerSubscriber).
   const eventBus = useEventBus();
-
   // === Settings ===
   const { state: { grid: gridContextSettings, rulers: rulerContextSettings } } = useRulersGridContext();
   const { settings: cursorSettings } = useCursorSettings();
@@ -146,7 +143,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     cursorSettings, gridContextSettings: gridContextSettings ?? null, rulerContextSettings: rulerContextSettings ?? null, showGrid,
   });
   const gripSettings = useGripStyles();
-
   // === Guide + Construction Point state ===
   const guideState = useGuideActions();
   // ADR-040: stable getter — reads from GuideStore at click time, prevents stale snapshot
@@ -289,7 +285,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined, currentOverlays, overlayUpdate: overlayStore.update });
   const mirrorTool = useMirrorTool({ activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined });
-
+  const scaleTool = useScaleTool({ activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined });
   // === Move Tool (ADR-049: AutoCAD-style 2-click) ===
   const executeOverlayMove = useCallback((ids: string[], delta: {x:number;y:number}) => { executeCommand(ids.length===1 ? new MoveOverlayCommand(ids[0],delta,overlayStore,false) : new MoveMultipleOverlaysCommand(ids,delta,overlayStore,false)); }, [overlayStore, executeCommand]);
   const createOverlayMoveCommand = useCallback((ids: string[], delta: {x:number;y:number}) => ids.length===1 ? new MoveOverlayCommand(ids[0],delta,overlayStore,false) : new MoveMultipleOverlaysCommand(ids,delta,overlayStore,false), [overlayStore]);
@@ -339,6 +336,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     rotationIsActive: rotationTool.isCollectingInput, handleRotationClick: rotationTool.handleRotationClick,
     moveIsActive: moveTool.isCollectingInput, handleMoveClick: moveTool.handleMoveClick,
     mirrorIsActive: mirrorTool.isCollectingInput, handleMirrorClick: mirrorTool.handleMirrorClick,
+    scaleIsActive: scaleTool.isCollectingInput, handleScaleClick: scaleTool.handleScaleClick,
     levelManager, draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
@@ -406,6 +404,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleMoveEscape: moveTool.handleMoveEscape, moveIsActive: moveTool.isCollectingInput,
     handleMirrorEscape: mirrorTool.handleMirrorEscape, mirrorIsActive: mirrorTool.isCollectingInput,
     handleMirrorConfirm: mirrorTool.handleMirrorConfirm, mirrorAwaitingConfirm: mirrorTool.phase === 'awaiting-keep-originals',
+    handleScaleEscape: scaleTool.handleScaleEscape, handleScaleKeyDown: scaleTool.handleScaleKeyDown, scaleIsActive: scaleTool.isCollectingInput,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     clearEntitySelection: () => universalSelectionRef.current.clearAll(),
   });
@@ -455,6 +454,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         rotationPreview={{ phase: rotationTool.phase, basePoint: rotationTool.basePoint, referencePoint: rotationTool.referencePoint, currentAngle: rotationTool.currentAngle }}
         movePreview={{ phase: moveTool.phase, basePoint: moveTool.basePoint, selectedOverlayIds: universalSelection.getIdsByType('overlay'), getOverlay: (id) => overlayStore.overlays[id] ?? null }}
         mirrorPreview={{ phase: mirrorTool.phase, firstPoint: mirrorTool.firstPoint, secondPoint: mirrorTool.secondPoint }}
+        scalePreview={{}}
         levelManager={levelManager}
       />
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}

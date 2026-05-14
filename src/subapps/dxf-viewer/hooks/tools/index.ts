@@ -30,3 +30,12 @@ export type {
 
 export { useMirrorPreview } from './useMirrorPreview';
 export type { UseMirrorPreviewProps } from './useMirrorPreview';
+
+export { useScaleTool } from './useScaleTool';
+export type { UseScaleToolProps, UseScaleToolReturn } from './useScaleTool';
+
+export { useScalePreview } from './useScalePreview';
+export type { UseScalePreviewProps } from './useScalePreview';
+
+export { useStretchTool } from './useStretchTool';
+export type { UseStretchToolProps, UseStretchToolReturn } from './useStretchTool';

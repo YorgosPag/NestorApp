@@ -26,6 +26,7 @@ import { useRotationPreview } from '../../hooks/tools/useRotationPreview';
 import { useMovePreview } from '../../hooks/tools/useMovePreview';
 import { useGripGhostPreview } from '../../hooks/tools/useGripGhostPreview';
 import { useMirrorPreview } from '../../hooks/tools/useMirrorPreview';
+import { useScalePreview } from '../../hooks/tools/useScalePreview';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
 import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
@@ -361,6 +362,24 @@ export const MirrorPreviewMount = React.memo(function MirrorPreviewMount(
   return null;
 });
 
+// ============================================================================
+// SCALE PREVIEW MOUNT
+// ============================================================================
+
+interface ScalePreviewMountProps {
+  levelManager: Parameters<typeof useScalePreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+export const ScalePreviewMount = React.memo(function ScalePreviewMount(
+  props: ScalePreviewMountProps,
+) {
+  useScalePreview(props);
+  return null;
+});
+
 /**
  * Mounts useGripGhostPreview. No JSX — draws to PreviewCanvas via imperative
  * API. Renders a blue translucent ghost of the entity being grip-dragged
@@ -384,6 +403,7 @@ interface PreviewCanvasMountsProps {
   rotation: Omit<RotationPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   move: Omit<MovePreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   mirror: Omit<MirrorPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  scale: Omit<ScalePreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   gripDragPreview: DxfGripDragPreview | null;
   selectedEntityIds: string[];
   levelManager: MovePreviewMountProps['levelManager'];
@@ -400,7 +420,7 @@ interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { rotation, move, mirror, scale, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
   return (
     <>
       <RotationPreviewMount
@@ -422,6 +442,13 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       <MovePreviewMount
         {...move}
         selectedEntityIds={selectedEntityIds}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <ScalePreviewMount
+        {...scale}
         levelManager={levelManager}
         transform={transform}
         getCanvas={getCanvas}

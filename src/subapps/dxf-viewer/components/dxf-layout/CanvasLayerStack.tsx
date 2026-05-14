@@ -36,7 +36,6 @@ import {
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
 import { PolygonCropPreviewSubscriber } from './LassoCropPreviewSubscriber';
-import { LassoFreehandPreviewSubscriber } from './LassoFreehandPreviewSubscriber';
 import { AutoAreaResultPanel } from './AutoAreaResultPanel';
 import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay';
@@ -60,7 +59,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   entityPickingActive,
   selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
-  rotationPreview, movePreview, mirrorPreview, levelManager,
+  rotationPreview, movePreview, mirrorPreview, scalePreview, levelManager,
 }: CanvasLayerStackProps) {
   // --- Destructure grouped props ---
   const {
@@ -439,6 +438,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             rotation={rotationPreview}
             move={movePreview}
             mirror={mirrorPreview}
+            scale={scalePreview}
             gripDragPreview={dxfGripInteraction.dragPreview}
             selectedEntityIds={selectedEntityIds}
             levelManager={levelManager}
@@ -482,11 +482,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           />
           <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
           <PolygonCropPreviewSubscriber
-            transform={transform}
-            viewport={viewport}
-            className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`}
-          />
-          <LassoFreehandPreviewSubscriber
             transform={transform}
             viewport={viewport}
             className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`}

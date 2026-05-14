@@ -85,10 +85,12 @@ export function useCanvasContainerHandlers(
     executeCommand(cmd);
   }, [executeCommand]);
 
-  // Min screen distance (px²) to add a new lasso point — avoids redundant points
+  // Screen-space refs for lasso throttle + snap-to-close
   const _lastLassoScreen = useRef<{ x: number; y: number } | null>(null);
+  const _startLassoScreen = useRef<{ x: number; y: number } | null>(null);
 
-  // Freehand lasso: pointermove → addPoint when distance ≥ 3px screen
+  // Freehand lasso: pointermove → addPoint when distance ≥ 3px screen.
+  // Snap-to-close: when cursor is within 20px of start, grow the dot and skip adding points.
   useEffect(() => {
     const el = containerRef.current;
     if (!el || activeTool !== 'lasso-crop') return;
@@ -97,6 +99,19 @@ export function useCanvasContainerHandlers(
       const rect = el.getBoundingClientRect();
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
+
+      // Snap-to-close check (only when ≥ 3 pts so first small movement doesn't trigger)
+      const start = _startLassoScreen.current;
+      if (start && LassoFreehandStore.getPoints().length >= 3) {
+        const cdx = sx - start.x;
+        const cdy = sy - start.y;
+        const nearClose = cdx * cdx + cdy * cdy < 400; // < 20px radius
+        LassoFreehandStore.setNearClose(nearClose);
+        if (nearClose) return; // freeze trace — don't add point, wait for mouseup
+      } else {
+        LassoFreehandStore.setNearClose(false);
+      }
+
       const last = _lastLassoScreen.current;
       if (last) {
         const dx = sx - last.x;
@@ -104,13 +119,13 @@ export function useCanvasContainerHandlers(
         if (dx * dx + dy * dy < 9) return; // < 3px
       }
       _lastLassoScreen.current = { x: sx, y: sy };
-      const worldX = (sx - transform.offsetX) / transform.scale;
-      const worldY = (sy - transform.offsetY) / transform.scale;
-      LassoFreehandStore.addPoint(worldX, worldY);
+      const worldPos = getImmediateWorldPosition();
+      if (!worldPos) return;
+      LassoFreehandStore.addPoint(worldPos.x, worldPos.y);
     };
     el.addEventListener('pointermove', onMove);
     return () => el.removeEventListener('pointermove', onMove);
-  }, [activeTool, containerRef, transform]);
+  }, [activeTool, containerRef]);
 
   const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
@@ -119,6 +134,10 @@ export function useCanvasContainerHandlers(
     if (activeTool === 'lasso-crop') {
       const worldPos = getImmediateWorldPosition() ?? { x: 0, y: 0 };
       _lastLassoScreen.current = null;
+      const rect = containerRef.current?.getBoundingClientRect();
+      _startLassoScreen.current = rect
+        ? { x: e.clientX - rect.left, y: e.clientY - rect.top }
+        : null;
       LassoFreehandStore.startAt(worldPos.x, worldPos.y);
       return;
     }

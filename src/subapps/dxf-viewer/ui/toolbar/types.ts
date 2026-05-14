@@ -37,6 +37,9 @@ export type ToolType =
   | 'rotate'
   | 'copy'
   | 'delete'
+  // ADR-349 Phase 1a: Stretch command (crossing-window displacement)
+  | 'stretch'
+  | 'mstretch'
   | 'measure'
   | 'measure-distance'
   | 'measure-distance-continuous'

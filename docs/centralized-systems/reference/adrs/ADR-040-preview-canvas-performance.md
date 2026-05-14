@@ -71,6 +71,12 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-15: ADR-348 Scale Command — ScalePreviewMount aggiunto alle micro-leaves
+
+`canvas-layer-stack-leaves.tsx`: aggiunto `ScalePreviewMount` e `ScalePreviewMountProps` seguendo il pattern micro-leaf esistente (identico a `MirrorPreviewMount`). Mount zero-JSX che chiama `useScalePreview` per il preview RAF-based a 60fps. `PreviewCanvasMountsProps` e `PreviewCanvasMounts` JSX aggiornati con prop `scale`. `canvas-layer-stack-types.ts`: aggiunto `scalePreview: Record<string, never>` (il preview legge tutto da `ScaleToolStore` — zero prop esterne necessarie). `CanvasLayerStack.tsx`: destructuring + pass-through `scalePreview`. `CanvasSection.tsx`: import `useScaleTool`, call hook, wiring di `scaleIsActive`/`handleScaleClick` → `useCanvasClickHandler`, `handleScaleEscape`/`handleScaleKeyDown`/`scaleIsActive` → `useCanvasKeyboardShortcuts`, `scalePreview={{}}` → `CanvasLayerStack`. Constraint CHECK 6C rispettato: `ScaleToolStore` non chiama `useSyncExternalStore` nell'orchestratore (`CanvasSection`) — il subscribe vive solo in `ScalePreviewMount` (leaf).
+
+---
+
 ### 2026-05-14: fit-to-view dopo import DXF — EventBus path
 
 `useSceneState.ts`: rimpiazzato `canvasOps.fitToView()` (path via `dxfRef.current`) con `EventBus.emit('canvas-fit-to-view', { source: 'auto' })` nel timeout post-import (200ms). Il path EventBus è canonico (`useFitToView` listener legge `dxfScene` dallo stato React — sempre fresco dopo il commit), eliminando la dipendenza da `dxfRef.current` che poteva essere null/stale durante il re-render. Questo assicura il fit-to-view automatico dopo ogni import DXF (wizard incluso).

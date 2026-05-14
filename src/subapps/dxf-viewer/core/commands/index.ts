@@ -104,6 +104,10 @@ export { CreateEntityCommand } from './entity-commands/CreateEntityCommand';
 export { DeleteEntityCommand, DeleteMultipleEntitiesCommand } from './entity-commands/DeleteEntityCommand';
 export { MoveEntityCommand, MoveMultipleEntitiesCommand } from './entity-commands/MoveEntityCommand';
 export { JoinEntityCommand } from './entity-commands/JoinEntityCommand';
+export { ScaleEntityCommand } from './entity-commands/ScaleEntityCommand';
+export type { ScaleParams } from './entity-commands/ScaleEntityCommand';
+export { StretchEntityCommand } from './entity-commands/StretchEntityCommand';
+export type { StretchParams, StretchVertexMove } from './entity-commands/StretchEntityCommand';
 
 // Vertex Commands
 export { MoveVertexCommand } from './vertex-commands/MoveVertexCommand';

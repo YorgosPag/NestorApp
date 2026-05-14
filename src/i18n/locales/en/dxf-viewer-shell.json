@@ -380,6 +380,7 @@
       "mirror": "Mirror",
       "scale": "Scale",
       "stretch": "Stretch",
+      "mstretch": "Multi-Stretch",
       "trim": "Trim",
       "extend": "Extend",
       "offset": "Offset",

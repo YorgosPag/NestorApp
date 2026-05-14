@@ -214,6 +214,8 @@ export interface CanvasLayerStackProps {
     firstPoint: Point2D | null;
     secondPoint: Point2D | null;
   };
+  // === ADR-348: Scale tool preview (ScaleToolStore-driven, zero props needed) ===
+  scalePreview: Record<string, never>;
   /** Level manager — needed by useRotationPreview + useMovePreview for entity reads */
   levelManager: ReturnType<typeof useLevels>;
 

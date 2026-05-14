@@ -119,6 +119,18 @@ export interface UseCanvasClickHandlerParams {
   /** Click handler for mirror state machine */
   handleMirrorClick?: (worldPoint: Point2D) => void;
 
+  // ── ADR-348: Scale tool ────────────────────────────────────────────────
+  /** Whether the scale tool is active and collecting base point / reference points */
+  scaleIsActive?: boolean;
+  /** Click handler for scale state machine */
+  handleScaleClick?: (worldPoint: Point2D) => void;
+
+  // ── ADR-349: Stretch tool ──────────────────────────────────────────────
+  /** Whether the stretch / mstretch tool is active and collecting base point / displacement */
+  stretchIsActive?: boolean;
+  /** Click handler for stretch state machine */
+  handleStretchClick?: (worldPoint: Point2D) => void;
+
   // ── Level / Scene ─────────────────────────────────────────────────────
   levelManager: LevelManagerLike;
 

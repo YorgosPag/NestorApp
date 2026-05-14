@@ -172,7 +172,7 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
     const isRotationActive = activeTool === 'rotate';
     const isGuideToolActive = activeTool?.startsWith('guide-') ?? false;
     const isAdditiveClick = e.shiftKey || e.ctrlKey || e.metaKey;
-    if (e.button === 0 && !isAdditiveClick && activeTool !== 'pan' && !isToolInteractive && !shouldStartPan && !isGripDragging && !isRotationActive && !isGuideToolActive) {
+    if (e.button === 0 && !isAdditiveClick && activeTool !== 'pan' && activeTool !== 'lasso-crop' && activeTool !== 'polygon-crop' && !isToolInteractive && !shouldStartPan && !isGripDragging && !isRotationActive && !isGuideToolActive) {
       cursor.startSelection(screenPos);
     }
   }, [transform, cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown]);

@@ -6,7 +6,6 @@ import { useState, useCallback, useRef } from 'react';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { ToolType } from '../../ui/toolbar/types';
 export type ToolCategory = 'selection' | 'drawing' | 'measurement' | 'zoom' | 'utility' | 'editing';
-
 export interface ToolInfo {
   id: ToolType;
   category: ToolCategory;
@@ -16,11 +15,9 @@ export interface ToolInfo {
   /** 🏢 ENTERPRISE (2026-01-26): ADR-033 - Whether this tool preserves overlay draw mode when active */
   preservesOverlayMode: boolean;
 }
-
 const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // Selection tools - preserve overlay mode for editing
   'select': { id: 'select', category: 'selection', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: true },
-
   // Drawing tools - cancel overlay mode (CAD drawing ≠ overlay drawing)
   'line': { id: 'line', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'line-perpendicular': { id: 'line-perpendicular', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
@@ -43,7 +40,6 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'arc-3p': { id: 'arc-3p', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'arc-cse': { id: 'arc-cse', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'arc-sce': { id: 'arc-sce', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
-
   // Measurement tools - cancel overlay mode (measurement ≠ overlay drawing)
   // 🏢 ENTERPRISE FIX (2026-01-26): allowsContinuous: true for consecutive measurements
   // Pattern: AutoCAD/BricsCAD - measurement tools stay active for multiple measurements
@@ -70,13 +66,17 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
 
   // Utility tools - pan doesn't interact with overlay drawing
   'pan': { id: 'pan', category: 'utility', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false },
-
   // 🏢 ENTERPRISE (Phase 3): Editing tools for entity manipulation
   'move': { id: 'move', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'rotate': { id: 'rotate', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'copy': { id: 'copy', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'delete': { id: 'delete', category: 'editing', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
   'grip-edit': { id: 'grip-edit', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: true },
+  // ADR-348: Scale command (uniform + non-uniform + copy mode + reference mode)
+  'scale': { id: 'scale', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-349 Phase 1a: Stretch (crossing-window) + MStretch (multi-window union)
+  'stretch': { id: 'stretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'mstretch': { id: 'mstretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 
   // 🏢 ENTERPRISE: Layering tool - ALWAYS preserves overlay mode (it's the overlay management tool!)
   'layering': { id: 'layering', category: 'utility', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: true },

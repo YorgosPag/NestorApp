@@ -569,7 +569,44 @@
         "Κλικ σε X ή Y οδηγό ως άξονα συμμετρίας"
       ],
       "shortcuts": "G→5 | Ctrl+Z=Αναίρεση | ESC=Ακύρωση"
+    },
+    "scale": {
+      "name": "Κλιμάκωση",
+      "description": "Κλιμάκωση επιλεγμένων οντοτήτων",
+      "steps": [
+        "Επιλέξτε οντότητες",
+        "Ορίστε σημείο βάσης",
+        "Δώστε συντελεστή κλιμάκωσης"
+      ],
+      "shortcuts": "SC | C=Αντιγραφή | R=Αναφορά | N=Ανομοιόμορφη | ESC=Ακύρωση"
     }
+  },
+  "scaleTool": {
+    "selectObjects": "Επιλέξτε αντικείμενα → ENTER",
+    "specifyBasePoint": "Ορίστε σημείο βάσης",
+    "enterScaleFactor": "Δώστε συντελεστή κλιμάκωσης [C=Αντιγραφή / R=Αναφορά / N=Ανομοιόμορφη]",
+    "enterScaleX": "Δώστε συντελεστή Χ (οριζόντιος)",
+    "enterScaleY": "Δώστε συντελεστή Υ (κατακόρυφος)",
+    "refPoint1": "Κάντε κλικ στο 1ο σημείο αναφοράς",
+    "refPoint2": "Κάντε κλικ στο 2ο σημείο αναφοράς",
+    "refNewLength": "Δώστε νέο μήκος",
+    "lockedLayerSkipped": "{count} αντικείμενα σε κλειδωμένα επίπεδα παραλείφθηκαν",
+    "allLockedAbort": "Όλα τα αντικείμενα είναι σε κλειδωμένα επίπεδα — ακύρωση",
+    "invalidZeroFactor": "Ο συντελεστής κλιμάκωσης δεν μπορεί να είναι μηδέν",
+    "copyModeOn": "Κατάσταση Αντιγραφής: ΕΝΕΡΓΗ",
+    "nonUniformOn": "Ανομοιόμορφη κλιμάκωση: ΕΝΕΡΓΗ"
+  },
+  "stretchTool": {
+    "selectObjects": "Επιλέξτε αντικείμενα με crossing window → ENTER",
+    "specifyBasePoint": "Ορίστε σημείο βάσης",
+    "specifyDisplacement": "Ορίστε δεύτερο σημείο μετατόπισης",
+    "enterDisplacement": "Δώστε μετατόπιση (dx,dy)",
+    "nothingToStretch": "Δεν επιλέχθηκαν σημεία προς επιμήκυνση",
+    "lockedLayerSkipped": "{count} αντικείμενα σε κλειδωμένα επίπεδα παραλείφθηκαν",
+    "allLockedAbort": "Όλα τα αντικείμενα είναι σε κλειδωμένα επίπεδα — ακύρωση",
+    "invalidZeroDisplacement": "Η μετατόπιση δεν μπορεί να είναι μηδέν",
+    "mstretchSelectFirst": "Σχεδιάστε 1ο crossing window",
+    "mstretchSelectNext": "Επόμενο crossing window ή ENTER για ολοκλήρωση"
   },
   "common": {
     "step": "Βήμα",

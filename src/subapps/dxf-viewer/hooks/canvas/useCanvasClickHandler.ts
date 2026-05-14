@@ -45,6 +45,7 @@ import { collectAreaCandidates, collectHoleAreas } from '../../systems/auto-area
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { dlog, dwarn } from '../../debug';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
+import { resolveEntityText } from '../../utils/text-node-utils';
 
 // ── Re-exports for backward compatibility ───────────────────────────────────
 export type {
@@ -77,6 +78,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     rotationIsActive = false, handleRotationClick,
     moveIsActive = false, handleMoveClick,
     mirrorIsActive = false, handleMirrorClick,
+    scaleIsActive = false, handleScaleClick,
+    stretchIsActive = false, handleStretchClick,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef,
@@ -102,7 +105,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     }
 
     // PRIORITY 1: DXF entity grip interaction (ONLY in select mode — not during drawing)
-    if (!isInteractiveTool(activeTool) && activeTool !== 'rotate' && dxfGripInteraction.handleGripClick(worldPoint)) {
+    if (!isInteractiveTool(activeTool) && activeTool !== 'rotate' && activeTool !== 'scale' && activeTool !== 'stretch' && activeTool !== 'mstretch' && dxfGripInteraction.handleGripClick(worldPoint)) {
       return;
     }
 
@@ -127,6 +130,18 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.56: Mirror tool click (axis point 1 or 2)
     if (mirrorIsActive && handleMirrorClick) {
       handleMirrorClick(worldPoint);
+      return;
+    }
+
+    // PRIORITY 1.57: ADR-348 — Scale tool click (base point or reference point)
+    if (scaleIsActive && handleScaleClick) {
+      handleScaleClick(worldPoint);
+      return;
+    }
+
+    // PRIORITY 1.58: ADR-349 — Stretch / MStretch tool click (base point or displacement)
+    if (stretchIsActive && handleStretchClick) {
+      handleStretchClick(worldPoint);
       return;
     }
 
@@ -229,6 +244,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     rotationIsActive, handleRotationClick,
     moveIsActive, handleMoveClick,
     mirrorIsActive, handleMirrorClick,
+    scaleIsActive, handleScaleClick,
+    stretchIsActive, handleStretchClick,
     levelManager,
     draftPolygon, isSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
@@ -351,7 +368,7 @@ function testEntityHit(
 
   if (isTextEntity(entity)) {
     const height = entity.height ?? entity.fontSize ?? 2.5;
-    const width = entity.text.length * height * 0.6;
+    const width = resolveEntityText(entity).length * height * 0.6;
     return worldPoint.x >= entity.position.x - hitTolerance &&
            worldPoint.x <= entity.position.x + width + hitTolerance &&
            worldPoint.y >= entity.position.y - height - hitTolerance &&
@@ -360,7 +377,7 @@ function testEntityHit(
 
   if (isMTextEntity(entity)) {
     const height = entity.height ?? entity.fontSize ?? 2.5;
-    const width = entity.width || (entity.text.length * height * 0.6);
+    const width = entity.width || (resolveEntityText(entity).length * height * 0.6);
     return worldPoint.x >= entity.position.x - hitTolerance &&
            worldPoint.x <= entity.position.x + width + hitTolerance &&
            worldPoint.y >= entity.position.y - height - hitTolerance &&
