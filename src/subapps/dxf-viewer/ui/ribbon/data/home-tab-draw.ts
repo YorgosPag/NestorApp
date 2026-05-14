@@ -18,6 +18,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
       isInFlyout: false,
       buttons: [
         {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'draw.layering',
+            labelKey: 'ribbon.commands.layering',
+            icon: 'layering',
+            commandKey: 'layering',
+          },
+        },
+        {
           type: 'split',
           size: 'large',
           command: {

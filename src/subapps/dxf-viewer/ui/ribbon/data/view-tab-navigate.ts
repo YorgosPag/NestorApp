@@ -107,5 +107,21 @@ export const VIEW_NAVIGATE_PANEL: RibbonPanelDef = {
         },
       ],
     },
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'widget',
+          size: 'small',
+          widgetId: 'zoom-controls',
+          command: {
+            id: 'navigate.zoomLevel',
+            labelKey: 'ribbon.commands.zoomLevel',
+            icon: '',
+            commandKey: 'zoom-level',
+          },
+        },
+      ],
+    },
   ],
 };

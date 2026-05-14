@@ -21,6 +21,27 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
           type: 'simple',
           size: 'large',
           command: {
+            id: 'modify.select',
+            labelKey: 'ribbon.commands.select',
+            icon: 'select',
+            commandKey: 'select',
+            shortcut: 'ESC',
+          },
+        },
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'modify.gripEdit',
+            labelKey: 'ribbon.commands.gripEdit',
+            icon: 'grip-edit',
+            commandKey: 'grip-edit',
+          },
+        },
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
             id: 'modify.move',
             labelKey: 'ribbon.commands.move',
             icon: 'move',
@@ -66,6 +87,33 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
           type: 'simple',
           size: 'large',
           command: {
+            id: 'modify.delete',
+            labelKey: 'ribbon.commands.delete',
+            icon: 'delete',
+            commandKey: 'delete',
+            shortcut: 'DEL',
+          },
+        },
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'modify.cropWindow',
+            labelKey: 'ribbon.commands.cropWindow',
+            icon: 'crop-window',
+            commandKey: 'crop-window',
+            shortcut: 'CR',
+          },
+        },
+      ],
+    },
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
             id: 'modify.scale',
             labelKey: 'ribbon.commands.scale',
             icon: 'scale',
@@ -76,7 +124,7 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
         },
         {
           type: 'simple',
-          size: 'large',
+          size: 'small',
           command: {
             id: 'modify.stretch',
             labelKey: 'ribbon.commands.stretch',
@@ -86,11 +134,6 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             comingSoon: true,
           },
         },
-      ],
-    },
-    {
-      isInFlyout: false,
-      buttons: [
         {
           type: 'simple',
           size: 'small',

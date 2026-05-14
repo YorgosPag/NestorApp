@@ -47,6 +47,14 @@ export function applyToggle(
     setValue('underline', nextValue);
     return;
   }
+  if (commandKey === TEXT_RIBBON_KEYS.style.overline) {
+    setValue('overline', nextValue);
+    return;
+  }
+  if (commandKey === TEXT_RIBBON_KEYS.style.strikethrough) {
+    setValue('strikethrough', nextValue);
+    return;
+  }
   const justification = ALIGN_KEY_TO_JUSTIFICATION[commandKey];
   if (justification && nextValue) {
     setValue('justification', justification);
@@ -60,6 +68,8 @@ export function readToggleState(
   if (commandKey === TEXT_RIBBON_KEYS.style.bold) return values.bold;
   if (commandKey === TEXT_RIBBON_KEYS.style.italic) return values.italic;
   if (commandKey === TEXT_RIBBON_KEYS.style.underline) return values.underline;
+  if (commandKey === TEXT_RIBBON_KEYS.style.overline) return values.overline;
+  if (commandKey === TEXT_RIBBON_KEYS.style.strikethrough) return values.strikethrough;
   const justification = ALIGN_KEY_TO_JUSTIFICATION[commandKey];
   if (!justification) return false;
   if (values.justification === null) return null;

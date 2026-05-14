@@ -44,6 +44,21 @@ export function applyCombobox(
     if (n !== null && n > 0) setValue('lineSpacingFactor', n);
     return;
   }
+  if (commandKey === TEXT_RIBBON_KEYS.font.widthFactor) {
+    const n = parseFiniteNumber(value);
+    if (n !== null && n > 0) setValue('widthFactor', n);
+    return;
+  }
+  if (commandKey === TEXT_RIBBON_KEYS.font.obliqueAngle) {
+    const n = parseFiniteNumber(value);
+    if (n !== null) setValue('obliqueAngle', n);
+    return;
+  }
+  if (commandKey === TEXT_RIBBON_KEYS.font.tracking) {
+    const n = parseFiniteNumber(value);
+    if (n !== null && n > 0) setValue('tracking', n);
+    return;
+  }
   if (commandKey === TEXT_RIBBON_KEYS.properties.layer) {
     setValue('layerId', value);
     return;

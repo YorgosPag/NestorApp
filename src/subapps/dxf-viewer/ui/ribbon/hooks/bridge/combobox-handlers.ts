@@ -56,6 +56,18 @@ export function readComboboxState(
     const raw = values.lineSpacingFactor;
     return { value: raw === null ? null : raw.toFixed(2), options: [] };
   }
+  if (commandKey === TEXT_RIBBON_KEYS.font.widthFactor) {
+    const raw = values.widthFactor;
+    return { value: raw === null ? null : raw.toFixed(2), options: [] };
+  }
+  if (commandKey === TEXT_RIBBON_KEYS.font.obliqueAngle) {
+    const raw = values.obliqueAngle;
+    return { value: raw === null ? null : String(raw), options: [] };
+  }
+  if (commandKey === TEXT_RIBBON_KEYS.font.tracking) {
+    const raw = values.tracking;
+    return { value: raw === null ? null : raw.toFixed(2), options: [] };
+  }
   if (commandKey === TEXT_RIBBON_KEYS.properties.layer) {
     return { value: values.layerId, options: buildLayerOptions(sources.layers) };
   }
