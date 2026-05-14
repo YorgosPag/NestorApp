@@ -116,6 +116,31 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     isProjectRole: false,
   },
 
+  internal_user: {
+    name: "auth.roles.internalUser.name",
+    description: "auth.roles.internalUser.description",
+    permissions: [
+      "projects:projects:view",
+      "projects:floors:view",
+      "buildings:buildings:view",
+      "properties:properties:view",
+      "notifications:notifications:view",
+    ],
+    level: 2,
+    isProjectRole: false,
+  },
+
+  external_user: {
+    name: "auth.roles.externalUser.name",
+    description: "auth.roles.externalUser.description",
+    permissions: [
+      "projects:projects:view",
+      "properties:properties:view",
+    ],
+    level: 3,
+    isProjectRole: false,
+  },
+
   // ===========================================================================
   // PROJECT ROLES (Project-scoped)
   // ===========================================================================
