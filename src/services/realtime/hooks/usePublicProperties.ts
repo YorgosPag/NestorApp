@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { query, where, collection, onSnapshot, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { LISTED_COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
 import type { RealtimeUnit } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -19,8 +21,10 @@ export function usePublicProperties() {
     setError(null);
 
     try {
-      const constraints: QueryConstraint[] = [where('commercialStatus', 'in', ['for-sale', 'for-rent', 'for-sale-and-rent'])];
-      const q = query(collection(db, 'properties'), ...constraints);
+      const constraints: QueryConstraint[] = [
+        where('commercialStatus', 'in', LISTED_COMMERCIAL_STATUSES as unknown as string[]),
+      ];
+      const q = query(collection(db, COLLECTIONS.PROPERTIES), ...constraints);
 
       const unsubscribe = onSnapshot(
         q,
