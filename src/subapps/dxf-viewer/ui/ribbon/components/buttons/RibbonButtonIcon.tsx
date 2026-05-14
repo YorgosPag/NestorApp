@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough } from 'lucide-react';
+import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough } from 'lucide-react';
 import { LineIcon } from '../../../toolbar/icons/LineIcon';
 import { CircleIcon } from '../../../toolbar/icons/CircleIcon';
 import { ArcIcon } from '../../../toolbar/icons/ArcIcon';
@@ -158,6 +158,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'display-grid': return <Grid3X3 width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'display-autocrop': return <Crop width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'crop-window': return <Scissors width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'polygon-crop': return <Pentagon width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'lasso-crop': return <Lasso width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'pdf-background': return <FileImage width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'import-legacy': return <Upload width={sizePx[size]} height={sizePx[size]} className={className} />;

@@ -314,6 +314,7 @@
     "panels": {
       "draw": "Draw",
       "modify": "Modify",
+      "modifyEdit": "Edit",
       "annotation": "Annotation",
       "layerManager": "Layer Manager",
       "navigate": "Navigate",
@@ -507,8 +508,14 @@
       "guideAnalysis": "Guide Analysis",
       "displayGrid": "Grid",
       "displayAutoCrop": "Auto Crop",
-      "cropWindow": "Crop Region",
+      "cropWindow": "Crop",
+      "polygonCrop": "Polygon Crop",
       "lassoCrop": "Lasso Crop",
+      "cropVariants": {
+        "window": "Crop Region",
+        "polygon": "Polygon Crop",
+        "lasso": "Lasso Crop"
+      },
       "floorplanWizard": "Floorplan (Wizard)",
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",

@@ -384,8 +384,7 @@
       "name": "Parallel Guide",
       "description": "Create guide parallel to existing",
       "steps": [
-        "Click on reference guide",
-        "Click on desired side"
+        "Click on guide — type distance + Enter"
       ],
       "shortcuts": "G→P | ESC=Cancel"
     },

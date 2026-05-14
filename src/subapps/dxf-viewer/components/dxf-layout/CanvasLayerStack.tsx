@@ -35,9 +35,11 @@ import {
   PreviewCanvasMounts,
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
-import { LassoCropPreviewSubscriber } from './LassoCropPreviewSubscriber';
+import { PolygonCropPreviewSubscriber } from './LassoCropPreviewSubscriber';
+import { LassoFreehandPreviewSubscriber } from './LassoFreehandPreviewSubscriber';
 import { AutoAreaResultPanel } from './AutoAreaResultPanel';
 import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
+import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay';
 
 // Re-export props type for consumers
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
@@ -424,7 +426,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`}
             />
           )}
-
           <PreviewCanvas
             ref={previewCanvasRef as React.RefObject<PreviewCanvasHandle>}
             transform={transform}
@@ -433,7 +434,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             defaultOptions={PREVIEW_DEFAULTS}
           />
-
           {/* PreviewCanvas mounts: Rotation / Move / GripDrag (ADR-049 SSOT) */}
           <PreviewCanvasMounts
             rotation={rotationPreview}
@@ -446,7 +446,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             getCanvas={getPreviewCanvas}
             getViewportElement={getViewportEl}
           />
-
           <CrosshairOverlay
             isActive={crosshairSettings.enabled && !!dxfScene}
             rulerMargins={{
@@ -460,7 +459,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               height: `calc(100% - ${rulerSettings.horizontal?.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)`,
             }}
           />
-
           <SnapIndicatorSubscriber
             viewport={viewport}
             dxfCanvasRef={dxfCanvasRef}
@@ -482,14 +480,18 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             viewport={viewport}
             className={PANEL_LAYOUT.Z_INDEX['30']}
           />
-
           <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
-
-          <LassoCropPreviewSubscriber
+          <PolygonCropPreviewSubscriber
             transform={transform}
             viewport={viewport}
             className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`}
           />
+          <LassoFreehandPreviewSubscriber
+            transform={transform}
+            viewport={viewport}
+            className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`}
+          />
+          <CanvasNumericInputOverlay />
         </div>
       </div>
       <AutoAreaResultPanel />

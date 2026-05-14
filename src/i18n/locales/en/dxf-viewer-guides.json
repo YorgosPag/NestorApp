@@ -156,5 +156,8 @@
     "confirmTitle": "Keep original objects?",
     "confirmYes": "Yes",
     "confirmNo": "No"
+  },
+  "canvasNumericInput": {
+    "label": "Distance"
   }
 }

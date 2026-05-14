@@ -94,7 +94,7 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
           },
         },
         {
-          type: 'simple',
+          type: 'split',
           size: 'large',
           command: {
             id: 'modify.cropWindow',
@@ -103,22 +103,31 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             commandKey: 'crop-window',
             shortcut: 'CR',
           },
-        },
-        {
-          type: 'simple',
-          size: 'large',
-          command: {
-            id: 'modify.lassoCrop',
-            labelKey: 'ribbon.commands.lassoCrop',
-            icon: 'lasso-crop',
-            commandKey: 'lasso-crop',
-            shortcut: 'LC',
-          },
+          variants: [
+            {
+              id: 'crop.window',
+              labelKey: 'ribbon.commands.cropVariants.window',
+              icon: 'crop-window',
+              commandKey: 'crop-window',
+            },
+            {
+              id: 'crop.polygon',
+              labelKey: 'ribbon.commands.cropVariants.polygon',
+              icon: 'polygon-crop',
+              commandKey: 'polygon-crop',
+            },
+            {
+              id: 'crop.lasso',
+              labelKey: 'ribbon.commands.cropVariants.lasso',
+              icon: 'lasso-crop',
+              commandKey: 'lasso-crop',
+            },
+          ],
         },
       ],
     },
     {
-      isInFlyout: false,
+      isInFlyout: true,
       buttons: [
         {
           type: 'simple',
@@ -254,6 +263,77 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             shortcut: 'X',
             comingSoon: true,
           },
+        },
+      ],
+    },
+  ],
+};
+
+export const HOME_MODIFY_EDIT_PANEL: RibbonPanelDef = {
+  id: 'modify-edit',
+  labelKey: 'ribbon.panels.modifyEdit',
+  rows: [
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'simple',
+          size: 'small',
+          command: { id: 'edit.scale', labelKey: 'ribbon.commands.scale', icon: 'scale', commandKey: 'scale', shortcut: 'SC', comingSoon: true },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: { id: 'edit.stretch', labelKey: 'ribbon.commands.stretch', icon: 'stretch', commandKey: 'stretch', shortcut: 'S', comingSoon: true },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: { id: 'edit.trim', labelKey: 'ribbon.commands.trim', icon: 'trim', commandKey: 'trim', shortcut: 'TR', comingSoon: true },
+        },
+      ],
+    },
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'simple',
+          size: 'small',
+          command: { id: 'edit.extend', labelKey: 'ribbon.commands.extend', icon: 'extend', commandKey: 'extend', shortcut: 'EX', comingSoon: true },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: { id: 'edit.offset', labelKey: 'ribbon.commands.offset', icon: 'offset', commandKey: 'offset', shortcut: 'O', comingSoon: true },
+        },
+        {
+          type: 'split',
+          size: 'small',
+          command: { id: 'edit.fillet', labelKey: 'ribbon.commands.fillet', icon: 'fillet', commandKey: 'fillet', shortcut: 'F', comingSoon: true },
+          variants: [
+            { id: 'fillet2.fillet', labelKey: 'ribbon.commands.filletVariants.fillet', icon: 'fillet', commandKey: 'fillet', comingSoon: true },
+            { id: 'fillet2.chamfer', labelKey: 'ribbon.commands.filletVariants.chamfer', icon: 'chamfer', commandKey: 'chamfer', comingSoon: true },
+          ],
+        },
+      ],
+    },
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'split',
+          size: 'small',
+          command: { id: 'edit.array', labelKey: 'ribbon.commands.array', icon: 'array-rect', commandKey: 'array', shortcut: 'AR', comingSoon: true },
+          variants: [
+            { id: 'array2.rectangular', labelKey: 'ribbon.commands.arrayVariants.rectangular', icon: 'array-rect', commandKey: 'array-rect', comingSoon: true },
+            { id: 'array2.path', labelKey: 'ribbon.commands.arrayVariants.path', icon: 'array-path', commandKey: 'array-path', comingSoon: true },
+            { id: 'array2.polar', labelKey: 'ribbon.commands.arrayVariants.polar', icon: 'array-polar', commandKey: 'array-polar', comingSoon: true },
+          ],
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: { id: 'edit.explode', labelKey: 'ribbon.commands.explode', icon: 'explode', commandKey: 'explode', shortcut: 'X', comingSoon: true },
         },
       ],
     },

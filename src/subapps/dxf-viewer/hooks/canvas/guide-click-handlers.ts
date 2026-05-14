@@ -145,30 +145,30 @@ export function handleGuideToolClick(
 // INDIVIDUAL GUIDE HANDLERS (non-entity-picking)
 // ============================================================================
 
-/** ADR-189 §3.3: Diagonal (XZ) guide — 3-click state machine */
+/** ADR-189 §3.3: Diagonal (XZ) guide — 2-click: anchor then direction → infinite guide */
 function handleDiagonalGuide(ctx: GuideClickContext, p: UseCanvasClickHandlerParams): boolean {
   const { worldPoint } = ctx;
   const diagonalStep = p.diagonalStep ?? 0;
 
   if (diagonalStep === 0 && p.onDiagonalStartSet) {
     p.onDiagonalStartSet(worldPoint);
-    dlog('guideClickHandlers', 'Diagonal step 0: start set', worldPoint);
+    dlog('guideClickHandlers', 'Diagonal step 0: anchor set', worldPoint);
     return true;
   }
-  if (diagonalStep === 1 && p.onDiagonalDirectionSet) {
-    p.onDiagonalDirectionSet(worldPoint);
-    dlog('guideClickHandlers', 'Diagonal step 1: direction set', worldPoint);
-    return true;
-  }
-  if (diagonalStep === 2 && p.diagonalStartPoint && p.diagonalDirectionPoint && p.guideAddDiagonalGuide) {
-    const dx = p.diagonalDirectionPoint.x - p.diagonalStartPoint.x;
-    const dy = p.diagonalDirectionPoint.y - p.diagonalStartPoint.y;
+  if (diagonalStep === 1 && p.diagonalStartPoint && p.guideAddDiagonalGuide) {
+    const dx = worldPoint.x - p.diagonalStartPoint.x;
+    const dy = worldPoint.y - p.diagonalStartPoint.y;
     const lenSq = dx * dx + dy * dy;
-    if (lenSq > 0) {
-      const t = ((worldPoint.x - p.diagonalStartPoint.x) * dx + (worldPoint.y - p.diagonalStartPoint.y) * dy) / lenSq;
-      const endPoint = { x: p.diagonalStartPoint.x + t * dx, y: p.diagonalStartPoint.y + t * dy };
-      p.guideAddDiagonalGuide(p.diagonalStartPoint, endPoint);
-      dlog('guideClickHandlers', 'Diagonal step 2: guide created', { start: p.diagonalStartPoint, end: endPoint });
+    if (lenSq > 0.001) {
+      const extent = 100_000;
+      const len = Math.sqrt(lenSq);
+      const nx = (dx / len) * extent;
+      const ny = (dy / len) * extent;
+      p.guideAddDiagonalGuide(
+        { x: p.diagonalStartPoint.x - nx, y: p.diagonalStartPoint.y - ny },
+        { x: p.diagonalStartPoint.x + nx, y: p.diagonalStartPoint.y + ny },
+      );
+      dlog('guideClickHandlers', 'Diagonal step 1: infinite guide created', { anchor: p.diagonalStartPoint, direction: worldPoint });
     }
     p.onDiagonalComplete?.();
   }
@@ -199,38 +199,30 @@ function handleGuideDelete(ctx: GuideClickContext, p: UseCanvasClickHandlerParam
   return true;
 }
 
-/** guide-parallel — 2-step: select reference, then choose side */
+/** guide-parallel — 1-click: select reference + infer side from cursor position */
 function handleGuideParallel(ctx: GuideClickContext, p: UseCanvasClickHandlerParams): boolean {
   if (!p.guides || p.guides.length === 0) return true;
+  if (!p.onParallelSideChosen) return true;
 
-  if (!p.parallelRefGuideId && p.onParallelRefSelected) {
-    const result = findNearestGuide(ctx.worldPoint, p.guides, 30 / ctx.transform.scale);
-    if (result) {
-      p.onParallelRefSelected(result.guide.id);
-      dlog('guideClickHandlers', 'Parallel step 1: reference selected', result.guide.id, result.guide.axis);
-    }
-    return true;
+  const result = findNearestGuide(ctx.worldPoint, p.guides, 30 / ctx.transform.scale);
+  if (!result) return true;
+
+  const { guide } = result;
+  let sign: 1 | -1;
+  if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
+    const dx = guide.endPoint.x - guide.startPoint.x;
+    const dy = guide.endPoint.y - guide.startPoint.y;
+    const cx = ctx.worldPoint.x - guide.startPoint.x;
+    const cy = ctx.worldPoint.y - guide.startPoint.y;
+    sign = (cx * dy - cy * dx) >= 0 ? 1 : -1;
+  } else {
+    sign = guide.axis === 'X'
+      ? (ctx.worldPoint.x >= guide.offset ? 1 : -1)
+      : (ctx.worldPoint.y >= guide.offset ? 1 : -1);
   }
 
-  if (p.parallelRefGuideId && p.onParallelSideChosen) {
-    const refGuide = p.guides.find(g => g.id === p.parallelRefGuideId);
-    if (refGuide) {
-      let sign: 1 | -1;
-      if (refGuide.axis === 'XZ' && refGuide.startPoint && refGuide.endPoint) {
-        const dx = refGuide.endPoint.x - refGuide.startPoint.x;
-        const dy = refGuide.endPoint.y - refGuide.startPoint.y;
-        const cx = ctx.worldPoint.x - refGuide.startPoint.x;
-        const cy = ctx.worldPoint.y - refGuide.startPoint.y;
-        sign = (cx * dy - cy * dx) >= 0 ? 1 : -1;
-      } else {
-        sign = refGuide.axis === 'X'
-          ? (ctx.worldPoint.x >= refGuide.offset ? 1 : -1)
-          : (ctx.worldPoint.y >= refGuide.offset ? 1 : -1);
-      }
-      p.onParallelSideChosen(refGuide.id, sign);
-      dlog('guideClickHandlers', 'Parallel step 2: side chosen', sign > 0 ? '+' : '-', refGuide.axis);
-    }
-  }
+  p.onParallelSideChosen(guide.id, sign);
+  dlog('guideClickHandlers', 'Parallel: reference + side in 1 click', guide.id, sign > 0 ? '+' : '-', guide.axis);
   return true;
 }
 

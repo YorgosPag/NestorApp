@@ -30,7 +30,8 @@ import { ClipToPolygonService } from '../services/ClipToPolygonService';
 import { ClipToRegionCommand, type OverlayClipChange } from '../core/commands/ClipToRegionCommand';
 import { useOverlayStore } from '../overlays/overlay-store';
 import { useLevels } from '../systems/levels';
-import { LassoCropStore } from '../systems/lasso/LassoCropStore';
+import { PolygonCropStore } from '../systems/lasso/LassoCropStore';
+import { LassoFreehandStore } from '../systems/lasso/LassoFreehandStore';
 
 const clipService = new ClipToRegionService();
 const polygonClipService = new ClipToPolygonService();
@@ -158,40 +159,45 @@ export function useDxfViewerState() {
     });
   }, [setActiveTool]);
 
-  // Lasso-crop: EventBus delivers world-space polygon after user closes lasso (Enter).
-  // Same command pattern as crop:marquee-rect for undo/redo.
-  useEffect(() => {
-    return EventBus.on('crop:lasso-polygon', ({ polygon }) => {
-      const { currentScene, currentLevelId } = sceneStateRef.current;
-      if (!currentScene || !currentLevelId) {
-        setActiveTool('select');
-        return;
-      }
-      const clippedScene = polygonClipService.clipByPolygon(currentScene, polygon);
-      const store = overlayStoreRef.current;
-      const overlayChanges: OverlayClipChange[] = store
-        .getByLevel(currentLevelId)
-        .reduce<OverlayClipChange[]>((acc, overlay) => {
-          const after = polygonClipService.clipOverlayPolygonByLasso(overlay.polygon, polygon);
-          if (after !== overlay.polygon) {
-            acc.push({ before: overlay, after });
-          }
-          return acc;
-        }, []);
-      const cmd = new ClipToRegionCommand(
-        currentLevelId, currentScene, clippedScene, overlayChanges,
-        setLevelSceneRef.current, store,
-      );
-      executeCommandRef.current(cmd);
-      setActiveTool('select');
-    });
+  // Shared clip-by-polygon handler — used by both polygon-crop and lasso-crop
+  const _clipByPolygon = useCallback((polygon: Array<[number, number]>) => {
+    const { currentScene, currentLevelId } = sceneStateRef.current;
+    if (!currentScene || !currentLevelId) { setActiveTool('select'); return; }
+    const clippedScene = polygonClipService.clipByPolygon(currentScene, polygon);
+    const store = overlayStoreRef.current;
+    const overlayChanges: OverlayClipChange[] = store
+      .getByLevel(currentLevelId)
+      .reduce<OverlayClipChange[]>((acc, overlay) => {
+        const after = polygonClipService.clipOverlayPolygonByLasso(overlay.polygon, polygon);
+        if (after !== overlay.polygon) acc.push({ before: overlay, after });
+        return acc;
+      }, []);
+    const cmd = new ClipToRegionCommand(
+      currentLevelId, currentScene, clippedScene, overlayChanges,
+      setLevelSceneRef.current, store,
+    );
+    executeCommandRef.current(cmd);
+    setActiveTool('select');
   }, [setActiveTool]);
 
-  // Clear lasso store whenever the active tool changes away from lasso-crop
+  // Polygon-crop: EventBus delivers world-space polygon after user presses Enter.
   useEffect(() => {
-    if (activeTool !== 'lasso-crop') {
-      LassoCropStore.cancel();
-    }
+    return EventBus.on('crop:polygon', ({ polygon }) => _clipByPolygon(polygon));
+  }, [_clipByPolygon]);
+
+  // Lasso-crop: EventBus delivers freehand polygon after mouseup.
+  useEffect(() => {
+    return EventBus.on('crop:lasso-polygon', ({ polygon }) => _clipByPolygon(polygon));
+  }, [_clipByPolygon]);
+
+  // Cancel polygon-crop store when tool changes away
+  useEffect(() => {
+    if (activeTool !== 'polygon-crop') PolygonCropStore.cancel();
+  }, [activeTool]);
+
+  // Cancel lasso-freehand store when tool changes away
+  useEffect(() => {
+    if (activeTool !== 'lasso-crop') LassoFreehandStore.cancel();
   }, [activeTool]);
 
   // Canvas actions through new API
@@ -225,6 +231,11 @@ export function useDxfViewerState() {
     // processMarqueeSelection intercepts activeTool==='crop-window' and emits crop:marquee-rect.
     if (tool === 'crop-window') {
       setActiveTool('crop-window');
+      return;
+    }
+
+    if (tool === 'polygon-crop') {
+      setActiveTool('polygon-crop');
       return;
     }
 

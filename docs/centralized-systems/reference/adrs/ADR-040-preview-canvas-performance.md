@@ -1128,11 +1128,21 @@ Added `AutoAreaPreviewOverlay` (SVG) to `CanvasLayerStack.tsx` for real-time pol
 
 `DxfRenderer.renderScene()`: normal-state solid LINE entities are now grouped by `(strokeColor × lineWidth)` and rendered as a single canvas path per group — one `ctx.stroke()` call per color/width group instead of one per entity. Reduces canvas API calls from O(n) to O(groups) for the most common case. Excluded from batch (rendered individually as before): selected, hovered, measurement, non-solid line types. Two-pass strategy: (1) collect + batch-flush normal lines, (2) per-entity loop for everything else skips `batchedIds`. No change to `LineRenderer` — the batch path bypasses the full renderer stack and directly draws to ctx, matching `applyEntityStyle` semantics (`entity.color || CAD_UI_COLORS.entity.default`, `lineWidth ≥ 1`, solid dash, `lineCap: butt`).
 
+## 2026-05-14: Polygon Crop + Lasso Freehand — rename + new micro-leaf
+
+**Task 1 (rename):** `LassoCropStore` renamed to `PolygonCropStore` (in-place, file path unchanged), export `LassoCropStore` kept as deprecated alias. `LassoCropPreviewSubscriber` renamed to `PolygonCropPreviewSubscriber` (in-place), deprecated alias re-exported. ToolType `'lasso-crop'` → `'polygon-crop'` (and new `'lasso-crop'` added for freehand). EventBus event `'crop:lasso-polygon'` → `'crop:polygon'` for polygon-crop; `'crop:lasso-polygon'` re-added for freehand lasso. All callers updated: `useCanvasClickHandler`, `useCanvasKeyboardShortcuts`, `useDxfViewerState`, `CanvasLayerStack`.
+
+**Task 2 (freehand lasso):** New `LassoFreehandStore` (`systems/lasso/LassoFreehandStore.ts`) — module-level pub/sub, fields `_active`+`_points`, methods `startAt/addPoint/finish/cancel/isActive/getPoints/subscribe`. Input wired in `useCanvasContainerHandlers`: mouseDown → `startAt()`, mouseUp → `finish()`, `pointermove` useEffect → `addPoint()` throttled ≥3px screen (screen-distance check via `_lastLassoScreen` ref). Escape → `LassoFreehandStore.cancel()` in `useCanvasKeyboardShortcuts`. New `LassoFreehandPreviewSubscriber` micro-leaf subscribes to `LassoFreehandStore` only — renders teal dashed polyline + closing dashed line (≥3 pts). Mounted in `CanvasLayerStack` alongside `PolygonCropPreviewSubscriber`. `useDxfViewerState` handles `crop:lasso-polygon` via shared `_clipByPolygon` callback (DRY — same `ClipToPolygonService` call for both tools).
+
 ## 2026-05-14: Lasso Crop — LassoCropPreviewSubscriber micro-leaf
 
 New `LassoCropPreviewSubscriber` component in `components/dxf-layout/LassoCropPreviewSubscriber.tsx` (extracted to its own file, not appended to `canvas-layer-stack-leaves.tsx`, to stay under 500-line limit). Follows the established micro-leaf subscriber pattern. Subscribes to two stores: `LassoCropStore` (updates on every click, low-frequency) and `ImmediateSnapStore` (high-frequency, for rubber-band line to cursor). Renders an SVG overlay with: filled orange polygon preview, rubber-band dashed line from last point to cursor, closing dashed line from cursor to first point, vertex dots (first dot larger). `CanvasLayerStack` imports and renders `LassoCropPreviewSubscriber` directly (no prop drilling needed — store-based). `LassoCropStore` (new, `systems/lasso/LassoCropStore.ts`) is a module-level pub/sub store that also emits `EventBus.emit('crop:lasso-polygon')` on `close()`. Cardinal rules maintained: zero `useSyncExternalStore` calls in orchestrators (`CanvasSection`, `CanvasLayerStack`).
 
 ---
+
+## 2026-05-14: CanvasNumericInputOverlay — micro-leaf for direct numeric entry
+
+New `CanvasNumericInputOverlay` micro-leaf in `systems/canvas-numeric-input/CanvasNumericInputOverlay.tsx`. Subscribes to `CanvasNumericInputStore` (module-level pub/sub) only. Two `useSyncExternalStore` calls with primitive selectors (`isActive: boolean`, `buffer: string`). Renders `position: fixed` bottom-center pill when active — zero re-render cost on CanvasLayerStack (orchestrator). Mounted in `CanvasLayerStack` alongside `PolygonCropPreviewSubscriber` and `LassoFreehandPreviewSubscriber`. `CanvasNumericInputStore` reuses `DirectDistanceEntry` (text-engine SSOT) — no inline buffer reimplementation. Cardinal rules maintained: zero `useSyncExternalStore` calls in `CanvasLayerStack` orchestrator.
 
 ## 2026-05-14: AutoCAD-style Mirror Tool — MirrorPreviewMount micro-leaf
 

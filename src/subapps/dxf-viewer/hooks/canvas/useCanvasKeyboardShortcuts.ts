@@ -16,7 +16,9 @@
 'use client';
 
 import { useEffect, type Dispatch, type SetStateAction } from 'react';
-import { LassoCropStore } from '../../systems/lasso/LassoCropStore';
+import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
+import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
+import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 import type { SelectedGrip } from '../grips/useGripSystem';
 
 // ============================================================================
@@ -119,6 +121,16 @@ export function useCanvasKeyboardShortcuts({
         return;
       }
 
+      // Canvas numeric input — intercepts before generic Delete/Backspace/Escape (ADR-189)
+      if (CanvasNumericInputStore.isActive()) {
+        if (e.key === 'Backspace') { e.preventDefault(); CanvasNumericInputStore.backspace(); return; }
+        if (e.key === 'Enter') { e.preventDefault(); CanvasNumericInputStore.confirm(); return; }
+        if (e.key === 'Escape') { e.preventDefault(); CanvasNumericInputStore.cancel(); return; }
+        if (e.key === ',' || e.key === '.') { e.preventDefault(); CanvasNumericInputStore.addChar(e.key); return; }
+        if (/^[\d-]$/.test(e.key)) { e.preventDefault(); CanvasNumericInputStore.addChar(e.key); return; }
+        return; // block all other keys during numeric input
+      }
+
       // 🏢 ENTERPRISE (2026-01-26): Smart Delete - ADR-032
       // Delete/Backspace: Context-aware deletion (grips first, then overlays)
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -133,9 +145,14 @@ export function useCanvasKeyboardShortcuts({
 
       switch (e.key) {
         case 'Escape':
-          // Lasso crop: Escape cancels the in-progress polygon
+          // Polygon crop: Escape cancels the in-progress polygon
+          if (activeTool === 'polygon-crop') {
+            PolygonCropStore.cancel();
+            break;
+          }
+          // Freehand lasso-crop: Escape cancels the freehand trace
           if (activeTool === 'lasso-crop') {
-            LassoCropStore.cancel();
+            LassoFreehandStore.cancel();
             break;
           }
           // ADR-049: Move tool cancel (highest priority — intercepts before rotation)
@@ -173,10 +190,10 @@ export function useCanvasKeyboardShortcuts({
           }
           break;
         case 'Enter': {
-          // Lasso crop: Enter closes the polygon and triggers the clip
-          if (activeTool === 'lasso-crop') {
+          // Polygon crop: Enter closes the polygon and triggers the clip
+          if (activeTool === 'polygon-crop') {
             e.preventDefault();
-            LassoCropStore.close();
+            PolygonCropStore.close();
             break;
           }
           // 🏢 ENTERPRISE (2026-01-31): Handle Enter for continuous drawing tools - ADR-083

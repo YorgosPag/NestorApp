@@ -24,7 +24,7 @@ import type {
   GridOperationResult,
 } from '../../ai-assistant/grid-types';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Guide, GuideGroup } from './guide-types';
+import type { Guide, GuideGroup, GridGuideStyle } from './guide-types';
 import { GUIDE_LIMITS, pointToSegmentDistance } from './guide-types';
 import { generateEntityId } from '../entity-creation/utils';
 import {
@@ -142,7 +142,7 @@ export class GuideStore implements IGridHeadlessAPI {
 
   // ── Write Operations (Individual) ──
 
-  addGuideRaw(axis: GridAxis, offset: number, label: string | null = null, parentId: string | null = null, groupId: string | null = null, temporary = false): Guide | undefined {
+  addGuideRaw(axis: GridAxis, offset: number, label: string | null = null, parentId: string | null = null, groupId: string | null = null, temporary = false, style: GridGuideStyle | null = null): Guide | undefined {
     if (this.guides.length >= GUIDE_LIMITS.MAX_GUIDES) {
       console.warn(`[GuideStore] Max guides limit reached (${GUIDE_LIMITS.MAX_GUIDES})`);
       return undefined;
@@ -151,14 +151,17 @@ export class GuideStore implements IGridHeadlessAPI {
     const duplicate = this.guides.find(
       g => g.axis === axis && Math.abs(g.offset - offset) < GUIDE_LIMITS.MIN_OFFSET_DELTA
     );
-    if (duplicate) return undefined;
+    if (duplicate) {
+      console.log('[GuideStore] addGuideRaw() — DUPLICATE REJECTED', { axis, offset, existing: duplicate.offset });
+      return undefined;
+    }
 
     const guide: Guide = {
       id: `guide_${generateEntityId()}`,
       axis,
       offset,
       label,
-      style: null,
+      style,
       visible: true,
       locked: false,
       createdAt: nowISO(),
@@ -167,13 +170,14 @@ export class GuideStore implements IGridHeadlessAPI {
       ...(temporary ? { temporary: true } : {}),
     };
 
+    console.log('[GuideStore] addGuideRaw() — creating guide', { axis, offset, id: guide.id });
     // CRITICAL: New array — useSyncExternalStore uses Object.is()
     this.guides = [...this.guides, guide];
     this.notify();
     return guide;
   }
 
-  addDiagonalGuideRaw(startPoint: Point2D, endPoint: Point2D, label: string | null = null): Guide | undefined {
+  addDiagonalGuideRaw(startPoint: Point2D, endPoint: Point2D, label: string | null = null, style: GridGuideStyle | null = null): Guide | undefined {
     if (this.guides.length >= GUIDE_LIMITS.MAX_GUIDES) {
       console.warn(`[GuideStore] Max guides limit reached (${GUIDE_LIMITS.MAX_GUIDES})`);
       return undefined;
@@ -188,7 +192,7 @@ export class GuideStore implements IGridHeadlessAPI {
       axis: 'XZ',
       offset: 0,
       label,
-      style: null,
+      style,
       visible: true,
       locked: false,
       createdAt: nowISO(),

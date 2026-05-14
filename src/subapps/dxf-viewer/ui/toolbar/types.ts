@@ -86,7 +86,8 @@ export type ToolType =
   | 'guide-preset-grid'       // ADR-189 B23: Structural preset grid
   | 'guide-from-selection'    // ADR-189 B37: Batch guide from selection
   | 'crop-window'             // Crop scene to drawn window region
-  | 'lasso-crop';             // Crop scene to freehand polygon region
+  | 'polygon-crop'            // Crop scene to click-to-add-points polygon
+  | 'lasso-crop';             // Crop scene to freehand drawn polygon
 
 
 export interface ToolDefinition {

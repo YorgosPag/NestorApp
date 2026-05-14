@@ -6,7 +6,7 @@
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { HOME_DRAW_PANEL } from './home-tab-draw';
-import { HOME_MODIFY_PANEL } from './home-tab-modify';
+import { HOME_MODIFY_PANEL, HOME_MODIFY_EDIT_PANEL } from './home-tab-modify';
 import { VIEW_NAVIGATE_PANEL } from './view-tab-navigate';
 import { VIEW_DISPLAY_PANEL } from './view-tab-display';
 import { VIEW_VISUAL_STYLES_PANEL } from './view-tab-visual-styles';
@@ -36,9 +36,9 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
       HOME_HISTORY_PANEL,
       HOME_DRAW_PANEL,
       HOME_MODIFY_PANEL,
+      HOME_MODIFY_EDIT_PANEL,
       HOME_GUIDES_PANEL,
       ANNOTATE_MEASURE_PANEL,
-      { id: 'annotation', labelKey: 'ribbon.panels.annotation', rows: [] },
       HOME_AI_PANEL,
     ],
   },

@@ -6,10 +6,11 @@
  * Handles: guide drag initiation, guide drag completion (MoveGuideCommand),
  * and unified grip mouseDown/mouseUp delegation.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
+import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
 import type { GridAxis } from '../../systems/guides/guide-types';
 import { MoveGuideCommand } from '../../systems/guides/commands';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
@@ -84,8 +85,43 @@ export function useCanvasContainerHandlers(
     executeCommand(cmd);
   }, [executeCommand]);
 
+  // Min screen distance (px²) to add a new lasso point — avoids redundant points
+  const _lastLassoScreen = useRef<{ x: number; y: number } | null>(null);
+
+  // Freehand lasso: pointermove → addPoint when distance ≥ 3px screen
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || activeTool !== 'lasso-crop') return;
+    const onMove = (e: PointerEvent) => {
+      if (!LassoFreehandStore.isActive()) return;
+      const rect = el.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const last = _lastLassoScreen.current;
+      if (last) {
+        const dx = sx - last.x;
+        const dy = sy - last.y;
+        if (dx * dx + dy * dy < 9) return; // < 3px
+      }
+      _lastLassoScreen.current = { x: sx, y: sy };
+      const worldX = (sx - transform.offsetX) / transform.scale;
+      const worldY = (sy - transform.offsetY) / transform.scale;
+      LassoFreehandStore.addPoint(worldX, worldY);
+    };
+    el.addEventListener('pointermove', onMove);
+    return () => el.removeEventListener('pointermove', onMove);
+  }, [activeTool, containerRef, transform]);
+
   const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
+
+    // Freehand lasso-crop: mousedown starts the lasso trace
+    if (activeTool === 'lasso-crop') {
+      const worldPos = getImmediateWorldPosition() ?? { x: 0, y: 0 };
+      _lastLassoScreen.current = null;
+      LassoFreehandStore.startAt(worldPos.x, worldPos.y);
+      return;
+    }
 
     // ADR-189 B5: Guide drag initiation — highest priority for guide-move tool
     if (activeTool === 'guide-move' && containerRef.current) {
@@ -126,6 +162,13 @@ export function useCanvasContainerHandlers(
   }, [unified, activeTool, containerRef, transform, setDraggingGuide]);
 
   const handleContainerMouseUp = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+    // Freehand lasso-crop: mouseup finishes the trace and emits crop:lasso-polygon
+    if (LassoFreehandStore.isActive()) {
+      _lastLassoScreen.current = null;
+      LassoFreehandStore.finish();
+      return;
+    }
+
     // ADR-189 B5: Guide drag end — create MoveGuideCommand
     if (draggingGuide && containerRef.current) {
       const snap = getPointerSnapshotFromElement(containerRef.current);

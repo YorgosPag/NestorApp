@@ -156,5 +156,8 @@
     "confirmTitle": "Διατήρηση αρχικών αντικειμένων;",
     "confirmYes": "Ναι",
     "confirmNo": "Όχι"
+  },
+  "canvasNumericInput": {
+    "label": "Απόσταση"
   }
 }

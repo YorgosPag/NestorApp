@@ -314,6 +314,7 @@
     "panels": {
       "draw": "Σχεδίαση",
       "modify": "Τροποποίηση",
+      "modifyEdit": "Επεξεργασία",
       "annotation": "Επισημείωση",
       "layerManager": "Διαχειριστής Επιπέδων",
       "navigate": "Πλοήγηση",
@@ -507,8 +508,14 @@
       "guideAnalysis": "Ανάλυση Οδηγών",
       "displayGrid": "Πλέγμα",
       "displayAutoCrop": "Αυτόματη Περικοπή",
-      "cropWindow": "Περικοπή Περιοχής",
+      "cropWindow": "Περικοπή",
+      "polygonCrop": "Περικοπή Πολύγωνο",
       "lassoCrop": "Περικοπή Λάσσο",
+      "cropVariants": {
+        "window": "Περικοπή Περιοχής",
+        "polygon": "Περικοπή Πολύγωνο",
+        "lasso": "Περικοπή Λάσσο"
+      },
       "floorplanWizard": "Κάτοψη (Wizard)",
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",

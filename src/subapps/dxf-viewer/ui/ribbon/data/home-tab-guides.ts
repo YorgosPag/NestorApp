@@ -96,7 +96,7 @@ export const HOME_GUIDES_PANEL: RibbonPanelDef = {
           },
         },
         {
-          type: 'simple',
+          type: 'split',
           size: 'large',
           command: {
             id: 'guides.openPanel',
@@ -106,11 +106,28 @@ export const HOME_GUIDES_PANEL: RibbonPanelDef = {
             action: 'toggle-guide-panel',
             shortcut: 'G→L',
           },
+          variants: [
+            {
+              id: 'guides.toggleVisibility',
+              labelKey: 'ribbon.commands.toggleGuides',
+              icon: 'guide-visibility',
+              commandKey: 'guides-visibility',
+              action: 'toggle-guides',
+              shortcut: 'G→V',
+            },
+            {
+              id: 'guides.analysis',
+              labelKey: 'ribbon.commands.guideAnalysis',
+              icon: 'guide-analysis',
+              commandKey: 'guide-analysis',
+              action: 'toggle-guide-analysis-panel',
+            },
+          ],
         },
       ],
     },
     {
-      isInFlyout: false,
+      isInFlyout: true,
       buttons: [
         {
           type: 'simple',

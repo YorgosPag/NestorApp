@@ -3138,3 +3138,39 @@ Grouped dropdown menu with section headers (AutoCAD/Revit panel pattern) + `max-
 - `ui/toolbar/toolDefinitions.tsx` — `group` field on each guide option
 - `i18n/locales/en/dxf-viewer.json` — 6 EN group headers
 - `i18n/locales/el/dxf-viewer.json` — 6 EL group headers
+
+---
+
+## 2026-05-14: guide-parallel — parallel guide inherits reference color (2-part fix)
+
+**Part 1 — root cause:** `guide-renderer.ts` `resolveStyle()` had a branch `if (guide.parentId) return { color: GUIDE_COLORS.PARALLEL }` that overrode ALL parallel guides (any guide with `parentId` set) with a fixed color, ignoring axis. Removed this branch — parallel guides now fall through to the axis-based color logic (`GUIDE_COLORS.X` for X, `GUIDE_COLORS.Y` for Y), identical to regular guides.
+
+**Part 2 — custom color inheritance:** `CreateParallelGuideCommand.execute()` now passes `reference.style` to `addGuideRaw` (X/Y) and `addDiagonalGuideRaw` (XZ), so if the reference guide has a custom user-set color, the parallel inherits it. `addGuideRaw` and `addDiagonalGuideRaw` in `guide-store.ts` gained an optional trailing `style: GridGuideStyle | null = null` parameter (backward compatible). `GridGuideStyle` added to imports in `guide-store.ts`.
+
+## 2026-05-14: guide-parallel — 2-click → 1-click: side inferred from cursor
+
+`handleGuideParallel` (guide-click-handlers.ts) refactored from 2-click flow to 1-click. Previously: click1=select reference, click2=choose side. Now: single click selects the nearest guide AND computes sign from the click's worldPoint relative to the guide. For X/Y guides: `sign = worldPoint.x/y >= guide.offset ? 1 : -1`. For XZ diagonal guides: sign via cross product `(cx * dy - cy * dx) >= 0`. Immediately activates `CanvasNumericInputStore` (installed in same session). `onParallelRefSelected` and `parallelRefGuideId` state become unused (dead code, harmless — state type unchanged). Tool hints updated to 1 step: "Click on guide — type distance + Enter".
+
+## 2026-05-14: guide-xz — 3-click → 2-click simplification
+
+`handleDiagonalGuide` (guide-click-handlers.ts) refactored from 3-click state machine to 2-click flow. Previously: click1=anchor, click2=direction, click3=projection confirmation. Now: click1=anchor, click2=direction → immediately creates guide extending ±100,000 units (infinite on screen). No state or type changes — `diagonalStep` still uses `0|1` subset of `0|1|2`. `onDiagonalDirectionSet` and `diagonalDirectionPoint` become unused (dead code, harmless). i18n hints were already correct (2 steps). Tool hint override via `toolHintOverrideStore` still correct: step 0 → "Κάντε κλικ για το σημείο αρχής", step 1 → "Κάντε κλικ για το σημείο τέλους".
+
+## 2026-05-14: guide-parallel — AutoCAD-style direct numeric input (no modal)
+
+**Flow change:** `guide-parallel` step 2 (side chosen) no longer opens a `showPromptDialog` modal. Instead it activates `CanvasNumericInputStore` (module-level pub/sub, ADR-040 compliant). The user types distance digits directly on the canvas; a fixed overlay shows the live buffer. Enter commits, Escape cancels.
+
+**Architecture:**
+- `systems/canvas-numeric-input/CanvasNumericInputStore.ts` — module-level store, reuses `DirectDistanceEntry` (text-engine SSOT) for buffer/parse logic. Methods: `activate(sign, refGuideId, onConfirm, onCancel)`, `addChar`, `backspace`, `confirm`, `cancel`, `isActive`, `getBuffer`, `subscribe`.
+- `systems/canvas-numeric-input/CanvasNumericInputOverlay.tsx` — micro-leaf (ADR-040). Two `useSyncExternalStore` calls (primitive selectors: `isActive` bool, `buffer` string). Renders `position: fixed` bottom-center pill when active. No props.
+- `useGuideWorkflowHandlers.ts` — `handleParallelSideChosen` replaced to call `CanvasNumericInputStore.activate(...)` instead of `showPromptDialog`. `showPromptDialog` dep removed from that callback only (still used by other handlers).
+- `useCanvasKeyboardShortcuts.ts` — numeric input block at top of `handleKeyDown`: when `isActive()`, routes Backspace/Enter/Escape/digit/comma/dot to store, blocks all other keys.
+- `CanvasLayerStack.tsx` — mounts `<CanvasNumericInputOverlay />` after lasso subscribers (follows same micro-leaf pattern).
+
+### Files Changed
+- `systems/canvas-numeric-input/CanvasNumericInputStore.ts` — NEW
+- `systems/canvas-numeric-input/CanvasNumericInputOverlay.tsx` — NEW
+- `hooks/guides/useGuideWorkflowHandlers.ts` — replace parallel side handler
+- `hooks/canvas/useCanvasKeyboardShortcuts.ts` — numeric input routing
+- `components/dxf-layout/CanvasLayerStack.tsx` — mount overlay
+- `i18n/locales/el/dxf-viewer-guides.json` — `canvasNumericInput.label`
+- `i18n/locales/en/dxf-viewer-guides.json` — `canvasNumericInput.label`

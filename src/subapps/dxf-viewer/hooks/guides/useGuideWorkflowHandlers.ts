@@ -11,6 +11,7 @@ import type { UseGuideStateReturn } from '../state/useGuideState';
 import type { UseConstructionPointStateReturn } from '../state/useConstructionPointState';
 import type { PromptDialogOptions } from '../../systems/prompt-dialog';
 import type { GuideWorkflowState } from './guide-workflow-types';
+import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 
 export interface UseGuideWorkflowHandlersParams {
   guideState: UseGuideStateReturn;
@@ -30,27 +31,18 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
   }, [state]);
 
   const handleParallelSideChosen = useCallback((refGuideId: string, sign: 1 | -1) => {
-    showPromptDialog({
-      title: t('promptDialog.parallelDistance'),
-      label: t('promptDialog.enterDistance'),
-      placeholder: t('promptDialog.distancePlaceholder'),
-      inputType: 'number',
-      unit: 'mm',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n) || n === 0) return t('promptDialog.invalidNumber');
-        return null;
+    console.log('[handleParallelSideChosen] activate()', { refGuideId, sign });
+    CanvasNumericInputStore.activate(
+      sign,
+      refGuideId,
+      (distance, s, id) => {
+        console.log('[handleParallelSideChosen] callback invoked', { id, distance, sign: s, offsetDistance: distance * s });
+        guideState.addParallelGuide(id, distance * s);
+        state.setParallelRefGuideId(null);
       },
-    }).then((result) => {
-      if (result !== null) {
-        const distance = parseFloat(result);
-        if (!isNaN(distance) && Math.abs(distance) > 0.001) {
-          guideState.addParallelGuide(refGuideId, Math.abs(distance) * sign);
-        }
-      }
-      state.setParallelRefGuideId(null);
-    });
-  }, [showPromptDialog, t, guideState, state]);
+      () => { state.setParallelRefGuideId(null); },
+    );
+  }, [guideState, state]);
 
   // ─── Rotate workflow ───
   const handleRotateRefSelected = useCallback((guideId: string) => {

@@ -281,8 +281,6 @@ export class GuideRenderer {
       };
     }
 
-    if (guide.parentId) return { ...DEFAULT_GUIDE_STYLE, color: GUIDE_COLORS.PARALLEL };
-
     const color = guide.axis === 'X' ? GUIDE_COLORS.X : GUIDE_COLORS.Y;
     return { ...DEFAULT_GUIDE_STYLE, color };
   }

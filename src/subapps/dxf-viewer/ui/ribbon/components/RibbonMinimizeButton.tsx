@@ -12,8 +12,8 @@ interface RibbonMinimizeButtonProps {
 
 const ARROW_BY_STATE: Record<RibbonMinimizeState, string> = {
   'full': '▲',
-  'panel-buttons': '▴',
-  'panel-titles': '▵',
+  'panel-buttons': '▲',
+  'panel-titles': '▽',
   'tab-names': '▽',
 };
 

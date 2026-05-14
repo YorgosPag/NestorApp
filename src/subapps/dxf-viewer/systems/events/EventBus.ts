@@ -176,7 +176,9 @@ export interface DrawingEventMap {
   };
   // Crop-window: marquee drawn by user → clip scene to that world-space rectangle
   'crop:marquee-rect': { xMin: number; yMin: number; xMax: number; yMax: number };
-  // Lasso-crop: freehand polygon drawn by user → clip scene to that polygon
+  // Polygon-crop: click-to-add-points polygon → clip scene
+  'crop:polygon': { polygon: Array<[number, number]> };
+  // Lasso-crop: freehand polygon drawn by user → clip scene
   'crop:lasso-polygon': { polygon: Array<[number, number]> };
 }
 
