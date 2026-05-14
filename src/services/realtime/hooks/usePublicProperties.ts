@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { query, where, collection, onSnapshot, type QueryConstraint } from 'firebase/firestore';
-import { firebaseClient } from '@/lib/firebaseClient';
+import { db } from '@/lib/firebase';
 import type { RealtimeUnit } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -19,7 +19,6 @@ export function usePublicProperties() {
     setError(null);
 
     try {
-      const db = firebaseClient;
       const constraints: QueryConstraint[] = [where('status', '==', 'available')];
       const q = query(collection(db, 'properties'), ...constraints);
 
