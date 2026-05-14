@@ -759,6 +759,8 @@
       "modified": "Ενημερώθηκε {field}: {item}",
       "emptyItem": "(άγνωστο)"
     },
+    "unknownEntityName": "Άγνωστη εγγραφή",
+    "userRef": "Χρήστης",
     "loadMore": "Περισσότερα",
     "byUser": "από {name}",
     "fields": {

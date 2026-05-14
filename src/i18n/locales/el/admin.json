@@ -479,11 +479,92 @@
       }
     },
     "hierarchy": {
-      "title": "Ιεραρχία Ρόλων"
+      "title": "Ιεραρχία Ρόλων",
+      "allPermsLabel": "όλα τα δικαιώματα — παράκαμψη",
+      "permsSuffix": "δικαιώματα",
+      "projectScoped": "ανά έργο"
     },
     "permissionSetCards": {
       "title": "Λεπτομέρειες Σετ Δικαιωμάτων",
       "permissions": "Δικαιώματα"
+    },
+    "roleNames": {
+      "super_admin": "Υπερδιαχειριστής",
+      "company_admin": "Διαχειριστής Εταιρείας",
+      "project_manager": "Υπεύθυνος Έργου",
+      "architect": "Αρχιτέκτονας",
+      "engineer": "Μηχανικός",
+      "site_manager": "Επιστάτης Εργοταξίου",
+      "accountant": "Λογιστής",
+      "sales_agent": "Πωλητής",
+      "data_entry": "Εισαγωγή Δεδομένων",
+      "vendor": "Προμηθευτής",
+      "viewer": "Θεατής",
+      "internal_user": "Εσωτερικός",
+      "external_user": "Εξωτερικός"
+    },
+    "definitions": {
+      "dxf_editor": {
+        "name": "DXF Editor",
+        "description": "Πλήρεις δυνατότητες επεξεργασίας DXF"
+      },
+      "dxf_uploader": {
+        "name": "Μόνο Μεταφόρτωση DXF",
+        "description": "Μεταφόρτωση αρχείων DXF χωρίς επεξεργασία"
+      },
+      "finance_approver": {
+        "name": "Εγκριτής Οικονομικών",
+        "description": "Έγκριση χρηματοοικονομικών συναλλαγών"
+      },
+      "legal_viewer": {
+        "name": "Θεατής Νομικών",
+        "description": "Προβολή νομικών εγγράφων"
+      },
+      "legal_manager": {
+        "name": "Διαχειριστής Νομικών",
+        "description": "Διαχείριση ιδιοκτησίας και παραχωρήσεων"
+      },
+      "crm_exporter": {
+        "name": "Εξαγωγή CRM",
+        "description": "Εξαγωγή επαφών CRM"
+      },
+      "comm_staff": {
+        "name": "Προσωπικό Επικοινωνιών",
+        "description": "Διαχείριση επικοινωνιών πελατών"
+      },
+      "listing_publisher": {
+        "name": "Δημοσιευτής Αγγελιών",
+        "description": "Δημοσίευση μονάδων σε δημόσιες αγγελίες"
+      },
+      "report_creator": {
+        "name": "Δημιουργός Αναφορών",
+        "description": "Δημιουργία και προβολή αναφορών"
+      }
+    },
+    "domains": {
+      "admin": "Διαχείριση Συστήματος",
+      "buildings": "Κτήρια",
+      "comm": "Επικοινωνίες",
+      "crm": "CRM",
+      "deliveries": "Παραδόσεις",
+      "dxf": "Αρχεία DXF",
+      "finance": "Οικονομικά",
+      "floorplans": "Κατόψεις",
+      "legal": "Νομικά",
+      "listings": "Αγγελίες",
+      "notifications": "Ειδοποιήσεις",
+      "orders": "Παραγγελίες",
+      "other": "Άλλα",
+      "photos": "Φωτογραφίες",
+      "progress": "Πρόοδος",
+      "projects": "Έργα",
+      "properties": "Ακίνητα",
+      "reports": "Αναφορές",
+      "search": "Αναζήτηση",
+      "settings": "Ρυθμίσεις",
+      "specs": "Προδιαγραφές",
+      "units": "Μονάδες",
+      "users": "Χρήστες & Ρόλοι"
     },
     "comingSoon": "Σύντομα — Φάση Β",
     "accessDenied": "Πρόσβαση Απορρίφθηκε",
@@ -579,7 +660,7 @@
     "cannotChangeOwnRole": "Δεν μπορείτε να αλλάξετε τον δικό σας ρόλο",
     "reLoginWarning": "Ο χρήστης πρέπει να επανασυνδεθεί για να ισχύσουν οι αλλαγές",
     "confirmRoleChange": "Επιβεβαίωση αλλαγής ρόλου",
-    "hierarchyNote": "Σημείωση ιεραρχίας",
+    "hierarchyNote": "Οι μικρότεροι αριθμοί επιπέδου σημαίνουν μεγαλύτερη πρόσβαση. Οι καθολικοί ρόλοι (L0–L1) ισχύουν για ολόκληρο τον οργανισμό. Οι ρόλοι έργου (L2–L6) ισχύουν ανά έργο.",
     "domain": "Τομέας",
     "userDetails": "Στοιχεία χρήστη",
     "userInfo": "Πληροφορίες χρήστη",
@@ -787,5 +868,26 @@
     "noCompanies": "Δεν βρέθηκαν εταιρείες",
     "loadError": "Σφάλμα φόρτωσης εταιρειών",
     "noSelection": "Χωρίς επιλογή"
+  },
+  "sidebar": {
+    "title": "Admin Console",
+    "openMenu": "Άνοιγμα μενού πλοήγησης",
+    "closeMenu": "Κλείσιμο μενού",
+    "nav": {
+      "userManagement": "Διαχείριση Χρηστών",
+      "roleManagement": "Ρόλοι & Χρήστες",
+      "claimsRepair": "Επισκευή Claims",
+      "dataAudit": "Δεδομένα & Έλεγχος",
+      "auditLog": "Ιστορικό Ελέγχου",
+      "backup": "Αντίγραφο Ασφαλείας",
+      "system": "Σύστημα",
+      "setup": "Ρυθμίσεις Συστήματος",
+      "databaseUpdate": "Ενημέρωση Βάσης",
+      "enterpriseMigration": "Μετεγκατάσταση Enterprise",
+      "searchBackfill": "Ανανέωση Αναζήτησης",
+      "communications": "Επικοινωνία",
+      "aiInbox": "Εισερχόμενα AI",
+      "operatorInbox": "Εισερχόμενα Χειριστή"
+    }
   }
 }

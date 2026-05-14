@@ -17,6 +17,9 @@ import { ExternalLink } from "lucide-react";
 import { formatRelativeTime, formatDateTime } from "@/lib/intl-utils";
 import type {
   AuditEntityType,
+  AuditCollectionOp,
+  AuditFieldChange,
+  AuditSubChange,
   EntityAuditEntry,
 } from "@/types/audit-trail";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
@@ -66,6 +69,75 @@ export function buildEntityHref(
 }
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Firestore runtime guard: typed fields (entityName, change.field, itemLabel)
+ * may be stored as objects in legacy records. Coerce safely to string.
+ * Uses `as unknown` to bypass TS narrowing without `any`.
+ */
+function safeStr(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    if ('name' in obj) return String(obj.name);
+    return JSON.stringify(obj);
+  }
+  return String(value);
+}
+
+function safeEntityName(value: string | null): string | null {
+  if (value === null || value === undefined) return null;
+  const s = safeStr(value as unknown);
+  return s === '' ? null : s;
+}
+
+// ============================================================================
+// ENTRY SANITIZER — coerce ALL Firestore string fields to actual strings
+// CDC deep-diff can write object values ({name, number}) where the schema
+// expects primitives. Sanitize once at the component boundary so every
+// downstream render expression receives guaranteed-safe types.
+// ============================================================================
+
+function sanitizeSubChange(raw: AuditSubChange): AuditSubChange {
+  return {
+    ...raw,
+    subField: safeStr(raw.subField as unknown),
+    label: raw.label != null ? safeStr(raw.label as unknown) : undefined,
+  };
+}
+
+function sanitizeChange(raw: AuditFieldChange): AuditFieldChange {
+  return {
+    ...raw,
+    field: safeStr(raw.field as unknown),
+    label: raw.label != null ? safeStr(raw.label as unknown) : undefined,
+    itemKey: raw.itemKey != null ? safeStr(raw.itemKey as unknown) : undefined,
+    itemLabel: raw.itemLabel != null ? safeStr(raw.itemLabel as unknown) : undefined,
+    kind: raw.kind != null ? (safeStr(raw.kind as unknown) as AuditFieldChange['kind']) : undefined,
+    op: raw.op != null ? (safeStr(raw.op as unknown) as AuditCollectionOp) : undefined,
+    subChanges: raw.subChanges ? raw.subChanges.map(sanitizeSubChange) : undefined,
+  };
+}
+
+function sanitizeEntry(raw: EntityAuditEntry): EntityAuditEntry {
+  const name = raw.entityName != null ? safeStr(raw.entityName as unknown) : null;
+  return {
+    ...raw,
+    entityType: safeStr(raw.entityType as unknown) as AuditEntityType,
+    entityId: safeStr(raw.entityId as unknown),
+    entityName: name === '' ? null : name,
+    action: safeStr(raw.action as unknown) as EntityAuditEntry['action'],
+    timestamp: safeStr(raw.timestamp as unknown),
+    performedBy: safeStr(raw.performedBy as unknown),
+    performedByName: raw.performedByName != null ? (safeStr(raw.performedByName as unknown) || null) : null,
+    changes: (raw.changes ?? []).map(sanitizeChange),
+  };
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
@@ -75,9 +147,10 @@ interface AuditTimelineEntryProps {
 }
 
 export function AuditTimelineEntry({
-  entry,
+  entry: rawEntry,
   showEntityLink,
 }: AuditTimelineEntryProps) {
+  const entry = sanitizeEntry(rawEntry);
   const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
   const colors = useSemanticColors();
   const config = ACTION_MAP[entry.action] ?? ACTION_MAP.updated;
@@ -90,6 +163,9 @@ export function AuditTimelineEntry({
   const entityHref = showEntityLink
     ? buildEntityHref(entry.entityType, entry.entityId)
     : null;
+
+  /** Firebase UID detector — alphanumeric 20–36 chars, no separators. */
+  const FIREBASE_UID_RE = /^[A-Za-z0-9]{20,36}$/;
 
   /** Country-code labels (kept local — not a tracked enum field). */
   const COUNTRY_KEYS: Readonly<Record<string, string>> = {
@@ -115,6 +191,8 @@ export function AuditTimelineEntry({
     (v: string): string | undefined => {
       const resolved = resolveAuditValue(field, v, t);
       if (resolved) return resolved;
+
+      if (FIREBASE_UID_RE.test(v)) return t('audit.userRef');
 
       const countryKey = COUNTRY_KEYS[v];
       if (countryKey) {
@@ -148,12 +226,12 @@ export function AuditTimelineEntry({
                 href={entityHref}
                 className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
               >
-                {entry.entityName ?? entry.entityId}
+                {safeEntityName(entry.entityName) ?? t('audit.unknownEntityName')}
                 <ExternalLink className="h-3 w-3 opacity-60" />
               </Link>
             ) : (
               <span className="font-medium">
-                {entry.entityName ?? entry.entityId}
+                {safeEntityName(entry.entityName) ?? t('audit.unknownEntityName')}
               </span>
             )}
           </div>
@@ -165,7 +243,7 @@ export function AuditTimelineEntry({
           </span>
           {entry.performedByName && (
             <span className={cn("text-xs", colors.text.muted)}>
-              {t("audit.byUser", { name: entry.performedByName })}
+              {t("audit.byUser", { name: safeStr(entry.performedByName as unknown) })}
             </span>
           )}
           {timestamp && (
@@ -191,23 +269,27 @@ export function AuditTimelineEntry({
               const genericFieldKey = `audit.fields.${change.field}`;
               const resolvedSpecific = t(specificFieldKey);
               const resolvedGeneric = t(genericFieldKey);
-              const fieldLabel = resolvedSpecific !== specificFieldKey
-                ? resolvedSpecific
-                : resolvedGeneric !== genericFieldKey
-                  ? resolvedGeneric
-                  : (change.label ?? change.field);
+              // t() may return objects when key resolves to a non-leaf node in i18next
+              const fieldLabel: string =
+                typeof resolvedSpecific === 'string' && resolvedSpecific !== specificFieldKey
+                  ? resolvedSpecific
+                  : typeof resolvedGeneric === 'string' && resolvedGeneric !== genericFieldKey
+                    ? resolvedGeneric
+                    : safeStr(change.label ?? (change.field as unknown));
 
               // ── Collection-aware rendering (ADR-195 Phase 11) ──
               if (change.kind === 'collection' && change.op) {
-                const rawLabel = change.itemLabel ?? change.itemKey ?? '';
-                const itemLabel = rawLabel !== ''
+                // safeStr: itemLabel/itemKey may be objects in legacy Firestore records
+                const rawLabel = safeStr(change.itemLabel ?? change.itemKey ?? '');
+                const itemLabel: string = rawLabel !== ''
                   ? (resolveAuditValue(change.field, rawLabel, t)
                       ?? (rawLabel.includes('firebasestorage.googleapis.com') ? formatStorageUrl(rawLabel) : rawLabel))
-                  : t('audit.collection.emptyItem');
-                const message = t(`audit.collection.${change.op}`, {
+                  : safeStr(t('audit.collection.emptyItem') as unknown);
+                const rawMessage = t(`audit.collection.${change.op}`, {
                   field: fieldLabel,
                   item: itemLabel,
                 });
+                const message = safeStr(rawMessage as unknown);
                 return (
                   <li
                     key={`${change.field}-${change.op}-${change.itemKey ?? idx}`}
@@ -220,8 +302,9 @@ export function AuditTimelineEntry({
                           {change.subChanges.map((sub, si) => {
                             const subKey = `audit.fields.${sub.subField}`;
                             const resolvedSub = t(subKey);
-                            const subLabel = sub.label
-                              ?? (resolvedSub !== subKey ? resolvedSub : sub.subField);
+                            // safeStr + typeof guard: t() may return objects for non-leaf keys
+                            const subLabel: string = safeStr(sub.label
+                              ?? (typeof resolvedSub === 'string' && resolvedSub !== subKey ? resolvedSub : (sub.subField as unknown)));
                             const translateSubValue = makeFieldTranslator(sub.subField);
                             return (
                               <li key={`${sub.subField}-${si}`}>

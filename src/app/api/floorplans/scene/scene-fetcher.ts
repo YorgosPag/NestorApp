@@ -55,15 +55,28 @@ export async function downloadSceneFile(
   let resolvedPath: string | null = null;
   let isGzip = false;
 
+  logger.debug('downloadSceneFile paths', {
+    fileId,
+    storageBucket,
+    rawPath,
+    sceneJsonPath,
+    processedDataPath: file.processedData?.processedDataPath ?? null,
+  });
+
   if (sceneJsonPath) {
     const [exists] = await bucket.file(sceneJsonPath).exists();
+    logger.debug('sceneJsonPath exists check', { sceneJsonPath, exists });
     if (exists) { resolvedPath = sceneJsonPath; isGzip = false; }
   }
   if (!resolvedPath && file.processedData?.processedDataPath) {
     const [exists] = await bucket.file(file.processedData.processedDataPath).exists();
+    logger.debug('processedDataPath exists check', { processedDataPath: file.processedData.processedDataPath, exists });
     if (exists) { resolvedPath = file.processedData.processedDataPath; isGzip = true; }
   }
-  if (!resolvedPath) return null;
+  if (!resolvedPath) {
+    logger.warn('No scene file found in storage', { fileId, sceneJsonPath, processedDataPath: file.processedData?.processedDataPath ?? null });
+    return null;
+  }
 
   const fileRef = bucket.file(resolvedPath);
   const [fileBuffer] = await fileRef.download();

@@ -479,11 +479,92 @@
       }
     },
     "hierarchy": {
-      "title": "Role Hierarchy"
+      "title": "Role Hierarchy",
+      "allPermsLabel": "all perms — bypass",
+      "permsSuffix": "perms",
+      "projectScoped": "project-scoped"
     },
     "permissionSetCards": {
       "title": "Permission Set Details",
       "permissions": "Permissions"
+    },
+    "roleNames": {
+      "super_admin": "Super Admin",
+      "company_admin": "Company Admin",
+      "project_manager": "Project Manager",
+      "architect": "Architect",
+      "engineer": "Engineer",
+      "site_manager": "Site Manager",
+      "accountant": "Accountant",
+      "sales_agent": "Sales Agent",
+      "data_entry": "Data Entry",
+      "vendor": "Vendor",
+      "viewer": "Viewer",
+      "internal_user": "Internal",
+      "external_user": "External"
+    },
+    "definitions": {
+      "dxf_editor": {
+        "name": "DXF Editor",
+        "description": "Full DXF editing capabilities"
+      },
+      "dxf_uploader": {
+        "name": "DXF Upload Only",
+        "description": "Upload DXF files without editing"
+      },
+      "finance_approver": {
+        "name": "Finance Approver",
+        "description": "Approve financial transactions"
+      },
+      "legal_viewer": {
+        "name": "Legal Viewer",
+        "description": "View legal documents"
+      },
+      "legal_manager": {
+        "name": "Legal Manager",
+        "description": "Manage ownership and grants"
+      },
+      "crm_exporter": {
+        "name": "CRM Export",
+        "description": "Export CRM contacts"
+      },
+      "comm_staff": {
+        "name": "Communications Staff",
+        "description": "Handle customer communications"
+      },
+      "listing_publisher": {
+        "name": "Listing Publisher",
+        "description": "Publish units to public listings"
+      },
+      "report_creator": {
+        "name": "Report Creator",
+        "description": "Create and view reports"
+      }
+    },
+    "domains": {
+      "admin": "System Administration",
+      "buildings": "Buildings",
+      "comm": "Communications",
+      "crm": "CRM",
+      "deliveries": "Deliveries",
+      "dxf": "DXF Files",
+      "finance": "Finance",
+      "floorplans": "Floor Plans",
+      "legal": "Legal",
+      "listings": "Listings",
+      "notifications": "Notifications",
+      "orders": "Orders",
+      "other": "Other",
+      "photos": "Photos",
+      "progress": "Progress",
+      "projects": "Projects",
+      "properties": "Properties",
+      "reports": "Reports",
+      "search": "Search",
+      "settings": "Settings",
+      "specs": "Specifications",
+      "units": "Units",
+      "users": "Users & Roles"
     },
     "comingSoon": "Coming soon — Phase B",
     "accessDenied": "Access Denied",
@@ -579,7 +660,7 @@
     "cannotChangeOwnRole": "Cannot change own role",
     "reLoginWarning": "Re login warning",
     "confirmRoleChange": "Confirm role change",
-    "hierarchyNote": "Hierarchy note",
+    "hierarchyNote": "Lower level numbers mean higher access. Global roles (L0–L1) are organization-wide. Project roles (L2–L6) are scoped per project.",
     "domain": "Domain",
     "userDetails": "User details",
     "userInfo": "User info",
@@ -787,5 +868,26 @@
     "noCompanies": "No companies found",
     "loadError": "Error loading companies",
     "noSelection": "No selection"
+  },
+  "sidebar": {
+    "title": "Admin Console",
+    "openMenu": "Open navigation menu",
+    "closeMenu": "Close menu",
+    "nav": {
+      "userManagement": "User Management",
+      "roleManagement": "Roles & Users",
+      "claimsRepair": "Claims Repair",
+      "dataAudit": "Data & Audit",
+      "auditLog": "Audit Log",
+      "backup": "Backup",
+      "system": "System",
+      "setup": "System Setup",
+      "databaseUpdate": "Database Update",
+      "enterpriseMigration": "Enterprise Migration",
+      "searchBackfill": "Search Backfill",
+      "communications": "Communications",
+      "aiInbox": "AI Inbox",
+      "operatorInbox": "Operator Inbox"
+    }
   }
 }

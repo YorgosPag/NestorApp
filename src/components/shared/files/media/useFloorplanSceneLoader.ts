@@ -99,15 +99,19 @@ export function useFloorplanSceneLoader(
         return;
       }
 
-      // -- PATH B: V3 — processedDataPath via authenticated API --
-      if (currentFile.processedData?.processedDataPath && currentFile.id && auth.currentUser) {
+      // -- PATH B: V3 — processedDataPath via API (auth optional — public projects allowed) --
+      if (currentFile.processedData?.processedDataPath && currentFile.id) {
         setIsLoading(true);
         setSceneError(null);
         try {
-          const idToken = await auth.currentUser.getIdToken();
+          const headers: HeadersInit = {};
+          if (auth.currentUser) {
+            const idToken = await auth.currentUser.getIdToken();
+            headers['Authorization'] = `Bearer ${idToken}`;
+          }
           const response = await fetch(API_ROUTES.FLOORPLANS.SCENE(currentFile.id), {
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${idToken}` },
+            headers,
           });
           if (cancelled) return;
           if (response.status === 202) {

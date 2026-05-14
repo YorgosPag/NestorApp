@@ -759,6 +759,8 @@
       "modified": "Updated {field}: {item}",
       "emptyItem": "(unknown)"
     },
+    "unknownEntityName": "Unknown entry",
+    "userRef": "User",
     "loadMore": "Load more",
     "byUser": "by {name}",
     "fields": {
