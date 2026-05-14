@@ -27,9 +27,9 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { ToolType, ToolDefinition } from './types';
-import { toolGroups, createActionButtons } from './toolDefinitions';
+import { toolGroups } from './toolDefinitions';
 import { isMobileDisabledTool, isMobilePrimaryTool } from './toolbar-responsive-config';
-import { ToolButton, ActionButton } from './ToolButton';
+import { ToolButton } from './ToolButton';
 // ADR-040 Phase VII: subscribe to ZoomStore directly
 import { useCurrentZoom } from '../../systems/zoom/ZoomStore';
 
@@ -37,27 +37,15 @@ interface MobileToolbarLayoutProps {
   activeTool: ToolType;
   onToolChange: (tool: ToolType) => void;
   onAction: (action: string, data?: number | string | Record<string, unknown>) => void;
-  showGrid: boolean;
-  autoCrop: boolean;
-  canUndo: boolean;
-  canRedo: boolean;
-  snapEnabled: boolean;
   commandCount?: number;
   onSidebarToggle: () => void;
-  showGuidePanel?: boolean;
 }
 
 export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
   activeTool,
   onToolChange,
   onAction,
-  showGrid,
-  autoCrop,
-  canUndo,
-  canRedo,
-  snapEnabled,
   onSidebarToggle,
-  showGuidePanel = false,
 }) => {
   const currentZoom = useCurrentZoom();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -89,20 +77,6 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
 
   // Separate secondary tools (not in primary bar)
   const secondaryTools = allTools.filter(t => !isMobilePrimaryTool(t.id));
-
-  // Action buttons for overflow — bridge boolean type from createActionButtons to onAction
-  const actionButtons = createActionButtons({
-    showGrid,
-    autoCrop,
-    canUndo,
-    canRedo,
-    snapEnabled,
-    showGuidePanel,
-    onAction: (action: string) => {
-      onAction(action);
-      setMoreOpen(false);
-    },
-  });
 
   return (
     <>
@@ -241,12 +215,6 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
             })}
           </section>
 
-          {/* Action buttons */}
-          <section className={`grid grid-cols-3 ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.MARGIN.TOP_MD}`}>
-            {actionButtons.map(action => (
-              <ActionButton key={action.id} action={action} />
-            ))}
-          </section>
         </SheetContent>
       </Sheet>
     </>

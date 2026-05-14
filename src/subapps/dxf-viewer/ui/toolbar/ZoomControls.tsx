@@ -1,196 +1,114 @@
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Minus } from "lucide-react";
+import { ChevronDown, Check } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { normalizeNumericInput, validateNumericInput } from './shared/input-validation';
-import { ZOOM_FACTORS } from '../../config/transform-config';
-// 🏢 ADR-079: Centralized Movement Detection Constants
 import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
-import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-// 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-// 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-// 🏢 ENTERPRISE: i18n support
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n';
-// 🏢 ADR-081: Centralized percentage formatting
-import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
+
+const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200, 400] as const;
+const VALIDATION_OPTIONS = { minValue: 1, maxValue: 99999, defaultValue: 100 };
 
 interface ZoomControlsProps {
   currentZoom: number;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
   onSetZoom: (zoom: number) => void;
 }
 
-export const ZoomControls: React.FC<ZoomControlsProps> = ({
-  currentZoom,
-  onZoomIn,
-  onZoomOut,
-  onSetZoom
-}) => {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const iconSizes = useIconSizes();
-  const { getFocusBorder, getStatusBorder } = useBorderTokens();
+export const ZoomControls: React.FC<ZoomControlsProps> = ({ currentZoom, onSetZoom }) => {
+  const { t } = useTranslation(['dxf-viewer-shell']);
   const colors = useSemanticColors();
-  const [inputValue, setInputValue] = useState<string>('');
-  const [isEditing, setIsEditing] = useState(false);
+  const { getStatusBorder, getFocusBorder } = useBorderTokens();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState('');
 
-  // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση industry-standard zoom factor (20% για UI buttons)
-  const ZOOM_STEP_FACTOR = ZOOM_FACTORS.BUTTON_IN; // 1.2 = 20% increase
-  const ZOOM_STEP_PERCENTAGE = Math.round((ZOOM_STEP_FACTOR - 1) * 100); // 20%
+  const currentPct = Math.round(currentZoom * 100);
 
-  // Update input value when currentZoom changes (only if not editing)
   useEffect(() => {
-    if (!isEditing) {
-      setInputValue(formatPercent(currentZoom, false));
+    if (open) {
+      setInputValue(currentPct.toString());
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }, 50);
     }
-  }, [currentZoom, isEditing]);
+  }, [open, currentPct]);
 
-  const zoomValidationOptions = { minValue: 1, maxValue: 99999, defaultValue: 100 };
-
-  // 🔺 NORMALIZE INPUT - Δέχεται τελεία και κόμμα
-  const normalizeInput = useCallback((value: string): number => {
-    return normalizeNumericInput(value, zoomValidationOptions);
-  }, []);
-
-  // 🔺 VALIDATE INPUT - Έλεγχος εγκυρότητας
-  const validateInput = useCallback((value: string): boolean => {
-    const isValid = validateNumericInput(value, zoomValidationOptions);
-
-    return isValid;
-  }, []);
-
-  // ✅ ZOOM IN με industry-standard 20% αύξηση
-  const handleZoomInClick = useCallback(() => {
-    const current = normalizeInput(inputValue || (currentZoom * 100).toString());
-    const newValue = Math.min(Math.round(current * ZOOM_STEP_FACTOR), 99999);
-
-    setInputValue(newValue.toString());
-    onZoomIn();
-
-  }, [inputValue, currentZoom, normalizeInput, onZoomIn, ZOOM_STEP_FACTOR]);
-
-  // ✅ ZOOM OUT με industry-standard 20% μείωση
-  const handleZoomOutClick = useCallback(() => {
-    const current = normalizeInput(inputValue || (currentZoom * 100).toString());
-    const newValue = Math.max(Math.round(current / ZOOM_STEP_FACTOR), 1);
-
-    setInputValue(newValue.toString());
-    onZoomOut();
-
-  }, [inputValue, currentZoom, normalizeInput, onZoomOut, ZOOM_STEP_FACTOR]);
-
-  // 🔺 INPUT FOCUS - Επιλογή όλων των ψηφίων
-  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    setIsEditing(true);
-    setTimeout(() => {
-      e.target.select();
-    }, 0);
-
-  }, []);
-
-  // 🔺 INPUT CHANGE - Ενημέρωση κατά την πληκτρολόγηση
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
-
-  }, []);
-
-  // 🔺 APPLY ZOOM - Κοινή λογική εφαρμογής
-  const applyZoom = useCallback((explicitValue?: string) => {
-    const valueToUse = explicitValue !== undefined ? explicitValue : inputValue;
-    
-    setIsEditing(false);
-
-    if (!validateInput(valueToUse)) {
-      const currentPercentage = formatPercent(currentZoom, false);
-      setInputValue(currentPercentage);
-      console.warn(`⚠️ ${t('zoomControls.invalidInput', { value: valueToUse, percentage: currentPercentage })}`);
-      return;
+  const applyZoom = useCallback((raw: string) => {
+    if (!validateNumericInput(raw, VALIDATION_OPTIONS)) return;
+    const pct = normalizeNumericInput(raw, VALIDATION_OPTIONS);
+    const decimal = pct / 100;
+    if (Math.abs(decimal - currentZoom) > MOVEMENT_DETECTION.ZOOM_CHANGE) {
+      onSetZoom(decimal);
     }
-    
-    const newZoom = normalizeInput(valueToUse);
-    const newZoomDecimal = newZoom / 100;
+    setOpen(false);
+  }, [currentZoom, onSetZoom]);
 
-    // 🏢 ADR-079: Use centralized zoom change threshold
-    // Εφαρμογή μόνο αν διαφέρει από την τρέχουσα τιμή
-    if (Math.abs(newZoomDecimal - currentZoom) > MOVEMENT_DETECTION.ZOOM_CHANGE) {
-
-      onSetZoom(newZoomDecimal);
-    } else {
-
+  const handlePreset = useCallback((pct: number) => {
+    const decimal = pct / 100;
+    if (Math.abs(decimal - currentZoom) > MOVEMENT_DETECTION.ZOOM_CHANGE) {
+      onSetZoom(decimal);
     }
-    
-    setInputValue(newZoom.toString());
-  }, [inputValue, currentZoom, validateInput, normalizeInput, onSetZoom]);
+    setOpen(false);
+  }, [currentZoom, onSetZoom]);
 
-  // 🔺 ENTER KEY - Εφαρμογή του zoom
-  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    e.stopPropagation();
     if (e.key === 'Enter') {
-      const currentValue = (e.target as HTMLInputElement).value;
-
-      applyZoom(currentValue);
+      e.preventDefault();
+      applyZoom((e.target as HTMLInputElement).value);
     }
-  }, [applyZoom]);
-
-  // 🔺 INPUT BLUR - Εφαρμογή κατά την απώλεια focus
-  const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    const currentValue = e.target.value;
-
-    applyZoom(currentValue);
+    if (e.key === 'Escape') setOpen(false);
   }, [applyZoom]);
 
   return (
-    <TooltipProvider>
-      <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${colors.bg.backgroundSecondary} rounded ${PANEL_LAYOUT.SPACING.COMPACT}`}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={handleZoomOutClick}
-              aria-label={t('zoomControls.zoomOut', { percentage: ZOOM_STEP_PERCENTAGE })}
-              className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-            >
-              <Minus className={iconSizes.xs} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{t('zoomControls.zoomOut', { percentage: ZOOM_STEP_PERCENTAGE })}</TooltipContent>
-        </Tooltip>
-
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          onChange={handleInputChange}
-          onKeyPress={handleKeyPress}
-          onFocus={handleInputFocus}
-          onBlur={handleInputBlur}
-          className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center ${getFocusBorder('input')} focus:outline-none ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.SELECT.ALL}`}
-          title={t('zoomControls.inputTitle')}
-          placeholder="100"
-        />
-
-        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>%</span>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={handleZoomInClick}
-              aria-label={t('zoomControls.zoomIn', { percentage: ZOOM_STEP_PERCENTAGE })}
-              className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-            >
-              <Plus className={iconSizes.xs} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{t('zoomControls.zoomIn', { percentage: ZOOM_STEP_PERCENTAGE })}</TooltipContent>
-        </Tooltip>
-      </div>
-    </TooltipProvider>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button
+          aria-label={t('zoomControls.badgeAriaLabel', { percentage: currentPct })}
+          className={`flex items-center gap-1 ${PANEL_LAYOUT.SPACING.COMPACT} ${colors.bg.backgroundSecondary} ${colors.text.secondary} ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS} select-none`}
+        >
+          <span>{currentPct}%</span>
+          <ChevronDown className="w-3 h-3 opacity-60" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="center" className="w-28">
+        <div className="px-2 py-1.5">
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={t('zoomControls.customInputPlaceholder')}
+            className={`w-full ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center rounded ${PANEL_LAYOUT.SPACING.COMPACT_XS} ${colors.bg.secondary} ${getStatusBorder('muted')} ${colors.text.inverted} ${getFocusBorder('input')} focus:outline-none font-mono`}
+          />
+        </div>
+        <DropdownMenuSeparator />
+        {ZOOM_PRESETS.map(pct => (
+          <DropdownMenuItem
+            key={pct}
+            onSelect={() => handlePreset(pct)}
+            className={`flex items-center justify-between ${PANEL_LAYOUT.TYPOGRAPHY.XS} cursor-pointer font-mono`}
+          >
+            <span>{pct}%</span>
+            {currentPct === pct && <Check className="w-3 h-3" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
-

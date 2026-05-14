@@ -84,7 +84,8 @@ export type ToolType =
   | 'guide-copy-pattern'      // ADR-189 B17: Copy/offset pattern of selected guides
   | 'guide-offset-entity'     // ADR-189 B24: Guide offset from entity edge
   | 'guide-preset-grid'       // ADR-189 B23: Structural preset grid
-  | 'guide-from-selection';   // ADR-189 B37: Batch guide from selection
+  | 'guide-from-selection'    // ADR-189 B37: Batch guide from selection
+  | 'crop-window';            // Crop scene to drawn window region
 
 
 export interface ToolDefinition {
@@ -318,12 +319,6 @@ export interface EnhancedDXFToolbarPropsExtended {
 
   /** ADR-176: Mobile sidebar toggle callback */
   onSidebarToggle?: () => void;
-
-  /** ADR-189: Whether construction guides are visible */
-  guidesVisible?: boolean;
-
-  /** ADR-189 §4.13: Whether the guide list panel is open */
-  showGuidePanel?: boolean;
 
   /** ADR-241: Fullscreen state for toolbar icon toggle */
   isFullscreen?: boolean;
