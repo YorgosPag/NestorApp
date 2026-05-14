@@ -35,19 +35,14 @@ import {
   PreviewCanvasMounts,
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
+import { LassoCropPreviewSubscriber } from './LassoCropPreviewSubscriber';
 import { AutoAreaResultPanel } from './AutoAreaResultPanel';
 import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 
 // Re-export props type for consumers
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
-
-// Stable empty array — passed to renderOptions.snapResults to avoid
-// creating a new array literal on every render.
+// Stable empty array — passed to renderOptions.snapResults to avoid creating a new array literal on every render.
 const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
-
-// ============================================================================
-// MAIN COMPONENT (shell — no high-frequency subscriptions)
-// ============================================================================
 
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   transform, viewport, activeTool, overlayMode, showLayers,
@@ -80,14 +75,12 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     drawingHandlers, handleDrawingFinish, handleDrawingClose,
     handleDrawingCancel, handleDrawingUndoLastPoint, handleFlipArc,
   } = drawingState;
-
   // --- Computed values ---
   const isGripDragging =
     draggingVertex !== null ||
     draggingEdgeMidpoint !== null ||
     hoveredVertexInfo !== null ||
     hoveredEdgeInfo !== null;
-
   // --- Named callbacks ---
   const handleTransformChange = (newTransform: ViewTransform) => {
     setTransform(newTransform);
@@ -491,6 +484,12 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           />
 
           <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
+
+          <LassoCropPreviewSubscriber
+            transform={transform}
+            viewport={viewport}
+            className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`}
+          />
         </div>
       </div>
       <AutoAreaResultPanel />

@@ -508,6 +508,7 @@
       "displayGrid": "Grid",
       "displayAutoCrop": "Auto Crop",
       "cropWindow": "Crop Region",
+      "lassoCrop": "Lasso Crop",
       "floorplanWizard": "Floorplan (Wizard)",
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",

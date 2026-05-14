@@ -26,11 +26,14 @@ import { useRulersGridContext } from '../systems/rulers-grid/RulersGridSystem';
 // 📐 ADR-189: EventBus for guide→snap auto-enable
 import { EventBus } from '../systems/events/EventBus';
 import { ClipToRegionService } from '../services/ClipToRegionService';
+import { ClipToPolygonService } from '../services/ClipToPolygonService';
 import { ClipToRegionCommand, type OverlayClipChange } from '../core/commands/ClipToRegionCommand';
 import { useOverlayStore } from '../overlays/overlay-store';
 import { useLevels } from '../systems/levels';
+import { LassoCropStore } from '../systems/lasso/LassoCropStore';
 
 const clipService = new ClipToRegionService();
+const polygonClipService = new ClipToPolygonService();
 
 // ADR-189: ALL guide tools auto-open GL panel when selected
 const GUIDE_TOOLS_NEEDING_PANEL: ReadonlySet<ToolType> = new Set<ToolType>([
@@ -155,6 +158,42 @@ export function useDxfViewerState() {
     });
   }, [setActiveTool]);
 
+  // Lasso-crop: EventBus delivers world-space polygon after user closes lasso (Enter).
+  // Same command pattern as crop:marquee-rect for undo/redo.
+  useEffect(() => {
+    return EventBus.on('crop:lasso-polygon', ({ polygon }) => {
+      const { currentScene, currentLevelId } = sceneStateRef.current;
+      if (!currentScene || !currentLevelId) {
+        setActiveTool('select');
+        return;
+      }
+      const clippedScene = polygonClipService.clipByPolygon(currentScene, polygon);
+      const store = overlayStoreRef.current;
+      const overlayChanges: OverlayClipChange[] = store
+        .getByLevel(currentLevelId)
+        .reduce<OverlayClipChange[]>((acc, overlay) => {
+          const after = polygonClipService.clipOverlayPolygonByLasso(overlay.polygon, polygon);
+          if (after !== overlay.polygon) {
+            acc.push({ before: overlay, after });
+          }
+          return acc;
+        }, []);
+      const cmd = new ClipToRegionCommand(
+        currentLevelId, currentScene, clippedScene, overlayChanges,
+        setLevelSceneRef.current, store,
+      );
+      executeCommandRef.current(cmd);
+      setActiveTool('select');
+    });
+  }, [setActiveTool]);
+
+  // Clear lasso store whenever the active tool changes away from lasso-crop
+  useEffect(() => {
+    if (activeTool !== 'lasso-crop') {
+      LassoCropStore.cancel();
+    }
+  }, [activeTool]);
+
   // Canvas actions through new API
   // 🏢 ENTERPRISE (2026-01-26): Undo/Redo connected to Command History - ADR-032
   // 🏢 ENTERPRISE (2026-01-27): Added getTransform/setTransform for direct scale setting - ADR-043
@@ -186,6 +225,11 @@ export function useDxfViewerState() {
     // processMarqueeSelection intercepts activeTool==='crop-window' and emits crop:marquee-rect.
     if (tool === 'crop-window') {
       setActiveTool('crop-window');
+      return;
+    }
+
+    if (tool === 'lasso-crop') {
+      setActiveTool('lasso-crop');
       return;
     }
 

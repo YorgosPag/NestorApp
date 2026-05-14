@@ -508,6 +508,7 @@
       "displayGrid": "Πλέγμα",
       "displayAutoCrop": "Αυτόματη Περικοπή",
       "cropWindow": "Περικοπή Περιοχής",
+      "lassoCrop": "Περικοπή Λάσσο",
       "floorplanWizard": "Κάτοψη (Wizard)",
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",

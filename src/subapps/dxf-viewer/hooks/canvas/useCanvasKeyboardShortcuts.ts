@@ -16,6 +16,7 @@
 'use client';
 
 import { useEffect, type Dispatch, type SetStateAction } from 'react';
+import { LassoCropStore } from '../../systems/lasso/LassoCropStore';
 import type { SelectedGrip } from '../grips/useGripSystem';
 
 // ============================================================================
@@ -132,6 +133,11 @@ export function useCanvasKeyboardShortcuts({
 
       switch (e.key) {
         case 'Escape':
+          // Lasso crop: Escape cancels the in-progress polygon
+          if (activeTool === 'lasso-crop') {
+            LassoCropStore.cancel();
+            break;
+          }
           // ADR-049: Move tool cancel (highest priority — intercepts before rotation)
           if (moveIsActive && handleMoveEscape) {
             handleMoveEscape();
@@ -167,14 +173,18 @@ export function useCanvasKeyboardShortcuts({
           }
           break;
         case 'Enter': {
+          // Lasso crop: Enter closes the polygon and triggers the clip
+          if (activeTool === 'lasso-crop') {
+            e.preventDefault();
+            LassoCropStore.close();
+            break;
+          }
           // 🏢 ENTERPRISE (2026-01-31): Handle Enter for continuous drawing tools - ADR-083
-          // Check if we're in a continuous drawing mode (polyline, polygon, measure-area, circle-best-fit, etc.)
           const continuousTools = ['polyline', 'polygon', 'measure-area', 'measure-angle', 'measure-distance-continuous', 'circle-best-fit'];
           if (continuousTools.includes(activeTool)) {
             e.preventDefault();
             handleDrawingFinish();
           } else if (draftPolygon.length >= 3) {
-            // Legacy: Overlay polygon mode
             finishDrawing();
           }
           break;

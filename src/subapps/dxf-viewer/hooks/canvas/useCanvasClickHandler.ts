@@ -44,6 +44,7 @@ import { setAutoAreaState } from '../../systems/auto-area/AutoAreaResultStore';
 import { collectAreaCandidates, collectHoleAreas } from '../../systems/auto-area/auto-area-hit';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { dlog, dwarn } from '../../debug';
+import { LassoCropStore } from '../../systems/lasso/LassoCropStore';
 
 // ── Re-exports for backward compatibility ───────────────────────────────────
 export type {
@@ -91,6 +92,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // Block interactions until viewport is ready
     if (!viewportReady) {
       dwarn('useCanvasClickHandler', 'Click blocked: viewport not ready', viewport);
+      return;
+    }
+
+    // PRIORITY 0.5: Lasso crop — accumulate polygon point, skip all other handlers
+    if (activeTool === 'lasso-crop') {
+      LassoCropStore.addPoint(worldPoint.x, worldPoint.y);
       return;
     }
 
