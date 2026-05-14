@@ -22,7 +22,7 @@ import type { AuthContext, PermissionCache, GlobalRole, PermissionId } from '@/l
 import { logClaimsUpdated, extractRequestMetadata } from '@/lib/auth';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { withSensitiveRateLimit, withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -329,6 +329,38 @@ async function handleSetUserClaims(
       firestoreSuccess = false;
       // Don't fail the entire request - custom claims are already set
       logger.warn('Continuing despite Firestore error', { targetUid: uid });
+    }
+
+    // ========================================================================
+    // STEP 4A: Create/Update company member record (subcollection)
+    // ========================================================================
+    // Writes to /companies/{companyId}/members/{uid} for admin panel visibility.
+    // Uses merge: true for idempotence — safe to call multiple times.
+
+    try {
+      const memberRef = getAdminFirestore()
+        .collection(COLLECTIONS.COMPANIES).doc(companyId)
+        .collection(SUBCOLLECTIONS.COMPANY_MEMBERS).doc(uid);
+
+      const memberData = {
+        uid,
+        globalRole,
+        status: 'active',
+        joinedAt: AdminFieldValue.serverTimestamp(),
+        addedBy: ctx.uid,
+        updatedAt: AdminFieldValue.serverTimestamp(),
+        permissionSetIds: [],
+      };
+
+      await memberRef.set(memberData, { merge: true });
+      logger.info('Created/updated company member record', { targetUid: uid, companyId });
+    } catch (error) {
+      logger.warn('Failed to create/update company member record (non-blocking)', {
+        targetUid: uid,
+        companyId,
+        error: getErrorMessage(error),
+      });
+      // Don't fail the entire request - custom claims and user doc are already set
     }
 
     // ========================================================================

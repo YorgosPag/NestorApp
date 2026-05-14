@@ -60,6 +60,7 @@ interface CompanyUser {
   lastSignIn: string | null;
   disabled: boolean;
   mfaEnrolled: boolean;
+  companyId: string | null; // null for unassigned users
 }
 
 // =============================================================================
@@ -150,6 +151,7 @@ export const GET = withSensitiveRateLimit(
             lastSignIn: authInfo?.lastSignIn ?? null,
             disabled: authInfo?.disabled ?? false,
             mfaEnrolled: authInfo?.mfaEnrolled ?? false,
+            companyId: ctx.companyId, // Already assigned to this company
           };
         });
 
@@ -160,22 +162,87 @@ export const GET = withSensitiveRateLimit(
           user.email = profile?.email ?? authRecord?.email ?? '';
         }
 
+        // 5. Fetch unassigned users (companyId == null or missing) for admin to assign
+        const unassignedSnap = await db
+          .collection(COLLECTIONS.USERS)
+          .where('companyId', '==', null)
+          .limit(1000)
+          .get();
+
+        const unassignedUsers: CompanyUser[] = [];
+        if (!unassignedSnap.empty) {
+          const unassignedUids = unassignedSnap.docs.map((doc) => doc.id);
+          const unassignedIdentifiers = unassignedUids.map((uid) => ({ uid }));
+
+          // Batch-fetch Firebase Auth records
+          const unassignedAuthResult = await auth.getUsers(unassignedIdentifiers);
+          const unassignedAuthMap = new Map<string, {
+            lastSignIn: string | null;
+            disabled: boolean;
+            mfaEnrolled: boolean;
+          }>();
+          for (const userRecord of unassignedAuthResult.users) {
+            unassignedAuthMap.set(userRecord.uid, {
+              lastSignIn: userRecord.metadata.lastSignInTime ?? null,
+              disabled: userRecord.disabled,
+              mfaEnrolled: (userRecord.multiFactor?.enrolledFactors?.length ?? 0) > 0,
+            });
+          }
+
+          // Build unassigned users list
+          for (const doc of unassignedSnap.docs) {
+            const data = doc.data();
+            const authInfo = unassignedAuthMap.get(doc.id);
+            unassignedUsers.push({
+              uid: doc.id,
+              email: (data.email as string) ?? '',
+              displayName: (data.displayName as string | null) ?? null,
+              photoURL: (data.photoURL as string | null) ?? null,
+              globalRole: (data.globalRole as GlobalRole) ?? 'external_user',
+              status: (data.status as 'active' | 'suspended') ?? 'active',
+              joinedAt: data.createdAt
+                ? (data.createdAt as FirebaseFirestore.Timestamp).toDate?.()?.toISOString() ?? null
+                : null,
+              permissionSetIds: Array.isArray(data.permissionSetIds) ? (data.permissionSetIds as string[]) : [],
+              lastSignIn: authInfo?.lastSignIn ?? null,
+              disabled: authInfo?.disabled ?? false,
+              mfaEnrolled: authInfo?.mfaEnrolled ?? false,
+              companyId: null, // Unassigned
+            });
+          }
+        }
+
         await logAuditEvent(ctx, 'data_accessed', ctx.companyId, 'user', {
-          metadata: { reason: `Listed ${users.length} company users` },
+          metadata: { reason: `Listed ${users.length} company users + ${unassignedUsers.length} unassigned` },
         });
 
-        logger.info('Company users listed', { companyId: ctx.companyId, count: users.length });
+        logger.info('Company users listed', {
+          companyId: ctx.companyId,
+          assignedCount: users.length,
+          unassignedCount: unassignedUsers.length,
+        });
+
+        // Combine assigned + unassigned users
+        const allUsers = [
+          ...users.map((u) => ({
+            ...u,
+            projectCount: 0,
+            projectMemberships: [] as any[], // Phase A: not fetched
+          })),
+          ...unassignedUsers.map((u) => ({
+            ...u,
+            projectCount: 0,
+            projectMemberships: [] as any[],
+          })),
+        ];
 
         return NextResponse.json({
           success: true,
           data: {
-            users: users.map((u) => ({
-              ...u,
-              // Phase A: project memberships not fetched (expensive query)
-              projectCount: 0,
-              projectMemberships: [],
-            })),
-            total: users.length,
+            users: allUsers,
+            total: allUsers.length,
+            assigned: users.length,
+            unassigned: unassignedUsers.length,
           },
         });
       } catch (error) {

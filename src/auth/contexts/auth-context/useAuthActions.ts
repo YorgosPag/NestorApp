@@ -158,6 +158,19 @@ export function useAuthActions(params: UseAuthActionsParams) {
         safeSetItem(`${STORAGE_KEYS.AUTH_PROFILE_COMPLETE_PREFIX}${result.user.uid}`, 'true');
         await sendEmailVerification(result.user);
 
+        // Non-blocking post-signup onboarding: assign to default company
+        await fetch('/api/auth/complete-registration', { method: 'POST' })
+          .catch(() => {
+            logger.warn('[AuthContext] Complete registration API call failed', {});
+          });
+
+        // Force-refresh token to load new claims from complete-registration
+        try {
+          await result.user.getIdToken(true);
+        } catch (err) {
+          logger.warn('[AuthContext] Token refresh after registration failed', {});
+        }
+
         setUser({
           uid: result.user.uid,
           email: result.user.email,

@@ -22,6 +22,7 @@ export interface CompanyUser {
   projectCount: number;
   permissionSetIds: string[];
   projectMemberships: ProjectMembership[];
+  companyId: string | null; // null for unassigned users
 }
 
 export interface ProjectMembership {
@@ -52,6 +53,8 @@ export interface UserListResponse {
   data: {
     users: CompanyUser[];
     total: number;
+    assigned?: number; // Count of assigned users
+    unassigned?: number; // Count of unassigned users
   };
 }
 
