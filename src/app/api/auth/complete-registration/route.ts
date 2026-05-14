@@ -21,6 +21,8 @@ import type { AuthContext } from '@/lib/auth';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -208,6 +210,17 @@ async function handleCompleteRegistration(
 
       await memberRef.set(memberData, { merge: true });
       logger.info('Created company member record', { uid, companyId: defaultCompanyId });
+
+      await EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.COMPANY,
+        entityId: defaultCompanyId,
+        entityName: null,
+        action: 'updated',
+        changes: [{ field: 'members', oldValue: null, newValue: uid }],
+        performedBy: uid,
+        performedByName: userEmail ?? null,
+        companyId: defaultCompanyId,
+      }).catch((err) => logger.warn('EntityAudit recordChange failed (non-blocking)', { error: getErrorMessage(err) }));
     } catch (error) {
       logger.warn('Failed to create company member record (non-blocking)', {
         uid,
