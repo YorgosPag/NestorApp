@@ -67,6 +67,11 @@ const INITIAL: TrimToolState = {
   dragCurrent: null,
 };
 
+// ── Pick function registry (avoids prop-threading through orchestrators) ──────
+
+type PickFn = (worldPoint: Point2D, shiftKey: boolean) => void;
+let _pickFn: PickFn | null = null;
+
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 let _state: TrimToolState = INITIAL;
@@ -153,7 +158,21 @@ export const TrimToolStore = {
     _patch({ warnings: EMPTY_TRIM_WARNINGS });
   },
 
+  /**
+   * Register the performTrimPick closure from useTrimTool.
+   * Called on tool activate (with fn) and deactivate (with null).
+   */
+  registerPickFn(fn: PickFn | null): void {
+    _pickFn = fn;
+  },
+
+  /** Invoke the registered pick function (used by drag-capture leaf). */
+  execPick(worldPoint: Point2D, shiftKey: boolean): void {
+    _pickFn?.(worldPoint, shiftKey);
+  },
+
   reset(): void {
+    _pickFn = null;
     _state = INITIAL;
     _notify();
   },

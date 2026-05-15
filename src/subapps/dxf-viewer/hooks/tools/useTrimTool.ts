@@ -22,6 +22,7 @@ import { TrimEntityCommand } from '../../core/commands/entity-commands/TrimEntit
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { TrimToolStore } from '../../systems/trim/TrimToolStore';
+import { ToolCursorStore } from '../../systems/cursor/ToolCursorStore';
 import { resolveCuttingEdges, isTrimmable } from '../../systems/trim/trim-boundary-resolver';
 import { computeIntersectionPoints } from '../../systems/trim/trim-intersection-mapper';
 import { trimEntity } from '../../systems/trim/trim-entity-cutter';
@@ -76,12 +77,24 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
     if (isActive && !wasActiveRef.current) {
       TrimToolStore.reset();
       TrimToolStore.setPhase('picking');
+      ToolCursorStore.set('trim-pickbox');
     } else if (!isActive && wasActiveRef.current) {
       flushAggregatedWarnings();
+      ToolCursorStore.reset();
       TrimToolStore.reset();
     }
     wasActiveRef.current = isActive;
   }, [isActive]);
+
+  // Keep performTrimPick registered in TrimToolStore so leaves can call it
+  // without prop-threading through CanvasLayerStack (ADR-040 principle).
+  useEffect(() => {
+    if (!isActive) return;
+    TrimToolStore.registerPickFn(performTrimPick);
+    return () => {
+      TrimToolStore.registerPickFn(null);
+    };
+  }, [isActive, performTrimPick]);
 
   // Status-bar prompt sync (G13)
   useEffect(() => {
@@ -207,6 +220,12 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       if (!isActive) return false;
       if (key === 'Escape') {
         handleTrimEscape();
+        return true;
+      }
+      // SHIFT keydown / keyup → immediate inverseMode + cursor variant update
+      if (key === 'Shift') {
+        TrimToolStore.setInverseMode(shiftKey);
+        ToolCursorStore.set(shiftKey ? 'extend-arrow' : 'trim-pickbox');
         return true;
       }
       if (key === 'Enter') {

@@ -105,6 +105,22 @@ export function useTrimPreview(props: UseTrimPreviewProps): void {
       ctx.restore();
     }
 
+    // Fence line during drag (B3)
+    if (s.phase === 'fence' && s.dragStart && s.dragCurrent) {
+      const ds = toScreen(s.dragStart);
+      const dc = toScreen(s.dragCurrent);
+      ctx.save();
+      ctx.strokeStyle = '#FFD24A';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(ds.x, ds.y);
+      ctx.lineTo(dc.x, dc.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
     // Pickbox crosshair (Q14)
     if (!cursorWorld) return;
     const c = toScreen(cursorWorld);

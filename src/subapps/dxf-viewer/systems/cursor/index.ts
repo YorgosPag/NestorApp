@@ -28,3 +28,5 @@ export type { SelectionState } from './SelectionStore';
 
 // Re-export main system component for convenience
 export { CursorSystem, CursorContext, CursorProvider, useCursorContext } from './CursorSystem';
+export { ToolCursorStore } from './ToolCursorStore';
+export type { ToolCursorVariant } from './ToolCursorStore';

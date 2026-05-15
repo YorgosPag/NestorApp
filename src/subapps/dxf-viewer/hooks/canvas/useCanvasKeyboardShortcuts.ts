@@ -305,4 +305,14 @@ export function useCanvasKeyboardShortcuts({
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, handleTrimEscape, handleTrimKeyDown, trimIsActive, clearEntitySelection, hasAnySelection, dxfGripInteraction, setDraftPolygon, setSelectedGrips]);
+
+  // ADR-350 B2: SHIFT keyup → immediately reset inverseMode when trim is active
+  useEffect(() => {
+    if (!trimIsActive || !handleTrimKeyDown) return;
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') handleTrimKeyDown('Shift', false);
+    };
+    window.addEventListener('keyup', onKeyUp, { capture: true });
+    return () => window.removeEventListener('keyup', onKeyUp, { capture: true });
+  }, [trimIsActive, handleTrimKeyDown]);
 }

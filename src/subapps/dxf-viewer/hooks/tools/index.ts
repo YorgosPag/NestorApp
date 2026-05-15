@@ -46,5 +46,8 @@ export type { UseTrimToolProps, UseTrimToolReturn } from './useTrimTool';
 export { useTrimPreview } from './useTrimPreview';
 export type { UseTrimPreviewProps } from './useTrimPreview';
 
+export { useTrimDragCapture } from './useTrimDragCapture';
+export type { UseTrimDragCaptureProps } from './useTrimDragCapture';
+
 export { useModifyTools } from './useModifyTools';
 export type { UseModifyToolsProps, UseModifyToolsReturn } from './useModifyTools';
