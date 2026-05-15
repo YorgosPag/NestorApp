@@ -345,7 +345,7 @@ class UserNotificationSettingsService {
     // Route through SSoT RealtimeService (ADR-195 Phase 8) for subscription
     // tracking + dedup + centralized error handling.
     const unsubscribe = RealtimeService.subscribeToDocument(
-      { collection: COLLECTION_NAME, documentId: userId },
+      { collection: COLLECTION_NAME as import('@/services/realtime/types').RealtimeCollection, documentId: userId },
       (data) => {
         if (data) {
           const settings = this.transformFromFirestore(data, userId);

@@ -23,7 +23,8 @@ export type RealtimeCollection =
   | 'floors'
   | 'contacts'
   | 'project_floorplans'
-  | 'files';
+  | 'files'
+  | 'user_notification_settings';
 
 /**
  * 🏢 ENTERPRISE: Real-time subscription status

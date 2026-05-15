@@ -35,5 +35,5 @@ export * from './domains/dropdown-misc-labels';
 // Project tabs, building toolbar, persona labels
 export * from './domains/project-building-persona-labels';
 
-// Default export (property status core)
-export { default } from './domains/property-status-core';
+// Named re-exports from property status core
+export * from './domains/property-status-core';

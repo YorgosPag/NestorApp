@@ -115,6 +115,7 @@ export async function saveOrgStructure(
     void EntityAuditService.recordChange({
       entityType: ENTITY_TYPES.COMPANY,
       entityId: companyId,
+      entityName: null,
       action: 'updated',
       changes: [{ field: 'settings.orgStructure', oldValue: null, newValue: toSave.id, label: 'Org Structure' }],
       performedBy: userId,

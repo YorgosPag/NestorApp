@@ -274,6 +274,7 @@ export const AUDIT_TARGET_TYPES = {
   webhook: true,
   communication: true,
   purchase_order: true,
+  contact: true,
 } as const;
 
 /** Audit target type derived from registry. */
@@ -306,6 +307,7 @@ export interface AuditMetadata {
   reason?: string;
   filesRestored?: number;
   filesCascaded?: number;
+  filesSkipped?: number;
 }
 
 /** Complete audit log entry. */

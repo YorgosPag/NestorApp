@@ -401,6 +401,7 @@ export function createDefaultPersonaData(personaType: PersonaType): PersonaData 
         personaType: 'supplier',
         supplierCategory: null,
         paymentTermsDays: null,
+        tradeSpecialties: [],
       };
     case 'notary':
       return {

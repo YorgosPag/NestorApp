@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
+import type { RealtimeEventMap } from '@/services/realtime';
 
 /** Shared factory — one implementation, three space-type exports below. */
 function useHasAnySpaces(
   route: string,
   responseKey: string,
-  createdEvent: string,
-  deletedEvent: string,
+  createdEvent: keyof RealtimeEventMap,
+  deletedEvent: keyof RealtimeEventMap,
 ): boolean {
   const [hasItems, setHasItems] = useState(false);
 
