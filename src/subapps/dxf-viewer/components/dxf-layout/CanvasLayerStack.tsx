@@ -451,14 +451,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <CrosshairOverlay
             isActive={crosshairSettings.enabled && !!dxfScene}
             rulerMargins={{
-              left: rulerSettings.vertical?.width ?? COORDINATE_LAYOUT.RULER_LEFT_WIDTH,
+              left: rulerSettings.width ?? COORDINATE_LAYOUT.RULER_LEFT_WIDTH,
               top: 0,
               bottom: 0,
             }}
             isEntitySelected={(id) => selectedEntityIds.includes(id)}
             className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             style={{
-              height: `calc(100% - ${rulerSettings.horizontal?.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)`,
+              height: `calc(100% - ${rulerSettings.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT}px)`,
             }}
           />
           <SnapIndicatorSubscriber
@@ -468,8 +468,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
           />
           <RulerCornerBox
-            rulerWidth={rulerSettings.vertical?.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}
-            rulerHeight={rulerSettings.horizontal?.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT}
+            rulerWidth={rulerSettings.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}
+            rulerHeight={rulerSettings.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT}
             backgroundColor={globalRulerSettings.horizontal.backgroundColor}
             textColor={globalRulerSettings.horizontal.textColor}
             onZoomToFit={handleRulerZoomToFit}

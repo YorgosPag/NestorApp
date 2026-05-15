@@ -438,14 +438,14 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         <DxfImportModal
           isOpen={showLegacyImport}
           onClose={() => setShowLegacyImport(false)}
-          onImport={(file, encoding) => { void handleFileImportWithEncoding(file, encoding); }}
+          onImport={async (file, encoding) => { await handleFileImportWithEncoding(file, encoding); }}
         />
       </React.Suspense>
       <React.Suspense fallback={<div className="hidden" />}>
         <SimpleProjectDialog
           isOpen={showEnhancedImport}
           onClose={() => setShowEnhancedImport(false)}
-          onFileImport={async (file, encoding) => { await handleFileImportWithEncoding(file, encoding); }}
+          onFileImport={(file: File) => handleFileImportWithEncoding(file)}
         />
       </React.Suspense>
       <React.Suspense fallback={<div className="hidden" />}>

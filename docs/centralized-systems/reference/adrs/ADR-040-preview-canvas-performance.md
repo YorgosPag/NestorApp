@@ -1173,3 +1173,7 @@ New `CanvasNumericInputOverlay` micro-leaf in `systems/canvas-numeric-input/Canv
 ## 2026-05-15: Grip handoff to Rotate/Scale/Mirror (ADR-349 Phase 1c-B2)
 
 `CanvasSection` now passes `onToolChange` to `useUnifiedGripInteraction` for grip-mode handoff. No new `useSyncExternalStore` calls added to orchestrator. Cardinal rules maintained.
+
+## 2026-05-15: RulerSettings API fix — .width/.height flat access (CanvasLayerStack)
+
+Fixed `rulerSettings.vertical?.width` → `rulerSettings.width` and `rulerSettings.horizontal?.height` → `rulerSettings.height` in CrosshairOverlay margins and RulerCornerBox props. No new subscriptions added to orchestrator.

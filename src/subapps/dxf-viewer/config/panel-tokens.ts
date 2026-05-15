@@ -371,6 +371,7 @@ export const PANEL_LAYOUT = {
     LEFT_MD: 'pl-4',                   // 16px left padding
     LEFT_XL: 'pl-8',                   // 32px left padding (indented content)
     // 🏷️ SPECIAL paddings
+    XS: 'p-1',                         // 4px all-around padding
     TOOLTIP: 'px-1 py-0.5',            // Tooltip/snap indicator padding
     BADGE: 'px-1.5 py-0.5',            // Badge/chip padding
     HORIZONTAL_HALF: 'px-0.5',         // 2px horizontal padding (sub-pixel)

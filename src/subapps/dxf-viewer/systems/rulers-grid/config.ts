@@ -43,6 +43,8 @@ export interface RulerSettings {
     showLabels: boolean; // New property to control text visibility
     showUnits: boolean;  // New property to control units in labels
     showBackground: boolean;  // New property to control background visibility
+    borderColor: string;
+    borderWidth: number;
   };
   vertical: {
     enabled: boolean;
@@ -67,6 +69,8 @@ export interface RulerSettings {
     showLabels: boolean; // New property to control text visibility
     showUnits: boolean;  // New property to control units in labels
     showBackground: boolean;  // New property to control background visibility
+    borderColor: string;
+    borderWidth: number;
   };
   units: 'mm' | 'cm' | 'm' | 'inches' | 'feet';
   snap: {
@@ -168,7 +172,9 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
     unitsColor: UI_COLORS.RULER_TEXT_GRAY,  // Default: same color as textColor
     showLabels: true,  // Default: show labels
     showUnits: true,   // Default: show units in labels
-    showBackground: true  // Default: show background
+    showBackground: true,  // Default: show background
+    borderColor: '#cccccc',
+    borderWidth: 1
   },
   vertical: {
     enabled: true,
@@ -192,7 +198,9 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
     unitsColor: UI_COLORS.RULER_TEXT_GRAY,  // Default: same color as textColor
     showLabels: true,  // Default: show labels
     showUnits: true,   // Default: show units in labels
-    showBackground: true  // Default: show background
+    showBackground: true,  // Default: show background
+    borderColor: '#cccccc',
+    borderWidth: 1
   },
   units: 'mm',
   // 🏢 ADR-105: Use centralized fallback tolerance

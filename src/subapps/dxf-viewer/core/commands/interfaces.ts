@@ -21,6 +21,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { IAuditTrail } from './types/audit-types';
 
 // ============================================================================
 // SERIALIZATION TYPES

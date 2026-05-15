@@ -277,9 +277,10 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
   // Without this subscription, grip panel changes have no effect until the
   // next unrelated re-render that happens to set isDirtyRef = true.
   useEffect(() => {
-    return gripStyleStore.subscribe(() => {
+    const unsub = gripStyleStore.subscribe(() => {
       isDirtyRef.current = true;
     });
+    return () => { unsub(); };
   }, []);
 
   return { isDirtyRef };

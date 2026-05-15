@@ -143,6 +143,10 @@ export class CanvasSettings {
         showAxes: GRID_AXES_DEFAULTS.showAxes,
         axesColor: GRID_AXES_DEFAULTS.axesColor,
         axesWeight: GRID_AXES_DEFAULTS.axesWeight,
+        smoothFade: false,
+        smoothFadeMinPx: 2,
+        smoothFadeMaxPx: 10,
+        smoothFadeDurationMs: 200,
         zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
       },
       rulers: {
