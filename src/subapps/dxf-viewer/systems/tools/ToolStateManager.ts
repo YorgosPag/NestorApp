@@ -57,13 +57,11 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'measure-angle-constraint': { id: 'measure-angle-constraint', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'measure-radius': { id: 'measure-radius', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'measure-perimeter': { id: 'measure-perimeter', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
-
   // Zoom tools - cancel overlay mode (zoom interaction ≠ overlay drawing)
   'zoom-in': { id: 'zoom-in', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
   'zoom-out': { id: 'zoom-out', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
   'zoom-extents': { id: 'zoom-extents', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
   'zoom-window': { id: 'zoom-window', category: 'zoom', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
-
   // Utility tools - pan doesn't interact with overlay drawing
   'pan': { id: 'pan', category: 'utility', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false },
   // 🏢 ENTERPRISE (Phase 3): Editing tools for entity manipulation
@@ -74,9 +72,15 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'grip-edit': { id: 'grip-edit', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: true },
   // ADR-348: Scale command (uniform + non-uniform + copy mode + reference mode)
   'scale': { id: 'scale', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // Mirror command
+  'mirror': { id: 'mirror', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-349 Phase 1a: Stretch (crossing-window) + MStretch (multi-window union)
   'stretch': { id: 'stretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'mstretch': { id: 'mstretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // Crop tools (window / polygon / lasso freehand)
+  'crop-window': { id: 'crop-window', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'polygon-crop': { id: 'polygon-crop', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'lasso-crop': { id: 'lasso-crop', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 
   // 🏢 ENTERPRISE: Layering tool - ALWAYS preserves overlay mode (it's the overlay management tool!)
   'layering': { id: 'layering', category: 'utility', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: true },
@@ -141,7 +145,6 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
 // 🏢 ENTERPRISE HELPER FUNCTIONS (ADR-033)
 // Standalone functions for tool metadata access without hook dependency
 // ============================================================================
-
 /**
  * Get tool metadata from centralized definitions
  * @param tool - The tool type to query
@@ -150,7 +153,6 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
 export function getToolMetadata(tool: ToolType): ToolInfo {
   return TOOL_DEFINITIONS[tool] ?? TOOL_DEFINITIONS['select'];
 }
-
 /**
  * Check if a tool preserves overlay draw mode when activated
  * Used by DxfViewerContent to determine overlay mode lifecycle
@@ -271,7 +273,6 @@ export function isInDrawingMode(
 
   return false;
 }
-
 /**
  * Check if a tool allows continuous operation (multiple uses without reselecting)
  * ENTERPRISE: Use this to determine if tool should stay active after completing an action
@@ -297,7 +298,6 @@ export interface ToolStateManagerOptions {
   onToolChange?: (newTool: ToolType, previousTool: ToolType) => void;
   onToolValidation?: (tool: ToolType, isValid: boolean) => void;
 }
-
 export interface ToolTransition {
   from: ToolType;
   to: ToolType;
