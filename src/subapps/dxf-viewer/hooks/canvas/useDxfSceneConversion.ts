@@ -20,8 +20,9 @@ import { perfMark } from '../../debug/perf-line-profile';
 import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
-import type { SceneModel, TextEntity } from '../../types/entities';
+import type { SceneModel, TextEntity, Entity } from '../../types/entities';
 import { isArrayEntity } from '../../types/entities';
+import type { PathParams } from '../../systems/array/types';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
 import { expandArrayEntity } from '../../systems/array/array-expander';
@@ -241,7 +242,10 @@ export function useDxfSceneConversion({
       if (isArrayEntity(entity)) {
         let items = arrayCache.get(entity);
         if (!items) {
-          const expanded = expandArrayEntity(entity);
+          const pathEnt = entity.arrayKind === 'path' && entity.params.kind === 'path'
+            ? (entities as Entity[]).find(e => e.id === (entity.params as PathParams).pathEntityId)
+            : undefined;
+          const expanded = expandArrayEntity(entity, pathEnt);
           items = expanded.reduce<DxfEntityUnion[]>((acc, e) => {
             const c = convertEntity(e, layers);
             if (c) acc.push(c);

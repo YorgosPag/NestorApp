@@ -14,6 +14,8 @@ import { LineStrategy } from './path-sampler-strategies/line-strategy';
 import { PolylineStrategy } from './path-sampler-strategies/polyline-strategy';
 import { ArcStrategy } from './path-sampler-strategies/arc-strategy';
 import { CircleStrategy } from './path-sampler-strategies/circle-strategy';
+import { EllipseStrategy } from './path-sampler-strategies/ellipse-strategy';
+import { SplineStrategy } from './path-sampler-strategies/spline-strategy';
 
 /** Position + tangent direction at a sampled arc-length parameter u ∈ [0,1]. */
 export interface PathSample {
@@ -44,9 +46,11 @@ const STRATEGIES: ReadonlyArray<PathSamplerStrategy> = [
   new PolylineStrategy(),
   new ArcStrategy(),
   new CircleStrategy(),
+  new EllipseStrategy(),
+  new SplineStrategy(),
 ];
 
-/** Return the strategy for the entity, or null if unsupported (e.g. SPLINE, ELLIPSE → C2). */
+/** Return the strategy for the entity, or null if unsupported. */
 export function getPathSamplerStrategy(entity: Entity): PathSamplerStrategy | null {
   for (const s of STRATEGIES) {
     if (s.matches(entity)) return s;
@@ -54,7 +58,7 @@ export function getPathSamplerStrategy(entity: Entity): PathSamplerStrategy | nu
   return null;
 }
 
-/** True if the entity is a supported path type (C1: LINE/POLYLINE/LWPOLYLINE/ARC/CIRCLE). */
+/** True if the entity is a supported path type (C1+C2: LINE/POLYLINE/LWPOLYLINE/ARC/CIRCLE/ELLIPSE/SPLINE). */
 export function isPathEntity(entity: Entity): boolean {
   return getPathSamplerStrategy(entity) !== null;
 }

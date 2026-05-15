@@ -67,14 +67,14 @@ describe('getPathSamplerStrategy', () => {
     expect(getPathSamplerStrategy(circle(0, 0, 1))).not.toBeNull();
   });
 
-  it('returns null for SPLINE (C2)', () => {
-    const spline = { id: 's', type: 'spline', name: 's' } as unknown as Entity;
-    expect(getPathSamplerStrategy(spline)).toBeNull();
+  it('returns strategy for SPLINE (C2)', () => {
+    const spline = { id: 's', type: 'spline', name: 's', controlPoints: [] } as unknown as Entity;
+    expect(getPathSamplerStrategy(spline)).not.toBeNull();
   });
 
-  it('returns null for ELLIPSE (C2)', () => {
-    const ellipse = { id: 'e', type: 'ellipse', name: 'e' } as unknown as Entity;
-    expect(getPathSamplerStrategy(ellipse)).toBeNull();
+  it('returns strategy for ELLIPSE (C2)', () => {
+    const ellipse = { id: 'e', type: 'ellipse', name: 'e', center: { x: 0, y: 0 }, majorAxis: 1, minorAxis: 1 } as unknown as Entity;
+    expect(getPathSamplerStrategy(ellipse)).not.toBeNull();
   });
 
   it('returns null for TEXT', () => {
@@ -96,9 +96,16 @@ describe('isPathEntity', () => {
     expect(isPathEntity(circle(0, 0, 1))).toBe(true);
   });
 
-  it('false for unsupported types', () => {
-    const spline = { id: 's', type: 'spline', name: 's' } as unknown as Entity;
-    expect(isPathEntity(spline)).toBe(false);
+  it('true for SPLINE and ELLIPSE (C2)', () => {
+    const spline = { id: 's', type: 'spline', name: 's', controlPoints: [] } as unknown as Entity;
+    const ellipse = { id: 'e', type: 'ellipse', name: 'e', center: { x: 0, y: 0 }, majorAxis: 1, minorAxis: 1 } as unknown as Entity;
+    expect(isPathEntity(spline)).toBe(true);
+    expect(isPathEntity(ellipse)).toBe(true);
+  });
+
+  it('false for TEXT (truly unsupported)', () => {
+    const text = { id: 't', type: 'text', name: 't' } as unknown as Entity;
+    expect(isPathEntity(text)).toBe(false);
   });
 });
 
@@ -363,16 +370,22 @@ describe('CircleStrategy', () => {
   });
 });
 
-// ── samplePath null for unsupported ──────────────────────────────────────
+// ── samplePath null for truly unsupported ────────────────────────────────
 
-describe('samplePath null for unsupported types', () => {
-  it('returns null for SPLINE', () => {
-    const spline = { id: 's', type: 'spline', name: 's' } as unknown as Entity;
-    expect(samplePath(spline, 0.5)).toBeNull();
+describe('samplePath null for truly unsupported types', () => {
+  it('returns null for TEXT', () => {
+    const text = { id: 't', type: 'text', name: 't' } as unknown as Entity;
+    expect(samplePath(text, 0.5)).toBeNull();
   });
 
-  it('pathTotalLength returns 0 for unsupported', () => {
-    const spline = { id: 's', type: 'spline', name: 's' } as unknown as Entity;
-    expect(pathTotalLength(spline)).toBe(0);
+  it('pathTotalLength returns 0 for TEXT', () => {
+    const text = { id: 't', type: 'text', name: 't' } as unknown as Entity;
+    expect(pathTotalLength(text)).toBe(0);
+  });
+
+  it('SPLINE now supported (C2) — not null', () => {
+    const spline = { id: 's', type: 'spline', name: 's', controlPoints: [{ x: 0, y: 0 }, { x: 1, y: 0 }] } as unknown as Entity;
+    expect(samplePath(spline, 0.5)).not.toBeNull();
   });
 });
+

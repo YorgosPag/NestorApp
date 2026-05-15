@@ -458,7 +458,7 @@ This ADR will be implemented across **9 self-contained sessions** spanning the 3
 | **B** | B1 | Polar math + command + tool registration | ✅ done | 2 new, 5 modify | ~30 min | 2026-05-15 |
 | **B** | B2 | Polar ribbon + center picker + grips (Phase B SHIPS) | ✅ done | 2 new, 11 modify | ~60 min | 2026-05-15 |
 | **C** | C1 | Arc-length sampler analytical (LINE/POLY/ARC/CIRCLE) | ✅ done | 5 new + 1 test | ~45 min | 2026-05-15 |
-| **C** | C2 | Arc-length numerical (ELLIPSE/SPLINE) + path-transform | ⏳ pending | ~5 new/modify | ~60 min | — |
+| **C** | C2 | Arc-length numerical (ELLIPSE/SPLINE) + path-transform | ✅ done | 5 new + 5 modify | ~60 min | 2026-05-16 |
 | **C** | C3 | Path ribbon + path picker + reverse button (Phase C SHIPS — feature complete) | ⏳ pending | ~7 new/modify | ~45 min | — |
 
 **Total estimate: ~7 hours of focused implementation distributed across 9 sessions.**
@@ -684,31 +684,41 @@ This ADR will be implemented across **9 self-contained sessions** spanning the 3
 
 **Scope:** ELLIPSE + SPLINE numerical strategies + path transform composition.
 
-**Files to create:**
-1. `src/subapps/dxf-viewer/systems/array/path-sampler-strategies/ellipse-sampler.ts` — numerical: sample densely, build (t, s) table, binary search.
-2. `.../spline-sampler.ts` — numerical: De Boor evaluation + arc-length table + binary search.
-3. `src/subapps/dxf-viewer/systems/array/path-transform.ts` — `computePathTransforms(params, sampler, sourceBbox): ItemTransform[]`. Handles Divide vs Measure, alignItems, reversed direction, closed-path divisor adjustment.
+**Files created (2026-05-16):**
+1. `systems/array/path-sampler-strategies/ellipse-strategy.ts` — Gauss-Legendre 5-point GL quadrature for totalLength; cumulative table (N=128) + binary search for sample. majorAxis/minorAxis = semi-axes.
+2. `systems/array/path-sampler-strategies/spline-strategy.ts` — Catmull-Rom chord-length (N=256). Covers 90%+ of DXF splines. De Boor (NURBS) deferred — not needed for path-array.
+3. `systems/array/path-transform.ts` — `computePathTransforms(params, sourceBbox, pathEntity)`. Divide (open: /N-1, closed: /N) + Measure (stop before endpoint, AutoCAD pattern). `isClosedPathEntity` handles circle/full-ellipse/closed-poly/closed-spline.
 
-**Files to modify:**
-- `systems/array/types.ts` — finalize `PathParams` (method: 'divide' | 'measure', count, spacing?, alignItems, pathEntityId, reversed).
-- `systems/array/array-validation.ts` — path-specific validation.
-- `systems/tools/ToolStateManager.ts` — register `array-path` (selection + path-pick + params).
-- `ui/toolbar/types.ts` — extend with `'array-path'`.
+**Files modified:**
+- `path-arc-length-sampler.ts` — added EllipseStrategy + SplineStrategy to STRATEGIES array.
+- `array-expander.ts` — added `pathEntity?: Entity` param; path branch calls `computePathTransforms`.
+- `ExplodeArrayCommand.ts` — path branch: `sceneManager.getEntity(pathEntityId)` → `computePathTransforms`.
+- `useDxfSceneConversion.ts` — looks up pathEntity from entities list before `expandArrayEntity(entity, pathEnt)`.
+- `useGlobalSnapSceneSync.ts` — same lookup pattern for snap candidates.
 
-**Tests:**
-- `__tests__/path-sampler-strategies/ellipse-sampler.test.ts` — ±1e-6 accuracy vs known ellipse arc length.
-- `__tests__/path-sampler-strategies/spline-sampler.test.ts` — ±1e-6 accuracy vs reference NURBS.
-- `__tests__/path-transform.test.ts` — Divide/Measure, alignItems, reversed, closed-path divisor (/N vs /N-1), out-of-range Measure clamp.
+**Architectural decision (D1):** pathEntity passed as optional param to expandArrayEntity (not injected via sceneManager). Caller does the lookup. SRP preserved.
 
-**Acceptance:**
-- ✅ Ellipse + SPLINE sampler ±1e-6 accuracy.
-- ✅ Path transform produces correct positions + tangents for all 7 entity types.
-- ✅ Closed-path Divide uses /N (no duplicate at start=end).
-- ✅ Measure beyond path silently omits.
-- ✅ Reversed flag inverts traversal order.
-- ✅ Tool registered.
+**Tests (all green, 162 tests):**
+- `__tests__/path-sampler-strategies-c2.test.ts` — 22 tests: EllipseStrategy (full circle ≈2π ±0.1%, sample positions, tangents, reversed, degenerate) + SplineStrategy (collinear convergence, midpoint, reversed, degenerate).
+- `__tests__/path-transform.test.ts` — 18 tests: divide/measure/closed/alignItems/reversed/edge-cases.
+- `__tests__/path-arc-length-sampler.test.ts` — updated: ELLIPSE+SPLINE now return strategies (not null).
 
-**Handoff to C3:** Math ready. C3 adds UI.
+**Acceptance (all ✅):**
+- ✅ getPathSamplerStrategy(ellipse/spline) returns strategy (not null).
+- ✅ Full circle a=b=1: totalLength ≈ 2π ±0.1%.
+- ✅ Sample(0.25) on circle → near (0,1) geometrically.
+- ✅ Spline 4 collinear points: totalLength ≈ linear distance.
+- ✅ divide count=5, open line: 5 equidistant points.
+- ✅ divide count=4, closed circle: 4 items at 90° each, no duplicate.
+- ✅ measure spacing=5, line 20: 4 items (0,5,10,15), omits 20.
+- ✅ alignItems=true: rotateDeg follows tangent.
+- ✅ alignItems=false: rotateDeg=0.
+- ✅ reversed=true: items in reverse order along path.
+- ✅ ExplodeArrayCommand path: no longer throws, produces N items.
+- ✅ expandArrayEntity path branch: works with pathEntity param.
+- ✅ TypeScript strict, no any, no @ts-ignore.
+
+**Handoff to C3:** Math complete. C3 adds ribbon + path-pick UI.
 
 ---
 

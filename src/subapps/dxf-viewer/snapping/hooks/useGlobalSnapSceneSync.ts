@@ -32,6 +32,7 @@ import {
 } from '../global-snap-engine';
 import type { Entity } from '../extended-types';
 import { isArrayEntity } from '../../types/entities';
+import type { PathParams } from '../../systems/array/types';
 import type { SceneModel } from '../../types/scene';
 import { expandArrayEntity } from '../../systems/array/array-expander';
 import type { Overlay } from '../../overlays/types';
@@ -91,7 +92,10 @@ export function useGlobalSnapSceneSync({
     const dxfEnts: Entity[] = [];
     for (const e of rawEnts) {
       if (isArrayEntity(e)) {
-        for (const item of expandArrayEntity(e)) dxfEnts.push(item as Entity);
+        const pathEnt = e.arrayKind === 'path' && e.params.kind === 'path'
+          ? rawEnts.find(r => r.id === (e.params as PathParams).pathEntityId)
+          : undefined;
+        for (const item of expandArrayEntity(e, pathEnt as Entity | undefined)) dxfEnts.push(item as Entity);
       } else {
         dxfEnts.push(e);
       }

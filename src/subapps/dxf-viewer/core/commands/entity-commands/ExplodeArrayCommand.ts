@@ -7,16 +7,17 @@
  * execute/redo: compute transforms → addEntity N times → removeEntity(array).
  * undo: removeEntity for each created ID → addEntity(arraySnapshot).
  *
- * Supports: rect (Phase A), polar (Phase B). Path: Phase C.
+ * Supports: rect (Phase A), polar (Phase B), path (Phase C2).
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
-import type { ArrayEntity } from '../../../types/entities';
-import type { ItemTransform, SourceBbox } from '../../../systems/array/types';
+import type { ArrayEntity, Entity } from '../../../types/entities';
+import type { ItemTransform, PathParams, SourceBbox } from '../../../systems/array/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { computeRectTransforms } from '../../../systems/array/rect-transform';
 import { computePolarTransforms } from '../../../systems/array/polar-transform';
+import { computePathTransforms } from '../../../systems/array/path-transform';
 import { applyTransformToEntity } from '../../../systems/array/array-entity-transform';
 import { computeSourceGroupBbox } from '../../../systems/array/array-bbox';
 
@@ -94,11 +95,13 @@ export class ExplodeArrayCommand implements ICommand {
       return computePolarTransforms(params, bbox);
     }
 
-    // Path: Phase C
-    throw new Error(
-      `ExplodeArrayCommand: array kind '${arrayKind}' is not yet supported. ` +
-      `Implement path-transform.ts (Phase C) first.`,
-    );
+    if (arrayKind === 'path' && params.kind === 'path') {
+      const pathEnt = this.sceneManager.getEntity((params as PathParams).pathEntityId);
+      if (!pathEnt) return [];
+      return computePathTransforms(params as PathParams, bbox, pathEnt as unknown as Entity);
+    }
+
+    throw new Error(`ExplodeArrayCommand: unknown array kind '${arrayKind}'`);
   }
 
   getDescription(): string {

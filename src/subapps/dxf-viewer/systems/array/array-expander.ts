@@ -13,9 +13,10 @@
  */
 
 import type { ArrayEntity, Entity } from '../../types/entities';
-import type { RectParams, PolarParams, ItemTransform } from './types';
+import type { RectParams, PolarParams, PathParams, ItemTransform } from './types';
 import { computeRectTransforms } from './rect-transform';
 import { computePolarTransforms } from './polar-transform';
+import { computePathTransforms } from './path-transform';
 import { computeSourceGroupBbox } from './array-bbox';
 import { applyTransformToEntity } from './array-entity-transform';
 
@@ -23,15 +24,15 @@ import { applyTransformToEntity } from './array-entity-transform';
  * Expand an ArrayEntity into rendered/snap-candidate items.
  *
  * Dispatches to the correct transform math by arrayKind.
- * Returns empty for unsupported kinds (path — Phase C).
+ * Path kind requires pathEntity (looked up by caller from the scene).
  * Each returned item carries the parent ArrayEntity's `id` so that click
  * hit-testing resolves to the correct scene entity.
  */
-export function expandArrayEntity(entity: ArrayEntity): Entity[] {
+export function expandArrayEntity(entity: ArrayEntity, pathEntity?: Entity): Entity[] {
   if (entity.hiddenSources.length === 0) return [];
 
   const bbox = computeSourceGroupBbox(entity.hiddenSources);
-  const transforms = computeTransformsForKind(entity, bbox);
+  const transforms = computeTransformsForKind(entity, bbox, pathEntity);
 
   const result: Entity[] = [];
   for (const transform of transforms) {
@@ -46,13 +47,17 @@ export function expandArrayEntity(entity: ArrayEntity): Entity[] {
 function computeTransformsForKind(
   entity: ArrayEntity,
   bbox: ReturnType<typeof computeSourceGroupBbox>,
+  pathEntity?: Entity,
 ): ItemTransform[] {
   switch (entity.arrayKind) {
     case 'rect':
       return computeRectTransforms(entity.params as RectParams, bbox);
     case 'polar':
       return computePolarTransforms(entity.params as PolarParams, bbox);
+    case 'path':
+      if (!pathEntity) return [];
+      return computePathTransforms(entity.params as PathParams, bbox, pathEntity);
     default:
-      return []; // path: Phase C
+      return [];
   }
 }
