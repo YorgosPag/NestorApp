@@ -50,15 +50,16 @@ interface UseCompanyIdOptions {
  */
 export function useCompanyId(options?: UseCompanyIdOptions): CompanyIdResult | undefined {
   const { user } = useAuth();
-  const { activeCompanyId: superAdminCompanyId } = useSuperAdminCompany();
+  const { isSuperAdmin, activeCompanyId: superAdminCompanyId } = useSuperAdminCompany();
 
   return useMemo(
     () => tryResolveCompanyId({
       building: options?.building,
-      user,
-      // Super admin active company takes effect when user has no own companyId
+      // Super admin with active selection: null out user.companyId so the
+      // switcher selection (selectedCompanyId) wins over the user's own tenant.
+      user: (isSuperAdmin && superAdminCompanyId) ? null : user,
       selectedCompanyId: options?.selectedCompanyId ?? superAdminCompanyId ?? undefined,
     }),
-    [options?.building?.companyId, user?.companyId, options?.selectedCompanyId, superAdminCompanyId]
+    [options?.building?.companyId, user?.companyId, options?.selectedCompanyId, superAdminCompanyId, isSuperAdmin]
   );
 }
