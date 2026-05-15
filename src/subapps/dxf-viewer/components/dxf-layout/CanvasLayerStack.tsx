@@ -60,7 +60,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   entityPickingActive,
   selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
-  rotationPreview, movePreview, mirrorPreview, scalePreview, levelManager,
+  rotationPreview, movePreview, mirrorPreview, scalePreview, stretchPreview, levelManager,
 }: CanvasLayerStackProps) {
   // --- Destructure grouped props ---
   const {
@@ -440,6 +440,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             move={movePreview}
             mirror={mirrorPreview}
             scale={scalePreview}
+            stretch={stretchPreview}
             gripDragPreview={dxfGripInteraction.dragPreview}
             selectedEntityIds={selectedEntityIds}
             levelManager={levelManager}

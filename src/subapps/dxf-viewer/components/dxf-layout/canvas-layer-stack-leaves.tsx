@@ -27,6 +27,7 @@ import { useMovePreview } from '../../hooks/tools/useMovePreview';
 import { useGripGhostPreview } from '../../hooks/tools/useGripGhostPreview';
 import { useMirrorPreview } from '../../hooks/tools/useMirrorPreview';
 import { useScalePreview } from '../../hooks/tools/useScalePreview';
+import { useStretchPreview } from '../../hooks/tools/useStretchPreview';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
 import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
@@ -380,6 +381,29 @@ export const ScalePreviewMount = React.memo(function ScalePreviewMount(
   return null;
 });
 
+// ============================================================================
+// STRETCH PREVIEW MOUNT (ADR-349 Phase 1c-B1)
+// ============================================================================
+
+interface StretchPreviewMountProps {
+  levelManager: Parameters<typeof useStretchPreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+/**
+ * Mounts useStretchPreview. No JSX — draws to PreviewCanvas via imperative API.
+ * Subscribes to StretchToolStore + useCursorWorldPosition internally.
+ * Only this component re-renders on stretch displacement updates — NOT CanvasLayerStack.
+ */
+export const StretchPreviewMount = React.memo(function StretchPreviewMount(
+  props: StretchPreviewMountProps,
+) {
+  useStretchPreview(props);
+  return null;
+});
+
 /**
  * Mounts useGripGhostPreview. No JSX — draws to PreviewCanvas via imperative
  * API. Renders a blue translucent ghost of the entity being grip-dragged
@@ -404,6 +428,7 @@ interface PreviewCanvasMountsProps {
   move: Omit<MovePreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   mirror: Omit<MirrorPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   scale: Omit<ScalePreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  stretch: Omit<StretchPreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   gripDragPreview: DxfGripDragPreview | null;
   selectedEntityIds: string[];
   levelManager: MovePreviewMountProps['levelManager'];
@@ -420,7 +445,7 @@ interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, scale, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { rotation, move, mirror, scale, stretch, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
   return (
     <>
       <RotationPreviewMount
@@ -449,6 +474,13 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       />
       <ScalePreviewMount
         {...scale}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <StretchPreviewMount
+        {...stretch}
         levelManager={levelManager}
         transform={transform}
         getCanvas={getCanvas}

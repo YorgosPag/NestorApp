@@ -216,6 +216,8 @@ export interface CanvasLayerStackProps {
   };
   // === ADR-348: Scale tool preview (ScaleToolStore-driven, zero props needed) ===
   scalePreview: Record<string, never>;
+  // === ADR-349 Phase 1c-B1: Stretch tool preview (StretchToolStore-driven, zero props needed) ===
+  stretchPreview: Record<string, never>;
   /** Level manager — needed by useRotationPreview + useMovePreview for entity reads */
   levelManager: ReturnType<typeof useLevels>;
 

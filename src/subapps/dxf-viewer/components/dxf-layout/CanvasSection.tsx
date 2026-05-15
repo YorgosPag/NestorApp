@@ -421,7 +421,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // === Auto-area hover preview ===
   const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove: unified.handleMouseMove, activeTool, levelManager, currentOverlays, transformScale: transform.scale });
-
   // === Render ===
   return (
     <>
@@ -454,6 +453,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         movePreview={{ phase: moveTool.phase, basePoint: moveTool.basePoint, selectedOverlayIds: universalSelection.getIdsByType('overlay'), getOverlay: (id) => overlayStore.overlays[id] ?? null }}
         mirrorPreview={{ phase: mirrorTool.phase, firstPoint: mirrorTool.firstPoint, secondPoint: mirrorTool.secondPoint }}
         scalePreview={{}}
+        stretchPreview={{}}
         levelManager={levelManager}
       />
       <DrawingContextMenu ref={drawingMenuRef} activeTool={(overlayMode === 'draw' ? 'polygon' : activeTool) as ToolType}

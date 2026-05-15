@@ -1165,3 +1165,7 @@ New `CanvasNumericInputOverlay` micro-leaf in `systems/canvas-numeric-input/Canv
 ## 2026-05-15: Grip Hover Menu — GripHoverMenu micro-leaf (ADR-349 Phase 1b.2)
 
 `GripHoverMenu` added as a micro-leaf sibling of `<PromptDialog />` in `CanvasSection`. Subscribes ONLY to `GripHoverMenuStore` (module-level pub/sub — low-frequency visibility transitions). `useGripHoverMenuController` hook invoked in `CanvasSection` orchestrator (no store subscriptions in the hook — fires timer effects only). Cardinal rules maintained: `CanvasSection` orchestrator has zero `useSyncExternalStore` calls; all store reads in `GripHoverMenu` leaf.
+
+## 2026-05-15: Stretch Preview — StretchPreviewMount micro-leaf (ADR-349 Phase 1c-B1)
+
+`StretchPreviewMount` added to `canvas-layer-stack-leaves.tsx`. `useStretchPreview` runs 60fps RAF on PreviewCanvas — draws ghost copies of stretch-selected vertices displaced by current drag delta. `stretchPreview: Record<string, never>` prop added to `CanvasLayerStackProps` (same zero-prop pattern as `scalePreview`). `CanvasSection` passes `stretchPreview={{}}` to `CanvasLayerStack`. Cardinal rules maintained: `CanvasSection` and `CanvasLayerStack` orchestrators have zero `useSyncExternalStore` calls.
