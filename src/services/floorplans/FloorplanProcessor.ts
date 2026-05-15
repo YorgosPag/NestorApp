@@ -20,7 +20,7 @@
 
 'use client';
 
-import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
+import { processFloorplanWithPolicy, isInProgress } from '@/services/floorplans/floorplan-processing-mutation-gateway';
 import type {
   FileRecord,
   FloorplanProcessedData,
@@ -179,13 +179,16 @@ export class FloorplanProcessor {
         forceReprocess,
       });
 
+      if (isInProgress(result)) {
+        logger.info('Processing in progress', { fileId: result.fileId });
+        return { success: true };
+      }
+
       logger.info('Server processing complete', {
         fileId: result.fileId,
         fileType: result.fileType,
         stats: result.stats,
       });
-      // Return success - the server has already saved processedData to Firestore
-      // The caller should re-fetch the FileRecord to get the updated processedData
       return {
         success: true,
         processedData: {

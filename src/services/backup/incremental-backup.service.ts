@@ -64,6 +64,11 @@ const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = {
   parking: 'PARKING_SPACES',
   storage: 'STORAGE',
   purchase_order: 'PURCHASE_ORDERS',
+  quote: 'QUOTES',
+  material: 'MATERIALS',
+  framework_agreement: 'FRAMEWORK_AGREEMENTS',
+  text_template: 'TEXT_TEMPLATES',
+  custom_dictionary_entry: 'TEXT_CUSTOM_DICTIONARY',
 };
 
 /** Actions that indicate a document was removed */

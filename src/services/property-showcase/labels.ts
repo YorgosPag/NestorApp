@@ -35,6 +35,7 @@ const CATALOGS: Record<EnumLocale, ElShowcase> = {
 
 export interface ShowcaseSpecLabels {
   title: string;
+  sectionTitle: string;
   areaUnit: string;
   type: string;
   code: string;
@@ -43,7 +44,9 @@ export interface ShowcaseSpecLabels {
   grossArea: string;
   netArea: string;
   balcony: string;
+  balconyArea: string;
   terrace: string;
+  terraceArea: string;
   garden: string;
   millesimalShares: string;
   bedrooms: string;

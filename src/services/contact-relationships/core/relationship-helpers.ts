@@ -61,6 +61,7 @@ export const RECIPROCAL_MAPPINGS: Record<RelationshipType, RelationshipType | nu
   'property_buyer': null,
   'property_co_buyer': null,
   'property_landowner': null,
+  'business_contact': null,
   'other': null
 };
 

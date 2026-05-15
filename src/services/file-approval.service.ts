@@ -172,7 +172,7 @@ export const FileApprovalService = {
   ): Unsubscribe {
     return firestoreQueryService.subscribe<FileApproval>(
       'FILE_APPROVALS',
-      (result) => callback(result.documents),
+      (result) => callback([...result.documents]),
       (err) => log.error('subscribeToApprovals failed', { fileId, err }),
       {
         constraints: [

@@ -133,7 +133,7 @@ export const FileCommentService = {
   ): Unsubscribe {
     return firestoreQueryService.subscribe<FileComment>(
       'FILE_COMMENTS',
-      (result) => callback(result.documents),
+      (result) => callback([...result.documents]),
       (err) => log.error('subscribeToComments failed', { fileId, err }),
       {
         constraints: [
