@@ -106,12 +106,10 @@ export const GET = withHighRateLimit(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const startTime = Date.now();
 
-      // 🏢 ENTERPRISE: Check if user is Super Admin for cross-tenant access
-      const isSuperAdmin = ctx.globalRole === 'super_admin';
-      const superAdminOverride = ctx.superAdminOverride ?? false;
+      // ADR-356 SSOT: scope decision (filter + cache slot + mode) from helper.
+      const scope = resolveSuperAdminProjectScope(ctx);
       logger.info('[Projects/List] Starting projects list load', {
-        isSuperAdmin,
-        superAdminOverride,
+        scopeMode: scope.mode,
         effectiveCompanyId: ctx.companyId,
       });
 
@@ -120,7 +118,7 @@ export const GET = withHighRateLimit(
       // ============================================================================
 
       const cache = EnterpriseAPICache.getInstance();
-      const tenantCacheKey = getTenantCacheKey(ctx.companyId, isSuperAdmin, superAdminOverride);
+      const tenantCacheKey = `${CACHE_KEY_PREFIX}:${scope.cacheSlot}`;
 
       // ADR-354 entry point #6: client-side bust via `?t=<ts>` query param
       // (used by useFirestoreProjects listener on super-admin company switch).
@@ -156,26 +154,19 @@ export const GET = withHighRateLimit(
       // 🏢 ENTERPRISE: Super Admin gets ALL projects, others get tenant-scoped
       // ============================================================================
 
-      let projectsSnapshot;
-      if (isSuperAdmin && superAdminOverride) {
-        // ADR-354 entry point #6: super admin switcher → impersonate target tenant.
-        // Scope to effective companyId, same as a regular company_admin would see.
-        logger.info('[Projects/List] Super Admin switcher override - tenant-scoped impersonation', { effectiveCompanyId: ctx.companyId });
-        projectsSnapshot = await getAdminFirestore()
-          .collection(COLLECTIONS.PROJECTS)
-          .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
-          .get();
-      } else if (isSuperAdmin) {
-        // 🏢 Super Admin without active switcher: Fetch ALL projects (cross-tenant view)
-        logger.info('[Projects/List] Super Admin - Fetching all projects');
-        projectsSnapshot = await getAdminFirestore().collection(COLLECTIONS.PROJECTS).get();
-      } else {
-        // 🔒 Regular user: Tenant-scoped (only their company)
-        projectsSnapshot = await getAdminFirestore()
-          .collection(COLLECTIONS.PROJECTS)
-          .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
-          .get();
-      }
+      // ADR-356 SSOT: filter decision from helper. `filterCompanyId` is `null`
+      // only for super-admin-global mode (cross-tenant view); every other mode
+      // (tenant, super-admin-impersonate) emits a `where('companyId', '==', X)`.
+      logger.info('[Projects/List] Fetching projects', {
+        scopeMode: scope.mode,
+        filterCompanyId: scope.filterCompanyId,
+      });
+      const projectsSnapshot = scope.filterCompanyId
+        ? await getAdminFirestore()
+            .collection(COLLECTIONS.PROJECTS)
+            .where(FIELDS.COMPANY_ID, '==', scope.filterCompanyId)
+            .get()
+        : await getAdminFirestore().collection(COLLECTIONS.PROJECTS).get();
 
       logger.info('[Projects/List] Found projects', { total: projectsSnapshot.docs.length });
 

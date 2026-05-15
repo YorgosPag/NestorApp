@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload, type ProjectCreatedPayload, type ProjectDeletedPayload } from '@/services/realtime';
-// ADR-354 entry point #6: re-fetch on super-admin switcher change
-import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
+// ADR-356: shared switcher-invalidation SSOT hook for REST-backed consumers
+import { useSuperAdminSwitcherInvalidation } from '@/hooks/useSuperAdminSwitcherInvalidation';
 // 🏢 SSoT: ProjectSummary from @/types/project (via Pick<Project, ...>)
 import type { ProjectSummary } from '@/types/project';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -107,24 +107,25 @@ export function useFirestoreProjects() {
     const unsubCreate = RealtimeService.subscribe('PROJECT_CREATED', handleProjectCreated);
     const unsubDelete = RealtimeService.subscribe('PROJECT_DELETED', handleProjectDeleted);
 
-    // ADR-354 entry point #6 — super-admin switcher change: invalidate module
-    // cache + bust server cache on next request + force refetch. Without this
-    // the page keeps the previously-impersonated tenant's projects list.
-    const unsubSwitcher = onSuperAdminActiveCompanyChange(() => {
-      logger.info('Super admin company switched — busting projects cache + refetching');
-      projectsCache.set([]);
-      hasLoadedOnceRef.current = false;
-      bustServerCacheRef.current = true;
-      setRefreshTrigger(prev => prev + 1);
-    });
-
     return () => {
       unsubUpdate();
       unsubCreate();
       unsubDelete();
-      unsubSwitcher();
     };
   }, []);
+
+  // ADR-356 — super-admin switcher change: invalidate module cache + bust
+  // server cache on next request + force refetch. Single SSOT hook reused by
+  // every REST-backed consumer (NavigationContext bootstrap, projects list,
+  // etc.) — no per-consumer duplication of the listener wiring.
+  const handleSwitcherChange = useCallback(() => {
+    logger.info('Super admin company switched — busting projects cache + refetching');
+    projectsCache.set([]);
+    hasLoadedOnceRef.current = false;
+    bustServerCacheRef.current = true;
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
+  useSuperAdminSwitcherInvalidation(handleSwitcherChange);
 
   useEffect(() => {
     async function fetchProjects() {

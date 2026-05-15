@@ -11,6 +11,7 @@
 
 import { getErrorMessage } from "@/lib/error-utils";
 import type { AuthContext } from "@/lib/auth";
+import { resolveSuperAdminProjectScope } from "@/lib/auth";
 import { COLLECTIONS } from "@/config/firestore-collections";
 import { FIELDS } from "@/config/firestore-field-constants";
 import type { CompanyContact } from "@/types/contacts";
@@ -50,10 +51,12 @@ export async function fetchCompanies(
   const companyMap = new Map<string, { id: string; name: string }>();
 
   try {
-    // ADR-354 entry point #6: super admin with switcher override → impersonate
-    // target tenant. Skip global navigation_companies scan; scope to effective
-    // companyId only, identical to company_admin of that tenant.
-    if (ctx.globalRole === "super_admin" && ctx.superAdminOverride) {
+    // ADR-356 SSOT: scope decision delegated to helper. Super admin with an
+    // active switcher selection → impersonation mode → skip navigation_companies
+    // scan and load only the effective tenant, exactly like company_admin of
+    // that tenant. (Helper applies the same rule across every project route.)
+    const scope = resolveSuperAdminProjectScope(ctx);
+    if (scope.mode === "super-admin-impersonate") {
       logger.info("[Bootstrap] Super admin switcher override - tenant-scoped impersonation", { effectiveCompanyId: ctx.companyId });
       return fetchCompaniesTenant(adminDb, ctx, [], new Map());
     }
