@@ -36,8 +36,10 @@ import {
   getDefaultNotificationSettings,
 } from './user-notification-settings.types';
 import { COLLECTIONS } from '@/config/firestore-collections';
-// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync (event bus)
 import { RealtimeService } from '@/services/realtime';
+// ADR-355: Firestore document subscription via tenant-aware SSOT
+import { firestoreQueryService } from '@/services/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('UserNotificationSettingsService');
@@ -342,16 +344,17 @@ class UserNotificationSettingsService {
       existingUnsubscribe();
     }
 
-    // Route through SSoT RealtimeService (ADR-195 Phase 8) for subscription
-    // tracking + dedup + centralized error handling.
-    const unsubscribe = RealtimeService.subscribeToDocument(
-      { collection: COLLECTION_NAME as import('@/services/realtime/types').RealtimeCollection, documentId: userId },
+    // ADR-355: route through firestoreQueryService SSOT — tenant-aware,
+    // auth-gated, switcher-aware. Replaces the previous RealtimeService
+    // subscribeToDocument path (deleted) with the unified subscription API.
+    const unsubscribe = firestoreQueryService.subscribeDoc(
+      'USER_NOTIFICATION_SETTINGS',
+      userId,
       (data) => {
         if (data) {
-          const settings = this.transformFromFirestore(data, userId);
+          const settings = this.transformFromFirestore(data as Record<string, unknown>, userId);
           callback(settings);
         } else {
-          // Return default settings if document doesn't exist
           callback(getDefaultNotificationSettings(userId));
         }
       },

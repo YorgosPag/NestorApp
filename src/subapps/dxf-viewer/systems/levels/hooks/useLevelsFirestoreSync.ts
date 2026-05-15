@@ -1,19 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
-import {
-  where,
-  orderBy,
-  doc,
-  writeBatch,
-} from 'firebase/firestore';
+import { useEffect } from 'react';
+import { orderBy, doc, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '../../../../../lib/firebase';
-import { RealtimeService } from '@/services/realtime/RealtimeService';
-import type { RealtimeCollection } from '@/services/realtime/types';
+import { firestoreQueryService } from '@/services/firestore';
+import type { QueryResult } from '@/services/firestore';
 import { getErrorMessage } from '@/lib/error-utils';
-import {
-  getSuperAdminActiveCompanyId,
-  onSuperAdminActiveCompanyChange,
-} from '@/services/firestore/super-admin-active-company';
 import { LevelOperations } from '../utils';
 import type { Level } from '../config';
 
@@ -21,7 +12,7 @@ interface UseLevelsFirestoreSyncParams {
   enableFirestore: boolean;
   firestoreCollection: string;
   currentLevelId: string | null;
-  /** companyId from Firebase custom claims — required for tenant-scoped query */
+  /** companyId from Firebase custom claims — required for tenant-scoped bootstrap write */
   companyId: string | null | undefined;
   /** uid of the authenticated user — used for bootstrap doc ownership */
   userId: string | null | undefined;
@@ -36,14 +27,13 @@ interface UseLevelsFirestoreSyncParams {
 }
 
 /**
- * 🏢 ENTERPRISE: Real-time Firestore sync for the levels collection
+ * Real-time Firestore sync for the levels collection (ADR-355 SSOT).
  *
- * Subscribes to the levels collection (ordered by `order`) and:
- *  - Keeps the local `levels` state in sync with Firestore (onSnapshot).
- *  - Selects a sensible default level when none is selected or the current
- *    selection disappears (prefers the `isDefault` level, else the first).
- *  - Bootstraps the collection with default levels on first run (empty collection).
- *  - Surfaces transport errors via `handleError`.
+ * Subscribes via `firestoreQueryService.subscribe('DXF_VIEWER_LEVELS', ...)`:
+ *  - Tenant filter (where companyId == effectiveCompanyId) auto-applied
+ *  - Super-admin switcher re-subscription auto-handled (ADR-354 entry point #3)
+ *  - Auth-readiness gating auto-handled
+ * Hook owns: orderBy('order'), bootstrap-on-empty, level re-election.
  */
 export function useLevelsFirestoreSync({
   enableFirestore,
@@ -59,51 +49,17 @@ export function useLevelsFirestoreSync({
   onLevelChange,
   handleError,
 }: UseLevelsFirestoreSyncParams): void {
-  // 🏢 ADR-354 Phase B: re-subscribe trigger on super admin company switch.
-  // The registry listener bumps this tick; the main subscription useEffect
-  // includes it in deps and tears down / rebuilds with the new constraint.
-  const [superAdminCompanyTick, setSuperAdminCompanyTick] = useState(0);
-  useEffect(() => {
-    if (!isSuperAdmin) return;
-    return onSuperAdminActiveCompanyChange(() => {
-      setSuperAdminCompanyTick((t) => t + 1);
-    });
-  }, [isSuperAdmin]);
-
   useEffect(() => {
     if (!enableFirestore) return;
-    // Wait until auth is resolved so we can build a tenant-scoped query.
-    // Super-admins may query without a companyId filter (rule: isSuperAdminOnly()).
     if (!isSuperAdmin && !companyId) return;
 
     setIsLoading(true);
 
-    // 🏢 ADR-195 (C.5.33): subscribe via RealtimeService SSoT — dynamic
-    // collection name (param-driven) requires string-based API, not CollectionKey.
-    // Non-super-admin users MUST include where('companyId', '==', ...) so that
-    // Firestore can statically verify every returned document satisfies the
-    // tenant-isolation rule (resource.data.companyId == getUserCompanyId()).
-    // Super-admins rely on isSuperAdminOnly() in the rule, which is request-only
-    // and does not require a where-clause — but ADR-354 Phase B adds the filter
-    // when the super admin has selected an active company via the switcher, so
-    // the level list re-scopes to that tenant (and currentLevelId re-elects in
-    // the snapshot callback when the previous selection is no longer present).
-    const effectiveSuperAdminCompanyId = isSuperAdmin
-      ? getSuperAdminActiveCompanyId()
-      : null;
-    const constraints = isSuperAdmin
-      ? effectiveSuperAdminCompanyId
-        ? [where('companyId', '==', effectiveSuperAdminCompanyId), orderBy('order', 'asc')]
-        : [orderBy('order', 'asc')]
-      : [where('companyId', '==', companyId), orderBy('order', 'asc')];
-
-    // Cast dynamic param to RealtimeCollection — `firestoreCollection` is runtime
-    // config (not statically a CollectionKey). Firestore rules enforce access.
-    const unsubscribe = RealtimeService.subscribeToCollection(
-      { collection: firestoreCollection as RealtimeCollection, constraints },
-      (docs) => {
+    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
+      'DXF_VIEWER_LEVELS',
+      (result: QueryResult<DocumentData>) => {
         try {
-          const fetchedLevels = docs as unknown as Level[];
+          const fetchedLevels = result.documents as unknown as Level[];
 
           if (fetchedLevels.length > 0) {
             setLevels(fetchedLevels);
@@ -118,7 +74,6 @@ export function useLevelsFirestoreSync({
             defaultLevels.forEach(level => {
               const { id, ...levelData } = level;
               const docRef = doc(db, firestoreCollection, id);
-              // Include tenant-scoping fields so future reads pass security rules.
               batch.set(docRef, {
                 ...levelData,
                 ...(companyId ? { companyId } : {}),
@@ -137,9 +92,10 @@ export function useLevelsFirestoreSync({
       (err) => {
         handleError(`Firestore error: ${err.message}`);
         setIsLoading(false);
-      }
+      },
+      { constraints: [orderBy('order', 'asc')] }
     );
 
     return () => unsubscribe();
-  }, [enableFirestore, firestoreCollection, currentLevelId, companyId, creatorUid, isSuperAdmin, superAdminCompanyTick, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
+  }, [enableFirestore, firestoreCollection, currentLevelId, companyId, creatorUid, isSuperAdmin, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
 }
