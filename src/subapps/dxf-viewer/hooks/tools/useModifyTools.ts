@@ -13,6 +13,7 @@ import { useMirrorTool } from './useMirrorTool';
 import { useScaleTool } from './useScaleTool';
 import { useStretchTool } from './useStretchTool';
 import { useTrimTool } from './useTrimTool';
+import { useExtendTool } from './useExtendTool';
 import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { distanceToEntity } from '../../utils/entity-distance';
@@ -95,6 +96,10 @@ export function useModifyTools({
     activeTool, levelManager, executeCommand, hitTestEntity: trimHitTest, onToolChange,
   });
 
+  const extendTool = useExtendTool({
+    activeTool, levelManager, executeCommand, hitTestEntity: trimHitTest, onToolChange,
+  });
+
   const executeOverlayMove = useCallback(
     (ids: string[], delta: { x: number; y: number }) => {
       executeCommand(
@@ -154,6 +159,7 @@ export function useModifyTools({
     scaleTool,
     stretchTool,
     trimTool,
+    extendTool,
     handleRotationAnglePrompt,
   };
 }

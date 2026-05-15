@@ -182,7 +182,7 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             icon: 'extend',
             commandKey: 'extend',
             shortcut: 'EX',
-            comingSoon: true,
+            comingSoon: false,
           },
         },
         {
@@ -307,7 +307,7 @@ export const HOME_MODIFY_EDIT_PANEL: RibbonPanelDef = {
         {
           type: 'simple',
           size: 'small',
-          command: { id: 'edit.extend', labelKey: 'ribbon.commands.extend', icon: 'extend', commandKey: 'extend', shortcut: 'EX', comingSoon: true },
+          command: { id: 'edit.extend', labelKey: 'ribbon.commands.extend', icon: 'extend', commandKey: 'extend', shortcut: 'EX', comingSoon: false },
         },
         {
           type: 'simple',

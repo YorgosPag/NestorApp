@@ -29,6 +29,7 @@ import { useMirrorPreview } from '../../hooks/tools/useMirrorPreview';
 import { useScalePreview } from '../../hooks/tools/useScalePreview';
 import { useStretchPreview } from '../../hooks/tools/useStretchPreview';
 import { TrimPreviewMount } from './TrimPreviewMount';
+import { ExtendPreviewOverlay } from './ExtendPreviewOverlay';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
 import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
@@ -301,7 +302,6 @@ export const RotationPreviewMount = React.memo(function RotationPreviewMount(
 // ============================================================================
 // MOVE PREVIEW MOUNT (ADR-049)
 // ============================================================================
-
 interface MovePreviewMountProps {
   phase: MovePhase;
   basePoint: Point2D | null;
@@ -329,7 +329,6 @@ export const MovePreviewMount = React.memo(function MovePreviewMount(
 // ============================================================================
 // GRIP DRAG PREVIEW MOUNT (ADR-049 SSOT — paired with Move tool)
 // ============================================================================
-
 interface GripDragPreviewMountProps {
   dragPreview: DxfGripDragPreview | null;
   levelManager: Parameters<typeof useGripGhostPreview>[0]['levelManager'];
@@ -339,7 +338,6 @@ interface GripDragPreviewMountProps {
 }
 
 // --- MIRROR PREVIEW MOUNT ---
-
 interface MirrorPreviewMountProps {
   phase: MirrorPhase;
   firstPoint: Point2D | null;
@@ -359,7 +357,6 @@ export const MirrorPreviewMount = React.memo(function MirrorPreviewMount(
 });
 
 // --- SCALE PREVIEW MOUNT ---
-
 interface ScalePreviewMountProps {
   levelManager: Parameters<typeof useScalePreview>[0]['levelManager'];
   transform: ViewTransform;
@@ -377,7 +374,6 @@ export const ScalePreviewMount = React.memo(function ScalePreviewMount(
 // ============================================================================
 // STRETCH PREVIEW MOUNT (ADR-349 Phase 1c-B1)
 // ============================================================================
-
 interface StretchPreviewMountProps {
   levelManager: Parameters<typeof useStretchPreview>[0]['levelManager'];
   transform: ViewTransform;
@@ -482,6 +478,11 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         getViewportElement={getViewportElement}
       />
       <TrimPreviewMount
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <ExtendPreviewOverlay
         transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}

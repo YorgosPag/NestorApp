@@ -81,6 +81,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     scaleIsActive = false, handleScaleClick,
     stretchIsActive = false, handleStretchClick,
     trimIsActive = false, handleTrimClick,
+    extendIsActive = false, handleExtendClick,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef,
@@ -149,6 +150,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.59: ADR-350 — Trim tool click (single pick / SHIFT+click = EXTEND)
     if (trimIsActive && handleTrimClick) {
       handleTrimClick(worldPoint, shiftKey);
+      return;
+    }
+
+    // PRIORITY 1.60: ADR-353 — Extend tool click (single pick / SHIFT+click = TRIM inverse)
+    if (extendIsActive && handleExtendClick) {
+      handleExtendClick(worldPoint, shiftKey);
       return;
     }
 
@@ -254,6 +261,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     scaleIsActive, handleScaleClick,
     stretchIsActive, handleStretchClick,
     trimIsActive, handleTrimClick,
+    extendIsActive, handleExtendClick,
     levelManager,
     draftPolygon, isSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,

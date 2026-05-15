@@ -93,6 +93,12 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleTrimKeyDown?: (key: string, shiftKey: boolean) => boolean;
   /** ADR-350: Whether the trim tool is active and in pick/edges phase */
   trimIsActive?: boolean;
+  /** ADR-353: Extend tool cancel handler */
+  handleExtendEscape?: () => void;
+  /** ADR-353: Extend tool key handler — returns true if key was consumed */
+  handleExtendKeyDown?: (key: string, shiftKey: boolean) => boolean;
+  /** ADR-353: Whether the extend tool is active and in pick/edges phase */
+  extendIsActive?: boolean;
   /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
   clearEntitySelection?: () => void;
   /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
@@ -137,6 +143,9 @@ export function useCanvasKeyboardShortcuts({
   handleTrimEscape,
   handleTrimKeyDown,
   trimIsActive = false,
+  handleExtendEscape,
+  handleExtendKeyDown,
+  extendIsActive = false,
   clearEntitySelection,
   hasAnySelection = false,
   handleReorderEntity,
@@ -166,6 +175,12 @@ export function useCanvasKeyboardShortcuts({
       // ADR-350: Trim tool — intercepts before global shortcuts when active
       if (trimIsActive && handleTrimKeyDown) {
         const consumed = handleTrimKeyDown(e.key, e.shiftKey);
+        if (consumed) { e.preventDefault(); return; }
+      }
+
+      // ADR-353: Extend tool — intercepts before global shortcuts when active
+      if (extendIsActive && handleExtendKeyDown) {
+        const consumed = handleExtendKeyDown(e.key, e.shiftKey);
         if (consumed) { e.preventDefault(); return; }
       }
 
@@ -233,6 +248,11 @@ export function useCanvasKeyboardShortcuts({
           // ADR-350: Trim tool cancel
           if (trimIsActive && handleTrimEscape) {
             handleTrimEscape();
+            break;
+          }
+          // ADR-353: Extend tool cancel
+          if (extendIsActive && handleExtendEscape) {
+            handleExtendEscape();
             break;
           }
           // ADR-188: Escape cancels rotation tool
@@ -314,7 +334,7 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, handleTrimEscape, handleTrimKeyDown, trimIsActive, clearEntitySelection, hasAnySelection, dxfGripInteraction, setDraftPolygon, setSelectedGrips, handleReorderEntity]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, handleTrimEscape, handleTrimKeyDown, trimIsActive, handleExtendEscape, handleExtendKeyDown, extendIsActive, clearEntitySelection, hasAnySelection, dxfGripInteraction, setDraftPolygon, setSelectedGrips, handleReorderEntity]);
 
   // ADR-350 B2: SHIFT keyup → immediately reset inverseMode when trim is active
   useEffect(() => {
@@ -325,4 +345,14 @@ export function useCanvasKeyboardShortcuts({
     window.addEventListener('keyup', onKeyUp, { capture: true });
     return () => window.removeEventListener('keyup', onKeyUp, { capture: true });
   }, [trimIsActive, handleTrimKeyDown]);
+
+  // ADR-353: SHIFT keyup → immediately reset inverseMode when extend is active
+  useEffect(() => {
+    if (!extendIsActive || !handleExtendKeyDown) return;
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') handleExtendKeyDown('Shift', false);
+    };
+    window.addEventListener('keyup', onKeyUp, { capture: true });
+    return () => window.removeEventListener('keyup', onKeyUp, { capture: true });
+  }, [extendIsActive, handleExtendKeyDown]);
 }

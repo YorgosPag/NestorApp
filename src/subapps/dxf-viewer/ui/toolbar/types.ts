@@ -44,6 +44,8 @@ export type ToolType =
   | 'mstretch'
   // ADR-350: Trim command (Ψαλίδισμα — quick + standard, with SHIFT→EXTEND inverse)
   | 'trim'
+  // ADR-353: Extend command (Επέκταση — quick + standard, with SHIFT→TRIM inverse)
+  | 'extend'
   | 'measure'
   | 'measure-distance'
   | 'measure-distance-continuous'

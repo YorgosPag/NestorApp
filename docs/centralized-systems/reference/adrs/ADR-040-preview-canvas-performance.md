@@ -1261,3 +1261,8 @@ Fixed `rulerSettings.vertical?.width` → `rulerSettings.width` and `rulerSettin
 ## 2026-05-15: Canvas keyboard pan — useCanvasPan EventBus listener (ADR-040)
 
 `useCanvasPan` hook added to `hooks/canvas/` barrel. Listens for `canvas-pan` EventBus events emitted by `useKeyboardShortcuts` when arrow keys are pressed with no entity selected (AutoCAD parity). Applies dx/dy pixel delta directly to offsetX/offsetY via `setTransform`. `useKeyboardShortcuts` updated: arrow keys with no selection emit `canvas-pan` instead of falling through; with a selection they still nudge. `EventBus.DrawingEventMap` extended with `canvas-pan` payload. Cardinal rules maintained: `CanvasSection` orchestrator has zero new `useSyncExternalStore` calls — `useCanvasPan` is a side-effect hook with no subscriptions.
+
+
+## 2026-05-15: Extend Command — ExtendPreviewOverlay micro-leaf + useExtendTool orchestrator hook (ADR-353)
+
+`ExtendPreviewOverlay` added to `canvas-layer-stack-leaves.tsx` as a zero-JSX micro-leaf (same pattern as `TrimPreviewMount`). `useExtendTool` wired into `CanvasSection` via `useModifyTools` (EX shortcut, click handler, ESC/keyboard). `ExtendToolStore` FSM mirrors TrimToolStore: idle→active→done. `canvas-click-types.ts` extended with `extendIsActive`/`handleExtendClick`. Cardinal rules maintained: `CanvasSection` and `CanvasLayerStack` have zero direct `useSyncExternalStore` calls — all store reads isolated to `ExtendPreviewOverlay` leaf. SHIFT+click during EXTEND invokes TrimEntityCommand (symmetric inverse), SHIFT+click during TRIM invokes ExtendEntityCommand.

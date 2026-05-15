@@ -170,6 +170,19 @@ export function registerBuiltInCommands(registry: ICommandRegistry): void {
       return new RemoveVertexCommand(data.entityId, data.vertexIndex, sceneManager);
     });
 
+    // Extend Entities (ADR-353) — single undo step per pick
+    registry.register('extend-entities', (serialized, sceneManager) => {
+      const { ExtendEntityCommand } = require('./entity-commands/ExtendEntityCommand');
+      const data = serialized.data as {
+        operations: ReadonlyArray<import('../../systems/extend/extend-types').ExtendOperation>;
+        pickPoint: { x: number; y: number };
+      };
+      return new ExtendEntityCommand(
+        { operations: data.operations, pickPoint: data.pickPoint },
+        sceneManager,
+      );
+    });
+
     // Trim Entities (ADR-350) — single undo step per pick
     registry.register('trim-entities', (serialized, sceneManager) => {
       const { TrimEntityCommand } = require('./entity-commands/TrimEntityCommand');

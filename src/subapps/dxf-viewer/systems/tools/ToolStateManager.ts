@@ -79,11 +79,12 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'mstretch': { id: 'mstretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-350: Trim (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)
   'trim': { id: 'trim', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-353: Extend (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)
+  'extend': { id: 'extend', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // Crop tools (window / polygon / lasso freehand)
   'crop-window': { id: 'crop-window', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'polygon-crop': { id: 'polygon-crop', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'lasso-crop': { id: 'lasso-crop', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
-
   // 🏢 ENTERPRISE: Layering tool - ALWAYS preserves overlay mode (it's the overlay management tool!)
   'layering': { id: 'layering', category: 'utility', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: true },
   // ADR-189: Construction guide tools
@@ -142,7 +143,6 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-189 B37: Batch guide from selection
   'guide-from-selection': { id: 'guide-from-selection', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 };
-
 // ============================================================================
 // 🏢 ENTERPRISE HELPER FUNCTIONS (ADR-033)
 // Standalone functions for tool metadata access without hook dependency

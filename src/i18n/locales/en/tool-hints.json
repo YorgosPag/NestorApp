@@ -650,6 +650,18 @@
     "lockedSkipped": "{count} entities on locked layer were skipped",
     "noIntersectionDeleted": "Entity had no intersection and was deleted"
   },
+  "extendTool": {
+    "promptPick": "Select objects to extend or [Boundary(B) / Undo(U) / Mode(M) / Edge(E)]:",
+    "promptStandardEdges": "Select boundary edges or press ENTER for all:",
+    "promptTrimming": "TRIM: select objects (hold SHIFT):",
+    "modeQuick": "Mode: Quick",
+    "modeStandard": "Mode: Standard",
+    "edgeNoExtend": "Edge: No extend",
+    "edgeExtend": "Edge: Virtual extend",
+    "undoEmpty": "No extend to undo",
+    "noIntersection": "No boundary found for extension",
+    "lockedSkipped": "{count} entities on locked layer were skipped"
+  },
   "gripMode": {
     "stretch": "Stretch",
     "move": "Move",

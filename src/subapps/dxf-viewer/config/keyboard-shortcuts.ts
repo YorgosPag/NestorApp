@@ -184,6 +184,16 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     toolType: 'measure-angle',
   },
 
+  // ADR-353: Extend tool (display-only — same pattern as trim/TR in ribbon)
+  extend: {
+    key: 'EX',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.extend',
+    action: 'tool:extend',
+    category: 'tool',
+    toolType: 'extend',
+  },
+
   // Zoom Tools
   zoomWindow: {
     key: 'W',
