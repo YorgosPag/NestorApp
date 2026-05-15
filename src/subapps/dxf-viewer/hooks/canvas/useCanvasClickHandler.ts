@@ -46,10 +46,6 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { dlog, dwarn } from '../../debug';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 import { resolveEntityText } from '../../utils/text-node-utils';
-import { useCommandHistory } from '../../core/commands';
-import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import { ArrayStore } from '../../systems/array/ArrayStore';
-import { applyCenterPick } from '../../systems/array/polar-center-pick-controller';
 
 // ── Re-exports for backward compatibility ───────────────────────────────────
 export type {
@@ -87,6 +83,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     trimIsActive = false, handleTrimClick,
     extendIsActive = false, handleExtendClick,
     arrayPolarIsActive = false, handleArrayPolarClick,
+    handleArrayPolarCenterRepick,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef,
@@ -97,8 +94,6 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     draggingOverlayBody, setSelectedEntityIds,
     currentOverlays, handleOverlayClick,
   } = params;
-
-  const { execute: executeCommand } = useCommandHistory();
 
   const handleCanvasClick = useCallback((worldPoint: Point2D, shiftKey: boolean = false) => {
     // Block interactions until viewport is ready
@@ -168,20 +163,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
 
     // PRIORITY 1.605: ADR-353 Phase B — Polar Array centre-pick
     //   (a) interactive re-pick from the contextual ribbon — applies a new
-    //       centre to an existing polar array
+    //       centre to an existing polar array via parent-supplied callback
     //   (b) initial creation pick during the 'array-polar' tool — feeds the
     //       hook's awaiting-centre state machine.
-    {
-      const repickArrayId = ArrayStore.getState().pickingCenterArrayId;
-      if (repickArrayId && levelManager.currentLevelId) {
-        const sm = new LevelSceneManagerAdapter(
-          levelManager.getLevelScene,
-          levelManager.setLevelScene,
-          levelManager.currentLevelId,
-        );
-        applyCenterPick(worldPoint, sm, executeCommand);
-        return;
-      }
+    if (handleArrayPolarCenterRepick && handleArrayPolarCenterRepick(worldPoint)) {
+      return;
     }
     if (arrayPolarIsActive && handleArrayPolarClick) {
       handleArrayPolarClick(worldPoint);
@@ -292,7 +278,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     trimIsActive, handleTrimClick,
     extendIsActive, handleExtendClick,
     arrayPolarIsActive, handleArrayPolarClick,
-    executeCommand,
+    handleArrayPolarCenterRepick,
     levelManager,
     draftPolygon, isSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,

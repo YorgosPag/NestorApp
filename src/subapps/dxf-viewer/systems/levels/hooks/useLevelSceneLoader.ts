@@ -193,11 +193,19 @@ export function useLevelSceneLoader({
   // Cached scenes + dedupe set belong to the previous tenant and must be evicted before
   // useLevelsFirestoreSync delivers the new tenant's levels. Aborts pending load first
   // so an in-flight fetch can't repopulate the just-cleared cache.
+  //
+  // 🚨 DATA SAFETY (ADR-354 Phase B Part 1 hotfix): a plain clearAllScenes is NOT enough.
+  // When the new tenant's level bootstrap fires setLevelScene with an empty scene, the
+  // auto-save machinery still holds the previous tenant's fileRecordId + canonicalScenePath
+  // + currentFileName and would persist the empty scene to that path — destroying the
+  // previous tenant's DXF. resetSceneSession atomically: engages the load guard, cancels
+  // the pending debounced save, clears scenes + fileRecordId + saveContext + filename +
+  // per-file caches, and releases the guard on the next animation frame.
   useEffect(() => {
     const unsub = onSuperAdminActiveCompanyChange(() => {
       sceneLoadAbortRef.current?.abort();
       loadedSceneLevelsRef.current.clear();
-      sceneManager.clearAllScenes();
+      sceneManager.resetSceneSession();
     });
     return unsub;
   }, [sceneManager]);

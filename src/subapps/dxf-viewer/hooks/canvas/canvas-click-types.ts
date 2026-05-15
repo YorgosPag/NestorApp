@@ -148,6 +148,12 @@ export interface UseCanvasClickHandlerParams {
   arrayPolarIsActive?: boolean;
   /** Click handler for the polar centre-pick state machine */
   handleArrayPolarClick?: (worldPoint: Point2D) => void;
+  /**
+   * ADR-353 §B2 — Centre re-pick from the contextual ribbon. Returns true
+   * if the click was consumed (an array is in `pickingCenterArrayId` mode
+   * and the new centre was applied via UpdateArrayParamsCommand).
+   */
+  handleArrayPolarCenterRepick?: (worldPoint: Point2D) => boolean;
 
   // ── Level / Scene ─────────────────────────────────────────────────────
   levelManager: LevelManagerLike;

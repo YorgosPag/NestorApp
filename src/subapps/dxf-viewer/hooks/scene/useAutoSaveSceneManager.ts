@@ -22,6 +22,15 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
   setOnSceneSaved: (cb: ((fileId: string, fileName: string) => void) | null) => void;
   /** 🏢 ENTERPRISE: Set loading guard to prevent auto-save during scene load from Storage */
   setIsLoadingFromFirestore: (loading: boolean) => void;
+  /**
+   * 🏢 ADR-354 Phase B Part 1: full session reset for super admin company switch.
+   * Cancels pending debounced auto-save, clears scenes + saveContext + fileRecordId +
+   * currentFileName + per-file caches, and engages the loading guard so any subsequent
+   * setLevelScene (triggered by the new tenant's level bootstrap) does NOT auto-save the
+   * empty scene over the previous tenant's file. The guard is released on the next
+   * animation frame so the next genuine scene load from useLevelSceneLoader proceeds.
+   */
+  resetSceneSession: () => void;
 }
 
 export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
@@ -93,6 +102,37 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const setIsLoadingFromFirestore = useCallback((loading: boolean) => {
     isLoadingFromFirestoreRef.current = loading;
   }, []);
+
+  /**
+   * 🏢 ADR-354 Phase B Part 1: hard reset of every piece of session state that could
+   * cause an auto-save to write the new tenant's empty scene into the previous tenant's
+   * Storage path. The order matters: engage the guard FIRST (so any synchronous setLevelScene
+   * triggered downstream is ignored), cancel the pending debounced save, clear in-memory
+   * scene state, then null the inputs auto-save reads (fileRecordId, fileName, context, caches).
+   */
+  const resetSceneSession = useCallback(() => {
+    isLoadingFromFirestoreRef.current = true;
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = undefined;
+    }
+    sceneManager.clearAllScenes();
+    injectedFileRecordIdRef.current = null;
+    injectedSaveContextRef.current = null;
+    currentFileNameRef.current = null;
+    setCurrentFileNameState(null);
+    fileIdCacheRef.current.clear();
+    scenePathCacheRef.current.clear();
+    loadedFilesRef.current.clear();
+    setSaveStatus('idle');
+    // Release the guard on the next animation frame — by then any synchronous
+    // empty-scene setLevelScene from the tenant bootstrap has resolved without firing
+    // auto-save (line 109 short-circuit), and the next genuine load from useLevelSceneLoader
+    // sets the guard explicitly via setIsLoadingFromFirestore(true) on entry.
+    requestAnimationFrame(() => {
+      isLoadingFromFirestoreRef.current = false;
+    });
+  }, [sceneManager]);
 
   /**
    * Enhanced setLevelScene with auto-save
@@ -255,5 +295,6 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     setSaveContext,
     setOnSceneSaved,
     setIsLoadingFromFirestore,
+    resetSceneSession,
   };
 }
