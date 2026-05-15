@@ -369,8 +369,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
   const handleTrimMouseMove = useCallback(
     (worldPoint: Point2D, shiftKey: boolean): void => {
       if (!isActive) return;
-      TrimToolStore.setHoverPoint(worldPoint);
-      TrimToolStore.setInverseMode(shiftKey);
+      TrimToolStore.setInverseMode(shiftKey); // has guard — only notifies on SHIFT toggle
 
       const state = TrimToolStore.getState();
       if (state.phase !== 'picking') {
@@ -382,6 +381,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       if (now - lastHoverMsRef.current < 50) return;
       lastHoverMsRef.current = now;
 
+      TrimToolStore.setHoverPoint(worldPoint); // inside throttle: ~20fps max, not 60fps
       const hitId = hitTestEntity(worldPoint);
       if (!hitId || !levelManager.currentLevelId) { TrimToolStore.setHoverPreview(null); return; }
       const scene = levelManager.getLevelScene(levelManager.currentLevelId);
@@ -400,6 +400,14 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
     },
     [isActive, hitTestEntity, levelManager],
   );
+
+  useEffect(() => {
+    if (!isActive) return;
+    TrimToolStore.registerHoverMoveFn(handleTrimMouseMove);
+    return () => {
+      TrimToolStore.registerHoverMoveFn(null);
+    };
+  }, [isActive, handleTrimMouseMove]);
 
   return {
     isActive,

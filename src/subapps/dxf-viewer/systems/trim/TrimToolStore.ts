@@ -13,6 +13,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { pointsEqual } from '../../rendering/entities/shared/geometry-vector-utils';
 import {
   EMPTY_TRIM_WARNINGS,
   type TrimEdgeMode,
@@ -82,6 +83,9 @@ let _fenceFn: FenceFn | null = null;
 type FencePreviewFn = (fenceStart: Point2D, fenceEnd: Point2D) => void;
 let _fencePreviewFn: FencePreviewFn | null = null;
 
+type HoverMoveFn = (worldPoint: Point2D, shiftKey: boolean) => void;
+let _hoverMoveFn: HoverMoveFn | null = null;
+
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 let _state: TrimToolState = INITIAL;
@@ -135,6 +139,7 @@ export const TrimToolStore = {
   },
 
   setHoverPoint(pt: Point2D | null): void {
+    if (pointsEqual(_state.hoverPoint, pt)) return;
     _patch({ hoverPoint: pt });
   },
 
@@ -204,10 +209,21 @@ export const TrimToolStore = {
     _fencePreviewFn?.(fenceStart, fenceEnd);
   },
 
+  /** Register the handleTrimMouseMove closure from useTrimTool (Phase 6 fix). */
+  registerHoverMoveFn(fn: HoverMoveFn | null): void {
+    _hoverMoveFn = fn;
+  },
+
+  /** Invoke the hover move fn on each pointermove while in picking phase. */
+  execHoverMove(worldPoint: Point2D, shiftKey: boolean): void {
+    _hoverMoveFn?.(worldPoint, shiftKey);
+  },
+
   reset(): void {
     _pickFn = null;
     _fenceFn = null;
     _fencePreviewFn = null;
+    _hoverMoveFn = null;
     _state = INITIAL;
     _notify();
   },

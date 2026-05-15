@@ -35,6 +35,19 @@ export function squaredDistance(p1: Point2D, p2: Point2D): number {
   return dx * dx + dy * dy;
 }
 
+/**
+ * Structural equality for two Point2D values (or null).
+ * Use instead of inline `a.x === b.x && a.y === b.y` guards.
+ */
+export function pointsEqual(
+  a: Point2D | null | undefined,
+  b: Point2D | null | undefined,
+): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  return a.x === b.x && a.y === b.y;
+}
+
 // ===== VECTOR MAGNITUDE & NORMALIZATION =====
 
 /**

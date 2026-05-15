@@ -58,7 +58,15 @@ export function useTrimDragCapture(props: UseTrimDragCaptureProps): void {
 
     function onPointerMove(e: PointerEvent): void {
       const start = dragStartScreenRef.current;
-      if (!start) return;
+
+      // No button held — fire hover preview (throttling done inside handleTrimMouseMove).
+      if (!start) {
+        if (TrimToolStore.getState().phase === 'picking') {
+          TrimToolStore.execHoverMove(screenToWorld(e.clientX, e.clientY), e.shiftKey);
+        }
+        return;
+      }
+
       const dx = e.clientX - start.x;
       const dy = e.clientY - start.y;
       if (!isDraggingRef.current) {
