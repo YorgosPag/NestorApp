@@ -27,6 +27,7 @@ import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
 import type { Overlay, UpdateOverlayData } from '../../overlays/types';
 import { rotatePoint } from '../../utils/rotation-math';
+import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 
 // ============================================================================
 // TYPES
@@ -132,16 +133,24 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
 
     if (toolIsRotate && !wasActiveRef.current) {
       // Transition: entering rotation mode
-      if (hasEntities) {
-        // Entities already selected → skip to base-point
+      const handoffPt = GripHandoffStore.consume('rotate');
+      if (hasEntities && handoffPt) {
+        // Grip drag pre-seeded the base point → skip straight to reference
+        setBasePoint(handoffPt);
+        setReferencePoint(null);
+        setCurrentAngle(0);
+        setPhase('awaiting-reference');
+      } else if (hasEntities) {
+        setBasePoint(null);
+        setReferencePoint(null);
+        setCurrentAngle(0);
         setPhase('awaiting-base-point');
       } else {
-        // No entities → prompt user to select
+        setBasePoint(null);
+        setReferencePoint(null);
+        setCurrentAngle(0);
         setPhase('awaiting-entity');
       }
-      setBasePoint(null);
-      setReferencePoint(null);
-      setCurrentAngle(0);
       previewCanvasRef.current?.clear();
     } else if (!toolIsRotate && wasActiveRef.current) {
       // Transition: leaving rotation mode

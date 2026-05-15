@@ -17,6 +17,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import i18next from 'i18next';
+import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
@@ -117,9 +118,17 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
     const hasEntities = selectedEntityIds.length > 0;
 
     if (toolIsMirror && !wasActiveRef.current) {
-      setPhase(hasEntities ? 'awaiting-first-point' : 'awaiting-entity');
-      setFirstPoint(null);
-      setSecondPoint(null);
+      const handoffPt = GripHandoffStore.consume('mirror');
+      if (hasEntities && handoffPt) {
+        // Grip drag pre-seeded the first axis point → skip straight to second point
+        setFirstPoint(handoffPt);
+        setSecondPoint(null);
+        setPhase('awaiting-second-point');
+      } else {
+        setPhase(hasEntities ? 'awaiting-first-point' : 'awaiting-entity');
+        setFirstPoint(null);
+        setSecondPoint(null);
+      }
       previewCanvasRef.current?.clear();
     } else if (!toolIsMirror && wasActiveRef.current) {
       setPhase('idle');

@@ -78,6 +78,7 @@ export function useUnifiedGripInteraction(
     selectedEntityIds, dxfScene, transform,
     currentOverlays, universalSelection, overlayStore, overlayStoreRef,
     activeTool, gripSettings, executeCommand, movementDetectionThreshold,
+    onToolChange,
   } = params;
 
   // ── Commit deps ──
@@ -85,8 +86,14 @@ export function useUnifiedGripInteraction(
   const { execute } = useCommandHistory();
   const { currentLevelId, getLevelScene, setLevelScene } = useLevels();
 
+  const onToolChangeRef = useRef(onToolChange);
+  onToolChangeRef.current = onToolChange;
+
   const dxfCommitDeps = useMemo<DxfCommitDeps>(
-    () => ({ moveEntities, execute, currentLevelId, getLevelScene, setLevelScene }),
+    () => ({
+      moveEntities, execute, currentLevelId, getLevelScene, setLevelScene,
+      onToolChange: (tool: string) => onToolChangeRef.current?.(tool),
+    }),
     [moveEntities, execute, currentLevelId, getLevelScene, setLevelScene],
   );
 

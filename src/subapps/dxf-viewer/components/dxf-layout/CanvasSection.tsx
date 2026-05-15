@@ -173,6 +173,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     selectedEntityIds, dxfScene, transform, currentOverlays, universalSelection,
     overlayStore, overlayStoreRef, activeTool, gripSettings, executeCommand,
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
   });
   useGripHoverMenuController({ hoveredGrip: unified.hoveredGrip, phase: unified.phase, activeTool, levelManager, executeCommand, showPromptDialog, t });
   // === Polygon drawing ===
@@ -418,7 +419,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     executeCommand,
     getSelectedEntityIds,
   });
-
   // === Auto-area hover preview ===
   const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove: unified.handleMouseMove, activeTool, levelManager, currentOverlays, transformScale: transform.scale });
   // === Render ===

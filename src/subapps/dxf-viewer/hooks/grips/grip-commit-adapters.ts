@@ -20,8 +20,9 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-rend
 import type { AnySceneEntity, SceneModel } from '../../types/scene';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UnifiedGripInfo } from './unified-grip-types';
-import { type GripMode, gripModeMeta } from '../../systems/grip/grip-mode-cycle';
+import { type GripMode } from '../../systems/grip/grip-mode-cycle';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 
 // ============================================================================
 // TYPES
@@ -34,6 +35,8 @@ export interface DxfCommitDeps {
   currentLevelId: string | null;
   getLevelScene: (levelId: string) => SceneModel | null;
   setLevelScene: (levelId: string, scene: SceneModel) => void;
+  /** Switch active tool — required for rotate/scale/mirror grip handoff (ADR-349 Phase 1c-B2). */
+  onToolChange: (tool: string) => void;
 }
 
 /** Dependencies needed for overlay grip commits */
@@ -363,11 +366,8 @@ export function commitDxfGripDragModeAware(
   }
 
   if (mode === 'rotate' || mode === 'scale' || mode === 'mirror') {
-    const meta = gripModeMeta(mode);
-    const modeLabel = i18next.t(`tool-hints:${meta.labelKey}`);
-    toolHintOverrideStore.setOverride(
-      i18next.t('tool-hints:gripMode.deferredHint', { mode: modeLabel }),
-    );
+    GripHandoffStore.set(mode, grip.position);
+    deps.onToolChange(mode);
     return;
   }
 

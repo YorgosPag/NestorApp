@@ -35,6 +35,8 @@ export type ToolType =
 
   | 'move'
   | 'rotate'
+  | 'scale'             // ADR-348: Scale command (uniform + non-uniform + reference + copy)
+  | 'mirror'            // ADR-2xx: Mirror command
   | 'copy'
   | 'delete'
   // ADR-349 Phase 1a: Stretch command (crossing-window displacement)

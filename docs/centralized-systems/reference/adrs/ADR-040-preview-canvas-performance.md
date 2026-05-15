@@ -1169,3 +1169,7 @@ New `CanvasNumericInputOverlay` micro-leaf in `systems/canvas-numeric-input/Canv
 ## 2026-05-15: Stretch Preview — StretchPreviewMount micro-leaf (ADR-349 Phase 1c-B1)
 
 `StretchPreviewMount` added to `canvas-layer-stack-leaves.tsx`. `useStretchPreview` runs 60fps RAF on PreviewCanvas — draws ghost copies of stretch-selected vertices displaced by current drag delta. `stretchPreview: Record<string, never>` prop added to `CanvasLayerStackProps` (same zero-prop pattern as `scalePreview`). `CanvasSection` passes `stretchPreview={{}}` to `CanvasLayerStack`. Cardinal rules maintained: `CanvasSection` and `CanvasLayerStack` orchestrators have zero `useSyncExternalStore` calls.
+
+## 2026-05-15: Grip handoff to Rotate/Scale/Mirror (ADR-349 Phase 1c-B2)
+
+`CanvasSection` now passes `onToolChange` to `useUnifiedGripInteraction` for grip-mode handoff. No new `useSyncExternalStore` calls added to orchestrator. Cardinal rules maintained.

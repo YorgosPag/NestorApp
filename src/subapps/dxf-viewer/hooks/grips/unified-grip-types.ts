@@ -133,6 +133,8 @@ export interface UseUnifiedGripInteractionParams {
   gripSettings: { gripSize?: number; dpiScale?: number };
   executeCommand: (command: ICommand) => void;
   movementDetectionThreshold: number;
+  /** Switch active tool — used by rotate/scale/mirror grip handoff (ADR-349 Phase 1c-B2). */
+  onToolChange?: (tool: string) => void;
 }
 
 /** DXF projection — backward-compatible with UseDxfGripInteractionReturn */

@@ -27,6 +27,7 @@ import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
 import { computeUniformRef } from '../../systems/scale/scale-reference-calc';
 import type { useLevels } from '../../systems/levels';
 import type { ScaleSubPhase } from '../../systems/scale/ScaleToolStore';
+import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -115,7 +116,14 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
 
     if (toolIsScale && !wasActiveRef.current) {
       ScaleToolStore.setSelectedEntityIds(selectedEntityIds);
-      ScaleToolStore.setPhase(hasEntities ? 'base_point' : 'selecting');
+      const handoffPt = GripHandoffStore.consume('scale');
+      if (hasEntities && handoffPt) {
+        // Grip drag pre-seeded the base point → skip straight to scale_input
+        ScaleToolStore.setBasePoint(handoffPt);
+        ScaleToolStore.setPhase('scale_input', 'direct');
+      } else {
+        ScaleToolStore.setPhase(hasEntities ? 'base_point' : 'selecting');
+      }
       previewCanvasRef.current?.clear();
     } else if (!toolIsScale && wasActiveRef.current) {
       ScaleToolStore.reset();
