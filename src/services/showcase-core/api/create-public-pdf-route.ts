@@ -111,7 +111,7 @@ async function streamOrFail(
   logger: Logger,
   token: string,
   shareId: string,
-): Promise<{ stream: ReadableStream<Uint8Array>; size: number | undefined } | NextResponse> {
+): Promise<{ stream: ReadableStream<Uint8Array>; size?: number | undefined } | NextResponse> {
   try {
     return await streamPdfFromStorage(pdfStoragePath);
   } catch (err) {

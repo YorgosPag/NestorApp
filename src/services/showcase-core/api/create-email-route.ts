@@ -29,7 +29,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z, type ZodTypeAny } from 'zod';
 import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import type { AuthContext, PermissionCache, PermissionId } from '@/lib/auth';
+import type { AuditEntityType } from '@/types/audit-trail';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import type { Firestore } from 'firebase-admin/firestore';
@@ -97,7 +98,7 @@ export interface CreateShowcaseEmailRouteConfig<TExtraBody extends Record<string
    * Optional permission for `withAuth`. The 3 legacy routes call `withAuth`
    * without explicit permissions — leave undefined to match that behaviour.
    */
-  permission?: string;
+  permission?: PermissionId;
   /** Surface-specific email builder — also owns tenant check + media load. */
   loadEmail: (
     params: LoadShowcaseEmailParams<TExtraBody>,
@@ -127,7 +128,7 @@ function zodErrorMessage(err: unknown): string {
 }
 
 interface FireAuditParams {
-  entityType: string;
+  entityType: AuditEntityType;
   entityId: string;
   entityName: string;
   recipient: string;
@@ -242,7 +243,7 @@ export function createShowcaseEmailRoute<TExtraBody extends Record<string, unkno
           handle(req, ctx, entityId),
         authOptions,
       );
-      return withStandardRateLimit(wrapped)(request);
+      return Promise.resolve(withStandardRateLimit(wrapped)(request));
     },
   };
 }

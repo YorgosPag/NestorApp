@@ -78,8 +78,8 @@ export interface CreatePublicPayloadRouteConfig<TPayload, TExtra = Record<string
    * + tenant check (snapshot builders already enforce it per Phase 1.1).
    */
   buildPayload: (params: BuildPublicPayloadParams<TExtra>) => Promise<TPayload>;
-  /** PDF URL path template (invoked only when `pdfStoragePath` is present). */
-  pdfUrlPath: (token: string) => string;
+  /** PDF URL path template (invoked only when `pdfStoragePath` is present). Return null to skip PDF URL. */
+  pdfUrlPath: (token: string) => string | null;
 }
 
 export interface PublicShowcasePayloadHandler {
@@ -133,9 +133,8 @@ export function createPublicShowcasePayloadRoute<TPayload, TExtra = Record<strin
       }
 
       const locale = resolveLocale(request);
-      const pdfUrl = share.pdfStoragePath
-        ? `${buildBaseUrl(request)}${config.pdfUrlPath(token)}`
-        : undefined;
+      const pdfPath = share.pdfStoragePath ? config.pdfUrlPath(token) : null;
+      const pdfUrl = pdfPath ? `${buildBaseUrl(request)}${pdfPath}` : undefined;
 
       let payload: TPayload;
       try {

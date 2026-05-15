@@ -33,7 +33,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z, type ZodTypeAny } from 'zod';
 import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import type { AuthContext, PermissionCache, PermissionId } from '@/lib/auth';
+import type { EntityType } from '@/config/domain-constants';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { FILE_CATEGORIES, FILE_DOMAINS } from '@/config/domain-constants';
@@ -70,14 +71,14 @@ export interface LoadShowcasePdfDataParams<TExtraBody> {
 
 export interface CreateShowcasePdfRouteConfig<TData, TExtraBody = {}> {
   /** Used for storage path entityType segment + logs. */
-  entityType: string;
+  entityType: EntityType;
   /**
    * Name of the surface-specific id field written into `FILE_SHARES` on the
    * pre-upload claim (e.g. `showcaseBuildingId`, `showcasePropertyId`).
    */
   entityIdFsField: string;
   /** Permission passed to `withAuth` (e.g. `'buildings:buildings:update'`). */
-  permission: string;
+  permission: PermissionId;
   /** Module-logger name (e.g. `'BuildingShowcasePdfRoute'`). */
   loggerName: string;
   /** Note stored on the pre-upload claim (diagnostic). */
@@ -278,7 +279,7 @@ export function createShowcasePdfRoute<TData, TExtraBody extends Record<string, 
           { permissions: config.permission },
         ),
       );
-      return handler(request);
+      return Promise.resolve(handler(request));
     },
   };
 }
