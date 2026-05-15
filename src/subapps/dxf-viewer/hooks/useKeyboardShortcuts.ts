@@ -137,8 +137,8 @@ export const useKeyboardShortcuts = ({
         e.preventDefault();
         const dist = e.shiftKey ? PAN_LARGE : PAN_STEP;
         // Arrow semantics: ↑ = viewport moves up = scene shifts down = dy positive
-        if (e.key === 'ArrowUp')    EventBus.emit('canvas-pan', { dx: 0, dy: dist });
-        if (e.key === 'ArrowDown')  EventBus.emit('canvas-pan', { dx: 0, dy: -dist });
+        if (e.key === 'ArrowUp')    EventBus.emit('canvas-pan', { dx: 0, dy: -dist });
+        if (e.key === 'ArrowDown')  EventBus.emit('canvas-pan', { dx: 0, dy: dist });
         if (e.key === 'ArrowLeft')  EventBus.emit('canvas-pan', { dx: dist, dy: 0 });
         if (e.key === 'ArrowRight') EventBus.emit('canvas-pan', { dx: -dist, dy: 0 });
         return;

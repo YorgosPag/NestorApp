@@ -71,6 +71,37 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-15: Z-order PageUp/PageDown — Bring to front / Send to back
+
+Aggiunti shortcut `PageUp` (bring to front) e `PageDown` (send to back) per riordinare la posizione di un'entità nella render list quando esattamente UNA entità è selezionata. Parity AutoCAD/BricsCAD `DRAWORDER`.
+
+**Architettura (8 file)**:
+- `core/commands/entity-commands/ReorderEntityCommand.ts` (nuovo): `ICommand` con execute/undo/redo. `execute()` cattura `originalIndex` via `sceneManager.getEntityIndex()`, poi chiama `reorderEntity(id, 'front'|'back')`. `undo()` ripristina l'indice esatto via `moveEntityToIndex(id, originalIndex)` — undo accurato anche dopo riordinamenti complessi.
+- `core/commands/interfaces.ts`: aggiunti tre metodi a `ISceneManager` — `getEntityIndex`, `reorderEntity`, `moveEntityToIndex`.
+- `managers/SceneUpdateManager.ts`: implementazione canonica via `splice` + `updateScene()` (passa per il batch path normale → bitmap cache invalidation + listener notification).
+- `systems/entity-creation/LevelSceneManagerAdapter.ts`: stessa logica adattata al pattern `getLatestScene` + `commitScene` del Level system.
+- `config/keyboard-shortcuts.ts`: aggiunti `bringToFront` (PageUp) e `sendToBack` (PageDown) nell'SSoT `DXF_NAVIGATION_SHORTCUTS`. `matchesShortcut` esteso per riconoscere `PageUp`/`PageDown` come tasti speciali.
+- `hooks/canvas/useCanvasKeyboardShortcuts.ts`: intercetta PageUp/PageDown quando `selectedEntityIds.length === 1`, chiama `handleReorderEntity(direction)`. Aggiunto a deps array di `useEffect`.
+- `components/dxf-layout/CanvasSection.tsx`: `handleReorderEntity` istanzia `LevelSceneManagerAdapter` e dispatcha `ReorderEntityCommand` via `executeCommand` (history-aware, undo/redo OK).
+- `core/commands/entity-commands/index.ts`: export `ReorderEntityCommand`.
+
+**Constraint ADR-040 rispettato**: nessun nuovo `useSyncExternalStore` in `CanvasSection`. `handleReorderEntity` è un `useCallback` con deps stabili. L'entity index O(1) di `SceneUpdateManager` (commit `c4efe0dd`) è preservato perché lo splice passa per `updateScene()` → `rebuildEntityIndex()`.
+
+---
+
+### 2026-05-15: Pan ArrowUp/ArrowDown — fix direzione invertita
+
+`hooks/useKeyboardShortcuts.ts`: corrette le emissioni `canvas-pan` su ArrowUp/ArrowDown. Erano invertite rispetto alla semantica documentata nell'entry "Keyboard arrow-key canvas pan" (↑ = viewport sale = scena va GIÙ = `dy` negativo). Regression introdotta nel commit `9327e12e`.
+
+| Tasto | Prima (BUG) | Dopo (FIX) |
+|-------|-------------|------------|
+| `ArrowUp` | `dy: +dist` | `dy: -dist` |
+| `ArrowDown` | `dy: -dist` | `dy: +dist` |
+
+ArrowLeft/Right erano già corrette.
+
+---
+
 ### 2026-05-15: Keyboard arrow-key canvas pan
 
 Aggiunto panning del canvas tramite tasti freccia quando nessuna entità è selezionata (parity AutoCAD). ↑/↓/←/→ = pan 80px; Shift+freccia = pan 240px. Le direzioni corrispondono allo scroll del viewport (↑ = contenuto si sposta giù, ecc.).
