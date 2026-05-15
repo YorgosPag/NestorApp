@@ -41,12 +41,15 @@ interface RibbonRootProps {
    * `null` when no contextual tab should appear.
    */
   activeContextualTrigger?: string | null;
+  /** ADR-345 Fase 6.1 — content rendered in expanded area below settings ribbon panels. */
+  settingsTabContent?: React.ReactNode;
 }
 
 export const RibbonRoot: React.FC<RibbonRootProps> = ({
   commands,
   contextualTabs,
   activeContextualTrigger = null,
+  settingsTabContent,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const state = useRibbonState();
@@ -121,6 +124,9 @@ export const RibbonRoot: React.FC<RibbonRootProps> = ({
         <RibbonBody
           activeTab={activeTab}
           minimizeState={state.effectiveMinimizeState}
+          settingsTabContent={settingsTabContent}
+          pinnedPanelIds={state.pinnedPanelIds}
+          onPinToggle={state.togglePinPanel}
         />
         {menuPos && (
           <RibbonContextMenu

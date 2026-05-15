@@ -44,6 +44,16 @@ function parseMinimizeState(raw: string): RibbonMinimizeState {
     : DEFAULT_MINIMIZE;
 }
 
+function parsePinnedPanelIds(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id): id is string => typeof id === 'string');
+  } catch {
+    return [];
+  }
+}
+
 function parseTabOrder(raw: string): string[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
@@ -77,6 +87,8 @@ export interface UseRibbonStateReturn {
   cycleMinimizeState: () => void;
   tabOrder: string[];
   setTabOrder: (order: string[]) => void;
+  pinnedPanelIds: string[];
+  togglePinPanel: (panelId: string) => void;
   isNarrow: boolean;
 }
 
@@ -90,6 +102,9 @@ export function useRibbonState(): UseRibbonStateReturn {
     );
   const [tabOrder, setTabOrderState] = useState<string[]>(() =>
     readLS(RIBBON_LS_KEYS.tabOrder, [...DEFAULT_RIBBON_TAB_ORDER], parseTabOrder),
+  );
+  const [pinnedPanelIds, setPinnedPanelIdsState] = useState<string[]>(() =>
+    readLS(RIBBON_LS_KEYS.pinnedPanelIds, [], parsePinnedPanelIds),
   );
 
   const isNarrow = useNarrowViewport();
@@ -122,6 +137,16 @@ export function useRibbonState(): UseRibbonStateReturn {
     writeLS(RIBBON_LS_KEYS.tabOrder, JSON.stringify(order));
   }, []);
 
+  const togglePinPanel = useCallback((panelId: string) => {
+    setPinnedPanelIdsState((prev) => {
+      const next = prev.includes(panelId)
+        ? prev.filter((id) => id !== panelId)
+        : [...prev, panelId];
+      writeLS(RIBBON_LS_KEYS.pinnedPanelIds, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return {
     activeTabId,
     setActiveTabId,
@@ -131,6 +156,8 @@ export function useRibbonState(): UseRibbonStateReturn {
     cycleMinimizeState,
     tabOrder,
     setTabOrder,
+    pinnedPanelIds,
+    togglePinPanel,
     isNarrow,
   };
 }

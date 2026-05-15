@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type {
   RibbonButton,
@@ -22,6 +22,10 @@ import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 
 interface RibbonPanelProps {
   panel: RibbonPanelDef;
+  /** ADR-345 Fase 7 — whether this panel's flyout is pinned open. */
+  isPinned?: boolean;
+  /** ADR-345 Fase 7 — callback to toggle pin state. */
+  onPinToggle?: (panelId: string) => void;
 }
 
 function renderButton(button: RibbonButton): React.ReactNode {
@@ -53,7 +57,6 @@ function renderButton(button: RibbonButton): React.ReactNode {
   if (button.type === 'split') {
     return <RibbonSplitButton key={key} button={button} />;
   }
-  // ADR-345 §4.4-4.5 Fase 5.5 — toggle/combobox sit alongside simple types.
   if (button.type === 'toggle') {
     return <RibbonToggleButton key={key} command={button.command} />;
   }
@@ -72,27 +75,104 @@ function rowSize(row: RibbonRow): 'large' | 'small' | 'mixed' {
   return row.buttons.every((b) => b.size === first) ? first : 'mixed';
 }
 
-export const RibbonPanel: React.FC<RibbonPanelProps> = ({ panel }) => {
+export const RibbonPanel: React.FC<RibbonPanelProps> = ({
+  panel,
+  isPinned = false,
+  onPinToggle,
+}) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const hasContent = panel.rows.some((row) => row.buttons.length > 0);
+  const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
+  const containerRef = useRef<HTMLElement>(null);
+
+  const normalRows = panel.rows.filter((r) => !r.isInFlyout && r.buttons.length > 0);
+  const flyoutRows = panel.rows.filter((r) => r.isInFlyout && r.buttons.length > 0);
+  const hasFlyout = flyoutRows.length > 0;
+  const flyoutVisible = isPinned || isFlyoutOpen;
+
+  const toggleFlyout = useCallback(() => {
+    if (!isPinned) setIsFlyoutOpen((prev) => !prev);
+  }, [isPinned]);
+
+  const handlePinToggle = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onPinToggle?.(panel.id);
+      setIsFlyoutOpen(false);
+    },
+    [onPinToggle, panel.id],
+  );
+
+  // Close flyout on outside click when not pinned
+  useEffect(() => {
+    if (!isFlyoutOpen || isPinned) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsFlyoutOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [isFlyoutOpen, isPinned]);
+
+  const hasContent = normalRows.length > 0;
 
   return (
-    <section className="dxf-ribbon-panel" data-panel-id={panel.id}>
+    <section
+      ref={containerRef}
+      className="dxf-ribbon-panel"
+      data-panel-id={panel.id}
+      data-flyout-open={flyoutVisible}
+    >
       <div className="dxf-ribbon-panel-body" data-empty={!hasContent}>
         {hasContent
-          ? panel.rows
-              .filter((row) => !row.isInFlyout && row.buttons.length > 0)
-              .map((row, idx) => (
-                <div
-                  key={idx}
-                  className="dxf-ribbon-panel-row"
-                  data-row-size={rowSize(row)}
-                >
-                  {row.buttons.map(renderButton)}
-                </div>
-              ))
+          ? normalRows.map((row, idx) => (
+              <div
+                key={idx}
+                className="dxf-ribbon-panel-row"
+                data-row-size={rowSize(row)}
+              >
+                {row.buttons.map(renderButton)}
+              </div>
+            ))
           : t('ribbon.panels.placeholder')}
       </div>
+
+      {hasFlyout && (
+        <button
+          type="button"
+          className="dxf-ribbon-flyout-trigger"
+          aria-label={t('ribbon.flyout.expand')}
+          aria-expanded={flyoutVisible}
+          onClick={toggleFlyout}
+        >
+          <span className="dxf-ribbon-flyout-chevron" aria-hidden="true">
+            {flyoutVisible ? '▲' : '▼'}
+          </span>
+        </button>
+      )}
+
+      {hasFlyout && flyoutVisible && (
+        <div className="dxf-ribbon-flyout-rows" role="group">
+          {flyoutRows.map((row, idx) => (
+            <div
+              key={idx}
+              className="dxf-ribbon-panel-row"
+              data-row-size={rowSize(row)}
+            >
+              {row.buttons.map(renderButton)}
+            </div>
+          ))}
+          <button
+            type="button"
+            className="dxf-ribbon-flyout-pin"
+            aria-label={t(isPinned ? 'ribbon.flyout.unpin' : 'ribbon.flyout.pin')}
+            aria-pressed={isPinned}
+            onClick={handlePinToggle}
+          >
+            📌
+          </button>
+        </div>
+      )}
     </section>
   );
 };

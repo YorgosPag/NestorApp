@@ -65,7 +65,6 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
     id: 'settings',
     labelKey: 'ribbon.tabs.settings',
     panels: [
-      { id: 'general', labelKey: 'ribbon.panels.general', rows: [] },
       SETTINGS_CURSOR_PANEL,
       SETTINGS_DEVELOPER_PANEL,
     ],

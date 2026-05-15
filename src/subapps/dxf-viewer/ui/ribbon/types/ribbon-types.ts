@@ -106,6 +106,8 @@ export interface RibbonPersistedState {
 
 export const RIBBON_MINIMIZE_CYCLE: readonly RibbonMinimizeState[] = [
   'full',
+  'panel-buttons',
+  'panel-titles',
   'tab-names',
 ] as const;
 

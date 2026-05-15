@@ -26,9 +26,9 @@ export function usePanelNavigation({
 }: UsePanelNavigationParams): PanelNavigationMethods {
 
   // ✅ Panel disabled state logic
-  // ADR-345 Fase 6: 'text-properties' tab removed — tab eliminated entirely.
+  // ADR-345 Fase 6.1: 'colors' tab disabled — DxfSettingsPanel migrated to ribbon Settings tab.
   const getDisabledPanels = (): Partial<Record<PanelType, boolean>> => {
-    return {};
+    return { colors: true };
   };
 
   const disabledPanels = useMemo(() => getDisabledPanels(), []);

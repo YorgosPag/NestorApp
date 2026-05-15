@@ -191,6 +191,90 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
   display: block;
 }
 
+/* ADR-345 Fase 6.1 — Settings tab split mode: ribbon panels row on top + DxfSettingsPanel below */
+.dxf-ribbon-body[data-tab-mode="settings"] {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  max-height: min(640px, 70vh);
+  overflow: hidden;
+}
+
+.dxf-ribbon-settings-panels {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--ribbon-separator);
+  height: calc(var(--ribbon-height-full) - var(--ribbon-tab-bar-height));
+}
+
+.dxf-ribbon-settings-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.dxf-ribbon-body[data-tab-mode="settings"][data-minimize="tab-names"] {
+  display: none;
+}
+
+/* ADR-345 Fase 7 — Flyout rows + trigger + pin */
+.dxf-ribbon-flyout-rows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 6px;
+  border-top: 1px solid var(--ribbon-separator);
+  background: var(--ribbon-bg);
+  position: relative;
+}
+
+.dxf-ribbon-flyout-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--ribbon-separator);
+  color: var(--ribbon-text-muted);
+  cursor: pointer;
+  font-size: 8px;
+  flex-shrink: 0;
+}
+
+.dxf-ribbon-flyout-trigger:hover {
+  background: var(--ribbon-btn-hover);
+  color: var(--ribbon-text);
+}
+
+.dxf-ribbon-flyout-chevron {
+  line-height: 1;
+  user-select: none;
+}
+
+.dxf-ribbon-flyout-pin {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0.5;
+  padding: 2px;
+  border-radius: 2px;
+}
+
+.dxf-ribbon-flyout-pin[aria-pressed="true"],
+.dxf-ribbon-flyout-pin:hover {
+  opacity: 1;
+  background: var(--ribbon-btn-hover);
+}
+
 .dxf-ribbon-panel {
   display: flex;
   flex-direction: column;
