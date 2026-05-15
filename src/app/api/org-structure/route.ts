@@ -50,12 +50,21 @@ function validateDepartmentsHierarchy(orgStructure: OrgStructure): string[] {
 
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
+function resolveCompanyId(req: NextRequest, ctx: AuthContext): string {
+  if (ctx.globalRole === 'super_admin') {
+    const override = req.headers.get('X-Super-Admin-Company-Id');
+    if (override) return override;
+  }
+  return ctx.companyId;
+}
+
 async function handleGet(
-  _req: NextRequest,
+  req: NextRequest,
   ctx: AuthContext,
   _cache: PermissionCache,
 ): Promise<NextResponse<GetResponse>> {
-  const orgStructure = await getOrgStructure(ctx.companyId);
+  const companyId = resolveCompanyId(req, ctx);
+  const orgStructure = await getOrgStructure(companyId);
   return NextResponse.json({ orgStructure });
 }
 
@@ -96,7 +105,8 @@ async function handlePut(
   }
 
   try {
-    const saved = await saveOrgStructure(ctx.companyId, payload, ctx.uid);
+    const companyId = resolveCompanyId(req, ctx);
+    const saved = await saveOrgStructure(companyId, payload, ctx.uid);
     return NextResponse.json({ orgStructure: saved });
   } catch (err) {
     return NextResponse.json({ error: getErrorMessage(err) }, { status: 500 });

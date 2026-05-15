@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/hooks/useAuth';
+import { useSuperAdminCompany } from '@/contexts/SuperAdminCompanyContext';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { API_ROUTES } from '@/config/domain-constants';
 import { CompanyInfoTab } from './CompanyInfoTab';
@@ -22,6 +23,7 @@ interface OrgStructureState {
 export function CompanySettingsPageContent() {
   const { t } = useTranslation('org-structure');
   const { user } = useAuth();
+  const { isSuperAdmin, activeCompanyId: superAdminCompanyId } = useSuperAdminCompany();
 
   const [state, setState] = useState<OrgStructureState>({
     orgStructure: null,
@@ -32,8 +34,15 @@ export function CompanySettingsPageContent() {
 
   const getAuthHeaders = useCallback(async (): Promise<HeadersInit> => {
     const token = await user!.getIdToken();
-    return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-  }, [user]);
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+    if (isSuperAdmin && superAdminCompanyId) {
+      headers['X-Super-Admin-Company-Id'] = superAdminCompanyId;
+    }
+    return headers;
+  }, [user, isSuperAdmin, superAdminCompanyId]);
 
   const fetchOrgStructure = useCallback(async () => {
     if (!user) return;
