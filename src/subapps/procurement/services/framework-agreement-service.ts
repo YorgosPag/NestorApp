@@ -217,6 +217,7 @@ export async function createFrameworkAgreement(
         performedByName: null,
         companyId: ctx.companyId,
       }),
+      'framework-agreement-service.create',
     );
     logger.info('Framework agreement created', { id, agreementNumber, companyId: ctx.companyId });
     return agreement;
@@ -358,6 +359,7 @@ export async function updateFrameworkAgreement(
         performedByName: null,
         companyId: ctx.companyId,
       }),
+      'framework-agreement-service.update',
     );
     logger.info('Framework agreement updated', {
       id: agreementId,
@@ -400,6 +402,7 @@ export async function softDeleteFrameworkAgreement(
         performedByName: null,
         companyId: ctx.companyId,
       }),
+      'framework-agreement-service.softDelete',
     );
     logger.info('Framework agreement soft-deleted', { id: agreementId });
   });

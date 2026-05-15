@@ -62,7 +62,8 @@ export function detectVendorMismatch(
   const nameConfidence = extracted.vendorName.confidence;
 
   const contactVat = normalizeVat(
-    contact.vatNumber ?? (contact as Record<string, unknown>)['taxNumber'] as string | undefined,
+    (contact as unknown as Record<string, unknown>)['vatNumber'] as string | undefined
+      ?? (contact as unknown as Record<string, unknown>)['taxNumber'] as string | undefined,
   );
   // Contact name: try all possible fields (individual/company/service contacts).
   const contactName = (

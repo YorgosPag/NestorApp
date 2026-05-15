@@ -144,6 +144,7 @@ export async function createMaterial(
         performedByName: null,
         companyId: ctx.companyId,
       }),
+      'material-service.create',
     );
     logger.info('Material created', { id, code, companyId: ctx.companyId });
     return material;
@@ -266,6 +267,7 @@ export async function updateMaterial(
         performedByName: null,
         companyId: ctx.companyId,
       }),
+      'material-service.update',
     );
     logger.info('Material updated', { id: materialId, fields: Object.keys(updates) });
     return next;
@@ -305,6 +307,7 @@ export async function softDeleteMaterial(
         performedByName: null,
         companyId: ctx.companyId,
       }),
+      'material-service.softDelete',
     );
     logger.info('Material soft-deleted', { id: materialId });
   });

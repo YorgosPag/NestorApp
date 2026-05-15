@@ -154,7 +154,8 @@ async function createIndividualContact(
         performedBy: ctx.uid,
         performedByName: null,
         companyId: ctx.companyId,
-      })
+      }),
+      'commit-signatory-service.createSignatory',
     );
     logger.info('Created IndividualContact for quote signatory', {
       id,

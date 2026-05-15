@@ -110,7 +110,7 @@ export async function createQuote(
       performedBy: ctx.uid,
       performedByName: null,
       companyId: ctx.companyId,
-    }));
+    }), 'quote-service.create');
     logger.info('Quote created', { id, displayNumber, companyId: ctx.companyId });
     return quote;
   });
@@ -272,7 +272,7 @@ export async function updateQuote(
         performedBy: ctx.uid,
         performedByName: null,
         companyId: ctx.companyId,
-      }));
+      }), 'quote-service.statusChange');
     }
     return { ...current, ...updates };
   });

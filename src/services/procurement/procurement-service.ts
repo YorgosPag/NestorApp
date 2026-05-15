@@ -15,6 +15,7 @@ import {
   type UpdatePurchaseOrderDTO,
   type RecordDeliveryDTO,
   type PurchaseOrder,
+  type PurchaseOrderStatus,
   type ProcurementAuditAction,
 } from '@/types/procurement';
 import { EntityAuditService } from '@/services/entity-audit.service';

@@ -324,7 +324,7 @@ export async function createRevision(
     const baseData = baseSnap.data() as VersionedFields & { version?: number; status: string };
     const baseVersion = baseData.version ?? 1;
     const newVersion = baseVersion + 1;
-    const overrides = mutator(baseData as Record<string, unknown>);
+    const overrides = mutator(baseData as unknown as Record<string, unknown>);
 
     tx.set(newRef, {
       ...baseData,
