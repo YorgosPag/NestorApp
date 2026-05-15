@@ -54,7 +54,6 @@ const FloorplanBackgroundPanel = React.lazy(() => import('../floorplan-backgroun
 const ReplaceConfirmDialog = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.ReplaceConfirmDialog })));
 const CalibrationDialog = React.lazy(() => import('../floorplan-background').then(mod => ({ default: mod.CalibrationDialog })));
 const DxfAiChatPanel = React.lazy(() => import('../ai-assistant/components/DxfAiChatPanel'));
-import { LazyColorPalettePanel as RibbonSettingsPanel } from '../ui/components/LazyLoadWrapper';
 const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
 const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
 const FloorplanImportWizard = React.lazy(() => import('@/features/floorplan-import').then(mod => ({ default: mod.FloorplanImportWizard })));
@@ -312,7 +311,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           }}
           contextualTabs={ribbonContextualTabs}
           activeContextualTrigger={activeContextualTrigger}
-          settingsTabContent={<RibbonSettingsPanel />}
+
         />
       <section
         className={`flex flex-1 min-h-0 ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}

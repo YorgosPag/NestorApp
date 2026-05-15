@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { BarChart } from 'lucide-react';
+import { BarChart, Settings } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Use centralized TabsOnlyTriggers (same as Contacts, ΓΕΜΗ tabs)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
@@ -35,7 +35,6 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
 
   // 🏢 ENTERPRISE: Create tabs in TabDefinition format (same as GenericFormTabRenderer)
   // ADR-309 Phase 1: 2 tabs only (hierarchy + overlay removed)
-  // ADR-345 Fase 8: 'colors' tab removed — DxfSettingsPanel migrated to ribbon Settings tab.
   const tabs: TabDefinition[] = [
     {
       id: 'levels',
@@ -43,6 +42,13 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
       icon: BarChart,
       content: null,
       disabled: disabledPanels['levels'],
+    },
+    {
+      id: 'colors',
+      label: isCollapsed ? '' : t('dxfSettings.title'),
+      icon: Settings,
+      content: null,
+      disabled: disabledPanels['colors'],
     },
   ];
 

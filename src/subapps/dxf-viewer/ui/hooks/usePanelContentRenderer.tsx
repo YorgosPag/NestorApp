@@ -16,8 +16,10 @@ import { useTranslation } from '@/i18n';
 
 // ✅ CENTRALIZED: Use existing LazyLoadWrapper system instead of duplicate React.lazy
 // ADR-309 Phase 1: LazyHierarchyDebugPanel removed (hierarchy tab eliminated)
-// ADR-345 Fase 8: LazyColorPalettePanel removed — DxfSettingsPanel now in ribbon Settings tab
-import { LazyLevelPanel as LevelPanel } from '../components/LazyLoadWrapper';
+import {
+  LazyLevelPanel as LevelPanel,
+  LazyColorPalettePanel as ColorPalettePanel,
+} from '../components/LazyLoadWrapper';
 
 // EntitiesSettings removed - content moved to colors panel
 import type { SceneModel } from '../../types/scene';
@@ -93,8 +95,14 @@ export function usePanelContentRenderer({
           </LazyPanelWrapper>
         );
 
-      // ADR-345 Fase 8: 'colors' case removed — DxfSettingsPanel migrated to ribbon Settings tab.
-      // ADR-309 Phase 1: 'hierarchy' and 'overlay' cases removed.
+      // ADR-309 Phase 1: 'hierarchy' and 'overlay' cases removed
+
+      case 'colors':
+        return (
+          <LazyPanelWrapper loadingText={t('panels.colors.loading')}>
+            <ColorPalettePanel />
+          </LazyPanelWrapper>
+        );
 
       default:
         return (

@@ -729,9 +729,9 @@ interface RibbonState {
 - `pinnedPanelIds` in `useRibbonState` con localStorage persistence
 - Flyout inline (sotto panel body): chevron trigger ▼/▲ + pin button 📌 + click-outside close
 
-### Fase 8 — Floating panel removal ✅ PARZIALE 2026-05-15
-- Tab `colors` rimossa dal floating panel UI (DxfSettingsPanel nel ribbon)
-- Floating panel rimane con solo `levels` — rimozione completa quando `levels` migrerà nel ribbon
+### Fase 8 — Floating panel removal ⏳ NON PIANIFICATA
+- Tab `colors` (Ρυθμίσεις DXF) rimane nella sidebar — confermato da Giorgio 2026-05-15
+- Floating panel sidebar resta con entrambe le tab (Επίπεδα + Ρυθμίσεις DXF)
 
 ### Fase 9 — ToolbarStatusBar standalone ✅ COMPLETATA 2026-05-13
 - `ToolbarStatusBar` estratto come elemento autonomo senza wrapper container

@@ -41,7 +41,7 @@
 #### Fasi future ADR-345 (in ordine)
 - [x] **Fase 6.1: Tab SETTINGS** — DxfSettingsPanel nel ribbon, floating colors tab disabilitata ✅ 2026-05-15
 - [x] **Fase 7: Panel flyout** — 4 stati minimize, pinnedPanelIds, chevron + pin UI ✅ 2026-05-15
-- [ ] **Fase 8 completa: Floating panel removal** — rimozione completa: rimettere Layers tab nel ribbon + eliminare FloatingPanelContainer (23 file, task separato)
+- [x] **Fase 8: Floating panel removal** — NON da fare. Giorgio ha confermato: sidebar rimane con Επίπεδα + Ρυθμίσεις DXF. ✅ 2026-05-15
 
 ---
 
