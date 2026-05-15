@@ -206,6 +206,23 @@ export class LevelSceneManagerAdapter implements ISceneManager {
   }
 
   /**
+   * Batch-update multiple entities in a single O(n_scene) pass and one commitScene.
+   * Called by MoveMultipleEntitiesCommand to avoid N×O(n) individual updateEntity calls.
+   */
+  updateEntities(updates: ReadonlyMap<string, Partial<SceneEntity>>): void {
+    if (updates.size === 0) return;
+    const scene = this.getLatestScene();
+    if (!scene) return;
+
+    const updatedEntities = scene.entities.map((e) => {
+      const u = updates.get(e.id);
+      return u ? ({ ...e, ...u } as AnySceneEntity) : e;
+    });
+
+    this.commitScene({ ...scene, entities: updatedEntities });
+  }
+
+  /**
    * Update a specific vertex of an entity
    * Called by MoveVertexCommand
    */

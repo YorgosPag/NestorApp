@@ -29,6 +29,8 @@ export class SceneUpdateManager {
   private updateInProgress = false;
   private validator: SceneValidator;
   private statistics: SceneStatistics;
+  /** O(1) entity lookup — entityId → index in currentScene.entities */
+  private entityIndex = new Map<string, number>();
 
   constructor() {
     this.validator = new SceneValidator();
@@ -85,6 +87,7 @@ export class SceneUpdateManager {
 
       const oldScene = this.currentScene;
       this.currentScene = newScene;
+      this.rebuildEntityIndex(newScene?.entities ?? []);
 
       dlog('🎭 Scene updated:', {
         version: newScene?.version || 'null',
@@ -128,6 +131,14 @@ export class SceneUpdateManager {
 
   // ═══ ENTITY OPERATIONS ═══
 
+  /** Rebuild entityId→index map after any scene replacement. O(n) once vs O(n) per lookup. */
+  private rebuildEntityIndex(entities: readonly AnySceneEntity[]): void {
+    this.entityIndex.clear();
+    for (let i = 0; i < entities.length; i++) {
+      this.entityIndex.set(entities[i].id, i);
+    }
+  }
+
   updateEntity(entityId: string, updates: Partial<AnySceneEntity>, source = 'entity-update'): void {
     if (!this.currentScene) {
       dwarn('🎭 Cannot update entity - no current scene');
@@ -138,19 +149,42 @@ export class SceneUpdateManager {
       return;
     }
 
-    const entities: AnySceneEntity[] = this.currentScene.entities.map(entity => {
-      if (entity.id === entityId) {
-        return { ...entity, ...updates } as AnySceneEntity;
-      }
-      return entity;
-    });
+    const idx = this.entityIndex.get(entityId);
+    if (idx === undefined) {
+      dwarn(`🎭 updateEntity: entity not found: ${entityId}`);
+      return;
+    }
 
-    const updatedScene = {
-      ...this.currentScene,
-      entities
-    };
+    // O(1) lookup + native slice (no per-element JS callbacks) instead of .map()
+    const entities = this.currentScene.entities.slice() as AnySceneEntity[];
+    entities[idx] = { ...entities[idx], ...updates } as AnySceneEntity;
 
+    const updatedScene = { ...this.currentScene, entities };
     this.updateScene(updatedScene, { source, reason: `entity-${entityId}` });
+  }
+
+  /** Batch-update multiple entities in a single O(n_scene) pass and one scene commit. */
+  updateEntities(updates: ReadonlyMap<string, Partial<AnySceneEntity>>, source = 'batch-entity-update'): void {
+    if (!this.currentScene || updates.size === 0) return;
+
+    const entities = this.currentScene.entities.slice() as AnySceneEntity[];
+    let changed = false;
+
+    for (const [entityId, entityUpdates] of updates) {
+      if (!this.validator.validateEntityUpdate(entityUpdates)) continue;
+      const idx = this.entityIndex.get(entityId);
+      if (idx === undefined) {
+        dwarn(`🎭 updateEntities: entity not found: ${entityId}`);
+        continue;
+      }
+      entities[idx] = { ...entities[idx], ...entityUpdates } as AnySceneEntity;
+      changed = true;
+    }
+
+    if (!changed) return;
+
+    const updatedScene = { ...this.currentScene, entities };
+    this.updateScene(updatedScene, { source, reason: `batch-${updates.size}-entities` });
   }
 
   addEntity(entity: AnySceneEntity, source = 'add-entity'): void {
@@ -177,7 +211,15 @@ export class SceneUpdateManager {
       return;
     }
 
-    const entities = this.currentScene.entities.filter(entity => entity.id !== entityId);
+    const idx = this.entityIndex.get(entityId);
+    if (idx === undefined) {
+      dwarn(`🎭 removeEntity: entity not found: ${entityId}`);
+      return;
+    }
+
+    // O(1) lookup + splice instead of .filter()
+    const entities = this.currentScene.entities.slice() as AnySceneEntity[];
+    entities.splice(idx, 1);
     const updatedScene = {
       ...this.currentScene,
       entities

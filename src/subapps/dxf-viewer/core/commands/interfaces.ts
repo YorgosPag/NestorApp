@@ -328,6 +328,9 @@ export interface ISceneManager {
   /** Update an entity */
   updateEntity(entityId: string, updates: Partial<SceneEntity>): void;
 
+  /** Batch-update multiple entities in a single scene commit — O(n_scene) vs N×O(n_scene) */
+  updateEntities(updates: ReadonlyMap<string, Partial<SceneEntity>>): void;
+
   /** Update a specific vertex of an entity */
   updateVertex(entityId: string, vertexIndex: number, position: Point2D): void;
 

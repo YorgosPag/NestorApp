@@ -219,51 +219,60 @@ export class MoveMultipleEntitiesCommand implements ICommand {
   }
 
   /**
-   * Execute: Move all entities by delta
+   * Execute: Move all entities by delta — single batch commit, O(n_scene) not N×O(n_scene).
    */
   execute(): void {
     this.entitySnapshots.clear();
+    const updatesMap = new Map<string, Partial<SceneEntity>>();
 
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId);
       if (entity) {
-        // Store snapshot before move (for undo)
         this.entitySnapshots.set(entityId, deepClone(entity));
-
-        // Calculate and apply new geometry
-        const updates = calculateMovedGeometry(entity, this.delta);
-        this.sceneManager.updateEntity(entityId, updates);
+        updatesMap.set(entityId, calculateMovedGeometry(entity, this.delta));
       }
     }
 
-    this.wasExecuted = this.entitySnapshots.size > 0;
+    if (updatesMap.size > 0) {
+      this.sceneManager.updateEntities(updatesMap);
+      this.wasExecuted = true;
+    }
   }
 
   /**
-   * Undo: Move all entities by reverse delta
+   * Undo: Move all entities by reverse delta — single batch commit.
    */
   undo(): void {
-    if (this.wasExecuted) {
-      for (const entityId of this.entityIds) {
-        const entity = this.sceneManager.getEntity(entityId);
-        if (entity) {
-          const reversedUpdates = calculateMovedGeometry(entity, reverseDelta(this.delta));
-          this.sceneManager.updateEntity(entityId, reversedUpdates);
-        }
+    if (!this.wasExecuted) return;
+    const updatesMap = new Map<string, Partial<SceneEntity>>();
+
+    for (const entityId of this.entityIds) {
+      const entity = this.sceneManager.getEntity(entityId);
+      if (entity) {
+        updatesMap.set(entityId, calculateMovedGeometry(entity, reverseDelta(this.delta)));
       }
+    }
+
+    if (updatesMap.size > 0) {
+      this.sceneManager.updateEntities(updatesMap);
     }
   }
 
   /**
-   * Redo: Move all entities by delta again
+   * Redo: Move all entities by delta again — single batch commit.
    */
   redo(): void {
+    const updatesMap = new Map<string, Partial<SceneEntity>>();
+
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId);
       if (entity) {
-        const updates = calculateMovedGeometry(entity, this.delta);
-        this.sceneManager.updateEntity(entityId, updates);
+        updatesMap.set(entityId, calculateMovedGeometry(entity, this.delta));
       }
+    }
+
+    if (updatesMap.size > 0) {
+      this.sceneManager.updateEntities(updatesMap);
     }
   }
 
