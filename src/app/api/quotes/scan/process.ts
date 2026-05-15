@@ -69,7 +69,7 @@ export async function processScanAsync(
     const vendorName = extracted.vendorName?.value ?? quoteId;
     void dispatchProcurementNotification(
       NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_SCAN_COMPLETED,
-      ctx.userId,
+      ctx.uid,
       ctx.companyId,
       `Σάρωση προσφοράς ολοκληρώθηκε: ${vendorName}`,
       `quote_scan_${quoteId}`,

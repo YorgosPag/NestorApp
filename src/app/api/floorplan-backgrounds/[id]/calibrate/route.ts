@@ -98,10 +98,10 @@ async function handlePost(
 }
 
 export const POST = withStandardRateLimit(
-  async (request: NextRequest, routeCtx: RouteContext) => {
+  async (request: NextRequest, routeCtx?: RouteContext) => {
     const handler = withAuth(
       async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) =>
-        handlePost(request, ctx, routeCtx),
+        handlePost(request, ctx, routeCtx!),
       { permissions: 'dxf:layers:view' },
     );
     return handler(request);

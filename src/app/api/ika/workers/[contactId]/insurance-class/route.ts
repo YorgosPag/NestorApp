@@ -33,9 +33,9 @@ const UpdateInsuranceClassSchema = z.object({
 
 async function handlePatch(
   request: NextRequest,
-  segmentData: { params: Promise<{ contactId: string }> },
+  segmentData?: { params: Promise<{ contactId: string }> },
 ): Promise<NextResponse> {
-  const { contactId } = await segmentData.params;
+  const { contactId } = await segmentData!.params;
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
