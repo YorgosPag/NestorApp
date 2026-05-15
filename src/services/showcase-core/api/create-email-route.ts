@@ -84,7 +84,7 @@ export interface LoadShowcaseEmailParams<TExtraBody> {
 
 export interface CreateShowcaseEmailRouteConfig<TExtraBody extends Record<string, unknown> = {}> {
   /** Used for audit-trail `entityType` + structured logs. */
-  entityType: string;
+  entityType: AuditEntityType;
   /** Module-logger name (e.g. `'BuildingShowcaseEmailRoute'`). */
   loggerName: string;
   /**

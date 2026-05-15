@@ -126,7 +126,7 @@ async function handleGet(
     const [fileBuffer] = await getAdminBucket().file(storagePath).download();
 
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(Buffer.from(fileBuffer));
+    await workbook.xlsx.load(fileBuffer as unknown as Buffer);
 
     const html = buildHtml(workbook);
 

@@ -188,7 +188,7 @@ export default function DxfCanvasHarness() {
       updateSceneEntity: (id: string, patch: Record<string, unknown>) =>
         setScene(s => s ? { ...s, entities: s.entities.map(e => e.id === id ? { ...e, ...patch } as typeof e : e) } : null),
       addSceneEntity: (entity: Record<string, unknown>) =>
-        setScene(s => s ? { ...s, entities: [...s.entities, entity as DxfScene['entities'][number]] } : null),
+        setScene(s => s ? { ...s, entities: [...s.entities, entity as unknown as DxfScene['entities'][number]] } : null),
       removeSceneEntity: (id: string) =>
         setScene(s => s ? { ...s, entities: s.entities.filter(e => e.id !== id) } : null),
       showSnap: (type: string, wx: number, wy: number) => setSnapResult({ point: { x: wx, y: wy }, type }),

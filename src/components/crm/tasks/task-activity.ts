@@ -22,11 +22,11 @@ export const TASK_TYPE_ICONS: Record<CrmTaskType, React.ElementType> = {
   other: Clock,
 };
 
-export const PRIORITY_BADGE_VARIANT: Record<CrmTaskPriority, 'success' | 'warning' | 'info' | 'error'> = {
+export const PRIORITY_BADGE_VARIANT: Record<CrmTaskPriority, 'success' | 'warning' | 'info' | 'destructive'> = {
   low: 'success',
   medium: 'warning',
   high: 'info',
-  urgent: 'error',
+  urgent: 'destructive',
 };
 
 export const STATUS_BADGE_VARIANT: Record<CrmTaskStatus, 'info' | 'warning' | 'success' | 'muted'> = {

@@ -437,7 +437,7 @@ export function TaskDetailPanel({
     <>
       <ConfirmDialog {...dialogProps} />
       <DetailsContainer
-        selectedItem={(activity ?? (isCreating ? { id: 'creating' } : null))}
+        selectedItem={(activity ? { id: activity.kind === 'task' ? activity.task.id : (activity.appt as { id?: string }).id ?? '' } : (isCreating ? { id: 'creating' } : null))}
         emptyStateProps={{
           icon: Clock,
           title: t('tasks.emptyState.title'),

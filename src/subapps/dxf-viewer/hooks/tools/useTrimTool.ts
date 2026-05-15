@@ -86,16 +86,6 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
     wasActiveRef.current = isActive;
   }, [isActive]);
 
-  // Keep performTrimPick registered in TrimToolStore so leaves can call it
-  // without prop-threading through CanvasLayerStack (ADR-040 principle).
-  useEffect(() => {
-    if (!isActive) return;
-    TrimToolStore.registerPickFn(performTrimPick);
-    return () => {
-      TrimToolStore.registerPickFn(null);
-    };
-  }, [isActive, performTrimPick]);
-
   // Status-bar prompt sync (G13)
   useEffect(() => {
     if (!isActive || phase === 'idle') {
@@ -194,6 +184,16 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
     },
     [getSceneManager, levelManager, hitTestEntity, executeCommand],
   );
+
+  // Keep performTrimPick registered in TrimToolStore so leaves can call it
+  // without prop-threading through CanvasLayerStack (ADR-040 principle).
+  useEffect(() => {
+    if (!isActive) return;
+    TrimToolStore.registerPickFn(performTrimPick);
+    return () => {
+      TrimToolStore.registerPickFn(null);
+    };
+  }, [isActive, performTrimPick]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 

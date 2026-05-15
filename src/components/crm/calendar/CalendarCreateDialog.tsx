@@ -129,7 +129,7 @@ export function CalendarCreateDialog({
   }, [open]);
 
   const contactOptions = useMemo<ComboboxOption[]>(
-    () => contacts.map(c => ({ value: c.id, label: getContactDisplayName(c) })),
+    () => contacts.flatMap(c => c.id ? [{ value: c.id, label: getContactDisplayName(c) }] : []),
     [contacts]
   );
 

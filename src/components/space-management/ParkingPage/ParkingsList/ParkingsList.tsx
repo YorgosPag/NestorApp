@@ -68,7 +68,7 @@ export function ParkingsList({
   // 🏢 ENTERPRISE: Filter parking spots using centralized search + status quick filter
   const filteredParkingSpots = useMemo(() => {
     return parkingSpots.filter(parking => {
-      if (selectedStatuses.length > 0 && !selectedStatuses.includes(parking.status)) {
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(parking.status ?? '')) {
         return false;
       }
       return matchesSearchTerm(

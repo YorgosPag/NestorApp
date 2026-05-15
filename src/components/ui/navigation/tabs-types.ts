@@ -17,6 +17,8 @@ export interface BaseTabDef {
   disabled?: boolean;
   /** Amber dot rendered on the tab trigger to signal a required action inside. */
   warningDot?: boolean;
+  /** Optional inline content — rendered by BaseTabs when no children provided. */
+  content?: React.ReactNode;
 }
 
 export interface TabDefinition extends BaseTabDef {

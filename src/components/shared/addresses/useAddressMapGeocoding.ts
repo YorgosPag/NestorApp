@@ -232,9 +232,14 @@ export function useAddressMapGeocoding({
                 geocodedMap.set(addr.id, {
                   lat: addr.coordinates.lat,
                   lng: addr.coordinates.lng,
-                  accuracy: 'exact',
+                  accuracy: 'exact' as const,
                   confidence: 1,
                   displayName: [addr.street, addr.number, addr.city].filter(Boolean).join(' '),
+                  resolvedFields: {},
+                  partialMatch: false,
+                  reasoning: {} as import('@/lib/geocoding/geocoding-types').GeocodingReasoning,
+                  alternatives: [],
+                  source: {} as import('@/lib/geocoding/geocoding-types').GeocodingSource,
                 });
                 successCount++;
                 continue;
