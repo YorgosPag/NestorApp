@@ -76,6 +76,7 @@ const SEARCH_TO_NAVIGATION_ENTITY: Record<SearchEntityType, NavigationEntityType
   [SEARCH_ENTITY_TYPES.OPPORTUNITY]: 'opportunity',
   [SEARCH_ENTITY_TYPES.COMMUNICATION]: 'communication',
   [SEARCH_ENTITY_TYPES.TASK]: 'task',
+  [SEARCH_ENTITY_TYPES.FLOOR]: 'floor',
 };
 
 /**
@@ -92,6 +93,7 @@ const ENTITY_LABEL_KEYS: Record<SearchEntityType, string> = {
   [SEARCH_ENTITY_TYPES.OPPORTUNITY]: 'search.entityTypes.opportunity',
   [SEARCH_ENTITY_TYPES.COMMUNICATION]: 'search.entityTypes.communication',
   [SEARCH_ENTITY_TYPES.TASK]: 'search.entityTypes.task',
+  [SEARCH_ENTITY_TYPES.FLOOR]: 'search.entityTypes.floor',
 };
 
 /**

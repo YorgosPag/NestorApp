@@ -118,6 +118,12 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
     color: "text-rose-600",
     bgColor: "bg-rose-50 dark:bg-rose-950/30",
   },
+  vendor_notified: {
+    icon: Mail,
+    labelKey: "audit.actions.vendor_notified",
+    color: "text-sky-600",
+    bgColor: "bg-sky-50 dark:bg-sky-950/30",
+  },
 };
 
 /** i18n key under audit.filters.* — resolved at render time */

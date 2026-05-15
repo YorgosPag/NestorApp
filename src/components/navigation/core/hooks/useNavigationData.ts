@@ -34,13 +34,14 @@ interface BootstrapProject {
   projectCode: string | null;
   name: string;
   companyId: string;
+  companyDisplayName?: string;
+  linkedCompanyId?: string | null;
   status: string;
   updatedAt: string | null;
   createdAt: string | null;
   totalProperties?: number;
   soldProperties?: number;
   soldAreaM2?: number;
-  // 🏢 PERF-001: Building count from bootstrap (eliminates realtime listener)
   buildingCount: number;
 }
 
@@ -168,7 +169,7 @@ export function useNavigationData(): UseNavigationDataReturn {
         const projects: NavigationProject[] = bootstrapData.projects.map(p => ({
           id: p.id,
           name: p.name,
-          company: p.companyDisplayName,
+          company: p.companyDisplayName ?? '',
           companyId: p.companyId,
           linkedCompanyId: p.linkedCompanyId,
           projectCode: p.projectCode,

@@ -475,7 +475,7 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
             onClear={editor.activity.clear}
             onSetVerbosity={editor.activity.setVerbosity}
             collapsed={logCollapsed}
-            onToggleCollapsed={() => setLogCollapsed((p) => !p)}
+            onToggleCollapsed={() => setLogCollapsed((p: boolean) => !p)}
           />
         )}
 

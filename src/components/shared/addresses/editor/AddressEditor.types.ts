@@ -10,12 +10,20 @@
  */
 
 import type { ReactNode } from 'react';
-import type { ResolvedAddressFields as _ResolvedAddressFields } from './types';
+import type {
+  ResolvedAddressFields,
+  AddressEditorMode,
+  AddressEditorDomain,
+  AddressEditorFormOptions,
+  AddressEditorMapOptions,
+  AddressEditorActivityOptions,
+  AddressEditorTelemetryOptions,
+} from './types';
 
 /** Imperative handle exposed via `ref` on `<AddressEditor>`. */
 export interface AddressEditorHandle {
   /** Queue an externally-resolved drag address for the confirm dialog. */
-  setPendingDrag(addr: _ResolvedAddressFields): void;
+  setPendingDrag(addr: ResolvedAddressFields): void;
 }
 
 export type {
