@@ -3,6 +3,7 @@ import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { DxfFirestoreService } from '../../../services/dxf-firestore.service';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
+import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
 import type { Level } from '../config';
 
 // 🔺 FIXED: Helper για ΠΡΑΓΜΑΤΙΚΑ κενή σκηνή χωρίς default layer
@@ -187,6 +188,19 @@ export function useLevelSceneLoader({
       setOnSceneSaved(null);
     };
   }, [currentLevelId, linkSceneToLevel, setOnSceneSaved]);
+
+  // 🏢 ADR-354 Entry Point #4: super admin company switcher → DXF scene cache invalidation.
+  // Cached scenes + dedupe set belong to the previous tenant and must be evicted before
+  // useLevelsFirestoreSync delivers the new tenant's levels. Aborts pending load first
+  // so an in-flight fetch can't repopulate the just-cleared cache.
+  useEffect(() => {
+    const unsub = onSuperAdminActiveCompanyChange(() => {
+      sceneLoadAbortRef.current?.abort();
+      loadedSceneLevelsRef.current.clear();
+      sceneManager.clearAllScenes();
+    });
+    return unsub;
+  }, [sceneManager]);
 
   return { sceneLoading, linkSceneToLevel };
 }

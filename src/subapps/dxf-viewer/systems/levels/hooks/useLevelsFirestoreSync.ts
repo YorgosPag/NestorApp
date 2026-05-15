@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   where,
   orderBy,
@@ -10,6 +10,10 @@ import { db } from '../../../../../lib/firebase';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import type { RealtimeCollection } from '@/services/realtime/types';
 import { getErrorMessage } from '@/lib/error-utils';
+import {
+  getSuperAdminActiveCompanyId,
+  onSuperAdminActiveCompanyChange,
+} from '@/services/firestore/super-admin-active-company';
 import { LevelOperations } from '../utils';
 import type { Level } from '../config';
 
@@ -55,6 +59,17 @@ export function useLevelsFirestoreSync({
   onLevelChange,
   handleError,
 }: UseLevelsFirestoreSyncParams): void {
+  // 🏢 ADR-354 Phase B: re-subscribe trigger on super admin company switch.
+  // The registry listener bumps this tick; the main subscription useEffect
+  // includes it in deps and tears down / rebuilds with the new constraint.
+  const [superAdminCompanyTick, setSuperAdminCompanyTick] = useState(0);
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    return onSuperAdminActiveCompanyChange(() => {
+      setSuperAdminCompanyTick((t) => t + 1);
+    });
+  }, [isSuperAdmin]);
+
   useEffect(() => {
     if (!enableFirestore) return;
     // Wait until auth is resolved so we can build a tenant-scoped query.
@@ -69,9 +84,17 @@ export function useLevelsFirestoreSync({
     // Firestore can statically verify every returned document satisfies the
     // tenant-isolation rule (resource.data.companyId == getUserCompanyId()).
     // Super-admins rely on isSuperAdminOnly() in the rule, which is request-only
-    // and does not require a where-clause.
+    // and does not require a where-clause — but ADR-354 Phase B adds the filter
+    // when the super admin has selected an active company via the switcher, so
+    // the level list re-scopes to that tenant (and currentLevelId re-elects in
+    // the snapshot callback when the previous selection is no longer present).
+    const effectiveSuperAdminCompanyId = isSuperAdmin
+      ? getSuperAdminActiveCompanyId()
+      : null;
     const constraints = isSuperAdmin
-      ? [orderBy('order', 'asc')]
+      ? effectiveSuperAdminCompanyId
+        ? [where('companyId', '==', effectiveSuperAdminCompanyId), orderBy('order', 'asc')]
+        : [orderBy('order', 'asc')]
       : [where('companyId', '==', companyId), orderBy('order', 'asc')];
 
     // Cast dynamic param to RealtimeCollection — `firestoreCollection` is runtime
@@ -118,5 +141,5 @@ export function useLevelsFirestoreSync({
     );
 
     return () => unsubscribe();
-  }, [enableFirestore, firestoreCollection, currentLevelId, companyId, creatorUid, isSuperAdmin, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
+  }, [enableFirestore, firestoreCollection, currentLevelId, companyId, creatorUid, isSuperAdmin, superAdminCompanyTick, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
 }

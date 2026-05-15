@@ -17,7 +17,7 @@ A previous attempt patched `/api/org-structure/route.ts` ad-hoc with a `resolveC
 
 ## Decision
 
-Extend the **three** existing SSoT entry points instead of patching per route / per hook:
+Extend the **five** existing SSoT entry points instead of patching per route / per hook:
 
 1. **Server entry point** — `buildRequestContext()` in `src/lib/auth/auth-context.ts`. After extracting JWT claims, if `isRoleBypass(claims.globalRole)` and the request carries header `X-Super-Admin-Company-Id`, override `ctx.companyId` with that header value. The new helper `resolveEffectiveCompanyId(request, claims, uid)` is applied to both authentication paths (Bearer header + `__session` cookie). An audit log entry is emitted on every override.
 
@@ -29,11 +29,14 @@ Extend the **three** existing SSoT entry points instead of patching per route / 
    - `buildTenantConstraints` changed: super admin with `effectiveCompanyId` → emit `where('companyId', '==', effectiveCompanyId)`; super admin without selection → unchanged (skip filter, full cross-tenant view).
    - `subscribe()` refactored to a `rebuild()` function. On every switcher change, `onSuperAdminActiveCompanyChange` fires and `rebuild()` tears down the previous `onSnapshot` and creates a new one with the updated `where` clause. **All 30+ subscription hooks inherit the fix transparently** with no code changes.
 
-4. **Glue** — `SuperAdminCompanyContext` provider effect propagates `isSuperAdmin ? activeCompanyId : null` to both transports (`apiClient` + Firestore registry) on every change. No component needs to know about either mechanism.
+4. **Client DXF scene cache entry point** — `useLevelSceneLoader` in `src/subapps/dxf-viewer/systems/levels/hooks/useLevelSceneLoader.ts`. The DXF viewer caches loaded scenes in two places: `useSceneManager.levelScenes` (the in-memory `Record<levelId, SceneModel>` SSOT) and `loadedSceneLevelsRef` (a dedupe `Set<levelId>` to prevent duplicate Firestore loads). Both are React-memory state, completely outside any Firestore listener, so the switcher had no effect on `/dxf/viewer`: real-time counters refreshed (entry point #3 worked) but the rendered scene on canvas survived because nothing invalidated the in-memory cache. Fix: a `useEffect` in `useLevelSceneLoader` subscribes to `onSuperAdminActiveCompanyChange`. On every fire it aborts the pending scene load (race-safety), clears `loadedSceneLevelsRef`, and calls `sceneManager.clearAllScenes()`. The loader is the single owner of both refs, so invalidation is atomic. All downstream canvas consumers (`CanvasSection`, `DxfCanvasSubscriber`, `DxfRenderer`, bitmap cache) re-render naturally on the cleared state. No per-component patches in `canvas-v2/`.
 
-5. **Client-side Firestore SDK direct queries** (the 7 components with their own `where('companyId', '==', ...)` outside `firestoreQueryService`) — covered by `useCompanyId()` (ADR-201 Phase 2 + 2026-05-15 patch in `src/hooks/useCompanyId.ts`): when super admin + active selection, the switcher value wins over `user.companyId`.
+5. **Client DXF levels list re-scoping entry point** — `useLevelsFirestoreSync` in `src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts`. This hook uses `RealtimeService.subscribeToCollection` (not `firestoreQueryService.subscribe`), so it does not inherit entry point #3. For super admin the query was previously `[orderBy('order', 'asc')]` with **no `companyId` filter** — a cross-tenant level list that did not react to the switcher. The DXF viewer would then auto-select a level whose `sceneFileId` belonged to an arbitrary tenant, and the scene loader would call Storage with a stale path (`No valid scene found in any Storage path`). Fix: (a) read `getSuperAdminActiveCompanyId()` and, when present, add `where('companyId', '==', effectiveSuperAdminCompanyId)` to the constraints; (b) subscribe to `onSuperAdminActiveCompanyChange` and bump a `superAdminCompanyTick` state so the main subscription `useEffect` tears down the previous `onSnapshot` and rebuilds it with the new filter. The existing snapshot callback already re-elects `currentLevelId` (line 87) when the previous selection disappears from the new tenant's list, so the loader receives a fresh `levelId` + valid `sceneFileId` and the orphan-path load is eliminated.
+6. **Glue** — `SuperAdminCompanyContext` provider effect propagates `isSuperAdmin ? activeCompanyId : null` to both transports (`apiClient` + Firestore registry) on every change. No component needs to know about either mechanism.
 
-6. **Per-route revert** — `src/app/api/org-structure/route.ts` had the ad-hoc helper removed. It is now generic code consuming `ctx.companyId`, and stands as the reference pattern for all 229 routes.
+7. **Client-side Firestore SDK direct queries** (the 7 components with their own `where('companyId', '==', ...)` outside `firestoreQueryService`) — covered by `useCompanyId()` (ADR-201 Phase 2 + 2026-05-15 patch in `src/hooks/useCompanyId.ts`): when super admin + active selection, the switcher value wins over `user.companyId`.
+
+8. **Per-route revert** — `src/app/api/org-structure/route.ts` had the ad-hoc helper removed. It is now generic code consuming `ctx.companyId`, and stands as the reference pattern for all 229 routes.
 
 ## Architecture
 
@@ -50,9 +53,12 @@ Extend the **three** existing SSoT entry points instead of patching per route / 
 │         │                                                            │
 │         ├──► setSuperAdminActiveCompanyId(id) [module registry]      │
 │         │       └─► fires onSuperAdminActiveCompanyChange listeners  │
-│         │            └─► firestoreQueryService.subscribe rebuilds    │
-│         │                 onSnapshot with new where('companyId'…)    │
-│         │                 → 30+ real-time hooks re-scope             │
+│         │            ├─► firestoreQueryService.subscribe rebuilds    │
+│         │            │    onSnapshot with new where('companyId'…)    │
+│         │            │    → 30+ real-time hooks re-scope             │
+│         │            └─► useLevelSceneLoader invalidates DXF cache   │
+│         │                 → loadedSceneLevelsRef.clear()             │
+│         │                 → sceneManager.clearAllScenes()            │
 │         │                                                            │
 │         └──► useCompanyId() React hook                               │
 │                 └─► direct Firestore SDK queries in 7 components    │
@@ -90,6 +96,8 @@ Extend the **three** existing SSoT entry points instead of patching per route / 
 | `src/contexts/SuperAdminCompanyContext.tsx` | useEffect propagates to **both** apiClient + Firestore registry |
 | `src/app/api/org-structure/route.ts` | Reverted ad-hoc `resolveCompanyId` helper — now generic |
 | `src/hooks/useCompanyId.ts` | Patched 2026-05-15 — Firestore client direct-query path |
+| `src/subapps/dxf-viewer/systems/levels/hooks/useLevelSceneLoader.ts` | **Phase B** — subscribes to `onSuperAdminActiveCompanyChange`; aborts pending load + clears `loadedSceneLevelsRef` + calls `sceneManager.clearAllScenes()` |
+| `src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts` | **Phase B** — adds `where('companyId', '==', effectiveSuperAdminCompanyId)` to constraints when super admin has a selection; `superAdminCompanyTick` triggers re-subscription on switcher change |
 
 ## Trade-offs Considered
 
@@ -107,8 +115,12 @@ The header + registry approach is invisible to consumer code, idempotent, and al
 2. **Localhost happy path — Firestore SDK**: `/contacts` (or `/buildings`, etc.) → switch company → real-time listener logs show `count` change live (e.g. `useRealtimeBuildings count:1` → `count:0`). ✅
 3. **Security negative**: as `company_admin` (non-bypass role) inject header manually → server logs no override, response data scoped to JWT claim. `requireAuthContext` returns `effectiveCompanyId: null` for non-super-admin sessions.
 4. **Reset**: clear switcher (or sign in as non-super) → both `apiClient.setSuperAdminCompanyId(null)` and `setSuperAdminActiveCompanyId(null)` → header no longer sent, Firestore subscriptions go back to JWT-claim filter → behavior identical to pre-switcher era.
+5. **DXF scene cache (Phase B Part 1)**: `/dxf/viewer` with company A that has a loaded scene → switch to company B → canvas clears immediately; switch back to A → DXF re-loads from Firestore, `loadedSceneLevelsRef` repopulates fresh. PERF_LINE logs (`CanvasSection.commit`, `DxfCanvasSubscriber.commit`) fire with new entity count. ✅
+6. **DXF levels list re-scoping (Phase B Part 2)**: as super admin, `/dxf/viewer` levels list reflects only the active company's levels. Switch to a company with no levels → bootstrap creates defaults for that tenant; switch back → levels re-appear correctly. No `[DxfFirestore] No valid scene found in any Storage path` error in console after switch. ✅
 
 ## Changelog
 
 - **2026-05-15** — Initial implementation. Server override in `buildRequestContext` + client setter in `EnterpriseApiClient` + context propagation. Reverted ad-hoc `/api/org-structure/route.ts` helper.
 - **2026-05-15 (extension)** — Discovered third gap: client-side Firestore SDK real-time listeners (`firestoreQueryService.subscribe`, used by `useRealtimeBuildings`, `useRealtimeProperties`, `subscribeToContacts`, etc.) skipped the `companyId` filter entirely for super admin (line 82 `if (ctx.isSuperAdmin) return [];`), so cross-tenant lists were unaffected by the switcher. Fixed by adding `super-admin-active-company.ts` registry + listener pattern, `effectiveCompanyId` on `TenantContext`, and `subscribe()` rebuild-on-change. 30+ subscription hooks now inherit the fix with zero per-hook changes.
+- **2026-05-15 (Phase B Part 1)** — Fourth gap: `/dxf/viewer` retained the previous tenant's scene on canvas after company switch because the DXF scene cache lives in React memory (`useSceneManager.levelScenes` + `useLevelSceneLoader.loadedSceneLevelsRef`), completely outside Firestore listeners. Firestore counters refreshed via entry point #3, but the rendered scene survived. Fixed by extending entry point coverage to client DXF scene cache: `useLevelSceneLoader` now subscribes to `onSuperAdminActiveCompanyChange` and on fire it aborts the pending load, clears `loadedSceneLevelsRef`, and calls `sceneManager.clearAllScenes()`. Atomic invalidation in the single loader that owns both refs — no per-component patches in `canvas-v2/`.
+- **2026-05-15 (Phase B Part 2)** — Fifth gap surfaced by Part 1: after cache invalidation, the scene loader was re-fetching a stale `sceneFileId` and Storage logged `[DxfFirestore] No valid scene found in any Storage path`. Root cause: `useLevelsFirestoreSync` uses `RealtimeService.subscribeToCollection` (not `firestoreQueryService.subscribe`) so it bypassed entry point #3. For super admin the query had **no `companyId` filter** — cross-tenant level list, no reaction to the switcher. Auto-select would pick an arbitrary tenant's level whose file does not exist for the effective company. Fixed by reading `getSuperAdminActiveCompanyId()` and adding `where('companyId', '==', …)` when present, plus a `superAdminCompanyTick` state bumped by `onSuperAdminActiveCompanyChange` so the main `useEffect` rebuilds the subscription on every switch. The existing snapshot callback re-elects `currentLevelId` when the previous selection disappears from the new tenant's level list, eliminating orphan-path Storage loads.
