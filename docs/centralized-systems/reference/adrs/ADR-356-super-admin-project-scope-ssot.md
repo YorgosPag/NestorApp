@@ -57,7 +57,24 @@ const snap = scope.filterCompanyId
 
 `bootstrap-queries.ts` keeps its `company_admin → navigation_companies` expansion (route-specific business logic), but the super-admin branch now goes through `scope.mode === 'super-admin-impersonate'` instead of an inline boolean.
 
-### Client: `useSuperAdminSwitcherInvalidation(onInvalidate, options?)`
+### Client direct-query helper: `resolveEffectiveCompanyId(ctx)`
+
+Location: `src/services/firestore/auth-context.ts`, re-exported from `@/services/firestore`.
+
+```typescript
+function resolveEffectiveCompanyId(ctx: TenantContext): string | null;
+```
+
+- Regular user → `ctx.companyId`
+- Super admin with active switcher → `ctx.effectiveCompanyId` (impersonated tenant)
+- Super admin without switcher selection → `null` (caller skips the `where('companyId', ...)` constraint)
+
+Every custom service that does direct Firestore queries via `getDocs`/`setDoc`/`deleteDoc` outside `firestoreQueryService` MUST resolve its tenant filter through this helper. Without it, super-admin sessions silently fall through to the JWT-claim companyId and leak cross-tenant data — the bug behind the 2026-05-16 screenshot (super admin selected "Georgios Pagonis" tenant in the switcher; the "Σύνδεση με Εταιρεία" dropdown still showed contacts from the operator's home tenant "Pagonis TEK"). Migrated services as of this ADR:
+
+- `src/services/companies.service.ts` — 4 call sites (`getAllActiveCompanies`, `getCompanyById`, `getCompanyByName`, `getAllCompaniesForSelect`)
+- `src/services/navigation-companies.service.ts` — 5 call sites (`addCompanyToNavigation`, `removeCompanyFromNavigation`, `isCompanyInNavigation`, `getNavigationCompanyIds`, `getAllNavigationCompanies`). The per-tenant in-memory cache key continues to follow the effective companyId so switching A → B → A hits separate slots.
+
+### Client subscription helper: `useSuperAdminSwitcherInvalidation(onInvalidate, options?)`
 
 Location: `src/hooks/useSuperAdminSwitcherInvalidation.ts`.
 

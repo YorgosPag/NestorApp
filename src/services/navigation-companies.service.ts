@@ -4,7 +4,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 import { createModuleLogger } from '@/lib/telemetry';
-import { requireAuthContext } from '@/services/firestore/auth-context';
+import { requireAuthContext, resolveEffectiveCompanyId } from '@/services/firestore/auth-context';
 
 const logger = createModuleLogger('NavigationCompaniesService');
 
@@ -35,7 +35,9 @@ export class NavigationCompaniesService {
    */
   async addCompanyToNavigation(contactId: string, userId?: string): Promise<void> {
     try {
-      const { companyId } = await requireAuthContext();
+      // ADR-356: honor super-admin switcher — write under effective tenant.
+      const ctx = await requireAuthContext();
+      const companyId = resolveEffectiveCompanyId(ctx);
 
       // Ελέγχουμε αν υπάρχει ήδη
       const exists = await this.isCompanyInNavigation(contactId);
@@ -83,7 +85,9 @@ export class NavigationCompaniesService {
    */
   async removeCompanyFromNavigation(contactId: string): Promise<void> {
     try {
-      const { companyId } = await requireAuthContext();
+      // ADR-356: honor super-admin switcher — scope delete to effective tenant.
+      const ctx = await requireAuthContext();
+      const companyId = resolveEffectiveCompanyId(ctx);
 
       const constraints: QueryConstraint[] = [where('contactId', '==', contactId)];
       if (companyId) {
@@ -125,7 +129,9 @@ export class NavigationCompaniesService {
    */
   async isCompanyInNavigation(contactId: string): Promise<boolean> {
     try {
-      const { companyId } = await requireAuthContext();
+      // ADR-356: honor super-admin switcher — read effective tenant, not JWT claim.
+      const ctx = await requireAuthContext();
+      const companyId = resolveEffectiveCompanyId(ctx);
 
       const constraints: QueryConstraint[] = [where('contactId', '==', contactId)];
       if (companyId) {
@@ -155,7 +161,9 @@ export class NavigationCompaniesService {
 
   async getNavigationCompanyIds(): Promise<string[]> {
     try {
-      const { companyId } = await requireAuthContext();
+      // ADR-356: honor super-admin switcher — cache key follows effective tenant.
+      const ctx = await requireAuthContext();
+      const companyId = resolveEffectiveCompanyId(ctx);
       const cacheKey = companyId ?? SUPER_ADMIN_CACHE_KEY;
 
       // 🚀 PERFORMANCE: Check per-tenant cache first
@@ -202,7 +210,9 @@ export class NavigationCompaniesService {
    */
   async getAllNavigationCompanies(): Promise<NavigationCompanyEntry[]> {
     try {
-      const { companyId } = await requireAuthContext();
+      // ADR-356: honor super-admin switcher — read effective tenant, not JWT claim.
+      const ctx = await requireAuthContext();
+      const companyId = resolveEffectiveCompanyId(ctx);
 
       const q = companyId
         ? query(
