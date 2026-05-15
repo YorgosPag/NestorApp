@@ -1,0 +1,19 @@
+[
+  {
+    "origin": [
+      "https://nestorconstruct.gr",
+      "https://www.nestorconstruct.gr",
+      "https://nestor-app.vercel.app",
+      "http://localhost:3000",
+      "http://localhost:3001"
+    ],
+    "method": ["GET", "HEAD", "PUT", "POST"],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Authorization",
+      "x-goog-meta-*"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
