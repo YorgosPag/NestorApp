@@ -87,6 +87,12 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleStretchKeyDown?: (key: string) => boolean;
   /** ADR-349: Whether the stretch / mstretch tool is active and collecting input */
   stretchIsActive?: boolean;
+  /** ADR-350: Trim tool cancel handler */
+  handleTrimEscape?: () => void;
+  /** ADR-350: Trim tool key handler — returns true if key was consumed */
+  handleTrimKeyDown?: (key: string, shiftKey: boolean) => boolean;
+  /** ADR-350: Whether the trim tool is active and in pick/edges phase */
+  trimIsActive?: boolean;
   /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
   clearEntitySelection?: () => void;
   /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
@@ -126,6 +132,9 @@ export function useCanvasKeyboardShortcuts({
   handleStretchEscape,
   handleStretchKeyDown,
   stretchIsActive = false,
+  handleTrimEscape,
+  handleTrimKeyDown,
+  trimIsActive = false,
   clearEntitySelection,
   hasAnySelection = false,
 }: UseCanvasKeyboardShortcutsParams): void {
@@ -148,6 +157,12 @@ export function useCanvasKeyboardShortcuts({
       // ADR-349: Stretch / MStretch tool — intercepts before global shortcuts when active
       if (stretchIsActive && handleStretchKeyDown) {
         const consumed = handleStretchKeyDown(e.key);
+        if (consumed) { e.preventDefault(); return; }
+      }
+
+      // ADR-350: Trim tool — intercepts before global shortcuts when active
+      if (trimIsActive && handleTrimKeyDown) {
+        const consumed = handleTrimKeyDown(e.key, e.shiftKey);
         if (consumed) { e.preventDefault(); return; }
       }
 
@@ -203,6 +218,11 @@ export function useCanvasKeyboardShortcuts({
           // ADR-349: Stretch / MStretch tool cancel
           if (stretchIsActive && handleStretchEscape) {
             handleStretchEscape();
+            break;
+          }
+          // ADR-350: Trim tool cancel
+          if (trimIsActive && handleTrimEscape) {
+            handleTrimEscape();
             break;
           }
           // ADR-188: Escape cancels rotation tool
@@ -284,5 +304,5 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, clearEntitySelection, hasAnySelection]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, handleTrimEscape, handleTrimKeyDown, trimIsActive, clearEntitySelection, hasAnySelection, dxfGripInteraction, setDraftPolygon, setSelectedGrips]);
 }

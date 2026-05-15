@@ -10,3 +10,5 @@
 export { CreateEntityCommand } from './CreateEntityCommand';
 export { DeleteEntityCommand, DeleteMultipleEntitiesCommand } from './DeleteEntityCommand';
 export { JoinEntityCommand } from './JoinEntityCommand';
+export { TrimEntityCommand } from './TrimEntityCommand';
+export type { TrimCommandParams } from './TrimEntityCommand';

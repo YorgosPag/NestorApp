@@ -9,7 +9,6 @@ import React, { useRef, useCallback, useMemo, useEffect } from 'react';
 import { CanvasLayerStack } from './CanvasLayerStack';
 import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
 import { useCanvasContext } from '../../contexts/CanvasContext';
-import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLiveOverlaysForLevel } from '../../hooks/useLiveOverlaysForLevel';
 import { useLevels } from '../../systems/levels';
@@ -25,7 +24,7 @@ import { dwarn, derr } from '../../debug';
 import { useFloorplanBackgroundForLevel } from '../../floorplan-background';
 import { useEventBus } from '../../systems/events';
 import { useUniversalSelection } from '../../systems/selection';
-import { useCommandHistory, useCommandHistoryKeyboard, MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
+import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/commands';
 import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
   useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler,
@@ -39,11 +38,7 @@ import { useGlobalSnapSceneSync } from '../../snapping/hooks/useGlobalSnapSceneS
 // useHoveredOverlay REMOVED from orchestrator — ADR-040 Phase II micro-leaf pattern.
 // Subscription lives in DraftLayerSubscriber (canvas-layer-stack-leaves.tsx).
 import { useSpecialTools } from '../../hooks/tools';
-import { useRotationTool } from '../../hooks/tools/useRotationTool';
-import { useMoveTool } from '../../hooks/tools/useMoveTool';
-import { useMirrorTool } from '../../hooks/tools/useMirrorTool';
-import { useScaleTool } from '../../hooks/tools/useScaleTool';
-import { useStretchTool } from '../../hooks/tools/useStretchTool';
+import { useModifyTools } from '../../hooks/tools/useModifyTools';
 import { useUnifiedGripInteraction } from '../../hooks/grips/useUnifiedGripInteraction';
 import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuController';
 import { GripHoverMenu } from '../grip/GripHoverMenu';
@@ -277,29 +272,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const entityMenuRef = useRef<EntityContextMenuHandle>(null);
   const guideMenuRef = useRef<GuideContextMenuHandle>(null);
   const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
-  const rotationTool = useRotationTool({ activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
-    onToolChange: props.onToolChange as ((tool: string) => void) | undefined, currentOverlays, overlayUpdate: overlayStore.update });
-  const mirrorTool = useMirrorTool({ activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
-    onToolChange: props.onToolChange as ((tool: string) => void) | undefined });
-  const scaleTool = useScaleTool({ activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef,
-    onToolChange: props.onToolChange as ((tool: string) => void) | undefined });
-  const stretchTool = useStretchTool({ activeTool, selectedEntityIds, levelManager, executeCommand,
-    onToolChange: props.onToolChange as ((tool: string) => void) | undefined });
-  // === Move Tool (ADR-049: AutoCAD-style 2-click) ===
-  const executeOverlayMove = useCallback((ids: string[], delta: {x:number;y:number}) => { executeCommand(ids.length===1 ? new MoveOverlayCommand(ids[0],delta,overlayStore,false) : new MoveMultipleOverlaysCommand(ids,delta,overlayStore,false)); }, [overlayStore, executeCommand]);
-  const createOverlayMoveCommand = useCallback((ids: string[], delta: {x:number;y:number}) => ids.length===1 ? new MoveOverlayCommand(ids[0],delta,overlayStore,false) : new MoveMultipleOverlaysCommand(ids,delta,overlayStore,false), [overlayStore]);
-  const moveTool = useMoveTool({
-    activeTool, selectedEntityIds, selectedOverlayIds: universalSelection.getIdsByType('overlay'), levelManager, executeCommand, previewCanvasRef,
-    executeOverlayMove, createOverlayMoveCommand, onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
+  // === Modify tools (ADR-349/350 — extracted to useModifyTools for CanvasSection size budget) ===
+  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, handleRotationAnglePrompt } = useModifyTools({
+    activeTool, selectedEntityIds, levelManager, executeCommand,
+    onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
+    previewCanvasRef, transformScale: transform.scale,
+    overlayStore, universalSelection, currentOverlays,
+    overlayUpdate: overlayStore.update,
+    showPromptDialog, t,
   });
-  const handleRotationAnglePrompt = useCallback(async () => {
-    const result = await showPromptDialog({
-      title: t('promptDialog.rotationAngle'), label: t('promptDialog.enterAngle'),
-      placeholder: t('promptDialog.anglePlaceholder'), inputType: 'number', unit: '°',
-      validate: (val) => { const n = parseFloat(val); if (isNaN(n)) return t('promptDialog.invalidNumber'); return null; },
-    });
-    if (result !== null) { const angle = parseFloat(result); if (!isNaN(angle) && Math.abs(angle) > 0.001) rotationTool.handleAngleInput(angle); }
-  }, [showPromptDialog, t, rotationTool]);
 
   const { handleDrawingContextMenu } = useCanvasContextMenu({
     containerRef, activeTool, overlayMode, hasUnifiedDrawingPointsRef, draftPolygonRef,
@@ -336,6 +317,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     mirrorIsActive: mirrorTool.isCollectingInput, handleMirrorClick: mirrorTool.handleMirrorClick,
     scaleIsActive: scaleTool.isCollectingInput, handleScaleClick: scaleTool.handleScaleClick,
     stretchIsActive: stretchTool.isCollectingInput, handleStretchClick: stretchTool.handleStretchClick,
+    trimIsActive: trimTool.isActive, handleTrimClick: trimTool.handleTrimClick,
     levelManager, draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
@@ -380,18 +362,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     return { canJoin, joinResultLabel: preview?.resultType !== 'not-joinable' ? preview?.resultType : undefined };
   }, [entityJoinHook, selectedEntityIds]);
 
-  // 🚀 PERF (2026-05-09): useRotationPreview MOVED into CanvasLayerStack
-  // (subscribes to ImmediatePositionStore locally — no parent re-render).
-  // The `handleRotationMouseMove` callback now subscribes to the world
-  // position store directly instead of a useEffect that depends on a
-  // mouseWorld React state value.
-  useEffect(() => {
-    if (!rotationTool.isActive) return;
-    return subscribeToImmediateWorldPosition((pos) => {
-      if (pos) rotationTool.handleRotationMouseMove(pos);
-    });
-  }, [rotationTool.isActive, rotationTool.handleRotationMouseMove]);
-
   const handleExitDrawMode = useCallback(() => { if (overlayMode === 'draw' && setOverlayMode) setOverlayMode('select'); }, [overlayMode, setOverlayMode]);
   useCanvasKeyboardShortcuts({
     handleSmartDelete, dxfGripInteraction: unified.dxfProjection,
@@ -405,6 +375,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleMirrorConfirm: mirrorTool.handleMirrorConfirm, mirrorAwaitingConfirm: mirrorTool.phase === 'awaiting-keep-originals',
     handleScaleEscape: scaleTool.handleScaleEscape, handleScaleKeyDown: scaleTool.handleScaleKeyDown, scaleIsActive: scaleTool.isCollectingInput,
     handleStretchEscape: stretchTool.handleStretchEscape, handleStretchKeyDown: stretchTool.handleStretchKeyDown, stretchIsActive: stretchTool.isCollectingInput,
+    handleTrimEscape: trimTool.handleTrimEscape, handleTrimKeyDown: trimTool.handleTrimKeyDown, trimIsActive: trimTool.isActive,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     clearEntitySelection: () => universalSelectionRef.current.clearAll(),
   });

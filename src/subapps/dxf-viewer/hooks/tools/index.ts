@@ -39,3 +39,12 @@ export type { UseScalePreviewProps } from './useScalePreview';
 
 export { useStretchTool } from './useStretchTool';
 export type { UseStretchToolProps, UseStretchToolReturn } from './useStretchTool';
+
+export { useTrimTool } from './useTrimTool';
+export type { UseTrimToolProps, UseTrimToolReturn } from './useTrimTool';
+
+export { useTrimPreview } from './useTrimPreview';
+export type { UseTrimPreviewProps } from './useTrimPreview';
+
+export { useModifyTools } from './useModifyTools';
+export type { UseModifyToolsProps, UseModifyToolsReturn } from './useModifyTools';

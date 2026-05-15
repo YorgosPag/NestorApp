@@ -28,6 +28,7 @@ import { useGripGhostPreview } from '../../hooks/tools/useGripGhostPreview';
 import { useMirrorPreview } from '../../hooks/tools/useMirrorPreview';
 import { useScalePreview } from '../../hooks/tools/useScalePreview';
 import { useStretchPreview } from '../../hooks/tools/useStretchPreview';
+import { TrimPreviewMount } from './TrimPreviewMount';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
 import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
@@ -50,9 +51,7 @@ const _subscribeGuideStore = (cb: () => void) => _guideStore.subscribe(cb);
 const _getGuides = () => _guideStore.getGuides();
 const _getGuidesVisible = () => _guideStore.isVisible();
 
-// ============================================================================
-// SNAP INDICATOR SUBSCRIBER
-// ============================================================================
+// --- SNAP INDICATOR SUBSCRIBER ---
 
 interface SnapIndicatorSubscriberProps {
   viewport: { width: number; height: number };
@@ -273,9 +272,7 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   );
 });
 
-// ============================================================================
-// ROTATION PREVIEW MOUNT
-// ============================================================================
+// --- ROTATION PREVIEW MOUNT ---
 
 interface RotationPreviewMountProps {
   phase: import('../../hooks/tools/useRotationTool').RotationPhase;
@@ -341,9 +338,7 @@ interface GripDragPreviewMountProps {
   getViewportElement: () => HTMLElement | null;
 }
 
-// ============================================================================
-// MIRROR PREVIEW MOUNT
-// ============================================================================
+// --- MIRROR PREVIEW MOUNT ---
 
 interface MirrorPreviewMountProps {
   phase: MirrorPhase;
@@ -363,9 +358,7 @@ export const MirrorPreviewMount = React.memo(function MirrorPreviewMount(
   return null;
 });
 
-// ============================================================================
-// SCALE PREVIEW MOUNT
-// ============================================================================
+// --- SCALE PREVIEW MOUNT ---
 
 interface ScalePreviewMountProps {
   levelManager: Parameters<typeof useScalePreview>[0]['levelManager'];
@@ -429,6 +422,8 @@ interface PreviewCanvasMountsProps {
   mirror: Omit<MirrorPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   scale: Omit<ScalePreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   stretch: Omit<StretchPreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-350: TRIM overlay has no extra payload — full state lives in TrimToolStore. */
+  trim?: Record<string, never>;
   gripDragPreview: DxfGripDragPreview | null;
   selectedEntityIds: string[];
   levelManager: MovePreviewMountProps['levelManager'];
@@ -486,6 +481,11 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
+      <TrimPreviewMount
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
       <GripDragPreviewMount
         dragPreview={gripDragPreview}
         levelManager={levelManager}
@@ -496,4 +496,3 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
     </>
   );
 });
-

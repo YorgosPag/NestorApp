@@ -636,6 +636,20 @@
     "mstretchSelectFirst": "Draw 1st crossing window",
     "mstretchSelectNext": "Next crossing window or ENTER to finish"
   },
+  "trimTool": {
+    "promptPick": "Select objects to trim or [Boundary(B) / eRase(R) / Undo(U) / Mode(M) / Edge(E)]:",
+    "promptStandardEdges": "Select cutting edges or press ENTER for all:",
+    "promptExtending": "EXTEND: select objects (hold SHIFT):",
+    "modeQuick": "Mode: Quick",
+    "modeStandard": "Mode: Standard",
+    "edgeNoExtend": "Edge: No extend",
+    "edgeExtend": "Edge: Virtual extend",
+    "eraseArmed": "Next click will delete the entity",
+    "undoEmpty": "No trim to undo",
+    "hatchNotTrimmable": "Hatch cannot be trimmed. EXPLODE it first.",
+    "lockedSkipped": "{count} entities on locked layer were skipped",
+    "noIntersectionDeleted": "Entity had no intersection and was deleted"
+  },
   "gripMode": {
     "stretch": "Stretch",
     "move": "Move",

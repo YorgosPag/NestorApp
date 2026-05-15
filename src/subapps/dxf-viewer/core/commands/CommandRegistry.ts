@@ -170,6 +170,20 @@ export function registerBuiltInCommands(registry: ICommandRegistry): void {
       return new RemoveVertexCommand(data.entityId, data.vertexIndex, sceneManager);
     });
 
+    // Trim Entities (ADR-350) — single undo step per pick
+    registry.register('trim-entities', (serialized, sceneManager) => {
+      const { TrimEntityCommand } = require('./entity-commands/TrimEntityCommand');
+      const data = serialized.data as {
+        operations: ReadonlyArray<import('../../systems/trim/trim-types').TrimOperation>;
+        pickPoint: { x: number; y: number };
+        inverse: boolean;
+      };
+      return new TrimEntityCommand(
+        { operations: data.operations, pickPoint: data.pickPoint, inverse: data.inverse },
+        sceneManager,
+      );
+    });
+
     // Compound Command
     registry.register('compound', (serialized, sceneManager) => {
       const { CompoundCommand } = require('./CompoundCommand');

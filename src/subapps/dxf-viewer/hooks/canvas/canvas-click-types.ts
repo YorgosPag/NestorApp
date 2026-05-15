@@ -131,6 +131,12 @@ export interface UseCanvasClickHandlerParams {
   /** Click handler for stretch state machine */
   handleStretchClick?: (worldPoint: Point2D) => void;
 
+  // ── ADR-350: Trim tool ─────────────────────────────────────────────────
+  /** Whether the trim tool is in `picking` / `selectingEdges` phase */
+  trimIsActive?: boolean;
+  /** Click handler for trim state machine (shiftKey = inverse EXTEND, Q9) */
+  handleTrimClick?: (worldPoint: Point2D, shiftKey: boolean) => void;
+
   // ── Level / Scene ─────────────────────────────────────────────────────
   levelManager: LevelManagerLike;
 

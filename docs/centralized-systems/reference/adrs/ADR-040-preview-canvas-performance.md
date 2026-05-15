@@ -1177,3 +1177,8 @@ New `CanvasNumericInputOverlay` micro-leaf in `systems/canvas-numeric-input/Canv
 ## 2026-05-15: RulerSettings API fix — .width/.height flat access (CanvasLayerStack)
 
 Fixed `rulerSettings.vertical?.width` → `rulerSettings.width` and `rulerSettings.horizontal?.height` → `rulerSettings.height` in CrosshairOverlay margins and RulerCornerBox props. No new subscriptions added to orchestrator.
+
+
+## 2026-05-15: Trim Command — TrimPreviewMount micro-leaf + useTrimTool orchestrator hook (ADR-350 Phase 2)
+
+`TrimPreviewMount` added to `canvas-layer-stack-leaves.tsx` as a zero-JSX micro-leaf (same pattern as `StretchPreviewMount`). `useTrimPreview` runs on `TrimToolStore` state; draws hover highlight + scissor cursor indicator on PreviewCanvas. `useTrimTool` wired into `CanvasSection` (TR shortcut, click handler, ESC/keyboard). `TrimToolStore` FSM: idle→active→done. `trimPreview: Record<string, never>` optional prop added to `PreviewCanvasMountsProps`. Cardinal rules maintained: `CanvasSection` and `CanvasLayerStack` have zero direct `useSyncExternalStore` calls — all store reads isolated to `TrimPreviewMount` leaf and `useTrimTool` hook internals.

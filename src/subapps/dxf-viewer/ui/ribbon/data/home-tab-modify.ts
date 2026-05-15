@@ -171,7 +171,6 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             icon: 'trim',
             commandKey: 'trim',
             shortcut: 'TR',
-            comingSoon: true,
           },
         },
         {
@@ -298,7 +297,7 @@ export const HOME_MODIFY_EDIT_PANEL: RibbonPanelDef = {
         {
           type: 'simple',
           size: 'small',
-          command: { id: 'edit.trim', labelKey: 'ribbon.commands.trim', icon: 'trim', commandKey: 'trim', shortcut: 'TR', comingSoon: true },
+          command: { id: 'edit.trim', labelKey: 'ribbon.commands.trim', icon: 'trim', commandKey: 'trim', shortcut: 'TR' },
         },
       ],
     },

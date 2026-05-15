@@ -77,6 +77,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-349 Phase 1a: Stretch (crossing-window) + MStretch (multi-window union)
   'stretch': { id: 'stretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'mstretch': { id: 'mstretch', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-350: Trim (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)
+  'trim': { id: 'trim', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // Crop tools (window / polygon / lasso freehand)
   'crop-window': { id: 'crop-window', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'polygon-crop': { id: 'polygon-crop', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
@@ -310,7 +312,6 @@ export function useToolStateManager({
   onToolChange,
   onToolValidation
 }: ToolStateManagerOptions = {}) {
-  
   // ============================================================================
   // CORE STATE
   // ============================================================================
@@ -322,7 +323,6 @@ export function useToolStateManager({
   // ============================================================================
   // TOOL VALIDATION & CATEGORIZATION
   // ============================================================================
-  
   const getToolInfo = useCallback((tool: ToolType): ToolInfo => {
     return TOOL_DEFINITIONS[tool] || TOOL_DEFINITIONS['select'];
   }, []);

@@ -608,6 +608,20 @@
     "mstretchSelectFirst": "Σχεδιάστε 1ο crossing window",
     "mstretchSelectNext": "Επόμενο crossing window ή ENTER για ολοκλήρωση"
   },
+  "trimTool": {
+    "promptPick": "Επιλέξτε αντικείμενα προς ψαλίδισμα ή [Όρια(Ο) / Διαγραφή(Δ) / Αναίρεση(Α) / Λειτουργία(Λ) / Άκρη(Ε)]:",
+    "promptStandardEdges": "Επιλέξτε όρια ή πατήστε ENTER για όλα:",
+    "promptExtending": "ΕΠΕΚΤΑΣΗ: επιλέξτε αντικείμενα (κρατήστε SHIFT):",
+    "modeQuick": "Λειτουργία: Γρήγορη",
+    "modeStandard": "Λειτουργία: Κλασική",
+    "edgeNoExtend": "Άκρη: Χωρίς προέκταση",
+    "edgeExtend": "Άκρη: Με νοερή προέκταση",
+    "eraseArmed": "Επόμενο κλικ θα διαγράψει την οντότητα",
+    "undoEmpty": "Δεν υπάρχει αποκοπή για αναίρεση",
+    "hatchNotTrimmable": "Η σκίαση δεν είναι δυνατόν να κοπεί. Διασπάστε την πρώτα (EXPLODE).",
+    "lockedSkipped": "{count} οντότητες σε κλειδωμένο επίπεδο παραλείφθηκαν",
+    "noIntersectionDeleted": "Η οντότητα δεν είχε τομές και διαγράφηκε"
+  },
   "gripMode": {
     "stretch": "Έλξη",
     "move": "Μετακίνηση",

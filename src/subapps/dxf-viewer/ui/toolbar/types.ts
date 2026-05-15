@@ -42,6 +42,8 @@ export type ToolType =
   // ADR-349 Phase 1a: Stretch command (crossing-window displacement)
   | 'stretch'
   | 'mstretch'
+  // ADR-350: Trim command (Ψαλίδισμα — quick + standard, with SHIFT→EXTEND inverse)
+  | 'trim'
   | 'measure'
   | 'measure-distance'
   | 'measure-distance-continuous'
