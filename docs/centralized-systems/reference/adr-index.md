@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 288 ADRs | Last Updated: 2026-05-11
+**📊 Stats**: 298 ADRs | Last Updated: 2026-05-15
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 96 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 106 | [View](#uncategorized) |
 
 ---
 
@@ -323,14 +323,16 @@
 | **ADR-342** | Voice Input Field SSoT | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-342-voice-input-field-ssot.md) |
 | **ADR-343** | DXF Canvas Visual Regression Test Suite | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-343-dxf-canvas-visual-regression-suite.md) |
 | **ADR-344** | DXF Enterprise Text Engine (Autodesk-Grade Text Creation & Editing Suite) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-344-dxf-enterprise-text-engine.md) |
-| **ADR-345** | DXF Ribbon Interface (AutoCAD-style) — migrazione da floating panel | 🟡 PROPOSED | 2026-05-11 | DXF Viewer | [📄](./adrs/ADR-345-dxf-ribbon-interface.md) |
-| **ADR-346** | Auto Area Measurement — point-and-click polygon area detection | ✅ IMPLEMENTED | 2026-05-12 | DXF Viewer | [📄](./adrs/ADR-346-auto-area-measurement.md) |
-| **ADR-347** | Admin Console Sidebar | ✅ APPROVED | 2026-05-14 | DXF Viewer | [📄](./adrs/ADR-347-admin-console-sidebar.md) |
-| **ADR-348** | Scale Command (Κλιμάκωση) — uniform + non-uniform + copy + reference | ✅ IMPLEMENTED | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-348-scale-command.md) |
-| **ADR-349** | Stretch Command (Επιμήκυνση) — crossing-window deformation + MSTRETCH + grip menu | ✅ FULLY IMPLEMENTED (Phase 1a–1d) | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-349-stretch-command.md) |
-| **ADR-350** | Trim Command (Κοπή) — quick/standard mode, fence drag, SHIFT→EXTEND inverse | ✅ IMPLEMENTED | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-350-trim-command.md) |
-| **ADR-352** | File Record Sort + Wipe Completeness | ✅ IMPLEMENTED | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-352-file-record-sort.md) |
-| **ADR-353** | Extend Command (Επέκταση) — Quick/Standard modes, SHIFT→TRIM inverse, hover preview | ✅ IMPLEMENTED | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-353-extend-command.md) |
+| **ADR-345** | DXF Viewer — Ribbon Interface (AutoCAD-style) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-345-dxf-ribbon-interface.md) |
+| **ADR-346** | Auto Area Measurement (Point-and-Click) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-346-auto-area-measurement.md) |
+| **ADR-347** | Admin Console Sidebar | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-347-admin-console-sidebar.md) |
+| **ADR-348** | Scale Command (Κλιμάκωση) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-348-scale-command.md) |
+| **ADR-349** | Stretch Command (Επιμήκυνση) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-349-stretch-command.md) |
+| **ADR-350** | Trim Command (Ψαλίδισμα) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-350-trim-command.md) |
+| **ADR-351** | Firebase Storage CORS Policy | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-351-firebase-storage-cors-policy.md) |
+| **ADR-352** | FileRecord Query Ordering & Wipe Completeness | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-352-filerecord-ordering-wipe-completeness.md) |
+| **ADR-353** | Array Commands — Rectangular, Path, Polar | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-353-array-commands.md) |
+| **ADR-353** | Extend Command (Επέκταση) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-353-extend-command.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -654,6 +656,16 @@
 | **ADR-342** | Voice Input Field SSoT | ✅ APPROVED | [View](./adrs/ADR-342-voice-input-field-ssot.md) |
 | **ADR-343** | DXF Canvas Visual Regression Test Suite | ✅ APPROVED | [View](./adrs/ADR-343-dxf-canvas-visual-regression-suite.md) |
 | **ADR-344** | DXF Enterprise Text Engine (Autodesk-Grade Text Creation & Editing Suite) | ✅ APPROVED | [View](./adrs/ADR-344-dxf-enterprise-text-engine.md) |
+| **ADR-345** | DXF Viewer — Ribbon Interface (AutoCAD-style) | ✅ APPROVED | [View](./adrs/ADR-345-dxf-ribbon-interface.md) |
+| **ADR-346** | Auto Area Measurement (Point-and-Click) | ✅ APPROVED | [View](./adrs/ADR-346-auto-area-measurement.md) |
+| **ADR-347** | Admin Console Sidebar | ✅ APPROVED | [View](./adrs/ADR-347-admin-console-sidebar.md) |
+| **ADR-348** | Scale Command (Κλιμάκωση) | ✅ APPROVED | [View](./adrs/ADR-348-scale-command.md) |
+| **ADR-349** | Stretch Command (Επιμήκυνση) | ✅ APPROVED | [View](./adrs/ADR-349-stretch-command.md) |
+| **ADR-350** | Trim Command (Ψαλίδισμα) | ✅ APPROVED | [View](./adrs/ADR-350-trim-command.md) |
+| **ADR-351** | Firebase Storage CORS Policy | ✅ APPROVED | [View](./adrs/ADR-351-firebase-storage-cors-policy.md) |
+| **ADR-352** | FileRecord Query Ordering & Wipe Completeness | ✅ APPROVED | [View](./adrs/ADR-352-filerecord-ordering-wipe-completeness.md) |
+| **ADR-353** | Array Commands — Rectangular, Path, Polar | ✅ APPROVED | [View](./adrs/ADR-353-array-commands.md) |
+| **ADR-353** | Extend Command (Επέκταση) | ✅ APPROVED | [View](./adrs/ADR-353-extend-command.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
