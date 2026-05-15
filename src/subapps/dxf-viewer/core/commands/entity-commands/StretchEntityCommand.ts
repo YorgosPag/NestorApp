@@ -5,8 +5,8 @@
  *   - per-vertex captures (LINE / POLYLINE / SPLINE / ARC endpoints)
  *   - whole-entity anchor captures (CIRCLE / ELLIPSE / TEXT / INSERT / POINT)
  *
- * Single undo step reverses the entire stretch (Q11: 1 audit entry / command,
- * audit hook to be wired in Phase 1d).
+ * Single undo step reverses the entire stretch (Q11: 1 audit entry / command
+ * via IDxfTextAuditRecorder — noopAuditRecorder until Phase 7 Firestore persist).
  *
  * @see ADR-349 §Command Registration
  */
@@ -21,6 +21,7 @@ import {
 } from '../../../systems/stretch/stretch-entity-transform';
 import type { VertexRef } from '../../../systems/stretch/stretch-vertex-classifier';
 import type { Entity } from '../../../types/entities';
+import { noopAuditRecorder, type IDxfTextAuditRecorder } from '../text/types';
 
 type ReplacedEntry = { readonly oldEntity: SceneEntity; readonly newEntity: SceneEntity };
 
@@ -48,6 +49,7 @@ export class StretchEntityCommand implements ICommand {
   constructor(
     private readonly params: StretchParams,
     private readonly sceneManager: ISceneManager,
+    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
@@ -86,6 +88,21 @@ export class StretchEntityCommand implements ICommand {
     }
 
     this.wasExecuted = this.entitySnapshots.size > 0;
+    if (this.wasExecuted) {
+      const { x, y } = this.params.displacement;
+      this.auditRecorder.record({
+        entityId: this.id,
+        action: 'updated',
+        changes: [
+          { field: 'op', oldValue: null, newValue: 'stretch' },
+          { field: 'displacement', oldValue: { x: 0, y: 0 }, newValue: { x, y } },
+          { field: 'affectedEntityIds', oldValue: null, newValue: this.getAffectedEntityIds() },
+          { field: 'affectedEntityCount', oldValue: null, newValue: this.entitySnapshots.size },
+        ],
+        commandName: this.name,
+        timestamp: Date.now(),
+      });
+    }
   }
 
   undo(): void {
@@ -101,6 +118,17 @@ export class StretchEntityCommand implements ICommand {
         this.sceneManager.updateEntity(entityId, geometry);
       }
     }
+    const { x, y } = this.params.displacement;
+    this.auditRecorder.record({
+      entityId: this.id,
+      action: 'updated',
+      changes: [
+        { field: 'op', oldValue: null, newValue: 'stretch-undo' },
+        { field: 'displacement', oldValue: { x, y }, newValue: { x: -x, y: -y } },
+      ],
+      commandName: this.name,
+      timestamp: Date.now(),
+    });
   }
 
   redo(): void {
@@ -122,6 +150,19 @@ export class StretchEntityCommand implements ICommand {
       const updates = translateEntityByAnchor(snapshot as unknown as Entity, displacement);
       if (Object.keys(updates).length > 0) this.sceneManager.updateEntity(entityId, updates);
     }
+    const { x, y } = displacement;
+    this.auditRecorder.record({
+      entityId: this.id,
+      action: 'updated',
+      changes: [
+        { field: 'op', oldValue: null, newValue: 'stretch' },
+        { field: 'displacement', oldValue: { x: 0, y: 0 }, newValue: { x, y } },
+        { field: 'affectedEntityIds', oldValue: null, newValue: this.getAffectedEntityIds() },
+        { field: 'affectedEntityCount', oldValue: null, newValue: this.entitySnapshots.size },
+      ],
+      commandName: this.name,
+      timestamp: Date.now(),
+    });
   }
 
   getDescription(): string {

@@ -28,9 +28,14 @@ export function drawGhostEntity(
   transform: ViewTransform,
   viewport: Viewport,
 ): void {
+  // Imported DXF may carry runtime type 'mtext' — treat it as 'text' for ghost rendering.
+  if ((entity as { type: string }).type === 'mtext') {
+    return drawGhostEntity(ctx, { ...entity, type: 'text' } as unknown as DxfEntityUnion, transform, viewport);
+  }
+
   const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, transform, viewport);
 
-  switch (entity.type as DxfEntityUnion['type'] | 'mtext') {
+  switch (entity.type) {
     case 'line': {
       const s = toScreen(entity.start);
       const e = toScreen(entity.end);
@@ -77,8 +82,7 @@ export function drawGhostEntity(
       return;
     }
 
-    case 'text':
-    case 'mtext': {
+    case 'text': {
       // Cast wide: imported entities carry flat `.text`, while TEXT-tool entities
       // carry only `.textNode` (Phase 6.E AST) — flatten both for the ghost.
       const e = entity as DxfEntityUnion & {

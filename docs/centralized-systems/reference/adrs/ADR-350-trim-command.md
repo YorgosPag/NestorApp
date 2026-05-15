@@ -1,6 +1,6 @@
 # ADR-350: Trim Command (Ψαλίδισμα)
 
-**Status:** 📝 DRAFT v0.1 — Phase 1 (recognition/Q&A in progress)
+**Status:** ✅ Phase 1 COMPLETE (recognition + Q&A 18/18 resolved). Ready for Phase 2 (implementation).
 **Date:** 2026-05-15
 **Domain:** DXF Viewer — Modify Tools
 **Shortcut:** `TR` (matches AutoCAD)
@@ -383,14 +383,14 @@ Captured via existing `useCanvasKeyHandler`. Single-letter keywords:
 | Q8 | Polyline tapered → preserva taper (industry std AutoCAD), oppure scarta taper (BricsCAD older)? | ✅ AUTO 2026-05-15 (industry convergence 5/5) | **Preserva taper**: width adjusted per AutoCAD docs ("width of the extended end is corrected to continue the original taper"). Se impossibile → 0 width point. Implementato in `trim-entity-cutter.ts::trimPolyline`. |
 | Q9 | SHIFT+click → invoca EXTEND inverso (industry std 5/5) — Phase 1 ή differire a ADR EXTEND? | ✅ DECIDED 2026-05-15 | **Phase 1**: SHIFT+click entro TRIM → EXTEND inverso. Math simmetrico (TRIM rimuove sub-segmento al pick, EXTEND aggiunge sub-segmento dal endpoint più vicino al cutting edge). Stesso `trim-entity-cutter.ts` espone funzioni `extendLine/Arc/Polyline/...`. `TrimEntityCommand` riusato con `kind: 'extend'` operation type. **EXTEND command standalone resta TBD in futuro ADR** ma il SHIFT+click in TRIM è coperto qui. |
 | Q10 | Undo granularità: **1 undo step per pick** (industry std AutoCAD) ή **1 undo step per intera sessione TRIM** (più atomico)? | ✅ DECIDED 2026-05-15 | **1 undo step per pick** — ogni click conferma genera `TrimEntityCommand` separato in `CommandHistory`. Ctrl+Z reverses last pick. Industry std 5/5. |
-| Q11 | Audit trail (CHECK 3.17): **1 entry per pick** ή **1 entry per sessione** (compact)? | ⏸️ pending | — |
-| Q12 | Locked-layer entities: **silent skip** (industry std) ή toast informativo? | ⏸️ pending | — |
-| Q13 | Project mode Phase 1: **solo UCS** (2D viewer, default) ή esponi anche None/View come opzioni keyword? | ⏸️ pending | — |
+| Q11 | Audit trail (CHECK 3.17): **1 entry per pick** ή **1 entry per sessione** (compact)? | ✅ AUTO 2026-05-15 (consequenza Q10) | **1 entry per pick** — segue il pattern Q10 (1 undo step per pick). Audit payload: `{ op: 'trim'\|'extend', pickPoint, affectedEntityIds, operations: TrimOperation[] }`. |
+| Q12 | Locked-layer entities: **silent skip** (industry std) ή toast informativo? | ✅ DECIDED 2026-05-15 | **Silent skip** — industry std 5/5. Riusa pattern `filterLockedEntities` da `useStretchTool.ts`. Promuovere a helper SSoT se duplicato. |
+| Q13 | Project mode Phase 1: **solo UCS** (2D viewer, default) ή esponi anche None/View come opzioni keyword? | ✅ AUTO 2026-05-15 | **Solo UCS** — Phase 1 il viewer è 2D-only (matches ADR-349 Q7 stretch). `PROJMODE=1` hardcoded. Future 3D = separate ADR. Keyword `Π`/`P` non esposto. |
 | Q14 | Cursor durante TRIM: **pickbox classico** AutoCAD (piccolo quadrato) ή **crosshair + scissor icon**? | ✅ DECIDED 2026-05-15 | **Pickbox + scissor icon** (icona forbici 12×12px attaccata al pickbox). Inverte automaticamente in icona di freccia-EXTEND quando SHIFT è premuto. SVG inline, reuses cursor SSoT (`systems/cursor/`). |
 | Q15 | Greek command label: **"Αποκοπή"** (esistente nei locale planning) ή alternativa "Κοπή"/"Ψαλίδι"? | ✅ DECIDED 2026-05-15 | **"Ψαλίδισμα"** — scelta di Giorgio (custom). Locale key `ribbon.commands.trim = "Ψαλίδισμα"`. Aggiornare ADR-345 e tutti i riferimenti che dicevano "Αποκοπή". |
-| Q16 | Ribbon "small button" duplicato a `home-tab-modify.ts:301` — tienilo (boy-scout) ή rimuovilo? | ⏸️ pending | — |
-| Q17 | TR shortcut a casi-base: **istantaneo TR↵** ή solo da ribbon? | ⏸️ pending | — |
-| Q18 | Snap engine durante pick: **tutti i snap attivi** (endpoint/midpoint/intersection/nearest) ή **solo nearest-on-curve** (più predicibile)? | ⏸️ pending | — |
+| Q16 | Ribbon "small button" duplicato a `home-tab-modify.ts:301` — tienilo (boy-scout) ή rimuovilo? | ✅ DECIDED 2026-05-15 | **Tieni** — boy-scout, utenti con schermi piccoli usano il flyout. Flip `comingSoon: false` su entrambi i buttons (linea 169-174 + 301). |
+| Q17 | TR shortcut a casi-base: **istantaneo TR↵** ή solo da ribbon? | ✅ DECIDED 2026-05-15 | **Istantaneo TR** dal vuoto canvas → attiva trim immediatamente (industry std 5/5 AutoCAD/BricsCAD/ZWCAD/GstarCAD/progeCAD). Wired via `config/keyboard-shortcuts.ts` esistente SSoT. |
+| Q18 | Snap engine durante pick: **tutti i snap attivi** (endpoint/midpoint/intersection/nearest) ή **solo nearest-on-curve** (più predicibile)? | ✅ DECIDED 2026-05-15 | **Solo nearest-on-entity** — più prevedibile per la decisione "quale lato tagliare". Pattern AutoCAD per TRIM. Snap engine viene chiamato con `enabledTypes: ['nearest']` overrida user setting per la sessione TRIM. |
 
 ---
 
@@ -441,3 +441,5 @@ Captured via existing `useCanvasKeyHandler`. Single-letter keywords:
 | 2026-05-15 | Q10 decided: Undo granularità = **1 step per pick** (industry std). |
 | 2026-05-15 | Q14 decided: Cursor = **pickbox + scissor icon** (auto-toggles a freccia-EXTEND con SHIFT). |
 | 2026-05-15 | Q15 decided: Greek label = **"Ψαλίδισμα"** (custom). |
+| 2026-05-15 | Q11 auto: audit = 1 entry per pick. Q12 silent skip locked. Q13 solo UCS. Q16 tieni small button. Q17 TR istantaneo. Q18 nearest-only snap. |
+| 2026-05-15 | **Phase 1 (recognition + Q&A) COMPLETED.** 18/18 Q&A resolved. Ready for Phase 2 (implementation). |
