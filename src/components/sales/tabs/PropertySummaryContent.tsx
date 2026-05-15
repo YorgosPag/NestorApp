@@ -93,7 +93,7 @@ export function PropertySummaryContent({ data: unit }: PropertySummaryContentPro
               icon={Home}
               iconColor="text-teal-600"
               label={t('sales.unitSummary.type')}
-              value={t(`sales.unitTypes.${unit.type}`)}
+              value={tProps(`types.${unit.type}`)}
             />
             <SummaryField
               icon={Maximize2}
