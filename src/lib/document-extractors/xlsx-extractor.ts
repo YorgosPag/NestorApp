@@ -7,7 +7,7 @@ import ExcelJS from 'exceljs';
  */
 export async function extractTextFromXlsx(buffer: Buffer): Promise<string> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as unknown as Buffer);
+  await workbook.xlsx.load(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as unknown as Buffer);
 
   const lines: string[] = [];
 
