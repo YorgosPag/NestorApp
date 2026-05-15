@@ -15,6 +15,7 @@ import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { isRoleBypass } from '@/lib/auth/roles';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { CompanyDocument } from '@/types/company';
 
@@ -84,9 +85,20 @@ export function SuperAdminCompanyProvider({ children }: { children: React.ReactN
   }, [isSuperAdmin]);
 
   const setActiveCompanyId = useCallback((id: string) => {
+    // eslint-disable-next-line no-console
+    console.log('[SACtx] setActiveCompanyId called', { newId: id });
     setActiveCompanyIdState(id);
     localStorage.setItem(STORAGE_KEY, id);
   }, []);
+
+  // Propagate selection to apiClient singleton so every authenticated API call
+  // sends X-Super-Admin-Company-Id header. Server's buildRequestContext reads it
+  // and overrides ctx.companyId for bypass roles (ADR-354).
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('[SACtx] propagate effect', { isSuperAdmin, activeCompanyId });
+    apiClient.setSuperAdminCompanyId(isSuperAdmin ? activeCompanyId : null);
+  }, [isSuperAdmin, activeCompanyId]);
 
   return (
     <SuperAdminCompanyContext.Provider value={{ isSuperAdmin, activeCompanyId, companies, loading, setActiveCompanyId }}>

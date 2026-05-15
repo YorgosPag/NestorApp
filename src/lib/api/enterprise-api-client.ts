@@ -59,12 +59,17 @@ export class EnterpriseApiClient {
   private static instance: EnterpriseApiClient;
   private currentUser: FirebaseUser | null = null;
   private tokenCache: { token: string; expiresAt: number } | null = null;
+  private superAdminCompanyId: string | null = null;
 
   static getInstance(): EnterpriseApiClient {
     if (!EnterpriseApiClient.instance) {
       EnterpriseApiClient.instance = new EnterpriseApiClient();
     }
     return EnterpriseApiClient.instance;
+  }
+
+  setSuperAdminCompanyId(id: string | null): void {
+    this.superAdminCompanyId = id;
   }
 
   private constructor() {
@@ -208,6 +213,9 @@ export class EnterpriseApiClient {
     if (!skipAuth) {
       const token = await this.getIdToken();
       headers['Authorization'] = `Bearer ${token}`;
+      if (this.superAdminCompanyId) {
+        headers['X-Super-Admin-Company-Id'] = this.superAdminCompanyId;
+      }
     }
 
     return headers;

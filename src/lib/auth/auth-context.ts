@@ -32,8 +32,27 @@ import type {
 import { isValidGlobalRole } from './types';
 import { getDevCompanyId } from '@/config/dev-environment';
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('auth-context');
+
+const SUPER_ADMIN_COMPANY_HEADER = 'x-super-admin-company-id';
+
+function resolveEffectiveCompanyId(
+  request: NextRequest,
+  claims: CustomClaims,
+  uid: string,
+): string {
+  if (!isRoleBypass(claims.globalRole)) return claims.companyId;
+  const override = request.headers.get(SUPER_ADMIN_COMPANY_HEADER);
+  if (!override || typeof override !== 'string' || override === claims.companyId) {
+    return claims.companyId;
+  }
+  logger.info('[AUTH_CONTEXT] Super admin company override', {
+    uid, original: claims.companyId, override,
+  });
+  return override;
+}
 
 // =============================================================================
 // CONSTANTS
@@ -229,7 +248,7 @@ export async function buildRequestContext(
     return {
       uid: decodedToken.uid,
       email: decodedToken.email || '',
-      companyId: claims.companyId,
+      companyId: resolveEffectiveCompanyId(request, claims, decodedToken.uid),
       globalRole: claims.globalRole,
       mfaEnrolled: claims.mfaEnrolled ?? false,
       isAuthenticated: true,
@@ -253,7 +272,7 @@ export async function buildRequestContext(
     return {
       uid: decodedToken.uid,
       email: decodedToken.email || '',
-      companyId: claims.companyId,
+      companyId: resolveEffectiveCompanyId(request, claims, decodedToken.uid),
       globalRole: claims.globalRole,
       mfaEnrolled: claims.mfaEnrolled ?? false,
       isAuthenticated: true,
