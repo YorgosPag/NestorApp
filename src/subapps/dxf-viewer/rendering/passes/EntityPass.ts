@@ -1,5 +1,5 @@
 /**
- * ENTITY PASS - Render των DXF entities με batching optimization
+ * ENTITY PASS - Render των DXF entities με batching optimization — DEADCODE
  * ✅ ΦΑΣΗ 4: Δεύτερη φάση του render pipeline με batch processing
  */
 

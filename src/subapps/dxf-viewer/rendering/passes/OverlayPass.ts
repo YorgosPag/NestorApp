@@ -1,5 +1,5 @@
 /**
- * OVERLAY PASS - Render των UI elements (grips, selection, cursors)
+ * OVERLAY PASS - Render των UI elements (grips, selection, cursors) — DEADCODE
  * ✅ ΦΑΣΗ 4: Τρίτη φάση του render pipeline για overlay elements
  */
 

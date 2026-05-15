@@ -1,5 +1,5 @@
 /**
- * BACKGROUND PASS - Render του background (grid, rulers, coordinate system)
+ * BACKGROUND PASS - Render του background (grid, rulers, coordinate system) — DEADCODE
  * ✅ ΦΑΣΗ 4: Πρώτη φάση του render pipeline
  */
 

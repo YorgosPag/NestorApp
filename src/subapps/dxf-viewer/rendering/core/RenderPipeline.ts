@@ -1,5 +1,5 @@
 /**
- * RENDER PIPELINE - Οργανωμένες render passes για βέλτιστη απόδοση
+ * RENDER PIPELINE - Οργανωμένες render passes για βέλτιστη απόδοση — DEADCODE
  * ✅ ΦΑΣΗ 4: 3-Pass rendering system με batching optimization
  */
 
