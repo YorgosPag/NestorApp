@@ -15,6 +15,7 @@ import { useStretchTool } from './useStretchTool';
 import { useTrimTool } from './useTrimTool';
 import { useExtendTool } from './useExtendTool';
 import { useArrayTool } from './useArrayTool';
+import { useArrayPolarTool } from './useArrayPolarTool';
 import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { distanceToEntity } from '../../utils/entity-distance';
@@ -105,19 +106,25 @@ export function useModifyTools({
   });
 
   // ADR-353 Phase A — Rectangular Array (single-shot from pre-selection).
+  const replaceWithArrayId = useCallback(
+    (ids: string[]) => {
+      setSelectedEntityIds(ids);
+      universalSelection.clearByType('dxf-entity');
+      if (ids.length > 0) universalSelection.select(ids[0], 'dxf-entity');
+    },
+    [setSelectedEntityIds, universalSelection],
+  );
+
   const arrayTool = useArrayTool({
-    activeTool,
-    selectedEntityIds,
-    levelManager,
-    executeCommand,
-    setSelectedEntityIds: useCallback(
-      (ids: string[]) => {
-        setSelectedEntityIds(ids);
-        universalSelection.clearByType('dxf-entity');
-        if (ids.length > 0) universalSelection.select(ids[0], 'dxf-entity');
-      },
-      [setSelectedEntityIds, universalSelection],
-    ),
+    activeTool, selectedEntityIds, levelManager, executeCommand,
+    setSelectedEntityIds: replaceWithArrayId,
+    onToolChange,
+  });
+
+  // ADR-353 Phase B — Polar Array (pre-select sources → click centre → create).
+  const arrayPolarTool = useArrayPolarTool({
+    activeTool, selectedEntityIds, levelManager, executeCommand,
+    setSelectedEntityIds: replaceWithArrayId,
     onToolChange,
   });
 
@@ -182,6 +189,7 @@ export function useModifyTools({
     trimTool,
     extendTool,
     arrayTool,
+    arrayPolarTool,
     handleRotationAnglePrompt,
   };
 }

@@ -331,6 +331,7 @@
       "editor": "Εργαλεία Επεξεργαστή",
       "arrayGeometry": "Γεωμετρία",
       "arraySpacing": "Αποστάσεις",
+      "arrayOptions": "Επιλογές",
       "arrayActions": "Ενέργειες",
       "placeholder": "Σε φάση ανάπτυξης",
       "history": "Ιστορικό",
@@ -496,7 +497,14 @@
         "colSpacing": "Απόσταση Στηλών",
         "editSource": "Επεξεργασία Πηγής",
         "explode": "Διάλυση",
-        "close": "Κλείσιμο"
+        "close": "Κλείσιμο",
+        "polarCount": "Αντικείμενα",
+        "polarFillAngle": "Γωνία Πλήρωσης",
+        "polarStartAngle": "Γωνία Εκκίνησης",
+        "polarRadius": "Ακτίνα",
+        "polarRotateItems": "Περιστροφή Αντικειμένων",
+        "polarPickCenter": "Επιλογή Κέντρου",
+        "centerPickPrompt": "Κάνε κλικ για το κέντρο του πολικού πίνακα"
       },
       "measureAngle": "Γωνία",
       "measureAngleVariants": {

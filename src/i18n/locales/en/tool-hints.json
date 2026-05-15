@@ -664,7 +664,8 @@
   },
   "arrayTool": {
     "needsSelection": "Select entities first, then activate Array.",
-    "nestedForbidden": "Nested arrays are not allowed."
+    "nestedForbidden": "Nested arrays are not allowed.",
+    "pickCenter": "Click to set the polar array center."
   },
   "gripMode": {
     "stretch": "Stretch",

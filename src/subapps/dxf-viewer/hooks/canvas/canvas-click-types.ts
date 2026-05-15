@@ -143,6 +143,12 @@ export interface UseCanvasClickHandlerParams {
   /** Click handler for extend state machine (shiftKey = inverse TRIM, Q4) */
   handleExtendClick?: (worldPoint: Point2D, shiftKey: boolean) => void;
 
+  // ── ADR-353 Phase B: Polar Array tool ──────────────────────────────────
+  /** Whether the polar Array tool is awaiting the centre-pick click */
+  arrayPolarIsActive?: boolean;
+  /** Click handler for the polar centre-pick state machine */
+  handleArrayPolarClick?: (worldPoint: Point2D) => void;
+
   // ── Level / Scene ─────────────────────────────────────────────────────
   levelManager: LevelManagerLike;
 

@@ -1,12 +1,19 @@
 /**
- * ARRAY STORE — ADR-353 Session A2
+ * ARRAY STORE — ADR-353 Sessions A2 + B2
  *
  * Module-level pub/sub store for ephemeral Array tool state.
  * Zero React state — mirrors TrimToolStore / ExtendToolStore pattern (ADR-040).
  *
  * State:
- *   inProgressParams  — params being edited during array creation (null = not creating)
- *   editSourceArrayId — ID of the array whose source is currently being edited (null = not editing)
+ *   inProgressParams      — params being edited during array creation/edit
+ *                           (null = not editing). Used by the ribbon bridge to
+ *                           expose the just-typed value before the scene
+ *                           mutation propagates back.
+ *   editSourceArrayId     — ID of the array whose source is currently being
+ *                           edited (null = not editing).
+ *   pickingCenterArrayId  — ID of the polar array currently in
+ *                           interactive-center-pick mode (Phase B re-pick from
+ *                           the ribbon "Pick Center" button). Null = idle.
  */
 
 import type { ArrayParams } from './types';
@@ -16,11 +23,13 @@ import type { ArrayParams } from './types';
 export interface ArrayStoreState {
   readonly inProgressParams: ArrayParams | null;
   readonly editSourceArrayId: string | null;
+  readonly pickingCenterArrayId: string | null;
 }
 
 const INITIAL: ArrayStoreState = {
   inProgressParams: null,
   editSourceArrayId: null,
+  pickingCenterArrayId: null,
 };
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -61,6 +70,14 @@ export const ArrayStore = {
 
   clearEditSourceArrayId(): void {
     _patch({ editSourceArrayId: null });
+  },
+
+  setPickingCenterArrayId(id: string): void {
+    _patch({ pickingCenterArrayId: id });
+  },
+
+  clearPickingCenterArrayId(): void {
+    _patch({ pickingCenterArrayId: null });
   },
 
   reset(): void {

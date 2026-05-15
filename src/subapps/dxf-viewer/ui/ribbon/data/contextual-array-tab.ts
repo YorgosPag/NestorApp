@@ -1,25 +1,33 @@
 /**
- * ADR-353 Phase A (Session A4) — Contextual ribbon tab: ARRAY EDITOR.
+ * ADR-353 Phase A (Session A4) + Phase B (Session B2) — Contextual ribbon
+ * tabs for the Array editor. Two siblings, picked by `params.kind`:
  *
- * Auto-opens when the primary selection is an ArrayEntity (Q17). Three
- * panels:
- *   - Geometry  → rows / cols / angle (numeric comboboxes with industry
- *     defaults; free-typed values auto-inject as first option).
- *   - Spacing   → row spacing / col spacing.
- *   - Actions   → edit source / explode / close.
+ *   - ARRAY-RECT  (`array-rect-selected` trigger)
+ *       Geometry  → rows / cols / angle
+ *       Spacing   → row spacing / col spacing
+ *       Actions   → edit source / explode / close
+ *
+ *   - ARRAY-POLAR (`array-polar-selected` trigger)
+ *       Geometry  → count / fillAngle / startAngle / radius
+ *       Options   → rotateItems toggle / pick-center action
+ *       Actions   → edit source / explode / close
  *
  * Live preview: bridge dispatches `UpdateArrayParamsCommand` on each
  * change with `isDragging=true` so the command stack merges rapid edits
  * into a single undo step (UpdateArrayParamsCommand.canMergeWith).
  *
- * Trigger token: 'array-selected' — DxfViewerContent flips
- * `activeContextualTrigger` based on `primarySelectedId.type === 'array'`.
+ * Trigger tokens are dispatched by DxfViewerContent based on
+ * `primarySelectedId.params.kind`.
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { ARRAY_RIBBON_KEYS } from '../hooks/bridge/array-command-keys';
 
-export const ARRAY_CONTEXTUAL_TRIGGER = 'array-selected';
+export const ARRAY_RECT_CONTEXTUAL_TRIGGER = 'array-rect-selected';
+export const ARRAY_POLAR_CONTEXTUAL_TRIGGER = 'array-polar-selected';
+
+/** @deprecated Phase A alias — use {@link ARRAY_RECT_CONTEXTUAL_TRIGGER}. */
+export const ARRAY_CONTEXTUAL_TRIGGER = ARRAY_RECT_CONTEXTUAL_TRIGGER;
 
 const COUNT_OPTIONS = [
   { value: '1', labelKey: '1', isLiteralLabel: true },
@@ -52,11 +60,38 @@ const SPACING_OPTIONS = [
   { value: '250', labelKey: '250', isLiteralLabel: true },
 ] as const;
 
-export const CONTEXTUAL_ARRAY_TAB: RibbonTab = {
-  id: 'array-editor',
+const FILL_ANGLE_OPTIONS = [
+  { value: '360', labelKey: '360°', isLiteralLabel: true },
+  { value: '270', labelKey: '270°', isLiteralLabel: true },
+  { value: '180', labelKey: '180°', isLiteralLabel: true },
+  { value: '90', labelKey: '90°', isLiteralLabel: true },
+  { value: '-90', labelKey: '-90°', isLiteralLabel: true },
+  { value: '-180', labelKey: '-180°', isLiteralLabel: true },
+  { value: '-360', labelKey: '-360°', isLiteralLabel: true },
+] as const;
+
+const START_ANGLE_OPTIONS = [
+  { value: '0', labelKey: '0°', isLiteralLabel: true },
+  { value: '45', labelKey: '45°', isLiteralLabel: true },
+  { value: '90', labelKey: '90°', isLiteralLabel: true },
+  { value: '180', labelKey: '180°', isLiteralLabel: true },
+  { value: '270', labelKey: '270°', isLiteralLabel: true },
+] as const;
+
+const RADIUS_OPTIONS = [
+  { value: '0', labelKey: 'auto', isLiteralLabel: true },
+  { value: '50', labelKey: '50', isLiteralLabel: true },
+  { value: '100', labelKey: '100', isLiteralLabel: true },
+  { value: '250', labelKey: '250', isLiteralLabel: true },
+  { value: '500', labelKey: '500', isLiteralLabel: true },
+  { value: '1000', labelKey: '1000', isLiteralLabel: true },
+] as const;
+
+export const CONTEXTUAL_ARRAY_RECT_TAB: RibbonTab = {
+  id: 'array-editor-rect',
   labelKey: 'ribbon.tabs.arrayEditor',
   isContextual: true,
-  contextualTrigger: ARRAY_CONTEXTUAL_TRIGGER,
+  contextualTrigger: ARRAY_RECT_CONTEXTUAL_TRIGGER,
   panels: [
     {
       id: 'array-geometry',
@@ -135,49 +170,153 @@ export const CONTEXTUAL_ARRAY_TAB: RibbonTab = {
         },
       ],
     },
+    ARRAY_ACTIONS_PANEL('rect'),
+  ],
+};
+
+/** @deprecated Phase A alias — use {@link CONTEXTUAL_ARRAY_RECT_TAB}. */
+export const CONTEXTUAL_ARRAY_TAB = CONTEXTUAL_ARRAY_RECT_TAB;
+
+export const CONTEXTUAL_ARRAY_POLAR_TAB: RibbonTab = {
+  id: 'array-editor-polar',
+  labelKey: 'ribbon.tabs.arrayEditor',
+  isContextual: true,
+  contextualTrigger: ARRAY_POLAR_CONTEXTUAL_TRIGGER,
+  panels: [
     {
-      id: 'array-actions',
-      labelKey: 'ribbon.panels.arrayActions',
+      id: 'array-polar-geometry',
+      labelKey: 'ribbon.panels.arrayGeometry',
       rows: [
         {
           isInFlyout: false,
           buttons: [
             {
-              type: 'simple',
+              type: 'combobox',
               size: 'small',
               command: {
-                id: 'array.editSource',
-                labelKey: 'ribbon.commands.arrayEditor.editSource',
-                icon: 'grip-edit',
-                commandKey: 'array-edit-source',
-                action: 'array-edit-source',
+                id: 'array.polarCount',
+                labelKey: 'ribbon.commands.arrayEditor.polarCount',
+                commandKey: ARRAY_RIBBON_KEYS.params.polarCount,
+                comboboxWidthPx: 80,
+                options: COUNT_OPTIONS,
               },
             },
             {
-              type: 'simple',
+              type: 'combobox',
               size: 'small',
               command: {
-                id: 'array.explode',
-                labelKey: 'ribbon.commands.arrayEditor.explode',
-                icon: 'explode',
-                commandKey: 'array-explode',
-                action: 'array-explode',
+                id: 'array.polarFillAngle',
+                labelKey: 'ribbon.commands.arrayEditor.polarFillAngle',
+                commandKey: ARRAY_RIBBON_KEYS.params.polarFillAngle,
+                comboboxWidthPx: 90,
+                options: FILL_ANGLE_OPTIONS,
               },
             },
             {
-              type: 'simple',
+              type: 'combobox',
               size: 'small',
               command: {
-                id: 'array.close',
-                labelKey: 'ribbon.commands.arrayEditor.close',
-                icon: 'select',
-                commandKey: 'array-close-tab',
-                action: 'array-close-tab',
+                id: 'array.polarStartAngle',
+                labelKey: 'ribbon.commands.arrayEditor.polarStartAngle',
+                commandKey: ARRAY_RIBBON_KEYS.params.polarStartAngle,
+                comboboxWidthPx: 90,
+                options: START_ANGLE_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'array.polarRadius',
+                labelKey: 'ribbon.commands.arrayEditor.polarRadius',
+                commandKey: ARRAY_RIBBON_KEYS.params.polarRadius,
+                comboboxWidthPx: 100,
+                options: RADIUS_OPTIONS,
               },
             },
           ],
         },
       ],
     },
+    {
+      id: 'array-polar-options',
+      labelKey: 'ribbon.panels.arrayOptions',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'array.polarRotateItems',
+                labelKey: 'ribbon.commands.arrayEditor.polarRotateItems',
+                icon: 'rotate',
+                commandKey: ARRAY_RIBBON_KEYS.toggles.polarRotateItems,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'array.polarPickCenter',
+                labelKey: 'ribbon.commands.arrayEditor.polarPickCenter',
+                icon: 'select',
+                commandKey: ARRAY_RIBBON_KEYS.actions.polarPickCenter,
+                action: ARRAY_RIBBON_KEYS.actions.polarPickCenter,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    ARRAY_ACTIONS_PANEL('polar'),
   ],
 };
+
+function ARRAY_ACTIONS_PANEL(variant: 'rect' | 'polar'): RibbonTab['panels'][number] {
+  return {
+    id: `array-actions-${variant}`,
+    labelKey: 'ribbon.panels.arrayActions',
+    rows: [
+      {
+        isInFlyout: false,
+        buttons: [
+          {
+            type: 'simple',
+            size: 'small',
+            command: {
+              id: `array.editSource.${variant}`,
+              labelKey: 'ribbon.commands.arrayEditor.editSource',
+              icon: 'grip-edit',
+              commandKey: 'array-edit-source',
+              action: 'array-edit-source',
+            },
+          },
+          {
+            type: 'simple',
+            size: 'small',
+            command: {
+              id: `array.explode.${variant}`,
+              labelKey: 'ribbon.commands.arrayEditor.explode',
+              icon: 'explode',
+              commandKey: 'array-explode',
+              action: 'array-explode',
+            },
+          },
+          {
+            type: 'simple',
+            size: 'small',
+            command: {
+              id: `array.close.${variant}`,
+              labelKey: 'ribbon.commands.arrayEditor.close',
+              icon: 'select',
+              commandKey: 'array-close-tab',
+              action: 'array-close-tab',
+            },
+          },
+        ],
+      },
+    ],
+  };
+}

@@ -24,6 +24,14 @@ import { useCommandHistory } from '../../../core/commands';
 import { ExplodeArrayCommand } from '../../../core/commands/entity-commands/ExplodeArrayCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { enterEditSource } from '../../../systems/array/array-edit-source-mode';
+import {
+  enterCenterPickMode,
+  exitCenterPickMode,
+  getPickingCenterArrayId,
+} from '../../../systems/array/polar-center-pick-controller';
+import { ARRAY_RIBBON_KEYS } from './bridge/array-command-keys';
+import { toolHintOverrideStore } from '../../../hooks/toolHintOverrideStore';
+import i18next from 'i18next';
 import { isArrayEntity } from '../../../types/entities';
 import type { useLevels } from '../../../systems/levels';
 import type { useUniversalSelection } from '../../../systems/selection';
@@ -64,7 +72,8 @@ export function useArrayRibbonActions(
       if (
         action !== 'array-explode' &&
         action !== 'array-edit-source' &&
-        action !== 'array-close-tab'
+        action !== 'array-close-tab' &&
+        action !== ARRAY_RIBBON_KEYS.actions.polarPickCenter
       ) {
         fallback(action, data);
         return;
@@ -107,6 +116,21 @@ export function useArrayRibbonActions(
 
       if (action === 'array-edit-source') {
         enterEditSource(entity.id, sm);
+        return;
+      }
+
+      if (action === ARRAY_RIBBON_KEYS.actions.polarPickCenter) {
+        if (entity.params.kind !== 'polar') return;
+        // Toggle: re-clicking the button while picking cancels pick mode.
+        if (getPickingCenterArrayId() === entity.id) {
+          exitCenterPickMode();
+          toolHintOverrideStore.setOverride(null);
+          return;
+        }
+        enterCenterPickMode(entity.id);
+        toolHintOverrideStore.setOverride(
+          i18next.t('tool-hints:arrayTool.pickCenter'),
+        );
         return;
       }
     },

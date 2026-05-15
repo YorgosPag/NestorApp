@@ -61,6 +61,10 @@ import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 import { useTextCreationTool } from '../../hooks/canvas/useTextCreationTool';
 import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import {
+  applyCenterPick as applyPolarCenterPick,
+  getPickingCenterArrayId as getPolarPickingArrayId,
+} from '../../systems/array/polar-center-pick-controller';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
@@ -178,12 +182,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
   });
   const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement } = useSpecialTools({ activeTool, levelManager });
-
   // === Cursor + touch gestures ===
   const { updatePosition, setActive } = useCursorActions();
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
   useTouchGestures({ targetRef: containerRef, enabled: canvasLayoutMode !== 'desktop', activeTool, transform, setTransform: contextSetTransform });
-
   // === Mouse event handling ===
   // 🚀 PERF (2026-05-09): mouseCss / mouseWorld React state REMOVED.
   // SSoT lives in ImmediatePositionStore — see ADR-040.
@@ -208,7 +210,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
     draggingGuide, setDraggingGuide, onGuideDragComplete: handleGuideDragComplete,
   });
-
   // === Guide tool workflows ===
   // 🚀 PERF (2026-05-09): mouseWorld removed — `useGuideWorkflowComputed` now
   // runs inside CanvasLayerStack and subscribes to ImmediatePositionStore.
@@ -269,14 +270,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     universalSelection, dxfScene, dxfCanvasRef, overlayCanvasRef, zoomSystem,
     currentLevelId: levelManager.currentLevelId, onMeasurementComplete: guideWorkflows.handleMeasurementComplete,
   });
-
   // === Context menu refs ===
   const drawingMenuRef = useRef<DrawingContextMenuHandle>(null);
   const entityMenuRef = useRef<EntityContextMenuHandle>(null);
   const guideMenuRef = useRef<GuideContextMenuHandle>(null);
   const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
   // === Modify tools (ADR-349/350 — extracted to useModifyTools for CanvasSection size budget) ===
-  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, handleRotationAnglePrompt } = useModifyTools({
+  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, arrayPolarTool, handleRotationAnglePrompt } = useModifyTools({
     activeTool, selectedEntityIds, setSelectedEntityIds, levelManager, executeCommand,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
     previewCanvasRef, transformScale: transform.scale,
@@ -284,7 +284,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     overlayUpdate: overlayStore.update,
     showPromptDialog, t,
   });
-
   const { handleDrawingContextMenu } = useCanvasContextMenu({
     containerRef, activeTool, overlayMode, hasUnifiedDrawingPointsRef, draftPolygonRef,
     selectedEntityIds, drawingMenuRef, entityMenuRef, rotationPhase: rotationTool.phase,
@@ -299,7 +298,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     hoveredEdgeInfo, transformScale: transform.scale, fitToOverlay,
     setDraggingOverlayBody: unified.setDraggingOverlayBody, setDragPreviewPosition: unified.setDragPreviewPosition,
   });
-
   // ADR-344 Phase 6.E follow-up — text creation tool.
   // Mounted before useCanvasClickHandler so `handleCanvasClick` is available
   // to route 'text' tool clicks to the in-canvas TipTap creation overlay.
@@ -311,6 +309,21 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     executeCommand,
   });
 
+  // ADR-353 §B2 — interactive centre re-pick for an existing polar array.
+  // CanvasSection owns levelManager + executeCommand → builds the adapter and
+  // dispatches UpdateArrayParamsCommand via the controller. Returns true when
+  // the click was consumed so the canvas-click handler can short-circuit.
+  const handleArrayPolarCenterRepick = useCallback((worldPoint: { x: number; y: number }): boolean => {
+    if (!getPolarPickingArrayId()) return false;
+    if (!levelManager.currentLevelId) return false;
+    const adapter = new LevelSceneManagerAdapter(
+      levelManager.getLevelScene,
+      levelManager.setLevelScene,
+      levelManager.currentLevelId,
+    );
+    const result = applyPolarCenterPick(worldPoint, adapter, executeCommand);
+    return result.ok;
+  }, [levelManager, executeCommand]);
   const { handleCanvasClick } = useCanvasClickHandler({
     viewportReady, viewport, transform, activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement,
@@ -322,6 +335,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     stretchIsActive: stretchTool.isCollectingInput, handleStretchClick: stretchTool.handleStretchClick,
     trimIsActive: trimTool.isActive, handleTrimClick: trimTool.handleTrimClick,
     extendIsActive: extendTool.isActive, handleExtendClick: extendTool.handleExtendClick,
+    arrayPolarIsActive: arrayPolarTool.isActive, handleArrayPolarClick: arrayPolarTool.handleArrayPolarClick,
+    handleArrayPolarCenterRepick,
     levelManager, draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
@@ -387,6 +402,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleStretchEscape: stretchTool.handleStretchEscape, handleStretchKeyDown: stretchTool.handleStretchKeyDown, stretchIsActive: stretchTool.isCollectingInput,
     handleTrimEscape: trimTool.handleTrimEscape, handleTrimKeyDown: trimTool.handleTrimKeyDown, trimIsActive: trimTool.isActive,
     handleExtendEscape: extendTool.handleExtendEscape, handleExtendKeyDown: extendTool.handleExtendKeyDown, extendIsActive: extendTool.isActive,
+    handleArrayPolarEscape: arrayPolarTool.handleArrayPolarEscape, arrayPolarIsActive: arrayPolarTool.isActive,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     clearEntitySelection: () => universalSelectionRef.current.clearAll(),
     handleReorderEntity,

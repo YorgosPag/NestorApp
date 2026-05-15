@@ -1270,3 +1270,7 @@ Fixed `rulerSettings.vertical?.width` → `rulerSettings.width` and `rulerSettin
 ## 2026-05-15: Array Tool Phase A — useModifyTools setSelectedEntityIds threading (ADR-353)
 
 `CanvasSection` passes `setSelectedEntityIds` to `useModifyTools` so `useArrayTool` can update selection after array creation (select the new array entity). 1-line orchestrator change; no new `useSyncExternalStore` calls added to `CanvasSection` or `CanvasLayerStack`. Cardinal rules maintained.
+
+## 2026-05-15: Array Tool Phase B2 — Polar Array tool wiring (ADR-353 B2)
+
+`CanvasSection` wires `arrayPolarTool` (from `useModifyTools`) into `useCanvasClickHandler` and `useCanvasKeyboardShortcuts`. 2-line orchestrator changes adding `arrayPolarIsActive`/`handleArrayPolarClick`/`handleArrayPolarEscape` props. `canvas-click-types.ts` extended with the same optional props. No new `useSyncExternalStore` calls added to `CanvasSection` or `CanvasLayerStack`. Centre-pick state (`pickingCenterArrayId`) lives in `ArrayStore` (module-level pub/sub — same pattern as TrimToolStore). Cardinal rules maintained.

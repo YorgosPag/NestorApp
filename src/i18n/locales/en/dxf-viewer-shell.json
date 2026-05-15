@@ -331,6 +331,7 @@
       "editor": "Editor Tools",
       "arrayGeometry": "Geometry",
       "arraySpacing": "Spacing",
+      "arrayOptions": "Options",
       "arrayActions": "Actions",
       "placeholder": "Coming soon",
       "history": "History",
@@ -496,7 +497,14 @@
         "colSpacing": "Column Spacing",
         "editSource": "Edit Source",
         "explode": "Explode",
-        "close": "Close"
+        "close": "Close",
+        "polarCount": "Items",
+        "polarFillAngle": "Fill Angle",
+        "polarStartAngle": "Start Angle",
+        "polarRadius": "Radius",
+        "polarRotateItems": "Rotate Items",
+        "polarPickCenter": "Pick Center",
+        "centerPickPrompt": "Click to set the polar array center"
       },
       "measureAngle": "Angle",
       "measureAngleVariants": {

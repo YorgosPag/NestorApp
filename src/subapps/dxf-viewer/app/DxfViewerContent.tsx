@@ -80,10 +80,8 @@ import { useDxfViewerEffects } from './useDxfViewerEffects';
 import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 📐 ADR-345 Fase 5B: contextual tab Text Editor (scaffolding — placeholders)
-import { CONTEXTUAL_TEXT_EDITOR_TAB, TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-text-editor-tab';
-// 📐 ADR-353 Phase A: contextual tab Array editor + bridge
-import { CONTEXTUAL_ARRAY_TAB, ARRAY_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-array-tab';
+// 📐 ADR-345/353: contextual tabs config + trigger resolver (SSoT)
+import { RIBBON_CONTEXTUAL_TABS, resolveContextualTrigger } from './ribbon-contextual-config';
 import { useRibbonArrayBridge } from '../ui/ribbon/hooks/useRibbonArrayBridge';
 import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
@@ -120,7 +118,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     [notifications, tShell],
   );
   // ADR-345 Fase 5B + ADR-353 Phase A — contextual tab list.
-  const ribbonContextualTabs = React.useMemo(() => [CONTEXTUAL_TEXT_EDITOR_TAB, CONTEXTUAL_ARRAY_TAB], []);
+  const ribbonContextualTabs = RIBBON_CONTEXTUAL_TABS;
   // ADR-345 Fase 5.5 — text editor bridge (toggle/combobox state + handlers).
   const textEditorBridge = useRibbonTextEditorBridge();
   // ADR-344 Phase 6.E — selection → toolbar populate (Layer 1) + toolbar → CommandHistory (Layer 2).
@@ -193,15 +191,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const handleSceneChangeRef = React.useRef(handleSceneChange);
   // 🏢 Universal selection primary ID
   const primarySelectedId = universalSelection.getPrimaryId();
-  // ADR-345 Fase 5B + ADR-353 Phase A — derive contextual ribbon trigger from
-  // selection. Text/MTEXT → Text Editor tab. Array → Array Editor tab.
+  // ADR-345 Fase 5B + ADR-353 Phase A — derive contextual ribbon trigger from selection.
   const activeContextualTrigger = React.useMemo<string | null>(() => {
     if (!primarySelectedId || !currentScene) return null;
     const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
-    if (!entity) return null;
-    if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;
-    if (entity.type === 'array') return ARRAY_CONTEXTUAL_TRIGGER;
-    return null;
+    return entity ? resolveContextualTrigger(entity) : null;
   }, [primarySelectedId, currentScene]);
   // Auto fit-to-view when a DXF scene loads for the first time (null → SceneModel).
   // Matches AutoCAD / BricsCAD behaviour: Zoom Extents on file open.
