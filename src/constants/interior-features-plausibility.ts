@@ -80,6 +80,7 @@ export type InteriorFeaturesReason =
   | 'fireplaceTinyStudio'
   | 'airConditioningRedundant'
   | 'luxuryFeaturesStudio'
+  | 'alarmSystemRedundant'
   | 'underfloorHeatingNoCentral'
   | null;
 

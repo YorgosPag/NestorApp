@@ -1,8 +1,11 @@
-// Augments @google-cloud/firestore Timestamp to be compatible with the client
-// SDK Timestamp interface (which requires toJSON). Both admin and client
-// Timestamps are structurally identical except for toJSON.
+// Augments @google-cloud/firestore Timestamp to be structurally compatible
+// with the @firebase/firestore client SDK Timestamp. The client Timestamp has:
+//   - toJSON() returning { seconds, nanoseconds, type: string }
+//   - toString() returning string
+// Both are missing from the admin declaration but present at runtime.
 declare module '@google-cloud/firestore' {
   interface Timestamp {
-    toJSON(): { seconds: number; nanoseconds: number };
+    toJSON(): { seconds: number; nanoseconds: number; type: string };
+    toString(): string;
   }
 }

@@ -304,6 +304,8 @@ export interface AuditMetadata {
   userAgent?: string;
   path?: string;
   reason?: string;
+  filesRestored?: number;
+  filesCascaded?: number;
 }
 
 /** Complete audit log entry. */

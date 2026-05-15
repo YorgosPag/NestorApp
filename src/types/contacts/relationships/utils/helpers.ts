@@ -73,6 +73,7 @@ export function getRelationshipDisplayLabel(relationship: ContactRelationship): 
     'property_buyer': 'Αγοραστής Ακινήτου',
     'property_co_buyer': 'Συν-αγοραστής Ακινήτου',
     'property_landowner': 'Οικοπεδούχος',
+    'business_contact': 'Επαγγελματική Επαφή',
     'other': 'Άλλο'
   };
 

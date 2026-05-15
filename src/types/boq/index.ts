@@ -22,6 +22,8 @@ export { IFC_UNIT_MAP } from './units';
 
 // Core entities
 export type {
+  BOQScope,
+  CostAllocationMethod,
   BOQItem,
   BOQCategory,
   BOQCategorySummary,

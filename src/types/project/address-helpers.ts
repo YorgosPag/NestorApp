@@ -181,6 +181,7 @@ export function formatAddressType(
     postal: 'Ταχυδρομείο',
     billing: 'Τιμολόγηση',
     correspondence: 'Αλληλογραφία',
+    frontage: 'Πρόσωπο Οικοπέδου',
     other: 'Άλλο'
   };
 
