@@ -29,7 +29,9 @@ import {
   ARRAY_RIBBON_KEYS,
   isArrayRibbonKey,
   isArrayRibbonToggleKey,
+  isArrayRibbonStringKey,
   type ArrayRibbonComboKey,
+  type ArrayRibbonStringComboKey,
   type ArrayRibbonToggleKey,
 } from './bridge/array-command-keys';
 import type {
@@ -38,7 +40,7 @@ import type {
 } from '../context/RibbonCommandContext';
 import type { ArrayEntity } from '../../../types/entities';
 import { isArrayEntity } from '../../../types/entities';
-import type { ArrayParams, PolarParams, RectParams } from '../../../systems/array/types';
+import type { ArrayParams, PathParams, PolarParams, RectParams } from '../../../systems/array/types';
 import type { useLevels } from '../../../systems/levels';
 import type { useUniversalSelection } from '../../../systems/selection';
 
@@ -119,6 +121,13 @@ export function useRibbonArrayBridge(
     return arr.params;
   }, [resolveArray, inProgress]);
 
+  const readPathParams = useCallback((): PathParams | null => {
+    const arr = resolveArray();
+    if (!arr || arr.params.kind !== 'path') return null;
+    if (inProgress && inProgress.kind === 'path') return inProgress;
+    return arr.params;
+  }, [resolveArray, inProgress]);
+
   const dispatchParams = useCallback(
     (arr: ArrayEntity, previousParams: ArrayParams, nextParams: ArrayParams) => {
       if (!levelManager.currentLevelId) return;
@@ -143,6 +152,14 @@ export function useRibbonArrayBridge(
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
+      if (isArrayRibbonStringKey(commandKey)) {
+        const path = readPathParams();
+        if (path) {
+          const value = readPathStringField(commandKey, path);
+          return value === null ? null : { value, options: [] };
+        }
+        return null;
+      }
       if (!isArrayRibbonKey(commandKey)) return null;
 
       const rect = readRectParams();
@@ -155,13 +172,26 @@ export function useRibbonArrayBridge(
         const value = readPolarField(commandKey, polar);
         return value === null ? null : { value, options: [] };
       }
+      const path = readPathParams();
+      if (path) {
+        const value = readPathField(commandKey, path);
+        return value === null ? null : { value, options: [] };
+      }
       return null;
     },
-    [readRectParams, readPolarParams],
+    [readRectParams, readPolarParams, readPathParams],
   );
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
+      if (isArrayRibbonStringKey(commandKey)) {
+        const arr = resolveArray();
+        if (!arr || arr.params.kind !== 'path') return;
+        const next = patchPathStringParam(arr.params, commandKey, value);
+        if (next === null) return;
+        dispatchParams(arr, arr.params, next);
+        return;
+      }
       if (!isArrayRibbonKey(commandKey)) return;
       const arr = resolveArray();
       if (!arr) return;
@@ -179,6 +209,12 @@ export function useRibbonArrayBridge(
         const next = patchPolarParam(arr.params, commandKey, numeric);
         if (next === null) return;
         dispatchParams(arr, arr.params, next);
+        return;
+      }
+      if (arr.params.kind === 'path') {
+        const next = patchPathParam(arr.params, commandKey, numeric);
+        if (next === null) return;
+        dispatchParams(arr, arr.params, next);
       }
     },
     [resolveArray, dispatchParams],
@@ -188,25 +224,116 @@ export function useRibbonArrayBridge(
     (commandKey: string): RibbonToggleState => {
       if (!isArrayRibbonToggleKey(commandKey)) return NULL_TOGGLE;
       const polar = readPolarParams();
-      if (!polar) return NULL_TOGGLE;
-      return readPolarToggleField(commandKey, polar);
+      if (polar) return readPolarToggleField(commandKey, polar);
+      const path = readPathParams();
+      if (path) return readPathToggleField(commandKey, path);
+      return NULL_TOGGLE;
     },
-    [readPolarParams],
+    [readPolarParams, readPathParams],
   );
 
   const onToggle = useCallback(
     (commandKey: string, nextValue: boolean): void => {
       if (!isArrayRibbonToggleKey(commandKey)) return;
       const arr = resolveArray();
-      if (!arr || arr.params.kind !== 'polar') return;
-      const next = patchPolarToggle(arr.params, commandKey, nextValue);
-      if (next === null) return;
-      dispatchParams(arr, arr.params, next);
+      if (!arr) return;
+      if (arr.params.kind === 'polar') {
+        const next = patchPolarToggle(arr.params, commandKey, nextValue);
+        if (next === null) return;
+        dispatchParams(arr, arr.params, next);
+        return;
+      }
+      if (arr.params.kind === 'path') {
+        const next = patchPathToggle(arr.params, commandKey, nextValue);
+        if (next === null) return;
+        dispatchParams(arr, arr.params, next);
+      }
     },
     [resolveArray, dispatchParams],
   );
 
   return { onComboboxChange, getComboboxState, onToggle, getToggleState };
+}
+
+// ── Path helpers ──────────────────────────────────────────────────────────────
+
+function readPathField(key: ArrayRibbonComboKey, p: PathParams): string | null {
+  switch (key) {
+    case ARRAY_RIBBON_KEYS.params.pathCount:   return String(p.count);
+    case ARRAY_RIBBON_KEYS.params.pathSpacing: return p.spacing !== undefined ? formatNumeric(p.spacing) : '';
+    default: return null;
+  }
+}
+
+function patchPathParam(
+  prev: PathParams,
+  key: ArrayRibbonComboKey,
+  numeric: number,
+): PathParams | null {
+  switch (key) {
+    case ARRAY_RIBBON_KEYS.params.pathCount: {
+      const v = Math.max(1, Math.round(numeric));
+      if (v === prev.count) return null;
+      return { ...prev, count: v };
+    }
+    case ARRAY_RIBBON_KEYS.params.pathSpacing: {
+      if (numeric <= 0) return null;
+      if (numeric === prev.spacing) return null;
+      return { ...prev, spacing: numeric };
+    }
+    default: return null;
+  }
+}
+
+function readPathToggleField(key: ArrayRibbonToggleKey, p: PathParams): RibbonToggleState {
+  switch (key) {
+    case ARRAY_RIBBON_KEYS.toggles.pathAlignItems: return p.alignItems;
+    case ARRAY_RIBBON_KEYS.toggles.pathReversed:   return p.reversed;
+    default: return NULL_TOGGLE;
+  }
+}
+
+function patchPathToggle(
+  prev: PathParams,
+  key: ArrayRibbonToggleKey,
+  nextValue: boolean,
+): PathParams | null {
+  switch (key) {
+    case ARRAY_RIBBON_KEYS.toggles.pathAlignItems: {
+      if (nextValue === prev.alignItems) return null;
+      return { ...prev, alignItems: nextValue };
+    }
+    case ARRAY_RIBBON_KEYS.toggles.pathReversed: {
+      if (nextValue === prev.reversed) return null;
+      return { ...prev, reversed: nextValue };
+    }
+    default: return null;
+  }
+}
+
+function readPathStringField(
+  key: ArrayRibbonStringComboKey,
+  p: PathParams,
+): string | null {
+  switch (key) {
+    case ARRAY_RIBBON_KEYS.stringParams.pathMethod: return p.method;
+    default: return null;
+  }
+}
+
+function patchPathStringParam(
+  prev: PathParams,
+  key: ArrayRibbonStringComboKey,
+  value: string,
+): PathParams | null {
+  switch (key) {
+    case ARRAY_RIBBON_KEYS.stringParams.pathMethod: {
+      if (value !== 'divide' && value !== 'measure') return null;
+      if (value === prev.method) return null;
+      return { ...prev, method: value };
+    }
+    default: return null;
+  }
 }
 
 // ── Rect helpers ─────────────────────────────────────────────────────────────

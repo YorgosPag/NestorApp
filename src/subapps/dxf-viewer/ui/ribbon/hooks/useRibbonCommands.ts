@@ -8,7 +8,7 @@ import type {
 } from '../context/RibbonCommandContext';
 import type { RibbonTextEditorBridge } from './useRibbonTextEditorBridge';
 import type { RibbonArrayBridge } from './useRibbonArrayBridge';
-import { isArrayRibbonKey } from './bridge/array-command-keys';
+import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 
 interface UseRibbonCommandsProps {
   handleToolChange: (tool: ToolType) => void;
@@ -31,7 +31,7 @@ export function useRibbonCommands({
   // they don't own, but the array prefix check short-circuits cheaply.
   const onComboboxChange = React.useCallback(
     (key: string, value: string) => {
-      if (isArrayRibbonKey(key)) {
+      if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) {
         arrayBridge.onComboboxChange(key, value);
         return;
       }
@@ -42,7 +42,7 @@ export function useRibbonCommands({
 
   const getComboboxState = React.useCallback(
     (key: string): RibbonComboboxState | null => {
-      if (isArrayRibbonKey(key)) return arrayBridge.getComboboxState(key);
+      if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
     [arrayBridge, textEditorBridge],
@@ -50,14 +50,21 @@ export function useRibbonCommands({
 
   const onToggle = React.useCallback(
     (key: string, next: boolean) => {
+      if (isArrayRibbonToggleKey(key)) {
+        arrayBridge.onToggle(key, next);
+        return;
+      }
       textEditorBridge.onToggle(key, next);
     },
-    [textEditorBridge],
+    [arrayBridge, textEditorBridge],
   );
 
   const getToggleState = React.useCallback(
-    (key: string): RibbonToggleState => textEditorBridge.getToggleState(key),
-    [textEditorBridge],
+    (key: string): RibbonToggleState => {
+      if (isArrayRibbonToggleKey(key)) return arrayBridge.getToggleState(key);
+      return textEditorBridge.getToggleState(key);
+    },
+    [arrayBridge, textEditorBridge],
   );
 
   return React.useMemo(

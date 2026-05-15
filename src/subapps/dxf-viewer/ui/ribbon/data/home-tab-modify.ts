@@ -249,7 +249,7 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
               labelKey: 'ribbon.commands.arrayVariants.path',
               icon: 'array-path',
               commandKey: 'array-path',
-              comingSoon: true,
+              comingSoon: false,
             },
             {
               id: 'array.polar',
@@ -334,7 +334,7 @@ export const HOME_MODIFY_EDIT_PANEL: RibbonPanelDef = {
           command: { id: 'edit.array', labelKey: 'ribbon.commands.array', icon: 'array-rect', commandKey: 'array-rect', shortcut: 'AR', comingSoon: false },
           variants: [
             { id: 'array2.rectangular', labelKey: 'ribbon.commands.arrayVariants.rectangular', icon: 'array-rect', commandKey: 'array-rect', comingSoon: false },
-            { id: 'array2.path', labelKey: 'ribbon.commands.arrayVariants.path', icon: 'array-path', commandKey: 'array-path', comingSoon: true },
+            { id: 'array2.path', labelKey: 'ribbon.commands.arrayVariants.path', icon: 'array-path', commandKey: 'array-path', comingSoon: false },
             { id: 'array2.polar', labelKey: 'ribbon.commands.arrayVariants.polar', icon: 'array-polar', commandKey: 'array-polar', comingSoon: false },
           ],
         },

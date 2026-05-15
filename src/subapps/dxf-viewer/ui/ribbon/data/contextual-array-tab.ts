@@ -1,6 +1,7 @@
 /**
- * ADR-353 Phase A (Session A4) + Phase B (Session B2) — Contextual ribbon
- * tabs for the Array editor. Two siblings, picked by `params.kind`:
+ * ADR-353 Phase A (Session A4) + Phase B (Session B2) + Phase C (Session C3)
+ * — Contextual ribbon tabs for the Array editor. Three siblings, picked by
+ * `params.kind`:
  *
  *   - ARRAY-RECT  (`array-rect-selected` trigger)
  *       Geometry  → rows / cols / angle
@@ -10,6 +11,11 @@
  *   - ARRAY-POLAR (`array-polar-selected` trigger)
  *       Geometry  → count / fillAngle / startAngle / radius
  *       Options   → rotateItems toggle / pick-center action
+ *       Actions   → edit source / explode / close
+ *
+ *   - ARRAY-PATH  (`array-path-selected` trigger)
+ *       Geometry  → method toggle / count (divide) or spacing (measure)
+ *       Options   → alignItems toggle / reversed toggle / pick-path action
  *       Actions   → edit source / explode / close
  *
  * Live preview: bridge dispatches `UpdateArrayParamsCommand` on each
@@ -25,6 +31,7 @@ import { ARRAY_RIBBON_KEYS } from '../hooks/bridge/array-command-keys';
 
 export const ARRAY_RECT_CONTEXTUAL_TRIGGER = 'array-rect-selected';
 export const ARRAY_POLAR_CONTEXTUAL_TRIGGER = 'array-polar-selected';
+export const ARRAY_PATH_CONTEXTUAL_TRIGGER = 'array-path-selected';
 
 /** @deprecated Phase A alias — use {@link ARRAY_RECT_CONTEXTUAL_TRIGGER}. */
 export const ARRAY_CONTEXTUAL_TRIGGER = ARRAY_RECT_CONTEXTUAL_TRIGGER;
@@ -274,7 +281,108 @@ export const CONTEXTUAL_ARRAY_POLAR_TAB: RibbonTab = {
   ],
 };
 
-function ARRAY_ACTIONS_PANEL(variant: 'rect' | 'polar'): RibbonTab['panels'][number] {
+const METHOD_OPTIONS = [
+  { value: 'divide', labelKey: 'Divide', isLiteralLabel: true },
+  { value: 'measure', labelKey: 'Measure', isLiteralLabel: true },
+] as const;
+
+export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
+  id: 'array-editor-path',
+  labelKey: 'ribbon.tabs.arrayEditor',
+  isContextual: true,
+  contextualTrigger: ARRAY_PATH_CONTEXTUAL_TRIGGER,
+  panels: [
+    {
+      id: 'array-path-geometry',
+      labelKey: 'ribbon.panels.arrayGeometry',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'array.pathMethod',
+                labelKey: 'ribbon.commands.arrayEditor.pathMethod',
+                commandKey: ARRAY_RIBBON_KEYS.stringParams.pathMethod,
+                comboboxWidthPx: 100,
+                options: METHOD_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'array.pathCount',
+                labelKey: 'ribbon.commands.arrayEditor.pathCount',
+                commandKey: ARRAY_RIBBON_KEYS.params.pathCount,
+                comboboxWidthPx: 80,
+                options: COUNT_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'array.pathSpacing',
+                labelKey: 'ribbon.commands.arrayEditor.pathSpacing',
+                commandKey: ARRAY_RIBBON_KEYS.params.pathSpacing,
+                comboboxWidthPx: 100,
+                options: SPACING_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'array-path-options',
+      labelKey: 'ribbon.panels.arrayOptions',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'array.pathAlignItems',
+                labelKey: 'ribbon.commands.arrayEditor.pathAlignItems',
+                icon: 'rotate',
+                commandKey: ARRAY_RIBBON_KEYS.toggles.pathAlignItems,
+              },
+            },
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'array.pathReversed',
+                labelKey: 'ribbon.commands.arrayEditor.pathReversed',
+                icon: 'mirror',
+                commandKey: ARRAY_RIBBON_KEYS.toggles.pathReversed,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'array.pathPickPath',
+                labelKey: 'ribbon.commands.arrayEditor.pathPickPath',
+                icon: 'select',
+                commandKey: ARRAY_RIBBON_KEYS.actions.pathPickPath,
+                action: ARRAY_RIBBON_KEYS.actions.pathPickPath,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    ARRAY_ACTIONS_PANEL('path'),
+  ],
+};
+
+function ARRAY_ACTIONS_PANEL(variant: 'rect' | 'polar' | 'path'): RibbonTab['panels'][number] {
   return {
     id: `array-actions-${variant}`,
     labelKey: 'ribbon.panels.arrayActions',

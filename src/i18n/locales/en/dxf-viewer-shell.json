@@ -504,7 +504,13 @@
         "polarRadius": "Radius",
         "polarRotateItems": "Rotate Items",
         "polarPickCenter": "Pick Center",
-        "centerPickPrompt": "Click to set the polar array center"
+        "centerPickPrompt": "Click to set the polar array center",
+        "pathCount": "Items",
+        "pathMethod": "Method",
+        "pathSpacing": "Spacing",
+        "pathAlignItems": "Align",
+        "pathReversed": "Reversed",
+        "pathPickPath": "Pick Path"
       },
       "measureAngle": "Angle",
       "measureAngleVariants": {

@@ -665,7 +665,9 @@
   "arrayTool": {
     "needsSelection": "Select entities first, then activate Array.",
     "nestedForbidden": "Nested arrays are not allowed.",
-    "pickCenter": "Click to set the polar array center."
+    "pickCenter": "Click to set the polar array center.",
+    "pickPath": "Click a line, arc, circle, ellipse or spline to use as the path.",
+    "invalidPathType": "This entity cannot be used as a path. Select a line, arc, circle, ellipse or spline."
   },
   "gripMode": {
     "stretch": "Stretch",

@@ -29,6 +29,11 @@ import {
   exitCenterPickMode,
   getPickingCenterArrayId,
 } from '../../../systems/array/polar-center-pick-controller';
+import {
+  enterPathPickMode,
+  exitPathPickMode,
+  getPickingPathArrayId,
+} from '../../../systems/array/path-pick-controller';
 import { ARRAY_RIBBON_KEYS } from './bridge/array-command-keys';
 import { toolHintOverrideStore } from '../../../hooks/toolHintOverrideStore';
 import i18next from 'i18next';
@@ -73,7 +78,8 @@ export function useArrayRibbonActions(
         action !== 'array-explode' &&
         action !== 'array-edit-source' &&
         action !== 'array-close-tab' &&
-        action !== ARRAY_RIBBON_KEYS.actions.polarPickCenter
+        action !== ARRAY_RIBBON_KEYS.actions.polarPickCenter &&
+        action !== ARRAY_RIBBON_KEYS.actions.pathPickPath
       ) {
         fallback(action, data);
         return;
@@ -130,6 +136,21 @@ export function useArrayRibbonActions(
         enterCenterPickMode(entity.id);
         toolHintOverrideStore.setOverride(
           i18next.t('tool-hints:arrayTool.pickCenter'),
+        );
+        return;
+      }
+
+      if (action === ARRAY_RIBBON_KEYS.actions.pathPickPath) {
+        if (entity.params.kind !== 'path') return;
+        // Toggle: re-clicking while picking cancels pick mode.
+        if (getPickingPathArrayId() === entity.id) {
+          exitPathPickMode();
+          toolHintOverrideStore.setOverride(null);
+          return;
+        }
+        enterPathPickMode(entity.id);
+        toolHintOverrideStore.setOverride(
+          i18next.t('tool-hints:arrayTool.pickPath'),
         );
         return;
       }

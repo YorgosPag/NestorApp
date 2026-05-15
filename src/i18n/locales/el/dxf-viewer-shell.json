@@ -504,7 +504,13 @@
         "polarRadius": "Ακτίνα",
         "polarRotateItems": "Περιστροφή Αντικειμένων",
         "polarPickCenter": "Επιλογή Κέντρου",
-        "centerPickPrompt": "Κάνε κλικ για το κέντρο του πολικού πίνακα"
+        "centerPickPrompt": "Κάνε κλικ για το κέντρο του πολικού πίνακα",
+        "pathCount": "Αντικείμενα",
+        "pathMethod": "Μέθοδος",
+        "pathSpacing": "Απόσταση",
+        "pathAlignItems": "Στοίχιση",
+        "pathReversed": "Αντίστροφα",
+        "pathPickPath": "Επιλογή Διαδρομής"
       },
       "measureAngle": "Γωνία",
       "measureAngleVariants": {
