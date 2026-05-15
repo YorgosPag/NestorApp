@@ -309,7 +309,8 @@
       "view": "View",
       "annotate": "Annotate",
       "settings": "Settings",
-      "textEditor": "Text Editor"
+      "textEditor": "Text Editor",
+      "arrayEditor": "Array"
     },
     "panels": {
       "draw": "Draw",
@@ -328,6 +329,9 @@
       "textProperties": "Properties",
       "insert": "Insert",
       "editor": "Editor Tools",
+      "arrayGeometry": "Geometry",
+      "arraySpacing": "Spacing",
+      "arrayActions": "Actions",
       "placeholder": "Coming soon",
       "history": "History",
       "guides": "Guides",
@@ -484,6 +488,16 @@
           "spellCheck": "Spell Check"
         }
       },
+      "arrayEditor": {
+        "rows": "Rows",
+        "cols": "Columns",
+        "angle": "Angle",
+        "rowSpacing": "Row Spacing",
+        "colSpacing": "Column Spacing",
+        "editSource": "Edit Source",
+        "explode": "Explode",
+        "close": "Close"
+      },
       "measureAngle": "Angle",
       "measureAngleVariants": {
         "basic": "Basic Angle",
@@ -533,6 +547,31 @@
       "aiAssistant": "AI Assistant",
       "layering": "Layer Drawing",
       "fullscreen": "Full Screen"
+    }
+  },
+  "array": {
+    "pathDeletion": {
+      "title": "Path Deletion",
+      "body": "This entity is referenced by {count} array(s). Choose how to proceed.",
+      "deleteBoth": "Delete Both",
+      "explode": "Explode Arrays",
+      "cancel": "Cancel"
+    },
+    "emptySource": {
+      "title": "Empty Array Source",
+      "body": "No source entities remain in the array.",
+      "deleteArray": "Delete Array",
+      "restore": "Keep Editing"
+    },
+    "validation": {
+      "nestedForbidden": "Nested arrays are not allowed.",
+      "sourceTypeNotAllowed": "Entity type is not supported as an array source.",
+      "hardLimitExceeded": "Exceeds 5000-item hard limit.",
+      "warnLimitExceeded": "Over 1000 items — performance may degrade.",
+      "countMustBePositive": "Rows and columns must be positive.",
+      "spacingCannotBeZero": "Spacing cannot be zero.",
+      "fillAngleCannotBeZero": "Fill angle cannot be zero.",
+      "pathEntityRequired": "Path entity is required."
     }
   }
 }

@@ -194,6 +194,16 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     toolType: 'extend',
   },
 
+  // ADR-353 Phase A: Rectangular Array (display-only label, Phase A ships rect only)
+  arrayRect: {
+    key: 'AR',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.arrayRect',
+    action: 'tool:array-rect',
+    category: 'tool',
+    toolType: 'array-rect',
+  },
+
   // Zoom Tools
   zoomWindow: {
     key: 'W',

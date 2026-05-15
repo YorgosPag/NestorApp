@@ -662,6 +662,10 @@
     "noIntersection": "No boundary found for extension",
     "lockedSkipped": "{count} entities on locked layer were skipped"
   },
+  "arrayTool": {
+    "needsSelection": "Select entities first, then activate Array.",
+    "nestedForbidden": "Nested arrays are not allowed."
+  },
   "gripMode": {
     "stretch": "Stretch",
     "move": "Move",

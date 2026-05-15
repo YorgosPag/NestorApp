@@ -14,6 +14,7 @@ import { useScaleTool } from './useScaleTool';
 import { useStretchTool } from './useStretchTool';
 import { useTrimTool } from './useTrimTool';
 import { useExtendTool } from './useExtendTool';
+import { useArrayTool } from './useArrayTool';
 import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { distanceToEntity } from '../../utils/entity-distance';
@@ -33,6 +34,8 @@ type UniversalSelection = ReturnType<typeof useUniversalSelection>;
 export interface UseModifyToolsProps {
   activeTool: string;
   selectedEntityIds: string[];
+  /** ADR-353 Phase A: array tool replaces selection with the new ArrayEntity id. */
+  setSelectedEntityIds: (ids: string[]) => void;
   levelManager: LevelManager;
   executeCommand: (cmd: ICommand) => void;
   onToolChange: ((tool: string) => void) | undefined;
@@ -49,6 +52,7 @@ export interface UseModifyToolsProps {
 export function useModifyTools({
   activeTool,
   selectedEntityIds,
+  setSelectedEntityIds,
   levelManager,
   executeCommand,
   onToolChange,
@@ -98,6 +102,23 @@ export function useModifyTools({
 
   const extendTool = useExtendTool({
     activeTool, levelManager, executeCommand, hitTestEntity: trimHitTest, onToolChange,
+  });
+
+  // ADR-353 Phase A — Rectangular Array (single-shot from pre-selection).
+  const arrayTool = useArrayTool({
+    activeTool,
+    selectedEntityIds,
+    levelManager,
+    executeCommand,
+    setSelectedEntityIds: useCallback(
+      (ids: string[]) => {
+        setSelectedEntityIds(ids);
+        universalSelection.clearByType('dxf-entity');
+        if (ids.length > 0) universalSelection.select(ids[0], 'dxf-entity');
+      },
+      [setSelectedEntityIds, universalSelection],
+    ),
+    onToolChange,
   });
 
   const executeOverlayMove = useCallback(
@@ -160,6 +181,7 @@ export function useModifyTools({
     stretchTool,
     trimTool,
     extendTool,
+    arrayTool,
     handleRotationAnglePrompt,
   };
 }

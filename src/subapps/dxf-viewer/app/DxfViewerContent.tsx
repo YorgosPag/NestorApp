@@ -81,10 +81,11 @@ import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 📐 ADR-345 Fase 5B: contextual tab Text Editor (scaffolding — placeholders)
-import {
-  CONTEXTUAL_TEXT_EDITOR_TAB,
-  TEXT_EDITOR_CONTEXTUAL_TRIGGER,
-} from '../ui/ribbon/data/contextual-text-editor-tab';
+import { CONTEXTUAL_TEXT_EDITOR_TAB, TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-text-editor-tab';
+// 📐 ADR-353 Phase A: contextual tab Array editor + bridge
+import { CONTEXTUAL_ARRAY_TAB, ARRAY_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-array-tab';
+import { useRibbonArrayBridge } from '../ui/ribbon/hooks/useRibbonArrayBridge';
+import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
 import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEditorBridge';
 import { useRibbonCommands } from '../ui/ribbon/hooks/useRibbonCommands';
@@ -118,11 +119,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     },
     [notifications, tShell],
   );
-  // ADR-345 Fase 5B — contextual tab list (Text Editor scaffolding).
-  const ribbonContextualTabs = React.useMemo(
-    () => [CONTEXTUAL_TEXT_EDITOR_TAB],
-    [],
-  );
+  // ADR-345 Fase 5B + ADR-353 Phase A — contextual tab list.
+  const ribbonContextualTabs = React.useMemo(() => [CONTEXTUAL_TEXT_EDITOR_TAB, CONTEXTUAL_ARRAY_TAB], []);
   // ADR-345 Fase 5.5 — text editor bridge (toggle/combobox state + handlers).
   const textEditorBridge = useRibbonTextEditorBridge();
   // ADR-344 Phase 6.E — selection → toolbar populate (Layer 1) + toolbar → CommandHistory (Layer 2).
@@ -195,15 +193,14 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const handleSceneChangeRef = React.useRef(handleSceneChange);
   // 🏢 Universal selection primary ID
   const primarySelectedId = universalSelection.getPrimaryId();
-  // ADR-345 Fase 5B — derive contextual ribbon trigger from selection.
-  // Text/MTEXT primary selection → show Text Editor contextual tab.
+  // ADR-345 Fase 5B + ADR-353 Phase A — derive contextual ribbon trigger from
+  // selection. Text/MTEXT → Text Editor tab. Array → Array Editor tab.
   const activeContextualTrigger = React.useMemo<string | null>(() => {
     if (!primarySelectedId || !currentScene) return null;
     const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
     if (!entity) return null;
-    if (entity.type === 'text' || entity.type === 'mtext') {
-      return TEXT_EDITOR_CONTEXTUAL_TRIGGER;
-    }
+    if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;
+    if (entity.type === 'array') return ARRAY_CONTEXTUAL_TRIGGER;
     return null;
   }, [primarySelectedId, currentScene]);
   // Auto fit-to-view when a DXF scene loads for the first time (null → SceneModel).
@@ -292,11 +289,16 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     layoutMode === 'desktop' && activeTool === 'layering'
       ? PANEL_LAYOUT.POINTER_EVENTS.NONE
       : PANEL_LAYOUT.POINTER_EVENTS.AUTO;
+  // ADR-353 Phase A — Array contextual bridge + action interception.
+  const arrayBridge = useRibbonArrayBridge({ levelManager, universalSelection });
+  const arrayActionInterceptor = useArrayRibbonActions({
+    levelManager, universalSelection, setSelectedEntityIds,
+    handleToolChange, fallback: wrappedHandleAction,
+  });
   const ribbonCommands = useRibbonCommands({
-    handleToolChange,
-    handleRibbonComingSoon,
-    wrappedHandleAction,
-    textEditorBridge,
+    handleToolChange, handleRibbonComingSoon,
+    wrappedHandleAction: arrayActionInterceptor,
+    textEditorBridge, arrayBridge,
   });
   return (
       <TransformProvider

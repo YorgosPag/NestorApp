@@ -81,6 +81,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'trim': { id: 'trim', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-353: Extend (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)
   'extend': { id: 'extend', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-353 Phase A: Rectangular Array (single-shot: pre-select sources → activate → array created → ribbon contextual tab adjusts params)
+  'array-rect': { id: 'array-rect', category: 'editing', requiresCanvas: false, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // Crop tools (window / polygon / lasso freehand)
   'crop-window': { id: 'crop-window', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'polygon-crop': { id: 'polygon-crop', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
@@ -172,7 +174,6 @@ export function getToolMetadata(tool: ToolType): ToolInfo {
 export function preservesOverlayMode(tool: ToolType): boolean {
   return getToolMetadata(tool).preservesOverlayMode;
 }
-
 /**
  * Get all tools that preserve overlay mode (for debugging/documentation)
  * @returns Array of tool types that preserve overlay draw mode
@@ -188,7 +189,6 @@ export function getOverlayCompatibleTools(): ToolType[] {
 // Single Source of Truth for tool type detection - use these everywhere!
 // ADR-036: Centralized Tool Detection - eliminates duplicate tool lists
 // ============================================================================
-
 /**
  * Check if a tool is a drawing tool (line, circle, polygon, etc.)
  * ENTERPRISE: This is the SINGLE SOURCE OF TRUTH for drawing tool detection

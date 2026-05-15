@@ -309,7 +309,8 @@
       "view": "Προβολή",
       "annotate": "Επισημείωση",
       "settings": "Ρυθμίσεις",
-      "textEditor": "Επεξεργαστής Κειμένου"
+      "textEditor": "Επεξεργαστής Κειμένου",
+      "arrayEditor": "Πίνακας"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -328,6 +329,9 @@
       "textProperties": "Ιδιότητες",
       "insert": "Εισαγωγή",
       "editor": "Εργαλεία Επεξεργαστή",
+      "arrayGeometry": "Γεωμετρία",
+      "arraySpacing": "Αποστάσεις",
+      "arrayActions": "Ενέργειες",
       "placeholder": "Σε φάση ανάπτυξης",
       "history": "Ιστορικό",
       "guides": "Οδηγοί",
@@ -484,6 +488,16 @@
           "spellCheck": "Ορθογραφικός Έλεγχος"
         }
       },
+      "arrayEditor": {
+        "rows": "Γραμμές",
+        "cols": "Στήλες",
+        "angle": "Γωνία",
+        "rowSpacing": "Απόσταση Γραμμών",
+        "colSpacing": "Απόσταση Στηλών",
+        "editSource": "Επεξεργασία Πηγής",
+        "explode": "Διάλυση",
+        "close": "Κλείσιμο"
+      },
       "measureAngle": "Γωνία",
       "measureAngleVariants": {
         "basic": "Βασική Γωνία",
@@ -533,6 +547,31 @@
       "aiAssistant": "Βοηθός AI",
       "layering": "Σχεδίαση Επιπέδων",
       "fullscreen": "Πλήρης Οθόνη"
+    }
+  },
+  "array": {
+    "pathDeletion": {
+      "title": "Διαγραφή Διαδρομής",
+      "body": "Η οντότητα χρησιμοποιείται από {count} πίνακες. Τι θέλεις να γίνει;",
+      "deleteBoth": "Διαγραφή Όλων",
+      "explode": "Διάλυση Πινάκων",
+      "cancel": "Άκυρο"
+    },
+    "emptySource": {
+      "title": "Κενή Πηγή Πίνακα",
+      "body": "Δεν απομένει καμία οντότητα στην πηγή του πίνακα.",
+      "deleteArray": "Διαγραφή Πίνακα",
+      "restore": "Συνέχεια Επεξεργασίας"
+    },
+    "validation": {
+      "nestedForbidden": "Δεν επιτρέπεται πίνακας μέσα σε πίνακα.",
+      "sourceTypeNotAllowed": "Ο τύπος της οντότητας δεν υποστηρίζεται ως πηγή πίνακα.",
+      "hardLimitExceeded": "Υπέρβαση ορίου 5000 αντικειμένων.",
+      "warnLimitExceeded": "Πάνω από 1000 αντικείμενα — η απόδοση μπορεί να μειωθεί.",
+      "countMustBePositive": "Οι γραμμές και οι στήλες πρέπει να είναι θετικές.",
+      "spacingCannotBeZero": "Η απόσταση δεν μπορεί να είναι μηδέν.",
+      "fillAngleCannotBeZero": "Η γωνία γεμίσματος δεν μπορεί να είναι μηδέν.",
+      "pathEntityRequired": "Απαιτείται η επιλογή διαδρομής."
     }
   }
 }

@@ -46,6 +46,8 @@ export type ToolType =
   | 'trim'
   // ADR-353: Extend command (Επέκταση — quick + standard, with SHIFT→TRIM inverse)
   | 'extend'
+  // ADR-353: Rectangular Array command (Πίνακας — Phase A: rect only)
+  | 'array-rect'
   | 'measure'
   | 'measure-distance'
   | 'measure-distance-continuous'

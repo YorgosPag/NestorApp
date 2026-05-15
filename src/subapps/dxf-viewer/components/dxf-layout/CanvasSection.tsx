@@ -277,7 +277,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
   // === Modify tools (ADR-349/350 — extracted to useModifyTools for CanvasSection size budget) ===
   const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, handleRotationAnglePrompt } = useModifyTools({
-    activeTool, selectedEntityIds, levelManager, executeCommand,
+    activeTool, selectedEntityIds, setSelectedEntityIds, levelManager, executeCommand,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
     previewCanvasRef, transformScale: transform.scale,
     overlayStore, universalSelection, currentOverlays,

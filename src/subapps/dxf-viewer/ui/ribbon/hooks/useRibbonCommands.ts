@@ -3,14 +3,20 @@ import type { ToolType } from '../../toolbar/types';
 import type {
   RibbonCommandsApi,
   RibbonActionPayload,
+  RibbonComboboxState,
+  RibbonToggleState,
 } from '../context/RibbonCommandContext';
 import type { RibbonTextEditorBridge } from './useRibbonTextEditorBridge';
+import type { RibbonArrayBridge } from './useRibbonArrayBridge';
+import { isArrayRibbonKey } from './bridge/array-command-keys';
 
 interface UseRibbonCommandsProps {
   handleToolChange: (tool: ToolType) => void;
   handleRibbonComingSoon: (label: string) => void;
   wrappedHandleAction: (action: string, data?: RibbonActionPayload) => void;
   textEditorBridge: RibbonTextEditorBridge;
+  /** ADR-353 Phase A — Array contextual tab bridge. */
+  arrayBridge: RibbonArrayBridge;
 }
 
 export function useRibbonCommands({
@@ -18,25 +24,60 @@ export function useRibbonCommands({
   handleRibbonComingSoon,
   wrappedHandleAction,
   textEditorBridge,
+  arrayBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
+  // Compose: array-prefixed keys route to arrayBridge; everything else
+  // falls through to the text-editor bridge. Both bridges no-op on keys
+  // they don't own, but the array prefix check short-circuits cheaply.
+  const onComboboxChange = React.useCallback(
+    (key: string, value: string) => {
+      if (isArrayRibbonKey(key)) {
+        arrayBridge.onComboboxChange(key, value);
+        return;
+      }
+      textEditorBridge.onComboboxChange(key, value);
+    },
+    [arrayBridge, textEditorBridge],
+  );
+
+  const getComboboxState = React.useCallback(
+    (key: string): RibbonComboboxState | null => {
+      if (isArrayRibbonKey(key)) return arrayBridge.getComboboxState(key);
+      return textEditorBridge.getComboboxState(key);
+    },
+    [arrayBridge, textEditorBridge],
+  );
+
+  const onToggle = React.useCallback(
+    (key: string, next: boolean) => {
+      textEditorBridge.onToggle(key, next);
+    },
+    [textEditorBridge],
+  );
+
+  const getToggleState = React.useCallback(
+    (key: string): RibbonToggleState => textEditorBridge.getToggleState(key),
+    [textEditorBridge],
+  );
+
   return React.useMemo(
     () => ({
       onToolChange: handleToolChange,
       onComingSoon: handleRibbonComingSoon,
       onAction: wrappedHandleAction,
-      onToggle: textEditorBridge.onToggle,
-      onComboboxChange: textEditorBridge.onComboboxChange,
-      getToggleState: textEditorBridge.getToggleState,
-      getComboboxState: textEditorBridge.getComboboxState,
+      onToggle,
+      onComboboxChange,
+      getToggleState,
+      getComboboxState,
     }),
     [
       handleToolChange,
       handleRibbonComingSoon,
       wrappedHandleAction,
-      textEditorBridge.onToggle,
-      textEditorBridge.onComboboxChange,
-      textEditorBridge.getToggleState,
-      textEditorBridge.getComboboxState,
+      onToggle,
+      onComboboxChange,
+      getToggleState,
+      getComboboxState,
     ],
   );
 }

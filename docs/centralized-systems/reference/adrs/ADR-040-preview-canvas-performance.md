@@ -1266,3 +1266,7 @@ Fixed `rulerSettings.vertical?.width` → `rulerSettings.width` and `rulerSettin
 ## 2026-05-15: Extend Command — ExtendPreviewOverlay micro-leaf + useExtendTool orchestrator hook (ADR-353)
 
 `ExtendPreviewOverlay` added to `canvas-layer-stack-leaves.tsx` as a zero-JSX micro-leaf (same pattern as `TrimPreviewMount`). `useExtendTool` wired into `CanvasSection` via `useModifyTools` (EX shortcut, click handler, ESC/keyboard). `ExtendToolStore` FSM mirrors TrimToolStore: idle→active→done. `canvas-click-types.ts` extended with `extendIsActive`/`handleExtendClick`. Cardinal rules maintained: `CanvasSection` and `CanvasLayerStack` have zero direct `useSyncExternalStore` calls — all store reads isolated to `ExtendPreviewOverlay` leaf. SHIFT+click during EXTEND invokes TrimEntityCommand (symmetric inverse), SHIFT+click during TRIM invokes ExtendEntityCommand.
+
+## 2026-05-15: Array Tool Phase A — useModifyTools setSelectedEntityIds threading (ADR-353)
+
+`CanvasSection` passes `setSelectedEntityIds` to `useModifyTools` so `useArrayTool` can update selection after array creation (select the new array entity). 1-line orchestrator change; no new `useSyncExternalStore` calls added to `CanvasSection` or `CanvasLayerStack`. Cardinal rules maintained.
