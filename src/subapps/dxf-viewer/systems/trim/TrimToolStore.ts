@@ -72,6 +72,11 @@ const INITIAL: TrimToolState = {
 type PickFn = (worldPoint: Point2D, shiftKey: boolean) => void;
 let _pickFn: PickFn | null = null;
 
+// ── Fence function registry ────────────────────────────────────────────────────
+
+type FenceFn = (fenceStart: Point2D, fenceEnd: Point2D, shiftKey: boolean) => void;
+let _fenceFn: FenceFn | null = null;
+
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 let _state: TrimToolState = INITIAL;
@@ -171,8 +176,22 @@ export const TrimToolStore = {
     _pickFn?.(worldPoint, shiftKey);
   },
 
+  /**
+   * Register the performFenceTrim closure from useTrimTool.
+   * Called on tool activate (with fn) and deactivate (with null).
+   */
+  registerFenceFn(fn: FenceFn | null): void {
+    _fenceFn = fn;
+  },
+
+  /** Invoke the registered fence function after a fence drag ends. */
+  execFence(fenceStart: Point2D, fenceEnd: Point2D, shiftKey: boolean): void {
+    _fenceFn?.(fenceStart, fenceEnd, shiftKey);
+  },
+
   reset(): void {
     _pickFn = null;
+    _fenceFn = null;
     _state = INITIAL;
     _notify();
   },

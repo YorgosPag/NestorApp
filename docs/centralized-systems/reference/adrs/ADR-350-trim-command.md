@@ -1,6 +1,6 @@
 # ADR-350: Trim Command (Ψαλίδισμα)
 
-**Status:** ✅ Phase 1 + Phase 2 + Phase 3 (follow-up bundle) COMPLETE. Phase 3 adds: ToolCursorStore SSoT variants (`trim-pickbox`/`extend-arrow`), SHIFT keydown/keyup immediate inverseMode update, fence drag capture in TrimPreviewMount leaf, fence line rendering in useTrimPreview, pick-fn registry in TrimToolStore (no prop-threading), extended test coverage (ELLIPSE/SPLINE/closed-POLYLINE + trim-boundary-resolver test suite).
+**Status:** ✅ Phase 1 + Phase 2 + Phase 3 (follow-up bundle) + Phase 4 (fence entity-hit detection) COMPLETE. Phase 4 adds: `trim-fence-hit-detector.ts` (pure function: fence segment → FenceHit[]), `FenceFn` registry in `TrimToolStore` (`registerFenceFn`/`execFence`), `performFenceTrim` in `useTrimTool` (batch TrimEntityCommand for all fence-hit entities), `useTrimDragCapture` onPointerUp now calls `TrimToolStore.execFence` replacing the TODO.
 **Date:** 2026-05-15
 **Domain:** DXF Viewer — Modify Tools
 **Shortcut:** `TR` (matches AutoCAD)

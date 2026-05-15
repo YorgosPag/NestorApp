@@ -24,6 +24,7 @@ import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { TrimToolStore } from '../../systems/trim/TrimToolStore';
 import { ToolCursorStore } from '../../systems/cursor/ToolCursorStore';
 import { resolveCuttingEdges, isTrimmable } from '../../systems/trim/trim-boundary-resolver';
+import { detectFenceHits } from '../../systems/trim/trim-fence-hit-detector';
 import { computeIntersectionPoints } from '../../systems/trim/trim-intersection-mapper';
 import { trimEntity } from '../../systems/trim/trim-entity-cutter';
 import type { TrimOperation } from '../../systems/trim/trim-types';
@@ -194,6 +195,62 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       TrimToolStore.registerPickFn(null);
     };
   }, [isActive, performTrimPick]);
+
+  // Fence trim: batch-trim all entities crossed by the drag fence segment (Phase 4).
+  const performFenceTrim = useCallback(
+    (fenceStart: Point2D, fenceEnd: Point2D, shiftKey: boolean): void => {
+      const sm = getSceneManager();
+      if (!sm || !levelManager.currentLevelId) return;
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      if (!scene) return;
+
+      const state = TrimToolStore.getState();
+      const hits = detectFenceHits({
+        fenceStart, fenceEnd, scene,
+        mode: state.mode, cuttingEdgeIds: state.cuttingEdgeIds,
+      });
+      if (hits.length === 0) return;
+
+      const edges = resolveCuttingEdges({
+        mode: state.mode, scene,
+        selectedEdgeIds: state.cuttingEdgeIds, edgeMode: state.edgeMode,
+      });
+
+      const allOps: TrimOperation[] = [];
+      for (const hit of hits) {
+        const target = scene.entities.find((e) => e.id === hit.entityId) as Entity | undefined;
+        if (!target) continue;
+        if (target.type === 'hatch') { TrimToolStore.incrementWarning('hatch'); continue; }
+        const layer = target.layer ? scene.layers[target.layer] : undefined;
+        if (layer?.locked) { TrimToolStore.incrementWarning('locked'); continue; }
+        const intersections = computeIntersectionPoints(target, edges);
+        const result = trimEntity({
+          entity: target, intersections,
+          pickPoint: hit.pickPoint, mode: state.mode, newId: generateEntityId,
+        });
+        if (result.operations.length === 0) continue;
+        if (result.operations.some((o) => o.kind === 'delete') && intersections.length === 0) {
+          TrimToolStore.incrementWarning('deletedNoIntersection');
+        }
+        allOps.push(...result.operations);
+      }
+
+      if (allOps.length === 0) return;
+      const midpoint: Point2D = { x: (fenceStart.x + fenceEnd.x) / 2, y: (fenceStart.y + fenceEnd.y) / 2 };
+      const cmd = new TrimEntityCommand({ operations: allOps, pickPoint: midpoint, inverse: shiftKey }, sm);
+      executeCommand(cmd);
+      lastCommandRef.current = cmd;
+    },
+    [getSceneManager, levelManager, executeCommand],
+  );
+
+  useEffect(() => {
+    if (!isActive) return;
+    TrimToolStore.registerFenceFn(performFenceTrim);
+    return () => {
+      TrimToolStore.registerFenceFn(null);
+    };
+  }, [isActive, performFenceTrim]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 

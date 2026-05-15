@@ -76,9 +76,10 @@ export function useTrimDragCapture(props: UseTrimDragCaptureProps): void {
         dragStartScreenRef.current = null;
         return;
       }
-      // TODO: compute which entities the fence segment crosses and call
-      // TrimToolStore.execPick(worldPoint, e.shiftKey) for each hit.
-      // Requires spatial index or entity-bbox scan (Phase 4 work item).
+      const { dragStart, dragCurrent, phase } = TrimToolStore.getState();
+      if (phase === 'fence' && dragStart && dragCurrent) {
+        TrimToolStore.execFence(dragStart, dragCurrent, e.shiftKey);
+      }
       TrimToolStore.setDrag(null, null);
       TrimToolStore.setPhase('picking');
       dragStartScreenRef.current = null;
