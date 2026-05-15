@@ -4,7 +4,7 @@ import type { CompanyContact, Contact } from '@/types/contacts';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { getNavigationCompanyIds } from './navigation-companies.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { requireAuthContext } from '@/services/firestore/auth-context';
+import { requireAuthContext, resolveEffectiveCompanyId } from '@/services/firestore/auth-context';
 import { createModuleLogger } from '@/lib/telemetry';
 import { compareByLocale } from '@/lib/intl-formatting';
 
@@ -101,7 +101,9 @@ export class CompaniesService {
    */
   async getAllActiveCompanies(): Promise<CompanyContact[]> {
     try {
-      const { companyId } = await requireAuthContext();
+      // ADR-356: honor super-admin switcher — read effective tenant, not JWT claim.
+      const ctx = await requireAuthContext();
+      const companyId = resolveEffectiveCompanyId(ctx);
 
       const navigationCompanyIds = await getNavigationCompanyIds();
       const companiesWithProjectIds = await this.getCompaniesWithProjects(companyId);
@@ -137,7 +139,9 @@ export class CompaniesService {
    */
   async getCompanyById(targetId: string): Promise<CompanyContact | null> {
     try {
-      const { companyId } = await requireAuthContext();
+      // ADR-356: honor super-admin switcher — read effective tenant, not JWT claim.
+      const ctx = await requireAuthContext();
+      const companyId = resolveEffectiveCompanyId(ctx);
 
       const constraints = [
         where('type', '==', 'company'),
@@ -171,7 +175,9 @@ export class CompaniesService {
    */
   async getCompanyByName(companyName: string): Promise<CompanyContact | null> {
     try {
-      const { companyId } = await requireAuthContext();
+      // ADR-356: honor super-admin switcher — read effective tenant, not JWT claim.
+      const ctx = await requireAuthContext();
+      const companyId = resolveEffectiveCompanyId(ctx);
 
       const constraints = [
         where('type', '==', 'company'),
@@ -204,7 +210,9 @@ export class CompaniesService {
    */
   async getAllCompaniesForSelect(): Promise<CompanyContact[]> {
     try {
-      const { companyId } = await requireAuthContext();
+      // ADR-356: honor super-admin switcher — read effective tenant, not JWT claim.
+      const ctx = await requireAuthContext();
+      const companyId = resolveEffectiveCompanyId(ctx);
       const companiesQuery = buildCompanyContactsQuery(companyId);
 
       const snapshot = await getDocs(companiesQuery);
