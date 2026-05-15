@@ -353,6 +353,12 @@ export interface AuthContext {
   globalRole: GlobalRole;
   mfaEnrolled: boolean;
   isAuthenticated: true;
+  /**
+   * ADR-354 entry point #6 — true when `companyId` was overridden by the
+   * super-admin switcher header. Routes use this to scope admin endpoints
+   * to the effective company instead of returning cross-tenant data.
+   */
+  superAdminOverride?: boolean;
 }
 
 /** Unauthenticated context with reason. */

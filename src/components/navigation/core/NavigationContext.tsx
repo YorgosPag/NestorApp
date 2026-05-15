@@ -13,6 +13,7 @@ import { useNavigationSubscriptions } from './hooks/useNavigationSubscriptions';
 import { useRealtimeBuildings, useRealtimeProperties } from '@/services/realtime';
 import { NavigationApiService } from './services/navigationApi';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
 import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type {
   NavigationState,
@@ -173,6 +174,19 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   // Realtime subscriptions (extracted to separate hook)
   useNavigationSubscriptions(refreshNavigation, setState);
+
+  // ADR-354 entry point #6 — re-fetch projects bootstrap when super admin
+  // switches company. The bootstrap REST endpoint is not a Firestore stream,
+  // so the registry listener pattern (used by firestoreQueryService) cannot
+  // reach it. We invalidate client + server cache via refreshNavigation.
+  useEffect(() => {
+    if (!isAuthReady) return;
+    const unsubscribe = onSuperAdminActiveCompanyChange(() => {
+      logger.info('Super admin company switched — refreshing navigation bootstrap');
+      void refreshNavigation();
+    });
+    return unsubscribe;
+  }, [isAuthReady, refreshNavigation]);
 
   // ── Action wrappers ──
 

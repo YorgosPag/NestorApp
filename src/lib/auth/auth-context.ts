@@ -42,16 +42,18 @@ function resolveEffectiveCompanyId(
   request: NextRequest,
   claims: CustomClaims,
   uid: string,
-): string {
-  if (!isRoleBypass(claims.globalRole)) return claims.companyId;
+): { companyId: string; overridden: boolean } {
+  if (!isRoleBypass(claims.globalRole)) {
+    return { companyId: claims.companyId, overridden: false };
+  }
   const override = request.headers.get(SUPER_ADMIN_COMPANY_HEADER);
   if (!override || typeof override !== 'string' || override === claims.companyId) {
-    return claims.companyId;
+    return { companyId: claims.companyId, overridden: false };
   }
   logger.info('[AUTH_CONTEXT] Super admin company override', {
     uid, original: claims.companyId, override,
   });
-  return override;
+  return { companyId: override, overridden: true };
 }
 
 // =============================================================================
@@ -245,13 +247,15 @@ export async function buildRequestContext(
       return createUnauthenticatedContext('missing_claims');
     }
 
+    const effective = resolveEffectiveCompanyId(request, claims, decodedToken.uid);
     return {
       uid: decodedToken.uid,
       email: decodedToken.email || '',
-      companyId: resolveEffectiveCompanyId(request, claims, decodedToken.uid),
+      companyId: effective.companyId,
       globalRole: claims.globalRole,
       mfaEnrolled: claims.mfaEnrolled ?? false,
       isAuthenticated: true,
+      superAdminOverride: effective.overridden,
     };
   }
 
@@ -269,13 +273,15 @@ export async function buildRequestContext(
       return createUnauthenticatedContext('missing_claims');
     }
 
+    const effective = resolveEffectiveCompanyId(request, claims, decodedToken.uid);
     return {
       uid: decodedToken.uid,
       email: decodedToken.email || '',
-      companyId: resolveEffectiveCompanyId(request, claims, decodedToken.uid),
+      companyId: effective.companyId,
       globalRole: claims.globalRole,
       mfaEnrolled: claims.mfaEnrolled ?? false,
       isAuthenticated: true,
+      superAdminOverride: effective.overridden,
     };
   }
 

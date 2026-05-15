@@ -50,6 +50,14 @@ export async function fetchCompanies(
   const companyMap = new Map<string, { id: string; name: string }>();
 
   try {
+    // ADR-354 entry point #6: super admin with switcher override → impersonate
+    // target tenant. Skip global navigation_companies scan; scope to effective
+    // companyId only, identical to company_admin of that tenant.
+    if (ctx.globalRole === "super_admin" && ctx.superAdminOverride) {
+      logger.info("[Bootstrap] Super admin switcher override - tenant-scoped impersonation", { effectiveCompanyId: ctx.companyId });
+      return fetchCompaniesTenant(adminDb, ctx, [], new Map());
+    }
+
     if (isAdmin) {
       const adminResult = await fetchCompaniesAdmin(adminDb, companyIds, companyMap);
       if (!adminResult.ok && ctx.companyId) {

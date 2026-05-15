@@ -93,11 +93,18 @@ async function handleProjectsBootstrap(
   const adminDb = initAdminFirestore();
 
   // 1. CHECK CACHE
+  // ADR-354 entry point #6: super admin with switcher override gets its own
+  // cache slot per effective company, so switching A→B→A never serves stale
+  // cross-tenant data. The plain `:admin` slot stays for global multi-tenant
+  // views (no override), and `:tenant:<id>` for regular company_admin users.
   const isAdmin =
     ctx.globalRole === "super_admin" || ctx.globalRole === "company_admin";
-  const tenantCacheKey = isAdmin
-    ? `${CACHE_KEY}:admin`
-    : `${CACHE_KEY}:tenant:${ctx.companyId}`;
+  const tenantCacheKey =
+    ctx.globalRole === "super_admin" && ctx.superAdminOverride
+      ? `${CACHE_KEY}:super:${ctx.companyId}`
+      : isAdmin
+        ? `${CACHE_KEY}:admin`
+        : `${CACHE_KEY}:tenant:${ctx.companyId}`;
 
   const cache = EnterpriseAPICache.getInstance();
 
