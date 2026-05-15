@@ -1,17 +1,17 @@
-# ADR-350: Trim Command (Αποκοπή)
+# ADR-350: Trim Command (Ψαλίδισμα)
 
 **Status:** 📝 DRAFT v0.1 — Phase 1 (recognition/Q&A in progress)
 **Date:** 2026-05-15
 **Domain:** DXF Viewer — Modify Tools
 **Shortcut:** `TR` (matches AutoCAD)
-**Ribbon:** Home → Modify → Αποκοπή (`modify.trim`, currently `comingSoon: true`)
+**Ribbon:** Home → Modify → **Ψαλίδισμα** (`modify.trim`, currently `comingSoon: true` — to be flipped)
 **Related ADRs:** ADR-345 (DXF Ribbon Interface), ADR-348 (Scale Command), ADR-349 (Stretch Command), ADR-040 (Preview Canvas Performance), ADR-031 (Enterprise Command Pattern / Undo–Redo), ADR-189 (Construction Guides), ADR-027 (DXF Keyboard Shortcuts), ADR-195 (Audit Value Catalogs), ADR-001 (Select/Dropdown), ADR-065 (file size geometry split)
 
 ---
 
 ## Context
 
-The DXF Viewer ribbon (ADR-345) includes a **Trim** (Αποκοπή) button in the Modify panel (`HOME_MODIFY_PANEL` flyout, file `ui/ribbon/data/home-tab-modify.ts:169-174`, plus a small twin at line 301), currently marked `comingSoon: true`. TRIM is **the single most-used modify command** in every professional 2D CAD package — it shortens or breaks an entity at the intersection with another entity (the "cutting edge").
+The DXF Viewer ribbon (ADR-345) includes a **Trim** (Ψαλίδισμα — Q15 decision) button in the Modify panel (`HOME_MODIFY_PANEL` flyout, file `ui/ribbon/data/home-tab-modify.ts:169-174`, plus a small twin at line 301), currently marked `comingSoon: true`. TRIM is **the single most-used modify command** in every professional 2D CAD package — it shortens or breaks an entity at the intersection with another entity (the "cutting edge").
 
 Distinct from neighboring modify commands:
 
@@ -109,7 +109,7 @@ Implement the `trim` command in **a single complete phase** (per `feedback_compl
 QUICK MODE (default)
 
 PHASE 1: ACTIVATION
-  → User presses ribbon "Αποκοπή" / shortcut TR / Enter from previous TRIM session
+  → User presses ribbon "Ψαλίδισμα" / shortcut TR / Enter from previous TRIM session
   → Status bar: "Επιλέξτε αντικείμενα προς αποκοπή ή [Όρια(Ο) / Διαγραφή(Δ) / Αναίρεση(Α) / Λειτουργία(Λ) / Άκρη(Ε) / Προβολή(Π)]:"
   → Cursor: pickbox (small square)
 
@@ -362,7 +362,7 @@ Captured via existing `useCanvasKeyHandler`. Single-letter keywords:
 | `config/keyboard-shortcuts.ts` | Wire `TR` shortcut to `trim` tool |
 | `snapping/engines/intersection-calculators.ts` | Extend if missing: arc-arc, line-arc, line-ellipse, polyline-arc, polyline-polyline, spline-* |
 | `core/commands/CommandRegistry.ts` | Register `TrimEntityCommand` |
-| `src/i18n/locales/el/dxf-viewer.json` | Add `ribbon.commands.trim: "Αποκοπή"` + all prompts + keywords |
+| `src/i18n/locales/el/dxf-viewer.json` | Add `ribbon.commands.trim: "Ψαλίδισμα"` + all prompts + keywords |
 | `src/i18n/locales/en/dxf-viewer.json` | Add `ribbon.commands.trim: "Trim"` + prompts + keywords |
 | `docs/centralized-systems/reference/adr-index.md` | Add ADR-350 entry |
 | `.claude-rules/pending-ratchet-work.md` | Update if needed |
@@ -381,13 +381,13 @@ Captured via existing `useCanvasKeyHandler`. Single-letter keywords:
 | Q6 | HATCH come oggetto da trim → **non supportato, EXPLODE first** (industry std 5/5, blocco con toast) ή skip silenzioso? | ✅ DECIDED 2026-05-15 | **Απόρριψη με μήνυμα** — toast `Η σκίαση δεν είναι δυνατόν να κοπεί. Διασπάστε την πρώτα (EXPLODE).` Locale key `notifications.trim.hatchNotTrimmable`. Aggregator counts unique hatches per session, single toast. |
 | Q7 | SPLINE fit-point → CV conversion silenziosa (industry std) ή avviso utente? | ✅ DECIDED 2026-05-15 (consequenza Q5) | **Σιωπηλή** — η μετατροπή fit→CV γίνεται διαφανώς μέσα στο `TrimEntityCommand.execute()`. Single Ctrl+Z αντιστρέφει και τα δύο. |
 | Q8 | Polyline tapered → preserva taper (industry std AutoCAD), oppure scarta taper (BricsCAD older)? | ✅ AUTO 2026-05-15 (industry convergence 5/5) | **Preserva taper**: width adjusted per AutoCAD docs ("width of the extended end is corrected to continue the original taper"). Se impossibile → 0 width point. Implementato in `trim-entity-cutter.ts::trimPolyline`. |
-| Q9 | SHIFT+click → invoca EXTEND inverso (industry std 5/5) — Phase 1 ή differire a ADR EXTEND? | ⏸️ pending | — |
-| Q10 | Undo granularità: **1 undo step per pick** (industry std AutoCAD) ή **1 undo step per intera sessione TRIM** (più atomico)? | ⏸️ pending | — |
+| Q9 | SHIFT+click → invoca EXTEND inverso (industry std 5/5) — Phase 1 ή differire a ADR EXTEND? | ✅ DECIDED 2026-05-15 | **Phase 1**: SHIFT+click entro TRIM → EXTEND inverso. Math simmetrico (TRIM rimuove sub-segmento al pick, EXTEND aggiunge sub-segmento dal endpoint più vicino al cutting edge). Stesso `trim-entity-cutter.ts` espone funzioni `extendLine/Arc/Polyline/...`. `TrimEntityCommand` riusato con `kind: 'extend'` operation type. **EXTEND command standalone resta TBD in futuro ADR** ma il SHIFT+click in TRIM è coperto qui. |
+| Q10 | Undo granularità: **1 undo step per pick** (industry std AutoCAD) ή **1 undo step per intera sessione TRIM** (più atomico)? | ✅ DECIDED 2026-05-15 | **1 undo step per pick** — ogni click conferma genera `TrimEntityCommand` separato in `CommandHistory`. Ctrl+Z reverses last pick. Industry std 5/5. |
 | Q11 | Audit trail (CHECK 3.17): **1 entry per pick** ή **1 entry per sessione** (compact)? | ⏸️ pending | — |
 | Q12 | Locked-layer entities: **silent skip** (industry std) ή toast informativo? | ⏸️ pending | — |
 | Q13 | Project mode Phase 1: **solo UCS** (2D viewer, default) ή esponi anche None/View come opzioni keyword? | ⏸️ pending | — |
-| Q14 | Cursor durante TRIM: **pickbox classico** AutoCAD (piccolo quadrato) ή **crosshair + scissor icon**? | ⏸️ pending | — |
-| Q15 | Greek command label: **"Αποκοπή"** (esistente nei locale planning) ή alternativa "Κοπή"/"Ψαλίδι"? | ⏸️ pending | — |
+| Q14 | Cursor durante TRIM: **pickbox classico** AutoCAD (piccolo quadrato) ή **crosshair + scissor icon**? | ✅ DECIDED 2026-05-15 | **Pickbox + scissor icon** (icona forbici 12×12px attaccata al pickbox). Inverte automaticamente in icona di freccia-EXTEND quando SHIFT è premuto. SVG inline, reuses cursor SSoT (`systems/cursor/`). |
+| Q15 | Greek command label: **"Αποκοπή"** (esistente nei locale planning) ή alternativa "Κοπή"/"Ψαλίδι"? | ✅ DECIDED 2026-05-15 | **"Ψαλίδισμα"** — scelta di Giorgio (custom). Locale key `ribbon.commands.trim = "Ψαλίδισμα"`. Aggiornare ADR-345 e tutti i riferimenti che dicevano "Αποκοπή". |
 | Q16 | Ribbon "small button" duplicato a `home-tab-modify.ts:301` — tienilo (boy-scout) ή rimuovilo? | ⏸️ pending | — |
 | Q17 | TR shortcut a casi-base: **istantaneo TR↵** ή solo da ribbon? | ⏸️ pending | — |
 | Q18 | Snap engine durante pick: **tutti i snap attivi** (endpoint/midpoint/intersection/nearest) ή **solo nearest-on-curve** (più predicibile)? | ⏸️ pending | — |
@@ -437,3 +437,7 @@ Captured via existing `useCanvasKeyHandler`. Single-letter keywords:
 | 2026-05-15 | Q6 decided: HATCH not trimmable → toast `Διασπάστε την πρώτα (EXPLODE)`. |
 | 2026-05-15 | Q7 decided: SPLINE fit→CV silent (consequenza Q5). |
 | 2026-05-15 | Q8 auto-decided: Tapered polyline preserves taper (industry std 5/5). |
+| 2026-05-15 | Q9 decided: SHIFT+click entro TRIM → **EXTEND inverso** in Phase 1. Scope ADR-350 esteso. |
+| 2026-05-15 | Q10 decided: Undo granularità = **1 step per pick** (industry std). |
+| 2026-05-15 | Q14 decided: Cursor = **pickbox + scissor icon** (auto-toggles a freccia-EXTEND con SHIFT). |
+| 2026-05-15 | Q15 decided: Greek label = **"Ψαλίδισμα"** (custom). |
