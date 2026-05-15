@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Dynamic import to avoid SSR issues with Firebase
 const getConfigModules = async () => {
@@ -74,6 +75,7 @@ interface MigrationState {
 }
 
 export function EnterpriseMigrationPageContent() {
+  const { t } = useTranslation('admin');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
@@ -97,11 +99,14 @@ export function EnterpriseMigrationPageContent() {
       const { ConfigurationHealthCheck } = await getConfigModules();
       const status = await ConfigurationHealthCheck.getSystemStatus();
       setSystemStatus(status);
-      addLog(`System health check: ${status.isHealthy ? 'Healthy' : 'Issues detected'} (Score: ${status.score}/100)`);
+      const logKey = status.isHealthy
+        ? 'enterpriseMigration.logs.healthCheckHealthy'
+        : 'enterpriseMigration.logs.healthCheckIssues';
+      addLog(t(logKey, { score: status.score }));
     } catch (error) {
-      addLog(`System health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      addLog(t('enterpriseMigration.logs.healthCheckFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     checkSystemHealth();
@@ -130,49 +135,52 @@ export function EnterpriseMigrationPageContent() {
 
   const startMigration = async () => {
     if (migrationState.isRunning) {
-      addLog('Migration is already running');
+      addLog(t('enterpriseMigration.logs.alreadyRunning'));
       return;
     }
+
+    const phaseKeys: Array<keyof typeof phaseNameMap> = ['preparing', 'backup', 'validation', 'migrating', 'verification', 'completed'];
+    const phaseNameMap = {
+      preparing: t('enterpriseMigration.phases.preparing'),
+      backup: t('enterpriseMigration.phases.backup'),
+      validation: t('enterpriseMigration.phases.validation'),
+      migrating: t('enterpriseMigration.phases.migrating'),
+      verification: t('enterpriseMigration.phases.verification'),
+      completed: t('enterpriseMigration.phases.completed'),
+    };
+    const phaseDurations: Record<string, number> = {
+      preparing: 2000, backup: 3000, validation: 2000,
+      migrating: 8000, verification: 3000, completed: 1000,
+    };
 
     setMigrationState(prev => ({
       ...prev,
       isRunning: true,
       progress: 0,
       phase: 'preparing',
-      currentItem: 'Initializing...',
+      currentItem: phaseNameMap.preparing,
       errors: [],
       completed: false,
       success: false
     }));
 
-    addLog('🏢 Starting Enterprise Hardcoded Values Migration...');
+    addLog(`🏢 ${t('enterpriseMigration.logs.starting')}`);
 
     try {
-      // Simulate migration progress (real implementation would use actual progress callbacks)
-      const phases = [
-        { name: 'preparing', duration: 2000, label: 'Preparing migration...' },
-        { name: 'backup', duration: 3000, label: 'Creating secure backup...' },
-        { name: 'validation', duration: 2000, label: 'Validating configuration...' },
-        { name: 'migrating', duration: 8000, label: 'Migrating hardcoded values...' },
-        { name: 'verification', duration: 3000, label: 'Verifying migration...' },
-        { name: 'completed', duration: 1000, label: 'Migration completed!' }
-      ];
-
-      for (let i = 0; i < phases.length; i++) {
-        const phase = phases[i];
+      for (let i = 0; i < phaseKeys.length; i++) {
+        const key = phaseKeys[i];
+        const label = phaseNameMap[key];
         setMigrationState(prev => ({
           ...prev,
-          phase: phase.name,
-          currentItem: phase.label,
-          progress: (i + 1) * (100 / phases.length)
+          phase: key,
+          currentItem: label,
+          progress: (i + 1) * (100 / phaseKeys.length)
         }));
-
-        addLog(`Phase ${i + 1}/6: ${phase.label}`);
-        await new Promise(resolve => setTimeout(resolve, phase.duration));
+        addLog(t('enterpriseMigration.logs.phase', { current: i + 1, total: phaseKeys.length, label }));
+        await new Promise(resolve => setTimeout(resolve, phaseDurations[key]));
       }
 
-      // Execute actual migration
-      addLog('Executing actual migration...');
+      addLog(t('enterpriseMigration.logs.executing'));
       const { MigrationAPI } = await getConfigModules();
       await MigrationAPI.executeMigration({ createBackup: true });
 
@@ -182,20 +190,19 @@ export function EnterpriseMigrationPageContent() {
         completed: true,
         success: true,
         progress: 100,
-        currentItem: 'Migration completed successfully!'
+        currentItem: t('enterpriseMigration.status.success')
       }));
 
-      addLog('✅ Enterprise Migration completed successfully!');
-      addLog('🎉 All hardcoded values have been eliminated');
-      addLog('🏢 Application is now fully database-driven');
+      addLog(`✅ ${t('enterpriseMigration.logs.completed')}`);
+      addLog(`🎉 ${t('enterpriseMigration.logs.allHardcodedEliminated')}`);
+      addLog(`🏢 ${t('enterpriseMigration.logs.databaseDriven')}`);
 
-      // Refresh system status after migration
       const { ConfigurationHealthCheck: HealthCheck } = await getConfigModules();
       const newStatus = await HealthCheck.getSystemStatus();
       setSystemStatus(newStatus);
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : String(error);
       setMigrationState(prev => ({
         ...prev,
         isRunning: false,
@@ -204,7 +211,7 @@ export function EnterpriseMigrationPageContent() {
         errors: [...prev.errors, errorMessage]
       }));
 
-      addLog(`❌ Migration failed: ${errorMessage}`);
+      addLog(`❌ ${t('enterpriseMigration.logs.failed', { error: errorMessage })}`);
     }
   };
 
@@ -218,7 +225,7 @@ export function EnterpriseMigrationPageContent() {
       completed: false,
       success: false
     });
-    addLog('Migration state reset');
+    addLog(t('enterpriseMigration.logs.reset'));
   };
 
   // ============================================================================
@@ -230,14 +237,14 @@ export function EnterpriseMigrationPageContent() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Activity className={iconSizes.md} />
-          System Status
+          {t('enterpriseMigration.systemStatus.title')}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {systemStatus ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span>Health Score</span>
+              <span>{t('enterpriseMigration.systemStatus.healthScore')}</span>
               <Badge variant={systemStatus.isHealthy ? "default" : "destructive"}>
                 {systemStatus.score}/100
               </Badge>
@@ -250,7 +257,7 @@ export function EnterpriseMigrationPageContent() {
                 <Alert variant="destructive">
                   <AlertTriangle className={iconSizes.sm} />
                   <AlertDescription>
-                    {systemStatus.errors.length} error(s) detected
+                    {t('enterpriseMigration.systemStatus.errorsDetected', { count: systemStatus.errors.length })}
                   </AlertDescription>
                 </Alert>
               )}
@@ -259,7 +266,7 @@ export function EnterpriseMigrationPageContent() {
                 <Alert>
                   <AlertTriangle className={iconSizes.sm} />
                   <AlertDescription>
-                    {systemStatus.warnings.length} warning(s) detected
+                    {t('enterpriseMigration.systemStatus.warningsDetected', { count: systemStatus.warnings.length })}
                   </AlertDescription>
                 </Alert>
               )}
@@ -268,14 +275,14 @@ export function EnterpriseMigrationPageContent() {
                 <Alert>
                   <CheckCircle className={iconSizes.sm} />
                   <AlertDescription>
-                    System is healthy and ready for migration
+                    {t('enterpriseMigration.systemStatus.healthy')}
                   </AlertDescription>
                 </Alert>
               )}
             </div>
           </div>
         ) : (
-          <p>Loading system status...</p>
+          <p>{t('enterpriseMigration.systemStatus.loading')}</p>
         )}
       </CardContent>
     </Card>
@@ -286,7 +293,7 @@ export function EnterpriseMigrationPageContent() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Database className={iconSizes.md} />
-          Migration Controls
+          {t('enterpriseMigration.controls.title')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -301,12 +308,12 @@ export function EnterpriseMigrationPageContent() {
               {migrationState.isRunning ? (
                 <>
                   <RefreshCw className={`mr-2 ${iconSizes.sm} animate-spin`} />
-                  Migration Running...
+                  {t('enterpriseMigration.controls.running')}
                 </>
               ) : (
                 <>
                   <PlayCircle className={`mr-2 ${iconSizes.sm}`} />
-                  Start Enterprise Migration
+                  {t('enterpriseMigration.controls.start')}
                 </>
               )}
             </Button>
@@ -320,19 +327,22 @@ export function EnterpriseMigrationPageContent() {
               size="lg"
             >
               <RefreshCw className={`mr-2 ${iconSizes.sm}`} />
-              Reset Migration
+              {t('enterpriseMigration.controls.reset')}
             </Button>
           )}
 
           {migrationState.isRunning && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Progress</span>
+                <span>{t('enterpriseMigration.controls.progress')}</span>
                 <span>{Math.round(migrationState.progress)}%</span>
               </div>
               <Progress value={migrationState.progress} />
               <p className="text-sm text-gray-600">
-                Phase: {migrationState.phase} - {migrationState.currentItem}
+                {t('enterpriseMigration.controls.phaseLabel', {
+                  phase: migrationState.phase,
+                  item: migrationState.currentItem
+                })}
               </p>
             </div>
           )}
@@ -345,7 +355,9 @@ export function EnterpriseMigrationPageContent() {
                 <AlertTriangle className={iconSizes.sm} />
               )}
               <AlertDescription>
-                Migration {migrationState.success ? 'completed successfully' : 'failed'}
+                {migrationState.success
+                  ? t('enterpriseMigration.status.success')
+                  : t('enterpriseMigration.status.failed')}
                 {migrationState.errors.length > 0 && `: ${migrationState.errors.join(', ')}`}
               </AlertDescription>
             </Alert>
@@ -360,21 +372,21 @@ export function EnterpriseMigrationPageContent() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className={iconSizes.md} />
-          Migration Logs
+          {t('enterpriseMigration.logs.title')}
           <Button
             onClick={clearLogs}
             variant="outline"
             size="sm"
             className="ml-auto"
           >
-            Clear
+            {t('enterpriseMigration.logs.clear')}
           </Button>
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="bg-black text-green-400 p-4 rounded-md font-mono text-sm h-64 overflow-y-auto">
           {logs.length === 0 ? (
-            <p>No logs yet...</p>
+            <p>{t('enterpriseMigration.logs.empty')}</p>
           ) : (
             logs.map((log, index) => (
               <p key={index}>{log}</p>
@@ -394,10 +406,10 @@ export function EnterpriseMigrationPageContent() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
           <Shield className={`${iconSizes.xl2} text-blue-600`} />
-          Enterprise Hardcoded Values Migration
+          {t('enterpriseMigration.title')}
         </h1>
         <p className="text-gray-600">
-          Eliminate all hardcoded values and transform your application to be fully database-driven
+          {t('enterpriseMigration.subtitle')}
         </p>
       </div>
 
@@ -413,15 +425,15 @@ export function EnterpriseMigrationPageContent() {
       <div className={`mt-6 p-4 bg-blue-50 rounded-lg ${getStatusBorder('info')}`}>
         <h3 className="font-semibold mb-2 flex items-center gap-2">
           <CheckCircle className={`${iconSizes.md} text-blue-600`} />
-          Migration Benefits
+          {t('enterpriseMigration.benefits.title')}
         </h3>
         <ul className="text-sm space-y-1 text-blue-800">
-          <li>✅ Eliminates all 150+ hardcoded values identified</li>
-          <li>✅ Transforms application to be fully database-driven</li>
-          <li>✅ Enables dynamic configuration without code deployments</li>
-          <li>✅ Improves maintainability and enterprise compliance</li>
-          <li>✅ Provides centralized configuration management</li>
-          <li>✅ Includes rollback capabilities for safety</li>
+          <li>✅ {t('enterpriseMigration.benefits.item1')}</li>
+          <li>✅ {t('enterpriseMigration.benefits.item2')}</li>
+          <li>✅ {t('enterpriseMigration.benefits.item3')}</li>
+          <li>✅ {t('enterpriseMigration.benefits.item4')}</li>
+          <li>✅ {t('enterpriseMigration.benefits.item5')}</li>
+          <li>✅ {t('enterpriseMigration.benefits.item6')}</li>
         </ul>
       </div>
     </div>

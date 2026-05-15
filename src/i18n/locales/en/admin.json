@@ -1030,6 +1030,64 @@
       "deleteBackupFailed": "Failed to delete backup"
     }
   },
+  "enterpriseMigration": {
+    "title": "Enterprise Hardcoded Values Migration",
+    "subtitle": "Eliminate all hardcoded values and transform your application to be fully database-driven",
+    "systemStatus": {
+      "title": "System Status",
+      "healthScore": "Health Score",
+      "healthy": "System is healthy and ready for migration",
+      "errorsDetected": "{count} error(s) detected",
+      "warningsDetected": "{count} warning(s) detected",
+      "loading": "Loading system status..."
+    },
+    "controls": {
+      "title": "Migration Controls",
+      "start": "Start Enterprise Migration",
+      "running": "Migration Running...",
+      "reset": "Reset Migration",
+      "progress": "Progress",
+      "phaseLabel": "Phase: {phase} — {item}"
+    },
+    "status": {
+      "success": "Migration completed successfully",
+      "failed": "Migration failed"
+    },
+    "logs": {
+      "title": "Migration Logs",
+      "clear": "Clear",
+      "empty": "No logs yet...",
+      "healthCheckHealthy": "System health check: Healthy (Score: {score}/100)",
+      "healthCheckIssues": "System health check: Issues detected (Score: {score}/100)",
+      "healthCheckFailed": "System health check failed: {error}",
+      "alreadyRunning": "Migration is already running",
+      "starting": "Starting Enterprise Hardcoded Values Migration...",
+      "phase": "Phase {current}/{total}: {label}",
+      "executing": "Executing actual migration...",
+      "completed": "Enterprise Migration completed successfully!",
+      "allHardcodedEliminated": "All hardcoded values have been eliminated",
+      "databaseDriven": "Application is now fully database-driven",
+      "failed": "Migration failed: {error}",
+      "reset": "Migration state reset"
+    },
+    "phases": {
+      "preparing": "Preparing migration...",
+      "backup": "Creating secure backup...",
+      "validation": "Validating configuration...",
+      "migrating": "Migrating hardcoded values...",
+      "verification": "Verifying migration...",
+      "completed": "Migration completed!"
+    },
+    "benefits": {
+      "title": "Migration Benefits",
+      "item1": "Eliminates all 150+ hardcoded values identified",
+      "item2": "Transforms application to be fully database-driven",
+      "item3": "Enables dynamic configuration without code deployments",
+      "item4": "Improves maintainability and enterprise compliance",
+      "item5": "Provides centralized configuration management",
+      "item6": "Includes rollback capabilities for safety"
+    }
+  },
   "companySwitcher": {
     "label": "Company",
     "selectCompany": "Select company",

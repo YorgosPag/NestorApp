@@ -30,6 +30,7 @@ import { generateContactId } from '@/services/enterprise-id.service';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import {
   EXISTING_CONTACT_IDS, NEW_CONTACTS,
   CONTACT_ASSIGNMENTS, STATUS_ASSIGNMENTS
@@ -43,6 +44,8 @@ export function DatabaseUpdatePageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
+  const companyIdResult = useCompanyId();
+  const companyId = companyIdResult?.companyId;
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [completed, setCompleted] = useState({
@@ -67,7 +70,7 @@ export function DatabaseUpdatePageContent() {
     const addedContactIds: string[] = [];
     try {
       for (const contact of NEW_CONTACTS) {
-        const contactData = { ...contact, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: 'database-update-script', lastModifiedBy: 'database-update-script' };
+        const contactData = { ...contact, companyId, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: 'database-update-script', lastModifiedBy: 'database-update-script' };
         const contactId = generateContactId();
         await setDoc(doc(db, COLLECTIONS.CONTACTS, contactId), contactData);
         addedContactIds.push(contactId);
