@@ -58,7 +58,7 @@ export function useSourcingEvent(eventId?: string): UseSourcingEventResult {
     async (dto: UpdateSourcingEventDTO): Promise<SourcingEvent> => {
       if (!eventId) throw new Error('No eventId — cannot update');
       const snapshot = event;
-      setEvent((prev) => (prev ? { ...prev, ...dto } : prev));
+      setEvent((prev) => (prev ? { ...prev, ...dto } as SourcingEvent : prev));
       try {
         const res = await fetch(`${BASE}/${eventId}`, {
           method: 'PATCH',

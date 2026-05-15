@@ -34,7 +34,7 @@ interface RfqDetailDialogsProps {
   setRenewalQuoteId: (id: string | null) => void;
   handleDialogConfirm: (category: string, note: string) => Promise<void>;
   handleDialogCancel: () => void;
-  handleExpiredDialogAction: (action: string) => void;
+  handleExpiredDialogAction: (action: 'award_anyway' | 'request_renewal' | 'cancel') => void;
   dismissDetection: () => void;
   onCancelConfirm: (payload: {
     reason: RfqCancellationReason | null;

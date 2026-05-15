@@ -105,7 +105,7 @@ export function VendorNotificationDialog({
     if (!open) return;
     const now = new Date().toLocaleDateString('el-GR');
     const rfqTitle = rfq?.title ?? '';
-    const rfqNumber = rfq?.displayNumber ?? '';
+    const rfqNumber = (rfq as (typeof rfq & { displayNumber?: string }))?.displayNumber ?? '';
 
     const initial: VendorRow[] = quotes
       .filter((q) => q.status !== 'superseded' && (q.status === 'accepted' || q.status === 'rejected'))

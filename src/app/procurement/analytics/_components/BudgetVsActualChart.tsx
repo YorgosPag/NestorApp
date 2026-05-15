@@ -136,7 +136,7 @@ export function BudgetVsActualChart({
                   height={64}
                 />
                 <YAxis tickFormatter={formatEurShort} tick={{ fontSize: 11 }} width={56} />
-                <Tooltip content={(props) => <CustomTooltip {...props} messages={messages} />} />
+                <Tooltip content={(props: TooltipProps<number, string>) => <CustomTooltip {...props} messages={messages} />} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar
                   dataKey="budget"

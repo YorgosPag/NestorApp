@@ -133,7 +133,7 @@ function FilterFields({ filters, onChange }: AnalyticsFiltersBarProps) {
   );
   const supplierOptions = useMemo<MultiComboboxOption[]>(
     () => suppliers.map((s) => ({
-      value: s.id,
+      value: s.id ?? '',
       label:
         s.displayName ??
         s.name ??
@@ -142,7 +142,8 @@ function FilterFields({ filters, onChange }: AnalyticsFiltersBarProps) {
           ? [s.firstName, s.lastName].filter(Boolean).join(' ')
           : null) ??
         s.serviceName ??
-        s.id,
+        s.id ??
+        '',
     })),
     [suppliers],
   );

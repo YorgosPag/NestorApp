@@ -24,6 +24,7 @@ interface ContactRfqInvitesSectionProps {
 }
 
 const STATUS_VARIANTS: Record<VendorInvite['status'], string> = {
+  pending: 'bg-gray-100 text-gray-700',
   sent: 'bg-blue-100 text-blue-700',
   opened: 'bg-amber-100 text-amber-700',
   submitted: 'bg-emerald-100 text-emerald-700',

@@ -180,7 +180,6 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
 
   const [renewalQuoteId, setRenewalQuoteId] = useState<string | null>(null);
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
-
   const refetchAll = useCallback(async () => {
     await Promise.all([fetchRfq(), refetch(), refetchComparison()]);
   }, [fetchRfq, refetch, refetchComparison]);
@@ -217,7 +216,6 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     rfqId: id,
     projectId: rfq?.projectId,
   });
-
   const handleStub = useCallback(
     () => void toast.info(t('rfqs.quoteHeader.tooltip.comingSoon')),
     [t],
@@ -239,7 +237,10 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
       : buildQuoteHeaderActions({
           quote: selectedQuote, rfq,
           onConfirm: () => void patchQuoteStatus('under_review'),
-          onApprove: () => handleAwardIntent(selectedQuote.id),
+          onApprove: () => {
+            const entry = comparison?.quotes.find(e => e.quoteId === selectedQuote.id);
+            if (entry) handleAwardIntent(entry);
+          },
           onReject: () => void patchQuoteStatus('rejected'),
           onCreatePo: handleStub, onViewPo: handleStub,
           onRestore: () => void patchQuoteStatus('submitted'),
@@ -330,7 +331,6 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
       {showDashboard && (
         <UnifiedDashboard stats={dashboardStats} columns={4} />
       )}
-
       <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as RfqTabValue)}>
         <TabsList>
           <TabsTrigger value="quotes">
@@ -471,7 +471,6 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
           <VendorInviteSection rfqId={id} rfq={rfq} lockState={lockState} onViewInvites={() => handleTabChange('setup')} />
         </TabsContent>
       </Tabs>
-
       <RfqDetailDialogs
         rfqId={id}
         rfq={rfq}

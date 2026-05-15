@@ -87,7 +87,7 @@ export function VendorInviteDialog({
   const { t } = useTranslation('quotes');
 
   const { suggested, others } = useMemo(
-    () => rankVendors(rfq?.category ?? null, vendorContacts, alreadyInvitedIds),
+    () => rankVendors((rfq as (typeof rfq & { category?: string | null }))?.category ?? null, vendorContacts, alreadyInvitedIds),
     [rfq, vendorContacts, alreadyInvitedIds],
   );
 
