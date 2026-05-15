@@ -13,33 +13,46 @@
  */
 
 import type { ArrayEntity, Entity } from '../../types/entities';
-import type { RectParams } from './types';
+import type { RectParams, PolarParams, ItemTransform } from './types';
 import { computeRectTransforms } from './rect-transform';
+import { computePolarTransforms } from './polar-transform';
 import { computeSourceGroupBbox } from './array-bbox';
 import { applyTransformToEntity } from './array-entity-transform';
 
 /**
- * Expand a rectangular ArrayEntity into rendered/snap-candidate items.
+ * Expand an ArrayEntity into rendered/snap-candidate items.
  *
- * Returns an empty array for unsupported array kinds (polar/path — Phase B+).
+ * Dispatches to the correct transform math by arrayKind.
+ * Returns empty for unsupported kinds (path — Phase C).
  * Each returned item carries the parent ArrayEntity's `id` so that click
  * hit-testing resolves to the correct scene entity.
  */
 export function expandArrayEntity(entity: ArrayEntity): Entity[] {
-  if (entity.arrayKind !== 'rect') return [];
+  if (entity.hiddenSources.length === 0) return [];
 
-  const params = entity.params as RectParams;
   const bbox = computeSourceGroupBbox(entity.hiddenSources);
-  const transforms = computeRectTransforms(params, bbox);
+  const transforms = computeTransformsForKind(entity, bbox);
 
   const result: Entity[] = [];
-
   for (const transform of transforms) {
     for (const source of entity.hiddenSources) {
       const item = applyTransformToEntity(source, transform, bbox.center);
       result.push({ ...item, id: entity.id });
     }
   }
-
   return result;
+}
+
+function computeTransformsForKind(
+  entity: ArrayEntity,
+  bbox: ReturnType<typeof computeSourceGroupBbox>,
+): ItemTransform[] {
+  switch (entity.arrayKind) {
+    case 'rect':
+      return computeRectTransforms(entity.params as RectParams, bbox);
+    case 'polar':
+      return computePolarTransforms(entity.params as PolarParams, bbox);
+    default:
+      return []; // path: Phase C
+  }
 }

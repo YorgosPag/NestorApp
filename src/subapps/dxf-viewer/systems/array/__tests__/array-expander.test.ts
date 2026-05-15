@@ -92,8 +92,9 @@ describe('expandArrayEntity', () => {
     expect(second.end.y).toBeCloseTo(20);
   });
 
-  it('polar array kind returns empty array', () => {
+  it('polar array: 6 items / 360° → 6 items expanded', () => {
     const src = makeLine('src1', 0, 0, 10, 0);
+    // source bbox center=(5,0), polar center=(0,0), explicit radius=50
     const polarArr: ArrayEntity = {
       id: 'arr1',
       type: 'array',
@@ -101,9 +102,26 @@ describe('expandArrayEntity', () => {
       visible: true,
       arrayKind: 'polar',
       hiddenSources: [src],
-      params: { kind: 'polar', count: 6, fillAngle: 360, startAngle: 0, rotateItems: true, center: { x: 0, y: 0 }, radius: 50 } as PolarParams,
+      params: { kind: 'polar', count: 6, fillAngle: 360, startAngle: 0, rotateItems: false, center: { x: 0, y: 0 }, radius: 50 } as PolarParams,
     } as ArrayEntity;
-    expect(expandArrayEntity(polarArr)).toHaveLength(0);
+    expect(expandArrayEntity(polarArr)).toHaveLength(6);
+  });
+
+  it('polar array: all items carry parent arrayId', () => {
+    const src = makeLine('src1', 0, 0, 10, 0);
+    const polarArr: ArrayEntity = {
+      id: 'polar-arr',
+      type: 'array',
+      layer: '0',
+      visible: true,
+      arrayKind: 'polar',
+      hiddenSources: [src],
+      params: { kind: 'polar', count: 4, fillAngle: 360, startAngle: 0, rotateItems: false, center: { x: 0, y: 0 }, radius: 20 } as PolarParams,
+    } as ArrayEntity;
+    const items = expandArrayEntity(polarArr);
+    for (const item of items) {
+      expect(item.id).toBe('polar-arr');
+    }
   });
 
   it('empty hiddenSources → no items', () => {

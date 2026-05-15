@@ -1,5 +1,5 @@
 /**
- * EXPLODE ARRAY COMMAND — ADR-353 Session A2 (Q14)
+ * EXPLODE ARRAY COMMAND — ADR-353 Session A2 (Q14), updated B1
  *
  * Breaks an associative ArrayEntity into N independent entity copies
  * (one per item per source). The ArrayEntity is then removed from scene.
@@ -7,16 +7,16 @@
  * execute/redo: compute transforms → addEntity N times → removeEntity(array).
  * undo: removeEntity for each created ID → addEntity(arraySnapshot).
  *
- * Polar/Path transforms are not available in Phase A — those array kinds
- * cannot be created yet, so this branch throws a clear error at runtime.
+ * Supports: rect (Phase A), polar (Phase B). Path: Phase C.
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { ArrayEntity } from '../../../types/entities';
-import type { ItemTransform } from '../../../systems/array/types';
+import type { ItemTransform, SourceBbox } from '../../../systems/array/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { computeRectTransforms } from '../../../systems/array/rect-transform';
+import { computePolarTransforms } from '../../../systems/array/polar-transform';
 import { applyTransformToEntity } from '../../../systems/array/array-entity-transform';
 import { computeSourceGroupBbox } from '../../../systems/array/array-bbox';
 
@@ -66,14 +66,15 @@ export class ExplodeArrayCommand implements ICommand {
 
     this.arraySnapshot = deepClone(raw);
     const arrayEntity = raw as unknown as ArrayEntity;
-    const transforms = this._computeTransforms(arrayEntity);
+    const bbox = computeSourceGroupBbox(arrayEntity.hiddenSources);
+    const transforms = this._computeTransforms(arrayEntity, bbox);
 
     this.createdEntityIds = [];
 
     for (const transform of transforms) {
       for (const source of arrayEntity.hiddenSources) {
         const newId = generateEntityId();
-        const transformed = applyTransformToEntity(source, transform);
+        const transformed = applyTransformToEntity(source, transform, bbox.center);
         this.sceneManager.addEntity({ ...transformed, id: newId } as unknown as SceneEntity);
         this.createdEntityIds.push(newId);
       }
@@ -82,18 +83,21 @@ export class ExplodeArrayCommand implements ICommand {
     this.sceneManager.removeEntity(this.arrayId);
   }
 
-  private _computeTransforms(arrayEntity: ArrayEntity): ItemTransform[] {
-    const { arrayKind, hiddenSources, params } = arrayEntity;
+  private _computeTransforms(arrayEntity: ArrayEntity, bbox: SourceBbox): ItemTransform[] {
+    const { arrayKind, params } = arrayEntity;
 
     if (arrayKind === 'rect' && params.kind === 'rect') {
-      const bbox = computeSourceGroupBbox(hiddenSources);
       return computeRectTransforms(params, bbox);
     }
 
-    // Polar/Path transforms implemented in Phase B/C respectively.
+    if (arrayKind === 'polar' && params.kind === 'polar') {
+      return computePolarTransforms(params, bbox);
+    }
+
+    // Path: Phase C
     throw new Error(
       `ExplodeArrayCommand: array kind '${arrayKind}' is not yet supported. ` +
-      `Implement polar-transform.ts (Phase B) or path-transform.ts (Phase C) first.`,
+      `Implement path-transform.ts (Phase C) first.`,
     );
   }
 

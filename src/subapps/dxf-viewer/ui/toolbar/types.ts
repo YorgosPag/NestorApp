@@ -48,6 +48,8 @@ export type ToolType =
   | 'extend'
   // ADR-353: Rectangular Array command (Πίνακας — Phase A: rect only)
   | 'array-rect'
+  // ADR-353: Polar Array command (Πίνακας Πολικός — Phase B)
+  | 'array-polar'
   | 'measure'
   | 'measure-distance'
   | 'measure-distance-continuous'

@@ -83,6 +83,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'extend': { id: 'extend', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-353 Phase A: Rectangular Array (single-shot: pre-select sources → activate → array created → ribbon contextual tab adjusts params)
   'array-rect': { id: 'array-rect', category: 'editing', requiresCanvas: false, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-353 Phase B: Polar Array (requiresCanvas=true: B2 adds interactive center-pick)
+  'array-polar': { id: 'array-polar', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // Crop tools (window / polygon / lasso freehand)
   'crop-window': { id: 'crop-window', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'polygon-crop': { id: 'polygon-crop', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
@@ -403,15 +405,13 @@ export function useToolStateManager({
     if (transitionHistory.current.length > 50) {
       transitionHistory.current = transitionHistory.current.slice(-50);
     }
-
   }, []);
 
   const setTool = useCallback((
-    newTool: ToolType, 
+    newTool: ToolType,
     reason: ToolTransition['reason'] = 'user'
   ): boolean => {
     if (newTool === activeTool) {
-
       return true;
     }
 
