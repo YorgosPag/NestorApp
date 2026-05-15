@@ -359,6 +359,11 @@
       "showPanels": "Show Panels",
       "undock": "Undock"
     },
+    "flyout": {
+      "expand": "Expand panel",
+      "pin": "Pin panel",
+      "unpin": "Unpin panel"
+    },
     "commands": {
       "line": "Line",
       "lineVariants": {

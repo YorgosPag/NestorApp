@@ -1,7 +1,7 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
-**Last updated:** 2026-05-12 (ADR-345 Fase 5.5 pending ribbon items added)
+**Last updated:** 2026-05-15 (ADR-345 Fasi 6.1 + 7 + 8-partial completate)
 **Source of truth:** `adrs/ADR-299-ratchet-backlog-master-roadmap.md`
 **Purpose:** Agent-facing live checklist. Se STATUS = ALL_DONE → salta il resto. Se STATUS = ACTIVE → leggi e ricorda a Giorgio.
 
@@ -39,9 +39,9 @@
 - [ ] **Commit chain store → UpdateTextStyleCommand → CommandHistory** — il bridge Fase 5.5 scrive solo lo store. Il chain verso CommandHistory appartiene ad ADR-344 Phase 6+ (TipTap session close). Quando ADR-344 Phase 6 atterrerà, il bridge ribbon ne beneficia automaticamente.
 
 #### Fasi future ADR-345 (in ordine)
-- [ ] **Fase 6: Tab SETTINGS** — migrazione DXF Settings, disabilitazione floating 'colors' tab
-- [ ] **Fase 7: Panel flyout** — expand + pin button + minimize states refinement
-- [ ] **Fase 8: Floating panel removal** — rimozione completa panel flottanti legacy
+- [x] **Fase 6.1: Tab SETTINGS** — DxfSettingsPanel nel ribbon, floating colors tab disabilitata ✅ 2026-05-15
+- [x] **Fase 7: Panel flyout** — 4 stati minimize, pinnedPanelIds, chevron + pin UI ✅ 2026-05-15
+- [ ] **Fase 8 completa: Floating panel removal** — rimozione completa: rimettere Layers tab nel ribbon + eliminare FloatingPanelContainer (23 file, task separato)
 
 ---
 
@@ -66,6 +66,7 @@
 ## Changelog
 
 | Date       | Change |
+| 2026-05-15 | ADR-345 Fasi 6.1 + 7 completate. Fase 8 parziale (colors rimossa, levels rimane per ora). |
 | 2026-05-12 | ADR-345 Fase 5.5 pending items aggiunti (findReplace/spellCheck/symbol comingSoon, commit chain ADR-344 Ph6+, Fasi 6/7/8). STATUS → ACTIVE. |
 | 2026-05-04 | ADR-233 CLOSED — tutti e 3 gli item già implementati nel codice (POST 409 route.ts:220-233, PATCH 409 building-update.handler.ts:104-119, BuildingListCard formatBuildingLabel, unit tests entity-code-config.test.ts). Ratchet era stale. |
 | 2026-05-04 | ADR-314 CLOSED — CHECK 3.18 baseline 0/0/0 ALL GREEN dal 2026-04-19 (Phase A-E DONE). `.ssot-discover-baseline.json` confirma centralizedFiles=135 protected=135 unprotected=0 duplicateExports=0 antiPatterns=0. STATUS → ALL_DONE. |

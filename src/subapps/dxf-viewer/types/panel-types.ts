@@ -27,7 +27,7 @@
  *
  * @description
  * - 'levels': Επίπεδα - Level management panel (+ wizard button, ADR-309)
- * - 'colors': Ρυθμίσεις DXF - DXF settings (lines, text, grips)
+ * (ADR-345 Fase 8: 'colors' removed — DxfSettingsPanel migrated to ribbon Settings tab)
  * (ADR-345 Fase 6: 'text-properties' removed — all controls migrated to Ribbon contextual tab)
  *
  * @example
