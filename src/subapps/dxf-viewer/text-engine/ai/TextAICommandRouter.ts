@@ -134,7 +134,7 @@ function buildCommandFromIntent(
 
     case 'update_paragraph': {
       const justification = resolveJustification(intent.justification);
-      const patch: Partial<Omit<TextParagraph, 'runs'>> = {};
+      const patch: { -readonly [K in Exclude<keyof TextParagraph, 'runs'>]?: TextParagraph[K] } = {};
       if (justification !== undefined) patch.justification = justification;
       return new UpdateMTextParagraphCommand(
         { entityId, patch, paragraphIndex: intent.paragraphIndex ?? undefined },
@@ -154,7 +154,7 @@ function buildCommandFromIntent(
           entityIds: [entityId],
           pattern: intent.search ?? '',
           replacement: intent.replacement ?? '',
-          matchOptions: { caseSensitive: intent.caseSensitive ?? false },
+          matchOptions: { caseSensitive: intent.caseSensitive ?? false, wholeWord: false, regex: false },
         },
         scene,
         layerProvider,

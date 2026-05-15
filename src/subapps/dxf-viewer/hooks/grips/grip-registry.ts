@@ -125,7 +125,7 @@ export function useGripRegistry({
           for (const grip of dxfGrips) {
             if (count >= maxGripsPerEntity) break;
             const wrapped = wrapDxfGrip(grip);
-            if (!showMidpoints && (wrapped.type === 'edge' || wrapped.type === 'midpoint')) continue;
+            if (!showMidpoints && wrapped.type === 'edge') continue;
             if (!showCenters && wrapped.type === 'center') continue;
             result.push(wrapped);
             count++;

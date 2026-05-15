@@ -77,7 +77,7 @@ export function TextEditorOverlay({
       ...dxfTextExtensions,
     ];
     if (yDoc) {
-      base.push(createYjsTipTapExtension({ doc: yDoc }));
+      base.push(createYjsTipTapExtension({ doc: yDoc, awareness: null, user: null }));
     }
     return base;
   }, [yDoc]);

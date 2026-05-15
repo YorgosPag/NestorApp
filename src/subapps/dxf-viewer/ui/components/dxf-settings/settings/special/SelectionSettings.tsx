@@ -24,7 +24,7 @@ export function SelectionSettings() {
   const { getStatusBorder, getElementBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // 🌐 i18n
-  const { t } = useTranslation(I18N_NAMESPACES);
+  const { t } = useTranslation([...I18N_NAMESPACES]);
 
   // 🏢 ENTERPRISE: Type-safe selection field value type
   type SelectionFieldValue = string | number | 'solid' | 'dashed' | 'dotted' | 'dash-dot';

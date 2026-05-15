@@ -113,7 +113,7 @@ export function useFloorEntitiesForLinking({
     }));
 
     const filteredParking = floorId
-      ? parkingSpots.filter(p => p.floorId === floorId)
+      ? parkingSpots.filter(p => p.floor === floorId)
       : parkingSpots;
     const parkingEntities: LinkableEntity[] = filteredParking.map(p => ({
       id: p.id,

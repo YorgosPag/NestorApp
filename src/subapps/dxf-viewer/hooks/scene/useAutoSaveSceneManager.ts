@@ -185,7 +185,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
             ...(canonicalScenePath ? { canonicalScenePath } : {}),
           };
           const success = await DxfFirestoreService.autoSaveV2(
-            fileId, fileName, scene,
+            fileId!, fileName, scene,
             Object.keys(saveContext).length > 0 ? saveContext : undefined
           );
 
@@ -193,7 +193,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
             setSaveStatus('success');
             setLastSaveTime(new Date());
             // 🏢 ENTERPRISE: Notify LevelsSystem to persist level→DXF association
-            onSceneSavedRef.current?.(fileId, fileName);
+            onSceneSavedRef.current?.(fileId!, fileName);
           } else {
             setSaveStatus('error');
             console.error(`❌ [AutoSave] Failed to save changes to ${fileName}`);

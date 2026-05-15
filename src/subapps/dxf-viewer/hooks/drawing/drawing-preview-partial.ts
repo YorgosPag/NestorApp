@@ -133,10 +133,10 @@ export function applyPreviewStyling(
         grips.push({ position: clickedPts[i], type: 'vertex', color: ICON_CLICK_COLORS.SECOND });
       }
       grips.push({ position: cursorPoint, type: 'cursor', color: cursorStepColor(tool, clickedPts.length) });
-      (entity as Record<string, unknown>).previewGripPoints = grips;
+      (entity as unknown as Record<string, unknown>).previewGripPoints = grips;
     } else {
       // 0 clicks: cursor dot = FIRST (teal) — step-0 indicator
-      (entity as Record<string, unknown>).previewGripPoints = [
+      (entity as unknown as Record<string, unknown>).previewGripPoints = [
         { position: cursorPoint, type: 'cursor', color: ICON_CLICK_COLORS.FIRST },
       ];
     }

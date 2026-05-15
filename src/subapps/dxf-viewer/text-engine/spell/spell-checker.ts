@@ -171,7 +171,7 @@ class WorkerSpellChecker implements SpellChecker {
   async hydrateCustomDictionary(terms: readonly CustomTermPayload[]): Promise<void> {
     // Tear down + re-create the worker so the init message carries the new set.
     this.disposeInternal();
-    Object.assign(this as { initialCustomTerms: readonly CustomTermPayload[] }, {
+    Object.assign(this as unknown as { initialCustomTerms: readonly CustomTermPayload[] }, {
       initialCustomTerms: terms,
     });
     await this.ensureInit();

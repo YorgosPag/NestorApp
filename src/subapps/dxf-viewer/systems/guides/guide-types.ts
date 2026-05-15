@@ -18,7 +18,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 
 // Re-export for convenience
-export type { GridAxis } from '../../ai-assistant/grid-types';
+export type { GridAxis, GridGuideStyle } from '../../ai-assistant/grid-types';
 
 // ============================================================================
 // GUIDE ENTITY

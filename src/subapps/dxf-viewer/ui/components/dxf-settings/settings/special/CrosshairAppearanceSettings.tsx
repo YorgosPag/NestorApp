@@ -89,7 +89,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
   const { quick, getStatusBorder, radius, radiusClass } = useBorderTokens();
   const colors = useSemanticColors();
   // 🌐 i18n
-  const { t } = useTranslation(I18N_NAMESPACES);
+  const { t } = useTranslation([...I18N_NAMESPACES]);
   // ============================================================================
   // HOOKS
   // ============================================================================
