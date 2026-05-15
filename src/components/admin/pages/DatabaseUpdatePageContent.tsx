@@ -22,7 +22,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   collection, setDoc, doc, serverTimestamp,
-  getDocs, query, limit, writeBatch
+  getDocs, query, limit, writeBatch, where
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -92,7 +92,7 @@ export function DatabaseUpdatePageContent() {
       const batch = writeBatch(db);
       for (const [contactId, assignment] of Object.entries(CONTACT_ASSIGNMENTS)) {
         batch.update(doc(db, 'contacts', contactId), {
-          tags: assignment.tags, updatedAt: serverTimestamp(),
+          tags: assignment.tags, companyId, updatedAt: serverTimestamp(),
           lastModifiedBy: 'database-update-script', notes: t('databaseUpdate.logs.role', { role: assignment.role })
         });
         updatedCount++;
@@ -111,7 +111,7 @@ export function DatabaseUpdatePageContent() {
     addLog(`🔄 ${t('databaseUpdate.logs.updatingUnits')}`);
     let updatedCount = 0;
     try {
-      const propertiesQuery = query(collection(db, COLLECTIONS.PROPERTIES), limit(20));
+      const propertiesQuery = query(collection(db, COLLECTIONS.PROPERTIES), where('companyId', '==', companyId), limit(20));
       const propertiesSnapshot = await getDocs(propertiesQuery);
       const batch = writeBatch(db);
       const contactIds = Object.keys(CONTACT_ASSIGNMENTS);
@@ -121,11 +121,11 @@ export function DatabaseUpdatePageContent() {
           if (!(contactId in CONTACT_ASSIGNMENTS)) return;
           const assignment = CONTACT_ASSIGNMENTS[contactId as keyof typeof CONTACT_ASSIGNMENTS];
           const newStatus = STATUS_ASSIGNMENTS[assignment.role];
-          const updateData: Record<string, unknown> = { status: newStatus, updatedAt: serverTimestamp() };
+          const updateData: Record<string, unknown> = { companyId, status: newStatus, updatedAt: serverTimestamp() };
           if (assignment.role === 'buyer') { updateData.soldTo = contactId; updateData.saleDate = nowISO(); }
           else if (assignment.role === 'landowner') { updateData.ownerId = contactId; }
           else if (assignment.role.includes('renter')) { updateData.tenantId = contactId; }
-          else if (assignment.role === 'corporate') { updateData.companyId = contactId; }
+          else if (assignment.role === 'corporate') { updateData.corporateContactId = contactId; }
           batch.update(doc(db, 'properties', propDoc.id), updateData);
           addLog(`  ✅ ${t('databaseUpdate.logs.unitUpdated', { id: propDoc.id, status: newStatus, contactId })}`);
           updatedCount++;

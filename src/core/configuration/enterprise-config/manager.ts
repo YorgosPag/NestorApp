@@ -135,12 +135,15 @@ export class EnterpriseConfigurationManager {
         return DEFAULT_SYSTEM_CONFIG;
       }
 
-      const systemConfig = validateSystemConfig(configDoc.data());
-
-      this.configCache.set(cacheKey, systemConfig);
-      setTimeout(() => this.configCache.delete(cacheKey), this.cacheTimeout);
-
-      return systemConfig;
+      try {
+        const systemConfig = validateSystemConfig(configDoc.data());
+        this.configCache.set(cacheKey, systemConfig);
+        setTimeout(() => this.configCache.delete(cacheKey), this.cacheTimeout);
+        return systemConfig;
+      } catch {
+        logger.warn('System config has incomplete data, using defaults');
+        return DEFAULT_SYSTEM_CONFIG;
+      }
 
     } catch (error) {
       logger.error('Failed to load system config', { error });
