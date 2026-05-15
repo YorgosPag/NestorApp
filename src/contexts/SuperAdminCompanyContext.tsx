@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { setSuperAdminActiveCompanyId } from '@/services/firestore/super-admin-active-company';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { CompanyDocument } from '@/types/company';
 
@@ -85,19 +86,19 @@ export function SuperAdminCompanyProvider({ children }: { children: React.ReactN
   }, [isSuperAdmin]);
 
   const setActiveCompanyId = useCallback((id: string) => {
-    // eslint-disable-next-line no-console
-    console.log('[SACtx] setActiveCompanyId called', { newId: id });
     setActiveCompanyIdState(id);
     localStorage.setItem(STORAGE_KEY, id);
   }, []);
 
-  // Propagate selection to apiClient singleton so every authenticated API call
-  // sends X-Super-Admin-Company-Id header. Server's buildRequestContext reads it
-  // and overrides ctx.companyId for bypass roles (ADR-354).
+  // Propagate selection to both transports (ADR-354):
+  //  - apiClient → adds X-Super-Admin-Company-Id header to every API call;
+  //    server's buildRequestContext overrides ctx.companyId for bypass roles.
+  //  - firestore registry → requireAuthContext picks it up so client-side
+  //    Firestore SDK queries (real-time listeners, getAll) scope to it.
   useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('[SACtx] propagate effect', { isSuperAdmin, activeCompanyId });
-    apiClient.setSuperAdminCompanyId(isSuperAdmin ? activeCompanyId : null);
+    const id = isSuperAdmin ? activeCompanyId : null;
+    apiClient.setSuperAdminCompanyId(id);
+    setSuperAdminActiveCompanyId(id);
   }, [isSuperAdmin, activeCompanyId]);
 
   return (

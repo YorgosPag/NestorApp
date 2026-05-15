@@ -22,6 +22,12 @@ export interface TenantContext {
   readonly uid: string;
   readonly companyId: string | null;
   readonly isSuperAdmin: boolean;
+  /**
+   * When a super admin has picked a company via the global switcher (ADR-354),
+   * Firestore queries scope to this id instead of returning all tenants.
+   * Null for regular users or super admins without active selection.
+   */
+  readonly effectiveCompanyId: string | null;
 }
 
 // ============================================================================

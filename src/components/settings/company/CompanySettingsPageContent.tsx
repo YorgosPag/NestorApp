@@ -24,8 +24,6 @@ export function CompanySettingsPageContent() {
   const { t } = useTranslation('org-structure');
   const { user } = useAuth();
   const { isSuperAdmin, activeCompanyId: superAdminCompanyId } = useSuperAdminCompany();
-  // eslint-disable-next-line no-console
-  console.log('[CompanySettings] render', { hasUser: !!user, isSuperAdmin, superAdminCompanyId });
 
   const [state, setState] = useState<OrgStructureState>({
     orgStructure: null,
@@ -48,24 +46,18 @@ export function CompanySettingsPageContent() {
 
   const fetchOrgStructure = useCallback(async () => {
     if (!user) return;
-    // eslint-disable-next-line no-console
-    console.log('[OrgFetch] fire', { isSuperAdmin, superAdminCompanyId });
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
       const headers = await getAuthHeaders();
-      // eslint-disable-next-line no-console
-      console.log('[OrgFetch] headers built', { hasOverride: 'X-Super-Admin-Company-Id' in (headers as Record<string, string>) });
       const res = await fetch(API_ROUTES.ORG_STRUCTURE, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { orgStructure: OrgStructure | null };
-      // eslint-disable-next-line no-console
-      console.log('[OrgFetch] resp', { orgStructureId: data.orgStructure?.id, departments: data.orgStructure?.departments?.length ?? 0 });
       setState((s) => ({ ...s, orgStructure: data.orgStructure, loading: false }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'error';
       setState((s) => ({ ...s, error: msg, loading: false }));
     }
-  }, [user, getAuthHeaders, isSuperAdmin, superAdminCompanyId]);
+  }, [user, getAuthHeaders]);
 
   useEffect(() => {
     void fetchOrgStructure();

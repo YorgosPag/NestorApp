@@ -36,6 +36,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS, FIRESTORE_LIMITS, type CollectionKey } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { requireAuthContext, waitForAuthReady } from './auth-context';
+import { onSuperAdminActiveCompanyChange } from './super-admin-active-company';
 import { getTenantConfig, resolveTenantValue } from './tenant-config';
 import { chunkArray } from '@/lib/array-utils';
 import type {
@@ -77,9 +78,15 @@ function buildTenantConstraints(
   // System collections — no tenant filter
   if (config.mode === 'none') return [];
 
-  // Super admin → sees everything (consistent with server-side API routes
-  // which also skip tenant filter for super_admin — e.g. /api/projects/list)
-  if (ctx.isSuperAdmin) return [];
+  // Super admin with active company switcher (ADR-354) → filter by selected
+  // company so the cross-tenant view collapses to a single tenant's data.
+  // Super admin without selection → sees everything (skip filter).
+  if (ctx.isSuperAdmin) {
+    if (ctx.effectiveCompanyId && config.mode === 'companyId') {
+      return [where(config.fieldName, '==', ctx.effectiveCompanyId)];
+    }
+    return [];
+  }
 
   const value = resolveTenantValue(config.mode, ctx);
   if (!value) return [];
@@ -233,17 +240,16 @@ class FirestoreQueryService implements IFirestoreQueryService {
     const colName = resolveCollectionName(key);
     const colRef = collection(db, colName);
 
-    // Wait for Firebase Auth to initialize before subscribing.
-    // This prevents silent failures during SSR hydration when
-    // auth.currentUser is still null. (ADR-294 auth-ready centralization)
-    let unsubscribe: Unsubscribe = () => { /* noop */ };
+    let innerUnsub: Unsubscribe = () => { /* noop */ };
     let cancelled = false;
 
-    void waitForAuthReady().then(hasUser => {
-      if (cancelled || !hasUser) return;
-      return requireAuthContext();
-    }).then(ctx => {
-      if (!ctx || cancelled) return;
+    const rebuild = async () => {
+      innerUnsub();
+      if (cancelled) return;
+      if (!(await waitForAuthReady())) return;
+      if (cancelled) return;
+      const ctx = await requireAuthContext();
+      if (cancelled) return;
 
       const allConstraints: QueryConstraint[] = [
         ...buildTenantConstraints(key, ctx, options.tenantOverride),
@@ -258,7 +264,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
         ? query(colRef, ...allConstraints)
         : query(colRef);
 
-      unsubscribe = onSnapshot(q,
+      innerUnsub = onSnapshot(q,
         snapshot => {
           const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
           const lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
@@ -271,12 +277,20 @@ class FirestoreQueryService implements IFirestoreQueryService {
         },
         onError
       );
-    }).catch(onError);
+    };
 
-    // Return a function that cancels pending setup OR the actual listener
+    void rebuild().catch(onError);
+
+    // Rebuild query when super admin switches company (ADR-354) — otherwise
+    // long-lived real-time listeners stay scoped to the previous tenant.
+    const unsubSwitcher = onSuperAdminActiveCompanyChange(() => {
+      void rebuild().catch(onError);
+    });
+
     return () => {
       cancelled = true;
-      unsubscribe();
+      innerUnsub();
+      unsubSwitcher();
     };
   }
 

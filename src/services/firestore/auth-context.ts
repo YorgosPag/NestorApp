@@ -12,6 +12,7 @@
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { TenantContext } from './firestore-query.types';
+import { getSuperAdminActiveCompanyId } from './super-admin-active-company';
 
 /**
  * Waits for Firebase Auth to finish initializing.
@@ -70,9 +71,14 @@ export async function requireAuthContext(): Promise<TenantContext> {
     throw new Error('AUTHORIZATION_ERROR: User is not assigned to a company');
   }
 
+  const effectiveCompanyId = isSuperAdmin
+    ? getSuperAdminActiveCompanyId()
+    : null;
+
   return {
     uid: currentUser.uid,
     companyId,
     isSuperAdmin,
+    effectiveCompanyId,
   };
 }
