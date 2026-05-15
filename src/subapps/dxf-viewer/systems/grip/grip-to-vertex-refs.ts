@@ -12,7 +12,9 @@
  *   - ARC      gripIndex 1 → 'arc-start'       |  2 → 'arc-end'   |  3 (edge) → both
  *   - RECTANGLE corner grip → 'rectangle-corner' at grip.gripIndex
  *                edge grip → both adjacent corners
- *   - CIRCLE / ELLIPSE / TEXT center grip → anchor-translate (caller branches)
+ *   - CIRCLE   gripIndex 1-4 (quadrant) → 'circle-quadrant' index 0-3
+ *                gripIndex 0 (center) → anchor-translate (caller branches)
+ *   - ELLIPSE / TEXT center grip → anchor-translate (caller branches)
  *
  * Returns `[]` when the entity has no addressable vertices for that grip —
  * caller should fall back to anchor-translate via `grip.movesEntity`.
@@ -77,6 +79,19 @@ function refsForRectangle(entityId: string, grip: UnifiedGripInfo): VertexRef[] 
 }
 
 /**
+ * Circle quadrant grips: gripIndex 1-4 → quadrant 0-3 (right, top, left,
+ * bottom — see `computeDxfEntityGrips` in `hooks/grip-computation.ts`).
+ * gripIndex 0 = center grip = `movesEntity`, falls back to anchorMoves.
+ */
+function refsForCircle(entityId: string, grip: UnifiedGripInfo): VertexRef[] {
+  if (grip.type !== 'vertex') return [];
+  if (grip.gripIndex >= 1 && grip.gripIndex <= 4) {
+    return [{ entityId, kind: 'circle-quadrant', index: grip.gripIndex - 1 }];
+  }
+  return [];
+}
+
+/**
  * Resolve the `VertexRef[]` that a STRETCH command should target for a given
  * grip drag. Returns `[]` for entities that should use anchor-translate
  * (caller falls back via `grip.movesEntity`).
@@ -90,6 +105,7 @@ export function gripToVertexRefs(entity: Entity, grip: UnifiedGripInfo): VertexR
     case 'lwpolyline': return refsForPolyline(entity.id, grip);
     case 'rectangle':
     case 'rect':       return refsForRectangle(entity.id, grip);
+    case 'circle':     return refsForCircle(entity.id, grip);
     default:           return [];
   }
 }

@@ -55,7 +55,11 @@ export function translateEntityByAnchor(entity: Entity, delta: WorldVector): Par
   switch (entity.type) {
     case 'circle':
     case 'ellipse':
+    case 'arc':
       return { center: translatePoint(entity.center, delta) } as Partial<SceneEntity>;
+    case 'rectangle':
+    case 'rect':
+      return { x: entity.x + delta.x, y: entity.y + delta.y } as Partial<SceneEntity>;
     case 'text':
     case 'mtext':
       return { position: translatePoint(entity.position, delta) } as Partial<SceneEntity>;
@@ -92,6 +96,8 @@ export function applyVertexDisplacement(
     case 'rectangle':
     case 'rect':
       return stretchRectangle(entity, capturedRefs, delta);
+    case 'circle':
+      return wrapUpdate(stretchCircle(entity, capturedRefs, delta));
     default:
       return { kind: 'noop' };
   }
@@ -320,6 +326,45 @@ function stretchRectangle(
   } as unknown as SceneEntity;
 
   return { kind: 'replace', entity: replacement };
+}
+
+/**
+ * Circle stretch — a captured quadrant grip resizes the circle so the new
+ * grip position lies on the circumference. Center is preserved (rigid move
+ * of a circle goes through {@link translateEntityByAnchor} via the center
+ * grip / `anchorMoves`, not through quadrant capture).
+ *
+ * Multi-quadrant capture (geometrically over-constrained) is resolved by
+ * averaging the resulting radii — pragmatic and stable under crossing-window
+ * stretch, where 2-3 quadrants may fall inside the window.
+ */
+function stretchCircle(
+  entity: Entity & { type: 'circle' },
+  refs: ReadonlyArray<VertexRef>,
+  d: WorldVector,
+): Partial<SceneEntity> {
+  const captured: number[] = [];
+  for (const r of refs) {
+    if (r.kind === 'circle-quadrant' && r.index !== undefined) captured.push(r.index);
+  }
+  if (captured.length === 0) return {};
+
+  const oldQuadrants: Point2D[] = [
+    { x: entity.center.x + entity.radius, y: entity.center.y },
+    { x: entity.center.x,                 y: entity.center.y + entity.radius },
+    { x: entity.center.x - entity.radius, y: entity.center.y },
+    { x: entity.center.x,                 y: entity.center.y - entity.radius },
+  ];
+
+  let radiusSum = 0;
+  for (const i of captured) {
+    const newPos = translatePoint(oldQuadrants[i], d);
+    radiusSum += Math.hypot(newPos.x - entity.center.x, newPos.y - entity.center.y);
+  }
+  const newRadius = radiusSum / captured.length;
+  if (newRadius < 1e-9) return {};
+
+  return { radius: newRadius } as Partial<SceneEntity>;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

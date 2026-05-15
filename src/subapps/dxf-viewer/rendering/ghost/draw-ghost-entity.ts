@@ -30,7 +30,7 @@ export function drawGhostEntity(
 ): void {
   const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, transform, viewport);
 
-  switch (entity.type) {
+  switch (entity.type as DxfEntityUnion['type'] | 'mtext') {
     case 'line': {
       const s = toScreen(entity.start);
       const e = toScreen(entity.end);

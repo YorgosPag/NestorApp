@@ -24,7 +24,8 @@ export type VertexKind =
   | 'arc-mid'
   | 'arc-end'
   | 'spline-cv'
-  | 'rectangle-corner';
+  | 'rectangle-corner'
+  | 'circle-quadrant';
 
 export interface VertexRef {
   readonly entityId: string;
@@ -65,6 +66,10 @@ export function enumerateVertices(entity: Entity): VertexRef[] {
     case 'rect':
       return [0, 1, 2, 3].map(i => ({
         entityId: entity.id, kind: 'rectangle-corner' as const, index: i,
+      }));
+    case 'circle':
+      return [0, 1, 2, 3].map(i => ({
+        entityId: entity.id, kind: 'circle-quadrant' as const, index: i,
       }));
     default:
       return [];
@@ -117,6 +122,8 @@ export function getVertexPosition(entity: Entity, ref: VertexRef): Point2D | nul
       return readSplineCv(entity, ref.index);
     case 'rectangle-corner':
       return readRectangleCorner(entity, ref.index);
+    case 'circle-quadrant':
+      return readCircleQuadrant(entity, ref.index);
     default:
       return null;
   }
@@ -144,6 +151,19 @@ function readRectangleCorner(entity: Entity, index: number | undefined): Point2D
     case 1: return { x: x + w, y };
     case 2: return { x: x + w, y: y + h };
     case 3: return { x, y: y + h };
+    default: return null;
+  }
+}
+
+function readCircleQuadrant(entity: Entity, index: number | undefined): Point2D | null {
+  if (index === undefined || entity.type !== 'circle') return null;
+  const { center: c, radius: r } = entity;
+  // Order: 0 = right (+x), 1 = top (+y), 2 = left (-x), 3 = bottom (-y).
+  switch (index) {
+    case 0: return { x: c.x + r, y: c.y };
+    case 1: return { x: c.x,     y: c.y + r };
+    case 2: return { x: c.x - r, y: c.y };
+    case 3: return { x: c.x,     y: c.y - r };
     default: return null;
   }
 }
