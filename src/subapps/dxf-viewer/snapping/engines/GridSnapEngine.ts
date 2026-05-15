@@ -15,7 +15,7 @@
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { calculateDistance, pointsEqual } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-079: Centralized Axis Detection Constants
 import { AXIS_DETECTION, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
@@ -88,7 +88,7 @@ export class GridSnapEngine extends BaseSnapEngine {
       // Also check adjacent grid points (they might be closer)
       const adjacentPoints = this.getAdjacentGridPoints(cursorPoint);
       for (const point of adjacentPoints) {
-        if (point.x === nearestGridPoint.x && point.y === nearestGridPoint.y) continue;
+        if (pointsEqual(point, nearestGridPoint)) continue;
 
         const adjDistance = calculateDistance(cursorPoint, point);
         if (adjDistance <= radius && adjDistance < distance) {
