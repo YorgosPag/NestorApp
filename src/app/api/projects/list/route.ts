@@ -23,7 +23,7 @@
 
 import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth, logAuditEvent, resolveSuperAdminProjectScope } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -59,14 +59,8 @@ interface ProjectListResponse {
 
 const CACHE_KEY_PREFIX = 'api:projects:list';
 
-/**
- * Generate tenant-specific cache key
- * TTL managed by EnterpriseAPICache (30s for projectsList - near-realtime)
- * 🏢 Super Admin gets 'all' cache key for cross-tenant access
- */
-function getTenantCacheKey(companyId: string, isSuperAdmin: boolean): string {
-  return isSuperAdmin ? `${CACHE_KEY_PREFIX}:all` : `${CACHE_KEY_PREFIX}:${companyId}`;
-}
+// Cache-key slot decision delegated to ADR-356 SSOT helper
+// (`resolveSuperAdminProjectScope`) — see usage in handler below.
 
 // ============================================================================
 // TYPE-SAFE FIELD EXTRACTORS
@@ -109,19 +103,32 @@ export const dynamic = 'force-dynamic';
 
 export const GET = withHighRateLimit(
   withAuth<ApiSuccessResponse<ProjectListResponse>>(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const startTime = Date.now();
 
       // 🏢 ENTERPRISE: Check if user is Super Admin for cross-tenant access
       const isSuperAdmin = ctx.globalRole === 'super_admin';
-      logger.info('[Projects/List] Starting projects list load', { isSuperAdmin });
+      const superAdminOverride = ctx.superAdminOverride ?? false;
+      logger.info('[Projects/List] Starting projects list load', {
+        isSuperAdmin,
+        superAdminOverride,
+        effectiveCompanyId: ctx.companyId,
+      });
 
       // ============================================================================
       // 1. CHECK TENANT-SPECIFIC CACHE FIRST
       // ============================================================================
 
       const cache = EnterpriseAPICache.getInstance();
-      const tenantCacheKey = getTenantCacheKey(ctx.companyId, isSuperAdmin);
+      const tenantCacheKey = getTenantCacheKey(ctx.companyId, isSuperAdmin, superAdminOverride);
+
+      // ADR-354 entry point #6: client-side bust via `?t=<ts>` query param
+      // (used by useFirestoreProjects listener on super-admin company switch).
+      if (req.nextUrl.searchParams.has('t')) {
+        cache.delete(tenantCacheKey);
+        logger.info('[Projects/List] Cache busted by client request');
+      }
+
       const cachedData = cache.get<ProjectListResponse>(tenantCacheKey);
 
   if (cachedData) {
@@ -150,9 +157,16 @@ export const GET = withHighRateLimit(
       // ============================================================================
 
       let projectsSnapshot;
-      if (isSuperAdmin) {
-        // 🏢 Super Admin: Fetch ALL projects (no navigation_companies filtering)
-        // navigation_companies is visual-only (sidebar navigation), not a data filter
+      if (isSuperAdmin && superAdminOverride) {
+        // ADR-354 entry point #6: super admin switcher → impersonate target tenant.
+        // Scope to effective companyId, same as a regular company_admin would see.
+        logger.info('[Projects/List] Super Admin switcher override - tenant-scoped impersonation', { effectiveCompanyId: ctx.companyId });
+        projectsSnapshot = await getAdminFirestore()
+          .collection(COLLECTIONS.PROJECTS)
+          .where(FIELDS.COMPANY_ID, '==', ctx.companyId)
+          .get();
+      } else if (isSuperAdmin) {
+        // 🏢 Super Admin without active switcher: Fetch ALL projects (cross-tenant view)
         logger.info('[Projects/List] Super Admin - Fetching all projects');
         projectsSnapshot = await getAdminFirestore().collection(COLLECTIONS.PROJECTS).get();
       } else {

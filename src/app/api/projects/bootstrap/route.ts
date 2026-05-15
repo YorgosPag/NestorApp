@@ -29,7 +29,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth";
+import { withAuth, resolveSuperAdminProjectScope } from "@/lib/auth";
 import type { AuthContext, PermissionCache } from "@/lib/auth";
 import { getAdminFirestore, getAdminDiagnostics } from "@/lib/firebaseAdmin";
 import { apiSuccess, type ApiSuccessResponse } from "@/lib/api/ApiErrorHandler";
@@ -84,27 +84,27 @@ async function handleProjectsBootstrap(
   ctx: AuthContext,
 ): Promise<NextResponse<ApiSuccessResponse<BootstrapResponse>>> {
   const startTime = Date.now();
+  const scope = resolveSuperAdminProjectScope(ctx);
+
   logger.info("[Bootstrap] Projects bootstrap load", {
     email: ctx.email,
     companyId: ctx.companyId,
+    globalRole: ctx.globalRole,
+    scopeMode: scope.mode,
   });
 
   // 0. VALIDATE FIREBASE ADMIN SDK
   const adminDb = initAdminFirestore();
 
-  // 1. CHECK CACHE
-  // ADR-354 entry point #6: super admin with switcher override gets its own
-  // cache slot per effective company, so switching A→B→A never serves stale
-  // cross-tenant data. The plain `:admin` slot stays for global multi-tenant
-  // views (no override), and `:tenant:<id>` for regular company_admin users.
-  const isAdmin =
-    ctx.globalRole === "super_admin" || ctx.globalRole === "company_admin";
-  const tenantCacheKey =
-    ctx.globalRole === "super_admin" && ctx.superAdminOverride
-      ? `${CACHE_KEY}:super:${ctx.companyId}`
-      : isAdmin
-        ? `${CACHE_KEY}:admin`
-        : `${CACHE_KEY}:tenant:${ctx.companyId}`;
+  // 1. CHECK CACHE — slot decided by ADR-356 SSOT helper. company_admin keeps
+  // the legacy `:admin` aggregated slot because the bootstrap-queries layer
+  // still expands its scope via `navigation_companies` registry (multi-company
+  // view inside a single tenant). Super-admin and regular tenants delegate
+  // their slot to `scope.cacheSlot`.
+  const isCompanyAdmin = ctx.globalRole === "company_admin";
+  const tenantCacheKey = isCompanyAdmin
+    ? `${CACHE_KEY}:admin`
+    : `${CACHE_KEY}:${scope.cacheSlot}`;
 
   const cache = EnterpriseAPICache.getInstance();
 

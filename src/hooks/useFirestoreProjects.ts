@@ -3,6 +3,8 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload, type ProjectCreatedPayload, type ProjectDeletedPayload } from '@/services/realtime';
+// ADR-354 entry point #6: re-fetch on super-admin switcher change
+import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
 // 🏢 SSoT: ProjectSummary from @/types/project (via Pick<Project, ...>)
 import type { ProjectSummary } from '@/types/project';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -66,6 +68,8 @@ export function useFirestoreProjects() {
 
   // 🏢 ENTERPRISE: AbortController ref για proper cleanup
   const abortControllerRef = useRef<AbortController | null>(null);
+  // ADR-354 entry point #6: when true, next fetch appends `?t=<ts>` to bust server cache
+  const bustServerCacheRef = useRef(false);
 
   /**
    * 🏢 ENTERPRISE: Manual refetch function
@@ -103,10 +107,22 @@ export function useFirestoreProjects() {
     const unsubCreate = RealtimeService.subscribe('PROJECT_CREATED', handleProjectCreated);
     const unsubDelete = RealtimeService.subscribe('PROJECT_DELETED', handleProjectDeleted);
 
+    // ADR-354 entry point #6 — super-admin switcher change: invalidate module
+    // cache + bust server cache on next request + force refetch. Without this
+    // the page keeps the previously-impersonated tenant's projects list.
+    const unsubSwitcher = onSuperAdminActiveCompanyChange(() => {
+      logger.info('Super admin company switched — busting projects cache + refetching');
+      projectsCache.set([]);
+      hasLoadedOnceRef.current = false;
+      bustServerCacheRef.current = true;
+      setRefreshTrigger(prev => prev + 1);
+    });
+
     return () => {
       unsubUpdate();
       unsubCreate();
       unsubDelete();
+      unsubSwitcher();
     };
   }, []);
 
@@ -146,7 +162,11 @@ export function useFirestoreProjects() {
 
         // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + unwrap)
         // apiClient.get() returns unwrapped data (not { success, data })
-        const result = await apiClient.get<ProjectListData>(API_ROUTES.PROJECTS.LIST);
+        const url = bustServerCacheRef.current
+          ? `${API_ROUTES.PROJECTS.LIST}?t=${Date.now()}`
+          : API_ROUTES.PROJECTS.LIST;
+        bustServerCacheRef.current = false;
+        const result = await apiClient.get<ProjectListData>(url);
 
         // Check if request was aborted
         if (controller.signal.aborted) {
