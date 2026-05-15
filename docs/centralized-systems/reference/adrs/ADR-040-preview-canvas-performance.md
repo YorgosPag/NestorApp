@@ -71,6 +71,26 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-15: Ribbon re-render cascade fix — getter pattern + React.memo
+
+**Root cause**: `useRibbonTextEditorBridge.ts:44` chiamava `useTextToolbarStore()` senza selector → subscription all'intero store (15+ campi). Ogni aggiornamento del text toolbar store (selezione entità testo, cursor move in editor) causava re-render di `DxfViewerContent` → `commands` inline object ricreato → `RibbonRoot` (non memo'd) re-renderizzava → cascata su tutti i figli incluso `RibbonSplitButton` (169 samples / 31% `flushSyncWorkAcrossRoots_impl` in Firefox Profiler su sessione 1m16s).
+
+**Fix (4 file)**:
+
+1. **`useRibbonTextEditorBridge.ts`**: Rimossa `const values = useTextToolbarStore()` (whole-store subscription). Sostituita con getter ADR-040 pattern: `const getValues = useTextToolbarStore.getState`. `getToggleState` e `getComboboxState` ora leggono lo store al momento della chiamata — refs stabili (`[]` / `[sources]` deps). Zero subscription a livello di orchestratore.
+
+2. **`DxfViewerContent.tsx`**: Estratto `commands` object in `useMemo(ribbonCommands, [...stable-fn-refs])`. Oggetto stabile grazie a getter pattern del bridge → `RibbonCommandProvider.useMemo` non ricrea il context value su ogni re-render.
+
+3. **`RibbonRoot.tsx`**: Wrappato con `React.memo` → salta il re-render quando tutti i props (commands, contextualTabs, activeContextualTrigger) sono stabili per reference.
+
+4. **`RibbonSplitButton.tsx`**: Wrappato con `React.memo` → protezione leaf finale.
+
+**Pattern confermato**: `RibbonCommandProvider` già usava `useMemo` con deps sulle singole fn refs — quindi `getToggleState` stabile blocca il cascade dall'alto verso il basso.
+
+**Nota reactivity**: `getToggleState` e `getComboboxState` usano getter — mostrano stato corretto al momento del render, ma non forzano re-render reattivo quando il testo store cambia. Accettabile: la chain store→`UpdateTextStyleCommand` è pending ADR-344 Phase 6+; quando verrà cablata, il ribbon riceverà aggiornamenti tramite il command bridge, non via subscription diretta allo store.
+
+---
+
 ### 2026-05-15: ADR-348 Scale Command — ScalePreviewMount aggiunto alle micro-leaves
 
 `canvas-layer-stack-leaves.tsx`: aggiunto `ScalePreviewMount` e `ScalePreviewMountProps` seguendo il pattern micro-leaf esistente (identico a `MirrorPreviewMount`). Mount zero-JSX che chiama `useScalePreview` per il preview RAF-based a 60fps. `PreviewCanvasMountsProps` e `PreviewCanvasMounts` JSX aggiornati con prop `scale`. `canvas-layer-stack-types.ts`: aggiunto `scalePreview: Record<string, never>` (il preview legge tutto da `ScaleToolStore` — zero prop esterne necessarie). `CanvasLayerStack.tsx`: destructuring + pass-through `scalePreview`. `CanvasSection.tsx`: import `useScaleTool`, call hook, wiring di `scaleIsActive`/`handleScaleClick` → `useCanvasClickHandler`, `handleScaleEscape`/`handleScaleKeyDown`/`scaleIsActive` → `useCanvasKeyboardShortcuts`, `scalePreview={{}}` → `CanvasLayerStack`. Constraint CHECK 6C rispettato: `ScaleToolStore` non chiama `useSyncExternalStore` nell'orchestratore (`CanvasSection`) — il subscribe vive solo in `ScalePreviewMount` (leaf).

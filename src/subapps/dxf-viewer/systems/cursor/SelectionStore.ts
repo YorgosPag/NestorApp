@@ -11,6 +11,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { pointsEqual } from '../../rendering/entities/shared/geometry-vector-utils';
 
 export interface SelectionState {
   isSelecting: boolean;
@@ -43,7 +44,7 @@ class SelectionStoreClass {
 
   updateSelection(current: Point2D): void {
     const prev = this.state.selectionCurrent;
-    if (prev?.x === current.x && prev?.y === current.y) return;
+    if (pointsEqual(prev, current)) return;
     this.state = { ...this.state, selectionCurrent: { x: current.x, y: current.y } };
     this.notify();
   }

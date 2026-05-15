@@ -87,6 +87,7 @@ import {
 } from '../ui/ribbon/data/contextual-text-editor-tab';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
 import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEditorBridge';
+import { useRibbonCommands } from '../ui/ribbon/hooks/useRibbonCommands';
 // ADR-344 Phase 6.E: selection→toolbar + toolbar→CommandHistory always-on bridges
 import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
 import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToolbarCommandBridge';
@@ -291,6 +292,12 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     layoutMode === 'desktop' && activeTool === 'layering'
       ? PANEL_LAYOUT.POINTER_EVENTS.NONE
       : PANEL_LAYOUT.POINTER_EVENTS.AUTO;
+  const ribbonCommands = useRibbonCommands({
+    handleToolChange,
+    handleRibbonComingSoon,
+    wrappedHandleAction,
+    textEditorBridge,
+  });
   return (
       <TransformProvider
         initialTransform={getImmediateTransform()}
@@ -300,18 +307,9 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         {/* ADR-345 Fase 1: ribbon inserito tra global header e layout viewer */}
         {/* ADR-345 Fase 2: Layers tab content wired with scene/tool/selection state */}
         <RibbonRoot
-          commands={{
-            onToolChange: handleToolChange,
-            onComingSoon: handleRibbonComingSoon,
-            onAction: wrappedHandleAction,
-            onToggle: textEditorBridge.onToggle,
-            onComboboxChange: textEditorBridge.onComboboxChange,
-            getToggleState: textEditorBridge.getToggleState,
-            getComboboxState: textEditorBridge.getComboboxState,
-          }}
+          commands={ribbonCommands}
           contextualTabs={ribbonContextualTabs}
           activeContextualTrigger={activeContextualTrigger}
-
         />
       <section
         className={`flex flex-1 min-h-0 ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}

@@ -57,6 +57,7 @@ export {
   angleBetweenVectors,
   rotatePoint,
   getPerpendicularDirection,
+  pointsEqual,
 } from './geometry-vector-utils';
 
 // ===== ENTITY UTILITIES =====

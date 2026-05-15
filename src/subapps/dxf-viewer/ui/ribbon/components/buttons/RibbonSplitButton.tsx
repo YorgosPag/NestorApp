@@ -30,7 +30,7 @@ function resolveActiveVariant(
   return variants[0];
 }
 
-export const RibbonSplitButton: React.FC<RibbonSplitButtonProps> = ({
+const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
   button,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -121,3 +121,6 @@ export const RibbonSplitButton: React.FC<RibbonSplitButtonProps> = ({
     </div>
   );
 };
+
+// ADR-040 perf: memo skips re-render when button config and context are stable.
+export const RibbonSplitButton = React.memo(RibbonSplitButtonInner);

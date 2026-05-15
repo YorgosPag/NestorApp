@@ -45,7 +45,7 @@ interface RibbonRootProps {
   settingsTabContent?: React.ReactNode;
 }
 
-export const RibbonRoot: React.FC<RibbonRootProps> = ({
+const RibbonRootInner: React.FC<RibbonRootProps> = ({
   commands,
   contextualTabs,
   activeContextualTrigger = null,
@@ -140,5 +140,10 @@ export const RibbonRoot: React.FC<RibbonRootProps> = ({
     </RibbonCommandProvider>
   );
 };
+
+// ADR-040 perf: memo blocks cascade re-renders from DxfViewerContent.
+// RibbonRoot re-renders only when its props (commands, contextualTabs,
+// activeContextualTrigger) actually change by reference.
+export const RibbonRoot = React.memo(RibbonRootInner);
 
 export default RibbonRoot;

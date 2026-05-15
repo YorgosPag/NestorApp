@@ -41,7 +41,10 @@ export interface RibbonTextEditorBridge {
 
 export function useRibbonTextEditorBridge(): RibbonTextEditorBridge {
   const setValue = useTextToolbarStore((s) => s.setValue);
-  const values = useTextToolbarStore();
+  // ADR-040 getter pattern: read state at call time instead of subscribing to
+  // the entire store. Prevents DxfViewerContent from re-rendering on every
+  // text toolbar field change (15+ fields → ribbon cascade).
+  const getValues = useTextToolbarStore.getState;
   const fonts = useTextPanelFonts();
   const layers = useTextPanelLayers();
   const scales = useScaleList();
@@ -63,13 +66,14 @@ export function useRibbonTextEditorBridge(): RibbonTextEditorBridge {
   );
 
   const getToggleState = useCallback(
-    (key: string) => readToggleState(key, values),
-    [values],
+    (key: string) => readToggleState(key, getValues()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
   );
 
   const getComboboxState = useCallback(
-    (key: string) => readComboboxState(key, values, sources),
-    [values, sources],
+    (key: string) => readComboboxState(key, getValues(), sources),
+    [sources],
   );
 
   return { onToggle, onComboboxChange, getToggleState, getComboboxState };

@@ -20,6 +20,7 @@
  */
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
+import { pointsEqual } from '../../rendering/entities/shared/geometry-vector-utils';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ADR-163: Canvas Layer Synchronization - Mark canvases dirty for synchronized render
 // 🔧 FIX (2026-02-01): Use markSystemsDirty instead of markAllCanvasDirty
@@ -67,9 +68,7 @@ class ImmediatePositionStoreClass {
    */
   setPosition(pos: Point2D | null): void {
     // Skip if position unchanged (performance optimization)
-    if (this.position?.x === pos?.x && this.position?.y === pos?.y) {
-      return;
-    }
+    if (pointsEqual(this.position, pos)) return;
 
     this.position = pos ? { x: pos.x, y: pos.y } : null;
 
@@ -207,9 +206,7 @@ class ImmediatePositionStoreClass {
 
   // ─── World position channel (2026-05-08) ───────────────────────────────
   setWorldPosition(pos: Point2D | null): void {
-    if (this.worldPosition?.x === pos?.x && this.worldPosition?.y === pos?.y) {
-      return;
-    }
+    if (pointsEqual(this.worldPosition, pos)) return;
     this.worldPosition = pos ? { x: pos.x, y: pos.y } : null;
     this.worldListeners.forEach((l) => {
       try { l(this.worldPosition); } catch (e) { console.error('worldPosition listener error:', e); }
