@@ -70,7 +70,8 @@ export type EntityType =
   | 'leader'               // ✅ ENTERPRISE: AutoCAD leader/annotation entity support
   | 'hatch'                // ✅ ENTERPRISE: AutoCAD hatch pattern entity support
   | 'xline'                // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
-  | 'ray';                 // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
+  | 'ray'                  // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
+  | 'array';               // ADR-353: Associative array entity (rect/polar/path)
 
 // Geometric entities
 export interface LineEntity extends BaseEntity {
@@ -297,6 +298,27 @@ export interface RayEntity extends BaseEntity {
   secondPoint?: Point2D;         // Alternative definition: point defining direction
 }
 
+// ADR-353: Associative Array Entity.
+// Defined here (not in systems/array/types.ts) to avoid a circular import
+// (Entity↔ArrayEntity via hiddenSources: Entity[]).
+import type { ArrayKind, ArrayParams } from '../systems/array/types';
+export type { ArrayKind, ArrayParams };
+
+export interface ArrayEntity extends BaseEntity {
+  readonly type: 'array';
+  readonly arrayKind: ArrayKind;
+  /**
+   * Deep-cloned source entity copies owned by this ArrayEntity.
+   * Removed from scene on creation; temporarily restored in Edit Source mode.
+   */
+  readonly hiddenSources: Entity[];
+  readonly params: ArrayParams;
+  /** Path entity ID in scene (path arrays only; undefined for rect/polar). */
+  readonly pathEntityId?: string;
+  /** User base-point override; undefined = auto (bbox center). */
+  readonly basePointOverride?: Point2D;
+}
+
 // Union type for all entities
 // ✅ ENTERPRISE FIX: Explicit intersection with BaseEntity to ensure name property is available
 export type Entity = (
@@ -319,6 +341,7 @@ export type Entity = (
   | HatchEntity              // ✅ ENTERPRISE: AutoCAD hatch pattern entity support
   | XLineEntity              // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
   | RayEntity                // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
+  | ArrayEntity              // ADR-353: Associative array (rect/polar/path)
 ) & Pick<BaseEntity, 'name'>; // ✅ ENTERPRISE: Ensures name property is always available on Entity type
 
 // Entity collection types
@@ -423,6 +446,10 @@ export const isXLineEntity = (entity: Entity): entity is XLineEntity =>
 
 export const isRayEntity = (entity: Entity): entity is RayEntity =>
   entity.type === 'ray';
+
+// ADR-353
+export const isArrayEntity = (entity: Entity): entity is ArrayEntity =>
+  entity.type === 'array';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility
