@@ -33,7 +33,7 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('NotifyVendorRoute');
@@ -57,16 +57,14 @@ const NotifyVendorSchema = z.object({
 
 async function handlePost(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context?: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const { id: quoteId } = await context.params;
+  const { id: quoteId } = await context!.params;
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const parsed = await safeParseBody(req, NotifyVendorSchema);
-      if (!parsed.success) {
-        return NextResponse.json({ error: parsed.error }, { status: 400 });
-      }
+      const parsed = await safeJsonBody(NotifyVendorSchema, req);
+      if (parsed.error) return parsed.error;
 
       const { vendorEmail, template, subject, body, rfqId, customized } = parsed.data;
 
@@ -110,6 +108,7 @@ async function handlePost(
           performedByName: null,
           companyId: ctx.companyId,
         }),
+        'NotifyVendorRoute.audit',
       );
 
       logger.info('Vendor notified', { quoteId, vendorEmail, template, messageId: result.messageId });

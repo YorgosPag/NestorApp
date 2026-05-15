@@ -102,10 +102,10 @@ async function handleGet(
   _request: NextRequest,
   _ctx: AuthContext,
   _cache: PermissionCache,
-  { params }: { params: Promise<{ fileId: string }> },
+  routeContext?: { params: Promise<{ fileId: string }> },
 ): Promise<NextResponse> {
   try {
-    const { fileId } = await params;
+    const { fileId } = await routeContext!.params;
 
     const fileDoc = await getAdminFirestore().collection(COLLECTIONS.FILES).doc(fileId).get();
     if (!fileDoc.exists) {
@@ -126,7 +126,7 @@ async function handleGet(
     const [fileBuffer] = await getAdminBucket().file(storagePath).download();
 
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(fileBuffer);
+    await workbook.xlsx.load(Buffer.from(fileBuffer));
 
     const html = buildHtml(workbook);
 

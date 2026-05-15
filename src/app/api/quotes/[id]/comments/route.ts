@@ -17,7 +17,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { nowISO } from '@/lib/date-local';
@@ -72,7 +72,7 @@ async function handleGet(
 
       const comments = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((c) => (c as { deletedAt: unknown }).deletedAt === null);
+        .filter((c) => (c as unknown as { deletedAt: unknown }).deletedAt === null);
 
       return NextResponse.json({ data: comments });
     },
@@ -92,10 +92,8 @@ async function handlePost(
 
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const parsed = await safeParseBody(req, CreateCommentSchema);
-      if (!parsed.success) {
-        return NextResponse.json({ error: parsed.error }, { status: 400 });
-      }
+      const parsed = await safeJsonBody(CreateCommentSchema, req);
+      if (parsed.error) return parsed.error;
 
       const owned = await verifyQuoteOwnership(quoteId, ctx.companyId);
       if (!owned) return NextResponse.json({ error: 'Not found' }, { status: 404 });

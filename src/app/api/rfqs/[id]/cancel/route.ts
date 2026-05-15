@@ -25,6 +25,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { cancelRfq } from '@/subapps/procurement/services/rfq-lifecycle-service';
 import { RFQ_CANCELLATION_REASONS } from '@/subapps/procurement/types/rfq';
+import type { RfqCancellationReason } from '@/subapps/procurement/types/rfq';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -45,7 +46,7 @@ async function handlePost(
         const parsed = safeParseBody(CancelBodySchema, await req.json().catch(() => ({})));
         if (parsed.error) return parsed.error;
         const updated = await cancelRfq(ctx, id, {
-          reason: parsed.data.reason ?? null,
+          reason: (parsed.data.reason as RfqCancellationReason | null | undefined) ?? null,
           detail: parsed.data.detail ?? null,
           notifyVendors: parsed.data.notifyVendors,
         });

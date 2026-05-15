@@ -32,6 +32,7 @@ export function buildUpdateAuditChanges(existing: BankAccount, updates: BankAcco
     holderName: 'Δικαιούχος',
     notes: 'Σημειώσεις',
     isActive: 'Ενεργός λογαριασμός',
+    ibanChecksumWarning: 'Προειδοποίηση IBAN',
   };
 
   const changes: AuditFieldChange[] = [];

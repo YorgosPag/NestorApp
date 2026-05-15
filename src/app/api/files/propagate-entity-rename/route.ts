@@ -39,6 +39,11 @@ const ENTITY_COLLECTION_MAP: Readonly<Record<AuditEntityType, string>> = {
   parking: COLLECTIONS.PARKING_SPACES,
   storage: COLLECTIONS.STORAGE,
   purchase_order: COLLECTIONS.PURCHASE_ORDERS,
+  quote: COLLECTIONS.QUOTES,
+  material: COLLECTIONS.MATERIALS,
+  framework_agreement: COLLECTIONS.FRAMEWORK_AGREEMENTS,
+  text_template: COLLECTIONS.TEXT_TEMPLATES,
+  custom_dictionary_entry: COLLECTIONS.TEXT_CUSTOM_DICTIONARY,
 };
 
 interface PropagateRenameRequest {

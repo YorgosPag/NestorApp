@@ -150,7 +150,7 @@ async function handleMigration(
             entityType: ENTITY_TYPES.PROPERTY,
             entityId: entry.id,
             entityName: entry.name,
-            action: 'update',
+            action: 'updated',
             changes: [
               { field: 'interiorFeatures', oldValue: 'alarm-system', newValue: null, kind: 'collection', op: 'removed', itemKey: 'alarm-system', itemLabel: 'Συναγερμός (εσωτερικά)' },
               { field: 'securityFeatures', oldValue: null, newValue: 'alarm', kind: 'collection', op: 'added', itemKey: 'alarm', itemLabel: 'Συναγερμός (ασφάλεια)' },

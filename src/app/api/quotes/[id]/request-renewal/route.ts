@@ -17,7 +17,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('QuoteRenewalRoute');
@@ -38,16 +38,14 @@ const RenewalRequestSchema = z.object({
 
 async function handlePost(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context?: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const { id: quoteId } = await context.params;
+  const { id: quoteId } = await context!.params;
 
   const handler = withAuth(
     async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const parsed = await safeParseBody(req, RenewalRequestSchema);
-      if (!parsed.success) {
-        return NextResponse.json({ error: parsed.error }, { status: 400 });
-      }
+      const parsed = await safeJsonBody(RenewalRequestSchema, req);
+      if (parsed.error) return parsed.error;
 
       const { to, subject, body } = parsed.data;
 
