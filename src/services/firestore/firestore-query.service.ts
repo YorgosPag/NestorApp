@@ -35,7 +35,7 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS, FIRESTORE_LIMITS, type CollectionKey } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
-import { requireAuthContext, waitForAuthReady } from './auth-context';
+import { requireAuthContext, waitForAuthReady, resolveEffectiveCompanyId } from './auth-context';
 import { onSuperAdminActiveCompanyChange } from './super-admin-active-company';
 import { getTenantConfig, resolveTenantValue } from './tenant-config';
 import { chunkArray } from '@/lib/array-utils';
@@ -78,16 +78,21 @@ function buildTenantConstraints(
   // System collections — no tenant filter
   if (config.mode === 'none') return [];
 
-  // Super admin with active company switcher (ADR-354) → filter by selected
-  // company so the cross-tenant view collapses to a single tenant's data.
-  // Super admin without selection → sees everything (skip filter).
-  if (ctx.isSuperAdmin) {
-    if (ctx.effectiveCompanyId && config.mode === 'companyId') {
-      return [where(config.fieldName, '==', ctx.effectiveCompanyId)];
-    }
-    return [];
+  // ADR-356 SSOT: the companyId decision (regular tenant / super-admin
+  // impersonation / super-admin global view) lives in `resolveEffectiveCompanyId`.
+  // Custom services that bypass this layer (e.g. `companies.service.ts`,
+  // `navigation-companies.service.ts`) call the same helper directly, so the
+  // rule is enforced once across every client-side tenant filter.
+  if (config.mode === 'companyId') {
+    const effective = resolveEffectiveCompanyId(ctx);
+    if (!effective) return []; // super admin with no switcher selection
+    return [where(config.fieldName, '==', effective)];
   }
 
+  // Non-companyId modes (userId, tenantId, ...) — delegated to the
+  // tenant-config resolver. Super admins without `effectiveCompanyId` already
+  // returned `[]` above for the companyId mode; other modes use ctx fields
+  // directly and are unaffected by the switcher.
   const value = resolveTenantValue(config.mode, ctx);
   if (!value) return [];
 

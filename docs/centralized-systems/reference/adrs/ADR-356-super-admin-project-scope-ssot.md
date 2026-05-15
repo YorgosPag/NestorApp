@@ -69,6 +69,15 @@ function resolveEffectiveCompanyId(ctx: TenantContext): string | null;
 - Super admin with active switcher → `ctx.effectiveCompanyId` (impersonated tenant)
 - Super admin without switcher selection → `null` (caller skips the `where('companyId', ...)` constraint)
 
+**Full unification (2026-05-16)**: `buildTenantConstraints` inside `firestoreQueryService` was refactored to call `resolveEffectiveCompanyId` for the `companyId` mode (previously it duplicated the same `ctx.isSuperAdmin ? ctx.effectiveCompanyId : ctx.companyId` branching inline). Net result:
+
+- **One source of truth** for the "which companyId is this query's effective tenant?" decision: `resolveEffectiveCompanyId(ctx)` in `src/services/firestore/auth-context.ts`.
+- **Two output shapes** that wrap the same value:
+  - `firestoreQueryService.subscribe` / `.getAll` → wraps it in `where(...)` automatically (30+ realtime hooks)
+  - Custom services (companies, navigation-companies, …) → call it directly and build their own constraint
+
+A future change to the rule (e.g. honoring a different override field) flips both consumer paths at once. The risk of inline-divergent copies is gone.
+
 Every custom service that does direct Firestore queries via `getDocs`/`setDoc`/`deleteDoc` outside `firestoreQueryService` MUST resolve its tenant filter through this helper. Without it, super-admin sessions silently fall through to the JWT-claim companyId and leak cross-tenant data — the bug behind the 2026-05-16 screenshot (super admin selected "Georgios Pagonis" tenant in the switcher; the "Σύνδεση με Εταιρεία" dropdown still showed contacts from the operator's home tenant "Pagonis TEK"). Migrated services as of this ADR:
 
 - `src/services/companies.service.ts` — 4 call sites (`getAllActiveCompanies`, `getCompanyById`, `getCompanyByName`, `getAllCompaniesForSelect`)
@@ -140,4 +149,6 @@ Firestore-listener consumers do **not** need this hook — `firestoreQueryServic
 
 ## Changelog
 
-- **2026-05-16** — Initial implementation. Helper `resolveSuperAdminProjectScope` + hook `useSuperAdminSwitcherInvalidation`. Bootstrap + list routes migrated. NavigationContext + useFirestoreProjects migrated. ADR-354 entry point #6 (Phase C) remains valid; its inline boolean is now sourced from the helper rather than re-implemented.
+- **2026-05-16** — Initial implementation. Server helper `resolveSuperAdminProjectScope` + client hook `useSuperAdminSwitcherInvalidation`. Bootstrap + list routes migrated. NavigationContext + useFirestoreProjects migrated. ADR-354 entry point #6 (Phase C) remains valid; its inline boolean is now sourced from the helper rather than re-implemented.
+- **2026-05-16 (cross-tenant leak hotfix)** — `companies.service.ts` (4 sites) and `navigation-companies.service.ts` (5 sites) were destructuring `companyId` from `requireAuthContext()` instead of resolving the effective tenant, so super-admin switcher selections never reached company-contact dropdowns. Added client helper `resolveEffectiveCompanyId(ctx)` in `src/services/firestore/auth-context.ts` and migrated all call sites.
+- **2026-05-16 (full unification)** — Removed inline `ctx.isSuperAdmin ? ctx.effectiveCompanyId : ctx.companyId` duplicate inside `firestoreQueryService.buildTenantConstraints`. The function now delegates the companyId-mode decision to `resolveEffectiveCompanyId`. Single source of truth for every client-side tenant filter; two output adapters (Firestore constraint vs. raw value).
