@@ -19,7 +19,7 @@ if (!fs.existsSync(BASELINE_FILE)) {
 const baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
 const baselineSet = new Set(baseline.files ?? []);
 
-const result = spawnSync('npx', ['knip', '--reporter', 'json'], {
+const result = spawnSync('npx', ['knip', '--reporter', 'json', '--cache'], {
   cwd: ROOT,
   encoding: 'utf8',
   maxBuffer: 50 * 1024 * 1024,

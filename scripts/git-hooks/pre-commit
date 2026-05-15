@@ -219,11 +219,34 @@ if [[ -z "${SKIP_DEADCODE_CHECK:-}" ]] && [[ -n "$TS_FILES" ]] && [[ -f ".deadco
         if [[ -n "$ADDED_TS" || -n "$DELETED_TS" || -n "$REMOVED_IMPORTS" ]]; then
             DEADCODE_NEEDED=1
         fi
+
+        # ── Import pre-filter (case a only) ─────────────────────────────────
+        # If the ONLY trigger is ADDED_TS (no deletes, no removed imports),
+        # grep for each new file's stem in the project's import lines.
+        # Found in ≥1 import → file is wired up → provably not dead → skip knip.
+        # Misses → fall through to full knip. Layer 2 CI is authoritative either way.
+        if [[ $DEADCODE_NEEDED -eq 1 && -n "$ADDED_TS" && -z "$DELETED_TS" && -z "$REMOVED_IMPORTS" ]]; then
+            ALL_IMPORTED=1
+            while IFS= read -r f; do
+                stem=$(basename "$f" | sed 's/\.[^.]*$//')
+                if ! git grep -q --cached -E "(from|require)[[:space:]]*['\"].*/${stem}['\"]" -- '*.ts' '*.tsx' 2>/dev/null; then
+                    ALL_IMPORTED=0
+                    break
+                fi
+            done <<< "$ADDED_TS"
+            if [[ $ALL_IMPORTED -eq 1 ]]; then
+                echo -e "${GREEN}  ✅ Dead-code skipped — new file(s) all have importers (Layer 2 CI authoritative)${NC}"
+                DEADCODE_NEEDED=0
+            fi
+        fi
     fi
 
     if [[ $DEADCODE_NEEDED -eq 0 ]]; then
-        echo -e "${GREEN}  ✅ Dead-code skipped — no added/deleted .ts files and no removed imports (Layer 2 CI authoritative)${NC}"
-        # Skip the rest of CHECK 3.22 by jumping out of this block
+        # Message already printed by whichever skip-path fired above (pre-filter or no-trigger).
+        # Fallback for the original "no trigger" path (ADDED_TS/DELETED_TS/REMOVED_IMPORTS all empty).
+        if [[ -z "$ADDED_TS" && -z "$DELETED_TS" && -z "$REMOVED_IMPORTS" ]]; then
+            echo -e "${GREEN}  ✅ Dead-code skipped — no added/deleted .ts files and no removed imports (Layer 2 CI authoritative)${NC}"
+        fi
         DEADCODE_OUTPUT=""
         DEADCODE_EXIT=0
     else
