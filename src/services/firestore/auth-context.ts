@@ -82,3 +82,23 @@ export async function requireAuthContext(): Promise<TenantContext> {
     effectiveCompanyId,
   };
 }
+
+/**
+ * Resolves the effective companyId to filter client-side Firestore queries by.
+ *
+ * - Regular user → `ctx.companyId` (their tenant)
+ * - Super admin WITH active switcher selection → `ctx.effectiveCompanyId`
+ *   (impersonated tenant)
+ * - Super admin WITHOUT switcher selection → `null` (cross-tenant view, the
+ *   caller should skip the `where('companyId', ...)` constraint)
+ *
+ * ADR-356 SSOT: every custom service that does direct Firestore queries
+ * outside `firestoreQueryService.subscribe` / `.getAll` MUST resolve its
+ * tenant filter through this helper so the super-admin switcher (ADR-354)
+ * is honored consistently. Without it, super-admin sessions read the
+ * JWT-claim companyId and leak cross-tenant data.
+ */
+export function resolveEffectiveCompanyId(ctx: TenantContext): string | null {
+  if (ctx.isSuperAdmin) return ctx.effectiveCompanyId;
+  return ctx.companyId;
+}

@@ -10,7 +10,7 @@ export { firestoreQueryService } from './firestore-query.service';
 export { AuthorizationError, QueryExecutionError } from './firestore-query.service';
 
 // --- Auth context ---
-export { requireAuthContext } from './auth-context';
+export { requireAuthContext, resolveEffectiveCompanyId } from './auth-context';
 
 // --- Tenant config ---
 export { getTenantConfig, resolveTenantValue } from './tenant-config';
