@@ -201,3 +201,10 @@ export {
   requireOpportunityInTenant,
   filterSnapshotsByTenant,
 } from './tenant-isolation';
+
+// =============================================================================
+// SUPER ADMIN PROJECT SCOPE (ADR-356)
+// =============================================================================
+
+export type { SuperAdminProjectScope, SuperAdminScopeMode } from './super-admin-scope';
+export { resolveSuperAdminProjectScope } from './super-admin-scope';
