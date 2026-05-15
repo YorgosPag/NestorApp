@@ -25,10 +25,12 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getEntityIcon } from '../search-backfill/search-backfill-types';
 import { useSearchBackfillState } from '../search-backfill/useSearchBackfillState';
 
 export function SearchBackfillPageContent() {
+  const { t } = useTranslation('admin');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const s = useSearchBackfillState();
@@ -39,10 +41,10 @@ export function SearchBackfillPageContent() {
       <header className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <Search className={cn(iconSizes.lg, 'text-primary')} />
-          <h1 className="text-2xl font-bold">Search Index Backfill</h1>
+          <h1 className="text-2xl font-bold">{t('searchBackfill.title')}</h1>
         </div>
         <p className={colors.text.muted}>
-          Populate the search index with existing data for Global Search functionality.
+          {t('searchBackfill.subtitle')}
         </p>
       </header>
 
@@ -50,7 +52,7 @@ export function SearchBackfillPageContent() {
       {s.error && (
         <Alert variant="destructive" className="mb-6">
           <AlertTriangle className={iconSizes.sm} />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t('searchBackfill.error')}</AlertTitle>
           <AlertDescription>{s.error}</AlertDescription>
         </Alert>
       )}
@@ -61,11 +63,11 @@ export function SearchBackfillPageContent() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Database className={iconSizes.md} />
-              <CardTitle>Current Index Status</CardTitle>
+              <CardTitle>{t('searchBackfill.indexStatus.title')}</CardTitle>
             </div>
             <Button variant="outline" size="sm" onClick={s.fetchStatus} disabled={s.isLoading}>
               <RefreshCw className={cn(iconSizes.sm, 'mr-2', s.isLoading && 'animate-spin')} />
-              Refresh
+              {t('searchBackfill.indexStatus.refresh')}
             </Button>
           </div>
         </CardHeader>
@@ -74,10 +76,10 @@ export function SearchBackfillPageContent() {
             <section>
               <div className="flex items-center gap-2 mb-4">
                 <Badge variant="secondary" className="text-lg px-3 py-1">
-                  {s.status.currentIndex.totalDocuments} documents
+                  {t('searchBackfill.indexStatus.documents', { count: s.status.currentIndex.totalDocuments })}
                 </Badge>
                 <span className={cn('text-sm', colors.text.muted)}>
-                  in {s.status.currentIndex.collection}
+                  {t('searchBackfill.indexStatus.inCollection', { collection: s.status.currentIndex.collection })}
                 </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -87,14 +89,16 @@ export function SearchBackfillPageContent() {
                     <div key={type} className="flex flex-col items-center p-3 rounded-lg bg-muted/50">
                       <Icon className={cn(iconSizes.md, 'mb-1', colors.text.muted)} />
                       <span className="font-semibold">{count}</span>
-                      <span className={cn('text-xs capitalize', colors.text.muted)}>{type}s</span>
+                      <span className={cn('text-xs', colors.text.muted)}>
+                        {t(`searchBackfill.entityTypes.${type}`)}
+                      </span>
                     </div>
                   );
                 })}
               </div>
             </section>
           ) : (
-            <p className={colors.text.muted}>Loading...</p>
+            <p className={colors.text.muted}>{t('searchBackfill.indexStatus.loading')}</p>
           )}
         </CardContent>
       </Card>
@@ -102,24 +106,24 @@ export function SearchBackfillPageContent() {
       {/* Actions */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Actions</CardTitle>
-          <CardDescription>First run a dry-run to preview changes, then execute to apply.</CardDescription>
+          <CardTitle>{t('searchBackfill.actions.title')}</CardTitle>
+          <CardDescription>{t('searchBackfill.actions.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" onClick={() => s.executeBackfill(true)} disabled={s.isExecuting}>
               <Eye className={cn(iconSizes.sm, 'mr-2')} />
-              Dry Run (Preview)
+              {t('searchBackfill.actions.dryRun')}
             </Button>
             <Button variant="default" onClick={() => s.executeBackfill(false)} disabled={s.isExecuting}>
               <PlayCircle className={cn(iconSizes.sm, 'mr-2')} />
-              Execute Backfill
+              {t('searchBackfill.actions.execute')}
             </Button>
           </div>
           {s.isExecuting && (
             <div className={cn('mt-4 flex items-center gap-2', colors.text.muted)}>
               <RefreshCw className={cn(iconSizes.sm, 'animate-spin')} />
-              <span>Processing... This may take a moment.</span>
+              <span>{t('searchBackfill.actions.processing')}</span>
             </div>
           )}
         </CardContent>
@@ -130,35 +134,34 @@ export function SearchBackfillPageContent() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <User className={cn(iconSizes.md, 'text-orange-500')} />
-            <CardTitle>Contact Tenant Migration</CardTitle>
+            <CardTitle>{t('searchBackfill.contactMigration.title')}</CardTitle>
           </div>
           <CardDescription>
-            Migrate contacts to add companyId from their creator. Required for tenant isolation.
+            {t('searchBackfill.contactMigration.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert className="mb-4">
             <AlertTriangle className={iconSizes.sm} />
-            <AlertTitle>Enterprise Security Fix</AlertTitle>
+            <AlertTitle>{t('searchBackfill.contactMigration.alertTitle')}</AlertTitle>
             <AlertDescription>
-              This migration adds companyId to contacts that don&apos;t have it, using the creator&apos;s companyId.
-              This enables proper tenant isolation for the Global Search.
+              {t('searchBackfill.contactMigration.alertDescription')}
             </AlertDescription>
           </Alert>
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" onClick={() => s.executeMigration(true)} disabled={s.isMigrating}>
               <Eye className={cn(iconSizes.sm, 'mr-2')} />
-              Preview Migration
+              {t('searchBackfill.contactMigration.preview')}
             </Button>
             <Button variant="default" className="bg-orange-500 hover:bg-orange-600" onClick={() => s.executeMigration(false)} disabled={s.isMigrating}>
               <PlayCircle className={cn(iconSizes.sm, 'mr-2')} />
-              Execute Migration
+              {t('searchBackfill.contactMigration.execute')}
             </Button>
           </div>
           {s.isMigrating && (
             <div className={cn('mt-4 flex items-center gap-2', colors.text.muted)}>
               <RefreshCw className={cn(iconSizes.sm, 'animate-spin')} />
-              <span>Migrating contacts... This may take a moment.</span>
+              <span>{t('searchBackfill.contactMigration.processing')}</span>
             </div>
           )}
         </CardContent>
@@ -169,19 +172,18 @@ export function SearchBackfillPageContent() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Car className={cn(iconSizes.md, 'text-blue-500')} />
-            <CardTitle>Parking Foreign Key Migration</CardTitle>
+            <CardTitle>{t('searchBackfill.parkingMigration.title')}</CardTitle>
           </div>
           <CardDescription>
-            Normalize parking spot references to use canonical ID format (with prefixes).
+            {t('searchBackfill.parkingMigration.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert className="mb-4 border-orange-300 bg-orange-50">
             <AlertTriangle className={cn(iconSizes.sm, 'text-orange-600')} />
-            <AlertTitle className="text-orange-800">Parking Re-seed</AlertTitle>
+            <AlertTitle className="text-orange-800">{t('searchBackfill.parkingMigration.reseedTitle')}</AlertTitle>
             <AlertDescription className="text-orange-700">
-              Delete all parking spots and recreate with correct IDs (without prefix).
-              Use this if parking spots have incorrect buildingId/projectId references.
+              {t('searchBackfill.parkingMigration.reseedDescription')}
             </AlertDescription>
           </Alert>
 
@@ -192,7 +194,9 @@ export function SearchBackfillPageContent() {
               disabled={s.isParkingReseeding || s.isParkingMigrating}
             >
               <RefreshCw className={cn(iconSizes.sm, 'mr-2', s.isParkingReseeding && 'animate-spin')} />
-              {s.isParkingReseeding ? 'Re-seeding...' : 'Re-seed Parking Spots'}
+              {s.isParkingReseeding
+                ? t('searchBackfill.parkingMigration.reseeding')
+                : t('searchBackfill.parkingMigration.reseedButton')}
             </Button>
           </div>
 
@@ -201,16 +205,16 @@ export function SearchBackfillPageContent() {
             <div className="mb-6 p-4 rounded-lg border border-green-300 bg-green-50">
               <div className="flex items-center gap-2 text-green-800 font-medium mb-2">
                 <CheckCircle className={iconSizes.sm} />
-                Parking Re-seed Complete
+                {t('searchBackfill.parkingMigration.reseedComplete')}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-2 rounded bg-red-100">
                   <div className="text-xl font-bold text-red-600">{s.parkingReseedResult.deleted}</div>
-                  <div className="text-xs text-red-700">Deleted</div>
+                  <div className="text-xs text-red-700">{t('searchBackfill.stats.deleted')}</div>
                 </div>
                 <div className="text-center p-2 rounded bg-green-100">
                   <div className="text-xl font-bold text-green-600">{s.parkingReseedResult.created}</div>
-                  <div className="text-xs text-green-700">Created</div>
+                  <div className="text-xs text-green-700">{t('searchBackfill.stats.created')}</div>
                 </div>
               </div>
             </div>
@@ -219,10 +223,9 @@ export function SearchBackfillPageContent() {
           {/* FK Validation Section */}
           <Alert className="mb-4 border-gray-300 bg-gray-50">
             <AlertTriangle className={cn(iconSizes.sm, 'text-gray-600')} />
-            <AlertTitle className="text-gray-800">FK Validation (Verification Only)</AlertTitle>
+            <AlertTitle className="text-gray-800">{t('searchBackfill.parkingMigration.fkValidationTitle')}</AlertTitle>
             <AlertDescription className="text-gray-700">
-              This is now a <strong>validation-only</strong> endpoint. It checks if parking spots have
-              correct non-prefixed IDs.
+              {t('searchBackfill.parkingMigration.fkValidationDescription')}
             </AlertDescription>
           </Alert>
 
@@ -233,14 +236,14 @@ export function SearchBackfillPageContent() {
               disabled={s.isParkingMigrating || s.isParkingReseeding}
             >
               <Eye className={cn(iconSizes.sm, 'mr-2')} />
-              Validate IDs (Check Only)
+              {t('searchBackfill.parkingMigration.validateButton')}
             </Button>
           </div>
 
           {s.isParkingMigrating && (
             <div className={cn('mt-4 flex items-center gap-2', colors.text.muted)}>
               <RefreshCw className={cn(iconSizes.sm, 'animate-spin')} />
-              <span>Migrating parking spots... This may take a moment.</span>
+              <span>{t('searchBackfill.parkingMigration.processing')}</span>
             </div>
           )}
         </CardContent>
@@ -253,26 +256,26 @@ export function SearchBackfillPageContent() {
             <div className="flex items-center gap-2">
               <CheckCircle className={cn(iconSizes.md, 'text-green-500')} />
               <CardTitle>
-                {s.parkingMigrationResult.mode === 'DRY_RUN' ? 'Parking Migration Preview' : 'Parking Migration Results'}
+                {s.parkingMigrationResult.mode === 'DRY_RUN' ? t('searchBackfill.results.parkingPreview') : t('searchBackfill.results.parkingResults')}
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { value: s.parkingMigrationResult.stats.total, label: 'Total', color: 'blue' },
-                { value: s.parkingMigrationResult.stats.migrated, label: 'Migrated', color: 'green' },
-                { value: s.parkingMigrationResult.stats.alreadyCorrect, label: 'Already Correct', color: 'gray' },
-                { value: s.parkingMigrationResult.stats.errors, label: 'Errors', color: 'red' },
-              ].map(({ value, label, color }) => (
-                <div key={label} className={`text-center p-3 rounded-lg bg-${color}-500/10`}>
+                { id: 'total', value: s.parkingMigrationResult.stats.total, label: t('searchBackfill.stats.total'), color: 'blue' },
+                { id: 'migrated', value: s.parkingMigrationResult.stats.migrated, label: t('searchBackfill.stats.migrated'), color: 'green' },
+                { id: 'alreadyCorrect', value: s.parkingMigrationResult.stats.alreadyCorrect, label: t('searchBackfill.stats.alreadyCorrect'), color: 'gray' },
+                { id: 'errors', value: s.parkingMigrationResult.stats.errors, label: t('searchBackfill.stats.errors'), color: 'red' },
+              ].map(({ id, value, label, color }) => (
+                <div key={id} className={`text-center p-3 rounded-lg bg-${color}-500/10`}>
                   <div className={`text-2xl font-bold text-${color}-600`}>{value}</div>
                   <div className={cn('text-sm', colors.text.muted)}>{label}</div>
                 </div>
               ))}
             </div>
             <div className={cn('mt-4 text-sm', colors.text.muted)}>
-              {s.parkingMigrationResult.message} | Duration: {s.parkingMigrationResult.executionTimeMs}ms
+              {s.parkingMigrationResult.message} | {t('searchBackfill.results.duration', { ms: s.parkingMigrationResult.executionTimeMs })}
             </div>
           </CardContent>
         </Card>
@@ -285,27 +288,27 @@ export function SearchBackfillPageContent() {
             <div className="flex items-center gap-2">
               <CheckCircle className={cn(iconSizes.md, 'text-green-500')} />
               <CardTitle>
-                {s.migrationResult.mode === 'DRY_RUN' ? 'Migration Preview' : 'Migration Results'}
+                {s.migrationResult.mode === 'DRY_RUN' ? t('searchBackfill.results.contactPreview') : t('searchBackfill.results.contactResults')}
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               {[
-                { value: s.migrationResult.stats.total, label: 'Total', color: 'blue' },
-                { value: s.migrationResult.stats.migrated, label: 'Migrated', color: 'green' },
-                { value: s.migrationResult.stats.skipped, label: 'Skipped', color: 'yellow' },
-                { value: s.migrationResult.stats.noCreator, label: 'No Creator', color: 'orange' },
-                { value: s.migrationResult.stats.errors, label: 'Errors', color: 'red' },
-              ].map(({ value, label, color }) => (
-                <div key={label} className={`text-center p-3 rounded-lg bg-${color}-500/10`}>
+                { id: 'total', value: s.migrationResult.stats.total, label: t('searchBackfill.stats.total'), color: 'blue' },
+                { id: 'migrated', value: s.migrationResult.stats.migrated, label: t('searchBackfill.stats.migrated'), color: 'green' },
+                { id: 'skipped', value: s.migrationResult.stats.skipped, label: t('searchBackfill.stats.skipped'), color: 'yellow' },
+                { id: 'noCreator', value: s.migrationResult.stats.noCreator, label: t('searchBackfill.stats.noCreator'), color: 'orange' },
+                { id: 'errors', value: s.migrationResult.stats.errors, label: t('searchBackfill.stats.errors'), color: 'red' },
+              ].map(({ id, value, label, color }) => (
+                <div key={id} className={`text-center p-3 rounded-lg bg-${color}-500/10`}>
                   <div className={`text-2xl font-bold text-${color}-600`}>{value}</div>
                   <div className={cn('text-sm', colors.text.muted)}>{label}</div>
                 </div>
               ))}
             </div>
             <div className={cn('mt-4 text-sm', colors.text.muted)}>
-              Duration: {s.migrationResult.duration}ms | {s.migrationResult.timestamp}
+              {t('searchBackfill.results.durationTimestamp', { ms: s.migrationResult.duration, timestamp: s.migrationResult.timestamp })}
             </div>
           </CardContent>
         </Card>
@@ -318,26 +321,26 @@ export function SearchBackfillPageContent() {
             <div className="flex items-center gap-2">
               <CheckCircle className={cn(iconSizes.md, 'text-green-500')} />
               <CardTitle>
-                {s.result.mode === 'DRY_RUN' ? 'Dry Run Results' : 'Execution Results'}
+                {s.result.mode === 'DRY_RUN' ? t('searchBackfill.results.dryRunResults') : t('searchBackfill.results.executionResults')}
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
               {[
-                { value: s.result.totalStats.processed, label: 'Processed', color: 'blue' },
-                { value: s.result.totalStats.indexed, label: 'Indexed', color: 'green' },
-                { value: s.result.totalStats.skipped, label: 'Skipped', color: 'yellow' },
-                { value: s.result.totalStats.errors, label: 'Errors', color: 'red' },
-              ].map(({ value, label, color }) => (
-                <div key={label} className={`text-center p-3 rounded-lg bg-${color}-500/10`}>
+                { id: 'processed', value: s.result.totalStats.processed, label: t('searchBackfill.stats.processed'), color: 'blue' },
+                { id: 'indexed', value: s.result.totalStats.indexed, label: t('searchBackfill.stats.indexed'), color: 'green' },
+                { id: 'skipped', value: s.result.totalStats.skipped, label: t('searchBackfill.stats.skipped'), color: 'yellow' },
+                { id: 'errors', value: s.result.totalStats.errors, label: t('searchBackfill.stats.errors'), color: 'red' },
+              ].map(({ id, value, label, color }) => (
+                <div key={id} className={`text-center p-3 rounded-lg bg-${color}-500/10`}>
                   <div className={`text-2xl font-bold text-${color}-600`}>{value}</div>
                   <div className={cn('text-sm', colors.text.muted)}>{label}</div>
                 </div>
               ))}
             </div>
 
-            <h4 className="font-medium mb-3">By Entity Type</h4>
+            <h4 className="font-medium mb-3">{t('searchBackfill.results.byEntityType')}</h4>
             <div className="space-y-2">
               {Object.entries(s.result.stats).map(([type, stats]) => {
                 const Icon = getEntityIcon(type);
@@ -345,13 +348,13 @@ export function SearchBackfillPageContent() {
                   <div key={type} className="flex items-center justify-between p-2 rounded bg-muted/30">
                     <div className="flex items-center gap-2">
                       <Icon className={cn(iconSizes.sm, colors.text.muted)} />
-                      <span className="capitalize font-medium">{type}</span>
+                      <span className="capitalize font-medium">{t(`searchBackfill.entityTypes.${type}`, type)}</span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
-                      <span>{stats.processed} processed</span>
-                      <span className="text-green-600">{stats.indexed} indexed</span>
-                      {stats.skipped > 0 && <span className="text-yellow-600">{stats.skipped} skipped</span>}
-                      {stats.errors > 0 && <span className="text-red-600">{stats.errors} errors</span>}
+                      <span>{t('searchBackfill.stats.nProcessed', { n: stats.processed })}</span>
+                      <span className="text-green-600">{t('searchBackfill.stats.nIndexed', { n: stats.indexed })}</span>
+                      {stats.skipped > 0 && <span className="text-yellow-600">{t('searchBackfill.stats.nSkipped', { n: stats.skipped })}</span>}
+                      {stats.errors > 0 && <span className="text-red-600">{t('searchBackfill.stats.nErrors', { n: stats.errors })}</span>}
                     </div>
                   </div>
                 );
@@ -359,7 +362,7 @@ export function SearchBackfillPageContent() {
             </div>
 
             <div className={cn('mt-4 text-sm', colors.text.muted)}>
-              Duration: {s.result.duration}ms | {s.result.timestamp}
+              {t('searchBackfill.results.durationTimestamp', { ms: s.result.duration, timestamp: s.result.timestamp })}
             </div>
           </CardContent>
         </Card>
@@ -368,7 +371,7 @@ export function SearchBackfillPageContent() {
       {/* Logs */}
       <Card>
         <CardHeader>
-          <CardTitle>Logs</CardTitle>
+          <CardTitle>{t('searchBackfill.logs.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="bg-muted/50 rounded-lg p-3 h-48 overflow-y-auto font-mono text-xs">
@@ -377,7 +380,7 @@ export function SearchBackfillPageContent() {
                 <div key={i} className="py-0.5">{log}</div>
               ))
             ) : (
-              <span className={colors.text.muted}>No logs yet...</span>
+              <span className={colors.text.muted}>{t('searchBackfill.logs.empty')}</span>
             )}
           </div>
         </CardContent>

@@ -1030,6 +1030,91 @@
       "deleteBackupFailed": "Αποτυχία διαγραφής αντιγράφου"
     }
   },
+  "searchBackfill": {
+    "title": "Ανατροφοδότηση Ευρετηρίου Αναζήτησης",
+    "subtitle": "Πλήρωση του ευρετηρίου αναζήτησης με υπάρχοντα δεδομένα για τη Γενική Αναζήτηση.",
+    "error": "Σφάλμα",
+    "indexStatus": {
+      "title": "Τρέχουσα Κατάσταση Ευρετηρίου",
+      "refresh": "Ανανέωση",
+      "documents": "{count} έγγραφα",
+      "inCollection": "στη συλλογή {collection}",
+      "loading": "Φόρτωση..."
+    },
+    "actions": {
+      "title": "Ενέργειες",
+      "description": "Πρώτα εκτελέστε dry-run για προεπισκόπηση, μετά εκτελέστε για εφαρμογή.",
+      "dryRun": "Dry Run (Προεπισκόπηση)",
+      "execute": "Εκτέλεση Ανατροφοδότησης",
+      "processing": "Επεξεργασία... Αυτό μπορεί να πάρει λίγο χρόνο."
+    },
+    "contactMigration": {
+      "title": "Μετεγκατάσταση Επαφών Ενοικιαστή",
+      "description": "Μετεγκατάσταση επαφών για προσθήκη companyId από τον δημιουργό τους. Απαιτείται για την απομόνωση ενοικιαστή.",
+      "alertTitle": "Επιδιόρθωση Ασφαλείας Enterprise",
+      "alertDescription": "Αυτή η μετεγκατάσταση προσθέτει companyId σε επαφές που δεν το έχουν, χρησιμοποιώντας το companyId του δημιουργού. Αυτό επιτρέπει την σωστή απομόνωση ενοικιαστή για τη Γενική Αναζήτηση.",
+      "preview": "Προεπισκόπηση Μετεγκατάστασης",
+      "execute": "Εκτέλεση Μετεγκατάστασης",
+      "processing": "Μετεγκατάσταση επαφών... Αυτό μπορεί να πάρει λίγο χρόνο."
+    },
+    "parkingMigration": {
+      "title": "Μετεγκατάσταση Ξένου Κλειδιού Parking",
+      "description": "Ομαλοποίηση αναφορών θέσεων parking σε κανονική μορφή ID (με προθέματα).",
+      "reseedTitle": "Επαναδημιουργία Parking",
+      "reseedDescription": "Διαγραφή όλων των θέσεων parking και επαναδημιουργία με σωστά ID (χωρίς πρόθεμα). Χρησιμοποιήστε αυτό αν τα parking έχουν λανθασμένες αναφορές buildingId/projectId.",
+      "reseedButton": "Επαναδημιουργία Θέσεων Parking",
+      "reseeding": "Επαναδημιουργία...",
+      "reseedComplete": "Η Επαναδημιουργία Parking Ολοκληρώθηκε",
+      "fkValidationTitle": "Επαλήθευση FK (Μόνο Έλεγχος)",
+      "fkValidationDescription": "Αυτό είναι πλέον endpoint μόνο επαλήθευσης. Ελέγχει αν τα parking έχουν σωστά μη-προθεματικά ID.",
+      "validateButton": "Επαλήθευση ID (Μόνο Έλεγχος)",
+      "processing": "Μετεγκατάσταση θέσεων parking... Αυτό μπορεί να πάρει λίγο χρόνο."
+    },
+    "results": {
+      "parkingPreview": "Προεπισκόπηση Μετεγκατάστασης Parking",
+      "parkingResults": "Αποτελέσματα Μετεγκατάστασης Parking",
+      "contactPreview": "Προεπισκόπηση Μετεγκατάστασης",
+      "contactResults": "Αποτελέσματα Μετεγκατάστασης",
+      "dryRunResults": "Αποτελέσματα Dry Run",
+      "executionResults": "Αποτελέσματα Εκτέλεσης",
+      "byEntityType": "Ανά Τύπο Οντότητας",
+      "duration": "Διάρκεια: {ms}ms",
+      "durationTimestamp": "Διάρκεια: {ms}ms | {timestamp}"
+    },
+    "stats": {
+      "total": "Σύνολο",
+      "migrated": "Μεταφέρθηκαν",
+      "alreadyCorrect": "Ήδη Σωστά",
+      "errors": "Σφάλματα",
+      "skipped": "Παραλείφθηκαν",
+      "noCreator": "Χωρίς Δημιουργό",
+      "processed": "Επεξεργάστηκαν",
+      "indexed": "Ευρετηριάστηκαν",
+      "deleted": "Διαγράφηκαν",
+      "created": "Δημιουργήθηκαν",
+      "nProcessed": "{n} επεξεργ.",
+      "nIndexed": "{n} ευρετ.",
+      "nSkipped": "{n} παραλ.",
+      "nErrors": "{n} σφάλμ."
+    },
+    "entityTypes": {
+      "project": "Έργα",
+      "building": "Κτήρια",
+      "floor": "Όροφοι",
+      "property": "Ακίνητα",
+      "contact": "Επαφές",
+      "file": "Αρχεία",
+      "parking": "Parking",
+      "storage": "Αποθήκες",
+      "opportunity": "Ευκαιρίες",
+      "communication": "Επικοινωνίες",
+      "task": "Εργασίες"
+    },
+    "logs": {
+      "title": "Αρχείο",
+      "empty": "Δεν υπάρχουν εγγραφές ακόμα..."
+    }
+  },
   "enterpriseMigration": {
     "title": "Μετεγκατάσταση Σκληρών Τιμών Enterprise",
     "subtitle": "Εξάλειψη όλων των σκληρών τιμών και μετατροπή της εφαρμογής σε πλήρως βάσης δεδομένων",

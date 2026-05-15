@@ -1030,6 +1030,91 @@
       "deleteBackupFailed": "Failed to delete backup"
     }
   },
+  "searchBackfill": {
+    "title": "Search Index Backfill",
+    "subtitle": "Populate the search index with existing data for Global Search functionality.",
+    "error": "Error",
+    "indexStatus": {
+      "title": "Current Index Status",
+      "refresh": "Refresh",
+      "documents": "{count} documents",
+      "inCollection": "in {collection}",
+      "loading": "Loading..."
+    },
+    "actions": {
+      "title": "Actions",
+      "description": "First run a dry-run to preview changes, then execute to apply.",
+      "dryRun": "Dry Run (Preview)",
+      "execute": "Execute Backfill",
+      "processing": "Processing... This may take a moment."
+    },
+    "contactMigration": {
+      "title": "Contact Tenant Migration",
+      "description": "Migrate contacts to add companyId from their creator. Required for tenant isolation.",
+      "alertTitle": "Enterprise Security Fix",
+      "alertDescription": "This migration adds companyId to contacts that don't have it, using the creator's companyId. This enables proper tenant isolation for the Global Search.",
+      "preview": "Preview Migration",
+      "execute": "Execute Migration",
+      "processing": "Migrating contacts... This may take a moment."
+    },
+    "parkingMigration": {
+      "title": "Parking Foreign Key Migration",
+      "description": "Normalize parking spot references to use canonical ID format (with prefixes).",
+      "reseedTitle": "Parking Re-seed",
+      "reseedDescription": "Delete all parking spots and recreate with correct IDs (without prefix). Use this if parking spots have incorrect buildingId/projectId references.",
+      "reseedButton": "Re-seed Parking Spots",
+      "reseeding": "Re-seeding...",
+      "reseedComplete": "Parking Re-seed Complete",
+      "fkValidationTitle": "FK Validation (Verification Only)",
+      "fkValidationDescription": "This is now a validation-only endpoint. It checks if parking spots have correct non-prefixed IDs.",
+      "validateButton": "Validate IDs (Check Only)",
+      "processing": "Migrating parking spots... This may take a moment."
+    },
+    "results": {
+      "parkingPreview": "Parking Migration Preview",
+      "parkingResults": "Parking Migration Results",
+      "contactPreview": "Migration Preview",
+      "contactResults": "Migration Results",
+      "dryRunResults": "Dry Run Results",
+      "executionResults": "Execution Results",
+      "byEntityType": "By Entity Type",
+      "duration": "Duration: {ms}ms",
+      "durationTimestamp": "Duration: {ms}ms | {timestamp}"
+    },
+    "stats": {
+      "total": "Total",
+      "migrated": "Migrated",
+      "alreadyCorrect": "Already Correct",
+      "errors": "Errors",
+      "skipped": "Skipped",
+      "noCreator": "No Creator",
+      "processed": "Processed",
+      "indexed": "Indexed",
+      "deleted": "Deleted",
+      "created": "Created",
+      "nProcessed": "{n} processed",
+      "nIndexed": "{n} indexed",
+      "nSkipped": "{n} skipped",
+      "nErrors": "{n} errors"
+    },
+    "entityTypes": {
+      "project": "Projects",
+      "building": "Buildings",
+      "floor": "Floors",
+      "property": "Properties",
+      "contact": "Contacts",
+      "file": "Files",
+      "parking": "Parkings",
+      "storage": "Storages",
+      "opportunity": "Opportunities",
+      "communication": "Communications",
+      "task": "Tasks"
+    },
+    "logs": {
+      "title": "Logs",
+      "empty": "No logs yet..."
+    }
+  },
   "enterpriseMigration": {
     "title": "Enterprise Hardcoded Values Migration",
     "subtitle": "Eliminate all hardcoded values and transform your application to be fully database-driven",
