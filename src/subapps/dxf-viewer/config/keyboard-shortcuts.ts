@@ -543,6 +543,36 @@ export const DXF_NAVIGATION_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'navigate:cycle-snap',
     category: 'navigation',
   },
+  // Canvas pan — same arrow keys as nudge but active when NO entity is selected.
+  // Priority: nudge (selection exists) > pan (no selection). AutoCAD parity.
+  panUp: {
+    key: 'ArrowUp',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.navigation.panUp',
+    action: 'navigate:pan-up',
+    category: 'navigation',
+  },
+  panDown: {
+    key: 'ArrowDown',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.navigation.panDown',
+    action: 'navigate:pan-down',
+    category: 'navigation',
+  },
+  panLeft: {
+    key: 'ArrowLeft',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.navigation.panLeft',
+    action: 'navigate:pan-left',
+    category: 'navigation',
+  },
+  panRight: {
+    key: 'ArrowRight',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.navigation.panRight',
+    action: 'navigate:pan-right',
+    category: 'navigation',
+  },
 } as const;
 
 // ============================================================================

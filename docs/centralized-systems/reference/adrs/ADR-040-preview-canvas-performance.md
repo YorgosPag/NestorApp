@@ -71,6 +71,21 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-15: Keyboard arrow-key canvas pan
+
+Aggiunto panning del canvas tramite tasti freccia quando nessuna entità è selezionata (parity AutoCAD). ↑/↓/←/→ = pan 80px; Shift+freccia = pan 240px. Le direzioni corrispondono allo scroll del viewport (↑ = contenuto si sposta giù, ecc.).
+
+**Architettura**: EventBus pattern identico a `canvas-fit-to-view`.
+- `EventBus.ts`: aggiunto `'canvas-pan': { dx, dy }` event type
+- `keyboard-shortcuts.ts`: aggiunto panUp/panDown/panLeft/panRight nell'SSoT navigation shortcuts
+- `useKeyboardShortcuts.ts`: emette `canvas-pan` PRIMA del guard selection — quando nessuna selezione, le frecce pan; quando selezione esiste, nudge (comportamento esistente)
+- `useCanvasPan.ts` (nuovo, `hooks/canvas/`): listener EventBus che applica `{ offsetX + dx, offsetY + dy }` al transform corrente via `transformRef.current`
+- `CanvasSection.tsx`: chiama `useCanvasPan({ transformRef, setTransform })` vicino a `useFitToView`
+
+**ADR-040 constraint rispettato**: `useCanvasPan` è un hook "side-effect only" (solo `useEffect` + EventBus listener), zero `useSyncExternalStore`, zero subscription a store high-freq. `CanvasSection` non accumula nuovi re-render.
+
+---
+
 ### 2026-05-15: Ribbon re-render cascade fix — getter pattern + React.memo
 
 **Root cause**: `useRibbonTextEditorBridge.ts:44` chiamava `useTextToolbarStore()` senza selector → subscription all'intero store (15+ campi). Ogni aggiornamento del text toolbar store (selezione entità testo, cursor move in editor) causava re-render di `DxfViewerContent` → `commands` inline object ricreato → `RibbonRoot` (non memo'd) re-renderizzava → cascata su tutti i figli incluso `RibbonSplitButton` (169 samples / 31% `flushSyncWorkAcrossRoots_impl` in Firefox Profiler su sessione 1m16s).
@@ -1206,3 +1221,7 @@ Fixed `rulerSettings.vertical?.width` → `rulerSettings.width` and `rulerSettin
 ## 2026-05-15: Trim Command Phase 3 follow-up — ToolCursorStore + fence drag capture (ADR-350 Phase 3)
 
 `TrimPreviewMount` extended: now also mounts `useTrimDragCapture` alongside `useTrimPreview`. Both hooks are ADR-040 leaf-only — no orchestrator subscriptions. `useTrimDragCapture` attaches pointer events directly to the viewport element (no React state, no re-renders); sets `TrimToolStore.phase='fence'` + `dragStart`/`dragCurrent` on drag detection (5px screen threshold). `useTrimPreview` extended with fence-line rendering (yellow dashed line from dragStart→dragCurrent). `ToolCursorStore` (new module-level SSoT) tracks `default`/`trim-pickbox`/`extend-arrow` variant; wired in `useTrimTool` on activate/deactivate + SHIFT keydown/keyup. Pick-fn registry (`TrimToolStore.registerPickFn`) avoids prop-threading through CanvasLayerStack — `useTrimDragCapture` calls `TrimToolStore.execPick` directly. Cardinal rules maintained: `CanvasSection` has zero new `useSyncExternalStore` calls; no orchestrator changes.
+
+## 2026-05-15: Canvas keyboard pan — useCanvasPan EventBus listener (ADR-040)
+
+`useCanvasPan` hook added to `hooks/canvas/` barrel. Listens for `canvas-pan` EventBus events emitted by `useKeyboardShortcuts` when arrow keys are pressed with no entity selected (AutoCAD parity). Applies dx/dy pixel delta directly to offsetX/offsetY via `setTransform`. `useKeyboardShortcuts` updated: arrow keys with no selection emit `canvas-pan` instead of falling through; with a selection they still nudge. `EventBus.DrawingEventMap` extended with `canvas-pan` payload. Cardinal rules maintained: `CanvasSection` orchestrator has zero new `useSyncExternalStore` calls — `useCanvasPan` is a side-effect hook with no subscriptions.

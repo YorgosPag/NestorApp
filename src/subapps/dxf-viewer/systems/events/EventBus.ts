@@ -61,6 +61,12 @@ export interface DrawingEventMap {
     source?: string; // 'middle-double-click' | 'keyboard' | 'auto' | undefined
     viewport?: { width: number; height: number };
   };
+  'canvas-pan': {
+    /** Pixel delta to apply to offsetX (positive = right) */
+    dx: number;
+    /** Pixel delta to apply to offsetY (positive = down) */
+    dy: number;
+  };
   'canvas:select-all': void;
   'overlay:polygon-update': {
     regionId: string;

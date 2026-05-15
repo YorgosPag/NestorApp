@@ -127,9 +127,24 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      // ⌨️ NAVIGATION SHORTCUTS - Arrow keys for nudging
-      if (!selectedEntityIds?.length) return;
+      // ⌨️ CANVAS PAN — arrow keys when nothing is selected (AutoCAD parity)
+      // Priority: pan (no selection) → nudge below (selection exists)
+      if (!selectedEntityIds?.length) {
+        const PAN_STEP = 80;   // pixels per keypress
+        const PAN_LARGE = 240; // Shift+Arrow — 3× step
+        const isArrow = e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+        if (!isArrow || e.ctrlKey || e.metaKey || e.altKey || inputFocused) return;
+        e.preventDefault();
+        const dist = e.shiftKey ? PAN_LARGE : PAN_STEP;
+        // Arrow semantics: ↑ = viewport moves up = scene shifts down = dy positive
+        if (e.key === 'ArrowUp')    EventBus.emit('canvas-pan', { dx: 0, dy: dist });
+        if (e.key === 'ArrowDown')  EventBus.emit('canvas-pan', { dx: 0, dy: -dist });
+        if (e.key === 'ArrowLeft')  EventBus.emit('canvas-pan', { dx: dist, dy: 0 });
+        if (e.key === 'ArrowRight') EventBus.emit('canvas-pan', { dx: -dist, dy: 0 });
+        return;
+      }
 
+      // ⌨️ NAVIGATION SHORTCUTS - Arrow keys for nudging (entity selected)
       const step = NUDGE_CONFIG.BASE_STEP;
       const largeStep = NUDGE_CONFIG.BASE_STEP * NUDGE_CONFIG.SHIFT_MULTIPLIER;
 

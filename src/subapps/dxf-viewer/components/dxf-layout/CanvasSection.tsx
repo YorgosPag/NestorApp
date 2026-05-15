@@ -28,7 +28,7 @@ import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/command
 import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
   useCanvasContextMenu, useSmartDelete, useDrawingUIHandlers, useCanvasClickHandler,
-  useFitToView, usePolygonCompletion, useCanvasKeyboardShortcuts,
+  useFitToView, useCanvasPan, usePolygonCompletion, useCanvasKeyboardShortcuts,
   useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
   useAutoAreaMouseMove,
 } from '../../hooks/canvas';
@@ -235,6 +235,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     hiddenOverlayIds: overlayStore.hiddenOverlayIds,
   });
   const { fitToOverlay } = useFitToView({ dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
+  useCanvasPan({ transformRef, setTransform });
   // ADR-340 Phase 5 — auto-fit camera to newly-loaded floorplan background.
   // Replaces legacy useFitToPdf. Tracks the last-fitted background ID to avoid
   // resetting the user's manual zoom on every re-render.

@@ -101,6 +101,10 @@ export type {
   UseFitToViewReturn,
 } from './useFitToView';
 
+// === useCanvasPan === keyboard arrow-key canvas panning (no entity selected)
+export { useCanvasPan } from './useCanvasPan';
+export type { UseCanvasPanParams } from './useCanvasPan';
+
 // === usePolygonCompletion === (CanvasSection decomposition #9 — polygon draft state + completion)
 export { usePolygonCompletion } from './usePolygonCompletion';
 export type {
