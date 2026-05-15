@@ -103,6 +103,10 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleArrayPolarEscape?: () => void;
   /** ADR-353 Phase B: Whether the polar Array tool is awaiting centre pick */
   arrayPolarIsActive?: boolean;
+  /** ADR-353 Phase C: Path Array path-entity-pick cancel handler */
+  handleArrayPathEscape?: () => void;
+  /** ADR-353 Phase C: Whether the path Array tool is awaiting path-entity pick */
+  arrayPathIsActive?: boolean;
   /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
   clearEntitySelection?: () => void;
   /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
@@ -152,6 +156,8 @@ export function useCanvasKeyboardShortcuts({
   extendIsActive = false,
   handleArrayPolarEscape,
   arrayPolarIsActive = false,
+  handleArrayPathEscape,
+  arrayPathIsActive = false,
   clearEntitySelection,
   hasAnySelection = false,
   handleReorderEntity,
@@ -264,6 +270,11 @@ export function useCanvasKeyboardShortcuts({
           // ADR-353 Phase B: Polar Array centre-pick cancel
           if (arrayPolarIsActive && handleArrayPolarEscape) {
             handleArrayPolarEscape();
+            break;
+          }
+          // ADR-353 Phase C: Path Array path-entity-pick cancel
+          if (arrayPathIsActive && handleArrayPathEscape) {
+            handleArrayPathEscape();
             break;
           }
           // ADR-188: Escape cancels rotation tool

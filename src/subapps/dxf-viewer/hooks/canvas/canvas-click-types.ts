@@ -155,6 +155,18 @@ export interface UseCanvasClickHandlerParams {
    */
   handleArrayPolarCenterRepick?: (worldPoint: Point2D) => boolean;
 
+  // ── ADR-353 Phase C: Path Array tool ───────────────────────────────────
+  /** Whether the path Array tool is awaiting the path-entity pick click */
+  arrayPathIsActive?: boolean;
+  /** Click handler for the path-entity pick state machine (worldPoint unused — uses HoverStore) */
+  handleArrayPathClick?: () => void;
+  /**
+   * ADR-353 §C3 — Path-entity re-pick from the contextual ribbon. Returns true
+   * if the click was consumed (an array is in `pickingPathArrayId` mode and the
+   * hovered entity was a valid curve type).
+   */
+  handleArrayPathEntityRepick?: () => boolean;
+
   // ── Level / Scene ─────────────────────────────────────────────────────
   levelManager: LevelManagerLike;
 

@@ -84,6 +84,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     extendIsActive = false, handleExtendClick,
     arrayPolarIsActive = false, handleArrayPolarClick,
     handleArrayPolarCenterRepick,
+    arrayPathIsActive = false, handleArrayPathClick,
+    handleArrayPathEntityRepick,
     levelManager,
     draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef,
@@ -161,16 +163,21 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       return;
     }
 
-    // PRIORITY 1.605: ADR-353 Phase B — Polar Array centre-pick
-    //   (a) interactive re-pick from the contextual ribbon — applies a new
-    //       centre to an existing polar array via parent-supplied callback
-    //   (b) initial creation pick during the 'array-polar' tool — feeds the
-    //       hook's awaiting-centre state machine.
+    // PRIORITY 1.605: ADR-353 Phase B/C — Array interactive picks
+    //   Polar: (a) re-pick center from ribbon, (b) initial center during tool
+    //   Path:  (a) re-pick path entity from ribbon, (b) initial pick during tool
     if (handleArrayPolarCenterRepick && handleArrayPolarCenterRepick(worldPoint)) {
       return;
     }
     if (arrayPolarIsActive && handleArrayPolarClick) {
       handleArrayPolarClick(worldPoint);
+      return;
+    }
+    if (handleArrayPathEntityRepick && handleArrayPathEntityRepick()) {
+      return;
+    }
+    if (arrayPathIsActive && handleArrayPathClick) {
+      handleArrayPathClick();
       return;
     }
 
@@ -279,6 +286,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     extendIsActive, handleExtendClick,
     arrayPolarIsActive, handleArrayPolarClick,
     handleArrayPolarCenterRepick,
+    arrayPathIsActive, handleArrayPathClick,
+    handleArrayPathEntityRepick,
     levelManager,
     draftPolygon, isSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,

@@ -138,3 +138,9 @@ export type {
   UseCanvasContainerHandlersParams,
   UseCanvasContainerHandlersReturn,
 } from './useCanvasContainerHandlers';
+
+// === useArrayRepickHandlers === (ADR-353 — polar/path array re-pick, extracted from CanvasSection)
+export { useArrayRepickHandlers } from './useArrayRepickHandlers';
+
+// === useFloorplanAutoFit === (ADR-340 Phase 5 — auto-fit camera to floorplan background)
+export { useFloorplanAutoFit } from './useFloorplanAutoFit';

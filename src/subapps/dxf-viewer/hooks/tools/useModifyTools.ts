@@ -16,6 +16,7 @@ import { useTrimTool } from './useTrimTool';
 import { useExtendTool } from './useExtendTool';
 import { useArrayTool } from './useArrayTool';
 import { useArrayPolarTool } from './useArrayPolarTool';
+import { useArrayPathTool } from './useArrayPathTool';
 import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { distanceToEntity } from '../../utils/entity-distance';
@@ -128,6 +129,13 @@ export function useModifyTools({
     onToolChange,
   });
 
+  // ADR-353 Phase C — Path Array (pre-select sources → click path entity → create).
+  const arrayPathTool = useArrayPathTool({
+    activeTool, selectedEntityIds, levelManager, executeCommand,
+    setSelectedEntityIds: replaceWithArrayId,
+    onToolChange,
+  });
+
   const executeOverlayMove = useCallback(
     (ids: string[], delta: { x: number; y: number }) => {
       executeCommand(
@@ -190,6 +198,7 @@ export function useModifyTools({
     extendTool,
     arrayTool,
     arrayPolarTool,
+    arrayPathTool,
     handleRotationAnglePrompt,
   };
 }

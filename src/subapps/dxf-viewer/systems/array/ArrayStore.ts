@@ -1,5 +1,5 @@
 /**
- * ARRAY STORE — ADR-353 Sessions A2 + B2
+ * ARRAY STORE — ADR-353 Sessions A2 + B2 + C3
  *
  * Module-level pub/sub store for ephemeral Array tool state.
  * Zero React state — mirrors TrimToolStore / ExtendToolStore pattern (ADR-040).
@@ -14,6 +14,9 @@
  *   pickingCenterArrayId  — ID of the polar array currently in
  *                           interactive-center-pick mode (Phase B re-pick from
  *                           the ribbon "Pick Center" button). Null = idle.
+ *   pickingPathArrayId    — ID of the path array currently in
+ *                           interactive-path-entity-pick mode (Phase C re-pick
+ *                           from the ribbon "Pick Path" button). Null = idle.
  */
 
 import type { ArrayParams } from './types';
@@ -24,12 +27,14 @@ export interface ArrayStoreState {
   readonly inProgressParams: ArrayParams | null;
   readonly editSourceArrayId: string | null;
   readonly pickingCenterArrayId: string | null;
+  readonly pickingPathArrayId: string | null;
 }
 
 const INITIAL: ArrayStoreState = {
   inProgressParams: null,
   editSourceArrayId: null,
   pickingCenterArrayId: null,
+  pickingPathArrayId: null,
 };
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -78,6 +83,14 @@ export const ArrayStore = {
 
   clearPickingCenterArrayId(): void {
     _patch({ pickingCenterArrayId: null });
+  },
+
+  setPickingPathArrayId(id: string): void {
+    _patch({ pickingPathArrayId: id });
+  },
+
+  clearPickingPathArrayId(): void {
+    _patch({ pickingPathArrayId: null });
   },
 
   reset(): void {

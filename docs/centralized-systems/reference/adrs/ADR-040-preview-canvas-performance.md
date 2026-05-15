@@ -1274,3 +1274,12 @@ Fixed `rulerSettings.vertical?.width` → `rulerSettings.width` and `rulerSettin
 ## 2026-05-15: Array Tool Phase B2 — Polar Array tool wiring (ADR-353 B2)
 
 `CanvasSection` wires `arrayPolarTool` (from `useModifyTools`) into `useCanvasClickHandler` and `useCanvasKeyboardShortcuts`. 2-line orchestrator changes adding `arrayPolarIsActive`/`handleArrayPolarClick`/`handleArrayPolarEscape` props. `canvas-click-types.ts` extended with the same optional props. No new `useSyncExternalStore` calls added to `CanvasSection` or `CanvasLayerStack`. Centre-pick state (`pickingCenterArrayId`) lives in `ArrayStore` (module-level pub/sub — same pattern as TrimToolStore). Cardinal rules maintained.
+
+## 2026-05-16: CanvasSection size budget refactor — useArrayRepickHandlers + useFloorplanAutoFit
+
+Extracted two blocks from CanvasSection to keep it under 500 lines (N.7.1 budget):
+`useArrayRepickHandlers` (polar+path repick callbacks, `hooks/canvas/`) and `useFloorplanAutoFit` (ADR-340 Phase 5 auto-fit effect, `hooks/canvas/`). CanvasSection: 515→468 lines. Cardinal rules maintained.
+
+## 2026-05-16: Array Tool Phase C3 — Path Array tool wiring (ADR-353 C3)
+
+`CanvasSection` wires `arrayPathTool` (from `useModifyTools`) into `useCanvasClickHandler` and `useCanvasKeyboardShortcuts`. Adds `handleArrayPathEntityRepick` callback (mirrors `handleArrayPolarCenterRepick` pattern — reads `getPickingPathArrayId()` + calls `applyPathPick`). `canvas-click-types.ts` extended with `arrayPathIsActive`/`handleArrayPathClick`/`handleArrayPathEntityRepick`. No new `useSyncExternalStore` calls added to `CanvasSection` or `CanvasLayerStack`. Path-pick state (`pickingPathArrayId`) lives in `ArrayStore`. Cardinal rules maintained.

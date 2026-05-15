@@ -61,10 +61,8 @@ import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 import { useTextCreationTool } from '../../hooks/canvas/useTextCreationTool';
 import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import {
-  applyCenterPick as applyPolarCenterPick,
-  getPickingCenterArrayId as getPolarPickingArrayId,
-} from '../../systems/array/polar-center-pick-controller';
+import { useArrayRepickHandlers } from '../../hooks/canvas/useArrayRepickHandlers';
+import { useFloorplanAutoFit } from '../../hooks/canvas/useFloorplanAutoFit';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
@@ -243,25 +241,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // Replaces legacy useFitToPdf. Tracks the last-fitted background ID to avoid
   // resetting the user's manual zoom on every re-render.
   const floorplanBg = useFloorplanBackgroundForLevel();
-  const lastFittedBgIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    const bg = floorplanBg?.background;
-    if (!bg) return;
-    if (lastFittedBgIdRef.current === bg.id) return;
-    if (viewport.width <= 0 || viewport.height <= 0) return;
-    const result = zoomSystem.zoomToFit(
-      { min: { x: 0, y: 0 }, max: { x: bg.naturalBounds.width, y: bg.naturalBounds.height } },
-      viewport,
-      false,
-    );
-    if (result?.transform) {
-      const { scale, offsetX, offsetY } = result.transform;
-      if (!isNaN(scale) && !isNaN(offsetX) && !isNaN(offsetY)) {
-        lastFittedBgIdRef.current = bg.id;
-        setTransform(result.transform);
-      }
-    }
-  }, [floorplanBg?.background, viewport.width, viewport.height, zoomSystem, setTransform]);
+  useFloorplanAutoFit({ floorplanBg, viewport, zoomSystem, setTransform });
   const { globalRulerSettings, drawingHandlers, drawingHandlersRef, hasUnifiedDrawingPointsRef } = useCanvasEffects({
     activeTool, overlayMode, currentScene: props.currentScene ?? null,
     handleSceneChange: props.handleSceneChange, onToolChange: props.onToolChange, previewCanvasRef,
@@ -276,7 +256,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const guideMenuRef = useRef<GuideContextMenuHandle>(null);
   const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
   // === Modify tools (ADR-349/350 — extracted to useModifyTools for CanvasSection size budget) ===
-  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, arrayPolarTool, handleRotationAnglePrompt } = useModifyTools({
+  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, arrayPolarTool, arrayPathTool, handleRotationAnglePrompt } = useModifyTools({
     activeTool, selectedEntityIds, setSelectedEntityIds, levelManager, executeCommand,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
     previewCanvasRef, transformScale: transform.scale,
@@ -309,21 +289,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     executeCommand,
   });
 
-  // ADR-353 §B2 — interactive centre re-pick for an existing polar array.
-  // CanvasSection owns levelManager + executeCommand → builds the adapter and
-  // dispatches UpdateArrayParamsCommand via the controller. Returns true when
-  // the click was consumed so the canvas-click handler can short-circuit.
-  const handleArrayPolarCenterRepick = useCallback((worldPoint: { x: number; y: number }): boolean => {
-    if (!getPolarPickingArrayId()) return false;
-    if (!levelManager.currentLevelId) return false;
-    const adapter = new LevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-    const result = applyPolarCenterPick(worldPoint, adapter, executeCommand);
-    return result.ok;
-  }, [levelManager, executeCommand]);
+  // ADR-353 §B2/C3 — interactive re-pick handlers for polar/path arrays.
+  const { handleArrayPolarCenterRepick, handleArrayPathEntityRepick } = useArrayRepickHandlers({ levelManager, executeCommand });
   const { handleCanvasClick } = useCanvasClickHandler({
     viewportReady, viewport, transform, activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement,
@@ -337,6 +304,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     extendIsActive: extendTool.isActive, handleExtendClick: extendTool.handleExtendClick,
     arrayPolarIsActive: arrayPolarTool.isActive, handleArrayPolarClick: arrayPolarTool.handleArrayPolarClick,
     handleArrayPolarCenterRepick,
+    arrayPathIsActive: arrayPathTool.isActive, handleArrayPathClick: arrayPathTool.handleArrayPathClick,
+    handleArrayPathEntityRepick,
     levelManager, draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
     finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
@@ -403,6 +372,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleTrimEscape: trimTool.handleTrimEscape, handleTrimKeyDown: trimTool.handleTrimKeyDown, trimIsActive: trimTool.isActive,
     handleExtendEscape: extendTool.handleExtendEscape, handleExtendKeyDown: extendTool.handleExtendKeyDown, extendIsActive: extendTool.isActive,
     handleArrayPolarEscape: arrayPolarTool.handleArrayPolarEscape, arrayPolarIsActive: arrayPolarTool.isActive,
+    handleArrayPathEscape: arrayPathTool.handleArrayPathEscape, arrayPathIsActive: arrayPathTool.isActive,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     clearEntitySelection: () => universalSelectionRef.current.clearAll(),
     handleReorderEntity,
