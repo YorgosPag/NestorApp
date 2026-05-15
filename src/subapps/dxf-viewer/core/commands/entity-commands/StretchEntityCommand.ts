@@ -22,6 +22,8 @@ import {
 import type { VertexRef } from '../../../systems/stretch/stretch-vertex-classifier';
 import type { Entity } from '../../../types/entities';
 
+type ReplacedEntry = { readonly oldEntity: SceneEntity; readonly newEntity: SceneEntity };
+
 export interface StretchVertexMove {
   readonly entityId: string;
   readonly refs: ReadonlyArray<VertexRef>;
@@ -40,6 +42,7 @@ export class StretchEntityCommand implements ICommand {
   readonly timestamp: number;
 
   private entitySnapshots: Map<string, SceneEntity> = new Map();
+  private replacements: Map<string, ReplacedEntry> = new Map();
   private wasExecuted = false;
 
   constructor(
@@ -52,22 +55,32 @@ export class StretchEntityCommand implements ICommand {
 
   execute(): void {
     this.entitySnapshots.clear();
+    this.replacements.clear();
     const { vertexMoves, anchorMoves, displacement } = this.params;
 
     for (const move of vertexMoves) {
       const entity = this.sceneManager.getEntity(move.entityId);
       if (!entity) continue;
-      const updates = applyVertexDisplacement(entity as unknown as Entity, move.refs, displacement);
-      if (!hasUpdates(updates)) continue;
-      this.entitySnapshots.set(move.entityId, deepClone(entity));
-      this.sceneManager.updateEntity(move.entityId, updates);
+      const result = applyVertexDisplacement(entity as unknown as Entity, move.refs, displacement);
+      if (result.kind === 'noop') continue;
+      const snapshot = deepClone(entity);
+      this.entitySnapshots.set(move.entityId, snapshot);
+      if (result.kind === 'update') {
+        this.sceneManager.updateEntity(move.entityId, result.updates);
+      } else {
+        // Type-changing replacement (e.g. rectangle → polyline). Same id is
+        // preserved by the math layer so selection/refs stay valid.
+        this.replacements.set(move.entityId, { oldEntity: snapshot, newEntity: result.entity });
+        this.sceneManager.removeEntity(move.entityId);
+        this.sceneManager.addEntity(result.entity);
+      }
     }
 
     for (const entityId of anchorMoves) {
       const entity = this.sceneManager.getEntity(entityId);
       if (!entity) continue;
       const updates = translateEntityByAnchor(entity as unknown as Entity, displacement);
-      if (!hasUpdates(updates)) continue;
+      if (Object.keys(updates).length === 0) continue;
       this.entitySnapshots.set(entityId, deepClone(entity));
       this.sceneManager.updateEntity(entityId, updates);
     }
@@ -78,8 +91,15 @@ export class StretchEntityCommand implements ICommand {
   undo(): void {
     if (!this.wasExecuted) return;
     for (const [entityId, snapshot] of this.entitySnapshots) {
-      const { id: _id, layer: _layer, visible: _visible, ...geometry } = snapshot;
-      this.sceneManager.updateEntity(entityId, geometry);
+      const replacement = this.replacements.get(entityId);
+      if (replacement) {
+        // Reverse the type-changing replacement: drop the new entity, restore old.
+        this.sceneManager.removeEntity(replacement.newEntity.id);
+        this.sceneManager.addEntity(replacement.oldEntity);
+      } else {
+        const { id: _id, layer: _layer, visible: _visible, ...geometry } = snapshot;
+        this.sceneManager.updateEntity(entityId, geometry);
+      }
     }
   }
 
@@ -88,14 +108,19 @@ export class StretchEntityCommand implements ICommand {
     for (const move of vertexMoves) {
       const snapshot = this.entitySnapshots.get(move.entityId);
       if (!snapshot) continue;
-      const updates = applyVertexDisplacement(snapshot as unknown as Entity, move.refs, displacement);
-      if (hasUpdates(updates)) this.sceneManager.updateEntity(move.entityId, updates);
+      const result = applyVertexDisplacement(snapshot as unknown as Entity, move.refs, displacement);
+      if (result.kind === 'update') {
+        this.sceneManager.updateEntity(move.entityId, result.updates);
+      } else if (result.kind === 'replace') {
+        this.sceneManager.removeEntity(move.entityId);
+        this.sceneManager.addEntity(result.entity);
+      }
     }
     for (const entityId of anchorMoves) {
       const snapshot = this.entitySnapshots.get(entityId);
       if (!snapshot) continue;
       const updates = translateEntityByAnchor(snapshot as unknown as Entity, displacement);
-      if (hasUpdates(updates)) this.sceneManager.updateEntity(entityId, updates);
+      if (Object.keys(updates).length > 0) this.sceneManager.updateEntity(entityId, updates);
     }
   }
 
@@ -139,6 +164,3 @@ export class StretchEntityCommand implements ICommand {
   }
 }
 
-function hasUpdates(obj: Partial<SceneEntity>): boolean {
-  return Object.keys(obj).length > 0;
-}

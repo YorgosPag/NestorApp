@@ -30,7 +30,8 @@ export { findNearestGrip } from './grip-hit-testing';
 
 // === Commit adapters ===
 export {
-  commitDxfGripDrag,
+  commitDxfGripDragViaStretchCommand,
+  commitDxfGripDragModeAware,
   commitOverlayVertexDrag,
   commitOverlayEdgeMidpointDrag,
   commitOverlayBodyDrag,

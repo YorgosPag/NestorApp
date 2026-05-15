@@ -207,7 +207,9 @@ function buildVertexGhost(
   refs: ReadonlyArray<VertexRef>,
   delta: Point2D,
 ): DxfEntityUnion | null {
-  const partial = applyVertexDisplacement(entity, refs, delta);
-  if (Object.keys(partial).length === 0) return null;
-  return { ...entity, ...partial } as DxfEntityUnion;
+  const result = applyVertexDisplacement(entity, refs, delta);
+  if (result.kind === 'noop') return null;
+  if (result.kind === 'update') return { ...entity, ...result.updates } as DxfEntityUnion;
+  // 'replace' — wholesale entity replacement (e.g. rectangle → polyline coercion).
+  return result.entity as unknown as DxfEntityUnion;
 }

@@ -11,18 +11,18 @@
  * @see useCanvasMouse.ts — original overlay commit (handleContainerMouseUp)
  */
 
-import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ISceneManager, SceneEntity, ICommand } from '../../core/commands/interfaces';
 import type { VertexMovement } from '../../core/commands';
-import { MoveVertexCommand } from '../../core/commands';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import type { AnySceneEntity, SceneModel } from '../../types/scene';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import { type GripMode } from '../../systems/grip/grip-mode-cycle';
-import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
+import { gripToVertexRefs } from '../../systems/grip/grip-to-vertex-refs';
+import { StretchEntityCommand, type StretchParams } from '../../core/commands/entity-commands/StretchEntityCommand';
+import type { Entity } from '../../types/entities';
 
 // ============================================================================
 // TYPES
@@ -234,10 +234,21 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
 }
 
 /**
- * Commit a DXF grip drag.
- * Extracted from useDxfGripInteraction.ts:563-665.
+ * Commit a DXF grip drag through the unified `StretchEntityCommand` (ADR-349
+ * Phase 1c-B3). Replaces the legacy fragmented `commitDxfGripDrag` (manual
+ * edge mutation per entity type / `MoveVertexCommand` / `moveEntities`):
+ *
+ *   - vertex/edge grips → resolved to `VertexRef[]` via `gripToVertexRefs` and
+ *     dispatched as `vertexMoves` (line / polyline / arc / rectangle)
+ *   - whole-entity grips (`grip.movesEntity` — circle / ellipse / text / point /
+ *     block) → dispatched as `anchorMoves` (rigid translation by anchor)
+ *
+ * The math (bulge-preserving arc, rectangle → polyline coercion, polyline /
+ * line / spline per-vertex translation) lives in `stretch-entity-transform.ts`
+ * and is shared with `useStretchPreview` so the ghost cannot diverge from the
+ * commit result.
  */
-export function commitDxfGripDrag(
+export function commitDxfGripDragViaStretchCommand(
   grip: UnifiedGripInfo,
   delta: Point2D,
   deps: DxfCommitDeps,
@@ -245,111 +256,35 @@ export function commitDxfGripDrag(
   if (delta.x === 0 && delta.y === 0) return;
   if (!grip.entityId) return;
 
-  const { moveEntities, execute, currentLevelId, getLevelScene, setLevelScene } = deps;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
 
-  if (grip.edgeVertexIndices) {
-    // Edge-stretch: Move BOTH vertices of this edge ATOMICALLY
-    if (!currentLevelId) return;
-    const scene = getLevelScene(currentLevelId);
-    if (!scene) return;
+  const entity = sceneManager.getEntity(grip.entityId);
+  if (!entity) return;
 
-    const entity = scene.entities.find(e => e.id === grip.entityId);
-    if (!entity) return;
+  const refs = gripToVertexRefs(entity as unknown as Entity, grip);
 
-    // Polyline/polygon
-    if ('vertices' in entity && Array.isArray(entity.vertices)) {
-      const [v1idx, v2idx] = grip.edgeVertexIndices;
-      const vertices = entity.vertices as Point2D[];
-      if (v1idx >= vertices.length || v2idx >= vertices.length) return;
+  const vertexMoves = refs.length > 0 ? [{ entityId: grip.entityId, refs }] : [];
+  const anchorMoves = refs.length === 0 && grip.movesEntity ? [grip.entityId] : [];
 
-      const newVertices = [...vertices];
-      newVertices[v1idx] = { x: vertices[v1idx].x + delta.x, y: vertices[v1idx].y + delta.y };
-      newVertices[v2idx] = { x: vertices[v2idx].x + delta.x, y: vertices[v2idx].y + delta.y };
+  if (vertexMoves.length === 0 && anchorMoves.length === 0) return;
 
-      setLevelScene(currentLevelId, {
-        ...scene,
-        entities: scene.entities.map(e =>
-          e.id === grip.entityId ? { ...e, vertices: newVertices } : e
-        ),
-      });
-    }
-    // Line: move both start and end
-    else if ('start' in entity && 'end' in entity) {
-      const start = entity.start as Point2D;
-      const end = entity.end as Point2D;
-      setLevelScene(currentLevelId, {
-        ...scene,
-        entities: scene.entities.map(e =>
-          e.id === grip.entityId ? {
-            ...e,
-            start: { x: start.x + delta.x, y: start.y + delta.y },
-            end: { x: end.x + delta.x, y: end.y + delta.y },
-          } : e
-        ),
-      });
-    }
-    // Rectangle: edge midpoints move one side
-    else if ('corner1' in entity && 'corner2' in entity) {
-      const c1 = entity.corner1 as Point2D;
-      const c2 = entity.corner2 as Point2D;
-      const [v1, v2] = grip.edgeVertexIndices;
-      let newC1 = { ...c1 };
-      let newC2 = { ...c2 };
-
-      if ((v1 === 0 && v2 === 1) || (v1 === 1 && v2 === 0)) {
-        newC1 = { ...c1, y: c1.y + delta.y };
-      } else if ((v1 === 1 && v2 === 2) || (v1 === 2 && v2 === 1)) {
-        newC2 = { ...c2, x: c2.x + delta.x };
-      } else if ((v1 === 2 && v2 === 3) || (v1 === 3 && v2 === 2)) {
-        newC2 = { ...c2, y: c2.y + delta.y };
-      } else if ((v1 === 3 && v2 === 0) || (v1 === 0 && v2 === 3)) {
-        newC1 = { ...c1, x: c1.x + delta.x };
-      }
-
-      setLevelScene(currentLevelId, {
-        ...scene,
-        entities: scene.entities.map(e =>
-          e.id === grip.entityId ? { ...e, corner1: newC1, corner2: newC2 } : e
-        ),
-      });
-    }
-  } else if (grip.movesEntity) {
-    moveEntities([grip.entityId], delta, { isDragging: false });
-  } else {
-    // Move single vertex via command
-    const sceneManager = createSceneManagerAdapter(deps);
-    if (sceneManager) {
-      const vertices = sceneManager.getVertices(grip.entityId);
-      if (vertices && grip.gripIndex < vertices.length) {
-        const oldPosition = vertices[grip.gripIndex];
-        const newPosition: Point2D = {
-          x: oldPosition.x + delta.x,
-          y: oldPosition.y + delta.y,
-        };
-        const command = new MoveVertexCommand(
-          grip.entityId,
-          grip.gripIndex,
-          oldPosition,
-          newPosition,
-          sceneManager
-        );
-        execute(command);
-      }
-    }
-  }
+  const params: StretchParams = { vertexMoves, anchorMoves, displacement: delta };
+  const command = new StretchEntityCommand(params, sceneManager);
+  if (command.validate() !== null) return;
+  deps.execute(command);
 }
 
 /**
- * Mode-aware DXF grip commit (ADR-349 Phase 1c-A).
+ * Mode-aware DXF grip commit (ADR-349 Phase 1c-A / 1c-B2 / 1c-B3).
  *
  * Routes the drag through the strategy selected by the spacebar cycle:
- *   - `stretch` (default) — preserves the legacy fragmented logic
- *     (manual edge mutation / vertex MoveVertexCommand / movesEntity → moveEntities)
+ *   - `stretch` (default) — Phase 1c-B3: routes through `StretchEntityCommand`
+ *     via {@link commitDxfGripDragViaStretchCommand} (vertex refs for line /
+ *     polyline / arc / rectangle, anchor for circle / ellipse / text / etc.)
  *   - `move` — translates the WHOLE entity regardless of grip type
- *   - `rotate`/`scale`/`mirror` — deferred; sets a status-bar hint and skips
- *     the commit (full handoff to RotationTool/ScaleTool/MirrorTool ships in
- *     Phase 1c-B). User can then click the corresponding ribbon button to
- *     complete the operation manually.
+ *   - `rotate` / `scale` / `mirror` — Phase 1c-B2: pre-seeds the target tool's
+ *     first point in {@link GripHandoffStore} and switches `activeTool`
  */
 export function commitDxfGripDragModeAware(
   grip: UnifiedGripInfo,
@@ -371,8 +306,8 @@ export function commitDxfGripDragModeAware(
     return;
   }
 
-  // mode === 'stretch' (default): existing fragmented commit logic.
-  commitDxfGripDrag(grip, delta, deps);
+  // mode === 'stretch' (default): unified StretchEntityCommand path.
+  commitDxfGripDragViaStretchCommand(grip, delta, deps);
 }
 
 // ============================================================================

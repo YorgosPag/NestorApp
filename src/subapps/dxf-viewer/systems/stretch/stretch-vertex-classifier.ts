@@ -21,6 +21,7 @@ export type VertexKind =
   | 'line-end'
   | 'polyline-vertex'
   | 'arc-start'
+  | 'arc-mid'
   | 'arc-end'
   | 'spline-cv'
   | 'rectangle-corner';
@@ -53,6 +54,7 @@ export function enumerateVertices(entity: Entity): VertexRef[] {
     case 'arc':
       return [
         { entityId: entity.id, kind: 'arc-start' },
+        { entityId: entity.id, kind: 'arc-mid' },
         { entityId: entity.id, kind: 'arc-end' },
       ];
     case 'spline':
@@ -105,6 +107,10 @@ export function getVertexPosition(entity: Entity, ref: VertexRef): Point2D | nul
       return readPolylineVertex(entity, ref.index);
     case 'arc-start':
       return entity.type === 'arc' ? arcEndpoint(entity, entity.startAngle) : null;
+    case 'arc-mid':
+      return entity.type === 'arc'
+        ? arcEndpoint(entity, (entity.startAngle + entity.endAngle) / 2)
+        : null;
     case 'arc-end':
       return entity.type === 'arc' ? arcEndpoint(entity, entity.endAngle) : null;
     case 'spline-cv':
