@@ -342,6 +342,15 @@ export interface ISceneManager {
 
   /** Get all vertices of an entity */
   getVertices(entityId: string): Point2D[] | undefined;
+
+  /** Return the current position (index) of an entity in the render order. -1 if not found. */
+  getEntityIndex(entityId: string): number;
+
+  /** Bring entity to front (end of render list) or send to back (start). */
+  reorderEntity(entityId: string, direction: 'front' | 'back'): void;
+
+  /** Restore entity to an exact index position — used by ReorderEntityCommand.undo(). */
+  moveEntityToIndex(entityId: string, targetIndex: number): void;
 }
 
 /**

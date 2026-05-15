@@ -60,6 +60,8 @@ import { useTextDoubleClickEditor } from '../../ui/text-toolbar/hooks/useTextDou
 import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 import { useTextCreationTool } from '../../hooks/canvas/useTextCreationTool';
 import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
+import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { ReorderEntityCommand } from '../../core/commands/entity-commands';
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -364,6 +366,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [entityJoinHook, selectedEntityIds]);
 
   const handleExitDrawMode = useCallback(() => { if (overlayMode === 'draw' && setOverlayMode) setOverlayMode('select'); }, [overlayMode, setOverlayMode]);
+  const handleReorderEntity = useCallback((direction: 'front' | 'back') => {
+    if (selectedEntityIds.length !== 1 || !levelManager.currentLevelId) return;
+    const adapter = new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId);
+    executeCommand(new ReorderEntityCommand(selectedEntityIds[0], direction, adapter));
+  }, [selectedEntityIds, levelManager, executeCommand]);
+
   useCanvasKeyboardShortcuts({
     handleSmartDelete, dxfGripInteraction: unified.dxfProjection,
     setDraftPolygon, draftPolygon, selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
@@ -379,6 +387,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleTrimEscape: trimTool.handleTrimEscape, handleTrimKeyDown: trimTool.handleTrimKeyDown, trimIsActive: trimTool.isActive,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     clearEntitySelection: () => universalSelectionRef.current.clearAll(),
+    handleReorderEntity,
   });
 
   // === ADR-344 Phase 6.E — In-canvas text editor (DBLCLKEDIT) ===

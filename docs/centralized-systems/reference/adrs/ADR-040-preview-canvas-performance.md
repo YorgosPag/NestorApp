@@ -87,6 +87,11 @@ Aggiunti shortcut `PageUp` (bring to front) e `PageDown` (send to back) per rior
 
 **Constraint ADR-040 rispettato**: nessun nuovo `useSyncExternalStore` in `CanvasSection`. `handleReorderEntity` è un `useCallback` con deps stabili. L'entity index O(1) di `SceneUpdateManager` (commit `c4efe0dd`) è preservato perché lo splice passa per `updateScene()` → `rebuildEntityIndex()`.
 
+**Note implementative**:
+- Lo shortcut è gated su `selectedEntityIds.length === 1` — multi-select reorder non supportato (parity AutoCAD: DRAWORDER richiede singola entità o gruppo esplicito).
+- `LevelSceneManagerAdapter` instanziato on-demand nel callback (non hoistato) — l'adapter è stateless rispetto alle operazioni di riordino, costa solo l'allocazione dell'oggetto.
+- `Bitmap cache invalidation`: passando per `SceneUpdateManager.updateScene()` il cache key cambia (entities array reference), trigger naturale di redraw senza modifiche al `dxf-bitmap-cache.ts` (cardinal rule 3 rispettata).
+
 ---
 
 ### 2026-05-15: Pan ArrowUp/ArrowDown — fix direzione invertita

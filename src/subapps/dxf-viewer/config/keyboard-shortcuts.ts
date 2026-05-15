@@ -543,6 +543,21 @@ export const DXF_NAVIGATION_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'navigate:cycle-snap',
     category: 'navigation',
   },
+  // Z-order: PageUp = bring to front, PageDown = send to back (AutoCAD/BricsCAD parity)
+  bringToFront: {
+    key: 'PageUp',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.navigation.bringToFront',
+    action: 'navigate:bring-to-front',
+    category: 'navigation',
+  },
+  sendToBack: {
+    key: 'PageDown',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.navigation.sendToBack',
+    action: 'navigate:send-to-back',
+    category: 'navigation',
+  },
   // Canvas pan — same arrow keys as nudge but active when NO entity is selected.
   // Priority: nudge (selection exists) > pan (no selection). AutoCAD parity.
   panUp: {
@@ -846,7 +861,7 @@ export const matchesShortcut = (
   if (shortcut.key.startsWith('F') && shortcut.key.length > 1) {
     return event.key === shortcut.key;
   }
-  if (shortcut.key === 'Escape' || shortcut.key === 'Delete' || shortcut.key === 'Backspace' || shortcut.key === 'Home' || shortcut.key === 'End') {
+  if (shortcut.key === 'Escape' || shortcut.key === 'Delete' || shortcut.key === 'Backspace' || shortcut.key === 'Home' || shortcut.key === 'End' || shortcut.key === 'PageUp' || shortcut.key === 'PageDown') {
     return event.key === shortcut.key;
   }
   if (shortcut.key.startsWith('Arrow')) {

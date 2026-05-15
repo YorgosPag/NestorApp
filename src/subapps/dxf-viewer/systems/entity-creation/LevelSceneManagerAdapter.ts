@@ -381,6 +381,39 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     return undefined;
   }
 
+  /** Z-order: return current render-list index of an entity. -1 if not found. */
+  getEntityIndex(entityId: string): number {
+    const scene = this.getLatestScene();
+    if (!scene) return -1;
+    return scene.entities.findIndex((e) => e.id === entityId);
+  }
+
+  /** Z-order: move entity to front (end of list) or back (start). */
+  reorderEntity(entityId: string, direction: 'front' | 'back'): void {
+    const scene = this.getLatestScene();
+    if (!scene) return;
+    const idx = scene.entities.findIndex((e) => e.id === entityId);
+    if (idx === -1) return;
+    const entities = scene.entities.slice() as AnySceneEntity[];
+    const [entity] = entities.splice(idx, 1);
+    if (direction === 'front') entities.push(entity);
+    else entities.unshift(entity);
+    this.commitScene({ ...scene, entities });
+  }
+
+  /** Z-order: restore entity to an exact index — used by ReorderEntityCommand.undo(). */
+  moveEntityToIndex(entityId: string, targetIndex: number): void {
+    const scene = this.getLatestScene();
+    if (!scene) return;
+    const idx = scene.entities.findIndex((e) => e.id === entityId);
+    if (idx === -1) return;
+    const entities = scene.entities.slice() as AnySceneEntity[];
+    const [entity] = entities.splice(idx, 1);
+    const clamped = Math.min(Math.max(0, targetIndex), entities.length);
+    entities.splice(clamped, 0, entity);
+    this.commitScene({ ...scene, entities });
+  }
+
   /**
    * Get the level ID this adapter operates on
    */

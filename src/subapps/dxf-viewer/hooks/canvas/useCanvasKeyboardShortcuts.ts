@@ -97,6 +97,8 @@ export interface UseCanvasKeyboardShortcutsParams {
   clearEntitySelection?: () => void;
   /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
   hasAnySelection?: boolean;
+  /** PageUp/PageDown: bring selected entity to front / send to back */
+  handleReorderEntity?: (direction: 'front' | 'back') => void;
 }
 
 // ============================================================================
@@ -137,6 +139,7 @@ export function useCanvasKeyboardShortcuts({
   trimIsActive = false,
   clearEntitySelection,
   hasAnySelection = false,
+  handleReorderEntity,
 }: UseCanvasKeyboardShortcutsParams): void {
 
   // Handle keyboard shortcuts for drawing, delete, and local operations
@@ -187,6 +190,13 @@ export function useCanvasKeyboardShortcuts({
 
       // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Zoom shortcuts μετακόμισαν στο hooks/useKeyboardShortcuts.ts
       // Εδώ κρατάμε ΜΟΝΟ local shortcuts για drawing mode (Escape, Enter)
+
+      // Z-order: PageUp = bring to front, PageDown = send to back
+      if ((e.key === 'PageUp' || e.key === 'PageDown') && selectedEntityIds.length === 1 && handleReorderEntity) {
+        e.preventDefault();
+        handleReorderEntity(e.key === 'PageUp' ? 'front' : 'back');
+        return;
+      }
 
       switch (e.key) {
         case 'Escape':
@@ -304,7 +314,7 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, handleTrimEscape, handleTrimKeyDown, trimIsActive, clearEntitySelection, hasAnySelection, dxfGripInteraction, setDraftPolygon, setSelectedGrips]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, onExitDrawMode, handleRotationEscape, rotationIsActive, handleMoveEscape, moveIsActive, handleMirrorEscape, mirrorIsActive, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleEscape, handleScaleKeyDown, scaleIsActive, handleStretchEscape, handleStretchKeyDown, stretchIsActive, handleTrimEscape, handleTrimKeyDown, trimIsActive, clearEntitySelection, hasAnySelection, dxfGripInteraction, setDraftPolygon, setSelectedGrips, handleReorderEntity]);
 
   // ADR-350 B2: SHIFT keyup → immediately reset inverseMode when trim is active
   useEffect(() => {

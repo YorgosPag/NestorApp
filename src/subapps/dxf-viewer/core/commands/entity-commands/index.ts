@@ -12,3 +12,4 @@ export { DeleteEntityCommand, DeleteMultipleEntitiesCommand } from './DeleteEnti
 export { JoinEntityCommand } from './JoinEntityCommand';
 export { TrimEntityCommand } from './TrimEntityCommand';
 export type { TrimCommandParams } from './TrimEntityCommand';
+export { ReorderEntityCommand } from './ReorderEntityCommand';

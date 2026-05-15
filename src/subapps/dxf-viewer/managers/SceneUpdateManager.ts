@@ -272,6 +272,34 @@ export class SceneUpdateManager {
     dlog('🎭 SceneUpdateManager disposed');
   }
 
+  // ═══ Z-ORDER METHODS ═══
+
+  getEntityIndex(entityId: string): number {
+    return this.entityIndex.get(entityId) ?? -1;
+  }
+
+  reorderEntity(entityId: string, direction: 'front' | 'back', source = 'reorder-entity'): void {
+    if (!this.currentScene) return;
+    const idx = this.entityIndex.get(entityId);
+    if (idx === undefined) return;
+    const entities = this.currentScene.entities.slice() as AnySceneEntity[];
+    const [entity] = entities.splice(idx, 1);
+    if (direction === 'front') entities.push(entity);
+    else entities.unshift(entity);
+    this.updateScene({ ...this.currentScene, entities }, { source, reason: `reorder-${direction}-${entityId}` });
+  }
+
+  moveEntityToIndex(entityId: string, targetIndex: number, source = 'move-entity-to-index'): void {
+    if (!this.currentScene) return;
+    const idx = this.entityIndex.get(entityId);
+    if (idx === undefined) return;
+    const entities = this.currentScene.entities.slice() as AnySceneEntity[];
+    const [entity] = entities.splice(idx, 1);
+    const clamped = Math.min(Math.max(0, targetIndex), entities.length);
+    entities.splice(clamped, 0, entity);
+    this.updateScene({ ...this.currentScene, entities }, { source, reason: `move-to-index-${targetIndex}-${entityId}` });
+  }
+
   // ═══ DEBUG METHODS ═══
 
   debugCurrentScene() {
