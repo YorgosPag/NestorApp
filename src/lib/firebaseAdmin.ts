@@ -205,11 +205,14 @@ export function getAdminDiagnostics(): AdminDiagnosticReport {
  */
 export async function safeFirestoreOperation<T>(
   operation: (db: Firestore) => Promise<T>,
-  fallback: T
+  fallback?: T
 ): Promise<T> {
   if (!isFirebaseAdminAvailable()) {
-    logger.warn('[Firebase Admin] SDK not available, returning fallback');
-    return fallback;
+    if (fallback !== undefined) {
+      logger.warn('[Firebase Admin] SDK not available, returning fallback');
+      return fallback;
+    }
+    throw new Error('[Firebase Admin] SDK not available and no fallback provided');
   }
 
   try {
@@ -221,7 +224,8 @@ export async function safeFirestoreOperation<T>(
       stack: error instanceof Error ? error.stack : undefined,
       code: (error as { code?: string | number })?.code,
     });
-    return fallback;
+    if (fallback !== undefined) return fallback;
+    throw error;
   }
 }
 
