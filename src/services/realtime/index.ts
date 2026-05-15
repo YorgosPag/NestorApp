@@ -26,12 +26,7 @@ export { RealtimeService, default as RealtimeServiceInstance } from './RealtimeS
 
 // Types
 export {
-  type RealtimeCollection,
   type SubscriptionStatus,
-  type RealtimeQueryOptions,
-  type RealtimeDocOptions,
-  type RealtimeQueryResult,
-  type RealtimeDocResult,
   type RealtimeBuilding,
   type RealtimeProject,
   type RealtimeUnit,
@@ -109,7 +104,6 @@ export {
 } from './types';
 
 // Hooks
-export { useRealtimeQuery } from './hooks/useRealtimeQuery';
 export { useRealtimeBuildings } from './hooks/useRealtimeBuildings';
 export { useRealtimeProperties } from './hooks/useRealtimeProperties';
 export { useRealtimeTasks } from './hooks/useRealtimeTasks';

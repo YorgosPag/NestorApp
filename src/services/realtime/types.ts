@@ -7,27 +7,17 @@
  * Payload interfaces extracted to event-payload-definitions.ts (Google SRP, N.7.1).
  */
 
-import type { DocumentData, QueryConstraint } from 'firebase/firestore';
-
 // ============================================================================
 // CORE TYPES
 // ============================================================================
 
 /**
- * 🏢 ENTERPRISE: Supported Firestore collections for real-time
- */
-export type RealtimeCollection =
-  | 'buildings'
-  | 'projects'
-  | 'properties'
-  | 'floors'
-  | 'contacts'
-  | 'project_floorplans'
-  | 'files'
-  | 'user_notification_settings';
-
-/**
- * 🏢 ENTERPRISE: Real-time subscription status
+ * Real-time subscription status (consumer hook state).
+ *
+ * Used by hooks built on top of `firestoreQueryService.subscribe` to surface
+ * the connection lifecycle to UI consumers. ADR-355 removed the Firestore
+ * listener wrapper from this service; the status remains the public contract
+ * for `useRealtime*` return types.
  */
 export type SubscriptionStatus =
   | 'idle'
@@ -35,72 +25,6 @@ export type SubscriptionStatus =
   | 'active'
   | 'error'
   | 'disconnected';
-
-/**
- * 🏢 ENTERPRISE: Real-time query options
- */
-export interface RealtimeQueryOptions {
-  /** Collection to watch */
-  collection: RealtimeCollection;
-  /** Optional query constraints (where, orderBy, limit) */
-  constraints?: QueryConstraint[];
-  /** Enable/disable the subscription */
-  enabled?: boolean;
-  /** Callback on successful update */
-  onUpdate?: (data: DocumentData[]) => void;
-  /** Callback on error */
-  onError?: (error: Error) => void;
-}
-
-/**
- * 🏢 ENTERPRISE: Single document real-time options
- */
-export interface RealtimeDocOptions {
-  /** Collection name */
-  collection: RealtimeCollection;
-  /** Document ID */
-  documentId: string;
-  /** Enable/disable the subscription */
-  enabled?: boolean;
-  /** Callback on successful update */
-  onUpdate?: (data: DocumentData | null) => void;
-  /** Callback on error */
-  onError?: (error: Error) => void;
-}
-
-/**
- * 🏢 ENTERPRISE: Real-time query return type
- */
-export interface RealtimeQueryResult<T> {
-  /** Current data */
-  data: T[];
-  /** Loading state */
-  loading: boolean;
-  /** Error message if any */
-  error: string | null;
-  /** Subscription status */
-  status: SubscriptionStatus;
-  /** Manual refetch trigger */
-  refetch: () => void;
-  /** Unsubscribe function */
-  unsubscribe: () => void;
-}
-
-/**
- * 🏢 ENTERPRISE: Real-time document return type
- */
-export interface RealtimeDocResult<T> {
-  /** Current document data */
-  data: T | null;
-  /** Loading state */
-  loading: boolean;
-  /** Error message if any */
-  error: string | null;
-  /** Subscription status */
-  status: SubscriptionStatus;
-  /** Manual refetch trigger */
-  refetch: () => void;
-}
 
 // ============================================================================
 // NAVIGATION-SPECIFIC TYPES
