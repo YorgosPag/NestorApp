@@ -163,6 +163,33 @@ async function loadFileRows(
   return rows.filter((r): r is FileRow => r !== null);
 }
 
+/**
+ * ADR-351: List every FileRecord whose entity is this floor, regardless of
+ * whether it is referenced from a floorplan_backgrounds or dxf_viewer_levels
+ * doc. Without this, FileRecords created but never linked (e.g. upload races,
+ * partial wizard exits) are left orphan in Firestore — and surface later as
+ * "ghost" floorplans with no Storage binary (incident 2026-05-15).
+ */
+async function listAllFloorFileRows(
+  db: Firestore,
+  companyId: string,
+  floorId: string,
+): Promise<FileRow[]> {
+  const snap = await db
+    .collection(COLLECTIONS.FILES)
+    .where('companyId', '==', companyId)
+    .where('entityType', '==', 'floor')
+    .where('entityId', '==', floorId)
+    .get();
+  return snap.docs.map((d) => {
+    const data = d.data() as { storagePath?: string };
+    return {
+      ref: d.ref,
+      storagePath: typeof data.storagePath === 'string' ? data.storagePath : null,
+    } satisfies FileRow;
+  });
+}
+
 async function loadFloorProjectId(
   db: Firestore,
   companyId: string,
@@ -288,18 +315,22 @@ export class FloorplanFloorWipeService {
     floorId: string,
   ): Promise<FloorWipePreview> {
     const db = getDb();
-    const [polygonState, backgrounds, dxfLevels] = await Promise.all([
+    const [polygonState, backgrounds, dxfLevels, allFloorFiles] = await Promise.all([
       FloorplanCascadeDeleteService.getFloorPolygonState(companyId, floorId),
       listBackgrounds(db, companyId, floorId),
       listDxfLevels(db, companyId, floorId),
+      listAllFloorFileRows(db, companyId, floorId),
     ]);
 
-    const fileIds = collectFileIds(backgrounds, dxfLevels);
+    // ADR-351: union referenced + orphan FileRecord ids so the preview count
+    // matches what executeWipe actually deletes (no surprise "ghost" leftovers).
+    const referencedIds = new Set(collectFileIds(backgrounds, dxfLevels));
+    for (const row of allFloorFiles) referencedIds.add(row.ref.id);
 
     return {
       floorplanOverlayCount: polygonState.floorplanOverlayCount,
       floorplanBackgroundCount: backgrounds.length,
-      fileRecordCount: fileIds.length,
+      fileRecordCount: referencedIds.size,
       totalPolygons: polygonState.total,
     };
   }
@@ -339,7 +370,16 @@ async function executeWipe(
   ]);
 
   const fileIds = collectFileIds(backgrounds, dxfLevels);
-  const fileRows = await loadFileRows(db, companyId, fileIds);
+  const referencedFileRows = await loadFileRows(db, companyId, fileIds);
+
+  // ADR-351: union the referenced rows with EVERY FileRecord pointing at this
+  // floor — catches orphan FileRecords (created but never linked from a
+  // background/level doc) that previous wipes ignored.
+  const allFloorFileRows = await listAllFloorFileRows(db, companyId, floorId);
+  const fileRowsById = new Map<string, FileRow>();
+  for (const row of referencedFileRows) fileRowsById.set(row.ref.id, row);
+  for (const row of allFloorFileRows) fileRowsById.set(row.ref.id, row);
+  const fileRows = Array.from(fileRowsById.values());
 
   // Polygons FIRST — cascade reads dxf_viewer_levels (still alive here).
   const cascade = await FloorplanCascadeDeleteService.cascadeAllPolygonsForFloor(

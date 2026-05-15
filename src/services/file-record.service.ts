@@ -17,7 +17,6 @@
  * 2. Upload binary to Storage at storagePath
  * 3. finalizeFileRecord() → Updates status: ready, adds downloadUrl/sizeBytes
  */
-
 import {
   doc,
   setDoc,
@@ -47,7 +46,6 @@ import type {
   FileRecordQuery,
 } from '@/types/file-record';
 import { isFileRecord } from '@/types/file-record';
-
 import {
   ensureFilesNamespaceLoaded,
 } from '@/services/upload/utils/file-display-name';
@@ -61,7 +59,6 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { RealtimeService } from '@/services/realtime';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-
 // 🏢 ENTERPRISE: SRP-compliant modules (ADR-065)
 import {
   moveToTrash,
@@ -80,13 +77,10 @@ import {
   updateDescription,
   findByHash,
 } from '@/services/file-record-links';
-
 const logger = createModuleLogger('FILE_RECORD');
-
 // ============================================================================
 // POST-QUERY NORMALIZATION HELPER (ADR-214 Phase 3)
 // ============================================================================
-
 export function toFileRecord(raw: DocumentData): FileRecord | null {
   const record = {
     ...raw,
@@ -96,17 +90,14 @@ export function toFileRecord(raw: DocumentData): FileRecord | null {
   };
   return isFileRecord(record) ? record : null;
 }
-
 // ============================================================================
 // FILE RECORD SERVICE
 // ============================================================================
-
 export class FileRecordService {
   static isVisibleInActiveLists(file: Pick<FileRecord, 'lifecycleState' | 'isDeleted'>): boolean {
     if (file.isDeleted) return false;
     return (file.lifecycleState ?? FILE_LIFECYCLE_STATES.ACTIVE) === FILE_LIFECYCLE_STATES.ACTIVE;
   }
-
   // ==========================================================================
   // CREATE OPERATIONS
   // ==========================================================================
@@ -379,6 +370,16 @@ export class FileRecordService {
         logger.warn('Skipping invalid FileRecord in query results', { docId: raw.id });
       }
     }
+
+    // ADR-351: sort by createdAt DESC (most recent first) — client-side to avoid
+    // adding a composite index for every where() combination. Callers that pick
+    // `result[0]` (e.g. FloorFloorplanService.loadFloorplan) MUST receive the
+    // most recently created record, not the lexicographically first UUID.
+    validRecords.sort((a, b) => {
+      const aMs = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bMs = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bMs - aMs;
+    });
 
     return validRecords;
   }
