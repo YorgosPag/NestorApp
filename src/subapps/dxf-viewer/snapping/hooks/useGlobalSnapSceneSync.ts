@@ -31,7 +31,9 @@ import {
   setLastSnapEntityFingerprint,
 } from '../global-snap-engine';
 import type { Entity } from '../extended-types';
+import { isArrayEntity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
+import { expandArrayEntity } from '../../systems/array/array-expander';
 import type { Overlay } from '../../overlays/types';
 import { overlaysToRegions } from '../../overlays/overlay-adapter';
 import { regionsToSnapEntities } from '../../overlays/snap-adapter';
@@ -84,7 +86,16 @@ export function useGlobalSnapSceneSync({
   const scheduler = useRef(getIdleScheduler()).current;
 
   useEffect(() => {
-    const dxfEnts = (scene?.entities ?? []) as readonly Entity[];
+    const rawEnts = (scene?.entities ?? []) as readonly Entity[];
+    // ADR-353: expand ArrayEntities into individual snap candidates.
+    const dxfEnts: Entity[] = [];
+    for (const e of rawEnts) {
+      if (isArrayEntity(e)) {
+        for (const item of expandArrayEntity(e)) dxfEnts.push(item as Entity);
+      } else {
+        dxfEnts.push(e);
+      }
+    }
     const overlayEnts: Entity[] = overlays?.length
       ? regionsToSnapEntities(overlaysToRegions([...overlays]))
       : [];

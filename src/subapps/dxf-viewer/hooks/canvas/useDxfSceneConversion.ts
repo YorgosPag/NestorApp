@@ -21,8 +21,10 @@ import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
+import { isArrayEntity } from '../../types/entities';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
+import { expandArrayEntity } from '../../systems/array/array-expander';
 import { getLayerNameOrDefault } from '../../config/layer-config';
 import { UI_COLORS } from '../../config/color-config';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
@@ -224,14 +226,33 @@ export function useDxfSceneConversion({
   // SceneModel.entities is rebuilt but individual entries keep the same ref
   // (the common case for incremental scene updates), conversion is skipped.
   const cacheRef = useRef<WeakMap<object, DxfEntityUnion>>(new WeakMap());
+  // ADR-353: 1:N cache for array entities (one ArrayEntity → multiple DxfEntityUnion items).
+  const arrayCacheRef = useRef<WeakMap<object, DxfEntityUnion[]>>(new WeakMap());
 
   const dxfScene = useMemo<DxfScene>(() => perfMark('useDxfSceneConversion.memo', () => {
     const entities = currentScene?.entities ?? [];
     const layers = currentScene?.layers ?? {};
     const cache = cacheRef.current;
+    const arrayCache = arrayCacheRef.current;
     const converted: DxfEntityUnion[] = [];
 
     for (const entity of entities) {
+      // ADR-353: ArrayEntity expands 1→N items before conversion.
+      if (isArrayEntity(entity)) {
+        let items = arrayCache.get(entity);
+        if (!items) {
+          const expanded = expandArrayEntity(entity);
+          items = expanded.reduce<DxfEntityUnion[]>((acc, e) => {
+            const c = convertEntity(e, layers);
+            if (c) acc.push(c);
+            return acc;
+          }, []);
+          if (items.length > 0) arrayCache.set(entity, items);
+        }
+        for (const item of items) converted.push(item);
+        continue;
+      }
+
       let result = cache.get(entity);
       if (!result) {
         const c = convertEntity(entity, layers);
