@@ -37,13 +37,15 @@ import type {
 import { useGripRegistry } from './grip-registry';
 import { findNearestGrip } from './grip-hit-testing';
 import {
-  commitDxfGripDrag,
+  commitDxfGripDragModeAware,
   commitOverlayVertexDrag,
   commitOverlayEdgeMidpointDrag,
   commitOverlayBodyDrag,
   type DxfCommitDeps,
   type OverlayCommitDeps,
 } from './grip-commit-adapters';
+import { GripModeStore } from '../../systems/grip/GripModeStore';
+import { useGripSpacebarCycle } from './useGripSpacebarCycle';
 
 import {
   buildDxfDragPreview,
@@ -141,6 +143,9 @@ export function useUnifiedGripInteraction(
   }, []);
 
   const isGripMode = activeTool === 'select' || activeTool === 'layering';
+
+  // ADR-349 Phase 1c-A: spacebar cycles grip-hot mode (Stretch → Move → Rotate → Scale → Mirror).
+  useGripSpacebarCycle({ phase, activeTool });
 
   // ── Reset on selection change ──
   const entitySelectionKey = selectedEntityIds.join(',');
@@ -315,7 +320,7 @@ export function useUnifiedGripInteraction(
       try {
         if (phase === 'dragging' && activeGrip?.source === 'dxf' && anchorRef.current) {
           const delta: Point2D = { x: worldPos.x - anchorRef.current.x, y: worldPos.y - anchorRef.current.y };
-          commitDxfGripDrag(activeGrip, delta, dxfCommitDeps);
+          commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
           resetToIdle();
           return true;
         }

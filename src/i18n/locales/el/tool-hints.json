@@ -608,6 +608,15 @@
     "mstretchSelectFirst": "Σχεδιάστε 1ο crossing window",
     "mstretchSelectNext": "Επόμενο crossing window ή ENTER για ολοκλήρωση"
   },
+  "gripMode": {
+    "stretch": "Έλξη",
+    "move": "Μετακίνηση",
+    "rotate": "Περιστροφή",
+    "scale": "Κλιμάκωση",
+    "mirror": "Αντικατοπτρισμός",
+    "cycleHint": "Λειτουργία λαβής: {mode} — Space για εναλλαγή",
+    "deferredHint": "Λειτουργία {mode} διαθέσιμη σε επόμενη φάση"
+  },
   "gripMenu": {
     "ariaLabel": "Μενού επεξεργασίας λαβής",
     "stretch": "Έλξη",

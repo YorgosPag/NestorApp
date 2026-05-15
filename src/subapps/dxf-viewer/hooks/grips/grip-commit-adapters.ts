@@ -11,6 +11,7 @@
  * @see useCanvasMouse.ts — original overlay commit (handleContainerMouseUp)
  */
 
+import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ISceneManager, SceneEntity, ICommand } from '../../core/commands/interfaces';
 import type { VertexMovement } from '../../core/commands';
@@ -19,6 +20,8 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-rend
 import type { AnySceneEntity, SceneModel } from '../../types/scene';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UnifiedGripInfo } from './unified-grip-types';
+import { type GripMode, gripModeMeta } from '../../systems/grip/grip-mode-cycle';
+import { toolHintOverrideStore } from '../toolHintOverrideStore';
 
 // ============================================================================
 // TYPES
@@ -331,6 +334,45 @@ export function commitDxfGripDrag(
       }
     }
   }
+}
+
+/**
+ * Mode-aware DXF grip commit (ADR-349 Phase 1c-A).
+ *
+ * Routes the drag through the strategy selected by the spacebar cycle:
+ *   - `stretch` (default) — preserves the legacy fragmented logic
+ *     (manual edge mutation / vertex MoveVertexCommand / movesEntity → moveEntities)
+ *   - `move` — translates the WHOLE entity regardless of grip type
+ *   - `rotate`/`scale`/`mirror` — deferred; sets a status-bar hint and skips
+ *     the commit (full handoff to RotationTool/ScaleTool/MirrorTool ships in
+ *     Phase 1c-B). User can then click the corresponding ribbon button to
+ *     complete the operation manually.
+ */
+export function commitDxfGripDragModeAware(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+  mode: GripMode,
+): void {
+  if (delta.x === 0 && delta.y === 0) return;
+  if (!grip.entityId) return;
+
+  if (mode === 'move') {
+    deps.moveEntities([grip.entityId], delta, { isDragging: false });
+    return;
+  }
+
+  if (mode === 'rotate' || mode === 'scale' || mode === 'mirror') {
+    const meta = gripModeMeta(mode);
+    const modeLabel = i18next.t(`tool-hints:${meta.labelKey}`);
+    toolHintOverrideStore.setOverride(
+      i18next.t('tool-hints:gripMode.deferredHint', { mode: modeLabel }),
+    );
+    return;
+  }
+
+  // mode === 'stretch' (default): existing fragmented commit logic.
+  commitDxfGripDrag(grip, delta, deps);
 }
 
 // ============================================================================

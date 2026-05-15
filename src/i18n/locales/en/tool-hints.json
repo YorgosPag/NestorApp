@@ -636,6 +636,15 @@
     "mstretchSelectFirst": "Draw 1st crossing window",
     "mstretchSelectNext": "Next crossing window or ENTER to finish"
   },
+  "gripMode": {
+    "stretch": "Stretch",
+    "move": "Move",
+    "rotate": "Rotate",
+    "scale": "Scale",
+    "mirror": "Mirror",
+    "cycleHint": "Grip mode: {mode} — Space to cycle",
+    "deferredHint": "{mode} mode available in a future phase"
+  },
   "gripMenu": {
     "ariaLabel": "Grip edit menu",
     "stretch": "Stretch",
