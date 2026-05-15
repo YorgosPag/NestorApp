@@ -26,7 +26,7 @@ const buildingShowcaseClientConfig: ShowcaseClientConfig<BuildingShowcasePayload
     downloadPdfLabel: 'buildingShowcase.actions.downloadPdf',
   },
   getCompany: (p) => p.company,
-  getPdfUrl: (p) => p.pdfUrl,
+  getPdfUrl: (p) => p.pdfUrl ?? undefined,
   headerProps: (p, t) => ({
     titleOverride: p.building.name,
     subtitleOverride: `${p.company.name} · ${t('buildingShowcase.header.subtitle')}`,

@@ -305,7 +305,7 @@ export function UnifiedShareDialog({
           className="flex flex-col items-center justify-center gap-2 py-10 text-sm text-muted-foreground"
           aria-busy="true"
         >
-          <Spinner size="default" color="inherit" />
+          <Spinner size="medium" color="inherit" />
           <span>{t('common-shared:share.creatingLink')}</span>
         </section>
       ) : (

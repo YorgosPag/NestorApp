@@ -26,7 +26,7 @@ const parkingShowcaseClientConfig: ShowcaseClientConfig<ParkingShowcasePayload> 
     downloadPdfLabel:    'parkingShowcase.actions.downloadPdf',
   },
   getCompany: (p) => p.company,
-  getPdfUrl: (p) => p.pdfUrl ?? null,
+  getPdfUrl: (p) => p.pdfUrl ?? undefined,
   headerProps: (p, t) => ({
     titleOverride: p.parking.number,
     subtitleOverride: `${p.company.name} · ${t('parkingShowcase.header.subtitle')}`,

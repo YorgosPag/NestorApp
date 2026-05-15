@@ -250,6 +250,7 @@ export function AddressesSectionWithFullscreen({
       city: addr.city ?? '',
       neighborhood: '',
       region: addr.region ?? '',
+      country: addr.country ?? '',
     }, 0);
   }, [applyDragResolve]);
 

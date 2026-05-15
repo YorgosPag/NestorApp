@@ -19,4 +19,4 @@ export { AddressCoordsBadge } from './components/AddressCoordsBadge';
 export { AddressDragConfirmDialog } from './components/AddressDragConfirmDialog';
 export type { AddressDragConfirmDialogProps } from './components/AddressDragConfirmDialog';
 export { computeFreshness } from './helpers/computeFreshness';
-export type { AddressSourceType, AddressFreshness, AddressFreshnessLevel } from './types';
+export type { AddressSourceType, AddressFreshness, AddressFreshnessLevel, ResolvedAddressFields } from './types';

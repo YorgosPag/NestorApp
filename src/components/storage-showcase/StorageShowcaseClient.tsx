@@ -26,7 +26,7 @@ const storageShowcaseClientConfig: ShowcaseClientConfig<StorageShowcasePayload> 
     downloadPdfLabel:    'storageShowcase.actions.downloadPdf',
   },
   getCompany: (p) => p.company,
-  getPdfUrl: (p) => p.pdfUrl ?? null,
+  getPdfUrl: (p) => p.pdfUrl ?? undefined,
   headerProps: (p, t) => ({
     titleOverride: p.storage.name,
     subtitleOverride: `${p.company.name} · ${t('storageShowcase.header.subtitle')}`,

@@ -277,8 +277,9 @@ function getPrimaryPhone(contact: ContactData): string | null {
   if (contact.phones && contact.phones.length > 0) {
     const firstPhone = contact.phones[0];
     if (typeof firstPhone === 'string') return firstPhone;
+    if (!firstPhone.number) return null;
     // Include extension via SSoT formatter (keeps PBX internal number visible).
-    return formatPhoneDisplay(firstPhone, { omitCountryCode: true }) || null;
+    return formatPhoneDisplay({ number: firstPhone.number }, { omitCountryCode: true }) || null;
   }
   return null;
 }
