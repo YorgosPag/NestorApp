@@ -101,5 +101,6 @@ export function buildRfqDashboardStats(
     case 'quotes':     return quotesTab(quotes, t);
     case 'comparison': return comparisonTab(quotes, comparison, t);
     case 'setup':      return setupTab(rfq, invites, t);
+    default:           return [];
   }
 }

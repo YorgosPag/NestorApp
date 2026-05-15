@@ -155,6 +155,8 @@ export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: 
       warranty: payload.warranty,
       notes: payload.notes,
       attachments: newAttachments,
+      quotedTotal: null,
+      linkedPoId: null,
       extractedData: null,
       overallConfidence: null,
       acceptanceMode: 'manual',
@@ -185,7 +187,7 @@ export async function persistVendorQuote(args: PersistArgs): Promise<{ quoteId: 
       await db
         .collection(COLLECTIONS.QUOTES)
         .doc(quoteId)
-        .set(sanitizeForFirestore(quote as unknown as Record<string, unknown>));
+        .set(sanitizeForFirestore(quote));
     }, undefined);
     logger.info('Vendor portal quote created', { inviteId, quoteId, total: totals.total });
     return { quoteId };

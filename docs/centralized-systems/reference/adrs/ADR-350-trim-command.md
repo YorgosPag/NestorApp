@@ -1,6 +1,6 @@
 # ADR-350: Trim Command (Ψαλίδισμα)
 
-**Status:** ✅ Phase 1 COMPLETE (recognition + Q&A 18/18 resolved). Ready for Phase 2 (implementation).
+**Status:** ✅ Phase 1 COMPLETE (recognition + Q&A 18/18 Round 1 + 22/22 Round 2 gap analysis resolved). Ready for Phase 2 (implementation).
 **Date:** 2026-05-15
 **Domain:** DXF Viewer — Modify Tools
 **Shortcut:** `TR` (matches AutoCAD)
@@ -366,6 +366,11 @@ Captured via existing `useCanvasKeyHandler`. Single-letter keywords:
 | `src/i18n/locales/en/dxf-viewer.json` | Add `ribbon.commands.trim: "Trim"` + prompts + keywords |
 | `docs/centralized-systems/reference/adr-index.md` | Add ADR-350 entry |
 | `.claude-rules/pending-ratchet-work.md` | Update if needed |
+| `docs/centralized-systems/reference/adrs/ADR-345-dxf-ribbon-interface.md` | §3.2 Fase 4 — sostituire "Αποκοπή" placeholder con "Ψαλίδισμα" definitivo (G17) |
+| `components/dxf-layout/canvas-layer-stack-leaves.tsx` | Mount `TrimPreviewOverlay` come leaf subscriber (G20). NON `CanvasLayerStack.tsx` orchestrator. |
+| `ui/ribbon/components/buttons/RibbonButtonIconPaths.tsx` | Verificare `trim` icon key. Aggiungere SVG scissor se mancante (G18). |
+| `systems/cursor/` (file da identificare) | Estendere cursor SSoT con `'trim-pickbox'` e `'extend-arrow'` variants. Auto-switch su SHIFT keydown/up. |
+| `core/spatial/` | **NO CHANGES** — reuse SSoT esistente (`SpatialIndexFactory`, `QuadTreeSpatialIndex`, `HitTester`). Verifica integrità (G22). |
 
 ---
 
@@ -391,6 +396,126 @@ Captured via existing `useCanvasKeyHandler`. Single-letter keywords:
 | Q16 | Ribbon "small button" duplicato a `home-tab-modify.ts:301` — tienilo (boy-scout) ή rimuovilo? | ✅ DECIDED 2026-05-15 | **Tieni** — boy-scout, utenti con schermi piccoli usano il flyout. Flip `comingSoon: false` su entrambi i buttons (linea 169-174 + 301). |
 | Q17 | TR shortcut a casi-base: **istantaneo TR↵** ή solo da ribbon? | ✅ DECIDED 2026-05-15 | **Istantaneo TR** dal vuoto canvas → attiva trim immediatamente (industry std 5/5 AutoCAD/BricsCAD/ZWCAD/GstarCAD/progeCAD). Wired via `config/keyboard-shortcuts.ts` esistente SSoT. |
 | Q18 | Snap engine durante pick: **tutti i snap attivi** (endpoint/midpoint/intersection/nearest) ή **solo nearest-on-curve** (più predicibile)? | ✅ DECIDED 2026-05-15 | **Solo nearest-on-entity** — più prevedibile per la decisione "quale lato tagliare". Pattern AutoCAD per TRIM. Snap engine viene chiamato con `enabledTypes: ['nearest']` overrida user setting per la sessione TRIM. |
+
+---
+
+## Open Design Decisions — Round 2 (Gap Analysis 2026-05-15)
+
+Dopo rilettura post-Q&A 18/18, identificati 22 ulteriori dettagli. Risolti come segue:
+
+### 🔴 CRITICI (Q&A con Giorgio Round 2)
+
+| # | Gap | Decisione |
+|---|-----|-----------|
+| G1 | Closed polyline interior trim → cosa diventa? | **Polyline "apre" (closed=false)** — stesso entityId, segmento rimosso, vertices ai cut points. Industry std AutoCAD/BricsCAD. Properties (layer, lineweight, color) preservate. |
+| G4 | Hover preview con SHIFT premuto | **Preview verde + cursor freccia EXTEND**. Quando user preme SHIFT senza ancora cliccare: `TrimPreviewOverlay` cambia da rosso (semitransparent removal) a **verde** (semitransparent addition); cursor scissor icon si trasforma in icona freccia-EXTEND. Visibile feedback completo. |
+| G5 | Live preview durante fence/crossing drag | **60fps highlight rosso dei sub-segments**. Mentre user trascina fence/crossing, `useTrimPreview` calcola in tempo reale (via `UnifiedFrameScheduler`) quali sub-segments verranno rimossi e li mette in highlight rosso semi-transparent. Spatial index assicura <16ms anche con 5000+ entities. |
+| G6 | Right-click semantics | **Right-click = ENTER (exit session)**. Industry std AutoCAD 5/5. No context menu durante TRIM. Right-click su empty E su entity = exit ugualmente. |
+| G15 | ESC durante fence drag a metà | **ESC = exit totale**. Singolo ESC sempre termina la sessione TRIM, indipendentemente dallo stato (idle pick / drag fence / drag crossing). Picks già confirmed restano. Industry std AutoCAD 5/5. |
+| G22 | Performance threshold per Quick mode | **Spatial Index pieno enterprise** — reuse SSoT esistente `core/spatial/SpatialIndexFactory.ts` + `ISpatialIndex.ts` + `QuadTreeSpatialIndex.ts` + `GridSpatialIndex.ts` + `rendering/hitTesting/HitTester.ts` + `services/HitTestingService.ts`. **NESSUN nuovo spatial index**. Query: `spatialIndex.queryBounds(pickedEntityBounds)` → solo candidate entities → poi intersection math. <5ms / pick anche con 50.000 entities. |
+
+### 🟡 AUTO-DECISIONI (industry std, motivate)
+
+| # | Gap | Decisione + motivazione |
+|---|-----|-------------------------|
+| G2 | Open polyline interior cut | **2 polylines separate** — split del polyline aperto in interior cut produce 2 polilinee con nuovi enterprise IDs. Original entity deleted. Riferimento `enterprise-id.service.generatePolylineId()`. |
+| G3 | RAY/XLINE pick point semantics | **Pick point proiettato sulla retta infinita**. RAY trimmato da entrambi i lati → LINE finita. XLINE trimmato a 1 punto → RAY. XLINE trimmato a 2+ punti → diventa LINE/RAY/XLINE a seconda della posizione del pick. Reuse di parametrizzazione t ∈ (-∞, +∞) per XLINE, t ∈ [0, +∞) per RAY. |
+| G7 | Drag threshold single-click vs press-drag | **5px (world-space convertito)** — reuse della costante esistente del lasso (ADR-345). Se mouseup entro 5px dal mousedown → single-click; altrimenti press-drag freehand path. |
+| G8 | Crossing window direction | **Right-to-left = crossing** (verde), **left-to-right = window** (blu, partial inside only). Coerente con ADR-349 stretch e selection standard. In TRIM solo crossing è semanticamente utile, window degenera a single-picks per entities completamente inside. |
+| G13 | Status bar format | **Icon + Greek text** — riuso pattern ADR-348 Q5 / ADR-349 Q6. `toolHintOverrideStore` esteso (già da ADR-349) accetta `iconKey?: string`. Trim usa icona `scissors`. |
+
+### 🟢 DETTAGLI IMPLEMENTATIVI (auto-coperti)
+
+| # | Gap | Soluzione |
+|---|-----|-----------|
+| G9 | SSoT aggregator toast warnings | Reuse `NOTIFICATION_KEYS` registry (project_notification_ssot 2026-04-21). Pattern: contatore in `TrimToolStore.warningAggregator: { hatch: number, locked: number, ... }`. Single toast emesso al `phase: 'idle'` reset con messaggio aggregato. |
+| G10 | Test plan | Sezione "Test Plan" sotto. Vedi sezione dedicata. |
+| G11 | Hover detection threshold | Reuse `SnapEngine.hoverRadius` (existing SSoT, pixel-space convertito). Default 8px. Non duplicare. |
+| G12 | Multi-entity intersection consistency | **Compute on-the-fly per pick** — nessun pre-compute cache. Per ogni pick: `spatialIndex.queryBounds(entityBounds)` → recompute intersections con candidate cutting edges. Sempre consistent anche dopo cancellazioni intra-sessione. |
+| G14 | i18n keys list completa | Sezione "i18n Keys" sotto. Vedi sezione dedicata. |
+| G16 | Tapered polyline formula | AutoCAD docs: width(t) interpolato linearmente tra startWidth e endWidth lungo `t ∈ [0,1]` del segmento. Dopo trim al parametro `t_cut`: `newEndWidth = lerp(startWidth, endWidth, t_cut)`. Se `t_cut` produce width < 0.001 → set a 0 (sharp point). |
+| G17 | ADR-345 update | Aggiungere a "Files to Modify": aggiornare ADR-345 §3.2 Fase 4 — sostituire "Αποκοπή" con "Ψαλίδισμα" nella tabella commands e nelle note. |
+| G18 | Icona ribbon "trim" | Verificare `ui/ribbon/components/buttons/RibbonButtonIconPaths.tsx` per `'trim'` key. Se esistente → reuse. Se mancante → creare con SVG scissor (~20 lines). |
+| G19 | Coerenza con `LengthenCommand` | LENGTHEN modifica lunghezza (delta/percent/total/dynamic) **senza intersezioni**. TRIM rimuove sub-segments **per intersezione con cutting edges**. Domini distinti, nessuna sovrapposizione. Documentato in Context section sopra. |
+| G20 | Mount-point preview ADR-040 (CHECK 6B/6C/6D) | `TrimPreviewOverlay` montato come leaf in `components/dxf-layout/canvas-layer-stack-leaves.tsx` (NON in `CanvasLayerStack.tsx` orchestrator). Subscribe a `TrimToolStore` via `useSyncExternalStore` SOLO nel leaf. Stagging ADR-350 + leaf file insieme nel commit per soddisfare CHECK 6B. |
+| G21 | Error reporting su math degenere | Pattern try/catch interno a `trim-entity-cutter.ts` funzioni → su NaN/Infinity/empty result emette `logger.warn` (existing SSoT `core/logger`) + skip silenzioso del pick. No toast per math error (rare, non-actionable for user). |
+
+---
+
+## Test Plan (G10)
+
+File: `systems/trim/__tests__/trim-entity-cutter.test.ts` + sibling per ogni module.
+
+### Coverage matrix
+
+| Entity | Test scenarios |
+|--------|---------------|
+| LINE | (a) interior cut → 2 lines, (b) endpoint cut → 1 shortened, (c) no intersection (Quick) → delete, (d) zero-length result → reject + logger.warn |
+| ARC | (a) interior cut → 2 arcs, (b) endpoint cut → 1 shortened, (c) full-arc trim at 1 point → 1 arc shortened, (d) chord intersection |
+| CIRCLE | (a) 2 intersections → 1 ARC (the arc NOT containing pickPoint), (b) 1 intersection → delete (no closed-arc result), (c) 0 intersections → delete entirely (Quick) |
+| ELLIPSE | (a) 2 intersections → 1 ELLIPTICAL ARC, (b) tangent intersection → 1 intersection counted, delete |
+| POLYLINE (open) | (a) interior cut → 2 polylines new IDs, (b) endpoint cut → 1 shortened, (c) tapered taper preserved per G16 formula |
+| POLYLINE (closed) | (a) interior cut → 1 polyline closed=false same ID per G1, (b) multi-cut → first cut opens, subsequent cuts split |
+| SPLINE (CV) | (a) interior cut → 2 splines control points recomputed, (b) endpoint cut → 1 shortened |
+| SPLINE (fit) | (a) interior cut → silent convert to CV then trim, (b) Ctrl+Z reverts both operations atomically |
+| RAY | (a) finite cut → LINE, (b) cut towards-infinity-side → shortened RAY, (c) opposite-side cut → impossible (no intersection) → delete (Quick) |
+| XLINE | (a) 2 cuts → RAY/LINE/RAY split, (b) 1 cut → RAY |
+| HATCH | (a) any pick → toast "Διασπάστε πρώτα" (no mutation) |
+
+### Integration tests
+
+- `useTrimTool.test.tsx`: state machine transitions, ESC behavior, SHIFT→EXTEND inversion, Quick/Standard mode toggle
+- `TrimEntityCommand.test.ts`: execute/undo round-trip for each TrimOperation kind (shorten/split/promote/delete)
+- `trim-boundary-resolver.test.ts`: Quick mode = all visible entities, Standard mode = explicit set, locked-layer filtering
+- `trim-edge-extender.test.ts`: lines→infinite, arcs→full circle, splines→tangent extrapolation
+- `TrimPreviewOverlay.test.tsx`: render assertion, no orchestrator-level subscription (ADR-040 gate)
+
+### Performance benchmarks
+
+- `trim-performance.bench.ts`: pick on 100 / 1000 / 5000 / 50000 entity scenes. Target: <16ms / pick with spatial index reuse.
+
+---
+
+## i18n Keys (G14)
+
+### `src/i18n/locales/el/dxf-viewer.json` (additions)
+
+```json
+{
+  "ribbon": {
+    "commands": {
+      "trim": "Ψαλίδισμα"
+    }
+  },
+  "trimTool": {
+    "prompt.pick": "Επιλέξτε αντικείμενα προς ψαλίδισμα ή [Όρια(Ο) / Διαγραφή(Δ) / Αναίρεση(Α) / Λειτουργία(Λ) / Άκρη(Ε)]:",
+    "prompt.standardEdges": "Επιλέξτε όρια ή πατήστε ENTER για όλα:",
+    "prompt.extending": "ΕΠΕΚΤΑΣΗ: επιλέξτε αντικείμενα (κρατήστε SHIFT):",
+    "mode.quick": "Λειτουργία: Γρήγορη",
+    "mode.standard": "Λειτουργία: Κλασική",
+    "edge.noExtend": "Άκρη: Χωρίς προέκταση",
+    "edge.extend": "Άκρη: Με νοερή προέκταση",
+    "erase.armed": "Επόμενο κλικ θα διαγράψει την οντότητα",
+    "undo.empty": "Δεν υπάρχει αποκοπή για αναίρεση"
+  },
+  "notifications": {
+    "trim": {
+      "hatchNotTrimmable": "Η σκίαση δεν είναι δυνατόν να κοπεί. Διασπάστε την πρώτα (EXPLODE).",
+      "lockedSkipped_one": "1 οντότητα σε κλειδωμένο επίπεδο παραλείφθηκε",
+      "lockedSkipped_other": "{{count}} οντότητες σε κλειδωμένο επίπεδο παραλείφθηκαν",
+      "noIntersectionDeleted": "Η οντότητα δεν είχε τομές και διαγράφηκε"
+    }
+  }
+}
+```
+
+### `src/i18n/locales/en/dxf-viewer.json` (mirror with English values)
+
+Stesso scheletro, valori in inglese ("Trim", "Select objects to trim or [...]", etc.).
+
+### Tooltip + tour
+
+Aggiungere a `tool-hints` namespace: `trimTool.steps[]` (step-by-step guidance, ADR-082 pattern).
 
 ---
 
@@ -442,4 +567,6 @@ Captured via existing `useCanvasKeyHandler`. Single-letter keywords:
 | 2026-05-15 | Q14 decided: Cursor = **pickbox + scissor icon** (auto-toggles a freccia-EXTEND con SHIFT). |
 | 2026-05-15 | Q15 decided: Greek label = **"Ψαλίδισμα"** (custom). |
 | 2026-05-15 | Q11 auto: audit = 1 entry per pick. Q12 silent skip locked. Q13 solo UCS. Q16 tieni small button. Q17 TR istantaneo. Q18 nearest-only snap. |
-| 2026-05-15 | **Phase 1 (recognition + Q&A) COMPLETED.** 18/18 Q&A resolved. Ready for Phase 2 (implementation). |
+| 2026-05-15 | **Phase 1 Round 1 (Q&A) COMPLETED.** 18/18 Q&A resolved. |
+| 2026-05-15 | **Phase 1 Round 2 (Gap Analysis) COMPLETED.** 22/22 gaps resolved (6 critici + 5 auto + 11 dettagli). Spatial index SSoT confirmato esistente (`core/spatial/*`). Closed polyline opens (G1). SHIFT→EXTEND preview verde (G4). Live fence/crossing preview (G5). Right-click=ENTER (G6). ESC=exit totale (G15). |
+| 2026-05-15 | **Phase 1 COMPLETE.** Ready for Phase 2 (implementation). |

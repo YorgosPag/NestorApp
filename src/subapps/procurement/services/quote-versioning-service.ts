@@ -241,9 +241,9 @@ export async function supersede(
 
     const newData = newSnap.data() as VersionedFields;
     tx.update(newRef, {
-      version: newVersion,
       previousVersionId: oldQuoteId,
       ...nextVersionFields(newData.version, userId),
+      version: newVersion,
     });
 
     return { newVersion };
@@ -287,9 +287,9 @@ export async function revertSupersede(
 
     const newData = newSnap.data() as VersionedFields;
     tx.update(newRef, {
-      version: 1,
       previousVersionId: null,
       ...nextVersionFields(newData.version, userId),
+      version: 1,
     });
   });
 }
@@ -330,13 +330,13 @@ export async function createRevision(
       ...baseData,
       ...overrides,
       id: newQuoteId,
-      version: newVersion,
       previousVersionId: baseQuoteId,
       supersededBy: null,
       supersededAt: null,
       _previousStatus: null,
       status: 'submitted',
       ...nextVersionFields(undefined, userId),
+      version: newVersion,
     });
 
     tx.update(baseRef, {

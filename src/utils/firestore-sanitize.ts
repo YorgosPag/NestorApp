@@ -34,7 +34,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * @param data - The object to sanitize
  * @returns A shallow copy with all `undefined` values replaced by `null`
  */
-export function sanitizeForFirestore<T extends Record<string, unknown>>(data: T): T {
+export function sanitizeForFirestore<T extends object>(data: T): T {
   const sanitized: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(data)) {
