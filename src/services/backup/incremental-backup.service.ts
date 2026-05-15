@@ -69,6 +69,8 @@ const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = {
   framework_agreement: 'FRAMEWORK_AGREEMENTS',
   text_template: 'TEXT_TEMPLATES',
   custom_dictionary_entry: 'TEXT_CUSTOM_DICTIONARY',
+  parking_spot: 'PARKING_SPACES',
+  storage_unit: 'STORAGE',
 };
 
 /** Actions that indicate a document was removed */
