@@ -24,6 +24,7 @@ import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { TrimToolStore } from '../../systems/trim/TrimToolStore';
 import { ToolCursorStore } from '../../systems/cursor/ToolCursorStore';
 import { resolveCuttingEdges, isTrimmable } from '../../systems/trim/trim-boundary-resolver';
+import { computeHoverPreviewPath } from '../../systems/trim/trim-hover-preview';
 import { buildEntityPreviewPath, detectFenceHits } from '../../systems/trim/trim-fence-hit-detector';
 import { computeIntersectionPoints } from '../../systems/trim/trim-intersection-mapper';
 import { trimEntity } from '../../systems/trim/trim-entity-cutter';
@@ -69,6 +70,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
   const { activeTool, levelManager, executeCommand, hitTestEntity, onToolChange } = props;
   const wasActiveRef = useRef(false);
   const lastCommandRef = useRef<TrimEntityCommand | null>(null);
+  const lastHoverMsRef = useRef(0);
 
   const isActive = activeTool === 'trim';
   const phase = useSyncExternalStore(TrimToolStore.subscribe, () => TrimToolStore.getState().phase);
@@ -369,8 +371,34 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       if (!isActive) return;
       TrimToolStore.setHoverPoint(worldPoint);
       TrimToolStore.setInverseMode(shiftKey);
+
+      const state = TrimToolStore.getState();
+      if (state.phase !== 'picking') {
+        TrimToolStore.setHoverPreview(null);
+        return;
+      }
+      // Throttle to ~20fps — hover preview computation traverses the scene.
+      const now = Date.now();
+      if (now - lastHoverMsRef.current < 50) return;
+      lastHoverMsRef.current = now;
+
+      const hitId = hitTestEntity(worldPoint);
+      if (!hitId || !levelManager.currentLevelId) { TrimToolStore.setHoverPreview(null); return; }
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      if (!scene) { TrimToolStore.setHoverPreview(null); return; }
+      const target = scene.entities.find((e) => e.id === hitId) as Entity | undefined;
+      if (!target || !isTrimmable(target)) { TrimToolStore.setHoverPreview(null); return; }
+
+      const edges = resolveCuttingEdges({
+        mode: state.mode, scene, selectedEdgeIds: state.cuttingEdgeIds, edgeMode: state.edgeMode,
+      });
+      const intersections = computeIntersectionPoints(target, edges);
+      const path = computeHoverPreviewPath(target, intersections, worldPoint);
+      TrimToolStore.setHoverPreview(
+        path.length >= 2 ? { kind: state.inverseMode ? 'add' : 'remove', entityId: hitId, path } : null,
+      );
     },
-    [isActive],
+    [isActive, hitTestEntity, levelManager],
   );
 
   return {
