@@ -24,7 +24,7 @@ import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { TrimToolStore } from '../../systems/trim/TrimToolStore';
 import { ToolCursorStore } from '../../systems/cursor/ToolCursorStore';
 import { resolveCuttingEdges, isTrimmable } from '../../systems/trim/trim-boundary-resolver';
-import { detectFenceHits } from '../../systems/trim/trim-fence-hit-detector';
+import { buildEntityPreviewPath, detectFenceHits } from '../../systems/trim/trim-fence-hit-detector';
 import { computeIntersectionPoints } from '../../systems/trim/trim-intersection-mapper';
 import { trimEntity } from '../../systems/trim/trim-entity-cutter';
 import type { TrimOperation } from '../../systems/trim/trim-types';
@@ -251,6 +251,40 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       TrimToolStore.registerFenceFn(null);
     };
   }, [isActive, performFenceTrim]);
+
+  // Live fence drag preview — highlights entities that would be trimmed (G5 / Phase 5).
+  // Called throttled from useTrimDragCapture; scene access is only available here.
+  const computeFencePreview = useCallback(
+    (fenceStart: Point2D, fenceEnd: Point2D): void => {
+      if (!levelManager.currentLevelId) return;
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      if (!scene) return;
+      const state = TrimToolStore.getState();
+      const hits = detectFenceHits({
+        fenceStart, fenceEnd, scene,
+        mode: state.mode, cuttingEdgeIds: state.cuttingEdgeIds,
+      });
+      if (hits.length === 0) {
+        TrimToolStore.setDragPreview(null);
+        return;
+      }
+      const previews = hits.map((hit) => {
+        const entity = scene.entities.find((e) => e.id === hit.entityId) as Entity | undefined;
+        const path = entity ? buildEntityPreviewPath(entity) : [];
+        return { kind: 'remove' as const, entityId: hit.entityId, path };
+      });
+      TrimToolStore.setDragPreview({ previews });
+    },
+    [levelManager],
+  );
+
+  useEffect(() => {
+    if (!isActive) return;
+    TrimToolStore.registerFencePreviewFn(computeFencePreview);
+    return () => {
+      TrimToolStore.registerFencePreviewFn(null);
+    };
+  }, [isActive, computeFencePreview]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 

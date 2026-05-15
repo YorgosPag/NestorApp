@@ -33,6 +33,7 @@ export function useTrimDragCapture(props: UseTrimDragCaptureProps): void {
 
   const dragStartScreenRef = useRef<{ x: number; y: number } | null>(null);
   const isDraggingRef = useRef(false);
+  const lastPreviewMsRef = useRef(0);
 
   useEffect(() => {
     const el = getViewportElement();
@@ -64,10 +65,21 @@ export function useTrimDragCapture(props: UseTrimDragCaptureProps): void {
         if (Math.hypot(dx, dy) < FENCE_DRAG_THRESHOLD_PX) return;
         isDraggingRef.current = true;
         TrimToolStore.setPhase('fence');
-        TrimToolStore.setDrag(screenToWorld(start.x, start.y), screenToWorld(e.clientX, e.clientY));
+        const fenceStart = screenToWorld(start.x, start.y);
+        const fenceCurrent = screenToWorld(e.clientX, e.clientY);
+        TrimToolStore.setDrag(fenceStart, fenceCurrent);
+        TrimToolStore.execFencePreview(fenceStart, fenceCurrent);
+        lastPreviewMsRef.current = Date.now();
       } else {
+        const current = screenToWorld(e.clientX, e.clientY);
         const start3d = TrimToolStore.getState().dragStart;
-        TrimToolStore.setDrag(start3d, screenToWorld(e.clientX, e.clientY));
+        TrimToolStore.setDrag(start3d, current);
+        // Throttle to ~80ms to avoid blocking the pointer event with scene traversal.
+        const now = Date.now();
+        if (start3d && now - lastPreviewMsRef.current >= 80) {
+          lastPreviewMsRef.current = now;
+          TrimToolStore.execFencePreview(start3d, current);
+        }
       }
     }
 
@@ -80,7 +92,9 @@ export function useTrimDragCapture(props: UseTrimDragCaptureProps): void {
       if (phase === 'fence' && dragStart && dragCurrent) {
         TrimToolStore.execFence(dragStart, dragCurrent, e.shiftKey);
       }
+      TrimToolStore.setDragPreview(null);
       TrimToolStore.setDrag(null, null);
+      lastPreviewMsRef.current = 0;
       TrimToolStore.setPhase('picking');
       dragStartScreenRef.current = null;
       isDraggingRef.current = false;

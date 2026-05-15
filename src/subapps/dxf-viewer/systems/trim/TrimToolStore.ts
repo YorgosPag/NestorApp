@@ -77,6 +77,11 @@ let _pickFn: PickFn | null = null;
 type FenceFn = (fenceStart: Point2D, fenceEnd: Point2D, shiftKey: boolean) => void;
 let _fenceFn: FenceFn | null = null;
 
+// ── Fence preview function registry (Phase 5 — G5 live drag preview) ──────────
+
+type FencePreviewFn = (fenceStart: Point2D, fenceEnd: Point2D) => void;
+let _fencePreviewFn: FencePreviewFn | null = null;
+
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 let _state: TrimToolState = INITIAL;
@@ -189,9 +194,20 @@ export const TrimToolStore = {
     _fenceFn?.(fenceStart, fenceEnd, shiftKey);
   },
 
+  /** Register the computeFencePreview closure from useTrimTool (Phase 5). */
+  registerFencePreviewFn(fn: FencePreviewFn | null): void {
+    _fencePreviewFn = fn;
+  },
+
+  /** Invoke the preview fn during fence drag mousemove (throttled by caller). */
+  execFencePreview(fenceStart: Point2D, fenceEnd: Point2D): void {
+    _fencePreviewFn?.(fenceStart, fenceEnd);
+  },
+
   reset(): void {
     _pickFn = null;
     _fenceFn = null;
+    _fencePreviewFn = null;
     _state = INITIAL;
     _notify();
   },

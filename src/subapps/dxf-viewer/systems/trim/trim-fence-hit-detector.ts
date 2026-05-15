@@ -1,9 +1,9 @@
 /**
- * TRIM FENCE HIT DETECTOR — ADR-350 Phase 4
+ * TRIM FENCE HIT DETECTOR — ADR-350 Phase 4 + 5
  *
- * Pure function: given the fence segment (dragStart → dragCurrent) and the
- * current scene, returns every entity the fence segment geometrically crosses.
- * Each hit carries the intersection point used as the pick point for the cutter.
+ * Pure functions:
+ *   - {@link detectFenceHits}: fence segment → FenceHit[] (Phase 4)
+ *   - {@link buildEntityPreviewPath}: entity → Point2D[] for overlay rendering (Phase 5)
  *
  * Design:
  *   - Reuses {@link computeIntersectionPoints} from the intersection mapper SSoT.
@@ -14,13 +14,31 @@
  *
  * No React, no state, no side effects.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-350-trim-command.md §Phase 4
+ * @see docs/centralized-systems/reference/adrs/ADR-350-trim-command.md §Phase 4 §Phase 5
  */
 
-import type { Entity, LineEntity } from '../../types/entities';
+import type {
+  ArcEntity,
+  CircleEntity,
+  Entity,
+  LineEntity,
+  RayEntity,
+  XLineEntity,
+} from '../../types/entities';
+import {
+  isArcEntity,
+  isCircleEntity,
+  isEllipseEntity,
+  isLineEntity,
+  isLWPolylineEntity,
+  isPolylineEntity,
+  isRayEntity,
+  isSplineEntity,
+  isXLineEntity,
+} from '../../types/entities';
 import type { SceneLayer, SceneModel } from '../../types/scene';
 import { isValidCuttingCandidate, isTrimmable } from './trim-boundary-resolver';
-import { computeIntersectionPoints } from './trim-intersection-mapper';
+import { computeIntersectionPoints, tessellateEllipse, tessellateSpline } from './trim-intersection-mapper';
 import type { CuttingEdge, TrimMode } from './trim-types';
 import type { Point2D } from '../../rendering/types/Types';
 
@@ -99,4 +117,73 @@ function closestToOrigin(pts: ReadonlyArray<Point2D>, origin: Point2D): Point2D 
 
 function distSq(a: Point2D, b: Point2D): number {
   return (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+}
+
+// ── Preview path builder (Phase 5 — G5 live fence preview) ───────────────────
+
+const PREVIEW_ARC_SEGMENTS = 32;
+const PREVIEW_CIRCLE_SEGMENTS = 64;
+const RAY_RENDER_LENGTH = 1e4;
+
+/**
+ * Convert any trimmable entity to a polyline path for the red overlay preview.
+ * Used by the fence drag preview to highlight which entities would be trimmed.
+ * Returns an empty array for unknown or zero-geometry entities.
+ */
+export function buildEntityPreviewPath(entity: Entity): ReadonlyArray<Point2D> {
+  if (isLineEntity(entity)) return [entity.start, entity.end];
+  if (isArcEntity(entity)) return tessellateArc(entity, PREVIEW_ARC_SEGMENTS);
+  if (isCircleEntity(entity)) return tessellateCircle(entity, PREVIEW_CIRCLE_SEGMENTS);
+  if (isLWPolylineEntity(entity) || isPolylineEntity(entity)) {
+    return entity.vertices.map((v) => ({ x: v.x, y: v.y }));
+  }
+  if (isEllipseEntity(entity)) return tessellateEllipse(entity, PREVIEW_ARC_SEGMENTS);
+  if (isSplineEntity(entity)) return tessellateSpline(entity, PREVIEW_ARC_SEGMENTS);
+  if (isRayEntity(entity)) return rayToSegment(entity);
+  if (isXLineEntity(entity)) return xlineToSegment(entity);
+  return [];
+}
+
+function tessellateArc(arc: ArcEntity, n: number): Point2D[] {
+  const two = Math.PI * 2;
+  const ccw = arc.counterclockwise !== false;
+  let sweep: number;
+  if (ccw) {
+    sweep = arc.endAngle >= arc.startAngle ? arc.endAngle - arc.startAngle : two - (arc.startAngle - arc.endAngle);
+  } else {
+    sweep = arc.startAngle >= arc.endAngle ? arc.startAngle - arc.endAngle : two - (arc.endAngle - arc.startAngle);
+  }
+  const pts: Point2D[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = ccw ? arc.startAngle + (sweep * i) / n : arc.startAngle - (sweep * i) / n;
+    pts.push({ x: arc.center.x + arc.radius * Math.cos(t), y: arc.center.y + arc.radius * Math.sin(t) });
+  }
+  return pts;
+}
+
+function tessellateCircle(circle: CircleEntity, n: number): Point2D[] {
+  const pts: Point2D[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = (i / n) * Math.PI * 2;
+    pts.push({ x: circle.center.x + circle.radius * Math.cos(t), y: circle.center.y + circle.radius * Math.sin(t) });
+  }
+  return pts;
+}
+
+function rayToSegment(ray: RayEntity): [Point2D, Point2D] {
+  const dlen = Math.hypot(ray.direction.x, ray.direction.y) || 1;
+  return [
+    ray.basePoint,
+    { x: ray.basePoint.x + (ray.direction.x / dlen) * RAY_RENDER_LENGTH, y: ray.basePoint.y + (ray.direction.y / dlen) * RAY_RENDER_LENGTH },
+  ];
+}
+
+function xlineToSegment(xl: XLineEntity): [Point2D, Point2D] {
+  const dlen = Math.hypot(xl.direction.x, xl.direction.y) || 1;
+  const ux = xl.direction.x / dlen;
+  const uy = xl.direction.y / dlen;
+  return [
+    { x: xl.basePoint.x - ux * RAY_RENDER_LENGTH, y: xl.basePoint.y - uy * RAY_RENDER_LENGTH },
+    { x: xl.basePoint.x + ux * RAY_RENDER_LENGTH, y: xl.basePoint.y + uy * RAY_RENDER_LENGTH },
+  ];
 }
