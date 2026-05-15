@@ -68,8 +68,8 @@ async function actionLengthen(
   if (!endpoint) return;
 
   const raw = await ctx.showPromptDialog({
-    title: ctx.t('gripMenu.prompt.lengthenTitle'),
-    label: ctx.t('gripMenu.prompt.lengthenLabel'),
+    title: ctx.t('tool-hints:gripMenu.prompt.lengthenTitle'),
+    label: ctx.t('tool-hints:gripMenu.prompt.lengthenLabel'),
     inputType: 'number',
     defaultValue: '',
   });
@@ -88,13 +88,13 @@ async function actionRadius(
   ctx: GripMenuActionContext,
 ): Promise<void> {
   const raw = await ctx.showPromptDialog({
-    title: ctx.t('gripMenu.prompt.radiusTitle'),
-    label: ctx.t('gripMenu.prompt.radiusLabel'),
+    title: ctx.t('tool-hints:gripMenu.prompt.radiusTitle'),
+    label: ctx.t('tool-hints:gripMenu.prompt.radiusLabel'),
     inputType: 'number',
     defaultValue: arc.radius.toFixed(3),
     validate: (v) => {
       const n = parseFiniteFloat(v);
-      return n !== null && n > 0 ? null : ctx.t('gripMenu.prompt.radiusInvalid');
+      return n !== null && n > 0 ? null : ctx.t('tool-hints:gripMenu.prompt.radiusInvalid');
     },
   });
   const newRadius = parseFiniteFloat(raw);
