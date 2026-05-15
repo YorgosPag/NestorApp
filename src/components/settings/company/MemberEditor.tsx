@@ -13,12 +13,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ManagerPicker } from './ManagerPicker';
+import { ContactSearchManager } from '@/components/contacts/relationships/ContactSearchManager';
+import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
+import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
 import { validateOrgHierarchy } from '@/services/org-structure/utils/validate-org-hierarchy';
 import { generateOrgMemberId } from '@/services/enterprise-id.service';
-import type { OrgMember, OrgMemberMode, OrgMemberRole } from '@/types/org/org-structure';
+import type { OrgMember, OrgMemberMode, OrgMemberRole, OrgEmailInfo } from '@/types/org/org-structure';
 
 const ROLES: OrgMemberRole[] = ['head', 'manager', 'senior', 'employee', 'intern', 'custom'];
-const MODES: OrgMemberMode[] = ['plain', 'linked', 'created'];
+const MODES: OrgMemberMode[] = ['linked'];
 
 interface MemberEditorProps {
   member?: OrgMember;
@@ -35,17 +38,19 @@ type Draft = {
   reportsTo: string | null;
   isDepartmentHead: boolean;
   receivesNotifications: boolean;
+  emails: OrgEmailInfo[];
 };
 
 function buildDraft(member?: OrgMember): Draft {
   return {
     displayName: member?.displayName ?? '',
-    mode: member?.mode ?? 'plain',
+    mode: (member?.mode && member.mode !== 'plain') ? member.mode : 'linked',
     role: member?.role ?? 'employee',
     contactId: member?.contactId ?? '',
     reportsTo: member?.reportsTo ?? null,
     isDepartmentHead: member?.isDepartmentHead ?? false,
     receivesNotifications: member?.receivesNotifications ?? false,
+    emails: member?.emails ?? [],
   };
 }
 
@@ -53,9 +58,31 @@ export function MemberEditor({ member, allMembers, onSave, onCancel }: MemberEdi
   const { t } = useTranslation(['org-structure', 'common']);
   const [draft, setDraft] = useState<Draft>(() => buildDraft(member));
   const [cycleError, setCycleError] = useState<string | null>(null);
+  const [showCreateContact, setShowCreateContact] = useState(false);
+  const [contactSearchKey, setContactSearchKey] = useState(0);
 
   const set = <K extends keyof Draft>(key: K, val: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: val }));
+
+  const handleContactCreated = () => {
+    setShowCreateContact(false);
+    setContactSearchKey((k) => k + 1);
+  };
+
+  const handleContactSelect = (contact: ContactSummary | null) => {
+    if (!contact) {
+      setDraft((d) => ({ ...d, contactId: '', emails: [] }));
+      return;
+    }
+    setDraft((d) => ({
+      ...d,
+      contactId: contact.id,
+      displayName: contact.name,
+      emails: contact.email
+        ? [{ email: contact.email, type: 'work' as const, isPrimary: true }]
+        : d.emails,
+    }));
+  };
 
   const handleReportsTo = (val: string | null) => {
     set('reportsTo', val);
@@ -98,7 +125,7 @@ export function MemberEditor({ member, allMembers, onSave, onCancel }: MemberEdi
       reportsTo: draft.reportsTo,
       isDepartmentHead: draft.isDepartmentHead,
       receivesNotifications: draft.receivesNotifications,
-      emails: member?.emails ?? [],
+      emails: draft.emails,
       phones: member?.phones ?? [],
       status: member?.status ?? 'active',
     };
@@ -107,21 +134,6 @@ export function MemberEditor({ member, allMembers, onSave, onCancel }: MemberEdi
 
   return (
     <div className="space-y-4 py-2">
-      <div className="space-y-1">
-        <label className="text-xs font-medium">{t('orgStructure.member.modeSelector')}</label>
-        <div className="flex gap-2">
-          {MODES.map((m) => (
-            <Badge
-              key={m}
-              variant={draft.mode === m ? 'default' : 'outline'}
-              className="cursor-pointer select-none"
-              onClick={() => set('mode', m)}
-            >
-              {t(`memberMode.${m}`)}
-            </Badge>
-          ))}
-        </div>
-      </div>
 
       <div className="space-y-1">
         <label className="text-xs font-medium">{t('orgStructure.member.displayNamePlaceholder')}</label>
@@ -132,16 +144,19 @@ export function MemberEditor({ member, allMembers, onSave, onCancel }: MemberEdi
         />
       </div>
 
-      {draft.mode !== 'plain' && (
+      {draft.mode === 'linked' && (
         <div className="space-y-1">
-          <label className="text-xs font-medium">{t('orgStructure.member.contactIdPlaceholder')}</label>
-          <Input
-            value={draft.contactId}
-            onChange={(e) => set('contactId', e.target.value)}
-            placeholder={t('orgStructure.member.contactIdPlaceholder')}
+          <label className="text-xs font-medium">{t('orgStructure.member.selectContact')}</label>
+          <ContactSearchManager
+            key={contactSearchKey}
+            selectedContactId={draft.contactId}
+            onContactSelect={handleContactSelect}
+            allowedContactTypes={['individual']}
+            onCreateNew={() => setShowCreateContact(true)}
           />
         </div>
       )}
+
 
       <div className="space-y-1">
         <label className="text-xs font-medium">{t('orgStructure.head')}</label>
@@ -162,6 +177,7 @@ export function MemberEditor({ member, allMembers, onSave, onCancel }: MemberEdi
           currentMemberId={member?.id ?? null}
           value={draft.reportsTo}
           onChange={handleReportsTo}
+          disabled={draft.isDepartmentHead}
         />
         {cycleError && (
           <p className="text-xs text-destructive">{cycleError}</p>
@@ -173,7 +189,13 @@ export function MemberEditor({ member, allMembers, onSave, onCancel }: MemberEdi
           <input
             type="checkbox"
             checked={draft.isDepartmentHead}
-            onChange={(e) => set('isDepartmentHead', e.target.checked)}
+            onChange={(e) => {
+              set('isDepartmentHead', e.target.checked);
+              if (e.target.checked) {
+                set('reportsTo', null);
+                setCycleError(null);
+              }
+            }}
           />
           {t('orgStructure.member.isDeptHead')}
         </label>
@@ -187,16 +209,24 @@ export function MemberEditor({ member, allMembers, onSave, onCancel }: MemberEdi
         </label>
       </div>
 
+      <TabbedAddNewContactDialog
+        open={showCreateContact}
+        onOpenChange={setShowCreateContact}
+        onContactAdded={handleContactCreated}
+        allowedContactTypes={['individual']}
+        presentation="sheet"
+      />
+
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="outline" size="sm" onClick={onCancel}>
-          {t('buttons.cancel', { ns: 'common' })}
+          {t('modal.cancel', { ns: 'common' })}
         </Button>
         <Button
           size="sm"
           onClick={handleSave}
           disabled={!draft.displayName.trim() || !!cycleError}
         >
-          {member ? t('orgStructure.editMember') : t('orgStructure.addMember')}
+          {t('modal.confirm', { ns: 'common' })}
         </Button>
       </div>
     </div>
