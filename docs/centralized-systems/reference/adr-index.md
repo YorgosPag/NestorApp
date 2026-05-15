@@ -328,6 +328,9 @@
 | **ADR-347** | Admin Console Sidebar | ✅ APPROVED | 2026-05-14 | DXF Viewer | [📄](./adrs/ADR-347-admin-console-sidebar.md) |
 | **ADR-348** | Scale Command (Κλιμάκωση) — uniform + non-uniform + copy + reference | ✅ IMPLEMENTED | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-348-scale-command.md) |
 | **ADR-349** | Stretch Command (Επιμήκυνση) — crossing-window deformation + MSTRETCH + grip menu | ✅ FULLY IMPLEMENTED (Phase 1a–1d) | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-349-stretch-command.md) |
+| **ADR-350** | Trim Command (Κοπή) — quick/standard mode, fence drag, SHIFT→EXTEND inverse | ✅ IMPLEMENTED | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-350-trim-command.md) |
+| **ADR-352** | File Record Sort + Wipe Completeness | ✅ IMPLEMENTED | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-352-file-record-sort.md) |
+| **ADR-353** | Extend Command (Επέκταση) — Quick/Standard modes, SHIFT→TRIM inverse, hover preview | ✅ IMPLEMENTED | 2026-05-15 | DXF Viewer | [📄](./adrs/ADR-353-extend-command.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
