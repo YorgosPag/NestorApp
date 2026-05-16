@@ -44,63 +44,14 @@ const DEFAULT_HANDRAIL_HEIGHT_MM = 900;
 const DEFAULT_WALKLINE_OFFSET_MM = 600;
 const RAD_TO_DEG = 180 / Math.PI;
 
-// ─── Scene units → mm scale (Phase 8 unit-aware builder hotfix) ──────────────
+// ─── Scene units → mm scale (Phase 8 unit-aware builder) ────────────────────
+//
+// Canonical SceneUnits type + helpers live in `utils/scene-units.ts`. This
+// module re-exports the type for back-compat with callers that imported it
+// from here, and imports the conversion table for the builder below.
 
-export type SceneUnits = 'mm' | 'cm' | 'm' | 'in' | 'ft';
-
-/**
- * Multiplier applied to the mm defaults so the resulting `StairParams` are
- * expressed in the scene's coordinate units. DXF planning files are commonly
- * in millimeters (architectural drafting), but BIM/civil files reach the
- * scene in meters; without this conversion the stair geometry is rendered
- * ~1000× larger than the host floorplan (regression observed 2026-05-17).
- */
-function mmToSceneUnits(units: SceneUnits): number {
-  switch (units) {
-    case 'mm': return 1;
-    case 'cm': return 0.1;
-    case 'm':  return 0.001;
-    case 'in': return 1 / 25.4;
-    case 'ft': return 1 / 304.8;
-  }
-}
-
-/**
- * ADR-358 Phase 8 — heuristic scene-units detection from the scene bounds.
- *
- * Background: `dxf-scene-builder` hardcodes `SceneModel.units = 'mm'` even
- * when the source DXF carries `$INSUNITS = 6` (meters), so the stored field
- * is unreliable as a scale reference for newly drawn entities. Until the
- * builder is fixed to propagate the real unit (carryover, broader scope),
- * we infer the scale from the world-bounds diagonal of the loaded scene:
- *
- *   diagonal in meters     ≈ 10 – 200      (typical building footprint)
- *   diagonal in centimeters ≈ 1_000 – 20_000
- *   diagonal in millimeters ≈ 10_000 – 200_000
- *
- * The thresholds err on the safe side — pathological tiny scenes
- * (< 1 unit) and giant ones (> 5e5) fall back to `'mm'` to preserve the
- * historical default.
- */
-export function detectSceneUnits(bounds: {
-  min: { x: number; y: number };
-  max: { x: number; y: number };
-}): SceneUnits {
-  const dx = bounds.max.x - bounds.min.x;
-  const dy = bounds.max.y - bounds.min.y;
-  const diagonal = Math.hypot(dx, dy);
-  let detected: SceneUnits;
-  if (!Number.isFinite(diagonal) || diagonal <= 0) detected = 'mm';
-  else if (diagonal < 1) detected = 'mm';      // unknown / unitless → safe default
-  else if (diagonal < 500) detected = 'm';     // 1 – 500 units ≈ meters
-  else if (diagonal < 50_000) detected = 'cm'; // 500 – 50k units ≈ centimeters
-  else detected = 'mm';                        // 50k+ ≈ millimeters
-  // ADR-358 Phase 8 unit-aware builder — diagnostic log (temporary). Remove
-  // once `dxf-scene-builder` is fixed to propagate the real $INSUNITS.
-  // eslint-disable-next-line no-console
-  console.info('[StairTool] detectSceneUnits', { dx, dy, diagonal, detected });
-  return detected;
-}
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+export type { SceneUnits };
 
 // ─── Param overrides accepted by builders ────────────────────────────────────
 
@@ -175,8 +126,6 @@ export function buildDefaultStairParams(
   const rise = overrides.rise ?? DEFAULT_RISE_MM * s;
   const tread = overrides.tread ?? DEFAULT_TREAD_MM * s;
   const width = overrides.width ?? DEFAULT_WIDTH_MM * s;
-  // eslint-disable-next-line no-console
-  console.info('[StairTool] buildDefaultStairParams', { sceneUnits, scale: s, rise, tread, width });
   const stepCount = overrides.stepCount ?? DEFAULT_STEP_COUNT;
   const codeProfile: StairCodeProfile = overrides.codeProfile ?? 'nok';
   const base3D: Point3D = { x: basePoint.x, y: basePoint.y, z: 0 };
