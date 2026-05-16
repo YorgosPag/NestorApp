@@ -57,12 +57,10 @@ export function useLevelsFirestoreSync({
   const currentLevelIdRef = useRef(currentLevelId);
   currentLevelIdRef.current = currentLevelId;
 
-  // ADR-040: Firestore cache re-emission produces fresh array ref with identical
-  // content (~3-10Hz at idle, depending on pending writes / ack / hydration).
-  // Without this guard, setLevels fires every emission, LevelsContext value
-  // changes ref (non-memoized provider), and every useLevels consumer re-renders
-  // — driving the idle render loop investigated 2026-05-16.
-  const prevLevelsHashRef = useRef<string>('');
+  // ADR-361: same-content snapshot suppression is now enforced inside
+  // `firestoreQueryService.subscribe`. The previous inline hash guard was
+  // removed; the service drops re-emissions whose `documents` deep-equals the
+  // last delivered payload, so this hook only sees real content changes.
 
   useEffect(() => {
     if (!enableFirestore) return;
@@ -77,23 +75,6 @@ export function useLevelsFirestoreSync({
           const fetchedLevels = result.documents as unknown as Level[];
 
           if (fetchedLevels.length > 0) {
-            // Equality guard: skip state mutation when content is unchanged.
-            // Hash only fields that affect downstream consumers (id/name/order/
-            // visibility/default/companyId/floor binding). Faster than deep equal
-            // for arrays of <20 levels (typical N is 1-5).
-            const nextHash = JSON.stringify(
-              fetchedLevels.map((l) => [
-                l.id, l.name, l.order, l.isDefault, l.visible,
-                l.floorId, l.buildingId, l.sceneFileId,
-              ]),
-            );
-            if (nextHash === prevLevelsHashRef.current) {
-              setIsLoading(false);
-              setError(null);
-              return;
-            }
-            prevLevelsHashRef.current = nextHash;
-
             setLevels(fetchedLevels);
             const activeId = currentLevelIdRef.current;
             if (!activeId || !fetchedLevels.some(l => l.id === activeId)) {

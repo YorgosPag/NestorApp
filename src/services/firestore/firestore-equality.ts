@@ -26,16 +26,17 @@ import { dequal } from 'dequal';
  * Default equality comparator for collection/subcollection subscription
  * payloads — deep equal of the readonly documents array.
  *
- * @param prev — previously delivered documents (or `null` if first delivery)
- * @param next — new documents from the latest snapshot
+ * @param prev — previously delivered documents, or `null`/`undefined` when
+ *               no prior delivery has happened (initial state or post-reset).
+ * @param next — new documents from the latest snapshot.
  * @returns `true` when contents are deeply equal (skip delivery), `false`
- *          when they differ (deliver to consumer).
+ *          when they differ or no prior delivery exists (deliver to consumer).
  */
 export function defaultDocumentsEqual<T>(
-  prev: readonly T[] | null,
+  prev: readonly T[] | null | undefined,
   next: readonly T[],
 ): boolean {
-  if (prev === null) return false;
+  if (prev == null) return false;
   if (prev === next) return true;
   if (prev.length !== next.length) return false;
   return dequal(prev, next);
