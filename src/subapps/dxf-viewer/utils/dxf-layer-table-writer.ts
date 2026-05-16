@@ -105,6 +105,11 @@ function emitLayerTable(out: string[], layers: ReadonlyArray<SceneLayer>): void 
 }
 
 function emitLayerXData(out: string[], layer: SceneLayer): void {
+  // NestorLayerId — stable enterprise-id (`lyr_<ULID>`) round-trip (ADR-358 Phase 9C v2.13).
+  // Preserves layer identity across save/load — undo/redo refs, Firestore audit, xref bindings survive.
+  emit(out, '1001', 'NestorLayerId');
+  emit(out, '1000', `id=${layer.id}`);
+
   // AcCmTransparency — only emit when non-zero (DXF convention: omit = opaque).
   if ((layer.transparency ?? 0) > 0) {
     const alpha = Math.max(0, Math.min(255, Math.round((1 - layer.transparency! / 90) * 255)));

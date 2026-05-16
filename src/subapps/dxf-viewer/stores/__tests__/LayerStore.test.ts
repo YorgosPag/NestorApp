@@ -64,12 +64,13 @@ describe('LayerStore — setLayers', () => {
     expect(getCurrentLayerId()).toBeNull();
   });
 
-  it('keys by id when present, falls back to name', () => {
+  it('keys every layer by id (Phase 9C: factory auto-gen guarantees id presence)', () => {
     const withId = createSceneLayer({ id: 'lyr_x', name: 'X' });
-    const noId = createSceneLayer({ name: 'Y' });
-    setLayers([withId, noId]);
+    const autoId = createSceneLayer({ name: 'Y' });
+    setLayers([withId, autoId]);
     expect(getLayer('lyr_x')).toBe(withId);
-    expect(getLayer('Y')).toBe(noId);
+    expect(getLayer(autoId.id)).toBe(autoId);
+    expect(getLayer('Y')).toBeNull();
   });
 
   it('deduplicates by key — first occurrence wins', () => {

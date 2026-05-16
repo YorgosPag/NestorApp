@@ -22,17 +22,19 @@
 
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
 import type { Point2D } from '../../rendering/types/Types';
-import type { SceneModel, AnySceneEntity, SceneLayer, SceneBounds } from '../../types/scene';
+import type { SceneModel, AnySceneEntity, SceneBounds } from '../../types/scene';
 // 🏢 ADR-130: Centralized Default Layer Name
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 // 🏢 ADR-XXX: Centralized Color Config
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-102: Centralized Entity Type Guards
+// 🏢 ADR-358 Phase 9C: createSceneLayer factory (SceneLayer.id required, auto-gen via enterprise-id)
 import {
   isLineEntity,
   isCircleEntity,
   isRectangleEntity,
   isPolylineEntity,
+  createSceneLayer,
   type Entity,
 } from '../../types/entities';
 
@@ -135,13 +137,13 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     } else {
       // Create new scene with this entity
       // 🏢 ENTERPRISE: DXF Standard - Layer "0" is always present for entities without explicit layer
-      // Create minimal SceneModel with default values for required properties
-      const defaultLayer: SceneLayer = {
+      // 🏢 ADR-358 Phase 9C: SceneLayer.id is now REQUIRED — factory auto-generates `lyr_<ULID>` via enterprise-id
+      const defaultLayer = createSceneLayer({
         name: DXF_DEFAULT_LAYER,
         color: UI_COLORS.WHITE,
         visible: true,
         locked: false,
-      };
+      });
 
       const defaultBounds: SceneBounds = {
         min: { x: 0, y: 0 },

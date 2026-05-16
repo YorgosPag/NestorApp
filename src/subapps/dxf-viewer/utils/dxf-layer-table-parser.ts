@@ -18,6 +18,7 @@
  *   AcCmTransparency    → 1071 int → transparency 0-90%
  *   NestorAec           → 1000 "category=<aec>" + "tag=<lowercase>" repeated
  *   NestorLayerMeta     → 1000 "description=<utf8>"
+ *   NestorLayerId       → 1000 "id=<lyr_ULID>"              (Phase 9C round-trip — stable enterprise-id)
  *   NestorBimCategory   → 1000 "category=<ifc>"            (Q15 scaffold round-trip)
  *   NestorVpOverride    → 1000 "vpOverrides=<json>"        (Q16 scaffold round-trip)
  *
@@ -213,6 +214,7 @@ function buildSceneLayer(draft: MutableLayerDraft, warnings: ParseLayerWarning[]
   const xd = collectXData(draft.xdataBuf);
 
   return createSceneLayer({
+    id: xd.layerId,
     name,
     color: draft.colorTrueColor != null
       ? hex(draft.colorTrueColor)
@@ -242,6 +244,8 @@ interface CollectedXData {
   tags: ReadonlyArray<string>;
   bimCategory: string | null;
   vpOverrides: Record<string, Partial<VpLayerProps>> | null;
+  /** ADR-358 Phase 9C: stable enterprise-id from NestorLayerId XDATA; undefined → factory auto-gen on legacy import. */
+  layerId: string | undefined;
 }
 
 function collectXData(pairs: ReadonlyArray<XDataPair>): CollectedXData {
@@ -251,6 +255,7 @@ function collectXData(pairs: ReadonlyArray<XDataPair>): CollectedXData {
   const tags: string[] = [];
   let bimCategory: string | null = null;
   let vpOverrides: Record<string, Partial<VpLayerProps>> | null = null;
+  let layerId: string | undefined;
 
   for (const p of pairs) {
     if (p.app === 'AcCmTransparency' && p.code === '1071') {
@@ -272,6 +277,9 @@ function collectXData(pairs: ReadonlyArray<XDataPair>): CollectedXData {
     } else if (p.app === 'NestorLayerMeta') {
       const [k, v] = splitKv(p.value);
       if (k === 'description') description = v;
+    } else if (p.app === 'NestorLayerId') {
+      const [k, v] = splitKv(p.value);
+      if (k === 'id' && v.startsWith('lyr_')) layerId = v;
     } else if (p.app === 'NestorBimCategory') {
       const [k, v] = splitKv(p.value);
       if (k === 'category') bimCategory = v;
@@ -294,6 +302,7 @@ function collectXData(pairs: ReadonlyArray<XDataPair>): CollectedXData {
     tags: Object.freeze(tags.slice(0, 8)),
     bimCategory,
     vpOverrides,
+    layerId,
   };
 }
 
