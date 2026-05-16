@@ -11,6 +11,8 @@ import {
   getVisibleEntityIdsByLayers,
   getVisibleEntityIdsInLayers
 } from '../../../../services/shared/layer-operation-utils';
+// ADR-358 Phase 9D-5a: id-first reader SSoT (LayerStore lookup + legacy name fallback).
+import { resolveEntityLayerName } from '../../../../stores/LayerStore';
 
 interface LayersCallbacksProps {
   scene: SceneModel | null;
@@ -208,8 +210,13 @@ export function useLayersCallbacks({
       // existing single-click code (ήδη κάνει publish + selection)
       if (!scene || !onEntitySelectionChange) return;
       const ids: string[] = [];
+      // ADR-358 Phase 9D-5a: id-first resolution via LayerStore (post-rename stale-name guard).
       layerNames.forEach(L =>
-        scene.entities?.forEach(e => { if (e.layer === L && e.visible !== false) ids.push(e.id); })
+        scene.entities?.forEach(e => {
+          if (resolveEntityLayerName(e as { layerId?: string; layer?: string }) === L && e.visible !== false) {
+            ids.push(e.id);
+          }
+        })
       );
       setSelection(ids, { onEntitySelectionChange });
     }
