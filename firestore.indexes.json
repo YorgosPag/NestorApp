@@ -3590,6 +3590,33 @@
         { "fieldPath": "targetId", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "floorplan_stairs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" },
+        { "fieldPath": "floorplanId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_stairs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "projectId", "order": "ASCENDING" },
+        { "fieldPath": "floorId", "order": "ASCENDING" },
+        { "fieldPath": "params.codeProfile", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_stairs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "projectId", "order": "ASCENDING" },
+        { "fieldPath": "validation.hasCodeViolations", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
