@@ -22,6 +22,7 @@ import { clearAutoAreaState } from '../../systems/auto-area/AutoAreaResultStore'
 import { clearAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore';
 import { useLinePerpendicular } from '../drawing/useLinePerpendicular';
 import { useLineParallel } from '../drawing/useLineParallel';
+import { useStairTool } from '../drawing/useStairTool';
 import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
 import type { AngleMeasurementEntity } from '../../types/entities';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
@@ -54,6 +55,8 @@ export interface UseSpecialToolsReturn {
   lineParallel: ReturnType<typeof useLineParallel>;
   /** Angle entity measurement hook return */
   angleEntityMeasurement: ReturnType<typeof useAngleEntityMeasurement>;
+  /** ADR-358 Phase 5a — Stair tool hook return */
+  stairTool: ReturnType<typeof useStairTool>;
 }
 
 // ============================================================================
@@ -221,6 +224,40 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   }, [activeTool, activateAngle, deactivateAngle]);
 
   // ============================================================================
+  // ADR-358 Phase 5a — STAIR TOOL
+  // ============================================================================
+
+  /**
+   * Stair drawing tool — 2-click placement (basePoint + direction) + commit.
+   * State machine in `useStairTool`. Variant fixed to 'straight' Phase 5a;
+   * contextual ribbon variant selector lands Phase 7a.
+   */
+  const stairTool = useStairTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onStairCreated: (stairEntity) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+      const updatedScene = {
+        ...scene,
+        entities: [...(scene.entities || []), stairEntity],
+      };
+      levelManager.setLevelScene(levelId, updatedScene);
+      console.debug('[StairTool] Stair added to scene:', stairEntity.id);
+    },
+  });
+
+  const { activate: activateStair, deactivate: deactivateStair } = stairTool;
+  useEffect(() => {
+    if (activeTool === 'stair') {
+      activateStair();
+    } else {
+      deactivateStair();
+    }
+  }, [activeTool, activateStair, deactivateStair]);
+
+  // ============================================================================
   // AUTO AREA — clear result panel when tool changes away
   // ============================================================================
 
@@ -240,6 +277,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     linePerpendicular,
     lineParallel,
     angleEntityMeasurement,
+    stairTool,
   };
 }
 

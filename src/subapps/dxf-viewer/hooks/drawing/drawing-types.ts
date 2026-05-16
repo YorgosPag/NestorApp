@@ -70,7 +70,7 @@ export type ExtendedSceneEntity =
 
 // ─── Drawing Tool & State ───────────────────────────────────────────────────
 
-// ADR-059: Arc tools, ADR-083: Circle variants
+// ADR-059: Arc tools, ADR-083: Circle variants, ADR-358 Phase 5a: Stair tool
 export type DrawingTool =
   | 'select' | 'line' | 'rectangle'
   | 'circle' | 'circle-diameter' | 'circle-2p-diameter'
@@ -78,7 +78,8 @@ export type DrawingTool =
   | 'polyline' | 'polygon'
   | 'measure-distance' | 'measure-distance-continuous' | 'measure-area' | 'measure-angle'
   | 'measure-angle-line-arc' | 'measure-angle-two-arcs' | 'measure-angle-measuregeom' | 'measure-angle-constraint'
-  | 'arc-3p' | 'arc-cse' | 'arc-sce';
+  | 'arc-3p' | 'arc-cse' | 'arc-sce'
+  | 'stair';
 
 export interface DrawingState {
   currentTool: DrawingTool;

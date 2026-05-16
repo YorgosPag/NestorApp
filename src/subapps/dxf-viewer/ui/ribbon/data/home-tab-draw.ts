@@ -222,8 +222,7 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
             commandKey: 'ellipse',
           },
         },
-        // ADR-358 Phase 0: Stair button stub. `comingSoon` until Phase 5a wires the tool;
-        // Q15 mandates removal of this flag at full-tool merge.
+        // ADR-358 Phase 5a: Stair tool wired (useStairTool orchestrator).
         {
           type: 'simple',
           size: 'small',
@@ -233,7 +232,6 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
             icon: 'stair',
             commandKey: 'stair',
             shortcut: 'ST',
-            comingSoon: true,
           },
         },
       ],

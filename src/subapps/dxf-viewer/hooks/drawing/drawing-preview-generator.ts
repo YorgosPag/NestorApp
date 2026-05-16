@@ -19,6 +19,11 @@ import type {
   ExtendedArcEntity,
   PreviewPoint,
 } from './drawing-types';
+// ADR-358 Phase 5a — stair preview via SSoT `computeStairGeometry`.
+import { buildDefaultStairParams } from './stair-completion';
+import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
+import type { StairParamOverrides } from './stair-completion';
+import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import {
   arcFrom3Points,
   arcFromCenterStartEnd,
@@ -55,7 +60,7 @@ function makeRubberBandPolyline(id: string, vertices: Point2D[]): ExtendedPolyli
     visible: true,
     layer: '0',
     color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
-    lineweight: 1,
+    lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
     opacity: 1.0,
     lineType: 'solid' as const,
   };
@@ -87,6 +92,11 @@ export function generatePreviewEntity(
   arcFlipped: boolean,
   createEntity: CreateEntityFn
 ): ExtendedSceneEntity | null {
+
+  // ── ADR-358 Phase 5a — Stair tool preview branch ─────────────────────────
+  if (tool === 'stair') {
+    return generateStairPreview(tempPoints, cursorPoint);
+  }
 
   // ── Zero-point preview: show start indicator ─────────────────────────────
   if (tempPoints.length === 0) {
@@ -304,3 +314,81 @@ export function generatePreviewEntity(
 
 // Re-export from extracted module for backward compatibility
 export { applyPreviewStyling, createPartialPreview } from './drawing-preview-partial';
+
+
+// ─── ADR-358 Phase 5a — Stair preview helpers ───────────────────────────────
+
+/**
+ * Build a stair preview entity from `tempPoints` + cursor. State machine map:
+ *   - [] → cursor marker (basePoint indicator)
+ *   - [base] → ghost polyline base→cursor (direction indicator)
+ *   - [base, dirPoint] → walkline polyline from StairGeometry SSoT
+ *
+ * Phase 5a returns a single polyline preview (walkline). The full multi-entity
+ * preview (treads + walkline + arrow) lands a dedicated stair preview overlay
+ * leaf in Phase 5b; this single-entity shape preserves the existing
+ * `ExtendedSceneEntity` contract used by PreviewCanvas (ADR-040 §6.2).
+ */
+function generateStairPreview(
+  tempPoints: readonly Point2D[],
+  cursorPoint: Point2D,
+  overrides: StairParamOverrides = {},
+): ExtendedSceneEntity | null {
+  if (tempPoints.length === 0) {
+    return {
+      id: 'preview_stair_basepoint',
+      type: 'point',
+      position: cursorPoint,
+      size: 6,
+      visible: true,
+      layer: '0',
+      preview: true,
+      showPreviewGrips: true,
+    } as PreviewPoint;
+  }
+  if (tempPoints.length === 1) {
+    return makeStairGhost('preview_stair_direction', [tempPoints[0], cursorPoint]);
+  }
+  return makeStairWalklinePreview(tempPoints[0], tempPoints[1], overrides);
+}
+
+function makeStairGhost(id: string, vertices: readonly Point2D[]): ExtendedPolylineEntity {
+  const base: PolylineEntity = {
+    id,
+    type: 'polyline',
+    vertices: [...vertices],
+    closed: false,
+    visible: true,
+    layer: '0',
+    color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+    lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
+    opacity: 0.6,
+    lineType: 'dashed' as const,
+  };
+  return { ...base, preview: true, showEdgeDistances: true, showPreviewGrips: true } as ExtendedPolylineEntity;
+}
+
+function makeStairWalklinePreview(
+  basePoint: Readonly<Point2D>,
+  dirPoint: Readonly<Point2D>,
+  overrides: StairParamOverrides,
+): ExtendedSceneEntity {
+  const direction = Math.atan2(dirPoint.y - basePoint.y, dirPoint.x - basePoint.x) * (180 / Math.PI);
+  const params = buildDefaultStairParams(basePoint, direction, overrides);
+  const geometry = computeStairGeometry(params);
+  const vertices: Point2D[] = geometry.walkline.map(p => ({ x: p.x, y: p.y }));
+  const polyline: PolylineEntity = {
+    id: 'preview_stair_walkline',
+    type: 'polyline',
+    vertices,
+    closed: false,
+    visible: true,
+    layer: '0',
+    color: UI_COLORS.BRIGHT_GREEN,
+    lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
+    opacity: 0.8,
+    lineType: 'solid' as const,
+  };
+  return { ...polyline, preview: true, showPreviewGrips: true } as ExtendedPolylineEntity;
+}
+

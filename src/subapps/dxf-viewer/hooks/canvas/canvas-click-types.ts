@@ -76,6 +76,12 @@ export interface DxfGripInteractionLike {
   handleGripClick: (worldPoint: Point2D) => boolean;
 }
 
+/** ADR-358 Phase 5a — Minimal stair tool interface for click routing. */
+export interface StairToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /** Minimal interface for level manager (read-only for click handling) */
 export interface LevelManagerLike {
   currentLevelId: string | null;
@@ -100,6 +106,8 @@ export interface UseCanvasClickHandlerParams {
   lineParallel: SpecialToolLike;
   angleEntityMeasurement: AngleEntityToolLike;
   dxfGripInteraction: DxfGripInteractionLike;
+  /** ADR-358 Phase 5a — Stair tool click pipeline. */
+  stairTool?: StairToolLike;
 
   // ── ADR-188: Rotation tool ────────────────────────────────────────────
   /** Whether the rotation tool is active and collecting input */

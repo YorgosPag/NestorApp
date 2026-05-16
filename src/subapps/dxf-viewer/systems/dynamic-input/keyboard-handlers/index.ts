@@ -11,6 +11,7 @@
 import { handleLineKeyboard } from './line-keyboard-handler';
 import { handleCircleKeyboard } from './circle-keyboard-handler';
 import { handleDefaultKeyboard } from './default-keyboard-handler';
+import { handleStairKeyboard } from './stair-keyboard-handler';
 import type { KeyboardHandler, KeyboardHandlerRegistry } from './types';
 
 /**
@@ -25,6 +26,9 @@ const KEYBOARD_HANDLER_REGISTRY: KeyboardHandlerRegistry = {
   'circle': handleCircleKeyboard,
   'circle-diameter': handleCircleKeyboard,
   'circle-2p-diameter': handleCircleKeyboard,
+
+  // ADR-358 Phase 5a — Stair tool
+  'stair': handleStairKeyboard,
 };
 
 /**
@@ -68,3 +72,4 @@ export type {
 export { handleLineKeyboard } from './line-keyboard-handler';
 export { handleCircleKeyboard } from './circle-keyboard-handler';
 export { handleDefaultKeyboard } from './default-keyboard-handler';
+export { handleStairKeyboard, validateStairField, STAIR_FIELD_RANGES } from './stair-keyboard-handler';

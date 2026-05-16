@@ -185,6 +185,9 @@ importers:
       date-fns:
         specifier: ^3.6.0
         version: 3.6.0
+      dequal:
+        specifier: 2.0.3
+        version: 2.0.3
       dictionary-en:
         specifier: ^4.0.0
         version: 4.0.0

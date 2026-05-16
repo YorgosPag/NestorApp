@@ -38,6 +38,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     lineCapOptions, lineJoinOptions, templateGroupedOptions,
     handleTemplateSelect, handleFactoryResetClick, handleFactoryResetConfirm,
     handleFactoryResetCancel, handleColorChange,
+    handleColorModeToggle, handleLineweightModeToggle,
     showFactoryResetModal, accordion, isEmbedded,
   } = state;
 
@@ -110,7 +111,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       {/* Accordion Sections */}
       <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${!settings.enabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}` : ''}`}>
         <TemplatesSection {...sectionProps} templateGroupedOptions={templateGroupedOptions} handleTemplateSelect={handleTemplateSelect} accordion={accordion} />
-        <BasicSection {...sectionProps} handleColorChange={handleColorChange} accordion={accordion} />
+        <BasicSection
+          {...sectionProps}
+          handleColorChange={handleColorChange}
+          handleColorModeToggle={handleColorModeToggle}
+          handleLineweightModeToggle={handleLineweightModeToggle}
+          accordion={accordion}
+        />
         <HoverSection {...sectionProps} accordion={accordion} />
         <FinalSection {...sectionProps} accordion={accordion} />
         <AdvancedSection {...sectionProps} lineCapOptions={lineCapOptions} lineJoinOptions={lineJoinOptions} accordion={accordion} />

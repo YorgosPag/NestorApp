@@ -75,6 +75,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     viewportReady, viewport, transform,
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
+    stairTool,
     rotationIsActive = false, handleRotationClick,
     moveIsActive = false, handleMoveClick,
     mirrorIsActive = false, handleMirrorClick,
@@ -201,6 +202,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     if (handleLinePerpendicularPick(entityCtx, linePerpendicular, activeTool)) return;
     if (handleLineParallelPick(entityCtx, lineParallel, activeTool)) return;
 
+    // PRIORITY 4.5: ADR-358 Phase 5a — Stair tool 2-click placement.
+    if (activeTool === 'stair' && stairTool?.isActive) {
+      stairTool.onCanvasClick(worldPoint);
+      return;
+    }
+
     // PRIORITY 5: Overlay polygon drawing
     if (overlayMode === 'draw') {
       if (isSavingPolygon) return;
@@ -277,6 +284,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     viewportReady, viewport, transform,
     activeTool, overlayMode,
     circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
+    stairTool,
     rotationIsActive, handleRotationClick,
     moveIsActive, handleMoveClick,
     mirrorIsActive, handleMirrorClick,

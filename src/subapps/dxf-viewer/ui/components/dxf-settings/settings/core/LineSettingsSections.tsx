@@ -37,6 +37,8 @@ import {
 import type { LineSettingsState } from './useLineSettingsState';
 import { SliderInput } from '../../../shared/SliderInput';
 
+import { ByLayerToggle } from './ByLayerToggle';
+
 type SectionProps = Pick<LineSettingsState,
   'settings' | 'settingsUpdater' | 'colors' | 'borderTokens' | 'iconSizes' | 't'
 >;
@@ -90,8 +92,15 @@ export function TemplatesSection({
 
 export function BasicSection({
   settings, settingsUpdater, colors, borderTokens, iconSizes, t,
-  handleColorChange, accordion,
-}: SectionProps & Pick<LineSettingsState, 'handleColorChange' | 'accordion'>) {
+  handleColorChange, handleColorModeToggle, handleLineweightModeToggle, accordion,
+}: SectionProps & Pick<LineSettingsState,
+  'handleColorChange' | 'handleColorModeToggle' | 'handleLineweightModeToggle' | 'accordion'
+>) {
+  // ADR-358 §G7 Phase 6.5 — undefined treated as ByLayer (Google-grade default).
+  const colorMode = settings.colorMode ?? 'ByLayer';
+  const lineweightMode = settings.lineweightMode ?? 'ByLayer';
+  const colorIsByLayer = colorMode === 'ByLayer';
+  const lineweightIsByLayer = lineweightMode === 'ByLayer';
   const { quick, radius } = borderTokens;
   return (
     <AccordionSection
@@ -125,29 +134,60 @@ export function BasicSection({
           </Select>
         </div>
 
-        {/* Line Width */}
-        <SliderInput
-          label={t('settings.line.labels.widthValue', { value: settings.lineWidth })}
-          min={LINE_WIDTH_RANGE.min} max={LINE_WIDTH_RANGE.max} step={LINE_WIDTH_RANGE.step}
-          value={settings.lineWidth}
-          onChange={(v) => settingsUpdater.updateSetting('lineWidth', v)}
-          showNumberInput
-        />
-
-        {/* Color */}
+        {/* Line Width — ADR-358 §G7 Phase 6.5: ByLayer pillola first, then slider */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('settings.line.labels.color')}</label>
-          <ColorDialogTrigger
-            value={settings.color}
-            onChange={handleColorChange}
-            label={settings.color}
-            title={t('settings.line.colorPicker.line')}
-            alpha={false}
-            modes={['hex', 'rgb', 'hsl']}
-            palettes={['dxf', 'semantic', 'material']}
-            recent
-            eyedropper
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
+            {t('settings.line.labels.lineweightMode')}
+          </label>
+          <ByLayerToggle
+            mode={lineweightMode}
+            onChange={handleLineweightModeToggle}
+            colors={colors}
+            borderTokens={borderTokens}
+            tByLayer={t('settings.line.labels.byLayer')}
+            tConcrete={t('settings.line.labels.concrete')}
           />
+          {!lineweightIsByLayer && (
+            <SliderInput
+              label={t('settings.line.labels.widthValue', { value: settings.lineWidth })}
+              min={LINE_WIDTH_RANGE.min} max={LINE_WIDTH_RANGE.max} step={LINE_WIDTH_RANGE.step}
+              value={settings.lineWidth}
+              onChange={(v) => settingsUpdater.updateSetting('lineWidth', v)}
+              showNumberInput
+            />
+          )}
+        </div>
+
+        {/* Color — ADR-358 §G7 Phase 6.5: ByLayer pillola first, then picker */}
+        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
+          <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
+            {t('settings.line.labels.colorMode')}
+          </label>
+          <ByLayerToggle
+            mode={colorMode}
+            onChange={handleColorModeToggle}
+            colors={colors}
+            borderTokens={borderTokens}
+            tByLayer={t('settings.line.labels.byLayer')}
+            tConcrete={t('settings.line.labels.concrete')}
+          />
+          {colorIsByLayer ? (
+            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
+              {t('settings.line.labels.byLayerHint')}
+            </p>
+          ) : (
+            <ColorDialogTrigger
+              value={settings.color}
+              onChange={handleColorChange}
+              label={settings.color}
+              title={t('settings.line.colorPicker.line')}
+              alpha={false}
+              modes={['hex', 'rgb', 'hsl']}
+              palettes={['dxf', 'semantic', 'material']}
+              recent
+              eyedropper
+            />
+          )}
         </div>
 
         {/* Opacity */}

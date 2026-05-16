@@ -260,8 +260,21 @@ export function useLineSettingsState(contextType?: 'preview' | 'completion') {
   };
 
   const handleColorChange = (color: string) => {
+    // ADR-358 §G7 Phase 6.5 — explicit picker change implies the user wants a
+    // concrete colour override (otherwise they'd leave the ByLayer pill on).
     settingsUpdater.updateSetting('color', color);
+    settingsUpdater.updateSetting('colorMode', 'Concrete');
     enterpriseContext.updateSpecificLineSettings('completion', { color });
+  };
+
+  /** ADR-358 §G7 Phase 6.5 — toggle ByLayer/Concrete colour resolution. */
+  const handleColorModeToggle = (mode: 'ByLayer' | 'Concrete') => {
+    settingsUpdater.updateSetting('colorMode', mode);
+  };
+
+  /** ADR-358 §G7 Phase 6.5 — toggle ByLayer/Concrete lineweight resolution. */
+  const handleLineweightModeToggle = (mode: 'ByLayer' | 'Concrete') => {
+    settingsUpdater.updateSetting('lineweightMode', mode);
   };
 
   // Accordion state
@@ -293,6 +306,8 @@ export function useLineSettingsState(contextType?: 'preview' | 'completion') {
     handleFactoryResetConfirm,
     handleFactoryResetCancel,
     handleColorChange,
+    handleColorModeToggle,
+    handleLineweightModeToggle,
     // Modal
     showFactoryResetModal,
     // Accordion

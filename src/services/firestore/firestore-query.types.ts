@@ -78,7 +78,7 @@ export interface SubscribeOptions<T = unknown> extends QueryOptions, EqualityGua
    * very large payloads where hashing a small subset of fields is cheaper.
    * Returning `true` means contents are equal → skip delivery.
    */
-  readonly equalityFn?: (prev: readonly T[] | null, next: readonly T[]) => boolean;
+  readonly equalityFn?: (prev: readonly T[] | null | undefined, next: readonly T[]) => boolean;
 }
 
 /** Options for single-document real-time subscriptions */
@@ -87,7 +87,8 @@ export interface SubscribeDocOptions<T = unknown> extends EqualityGuardOptions {
   /**
    * ADR-361: custom comparator for the document payload.
    * Default: `dequal` deep equal. Returning `true` means contents are equal
-   * → skip delivery.
+   * → skip delivery. `prev` is `undefined` on the first delivery and after
+   * `EqualitySlot.reset()`.
    */
   readonly equalityFn?: (prev: T | null | undefined, next: T | null) => boolean;
 }

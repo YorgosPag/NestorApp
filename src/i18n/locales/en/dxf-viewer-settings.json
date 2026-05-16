@@ -105,7 +105,12 @@
         "dashOffset": "Dash Offset",
         "dashOffsetValue": "Dash Offset: {value}px",
         "lineCap": "Line Cap",
-        "lineJoin": "Line Join"
+        "lineJoin": "Line Join",
+        "colorMode": "Color Source",
+        "lineweightMode": "Lineweight Source",
+        "byLayer": "ByLayer",
+        "concrete": "Custom",
+        "byLayerHint": "Color inherits from the active layer. Change the layer color and every entity updates automatically."
       },
       "colorPicker": {
         "line": "Select Line Color",

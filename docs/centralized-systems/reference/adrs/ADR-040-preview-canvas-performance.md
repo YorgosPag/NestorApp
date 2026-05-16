@@ -107,6 +107,8 @@ Hash JSON costo trascurabile su N=1-5 levels (typical). Skip diretto = zero stat
 
 **Pattern (cardinal rule N5 esteso)**: ogni consumer di `firestoreQueryService.subscribe` DEVE includere equality guard su content hash prima di chiamare setter di state. Firestore re-emette aggressivamente cached snapshots — without guard, ogni subscriber è amplificatore passivo del render loop.
 
+**Generalizzazione (2026-05-16, stessa sessione) → ADR-361**: l'equality guard inline è stato **migrato dentro `firestoreQueryService.subscribe/subscribeDoc/subscribeSubcollection` come SSoT** (vedi `docs/centralized-systems/reference/adrs/ADR-361-firestore-subscribe-equality-guard.md`). Industry standard adottato: `dequal` deep equal (allineato a SWR), `EqualitySlot` con `reset()` su super-admin switcher rebuild (ADR-354 entry #3), opzioni `skipEqualityGuard` + `equalityFn` per opt-out / override. Tutti i 58 caller di `subscribe`, 13 di `subscribeDoc`, 2 di `subscribeSubcollection` ne beneficiano automaticamente. L'inline JSON-hash in `useLevelsFirestoreSync.ts` è stato **rimosso** (ora ridondante).
+
 **Diagnostica usata (riusabile)**: `src/subapps/dxf-viewer/debug/render-loop-trace.ts` — SSOT helper env-gated (`NEXT_PUBLIC_TRACE_RENDER_LOOP=1` o `localStorage.setItem('TRACE_RENDER_LOOP','1')`). Esporta `useRenderTrace(label, snapshot)` + `installSetStateTracer()`. Monkey-patch `React.useState`/`useReducer`/`useSyncExternalStore` NON funziona su Firefox+Turbopack (React namespace frozen) — patch fallisce gracefully, `useRenderTrace` rimane operativo come strumento principale. No-op in production.
 
 **Follow-up still open** (non bloccante idle):
