@@ -1,15 +1,20 @@
 'use client';
 
 /**
- * ADR-358 Phase 7b2a + 7b2b-α — Floating Advanced Properties panel.
+ * ADR-358 Phase 7b2a + 7b2b-α + 7.5 — Floating Advanced Properties panel.
  *
  * Pure presentational component: receives the selected `StairEntity` and a
  * patch dispatcher, composes the section stack:
+ *   - Presets (7.5, Stream H — G26/Q32 library presets)
  *   - Materials (7b2a, Stream G item 1)
  *   - Per-Tread Overrides (7b2a, Stream G item 2)
  *   - Cut Plane Height (7b2a, Stream G item 3)
  *   - Tread Numbering (7b2b-α, Stream G item 4)
  *   - Nosing Side (7b2b-α, Stream G item 5)
+ *
+ * Presets section sits first (industry convention: Revit Type Selector / ArchiCAD
+ * Favorites at top of Properties palette). It receives auth + project context
+ * separately because preset CRUD lives outside the per-stair param dispatcher.
  *
  * Positioning: floating fixed top-right, below the ribbon, width 320px.
  * Industry-aligned with Revit Properties Palette docked-right convention.
@@ -19,6 +24,10 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../types/entities';
+import type { useLevels } from '../../systems/levels';
+import type { UseStairPersistenceResult } from '../../hooks/data/useStairPersistence';
+import { StairPersistenceSection } from './sections/StairPersistenceSection';
+import { StairPresetsSection } from './sections/StairPresetsSection';
 import { StairMaterialsSection } from './sections/StairMaterialsSection';
 import { StairPerTreadOverrideSection } from './sections/StairPerTreadOverrideSection';
 import { StairCutPlaneSection } from './sections/StairCutPlaneSection';
@@ -26,14 +35,29 @@ import { StairTreadNumberingSection } from './sections/StairTreadNumberingSectio
 import { StairNosingSection } from './sections/StairNosingSection';
 import type { DispatchStairParamPatch } from './commands/dispatchStairParamPatch';
 
+type LevelManagerLike = Pick<
+  ReturnType<typeof useLevels>,
+  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
+>;
+
 export interface StairAdvancedPanelProps {
   readonly stair: StairEntity;
   readonly dispatchPatch: DispatchStairParamPatch;
+  readonly companyId: string | null;
+  readonly userId: string | null;
+  readonly projectId?: string;
+  readonly levelManager: LevelManagerLike;
+  readonly persistence?: UseStairPersistenceResult;
 }
 
 export function StairAdvancedPanel({
   stair,
   dispatchPatch,
+  companyId,
+  userId,
+  projectId,
+  levelManager,
+  persistence,
 }: StairAdvancedPanelProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
 
@@ -47,6 +71,22 @@ export function StairAdvancedPanel({
           {t('stairAdvancedPanel.title')}
         </h3>
       </header>
+      {persistence && (
+        <StairPersistenceSection
+          stair={stair}
+          currentUserId={userId}
+          persistence={persistence}
+        />
+      )}
+      {companyId && userId && (
+        <StairPresetsSection
+          stair={stair}
+          companyId={companyId}
+          userId={userId}
+          projectId={projectId}
+          levelManager={levelManager}
+        />
+      )}
       <StairMaterialsSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairPerTreadOverrideSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairCutPlaneSection stair={stair} dispatchPatch={dispatchPatch} />
