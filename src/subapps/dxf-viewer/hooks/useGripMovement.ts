@@ -74,69 +74,10 @@ export const GRIP_CONFIG = {
 const DEBUG_MODE = process.env.NODE_ENV === 'development';
 
 // ============================================================================
-// 🏢 ENTERPRISE: Type Definitions
+// 🏢 ENTERPRISE: Type Definitions (extracted to grip-types.ts — SRP)
 // ============================================================================
 
-/**
- * Grip type enumeration
- */
-export type GripType = 'vertex' | 'center' | 'edge' | 'corner' | 'midpoint';
-
-/**
- * ADR-358 Phase 5b — Stair grip kind (parametric grip type).
- * One of 5 grips exposed by `StairEntity`: base point translate, direction
- * rotate, width resize, length (stepCount) resize, split (flightSplit) for
- * L/U/gamma variants only. See `systems/stairs/stair-grips.ts`.
- */
-export type StairGripKind =
-  | 'stair-base'
-  | 'stair-direction'
-  | 'stair-width'
-  | 'stair-length'
-  | 'stair-split';
-
-/**
- * Grip information
- */
-export interface GripInfo {
-  /** Entity ID this grip belongs to */
-  entityId: string;
-  /** Grip index within the entity */
-  gripIndex: number;
-  /** Grip type */
-  type: GripType;
-  /** World position of the grip */
-  position: Point2D;
-  /** Whether this grip moves the entire entity */
-  movesEntity: boolean;
-  /** 🏢 (2026-02-15): For edge grips — which 2 vertex indices to move together (edge-stretch) */
-  edgeVertexIndices?: [number, number];
-  /**
-   * ADR-358 Phase 5b — parametric stair grip discriminator. Present only when
-   * the grip belongs to a `StairEntity`; routes the commit through
-   * `applyStairGripDrag()` + `UpdateStairParamsCommand` instead of the
-   * standard `StretchEntityCommand` vertex path.
-   */
-  stairGripKind?: StairGripKind;
-}
-
-/**
- * Grip drag state
- */
-export interface GripDragState {
-  /** Is currently dragging a grip */
-  isDragging: boolean;
-  /** Active grip being dragged */
-  activeGrip: GripInfo | null;
-  /** Start position (world coordinates) */
-  startPosition: Point2D | null;
-  /** Current position (world coordinates) */
-  currentPosition: Point2D | null;
-  /** Total delta during drag */
-  totalDelta: Point2D;
-  /** Has moved past minimum distance */
-  hasMoved: boolean;
-}
+export type { GripType, StairGripKind, GripInfo, GripDragState } from './grip-types';
 
 /**
  * Options for useGripMovement hook
