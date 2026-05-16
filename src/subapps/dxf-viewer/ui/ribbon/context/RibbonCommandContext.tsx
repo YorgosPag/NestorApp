@@ -56,6 +56,13 @@ export interface RibbonCommandsApi {
    * `command.options` static list and renders an empty value.
    */
   getComboboxState?: (commandKey: string) => RibbonComboboxState | null;
+  /**
+   * ADR-358 Phase 7b1 — read current validation badge state for a `badgeKey`
+   * declared on a `RibbonTab`. Returns `true` to render a red "!" badge on
+   * the tab button. Owning bridge (e.g. `useRibbonStairBridge`) maps badge
+   * keys to domain validators (e.g. `StairEntity.validation.hasCodeViolations`).
+   */
+  getBadgeState?: (badgeKey: string) => boolean;
 }
 
 interface RibbonCommandContextValue {
@@ -66,6 +73,7 @@ interface RibbonCommandContextValue {
   onComboboxChange: (commandKey: string, value: string) => void;
   getToggleState: (commandKey: string) => RibbonToggleState;
   getComboboxState: (commandKey: string) => RibbonComboboxState | null;
+  getBadgeState: (badgeKey: string) => boolean;
   splitLastUsed: Record<string, string>;
   setSplitLastUsed: (commandId: string, variantId: string) => void;
 }
@@ -74,6 +82,7 @@ const NOOP_TOGGLE = () => {};
 const NOOP_COMBOBOX_CHANGE = () => {};
 const NOOP_TOGGLE_STATE = (): RibbonToggleState => false;
 const NOOP_COMBOBOX_STATE = (): RibbonComboboxState | null => null;
+const NOOP_BADGE_STATE = (): boolean => false;
 
 const RibbonCommandContext = createContext<RibbonCommandContextValue | null>(
   null,
@@ -99,6 +108,7 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       onComboboxChange: commands.onComboboxChange ?? NOOP_COMBOBOX_CHANGE,
       getToggleState: commands.getToggleState ?? NOOP_TOGGLE_STATE,
       getComboboxState: commands.getComboboxState ?? NOOP_COMBOBOX_STATE,
+      getBadgeState: commands.getBadgeState ?? NOOP_BADGE_STATE,
       splitLastUsed,
       setSplitLastUsed,
     }),
@@ -110,6 +120,7 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       commands.onComboboxChange,
       commands.getToggleState,
       commands.getComboboxState,
+      commands.getBadgeState,
       splitLastUsed,
       setSplitLastUsed,
     ],
