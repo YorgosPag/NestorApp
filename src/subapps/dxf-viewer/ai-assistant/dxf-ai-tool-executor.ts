@@ -34,6 +34,8 @@ import type { Entity, LineEntity, CircleEntity, RectangleEntity, PolylineEntity,
 import { generateEntityId } from '../systems/entity-creation/utils';
 import { DXF_AI_DEFAULTS, DXF_AI_LIMITS } from '../config/ai-assistant-config';
 import { EventBus } from '../systems/events';
+// ADR-358 Phase 9D-5a: id-first reader SSoT (LayerStore lookup + legacy name fallback).
+import { resolveEntityLayerName } from '../stores/LayerStore';
 
 // ============================================================================
 // ENTITY BUILDERS
@@ -199,7 +201,8 @@ function executeQuery(
     filtered = filtered.filter(e => e.type === args.type);
   }
   if (args.layer) {
-    filtered = filtered.filter(e => e.layer === args.layer);
+    // ADR-358 Phase 9D-5a: id-first resolution via LayerStore (covers post-rename stale `.layer` names).
+    filtered = filtered.filter(e => resolveEntityLayerName(e as { layerId?: string; layer?: string }) === args.layer);
   }
 
   if (filtered.length === 0) {
