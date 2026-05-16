@@ -9,7 +9,7 @@ import type {
 import type { RibbonTextEditorBridge } from './useRibbonTextEditorBridge';
 import type { RibbonArrayBridge } from './useRibbonArrayBridge';
 import type { RibbonStairBridge } from './useRibbonStairBridge';
-import { isStairBadgeKey } from './useRibbonStairBridge';
+import { isStairBadgeKey, isStairPanelVisibilityKey } from './useRibbonStairBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
 
@@ -88,6 +88,17 @@ export function useRibbonCommands({
     [stairBridge],
   );
 
+  // ADR-358 Phase 7b2b-β Stream F — Only the stair bridge owns visibility
+  // keys today. Future bridges add their own owned set + branch here.
+  // Default `true` for unowned keys = panel visible (no breaking change).
+  const getPanelVisibility = React.useCallback(
+    (visibilityKey: string): boolean => {
+      if (isStairPanelVisibilityKey(visibilityKey)) return stairBridge.getPanelVisibility(visibilityKey);
+      return true;
+    },
+    [stairBridge],
+  );
+
   return React.useMemo(
     () => ({
       onToolChange: handleToolChange,
@@ -98,6 +109,7 @@ export function useRibbonCommands({
       getToggleState,
       getComboboxState,
       getBadgeState,
+      getPanelVisibility,
     }),
     [
       handleToolChange,
@@ -108,6 +120,7 @@ export function useRibbonCommands({
       getToggleState,
       getComboboxState,
       getBadgeState,
+      getPanelVisibility,
     ],
   );
 }
