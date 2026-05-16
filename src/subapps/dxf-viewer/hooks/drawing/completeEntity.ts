@@ -200,6 +200,8 @@ export function completeEntity(
       existingId,
       // ADR-358 Phase 9D-3: id-first name via LayerStore, fallback to legacy `.layer`
       layer: resolveEntityLayerName(styledEntity as { layerId?: string; layer?: string }),
+      // ADR-358 Phase 9D-5a: stable `layerId` forward — CreateEntityCommand prefers this over `layer` name lookup.
+      layerId: typeof styledEntity.layerId === 'string' ? styledEntity.layerId : undefined,
       color: typeof styledEntity.color === 'string' ? styledEntity.color : undefined,
       lineweight: typeof styledEntity.lineweight === 'number' ? styledEntity.lineweight : undefined,
       opacity: typeof styledEntity.opacity === 'number' ? styledEntity.opacity : undefined,
