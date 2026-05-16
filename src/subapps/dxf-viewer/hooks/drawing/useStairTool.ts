@@ -26,6 +26,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { StairEntity } from '../../types/stair';
 import { stairStatusStore } from '../../statusbar/stair-status-store';
+import { stairPreviewStore } from '../../systems/stairs/stair-preview-store';
 import type { DynamicSubmitDetail } from '../../systems/dynamic-input/utils/events';
 import {
   buildDefaultStairParams,
@@ -209,10 +210,29 @@ export function useStairTool(options: UseStairToolOptions = {}): UseStairToolRes
     }
   }, [state.phase]);
 
-  // Separate unmount-only cleanup so the per-phase effect above does not
+  // ── ADR-358 Phase 8 (preview hotfix) — publish current basePoint+direction
+  // to `stairPreviewStore` so `useUnifiedDrawing.updatePreview` can render the
+  // ghost rubber-band / walkline preview. The stair tool's state machine is
+  // intentionally NOT routed through `machineContext.points`, so a dedicated
+  // SSoT store is the cleanest cross-hook bridge.
+  useEffect(() => {
+    if (state.phase === 'idle') {
+      stairPreviewStore.reset();
+      return;
+    }
+    stairPreviewStore.set({
+      basePoint: state.basePoint,
+      direction: state.direction,
+    });
+  }, [state.phase, state.basePoint, state.direction]);
+
+  // Separate unmount-only cleanup so the per-phase effects above do not
   // emit a transient `null` between phase transitions.
   useEffect(() => {
-    return () => { stairStatusStore.set(null); };
+    return () => {
+      stairStatusStore.set(null);
+      stairPreviewStore.reset();
+    };
   }, []);
 
   // ADR-358 Phase 7b2b-β Stream E — listen for `commit-stair` events emitted
