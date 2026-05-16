@@ -3039,9 +3039,9 @@
     },
     "dxf-layer-parser": {
       "ssotFile": "src/subapps/dxf-viewer/utils/dxf-layer-table-parser.ts",
-      "description": "ADR-358 §5.2 Phase 3A: the DXF LAYER table is parsed by a single entry point (`parseLayerTable()` in `dxf-layer-table-parser.ts`) with a mandatory LTYPE pre-pass (`parseLinetypeTable()` in `dxf-linetype-table-parser.ts`). Inline use of the Nestor XDATA AppId literals (AcCmTransparency, NestorAec, NestorLayerMeta, NestorBimCategory, NestorVpOverride) outside the parser + writer creates duplicate XDATA handling that breaks the §G15 round-trip guarantee. Zero-tolerance baseline — no legacy use exists.",
+      "description": "ADR-358 §5.2 Phase 3A: the DXF LAYER table is parsed by a single entry point (`parseLayerTable()` in `dxf-layer-table-parser.ts`) with a mandatory LTYPE pre-pass (`parseLinetypeTable()` in `dxf-linetype-table-parser.ts`). Inline use of the Nestor XDATA AppId literals (AcCmTransparency, NestorAec, NestorLayerMeta, NestorLayerId, NestorBimCategory, NestorVpOverride) outside the parser + writer creates duplicate XDATA handling that breaks the §G15 round-trip guarantee. Zero-tolerance baseline — no legacy use exists. Phase 9C v2.13: added NestorLayerId for stable enterprise-id round-trip.",
       "forbiddenPatterns": [
-        "['\\\"](AcCmTransparency|NestorAec|NestorLayerMeta|NestorBimCategory|NestorVpOverride)['\\\"]"
+        "['\\\"](AcCmTransparency|NestorAec|NestorLayerMeta|NestorLayerId|NestorBimCategory|NestorVpOverride)['\\\"]"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/utils/dxf-layer-table-parser.ts",
