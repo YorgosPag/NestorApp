@@ -44,6 +44,8 @@ import { useCallback, useMemo, useRef } from 'react';
 import { isNonEmptyString } from '@/lib/type-guards';
 import { useSelection } from '../systems/selection';
 import { useLevels } from '../systems/levels';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
+import { resolveEntityLayerName } from '../stores/LayerStore';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
@@ -242,7 +244,10 @@ export function useEnhancedSelection(): UseEnhancedSelectionReturn {
         .filter(entity => {
           if (!hasLayerInfo(entity)) return false;
 
-          return entity.layer === layerId;
+          // ADR-358 Phase 9D-3: id-first match (LayerStore lookup) + legacy name fallback.
+          // `layerId` param here is historically a layer NAME (pre-9C terminology, kept
+          // for callsite compatibility). Compare via resolveEntityLayerName.
+          return resolveEntityLayerName(entity) === layerId;
         })
         .map(entity => (entity as EntityWithLayer).id);
 
