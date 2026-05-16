@@ -20,6 +20,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { Property } from '@/types/property-viewer';
+import { dequal } from 'dequal';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('SharedPropertiesProvider');
@@ -63,6 +64,13 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
   // 🏢 ENTERPRISE: Lazy activation flag
   const [activated, setActivated] = useState(false);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  // ADR-361 (EXTENDED): Equality guard for filtered properties/floors.
+  // Firestore equality guard compares FULL documents (including deleted).
+  // But callback filters deleted → two identical filtered results can have
+  // different full docs. Without guard here, unnecessary setState → loop.
+  const lastFilteredPropertiesRef = useRef<Property[] | null>(null);
+  const lastFilteredFloorsRef = useRef<Floor[] | null>(null);
 
   const forceDataRefresh = useCallback(() => {
     setRefreshKey(prev => prev + 1);
@@ -128,6 +136,18 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
         );
 
         if (propertiesData.length > 0) {
+          // ADR-361 (EXTENDED): Equality guard for filtered results.
+          // Firestore guard compares FULL docs (incl. deleted), but we filter
+          // → two identical filtered results can differ in full docs.
+          // Without guard here, unnecessary setState triggers loop.
+          if (dequal(lastFilteredPropertiesRef.current, propertiesData)) {
+            // Properties unchanged after filtering — skip setState
+            setError(null);
+            setIsLoading(false);
+            return;
+          }
+
+          lastFilteredPropertiesRef.current = propertiesData;
           setPropertiesState(propertiesData);
 
           const floorsMap = new Map<string, Floor>();
@@ -148,13 +168,28 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
           });
 
           const floorsArray = Array.from(floorsMap.values()).sort((a, b) => a.level - b.level);
+
+          if (dequal(lastFilteredFloorsRef.current, floorsArray)) {
+            // Floors unchanged after grouping — skip setState
+            setError(null);
+            setIsLoading(false);
+            return;
+          }
+
+          lastFilteredFloorsRef.current = floorsArray;
           setFloors(floorsArray);
 
           setError(null);
         } else {
           logger.warn('No properties found in Firestore snapshot');
-          setPropertiesState([]);
-          setFloors([]);
+          if (!dequal(lastFilteredPropertiesRef.current, [])) {
+            lastFilteredPropertiesRef.current = [];
+            setPropertiesState([]);
+          }
+          if (!dequal(lastFilteredFloorsRef.current, [])) {
+            lastFilteredFloorsRef.current = [];
+            setFloors([]);
+          }
         }
 
         setIsLoading(false);
