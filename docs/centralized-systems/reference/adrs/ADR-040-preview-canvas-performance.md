@@ -71,7 +71,32 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
-### 2026-05-16 (Phase XIX) — RENDER-LOOP RESOLVED: ribbon bridges return object literal
+### 2026-05-16 (Phase XX) — Render-loop persists; instrumentation deployed
+
+**Status**: Phase XIX claim "RESOLVED" **SMENTITA**. Giorgio conferma: dopo i fix XV-XIX, in idle puro lo zero-input loop `PERF_LINE DxfCanvasSubscriber.commit` + `PERF_LINE CanvasSection.commit` continua a fire a ~1-2Hz. I 5 fix XV-XIX sono validi defensive layers GOL-level — **non rollback** — ma **nessuno** è il root cause.
+
+**Diagnostic gap identificato**: il profile dump v5 di Phase XIX (`profiling-data.16-05-2026.22-39-14.json`) probabilmente cattura il bootstrap burst, non lo steady-state. Evidenza: `DxfCanvasSubscriber` appare in 3/28 commit nel profile ma in **ogni** commit nei runtime logs PERF_LINE. Mismatch profile↔logs = profile non rappresenta steady-state.
+
+**Nuova strategia (instrumentation, no guessing)**:
+
+1. **`useRenderTrace(label, snapshot)`** già esistente in `src/subapps/dxf-viewer/debug/render-loop-trace.ts` (SSoT). Logga per-render quale chiave dello snapshot ha cambiato ref vs precedente, distinguendo `content-changed` da `ref-only` (pure ref churn).
+2. **`installSetStateTracer()`** monkey-patcha `React.useState` / `useReducer` / `useSyncExternalStore` — logga `[SETSTATE-CHURN]` con stack-trace quando un dispatch produce `prev !== next` ma `JSON.stringify(prev) === JSON.stringify(next)` (= identical content, new ref = il sintomo del root cause).
+
+**Activation**: `localStorage.setItem('TRACE_RENDER_LOOP','1')` + hard reload. Zero overhead in prod (flag-gated).
+
+**Instrumentation deployed**:
+- `CanvasSection.tsx` — `installSetStateTracer()` top-level (idempotent) + `useRenderTrace('CanvasSection', {…snapshot ~40 hook outputs})` prima del return.
+- `canvas-layer-stack-leaves.tsx` — `useRenderTrace('DxfCanvasSubscriber', {…props})` dentro il componente memo.
+
+**Atteso console output in idle**:
+- `[CanvasSection] #N content-changed: (NONE — pure ref churn!) | ref-only: <hookX>` → identifica hook colpevole.
+- `[SETSTATE-CHURN useSyncExternalStore] new ref, same content. prev=… next=…\n<stack>` → setter colpevole + path al store.
+
+**Next step**: Giorgio attiva flag, idle 30s, raccoglie logs, ritorna output. Da lì root cause è deterministico.
+
+---
+
+### 2026-05-16 (Phase XIX) — ⚠️ RESOLUTION UNCONFIRMED (vedi Phase XX): ribbon bridges return object literal
 
 **Diagnostic**: React DevTools Profiler v5 export (`profiling-data.16-05-2026.22-39-14.json`, 7.3s / 28 commits) + Python decoder (`scripts/analyze-profile5.py`). Strategy: count per-fiber re-render in `fiberActualDurations` with `duration>0`. Components in ≥50% commits = loop suspects.
 

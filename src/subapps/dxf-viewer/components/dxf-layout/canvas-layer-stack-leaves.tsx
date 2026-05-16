@@ -16,6 +16,7 @@
 
 import React, { useMemo, useSyncExternalStore, useEffect } from 'react';
 import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
+import { useRenderTrace } from '../../debug/render-loop-trace';
 import { useHoveredOverlay } from '../../systems/hover/useHover';
 import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
@@ -204,6 +205,16 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   useEffect(() => {
     if (PERF_LINE_PROFILE) perfEnd('DxfCanvasSubscriber.commit', _perfRenderStart);
   });
+  // ADR-040 Phase XX — render diff trace.
+  useRenderTrace('DxfCanvasSubscriber', {
+    dxfCanvasRef, scene, transform, viewport, activeTool, overlayMode, colorLayers,
+    renderOptionsBase, crosshairSettings, gridSettings, rulerSettings,
+    selectedGuideIds, constructionPoints, panelHighlightPointId,
+    guideWorkflowComputedParams, isGripDragging, entityPickingActive,
+    onLayerSelected, onMultiLayerSelected, onEntitiesSelected, onUnifiedMarqueeResult,
+    onHoverEntity, onHoverOverlay, onEntitySelect, onGripMouseDown, onGripMouseUp,
+    onContextMenu, onCanvasClick, onTransformChange, onWheelZoom, onMouseMove,
+  });
   // 🚀 PERF: Subscribe to guide store DIRECTLY here (micro-leaf pattern, ADR-040).
   // CanvasSection uses useGuideActions() (no subscription) → guide drag at 60fps
   // no longer re-renders CanvasSection. Only this leaf re-renders on guide changes.
@@ -325,7 +336,6 @@ export const MovePreviewMount = React.memo(function MovePreviewMount(
   useMovePreview(props);
   return null;
 });
-
 // ============================================================================
 // GRIP DRAG PREVIEW MOUNT (ADR-049 SSOT — paired with Move tool)
 // ============================================================================
@@ -336,7 +346,6 @@ interface GripDragPreviewMountProps {
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
-
 // --- MIRROR PREVIEW MOUNT ---
 interface MirrorPreviewMountProps {
   phase: MirrorPhase;
@@ -348,14 +357,12 @@ interface MirrorPreviewMountProps {
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
-
 export const MirrorPreviewMount = React.memo(function MirrorPreviewMount(
   props: MirrorPreviewMountProps,
 ) {
   useMirrorPreview(props);
   return null;
 });
-
 // --- SCALE PREVIEW MOUNT ---
 interface ScalePreviewMountProps {
   levelManager: Parameters<typeof useScalePreview>[0]['levelManager'];
@@ -363,14 +370,12 @@ interface ScalePreviewMountProps {
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
-
 export const ScalePreviewMount = React.memo(function ScalePreviewMount(
   props: ScalePreviewMountProps,
 ) {
   useScalePreview(props);
   return null;
 });
-
 // ============================================================================
 // STRETCH PREVIEW MOUNT (ADR-349 Phase 1c-B1)
 // ============================================================================
@@ -380,7 +385,6 @@ interface StretchPreviewMountProps {
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
-
 /**
  * Mounts useStretchPreview. No JSX — draws to PreviewCanvas via imperative API.
  * Subscribes to StretchToolStore + useCursorWorldPosition internally.
@@ -392,7 +396,6 @@ export const StretchPreviewMount = React.memo(function StretchPreviewMount(
   useStretchPreview(props);
   return null;
 });
-
 /**
  * Mounts useGripGhostPreview. No JSX — draws to PreviewCanvas via imperative
  * API. Renders a blue translucent ghost of the entity being grip-dragged
@@ -407,11 +410,9 @@ export const GripDragPreviewMount = React.memo(function GripDragPreviewMount(
   useGripGhostPreview(props);
   return null;
 });
-
 // ============================================================================
 // PREVIEW CANVAS MOUNTS — composite of the 3 zero-jsx preview mounts
 // ============================================================================
-
 interface PreviewCanvasMountsProps {
   rotation: Omit<RotationPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   move: Omit<MovePreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
@@ -427,7 +428,6 @@ interface PreviewCanvasMountsProps {
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
-
 /**
  * Renders the 3 PreviewCanvas mounts (Rotation / Move / GripDrag) sharing
  * the same `getCanvas` / `getViewportElement` getters. Keeps the shell
