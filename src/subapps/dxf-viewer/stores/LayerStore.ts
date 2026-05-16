@@ -4,12 +4,12 @@
  * Mutable singleton micro-leaf (ADR-040 pattern: useSyncExternalStore-compatible).
  * Owns `SceneLayer[]` (project-wide) + `currentLayerId` (formerly in `overlay-manager`).
  *
- * Phase 1 scope (foundation only):
- *   - Store contract + subscriptions.
- *   - No persistence yet (Phase 9 wires Firestore + localStorage).
- *   - No render-pipeline wire-up (Phase 4 ByLayer/ByBlock).
- *   - `overlay-manager.currentLayerId` migration happens in Phase 5 bridge — until then the
- *     two coexist; LayerStore is the SSoT going forward.
+ * Scope:
+ *   - Store contract + subscriptions (Phase 1).
+ *   - Render-pipeline wire-up live (Phase 4-6 ByLayer/ByBlock).
+ *   - `recentLayerIds` FIFO slice (Phase 7 §5.5.bis Q8). Persistence is owned
+ *     by `ui/components/layer-picker/layer-picker-persistence.ts` — the store
+ *     stays a pure micro-leaf with no I/O dependencies.
  *
  * Pre-commit ratchet `unified-layer-store` (in `.ssot-registry.json`) blocks direct
  * `RegionLayerObject` access and `overlay-manager.coreState.layers` reads outside
@@ -25,16 +25,27 @@ interface LayerStoreSnapshot {
   readonly layers: ReadonlyArray<SceneLayer>;
   /** Current layer for new-entity creation. Null until first scene load. */
   readonly currentLayerId: string | null;
+  /**
+   * Recent layer ids (Q8 §5.5.bis). FIFO sliding window, most-recent first.
+   * Max length `RECENT_LAYERS_MAX`. Persistence is project+user-scoped, owned
+   * by `ui/components/layer-picker/layer-picker-persistence.ts`.
+   */
+  readonly recentLayerIds: ReadonlyArray<string>;
 }
+
+/** FIFO cap for recent-layer tracking — AutoCAD/Revit parity. */
+export const RECENT_LAYERS_MAX = 10;
 
 const EMPTY_SNAPSHOT: LayerStoreSnapshot = Object.freeze({
   layers: Object.freeze([]) as ReadonlyArray<SceneLayer>,
   currentLayerId: null,
+  recentLayerIds: Object.freeze([]) as ReadonlyArray<string>,
 });
 
 let layersById: Map<string, SceneLayer> = new Map();
 let layerOrder: string[] = [];
 let currentLayerId: string | null = null;
+let recentLayerIds: string[] = [];
 let cachedSnapshot: LayerStoreSnapshot = EMPTY_SNAPSHOT;
 
 const subscribers = new Set<Listener>();
@@ -52,6 +63,7 @@ function rebuildSnapshot(): void {
   cachedSnapshot = Object.freeze({
     layers: Object.freeze(list) as ReadonlyArray<SceneLayer>,
     currentLayerId,
+    recentLayerIds: Object.freeze(recentLayerIds.slice()) as ReadonlyArray<string>,
   });
 }
 
@@ -88,6 +100,10 @@ export function getCurrentLayerId(): string | null {
   return currentLayerId;
 }
 
+export function getRecentLayerIds(): ReadonlyArray<string> {
+  return cachedSnapshot.recentLayerIds;
+}
+
 // ─── Mutations ───────────────────────────────────────────────────────────────
 
 /** Replace the entire layer set (DXF scene load, project switch). */
@@ -103,6 +119,7 @@ export function setLayers(next: ReadonlyArray<SceneLayer>): void {
   if (currentLayerId && !layersById.has(currentLayerId)) {
     currentLayerId = null;
   }
+  recentLayerIds = recentLayerIds.filter((id) => layersById.has(id));
   rebuildSnapshot();
   notify();
 }
@@ -122,6 +139,7 @@ export function removeLayer(idOrName: string): void {
   layersById.delete(idOrName);
   layerOrder = layerOrder.filter((k) => k !== idOrName);
   if (currentLayerId === idOrName) currentLayerId = null;
+  recentLayerIds = recentLayerIds.filter((id) => id !== idOrName);
   rebuildSnapshot();
   notify();
 }
@@ -131,8 +149,56 @@ export function setCurrentLayerId(id: string | null): void {
   if (id === currentLayerId) return;
   if (id !== null && !layersById.has(id)) return;
   currentLayerId = id;
+  if (id !== null) pushRecentInternal(id);
   rebuildSnapshot();
   notify();
+}
+
+/**
+ * Push a layer id to the most-recent slot. FIFO cap = RECENT_LAYERS_MAX.
+ * Idempotent on duplicate top entry. Use when bridging external state
+ * (e.g. AdminLayerManager "Set as current") without going through
+ * `setCurrentLayerId`. Always validates against known layers.
+ */
+export function pushRecentLayer(id: string): void {
+  if (!layersById.has(id)) return;
+  if (recentLayerIds[0] === id) return;
+  pushRecentInternal(id);
+  rebuildSnapshot();
+  notify();
+}
+
+/**
+ * Replace the recent-layers list (persistence hydration). Filters unknown
+ * ids and trims to cap. Idempotent against current state.
+ */
+export function setRecentLayerIds(ids: ReadonlyArray<string>): void {
+  const next: string[] = [];
+  for (const id of ids) {
+    if (next.length >= RECENT_LAYERS_MAX) break;
+    if (!layersById.has(id)) continue;
+    if (next.includes(id)) continue;
+    next.push(id);
+  }
+  if (sameOrder(next, recentLayerIds)) return;
+  recentLayerIds = next;
+  rebuildSnapshot();
+  notify();
+}
+
+function pushRecentInternal(id: string): void {
+  const filtered = recentLayerIds.filter((existing) => existing !== id);
+  filtered.unshift(id);
+  if (filtered.length > RECENT_LAYERS_MAX) filtered.length = RECENT_LAYERS_MAX;
+  recentLayerIds = filtered;
+}
+
+function sameOrder(a: ReadonlyArray<string>, b: ReadonlyArray<string>): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }
 
 // ─── Test-only reset (NOT exported from index — direct import only) ──────────
@@ -142,6 +208,7 @@ export function __resetLayerStoreForTesting(): void {
   layersById = new Map();
   layerOrder = [];
   currentLayerId = null;
+  recentLayerIds = [];
   cachedSnapshot = EMPTY_SNAPSHOT;
   subscribers.clear();
 }

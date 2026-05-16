@@ -10,6 +10,7 @@ import { useCadToggles } from '../hooks/common/useCadToggles';
 import type { CadToggle } from '../hooks/common/useCadToggles';
 import { useSnapContext } from '../snapping/context/SnapContext';
 import { ProSnapToolbar } from '../ui/components/ProSnapToolbar';
+import { CurrentLayerPicker } from '../ui/components/layer-picker/CurrentLayerPicker';
 import type { ExtendedSnapType } from '../snapping/extended-types';
 
 export default function CadStatusBar() {
@@ -71,7 +72,8 @@ export default function CadStatusBar() {
               />
             )
           )}
-          <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+          <CurrentLayerPicker variant="status-bar" className="ml-auto" />
+          <span className="shrink-0 text-xs text-muted-foreground">
             {t('cadDock.statusBar.modeInfo')}
           </span>
         </div>

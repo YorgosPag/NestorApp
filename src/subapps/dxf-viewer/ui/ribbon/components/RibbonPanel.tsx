@@ -19,6 +19,7 @@ import { RibbonFontFamilyWidget } from './RibbonFontFamilyWidget';
 import { RibbonLineSpacingWidget } from './RibbonLineSpacingWidget';
 import { RibbonAnnotationScaleWidget } from './RibbonAnnotationScaleWidget';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
+import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
 
 interface RibbonPanelProps {
   panel: RibbonPanelDef;
@@ -51,6 +52,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'insert-tokens') {
       return <RibbonInsertTokenWidget key="insert-tokens-widget" />;
+    }
+    if (button.widgetId === 'current-layer-picker') {
+      return <CurrentLayerPicker key="current-layer-picker-widget" variant="ribbon" />;
     }
     return null;
   }

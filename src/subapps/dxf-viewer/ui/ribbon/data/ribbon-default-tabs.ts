@@ -6,6 +6,7 @@
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { HOME_DRAW_PANEL } from './home-tab-draw';
+import { HOME_LAYERS_PANEL } from './home-tab-layers';
 import { HOME_MODIFY_PANEL, HOME_MODIFY_EDIT_PANEL } from './home-tab-modify';
 import { VIEW_NAVIGATE_PANEL } from './view-tab-navigate';
 import { VIEW_DISPLAY_PANEL } from './view-tab-display';
@@ -34,6 +35,7 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
     labelKey: 'ribbon.tabs.home',
     panels: [
       HOME_HISTORY_PANEL,
+      HOME_LAYERS_PANEL,
       HOME_DRAW_PANEL,
       HOME_MODIFY_PANEL,
       HOME_MODIFY_EDIT_PANEL,

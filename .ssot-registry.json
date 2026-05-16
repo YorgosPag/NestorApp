@@ -3101,6 +3101,28 @@
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",
       "tier": 3
+    },
+    "current-layer-picker": {
+      "ssotFile": "src/subapps/dxf-viewer/ui/components/layer-picker/CurrentLayerPicker.tsx",
+      "description": "ADR-358 §5.5.bis Q8 Phase 7: a single `CurrentLayerPicker` component with two visual variants ('status-bar', 'ribbon') is the only UI entry point for changing `LayerStore.currentLayerId`. Direct calls to `setCurrentLayerId` / `pushRecentLayer` / `setRecentLayerIds` outside the LayerStore SSoT and the picker state hook fragment the user-initiated change flow (toast + recent FIFO + per-project/per-level persistence). Component imports outside the two ratcheted host mount points (CadStatusBar status-bar variant, RibbonPanel ribbon variant) duplicate the picker UI. Zero-tolerance baseline at landing.",
+      "forbiddenPatterns": [
+        "\\b(setCurrentLayerId|pushRecentLayer|setRecentLayerIds)\\s*\\(",
+        "\\bCurrentLayerPicker\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/stores/LayerStore.ts",
+        "src/subapps/dxf-viewer/stores/__tests__/LayerStore.test.ts",
+        "src/subapps/dxf-viewer/stores/__tests__/LayerStore.recent.test.ts",
+        "src/subapps/dxf-viewer/ui/components/layer-picker/CurrentLayerPicker.tsx",
+        "src/subapps/dxf-viewer/ui/components/layer-picker/CurrentLayerPickerPopover.tsx",
+        "src/subapps/dxf-viewer/ui/components/layer-picker/useCurrentLayerPickerState.ts",
+        "src/subapps/dxf-viewer/ui/components/layer-picker/__tests__/useCurrentLayerPickerState.test.tsx",
+        "src/subapps/dxf-viewer/statusbar/CadStatusBar.tsx",
+        "src/subapps/dxf-viewer/ui/ribbon/components/RibbonPanel.tsx"
+      ],
+      "addedDate": "2026-05-16",
+      "addedByAdr": "ADR-358",
+      "tier": 3
     }
   }
 }
