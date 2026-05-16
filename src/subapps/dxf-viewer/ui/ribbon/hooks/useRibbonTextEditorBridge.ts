@@ -76,5 +76,9 @@ export function useRibbonTextEditorBridge(): RibbonTextEditorBridge {
     [sources],
   );
 
-  return { onToggle, onComboboxChange, getToggleState, getComboboxState };
+  // ADR-040 Phase XIX: memoize return so RibbonCommandProvider deps stay stable.
+  return useMemo(
+    () => ({ onToggle, onComboboxChange, getToggleState, getComboboxState }),
+    [onToggle, onComboboxChange, getToggleState, getComboboxState],
+  );
 }

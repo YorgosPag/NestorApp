@@ -23,7 +23,7 @@
  * composes with the text-editor + array bridges in `useRibbonCommands`.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -205,7 +205,13 @@ export function useRibbonStairBridge(
     return false;
   }, [resolveStair]);
 
-  return { onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState };
+  // ADR-040 Phase XIX: memoize return so RibbonCommandProvider deps stay stable.
+  // Non-memoized object literal here caused 14/28 commit re-render cascade in
+  // RibbonRoot + RibbonCommandProvider + 30+ button consumers (profile 2026-05-16).
+  return useMemo(
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState],
+  );
 }
 
 /** ADR-358 Phase 7b1 — type guard used by `useRibbonCommands` composer. */

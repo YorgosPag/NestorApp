@@ -20,7 +20,7 @@
  * `useRibbonCommands`.
  */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateArrayParamsCommand } from '../../../core/commands/entity-commands/UpdateArrayParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -252,7 +252,11 @@ export function useRibbonArrayBridge(
     [resolveArray, dispatchParams],
   );
 
-  return { onComboboxChange, getComboboxState, onToggle, getToggleState };
+  // ADR-040 Phase XIX: memoize return so RibbonCommandProvider deps stay stable.
+  return useMemo(
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState],
+  );
 }
 
 // ── Path helpers ──────────────────────────────────────────────────────────────
