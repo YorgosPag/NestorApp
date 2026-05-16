@@ -51,6 +51,10 @@ import { useLineStyles } from '../../settings-provider';
 import { completeEntity } from './completeEntity';
 import { createEntityFromTool as createEntityFromToolPure, isEntityComplete } from './drawing-entity-builders';
 import { generatePreviewEntity, applyPreviewStyling, createPartialPreview } from './drawing-preview-generator';
+// ADR-358 Phase 8 preview hotfix — read stair tool state (basePoint+direction)
+// from the SSoT store so the rubber-band preview renders during 2-click placement.
+import { stairPreviewStore } from '../../systems/stairs/stair-preview-store';
+import { toolStateStore } from '../../stores/ToolStateStore';
 import { applyPreviewSettingsToEntity } from './apply-preview-settings';
 
 // ─── Module-level helpers ───────────────────────────────────────────────────
@@ -223,17 +227,44 @@ export function useUnifiedDrawing() {
   }, [canAddPoint, machineAddPoint, machineContext.points, machineContext.toolType, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, machineComplete, machineReset, machineDeselectTool]);
 
   const updatePreview = useCallback((mousePoint: Point2D, _transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
-    const currentTool = (machineContext.toolType as DrawingTool) || 'select';
-    if (!currentTool || currentTool === 'select') return;
+    const machineTool = (machineContext.toolType as DrawingTool) || 'select';
+    // ADR-358 Phase 8 preview hotfix — stair tool runs its own state machine
+    // outside `machineContext.points`. `useToolbarState.handleToolChange` does
+    // NOT route `'stair'` through `onDrawingStart`, so `machineTool` stays at
+    // `'select'` even when the stair tool is active. Source the authoritative
+    // active tool from the SSoT `toolStateStore` so the preview surfaces.
+    const isStair = toolStateStore.get().activeTool === 'stair';
+    const currentTool: DrawingTool = isStair ? 'stair' : machineTool;
+    if (!isStair && (!machineTool || machineTool === 'select')) return;
 
     // machineMoveCursor intentionally removed — it updated cursorPosition in machine context
     // (never read by any component) and notified React useSyncExternalStore subscribers on
     // every mousemove → 80-102ms commits on CanvasSection + 8 children during drawing.
     // Preview entity is generated from mousePoint directly (no machine cursor read needed).
-    const tempPoints = machineContext.points;
+    let tempPoints: readonly Point2D[] = machineContext.points;
+    if (isStair) {
+      // Reconstruct the tuple consumed by `generateStairPreview`:
+      //   [] → basePoint marker, [base] → ghost direction line, [base, dir] → walkline.
+      const previewState = stairPreviewStore.get();
+      if (previewState.basePoint && previewState.direction !== null) {
+        const rad = previewState.direction * Math.PI / 180;
+        tempPoints = [
+          previewState.basePoint,
+          { x: previewState.basePoint.x + Math.cos(rad), y: previewState.basePoint.y + Math.sin(rad) },
+        ];
+      } else if (previewState.basePoint) {
+        tempPoints = [previewState.basePoint];
+      } else {
+        tempPoints = [];
+      }
+    }
 
     const previewEntity = generatePreviewEntity(
-      currentTool, tempPoints, mousePoint, arcFlippedRef.current, createEntityFromTool
+      currentTool,
+      tempPoints,
+      mousePoint,
+      arcFlippedRef.current,
+      createEntityFromTool,
     );
     if (previewEntity) {
       applyPreviewStyling(
