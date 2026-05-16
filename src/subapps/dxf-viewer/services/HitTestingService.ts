@@ -108,6 +108,7 @@ export class HitTestingService {
         return {
           entityId: hit.data?.id || null, // ✅ ENTERPRISE FIX: Use data.id from SpatialQueryResult
           entityType: hit.data?.type || 'unknown', // ✅ Use data.type
+          // ADR-358 Phase 9D-5b-i: id-only resolver SSoT (HitTester.layer is already resolver-populated).
           layer: hit.layer,
           distance: hit.distance
         };
@@ -231,6 +232,24 @@ export class HitTestingService {
           point2: angleEntity.point2,
           angle: angleEntity.angle
         };
+      }
+      // ADR-358 Phase 8 — StairEntity passthrough so hit-testing can index it.
+      // The `geometry.bbox` field powers spatial broad-phase via BoundsCalculator
+      // (Bounds.ts `case 'stair'`). Without this branch the entity fell through
+      // to the `never` default and was silently dropped from the index.
+      case 'stair': {
+        const stairEntity = entity as import('../types/stair').StairEntity;
+        return {
+          ...baseModel,
+          type: 'stair',
+          // Pass-through fields consumed by StairRenderer + grip pipeline.
+          // We cast to EntityModel because the canvas Entity union does not
+          // (yet) carry the stair discriminant. TODO Phase 9: widen Entity.
+          kind: stairEntity.kind,
+          params: stairEntity.params,
+          geometry: stairEntity.geometry,
+          validation: stairEntity.validation,
+        } as unknown as EntityModel;
       }
       default: {
         const exhaustiveCheck: never = entity;
