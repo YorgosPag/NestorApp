@@ -42,7 +42,7 @@ import { UI_COLORS } from '../../config/color-config';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 
-// ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+// ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
 const defaultLayerId = (): string | undefined => getLayer(DXF_DEFAULT_LAYER)?.id;
 
 // ─── Callback types for dependency injection ───────────────────────────────
@@ -63,7 +63,6 @@ function makeRubberBandPolyline(id: string, vertices: Point2D[]): ExtendedPolyli
     vertices,
     closed: false,
     visible: true,
-    layer: '0',
     layerId: defaultLayerId(),
     color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
     lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
@@ -130,7 +129,6 @@ export function generatePreviewEntity(
         position: cursorPoint,
         size: 4,
         visible: true,
-        layer: '0',
         layerId: defaultLayerId(),
         preview: true,
         showPreviewGrips: true,
@@ -158,7 +156,6 @@ export function generatePreviewEntity(
           center: circleResult.center,
           radius: circleResult.radius,
           visible: true,
-          layer: '0',
           layerId: defaultLayerId(),
           preview: true,
           showPreviewGrips: true,
@@ -183,7 +180,6 @@ export function generatePreviewEntity(
           center: circleResult.center,
           radius: circleResult.radius,
           visible: true,
-          layer: '0',
           layerId: defaultLayerId(),
           preview: true,
           showPreviewGrips: true,
@@ -207,7 +203,6 @@ export function generatePreviewEntity(
           center: circleResult.center,
           radius: circleResult.radius,
           visible: true,
-          layer: '0',
           layerId: defaultLayerId(),
           preview: true,
           showPreviewGrips: true,
@@ -231,7 +226,6 @@ export function generatePreviewEntity(
         center: circleResult.center,
         radius: circleResult.radius,
         visible: true,
-        layer: '0',
         layerId: defaultLayerId(),
         preview: true,
         showPreviewGrips: true,
@@ -302,7 +296,6 @@ export function generatePreviewEntity(
           startAngle: arcResult.startAngle,
           endAngle: arcResult.endAngle,
           visible: true,
-          layer: '0',
           layerId: defaultLayerId(),
           preview: true,
           showPreviewGrips: true,
@@ -353,7 +346,6 @@ function generateStairPreview(
       position: cursorPoint,
       size: 6,
       visible: true,
-      layer: '0',
       layerId: defaultLayerId(),
       preview: true,
       showPreviewGrips: true,
@@ -372,7 +364,6 @@ function makeStairGhost(id: string, vertices: readonly Point2D[]): ExtendedPolyl
     vertices: [...vertices],
     closed: false,
     visible: true,
-    layer: '0',
     layerId: defaultLayerId(),
     color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
     lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
@@ -397,7 +388,6 @@ function makeStairWalklinePreview(
     vertices,
     closed: false,
     visible: true,
-    layer: '0',
     layerId: defaultLayerId(),
     color: UI_COLORS.BRIGHT_GREEN,
     lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
