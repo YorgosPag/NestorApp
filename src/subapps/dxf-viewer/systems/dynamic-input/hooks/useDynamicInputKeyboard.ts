@@ -16,7 +16,7 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction, RefObject, MutableRefObject } from 'react';
-import type { FieldValueSetters, FieldValues, FullFieldState, CoordinateFieldState, ManualInputState, Field } from '../types/common-interfaces';
+import type { FieldValueSetters, FieldValues, FullFieldState, CoordinateFieldState, ManualInputState, Field, StairField } from '../types/common-interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 // 🏢 ADR-098: Centralized Timing Constants
 import { INPUT_TIMING } from '../../../config/timing-config';
@@ -62,6 +62,19 @@ interface UseDynamicInputKeyboardArgs extends FieldValueSetters, FieldValues {
   radiusInputRef: RefObject<HTMLInputElement | null>;
   diameterInputRef: RefObject<HTMLInputElement | null>;
 
+  // ADR-358 Phase 7b2b-β Stream E — stair-specific values + setters + refs + active field.
+  riseValue: string;
+  treadValue: string;
+  widthValue: string;
+  setRiseValue: (v: string) => void;
+  setTreadValue: (v: string) => void;
+  setWidthValue: (v: string) => void;
+  activeStairField: StairField;
+  setActiveStairField: (f: StairField) => void;
+  riseInputRef: RefObject<HTMLInputElement | null>;
+  treadInputRef: RefObject<HTMLInputElement | null>;
+  widthInputRef: RefObject<HTMLInputElement | null>;
+
   // feedback
   CADFeedback: { onError: () => void; onInputConfirm: () => void };
 
@@ -96,6 +109,11 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
     resetForNextPointFirstPhase,
     firstClickPoint,
     setFirstClickPoint,
+    // ADR-358 Phase 7b2b-β Stream E
+    riseValue, treadValue, widthValue,
+    setRiseValue, setTreadValue, setWidthValue,
+    activeStairField, setActiveStairField,
+    riseInputRef, treadInputRef, widthInputRef,
   } = args;
 
   // 🏢 ENTERPRISE: Helper for focus with timeout
