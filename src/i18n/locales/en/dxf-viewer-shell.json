@@ -323,7 +323,8 @@
       "annotate": "Annotate",
       "settings": "Settings",
       "textEditor": "Text Editor",
-      "arrayEditor": "Array"
+      "arrayEditor": "Array",
+      "stairProperties": "Stair Properties"
     },
     "panels": {
       "draw": "Draw",
@@ -346,6 +347,10 @@
       "arraySpacing": "Spacing",
       "arrayOptions": "Options",
       "arrayActions": "Actions",
+      "stairStructure": "Structure",
+      "stairGeometry": "Geometry",
+      "stairMultiStory": "Multi-Story",
+      "stairActions": "Actions",
       "placeholder": "Coming soon",
       "history": "History",
       "guides": "Guides",
@@ -525,6 +530,17 @@
         "pathAlignItems": "Align",
         "pathReversed": "Reversed",
         "pathPickPath": "Pick Path"
+      },
+      "stairEditor": {
+        "structureType": "Structure Type",
+        "riserType": "Riser",
+        "rise": "Rise",
+        "tread": "Tread",
+        "width": "Width",
+        "stepCount": "Steps",
+        "storyCount": "Floors",
+        "storyHeight": "Story Height",
+        "close": "Close"
       },
       "measureAngle": "Angle",
       "measureAngleVariants": {

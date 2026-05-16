@@ -323,7 +323,8 @@
       "annotate": "Επισημείωση",
       "settings": "Ρυθμίσεις",
       "textEditor": "Επεξεργαστής Κειμένου",
-      "arrayEditor": "Πίνακας"
+      "arrayEditor": "Πίνακας",
+      "stairProperties": "Ιδιότητες Κλίμακας"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -346,6 +347,10 @@
       "arraySpacing": "Αποστάσεις",
       "arrayOptions": "Επιλογές",
       "arrayActions": "Ενέργειες",
+      "stairStructure": "Δομή",
+      "stairGeometry": "Γεωμετρία",
+      "stairMultiStory": "Πολυώροφα",
+      "stairActions": "Ενέργειες",
       "placeholder": "Σε φάση ανάπτυξης",
       "history": "Ιστορικό",
       "guides": "Οδηγοί",
@@ -525,6 +530,17 @@
         "pathAlignItems": "Στοίχιση",
         "pathReversed": "Αντίστροφα",
         "pathPickPath": "Επιλογή Διαδρομής"
+      },
+      "stairEditor": {
+        "structureType": "Τύπος Δομής",
+        "riserType": "Ριχτή",
+        "rise": "Ύψος Σκαλιού",
+        "tread": "Πάτημα",
+        "width": "Πλάτος",
+        "stepCount": "Πλήθος Σκαλιών",
+        "storyCount": "Αριθμός Ορόφων",
+        "storyHeight": "Ύψος Ορόφου",
+        "close": "Κλείσιμο"
       },
       "measureAngle": "Γωνία",
       "measureAngleVariants": {
