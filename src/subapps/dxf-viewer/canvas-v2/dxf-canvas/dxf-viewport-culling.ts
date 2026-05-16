@@ -97,6 +97,16 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
         maxY: Math.max(...ys),
       };
     }
+    case 'stair': {
+      // ADR-358 Phase 5b — project the StairGeometry 3D bbox to 2D plan bounds.
+      const bb = entity.stairEntity.geometry.bbox;
+      return {
+        minX: bb.min.x,
+        minY: bb.min.y,
+        maxX: bb.max.x,
+        maxY: bb.max.y,
+      };
+    }
   }
 }
 
