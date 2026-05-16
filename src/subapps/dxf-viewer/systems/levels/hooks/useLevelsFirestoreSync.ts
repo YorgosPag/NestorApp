@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { orderBy, doc, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '../../../../../lib/firebase';
 import { firestoreQueryService } from '@/services/firestore';
@@ -49,6 +49,14 @@ export function useLevelsFirestoreSync({
   onLevelChange,
   handleError,
 }: UseLevelsFirestoreSyncParams): void {
+  // ADR-040: read currentLevelId via ref inside the snapshot callback so it is
+  // NOT a subscription dep. Including it in the deps array tears down + rebuilds
+  // the Firestore onSnapshot on every level change, and the synchronous local-cache
+  // delivery on re-attach drives a self-reinforcing idle re-render loop (~3.8Hz)
+  // through CanvasSection. See ADR-040 changelog 2026-05-16.
+  const currentLevelIdRef = useRef(currentLevelId);
+  currentLevelIdRef.current = currentLevelId;
+
   useEffect(() => {
     if (!enableFirestore) return;
     if (!isSuperAdmin && !companyId) return;
@@ -63,7 +71,8 @@ export function useLevelsFirestoreSync({
 
           if (fetchedLevels.length > 0) {
             setLevels(fetchedLevels);
-            if (!currentLevelId || !fetchedLevels.some(l => l.id === currentLevelId)) {
+            const activeId = currentLevelIdRef.current;
+            if (!activeId || !fetchedLevels.some(l => l.id === activeId)) {
               const defaultLevel = fetchedLevels.find(l => l.isDefault) || fetchedLevels[0];
               setCurrentLevelId(defaultLevel.id);
               onLevelChange?.(defaultLevel.id);
@@ -97,5 +106,5 @@ export function useLevelsFirestoreSync({
     );
 
     return () => unsubscribe();
-  }, [enableFirestore, firestoreCollection, currentLevelId, companyId, creatorUid, isSuperAdmin, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
+  }, [enableFirestore, firestoreCollection, companyId, creatorUid, isSuperAdmin, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
 }

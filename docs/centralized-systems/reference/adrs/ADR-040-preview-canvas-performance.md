@@ -4,7 +4,7 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Updated** | 2026-05-12 |
+| **Last Updated** | 2026-05-16 |
 | **Category** | Drawing System |
 | **Canonical Location** | `canvas-v2/preview-canvas/` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -70,6 +70,29 @@ Mouse Event → DxfCanvas.onMouseMove
 ---
 
 ## Changelog
+
+### 2026-05-16: Fix idle re-render loop — `useLevelsFirestoreSync` subscription thrash
+
+**Bug**: `CanvasSection.tsx` re-rendered at ~3.8Hz (~263ms period) at full idle (no input, no mouse, no key). PERF_LINE `CanvasSection.commit` + `DxfCanvasSubscriber.commit` flussi continui in console. Tutta la micro-leaf architecture (ADR-040 Phase II) bypassata da una cascade upstream proveniente da `LevelsContext`.
+
+**Root cause**: `src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts` aveva `currentLevelId` nell'array di dipendenze del `useEffect` che gestiva la subscription Firestore `onSnapshot('DXF_VIEWER_LEVELS')`. Ogni cambio di `currentLevelId` (anche identity-only via context re-render) faceva teardown + re-attach della subscription; Firestore SDK consegna immediatamente uno snapshot da local cache su ogni re-attach (~250ms ciclico), che dentro il callback chiamava `setLevels(...)` → context update → `useLevels()` consumer (CanvasSection.tsx:122) re-render → ciclo si auto-alimenta. Periodo 263ms = cost teardown+rebuild Firestore listener.
+
+**Fix**: promosso `currentLevelId` a ref (`currentLevelIdRef`) letto imperativamente dentro il callback. Rimosso `currentLevelId` dai deps dell'effetto. La subscription Firestore viene ora creata UNA volta per `(companyId, isSuperAdmin)` invariante e rimane stabile — il re-election logic dentro il callback usa sempre il valore ref aggiornato. Zero modifiche al business logic.
+
+**File modificati**:
+- `src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts`: aggiunto `useRef`, promosso `currentLevelId` a ref, rimosso da deps array.
+
+**Pattern**: identico alla cardinal rule 2 di ADR-040 ("event-handler reads MUST use getter not snapshot") — esteso ora ai callback Firestore. Subscription long-lived devono leggere stato React via ref, non via closure-on-deps.
+
+**Verifica**: dopo fix, idle PERF_LINE silenzioso (zero commit logs a riposo). React DevTools Profiler 5s idle → zero re-render registrati. CanvasSection re-render solo su input legittimo (mouse move attivo / tool change / level switch).
+
+**Secondary offenders identificati (non root cause idle loop, follow-up separato)**:
+- `CanvasSection.tsx:122` chiama `useLevels()` (full context subscription) — ADR-040 violation latente. Idealmente dovrebbe consumare slice stabile (es. `useLevelScene(levelId)`).
+- `overlays/overlay-store.tsx:130` produce nuovo `overlays: Record<string, Overlay>` ad ogni snapshot — ogni write su `floorplan_overlays` cascade in `useLiveOverlaysForLevel` → CanvasSection. Non idle-driven, ma write-heavy sessions ne risentono.
+
+Questi due punti aprono un follow-up ADR-040 Phase XIV separato — non bloccanti per il fix idle loop.
+
+---
 
 ### 2026-05-15: Z-order PageUp/PageDown — Bring to front / Send to back
 

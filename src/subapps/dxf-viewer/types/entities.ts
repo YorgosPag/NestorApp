@@ -774,6 +774,18 @@ export function createSceneLayer(input: {
   createdAt?: string;
   category?: AecLayerCategory;
   tags?: ReadonlyArray<string>;
+  /**
+   * Q15 SCAFFOLD round-trip — accepted only from DXF I/O sites (parser/writer/tests).
+   * Active product code MUST NOT pass this; ratchet `bim-category-scaffolding-no-active-use`
+   * blocks `.bimCategory` reads/writes outside the DXF round-trip whitelist.
+   */
+  bimCategory?: string | null;
+  /**
+   * Q16 SCAFFOLD round-trip — accepted only from DXF I/O sites (parser/writer/tests).
+   * Active product code MUST NOT pass this; ratchet `vp-overrides-scaffolding-no-active-use`
+   * blocks `.vpOverrides` reads/writes outside the DXF round-trip whitelist.
+   */
+  vpOverrides?: Record<string, Partial<VpLayerProps>> | null;
 }): SceneLayer {
   return {
     id: input.id,
@@ -793,6 +805,8 @@ export function createSceneLayer(input: {
     createdAt: input.createdAt,
     category: input.category ?? 'general',
     tags: input.tags ?? [],
+    bimCategory: input.bimCategory ?? null,
+    vpOverrides: input.vpOverrides ?? null,
   };
 }
 
