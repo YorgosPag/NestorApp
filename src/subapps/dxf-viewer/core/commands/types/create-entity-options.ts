@@ -7,11 +7,30 @@
  * usage contract.
  */
 
+import type { LineweightMm } from '../../../types/entities';
+
 export interface CreateEntityOptions {
   layer?: string;
   color?: string;
   lineweight?: number;
   opacity?: number;
+  /**
+   * ADR-358 §G7 Phase 6.5 — sentinel-aware entity creation. When
+   * `colorMode === 'ByLayer'` (or 'ByBlock'), `CreateEntityCommand` forwards
+   * the sentinel to the entity and SKIPS the concrete `color` flatten so the
+   * renderer's `resolveStyleForRender()` cascades through `layersById`.
+   */
+  colorMode?: 'ByLayer' | 'ByBlock' | 'Concrete';
+  /** ACI 1-255 — DXF group 62 (Phase 6.5 sentinel forward). */
+  colorAci?: number;
+  /** TrueColor 0xRRGGBB — DXF group 420 (Phase 6.5 sentinel forward). */
+  colorTrueColor?: number | null;
+  /** Linetype DXF name — 'ByLayer'/'ByBlock' opt into inheritance (Phase 6.5). */
+  linetypeName?: string;
+  /** Lineweight mm — accepts -3/-2/-1 sentinels (Phase 6.5). */
+  lineweightMm?: LineweightMm;
+  /** Transparency 0-90 — DXF group 1071 (Phase 6.5 sentinel forward). */
+  transparency?: number;
   /**
    * Preserve a pre-existing entity ID instead of generating a new one.
    * Used by `completeEntity()` (ADR-057) so the entity id assigned at

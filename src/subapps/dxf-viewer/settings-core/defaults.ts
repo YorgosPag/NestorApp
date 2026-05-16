@@ -22,7 +22,10 @@ export const DEFAULT_LINE_SETTINGS: LineSettings = {
   enabled: true,
   lineType: 'solid',           // ISO 128: Continuous line as default
   lineWidth: 1,                // ✅ ENTERPRISE: Updated to match test expectations
-  color: UI_COLORS.WHITE,      // AutoCAD ACI 7: White for main lines
+  color: UI_COLORS.WHITE,      // AutoCAD ACI 7: White for main lines (used only when colorMode='Concrete')
+  // ADR-358 §G7 Phase 6.5 — Google-grade default: new entities inherit layer style.
+  colorMode: 'ByLayer',
+  lineweightMode: 'ByLayer',
   opacity: 1.0,                // Full opacity standard
   dashScale: 1.0,              // Standard dash scale
   dashOffset: 0,               // No offset standard

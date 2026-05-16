@@ -40,7 +40,20 @@ export interface LineSettings {
   enabled: boolean;
   lineType: LineType;
   lineWidth: number;        // 0.25 - 2.0mm (ISO 128)
-  color: string;            // Hex color
+  color: string;            // Hex color (used when colorMode !== 'ByLayer')
+  /**
+   * ADR-358 §G7 Phase 6.5 — color resolution mode for entities created by
+   * drawing tools. 'ByLayer' (default) → entity emits sentinel and inherits
+   * from layer cascade at render time. 'Concrete' → entity flattens to the
+   * `color` hex above. Absent treated as 'ByLayer' for forward-compat.
+   */
+  colorMode?: 'ByLayer' | 'Concrete';
+  /**
+   * ADR-358 §G7 Phase 6.5 — lineweight resolution mode mirroring colorMode.
+   * 'ByLayer' (default) → entity emits `lineweightMm: -2` sentinel and
+   * inherits from layer. 'Concrete' → uses `lineWidth` above.
+   */
+  lineweightMode?: 'ByLayer' | 'Concrete';
   opacity: number;          // 0.0 - 1.0
   dashScale: number;        // 0.5 - 3.0
   dashOffset: number;       // 0 - 100

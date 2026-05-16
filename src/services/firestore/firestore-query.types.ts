@@ -54,9 +54,42 @@ export interface QueryOptions {
   readonly maxResults?: number;
 }
 
-/** Options for real-time subscriptions */
-export interface SubscribeOptions extends QueryOptions {
+/**
+ * ADR-361: shared subscription-level controls for the equality guard.
+ * Applied identically to `subscribe` / `subscribeDoc` / `subscribeSubcollection`.
+ */
+export interface EqualityGuardOptions {
+  /**
+   * Disable automatic content-equality guard for this subscription.
+   * Default `false` — guard suppresses same-content re-emissions from
+   * Firestore cache hydration / pending writes ack. Set to `true` when the
+   * consumer must observe every snapshot (e.g. metadata refresh listeners).
+   */
+  readonly skipEqualityGuard?: boolean;
+}
+
+/** Options for collection / subcollection real-time subscriptions */
+export interface SubscribeOptions<T = unknown> extends QueryOptions, EqualityGuardOptions {
   readonly enabled?: boolean;
+  /**
+   * ADR-361: custom comparator for the documents payload.
+   * Default: `dequal` deep equal (industry standard — handles Firestore
+   * Timestamp, Date, undefined, NaN correctly). Override for hot paths with
+   * very large payloads where hashing a small subset of fields is cheaper.
+   * Returning `true` means contents are equal → skip delivery.
+   */
+  readonly equalityFn?: (prev: readonly T[] | null, next: readonly T[]) => boolean;
+}
+
+/** Options for single-document real-time subscriptions */
+export interface SubscribeDocOptions<T = unknown> extends EqualityGuardOptions {
+  readonly enabled?: boolean;
+  /**
+   * ADR-361: custom comparator for the document payload.
+   * Default: `dequal` deep equal. Returning `true` means contents are equal
+   * → skip delivery.
+   */
+  readonly equalityFn?: (prev: T | null | undefined, next: T | null) => boolean;
 }
 
 // ============================================================================
@@ -134,7 +167,7 @@ export interface IFirestoreQueryService {
     docId: string,
     onData: (document: T | null) => void,
     onError: (error: Error) => void,
-    options?: SubscribeOptions
+    options?: SubscribeDocOptions<T>
   ): Unsubscribe;
 
   subscribeSubcollection<T extends DocumentData>(

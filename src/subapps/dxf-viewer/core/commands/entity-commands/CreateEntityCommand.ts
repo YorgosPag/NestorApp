@@ -44,8 +44,11 @@ export class CreateEntityCommand implements ICommand {
         visible: true,
       } as SceneEntity;
 
-      // Apply optional styling
-      if (this.options.color) {
+      // Apply optional styling — concrete color is skipped when the caller
+      // declared ByLayer/ByBlock so the renderer can cascade through layersById
+      // (ADR-358 §G7 Phase 6.5).
+      const inheritsColor = this.options.colorMode === 'ByLayer' || this.options.colorMode === 'ByBlock';
+      if (this.options.color && !inheritsColor) {
         this.entity.color = this.options.color;
       }
       if (this.options.lineweight !== undefined) {
@@ -53,6 +56,26 @@ export class CreateEntityCommand implements ICommand {
       }
       if (this.options.opacity !== undefined) {
         this.entity.opacity = this.options.opacity;
+      }
+
+      // ─── ADR-358 §G7 Phase 6.5 — sentinel forward ──────────────────────
+      if (this.options.colorMode !== undefined) {
+        this.entity.colorMode = this.options.colorMode;
+      }
+      if (this.options.colorAci !== undefined) {
+        this.entity.colorAci = this.options.colorAci;
+      }
+      if (this.options.colorTrueColor !== undefined) {
+        this.entity.colorTrueColor = this.options.colorTrueColor;
+      }
+      if (this.options.linetypeName !== undefined) {
+        this.entity.linetypeName = this.options.linetypeName;
+      }
+      if (this.options.lineweightMm !== undefined) {
+        this.entity.lineweightMm = this.options.lineweightMm;
+      }
+      if (this.options.transparency !== undefined) {
+        this.entity.transparency = this.options.transparency;
       }
     }
 

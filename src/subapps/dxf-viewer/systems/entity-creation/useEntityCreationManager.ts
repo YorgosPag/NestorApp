@@ -122,12 +122,28 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
       };
       const { id: existingId, ...entityDataWithoutId } = normalizedEntity;
 
-      // Create options from entity data
+      // Create options from entity data — ADR-358 §G7 Phase 6.5 forwards the
+      // sentinel fields (colorMode / lineweightMm / linetypeName / …) so the
+      // command preserves the ByLayer/ByBlock contract end-to-end.
+      const baseSentinels = entity as typeof entity & {
+        colorMode?: 'ByLayer' | 'ByBlock' | 'Concrete';
+        colorAci?: number;
+        colorTrueColor?: number | null;
+        linetypeName?: string;
+        lineweightMm?: import('../../types/entities').LineweightMm;
+        transparency?: number;
+      };
       const options: CreateEntityOptions = {
         layer: entity.layer ?? DXF_DEFAULT_LAYER,
         color: entity.color,
         lineweight: entity.lineweight,
         opacity: entity.opacity,
+        ...(baseSentinels.colorMode !== undefined && { colorMode: baseSentinels.colorMode }),
+        ...(baseSentinels.colorAci !== undefined && { colorAci: baseSentinels.colorAci }),
+        ...(baseSentinels.colorTrueColor !== undefined && { colorTrueColor: baseSentinels.colorTrueColor }),
+        ...(baseSentinels.linetypeName !== undefined && { linetypeName: baseSentinels.linetypeName }),
+        ...(baseSentinels.lineweightMm !== undefined && { lineweightMm: baseSentinels.lineweightMm }),
+        ...(baseSentinels.transparency !== undefined && { transparency: baseSentinels.transparency }),
       };
 
       // 🏢 ENTERPRISE: Create and execute command via CommandHistory

@@ -22,8 +22,18 @@ export type {
   TenantFieldConfig,
   QueryOptions,
   SubscribeOptions,
+  SubscribeDocOptions,
+  EqualityGuardOptions,
   CreateOptions,
   UpdateOptions,
   QueryResult,
   IFirestoreQueryService,
 } from './firestore-query.types';
+
+// --- ADR-361: Equality guard SSoT (consumed by the service; exposed for tests
+//     and consumers that need custom equality wrappers) ---
+export {
+  defaultDocumentsEqual,
+  defaultDocumentEqual,
+  EqualitySlot,
+} from './firestore-equality';

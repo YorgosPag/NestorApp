@@ -43,11 +43,17 @@ import type {
   TenantContext,
   QueryOptions,
   SubscribeOptions,
+  SubscribeDocOptions,
   CreateOptions,
   UpdateOptions,
   QueryResult,
   IFirestoreQueryService,
 } from './firestore-query.types';
+import {
+  defaultDocumentsEqual,
+  defaultDocumentEqual,
+  EqualitySlot,
+} from './firestore-equality';
 
 // Canonical error types — originally defined in query-middleware.ts, re-exported here
 // as the single import point for all consumers (ADR-214 Phase 11).
@@ -235,7 +241,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
     key: CollectionKey,
     onData: (result: QueryResult<T>) => void,
     onError: (error: Error) => void,
-    options: SubscribeOptions = {}
+    options: SubscribeOptions<T> = {}
   ): Unsubscribe {
     if (options.enabled === false) {
       // Return no-op unsubscribe when disabled
@@ -248,8 +254,15 @@ class FirestoreQueryService implements IFirestoreQueryService {
     let innerUnsub: Unsubscribe = () => { /* noop */ };
     let cancelled = false;
 
+    // ADR-361: content-equality guard. Reset on every rebuild so a switcher
+    // tenant change does not suppress the first delivery of the new tenant.
+    const slot = new EqualitySlot<readonly T[]>();
+    const equalityFn = options.equalityFn ?? defaultDocumentsEqual;
+    const guardEnabled = options.skipEqualityGuard !== true;
+
     const rebuild = async () => {
       innerUnsub();
+      slot.reset();
       if (cancelled) return;
       if (!(await waitForAuthReady())) return;
       if (cancelled) return;
@@ -272,6 +285,9 @@ class FirestoreQueryService implements IFirestoreQueryService {
       innerUnsub = onSnapshot(q,
         snapshot => {
           const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
+          if (guardEnabled && slot.shouldSkip(documents, equalityFn)) {
+            return;
+          }
           const lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
           onData({
             documents,
@@ -306,7 +322,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
     docId: string,
     onData: (document: T | null) => void,
     onError: (error: Error) => void,
-    options: SubscribeOptions = {}
+    options: SubscribeDocOptions<T> = {}
   ): Unsubscribe {
     if (options.enabled === false) {
       return () => { /* noop */ };
@@ -318,6 +334,11 @@ class FirestoreQueryService implements IFirestoreQueryService {
     let unsubscribe: Unsubscribe = () => { /* noop */ };
     let cancelled = false;
 
+    // ADR-361: content-equality guard for single-document subscription.
+    const slot = new EqualitySlot<T | null>();
+    const equalityFn = options.equalityFn ?? defaultDocumentEqual;
+    const guardEnabled = options.skipEqualityGuard !== true;
+
     void waitForAuthReady().then(hasUser => {
       if (cancelled || !hasUser) return;
       return requireAuthContext();
@@ -326,7 +347,11 @@ class FirestoreQueryService implements IFirestoreQueryService {
 
       unsubscribe = onSnapshot(docRef,
         snapshot => {
-          onData(extractDoc<T>(snapshot));
+          const document = extractDoc<T>(snapshot);
+          if (guardEnabled && slot.shouldSkip(document, equalityFn)) {
+            return;
+          }
+          onData(document);
         },
         onError
       );
@@ -346,7 +371,7 @@ class FirestoreQueryService implements IFirestoreQueryService {
     subcollectionName: string,
     onData: (result: QueryResult<T>) => void,
     onError: (error: Error) => void,
-    options: SubscribeOptions = {}
+    options: SubscribeOptions<T> = {}
   ): Unsubscribe {
     if (options.enabled === false) {
       return () => { /* noop */ };
@@ -357,6 +382,11 @@ class FirestoreQueryService implements IFirestoreQueryService {
 
     let unsubscribe: Unsubscribe = () => { /* noop */ };
     let cancelled = false;
+
+    // ADR-361: content-equality guard for subcollection subscription.
+    const slot = new EqualitySlot<readonly T[]>();
+    const equalityFn = options.equalityFn ?? defaultDocumentsEqual;
+    const guardEnabled = options.skipEqualityGuard !== true;
 
     void waitForAuthReady().then(hasUser => {
       if (cancelled || !hasUser) return;
@@ -379,6 +409,9 @@ class FirestoreQueryService implements IFirestoreQueryService {
       unsubscribe = onSnapshot(q,
         snapshot => {
           const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
+          if (guardEnabled && slot.shouldSkip(documents, equalityFn)) {
+            return;
+          }
           const lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
           onData({
             documents,
