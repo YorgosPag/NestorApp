@@ -21,10 +21,17 @@ export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
   command,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, onComingSoon, onAction } = useRibbonCommand();
+  const { onToolChange, onComingSoon, onAction, activeTool } = useRibbonCommand();
 
   const label = t(command.labelKey);
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
+  // ADR-345 Fase 5.6 — pure tool buttons highlight when their commandKey
+  // matches activeTool. Skip for comingSoon / action buttons (stateless).
+  const isActive =
+    !command.comingSoon &&
+    !command.action &&
+    activeTool !== null &&
+    activeTool === command.commandKey;
 
   const handleClick = useCallback(() => {
     if (command.comingSoon) {
@@ -54,8 +61,10 @@ export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
           type="button"
           className="dxf-ribbon-btn dxf-ribbon-btn-large"
           onClick={handleClick}
+          aria-pressed={isActive || undefined}
           data-command-id={command.id}
           data-coming-soon={command.comingSoon ? 'true' : undefined}
+          data-active={isActive ? 'true' : undefined}
         >
           <span className="dxf-ribbon-btn-icon-wrap">
             <RibbonButtonIcon icon={command.icon} size="large" />
