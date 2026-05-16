@@ -12,11 +12,16 @@ import { useSnapContext } from '../snapping/context/SnapContext';
 import { ProSnapToolbar } from '../ui/components/ProSnapToolbar';
 import { CurrentLayerPicker } from '../ui/components/layer-picker/CurrentLayerPicker';
 import type { ExtendedSnapType } from '../snapping/extended-types';
+import { useStairStatusKey } from './stair-status-store';
 
 export default function CadStatusBar() {
   const { osnap, grid, snap, ortho, polar, dynInput } = useCadToggles();
   const { t } = useTranslation('dxf-viewer-panels');
+  const { t: tTools } = useTranslation('tool-hints');
   const { enabledModes, toggleMode } = useSnapContext();
+  // ADR-358 Phase 7b1 — Inline stair prompt left of the toggles.
+  const stairStatusKey = useStairStatusKey();
+  const stairStatusText = stairStatusKey ? tTools(stairStatusKey) : '';
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,6 +54,15 @@ export default function CadStatusBar() {
         className="w-full border-t border-border bg-background/95 backdrop-blur-sm shrink-0"
       >
         <div className="flex items-center gap-4 px-4 py-1.5 overflow-x-auto">
+          {stairStatusText && (
+            <span
+              className="shrink-0 text-xs font-semibold text-amber-400"
+              role="status"
+              aria-live="polite"
+            >
+              {stairStatusText}
+            </span>
+          )}
           {toggleDefs.map(({ key, toggle, shortcut, labelKey, descKey }) =>
             key === 'osnap' ? (
               <OsnapToggleWithPopover
