@@ -43,6 +43,9 @@ import { computeSpiral } from './stair-geometry-spiral';
 import { computeHelical } from './stair-geometry-helical';
 import { computeElliptical } from './stair-geometry-elliptical';
 import { computeWinder } from './stair-geometry-winder';
+import { computeTriangularFan } from './stair-geometry-triangular-fan';
+import { computeTriangularOutline } from './stair-geometry-triangular-outline';
+import { computeSketch } from './stair-geometry-sketch';
 
 // ─── Public entry point (kind dispatch) ──────────────────────────────────────
 
@@ -71,11 +74,11 @@ export function computeStairGeometry(params: Readonly<StairParams>): StairGeomet
     case 'winder':
       return computeWinder(params, variant);
     case 'triangular-fan':
+      return computeTriangularFan(params, variant);
     case 'triangular-outline':
+      return computeTriangularOutline(params, variant);
     case 'sketch':
-      throw new Error(
-        `StairGeometryService: kind '${variant.kind}' not implemented yet (Phase 4c)`,
-      );
+      return computeSketch(params, variant);
     default: {
       const _exhaustive: never = variant;
       throw new Error(`StairGeometryService: unhandled variant ${JSON.stringify(_exhaustive)}`);
