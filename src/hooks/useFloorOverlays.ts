@@ -176,7 +176,18 @@ export function useFloorOverlays(floorId: string | null): UseFloorOverlaysReturn
           if (normalized.role === 'footprint') continue;
           items.push(normalized);
         }
-        setRawOverlays(items);
+        // ADR-040 Phase XVIII: defensive equality guard — ADR-361 service-level
+        // guard supprime duplicates ma metadata-only updates passano. Skip setState
+        // se gli campi rilevanti per downstream useMemo (id + status) sono invariati.
+        setRawOverlays((prev) => {
+          if (prev.length !== items.length) return items;
+          for (let i = 0; i < items.length; i++) {
+            if (prev[i].id !== items[i].id || prev[i].status !== items[i].status) {
+              return items;
+            }
+          }
+          return prev;
+        });
         setLoading(false);
         logger.debug('Floor overlays loaded', { data: { floorId, count: items.length } });
       },
