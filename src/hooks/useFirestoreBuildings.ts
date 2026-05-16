@@ -1,14 +1,15 @@
 'use client';
 
 /**
- * ENTERPRISE BUILDINGS HOOK — Real-time onSnapshot (ADR-227)
+ * ENTERPRISE BUILDINGS HOOK — Real-time via firestoreQueryService.subscribe (ADR-227, ADR-355 SSoT, ADR-361 equality-guarded)
  *
  * Replaces the previous REST + useAsyncData pattern that caused full-screen
  * flicker on every CRUD event (setLoading(true) → spinner → data).
  *
- * Uses firestoreQueryService.subscribe('BUILDINGS', ...) which wraps Firestore
- * onSnapshot with tenant isolation (auto-companyId injection) and auth-ready
- * gating. Updates arrive incrementally — no loading state on mutations.
+ * Uses firestoreQueryService.subscribe('BUILDINGS', ...) — the canonical
+ * real-time path with tenant isolation (auto-companyId injection), auth-ready
+ * gating, and content-equality guard (ADR-361). Updates arrive incrementally —
+ * no loading state on mutations.
  *
  * @ssot ADR-227 — Real-Time Subscription Consolidation
  * @ssot ADR-228 — Real-Time Event Bus Coverage
