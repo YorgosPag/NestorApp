@@ -39,6 +39,15 @@ export interface DynamicSubmitDetail {
 
   /** Last processed point for constraint operations */
   lastPoint?: Point2D;
+
+  /**
+   * ADR-358 Phase 7b2b-β Stream E — stair tool inline param overrides.
+   * Carried by `action: 'commit-stair'` so `useStairTool` can call
+   * `setParamOverrides({ rise, tread, width })` before `confirm()`.
+   */
+  rise?: number;
+  tread?: number;
+  width?: number;
 }
 
 /**
