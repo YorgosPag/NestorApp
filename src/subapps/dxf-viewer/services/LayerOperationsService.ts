@@ -25,7 +25,7 @@ import {
 } from '../config/lineweight-iso-catalog';
 import { resolveLinetype } from '../stores/LinetypeRegistry';
 import { DEFAULT_LINETYPE_NAME } from '../config/linetype-iso-catalog';
-import type { LineweightMm } from '../types/entities';
+import { createSceneLayer, type LineweightMm } from '../types/entities';
 // ADR-358 Phase 9B: server-side naming trust boundary
 import { guardLayerName } from './shared/layer-naming-guard';
 import type { LayerNameValidationError } from './layer-name-validator';
@@ -209,14 +209,14 @@ export class LayerOperationsService {
     const guard = guardLayerName({ name, scene });
     if (guard) return guard;
 
-    // ✅ ENTERPRISE FIX: Added missing 'locked' property to match SceneLayer interface
-    const newLayer = {
-      name: name,
-      visible: visible,
-      color: color,
-      frozen: frozen,
-      locked: false // Default value for new layers
-    };
+    // 🏢 ADR-358 Phase 9C: SceneLayer.id REQUIRED — factory auto-gen via enterprise-id (`lyr_<ULID>`)
+    const newLayer = createSceneLayer({
+      name,
+      color,
+      visible,
+      frozen,
+      locked: false,
+    });
     
     const updatedScene = {
       ...scene,
