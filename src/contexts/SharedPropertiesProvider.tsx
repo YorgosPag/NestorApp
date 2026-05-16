@@ -16,7 +16,7 @@
 // 🎯 PRODUCTION: Debug disabled για καθαρότερα logs
 const DEBUG_SHARED_PROPERTIES_PROVIDER = false;
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { Property } from '@/types/property-viewer';
@@ -68,13 +68,19 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     setRefreshKey(prev => prev + 1);
   }, []);
 
-  // 🏢 ENTERPRISE: Activate function - called by useSharedProperties
+  // 🏢 ENTERPRISE: Activate function - called by useSharedProperties.
+  // Functional setter with empty deps → stable reference forever. Critical: if
+  // `activate` ref changes, the context value object changes (see useMemo below),
+  // and the `useEffect` in `useSharedProperties` re-fires, calling `activate()`
+  // again, scheduling a render, creating a new context — infinite cascade.
+  // Root cause of CanvasSection ~4Hz idle re-render loop (2026-05-16).
   const activate = useCallback(() => {
-    if (!activated) {
+    setActivated((prev) => {
+      if (prev) return prev;
       logger.info('[SharedProperties] Lazy activation triggered');
-      setActivated(true);
-    }
-  }, [activated]);
+      return true;
+    });
+  }, []);
 
   // Local-only state update — Firestore writes happen via API routes (Admin SDK).
   // The onSnapshot listener below picks up changes automatically.
@@ -169,8 +175,12 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     };
   }, [activated, refreshKey, authLoading, user?.companyId]);
 
-  return (
-    <SharedPropertiesContext.Provider value={{
+  // 🚀 PERF: memoize context value — non-memoized object literal here was
+  // poisoning every consumer of useSharedProperties (incl. useLiveOverlaysForLevel
+  // → CanvasSection) by changing reference on every Provider render, even when
+  // data was identical. See ADR-040 changelog 2026-05-16.
+  const contextValue = useMemo(
+    () => ({
       properties: properties || [],
       floors,
       setProperties,
@@ -178,7 +188,12 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
       error,
       forceDataRefresh,
       activate,
-    }}>
+    }),
+    [properties, floors, setProperties, isLoading, error, forceDataRefresh, activate],
+  );
+
+  return (
+    <SharedPropertiesContext.Provider value={contextValue}>
       {children}
     </SharedPropertiesContext.Provider>
   );

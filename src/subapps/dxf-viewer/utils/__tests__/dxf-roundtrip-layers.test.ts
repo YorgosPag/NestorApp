@@ -76,7 +76,7 @@ describe('DXF layer round-trip — fixture 2: custom linetype, all 11 fields', (
     const original = [
       createSceneLayer({
         name: 'A-WALL',
-        color: getAciColor(1),
+        color: '#FF8040',
         colorAci: 1,
         colorTrueColor: 0xff8040,
         linetype: 'WallDashed',
@@ -221,7 +221,7 @@ describe('DXF layer round-trip — full 5-layer scene', () => {
         name: 'L1', color: getAciColor(7), colorAci: 7, source: 'dxf-import',
       }),
       createSceneLayer({
-        name: 'A-WALL', color: getAciColor(1), colorAci: 1, colorTrueColor: 0xff8040,
+        name: 'A-WALL', color: '#FF8040', colorAci: 1, colorTrueColor: 0xff8040,
         linetype: 'WallDashed', lineweight: 0.5, transparency: 30,
         description: 'walls', category: 'architectural', tags: ['load-bearing'],
         source: 'dxf-import',

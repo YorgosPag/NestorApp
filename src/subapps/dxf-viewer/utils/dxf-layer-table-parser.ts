@@ -304,5 +304,5 @@ function splitKv(raw: string): [string, string] {
 }
 
 function hex(rgb: number): string {
-  return `#${rgb.toString(16).padStart(6, '0')}`;
+  return `#${rgb.toString(16).padStart(6, '0').toUpperCase()}`;
 }
