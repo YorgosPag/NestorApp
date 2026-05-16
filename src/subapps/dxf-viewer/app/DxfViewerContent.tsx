@@ -73,8 +73,6 @@ import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/Cl
 // ✅ ADR-065 SRP: Extracted hooks
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
-// 📐 ADR-345 Fase 1: Ribbon interface scaffold
-import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 📐 ADR-345/353: contextual tabs config + trigger resolver (SSoT)
@@ -83,7 +81,8 @@ import { useRibbonArrayBridge } from '../ui/ribbon/hooks/useRibbonArrayBridge';
 import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions';
 // 📐 ADR-358 Phase 7a: bridge stair-params ↔ ribbon contextual tab
 import { useRibbonStairBridge } from '../ui/ribbon/hooks/useRibbonStairBridge';
-import { StairAdvancedPanelHost } from './StairAdvancedPanelHost';
+// 📐 ADR-358 Phase 8: top-bar wrapper (RibbonRoot + StairAdvancedPanelHost) — N.7.1 size split
+import { DxfViewerTopBar } from './DxfViewerTopBar';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
 import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEditorBridge';
 import { useRibbonCommands } from '../ui/ribbon/hooks/useRibbonCommands';
@@ -302,14 +301,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         onTransformReady={handleTransformReady}
       >
       <div className="flex flex-col h-full min-h-0">
-        {/* ADR-345 Fase 1: ribbon inserito tra global header e layout viewer */}
-        {/* ADR-345 Fase 2: Layers tab content wired with scene/tool/selection state */}
-        <RibbonRoot
-          commands={ribbonCommands}
+        <DxfViewerTopBar
+          ribbonCommands={ribbonCommands}
           contextualTabs={ribbonContextualTabs}
           activeContextualTrigger={activeContextualTrigger}
-        />
-        <StairAdvancedPanelHost
           primarySelectedId={primarySelectedId}
           currentScene={currentScene}
           levelManager={levelManager}
