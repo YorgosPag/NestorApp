@@ -469,8 +469,10 @@ export class DxfSceneBuilder {
       return false;
     }
 
-    // Check entities validity
-    if (scene.entities.some(entity => !entity.id || !entity.type || !entity.layer)) {
+    // Check entities validity.
+    // ADR-358 Phase 9D-5a — validate stable `layerId` (post-9D-2 attribution). Legacy `.layer`
+    // name check dropped; resolution at read-time goes through `LayerStore.getLayer(id)?.name`.
+    if (scene.entities.some(entity => !entity.id || !entity.type || !(entity as { layerId?: string }).layerId)) {
       return false;
     }
 
