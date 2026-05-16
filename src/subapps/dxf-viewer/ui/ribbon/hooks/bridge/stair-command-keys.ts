@@ -11,6 +11,17 @@ export const STAIR_RIBBON_KEYS = {
   stringParams: {
     structureType: 'stair.params.structureType',
     riserType: 'stair.params.riserType',
+    /**
+     * ADR-358 Phase 7b2b-β Stream F — multi-flight turn direction.
+     * For `l-shape`/`u-shape` (2 flights) → `variant.turnDirection`.
+     * For `gamma` (3 flights, 2 turns) → `variant.turnSequence[0]`.
+     */
+    flight2TurnDirection: 'stair.params.flight2TurnDirection',
+    /**
+     * ADR-358 Phase 7b2b-β Stream F — flight 3 turn direction.
+     * Only applies to `gamma` (`variant.turnSequence[1]`). No-op for other kinds.
+     */
+    flight3TurnDirection: 'stair.params.flight3TurnDirection',
   },
   params: {
     rise: 'stair.params.rise',
@@ -25,6 +36,14 @@ export const STAIR_RIBBON_KEYS = {
   },
 } as const;
 
+/**
+ * ADR-358 Phase 7b2b-β Stream F — panel visibility keys consumed by
+ * `RibbonPanelDef.visibilityKey`. Stair bridge owns `multiFlight`.
+ */
+export const STAIR_RIBBON_VISIBILITY_KEYS = {
+  multiFlight: 'stair.visibility.multiFlight',
+} as const;
+
 export type StairRibbonComboKey =
   | typeof STAIR_RIBBON_KEYS.params.rise
   | typeof STAIR_RIBBON_KEYS.params.tread
@@ -35,7 +54,12 @@ export type StairRibbonComboKey =
 
 export type StairRibbonStringComboKey =
   | typeof STAIR_RIBBON_KEYS.stringParams.structureType
-  | typeof STAIR_RIBBON_KEYS.stringParams.riserType;
+  | typeof STAIR_RIBBON_KEYS.stringParams.riserType
+  | typeof STAIR_RIBBON_KEYS.stringParams.flight2TurnDirection
+  | typeof STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection;
+
+export type StairRibbonVisibilityKey =
+  | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiFlight;
 
 const ALL_STAIR_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.params.rise,
@@ -49,6 +73,12 @@ const ALL_STAIR_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
 const ALL_STAIR_STRING_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.stringParams.structureType,
   STAIR_RIBBON_KEYS.stringParams.riserType,
+  STAIR_RIBBON_KEYS.stringParams.flight2TurnDirection,
+  STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection,
+]);
+
+const ALL_STAIR_VISIBILITY_KEYS: ReadonlySet<string> = new Set<string>([
+  STAIR_RIBBON_VISIBILITY_KEYS.multiFlight,
 ]);
 
 export function isStairRibbonKey(key: string): key is StairRibbonComboKey {
@@ -57,4 +87,8 @@ export function isStairRibbonKey(key: string): key is StairRibbonComboKey {
 
 export function isStairRibbonStringKey(key: string): key is StairRibbonStringComboKey {
   return ALL_STAIR_STRING_COMBO_KEYS.has(key);
+}
+
+export function isStairVisibilityKey(key: string): key is StairRibbonVisibilityKey {
+  return ALL_STAIR_VISIBILITY_KEYS.has(key);
 }
