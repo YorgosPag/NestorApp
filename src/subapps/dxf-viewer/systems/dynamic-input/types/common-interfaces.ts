@@ -8,6 +8,13 @@ import type { Point2D } from '../../../rendering/types/Types';
 export type Field = 'x' | 'y' | 'angle' | 'length' | 'radius' | 'diameter';
 
 /**
+ * ADR-358 Phase 7b2b-β Stream E — Stair-specific Dynamic Input fields.
+ * Kept separate from `Field` to avoid breaking existing tools that switch
+ * on Field exhaustively. Cycled by Tab inside the stair keyboard handler.
+ */
+export type StairField = 'rise' | 'tread' | 'width';
+
+/**
  * 🏢 ENTERPRISE: Standardized Field State Types
  * Single source of truth για field boolean states
  */
