@@ -41,7 +41,11 @@ export function CurrentLayerPicker({
 
   const triggerClass = variant === 'status-bar' ? STATUS_BAR_TRIGGER : RIBBON_TRIGGER;
   const labelClass = variant === 'status-bar' ? STATUS_BAR_LABEL : RIBBON_LABEL;
-  const swatchClass = variant === 'status-bar' ? STATUS_BAR_SWATCH : RIBBON_SWATCH;
+  const baseSwatchClass = variant === 'status-bar' ? STATUS_BAR_SWATCH : RIBBON_SWATCH;
+  const pulseClass =
+    variant === 'status-bar' && state.pulseToken > 0 ? ' layer-picker-pulse' : '';
+  const swatchKey =
+    state.pulseToken > 0 ? `swatch-${state.pulseToken}` : 'swatch-init';
   const tooltipLabel = state.currentLayer
     ? t('layerPicker.tooltipCurrent', { name: state.currentLayer.name })
     : t('layerPicker.tooltipEmpty');
@@ -59,7 +63,8 @@ export function CurrentLayerPicker({
               className={`${triggerClass} ${className ?? ''}`.trim()}
             >
               <span
-                className={swatchClass}
+                key={swatchKey}
+                className={`${baseSwatchClass}${pulseClass}`}
                 style={{ backgroundColor: state.currentLayer?.color ?? '#888888' }}
                 aria-hidden
               />
