@@ -1,11 +1,13 @@
 import { useState, useCallback, useSyncExternalStore, useMemo } from 'react';
-import { DXF_LAYER_CATEGORY_LABELS } from '@/constants/property-statuses-enterprise';
+import { useTranslation } from '@/i18n';
 import {
   subscribeLayerStore,
   getLayerStoreSnapshot,
   upsertLayer,
+  setCurrentLayerId,
 } from '../../../stores/LayerStore';
-import type { SceneLayer } from '../../../types/entities';
+import { useLevelSelection } from '../../../systems/levels/useLevels';
+import type { SceneLayer, AecLayerCategory } from '../../../types/entities';
 import type { Layer, Category, LayerManagerState, LayerManagerActions } from './types';
 
 export interface LayerManagerStateHook {
@@ -15,25 +17,28 @@ export interface LayerManagerStateHook {
   categories: Category[];
 }
 
-// ADR-358 §5.3.quinquies (Q7) cleanup target: remove these mock entries in Phase 6
-// when AdminLayerManager wires AEC categories + tags from the real store.
-const MOCK_LAYERS: Layer[] = [
-  { id: '1', name: 'Ηλεκτρολογικά', category: 'electrical', visible: true, elements: 25 },
-  { id: '2', name: 'Υδραυλικά', category: 'plumbing', visible: true, elements: 18 },
-  { id: '3', name: 'HVAC', category: 'hvac', visible: false, elements: 12 },
-];
-
-function sceneLayerToUi(layer: SceneLayer): Layer {
+function sceneLayerToUi(layer: SceneLayer, isCurrent: boolean, elementCount: number): Layer {
   return {
     id: layer.id ?? layer.name,
     name: layer.name,
     category: layer.category ?? 'general',
     visible: layer.visible,
-    elements: 0,
+    elements: elementCount,
+    isCurrent,
   };
 }
 
+function getUniqueCategories(layers: SceneLayer[]): Set<AecLayerCategory> {
+  const cats = new Set<AecLayerCategory>();
+  for (const layer of layers) {
+    const cat = (layer.category ?? 'general') as AecLayerCategory;
+    cats.add(cat);
+  }
+  return cats;
+}
+
 export function useLayerManagerState(): LayerManagerStateHook {
+  const { t } = useTranslation(['dxf-viewer-shell']);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isConnected, setIsConnected] = useState(true);
@@ -45,39 +50,49 @@ export function useLayerManagerState(): LayerManagerStateHook {
     getLayerStoreSnapshot,
   );
 
-  const [mockLayers, setMockLayers] = useState<Layer[]>(MOCK_LAYERS);
+  const { currentLevel, currentLevelId } = useLevelSelection();
 
   const layers = useMemo<Layer[]>(() => {
-    if (storeSnapshot.layers.length > 0) {
-      return storeSnapshot.layers.map(sceneLayerToUi);
-    }
-    return mockLayers;
-  }, [storeSnapshot.layers, mockLayers]);
+    if (storeSnapshot.layers.length === 0) return [];
 
-  const categories: Category[] = [
-    { value: 'all', label: DXF_LAYER_CATEGORY_LABELS.all },
-    { value: 'electrical', label: DXF_LAYER_CATEGORY_LABELS.electrical },
-    { value: 'plumbing', label: DXF_LAYER_CATEGORY_LABELS.plumbing },
-    { value: 'hvac', label: DXF_LAYER_CATEGORY_LABELS.hvac },
-  ];
+    const scene = currentLevel?.scene;
+    return storeSnapshot.layers.map((layer) => {
+      const elementCount = scene
+        ? scene.entities.filter((e) => e.layer === layer.name).length
+        : 0;
+      const isCurrent = storeSnapshot.currentLayerId === (layer.id ?? layer.name);
+      return sceneLayerToUi(layer, isCurrent, elementCount);
+    });
+  }, [storeSnapshot.layers, storeSnapshot.currentLayerId, currentLevel?.scene]);
+
+  const categories = useMemo<Category[]>(() => {
+    const uniqueCats = getUniqueCategories(storeSnapshot.layers);
+    const result: Category[] = [
+      { value: 'all', label: t('layerPicker.category.all') || 'All' },
+    ];
+    uniqueCats.forEach((cat) => {
+      const key = `layerPicker.category.${cat}`;
+      result.push({ value: cat, label: t(key) || cat });
+    });
+    return result;
+  }, [storeSnapshot.layers, t]);
 
   const toggleLayerVisibility = useCallback(
     (layerId: string) => {
-      if (storeSnapshot.layers.length > 0) {
-        const target = storeSnapshot.layers.find(
-          (l) => (l.id ?? l.name) === layerId,
-        );
-        if (!target) return;
-        upsertLayer({ ...target, visible: !target.visible });
-        return;
-      }
-      setMockLayers((prev) =>
-        prev.map((layer) =>
-          layer.id === layerId ? { ...layer, visible: !layer.visible } : layer,
-        ),
+      const target = storeSnapshot.layers.find(
+        (l) => (l.id ?? l.name) === layerId,
       );
+      if (!target) return;
+      upsertLayer({ ...target, visible: !target.visible });
     },
     [storeSnapshot.layers],
+  );
+
+  const setCurrentLayer = useCallback(
+    (layerId: string) => {
+      setCurrentLayerId(layerId);
+    },
+    [],
   );
 
   const updateSearchQuery = useCallback((query: string) => {
@@ -104,6 +119,7 @@ export function useLayerManagerState(): LayerManagerStateHook {
     setSelectedCategory: updateSelectedCategory,
     setIsConnected: updateConnectionStatus,
     toggleLayerVisibility,
+    setCurrentLayer,
   };
 
   return {
