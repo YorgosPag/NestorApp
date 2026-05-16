@@ -3020,6 +3020,28 @@
       "addedByAdr": "ADR-358",
       "tier": 3
     },
+    "entity-layer-id-canonical": {
+      "ssotFile": "src/subapps/dxf-viewer/stores/LayerStore.ts",
+      "description": "ADR-358 Phase 9D-5a: stable `layerId` (`lyr_<UUID-v4>`) is the canonical entity↔layer binding. Direct reads of `entity.layer` (the legacy display-name field) and writes via `.layer = '<name>'` literal are forbidden in active product code — use `resolveEntityLayerName(entity)` (id-first via LayerStore, legacy fallback) or `LayerStore.getLayer(entity.layerId)?.name`. Transitional readers + the BaseEntity interface itself + the DXF parse boundary remain allowlisted until Phase 9D-5b drops the legacy field outright. Ratchet, not zero-tolerance: existing reader sites baseline-tolerated until 9D-5b sweep.",
+      "forbiddenPatterns": [
+        "entity\\.layer\\b",
+        "\\.layer\\s*=\\s*['\"]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/types/entities.ts",
+        "src/subapps/dxf-viewer/stores/LayerStore.ts",
+        "src/subapps/dxf-viewer/services/LayerOperationsService.ts",
+        "src/subapps/dxf-viewer/utils/dxf-scene-builder.ts",
+        "src/subapps/dxf-viewer/config/layer-config.ts",
+        "src/subapps/dxf-viewer/systems/entity-creation/useEntityCreationManager.ts",
+        "src/subapps/dxf-viewer/core/commands/entity-commands/CreateEntityCommand.ts",
+        "src/subapps/dxf-viewer/hooks/drawing/completeEntity.ts",
+        "src/subapps/dxf-viewer/hooks/scene/useSceneState.ts"
+      ],
+      "addedDate": "2026-05-17",
+      "addedByAdr": "ADR-358",
+      "tier": 3
+    },
     "unified-layer-store": {
       "ssotFile": "src/subapps/dxf-viewer/stores/LayerStore.ts",
       "description": "LayerStore is the unified SSoT for SceneLayer + currentLayerId (ADR-358 §5.10 + Q3). Replaces the dual paradigm where DXF entity layers and overlay-manager `coreState.layers` (Region layers) were owned separately. Direct `RegionLayerObject` typed access and `coreState.layers` reads outside the legacy bridge files are forbidden for new code; Phase 5/9 will retire the bridge entirely. Co-existence ratchet, not zero-tolerance — current allowlist captures the transitional surface.",
