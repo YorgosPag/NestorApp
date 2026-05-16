@@ -72,18 +72,16 @@ export function useSceneState() {
   // Entity creation handler
   const onEntityCreated = useCallback((entity: AnySceneEntity) => {
     if (currentLevelId && currentScene) {
-      // Ensure entity has a default layer if not specified
-      // ADR-358 Phase 9D-3 WRITE site: mirror legacy `layer` + stable `layerId`
-      if (!entity.layer) {
-        entity.layer = DXF_DEFAULT_LAYER;
-      }
+      // ADR-358 Phase 9D-5a — id-only WRITE: ensure entity carries a stable `layerId`.
+      // Legacy `entity.layer` name assignment dropped; downstream readers resolve display
+      // name via `resolveEntityLayerName(entity)` (LayerStore id-first lookup).
       if (!entity.layerId) {
         const defaultLayer = getLayer(DXF_DEFAULT_LAYER);
         if (defaultLayer) {
           entity.layerId = defaultLayer.id;
         }
       }
-      
+
       const newScene = { ...currentScene, entities: [...currentScene.entities, entity] };
       setLevelScene(currentLevelId, newScene);
     }
