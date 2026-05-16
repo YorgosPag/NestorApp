@@ -42,6 +42,7 @@ import { LevelSceneManagerAdapter } from './LevelSceneManagerAdapter';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import type { SceneEntity, CreateEntityOptions } from '../../core/commands/interfaces';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
+import { getLayer } from '../../stores/LayerStore';
 
 /**
  * Configuration for the entity creation manager
@@ -115,9 +116,12 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
 
       // Prepare entity data for command (strip 'id' as command generates its own)
       // This follows Command Pattern best practice - command owns entity lifecycle
+      // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+      const resolvedLayerName = entity.layer ?? DXF_DEFAULT_LAYER;
       const normalizedEntity: SceneEntity = {
         ...entity,
-        layer: entity.layer ?? DXF_DEFAULT_LAYER,
+        layer: resolvedLayerName,
+        layerId: entity.layerId ?? getLayer(resolvedLayerName)?.id,
         visible: entity.visible ?? true
       };
       const { id: existingId, ...entityDataWithoutId } = normalizedEntity;
