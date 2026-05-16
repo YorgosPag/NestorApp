@@ -3,6 +3,14 @@
     "confirm": "Επιβεβαίωση",
     "cancel": "Ακύρωση"
   },
+  "layerPicker": {
+    "toastChanged": "Επίπεδο άλλαξε σε \"{name}\"",
+    "tooltipCurrent": "Τρέχον επίπεδο: {name}",
+    "tooltipEmpty": "Χωρίς ενεργό επίπεδο",
+    "placeholder": "Χωρίς επίπεδο",
+    "searchPlaceholder": "Αναζήτηση επιπέδων…",
+    "empty": "Δεν βρέθηκαν επίπεδα"
+  },
   "toolbar": {
     "title": "Εργαλεία Σχεδίασης",
     "select": "Επιλογή",
