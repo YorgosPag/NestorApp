@@ -241,9 +241,10 @@ function buildMergedEntity(
     ? primary.lineType as 'solid' | 'dashed' | 'dotted' | 'dashdot' : undefined;
 
   // Common base properties
+  // ADR-358 Phase 9D-5b-i: stable layerId propagation (legacy `layer` name dropped from BaseEntity).
   const base = {
     id: newId,
-    layer: primary.layer ?? '0',
+    layerId: primary.layerId,
     visible: true,
     name: primary.name || `Joined_${entities.length}_entities`,
     color: primary.color,
