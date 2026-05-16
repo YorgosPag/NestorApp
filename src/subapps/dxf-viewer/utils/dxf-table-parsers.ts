@@ -128,10 +128,13 @@ export function parseDimStyles(lines: string[]): DimStyleMap {
 // ============================================================================
 
 /**
- * Parse LAYER table from TABLES section.
+ * Parse LAYER table from TABLES section — LEGACY 2-field reader.
  *
- * Extracts the REAL ACI colors for each layer.
- * Replaces the old hash-based color assignment with actual DXF colors.
+ * @deprecated ADR-358 Phase 3 — superseded by `parseLayerTable()` in
+ * `dxf-layer-table-parser.ts`, which emits full `SceneLayer[]` with the 11
+ * DXF layer fields + scaffold round-trip. This wrapper is kept for the
+ * `dxf-scene-builder.ts` legacy consumer until Phase 4 migrates the renderer
+ * pipeline to consume `SceneLayer` directly.
  *
  * @param lines - All lines from DXF file
  * @returns Map of layer names to their color properties
