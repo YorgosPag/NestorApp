@@ -1,16 +1,21 @@
 /**
- * @related ADR-358 §5.9 §3.5 §9.2 Q25 — Stair code-profile validator (Phase 6).
+ * @related ADR-358 §5.9 §3.5 §3.7 §9.2 Q25 Q27 — Stair code-profile validator
+ *   (Phase 6 = 4 code profiles + hard errors; Phase 6.5 = +egress G20).
  *
  * Pure functions. Zero React / DOM / Firestore deps. Runs the 4 active code
- * profiles (NOK / IBC / Eurocode / ADA) plus a universal hard-error baseline.
+ * profiles (NOK / IBC / Eurocode / ADA), a universal hard-error baseline, and
+ * a universal egress capacity check (IBC §1011.5 formula: width_mm / 7.62 =
+ * persons_max). Egress runs for every profile except 'none' — it is universal
+ * life-safety, not profile-specific.
  *
  * Hard errors → block stair creation.
  * Code violations → non-blocking warnings (red badge in property panel).
+ * Egress violations → non-blocking warnings (separate bucket for UI grouping).
  *
  * NBC / NFPA / AS1657 / DIN profiles are placeholders Phase 9 (Q25).
- * Headroom + egress validators live in `stair-validator.ts` (cheap 2D Phase 6
- * and Phase 6.5 respectively); ADA handrail render lives in StairRenderer
- * Phase 6.5 (Q26).
+ * Headroom validator lives in `stair-validator.ts` (cheap 2D Phase 6).
+ * ADA handrail render lives in StairRenderer Phase 7a (deferred from Phase 6.5
+ * — Q26 visual coherent pacchetto landed alongside red badge UI surfacing).
  */
 
 import type {
@@ -25,6 +30,12 @@ export interface GateStairCheckerInput {
   readonly params: Readonly<StairParams>;
   readonly codeProfile: StairCodeProfile;
   readonly nokSubType?: StairNokSubType;
+  /**
+   * Project-default occupancy load (Q27, ADR-358 §3.7). Caller passes the
+   * resolved value (`projectDefault ?? params.occupancyLoad`); when absent or
+   * 0 egress check is skipped. Universal across profiles except 'none'.
+   */
+  readonly occupancyLoad?: number;
 }
 
 export interface GateStairCheckerResult {
@@ -34,6 +45,8 @@ export interface GateStairCheckerResult {
   readonly codeViolations: readonly string[];
   /** ADA-specific violations split out for UI grouping. */
   readonly adaViolations: readonly string[];
+  /** Egress capacity violations (Phase 6.5, G20). Universal except 'none'. */
+  readonly egressViolations: readonly string[];
 }
 
 // ─── Hard-error baseline (profile-independent) ───────────────────────────────
@@ -109,6 +122,22 @@ function checkADA(params: Readonly<StairParams>): readonly string[] {
   return out;
 }
 
+// ─── Egress capacity (G20, IBC §1011.5 — universal life-safety, Phase 6.5) ──
+
+/** Required width per occupant on stairs: 0.3 in / person = 7.62 mm / person. */
+const EGRESS_MM_PER_PERSON = 7.62;
+
+function checkEgress(
+  params: Readonly<StairParams>,
+  occupancyLoad: number | undefined,
+): readonly string[] {
+  if (!occupancyLoad || occupancyLoad <= 0) return [];
+  const required = occupancyLoad * EGRESS_MM_PER_PERSON;
+  return params.width < required
+    ? ['tools.stair.validator.egress.widthBelowOccupancy']
+    : [];
+}
+
 // ─── Public dispatcher ───────────────────────────────────────────────────────
 
 function dispatchProfile(input: GateStairCheckerInput): {
@@ -140,11 +169,15 @@ function dispatchProfile(input: GateStairCheckerInput): {
 }
 
 /**
- * Entry point for the stair validator gate (ADR-358 Phase 6). Returns hard
- * errors (block creation), code violations and ADA violations as i18n keys.
+ * Entry point for the stair validator gate (ADR-358 Phase 6 + 6.5). Returns
+ * hard errors (block creation), code violations, ADA violations, and egress
+ * violations as i18n keys. Egress runs universally except when `codeProfile`
+ * is 'none' or `occupancyLoad` is absent/0.
  */
 export function gateStairChecker(input: GateStairCheckerInput): GateStairCheckerResult {
   const hardErrors = checkHardErrors(input.params);
   const { codeViolations, adaViolations } = dispatchProfile(input);
-  return { hardErrors, codeViolations, adaViolations };
+  const egressViolations =
+    input.codeProfile === 'none' ? [] : checkEgress(input.params, input.occupancyLoad);
+  return { hardErrors, codeViolations, adaViolations, egressViolations };
 }
