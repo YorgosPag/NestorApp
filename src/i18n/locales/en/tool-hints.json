@@ -116,6 +116,42 @@
         "width": "Width",
         "length": "Length / Step count",
         "split": "Flight split"
+      },
+      "validator": {
+        "hardError": {
+          "stepCount": "Invalid step count (at least 2 required).",
+          "width": "Invalid stair width.",
+          "rise": "Invalid riser height.",
+          "tread": "Invalid tread depth.",
+          "totalRise": "Invalid total rise."
+        },
+        "nok": {
+          "widthMin": "NOK: insufficient stair width.",
+          "riseRange": "NOK: riser height outside allowed range.",
+          "treadRange": "NOK: tread depth outside allowed range.",
+          "twoRPlusG": "NOK: comfort formula 2R+G outside allowed range."
+        },
+        "ibc": {
+          "widthMin": "IBC: insufficient stair width (below 1117 mm / 44 in).",
+          "riseMax": "IBC: riser height exceeds maximum (177.8 mm / 7 in).",
+          "treadMin": "IBC: tread depth below minimum (279.4 mm / 11 in)."
+        },
+        "eurocode": {
+          "widthMin": "Eurocode: insufficient stair width.",
+          "riseRange": "Eurocode: riser height outside allowed range.",
+          "treadRange": "Eurocode: tread depth outside allowed range.",
+          "twoRPlusG": "Eurocode: comfort formula 2R+G outside allowed range."
+        },
+        "ada": {
+          "riseMax": "ADA: riser height exceeds accessibility limit.",
+          "treadMin": "ADA: tread depth below accessibility limit.",
+          "uniformStep": "ADA: step variation exceeds the allowed uniformity tolerance.",
+          "handrailHeight": "ADA: handrail height outside allowed range (864-965 mm).",
+          "topExtension": "ADA: insufficient top handrail extension (at least 305 mm required).",
+          "bottomExtension": "ADA: bottom handrail extension must equal one tread depth.",
+          "contrastStrip": "ADA: contrasting nosing strip is missing."
+        },
+        "headroomBelowMin": "Headroom clearance is below the code minimum."
       }
     },
     "circle": {
