@@ -106,15 +106,11 @@ export class LayerOperationsService {
       }
     };
     
-    // ADR-358 Phase 9D-1: entity.layerId is preserved by the spread (stable across rename).
-    // entity.layer (legacy name backref) is updated for transitional readers; removed at end
-    // of Phase 9D-3 sweep when all readers have migrated to layerId + LayerStore lookup.
-    // Phase 9D-3: id-first match — also catches entities with only `.layerId` set.
-    const updatedEntities = scene.entities.map(entity =>
-      resolveEntityLayerName(entity) === oldName
-        ? { ...entity, layer: newName }
-        : entity
-    );
+    // ADR-358 Phase 9D-5a — entity.layerId is the stable identifier (rename mutates SceneLayer.name only).
+    // No entity-side mutation needed: id-first readers (`resolveEntityLayerName`) auto-resolve the new name
+    // via LayerStore.getLayer(id).name. Legacy `entity.layer` name backref dropped; remaining stale-name
+    // readers either migrate to the resolver (this phase) or are tolerated until 9D-5b schema flip.
+    const updatedEntities = scene.entities;
     
     const updatedScene = {
       ...scene,
@@ -252,12 +248,16 @@ export class LayerOperationsService {
       };
     }
     
-    // Move all entities from source layers to target layer
-    // ADR-358 Phase 9D-3: id-first lookup via LayerStore, name fallback
+    // Move all entities from source layers to target layer.
+    // ADR-358 Phase 9D-5a — re-key via stable `layerId` (target layer's id from SceneModel.layers
+    // SSoT). Legacy `entity.layer` name backref dropped. Source entities now point at the target
+    // layer's id; downstream readers resolve the display name via LayerStore.getLayer(id).name.
+    const targetLayer = scene.layers[targetLayerName];
+    const targetLayerId = targetLayer?.id;
     const updatedEntities = scene.entities.map(entity => {
       const name = resolveEntityLayerName(entity);
       return name && sourceLayerNames.includes(name)
-        ? { ...entity, layer: targetLayerName }
+        ? { ...entity, layerId: targetLayerId ?? (entity as { layerId?: string }).layerId }
         : entity;
     });
     
