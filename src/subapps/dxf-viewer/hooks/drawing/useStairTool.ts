@@ -22,9 +22,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §6.1 §6.2 §9.1 Q2
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { StairEntity } from '../../types/stair';
+import { stairStatusStore } from '../../statusbar/stair-status-store';
 import {
   buildDefaultStairParams,
   buildStairEntity,
@@ -177,6 +178,23 @@ export function useStairTool(options: UseStairToolOptions = {}): UseStairToolRes
       case 'confirming': return 'tools.stair.statusConfirm';
       default: return '';
     }
+  }, []);
+
+  // ── ADR-358 Phase 7b1 — publish current status key to CadStatusBar.
+  // Single writer (this hook), multi reader (useStairStatusKey).
+  useEffect(() => {
+    switch (state.phase) {
+      case 'awaitingBasePoint': stairStatusStore.set('tools.stair.statusBasePoint'); break;
+      case 'awaitingDirection': stairStatusStore.set('tools.stair.statusDirection'); break;
+      case 'confirming': stairStatusStore.set('tools.stair.statusConfirm'); break;
+      default: stairStatusStore.set(null);
+    }
+  }, [state.phase]);
+
+  // Separate unmount-only cleanup so the per-phase effect above does not
+  // emit a transient `null` between phase transitions.
+  useEffect(() => {
+    return () => { stairStatusStore.set(null); };
   }, []);
 
   return {
