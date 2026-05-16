@@ -92,6 +92,35 @@ import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToo
 import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToolbarCommandBridge';
 // ✅ PERFORMANCE: Memoize the main component
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
+  // === [DVC-RENDER] DIAGNOSTIC — DELETE AFTER ROOT CAUSE FOUND (render loop investigation 2026-05-16) ===
+  const _dvcRenderCountRef = React.useRef(0);
+  const _dvcPrevPropsRef = React.useRef<Record<string, unknown>>({});
+  _dvcRenderCountRef.current++;
+  React.useEffect(() => {
+    const safeStr = (v: unknown): string => {
+      try {
+        return JSON.stringify(v, (_k, val) => {
+          if (typeof val === 'function') return '[fn]';
+          if (val instanceof Map || val instanceof Set) return `[${val.constructor.name}:${(val as Set<unknown>).size}]`;
+          return val;
+        });
+      } catch { return '[uncomparable]'; }
+    };
+    const curr = props as unknown as Record<string, unknown>;
+    const prev = _dvcPrevPropsRef.current;
+    const refChanged: string[] = [];
+    const contentChanged: string[] = [];
+    for (const [k, v] of Object.entries(curr)) {
+      if (prev[k] !== v) {
+        refChanged.push(k);
+        if (safeStr(prev[k]) !== safeStr(v)) contentChanged.push(k);
+      }
+    }
+
+    console.log(`[DVC-RENDER] #${_dvcRenderCountRef.current} props-content-changed:`, contentChanged.length === 0 ? '(NONE)' : contentChanged.join(','), '| props-ref-only:', refChanged.filter(k => !contentChanged.includes(k)).join(','));
+    _dvcPrevPropsRef.current = curr;
+  });
+  // === END DIAGNOSTIC ===
   // ADR-345 — mark the document root while the DXF viewer route is mounted
   // so route-scoped CSS (e.g. hiding the global header border-bottom) only
   // applies here. Cleanup restores the previous value when leaving the route.

@@ -35,7 +35,10 @@ import {
   buildCutLine,
   buildStringersFromWalkline,
 } from './stair-geometry-shared';
+import { buildTreadLabels } from './stair-geometry-labels';
 import { computeLShape } from './stair-geometry-lshape';
+import { computeUShape } from './stair-geometry-ushape';
+import { computeGamma } from './stair-geometry-gamma';
 
 // ─── Public entry point (kind dispatch) ──────────────────────────────────────
 
@@ -52,10 +55,9 @@ export function computeStairGeometry(params: Readonly<StairParams>): StairGeomet
     case 'l-shape':
       return computeLShape(params, variant);
     case 'u-shape':
+      return computeUShape(params, variant);
     case 'gamma':
-      throw new Error(
-        `StairGeometryService: kind '${variant.kind}' not implemented yet (Phase 3b)`,
-      );
+      return computeGamma(params, variant);
     case 'spiral':
     case 'helical':
       throw new Error(
@@ -111,6 +113,14 @@ function computeStraight(params: Readonly<StairParams>): StairGeometry {
     split.below.length > 0 && split.above.length > 0
       ? buildCutLine(split.above[0], u, width, cutPlaneHeight)
       : undefined;
+  const treadLabels = buildTreadLabels(
+    treads,
+    [stepCount],
+    params.treadLabelDisplay,
+    params.treadLabelEveryN,
+    params.treadLabelRestartPerFlight,
+    params.treadNumberStart,
+  );
   return {
     treads: split.below,
     treadsBelowCut: split.below,
@@ -122,6 +132,7 @@ function computeStraight(params: Readonly<StairParams>): StairGeometry {
     landings: [],
     arrowSymbol: arrow,
     cutLine,
+    treadLabels,
     bbox: bboxOfPolygons(treads),
   };
 }

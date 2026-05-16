@@ -201,12 +201,12 @@ describe('StairGeometryService — L-shape', () => {
     expect(g.arrowSymbol.label).toBe('UP');
   });
 
-  it("Test 11: landingCornerStyle='chamfer' throws (Phase 3b feature)", () => {
+  it("Test 11: landingCornerStyle='chamfer' throws (Phase 3c feature)", () => {
     expect(() => computeStairGeometry(makeLShapeParams({ landingCornerStyle: 'chamfer' }))).toThrow(
-      /Phase 3b/,
+      /Phase 3c/,
     );
     expect(() => computeStairGeometry(makeLShapeParams({ landingCornerStyle: 'fillet' }))).toThrow(
-      /Phase 3b/,
+      /Phase 3c/,
     );
   });
 });

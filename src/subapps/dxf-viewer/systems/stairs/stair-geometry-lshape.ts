@@ -24,9 +24,10 @@ import {
   arrowSymbol,
   bboxOfPolygons,
   splitTreadsByCutPlane,
-  buildCutLine,
+  buildCutLineForFlights,
   buildStringersFromWalkline,
 } from './stair-geometry-shared';
+import { buildTreadLabels } from './stair-geometry-labels';
 
 // ─── L-SHAPE entry ────────────────────────────────────────────────────────────
 
@@ -54,10 +55,17 @@ export function computeLShape(
   const arrow = arrowSymbol(basePoint, walkline[walkline.length - 1], upDirection);
   const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
   const split = splitTreadsByCutPlane(allTreads, cutPlaneHeight);
-  const cutLine =
-    split.below.length > 0 && split.above.length > 0
-      ? buildCutLine(split.above[0], u1, width, cutPlaneHeight)
-      : undefined;
+  const cutLine = buildCutLineForFlights(
+    allTreads, [n1, n2], [u1, u2], width, cutPlaneHeight,
+  );
+  const treadLabels = buildTreadLabels(
+    allTreads,
+    [n1, n2],
+    params.treadLabelDisplay,
+    params.treadLabelEveryN,
+    params.treadLabelRestartPerFlight,
+    params.treadNumberStart,
+  );
   return {
     treads: split.below,
     treadsBelowCut: split.below,
@@ -69,6 +77,7 @@ export function computeLShape(
     landings: [landing],
     arrowSymbol: arrow,
     cutLine,
+    treadLabels,
     bbox: bboxOfPolygons([...allTreads, landing]),
   };
 }
@@ -79,7 +88,7 @@ function assertLShapeCornerSupported(variant: StairVariantLShape): void {
   const style = variant.landingCornerStyle ?? 'square';
   if (style !== 'square') {
     throw new Error(
-      `StairGeometryService: landingCornerStyle '${style}' requires Phase 3b (chamfer/fillet not implemented)`,
+      `StairGeometryService: landingCornerStyle '${style}' requires Phase 3c (chamfer/fillet not implemented)`,
     );
   }
 }
