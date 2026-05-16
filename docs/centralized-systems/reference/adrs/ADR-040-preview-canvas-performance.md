@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-17 — ADR-358 Phase 9D-3b interop: DxfRenderer dual-write `layerId` + id-first resolve
+
+`DxfRenderer.entityToDxfEntity` now mirrors `entity.layerId` onto the DXF entity, and `getResolvedLayerStyle` resolves the layer via `resolveEntityLayerName(entity)` (LayerStore lookup + legacy name fallback). Render-path now id-aware; bitmap cache key is unaffected (still keyed by visible/selected snapshot, ADR-040 cardinal rule #3 intact).
+
 ### 2026-05-16 (Phase XX) — Render-loop persists; instrumentation deployed
 
 **Status**: Phase XIX claim "RESOLVED" **SMENTITA**. Giorgio conferma: dopo i fix XV-XIX, in idle puro lo zero-input loop `PERF_LINE DxfCanvasSubscriber.commit` + `PERF_LINE CanvasSection.commit` continua a fire a ~1-2Hz. I 5 fix XV-XIX sono validi defensive layers GOL-level — **non rollback** — ma **nessuno** è il root cause.

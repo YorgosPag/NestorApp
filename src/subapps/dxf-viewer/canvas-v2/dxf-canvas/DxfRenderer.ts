@@ -11,6 +11,8 @@ import { CAD_UI_COLORS } from '../../config/color-config';
 // ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolver
 import { resolveEntityStyle, entityToStyleInput } from '../../systems/properties/resolve-entity-style';
 import { lineweightToPx } from '../../config/lineweight-iso-catalog';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
+import { resolveEntityLayerName } from '../../stores/LayerStore';
 function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
   const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
     'solid': 'solid',
@@ -280,6 +282,8 @@ export class DxfRenderer {
       visible: entity.visible,
       selected: isSelected,
       layer: entity.layer,
+      // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+      layerId: entity.layerId,
       color: resolved.colorHex,
       lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
       lineweight: resolved.lineWidthPx,
@@ -466,7 +470,11 @@ export class DxfRenderer {
       lineWidthPx: Math.max(1, entity.lineWidth || 1),
     };
     if (!layersById) return fallback;
-    const layer = layersById[entity.layer];
+    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback. `layersById`
+    // is currently name-keyed (Phase 9E re-keys to LayerId); resolve the name
+    // through dual-read so id-only entities still hit the cache.
+    const resolvedLayerName = resolveEntityLayerName(entity);
+    const layer = resolvedLayerName ? layersById[resolvedLayerName] : undefined;
     if (!layer) return fallback;
     const styleInput = entityToStyleInput({
       color: entity.color,
