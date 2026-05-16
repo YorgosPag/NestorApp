@@ -8,6 +8,8 @@
 
 import type { ICommand, ISceneManager, SceneEntity, CreateEntityOptions, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
+// ADR-358 Phase 9D-5a — propagate stable `layerId` (`lyr_<UUID-v4>`) alongside legacy `layer`.
+import { getLayer } from '../../../stores/LayerStore';
 
 /**
  * Command for creating a new entity
@@ -37,10 +39,15 @@ export class CreateEntityCommand implements ICommand {
     if (!this.entity) {
       // First execution - reuse caller-provided id when present (ADR-057),
       // otherwise generate a fresh one.
+      const layerName = this.options.layer ?? this.entityData.layer ?? '0';
+      // ADR-358 Phase 9D-5a — resolve stable id either from caller override, entityData mirror, or layer-name lookup.
+      const entityDataLayerId = (this.entityData as { layerId?: string }).layerId;
+      const resolvedLayerId = this.options.layerId ?? entityDataLayerId ?? getLayer(layerName)?.id;
       this.entity = {
         ...this.entityData,
         id: this.options.existingId ?? generateEntityId(),
-        layer: this.options.layer ?? this.entityData.layer ?? '0',
+        layer: layerName,
+        layerId: resolvedLayerId,
         visible: true,
       } as SceneEntity;
 
