@@ -44,6 +44,58 @@ const DEFAULT_HANDRAIL_HEIGHT_MM = 900;
 const DEFAULT_WALKLINE_OFFSET_MM = 600;
 const RAD_TO_DEG = 180 / Math.PI;
 
+// ─── Scene units → mm scale (Phase 8 unit-aware builder hotfix) ──────────────
+
+export type SceneUnits = 'mm' | 'cm' | 'm' | 'in' | 'ft';
+
+/**
+ * Multiplier applied to the mm defaults so the resulting `StairParams` are
+ * expressed in the scene's coordinate units. DXF planning files are commonly
+ * in millimeters (architectural drafting), but BIM/civil files reach the
+ * scene in meters; without this conversion the stair geometry is rendered
+ * ~1000× larger than the host floorplan (regression observed 2026-05-17).
+ */
+function mmToSceneUnits(units: SceneUnits): number {
+  switch (units) {
+    case 'mm': return 1;
+    case 'cm': return 0.1;
+    case 'm':  return 0.001;
+    case 'in': return 1 / 25.4;
+    case 'ft': return 1 / 304.8;
+  }
+}
+
+/**
+ * ADR-358 Phase 8 — heuristic scene-units detection from the scene bounds.
+ *
+ * Background: `dxf-scene-builder` hardcodes `SceneModel.units = 'mm'` even
+ * when the source DXF carries `$INSUNITS = 6` (meters), so the stored field
+ * is unreliable as a scale reference for newly drawn entities. Until the
+ * builder is fixed to propagate the real unit (carryover, broader scope),
+ * we infer the scale from the world-bounds diagonal of the loaded scene:
+ *
+ *   diagonal in meters     ≈ 10 – 200      (typical building footprint)
+ *   diagonal in centimeters ≈ 1_000 – 20_000
+ *   diagonal in millimeters ≈ 10_000 – 200_000
+ *
+ * The thresholds err on the safe side — pathological tiny scenes
+ * (< 1 unit) and giant ones (> 5e5) fall back to `'mm'` to preserve the
+ * historical default.
+ */
+export function detectSceneUnits(bounds: {
+  min: { x: number; y: number };
+  max: { x: number; y: number };
+}): SceneUnits {
+  const dx = bounds.max.x - bounds.min.x;
+  const dy = bounds.max.y - bounds.min.y;
+  const diagonal = Math.hypot(dx, dy);
+  if (!Number.isFinite(diagonal) || diagonal <= 0) return 'mm';
+  if (diagonal < 1) return 'mm';      // unknown / unitless → safe default
+  if (diagonal < 500) return 'm';     // 1 – 500 units ≈ meters
+  if (diagonal < 50_000) return 'cm'; // 500 – 50k units ≈ centimeters
+  return 'mm';                        // 50k+ ≈ millimeters
+}
+
 // ─── Param overrides accepted by builders ────────────────────────────────────
 
 /**
@@ -108,22 +160,33 @@ export function buildDefaultStairParams(
   basePoint: Readonly<Point2D>,
   direction: number,
   overrides: StairParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): StairParams {
-  const rise = overrides.rise ?? DEFAULT_RISE_MM;
-  const tread = overrides.tread ?? DEFAULT_TREAD_MM;
-  const width = overrides.width ?? DEFAULT_WIDTH_MM;
+  const s = mmToSceneUnits(sceneUnits);
+  // Dynamic Input overrides arrive already in the scene units the user typed
+  // (panel labels reflect the current scene units), so they are NOT re-scaled
+  // here. Only the mm-baked defaults need converting.
+  const rise = overrides.rise ?? DEFAULT_RISE_MM * s;
+  const tread = overrides.tread ?? DEFAULT_TREAD_MM * s;
+  const width = overrides.width ?? DEFAULT_WIDTH_MM * s;
   const stepCount = overrides.stepCount ?? DEFAULT_STEP_COUNT;
   const codeProfile: StairCodeProfile = overrides.codeProfile ?? 'nok';
   const base3D: Point3D = { x: basePoint.x, y: basePoint.y, z: 0 };
   const variant: StairVariantParams = { kind: 'straight' };
   const adaContrastStrip =
     overrides.adaContrastStrip ?? (codeProfile === 'ada' ? true : false);
+  const handrailsBuilt = buildHandrails(codeProfile, overrides.handrails);
+  // Scale handrail height (always mm in `buildHandrails`) into scene units
+  // when the caller did not explicitly override it.
+  const handrailsScaled: StairParams['handrails'] = overrides.handrails?.height !== undefined
+    ? handrailsBuilt
+    : { ...handrailsBuilt, height: handrailsBuilt.height * s };
   return {
     basePoint: base3D,
     direction,
     rise,
     tread,
-    nosing: DEFAULT_NOSING_MM,
+    nosing: DEFAULT_NOSING_MM * s,
     nosingSide: 'front',
     width,
     stepCount,
@@ -135,8 +198,8 @@ export function buildDefaultStairParams(
     antiskidNosing: false,
     adaContrastStrip,
     variant,
-    walklineOffset: DEFAULT_WALKLINE_OFFSET_MM,
-    handrails: buildHandrails(codeProfile, overrides.handrails),
+    walklineOffset: DEFAULT_WALKLINE_OFFSET_MM * s,
+    handrails: handrailsScaled,
     upDirection: 'forward',
     treadNumberStart: 1,
     treadLabelDisplay: 'all',
