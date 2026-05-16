@@ -357,6 +357,19 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
   background: var(--ribbon-btn-hover);
 }
 
+/* ADR-345 Fase 5.6 — Active tool highlight (Large + Small buttons).
+   Matches when `commandKey === activeTool`. Mirrors status-bar `data-on`
+   and toggle-button `data-pressed` for visual consistency. */
+.dxf-ribbon-btn[data-active="true"] {
+  background: var(--ribbon-btn-active);
+  color: #FFFFFF;
+}
+
+.dxf-ribbon-btn[data-active="true"]:hover {
+  background: var(--ribbon-btn-active);
+  filter: brightness(1.1);
+}
+
 .dxf-ribbon-btn-large {
   flex-direction: column;
   justify-content: flex-start;
@@ -415,6 +428,24 @@ html[data-app-route="dxf-viewer"] header.sticky.top-0 {
 
 .dxf-ribbon-btn-split:hover {
   border-color: var(--ribbon-separator);
+}
+
+/* ADR-345 Fase 5.6 — Active state on split when ANY variant matches
+   activeTool. Paints the whole split (top+arrow) with the accent. */
+.dxf-ribbon-btn-split[data-active="true"] {
+  background: var(--ribbon-btn-active);
+  color: #FFFFFF;
+  border-color: var(--ribbon-btn-active);
+}
+
+.dxf-ribbon-btn-split[data-active="true"] .dxf-ribbon-btn-split-top,
+.dxf-ribbon-btn-split[data-active="true"] .dxf-ribbon-btn-split-arrow {
+  color: #FFFFFF;
+}
+
+.dxf-ribbon-btn-split[data-active="true"] .dxf-ribbon-btn-split-top:hover,
+.dxf-ribbon-btn-split[data-active="true"] .dxf-ribbon-btn-split-arrow:hover {
+  background: rgb(255 255 255 / 0.12);
 }
 
 .dxf-ribbon-btn-split-large {
