@@ -7,6 +7,7 @@
 import React from 'react';
 import { ColorPickerModal } from './layers/components/ColorPickerModal';
 import type { SceneModel } from '../../types/scene';
+import { getLayer } from '../../stores/LayerStore';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 import { useTranslation } from '@/i18n';
@@ -62,8 +63,13 @@ export const ColorManager: React.FC<ColorManagerProps> = ({
     const { scene: sceneA, layerName } = ensureLayerForColor(currentScene, hex);
 
     // 2) μεταφορά των οντοτήτων στο νέο layer + ενημέρωση color
+    // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+    const sceneLayer = sceneA.layers[layerName] as { id?: string } | undefined;
+    const targetLayerId = sceneLayer?.id ?? getLayer(layerName)?.id;
     const newEntities = sceneA.entities.map(e =>
-      idSet.has(e.id) ? { ...e, layer: layerName, color: hex } : e
+      idSet.has(e.id)
+        ? { ...e, layer: layerName, layerId: targetLayerId ?? e.layerId, color: hex }
+        : e
     );
 
     const updated = { ...sceneA, entities: newEntities };
