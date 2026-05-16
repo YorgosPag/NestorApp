@@ -4,6 +4,8 @@ import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
 import { getAciColor } from '../settings/standards/aci';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault, DXF_DEFAULT_LAYER } from '../config/layer-config';
+// ADR-358 Phase 9C/9D — SceneLayer construction SSoT (auto-gens `lyr_<UUID-v4>` id).
+import { createSceneLayer } from '../types/entities';
 // 🏢 ADR-142: Centralized Default Font Size
 import { TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
@@ -49,13 +51,16 @@ export class DxfSceneBuilder {
     const layers: Record<string, SceneLayer> = {};
 
     // Add default layer with real ACI color
+    // ADR-358 Phase 9C/9D-2 — factory injects stable `lyr_<UUID-v4>` id (auto-gen via
+    // enterprise-id-convenience.generateLayerId). Replaces legacy inline literal that
+    // bypassed the id-gen contract.
     const defaultLayerColor = layerColors[DXF_DEFAULT_LAYER]?.color || DEFAULT_LAYER_COLOR;
-    layers[DXF_DEFAULT_LAYER] = {
+    layers[DXF_DEFAULT_LAYER] = createSceneLayer({
       name: DXF_DEFAULT_LAYER,
       color: defaultLayerColor,
       visible: true,
-      locked: false
-    };
+      locked: false,
+    });
 
     // Parse entities using state machine
     const parsedEntities = DxfEntityParser.parseEntities(lines);
@@ -86,6 +91,11 @@ export class DxfSceneBuilder {
 
         // Register layer with REAL ACI colors from parsed LAYER table
         DxfSceneBuilder.registerLayer(layers, layerName, layerColors);
+
+        // ADR-358 Phase 9D-2 — attribute stable `layerId` on entity from the
+        // registered SceneLayer. Provides id-keyed routing downstream
+        // (DxfRenderer/HitTester) prior to Phase 9E `SceneModel.layers` re-key.
+        (entity as { layerId?: string }).layerId = layers[layerName].id;
 
         // ╔════════════════════════════════════════════════════════════════════════╗
         // ║ 🎨 BYLAYER COLOR RESOLUTION (2026-01-03)                               ║
@@ -210,12 +220,13 @@ export class DxfSceneBuilder {
         resolvedColor = getLayerColor(layerName);
       }
 
-      layers[layerName] = {
+      // ADR-358 Phase 9C/9D-2 — factory auto-gens stable `lyr_<UUID-v4>` id.
+      layers[layerName] = createSceneLayer({
         name: layerName,
         color: resolvedColor,
         visible,
-        locked: false
-      };
+        locked: false,
+      });
     }
   }
 
