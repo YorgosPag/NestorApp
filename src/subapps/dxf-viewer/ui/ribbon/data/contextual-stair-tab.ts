@@ -18,6 +18,7 @@
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { STAIR_RIBBON_KEYS } from '../hooks/bridge/stair-command-keys';
+import { STAIR_RIBBON_BADGE_KEYS } from '../hooks/useRibbonStairBridge';
 
 export const STAIR_CONTEXTUAL_TRIGGER = 'stair-selected';
 
@@ -124,6 +125,8 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
   labelKey: 'ribbon.tabs.stairProperties',
   isContextual: true,
   contextualTrigger: STAIR_CONTEXTUAL_TRIGGER,
+  // ADR-358 Phase 7b1 — Red "!" badge when validation.hasCodeViolations === true.
+  badgeKey: STAIR_RIBBON_BADGE_KEYS.violations,
   panels: [
     {
       id: 'stair-structure',
