@@ -28,6 +28,8 @@ import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
 import { expandArrayEntity } from '../../systems/array/array-expander';
 import { getLayerNameOrDefault } from '../../config/layer-config';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
+import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { UI_COLORS } from '../../config/color-config';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 import { dwarn } from '../../debug';
@@ -64,7 +66,9 @@ export interface UseDxfSceneConversionReturn {
  *   `resolveStyleForRender()` then cascades live through `layersById` → layer style.
  */
 function buildBase(entity: SceneEntity, layers: SceneLayers) {
-  const layerInfo = entity.layer ? layers[entity.layer] : null;
+  // ADR-358 Phase 9D-3: id-first name resolution via LayerStore, fallback to legacy
+  const resolvedLayerName = resolveEntityLayerName(entity);
+  const layerInfo = resolvedLayerName ? layers[resolvedLayerName] : null;
   const m = entity as typeof entity & {
     measurement?: boolean;
     showEdgeDistances?: boolean;
@@ -77,7 +81,11 @@ function buildBase(entity: SceneEntity, layers: SceneLayers) {
 
   return {
     id: entity.id,
-    layer: getLayerNameOrDefault(entity.layer),
+    // ADR-358 Phase 9D-3: id-first name resolution + ADR-130 default fallback
+    layer: getLayerNameOrDefault(resolvedLayerName),
+    // ADR-358 Phase 9D-2 — forward stable layerId when present. Resolves to id lookup
+    // path in DxfRenderer/HitTester once Phase 9E re-keys scene.layers by id.
+    ...(entity.layerId !== undefined && { layerId: entity.layerId }),
     // Phase 6: omit `color` when entity opts into ByLayer/ByBlock cascade. Resolver
     // reads `colorMode` + `layersById[layer].color` at render time.
     ...(colorByLayer
