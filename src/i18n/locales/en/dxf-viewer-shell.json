@@ -374,6 +374,7 @@
       "stairStructure": "Structure",
       "stairGeometry": "Geometry",
       "stairMultiStory": "Multi-Story",
+      "stairMultiFlight": "Multi-Flight",
       "stairActions": "Actions",
       "placeholder": "Coming soon",
       "history": "History",
@@ -564,6 +565,10 @@
         "stepCount": "Steps",
         "storyCount": "Floors",
         "storyHeight": "Story Height",
+        "flight2TurnDirection": "Flight 2 Turn",
+        "flight3TurnDirection": "Flight 3 Turn",
+        "turnDirectionLeft": "Left",
+        "turnDirectionRight": "Right",
         "close": "Close"
       },
       "measureAngle": "Angle",
@@ -640,6 +645,70 @@
       "spacingCannotBeZero": "Spacing cannot be zero.",
       "fillAngleCannotBeZero": "Fill angle cannot be zero.",
       "pathEntityRequired": "Path entity is required."
+    }
+  },
+  "stairAdvancedPanel": {
+    "title": "Stair Advanced Properties",
+    "closeAriaLabel": "Close panel",
+    "sections": {
+      "materials": {
+        "title": "Materials",
+        "tread": "Tread",
+        "riser": "Riser",
+        "stringer": "Stringer",
+        "landing": "Landing",
+        "customPlaceholder": "Material name"
+      },
+      "perTread": {
+        "title": "Per-tread overrides",
+        "empty": "No overrides",
+        "addOverride": "Add",
+        "removeOverride": "Remove",
+        "columns": {
+          "index": "#",
+          "material": "Material",
+          "nosing": "Nosing (mm)"
+        },
+        "rowAriaLabel": "Tread {index}"
+      },
+      "cutPlane": {
+        "title": "Cut Plane",
+        "inheritProject": "Inherit from project",
+        "projectDefaultHint": "Project default: {valueMm} mm",
+        "overrideMm": "Override (mm)"
+      },
+      "treadNumbering": {
+        "title": "Tread Numbering",
+        "display": {
+          "all": "All",
+          "nth": "Every Nth",
+          "none": "None"
+        },
+        "everyN": "Every:",
+        "restartPerFlight": "Restart per flight"
+      },
+      "nosingSide": {
+        "title": "Nosing Side",
+        "options": {
+          "front": "Front",
+          "none": "None",
+          "frontAndSides": "Front + Sides"
+        }
+      }
+    },
+    "materials": {
+      "preset": {
+        "oak": "Oak",
+        "walnut": "Walnut",
+        "marble": "Marble",
+        "granite": "Granite",
+        "concrete": "Concrete",
+        "steel": "Steel",
+        "glass": "Glass",
+        "terrazzo": "Terrazzo",
+        "tile": "Tile",
+        "custom": "Custom"
+      }
     }
   }
 }
