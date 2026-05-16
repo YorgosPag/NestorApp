@@ -35,11 +35,14 @@ import type {
   StairParams,
   StairRiserType,
   StairStructureType,
+  StairTurnDirectionLR,
 } from '../../../types/stair';
 import {
   STAIR_RIBBON_KEYS,
+  STAIR_RIBBON_VISIBILITY_KEYS,
   isStairRibbonKey,
   isStairRibbonStringKey,
+  isStairVisibilityKey,
   type StairRibbonComboKey,
   type StairRibbonStringComboKey,
 } from './bridge/stair-command-keys';
@@ -76,6 +79,13 @@ export interface RibbonStairBridge {
    * Badge keys outside `STAIR_RIBBON_BADGE_KEYS` return `false`.
    */
   readonly getBadgeState: (badgeKey: string) => boolean;
+  /**
+   * ADR-358 Phase 7b2b-β Stream F — panel visibility resolver. Returns
+   * `true` when the panel should render. For `multiFlight`, true iff the
+   * selected stair's `variant.kind` ∈ {l-shape, u-shape, gamma}. Keys
+   * outside `STAIR_RIBBON_VISIBILITY_KEYS` return `true` (no-op, panel shown).
+   */
+  readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
 /**
@@ -205,18 +215,35 @@ export function useRibbonStairBridge(
     return false;
   }, [resolveStair]);
 
+  // ADR-358 Phase 7b2b-β Stream F — panel visibility resolver.
+  const getPanelVisibility = useCallback((visibilityKey: string): boolean => {
+    if (!isStairVisibilityKey(visibilityKey)) return true;
+    const stair = resolveStair();
+    if (!stair) return false;
+    if (visibilityKey === STAIR_RIBBON_VISIBILITY_KEYS.multiFlight) {
+      const kind = stair.params.variant.kind;
+      return kind === 'l-shape' || kind === 'u-shape' || kind === 'gamma';
+    }
+    return true;
+  }, [resolveStair]);
+
   // ADR-040 Phase XIX: memoize return so RibbonCommandProvider deps stay stable.
   // Non-memoized object literal here caused 14/28 commit re-render cascade in
   // RibbonRoot + RibbonCommandProvider + 30+ button consumers (profile 2026-05-16).
   return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState],
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, getPanelVisibility }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, getPanelVisibility],
   );
 }
 
 /** ADR-358 Phase 7b1 — type guard used by `useRibbonCommands` composer. */
 export function isStairBadgeKey(badgeKey: string): boolean {
   return STAIR_OWNED_BADGE_KEYS.has(badgeKey);
+}
+
+/** ADR-358 Phase 7b2b-β Stream F — type guard used by `useRibbonCommands` composer. */
+export function isStairPanelVisibilityKey(visibilityKey: string): boolean {
+  return isStairVisibilityKey(visibilityKey);
 }
 
 // ── Read helpers ─────────────────────────────────────────────────────────────
@@ -228,8 +255,28 @@ function readStairStringField(
   switch (key) {
     case STAIR_RIBBON_KEYS.stringParams.structureType: return p.structureType;
     case STAIR_RIBBON_KEYS.stringParams.riserType:     return p.riserType;
+    case STAIR_RIBBON_KEYS.stringParams.flight2TurnDirection:
+      return readFlightTurnDirection(p, 0);
+    case STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection:
+      return readFlightTurnDirection(p, 1);
     default: return null;
   }
+}
+
+/**
+ * ADR-358 Phase 7b2b-β Stream F — read flight turn direction from variant.
+ * `flightIndex` 0 → flight 2 (l-shape/u-shape `turnDirection`, gamma `turnSequence[0]`).
+ * `flightIndex` 1 → flight 3 (gamma only, `turnSequence[1]`).
+ */
+function readFlightTurnDirection(p: StairParams, flightIndex: 0 | 1): string | null {
+  const v = p.variant;
+  if (flightIndex === 0) {
+    if (v.kind === 'l-shape' || v.kind === 'u-shape') return v.turnDirection;
+    if (v.kind === 'gamma') return v.turnSequence[0];
+    return null;
+  }
+  if (v.kind === 'gamma') return v.turnSequence[1];
+  return null;
 }
 
 function readStairNumericField(
@@ -269,8 +316,55 @@ function patchStairStringParam(
       if (riserType === prev.riserType) return null;
       return { ...prev, riserType };
     }
+    case STAIR_RIBBON_KEYS.stringParams.flight2TurnDirection:
+      return patchFlightTurnDirection(prev, 0, value);
+    case STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection:
+      return patchFlightTurnDirection(prev, 1, value);
     default: return null;
   }
+}
+
+/**
+ * ADR-358 Phase 7b2b-β Stream F — patch flight turn direction on the
+ * discriminated `variant` union. Returns `null` for invalid kinds or no-op.
+ */
+function patchFlightTurnDirection(
+  prev: StairParams,
+  flightIndex: 0 | 1,
+  value: string,
+): StairParams | null {
+  if (value !== 'left' && value !== 'right') return null;
+  const next = value as StairTurnDirectionLR;
+  const v = prev.variant;
+  if (flightIndex === 0) {
+    if (v.kind === 'l-shape' || v.kind === 'u-shape') {
+      if (v.turnDirection === next) return null;
+      return { ...prev, variant: { ...v, turnDirection: next } };
+    }
+    if (v.kind === 'gamma') {
+      if (v.turnSequence[0] === next) return null;
+      return {
+        ...prev,
+        variant: {
+          ...v,
+          turnSequence: [next, v.turnSequence[1]] as readonly [StairTurnDirectionLR, StairTurnDirectionLR],
+        },
+      };
+    }
+    return null;
+  }
+  // flightIndex === 1 → only gamma
+  if (v.kind === 'gamma') {
+    if (v.turnSequence[1] === next) return null;
+    return {
+      ...prev,
+      variant: {
+        ...v,
+        turnSequence: [v.turnSequence[0], next] as readonly [StairTurnDirectionLR, StairTurnDirectionLR],
+      },
+    };
+  }
+  return null;
 }
 
 // ── Numeric patch helpers ────────────────────────────────────────────────────
