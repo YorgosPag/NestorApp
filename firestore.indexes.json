@@ -3604,6 +3604,14 @@
       "collectionGroup": "floorplan_stairs",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "floorplanId", "order": "ASCENDING" },
+        { "fieldPath": "projectId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_stairs",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "projectId", "order": "ASCENDING" },
         { "fieldPath": "floorId", "order": "ASCENDING" },
         { "fieldPath": "params.codeProfile", "order": "ASCENDING" }
