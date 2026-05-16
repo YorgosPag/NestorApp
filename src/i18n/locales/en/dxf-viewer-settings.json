@@ -725,7 +725,10 @@
       "width": "e.g. 50.0",
       "height": "e.g. 100.0",
       "radius": "e.g. 50.0",
-      "diameter": "e.g. 100.0"
+      "diameter": "e.g. 100.0",
+      "rise": "e.g. 175",
+      "tread": "e.g. 280",
+      "stairWidth": "e.g. 1200"
     },
     "multiPoint": {
       "distance": "Distance:",
