@@ -3,6 +3,14 @@
     "confirm": "Confirm",
     "cancel": "Cancel"
   },
+  "layerPicker": {
+    "toastChanged": "Layer changed to \"{name}\"",
+    "tooltipCurrent": "Current layer: {name}",
+    "tooltipEmpty": "No active layer",
+    "placeholder": "No layer",
+    "searchPlaceholder": "Search layers…",
+    "empty": "No layers found"
+  },
   "toolbar": {
     "title": "Drawing Tools",
     "select": "Select",
