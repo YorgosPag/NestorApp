@@ -9,6 +9,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { StairGripKind } from '../useGripMovement';
 import type {
   VertexHoverInfo,
   EdgeHoverInfo,
@@ -84,6 +85,12 @@ export interface UnifiedGripInfo {
   readonly edgeVertexIndices?: [number, number];
   /** For overlay edge grips: vertex insertion index (edgeIndex + 1) */
   readonly edgeInsertIndex?: number;
+  /**
+   * ADR-358 Phase 5b — parametric stair grip discriminator (forwarded from
+   * `GripInfo.stairGripKind` in `grip-registry.wrapDxfGrip`). Routes commit
+   * through `UpdateStairParamsCommand` instead of `StretchEntityCommand`.
+   */
+  readonly stairGripKind?: StairGripKind;
 }
 
 /**
