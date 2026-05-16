@@ -51,9 +51,14 @@ export function useDynamicInputLayout({
         if (drawingPhase === 'first-point') {
           return ['x', 'y']; // Phase 1: X,Y για πρώτο σημείο διαμέτρου
         } else if (drawingPhase === 'second-point') {
-          return ['x', 'y']; // Phase 2: X,Y για δεύτερο σημείο διαμέτρου  
+          return ['x', 'y']; // Phase 2: X,Y για δεύτερο σημείο διαμέτρου
         }
         return ['x', 'y']; // Fallback
+      // ADR-358 Phase 7b2b-β Stream E — Stair tool: rise/tread/width always
+      // visible (industry convergence AutoCAD/Revit/ArchiCAD/Vectorworks/SolidWorks
+      // — params editable from tool activation, not gated by placement phase).
+      case 'stair':
+        return ['rise', 'tread', 'width'];
       default:
         return ['x', 'y', 'length']; // Default για άλλα εργαλεία
     }
