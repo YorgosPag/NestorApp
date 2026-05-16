@@ -243,7 +243,6 @@ export class LayerOperationsService {
     sourceLayerNames: string[],
     scene: SceneModel
   ): LayerOperationResult {
-
     // Validate target layer exists
     if (!scene.layers[targetLayerName]) {
       return {
@@ -274,7 +273,6 @@ export class LayerOperationsService {
       layers: updatedLayers,
       entities: updatedEntities
     };
-
     const affectedEntityIds = getEntityIdsByLayers(scene.entities, sourceLayerNames);
     return {
       updatedScene,
@@ -395,11 +393,13 @@ export class LayerOperationsService {
           ])
         )
       },
-      entities: scene.entities.map(entity =>
-        entity.layer && layersInGroup.includes(entity.layer)
+      entities: scene.entities.map(entity => {
+        // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
+        const resolvedName = resolveEntityLayerName(entity);
+        return resolvedName && layersInGroup.includes(resolvedName)
           ? { ...entity, color }
-          : entity
-      )
+          : entity;
+      })
     };
 
     // ADR-129: Centralized entity filtering
