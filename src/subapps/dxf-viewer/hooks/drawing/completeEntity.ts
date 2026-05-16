@@ -37,8 +37,6 @@ import type { Entity } from '../../types/entities';
 // 🏢 ADR-358 Phase 9C: SceneLayer factory SSoT (enterprise-id auto-gen `lyr_<UUID-v4>`)
 import { createSceneLayer } from '../../types/entities';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
-import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { UI_COLORS } from '../../config/color-config';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -198,9 +196,8 @@ export function completeEntity(
     adapter,
     {
       existingId,
-      // ADR-358 Phase 9D-3: id-first name via LayerStore, fallback to legacy `.layer`
-      layer: resolveEntityLayerName(styledEntity as { layerId?: string; layer?: string }),
-      // ADR-358 Phase 9D-5a: stable `layerId` forward — CreateEntityCommand prefers this over `layer` name lookup.
+      // ADR-358 Phase 9D-5b-i: id-only — stable `layerId` is the canonical layer binding.
+      // Legacy `layer` name option dropped from CreateEntityOptions.
       layerId: typeof styledEntity.layerId === 'string' ? styledEntity.layerId : undefined,
       color: typeof styledEntity.color === 'string' ? styledEntity.color : undefined,
       lineweight: typeof styledEntity.lineweight === 'number' ? styledEntity.lineweight : undefined,
