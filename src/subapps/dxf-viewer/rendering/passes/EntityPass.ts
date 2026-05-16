@@ -8,6 +8,8 @@ import { UI_COLORS } from '../../config/color-config';
 import { TAU } from '../primitives/canvasPaths';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault } from '../../config/layer-config';
+// 🏢 ADR-358 Phase 9D-5b-i: id-first resolver SSoT (collapsed in Phase 9D-5b-i — id-only).
+import { resolveEntityLayerName } from '../../stores/LayerStore';
 // 🏢 ADR-151: Centralized Simple Coordinate Transforms
 import { transformBoundsToScreen } from '../core/CoordinateTransforms';
 
@@ -135,15 +137,16 @@ export class EntityPass implements IRenderPass {
     for (const entity of entities) {
       // Create batch key based on type, layer, and style
       // ✅ ENTERPRISE FIX: Safe property access with type guards
-      // ADR-130: Centralized default layer
-      const entityWithStyle = entity as Entity & { layer?: string; color?: string; lineWidth?: number; };
-      const batchKey = `${entity.type}_${getLayerNameOrDefault(entityWithStyle.layer)}_${entityWithStyle.color || UI_COLORS.WHITE}_${entityWithStyle.lineWidth || 1}`;
+      // ADR-358 Phase 9D-5b-i: layer NAME via id-only resolver SSoT (LayerStore lookup).
+      const entityWithStyle = entity as Entity & { color?: string; lineWidth?: number; };
+      const layerName = getLayerNameOrDefault(resolveEntityLayerName(entity));
+      const batchKey = `${entity.type}_${layerName}_${entityWithStyle.color || UI_COLORS.WHITE}_${entityWithStyle.lineWidth || 1}`;
 
       if (!batchMap.has(batchKey)) {
         batchMap.set(batchKey, {
           entityType: entity.type,
           entities: [],
-          layer: entityWithStyle.layer,
+          layer: layerName,
           color: entityWithStyle.color,
           lineWidth: entityWithStyle.lineWidth
         });
@@ -159,7 +162,7 @@ export class EntityPass implements IRenderPass {
         batchMap.set(overflowKey, {
           entityType: entity.type,
           entities: [],
-          layer: entityWithStyle.layer,
+          layer: layerName,
           color: entityWithStyle.color,
           lineWidth: entityWithStyle.lineWidth
         });
