@@ -23,7 +23,6 @@ import { useLevelsFirestoreSync } from './hooks/useLevelsFirestoreSync';
 import { useLevelOperations } from './hooks/useLevelOperations';
 import { useLevelFloorplanSync } from './hooks/useLevelFloorplanSync';
 import { useAuth } from '@/auth';
-import { useRenderTrace } from '../../debug/render-loop-trace';
 
 // ============================================================================
 // 🏢 ENTERPRISE: STATIC CONTEXT CREATION (ADR-125)
@@ -55,32 +54,16 @@ function useLevelsSystemState({
   onFloorplanRemove,
   onError,
 }: Omit<LevelsSystemProps, 'children'>): LevelsHookReturn {
-  // ADR-040 Phase XX — wrap ALL setters with stack-trace logging (always on, no flag).
-  // Hunts the setState that causes idle re-render loop.
-  const traceSet = <T,>(name: string, raw: React.Dispatch<React.SetStateAction<T>>): React.Dispatch<React.SetStateAction<T>> => {
-    return (next) => {
-      // eslint-disable-next-line no-console
-      console.warn(`[SETSTATE-CALL ${name}]`, new Error().stack);
-      raw(next);
-    };
-  };
-  const [levels, setLevelsRaw] = useState<Level[]>(initialLevels);
-  const setLevels = React.useMemo(() => traceSet('levels', setLevelsRaw), []);
-  const [currentLevelId, setCurrentLevelIdRaw] = useState<string | null>(initialCurrentLevelId);
-  const setCurrentLevelId = React.useMemo(() => traceSet('currentLevelId', setCurrentLevelIdRaw), []);
-  const [floorplans, setFloorplansRaw] = useState<Record<string, FloorplanDoc>>(initialFloorplans);
-  const setFloorplans = React.useMemo(() => traceSet('floorplans', setFloorplansRaw), []);
-  const [importWizard, setImportWizardRaw] = useState<ImportWizardState>(DEFAULT_IMPORT_WIZARD_STATE);
-  const setImportWizard = React.useMemo(() => traceSet('importWizard', setImportWizardRaw), []);
-  const [settings, setSettingsRaw] = useState<LevelSystemSettings>({
+  const [levels, setLevels] = useState<Level[]>(initialLevels);
+  const [currentLevelId, setCurrentLevelId] = useState<string | null>(initialCurrentLevelId);
+  const [floorplans, setFloorplans] = useState<Record<string, FloorplanDoc>>(initialFloorplans);
+  const [importWizard, setImportWizard] = useState<ImportWizardState>(DEFAULT_IMPORT_WIZARD_STATE);
+  const [settings, setSettings] = useState<LevelSystemSettings>({
     ...DEFAULT_LEVEL_SETTINGS,
     ...initialSettings,
   });
-  const setSettings = React.useMemo(() => traceSet('settings', setSettingsRaw), []);
-  const [isLoading, setIsLoadingRaw] = useState(false);
-  const setIsLoading = React.useMemo(() => traceSet('isLoading', setIsLoadingRaw), []);
-  const [error, setErrorRaw] = useState<string | null>(null);
-  const setError = React.useMemo(() => traceSet('error', setErrorRaw), []);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const sceneManager = useAutoSaveSceneManager();
   const sceneManagerRef = useRef(sceneManager);
@@ -374,24 +357,6 @@ function useLevelsSystemState({
     () => ({ lastSaveTime: sceneManager.lastSaveTime, saveStatus: sceneManager.saveStatus }),
     [sceneManager],
   );
-
-  // ADR-040 Phase XX — render diff trace inside LevelsSystem provider.
-  // Identifies which state/hook primitive churns in idle.
-  useRenderTrace('LevelsSystem.provider', {
-    levels, currentLevelId, floorplans, importWizard, settings, isLoading,
-    sceneLoading, error, sceneManager, importWizardHook, firebaseUser,
-    companyId, userId, isSuperAdmin,
-    // useCallback handlers (suspect refs)
-    handleError, addLevel, removeLevel, deleteLevel, clearAllLevels, reorderLevels,
-    renameLevel, setCurrentLevel, toggleLevelVisibility, setDefaultLevel,
-    duplicateLevel, linkLevelToFloor, updateLevelContext,
-    addFloorplan, removeFloorplan, updateFloorplan, getFloorplansForLevel, calibrateFloorplan,
-    setLevelScene, getLevelScene, clearLevelScene,
-    getCurrentFileName, getAutoSaveStatus, linkSceneToLevel,
-    startImportWizard, setImportWizardStep, setSelectedLevel, setCalibration,
-    completeImport, cancelImportWizard,
-    updateSettings, resetSettings, validateLevelName, exportLevelsData, importLevelsData,
-  });
 
   // ADR-040 Phase XVI — memoize the Context value so consumers don't re-render
   // on every Provider render. Root cause of idle render-loop (2026-05-16):
