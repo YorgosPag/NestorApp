@@ -34,7 +34,7 @@ const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
   button,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, onComingSoon, onAction, splitLastUsed } = useRibbonCommand();
+  const { onToolChange, onComingSoon, onAction, splitLastUsed, activeTool } = useRibbonCommand();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -42,6 +42,20 @@ const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
   const active = useMemo(
     () => resolveActiveVariant(variants, splitLastUsed[button.command.id]),
     [variants, splitLastUsed, button.command.id],
+  );
+  // ADR-345 Fase 5.6 — split is active when ANY variant maps to current
+  // tool (not just the last-used one). Lets user see "I'm in line-parallel"
+  // even when the visible default is plain Line.
+  const isActive = useMemo(
+    () =>
+      activeTool !== null &&
+      variants.some(
+        (v) =>
+          !v.comingSoon &&
+          !v.action &&
+          v.commandKey === activeTool,
+      ),
+    [variants, activeTool],
   );
 
   const handleTopClick = useCallback(() => {
@@ -75,6 +89,7 @@ const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
       className={wrapperClass}
       data-command-id={button.command.id}
       data-coming-soon={active.comingSoon ? 'true' : undefined}
+      data-active={isActive ? 'true' : undefined}
     >
       <Tooltip>
       <TooltipTrigger asChild>
