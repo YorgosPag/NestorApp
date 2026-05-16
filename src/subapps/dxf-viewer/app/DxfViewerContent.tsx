@@ -291,7 +291,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-358 Phase 7a — Stair contextual bridge.
   const stairBridge = useRibbonStairBridge({ levelManager, universalSelection });
   const ribbonCommands = useRibbonCommands({
-    handleToolChange, handleRibbonComingSoon,
+    activeTool, handleToolChange, handleRibbonComingSoon,
     wrappedHandleAction: arrayActionInterceptor,
     textEditorBridge, arrayBridge, stairBridge,
   });

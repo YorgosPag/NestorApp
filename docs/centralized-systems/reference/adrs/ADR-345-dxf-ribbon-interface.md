@@ -772,6 +772,7 @@ interface RibbonState {
 
 | Data | Modifica |
 |------|----------|
+| 2026-05-17 | **Fase 5.6 wire** — `DxfViewerContent` passa `useDxfViewerState.activeTool` come prop a `useRibbonCommands({ activeTool, ... })`, completando il plumbing da viewer-state → ribbon-context → tool buttons. |
 | 2026-05-17 | **Fase 5.6 — activeTool propagation per pressed/active visual state**. `RibbonCommandsApi.activeTool: ToolType \| null` aggiunto; `RibbonCommandProvider` lo memoizza nel context value (deps array updated). `useRibbonCommands` riceve `activeTool` da `useDxfViewerState` e lo forward. `DxfViewerContent` lo plumbing al hook. `RibbonLargeButton` + `RibbonSmallButton` calcolano `isActive = !comingSoon && !action && activeTool === command.commandKey` e settano `aria-pressed` + `data-active`. Industry convergence (Office/AutoCAD/Revit Ribbon): toggle button visual state mandatory per discoverability tool corrente. Pure tool buttons (no action/comingSoon) only — stateless action buttons restano sempre inactive. |
 | 2026-05-11 | ADR-345 PROPOSED — Research Autodesk ribbon architecture + struttura completa tool Home tab. Migration plan in 7 fasi. |
 | 2026-05-11 | §8.0 aggiunto — Layout position confermato: ribbon full-width tra global header e DXF toolbar. Coesistenza transitoria con floating panel + DXF toolbar durante migrazione. |
