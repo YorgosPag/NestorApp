@@ -116,12 +116,12 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
 
       // Prepare entity data for command (strip 'id' as command generates its own)
       // This follows Command Pattern best practice - command owns entity lifecycle
-      // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+      // ADR-358 Phase 9D-5a: id-only WRITE — CreateEntityCommand resolves legacy `.layer` from options.
       const resolvedLayerName = entity.layer ?? DXF_DEFAULT_LAYER;
+      const resolvedLayerId = entity.layerId ?? getLayer(resolvedLayerName)?.id;
       const normalizedEntity: SceneEntity = {
         ...entity,
-        layer: resolvedLayerName,
-        layerId: entity.layerId ?? getLayer(resolvedLayerName)?.id,
+        layerId: resolvedLayerId,
         visible: entity.visible ?? true
       };
       const { id: existingId, ...entityDataWithoutId } = normalizedEntity;
@@ -138,7 +138,9 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
         transparency?: number;
       };
       const options: CreateEntityOptions = {
-        layer: entity.layer ?? DXF_DEFAULT_LAYER,
+        layer: resolvedLayerName,
+        // ADR-358 Phase 9D-5a — stable `layerId` forward (preferred path; legacy `layer` kept until 9D-5b).
+        layerId: resolvedLayerId,
         color: entity.color,
         lineweight: entity.lineweight,
         opacity: entity.opacity,
