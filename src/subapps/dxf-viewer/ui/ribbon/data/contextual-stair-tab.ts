@@ -17,7 +17,10 @@
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
-import { STAIR_RIBBON_KEYS } from '../hooks/bridge/stair-command-keys';
+import {
+  STAIR_RIBBON_KEYS,
+  STAIR_RIBBON_VISIBILITY_KEYS,
+} from '../hooks/bridge/stair-command-keys';
 import { STAIR_RIBBON_BADGE_KEYS } from '../hooks/useRibbonStairBridge';
 
 export const STAIR_CONTEXTUAL_TRIGGER = 'stair-selected';
@@ -107,6 +110,12 @@ const STORY_COUNT_OPTIONS = [
   { value: '8', labelKey: '8', isLiteralLabel: true },
   { value: '9', labelKey: '9', isLiteralLabel: true },
   { value: '10', labelKey: '10', isLiteralLabel: true },
+] as const;
+
+// ADR-358 Phase 7b2b-β Stream F — turn direction options for flight2/3.
+const TURN_DIRECTION_OPTIONS = [
+  { value: 'left', labelKey: 'ribbon.commands.stairEditor.turnDirectionLeft', isLiteralLabel: false },
+  { value: 'right', labelKey: 'ribbon.commands.stairEditor.turnDirectionRight', isLiteralLabel: false },
 ] as const;
 
 const STORY_HEIGHT_MM_OPTIONS = [
@@ -243,6 +252,43 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.storyHeight,
                 comboboxWidthPx: 80,
                 options: STORY_HEIGHT_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-358 Phase 7b2b-β Stream F — Multi-Flight panel. Visible only for
+      // variant.kind ∈ {l-shape, u-shape, gamma} via `visibilityKey` framework.
+      // flight3 combobox is shown but no-ops for l-shape/u-shape (gamma-only).
+      id: 'stair-multi-flight',
+      labelKey: 'ribbon.panels.stairMultiFlight',
+      visibilityKey: STAIR_RIBBON_VISIBILITY_KEYS.multiFlight,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.flight2TurnDirection',
+                labelKey: 'ribbon.commands.stairEditor.flight2TurnDirection',
+                commandKey: STAIR_RIBBON_KEYS.stringParams.flight2TurnDirection,
+                comboboxWidthPx: 110,
+                options: TURN_DIRECTION_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.flight3TurnDirection',
+                labelKey: 'ribbon.commands.stairEditor.flight3TurnDirection',
+                commandKey: STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection,
+                comboboxWidthPx: 110,
+                options: TURN_DIRECTION_OPTIONS,
               },
             },
           ],
