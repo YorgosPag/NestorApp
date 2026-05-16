@@ -40,11 +40,11 @@ export interface GateStairCheckerResult {
 
 function checkHardErrors(params: Readonly<StairParams>): readonly string[] {
   const errors: string[] = [];
-  if (params.stepCount < 2) errors.push('stairs.validator.hardError.stepCount');
-  if (params.width <= 0) errors.push('stairs.validator.hardError.width');
-  if (params.rise <= 0) errors.push('stairs.validator.hardError.rise');
-  if (params.tread <= 0) errors.push('stairs.validator.hardError.tread');
-  if (params.totalRise <= 0) errors.push('stairs.validator.hardError.totalRise');
+  if (params.stepCount < 2) errors.push('tools.stair.validator.hardError.stepCount');
+  if (params.width <= 0) errors.push('tools.stair.validator.hardError.width');
+  if (params.rise <= 0) errors.push('tools.stair.validator.hardError.rise');
+  if (params.tread <= 0) errors.push('tools.stair.validator.hardError.tread');
+  if (params.totalRise <= 0) errors.push('tools.stair.validator.hardError.totalRise');
   return errors;
 }
 
@@ -62,10 +62,10 @@ function checkNOK(
   const treadMax = isMain ? 320 : 280;
   const twoRG = 2 * params.rise + params.tread;
   const out: string[] = [];
-  if (params.width < widthMin) out.push('stairs.validator.nok.widthMin');
-  if (params.rise < riseMin || params.rise > riseMax) out.push('stairs.validator.nok.riseRange');
-  if (params.tread < treadMin || params.tread > treadMax) out.push('stairs.validator.nok.treadRange');
-  if (isMain && (twoRG < 600 || twoRG > 640)) out.push('stairs.validator.nok.twoRPlusG');
+  if (params.width < widthMin) out.push('tools.stair.validator.nok.widthMin');
+  if (params.rise < riseMin || params.rise > riseMax) out.push('tools.stair.validator.nok.riseRange');
+  if (params.tread < treadMin || params.tread > treadMax) out.push('tools.stair.validator.nok.treadRange');
+  if (isMain && (twoRG < 600 || twoRG > 640)) out.push('tools.stair.validator.nok.twoRPlusG');
   return out;
 }
 
@@ -73,9 +73,9 @@ function checkNOK(
 
 function checkIBC(params: Readonly<StairParams>): readonly string[] {
   const out: string[] = [];
-  if (params.width < 1117) out.push('stairs.validator.ibc.widthMin');
-  if (params.rise > 177.8) out.push('stairs.validator.ibc.riseMax');
-  if (params.tread < 279.4) out.push('stairs.validator.ibc.treadMin');
+  if (params.width < 1117) out.push('tools.stair.validator.ibc.widthMin');
+  if (params.rise > 177.8) out.push('tools.stair.validator.ibc.riseMax');
+  if (params.tread < 279.4) out.push('tools.stair.validator.ibc.treadMin');
   return out;
 }
 
@@ -84,10 +84,10 @@ function checkIBC(params: Readonly<StairParams>): readonly string[] {
 function checkEurocode(params: Readonly<StairParams>): readonly string[] {
   const twoRG = 2 * params.rise + params.tread;
   const out: string[] = [];
-  if (params.width < 1000) out.push('stairs.validator.eurocode.widthMin');
-  if (params.rise < 170 || params.rise > 200) out.push('stairs.validator.eurocode.riseRange');
-  if (params.tread < 230 || params.tread > 300) out.push('stairs.validator.eurocode.treadRange');
-  if (twoRG < 600 || twoRG > 650) out.push('stairs.validator.eurocode.twoRPlusG');
+  if (params.width < 1000) out.push('tools.stair.validator.eurocode.widthMin');
+  if (params.rise < 170 || params.rise > 200) out.push('tools.stair.validator.eurocode.riseRange');
+  if (params.tread < 230 || params.tread > 300) out.push('tools.stair.validator.eurocode.treadRange');
+  if (twoRG < 600 || twoRG > 650) out.push('tools.stair.validator.eurocode.twoRPlusG');
   return out;
 }
 
@@ -95,17 +95,17 @@ function checkEurocode(params: Readonly<StairParams>): readonly string[] {
 
 function checkADA(params: Readonly<StairParams>): readonly string[] {
   const out: string[] = [];
-  if (params.rise > 177.8) out.push('stairs.validator.ada.riseMax');
-  if (params.tread < 279.4) out.push('stairs.validator.ada.treadMin');
+  if (params.rise > 177.8) out.push('tools.stair.validator.ada.riseMax');
+  if (params.tread < 279.4) out.push('tools.stair.validator.ada.treadMin');
   // Parametric stair: all risers uniform by construction. Per-tread custom rise
   // not yet supported in `StairPerTreadOverride`, so uniformity is trivially
   // satisfied — no emission. Phase 9 will revisit when per-tread rise exposed.
   const h = params.handrails.height;
-  if (h < 864 || h > 965) out.push('stairs.validator.ada.handrailHeight');
+  if (h < 864 || h > 965) out.push('tools.stair.validator.ada.handrailHeight');
   const topExt = params.handrails.topExtension ?? 0;
-  if (topExt < 305) out.push('stairs.validator.ada.topExtension');
-  if (params.handrails.bottomExtension !== 'one-tread') out.push('stairs.validator.ada.bottomExtension');
-  if (!params.adaContrastStrip) out.push('stairs.validator.ada.contrastStrip');
+  if (topExt < 305) out.push('tools.stair.validator.ada.topExtension');
+  if (params.handrails.bottomExtension !== 'one-tread') out.push('tools.stair.validator.ada.bottomExtension');
+  if (!params.adaContrastStrip) out.push('tools.stair.validator.ada.contrastStrip');
   return out;
 }
 
