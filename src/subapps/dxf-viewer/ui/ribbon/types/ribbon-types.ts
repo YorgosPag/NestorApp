@@ -88,6 +88,14 @@ export interface RibbonTab {
   panels: RibbonPanelDef[];
   isContextual?: boolean;
   contextualTrigger?: string;
+  /**
+   * ADR-358 Phase 7b1 — Validation badge surfacing. When set, the tab
+   * button renders a red "!" badge in the top-right corner whenever
+   * `RibbonCommandsApi.getBadgeState(badgeKey)` returns `true`. Owner
+   * bridge decides what `true` means (e.g. stair bridge maps it to
+   * `StairEntity.validation.hasCodeViolations`).
+   */
+  badgeKey?: string;
 }
 
 export type RibbonMinimizeState =
