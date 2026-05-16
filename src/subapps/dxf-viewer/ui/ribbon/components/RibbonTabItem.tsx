@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonTab } from '../types/ribbon-types';
 import type { TabDragHandlers } from '../hooks/useRibbonTabDrag';
+import { useRibbonCommand } from '../context/RibbonCommandContext';
 
 interface RibbonTabItemProps {
   tab: RibbonTab;
@@ -23,8 +24,14 @@ export const RibbonTabItem: React.FC<RibbonTabItemProps> = ({
   drag,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
+  const { getBadgeState } = useRibbonCommand();
   const isDragging = drag.draggingId === tab.id;
   const isDropTarget = drag.dropTargetId === tab.id;
+  // ADR-358 Phase 7b1 — Validation badge surfacing.
+  const showBadge = tab.badgeKey ? getBadgeState(tab.badgeKey) : false;
+  const badgeAriaLabel = tab.badgeKey
+    ? t('ribbon.tabs.validationBadge', { defaultValue: '' })
+    : '';
   return (
     <button
       type="button"
@@ -35,6 +42,7 @@ export const RibbonTabItem: React.FC<RibbonTabItemProps> = ({
       data-contextual={tab.isContextual ?? false}
       data-dragging={isDragging}
       data-drop-target={isDropTarget}
+      data-has-badge={showBadge}
       draggable
       onClick={onActivate}
       onDoubleClick={onDoubleClick}
@@ -46,6 +54,15 @@ export const RibbonTabItem: React.FC<RibbonTabItemProps> = ({
       onDragEnd={drag.onDragEnd}
     >
       {t(tab.labelKey)}
+      {showBadge && (
+        <span
+          className="dxf-ribbon-tab-badge"
+          role="img"
+          aria-label={badgeAriaLabel}
+        >
+          !
+        </span>
+      )}
     </button>
   );
 };
