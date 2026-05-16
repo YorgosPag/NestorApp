@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { getFormatter } from '../../../formatting';
 import { useCursor } from '../../cursor';
 import { CADFeedback } from '../../../utils/feedback-utils';
-import { DynamicInputField } from './DynamicInputField';
+import { DynamicInputFields } from './DynamicInputFields';
 import { DynamicInputHeader } from './DynamicInputHeader';
 import { DynamicInputFooter } from './DynamicInputFooter';
 import { DynamicInputContainer } from './DynamicInputContainer';
@@ -354,229 +354,44 @@ export default function DynamicInputOverlay({
     <DynamicInputContainer position={position} showInput={showInput}>
       <DynamicInputHeader activeTool={activeTool} />
 
-        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          {/* X Coordinate */}
-          {fieldsToShow.includes('x') && (
-            <DynamicInputField
-              label="X"
-              value={xValue}
-              onChange={(e) => {
-                const normalizedValue = e.target.value.replace(',', '.'); // Κανονικοποίηση on-the-fly
-                setXValue(normalizedValue);
-                setIsManualInput(prev => ({ ...prev, x: true })); // Σημειώνει manual input
-              }}
-              onFocus={() => setActiveField('x')}
-              inputRef={xInputRef}
-              isActive={activeField === 'x'}
-              isAnchored={isCoordinateAnchored.x}
-              placeholder={t('dynamicInput.placeholders.xCoordinate')}
-            />
-          )}
-          
-          {/* Y Coordinate */}
-          {fieldsToShow.includes('y') && (
-            <DynamicInputField
-              label="Y"
-              value={yValue}
-              onChange={(e) => {
-                if (fieldUnlocked.y) { // Μόνο αν είναι ξεκλείδωτο
-                  const normalizedValue = e.target.value.replace(',', '.'); // Κανονικοποίηση on-the-fly
-                  setYValue(normalizedValue);
-                  setIsManualInput(prev => ({ ...prev, y: true })); // Σημειώνει manual input
-                }
-              }}
-              onFocus={() => {
-                if (fieldUnlocked.y) {
-                  setActiveField('y');
-                } else {
-                  // Επιστροφή στο X αν το Y είναι κλειδωμένο
-                  setTimeout(() => xInputRef.current?.focus(), PANEL_LAYOUT.TIMING.FOCUS_DELAY);
-                }
-              }}
-              inputRef={yInputRef}
-              disabled={!fieldUnlocked.y}
-              isActive={activeField === 'y' && fieldUnlocked.y}
-              isAnchored={isCoordinateAnchored.y}
-              placeholder={t('dynamicInput.placeholders.yCoordinate')}
-            />
-          )}
-          
-          {/* Angle field */}
-          {fieldsToShow.includes('angle') && (
-            <DynamicInputField
-              label="°"
-              value={angleValue}
-              onChange={(e) => {
-                if (fieldUnlocked.angle) {
-                  setAngleValue(e.target.value);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (!fieldUnlocked.angle) {
-                  e.preventDefault();
-                  return;
-                }
-
-              }}
-              onFocus={() => {
-                if (fieldUnlocked.angle) {
-                  setActiveField('angle');
-                } else {
-                  setTimeout(() => yInputRef.current?.focus(), PANEL_LAYOUT.TIMING.FOCUS_DELAY);
-                }
-              }}
-              inputRef={angleInputRef}
-              disabled={!fieldUnlocked.angle}
-              isActive={activeField === 'angle' && fieldUnlocked.angle}
-              placeholder={t('dynamicInput.placeholders.angle')}
-              fieldType="angle"
-            />
-          )}
-          
-          {/* Length field */}
-          {fieldsToShow.includes('length') && (
-            <DynamicInputField
-              label="L"
-              value={lengthValue}
-              onChange={(e) => {
-                if (fieldUnlocked.length) {
-                  setLengthValue(e.target.value);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (!fieldUnlocked.length) {
-                  e.preventDefault();
-                  return;
-                }
-
-              }}
-              onFocus={() => {
-                if (fieldUnlocked.length) {
-                  setActiveField('length');
-                } else {
-                  const prevField = fieldUnlocked.y ? 'y' : 'x';
-                  setTimeout(() => {
-                    if (prevField === 'y') yInputRef.current?.focus();
-                    else xInputRef.current?.focus();
-                  }, 10);
-                }
-              }}
-              inputRef={lengthInputRef}
-              disabled={!fieldUnlocked.length}
-              isActive={activeField === 'length' && fieldUnlocked.length}
-              placeholder={t('dynamicInput.placeholders.length')}
-              fieldType="length"
-            />
-          )}
-          
-          {/* Radius field */}
-          {fieldsToShow.includes('radius') && (
-            <DynamicInputField
-              label="R"
-              value={radiusValue}
-              onChange={(e) => {
-                if (fieldUnlocked.radius) {
-                  setRadiusValue(e.target.value);
-                  setIsManualInput(prev => ({ ...prev, radius: true }));
-                }
-              }}
-              onKeyDown={(e) => {
-                if (!fieldUnlocked.radius) {
-                  e.preventDefault();
-                  return;
-                }
-
-              }}
-              onFocus={() => {
-                if (fieldUnlocked.radius) {
-                  setActiveField('radius');
-                } else {
-                  setTimeout(() => xInputRef.current?.focus(), PANEL_LAYOUT.TIMING.FOCUS_DELAY);
-                }
-              }}
-              inputRef={radiusInputRef}
-              disabled={!fieldUnlocked.radius}
-              isActive={activeField === 'radius' && fieldUnlocked.radius}
-              placeholder={t('dynamicInput.placeholders.radius')}
-              fieldType="radius"
-            />
-          )}
-          
-          {/* Diameter field */}
-          {fieldsToShow.includes('diameter') && (
-            <DynamicInputField
-              label="D"
-              value={diameterValue}
-              onChange={(e) => {
-                if (fieldUnlocked.diameter) {
-                  setDiameterValue(e.target.value);
-                  setIsManualInput(prev => ({ ...prev, diameter: true }));
-                }
-              }}
-              onKeyDown={(e) => {
-                if (!fieldUnlocked.diameter) {
-                  e.preventDefault();
-                  return;
-                }
-
-              }}
-              onFocus={() => {
-                if (fieldUnlocked.diameter) {
-                  setActiveField('diameter');
-                } else {
-                  setTimeout(() => xInputRef.current?.focus(), PANEL_LAYOUT.TIMING.FOCUS_DELAY);
-                }
-              }}
-              inputRef={diameterInputRef}
-              disabled={!fieldUnlocked.diameter}
-              isActive={activeField === 'diameter' && fieldUnlocked.diameter}
-              placeholder={t('dynamicInput.placeholders.diameter')}
-              fieldType="diameter"
-            />
-          )}
-
-          {/* ADR-358 Phase 7b2b-β Stream E — Stair Rise field (R, mm) */}
-          {fieldsToShow.includes('rise') && (
-            <DynamicInputField
-              label="R"
-              value={riseValue}
-              onChange={(e) => setRiseValue(e.target.value.replace(',', '.'))}
-              onFocus={() => setActiveStairField('rise')}
-              inputRef={riseInputRef}
-              isActive={activeStairField === 'rise'}
-              placeholder={t('dynamicInput.placeholders.rise')}
-              fieldType="length"
-            />
-          )}
-
-          {/* ADR-358 Phase 7b2b-β Stream E — Stair Tread field (T, mm) */}
-          {fieldsToShow.includes('tread') && (
-            <DynamicInputField
-              label="T"
-              value={treadValue}
-              onChange={(e) => setTreadValue(e.target.value.replace(',', '.'))}
-              onFocus={() => setActiveStairField('tread')}
-              inputRef={treadInputRef}
-              isActive={activeStairField === 'tread'}
-              placeholder={t('dynamicInput.placeholders.tread')}
-              fieldType="length"
-            />
-          )}
-
-          {/* ADR-358 Phase 7b2b-β Stream E — Stair Width field (W, mm) */}
-          {fieldsToShow.includes('width') && (
-            <DynamicInputField
-              label="W"
-              value={widthValue}
-              onChange={(e) => setWidthValue(e.target.value.replace(',', '.'))}
-              onFocus={() => setActiveStairField('width')}
-              inputRef={widthInputRef}
-              isActive={activeStairField === 'width'}
-              placeholder={t('dynamicInput.placeholders.stairWidth')}
-              fieldType="length"
-            />
-          )}
-        </div>
+        <DynamicInputFields
+          fieldsToShow={fieldsToShow}
+          t={t}
+          xValue={xValue}
+          yValue={yValue}
+          angleValue={angleValue}
+          lengthValue={lengthValue}
+          radiusValue={radiusValue}
+          diameterValue={diameterValue}
+          riseValue={riseValue}
+          treadValue={treadValue}
+          widthValue={widthValue}
+          setXValue={setXValue}
+          setYValue={setYValue}
+          setAngleValue={setAngleValue}
+          setLengthValue={setLengthValue}
+          setRadiusValue={setRadiusValue}
+          setDiameterValue={setDiameterValue}
+          setRiseValue={setRiseValue}
+          setTreadValue={setTreadValue}
+          setWidthValue={setWidthValue}
+          setIsManualInput={setIsManualInput}
+          activeField={activeField}
+          setActiveField={setActiveField}
+          activeStairField={activeStairField}
+          setActiveStairField={setActiveStairField}
+          fieldUnlocked={fieldUnlocked}
+          isCoordinateAnchored={isCoordinateAnchored}
+          xInputRef={xInputRef}
+          yInputRef={yInputRef}
+          angleInputRef={angleInputRef}
+          lengthInputRef={lengthInputRef}
+          radiusInputRef={radiusInputRef}
+          diameterInputRef={diameterInputRef}
+          riseInputRef={riseInputRef}
+          treadInputRef={treadInputRef}
+          widthInputRef={widthInputRef}
+        />
 
         {/* Multi-point information για polyline/polygon */}
         {/* 🏢 ENTERPRISE ADR-082: Uses FormatterRegistry for locale-aware formatting */}
