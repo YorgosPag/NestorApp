@@ -327,6 +327,21 @@ export class DxfRenderer {
           point2: entity.point2,
           angle: entity.angle
         };
+      case 'stair': {
+        // ADR-358 Phase 5b — unwrap the DxfStair wrapper back into a
+        // first-class StairEntity for the renderer pipeline. The parametric
+        // geometry comes from the SSoT (`stairEntity.geometry` — populated by
+        // `computeStairGeometry()` at create/update time).
+        const s = entity.stairEntity;
+        return {
+          ...base,
+          type: 'stair',
+          kind: s.kind,
+          params: s.params,
+          geometry: s.geometry,
+          validation: s.validation,
+        } as unknown as Entity;
+      }
       default: {
         const exhaustiveCheck: never = entity;
         return exhaustiveCheck;

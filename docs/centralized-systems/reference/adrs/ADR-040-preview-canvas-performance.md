@@ -71,6 +71,16 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-16 (ADR-358 Phase 5b): DxfRenderer — stair entity dispatch
+
+`DxfRenderer.resolveEntityForRender` adds `case 'stair'`: unwraps the
+`DxfStair` wrapper into a first-class `StairEntity` for the renderer pipeline.
+Geometry comes from `stairEntity.geometry` (SSoT: `computeStairGeometry()`
+at create/update time). Delegates paint to `StairRenderer` via
+`EntityRendererComposite`. Zero bitmap-cache key change (stair geometry stored
+in entity, not in hover/selection state).
+
+
 ### 2026-05-16 (Phase XV): Fix residual idle re-render loop — Firestore `setLevels` cascade
 
 **Bug**: Dopo il fix `SharedPropertiesProvider` (entry sotto), persisteva un secondo loop idle ~3-10Hz (PERF_LINE `CanvasSection.commit` + `DxfCanvasSubscriber.commit` continui, no input). Render-trace instrumentation (`debug/render-loop-trace.ts`) ha rivelato `levelManagerLevels` SEMPRE in `ref-only` su ogni `[DVC-SNAPSHOT]` e `[CS-RENDER]` — pure ref churn senza content change.
