@@ -84,6 +84,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { RIBBON_CONTEXTUAL_TABS, resolveContextualTrigger } from './ribbon-contextual-config';
 import { useRibbonArrayBridge } from '../ui/ribbon/hooks/useRibbonArrayBridge';
 import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions';
+// 📐 ADR-358 Phase 7a: bridge stair-params ↔ ribbon contextual tab
+import { useRibbonStairBridge } from '../ui/ribbon/hooks/useRibbonStairBridge';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
 import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEditorBridge';
 import { useRibbonCommands } from '../ui/ribbon/hooks/useRibbonCommands';
@@ -289,10 +291,12 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     levelManager, universalSelection, setSelectedEntityIds,
     handleToolChange, fallback: wrappedHandleAction,
   });
+  // ADR-358 Phase 7a — Stair contextual bridge.
+  const stairBridge = useRibbonStairBridge({ levelManager, universalSelection });
   const ribbonCommands = useRibbonCommands({
     handleToolChange, handleRibbonComingSoon,
     wrappedHandleAction: arrayActionInterceptor,
-    textEditorBridge, arrayBridge,
+    textEditorBridge, arrayBridge, stairBridge,
   });
   return (
       <TransformProvider
