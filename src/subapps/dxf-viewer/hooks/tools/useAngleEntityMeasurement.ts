@@ -244,8 +244,7 @@ export function useAngleEntityMeasurement(
         point2: result.point2,
         angle: result.angleDeg,
         visible: true,
-        layer: '0',
-        // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+        // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
         layerId: getLayer(DXF_DEFAULT_LAYER)?.id,
         measurement: true,
       };
