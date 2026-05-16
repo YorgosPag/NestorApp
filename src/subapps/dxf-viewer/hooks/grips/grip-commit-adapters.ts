@@ -22,7 +22,10 @@ import { type GripMode } from '../../systems/grip/grip-mode-cycle';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 import { gripToVertexRefs } from '../../systems/grip/grip-to-vertex-refs';
 import { StretchEntityCommand, type StretchParams } from '../../core/commands/entity-commands/StretchEntityCommand';
+import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
+import { applyStairGripDrag } from '../../systems/stairs/stair-grips';
 import type { Entity } from '../../types/entities';
+import type { StairEntity } from '../../types/stair';
 
 // ============================================================================
 // TYPES
@@ -276,6 +279,54 @@ export function commitDxfGripDragViaStretchCommand(
 }
 
 /**
+ * ADR-358 Phase 5b — Parametric stair grip commit. Bypasses the standard
+ * stretch / move / rotate strategies because `StairEntity` is parametric:
+ * geometry is fully derived from `params`, so the grip drag transforms params
+ * (via `applyStairGripDrag`) and the command (`UpdateStairParamsCommand`)
+ * recomputes geometry atomically. Idempotent + undo/redo-safe.
+ */
+function commitStairGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.stairGripKind) return;
+
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<StairEntity>;
+  if (candidate.type !== 'stair' || !candidate.params) return;
+
+  const stair = candidate as StairEntity;
+  const originalParams = stair.params;
+  // Reconstruct current cursor position from the drag anchor (grip.position is
+  // captured at mouseDown — see `useUnifiedGripInteraction.handleMouseDown`).
+  const currentPos: Point2D = {
+    x: grip.position.x + delta.x,
+    y: grip.position.y + delta.y,
+  };
+
+  const newParams = applyStairGripDrag(grip.stairGripKind, {
+    originalParams,
+    delta,
+    currentPos,
+  });
+
+  const command = new UpdateStairParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    false,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+}
+
+/**
  * Mode-aware DXF grip commit (ADR-349 Phase 1c-A / 1c-B2 / 1c-B3).
  *
  * Routes the drag through the strategy selected by the spacebar cycle:
@@ -285,6 +336,10 @@ export function commitDxfGripDragViaStretchCommand(
  *   - `move` — translates the WHOLE entity regardless of grip type
  *   - `rotate` / `scale` / `mirror` — Phase 1c-B2: pre-seeds the target tool's
  *     first point in {@link GripHandoffStore} and switches `activeTool`
+ *
+ * ADR-358 Phase 5b — early-branches to {@link commitStairGripDrag} when the
+ * grip carries a `stairGripKind`, bypassing stretch/move because stair grips
+ * mutate parametric `StairParams` rather than vertex / anchor positions.
  */
 export function commitDxfGripDragModeAware(
   grip: UnifiedGripInfo,
@@ -294,6 +349,12 @@ export function commitDxfGripDragModeAware(
 ): void {
   if (delta.x === 0 && delta.y === 0) return;
   if (!grip.entityId) return;
+
+  // ADR-358 Phase 5b — stair parametric grip path (5 kinds, §5.12).
+  if (grip.stairGripKind) {
+    commitStairGripDrag(grip, delta, deps);
+    return;
+  }
 
   if (mode === 'move') {
     deps.moveEntities([grip.entityId], delta, { isDragging: false });
