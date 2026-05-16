@@ -65,12 +65,15 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
   const [activated, setActivated] = useState(false);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // ADR-361 (EXTENDED): Equality guard for filtered properties/floors.
+  // ADR-361 (EXTENDED): Equality guard for filtered properties/floors + states.
   // Firestore equality guard compares FULL documents (including deleted).
   // But callback filters deleted → two identical filtered results can have
   // different full docs. Without guard here, unnecessary setState → loop.
+  // Also guard isLoading/error to avoid context invalidation on every emission.
   const lastFilteredPropertiesRef = useRef<Property[] | null>(null);
   const lastFilteredFloorsRef = useRef<Floor[] | null>(null);
+  const lastIsLoadingRef = useRef<boolean>(false);
+  const lastErrorRef = useRef<string | null>(null);
 
   const forceDataRefresh = useCallback(() => {
     setRefreshKey(prev => prev + 1);
@@ -135,21 +138,9 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
           (p) => (p.status as string | undefined) !== 'deleted',
         );
 
+        // Build next state
+        let floorsArray: Floor[] = [];
         if (propertiesData.length > 0) {
-          // ADR-361 (EXTENDED): Equality guard for filtered results.
-          // Firestore guard compares FULL docs (incl. deleted), but we filter
-          // → two identical filtered results can differ in full docs.
-          // Without guard here, unnecessary setState triggers loop.
-          if (dequal(lastFilteredPropertiesRef.current, propertiesData)) {
-            // Properties unchanged after filtering — skip setState
-            setError(null);
-            setIsLoading(false);
-            return;
-          }
-
-          lastFilteredPropertiesRef.current = propertiesData;
-          setPropertiesState(propertiesData);
-
           const floorsMap = new Map<string, Floor>();
           propertiesData.forEach(property => {
             if (!property.floorId) return;
@@ -166,33 +157,37 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
             }
             floorsMap.get(floorKey)!.properties.push(property);
           });
-
-          const floorsArray = Array.from(floorsMap.values()).sort((a, b) => a.level - b.level);
-
-          if (dequal(lastFilteredFloorsRef.current, floorsArray)) {
-            // Floors unchanged after grouping — skip setState
-            setError(null);
-            setIsLoading(false);
-            return;
-          }
-
-          lastFilteredFloorsRef.current = floorsArray;
-          setFloors(floorsArray);
-
-          setError(null);
+          floorsArray = Array.from(floorsMap.values()).sort((a, b) => a.level - b.level);
         } else {
           logger.warn('No properties found in Firestore snapshot');
-          if (!dequal(lastFilteredPropertiesRef.current, [])) {
-            lastFilteredPropertiesRef.current = [];
-            setPropertiesState([]);
-          }
-          if (!dequal(lastFilteredFloorsRef.current, [])) {
-            lastFilteredFloorsRef.current = [];
-            setFloors([]);
-          }
         }
 
-        setIsLoading(false);
+        const nextIsLoading = false;
+        const nextError: string | null = null;
+
+        // ADR-361 (EXTENDED): Skip ALL setState if state is deeply equal.
+        // Without this guard, every Firestore emission (even with identical filtered
+        // content) calls setPropertiesState, setFloors, setIsLoading, setError,
+        // invalidating contextValue useMemo, creating new context → loop.
+        if (
+          dequal(lastFilteredPropertiesRef.current, propertiesData) &&
+          dequal(lastFilteredFloorsRef.current, floorsArray) &&
+          lastIsLoadingRef.current === nextIsLoading &&
+          lastErrorRef.current === nextError
+        ) {
+          return;
+        }
+
+        // Update all state in one batch
+        lastFilteredPropertiesRef.current = propertiesData;
+        lastFilteredFloorsRef.current = floorsArray;
+        lastIsLoadingRef.current = nextIsLoading;
+        lastErrorRef.current = nextError;
+
+        setPropertiesState(propertiesData);
+        setFloors(floorsArray);
+        setIsLoading(nextIsLoading);
+        setError(nextError);
       },
       (listenerError) => {
         logger.error('Firestore listener error', { error: listenerError });
