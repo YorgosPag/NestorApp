@@ -23,6 +23,7 @@ export function buildAuthUser(firebaseUser: FirebaseUser, customClaims: Record<s
     companyId: typeof customClaims.companyId === 'string' ? customClaims.companyId : undefined,
     permissions: Array.isArray(customClaims.permissions) ? customClaims.permissions as string[] : undefined,
     mfaEnrolled: typeof customClaims.mfaEnrolled === 'boolean' ? customClaims.mfaEnrolled : undefined,
+    claimsUpdatedAt: typeof customClaims.claimsUpdatedAt === 'number' ? customClaims.claimsUpdatedAt : undefined,
   };
 }
 

@@ -48,6 +48,8 @@ export interface FirebaseAuthUser {
   permissions?: string[];
   /** MFA enrollment status */
   mfaEnrolled?: boolean;
+  /** Epoch ms when custom claims were last updated server-side (ADR-360) */
+  claimsUpdatedAt?: number;
 }
 
 /**

@@ -408,7 +408,8 @@
         "src/services/firestore/firestore-query.service.ts",
         "src/services/realtime/RealtimeService.ts",
         "src/services/realtime/hooks/",
-        "src/hooks/useFirestoreStatus.ts"
+        "src/hooks/useFirestoreStatus.ts",
+        "src/auth/contexts/auth-context/use-claims-refresh.ts"
       ]
     },
     "firestore-schema-map": {
