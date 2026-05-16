@@ -1581,16 +1581,19 @@ LINE tool → completeEntity()
 
 > **Regola §7.1 ADR-357**: Una phase = una sessione. ≤ 70% context. ≤ 500 lines per file. Se troppo grande → suddividere PRIMA.
 
-| Phase | Titolo | Files | Effort | Q-ref |
-|---|---|---|---|---|
-| **1** | Estendere `SceneLayer` interface + migration default-fill + tipi `Lineweight`, `LayerColor` | 3 | S | Q1, Q2 |
-| **2** | `LayerStore` singleton (micro-leaf) + `useLayerStore` hook + bridge con `SceneModel` | 4 | M | Q3 |
-| **3** | Catalog SSoT — `linetype-catalog.ts`, `lineweight-catalog.ts`, `aci-color-palette.ts` consolidato | 3 | M | Q4 |
-| **4** | `resolveEntityStyle` pure fn + wire-up in `DxfRenderer.drawEntity` + unit test ByLayer/ByBlock/Direct | 4 | M | Q5 |
-| **5** | DXF parser esteso (group 6, 70, 290, 370, 420, 1071) + roundtrip integrity test su 5 file reference | 4 | L | Q6 |
-| **6** | `AdminLayerManager` wired al `LayerStore` — drop mock data — preserve UI props | 5 | M | Q7 |
-| **7** | `CurrentLayerPicker` ribbon/status-bar + persistence `dxf:currentLayerId.{levelId}` | 3 | S | Q8 |
-| **8** | `LayerOperationsService` esteso (setLineweight/setLinetype/setTransparency/setPlottable/setFrozen) | 3 | S | — |
+| Phase | Titolo | Files | Effort | Q-ref | Status |
+|---|---|---|---|---|---|
+| **1** | Estendere `SceneLayer` interface + migration default-fill + tipi `Lineweight`, `LayerColor` | 3 | S | Q1, Q2 | ✅ v2.1 |
+| **2** | Catalog SSoT — `linetype-iso-catalog.ts`, `lineweight-iso-catalog.ts`, `default-lineweight-resolver.ts` + `LinetypeRegistry` singleton | 3 | M | Q4, Q5 | ✅ v2.2 |
+| **3** | DXF parser esteso (LTYPE pre-pass + LAYER group 6/70/290/370/420 + XDATA 1071/1000 AppIds) + writer + roundtrip integrity §G15 | 4 | L | Q6 | ✅ v2.3 |
+| **4** | `resolveEntityStyle` pure fn + tipi `ResolvedStyle`/`EntityStyleInput` + wire-up in `DxfRenderer.drawEntity` ByLayer/ByBlock/Direct cascade | 4 | M | — | ✅ v2.4 |
+| **5** | SceneModel→DxfScene `layersById` bridge — activation end-to-end §G7 data path | 3 | M | — | ✅ v2.5 |
+| **6** | Entity sentinel emission `colorMode='ByLayer'`/`lineweightMm=-2`/`linetypeName='ByLayer'` LIVE in `useDxfSceneConversion.buildBase` + cascade fires production | 3 | M | — | ✅ v2.6 |
+| **6.5** | LINE/CIRCLE/POLYLINE/ARC/RECTANGLE tools default ByLayer + AutoCAD-style UI toggle `<ByLayerToggle>` per color/lineweight in LineSettings panel | 9 | M | — | ✅ v2.7 |
+| **8** | `AdminLayerManager` wired al `LayerStore` — drop mock data — preserve UI props (era §7.2 Phase 6, ricontestualizzato post-6.5) | 5 | M | Q7 | ✅ v2.8 |
+| **~~6 (originale)~~** | ~~`AdminLayerManager` wired al `LayerStore`~~ — **rinumerato Phase 8 (v2.8)** per allineamento sequential post-dependency ordering | — | — | — | → Phase 8 |
+| **7** | `CurrentLayerPicker` ribbon/status-bar + persistence `dxf:currentLayerId.{levelId}` | 3 | S | Q8 | ⏳ |
+| **8 (originale)** | `LayerOperationsService` esteso (setLineweight/setLinetype/setTransparency/setPlottable/setFrozen) — **da rinumerare next free** | 3 | S | — | ⏳ |
 | **9** | Layer rename con backref completi (entity.layerId migration + audit commandHistory/regions) | 5 | L | Q9 |
 | **10** | Comandi `LayerIsolate / Unisolate / Dim / Off` + click-driven UX | 5 | M | Q10 |
 | **11** | Layer Filters Builder (Group + Properties) nel manager | 4 | M | Q11 |
