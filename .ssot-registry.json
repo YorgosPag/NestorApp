@@ -251,6 +251,22 @@
       ],
       "tier": 3
     },
+    "stair-firestore-service": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/stairs/stair-firestore-service.ts",
+      "description": "Stair persistence + soft-lock (ADR-358 Phase 8, G24) must go through StairFirestoreService — no direct collection() writes on floorplan_stairs, no inline addDoc, no inline stair ID generation, no direct onSnapshot bypass of firestoreQueryService SSoT subscribe wrapper",
+      "forbiddenPatterns": [
+        "addDoc\\([^)]*floorplan_stairs",
+        "collection\\([^)]*floorplan_stairs[^)]*\\)\\s*,\\s*\\{",
+        "crypto\\.randomUUID\\(\\)[^\\n]*stair[^_-]",
+        "Date\\.now\\(\\)\\.toString\\(\\)[^\\n]*stair[^_-]",
+        "onSnapshot\\([^)]*floorplan_stairs"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/stairs/stair-firestore-service.ts",
+        "src/subapps/dxf-viewer/systems/stairs/__tests__/"
+      ],
+      "tier": 3
+    },
     "showcase-core": {
       "ssotFile": "src/services/showcase-core/index.ts",
       "description": "Public-showcase orchestration (PDF pipeline, email pipeline, public payload/PDF routes, snapshot builder, share resolver, email builder, PDF service+renderer) must use the showcase-core factories (ADR-321). New showcase surfaces must delegate to createShowcasePdfRoute, createShowcaseEmailRoute, createPublicShowcasePayloadRoute, createPublicShowcasePdfRoute, createShowcaseSnapshotBuilder, createShowcaseShareResolver, createShowcaseEmailBuilder, ShowcasePDFService, BaseShowcaseRenderer from src/services/showcase-core/ — not reimplement the orchestration.",
