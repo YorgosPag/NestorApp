@@ -8,6 +8,8 @@ import React from 'react';
 import { ColorPickerModal } from './layers/components/ColorPickerModal';
 import type { SceneModel } from '../../types/scene';
 import { getLayer } from '../../stores/LayerStore';
+// ADR-358 Phase 9D-5a: factory enforces SceneLayer shape (14 fields) + enterprise-id `lyr_<UUID-v4>`.
+import { createSceneLayer } from '../../types/entities';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 import { useTranslation } from '@/i18n';
@@ -45,10 +47,12 @@ export const ColorManager: React.FC<ColorManagerProps> = ({
     if (existing) return { scene, layerName: existing[0] };
 
     // 2) αλλιώς, φτιάξε καινούριο
+    // ADR-358 Phase 9D-5a + Phase 9C: createSceneLayer factory enforces 14-field shape +
+    // auto-gens stable `lyr_<UUID-v4>` id via enterprise-id (was inline literal bypassing id contract).
     const newName = `COLOR_${hex.replace('#','').toUpperCase()}`;
     const newLayers = {
       ...scene.layers,
-      [newName]: { name: newName, color: hex, colorHex: hex, visible: true, locked: false }
+      [newName]: createSceneLayer({ name: newName, color: hex, visible: true, locked: false })
     };
     return { scene: { ...scene, layers: newLayers }, layerName: newName };
   }, []);
@@ -63,12 +67,11 @@ export const ColorManager: React.FC<ColorManagerProps> = ({
     const { scene: sceneA, layerName } = ensureLayerForColor(currentScene, hex);
 
     // 2) μεταφορά των οντοτήτων στο νέο layer + ενημέρωση color
-    // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
-    const sceneLayer = sceneA.layers[layerName] as { id?: string } | undefined;
-    const targetLayerId = sceneLayer?.id ?? getLayer(layerName)?.id;
+    // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
+    const targetLayerId = sceneA.layers[layerName]?.id ?? getLayer(layerName)?.id;
     const newEntities = sceneA.entities.map(e =>
       idSet.has(e.id)
-        ? { ...e, layer: layerName, layerId: targetLayerId ?? e.layerId, color: hex }
+        ? { ...e, layerId: targetLayerId ?? e.layerId, color: hex }
         : e
     );
 
