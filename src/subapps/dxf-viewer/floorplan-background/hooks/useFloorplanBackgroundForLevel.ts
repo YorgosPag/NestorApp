@@ -124,6 +124,12 @@ export function useFloorplanBackgroundForLevel(): FloorplanBackgroundForLevelRes
     await useFloorplanBackgroundStore.getState().removeBackground(resolvedFloorId);
   }, [resolvedFloorId]);
 
-  if (!resolvedFloorId) return null;
-  return { ...result, floorId: resolvedFloorId, uploadBackground, deleteBackground };
+  // ADR-040 Phase XVI — memoize the returned object so CanvasSection (the
+  // primary consumer) does not get a new reference every parent render. The
+  // bare spread literal caused `floorplanBg` to ref-churn idle, contributing
+  // to the 2026-05-16 render-loop diagnosed against ADR-361.
+  return useMemo(() => {
+    if (!resolvedFloorId) return null;
+    return { ...result, floorId: resolvedFloorId, uploadBackground, deleteBackground };
+  }, [resolvedFloorId, result, uploadBackground, deleteBackground]);
 }
