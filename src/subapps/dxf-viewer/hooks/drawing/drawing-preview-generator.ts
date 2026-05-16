@@ -22,7 +22,7 @@ import type {
 // ADR-358 Phase 5a — stair preview via SSoT `computeStairGeometry`.
 import { buildDefaultStairParams } from './stair-completion';
 import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
-import type { StairParamOverrides } from './stair-completion';
+import type { SceneUnits, StairParamOverrides } from './stair-completion';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import {
   arcFrom3Points,
@@ -95,12 +95,13 @@ export function generatePreviewEntity(
   tempPoints: readonly Point2D[],
   cursorPoint: Point2D,
   arcFlipped: boolean,
-  createEntity: CreateEntityFn
+  createEntity: CreateEntityFn,
+  sceneUnits: SceneUnits = 'mm',
 ): ExtendedSceneEntity | null {
 
   // ── ADR-358 Phase 5a — Stair tool preview branch ─────────────────────────
   if (tool === 'stair') {
-    return generateStairPreview(tempPoints, cursorPoint);
+    return generateStairPreview(tempPoints, cursorPoint, {}, sceneUnits);
   }
 
   // ── Zero-point preview: show start indicator ─────────────────────────────
@@ -338,6 +339,7 @@ function generateStairPreview(
   tempPoints: readonly Point2D[],
   cursorPoint: Point2D,
   overrides: StairParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
 ): ExtendedSceneEntity | null {
   if (tempPoints.length === 0) {
     return {
@@ -354,7 +356,7 @@ function generateStairPreview(
   if (tempPoints.length === 1) {
     return makeStairGhost('preview_stair_direction', [tempPoints[0], cursorPoint]);
   }
-  return makeStairWalklinePreview(tempPoints[0], tempPoints[1], overrides);
+  return makeStairWalklinePreview(tempPoints[0], tempPoints[1], overrides, sceneUnits);
 }
 
 function makeStairGhost(id: string, vertices: readonly Point2D[]): ExtendedPolylineEntity {
@@ -377,9 +379,10 @@ function makeStairWalklinePreview(
   basePoint: Readonly<Point2D>,
   dirPoint: Readonly<Point2D>,
   overrides: StairParamOverrides,
+  sceneUnits: SceneUnits = 'mm',
 ): ExtendedSceneEntity {
   const direction = Math.atan2(dirPoint.y - basePoint.y, dirPoint.x - basePoint.x) * (180 / Math.PI);
-  const params = buildDefaultStairParams(basePoint, direction, overrides);
+  const params = buildDefaultStairParams(basePoint, direction, overrides, sceneUnits);
   const geometry = computeStairGeometry(params);
   const vertices: Point2D[] = geometry.walkline.map(p => ({ x: p.x, y: p.y }));
   const polyline: PolylineEntity = {
