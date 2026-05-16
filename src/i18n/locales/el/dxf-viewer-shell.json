@@ -651,6 +651,36 @@
     "title": "Προηγμένες Ιδιότητες Κλίμακας",
     "closeAriaLabel": "Κλείσιμο πάνελ",
     "sections": {
+      "persistence": {
+        "title": "Αποθήκευση",
+        "saveButton": "Αποθήκευση τώρα",
+        "idle": "Έτοιμο",
+        "saving": "Αποθήκευση…",
+        "savedAt": "Αποθηκεύτηκε στις {time}",
+        "error": "Σφάλμα αποθήκευσης",
+        "editingByOther": "Άλλος χρήστης επεξεργάζεται αυτή τη σκάλα"
+      },
+      "presets": {
+        "title": "Βιβλιοθήκη Προτύπων",
+        "save": "Αποθήκευση",
+        "confirmSave": "OK",
+        "cancel": "Άκυρο",
+        "load": "Φόρτωση",
+        "delete": "Διαγραφή",
+        "namePlaceholder": "Όνομα προτύπου",
+        "scopeUser": "Δικά μου",
+        "scopeCompany": "Εταιρείας",
+        "scopeProject": "Έργου",
+        "emptyScope": "Κανένα πρότυπο",
+        "loading": "Φόρτωση…",
+        "errors": {
+          "STAIR_PRESET_NAME_REQUIRED": "Απαιτείται όνομα προτύπου",
+          "STAIR_PRESET_PROJECT_SCOPE_REQUIRES_PROJECT_ID": "Δεν υπάρχει ενεργό έργο",
+          "STAIR_PRESET_LIST_FAILED": "Αποτυχία ανάκτησης προτύπων",
+          "STAIR_PRESET_SAVE_FAILED": "Αποτυχία αποθήκευσης προτύπου",
+          "STAIR_PRESET_DELETE_FAILED": "Αποτυχία διαγραφής προτύπου"
+        }
+      },
       "materials": {
         "title": "Υλικά",
         "tread": "Πάτημα",
