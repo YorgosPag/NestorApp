@@ -92,6 +92,26 @@ export function getLayer(idOrName: string): SceneLayer | null {
   return layersById.get(idOrName) ?? null;
 }
 
+/**
+ * Resolve an entity's layer NAME with id-first preference (ADR-358 Phase 9D-3).
+ *
+ * Dual-read transitional helper:
+ *   1. If `entity.layerId` is set → look up SceneLayer by stable id (post-9C path).
+ *   2. Fallback to legacy `entity.layer` name backref (pre-9D entities or unresolved id).
+ *
+ * Collapses to id-only after Phase 9D-5 final flip removes `entity.layer`.
+ */
+export function resolveEntityLayerName(
+  entity: { layerId?: string; layer?: string } | null | undefined
+): string | undefined {
+  if (!entity) return undefined;
+  if (entity.layerId) {
+    const layer = layersById.get(entity.layerId);
+    if (layer) return layer.name;
+  }
+  return entity.layer;
+}
+
 export function getAllLayers(): ReadonlyArray<SceneLayer> {
   return cachedSnapshot.layers;
 }
