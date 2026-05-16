@@ -70,7 +70,26 @@ export interface RibbonStairBridge {
   readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
   readonly onToggle: (commandKey: string, nextValue: boolean) => void;
   readonly getToggleState: (commandKey: string) => RibbonToggleState;
+  /**
+   * ADR-358 Phase 7b1 — validation badge surfacing. Returns `true` when the
+   * currently selected `StairEntity` has `validation.hasCodeViolations`.
+   * Badge keys outside `STAIR_RIBBON_BADGE_KEYS` return `false`.
+   */
+  readonly getBadgeState: (badgeKey: string) => boolean;
 }
+
+/**
+ * ADR-358 Phase 7b1 — Badge keys owned by the stair bridge. Mirrors the
+ * commandKey registry pattern (`STAIR_RIBBON_KEYS`) so other bridges can
+ * compose without collisions.
+ */
+export const STAIR_RIBBON_BADGE_KEYS = {
+  violations: 'stair.badge.violations',
+} as const;
+
+const STAIR_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
+  STAIR_RIBBON_BADGE_KEYS.violations,
+]);
 
 const NULL_TOGGLE: RibbonToggleState = false;
 
@@ -176,7 +195,22 @@ export function useRibbonStairBridge(
 
   const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
 
-  return { onComboboxChange, getComboboxState, onToggle, getToggleState };
+  const getBadgeState = useCallback((badgeKey: string): boolean => {
+    if (!STAIR_OWNED_BADGE_KEYS.has(badgeKey)) return false;
+    const stair = resolveStair();
+    if (!stair) return false;
+    if (badgeKey === STAIR_RIBBON_BADGE_KEYS.violations) {
+      return stair.validation.hasCodeViolations;
+    }
+    return false;
+  }, [resolveStair]);
+
+  return { onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState };
+}
+
+/** ADR-358 Phase 7b1 — type guard used by `useRibbonCommands` composer. */
+export function isStairBadgeKey(badgeKey: string): boolean {
+  return STAIR_OWNED_BADGE_KEYS.has(badgeKey);
 }
 
 // ── Read helpers ─────────────────────────────────────────────────────────────
