@@ -3084,6 +3084,22 @@
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",
       "tier": 3
+    },
+    "resolve-entity-style": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/properties/resolve-entity-style.ts",
+      "description": "ADR-358 §G7 Phase 6: the ByLayer/ByBlock/Concrete cascade — entity → block → layer → system default for color + linetype + lineweight + transparency — is owned by `resolve-entity-style.ts`. Calls to `resolveEntityStyle()` must live in the centralised renderer path (`DxfRenderer.resolveStyleForRender`) so that `AdminLayerManager` edits propagate live to canvas and snapshot/print/export paths share the same resolution semantics. Bypass call sites flatten styles ad-hoc and break the §G7 LIVE pipeline. Property panels reading provenance for inspection are allowlisted.",
+      "forbiddenPatterns": [
+        "\\bresolveEntityStyle\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/properties/resolve-entity-style.ts",
+        "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts",
+        "src/subapps/dxf-viewer/systems/properties/__tests__/resolve-entity-style.test.ts",
+        "src/subapps/dxf-viewer/hooks/canvas/__tests__/useDxfSceneConversion-bylayer-emission.test.ts"
+      ],
+      "addedDate": "2026-05-16",
+      "addedByAdr": "ADR-358",
+      "tier": 3
     }
   }
 }
