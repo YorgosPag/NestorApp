@@ -76,6 +76,17 @@ function handleStairTab(
 }
 
 // ─── Enter — confirm stair placement step (parses current values) ────────────
+//
+// Industry convergence (AutoCAD / Revit / ArchiCAD / Vectorworks / SolidWorks):
+// Enter commits the placement using defaults when the inline fields are blank;
+// only explicitly out-of-range typed values are rejected as errors. This means
+// the user can drive the entire tool with mouse-only (2 clicks + Enter) and
+// the keyboard-driven inline editing remains an opt-in refinement.
+//
+// Empty / blank field  → `null` override → `useStairTool` falls back to the
+//                         param default from `buildDefaultStairParams`.
+// Typed valid number   → override applied.
+// Typed invalid number → error feedback, no commit.
 
 function handleStairEnter(
   context: KeyboardHandlerContext,
@@ -83,11 +94,11 @@ function handleStairEnter(
 ): boolean {
   const { activeTool, riseValue, treadValue, widthValue, isValidNumber } = context;
 
-  const rise = parseStairField('rise', riseValue, isValidNumber);
-  const tread = parseStairField('tread', treadValue, isValidNumber);
-  const width = parseStairField('width', widthValue, isValidNumber);
+  const rise = parseStairFieldOptional('rise', riseValue, isValidNumber);
+  const tread = parseStairFieldOptional('tread', treadValue, isValidNumber);
+  const width = parseStairFieldOptional('width', widthValue, isValidNumber);
 
-  if (rise === null || tread === null || width === null) {
+  if (rise === 'invalid' || tread === 'invalid' || width === 'invalid') {
     actions.CADFeedback.onError();
     return false;
   }
@@ -96,22 +107,28 @@ function handleStairEnter(
   actions.dispatchDynamicSubmit({
     tool: activeTool,
     action: 'commit-stair',
-    rise,
-    tread,
-    width,
+    ...(typeof rise === 'number' ? { rise } : {}),
+    ...(typeof tread === 'number' ? { tread } : {}),
+    ...(typeof width === 'number' ? { width } : {}),
   });
   return true;
 }
 
-function parseStairField(
+/**
+ * Three-way result: `number` when the user typed a valid in-range value,
+ * `null` when the field is empty (caller should use the param default),
+ * `'invalid'` when the user typed a value but it is out of range or NaN.
+ */
+function parseStairFieldOptional(
   field: StairField,
   raw: string,
   isValidNumber: (v: string) => boolean,
-): number | null {
-  if (!isValidNumber(raw)) return null;
+): number | null | 'invalid' {
+  if (!raw || raw.trim() === '') return null;
+  if (!isValidNumber(raw)) return 'invalid';
   const n = Number.parseFloat(raw);
-  if (!Number.isFinite(n)) return null;
-  return validateStairField(field, n) ? n : null;
+  if (!Number.isFinite(n)) return 'invalid';
+  return validateStairField(field, n) ? n : 'invalid';
 }
 
 // ─── Range validator (exported for ribbon-panel reuse Phase 7a) ──────────────
