@@ -89,11 +89,17 @@ export function detectSceneUnits(bounds: {
   const dx = bounds.max.x - bounds.min.x;
   const dy = bounds.max.y - bounds.min.y;
   const diagonal = Math.hypot(dx, dy);
-  if (!Number.isFinite(diagonal) || diagonal <= 0) return 'mm';
-  if (diagonal < 1) return 'mm';      // unknown / unitless → safe default
-  if (diagonal < 500) return 'm';     // 1 – 500 units ≈ meters
-  if (diagonal < 50_000) return 'cm'; // 500 – 50k units ≈ centimeters
-  return 'mm';                        // 50k+ ≈ millimeters
+  let detected: SceneUnits;
+  if (!Number.isFinite(diagonal) || diagonal <= 0) detected = 'mm';
+  else if (diagonal < 1) detected = 'mm';      // unknown / unitless → safe default
+  else if (diagonal < 500) detected = 'm';     // 1 – 500 units ≈ meters
+  else if (diagonal < 50_000) detected = 'cm'; // 500 – 50k units ≈ centimeters
+  else detected = 'mm';                        // 50k+ ≈ millimeters
+  // ADR-358 Phase 8 unit-aware builder — diagnostic log (temporary). Remove
+  // once `dxf-scene-builder` is fixed to propagate the real $INSUNITS.
+  // eslint-disable-next-line no-console
+  console.info('[StairTool] detectSceneUnits', { dx, dy, diagonal, detected });
+  return detected;
 }
 
 // ─── Param overrides accepted by builders ────────────────────────────────────
@@ -169,6 +175,8 @@ export function buildDefaultStairParams(
   const rise = overrides.rise ?? DEFAULT_RISE_MM * s;
   const tread = overrides.tread ?? DEFAULT_TREAD_MM * s;
   const width = overrides.width ?? DEFAULT_WIDTH_MM * s;
+  // eslint-disable-next-line no-console
+  console.info('[StairTool] buildDefaultStairParams', { sceneUnits, scale: s, rise, tread, width });
   const stepCount = overrides.stepCount ?? DEFAULT_STEP_COUNT;
   const codeProfile: StairCodeProfile = overrides.codeProfile ?? 'nok';
   const base3D: Point3D = { x: basePoint.x, y: basePoint.y, z: 0 };
