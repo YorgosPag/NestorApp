@@ -236,6 +236,21 @@
       ]
     },
     "_comment_tier3": "=== TIER 3: BUSINESS LOGIC (bypass = inconsistency) ===",
+    "stair-presets-service": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/stairs/stair-presets-service.ts",
+      "description": "Stair library presets CRUD (ADR-358 G26, Q32) must go through StairPresetsService — no direct collection() writes, no inline `addDoc` on stair_presets, no inline preset ID generation",
+      "forbiddenPatterns": [
+        "addDoc\\([^)]*stair_presets",
+        "collection\\([^)]*stair_presets[^)]*\\)\\s*,\\s*\\{",
+        "crypto\\.randomUUID\\(\\)[^\\n]*stair[_-]preset",
+        "Date\\.now\\(\\)\\.toString\\(\\)[^\\n]*stair[_-]preset"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/stairs/stair-presets-service.ts",
+        "src/subapps/dxf-viewer/systems/stairs/__tests__/"
+      ],
+      "tier": 3
+    },
     "showcase-core": {
       "ssotFile": "src/services/showcase-core/index.ts",
       "description": "Public-showcase orchestration (PDF pipeline, email pipeline, public payload/PDF routes, snapshot builder, share resolver, email builder, PDF service+renderer) must use the showcase-core factories (ADR-321). New showcase surfaces must delegate to createShowcasePdfRoute, createShowcaseEmailRoute, createPublicShowcasePayloadRoute, createPublicShowcasePdfRoute, createShowcaseSnapshotBuilder, createShowcaseShareResolver, createShowcaseEmailBuilder, ShowcasePDFService, BaseShowcaseRenderer from src/services/showcase-core/ — not reimplement the orchestration.",
