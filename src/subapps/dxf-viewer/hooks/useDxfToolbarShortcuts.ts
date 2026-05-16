@@ -99,7 +99,8 @@ export function useDxfToolbarShortcuts(
         // ADR-358 §13 carryover — open a 350ms chord window: 'S' then 'T'
         // within window → stair tool; otherwise → select fallback.
         e.preventDefault();
-        if (stairChordRef.current) clearTimeout(stairChordRef.current.timer);
+        const prev = stairChordRef.current;
+        if (prev) clearTimeout(prev.timer);
         stairChordRef.current = {
           timer: setTimeout(() => {
             if (stairChordRef.current) {
