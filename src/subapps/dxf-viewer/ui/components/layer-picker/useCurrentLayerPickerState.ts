@@ -1,5 +1,5 @@
 /**
- * useCurrentLayerPickerState — ADR-358 §5.5.bis Q8 Phase 7.
+ * useCurrentLayerPickerState — ADR-358 §5.5.bis Q8 Phase 7 (Google-grade).
  *
  * Single state hook shared by the status-bar and ribbon variants of
  * `CurrentLayerPicker`. Owns:
@@ -7,12 +7,16 @@
  *   - subscription to `LayerStore` (current + recent + layer list)
  *   - per-project + per-level persistence (localStorage primary,
  *     `userSettingsRepository.dxfViewer.dxfSettings.layerPicker` fallback)
- *   - hydration on project / level switch (LayerStore.setCurrentLayerId
+ *   - hydration on project/level switch (LayerStore.setCurrentLayerId
  *     + setRecentLayerIds with stored values, only when scene already has
  *     the referenced layer)
+ *   - initial seed on first scene load (Layer "0" → general category → first)
  *   - search filter state (live, no debounce — finite layer set)
  *   - popover open/close state
- *   - user-initiated change handler → toast via NotificationProvider
+ *   - permission-aware selection (frozen/locked layers blocked via toast)
+ *   - row-level mutations (toggle visibility/lock/freeze) for context menu
+ *   - pulse token bumped on user-initiated change (drives status-bar swatch
+ *     animation in CurrentLayerPicker)
  *
  * The hook avoids writing to LayerStore when persistence loads stale ids
  * (e.g. layer renamed/deleted between sessions). `setRecentLayerIds`
@@ -33,11 +37,13 @@ import {
   setCurrentLayerId,
   setRecentLayerIds,
   subscribeLayerStore,
+  upsertLayer,
 } from '../../../stores/LayerStore';
 import { useLevels } from '../../../systems/levels/useLevels';
 import { useNotifications } from '../../../../../providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { userSettingsRepository } from '@/services/user-settings';
+import { useCanEditText } from '../../../hooks/useCanEditText';
 import type { SceneLayer, AecLayerCategory } from '../../../types/entities';
 import {
   readCurrentLayerLocal,
@@ -53,6 +59,7 @@ import {
 
 const LAYER_PICKER_SLICE_KEY = 'layerPicker' as const;
 const FIRESTORE_SLICE_PATH = 'dxfViewer.dxfSettings' as const;
+const RECENT_DISPLAY_TARGET = 5;
 
 export interface LayerPickerState {
   readonly currentLayer: SceneLayer | null;
@@ -65,12 +72,20 @@ export interface LayerPickerState {
   readonly searchQuery: string;
   readonly isOpen: boolean;
   readonly isReady: boolean;
+  readonly canUnlockLayer: boolean;
+  /** Bumped on every user-initiated change — drives swatch pulse re-mount. */
+  readonly pulseToken: number;
 }
 
 export interface LayerPickerActions {
   setSearchQuery: (next: string) => void;
   setIsOpen: (next: boolean) => void;
   selectLayer: (layerId: string) => void;
+  toggleVisibility: (layerId: string) => void;
+  toggleLock: (layerId: string) => void;
+  toggleFreeze: (layerId: string) => void;
+  openProperties: (layerId: string) => void;
+  openManager: () => void;
 }
 
 export interface LayerGroup {
@@ -91,6 +106,20 @@ const CATEGORY_ORDER: ReadonlyArray<AecLayerCategory> = [
   'general',
 ];
 
+/**
+ * Pure initial-current selector — Q8 spec line 863: Layer "0" → first general
+ * category layer → first of array. Returns the layer id-or-name key.
+ */
+export function pickInitialLayerId(layers: ReadonlyArray<SceneLayer>): string | null {
+  if (layers.length === 0) return null;
+  const key = (l: SceneLayer): string => l.id ?? l.name;
+  const layerZero = layers.find((l) => l.name === '0');
+  if (layerZero) return key(layerZero);
+  const general = layers.find((l) => (l.category ?? 'general') === 'general');
+  if (general) return key(general);
+  return key(layers[0]);
+}
+
 export function useCurrentLayerPickerState(): {
   state: LayerPickerState;
   actions: LayerPickerActions;
@@ -109,13 +138,15 @@ export function useCurrentLayerPickerState(): {
     return level?.projectId ?? null;
   }, [currentLevelId, levels.levels]);
 
-  const { success: notifySuccess } = useNotifications();
+  const { success: notifySuccess, warning: notifyWarning } = useNotifications();
   const { t } = useTranslation('dxf-viewer-shell');
+  const { canUnlockLayer } = useCanEditText();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [pulseToken, setPulseToken] = useState(0);
 
-  // ── Hydration: project/level switch → load persisted current + recent ──
+  // ── Hydration: project/level switch → load persisted current + recent + seed ──
   const hydratedKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!projectId || !currentLevelId) return;
@@ -136,7 +167,8 @@ export function useCurrentLayerPickerState(): {
     );
     const remoteRecent = pickRecentFromSlice(remoteSlice?.layerPicker, projectId);
 
-    const resolvedCurrent = localCurrent ?? remoteCurrent;
+    const resolvedCurrent =
+      localCurrent ?? remoteCurrent ?? pickInitialLayerId(snapshot.layers);
     const resolvedRecent = localRecent.length > 0 ? localRecent : remoteRecent;
 
     if (resolvedCurrent && resolvedCurrent !== snapshot.currentLayerId) {
@@ -203,7 +235,7 @@ export function useCurrentLayerPickerState(): {
     }
   }, [projectId, snapshot.recentLayerIds]);
 
-  // ── Derived: current + recent + grouped + filtered ──
+  // ── Derived: current + recent (+ alpha fallback) + grouped + filtered ──
   const layerById = useMemo(() => {
     const map = new Map<string, SceneLayer>();
     for (const layer of snapshot.layers) {
@@ -216,15 +248,30 @@ export function useCurrentLayerPickerState(): {
     ? layerById.get(snapshot.currentLayerId) ?? null
     : null;
 
+  // Q8 line 858: fallback to alphabetical when recent < 5
   const recentLayers = useMemo<ReadonlyArray<SceneLayer>>(() => {
     const list: SceneLayer[] = [];
+    const seen = new Set<string>();
     for (const id of snapshot.recentLayerIds) {
+      if (seen.has(id)) continue;
       const layer = layerById.get(id);
-      if (layer) list.push(layer);
-      if (list.length >= 5) break;
+      if (!layer) continue;
+      list.push(layer);
+      seen.add(id);
+      if (list.length >= RECENT_DISPLAY_TARGET) break;
+    }
+    if (list.length < RECENT_DISPLAY_TARGET) {
+      const alpha = [...snapshot.layers]
+        .filter((l) => !seen.has(l.id ?? l.name))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      for (const layer of alpha) {
+        list.push(layer);
+        seen.add(layer.id ?? layer.name);
+        if (list.length >= RECENT_DISPLAY_TARGET) break;
+      }
     }
     return list;
-  }, [snapshot.recentLayerIds, layerById]);
+  }, [snapshot.recentLayerIds, snapshot.layers, layerById]);
 
   const groupedByCategory = useMemo<ReadonlyArray<LayerGroup>>(() => {
     const buckets = new Map<AecLayerCategory, SceneLayer[]>();
@@ -274,17 +321,72 @@ export function useCurrentLayerPickerState(): {
     (layerId: string) => {
       const target = layerById.get(layerId);
       if (!target) return;
+      if (target.frozen === true) {
+        notifyWarning(t('layerPicker.toastFrozen', { name: target.name }));
+        setIsOpen(false);
+        return;
+      }
+      if (target.locked && !canUnlockLayer) {
+        notifyWarning(t('layerPicker.toastLocked', { name: target.name }));
+        setIsOpen(false);
+        return;
+      }
       if (snapshot.currentLayerId === layerId) {
         pushRecentLayer(layerId);
+        setPulseToken((n) => n + 1);
         setIsOpen(false);
         return;
       }
       setCurrentLayerId(layerId);
+      setPulseToken((n) => n + 1);
       notifySuccess(t('layerPicker.toastChanged', { name: target.name }));
       setIsOpen(false);
     },
-    [layerById, snapshot.currentLayerId, notifySuccess, t],
+    [layerById, snapshot.currentLayerId, canUnlockLayer, notifySuccess, notifyWarning, t],
   );
+
+  const toggleVisibility = useCallback(
+    (layerId: string) => {
+      const target = layerById.get(layerId);
+      if (!target) return;
+      upsertLayer({ ...target, visible: !target.visible });
+    },
+    [layerById],
+  );
+
+  const toggleLock = useCallback(
+    (layerId: string) => {
+      const target = layerById.get(layerId);
+      if (!target) return;
+      if (!canUnlockLayer) {
+        notifyWarning(t('layerPicker.toastLocked', { name: target.name }));
+        return;
+      }
+      upsertLayer({ ...target, locked: !target.locked });
+    },
+    [layerById, canUnlockLayer, notifyWarning, t],
+  );
+
+  const toggleFreeze = useCallback(
+    (layerId: string) => {
+      const target = layerById.get(layerId);
+      if (!target) return;
+      upsertLayer({ ...target, frozen: target.frozen !== true });
+    },
+    [layerById],
+  );
+
+  const openManager = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('dxf:open-layer-manager'));
+    setIsOpen(false);
+  }, []);
+
+  const openProperties = useCallback((layerId: string) => {
+    window.dispatchEvent(
+      new CustomEvent('dxf:open-layer-manager', { detail: { layerId } }),
+    );
+    setIsOpen(false);
+  }, []);
 
   const state: LayerPickerState = {
     currentLayer,
@@ -297,12 +399,19 @@ export function useCurrentLayerPickerState(): {
     searchQuery,
     isOpen,
     isReady: snapshot.layers.length > 0,
+    canUnlockLayer,
+    pulseToken,
   };
 
   const actions: LayerPickerActions = {
     setSearchQuery,
     setIsOpen,
     selectLayer,
+    toggleVisibility,
+    toggleLock,
+    toggleFreeze,
+    openProperties,
+    openManager,
   };
 
   return { state, actions };
