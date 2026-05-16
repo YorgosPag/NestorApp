@@ -164,9 +164,17 @@ export const GET = withSensitiveRateLimit(
           .limit(1000)
           .get();
 
+        // Exclude synthetic development-bypass users (e.g. dev-admin). They
+        // have no Firebase Auth identity, cannot be promoted to companyMembers,
+        // and listing them produces UI/API mismatches where PATCH role/status/
+        // permission-sets fails with 404 "User not found in this company".
+        const realUnassignedDocs = unassignedSnap.docs.filter(
+          (doc) => (doc.data().authProvider as string | undefined) !== 'development-bypass'
+        );
+
         const unassignedUsers: CompanyUser[] = [];
-        if (!unassignedSnap.empty) {
-          const unassignedUids = unassignedSnap.docs.map((doc) => doc.id);
+        if (realUnassignedDocs.length > 0) {
+          const unassignedUids = realUnassignedDocs.map((doc) => doc.id);
           const unassignedIdentifiers = unassignedUids.map((uid) => ({ uid }));
 
           // Batch-fetch Firebase Auth records
@@ -185,7 +193,7 @@ export const GET = withSensitiveRateLimit(
           }
 
           // Build unassigned users list
-          for (const doc of unassignedSnap.docs) {
+          for (const doc of realUnassignedDocs) {
             const data = doc.data();
             const authInfo = unassignedAuthMap.get(doc.id);
             unassignedUsers.push({
