@@ -63,6 +63,14 @@ export interface RibbonCommandsApi {
    * keys to domain validators (e.g. `StairEntity.validation.hasCodeViolations`).
    */
   getBadgeState?: (badgeKey: string) => boolean;
+  /**
+   * ADR-358 Phase 7b2b-β Stream F — read panel visibility for a
+   * `visibilityKey` declared on `RibbonPanelDef`. Returns `false` to skip
+   * rendering the panel. Owning bridge (e.g. `useRibbonStairBridge`) maps
+   * visibility keys to domain predicates (e.g. variant.kind != 'straight').
+   * Default behavior when no bridge owns the key: panel always visible.
+   */
+  getPanelVisibility?: (visibilityKey: string) => boolean;
 }
 
 interface RibbonCommandContextValue {
@@ -74,6 +82,7 @@ interface RibbonCommandContextValue {
   getToggleState: (commandKey: string) => RibbonToggleState;
   getComboboxState: (commandKey: string) => RibbonComboboxState | null;
   getBadgeState: (badgeKey: string) => boolean;
+  getPanelVisibility: (visibilityKey: string) => boolean;
   splitLastUsed: Record<string, string>;
   setSplitLastUsed: (commandId: string, variantId: string) => void;
 }
@@ -83,6 +92,9 @@ const NOOP_COMBOBOX_CHANGE = () => {};
 const NOOP_TOGGLE_STATE = (): RibbonToggleState => false;
 const NOOP_COMBOBOX_STATE = (): RibbonComboboxState | null => null;
 const NOOP_BADGE_STATE = (): boolean => false;
+// ADR-358 Phase 7b2b-β Stream F — default = always visible (no breaking
+// change for existing panels without `visibilityKey`).
+const DEFAULT_PANEL_VISIBILITY = (): boolean => true;
 
 const RibbonCommandContext = createContext<RibbonCommandContextValue | null>(
   null,
@@ -109,6 +121,7 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       getToggleState: commands.getToggleState ?? NOOP_TOGGLE_STATE,
       getComboboxState: commands.getComboboxState ?? NOOP_COMBOBOX_STATE,
       getBadgeState: commands.getBadgeState ?? NOOP_BADGE_STATE,
+      getPanelVisibility: commands.getPanelVisibility ?? DEFAULT_PANEL_VISIBILITY,
       splitLastUsed,
       setSplitLastUsed,
     }),
@@ -121,6 +134,7 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       commands.getToggleState,
       commands.getComboboxState,
       commands.getBadgeState,
+      commands.getPanelVisibility,
       splitLastUsed,
       setSplitLastUsed,
     ],
