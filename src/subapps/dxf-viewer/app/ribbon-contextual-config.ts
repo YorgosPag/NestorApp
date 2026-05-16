@@ -13,14 +13,23 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_STAIR_TAB,
 ] as const;
 
-type EntityLike = { type: string; params?: { kind?: string } };
+type EntityLike = { readonly type: string; readonly params?: unknown };
+
+function readArrayKind(params: unknown): string | undefined {
+  if (params && typeof params === 'object' && 'kind' in params) {
+    const k = (params as { kind?: unknown }).kind;
+    return typeof k === 'string' ? k : undefined;
+  }
+  return undefined;
+}
 
 export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'stair') return STAIR_CONTEXTUAL_TRIGGER;
   if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;
   if (entity.type === 'array') {
-    if (entity.params?.kind === 'polar') return ARRAY_POLAR_CONTEXTUAL_TRIGGER;
-    if (entity.params?.kind === 'path') return ARRAY_PATH_CONTEXTUAL_TRIGGER;
+    const kind = readArrayKind(entity.params);
+    if (kind === 'polar') return ARRAY_POLAR_CONTEXTUAL_TRIGGER;
+    if (kind === 'path') return ARRAY_PATH_CONTEXTUAL_TRIGGER;
     return ARRAY_RECT_CONTEXTUAL_TRIGGER;
   }
   return null;
