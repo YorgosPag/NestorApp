@@ -25,6 +25,8 @@ import {
   type AngleMeasurementResult,
 } from '../../utils/angle-entity-math';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
+import { getLayer } from '../../stores/LayerStore';
 
 // ============================================================================
 // TYPES
@@ -243,6 +245,8 @@ export function useAngleEntityMeasurement(
         angle: result.angleDeg,
         visible: true,
         layer: '0',
+        // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+        layerId: getLayer(DXF_DEFAULT_LAYER)?.id,
         measurement: true,
       };
 
