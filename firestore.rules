@@ -550,6 +550,59 @@ service cloud.firestore {
         // 📝 UPDATE/DELETE: Not allowed - audit logs are immutable
         allow update, delete: if false;
       }
+
+      // =========================================================================
+      // 🪜 STAIR_PRESETS SUBCOLLECTION — ADR-358 Phase 7.5 (G26, Q32)
+      // =========================================================================
+      // 📅 Added: 2026-05-17
+      // 🏢 ENTERPRISE: 3-scope stair library presets (user / company / project).
+      // 🔒 SECURITY: Tenant isolation via companyId === parent path segment.
+      //              Scope discrimination by `scope` field on the document.
+      // 📘 ADR-358 §5.3 #7, §6.6, §9.2 Q32
+      match /stair_presets/{presetId} {
+
+        // 📖 READ — Tenant-scoped + scope filter
+        // user scope: only owner reads.
+        // company scope: any tenant member reads.
+        // project scope: any tenant member reads (project isolation handled by service-layer query).
+        allow read: if isAuthenticated()
+                    && belongsToCompany(companyId)
+                    && (
+                         resource.data.scope == 'company'
+                         || resource.data.scope == 'project'
+                         || (resource.data.scope == 'user'
+                             && resource.data.ownerId == request.auth.uid)
+                       );
+
+        // ✍️ CREATE — Tenant member + companyId == path + ownerId == self + valid scope
+        allow create: if isAuthenticated()
+                      && resource == null
+                      && belongsToCompany(companyId)
+                      && request.resource.data.companyId == companyId
+                      && request.resource.data.ownerId == request.auth.uid
+                      && request.resource.data.scope in ['user', 'company', 'project']
+                      && (request.resource.data.scope != 'project'
+                          || request.resource.data.keys().hasAny(['projectId']));
+
+        // 📝 UPDATE — Owner only (immutable companyId/scope/ownerId)
+        allow update: if isAuthenticated()
+                      && belongsToCompany(companyId)
+                      && resource.data.ownerId == request.auth.uid
+                      && request.resource.data.companyId == resource.data.companyId
+                      && request.resource.data.scope == resource.data.scope
+                      && request.resource.data.ownerId == resource.data.ownerId;
+
+        // 🗑️ DELETE — Owner or company_admin (per scope)
+        // user scope: owner only.
+        // company / project scope: owner or company_admin.
+        allow delete: if isAuthenticated()
+                      && belongsToCompany(companyId)
+                      && (
+                           resource.data.ownerId == request.auth.uid
+                           || (resource.data.scope in ['company', 'project']
+                               && isCompanyAdminOfCompany(companyId))
+                         );
+      }
     }
 
     // =========================================================================
