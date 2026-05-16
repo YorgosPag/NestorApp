@@ -1337,3 +1337,7 @@ Extracted two blocks from CanvasSection to keep it under 500 lines (N.7.1 budget
 ## 2026-05-16: CanvasSection render-loop diagnostic (temporary — CS-RENDER)
 
 `CS-RENDER` diagnostic block added to `CanvasSection.tsx` to investigate 4Hz idle re-render loop root cause. Tracks which props change reference vs content across renders via `useRef` snapshot diff + `useEffect` console output (`[CS-RENDER] #N content-changed: X | ref-only: Y`). Uses only `useRef` + `useEffect` — no store subscriptions, no new `useSyncExternalStore` calls. Temporary — will be removed after root cause identified. Cardinal rules maintained.
+
+## 2026-05-16: DxfViewerContent render-loop diagnostic (temporary — DVC-RENDER)
+
+Parallel diagnostic in `DxfViewerContent.tsx` (parent of CanvasSection). `DVC-RENDER` block tracks which PROPS of `DxfViewerContent` change reference vs content across renders via `useRef` snapshot + `useEffect` console output (`[DVC-RENDER] #N props-content-changed: X | props-ref-only: Y`). Identifies whether the 4Hz re-render originates from parent props or internal CanvasSection state. Uses `useRef` + `useEffect` only — no store subscriptions, no new `useSyncExternalStore` calls. Temporary — will be removed after root cause identified. Cardinal rules maintained.
