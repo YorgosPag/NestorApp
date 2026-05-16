@@ -23,6 +23,7 @@ import { clearAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewSto
 import { useLinePerpendicular } from '../drawing/useLinePerpendicular';
 import { useLineParallel } from '../drawing/useLineParallel';
 import { useStairTool } from '../drawing/useStairTool';
+import { detectSceneUnits } from '../drawing/stair-completion';
 import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
 import type { AngleMeasurementEntity } from '../../types/entities';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
@@ -234,6 +235,18 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
    */
   const stairTool = useStairTool({
     currentLevelId: levelManager.currentLevelId || '0',
+    // ADR-358 Phase 8 unit-aware builder — convert mm defaults into the active
+    // scene's coordinate units so the stair geometry matches the host DXF.
+    // Uses heuristic `detectSceneUnits(bounds)` because `dxf-scene-builder`
+    // hardcodes `scene.units = 'mm'` even for meter-based DXF files
+    // (carryover: fix the builder to propagate `$INSUNITS`).
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene?.bounds) return 'mm';
+      return detectSceneUnits(scene.bounds);
+    },
     onStairCreated: (stairEntity) => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return;
