@@ -273,11 +273,6 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   );
 });
 
-// WDYR diagnostic — remove after render-loop investigation complete
-if (process.env.NODE_ENV === 'development') {
-  (DxfCanvasSubscriber as unknown as { whyDidYouRender: boolean }).whyDidYouRender = true;
-}
-
 // --- ROTATION PREVIEW MOUNT ---
 
 interface RotationPreviewMountProps {

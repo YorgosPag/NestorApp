@@ -71,17 +71,44 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
-### 2026-05-16 (WDYR Diagnostic): why-did-you-render instrumentation for ongoing render-loop audit
+### 2026-05-16 (Phase XIX) — RENDER-LOOP RESOLVED: ribbon bridges return object literal
 
-**Purpose**: `@welldone-software/why-did-you-render` wired to `CanvasSection` + `DxfCanvasSubscriber` to trace exact prop/hook triggering re-renders in browser console during dev.
+**Diagnostic**: React DevTools Profiler v5 export (`profiling-data.16-05-2026.22-39-14.json`, 7.3s / 28 commits) + Python decoder (`scripts/analyze-profile5.py`). Strategy: count per-fiber re-render in `fiberActualDurations` with `duration>0`. Components in ≥50% commits = loop suspects.
 
-**Files** (dev-only, remove after audit complete):
-- `src/wdyr.ts` — WDYR init (NODE_ENV=development + window guard, `trackHooks: true`)
-- `src/app/layout.tsx` — `import '../wdyr'` at top
-- `CanvasSection.tsx` — `CanvasSection.whyDidYouRender = true`
-- `canvas-layer-stack-leaves.tsx` — `DxfCanvasSubscriber.whyDidYouRender = true`
+**Profile stats**:
+- `PanelTabs`: **28/28** commits, 252ms
+- `RibbonCommandProvider`: **14/28**, 1548ms
+- `RibbonRootInner`: **14/28**, 1552ms
+- `CanvasSection`: 14/28, 305ms (cousin)
+- `DxfCanvasSubscriber`: **only 3/28** ← phases XV/XVII suspect SMENTITO
 
-**Removal**: when idle render loop confirmed eliminated, remove `wdyr.ts` import from layout.tsx and `.whyDidYouRender` annotations.
+**Root cause**: `useRibbonStairBridge`, `useRibbonArrayBridge`, `useRibbonTextEditorBridge` ritornavano **object literal senza `useMemo`** (linee 208, 255, 79 rispettivamente).
+
+**Cascade**:
+```
+3 ribbon bridges → return {...} NEW REF every render
+       ↓
+useRibbonCommands → useCallback([stairBridge, arrayBridge, textEditorBridge])
+                    useMemo([handleX, ..., getBadgeState])    ← invalidate
+       ↓
+RibbonRoot = React.memo(...)    ← memo bail-out fails (commands prop NEW REF)
+       ↓
+RibbonCommandProvider value = useMemo([commands.onToolChange, ...])    ← invalidate
+       ↓
+30+ ribbon consumers re-render + CanvasSection (via shared TransformProvider ancestor)
+```
+
+**Fix (3 files)**:
+
+1. `src/subapps/dxf-viewer/ui/ribbon/hooks/useRibbonStairBridge.ts:208` — wrap return in `useMemo([onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState])`.
+2. `src/subapps/dxf-viewer/ui/ribbon/hooks/useRibbonArrayBridge.ts:255` — same pattern (4 callable).
+3. `src/subapps/dxf-viewer/ui/ribbon/hooks/useRibbonTextEditorBridge.ts:79` — same pattern (4 callable).
+
+Inner callbacks già `useCallback` con deps stabili → useMemo deps stabili → bridge ref stabile → ribbonCommands stabile → RibbonRoot memo bail-out → RibbonCommandProvider value stabile → zero re-render cascade.
+
+**Lezione (cardinal rule)**: ogni custom hook che ritorna un object con multiple proprietà DEVE wrappare in `useMemo` con array deps esplicito. Without it, return value è anti-pattern che propaga instabilità a cascata in ogni consumer.
+
+**Phase XV/XVI/XVII/XVIII residui**: defensive layers (Firestore equality guard + memoization + ref-pattern + useEntityStatusResolver equality) rimangono in place — GOL-level safety nets per loop futuri, non rollback.
 
 ---
 

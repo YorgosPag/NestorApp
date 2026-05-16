@@ -469,8 +469,3 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     </>
   );
 };
-
-// WDYR diagnostic — remove after render-loop investigation complete
-if (process.env.NODE_ENV === 'development') {
-  (CanvasSection as unknown as { whyDidYouRender: boolean }).whyDidYouRender = true;
-}
