@@ -164,7 +164,7 @@ function docToTriageCommunication(doc: DocumentData & { id: string }): Communica
 /**
  * 🏢 ENTERPRISE: Realtime listener for AI Inbox triage communications (ADR-079)
  *
- * Replaces server actions + WebSocket dead code with Firestore onSnapshot().
+ * Replaces server actions + WebSocket dead code with firestoreQueryService.subscribe (ADR-355 SSoT, ADR-361 equality-guarded).
  * Follows proven useRealtimeMessages pattern on the same `messages` collection.
  *
  * @param options - Configuration (companyId required for Firestore rules)
