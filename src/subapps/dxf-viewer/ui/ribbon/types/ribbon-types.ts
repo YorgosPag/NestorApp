@@ -80,6 +80,16 @@ export interface RibbonPanelDef {
   labelKey: string;
   rows: RibbonRow[];
   isPinned?: boolean;
+  /**
+   * ADR-358 Phase 7b2b-β Stream F — context-aware panel visibility. When set,
+   * the panel is rendered only when
+   * `RibbonCommandsApi.getPanelVisibility(visibilityKey)` returns `true`.
+   * Owner bridge (e.g. `useRibbonStairBridge`) maps visibility keys to domain
+   * predicates (e.g. `variant.kind ∈ {l-shape, u-shape, gamma}`). Mirrors the
+   * `badgeKey` pattern from Phase 7b1. Default `undefined` = always visible
+   * (zero breaking change for existing tabs).
+   */
+  visibilityKey?: string;
 }
 
 export interface RibbonTab {
