@@ -55,6 +55,7 @@ import { generatePreviewEntity, applyPreviewStyling, createPartialPreview } from
 // from the SSoT store so the rubber-band preview renders during 2-click placement.
 import { stairPreviewStore } from '../../systems/stairs/stair-preview-store';
 import { toolStateStore } from '../../stores/ToolStateStore';
+import { detectSceneUnits } from './stair-completion';
 import { applyPreviewSettingsToEntity } from './apply-preview-settings';
 
 // ─── Module-level helpers ───────────────────────────────────────────────────
@@ -259,12 +260,26 @@ export function useUnifiedDrawing() {
       }
     }
 
+    // ADR-358 Phase 8 — scene units propagated to stair preview so the
+    // ghost rubber-band + walkline match the host floorplan scale.
+    // Detection is bounds-heuristic because `dxf-scene-builder` hardcodes
+    // `scene.units = 'mm'` even for meter-based DXF files.
+    const sceneUnitsForPreview = (() => {
+      if (!isStair) return 'mm' as const;
+      const levelId = currentLevelId;
+      if (!levelId) return 'mm' as const;
+      const scene = getLevelScene(levelId);
+      if (!scene?.bounds) return 'mm' as const;
+      return detectSceneUnits(scene.bounds);
+    })();
+
     const previewEntity = generatePreviewEntity(
       currentTool,
       tempPoints,
       mousePoint,
       arcFlippedRef.current,
       createEntityFromTool,
+      sceneUnitsForPreview,
     );
     if (previewEntity) {
       applyPreviewStyling(
@@ -275,7 +290,7 @@ export function useUnifiedDrawing() {
     }
 
     previewEntityRef.current = previewEntity;
-  }, [machineContext.toolType, machineContext.points, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings]);
+  }, [machineContext.toolType, machineContext.points, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings, currentLevelId, getLevelScene]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
     setMode('preview');
