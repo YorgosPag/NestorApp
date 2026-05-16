@@ -39,6 +39,8 @@ import {
 import { ensureTextNode } from '../../../text-engine/edit';
 import type { SceneModel, AnySceneEntity } from '../../../types/scene';
 import type { DxfTextNode } from '../../../text-engine/types';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
+import { resolveEntityLayerName } from '../../../stores/LayerStore';
 
 interface ResolvedTextEntity {
   readonly id: string;
@@ -61,7 +63,8 @@ function resolveTextEntities(
     out.push({
       id: entity.id,
       node: ensureTextNode(entity as unknown as Parameters<typeof ensureTextNode>[0]),
-      layerId: entity.layer ?? '',
+      // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
+      layerId: resolveEntityLayerName(entity) ?? '',
     });
   }
   return out;
