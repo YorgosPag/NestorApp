@@ -32,6 +32,7 @@ import {
   buildDefaultStairParams,
   buildStairEntity,
   directionFromPoints,
+  type SceneUnits,
   type StairParamOverrides,
 } from './stair-completion';
 
@@ -66,6 +67,12 @@ export interface UseStairToolOptions {
   readonly onStairCreated?: (entity: StairEntity) => void;
   /** Layer ID at which the StairEntity is registered. */
   readonly currentLevelId?: string;
+  /**
+   * ADR-358 Phase 8 — scene units getter (called at commit time so the
+   * builder converts the mm-baked defaults into the active scene's units).
+   * Defaults to `'mm'` when omitted (back-compat).
+   */
+  readonly getSceneUnits?: () => SceneUnits;
 }
 
 export interface UseStairToolResult {
@@ -90,7 +97,7 @@ export interface UseStairToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useStairTool(options: UseStairToolOptions = {}): UseStairToolResult {
-  const { onStairCreated, currentLevelId = '0' } = options;
+  const { onStairCreated, currentLevelId = '0', getSceneUnits } = options;
 
   const [state, setState] = useState<StairToolState>(INITIAL_STATE);
   const stateRef = useRef<StairToolState>(state);
@@ -122,7 +129,8 @@ export function useStairTool(options: UseStairToolOptions = {}): UseStairToolRes
   // ── commit ───────────────────────────────────────────────────────────────
   const commitFromState = useCallback((s: StairToolState): boolean => {
     if (s.basePoint === null || s.direction === null) return false;
-    const params = buildDefaultStairParams(s.basePoint, s.direction, s.overrides);
+    const sceneUnits = getSceneUnits?.() ?? 'mm';
+    const params = buildDefaultStairParams(s.basePoint, s.direction, s.overrides, sceneUnits);
     const entity = buildStairEntity(params, currentLevelId);
     onStairCreated?.(entity);
     setState({
@@ -133,7 +141,7 @@ export function useStairTool(options: UseStairToolOptions = {}): UseStairToolRes
       error: null,
     });
     return true;
-  }, [currentLevelId, onStairCreated]);
+  }, [currentLevelId, onStairCreated, getSceneUnits]);
 
   const confirm = useCallback((): boolean => {
     const s = stateRef.current;
@@ -252,6 +260,32 @@ export function useStairTool(options: UseStairToolOptions = {}): UseStairToolRes
     window.addEventListener('dynamic-input-coordinate-submit', onDynSubmit);
     return () => window.removeEventListener('dynamic-input-coordinate-submit', onDynSubmit);
   }, [confirmWithOverrides]);
+
+  // ADR-358 Phase 8 (Enter commit hotfix) — direct Enter listener as a safety
+  // net so the tool commits even when the Dynamic Input overlay is disabled
+  // (`settings.behavior.dynamic_input === false`) or temporarily unmounted.
+  // The Dynamic Input path remains the preferred route when active because it
+  // can attach inline rise/tread/width overrides; here we just commit with
+  // current state defaults. Capture phase so we win against any unrelated
+  // global handler; we only act when phase === 'confirming'.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return;
+      if (stateRef.current.phase !== 'confirming') return;
+      // Do not double-fire when Dynamic Input also dispatches a commit-stair.
+      // If the active element is an input (Dynamic Input field), let the
+      // overlay handler win via `dynamic-input-coordinate-submit`.
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      confirm();
+    };
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [confirm]);
 
   return {
     state,
