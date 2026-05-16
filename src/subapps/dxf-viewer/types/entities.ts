@@ -26,7 +26,19 @@ export interface BaseEntity {
   id: string;
   name?: string;             // Optional user-friendly name for the entity
   type: EntityType;
+  /**
+   * @deprecated ADR-358 Phase 9D — Layer NAME backref. Transitional alias kept ≤1 release for
+   * legacy readers. Stable identifier is `layerId` (`lyr_<UUID-v4>`). After Phase 9D-3 sweep
+   * removes all reader sites, this field will be deleted (final required-flip in Phase 9D-5).
+   * Writers MUST keep both fields in sync until then.
+   */
   layer?: string;
+  /**
+   * Stable layer identifier — `lyr_<UUID-v4>` matching `SceneLayer.id` (ADR-358 Phase 9C v2.13).
+   * Optional in Phase 9D-1 to keep TS green during ~55-file callsite migration. Becomes
+   * REQUIRED at end of Phase 9D-4. Resolve display name via `LayerStore.getLayer(id)?.name`.
+   */
+  layerId?: string;
   color?: string;
   selected?: boolean;
   preview?: boolean;
