@@ -34,7 +34,11 @@ export function AIInboxUnauthorized({ error }: AIInboxUnauthorizedProps) {
             <CardDescription>{t('accessDenied.description')}</CardDescription>
           </CardHeader>
           <CardContent className={layout.flexColGap2}>
-            <p className={`text-sm ${colors.text.muted}`}>{error}</p>
+            <p className={`text-sm ${colors.text.muted}`}>
+              {/MFA enrollment required/i.test(error)
+                ? t('accessDenied.mfaRequired')
+                : error}
+            </p>
             <div className={layout.flexGap2}>
               <Button asChild variant="default">
                 <Link href={AUTH_ROUTES.login}>

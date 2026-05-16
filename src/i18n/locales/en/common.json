@@ -82,7 +82,8 @@
     "title": "Unauthorized access",
     "description": "You do not have permission to access this page.",
     "login": "Login",
-    "home": "Go Home"
+    "home": "Go Home",
+    "mfaRequired": "MFA enrollment is required for the admin role. Please enable two-factor authentication."
   },
   "toast": {
     "success": "Success",
