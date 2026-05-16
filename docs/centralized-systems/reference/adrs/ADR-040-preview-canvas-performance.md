@@ -71,6 +71,20 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-16 (WDYR Diagnostic): why-did-you-render instrumentation for ongoing render-loop audit
+
+**Purpose**: `@welldone-software/why-did-you-render` wired to `CanvasSection` + `DxfCanvasSubscriber` to trace exact prop/hook triggering re-renders in browser console during dev.
+
+**Files** (dev-only, remove after audit complete):
+- `src/wdyr.ts` — WDYR init (NODE_ENV=development + window guard, `trackHooks: true`)
+- `src/app/layout.tsx` — `import '../wdyr'` at top
+- `CanvasSection.tsx` — `CanvasSection.whyDidYouRender = true`
+- `canvas-layer-stack-leaves.tsx` — `DxfCanvasSubscriber.whyDidYouRender = true`
+
+**Removal**: when idle render loop confirmed eliminated, remove `wdyr.ts` import from layout.tsx and `.whyDidYouRender` annotations.
+
+---
+
 ### 2026-05-16 (Phase XVIII): Fix render-loop @ ~1Hz — useEntityStatusResolver multi-chunk cascade
 
 **Bug (third occurrence same day)**: Phase XVII (ref-chain stabilization) non ha risolto. Loop persisteva a ~1Hz idle con coppia `DxfCanvasSubscriber.commit` + `CanvasSection.commit`. Giorgio ha perso molte ore. Pattern coppia = store COMUNE invalidato, non instabilità ref isolata.
