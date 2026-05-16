@@ -16,7 +16,6 @@
 
 import React, { useMemo, useSyncExternalStore, useEffect } from 'react';
 import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
-import { useRenderTrace } from '../../debug/render-loop-trace';
 import { useHoveredOverlay } from '../../systems/hover/useHover';
 import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
@@ -204,16 +203,6 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   const _perfRenderStart = perfStart();
   useEffect(() => {
     if (PERF_LINE_PROFILE) perfEnd('DxfCanvasSubscriber.commit', _perfRenderStart);
-  });
-  // ADR-040 Phase XX — render diff trace.
-  useRenderTrace('DxfCanvasSubscriber', {
-    dxfCanvasRef, scene, transform, viewport, activeTool, overlayMode, colorLayers,
-    renderOptionsBase, crosshairSettings, gridSettings, rulerSettings,
-    selectedGuideIds, constructionPoints, panelHighlightPointId,
-    guideWorkflowComputedParams, isGripDragging, entityPickingActive,
-    onLayerSelected, onMultiLayerSelected, onEntitiesSelected, onUnifiedMarqueeResult,
-    onHoverEntity, onHoverOverlay, onEntitySelect, onGripMouseDown, onGripMouseUp,
-    onContextMenu, onCanvasClick, onTransformChange, onWheelZoom, onMouseMove,
   });
   // 🚀 PERF: Subscribe to guide store DIRECTLY here (micro-leaf pattern, ADR-040).
   // CanvasSection uses useGuideActions() (no subscription) → guide drag at 60fps

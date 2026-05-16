@@ -71,9 +71,11 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
-### 2026-05-17 (Phase XXI) — ROOT CAUSE: client-side `dxf_viewer_levels` bootstrap rejected by Firestore rules
+### 2026-05-17 (Phase XXI) — ✅ RESOLVED: client-side `dxf_viewer_levels` bootstrap rejected by Firestore rules
 
-**Status**: Phase XX instrumentation deployed → log analysis confirms deterministic root cause. Loop is NOT a React/ref-churn problem — it is a Firestore **write-reject loop** that the snapshot listener amplifies into a React render cascade.
+**Status**: ✅ **RESOLVED & CONFIRMED**. Giorgio validation 2026-05-17 02:42 (Greek): *«ΔΕΝ ΕΧΕΙ ΛΟΥΠΑ»* (= no loop). Steady-state idle log shows **0** `FirebaseError: Missing or insufficient permissions` (vs 83 pre-fix) and **0** continuous `PERF_LINE` commit pairs after init settles. Phase XX probes (`useRenderTrace` + `installSetStateTracer` + manual `traceSet` setter wrappers) cleaned up in same commit; `render-loop-trace.ts` SSoT utility retained for future investigations (flag-gated, zero prod overhead).
+
+**Diagnosis**: Loop was NOT a React/ref-churn problem — it was a Firestore **write-reject loop** that the snapshot listener amplified into a React render cascade.
 
 **Evidence (Firefox console log `console-export-2026-5-17_1-27-39.log`, 19624 lines)**:
 

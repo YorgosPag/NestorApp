@@ -8,12 +8,6 @@
 import React, { useRef, useCallback, useMemo, useEffect } from 'react';
 import { CanvasLayerStack } from './CanvasLayerStack';
 import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
-import { useRenderTrace, installSetStateTracer } from '../../debug/render-loop-trace';
-
-// ADR-040 Phase XX — idle render-loop investigation. Installs setState tracer
-// at module load (idempotent, no-op unless TRACE_RENDER_LOOP=1).
-// Activate: localStorage.setItem('TRACE_RENDER_LOOP','1') + reload.
-if (typeof window !== 'undefined') installSetStateTracer();
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLiveOverlaysForLevel } from '../../hooks/useLiveOverlaysForLevel';
@@ -398,24 +392,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   });
   // === Auto-area hover preview ===
   const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove: unified.handleMouseMove, activeTool, levelManager, currentOverlays, transformScale: transform.scale });
-
-  // ADR-040 Phase XX — render diff trace (idle render-loop investigation).
-  // No-op unless localStorage.TRACE_RENDER_LOOP === '1'. Logs ref-vs-content
-  // diff per render → identifies which hook output churns refs while idle.
-  useRenderTrace('CanvasSection', {
-    // props
-    activeTool: props.activeTool, overlayMode, currentStatus, currentKind, currentScene: props.currentScene, showGrid, showLayers, dxfCanvasVisible: props.dxfCanvasVisible, layerCanvasVisible: props.layerCanvasVisible,
-    // context + viewport + scene + level + overlays + selection
-    canvasContext, transform, viewport, viewportReady, levelManager, currentLevelId: levelManager.currentLevelId, dxfScene, currentOverlays, universalSelection, selectedEntityIds,
-    // settings
-    cursorSettings, gridContextSettings, rulerContextSettings, crosshairSettings, cursorCanvasSettings, snapSettings, rulerSettings, gridSettings, selectionSettings, gripSettings, globalRulerSettings,
-    // state + composite hooks
-    guideState, cpState, unified, zoomSystem, eventBus, colorLayers, floorplanBg,
-    // tools
-    rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, arrayPolarTool, arrayPathTool, circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool,
-    // workflows + text editor
-    guideWorkflows, draftPolygon, isSavingPolygon, draggingGuide, entityJoinState, textEditor, textCreation,
-  });
 
   // === Render ===
   return (
