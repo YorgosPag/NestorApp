@@ -22,6 +22,8 @@ import {
   type ILayerAccessProvider,
 } from './types';
 import { assertCanEditLayer } from './CanEditLayerGuard';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
+import { resolveEntityLayerName } from '../../../stores/LayerStore';
 import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
 
 export interface ReplaceTextNodeCommandInput {
@@ -53,7 +55,8 @@ export class ReplaceTextNodeCommand implements ICommand {
       | DxfTextSceneEntity
       | undefined;
     if (!entity) return;
-    assertCanEditLayer({ layerName: entity.layer, provider: this.layerProvider });
+    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
+    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
 
     if (!this.snapshot) this.snapshot = ensureTextNode(entity);
     this.sceneManager.updateEntity(this.input.entityId, {
