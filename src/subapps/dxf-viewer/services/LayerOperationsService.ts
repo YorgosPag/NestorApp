@@ -1,8 +1,6 @@
 /**
- * Layer Operations Service
- * Handles all layer-related operations including CRUD, visibility, color changes, and merging
+ * Layer Operations Service — handles layer CRUD, visibility, color, merging.
  */
-
 import { SceneModel } from '../types/scene';
 import { mergeColorGroups } from '../ui/components/layers/utils/scene-merge';
 // ADR-130: Centralized Default Layer Name
@@ -28,12 +26,17 @@ import {
 import { resolveLinetype } from '../stores/LinetypeRegistry';
 import { DEFAULT_LINETYPE_NAME } from '../config/linetype-iso-catalog';
 import type { LineweightMm } from '../types/entities';
+// ADR-358 Phase 9B: server-side naming trust boundary
+import { guardLayerName } from './shared/layer-naming-guard';
+import type { LayerNameValidationError } from './layer-name-validator';
 
 export interface LayerOperationResult {
   updatedScene: SceneModel;
   affectedEntityIds?: string[];
   success: boolean;
   message?: string;
+  /** ADR-358 §5.6 Q9 — populated when failure originates from name validation. */
+  validationError?: LayerNameValidationError;
 }
 
 export interface LayerCreateOptions {
@@ -79,17 +82,9 @@ export class LayerOperationsService {
         message: 'Layer name unchanged'
       };
     }
-    
-    if (scene.layers[newName]) {
-      return {
-        updatedScene: scene,
-        success: false,
-        message: `Layer "${newName}" already exists`
-      };
-    }
-    
+
     const { [oldName]: renamedLayer, ...otherLayers } = scene.layers;
-    
+
     if (!renamedLayer) {
       return {
         updatedScene: scene,
@@ -97,6 +92,13 @@ export class LayerOperationsService {
         message: `Layer "${oldName}" does not exist`
       };
     }
+
+    const guard = guardLayerName({
+      name: newName,
+      scene,
+      excludeId: renamedLayer.id,
+    });
+    if (guard) return guard;
     
     const updatedLayers = {
       ...otherLayers,
@@ -157,6 +159,16 @@ export class LayerOperationsService {
     layerName: string,
     scene: SceneModel
   ): LayerOperationResult {
+    // ADR-358 §5.6 line 1000-1005 — Layer "0" system-reserved.
+    if (layerName === '0') {
+      return {
+        updatedScene: scene,
+        success: false,
+        message: 'Layer "0" is system-reserved and cannot be deleted',
+        validationError: 'RESERVED',
+      };
+    }
+
     if (!scene.layers[layerName]) {
       return {
         updatedScene: scene,
@@ -193,15 +205,10 @@ export class LayerOperationsService {
     scene: SceneModel
   ): LayerOperationResult {
     const { name, color, visible = true, frozen = false } = options;
-    
-    if (scene.layers && scene.layers[name]) {
-      return {
-        updatedScene: scene,
-        success: false,
-        message: `Layer "${name}" already exists`
-      };
-    }
-    
+
+    const guard = guardLayerName({ name, scene });
+    if (guard) return guard;
+
     // ✅ ENTERPRISE FIX: Added missing 'locked' property to match SceneLayer interface
     const newLayer = {
       name: name,
