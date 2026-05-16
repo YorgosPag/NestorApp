@@ -64,8 +64,12 @@ export interface LevelSystemActions extends ImportWizardActions {
   getAutoSaveStatus?: () => { lastSaveTime: Date | null; saveStatus: string };
   /** 🏢 ENTERPRISE: Inject FileRecord ID so cadFiles uses the same ID as files collection */
   setFileRecordId?: (id: string | null) => void;
+  /** 🪜 ADR-358 Phase 8: reactive read of injected FileRecord id (for stair persistence floorplanId scope) */
+  fileRecordId?: string | null;
   /** 🏢 ADR-240: Inject save context (entityType/floorId/purpose) from Wizard import */
   setSaveContext?: (ctx: DxfSaveContext | null) => void;
+  /** 🪜 ADR-358 Phase 8: reactive read of injected save context (for stair persistence projectId scope) */
+  saveContext?: DxfSaveContext | null;
   /** 🏢 ENTERPRISE: Persist level→DXF association in Firestore for auto-load on restart */
   linkSceneToLevel: (levelId: string, fileId: string, fileName: string) => Promise<void>;
 
