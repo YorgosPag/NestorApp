@@ -16,7 +16,8 @@ import {
   getEntitiesNotInLayers
 } from './shared/layer-operation-utils';
 // ADR-358 Phase 8.5: SSoT-based property setters
-import { getLayer, upsertLayer } from '../stores/LayerStore';
+// ADR-358 Phase 9D-3: id-first reader SSoT
+import { getLayer, upsertLayer, resolveEntityLayerName } from '../stores/LayerStore';
 import {
   isConcreteLineweight,
   parseDxfCode370,
@@ -82,9 +83,7 @@ export class LayerOperationsService {
         message: 'Layer name unchanged'
       };
     }
-
     const { [oldName]: renamedLayer, ...otherLayers } = scene.layers;
-
     if (!renamedLayer) {
       return {
         updatedScene: scene,
@@ -92,7 +91,6 @@ export class LayerOperationsService {
         message: `Layer "${oldName}" does not exist`
       };
     }
-
     const guard = guardLayerName({
       name: newName,
       scene,
@@ -108,8 +106,12 @@ export class LayerOperationsService {
       }
     };
     
+    // ADR-358 Phase 9D-1: entity.layerId is preserved by the spread (stable across rename).
+    // entity.layer (legacy name backref) is updated for transitional readers; removed at end
+    // of Phase 9D-3 sweep when all readers have migrated to layerId + LayerStore lookup.
+    // Phase 9D-3: id-first match — also catches entities with only `.layerId` set.
     const updatedEntities = scene.entities.map(entity =>
-      entity.layer === oldName
+      resolveEntityLayerName(entity) === oldName
         ? { ...entity, layer: newName }
         : entity
     );
@@ -252,11 +254,13 @@ export class LayerOperationsService {
     }
     
     // Move all entities from source layers to target layer
-    const updatedEntities = scene.entities.map(entity =>
-      entity.layer && sourceLayerNames.includes(entity.layer)
+    // ADR-358 Phase 9D-3: id-first lookup via LayerStore, name fallback
+    const updatedEntities = scene.entities.map(entity => {
+      const name = resolveEntityLayerName(entity);
+      return name && sourceLayerNames.includes(name)
         ? { ...entity, layer: targetLayerName }
-        : entity
-    );
+        : entity;
+    });
     
     // Delete source layers
     const updatedLayers = Object.fromEntries(
@@ -271,9 +275,7 @@ export class LayerOperationsService {
       entities: updatedEntities
     };
 
-    // ADR-129: Centralized entity filtering
     const affectedEntityIds = getEntityIdsByLayers(scene.entities, sourceLayerNames);
-
     return {
       updatedScene,
       affectedEntityIds,
@@ -291,9 +293,7 @@ export class LayerOperationsService {
     scene: SceneModel
   ): LayerOperationResult {
 
-    // Use the hierarchical logic that doesn't delete layers
     const updatedScene = mergeColorGroups(scene, targetColorGroup, sourceColorGroups);
-
     return {
       updatedScene,
       success: true,
@@ -321,14 +321,15 @@ export class LayerOperationsService {
           ])
         )
       },
-      entities: scene.entities.map(entity =>
-        entity.layer && layersInGroup.includes(entity.layer)
+      entities: scene.entities.map(entity => {
+        // ADR-358 Phase 9D-3: id-first lookup via LayerStore, name fallback
+        const name = resolveEntityLayerName(entity);
+        return name && layersInGroup.includes(name)
           ? { ...entity, visible }
-          : entity
-      )
+          : entity;
+      })
     };
 
-    // ADR-129: Centralized entity filtering
     const affectedEntityIds = getEntityIdsByLayers(scene.entities, layersInGroup);
 
     return {
@@ -483,8 +484,8 @@ export class LayerOperationsService {
     
     const entitiesByLayer: Record<string, number> = {};
     scene.entities.forEach(entity => {
-      // ADR-130: Centralized default layer
-      const layerName = getLayerNameOrDefault(entity.layer);
+      // ADR-130 + ADR-358 Phase 9D-3: id-first name via LayerStore, fallback to legacy
+      const layerName = getLayerNameOrDefault(resolveEntityLayerName(entity));
       entitiesByLayer[layerName] = (entitiesByLayer[layerName] || 0) + 1;
     });
     
