@@ -302,6 +302,80 @@ describe('validateStairParams — headroom proxy', () => {
   });
 });
 
+// ─── Egress (G20, Phase 6.5) ─────────────────────────────────────────────────
+
+describe('validateStairParams — egress capacity (G20)', () => {
+  test('width 900 + occupancyLoad 200 (req=1524mm) emits egress.widthBelowOccupancy', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', width: 900 }),
+      [],
+      200,
+    );
+    expect(r.egressViolations).toContain('tools.stair.validator.egress.widthBelowOccupancy');
+  });
+
+  test('width 2000 + occupancyLoad 100 (req=762mm): no egress violation', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', width: 2000 }),
+      [],
+      100,
+    );
+    expect(r.egressViolations ?? []).toHaveLength(0);
+  });
+
+  test('occupancyLoad undefined: no egress check', () => {
+    const r = validateStairParams(buildParams({ codeProfile: 'nok', width: 100 }));
+    expect(r.egressViolations ?? []).toHaveLength(0);
+  });
+
+  test('occupancyLoad 0: no egress check (disabled)', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'nok', width: 100 }),
+      [],
+      0,
+    );
+    expect(r.egressViolations ?? []).toHaveLength(0);
+  });
+
+  test('codeProfile none: no egress check', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'none', width: 100 }),
+      [],
+      500,
+    );
+    expect(r.egressViolations ?? []).toHaveLength(0);
+  });
+
+  test('projectOccupancyLoad overrides params.occupancyLoad', () => {
+    // params.occupancyLoad would not trigger (50 × 7.62 = 381 < width 1200),
+    // but projectOccupancyLoad 500 (× 7.62 = 3810) does → violation.
+    const params: StairParams = {
+      ...buildParams({ codeProfile: 'nok', width: 1200 }),
+      occupancyLoad: 50,
+    };
+    const r = validateStairParams(params, [], 500);
+    expect(r.egressViolations).toContain('tools.stair.validator.egress.widthBelowOccupancy');
+  });
+
+  test('params.occupancyLoad used when projectOccupancyLoad absent', () => {
+    const params: StairParams = {
+      ...buildParams({ codeProfile: 'nok', width: 800 }),
+      occupancyLoad: 200,
+    };
+    const r = validateStairParams(params);
+    expect(r.egressViolations).toContain('tools.stair.validator.egress.widthBelowOccupancy');
+  });
+
+  test('egress key sits under expected namespace', () => {
+    const r = validateStairParams(
+      buildParams({ codeProfile: 'ibc', width: 500 }),
+      [],
+      100,
+    );
+    expect(r.egressViolations?.every((k) => k.startsWith('tools.stair.validator.egress.'))).toBe(true);
+  });
+});
+
 // ─── Profile 'none' + idempotency ────────────────────────────────────────────
 
 describe('validateStairParams — profile none + idempotency', () => {
