@@ -235,6 +235,21 @@
         "src/lib/file-types/preview-registry.ts"
       ]
     },
+    "scene-units": {
+      "ssotFile": "src/subapps/dxf-viewer/utils/scene-units.ts",
+      "description": "SceneUnits type + mm⇄scene-units conversion + $INSUNITS resolution + bounds-diagonal heuristic. Single source of truth for any tool that builds geometry from mm-baked defaults (ADR-358 stair tool Phase 8; future tools must reuse instead of redefining unit conversion locally). Previously: dxf-scene-builder hardcoded scene.units='mm' regardless of $INSUNITS and stair-completion duplicated the conversion table — fixed 2026-05-17.",
+      "forbiddenPatterns": [
+        "type\\s+SceneUnits\\s*=\\s*'mm'\\s*\\|",
+        "function\\s+mmToSceneUnits",
+        "function\\s+detectSceneUnits",
+        "function\\s+resolveSceneUnits",
+        "function\\s+insunitsCodeToSceneUnits"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/utils/scene-units.ts"
+      ],
+      "tier": 2
+    },
     "_comment_tier3": "=== TIER 3: BUSINESS LOGIC (bypass = inconsistency) ===",
     "stair-presets-service": {
       "ssotFile": "src/subapps/dxf-viewer/systems/stairs/stair-presets-service.ts",
