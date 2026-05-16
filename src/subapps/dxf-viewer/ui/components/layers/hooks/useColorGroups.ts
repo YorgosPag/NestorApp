@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import type { SceneModel } from '../../../../types/scene';
 import { DEFAULT_LAYER_COLOR } from '../../../../config/color-config';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
+import { resolveEntityLayerName } from '../../../../stores/LayerStore';
 
 export function useColorGroups(scene: SceneModel | null, searchTerm: string) {
   const colorGroups = useMemo(() => {
@@ -19,8 +21,9 @@ export function useColorGroups(scene: SceneModel | null, searchTerm: string) {
         colorName.toLowerCase().includes(searchTerm.toLowerCase());
       
       // Check if any entities in this layer match search
-      const hasMatchingEntities = searchTerm !== '' && scene?.entities?.some(entity => 
-        entity.layer === layerName && (
+      const hasMatchingEntities = searchTerm !== '' && scene?.entities?.some(entity =>
+        // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
+        resolveEntityLayerName(entity) === layerName && (
           entity.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           entity.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
           entity.type?.toLowerCase().includes(searchTerm.toLowerCase())
