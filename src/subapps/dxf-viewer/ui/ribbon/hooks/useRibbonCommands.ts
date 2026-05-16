@@ -14,6 +14,9 @@ import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
 
 interface UseRibbonCommandsProps {
+  /** ADR-345 Fase 5.6 — current tool from useDxfViewerState. Drives Large /
+   * Small / Split button active visual state. */
+  activeTool: ToolType | null;
   handleToolChange: (tool: ToolType) => void;
   handleRibbonComingSoon: (label: string) => void;
   wrappedHandleAction: (action: string, data?: RibbonActionPayload) => void;
@@ -25,6 +28,7 @@ interface UseRibbonCommandsProps {
 }
 
 export function useRibbonCommands({
+  activeTool,
   handleToolChange,
   handleRibbonComingSoon,
   wrappedHandleAction,
@@ -101,6 +105,7 @@ export function useRibbonCommands({
 
   return React.useMemo(
     () => ({
+      activeTool,
       onToolChange: handleToolChange,
       onComingSoon: handleRibbonComingSoon,
       onAction: wrappedHandleAction,
@@ -112,6 +117,7 @@ export function useRibbonCommands({
       getPanelVisibility,
     }),
     [
+      activeTool,
       handleToolChange,
       handleRibbonComingSoon,
       wrappedHandleAction,
