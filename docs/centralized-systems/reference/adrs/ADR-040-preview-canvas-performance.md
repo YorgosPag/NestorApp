@@ -204,6 +204,39 @@ return <SharedPropertiesContext.Provider value={contextValue}>{children}</Shared
 
 ---
 
+### 2026-05-16 (EXTENDED): Fix tertiary loop source — `SharedPropertiesProvider` Firestore emit guard
+
+**New Bug**: After Phase XV-XVI memoization fixes, idle ~3-10Hz loop persisted. Root cause: `SharedPropertiesProvider` Firestore callback had no equality guard on filtered state (properties, floors, isLoading, error).
+
+**Mechanism**:
+1. `firestoreQueryService.subscribe('PROPERTIES', ...)` applies ADR-361 equality guard to FULL documents (incl. deleted)
+2. Callback filters `status !== 'deleted'`, producing `propertiesData`
+3. Even if filtered result is identical across emissions, FULL documents might differ
+4. Guard passes, callback runs → `setPropertiesState(propertiesData)` dispatched
+5. state.properties gets new ref → contextValue useMemo invalidates (deps include `properties`)
+6. New context object → useSharedProperties useEffect fires → context.activate() called
+7. No state change but render cycles continue @ ~5-10Hz (Firestore cache hydration + pending-write ack)
+
+**Fix**: Apply `dequal` equality guard on FILTERED state before ANY setState:
+```ts
+const nextIsLoading = false;
+const nextError: string | null = null;
+if (
+  dequal(lastFilteredPropertiesRef.current, propertiesData) &&
+  dequal(lastFilteredFloorsRef.current, floorsArray) &&
+  lastIsLoadingRef.current === nextIsLoading &&
+  lastErrorRef.current === nextError
+) {
+  return; // Skip all setState — no render
+}
+```
+
+**Files modified**: `src/contexts/SharedPropertiesProvider.tsx` (4 refs + guard logic in callback).
+
+**Result**: Idle re-renders eliminated. Loop suppressed to user-input-driven only.
+
+---
+
 ### 2026-05-16: Clean up temporary render-loop diagnostics instrumentation
 
 **Context**: ADR-040 Phase XV-XVI root-cause analysis completed (Firestore equality guard + memoization chain fixes). Temporary instrumentation deployed to isolate idle render-loop amplifiers no longer needed.
