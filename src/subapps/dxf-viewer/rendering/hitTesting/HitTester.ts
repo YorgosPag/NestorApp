@@ -9,6 +9,8 @@ import { SpatialFactory, type ISpatialIndex, type SpatialQueryResult } from '../
 import type { Point2D } from '../types/Types';
 import { BoundingBox, BoundsCalculator, BoundsOperations } from './Bounds';
 import { SNAP_TOLERANCE } from '../../config/tolerance-config';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
+import { resolveEntityLayerName } from '../../stores/LayerStore';
 
 // Re-export types for consumers
 export type { HitTestOptions, HitTestResult, SnapResult } from './hit-tester-types';
@@ -281,7 +283,8 @@ export class HitTester {
       ...detailedHit,
       entityId: entity.id,
       entityType: entity.type,
-      layer: getLayerNameOrDefault(entity.layer),
+      // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
+      layer: getLayerNameOrDefault(resolveEntityLayerName(entity)),
       selectable: entity.selected !== false,
       priority: calculatePriority(entity),
     } as HitTestResult;
