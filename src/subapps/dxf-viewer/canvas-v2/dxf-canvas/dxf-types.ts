@@ -13,6 +13,13 @@ export interface DxfEntity {
   type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair';
   layer: string;
   /**
+   * ADR-358 Phase 9D-2 — Stable layer id (`lyr_<UUID-v4>`) mirror of `BaseEntity.layerId`.
+   * Optional during transitional Phase 9D window; becomes required at end of Phase 9D-4
+   * (paired with `BaseEntity.layerId` final flip). Forwarded by `useDxfSceneConversion`
+   * so renderer/hit-test can resolve layer via id instead of name lookup.
+   */
+  layerId?: string;
+  /**
    * ADR-358 §G7 Phase 6 — concrete hex color. Optional sentinel: when absent
    * AND `colorMode !== 'Concrete'`, the renderer cascades through
    * `resolveStyleForRender()` → layer color (ByLayer). Legacy entities that
