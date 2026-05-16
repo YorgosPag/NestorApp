@@ -127,6 +127,40 @@ export function buildCutLine(
   };
 }
 
+/**
+ * Multi-flight aware cutLine builder (Phase 3b, G14).
+ *
+ * Locates the FIRST tread (in flight-then-index order) whose z is at or above
+ * `cutPlaneHeight` and emits a cutLine perpendicular to THAT flight's
+ * direction — solves the latent bug in Phase 3a where l-shape always passed
+ * `u1` even when the cut crossed inside flight 2.
+ *
+ * Returns `undefined` when no tread crosses the cut plane (single-band stair).
+ */
+export function buildCutLineForFlights(
+  treads: readonly Polygon3D[],
+  flightSplit: readonly number[],
+  flightDirections: readonly Vec2[],
+  width: number,
+  cutPlaneHeight: number,
+): Segment3D | undefined {
+  let globalIdx = 0;
+  for (let f = 0; f < flightSplit.length; f++) {
+    const n = flightSplit[f];
+    const uDir = flightDirections[f] ?? flightDirections[0];
+    for (let i = 0; i < n; i++) {
+      if (globalIdx >= treads.length) return undefined;
+      const tread = treads[globalIdx];
+      const z = tread[0]?.z ?? 0;
+      if (z >= cutPlaneHeight) {
+        return buildCutLine(tread, uDir, width, cutPlaneHeight);
+      }
+      globalIdx++;
+    }
+  }
+  return undefined;
+}
+
 export function buildStringersFromWalkline(
   walkline: Polyline3D,
   width: number,

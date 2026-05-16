@@ -5,9 +5,12 @@ import { canvasBoundsService } from '../../services/CanvasBoundsService';
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
 import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DContext';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
+import type { Entity, SceneLayer } from '../../types/entities';
 import { viewportToWorldBBox, isEntityInViewport } from './dxf-viewport-culling';
 import { CAD_UI_COLORS } from '../../config/color-config';
+// ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolver
+import { resolveEntityStyle, entityToStyleInput } from '../../systems/properties/resolve-entity-style';
+import { lineweightToPx } from '../../config/lineweight-iso-catalog';
 function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
   const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
     'solid': 'solid',
@@ -132,8 +135,9 @@ export class DxfRenderer {
       if (meta.measurement) continue;
       if (meta.lineType && meta.lineType !== 'solid') continue;
 
-      const color = entity.color || CAD_UI_COLORS.entity.default;
-      const lw = Math.max(1, entity.lineWidth || 1);
+      const resolved = this.resolveStyleForRender(entity, effectiveOptions.layersById);
+      const color = resolved.colorHex;
+      const lw = resolved.lineWidthPx;
       const key = `${color}\0${lw}`;
       let batch = lineBatches.get(key);
       if (!batch) { batch = { starts: [], ends: [], lw }; lineBatches.set(key, batch); }
@@ -187,6 +191,8 @@ export class DxfRenderer {
     mode: 'hovered' | 'selected',
     interaction: {
       gripInteractionState?: DxfRenderOptions['gripInteractionState'];
+      // ADR-358 §G7 Phase 4 — pass-through for ByLayer/ByBlock resolver
+      layersById?: Record<string, SceneLayer>;
     } = {},
   ): void {
     if (!entity.visible) return;
@@ -216,6 +222,7 @@ export class DxfRenderer {
       selectedEntityIds: mode === 'selected' ? [entity.id] : [],
       hoveredEntityId: mode === 'hovered' ? entity.id : null,
       gripInteractionState: gripOpts,
+      layersById: interaction.layersById,
     };
 
     this._selectionSet = new Set(syntheticOptions.selectedEntityIds);
@@ -241,7 +248,7 @@ export class DxfRenderer {
     // by useGripGhostPreview, identical to the Move tool. The main canvas
     // always paints entities at their CURRENT scene-state position — no more
     // applyDragPreview mutation, no per-frame globalAlpha tweak.
-    const entityModel: EntityModel = this.toEntityModel(entity, isSelected);
+    const entityModel: EntityModel = this.toEntityModel(entity, isSelected, options.layersById);
 
     const renderOptions: RenderOptions = {
       phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',
@@ -256,20 +263,26 @@ export class DxfRenderer {
     this.entityComposite.render(entityModel, renderOptions);
   }
 
-  private toEntityModel(entity: DxfEntityUnion, isSelected: boolean): Entity {
+  private toEntityModel(
+    entity: DxfEntityUnion,
+    isSelected: boolean,
+    layersById?: Record<string, SceneLayer>,
+  ): Entity {
     const entityWithLineType = entity as typeof entity & { lineType?: string };
     const entityWithMeasurement = entity as typeof entity & {
       measurement?: boolean;
       showEdgeDistances?: boolean;
     };
+    // ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolution
+    const resolved = this.resolveStyleForRender(entity, layersById);
     const base = {
       id: entity.id,
       visible: entity.visible,
       selected: isSelected,
       layer: entity.layer,
-      color: entity.color,
+      color: resolved.colorHex,
       lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
-      lineweight: entity.lineWidth,
+      lineweight: resolved.lineWidthPx,
       ...(entityWithMeasurement.measurement !== undefined && { measurement: entityWithMeasurement.measurement }),
       ...(entityWithMeasurement.showEdgeDistances !== undefined && { showEdgeDistances: entityWithMeasurement.showEdgeDistances })
     };
@@ -412,5 +425,34 @@ export class DxfRenderer {
       default:
         return null;
     }
+  }
+
+  /**
+   * ADR-358 §G7 Phase 4 — ByLayer/ByBlock style resolution at render time.
+   *
+   * Routes each entity through the centralised `resolveEntityStyle()` SSoT when
+   * `layersById` is provided, producing concrete colour + lineweight (mm → px
+   * via `lineweightToPx`). Falls back to literal entity values (legacy path)
+   * when no layer map is supplied or the entity's layer is unknown — preserves
+   * Phase 1-3 visual baseline until callers wire the SceneModel bridge.
+   */
+  private resolveStyleForRender(
+    entity: DxfEntityUnion,
+    layersById?: Record<string, SceneLayer>,
+  ): { colorHex: string; lineWidthPx: number } {
+    const fallback = {
+      colorHex: entity.color || CAD_UI_COLORS.entity.default,
+      lineWidthPx: Math.max(1, entity.lineWidth || 1),
+    };
+    if (!layersById) return fallback;
+    const layer = layersById[entity.layer];
+    if (!layer) return fallback;
+    const styleInput = entityToStyleInput({ color: entity.color });
+    const resolved = resolveEntityStyle(styleInput, layer);
+    const px = lineweightToPx(resolved.lineweight, 96);
+    return {
+      colorHex: resolved.color,
+      lineWidthPx: Math.max(1, px || fallback.lineWidthPx),
+    };
   }
 }

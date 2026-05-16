@@ -4,6 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { SceneLayer } from '../../types/entities';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
@@ -117,6 +118,13 @@ export interface DxfRenderOptions {
    * via DxfRenderer.renderSingleEntity() as a single-entity overlay on top.
    */
   skipInteractive?: boolean;
+  /**
+   * ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolver layer map.
+   * When provided, the renderer routes each entity through `resolveEntityStyle()`
+   * to inherit color/linetype/lineweight from its owning `SceneLayer`. Absent or
+   * missing layer → renderer falls back to per-entity literal values (legacy).
+   */
+  layersById?: Record<string, SceneLayer>;
 }
 
 // === DXF SELECTION ===

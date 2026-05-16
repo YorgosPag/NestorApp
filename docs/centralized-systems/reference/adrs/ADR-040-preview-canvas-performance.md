@@ -1329,3 +1329,11 @@ Extracted two blocks from CanvasSection to keep it under 500 lines (N.7.1 budget
 ## 2026-05-16: Array Tool Phase C3 — Path Array tool wiring (ADR-353 C3)
 
 `CanvasSection` wires `arrayPathTool` (from `useModifyTools`) into `useCanvasClickHandler` and `useCanvasKeyboardShortcuts`. Adds `handleArrayPathEntityRepick` callback (mirrors `handleArrayPolarCenterRepick` pattern — reads `getPickingPathArrayId()` + calls `applyPathPick`). `canvas-click-types.ts` extended with `arrayPathIsActive`/`handleArrayPathClick`/`handleArrayPathEntityRepick`. No new `useSyncExternalStore` calls added to `CanvasSection` or `CanvasLayerStack`. Path-pick state (`pickingPathArrayId`) lives in `ArrayStore`. Cardinal rules maintained.
+
+## 2026-05-16: ADR-358 §G7 Phase 4 — DxfRenderer ByLayer/ByBlock import wiring
+
+`DxfRenderer.ts` imports `resolveEntityStyle` + `entityToStyleInput` from new `systems/properties/resolve-entity-style.ts` and `lineweightToPx` from `config/lineweight-iso-catalog.ts`. New `layersById?: Record<string, SceneLayer>` field added to `DxfRenderOptions` in `dxf-types.ts` — when provided, renderer will route each entity through the ByLayer/ByBlock cascade resolver (Phase 4 render integration pending). New `systems/properties/` module: `resolved-style.types.ts` (ResolvedStyle + EntityStyleInput + BlockStyleInput + DefaultStyleInput interfaces) + `resolve-entity-style.ts` (pure cascade resolver, no side effects, RAF-safe). `BaseEntity` in `types/entities.ts` gains optional fields `colorMode`, `colorAci`, `colorTrueColor`, `linetypeName`, `lineweightMm`, `transparency`. Cardinal rules maintained: no new `useSyncExternalStore` calls.
+
+## 2026-05-16: CanvasSection render-loop diagnostic (temporary — CS-RENDER)
+
+`CS-RENDER` diagnostic block added to `CanvasSection.tsx` to investigate 4Hz idle re-render loop root cause. Tracks which props change reference vs content across renders via `useRef` snapshot diff + `useEffect` console output (`[CS-RENDER] #N content-changed: X | ref-only: Y`). Uses only `useRef` + `useEffect` — no store subscriptions, no new `useSyncExternalStore` calls. Temporary — will be removed after root cause identified. Cardinal rules maintained.

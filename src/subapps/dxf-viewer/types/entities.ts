@@ -48,6 +48,22 @@ export interface BaseEntity {
   // Preview/Completion flags
   breakAtCenter?: boolean;    // Split line at center for distance label
   showEdgeDistances?: boolean; // Show distance labels on preview
+
+  // ─── ADR-358 §G7 — ByLayer / ByBlock pipeline (Phase 4) ───────────────
+  // Additive optional fields. Missing = ByLayer (current behaviour preserved).
+  // Active resolution at render via `systems/properties/resolve-entity-style.ts`.
+  /** Explicit color resolution mode. Missing or 'ByLayer' → inherit from layer. */
+  colorMode?: 'ByLayer' | 'ByBlock' | 'Concrete';
+  /** ACI 1-255 — DXF group 62. Takes priority over legacy `color` hex when set. */
+  colorAci?: number;
+  /** TrueColor 0xRRGGBB — DXF group 420. Takes priority over ACI + hex. */
+  colorTrueColor?: number | null;
+  /** Linetype DXF name — case-sensitive. Literal 'ByLayer'/'ByBlock' opts into inheritance. */
+  linetypeName?: string;
+  /** Lineweight mm — DXF group 370. Accepts -3/-2/-1 sentinels. */
+  lineweightMm?: LineweightMm;
+  /** Transparency 0-90 — DXF group 1071. 0 = opaque. */
+  transparency?: number;
 }
 
 // Supported entity types
