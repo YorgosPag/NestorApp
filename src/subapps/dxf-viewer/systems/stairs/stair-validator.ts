@@ -36,6 +36,8 @@ import type {
   StairParams,
   StairValidationState,
 } from '../../types/stair';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
+import { resolveEntityLayerName } from '../../stores/LayerStore';
 
 // ─── Headroom thresholds (cheap 2D proxy, Phase 6) ───────────────────────────
 
@@ -71,7 +73,9 @@ function checkHeadroom(
   const minClearance = MIN_HEADROOM_MM[profile];
   const stairTopZ = params.basePoint.z + params.totalRise;
   for (const entity of contextEntities) {
-    if (!entity.layer || !CEILING_LAYER_RE.test(entity.layer)) continue;
+    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
+    const layerName = resolveEntityLayerName(entity);
+    if (!layerName || !CEILING_LAYER_RE.test(layerName)) continue;
     const elevation = extractEntityElevation(entity);
     if (elevation === null) continue;
     const clearance = elevation - stairTopZ;
