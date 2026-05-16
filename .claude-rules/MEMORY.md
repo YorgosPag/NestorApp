@@ -10,7 +10,7 @@
 - [ADR-Driven Workflow (4 Phases)](feedback_adr_driven_workflow.md) — NON-NEGOTIABLE: Phase 1 Plan Mode (code→ADR update), Phase 2 Implementation, Phase 3 ADR Update, Phase 4 Commit
 - [ADR Phase 3 MANDATORY](feedback_adr_phase3_mandatory.md) — NEVER commit code without ADR update in the SAME commit. Fixed 2026-03-12.
 - [No push without explicit order](feedback_no_push_without_order.md) — NON-NEGOTIABLE: NEVER git push without explicit order from Giorgio
-- [Only commit, NEVER push](feedback_only_commit_no_push.md) — Only commit autonomously. Push ONLY with explicit order. Reinforced 2026-03-24.
+- [Giorgio fa commit + push](feedback_only_commit_no_push.md) — **AGGIORNATO 2026-05-16**: Giorgio fa SIA commit SIA push. Agent NEVER committa né pusha autonomamente. Vedi CLAUDE.md N.(-1).
 - [Never ask about commit/push](feedback_never_ask_commit_push.md) — NEVER ask "do you want a commit?" — Giorgio says so himself
 
 ## Pending Work

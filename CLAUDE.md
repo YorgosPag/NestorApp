@@ -375,7 +375,7 @@ Quando lancio `Agent` tool, **DEVO** passare `model` param scegliendo il **minim
 4. **`@ts-ignore`** — FORBIDDEN. Hides problems instead of solving them.
 5. **`any` type** — FORBIDDEN. Use generics (`<T>`), union types, proper interfaces.
 6. **ADR-001: Select/Dropdown Components** — CANONICAL: `@/components/ui/select` (Radix Select). New use of `EnterpriseComboBox` = FORBIDDEN. 7 legacy DXF files migrate on touch.
-7. **ADR Numbering**: Use available **145** FIRST (the only one available), then continue from ADR-167. 156 and 164 are used. Gaps consolidated in `adrs/ADR-GEOMETRY.md`.
+7. **ADR Numbering**: Use the next sequential number after the highest existing ADR (currently **ADR-357 = next free** as of 2026-05-16). ⚠️ AVOID ADR-145 — it is already duplicated in 2 files (`ADR-145-super-admin-ai-assistant.md` and `ADR-145-property-types-ssot.md`); do NOT create a third. Other historical gaps (e.g. 162, 163) consolidated in `adrs/ADR-GEOMETRY.md`.
 
 ## ✅ AUTONOMOUS FLOW — PROCEED WITHOUT ASKING
 
@@ -467,9 +467,13 @@ export function myFunction(value: string | number): Result {
 
 ## 🔄 GIT / VERCEL / BACKUP — Quick reference
 
-**Core rule**: Commit autonomously after success → **STOP** → wait for Giorgio's order to push.
+**Core rule (aggiornata 2026-05-16)**: **Giorgio fa i commit. Giorgio fa i push.** L'agente NON committa MAI e NON pusha MAI autonomamente — neanche "dopo successo", neanche "per comodità", neanche se il task è finito. L'agente prepara il lavoro (`git add`, `git status`, `git diff` per verifica), poi **si ferma** e aspetta l'ordine esplicito di Giorgio. Vedi N.(-1) per zero-tolerance enforcement.
 
-**"Safety checkpoint"** = commit + push ONLY (does not mean BACKUP_SUMMARY.json or ZIP).
+**Commit/push happen ONLY when Giorgio says** (greco/italiano/inglese):
+- Commit: "commit", "κάνε commit", "fai commit", "commit it"
+- Push: "push", "στείλε", "ανέβασε", "πήγαινε Vercel", "send it", "upload"
+
+**"Safety checkpoint"** = commit + push ONLY when Giorgio explicitly asks (does not mean BACKUP_SUMMARY.json or ZIP).
 
 **"Do a backup zip"** = run:
 ```bash
