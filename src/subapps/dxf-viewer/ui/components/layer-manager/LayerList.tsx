@@ -73,6 +73,10 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => onLayerAction?.(layer.id, 'menu')}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      onLayerAction?.(layer.id, 'setAsCurrent');
+                    }}
                     className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
                   >
                     <MoreVertical className={iconSizes.xs} />
