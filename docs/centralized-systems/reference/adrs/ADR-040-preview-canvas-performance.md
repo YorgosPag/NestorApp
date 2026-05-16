@@ -71,6 +71,56 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-16 (Phase XVIII): Fix render-loop @ ~1Hz — useEntityStatusResolver multi-chunk cascade
+
+**Bug (third occurrence same day)**: Phase XVII (ref-chain stabilization) non ha risolto. Loop persisteva a ~1Hz idle con coppia `DxfCanvasSubscriber.commit` + `CanvasSection.commit`. Giorgio ha perso molte ore. Pattern coppia = store COMUNE invalidato, non instabilità ref isolata.
+
+**Root cause**: `src/hooks/useEntityStatusResolver.ts:194` chiama `setEntityStatusCache(new Map(liveMapRef.current))` SENZA equality guard. Multi-chunk subscriptions (PROPERTIES + PARKING_SPACES + STORAGE × N chunks da `chunkArray(entityIds, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS)`) producono N callback fire indipendenti. Anche se ogni `firestoreQueryService.subscribe` ha il proprio ADR-361 service-level guard, l'AGGREGATO di N emit produce N `setEntityStatusCache` consecutivi con N nuove Map.
+
+**Catena di propagazione**:
+```
+useEntityStatusResolver:194  setEntityStatusCache(new Map(...))          ← NUOVA ref ogni emit
+  → useEntityStatusResolver:230-250  resolvedStatusMap useMemo([overlays, entityStatusCache])
+  → useFloorOverlays:204-210  enrichedOverlays useMemo([rawOverlays, statusMap])
+  → overlay-store.tsx:130-140  overlays useMemo([floorItems, currentLevelId, pendingPolygons])
+  → overlay-store.tsx:379  contextValue useMemo([overlays, ...])
+  → useLiveOverlaysForLevel:27-36  return useMemo(..., [..., overlayStore.overlays, ...])
+  → CanvasSection.tsx:125  currentOverlays = useLiveOverlaysForLevel(...)  ← COMMIT
+  → canvas-layer-stack-leaves.tsx  DxfCanvasSubscriber subscribes same store  ← parallel COMMIT
+```
+
+**Perché Phase XV (ADR-361) non basta**: service-level guard è PER-SUBSCRIPTION. Multi-chunk hook (3 collection × multiple chunks) ha N subscription, ognuna con guard indipendente. Ogni emit valido per la sua subscription è valido per il caller, anche se collettivamente è ridondante. Inoltre `liveMapRef.current` accumula tra callback fire → `new Map(...)` riflette stato cumulative diverso ad ogni emit anche se contenuto logicamente identico.
+
+**Fix (2 file)**:
+
+1. `useEntityStatusResolver.ts:194` — functional setter con O(N) Map equality check:
+```typescript
+setEntityStatusCache((prev) => {
+  if (prev.size === liveMapRef.current.size) {
+    let identical = true;
+    for (const [k, v] of liveMapRef.current) {
+      if (prev.get(k) !== v) { identical = false; break; }
+    }
+    if (identical) return prev;  // ← STABLE REF → skip cascade
+  }
+  return new Map(liveMapRef.current);
+});
+```
+   Anche linea 221 (`if (totalChunks === 0)` setup branch): functional setter `prev.size === 0 ? prev : new Map()`.
+
+2. `useFloorOverlays.ts:179` — hardening defensive: functional setter con shallow check id+status (campi che downstream `enrichedOverlays.useMemo` legge). Safety net se Firestore metadata-only updates passano ADR-361 guard.
+
+**Pattern (cardinal rule N5 SSoT esteso)**: Quando un hook fa subscribe a MULTIPLE Firestore listener (chunked queries, multi-collection), il guard service-level ADR-361 garantisce per-subscription dedup ma NON aggregate dedup. Il setState aggregate caller DEVE avere il suo equality guard. Pattern: functional setter `prev => identical(prev, next) ? prev : next` per Map/Array/Record.
+
+**Verification**: hard refresh + 30s idle ZERO input → ZERO `PERF_LINE` (vs 1Hz coppia DxfCanvasSubscriber + CanvasSection prima). Mouse → PERF_LINE event-driven OK. Stop → halt <1s.
+
+**Triple-layer defense now**:
+- Phase XV: Firestore service-level guard (ADR-361) — per-subscription dedup
+- Phase XVI/XVII: memoization chain + ref-pattern stabilization — context value stability  
+- Phase XVIII: aggregate equality guard in multi-subscription consumers — caller-level dedup
+
+---
+
 ### 2026-05-16 (Phase XVII): Fix render-loop via ref-chain stabilization — useSceneManager → LevelsSystem
 
 **Bug (second occurrence same day)**: Despite Phases XV+XVI fixes (Firestore equality guard, memoization), `CanvasSection` **continued** re-rendering ~30Hz at idle (PERF_LINE `CanvasSection.commit` repeating, zero input). Giorgio reported "seconda volta che succede" (second time today) + lost many hours debugging. Root cause was NOT Firestore delivery (already guarded by ADR-361 service-level equality), but a **cascading ref chain of unstable React hook returns** in the DXF Viewer scene manager hierarchy.
