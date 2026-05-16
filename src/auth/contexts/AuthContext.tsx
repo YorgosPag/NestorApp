@@ -27,6 +27,7 @@ import {
   syncUserProfileToFirestore,
 } from './auth-context/auth-context-profile';
 import { useAuthActions } from './auth-context/useAuthActions';
+import { useClaimsRefresh } from './auth-context/use-claims-refresh';
 
 const logger = createModuleLogger('AuthContext');
 
@@ -193,6 +194,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       void actions.signOut();
     });
   }, [actions, user]);
+
+  // ADR-360: Auto-refresh ID token when server bumps claimsUpdatedAt mirror
+  useClaimsRefresh({
+    uid: user?.uid,
+    tokenClaimsUpdatedAt: user?.claimsUpdatedAt,
+    setUser,
+  });
 
   useEffect(() => {
     return bindRefreshSessionListener(async () => {
