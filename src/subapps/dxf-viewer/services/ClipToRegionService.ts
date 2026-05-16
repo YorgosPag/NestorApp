@@ -185,12 +185,12 @@ function clipCircle(e: CircleEntity, r: ClipRect): Entity[] {
     const inside = inRect({ x: center.x + radius * Math.cos(deg * DEG), y: center.y + radius * Math.sin(deg * DEG) }, r);
     if (inside && segStart === null) { segStart = deg; }
     else if (!inside && segStart !== null) {
-      arcs.push({ id: e.id, type: 'arc', layer: e.layer, color: e.color, visible: e.visible, center, radius, startAngle: segStart, endAngle: lastDeg, counterclockwise: true } as ArcEntity);
+      arcs.push({ id: e.id, type: 'arc', layerId: e.layerId, color: e.color, visible: e.visible, center, radius, startAngle: segStart, endAngle: lastDeg, counterclockwise: true } as ArcEntity);
       segStart = null;
     }
     lastDeg = deg;
   }
-  if (segStart !== null) arcs.push({ id: e.id, type: 'arc', layer: e.layer, color: e.color, visible: e.visible, center, radius, startAngle: segStart, endAngle: lastDeg, counterclockwise: true } as ArcEntity);
+  if (segStart !== null) arcs.push({ id: e.id, type: 'arc', layerId: e.layerId, color: e.color, visible: e.visible, center, radius, startAngle: segStart, endAngle: lastDeg, counterclockwise: true } as ArcEntity);
   return arcs;
 }
 
