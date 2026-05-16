@@ -10,12 +10,18 @@ import type {
 } from './interfaces';
 import { setFieldValue } from '../utils/field-value-utils';
 import type { Point2D, Phase } from '../../../rendering/types/Types';
+import type { StairField } from '../types/common-interfaces';
 
 // Re-export Phase for other modules
 export type { Phase };
 export type Point = Point2D;
 
 export type Field = 'x' | 'y' | 'angle' | 'length' | 'radius' | 'diameter';
+
+// ADR-358 Phase 7b2b-β Stream E — default stair param values (industry NOK main).
+const STAIR_DEFAULT_RISE_MM = '175';
+const STAIR_DEFAULT_TREAD_MM = '280';
+const STAIR_DEFAULT_WIDTH_MM = '1200';
 
 interface UseDynamicInputStateProps {
   activeTool: string;
@@ -30,6 +36,12 @@ export function useDynamicInputState({ activeTool }: UseDynamicInputStateProps) 
   const [lengthValue, setLengthValue] = useState('');
   const [radiusValue, setRadiusValue] = useState('');
   const [diameterValue, setDiameterValue] = useState('');
+
+  // ADR-358 Phase 7b2b-β Stream E — stair-specific field values.
+  const [riseValue, setRiseValue] = useState(STAIR_DEFAULT_RISE_MM);
+  const [treadValue, setTreadValue] = useState(STAIR_DEFAULT_TREAD_MM);
+  const [widthValue, setWidthValue] = useState(STAIR_DEFAULT_WIDTH_MM);
+  const [activeStairField, setActiveStairField] = useState<StairField>('rise');
 
   // Field management
   const [activeField, setActiveField] = useState<Field>('x');
@@ -53,6 +65,10 @@ export function useDynamicInputState({ activeTool }: UseDynamicInputStateProps) 
   const lengthInputRef = useRef<HTMLInputElement>(null);
   const radiusInputRef = useRef<HTMLInputElement>(null);
   const diameterInputRef = useRef<HTMLInputElement>(null);
+  // ADR-358 Phase 7b2b-β Stream E — stair input refs.
+  const riseInputRef = useRef<HTMLInputElement>(null);
+  const treadInputRef = useRef<HTMLInputElement>(null);
+  const widthInputRef = useRef<HTMLInputElement>(null);
 
   // Helper functions (memoized για σταθερότητα)
   // Custom setFirstClickPoint that updates both state and ref
@@ -171,18 +187,24 @@ export function useDynamicInputState({ activeTool }: UseDynamicInputStateProps) 
   return {
     // Core values
     showInput, xValue, yValue, angleValue, lengthValue, radiusValue, diameterValue,
+    // ADR-358 Phase 7b2b-β Stream E — stair values.
+    riseValue, treadValue, widthValue, activeStairField,
     activeField, isManualInput, isCoordinateAnchored, fieldUnlocked,
-    drawingPhase, hideAngleLengthFields, showLengthDuringDraw, 
+    drawingPhase, hideAngleLengthFields, showLengthDuringDraw,
     firstClickPoint: firstClickPoint || firstClickPointRef.current, // Hot reload recovery
-    
+
     // Refs
     hideAngleLengthFieldsRef, drawingPhaseRef, firstClickPointRef,
     xInputRef, yInputRef, angleInputRef, lengthInputRef, radiusInputRef, diameterInputRef,
+    // ADR-358 Phase 7b2b-β Stream E — stair refs.
+    riseInputRef, treadInputRef, widthInputRef,
 
     // Setters
     setShowInput, setXValue, setYValue, setAngleValue, setLengthValue, setRadiusValue, setDiameterValue,
+    // ADR-358 Phase 7b2b-β Stream E — stair setters.
+    setRiseValue, setTreadValue, setWidthValue, setActiveStairField,
     setActiveField, setIsManualInput, setIsCoordinateAnchored, setFieldUnlocked,
-    setDrawingPhase, setHideAngleLengthFields, setShowLengthDuringDraw, 
+    setDrawingPhase, setHideAngleLengthFields, setShowLengthDuringDraw,
     setFirstClickPoint: setFirstClickPointSafe, // Use the safe version
 
     // Helper functions
