@@ -15,7 +15,8 @@ import type {
   Field,
   FullFieldState,
   CoordinateFieldState,
-  ManualInputState
+  ManualInputState,
+  StairField
 } from '../types/common-interfaces';
 
 // Re-export Phase type for convenience
@@ -34,8 +35,15 @@ export interface KeyboardHandlerContext {
   readonly radiusValue: string;
   readonly diameterValue: string;
 
+  // ADR-358 Phase 7b2b-β Stream E — stair-specific field values (rise/tread/width in mm).
+  readonly riseValue: string;
+  readonly treadValue: string;
+  readonly widthValue: string;
+
   // Current state (readonly)
   readonly activeField: Field;
+  /** ADR-358 Phase 7b2b-β Stream E — active stair field for Tab cycling. */
+  readonly activeStairField: StairField;
   readonly drawingPhase: Phase;
   readonly firstClickPoint: Point2D | null;
   readonly activeTool: string;
@@ -68,6 +76,12 @@ export interface KeyboardHandlerActions {
   setDiameterValue: (v: string) => void;
   setShowInput: (show: boolean) => void;
 
+  // ADR-358 Phase 7b2b-β Stream E — stair-specific setters + active-field cycler.
+  setRiseValue: (v: string) => void;
+  setTreadValue: (v: string) => void;
+  setWidthValue: (v: string) => void;
+  setActiveStairField: (f: StairField) => void;
+
   // Circle-specific
   setFirstClickPoint: (p: Point2D | null) => void;
 
@@ -96,6 +110,10 @@ export interface KeyboardHandlerRefs {
   lengthInputRef: RefObject<HTMLInputElement | null>;
   radiusInputRef: RefObject<HTMLInputElement | null>;
   diameterInputRef: RefObject<HTMLInputElement | null>;
+  // ADR-358 Phase 7b2b-β Stream E — stair-specific input refs.
+  riseInputRef: RefObject<HTMLInputElement | null>;
+  treadInputRef: RefObject<HTMLInputElement | null>;
+  widthInputRef: RefObject<HTMLInputElement | null>;
   drawingPhaseRef: MutableRefObject<Phase>;
 }
 
