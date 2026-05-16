@@ -9,6 +9,8 @@ import type { SpatialQueryResult } from '../../core/spatial';
 import type { HitTestOptions } from './hit-tester-types';
 import { BoundingBox, BoundsCalculator } from './Bounds';
 import { getLayerNameOrDefault } from '../../config/layer-config';
+// 🏢 ADR-358 Phase 9D-5b-i: id-first resolver SSoT (collapsed in 9D-5b-i — id-only).
+import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { createInfinityBounds, isInfinityBounds } from '../../config/geometry-constants';
 
 /** Calculate bounds from an array of entities */
@@ -65,8 +67,8 @@ export function calculatePriority(entity: Entity): number {
     default: priority += 50; break;
   }
 
-  const entityWithLayer = entity as { layer?: string };
-  const layer = entityWithLayer.layer;
+  // ADR-358 Phase 9D-5b-i: id-only resolver SSoT (legacy `entity.layer` name field dropped).
+  const layer = resolveEntityLayerName(entity);
   if (layer === 'construction') priority -= 20;
   if (layer === 'annotation') priority += 10;
 
@@ -78,8 +80,8 @@ export function passesFilters(entity: Entity, options: HitTestOptions): boolean 
   const entityWithVisibility = entity as { visible?: boolean };
   if (!options.includeInvisible && entityWithVisibility.visible === false) return false;
 
-  const entityWithLayer = entity as { layer?: string };
-  const entityLayer = entityWithLayer.layer;
+  // ADR-358 Phase 9D-5b-i: id-only resolver SSoT — layerFilter matches by display name.
+  const entityLayer = resolveEntityLayerName(entity);
   if (options.layerFilter?.length && (!entityLayer || !options.layerFilter.includes(entityLayer))) {
     return false;
   }
