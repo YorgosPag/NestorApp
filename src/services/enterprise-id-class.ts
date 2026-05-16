@@ -282,6 +282,10 @@ export class EnterpriseIdService {
   generateCompanyFontId(): string { return this.generateId(P.COMPANY_FONT).id; }
   generateDictEntryId(): string { return this.generateId(P.DICT_ENTRY).id; }
 
+  // DXF Stair Tool (ADR-358)
+  generateStairId(): string { return this.generateId(P.STAIR).id; }
+  generateStairPresetId(): string { return this.generateId(P.STAIR_PRESET).id; }
+
   // --- Deterministic Composite Key Generators ---
 
   generateAiUsageDocId(channel: string, userId: string, month: string): string {

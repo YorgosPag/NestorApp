@@ -146,6 +146,7 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'guide-preset-grid': { id: 'guide-preset-grid', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-189 B37: Batch guide from selection
   'guide-from-selection': { id: 'guide-from-selection', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'stair': { id: 'stair', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false }, // ADR-358 Phase 0
 };
 // ============================================================================
 // 🏢 ENTERPRISE HELPER FUNCTIONS (ADR-033)
@@ -274,7 +275,6 @@ export function isInDrawingMode(
 
   // Overlay polygon drawing mode
   if (overlayMode === 'draw') return true;
-
   return false;
 }
 /**

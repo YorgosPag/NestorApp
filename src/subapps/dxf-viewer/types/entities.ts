@@ -71,7 +71,8 @@ export type EntityType =
   | 'hatch'                // ✅ ENTERPRISE: AutoCAD hatch pattern entity support
   | 'xline'                // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
   | 'ray'                  // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
-  | 'array';               // ADR-353: Associative array entity (rect/polar/path)
+  | 'array'                // ADR-353: Associative array entity (rect/polar/path)
+  | 'stair';               // ADR-358: Parametric stair entity (11 kinds, Phase 1+)
 
 // Geometric entities
 export interface LineEntity extends BaseEntity {
@@ -304,6 +305,19 @@ export interface RayEntity extends BaseEntity {
 import type { ArrayKind, ArrayParams } from '../systems/array/types';
 export type { ArrayKind, ArrayParams };
 
+// ADR-358: Parametric Stair Entity — discriminated union over 11 kinds.
+import type { StairEntity } from './stair';
+export type {
+  StairEntity,
+  StairKind,
+  StairParams,
+  StairVariantParams,
+  StairGeometry,
+  StairDoc,
+  StairPresetDoc,
+  StairQTO,
+} from './stair';
+
 export interface ArrayEntity extends BaseEntity {
   readonly type: 'array';
   readonly arrayKind: ArrayKind;
@@ -342,6 +356,7 @@ export type Entity = (
   | XLineEntity              // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
   | RayEntity                // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
   | ArrayEntity              // ADR-353: Associative array (rect/polar/path)
+  | StairEntity              // ADR-358: Parametric stair (11 kinds)
 ) & Pick<BaseEntity, 'name'>; // ✅ ENTERPRISE: Ensures name property is always available on Entity type
 
 // Entity collection types
@@ -450,6 +465,10 @@ export const isRayEntity = (entity: Entity): entity is RayEntity =>
 // ADR-353
 export const isArrayEntity = (entity: Entity): entity is ArrayEntity =>
   entity.type === 'array';
+
+// ADR-358
+export const isStairEntity = (entity: Entity): entity is StairEntity =>
+  entity.type === 'stair';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility
@@ -584,6 +603,12 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
         };
       }
       // 🏢 ADR-034: Centralized Empty Spatial Bounds
+      return EMPTY_SPATIAL_BOUNDS;
+    case 'stair':    // ADR-358: project StairGeometry.bbox (3D) to 2D plan bounds
+      if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
+        const { min, max } = entity.geometry.bbox;
+        return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };
+      }
       return EMPTY_SPATIAL_BOUNDS;
     case 'ray':      // ✅ ENTERPRISE: Ray is semi-infinite - return basePoint to direction extent
       if ('basePoint' in entity && entity.basePoint) {

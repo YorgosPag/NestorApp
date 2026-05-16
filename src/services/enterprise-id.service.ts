@@ -82,6 +82,7 @@ export {
   generateMaterialId,
   generateFrameworkAgreementId,
   generateTextTemplateId, generateCompanyFontId, generateDictEntryId,
+  generateStairId, generateStairPresetId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId, generateNotificationDedupeId,
 } from './enterprise-id-convenience';

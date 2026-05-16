@@ -210,6 +210,10 @@ export const generateTextTemplateId = () => enterpriseIdService.generateTextTemp
 export const generateCompanyFontId = () => enterpriseIdService.generateCompanyFontId();
 export const generateDictEntryId = () => enterpriseIdService.generateDictEntryId();
 
+// DXF Stair Tool (ADR-358)
+export const generateStairId = () => enterpriseIdService.generateStairId();
+export const generateStairPresetId = () => enterpriseIdService.generateStairPresetId();
+
 // Optimistic & Temporary
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
 export const generateTempId = () => enterpriseIdService.generateTempId();

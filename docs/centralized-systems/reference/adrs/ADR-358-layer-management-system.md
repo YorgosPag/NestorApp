@@ -154,20 +154,101 @@ interface SceneLayer {
 
 ### 3.4 Layer Isolate / Unisolate / LayDim
 
-- **LAYISO** (Layer Isolate): seleziona entità → tutti i layer **non** di quelle entità vanno OFF o `dimmed` (configurable).
-- **LAYUNISO** (Layer Unisolate): ripristina lo stato pre-isolate (snapshot interno).
-- **LAYDIM**: rendi semi-transparent i layer non target.
-- **LAYOFF / LAYON / LAYFRZ / LAYTHW / LAYLCK / LAYULK**: comandi click-driven (one-shot layer operations via click su entity).
+Convergence: AutoCAD ✅ / BricsCAD ✅ / GstarCAD ✅ / ZWCAD ✅ / MicroStation ✅ — feature universale CAD.
 
-### 3.5 ByLayer / ByBlock / Direct property
+- **LAYISO** (Layer Isolate): seleziona entità → comportamento default = **"Lock and fade"** (NON OFF); layer non-target vanno a `transparency = userFade` (default 50, range **0–90 configurabile** via LAYISO Settings → "Settings" option al command line). Modalità alternativa "Off" hide-completo.
+- **LAYUNISO** (Layer Unisolate): ripristina lo stato pre-isolate (snapshot interno).
+- **LAYDIM**: applica explicit dimming senza locking.
+- **LAYOFF / LAYON / LAYFRZ / LAYTHW / LAYLCK / LAYULK**: comandi click-driven one-shot.
+- *Source*: AutoCAD 2025 Help LAYISO (Settings → Lock-and-fade vs Off).
+
+### 3.5 ByLayer / ByBlock / Direct property (Layer 0 special)
 
 - **ByLayer**: entity color/linetype/lineweight/transparency = quello del layer. Cambiando layer property, tutte le entità ByLayer si aggiornano.
 - **ByBlock**: entity property è ereditata dal **blocco contenitore** (se entity è dentro un INSERT). Fuori da blocchi = nero/Continuous/Default.
 - **Direct** (es. color rosso esplicito): override del layer, immutabile rispetto al layer.
 
-### 3.6 Naming conventions (AIA CAD layer guidelines)
+**Layer 0 — special behavior (DWG ecosystem convention)**:
+- Layer 0 esiste in ogni drawing DXF/DWG, **non può essere rinominato né cancellato/purged**.
+- Oggetti disegnati su layer 0 e raggruppati in un BLOCK ereditano color/linetype/lineweight **del layer in cui il block viene inserito** (NOT layer 0).
+- Oggetti su layer ≠ 0 dentro un BLOCK mantengono il loro layer originale all'inserimento.
+- Best practice industry: blocchi riusabili → tutta la geometria su layer 0 con properties = `ByLayer` → si adattano automaticamente al layer host.
+- *Source*: cad-notes.com "What are AutoCAD Layer 0, ByLayer and ByBlock?" + gstarcad.net "Understanding Layer 0".
 
-Standard `Discipline-MajorGroup-MinorGroup-Status` (es. `A-WALL-FULL-NEW`, `S-COL-EXST`, `M-HVAC-DUCT-DEMO`). Out of scope obbligatorio in ADR-358 — può essere convenzione documentata, **non enforcement**.
+### 3.6 Per-viewport layer overrides (paperspace)
+
+AutoCAD 2008+: comando **VPLAYER** + system var **VPLAYEROVERRIDESMODE** permettono override per layout-viewport delle proprietà Color/Linetype/Lineweight/Plot Style + VP Freeze, **senza modificare le global layer properties**.
+
+- Colonne dedicate nel Layer Properties Manager (visibili solo in paperspace attiva): `VP Freeze`, `VP Color`, `VP Linetype`, `VP Lineweight`, `VP Plot Style`.
+- Reset via right-click → "Remove Viewport Overrides for Selected Layers / All Layers" → "Current Viewport / All Viewports".
+- Convergence: AutoCAD ✅ / BricsCAD ✅ / GstarCAD ✅ / ZWCAD ✅ / MicroStation ✅ — standard CAD da 18+ anni.
+- **Decisione Nestor (Q16)**: paperspace/viewports non sono nel modello dati attuale → out-of-scope. Da rivalutare se roadmap include layout/sheet authoring.
+
+### 3.7 Naming conventions (AIA NCS + ISO 13567)
+
+**AIA CAD Layer Guidelines (US National CAD Standard NCS V7)** — 4 fields:
+- `Discipline Designator` (2 char, obbligatorio): A=Architectural, B=Geotechnical, C=Civil, E=Electrical, F=Fire Protection, I=Interiors, M=Mechanical, P=Plumbing, S=Structural, T=Telecommunications…
+- `Major Group` (4 char, obbligatorio): es. WALL, DOOR, COLS, HVAC.
+- `Minor Group` (4 char, opzionale, fino a 2 livelli): es. FULL, EXST, DEMO, NEWW.
+- `Status` (1 char, opzionale): N=New, E=Existing-to-remain, D=Demolition, R=Relocated, T=Temporary, F=Future.
+- Esempi: `A-WALL-FULL-N`, `S-COLS-EXST`, `M-HVAC-DUCT-D`.
+- *Source*: AIA NCS V6 PDF (nationalcadstandard.org) + Seidler Studio AutoCAD AIA tutorials.
+
+**ISO 13567-1:2017 — Technical product documentation, Organization and naming of layers for CAD** — 10 fields fixed-length:
+- `Responsible Agent` (2 char): A=Architect, B=Building surveyors, C=Civil eng., E=Electrical eng., M=Mechanical eng., S=Structural eng., …
+- `Building Element` (6 char): classificazione SfB / Uniclass / OmniClass (es. `230` per partitions).
+- `Presentation` (2 char): E=element graphics, T=text, H=hatching, D=dimensions, V=viewport graphics.
+- `Status` (1 char): N=New, E=Existing, R=To be removed, T=Temporary.
+- Plus campi opzionali: `Project Phase`, `Scale`, `Work-package`, `Subdivision`, `Drawing type`, `User-defined`.
+- Compatibilità DWG/DXF (max 31 chars layer name).
+- *Source*: ISO 13567-1:2017 (iso.org) + Wikipedia ISO 13567 + ITcon proposed standard paper.
+
+**Decisione Nestor (Q14)**: scegliere tra `solo AIA` (US-centric, Giorgio greco/EU), `solo ISO 13567` (EU/intl), o `entrambi supportati` (helper utility con switcher). Pre-fill/auto-suggest opzionale via Q7.
+
+### 3.8 BIM paradigm comparison (rationale per scope CAD-only)
+
+Sistemi BIM seguono paradigmi **fondamentalmente diversi** dai CAD-layered:
+
+- **Revit (Autodesk)**: nessun layer user-defined. Usa **categories built-in immutabili** (Walls, Doors, Windows, Floors, …). Visibility controllata view-by-view via category overrides + view templates + filters. Categories definiscono behavior (es. door taglia hole in wall). Layer name appare solo all'export DWG.
+  - *Source*: linkedin.com/learning + united-bim.com Revit vs AutoCAD.
+- **ArchiCAD (Graphisoft)**: layers user-defined + **Pen Sets** (color/lineweight via pen number 1-255) + **Building Materials** (material → fill/cut/surface) + **Layer Combinations** (≈ Layer States). Multi-attribute system più ricco di AutoCAD.
+  - *Source*: graphisoft.com/us/archicad-layer-theory + Pen Sets / Building Materials docs.
+- **Vectorworks (Nemetschek)**: **dual organization** ortogonale = `design layers` (location/quota: site, ground floor, level 1, …) + `classes` (appearance/type: walls-exterior, walls-interior, doors, …). Ogni oggetto appartiene a 1 design layer + 1 class. Spans design layers.
+  - *Source*: app-help.vectorworks.net 2023/2026 Drawing Structure + Classes.
+- **AllPlan (Nemetschek)**: BIM IFC-compliant; layer system meno documentato pubblicamente.
+
+**Nestor scope decision (Q15)**: il modello dati attuale è DWG/DXF-driven (entity → layer name string + per-entity color/linetype/lineweight). Segue il **CAD paradigm**, NON BIM. Future BIM-mode placeholder = decisione Q15.
+
+### 3.9 Convergence summary matrix
+
+Confronto feature × sistema (✅ = supportato, ❌ = non applicabile, ⚠️ = parziale):
+
+| Feature | AutoCAD | BricsCAD | GstarCAD | ZWCAD | MicroStation | Revit | ArchiCAD | Vectorworks | Verdetto |
+|---|---|---|---|---|---|---|---|---|---|
+| Layer CRUD user-defined | ✅ | ✅ | ✅ | ✅ | ✅ Levels | ❌ categories | ✅ | ✅ design layers | DWG std |
+| Layer 0 special (block inherit) | ✅ | ✅ | ✅ | ✅ | N/A | N/A | N/A | N/A | **DWG-ecosystem only** |
+| Color ACI + TrueColor (62+420) | ✅ | ✅ | ✅ | ✅ | ✅ | N/A | ✅ Pen Sets | ✅ | Universal |
+| Linetype DXF (code 6) | ✅ | ✅ | ✅ | ✅ | ✅ | per-cat override | ✅ | ✅ | CAD universal |
+| Lineweight ISO 24 (code 370) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ override | ✅ | ✅ | Universal |
+| Transparency (1071 XDATA) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Universal |
+| ON/OFF | ✅ | ✅ | ✅ | ✅ | ✅ | view-by-view | ✅ | ✅ vis/inv/gray | Universal |
+| Freeze/Thaw | ✅ | ✅ | ✅ | ✅ | ⚠️ display | N/A | N/A | N/A | DWG std |
+| Lock/Unlock | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Universal |
+| Plot/NoPlot (290) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Universal |
+| Description (1000 XDATA) | ✅ | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | ✅ | Standard |
+| Layer States Manager (.las) | ✅ | ✅ | ✅ | ✅ | ⚠️ Level Status | view templates | ✅ Layer Combos | ✅ Saved Views | DWG std + BIM equiv |
+| Group Filter (manual) | ✅ | ✅ | ✅ | ✅ | ✅ Level Filters | N/A | ✅ | ✅ | CAD std |
+| Property Filter (dynamic) | ✅ | ✅ | ✅ | ✅ | ✅ | N/A | N/A | N/A | DWG std |
+| Invert Filter | ✅ | ✅ | ✅ | ✅ | ✅ | N/A | N/A | N/A | DWG std |
+| LAYISO (fade 0-90 default) | ✅ | ✅ | ✅ | ✅ | ✅ | view filters | ✅ Layer Combo | ✅ class opts | CAD universal |
+| Per-viewport overrides (VPLAYER) | ✅ '08+ | ✅ | ✅ | ✅ | ✅ | N/A view-based | N/A | ✅ Sheet Vis | CAD paperspace |
+| ByLayer / ByBlock | ✅ | ✅ ByLevel | ✅ | ✅ | ✅ ByLevel | category inherit | ✅ ByPen | ✅ ByClass | Universal principle |
+| AIA NCS naming (US) | de facto | ok | ok | ok | ok | N/A | ok | ok | US std |
+| ISO 13567 naming (EU/intl) | ok | ok | ok | ok | ok | N/A | ok | ok | EU/intl std |
+
+**Convergenza DWG-ecosystem (AutoCAD/BricsCAD/GstarCAD/ZWCAD)**: 4/4 su tutti i campi sopra. Industry consensus solidissimo.
+**Convergenza CAD+BIM su feature universali** (color/linetype/lineweight/transparency/lock/plot): 8/8 sistemi.
+**Decisioni Nestor**: poiché modello dati DXF-driven, scope è DWG-ecosystem parity (no BIM categories built-in, no per-viewport for now).
 
 ---
 
@@ -224,19 +305,36 @@ export const LINETYPE_CATALOG = {
 - Consumer: `DxfRenderer.ts` entity stroke + `AdminLayerManager` preview + Quick Style ribbon dropdown.
 
 ### G6 — Lineweight ISO Catalog SSoT
-**Cosa manca**: catalogo lineweight ISO + special values `-3=Default`, `-2=ByLayer`, `-1=ByBlock`.
+**Cosa manca**: catalogo lineweight ISO completo + special values `-3=Default`, `-2=ByLayer`, `-1=ByBlock`.
+**Research grounding (2026-05-16, ezdxf 1.4.3 + Autodesk DXF Reference)**: il DXF code 370 accetta **24 valori ufficiali** stoccati come `mm × 100` (int16).
 **Google-fix**: nuovo `src/subapps/dxf-viewer/config/lineweight-catalog.ts`:
 ```typescript
-export const LINEWEIGHT_ISO = [
-  0.05, 0.09, 0.13, 0.18, 0.25, 0.35, 0.50, 0.70, 1.00, 1.40, 2.00, 2.11
-] as const; // mm
-export const LW_DEFAULT = -3;
-export const LW_BYLAYER = -2;
-export const LW_BYBLOCK = -1;
-export type LineweightMm = typeof LINEWEIGHT_ISO[number] | typeof LW_DEFAULT | typeof LW_BYLAYER | typeof LW_BYBLOCK;
+// DXF code 370 — stored as mm × 100 (int16). 24 valori ISO ufficiali.
+export const LINEWEIGHT_ISO_MM = [
+  0.00, 0.05, 0.09, 0.13, 0.15, 0.18, 0.20, 0.25, 0.30, 0.35,
+  0.40, 0.50, 0.53, 0.60, 0.70, 0.80, 0.90, 1.00, 1.06, 1.20,
+  1.40, 1.58, 2.00, 2.11,
+] as const; // 24 entries — full DXF code 370 enum
+
+export const LINEWEIGHT_DXF_CODES = [
+  0, 5, 9, 13, 15, 18, 20, 25, 30, 35,
+  40, 50, 53, 60, 70, 80, 90, 100, 106, 120,
+  140, 158, 200, 211,
+] as const;
+
+export const LW_DEFAULT = -3;   // BYDEFAULT (use drawing default)
+export const LW_BYLAYER = -2;   // inherits from layer
+export const LW_BYBLOCK = -1;   // inherits from block
+
+export type LineweightMm =
+  | typeof LINEWEIGHT_ISO_MM[number]
+  | typeof LW_DEFAULT
+  | typeof LW_BYLAYER
+  | typeof LW_BYBLOCK;
 ```
 - Conversion `lineweightToPx(mm, zoom)` → pixel rendering.
-- DXF code 370 round-trip identico (multiply × 100, e.g. 0.25mm → 25).
+- DXF code 370 round-trip identico (`dxfCode = Math.round(mm × 100)`; `mm = dxfCode / 100`).
+- Helper `parseDxfCode370(code: number) → LineweightMm` con whitelist + fallback `LW_DEFAULT`.
 
 ### G7 — ByLayer / ByBlock pipeline
 **Cosa manca**: quando un'entity è creata da LINE tool, deve poter dichiarare `color: 'ByLayer'`, `linetype: 'ByLayer'`, `lineweight: 'ByLayer'`. Al render, il renderer risolve l'eredità.
@@ -283,11 +381,14 @@ export type LineweightMm = typeof LINEWEIGHT_ISO[number] | typeof LW_DEFAULT | t
 
 ### G12 — Layer Isolate / Unisolate / Dim
 **Cosa manca**: industry standard click-driven layer ops.
+**Research grounding (2026-05-16, AutoCAD LAYISO Help 2025)**: default mode AutoCAD = **"Lock and fade"** (NON "OFF"); fade value è **configurabile 0–90** via LAYISO Settings (0 = no fading, 90 = quasi invisibile). Behavior alternativo = "Off" (layer hidden). Setting persistito via system variable.
 **Google-fix**:
 - Comandi nuovi in `CommandRegistry`: `LayerIsolate`, `LayerUnisolate`, `LayerDim`, `LayerOff` (click-driven).
-- UX: shortcut `Ctrl+Shift+I` → click entity → isolate (gli altri layer → OFF). `Ctrl+Shift+U` → unisolate.
+- UX: shortcut `Ctrl+Shift+I` → click entity → isolate (modalità default da Q10).
 - Snapshot pre-isolate salvato in `LayerStore.unisolateSnapshot` per `LayerUnisolate`.
-- LayerDim: usa property `transparency=60` su altri layer invece di OFF.
+- LayerIsolate mode (Q10 outcome): `'lock-and-fade'` (default AutoCAD-parity) | `'off'` (legacy).
+- **Fade value configurabile 0–90** via slider in Layer Manager / preferences (NON hardcoded). Setting persistito `dxf:layerIsolateFade.{userId}` localStorage.
+- LayerDim: variant esplicita che applica `transparency = userFade` su altri layer senza locking.
 
 ### G13 — Layer rename con backref completi
 **Cosa manca**: `renameLayer` aggiorna `scene.layers` + `entity.layer` ma audit incompleto su:
@@ -317,6 +418,16 @@ export type LineweightMm = typeof LINEWEIGHT_ISO[number] | typeof LW_DEFAULT | t
 ## 5. Decision (template — da finalizzare in Q&A)
 
 > Le risposte di Giorgio in greco saranno trascritte in italiano e aggiorneranno questa sezione.
+
+> **🔬 POST-RESEARCH VALIDATION (2026-05-16 v2)** — Le 13 risoluzioni Q1–Q13 sotto sono state **rivalidate** contro 14 WebSearch verificate (vedi §11 References e §3 espanso). Esito:
+> - **Industry convergence DWG-ecosystem 4/4** (AutoCAD/BricsCAD/GstarCAD/ZWCAD) confermata sui campi target dell'interface `SceneLayer` (Q1).
+> - **Q10 Layer Isolate**: research conferma fade configurabile **0–90** (NON hardcoded 30%). §5.6.bis aggiornato in §G12 a "configurable 0–90 with slider Full Enterprise". Q10 status: **✅ confermata con refinement fade-range**.
+> - **Q12 `.las` round-trip**: research conferma `.las` export è 1-state-at-time (multi-export = batch). §5.9 sostanzialmente confermata.
+> - **§G6 Lineweight**: catalogo aggiornato da 11 a **24 valori ISO ufficiali** DXF code 370. Update applicato.
+> - **Q9 naming validation**: era "AutoCAD parity only". Research aggiunge **ISO 13567-1:2017** (EU/intl standard) come alternativa rilevante per mercato greco/EU → nuova **Q14**.
+> - **BIM paradigm scope**: research evidenzia differenze fondamentali Revit/ArchiCAD/Vectorworks → nuova **Q15** documentare scope rationale.
+> - **Per-viewport overrides** (VPLAYER, standard CAD 18+ anni): research conferma rilevanza → nuova **Q16** (oggi out-of-scope, future paperspace?).
+> - Q1–Q8, Q11, Q13: **✅ confermate senza modifica** (research-aligned).
 
 ### 5.1 Modello dati `SceneLayer` esteso — FULL ENTERPRISE (Q1 risolta 2026-05-16)
 
@@ -1525,6 +1636,14 @@ LINE tool → completeEntity()
 
 > Le risposte sono trascritte in italiano e aggiornano la §5 Decision.
 
+### Nuove Open Questions post-research (2026-05-16 v2)
+
+- 🟡 **Q14** — Naming standard scope: solo AIA NCS (US) / solo ISO 13567-1:2017 (EU/intl) / entrambi supportati con switcher? Greek/EU market context.
+- 🟡 **Q15** — BIM paradigm scope rationale: skip silently / documentare nello scope §3.8 perché Nestor segue CAD-DXF model / aggiungere placeholder "future BIM mode" in roadmap?
+- 🟡 **Q16** — Per-viewport overrides (VPLAYER, paperspace): skip permanently dal data model / scaffold campi `vpOverride.*` future-proof / documentare solo come "future paperspace ADR" senza scaffolding?
+
+### Questions già risolte (Q1–Q13)
+
 1. ✅ **`SceneLayer` extension scope** — RISOLTA 2026-05-16: **FULL Enterprise + GOL + SSoT** (12 campi). Migration helper obbligatorio. Pre-commit ratchet `scene-layer-shape` proibisce accessi diretti da fuori SSoT.
 2. ✅ **Layer ID stabile vs name-keyed** — RISOLTA 2026-05-16: **Stable ID Google-standard**. `lyr_<ULID-26>` da `enterprise-id.service.ts` (SOS. N.6). `entity.layerId` canonico, `entity.layer` deprecato (computed alias 1 release). `scene.layers` keyed by `id`. DXF I/O usa `name` in group 8, mapping interno applicazione. No feature flag (test data, no backward compat). |
 3. ✅ **`LayerStore` scope** — RISOLTA 2026-05-16: **Unified SSoT pure** (Opzione Α). Un solo store gestisce DXF entities + Regions. `overlay-manager.layers` + `currentLayerId` assorbiti. `RegionLayerObject` rimosso, `regionIds` derivato da `SceneModel.regions.filter(layerId)`. Pre-commit ratchet `unified-layer-store`. |
@@ -1561,16 +1680,59 @@ LINE tool → completeEntity()
 | 2026-05-16 | Q12 risolta: Layer States Manager Γ FULL Enterprise. Save/Restore + `.las` Export/Import + Cross-project Templates Firestore. `LayerStateStore` + `RestoreLayerStateCommand` undo-able. Templates `companyId`-scoped. Pre-commit ratchet `layer-state-system`. Δ auto-snapshot deferred ADR-361. |
 | 2026-05-16 | Q13 risolta: Persistence Δ Project-wide + Per-Level Visibility Override (SSoT pure). Layer content unico SSoT project, `visible/frozen/locked` overridable per-level. `SceneModel.layers` rimosso. `resolveEffectiveLayer` pure fn. Pre-commit ratchet `layer-persistence-scope`. |
 | 2026-05-16 | **Tutte le 13 Open Questions risolte (Q1-Q13). ADR-358 FINALIZZATO.** Status: ✅ ACCEPTED. Implementation roadmap aggiornato. Prerequisiti completati. Ready per phases 1-15. |
+| 2026-05-16 v2 | **🔬 Post-Research Validation Phase 0**: eseguite 14 WebSearch verificate (AutoCAD/BricsCAD/GstarCAD/ZWCAD/MicroStation/Revit/ArchiCAD/Vectorworks/DXF spec/AIA/ISO 13567/NCS). §3 Industry Benchmark espansa a 9 sub-sezioni (+§3.6 per-viewport, +§3.7 AIA+ISO, +§3.8 BIM paradigm, +§3.9 convergence matrix). §11 References da 8 → 28 link verificati. §G6 lineweight catalog corretto a 24 valori ISO ufficiali. §G12 LayerIsolate corretto a fade configurabile 0-90 (NON hardcoded). Q1–Q13 ✅ rivalidate research-aligned. Q14/Q15/Q16 nuove aperte (ISO 13567, BIM scope, per-viewport). |
 
 ---
 
-## 11. References
+## 11. References (verified web research 2026-05-16)
 
-- AutoCAD Layer Properties Manager: https://help.autodesk.com/cloudhelp/2022/ENU/AutoCAD-Core/files/GUID-B297EBD9-D68C-47E1-87CE-1B3798496599.htm
-- AutoCAD Layer States Manager: https://help.autodesk.com/cloudhelp/2026/ENU/AutoCAD-LT-DidYouKnow/files/GUID-5312A8BD-DD94-47D6-B1BA-5E0AF5E0CED8.htm
-- AutoCAD Layer Filters (Group + Properties): https://designandmotion.net/autodesk/autocad/autocad-layers-deep-dive-series-layer-filters/
-- DXF LAYER table group codes (ezdxf): https://ezdxf.readthedocs.io/en/stable/dxfinternals/tables/layer_table.html
-- DXF reference (Autodesk): https://documentation.help/AutoCAD-DXF/WS1a9193826455f5ff18cb41610ec0a2e719-7a51.htm
-- ByLayer / ByBlock inheritance: https://www.cad-notes.com/layer-0-bylayer-and-byblock/
-- AIA CAD Layer Guidelines (naming convention): https://www.nationalcadstandard.org/
-- BricsCAD Layer Manager: https://help.bricsys.com/en-us/document/bricscad/drawing-tools/working-with-layers
+### AutoCAD (Autodesk, reference DWG ecosystem)
+- Layer Properties Manager (2026): https://help.autodesk.com/view/ARCHDESK/2026/ENU/?guid=GUID-B5ADCD3C-416F-4AC3-B869-D39475CF98AA
+- AutoCAD MEP — About Layer Properties Manager: https://help.autodesk.com/view/BLDSYS/2026/ENU/?guid=GUID-AB5E3658-0883-4851-A31B-E6288826C12A
+- Layer States Manager (.las export/import): https://help.autodesk.com/cloudhelp/2026/ENU/AutoCAD-LT-DidYouKnow/files/GUID-5312A8BD-DD94-47D6-B1BA-5E0AF5E0CED8.htm
+- Layer Filters (Group + Property + Invert, dynamic): https://help.autodesk.com/cloudhelp/2026/ENU/AutoCAD-LT-DidYouKnow/files/GUID-46F22B6E-D087-4AB4-8D4F-580E0E75FAD3.htm
+- LAYISO command (Lock & Fade default 0-90): https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-E24B9866-9538-43BF-A3DF-AA7E2341C624
+- LAYUNISO command: https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-0795CBC9-7A9D-4A36-B49E-244C146FF6EA
+- VPLAYER + per-viewport overrides (VPLAYEROVERRIDESMODE): http://docs.autodesk.com/ACD/2010/ENU/AutoCAD%202010%20User%20Documentation/files/WS1a9193826455f5ffa23ce210c4a30acaf-5243.htm
+- Layer 0 + ByLayer / ByBlock inheritance: https://www.cad-notes.com/layer-0-bylayer-and-byblock/
+- About Layer 0 / GstarCAD blog: https://blog.gstarcad.net/whats-the-difference-between-layer-0-and-other-layers/
+
+### DXF Specification (Autodesk + ezdxf)
+- DXF LAYER table group codes (Autodesk official): https://help.autodesk.com/cloudhelp/2020/ENU/AutoCAD-DXF/files/GUID-D94802B0-8BE8-4AC9-8054-17197688AFDB.htm
+- LAYER table — ezdxf 1.4.3 docs: https://ezdxf.readthedocs.io/en/stable/dxfinternals/tables/layer_table.html
+- Lineweights enum (24 ISO values, code 370) — ezdxf: https://ezdxf.readthedocs.io/en/stable/concepts/lineweights.html
+- Linetype LIN file format (simple + complex w/ TEXT/SHAPE) — ezdxf: https://ezdxf.readthedocs.io/en/stable/tutorials/linetypes.html
+- DXF Group Codes Numerical Order (OARX 2025): https://help.autodesk.com/view/OARX/2025/ENU/?guid=GUID-3F0380A5-1C15-464D-BC66-2C5F094BCFB9
+
+### BricsCAD (Bricsys, DWG ecosystem)
+- Layers Panel: https://help.bricsys.com/en-us/document/bricscad/panels/layers-panel
+- Working with layers + Drawing Explorer (EXPLAYERS): https://help.bricsys.com/en-us/document/bricscad/2d-drafting/working-with-layers
+- LAYER command reference: https://help.bricsys.com/en-us/document/command-reference/l/layer-command
+
+### GstarCAD / ZWCAD (AutoCAD clones, DWG ecosystem)
+- GstarCAD 2026 vs AutoCAD/BricsCAD/ZWCAD comparison PDF: https://gstarcadaustralia.com/wp-content/uploads/2025/07/GstarCAD-2026-Compare-AutoCAD-BricsCAD-ZWCad.pdf
+- GstarCAD vs ZWCAD differences table: https://www.gstarcad.com.my/comparison-table-gstarcad-vs-zwcad
+
+### MicroStation (Bentley, Levels ≡ Layers)
+- Levels (MicroStation v26): https://docs.bentley.com/LiveContent/web/MicroStation%20Help-v26/en/GUID-54601CED-0045-0C31-D38F-62736D5FF20C.html
+- Level Manager Dialog: https://docs.bentley.com/LiveContent/web/MicroStation%20Help-v21/en/LevelManager.html
+- MicroStation Level Attributes (cad-notes): https://www.cad-notes.com/microstation-level-and-level-attributes/
+
+### BIM paradigm comparison (for §3.8 scope rationale)
+- Revit categories vs AutoCAD layers (LinkedIn Learning): https://www.linkedin.com/learning/migrating-from-autocad-to-revit/organizing-with-categories-vs-layers
+- Revit vs AutoCAD (United-BIM): https://www.united-bim.com/blog/revit-vs-autocad
+- ArchiCAD Pen Sets (Graphisoft Community): https://community.graphisoft.com/t5/Documentation/Pen-Sets/ta-p/303731
+- ArchiCAD Building Materials migration: https://help.graphisoft.com/AC/26/INT/_AC26_Help/011_MigrationGuideOlderVersions/011_MigrationGuideOlderVersions-7.htm
+- ArchiCAD Layer Theory (Graphisoft): https://www.graphisoft.com/us/archicad-layer-theory-do-you-need-that-layer
+- Vectorworks dual organization (classes + design layers): https://app-help.vectorworks.net/2023/eng/VW2023_Guide/Structure/Organizing_the_drawing.htm
+- Vectorworks layer/class/viewport standards 2026: https://app-help.vectorworks.net/2026/eng/VW2026_Guide/Structure/Layer_class_and_viewport_standards.htm
+
+### Naming standards
+- AIA CAD Layer Guidelines (NCS V6): https://www.nationalcadstandard.org/ncs6/pdfs/ncs6_clg_lnf.pdf
+- ISO 13567-1:2017 — Organization and naming of layers for CAD: https://www.iso.org/standard/70181.html
+- ISO 13567 Wikipedia overview: https://en.wikipedia.org/wiki/ISO_13567
+- AutoCAD layer naming standards complete guide (sourcecad): https://sourcecad.com/layer-naming-standards-cad-drawing/
+
+### National BIM Standard (US, NCS coordination)
+- NCS V7 content: https://www.nationalcadstandard.org/ncs7/content.php
+- NIBS / NBIMS-US standards: https://nibs.org/our-work/resources/standards/

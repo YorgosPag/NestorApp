@@ -105,6 +105,12 @@
       ],
       "shortcuts": "Enter/C=Close | U=Undo | ESC=Cancel"
     },
+    "stair": {
+      "name": "Stair",
+      "description": "Draw stair (stub — Phase 0, available from Phase 5a)",
+      "steps": ["Tool under development"],
+      "shortcuts": "ST | ESC=Cancel"
+    },
     "circle": {
       "name": "Circle (Radius)",
       "description": "Circle by center and radius",

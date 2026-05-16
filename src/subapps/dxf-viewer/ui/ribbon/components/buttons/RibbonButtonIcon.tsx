@@ -12,7 +12,7 @@ import { LineIcon } from '../../../toolbar/icons/LineIcon';
 import { CircleIcon } from '../../../toolbar/icons/CircleIcon';
 import { ArcIcon } from '../../../toolbar/icons/ArcIcon';
 import {
-  POLYLINE_PATH, POLYGON_PATH, RECTANGLE_PATH, ELLIPSE_PATH,
+  POLYLINE_PATH, POLYGON_PATH, RECTANGLE_PATH, ELLIPSE_PATH, STAIR_PATH,
   TEXT_PLACEHOLDER_PATH, TEXT_CREATE_PATH,
   MOVE_PATH, COPY_PATH, ROTATE_PATH, MIRROR_PATH, SCALE_PATH,
   STRETCH_PATH, TRIM_PATH, EXTEND_PATH, OFFSET_PATH,
@@ -88,6 +88,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'polygon': return inlineSvg(size, POLYGON_PATH);
     case 'rectangle': return inlineSvg(size, RECTANGLE_PATH);
     case 'ellipse': return inlineSvg(size, ELLIPSE_PATH);
+    case 'stair': return inlineSvg(size, STAIR_PATH);
     case 'text-placeholder': return inlineSvg(size, TEXT_PLACEHOLDER_PATH);
     case 'text-create': return inlineSvg(size, TEXT_CREATE_PATH);
     case 'text-bold': return <Bold width={sizePx[size]} height={sizePx[size]} className={className} />;

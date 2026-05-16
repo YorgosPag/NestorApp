@@ -40,6 +40,12 @@ export const ELLIPSE_PATH = (
     {dot(21, 12, ICON_CLICK_COLORS.THIRD)}
   </>
 );
+// ADR-358 Phase 0: Stair placeholder icon — 4-step ascending profile.
+export const STAIR_PATH = (
+  <>
+    <polyline points="4,20 4,16 8,16 8,12 12,12 12,8 16,8 16,4 20,4" fill="none" />
+  </>
+);
 export const TEXT_PLACEHOLDER_PATH = (
   <>
     <polyline points="4 6 4 3 20 3 20 6" />

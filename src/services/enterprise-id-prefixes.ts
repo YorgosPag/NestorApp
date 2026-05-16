@@ -213,6 +213,10 @@ export const ENTERPRISE_ID_PREFIXES = {
   COMPANY_FONT: 'fnt',         // company_fonts collection — uploaded TTF/OTF/SHX fonts per company
   DICT_ENTRY: 'dict',          // text_custom_dictionary collection — per-company spell-check terms
 
+  // DXF Stair Tool (ADR-358)
+  STAIR: 'stair',              // floorplan_stairs collection — parametric stair entity (11 kinds)
+  STAIR_PRESET: 'sprst',       // stair_presets collection — library presets (user/company/project scope)
+
   // Optimistic & Temporary
   OPTIMISTIC: 'opt',
   TEMP: 'tmp',

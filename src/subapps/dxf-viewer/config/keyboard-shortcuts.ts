@@ -129,6 +129,16 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'tool',
     toolType: 'arc-3p',
   },
+  // ADR-358: Stair drawing tool — 2-char mnemonic 'ST' (industry: AutoCAD/ArchiCAD/Bricsys).
+  // Phase 0: declared only. Multi-char sequence dispatcher lands Phase 5a (button is comingSoon meanwhile).
+  stair: {
+    key: 'ST',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.stair',
+    action: 'tool:stair',
+    category: 'tool',
+    toolType: 'stair',
+  },
 
   // Editing Tools
   move: {
