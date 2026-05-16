@@ -93,23 +93,17 @@ export function getLayer(idOrName: string): SceneLayer | null {
 }
 
 /**
- * Resolve an entity's layer NAME with id-first preference (ADR-358 Phase 9D-3).
+ * Resolve an entity's layer NAME via stable id lookup (ADR-358 Phase 9D-5b-i — id-only SSoT).
  *
- * Dual-read transitional helper:
- *   1. If `entity.layerId` is set → look up SceneLayer by stable id (post-9C path).
- *   2. Fallback to legacy `entity.layer` name backref (pre-9D entities or unresolved id).
- *
- * Collapses to id-only after Phase 9D-5 final flip removes `entity.layer`.
+ * Post-Phase 9D-5b-i: legacy `entity.layer` name backref dropped from BaseEntity schema.
+ * Resolution is strictly id-keyed against `SceneLayer.id` (`lyr_<UUID-v4>`).
+ * Returns `undefined` if entity has no layerId or the id is unknown to the store.
  */
 export function resolveEntityLayerName(
-  entity: { layerId?: string; layer?: string } | null | undefined
+  entity: { layerId?: string } | null | undefined
 ): string | undefined {
-  if (!entity) return undefined;
-  if (entity.layerId) {
-    const layer = layersById.get(entity.layerId);
-    if (layer) return layer.name;
-  }
-  return entity.layer;
+  if (!entity?.layerId) return undefined;
+  return layersById.get(entity.layerId)?.name;
 }
 
 export function getAllLayers(): ReadonlyArray<SceneLayer> {
