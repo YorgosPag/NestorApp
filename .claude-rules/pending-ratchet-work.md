@@ -45,6 +45,12 @@
 
 ---
 
+### 🪜 ADR-358 STAIR DOMAIN — pre-existing TS residual (priorità bassa)
+
+- [ ] **HitTestingService.ts:236 — DxfStair exhaustive check failure** — `convertToEntityModel` switch manca branch `case 'stair'`. Pre-esistente dal Phase 9C base (commit `9970706a`). Richiede decisione campi `EntityModel` stair-specific (treads, riserHeight, run, ecc.) — domain stair-tool (`ADR-358-dxf-stair-tool-google-level.md`). Identificato 2026-05-16 durante Phase 9D-3a TS check. Defer a sessione dedicata stair-tool.
+
+---
+
 ### 🧹 FULL ZERO BACKLOG (Scenario B extras — +~43h expected)
 
 - [x] **ADR-298 Phase C** — COMPLETATO. Phase C.7 DONE 2026-04-14. 11 collezioni → COVERAGE. FIRESTORE_RULES_PENDING ora VUOTA (zero entry). Coverage totale: 92 collezioni. 291 test verdi.
