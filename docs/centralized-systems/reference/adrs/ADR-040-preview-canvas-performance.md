@@ -71,6 +71,52 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-17 (Phase XXI) — ROOT CAUSE: client-side `dxf_viewer_levels` bootstrap rejected by Firestore rules
+
+**Status**: Phase XX instrumentation deployed → log analysis confirms deterministic root cause. Loop is NOT a React/ref-churn problem — it is a Firestore **write-reject loop** that the snapshot listener amplifies into a React render cascade.
+
+**Evidence (Firefox console log `console-export-2026-5-17_1-27-39.log`, 19624 lines)**:
+
+1. **83 occurrences** of `Uncaught (in promise) FirebaseError: Missing or insufficient permissions` interleaved 1:1 with `[SETSTATE-CALL levels]` entries.
+2. Manual `traceSet` wrapper on `setLevels`/`setError`/`setIsLoading` in `LevelsSystem.tsx` produces 417 stack traces (3 setters × ~138 iterations). Every trace bottoms out in:
+   ```
+   useLevelsFirestoreSync.useEffect.unsubscribe (snapshot callback)
+     ← __PRIVATE_syncEngineEmitNewSnapsAndNotifyLocalStore
+     ← async*__PRIVATE_syncEngineRejectFailedWrite  ← REJECT
+     ← __PRIVATE_onWriteStreamClose / handleWriteError
+   ```
+3. `installSetStateTracer()` (monkey-patch on `React.useState/useReducer/useSyncExternalStore`) reports `tracer install — useState=false useReducer=false useSyncExternalStore=false` + `React namespace is non-extensible (Firefox/Turbopack)`. Confirms tracer is **inoperable in dev mode** under Turbopack — the manual `traceSet` wrapper is the only path to stack traces, and it is sufficient here.
+4. `[CanvasSection] #N content-changed: (NONE — pure ref churn!)` and `[LevelsSystem.provider] #N ... ref-only: levels,importWizardHook,addLevel,...` confirm the cascade is a pure-ref-churn render storm downstream of the rejected-write source.
+
+**Root cause**: `useLevelsFirestoreSync.ts:86-97` (pre-fix) executed a client-side `writeBatch(db).set(...).commit()` against `dxf_viewer_levels` when the snapshot delivered an empty document set. The collection's Firestore rules permit writes only via the Admin SDK / `/api/dxf-levels` gateway (explicitly documented at `useLevelSceneLoader.ts:151`: *"Firestore rules do NOT allow client-side updates on dxf_viewer_levels"*). Under super-admin without `companyId` (or any tenant whose first viewer load hits the empty-cache path), the batch was rejected; the rejection rolled back the local cache, which re-fired the snapshot listener with an empty document set, which re-invoked the bootstrap path — an unbounded ~1-2Hz idle loop.
+
+**Why Phase XV (ADR-361) service-level dequal guard did not catch it**: the guard suppresses *content-equal* re-emissions. Rejected-write rollbacks emit the same empty-document snapshot, which the guard correctly skips for the second-onwards emission within a single subscription session — but the bootstrap path **re-triggers the write itself**, so each iteration is a fresh `{empty snapshot} → batch.commit → reject → rollback → empty snapshot` cycle. The guard never sees a *steady state* to lock onto.
+
+**Why Phases XVI/XVII/XVIII/XIX defensive layers did not catch it**: those phases targeted React identity churn downstream of legitimate state changes. They are still valid GOL-level safety nets and remain in place. The source here is not React identity — it is the Firestore mutation queue being driven by a permanently-failing write.
+
+**Fix (`useLevelsFirestoreSync.ts`)**:
+
+1. Removed `writeBatch` + `doc` + `db` imports.
+2. Added `createDxfLevelWithPolicy` import (existing gateway client, matches `useLevelOperations.addLevel` pattern).
+3. Replaced client-side `batch.commit()` with `Promise.all(defaultLevels.map(l => createDxfLevelWithPolicy({ payload: {...l} })))` — server-side bootstrap via `/api/dxf-levels` (Admin SDK + `createEntity('dxfLevel', …)` audit pipeline, ADR-286).
+4. Added `bootstrapStateRef: 'idle' | 'running' | 'completed' | 'failed'` to guarantee idempotency: bootstrap fires **once** per hook lifetime regardless of how many empty snapshots are delivered. On failure the state moves to `failed` and is **not retried** — operator must inspect server logs (a permanently-failing bootstrap is now visible via `handleError`, not silenced).
+
+**Files**:
+- `src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts` (fix)
+
+**Expected steady state after fix**: zero idle `PERF_LINE DxfCanvasSubscriber.commit` / `CanvasSection.commit` pairs; zero `Missing or insufficient permissions` console entries; `[SETSTATE-CALL levels]` fires only on real Firestore content changes (true level mutations).
+
+**Verification protocol**:
+1. Giorgio: `npm run dev` → DXF Viewer → idle 30s → console must show 0 PERF_LINE pairs and 0 `FirebaseError: Missing or insufficient permissions`.
+2. If clean → remove `traceSet` wrapper from `LevelsSystem.tsx` (Phase XX probe cleanup) + remove `useRenderTrace` calls from `CanvasSection` / `canvas-layer-stack-leaves` / `LevelsSystem.provider` (probes served their purpose).
+3. If loop persists → there is a second writer to `dxf_viewer_levels` outside the bootstrap path (no current code path found via grep). Re-run with probes in place to capture new stack traces.
+
+**Phase XX probe disposition**: instrumentation (`useRenderTrace` + `installSetStateTracer` + `traceSet` wrapper) stays deployed until Giorgio confirms idle steady state, then cleanup commit removes it.
+
+**Lezione**: client-side writes to server-only Firestore collections produce a self-reinforcing reject-loop that is **invisible to the React render-trace** until you wrap setters in stack-capturing decorators or read the Firestore stack frames (`__PRIVATE_syncEngineRejectFailedWrite`). When a "render loop" stack trace points at a Firestore subscription, the next question is always *"what is writing to this collection, and is the write being denied?"* — not *"which downstream consumer is unstable?"*.
+
+---
+
 ### 2026-05-17 — ADR-358 Phase 9D-3b interop: DxfRenderer dual-write `layerId` + id-first resolve
 
 `DxfRenderer.entityToDxfEntity` now mirrors `entity.layerId` onto the DXF entity, and `getResolvedLayerStyle` resolves the layer via `resolveEntityLayerName(entity)` (LayerStore lookup + legacy name fallback). Render-path now id-aware; bitmap cache key is unaffected (still keyed by visible/selected snapshot, ADR-040 cardinal rule #3 intact).
