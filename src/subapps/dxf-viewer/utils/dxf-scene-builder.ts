@@ -12,6 +12,8 @@ import { TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
 import { createInfinityBounds } from '../config/geometry-constants';
 // 🏢 ADR-163: Centralized Vector Magnitude (replaces inline Math.sqrt patterns)
 import { vectorMagnitude } from '../rendering/entities/shared/geometry-rendering-utils';
+// ADR-358 Phase 8 — propagate real $INSUNITS to SceneModel.units via SSoT.
+import { detectSceneUnits, insunitsCodeToSceneUnits } from './scene-units';
 
 export class DxfSceneBuilder {
   static buildScene(content: string): SceneModel {
@@ -86,8 +88,11 @@ export class DxfSceneBuilder {
       const converted = Array.isArray(result) ? result : [result];
 
       for (const entity of converted) {
-        // ADR-130: Centralized default layer
-        const layerName = getLayerNameOrDefault(entity.layer as string);
+        // ADR-358 Phase 9D-5b-i — DXF parse boundary: raw DxfEntityParser output still
+        // emits `.layer` (group 8 string) at runtime; narrow cast preserves boundary read
+        // since BaseEntity.layer field was dropped from SceneEntity schema in 9D-5b-i.
+        // TODO Phase 9E candidate: extract formal `RawDxfEntity` type for parse boundary.
+        const layerName = getLayerNameOrDefault((entity as { layer?: string }).layer);
 
         // Register layer with REAL ACI colors from parsed LAYER table
         DxfSceneBuilder.registerLayer(layers, layerName, layerColors);
@@ -164,11 +169,17 @@ export class DxfSceneBuilder {
     // ║ Τα entities περνάνε απευθείας χωρίς text height normalization.        ║
     // ╚════════════════════════════════════════════════════════════════════════╝
 
+    // ADR-358 Phase 8 — propagate the real $INSUNITS to SceneModel.units.
+    // Was hardcoded `'mm'` regardless of source file, breaking every
+    // consumer that builds geometry from mm-baked defaults (stair tool).
+    const fromInsunits = insunitsCodeToSceneUnits(header.insunits);
+    const resolvedUnits = fromInsunits ?? detectSceneUnits(bounds);
+
     return {
       entities,
       layers,
       bounds,
-      units: 'mm'
+      units: resolvedUnits
     };
   }
 
