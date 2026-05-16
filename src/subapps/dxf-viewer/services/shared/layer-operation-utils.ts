@@ -9,6 +9,8 @@
  */
 
 import { SceneModel, AnySceneEntity } from '../../types/scene';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
+import { resolveEntityLayerName } from '../../stores/LayerStore';
 
 export interface LayerOperationResult {
   updatedScene: SceneModel;
@@ -65,7 +67,8 @@ export function updateEntitiesForLayer(
   return {
     ...scene,
     entities: scene.entities.map(entity => {
-      if (entity.layer === layerName) {
+      // ADR-358 Phase 9D-3: id-first match via LayerStore, name fallback
+      if (resolveEntityLayerName(entity) === layerName) {
         return { ...entity, ...entityUpdates };
       }
       return entity;
@@ -85,7 +88,8 @@ export function entityBelongsToLayer(
   entity: AnySceneEntity,
   layerName: string
 ): boolean {
-  return entity.layer === layerName;
+  // ADR-358 Phase 9D-3: id-first comparison via LayerStore, name fallback
+  return resolveEntityLayerName(entity) === layerName;
 }
 
 /**
@@ -95,7 +99,9 @@ export function entityBelongsToLayers(
   entity: AnySceneEntity,
   layerNames: string[]
 ): boolean {
-  return entity.layer != null && layerNames.includes(entity.layer);
+  // ADR-358 Phase 9D-3: id-first comparison via LayerStore, name fallback
+  const name = resolveEntityLayerName(entity);
+  return name != null && layerNames.includes(name);
 }
 
 /**
@@ -242,8 +248,9 @@ export function getVisibleEntityIdsInLayers(
     .filter(entity => {
       if (!entityBelongsToLayers(entity, layerNames)) return false;
       if (!isEntityVisible(entity)) return false;
-      // Check layer visibility
-      const layerVisible = entity.layer != null && layers[entity.layer]?.visible !== false;
+      // Check layer visibility — ADR-358 Phase 9D-3: id-first name resolution
+      const name = resolveEntityLayerName(entity);
+      const layerVisible = name != null && layers[name]?.visible !== false;
       return layerVisible;
     })
     .map(entity => entity.id);
@@ -261,7 +268,8 @@ export function getEntitiesNotInLayer(
   entities: AnySceneEntity[],
   layerName: string
 ): AnySceneEntity[] {
-  return entities.filter(entity => entity.layer !== layerName);
+  // ADR-358 Phase 9D-3: id-first exclusion via LayerStore, name fallback
+  return entities.filter(entity => resolveEntityLayerName(entity) !== layerName);
 }
 
 /**
@@ -274,5 +282,9 @@ export function getEntitiesNotInLayers(
   entities: AnySceneEntity[],
   layerNames: string[]
 ): AnySceneEntity[] {
-  return entities.filter(entity => !entity.layer || !layerNames.includes(entity.layer));
+  // ADR-358 Phase 9D-3: id-first exclusion via LayerStore, name fallback
+  return entities.filter(entity => {
+    const name = resolveEntityLayerName(entity);
+    return !name || !layerNames.includes(name);
+  });
 }
