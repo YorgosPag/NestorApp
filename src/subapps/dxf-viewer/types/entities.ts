@@ -654,11 +654,146 @@ export type AnySceneEntity = Entity; // ✅ UNIFIED: Now alias to main Entity ty
 // ✅ ENTERPRISE: Legacy compatibility aliases
 export type EntityModel = Entity; // ✅ FIX: Use full Entity type to preserve fontSize, position, text, etc.
 
+/**
+ * SceneLayer — ADR-358 §5.1 (FULL Enterprise + GOL + SSoT)
+ *
+ * Phase 1 shape: 12 base fields + Q15 `bimCategory` scaffold + Q16 `vpOverrides` scaffold.
+ *
+ * Required (always-on): name, color, visible, locked.
+ * Optional in Phase 1 (default-fill at boundary I/O — DXF parser Phase 3, factory below):
+ *   id, colorAci, colorTrueColor, linetype, lineweight, transparency, frozen,
+ *   plottable, description, source, createdAt, category, tags, bimCategory, vpOverrides.
+ *
+ * All construction sites must use `createSceneLayer()` factory (ratchet `scene-layer-shape`).
+ */
 export interface SceneLayer {
+  /** Stable identifier — `lyr_<ULID>`. Required from Phase 9 (currently optional during migration). */
+  readonly id?: string;
+  /** Display name — DXF group 2. Mutable. */
   name: string;
+  /** Legacy display color hex — kept for backward compatibility through Phase 9. Prefer `colorAci`/`colorTrueColor`. */
   color: string;
+  /** ACI 1-255 — DXF group 62. Source of truth when `colorTrueColor` is null/undefined. */
+  colorAci?: number;
+  /** TrueColor 0xRRGGBB — DXF group 420. Overrides ACI if set. */
+  colorTrueColor?: number | null;
+  /** Linetype name — DXF group 6. Default "Continuous". */
+  linetype?: string;
+  /** Lineweight mm — DXF group 370. ISO catalog + special enums (-3/-2/-1). */
+  lineweight?: LineweightMm;
+  /** Transparency 0-90% — DXF group 1071 XDATA. 0 = opaque. */
+  transparency?: number;
+  /** ON/OFF — fast toggle, no regen. */
   visible: boolean;
+  /** Freeze — skip regen (perf). DXF group 70 bit 1. */
+  frozen?: boolean;
+  /** Lock — no edit. DXF group 70 bit 4. */
   locked: boolean;
+  /** Plottable — DXF group 290. False = not plotted. */
+  plottable?: boolean;
+  /** User metadata — DXF group 1000 XDATA. */
+  description?: string;
+  /** Provenance — internal, not DXF. */
+  source?: SceneLayerSource;
+  /** ISO timestamp creation — internal. */
+  createdAt?: string;
+  /** AEC category (Q7 §5.3.quinquies). Auto-suggested from AIA prefix. */
+  category?: AecLayerCategory;
+  /** Free-text tags — lowercase normalized, ≤8 entries. */
+  tags?: ReadonlyArray<string>;
+  /**
+   * Q15 SCAFFOLD — Future BIM mode placeholder.
+   * Optional IFC category string (e.g. "IfcWall", "IfcSlab").
+   * Pre-commit ratchet `bim-category-scaffolding-no-active-use` BLOCKS read/write.
+   * Active use deferred to Future BIM ADR (Phase 11+).
+   */
+  readonly bimCategory?: string | null;
+  /**
+   * Q16 SCAFFOLD — Future per-viewport overrides (VPLAYER).
+   * Map keyed by viewportId → partial layer property overrides.
+   * Pre-commit ratchet `vp-overrides-scaffolding-no-active-use` BLOCKS read/write.
+   * DXF parser preserves these via XDATA round-trip but never reads in active code path (Phase 3).
+   * Active use deferred to Future paperspace ADR.
+   */
+  readonly vpOverrides?: Record<string, Partial<VpLayerProps>> | null;
+}
+
+/** Source of a layer's creation — internal provenance, not DXF. */
+export type SceneLayerSource = 'dxf-import' | 'user-created' | 'system-default';
+
+/**
+ * DXF group 370 lineweight catalog — 24 ISO values (mm) + 3 special enums.
+ * Special: -3 = Default, -2 = ByLayer, -1 = ByBlock.
+ */
+export type LineweightMm =
+  | 0 | 0.05 | 0.09 | 0.13 | 0.15 | 0.18 | 0.20 | 0.25
+  | 0.30 | 0.35 | 0.40 | 0.50 | 0.53 | 0.60 | 0.70 | 0.80
+  | 0.90 | 1.00 | 1.06 | 1.20 | 1.40 | 1.58 | 2.00 | 2.11
+  | -3 | -2 | -1;
+
+/** AEC discipline taxonomy — ADR-358 §5.3.quinquies (Q7). AIA prefix per category. */
+export type AecLayerCategory =
+  | 'architectural' | 'structural' | 'electrical' | 'mechanical'
+  | 'plumbing' | 'fire' | 'civil' | 'telecom' | 'interior' | 'general';
+
+/**
+ * Q16 SCAFFOLD — VP overridable layer properties.
+ * Subset of `SceneLayer` props that VPLAYER can override per-viewport.
+ * Active wiring deferred; type only used for round-trip preservation in DXF I/O.
+ */
+export interface VpLayerProps {
+  visible?: boolean;
+  frozen?: boolean;
+  colorAci?: number;
+  colorTrueColor?: number | null;
+  linetype?: string;
+  lineweight?: LineweightMm;
+  transparency?: number;
+}
+
+/**
+ * SSoT factory for `SceneLayer` (ADR-358 §5.1).
+ * Boundary I/O default-fill (DXF import, UI create, system seed) MUST go through here.
+ * Pre-commit ratchet `scene-layer-shape` blocks inline literal construction outside allowlist.
+ */
+export function createSceneLayer(input: {
+  name: string;
+  color?: string;
+  visible?: boolean;
+  locked?: boolean;
+  id?: string;
+  colorAci?: number;
+  colorTrueColor?: number | null;
+  linetype?: string;
+  lineweight?: LineweightMm;
+  transparency?: number;
+  frozen?: boolean;
+  plottable?: boolean;
+  description?: string;
+  source?: SceneLayerSource;
+  createdAt?: string;
+  category?: AecLayerCategory;
+  tags?: ReadonlyArray<string>;
+}): SceneLayer {
+  return {
+    id: input.id,
+    name: input.name,
+    color: input.color ?? '#ffffff',
+    colorAci: input.colorAci ?? 7,
+    colorTrueColor: input.colorTrueColor ?? null,
+    linetype: input.linetype ?? 'Continuous',
+    lineweight: input.lineweight ?? -3,
+    transparency: input.transparency ?? 0,
+    visible: input.visible ?? true,
+    frozen: input.frozen ?? false,
+    locked: input.locked ?? false,
+    plottable: input.plottable ?? true,
+    description: input.description,
+    source: input.source ?? 'user-created',
+    createdAt: input.createdAt,
+    category: input.category ?? 'general',
+    tags: input.tags ?? [],
+  };
 }
 
 export interface SceneBounds {

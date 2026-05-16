@@ -2968,6 +2968,103 @@
       "addedDate": "2026-05-11",
       "addedByAdr": "ADR-048",
       "tier": 3
+    },
+    "scene-layer-shape": {
+      "ssotFile": "src/subapps/dxf-viewer/types/entities.ts",
+      "description": "SceneLayer (ADR-358 §5.1) construction must go through createSceneLayer() factory — never inline literal. Factory enforces 14-field shape contract (12 base + Q15 bimCategory scaffold + Q16 vpOverrides scaffold) and applies default-fill at boundary I/O. Inline `const x: SceneLayer = { ... }` literals bypass the contract and break the eventual Phase 9 cleanup that flips all fields to required. Legacy construction sites are allowlisted during the Phase 1→9 migration.",
+      "forbiddenPatterns": [
+        ":\\s*SceneLayer\\s*=\\s*\\{"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/types/entities.ts",
+        "src/subapps/dxf-viewer/types/scene.ts",
+        "src/subapps/dxf-viewer/systems/entity-creation/LevelSceneManagerAdapter.ts",
+        "src/subapps/dxf-viewer/services/LayerOperationsService.ts",
+        "src/subapps/dxf-viewer/services/shared/layer-operation-utils.ts",
+        "src/subapps/dxf-viewer/hooks/drawing/completeEntity.ts",
+        "src/subapps/dxf-viewer/utils/region-operations.ts"
+      ],
+      "addedDate": "2026-05-16",
+      "addedByAdr": "ADR-358",
+      "tier": 3
+    },
+    "unified-layer-store": {
+      "ssotFile": "src/subapps/dxf-viewer/stores/LayerStore.ts",
+      "description": "LayerStore is the unified SSoT for SceneLayer + currentLayerId (ADR-358 §5.10 + Q3). Replaces the dual paradigm where DXF entity layers and overlay-manager `coreState.layers` (Region layers) were owned separately. Direct `RegionLayerObject` typed access and `coreState.layers` reads outside the legacy bridge files are forbidden for new code; Phase 5/9 will retire the bridge entirely. Co-existence ratchet, not zero-tolerance — current allowlist captures the transitional surface.",
+      "forbiddenPatterns": [
+        "RegionLayerObject\\b",
+        "coreState\\.layers\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/stores/LayerStore.ts",
+        "src/subapps/dxf-viewer/state/overlay-manager.ts",
+        "src/subapps/dxf-viewer/utils/region-operations.ts",
+        "src/subapps/dxf-viewer/ui/FloatingPanelContainer.tsx",
+        "src/subapps/dxf-viewer/ui/OverlayPanel.tsx"
+      ],
+      "addedDate": "2026-05-16",
+      "addedByAdr": "ADR-358",
+      "tier": 3
+    },
+    "bim-category-scaffolding-no-active-use": {
+      "ssotFile": "src/subapps/dxf-viewer/types/entities.ts",
+      "description": "ADR-358 Q15 SCAFFOLD: `SceneLayer.bimCategory` is a forward-compat field reserved for Future BIM Mode (Phase 11+). Reads and writes from product code are forbidden — the field exists only so DXF I/O can preserve XDATA `NestorBimCategory` round-trip without a future data-model refactor. Active use must come with a new ADR (likely ADR-362+) that defines BIM categories, IFC export pipeline, and Vectorworks-style dual-org. Zero-tolerance baseline (no legacy usage exists today).",
+      "forbiddenPatterns": [
+        "\\.bimCategory\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/types/entities.ts"
+      ],
+      "addedDate": "2026-05-16",
+      "addedByAdr": "ADR-358",
+      "tier": 4
+    },
+    "vp-overrides-scaffolding-no-active-use": {
+      "ssotFile": "src/subapps/dxf-viewer/types/entities.ts",
+      "description": "ADR-358 Q16 SCAFFOLD: `SceneLayer.vpOverrides` is a forward-compat field reserved for Future per-viewport overrides (VPLAYER, AutoCAD standard for 18+ years). Reads and writes from product code are forbidden — the field exists only so the DXF parser can preserve VP-override XDATA and the VP_FREEZE flag round-trip without a future data-model refactor. Active use must come with a new ADR (Future paperspace). Zero-tolerance baseline (no legacy usage exists today).",
+      "forbiddenPatterns": [
+        "\\.vpOverrides\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/types/entities.ts"
+      ],
+      "addedDate": "2026-05-16",
+      "addedByAdr": "ADR-358",
+      "tier": 4
+    },
+    "linetype-iso-catalog": {
+      "ssotFile": "src/subapps/dxf-viewer/config/linetype-iso-catalog.ts",
+      "description": "ADR-358 §5.3 + §5.3.bis: the 8 ISO baseline linetype names (Continuous, Dashed, Hidden, Center, Phantom, DashDot, Border, Divide) are case-sensitive AutoCAD identifiers owned by `linetype-iso-catalog.ts`. Hardcoded `linetype:` / `linetype =` assignments to these literal names outside the catalog + registry + tests + factory bypass resolveLinetype() and break the .lin import / DXF-import round-trip story (Phase 3+). Use `getIsoLinetype(name)` or `resolveLinetype(name)`; for the default, use `DEFAULT_LINETYPE_NAME`. Pattern is narrow (assignment context only) to avoid false positives on snap names ('Center'), UI labels ('Border'), and other unrelated occurrences.",
+      "forbiddenPatterns": [
+        "linetype\\s*[:=]\\s*['\"](Continuous|Dashed|Hidden|Center|Phantom|DashDot|Border|Divide)['\"]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/config/linetype-iso-catalog.ts",
+        "src/subapps/dxf-viewer/stores/LinetypeRegistry.ts",
+        "src/subapps/dxf-viewer/stores/__tests__/LinetypeRegistry.test.ts",
+        "src/subapps/dxf-viewer/types/entities.ts"
+      ],
+      "addedDate": "2026-05-16",
+      "addedByAdr": "ADR-358",
+      "tier": 3
+    },
+    "lineweight-iso-catalog": {
+      "ssotFile": "src/subapps/dxf-viewer/config/lineweight-iso-catalog.ts",
+      "description": "ADR-358 §5.3 + §5.3.ter: the 24 ISO lineweight values (mm) + 3 special sentinels (-3/-2/-1) are owned by `lineweight-iso-catalog.ts`. `as LineweightMm` casts and inline `lineweight:` / `lineweight =` numeric literal assignments outside the catalog + tests + entities.ts factory bypass the type contract and break the DXF group 370 round-trip story. Use `LINEWEIGHT_ISO_VALUES`, `LINEWEIGHT_SPECIAL`, `parseDxfCode370()`, or the `createSceneLayer()` factory. Baseline captures 3 legacy drawing-preview construction sites pending migration (Phase 5 render integration). The `default-lineweight-resolver` ratchet (system default 0.25mm hardcode ban) is deferred to Phase 5 too.",
+      "forbiddenPatterns": [
+        "\\bas\\s+LineweightMm\\b",
+        "lineweight\\s*[:=]\\s*-?\\d+(\\.\\d+)?\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/config/lineweight-iso-catalog.ts",
+        "src/subapps/dxf-viewer/config/default-lineweight-resolver.ts",
+        "src/subapps/dxf-viewer/config/__tests__/lineweight-iso-catalog.test.ts",
+        "src/subapps/dxf-viewer/config/__tests__/default-lineweight-resolver.test.ts",
+        "src/subapps/dxf-viewer/types/entities.ts"
+      ],
+      "addedDate": "2026-05-16",
+      "addedByAdr": "ADR-358",
+      "tier": 3
     }
   }
 }
