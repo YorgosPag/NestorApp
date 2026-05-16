@@ -158,13 +158,13 @@ function clipCircleByPoly(e: CircleEntity, poly: Array<[number, number]>): Entit
     const inside = pointInPolygon(pt, poly);
     if (inside && segStart === null) { segStart = deg; }
     else if (!inside && segStart !== null) {
-      arcs.push({ id: e.id, type: 'arc', layer: e.layer, color: e.color, visible: e.visible, center, radius, startAngle: segStart, endAngle: lastDeg, counterclockwise: true } as ArcEntity);
+      arcs.push({ id: e.id, type: 'arc', layerId: e.layerId, color: e.color, visible: e.visible, center, radius, startAngle: segStart, endAngle: lastDeg, counterclockwise: true } as ArcEntity);
       segStart = null;
     }
     lastDeg = deg;
   }
   if (segStart !== null) {
-    arcs.push({ id: e.id, type: 'arc', layer: e.layer, color: e.color, visible: e.visible, center, radius, startAngle: segStart, endAngle: lastDeg, counterclockwise: true } as ArcEntity);
+    arcs.push({ id: e.id, type: 'arc', layerId: e.layerId, color: e.color, visible: e.visible, center, radius, startAngle: segStart, endAngle: lastDeg, counterclockwise: true } as ArcEntity);
   }
   return arcs;
 }
