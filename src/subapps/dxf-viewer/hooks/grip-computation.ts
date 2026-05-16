@@ -13,6 +13,7 @@ import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo } from './useGripMovement';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
+import { getStairGrips } from '../systems/stairs/stair-grips';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -180,6 +181,12 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
         entityId: entity.id, gripIndex: 2, type: 'vertex',
         position: entity.point2, movesEntity: false,
       });
+      break;
+    }
+
+    case 'stair': {
+      // ADR-358 Phase 5b — parametric stair grips (5 kinds, §5.12).
+      grips.push(...getStairGrips(entity.stairEntity));
       break;
     }
   }
