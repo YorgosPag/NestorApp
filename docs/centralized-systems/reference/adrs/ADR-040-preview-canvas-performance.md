@@ -71,26 +71,49 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
-### 2026-05-16: Fix idle re-render loop — `useLevelsFirestoreSync` subscription thrash
+### 2026-05-16: Fix idle re-render loop — `SharedPropertiesProvider` cascade
 
-**Bug**: `CanvasSection.tsx` re-rendered at ~3.8Hz (~263ms period) at full idle (no input, no mouse, no key). PERF_LINE `CanvasSection.commit` + `DxfCanvasSubscriber.commit` flussi continui in console. Tutta la micro-leaf architecture (ADR-040 Phase II) bypassata da una cascade upstream proveniente da `LevelsContext`.
+**Bug**: `CanvasSection.tsx` re-rendered ad alta frequenza (~4-7Hz bursts) al pieno idle (no input, no mouse, no key). PERF_LINE `CanvasSection.commit` + `DxfCanvasSubscriber.commit` flussi continui in console. Tutta la micro-leaf architecture (ADR-040 Phase II) bypassata da cascade upstream.
 
-**Root cause**: `src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts` aveva `currentLevelId` nell'array di dipendenze del `useEffect` che gestiva la subscription Firestore `onSnapshot('DXF_VIEWER_LEVELS')`. Ogni cambio di `currentLevelId` (anche identity-only via context re-render) faceva teardown + re-attach della subscription; Firestore SDK consegna immediatamente uno snapshot da local cache su ogni re-attach (~250ms ciclico), che dentro il callback chiamava `setLevels(...)` → context update → `useLevels()` consumer (CanvasSection.tsx:122) re-render → ciclo si auto-alimenta. Periodo 263ms = cost teardown+rebuild Firestore listener.
+**Root cause**: `src/contexts/SharedPropertiesProvider.tsx` aveva DUE bug combinati in feedback loop:
 
-**Fix**: promosso `currentLevelId` a ref (`currentLevelIdRef`) letto imperativamente dentro il callback. Rimosso `currentLevelId` dai deps dell'effetto. La subscription Firestore viene ora creata UNA volta per `(companyId, isSuperAdmin)` invariante e rimane stabile — il re-election logic dentro il callback usa sempre il valore ref aggiornato. Zero modifiche al business logic.
+1. **Line 72-77 — `activate` callback con `[activated]` nei deps**: ogni volta che `activated` cambiava (anche da `true` a `true` via re-render), nuova ref `activate`.
+2. **Line 173-184 — context value object literal NON memoizzato**: `<SharedPropertiesContext.Provider value={{ ..., activate }}>` creava nuovo oggetto ad ogni render.
+3. **`useSharedProperties:200-202` — `useEffect(() => context.activate(), [context])`**: dep su oggetto context non-stabile faceva refire l'effetto ad ogni render, chiamando `activate()` → `setActivated(true)` → render → nuovo `activate` → nuovo context → effetto refire → loop infinito.
 
-**File modificati**:
-- `src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts`: aggiunto `useRef`, promosso `currentLevelId` a ref, rimosso da deps array.
+`CanvasSection` consuma indirettamente: `useLiveOverlaysForLevel` → `useSharedProperties()`. Ogni iterazione del loop → cascade in CanvasSection. La doppia chiamata `GET /api/floorplan-backgrounds` osservata nei log è sintomo secondario dello stesso loop (rimount/effect refire). Il log `[SharedProperties] Lazy activation triggered` apparso DUE volte è la firma del bug — dovrebbe firare esattamente una volta.
 
-**Pattern**: identico alla cardinal rule 2 di ADR-040 ("event-handler reads MUST use getter not snapshot") — esteso ora ai callback Firestore. Subscription long-lived devono leggere stato React via ref, non via closure-on-deps.
+**Fix (2 micro-changes in `src/contexts/SharedPropertiesProvider.tsx`)**:
 
-**Verifica**: dopo fix, idle PERF_LINE silenzioso (zero commit logs a riposo). React DevTools Profiler 5s idle → zero re-render registrati. CanvasSection re-render solo su input legittimo (mouse move attivo / tool change / level switch).
+A) `activate` con functional setter + deps vuote → ref stabile per sempre:
+```ts
+const activate = useCallback(() => {
+  setActivated((prev) => {
+    if (prev) return prev;
+    logger.info('[SharedProperties] Lazy activation triggered');
+    return true;
+  });
+}, []);
+```
 
-**Secondary offenders identificati (non root cause idle loop, follow-up separato)**:
-- `CanvasSection.tsx:122` chiama `useLevels()` (full context subscription) — ADR-040 violation latente. Idealmente dovrebbe consumare slice stabile (es. `useLevelScene(levelId)`).
-- `overlays/overlay-store.tsx:130` produce nuovo `overlays: Record<string, Overlay>` ad ogni snapshot — ogni write su `floorplan_overlays` cascade in `useLiveOverlaysForLevel` → CanvasSection. Non idle-driven, ma write-heavy sessions ne risentono.
+B) `contextValue` memoizzato con deps espliciti su tutti i campi:
+```ts
+const contextValue = useMemo(() => ({
+  properties: properties || [], floors, setProperties, isLoading, error, forceDataRefresh, activate,
+}), [properties, floors, setProperties, isLoading, error, forceDataRefresh, activate]);
+return <SharedPropertiesContext.Provider value={contextValue}>{children}</SharedPropertiesContext.Provider>;
+```
 
-Questi due punti aprono un follow-up ADR-040 Phase XIV separato — non bloccanti per il fix idle loop.
+**Fix collaterale (commit chain stessa sessione)**: `src/subapps/dxf-viewer/systems/levels/hooks/useLevelsFirestoreSync.ts` — `currentLevelId` rimosso dai deps del `useEffect` Firestore subscription, promosso a `currentLevelIdRef`. Tear-down/rebuild della subscription on level change era un secondary amplifier (non root cause). Fix preservato come hardening ADR-040 (pattern cardinal rule 2 esteso ai Firestore callback).
+
+**Pattern**: anti-pattern classico React — Context.Provider value object literal senza `useMemo` + useCallback con dipendenza sul proprio setState. Combinazione = cascade infinita. La fix è canonica (memo + functional setter) e diventa baseline per tutti i Provider del progetto.
+
+**Verifica**: dopo fix, log `[SharedProperties] Lazy activation triggered` apparirà esattamente UNA volta. PERF_LINE `CanvasSection.commit` + `DxfCanvasSubscriber.commit` silenziosi al pieno idle (no commit logs salvo input genuino).
+
+**Secondary offenders identificati (follow-up Phase XIV separato, non bloccanti)**:
+- `LevelsSystem.tsx:428-432` — `LevelsContext.Provider value={value}` con `value` da `useLevelsSystemState()` non-memoizzato (plain object return) → ogni render del provider crea nuova ref. Amplifier passivo.
+- `CanvasSection.tsx:122` chiama `useLevels()` (full context subscription) — dovrebbe usare slice stabile (es. `useLevelScene(levelId)`).
+- `overlays/overlay-store.tsx:130` produce nuovo `overlays: Record<string, Overlay>` ad ogni snapshot — ogni write su `floorplan_overlays` cascade in `useLiveOverlaysForLevel` → CanvasSection. Non idle-driven, write-heavy sessions ne risentono.
 
 ---
 
