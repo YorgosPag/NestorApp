@@ -169,12 +169,20 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
         // Without this guard, every Firestore emission (even with identical filtered
         // content) calls setPropertiesState, setFloors, setIsLoading, setError,
         // invalidating contextValue useMemo, creating new context → loop.
-        if (
-          dequal(lastFilteredPropertiesRef.current, propertiesData) &&
-          dequal(lastFilteredFloorsRef.current, floorsArray) &&
-          lastIsLoadingRef.current === nextIsLoading &&
-          lastErrorRef.current === nextError
-        ) {
+        const propEqual = dequal(lastFilteredPropertiesRef.current, propertiesData);
+        const floorsEqual = dequal(lastFilteredFloorsRef.current, floorsArray);
+        const loadingEqual = lastIsLoadingRef.current === nextIsLoading;
+        const errorEqual = lastErrorRef.current === nextError;
+
+        if (DEBUG_SHARED_PROPERTIES_PROVIDER) {
+          logger.info('[SharedProperties] Equality check', {
+            propEqual, floorsEqual, loadingEqual, errorEqual,
+            propLen: propertiesData.length, floorsLen: floorsArray.length,
+          });
+        }
+
+        if (propEqual && floorsEqual && loadingEqual && errorEqual) {
+          if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info('[SharedProperties] All equal → skipping setState');
           return;
         }
 
@@ -246,7 +254,12 @@ export function useSharedProperties() {
     context.activate();
   }, [context]);
 
-  // Return without the activate function (internal use only)
-  const { activate: _activate, ...publicContext } = context;
-  return publicContext;
+  // ADR-040 Phase XVI: Memoize return object (without activate).
+  // Destructuring creates new object every call → invalidates consumer useMemo.
+  // Without memoization here, useLiveOverlaysForLevel and other consumers
+  // see new ref every render despite context being stable.
+  return useMemo(() => {
+    const { activate: _activate, ...publicContext } = context;
+    return publicContext;
+  }, [context]);
 }
