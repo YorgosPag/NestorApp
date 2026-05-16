@@ -17,6 +17,17 @@ import {
   getEntitiesNotInLayer,
   getEntitiesNotInLayers
 } from './shared/layer-operation-utils';
+// ADR-358 Phase 8.5: SSoT-based property setters
+import { getLayer, upsertLayer } from '../stores/LayerStore';
+import {
+  isConcreteLineweight,
+  parseDxfCode370,
+  LINEWEIGHT_SPECIAL,
+  LINEWEIGHT_SPECIAL_VALUES,
+} from '../config/lineweight-iso-catalog';
+import { resolveLinetype } from '../stores/LinetypeRegistry';
+import { DEFAULT_LINETYPE_NAME } from '../config/linetype-iso-catalog';
+import type { LineweightMm } from '../types/entities';
 
 export interface LayerOperationResult {
   updatedScene: SceneModel;
@@ -392,6 +403,61 @@ export class LayerOperationsService {
       success: true,
       message: `Changed color group "${colorGroupName}" to ${color}`
     };
+  }
+
+  // ─── ADR-358 Phase 8.5 — SSoT-based property setters (LayerStore.upsertLayer) ─
+
+  public setLineweight(layerId: string, lineweight: LineweightMm): void {
+    const target = getLayer(layerId);
+    if (!target) return;
+    const validated = this.validateLineweight(lineweight);
+    if (target.lineweight === validated) return;
+    upsertLayer({ ...target, lineweight: validated });
+  }
+  public setLinetype(layerId: string, linetypeName: string): void {
+    const target = getLayer(layerId);
+    if (!target) return;
+    const validated = this.validateLinetype(linetypeName);
+    if (target.linetype === validated) return;
+    upsertLayer({ ...target, linetype: validated });
+  }
+  public setTransparency(layerId: string, value: number): void {
+    const target = getLayer(layerId);
+    if (!target) return;
+    const clamped = Math.max(0, Math.min(90, value));
+    if (target.transparency === clamped) return;
+    upsertLayer({ ...target, transparency: clamped });
+  }
+  public setPlottable(layerId: string, value: boolean): void {
+    const target = getLayer(layerId);
+    if (!target) return;
+    if (target.plottable === value) return;
+    upsertLayer({ ...target, plottable: value });
+  }
+  public setFrozen(layerId: string, value: boolean): void {
+    const target = getLayer(layerId);
+    if (!target) return;
+    if ((target.frozen ?? false) === value) return;
+    upsertLayer({ ...target, frozen: value });
+  }
+  private validateLineweight(lw: LineweightMm): LineweightMm {
+    if ((LINEWEIGHT_SPECIAL_VALUES as ReadonlyArray<number>).includes(lw)) return lw;
+    if (!isConcreteLineweight(lw)) return LINEWEIGHT_SPECIAL.DEFAULT;
+    const snapped = parseDxfCode370(Math.round(Number(lw) * 100));
+    if (snapped !== lw) {
+      console.warn(
+        `[LayerOperationsService] Non-ISO lineweight ${lw}mm — snapped to ${snapped}`,
+      );
+    }
+    return snapped;
+  }
+
+  private validateLinetype(name: string): string {
+    if (resolveLinetype(name)) return name;
+    console.warn(
+      `[LayerOperationsService] Unknown linetype "${name}" — fallback ${DEFAULT_LINETYPE_NAME}`,
+    );
+    return DEFAULT_LINETYPE_NAME;
   }
 
   /**
