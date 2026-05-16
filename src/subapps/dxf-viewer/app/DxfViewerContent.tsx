@@ -11,11 +11,9 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
 import React from 'react';
-// Types
 import type { DxfViewerAppProps } from '../types';
 import type { ViewTransform } from '../rendering/types/Types';
 import type { ToolType } from '../ui/toolbar/types';
-// Hooks
 import { useDxfViewerState } from '../hooks/useDxfViewerState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useOverlayDrawing } from '../hooks/useOverlayDrawing';
@@ -28,7 +26,6 @@ import { useEntityCreationManager } from '../systems/entity-creation';
 import { useOverlayState } from '../hooks/state/useOverlayState';
 import { useCanvasTransformState } from '../hooks/state/useCanvasTransformState';
 import { useColorMenuState } from '../hooks/state/useColorMenuState';
-// Stores and Managers
 import { useOverlayStore } from '../overlays/overlay-store';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../systems/selection';
@@ -86,6 +83,7 @@ import { useRibbonArrayBridge } from '../ui/ribbon/hooks/useRibbonArrayBridge';
 import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions';
 // 📐 ADR-358 Phase 7a: bridge stair-params ↔ ribbon contextual tab
 import { useRibbonStairBridge } from '../ui/ribbon/hooks/useRibbonStairBridge';
+import { StairAdvancedPanelHost } from './StairAdvancedPanelHost';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
 import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEditorBridge';
 import { useRibbonCommands } from '../ui/ribbon/hooks/useRibbonCommands';
@@ -310,6 +308,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           commands={ribbonCommands}
           contextualTabs={ribbonContextualTabs}
           activeContextualTrigger={activeContextualTrigger}
+        />
+        <StairAdvancedPanelHost
+          primarySelectedId={primarySelectedId}
+          currentScene={currentScene}
+          levelManager={levelManager}
         />
       <section
         className={`flex flex-1 min-h-0 ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}
