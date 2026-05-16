@@ -64,6 +64,10 @@ import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSce
 import { useArrayRepickHandlers } from '../../hooks/canvas/useArrayRepickHandlers';
 import { useFloorplanAutoFit } from '../../hooks/canvas/useFloorplanAutoFit';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands';
+// 🔬 TEMP INSTRUMENTATION — ADR-040 idle render-loop diagnostics (REMOVE after fix).
+// Gated by localStorage.TRACE_RENDER_LOOP=1 or NEXT_PUBLIC_TRACE_RENDER_LOOP=1.
+import { installSetStateTracer, useRenderTrace } from '../../debug/render-loop-trace';
+installSetStateTracer();
 /**
  * Canvas orchestrator — wires hooks together and delegates rendering to CanvasLayerStack.
  * No business logic beyond hook composition.
@@ -391,6 +395,22 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   });
   // === Auto-area hover preview ===
   const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove: unified.handleMouseMove, activeTool, levelManager, currentOverlays, transformScale: transform.scale });
+  // 🔬 TEMP TRACE — ADR-040 idle render-loop diagnostics (REMOVE after root cause found).
+  useRenderTrace('CanvasSection', {
+    overlayStore, universalSelection, levelManager, currentOverlays,
+    canvasContext, transform, viewport, dxfScene, colorLayers, draftPolygon,
+    gripSettings, gridContextSettings, rulerContextSettings, cursorSettings,
+    crosshairSettings, cursorCanvasSettings, snapSettings, rulerSettings,
+    gridSettings, selectionSettings, gridMajorInterval,
+    floorplanBg, activeTool, overlayMode, currentStatus, currentKind,
+    selectedEntityIds, draggingGuide, textEditor_editingState: textEditor.editingState,
+    textCreation_state: textCreation.creatingState,
+    unified_phase: unified.phase, unified_hoveredVertexInfo: hoveredVertexInfo,
+    unified_hoveredEdgeInfo: hoveredEdgeInfo, unified_selectedGrips: selectedGrips,
+    unified_draggingVertices: draggingVertices, unified_draggingOverlayBody: draggingOverlayBody,
+    unified_dragPreviewPosition: dragPreviewPosition,
+    entityJoinState, props_currentScene: props.currentScene,
+  });
   // === Render ===
   return (
     <>
