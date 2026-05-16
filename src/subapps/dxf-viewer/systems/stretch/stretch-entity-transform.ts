@@ -319,6 +319,8 @@ function stretchRectangle(
   const replacement = {
     id: entity.id,
     layer: entity.layer,
+    // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+    layerId: entity.layerId,
     visible: entity.visible,
     type: 'polyline' as const,
     vertices: newVertices,
