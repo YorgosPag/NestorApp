@@ -22,6 +22,11 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { ICON_CLICK_COLORS } from '../../config/color-config';
 import type { PreviewGripPoint } from '../../types/entities';
 import type { ApplySettingsFn } from './drawing-preview-generator';
+import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
+import { getLayer } from '../../stores/LayerStore';
+import { LINEWEIGHT_ISO_VALUES } from '../../config/lineweight-iso-catalog';
+
+const LINEWEIGHT_1MM = LINEWEIGHT_ISO_VALUES[17];
 
 // ─── Preview Styling ─────────────────────────────────────────────────────────
 
@@ -179,6 +184,8 @@ export function createPartialPreview(
   points: Point2D[]
 ): ExtendedSceneEntity | null {
   if (points.length === 0) return null;
+  // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+  const defaultLayerId = getLayer(DXF_DEFAULT_LAYER)?.id;
 
   // ── Pattern A: 3-point tools (dot at 1pt, line at 2pt) ────────────────
   if (THREE_POINT_DOT_LINE_TOOLS.has(tool)) {
@@ -190,6 +197,7 @@ export function createPartialPreview(
         size: 4,
         visible: true,
         layer: '0',
+        layerId: defaultLayerId,
         preview: true,
         showPreviewGrips: true,
       } as PreviewPoint;
@@ -202,8 +210,9 @@ export function createPartialPreview(
         end: points[1],
         visible: true,
         layer: '0',
+        layerId: defaultLayerId,
         color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
-        lineweight: 1,
+        lineweight: LINEWEIGHT_1MM,
         opacity: 1.0,
         lineType: 'solid' as const,
         preview: true,
@@ -224,6 +233,7 @@ export function createPartialPreview(
         radius: 3,
         visible: true,
         layer: '0',
+        layerId: defaultLayerId,
         measurement: true,
         preview: true,
         showPreviewGrips: true,
@@ -237,8 +247,9 @@ export function createPartialPreview(
         closed: false,
         visible: true,
         layer: '0',
+        layerId: defaultLayerId,
         color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
-        lineweight: 1,
+        lineweight: LINEWEIGHT_1MM,
         opacity: 1.0,
         lineType: 'solid' as const,
         preview: true,
@@ -260,6 +271,7 @@ export function createPartialPreview(
         size: 4,
         visible: true,
         layer: '0',
+        layerId: defaultLayerId,
         preview: true,
         showPreviewGrips: true,
       } as PreviewPoint;
@@ -272,8 +284,9 @@ export function createPartialPreview(
         end: points[1],
         visible: true,
         layer: '0',
+        layerId: defaultLayerId,
         color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
-        lineweight: 1,
+        lineweight: LINEWEIGHT_1MM,
         opacity: 1.0,
         lineType: 'solid' as const,
         preview: true,
@@ -291,6 +304,7 @@ export function createPartialPreview(
         radius: circleResult.radius,
         visible: true,
         layer: '0',
+        layerId: defaultLayerId,
         preview: true,
         showPreviewGrips: true,
       } as ExtendedCircleEntity;
@@ -302,8 +316,9 @@ export function createPartialPreview(
       closed: false,
       visible: true,
       layer: '0',
+      layerId: defaultLayerId,
       color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
-      lineweight: 1,
+      lineweight: LINEWEIGHT_1MM,
       opacity: 1.0,
       lineType: 'solid' as const,
       preview: true,
