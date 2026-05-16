@@ -100,6 +100,9 @@
       "description": "Σχεδίαση σκάλας (stub — Φάση 0, διαθέσιμο από Φάση 5α)",
       "steps": ["Εργαλείο υπό ανάπτυξη"],
       "shortcuts": "ST | ESC=Ακύρωση",
+      "statusBasePoint": "Σκάλα: κλικ για σημείο βάσης",
+      "statusDirection": "Σκάλα: κλικ για κατεύθυνση",
+      "statusConfirm": "Σκάλα: Enter για επιβεβαίωση",
       "grips": {
         "basePoint": "Σημείο βάσης",
         "direction": "Κατεύθυνση",

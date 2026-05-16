@@ -110,6 +110,9 @@
       "description": "Draw stair (stub — Phase 0, available from Phase 5a)",
       "steps": ["Tool under development"],
       "shortcuts": "ST | ESC=Cancel",
+      "statusBasePoint": "Stair: click for base point",
+      "statusDirection": "Stair: click for direction",
+      "statusConfirm": "Stair: press Enter to confirm",
       "grips": {
         "basePoint": "Base point",
         "direction": "Direction",
