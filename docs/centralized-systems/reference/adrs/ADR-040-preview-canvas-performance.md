@@ -204,6 +204,18 @@ return <SharedPropertiesContext.Provider value={contextValue}>{children}</Shared
 
 ---
 
+### 2026-05-16: Clean up temporary render-loop diagnostics instrumentation
+
+**Context**: ADR-040 Phase XV-XVI root-cause analysis completed (Firestore equality guard + memoization chain fixes). Temporary instrumentation deployed to isolate idle render-loop amplifiers no longer needed.
+
+**Cleanup**: Removed from `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx`:
+- `installSetStateTracer()` module-level init (monkey-patch React internal setState)
+- `useRenderTrace('CanvasSection', {...})` hook with 19 state dependency snapshots
+
+Debug utilities remain in `src/subapps/dxf-viewer/debug/render-loop-trace.ts` for future troubleshooting. No logic change to CanvasSection orchestrator.
+
+---
+
 ### 2026-05-15: Z-order PageUp/PageDown — Bring to front / Send to back
 
 Aggiunti shortcut `PageUp` (bring to front) e `PageDown` (send to back) per riordinare la posizione di un'entità nella render list quando esattamente UNA entità è selezionata. Parity AutoCAD/BricsCAD `DRAWORDER`.
