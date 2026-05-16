@@ -31,7 +31,9 @@ export function AdminLayerManager({ className }: AdminLayerManagerProps) {
   };
 
   const handleLayerAction = (layerId: string, action: string) => {
-
+    if (action === 'setAsCurrent') {
+      actions.setCurrentLayer(layerId);
+    }
   };
 
   return (
