@@ -25,6 +25,13 @@ export interface RibbonComboboxState {
 }
 
 export interface RibbonCommandsApi {
+  /**
+   * ADR-345 Fase 5.6 — currently active tool, used by tool buttons (Large /
+   * Small / Split) to render their pressed/highlighted state. `null` means
+   * no tool button should appear active (e.g. transient action mode).
+   * The bridge wires this from `useDxfViewerState.activeTool`.
+   */
+  activeTool?: ToolType | null;
   onToolChange: (tool: ToolType) => void;
   /** ADR-345 §3.2 Fase 4 — fires when a button marked `comingSoon` is clicked. */
   onComingSoon: (label: string) => void;
@@ -74,6 +81,8 @@ export interface RibbonCommandsApi {
 }
 
 interface RibbonCommandContextValue {
+  /** ADR-345 Fase 5.6 — see RibbonCommandsApi.activeTool. */
+  activeTool: ToolType | null;
   onToolChange: (tool: ToolType) => void;
   onComingSoon: (label: string) => void;
   onAction: (action: string, data?: RibbonActionPayload) => void;
@@ -113,6 +122,7 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
 
   const value = useMemo<RibbonCommandContextValue>(
     () => ({
+      activeTool: commands.activeTool ?? null,
       onToolChange: commands.onToolChange,
       onComingSoon: commands.onComingSoon,
       onAction: commands.onAction,
@@ -126,6 +136,7 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       setSplitLastUsed,
     }),
     [
+      commands.activeTool,
       commands.onToolChange,
       commands.onComingSoon,
       commands.onAction,
