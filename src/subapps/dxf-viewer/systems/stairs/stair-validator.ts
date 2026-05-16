@@ -71,7 +71,7 @@ function checkHeadroom(
     const elevation = extractEntityElevation(entity);
     if (elevation === null) continue;
     const clearance = elevation - stairTopZ;
-    if (clearance < minClearance) return ['stairs.validator.headroomBelowMin'];
+    if (clearance < minClearance) return ['tools.stair.validator.headroomBelowMin'];
   }
   return [];
 }
