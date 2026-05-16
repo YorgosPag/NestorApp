@@ -9,6 +9,7 @@ export interface Layer {
   category: string;
   visible: boolean;
   elements: number;
+  isCurrent?: boolean;
 }
 
 export interface Category {
@@ -28,6 +29,7 @@ export interface LayerManagerActions {
   setSelectedCategory: (category: string) => void;
   setIsConnected: (connected: boolean) => void;
   toggleLayerVisibility: (layerId: string) => void;
+  setCurrentLayer: (layerId: string) => void;
 }
 
 export interface LayerStatistics {
