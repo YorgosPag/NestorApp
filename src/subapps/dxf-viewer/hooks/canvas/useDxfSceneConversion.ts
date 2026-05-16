@@ -50,18 +50,49 @@ export interface UseDxfSceneConversionReturn {
 // PURE CONVERSION HELPERS (module-level, stable refs)
 // ============================================================================
 
+/**
+ * ADR-358 §G7 Phase 6 — sentinel-aware projection from SceneModel → DxfScene.
+ *
+ * Legacy path (Phase 1-5 baseline): entity declares concrete `color` + `lineweight`
+ *   → flatten to `color` hex + `lineWidth` px (preserves visual baseline).
+ *
+ * Sentinel path (Phase 6 LIVE): entity declares `colorMode: 'ByLayer'`/'ByBlock' OR
+ * `lineweightMm` ∈ { -3 DEFAULT, -2 BYLAYER, -1 BYBLOCK } OR
+ * `linetypeName: 'ByLayer'/'ByBlock'`
+ *   → forward the sentinel fields, SKIP the flattened legacy fields. The renderer's
+ *   `resolveStyleForRender()` then cascades live through `layersById` → layer style.
+ */
 function buildBase(entity: SceneEntity, layers: SceneLayers) {
   const layerInfo = entity.layer ? layers[entity.layer] : null;
   const m = entity as typeof entity & {
     measurement?: boolean;
     showEdgeDistances?: boolean;
   };
+
+  const colorByLayer = entity.colorMode === 'ByLayer' || entity.colorMode === 'ByBlock';
+  const lwSentinel = entity.lineweightMm !== undefined
+    && (entity.lineweightMm === -3 || entity.lineweightMm === -2 || entity.lineweightMm === -1);
+  const ltSentinel = entity.linetypeName === 'ByLayer' || entity.linetypeName === 'ByBlock';
+
   return {
     id: entity.id,
     layer: getLayerNameOrDefault(entity.layer),
-    color: String(entity.color || layerInfo?.color || UI_COLORS.WHITE),
-    lineWidth: entity.lineweight || 1,
+    // Phase 6: omit `color` when entity opts into ByLayer/ByBlock cascade. Resolver
+    // reads `colorMode` + `layersById[layer].color` at render time.
+    ...(colorByLayer
+      ? {}
+      : { color: String(entity.color || layerInfo?.color || UI_COLORS.WHITE) }),
+    // Phase 6: omit `lineWidth` when entity declares a sentinel lineweight.
+    // Resolver converts `layer.lineweight` mm → px via `lineweightToPx()`.
+    ...(lwSentinel ? {} : { lineWidth: entity.lineweight || 1 }),
     visible: entity.visible ?? true,
+    // ─── Sentinel forwarding (Phase 6 §G7) ─────────────────────────────
+    ...(entity.colorMode !== undefined && { colorMode: entity.colorMode }),
+    ...(entity.colorAci !== undefined && { colorAci: entity.colorAci }),
+    ...(entity.colorTrueColor !== undefined && { colorTrueColor: entity.colorTrueColor }),
+    ...((ltSentinel || entity.linetypeName) && { linetypeName: entity.linetypeName }),
+    ...(entity.lineweightMm !== undefined && { lineweightMm: entity.lineweightMm }),
+    ...(entity.transparency !== undefined && { transparency: entity.transparency }),
     ...(m.measurement !== undefined && { measurement: m.measurement }),
     ...(m.showEdgeDistances !== undefined && { showEdgeDistances: m.showEdgeDistances }),
   };
@@ -271,6 +302,8 @@ export function useDxfSceneConversion({
     return {
       entities: converted,
       layers: Object.keys(layers),
+      // ADR-358 §G7 Phase 5 — bridge full SceneLayer map for ByLayer/ByBlock resolver.
+      layersById: currentScene?.layers,
       bounds: currentScene?.bounds ?? null,
     };
   }), [currentScene]);

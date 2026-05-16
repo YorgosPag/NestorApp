@@ -428,13 +428,19 @@ export class DxfRenderer {
   }
 
   /**
-   * ADR-358 §G7 Phase 4 — ByLayer/ByBlock style resolution at render time.
+   * ADR-358 §G7 Phase 6 — ByLayer/ByBlock style resolution at render time (LIVE).
    *
    * Routes each entity through the centralised `resolveEntityStyle()` SSoT when
    * `layersById` is provided, producing concrete colour + lineweight (mm → px
    * via `lineweightToPx`). Falls back to literal entity values (legacy path)
    * when no layer map is supplied or the entity's layer is unknown — preserves
-   * Phase 1-3 visual baseline until callers wire the SceneModel bridge.
+   * Phase 1-3 visual baseline for entities that emit concrete styles.
+   *
+   * Phase 6 (2026-05-16): the adapter now forwards the full sentinel set
+   * (`colorMode`, `colorAci`, `colorTrueColor`, `linetypeName`, `lineweightMm`,
+   * `transparency`) — not just `color` — so entities that opt into the cascade
+   * actually inherit live from `layer.color` / `layer.lineweight` when the user
+   * edits layer style in `AdminLayerManager`.
    */
   private resolveStyleForRender(
     entity: DxfEntityUnion,
@@ -447,7 +453,15 @@ export class DxfRenderer {
     if (!layersById) return fallback;
     const layer = layersById[entity.layer];
     if (!layer) return fallback;
-    const styleInput = entityToStyleInput({ color: entity.color });
+    const styleInput = entityToStyleInput({
+      color: entity.color,
+      colorMode: entity.colorMode,
+      colorAci: entity.colorAci,
+      colorTrueColor: entity.colorTrueColor,
+      linetypeName: entity.linetypeName,
+      lineweightMm: entity.lineweightMm,
+      transparency: entity.transparency,
+    });
     const resolved = resolveEntityStyle(styleInput, layer);
     const px = lineweightToPx(resolved.lineweight, 96);
     return {

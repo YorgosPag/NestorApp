@@ -4,16 +4,43 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { SceneLayer } from '../../types/entities';
+import type { SceneLayer, LineweightMm } from '../../types/entities';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
   type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement';
   layer: string;
-  color: string;
-  lineWidth: number;
+  /**
+   * ADR-358 §G7 Phase 6 — concrete hex color. Optional sentinel: when absent
+   * AND `colorMode !== 'Concrete'`, the renderer cascades through
+   * `resolveStyleForRender()` → layer color (ByLayer). Legacy entities that
+   * emit a literal hex keep working unchanged.
+   */
+  color?: string;
+  /**
+   * ADR-358 §G7 Phase 6 — concrete stroke width in px. Optional sentinel:
+   * when absent AND `lineweightMm` is missing or a -3/-2/-1 sentinel, the
+   * renderer cascades to layer.lineweight via `resolveStyleForRender()`.
+   */
+  lineWidth?: number;
   visible: boolean;
+  // ─── ADR-358 §G7 — ByLayer / ByBlock sentinel inputs (Phase 6) ──────────
+  // Mirror of `BaseEntity` Phase-4 fields. Forwarded by `useDxfSceneConversion`
+  // so `DxfRenderer.resolveStyleForRender()` can route through the full
+  // `entityToStyleInput()` adapter (color + linetype + lineweight cascade).
+  /** Explicit colour resolution mode. Missing or 'ByLayer' → inherit from layer. */
+  colorMode?: 'ByLayer' | 'ByBlock' | 'Concrete';
+  /** ACI 1-255 — DXF group 62. Takes priority over `color` hex when present. */
+  colorAci?: number;
+  /** TrueColor 0xRRGGBB — DXF group 420. Takes priority over ACI + hex. */
+  colorTrueColor?: number | null;
+  /** Linetype DXF name — literals 'ByLayer'/'ByBlock' opt into inheritance. */
+  linetypeName?: string;
+  /** Lineweight mm — DXF group 370. Accepts -3/-2/-1 sentinels. */
+  lineweightMm?: LineweightMm;
+  /** Transparency 0-90 — DXF group 1071. 0 = opaque. */
+  transparency?: number;
 }
 
 export interface DxfLine extends DxfEntity {
@@ -87,7 +114,15 @@ export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfTex
 // === DXF SCENE ===
 export interface DxfScene {
   entities: DxfEntityUnion[];
+  /** @deprecated ADR-358 §G7 Phase 5 — use `layersById` for full SceneLayer access. Kept lossy for legacy callers (bounds calc, FitToView, etc.). */
   layers: string[];
+  /**
+   * ADR-358 §G7 Phase 5 — full `SceneLayer` map keyed by layer name.
+   * Bridges `SceneModel.layers` into the renderer so `resolveEntityStyle()` can
+   * cascade ByLayer/ByBlock/DEFAULT sentinels. Absent → renderer falls back to
+   * per-entity literal values (legacy path, Phase 1-4 baseline).
+   */
+  layersById?: Record<string, SceneLayer>;
   bounds: {
     min: Point2D;
     max: Point2D;

@@ -71,6 +71,52 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-16 (Phase XV): Fix residual idle re-render loop — Firestore `setLevels` cascade
+
+**Bug**: Dopo il fix `SharedPropertiesProvider` (entry sotto), persisteva un secondo loop idle ~3-10Hz (PERF_LINE `CanvasSection.commit` + `DxfCanvasSubscriber.commit` continui, no input). Render-trace instrumentation (`debug/render-loop-trace.ts`) ha rivelato `levelManagerLevels` SEMPRE in `ref-only` su ogni `[DVC-SNAPSHOT]` e `[CS-RENDER]` — pure ref churn senza content change.
+
+**Root cause**: `firestoreQueryService.subscribe('DXF_VIEWER_LEVELS', ...)` ri-emette snapshot Firestore ad alta frequenza (cache hydration + pending writes ack) con `documents` array prodotto fresh da `snapshot.docs.map(...)` → **nuova ref, contenuto identico**.
+
+`useLevelsFirestoreSync` chiamava `setLevels(fetchedLevels)` SENZA equality guard → React vede new ref → `setState` dispatched → `LevelsSystem` provider re-render → `value` (non memoizzato, plain object return da `useLevelsSystemState`) cascade → tutti i `useLevels()` consumer re-render → `useDxfViewerState` ritorna nuovo `state` literal → `DxfViewerContent` + `CanvasSection` re-render ~10Hz idle.
+
+Era il "Secondary offender" registrato nella entry precedente (`LevelsSystem.tsx:428-432`) — promosso a primary root cause da questa instrumentation session.
+
+**Fix**: equality guard via JSON hash su 8 campi structural in `useLevelsFirestoreSync` (`hooks/useLevelsFirestoreSync.ts`):
+
+```ts
+const prevLevelsHashRef = useRef<string>('');
+// ...inside onSnapshot callback:
+const nextHash = JSON.stringify(
+  fetchedLevels.map((l) => [
+    l.id, l.name, l.order, l.isDefault, l.visible,
+    l.floorId, l.buildingId, l.sceneFileId,
+  ]),
+);
+if (nextHash === prevLevelsHashRef.current) {
+  setIsLoading(false);
+  setError(null);
+  return; // skip setLevels — content unchanged, no cascade
+}
+prevLevelsHashRef.current = nextHash;
+setLevels(fetchedLevels);
+```
+
+Hash JSON costo trascurabile su N=1-5 levels (typical). Skip diretto = zero state mutation, zero re-render downstream.
+
+**Verifica**: post-fix, `[DVC-SNAPSHOT]` / `[CS-RENDER]` fermi a `#11` durante boot phase (Auth + NavigationContext + Firestore listener setup), poi **silenzio totale** al idle. `levelManagerLevels` / `levelsArray` SCOMPARSI dal `ref-only`. Pattern confermato da Giorgio (2026-05-16 13:08).
+
+**Pattern (cardinal rule N5 esteso)**: ogni consumer di `firestoreQueryService.subscribe` DEVE includere equality guard su content hash prima di chiamare setter di state. Firestore re-emette aggressivamente cached snapshots — without guard, ogni subscriber è amplificatore passivo del render loop.
+
+**Diagnostica usata (riusabile)**: `src/subapps/dxf-viewer/debug/render-loop-trace.ts` — SSOT helper env-gated (`NEXT_PUBLIC_TRACE_RENDER_LOOP=1` o `localStorage.setItem('TRACE_RENDER_LOOP','1')`). Esporta `useRenderTrace(label, snapshot)` + `installSetStateTracer()`. Monkey-patch `React.useState`/`useReducer`/`useSyncExternalStore` NON funziona su Firefox+Turbopack (React namespace frozen) — patch fallisce gracefully, `useRenderTrace` rimane operativo come strumento principale. No-op in production.
+
+**Follow-up still open** (non bloccante idle):
+- `LevelsSystem.tsx:428-432` — `value` ancora non memoizzato. Defense-in-depth opzionale (`useMemo` con ~30 dep). Skip per ora — fix #1 ferma cascade alla sorgente, downstream guard ridondante.
+- `CanvasSection.tsx` — `useLevels()` full subscription. Slice stabile `useLevelScene(levelId)` rimane raccomandazione.
+- `overlays/overlay-store.tsx:130` — write-heavy amplifier su `floorplan_overlays`. Stesso pattern equality guard applicabile.
+- `useDxfViewerState` (line 375-408) — return object literal fresh ad ogni render. Cosmetic effetto, non causa.
+
+---
+
 ### 2026-05-16: Fix idle re-render loop — `SharedPropertiesProvider` cascade
 
 **Bug**: `CanvasSection.tsx` re-rendered ad alta frequenza (~4-7Hz bursts) al pieno idle (no input, no mouse, no key). PERF_LINE `CanvasSection.commit` + `DxfCanvasSubscriber.commit` flussi continui in console. Tutta la micro-leaf architecture (ADR-040 Phase II) bypassata da cascade upstream.
@@ -1345,3 +1391,7 @@ Parallel diagnostic in `DxfViewerContent.tsx` (parent of CanvasSection). `DVC-RE
 ## 2026-05-16: render-loop-trace abstraction (debug/render-loop-trace.ts)
 
 Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks into a reusable `useRenderTrace(label, values)` hook in `src/subapps/dxf-viewer/debug/render-loop-trace.ts` (222 lines). Hook is env-gated (`NEXT_PUBLIC_RENDER_TRACE=1`): no-op in prod, zero overhead. `installSetStateTracer()` optional companion patches React's `setState` for set-state-level diagnosis. `CanvasSection.tsx` replaces its 40-line manual block with `useRenderTrace('CS-RENDER', {...})`. `DxfViewerContent.tsx` removes both `DVC-RENDER` + `DVC-SNAPSHOT` inline blocks (reducing from committed 521 → 497 lines, passing N.7.1 budget), wires `useRenderTrace('DVC-SNAPSHOT', {...})` instead. Cardinal rules maintained: no `useSyncExternalStore` calls added to orchestrators.
+
+## 2026-05-16: ADR-358 §G7 Phase 6 — ByLayer/ByBlock full sentinel pipeline LIVE
+
+`DxfRenderer.resolveStyleForRender()` now forwards the full sentinel set (`colorMode`, `colorAci`, `colorTrueColor`, `linetypeName`, `lineweightMm`, `transparency`) through `entityToStyleInput()` — not just legacy `color` hex (Phase 4 stub). Entities that declare `colorMode: 'ByLayer'` / `'ByBlock'` or sentinel lineweights (`-3`/`-2`/`-1`) now inherit live from `layer.color` / `layer.lineweight` when the user edits layer style in `AdminLayerManager`. `DxfEntity` in `dxf-types.ts` gains the full optional sentinel field set (mirrors `BaseEntity` Phase-4 fields). `useDxfSceneConversion` Phase 6: sentinel-aware `buildBase()` — omits flattened `color`/`lineWidth` when entity opts into ByLayer/ByBlock cascade, forwards sentinel fields to `DxfScene`. `dxf-canvas-renderer.ts` bridges `curScene.layersById` into all three `renderer.render()` + `renderSingleEntity()` calls. 2 new test suites (bylayer-emission, layers-bridge — 269 LOC) verify sentinel emission and bridge. Cardinal rules maintained: no new `useSyncExternalStore` calls.

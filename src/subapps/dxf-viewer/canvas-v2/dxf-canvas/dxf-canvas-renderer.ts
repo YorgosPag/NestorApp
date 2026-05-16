@@ -140,9 +140,14 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       const hitTesting = serviceRegistry.get('hit-testing');
       hitTesting.updateScene(curScene);
 
+      // ADR-358 §G7 Phase 5 — bridge SceneModel.layers into renderer via DxfScene.layersById.
+      // Absent → renderer falls back to per-entity literal values (Phase 1-4 baseline).
+      const curLayersById = curScene?.layersById;
+
       renderer.render(curScene, currentTransform, currentViewport, {
         ...curRenderOptions,
         skipInteractive: true,
+        layersById: curLayersById,
       });
 
       // 1b: Single-entity interactive overlays (O(1) via entityMap)
@@ -152,6 +157,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
               gripInteractionState: curRenderOptions.gripInteractionState,
+              layersById: curLayersById,
             });
           }
         }
@@ -166,6 +172,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {
               gripInteractionState: curRenderOptions.gripInteractionState,
+              layersById: curLayersById,
             });
           }
         }
