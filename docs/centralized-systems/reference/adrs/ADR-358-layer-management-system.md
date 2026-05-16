@@ -1593,7 +1593,7 @@ LINE tool → completeEntity()
 | **8** | `AdminLayerManager` wired al `LayerStore` — drop mock data — preserve UI props (era §7.2 Phase 6, ricontestualizzato post-6.5) | 5 | M | Q7 | ✅ v2.8 |
 | **~~6 (originale)~~** | ~~`AdminLayerManager` wired al `LayerStore`~~ — **rinumerato Phase 8 (v2.8)** per allineamento sequential post-dependency ordering | — | — | — | → Phase 8 |
 | **7** | `CurrentLayerPicker` ribbon/status-bar + persistence `dxf:currentLayerId.{levelId}` + Q8 full contract (initial seed, alpha fallback, context menu, keyboard nav, permission guard, swatch pulse, category Lucide icons) | 12 | M | Q8 | ✅ v2.9 |
-| **8 (originale)** | `LayerOperationsService` esteso (setLineweight/setLinetype/setTransparency/setPlottable/setFrozen) — **da rinumerare next free** | 3 | S | — | ⏳ |
+| **8.5** | `LayerOperationsService` esteso (setLineweight/setLinetype/setTransparency/setPlottable/setFrozen) via `LayerStore.upsertLayer` SSoT — wire-up UI Phase 8.5b DEFERRED | 3 | S | — | ✅ v2.10 |
 | **9** | Layer rename con backref completi (entity.layerId migration + audit commandHistory/regions) | 5 | L | Q9 |
 | **10** | Comandi `LayerIsolate / Unisolate / Dim / Off` + click-driven UX | 5 | M | Q10 |
 | **11** | Layer Filters Builder (Group + Properties) nel manager | 4 | M | Q11 |
