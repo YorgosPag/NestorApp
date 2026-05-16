@@ -347,7 +347,8 @@
       "settings": "Ρυθμίσεις",
       "textEditor": "Επεξεργαστής Κειμένου",
       "arrayEditor": "Πίνακας",
-      "stairProperties": "Ιδιότητες Κλίμακας"
+      "stairProperties": "Ιδιότητες Κλίμακας",
+      "validationBadge": "Παραβίαση κανονισμών"
     },
     "panels": {
       "draw": "Σχεδίαση",

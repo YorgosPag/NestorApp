@@ -347,7 +347,8 @@
       "settings": "Settings",
       "textEditor": "Text Editor",
       "arrayEditor": "Array",
-      "stairProperties": "Stair Properties"
+      "stairProperties": "Stair Properties",
+      "validationBadge": "Code violation"
     },
     "panels": {
       "draw": "Draw",
