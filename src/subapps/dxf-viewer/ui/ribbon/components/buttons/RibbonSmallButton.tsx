@@ -20,10 +20,16 @@ export const RibbonSmallButton: React.FC<RibbonSmallButtonProps> = ({
   command,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, onComingSoon, onAction } = useRibbonCommand();
+  const { onToolChange, onComingSoon, onAction, activeTool } = useRibbonCommand();
 
   const label = t(command.labelKey);
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
+  // ADR-345 Fase 5.6 — see RibbonLargeButton for rationale.
+  const isActive =
+    !command.comingSoon &&
+    !command.action &&
+    activeTool !== null &&
+    activeTool === command.commandKey;
 
   const handleClick = useCallback(() => {
     if (command.comingSoon) {
@@ -53,8 +59,10 @@ export const RibbonSmallButton: React.FC<RibbonSmallButtonProps> = ({
           type="button"
           className="dxf-ribbon-btn dxf-ribbon-btn-small"
           onClick={handleClick}
+          aria-pressed={isActive || undefined}
           data-command-id={command.id}
           data-coming-soon={command.comingSoon ? 'true' : undefined}
+          data-active={isActive ? 'true' : undefined}
         >
           <RibbonButtonIcon icon={command.iconSmall ?? command.icon} size="small" />
           <span className="dxf-ribbon-btn-label-inline">{label}</span>
