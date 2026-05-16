@@ -26,6 +26,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { StairEntity } from '../../types/stair';
 import { stairStatusStore } from '../../statusbar/stair-status-store';
+import type { DynamicSubmitDetail } from '../../systems/dynamic-input/utils/events';
 import {
   buildDefaultStairParams,
   buildStairEntity,
@@ -139,6 +140,23 @@ export function useStairTool(options: UseStairToolOptions = {}): UseStairToolRes
     return commitFromState(s);
   }, [commitFromState]);
 
+  /**
+   * ADR-358 Phase 7b2b-β Stream E — commit with inline Dynamic Input overrides
+   * applied atomically (bypasses async setState batching). Called by the
+   * `commit-stair` event listener below.
+   */
+  const confirmWithOverrides = useCallback(
+    (overrides: StairParamOverrides): boolean => {
+      const s = stateRef.current;
+      if (s.phase !== 'confirming') return false;
+      return commitFromState({
+        ...s,
+        overrides: { ...s.overrides, ...overrides },
+      });
+    },
+    [commitFromState],
+  );
+
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback((point: Readonly<Point2D>): boolean => {
     const s = stateRef.current;
@@ -196,6 +214,24 @@ export function useStairTool(options: UseStairToolOptions = {}): UseStairToolRes
   useEffect(() => {
     return () => { stairStatusStore.set(null); };
   }, []);
+
+  // ADR-358 Phase 7b2b-β Stream E — listen for `commit-stair` events emitted
+  // by the Dynamic Input overlay (rise/tread/width inline editor). Applies
+  // the inline overrides + confirms the placement atomically.
+  useEffect(() => {
+    const onDynSubmit = (e: Event) => {
+      const ce = e as CustomEvent<DynamicSubmitDetail>;
+      if (!ce.detail || ce.detail.action !== 'commit-stair' || ce.detail.tool !== 'stair') return;
+      const overrides: StairParamOverrides = {
+        ...(typeof ce.detail.rise === 'number' ? { rise: ce.detail.rise } : {}),
+        ...(typeof ce.detail.tread === 'number' ? { tread: ce.detail.tread } : {}),
+        ...(typeof ce.detail.width === 'number' ? { width: ce.detail.width } : {}),
+      };
+      confirmWithOverrides(overrides);
+    };
+    window.addEventListener('dynamic-input-coordinate-submit', onDynSubmit);
+    return () => window.removeEventListener('dynamic-input-coordinate-submit', onDynSubmit);
+  }, [confirmWithOverrides]);
 
   return {
     state,
