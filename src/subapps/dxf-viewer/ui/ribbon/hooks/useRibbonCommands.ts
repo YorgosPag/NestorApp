@@ -9,6 +9,7 @@ import type {
 import type { RibbonTextEditorBridge } from './useRibbonTextEditorBridge';
 import type { RibbonArrayBridge } from './useRibbonArrayBridge';
 import type { RibbonStairBridge } from './useRibbonStairBridge';
+import { isStairBadgeKey } from './useRibbonStairBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
 
@@ -77,6 +78,16 @@ export function useRibbonCommands({
     [arrayBridge, textEditorBridge],
   );
 
+  // ADR-358 Phase 7b1 — Only the stair bridge owns badge keys today.
+  // Future bridges add their own owned set + branch here.
+  const getBadgeState = React.useCallback(
+    (badgeKey: string): boolean => {
+      if (isStairBadgeKey(badgeKey)) return stairBridge.getBadgeState(badgeKey);
+      return false;
+    },
+    [stairBridge],
+  );
+
   return React.useMemo(
     () => ({
       onToolChange: handleToolChange,
@@ -86,6 +97,7 @@ export function useRibbonCommands({
       onComboboxChange,
       getToggleState,
       getComboboxState,
+      getBadgeState,
     }),
     [
       handleToolChange,
@@ -95,6 +107,7 @@ export function useRibbonCommands({
       onComboboxChange,
       getToggleState,
       getComboboxState,
+      getBadgeState,
     ],
   );
 }
