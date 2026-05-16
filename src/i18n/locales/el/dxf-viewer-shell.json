@@ -374,6 +374,7 @@
       "stairStructure": "Δομή",
       "stairGeometry": "Γεωμετρία",
       "stairMultiStory": "Πολυώροφα",
+      "stairMultiFlight": "Πολλαπλά Σκέλη",
       "stairActions": "Ενέργειες",
       "placeholder": "Σε φάση ανάπτυξης",
       "history": "Ιστορικό",
@@ -564,6 +565,10 @@
         "stepCount": "Πλήθος Σκαλιών",
         "storyCount": "Αριθμός Ορόφων",
         "storyHeight": "Ύψος Ορόφου",
+        "flight2TurnDirection": "Στροφή Σκέλους 2",
+        "flight3TurnDirection": "Στροφή Σκέλους 3",
+        "turnDirectionLeft": "Αριστερά",
+        "turnDirectionRight": "Δεξιά",
         "close": "Κλείσιμο"
       },
       "measureAngle": "Γωνία",
@@ -640,6 +645,70 @@
       "spacingCannotBeZero": "Η απόσταση δεν μπορεί να είναι μηδέν.",
       "fillAngleCannotBeZero": "Η γωνία γεμίσματος δεν μπορεί να είναι μηδέν.",
       "pathEntityRequired": "Απαιτείται η επιλογή διαδρομής."
+    }
+  },
+  "stairAdvancedPanel": {
+    "title": "Προηγμένες Ιδιότητες Κλίμακας",
+    "closeAriaLabel": "Κλείσιμο πάνελ",
+    "sections": {
+      "materials": {
+        "title": "Υλικά",
+        "tread": "Πάτημα",
+        "riser": "Ρίχτι",
+        "stringer": "Λωρίδα",
+        "landing": "Πλατύσκαλο",
+        "customPlaceholder": "Όνομα υλικού"
+      },
+      "perTread": {
+        "title": "Παρακάμψεις ανά βαθμίδα",
+        "empty": "Καμία παράκαμψη",
+        "addOverride": "Προσθήκη",
+        "removeOverride": "Αφαίρεση",
+        "columns": {
+          "index": "#",
+          "material": "Υλικό",
+          "nosing": "Μύτη (χιλ.)"
+        },
+        "rowAriaLabel": "Βαθμίδα {index}"
+      },
+      "cutPlane": {
+        "title": "Επίπεδο Τομής",
+        "inheritProject": "Κληρονομικότητα από το έργο",
+        "projectDefaultHint": "Προεπιλογή έργου: {valueMm} χιλ.",
+        "overrideMm": "Παράκαμψη (χιλιοστά)"
+      },
+      "treadNumbering": {
+        "title": "Αρίθμηση Σκαλοπατιών",
+        "display": {
+          "all": "Όλα",
+          "nth": "Κάθε Ν",
+          "none": "Κανένα"
+        },
+        "everyN": "Κάθε:",
+        "restartPerFlight": "Επανεκκίνηση ανά τμήμα"
+      },
+      "nosingSide": {
+        "title": "Πλευρά Μύτης",
+        "options": {
+          "front": "Μπροστά",
+          "none": "Καμία",
+          "frontAndSides": "Μπροστά + Πλευρές"
+        }
+      }
+    },
+    "materials": {
+      "preset": {
+        "oak": "Δρυς",
+        "walnut": "Καρυδιά",
+        "marble": "Μάρμαρο",
+        "granite": "Γρανίτης",
+        "concrete": "Μπετόν",
+        "steel": "Χάλυβας",
+        "glass": "Γυαλί",
+        "terrazzo": "Βενετσιάνικο",
+        "tile": "Πλακάκι",
+        "custom": "Προσαρμοσμένο"
+      }
     }
   }
 }
