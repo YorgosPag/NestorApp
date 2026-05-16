@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { orderBy, doc, writeBatch, type DocumentData } from 'firebase/firestore';
-import { db } from '../../../../../lib/firebase';
+import { orderBy, type DocumentData } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import { getErrorMessage } from '@/lib/error-utils';
 import { LevelOperations } from '../utils';
+import { createDxfLevelWithPolicy } from '@/services/dxf-level-mutation-gateway';
 import type { Level } from '../config';
 
 interface UseLevelsFirestoreSyncParams {
@@ -25,6 +25,8 @@ interface UseLevelsFirestoreSyncParams {
   onLevelChange?: (levelId: string | null) => void;
   handleError: (err: string | Error) => void;
 }
+
+type BootstrapState = 'idle' | 'running' | 'completed' | 'failed';
 
 /**
  * Real-time Firestore sync for the levels collection (ADR-355 SSOT).
@@ -62,6 +64,15 @@ export function useLevelsFirestoreSync({
   // removed; the service drops re-emissions whose `documents` deep-equals the
   // last delivered payload, so this hook only sees real content changes.
 
+  // ADR-040 Phase XXI — bootstrap state guard. The previous client-side
+  // `batch.commit()` on `dxf_viewer_levels` was denied by Firestore rules
+  // (collection only writable via Admin SDK / API gateway, see
+  // useLevelSceneLoader:151). Each rejected write triggered local-cache rollback
+  // → snapshot re-emit (empty) → bootstrap re-fire → reject → idle loop ~1-2Hz.
+  // The state ref ensures: (a) no concurrent bootstrap, (b) no retry after
+  // failure (operator must inspect server logs), (c) no retry after success.
+  const bootstrapStateRef = useRef<BootstrapState>('idle');
+
   useEffect(() => {
     if (!enableFirestore) return;
     if (!isSuperAdmin && !companyId) return;
@@ -82,19 +93,26 @@ export function useLevelsFirestoreSync({
               setCurrentLevelId(defaultLevel.id);
               onLevelChange?.(defaultLevel.id);
             }
-          } else {
+          } else if (bootstrapStateRef.current === 'idle') {
+            bootstrapStateRef.current = 'running';
             const defaultLevels = LevelOperations.createDefaultLevels();
-            const batch = writeBatch(db);
-            defaultLevels.forEach(level => {
-              const { id, ...levelData } = level;
-              const docRef = doc(db, firestoreCollection, id);
-              batch.set(docRef, {
-                ...levelData,
-                ...(companyId ? { companyId } : {}),
-                ...(creatorUid ? { createdBy: creatorUid } : {}),
-              });
+            Promise.all(
+              defaultLevels.map(level =>
+                createDxfLevelWithPolicy({
+                  payload: {
+                    name: level.name,
+                    order: level.order,
+                    isDefault: level.isDefault,
+                    visible: level.visible,
+                  },
+                })
+              )
+            ).then(() => {
+              bootstrapStateRef.current = 'completed';
+            }).catch(err => {
+              bootstrapStateRef.current = 'failed';
+              handleError(getErrorMessage(err, 'Failed to bootstrap default levels'));
             });
-            batch.commit().then(() => console.log('Default levels created in Firestore.'));
           }
           setIsLoading(false);
           setError(null);
