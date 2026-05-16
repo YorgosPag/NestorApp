@@ -912,6 +912,26 @@
     border: 1px solid hsl(var(--border));
   }
 
+  /* ADR-358 §5.5.bis Q8 — CurrentLayerPicker status-bar swatch pulse on
+     user-initiated current-layer change (line 853, 1× ~450ms, subtle). */
+  @keyframes layer-picker-pulse {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 hsl(var(--ring) / 0.6);
+    }
+    60% {
+      transform: scale(1.35);
+      box-shadow: 0 0 0 5px hsl(var(--ring) / 0);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 hsl(var(--ring) / 0);
+    }
+  }
+  .layer-picker-pulse {
+    animation: layer-picker-pulse 450ms ease-out;
+  }
+
   /* Mobile slide-in animations */
   @keyframes slide-in-from-right {
     from {
