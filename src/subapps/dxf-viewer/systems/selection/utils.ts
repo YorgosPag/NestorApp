@@ -20,6 +20,8 @@ import {
 } from '../../types/entities';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault } from '../../config/layer-config';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
+import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { createRectangleVertices, calculateEntityBounds } from './shared/selection-duplicate-utils';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -77,7 +79,8 @@ export class UnifiedEntitySelection {
     for (let i = entities.length - 1; i >= 0; i--) {
       const entity = entities[i];
       // ADR-130: Centralized default layer
-      const layer = layers[getLayerNameOrDefault('layer' in entity ? entity.layer : '')];
+      // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
+      const layer = layers[getLayerNameOrDefault(resolveEntityLayerName(entity))];
       
       if (layer && !layer.visible) {
         continue;
