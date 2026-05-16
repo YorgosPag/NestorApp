@@ -18,6 +18,8 @@ import {
   type ILayerAccessProvider,
 } from './types';
 import { assertCanEditLayer } from './CanEditLayerGuard';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
+import { resolveEntityLayerName } from '../../../stores/LayerStore';
 import { replaceAll, type MatchOptions } from './text-match-engine';
 
 export interface ReplaceAllTextCommandInput {
@@ -77,7 +79,8 @@ export class ReplaceAllTextCommand implements ICommand {
         | DxfTextSceneEntity
         | undefined;
       if (!entity) continue;
-      assertCanEditLayer({ layerName: entity.layer, provider: this.layerProvider });
+      // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
+      assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
       const { node, count } = replaceAll(
         entity.textNode,
         this.input.pattern,
