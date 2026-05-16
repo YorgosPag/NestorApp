@@ -33,6 +33,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     position: grip.position,
     movesEntity: grip.movesEntity,
     edgeVertexIndices: grip.edgeVertexIndices,
+    // ADR-358 Phase 5b — forward stair parametric grip discriminator.
+    ...(grip.stairGripKind ? { stairGripKind: grip.stairGripKind } : {}),
   };
 }
 
