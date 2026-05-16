@@ -51,6 +51,7 @@ import { useLineStyles } from '../../settings-provider';
 import { completeEntity } from './completeEntity';
 import { createEntityFromTool as createEntityFromToolPure, isEntityComplete } from './drawing-entity-builders';
 import { generatePreviewEntity, applyPreviewStyling, createPartialPreview } from './drawing-preview-generator';
+import { applyPreviewSettingsToEntity } from './apply-preview-settings';
 
 // ─── Module-level helpers ───────────────────────────────────────────────────
 
@@ -136,19 +137,13 @@ export function useUnifiedDrawing() {
   const linePreviewStyles = useLineStyles('preview');
   const nextEntityIdRef = useRef(1);
 
-  /** Applies ColorPalettePanel preview settings to an entity */
+  /**
+   * Applies ColorPalettePanel preview settings to an entity (ADR-358 §G7
+   * Phase 6.5). Sentinel-aware projection lives in `apply-preview-settings.ts`
+   * so it stays unit-testable in isolation.
+   */
   const applyPreviewSettings = useCallback((entity: Record<string, unknown>) => {
-    if (!linePreviewStyles) return;
-
-    entity.color = linePreviewStyles.color;
-    entity.lineweight = linePreviewStyles.lineWidth;
-    entity.opacity = linePreviewStyles.opacity;
-    entity.lineType = linePreviewStyles.lineType;
-    entity.dashScale = linePreviewStyles.dashScale;
-    entity.lineCap = linePreviewStyles.lineCap;
-    entity.lineJoin = linePreviewStyles.lineJoin;
-    entity.dashOffset = linePreviewStyles.dashOffset;
-    entity.breakAtCenter = linePreviewStyles.breakAtCenter;
+    applyPreviewSettingsToEntity(entity, linePreviewStyles);
   }, [linePreviewStyles]);
 
   const createEntityFromTool = useCallback((tool: DrawingTool, points: Point2D[]): ExtendedSceneEntity | null => {
