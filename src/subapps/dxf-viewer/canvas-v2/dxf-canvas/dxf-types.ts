@@ -5,11 +5,12 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneLayer, LineweightMm } from '../../types/entities';
+import type { StairEntity } from '../../types/stair';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair';
   layer: string;
   /**
    * ADR-358 §G7 Phase 6 — concrete hex color. Optional sentinel: when absent
@@ -109,7 +110,18 @@ export interface DxfAngleMeasurement extends DxfEntity {
   angle: number; // Angle in degrees
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement;
+/**
+ * ADR-358 Phase 5b — DxfStair wrapper. Exposes a parametric `StairEntity`
+ * (`SceneModel.entities`) to the DXF render + grip pipeline without expanding
+ * it into N polylines. SSoT: geometry lives in `stairEntity.geometry` and is
+ * recomputed by `computeStairGeometry()` at commit time, never duplicated.
+ */
+export interface DxfStair extends DxfEntity {
+  type: 'stair';
+  stairEntity: StairEntity;
+}
+
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair;
 
 // === DXF SCENE ===
 export interface DxfScene {
