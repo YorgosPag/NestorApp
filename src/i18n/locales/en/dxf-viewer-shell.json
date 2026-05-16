@@ -651,6 +651,36 @@
     "title": "Stair Advanced Properties",
     "closeAriaLabel": "Close panel",
     "sections": {
+      "persistence": {
+        "title": "Persistence",
+        "saveButton": "Save now",
+        "idle": "Ready",
+        "saving": "Saving…",
+        "savedAt": "Saved at {time}",
+        "error": "Save error",
+        "editingByOther": "Another user is editing this stair"
+      },
+      "presets": {
+        "title": "Preset Library",
+        "save": "Save",
+        "confirmSave": "OK",
+        "cancel": "Cancel",
+        "load": "Load",
+        "delete": "Delete",
+        "namePlaceholder": "Preset name",
+        "scopeUser": "Mine",
+        "scopeCompany": "Company",
+        "scopeProject": "Project",
+        "emptyScope": "No presets",
+        "loading": "Loading…",
+        "errors": {
+          "STAIR_PRESET_NAME_REQUIRED": "Preset name required",
+          "STAIR_PRESET_PROJECT_SCOPE_REQUIRES_PROJECT_ID": "No active project",
+          "STAIR_PRESET_LIST_FAILED": "Failed to list presets",
+          "STAIR_PRESET_SAVE_FAILED": "Failed to save preset",
+          "STAIR_PRESET_DELETE_FAILED": "Failed to delete preset"
+        }
+      },
       "materials": {
         "title": "Materials",
         "tread": "Tread",
