@@ -51,15 +51,21 @@ export default function DynamicInputOverlay({
   const {
     // Core values
     showInput, xValue, yValue, angleValue, lengthValue, radiusValue, diameterValue,
+    // ADR-358 Phase 7b2b-β Stream E — stair values.
+    riseValue, treadValue, widthValue, activeStairField,
     activeField, isManualInput, isCoordinateAnchored, fieldUnlocked,
     drawingPhase, hideAngleLengthFields, showLengthDuringDraw, firstClickPoint,
-    
+
     // Refs
     hideAngleLengthFieldsRef, drawingPhaseRef,
     xInputRef, yInputRef, angleInputRef, lengthInputRef, radiusInputRef, diameterInputRef,
+    // ADR-358 Phase 7b2b-β Stream E — stair refs.
+    riseInputRef, treadInputRef, widthInputRef,
 
     // Setters
     setShowInput, setXValue, setYValue, setAngleValue, setLengthValue, setRadiusValue, setDiameterValue,
+    // ADR-358 Phase 7b2b-β Stream E — stair setters.
+    setRiseValue, setTreadValue, setWidthValue, setActiveStairField,
     setActiveField, setIsManualInput, setIsCoordinateAnchored, setFieldUnlocked,
     setDrawingPhase, setHideAngleLengthFields, setShowLengthDuringDraw, setFirstClickPoint,
 
@@ -73,7 +79,7 @@ export default function DynamicInputOverlay({
     coordinateActions,
     phaseActions,
     inputRefActions,
-  } = useDynamicInputState({ 
+  } = useDynamicInputState({
     activeTool: activeTool || 'select'
   });
 
@@ -84,7 +90,15 @@ export default function DynamicInputOverlay({
     }
     
     // Εμφάνιση για εργαλεία σχεδίασης και μέτρησης
-    const drawingTools = ['line', 'rectangle', 'circle', 'circle-diameter', 'circle-2p-diameter', 'polyline', 'measure-angle', 'polygon', 'ruler', 'measure-distance', 'measure-area', 'measure-distance'];
+    // ADR-358 Phase 7b2b-β Stream E — 'stair' added: rise/tread/width inline editor
+    // visible from tool activation (industry convergence, see useDynamicInputLayout).
+    const drawingTools = ['line', 'rectangle', 'circle', 'circle-diameter', 'circle-2p-diameter', 'polyline', 'measure-angle', 'polygon', 'ruler', 'measure-distance', 'measure-area', 'measure-distance', 'stair'];
+
+    // Stair tool: show as soon as activated, no cursorPosition prerequisite
+    // (params editable before first click — industry pre-set workflow).
+    if (activeTool === 'stair') {
+      return true;
+    }
     
     // Για circle tools, εμφάνιση ανεξάρτητα από cursorPosition
     if ((activeTool === 'circle' || activeTool === 'circle-diameter' || activeTool === 'circle-2p-diameter') && drawingTools.includes(activeTool)) {
@@ -172,6 +186,18 @@ export default function DynamicInputOverlay({
     resetForNextPointFirstPhase,
     firstClickPoint,
     setFirstClickPoint,
+    // ADR-358 Phase 7b2b-β Stream E — stair-specific values + refs + active field.
+    riseValue,
+    treadValue,
+    widthValue,
+    setRiseValue,
+    setTreadValue,
+    setWidthValue,
+    activeStairField,
+    setActiveStairField,
+    riseInputRef,
+    treadInputRef,
+    widthInputRef,
   });
 
   // Phase management hook
@@ -265,17 +291,22 @@ export default function DynamicInputOverlay({
     // Focus στο ενεργό input όταν εμφανίζεται
     if (newShowInput) {
       setTimeout(() => {
-        const currentRef = activeField === 'x' ? xInputRef : 
-                         activeField === 'y' ? yInputRef : 
-                         activeField === 'angle' ? angleInputRef : 
-                         activeField === 'radius' ? radiusInputRef :
-                         activeField === 'diameter' ? diameterInputRef :
-                         lengthInputRef;
+        // ADR-358 Phase 7b2b-β Stream E — stair tool uses activeStairField cycle.
+        const currentRef = activeTool === 'stair'
+          ? (activeStairField === 'rise' ? riseInputRef
+            : activeStairField === 'tread' ? treadInputRef
+            : widthInputRef)
+          : (activeField === 'x' ? xInputRef
+            : activeField === 'y' ? yInputRef
+            : activeField === 'angle' ? angleInputRef
+            : activeField === 'radius' ? radiusInputRef
+            : activeField === 'diameter' ? diameterInputRef
+            : lengthInputRef);
         currentRef.current?.focus();
         currentRef.current?.select(); // Επιλέγει το περιεχόμενο αν υπάρχει
       }, 100); // Μικρή καθυστέρηση για να render το component
     }
-  }, [shouldShowDynamicInput, activeField]);
+  }, [shouldShowDynamicInput, activeField, activeTool, activeStairField]);
 
   // Backup event listeners για τα input fields - προστασία από global shortcuts
   useEffect(() => {
@@ -501,6 +532,48 @@ export default function DynamicInputOverlay({
               isActive={activeField === 'diameter' && fieldUnlocked.diameter}
               placeholder={t('dynamicInput.placeholders.diameter')}
               fieldType="diameter"
+            />
+          )}
+
+          {/* ADR-358 Phase 7b2b-β Stream E — Stair Rise field (R, mm) */}
+          {fieldsToShow.includes('rise') && (
+            <DynamicInputField
+              label="R"
+              value={riseValue}
+              onChange={(e) => setRiseValue(e.target.value.replace(',', '.'))}
+              onFocus={() => setActiveStairField('rise')}
+              inputRef={riseInputRef}
+              isActive={activeStairField === 'rise'}
+              placeholder={t('dynamicInput.placeholders.rise')}
+              fieldType="length"
+            />
+          )}
+
+          {/* ADR-358 Phase 7b2b-β Stream E — Stair Tread field (T, mm) */}
+          {fieldsToShow.includes('tread') && (
+            <DynamicInputField
+              label="T"
+              value={treadValue}
+              onChange={(e) => setTreadValue(e.target.value.replace(',', '.'))}
+              onFocus={() => setActiveStairField('tread')}
+              inputRef={treadInputRef}
+              isActive={activeStairField === 'tread'}
+              placeholder={t('dynamicInput.placeholders.tread')}
+              fieldType="length"
+            />
+          )}
+
+          {/* ADR-358 Phase 7b2b-β Stream E — Stair Width field (W, mm) */}
+          {fieldsToShow.includes('width') && (
+            <DynamicInputField
+              label="W"
+              value={widthValue}
+              onChange={(e) => setWidthValue(e.target.value.replace(',', '.'))}
+              onFocus={() => setActiveStairField('width')}
+              inputRef={widthInputRef}
+              isActive={activeStairField === 'width'}
+              placeholder={t('dynamicInput.placeholders.stairWidth')}
+              fieldType="length"
             />
           )}
         </div>
