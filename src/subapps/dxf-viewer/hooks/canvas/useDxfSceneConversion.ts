@@ -21,7 +21,8 @@ import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity, Entity } from '../../types/entities';
-import { isArrayEntity } from '../../types/entities';
+import { isArrayEntity, isStairEntity } from '../../types/entities';
+import type { StairEntity } from '../../types/stair';
 import type { PathParams } from '../../systems/array/types';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
@@ -239,6 +240,14 @@ function convertEntity(entity: SceneEntity, layers: SceneLayers): DxfEntityUnion
         return null;
       }
       return { ...base, type: 'polyline' as const, vertices: verts, closed: true } as DxfEntityUnion;
+    }
+    case 'stair': {
+      // ADR-358 Phase 5b — wrap StairEntity into DxfStair (no expansion). The
+      // StairRenderer renders directly from `stairEntity.geometry`, and grip
+      // computation reads the parametric grips from the StairEntity params via
+      // `getStairGrips()`. SSoT: zero geometry duplication.
+      const e = entity as StairEntity;
+      return { ...base, type: 'stair' as const, stairEntity: e } as DxfEntityUnion;
     }
     default:
       dwarn('useDxfSceneConversion', 'Unsupported entity type:', entity.type);
