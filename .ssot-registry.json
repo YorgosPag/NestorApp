@@ -3008,12 +3008,14 @@
     },
     "bim-category-scaffolding-no-active-use": {
       "ssotFile": "src/subapps/dxf-viewer/types/entities.ts",
-      "description": "ADR-358 Q15 SCAFFOLD: `SceneLayer.bimCategory` is a forward-compat field reserved for Future BIM Mode (Phase 11+). Reads and writes from product code are forbidden — the field exists only so DXF I/O can preserve XDATA `NestorBimCategory` round-trip without a future data-model refactor. Active use must come with a new ADR (likely ADR-362+) that defines BIM categories, IFC export pipeline, and Vectorworks-style dual-org. Zero-tolerance baseline (no legacy usage exists today).",
+      "description": "ADR-358 Q15 SCAFFOLD: `SceneLayer.bimCategory` is a forward-compat field reserved for Future BIM Mode (Phase 11+). Reads and writes from product code are forbidden — the field exists only so DXF I/O can preserve XDATA `NestorBimCategory` round-trip without a future data-model refactor. DXF I/O round-trip allowlist: `dxf-layer-table-parser.ts` (read XDATA → bimCategory) + `dxf-layer-table-writer.ts` (write bimCategory → XDATA). Active product code use must come with a new ADR (likely ADR-362+) that defines BIM categories, IFC export pipeline, and Vectorworks-style dual-org.",
       "forbiddenPatterns": [
         "\\.bimCategory\\b"
       ],
       "allowlist": [
-        "src/subapps/dxf-viewer/types/entities.ts"
+        "src/subapps/dxf-viewer/types/entities.ts",
+        "src/subapps/dxf-viewer/utils/dxf-layer-table-parser.ts",
+        "src/subapps/dxf-viewer/utils/dxf-layer-table-writer.ts"
       ],
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",
@@ -3021,16 +3023,33 @@
     },
     "vp-overrides-scaffolding-no-active-use": {
       "ssotFile": "src/subapps/dxf-viewer/types/entities.ts",
-      "description": "ADR-358 Q16 SCAFFOLD: `SceneLayer.vpOverrides` is a forward-compat field reserved for Future per-viewport overrides (VPLAYER, AutoCAD standard for 18+ years). Reads and writes from product code are forbidden — the field exists only so the DXF parser can preserve VP-override XDATA and the VP_FREEZE flag round-trip without a future data-model refactor. Active use must come with a new ADR (Future paperspace). Zero-tolerance baseline (no legacy usage exists today).",
+      "description": "ADR-358 Q16 SCAFFOLD: `SceneLayer.vpOverrides` is a forward-compat field reserved for Future per-viewport overrides (VPLAYER, AutoCAD standard for 18+ years). Reads and writes from product code are forbidden — the field exists only so the DXF parser can preserve VP-override XDATA and the VP_FREEZE flag round-trip without a future data-model refactor. DXF I/O round-trip allowlist: `dxf-layer-table-parser.ts` + `dxf-layer-table-writer.ts`. Active product code use must come with a new ADR (Future paperspace).",
       "forbiddenPatterns": [
         "\\.vpOverrides\\b"
       ],
       "allowlist": [
-        "src/subapps/dxf-viewer/types/entities.ts"
+        "src/subapps/dxf-viewer/types/entities.ts",
+        "src/subapps/dxf-viewer/utils/dxf-layer-table-parser.ts",
+        "src/subapps/dxf-viewer/utils/dxf-layer-table-writer.ts"
       ],
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",
       "tier": 4
+    },
+    "dxf-layer-parser": {
+      "ssotFile": "src/subapps/dxf-viewer/utils/dxf-layer-table-parser.ts",
+      "description": "ADR-358 §5.2 Phase 3A: the DXF LAYER table is parsed by a single entry point (`parseLayerTable()` in `dxf-layer-table-parser.ts`) with a mandatory LTYPE pre-pass (`parseLinetypeTable()` in `dxf-linetype-table-parser.ts`). Inline use of the Nestor XDATA AppId literals (AcCmTransparency, NestorAec, NestorLayerMeta, NestorBimCategory, NestorVpOverride) outside the parser + writer creates duplicate XDATA handling that breaks the §G15 round-trip guarantee. Zero-tolerance baseline — no legacy use exists.",
+      "forbiddenPatterns": [
+        "['\\\"](AcCmTransparency|NestorAec|NestorLayerMeta|NestorBimCategory|NestorVpOverride)['\\\"]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/utils/dxf-layer-table-parser.ts",
+        "src/subapps/dxf-viewer/utils/dxf-layer-table-writer.ts",
+        "src/subapps/dxf-viewer/utils/dxf-linetype-table-parser.ts"
+      ],
+      "addedDate": "2026-05-16",
+      "addedByAdr": "ADR-358",
+      "tier": 3
     },
     "linetype-iso-catalog": {
       "ssotFile": "src/subapps/dxf-viewer/config/linetype-iso-catalog.ts",
