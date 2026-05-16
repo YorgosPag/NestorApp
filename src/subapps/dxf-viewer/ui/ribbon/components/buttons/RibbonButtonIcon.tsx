@@ -35,6 +35,7 @@ import {
   MEASURE_DISTANCE_PATH, MEASURE_DISTANCE_CONTINUOUS_PATH,
   MEASURE_AREA_PATH, MEASURE_AREA_AUTO_PATH,
 } from './RibbonButtonIconPaths';
+import { STAIR_PATH_STRAIGHT, STAIR_PATH_SPIRAL, STAIR_PATH_USHAPE } from './stair-kind-icon-paths';
 
 export type RibbonIconSize = 'large' | 'small';
 
@@ -89,6 +90,9 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'rectangle': return inlineSvg(size, RECTANGLE_PATH);
     case 'ellipse': return inlineSvg(size, ELLIPSE_PATH);
     case 'stair': return inlineSvg(size, STAIR_PATH);
+    case 'stair-straight': return inlineSvg(size, STAIR_PATH_STRAIGHT);
+    case 'stair-spiral': return inlineSvg(size, STAIR_PATH_SPIRAL);
+    case 'stair-ushape': return inlineSvg(size, STAIR_PATH_USHAPE);
     case 'text-placeholder': return inlineSvg(size, TEXT_PLACEHOLDER_PATH);
     case 'text-create': return inlineSvg(size, TEXT_CREATE_PATH);
     case 'text-bold': return <Bold width={sizePx[size]} height={sizePx[size]} className={className} />;
