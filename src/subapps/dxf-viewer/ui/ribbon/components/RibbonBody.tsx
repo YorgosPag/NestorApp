@@ -7,6 +7,7 @@ import type {
   RibbonTab,
 } from '../types/ribbon-types';
 import { RibbonPanel } from './RibbonPanel';
+import { useRibbonCommand } from '../context/RibbonCommandContext';
 
 interface RibbonBodyProps {
   activeTab: RibbonTab | undefined;
@@ -27,9 +28,17 @@ export const RibbonBody: React.FC<RibbonBodyProps> = ({
   onPinToggle,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
+  const { getPanelVisibility } = useRibbonCommand();
   if (!activeTab) return null;
 
   const isSettingsMode = activeTab.id === 'settings' && !!settingsTabContent;
+
+  // ADR-358 Phase 7b2b-β Stream F — filter panels by `visibilityKey`. Panels
+  // without a key (most panels) are always visible. Panels with a key are
+  // shown only when the owning bridge returns `true`.
+  const visiblePanels = activeTab.panels.filter(
+    (panel) => panel.visibilityKey === undefined || getPanelVisibility(panel.visibilityKey),
+  );
 
   return (
     <div
@@ -41,9 +50,9 @@ export const RibbonBody: React.FC<RibbonBodyProps> = ({
     >
       {isSettingsMode ? (
         <>
-          {activeTab.panels.length > 0 && (
+          {visiblePanels.length > 0 && (
             <div className="dxf-ribbon-settings-panels">
-              {activeTab.panels.map((panel) => (
+              {visiblePanels.map((panel) => (
                 <RibbonPanel
                   key={panel.id}
                   panel={panel}
@@ -58,7 +67,7 @@ export const RibbonBody: React.FC<RibbonBodyProps> = ({
           </div>
         </>
       ) : (
-        activeTab.panels.map((panel) => (
+        visiblePanels.map((panel) => (
           <RibbonPanel
             key={panel.id}
             panel={panel}
