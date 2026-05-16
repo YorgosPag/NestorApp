@@ -37,6 +37,11 @@ import {
   subtractPoints,
 } from '../../rendering/entities/shared';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
+import { getLayer } from '../../stores/LayerStore';
+import { LINEWEIGHT_ISO_VALUES } from '../../config/lineweight-iso-catalog';
+
+const LINEWEIGHT_1MM = LINEWEIGHT_ISO_VALUES[17];
 
 
 /**
@@ -59,6 +64,8 @@ export function createEntityFromTool(
   arcFlipped: boolean
 ): ExtendedSceneEntity | null {
   const id = entityId;
+  // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+  const defaultLayerId = getLayer(DXF_DEFAULT_LAYER)?.id;
 
   switch (tool) {
     case 'line':
@@ -70,6 +77,7 @@ export function createEntityFromTool(
           end: points[1],
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
         } as LineEntity;
       }
       break;
@@ -82,6 +90,7 @@ export function createEntityFromTool(
           end: points[1],
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
           measurement: true,
           showEdgeDistances: true,
         } as LineEntity;
@@ -99,6 +108,7 @@ export function createEntityFromTool(
           end: lastTwoPoints[1],
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
           measurement: true,
           showEdgeDistances: true,
         } as LineEntity;
@@ -116,6 +126,7 @@ export function createEntityFromTool(
           corner2: p2,
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
         } as RectangleEntity;
       }
       break;
@@ -130,6 +141,7 @@ export function createEntityFromTool(
           radius,
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
         } as CircleEntity;
       }
       break;
@@ -144,6 +156,7 @@ export function createEntityFromTool(
           radius,
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
           diameterMode: true,
         } as CircleEntity;
       }
@@ -163,6 +176,7 @@ export function createEntityFromTool(
           radius,
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
           twoPointDiameter: true,
         } as CircleEntity;
       }
@@ -181,6 +195,7 @@ export function createEntityFromTool(
             radius: circleResult.radius,
             visible: true,
             layer: '0',
+            layerId: defaultLayerId,
           } as CircleEntity;
         }
       }
@@ -199,6 +214,7 @@ export function createEntityFromTool(
             radius: circleResult.radius,
             visible: true,
             layer: '0',
+            layerId: defaultLayerId,
           } as CircleEntity;
         }
       }
@@ -217,6 +233,7 @@ export function createEntityFromTool(
             radius: circleResult.radius,
             visible: true,
             layer: '0',
+            layerId: defaultLayerId,
           } as CircleEntity;
         }
       }
@@ -234,6 +251,7 @@ export function createEntityFromTool(
             radius: circleResult.radius,
             visible: true,
             layer: '0',
+            layerId: defaultLayerId,
           } as CircleEntity;
         }
       }
@@ -248,6 +266,7 @@ export function createEntityFromTool(
           closed: false,
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
         } as PolylineEntity;
       }
       break;
@@ -262,8 +281,9 @@ export function createEntityFromTool(
             closed: false,
             visible: true,
             layer: '0',
+            layerId: defaultLayerId,
             color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
-            lineweight: 1,
+            lineweight: LINEWEIGHT_1MM,
             opacity: 1.0,
             lineType: 'solid' as const,
           };
@@ -294,6 +314,7 @@ export function createEntityFromTool(
             angle: angleDeg,
             visible: true,
             layer: '0',
+            layerId: defaultLayerId,
             measurement: true,
           } as AngleMeasurementEntity;
         }
@@ -308,6 +329,7 @@ export function createEntityFromTool(
           closed: true,
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
         } as PolylineEntity;
       }
       break;
@@ -320,6 +342,7 @@ export function createEntityFromTool(
           closed: true,
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
           measurement: true,
         } as PolylineEntity;
       }
@@ -344,6 +367,7 @@ export function createEntityFromTool(
             endAngle: arcResult.endAngle,
             visible: true,
             layer: '0',
+            layerId: defaultLayerId,
             counterclockwise: finalCounterclockwise,
           } as ArcEntity;
         }
@@ -367,6 +391,7 @@ export function createEntityFromTool(
           endAngle: arcResult.endAngle,
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
           counterclockwise: finalCounterclockwise,
         } as ArcEntity;
       }
@@ -396,6 +421,7 @@ export function createEntityFromTool(
           endAngle: arcResult.endAngle,
           visible: true,
           layer: '0',
+          layerId: defaultLayerId,
           counterclockwise: finalCounterclockwise,
         };
         console.debug('createEntityFromTool arc-sce FULL ENTITY:', JSON.stringify(arcEntity, null, 2));
