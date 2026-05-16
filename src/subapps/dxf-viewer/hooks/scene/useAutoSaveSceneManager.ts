@@ -16,8 +16,21 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
   saveStatus: 'idle' | 'saving' | 'success' | 'error';
   /** 🏢 ENTERPRISE: Inject existing FileRecord ID so cadFiles uses the same ID */
   setFileRecordId: (id: string | null) => void;
+  /**
+   * 🪜 ADR-358 Phase 8: reactive mirror of the injected FileRecord id so
+   * downstream consumers (e.g. `useStairPersistence` via `StairAdvancedPanelHost`)
+   * can subscribe to it as state. The setter still updates the internal ref
+   * synchronously for auto-save reads.
+   */
+  fileRecordId: string | null;
   /** 🏢 ADR-240: Inject save context (entityType/floorId/purpose) from Wizard import */
   setSaveContext: (ctx: DxfSaveContext | null) => void;
+  /**
+   * 🪜 ADR-358 Phase 8: reactive mirror of the injected save context so
+   * `projectId` (and any other context field) propagates to React subtrees
+   * needing tenant/project scope (Phase 8 stair persistence).
+   */
+  saveContext: DxfSaveContext | null;
   /** 🏢 ENTERPRISE: Callback after successful scene save — used by LevelsSystem to link scene→level */
   setOnSceneSaved: (cb: ((fileId: string, fileName: string) => void) | null) => void;
   /** 🏢 ENTERPRISE: Set loading guard to prevent auto-save during scene load from Storage */
@@ -65,8 +78,12 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const scenePathCacheRef = useRef<Map<string, string>>(new Map());
   // 🏢 ENTERPRISE: Injected FileRecord ID (from wizard/upload) — ensures cadFiles uses the same ID
   const injectedFileRecordIdRef = useRef<string | null>(null);
+  // 🪜 ADR-358 Phase 8: reactive mirror of injectedFileRecordIdRef for downstream consumers.
+  const [fileRecordId, setFileRecordIdState] = useState<string | null>(null);
   // 🏢 ADR-240: Injected save context from Wizard — carries entityType/floorId/purpose for dual-write
   const injectedSaveContextRef = useRef<DxfSaveContext | null>(null);
+  // 🪜 ADR-358 Phase 8: reactive mirror of injectedSaveContextRef for downstream consumers.
+  const [saveContext, setSaveContextState] = useState<DxfSaveContext | null>(null);
   // 🏢 ENTERPRISE: Callback after successful save — LevelsSystem uses this to persist level→DXF link
   const onSceneSavedRef = useRef<((fileId: string, fileName: string) => void) | null>(null);
 
@@ -83,6 +100,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
    */
   const setFileRecordId = useCallback((id: string | null) => {
     injectedFileRecordIdRef.current = id;
+    setFileRecordIdState(id);
     // Cache against current filename (read from ref to avoid stale closure)
     const fileName = currentFileNameRef.current;
     if (id && fileName) {
@@ -93,6 +111,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   /** 🏢 ADR-240: Inject DxfSaveContext from Wizard so dual-write uses correct entityType/floorId */
   const setSaveContext = useCallback((ctx: DxfSaveContext | null) => {
     injectedSaveContextRef.current = ctx;
+    setSaveContextState(ctx);
   }, []);
 
   /** 🏢 ENTERPRISE: Set callback for after successful save (used by LevelsSystem) */
@@ -120,7 +139,9 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     }
     sceneManagerRef.current.clearAllScenes();
     injectedFileRecordIdRef.current = null;
+    setFileRecordIdState(null);
     injectedSaveContextRef.current = null;
+    setSaveContextState(null);
     currentFileNameRef.current = null;
     setCurrentFileNameState(null);
     fileIdCacheRef.current.clear();
@@ -290,12 +311,15 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     lastSaveTime,
     saveStatus,
     setFileRecordId,
+    fileRecordId,
     setSaveContext,
+    saveContext,
     setOnSceneSaved,
     setIsLoadingFromFirestore,
     resetSceneSession,
   }), [
     sceneManager, setLevelSceneWithAutoSave, currentFileName,
     autoSaveEnabled, lastSaveTime, saveStatus,
+    fileRecordId, saveContext,
   ]);
 }
