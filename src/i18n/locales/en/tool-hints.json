@@ -109,7 +109,14 @@
       "name": "Stair",
       "description": "Draw stair (stub — Phase 0, available from Phase 5a)",
       "steps": ["Tool under development"],
-      "shortcuts": "ST | ESC=Cancel"
+      "shortcuts": "ST | ESC=Cancel",
+      "grips": {
+        "basePoint": "Base point",
+        "direction": "Direction",
+        "width": "Width",
+        "length": "Length / Step count",
+        "split": "Flight split"
+      }
     },
     "circle": {
       "name": "Circle (Radius)",
