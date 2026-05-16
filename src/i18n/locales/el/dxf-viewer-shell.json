@@ -5,13 +5,36 @@
   },
   "layerPicker": {
     "toastChanged": "Επίπεδο άλλαξε σε \"{name}\"",
+    "toastLocked": "Το επίπεδο \"{name}\" είναι κλειδωμένο — δεν επιτρέπεται σχεδίαση",
+    "toastFrozen": "Το επίπεδο \"{name}\" είναι παγωμένο — ξεπαγώστε το για σχεδίαση",
     "tooltipCurrent": "Τρέχον επίπεδο: {name}",
     "tooltipEmpty": "Χωρίς ενεργό επίπεδο",
     "placeholder": "Χωρίς επίπεδο",
     "searchPlaceholder": "Αναζήτηση επιπέδων…",
     "empty": "Δεν βρέθηκαν επίπεδα",
+    "mostUsed": "Πιο πρόσφατα",
+    "newLayer": "Νέο Επίπεδο",
+    "openManager": "Διαχείριση Επιπέδων",
+    "disabledHint": "Μη επεξεργάσιμο επίπεδο",
+    "contextMenu": {
+      "setCurrent": "Ορισμός ως τρέχον",
+      "toggleVisibility": "Εναλλαγή ορατότητας",
+      "toggleLock": "Εναλλαγή κλειδώματος",
+      "toggleFreeze": "Εναλλαγή παγώματος",
+      "openProperties": "Ιδιότητες…"
+    },
     "category": {
-      "all": "Όλα"
+      "all": "Όλα",
+      "architectural": "Αρχιτεκτονικά",
+      "structural": "Στατικά",
+      "electrical": "Ηλεκτρολογικά",
+      "mechanical": "Μηχανολογικά",
+      "plumbing": "Υδραυλικά",
+      "fire": "Πυρόσβεση",
+      "civil": "Έργα Πολιτικού Μηχανικού",
+      "telecom": "Τηλεπικοινωνίες",
+      "interior": "Εσωτερικά",
+      "general": "Γενικά"
     }
   },
   "toolbar": {

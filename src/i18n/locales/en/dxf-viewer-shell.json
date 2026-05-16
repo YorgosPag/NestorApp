@@ -5,13 +5,36 @@
   },
   "layerPicker": {
     "toastChanged": "Layer changed to \"{name}\"",
+    "toastLocked": "Layer \"{name}\" is locked — cannot draw here",
+    "toastFrozen": "Layer \"{name}\" is frozen — thaw to draw",
     "tooltipCurrent": "Current layer: {name}",
     "tooltipEmpty": "No active layer",
     "placeholder": "No layer",
     "searchPlaceholder": "Search layers…",
     "empty": "No layers found",
+    "mostUsed": "Most used",
+    "newLayer": "New Layer",
+    "openManager": "Manage Layers",
+    "disabledHint": "Layer not editable",
+    "contextMenu": {
+      "setCurrent": "Set as current",
+      "toggleVisibility": "Toggle visibility",
+      "toggleLock": "Toggle lock",
+      "toggleFreeze": "Toggle freeze",
+      "openProperties": "Properties…"
+    },
     "category": {
-      "all": "All"
+      "all": "All",
+      "architectural": "Architectural",
+      "structural": "Structural",
+      "electrical": "Electrical",
+      "mechanical": "Mechanical",
+      "plumbing": "Plumbing",
+      "fire": "Fire",
+      "civil": "Civil",
+      "telecom": "Telecom",
+      "interior": "Interior",
+      "general": "General"
     }
   },
   "toolbar": {
