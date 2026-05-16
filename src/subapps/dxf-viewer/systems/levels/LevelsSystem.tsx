@@ -442,7 +442,9 @@ function useLevelsSystemState({
       setAutoSaveEnabled: sceneManager.setAutoSaveEnabled,
       getAutoSaveStatus,
       setFileRecordId: sceneManager.setFileRecordId,
+      fileRecordId: sceneManager.fileRecordId,
       setSaveContext: sceneManager.setSaveContext,
+      saveContext: sceneManager.saveContext,
       linkSceneToLevel,
 
       // Import wizard
@@ -470,6 +472,9 @@ function useLevelsSystemState({
       addFloorplan, removeFloorplan, updateFloorplan, getFloorplansForLevel, calibrateFloorplan,
       setLevelScene, getLevelScene, clearLevelScene,
       getCurrentFileName, getAutoSaveStatus, linkSceneToLevel,
+      // ADR-358 Phase 8: reactive scope inputs so `useStairPersistence` re-runs
+      // when a new floorplan loads or the wizard updates the project context.
+      sceneManager.fileRecordId, sceneManager.saveContext,
       startImportWizard, setImportWizardStep, setSelectedLevel, setCalibration, completeImport,
       cancelImportWizard,
       updateSettings, resetSettings,
