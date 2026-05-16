@@ -71,6 +71,12 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-17 — ADR-358 Phase 9D-5a interop: DxfRenderer drops `layer` from canvas base shape (id-only)
+
+`DxfRenderer.entityToDxfEntity` now mirrors only `entity.layerId` onto the canvas base shape; the legacy `entity.layer` field is no longer copied. ByLayer/ByBlock style resolution is unchanged — `resolveStyleForRender` reads from the id-keyed `layersById` map (ADR-358 Phase 9D-2). **Bitmap cache key untouched** — cardinal rule #3 holds (no high-frequency identity entries added). Render-path is now strictly id-aware in writes; transitional id-first readers (`resolveEntityLayerName`) still tolerate `.layer` name backref until Phase 9D-5b schema flip.
+
+---
+
 ### 2026-05-17 (Phase XXI) — ✅ RESOLVED: client-side `dxf_viewer_levels` bootstrap rejected by Firestore rules
 
 **Status**: ✅ **RESOLVED & CONFIRMED**. Giorgio validation 2026-05-17 02:42 (Greek): *«ΔΕΝ ΕΧΕΙ ΛΟΥΠΑ»* (= no loop). Steady-state idle log shows **0** `FirebaseError: Missing or insufficient permissions` (vs 83 pre-fix) and **0** continuous `PERF_LINE` commit pairs after init settles. Phase XX probes (`useRenderTrace` + `installSetStateTracer` + manual `traceSet` setter wrappers) cleaned up in same commit; `render-loop-trace.ts` SSoT utility retained for future investigations (flag-gated, zero prod overhead).

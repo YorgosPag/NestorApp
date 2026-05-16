@@ -277,12 +277,11 @@ export class DxfRenderer {
     };
     // ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolution
     const resolved = this.resolveStyleForRender(entity, layersById);
+    // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
     const base = {
       id: entity.id,
       visible: entity.visible,
       selected: isSelected,
-      layer: entity.layer,
-      // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
       layerId: entity.layerId,
       color: resolved.colorHex,
       lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
