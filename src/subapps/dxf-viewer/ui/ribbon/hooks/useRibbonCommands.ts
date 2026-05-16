@@ -8,7 +8,9 @@ import type {
 } from '../context/RibbonCommandContext';
 import type { RibbonTextEditorBridge } from './useRibbonTextEditorBridge';
 import type { RibbonArrayBridge } from './useRibbonArrayBridge';
+import type { RibbonStairBridge } from './useRibbonStairBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
+import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
 
 interface UseRibbonCommandsProps {
   handleToolChange: (tool: ToolType) => void;
@@ -17,6 +19,8 @@ interface UseRibbonCommandsProps {
   textEditorBridge: RibbonTextEditorBridge;
   /** ADR-353 Phase A — Array contextual tab bridge. */
   arrayBridge: RibbonArrayBridge;
+  /** ADR-358 Phase 7a — Stair contextual tab bridge. */
+  stairBridge: RibbonStairBridge;
 }
 
 export function useRibbonCommands({
@@ -25,27 +29,33 @@ export function useRibbonCommands({
   wrappedHandleAction,
   textEditorBridge,
   arrayBridge,
+  stairBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
-  // Compose: array-prefixed keys route to arrayBridge; everything else
-  // falls through to the text-editor bridge. Both bridges no-op on keys
-  // they don't own, but the array prefix check short-circuits cheaply.
+  // Compose: stair-prefixed keys → stairBridge; array-prefixed → arrayBridge;
+  // everything else falls through to the text-editor bridge. All bridges
+  // no-op on keys they don't own, but the prefix checks short-circuit.
   const onComboboxChange = React.useCallback(
     (key: string, value: string) => {
+      if (isStairRibbonKey(key) || isStairRibbonStringKey(key)) {
+        stairBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) {
         arrayBridge.onComboboxChange(key, value);
         return;
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [arrayBridge, textEditorBridge],
+    [stairBridge, arrayBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
     (key: string): RibbonComboboxState | null => {
+      if (isStairRibbonKey(key) || isStairRibbonStringKey(key)) return stairBridge.getComboboxState(key);
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [arrayBridge, textEditorBridge],
+    [stairBridge, arrayBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
