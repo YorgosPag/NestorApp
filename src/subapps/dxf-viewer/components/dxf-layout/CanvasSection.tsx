@@ -390,67 +390,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   });
   // === Auto-area hover preview ===
   const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove: unified.handleMouseMove, activeTool, levelManager, currentOverlays, transformScale: transform.scale });
-  // === [CS-RENDER] DIAGNOSTIC — DELETE AFTER ROOT CAUSE FOUND (render loop investigation 2026-05-16) ===
-  const _csRenderPrevRef = useRef<Record<string, unknown>>({});
-  const _csRenderCountRef = useRef(0);
-  _csRenderCountRef.current++;
-  const _csCurrent: Record<string, unknown> = {
-    canvasContext, transform, viewport, viewportReady, currentOverlays, dxfScene,
-    floorplanBg, colorLayers, selectedEntityIds,
-    levelManagerCurrent: levelManager.currentLevelId,
-    levelsArray: levelManager.levels,
-    activeTool, overlayMode, showLayers, showGrid,
-    currentScene: props.currentScene,
-    gridContextSettings, rulerContextSettings, cursorSettings,
-    crosshairSettings, cursorCanvasSettings, snapSettings, rulerSettings, gridSettings, selectionSettings,
-    gripSettings, gridMajorInterval,
-    guideState, cpState,
-    unifiedHoveredGrip: unified.hoveredGrip, unifiedPhase: unified.phase,
-    unifiedSelectedGrips: unified.selectedGrips, unifiedDraggingVertices: unified.draggingVertices,
-    unifiedOverlayProjection: unified.overlayProjection, unifiedDxfProjection: unified.dxfProjection,
-    unifiedGripStateForStack: unified.gripStateForStack,
-    hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, draggingVertices, draggingEdgeMidpoint, dragPreviewPosition,
-    draftPolygon, isSavingPolygon, draggingGuide,
-    rotationPhase: rotationTool.phase, movePhase: moveTool.phase, mirrorPhase: mirrorTool.phase,
-    scaleActive: scaleTool.isCollectingInput, stretchActive: stretchTool.isCollectingInput,
-    trimActive: trimTool.isActive, extendActive: extendTool.isActive,
-    arrayPolarActive: arrayPolarTool.isActive, arrayPathActive: arrayPathTool.isActive,
-    guideWorkflowsState: guideWorkflows.state, guideSelectedIds: guideWorkflows.selectedGuideIds,
-    textEditorState: textEditor.editingState, textCreationState: textCreation.creatingState,
-    drawingHandlers, globalRulerSettings,
-    entityJoinState, universalSelection,
-  };
-  useEffect(() => {
-    const refChanged: string[] = [];
-    const contentChanged: string[] = [];
-    const prev = _csRenderPrevRef.current;
-    const safeStringify = (v: unknown): string => {
-      try {
-        return JSON.stringify(v, (_k, val) => {
-          if (typeof val === 'function') return '[fn]';
-          if (val instanceof Map || val instanceof Set) return `[${val.constructor.name}:${(val as Set<unknown>).size}]`;
-          return val;
-        });
-      } catch { return '[uncomparable]'; }
-    };
-    for (const [k, v] of Object.entries(_csCurrent)) {
-      if (prev[k] !== v) {
-        refChanged.push(k);
-        const prevStr = safeStringify(prev[k]);
-        const currStr = safeStringify(v);
-        if (prevStr !== currStr) contentChanged.push(k);
-      }
-    }
-    if (_csRenderCountRef.current === 1) {
-
-      console.log('[CS-RENDER] #1 INITIAL keys=', Object.keys(_csCurrent).length);
-    } else {
-
-      console.log(`[CS-RENDER] #${_csRenderCountRef.current} content-changed:`, contentChanged.length === 0 ? '(NONE — pure ref churn!)' : contentChanged.join(','), '| ref-only:', refChanged.filter(k => !contentChanged.includes(k)).join(','));
-    }
-    _csRenderPrevRef.current = _csCurrent;
-  });
-  // === END DIAGNOSTIC ===
   // === Render ===
   return (
     <>
