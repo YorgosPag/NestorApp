@@ -202,7 +202,8 @@ export class HitTester {
             x: (entityBounds.minX + entityBounds.maxX) / 2,
             y: (entityBounds.minY + entityBounds.maxY) / 2,
           },
-          layer: getLayerNameOrDefault('layer' in candidate.data ? (candidate.data as { layer?: string }).layer : undefined),
+          // ADR-358 Phase 9D-5b-i: id-only resolver SSoT (legacy `entity.layer` name field dropped from BaseEntity).
+          layer: getLayerNameOrDefault(resolveEntityLayerName(candidate.data)),
           selectable: ('selectable' in candidate.data ? candidate.data.selectable : true) !== false,
           priority: calculatePriority(candidate.data),
           vertexIndex: undefined,
