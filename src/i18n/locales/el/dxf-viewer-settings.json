@@ -725,7 +725,10 @@
       "width": "π.χ. 50.0",
       "height": "π.χ. 100.0",
       "radius": "π.χ. 50.0",
-      "diameter": "π.χ. 100.0"
+      "diameter": "π.χ. 100.0",
+      "rise": "π.χ. 175",
+      "tread": "π.χ. 280",
+      "stairWidth": "π.χ. 1200"
     },
     "multiPoint": {
       "distance": "Απόσταση:",
