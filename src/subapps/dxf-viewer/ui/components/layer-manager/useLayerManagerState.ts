@@ -5,6 +5,8 @@ import {
   getLayerStoreSnapshot,
   upsertLayer,
   setCurrentLayerId,
+  // ADR-358 Phase 9D-5a: id-first reader SSoT (LayerStore lookup + legacy name fallback).
+  resolveEntityLayerName,
 } from '../../../stores/LayerStore';
 import { useLevelSelection } from '../../../systems/levels/useLevels';
 import type { SceneLayer, AecLayerCategory } from '../../../types/entities';
@@ -58,7 +60,8 @@ export function useLayerManagerState(): LayerManagerStateHook {
     const scene = currentLevel?.scene;
     return storeSnapshot.layers.map((layer) => {
       const elementCount = scene
-        ? scene.entities.filter((e) => e.layer === layer.name).length
+        // ADR-358 Phase 9D-5a: id-first resolution via LayerStore (post-rename stale-name guard).
+        ? scene.entities.filter((e) => resolveEntityLayerName(e as { layerId?: string; layer?: string }) === layer.name).length
         : 0;
       const isCurrent = storeSnapshot.currentLayerId === (layer.id ?? layer.name);
       return sceneLayerToUi(layer, isCurrent, elementCount);
