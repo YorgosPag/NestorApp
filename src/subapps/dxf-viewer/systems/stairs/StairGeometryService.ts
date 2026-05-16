@@ -39,6 +39,10 @@ import { buildTreadLabels } from './stair-geometry-labels';
 import { computeLShape } from './stair-geometry-lshape';
 import { computeUShape } from './stair-geometry-ushape';
 import { computeGamma } from './stair-geometry-gamma';
+import { computeSpiral } from './stair-geometry-spiral';
+import { computeHelical } from './stair-geometry-helical';
+import { computeElliptical } from './stair-geometry-elliptical';
+import { computeWinder } from './stair-geometry-winder';
 
 // ─── Public entry point (kind dispatch) ──────────────────────────────────────
 
@@ -59,15 +63,13 @@ export function computeStairGeometry(params: Readonly<StairParams>): StairGeomet
     case 'gamma':
       return computeGamma(params, variant);
     case 'spiral':
+      return computeSpiral(params, variant);
     case 'helical':
-      throw new Error(
-        `StairGeometryService: kind '${variant.kind}' not implemented yet (Phase 4a)`,
-      );
+      return computeHelical(params, variant);
     case 'elliptical':
+      return computeElliptical(params, variant);
     case 'winder':
-      throw new Error(
-        `StairGeometryService: kind '${variant.kind}' not implemented yet (Phase 4b)`,
-      );
+      return computeWinder(params, variant);
     case 'triangular-fan':
     case 'triangular-outline':
     case 'sketch':
