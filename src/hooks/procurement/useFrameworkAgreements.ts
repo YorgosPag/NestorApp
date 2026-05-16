@@ -3,7 +3,7 @@
 /**
  * useFrameworkAgreements — Framework Agreements hook (ADR-330 Phase 5)
  *
- * Reads via Firestore onSnapshot (live updates, ADR-300 stale cache).
+ * Reads via firestoreQueryService.subscribe (ADR-355 SSoT, ADR-361 equality-guarded; ADR-300 stale cache).
  * Writes via API routes (`/api/procurement/agreements`) — Firestore rules
  * block direct client writes; mutations go through Admin SDK with audit trail.
  *
