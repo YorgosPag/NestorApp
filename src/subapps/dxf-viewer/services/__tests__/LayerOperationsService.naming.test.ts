@@ -15,10 +15,13 @@ import { LayerOperationsService } from '../LayerOperationsService';
 function makeScene(layers: SceneLayer[], entityLayers: string[] = []): SceneModel {
   const layerMap: Record<string, SceneLayer> = {};
   for (const l of layers) layerMap[l.name] = l;
+  // ADR-358 Phase 9D-1: entities carry BOTH legacy `layer` (name) and stable `layerId`.
+  // Stable id resolves via layer-name → SceneLayer.id lookup at fixture build time.
   const entities = entityLayers.map((name, i) => ({
     id: `ent_${i}`,
     type: 'line' as const,
     layer: name,
+    layerId: layerMap[name]?.id,
     visible: true,
     color: '#ffffff',
     start: { x: 0, y: 0 },
@@ -92,12 +95,17 @@ describe('LayerOperationsService.renameLayer — name guard (ADR-358 §5.6 Q9)',
 
   it('accepts a valid rename — updates layers + entity layer refs', () => {
     const scene = makeScene([layerA()], ['Walls', 'Walls']);
+    const wallsIdBefore = scene.entities.map((e) => (e as { layerId?: string }).layerId);
     const r = service.renameLayer('Walls', 'Pareti', scene);
     expect(r.success).toBe(true);
     expect(r.validationError).toBeUndefined();
     expect(r.updatedScene.layers['Pareti']).toBeDefined();
     expect(r.updatedScene.layers['Walls']).toBeUndefined();
     expect(r.updatedScene.entities.every((e) => e.layer === 'Pareti')).toBe(true);
+    // ADR-358 Phase 9D-1: entity.layerId MUST stay stable across rename — only name changes.
+    const wallsIdAfter = r.updatedScene.entities.map((e) => (e as { layerId?: string }).layerId);
+    expect(wallsIdAfter).toEqual(wallsIdBefore);
+    expect(wallsIdAfter.every((id) => id === 'lyr_a')).toBe(true);
   });
 
   it('idempotent no-op for oldName === newName', () => {
