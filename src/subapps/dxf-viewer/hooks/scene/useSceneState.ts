@@ -19,6 +19,9 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { EMPTY_BOUNDS } from '../../config/geometry-constants';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT + DXF default-layer constant
+import { getLayer } from '../../stores/LayerStore';
+import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { dlog, dwarn, derr } from '../../debug';
 
 const DEBUG_SCENE_STATE = false;
@@ -70,8 +73,15 @@ export function useSceneState() {
   const onEntityCreated = useCallback((entity: AnySceneEntity) => {
     if (currentLevelId && currentScene) {
       // Ensure entity has a default layer if not specified
+      // ADR-358 Phase 9D-3 WRITE site: mirror legacy `layer` + stable `layerId`
       if (!entity.layer) {
-        entity.layer = '0';
+        entity.layer = DXF_DEFAULT_LAYER;
+      }
+      if (!entity.layerId) {
+        const defaultLayer = getLayer(DXF_DEFAULT_LAYER);
+        if (defaultLayer) {
+          entity.layerId = defaultLayer.id;
+        }
       }
       
       const newScene = { ...currentScene, entities: [...currentScene.entities, entity] };
