@@ -122,10 +122,39 @@ Hash JSON costo trascurabile su N=1-5 levels (typical). Skip diretto = zero stat
 **Diagnostica usata (riusabile)**: `src/subapps/dxf-viewer/debug/render-loop-trace.ts` — SSOT helper env-gated (`NEXT_PUBLIC_TRACE_RENDER_LOOP=1` o `localStorage.setItem('TRACE_RENDER_LOOP','1')`). Esporta `useRenderTrace(label, snapshot)` + `installSetStateTracer()`. Monkey-patch `React.useState`/`useReducer`/`useSyncExternalStore` NON funziona su Firefox+Turbopack (React namespace frozen) — patch fallisce gracefully, `useRenderTrace` rimane operativo come strumento principale. No-op in production.
 
 **Follow-up still open** (non bloccante idle):
-- `LevelsSystem.tsx:428-432` — `value` ancora non memoizzato. Defense-in-depth opzionale (`useMemo` con ~30 dep). Skip per ora — fix #1 ferma cascade alla sorgente, downstream guard ridondante.
 - `CanvasSection.tsx` — `useLevels()` full subscription. Slice stabile `useLevelScene(levelId)` rimane raccomandazione.
 - `overlays/overlay-store.tsx:130` — write-heavy amplifier su `floorplan_overlays`. Stesso pattern equality guard applicabile.
-- `useDxfViewerState` (line 375-408) — return object literal fresh ad ogni render. Cosmetic effetto, non causa.
+
+---
+
+### 2026-05-16 (Phase XVI): Fix residual idle re-render loop (after ADR-361) — hook return object memoization
+
+**Bug discovered post-ADR-361**: Despite Firestore equality guard suppression (Phase XV + ADR-361), `CanvasSection` still re-rendered ~10Hz idle with 4 ref-only churn: `levelManager`, `gripSettings`, `floorplanBg`, `entityJoinState`. Render-trace instrumentation confirmed: same content, different reference on every render.
+
+**Root cause — memoization chain break**: `useAutoSaveSceneManager()` returned a bare object literal (riga 285-299) without `useMemo`, containing fresh callback refs ad ogni render. This invalidated the `useMemo` inside `useLevelsSystemState` (riga 366), which depended on `sceneManager`. Chain reaction:
+
+```
+useSceneManager() → bare object literal (no memo)
+  ↓
+useAutoSaveSceneManager(sceneManager) → bare object literal (no memo, depends on sceneManager)
+  ↓
+useLevelsSystemState(sceneManager) → useMemo([... sceneManager ...]) — INVALIDATED every render
+  ↓
+LevelsContext.Provider value={useMemo result} → always NEW ref (deps include broken sceneManager)
+  ↓
+CanvasSection useContext(LevelsContext) → re-renders, trigger setState
+  ↓
+Loop (3-10Hz)
+```
+
+**Fix**: Wrap returns in `useMemo`:
+1. `useSceneManager()` — return wrapped in `useMemo([levelScenes, setLevelScene, getLevelScene, ...])`. Stabilize function fields (`hasSceneForLevel`, `getSceneEntityCount`) in `useCallback`.
+2. `useAutoSaveSceneManager()` — return wrapped in `useMemo([sceneManager, setLevelSceneWithAutoSave, currentFileName, ...])`.
+3. `LevelsSystem` Provider `value` already wrapped in `useMemo` (Phase XVI same-session fix).
+
+**Cascading**: Firestore subscription payload equality guard (ADR-361) suppresses STATE mutations, but if State-holding callbacks are not memoized, the context value still churns → downstream re-renders. Both layers required: (1) suppress duplicate deliveries, (2) stabilize all object refs in the Context value. Google-level architecture (N.7.2 #5 SSOT).
+
+**Verification**: After fix, render-trace shows [CanvasSection] idle at render #N (no new ref-only), ref-churn silent. Cardinal rules maintained: 40-line function limit (hooks under 80 lines), 500-line file limit (all modified files <300 lines), zero `any`, zero inline styles.
 
 ---
 

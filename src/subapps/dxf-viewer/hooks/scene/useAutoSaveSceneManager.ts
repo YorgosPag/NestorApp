@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { STORAGE_TIMING } from '../../config/timing-config';
 import { useSceneManager, type SceneManagerState } from './useSceneManager';
@@ -282,7 +282,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     };
   }, []);
   
-  return {
+  return useMemo(() => ({
     ...sceneManager,
     setLevelScene: setLevelSceneWithAutoSave,
     currentFileName,
@@ -296,5 +296,10 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     setOnSceneSaved,
     setIsLoadingFromFirestore,
     resetSceneSession,
-  };
+  }), [
+    sceneManager, setLevelSceneWithAutoSave, currentFileName, setCurrentFileName,
+    autoSaveEnabled, setAutoSaveEnabled, lastSaveTime, saveStatus,
+    setFileRecordId, setSaveContext, setOnSceneSaved, setIsLoadingFromFirestore,
+    resetSceneSession,
+  ]);
 }

@@ -3117,6 +3117,8 @@
         "src/subapps/dxf-viewer/ui/components/layer-picker/CurrentLayerPickerPopover.tsx",
         "src/subapps/dxf-viewer/ui/components/layer-picker/useCurrentLayerPickerState.ts",
         "src/subapps/dxf-viewer/ui/components/layer-picker/__tests__/useCurrentLayerPickerState.test.tsx",
+        "src/subapps/dxf-viewer/ui/components/layer-manager/useLayerManagerState.ts",
+        "src/subapps/dxf-viewer/ui/components/layer-manager/__tests__/useLayerManagerState.test.ts",
         "src/subapps/dxf-viewer/statusbar/CadStatusBar.tsx",
         "src/subapps/dxf-viewer/ui/ribbon/components/RibbonPanel.tsx"
       ],

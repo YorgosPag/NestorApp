@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import type { SceneModel } from '../../types/scene';
 
 export interface SceneManagerState {
@@ -47,16 +47,16 @@ export function useSceneManager(): SceneManagerState {
     setLevelScenes({});
   }, []);
 
-  const hasSceneForLevel = (levelId: string): boolean => {
+  const hasSceneForLevel = useCallback((levelId: string): boolean => {
     return !!levelScenes[levelId];
-  };
+  }, [levelScenes]);
 
-  const getSceneEntityCount = (levelId: string): number => {
+  const getSceneEntityCount = useCallback((levelId: string): number => {
     const scene = levelScenes[levelId];
     return scene?.entities.length || 0;
-  };
+  }, [levelScenes]);
 
-  return {
+  return useMemo(() => ({
     levelScenes,
     setLevelScene,
     getLevelScene,
@@ -64,5 +64,5 @@ export function useSceneManager(): SceneManagerState {
     clearAllScenes,
     hasSceneForLevel,
     getSceneEntityCount
-  };
+  }), [levelScenes, setLevelScene, getLevelScene, clearLevelScene, clearAllScenes, hasSceneForLevel, getSceneEntityCount]);
 }
