@@ -64,5 +64,5 @@ export function useSceneManager(): SceneManagerState {
     clearAllScenes,
     hasSceneForLevel,
     getSceneEntityCount
-  }), [levelScenes, setLevelScene, getLevelScene, clearLevelScene, clearAllScenes, hasSceneForLevel, getSceneEntityCount]);
+  }), [levelScenes, setLevelScene]);
 }
