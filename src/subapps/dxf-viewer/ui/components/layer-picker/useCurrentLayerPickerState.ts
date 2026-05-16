@@ -108,15 +108,22 @@ const CATEGORY_ORDER: ReadonlyArray<AecLayerCategory> = [
 
 /**
  * Pure initial-current selector — Q8 spec line 863: Layer "0" → first general
- * category layer → first of array. Returns the layer id-or-name key.
+ * category layer → first of array. Frozen layers skipped in all three tiers
+ * (drawing on a frozen layer is impossible — AutoCAD parity). Locked is fine
+ * for seed: user can still switch away later. Returns id-or-name key.
  */
 export function pickInitialLayerId(layers: ReadonlyArray<SceneLayer>): string | null {
   if (layers.length === 0) return null;
   const key = (l: SceneLayer): string => l.id ?? l.name;
-  const layerZero = layers.find((l) => l.name === '0');
+  const drawable = (l: SceneLayer): boolean => l.frozen !== true;
+  const layerZero = layers.find((l) => l.name === '0' && drawable(l));
   if (layerZero) return key(layerZero);
-  const general = layers.find((l) => (l.category ?? 'general') === 'general');
+  const general = layers.find(
+    (l) => (l.category ?? 'general') === 'general' && drawable(l),
+  );
   if (general) return key(general);
+  const firstDrawable = layers.find(drawable);
+  if (firstDrawable) return key(firstDrawable);
   return key(layers[0]);
 }
 
