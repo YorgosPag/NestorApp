@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Level,
   FloorplanDoc,
@@ -349,72 +349,98 @@ function useLevelsSystemState({
     [handleError]
   );
 
-  return {
-    // State
-    levels,
-    currentLevelId,
-    floorplans,
-    importWizard,
-    settings,
-    isLoading,
-    sceneLoading,
-    error,
+  // Stable getters for sceneManager fields — referenced via ref-stable closures
+  // so the memoized return object below stays referentially stable when
+  // sceneManager itself does not change identity.
+  const getCurrentFileName = useCallback(() => sceneManager.currentFileName, [sceneManager]);
+  const getAutoSaveStatus = useCallback(
+    () => ({ lastSaveTime: sceneManager.lastSaveTime, saveStatus: sceneManager.saveStatus }),
+    [sceneManager],
+  );
 
-    // Level operations
-    addLevel,
-    removeLevel,
-    deleteLevel,
-    clearAllLevels,
-    reorderLevels,
-    renameLevel,
-    setCurrentLevel,
-    toggleLevelVisibility,
-    setDefaultLevel,
-    duplicateLevel,
-    linkLevelToFloor,
-    updateLevelContext,
+  // ADR-040 Phase XVI — memoize the Context value so consumers don't re-render
+  // on every Provider render. Root cause of idle render-loop (2026-05-16):
+  // the bare object literal `value` caused every consumer (CanvasSection,
+  // floorplan-background hook, entity-join hook, …) to receive a new
+  // reference on each Provider render, even when content was identical.
+  return useMemo<LevelsHookReturn>(
+    () => ({
+      // State
+      levels,
+      currentLevelId,
+      floorplans,
+      importWizard,
+      settings,
+      isLoading,
+      sceneLoading,
+      error,
 
-    // Floorplan operations
-    addFloorplan,
-    removeFloorplan,
-    updateFloorplan,
-    getFloorplansForLevel,
-    calibrateFloorplan,
+      // Level operations
+      addLevel,
+      removeLevel,
+      deleteLevel,
+      clearAllLevels,
+      reorderLevels,
+      renameLevel,
+      setCurrentLevel,
+      toggleLevelVisibility,
+      setDefaultLevel,
+      duplicateLevel,
+      linkLevelToFloor,
+      updateLevelContext,
 
-    // Scene management
-    setLevelScene,
-    getLevelScene,
-    clearLevelScene,
+      // Floorplan operations
+      addFloorplan,
+      removeFloorplan,
+      updateFloorplan,
+      getFloorplansForLevel,
+      calibrateFloorplan,
 
-    // Auto-save functionality
-    setCurrentFileName: sceneManager.setCurrentFileName,
-    getCurrentFileName: () => sceneManager.currentFileName,
-    setAutoSaveEnabled: sceneManager.setAutoSaveEnabled,
-    getAutoSaveStatus: () => ({
-      lastSaveTime: sceneManager.lastSaveTime,
-      saveStatus: sceneManager.saveStatus,
+      // Scene management
+      setLevelScene,
+      getLevelScene,
+      clearLevelScene,
+
+      // Auto-save functionality
+      setCurrentFileName: sceneManager.setCurrentFileName,
+      getCurrentFileName,
+      setAutoSaveEnabled: sceneManager.setAutoSaveEnabled,
+      getAutoSaveStatus,
+      setFileRecordId: sceneManager.setFileRecordId,
+      setSaveContext: sceneManager.setSaveContext,
+      linkSceneToLevel,
+
+      // Import wizard
+      startImportWizard,
+      setImportWizardStep,
+      setSelectedLevel,
+      setCalibration,
+      completeImport,
+      cancelImportWizard,
+
+      // Settings
+      updateSettings,
+      resetSettings,
+
+      // Utility operations
+      validateLevelName,
+      exportLevelsData,
+      importLevelsData,
     }),
-    setFileRecordId: sceneManager.setFileRecordId,
-    setSaveContext: sceneManager.setSaveContext,
-    linkSceneToLevel,
-
-    // Import wizard
-    startImportWizard,
-    setImportWizardStep,
-    setSelectedLevel,
-    setCalibration,
-    completeImport,
-    cancelImportWizard,
-
-    // Settings
-    updateSettings,
-    resetSettings,
-
-    // Utility operations
-    validateLevelName,
-    exportLevelsData,
-    importLevelsData,
-  };
+    [
+      levels, currentLevelId, floorplans, importWizard, settings, isLoading, sceneLoading, error,
+      addLevel, removeLevel, deleteLevel, clearAllLevels, reorderLevels, renameLevel,
+      setCurrentLevel, toggleLevelVisibility, setDefaultLevel, duplicateLevel, linkLevelToFloor,
+      updateLevelContext,
+      addFloorplan, removeFloorplan, updateFloorplan, getFloorplansForLevel, calibrateFloorplan,
+      setLevelScene, getLevelScene, clearLevelScene,
+      sceneManager, getCurrentFileName, getAutoSaveStatus, linkSceneToLevel,
+      startImportWizard, setImportWizardStep, setSelectedLevel, setCalibration, completeImport,
+      cancelImportWizard,
+      updateSettings, resetSettings,
+      validateLevelName, exportLevelsData, importLevelsData,
+    ],
+  );
 }
 
 export function useLevelsContext(): LevelsHookReturn {
