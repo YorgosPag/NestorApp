@@ -3125,6 +3125,24 @@
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",
       "tier": 3
+    },
+    "layer-name-strict-validation": {
+      "ssotFile": "src/subapps/dxf-viewer/services/layer-name-validator.ts",
+      "description": "ADR-358 §5.6 Q9 (Strict AutoCAD parity) — `validateLayerName()` is the single source of truth for SceneLayer.name validation. 7 rules (EMPTY / WHITESPACE_ONLY / LEADING_TRAILING_WS / TOO_LONG / INVALID_CHARS / RESERVED Layer-0 / DUPLICATE) + Layer-0 immutable hardening (can never be renamed, deleted, or reused). All consumers (UI rename inputs, LayerOperationsService.createLayer / renameLayer, DXF parser fallback) must call this function rather than re-implementing checks; duplicate validator implementations create defender-hierarchy drift (UI accepts but service rejects, or vice versa) and break AutoCAD parity. Phase 9A landed the pure validator + 45 tests; Phase 9B wires it into LayerOperationsService; Phase 9G wires UI real-time hints + Layer 0 system badge.",
+      "forbiddenPatterns": [
+        "function validateLayerName\\b",
+        "const validateLayerName\\s*="
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/services/layer-name-validator.ts",
+        "src/subapps/dxf-viewer/services/shared/layer-naming-guard.ts",
+        "src/subapps/dxf-viewer/services/LayerOperationsService.ts",
+        "src/subapps/dxf-viewer/services/__tests__/layer-name-validator.test.ts",
+        "src/subapps/dxf-viewer/services/__tests__/LayerOperationsService.naming.test.ts"
+      ],
+      "addedDate": "2026-05-16",
+      "addedByAdr": "ADR-358",
+      "tier": 3
     }
   }
 }
