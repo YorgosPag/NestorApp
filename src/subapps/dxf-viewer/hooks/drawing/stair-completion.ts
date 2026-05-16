@@ -1,5 +1,5 @@
 /**
- * ADR-358 Phase 5a — Pure builders for stair entity creation.
+ * ADR-358 Phase 5a + 6.5 — Pure builders for stair entity creation.
  *
  * SSoT:
  *   - IDs via `generateStairId()` (N.6 enterprise-id, ADR-017/210/294).
@@ -10,14 +10,22 @@
  * via the contextual ribbon tab landing Phase 7a — Phase 5a keeps the click
  * pipeline minimal and deterministic.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §5.1 §6.1
+ * Phase 6.5 (Q26): when `codeProfile === 'ada'` the builder auto-applies the
+ * ADA accessibility pacchetto coherent — handrails on both sides at code-min
+ * height, top extension 305mm, bottom extension one-tread, contrast strip on
+ * — unless the caller explicitly overrides. The auto-default keeps the
+ * validator green out of the box for ADA stairs (Q26).
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §5.1 §6.1 §3.6 §9.2 Q26
  */
 
 import { Timestamp } from 'firebase/firestore';
 import type { Point2D, Point3D } from '../../rendering/types/Types';
 import type {
+  StairCodeProfile,
   StairEntity,
   StairGeometry,
+  StairNokSubType,
   StairParams,
   StairValidationState,
   StairVariantParams,
@@ -39,14 +47,53 @@ const RAD_TO_DEG = 180 / Math.PI;
 // ─── Param overrides accepted by builders ────────────────────────────────────
 
 /**
- * Dynamic Input field overrides for `buildDefaultStairParams`. Other params
- * (variant kind, structureType, codeProfile, handrails) keep Phase 5a defaults.
+ * Field overrides for `buildDefaultStairParams`. Dynamic Input supplies
+ * rise/tread/width/stepCount; Phase 6.5 (Q26) adds `codeProfile` so callers
+ * can trigger the ADA auto-default pacchetto, `nokSubType` for NOK κύρια vs
+ * δευτερεύουσα, plus selective handrail / contrastStrip / occupancyLoad
+ * overrides that survive the ADA auto-default.
  */
 export interface StairParamOverrides {
   readonly rise?: number;
   readonly tread?: number;
   readonly width?: number;
   readonly stepCount?: number;
+  readonly codeProfile?: StairCodeProfile;
+  readonly nokSubType?: StairNokSubType;
+  readonly handrails?: Partial<StairParams['handrails']>;
+  readonly adaContrastStrip?: boolean;
+  readonly occupancyLoad?: number;
+}
+
+// ─── ADA pacchetto coherent (Phase 6.5, Q26 / §3.6) ──────────────────────────
+
+/** ADA top horizontal handrail extension (ICC A117.1 §505 — 12" = 305mm). */
+const ADA_TOP_EXTENSION_MM = 305;
+/** ADA handrail height — code-compliant midpoint of [864, 965] mm range. */
+const ADA_HANDRAIL_HEIGHT_MM = 900;
+
+function buildHandrails(
+  codeProfile: StairCodeProfile,
+  override: Partial<StairParams['handrails']> | undefined,
+): StairParams['handrails'] {
+  if (codeProfile === 'ada') {
+    return {
+      inner: override?.inner ?? true,
+      outer: override?.outer ?? true,
+      height: override?.height ?? ADA_HANDRAIL_HEIGHT_MM,
+      topExtension: override?.topExtension ?? ADA_TOP_EXTENSION_MM,
+      bottomExtension: override?.bottomExtension ?? 'one-tread',
+    };
+  }
+  return {
+    inner: override?.inner ?? true,
+    outer: override?.outer ?? true,
+    height: override?.height ?? DEFAULT_HANDRAIL_HEIGHT_MM,
+    ...(override?.topExtension !== undefined ? { topExtension: override.topExtension } : {}),
+    ...(override?.bottomExtension !== undefined
+      ? { bottomExtension: override.bottomExtension }
+      : {}),
+  };
 }
 
 // ─── Defaults factory ────────────────────────────────────────────────────────
@@ -66,8 +113,11 @@ export function buildDefaultStairParams(
   const tread = overrides.tread ?? DEFAULT_TREAD_MM;
   const width = overrides.width ?? DEFAULT_WIDTH_MM;
   const stepCount = overrides.stepCount ?? DEFAULT_STEP_COUNT;
+  const codeProfile: StairCodeProfile = overrides.codeProfile ?? 'nok';
   const base3D: Point3D = { x: basePoint.x, y: basePoint.y, z: 0 };
   const variant: StairVariantParams = { kind: 'straight' };
+  const adaContrastStrip =
+    overrides.adaContrastStrip ?? (codeProfile === 'ada' ? true : false);
   return {
     basePoint: base3D,
     direction,
@@ -83,16 +133,19 @@ export function buildDefaultStairParams(
     structureType: 'monolithic',
     riserType: 'closed',
     antiskidNosing: false,
-    adaContrastStrip: false,
+    adaContrastStrip,
     variant,
     walklineOffset: DEFAULT_WALKLINE_OFFSET_MM,
-    handrails: { inner: true, outer: true, height: DEFAULT_HANDRAIL_HEIGHT_MM },
+    handrails: buildHandrails(codeProfile, overrides.handrails),
     upDirection: 'forward',
     treadNumberStart: 1,
     treadLabelDisplay: 'all',
     treadLabelRestartPerFlight: false,
-    codeProfile: 'nok',
-    nokSubType: 'main',
+    codeProfile,
+    nokSubType: overrides.nokSubType ?? (codeProfile === 'nok' ? 'main' : undefined),
+    ...(overrides.occupancyLoad !== undefined
+      ? { occupancyLoad: overrides.occupancyLoad }
+      : {}),
   };
 }
 
