@@ -184,7 +184,7 @@ export function createPartialPreview(
   points: Point2D[]
 ): ExtendedSceneEntity | null {
   if (points.length === 0) return null;
-  // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
+  // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
   const defaultLayerId = getLayer(DXF_DEFAULT_LAYER)?.id;
 
   // ── Pattern A: 3-point tools (dot at 1pt, line at 2pt) ────────────────
@@ -196,7 +196,6 @@ export function createPartialPreview(
         position: points[0],
         size: 4,
         visible: true,
-        layer: '0',
         layerId: defaultLayerId,
         preview: true,
         showPreviewGrips: true,
@@ -209,7 +208,6 @@ export function createPartialPreview(
         start: points[0],
         end: points[1],
         visible: true,
-        layer: '0',
         layerId: defaultLayerId,
         color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
         lineweight: LINEWEIGHT_1MM,
@@ -232,7 +230,6 @@ export function createPartialPreview(
         center: points[0],
         radius: 3,
         visible: true,
-        layer: '0',
         layerId: defaultLayerId,
         measurement: true,
         preview: true,
@@ -246,7 +243,6 @@ export function createPartialPreview(
         vertices: points,
         closed: false,
         visible: true,
-        layer: '0',
         layerId: defaultLayerId,
         color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
         lineweight: LINEWEIGHT_1MM,
@@ -270,7 +266,6 @@ export function createPartialPreview(
         position: points[0],
         size: 4,
         visible: true,
-        layer: '0',
         layerId: defaultLayerId,
         preview: true,
         showPreviewGrips: true,
@@ -283,7 +278,6 @@ export function createPartialPreview(
         start: points[0],
         end: points[1],
         visible: true,
-        layer: '0',
         layerId: defaultLayerId,
         color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
         lineweight: LINEWEIGHT_1MM,
@@ -303,7 +297,6 @@ export function createPartialPreview(
         center: circleResult.center,
         radius: circleResult.radius,
         visible: true,
-        layer: '0',
         layerId: defaultLayerId,
         preview: true,
         showPreviewGrips: true,
@@ -315,7 +308,6 @@ export function createPartialPreview(
       vertices: [...points],
       closed: false,
       visible: true,
-      layer: '0',
       layerId: defaultLayerId,
       color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
       lineweight: LINEWEIGHT_1MM,
