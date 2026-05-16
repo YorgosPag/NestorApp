@@ -1,0 +1,272 @@
+/**
+ * ADR-358 Phase 7a — Contextual ribbon tab for the Stair editor.
+ *
+ * Trigger: `stair-selected` (dispatched by `resolveContextualTrigger` in
+ * `app/ribbon-contextual-config.ts` when the primary-selected entity has
+ * `type === 'stair'`).
+ *
+ * Panels:
+ *   Structure  → structureType (8 enterprise types) + riserType
+ *   Geometry   → rise / tread / width / stepCount
+ *   Multi-Story → storyCount / storyHeight (writes StairParams.multiStoryConfig)
+ *   Actions    → close
+ *
+ * Live behavior: bridge dispatches `UpdateStairParamsCommand` on each combobox
+ * change (`isDragging=false`, commit-on-select). Smart defaults: structureType
+ * change auto-updates riserType (Q20) + nosingSide (Q34) in the same command.
+ */
+
+import type { RibbonTab } from '../types/ribbon-types';
+import { STAIR_RIBBON_KEYS } from '../hooks/bridge/stair-command-keys';
+
+export const STAIR_CONTEXTUAL_TRIGGER = 'stair-selected';
+
+const STRUCTURE_TYPE_OPTIONS = [
+  { value: 'monolithic', labelKey: 'Monolithic', isLiteralLabel: true },
+  { value: 'stringer-1side', labelKey: 'Stringer 1-Side', isLiteralLabel: true },
+  { value: 'stringer-2side', labelKey: 'Stringer 2-Side', isLiteralLabel: true },
+  { value: 'central-stringer', labelKey: 'Central Stringer', isLiteralLabel: true },
+  { value: 'cantilever', labelKey: 'Cantilever', isLiteralLabel: true },
+  { value: 'suspended', labelKey: 'Suspended', isLiteralLabel: true },
+  { value: 'glass-tread', labelKey: 'Glass Tread', isLiteralLabel: true },
+  { value: 'steel-grating', labelKey: 'Steel Grating', isLiteralLabel: true },
+] as const;
+
+const RISER_TYPE_OPTIONS = [
+  { value: 'closed', labelKey: 'Closed', isLiteralLabel: true },
+  { value: 'open', labelKey: 'Open', isLiteralLabel: true },
+] as const;
+
+const RISE_MM_OPTIONS = [
+  { value: '140', labelKey: '140', isLiteralLabel: true },
+  { value: '150', labelKey: '150', isLiteralLabel: true },
+  { value: '160', labelKey: '160', isLiteralLabel: true },
+  { value: '170', labelKey: '170', isLiteralLabel: true },
+  { value: '175', labelKey: '175', isLiteralLabel: true },
+  { value: '180', labelKey: '180', isLiteralLabel: true },
+  { value: '185', labelKey: '185', isLiteralLabel: true },
+  { value: '190', labelKey: '190', isLiteralLabel: true },
+  { value: '200', labelKey: '200', isLiteralLabel: true },
+  { value: '210', labelKey: '210', isLiteralLabel: true },
+  { value: '220', labelKey: '220', isLiteralLabel: true },
+] as const;
+
+const TREAD_MM_OPTIONS = [
+  { value: '220', labelKey: '220', isLiteralLabel: true },
+  { value: '240', labelKey: '240', isLiteralLabel: true },
+  { value: '250', labelKey: '250', isLiteralLabel: true },
+  { value: '260', labelKey: '260', isLiteralLabel: true },
+  { value: '270', labelKey: '270', isLiteralLabel: true },
+  { value: '280', labelKey: '280', isLiteralLabel: true },
+  { value: '290', labelKey: '290', isLiteralLabel: true },
+  { value: '300', labelKey: '300', isLiteralLabel: true },
+  { value: '320', labelKey: '320', isLiteralLabel: true },
+  { value: '350', labelKey: '350', isLiteralLabel: true },
+] as const;
+
+const WIDTH_MM_OPTIONS = [
+  { value: '800', labelKey: '800', isLiteralLabel: true },
+  { value: '900', labelKey: '900', isLiteralLabel: true },
+  { value: '1000', labelKey: '1000', isLiteralLabel: true },
+  { value: '1100', labelKey: '1100', isLiteralLabel: true },
+  { value: '1200', labelKey: '1200', isLiteralLabel: true },
+  { value: '1400', labelKey: '1400', isLiteralLabel: true },
+  { value: '1600', labelKey: '1600', isLiteralLabel: true },
+  { value: '1800', labelKey: '1800', isLiteralLabel: true },
+  { value: '2000', labelKey: '2000', isLiteralLabel: true },
+] as const;
+
+const STEP_COUNT_OPTIONS = [
+  { value: '3', labelKey: '3', isLiteralLabel: true },
+  { value: '4', labelKey: '4', isLiteralLabel: true },
+  { value: '5', labelKey: '5', isLiteralLabel: true },
+  { value: '6', labelKey: '6', isLiteralLabel: true },
+  { value: '7', labelKey: '7', isLiteralLabel: true },
+  { value: '8', labelKey: '8', isLiteralLabel: true },
+  { value: '9', labelKey: '9', isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+  { value: '11', labelKey: '11', isLiteralLabel: true },
+  { value: '12', labelKey: '12', isLiteralLabel: true },
+  { value: '13', labelKey: '13', isLiteralLabel: true },
+  { value: '14', labelKey: '14', isLiteralLabel: true },
+  { value: '15', labelKey: '15', isLiteralLabel: true },
+  { value: '16', labelKey: '16', isLiteralLabel: true },
+  { value: '18', labelKey: '18', isLiteralLabel: true },
+  { value: '20', labelKey: '20', isLiteralLabel: true },
+] as const;
+
+const STORY_COUNT_OPTIONS = [
+  { value: '1', labelKey: '1', isLiteralLabel: true },
+  { value: '2', labelKey: '2', isLiteralLabel: true },
+  { value: '3', labelKey: '3', isLiteralLabel: true },
+  { value: '4', labelKey: '4', isLiteralLabel: true },
+  { value: '5', labelKey: '5', isLiteralLabel: true },
+  { value: '6', labelKey: '6', isLiteralLabel: true },
+  { value: '7', labelKey: '7', isLiteralLabel: true },
+  { value: '8', labelKey: '8', isLiteralLabel: true },
+  { value: '9', labelKey: '9', isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+] as const;
+
+const STORY_HEIGHT_MM_OPTIONS = [
+  { value: '2400', labelKey: '2400', isLiteralLabel: true },
+  { value: '2500', labelKey: '2500', isLiteralLabel: true },
+  { value: '2600', labelKey: '2600', isLiteralLabel: true },
+  { value: '2700', labelKey: '2700', isLiteralLabel: true },
+  { value: '2800', labelKey: '2800', isLiteralLabel: true },
+  { value: '3000', labelKey: '3000', isLiteralLabel: true },
+  { value: '3200', labelKey: '3200', isLiteralLabel: true },
+  { value: '3500', labelKey: '3500', isLiteralLabel: true },
+] as const;
+
+export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
+  id: 'stair-editor',
+  labelKey: 'ribbon.tabs.stairProperties',
+  isContextual: true,
+  contextualTrigger: STAIR_CONTEXTUAL_TRIGGER,
+  panels: [
+    {
+      id: 'stair-structure',
+      labelKey: 'ribbon.panels.stairStructure',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.structureType',
+                labelKey: 'ribbon.commands.stairEditor.structureType',
+                commandKey: STAIR_RIBBON_KEYS.stringParams.structureType,
+                comboboxWidthPx: 150,
+                options: STRUCTURE_TYPE_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.riserType',
+                labelKey: 'ribbon.commands.stairEditor.riserType',
+                commandKey: STAIR_RIBBON_KEYS.stringParams.riserType,
+                comboboxWidthPx: 90,
+                options: RISER_TYPE_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'stair-geometry',
+      labelKey: 'ribbon.panels.stairGeometry',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.rise',
+                labelKey: 'ribbon.commands.stairEditor.rise',
+                commandKey: STAIR_RIBBON_KEYS.params.rise,
+                comboboxWidthPx: 70,
+                options: RISE_MM_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.tread',
+                labelKey: 'ribbon.commands.stairEditor.tread',
+                commandKey: STAIR_RIBBON_KEYS.params.tread,
+                comboboxWidthPx: 70,
+                options: TREAD_MM_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.width',
+                labelKey: 'ribbon.commands.stairEditor.width',
+                commandKey: STAIR_RIBBON_KEYS.params.width,
+                comboboxWidthPx: 80,
+                options: WIDTH_MM_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.stepCount',
+                labelKey: 'ribbon.commands.stairEditor.stepCount',
+                commandKey: STAIR_RIBBON_KEYS.params.stepCount,
+                comboboxWidthPx: 70,
+                options: STEP_COUNT_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'stair-multistory',
+      labelKey: 'ribbon.panels.stairMultiStory',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.storyCount',
+                labelKey: 'ribbon.commands.stairEditor.storyCount',
+                commandKey: STAIR_RIBBON_KEYS.params.storyCount,
+                comboboxWidthPx: 70,
+                options: STORY_COUNT_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.storyHeight',
+                labelKey: 'ribbon.commands.stairEditor.storyHeight',
+                commandKey: STAIR_RIBBON_KEYS.params.storyHeight,
+                comboboxWidthPx: 80,
+                options: STORY_HEIGHT_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'stair-actions',
+      labelKey: 'ribbon.panels.stairActions',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'stair.close',
+                labelKey: 'ribbon.commands.stairEditor.close',
+                icon: 'select',
+                commandKey: STAIR_RIBBON_KEYS.actions.close,
+                action: STAIR_RIBBON_KEYS.actions.close,
+              },
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
