@@ -11,14 +11,10 @@ import type { LineweightMm } from '../../../types/entities';
 
 export interface CreateEntityOptions {
   /**
-   * @deprecated ADR-358 Phase 9D — Layer NAME. Transitional dual-write alongside `layerId`.
-   * Phase 9D-5b removes this field; new callers MUST prefer `layerId` (stable `lyr_<UUID-v4>`).
-   */
-  layer?: string;
-  /**
    * Stable layer identifier — `lyr_<UUID-v4>` matching `SceneLayer.id` (ADR-358 Phase 9C v2.13).
-   * Resolved at execute() time via `LayerStore.getLayer(id)?.name` for the legacy `layer` write
-   * until Phase 9D-5b drops the dual-write.
+   * Canonical layer binding post-Phase 9D-5b-i (legacy `layer` name option REMOVED).
+   * Resolution to display name at read sites via `LayerStore.getLayer(id)?.name`
+   * (or `resolveEntityLayerName(entity)` helper).
    */
   layerId?: string;
   color?: string;
