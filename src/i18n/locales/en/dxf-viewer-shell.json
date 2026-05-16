@@ -9,7 +9,10 @@
     "tooltipEmpty": "No active layer",
     "placeholder": "No layer",
     "searchPlaceholder": "Search layers…",
-    "empty": "No layers found"
+    "empty": "No layers found",
+    "category": {
+      "all": "All"
+    }
   },
   "toolbar": {
     "title": "Drawing Tools",
