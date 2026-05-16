@@ -17,6 +17,7 @@ import { EllipseRenderer } from '../entities/EllipseRenderer';
 import { SplineRenderer } from '../entities/SplineRenderer';
 import { AngleMeasurementRenderer } from '../entities/AngleMeasurementRenderer';
 import { PointRenderer } from '../entities/PointRenderer';
+import { StairRenderer } from '../entities/StairRenderer';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -53,6 +54,8 @@ export class EntityRendererComposite {
     const splineRenderer = new SplineRenderer(this.ctx);
     const angleMeasurementRenderer = new AngleMeasurementRenderer(this.ctx);
     const pointRenderer = new PointRenderer(this.ctx);
+    // ADR-358 Phase 5b — parametric stair renderer (2D plan view).
+    const stairRenderer = new StairRenderer(this.ctx);
 
     // Register renderers by entity type
     this.renderers.set('line', lineRenderer);
@@ -68,6 +71,7 @@ export class EntityRendererComposite {
     this.renderers.set('spline', splineRenderer);
     this.renderers.set('point', pointRenderer as BaseEntityRenderer); // ✅ ENTERPRISE FIX: Type compatibility resolved
     this.renderers.set('angle-measurement', angleMeasurementRenderer);
+    this.renderers.set('stair', stairRenderer);
   }
 
   // Settings management
