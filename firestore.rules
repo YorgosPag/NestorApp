@@ -3453,6 +3453,81 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🪜 FLOORPLAN_STAIRS COLLECTION — ADR-358 Phase 8 (G6 schema, G24 soft-lock)
+    // =========================================================================
+    // 📅 Added: 2026-05-17
+    // 🏢 ENTERPRISE: Parametric stair entities. Top-level collection with
+    //                companyId field-based tenant isolation (mirrors
+    //                project_floorplans / building_floorplans pattern).
+    //                Top-level (NOT subcollection) so the SSoT
+    //                `firestoreQueryService.subscribe('FLOORPLAN_STAIRS')`
+    //                applies the tenant constraint automatically and ADR-361
+    //                equality guard suppresses idle re-render storms.
+    //
+    // 🔒 SECURITY MODEL:
+    //   - READ: Tenant member of doc's company OR super_admin
+    //   - CREATE: Tenant member + companyId matches caller + createdBy == self
+    //             + required fields (companyId, projectId, floorplanId, kind, params)
+    //   - UPDATE: Creator OR company_admin
+    //             + companyId/projectId/floorplanId immutable
+    //             + createdBy/createdAt immutable
+    //             + editingBy.userId can only be set to caller's uid (anti-spoof, G24)
+    //   - DELETE: Creator OR company_admin OR super_admin
+    //
+    // 📘 ADR-358 §6.1 (schema), §6.8 (soft-lock G24), §7.2 row 8
+    // =========================================================================
+    match /floorplan_stairs/{stairId} {
+
+      // 📖 READ — Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || belongsToCompany(resource.data.companyId)
+                     );
+
+      // ✍️ CREATE — Tenant member + required fields + ownership
+      allow create: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (
+                              request.resource.data.companyId == getUserCompanyId()
+                              && request.resource.data.createdBy == request.auth.uid
+                              && request.resource.data.keys().hasAll(
+                                   ['companyId', 'projectId', 'floorplanId', 'kind', 'params']
+                                 )
+                            )
+                       );
+
+      // 📝 UPDATE — Creator OR company_admin, with immutable fields + soft-lock anti-spoof
+      allow update: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (
+                              (resource.data.createdBy == request.auth.uid
+                               || isCompanyAdminOfCompany(resource.data.companyId))
+                              // Immutable identity
+                              && request.resource.data.companyId == resource.data.companyId
+                              && request.resource.data.projectId == resource.data.projectId
+                              && request.resource.data.floorplanId == resource.data.floorplanId
+                              // Immutable audit origin
+                              && request.resource.data.createdBy == resource.data.createdBy
+                              && request.resource.data.createdAt == resource.data.createdAt
+                              // G24 soft-lock anti-spoof: editingBy.userId may only be the caller
+                              && (!request.resource.data.keys().hasAny(['editingBy'])
+                                  || request.resource.data.editingBy.userId == request.auth.uid)
+                            )
+                       );
+
+      // 🗑️ DELETE — Creator OR company_admin
+      allow delete: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       );
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 

@@ -1159,6 +1159,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'user_preferences',       // lines 1458-1485 — ownership + tenant isolation, schemaVersion floor
   // company_fonts  → moved to COVERAGE (ADR-344 Phase 6.F, 2026-05-11)
   // text_templates → moved to COVERAGE (ADR-344 Phase 7.E, 2026-05-11)
+  // — DXF Stair Tool (ADR-358 Phase 8, 2026-05-17) —
+  'floorplan_stairs',       // lines 3479-3528 — tenant-scoped + G24 soft-lock anti-spoof, full matrix in Phase 8.X
 ] as const;
 
 // ---------------------------------------------------------------------------
