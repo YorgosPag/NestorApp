@@ -117,6 +117,36 @@ describe('useDxfSceneConversion — Phase 6 ByLayer sentinel emission', () => {
     const converted = result.current.dxfScene.entities[0] as DxfLine;
     expect(converted.linetypeName).toBe('ByLayer');
   });
+
+  it('forwards layerId sentinel (Phase 9D-2 stable id attribution)', () => {
+    const wallsLayer = createSceneLayer({ name: 'WALLS', color: '#FF0000' });
+    const layers = { WALLS: wallsLayer };
+    const entity = makeByLayerLine('e1', 'WALLS', { layerId: wallsLayer.id });
+    const scene = makeScene(layers, [entity]);
+
+    const { result } = renderHook(({ currentScene }) => useDxfSceneConversion({ currentScene }), {
+      initialProps: { currentScene: scene },
+    });
+
+    const converted = result.current.dxfScene.entities[0] as DxfLine;
+    expect(converted.layerId).toBe(wallsLayer.id);
+    expect(converted.layerId).toMatch(/^lyr_[0-9a-f-]{36}$/);
+  });
+
+  it('omits layerId on DxfEntity when source entity has no layerId (transitional optional)', () => {
+    const layers = {
+      WALLS: createSceneLayer({ name: 'WALLS', color: '#FF0000' }),
+    };
+    const entity = makeByLayerLine('e1', 'WALLS');
+    const scene = makeScene(layers, [entity]);
+
+    const { result } = renderHook(({ currentScene }) => useDxfSceneConversion({ currentScene }), {
+      initialProps: { currentScene: scene },
+    });
+
+    const converted = result.current.dxfScene.entities[0] as DxfLine;
+    expect(converted.layerId).toBeUndefined();
+  });
 });
 
 describe('ADR-358 §G7 Phase 6 — resolver end-to-end (sentinel → concrete)', () => {
