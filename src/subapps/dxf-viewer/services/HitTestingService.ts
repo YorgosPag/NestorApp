@@ -18,6 +18,8 @@ import type { BaseEntity } from '../types/entities';
 import { TOLERANCE_CONFIG } from '../config/tolerance-config';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault } from '../config/layer-config';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
+import { resolveEntityLayerName } from '../stores/LayerStore';
 
 export interface HitTestResult {
   entityId: string | null;
@@ -161,8 +163,8 @@ export class HitTestingService {
       type: entity.type,
       visible: entity.visible,
       selected: false,
-      // ADR-130: Centralized default layer
-      layer: getLayerNameOrDefault(entity.layer),
+      // ADR-130 + ADR-358 Phase 9D-3: id-first name via LayerStore, fallback to legacy
+      layer: getLayerNameOrDefault(resolveEntityLayerName(entity)),
       color: entity.color,
       lineType: (entityWithLineType.lineType as "solid" | "dashed" | "dotted" | "dashdot") || 'solid',
       lineweight: entity.lineWidth
