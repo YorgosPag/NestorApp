@@ -22,6 +22,8 @@ import type { Entity } from '../../types/entities';
 import type { SceneLayer, SceneModel } from '../../types/scene';
 import { extendEdge } from './trim-edge-extender';
 import type { CuttingEdge, TrimEdgeMode, TrimMode } from './trim-types';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
+import { resolveEntityLayerName } from '../../stores/LayerStore';
 
 export interface ResolveCuttingEdgesArgs {
   readonly mode: TrimMode;
@@ -65,12 +67,14 @@ export function resolveCuttingEdges(args: ResolveCuttingEdgesArgs): ReadonlyArra
  * DIMENSION / LEADER / BLOCK (industry rule — non-curve types).
  */
 export function isValidCuttingCandidate(
-  entity: { type: string; visible?: boolean; layer?: string },
+  entity: { type: string; visible?: boolean; layer?: string; layerId?: string },
   layers: Record<string, SceneLayer>,
 ): boolean {
   if (entity.visible === false) return false;
-  if (entity.layer && layers[entity.layer]?.locked) return false;
-  if (entity.layer && layers[entity.layer]?.visible === false) return false;
+  // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
+  const layerName = resolveEntityLayerName(entity);
+  if (layerName && layers[layerName]?.locked) return false;
+  if (layerName && layers[layerName]?.visible === false) return false;
 
   switch (entity.type) {
     case 'line':
