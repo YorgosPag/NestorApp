@@ -151,6 +151,9 @@
           "bottomExtension": "ADA: bottom handrail extension must equal one tread depth.",
           "contrastStrip": "ADA: contrasting nosing strip is missing."
         },
+        "egress": {
+          "widthBelowOccupancy": "Insufficient stair width for declared occupancy load ({occupancyLoad} persons)."
+        },
         "headroomBelowMin": "Headroom clearance is below the code minimum."
       }
     },
