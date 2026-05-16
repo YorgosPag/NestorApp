@@ -190,8 +190,22 @@ export function useEntityStatusResolver(
             // Track initial loading
             loadedChunks++;
 
-            // Trigger re-render with immutable copy
-            setEntityStatusCache(new Map(liveMapRef.current));
+            // ADR-040 Phase XVIII: equality guard — multi-chunk subscriptions
+            // can emit metadata-only updates that pass per-subscription ADR-361
+            // guard but produce N consecutive setState invalidating the entire
+            // overlay → CanvasSection chain. Functional setter with O(N) deep
+            // check on Map entries returns prev ref when content identical →
+            // no re-render cascade.
+            setEntityStatusCache((prev) => {
+              if (prev.size === liveMapRef.current.size) {
+                let identical = true;
+                for (const [k, v] of liveMapRef.current) {
+                  if (prev.get(k) !== v) { identical = false; break; }
+                }
+                if (identical) return prev;
+              }
+              return new Map(liveMapRef.current);
+            });
 
             if (loadedChunks === totalChunks) {
               logger.debug('All entity statuses resolved', {
@@ -218,7 +232,7 @@ export function useEntityStatusResolver(
     // No subscriptions needed — clear cache
     if (totalChunks === 0) {
       liveMapRef.current = new Map();
-      setEntityStatusCache(new Map());
+      setEntityStatusCache((prev) => (prev.size === 0 ? prev : new Map()));
     }
 
     return () => {
