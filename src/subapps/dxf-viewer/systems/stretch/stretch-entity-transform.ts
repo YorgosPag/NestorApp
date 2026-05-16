@@ -316,10 +316,9 @@ function stretchRectangle(
   ];
   const newVertices = corners.map((c, i) => (captured.has(i) ? translatePoint(c, d) : c));
 
+  // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
   const replacement = {
     id: entity.id,
-    layer: entity.layer,
-    // ADR-358 Phase 9D-4: dual-write id mirror, layer field deferred removal Phase 9D-5
     layerId: entity.layerId,
     visible: entity.visible,
     type: 'polyline' as const,
