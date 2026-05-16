@@ -18,6 +18,8 @@ import {
 } from '../../rendering/entities/shared/geometry-polyline-utils';
 import { findClosedPolygonsFromLines } from './auto-area-geometry';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
+import { resolveEntityLayerName } from '../../stores/LayerStore';
 
 // ============================================================================
 // TYPES
@@ -141,14 +143,14 @@ function collectEntityCandidates(
     if ((isPolylineEntity(entity) || isLWPolylineEntity(entity)) && entity.closed && entity.vertices.length >= 3) {
       const verts = entity.vertices.map(v => ({ x: v.x, y: v.y }));
       if (isPointInPolygon(worldPoint, verts)) {
-        out.push({ area: calculatePolygonArea(verts), perimeter: calculatePolygonPerimeter(verts), source: 'dxf-polyline', layerName: entity.layer, polygon: verts });
+        out.push({ area: calculatePolygonArea(verts), perimeter: calculatePolygonPerimeter(verts), source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
       }
     } else if (isRectangleEntity(entity) || isRectEntity(entity)) {
       const verts = getRectVertices(entity);
       if (verts && isPointInPolygon(worldPoint, verts)) {
         const w = Math.abs(verts[1].x - verts[0].x);
         const h = Math.abs(verts[2].y - verts[0].y);
-        out.push({ area: w * h, perimeter: 2 * (w + h), source: 'dxf-polyline', layerName: entity.layer, polygon: verts });
+        out.push({ area: w * h, perimeter: 2 * (w + h), source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
       }
     } else if (isCircleEntity(entity)) {
       const dx = worldPoint.x - entity.center.x;
@@ -156,7 +158,7 @@ function collectEntityCandidates(
       if (Math.sqrt(dx * dx + dy * dy) < entity.radius) {
         const r = entity.radius;
         const verts = buildCirclePolygon(entity.center, r, 64);
-        out.push({ area: Math.PI * r * r, perimeter: 2 * Math.PI * r, source: 'dxf-polyline', layerName: entity.layer, polygon: verts });
+        out.push({ area: Math.PI * r * r, perimeter: 2 * Math.PI * r, source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
       }
     } else if (isArcEntity(entity) && isFullCircleArc(entity.startAngle, entity.endAngle)) {
       const dx = worldPoint.x - entity.center.x;
@@ -164,14 +166,14 @@ function collectEntityCandidates(
       if (Math.sqrt(dx * dx + dy * dy) < entity.radius) {
         const r = entity.radius;
         const verts = buildCirclePolygon(entity.center, r, 64);
-        out.push({ area: Math.PI * r * r, perimeter: 2 * Math.PI * r, source: 'dxf-polyline', layerName: entity.layer, polygon: verts });
+        out.push({ area: Math.PI * r * r, perimeter: 2 * Math.PI * r, source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
       }
     } else if (isEllipseEntity(entity) && isFullEllipse(entity.startParam, entity.endParam)) {
       const verts = buildEllipsePolygon(entity.center, entity.majorAxis, entity.minorAxis, entity.rotation ?? 0, 64);
       if (isPointInPolygon(worldPoint, verts)) {
         const area = Math.PI * entity.majorAxis * entity.minorAxis;
         const perim = ellipsePerimeter(entity.majorAxis, entity.minorAxis);
-        out.push({ area, perimeter: perim, source: 'dxf-polyline', layerName: entity.layer, polygon: verts });
+        out.push({ area, perimeter: perim, source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
       }
     }
   }
@@ -291,25 +293,25 @@ function collectAllClosedPolygons(
   for (const entity of entities) {
     if ((isPolylineEntity(entity) || isLWPolylineEntity(entity)) && entity.closed && entity.vertices.length >= 3) {
       const verts = entity.vertices.map(v => ({ x: v.x, y: v.y }));
-      out.push({ area: calculatePolygonArea(verts), perimeter: calculatePolygonPerimeter(verts), source: 'dxf-polyline', layerName: entity.layer, polygon: verts });
+      out.push({ area: calculatePolygonArea(verts), perimeter: calculatePolygonPerimeter(verts), source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
     } else if (isRectangleEntity(entity) || isRectEntity(entity)) {
       const verts = getRectVertices(entity);
       if (verts) {
         const w = Math.abs(verts[1].x - verts[0].x);
         const h = Math.abs(verts[2].y - verts[0].y);
-        out.push({ area: w * h, perimeter: 2 * (w + h), source: 'dxf-polyline', layerName: entity.layer, polygon: verts });
+        out.push({ area: w * h, perimeter: 2 * (w + h), source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
       }
     } else if (isCircleEntity(entity)) {
       const r = entity.radius;
       const verts = buildCirclePolygon(entity.center, r, 64);
-      out.push({ area: Math.PI * r * r, perimeter: 2 * Math.PI * r, source: 'dxf-polyline', layerName: entity.layer, polygon: verts });
+      out.push({ area: Math.PI * r * r, perimeter: 2 * Math.PI * r, source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
     } else if (isArcEntity(entity) && isFullCircleArc(entity.startAngle, entity.endAngle)) {
       const r = entity.radius;
       const verts = buildCirclePolygon(entity.center, r, 64);
-      out.push({ area: Math.PI * r * r, perimeter: 2 * Math.PI * r, source: 'dxf-polyline', layerName: entity.layer, polygon: verts });
+      out.push({ area: Math.PI * r * r, perimeter: 2 * Math.PI * r, source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
     } else if (isEllipseEntity(entity) && isFullEllipse(entity.startParam, entity.endParam)) {
       const verts = buildEllipsePolygon(entity.center, entity.majorAxis, entity.minorAxis, entity.rotation ?? 0, 64);
-      out.push({ area: Math.PI * entity.majorAxis * entity.minorAxis, perimeter: ellipsePerimeter(entity.majorAxis, entity.minorAxis), source: 'dxf-polyline', layerName: entity.layer, polygon: verts });
+      out.push({ area: Math.PI * entity.majorAxis * entity.minorAxis, perimeter: ellipsePerimeter(entity.majorAxis, entity.minorAxis), source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
     }
   }
 
