@@ -35,6 +35,8 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
 
 export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const sceneManager = useSceneManager();
+  const sceneManagerRef = useRef(sceneManager);
+  sceneManagerRef.current = sceneManager;
   // 🔒 TENANT SCOPING (Sentry NESTOR-APP-3): inject authenticated user so
   // auto-save writes companyId + createdBy into cadFiles metadata, enabling
   // cross-user reads under tenant-scoped Firestore rules.
@@ -116,7 +118,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = undefined;
     }
-    sceneManager.clearAllScenes();
+    sceneManagerRef.current.clearAllScenes();
     injectedFileRecordIdRef.current = null;
     injectedSaveContextRef.current = null;
     currentFileNameRef.current = null;
@@ -125,20 +127,16 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     scenePathCacheRef.current.clear();
     loadedFilesRef.current.clear();
     setSaveStatus('idle');
-    // Release the guard on the next animation frame — by then any synchronous
-    // empty-scene setLevelScene from the tenant bootstrap has resolved without firing
-    // auto-save (line 109 short-circuit), and the next genuine load from useLevelSceneLoader
-    // sets the guard explicitly via setIsLoadingFromFirestore(true) on entry.
     requestAnimationFrame(() => {
       isLoadingFromFirestoreRef.current = false;
     });
-  }, [sceneManager]);
+  }, []);
 
   /**
    * Enhanced setLevelScene with auto-save
    */
   const setLevelSceneWithAutoSave = useCallback((levelId: string, scene: SceneModel) => {
-    sceneManager.setLevelScene(levelId, scene);
+    sceneManagerRef.current.setLevelScene(levelId, scene);
 
     // Read filename from ref — always current even before React re-renders
     // (avoids stale-closure issue when setCurrentFileName and setLevelScene are
@@ -247,7 +245,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
         setTimeout(() => setSaveStatus('idle'), PANEL_LAYOUT.TIMING.SAVE_STATUS_RESET);
       }, STORAGE_TIMING.SCENE_AUTOSAVE_DEBOUNCE); // 🏢 ADR-098
     }
-  }, [sceneManager, autoSaveEnabled]);
+  }, [autoSaveEnabled]);
   
   /**
    * Load scene from Firestore on file change
@@ -297,9 +295,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     setIsLoadingFromFirestore,
     resetSceneSession,
   }), [
-    sceneManager, setLevelSceneWithAutoSave, currentFileName, setCurrentFileName,
-    autoSaveEnabled, setAutoSaveEnabled, lastSaveTime, saveStatus,
-    setFileRecordId, setSaveContext, setOnSceneSaved, setIsLoadingFromFirestore,
-    resetSceneSession,
+    sceneManager, setLevelSceneWithAutoSave, currentFileName,
+    autoSaveEnabled, lastSaveTime, saveStatus,
   ]);
 }

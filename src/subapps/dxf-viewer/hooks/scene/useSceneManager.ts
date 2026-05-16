@@ -28,11 +28,10 @@ export function useSceneManager(): SceneManagerState {
     });
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const getLevelScene = useCallback((levelId: string): SceneModel | null => {
     // Read from ref → safe even when called from stale closures (after await)
     return levelScenesRef.current[levelId] || null;
-  }, [levelScenes]); // Dependency kept so reference changes → triggers dependent useMemos/useEffects
+  }, []); // ← STABILE: reads from ref, no deps needed
 
   const clearLevelScene = useCallback((levelId: string) => {
 
@@ -64,5 +63,5 @@ export function useSceneManager(): SceneManagerState {
     clearAllScenes,
     hasSceneForLevel,
     getSceneEntityCount
-  }), [levelScenes, setLevelScene]);
+  }), [levelScenes, setLevelScene, getLevelScene, clearLevelScene, clearAllScenes, hasSceneForLevel, getSceneEntityCount]);
 }

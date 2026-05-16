@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   Level,
   FloorplanDoc,
@@ -66,6 +66,8 @@ function useLevelsSystemState({
   const [error, setError] = useState<string | null>(null);
 
   const sceneManager = useAutoSaveSceneManager();
+  const sceneManagerRef = useRef(sceneManager);
+  sceneManagerRef.current = sceneManager;
   const importWizardHook = useImportWizard();
 
   // Auth claims for tenant-scoped Firestore query
@@ -211,28 +213,26 @@ function useLevelsSystemState({
     });
   }, []);
 
-  // Scene management (delegated to sceneManager)
+  // Scene management (delegated to sceneManager via stable ref)
   const setLevelScene = useCallback(
     (levelId: string, scene: SceneModel) => {
-      sceneManager.setLevelScene(levelId, scene);
+      sceneManagerRef.current.setLevelScene(levelId, scene);
     },
-    [sceneManager.setLevelScene]
+    []
   );
 
-  // 🔧 CRITICAL FIX: getLevelScene dependency must be the actual function, not sceneManager
-  // This ensures useMemo in useSceneState re-computes when scenes change
   const getLevelScene = useCallback(
     (levelId: string) => {
-      return sceneManager.getLevelScene(levelId);
+      return sceneManagerRef.current.getLevelScene(levelId);
     },
-    [sceneManager.getLevelScene]
+    []
   );
 
   const clearLevelScene = useCallback(
     (levelId: string) => {
-      sceneManager.clearLevelScene(levelId);
+      sceneManagerRef.current.clearLevelScene(levelId);
     },
-    [sceneManager.clearLevelScene]
+    []
   );
 
   // 🏢 ENTERPRISE: Bidirectional sync — external floorplan deletion clears canvas scene
@@ -434,7 +434,7 @@ function useLevelsSystemState({
       updateLevelContext,
       addFloorplan, removeFloorplan, updateFloorplan, getFloorplansForLevel, calibrateFloorplan,
       setLevelScene, getLevelScene, clearLevelScene,
-      sceneManager, getCurrentFileName, getAutoSaveStatus, linkSceneToLevel,
+      getCurrentFileName, getAutoSaveStatus, linkSceneToLevel,
       startImportWizard, setImportWizardStep, setSelectedLevel, setCalibration, completeImport,
       cancelImportWizard,
       updateSettings, resetSettings,

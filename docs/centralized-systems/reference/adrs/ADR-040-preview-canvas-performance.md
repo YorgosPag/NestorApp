@@ -71,6 +71,60 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-05-16 (Phase XVII): Fix render-loop via ref-chain stabilization — useSceneManager → LevelsSystem
+
+**Bug (second occurrence same day)**: Despite Phases XV+XVI fixes (Firestore equality guard, memoization), `CanvasSection` **continued** re-rendering ~30Hz at idle (PERF_LINE `CanvasSection.commit` repeating, zero input). Giorgio reported "seconda volta che succede" (second time today) + lost many hours debugging. Root cause was NOT Firestore delivery (already guarded by ADR-361 service-level equality), but a **cascading ref chain of unstable React hook returns** in the DXF Viewer scene manager hierarchy.
+
+**Root cause — 3-hook cascade of unstable refs**:
+
+```
+1. useSceneManager.ts:32-35
+   const getLevelScene = useCallback(..., [levelScenes])  ← new ref on every levelScenes change
+   
+   ↓ sceneManager object deps on getLevelScene new ref
+   
+2. useAutoSaveSceneManager.ts:250
+   setLevelSceneWithAutoSave = useCallback(..., [sceneManager, autoSaveEnabled])  ← sceneManager unstable
+   
+   ↓ useAutoSaveSceneManager return deps on setLevelSceneWithAutoSave
+   
+3. LevelsSystem.tsx:219-229
+   setLevelScene/getLevelScene useCallback([sceneManager.setLevelScene] / [sceneManager.getLevelScene])
+   ↓
+   LevelsContext useMemo([... sceneManager ...])  ← sceneManager unstable
+   
+   ↓ useLevels() subscribers (CanvasSection, OverlayStoreProvider)
+   
+   ↓ Render loop cascade
+```
+
+The root was **getLevelScene unnecessary `[levelScenes]` dependency**: function only reads from `levelScenesRef.current`, no dep needed. But with dep, every `levelScenes` state change → new `getLevelScene` ref → sceneManager object invalidates → setLevelSceneWithAutoSave gets new ref → its useEffect fires → calls `setLevelScenes` → levelScenes changes → loop perpetuates at ~30Hz.
+
+**Fix (3 files, ref-pattern pattern)**:
+
+1. **useSceneManager.ts** (lines 32-35, 59-67):
+   - Change `getLevelScene` deps from `[levelScenes]` to `[]` (function reads from stable ref)
+   - Update useMemo deps to include all 7 returned callables (was missing 5)
+
+2. **LevelsSystem.tsx** (lines 217-236, 437):
+   - Add ref pattern: `const sceneManagerRef = useRef(sceneManager); sceneManagerRef.current = sceneManager`
+   - Change `setLevelScene`, `getLevelScene`, `clearLevelScene` to use `sceneManagerRef.current` with `[]` deps
+   - Remove `sceneManager` from context useMemo deps
+
+3. **useAutoSaveSceneManager.ts** (lines 140-250, 285-304, 115-135):
+   - Add ref pattern for sceneManager
+   - Change `setLevelSceneWithAutoSave` deps from `[sceneManager, autoSaveEnabled]` to `[autoSaveEnabled]`
+   - Change `resetSceneSession` deps from `[sceneManager]` to `[]`
+   - Update useMemo deps to remove `sceneManager`
+
+**Pattern (cardinal rule N.7.2 #5 SSOT)**: When a hook parameter receives an unstable ref (e.g. sceneManager object with unstable internal refs), use a ref wrapper to decouple the callback's stability from the parameter's stability. Read from ref via `.current`, not from closure params.
+
+**Verification**: After fix, hard refresh + 30s idle with ZERO input → ZERO `PERF_LINE` logs. Mouse movement → PERF_LINE appears (event-driven, correct). Stop moving → logs stop within 1s. Idle resumes silent.
+
+**Impact**: Breaks the root cause of the 30Hz loop. Firestore service-level guard (Phase XV) + memoization chain (Phase XVI) + ref-chain stabilization (Phase XVII) = triple-layer defense, Google-level architecture.
+
+---
+
 ### 2026-05-16 (ADR-358 Phase 5b): DxfRenderer — stair entity dispatch
 
 `DxfRenderer.resolveEntityForRender` adds `case 'stair'`: unwraps the
