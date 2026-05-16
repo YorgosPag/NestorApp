@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, isValidGlobalRole, isValidPermission, PREDEFINED_ROLES, GLOBAL_ROLES, logClaimsUpdated, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, GlobalRole, PermissionId } from '@/lib/auth';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
+import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -163,7 +164,7 @@ export async function handleSetUserClaims(
     const newClaims = { companyId, globalRole, mfaEnrolled: false, permissions: finalPermissions };
 
     try {
-      await getAdminAuth().setCustomUserClaims(uid, newClaims);
+      await setClaimsWithMirror(uid, newClaims);
       logger.info('Custom claims set successfully', { targetUid: uid, permissionsCount: finalPermissions.length, viaFirestoreFallback: authLookupFailed });
 
       extractRequestMetadata(request);

@@ -106,7 +106,13 @@ async function bootstrapAdmin() {
 
     console.log('   📝 New claims:', JSON.stringify(newClaims, null, 2));
     await admin.auth().setCustomUserClaims(userRecord.uid, newClaims);
-    console.log('   ✅ Claims set successfully!');
+    // ADR-360: mirror claimsUpdatedAt to Firestore so connected clients
+    // detect the change via onSnapshot and auto-refresh their ID token.
+    await db.collection('users').doc(userRecord.uid).set({
+      claimsUpdatedAt: newClaims.claimsUpdatedAt,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    console.log('   ✅ Claims set successfully (mirror written)!');
     console.log('');
 
     // Step 6: Update/Create Firestore user document

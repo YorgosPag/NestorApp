@@ -6,6 +6,7 @@
 import 'server-only';
 
 import { getAdminFirestore, getAdminAuth, FieldValue } from '@/lib/firebaseAdmin';
+import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { LEGACY_TENANT_COMPANY_ID } from '@/config/tenant';
@@ -289,7 +290,7 @@ export async function executeMigration(
         const firebaseUser = await auth.getUser(uid);
         const currentClaims = firebaseUser.customClaims ?? {};
 
-        await auth.setCustomUserClaims(uid, {
+        await setClaimsWithMirror(uid, {
           ...currentClaims,
           companyId: newId,
         });

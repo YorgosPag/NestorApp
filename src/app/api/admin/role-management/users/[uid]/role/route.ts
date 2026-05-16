@@ -28,6 +28,7 @@ import { withAuth, logRoleChange, logClaimsUpdated } from '@/lib/auth';
 import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminAuth, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
+import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -130,10 +131,10 @@ export const PATCH = withSensitiveRateLimit(
           updatedBy: ctx.uid,
         });
 
-        // 2. Update Firebase Auth custom claims
+        // 2. Update Firebase Auth custom claims (ADR-360: SSOT helper writes Firestore mirror)
         const existingUser = await auth.getUser(targetUid);
         const existingClaims = (existingUser.customClaims ?? {}) as Record<string, unknown>;
-        await auth.setCustomUserClaims(targetUid, {
+        await setClaimsWithMirror(targetUid, {
           ...existingClaims,
           globalRole: body.newRole,
         });

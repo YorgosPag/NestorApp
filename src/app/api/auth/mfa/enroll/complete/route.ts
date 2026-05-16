@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
+import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
 import type { UserRecord } from 'firebase-admin/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -93,7 +94,7 @@ async function handlePOST(request: NextRequest): Promise<NextResponse<MfaEnrollC
       mfaEnrolled: true,
     };
 
-    await adminAuth.setCustomUserClaims(uid, nextClaims);
+    await setClaimsWithMirror(uid, nextClaims);
 
     // Sync to Firestore user doc (if present)
     try {

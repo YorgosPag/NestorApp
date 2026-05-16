@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
+import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -130,7 +131,7 @@ async function handleCompleteRegistration(
         permissions: ['properties:properties:view', 'projects:projects:view'],
       };
 
-      await getAdminAuth().setCustomUserClaims(uid, newClaims);
+      await setClaimsWithMirror(uid, newClaims);
       logger.info('Custom claims set successfully', { uid, companyId: defaultCompanyId });
     } catch (error) {
       logger.error('Failed to set custom claims', {

@@ -129,7 +129,12 @@ async function setUserClaims() {
     console.log('');
     console.log('📋 Step 3: Setting custom claims...');
     await admin.auth().setCustomUserClaims(USER_UID, mergedClaims);
-    console.log('   ✅ Claims set successfully!');
+    // ADR-360: mirror claimsUpdatedAt to Firestore for live client refresh.
+    await admin.firestore().collection('users').doc(USER_UID).set({
+      claimsUpdatedAt: mergedClaims.claimsUpdatedAt,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    console.log('   ✅ Claims set successfully (mirror written)!');
 
     // Step 4: Verify claims were set
     console.log('');
