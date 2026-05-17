@@ -856,12 +856,15 @@ export type LayerId = string;
 
 export interface SceneModel {
   entities: AnySceneEntity[];
-  /** @deprecated Phase 9E — use `layersById` (id-keyed). This map remains name-keyed for backward compat until Phase 9E-6. */
+  /**
+   * @deprecated ADR-358 Phase 9E — use `layersById` (id-keyed).
+   * Removal target: Phase 9E-6e. Until then, kept for compat with legacy Firestore docs.
+   */
   layers: Record<string, SceneLayer>;
   /**
-   * ADR-358 Phase 9E-1 — primary layer map keyed by `SceneLayer.id` (LayerId).
-   * Populated by `DxfSceneBuilder.buildScene` and `LayerOperationsService`.
-   * Undefined for scenes built before Phase 9E or deserialized from legacy Firestore docs.
+   * ADR-358 Phase 9E-5 — guaranteed present on all scenes produced by
+   * `DxfSceneBuilder.buildScene` and `LayerOperationsService` mutations.
+   * Still optional (`?`) for Firestore-deserialized legacy docs — becomes required in Phase 9E-6e.
    */
   layersById?: Record<LayerId, SceneLayer>;
   bounds: SceneBounds;
