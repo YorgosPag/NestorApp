@@ -20,6 +20,7 @@ export const DIM_RIBBON_KEYS = {
     position:      'dim.text.position',
     rotation:      'dim.text.rotation',
     resetPosition: 'dim.text.resetPosition',
+    override:      'dim.text.override',
   },
   properties: {
     layer:           'dim.properties.layer',
