@@ -75,7 +75,24 @@ export type StairCodeProfile =
   | 'ada'
   | 'none';
 
-export type StairNokSubType = 'main' | 'secondary';
+/**
+ * ADR-358 Phase 3g — NOK stair scope.
+ *
+ * Maps to PD 3046/304/89 Άρθρο 13 παρ. 2-4 (Κτιριοδομικός Κανονισμός):
+ *   - `'main'` (1.20 m): central staircase of multi-storey building (παρ. 2 base rule)
+ *   - `'low-rise'` (0.90 m): residential building ≤3 floors (παρ. 2 exception α)
+ *   - `'internal'` (0.60 m): internal stair of single dwelling/μεζονέτα (παρ. 2 exception β)
+ *   - `'auxiliary'` (0.60 m): auxiliary stair industrial/storage (παρ. 4.5)
+ *
+ * Legacy `'secondary'` is retained for back-compat with Phase 6 docs;
+ * `useStairPersistence.hydrateLegacyParams` rewrites it to `'low-rise'`.
+ */
+export type StairNokSubType =
+  | 'main'
+  | 'low-rise'
+  | 'internal'
+  | 'auxiliary'
+  | 'secondary';
 
 export type StairTreadLabelDisplay = 'all' | 'nth' | 'none';
 
@@ -404,6 +421,14 @@ export interface StairValidationState {
   readonly headroomViolations?: readonly string[];
   readonly egressViolations?: readonly string[];
   readonly adaViolations?: readonly string[];
+  /**
+   * ADR-358 Phase 3g — soft "comfort" warnings (yellow). NOT code violations.
+   * Surfaced when width ≥ legal minimum but below industry comfort threshold
+   * (e.g. internal stair 600 mm legal but <800 mm scomodo). Routes to the
+   * orange/yellow band in the UI instead of red. Subset disjoint from
+   * `violationKeys` (which carry legal violations only).
+   */
+  readonly comfortViolations?: readonly string[];
   readonly lastValidatedAt: Timestamp;
 }
 
