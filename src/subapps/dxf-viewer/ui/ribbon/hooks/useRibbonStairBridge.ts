@@ -288,8 +288,12 @@ function readStairNumericField(
     case STAIR_RIBBON_KEYS.params.tread:       return String(p.tread);
     case STAIR_RIBBON_KEYS.params.width:       return String(p.width);
     case STAIR_RIBBON_KEYS.params.stepCount:   return String(p.stepCount);
-    case STAIR_RIBBON_KEYS.params.storyCount:  return p.multiStoryConfig ? String(p.multiStoryConfig.storyCount) : '';
-    case STAIR_RIBBON_KEYS.params.storyHeight: return p.multiStoryConfig ? String(p.multiStoryConfig.storyHeight) : '';
+    // Return `null` (not `''`) when multi-story config is absent — Radix Select
+    // forbids empty-string SelectItem values and RibbonCombobox injects the
+    // current value as a fallback option. Empty-string would crash the panel
+    // on stair selection (regression observed 2026-05-17).
+    case STAIR_RIBBON_KEYS.params.storyCount:  return p.multiStoryConfig ? String(p.multiStoryConfig.storyCount) : null;
+    case STAIR_RIBBON_KEYS.params.storyHeight: return p.multiStoryConfig ? String(p.multiStoryConfig.storyHeight) : null;
     default: return null;
   }
 }
