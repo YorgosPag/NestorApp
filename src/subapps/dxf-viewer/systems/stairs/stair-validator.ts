@@ -100,6 +100,36 @@ function checkSingleFlightLimit(
 // ArchiCAD Multi-Level — both refuse to commit a flight that overflows the
 // declared story group. We surface as non-blocking code-violation so the
 // user can resize via grip / panel without losing work.
+/**
+ * Project numeric stair fields used by `gateStairChecker` (mm-baked code
+ * thresholds) into mm regardless of the scene's coordinate units. Mirror
+ * of `mmFactorFromWidth` in `stair-auto-fix.ts` / `stair-grips.ts`.
+ */
+function paramsToMmForCodeCheck(params: Readonly<StairParams>): StairParams {
+  const mmPerSceneUnit = mmFactorFromWidth(params.width);
+  if (mmPerSceneUnit === 1) return params;
+  return {
+    ...params,
+    width: params.width * mmPerSceneUnit,
+    rise: params.rise * mmPerSceneUnit,
+    tread: params.tread * mmPerSceneUnit,
+    handrails: {
+      ...params.handrails,
+      height: params.handrails.height * mmPerSceneUnit,
+      ...(params.handrails.topExtension !== undefined
+        ? { topExtension: params.handrails.topExtension * mmPerSceneUnit }
+        : {}),
+    },
+  };
+}
+
+function mmFactorFromWidth(width: number): number {
+  if (!Number.isFinite(width) || width <= 0) return 1;
+  if (width < 10) return 1000;   // metres
+  if (width < 100) return 10;    // centimetres
+  return 1;                       // millimetres (or larger units)
+}
+
 function checkStoryHeightOverflow(
   params: Readonly<StairParams>,
 ): readonly string[] {
@@ -166,8 +196,16 @@ export function validateStairParams(
   projectOccupancyLoad?: number,
 ): StairValidationState {
   const occupancyLoad = projectOccupancyLoad ?? params.occupancyLoad;
+  // `gateStairChecker` thresholds are mm-baked (NOK / IBC / Eurocode / ADA
+  // codes are written in mm). Scenes can be in m / cm / mm — project the
+  // numeric stair fields to mm via the same heuristic used by
+  // `mmFactorFromWidth` (stair-auto-fix.ts) so the comparison is unit-
+  // consistent. Without this every metre-scale stair tripped `rise < 130`,
+  // `tread < 260`, etc. regardless of actual value (regression observed
+  // 2026-05-17).
+  const paramsForGate = paramsToMmForCodeCheck(params);
   const gate = gateStairChecker({
-    params,
+    params: paramsForGate,
     codeProfile: params.codeProfile,
     nokSubType: params.nokSubType,
     occupancyLoad,
