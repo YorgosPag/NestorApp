@@ -35,6 +35,7 @@ import {
   type DimensionCreateKey,
   type DimensionCreateStartInput,
 } from './useDimensionCreate';
+import { useDimensionKeyboardRouting } from './useDimensionKeyboardRouting';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Tool → creation-flow input mapping
@@ -52,6 +53,9 @@ const DIM_TOOL_INPUTS: Readonly<Partial<Record<ToolType, DimensionCreateStartInp
   'dim-arc-length': 'arcLength',
   'dim-jogged-radius': 'joggedRadius',
   'dim-ordinate': 'ordinate',
+  // ADR-362 Phase D3 — chained dims
+  'dim-baseline': 'baseline',
+  'dim-continued': 'continued',
 };
 
 export function isDimTool(tool: ToolType): boolean {
@@ -97,6 +101,15 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
   useEffect(() => {
     return manageDimToolLifecycle(activeTool, lastDimToolRef, dimCreate, previewRef);
   }, [activeTool, dimCreate]);
+
+  // Phase D3 — Q-C live Tab/Space/Escape routing from the canvas. Active only
+  // when the current tool is a dim tool; gate inside the hook prevents stray
+  // events from reaching the store when focus is on the ribbon / input fields.
+  useDimensionKeyboardRouting({
+    activeTool,
+    isDimTool,
+    onKey: dimCreate.onKey,
+  });
 
   const handlePoint = useCallback(
     (world: Point2D, hoveredEntity?: DetectableEntity) => {
