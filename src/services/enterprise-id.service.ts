@@ -83,6 +83,7 @@ export {
   generateFrameworkAgreementId,
   generateTextTemplateId, generateCompanyFontId, generateDictEntryId,
   generateStairId, generateStairPresetId,
+  generateLayerFilterGroupId, generateLayerFilterPropertyId,
   generateDimensionId, generateDimStyleId, generateCenterMarkId, generateCenterLineId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId, generateNotificationDedupeId,
