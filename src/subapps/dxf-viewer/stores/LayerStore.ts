@@ -92,6 +92,14 @@ export function getLayer(idOrName: string): SceneLayer | null {
   return layersById.get(idOrName) ?? null;
 }
 
+/** Find a layer by display name (O(n) scan). Use `getLayer(id)` when id is known. */
+export function getLayerByName(name: string): SceneLayer | null {
+  for (const layer of layersById.values()) {
+    if (layer.name === name) return layer;
+  }
+  return null;
+}
+
 /**
  * Resolve an entity's layer NAME via stable id only (ADR-358 Phase 9D-5b-iii schema flip).
  *

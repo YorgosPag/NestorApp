@@ -13,6 +13,7 @@ import type { ArrayEntity, Entity } from '../../../types/entities';
 import type { ArrayKind, ArrayParams } from '../../../systems/array/types';
 import type { Point2D } from '../../../rendering/types/Types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { getCurrentLayerId } from '../../../stores/LayerStore';
 import {
   extractSourcesFromScene,
   restoreSourcesToScene,
@@ -67,12 +68,12 @@ export class CreateArrayCommand implements ICommand {
 
     this.hiddenSources = extractSourcesFromScene(sources, this.sceneManager);
 
-    const layer = (sources[0] as { layer?: string }).layer ?? '0';
+    const layerId = (sources[0] as { layerId?: string }).layerId ?? getCurrentLayerId() ?? '';
 
     const arrayEntity: ArrayEntity = {
       id: this.arrayEntityId,
       type: 'array',
-      layer,
+      layerId,
       visible: true,
       arrayKind: this.arrayKind,
       hiddenSources: this.hiddenSources,

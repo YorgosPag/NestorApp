@@ -5,8 +5,8 @@ import type { RectParams } from '../../../../systems/array/types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeLine(id: string): SceneEntity {
-  return { id, type: 'line', layer: '0', layerId: 'lyr_test_default', visible: true, start: { x: 0, y: 0 }, end: { x: 10, y: 0 } };
+function makeLine(id: string, layerId = 'lyr_test_default'): SceneEntity {
+  return { id, type: 'line', layerId, visible: true, start: { x: 0, y: 0 }, end: { x: 10, y: 0 } };
 }
 
 function makeMockScene(initial: SceneEntity[] = []): { scene: Map<string, SceneEntity>; sm: ISceneManager } {
@@ -143,5 +143,19 @@ describe('CreateArrayCommand', () => {
     expect(ids).toContain('s1');
     expect(ids).toContain('s2');
     expect(ids.length).toBe(3); // 1 arrayId + 2 source IDs
+  });
+
+  // ADR-358 Phase 9F — layerId propagation
+  it('arrayEntity.layerId matches source entity layerId', () => {
+    const line = makeLine('src1', 'lyr_walls_001');
+    const { scene, sm } = makeMockScene([line]);
+
+    const cmd = new CreateArrayCommand(['src1'], 'rect', RECT_PARAMS, sm);
+    cmd.execute();
+
+    const arr = [...scene.values()].find(e => e.type === 'array') as ArrayEntity;
+    expect(arr).toBeDefined();
+    expect(arr.layerId).toBe('lyr_walls_001');
+    expect((arr as unknown as Record<string, unknown>).layer).toBeUndefined();
   });
 });

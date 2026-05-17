@@ -8,8 +8,8 @@
 
 import type { ICommand, ISceneManager, SceneEntity, CreateEntityOptions, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-// ADR-358 Phase 9D-5a — propagate stable `layerId` (`lyr_<UUID-v4>`) alongside legacy `layer`.
-import { getLayer } from '../../../stores/LayerStore';
+import { getLayerByName, getCurrentLayerId } from '../../../stores/LayerStore';
+import { DXF_DEFAULT_LAYER } from '../../../config/layer-config';
 
 /**
  * Command for creating a new entity
@@ -37,18 +37,17 @@ export class CreateEntityCommand implements ICommand {
    */
   execute(): void {
     if (!this.entity) {
-      // First execution - reuse caller-provided id when present (ADR-057),
-      // otherwise generate a fresh one.
-      // ADR-358 Phase 9D-5b-ii Sub-D — explicit cast to bypass `SceneEntity` index-signature `[key:string]: unknown` widening on `layer` access.
-      const entityDataLayer = (this.entityData as { layer?: string }).layer;
-      const layerName: string = this.options.layer ?? entityDataLayer ?? '0';
-      // ADR-358 Phase 9D-5a — resolve stable id either from caller override, entityData mirror, or layer-name lookup.
+      // ADR-358 Phase 9F — id-only resolution. 4-level fallback ensures layerId is always set.
       const entityDataLayerId = (this.entityData as { layerId?: string }).layerId;
-      const resolvedLayerId = this.options.layerId ?? entityDataLayerId ?? getLayer(layerName)?.id;
+      const resolvedLayerId =
+        this.options.layerId ??
+        entityDataLayerId ??
+        getLayerByName(DXF_DEFAULT_LAYER)?.id ??
+        getCurrentLayerId() ??
+        '';
       this.entity = {
         ...this.entityData,
         id: this.options.existingId ?? generateEntityId(),
-        layer: layerName,
         layerId: resolvedLayerId,
         visible: true,
       } as SceneEntity;

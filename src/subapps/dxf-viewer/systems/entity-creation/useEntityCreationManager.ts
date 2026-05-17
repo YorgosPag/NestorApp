@@ -137,8 +137,7 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
         transparency?: number;
       };
       const options: CreateEntityOptions = {
-        layer: resolvedLayerName,
-        // ADR-358 Phase 9D-5a — stable `layerId` forward (preferred path; legacy `layer` kept until 9D-5b-iii).
+        // ADR-358 Phase 9F: id-only — layer name field dropped.
         layerId: resolvedLayerId,
         color: entity.color,
         lineweight: entity.lineweight,

@@ -29,7 +29,6 @@ function makeFakeSceneManager(): ISceneManager & { added: SceneEntity[] } {
 
 const baseLine: Omit<SceneEntity, 'id'> = {
   type: 'line',
-  layer: 'WALLS',
   layerId: 'lyr_test_default',
   start: { x: 0, y: 0 },
   end: { x: 10, y: 0 },
@@ -99,5 +98,35 @@ describe('CreateEntityCommand — Phase 6.5 ByLayer sentinel forward', () => {
     expect(created.linetypeName).toBe('DASHED');
     expect(created.lineweightMm).toBe(-2);
     expect(created.transparency).toBe(30);
+  });
+});
+
+// ADR-358 Phase 9F — replay safety
+describe('CreateEntityCommand — Phase 9F replay safety', () => {
+  it('entity with only layerId (no layer name) → layerId preserved, no layer field', () => {
+    const sm = makeFakeSceneManager();
+    const cmd = new CreateEntityCommand(baseLine, sm, { layerId: 'lyr_walls_001' });
+    cmd.execute();
+    const created = cmd.getEntity()!;
+    expect(created.layerId).toBe('lyr_walls_001');
+    expect((created as Record<string, unknown>).layer).toBeUndefined();
+  });
+
+  it('undo then redo → layerId identical to first execute', () => {
+    const sm = makeFakeSceneManager();
+    const cmd = new CreateEntityCommand(baseLine, sm, { layerId: 'lyr_walls_001' });
+    cmd.execute();
+    const firstId = cmd.getEntity()!.layerId;
+    cmd.undo();
+    cmd.redo();
+    expect(cmd.getEntity()!.layerId).toBe(firstId);
+  });
+
+  it('options.layerId takes priority over entityData.layerId', () => {
+    const sm = makeFakeSceneManager();
+    const dataWithId: Omit<SceneEntity, 'id'> = { ...baseLine, layerId: 'lyr_from_data' } as unknown as Omit<SceneEntity, 'id'>;
+    const cmd = new CreateEntityCommand(dataWithId, sm, { layerId: 'lyr_from_options' });
+    cmd.execute();
+    expect(cmd.getEntity()!.layerId).toBe('lyr_from_options');
   });
 });

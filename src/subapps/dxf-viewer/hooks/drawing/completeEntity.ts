@@ -37,8 +37,6 @@ import type { Entity } from '../../types/entities';
 // 🏢 ADR-358 Phase 9C: SceneLayer factory SSoT (enterprise-id auto-gen `lyr_<UUID-v4>`)
 import { createSceneLayer } from '../../types/entities';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
-import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { UI_COLORS } from '../../config/color-config';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -198,9 +196,7 @@ export function completeEntity(
     adapter,
     {
       existingId,
-      // ADR-358 Phase 9D-3: id-first name via LayerStore, fallback to legacy `.layer`
-      layer: resolveEntityLayerName(styledEntity as { layerId?: string; layer?: string }),
-      // ADR-358 Phase 9D-5a: stable `layerId` forward — CreateEntityCommand prefers this over `layer` name lookup.
+      // ADR-358 Phase 9F: id-only — no layer name needed.
       layerId: typeof styledEntity.layerId === 'string' ? styledEntity.layerId : undefined,
       color: typeof styledEntity.color === 'string' ? styledEntity.color : undefined,
       lineweight: typeof styledEntity.lineweight === 'number' ? styledEntity.lineweight : undefined,
@@ -216,8 +212,11 @@ export function completeEntity(
     ? { ...sceneBefore, entities: [...sceneBefore.entities, createdEntity] }
     : {
         entities: [createdEntity],
-        // ADR-358 Phase 9C: factory SSoT — auto-gen stable `lyr_<UUID-v4>` id
-        layers: { [DXF_DEFAULT_LAYER]: createSceneLayer({ name: DXF_DEFAULT_LAYER, color: UI_COLORS.WHITE, visible: true, locked: false }) },
+        // ADR-358 Phase 9F: layersById SSoT — keyed by stable id.
+        layersById: (() => {
+          const dl = createSceneLayer({ name: DXF_DEFAULT_LAYER, color: UI_COLORS.WHITE, visible: true, locked: false });
+          return { [dl.id]: dl };
+        })(),
         bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
         units: 'mm',
       };
