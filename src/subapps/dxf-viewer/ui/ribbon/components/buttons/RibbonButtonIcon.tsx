@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough } from 'lucide-react';
+import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal } from 'lucide-react';
 import { LineIcon } from '../../../toolbar/icons/LineIcon';
 import { CircleIcon } from '../../../toolbar/icons/CircleIcon';
 import { ArcIcon } from '../../../toolbar/icons/ArcIcon';
@@ -176,6 +176,18 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'ai-assistant': return <Sparkles width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'layering': return <Layers width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'fullscreen': return <Maximize2 width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-smart': return <Ruler width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-linear': return <MoveHorizontal width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-aligned': return <MoveDiagonal2 width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-angular2L': return <Triangle width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-angular3P': return <Triangle width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-radius': return <CircleDot width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-diameter': return <Diameter width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-arc-length': return <Spline width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-jogged-radius': return <CircleSlash width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-ordinate': return <MoveUpRight width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-baseline': return <Rows3 width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'dim-continued': return <Equal width={sizePx[size]} height={sizePx[size]} className={className} />;
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };
