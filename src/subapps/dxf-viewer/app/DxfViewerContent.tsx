@@ -77,6 +77,7 @@ import { useDxfViewerEffects } from './useDxfViewerEffects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 📐 ADR-345/353: contextual tabs config + trigger resolver (SSoT)
 import { RIBBON_CONTEXTUAL_TABS, resolveContextualTrigger } from './ribbon-contextual-config';
+import { STAIR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-stair-tab';
 import { useRibbonArrayBridge } from '../ui/ribbon/hooks/useRibbonArrayBridge';
 import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions';
 // 📐 ADR-358 Phase 7a: bridge stair-params ↔ ribbon contextual tab
@@ -190,12 +191,13 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const handleSceneChangeRef = React.useRef(handleSceneChange);
   // 🏢 Universal selection primary ID
   const primarySelectedId = universalSelection.getPrimaryId();
-  // ADR-345 Fase 5B + ADR-353 Phase A — derive contextual ribbon trigger from selection.
+  // ADR-345/353 + ADR-358 Phase 9B-5: selection trigger; stair tool also activates stair tab.
   const activeContextualTrigger = React.useMemo<string | null>(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
-    return entity ? resolveContextualTrigger(entity) : null;
-  }, [primarySelectedId, currentScene]);
+    const entity = primarySelectedId && currentScene
+      ? currentScene.entities.find((e) => e.id === primarySelectedId) : null;
+    const fromSelection = entity ? resolveContextualTrigger(entity) : null;
+    return fromSelection ?? (activeTool === 'stair' ? STAIR_CONTEXTUAL_TRIGGER : null);
+  }, [primarySelectedId, currentScene, activeTool]);
   // Auto fit-to-view when a DXF scene loads for the first time (null → SceneModel).
   // Matches AutoCAD / BricsCAD behaviour: Zoom Extents on file open.
   // 200ms delay lets the canvas mount and register its EventBus listener before firing.

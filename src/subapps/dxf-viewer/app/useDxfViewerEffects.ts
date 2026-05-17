@@ -305,6 +305,17 @@ Check console for detailed metrics`;
     }
   }, [activeTool, overlayMode, setOverlayMode, eventBus]);
 
+  // ADR-358 Phase Q17 9B-5 — auto-open left "Properties" floating panel tab
+  // when the stair tool activates, so the user sees the contextual ribbon tab
+  // AND the floating Properties surface together (Giorgio request 2026-05-17).
+  // Industry pattern: Revit Stair tool → Modify tab + Properties palette
+  // appear together. Switching away from the tool leaves the tab choice alone.
+  React.useEffect(() => {
+    if (activeTool === 'stair') {
+      floatingRef.current?.showTab('properties');
+    }
+  }, [activeTool, floatingRef]);
+
   // Listen for tool change requests from LevelPanel
   React.useEffect(() => {
     const cleanup = eventBus.on('level-panel:tool-change', (requestedTool) => {
