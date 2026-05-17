@@ -1725,3 +1725,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-17: ADR-358 Phase 11 — layer command integration in canvas/CanvasSection
 
 `CanvasSection.tsx` wires `useLayerCommandShortcuts` (keyboard dispatch for LAYISO/LAYUNISO/LAYFRZ/LAYTHW/LAYOFF/LAYON/LAYLCK) and passes the layer command dispatcher to child panels. `dxf-canvas-renderer.ts` bridges LayerStore frozen/visible state into renderer skip logic. No new `useSyncExternalStore` calls added to orchestrators; cardinal rules maintained.
+
+## 2026-05-17: ADR-362 Phase C1 — dimension entity in DxfRenderer
+
+`DxfRenderer.toEntityModel()` gains a `dimension` case that unwraps `DxfDimension.dimensionEntity` into the renderer pipeline. `buildDimensionLookup()` scans `scene.entities` once per frame to build the `Map<string, DimensionEntity>` needed for baseline/continued parent resolution. Two new type imports from ADR-362: `DimensionEntity`, `DimensionLookup`. Cardinal rules maintained.

@@ -16,6 +16,9 @@ import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../st
 // ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime effects (zero-cost passthrough when inactive).
 import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
+// ADR-362 Phase C1 — DimensionLookup builder for baseline/continued parent resolution.
+import type { DimensionEntity } from '../../types/dimension';
+import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
   const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
     'solid': 'solid',
@@ -95,6 +98,10 @@ export class DxfRenderer {
 
     // ✅ ΝΕΟ: Update composite settings
     this.entityComposite.setTransform(transform);
+    // ADR-362 Phase C1 — build the per-frame DimensionLookup map once and
+    // forward it to the dimension leaf. Cheap O(n) scene scan; only dim
+    // entities land in the map (typically <100 per scene).
+    this.entityComposite.setDimensionLookup(this.buildDimensionLookup(scene.entities));
 
     // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache passes skipInteractive=true
     // to render entities in pure normal-state. Interactive overlays are drawn separately.
@@ -360,6 +367,12 @@ export class DxfRenderer {
           validation: s.validation,
         } as unknown as Entity;
       }
+      case 'dimension': {
+        // ADR-362 Phase C1 — unwrap the DxfDimension wrapper back into the
+        // DimensionEntity SSoT. The renderer resolves DimStyle + DimGeometry
+        // internally (via registry singleton + per-frame DimensionLookup).
+        return { ...base, ...entity.dimensionEntity } as unknown as Entity;
+      }
       default: {
         const exhaustiveCheck: never = entity;
         return exhaustiveCheck;
@@ -367,21 +380,7 @@ export class DxfRenderer {
     }
   }
 
-  /**
-   * ADR-358 §G7 Phase 6 — ByLayer/ByBlock style resolution at render time (LIVE).
-   *
-   * Routes each entity through the centralised `resolveEntityStyle()` SSoT when
-   * `layersById` is provided, producing concrete colour + lineweight (mm → px
-   * via `lineweightToPx`). Falls back to literal entity values (legacy path)
-   * when no layer map is supplied or the entity's layer is unknown — preserves
-   * Phase 1-3 visual baseline for entities that emit concrete styles.
-   *
-   * Phase 6 (2026-05-16): the adapter now forwards the full sentinel set
-   * (`colorMode`, `colorAci`, `colorTrueColor`, `linetypeName`, `lineweightMm`,
-   * `transparency`) — not just `color` — so entities that opt into the cascade
-   * actually inherit live from `layer.color` / `layer.lineweight` when the user
-   * edits layer style in `AdminLayerManager`.
-   */
+  /** ADR-358 §G7 Phase 6 — ByLayer/ByBlock style resolution; falls back to literal values when no layersById. */
   private resolveStyleForRender(
     entity: DxfEntityUnion,
     layersById?: Record<string, SceneLayer>,
@@ -420,6 +419,22 @@ export class DxfRenderer {
       },
       entity,
     );
+  }
+
+  /**
+   * ADR-362 Phase C1 — build the per-frame DimensionLookup map for chained
+   * dim resolution (baseline / continued). O(n) scan; only `'dimension'`
+   * entities land in the map (typically <100 per scene). Returned closure is
+   * O(1) lookup at render time.
+   */
+  private buildDimensionLookup(entities: readonly DxfEntityUnion[]): DimensionLookup {
+    const map = new Map<string, DimensionEntity>();
+    for (const e of entities) {
+      if (e.type === 'dimension') {
+        map.set(e.dimensionEntity.id, e.dimensionEntity);
+      }
+    }
+    return (id: string) => map.get(id);
   }
 
   /**
