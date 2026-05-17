@@ -56,6 +56,7 @@ function makeEntity(
     id: 'ent_1',
     type,
     layer: '0',
+    layerId: 'lyr_test_default',
     visible: true,
     position: { x: 0, y: 0 },
     textNode: makeNode(rotation),

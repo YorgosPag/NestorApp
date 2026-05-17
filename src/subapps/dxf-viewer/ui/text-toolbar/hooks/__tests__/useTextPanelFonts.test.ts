@@ -37,6 +37,7 @@ function makeScene(fonts: string[]): SceneModel {
       id: `e_${i}`,
       type: 'text',
       layer: '0',
+      layerId: 'lyr_test_default',
       visible: true,
       position: { x: 0, y: 0 },
       text: 'x',

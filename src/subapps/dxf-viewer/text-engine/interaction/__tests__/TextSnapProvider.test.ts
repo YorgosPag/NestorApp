@@ -58,6 +58,7 @@ function makeEntity(over: Partial<DxfTextSceneEntity> = {}): DxfTextSceneEntity 
     id: 'ent_1',
     type: 'text',
     layer: '0',
+    layerId: 'lyr_test_default',
     visible: true,
     position: { x: 0, y: 0 },
     textNode: makeNode(),
