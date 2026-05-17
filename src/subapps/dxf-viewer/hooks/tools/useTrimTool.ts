@@ -31,8 +31,6 @@ import { trimEntity } from '../../systems/trim/trim-entity-cutter';
 import type { TrimOperation } from '../../systems/trim/trim-types';
 import type { Entity } from '../../types/entities';
 import type { useLevels } from '../../systems/levels';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
-import { resolveEntityLayerName } from '../../stores/LayerStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -137,9 +135,10 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       if (!isTrimmable(target)) return;
 
       // Locked-layer guard (Q12)
-      // ADR-358 Phase 9D-3: id-first name via LayerStore, fallback to legacy
-      const targetLayerName = resolveEntityLayerName(target);
-      const layer = targetLayerName ? scene.layers[targetLayerName] : undefined;
+      // ADR-358 Phase 9E-3: id-first lookup (layersById), entity.layer name fallback.
+      const layers = scene.layersById ?? scene.layers ?? {};
+      const layer = (target.layerId ? layers[target.layerId] : undefined)
+        ?? (target.layer ? layers[target.layer] : undefined);
       if (layer?.locked) {
         TrimToolStore.incrementWarning('locked');
         return;
@@ -222,14 +221,15 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
         selectedEdgeIds: state.cuttingEdgeIds, edgeMode: state.edgeMode,
       });
 
+      // ADR-358 Phase 9E-3: id-first lookup (layersById), entity.layer name fallback.
+      const fenceLayers = scene.layersById ?? scene.layers ?? {};
       const allOps: TrimOperation[] = [];
       for (const hit of hits) {
         const target = scene.entities.find((e) => e.id === hit.entityId) as Entity | undefined;
         if (!target) continue;
         if (target.type === 'hatch') { TrimToolStore.incrementWarning('hatch'); continue; }
-        // ADR-358 Phase 9D-3: id-first name via LayerStore, fallback to legacy
-        const fenceTargetLayerName = resolveEntityLayerName(target);
-        const layer = fenceTargetLayerName ? scene.layers[fenceTargetLayerName] : undefined;
+        const layer = (target.layerId ? fenceLayers[target.layerId] : undefined)
+          ?? (target.layer ? fenceLayers[target.layer] : undefined);
         if (layer?.locked) { TrimToolStore.incrementWarning('locked'); continue; }
         const intersections = computeIntersectionPoints(target, edges);
         const result = trimEntity({

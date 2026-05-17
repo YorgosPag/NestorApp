@@ -28,8 +28,6 @@ import { computeUniformRef } from '../../systems/scale/scale-reference-calc';
 import type { useLevels } from '../../systems/levels';
 import type { ScaleSubPhase } from '../../systems/scale/ScaleToolStore';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
-import { resolveEntityLayerName } from '../../stores/LayerStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -67,11 +65,13 @@ function filterLockedEntities(
   const scene = getLevelScene(levelId);
   if (!scene) return { workable: ids, skipped: 0 };
   const workable: string[] = [];
+  // ADR-358 Phase 9E-3: id-first lookup (layersById), entity.layer name fallback.
+  const layers = scene.layersById ?? scene.layers ?? {};
   for (const id of ids) {
     const entity = scene.entities.find(e => e.id === id);
-    // ADR-358 Phase 9D-3: id-first name via LayerStore, fallback to legacy
-    const entityLayerName = entity ? resolveEntityLayerName(entity) : undefined;
-    const layer = entityLayerName ? scene.layers[entityLayerName] : undefined;
+    const layer = entity
+      ? ((entity.layerId ? layers[entity.layerId] : undefined) ?? (entity.layer ? layers[entity.layer] : undefined))
+      : undefined;
     if (layer?.locked) continue;
     workable.push(id);
   }
