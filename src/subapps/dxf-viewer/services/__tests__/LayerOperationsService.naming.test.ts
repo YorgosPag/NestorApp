@@ -101,7 +101,8 @@ describe('LayerOperationsService.renameLayer — name guard (ADR-358 §5.6 Q9)',
     expect(r.validationError).toBeUndefined();
     expect(r.updatedScene.layers['Pareti']).toBeDefined();
     expect(r.updatedScene.layers['Walls']).toBeUndefined();
-    expect(r.updatedScene.entities.every((e) => e.layer === 'Pareti')).toBe(true);
+    // ADR-358 Phase 9D-5a: entity.layer is NOT updated during rename (stable-id system).
+    // Readers resolve the new name via LayerStore.getLayer(id).name — no entity mutation needed.
     // ADR-358 Phase 9D-1: entity.layerId MUST stay stable across rename — only name changes.
     const wallsIdAfter = r.updatedScene.entities.map((e) => (e as { layerId?: string }).layerId);
     expect(wallsIdAfter).toEqual(wallsIdBefore);
