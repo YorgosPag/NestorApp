@@ -37,7 +37,7 @@
  * const [activePanel, setActivePanel] = useState<FloatingPanelType>('levels');
  * ```
  */
-export type FloatingPanelType = 'levels' | 'colors';
+export type FloatingPanelType = 'levels' | 'colors' | 'properties';
 
 /**
  * 🏢 ENTERPRISE: All Panel Types (including future/hidden)
@@ -84,7 +84,7 @@ export type PanelType = FloatingPanelType;
 export function isFloatingPanelType(value: unknown): value is FloatingPanelType {
   return (
     typeof value === 'string' &&
-    ['levels', 'colors'].includes(value)
+    ['levels', 'colors', 'properties'].includes(value)
   );
 }
 
@@ -96,6 +96,7 @@ export function isFloatingPanelType(value: unknown): value is FloatingPanelType 
 export const FLOATING_PANEL_TYPES: readonly FloatingPanelType[] = [
   'levels',
   'colors',
+  'properties',
 ] as const;
 
 // ============================================================================
@@ -113,7 +114,7 @@ export interface PanelMetadata {
   /** Fallback label (Greek) */
   fallbackLabel: string;
   /** Lucide icon name */
-  iconName: 'BarChart' | 'Settings';
+  iconName: 'BarChart' | 'Settings' | 'Sliders';
   /** Whether panel can be disabled */
   canBeDisabled: boolean;
 }
@@ -138,6 +139,13 @@ export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata> = {
     iconName: 'Settings',
     canBeDisabled: false,
   },
+  properties: {
+    type: 'properties',
+    labelKey: 'panels.properties.title',
+    fallbackLabel: 'Ιδιότητες',
+    iconName: 'Sliders',
+    canBeDisabled: false,
+  },
 } as const;
 
 // ============================================================================
@@ -150,8 +158,8 @@ export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata> = {
  * Defines how panels are arranged in the tab rows.
  */
 export const PANEL_LAYOUT = {
-  /** Top row panels (ADR-309: 2 tabs) */
-  topRow: ['levels', 'colors'] as const satisfies readonly FloatingPanelType[],
+  /** Top row panels (ADR-309: 2 tabs + Phase 8 ADR-358 Properties tab) */
+  topRow: ['levels', 'colors', 'properties'] as const satisfies readonly FloatingPanelType[],
   /** Bottom row panels — empty after ADR-309 Phase 1 */
   bottomRow: [] as const satisfies readonly FloatingPanelType[],
 } as const;

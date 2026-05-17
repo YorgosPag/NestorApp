@@ -650,6 +650,7 @@
   "stairAdvancedPanel": {
     "title": "Stair Advanced Properties",
     "closeAriaLabel": "Close panel",
+    "emptyState": "Select a stair to see its properties.",
     "sections": {
       "treadLabelSize": {
         "title": "Number Size",

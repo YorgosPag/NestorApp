@@ -650,6 +650,7 @@
   "stairAdvancedPanel": {
     "title": "Προηγμένες Ιδιότητες Κλίμακας",
     "closeAriaLabel": "Κλείσιμο πάνελ",
+    "emptyState": "Επίλεξε μια κλίμακα για να δεις τις ιδιότητες.",
     "sections": {
       "treadLabelSize": {
         "title": "Μέγεθος Αρίθμησης",
