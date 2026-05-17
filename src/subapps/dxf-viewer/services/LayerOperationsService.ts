@@ -14,7 +14,6 @@ import {
   // ADR-129: Centralized entity layer filtering
   getEntityIdsByLayer,
   getEntityIdsByLayers,
-  getEntitiesNotInLayer,
   getEntitiesNotInLayers
 } from './shared/layer-operation-utils';
 // ADR-358 Phase 8.5: SSoT-based property setters
@@ -176,9 +175,10 @@ export class LayerOperationsService {
     
     const { [layerName]: deletedLayer, ...remainingLayers } = scene.layers;
 
-    // ADR-129: Centralized entity filtering
-    const deletedEntityIds = getEntityIdsByLayer(scene.entities, layerName);
-    const remainingEntities = getEntitiesNotInLayer(scene.entities, layerName);
+    // ADR-358 Phase 9E-6d: id-first entity purge.
+    const dlId = deletedLayer.id;
+    const deletedEntityIds = scene.entities.filter(e => (e as { layerId?: string }).layerId === dlId).map(e => e.id);
+    const remainingEntities = scene.entities.filter(e => (e as { layerId?: string }).layerId !== dlId);
     
     const updatedScene = {
       ...scene,

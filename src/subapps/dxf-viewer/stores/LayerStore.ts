@@ -103,7 +103,7 @@ export function getLayer(idOrName: string): SceneLayer | null {
  * with a safe fallback (e.g. DXF_DEFAULT_LAYER).
  */
 export function resolveEntityLayerName(
-  entity: { layerId?: string; layer?: string } | null | undefined
+  entity: { layerId?: string } | null | undefined
 ): string | undefined {
   if (!entity) return undefined;
   if (entity.layerId) {

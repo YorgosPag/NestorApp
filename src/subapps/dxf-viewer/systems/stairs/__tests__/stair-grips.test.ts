@@ -31,7 +31,7 @@ describe('stair-grips (Phase 5b)', () => {
         kind: 'l-shape',
         turnDirection: 'right',
         landingDepth: 'auto',
-        flightSplit: [0.5, 0.5],
+        flightSplit: [6, 6],
       },
     };
     return buildStairEntity(params, '0');

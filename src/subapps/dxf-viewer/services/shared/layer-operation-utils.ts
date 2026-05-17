@@ -13,13 +13,11 @@ import { SceneModel, AnySceneEntity, SceneLayer } from '../../types/scene';
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 
 /**
- * Resolve entity layer name: LayerStore id-first, then legacy `entity.layer` fallback.
- * The fallback handles test environments where LayerStore is not pre-populated and
- * transition-window entities that still carry the deprecated `layer` name field.
- * ADR-358 Phase 9D→9E: remove fallback after Phase 9E-6 drops `entity.layer`.
+ * Resolve entity layer name via stable LayerId only (ADR-358 Phase 9E-6d).
+ * `entity.layer` name fallback dropped — entities must carry `layerId`.
  */
 function resolveLayerName(entity: AnySceneEntity): string | undefined {
-  return resolveEntityLayerName(entity) ?? (entity as { layer?: string }).layer;
+  return resolveEntityLayerName(entity);
 }
 
 // ADR-358 Phase 9E-5: rebuild layersById mirror after any mutation to scene.layers.

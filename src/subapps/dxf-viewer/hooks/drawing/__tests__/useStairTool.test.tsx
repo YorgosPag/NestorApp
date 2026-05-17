@@ -58,7 +58,7 @@ describe('useStairTool state machine (Phase 5a)', () => {
     const entity = created[0];
     expect(entity.type).toBe('stair');
     expect(entity.kind).toBe('straight');
-    expect(entity.layer).toBe('L1');
+    expect(entity.levelId).toBe('L1');
     // tool resets to awaitingBasePoint for continuous chain
     expect(result.current.state.phase).toBe('awaitingBasePoint');
   });
