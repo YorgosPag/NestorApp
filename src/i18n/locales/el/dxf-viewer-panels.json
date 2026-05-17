@@ -109,6 +109,60 @@
         "placeholder": "Όνομα αντιγράφου...",
         "confirm": "Αντιγραφή",
         "cancel": "Άκυρο"
+      },
+      "editor": {
+        "backButton": "Πίσω",
+        "editingTitle": "Επεξεργασία: {name}",
+        "sections": {
+          "lines": "Γραμμές",
+          "symbols": "Σύμβολα & Βέλη",
+          "text": "Κείμενο"
+        },
+        "fields": {
+          "dimasz": "Μέγεθος βέλους (mm)",
+          "dimexe": "Επέκταση γρ. διάστασης (mm)",
+          "dimexo": "Απόσταση από αντικείμενο (mm)",
+          "dimdli": "Απόσταση baseline (mm)",
+          "suppressDimLine1": "Απόκρυψη γρ. διάστασης 1",
+          "suppressDimLine2": "Απόκρυψη γρ. διάστασης 2",
+          "suppressExtLine1": "Απόκρυψη επεκτ. γρ. 1",
+          "suppressExtLine2": "Απόκρυψη επεκτ. γρ. 2",
+          "dimblk": "Τύπος βέλους",
+          "dimcen": "Κεντρική σήμανση (mm)",
+          "dimtxt": "Ύψος κειμένου (mm)",
+          "dimtad": "Κατακόρυφη θέση κειμένου",
+          "dimtih": "Κείμενο εντός οριζόντια",
+          "dimtoh": "Κείμενο εκτός οριζόντια",
+          "dimgap": "Κενό κειμένου (mm)"
+        },
+        "dimtad": {
+          "centered": "Κεντραρισμένο",
+          "above": "Πάνω",
+          "outside": "Εξωτερικά",
+          "jis": "JIS",
+          "below": "Κάτω"
+        },
+        "dimblk": {
+          "none": "Κανένα",
+          "closedFilled": "Γεμιστό κλειστό",
+          "closedBlank": "Κλειστό κενό",
+          "closed": "Κλειστό",
+          "dot": "Κουκίδα",
+          "dotSmall": "Μικρή κουκίδα",
+          "dotBlank": "Κουκίδα κενή",
+          "dotSmallBlank": "Μικρή κουκίδα κενή",
+          "architecturalTick": "Αρχιτεκτονική γραμμή",
+          "oblique": "Λοξή",
+          "open": "Ανοιχτό",
+          "openRightAngle": "Ορθή γωνία",
+          "openSlanted": "Κεκλιμένο",
+          "origin": "Σημείο αρχής",
+          "origin2": "Σημείο αρχής 2",
+          "box": "Τετράγωνο",
+          "boxFilled": "Γεμιστό τετράγωνο",
+          "datumTriangle": "Τρίγωνο datum",
+          "datumTriangleFilled": "Γεμιστό τρίγωνο datum"
+        }
       }
     },
     "textProperties": {
