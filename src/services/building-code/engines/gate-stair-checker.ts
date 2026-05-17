@@ -47,6 +47,12 @@ export interface GateStairCheckerResult {
   readonly adaViolations: readonly string[];
   /** Egress capacity violations (Phase 6.5, G20). Universal except 'none'. */
   readonly egressViolations: readonly string[];
+  /**
+   * ADR-358 Phase 3g — soft comfort warnings (yellow band). Disjoint from
+   * `codeViolations` — comfort warnings fire when width ≥ legal minimum but
+   * below industry-practice comfort threshold for the declared NOK scope.
+   */
+  readonly comfortViolations: readonly string[];
 }
 
 // ─── Hard-error baseline (profile-independent) ───────────────────────────────
@@ -61,14 +67,48 @@ function checkHardErrors(params: Readonly<StairParams>): readonly string[] {
   return errors;
 }
 
-// ─── NOK (Ν.4067/2012, §3.5) ─────────────────────────────────────────────────
+// ─── NOK (Ν.4067/2012 + PD 3046/304/89 Άρθρο 13, §3.5) ───────────────────────
+
+/**
+ * ADR-358 Phase 3g — legal minimum stair width (mm) per NOK scope. Source:
+ * Κτιριοδομικός Κανονισμός Άρθρο 13 παρ. 2 + 4.5. Below = red code violation.
+ */
+const NOK_WIDTH_LEGAL_MIN_MM: Readonly<Record<StairNokSubType, number>> = {
+  main: 1200,           // παρ. 2 base rule — κεντρικό κλιμακοστάσιο
+  'low-rise': 900,      // παρ. 2 exception α — κτίριο κατοικίας ≤3 ορόφων
+  internal: 600,        // παρ. 2 exception β — εσωτερική ενιαίας κατοικίας
+  auxiliary: 600,       // παρ. 4.5 — βοηθητική (industria/αποθήκη)
+  secondary: 900,       // legacy alias for 'low-rise' (back-compat)
+};
+
+/**
+ * ADR-358 Phase 3g — industry comfort minimum stair width (mm) per scope.
+ * Above legal min but below comfort = yellow soft warning. Source: industry
+ * practice (Revit/ArchiCAD comfort guidance, Pasisis dimensionamento guide).
+ */
+const NOK_WIDTH_COMFORT_MIN_MM: Readonly<Record<StairNokSubType, number>> = {
+  main: 1200,           // legal == comfort (no warning gap)
+  'low-rise': 1000,     // 900 legal → 1000 comfort
+  internal: 800,        // 600 legal → 800 comfort (practical apartment min)
+  auxiliary: 600,       // auxiliary stairs are scomode by design — no comfort warning
+  secondary: 1000,      // legacy alias for 'low-rise'
+};
+
+/**
+ * `main` keeps the strict NOK rise/tread + 2R+G ergonomic envelope; the other
+ * scopes share the relaxed band (NOK does not subdivide rise/tread per scope,
+ * only width).
+ */
+function isMainScope(subType: StairNokSubType): boolean {
+  return subType === 'main';
+}
 
 function checkNOK(
   params: Readonly<StairParams>,
   subType: StairNokSubType,
 ): readonly string[] {
-  const isMain = subType === 'main';
-  const widthMin = isMain ? 1200 : 900;
+  const isMain = isMainScope(subType);
+  const widthMin = NOK_WIDTH_LEGAL_MIN_MM[subType];
   const riseMin = isMain ? 130 : 140;
   const riseMax = isMain ? 180 : 200;
   const treadMin = isMain ? 260 : 230;
@@ -80,6 +120,23 @@ function checkNOK(
   if (params.tread < treadMin || params.tread > treadMax) out.push('tools.stair.validator.nok.treadRange');
   if (isMain && (twoRG < 600 || twoRG > 640)) out.push('tools.stair.validator.nok.twoRPlusG');
   return out;
+}
+
+/**
+ * ADR-358 Phase 3g — soft comfort warning when width is between legal min and
+ * comfort min. Yellow band — does NOT count as code violation.
+ */
+function checkNOKComfort(
+  params: Readonly<StairParams>,
+  subType: StairNokSubType,
+): readonly string[] {
+  const legalMin = NOK_WIDTH_LEGAL_MIN_MM[subType];
+  const comfortMin = NOK_WIDTH_COMFORT_MIN_MM[subType];
+  if (comfortMin <= legalMin) return [];
+  if (params.width >= legalMin && params.width < comfortMin) {
+    return ['tools.stair.validator.nok.widthBelowComfort'];
+  }
+  return [];
 }
 
 // ─── IBC commercial §1011 ────────────────────────────────────────────────────
@@ -143,27 +200,34 @@ function checkEgress(
 function dispatchProfile(input: GateStairCheckerInput): {
   readonly codeViolations: readonly string[];
   readonly adaViolations: readonly string[];
+  readonly comfortViolations: readonly string[];
 } {
   const { params, codeProfile } = input;
   switch (codeProfile) {
-    case 'nok':
-      return { codeViolations: checkNOK(params, input.nokSubType ?? 'main'), adaViolations: [] };
+    case 'nok': {
+      const subType = input.nokSubType ?? 'main';
+      return {
+        codeViolations: checkNOK(params, subType),
+        adaViolations: [],
+        comfortViolations: checkNOKComfort(params, subType),
+      };
+    }
     case 'ibc':
-      return { codeViolations: checkIBC(params), adaViolations: [] };
+      return { codeViolations: checkIBC(params), adaViolations: [], comfortViolations: [] };
     case 'eurocode':
-      return { codeViolations: checkEurocode(params), adaViolations: [] };
+      return { codeViolations: checkEurocode(params), adaViolations: [], comfortViolations: [] };
     case 'ada':
-      return { codeViolations: [], adaViolations: checkADA(params) };
+      return { codeViolations: [], adaViolations: checkADA(params), comfortViolations: [] };
     case 'nbc':
     case 'nfpa':
     case 'as1657':
     case 'din':
     case 'none':
-      return { codeViolations: [], adaViolations: [] };
+      return { codeViolations: [], adaViolations: [], comfortViolations: [] };
     default: {
       const _exhaustive: never = codeProfile;
       void _exhaustive;
-      return { codeViolations: [], adaViolations: [] };
+      return { codeViolations: [], adaViolations: [], comfortViolations: [] };
     }
   }
 }
@@ -176,8 +240,8 @@ function dispatchProfile(input: GateStairCheckerInput): {
  */
 export function gateStairChecker(input: GateStairCheckerInput): GateStairCheckerResult {
   const hardErrors = checkHardErrors(input.params);
-  const { codeViolations, adaViolations } = dispatchProfile(input);
+  const { codeViolations, adaViolations, comfortViolations } = dispatchProfile(input);
   const egressViolations =
     input.codeProfile === 'none' ? [] : checkEgress(input.params, input.occupancyLoad);
-  return { hardErrors, codeViolations, adaViolations, egressViolations };
+  return { hardErrors, codeViolations, adaViolations, egressViolations, comfortViolations };
 }
