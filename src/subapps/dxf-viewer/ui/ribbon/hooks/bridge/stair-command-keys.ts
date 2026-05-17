@@ -29,6 +29,18 @@ export const STAIR_RIBBON_KEYS = {
      * are discarded — Revit "Family Type" swap convention).
      */
     variantKind: 'stair.params.variantKind',
+    /**
+     * ADR-358 Phase 3f — l-shape corner sub-style discriminator.
+     * Reads/writes `variant.cornerStyle` on `l-shape` variant (∈ {'landing','winders'}).
+     * No-op for other kinds.
+     */
+    cornerStyle: 'stair.params.cornerStyle',
+    /**
+     * ADR-358 Phase 3f — winder method for l-shape with winders.
+     * Reads/writes `variant.winderMethod` (∈ {'equal-going','pie'}; 'kite'/'balanced'
+     * throw Phase 4c sentinel).
+     */
+    winderMethod: 'stair.params.winderMethod',
   },
   params: {
     rise: 'stair.params.rise',
@@ -37,6 +49,12 @@ export const STAIR_RIBBON_KEYS = {
     stepCount: 'stair.params.stepCount',
     storyCount: 'stair.params.storyCount',
     storyHeight: 'stair.params.storyHeight',
+    /**
+     * ADR-358 Phase 3f — winder count for l-shape with winders. Numeric
+     * combobox 1-5 (NOK quarter-turn default 3). Recomputes `flightSplit`
+     * so `n1 + winderCount + n2 = stepCount` invariant holds.
+     */
+    winderCount: 'stair.params.winderCount',
   },
   actions: {
     close: 'stair.actions.close',
@@ -56,6 +74,16 @@ export const STAIR_RIBBON_KEYS = {
 export const STAIR_RIBBON_VISIBILITY_KEYS = {
   multiFlight: 'stair.visibility.multiFlight',
   multiStoryHeightEditor: 'stair.visibility.multiStoryHeightEditor',
+  /**
+   * ADR-358 Phase 3f — visible iff `variant.kind === 'l-shape'`. Surfaces
+   * the cornerStyle combobox (landing | winders) as a sub-option of L-shape.
+   */
+  lShapeCorner: 'stair.visibility.lShapeCorner',
+  /**
+   * ADR-358 Phase 3f — visible iff `variant.kind === 'l-shape' && cornerStyle === 'winders'`.
+   * Surfaces the winderCount + winderMethod editors only when relevant.
+   */
+  lShapeWindersParams: 'stair.visibility.lShapeWindersParams',
 } as const;
 
 export type StairRibbonComboKey =
@@ -64,18 +92,23 @@ export type StairRibbonComboKey =
   | typeof STAIR_RIBBON_KEYS.params.width
   | typeof STAIR_RIBBON_KEYS.params.stepCount
   | typeof STAIR_RIBBON_KEYS.params.storyCount
-  | typeof STAIR_RIBBON_KEYS.params.storyHeight;
+  | typeof STAIR_RIBBON_KEYS.params.storyHeight
+  | typeof STAIR_RIBBON_KEYS.params.winderCount;
 
 export type StairRibbonStringComboKey =
   | typeof STAIR_RIBBON_KEYS.stringParams.structureType
   | typeof STAIR_RIBBON_KEYS.stringParams.riserType
   | typeof STAIR_RIBBON_KEYS.stringParams.flight2TurnDirection
   | typeof STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection
-  | typeof STAIR_RIBBON_KEYS.stringParams.variantKind;
+  | typeof STAIR_RIBBON_KEYS.stringParams.variantKind
+  | typeof STAIR_RIBBON_KEYS.stringParams.cornerStyle
+  | typeof STAIR_RIBBON_KEYS.stringParams.winderMethod;
 
 export type StairRibbonVisibilityKey =
   | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiFlight
-  | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor;
+  | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor
+  | typeof STAIR_RIBBON_VISIBILITY_KEYS.lShapeCorner
+  | typeof STAIR_RIBBON_VISIBILITY_KEYS.lShapeWindersParams;
 
 const ALL_STAIR_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.params.rise,
@@ -84,6 +117,7 @@ const ALL_STAIR_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.params.stepCount,
   STAIR_RIBBON_KEYS.params.storyCount,
   STAIR_RIBBON_KEYS.params.storyHeight,
+  STAIR_RIBBON_KEYS.params.winderCount,
 ]);
 
 const ALL_STAIR_STRING_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
@@ -92,11 +126,15 @@ const ALL_STAIR_STRING_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.stringParams.flight2TurnDirection,
   STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection,
   STAIR_RIBBON_KEYS.stringParams.variantKind,
+  STAIR_RIBBON_KEYS.stringParams.cornerStyle,
+  STAIR_RIBBON_KEYS.stringParams.winderMethod,
 ]);
 
 const ALL_STAIR_VISIBILITY_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_VISIBILITY_KEYS.multiFlight,
   STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor,
+  STAIR_RIBBON_VISIBILITY_KEYS.lShapeCorner,
+  STAIR_RIBBON_VISIBILITY_KEYS.lShapeWindersParams,
 ]);
 
 export function isStairRibbonKey(key: string): key is StairRibbonComboKey {
