@@ -13,6 +13,8 @@ import type {
   StairGeometry,
   StairParams,
   StairVariantLShape,
+  StairVariantLShapeLanding,
+  StairVariantLShapeWinders,
 } from '../../types/stair';
 import {
   DEFAULT_CUT_PLANE_HEIGHT,
@@ -27,13 +29,37 @@ import {
   buildCutLineForFlights,
   buildStringersFromWalkline,
 } from './stair-geometry-shared';
-import { buildTreadLabelsWithLandings } from './stair-geometry-labels';
+import { buildTreadLabels, buildTreadLabelsWithLandings } from './stair-geometry-labels';
+import {
+  assertWinderMethodSupported,
+  buildWinderLayout,
+  buildWinderFlight1,
+  buildWinderTreads,
+  buildWinderFlight2,
+  buildWinderWalkline,
+  winderTangentAt,
+  rotateVec,
+} from './stair-geometry-winder';
 
 // ─── L-SHAPE entry ────────────────────────────────────────────────────────────
 
 export function computeLShape(
   params: Readonly<StairParams>,
   variant: StairVariantLShape,
+): StairGeometry {
+  // ADR-358 Phase 3f — dispatch on cornerStyle. 'landing' is the original
+  // path (πλατύσκαλο at the corner); 'winders' replaces the landing with
+  // NOK-compliant winder treads (σκαλοπάτια κουρμπαριστά) that preserve
+  // walkline going. Both preserve total numbered surfaces = stepCount.
+  if (variant.cornerStyle === 'winders') {
+    return computeLShapeWithWinders(params, variant);
+  }
+  return computeLShapeWithLanding(params, variant);
+}
+
+function computeLShapeWithLanding(
+  params: Readonly<StairParams>,
+  variant: StairVariantLShapeLanding,
 ): StairGeometry {
   assertLShapeCornerSupported(variant);
   const { basePoint, direction, rise, tread, nosing, width, upDirection } = params;
@@ -88,9 +114,75 @@ export function computeLShape(
   };
 }
 
+/**
+ * ADR-358 Phase 3f — L-shape with NOK-compliant winder treads at the corner.
+ * Reuses winder kind helpers (SSoT: `stair-geometry-winder.ts`) for layout,
+ * fan treads, walkline arc — l-shape supplies user-controlled `flightSplit`
+ * `[n1, n2]` (vs the winder kind's symmetric auto-split).
+ * Convention: 90° quarter-turn (turnSign from `turnDirection`).
+ */
+function computeLShapeWithWinders(
+  params: Readonly<StairParams>,
+  variant: StairVariantLShapeWinders,
+): StairGeometry {
+  assertWinderMethodSupported(variant.winderMethod);
+  const { width, upDirection } = params;
+  const [n1, n2] = variant.flightSplit;
+  const turnAngleDeg = variant.turnDirection === 'right' ? -90 : 90;
+  const layout = buildWinderLayout(params, turnAngleDeg, variant.winderCount, n1, n2);
+  const flight1 = buildWinderFlight1(params, layout);
+  const winders = buildWinderTreads(params, variant.winderMethod, layout);
+  const flight2 = buildWinderFlight2(params, layout);
+  const allTreads: readonly Polygon3D[] = [
+    ...flight1.treads,
+    ...winders,
+    ...flight2.treads,
+  ];
+  const risers: readonly Segment3D[] = [...flight1.risers, ...flight2.risers];
+  const walkline = buildWinderWalkline(params, layout);
+  const stringers = buildStringersFromWalkline(walkline, width);
+  // ADR-358 Phase 3d hotfix — arrow on FIRST flight segment (consistent with
+  // landing variant industry convention: AutoCAD/Revit plan view).
+  const arrow = arrowSymbol(walkline[0], walkline[1], upDirection);
+  const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
+  const split = splitTreadsByCutPlane(allTreads, cutPlaneHeight);
+  const midRay = rotateVec(layout.ray0, (layout.winderCount / 2) * layout.signedSweepRad);
+  const midTangent = winderTangentAt(midRay, layout.turnSign);
+  const cutLine = buildCutLineForFlights(
+    allTreads,
+    [layout.n1, layout.winderCount, layout.n2],
+    [layout.u1, midTangent, layout.u2],
+    width,
+    cutPlaneHeight,
+  );
+  // Winders are numbered as 'tread' (NOT landings) — they ARE walkable steps.
+  const treadLabels = buildTreadLabels(
+    allTreads,
+    [layout.n1, layout.winderCount, layout.n2],
+    params.treadLabelDisplay,
+    params.treadLabelEveryN,
+    params.treadLabelRestartPerFlight,
+    params.treadNumberStart,
+  );
+  return {
+    treads: split.below,
+    treadsBelowCut: split.below,
+    treadsAboveCut: split.above,
+    risers,
+    stringers,
+    walkline,
+    handrails: {},
+    landings: [],
+    arrowSymbol: arrow,
+    cutLine,
+    treadLabels,
+    bbox: bboxOfPolygons(allTreads),
+  };
+}
+
 // ─── L-SHAPE private helpers ──────────────────────────────────────────────────
 
-function assertLShapeCornerSupported(variant: StairVariantLShape): void {
+function assertLShapeCornerSupported(variant: StairVariantLShapeLanding): void {
   const style = variant.landingCornerStyle ?? 'square';
   if (style !== 'square') {
     throw new Error(
