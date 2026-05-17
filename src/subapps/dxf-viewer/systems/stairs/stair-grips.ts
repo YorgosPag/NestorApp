@@ -328,20 +328,39 @@ function adjustFlightSplit(input: Readonly<StairGripDragInput>): StairParams {
   const rawRatio = projOnDir / denom;
   const r = Math.min(MAX_FLIGHT_SPLIT_RATIO, Math.max(MIN_FLIGHT_SPLIT_RATIO, rawRatio));
 
-  const newVariant = withFlightSplitRatio(variant, r);
+  const newVariant = withFlightSplitStepCounts(variant, r, originalParams.stepCount);
   return { ...originalParams, variant: newVariant };
 }
 
-function withFlightSplitRatio(variant: StairVariantParams, r: number): StairVariantParams {
-  // L/U expose flightSplit:[a,b]. Gamma exposes [a,b,c]. Distribute remainder
-  // equally for gamma so the third flight keeps a sensible share.
+/**
+ * ADR-358 Phase 3d hotfix — convert split-grip ratio into integer step counts.
+ *
+ * Geometry builders (`buildLShapeFlight1` et al.) interpret `flightSplit` as
+ * `[stepCount1, stepCount2(, stepCount3)]` and call `new Array(n_i)`. Writing
+ * a float ratio here therefore threw `RangeError: invalid array length` as
+ * soon as the user reached the split grip on a freshly-created L-shape (UI
+ * path opened by Phase 3d Kind Selector). Round-trip through the ratio
+ * stays for clamping continuity; only the persisted shape switches to
+ * integers summing to `stepCount`.
+ */
+function withFlightSplitStepCounts(
+  variant: StairVariantParams,
+  r: number,
+  stepCount: number,
+): StairVariantParams {
   if (variant.kind === 'l-shape' || variant.kind === 'u-shape') {
-    return { ...variant, flightSplit: [r, 1 - r] as const };
+    const total = Math.max(2, stepCount);
+    const n1 = Math.max(1, Math.min(total - 1, Math.round(r * total)));
+    const n2 = total - n1;
+    return { ...variant, flightSplit: [n1, n2] as const };
   }
   if (variant.kind === 'gamma') {
-    const remaining = Math.max(MIN_FLIGHT_SPLIT_RATIO, 1 - r);
-    const half = remaining / 2;
-    return { ...variant, flightSplit: [r, half, half] as const };
+    const total = Math.max(3, stepCount);
+    const n1 = Math.max(1, Math.min(total - 2, Math.round(r * total)));
+    const remaining = total - n1;
+    const n2 = Math.max(1, Math.floor(remaining / 2));
+    const n3 = Math.max(1, remaining - n2);
+    return { ...variant, flightSplit: [n1, n2, n3] as const };
   }
   return variant;
 }
