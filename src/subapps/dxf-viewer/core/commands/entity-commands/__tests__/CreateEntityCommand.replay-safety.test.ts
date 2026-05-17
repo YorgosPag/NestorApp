@@ -1,11 +1,12 @@
 /**
  * ADR-358 Phase 9F — CreateEntityCommand replay safety.
+ * ADR-357 Phase 0 — promotes getCurrentLayerId() to Level 3.
  *
  * Validates the 4-level layerId fallback:
  *   1. options.layerId
  *   2. entityData.layerId
- *   3. getLayerByName(DXF_DEFAULT_LAYER)?.id  (real LayerStore, name-based)
- *   4. getCurrentLayerId()
+ *   3. getCurrentLayerId()  ← ADR-357 Phase 0: user's active layer wins
+ *   4. getLayerByName(DXF_DEFAULT_LAYER)?.id  (real LayerStore, name-based)
  *   5. '' (safe empty string)
  */
 
@@ -59,7 +60,21 @@ describe('CreateEntityCommand — Phase 9F layerId fallback chain', () => {
     expect(cmd.getEntity()!.layerId).toBe('lyr_from_data');
   });
 
-  it('Level 3: getLayerByName("0") used when no id in options or data', () => {
+  it('Level 3: getCurrentLayerId() used when no layerId in options or data', () => {
+    // ADR-357 Phase 0: user's active layer wins even when Layer 0 also exists
+    const defaultLayer = createSceneLayer({ name: '0', color: '#ffffff', visible: true, locked: false });
+    const activeLayer = createSceneLayer({ name: 'WALLS', color: '#ff0000', visible: true, locked: false });
+    setLayers([defaultLayer, activeLayer]);
+    setCurrentLayerId(activeLayer.id);
+
+    const sm = makeFakeSceneManager();
+    const cmd = new CreateEntityCommand(baseData, sm, {});
+    cmd.execute();
+    expect(cmd.getEntity()!.layerId).toBe(activeLayer.id);
+  });
+
+  it('Level 4: getLayerByName("0") used when currentLayerId is null', () => {
+    // No setCurrentLayerId call — currentLayerId stays null, fallback to Layer 0
     const defaultLayer = createSceneLayer({ name: '0', color: '#ffffff', visible: true, locked: false });
     setLayers([defaultLayer]);
 
@@ -67,17 +82,6 @@ describe('CreateEntityCommand — Phase 9F layerId fallback chain', () => {
     const cmd = new CreateEntityCommand(baseData, sm, {});
     cmd.execute();
     expect(cmd.getEntity()!.layerId).toBe(defaultLayer.id);
-  });
-
-  it('Level 4: getCurrentLayerId() used when no default layer in store', () => {
-    const otherLayer = createSceneLayer({ name: 'WALLS', color: '#ff0000', visible: true, locked: false });
-    setLayers([otherLayer]);
-    setCurrentLayerId(otherLayer.id);
-
-    const sm = makeFakeSceneManager();
-    const cmd = new CreateEntityCommand(baseData, sm, {});
-    cmd.execute();
-    expect(cmd.getEntity()!.layerId).toBe(otherLayer.id);
   });
 
   it('Level 5: empty string fallback when LayerStore is empty', () => {
