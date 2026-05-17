@@ -35,6 +35,7 @@ import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type {
   StairDoc,
   StairEntity,
+  StairParams,
   StairValidationState,
 } from '../../types/stair';
 import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
@@ -85,17 +86,22 @@ const LOCK_TTL_MS = 5 * 60 * 1000;
 // ============================================================================
 
 /**
- * ADR-358 Phase 3f — back-compat hydration for legacy `StairDoc.params` saved
- * before the `cornerStyle` discriminator landed on `StairVariantLShape`.
- * Legacy l-shape docs are mapped to `cornerStyle: 'landing'` (the only
- * behavior pre-Phase 3f). Other kinds pass through unchanged.
+ * ADR-358 Phase 3f + 3g — back-compat hydration for legacy `StairDoc.params`:
+ *
+ *   - Phase 3f: l-shape variant without `cornerStyle` → defaults to `'landing'`.
+ *   - Phase 3g: `nokSubType: 'secondary'` → rewritten to `'low-rise'` (same
+ *     legal width minimum 0.90 m; clearer semantic match to ΝΟΚ scope table).
  */
 function hydrateLegacyParams(params: StairParams): StairParams {
-  const v = params.variant;
+  let out: StairParams = params;
+  const v = out.variant;
   if (v.kind === 'l-shape' && (v as { cornerStyle?: string }).cornerStyle === undefined) {
-    return { ...params, variant: { ...v, cornerStyle: 'landing' } as typeof v };
+    out = { ...out, variant: { ...v, cornerStyle: 'landing' } as typeof v };
   }
-  return params;
+  if (out.nokSubType === 'secondary') {
+    out = { ...out, nokSubType: 'low-rise' };
+  }
+  return out;
 }
 
 /**

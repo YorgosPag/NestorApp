@@ -41,6 +41,13 @@ export const STAIR_RIBBON_KEYS = {
      * throw Phase 4c sentinel).
      */
     winderMethod: 'stair.params.winderMethod',
+    /**
+     * ADR-358 Phase 3g — NOK stair scope selector (Άρθρο 13 Κτιριοδομικού).
+     * Reads/writes `nokSubType` ∈ {'main','low-rise','internal','auxiliary'}.
+     * Drives legal + comfort width thresholds in `gateStairChecker.checkNOK`.
+     * Visible only when `codeProfile === 'nok'`.
+     */
+    nokSubType: 'stair.params.nokSubType',
   },
   params: {
     rise: 'stair.params.rise',
@@ -102,7 +109,8 @@ export type StairRibbonStringComboKey =
   | typeof STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection
   | typeof STAIR_RIBBON_KEYS.stringParams.variantKind
   | typeof STAIR_RIBBON_KEYS.stringParams.cornerStyle
-  | typeof STAIR_RIBBON_KEYS.stringParams.winderMethod;
+  | typeof STAIR_RIBBON_KEYS.stringParams.winderMethod
+  | typeof STAIR_RIBBON_KEYS.stringParams.nokSubType;
 
 export type StairRibbonVisibilityKey =
   | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiFlight
@@ -128,6 +136,7 @@ const ALL_STAIR_STRING_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.stringParams.variantKind,
   STAIR_RIBBON_KEYS.stringParams.cornerStyle,
   STAIR_RIBBON_KEYS.stringParams.winderMethod,
+  STAIR_RIBBON_KEYS.stringParams.nokSubType,
 ]);
 
 const ALL_STAIR_VISIBILITY_KEYS: ReadonlySet<string> = new Set<string>([
