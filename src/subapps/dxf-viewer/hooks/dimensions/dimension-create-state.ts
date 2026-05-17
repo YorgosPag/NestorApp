@@ -1,0 +1,319 @@
+/**
+ * ADR-362 Phase D1 — Pure state machine for the dimension creation flow.
+ *
+ * No React, no stores, no I/O. Pure `state + action → state` reducer feeding
+ * the `DimensionCreateStore` external store + `useDimensionCreate` hook.
+ *
+ * Modes:
+ *   - 'smart'  — Smart DIM tool. `detectDimensionType` (Phase C2) drives
+ *                `currentType` from hover + first-click context + Tab/Space
+ *                cycles. Falls back to `'linear'` when click 1 has no hover.
+ *   - 'manual' — Ribbon manual overrides (`dim-linear` / `dim-aligned` /
+ *                `dim-angular2L` / `dim-angular3P`). `manualOverride` feeds the
+ *                detector at Tier 1 so the type stays pinned regardless of
+ *                hover/cycle counters.
+ *
+ * Per-type click counts (see ADR-362 §3 D4 + §7 Phase C1 changelog):
+ *   - linear/aligned   → 3 clicks: extOrigin1, extOrigin2, dimLineRef
+ *   - angular2L        → 3 clicks: line1 pick, line2 pick, arcPoint
+ *   - angular3P        → 4 clicks: vertex, ray1End, ray2End, arcPoint
+ *
+ * `defPoints` derivation lives in `dimension-create-entity-builder.ts` so the
+ * reducer stays focused on state transitions. Real ID generation /
+ * `DimensionAssociation` materialisation live in the hook (side effects).
+ */
+
+import type { Point2D } from '../../rendering/types/Types';
+import type { DimensionType } from '../../types/dimension';
+import {
+  detectDimensionType,
+  type DetectableEntity,
+} from '../../systems/dimensions/dim-smart-detector';
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Public types
+// ──────────────────────────────────────────────────────────────────────────────
+
+export type DimensionCreateMode = 'smart' | 'manual';
+
+/** Reducer lifecycle phase — drives the hook's commit / preview decisions. */
+export type DimensionCreateStatus = 'idle' | 'collecting' | 'commit-ready';
+
+/** Single user click during dim creation — geometry pick + association seed. */
+export interface ClickRecord {
+  readonly world: Point2D;
+  /** Entity under cursor at click time (drives D11 associativity). */
+  readonly pickedEntity?: DetectableEntity;
+}
+
+export interface DimensionCreateState {
+  readonly status: DimensionCreateStatus;
+  readonly mode: DimensionCreateMode | null;
+  /** Active type — null while idle or before smart mode has anything to suggest. */
+  readonly currentType: DimensionType | null;
+  /** Tier-1 detector override (set when mode === 'manual'). */
+  readonly manualOverride: DimensionType | null;
+  /** Active DIMSTYLE id resolved at `start` time (kept stable for the session). */
+  readonly styleId: string | null;
+  readonly clicks: readonly ClickRecord[];
+  readonly cursorWorld: Point2D | null;
+  readonly hoveredEntity: DetectableEntity | null;
+  readonly spacePressCount: number;
+  readonly tabPressCount: number;
+}
+
+export type DimensionCreateAction =
+  | {
+      readonly kind: 'start';
+      readonly mode: DimensionCreateMode;
+      readonly styleId: string;
+      readonly manualOverride?: DimensionType;
+    }
+  | {
+      readonly kind: 'cursorMove';
+      readonly cursorWorld: Point2D;
+      readonly hoveredEntity?: DetectableEntity;
+    }
+  | {
+      readonly kind: 'click';
+      readonly world: Point2D;
+      readonly hoveredEntity?: DetectableEntity;
+    }
+  | { readonly kind: 'pressTab' }
+  | { readonly kind: 'pressSpace' }
+  | { readonly kind: 'cancel' };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Initial state
+// ──────────────────────────────────────────────────────────────────────────────
+
+export const initialDimensionCreateState: DimensionCreateState = Object.freeze({
+  status: 'idle',
+  mode: null,
+  currentType: null,
+  manualOverride: null,
+  styleId: null,
+  clicks: [],
+  cursorWorld: null,
+  hoveredEntity: null,
+  spacePressCount: 0,
+  tabPressCount: 0,
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Clicks needed to finish the given dimension type (see ADR-362 §3 D4 + §7 Phase D2). */
+export function requiredClickCount(type: DimensionType): number {
+  switch (type) {
+    case 'joggedRadius':
+      // [center via entity pick, arcPoint, jogPoint, jogVertex]
+      return 4;
+    case 'linear':
+    case 'aligned':
+    case 'angular2L':
+      return 3;
+    case 'angular3P':
+      return 4;
+    case 'radius':
+    case 'diameter':
+    case 'arcLength':
+    case 'ordinate':
+      // Phase D2 — radial family + ordinate (AutoCAD DIMRADIUS/DIMDIAMETER/DIMARC/DIMORDINATE: pick + text position).
+      return 2;
+    case 'baseline':
+    case 'continued':
+      // Phase D3 placeholder — chained flows wire keyboard event routing later.
+      return 3;
+    default: {
+      const _exhaustive: never = type;
+      void _exhaustive;
+      return 3;
+    }
+  }
+}
+
+/**
+ * Q-A (ADR-362 Phase D2): AutoCAD-style entity-pick requirement for the radial
+ * family. Manual `dim-radius` / `dim-diameter` / `dim-arc-length` / `dim-jogged-radius`
+ * tools reject click 1 when the cursor isn't over a valid arc/circle — matches
+ * DIMRADIUS / DIMDIAMETER / DIMARC behaviour (no freestyle 2-point variant).
+ */
+function firstClickNeedsEntityPick(
+  type: DimensionType | null,
+  picked: DetectableEntity | undefined,
+): boolean {
+  switch (type) {
+    case 'radius':
+    case 'joggedRadius':
+      return !picked || (picked.type !== 'arc' && picked.type !== 'circle');
+    case 'diameter':
+      return !picked || picked.type !== 'circle';
+    case 'arcLength':
+      return !picked || picked.type !== 'arc';
+    default:
+      return false;
+  }
+}
+
+/** Resolve `currentType` for the given state using the Phase C2 detector. */
+function resolveCurrentType(
+  state: DimensionCreateState,
+  firstClickedEntity: DetectableEntity | undefined,
+  cursorWorld: Point2D | null,
+): DimensionType | null {
+  // Manual mode: detector returns manualOverride verbatim (Tier 1).
+  if (state.mode === 'manual' && state.manualOverride) {
+    return state.manualOverride;
+  }
+  // Smart mode without cursor data yet — keep the current type stable.
+  if (!cursorWorld) return state.currentType;
+
+  const detected = detectDimensionType({
+    cursorWorld,
+    hoveredEntity: state.hoveredEntity ?? undefined,
+    firstClickedEntity,
+    spacePressCount: state.spacePressCount,
+    tabPressCount: state.tabPressCount,
+    manualOverride: state.manualOverride ?? undefined,
+  });
+
+  // Smart-mode fallback: once the user has clicked, never drop back to null.
+  // AutoCAD Smart DIM defaults to 'linear' when the picks are bare points.
+  if (!detected && state.clicks.length > 0) return state.currentType ?? 'linear';
+  return detected ?? state.currentType;
+}
+
+function firstPickedEntity(clicks: readonly ClickRecord[]): DetectableEntity | undefined {
+  return clicks[0]?.pickedEntity;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Reducer
+// ──────────────────────────────────────────────────────────────────────────────
+
+export function dimensionCreateReducer(
+  state: DimensionCreateState,
+  action: DimensionCreateAction,
+): DimensionCreateState {
+  switch (action.kind) {
+    case 'start':
+      return handleStart(state, action);
+    case 'cursorMove':
+      return handleCursorMove(state, action);
+    case 'click':
+      return handleClick(state, action);
+    case 'pressTab':
+      return handleTab(state);
+    case 'pressSpace':
+      return handleSpace(state);
+    case 'cancel':
+      return initialDimensionCreateState;
+    default: {
+      const _exhaustive: never = action;
+      void _exhaustive;
+      return state;
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Action handlers (kept small per the 40-line function rule)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function handleStart(
+  _prev: DimensionCreateState,
+  action: Extract<DimensionCreateAction, { kind: 'start' }>,
+): DimensionCreateState {
+  const manualOverride = action.manualOverride ?? null;
+  return {
+    ...initialDimensionCreateState,
+    status: 'collecting',
+    mode: action.mode,
+    manualOverride,
+    styleId: action.styleId,
+    currentType: action.mode === 'manual' ? manualOverride : null,
+  };
+}
+
+function handleCursorMove(
+  state: DimensionCreateState,
+  action: Extract<DimensionCreateAction, { kind: 'cursorMove' }>,
+): DimensionCreateState {
+  if (state.status !== 'collecting') return state;
+  const hovered = action.hoveredEntity ?? null;
+  const next: DimensionCreateState = {
+    ...state,
+    cursorWorld: action.cursorWorld,
+    hoveredEntity: hovered,
+  };
+  const nextType = resolveCurrentType(next, firstPickedEntity(next.clicks), action.cursorWorld);
+  return { ...next, currentType: nextType };
+}
+
+function handleClick(
+  state: DimensionCreateState,
+  action: Extract<DimensionCreateAction, { kind: 'click' }>,
+): DimensionCreateState {
+  if (state.status !== 'collecting') return state;
+
+  // Q-A guard: manual radial tools require a valid arc/circle pick on click 1.
+  // Reject silently so the user can keep moving the cursor until they hover one.
+  if (
+    state.mode === 'manual' &&
+    state.clicks.length === 0 &&
+    firstClickNeedsEntityPick(state.manualOverride, action.hoveredEntity)
+  ) {
+    return state;
+  }
+
+  const record: ClickRecord = action.hoveredEntity
+    ? { world: action.world, pickedEntity: action.hoveredEntity }
+    : { world: action.world };
+  const nextClicks = [...state.clicks, record];
+  const nextHovered = action.hoveredEntity ?? null;
+
+  const withClick: DimensionCreateState = {
+    ...state,
+    clicks: nextClicks,
+    cursorWorld: action.world,
+    hoveredEntity: nextHovered,
+  };
+
+  const nextType = resolveCurrentType(
+    withClick,
+    firstPickedEntity(nextClicks),
+    action.world,
+  );
+  const effectiveType = nextType ?? state.currentType ?? 'linear';
+  const required = requiredClickCount(effectiveType);
+  const status: DimensionCreateStatus =
+    nextClicks.length >= required ? 'commit-ready' : 'collecting';
+
+  return { ...withClick, currentType: effectiveType, status };
+}
+
+function handleTab(state: DimensionCreateState): DimensionCreateState {
+  if (state.status !== 'collecting' || state.mode !== 'smart') return state;
+  const tabPressCount = state.tabPressCount + 1;
+  const intermediate: DimensionCreateState = { ...state, tabPressCount };
+  const nextType = resolveCurrentType(
+    intermediate,
+    firstPickedEntity(state.clicks),
+    state.cursorWorld,
+  );
+  return { ...intermediate, currentType: nextType };
+}
+
+function handleSpace(state: DimensionCreateState): DimensionCreateState {
+  if (state.status !== 'collecting' || state.mode !== 'smart') return state;
+  const spacePressCount = state.spacePressCount + 1;
+  const intermediate: DimensionCreateState = { ...state, spacePressCount };
+  const nextType = resolveCurrentType(
+    intermediate,
+    firstPickedEntity(state.clicks),
+    state.cursorWorld,
+  );
+  return { ...intermediate, currentType: nextType };
+}
