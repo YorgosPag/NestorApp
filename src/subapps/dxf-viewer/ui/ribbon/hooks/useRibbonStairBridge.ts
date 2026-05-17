@@ -52,6 +52,7 @@ import type {
 } from '../context/RibbonCommandContext';
 import type { useLevels } from '../../../systems/levels';
 import type { useUniversalSelection } from '../../../systems/selection';
+import { mmToSceneUnits, resolveSceneUnits } from '../../../utils/scene-units';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -145,6 +146,19 @@ export function useRibbonStairBridge(
     return e;
   }, [levelManager, universalSelection]);
 
+  // ADR-358 Phase 9 — unit bridge. Ribbon I/O is normalized to mm so the
+  // hardcoded combobox option lists (140/150/160…/2400/2700…) always line
+  // up with the displayed current value. `StairParams.rise/tread/width` are
+  // stored in scene units (`* mmToSceneUnits`), so the bridge multiplies
+  // on write and divides on read. `multiStoryConfig.storyHeight` stays in
+  // mm (Phase 7a contract) — no conversion. `stepCount` is unitless.
+  const getSceneUnitsScale = useCallback((): number => {
+    const lid = levelManager.currentLevelId;
+    if (!lid) return mmToSceneUnits('mm');
+    const scene = levelManager.getLevelScene(lid);
+    return mmToSceneUnits(resolveSceneUnits(scene));
+  }, [levelManager]);
+
   const dispatchParams = useCallback(
     (stair: StairEntity, next: StairParams): void => {
       if (!levelManager.currentLevelId) return;
@@ -169,10 +183,10 @@ export function useRibbonStairBridge(
         return v === null ? null : { value: v, options: [] };
       }
       if (!isStairRibbonKey(commandKey)) return null;
-      const v = readStairNumericField(commandKey, stair.params);
+      const v = readStairNumericField(commandKey, stair.params, getSceneUnitsScale());
       return v === null ? null : { value: v, options: [] };
     },
-    [resolveStair],
+    [resolveStair, getSceneUnitsScale],
   );
 
   const onComboboxChange = useCallback(
@@ -191,11 +205,11 @@ export function useRibbonStairBridge(
       const numeric = Number.parseFloat(value);
       if (Number.isNaN(numeric)) return;
 
-      const next = patchStairNumericParam(stair.params, commandKey, numeric);
+      const next = patchStairNumericParam(stair.params, commandKey, numeric, getSceneUnitsScale());
       if (next === null) return;
       dispatchParams(stair, next);
     },
-    [resolveStair, dispatchParams],
+    [resolveStair, dispatchParams, getSceneUnitsScale],
   );
 
   // No toggles in Phase 7a — riserType is exposed as a combobox.
@@ -282,17 +296,24 @@ function readFlightTurnDirection(p: StairParams, flightIndex: 0 | 1): string | n
 function readStairNumericField(
   key: StairRibbonComboKey,
   p: StairParams,
+  scale: number,
 ): string | null {
+  // ADR-358 Phase 9 — convert scene-unit-stored geometry params back to mm
+  // for the ribbon. `scale = mmToSceneUnits(currentUnits)`. Rounding to the
+  // nearest integer mm keeps the combobox value matching the static option
+  // strings (140/150/175…) without floating-point drift on m scenes.
+  const toMm = (v: number): string => String(Math.round(v / scale));
   switch (key) {
-    case STAIR_RIBBON_KEYS.params.rise:        return String(p.rise);
-    case STAIR_RIBBON_KEYS.params.tread:       return String(p.tread);
-    case STAIR_RIBBON_KEYS.params.width:       return String(p.width);
+    case STAIR_RIBBON_KEYS.params.rise:        return toMm(p.rise);
+    case STAIR_RIBBON_KEYS.params.tread:       return toMm(p.tread);
+    case STAIR_RIBBON_KEYS.params.width:       return toMm(p.width);
     case STAIR_RIBBON_KEYS.params.stepCount:   return String(p.stepCount);
     // Return `null` (not `''`) when multi-story config is absent — Radix Select
     // forbids empty-string SelectItem values and RibbonCombobox injects the
     // current value as a fallback option. Empty-string would crash the panel
     // on stair selection (regression observed 2026-05-17).
     case STAIR_RIBBON_KEYS.params.storyCount:  return p.multiStoryConfig ? String(p.multiStoryConfig.storyCount) : null;
+    // storyHeight stays in mm in StairMultiStoryConfig (Phase 7a contract).
     case STAIR_RIBBON_KEYS.params.storyHeight: return p.multiStoryConfig ? String(p.multiStoryConfig.storyHeight) : null;
     default: return null;
   }
@@ -377,11 +398,12 @@ function patchStairNumericParam(
   prev: StairParams,
   key: StairRibbonComboKey,
   numeric: number,
+  scale: number,
 ): StairParams | null {
   switch (key) {
-    case STAIR_RIBBON_KEYS.params.rise:      return patchRise(prev, numeric);
-    case STAIR_RIBBON_KEYS.params.tread:     return patchTread(prev, numeric);
-    case STAIR_RIBBON_KEYS.params.width:     return patchWidth(prev, numeric);
+    case STAIR_RIBBON_KEYS.params.rise:      return patchRise(prev, numeric, scale);
+    case STAIR_RIBBON_KEYS.params.tread:     return patchTread(prev, numeric, scale);
+    case STAIR_RIBBON_KEYS.params.width:     return patchWidth(prev, numeric, scale);
     case STAIR_RIBBON_KEYS.params.stepCount: return patchStepCount(prev, numeric);
     case STAIR_RIBBON_KEYS.params.storyCount:  return patchStoryCount(prev, numeric);
     case STAIR_RIBBON_KEYS.params.storyHeight: return patchStoryHeight(prev, numeric);
@@ -389,20 +411,26 @@ function patchStairNumericParam(
   }
 }
 
-function patchRise(prev: StairParams, raw: number): StairParams | null {
-  const rise = clamp(raw, 50, 300);
+// ADR-358 Phase 9 — input arrives in mm (combobox option strings are mm).
+// Clamp ranges are mm too. Convert to scene units before writing into
+// `StairParams.{rise,tread,width}` which the geometry pipeline expects.
+function patchRise(prev: StairParams, rawMm: number, scale: number): StairParams | null {
+  const mm = clamp(rawMm, 50, 300);
+  const rise = mm * scale;
   if (rise === prev.rise) return null;
   return withRecomputedTotals({ ...prev, rise });
 }
 
-function patchTread(prev: StairParams, raw: number): StairParams | null {
-  const tread = clamp(raw, 150, 500);
+function patchTread(prev: StairParams, rawMm: number, scale: number): StairParams | null {
+  const mm = clamp(rawMm, 150, 500);
+  const tread = mm * scale;
   if (tread === prev.tread) return null;
   return withRecomputedTotals({ ...prev, tread });
 }
 
-function patchWidth(prev: StairParams, raw: number): StairParams | null {
-  const width = clamp(raw, 400, 4000);
+function patchWidth(prev: StairParams, rawMm: number, scale: number): StairParams | null {
+  const mm = clamp(rawMm, 400, 4000);
+  const width = mm * scale;
   if (width === prev.width) return null;
   return { ...prev, width };
 }
