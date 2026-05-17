@@ -38,6 +38,6 @@ export function restoreSourcesToScene(
   sceneManager: ISceneManager,
 ): void {
   for (const entity of hiddenSources) {
-    sceneManager.addEntity(entity as Parameters<ISceneManager['addEntity']>[0]);
+    sceneManager.addEntity(entity as unknown as Parameters<ISceneManager['addEntity']>[0]);
   }
 }

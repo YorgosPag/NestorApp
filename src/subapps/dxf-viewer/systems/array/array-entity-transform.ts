@@ -266,7 +266,7 @@ export function applyTransformToEntity(
 
 function translateEntityFallback(entity: Entity, t: ItemTransform): Entity {
   // Best-effort: translate any known positional fields
-  const e = entity as Record<string, unknown>;
+  const e = entity as unknown as Record<string, unknown>;
   const result: Record<string, unknown> = { ...e };
   if (typeof e['position'] === 'object' && e['position'] !== null) {
     const p = e['position'] as Point2D;
@@ -280,5 +280,5 @@ function translateEntityFallback(entity: Entity, t: ItemTransform): Entity {
     const bp = e['basePoint'] as Point2D;
     result['basePoint'] = translatePoint(bp, t.translateX, t.translateY);
   }
-  return result as Entity;
+  return result as unknown as Entity;
 }
