@@ -183,6 +183,24 @@ export interface EnterpriseRulerSettings {
 }
 
 // ============================================================================
+// LAYER ISOLATE SETTINGS (ADR-358 §5.6.bis Q10 — Phase 10)
+// ============================================================================
+
+export type LayerIsolateMode = 'dim' | 'freeze';
+
+export interface LayerIsolateSettings {
+  /** Default behavior on Ctrl+Shift+I. */
+  mode: LayerIsolateMode;
+  /**
+   * Display-side opacity (0-100, snapped to step 5 between 5..90) for
+   * non-isolated layers in 'dim' mode. Internally inverted to DXF transparency
+   * (`100 - dimOpacityPercent`, clamped 0..90) at render time via
+   * `dimOpacityToTransparency()` in `services/layer-isolate-resolver.ts`.
+   */
+  dimOpacityPercent: number;
+}
+
+// ============================================================================
 // COMBINED SETTINGS TYPE
 // ============================================================================
 
@@ -193,6 +211,8 @@ export interface DxfSettings {
   cursor?: EnterpriseCursorSettings;
   grid?: EnterpriseGridSettings;
   ruler?: EnterpriseRulerSettings;
+  /** ADR-358 §5.6.bis — Layer Isolate (Q10 FULL Enterprise Configurable). */
+  layerIsolate?: LayerIsolateSettings;
 }
 
 export type PartialDxfSettings = {
@@ -202,6 +222,7 @@ export type PartialDxfSettings = {
   cursor?: Partial<EnterpriseCursorSettings>;
   grid?: Partial<EnterpriseGridSettings>;
   ruler?: Partial<EnterpriseRulerSettings>;
+  layerIsolate?: Partial<LayerIsolateSettings>;
 };
 
 // ============================================================================

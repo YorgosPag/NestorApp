@@ -10,7 +10,8 @@ import type {
   EnterpriseCursorSettings,
   EnterpriseGridSettings,
   EnterpriseRulerSettings,
-  DxfSettings
+  DxfSettings,
+  LayerIsolateSettings
 } from './types';
 import { UI_COLORS } from '../config/color-config';
 
@@ -158,6 +159,15 @@ export const DEFAULT_RULER_SETTINGS: EnterpriseRulerSettings = {
 };
 
 // ============================================================================
+// LAYER ISOLATE DEFAULTS — ADR-358 §5.6.bis Q10 (Phase 10)
+// ============================================================================
+
+export const DEFAULT_LAYER_ISOLATE_SETTINGS: LayerIsolateSettings = {
+  mode: 'dim',
+  dimOpacityPercent: 30
+};
+
+// ============================================================================
 // COMBINED DEFAULTS
 // ============================================================================
 
@@ -167,7 +177,8 @@ export const DEFAULT_DXF_SETTINGS: DxfSettings = {
   grip: DEFAULT_GRIP_SETTINGS,
   cursor: DEFAULT_CURSOR_SETTINGS,
   grid: DEFAULT_GRID_SETTINGS,
-  ruler: DEFAULT_RULER_SETTINGS
+  ruler: DEFAULT_RULER_SETTINGS,
+  layerIsolate: DEFAULT_LAYER_ISOLATE_SETTINGS
 };
 
 // ============================================================================
