@@ -226,8 +226,28 @@ function resizeWidth(input: Readonly<StairGripDragInput>): StairParams {
   const dx = currentPos.x - originalParams.basePoint.x;
   const dy = currentPos.y - originalParams.basePoint.y;
   const projOnPerp = Math.abs(dx * p.x + dy * p.y);
-  const newWidth = Math.max(MIN_WIDTH_MM, projOnPerp * 2);
+  // Min-width floor must be expressed in the same units as `originalParams.width`
+  // (which mirror the scene units after ADR-358 Phase 8 unit-aware builder).
+  // Without scaling, `MIN_WIDTH_MM = 50` clamped a metre-scale stair to 50 m
+  // because `Math.max(50, 1.2) = 50`. Use the scale of the original width to
+  // pick the right floor (50 mm in mm-scenes, 0.05 m in metre-scenes, 5 cm in
+  // cm-scenes — same physical 50 mm everywhere).
+  const minWidth = minWidthFloorFor(originalParams.width);
+  const newWidth = Math.max(minWidth, projOnPerp * 2);
   return { ...originalParams, width: newWidth };
+}
+
+/**
+ * Pick a 50 mm min-width floor in whatever scene units the current `width`
+ * is expressed in. Heuristic mirror of `detectSceneUnits(bounds)` but per
+ * single value: a width default of 1.2 (m), 120 (cm), 1200 (mm) → respective
+ * floors 0.05, 5, 50 — same physical 50 mm in every case.
+ */
+function minWidthFloorFor(currentWidth: number): number {
+  if (!Number.isFinite(currentWidth) || currentWidth <= 0) return MIN_WIDTH_MM;
+  if (currentWidth < 10) return 0.05;   // metres
+  if (currentWidth < 100) return 5;     // centimetres
+  return MIN_WIDTH_MM;                  // millimetres (or larger units → safe)
 }
 
 function resizeLength(input: Readonly<StairGripDragInput>): StairParams {
