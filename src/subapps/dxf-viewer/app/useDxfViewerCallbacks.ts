@@ -23,6 +23,7 @@ import type { UniversalSelectionHook } from '../systems/selection/SelectionSyste
 import type { Status, OverlayKind } from '../overlays/types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
+import { openDimTextOverride } from '../ui/panels/dimensions/DimTextOverrideStore';
 
 /** Structural overlay entry shape used by callbacks */
 interface OverlayEntry {
@@ -156,6 +157,12 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     }
     if (action === 'import-dxf-legacy') {
       setShowLegacyImport(true);
+      return;
+    }
+    // ADR-362 Phase G1: open dimension text-override dialog
+    if (action === 'dim.text.override') {
+      const entityId = params.selectedEntityIds[0];
+      if (entityId) openDimTextOverride(entityId);
       return;
     }
     // Pass all other actions to original handleAction
