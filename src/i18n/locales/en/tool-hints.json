@@ -132,6 +132,7 @@
         },
         "nok": {
           "widthMin": "NOK: insufficient stair width.",
+          "widthBelowComfort": "Width is legal but tight for comfortable use.",
           "riseRange": "NOK: riser height outside allowed range.",
           "treadRange": "NOK: tread depth outside allowed range.",
           "twoRPlusG": "NOK: comfort formula 2R+G (2×riser + tread) outside allowed range 600–640 mm."
