@@ -11,12 +11,13 @@ import type { UpdateCustomStylePatch } from '../../../../systems/dimensions/dim-
 interface LinesSectionProps {
   style: DimStyle;
   onChange: (patch: UpdateCustomStylePatch) => void;
+  readOnly?: boolean;
 }
 
 function NumField({
-  id, label, value, onChange,
+  id, label, value, onChange, disabled,
 }: {
-  id: string; label: string; value: number; onChange: (v: number) => void;
+  id: string; label: string; value: number; onChange: (v: number) => void; disabled?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
@@ -27,6 +28,7 @@ function NumField({
         min={0}
         step={0.1}
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
         className="h-6 text-xs w-20 px-1.5"
       />
@@ -35,32 +37,32 @@ function NumField({
 }
 
 function BoolField({
-  id, label, checked, onChange,
+  id, label, checked, onChange, disabled,
 }: {
-  id: string; label: string; checked: boolean; onChange: (v: boolean) => void;
+  id: string; label: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean;
 }) {
   return (
     <div className="flex items-center gap-2">
-      <Checkbox id={id} checked={checked} onCheckedChange={(v) => onChange(Boolean(v))} />
+      <Checkbox id={id} checked={checked} onCheckedChange={(v) => onChange(Boolean(v))} disabled={disabled} />
       <Label htmlFor={id} className="text-xs cursor-pointer">{label}</Label>
     </div>
   );
 }
 
-export function LinesSection({ style, onChange }: LinesSectionProps) {
+export function LinesSection({ style, onChange, readOnly = false }: LinesSectionProps) {
   const { t } = useTranslation('dxf-viewer-panels');
   const f = (key: string) => t(`panels.dimensions.editor.fields.${key}`);
 
   return (
     <div className="flex flex-col gap-2 py-1">
-      <NumField id="dimasz" label={f('dimasz')} value={style.dimasz} onChange={(v) => onChange({ dimasz: v })} />
-      <NumField id="dimexe" label={f('dimexe')} value={style.dimexe} onChange={(v) => onChange({ dimexe: v })} />
-      <NumField id="dimexo" label={f('dimexo')} value={style.dimexo} onChange={(v) => onChange({ dimexo: v })} />
-      <NumField id="dimdli" label={f('dimdli')} value={style.dimdli} onChange={(v) => onChange({ dimdli: v })} />
-      <BoolField id="sDL1" label={f('suppressDimLine1')} checked={style.suppressDimLine1} onChange={(v) => onChange({ suppressDimLine1: v })} />
-      <BoolField id="sDL2" label={f('suppressDimLine2')} checked={style.suppressDimLine2} onChange={(v) => onChange({ suppressDimLine2: v })} />
-      <BoolField id="sEL1" label={f('suppressExtLine1')} checked={style.suppressExtLine1} onChange={(v) => onChange({ suppressExtLine1: v })} />
-      <BoolField id="sEL2" label={f('suppressExtLine2')} checked={style.suppressExtLine2} onChange={(v) => onChange({ suppressExtLine2: v })} />
+      <NumField id="dimasz" label={f('dimasz')} value={style.dimasz} onChange={(v) => onChange({ dimasz: v })} disabled={readOnly} />
+      <NumField id="dimexe" label={f('dimexe')} value={style.dimexe} onChange={(v) => onChange({ dimexe: v })} disabled={readOnly} />
+      <NumField id="dimexo" label={f('dimexo')} value={style.dimexo} onChange={(v) => onChange({ dimexo: v })} disabled={readOnly} />
+      <NumField id="dimdli" label={f('dimdli')} value={style.dimdli} onChange={(v) => onChange({ dimdli: v })} disabled={readOnly} />
+      <BoolField id="sDL1" label={f('suppressDimLine1')} checked={style.suppressDimLine1} onChange={(v) => onChange({ suppressDimLine1: v })} disabled={readOnly} />
+      <BoolField id="sDL2" label={f('suppressDimLine2')} checked={style.suppressDimLine2} onChange={(v) => onChange({ suppressDimLine2: v })} disabled={readOnly} />
+      <BoolField id="sEL1" label={f('suppressExtLine1')} checked={style.suppressExtLine1} onChange={(v) => onChange({ suppressExtLine1: v })} disabled={readOnly} />
+      <BoolField id="sEL2" label={f('suppressExtLine2')} checked={style.suppressExtLine2} onChange={(v) => onChange({ suppressExtLine2: v })} disabled={readOnly} />
     </div>
   );
 }
