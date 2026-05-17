@@ -33,6 +33,8 @@ import {
   subscribeProjectLayerStates,
   type LayerStatePersistenceHandle,
 } from '../services/layer-state-persistence';
+import { parseLasContent } from '../services/las-parser';
+import { serializeLasContent } from '../services/las-exporter';
 
 type Listener = () => void;
 
@@ -189,6 +191,53 @@ export function markCurrentLayerState(id: string | null): void {
   if (id !== null && !cached.states.some((s) => s.id === id)) return;
   currentStateId = id;
   rebuildAndNotify();
+}
+
+// ─── .las I/O (Phase 13A — ADR-358 §5.9 Q12) ─────────────────────────────────
+
+export interface LasImportSummary {
+  readonly added: number;
+  readonly skipped: number;
+  readonly errors: ReadonlyArray<string>;
+}
+
+/**
+ * Serialize the saved states (or a subset by id) to `.las` ASCII text. Returns
+ * empty string when no states match. Pure read — no persistence side effects.
+ */
+export function exportLayerStatesAsLas(ids?: ReadonlyArray<string>): string {
+  const all = cached.states;
+  const target = ids && ids.length > 0
+    ? all.filter((s) => ids.includes(s.id))
+    : all;
+  if (target.length === 0) return '';
+  return serializeLasContent(target);
+}
+
+/**
+ * Parse `.las` ASCII content and persist each valid state as a new saved
+ * `LayerState` (source `'las-import'`). Duplicates by name are skipped — the
+ * user must rename or delete first. Returns an import summary for the UI toast.
+ */
+export function importLayerStatesFromLas(content: string): LasImportSummary {
+  if (!projectId) return { added: 0, skipped: 0, errors: ['No project attached'] };
+  const result = parseLasContent(content, currentUserId);
+  const existingNames = new Set(cached.states.map((s) => s.name.toLowerCase()));
+  let added = 0;
+  let skipped = 0;
+  const errors = result.errors.map((e) =>
+    e.stateName ? `${e.stateName} (line ${e.line}): ${e.message}` : `Line ${e.line}: ${e.message}`,
+  );
+  for (const state of result.states) {
+    if (existingNames.has(state.name.toLowerCase())) {
+      skipped++;
+      continue;
+    }
+    persistSave(projectId, state);
+    existingNames.add(state.name.toLowerCase());
+    added++;
+  }
+  return { added, skipped, errors };
 }
 
 // ─── Capture helper (pure) ───────────────────────────────────────────────────
