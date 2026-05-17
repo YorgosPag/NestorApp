@@ -8,6 +8,10 @@ import type { UpdateCustomStylePatch } from '../../../systems/dimensions/dim-sty
 import { LinesSection } from './sections/LinesSection';
 import { SymbolsSection } from './sections/SymbolsSection';
 import { TextSection } from './sections/TextSection';
+import { FitSection } from './sections/FitSection';
+import { UnitsSection } from './sections/UnitsSection';
+import { TolerancesSection } from './sections/TolerancesSection';
+import { DimStylePreview } from './DimStylePreview';
 
 interface DimStyleAccordionProps {
   style: DimStyle;
@@ -21,6 +25,10 @@ export function DimStyleAccordion({ style, onChange, readOnly = false }: DimStyl
 
   return (
     <div className="flex flex-col gap-1">
+      <div className="flex justify-center py-1">
+        <DimStylePreview style={style} />
+      </div>
+
       <AccordionSection title={s('lines')} defaultOpen size="sm" variant="bordered">
         <LinesSection style={style} onChange={onChange} readOnly={readOnly} />
       </AccordionSection>
@@ -31,6 +39,18 @@ export function DimStyleAccordion({ style, onChange, readOnly = false }: DimStyl
 
       <AccordionSection title={s('text')} defaultOpen={false} size="sm" variant="bordered">
         <TextSection style={style} onChange={onChange} readOnly={readOnly} />
+      </AccordionSection>
+
+      <AccordionSection title={s('fit')} defaultOpen={false} size="sm" variant="bordered">
+        <FitSection style={style} onChange={onChange} readOnly={readOnly} />
+      </AccordionSection>
+
+      <AccordionSection title={s('units')} defaultOpen={false} size="sm" variant="bordered">
+        <UnitsSection style={style} onChange={onChange} readOnly={readOnly} />
+      </AccordionSection>
+
+      <AccordionSection title={s('tolerances')} defaultOpen={false} size="sm" variant="bordered">
+        <TolerancesSection style={style} onChange={onChange} readOnly={readOnly} />
       </AccordionSection>
     </div>
   );
