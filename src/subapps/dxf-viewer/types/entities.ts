@@ -93,7 +93,14 @@ export type EntityType =
   | 'array'                // ADR-353: Associative array entity (rect/polar/path)
   | 'stair'                // ADR-358: Parametric stair entity (11 kinds, Phase 1+)
   | 'center-mark'          // ADR-362 Phase A1: standalone center mark (D13)
-  | 'centerline';          // ADR-362 Phase A1: standalone centerline (D13)
+  | 'centerline'           // ADR-362 Phase A1: standalone centerline (D13)
+  // ADR-363 BIM Drawing Mode (Phase 0 Bootstrap — renderers/tools in Phase 1+):
+  | 'wall'                 // Parametric wall (straight/curved/polyline)
+  | 'opening'              // Door/window/sliding-door/french-door/fixed — hosted in wall
+  | 'slab'                 // Floor/ceiling/roof/ground/foundation slab
+  | 'slab-opening'         // Elevator shaft, stair well, duct, chimney cutout
+  | 'column'               // Rectangular/circular/L-shape/T-shape column
+  | 'beam';                // Straight/curved/cantilever beam
 
 // Geometric entities
 export interface LineEntity extends BaseEntity {
@@ -294,6 +301,60 @@ export {
   isContinuedDimension,
 } from './dimension';
 
+// ADR-363 Phase 0 Bootstrap: BIM entity base types + concrete entity interfaces.
+// Renderers and tools land in Phase 1+. These interfaces allow type-safe scene
+// operations (selection, bounds, guards) without any rendering code.
+import type {
+  BimEntity,
+  BimElementKind,
+  BoundingBox3D,
+} from '../bim/types/bim-base';
+
+// ─── BIM entity concrete types (Phase 0 stubs — params/geometry filled Phase 1+) ─
+export type WallKind = 'straight' | 'curved' | 'polyline';
+export type OpeningKind = 'door' | 'window' | 'sliding-door' | 'french-door' | 'fixed';
+export type SlabKind = 'floor' | 'ceiling' | 'roof' | 'ground' | 'foundation';
+export type SlabOpeningKind = 'shaft' | 'well' | 'duct' | 'chimney';
+export type ColumnKind = 'rectangular' | 'circular' | 'L-shape' | 'T-shape';
+export type BeamKind = 'straight' | 'curved' | 'cantilever';
+
+// Minimal geometry stub — full geometry types in bim/types/*-types.ts (Phase 1+)
+interface BimGeometryStub {
+  readonly bbox: BoundingBox3D;
+}
+
+// Minimal params stubs — full params in bim/types/*-types.ts (Phase 1+)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BimParamsStub = Record<string, any>;
+
+export interface WallEntity extends BimEntity<WallKind, BimParamsStub, BimGeometryStub> {
+  type: 'wall';
+  hostedOpeningIds?: readonly string[];
+}
+
+export interface OpeningEntity extends BimEntity<OpeningKind, BimParamsStub, BimGeometryStub> {
+  type: 'opening';
+}
+
+export interface SlabEntity extends BimEntity<SlabKind, BimParamsStub, BimGeometryStub> {
+  type: 'slab';
+}
+
+export interface SlabOpeningEntity extends BimEntity<SlabOpeningKind, BimParamsStub, BimGeometryStub> {
+  type: 'slab-opening';
+}
+
+export interface ColumnEntity extends BimEntity<ColumnKind, BimParamsStub, BimGeometryStub> {
+  type: 'column';
+}
+
+export interface BeamEntity extends BimEntity<BeamKind, BimParamsStub, BimGeometryStub> {
+  type: 'beam';
+}
+
+// Re-export BIM base types for downstream consumers
+export type { BimEntity, BimElementKind, BimValidation, BimQuantityTakeoff, SoftLock, Point3D, AtoeCategoryCode } from '../bim/types/bim-base';
+
 // ADR-362 Phase A1: standalone Center Mark + Centerline (D13).
 import type { CenterMarkEntity, CenterLineEntity } from './center-mark';
 export type { CenterMarkEntity, CenterLineEntity, CenterMarkStyle, CenterLineKind } from './center-mark';
@@ -421,6 +482,13 @@ export type Entity = (
   | StairEntity              // ADR-358: Parametric stair (11 kinds)
   | CenterMarkEntity         // ADR-362 Phase A1: standalone center mark (D13)
   | CenterLineEntity         // ADR-362 Phase A1: standalone centerline (D13)
+  // ADR-363 BIM Drawing Mode (Phase 0 — renderers/tools Phase 1+):
+  | WallEntity
+  | OpeningEntity
+  | SlabEntity
+  | SlabOpeningEntity
+  | ColumnEntity
+  | BeamEntity
 ) & Pick<BaseEntity, 'name'>; // ✅ ENTERPRISE: Ensures name property is always available on Entity type
 
 // Entity collection types
@@ -536,6 +604,30 @@ export const isStairEntity = (entity: Entity): entity is StairEntity =>
 
 // ADR-362 Phase A1 — standalone center mark / centerline guards already re-exported
 // from './center-mark' above (isCenterMarkEntity / isCenterLineEntity).
+
+// ADR-363 BIM entity type guards
+export const isWallEntity = (entity: Entity): entity is WallEntity =>
+  entity.type === 'wall';
+
+export const isOpeningEntity = (entity: Entity): entity is OpeningEntity =>
+  entity.type === 'opening';
+
+export const isSlabEntity = (entity: Entity): entity is SlabEntity =>
+  entity.type === 'slab';
+
+export const isSlabOpeningEntity = (entity: Entity): entity is SlabOpeningEntity =>
+  entity.type === 'slab-opening';
+
+export const isColumnEntity = (entity: Entity): entity is ColumnEntity =>
+  entity.type === 'column';
+
+export const isBeamEntity = (entity: Entity): entity is BeamEntity =>
+  entity.type === 'beam';
+
+/** True for any ADR-363 BIM parametric entity */
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity =>
+  entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
+  entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility
@@ -672,6 +764,18 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
       // 🏢 ADR-034: Centralized Empty Spatial Bounds
       return EMPTY_SPATIAL_BOUNDS;
     case 'stair':    // ADR-358: project StairGeometry.bbox (3D) to 2D plan bounds
+      if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
+        const { min, max } = entity.geometry.bbox;
+        return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };
+      }
+      return EMPTY_SPATIAL_BOUNDS;
+    // ADR-363 BIM entities — all carry geometry.bbox (BoundingBox3D), project to 2D
+    case 'wall':
+    case 'opening':
+    case 'slab':
+    case 'slab-opening':
+    case 'column':
+    case 'beam':
       if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
         const { min, max } = entity.geometry.bbox;
         return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };
