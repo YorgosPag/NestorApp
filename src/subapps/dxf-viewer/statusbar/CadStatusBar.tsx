@@ -13,6 +13,7 @@ import { ProSnapToolbar } from '../ui/components/ProSnapToolbar';
 import { CurrentLayerPicker } from '../ui/components/layer-picker/CurrentLayerPicker';
 import type { ExtendedSnapType } from '../snapping/extended-types';
 import { useStairStatusKey } from './stair-status-store';
+import { IsolateStatusIndicator } from './IsolateStatusIndicator';
 
 export default function CadStatusBar() {
   const { osnap, grid, snap, ortho, polar, dynInput } = useCadToggles();
@@ -87,6 +88,7 @@ export default function CadStatusBar() {
             )
           )}
           <CurrentLayerPicker variant="status-bar" className="ml-auto" />
+          <IsolateStatusIndicator />
           <span className="shrink-0 text-xs text-muted-foreground">
             {t('cadDock.statusBar.modeInfo')}
           </span>

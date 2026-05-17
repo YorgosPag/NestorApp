@@ -433,7 +433,35 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         onFinish={handleDrawingFinish} onClose={handleDrawingClose} onUndoLastPoint={handleDrawingUndoLastPoint} onCancel={handleDrawingCancel} onFlipArc={handleFlipArc} />
       <EntityContextMenu ref={entityMenuRef} selectedCount={selectedEntityIds.length}
         canJoin={entityJoinState.canJoin} joinResultLabel={entityJoinState.joinResultLabel}
-        onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)} onDelete={() => handleSmartDelete()} onCancel={() => entityMenuRef.current?.close()} />
+        onJoin={() => entityJoinHook.joinEntities(selectedEntityIds)} onDelete={() => handleSmartDelete()} onCancel={() => entityMenuRef.current?.close()}
+        {...(() => {
+          // ADR-358 §5.6.bis Phase 10 — Layer click-driven commands.
+          const firstId = selectedEntityIds[0];
+          const firstEntity = firstId && props.currentScene
+            ? props.currentScene.entities.find((e) => e.id === firstId)
+            : null;
+          const layerId = (firstEntity as { layerId?: string } | null)?.layerId ?? null;
+          if (!layerId) return { canApplyLayerCommands: false } as const;
+          const layer = props.currentScene?.layersById?.[layerId];
+          const isSystem = layer?.name === '0';
+          // Lazy-require to avoid circular deps in CanvasSection.
+          return {
+            canApplyLayerCommands: true,
+            isSystemLayer: isSystem,
+            onLayerOff: () => {
+              const { LayerOffCommand } = require('../../core/commands/layer');
+              executeCommand(new LayerOffCommand({ layerId }));
+            },
+            onLayerFreeze: () => {
+              const { LayerFreezeCommand } = require('../../core/commands/layer');
+              executeCommand(new LayerFreezeCommand({ layerId }));
+            },
+            onLayerLock: () => {
+              const { LayerLockCommand } = require('../../core/commands/layer');
+              executeCommand(new LayerLockCommand({ layerId }));
+            },
+          } as const;
+        })()} />
       <GuideContextMenu ref={guideMenuRef}
         onDelete={guideWorkflows.handleGuideContextDelete} onToggleLock={guideWorkflows.handleGuideContextToggleLock}
         onEditLabel={guideWorkflows.handleGuideContextEditLabel} onChangeColor={guideWorkflows.handleGuideContextChangeColor}

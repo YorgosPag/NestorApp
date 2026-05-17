@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { perfMark } from '../../debug/perf-line-profile';
 import type { DxfScene, DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -29,7 +29,7 @@ import { extractFlatText } from '../../utils/text-node-utils';
 import { expandArrayEntity } from '../../systems/array/array-expander';
 import { getLayerNameOrDefault } from '../../config/layer-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
-import { resolveEntityLayerName } from '../../stores/LayerStore';
+import { resolveEntityLayerName, setLayers as setLayerStoreLayers } from '../../stores/LayerStore';
 import { UI_COLORS } from '../../config/color-config';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 import { dwarn } from '../../debug';
@@ -328,6 +328,18 @@ export function useDxfSceneConversion({
       bounds: currentScene?.bounds ?? null,
     };
   }), [currentScene]);
+
+  // ADR-358 §5.6.bis Phase 10 prerequisite — hydrate LayerStore from the
+  // SceneModel snapshot whenever the current scene changes. This bridges the
+  // cold SceneModel.layersById to the runtime LayerStore SSoT consumed by:
+  //   - Phase 7 CurrentLayerPicker / Phase 8 AdminLayerManager (UI subscribers)
+  //   - Phase 10 LayerIsolate/Off/Freeze/Lock commands (mutate via upsertLayer)
+  // Idempotent — `setLayers` no-ops on identical input.
+  useEffect(() => {
+    const layersById = currentScene?.layersById;
+    if (!layersById) return;
+    setLayerStoreLayers(Object.values(layersById));
+  }, [currentScene]);
 
   return { dxfScene };
 }

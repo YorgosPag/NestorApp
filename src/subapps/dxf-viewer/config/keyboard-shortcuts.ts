@@ -796,6 +796,48 @@ export const GUIDE_CHORD_TIMEOUT_MS = 350 as const;
 // 🔗 COMBINED SHORTCUTS MAP (All shortcuts in one place)
 // ============================================================================
 
+// ============================================================================
+// 🪜 LAYER ISOLATE SHORTCUTS (ADR-358 §5.6.bis — Phase 10)
+// ============================================================================
+
+export const DXF_LAYER_SHORTCUTS: Record<string, ShortcutDefinition> = {
+  layerIsolate: {
+    key: 'I',
+    modifier: 'ctrlShift',
+    descriptionKey: 'shortcuts.layer.isolate',
+    action: 'layer:isolate',
+    category: 'action',
+  },
+  layerIsolateInverse: {
+    key: 'I',
+    modifier: 'ctrlAlt',
+    descriptionKey: 'shortcuts.layer.isolateInverse',
+    action: 'layer:isolate-inverse',
+    category: 'action',
+  },
+  layerUnisolate: {
+    key: 'U',
+    modifier: 'ctrlShift',
+    descriptionKey: 'shortcuts.layer.unisolate',
+    action: 'layer:unisolate',
+    category: 'action',
+  },
+  layerThawAll: {
+    key: 'T',
+    modifier: 'ctrlShift',
+    descriptionKey: 'shortcuts.layer.thawAll',
+    action: 'layer:thaw-all',
+    category: 'action',
+  },
+  layerOnAll: {
+    key: 'O',
+    modifier: 'ctrlShift',
+    descriptionKey: 'shortcuts.layer.onAll',
+    action: 'layer:on-all',
+    category: 'action',
+  },
+} as const;
+
 export const ALL_DXF_SHORTCUTS = {
   ...DXF_TOOL_SHORTCUTS,
   ...DXF_ACTION_SHORTCUTS,
@@ -806,6 +848,7 @@ export const ALL_DXF_SHORTCUTS = {
   ...DXF_OVERLAY_SHORTCUTS,
   ...DXF_SPECIAL_SHORTCUTS,
   ...DXF_DEBUG_SHORTCUTS,
+  ...DXF_LAYER_SHORTCUTS,
 } as const;
 
 // ============================================================================

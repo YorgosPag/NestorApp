@@ -25,6 +25,10 @@ import { serviceRegistry } from '../../services';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { perfStart, perfEnd } from '../../debug/perf-line-profile';
+// ADR-358 §5.6.bis Phase 10 — re-render on isolate state change.
+import { subscribeIsolateEffects } from '../../systems/isolate/IsolateEffectsStore';
+// ADR-358 §5.6.bis Phase 10 — re-render on LayerStore mutations (visible/frozen toggles).
+import { subscribeLayerStore } from '../../stores/LayerStore';
 
 const logger = createModuleLogger('DxfCanvasRenderer');
 
@@ -287,6 +291,24 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   useEffect(() => {
     isDirtyRef.current = true;
   }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, showGuideDimensions, ghostGuide, ghostDiagonalGuide, highlightedGuideId, constructionPoints, highlightedPointId, ghostSegmentLine]);
+
+  // ADR-358 §5.6.bis Phase 10 — mark dirty on IsolateEffectsStore changes
+  // (toggle isolate → dim opacity slider drag → mode swap). Zero-cost when
+  // store is idle (single Set entry, no notifications until command fires).
+  useEffect(() => {
+    return subscribeIsolateEffects(() => {
+      isDirtyRef.current = true;
+    });
+  }, []);
+
+  // ADR-358 §5.6.bis Phase 10 — mark dirty on LayerStore mutations (Phase 8
+  // visibility toggle, Phase 10 LayerOff/Freeze/Lock, etc). The renderer
+  // reads layer flags from LayerStore as the runtime SSoT.
+  useEffect(() => {
+    return subscribeLayerStore(() => {
+      isDirtyRef.current = true;
+    });
+  }, []);
 
   // Selection dirty-marking handled by DxfCanvas imperative SelectionStore
   // subscription — no useEffect dep array needed here.

@@ -579,7 +579,17 @@
   "layersSettings": {
     "tabs": {
       "outlines": "Outlines",
-      "fills": "Fills"
+      "fills": "Fills",
+      "isolate": "Isolate"
+    },
+    "isolate": {
+      "modeTitle": "Isolate mode",
+      "modeDescription": "What happens to non-isolated layers",
+      "modeDim": "Dim",
+      "modeFreeze": "Freeze",
+      "dimOpacityTitle": "Dim opacity",
+      "dimOpacityDescription": "Visibility of non-isolated layers",
+      "resetButton": "Reset isolate settings"
     },
     "title": "Layers Settings",
     "description": "Colors and appearance of drawing layers",

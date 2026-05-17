@@ -1,13 +1,9 @@
 'use client';
-// DEBUG FLAG - Set to false to disable performance-heavy logging
-const DEBUG_DXF_VIEWER_CONTENT = false;
 import { useNotifications } from '../../../providers/NotificationProvider';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 // 🤖 ADR-185: AI Drawing Assistant feature flag
 import { USE_AI_DRAWING_ASSISTANT } from '../config/feature-flags';
-// ✅ ENTERPRISE: Centralized copy-to-clipboard hook
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
-// 🏢 ADR-241: Centralized fullscreen — Portal-based, zero remount
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
 import React from 'react';
@@ -16,23 +12,21 @@ import type { ViewTransform } from '../rendering/types/Types';
 import type { ToolType } from '../ui/toolbar/types';
 import { useDxfViewerState } from '../hooks/useDxfViewerState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useLayerCommandShortcuts } from '../hooks/useLayerCommandShortcuts';
+import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { useOverlayDrawing } from '../hooks/useOverlayDrawing';
 import { useSnapContext } from '../snapping/context/SnapContext';
 import { useCanvasOperations } from '../hooks/interfaces/useCanvasOperations';
 import { useEventBus, EventBus } from '../systems/events/EventBus';
-// 🏢 ENTERPRISE (2026-01-30): ADR-055 Entity Creation Manager
 import { useEntityCreationManager } from '../systems/entity-creation';
-// ✅ ENTERPRISE: State Management Hooks (PHASE 4)
 import { useOverlayState } from '../hooks/state/useOverlayState';
 import { useCanvasTransformState } from '../hooks/state/useCanvasTransformState';
 import { useColorMenuState } from '../hooks/state/useColorMenuState';
 import { useOverlayStore } from '../overlays/overlay-store';
-// 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
 import { useGripContext } from '../providers/GripProvider';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-// ⚡ LCP OPTIMIZATION: Critical UI Components
 import { type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 // 🚀 LAZY LOADED: Non-Critical UI Components
 const OverlayToolbar = React.lazy(() => import('../ui/OverlayToolbar').then(mod => ({ default: mod.OverlayToolbar })));
@@ -273,6 +267,13 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     onDrawingCancel: state.onDrawingCancel,
     onSelectAll: handleSelectAll,
     activeTool, overlayMode, overlayStore
+  });
+  // ADR-358 §5.6.bis Phase 10 — wire Ctrl+Shift+I/U/T/O + Ctrl+Alt+I to layer commands.
+  const { history: layerCommandHistory } = useCommandHistory();
+  useLayerCommandShortcuts({
+    selectedEntityIds,
+    currentScene,
+    commandHistory: layerCommandHistory,
   });
   // Pointer events class for desktop layering mode
   const rootPointerEventsClass =

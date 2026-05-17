@@ -25,6 +25,47 @@
       "selected": "selected elements"
     }
   },
+  "layer": {
+    "isolate": {
+      "mode": {
+        "dim": "Dim non-isolated layers",
+        "freeze": "Freeze non-isolated layers"
+      },
+      "dimOpacity": "Dim opacity",
+      "statusBadge": {
+        "dim": "Isolated: {category}",
+        "freeze": "Frozen: {category}",
+        "unnamed": "unnamed"
+      },
+      "tooltipClickToUnisolate": "Click to unisolate",
+      "snapshotOverrideWarning": "Previous isolate snapshot was overwritten.",
+      "contextMenu": {
+        "off": "Off this layer",
+        "freeze": "Freeze this layer",
+        "lock": "Lock this layer"
+      },
+      "commands": {
+        "isolate": "Isolate layers",
+        "isolateInverse": "Isolate (inverse mode)",
+        "unisolate": "Unisolate",
+        "dim": "Dim layers",
+        "off": "Off layer",
+        "freeze": "Freeze layer",
+        "lock": "Lock layer",
+        "thawAll": "Thaw all layers",
+        "onAll": "Turn on all layers"
+      }
+    }
+  },
+  "shortcuts": {
+    "layer": {
+      "isolate": "Isolate selected layers",
+      "isolateInverse": "Inverse isolate (opposite mode)",
+      "unisolate": "Unisolate (restore)",
+      "thawAll": "Thaw all layers",
+      "onAll": "Turn on all layers"
+    }
+  },
   "calibration": {
     "title": "🔧 Coordinate Calibration",
     "close": "Close",

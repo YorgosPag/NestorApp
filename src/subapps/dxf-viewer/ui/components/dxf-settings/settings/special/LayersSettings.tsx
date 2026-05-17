@@ -5,7 +5,46 @@ import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLOR
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { Palette, Pencil, RotateCcw, Construction, Layers } from 'lucide-react';
+import { Palette, Pencil, RotateCcw, Construction, Layers, Target } from 'lucide-react';
+// ADR-358 §5.6.bis Phase 10 — Layer Isolate settings.
+import {
+  clampDimOpacityPercent,
+  DEFAULT_LAYER_ISOLATE_SETTINGS,
+  DIM_OPACITY_MAX,
+  DIM_OPACITY_MIN,
+  DIM_OPACITY_STEP,
+} from '../../../../../services/layer-isolate-resolver';
+import type { LayerIsolateMode, LayerIsolateSettings } from '../../../../../settings-core/types/domain';
+
+const LAYER_ISOLATE_STORAGE_KEY = 'dxf:layerIsolate';
+
+function loadIsolatePreference(): LayerIsolateSettings {
+  if (typeof window === 'undefined') return DEFAULT_LAYER_ISOLATE_SETTINGS;
+  try {
+    const raw = window.localStorage.getItem(LAYER_ISOLATE_STORAGE_KEY);
+    if (!raw) return DEFAULT_LAYER_ISOLATE_SETTINGS;
+    const parsed = JSON.parse(raw) as Partial<LayerIsolateSettings>;
+    return {
+      mode: parsed.mode === 'freeze' ? 'freeze' : 'dim',
+      dimOpacityPercent: clampDimOpacityPercent(
+        typeof parsed.dimOpacityPercent === 'number'
+          ? parsed.dimOpacityPercent
+          : DEFAULT_LAYER_ISOLATE_SETTINGS.dimOpacityPercent
+      ),
+    };
+  } catch {
+    return DEFAULT_LAYER_ISOLATE_SETTINGS;
+  }
+}
+
+function saveIsolatePreference(settings: LayerIsolateSettings): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LAYER_ISOLATE_STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    // Ignore storage errors (quota / private mode).
+  }
+}
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -24,9 +63,27 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const [activeTab, setActiveTab] = useState<'outlines' | 'fills'>('outlines');
+  const [activeTab, setActiveTab] = useState<'outlines' | 'fills' | 'isolate'>('outlines');
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
   const [fillsOpacity, setFillsOpacity] = useState<number>(1.0);
+  // ADR-358 §5.6.bis Phase 10 — Layer Isolate user preference (localStorage).
+  const [isolateSettings, setIsolateSettings] = useState<LayerIsolateSettings>(loadIsolatePreference);
+
+  const handleIsolateModeChange = (next: LayerIsolateMode) => {
+    const updated = { ...isolateSettings, mode: next };
+    setIsolateSettings(updated);
+    saveIsolatePreference(updated);
+  };
+  const handleIsolateOpacityChange = (next: number) => {
+    const clamped = clampDimOpacityPercent(next);
+    const updated = { ...isolateSettings, dimOpacityPercent: clamped };
+    setIsolateSettings(updated);
+    saveIsolatePreference(updated);
+  };
+  const handleIsolateReset = () => {
+    setIsolateSettings(DEFAULT_LAYER_ISOLATE_SETTINGS);
+    saveIsolatePreference(DEFAULT_LAYER_ISOLATE_SETTINGS);
+  };
 
   // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ: Χρησιμοποιούμε τα centralized constants αντί για διάσπαρτα
   const presetColors = [
@@ -50,7 +107,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
   // ============================================================================
 
-  type LayerTab = 'outlines' | 'fills';
+  type LayerTab = 'outlines' | 'fills' | 'isolate';
 
   const layerTabs: TabDefinition[] = [
     {
@@ -64,6 +121,12 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
       label: t('layersSettings.tabs.fills'),
       icon: Palette, // 🏢 ENTERPRISE: Lucide icon
       content: null, // Content rendered separately below
+    },
+    {
+      id: 'isolate',
+      label: t('layersSettings.tabs.isolate'),
+      icon: Target, // ADR-358 §5.6.bis Phase 10
+      content: null,
     },
   ];
 
@@ -215,6 +278,72 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                 </div>
               </div>
             </div>
+          </>
+        )}
+
+        {activeTab === 'isolate' && (
+          <>
+            {/* Mode selector */}
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('layersSettings.isolate.modeTitle')}</div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('layersSettings.isolate.modeDescription')}</div>
+              </div>
+              <div className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.SM}`}>
+                <button
+                  type="button"
+                  onClick={() => handleIsolateModeChange('dim')}
+                  className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} col-span-2 ${
+                    isolateSettings.mode === 'dim'
+                      ? `${colors.bg.info} ${getStatusBorder('info')}`
+                      : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                  }`}
+                >
+                  <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.primary}`}>{t('layersSettings.isolate.modeDim')}</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleIsolateModeChange('freeze')}
+                  className={`${PANEL_LAYOUT.SPACING.SM} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} col-span-2 ${
+                    isolateSettings.mode === 'freeze'
+                      ? `${colors.bg.info} ${getStatusBorder('info')}`
+                      : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
+                  }`}
+                >
+                  <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.primary}`}>{t('layersSettings.isolate.modeFreeze')}</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Dim opacity slider */}
+            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('layersSettings.isolate.dimOpacityTitle')}</div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('layersSettings.isolate.dimOpacityDescription')}</div>
+              </div>
+              <SliderInput
+                value={isolateSettings.dimOpacityPercent}
+                min={DIM_OPACITY_MIN}
+                max={DIM_OPACITY_MAX}
+                step={DIM_OPACITY_STEP}
+                onChange={handleIsolateOpacityChange}
+                showValue
+                formatValue={(v) => `${v}%`}
+                disabled={isolateSettings.mode !== 'dim'}
+              />
+            </div>
+
+            {/* Isolate reset */}
+            <article className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
+              <button
+                type="button"
+                onClick={handleIsolateReset}
+                className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.XS} flex items-center justify-center ${PANEL_LAYOUT.GAP.SM} ${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.primary} rounded ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+              >
+                <RotateCcw className={iconSizes.sm} />
+                <span>{t('layersSettings.isolate.resetButton')}</span>
+              </button>
+            </article>
           </>
         )}
 

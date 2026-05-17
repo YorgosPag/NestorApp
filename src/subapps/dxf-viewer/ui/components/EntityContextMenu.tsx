@@ -24,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useTranslation } from 'react-i18next';
 import styles from './DrawingContextMenu.module.css';
 import { cn } from '@/lib/utils';
 import { JoinIcon, DeleteIcon, CancelIcon } from '../icons/MenuIcons';
@@ -49,6 +50,16 @@ interface EntityContextMenuProps {
   onDelete: () => void;
   /** Callback for Cancel/close action */
   onCancel: () => void;
+  /**
+   * ADR-358 §5.6.bis Phase 10 — layer-scope click-driven commands.
+   * When omitted (or `canApplyLayerCommands` is false) the layer rows are hidden.
+   */
+  canApplyLayerCommands?: boolean;
+  /** True for Layer "0" — disables Off/Freeze/Lock (system layer). */
+  isSystemLayer?: boolean;
+  onLayerOff?: () => void;
+  onLayerFreeze?: () => void;
+  onLayerLock?: () => void;
 }
 
 // ===== MAIN COMPONENT =====
@@ -60,7 +71,13 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   onJoin,
   onDelete,
   onCancel,
+  canApplyLayerCommands,
+  isSystemLayer,
+  onLayerOff,
+  onLayerFreeze,
+  onLayerLock,
 }, ref) => {
+  const { t } = useTranslation('dxf-viewer');
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -95,6 +112,24 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
     setIsOpen(false);
   }, [onCancel]);
 
+  const handleLayerOff = useCallback(() => {
+    onLayerOff?.();
+    setIsOpen(false);
+  }, [onLayerOff]);
+
+  const handleLayerFreeze = useCallback(() => {
+    onLayerFreeze?.();
+    setIsOpen(false);
+  }, [onLayerFreeze]);
+
+  const handleLayerLock = useCallback(() => {
+    onLayerLock?.();
+    setIsOpen(false);
+  }, [onLayerLock]);
+
+  const showLayerCommands = !!(canApplyLayerCommands && (onLayerOff || onLayerFreeze || onLayerLock));
+  const layerCommandsDisabled = !!isSystemLayer;
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       {/* Hidden trigger positioned at right-click location */}
@@ -125,6 +160,40 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
           </span>
           <span className={styles.menuItemShortcut}>J</span>
         </DropdownMenuItem>
+
+        {showLayerCommands && (
+          <>
+            <DropdownMenuSeparator className={styles.menuSeparator} />
+            {/* ADR-358 §5.6.bis Phase 10 — Layer click-driven commands */}
+            {onLayerOff && (
+              <DropdownMenuItem
+                className={cn(styles.menuItem, layerCommandsDisabled && styles.menuItemDisabled)}
+                onClick={handleLayerOff}
+                disabled={layerCommandsDisabled}
+              >
+                <span className={styles.menuItemLabel}>{t('layer.isolate.contextMenu.off')}</span>
+              </DropdownMenuItem>
+            )}
+            {onLayerFreeze && (
+              <DropdownMenuItem
+                className={cn(styles.menuItem, layerCommandsDisabled && styles.menuItemDisabled)}
+                onClick={handleLayerFreeze}
+                disabled={layerCommandsDisabled}
+              >
+                <span className={styles.menuItemLabel}>{t('layer.isolate.contextMenu.freeze')}</span>
+              </DropdownMenuItem>
+            )}
+            {onLayerLock && (
+              <DropdownMenuItem
+                className={cn(styles.menuItem, layerCommandsDisabled && styles.menuItemDisabled)}
+                onClick={handleLayerLock}
+                disabled={layerCommandsDisabled}
+              >
+                <span className={styles.menuItemLabel}>{t('layer.isolate.contextMenu.lock')}</span>
+              </DropdownMenuItem>
+            )}
+          </>
+        )}
 
         <DropdownMenuSeparator className={styles.menuSeparator} />
 
