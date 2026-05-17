@@ -127,8 +127,10 @@ export class BoundsCalculator {
    * hit-test pre-filter → unselectable on canvas.
    */
   private static calculateStairBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
-    const stair = entity as { geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } } };
+    const stair = entity as { id?: string; geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } } };
     const bbox = stair.geometry?.bbox;
+    // eslint-disable-next-line no-console
+    console.info('[BoundsCalculator] calculateStairBounds', { id: stair.id, bbox });
     if (!bbox || !bbox.min || !bbox.max) return null;
     return this.createBoundingBox(
       bbox.min.x - tolerance,
