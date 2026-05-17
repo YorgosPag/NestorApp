@@ -17,21 +17,32 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import {
   deleteLayerStateById,
+  exportLayerStatesAsLas,
   getLayerStateStoreSnapshot,
+  importLayerStatesFromLas,
   renameLayerState,
   saveCurrentLayerState,
   subscribeLayerStateStore,
+  type LasImportSummary,
   type LayerStateStoreSnapshot,
 } from '../../../stores/LayerStateStore';
+import { buildLasFilename } from '../../../services/las-exporter';
 import { RestoreLayerStateCommand } from '../../../core/commands/layer/RestoreLayerStateCommand';
 import type { ICommand } from '../../../core/commands/interfaces';
 import type { LayerState } from '../../../types/layer-state';
+
+export interface LasExportPayload {
+  readonly content: string;
+  readonly filename: string;
+}
 
 export interface LayerStateDropdownActions {
   readonly saveCurrent: (name: string) => LayerState | null;
   readonly rename: (id: string, newName: string) => void;
   readonly remove: (id: string) => void;
   readonly restore: (id: string) => RestoreLayerStateCommand | null;
+  readonly exportLas: () => LasExportPayload | null;
+  readonly importLas: (content: string) => LasImportSummary;
 }
 
 export interface LayerStateDropdownState {
@@ -84,8 +95,20 @@ export function useLayerStateDropdown(
     [executeCommand],
   );
 
+  const exportLas = useCallback((): LasExportPayload | null => {
+    const content = exportLayerStatesAsLas();
+    if (!content) return null;
+    const filename = buildLasFilename(snapshot.states);
+    return { content, filename };
+  }, [snapshot.states]);
+
+  const importLas = useCallback(
+    (content: string): LasImportSummary => importLayerStatesFromLas(content),
+    [],
+  );
+
   return {
     state: { snapshot, currentState, isReady },
-    actions: { saveCurrent, rename, remove, restore },
+    actions: { saveCurrent, rename, remove, restore, exportLas, importLas },
   };
 }
