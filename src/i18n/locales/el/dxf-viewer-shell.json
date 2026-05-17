@@ -828,6 +828,7 @@
       "dimTextPosition": "Θέση Κειμένου",
       "dimTextRotation": "Στροφή Κειμένου",
       "dimResetTextPosition": "Επαναφορά Θέσης",
+      "dimTextOverride": "Παράκαμψη Κειμένου",
       "dimLayer": "Layer",
       "dimAnnotationScale": "Κλίμακα",
       "dimOpenPanel": "Ιδιότητες...",
