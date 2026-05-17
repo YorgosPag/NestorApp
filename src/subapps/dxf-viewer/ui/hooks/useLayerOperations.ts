@@ -6,6 +6,7 @@
 
 import { useMemo } from 'react';
 import type { SceneModel } from '../../types/scene';
+import { createSceneLayer } from '../../types/entities';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry instead of direct imports
 import { serviceRegistry } from '../../services';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -212,12 +213,12 @@ export function useLayerOperations({
         counter++;
       }
 
-      updatedLayers[targetLayerName] = {
+      updatedLayers[targetLayerName] = createSceneLayer({
         name: targetLayerName,
         color: color,
         visible: true,
-        locked: false
-      };
+        locked: false,
+      });
     }
 
     const updatedScene = {

@@ -30,6 +30,7 @@ import type {
   UndoActionArgs,
 } from './types';
 import type { Entity, LineEntity, CircleEntity, RectangleEntity, PolylineEntity, SceneModel } from '../types/entities';
+import { createSceneLayer } from '../types/entities';
 // NOTE: completeEntity deliberately NOT used here — see batch insert comment below
 import { generateEntityId } from '../systems/entity-creation/utils';
 import { DXF_AI_DEFAULTS, DXF_AI_LIMITS } from '../config/ai-assistant-config';
@@ -433,12 +434,12 @@ export function executeDxfAiToolCalls(
     const baseScene: SceneModel = scene ?? {
       entities: [],
       layers: {
-        [DXF_AI_DEFAULTS.LAYER]: {
+        [DXF_AI_DEFAULTS.LAYER]: createSceneLayer({
           name: DXF_AI_DEFAULTS.LAYER,
           color: DXF_AI_DEFAULTS.COLOR,
           visible: true,
           locked: false,
-        },
+        }),
       },
       bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
       units: 'mm',
