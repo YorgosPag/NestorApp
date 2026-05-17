@@ -93,6 +93,7 @@ describe('mirrorStairParams', () => {
   test('mirror l-shape flips turnDirection right↔left', () => {
     const variant: StairVariantLShape = {
       kind: 'l-shape',
+      cornerStyle: 'landing',
       turnDirection: 'right',
       landingDepth: 'auto',
       flightSplit: [0.5, 0.5],
