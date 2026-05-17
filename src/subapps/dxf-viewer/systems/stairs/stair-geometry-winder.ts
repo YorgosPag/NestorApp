@@ -36,6 +36,7 @@ import type {
   StairGeometry,
   StairParams,
   StairVariantWinder,
+  StairWinderMethod,
 } from '../../types/stair';
 import {
   DEFAULT_CUT_PLANE_HEIGHT,
@@ -53,7 +54,12 @@ import { buildTreadLabels } from './stair-geometry-labels';
 
 const DEG2RAD = Math.PI / 180;
 
-interface WinderLayout {
+/**
+ * ADR-358 Phase 3f export — l-shape with winders reuses this layout.
+ * Caller (l-shape) supplies user-controlled `n1`/`n2`; winder kind computes
+ * them from `stepCount − winderCount` symmetrically.
+ */
+export interface WinderLayout {
   readonly turnSign: 1 | -1;
   readonly n1: number;
   readonly n2: number;
@@ -72,10 +78,15 @@ export function computeWinder(
   params: Readonly<StairParams>,
   variant: StairVariantWinder,
 ): StairGeometry {
-  assertWinderMethodSupported(variant);
-  const layout = buildWinderLayout(params, variant);
+  assertWinderMethodSupported(variant.winderMethod);
+  // Winder kind auto-computes n1/n2 symmetrically; l-shape with winders
+  // passes user-controlled values via `buildWinderLayout` directly (Phase 3f).
+  const remaining = Math.max(0, params.stepCount - variant.winderCount);
+  const n1 = Math.floor(remaining / 2);
+  const n2 = remaining - n1;
+  const layout = buildWinderLayout(params, variant.turnAngle, variant.winderCount, n1, n2);
   const flight1 = buildWinderFlight1(params, layout);
-  const winders = buildWinderTreads(params, variant, layout);
+  const winders = buildWinderTreads(params, variant.winderMethod, layout);
   const flight2 = buildWinderFlight2(params, layout);
   const allTreads: readonly Polygon3D[] = [
     ...flight1.treads,
@@ -123,38 +134,42 @@ export function computeWinder(
 
 // ─── WINDER private helpers ───────────────────────────────────────────────────
 
-function assertWinderMethodSupported(variant: StairVariantWinder): void {
-  if (variant.winderMethod === 'kite' || variant.winderMethod === 'balanced') {
+export function assertWinderMethodSupported(method: StairWinderMethod): void {
+  if (method === 'kite' || method === 'balanced') {
     throw new Error(
-      `StairGeometryService: winderMethod '${variant.winderMethod}' not implemented yet (Phase 4c)`,
+      `StairGeometryService: winderMethod '${method}' not implemented yet (Phase 4c)`,
     );
   }
 }
 
-function buildWinderLayout(
+/**
+ * ADR-358 Phase 3f export — `n1`/`n2` supplied by caller (l-shape passes
+ * user-controlled `flightSplit`, winder kind computes them symmetrically).
+ */
+export function buildWinderLayout(
   params: Readonly<StairParams>,
-  variant: StairVariantWinder,
+  turnAngleDeg: number,
+  winderCount: number,
+  n1: number,
+  n2: number,
 ): WinderLayout {
   const u1 = directionToUnitVector(params.direction);
   const v1 = perp(u1);
-  const turnSign: 1 | -1 = variant.turnAngle >= 0 ? 1 : -1;
-  const turnRad = variant.turnAngle * DEG2RAD;
+  const turnSign: 1 | -1 = turnAngleDeg >= 0 ? 1 : -1;
+  const turnRad = turnAngleDeg * DEG2RAD;
   const u2 = rotateVec(u1, turnRad);
   const halfW = params.width * 0.5;
-  const remaining = Math.max(0, params.stepCount - variant.winderCount);
-  const n1 = Math.floor(remaining / 2);
-  const n2 = remaining - n1;
   const pivotXY = {
     x: params.basePoint.x + u1.x * (n1 * params.tread) + v1.x * (turnSign * halfW),
     y: params.basePoint.y + u1.y * (n1 * params.tread) + v1.y * (turnSign * halfW),
   };
   const ray0: Vec2 = { x: -turnSign * v1.x, y: -turnSign * v1.y };
-  const signedSweepRad = variant.winderCount > 0 ? turnRad / variant.winderCount : 0;
+  const signedSweepRad = winderCount > 0 ? turnRad / winderCount : 0;
   return {
     turnSign,
     n1,
     n2,
-    winderCount: variant.winderCount,
+    winderCount,
     u1,
     v1,
     u2,
@@ -164,7 +179,7 @@ function buildWinderLayout(
   };
 }
 
-function buildWinderFlight1(
+export function buildWinderFlight1(
   params: Readonly<StairParams>,
   layout: WinderLayout,
 ): { readonly treads: readonly Polygon3D[]; readonly risers: readonly Segment3D[] } {
@@ -197,9 +212,9 @@ function buildWinderFlight1(
   return { treads, risers };
 }
 
-function buildWinderTreads(
+export function buildWinderTreads(
   params: Readonly<StairParams>,
-  variant: StairVariantWinder,
+  winderMethod: StairWinderMethod,
   layout: WinderLayout,
 ): readonly Polygon3D[] {
   const { basePoint, rise, width } = params;
@@ -212,7 +227,7 @@ function buildWinderTreads(
     const apex = point(pivotXY.x, pivotXY.y, tz);
     const outerA = point(pivotXY.x + width * rayA.x, pivotXY.y + width * rayA.y, tz);
     const outerB = point(pivotXY.x + width * rayB.x, pivotXY.y + width * rayB.y, tz);
-    if (variant.winderMethod === 'pie') {
+    if (winderMethod === 'pie') {
       out[i] = turnSign === 1 ? [apex, outerA, outerB] : [apex, outerB, outerA];
     } else {
       out[i] = turnSign === 1
@@ -223,7 +238,7 @@ function buildWinderTreads(
   return out;
 }
 
-function buildWinderFlight2(
+export function buildWinderFlight2(
   params: Readonly<StairParams>,
   layout: WinderLayout,
 ): { readonly treads: readonly Polygon3D[]; readonly risers: readonly Segment3D[] } {
@@ -258,7 +273,7 @@ function buildWinderFlight2(
   return { treads, risers };
 }
 
-function buildWinderWalkline(
+export function buildWinderWalkline(
   params: Readonly<StairParams>,
   layout: WinderLayout,
 ): Polyline3D {
@@ -289,13 +304,13 @@ function buildWinderWalkline(
 
 // ─── Vec utilities ────────────────────────────────────────────────────────────
 
-function rotateVec(v: Vec2, angleRad: number): Vec2 {
+export function rotateVec(v: Vec2, angleRad: number): Vec2 {
   const c = Math.cos(angleRad);
   const s = Math.sin(angleRad);
   return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
 }
 
-function winderTangentAt(ray: Vec2, turnSign: 1 | -1): Vec2 {
+export function winderTangentAt(ray: Vec2, turnSign: 1 | -1): Vec2 {
   // d/dθ rotate(ray_0, θ) = rotate(ray_0, θ + π/2). Sign flips for cw sweep.
   return turnSign === 1 ? { x: -ray.y, y: ray.x } : { x: ray.y, y: -ray.x };
 }
