@@ -159,6 +159,9 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'dim-arc-length':    { id: 'dim-arc-length',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-jogged-radius': { id: 'dim-jogged-radius', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-ordinate':      { id: 'dim-ordinate',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-362 Phase D3: Chained dim creation (Baseline / Continued) — same metadata as D1/D2 dim tools.
+  'dim-baseline':      { id: 'dim-baseline',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'dim-continued':     { id: 'dim-continued',     category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 // ============================================================================
 // 🏢 ENTERPRISE HELPER FUNCTIONS (ADR-033)
@@ -327,35 +330,28 @@ export function useToolStateManager({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const transitionHistory = useRef<ToolTransition[]>([]);
   const previousTool = useRef<ToolType>(initialTool);
-
   // ============================================================================
   // TOOL VALIDATION & CATEGORIZATION
   // ============================================================================
   const getToolInfo = useCallback((tool: ToolType): ToolInfo => {
     return TOOL_DEFINITIONS[tool] || TOOL_DEFINITIONS['select'];
   }, []);
-
   const getToolCategory = useCallback((tool: ToolType): ToolCategory => {
     return getToolInfo(tool).category;
   }, [getToolInfo]);
-
   const isDrawingTool = useCallback((tool: ToolType): boolean => {
     return getToolCategory(tool) === 'drawing';
   }, [getToolCategory]);
-
   const isMeasurementTool = useCallback((tool: ToolType): boolean => {
     return getToolCategory(tool) === 'measurement';
   }, [getToolCategory]);
-
   const isZoomTool = useCallback((tool: ToolType): boolean => {
     return getToolCategory(tool) === 'zoom';
   }, [getToolCategory]);
-
   const isInteractiveTool = useCallback((tool: ToolType): boolean => {
     const info = getToolInfo(tool);
     return info.requiresCanvas && (info.category === 'drawing' || info.category === 'measurement');
   }, [getToolInfo]);
-
   const validateTool = useCallback((tool: ToolType): boolean => {
     const isValid = tool in TOOL_DEFINITIONS;
     onToolValidation?.(tool, isValid);
@@ -366,11 +362,9 @@ export function useToolStateManager({
     
     return isValid;
   }, [onToolValidation]);
-
   // ============================================================================
   // TOOL TRANSITIONS
   // ============================================================================
-
   const canTransitionTo = useCallback((newTool: ToolType): boolean => {
     if (!validateTool(newTool)) return false;
     

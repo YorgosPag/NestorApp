@@ -114,7 +114,10 @@ export type ToolType =
   | 'dim-diameter'        // AutoCAD DIMDIAMETER — pick circle + text position (side2 auto-derived)
   | 'dim-arc-length'      // AutoCAD DIMARC — pick arc (start/end derived from arc angles)
   | 'dim-jogged-radius'   // AutoCAD DIMJOGGED — pick arc + arcPoint + jogPoint + jogVertex
-  | 'dim-ordinate';       // AutoCAD DIMORDINATE — feature + leader endpoint (axis auto, datum {0,0})
+  | 'dim-ordinate'        // AutoCAD DIMORDINATE — feature + leader endpoint (axis auto, datum {0,0})
+  // ADR-362 Phase D3: Chained dim creation tools (parent = auto-last linear/aligned/chained)
+  | 'dim-baseline'        // AutoCAD DIMBASELINE — share extOrigin1 with parent; offset += DIMDLI per ancestor
+  | 'dim-continued';      // AutoCAD DIMCONTINUE — chain end-to-end on parent's dim line
 
 
 export interface ToolDefinition {
