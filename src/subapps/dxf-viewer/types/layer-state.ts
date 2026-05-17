@@ -61,6 +61,10 @@ export interface LayerState {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly createdByUserId: string;
+  /** Optional grouping category (Phase 13C Manage panel). */
+  readonly category?: string;
+  /** Optional user tags (Phase 13C Manage panel). */
+  readonly tags?: ReadonlyArray<string>;
 }
 
 /**
@@ -114,6 +118,8 @@ export function createLayerState(input: {
   sourceTemplateId?: string;
   createdAt?: string;
   updatedAt?: string;
+  category?: string;
+  tags?: ReadonlyArray<string>;
 }): LayerState {
   const now = nowISO();
   return {
@@ -127,6 +133,8 @@ export function createLayerState(input: {
     createdAt: input.createdAt ?? now,
     updatedAt: input.updatedAt ?? now,
     createdByUserId: input.createdByUserId,
+    category: input.category,
+    tags: input.tags ? Object.freeze(input.tags.slice()) as ReadonlyArray<string> : undefined,
   };
 }
 
