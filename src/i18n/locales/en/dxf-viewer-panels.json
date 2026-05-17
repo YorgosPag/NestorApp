@@ -109,6 +109,60 @@
         "placeholder": "Copy name...",
         "confirm": "Duplicate",
         "cancel": "Cancel"
+      },
+      "editor": {
+        "backButton": "Back",
+        "editingTitle": "Editing: {name}",
+        "sections": {
+          "lines": "Lines",
+          "symbols": "Symbols & Arrows",
+          "text": "Text"
+        },
+        "fields": {
+          "dimasz": "Arrow size (mm)",
+          "dimexe": "Extension beyond dim line (mm)",
+          "dimexo": "Extension offset (mm)",
+          "dimdli": "Baseline spacing (mm)",
+          "suppressDimLine1": "Suppress dim line 1",
+          "suppressDimLine2": "Suppress dim line 2",
+          "suppressExtLine1": "Suppress ext line 1",
+          "suppressExtLine2": "Suppress ext line 2",
+          "dimblk": "Arrowhead",
+          "dimcen": "Center mark (mm)",
+          "dimtxt": "Text height (mm)",
+          "dimtad": "Text vertical position",
+          "dimtih": "Text inside horizontal",
+          "dimtoh": "Text outside horizontal",
+          "dimgap": "Text gap (mm)"
+        },
+        "dimtad": {
+          "centered": "Centered",
+          "above": "Above",
+          "outside": "Outside",
+          "jis": "JIS",
+          "below": "Below"
+        },
+        "dimblk": {
+          "none": "None",
+          "closedFilled": "Closed filled",
+          "closedBlank": "Closed blank",
+          "closed": "Closed",
+          "dot": "Dot",
+          "dotSmall": "Small dot",
+          "dotBlank": "Dot blank",
+          "dotSmallBlank": "Small dot blank",
+          "architecturalTick": "Architectural tick",
+          "oblique": "Oblique",
+          "open": "Open",
+          "openRightAngle": "Right angle",
+          "openSlanted": "Open slanted",
+          "origin": "Origin",
+          "origin2": "Origin 2",
+          "box": "Box",
+          "boxFilled": "Box filled",
+          "datumTriangle": "Datum triangle",
+          "datumTriangleFilled": "Datum triangle filled"
+        }
       }
     },
     "textProperties": {
