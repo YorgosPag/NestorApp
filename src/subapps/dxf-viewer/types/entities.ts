@@ -27,13 +27,20 @@ export interface BaseEntity {
   name?: string;             // Optional user-friendly name for the entity
   type: EntityType;
   /**
-   * Stable layer identifier — `lyr_<UUID-v4>` matching `SceneLayer.id`.
-   * REQUIRED canonical layer binding (ADR-358 Phase 9D-5b-i schema flip).
-   * Legacy `layer` NAME field REMOVED — resolve display name via
-   * `LayerStore.resolveEntityLayerName(entity)` (id-only SSoT) or
-   * `LayerStore.getLayer(layerId)?.name`.
+   * @deprecated ADR-358 Phase 9D — Layer NAME backref. Transitional alias kept until
+   * downstream type-chain (`SceneEntity`, `PreviewPoint`, `DxfTextSceneEntity`) is migrated
+   * to id-only in Phase 9D-5b-ii (Google LSC consumer migration step). Stable identifier
+   * is `layerId` (`lyr_<UUID-v4>`). Schema flip atomic deferred to Phase 9D-5b-iii.
+   * Writers MUST keep both fields in sync until then.
    */
-  layerId: string;
+  layer?: string;
+  /**
+   * Stable layer identifier — `lyr_<UUID-v4>` matching `SceneLayer.id` (ADR-358 Phase 9C v2.13).
+   * Optional in Phase 9D-1 to keep TS green during ~55-file callsite migration. Becomes
+   * REQUIRED at end of Phase 9D-5b-iii (schema flip atomic). Resolve display name via
+   * `LayerStore.getLayer(id)?.name` or `LayerStore.resolveEntityLayerName(entity)`.
+   */
+  layerId?: string;
   color?: string;
   selected?: boolean;
   preview?: boolean;
