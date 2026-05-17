@@ -20,6 +20,9 @@ import { TOLERANCE_CONFIG } from '../config/tolerance-config';
 import { getLayerNameOrDefault } from '../config/layer-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
 import { resolveEntityLayerName } from '../stores/LayerStore';
+// ADR-358 Phase 8 — fallback to recompute stair geometry when missing (StairDoc
+// from Firestore is persisted without geometry, ADR §G6 re-derivable contract).
+import { computeStairGeometry } from '../systems/stairs/StairGeometryService';
 
 export interface HitTestResult {
   entityId: string | null;
@@ -63,6 +66,17 @@ export class HitTestingService {
 
     // Convert DxfEntityUnion to EntityModel
     const entityModels = scene.entities.map(entity => this.convertToEntityModel(entity));
+    // eslint-disable-next-line no-console
+    const stairModels = entityModels.filter((e: { type: string }) => e.type === 'stair');
+    if (stairModels.length > 0) {
+      // eslint-disable-next-line no-console
+      console.info('[HitTestingService] setScene stair count', {
+        total: entityModels.length,
+        stairs: stairModels.length,
+        firstStairBbox: (stairModels[0] as { geometry?: { bbox?: unknown } })?.geometry?.bbox,
+        firstStairHasParams: !!(stairModels[0] as { params?: unknown })?.params,
+      });
+    }
     // 🏢 ENTERPRISE: Type-safe cast - EntityModel extends BaseEntity which is compatible with Entity
     this.hitTester.setEntities(entityModels as import('../types/entities').Entity[], true);
   }
@@ -100,6 +114,16 @@ export class HitTestingService {
         layerFilter: options.layerFilter,
         typeFilter: options.typeFilter,
         includeInvisible: options.includeInvisible || false
+      });
+
+      // eslint-disable-next-line no-console
+      console.info('[HitTestingService] hitTest', {
+        worldPos,
+        worldTolerance,
+        hits: hits.length,
+        stairCount: this.currentScene?.entities.filter(e => e.type === 'stair').length,
+        firstHitType: hits[0]?.data?.type,
+        firstHitId: hits[0]?.data?.id,
       });
 
       // Return the first hit
@@ -237,8 +261,27 @@ export class HitTestingService {
       // The `geometry.bbox` field powers spatial broad-phase via BoundsCalculator
       // (Bounds.ts `case 'stair'`). Without this branch the entity fell through
       // to the `never` default and was silently dropped from the index.
+      //
+      // Geometry recompute fallback: `StairDoc` (ADR §G6) intentionally omits
+      // `geometry` from Firestore persistence (re-derivable from params), so
+      // a stair loaded from Storage / re-hydrated from Firestore may arrive
+      // here with `entity.geometry === undefined`. We rebuild via the SSoT
+      // `computeStairGeometry(params)` to guarantee bbox is always present —
+      // otherwise spatial-index broad-phase silently drops the entity and
+      // single-click selection fails.
       case 'stair': {
         const stairEntity = entity as import('../types/stair').StairEntity;
+        // Defensive: legacy / partially-serialized stair entries can reach the
+        // hit-tester without `params`. `computeStairGeometry` deref's
+        // `params.variant.kind` so a missing-params entry crashes the entire
+        // render pipeline. Treat as phantom: keep the type discriminant so
+        // upstream filters work, but skip geometry — downstream `Bounds.ts`
+        // returns null when `geometry.bbox` is missing and the entity drops
+        // out of the spatial index harmlessly.
+        const geometry = stairEntity.geometry
+          ?? (stairEntity.params
+            ? computeStairGeometry(stairEntity.params)
+            : undefined);
         return {
           ...baseModel,
           type: 'stair',
@@ -247,7 +290,7 @@ export class HitTestingService {
           // (yet) carry the stair discriminant. TODO Phase 9: widen Entity.
           kind: stairEntity.kind,
           params: stairEntity.params,
-          geometry: stairEntity.geometry,
+          geometry,
           validation: stairEntity.validation,
         } as unknown as EntityModel;
       }

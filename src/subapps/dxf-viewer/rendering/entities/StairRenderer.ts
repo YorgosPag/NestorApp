@@ -42,6 +42,12 @@ export class StairRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, _options: RenderOptions = {}): void {
     if (!isStairEntity(entity)) return;
     const stair = entity as StairEntity;
+    // ADR-358 Phase 8 — defensive: legacy / partially-serialized stair entries
+    // can arrive without `geometry` (e.g. Storage scene blob saved before the
+    // ADR §G6 contract was enforced). Skip render rather than crash so the
+    // rest of the scene renders normally; the entity is also dropped from
+    // hit-testing via the matching guard in HitTestingService.
+    if (!stair.geometry || !stair.params) return;
     const { geometry } = stair;
 
     this.ctx.save();
@@ -55,13 +61,16 @@ export class StairRenderer extends BaseEntityRenderer {
 
   getGrips(entity: EntityModel): GripInfo[] {
     if (!isStairEntity(entity)) return [];
-    return getStairGrips(entity as StairEntity);
+    const stair = entity as StairEntity;
+    if (!stair.params || !stair.geometry) return [];
+    return getStairGrips(stair);
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
     if (!isStairEntity(entity)) return false;
     const stair = entity as StairEntity;
-    const bb = stair.geometry.bbox;
+    const bb = stair.geometry?.bbox;
+    if (!bb) return false;
     return (
       point.x >= bb.min.x - tolerance &&
       point.x <= bb.max.x + tolerance &&
