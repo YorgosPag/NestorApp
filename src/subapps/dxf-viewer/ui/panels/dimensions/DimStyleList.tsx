@@ -65,7 +65,7 @@ export function DimStyleList({
               )}
 
               {style.isBuiltIn && (
-                <span className={`text-xs px-1 rounded ${colors.bg.neutral} ${colors.text.muted} shrink-0`}>
+                <span className={`text-xs px-1 rounded ${colors.bg.neutralSubtle} ${colors.text.muted} shrink-0`}>
                   {t('panels.dimensions.builtInBadge')}
                 </span>
               )}
@@ -126,7 +126,7 @@ function ActionButton({ icon, label, onClick, danger = false }: ActionButtonProp
           className={[
             'p-0.5 rounded',
             danger
-              ? `hover:${colors.bg.destructive} hover:${colors.text.onDestructive}`
+              ? `hover:${colors.bg.danger} hover:${colors.text.onError}`
               : `hover:${colors.bg.hover} ${colors.text.muted}`,
           ].join(' ')}
         >
