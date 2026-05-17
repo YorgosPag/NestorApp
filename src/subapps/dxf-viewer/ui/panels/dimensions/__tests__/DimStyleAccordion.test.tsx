@@ -1,12 +1,15 @@
 /**
- * ADR-362 Phase F2 — DimStyleAccordion unit tests.
+ * ADR-362 Phase F3 — DimStyleAccordion unit tests.
  *
  * Coverage:
- *   - Renders 3 accordion sections (lines, symbols, text).
+ *   - Renders 6 accordion sections (lines, symbols, text, fit, units, tolerances).
  *   - Number input change fires onChange with correct patch.
  *   - Checkbox toggle fires onChange with correct patch.
  *   - Select (dimtad) change fires onChange with correct patch.
  *   - Select (dimblk) change fires onChange with dimblk/dimblk1/dimblk2.
+ *   - Select (dimatfit) change fires onChange with dimatfit patch.
+ *   - Select (dimaunit) change fires onChange with dimaunit patch.
+ *   - Select (dimtolj) change fires onChange with dimtolj patch.
  *   - readOnly=true → all inputs/selects/checkboxes disabled.
  *   - readOnly=false → all inputs/selects/checkboxes enabled.
  *
@@ -89,6 +92,10 @@ jest.mock('@/components/ui/select', () => ({
   ),
 }));
 
+jest.mock('../DimStylePreview', () => ({
+  DimStylePreview: () => <div data-testid="dim-style-preview" />,
+}));
+
 // ── Setup/teardown ───────────────────────────────────────────────────────────
 
 import { DimStyleAccordion } from '../DimStyleAccordion';
@@ -111,13 +118,16 @@ function getBuiltInStyle(): DimStyle {
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
-describe('ADR-362 Phase F2 — DimStyleAccordion', () => {
-  it('renders 3 accordion sections', () => {
+describe('ADR-362 Phase F3 — DimStyleAccordion', () => {
+  it('renders 6 accordion sections', () => {
     const style = getBuiltInStyle();
     render(<DimStyleAccordion style={style} onChange={jest.fn()} />);
     expect(screen.getByTestId(/accordion-panels\.dimensions\.editor\.sections\.lines/)).toBeInTheDocument();
     expect(screen.getByTestId(/accordion-panels\.dimensions\.editor\.sections\.symbols/)).toBeInTheDocument();
     expect(screen.getByTestId(/accordion-panels\.dimensions\.editor\.sections\.text/)).toBeInTheDocument();
+    expect(screen.getByTestId(/accordion-panels\.dimensions\.editor\.sections\.fit/)).toBeInTheDocument();
+    expect(screen.getByTestId(/accordion-panels\.dimensions\.editor\.sections\.units/)).toBeInTheDocument();
+    expect(screen.getByTestId(/accordion-panels\.dimensions\.editor\.sections\.tolerances/)).toBeInTheDocument();
   });
 
   it('number input change fires onChange with correct patch', () => {
@@ -191,6 +201,54 @@ describe('ADR-362 Phase F2 — DimStyleAccordion', () => {
     render(<DimStyleAccordion style={created} onChange={jest.fn()} readOnly={false} />);
     const inputs = screen.getAllByRole('spinbutton');
     inputs.forEach((input) => expect(input).not.toBeDisabled());
+  });
+
+  it('dimatfit select change fires onChange with dimatfit patch', () => {
+    const style = getBuiltInStyle();
+    const onChange = jest.fn<void, [UpdateCustomStylePatch]>();
+    render(<DimStyleAccordion style={style} onChange={onChange} />);
+    const selects = screen.getAllByTestId('select');
+    const fitSelect = selects.find((s) => {
+      const options = s.querySelectorAll('option');
+      return Array.from(options).some((o) => o.value === '0');
+    });
+    expect(fitSelect).toBeDefined();
+    fireEvent.change(fitSelect!, { target: { value: '0' } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ dimatfit: 0 }));
+  });
+
+  it('dimaunit select change fires onChange with dimaunit patch', () => {
+    const style = getBuiltInStyle();
+    const onChange = jest.fn<void, [UpdateCustomStylePatch]>();
+    render(<DimStyleAccordion style={style} onChange={onChange} />);
+    const selects = screen.getAllByTestId('select');
+    const aunitSelect = selects.find((s) => {
+      const options = s.querySelectorAll('option');
+      return Array.from(options).some((o) => o.value === 'gradians');
+    });
+    expect(aunitSelect).toBeDefined();
+    fireEvent.change(aunitSelect!, { target: { value: 'gradians' } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ dimaunit: 'gradians' }));
+  });
+
+  it('dimtolj select change fires onChange with dimtolj patch', () => {
+    const style = getBuiltInStyle();
+    const onChange = jest.fn<void, [UpdateCustomStylePatch]>();
+    render(<DimStyleAccordion style={style} onChange={onChange} />);
+    const selects = screen.getAllByTestId('select');
+    const toljSelect = selects.find((s) => {
+      const options = s.querySelectorAll('option');
+      return Array.from(options).some((o) => o.value === 'bottom');
+    });
+    expect(toljSelect).toBeDefined();
+    fireEvent.change(toljSelect!, { target: { value: 'top' } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ dimtolj: 'top' }));
+  });
+
+  it('renders DimStylePreview', () => {
+    const style = getBuiltInStyle();
+    render(<DimStyleAccordion style={style} onChange={jest.fn()} />);
+    expect(screen.getByTestId('dim-style-preview')).toBeInTheDocument();
   });
 });
 
