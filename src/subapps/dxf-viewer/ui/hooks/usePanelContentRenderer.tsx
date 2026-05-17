@@ -44,6 +44,7 @@ interface UsePanelContentRendererParams {
   // ADR-358 Phase 8 sidebar dock — scope inputs for the Properties tab.
   projectId?: string;
   floorplanId?: string;
+  primarySelectedId?: string | null;
 }
 
 /**
@@ -62,6 +63,7 @@ export function usePanelContentRenderer({
   onSceneImported,
   projectId,
   floorplanId,
+  primarySelectedId,
 }: UsePanelContentRendererParams) {
   const colors = useSemanticColors();
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
@@ -114,7 +116,7 @@ export function usePanelContentRenderer({
       case 'properties':
         return (
           <StairPropertiesTab
-            primarySelectedId={selectedEntityIds[0] ?? null}
+            primarySelectedId={primarySelectedId ?? selectedEntityIds[0] ?? null}
             currentScene={scene}
             projectId={projectId}
             floorplanId={floorplanId}
