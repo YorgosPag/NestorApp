@@ -21,6 +21,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n';
 import type {
@@ -28,6 +29,7 @@ import type {
   LayerStateDropdownState,
 } from './useLayerStateDropdown';
 import type { LayerState } from '../../../types/layer-state';
+import type { LasImportSummary } from '../../../stores/LayerStateStore';
 
 export interface LayerStateDropdownPopoverProps {
   readonly state: LayerStateDropdownState;
@@ -44,10 +46,13 @@ export function LayerStateDropdownPopover({
   const [renameId, setRenameId] = React.useState<string | null>(null);
   const [draftRename, setDraftRename] = React.useState('');
   const [draftSaveName, setDraftSaveName] = React.useState('');
+  const [lasFeedback, setLasFeedback] = React.useState<LasFeedback | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const states = state.snapshot.states;
   const isReady = state.isReady;
   const currentId = state.snapshot.currentStateId;
+  const hasStates = states.length > 0;
 
   const handleSave = (): void => {
     const created = actions.saveCurrent(draftSaveName);
@@ -65,6 +70,43 @@ export function LayerStateDropdownPopover({
   const handleRestore = (id: string): void => {
     actions.restore(id);
     onClose();
+  };
+
+  const handleExportLas = (): void => {
+    const payload = actions.exportLas();
+    if (!payload) {
+      setLasFeedback({ kind: 'error', message: t('layerState.exportLasNoneToExport') });
+      return;
+    }
+    triggerExportDownload({
+      blob: new Blob([payload.content], { type: 'application/octet-stream' }),
+      filename: payload.filename,
+    });
+    setLasFeedback(null);
+  };
+
+  const handleImportLasClick = (): void => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportLasChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.las')) {
+      setLasFeedback({ kind: 'error', message: t('layerState.importLasInvalidExtension') });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => {
+      setLasFeedback({ kind: 'error', message: t('layerState.importLasReadFailure') });
+    };
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : '';
+      const summary = actions.importLas(text);
+      setLasFeedback(buildImportFeedback(summary, t));
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -135,15 +177,21 @@ export function LayerStateDropdownPopover({
       </section>
 
       <footer className={FOOTER_CLASS}>
-        <DisabledFooterAction
+        <FooterAction
           icon={<Download className="h-3.5 w-3.5" aria-hidden />}
           label={t('layerState.importLas')}
-          hint={t('layerState.phase13Hint')}
+          hint={t('layerState.importLasHint')}
+          disabled={!isReady}
+          onClick={handleImportLasClick}
+          testId="layer-state-import-las"
         />
-        <DisabledFooterAction
+        <FooterAction
           icon={<Upload className="h-3.5 w-3.5" aria-hidden />}
           label={t('layerState.exportLas')}
-          hint={t('layerState.phase13Hint')}
+          hint={t('layerState.exportLasHint')}
+          disabled={!isReady || !hasStates}
+          onClick={handleExportLas}
+          testId="layer-state-export-las"
         />
         <DisabledFooterAction
           icon={<Settings className="h-3.5 w-3.5" aria-hidden />}
@@ -151,9 +199,52 @@ export function LayerStateDropdownPopover({
           hint={t('layerState.phase13Hint')}
         />
       </footer>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".las,text/plain"
+        className="hidden"
+        onChange={handleImportLasChange}
+        data-testid="layer-state-import-las-input"
+      />
+      {lasFeedback && (
+        <p
+          className={
+            lasFeedback.kind === 'error' ? FEEDBACK_ERROR_CLASS : FEEDBACK_INFO_CLASS
+          }
+          data-testid="layer-state-las-feedback"
+          role="status"
+        >
+          {lasFeedback.message}
+        </p>
+      )}
     </section>
   );
 }
+
+interface LasFeedback {
+  readonly kind: 'info' | 'error';
+  readonly message: string;
+}
+
+function buildImportFeedback(
+  summary: LasImportSummary,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): LasFeedback {
+  if (summary.added === 0 && summary.skipped === 0 && summary.errors.length === 0) {
+    return { kind: 'error', message: t('layerState.importLasEmpty') };
+  }
+  const main = t('layerState.importLasSuccess', {
+    added: summary.added,
+    skipped: summary.skipped,
+  });
+  if (summary.errors.length === 0) return { kind: 'info', message: main };
+  return {
+    kind: 'error',
+    message: `${main} — ${t('layerState.importLasErrorsHeader')} ${summary.errors.join('; ')}`,
+  };
+}
+
 
 interface LayerStateRowProps {
   readonly entry: LayerState;
@@ -282,6 +373,43 @@ function DisabledFooterAction({
   );
 }
 
+interface FooterActionProps {
+  readonly icon: React.ReactNode;
+  readonly label: string;
+  readonly hint: string;
+  readonly disabled: boolean;
+  readonly onClick: () => void;
+  readonly testId: string;
+}
+
+function FooterAction({
+  icon,
+  label,
+  hint,
+  disabled,
+  onClick,
+  testId,
+}: FooterActionProps): React.ReactElement {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          className={FOOTER_BUTTON_CLASS}
+          aria-label={label}
+          data-testid={testId}
+        >
+          {icon}
+          <span className="truncate">{label}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{hint}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 const HEADER_CLASS =
   'flex items-center gap-1.5 px-3 py-2 border-b border-border text-xs font-semibold ' +
   'text-muted-foreground';
@@ -320,3 +448,9 @@ const PRIMARY_BUTTON_CLASS =
 const ICON_BUTTON_CLASS =
   'inline-flex items-center justify-center h-6 w-6 rounded ' +
   'hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed';
+
+const FEEDBACK_INFO_CLASS =
+  'px-3 py-2 border-t border-border bg-muted/20 text-xs text-foreground';
+
+const FEEDBACK_ERROR_CLASS =
+  'px-3 py-2 border-t border-border bg-destructive/10 text-xs text-destructive';
