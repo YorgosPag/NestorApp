@@ -2,17 +2,19 @@
 
 import React, { useSyncExternalStore, useState, useCallback } from 'react';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
-import { Plus } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
 import {
   getDimStyleRegistry,
   type CreateCustomStyleInput,
+  type UpdateCustomStylePatch,
 } from '../../../systems/dimensions/dim-style-registry';
 import type { DimStyle } from '../../../types/dimension';
 import { DimStyleList } from './DimStyleList';
 import { DimStyleCreateDialog } from './DimStyleCreateDialog';
+import { DimStyleAccordion } from './DimStyleAccordion';
 
 type DialogMode = 'create' | 'duplicate';
 
@@ -39,6 +41,7 @@ export function DimensionsTab() {
   const colors = useSemanticColors();
   const { styles, activeStyleId } = useRegistrySnapshot();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(CLOSED_DIALOG);
   const [deleteTarget, setDeleteTarget] = useState<DimStyle | null>(null);
 
@@ -81,7 +84,33 @@ export function DimensionsTab() {
     getDimStyleRegistry().setActiveStyleId(id);
   }, []);
 
+  const handleEdit = useCallback((id: string) => {
+    setEditingId(id);
+  }, []);
+
+  const handleStyleChange = useCallback((patch: UpdateCustomStylePatch) => {
+    if (!editingId) return;
+    getDimStyleRegistry().updateCustomStyle(editingId, patch);
+  }, [editingId]);
+
   const existingNames = styles.map((s) => s.name);
+  const editingStyle = editingId ? getDimStyleRegistry().getStyle(editingId) : null;
+
+  if (editingStyle) {
+    return (
+      <section aria-label={t('panels.dimensions.styleManager')} className="flex flex-col gap-2">
+        <header className="flex items-center gap-1.5">
+          <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} className="h-6 w-6 p-0">
+            <ArrowLeft size={14} />
+          </Button>
+          <h3 className={`text-xs font-semibold truncate ${colors.text.primary}`}>
+            {t('panels.dimensions.editor.editingTitle', { name: editingStyle.name })}
+          </h3>
+        </header>
+        <DimStyleAccordion style={editingStyle} onChange={handleStyleChange} />
+      </section>
+    );
+  }
 
   return (
     <section aria-label={t('panels.dimensions.styleManager')} className="flex flex-col gap-3">
@@ -103,7 +132,7 @@ export function DimensionsTab() {
         onSetActive={handleSetActive}
         onDuplicate={openDuplicate}
         onDelete={handleDelete}
-        onEdit={() => { /* Phase F2 */ }}
+        onEdit={handleEdit}
       />
 
       <DimStyleCreateDialog
