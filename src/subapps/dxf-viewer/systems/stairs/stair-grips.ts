@@ -348,14 +348,25 @@ function withFlightSplitStepCounts(
   r: number,
   stepCount: number,
 ): StairVariantParams {
-  if (variant.kind === 'l-shape' || variant.kind === 'u-shape') {
-    const total = Math.max(2, stepCount);
+  // ADR-358 Phase 3f — convention γ count conservation: landings/winders
+  // consume slots from `stepCount`. The split grip ratio applies to the
+  // REMAINING straight-tread budget after subtracting the corner consumption.
+  if (variant.kind === 'l-shape') {
+    const consumed =
+      variant.cornerStyle === 'winders' ? Math.max(1, variant.winderCount) : 1;
+    const total = Math.max(2, stepCount - consumed);
+    const n1 = Math.max(1, Math.min(total - 1, Math.round(r * total)));
+    const n2 = total - n1;
+    return { ...variant, flightSplit: [n1, n2] as const };
+  }
+  if (variant.kind === 'u-shape') {
+    const total = Math.max(2, stepCount - 1); // 1 landing
     const n1 = Math.max(1, Math.min(total - 1, Math.round(r * total)));
     const n2 = total - n1;
     return { ...variant, flightSplit: [n1, n2] as const };
   }
   if (variant.kind === 'gamma') {
-    const total = Math.max(3, stepCount);
+    const total = Math.max(3, stepCount - 2); // 2 landings
     const n1 = Math.max(1, Math.min(total - 2, Math.round(r * total)));
     const remaining = total - n1;
     const n2 = Math.max(1, Math.floor(remaining / 2));
