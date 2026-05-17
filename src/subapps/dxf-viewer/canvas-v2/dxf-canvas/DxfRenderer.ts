@@ -12,7 +12,10 @@ import { CAD_UI_COLORS } from '../../config/color-config';
 import { resolveEntityStyle, entityToStyleInput } from '../../systems/properties/resolve-entity-style';
 import { lineweightToPx } from '../../config/lineweight-iso-catalog';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../stores/LayerStore';
+import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../stores/LayerStore';
+// ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime effects (zero-cost passthrough when inactive).
+import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
+import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
 function mapDxfLineTypeToEnterprise(dxfLineType: string | undefined): 'solid' | 'dashed' | 'dotted' | 'dashdot' {
   const mapping: Record<string, 'solid' | 'dashed' | 'dotted' | 'dashdot'> = {
     'solid': 'solid',
@@ -123,7 +126,7 @@ export class DxfRenderer {
     // Normal-state solid LINE entities are grouped by (strokeColor × lineWidth) and
     // rendered as single paths — one ctx.stroke() per group instead of per entity.
     // Excludes: selected, hovered, measurement, non-solid line types.
-    type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number };
+    type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number; alpha: number };
     const lineBatches = new Map<string, LineBatch>();
     const batchedIds = new Set<string>();
 
@@ -131,6 +134,8 @@ export class DxfRenderer {
       if (entity.type !== 'line') continue;
       if (!entity.visible) continue;
       if (!isEntityInViewport(entity, worldViewport)) continue;
+      // ADR-358 §5.6.bis Phase 10 — skip frozen/invisible layers (perf parity AutoCAD).
+      if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) continue;
       if (this._selectionSet.has(entity.id)) continue;
       if (effectiveOptions.hoveredEntityId === entity.id) continue;
       const meta = entity as typeof entity & { measurement?: boolean; lineType?: string };
@@ -140,9 +145,10 @@ export class DxfRenderer {
       const resolved = this.resolveStyleForRender(entity, effectiveOptions.layersById);
       const color = resolved.colorHex;
       const lw = resolved.lineWidthPx;
-      const key = `${color}\0${lw}`;
+      const alpha = resolved.alpha;
+      const key = `${color}\0${lw}\0${alpha.toFixed(3)}`;
       let batch = lineBatches.get(key);
-      if (!batch) { batch = { starts: [], ends: [], lw }; lineBatches.set(key, batch); }
+      if (!batch) { batch = { starts: [], ends: [], lw, alpha }; lineBatches.set(key, batch); }
       batch.starts.push(CoordinateTransforms.worldToScreen(entity.start, transform, actualViewport));
       batch.ends.push(CoordinateTransforms.worldToScreen(entity.end, transform, actualViewport));
       batchedIds.add(entity.id);
@@ -154,7 +160,7 @@ export class DxfRenderer {
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = batch.lw;
       this.ctx.setLineDash([]);
-      this.ctx.globalAlpha = 1;
+      this.ctx.globalAlpha = batch.alpha;
       this.ctx.lineCap = 'butt';
       this.ctx.beginPath();
       for (let i = 0; i < batch.starts.length; i++) {
@@ -169,12 +175,11 @@ export class DxfRenderer {
     for (const entity of scene.entities) {
       if (!entity.visible) continue;
       if (!isEntityInViewport(entity, worldViewport)) continue;
+      // ADR-358 §5.6.bis Phase 10 — skip frozen/invisible layers.
+      if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) continue;
       if (batchedIds.has(entity.id)) continue;
       this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
     }
-    // Render selection highlights (no-op currently, kept for call-site stability)
-    this.renderSelectionHighlights(scene, transform, actualViewport, effectiveOptions);
-
     this.ctx.restore();
   }
 
@@ -250,7 +255,9 @@ export class DxfRenderer {
     // by useGripGhostPreview, identical to the Move tool. The main canvas
     // always paints entities at their CURRENT scene-state position — no more
     // applyDragPreview mutation, no per-frame globalAlpha tweak.
-    const entityModel: EntityModel = this.toEntityModel(entity, isSelected, options.layersById);
+    // ADR-358 §5.6.bis Phase 10 — single resolveStyleForRender call (shared with toEntityModel).
+    const resolved = this.resolveStyleForRender(entity, options.layersById);
+    const entityModel: EntityModel = this.toEntityModel(entity, isSelected, resolved);
 
     const renderOptions: RenderOptions = {
       phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',
@@ -259,7 +266,7 @@ export class DxfRenderer {
       showGrips: isSelected,
       grips: isSelected,
       hovered: isHovered,
-      alpha: entity.visible ? 1.0 : 0.3
+      alpha: (entity.visible ? 1.0 : 0.3) * resolved.alpha
     };
 
     this.entityComposite.render(entityModel, renderOptions);
@@ -268,15 +275,23 @@ export class DxfRenderer {
   private toEntityModel(
     entity: DxfEntityUnion,
     isSelected: boolean,
-    layersById?: Record<string, SceneLayer>,
+    resolvedOrLayersById: { colorHex: string; lineWidthPx: number; alpha: number } | Record<string, SceneLayer> | undefined,
   ): Entity {
     const entityWithLineType = entity as typeof entity & { lineType?: string };
     const entityWithMeasurement = entity as typeof entity & {
       measurement?: boolean;
       showEdgeDistances?: boolean;
     };
-    // ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolution
-    const resolved = this.resolveStyleForRender(entity, layersById);
+    // ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolution.
+    // Accepts either a pre-resolved style (perf: avoid double-resolve in renderEntityUnified)
+    // OR a layersById map (legacy / renderSingleEntity call sites).
+    const isPreResolved =
+      typeof resolvedOrLayersById === 'object' &&
+      resolvedOrLayersById !== null &&
+      'colorHex' in resolvedOrLayersById;
+    const resolved = isPreResolved
+      ? (resolvedOrLayersById as { colorHex: string; lineWidthPx: number; alpha: number })
+      : this.resolveStyleForRender(entity, resolvedOrLayersById as Record<string, SceneLayer> | undefined);
     // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
     const base = {
       id: entity.id,
@@ -353,99 +368,6 @@ export class DxfRenderer {
   }
 
   /**
-   * Render selection highlights — grips are now rendered per-entity via renderWithPhases.
-   * This method is kept as a no-op to avoid removing the call site.
-   * The dashed orange bounding box has been replaced by proper AutoCAD-style grips.
-   */
-  private renderSelectionHighlights(
-    _scene: DxfScene,
-    _transform: ViewTransform,
-    _viewport: Viewport,
-    _options: DxfRenderOptions
-  ): void {
-    // Grips are now rendered inline during entity rendering (options.grips = true)
-    // No additional selection overlay needed
-  }
-
-  /**
-   * Calculate basic entity bounds για selection highlighting
-   * TODO: Θα βελτιωθεί με proper bounding box calculation στη Φάση 4
-   */
-  private calculateEntityBounds(
-    entity: DxfEntityUnion,
-    transform: ViewTransform,
-    viewport: Viewport
-  ): { min: Point2D; max: Point2D } | null {
-    switch (entity.type) {
-      case 'line': {
-        const start = CoordinateTransforms.worldToScreen(entity.start, transform, viewport);
-        const end = CoordinateTransforms.worldToScreen(entity.end, transform, viewport);
-        return {
-          min: { x: Math.min(start.x, end.x), y: Math.min(start.y, end.y) },
-          max: { x: Math.max(start.x, end.x), y: Math.max(start.y, end.y) }
-        };
-      }
-
-      case 'circle': {
-        const center = CoordinateTransforms.worldToScreen(entity.center, transform, viewport);
-        const screenRadius = entity.radius * transform.scale;
-        return {
-          min: { x: center.x - screenRadius, y: center.y - screenRadius },
-          max: { x: center.x + screenRadius, y: center.y + screenRadius }
-        };
-      }
-
-      case 'arc': {
-        // 🏢 ENTERPRISE (2026-02-13): Arc highlight — bounding circle of the arc
-        const arcCenter = CoordinateTransforms.worldToScreen(entity.center, transform, viewport);
-        const arcScreenRadius = entity.radius * transform.scale;
-        return {
-          min: { x: arcCenter.x - arcScreenRadius, y: arcCenter.y - arcScreenRadius },
-          max: { x: arcCenter.x + arcScreenRadius, y: arcCenter.y + arcScreenRadius }
-        };
-      }
-
-      case 'polyline': {
-        // 🏢 ENTERPRISE (2026-02-13): Polyline/polygon highlight — bounds from all vertices
-        if (!entity.vertices || entity.vertices.length === 0) return null;
-        const screenVerts = entity.vertices.map(v => CoordinateTransforms.worldToScreen(v, transform, viewport));
-        let minX = screenVerts[0].x, minY = screenVerts[0].y;
-        let maxX = screenVerts[0].x, maxY = screenVerts[0].y;
-        for (let i = 1; i < screenVerts.length; i++) {
-          minX = Math.min(minX, screenVerts[i].x);
-          minY = Math.min(minY, screenVerts[i].y);
-          maxX = Math.max(maxX, screenVerts[i].x);
-          maxY = Math.max(maxY, screenVerts[i].y);
-        }
-        return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
-      }
-
-      case 'angle-measurement': {
-        // 🏢 ENTERPRISE (2026-02-13): Angle measurement highlight — bounds from 3 points
-        const v = CoordinateTransforms.worldToScreen(entity.vertex, transform, viewport);
-        const p1 = CoordinateTransforms.worldToScreen(entity.point1, transform, viewport);
-        const p2 = CoordinateTransforms.worldToScreen(entity.point2, transform, viewport);
-        return {
-          min: { x: Math.min(v.x, p1.x, p2.x), y: Math.min(v.y, p1.y, p2.y) },
-          max: { x: Math.max(v.x, p1.x, p2.x), y: Math.max(v.y, p1.y, p2.y) }
-        };
-      }
-
-      case 'text': {
-        // 🏢 ENTERPRISE (2026-02-13): Text highlight — approximate from position and height
-        const textPos = CoordinateTransforms.worldToScreen(entity.position, transform, viewport);
-        const screenHeight = entity.height * transform.scale;
-        return {
-          min: { x: textPos.x, y: textPos.y - screenHeight },
-          max: { x: textPos.x + screenHeight * 4, y: textPos.y } // Approximate width = 4x height
-        };
-      }
-      default:
-        return null;
-    }
-  }
-
-  /**
    * ADR-358 §G7 Phase 6 — ByLayer/ByBlock style resolution at render time (LIVE).
    *
    * Routes each entity through the centralised `resolveEntityStyle()` SSoT when
@@ -463,12 +385,13 @@ export class DxfRenderer {
   private resolveStyleForRender(
     entity: DxfEntityUnion,
     layersById?: Record<string, SceneLayer>,
-  ): { colorHex: string; lineWidthPx: number } {
+  ): { colorHex: string; lineWidthPx: number; alpha: number } {
     const fallback = {
       colorHex: entity.color || CAD_UI_COLORS.entity.default,
       lineWidthPx: Math.max(1, entity.lineWidth || 1),
+      alpha: 1,
     };
-    if (!layersById) return fallback;
+    if (!layersById) return this.applyIsolateAlpha(fallback, entity);
     // ADR-358 Phase 9E-1: id-keyed lookup first (scene.layersById populated by builder).
     // Name-keyed fallback handles legacy/Firestore scenes without layersById.
     const layerById = entity.layerId ? layersById[entity.layerId] : undefined;
@@ -476,7 +399,7 @@ export class DxfRenderer {
       const name = resolveEntityLayerName(entity);
       return name ? layersById[name] : undefined;
     })();
-    if (!layer) return fallback;
+    if (!layer) return this.applyIsolateAlpha(fallback, entity);
     const styleInput = entityToStyleInput({
       color: entity.color,
       colorMode: entity.colorMode,
@@ -488,9 +411,68 @@ export class DxfRenderer {
     });
     const resolved = resolveEntityStyle(styleInput, layer);
     const px = lineweightToPx(resolved.lineweight, 96);
-    return {
-      colorHex: resolved.color,
-      lineWidthPx: Math.max(1, px || fallback.lineWidthPx),
-    };
+    const baseAlpha = transparencyToAlpha(resolved.transparency);
+    return this.applyIsolateAlpha(
+      {
+        colorHex: resolved.color,
+        lineWidthPx: Math.max(1, px || fallback.lineWidthPx),
+        alpha: baseAlpha,
+      },
+      entity,
+    );
   }
+
+  /**
+   * ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime alpha override.
+   * Zero-cost passthrough when isolate is inactive (single boolean branch).
+   * In `dim` mode, multiplies alpha for layers NOT in the isolated set by the
+   * configured dimOpacityPercent. `freeze` mode is handled by the skip-path
+   * (see `isEntityLayerSkipped`).
+   */
+  private applyIsolateAlpha(
+    style: { colorHex: string; lineWidthPx: number; alpha: number },
+    entity: DxfEntityUnion,
+  ): { colorHex: string; lineWidthPx: number; alpha: number } {
+    const isolate = getIsolateEffectsSnapshot();
+    if (!isolate.active || isolate.mode !== 'dim') return style;
+    const layerId = entity.layerId;
+    if (layerId && isolate.isolatedLayerIds.has(layerId)) return style;
+    const dimAlpha = transparencyToAlpha(dimOpacityToTransparency(isolate.dimOpacityPercent));
+    return { ...style, alpha: Math.min(style.alpha, dimAlpha) };
+  }
+
+  /**
+   * ADR-358 §5.6.bis Phase 10 — return true when the entity belongs to a
+   * frozen or invisible layer (`LAYFRZ` / `LAYOFF` AutoCAD). Renderer skips
+   * those entirely. Called per entity in both render loops — kept inline-fast.
+   *
+   * LayerStore is the runtime SSoT (hydrated from SceneModel via
+   * `useDxfSceneConversion`); `layersById` is the cold fallback for legacy
+   * call sites or test harnesses that didn't go through the level loader.
+   */
+  private isEntityLayerSkipped(
+    entity: DxfEntityUnion,
+    layersById?: Record<string, SceneLayer>,
+  ): boolean {
+    if (!entity.layerId && !layersById) return false;
+    const storeLayer = entity.layerId ? getLayerStoreLayer(entity.layerId) : null;
+    if (storeLayer) {
+      return storeLayer.frozen === true || storeLayer.visible === false;
+    }
+    if (!layersById) return false;
+    const layerById = entity.layerId ? layersById[entity.layerId] : undefined;
+    const layer = layerById ?? (() => {
+      const name = resolveEntityLayerName(entity);
+      return name ? layersById[name] : undefined;
+    })();
+    if (!layer) return false;
+    return layer.frozen === true || layer.visible === false;
+  }
+}
+
+/** DXF transparency (0..90) → canvas alpha (0..1). 0 transparency = fully opaque. */
+function transparencyToAlpha(transparency: number | undefined): number {
+  if (typeof transparency !== 'number' || !Number.isFinite(transparency)) return 1;
+  const clamped = Math.max(0, Math.min(90, transparency));
+  return 1 - clamped / 100;
 }

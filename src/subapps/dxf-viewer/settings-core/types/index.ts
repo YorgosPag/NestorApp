@@ -53,6 +53,10 @@ export type {
   DxfSettings,
   PartialDxfSettings,
 
+  // ADR-358 §5.6.bis Phase 10 — Layer Isolate
+  LayerIsolateMode,
+  LayerIsolateSettings,
+
   // Entity ID
   EntityId,
 } from './domain';

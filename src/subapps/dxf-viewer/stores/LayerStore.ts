@@ -17,8 +17,31 @@
  */
 
 import type { SceneLayer } from '../types/entities';
+import {
+  getIsolateEffectsSnapshot
+} from '../systems/isolate/IsolateEffectsStore';
+import { dimOpacityToTransparency } from '../services/layer-isolate-resolver';
 
 type Listener = () => void;
+
+/**
+ * Single-level snapshot of layer visibility state captured by
+ * `LayerIsolateCommand.execute()` and restored by `LayerUnisolateCommand`.
+ * ADR-358 §5.6.bis — snapshot is session-only (NOT persisted) and overwritten
+ * by a second isolate (with warning toast at the command layer).
+ *
+ * NOTE: direct reads/writes of this field outside `core/commands/layer/**`
+ * are forbidden by the pre-commit ratchet `layer-isolate-system`.
+ */
+export interface UnisolateSnapshotEntry {
+  readonly layerId: string;
+  readonly visible: boolean;
+  readonly frozen: boolean;
+  readonly locked: boolean;
+  readonly transparency: number;
+}
+
+export type UnisolateSnapshot = ReadonlyArray<UnisolateSnapshotEntry> | null;
 
 interface LayerStoreSnapshot {
   /** Ordered list of layers — order reflects insertion/import (DXF table order). */
@@ -47,6 +70,7 @@ let layerOrder: string[] = [];
 let currentLayerId: string | null = null;
 let recentLayerIds: string[] = [];
 let cachedSnapshot: LayerStoreSnapshot = EMPTY_SNAPSHOT;
+let unisolateSnapshot: UnisolateSnapshot = null;
 
 const subscribers = new Set<Listener>();
 
@@ -132,6 +156,44 @@ export function getCurrentLayerId(): string | null {
 
 export function getRecentLayerIds(): ReadonlyArray<string> {
   return cachedSnapshot.recentLayerIds;
+}
+
+// ─── Unisolate snapshot (ADR-358 §5.6.bis — single-level, session-only) ──────
+
+/** Current isolate snapshot. Null when no isolate session is active. */
+export function getUnisolateSnapshot(): UnisolateSnapshot {
+  return unisolateSnapshot;
+}
+
+/**
+ * Replace the unisolate snapshot. `LayerIsolateCommand` captures pre-state;
+ * `LayerUnisolateCommand` clears it. No notify — snapshot is metadata-only,
+ * has no visual effect until commands act on it.
+ */
+export function setUnisolateSnapshot(next: UnisolateSnapshot): void {
+  unisolateSnapshot = next;
+}
+
+/** Clear the unisolate snapshot. Convenience alias for `setUnisolateSnapshot(null)`. */
+export function clearUnisolateSnapshot(): void {
+  unisolateSnapshot = null;
+}
+
+/**
+ * Resolve the effective transparency for a layer at render-time.
+ * Combines `layer.transparency` (0..90, ACI-aligned) with any active isolate
+ * override from `IsolateEffectsStore`: when mode='dim' and `layerId` is NOT in
+ * `isolatedLayerIds`, the layer is dimmed via `dimOpacityToTransparency()`.
+ *
+ * Returns 0 for non-existent layers (no transparency).
+ */
+export function getEffectiveTransparency(layerId: string): number {
+  const layer = layersById.get(layerId);
+  const base = layer?.transparency ?? 0;
+  const isolate = getIsolateEffectsSnapshot();
+  if (!isolate.active || isolate.mode !== 'dim') return base;
+  if (isolate.isolatedLayerIds.has(layerId)) return base;
+  return dimOpacityToTransparency(isolate.dimOpacityPercent);
 }
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
@@ -240,5 +302,6 @@ export function __resetLayerStoreForTesting(): void {
   currentLayerId = null;
   recentLayerIds = [];
   cachedSnapshot = EMPTY_SNAPSHOT;
+  unisolateSnapshot = null;
   subscribers.clear();
 }

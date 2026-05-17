@@ -3211,6 +3211,40 @@
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",
       "tier": 3
+    },
+    "layer-isolate-system": {
+      "ssotFile": "src/subapps/dxf-viewer/services/layer-isolate-resolver.ts",
+      "description": "ADR-358 §5.6.bis Q10 (FULL Enterprise Configurable) — `layer-isolate-resolver.ts` is the single source of truth for resolving Layer Isolate UX settings (mode + dim opacity %). The unisolate snapshot lives in `LayerStore.unisolateSnapshot` and MUST be touched only by Phase 10 layer commands (`core/commands/layer/**`). Hardcoded `dimOpacityPercent` literals bypass the project/user cascade and create drift between Settings panel + render pipeline + commands. Phase 10 ratchet: forbids `unisolateSnapshot` direct reads/writes outside the LayerStore + layer commands and forbids hardcoded numeric `dimOpacityPercent` literals outside the resolver/defaults.",
+      "forbiddenPatterns": [
+        "\\bunisolateSnapshot\\b",
+        "dimOpacityPercent\\s*[=:]\\s*[0-9]+"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/services/layer-isolate-resolver.ts",
+        "src/subapps/dxf-viewer/services/__tests__/layer-isolate-resolver.test.ts",
+        "src/subapps/dxf-viewer/stores/LayerStore.ts",
+        "src/subapps/dxf-viewer/stores/__tests__/LayerStore.test.ts",
+        "src/subapps/dxf-viewer/systems/isolate/IsolateEffectsStore.ts",
+        "src/subapps/dxf-viewer/systems/isolate/__tests__/IsolateEffectsStore.test.ts",
+        "src/subapps/dxf-viewer/core/commands/layer/LayerIsolateCommand.ts",
+        "src/subapps/dxf-viewer/core/commands/layer/LayerIsolateInverseCommand.ts",
+        "src/subapps/dxf-viewer/core/commands/layer/LayerUnisolateCommand.ts",
+        "src/subapps/dxf-viewer/core/commands/layer/LayerDimCommand.ts",
+        "src/subapps/dxf-viewer/core/commands/layer/layer-command-utils.ts",
+        "src/subapps/dxf-viewer/core/commands/layer/index.ts",
+        "src/subapps/dxf-viewer/core/commands/layer/__tests__/LayerIsolateCommand.test.ts",
+        "src/subapps/dxf-viewer/core/commands/layer/__tests__/LayerUnisolateCommand.test.ts",
+        "src/subapps/dxf-viewer/settings-core/defaults.ts",
+        "src/subapps/dxf-viewer/settings-core/types/domain.ts",
+        "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/special/LayersSettings.tsx",
+        "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts",
+        "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-canvas-renderer.ts",
+        "src/subapps/dxf-viewer/hooks/useLayerCommandShortcuts.ts",
+        "src/subapps/dxf-viewer/statusbar/IsolateStatusIndicator.tsx"
+      ],
+      "addedDate": "2026-05-17",
+      "addedByAdr": "ADR-358",
+      "tier": 3
     }
   }
 }

@@ -210,6 +210,82 @@ export function registerBuiltInCommands(registry: ICommandRegistry): void {
 
       return new CompoundCommand(serialized.name, commands);
     });
+
+    // ─── ADR-358 §5.6.bis — Layer commands (Phase 10) ────────────────────────
+    registry.register('layer-isolate', (serialized) => {
+      const { LayerIsolateCommand } = require('./layer/LayerIsolateCommand');
+      const data = serialized.data as {
+        targetLayerIds: string[];
+        settings: { mode: 'dim' | 'freeze'; dimOpacityPercent: number };
+        category: string | null;
+      };
+      return new LayerIsolateCommand({
+        targetLayerIds: data.targetLayerIds,
+        settings: data.settings,
+        category: data.category
+      });
+    });
+
+    registry.register('layer-isolate-inverse', (serialized) => {
+      const { LayerIsolateInverseCommand } = require('./layer/LayerIsolateInverseCommand');
+      const data = serialized.data as {
+        targetLayerIds: string[];
+        settings: { mode: 'dim' | 'freeze'; dimOpacityPercent: number };
+        category: string | null;
+      };
+      return new LayerIsolateInverseCommand({
+        targetLayerIds: data.targetLayerIds,
+        settings: data.settings,
+        category: data.category
+      });
+    });
+
+    registry.register('layer-unisolate', () => {
+      const { LayerUnisolateCommand } = require('./layer/LayerUnisolateCommand');
+      return new LayerUnisolateCommand();
+    });
+
+    registry.register('layer-dim', (serialized) => {
+      const { LayerDimCommand } = require('./layer/LayerDimCommand');
+      const data = serialized.data as {
+        targetLayerIds: string[];
+        dimOpacityPercent: number;
+        category: string | null;
+      };
+      return new LayerDimCommand({
+        targetLayerIds: data.targetLayerIds,
+        dimOpacityPercent: data.dimOpacityPercent,
+        category: data.category
+      });
+    });
+
+    registry.register('layer-off', (serialized) => {
+      const { LayerOffCommand } = require('./layer/LayerOffCommand');
+      const data = serialized.data as { layerId: string };
+      return new LayerOffCommand({ layerId: data.layerId });
+    });
+
+    registry.register('layer-freeze', (serialized) => {
+      const { LayerFreezeCommand } = require('./layer/LayerFreezeCommand');
+      const data = serialized.data as { layerId: string };
+      return new LayerFreezeCommand({ layerId: data.layerId });
+    });
+
+    registry.register('layer-lock', (serialized) => {
+      const { LayerLockCommand } = require('./layer/LayerLockCommand');
+      const data = serialized.data as { layerId: string };
+      return new LayerLockCommand({ layerId: data.layerId });
+    });
+
+    registry.register('layer-thaw-all', () => {
+      const { LayerThawAllCommand } = require('./layer/LayerThawAllCommand');
+      return new LayerThawAllCommand();
+    });
+
+    registry.register('layer-on-all', () => {
+      const { LayerOnAllCommand } = require('./layer/LayerOnAllCommand');
+      return new LayerOnAllCommand();
+    });
   };
 
   // Execute registration
