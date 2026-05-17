@@ -153,6 +153,12 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'dim-aligned':    { id: 'dim-aligned',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-angular2L':  { id: 'dim-angular2L',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'dim-angular3P':  { id: 'dim-angular3P',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-362 Phase D2: Radial family + Ordinate creation tools
+  'dim-radius':        { id: 'dim-radius',        category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'dim-diameter':      { id: 'dim-diameter',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'dim-arc-length':    { id: 'dim-arc-length',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'dim-jogged-radius': { id: 'dim-jogged-radius', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'dim-ordinate':      { id: 'dim-ordinate',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 // ============================================================================
 // 🏢 ENTERPRISE HELPER FUNCTIONS (ADR-033)

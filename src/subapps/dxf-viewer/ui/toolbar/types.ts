@@ -108,7 +108,13 @@ export type ToolType =
   | 'dim-linear'          // Manual linear (horizontal/vertical/rotated)
   | 'dim-aligned'         // Manual aligned (parallel to measured segment)
   | 'dim-angular2L'       // Manual angular between 2 line picks
-  | 'dim-angular3P';      // Manual angular from vertex + 2 rays
+  | 'dim-angular3P'       // Manual angular from vertex + 2 rays
+  // ADR-362 Phase D2: Radial family + Ordinate creation tools
+  | 'dim-radius'          // AutoCAD DIMRADIUS — pick arc/circle + text position
+  | 'dim-diameter'        // AutoCAD DIMDIAMETER — pick circle + text position (side2 auto-derived)
+  | 'dim-arc-length'      // AutoCAD DIMARC — pick arc (start/end derived from arc angles)
+  | 'dim-jogged-radius'   // AutoCAD DIMJOGGED — pick arc + arcPoint + jogPoint + jogVertex
+  | 'dim-ordinate';       // AutoCAD DIMORDINATE — feature + leader endpoint (axis auto, datum {0,0})
 
 
 export interface ToolDefinition {
