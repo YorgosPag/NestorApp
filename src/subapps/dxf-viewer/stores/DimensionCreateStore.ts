@@ -104,6 +104,10 @@ export const dimensionCreateStore = {
     applyAction({ kind: 'pressSpace' });
   },
 
+  setParent(parentDimensionId: string): void {
+    applyAction({ kind: 'setParent', parentDimensionId });
+  },
+
   cancel(): void {
     applyAction({ kind: 'cancel' });
   },
