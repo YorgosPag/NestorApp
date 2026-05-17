@@ -74,6 +74,11 @@ interface SidebarSectionProps {
   activeTool: string;
   // ADR-309 Phase 2: Wizard button in LevelPanel
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
+  // ADR-358 Phase 8 sidebar dock — Properties tab scope.
+  projectId?: string;
+  floorplanId?: string;
+  /** Universal-selection primary id (≠ selectedEntityIds[0] for some flows). */
+  primarySelectedId?: string | null;
 }
 
 // ============================================================================
@@ -94,6 +99,9 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   setSelectedEntityIds,
   activeTool,
   onSceneImported,
+  projectId,
+  floorplanId,
+  primarySelectedId,
 }) => {
   // ADR-040 Phase VII: subscribe to ZoomStore — re-renders only this leaf on zoom
   const currentZoom = useCurrentZoom();
@@ -146,6 +154,9 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
             zoomLevel={currentZoom}
             currentTool={activeTool as ToolType}
             onSceneImported={onSceneImported}
+            projectId={projectId}
+            floorplanId={floorplanId}
+            primarySelectedId={primarySelectedId}
           />
         </main>
 

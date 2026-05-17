@@ -44,13 +44,23 @@ export function DxfViewerTopBar({
         contextualTabs={contextualTabs}
         activeContextualTrigger={activeContextualTrigger}
       />
-      <StairAdvancedPanelHost
-        primarySelectedId={primarySelectedId}
-        currentScene={currentScene}
-        levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
-        floorplanId={levelManager.fileRecordId ?? undefined}
-      />
+      {/*
+        ADR-358 Phase 8 sidebar dock (2026-05-17) — Stair properties moved
+        from a right-floating overlay into the left sidebar as the third
+        "Properties" tab (industry pattern: VS Code Side Bar / ArchiCAD
+        Tray / Revit dockable palettes). The right-floating host is
+        disabled to free the canvas right side; flip the conditional back
+        on if a future option wants both surfaces.
+      */}
+      {false && (
+        <StairAdvancedPanelHost
+          primarySelectedId={primarySelectedId}
+          currentScene={currentScene}
+          levelManager={levelManager}
+          projectId={levelManager.saveContext?.projectId ?? undefined}
+          floorplanId={levelManager.fileRecordId ?? undefined}
+        />
+      )}
     </>
   );
 }

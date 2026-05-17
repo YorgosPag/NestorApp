@@ -322,6 +322,9 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           setSelectedEntityIds={setSelectedEntityIds}
           activeTool={activeTool}
           onSceneImported={handleFileImportWithEncoding}
+          projectId={levelManager.saveContext?.projectId ?? undefined}
+          floorplanId={levelManager.fileRecordId ?? undefined}
+          primarySelectedId={primarySelectedId}
         />
       ) : (
         <MobileSidebarDrawer

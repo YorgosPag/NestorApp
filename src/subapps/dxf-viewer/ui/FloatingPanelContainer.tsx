@@ -39,6 +39,8 @@ interface FloatingPanelContainerProps {
   // ADR-358 Phase 8 sidebar dock — scope inputs for the Properties tab.
   projectId?: string;
   floorplanId?: string;
+  /** Universal-selection primary id (used by stair Properties tab). */
+  primarySelectedId?: string | null;
 }
 
 const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, FloatingPanelContainerProps>(function FloatingPanelContainer({
@@ -50,6 +52,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   onSceneImported,
   projectId,
   floorplanId,
+  primarySelectedId,
 }, ref) {
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -100,6 +103,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     onSceneImported,
     projectId,
     floorplanId,
+    primarySelectedId,
   });
 
   // ADR-358 Phase 8 sidebar dock — auto-switch to the Properties tab when the
@@ -107,14 +111,13 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   // pops on selection). Stays out of the way for non-stair selections so the
   // user is not bounced off the Levels tab while doing layer work.
   React.useEffect(() => {
-    if (!scene || selectedEntityIds.length === 0) return;
-    const primaryId = selectedEntityIds[0];
-    const entity = scene.entities.find((e) => e.id === primaryId);
+    if (!scene || !primarySelectedId) return;
+    const entity = scene.entities.find((e) => e.id === primarySelectedId);
     if (!entity) return;
     if ((entity as { type?: string }).type === 'stair' && activePanel !== 'properties') {
       setActivePanel('properties');
     }
-  }, [selectedEntityIds, scene, activePanel, setActivePanel]);
+  }, [primarySelectedId, scene, activePanel, setActivePanel]);
 
   // ✅ ΒΗΜΑ 6: Extracted panel description logic to custom hook
   const { description, zoomText } = usePanelDescription({
@@ -189,6 +192,7 @@ export const FloatingPanelContainer = React.memo(FloatingPanelContainerInner, (p
     prevProps.currentTool === nextProps.currentTool &&
     prevProps.onSceneImported === nextProps.onSceneImported &&
     prevProps.projectId === nextProps.projectId &&
-    prevProps.floorplanId === nextProps.floorplanId
+    prevProps.floorplanId === nextProps.floorplanId &&
+    prevProps.primarySelectedId === nextProps.primarySelectedId
   );
 });
