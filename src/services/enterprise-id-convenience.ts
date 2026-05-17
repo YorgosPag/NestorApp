@@ -218,6 +218,9 @@ export const generateStairPresetId = () => enterpriseIdService.generateStairPres
 export const generateLayerFilterGroupId = () => enterpriseIdService.generateLayerFilterGroupId();
 export const generateLayerFilterPropertyId = () => enterpriseIdService.generateLayerFilterPropertyId();
 
+// DXF Layer States Manager (ADR-358 §5.9 Q12 — Phase 12)
+export const generateLayerStateId = () => enterpriseIdService.generateLayerStateId();
+
 // DXF Enterprise Dimension System (ADR-362)
 export const generateDimensionId = () => enterpriseIdService.generateDimensionId();
 export const generateDimStyleId = () => enterpriseIdService.generateDimStyleId();
