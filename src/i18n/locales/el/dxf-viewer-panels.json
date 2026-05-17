@@ -525,5 +525,33 @@
       "zoomPresets": "Προκαθορισμένα ζουμ",
       "srOnly": "Έλεγχοι ζουμ γωνίας χαρακών"
     }
+  },
+  "layerFilters": {
+    "aria": {
+      "ruleChip": "Κανόνας φίλτρου επιπέδου",
+      "removeRule": "Αφαίρεση κανόνα",
+      "ruleset": "Ομάδα κανόνων"
+    },
+    "combinator": {
+      "and": "ΚΑΙ",
+      "or": "Ή"
+    },
+    "warn": {
+      "depthExceeded": "Μέγιστο βάθος φωλιάσματος"
+    },
+    "action": {
+      "removeNested": "Αφαίρεση ομάδας",
+      "addRule": "Προσθήκη κανόνα",
+      "addNested": "Προσθήκη ομάδας"
+    },
+    "value": {
+      "true": "Ναι",
+      "false": "Όχι",
+      "textPlaceholder": "Τιμή..."
+    },
+    "memberKind": {
+      "entity": "Οντότητα",
+      "region": "Περιοχή"
+    }
   }
 }

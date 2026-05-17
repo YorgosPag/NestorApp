@@ -525,5 +525,33 @@
       "zoomPresets": "Zoom presets",
       "srOnly": "Corner box zoom controls"
     }
+  },
+  "layerFilters": {
+    "aria": {
+      "ruleChip": "Layer filter rule",
+      "removeRule": "Remove rule",
+      "ruleset": "Rule group"
+    },
+    "combinator": {
+      "and": "AND",
+      "or": "OR"
+    },
+    "warn": {
+      "depthExceeded": "Maximum nesting depth"
+    },
+    "action": {
+      "removeNested": "Remove group",
+      "addRule": "Add rule",
+      "addNested": "Add group"
+    },
+    "value": {
+      "true": "Yes",
+      "false": "No",
+      "textPlaceholder": "Value..."
+    },
+    "memberKind": {
+      "entity": "Entity",
+      "region": "Region"
+    }
   }
 }
