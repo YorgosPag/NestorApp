@@ -652,6 +652,9 @@
     "closeAriaLabel": "Κλείσιμο πάνελ",
     "emptyState": "Επίλεξε μια κλίμακα για να δεις τις ιδιότητες.",
     "sections": {
+      "warnings": {
+        "title": "Προειδοποιήσεις"
+      },
       "treadLabelSize": {
         "title": "Μέγεθος Αρίθμησης",
         "height": "Ύψος"

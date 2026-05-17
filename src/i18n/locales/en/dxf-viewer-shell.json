@@ -652,6 +652,9 @@
     "closeAriaLabel": "Close panel",
     "emptyState": "Select a stair to see its properties.",
     "sections": {
+      "warnings": {
+        "title": "Warnings"
+      },
       "treadLabelSize": {
         "title": "Number Size",
         "height": "Height"

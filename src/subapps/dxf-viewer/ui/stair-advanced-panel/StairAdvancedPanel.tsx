@@ -26,6 +26,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../types/entities';
 import type { useLevels } from '../../systems/levels';
 import type { UseStairPersistenceResult } from '../../hooks/data/useStairPersistence';
+import { StairWarningsSection } from './sections/StairWarningsSection';
 import { StairPersistenceSection } from './sections/StairPersistenceSection';
 import { StairPresetsSection } from './sections/StairPresetsSection';
 import { StairMaterialsSection } from './sections/StairMaterialsSection';
@@ -86,6 +87,7 @@ export function StairAdvancedPanel({
           </h3>
         </header>
       )}
+      <StairWarningsSection stair={stair} />
       {persistence && (
         <StairPersistenceSection
           stair={stair}
