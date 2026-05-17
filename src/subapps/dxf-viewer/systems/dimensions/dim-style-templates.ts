@@ -72,6 +72,8 @@ function sharedDefaults(): Omit<DimStyle, 'id' | 'name' | 'isBuiltIn'> {
     // Fit
     dimtix: false,
     dimtofl: false,
+    dimatfit: 3,
+    dimtmove: 0,
     dimscale: 1,
     paperTextHeight: 2.5,
 
@@ -84,6 +86,7 @@ function sharedDefaults(): Omit<DimStyle, 'id' | 'name' | 'isBuiltIn'> {
     dimpost: '',
     dimrnd: 0,
     dimlfac: 1,
+    dimzin: 0,
 
     // Alternate units
     dimalt: false,
