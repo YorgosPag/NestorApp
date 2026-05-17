@@ -24,9 +24,10 @@ const ARROWHEAD_NAMES = [
 interface SymbolsSectionProps {
   style: DimStyle;
   onChange: (patch: UpdateCustomStylePatch) => void;
+  readOnly?: boolean;
 }
 
-export function SymbolsSection({ style, onChange }: SymbolsSectionProps) {
+export function SymbolsSection({ style, onChange, readOnly = false }: SymbolsSectionProps) {
   const { t } = useTranslation('dxf-viewer-panels');
   const f = (key: string) => t(`panels.dimensions.editor.fields.${key}`);
   const blkLabel = (name: string) => t(`panels.dimensions.editor.dimblk.${name}`, { defaultValue: '' }) || name;
@@ -35,7 +36,7 @@ export function SymbolsSection({ style, onChange }: SymbolsSectionProps) {
     <div className="flex flex-col gap-2 py-1">
       <div className="flex items-center justify-between gap-2">
         <Label className="text-xs shrink-0 w-36">{f('dimblk')}</Label>
-        <Select value={style.dimblk} onValueChange={(v) => onChange({ dimblk: v, dimblk1: v, dimblk2: v })}>
+        <Select value={style.dimblk} onValueChange={(v) => onChange({ dimblk: v, dimblk1: v, dimblk2: v })} disabled={readOnly}>
           <SelectTrigger className="h-6 text-xs w-40">
             <SelectValue />
           </SelectTrigger>
@@ -56,6 +57,7 @@ export function SymbolsSection({ style, onChange }: SymbolsSectionProps) {
           type="number"
           step={0.1}
           value={style.dimcen}
+          disabled={readOnly}
           onChange={(e) => onChange({ dimcen: parseFloat(e.target.value) || 0 })}
           className="h-6 text-xs w-20 px-1.5"
         />
