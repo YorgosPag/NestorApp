@@ -13,9 +13,11 @@
 
 import * as React from 'react';
 import {
+  BookmarkPlus,
   Check,
   Download,
   FileText,
+  Library,
   Pencil,
   Settings,
   Trash2,
@@ -28,6 +30,8 @@ import type {
   LayerStateDropdownActions,
   LayerStateDropdownState,
 } from './useLayerStateDropdown';
+import { LayerStateTemplateBrowser } from './LayerStateTemplateBrowser';
+import { LayerStateSaveAsTemplateDialog } from './LayerStateSaveAsTemplateDialog';
 import type { LayerState } from '../../../types/layer-state';
 import type { LasImportSummary } from '../../../stores/LayerStateStore';
 
@@ -48,30 +52,25 @@ export function LayerStateDropdownPopover({
   const [draftSaveName, setDraftSaveName] = React.useState('');
   const [lasFeedback, setLasFeedback] = React.useState<LasFeedback | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-
   const states = state.snapshot.states;
   const isReady = state.isReady;
   const currentId = state.snapshot.currentStateId;
   const hasStates = states.length > 0;
-
   const handleSave = (): void => {
     const created = actions.saveCurrent(draftSaveName);
     if (created) {
       setDraftSaveName('');
     }
   };
-
   const handleRenameCommit = (id: string): void => {
     actions.rename(id, draftRename);
     setRenameId(null);
     setDraftRename('');
   };
-
   const handleRestore = (id: string): void => {
     actions.restore(id);
     onClose();
   };
-
   const handleExportLas = (): void => {
     const payload = actions.exportLas();
     if (!payload) {
@@ -199,6 +198,32 @@ export function LayerStateDropdownPopover({
           hint={t('layerState.phase13Hint')}
         />
       </footer>
+      <footer className={FOOTER_CLASS}>
+        <FooterAction
+          icon={<Library className="h-3.5 w-3.5" aria-hidden />}
+          label={t('layerState.templates.dropdownBrowseTemplates')}
+          hint={
+            state.templates.isReady
+              ? t('layerState.templates.browserDescription')
+              : t('layerState.templates.dropdownNotReady')
+          }
+          disabled={!state.templates.isReady}
+          onClick={actions.openTemplateBrowser}
+          testId="layer-state-templates-browse"
+        />
+        <FooterAction
+          icon={<BookmarkPlus className="h-3.5 w-3.5" aria-hidden />}
+          label={t('layerState.templates.dropdownSaveAsTemplate')}
+          hint={
+            state.templates.isReady
+              ? t('layerState.templates.saveAsDescription')
+              : t('layerState.templates.dropdownNotReady')
+          }
+          disabled={!state.templates.isReady || !isReady}
+          onClick={() => actions.openSaveAsTemplate()}
+          testId="layer-state-templates-save-as"
+        />
+      </footer>
       <input
         ref={fileInputRef}
         type="file"
@@ -218,6 +243,24 @@ export function LayerStateDropdownPopover({
           {lasFeedback.message}
         </p>
       )}
+      <LayerStateTemplateBrowser
+        open={state.dialogs.browserOpen}
+        onOpenChange={(next) => {
+          if (!next) actions.closeTemplateBrowser();
+        }}
+        categories={state.templates.categories}
+        fetchSummaries={() => state.templates.searchTemplateSummaries()}
+        onUseTemplate={(id) => state.templates.importTemplateAsState(id)}
+      />
+      <LayerStateSaveAsTemplateDialog
+        open={state.dialogs.saveAsOpen}
+        onOpenChange={(next) => {
+          if (!next) actions.closeSaveAsTemplate();
+        }}
+        categories={state.templates.categories}
+        sourceStateId={state.dialogs.saveAsSourceStateId}
+        onSave={(input) => state.templates.saveCurrentAsTemplate(input)}
+      />
     </section>
   );
 }
