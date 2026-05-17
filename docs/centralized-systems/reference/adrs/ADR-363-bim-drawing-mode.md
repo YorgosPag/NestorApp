@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟡 PROPOSED — αναμένει επιβεβαίωση Γιώργου (open questions §11) |
+| **Status** | 🟢 **APPROVED** 2026-05-17 — All Q1-Q8 answered. Ready for Phase 0 implementation. |
 | **Date** | 2026-05-17 |
 | **Category** | DXF Viewer — BIM / Parametric Building Modeling |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md` |
@@ -1280,7 +1280,47 @@ Pattern: industry `W` για Wall = international standard, δεν spaπει. Υ
 
 **Implementation**: στο `TOOL_DEFINITIONS` (ToolStateManager.ts) entries + `home-tab-bim.ts` ribbon panel + `useKeyboardShortcuts` hook επέκταση. Hotkey activation flow: keypress → `BimTypePickerDialog` opens (Q1) → user selects type → tool activates.
 
-**Q8**: Material library — Phase 6+ θες προ-φορτωμένη ελληνική αγορά (Knauf, Hellas Tiles, AlumilΛ, etc.) ή empty-by-default που γεμίζει ο χρήστης ανά project;
+**Q8** ✅ **ΑΠΑΝΤΗΘΗΚΕ 2026-05-17**: **(γ) Hybrid — minimal seed + user extension**. 25 generic essentials seeded (όχι brand-specific) με `defaultUnitCost: null`. User extends per company/project scope. Avoids brand bias + stale prices + onboarding friction.
+
+**Schema** (`bim_materials/{materialId}` Firestore):
+```typescript
+interface BimMaterial {
+  id: string;                    // bmat_<UUID-v4>
+  scope: 'system' | 'company' | 'project';
+  nameEl: string;
+  nameEn: string;
+  category: 'plaster' | 'masonry' | 'concrete' | 'insulation' | 'flooring'
+          | 'window-frame' | 'door-frame' | 'paint' | 'roofing' | 'waterproofing' | 'other';
+  density?: number;              // kg/m³
+  defaultThickness?: number;     // mm
+  fireRating?: 'EI30' | 'EI60' | 'EI90' | 'EI120' | 'none';
+  atoeCategory: AtoeCategoryCode;
+  atoeArticle?: string;
+  defaultUnitCost?: number | null; // DEFAULT NULL
+  defaultUnit: 'm' | 'm2' | 'm3' | 'kg' | 'pcs';
+  brand?: string;                // optional, για company-scoped
+  brandModel?: string;
+  notes?: string;
+  builtin: boolean;              // system-seeded = non-deletable
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
+
+**Seeded materials (~25)** — Phase 6.5 deliverable. Categories: plaster (3), masonry (3), concrete (4 + rebar), insulation (3), flooring (3), window-frame (2), door-frame (1), paint (2), roofing (2), waterproofing (1), other (1). Όλα με `defaultUnitCost: null`. Καμία brand-specific entry (Alumil/Knauf/Vitex εξαιρούνται από system seed — προστίθενται από company-scope από τον user).
+
+**Inheritance pattern** (mirror ADR-175 §4.1.3 + Q1 bim_presets):
+- System seed: 25 generic (read-only, builtin: true)
+- Company scope: brand-specific extensions (π.χ. company adds "Alumil M9650" με τιμή €320/m²)
+- Project scope: per-project overrides (π.χ. project negotiated price)
+- Inheritance: project > company > system
+
+**Phase 6.5 deliverable**:
+- `MaterialLibraryService.ts` με CRUD per scope
+- Firestore seed script `scripts/seed-bim-materials.ts` — μία φορά run, αδειάζει + γεμίζει με 25 system materials
+- Materials browser UI: σε floating panel "Υλικά" — list με filter ανά category, scope chip ("Σύστημα" / "Εταιρεία" / "Έργο"), search
+- Material picker UI: στο WallDna editor (Phase 1+) + Element panels, dropdown με auto-suggested ανά layer side
+- Pre-commit ratchet: νέο SSoT module `bim-material-prefix` που blocks inline material ID strings outside MaterialLibraryService
 
 ---
 
@@ -1340,3 +1380,4 @@ Phase 6 (BOQ Auto-Feed) θεωρείται **complete** όταν:
 | 2026-05-17 | **Q6 ANSWERED** — Hybrid auto+override layer creation. New `bim_settings/{projectId}` Firestore collection + `BimLayerService` SSoT + 3 built-in conventions (Greek/English/AIA-US) με auto-naming + auto-color (10 entries). Existing layer detection με semantic fuzzy match. Per-session override. Q6b pending: which default convention. | Claude Opus 4.7 |
 | 2026-05-17 | **Q6b ANSWERED** — English default layer names (`Walls-Exterior`, etc.). Layer NAMES Latin (legacy DWG interop + ξένη συνεργασία). UI CONTROLS ελληνικά (CLAUDE.md language rule). User-switchable convention μέσω `bim_settings.layerConvention`. | Claude Opus 4.7 |
 | 2026-05-17 | **Q7 ANSWERED** — Hotkeys finalized: W, OP, SL, SO, CL, BM, ST. Original `O`/`CO` conflicts με Offset/Copy detected and corrected. W kept (industry standard για Wall). Pattern: mixed 1+2 letter, industry alignment > forced consistency. | Claude Opus 4.7 |
+| 2026-05-17 | **Q8 ANSWERED — ALL Q1-Q8 CLOSED** — Hybrid material library: 25 generic essentials seeded (no brand bias), `defaultUnitCost: null`, scope inheritance (project > company > system). New Firestore collection `bim_materials`, `MaterialLibraryService` SSoT. **ADR-363 status moved from PROPOSED → APPROVED. Ready for Phase 0 implementation.** | Claude Opus 4.7 |
