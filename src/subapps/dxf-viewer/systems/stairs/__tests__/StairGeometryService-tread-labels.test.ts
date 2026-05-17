@@ -36,6 +36,7 @@ function makeLShape(overrides: {
   const flightSplit = overrides.flightSplit ?? ([5, 5] as const);
   const variant: StairVariantLShape = {
     kind: 'l-shape',
+    cornerStyle: 'landing',
     turnDirection: 'right',
     landingDepth: 'auto',
     flightSplit,
@@ -106,22 +107,25 @@ describe('StairGeometryService — Tread labels (G21)', () => {
     expect(g.treadLabels!.map(l => l.text)).toEqual(['1', '4', '7', '10']);
   });
 
-  it('Test 4: l-shape continuous numbering (restartPerFlight=false)', () => {
+  it('Test 4: l-shape continuous numbering with γ landing (flightSplit=[5,5] → 11 labels)', () => {
     const g = computeStairGeometry(
       makeLShape({ treadLabelDisplay: 'all', treadLabelRestartPerFlight: false }),
     );
+    // ADR-358 Phase 3e γ: flight1(5) + landing(1) + flight2(5) = 11 labels.
     expect(g.treadLabels!.map(l => l.text)).toEqual(
-      ['1','2','3','4','5','6','7','8','9','10'],
+      ['1','2','3','4','5','6','7','8','9','10','11'],
     );
+    expect(g.treadLabels![5].kind).toBe('landing');
   });
 
-  it('Test 5: l-shape restart per flight → 1..n1 then 1..n2', () => {
+  it('Test 5: l-shape restart per flight → 1..n1, landing=n1+1 (local), 1..n2', () => {
     const g = computeStairGeometry(
       makeLShape({ treadLabelDisplay: 'all', treadLabelRestartPerFlight: true }),
     );
     expect(g.treadLabels!.map(l => l.text)).toEqual(
-      ['1','2','3','4','5','1','2','3','4','5'],
+      ['1','2','3','4','5','6','1','2','3','4','5'],
     );
+    expect(g.treadLabels![5].kind).toBe('landing');
   });
 
   it('Test 6: treadNumberStart=5 → labels start at "5"', () => {
