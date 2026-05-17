@@ -44,6 +44,7 @@ function makeLShapeParams(overrides?: {
   const tread = overrides?.tread ?? 280;
   const variant: StairVariantLShape = {
     kind: 'l-shape',
+    cornerStyle: 'landing',
     turnDirection: overrides?.turnDirection ?? 'right',
     landingDepth: overrides?.landingDepth ?? 'auto',
     landingCornerStyle: overrides?.landingCornerStyle,
