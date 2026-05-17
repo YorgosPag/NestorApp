@@ -3246,6 +3246,35 @@
       "addedByAdr": "ADR-358",
       "tier": 3
     },
+    "layer-state-system": {
+      "ssotFile": "src/subapps/dxf-viewer/stores/LayerStateStore.ts",
+      "description": "ADR-358 §5.9 Q12 (FULL Enterprise — Phase 12 Save/Restore subset). `LayerStateStore.ts` is the SSoT for saved LayerState runtime state. `layer-state-persistence.ts` owns the localStorage Firestore-shaped pub/sub layer. `types/layer-state.ts` exports `createLayerState` / `createLayerStateEntry` factories — direct `LayerState` literal construction outside this allowlist is forbidden. `RestoreLayerStateCommand` is the ONLY caller of `applyLayerSnapshotEntries`. Phase 13 will widen the allowlist to add `las-parser.ts` / `las-exporter.ts` once `.las` lands.",
+      "forbiddenPatterns": [
+        "\\bsaveCurrentLayerState\\b",
+        "\\brenameLayerState\\b",
+        "\\bdeleteLayerStateById\\b",
+        "\\bapplyLayerSnapshotEntries\\b",
+        "\\bcaptureCurrentSnapshot\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/stores/LayerStateStore.ts",
+        "src/subapps/dxf-viewer/stores/LayerStore.ts",
+        "src/subapps/dxf-viewer/stores/__tests__/LayerStateStore.test.ts",
+        "src/subapps/dxf-viewer/stores/__tests__/LayerStore.test.ts",
+        "src/subapps/dxf-viewer/services/layer-state-persistence.ts",
+        "src/subapps/dxf-viewer/services/__tests__/layer-state-persistence.test.ts",
+        "src/subapps/dxf-viewer/types/layer-state.ts",
+        "src/subapps/dxf-viewer/core/commands/layer/RestoreLayerStateCommand.ts",
+        "src/subapps/dxf-viewer/core/commands/layer/__tests__/RestoreLayerStateCommand.test.ts",
+        "src/subapps/dxf-viewer/ui/components/layer-state/useLayerStateDropdown.ts",
+        "src/subapps/dxf-viewer/ui/components/layer-state/LayerStateDropdown.tsx",
+        "src/subapps/dxf-viewer/ui/components/layer-state/LayerStateDropdownPopover.tsx",
+        "src/subapps/dxf-viewer/ui/components/layer-state/__tests__/LayerStateDropdown.test.tsx"
+      ],
+      "addedDate": "2026-05-17",
+      "addedByAdr": "ADR-358",
+      "tier": 3
+    },
     "layer-filter-engine": {
       "ssotFile": "src/subapps/dxf-viewer/services/layer-filter-engine.ts",
       "description": "ADR-358 §5.7.bis Q11 (FULL Enterprise Δ + GOL) — `layer-filter-engine.ts` is the SSoT for evaluating `LayerFilter` (group + properties with recursive AND/OR rulesets). `layer-smart-filters.ts` owns the deterministic Smart filter set derived from a LayerStore snapshot. `layer-filter-validation.ts` owns the defensive JSON validation used by both import + Firestore hydrate. Phase 11 ratchet: forbids `applyLayerFilter` / `getSmartFilters` / `validateLayerFilterJson` invocations outside the allowlist files.",
