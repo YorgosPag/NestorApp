@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | 🟡 IN PROGRESS — Groups A-E done, Phases F1+F2 done, F3+ pending |
+| **Status** | 🟡 IN PROGRESS — Groups A-F done (F3 pending commit), Group G next |
 | **Date** | 2026-05-17 |
 | **Last Updated** | 2026-05-17 |
 | **Category** | DXF Viewer — Annotation / Dimensions |
@@ -544,7 +544,7 @@ Dopo ogni Phase 5A-5J:
 |---|---|---|---|
 | **F1** ✅ | Panel tab skeleton + Style Manager | `panel-types.ts` (mod), `PanelTabs.tsx` (mod), `usePanelContentRenderer.tsx` (mod), `ui/panels/dimensions/DimensionsTab.tsx` (NEW), `DimStyleList.tsx` (NEW), `DimStyleCreateDialog.tsx` (NEW), `systems/dimensions/dim-style-registry.ts` (mod: +getSnapshot), `i18n/{el,en}/dxf-viewer-panels.json` (mod: +dimensions keys) | 4° tab visible, CRUD styles — **DONE 2026-05-17** |
 | **F2** ✅ | Accordion sections 1-3 (Γραμμές, Σύμβολα, Κείμενο) | `DimStyleAccordion.tsx` (NEW), `sections/LinesSection.tsx` (NEW), `sections/SymbolsSection.tsx` (NEW), `sections/TextSection.tsx` (NEW), `DimensionsTab.tsx` (mod: +editingId state + edit-mode view), `i18n/{el,en}/dxf-viewer-panels.json` (mod: +editor keys) | Edit button wired, 3/6 sections editable — **DONE 2026-05-17** |
-| **F3** | Accordion sections 4-6 (Προσαρμογή, Μονάδες, Ανοχές) + Live Preview | `FitSection.tsx` (NEW), `PrimaryUnitsSection.tsx` (NEW), `AltUnitsSection.tsx` (NEW), `TolerancesSection.tsx` (NEW), `DimStylePreview.tsx` (NEW) | 6/6 sections + preview |
+| **F3** ✅ | Accordion sections 4-6 (Προσαρμογή, Μονάδες, Ανοχές) + Live Preview | `FitSection.tsx` (NEW), `UnitsSection.tsx` (NEW), `TolerancesSection.tsx` (NEW), `DimStylePreview.tsx` (NEW), `DimStyleAccordion.tsx` (mod: +3 sections +preview) | 6/6 sections + preview — **DONE 2026-05-17** |
 
 ### Group G — ADVANCED FEATURES D8 (3 sessions, blocked by F)
 
@@ -681,6 +681,17 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
   - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/__tests__/DimStyleAccordion.test.tsx` (~145 LOC) — 8 tests: renders 3 sections, number input fires onChange, checkbox fires onChange, dimtad select fires onChange, dimblk fires onChange with dimblk1+dimblk2, readOnly=true disables spinbuttons, readOnly=true disables checkboxes, readOnly=false leaves inputs enabled.
   - **No integration yet** (Phase F3 scope): sections 4-6 (Προσαρμογή/Μονάδες/Ανοχές), live canvas preview.
   - **Next**: Phase F3 — sections 4-6 + DimStylePreview.
+
+- **2026-05-17 (Phase F3 DONE — sections 4-6 + DimStylePreview + 12/12 tests PASS.)** — Three new accordion sections (Τοποθέτηση/Μονάδες/Ανοχές), SVG live preview at accordion top, 3 new DimStyle fields, 4 new tests (dimatfit/dimaunit/dimtolj selects + DimStylePreview render).
+  - **NEW DimStyle fields** (added to `types/dimension.ts` + defaults in `dim-style-templates.ts`): `dimatfit: number` (0-3, arrowhead/text fit when space insufficient), `dimtmove: number` (0-2, text move rule), `dimzin: number` (zero suppression bitmask). Defaults: dimatfit=3 (best fit), dimtmove=0 (move with dim line), dimzin=0.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/sections/FitSection.tsx` (~100 LOC) — dimatfit (Select: 4 options), dimtmove (Select: 3 options), dimscale (number input, step 0.01), dimlunit (Select: 6 DimLinearUnitFormat values). All disabled when readOnly.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/sections/UnitsSection.tsx` (~100 LOC) — dimdec/dimrnd/dimlfac/dimzin/dimadec (number inputs), dimaunit (Select: 5 DimAngularUnitFormat values). Integer clamping on dimdec/dimadec (0-8), dimlfac fallback=1.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/sections/TolerancesSection.tsx` (~100 LOC) — dimtol/dimlim (checkboxes), dimtp/dimtm/dimtdec (number inputs), dimtolj (Select: 3 DimToleranceJustify values: bottom/middle/top).
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/DimStylePreview.tsx` (~80 LOC) — Stateless SVG (160×80) showing a linear dimension: extension lines, dim line segments, closed-filled arrowheads (triangles), measured label (computed via dimlfac + dimdec + dimpost). Updates live as style changes via useMemo.
+  - **MOD** `src/subapps/dxf-viewer/ui/panels/dimensions/DimStyleAccordion.tsx` — Added DimStylePreview at top + 3 new AccordionSection (fit/units/tolerances, defaultOpen=false). Now renders 6 total sections.
+  - **MOD** `src/i18n/locales/el/dxf-viewer-panels.json` + `en/dxf-viewer-panels.json` — Added sections.{fit,units,tolerances}, fields.{dimatfit,dimtmove,dimscale,dimlunit,dimdec,dimrnd,dimlfac,dimzin,dimaunit,dimadec,dimtol,dimlim,dimtp,dimtm,dimtdec,dimtolj}, dimatfit.{0-3}, dimtmove.{0-2}, dimlunit.{6 keys}, dimaunit.{5 keys}, dimtolj.{bottom,middle,top}.
+  - **MOD** `src/subapps/dxf-viewer/ui/panels/dimensions/__tests__/DimStyleAccordion.test.tsx` — Updated to 12 tests: renders 6 sections (was 3), + dimatfit/dimaunit/dimtolj select tests + DimStylePreview renders. Added DimStylePreview jest.mock. **12/12 PASS**.
+  - **Next**: Phase F4 — DimensionsTab persistence (Firestore backing for custom styles) or Phase G (ribbon contextual dim commands wired to registry).
 
 - **2026-05-17 (Phase E2 DONE — contextual "Διάσταση" ribbon tab + trigger wiring; 15/15 unit tests PASS. Group E CLOSED.)** — Industry defaults (AutoCAD/Revit: one unified tab for all 10 dim types, combobox style chooser, comingSoon stubs for Phase F/G writes). Tab `id='dimension'`, `contextualTrigger='dim-selected'` — fires when `entity.type === 'dimension'` via `resolveContextualTrigger`.
   - **Design decisions** (AutoCAD/Revit industry defaults; Giorgio confirmed "OK + GOL + SSOT" without explicit Q-A/B/C/D answers so defaults applied): Q-A = pure 'dim-selected' trigger (one tab for all 10 dim types); Q-B = shared-values stub (Phase G impl); Q-C = combobox for DIMSTYLE chooser (scales with custom styles); Q-D = "Edit Style..." = comingSoon stub (opens Phase F left-panel tab).
