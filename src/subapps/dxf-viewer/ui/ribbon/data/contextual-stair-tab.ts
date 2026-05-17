@@ -182,16 +182,16 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-358 Phase 3d — Variant kind selector. Mounted between Στάθμη
-      // (floor link) and Δομή (structure) because the discriminated kind
-      // governs which downstream panels are meaningful (l-shape/u-shape/gamma
-      // unlock Multi-Flight; spiral/helical/elliptical have radial-only
-      // geometry; sketch/triangular-outline define free polylines). Industry
-      // convergence: Revit "Family Type" / ArchiCAD "Stair Type" / AutoCAD
-      // Architecture "Shape" — all surface this as the FIRST type-defining
-      // editor field, above per-type detail.
-      id: 'stair-variant',
-      labelKey: 'ribbon.panels.stairVariant',
+      // ADR-358 Phase 3d hotfix-2 — Variant kind selector inlined as FIRST
+      // combobox of the Δομή panel (instead of its own column). Eliminates
+      // the extra panel header + vertical separator that pushed total
+      // ribbon width past viewport on 80% browser zoom + standard layouts.
+      // Industry convergence: Revit "Type Selector" + Family Type Properties
+      // share the same Properties palette section; ArchiCAD groups Stair
+      // Type + Structure in one Info Box row; AutoCAD Architecture combines
+      // Shape + Style in one Properties palette group.
+      id: 'stair-structure',
+      labelKey: 'ribbon.panels.stairStructure',
       rows: [
         {
           isInFlyout: false,
@@ -203,21 +203,10 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 id: 'stair.variantKind',
                 labelKey: 'ribbon.commands.stairEditor.variantKind.section.title',
                 commandKey: STAIR_RIBBON_KEYS.stringParams.variantKind,
-                comboboxWidthPx: 180,
+                comboboxWidthPx: 130,
                 options: VARIANT_KIND_OPTIONS,
               },
             },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'stair-structure',
-      labelKey: 'ribbon.panels.stairStructure',
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'combobox',
               size: 'small',
