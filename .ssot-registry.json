@@ -3084,7 +3084,8 @@
       "allowlist": [
         "src/subapps/dxf-viewer/types/entities.ts",
         "src/subapps/dxf-viewer/utils/dxf-layer-table-parser.ts",
-        "src/subapps/dxf-viewer/utils/dxf-layer-table-writer.ts"
+        "src/subapps/dxf-viewer/utils/dxf-layer-table-writer.ts",
+        "src/subapps/dxf-viewer/services/dxf-scene-migration.ts"
       ],
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",
@@ -3099,7 +3100,8 @@
       "allowlist": [
         "src/subapps/dxf-viewer/types/entities.ts",
         "src/subapps/dxf-viewer/utils/dxf-layer-table-parser.ts",
-        "src/subapps/dxf-viewer/utils/dxf-layer-table-writer.ts"
+        "src/subapps/dxf-viewer/utils/dxf-layer-table-writer.ts",
+        "src/subapps/dxf-viewer/services/dxf-scene-migration.ts"
       ],
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",
