@@ -1,7 +1,7 @@
 /**
  * Layer Operations Service — handles layer CRUD, visibility, color, merging.
  */
-import { SceneModel } from '../types/scene';
+import { SceneModel, SceneLayer } from '../types/scene';
 import { mergeColorGroups } from '../ui/components/layers/utils/scene-merge';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault } from '../config/layer-config';
@@ -9,8 +9,6 @@ import {
   validateLayerExists,
   updateLayerProperties,
   updateEntitiesForLayer,
-  rebuildLayersById,
-  withLayersById,
   // ADR-129: Centralized entity layer filtering
   getEntityIdsByLayer,
   getEntityIdsByLayers,
@@ -83,7 +81,7 @@ export class LayerOperationsService {
         message: 'Layer name unchanged'
       };
     }
-    const { [oldName]: renamedLayer, ...otherLayers } = scene.layers;
+    const renamedLayer = Object.values(scene.layersById).find(l => l.name === oldName);
     if (!renamedLayer) {
       return {
         updatedScene: scene,
@@ -97,26 +95,14 @@ export class LayerOperationsService {
       excludeId: renamedLayer.id,
     });
     if (guard) return guard;
-    
-    const updatedLayers = {
-      ...otherLayers,
-      [newName]: {
-        ...renamedLayer,
-        name: newName
-      }
-    };
-    
-    // ADR-358 Phase 9D-5a — entity.layerId is the stable identifier (rename mutates SceneLayer.name only).
-    // No entity-side mutation needed: id-first readers (`resolveEntityLayerName`) auto-resolve the new name
-    // via LayerStore.getLayer(id).name. Legacy `entity.layer` name backref dropped; remaining stale-name
-    // readers either migrate to the resolver (this phase) or are tolerated until 9D-5b schema flip.
-    const updatedEntities = scene.entities;
-    
+
+    // ADR-358 Phase 9D-5a — rename mutates SceneLayer.name only; layerId stays stable.
     const updatedScene = {
       ...scene,
-      layers: updatedLayers,
-      layersById: rebuildLayersById(updatedLayers),
-      entities: updatedEntities
+      layersById: {
+        ...scene.layersById,
+        [renamedLayer.id]: { ...renamedLayer, name: newName },
+      },
     };
     return {
       updatedScene,
@@ -165,26 +151,25 @@ export class LayerOperationsService {
       };
     }
 
-    if (!scene.layers[layerName]) {
+    const layerToDelete = Object.values(scene.layersById).find(l => l.name === layerName);
+    if (!layerToDelete) {
       return {
         updatedScene: scene,
         success: false,
         message: `Layer "${layerName}" does not exist`
       };
     }
-    
-    const { [layerName]: deletedLayer, ...remainingLayers } = scene.layers;
 
-    // ADR-358 Phase 9E-6d: id-first entity purge.
-    const dlId = deletedLayer.id;
+    // ADR-358 Phase 9E-6d/6e: id-first entity purge.
+    const dlId = layerToDelete.id;
+    const { [dlId]: _removed, ...remainingById } = scene.layersById;
     const deletedEntityIds = scene.entities.filter(e => (e as { layerId?: string }).layerId === dlId).map(e => e.id);
     const remainingEntities = scene.entities.filter(e => (e as { layerId?: string }).layerId !== dlId);
-    
+
     const updatedScene = {
       ...scene,
-      layers: remainingLayers,
-      layersById: rebuildLayersById(remainingLayers),
-      entities: remainingEntities
+      layersById: remainingById,
+      entities: remainingEntities,
     };
     return {
       updatedScene,
@@ -214,11 +199,9 @@ export class LayerOperationsService {
       locked: false,
     });
     
-    const updatedLayers = { ...scene.layers, [name]: newLayer };
     const updatedScene = {
       ...scene,
-      layers: updatedLayers,
-      layersById: rebuildLayersById(updatedLayers),
+      layersById: { ...scene.layersById, [newLayer.id]: newLayer },
     };
     return {
       updatedScene,
@@ -235,40 +218,32 @@ export class LayerOperationsService {
     sourceLayerNames: string[],
     scene: SceneModel
   ): LayerOperationResult {
-    // Validate target layer exists
-    if (!scene.layers[targetLayerName]) {
+    const targetLayer = Object.values(scene.layersById).find(l => l.name === targetLayerName);
+    if (!targetLayer) {
       return {
         updatedScene: scene,
         success: false,
         message: `Target layer "${targetLayerName}" does not exist`
       };
     }
-    
-    // Move all entities from source layers to target layer.
-    // ADR-358 Phase 9D-5a — re-key via stable `layerId` (target layer's id from SceneModel.layers
-    // SSoT). Legacy `entity.layer` name backref dropped. Source entities now point at the target
-    // layer's id; downstream readers resolve the display name via LayerStore.getLayer(id).name.
-    const targetLayer = scene.layers[targetLayerName];
-    const targetLayerId = targetLayer?.id;
+
+    // ADR-358 Phase 9D-5a/9E-6e: re-key via stable layerId.
+    const targetLayerId = targetLayer.id;
     const updatedEntities = scene.entities.map(entity => {
       const name = resolveEntityLayerName(entity);
       return name && sourceLayerNames.includes(name)
-        ? { ...entity, layerId: targetLayerId ?? (entity as { layerId?: string }).layerId }
+        ? { ...entity, layerId: targetLayerId }
         : entity;
     });
-    
-    // Delete source layers
-    const updatedLayers = Object.fromEntries(
-      Object.entries(scene.layers).filter(
-        ([layerName]) => !sourceLayerNames.includes(layerName)
-      )
+
+    const remainingById = Object.fromEntries(
+      Object.entries(scene.layersById).filter(([_, l]) => !sourceLayerNames.includes(l.name))
     );
-    
+
     const updatedScene = {
       ...scene,
-      layers: updatedLayers,
-      layersById: rebuildLayersById(updatedLayers),
-      entities: updatedEntities
+      layersById: remainingById,
+      entities: updatedEntities,
     };
     const affectedEntityIds = getEntityIdsByLayers(scene.entities, sourceLayerNames);
     return {
@@ -288,7 +263,7 @@ export class LayerOperationsService {
     scene: SceneModel
   ): LayerOperationResult {
 
-    const updatedScene = withLayersById(mergeColorGroups(scene, targetColorGroup, sourceColorGroups));
+    const updatedScene = mergeColorGroups(scene, targetColorGroup, sourceColorGroups);
     return {
       updatedScene,
       success: true,
@@ -305,26 +280,17 @@ export class LayerOperationsService {
     visible: boolean,
     scene: SceneModel
   ): LayerOperationResult {
-    const updatedLayers = {
-      ...scene.layers,
-      ...Object.fromEntries(
-        layersInGroup.map(layerName => [
-          layerName,
-          { ...scene.layers[layerName], visible }
-        ])
-      )
-    };
+    const layerUpdates: Record<string, SceneLayer> = {};
+    for (const [id, l] of Object.entries(scene.layersById)) {
+      if (layersInGroup.includes(l.name)) layerUpdates[id] = { ...l, visible };
+    }
     const updatedScene = {
       ...scene,
-      layers: updatedLayers,
-      layersById: rebuildLayersById(updatedLayers),
+      layersById: { ...scene.layersById, ...layerUpdates },
       entities: scene.entities.map(entity => {
-        // ADR-358 Phase 9D-3: id-first lookup via LayerStore, name fallback
         const name = resolveEntityLayerName(entity);
-        return name && layersInGroup.includes(name)
-          ? { ...entity, visible }
-          : entity;
-      })
+        return name && layersInGroup.includes(name) ? { ...entity, visible } : entity;
+      }),
     };
 
     const affectedEntityIds = getEntityIdsByLayers(scene.entities, layersInGroup);
@@ -346,22 +312,17 @@ export class LayerOperationsService {
     scene: SceneModel
   ): LayerOperationResult {
 
-    // Remove layers and their entities
-    const remainingLayers = Object.fromEntries(
-      Object.entries(scene.layers).filter(
-        ([layerName]) => !layersInGroup.includes(layerName)
-      )
+    const remainingById = Object.fromEntries(
+      Object.entries(scene.layersById).filter(([_, l]) => !layersInGroup.includes(l.name))
     );
 
-    // ADR-129: Centralized entity filtering
     const deletedEntityIds = getEntityIdsByLayers(scene.entities, layersInGroup);
     const remainingEntities = getEntitiesNotInLayers(scene.entities, layersInGroup);
-    
+
     const updatedScene = {
       ...scene,
-      layers: remainingLayers,
-      layersById: rebuildLayersById(remainingLayers),
-      entities: remainingEntities
+      layersById: remainingById,
+      entities: remainingEntities,
     };
     return {
       updatedScene,
@@ -381,26 +342,17 @@ export class LayerOperationsService {
     scene: SceneModel
   ): LayerOperationResult {
 
-    const updatedLayers = {
-      ...scene.layers,
-      ...Object.fromEntries(
-        layersInGroup.map(layerName => [
-          layerName,
-          { ...scene.layers[layerName], color }
-        ])
-      )
-    };
+    const colorUpdates: Record<string, SceneLayer> = {};
+    for (const [id, l] of Object.entries(scene.layersById)) {
+      if (layersInGroup.includes(l.name)) colorUpdates[id] = { ...l, color };
+    }
     const updatedScene = {
       ...scene,
-      layers: updatedLayers,
-      layersById: rebuildLayersById(updatedLayers),
+      layersById: { ...scene.layersById, ...colorUpdates },
       entities: scene.entities.map(entity => {
-        // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
         const resolvedName = resolveEntityLayerName(entity);
-        return resolvedName && layersInGroup.includes(resolvedName)
-          ? { ...entity, color }
-          : entity;
-      })
+        return resolvedName && layersInGroup.includes(resolvedName) ? { ...entity, color } : entity;
+      }),
     };
 
     // ADR-129: Centralized entity filtering
@@ -479,7 +431,7 @@ export class LayerOperationsService {
     totalEntities: number;
     entitiesByLayer: Record<string, number>;
   } {
-    const layers = Object.values(scene.layers);
+    const layers = Object.values(scene.layersById);
     const visibleLayers = layers.filter(l => l.visible).length;
     const hiddenLayers = layers.filter(l => !l.visible).length;
     const entitiesByLayer: Record<string, number> = {};

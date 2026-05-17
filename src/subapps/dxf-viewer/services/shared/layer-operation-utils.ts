@@ -8,9 +8,9 @@
  * - Consistent visibility patterns
  */
 
-import { SceneModel, AnySceneEntity, SceneLayer } from '../../types/scene';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
+import { SceneModel, AnySceneEntity, SceneLayer, LayerId } from '../../types/scene';
 import { resolveEntityLayerName } from '../../stores/LayerStore';
+import { getSceneLayerByName } from '../../utils/scene-layer-utils';
 
 /**
  * Resolve entity layer name via stable LayerId only (ADR-358 Phase 9E-6d).
@@ -18,15 +18,6 @@ import { resolveEntityLayerName } from '../../stores/LayerStore';
  */
 function resolveLayerName(entity: AnySceneEntity): string | undefined {
   return resolveEntityLayerName(entity);
-}
-
-// ADR-358 Phase 9E-5: rebuild layersById mirror after any mutation to scene.layers.
-export function rebuildLayersById(layers: Record<string, SceneLayer>): Record<string, SceneLayer> {
-  return Object.fromEntries(Object.values(layers).map((l) => [l.id, l]));
-}
-
-export function withLayersById(scene: SceneModel): SceneModel {
-  return { ...scene, layersById: rebuildLayersById(scene.layers) };
 }
 
 export interface LayerOperationResult {
@@ -43,7 +34,7 @@ export function validateLayerExists(
   layerName: string,
   scene: SceneModel
 ): LayerOperationResult | null {
-  if (!scene.layers[layerName]) {
+  if (!getSceneLayerByName(scene, layerName)) {
     return {
       updatedScene: scene,
       success: false,
@@ -61,14 +52,14 @@ export function updateLayerProperties(
   properties: Partial<{ color: string; visible: boolean; frozen: boolean }>,
   scene: SceneModel
 ): SceneModel {
-  const updatedLayers = {
-    ...scene.layers,
-    [layerName]: { ...scene.layers[layerName], ...properties }
-  };
+  const layer = getSceneLayerByName(scene, layerName);
+  if (!layer) return scene;
   return {
     ...scene,
-    layers: updatedLayers,
-    layersById: rebuildLayersById(updatedLayers),
+    layersById: {
+      ...scene.layersById,
+      [layer.id]: { ...layer, ...properties },
+    },
   };
 }
 
@@ -246,25 +237,25 @@ export function getVisibleEntityIdsByLayers(
 }
 
 /**
- * Get visible entity IDs in layers with layer visibility check
- * Checks both entity.visible and layer.visible
- * @param entities - Array of scene entities
- * @param layers - Layer definitions with visibility
- * @param layerNames - Array of target layer names
- * @returns Visible entity IDs (both entity and layer must be visible)
+ * Get visible entity IDs in layers with layer visibility check.
+ * Checks both entity.visible and layer.visible.
+ * ADR-358 Phase 9E-6e: accepts id-keyed layersById map.
  */
 export function getVisibleEntityIdsInLayers(
   entities: AnySceneEntity[],
-  layers: Record<string, { visible?: boolean }>,
+  layersById: Record<LayerId, SceneLayer>,
   layerNames: string[]
 ): string[] {
+  const nameToVisible: Record<string, boolean> = {};
+  for (const l of Object.values(layersById)) {
+    nameToVisible[l.name] = l.visible !== false;
+  }
   return entities
     .filter(entity => {
       if (!entityBelongsToLayers(entity, layerNames)) return false;
       if (!isEntityVisible(entity)) return false;
       const name = resolveLayerName(entity);
-      const layerVisible = name != null && layers[name]?.visible !== false;
-      return layerVisible;
+      return name != null && nameToVisible[name] !== false;
     })
     .map(entity => entity.id);
 }

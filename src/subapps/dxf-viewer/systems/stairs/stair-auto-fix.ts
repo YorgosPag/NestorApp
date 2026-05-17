@@ -26,6 +26,7 @@ import type {
   StairNokSubType,
   StairParams,
 } from '../../types/stair';
+import { reconcileLinkedStair } from './stair-floor-link';
 
 // ============================================================================
 // PER-PROFILE CODE RANGES (mirror of gate-stair-checker, mm-scale)
@@ -167,14 +168,19 @@ function clampMidpoint(
  * verbatim so the user's design intent stays intact.
  */
 export function autoFixStairParams(params: StairParams): StairParams {
-  const ranges = resolveRanges(params.codeProfile, params.nokSubType);
-  const mmPerSceneUnit = mmFactorFromWidth(params.width);
+  // ADR-358 Phase 9B-2 — when linked to a floor, reconcile FIRST so the
+  // code-range fixes operate on a stair that already matches the story
+  // envelope. Prevents auto-fix from re-introducing overflow/underflow
+  // after the user clicks "Auto-fix" on a linked stair.
+  const reconciled = reconcileLinkedStair(params);
+  const ranges = resolveRanges(reconciled.codeProfile, reconciled.nokSubType);
+  const mmPerSceneUnit = mmFactorFromWidth(reconciled.width);
 
   // Project the scene-units geometry to mm so we can compare against the
   // code ranges, then project the fix back to scene-units before returning.
-  const riseMm = sceneToMm(params.rise, mmPerSceneUnit);
-  const treadMm = sceneToMm(params.tread, mmPerSceneUnit);
-  const widthMm = sceneToMm(params.width, mmPerSceneUnit);
+  const riseMm = sceneToMm(reconciled.rise, mmPerSceneUnit);
+  const treadMm = sceneToMm(reconciled.tread, mmPerSceneUnit);
+  const widthMm = sceneToMm(reconciled.width, mmPerSceneUnit);
 
   let nextRiseMm = clampMidpoint(riseMm, ranges.riseMin, ranges.riseMax);
   let nextTreadMm = clampMidpoint(treadMm, ranges.treadMin, ranges.treadMax);
@@ -202,8 +208,8 @@ export function autoFixStairParams(params: StairParams): StairParams {
   // Single-flight limit — cap stepCount, keep totalRise consistent.
   const flightCap = ranges.maxFlightRisers;
   const nextStepCount = Number.isFinite(flightCap)
-    ? Math.max(2, Math.min(params.stepCount, flightCap))
-    : Math.max(2, params.stepCount);
+    ? Math.max(2, Math.min(reconciled.stepCount, flightCap))
+    : Math.max(2, reconciled.stepCount);
 
   // Multi-story: shrink (overflow) OR grow (underflow) stepCount so the
   // total rise lands on the declared story envelope. Industry-symmetric
@@ -211,12 +217,12 @@ export function autoFixStairParams(params: StairParams): StairParams {
   // `checkStoryHeightUnderflow`). Floor for overflow, ceil for underflow
   // so the auto-fix always lands ≥ target rather than 1 riser short.
   let finalStepCount = nextStepCount;
-  if (params.multiStoryConfig) {
+  if (reconciled.multiStoryConfig) {
     // `multiStoryConfig.storyHeight` is mm-hardcoded by the ribbon options
     // (2400 / 2500 / ... / 3500), so it is ALREADY in mm — no further
     // scene-units conversion needed. `nextRiseMm` is mm as well.
     const targetTotalMm =
-      params.multiStoryConfig.storyHeight * params.multiStoryConfig.storyCount;
+      reconciled.multiStoryConfig.storyHeight * reconciled.multiStoryConfig.storyCount;
     if (targetTotalMm > 0 && Number.isFinite(nextRiseMm) && nextRiseMm > 0) {
       const maxByStory = Math.max(2, Math.floor(targetTotalMm / nextRiseMm));
       const idealByStory = Math.max(2, Math.ceil(targetTotalMm / nextRiseMm));
@@ -240,18 +246,20 @@ export function autoFixStairParams(params: StairParams): StairParams {
   const nextTotalRun = nextTreadScene * (finalStepCount - 1);
   const nextPitch = Math.atan2(nextRiseScene, nextTreadScene) * (180 / Math.PI);
 
-  // Early-out when nothing actually changed → preserve referential equality.
+  // Early-out when nothing actually changed (including the upstream reconcile
+  // step) → preserve referential equality so the caller can skip the dispatch.
   if (
-    nextRiseScene === params.rise
-    && nextTreadScene === params.tread
-    && nextWidthScene === params.width
-    && finalStepCount === params.stepCount
+    reconciled === params
+    && nextRiseScene === reconciled.rise
+    && nextTreadScene === reconciled.tread
+    && nextWidthScene === reconciled.width
+    && finalStepCount === reconciled.stepCount
   ) {
     return params;
   }
 
   return {
-    ...params,
+    ...reconciled,
     rise: nextRiseScene,
     tread: nextTreadScene,
     width: nextWidthScene,

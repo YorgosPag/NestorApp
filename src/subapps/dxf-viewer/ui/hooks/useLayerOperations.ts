@@ -196,41 +196,33 @@ export function useLayerOperations({
     const entity = scene.entities.find(e => e.id === entityId);
     if (!entity) return;
 
-    // ADR-358 Phase 9E-4: id-first iteration (layersById preferred, layers fallback).
-    const existingLayerWithColor = Object.values(scene.layersById ?? scene.layers ?? {})
-      .find((l) => l.color === color)?.name;
+    const existingLayerWithColor = Object.values(scene.layersById)
+      .find((l) => l.color === color);
 
-    let targetLayerName = existingLayerWithColor;
-    let updatedLayers = { ...scene.layers };
+    let updatedLayersById = { ...scene.layersById };
+    let targetLayerId: string;
 
-    if (!existingLayerWithColor) {
-      const newLayerName = entity.name || `Layer_${color.replace('#', '')}`;
-      targetLayerName = newLayerName;
-
+    if (existingLayerWithColor) {
+      targetLayerId = existingLayerWithColor.id;
+    } else {
+      const baseName = entity.name || `Layer_${color.replace('#', '')}`;
+      let targetLayerName = baseName;
+      const existingNames = new Set(Object.values(updatedLayersById).map(l => l.name));
       let counter = 1;
-      while (updatedLayers[targetLayerName]) {
-        targetLayerName = `${newLayerName}_${counter}`;
-        counter++;
+      while (existingNames.has(targetLayerName)) {
+        targetLayerName = `${baseName}_${counter++}`;
       }
-
-      updatedLayers[targetLayerName] = createSceneLayer({
-        name: targetLayerName,
-        color: color,
-        visible: true,
-        locked: false,
-      });
+      const newLayer = createSceneLayer({ name: targetLayerName, color, visible: true, locked: false });
+      updatedLayersById[newLayer.id] = newLayer;
+      targetLayerId = newLayer.id;
     }
 
     const updatedScene = {
       ...scene,
-      layers: updatedLayers,
+      layersById: updatedLayersById,
       entities: scene.entities.map(e =>
-        e.id === entityId ? {
-          ...e,
-          color: color,
-          layer: targetLayerName
-        } : e
-      )
+        e.id === entityId ? { ...e, color, layerId: targetLayerId } : e
+      ),
     };
 
     setLevelScene(currentLevelId, updatedScene);

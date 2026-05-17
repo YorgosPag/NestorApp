@@ -17,6 +17,11 @@ import {
   type StairRibbonComboKey,
   type StairRibbonStringComboKey,
 } from './stair-command-keys';
+import {
+  deriveRiseFromStepCount,
+  mmFactorFromWidth,
+  reconcileLinkedStair,
+} from '../../../../systems/stairs/stair-floor-link';
 
 // ── Module-private constants ─────────────────────────────────────────────────
 
@@ -217,7 +222,10 @@ function patchRise(prev: StairParams, rawMm: number, scale: number): StairParams
   const mm = clamp(rawMm, 50, 300);
   const rise = mm * scale;
   if (rise === prev.rise) return null;
-  return withRecomputedTotals({ ...prev, rise });
+  // ADR-358 Phase 9B-2 — when linked, rise is the primary lever; reconcile
+  // re-derives stepCount + totalRise so the stair stays bound to the floor
+  // envelope (Revit "Desired Riser Height" pattern). No-op in free mode.
+  return reconcileLinkedStair(withRecomputedTotals({ ...prev, rise }));
 }
 
 function patchTread(prev: StairParams, rawMm: number, scale: number): StairParams | null {
@@ -237,7 +245,27 @@ function patchWidth(prev: StairParams, rawMm: number, scale: number): StairParam
 function patchStepCount(prev: StairParams, raw: number): StairParams | null {
   const stepCount = Math.max(2, Math.round(raw));
   if (stepCount === prev.stepCount) return null;
-  return withRecomputedTotals({ ...prev, stepCount });
+  // ADR-358 Phase 9B-2 — when linked, stepCount is a secondary lever for
+  // rise: keep stepCount as requested, derive rise so the stair still lands
+  // on the story envelope, then reconcile (will no-op since math is exact).
+  const cfg = prev.multiStoryConfig;
+  if (cfg && cfg.linkedToFloor === true) {
+    const mmPerSceneUnit = mmFactorFromWidth(prev.width);
+    if (Number.isFinite(mmPerSceneUnit) && mmPerSceneUnit > 0) {
+      const derivedRise = deriveRiseFromStepCount(
+        stepCount,
+        cfg.storyHeight,
+        cfg.storyCount,
+        mmPerSceneUnit,
+      );
+      if (derivedRise > 0) {
+        return reconcileLinkedStair(
+          withRecomputedTotals({ ...prev, stepCount, rise: derivedRise }),
+        );
+      }
+    }
+  }
+  return reconcileLinkedStair(withRecomputedTotals({ ...prev, stepCount }));
 }
 
 function patchStoryCount(

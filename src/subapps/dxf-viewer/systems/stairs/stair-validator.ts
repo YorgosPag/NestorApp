@@ -141,7 +141,13 @@ function checkStoryHeightOverflow(
   const totalRiseMm = params.totalRise * mmPerSceneUnit;
   if (!Number.isFinite(allowedMm) || allowedMm <= 0) return [];
   if (totalRiseMm > allowedMm + 1) {
-    return ['tools.stair.validator.totalRiseOverStoryHeight'];
+    // ADR-358 Phase 9B-2 — when linked to a floor, exceeding the envelope is
+    // a hard error (red), not a warning. The reconcile pipeline should have
+    // prevented this; any remaining overflow is a structural break that
+    // blocks creation / blocks commit upstream.
+    return cfg.linkedToFloor === true
+      ? ['tools.stair.validator.hardError.totalRiseOverFloor']
+      : ['tools.stair.validator.totalRiseOverStoryHeight'];
   }
   return [];
 }
@@ -166,7 +172,11 @@ function checkStoryHeightUnderflow(
   const totalRiseMm = params.totalRise * mmPerSceneUnit;
   if (!Number.isFinite(targetMm) || targetMm <= 0) return [];
   if (totalRiseMm + 1 < targetMm) {
-    return ['tools.stair.validator.totalRiseBelowStoryHeight'];
+    // ADR-358 Phase 9B-2 — symmetric hard error when linked: a stair that
+    // does not reach the next floor is a structural break, not a warning.
+    return cfg.linkedToFloor === true
+      ? ['tools.stair.validator.hardError.totalRiseUnderFloor']
+      : ['tools.stair.validator.totalRiseBelowStoryHeight'];
   }
   return [];
 }
@@ -209,9 +219,7 @@ function checkHeadroom(
   const minClearance = MIN_HEADROOM_MM[profile];
   const stairTopZ = params.basePoint.z + params.totalRise;
   for (const entity of contextEntities) {
-    // ADR-358 Phase 9E-2: id-first name resolution, entity.layer fallback.
-    const layerName = (entity.layerId && layersById ? layersById[entity.layerId]?.name : undefined)
-      ?? entity.layer;
+    const layerName = entity.layerId && layersById ? layersById[entity.layerId]?.name : undefined;
     if (!layerName || !CEILING_LAYER_RE.test(layerName)) continue;
     const elevation = extractEntityElevation(entity);
     if (elevation === null) continue;
@@ -274,6 +282,15 @@ export function validateStairParams(
     ...storyUnderflowViolations,
     ...totalRiseTooLowViolations,
   ];
+  // ADR-358 Phase 9B-2 — promote floor-bound overflow/underflow keys into
+  // the `hardErrors` field so the partition logic in `StairWarningsSection`
+  // routes them to the red box (StairWarningsSection prefers the explicit
+  // field when present; without this they would land in the soft list).
+  const linkedHardErrors = [
+    ...storyOverflowViolations.filter(isFloorHardErrorKey),
+    ...storyUnderflowViolations.filter(isFloorHardErrorKey),
+  ];
+  const allHardErrors: readonly string[] = [...gate.hardErrors, ...linkedHardErrors];
   // ADR-358 / SOS N.6 — Firestore rejects `undefined`. Optional arrays are
   // omitted via conditional spread instead of being set to `undefined`, so
   // `setDoc()` from the stair persistence service never hits the
@@ -281,12 +298,16 @@ export function validateStairParams(
   return {
     hasCodeViolations: violationKeys.length > 0,
     violationKeys,
-    ...(gate.hardErrors.length > 0 ? { hardErrors: gate.hardErrors } : {}),
+    ...(allHardErrors.length > 0 ? { hardErrors: allHardErrors } : {}),
     ...(headroomViolations.length > 0 ? { headroomViolations } : {}),
     ...(gate.egressViolations.length > 0 ? { egressViolations: gate.egressViolations } : {}),
     ...(gate.adaViolations.length > 0 ? { adaViolations: gate.adaViolations } : {}),
     lastValidatedAt: Timestamp.now(),
   };
+}
+
+function isFloorHardErrorKey(key: string): boolean {
+  return key.startsWith('tools.stair.validator.hardError.');
 }
 
 /** Re-export the engine result shape for callers that want raw access. */

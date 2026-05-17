@@ -39,8 +39,8 @@ function collectEntityIdsOfColorGroups(scene: SceneModel | null, groups: string[
 
   // Find all layer names that belong to the specified color groups
   const layerNamesInGroups: string[] = [];
-  if (scene.layersById ?? scene.layers) {
-    Object.entries(scene.layersById ?? scene.layers).forEach(([, layer]) => {
+  if (scene.layersById) {
+    Object.entries(scene.layersById).forEach(([, layer]) => {
       const colorGroup = `Color ${layer?.color ?? DEFAULT_LAYER_COLOR}`;
       if (groups.includes(colorGroup)) {
         layerNamesInGroups.push(layer.name);
@@ -235,7 +235,7 @@ export function useLayersCallbacks({
     if (!scene?.entities || !onEntitySelectionChange) return;
 
     // ✅ Use centralized filtering with both entity and layer visibility
-    const ids = getVisibleEntityIdsInLayers(scene.entities, scene.layers, layerNames);
+    const ids = getVisibleEntityIdsInLayers(scene.entities, scene.layersById, layerNames);
 
     // ✅ ένα event – όχι καταιγισμό
     publishHighlight({ ids, mode: 'select' });

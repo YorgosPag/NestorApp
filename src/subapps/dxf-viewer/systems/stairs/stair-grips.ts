@@ -28,6 +28,12 @@ import type {
   StairParams,
   StairVariantParams,
 } from '../../types/stair';
+import { mmFactorFromWidth } from './stair-floor-link';
+
+// ADR-358 Phase 9B-2 — magnet snap zone for length grip when linked to a
+// floor: once the cursor enters the last 10% of the max run, the grip jumps
+// to maxRun exactly (Revit / ArchiCAD "magnet to top level" behaviour).
+const LINKED_LENGTH_SNAP_RATIO = 0.9;
 
 const RAD_TO_DEG = 180 / Math.PI;
 const DEG_TO_RAD = Math.PI / 180;
@@ -257,6 +263,44 @@ function resizeLength(input: Readonly<StairGripDragInput>): StairParams {
   const dx = currentPos.x - originalParams.basePoint.x;
   const dy = currentPos.y - originalParams.basePoint.y;
   const projOnDir = dx * u.x + dy * u.y;
+
+  // ADR-358 Phase 9B-2 — when linked to a floor, the grip is bound by the
+  // physical max run that fits inside `storyHeight × storyCount / rise`
+  // treads. Clamp + magnet snap (industry: Revit / ArchiCAD / AutoCAD Arch).
+  const cfg = originalParams.multiStoryConfig;
+  if (cfg && cfg.linkedToFloor === true) {
+    const mmPerSceneUnit = mmFactorFromWidth(originalParams.width);
+    const targetTotalMm = cfg.storyHeight * cfg.storyCount;
+    const riseMm = originalParams.rise * mmPerSceneUnit;
+    if (
+      Number.isFinite(targetTotalMm) && targetTotalMm > 0
+      && Number.isFinite(riseMm) && riseMm > 0
+      && originalParams.tread > 0
+    ) {
+      const maxStepCount = Math.max(MIN_STEP_COUNT, Math.round(targetTotalMm / riseMm));
+      const maxRunScene = originalParams.tread * Math.max(0, maxStepCount - 1);
+      let clampedRun = Math.max(originalParams.tread, projOnDir);
+      if (clampedRun > maxRunScene) clampedRun = maxRunScene;
+      // Magnet snap to maxRun when within the last 10% of the envelope.
+      if (clampedRun > maxRunScene * LINKED_LENGTH_SNAP_RATIO && clampedRun < maxRunScene) {
+        clampedRun = maxRunScene;
+      }
+      const rawStepCount = Math.floor(clampedRun / originalParams.tread) + 1;
+      const linkedStepCount = Math.max(
+        MIN_STEP_COUNT,
+        Math.min(rawStepCount, maxStepCount),
+      );
+      const linkedTotalRun = originalParams.tread * (linkedStepCount - 1);
+      const linkedTotalRise = targetTotalMm / mmPerSceneUnit;
+      return {
+        ...originalParams,
+        stepCount: linkedStepCount,
+        totalRun: linkedTotalRun,
+        totalRise: linkedTotalRise,
+      };
+    }
+  }
+
   const newRunMm = Math.max(originalParams.tread, projOnDir);
   // stepCount = floor(newRun / tread) + 1 ; floor on run, +1 for the final tread.
   const newStepCount = Math.max(MIN_STEP_COUNT, Math.floor(newRunMm / originalParams.tread) + 1);

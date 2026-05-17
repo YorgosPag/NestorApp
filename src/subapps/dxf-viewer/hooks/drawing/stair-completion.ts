@@ -33,6 +33,7 @@ import type {
 } from '../../types/stair';
 import { generateStairId } from '@/services/enterprise-id.service';
 import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
+import { reconcileLinkedStair } from '../../systems/stairs/stair-floor-link';
 
 // ─── Phase 5a defaults (industry-aligned, NOK κύρια per §5.10) ───────────────
 
@@ -173,7 +174,7 @@ export function buildDefaultStairParams(
           linkedToFloor: true,
         }
       : undefined;
-  return {
+  const built: StairParams = {
     basePoint: base3D,
     direction,
     rise,
@@ -205,6 +206,11 @@ export function buildDefaultStairParams(
       : {}),
     ...(multiStoryConfig ? { multiStoryConfig } : {}),
   };
+  // ADR-358 Phase 9B-2 — reconcile in linked mode so the first placed stair
+  // already lands on the floor envelope (e.g. floor 3000mm + rise 175mm →
+  // stepCount 17 out of the box, instead of the seeded 12). No-op when
+  // unlinked, so free-mode draws are unaffected.
+  return reconcileLinkedStair(built);
 }
 
 // ─── Entity builder ──────────────────────────────────────────────────────────
