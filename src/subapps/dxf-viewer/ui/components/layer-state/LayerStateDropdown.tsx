@@ -26,9 +26,20 @@ import {
 } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import type { ICommand } from '../../../core/commands/interfaces';
 import { useLayerStateDropdown } from './useLayerStateDropdown';
 import { LayerStateDropdownPopover } from './LayerStateDropdownPopover';
+
+function useTemplatesAuth(): { companyId: string; userId: string } {
+  const { user } = useAuth();
+  const companyResult = useCompanyId();
+  return {
+    companyId: companyResult?.companyId ?? '',
+    userId: user?.uid ?? '',
+  };
+}
 
 export interface LayerStateDropdownProps {
   readonly executeCommand: (cmd: ICommand) => void;
@@ -39,7 +50,8 @@ export function LayerStateDropdown({
   executeCommand,
   className,
 }: LayerStateDropdownProps): React.ReactElement {
-  const { state, actions } = useLayerStateDropdown(executeCommand);
+  const auth = useTemplatesAuth();
+  const { state, actions } = useLayerStateDropdown(executeCommand, auth);
   const { t } = useTranslation('dxf-viewer-shell');
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -90,7 +102,8 @@ export function LayerStateSaveButton({
   executeCommand,
   className,
 }: LayerStateDropdownProps): React.ReactElement {
-  const { actions, state } = useLayerStateDropdown(executeCommand);
+  const auth = useTemplatesAuth();
+  const { actions, state } = useLayerStateDropdown(executeCommand, auth);
   const { t } = useTranslation('dxf-viewer-shell');
   const [draftName, setDraftName] = React.useState('');
   const [isOpen, setIsOpen] = React.useState(false);
