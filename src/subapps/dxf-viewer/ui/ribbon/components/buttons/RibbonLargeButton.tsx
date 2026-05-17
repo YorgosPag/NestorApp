@@ -10,6 +10,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonCommand } from '../../types/ribbon-types';
 import type { ToolType } from '../../../toolbar/types';
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { isCommandActive } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -25,13 +26,7 @@ export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
 
   const label = t(command.labelKey);
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
-  // ADR-345 Fase 5.6 — pure tool buttons highlight when their commandKey
-  // matches activeTool. Skip for comingSoon / action buttons (stateless).
-  const isActive =
-    !command.comingSoon &&
-    !command.action &&
-    activeTool !== null &&
-    activeTool === command.commandKey;
+  const isActive = isCommandActive(command, activeTool);
 
   const handleClick = useCallback(() => {
     if (command.comingSoon) {

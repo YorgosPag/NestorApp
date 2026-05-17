@@ -9,6 +9,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonCommand } from '../../types/ribbon-types';
 import type { ToolType } from '../../../toolbar/types';
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { isCommandActive } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -24,12 +25,7 @@ export const RibbonSmallButton: React.FC<RibbonSmallButtonProps> = ({
 
   const label = t(command.labelKey);
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
-  // ADR-345 Fase 5.6 — see RibbonLargeButton for rationale.
-  const isActive =
-    !command.comingSoon &&
-    !command.action &&
-    activeTool !== null &&
-    activeTool === command.commandKey;
+  const isActive = isCommandActive(command, activeTool);
 
   const handleClick = useCallback(() => {
     if (command.comingSoon) {

@@ -11,6 +11,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonButton, RibbonCommand } from '../../types/ribbon-types';
 import type { ToolType } from '../../../toolbar/types';
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { isAnyVariantActive } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { RibbonSplitDropdown } from './RibbonSplitDropdown';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -43,18 +44,8 @@ const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
     () => resolveActiveVariant(variants, splitLastUsed[button.command.id]),
     [variants, splitLastUsed, button.command.id],
   );
-  // ADR-345 Fase 5.6 — split is active when ANY variant maps to current
-  // tool (not just the last-used one). Lets user see "I'm in line-parallel"
-  // even when the visible default is plain Line.
   const isActive = useMemo(
-    () =>
-      activeTool !== null &&
-      variants.some(
-        (v) =>
-          !v.comingSoon &&
-          !v.action &&
-          v.commandKey === activeTool,
-      ),
+    () => isAnyVariantActive(variants, activeTool),
     [variants, activeTool],
   );
 
