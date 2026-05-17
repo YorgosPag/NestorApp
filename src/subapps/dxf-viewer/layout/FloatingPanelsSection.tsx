@@ -16,6 +16,7 @@ import type { SceneModel } from '../types/scene';
 import type { OverlayEditorMode, OverlayKind, Status, Overlay, UpdateOverlayData } from '../overlays/types';
 import type { ToolType } from '../ui/toolbar/types';
 import { ColorManager } from '../ui/components/ColorManager';
+import { TextOverrideDialog } from '../ui/panels/dimensions/TextOverrideDialog';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import CursorSettingsPanel from '../ui/CursorSettingsPanel';
 // ADR-189 §4.13: Guide Panel
@@ -266,6 +267,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
         report={testReport}
         formattedReport={formattedTestReport}
       />
+      <TextOverrideDialog />
     </>
   );
 });
