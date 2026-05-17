@@ -159,7 +159,9 @@
         },
         "headroomBelowMin": "Headroom clearance is below the code minimum.",
         "singleFlightOverLimit": "Too many risers in one flight — code requires a landing.",
-        "totalRiseOverStoryHeight": "Total rise exceeds the declared story height."
+        "totalRiseOverStoryHeight": "Total rise exceeds the declared story height.",
+        "totalRiseBelowStoryHeight": "Stair does not reach the next level — total rise is below the declared story height.",
+        "totalRiseTooLow": "Total rise is suspiciously short (< 1 m). Check that the step count is enough."
       }
     },
     "circle": {

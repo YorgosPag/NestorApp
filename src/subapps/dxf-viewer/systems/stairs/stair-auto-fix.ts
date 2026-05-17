@@ -205,14 +205,32 @@ export function autoFixStairParams(params: StairParams): StairParams {
     ? Math.max(2, Math.min(params.stepCount, flightCap))
     : Math.max(2, params.stepCount);
 
-  // Multi-story overflow guard: shrink stepCount so `totalRise ≤ storyHeight`.
+  // Multi-story: shrink (overflow) OR grow (underflow) stepCount so the
+  // total rise lands on the declared story envelope. Industry-symmetric
+  // with the corresponding validator checks (`checkStoryHeightOverflow` +
+  // `checkStoryHeightUnderflow`). Floor for overflow, ceil for underflow
+  // so the auto-fix always lands ≥ target rather than 1 riser short.
   let finalStepCount = nextStepCount;
   if (params.multiStoryConfig) {
-    const allowedTotalScene =
+    // `multiStoryConfig.storyHeight` is mm-hardcoded by the ribbon options
+    // (2400 / 2500 / ... / 3500), so it is ALREADY in mm — no further
+    // scene-units conversion needed. `nextRiseMm` is mm as well.
+    const targetTotalMm =
       params.multiStoryConfig.storyHeight * params.multiStoryConfig.storyCount;
-    const allowedTotalMm = sceneToMm(allowedTotalScene, mmPerSceneUnit);
-    const maxStepsByStory = Math.max(2, Math.floor(allowedTotalMm / nextRiseMm));
-    finalStepCount = Math.min(finalStepCount, maxStepsByStory);
+    if (targetTotalMm > 0 && Number.isFinite(nextRiseMm) && nextRiseMm > 0) {
+      const maxByStory = Math.max(2, Math.floor(targetTotalMm / nextRiseMm));
+      const idealByStory = Math.max(2, Math.ceil(targetTotalMm / nextRiseMm));
+      // Shrink to overflow cap when current exceeds the story envelope.
+      finalStepCount = Math.min(finalStepCount, maxByStory);
+      // Grow to reach the story when current falls short, but never exceed
+      // the single-flight cap (would re-trigger `singleFlightOverLimit`).
+      const targetSteps = Number.isFinite(flightCap)
+        ? Math.min(idealByStory, flightCap)
+        : idealByStory;
+      if (targetSteps > finalStepCount) {
+        finalStepCount = targetSteps;
+      }
+    }
   }
 
   const nextRiseScene = mmToScene(nextRiseMm, mmPerSceneUnit);

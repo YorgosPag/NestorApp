@@ -36,9 +36,6 @@ import type {
   StairParams,
   StairValidationState,
 } from '../../types/stair';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../stores/LayerStore';
-
 // ─── Headroom thresholds (cheap 2D proxy, Phase 6) ───────────────────────────
 
 const MIN_HEADROOM_MM: Readonly<Record<StairCodeProfile, number>> = {
@@ -135,12 +132,59 @@ function checkStoryHeightOverflow(
 ): readonly string[] {
   const cfg = params.multiStoryConfig;
   if (!cfg) return [];
-  const allowed = cfg.storyHeight * cfg.storyCount;
-  if (!Number.isFinite(allowed) || allowed <= 0) return [];
-  // 1 mm tolerance (in scene units → divide by 1000 for metres etc.).
-  const tolerance = Math.max(0.001, allowed * 1e-6);
-  if (params.totalRise > allowed + tolerance) {
+  // `storyHeight` is published by the ribbon options in mm (hardcoded
+  // 2400 / 2500 / ...), while `params.totalRise` lives in scene units.
+  // Normalise to mm so the comparison is unit-consistent.
+  const mmPerSceneUnit = mmFactorFromWidth(params.width);
+  const allowedMm = cfg.storyHeight * cfg.storyCount;
+  const totalRiseMm = params.totalRise * mmPerSceneUnit;
+  if (!Number.isFinite(allowedMm) || allowedMm <= 0) return [];
+  if (totalRiseMm > allowedMm + 1) {
     return ['tools.stair.validator.totalRiseOverStoryHeight'];
+  }
+  return [];
+}
+
+/**
+ * Symmetric check: when `multiStoryConfig` is declared, the stair MUST reach
+ * the target story; a flight that stops short is just as broken as one that
+ * overshoots. Industry: Revit Multistory + ArchiCAD Multi-Level both flag a
+ * `totalRise < storyHeight × storyCount` as an unfinished flight.
+ *
+ * Tolerance allows the user to be 1mm short without nagging (floating-point
+ * drift from grip drag in metres → mm).
+ */
+function checkStoryHeightUnderflow(
+  params: Readonly<StairParams>,
+): readonly string[] {
+  const cfg = params.multiStoryConfig;
+  if (!cfg) return [];
+  // Same mm-vs-scene-units guard as `checkStoryHeightOverflow`.
+  const mmPerSceneUnit = mmFactorFromWidth(params.width);
+  const targetMm = cfg.storyHeight * cfg.storyCount;
+  const totalRiseMm = params.totalRise * mmPerSceneUnit;
+  if (!Number.isFinite(targetMm) || targetMm <= 0) return [];
+  if (totalRiseMm + 1 < targetMm) {
+    return ['tools.stair.validator.totalRiseBelowStoryHeight'];
+  }
+  return [];
+}
+
+/**
+ * Universal sanity warning when the stair is suspiciously short (< 1m total
+ * rise). Catches the "I dragged the length grip down to 3 steps but my house
+ * is 3m tall" case where no `multiStoryConfig` is set. Code-profile gated so
+ * `none` users (free-form CAD) are not nagged.
+ */
+const MIN_PLAUSIBLE_TOTAL_RISE_MM = 1000;
+function checkTotalRiseTooLow(
+  params: Readonly<StairParams>,
+): readonly string[] {
+  if (params.codeProfile === 'none') return [];
+  const mmPerSceneUnit = mmFactorFromWidth(params.width);
+  const totalRiseMm = params.totalRise * mmPerSceneUnit;
+  if (totalRiseMm > 0 && totalRiseMm < MIN_PLAUSIBLE_TOTAL_RISE_MM) {
+    return ['tools.stair.validator.totalRiseTooLow'];
   }
   return [];
 }
@@ -163,8 +207,8 @@ function checkHeadroom(
   const minClearance = MIN_HEADROOM_MM[profile];
   const stairTopZ = params.basePoint.z + params.totalRise;
   for (const entity of contextEntities) {
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-    const layerName = resolveEntityLayerName(entity);
+    // ADR-358 Phase 9D-5b-iii: scene.layers is name-keyed (pre-Phase 9E) — entity.layer direct.
+    const layerName = entity.layer;
     if (!layerName || !CEILING_LAYER_RE.test(layerName)) continue;
     const elevation = extractEntityElevation(entity);
     if (elevation === null) continue;
@@ -213,6 +257,8 @@ export function validateStairParams(
   const headroomViolations = checkHeadroom(params, contextEntities);
   const flightLimitViolations = checkSingleFlightLimit(params);
   const storyOverflowViolations = checkStoryHeightOverflow(params);
+  const storyUnderflowViolations = checkStoryHeightUnderflow(params);
+  const totalRiseTooLowViolations = checkTotalRiseTooLow(params);
   const violationKeys: readonly string[] = [
     ...gate.hardErrors,
     ...gate.codeViolations,
@@ -221,6 +267,8 @@ export function validateStairParams(
     ...headroomViolations,
     ...flightLimitViolations,
     ...storyOverflowViolations,
+    ...storyUnderflowViolations,
+    ...totalRiseTooLowViolations,
   ];
   return {
     hasCodeViolations: violationKeys.length > 0,
