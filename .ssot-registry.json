@@ -3286,8 +3286,12 @@
         "src/subapps/dxf-viewer/ui/components/layer-state/LayerStateDropdown.tsx",
         "src/subapps/dxf-viewer/ui/components/layer-state/LayerStateDropdownPopover.tsx",
         "src/subapps/dxf-viewer/ui/components/layer-state/useLayerStateTemplates.ts",
+        "src/subapps/dxf-viewer/ui/components/layer-state/LayerStateTemplateBrowser.tsx",
+        "src/subapps/dxf-viewer/ui/components/layer-state/LayerStateSaveAsTemplateDialog.tsx",
         "src/subapps/dxf-viewer/ui/components/layer-state/__tests__/LayerStateDropdown.test.tsx",
-        "src/subapps/dxf-viewer/ui/components/layer-state/__tests__/useLayerStateTemplates.test.ts"
+        "src/subapps/dxf-viewer/ui/components/layer-state/__tests__/useLayerStateTemplates.test.ts",
+        "src/subapps/dxf-viewer/ui/components/layer-state/__tests__/LayerStateTemplateBrowser.test.tsx",
+        "src/subapps/dxf-viewer/ui/components/layer-state/__tests__/LayerStateSaveAsTemplateDialog.test.tsx"
       ],
       "addedDate": "2026-05-17",
       "addedByAdr": "ADR-358",
