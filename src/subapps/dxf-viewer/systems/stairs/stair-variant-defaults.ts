@@ -48,21 +48,21 @@ export function buildDefaultVariantFor(
         kind: 'l-shape',
         turnDirection: 'right',
         landingDepth: 'auto',
-        flightSplit: splitTwoFlights(prev.stepCount),
+        flightSplit: splitTwoFlightsWithLanding(prev.stepCount),
       };
     case 'u-shape':
       return {
         kind: 'u-shape',
         turnDirection: 'right',
         landingDepth: 'auto',
-        flightSplit: splitTwoFlights(prev.stepCount),
+        flightSplit: splitTwoFlightsWithLanding(prev.stepCount),
       };
     case 'gamma':
       return {
         kind: 'gamma',
         turnSequence: ['right', 'right'] as const,
         landings: ['auto', 'auto'] as const,
-        flightSplit: splitThreeFlights(prev.stepCount),
+        flightSplit: splitThreeFlightsWithLandings(prev.stepCount),
       };
     case 'spiral':
       return {
@@ -161,6 +161,31 @@ function splitThreeFlights(stepCount: number): readonly [number, number, number]
   const c = Math.max(1, Math.floor(n / 3));
   const b = Math.max(1, n - a - c);
   return [a, b, c] as const;
+}
+
+/**
+ * ADR-358 Phase 3e — Split for kinds with 1 landing (l-shape, u-shape). The
+ * landing consumes 1 unit of `stepCount` (z-model: landing at `n1·rise`,
+ * flight2 starts at `(n1+1)·rise`), so `n1 + 1 + n2 = stepCount`.
+ * Convention γ + count conservation across kind switches.
+ */
+export function splitTwoFlightsWithLanding(
+  stepCount: number,
+): readonly [number, number] {
+  // Reserve 1 unit for the landing → split (stepCount - 1).
+  // Clamp to minimum 2 treads (1 per flight) so both flights are buildable.
+  return splitTwoFlights(Math.max(2, stepCount - 1));
+}
+
+/**
+ * ADR-358 Phase 3e — Split for kinds with 2 landings (gamma). Each landing
+ * consumes 1 unit of `stepCount` (`(n1+n2+2)·rise` total height), so
+ * `n1 + 1 + n2 + 1 + n3 = stepCount` ⇒ `n1+n2+n3 = stepCount - 2`.
+ */
+export function splitThreeFlightsWithLandings(
+  stepCount: number,
+): readonly [number, number, number] {
+  return splitThreeFlights(Math.max(3, stepCount - 2));
 }
 
 function clonePoint(p: Readonly<Point3D>): Point3D {
