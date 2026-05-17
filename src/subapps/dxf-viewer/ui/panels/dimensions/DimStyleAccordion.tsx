@@ -12,24 +12,25 @@ import { TextSection } from './sections/TextSection';
 interface DimStyleAccordionProps {
   style: DimStyle;
   onChange: (patch: UpdateCustomStylePatch) => void;
+  readOnly?: boolean;
 }
 
-export function DimStyleAccordion({ style, onChange }: DimStyleAccordionProps) {
+export function DimStyleAccordion({ style, onChange, readOnly = false }: DimStyleAccordionProps) {
   const { t } = useTranslation('dxf-viewer-panels');
   const s = (key: string) => t(`panels.dimensions.editor.sections.${key}`);
 
   return (
     <div className="flex flex-col gap-1">
       <AccordionSection title={s('lines')} defaultOpen size="sm" variant="bordered">
-        <LinesSection style={style} onChange={onChange} />
+        <LinesSection style={style} onChange={onChange} readOnly={readOnly} />
       </AccordionSection>
 
       <AccordionSection title={s('symbols')} defaultOpen={false} size="sm" variant="bordered">
-        <SymbolsSection style={style} onChange={onChange} />
+        <SymbolsSection style={style} onChange={onChange} readOnly={readOnly} />
       </AccordionSection>
 
       <AccordionSection title={s('text')} defaultOpen={false} size="sm" variant="bordered">
-        <TextSection style={style} onChange={onChange} />
+        <TextSection style={style} onChange={onChange} readOnly={readOnly} />
       </AccordionSection>
     </div>
   );
