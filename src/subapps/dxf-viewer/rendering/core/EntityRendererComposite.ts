@@ -18,6 +18,9 @@ import { SplineRenderer } from '../entities/SplineRenderer';
 import { AngleMeasurementRenderer } from '../entities/AngleMeasurementRenderer';
 import { PointRenderer } from '../entities/PointRenderer';
 import { StairRenderer } from '../entities/StairRenderer';
+// ADR-362 Phase C1 — persistent dimension leaf (consumes DimGeometry discriminated union).
+import { DimensionRenderer } from '../entities/DimensionRenderer';
+import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -56,6 +59,8 @@ export class EntityRendererComposite {
     const pointRenderer = new PointRenderer(this.ctx);
     // ADR-358 Phase 5b — parametric stair renderer (2D plan view).
     const stairRenderer = new StairRenderer(this.ctx);
+    // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
+    const dimensionRenderer = new DimensionRenderer(this.ctx);
 
     // Register renderers by entity type
     this.renderers.set('line', lineRenderer);
@@ -72,6 +77,30 @@ export class EntityRendererComposite {
     this.renderers.set('point', pointRenderer as BaseEntityRenderer); // ✅ ENTERPRISE FIX: Type compatibility resolved
     this.renderers.set('angle-measurement', angleMeasurementRenderer);
     this.renderers.set('stair', stairRenderer);
+    this.renderers.set('dimension', dimensionRenderer);
+  }
+
+  /**
+   * ADR-362 Phase C1 — forward the per-frame DimensionLookup map to the
+   * dimension renderer. No-op if the dim renderer isn't registered (defensive
+   * for partial test setups).
+   */
+  setDimensionLookup(lookup: DimensionLookup): void {
+    const dim = this.renderers.get('dimension');
+    if (dim instanceof DimensionRenderer) {
+      dim.setDimensionLookup(lookup);
+    }
+  }
+
+  /**
+   * ADR-362 Phase C1 — forward the owning-layer hex colour so the dimension
+   * renderer can resolve DIMCLRD/DIMCLRE/DIMCLRT sentinels (ByLayer / ByBlock).
+   */
+  setDimensionLayerColour(colour: string | undefined): void {
+    const dim = this.renderers.get('dimension');
+    if (dim instanceof DimensionRenderer) {
+      dim.setLayerColour(colour);
+    }
   }
 
   // Settings management
