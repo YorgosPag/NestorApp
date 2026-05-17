@@ -151,13 +151,42 @@ export interface StairVariantStraight {
   readonly kind: 'straight';
 }
 
-export interface StairVariantLShape {
+/**
+ * ADR-358 Phase 3f — L-shape stair discriminated on `cornerStyle`. Industry
+ * pattern (Revit/ArchiCAD/AutoCAD Architecture/Vectorworks/BricsCAD BIMSTAIR):
+ * L-shape is a single kind; the corner detail is a sub-option.
+ *
+ *   - `'landing'` — current behavior (πλατύσκαλο); `n1 + 1 + n2 = stepCount`.
+ *   - `'winders'` — NOK-compliant winder treads (σκαλοπάτια κουρμπαριστά) at
+ *     the corner, preserving going on the walkline; `n1 + winderCount + n2 = stepCount`.
+ */
+export type StairVariantLShape = StairVariantLShapeLanding | StairVariantLShapeWinders;
+
+export interface StairVariantLShapeLanding {
   readonly kind: 'l-shape';
+  readonly cornerStyle: 'landing';
   readonly turnDirection: StairTurnDirectionLR;
   readonly landingDepth: 'auto' | number;
   readonly landingCornerStyle?: StairLandingCornerStyle;
   readonly landingCornerRadius?: number;
-  readonly flightSplit: readonly [number, number];
+  readonly flightSplit: readonly [number, number]; // n1 + n2 = stepCount - 1
+}
+
+export interface StairVariantLShapeWinders {
+  readonly kind: 'l-shape';
+  readonly cornerStyle: 'winders';
+  readonly turnDirection: StairTurnDirectionLR;
+  readonly winderCount: number;             // default 3 (NOK quarter-turn)
+  readonly winderMethod: StairWinderMethod; // 'equal-going' default (walkline-preserving)
+  readonly flightSplit: readonly [number, number]; // n1 + n2 = stepCount - winderCount
+}
+
+export function isLShapeLandingVariant(v: StairVariantParams): v is StairVariantLShapeLanding {
+  return v.kind === 'l-shape' && v.cornerStyle === 'landing';
+}
+
+export function isLShapeWindersVariant(v: StairVariantParams): v is StairVariantLShapeWinders {
+  return v.kind === 'l-shape' && v.cornerStyle === 'winders';
 }
 
 export interface StairVariantUShape {
