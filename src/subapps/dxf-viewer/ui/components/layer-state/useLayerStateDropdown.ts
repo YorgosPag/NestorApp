@@ -30,14 +30,27 @@ import {
 } from '../../../stores/LayerStateStore';
 import { buildLasFilename } from '../../../services/las-exporter';
 import { RestoreLayerStateCommand } from '../../../core/commands/layer/RestoreLayerStateCommand';
-import { useAuth } from '@/auth/hooks/useAuth';
-import { useCompanyId } from '@/hooks/useCompanyId';
 import {
   useLayerStateTemplates,
   type UseLayerStateTemplatesResult,
 } from './useLayerStateTemplates';
 import type { ICommand } from '../../../core/commands/interfaces';
 import type { LayerState } from '../../../types/layer-state';
+
+/**
+ * Auth context required by the cross-project templates surface. The hook does
+ * NOT import `useAuth` / `useCompanyId` directly — that would pull the firebase
+ * auth chain into every test that mounts the popover. Instead the wrapper
+ * component (LayerStateDropdown.tsx) reads auth and passes the resolved values
+ * in; tests can pass empty strings and the templates branch cleanly stays
+ * `isReady: false`.
+ */
+export interface LayerStateTemplatesAuth {
+  readonly companyId: string;
+  readonly userId: string;
+}
+
+const EMPTY_AUTH: LayerStateTemplatesAuth = { companyId: '', userId: '' };
 
 export interface LasExportPayload {
   readonly content: string;
@@ -73,6 +86,7 @@ export interface LayerStateDropdownState {
 
 export function useLayerStateDropdown(
   executeCommand: (cmd: ICommand) => void,
+  templatesAuth: LayerStateTemplatesAuth = EMPTY_AUTH,
 ): { state: LayerStateDropdownState; actions: LayerStateDropdownActions } {
   const snapshot = useSyncExternalStore(
     subscribeLayerStateStore,
@@ -128,11 +142,9 @@ export function useLayerStateDropdown(
   );
 
   // ─── Templates (Phase 13B.3) ────────────────────────────────────────────────
-  const { user } = useAuth();
-  const companyResult = useCompanyId();
   const templates = useLayerStateTemplates({
-    companyId: companyResult?.companyId ?? '',
-    userId: user?.uid ?? '',
+    companyId: templatesAuth.companyId,
+    userId: templatesAuth.userId,
   });
 
   const [browserOpen, setBrowserOpen] = useState(false);
