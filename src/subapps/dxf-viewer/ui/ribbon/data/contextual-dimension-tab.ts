@@ -229,6 +229,23 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
             },
           ],
         },
+        // ADR-362 Phase G1 — text override editor
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'dim.text.override',
+                labelKey: 'ribbon.commands.dimTextOverride',
+                icon: 'dim-text-override',
+                commandKey: DIM_RIBBON_KEYS.text.override,
+                action: 'dim.text.override',
+              },
+            },
+          ],
+        },
       ],
     },
     // (D) Ιδιότητες — layer + annotation scale
