@@ -33,6 +33,7 @@ import {
   buildStairEntity,
   directionFromPoints,
   type SceneUnits,
+  type StairFloorLinkInput,
   type StairParamOverrides,
 } from './stair-completion';
 
@@ -73,6 +74,14 @@ export interface UseStairToolOptions {
    * Defaults to `'mm'` when omitted (back-compat).
    */
   readonly getSceneUnits?: () => SceneUnits;
+  /**
+   * ADR-358 Phase 9 — Q17 floor link resolver. Called at commit time so the
+   * builder can seed `multiStoryConfig` with the building floor's height
+   * (mm) and `linkedToFloor = true`. Returns `null` when no floor is in
+   * scope (e.g. building-level DXF or wizard project root); the builder
+   * then leaves `multiStoryConfig` undefined (Phase 7a behavior).
+   */
+  readonly getFloorLink?: () => StairFloorLinkInput | null;
 }
 
 export interface UseStairToolResult {
@@ -97,7 +106,7 @@ export interface UseStairToolResult {
 // ─── Hook implementation ─────────────────────────────────────────────────────
 
 export function useStairTool(options: UseStairToolOptions = {}): UseStairToolResult {
-  const { onStairCreated, currentLevelId = '0', getSceneUnits } = options;
+  const { onStairCreated, currentLevelId = '0', getSceneUnits, getFloorLink } = options;
 
   const [state, setState] = useState<StairToolState>(INITIAL_STATE);
   const stateRef = useRef<StairToolState>(state);
@@ -130,7 +139,14 @@ export function useStairTool(options: UseStairToolOptions = {}): UseStairToolRes
   const commitFromState = useCallback((s: StairToolState): boolean => {
     if (s.basePoint === null || s.direction === null) return false;
     const sceneUnits = getSceneUnits?.() ?? 'mm';
-    const params = buildDefaultStairParams(s.basePoint, s.direction, s.overrides, sceneUnits);
+    const floorLink = getFloorLink?.() ?? null;
+    const params = buildDefaultStairParams(
+      s.basePoint,
+      s.direction,
+      s.overrides,
+      sceneUnits,
+      floorLink,
+    );
     const entity = buildStairEntity(params, currentLevelId);
     onStairCreated?.(entity);
     setState({
@@ -141,7 +157,7 @@ export function useStairTool(options: UseStairToolOptions = {}): UseStairToolRes
       error: null,
     });
     return true;
-  }, [currentLevelId, onStairCreated, getSceneUnits]);
+  }, [currentLevelId, onStairCreated, getSceneUnits, getFloorLink]);
 
   const confirm = useCallback((): boolean => {
     const s = stateRef.current;

@@ -138,6 +138,32 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
   badgeKey: STAIR_RIBBON_BADGE_KEYS.violations,
   panels: [
     {
+      // ADR-358 Phase 9 — Floor link panel. Renders read-only floor metadata
+      // (number/name/elevation/end/height) + 🔗/⚠️ link badge + Reset button.
+      // Widget self-gates: returns null when no floor in scope or no stair
+      // selected, so the panel collapses gracefully outside the floor-linked
+      // workflow. Mounted first so the floor context anchors the tab.
+      id: 'stair-floor',
+      labelKey: 'ribbon.panels.stairFloor',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'large',
+              widgetId: 'stair-floor-info',
+              command: {
+                id: 'stair.floorInfo',
+                labelKey: 'ribbon.commands.stairEditor.floor.section.title',
+                commandKey: 'stair.floorInfo',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'stair-structure',
       labelKey: 'ribbon.panels.stairStructure',
       rows: [

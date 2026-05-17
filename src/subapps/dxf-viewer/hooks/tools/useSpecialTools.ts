@@ -24,6 +24,8 @@ import { useLinePerpendicular } from '../drawing/useLinePerpendicular';
 import { useLineParallel } from '../drawing/useLineParallel';
 import { useStairTool } from '../drawing/useStairTool';
 import { resolveSceneUnits } from '../../utils/scene-units';
+import { useFloorMetadata } from '../data/useFloorMetadata';
+import type { StairFloorLinkInput } from '../drawing/stair-completion';
 import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
 import type { AngleMeasurementEntity } from '../../types/entities';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
@@ -84,6 +86,18 @@ export interface UseSpecialToolsReturn {
  */
 export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsReturn {
   const { activeTool, levelManager } = props;
+
+  // ADR-358 Phase 9 — Q17 floor link source for the stair tool. When the
+  // active save context targets a floor (`entityType === 'floor'`), subscribe
+  // to that floor's `FLOORS/{floorId}` doc so the stair builder can seed
+  // `multiStoryConfig.storyHeight` (mm) from the floor `height` (m) at commit
+  // time. Building-level / property-level contexts return `null` and the
+  // builder falls back to Phase 7a behavior.
+  const floorIdForStair =
+    levelManager.saveContext?.entityType === 'floor'
+      ? levelManager.saveContext?.floorId ?? null
+      : null;
+  const floorForStair = useFloorMetadata(floorIdForStair);
 
   // ============================================================================
   // CIRCLE TTT TOOL
@@ -244,6 +258,16 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       const levelId = levelManager.currentLevelId;
       if (!levelId) return 'mm';
       return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+    // ADR-358 Phase 9 — Q17 floor link bridge. Returns a snapshot of the
+    // floor in scope so the stair builder seeds `multiStoryConfig`.
+    getFloorLink: (): StairFloorLinkInput | null => {
+      if (!floorForStair) return null;
+      return {
+        floorId: floorForStair.id,
+        name: floorForStair.name,
+        height: floorForStair.height,
+      };
     },
     onStairCreated: (stairEntity) => {
       const levelId = levelManager.currentLevelId;
