@@ -303,6 +303,17 @@ export class EnterpriseIdService {
   generateCenterMarkId(): string { return this.generateId(P.CENTER_MARK).id; }
   generateCenterLineId(): string { return this.generateId(P.CENTER_LINE).id; }
 
+  // DXF BIM Drawing Mode (ADR-363)
+  generateWallId(): string { return this.generateId(P.WALL).id; }
+  generateOpeningId(): string { return this.generateId(P.OPENING).id; }
+  generateSlabId(): string { return this.generateId(P.SLAB).id; }
+  generateSlabOpeningId(): string { return this.generateId(P.SLAB_OPENING).id; }
+  generateColumnId(): string { return this.generateId(P.COLUMN).id; }
+  generateBeamId(): string { return this.generateId(P.BEAM).id; }
+  generateBimPresetId(): string { return this.generateId(P.BIM_PRESET).id; }
+  generateBimMaterialId(): string { return this.generateId(P.BIM_MATERIAL).id; }
+  generateBimSettingsId(): string { return this.generateId(P.BIM_SETTINGS).id; }
+
   // --- Deterministic Composite Key Generators ---
 
   generateAiUsageDocId(channel: string, userId: string, month: string): string {
