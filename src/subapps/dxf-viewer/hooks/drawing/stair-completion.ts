@@ -182,7 +182,7 @@ export function buildDefaultStairParams(
  */
 export function buildStairEntity(
   params: Readonly<StairParams>,
-  layer: string,
+  levelId: string,
 ): StairEntity {
   const geometry: StairGeometry = computeStairGeometry(params);
   const validation: StairValidationState = {
@@ -197,7 +197,7 @@ export function buildStairEntity(
     params,
     geometry,
     validation,
-    layer,
+    levelId,
     visible: true,
   };
 }

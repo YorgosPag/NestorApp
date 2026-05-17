@@ -74,6 +74,7 @@ export interface StairSaveInput {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layer?: string;
+  readonly levelId?: string;
 }
 
 export interface StairUpdateInput {
@@ -82,6 +83,7 @@ export interface StairUpdateInput {
   readonly geometry?: StairDoc['geometry'];
   readonly qto?: StairDoc['qto'];
   readonly layer?: string;
+  readonly levelId?: string;
 }
 
 // ============================================================================
@@ -152,6 +154,7 @@ export class StairFirestoreService {
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     if (input.floorId !== undefined) base.floorId = input.floorId;
     if (input.layer !== undefined) base.layer = input.layer;
+    if (input.levelId !== undefined) base.levelId = input.levelId;
 
     await setDoc(ref, base);
     return base as unknown as StairDoc;
@@ -173,6 +176,7 @@ export class StairFirestoreService {
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;
     if (patch.qto !== undefined) payload.qto = patch.qto;
     if (patch.layer !== undefined) payload.layer = patch.layer;
+    if (patch.levelId !== undefined) payload.levelId = patch.levelId;
 
     await updateDoc(ref, payload);
   }
@@ -242,5 +246,6 @@ export function entityToSaveInput(entity: StairEntity): StairSaveInput {
     params: entity.params,
     validation: entity.validation,
     qto: entity.qto,
+    levelId: entity.levelId,
   };
 }

@@ -372,6 +372,8 @@ export interface StairEntity extends BaseEntity {
   /** G24 — display-only soft-lock (does not block other users). */
   readonly editingBy?: StairEditingLock;
   readonly qto?: StairQTO;
+  /** ADR-358 Phase 9D-5c — dedicated level ID (replaces layer-field abuse). */
+  readonly levelId?: string;
 }
 
 // ============================================================================
@@ -386,6 +388,8 @@ export interface StairDoc {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layer?: string;
+  /** ADR-358 Phase 9D-5c — dedicated level ID (replaces layer-field abuse). */
+  readonly levelId?: string;
 
   readonly kind: StairKind;
   readonly params: StairParams;

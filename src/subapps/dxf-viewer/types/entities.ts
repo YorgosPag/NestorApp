@@ -29,8 +29,8 @@ export interface BaseEntity {
   /**
    * @deprecated ADR-358 Phase 9D — Layer NAME backref. Resolver (`resolveEntityLayerName`)
    * collapsed to id-only in Phase 9D-5b-iii — this field is NO LONGER read by production code.
-   * Pending full drop: `StairEntity` still writes `layer` for level-id storage (design
-   * smell — migrate to dedicated `levelId` field in a future session before type removal).
+   * Phase 9D-5c: `StairEntity` now uses dedicated `levelId` field — layer abuse removed.
+   * Safe to drop from BaseEntity after confirming zero production reads.
    * DO NOT add new usages. Prefer `layerId` exclusively.
    */
   layer?: string;

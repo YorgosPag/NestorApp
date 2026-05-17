@@ -63,10 +63,11 @@ describe('stair-completion builders (Phase 5a)', () => {
     expect(typeof entry.createdAt).toBe('number');
   });
 
-  it('6. layer defaults to active level id passed by caller', () => {
+  it('6. levelId stored in dedicated field — layer no longer abused', () => {
     const params = buildDefaultStairParams(basePoint, 0);
     const entity = buildStairEntity(params, 'level-42');
-    expect(entity.layer).toBe('level-42');
+    expect(entity.levelId).toBe('level-42');
+    expect(entity.layer).toBeUndefined();
   });
 
   it('extra: directionFromPoints returns 0 for +X cardinal direction', () => {
