@@ -170,19 +170,27 @@ describe('StairGeometryService — U-shape', () => {
     expect(noCut.cutLine).toBeUndefined();
   });
 
-  it("Test 10: treadLabelDisplay='all' → 10 labels; 'none' → undefined", () => {
+  it("Test 10: treadLabelDisplay='all' → 11 labels (10 treads + 1 landing, γ); 'none' → undefined", () => {
     const all = computeStairGeometry(makeUShapeParams({ treadLabelDisplay: 'all' }));
-    expect(all.treadLabels).toHaveLength(10);
+    // ADR-358 Phase 3e γ: landing gets its own label interleaved between flights.
+    expect(all.treadLabels).toHaveLength(11);
+    expect(all.treadLabels!.map(l => l.text)).toEqual(
+      ['1','2','3','4','5','6','7','8','9','10','11'],
+    );
+    // Position 5 = landing (after flight1 of 5 treads, indices 0..4 → labels 1..5).
+    expect(all.treadLabels![5].kind).toBe('landing');
+    expect(all.treadLabels![0].kind).toBe('tread');
     const none = computeStairGeometry(makeUShapeParams({ treadLabelDisplay: 'none' }));
     expect(none.treadLabels).toBeUndefined();
   });
 
-  it('Test 11: label position equals tread centroid (xy + z)', () => {
+  it('Test 11: tread label position equals tread centroid (xy + z) — landing skipped here', () => {
     const g = computeStairGeometry(makeUShapeParams({ treadLabelDisplay: 'all' }));
     const labels = g.treadLabels;
     if (!labels) throw new Error('expected labels');
     const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
     for (const label of labels) {
+      if (label.kind === 'landing') continue; // landing centroid checked separately
       const c = centroidXY(all[label.treadIndex]);
       const cz = all[label.treadIndex][0].z;
       expect(label.position.x).toBeCloseTo(c.x, 6);
