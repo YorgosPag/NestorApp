@@ -213,6 +213,23 @@
           "datumTriangle": "Datum triangle",
           "datumTriangleFilled": "Datum triangle filled"
         }
+      },
+      "textOverride": {
+        "dialogTitle": "Dimension Text Override",
+        "mode": {
+          "measured": "Measured value (<>)",
+          "prefixSuffix": "Prefix / Suffix",
+          "free": "Free text"
+        },
+        "placeholderPrefix": "Prefix",
+        "placeholderSuffix": "Suffix",
+        "placeholderFree": "Text...",
+        "preview": "Result",
+        "previewMeasured": "<Measured value>",
+        "previewEmpty": "(empty)",
+        "noEntitySelected": "No dimension selected.",
+        "cancel": "Cancel",
+        "apply": "Apply"
       }
     },
     "textProperties": {
