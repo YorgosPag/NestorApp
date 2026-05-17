@@ -8,9 +8,11 @@
  *     `status === 'commit-ready'`, materialises `DimensionAssociation`s.
  *
  * Variants exercised: linear, aligned, angular2L (with picked lines + arc
- * anchor), angular3P (4 clicks). Out-of-scope variants (radial / ordinate /
- * baseline / continued / arcLength / joggedRadius) return null per Phase D1
- * scope — guarded by an explicit assertion.
+ * anchor), angular3P (4 clicks). Radial / ordinate / baseline / continued
+ * variants live in their own sibling builder modules — exercised in
+ * `dimension-create-entity-builder-radial.test.ts` and
+ * `dimension-create-chained-builders.test.ts`. This file also exercises the
+ * dispatcher delegation path for those types.
  */
 
 import type { LineEntity } from '../../../types/entities';
@@ -219,16 +221,44 @@ describe('buildCommittedDimensionEntity', () => {
     expect(buildCommittedDimensionEntity(s, { id: 'X', layerId: 'L' })).toBeNull();
   });
 
-  it('out-of-scope variants (baseline / continued) still return null in Phase D2', () => {
+  it('Phase D3 baseline/continued without parentDimensionId returns null (defensive)', () => {
     const s = state({
       status: 'commit-ready',
       currentType: 'baseline',
-      clicks: [
-        { world: { x: 0, y: 0 } },
-        { world: { x: 100, y: 0 } },
-        { world: { x: 50, y: 30 } },
-      ],
+      clicks: [{ world: { x: 100, y: 0 } }],
     });
     expect(buildCommittedDimensionEntity(s, { id: 'X', layerId: 'L' })).toBeNull();
+  });
+
+  it('Phase D3 baseline WITH parentDimensionId commits a BaselineDimensionEntity', () => {
+    const s = state({
+      status: 'commit-ready',
+      currentType: 'baseline',
+      parentDimensionId: 'dim_parent_123',
+      clicks: [{ world: { x: 100, y: 0 } }],
+    });
+    const result = buildCommittedDimensionEntity(s, { id: 'dim_b1', layerId: 'lyr_x' });
+    expect(result).not.toBeNull();
+    expect(result!.entity.dimensionType).toBe('baseline');
+    expect(result!.entity.defPoints).toEqual([{ x: 100, y: 0 }]);
+    expect((result!.entity as { parentDimensionId?: string }).parentDimensionId).toBe(
+      'dim_parent_123',
+    );
+  });
+
+  it('Phase D3 continued WITH parent + hovered host yields an endpoint association', () => {
+    const hovered = line('L_host', { x: 0, y: 0 }, { x: 200, y: 0 });
+    const s = state({
+      status: 'commit-ready',
+      currentType: 'continued',
+      parentDimensionId: 'dim_parent_456',
+      clicks: [{ world: { x: 200, y: 0 }, pickedEntity: hovered }],
+    });
+    const result = buildCommittedDimensionEntity(s, { id: 'dim_c1', layerId: 'lyr_x' });
+    expect(result).not.toBeNull();
+    expect(result!.entity.dimensionType).toBe('continued');
+    expect(result!.associations).toHaveLength(1);
+    expect(result!.associations[0].defPointIndex).toBe(0);
+    expect(result!.associations[0].geometryId).toBe('L_host');
   });
 });
