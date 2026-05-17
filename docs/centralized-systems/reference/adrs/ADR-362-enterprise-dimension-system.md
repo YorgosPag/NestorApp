@@ -762,3 +762,5 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
   - File inventory aggiornato implicitamente: nuovi files `dim-break-engine.ts`, `dim-space-engine.ts`, `center-mark-renderer.ts`, `useCenterMarkCreate.ts`, `dimension-context-menu.tsx`, `dim-text-field-parser.ts`.
 
 - **2026-05-17 (initial)** — ADR-362 creato. Phase 1 = Plan & Research. Q&A iterativo con Giorgio in Greek (8 decisioni grandi D1-D8, 2 default full-enterprise D9-D10). Industry research: ISO 129, ASME Y14.5, AutoCAD/BricsCAD/Revit comparison, DXF group codes spec. Implementation roadmap in 10 fasi (5A-5J), ~3-4 settimane. Status: APPROVED (Plan Phase).
+
+- **2026-05-17** — `dim-color-resolver.ts` aggiunto: risolve colore/alpha per entità dimension a render-time (ByLayer cascade, isolate dim-mode support).
