@@ -641,6 +641,7 @@ Totale: **18 phases**, **~79 files** affetti, ship-ready incrementalmente. Ogni 
 | 2026-05-16 | **Terza iterazione — Extras enterprise.** Q17/G13 Selection Cycling, Q18/G14 Length/Angle Lock, Q19/G15 Style Override INCLUSI. Layer Isolate → ADR-358. Auto-Dimension → ADR-360. Mouse gestures → audit. Sub-selection skip (overlap G10). |
 | 2026-05-16 | **Tutte le Q risolte (Q1-Q19). ADR-357 FINALIZZATO.** Status: ✅ ACCEPTED. Implementation roadmap aggiornato (15+3=18 phases incrementali). Prerequisiti: ADR-358. Follow-up: ADR-359, ADR-360. |
 | 2026-05-16 | Aggiunta §7.1 "Una phase = una sessione" (non-negoziabile). Suddivisione obbligatoria se la phase risulta troppo grande. Ordine vincolante: ADR-358 → ADR-359 → implementation. |
+| 2026-05-17 | **Phase 0 IMPLEMENTED.** `getCurrentLayerId()` promosso a Level 3 nel fallback di `CreateEntityCommand.execute()` (era Level 4, dopo `getLayerByName('0')`). `getLayerByName('0')` diventa Level 4 (fallback assoluto). Risultato: ogni nuova entity (LINE, ecc.) eredita il layer attivo dell'utente, non sempre Layer-0. Files: `CreateEntityCommand.ts`, `create-entity-options.ts`, `CreateEntityCommand.replay-safety.test.ts` (7/7 ✅). |
 
 ---
 
