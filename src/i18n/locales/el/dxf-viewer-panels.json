@@ -78,6 +78,39 @@
     "colors": {
       "loading": "Φόρτωση χρωμάτων..."
     },
+    "dimensions": {
+      "title": "Διαστάσεις",
+      "loading": "Φόρτωση στυλ διαστάσεων...",
+      "styleManager": "Διαχείριση Στυλ",
+      "newStyle": "Νέο Στυλ...",
+      "duplicate": "Αντιγραφή",
+      "delete": "Διαγραφή",
+      "edit": "Επεξεργασία",
+      "setActive": "Ορισμός ως ενεργό",
+      "activeBadge": "Ενεργό",
+      "builtInBadge": "Ενσωματωμένο",
+      "emptyList": "Δεν υπάρχουν στυλ",
+      "deleteConfirm": {
+        "title": "Διαγραφή στυλ",
+        "description": "Το στυλ «{name}» θα διαγραφεί οριστικά.",
+        "confirm": "Διαγραφή",
+        "cancel": "Άκυρο"
+      },
+      "createDialog": {
+        "title": "Νέο Στυλ Διαστάσεων",
+        "placeholder": "Όνομα στυλ...",
+        "confirm": "Δημιουργία",
+        "cancel": "Άκυρο",
+        "errorEmpty": "Το όνομα δεν μπορεί να είναι κενό.",
+        "errorDuplicate": "Υπάρχει ήδη στυλ με αυτό το όνομα."
+      },
+      "duplicateDialog": {
+        "title": "Αντιγραφή στυλ",
+        "placeholder": "Όνομα αντιγράφου...",
+        "confirm": "Αντιγραφή",
+        "cancel": "Άκυρο"
+      }
+    },
     "textProperties": {
       "title": "Ιδιότητες Κειμένου",
       "loading": "Φόρτωση ιδιοτήτων κειμένου..."
