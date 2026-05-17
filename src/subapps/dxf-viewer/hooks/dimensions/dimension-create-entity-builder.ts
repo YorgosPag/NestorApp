@@ -33,6 +33,10 @@ import {
   buildOrdinate,
   buildRadius,
 } from './dimension-create-radial-builders';
+import {
+  buildBaseline,
+  buildContinued,
+} from './dimension-create-chained-builders';
 
 const PREVIEW_ID_SENTINEL = '__dim_preview__';
 const PREVIEW_LAYER_ID_SENTINEL = '__dim_preview_layer__';
@@ -110,6 +114,10 @@ function buildFromState(
       return buildJoggedRadius(state, opts);
     case 'ordinate':
       return buildOrdinate(state, opts);
+    case 'baseline':
+      return buildBaseline(state, opts);
+    case 'continued':
+      return buildContinued(state, opts);
     default:
       return null;
   }
@@ -318,6 +326,16 @@ function collectAssociations(
     }
     case 'ordinate': {
       // defPoints[0] = measured feature; bind to the host entity if click 1 hovered one.
+      const picked = state.clicks[0]?.pickedEntity;
+      if (picked) out.push(makeAssociation(0, picked));
+      return out;
+    }
+    case 'baseline':
+    case 'continued': {
+      // defPoints[0] = new extOrigin2; bind to hovered host if click 1 picked one.
+      // Inherited points (extOrigin1 / dimLineRef) trace back through `parentDimensionId`
+      // — chained-builder.ts:resolveChain walks the chain at render time, so no
+      // associations are duplicated here.
       const picked = state.clicks[0]?.pickedEntity;
       if (picked) out.push(makeAssociation(0, picked));
       return out;
