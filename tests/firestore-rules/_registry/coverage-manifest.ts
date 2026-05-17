@@ -1161,6 +1161,9 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // text_templates → moved to COVERAGE (ADR-344 Phase 7.E, 2026-05-11)
   // — DXF Stair Tool (ADR-358 Phase 8, 2026-05-17) —
   'floorplan_stairs',       // lines 3479-3528 — tenant-scoped + G24 soft-lock anti-spoof, full matrix in Phase 8.X
+  // — DXF Layer State Templates (ADR-358 §5.9 Q12 Phase 13B, 2026-05-17) —
+  'dxf_layer_state_templates',  // lines 4154-4192 — tenant-scoped CRUD; full matrix in Phase 13B.X
+  'dxf_template_categories',    // lines 4209-4236 — tenant-scoped read + admin write; full matrix in Phase 13B.X
 ] as const;
 
 // ---------------------------------------------------------------------------

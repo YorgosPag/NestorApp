@@ -147,6 +147,12 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-189 B37: Batch guide from selection
   'guide-from-selection': { id: 'guide-from-selection', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'stair': { id: 'stair', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false }, // ADR-358 Phase 0
+  // ADR-362 Phase D1: Enterprise Dimension creation tools (Smart DIM + 4 manual overrides)
+  'dim-smart':      { id: 'dim-smart',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'dim-linear':     { id: 'dim-linear',     category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'dim-aligned':    { id: 'dim-aligned',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'dim-angular2L':  { id: 'dim-angular2L',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'dim-angular3P':  { id: 'dim-angular3P',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 // ============================================================================
 // 🏢 ENTERPRISE HELPER FUNCTIONS (ADR-033)
@@ -186,7 +192,6 @@ export function getOverlayCompatibleTools(): ToolType[] {
     tool => TOOL_DEFINITIONS[tool].preservesOverlayMode
   );
 }
-
 // ============================================================================
 // 🏢 ENTERPRISE (2026-01-26): STANDALONE TOOL CATEGORY FUNCTIONS
 // Single Source of Truth for tool type detection - use these everywhere!
@@ -209,7 +214,6 @@ export function isDrawingTool(tool: string | undefined | null): boolean {
   const info = TOOL_DEFINITIONS[tool as ToolType];
   return info?.category === 'drawing';
 }
-
 /**
  * Check if a tool is a measurement tool (measure-distance, measure-area, etc.)
  * ENTERPRISE: This is the SINGLE SOURCE OF TRUTH for measurement tool detection
@@ -227,7 +231,6 @@ export function isMeasurementTool(tool: string | undefined | null): boolean {
   const info = TOOL_DEFINITIONS[tool as ToolType];
   return info?.category === 'measurement';
 }
-
 /**
  * Check if a tool is an interactive tool (requires canvas clicks for operation)
  * Interactive tools are: drawing + measurement tools
@@ -244,7 +247,6 @@ export function isMeasurementTool(tool: string | undefined | null): boolean {
 export function isInteractiveTool(tool: string | undefined | null): boolean {
   return isDrawingTool(tool) || isMeasurementTool(tool);
 }
-
 /**
  * Check if the application is in ANY drawing mode
  * This includes: CAD drawing tools, measurement tools, AND overlay polygon drawing
@@ -296,7 +298,6 @@ export function allowsContinuous(tool: string | undefined | null): boolean {
   const info = TOOL_DEFINITIONS[tool as ToolType];
   return info?.allowsContinuous ?? false;
 }
-
 export interface ToolStateManagerOptions {
   initialTool?: ToolType;
   onToolChange?: (newTool: ToolType, previousTool: ToolType) => void;
@@ -308,7 +309,6 @@ export interface ToolTransition {
   timestamp: number;
   reason: 'user' | 'system' | 'interrupt' | 'complete';
 }
-
 export function useToolStateManager({
   initialTool = 'select',
   onToolChange,
