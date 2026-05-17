@@ -323,6 +323,75 @@ describe('buildDimensionGeometry — orchestrator', () => {
     expect(g.measurementValue).toBeCloseTo(50, 9);
   });
 
+  it('dispatches to angular3P builder (Phase B2)', () => {
+    const entity = {
+      id: 'dim_test',
+      type: 'dimension',
+      dimensionType: 'angular3P',
+      styleId: ISO_129_TEMPLATE.id,
+      defPoints: [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 0, y: 10 },
+        { x: 5, y: 5 },
+      ],
+      layerId: 'layer_test',
+    } as unknown as Parameters<typeof buildDimensionGeometry>[0];
+    const g = buildDimensionGeometry(entity, ISO_129_TEMPLATE);
+    expect(g.kind).toBe('angular');
+  });
+
+  it('dispatches to diameter builder (Phase B2)', () => {
+    const entity = {
+      id: 'dim_test',
+      type: 'dimension',
+      dimensionType: 'diameter',
+      styleId: ISO_129_TEMPLATE.id,
+      defPoints: [{ x: -10, y: 0 }, { x: 10, y: 0 }],
+      layerId: 'layer_test',
+    } as unknown as Parameters<typeof buildDimensionGeometry>[0];
+    const g = buildDimensionGeometry(entity, ISO_129_TEMPLATE);
+    expect(g.kind).toBe('radial');
+    expect(g.measurementValue).toBeCloseTo(20, 9);
+  });
+
+  it('dispatches to arcLength builder (Phase B2)', () => {
+    const entity = {
+      id: 'dim_test',
+      type: 'dimension',
+      dimensionType: 'arcLength',
+      styleId: ISO_129_TEMPLATE.id,
+      defPoints: [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 0, y: 10 },
+      ],
+      layerId: 'layer_test',
+    } as unknown as Parameters<typeof buildDimensionGeometry>[0];
+    const g = buildDimensionGeometry(entity, ISO_129_TEMPLATE);
+    expect(g.kind).toBe('radial');
+    expect(g.measurementValue).toBeCloseTo(5 * Math.PI, 6);
+  });
+
+  it('dispatches to joggedRadius builder (Phase B2)', () => {
+    const entity = {
+      id: 'dim_test',
+      type: 'dimension',
+      dimensionType: 'joggedRadius',
+      styleId: ISO_129_TEMPLATE.id,
+      defPoints: [
+        { x: 0, y: 0 },
+        { x: 50, y: 0 },
+        { x: 80, y: 20 },
+        { x: 65, y: 10 },
+      ],
+      layerId: 'layer_test',
+    } as unknown as Parameters<typeof buildDimensionGeometry>[0];
+    const g = buildDimensionGeometry(entity, ISO_129_TEMPLATE);
+    expect(g.kind).toBe('radial');
+    expect(g.measurementValue).toBeCloseTo(50, 9);
+  });
+
   it('throws for ordinate (not implemented in Phase B2)', () => {
     const entity: OrdinateDimensionEntity = {
       id: 'dim_test',
