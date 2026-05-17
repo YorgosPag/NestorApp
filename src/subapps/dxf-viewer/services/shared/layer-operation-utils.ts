@@ -12,6 +12,16 @@ import { SceneModel, AnySceneEntity } from '../../types/scene';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 
+/**
+ * Resolve entity layer name: LayerStore id-first, then legacy `entity.layer` fallback.
+ * The fallback handles test environments where LayerStore is not pre-populated and
+ * transition-window entities that still carry the deprecated `layer` name field.
+ * ADR-358 Phase 9D→9E: remove fallback after Phase 9E-6 drops `entity.layer`.
+ */
+function resolveLayerName(entity: AnySceneEntity): string | undefined {
+  return resolveEntityLayerName(entity) ?? (entity as { layer?: string }).layer;
+}
+
 export interface LayerOperationResult {
   updatedScene: SceneModel;
   affectedEntityIds?: string[];
@@ -88,8 +98,7 @@ export function entityBelongsToLayer(
   entity: AnySceneEntity,
   layerName: string
 ): boolean {
-  // ADR-358 Phase 9D-3: id-first comparison via LayerStore, name fallback
-  return resolveEntityLayerName(entity) === layerName;
+  return resolveLayerName(entity) === layerName;
 }
 
 /**
@@ -99,8 +108,7 @@ export function entityBelongsToLayers(
   entity: AnySceneEntity,
   layerNames: string[]
 ): boolean {
-  // ADR-358 Phase 9D-3: id-first comparison via LayerStore, name fallback
-  const name = resolveEntityLayerName(entity);
+  const name = resolveLayerName(entity);
   return name != null && layerNames.includes(name);
 }
 
@@ -248,8 +256,7 @@ export function getVisibleEntityIdsInLayers(
     .filter(entity => {
       if (!entityBelongsToLayers(entity, layerNames)) return false;
       if (!isEntityVisible(entity)) return false;
-      // Check layer visibility — ADR-358 Phase 9D-3: id-first name resolution
-      const name = resolveEntityLayerName(entity);
+      const name = resolveLayerName(entity);
       const layerVisible = name != null && layers[name]?.visible !== false;
       return layerVisible;
     })
@@ -268,8 +275,7 @@ export function getEntitiesNotInLayer(
   entities: AnySceneEntity[],
   layerName: string
 ): AnySceneEntity[] {
-  // ADR-358 Phase 9D-3: id-first exclusion via LayerStore, name fallback
-  return entities.filter(entity => resolveEntityLayerName(entity) !== layerName);
+  return entities.filter(entity => resolveLayerName(entity) !== layerName);
 }
 
 /**
@@ -282,9 +288,8 @@ export function getEntitiesNotInLayers(
   entities: AnySceneEntity[],
   layerNames: string[]
 ): AnySceneEntity[] {
-  // ADR-358 Phase 9D-3: id-first exclusion via LayerStore, name fallback
   return entities.filter(entity => {
-    const name = resolveEntityLayerName(entity);
+    const name = resolveLayerName(entity);
     return !name || !layerNames.includes(name);
   });
 }
