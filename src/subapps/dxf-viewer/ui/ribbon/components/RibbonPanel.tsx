@@ -20,6 +20,7 @@ import { RibbonLineSpacingWidget } from './RibbonLineSpacingWidget';
 import { RibbonAnnotationScaleWidget } from './RibbonAnnotationScaleWidget';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
+import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
 
 interface RibbonPanelProps {
@@ -59,6 +60,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'stair-floor-info') {
       return <RibbonStairFloorInfoWidget key="stair-floor-info-widget" />;
+    }
+    if (button.widgetId === 'stair-dimensions') {
+      return <RibbonStairDimensionsWidget key="stair-dimensions-widget" />;
     }
     return null;
   }

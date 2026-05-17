@@ -214,6 +214,12 @@ export const generateDictEntryId = () => enterpriseIdService.generateDictEntryId
 export const generateStairId = () => enterpriseIdService.generateStairId();
 export const generateStairPresetId = () => enterpriseIdService.generateStairPresetId();
 
+// DXF Enterprise Dimension System (ADR-362)
+export const generateDimensionId = () => enterpriseIdService.generateDimensionId();
+export const generateDimStyleId = () => enterpriseIdService.generateDimStyleId();
+export const generateCenterMarkId = () => enterpriseIdService.generateCenterMarkId();
+export const generateCenterLineId = () => enterpriseIdService.generateCenterLineId();
+
 // Optimistic & Temporary
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
 export const generateTempId = () => enterpriseIdService.generateTempId();

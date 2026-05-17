@@ -286,6 +286,12 @@ export class EnterpriseIdService {
   generateStairId(): string { return this.generateId(P.STAIR).id; }
   generateStairPresetId(): string { return this.generateId(P.STAIR_PRESET).id; }
 
+  // DXF Enterprise Dimension System (ADR-362)
+  generateDimensionId(): string { return this.generateId(P.DIMENSION).id; }
+  generateDimStyleId(): string { return this.generateId(P.DIM_STYLE).id; }
+  generateCenterMarkId(): string { return this.generateId(P.CENTER_MARK).id; }
+  generateCenterLineId(): string { return this.generateId(P.CENTER_LINE).id; }
+
   // --- Deterministic Composite Key Generators ---
 
   generateAiUsageDocId(channel: string, userId: string, month: string): string {

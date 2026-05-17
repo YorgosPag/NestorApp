@@ -91,7 +91,9 @@ export type EntityType =
   | 'xline'                // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
   | 'ray'                  // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
   | 'array'                // ADR-353: Associative array entity (rect/polar/path)
-  | 'stair';               // ADR-358: Parametric stair entity (11 kinds, Phase 1+)
+  | 'stair'                // ADR-358: Parametric stair entity (11 kinds, Phase 1+)
+  | 'center-mark'          // ADR-362 Phase A1: standalone center mark (D13)
+  | 'centerline';          // ADR-362 Phase A1: standalone centerline (D13)
 
 // Geometric entities
 export interface LineEntity extends BaseEntity {
@@ -246,15 +248,56 @@ export interface SplineEntity extends BaseEntity {
   tolerance?: number;         // ✅ ENTERPRISE: AutoCAD spline fit tolerance
 }
 
-export interface DimensionEntity extends BaseEntity {
-  type: 'dimension';
-  startPoint: Point2D;
-  endPoint: Point2D;
-  textPosition: Point2D;
-  value: number;
-  unit?: string;
-  precision?: number;
-}
+// ADR-362 Phase A1: rich DimensionEntity discriminated union (10 variants) lives in `./dimension`.
+// Legacy startPoint/endPoint/textPosition/value/unit/precision fields preserved as deprecated
+// optionals inside `DimensionEntityCommon` for back-compat with existing consumers
+// (PathCache.ts, InsertionSnapEngine.ts) — to be removed in Phase B/C.
+import type { DimensionEntity } from './dimension';
+export type { DimensionEntity } from './dimension';
+export type {
+  DimensionType,
+  DimStyle,
+  DimensionOverride,
+  DimensionAssociation,
+  DimensionAssociationType,
+  DimLinearUnitFormat,
+  DimAngularUnitFormat,
+  DimTextVerticalPlacement,
+  DimTextFillMode,
+  DimToleranceJustify,
+  DimAssociativity,
+  DimInspectionMode,
+  DimensionVariantByType,
+  LinearDimensionEntity,
+  AlignedDimensionEntity,
+  Angular2LDimensionEntity,
+  Angular3PDimensionEntity,
+  RadiusDimensionEntity,
+  DiameterDimensionEntity,
+  ArcLengthDimensionEntity,
+  JoggedRadiusDimensionEntity,
+  OrdinateDimensionEntity,
+  BaselineDimensionEntity,
+  ContinuedDimensionEntity,
+} from './dimension';
+export {
+  isLinearDimension,
+  isAlignedDimension,
+  isAngular2LDimension,
+  isAngular3PDimension,
+  isRadiusDimension,
+  isDiameterDimension,
+  isArcLengthDimension,
+  isJoggedRadiusDimension,
+  isOrdinateDimension,
+  isBaselineDimension,
+  isContinuedDimension,
+} from './dimension';
+
+// ADR-362 Phase A1: standalone Center Mark + Centerline (D13).
+import type { CenterMarkEntity, CenterLineEntity } from './center-mark';
+export type { CenterMarkEntity, CenterLineEntity, CenterMarkStyle, CenterLineKind } from './center-mark';
+export { isCenterMarkEntity, isCenterLineEntity } from './center-mark';
 
 // ✅ ENTERPRISE: Additional entity types from scene.ts integration
 export interface BlockEntity extends BaseEntity {
@@ -376,6 +419,8 @@ export type Entity = (
   | RayEntity                // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
   | ArrayEntity              // ADR-353: Associative array (rect/polar/path)
   | StairEntity              // ADR-358: Parametric stair (11 kinds)
+  | CenterMarkEntity         // ADR-362 Phase A1: standalone center mark (D13)
+  | CenterLineEntity         // ADR-362 Phase A1: standalone centerline (D13)
 ) & Pick<BaseEntity, 'name'>; // ✅ ENTERPRISE: Ensures name property is always available on Entity type
 
 // Entity collection types
@@ -488,6 +533,9 @@ export const isArrayEntity = (entity: Entity): entity is ArrayEntity =>
 // ADR-358
 export const isStairEntity = (entity: Entity): entity is StairEntity =>
   entity.type === 'stair';
+
+// ADR-362 Phase A1 — standalone center mark / centerline guards already re-exported
+// from './center-mark' above (isCenterMarkEntity / isCenterLineEntity).
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility

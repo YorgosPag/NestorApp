@@ -374,6 +374,7 @@
       "stairFloor": "Στάθμη",
       "stairStructure": "Δομή",
       "stairGeometry": "Γεωμετρία",
+      "stairDimensions": "Διαστάσεις",
       "stairMultiStory": "Πολυώροφα",
       "stairMultiStoryHeight": "Ύψος Ορόφου",
       "stairMultiFlight": "Πολλαπλά Σκέλη",
@@ -585,6 +586,13 @@
           "linkedBadge": "Από {name}: {value}",
           "customBadge": "Προσαρμοσμένο: {value}",
           "resetButton": "Επαναφορά στη στάθμη"
+        },
+        "dimensions": {
+          "section": {
+            "title": "Διαστάσεις"
+          },
+          "length": "Μήκος",
+          "totalRise": "Συνολικό ύψος"
         }
       },
       "measureAngle": "Γωνία",

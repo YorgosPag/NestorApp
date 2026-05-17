@@ -374,6 +374,7 @@
       "stairFloor": "Floor Level",
       "stairStructure": "Structure",
       "stairGeometry": "Geometry",
+      "stairDimensions": "Dimensions",
       "stairMultiStory": "Multi-Story",
       "stairMultiStoryHeight": "Story Height",
       "stairMultiFlight": "Multi-Flight",
@@ -585,6 +586,13 @@
           "linkedBadge": "From {name}: {value}",
           "customBadge": "Custom: {value}",
           "resetButton": "Reset to floor"
+        },
+        "dimensions": {
+          "section": {
+            "title": "Dimensions"
+          },
+          "length": "Length",
+          "totalRise": "Total rise"
         }
       },
       "measureAngle": "Angle",
