@@ -43,7 +43,7 @@ export interface UnisolateSnapshotEntry {
 
 export type UnisolateSnapshot = ReadonlyArray<UnisolateSnapshotEntry> | null;
 
-interface LayerStoreSnapshot {
+export interface LayerStoreSnapshot {
   /** Ordered list of layers — order reflects insertion/import (DXF table order). */
   readonly layers: ReadonlyArray<SceneLayer>;
   /** Current layer for new-entity creation. Null until first scene load. */
@@ -54,6 +54,12 @@ interface LayerStoreSnapshot {
    * by `ui/components/layer-picker/layer-picker-persistence.ts`.
    */
   readonly recentLayerIds: ReadonlyArray<string>;
+  /**
+   * Monotonic snapshot version (ADR-358 Phase 11 — LayerFiltersStore cache invalidation).
+   * Bumps on every `rebuildSnapshot()` call. Consumers use the diff to invalidate
+   * derived caches (e.g. `Map<filterId, Set<layerId>>` in LayerFiltersStore).
+   */
+  readonly version: number;
 }
 
 /** FIFO cap for recent-layer tracking — AutoCAD/Revit parity. */
@@ -63,12 +69,14 @@ const EMPTY_SNAPSHOT: LayerStoreSnapshot = Object.freeze({
   layers: Object.freeze([]) as ReadonlyArray<SceneLayer>,
   currentLayerId: null,
   recentLayerIds: Object.freeze([]) as ReadonlyArray<string>,
+  version: 0,
 });
 
 let layersById: Map<string, SceneLayer> = new Map();
 let layerOrder: string[] = [];
 let currentLayerId: string | null = null;
 let recentLayerIds: string[] = [];
+let snapshotVersion = 0;
 let cachedSnapshot: LayerStoreSnapshot = EMPTY_SNAPSHOT;
 let unisolateSnapshot: UnisolateSnapshot = null;
 
@@ -84,10 +92,12 @@ function rebuildSnapshot(): void {
     const layer = layersById.get(key);
     if (layer) list.push(layer);
   }
+  snapshotVersion += 1;
   cachedSnapshot = Object.freeze({
     layers: Object.freeze(list) as ReadonlyArray<SceneLayer>,
     currentLayerId,
     recentLayerIds: Object.freeze(recentLayerIds.slice()) as ReadonlyArray<string>,
+    version: snapshotVersion,
   });
 }
 
@@ -301,6 +311,7 @@ export function __resetLayerStoreForTesting(): void {
   layerOrder = [];
   currentLayerId = null;
   recentLayerIds = [];
+  snapshotVersion = 0;
   cachedSnapshot = EMPTY_SNAPSHOT;
   unisolateSnapshot = null;
   subscribers.clear();
