@@ -27,6 +27,8 @@ import type { ToolType } from '../toolbar/types';
 import type { PanelType } from './useFloatingPanelState';
 import type { LayerOperationsCallbacks } from './useLayerOperations';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
+// ADR-358 Phase 8 sidebar dock — Stair properties tab content.
+import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
 
 interface UsePanelContentRendererParams {
   activePanel: PanelType;
@@ -39,6 +41,9 @@ interface UsePanelContentRendererParams {
   layerOperations: LayerOperationsCallbacks;
   // ADR-309 Phase 2: Wizard button in LevelPanel
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
+  // ADR-358 Phase 8 sidebar dock — scope inputs for the Properties tab.
+  projectId?: string;
+  floorplanId?: string;
 }
 
 /**
@@ -55,6 +60,8 @@ export function usePanelContentRenderer({
   setExpandedKeys,
   layerOperations,
   onSceneImported,
+  projectId,
+  floorplanId,
 }: UsePanelContentRendererParams) {
   const colors = useSemanticColors();
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
@@ -102,6 +109,16 @@ export function usePanelContentRenderer({
           <LazyPanelWrapper loadingText={t('panels.colors.loading')}>
             <ColorPalettePanel />
           </LazyPanelWrapper>
+        );
+
+      case 'properties':
+        return (
+          <StairPropertiesTab
+            primarySelectedId={selectedEntityIds[0] ?? null}
+            currentScene={scene}
+            projectId={projectId}
+            floorplanId={floorplanId}
+          />
         );
 
       default:

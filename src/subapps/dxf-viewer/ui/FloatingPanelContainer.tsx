@@ -36,6 +36,9 @@ interface FloatingPanelContainerProps {
   currentTool: ToolType;
   // ADR-309 Phase 2: Wizard button in LevelPanel
   onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
+  // ADR-358 Phase 8 sidebar dock — scope inputs for the Properties tab.
+  projectId?: string;
+  floorplanId?: string;
 }
 
 const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, FloatingPanelContainerProps>(function FloatingPanelContainer({
@@ -45,6 +48,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   zoomLevel,
   currentTool,
   onSceneImported,
+  projectId,
+  floorplanId,
 }, ref) {
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -93,7 +98,23 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     setExpandedKeys,
     layerOperations,
     onSceneImported,
+    projectId,
+    floorplanId,
   });
+
+  // ADR-358 Phase 8 sidebar dock — auto-switch to the Properties tab when the
+  // user selects a stair (industry pattern: Revit / AutoCAD Properties palette
+  // pops on selection). Stays out of the way for non-stair selections so the
+  // user is not bounced off the Levels tab while doing layer work.
+  React.useEffect(() => {
+    if (!scene || selectedEntityIds.length === 0) return;
+    const primaryId = selectedEntityIds[0];
+    const entity = scene.entities.find((e) => e.id === primaryId);
+    if (!entity) return;
+    if ((entity as { type?: string }).type === 'stair' && activePanel !== 'properties') {
+      setActivePanel('properties');
+    }
+  }, [selectedEntityIds, scene, activePanel, setActivePanel]);
 
   // ✅ ΒΗΜΑ 6: Extracted panel description logic to custom hook
   const { description, zoomText } = usePanelDescription({
@@ -166,6 +187,8 @@ export const FloatingPanelContainer = React.memo(FloatingPanelContainerInner, (p
     prevProps.onEntitySelect === nextProps.onEntitySelect &&
     prevProps.zoomLevel === nextProps.zoomLevel &&
     prevProps.currentTool === nextProps.currentTool &&
-    prevProps.onSceneImported === nextProps.onSceneImported
+    prevProps.onSceneImported === nextProps.onSceneImported &&
+    prevProps.projectId === nextProps.projectId &&
+    prevProps.floorplanId === nextProps.floorplanId
   );
 });

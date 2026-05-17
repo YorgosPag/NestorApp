@@ -49,6 +49,13 @@ export interface StairAdvancedPanelProps {
   readonly projectId?: string;
   readonly levelManager: LevelManagerLike;
   readonly persistence?: UseStairPersistenceResult;
+  /**
+   * Override container className (sidebar-tab mode passes a flow-layout
+   * class; default keeps the legacy right-floating fixed position).
+   */
+  readonly containerClassName?: string;
+  /** Hide the header (caller renders its own — e.g. tab label). */
+  readonly hideHeader?: boolean;
 }
 
 export function StairAdvancedPanel({
@@ -59,19 +66,26 @@ export function StairAdvancedPanel({
   projectId,
   levelManager,
   persistence,
+  containerClassName,
+  hideHeader,
 }: StairAdvancedPanelProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
+  const resolvedClassName =
+    containerClassName
+    ?? 'fixed right-4 top-20 z-40 flex w-80 max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-3 shadow-xl backdrop-blur';
 
   return (
     <aside
       aria-label={t('stairAdvancedPanel.title')}
-      className="fixed right-4 top-20 z-40 flex w-80 max-h-[calc(100vh-6rem)] flex-col gap-3 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-3 shadow-xl backdrop-blur"
+      className={resolvedClassName}
     >
-      <header>
-        <h3 className="text-sm font-medium text-slate-100">
-          {t('stairAdvancedPanel.title')}
-        </h3>
-      </header>
+      {!hideHeader && (
+        <header>
+          <h3 className="text-sm font-medium text-slate-100">
+            {t('stairAdvancedPanel.title')}
+          </h3>
+        </header>
+      )}
       {persistence && (
         <StairPersistenceSection
           stair={stair}

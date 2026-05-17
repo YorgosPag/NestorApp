@@ -78,6 +78,9 @@
     "colors": {
       "loading": "Loading..."
     },
+    "properties": {
+      "title": "Properties"
+    },
     "textProperties": {
       "title": "Text Properties",
       "loading": "Loading text properties..."
