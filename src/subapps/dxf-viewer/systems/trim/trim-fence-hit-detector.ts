@@ -69,7 +69,7 @@ export function detectFenceHits(args: DetectFenceHitsArgs): FenceHit[] {
   const { fenceStart, fenceEnd, scene, mode, cuttingEdgeIds } = args;
 
   const fenceEdge = buildFenceEdge(fenceStart, fenceEnd);
-  const layers: Record<string, SceneLayer> = scene.layers ?? {};
+  const layers = scene.layersById ?? {};
   const allow = mode === 'standard' ? new Set(cuttingEdgeIds) : null;
   const hits: FenceHit[] = [];
 

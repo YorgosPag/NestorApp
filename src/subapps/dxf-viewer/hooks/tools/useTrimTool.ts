@@ -135,10 +135,8 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       if (!isTrimmable(target)) return;
 
       // Locked-layer guard (Q12)
-      // ADR-358 Phase 9E-3: id-first lookup (layersById), entity.layer name fallback.
-      const layers = scene.layersById ?? scene.layers ?? {};
-      const layer = (target.layerId ? layers[target.layerId] : undefined)
-        ?? (target.layer ? layers[target.layer] : undefined);
+      const layers = scene.layersById ?? {};
+      const layer = target.layerId ? layers[target.layerId] : undefined;
       if (layer?.locked) {
         TrimToolStore.incrementWarning('locked');
         return;
@@ -221,8 +219,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
         selectedEdgeIds: state.cuttingEdgeIds, edgeMode: state.edgeMode,
       });
 
-      // ADR-358 Phase 9E-3: id-first lookup (layersById), entity.layer name fallback.
-      const fenceLayers = scene.layersById ?? scene.layers ?? {};
+      const fenceLayers = scene.layersById ?? {};
       const allOps: TrimOperation[] = [];
       for (const hit of hits) {
         const target = scene.entities.find((e) => e.id === hit.entityId) as Entity | undefined;

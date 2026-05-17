@@ -38,23 +38,19 @@ export const ColorManager: React.FC<ColorManagerProps> = ({
 }) => {
   const { t } = useTranslation(['dxf-viewer-panels']);
   // ΒΟΗΘΗΤΙΚΟ: βρίσκει/δημιουργεί layer για το συγκεκριμένο χρώμα
-  const ensureLayerForColor = React.useCallback((scene: SceneModel, hex: string): { scene: SceneModel, layerName: string } => {
-    // 1) αν ήδη υπάρχει layer με αυτό το χρώμα, χρησιμοποίησέ το
-    const existing = Object.values(scene.layersById ?? scene.layers).find(
+  const ensureLayerForColor = React.useCallback((scene: SceneModel, hex: string): { scene: SceneModel, layerId: string } => {
+    const existing = Object.values(scene.layersById).find(
       (l) => (('colorHex' in l && typeof l.colorHex === 'string' && l.colorHex.toLowerCase?.() === hex.toLowerCase?.()) ||
               ('color' in l && typeof l.color === 'string' && l.color.toLowerCase?.() === hex.toLowerCase?.()))
     );
-    if (existing) return { scene, layerName: existing.name };
+    if (existing) return { scene, layerId: existing.id };
 
-    // 2) αλλιώς, φτιάξε καινούριο
-    // ADR-358 Phase 9D-5a + Phase 9C: createSceneLayer factory enforces 14-field shape +
-    // auto-gens stable `lyr_<UUID-v4>` id via enterprise-id (was inline literal bypassing id contract).
     const newName = `COLOR_${hex.replace('#','').toUpperCase()}`;
-    const newLayers = {
-      ...scene.layers,
-      [newName]: createSceneLayer({ name: newName, color: hex, visible: true, locked: false })
+    const newLayer = createSceneLayer({ name: newName, color: hex, visible: true, locked: false });
+    return {
+      scene: { ...scene, layersById: { ...scene.layersById, [newLayer.id]: newLayer } },
+      layerId: newLayer.id,
     };
-    return { scene: { ...scene, layers: newLayers }, layerName: newName };
   }, []);
 
   // ΚΥΡΙΟ: εφάρμοσε χρώμα σε ΟΛΕΣ τις επιλεγμένες οντότητες + ενημέρωσε scene/panels
@@ -64,15 +60,10 @@ export const ColorManager: React.FC<ColorManagerProps> = ({
     // 1) layer για το χρώμα
     const idSet = new Set(ids);
     // εντοπισμός/δημιουργία layer για το hex
-    const { scene: sceneA, layerName } = ensureLayerForColor(currentScene, hex);
+    const { scene: sceneA, layerId: targetLayerId } = ensureLayerForColor(currentScene, hex);
 
-    // 2) μεταφορά των οντοτήτων στο νέο layer + ενημέρωση color
-    // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
-    const targetLayerId = sceneA.layers[layerName]?.id ?? getLayer(layerName)?.id;
     const newEntities = sceneA.entities.map(e =>
-      idSet.has(e.id)
-        ? { ...e, layerId: targetLayerId ?? e.layerId, color: hex }
-        : e
+      idSet.has(e.id) ? { ...e, layerId: targetLayerId, color: hex } : e
     );
 
     const updated = { ...sceneA, entities: newEntities };

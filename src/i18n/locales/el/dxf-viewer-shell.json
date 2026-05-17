@@ -375,6 +375,7 @@
       "stairStructure": "Δομή",
       "stairGeometry": "Γεωμετρία",
       "stairMultiStory": "Πολυώροφα",
+      "stairMultiStoryHeight": "Ύψος Ορόφου",
       "stairMultiFlight": "Πολλαπλά Σκέλη",
       "stairActions": "Ενέργειες",
       "placeholder": "Σε φάση ανάπτυξης",

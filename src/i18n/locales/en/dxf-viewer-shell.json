@@ -375,6 +375,7 @@
       "stairStructure": "Structure",
       "stairGeometry": "Geometry",
       "stairMultiStory": "Multi-Story",
+      "stairMultiStoryHeight": "Story Height",
       "stairMultiFlight": "Multi-Flight",
       "stairActions": "Actions",
       "placeholder": "Coming soon",

@@ -137,10 +137,8 @@ export function useExtendTool(props: UseExtendToolProps): UseExtendToolReturn {
       const target = scene.entities.find((e) => e.id === hitId) as Entity | undefined;
       if (!target) return;
 
-      // ADR-358 Phase 9E-3: id-first lookup (layersById), entity.layer name fallback.
-      const layers = scene.layersById ?? scene.layers ?? {};
-      const layer = (target.layerId ? layers[target.layerId] : undefined)
-        ?? (target.layer ? layers[target.layer] : undefined);
+      const layers = scene.layersById ?? {};
+      const layer = target.layerId ? layers[target.layerId] : undefined;
       if (layer?.locked) {
         ExtendToolStore.incrementWarning('locked');
         return;

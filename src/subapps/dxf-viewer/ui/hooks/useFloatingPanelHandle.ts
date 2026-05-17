@@ -60,20 +60,19 @@ export function useFloatingPanelHandle({
         if (!ent) return;
 
         // Κλειδί 1ου επιπέδου: Color Group (όχι layer name)
-        if (ent.layer !== undefined && ent.layer !== null) {
-          const layer = getSceneLayerById(scene, (ent as { layerId?: string }).layerId ?? '') ?? scene.layers[(ent as { layer?: string }).layer ?? ''];
+        const layerId = (ent as { layerId?: string }).layerId;
+        if (layerId) {
+          const layer = getSceneLayerById(scene, layerId);
+          const layerName = layer?.name ?? '';
           if (layer) {
             const color = layer.color || DEFAULT_LAYER_COLOR;
-            const colorName = `Color ${color}`;
-            next.add(layerKey(colorName)); // Αυτό ταιριάζει με το ColorGroupList
+            next.add(layerKey(`Color ${color}`));
           }
-
-          // Κλειδί 2ου επιπέδου: το Layer μέσα στο Color Group
-          next.add(layerKey(ent.layer as string));
-
-          // Αν έχεις 3ο επίπεδο/υπο-layers:
-          const sub = ('subLayer' in ent ? ent.subLayer : 'groupKey' in ent ? ent.groupKey : undefined);
-          if (sub) next.add(subLayerKey(ent.layer as string, sub as string));
+          if (layerName) {
+            next.add(layerKey(layerName));
+            const sub = ('subLayer' in ent ? ent.subLayer : 'groupKey' in ent ? ent.groupKey : undefined);
+            if (sub) next.add(subLayerKey(layerName, sub as string));
+          }
         }
       });
 

@@ -252,6 +252,35 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-358 Phase Q17 9B-4 — read-only Dimensions widget. Surfaces
+      // `totalRun` (μήκος, planar length) + `totalRise` (συνολικό ύψος) in
+      // meters so the engineer can verify the derived stair envelope inline
+      // alongside the editable rise/tread/width/stepCount inputs. Industry:
+      // Revit "Dimensions" Properties section + ArchiCAD Stair settings.
+      id: 'stair-dimensions',
+      labelKey: 'ribbon.panels.stairDimensions',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'large',
+              widgetId: 'stair-dimensions',
+              command: {
+                id: 'stair.dimensions',
+                labelKey: 'ribbon.commands.stairEditor.dimensions.section.title',
+                commandKey: 'stair.dimensions',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-358 Phase 9B-3 — split out the storyCount editor from the
+      // storyHeight editor so the latter can be gated by `visibilityKey`
+      // (hidden when linked to a floor — the floor governs the height).
       id: 'stair-multistory',
       labelKey: 'ribbon.panels.stairMultiStory',
       rows: [
@@ -269,6 +298,22 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 options: STORY_COUNT_OPTIONS,
               },
             },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-358 Phase 9B-3 — storyHeight editor (free mode only). When
+      // linked to a floor the height is read-only via the floor info widget
+      // in the "Στάθμη" panel, so showing an editable combobox here would
+      // duplicate the surface and let the user drift the two apart.
+      id: 'stair-multistory-height',
+      labelKey: 'ribbon.panels.stairMultiStoryHeight',
+      visibilityKey: STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'combobox',
               size: 'small',

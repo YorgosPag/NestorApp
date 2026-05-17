@@ -476,7 +476,7 @@ export class DxfSceneBuilder {
 
   static validateScene(scene: SceneModel): boolean {
     // ADR-358 Phase 9E-6a: layersById guaranteed post-9E-5; layers kept for legacy compat.
-    if (!scene.entities || (!scene.layers && !scene.layersById) || !scene.bounds) {
+    if (!scene.entities || !scene.layersById || !scene.bounds) {
       return false;
     }
 

@@ -30,7 +30,7 @@ function parseDxfContent(content: string, filename: string): DxfImportResult {
       scene,
       stats: {
         entityCount: scene.entities.length,
-        layerCount: Object.keys(scene.layersById ?? scene.layers).length,
+        layerCount: Object.keys(scene.layersById ?? {}).length,
         parseTimeMs
       }
     };

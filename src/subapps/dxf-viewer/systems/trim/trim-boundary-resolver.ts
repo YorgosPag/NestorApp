@@ -38,8 +38,7 @@ export interface ResolveCuttingEdgesArgs {
 export function resolveCuttingEdges(args: ResolveCuttingEdgesArgs): ReadonlyArray<CuttingEdge> {
   const { mode, scene, selectedEdgeIds, edgeMode } = args;
   const allow = mode === 'standard' ? new Set(selectedEdgeIds) : null;
-  // ADR-358 Phase 9E-2: prefer id-keyed layersById; name-keyed layers as fallback.
-  const layers = scene.layersById ?? scene.layers ?? {};
+  const layers = scene.layersById ?? {};
   const out: CuttingEdge[] = [];
 
   for (const entity of scene.entities) {
@@ -70,9 +69,7 @@ export function isValidCuttingCandidate(
   layers: Record<string, SceneLayer>,
 ): boolean {
   if (entity.visible === false) return false;
-  // ADR-358 Phase 9E-2: id-first lookup (layersById), entity.layer name fallback.
-  const layer = (entity.layerId ? layers[entity.layerId] : undefined)
-    ?? (entity.layer ? layers[entity.layer] : undefined);
+  const layer = entity.layerId ? layers[entity.layerId] : undefined;
   if (layer?.locked) return false;
   if (layer?.visible === false) return false;
 

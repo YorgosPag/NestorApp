@@ -37,11 +37,18 @@ export const STAIR_RIBBON_KEYS = {
 } as const;
 
 /**
- * ADR-358 Phase 7b2b-β Stream F — panel visibility keys consumed by
- * `RibbonPanelDef.visibilityKey`. Stair bridge owns `multiFlight`.
+ * ADR-358 Phase 7b2b-β Stream F + Phase 9B-3 — panel visibility keys
+ * consumed by `RibbonPanelDef.visibilityKey`.
+ *
+ * - `multiFlight`: visible iff `variant.kind ∈ {l-shape, u-shape, gamma}`.
+ * - `multiStoryHeightEditor`: visible iff stair is NOT linked to a floor
+ *   (free mode). When linked, `storyHeight` is governed by the floor and
+ *   shown read-only in the floor info widget; the editable combobox hides
+ *   to remove the duplicate "Ύψος" surface (Phase 9B-3 UX fix).
  */
 export const STAIR_RIBBON_VISIBILITY_KEYS = {
   multiFlight: 'stair.visibility.multiFlight',
+  multiStoryHeightEditor: 'stair.visibility.multiStoryHeightEditor',
 } as const;
 
 export type StairRibbonComboKey =
@@ -59,7 +66,8 @@ export type StairRibbonStringComboKey =
   | typeof STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection;
 
 export type StairRibbonVisibilityKey =
-  | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiFlight;
+  | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiFlight
+  | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor;
 
 const ALL_STAIR_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.params.rise,
@@ -79,6 +87,7 @@ const ALL_STAIR_STRING_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
 
 const ALL_STAIR_VISIBILITY_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_VISIBILITY_KEYS.multiFlight,
+  STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor,
 ]);
 
 export function isStairRibbonKey(key: string): key is StairRibbonComboKey {

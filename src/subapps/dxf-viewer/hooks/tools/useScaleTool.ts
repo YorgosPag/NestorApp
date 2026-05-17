@@ -65,13 +65,10 @@ function filterLockedEntities(
   const scene = getLevelScene(levelId);
   if (!scene) return { workable: ids, skipped: 0 };
   const workable: string[] = [];
-  // ADR-358 Phase 9E-3: id-first lookup (layersById), entity.layer name fallback.
-  const layers = scene.layersById ?? scene.layers ?? {};
+  const layers = scene.layersById ?? {};
   for (const id of ids) {
     const entity = scene.entities.find(e => e.id === id);
-    const layer = entity
-      ? ((entity.layerId ? layers[entity.layerId] : undefined) ?? (entity.layer ? layers[entity.layer] : undefined))
-      : undefined;
+    const layer = entity?.layerId ? layers[entity.layerId] : undefined;
     if (layer?.locked) continue;
     workable.push(id);
   }

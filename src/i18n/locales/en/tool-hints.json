@@ -126,7 +126,9 @@
           "width": "Invalid stair width.",
           "rise": "Invalid riser height.",
           "tread": "Invalid tread depth.",
-          "totalRise": "Invalid total rise."
+          "totalRise": "Invalid total rise.",
+          "totalRiseOverFloor": "Stair exceeds the floor height. Reduce the riser or step count.",
+          "totalRiseUnderFloor": "Stair does not reach the next floor. Increase the riser or step count."
         },
         "nok": {
           "widthMin": "NOK: insufficient stair width.",

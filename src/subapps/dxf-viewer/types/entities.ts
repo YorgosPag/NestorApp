@@ -26,22 +26,8 @@ export interface BaseEntity {
   id: string;
   name?: string;             // Optional user-friendly name for the entity
   type: EntityType;
-  /**
-   * @deprecated ADR-358 Phase 9D — Layer NAME backref. Resolver (`resolveEntityLayerName`)
-   * collapsed to id-only in Phase 9D-5b-iii — this field is NO LONGER read by production code.
-   * Phase 9D-5c: `StairEntity` now uses dedicated `levelId` field — layer abuse removed.
-   * Safe to drop from BaseEntity after confirming zero production reads.
-   * DO NOT add new usages. Prefer `layerId` exclusively.
-   */
-  layer?: string;
-  /**
-   * Stable layer identifier — `lyr_<UUID-v4>` matching `SceneLayer.id` (ADR-358 Phase 9C v2.13).
-   * Phase 9D-5b-iii: resolver is id-only. STRONGLY REQUIRED — all new entity construction
-   * MUST set this field. Full TypeScript enforcement (`layerId: string` required) pending
-   * stair-level-id migration (see `layer?` above).
-   * Resolve display name via `LayerStore.getLayer(id)?.name`.
-   */
-  layerId?: string;
+  /** ADR-358 Phase 9E-6e: stable layer identifier `lyr_<UUID-v4>`. Required on all entities. */
+  layerId: string;
   color?: string;
   selected?: boolean;
   preview?: boolean;
@@ -856,17 +842,8 @@ export type LayerId = string;
 
 export interface SceneModel {
   entities: AnySceneEntity[];
-  /**
-   * @deprecated ADR-358 Phase 9E — use `layersById` (id-keyed).
-   * Removal target: Phase 9E-6e. Until then, kept for compat with legacy Firestore docs.
-   */
-  layers: Record<string, SceneLayer>;
-  /**
-   * ADR-358 Phase 9E-5 — guaranteed present on all scenes produced by
-   * `DxfSceneBuilder.buildScene` and `LayerOperationsService` mutations.
-   * Still optional (`?`) for Firestore-deserialized legacy docs — becomes required in Phase 9E-6e.
-   */
-  layersById?: Record<LayerId, SceneLayer>;
+  /** ADR-358 Phase 9E-6e: id-keyed layer map. Required on all scenes. */
+  layersById: Record<LayerId, SceneLayer>;
   bounds: SceneBounds;
   units: 'mm' | 'cm' | 'm' | 'in' | 'ft';
   version?: string;

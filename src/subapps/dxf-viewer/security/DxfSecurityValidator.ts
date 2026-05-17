@@ -194,7 +194,7 @@ export class DxfSecurityValidator extends SceneValidator {
     }
 
     // Layer count validation
-    const layerCount = Object.keys(scene.layersById ?? scene.layers ?? {}).length;
+    const layerCount = Object.keys(scene.layersById ?? {}).length;
     if (layerCount > ENTERPRISE_LIMITS.MAX_LAYER_COUNT) {
       return {
         isValid: false,

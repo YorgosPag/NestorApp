@@ -79,7 +79,7 @@ function buildCanvasContext(
     };
   }
 
-  const layerNames = Object.values(scene.layersById ?? scene.layers).map((l) => l.name);
+  const layerNames = Object.values(scene.layersById ?? {}).map((l) => l.name);
 
   return {
     entityCount: scene.entities.length,

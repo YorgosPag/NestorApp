@@ -34,9 +34,9 @@ export function useLayersState(scene: SceneModel | null) {
   
   // Color Group state - Start with all expanded
   const [expandedColorGroups, setExpandedColorGroups] = useState<Set<string>>(() => {
-    if (!(scene?.layers ?? scene?.layersById)) return new Set();
+    if (!scene?.layersById) return new Set();
     const colorGroupNames = Array.from(new Set(
-      Object.values(scene.layersById ?? scene.layers).map(layer => `Color ${layer.color || DEFAULT_LAYER_COLOR}`)
+      Object.values(scene.layersById).map(layer => `Color ${layer.color || DEFAULT_LAYER_COLOR}`)
     ));
     return new Set(colorGroupNames);
   });

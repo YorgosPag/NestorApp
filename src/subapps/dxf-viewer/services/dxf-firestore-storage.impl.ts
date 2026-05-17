@@ -37,7 +37,7 @@ import type { FileRecord } from '@/types/file-record';
 export function generateSceneChecksum(scene: SceneModel): string {
   const data = {
     entityCount: scene.entities.length,
-    layerCount: Object.keys(scene.layersById ?? scene.layers).length,
+    layerCount: Object.keys(scene.layersById ?? {}).length,
     bounds: scene.bounds,
     units: scene.units,
   };

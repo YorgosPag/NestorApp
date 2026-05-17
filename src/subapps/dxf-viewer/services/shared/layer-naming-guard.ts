@@ -49,7 +49,7 @@ export function guardLayerName(
   const { name, scene, excludeId } = input;
   const result = validateLayerName({
     name,
-    existingLayers: Object.values(scene.layersById ?? scene.layers),
+    existingLayers: Object.values(scene.layersById ?? {}),
     excludeId,
   });
   if (result.valid) return null;

@@ -222,7 +222,11 @@ export function useRibbonStairBridge(
     return false;
   }, [resolveStair]);
 
-  // ADR-358 Phase 7b2b-β Stream F — panel visibility resolver.
+  // ADR-358 Phase 7b2b-β Stream F + Phase 9B-3 — panel visibility resolver.
+  // `multiStoryHeightEditor` hides the storyHeight combobox when the stair
+  // is bound to a floor — Revit / ArchiCAD / AutoCAD Architecture all hide
+  // the level-distance editor once a stair is linked, so the user cannot
+  // drift the two surfaces apart.
   const getPanelVisibility = useCallback((visibilityKey: string): boolean => {
     if (!isStairVisibilityKey(visibilityKey)) return true;
     const stair = resolveStair();
@@ -230,6 +234,9 @@ export function useRibbonStairBridge(
     if (visibilityKey === STAIR_RIBBON_VISIBILITY_KEYS.multiFlight) {
       const kind = stair.params.variant.kind;
       return kind === 'l-shape' || kind === 'u-shape' || kind === 'gamma';
+    }
+    if (visibilityKey === STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor) {
+      return stair.params.multiStoryConfig?.linkedToFloor !== true;
     }
     return true;
   }, [resolveStair]);
