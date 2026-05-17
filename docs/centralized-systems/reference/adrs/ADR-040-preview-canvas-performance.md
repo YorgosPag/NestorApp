@@ -1729,3 +1729,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-17: ADR-362 Phase C1 — dimension entity in DxfRenderer
 
 `DxfRenderer.toEntityModel()` gains a `dimension` case that unwraps `DxfDimension.dimensionEntity` into the renderer pipeline. `buildDimensionLookup()` scans `scene.entities` once per frame to build the `Map<string, DimensionEntity>` needed for baseline/continued parent resolution. Two new type imports from ADR-362: `DimensionEntity`, `DimensionLookup`. Cardinal rules maintained.
+
+## 2026-05-17: ADR-362 Phase C1 — dim-arrowhead-renderer + dim-text-renderer leaves
+
+`rendering/entities/dimension/dim-arrowhead-renderer.ts` and `dim-text-renderer.ts` are pure Canvas2D leaf renderers used by `DimensionRenderer`. Both comply with ADR-040 micro-leaf rules: no store subscriptions, no scene reads, deterministic Canvas2D output. `dim-arrowhead-renderer` scales from unit-space block definitions (Phase A2) by `dimasz` and rotates to dim-line direction. `dim-text-renderer` applies `DIMTXSTY`/`DIMTXT`/`DIMCLRT`/`DIMGAP` from resolved DimStyle. Cardinal rules maintained.
