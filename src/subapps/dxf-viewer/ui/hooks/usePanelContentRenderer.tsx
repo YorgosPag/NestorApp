@@ -29,6 +29,8 @@ import type { LayerOperationsCallbacks } from './useLayerOperations';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 // ADR-358 Phase 8 sidebar dock — Stair properties tab content.
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
+// ADR-362 Phase F1 — Dimensions style manager tab.
+import { DimensionsTab } from '../panels/dimensions/DimensionsTab';
 
 interface UsePanelContentRendererParams {
   activePanel: PanelType;
@@ -122,6 +124,9 @@ export function usePanelContentRenderer({
             floorplanId={floorplanId}
           />
         );
+
+      case 'dimensions':
+        return <DimensionsTab />;
 
       default:
         return (
