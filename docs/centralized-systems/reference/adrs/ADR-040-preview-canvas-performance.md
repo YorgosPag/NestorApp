@@ -71,9 +71,11 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
-### 2026-05-17 — ADR-358 Phase 9E-1 interop: DxfRenderer id-first layersById lookup
+### 2026-05-17 — ADR-358 Phase 9E-1 interop: DxfRenderer id-first layersById lookup + SceneModel layersById mirror
 
 `DxfRenderer.resolveLayerStyle` updated to use `entity.layerId → layersById[entity.layerId]` as the primary lookup path (O(1), id-keyed). Previous path used `resolveEntityLayerName(entity)` then `layersById[name]` (name-keyed, double-call). New path: id-keyed first; IIFE fallback to name-keyed for legacy scenes without `layersById` or entities without `layerId`. **Bitmap cache key untouched** — cardinal rule #3 holds. **ADR-040 leaf rules**: no `useSyncExternalStore` added; `DxfRenderer` remains a render-pipeline leaf; change is purely a lookup-path optimisation.
+
+Companion changes (same Phase 9E-1): `SceneModel.layersById?: Record<LayerId, SceneLayer>` added to `types/entities.ts`; `DxfSceneBuilder.buildScene()` populates it via O(n) `Object.fromEntries` mirror; `useDxfSceneConversion` passes `layersById ?? layers` to the render bridge. These three files are not ADR-040 micro-leaf files but are bundled here for atomic Phase 9E-1 commit compliance (CHECK 6B).
 
 ---
 

@@ -175,9 +175,15 @@ export class DxfSceneBuilder {
     const fromInsunits = insunitsCodeToSceneUnits(header.insunits);
     const resolvedUnits = fromInsunits ?? detectSceneUnits(bounds);
 
+    // ADR-358 Phase 9E-1: build id-keyed mirror alongside name-keyed `layers`.
+    const layersById: Record<string, SceneLayer> = Object.fromEntries(
+      Object.values(layers).map((l) => [l.id, l]),
+    );
+
     return {
       entities,
       layers,
+      layersById,
       bounds,
       units: resolvedUnits
     };

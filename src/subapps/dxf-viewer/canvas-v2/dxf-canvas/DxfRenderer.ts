@@ -469,11 +469,13 @@ export class DxfRenderer {
       lineWidthPx: Math.max(1, entity.lineWidth || 1),
     };
     if (!layersById) return fallback;
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback. `layersById`
-    // is currently name-keyed (Phase 9E re-keys to LayerId); resolve the name
-    // through dual-read so id-only entities still hit the cache.
-    const resolvedLayerName = resolveEntityLayerName(entity);
-    const layer = resolvedLayerName ? layersById[resolvedLayerName] : undefined;
+    // ADR-358 Phase 9E-1: id-keyed lookup first (scene.layersById populated by builder).
+    // Name-keyed fallback handles legacy/Firestore scenes without layersById.
+    const layerById = entity.layerId ? layersById[entity.layerId] : undefined;
+    const layer = layerById ?? (() => {
+      const name = resolveEntityLayerName(entity);
+      return name ? layersById[name] : undefined;
+    })();
     if (!layer) return fallback;
     const styleInput = entityToStyleInput({
       color: entity.color,

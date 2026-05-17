@@ -320,6 +320,7 @@ export function useDxfSceneConversion({
       entities: converted,
       layers: Object.keys(layers),
       // ADR-358 §G7 Phase 5 — bridge full SceneLayer map for ByLayer/ByBlock resolver.
+      // Phase 9E-5: will switch to currentScene?.layersById once LayerOperationsService maintains it.
       layersById: currentScene?.layers,
       bounds: currentScene?.bounds ?? null,
     };
