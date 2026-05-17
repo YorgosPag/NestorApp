@@ -172,23 +172,32 @@ describe('StairGeometryService — Gamma (Γ)', () => {
     expect(polygonAreaXY(g.landings[1])).toBeCloseTo(1000 * 1500, 3);
   });
 
-  it('Test 10: tread numbering continuous (restartPerFlight=false) → labels 1..10', () => {
+  it('Test 10: continuous numbering with γ landings → 12 labels (10 treads + 2 landings)', () => {
     const g = computeStairGeometry(
       makeGammaParams({ treadLabelDisplay: 'all', treadLabelRestartPerFlight: false }),
     );
-    expect(g.treadLabels).toHaveLength(10);
+    expect(g.treadLabels).toHaveLength(12);
     if (!g.treadLabels) throw new Error('expected labels');
-    expect(g.treadLabels.map(l => l.text)).toEqual(['1','2','3','4','5','6','7','8','9','10']);
+    expect(g.treadLabels.map(l => l.text)).toEqual(
+      ['1','2','3','4','5','6','7','8','9','10','11','12'],
+    );
+    // ADR-358 Phase 3e γ: indices 3 and 8 are landings (after flight1 of 3 and flight2 of 4).
+    expect(g.treadLabels[3].kind).toBe('landing');
+    expect(g.treadLabels[8].kind).toBe('landing');
+    expect(g.treadLabels[0].kind).toBe('tread');
   });
 
-  it('Test 11: restartPerFlight=true → flights restart 1..n_i each', () => {
+  it('Test 11: restartPerFlight=true → flights restart, landings number after preceding flight', () => {
     const g = computeStairGeometry(
       makeGammaParams({ treadLabelDisplay: 'all', treadLabelRestartPerFlight: true }),
     );
     if (!g.treadLabels) throw new Error('expected labels');
+    // Landing localIdx = preceding flightSize → flight1(n1=3) landing1 text = "4"; flight2(n2=4) landing2 = "5".
     expect(g.treadLabels.map(l => l.text)).toEqual([
       '1','2','3',          // flight 1 (n1=3)
+      '4',                  // landing 1 (= n1+1 in flight1 local frame)
       '1','2','3','4',      // flight 2 (n2=4)
+      '5',                  // landing 2 (= n2+1)
       '1','2','3',          // flight 3 (n3=3)
     ]);
   });
