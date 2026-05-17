@@ -69,7 +69,54 @@
     "toastRestored": "Επαναφορά κατάστασης \"{name}\"",
     "toastSaved": "Αποθηκεύτηκε κατάσταση \"{name}\"",
     "toastDeleted": "Διαγράφηκε κατάσταση \"{name}\"",
-    "toastUnmatched": "Δεν βρέθηκαν {count} επίπεδα από την κατάσταση"
+    "toastUnmatched": "Δεν βρέθηκαν {count} επίπεδα από την κατάσταση",
+    "templates": {
+      "browserTitle": "Πρότυπα Καταστάσεων Επιπέδων",
+      "browserDescription": "Επιλέξτε ένα πρότυπο από τη βιβλιοθήκη της εταιρείας για να το χρησιμοποιήσετε ως αποθηκευμένη κατάσταση σε αυτό το έργο.",
+      "searchPlaceholder": "Αναζήτηση με όνομα…",
+      "categoryFilterAll": "Όλες οι κατηγορίες",
+      "categoryLabel": "Κατηγορία",
+      "tagsLabel": "Ετικέτες",
+      "tagsPlaceholder": "Προσθήκη ετικέτας και Enter",
+      "empty": "Δεν υπάρχουν πρότυπα ακόμα",
+      "noResults": "Κανένα αποτέλεσμα",
+      "loading": "Φόρτωση προτύπων…",
+      "useButton": "Χρήση",
+      "entryCount": "{count} επίπεδα",
+      "saveAsTitle": "Αποθήκευση ως Πρότυπο",
+      "saveAsDescription": "Αποθηκεύστε την τρέχουσα κατάσταση επιπέδων στη βιβλιοθήκη της εταιρείας για επαναχρησιμοποίηση σε άλλα έργα.",
+      "saveAsName": "Όνομα",
+      "saveAsNamePlaceholder": "π.χ. Αρχιτεκτονικά — Πλάνο Ορόφου",
+      "saveAsDescriptionField": "Περιγραφή",
+      "saveAsDescriptionPlaceholder": "Σύντομη περιγραφή του προτύπου (προαιρετικά)",
+      "saveAsCategory": "Κατηγορία",
+      "saveAsCategoryPlaceholder": "π.χ. αρχιτεκτονικά, στατικά",
+      "saveAsTags": "Ετικέτες",
+      "saveAsTagsPlaceholder": "Προσθήκη ετικέτας και Enter (έως 10)",
+      "saveAsTagsLimitReached": "Έφτασες το όριο των 10 ετικετών",
+      "saveAsSubmit": "Αποθήκευση",
+      "saveAsCancel": "Ακύρωση",
+      "dropdownBrowseTemplates": "Περιήγηση προτύπων…",
+      "dropdownSaveAsTemplate": "Αποθήκευση ως πρότυπο…",
+      "dropdownNotReady": "Φόρτωση βιβλιοθήκης…",
+      "toastSaved": "Αποθηκεύτηκε ως πρότυπο: {name}",
+      "toastImported": "Εισήχθη το πρότυπο: {name}",
+      "errorNameRequired": "Το όνομα είναι υποχρεωτικό",
+      "errorEmptySnapshot": "Δεν υπάρχουν επίπεδα για αποθήκευση",
+      "errorCrossTenant": "Το πρότυπο δεν ανήκει στην εταιρεία σου",
+      "errorNotFound": "Το πρότυπο δεν βρέθηκε",
+      "errorImport": "Αποτυχία εισαγωγής προτύπου",
+      "errorSave": "Αποτυχία αποθήκευσης προτύπου",
+      "presetCategory": {
+        "architectural": "Αρχιτεκτονικά",
+        "structural": "Στατικά",
+        "mep": "Η/Μ",
+        "demolition": "Καθαιρέσεις",
+        "presentation": "Παρουσίαση",
+        "working": "Εργασίας",
+        "custom": "Προσαρμοσμένο"
+      }
+    }
   },
   "toolbar": {
     "title": "Εργαλεία Σχεδίασης",
@@ -666,6 +713,15 @@
           },
           "equalGoing": "Ισόπλατο Πάτημα",
           "pie": "Τρίγωνα"
+        },
+        "nokSubType": {
+          "section": {
+            "title": "Είδος Σκάλας (ΝΟΚ)"
+          },
+          "main": "Κεντρικό Κλιμακοστάσιο",
+          "lowRise": "Κτίριο έως 3 ορόφους",
+          "internal": "Εσωτερική Σκάλα Κατοικίας",
+          "auxiliary": "Βοηθητική Σκάλα"
         }
       },
       "measureAngle": "Γωνία",

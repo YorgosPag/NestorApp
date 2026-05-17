@@ -69,7 +69,54 @@
     "toastRestored": "Restored state \"{name}\"",
     "toastSaved": "Saved state \"{name}\"",
     "toastDeleted": "Deleted state \"{name}\"",
-    "toastUnmatched": "{count} layer(s) from state not found"
+    "toastUnmatched": "{count} layer(s) from state not found",
+    "templates": {
+      "browserTitle": "Layer State Templates",
+      "browserDescription": "Pick a template from the company library to use as a saved state in this project.",
+      "searchPlaceholder": "Search by name…",
+      "categoryFilterAll": "All categories",
+      "categoryLabel": "Category",
+      "tagsLabel": "Tags",
+      "tagsPlaceholder": "Add a tag and press Enter",
+      "empty": "No templates yet",
+      "noResults": "No results",
+      "loading": "Loading templates…",
+      "useButton": "Use",
+      "entryCount": "{count} layers",
+      "saveAsTitle": "Save as Template",
+      "saveAsDescription": "Save the current layer state to the company library so other projects can reuse it.",
+      "saveAsName": "Name",
+      "saveAsNamePlaceholder": "e.g. Architectural — Floor Plan",
+      "saveAsDescriptionField": "Description",
+      "saveAsDescriptionPlaceholder": "Short description of the template (optional)",
+      "saveAsCategory": "Category",
+      "saveAsCategoryPlaceholder": "e.g. architectural, structural",
+      "saveAsTags": "Tags",
+      "saveAsTagsPlaceholder": "Add a tag and press Enter (up to 10)",
+      "saveAsTagsLimitReached": "Reached the 10-tag limit",
+      "saveAsSubmit": "Save",
+      "saveAsCancel": "Cancel",
+      "dropdownBrowseTemplates": "Browse Templates…",
+      "dropdownSaveAsTemplate": "Save as Template…",
+      "dropdownNotReady": "Loading library…",
+      "toastSaved": "Saved as template: {name}",
+      "toastImported": "Imported template: {name}",
+      "errorNameRequired": "Name is required",
+      "errorEmptySnapshot": "There are no layers to save",
+      "errorCrossTenant": "Template does not belong to your company",
+      "errorNotFound": "Template not found",
+      "errorImport": "Failed to import template",
+      "errorSave": "Failed to save template",
+      "presetCategory": {
+        "architectural": "Architectural",
+        "structural": "Structural",
+        "mep": "MEP",
+        "demolition": "Demolition",
+        "presentation": "Presentation",
+        "working": "Working",
+        "custom": "Custom"
+      }
+    }
   },
   "toolbar": {
     "title": "Drawing Tools",
@@ -666,6 +713,15 @@
           },
           "equalGoing": "Equal Going",
           "pie": "Pie"
+        },
+        "nokSubType": {
+          "section": {
+            "title": "Stair Type (NOK)"
+          },
+          "main": "Main Staircase",
+          "lowRise": "Residential ≤3 floors",
+          "internal": "Internal Apartment Stair",
+          "auxiliary": "Auxiliary Stair"
         }
       },
       "measureAngle": "Angle",
