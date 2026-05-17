@@ -408,6 +408,8 @@
       "stairFloor": "Στάθμη",
       "stairVariant": "Τύπος",
       "stairStructure": "Δομή",
+      "stairCorner": "Γωνία",
+      "stairCornerWinders": "Σκαλοπάτια Γωνίας",
       "stairGeometry": "Γεωμετρία",
       "stairDimensions": "Διαστάσεις",
       "stairMultiStory": "Πολυώροφα",
@@ -645,6 +647,25 @@
           "triangularFan": "Τριγωνική Βεντάλια",
           "triangularOutline": "Τριγωνική Περιγράμματος",
           "sketch": "Ελεύθερο Σχέδιο"
+        },
+        "cornerStyle": {
+          "section": {
+            "title": "Τύπος Γωνίας"
+          },
+          "landing": "Πλατύσκαλο",
+          "winders": "Σκαλοπάτια"
+        },
+        "winderCount": {
+          "section": {
+            "title": "Αριθμός Σκαλιών Γωνίας"
+          }
+        },
+        "winderMethod": {
+          "section": {
+            "title": "Μέθοδος Γωνίας"
+          },
+          "equalGoing": "Ισόπλατο Πάτημα",
+          "pie": "Τρίγωνα"
         }
       },
       "measureAngle": "Γωνία",

@@ -293,6 +293,10 @@ export class EnterpriseIdService {
   // DXF Layer States Manager (ADR-358 §5.9 Q12 — Phase 12)
   generateLayerStateId(): string { return this.generateId(P.LAYER_STATE).id; }
 
+  // DXF Layer State Templates (ADR-358 §5.9 Q12 — Phase 13B)
+  generateLayerStateTemplateId(): string { return this.generateId(P.LAYER_STATE_TEMPLATE).id; }
+  generateDxfTemplateCategoryId(): string { return this.generateId(P.DXF_TEMPLATE_CATEGORY).id; }
+
   // DXF Enterprise Dimension System (ADR-362)
   generateDimensionId(): string { return this.generateId(P.DIMENSION).id; }
   generateDimStyleId(): string { return this.generateId(P.DIM_STYLE).id; }

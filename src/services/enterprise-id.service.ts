@@ -85,6 +85,7 @@ export {
   generateStairId, generateStairPresetId,
   generateLayerFilterGroupId, generateLayerFilterPropertyId,
   generateLayerStateId,
+  generateLayerStateTemplateId, generateDxfTemplateCategoryId,
   generateDimensionId, generateDimStyleId, generateCenterMarkId, generateCenterLineId,
   generateOptimisticId, generateTempId, generateOpaqueToken, validateEnterpriseId, parseEnterpriseId,
   getIdType, isLegacyId, generateNotificationDedupeId,

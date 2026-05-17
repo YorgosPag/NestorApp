@@ -330,6 +330,14 @@ export const COLLECTIONS = {
   /** Stair library presets (3 scopes: user/company/project). Discriminator `scope` + tenant fields. IDs via sprst_* prefix. */
   STAIR_PRESETS: process.env.NEXT_PUBLIC_STAIR_PRESETS_COLLECTION || 'stair_presets',
 
+  // 🗂️ DXF LAYER STATE TEMPLATES — ADR-358 §5.9 Q12 Phase 13B (cross-project shareable layer states, companyId-scoped)
+  /** Cross-project layer state templates. Schema: { id, companyId, name, description?, tags[], category, snapshot[], createdBy, createdAt, updatedAt, deletedAt? }. IDs via lstpl_* prefix. */
+  DXF_LAYER_STATE_TEMPLATES:
+    process.env.NEXT_PUBLIC_DXF_LAYER_STATE_TEMPLATES_COLLECTION || 'dxf_layer_state_templates',
+  /** Per-company free-string category catalog for layer state templates. Auto-created when a user saves a template with a novel category. Schema: { id, companyId, value, createdBy, createdAt }. IDs via lstcat_* prefix. */
+  DXF_TEMPLATE_CATEGORIES:
+    process.env.NEXT_PUBLIC_DXF_TEMPLATE_CATEGORIES_COLLECTION || 'dxf_template_categories',
+
   // ✏️ DXF TEXT ENGINE — ADR-344 (companyId-scoped, Phase 0)
   /** Hybrid text templates: TS built-in defaults + per-company overrides. Schema: { id, companyId, name, category, content (DxfTextNode), placeholders[], isDefault }. IDs via tpl_text_* prefix. */
   TEXT_TEMPLATES: process.env.NEXT_PUBLIC_TEXT_TEMPLATES_COLLECTION || 'text_templates',

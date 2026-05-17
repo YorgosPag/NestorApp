@@ -23,6 +23,12 @@ import {
   renderLine, renderCircle, renderPolyline, renderRectangle,
   renderAngleMeasurement, renderPoint, renderArc,
 } from './preview-entity-renderers';
+// ADR-362 Phase D1: dim entity preview routed through the dedicated renderer
+// (Phase C2 deliverable). PreviewRenderer keeps DIMSTYLE resolution local so
+// the dim creation flow doesn't have to thread styles through props.
+import { renderPreviewDimension } from './preview-dimension-renderer';
+import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
+import type { DimensionEntity } from '../../types/dimension';
 
 export class PreviewRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
@@ -181,6 +187,21 @@ export class PreviewRenderer {
       case 'angle-measurement': renderAngleMeasurement(ctx, entity as AngleMeasurementEntity, transform, renderOpts, helpers); break;
       case 'point': renderPoint(ctx, entity as PreviewPoint, transform, renderOpts, helpers); break;
       case 'arc': renderArc(ctx, entity as ArcPreviewEntity, transform, renderOpts, helpers); break;
+      // ADR-362 Phase D1: route dim preview through the Phase C2 renderer.
+      case 'dimension': {
+        const dimEntity = entity as DimensionEntity;
+        const registry = getDimStyleRegistry();
+        const style = registry.getStyle(dimEntity.styleId) ?? registry.getActiveStyle();
+        renderPreviewDimension({
+          ctx,
+          entity: dimEntity,
+          style,
+          transform,
+          viewport: this.currentViewport,
+          opts: { color: renderOpts.color, opacity: renderOpts.opacity },
+        });
+        break;
+      }
     }
 
     // Render colored preview grips (FIRST=teal P1/cursor-start, SECOND=yellow intermediates, THIRD=red cursor)

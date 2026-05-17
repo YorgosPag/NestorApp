@@ -225,6 +225,10 @@ export const ENTERPRISE_ID_PREFIXES = {
   // DXF Layer States Manager (ADR-358 §5.9 Q12 — Phase 12)
   LAYER_STATE: 'lst',            // user-saved layer state snapshot (visibility + style)
 
+  // DXF Layer State Templates (ADR-358 §5.9 Q12 — Phase 13B, Cross-project Templates)
+  LAYER_STATE_TEMPLATE: 'lstpl', // dxf_layer_state_templates collection — companyId-scoped, shareable
+  DXF_TEMPLATE_CATEGORY: 'lstcat', // dxf_template_categories collection — per-company free-string catalog
+
   // DXF Enterprise Dimension System (ADR-362)
   DIMENSION: 'dim',            // dimension entity (10 variants: linear/aligned/angular/radial/diameter/ordinate/baseline/continued/arcLength/joggedRadius)
   DIM_STYLE: 'dimstyle',       // DIMSTYLE — ~60 vars, 3 built-in templates + user customs

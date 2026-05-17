@@ -221,6 +221,10 @@ export const generateLayerFilterPropertyId = () => enterpriseIdService.generateL
 // DXF Layer States Manager (ADR-358 §5.9 Q12 — Phase 12)
 export const generateLayerStateId = () => enterpriseIdService.generateLayerStateId();
 
+// DXF Layer State Templates (ADR-358 §5.9 Q12 — Phase 13B)
+export const generateLayerStateTemplateId = () => enterpriseIdService.generateLayerStateTemplateId();
+export const generateDxfTemplateCategoryId = () => enterpriseIdService.generateDxfTemplateCategoryId();
+
 // DXF Enterprise Dimension System (ADR-362)
 export const generateDimensionId = () => enterpriseIdService.generateDimensionId();
 export const generateDimStyleId = () => enterpriseIdService.generateDimStyleId();

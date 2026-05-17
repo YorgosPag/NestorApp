@@ -408,6 +408,8 @@
       "stairFloor": "Floor Level",
       "stairVariant": "Type",
       "stairStructure": "Structure",
+      "stairCorner": "Corner",
+      "stairCornerWinders": "Corner Winders",
       "stairGeometry": "Geometry",
       "stairDimensions": "Dimensions",
       "stairMultiStory": "Multi-Story",
@@ -645,6 +647,25 @@
           "triangularFan": "Triangular Fan",
           "triangularOutline": "Triangular Outline",
           "sketch": "Sketch"
+        },
+        "cornerStyle": {
+          "section": {
+            "title": "Corner Type"
+          },
+          "landing": "Landing",
+          "winders": "Winders"
+        },
+        "winderCount": {
+          "section": {
+            "title": "Winder Count"
+          }
+        },
+        "winderMethod": {
+          "section": {
+            "title": "Winder Method"
+          },
+          "equalGoing": "Equal Going",
+          "pie": "Pie"
         }
       },
       "measureAngle": "Angle",
