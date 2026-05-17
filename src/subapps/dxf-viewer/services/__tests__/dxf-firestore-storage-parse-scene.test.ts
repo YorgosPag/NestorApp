@@ -7,14 +7,20 @@
  * the load with `"Scene not found"` and wipe the floorplan + any drawn stair
  * after every hard refresh.
  *
+ * ADR-358 Phase 14 note: `parseAndValidateScene` now applies `migrateLayersById`
+ * so raw partial layers are upgraded to full SceneLayer objects at load time.
+ * Tests use `expect.objectContaining` for the fields they specifically care about,
+ * and `createSceneLayer` to build full expected values where exact equality matters.
+ *
  * @see dxf-firestore-storage.impl.ts
  * @see useLevelSceneLoader.ts (gates on `fileRecord.scene.layersById != null`)
  */
 
 import { parseAndValidateScene } from '../dxf-scene-json';
+import { createSceneLayer } from '../../types/entities';
 
 describe('parseAndValidateScene — Phase 9E-6f layersById hydration', () => {
-  test('round-trip new-schema scene (layersById) hydrates layersById', () => {
+  test('round-trip new-schema scene (layersById) hydrates layersById with migration defaults', () => {
     const original = {
       entities: [{ id: 'ent_1', type: 'line', layerId: 'lyr_a' }],
       layersById: {
@@ -25,11 +31,27 @@ describe('parseAndValidateScene — Phase 9E-6f layersById hydration', () => {
     };
     const result = parseAndValidateScene(JSON.stringify(original));
     expect(result).not.toBeNull();
-    expect(result?.layersById).toEqual(original.layersById);
     expect(result?.entities).toHaveLength(1);
+
+    // Phase 14 migration applied: layer now has all ADR-358 defaults
+    const layer = result?.layersById['lyr_a'];
+    expect(layer).not.toBeUndefined();
+    expect(layer).toEqual(
+      expect.objectContaining({
+        id: 'lyr_a',
+        name: 'WALLS',
+        color: '#000',
+        linetype: 'Continuous',
+        lineweight: -3,
+        transparency: 0,
+        frozen: false,
+        plottable: true,
+        source: 'dxf-import',
+      }),
+    );
   });
 
-  test('legacy scene (name-keyed `layers` only) falls back into layersById', () => {
+  test('legacy scene (name-keyed `layers` only) falls back into layersById with migration', () => {
     const legacy = {
       entities: [{ id: 'ent_1', type: 'line' }],
       layers: { WALLS: { name: 'WALLS', color: '#000' } },
@@ -38,7 +60,19 @@ describe('parseAndValidateScene — Phase 9E-6f layersById hydration', () => {
     };
     const result = parseAndValidateScene(JSON.stringify(legacy));
     expect(result).not.toBeNull();
-    expect(result?.layersById).toEqual(legacy.layers);
+
+    // Key is still 'WALLS' (name-keyed legacy map preserved as layersById keys)
+    const layer = result?.layersById['WALLS'];
+    expect(layer).not.toBeUndefined();
+    expect(layer).toEqual(
+      expect.objectContaining({
+        id: 'WALLS',  // migration: id = mapKey when absent
+        name: 'WALLS',
+        color: '#000',
+        linetype: 'Continuous',
+        source: 'dxf-import',
+      }),
+    );
   });
 
   test('scene without entities array returns null', () => {
@@ -83,7 +117,13 @@ describe('parseAndValidateScene — Phase 9E-6f layersById hydration', () => {
       units: 'mm',
     };
     const result = parseAndValidateScene(JSON.stringify(both));
-    expect(result?.layersById).toEqual(both.layersById);
+
+    // lyr_new from layersById wins
+    expect(result?.layersById['lyr_new']).toEqual(
+      expect.objectContaining({ id: 'lyr_new', name: 'NEW', color: '#fff' }),
+    );
+    // OLD from layers discarded
+    expect(result?.layersById['OLD']).toBeUndefined();
   });
 
   test('scene with neither layersById nor layers defaults to empty object', () => {
@@ -94,5 +134,24 @@ describe('parseAndValidateScene — Phase 9E-6f layersById hydration', () => {
     };
     const result = parseAndValidateScene(JSON.stringify(minimal));
     expect(result?.layersById).toEqual({});
+  });
+
+  test('already-migrated V2 layer passes through migration unchanged', () => {
+    const v2Layer = createSceneLayer({
+      id: 'lyr_abc',
+      name: 'A-WALL',
+      color: '#ff0000',
+      linetype: 'Dashed',
+      lineweight: 0.5,
+      source: 'dxf-import',
+    });
+    const scene = {
+      entities: [{ id: 'ent_1', type: 'line', layerId: 'lyr_abc' }],
+      layersById: { lyr_abc: v2Layer },
+      bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+      units: 'mm',
+    };
+    const result = parseAndValidateScene(JSON.stringify(scene));
+    expect(result?.layersById['lyr_abc']).toEqual(v2Layer);
   });
 });
