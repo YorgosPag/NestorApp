@@ -317,6 +317,8 @@ export interface StairTreadLabel {
   readonly treadIndex: number;
   readonly position: Point3D;
   readonly text: string;
+  /** ADR-358 Phase 3e G21γ — `'landing'` for label centroid on a landing polygon. */
+  readonly kind?: 'tread' | 'landing';
 }
 
 export interface StairArrowSymbol {
