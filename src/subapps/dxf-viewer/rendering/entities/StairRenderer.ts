@@ -25,7 +25,6 @@ import type { Point3D } from '../../rendering/types/Types';
 import type { StairEntity } from '../../types/stair';
 import { isStairEntity } from '../../types/entities';
 import { getStairGrips } from '../../systems/stairs/stair-grips';
-import { CAD_UI_COLORS } from '../../config/color-config';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 
 const TREAD_FILL_ALPHA = 0.12;
@@ -39,7 +38,7 @@ const LABEL_OFFSET_PX = 8;
 const ADA_TOP_EXTENSION_MM = 305;
 
 export class StairRenderer extends BaseEntityRenderer {
-  render(entity: EntityModel, _options: RenderOptions = {}): void {
+  render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isStairEntity(entity)) return;
     const stair = entity as StairEntity;
     // ADR-358 Phase 8 — defensive: legacy / partially-serialized stair entries
@@ -48,15 +47,34 @@ export class StairRenderer extends BaseEntityRenderer {
     // rest of the scene renders normally; the entity is also dropped from
     // hit-testing via the matching guard in HitTestingService.
     if (!stair.geometry || !stair.params) return;
-    const { geometry } = stair;
-
-    this.ctx.save();
-    this.drawTreads(geometry.treadsBelowCut);
-    this.drawStringers(geometry.stringers.inner, geometry.stringers.outer);
-    this.drawHandrails(stair);
-    this.drawWalkline(geometry.walkline);
-    this.drawArrow(geometry.arrowSymbol.start, geometry.arrowSymbol.end, geometry.arrowSymbol.label);
-    this.ctx.restore();
+    // eslint-disable-next-line no-console
+    if (options.hovered || options.selected) {
+      // eslint-disable-next-line no-console
+      console.info('[StairRenderer] render', {
+        id: entity.id,
+        hovered: options.hovered,
+        selected: options.selected,
+        phase: options.phase,
+      });
+    }
+    // Route through the SSoT 3-phase template (`renderWithPhases`) so the
+    // stair participates in the same hover/highlight pipeline as every other
+    // entity (yellow glow pre-pass + phase-appropriate setupStyle + grips).
+    // Phase 5b drew everything raw with a manual `ctx.save/restore`, which
+    // bypassed `PhaseManager` and left the stair without the canonical hover
+    // glow. Fixed 2026-05-17.
+    this.renderWithPhases(
+      entity,
+      options,
+      () => {
+        const { geometry } = stair;
+        this.drawTreads(geometry.treadsBelowCut);
+        this.drawStringers(geometry.stringers.inner, geometry.stringers.outer);
+        this.drawHandrails(stair);
+        this.drawWalkline(geometry.walkline);
+        this.drawArrow(geometry.arrowSymbol.start, geometry.arrowSymbol.end, geometry.arrowSymbol.label);
+      },
+    );
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
@@ -83,8 +101,11 @@ export class StairRenderer extends BaseEntityRenderer {
 
   private drawTreads(treads: ReadonlyArray<ReadonlyArray<Point3D>>): void {
     if (treads.length === 0) return;
+    // strokeStyle is set upstream by `renderWithPhases` (hover glow / phase
+    // setupStyle SSoT) — DO NOT overwrite here, otherwise the yellow hover
+    // pass is lost. Only the stair-specific fill (translucent slate) stays
+    // locally because it is not part of the entity style pipeline.
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.ctx.strokeStyle = CAD_UI_COLORS.entity.default;
     this.ctx.fillStyle = `rgba(120, 144, 156, ${TREAD_FILL_ALPHA})`;
 
     for (const tread of treads) {
@@ -103,8 +124,8 @@ export class StairRenderer extends BaseEntityRenderer {
   }
 
   private drawStringers(inner: ReadonlyArray<Point3D>, outer: ReadonlyArray<Point3D>): void {
+    // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THICK;
-    this.ctx.strokeStyle = CAD_UI_COLORS.entity.default;
     this.drawPolyline3D(inner);
     this.drawPolyline3D(outer);
   }
@@ -114,7 +135,7 @@ export class StairRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash(WALKLINE_DASH as unknown as number[]);
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-    this.ctx.strokeStyle = CAD_UI_COLORS.entity.default;
+    // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
     this.drawPolyline3D(walkline);
     this.ctx.restore();
   }
@@ -146,7 +167,7 @@ export class StairRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash(HANDRAIL_DASH as unknown as number[]);
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-    this.ctx.strokeStyle = CAD_UI_COLORS.entity.default;
+    // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
 
     if (handrails.inner) {
       const extended = extendPolylineEnds(stringers.inner, topExtMm, bottomExtMm);
@@ -164,8 +185,10 @@ export class StairRenderer extends BaseEntityRenderer {
     const start = this.worldToScreen({ x: startW.x, y: startW.y });
     const end = this.worldToScreen({ x: endW.x, y: endW.y });
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.ctx.strokeStyle = CAD_UI_COLORS.entity.default;
-    this.ctx.fillStyle = CAD_UI_COLORS.entity.default;
+    // strokeStyle inherited from `renderWithPhases` (hover/selected SSoT).
+    // fillStyle aligned with stroke so the arrow head + UP/DOWN label pick up
+    // the same hover/selection colour as the rest of the stair.
+    this.ctx.fillStyle = this.ctx.strokeStyle;
 
     this.ctx.beginPath();
     this.ctx.moveTo(start.x, start.y);
@@ -193,7 +216,7 @@ export class StairRenderer extends BaseEntityRenderer {
     }
 
     this.ctx.font = '11px sans-serif';
-    this.ctx.fillStyle = CAD_UI_COLORS.entity.default;
+    // fillStyle still matches strokeStyle from above (hover/selected SSoT).
     this.ctx.fillText(label, end.x + LABEL_OFFSET_PX, end.y - LABEL_OFFSET_PX);
   }
 
