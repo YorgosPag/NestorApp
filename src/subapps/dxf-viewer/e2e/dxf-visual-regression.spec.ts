@@ -184,7 +184,7 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.setActiveTool('line'));
     await page.evaluate(() => window.__dxfTest.drawPreview({
-      id: 'preview-line', type: 'line', layer: '0', color: '#00ff00',
+      id: 'preview-line', type: 'line', layer: '0', layerId: 'lyr_test_default', color: '#00ff00',
       lineWidth: 2, visible: true,
       start: { x: 150, y: 150 }, end: { x: 350, y: 220 },
     }));
@@ -197,7 +197,7 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.setActiveTool('circle'));
     await page.evaluate(() => window.__dxfTest.drawPreview({
-      id: 'preview-circle', type: 'circle', layer: '0', color: '#00ff00',
+      id: 'preview-circle', type: 'circle', layer: '0', layerId: 'lyr_test_default', color: '#00ff00',
       lineWidth: 2, visible: true,
       center: { x: 250, y: 200 }, radius: 70,
       previewCursorPoint: { x: 320, y: 200 },
@@ -212,7 +212,7 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.setActiveTool('arc-3p'));
     await page.evaluate(() => window.__dxfTest.drawPreview({
-      id: 'preview-arc', type: 'arc', layer: '0', color: '#00ff00',
+      id: 'preview-arc', type: 'arc', layer: '0', layerId: 'lyr_test_default', color: '#00ff00',
       lineWidth: 2, visible: true,
       center: { x: 250, y: 200 }, radius: 80,
       startAngle: 0, endAngle: 120, counterclockwise: false,
@@ -229,7 +229,7 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.setActiveTool('polyline'));
     await page.evaluate(() => window.__dxfTest.drawPreview({
-      id: 'preview-poly', type: 'polyline', layer: '0', color: '#00ff00',
+      id: 'preview-poly', type: 'polyline', layer: '0', layerId: 'lyr_test_default', color: '#00ff00',
       lineWidth: 2, visible: true,
       vertices: [
         { x: 130, y: 150 }, { x: 200, y: 250 },
@@ -246,7 +246,7 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.setActiveTool('rectangle'));
     await page.evaluate(() => window.__dxfTest.drawPreview({
-      id: 'preview-rect', type: 'polyline', layer: '0', color: '#00ff00',
+      id: 'preview-rect', type: 'polyline', layer: '0', layerId: 'lyr_test_default', color: '#00ff00',
       lineWidth: 2, visible: true,
       vertices: [
         { x: 150, y: 150 }, { x: 350, y: 150 },
@@ -274,7 +274,7 @@ test.describe('Phase 5 — Entity Operations', () => {
     await loadHarness(page);
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.addSceneEntity({
-      id: 'line-bottom-copy', type: 'line', layer: '0',
+      id: 'line-bottom-copy', type: 'line', layer: '0', layerId: 'lyr_test_default',
       color: '#ffff00', lineWidth: 2, visible: true,
       start: { x: 100, y: 130 }, end: { x: 400, y: 130 },
     }));
@@ -307,7 +307,7 @@ test.describe('Phase 5 — Entity Operations', () => {
     await loadHarness(page);
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.addSceneEntity({
-      id: 'circle-new', type: 'circle', layer: '0',
+      id: 'circle-new', type: 'circle', layer: '0', layerId: 'lyr_test_default',
       color: '#ff6600', lineWidth: 2, visible: true,
       center: { x: 250, y: 200 }, radius: 120,
     }));

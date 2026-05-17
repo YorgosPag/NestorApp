@@ -85,6 +85,7 @@ describe('useDxfSceneConversion — Phase 6 ByLayer sentinel emission', () => {
       id: 'e1',
       type: 'line',
       layer: 'WALLS',
+      layerId: 'lyr_test_default',
       start: { x: 0, y: 0 },
       end: { x: 10, y: 0 },
       visible: true,

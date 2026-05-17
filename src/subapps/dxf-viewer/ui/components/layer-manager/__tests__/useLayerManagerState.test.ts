@@ -27,9 +27,9 @@ const mockUseLevelSelection = vi.fn(() => ({
     id: 'level_1',
     scene: {
       entities: [
-        { layer: 'Electrical', type: 'line' },
-        { layer: 'Electrical', type: 'polyline' },
-        { layer: 'Plumbing', type: 'circle' },
+        { layer: 'Electrical', layerId: 'lyr_test_default', type: 'line' },
+        { layer: 'Electrical', layerId: 'lyr_test_default', type: 'polyline' },
+        { layer: 'Plumbing', layerId: 'lyr_test_default', type: 'circle' },
       ],
     } as SceneModel,
   },
