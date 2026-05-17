@@ -116,7 +116,10 @@
         "sections": {
           "lines": "Lines",
           "symbols": "Symbols & Arrows",
-          "text": "Text"
+          "text": "Text",
+          "fit": "Fit",
+          "units": "Units",
+          "tolerances": "Tolerances"
         },
         "fields": {
           "dimasz": "Arrow size (mm)",
@@ -133,7 +136,23 @@
           "dimtad": "Text vertical position",
           "dimtih": "Text inside horizontal",
           "dimtoh": "Text outside horizontal",
-          "dimgap": "Text gap (mm)"
+          "dimgap": "Text gap (mm)",
+          "dimatfit": "Arrow/text fit",
+          "dimtmove": "Text move rule",
+          "dimscale": "Overall scale factor",
+          "dimlunit": "Linear unit format",
+          "dimdec": "Decimal places",
+          "dimrnd": "Rounding",
+          "dimlfac": "Linear scale factor",
+          "dimzin": "Zero suppression",
+          "dimaunit": "Angular unit format",
+          "dimadec": "Angular decimal places",
+          "dimtol": "Show tolerance",
+          "dimlim": "Limits mode",
+          "dimtp": "Upper tolerance",
+          "dimtm": "Lower tolerance",
+          "dimtdec": "Tolerance decimal places",
+          "dimtolj": "Tolerance justification"
         },
         "dimtad": {
           "centered": "Centered",
@@ -141,6 +160,37 @@
           "outside": "Outside",
           "jis": "JIS",
           "below": "Below"
+        },
+        "dimatfit": {
+          "0": "Both outside extension lines",
+          "1": "Move arrows first",
+          "2": "Move text first",
+          "3": "Best fit"
+        },
+        "dimtmove": {
+          "0": "Move with dim line",
+          "1": "Add leader",
+          "2": "Move freely"
+        },
+        "dimlunit": {
+          "scientific": "Scientific",
+          "decimal": "Decimal",
+          "engineering": "Engineering",
+          "architectural": "Architectural",
+          "fractional": "Fractional",
+          "windowsDesktop": "Windows Desktop"
+        },
+        "dimaunit": {
+          "decimalDegrees": "Decimal degrees",
+          "degMinSec": "Deg/Min/Sec",
+          "gradians": "Gradians",
+          "radians": "Radians",
+          "surveyorUnits": "Surveyor units"
+        },
+        "dimtolj": {
+          "bottom": "Bottom",
+          "middle": "Middle",
+          "top": "Top"
         },
         "dimblk": {
           "none": "None",
