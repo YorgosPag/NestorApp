@@ -288,6 +288,81 @@ export function setRecentLayerIds(ids: ReadonlyArray<string>): void {
   notify();
 }
 
+/**
+ * Atomic snapshot apply (ADR-358 §5.9 Q12 Phase 12 — Restore command).
+ *
+ * Applies an array of partial layer state updates in a single notify cycle.
+ * Each entry is matched by `layerId` first, then by case-insensitive
+ * `layerName` fallback (cross-project `.las` restore semantics, Phase 13).
+ * Layers absent from the snapshot are left untouched (extra layers as-is);
+ * snapshot entries with no live match are reported back as `unmatched` so the
+ * caller can surface a toast.
+ */
+export interface LayerSnapshotEntryInput {
+  readonly layerId: string;
+  readonly layerName: string;
+  readonly visible: boolean;
+  readonly frozen: boolean;
+  readonly locked: boolean;
+  readonly color: string;
+  readonly colorAci?: number;
+  readonly colorTrueColor?: number | null;
+  readonly linetype: string;
+  readonly lineweight: SceneLayer['lineweight'];
+  readonly transparency: number;
+  readonly plottable: boolean;
+}
+
+export interface ApplyLayerSnapshotResult {
+  readonly applied: number;
+  readonly unmatched: ReadonlyArray<string>;
+}
+
+export function applyLayerSnapshotEntries(
+  entries: ReadonlyArray<LayerSnapshotEntryInput>,
+): ApplyLayerSnapshotResult {
+  let applied = 0;
+  const unmatched: string[] = [];
+  for (const entry of entries) {
+    const target = matchLayerForSnapshotEntry(entry);
+    if (!target) {
+      unmatched.push(entry.layerName);
+      continue;
+    }
+    const key = getLayerKey(target);
+    layersById.set(key, {
+      ...target,
+      visible: entry.visible,
+      frozen: entry.frozen,
+      locked: entry.locked,
+      color: entry.color,
+      colorAci: entry.colorAci ?? target.colorAci,
+      colorTrueColor:
+        entry.colorTrueColor === undefined ? target.colorTrueColor : entry.colorTrueColor,
+      linetype: entry.linetype,
+      lineweight: entry.lineweight,
+      transparency: entry.transparency,
+      plottable: entry.plottable,
+    });
+    applied += 1;
+  }
+  if (applied > 0) {
+    rebuildSnapshot();
+    notify();
+  }
+  return { applied, unmatched };
+}
+
+function matchLayerForSnapshotEntry(entry: LayerSnapshotEntryInput): SceneLayer | null {
+  const byId = layersById.get(entry.layerId);
+  if (byId) return byId;
+  const needle = entry.layerName.toLowerCase();
+  for (const layer of layersById.values()) {
+    if (layer.name.toLowerCase() === needle) return layer;
+  }
+  return null;
+}
+
 function pushRecentInternal(id: string): void {
   const filtered = recentLayerIds.filter((existing) => existing !== id);
   filtered.unshift(id);
