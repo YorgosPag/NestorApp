@@ -222,6 +222,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   LAYER_FILTER_PROPERTY: 'lfp',  // property filter (rule-based, AND/OR nested)
   // NOTE: smart filter ids (`lfs_*`) are DETERMINISTIC strings — not enterprise IDs.
 
+  // DXF Layer States Manager (ADR-358 §5.9 Q12 — Phase 12)
+  LAYER_STATE: 'lst',            // user-saved layer state snapshot (visibility + style)
+
   // DXF Enterprise Dimension System (ADR-362)
   DIMENSION: 'dim',            // dimension entity (10 variants: linear/aligned/angular/radial/diameter/ordinate/baseline/continued/arcLength/joggedRadius)
   DIM_STYLE: 'dimstyle',       // DIMSTYLE — ~60 vars, 3 built-in templates + user customs
