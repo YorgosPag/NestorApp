@@ -742,8 +742,8 @@ export const HOVER_HIGHLIGHT = {
     // TEMP debug: magenta to verify stair receives the hover glow pre-pass.
     // Revert to UI_COLORS.ENTITY_HOVER_GLOW once stair pipeline is verified.
     glowColor: '#FF00FF',  // was UI_COLORS.ENTITY_HOVER_GLOW — '#FFFF00'
-    glowExtraWidth: 12,  // bumped from 6 so the glow is unmistakable in the debug pass
-    glowOpacity: 0.9,   // bumped from 0.35 — full visibility during debug
+    glowExtraWidth: 30,  // TEMP wider for stair debug
+    glowOpacity: 1.0,    // TEMP full opaque for stair debug
     opacity: OPACITY.OPAQUE,
   },
   /** Guide hover — soft glow effect, keeps original guide color (AutoCAD-style) */
