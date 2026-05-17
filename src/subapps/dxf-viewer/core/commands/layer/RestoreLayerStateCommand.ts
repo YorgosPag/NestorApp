@@ -22,6 +22,8 @@
 import type { ICommand, SerializedCommand } from '../interfaces';
 import {
   applyLayerSnapshotEntries,
+  upsertLayer,
+  removeLayer,
   type LayerSnapshotEntryInput,
 } from '../../../stores/LayerStore';
 import {
@@ -32,10 +34,18 @@ import {
 } from '../../../stores/LayerStateStore';
 import type { LayerStateEntry } from '../../../types/layer-state';
 import { makeLayerCommandKey } from './layer-command-utils';
+import { createSceneLayer } from '../../../types/entities';
+
+export interface RestoreLayerStateOptions {
+  /** When true, snapshot entries with no live match are created as new layers. Default: false. */
+  readonly createMissingLayers: boolean;
+}
 
 export interface RestoreLayerStateInput {
   /** Id of the target saved state to apply. */
   readonly stateId: string;
+  /** Apply policy options. Defaults to `{ createMissingLayers: false }`. */
+  readonly options?: RestoreLayerStateOptions;
 }
 
 export class RestoreLayerStateCommand implements ICommand {
@@ -47,11 +57,15 @@ export class RestoreLayerStateCommand implements ICommand {
   private capturedPreState: ReadonlyArray<LayerStateEntry> | null = null;
   private previousCurrentStateId: string | null = null;
   private unmatchedLayerNames: ReadonlyArray<string> = [];
+  private createdLayerIds: ReadonlyArray<string> = [];
   private wasExecuted = false;
+
+  private readonly opts: RestoreLayerStateOptions;
 
   constructor(private readonly input: RestoreLayerStateInput) {
     this.id = makeLayerCommandKey('layer-state-restore');
     this.timestamp = Date.now();
+    this.opts = input.options ?? { createMissingLayers: false };
   }
 
   execute(): void {
@@ -64,11 +78,20 @@ export class RestoreLayerStateCommand implements ICommand {
     }
     const result = applyLayerSnapshotEntries(toSnapshotInputs(target.snapshot));
     this.unmatchedLayerNames = result.unmatched;
+    if (this.opts.createMissingLayers && result.unmatched.length > 0) {
+      this.createdLayerIds = this.createMissingLayers(target.snapshot, result.unmatched);
+      // Re-apply so newly created layers receive the state values.
+      applyLayerSnapshotEntries(toSnapshotInputs(target.snapshot));
+      this.unmatchedLayerNames = [];
+    }
     markCurrentLayerState(this.input.stateId);
   }
 
   undo(): void {
     if (!this.capturedPreState) return;
+    for (const id of this.createdLayerIds) {
+      removeLayer(id);
+    }
     applyLayerSnapshotEntries(toSnapshotInputs(this.capturedPreState));
     markCurrentLayerState(this.previousCurrentStateId);
   }
@@ -91,8 +114,11 @@ export class RestoreLayerStateCommand implements ICommand {
       id: this.id,
       name: this.name,
       timestamp: this.timestamp,
-      data: { stateId: this.input.stateId },
-      version: 1,
+      data: {
+        stateId: this.input.stateId,
+        options: { createMissingLayers: this.opts.createMissingLayers },
+      },
+      version: 2,
     };
   }
 
@@ -103,6 +129,33 @@ export class RestoreLayerStateCommand implements ICommand {
   /** Names of snapshot entries the live LayerStore could not match. */
   getUnmatchedLayerNames(): ReadonlyArray<string> {
     return this.unmatchedLayerNames;
+  }
+
+  private createMissingLayers(
+    snapshot: ReadonlyArray<LayerStateEntry>,
+    unmatchedNames: ReadonlyArray<string>,
+  ): ReadonlyArray<string> {
+    const unmatchedSet = new Set(unmatchedNames.map((n) => n.toLowerCase()));
+    const created: string[] = [];
+    for (const entry of snapshot) {
+      if (!unmatchedSet.has(entry.layerName.toLowerCase())) continue;
+      const newLayer = createSceneLayer({
+        id: entry.layerId,
+        name: entry.layerName,
+        visible: entry.visible,
+        frozen: entry.frozen,
+        locked: entry.locked,
+        color: entry.color,
+        linetype: entry.linetype,
+        lineweight: entry.lineweight,
+        transparency: entry.transparency,
+        plottable: entry.plottable,
+        source: 'user-created',
+      });
+      upsertLayer(newLayer);
+      created.push(newLayer.id);
+    }
+    return Object.freeze(created);
   }
 }
 
