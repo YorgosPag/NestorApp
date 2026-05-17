@@ -65,10 +65,12 @@ export interface UseDxfSceneConversionReturn {
  *   → forward the sentinel fields, SKIP the flattened legacy fields. The renderer's
  *   `resolveStyleForRender()` then cascades live through `layersById` → layer style.
  */
-function buildBase(entity: SceneEntity, layers: SceneLayers) {
+function buildBase(entity: SceneEntity, layers: SceneLayers, layersById?: SceneLayers) {
   // ADR-358 Phase 9D-3: id-first name resolution via LayerStore, fallback to legacy
   const resolvedLayerName = resolveEntityLayerName(entity);
-  const layerInfo = resolvedLayerName ? layers[resolvedLayerName] : null;
+  // ADR-358 Phase 9E-5: id-first layer object lookup (layersById), name-keyed fallback.
+  const layerInfo = (entity.layerId && layersById ? layersById[entity.layerId] : undefined)
+    ?? (resolvedLayerName ? layers[resolvedLayerName] : null);
   const m = entity as typeof entity & {
     measurement?: boolean;
     showEdgeDistances?: boolean;
@@ -189,8 +191,8 @@ function resolveTextHeight(entity: SceneEntity): number {
   return withNode.height || withNode.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
 }
 
-function convertEntity(entity: SceneEntity, layers: SceneLayers): DxfEntityUnion | null {
-  const base = buildBase(entity, layers);
+function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: SceneLayers): DxfEntityUnion | null {
+  const base = buildBase(entity, layers, layersById);
 
   switch (entity.type) {
     case 'line': {
@@ -281,6 +283,8 @@ export function useDxfSceneConversion({
   const dxfScene = useMemo<DxfScene>(() => perfMark('useDxfSceneConversion.memo', () => {
     const entities = currentScene?.entities ?? [];
     const layers = currentScene?.layers ?? {};
+    // ADR-358 Phase 9E-5: id-keyed primary for buildBase layerInfo lookup.
+    const layersById = currentScene?.layersById;
     const cache = cacheRef.current;
     const arrayCache = arrayCacheRef.current;
     const converted: DxfEntityUnion[] = [];
@@ -295,7 +299,7 @@ export function useDxfSceneConversion({
             : undefined;
           const expanded = expandArrayEntity(entity, pathEnt);
           items = expanded.reduce<DxfEntityUnion[]>((acc, e) => {
-            const c = convertEntity(e, layers);
+            const c = convertEntity(e, layers, layersById);
             if (c) acc.push(c);
             return acc;
           }, []);
@@ -307,7 +311,7 @@ export function useDxfSceneConversion({
 
       let result = cache.get(entity);
       if (!result) {
-        const c = convertEntity(entity, layers);
+        const c = convertEntity(entity, layers, layersById);
         if (c) {
           result = c;
           cache.set(entity, c);
@@ -319,9 +323,8 @@ export function useDxfSceneConversion({
     return {
       entities: converted,
       layers: Object.keys(layers),
-      // ADR-358 §G7 Phase 5 — bridge full SceneLayer map for ByLayer/ByBlock resolver.
-      // Phase 9E-5: will switch to currentScene?.layersById once LayerOperationsService maintains it.
-      layersById: currentScene?.layers,
+      // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
+      layersById: currentScene?.layersById ?? currentScene?.layers,
       bounds: currentScene?.bounds ?? null,
     };
   }), [currentScene]);

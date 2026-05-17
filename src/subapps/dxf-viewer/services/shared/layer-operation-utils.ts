@@ -8,7 +8,7 @@
  * - Consistent visibility patterns
  */
 
-import { SceneModel, AnySceneEntity } from '../../types/scene';
+import { SceneModel, AnySceneEntity, SceneLayer } from '../../types/scene';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT (LayerStore lookup + legacy name fallback)
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 
@@ -20,6 +20,15 @@ import { resolveEntityLayerName } from '../../stores/LayerStore';
  */
 function resolveLayerName(entity: AnySceneEntity): string | undefined {
   return resolveEntityLayerName(entity) ?? (entity as { layer?: string }).layer;
+}
+
+// ADR-358 Phase 9E-5: rebuild layersById mirror after any mutation to scene.layers.
+export function rebuildLayersById(layers: Record<string, SceneLayer>): Record<string, SceneLayer> {
+  return Object.fromEntries(Object.values(layers).map((l) => [l.id, l]));
+}
+
+export function withLayersById(scene: SceneModel): SceneModel {
+  return { ...scene, layersById: rebuildLayersById(scene.layers) };
 }
 
 export interface LayerOperationResult {
@@ -54,15 +63,14 @@ export function updateLayerProperties(
   properties: Partial<{ color: string; visible: boolean; frozen: boolean }>,
   scene: SceneModel
 ): SceneModel {
+  const updatedLayers = {
+    ...scene.layers,
+    [layerName]: { ...scene.layers[layerName], ...properties }
+  };
   return {
     ...scene,
-    layers: {
-      ...scene.layers,
-      [layerName]: {
-        ...scene.layers[layerName],
-        ...properties
-      }
-    }
+    layers: updatedLayers,
+    layersById: rebuildLayersById(updatedLayers),
   };
 }
 

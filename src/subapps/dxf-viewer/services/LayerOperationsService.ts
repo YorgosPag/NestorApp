@@ -9,6 +9,8 @@ import {
   validateLayerExists,
   updateLayerProperties,
   updateEntitiesForLayer,
+  rebuildLayersById,
+  withLayersById,
   // ADR-129: Centralized entity layer filtering
   getEntityIdsByLayer,
   getEntityIdsByLayers,
@@ -67,7 +69,6 @@ export class LayerOperationsService {
       message: `Layer color updated to ${color}`
     };
   }
-  
   /**
    * Rename a layer
    */
@@ -115,16 +116,15 @@ export class LayerOperationsService {
     const updatedScene = {
       ...scene,
       layers: updatedLayers,
+      layersById: rebuildLayersById(updatedLayers),
       entities: updatedEntities
     };
-    
     return {
       updatedScene,
       success: true,
       message: `Layer renamed from "${oldName}" to "${newName}"`
     };
   }
-  
   /**
    * Toggle layer visibility
    */
@@ -149,7 +149,6 @@ export class LayerOperationsService {
       message: `Layer visibility set to ${visible}`
     };
   }
-  
   /**
    * Delete a layer and all its entities
    */
@@ -184,9 +183,9 @@ export class LayerOperationsService {
     const updatedScene = {
       ...scene,
       layers: remainingLayers,
+      layersById: rebuildLayersById(remainingLayers),
       entities: remainingEntities
     };
-    
     return {
       updatedScene,
       affectedEntityIds: deletedEntityIds,
@@ -194,7 +193,6 @@ export class LayerOperationsService {
       message: `Layer "${layerName}" deleted with ${deletedEntityIds.length} entities`
     };
   }
-  
   /**
    * Create a new layer
    */
@@ -216,14 +214,12 @@ export class LayerOperationsService {
       locked: false,
     });
     
+    const updatedLayers = { ...scene.layers, [name]: newLayer };
     const updatedScene = {
       ...scene,
-      layers: {
-        ...scene.layers,
-        [name]: newLayer
-      }
+      layers: updatedLayers,
+      layersById: rebuildLayersById(updatedLayers),
     };
-    
     return {
       updatedScene,
       success: true,
@@ -271,6 +267,7 @@ export class LayerOperationsService {
     const updatedScene = {
       ...scene,
       layers: updatedLayers,
+      layersById: rebuildLayersById(updatedLayers),
       entities: updatedEntities
     };
     const affectedEntityIds = getEntityIdsByLayers(scene.entities, sourceLayerNames);
@@ -291,7 +288,7 @@ export class LayerOperationsService {
     scene: SceneModel
   ): LayerOperationResult {
 
-    const updatedScene = mergeColorGroups(scene, targetColorGroup, sourceColorGroups);
+    const updatedScene = withLayersById(mergeColorGroups(scene, targetColorGroup, sourceColorGroups));
     return {
       updatedScene,
       success: true,
@@ -308,17 +305,19 @@ export class LayerOperationsService {
     visible: boolean,
     scene: SceneModel
   ): LayerOperationResult {
+    const updatedLayers = {
+      ...scene.layers,
+      ...Object.fromEntries(
+        layersInGroup.map(layerName => [
+          layerName,
+          { ...scene.layers[layerName], visible }
+        ])
+      )
+    };
     const updatedScene = {
       ...scene,
-      layers: {
-        ...scene.layers,
-        ...Object.fromEntries(
-          layersInGroup.map(layerName => [
-            layerName,
-            { ...scene.layers[layerName], visible }
-          ])
-        )
-      },
+      layers: updatedLayers,
+      layersById: rebuildLayersById(updatedLayers),
       entities: scene.entities.map(entity => {
         // ADR-358 Phase 9D-3: id-first lookup via LayerStore, name fallback
         const name = resolveEntityLayerName(entity);
@@ -361,9 +360,9 @@ export class LayerOperationsService {
     const updatedScene = {
       ...scene,
       layers: remainingLayers,
+      layersById: rebuildLayersById(remainingLayers),
       entities: remainingEntities
     };
-    
     return {
       updatedScene,
       affectedEntityIds: deletedEntityIds,
@@ -382,17 +381,19 @@ export class LayerOperationsService {
     scene: SceneModel
   ): LayerOperationResult {
 
+    const updatedLayers = {
+      ...scene.layers,
+      ...Object.fromEntries(
+        layersInGroup.map(layerName => [
+          layerName,
+          { ...scene.layers[layerName], color }
+        ])
+      )
+    };
     const updatedScene = {
       ...scene,
-      layers: {
-        ...scene.layers,
-        ...Object.fromEntries(
-          layersInGroup.map(layerName => [
-            layerName,
-            { ...scene.layers[layerName], color }
-          ])
-        )
-      },
+      layers: updatedLayers,
+      layersById: rebuildLayersById(updatedLayers),
       entities: scene.entities.map(entity => {
         // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
         const resolvedName = resolveEntityLayerName(entity);
@@ -481,14 +482,12 @@ export class LayerOperationsService {
     const layers = Object.values(scene.layers);
     const visibleLayers = layers.filter(l => l.visible).length;
     const hiddenLayers = layers.filter(l => !l.visible).length;
-    
     const entitiesByLayer: Record<string, number> = {};
     scene.entities.forEach(entity => {
       // ADR-130 + ADR-358 Phase 9D-3: id-first name via LayerStore, fallback to legacy
       const layerName = getLayerNameOrDefault(resolveEntityLayerName(entity));
       entitiesByLayer[layerName] = (entitiesByLayer[layerName] || 0) + 1;
     });
-    
     return {
       totalLayers: layers.length,
       visibleLayers,
