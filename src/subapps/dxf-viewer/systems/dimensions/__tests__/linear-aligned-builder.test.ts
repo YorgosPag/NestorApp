@@ -17,7 +17,7 @@ import type {
   AlignedDimensionEntity,
   DimStyle,
   LinearDimensionEntity,
-  RadiusDimensionEntity,
+  OrdinateDimensionEntity,
 } from '../../../types/dimension';
 import type { Point2D } from '../../../rendering/types/Types';
 import { ISO_129_TEMPLATE } from '../dim-style-templates';
@@ -286,8 +286,28 @@ describe('buildDimensionGeometry — orchestrator', () => {
     expect(g.measurementValue).toBeCloseTo(50, 9);
   });
 
-  it('throws for radius (not implemented in Phase B1)', () => {
-    const entity: RadiusDimensionEntity = {
+  it('dispatches to angular2L builder (Phase B2)', () => {
+    const entity = {
+      id: 'dim_test',
+      type: 'dimension',
+      dimensionType: 'angular2L',
+      styleId: ISO_129_TEMPLATE.id,
+      defPoints: [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 0, y: 0 },
+        { x: 0, y: 10 },
+        { x: 5, y: 5 },
+      ],
+      layerId: 'layer_test',
+    } as unknown as Parameters<typeof buildDimensionGeometry>[0];
+    const g = buildDimensionGeometry(entity, ISO_129_TEMPLATE);
+    expect(g.kind).toBe('angular');
+    expect(g.measurementValue).toBeCloseTo(Math.PI / 2, 6);
+  });
+
+  it('dispatches to radius builder (Phase B2)', () => {
+    const entity = {
       id: 'dim_test',
       type: 'dimension',
       dimensionType: 'radius',
@@ -297,29 +317,25 @@ describe('buildDimensionGeometry — orchestrator', () => {
         { x: 50, y: 0 },
       ],
       layerId: 'layer_test',
-    } as RadiusDimensionEntity;
-    expect(() => buildDimensionGeometry(entity, ISO_129_TEMPLATE)).toThrow(
-      /not implemented in Phase B1/,
-    );
+    } as unknown as Parameters<typeof buildDimensionGeometry>[0];
+    const g = buildDimensionGeometry(entity, ISO_129_TEMPLATE);
+    expect(g.kind).toBe('radial');
+    expect(g.measurementValue).toBeCloseTo(50, 9);
   });
 
-  it('throws for angular2L (not implemented in Phase B1)', () => {
-    const entity = {
+  it('throws for ordinate (not implemented in Phase B2)', () => {
+    const entity: OrdinateDimensionEntity = {
       id: 'dim_test',
       type: 'dimension',
-      dimensionType: 'angular2L',
+      dimensionType: 'ordinate',
       styleId: ISO_129_TEMPLATE.id,
-      defPoints: [
-        { x: 0, y: 0 },
-        { x: 1, y: 0 },
-        { x: 0, y: 0 },
-        { x: 0, y: 1 },
-        { x: 1, y: 1 },
-      ],
+      defPoints: [{ x: 25, y: 25 }],
+      datum: { x: 0, y: 0 },
+      axis: 'x',
       layerId: 'layer_test',
-    } as unknown as Parameters<typeof buildDimensionGeometry>[0];
+    } as OrdinateDimensionEntity;
     expect(() => buildDimensionGeometry(entity, ISO_129_TEMPLATE)).toThrow(
-      /not implemented in Phase B1/,
+      /not implemented in Phase B2/,
     );
   });
 });
