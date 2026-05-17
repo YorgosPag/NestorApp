@@ -151,9 +151,7 @@ export function resolveEntityLayerName(
     const layer = layersById.get(entity.layerId);
     if (layer) return layer.name;
   }
-  // Legacy: pre-9F entities may carry the `layer` name field.
-  const legacy = (entity as Record<string, unknown>)['layer'];
-  return typeof legacy === 'string' ? legacy : undefined;
+  return undefined;
 }
 
 export function getAllLayers(): ReadonlyArray<SceneLayer> {
