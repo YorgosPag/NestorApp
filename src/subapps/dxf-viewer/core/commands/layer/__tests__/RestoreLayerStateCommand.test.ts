@@ -161,11 +161,82 @@ describe('unmatched layers', () => {
 });
 
 describe('serialize', () => {
-  it('serialize round-trips stateId', () => {
+  it('serialize round-trips stateId — version 2', () => {
     const cmd = new RestoreLayerStateCommand({ stateId: 'lst_abc' });
     const serialized = cmd.serialize();
     expect(serialized.type).toBe('layer-state-restore');
     expect(serialized.data.stateId).toBe('lst_abc');
-    expect(serialized.version).toBe(1);
+    expect(serialized.version).toBe(2);
+    expect(serialized.data.options).toEqual({ createMissingLayers: false });
+  });
+
+  it('version 2 includes options in data', () => {
+    const cmd = new RestoreLayerStateCommand({
+      stateId: 'lst_v2',
+      options: { createMissingLayers: true },
+    });
+    const serialized = cmd.serialize();
+    expect(serialized.version).toBe(2);
+    expect(serialized.data.options).toEqual({ createMissingLayers: true });
+  });
+});
+
+describe('createMissingLayers option', () => {
+  it('createMissing=true creates missing layers and clears unmatched list', () => {
+    const ghostState = createLayerState({
+      name: 'ghost',
+      snapshot: [
+        createLayerStateEntry({
+          layerId: 'lyr_ghost_cm1',
+          layerName: 'GHOST',
+          visible: true,
+          locked: false,
+          color: '#ff0000',
+        }),
+      ],
+      createdByUserId: 'u1',
+    });
+    saveLayerState('p1', ghostState);
+    setLayers([L('A')]);
+    setProjectId('p1');
+
+    const cmd = new RestoreLayerStateCommand({
+      stateId: ghostState.id,
+      options: { createMissingLayers: true },
+    });
+    cmd.execute();
+
+    expect(cmd.getUnmatchedLayerNames()).toEqual([]);
+    const names = getAllLayers().map((l) => l.name);
+    expect(names).toContain('GHOST');
+  });
+
+  it('undo removes auto-created layers', () => {
+    const phantomState = createLayerState({
+      name: 'phantom',
+      snapshot: [
+        createLayerStateEntry({
+          layerId: 'lyr_ghost_cm2',
+          layerName: 'PHANTOM',
+          visible: true,
+          locked: false,
+          color: '#0000ff',
+        }),
+      ],
+      createdByUserId: 'u1',
+    });
+    saveLayerState('p1', phantomState);
+    setLayers([L('B')]);
+    setProjectId('p1');
+
+    const cmd = new RestoreLayerStateCommand({
+      stateId: phantomState.id,
+      options: { createMissingLayers: true },
+    });
+    cmd.execute();
+    expect(getAllLayers().map((l) => l.name)).toContain('PHANTOM');
+
+    cmd.undo();
+    expect(getAllLayers().map((l) => l.name)).not.toContain('PHANTOM');
   });
 });
