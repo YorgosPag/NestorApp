@@ -14,6 +14,10 @@ export { LayerFreezeCommand, type LayerFreezeInput } from './LayerFreezeCommand'
 export { LayerLockCommand, type LayerLockInput } from './LayerLockCommand';
 export { LayerThawAllCommand } from './LayerThawAllCommand';
 export { LayerOnAllCommand } from './LayerOnAllCommand';
+export {
+  RestoreLayerStateCommand,
+  type RestoreLayerStateInput,
+} from './RestoreLayerStateCommand';
 
 export {
   captureAllLayersSnapshot,
