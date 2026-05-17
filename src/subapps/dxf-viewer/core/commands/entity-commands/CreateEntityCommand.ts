@@ -38,12 +38,15 @@ export class CreateEntityCommand implements ICommand {
   execute(): void {
     if (!this.entity) {
       // ADR-358 Phase 9F — id-only resolution. 4-level fallback ensures layerId is always set.
+      // ADR-357 Phase 0: getCurrentLayerId() promoted to Level 3 so user's active layer
+      // wins over the hardcoded Layer-0 default (which always exists and previously
+      // shadowed the user's selection).
       const entityDataLayerId = (this.entityData as { layerId?: string }).layerId;
       const resolvedLayerId =
         this.options.layerId ??
         entityDataLayerId ??
-        getLayerByName(DXF_DEFAULT_LAYER)?.id ??
         getCurrentLayerId() ??
+        getLayerByName(DXF_DEFAULT_LAYER)?.id ??
         '';
       this.entity = {
         ...this.entityData,
