@@ -669,6 +669,79 @@
         "Enter scale factor"
       ],
       "shortcuts": "SC | C=Copy | R=Reference | N=Non-uniform | ESC=Cancel"
+    },
+    "bim": {
+      "wall": {
+        "name": "Wall",
+        "description": "Draw parametric wall (ADR-363 Phase 1+)",
+        "steps": [
+          "Select wall type from dialog",
+          "Click for start point",
+          "Click for end point"
+        ],
+        "shortcuts": "W | ESC=Cancel",
+        "statusStart": "Wall: click for start point",
+        "statusEnd": "Wall: click for end point",
+        "statusConfirm": "Wall: Enter to confirm"
+      },
+      "opening": {
+        "name": "Opening",
+        "description": "Place door or window in an existing wall (ADR-363 Phase 2+)",
+        "steps": [
+          "Select opening type",
+          "Click on existing wall to place"
+        ],
+        "shortcuts": "OP | ESC=Cancel",
+        "statusHost": "Opening: click on wall to place",
+        "statusConfirm": "Opening: Enter to confirm"
+      },
+      "slab": {
+        "name": "Slab",
+        "description": "Draw slab (floor/ceiling/roof/foundation) as polygon (ADR-363 Phase 3+)",
+        "steps": [
+          "Select slab type",
+          "Click for polygon vertices",
+          "Enter=Close"
+        ],
+        "shortcuts": "SL | Enter=Close | ESC=Cancel",
+        "statusPoint": "Slab: click for polygon vertex",
+        "statusClose": "Slab: Enter to close"
+      },
+      "slabOpening": {
+        "name": "Slab Opening",
+        "description": "Cut slab for elevator shaft, stair well, duct or chimney (ADR-363 Phase 3.5+)",
+        "steps": [
+          "Select opening type",
+          "Click on existing slab",
+          "Define polygon outline"
+        ],
+        "shortcuts": "SO | ESC=Cancel",
+        "statusHost": "Slab Opening: click on slab",
+        "statusPoint": "Slab Opening: click for vertex"
+      },
+      "column": {
+        "name": "Column",
+        "description": "Place rectangular or circular column (ADR-363 Phase 4+)",
+        "steps": [
+          "Select column type",
+          "Click to place"
+        ],
+        "shortcuts": "CL | ESC=Cancel",
+        "statusPlace": "Column: click to place",
+        "statusConfirm": "Column: Enter to confirm"
+      },
+      "beam": {
+        "name": "Beam",
+        "description": "Draw beam (ADR-363 Phase 5+)",
+        "steps": [
+          "Select beam type",
+          "Click for start point",
+          "Click for end point"
+        ],
+        "shortcuts": "BM | ESC=Cancel",
+        "statusStart": "Beam: click for start point",
+        "statusEnd": "Beam: click for end point"
+      }
     }
   },
   "scaleTool": {
