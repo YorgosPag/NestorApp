@@ -48,6 +48,10 @@ export interface LayerFiltering {
 
 export interface AdminLayerManagerProps {
   className?: string;
+  /** Project id for project-scoped filter persistence (ADR-358 Phase 11). */
+  projectId?: string | null;
+  /** Display name used as the export filename prefix (ADR-358 Phase 11). */
+  projectName?: string;
 }
 
 export interface LayerHeaderProps {
@@ -56,7 +60,7 @@ export interface LayerHeaderProps {
   onSettings?: () => void;
 }
 
-export interface LayerFiltersProps {
+export interface LayerSearchBarProps {
   searchQuery: string;
   selectedCategory: string;
   categories: Category[];
