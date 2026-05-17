@@ -13,7 +13,9 @@ export interface CreateEntityOptions {
   /**
    * Stable layer identifier — `lyr_<UUID-v4>` matching `SceneLayer.id` (ADR-358 Phase 9C v2.13).
    * ADR-358 Phase 9F: sole layer field. Resolved in `CreateEntityCommand.execute()` via
-   * 4-level fallback: options.layerId → entityData.layerId → getLayerByName(default) → getCurrentLayerId.
+   * 4-level fallback: options.layerId → entityData.layerId → getCurrentLayerId → getLayerByName(default).
+   * ADR-357 Phase 0: getCurrentLayerId promoted to Level 3 so new entities land on the
+   * user's active layer instead of always defaulting to Layer 0.
    */
   layerId?: string;
   color?: string;
