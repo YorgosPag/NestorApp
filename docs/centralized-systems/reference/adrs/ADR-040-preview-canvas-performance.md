@@ -1733,3 +1733,7 @@ Extracted inline `CS-RENDER` / `DVC-RENDER` / `DVC-SNAPSHOT` diagnostic blocks i
 ## 2026-05-17: ADR-362 Phase C1 — dim-arrowhead-renderer + dim-text-renderer leaves
 
 `rendering/entities/dimension/dim-arrowhead-renderer.ts` and `dim-text-renderer.ts` are pure Canvas2D leaf renderers used by `DimensionRenderer`. Both comply with ADR-040 micro-leaf rules: no store subscriptions, no scene reads, deterministic Canvas2D output. `dim-arrowhead-renderer` scales from unit-space block definitions (Phase A2) by `dimasz` and rotates to dim-line direction. `dim-text-renderer` applies `DIMTXSTY`/`DIMTXT`/`DIMCLRT`/`DIMGAP` from resolved DimStyle. Cardinal rules maintained.
+
+## 2026-05-17: ADR-362 Phase C1 — dim-text-renderer wired (DIMTIH/DIMTOH placement)
+
+`dim-text-renderer.ts` companion note: horizontal vs aligned text placement driven by `dimtih` (text inside extension lines) and `dimtoh` (text outside) flags per DIMSTYLE. DIMTFILL background mask reserved as stub for Phase K. Fully stateless — no external reads beyond Canvas2D context + resolved DimStyle. Cardinal rules maintained.
