@@ -91,6 +91,14 @@ export interface StairMultiStoryConfig {
   readonly topLevel: string;
   readonly storyHeight: number; // mm
   readonly storyCount: number;
+  /**
+   * ADR-358 Phase 9 — Q17 floor-link state. `true` when `storyHeight`
+   * tracks the building floor's height (auto-set on stair creation when
+   * a `floorId` is in scope, and via "Reset to floor" in the ribbon).
+   * Set to `false` whenever the user overrides `storyHeight` manually
+   * (ribbon edit, grip drag, or programmatic patch).
+   */
+  readonly linkedToFloor?: boolean;
 }
 
 export interface StairStringerParams {

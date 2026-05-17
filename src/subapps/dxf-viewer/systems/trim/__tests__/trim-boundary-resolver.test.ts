@@ -64,6 +64,23 @@ describe('isValidCuttingCandidate', () => {
       expect(isValidCuttingCandidate({ type: t }, {})).toBe(true);
     });
   });
+
+  // ADR-358 Phase 9E-2: id-keyed lookup (layersById path)
+  it('rejects locked layer via layerId — id-keyed map', () => {
+    const layers = { lyr_1: { locked: true } as SceneLayer };
+    expect(isValidCuttingCandidate({ type: 'line', layerId: 'lyr_1' }, layers)).toBe(false);
+  });
+
+  it('rejects hidden layer via layerId — id-keyed map', () => {
+    const layers = { lyr_1: { visible: false } as SceneLayer };
+    expect(isValidCuttingCandidate({ type: 'line', layerId: 'lyr_1' }, layers)).toBe(false);
+  });
+
+  it('falls back to entity.layer when layerId has no match in map', () => {
+    const layers = { L1: { locked: true } as SceneLayer };
+    // layerId present but not in the map → fallback to entity.layer
+    expect(isValidCuttingCandidate({ type: 'line', layerId: 'lyr_unknown', layer: 'L1' }, layers)).toBe(false);
+  });
 });
 
 // ── isTrimmable ───────────────────────────────────────────────────────────────
@@ -134,6 +151,30 @@ describe('resolveCuttingEdges — Standard mode', () => {
       edgeMode: 'noExtend',
     });
     expect(edges).toHaveLength(0);
+  });
+});
+
+// ── resolveCuttingEdges — Phase 9E-2 layersById ───────────────────────────────
+
+describe('resolveCuttingEdges — layersById (id-keyed, Phase 9E-2)', () => {
+  it('excludes entity on locked layer via layersById when name-keyed layers is empty', () => {
+    const scene: SceneModel = {
+      entities: [{ ...makeLine('a', 'L1'), layerId: 'lyr_1' }],
+      layers: {},
+      layersById: { lyr_1: { locked: true } as SceneLayer },
+    } as SceneModel;
+    const edges = resolveCuttingEdges({ mode: 'quick', scene, selectedEdgeIds: [], edgeMode: 'noExtend' });
+    expect(edges).toHaveLength(0);
+  });
+
+  it('includes entity on unlocked layer via layersById', () => {
+    const scene: SceneModel = {
+      entities: [{ ...makeLine('a', 'L1'), layerId: 'lyr_1' }],
+      layers: {},
+      layersById: { lyr_1: { visible: true, locked: false } as SceneLayer },
+    } as SceneModel;
+    const edges = resolveCuttingEdges({ mode: 'quick', scene, selectedEdgeIds: [], edgeMode: 'noExtend' });
+    expect(edges).toHaveLength(1);
   });
 });
 

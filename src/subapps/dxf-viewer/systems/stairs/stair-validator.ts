@@ -31,6 +31,7 @@
 import { Timestamp } from 'firebase/firestore';
 import { gateStairChecker } from '@/services/building-code/engines/gate-stair-checker';
 import type { Entity } from '../../types/entities';
+import type { SceneLayer } from '../../types/scene';
 import type {
   StairCodeProfile,
   StairParams,
@@ -201,14 +202,16 @@ function extractEntityElevation(entity: Readonly<Entity>): number | null {
 function checkHeadroom(
   params: Readonly<StairParams>,
   contextEntities: readonly Entity[],
+  layersById?: Record<string, SceneLayer>,
 ): readonly string[] {
   const profile = params.codeProfile;
   if (profile === 'none' || contextEntities.length === 0) return [];
   const minClearance = MIN_HEADROOM_MM[profile];
   const stairTopZ = params.basePoint.z + params.totalRise;
   for (const entity of contextEntities) {
-    // ADR-358 Phase 9D-5b-iii: scene.layers is name-keyed (pre-Phase 9E) — entity.layer direct.
-    const layerName = entity.layer;
+    // ADR-358 Phase 9E-2: id-first name resolution, entity.layer fallback.
+    const layerName = (entity.layerId && layersById ? layersById[entity.layerId]?.name : undefined)
+      ?? entity.layer;
     if (!layerName || !CEILING_LAYER_RE.test(layerName)) continue;
     const elevation = extractEntityElevation(entity);
     if (elevation === null) continue;
@@ -238,6 +241,7 @@ export function validateStairParams(
   params: Readonly<StairParams>,
   contextEntities: readonly Entity[] = [],
   projectOccupancyLoad?: number,
+  layersById?: Record<string, SceneLayer>,
 ): StairValidationState {
   const occupancyLoad = projectOccupancyLoad ?? params.occupancyLoad;
   // `gateStairChecker` thresholds are mm-baked (NOK / IBC / Eurocode / ADA
@@ -254,7 +258,7 @@ export function validateStairParams(
     nokSubType: params.nokSubType,
     occupancyLoad,
   });
-  const headroomViolations = checkHeadroom(params, contextEntities);
+  const headroomViolations = checkHeadroom(params, contextEntities, layersById);
   const flightLimitViolations = checkSingleFlightLimit(params);
   const storyOverflowViolations = checkStoryHeightOverflow(params);
   const storyUnderflowViolations = checkStoryHeightUnderflow(params);

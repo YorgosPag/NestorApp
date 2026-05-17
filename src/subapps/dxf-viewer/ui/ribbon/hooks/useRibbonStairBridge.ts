@@ -428,9 +428,13 @@ function patchStoryHeight(prev: StairParams, raw: number): StairParams | null {
   const storyHeight = raw;
   const cur = prev.multiStoryConfig;
   if (cur && cur.storyHeight === storyHeight) return null;
+  // ADR-358 Phase 9 — manual edit unlinks the floor binding so the badge
+  // flips from 🔗 to ⚠️ and the "Reset to floor" button reappears. Reset
+  // path (`stair.resetToFloor` action) re-establishes the link via a
+  // dedicated patch that sets `linkedToFloor = true`.
   const multiStoryConfig: StairMultiStoryConfig = cur
-    ? { ...cur, storyHeight }
-    : { topLevel: '', storyHeight, storyCount: 1 };
+    ? { ...cur, storyHeight, linkedToFloor: false }
+    : { topLevel: '', storyHeight, storyCount: 1, linkedToFloor: false };
   return { ...prev, multiStoryConfig };
 }
 

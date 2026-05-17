@@ -25,6 +25,7 @@ import type {
   StairCodeProfile,
   StairEntity,
   StairGeometry,
+  StairMultiStoryConfig,
   StairNokSubType,
   StairParams,
   StairValidationState,
@@ -75,6 +76,24 @@ export interface StairParamOverrides {
   readonly occupancyLoad?: number;
 }
 
+/**
+ * ADR-358 Phase 9 — Floor link input for the default-builder. When supplied
+ * AND the floor exposes a numeric `height` (meters), the builder auto-seeds
+ * `multiStoryConfig` with `storyHeight = height * 1000` (mm) and
+ * `linkedToFloor = true`. Absence of either input keeps `multiStoryConfig`
+ * unset (current Phase 7a behavior) so existing callers see no change.
+ *
+ * Field naming mirrors `FloorMetadata` from `useFloorMetadata`: `floorId`
+ * identifies the source (round-trippable to the link source if needed
+ * downstream), `name` is used by the ribbon badge.
+ */
+export interface StairFloorLinkInput {
+  readonly floorId: string;
+  readonly name: string;
+  /** Meters. */
+  readonly height: number | null;
+}
+
 // ─── ADA pacchetto coherent (Phase 6.5, Q26 / §3.6) ──────────────────────────
 
 /** ADA top horizontal handrail extension (ICC A117.1 §505 — 12" = 305mm). */
@@ -119,6 +138,7 @@ export function buildDefaultStairParams(
   direction: number,
   overrides: StairParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
+  floorLink: StairFloorLinkInput | null = null,
 ): StairParams {
   const s = mmToSceneUnits(sceneUnits);
   // Dynamic Input overrides arrive already in the scene units the user typed
@@ -139,6 +159,20 @@ export function buildDefaultStairParams(
   const handrailsScaled: StairParams['handrails'] = overrides.handrails?.height !== undefined
     ? handrailsBuilt
     : { ...handrailsBuilt, height: handrailsBuilt.height * s };
+  // ADR-358 Phase 9 — Q17 floor link auto-init. Floor height is stored in
+  // meters; storyHeight stays in mm to preserve back-compat with Phase 7a
+  // ribbon presets (DEFAULT_STORY_HEIGHT_MM = 2700) and the multiStoryConfig
+  // contract documented on `StairMultiStoryConfig.storyHeight`. linkedToFloor
+  // is set to `true` here; the bridge flips it to `false` on manual edits.
+  const multiStoryConfig: StairMultiStoryConfig | undefined =
+    floorLink && typeof floorLink.height === 'number' && floorLink.height > 0
+      ? {
+          topLevel: floorLink.floorId,
+          storyHeight: floorLink.height * 1000,
+          storyCount: 1,
+          linkedToFloor: true,
+        }
+      : undefined;
   return {
     basePoint: base3D,
     direction,
@@ -169,6 +203,7 @@ export function buildDefaultStairParams(
     ...(overrides.occupancyLoad !== undefined
       ? { occupancyLoad: overrides.occupancyLoad }
       : {}),
+    ...(multiStoryConfig ? { multiStoryConfig } : {}),
   };
 }
 

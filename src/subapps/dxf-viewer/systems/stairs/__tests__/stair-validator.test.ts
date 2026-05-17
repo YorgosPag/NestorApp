@@ -301,6 +301,32 @@ describe('validateStairParams — headroom proxy', () => {
     const r = validateStairParams(buildParams({ codeProfile: 'none' }), [ceilingEntity(0)]);
     expect(r.headroomViolations ?? []).toHaveLength(0);
   });
+
+  // ADR-358 Phase 9E-2: id-first name resolution via layersById
+  test('ceiling resolved via layersById when entity.layer absent', () => {
+    // entity has layerId only (no entity.layer) — name must come from layersById
+    const ceilingByIdOnly = {
+      id: 'c-id-only',
+      type: 'line' as const,
+      layerId: 'lyr_ceiling',
+      metadata: { elevation: 3000 },
+      startPoint: { x: 0, y: 0 },
+      endPoint: { x: 1, y: 1 },
+    } as unknown as Entity;
+    const layersById = { lyr_ceiling: { id: 'lyr_ceiling', name: 'CEILING', color: '#fff' } } as Record<string, import('../../../types/scene').SceneLayer>;
+    const params = buildParams({ codeProfile: 'nok', basePointZ: 0, rise: 175, stepCount: 10 });
+    // stairTopZ = 1750; clearance = 3000 − 1750 = 1250 < 2030 → warn
+    const r = validateStairParams(params, [ceilingByIdOnly], undefined, layersById);
+    expect(r.headroomViolations).toContain('tools.stair.validator.headroomBelowMin');
+  });
+
+  test('layersById present but entity.layer fallback still works', () => {
+    const params = buildParams({ codeProfile: 'nok', basePointZ: 0, rise: 175, stepCount: 10 });
+    const layersById = {};
+    // ceilingEntity uses entity.layer = 'CEILING', not resolved via layersById
+    const r = validateStairParams(params, [ceilingEntity(3000)], undefined, layersById);
+    expect(r.headroomViolations).toContain('tools.stair.validator.headroomBelowMin');
+  });
 });
 
 // ─── Egress (G20, Phase 6.5) ─────────────────────────────────────────────────
