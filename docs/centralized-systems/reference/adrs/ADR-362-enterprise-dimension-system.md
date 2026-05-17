@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | 🟢 APPROVED (Plan Phase) — Implementation pending |
+| **Status** | 🟡 IN PROGRESS — Groups A-E done, Phases F1+F2 done, F3+ pending |
 | **Date** | 2026-05-17 |
 | **Last Updated** | 2026-05-17 |
 | **Category** | DXF Viewer — Annotation / Dimensions |
@@ -542,8 +542,8 @@ Dopo ogni Phase 5A-5J:
 
 | # | Phase | Files | Output |
 |---|---|---|---|
-| **F1** | Panel tab skeleton + Style Manager | `panel-types.ts` (mod), `PanelTabs.tsx` (mod), `usePanelContentRenderer.tsx` (mod), `ui/panels/dimensions/DimensionsTab.tsx` (NEW), `DimStyleList.tsx` (NEW) | 4° tab visible, CRUD styles |
-| **F2** | Accordion sections 1-3 (Γραμμές, Σύμβολα, Κείμενο) | `DimStyleAccordion.tsx` (NEW), `sections/LinesSection.tsx` (NEW), `SymbolsSection.tsx` (NEW), `TextSection.tsx` (NEW) | 3/6 sections editable |
+| **F1** ✅ | Panel tab skeleton + Style Manager | `panel-types.ts` (mod), `PanelTabs.tsx` (mod), `usePanelContentRenderer.tsx` (mod), `ui/panels/dimensions/DimensionsTab.tsx` (NEW), `DimStyleList.tsx` (NEW), `DimStyleCreateDialog.tsx` (NEW), `systems/dimensions/dim-style-registry.ts` (mod: +getSnapshot), `i18n/{el,en}/dxf-viewer-panels.json` (mod: +dimensions keys) | 4° tab visible, CRUD styles — **DONE 2026-05-17** |
+| **F2** ✅ | Accordion sections 1-3 (Γραμμές, Σύμβολα, Κείμενο) | `DimStyleAccordion.tsx` (NEW), `sections/LinesSection.tsx` (NEW), `sections/SymbolsSection.tsx` (NEW), `sections/TextSection.tsx` (NEW), `DimensionsTab.tsx` (mod: +editingId state + edit-mode view), `i18n/{el,en}/dxf-viewer-panels.json` (mod: +editor keys) | Edit button wired, 3/6 sections editable — **DONE 2026-05-17** |
 | **F3** | Accordion sections 4-6 (Προσαρμογή, Μονάδες, Ανοχές) + Live Preview | `FitSection.tsx` (NEW), `PrimaryUnitsSection.tsx` (NEW), `AltUnitsSection.tsx` (NEW), `TolerancesSection.tsx` (NEW), `DimStylePreview.tsx` (NEW) | 6/6 sections + preview |
 
 ### Group G — ADVANCED FEATURES D8 (3 sessions, blocked by F)
@@ -658,6 +658,28 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 ---
 
 ## 7. Changelog
+
+- **2026-05-17 (Phase F1 DONE — left FloatingPanel 4° tab "Διαστάσεις" skeleton + DIMSTYLE Manager CRUD; 9/9 unit tests PASS.)** — 4th tab added to the left sidebar alongside Levels/Colors/Properties. DIMSTYLE list with active badge, built-in badge, set-active, duplicate, delete (AlertDialog confirm), and "New Style..." create flow. `getSnapshot()` added to `DimStyleRegistry` for stable `useSyncExternalStore` references (prevents infinite render loop). Create/Duplicate dialogs with name uniqueness validation. Edit stub = comingSoon (Phase F2 scope).
+  - **MOD** `src/subapps/dxf-viewer/types/panel-types.ts` — `FloatingPanelType` union + `FLOATING_PANEL_TYPES` + `PANEL_METADATA` + `isFloatingPanelType` + `PANEL_LAYOUT.topRow` extended with `'dimensions'`. `PanelMetadata.iconName` extended with `'Ruler'`.
+  - **MOD** `src/subapps/dxf-viewer/ui/components/PanelTabs.tsx` — `Ruler` icon imported, 4th tab `{id:'dimensions', icon:Ruler}` added.
+  - **MOD** `src/subapps/dxf-viewer/ui/hooks/usePanelContentRenderer.tsx` — `case 'dimensions': return <DimensionsTab />`.
+  - **MOD** `src/subapps/dxf-viewer/systems/dimensions/dim-style-registry.ts` — `DimStyleSnapshot` interface exported; `getSnapshot()` method added with `cachedSnapshot` (invalidated in `notify()`). Stable reference for `useSyncExternalStore` consumers.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/DimensionsTab.tsx` (~145 LOC) — root tab component. `useRegistrySnapshot()` uses `registry.getSnapshot()` via `useSyncExternalStore`. Create/Duplicate/Delete/SetActive handlers. `DeleteConfirmDialog` sub-component (Radix AlertDialog). `defaultStyleFields()` clones active style for new style defaults.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/DimStyleList.tsx` (~110 LOC) — presentational list. Per-row: style name, active badge, built-in badge, action buttons (setActive/duplicate/edit/delete) visible on hover. Built-in styles: no edit/delete buttons. `ActionButton` sub-component (icon + aria-label + hover).
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/DimStyleCreateDialog.tsx` (~90 LOC) — modal dialog for create + duplicate modes. Real-time validation (empty name, duplicate name). `Enter` = confirm, `Escape` = cancel. Error shown in `role="alert"` `<p>`.
+  - **MOD** `src/i18n/locales/el/dxf-viewer-panels.json` + `src/i18n/locales/en/dxf-viewer-panels.json` — `panels.dimensions` section: title, loading, styleManager, newStyle, duplicate, delete, edit, setActive, activeBadge, builtInBadge, emptyList, deleteConfirm.{title,description,confirm,cancel}, createDialog.{title,placeholder,confirm,cancel,errorEmpty,errorDuplicate}, duplicateDialog.{title,placeholder,confirm,cancel}.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/__tests__/DimensionsTab.test.tsx` (~175 LOC) — 9 tests: renders 3 built-ins, builtInBadge ×3, activeBadge ×1, create dialog open, create + list update, duplicate name validation, style selection, no delete for built-ins, delete custom + confirm. **9/9 PASS**, ~4s.
+  - **No integration yet** (Phase F2 scope): Edit button = stub, no accordion sections (lines/symbols/text/fit/units/tolerances), no live preview.
+
+- **2026-05-17 (Phase F2 DONE — accordion editor sections 1-3: Γραμμές, Σύμβολα, Κείμενο.)** — Edit button now wired: clicking Edit on a custom style switches DimensionsTab to edit-mode view (← Back button + style name header + DimStyleAccordion). AccordionSection (existing DXF-viewer SSoT pattern, `useAccordion`) used for collapsible sections. Live updates via `registry.updateCustomStyle` on every field change — re-renders via `useSyncExternalStore` snapshot chain.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/DimStyleAccordion.tsx` (~35 LOC) — wrapper with 3 AccordionSection (Γραμμές open by default, Σύμβολα + Κείμενο closed). Passes `style` + `onChange` to each section.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/sections/LinesSection.tsx` (~75 LOC) — 8 fields: dimasz, dimexe, dimexo, dimdli (number inputs, step 0.1 mm), suppressDimLine1/2, suppressExtLine1/2 (checkboxes). `NumField` + `BoolField` sub-components.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/sections/SymbolsSection.tsx` (~50 LOC) — dimblk select (19 arrowhead options from `ARROWHEAD_BLOCKS`; sets dimblk1/dimblk2 simultaneously), dimcen number input.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/sections/TextSection.tsx` (~65 LOC) — dimtxt/dimgap (number inputs), dimtad (Select: 5 values), dimtih/dimtoh (checkboxes).
+  - **MOD** `src/subapps/dxf-viewer/ui/panels/dimensions/DimensionsTab.tsx` — `editingId` state, `handleEdit`/`handleStyleChange` callbacks, early-return edit-mode branch (ArrowLeft back button + DimStyleAccordion).
+  - **MOD** `src/i18n/locales/el/dxf-viewer-panels.json` + `en/dxf-viewer-panels.json` — `panels.dimensions.editor` section: backButton, editingTitle, sections.{lines,symbols,text}, fields.{dimasz,dimexe,dimexo,dimdli,suppress*,dimblk,dimcen,dimtxt,dimtad,dimtih,dimtoh,dimgap}, dimtad.{centered,above,outside,jis,below}, dimblk.{19 names}.
+  - **No integration yet** (Phase F3 scope): sections 4-6 (Προσαρμογή/Μονάδες/Ανοχές), live canvas preview.
+  - **Next**: Phase F3 — sections 4-6 + DimStylePreview.
 
 - **2026-05-17 (Phase E2 DONE — contextual "Διάσταση" ribbon tab + trigger wiring; 15/15 unit tests PASS. Group E CLOSED.)** — Industry defaults (AutoCAD/Revit: one unified tab for all 10 dim types, combobox style chooser, comingSoon stubs for Phase F/G writes). Tab `id='dimension'`, `contextualTrigger='dim-selected'` — fires when `entity.type === 'dimension'` via `resolveContextualTrigger`.
   - **Design decisions** (AutoCAD/Revit industry defaults; Giorgio confirmed "OK + GOL + SSOT" without explicit Q-A/B/C/D answers so defaults applied): Q-A = pure 'dim-selected' trigger (one tab for all 10 dim types); Q-B = shared-values stub (Phase G impl); Q-C = combobox for DIMSTYLE chooser (scales with custom styles); Q-D = "Edit Style..." = comingSoon stub (opens Phase F left-panel tab).
