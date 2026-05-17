@@ -6,11 +6,13 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneLayer, LineweightMm } from '../../types/entities';
 import type { StairEntity } from '../../types/stair';
+// ADR-362 Phase C1 — Dimension entity wrapper for DXF render pipeline.
+import type { DimensionEntity } from '../../types/dimension';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -133,7 +135,20 @@ export interface DxfStair extends DxfEntity {
   stairEntity: StairEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair;
+/**
+ * ADR-362 Phase C1 — DxfDimension wrapper. Carries the full discriminated-union
+ * `DimensionEntity` (10 variants) through the DXF render pipeline without
+ * flattening into legacy text+line primitives. `DimensionRenderer` resolves
+ * `DimStyle` + `DimGeometry` on the fly using the registry singleton + the
+ * per-frame `DimensionLookup` Map (set on `EntityRendererComposite` from
+ * `DxfRenderer.render()`).
+ */
+export interface DxfDimension extends DxfEntity {
+  type: 'dimension';
+  dimensionEntity: DimensionEntity;
+}
+
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension;
 
 // === DXF SCENE ===
 export interface DxfScene {
