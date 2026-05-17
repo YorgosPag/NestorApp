@@ -66,17 +66,6 @@ export class HitTestingService {
 
     // Convert DxfEntityUnion to EntityModel
     const entityModels = scene.entities.map(entity => this.convertToEntityModel(entity));
-    // eslint-disable-next-line no-console
-    const stairModels = entityModels.filter((e: { type: string }) => e.type === 'stair');
-    if (stairModels.length > 0) {
-      // eslint-disable-next-line no-console
-      console.info('[HitTestingService] setScene stair count', {
-        total: entityModels.length,
-        stairs: stairModels.length,
-        firstStairBbox: (stairModels[0] as { geometry?: { bbox?: unknown } })?.geometry?.bbox,
-        firstStairHasParams: !!(stairModels[0] as { params?: unknown })?.params,
-      });
-    }
     // 🏢 ENTERPRISE: Type-safe cast - EntityModel extends BaseEntity which is compatible with Entity
     this.hitTester.setEntities(entityModels as import('../types/entities').Entity[], true);
   }
@@ -114,16 +103,6 @@ export class HitTestingService {
         layerFilter: options.layerFilter,
         typeFilter: options.typeFilter,
         includeInvisible: options.includeInvisible || false
-      });
-
-      // eslint-disable-next-line no-console
-      console.info('[HitTestingService] hitTest', {
-        worldPos,
-        worldTolerance,
-        hits: hits.length,
-        stairCount: this.currentScene?.entities.filter(e => e.type === 'stair').length,
-        firstHitType: hits[0]?.data?.type,
-        firstHitId: hits[0]?.data?.id,
       });
 
       // Return the first hit
@@ -270,28 +249,30 @@ export class HitTestingService {
       // otherwise spatial-index broad-phase silently drops the entity and
       // single-click selection fails.
       case 'stair': {
-        const stairEntity = entity as import('../types/stair').StairEntity;
-        // Defensive: legacy / partially-serialized stair entries can reach the
-        // hit-tester without `params`. `computeStairGeometry` deref's
-        // `params.variant.kind` so a missing-params entry crashes the entire
-        // render pipeline. Treat as phantom: keep the type discriminant so
-        // upstream filters work, but skip geometry — downstream `Bounds.ts`
-        // returns null when `geometry.bbox` is missing and the entity drops
-        // out of the spatial index harmlessly.
-        const geometry = stairEntity.geometry
-          ?? (stairEntity.params
-            ? computeStairGeometry(stairEntity.params)
-            : undefined);
+        // The scene can carry stair entities in TWO shapes:
+        //   1. raw `StairEntity` — pushed directly by `useSpecialTools.onStairCreated`
+        //      (`params/geometry/kind/validation` at the root).
+        //   2. `DxfStair` wrapper — produced by `useDxfSceneConversion` for the
+        //      canvas pipeline (`stairEntity: { params, geometry, ... }`).
+        // Resolve from whichever shape so we never publish a stair to the
+        // spatial index without its parametric payload.
+        type StairLike = Partial<import('../types/stair').StairEntity> & {
+          stairEntity?: Partial<import('../types/stair').StairEntity>;
+        };
+        const raw = entity as unknown as StairLike;
+        const stairData = (raw.params ? raw : raw.stairEntity) ?? raw;
+        const geometry = stairData.geometry
+          ?? (stairData.params ? computeStairGeometry(stairData.params) : undefined);
         return {
           ...baseModel,
           type: 'stair',
           // Pass-through fields consumed by StairRenderer + grip pipeline.
           // We cast to EntityModel because the canvas Entity union does not
           // (yet) carry the stair discriminant. TODO Phase 9: widen Entity.
-          kind: stairEntity.kind,
-          params: stairEntity.params,
+          kind: stairData.kind,
+          params: stairData.params,
           geometry,
-          validation: stairEntity.validation,
+          validation: stairData.validation,
         } as unknown as EntityModel;
       }
       default: {
