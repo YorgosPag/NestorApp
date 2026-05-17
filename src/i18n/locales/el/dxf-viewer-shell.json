@@ -37,6 +37,32 @@
       "general": "Γενικά"
     }
   },
+  "layerState": {
+    "popoverLabel": "Καταστάσεις Επιπέδων",
+    "savedStates": "Αποθηκευμένες Καταστάσεις",
+    "placeholder": "Χωρίς Κατάσταση",
+    "tooltipCurrent": "Τρέχουσα κατάσταση: {name}",
+    "tooltipEmpty": "Δεν έχει εφαρμοστεί κατάσταση",
+    "notReady": "Φόρτωση…",
+    "empty": "Δεν υπάρχουν αποθηκευμένες καταστάσεις",
+    "savePrompt": "Αποθήκευση Τρέχουσας Κατάστασης",
+    "saveSection": "Αποθήκευση Κατάστασης",
+    "save": "Αποθήκευση",
+    "saveCurrent": "Αποθήκευση Τρέχουσας",
+    "namePlaceholder": "Όνομα κατάστασης…",
+    "rename": "Μετονομασία",
+    "confirmRename": "Επιβεβαίωση μετονομασίας",
+    "delete": "Διαγραφή",
+    "restoreAriaLabel": "Επαναφορά κατάστασης \"{name}\"",
+    "importLas": "Εισαγωγή .las",
+    "exportLas": "Εξαγωγή .las",
+    "manage": "Διαχείριση…",
+    "phase13Hint": "Διαθέσιμο σε επόμενη φάση",
+    "toastRestored": "Επαναφορά κατάστασης \"{name}\"",
+    "toastSaved": "Αποθηκεύτηκε κατάσταση \"{name}\"",
+    "toastDeleted": "Διαγράφηκε κατάσταση \"{name}\"",
+    "toastUnmatched": "Δεν βρέθηκαν {count} επίπεδα από την κατάσταση"
+  },
   "toolbar": {
     "title": "Εργαλεία Σχεδίασης",
     "select": "Επιλογή",

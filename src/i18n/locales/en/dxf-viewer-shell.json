@@ -37,6 +37,32 @@
       "general": "General"
     }
   },
+  "layerState": {
+    "popoverLabel": "Layer States",
+    "savedStates": "Saved States",
+    "placeholder": "No State",
+    "tooltipCurrent": "Current state: {name}",
+    "tooltipEmpty": "No state applied",
+    "notReady": "Loading…",
+    "empty": "No saved states",
+    "savePrompt": "Save Current State",
+    "saveSection": "Save State",
+    "save": "Save",
+    "saveCurrent": "Save Current",
+    "namePlaceholder": "State name…",
+    "rename": "Rename",
+    "confirmRename": "Confirm rename",
+    "delete": "Delete",
+    "restoreAriaLabel": "Restore state \"{name}\"",
+    "importLas": "Import .las",
+    "exportLas": "Export .las",
+    "manage": "Manage…",
+    "phase13Hint": "Available in a future phase",
+    "toastRestored": "Restored state \"{name}\"",
+    "toastSaved": "Saved state \"{name}\"",
+    "toastDeleted": "Deleted state \"{name}\"",
+    "toastUnmatched": "{count} layer(s) from state not found"
+  },
   "toolbar": {
     "title": "Drawing Tools",
     "select": "Select",
