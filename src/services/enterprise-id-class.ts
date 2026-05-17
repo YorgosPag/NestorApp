@@ -286,6 +286,10 @@ export class EnterpriseIdService {
   generateStairId(): string { return this.generateId(P.STAIR).id; }
   generateStairPresetId(): string { return this.generateId(P.STAIR_PRESET).id; }
 
+  // DXF Layer Filters Builder (ADR-358 §5.7.bis Q11 — Phase 11)
+  generateLayerFilterGroupId(): string { return this.generateId(P.LAYER_FILTER_GROUP).id; }
+  generateLayerFilterPropertyId(): string { return this.generateId(P.LAYER_FILTER_PROPERTY).id; }
+
   // DXF Enterprise Dimension System (ADR-362)
   generateDimensionId(): string { return this.generateId(P.DIMENSION).id; }
   generateDimStyleId(): string { return this.generateId(P.DIM_STYLE).id; }
