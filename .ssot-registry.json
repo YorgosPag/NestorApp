@@ -3332,6 +3332,62 @@
       "addedDate": "2026-05-17",
       "addedByAdr": "ADR-358",
       "tier": 3
+    },
+    "bim-entities": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/types/bim-base.ts",
+      "description": "BIM entity base types (ADR-363): BimEntity generic, BimValidation, BimQuantityTakeoff, SoftLock, Point3D. All BIM entity interfaces extend BimEntity — no re-implementation of these types elsewhere.",
+      "forbiddenPatterns": [
+        "interface BimEntity[^<]",
+        "interface BimValidation\\b",
+        "interface BimQuantityTakeoff\\b",
+        "interface SoftLock\\b",
+        "primaryUnit.*'m'.*'m2'.*'m3'.*'pcs'"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/types/bim-base.ts",
+        "src/subapps/dxf-viewer/bim/types/__tests__/",
+        "src/subapps/dxf-viewer/types/entities.ts"
+      ],
+      "addedDate": "2026-05-17",
+      "addedByAdr": "ADR-363",
+      "tier": 3
+    },
+    "bim-id-prefix": {
+      "ssotFile": "src/services/enterprise-id-prefixes.ts",
+      "description": "BIM entity ID prefixes (ADR-363): WALL='wall', OPENING='opening', SLAB='slab', SLAB_OPENING='slbopn', COLUMN='col', BEAM='beam', BIM_PRESET='bpst', BIM_MATERIAL='bmat'. All BIM IDs generated via enterprise-id-convenience.ts generateWallId() etc — no inline UUID, no hardcoded prefix strings.",
+      "forbiddenPatterns": [
+        "crypto\\.randomUUID\\(\\)[^\\n]*wall",
+        "crypto\\.randomUUID\\(\\)[^\\n]*opening",
+        "crypto\\.randomUUID\\(\\)[^\\n]*slab",
+        "crypto\\.randomUUID\\(\\)[^\\n]*column",
+        "crypto\\.randomUUID\\(\\)[^\\n]*beam",
+        "Date\\.now\\(\\)\\.toString\\(\\)[^\\n]*(wall|opening|slab|column|beam)"
+      ],
+      "allowlist": [
+        "src/services/enterprise-id-prefixes.ts",
+        "src/services/enterprise-id-class.ts",
+        "src/services/enterprise-id-convenience.ts",
+        "src/services/enterprise-id.service.ts",
+        "src/subapps/dxf-viewer/bim/"
+      ],
+      "addedDate": "2026-05-17",
+      "addedByAdr": "ADR-363",
+      "tier": 1
+    },
+    "bim-to-boq-bridge": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/services/BimToBoqBridge.ts",
+      "description": "BIM→BOQ auto-feed bridge (ADR-363 Phase 6+): all BIM entity saves must trigger BimToBoqBridge.upsertBoqItem() — no direct boqService.upsertItem() calls from BIM entity handlers, no inline BIM→ATOE mapping tables outside BimToBoqBridge.",
+      "forbiddenPatterns": [
+        "boqService\\.upsertItem\\([^)]*bim",
+        "BIM_TO_ATOE_MAPPING(?![^'\"]*BimToBoqBridge)"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/services/BimToBoqBridge.ts",
+        "src/subapps/dxf-viewer/bim/services/__tests__/"
+      ],
+      "addedDate": "2026-05-17",
+      "addedByAdr": "ADR-363",
+      "tier": 3
     }
   }
 }
