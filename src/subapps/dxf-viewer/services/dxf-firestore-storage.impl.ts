@@ -279,25 +279,11 @@ async function tryGetBytes(path: string): Promise<ArrayBuffer | null> {
   }
 }
 
-/**
- * Parse scene JSON text into a validated SceneModel.
- * Returns null if JSON is invalid or scene is empty (placeholder `{}`).
- */
-function parseAndValidateScene(text: string): SceneModel | null {
-  try {
-    const parsed = JSON.parse(text) as Record<string, unknown>;
-    const entities = parsed.entities;
-    if (!Array.isArray(entities) || entities.length === 0) return null;
-    return {
-      entities: entities as SceneModel['entities'],
-      layers: (parsed.layers ?? {}) as SceneModel['layers'],
-      bounds: (parsed.bounds ?? { minX: 0, minY: 0, maxX: 0, maxY: 0 }) as SceneModel['bounds'],
-      units: (parsed.units ?? 'mm') as SceneModel['units'],
-    };
-  } catch {
-    return null;
-  }
-}
+// ADR-358 Phase 9E-6f — `parseAndValidateScene` lives in `./dxf-scene-json.ts`
+// as a Firebase-free pure helper so it can be unit-tested without the auth
+// harness; re-exported here for call-site stability.
+export { parseAndValidateScene } from './dxf-scene-json';
+import { parseAndValidateScene } from './dxf-scene-json';
 
 /**
  * Load scene from Firebase Storage + metadata from Firestore.
