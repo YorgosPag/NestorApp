@@ -1,26 +1,36 @@
 'use client';
 
 /**
- * ADR-362 Phase D1 — `useDimensionCreate`: orchestrator hook for dimension
- * creation flows (Linear / Aligned / Angular2L / Angular3P).
+ * ADR-362 Phase D1+D2+D3 — `useDimensionCreate`: orchestrator hook for dim
+ * creation (Linear / Aligned / Angular2L / Angular3P / Radius / Diameter /
+ * ArcLength / JoggedRadius / Ordinate / Baseline / Continued — 10/10 types).
  *
  * Thin proxy over `dimensionCreateStore` (ADR-040 micro-leaf — no React state
- * subscription here; selective leaves do that in Phase E). Two responsibilities
- * the store cannot own because they are side-effect work:
+ * subscription here; selective leaves do that in Phase E). Three side-effect
+ * responsibilities the store cannot own:
  *
  *   1. Real `id` + `layerId` generation at commit time (enterprise-id SSoT,
- *      SOS N.6) — built `DimensionEntity` is handed to the parent through
+ *      SOS N.6) — built `DimensionEntity` handed to the parent through
  *      `onDimensionCreated`.
  *   2. Auto-restart after commit so `allowsContinuous: true` dim tools behave
  *      like AutoCAD / BricsCAD: place one dim, the prompt loops for the next
  *      one without re-clicking the ribbon button.
+ *   3. Phase D3 — parent dim resolution for chained baseline/continued flows.
+ *      Q-A AutoCAD default = auto-last: the most recently committed
+ *      linear/aligned/baseline/continued dim in the current hook session is
+ *      remembered and offered as parent. Q-B = auto-progression: after each
+ *      commit the chain head advances to the just-committed entity, so the
+ *      continuous loop chains end-to-end (continued) or rung-by-rung
+ *      (baseline). Q-D = silent + console.warn when no parent exists.
+ *      `resolveParentDimension` param is an optional explicit override (Phase
+ *      E will wire ribbon "Select parent" pick mode through it).
  *
- * Modifier keys (Tab / Space) for type cycling are wired here too — the
- * detector reads `tabPressCount` / `spacePressCount` from the store.
+ * Modifier keys (Tab / Space / Escape) — programmatic via `onKey`, live event
+ * routing from the canvas wired in `useDimensionKeyboardRouting`.
  *
- * Out of scope for Phase D1 (explicitly per the orchestrator brief):
- *   - Radial / ordinate creation         → Phase D2
- *   - Baseline / continued chains        → Phase D3
+ * Out of scope for Phase D3:
+ *   - Ribbon Smart DIM dropdown UI       → Phase E1
+ *   - Contextual ribbon tab              → Phase E2
  *   - Snap intelligence + grips          → Phase I
  *   - Associativity observers            → Phase J (click-time capture only here)
  *   - DXF export                         → Phase H
@@ -64,6 +74,16 @@ export interface UseDimensionCreateParams {
    * that don't want to touch the registry singleton.
    */
   readonly resolveStyleId?: () => string;
+  /**
+   * Phase D3 — explicit parent dim override for chained flows. Returns the
+   * dim to chain off (typically from a ribbon "Select parent" pick mode in
+   * Phase E). Returning `null` falls back to auto-last (the most recently
+   * committed chainable dim in this hook session). When BOTH return null, the
+   * hook warns + cancels (silent for the user; nothing reaches the store).
+   */
+  readonly resolveParentDimension?: (
+    mode: 'baseline' | 'continued',
+  ) => DimensionEntity | null;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -80,12 +100,19 @@ export function useDimensionCreate(params: UseDimensionCreateParams): DimensionC
   const resolveStyleIdRef = useRef(params.resolveStyleId);
   resolveStyleIdRef.current = params.resolveStyleId;
 
+  const resolveParentDimensionRef = useRef(params.resolveParentDimension);
+  resolveParentDimensionRef.current = params.resolveParentDimension;
+
   // Cached start params so we can auto-restart in continuous mode after commit.
   const lastStartRef = useRef<{
     mode: DimensionCreateMode;
     styleId: string;
     manualOverride?: DimensionType;
   } | null>(null);
+
+  // Phase D3 — last committed chainable dim id (linear/aligned/baseline/continued).
+  // Drives Q-A auto-last parent resolution + Q-B auto-progression of the chain head.
+  const lastChainableRef = useRef<string | null>(null);
 
   useEffect(() => {
     let scheduled = false;
@@ -96,7 +123,12 @@ export function useDimensionCreate(params: UseDimensionCreateParams): DimensionC
       scheduled = true;
       queueMicrotask(() => {
         scheduled = false;
-        runCommit(onDimensionCreatedRef.current, resolveLayerIdRef.current, lastStartRef.current);
+        runCommit(
+          onDimensionCreatedRef.current,
+          resolveLayerIdRef.current,
+          lastStartRef.current,
+          lastChainableRef,
+        );
       });
     });
   }, []);
@@ -104,6 +136,26 @@ export function useDimensionCreate(params: UseDimensionCreateParams): DimensionC
   const start = useCallback<DimensionCreateAPI['start']>((initial) => {
     const styleId = (resolveStyleIdRef.current ?? defaultStyleId)();
     const cached = makeStartParams(initial, styleId);
+
+    if (initial === 'baseline' || initial === 'continued') {
+      const parentId = resolveChainParentId(
+        initial,
+        resolveParentDimensionRef.current,
+        lastChainableRef.current,
+      );
+      if (!parentId) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[useDimensionCreate] ${initial} requires a prior linear/aligned dim — no parent available.`,
+        );
+        return;
+      }
+      lastStartRef.current = cached;
+      dimensionCreateStore.start(cached);
+      dimensionCreateStore.setParent(parentId);
+      return;
+    }
+
     lastStartRef.current = cached;
     dimensionCreateStore.start(cached);
   }, []);
@@ -124,12 +176,14 @@ export function useDimensionCreate(params: UseDimensionCreateParams): DimensionC
     if (key === 'Space') return dimensionCreateStore.pressSpace();
     if (key === 'Escape') {
       lastStartRef.current = null;
+      lastChainableRef.current = null;
       return dimensionCreateStore.cancel();
     }
   }, []);
 
   const cancel = useCallback<DimensionCreateAPI['cancel']>(() => {
     lastStartRef.current = null;
+    lastChainableRef.current = null;
     dimensionCreateStore.cancel();
   }, []);
 
@@ -156,6 +210,7 @@ function runCommit(
   onDimensionCreated: (entity: DimensionEntity) => void,
   resolveLayerId: () => string,
   lastStart: { mode: DimensionCreateMode; styleId: string; manualOverride?: DimensionType } | null,
+  lastChainableRef: { current: string | null },
 ): void {
   const state = dimensionCreateStore.get();
   if (state.status !== 'commit-ready') return;
@@ -171,13 +226,47 @@ function runCommit(
 
   onDimensionCreated(built.entity);
 
+  // Phase D3 — Q-B auto-progression: any chainable commit advances the head so
+  // the next baseline/continued in the loop hangs off the just-placed dim.
+  if (isChainable(built.entity.dimensionType)) {
+    lastChainableRef.current = built.entity.id;
+  }
+
   // Continuous mode: restart with the same initial pick so the user can keep
   // placing dims without re-clicking the ribbon button (matches AutoCAD /
   // BricsCAD `DIM` loop). When the parent cancels the tool, the next click
   // flow will not reach this branch because `start()` resets lastStartRef.
-  if (lastStart) {
-    dimensionCreateStore.start(lastStart);
-  } else {
+  if (!lastStart) {
     dimensionCreateStore.cancel();
+    return;
   }
+  dimensionCreateStore.start(lastStart);
+  // Chained tools need parentDimensionId re-set after the start() reset.
+  if (lastStart.manualOverride === 'baseline' || lastStart.manualOverride === 'continued') {
+    const parent = lastChainableRef.current;
+    if (parent) dimensionCreateStore.setParent(parent);
+    else dimensionCreateStore.cancel();
+  }
+}
+
+/**
+ * Phase D3 — Q-A parent resolution: explicit `resolveParentDimension` callback
+ * wins; otherwise fall back to the most recently committed chainable dim in
+ * this hook session. Returns null when neither has a parent (caller warns +
+ * aborts the start so the store never enters a chained flow without a parent).
+ */
+function resolveChainParentId(
+  mode: 'baseline' | 'continued',
+  resolveParentDimension:
+    | ((mode: 'baseline' | 'continued') => DimensionEntity | null)
+    | undefined,
+  fallbackId: string | null,
+): string | null {
+  const explicit = resolveParentDimension?.(mode);
+  if (explicit) return explicit.id;
+  return fallbackId;
+}
+
+function isChainable(t: DimensionType): boolean {
+  return t === 'linear' || t === 'aligned' || t === 'baseline' || t === 'continued';
 }
