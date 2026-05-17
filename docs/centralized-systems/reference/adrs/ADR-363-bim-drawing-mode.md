@@ -411,61 +411,110 @@ export interface BeamEntity extends BimEntity<BeamKind, BeamParams, BeamGeometry
 }
 ```
 
-### 5.8 Φάκελος δομής — `bim/`
+### 5.8 Φάκελος δομής — `bim/` (μετά Phase 0.5 Stair Migration)
 
 ```
 src/subapps/dxf-viewer/bim/
 ├── types/
 │   ├── bim-base.ts                    # BimEntity<T>, BimValidation, BimQuantityTakeoff, SoftLock
-│   ├── wall-types.ts
-│   ├── wall-dna-types.ts
-│   ├── opening-types.ts
-│   ├── slab-types.ts
-│   ├── column-types.ts
-│   └── beam-types.ts
+│   ├── stair-types.ts                 # Phase 0.5 (από types/stair.ts)
+│   ├── wall-types.ts                  # Phase 1
+│   ├── wall-dna-types.ts              # Phase 1
+│   ├── opening-types.ts               # Phase 2
+│   ├── slab-types.ts                  # Phase 3
+│   ├── slab-opening-types.ts          # Phase 3 (Q3 — separate entity)
+│   ├── column-types.ts                # Phase 4
+│   └── beam-types.ts                  # Phase 5
+├── stairs/                             # Phase 0.5 (από systems/stairs/)
+│   ├── stair-validator.ts
+│   ├── stair-grips.ts
+│   ├── stair-transforms.ts
+│   ├── stair-presets-service.ts
+│   ├── stair-firestore-service.ts
+│   ├── stair-floor-link.ts
+│   ├── stair-auto-fix.ts
+│   ├── stair-material-catalog.ts
+│   ├── stair-preview-store.ts
+│   ├── stair-variant-defaults.ts
+│   └── __tests__/                     # 20+ test files
 ├── geometry/
-│   ├── wall-geometry.ts               # port από genarc/engines/bom/wallGeometry.ts
-│   ├── opening-geometry.ts            # boolean subtract from host wall
-│   ├── slab-geometry.ts               # polygon area/perimeter
-│   ├── column-geometry.ts             # footprint
-│   ├── beam-geometry.ts
+│   ├── stairs/                        # Phase 0.5 (από systems/stairs/stair-geometry-*)
+│   │   ├── StairGeometryService.ts
+│   │   ├── stair-geometry-shared.ts
+│   │   ├── stair-geometry-straight.ts
+│   │   ├── stair-geometry-lshape.ts
+│   │   ├── stair-geometry-ushape.ts
+│   │   ├── stair-geometry-vshape.ts
+│   │   ├── stair-geometry-gamma.ts
+│   │   ├── stair-geometry-spiral.ts
+│   │   ├── stair-geometry-helical.ts
+│   │   ├── stair-geometry-elliptical.ts
+│   │   ├── stair-geometry-winder.ts
+│   │   ├── stair-geometry-triangular-fan.ts
+│   │   ├── stair-geometry-triangular-outline.ts
+│   │   ├── stair-geometry-sketch.ts
+│   │   ├── stair-geometry-labels.ts
+│   │   └── __tests__/
+│   ├── wall-geometry.ts               # Phase 1 (port genarc/engines/bom/wallGeometry.ts)
+│   ├── opening-geometry.ts            # Phase 2 (boolean subtract from host wall)
+│   ├── slab-geometry.ts               # Phase 3
+│   ├── slab-opening-geometry.ts       # Phase 3 (Q3)
+│   ├── column-geometry.ts             # Phase 4
+│   ├── beam-geometry.ts               # Phase 5
 │   └── shared/
 │       ├── polygon-utils.ts           # area, centroid, perimeter
 │       └── boolean-ops.ts             # για opening cutout στο wall outline
-├── tools/
-│   ├── wall-tool.ts                   # WallTool drawing logic
-│   ├── opening-tool.ts                # OpeningTool — host-wall snap
-│   ├── slab-tool.ts                   # SlabTool — polygon drawing
-│   ├── column-tool.ts                 # ColumnTool — anchor-aware placement
+├── tools/                              # Phase 1+ (new — δεν υπήρχε stair-tool)
+│   ├── wall-tool.ts
+│   ├── opening-tool.ts
+│   ├── slab-tool.ts
+│   ├── slab-opening-tool.ts
+│   ├── column-tool.ts
 │   └── beam-tool.ts
 ├── renderers/
-│   ├── wall-renderer.ts               # leaf — ADR-040 compliant
+│   ├── stair-renderer.ts              # Phase 0.5 (από rendering/entities/StairRenderer.ts)
+│   ├── wall-renderer.ts               # Phase 1 — leaf ADR-040 compliant
 │   ├── opening-renderer.ts
 │   ├── slab-renderer.ts
+│   ├── slab-opening-renderer.ts
 │   ├── column-renderer.ts
 │   └── beam-renderer.ts
+├── hooks/
+│   ├── use-stair-persistence.ts       # Phase 0.5 (από hooks/data/useStairPersistence.ts)
+│   ├── use-ribbon-stair-bridge.ts     # Phase 0.5 (από ui/ribbon/hooks/useRibbonStairBridge.ts)
+│   └── (Phase 1+: use-wall-persistence, use-bim-firestore-bridge, ...)
 ├── services/
 │   ├── BimEntityService.ts            # CRUD per element type, dispatch
 │   ├── WallDnaService.ts              # layer composition, defaults
 │   ├── MaterialLibraryService.ts      # Phase 6+
 │   └── BimToBoqBridge.ts              # auto-feed BOQ (ADR-175)
-├── validators/
-│   ├── wall-validator.ts              # height/thickness limits, ΝΟΚ
-│   ├── opening-validator.ts           # offset within wall, height ≤ wall height
+├── validators/                         # Phase 1+ (new — stair-validator μένει στο bim/stairs/)
+│   ├── wall-validator.ts
+│   ├── opening-validator.ts
 │   ├── slab-validator.ts
+│   ├── slab-opening-validator.ts
 │   ├── column-validator.ts
 │   └── beam-validator.ts
-├── grips/
+├── grips/                              # Phase 1+ (stair-grips μένει στο bim/stairs/)
 │   ├── wall-grips.ts
 │   ├── opening-grips.ts
 │   ├── slab-grips.ts
+│   ├── slab-opening-grips.ts
 │   ├── column-grips.ts
 │   └── beam-grips.ts
 ├── presets/
 │   ├── wall-dna-presets.ts            # port createDefaultExterior/Interior/Partition
 │   └── element-presets.ts             # column 30×30, beam 25×50, etc.
-└── index.ts                            # public exports
+├── ui/
+│   └── BimTypePickerDialog.tsx        # §5.9.1 SSoT abstraction (Q1)
+└── index.ts                            # public exports (re-exports stair public API)
 ```
+
+**Σημείωση οργάνωσης stair**: μετά την Phase 0.5, το stair έχει **2 sub-folders** μέσα στο `bim/`:
+- `bim/stairs/` — όλα τα stair-specific services (validator, grips, transforms, presets, firestore, floor-link, etc.)
+- `bim/geometry/stairs/` — τα 10 geometry variants + service (διαφορετική ευθύνη: pure math)
+
+Ο λόγος για split: αποφεύγεται "stairs" folder με 45+ αρχεία (κανόνας N.7.1 SRP — φάκελος = 1 ευθύνη). Τα νέα BIM entities (wall/opening/...) ακολουθούν ίδιο pattern: services στο top-level `bim/`, geometry math στο `bim/geometry/`.
 
 **Σημείωση**: φάκελος `bim/` (όχι `parametric/` ή `building/`) γιατί είναι ο σύντομος, διεθνής όρος, και διαχωρίζει καθαρά από `types/entities.ts` (DXF-level entities).
 
@@ -837,6 +886,110 @@ await entityAuditService.recordChange({
 - [ ] i18n skeleton: `tools.bim.*` keys με empty values (να αποκτούν περιεχόμενο per phase).
 - [ ] ADR-363 commit + Firestore indexes commit.
 
+### Phase 0.5 — Stair Migration to `bim/` (1 session, ~2-3h, atomic commit)
+
+**Prerequisite για Phase 1**. Καθαρίζει το folder layout ώστε όλα τα BIM entities (existing stair + new walls/openings/slabs/columns/beams/slab-openings) να ζουν ομογενοποιημένα κάτω από `bim/`.
+
+**Step-by-step (atomic commit)**:
+
+1. **Folder creation**:
+   ```
+   src/subapps/dxf-viewer/bim/
+   ├── stairs/                          # ← target για stair migration
+   ├── types/                           # bim-base.ts + stair-types.ts (Phase 0)
+   ├── renderers/                       # ← stair-renderer.ts (από rendering/entities/)
+   ├── hooks/                           # ← use-stair-persistence + use-ribbon-stair-bridge
+   ├── geometry/                        # ← stair geometry variants
+   └── (Phase 1+ έρχονται wall/, opening/, slab/, column/, beam/)
+   ```
+
+2. **git mv operations** (preserve history):
+   ```bash
+   git mv src/subapps/dxf-viewer/systems/stairs/* src/subapps/dxf-viewer/bim/stairs/
+   git mv src/subapps/dxf-viewer/types/stair.ts src/subapps/dxf-viewer/bim/types/stair-types.ts
+   git mv src/subapps/dxf-viewer/rendering/entities/StairRenderer.ts src/subapps/dxf-viewer/bim/renderers/stair-renderer.ts
+   git mv src/subapps/dxf-viewer/hooks/data/useStairPersistence.ts src/subapps/dxf-viewer/bim/hooks/use-stair-persistence.ts
+   git mv src/subapps/dxf-viewer/ui/ribbon/hooks/useRibbonStairBridge.ts src/subapps/dxf-viewer/bim/hooks/use-ribbon-stair-bridge.ts
+   ```
+
+   Stair geometry variants (10 αρχεία `stair-geometry-*.ts`) → υπο-φάκελος `bim/geometry/stairs/`:
+   ```bash
+   mkdir src/subapps/dxf-viewer/bim/geometry/stairs
+   git mv src/subapps/dxf-viewer/bim/stairs/stair-geometry-*.ts src/subapps/dxf-viewer/bim/geometry/stairs/
+   git mv src/subapps/dxf-viewer/bim/stairs/StairGeometryService.ts src/subapps/dxf-viewer/bim/geometry/stairs/
+   git mv src/subapps/dxf-viewer/bim/stairs/stair-geometry-shared.ts src/subapps/dxf-viewer/bim/geometry/stairs/
+   ```
+
+3. **Empty `systems/stairs/` folder removal**:
+   ```bash
+   rmdir src/subapps/dxf-viewer/systems/stairs/__tests__
+   rmdir src/subapps/dxf-viewer/systems/stairs
+   ```
+
+4. **Bulk find/replace imports** (entire repo):
+   | From | To |
+   |---|---|
+   | `from '@/subapps/dxf-viewer/systems/stairs/` | `from '@/subapps/dxf-viewer/bim/stairs/` |
+   | `from '@/subapps/dxf-viewer/types/stair'` | `from '@/subapps/dxf-viewer/bim/types/stair-types'` |
+   | `from '@/subapps/dxf-viewer/rendering/entities/StairRenderer'` | `from '@/subapps/dxf-viewer/bim/renderers/stair-renderer'` |
+   | `from '@/subapps/dxf-viewer/hooks/data/useStairPersistence'` | `from '@/subapps/dxf-viewer/bim/hooks/use-stair-persistence'` |
+   | `from '@/subapps/dxf-viewer/ui/ribbon/hooks/useRibbonStairBridge'` | `from '@/subapps/dxf-viewer/bim/hooks/use-ribbon-stair-bridge'` |
+   | Relative imports μέσα στο stair folder (π.χ. `./StairGeometryService` από geometry files) | Επανέλεγχος relative paths μετά το stairs/geometry split |
+
+5. **Stair type refactor → extends BimEntity**:
+   ```typescript
+   // bim/types/stair-types.ts (μετά το mv)
+   import type { BimEntity } from './bim-base';
+
+   export interface StairEntity extends BimEntity<StairKind, StairParams, StairGeometry> {
+     type: 'stair';
+     // hostedOpeningIds, validation, qto, editingBy → κληρονομούνται
+   }
+   ```
+   `validation`, `qto`, `editingBy` fields που ήταν inline → πάνε στο `BimEntity<T>` parent. Stair-specific fields (π.χ. multi-story config) παραμένουν στα `StairParams`.
+
+6. **`bim/index.ts` public API**:
+   ```typescript
+   // src/subapps/dxf-viewer/bim/index.ts
+   export * from './types/bim-base';
+   export * from './types/stair-types';
+   // Phase 1+: export * from './types/wall-types'; etc.
+   ```
+
+7. **TypeScript check** (`npx tsc --noEmit`): πρέπει zero errors.
+
+8. **Test suite** (`npm run test:dxf-viewer` ή vitest specific):
+   - 20+ stair test files πρέπει all pass
+   - StairGeometryService tests (8 variants × ~10 tests = 80+ tests)
+   - stair-grips, stair-validator, stair-transforms, stair-floor-link, stair-presets-service, stair-firestore-service
+   - **Acceptance: zero failing tests**
+
+9. **ADR-358 update** (same commit):
+   - All path references updated
+   - Changelog entry: "Phase 0.5 (ADR-363) — stair migrated to `bim/` SSoT. Paths now `bim/stairs/`, `bim/types/stair-types.ts`, `bim/geometry/stairs/`, `bim/renderers/stair-renderer.ts`, `bim/hooks/use-stair-persistence.ts`. Pre-commit CHECK 6B-6D compliance preserved."
+
+10. **Pre-commit ratchet**:
+    - SSoT registry (`ADR-294`): νέο module `bim-folder-residency` που blocks imports `from '@/subapps/dxf-viewer/systems/stairs/` ή `from '@/subapps/dxf-viewer/types/stair'` σε νέα files (zero baseline).
+
+**Risk mitigation**:
+- Atomic commit → `git revert` αν catastrophic
+- `git mv` per-file history preserved
+- Mechanical changes (find/replace) → reviewable, deterministic
+- Tests run + pass before commit
+- Pre-commit hook CHECK 6B/6C/6D auto-validate
+
+**Acceptance criteria Phase 0.5**:
+1. ✅ `find src/subapps/dxf-viewer/systems/stairs -type f` → no results (folder gone)
+2. ✅ `find src/subapps/dxf-viewer/bim/stairs -type f` → ~30 files
+3. ✅ `find src/subapps/dxf-viewer/bim/geometry/stairs -type f` → ~14 files (10 variants + service + shared + 1-2 helpers)
+4. ✅ `find src/subapps/dxf-viewer/bim/types/stair-types.ts` exists
+5. ✅ `find src/subapps/dxf-viewer/bim/renderers/stair-renderer.ts` exists
+6. ✅ `npx tsc --noEmit` → zero errors
+7. ✅ `npm run test:vitest -- bim/` → 100% green
+8. ✅ Manual smoke test: φόρτωση DXF + create stair via ribbon → working
+9. ✅ ADR-358 changelog updated with Phase 0.5 entry + new paths
+10. ✅ `.ssot-registry.json` new module `bim-folder-residency` με baseline 0
+
 ### Phase 1 — Wall (1-2 sessions)
 
 - [ ] Port `wall-types.ts` + `wall-dna-types.ts` από genarc (mm conversion, Nestor naming).
@@ -1066,13 +1219,50 @@ await entityAuditService.recordChange({
 | `mat-insulation-xps` (μόνωση) | ΟΙΚ-10 | ΟΙΚ-10.05 |
 | `mat-waterproofing` | ΟΙΚ-10 | ΟΙΚ-10.10 |
 
-**Q5**: Σκάλα (ADR-358) — αν δεν έχει ακόμη merged ο stair tool, θέλεις:
-   - (α) ADR-358 stair να ΜΕΤΑΦΕΡΘΕΙ κάτω από `bim/types/stair-types.ts` ως ομογενοποίηση, ή
-   - (β) Stair να μείνει στον δικό του `systems/stairs/` φάκελο και να είναι αυτόνομος, με BIM entities στο `bim/`;
+**Q5** ✅ **ΑΠΑΝΤΗΘΗΚΕ 2026-05-17**: **(β) Full migration στο `bim/`** — GOL + SSOT. Stair = building element, ζει με τα άλλα building elements. Compromise (shared abstraction μόνο, files stay put) απορρίφθηκε ως τεχνικό χρέος (παραβιάζει N.0/N.7/N.12). Νέα **Phase 0.5 "Stair Migration"** μπαίνει στο §6 — prerequisite για Phase 1 Wall.
 
-**Q6**: Layer convention — τα νέα BIM entities θες να μπαίνουν αυτόματα σε auto-created layers:
-   - π.χ. όταν σχεδιάζεις τοίχο, να δημιουργηθεί layer "Walls-Exterior" αυτόματα, ή
-   - να μένουν στο current layer του χρήστη (όπως DXF entities);
+**Migration details**:
+- 45+ stair files → `bim/stairs/` (single atomic commit)
+- `git mv` διατηρεί per-file history
+- Bulk find/replace imports: `systems/stairs/` → `bim/stairs/` + `rendering/entities/StairRenderer` → `bim/renderers/stair-renderer` + `hooks/data/useStairPersistence` → `bim/hooks/use-stair-persistence`
+- `types/stair.ts` refactor: `StairEntity extends BimEntity<StairKind, StairParams, StairGeometry>` (κληρονομεί validation/qto/softLock από abstraction)
+- ADR-358 paths update + changelog entry στο ίδιο commit
+- All 20+ stair tests run + pass
+- Phase 0.5 acceptance: zero TS errors, all tests green, ADR-358 paths consistent, `bim/index.ts` re-exports stair public API
+
+**Q6** ✅ **ΑΠΑΝΤΗΘΗΚΕ 2026-05-17**: **(γ) Υβριδικό — auto με override**. Default: auto layer creation με BIM naming convention. Override: per-element layer picker στο `BimTypePickerDialog` (κάτω από type picker). Existing layer detection όταν φορτώνεται DXF.
+
+**Implementation details**:
+- Νέα Firestore collection `bim_settings/{projectId}`:
+  ```typescript
+  {
+    layerConvention: 'greek' | 'english' | 'aia-us' | 'custom',
+    autoCreateLayers: boolean,         // default true
+    customLayerMap?: Record<BimElementKind, string>, // αν 'custom'
+  }
+  ```
+- 3 built-in conventions με auto-naming + auto-color:
+
+  | Element | Greek (default) | English | AIA-US | Default ACI color |
+  |---|---|---|---|---|
+  | wall.exterior | Τοίχοι-Εξωτερικοί | Walls-Exterior | A-WALL-EXTR | 2 (Yellow) |
+  | wall.interior | Τοίχοι-Εσωτερικοί | Walls-Interior | A-WALL-INTR | 4 (Cyan) |
+  | wall.partition | Τοίχοι-Διαχωριστικοί | Walls-Partition | A-WALL-PART | 9 (LtGray) |
+  | opening.door | Κουφώματα-Πόρτες | Openings-Doors | A-DOOR | 6 (Magenta) |
+  | opening.window | Κουφώματα-Παράθυρα | Openings-Windows | A-WIND | 5 (Blue) |
+  | slab.* | Πλάκες | Slabs | A-FLOR | 3 (Green) |
+  | slab-opening | Διανοίξεις-Πλακών | Slab-Openings | A-FLOR-OTLN | 1 (Red dashed) |
+  | column.* | Κολώνες | Columns | A-COLS | 1 (Red) |
+  | beam.* | Δοκάρια | Beams | A-BEAM | 14 (DkRed dashed) |
+  | stair.* | Σκάλες | Stairs | A-FLOR-STRS | 32 (Brown/Tan) |
+
+- `BimLayerService` SSoT (`src/subapps/dxf-viewer/bim/services/BimLayerService.ts`):
+  - `resolveLayerForEntity(elementType, kind, convention): { name: string, defaultColor: ACI, exists: boolean }`
+  - `ensureLayer(name, color): Promise<LayerId>` — idempotent (no duplicate creation)
+  - `detectExistingLayer(elementType, kind): Layer | null` — semantic match (case-insensitive, fuzzy: "Walls" matches "WALLS", "walls")
+- Existing layer detection UX: όταν DXF φορτώνεται με layer `WALLS`, ο dropdown στο TypePickerDialog δείχνει: "🔍 Εντοπίστηκε: WALLS — Χρήση υπάρχοντος | Δημιουργία Τοίχοι-Εξωτερικοί"
+- Per-session override: ο χρήστης μπορεί να αλλάξει layer για ένα μόνο entity χωρίς να αλλάξει default. Δεν επηρεάζει project setting.
+- **PENDING sub-question Q6b**: ποιο convention default; (ελληνικά / English / AIA-US) — βλ. επόμενο μήνυμα
 
 **Q7**: Hotkeys — προτείνω `W` για τοίχο, `O` για άνοιγμα, `SL` για πλάκα, `CO` για κολώνα, `BM` για δοκό. Έχεις αντιπρόταση; (Conflict check: `W` δεν χρησιμοποιείται, `O` δεν χρησιμοποιείται, `SL` καθαρό, `CO` καθαρό, `BM` καθαρό.)
 
@@ -1132,3 +1322,5 @@ Phase 6 (BOQ Auto-Feed) θεωρείται **complete** όταν:
 | 2026-05-17 | **Q2 ANSWERED** — Absolute mm offset (primary) + % info-only display. Snap 50mm. Constraints: frameWidth min/max. Wall length change → opening stays absolute, orphan warning if out-of-bounds. | Claude Opus 4.7 |
 | 2026-05-17 | **Q3 ANSWERED** — Separate `slab-opening` entity (NOT sub-property). Added 6th element type to EntityType union + Firestore collection `floorplan_slab_openings` + Enterprise ID prefix `SLAB_OPENING='slbopn'` + 4 system presets + "Copy to all floors" multi-storey stack workflow. Foreign key `slabId`, orphan warning on slab delete (no cascade). Slab `netArea` auto-recomputes. | Claude Opus 4.7 |
 | 2026-05-17 | **Q4 ANSWERED** — Hybrid group+expand BOQ items per wall. 1 parent (summary) + N children (per DNA layer). BoqItem schema extended (parentBoqItemId, layerIndex, isGroupParent). Phase 6 split: 6.0 single-item MVP → 6.1 DNA breakdown → 6.2 material→ΑΤΟΕ centralized SSoT. Cost rollup parent = Σ(children). | Claude Opus 4.7 |
+| 2026-05-17 | **Q5 ANSWERED** — Full migration stair → `bim/` (GOL+SSOT). Compromise (γ) rejected as technical debt (παραβιάζει N.0/N.7/N.12). New **Phase 0.5 "Stair Migration"** prerequisite για Phase 1. 45+ files moved via `git mv`, atomic commit, bulk find/replace imports, StairEntity extends BimEntity<>, ADR-358 paths updated same commit. SSoT registry new module `bim-folder-residency`. §5.8 folder layout updated με stairs/ + geometry/stairs/ split. | Claude Opus 4.7 |
+| 2026-05-17 | **Q6 ANSWERED** — Hybrid auto+override layer creation. New `bim_settings/{projectId}` Firestore collection + `BimLayerService` SSoT + 3 built-in conventions (Greek/English/AIA-US) με auto-naming + auto-color (10 entries). Existing layer detection με semantic fuzzy match. Per-session override. Q6b pending: which default convention. | Claude Opus 4.7 |
