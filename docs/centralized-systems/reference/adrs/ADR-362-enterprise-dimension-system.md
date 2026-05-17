@@ -659,6 +659,29 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-05-17 (Phase A3 DONE — Text Formatter + i18n skeleton)** — Foundation Phase A3 implementata.
+  - **NEW** `src/subapps/dxf-viewer/systems/dimensions/dim-text-formatter.ts` (185 LOC) — pure formatters consuming the resolved `DimStyle`:
+    - `formatLinearMeasurement(valueMm, style)` — DIMLFAC → DIMRND → DIMLUNIT/DIMDEC → DIMDSEP → DIMPOST.
+    - `formatAngularMeasurement(radians, style)` — DIMAUNIT/DIMADEC → DIMDSEP (no DIMLFAC for angles).
+    - `formatAlternateUnit(valueMm, style)` — DIMALT only, wraps in `[…]` per AutoCAD convention, applies DIMALTF/DIMALTRND/DIMALTU/DIMALTD/DIMAPOST. Multiplication semantic (AutoCAD spec): for mm-base drawings set DIMALTF ≈ 0.03937 to get inches.
+    - `formatToleranceText(style)` — DIMTOL only, returns `{plus, minus}` strings with DIMTDEC precision and DIMDSEP. Renderer applies DIMTFAC font scale.
+    - `formatLimitsText(measurementMm, style)` — DIMLIM only, returns `{upper, lower}` = measurement ± DIMTP/DIMTM (DIMTM stored negative).
+    - `composePrimaryText(valueMm, style, userText?)` — `''` suppress, `undefined`/`'<>'` measured, otherwise literal with `<>` substitution.
+    - Reuses ADR-082 `formatter-unit-formats.ts` helpers (`formatScientific`/`formatEngineering`/`formatArchitectural`/`formatFractional`/`formatDMS`/`formatGrads`/`formatSurveyor`) — no duplication. Decimal output uses native `toFixed`/`toExponential` then `swapDecimalSeparator` for DIMDSEP control (FormatterRegistry's locale-driven separator wouldn't honour DIMSTYLE).
+    - Internal helpers: `clampPrecision(0..8)`, `applyRounding(v, rnd)`, `swapDecimalSeparator(s, sep)`, `applyDimPost(post, value)` (`[]` placeholder substitution, plain suffix fallback).
+  - **NEW** `src/i18n/locales/el/dxf-viewer-dimensions.json` — 76 keys, **pure Greek** (zero English words outside standard names "ISO 129"/"ASME Y14.5"). Sub-namespaces (ADR-280): `panel.*` (15 incl. `panel.sections.*`), `templates.*` (3), `ribbon.*` (12), `contextualTab.*` (5), `contextMenu.*` (8), `arrowheads.*` (20), `units.*` (5), `angularUnits.*` (5), `errors.*` (3).
+  - **NEW** `src/i18n/locales/en/dxf-viewer-dimensions.json` — 76 keys, English mirror. Count parity verified (76/76, keys identical).
+  - **Path deviation noted**: ADR/plan referenced `src/subapps/dxf-viewer/i18n/locales/{el,en}/dimensions.json`, but DXF Viewer locales are centralized under `src/i18n/locales/{el,en}/` per existing convention (`dxf-viewer.json`, `dxf-viewer-panels.json`, `dxf-viewer-wizard.json`, `dxf-viewer-shell.json`, `dxf-viewer-settings.json`, `dxf-viewer-guides.json`). New file follows `dxf-viewer-dimensions.json` naming pattern.
+  - **Constraints honored**: zero `any` / `as any` / `@ts-ignore` (single `as Precision` after `clampPrecision` runtime guard, type-narrowing only). Functions ≤40 LOC each. File ≤500 LOC (185). Comments only on non-obvious "why". No hardcoded `defaultValue: 'literal'` (locale files exist before any `t('dimensions.X')` consumer). No integration with rendering pipeline / UI / i18n hook reachability registry (Phase F1 wires the panel hook).
+  - **Smoke verification (logic walkthrough)**:
+    - `formatLinearMeasurement(1234.567, ISO_129)` → toFixed(2)="1234.57" → dimdsep ',' → `"1234,57"` ✓
+    - `formatLinearMeasurement(1234.567, ASME_Y14_5)` → `"1234.57"` ✓
+    - `formatAngularMeasurement(Math.PI/4, ISO_129)` → 45° decimal, dimadec=0 → `"45°"` ✓
+    - `formatToleranceText({dimtol:true, dimtp:0.05, dimtm:-0.05, dimtdec:2, dimdsep:','})` → `{plus:"+0,05", minus:"-0,05"}` ✓
+    - JSON parse both locales OK, 76/76 keys identical.
+  - tsc `--noEmit` filter `dim-text-formatter|dxf-viewer-dimensions`: pulito (no new errors).
+  - **Next**: Phase B1 — Linear+Aligned+Rotated geometry builder (`systems/dimensions/dim-geometry-builder.ts` orchestrator + `builders/linear-aligned-builder.ts` + unit tests).
+
 - **2026-05-17 (Phase A2 DONE — DIMSTYLE Templates + Registry + Resolver + Arrowhead Blocks)** — Foundation Phase A2 implementata.
   - **NEW** `src/subapps/dxf-viewer/systems/dimensions/dim-style-templates.ts` (209 LOC) — 3 built-in `DimStyle` templates con deterministic IDs (`dimstyle_iso_129` / `dimstyle_asme_y14_5` / `dimstyle_arch_us`): `ISO_129_TEMPLATE` (oblique tick, text above & aligned, dimdsep ',', layer 'ΔΙΑΣΤΑΣΕΙΣ', ACI 4 cyan), `ASME_Y14_5_TEMPLATE` (closedFilled, text centered & horizontal, dimdsep '.', layer 'A-ANNO-DIMS', ACI 5 blue), `ARCHITECTURAL_US_TEMPLATE` (hybrid: closedFilled + text above & aligned, dimdsep '.', ACI 5). Shared 60-field defaults via `sharedDefaults()` helper. `BUILTIN_DIM_STYLES` array per bulk init. `DEFAULT_ACTIVE_DIM_STYLE_ID = ISO_129` (D2 Greek default).
   - **NEW** `src/subapps/dxf-viewer/systems/dimensions/dim-style-registry.ts` (143 LOC) — `DimStyleRegistry` class: `getStyle(id)`, `getAllStyles()`, `getActiveStyleId()` / `setActiveStyleId(id)` / `getActiveStyle()` (with fallback), `createCustomStyle(input)` via `generateDimStyleId()` (N.6 enterprise IDs), `updateCustomStyle(id, patch)`, `deleteCustomStyle(id)` (throws on built-in), `duplicateStyle(sourceId, newName)`, `subscribe(listener)` con `Set<RegistryListener>` (HoverStore pattern). Pre-populated con 3 built-in nel constructor. Lazy session singleton via `getDimStyleRegistry()` + `__setDimStyleRegistryForTests()` per testability. In-memory only (persistence Phase F).

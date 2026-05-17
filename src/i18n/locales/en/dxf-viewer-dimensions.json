@@ -1,0 +1,98 @@
+{
+  "panel": {
+    "title": "Dimensions",
+    "styleList": "Style List",
+    "activeStyle": "Active Style",
+    "newStyle": "New Style",
+    "duplicate": "Duplicate",
+    "rename": "Rename",
+    "delete": "Delete",
+    "preview": "Preview",
+    "sections": {
+      "lines": "Lines & Extensions",
+      "symbols": "Symbols & Arrows",
+      "text": "Text",
+      "fit": "Fit",
+      "primaryUnits": "Primary Units",
+      "altUnits": "Alternate Units",
+      "tolerances": "Tolerances"
+    }
+  },
+  "templates": {
+    "iso129": "ISO 129",
+    "asmeY14_5": "ASME Y14.5",
+    "architecturalUs": "Architectural US"
+  },
+  "ribbon": {
+    "groupTitle": "Dimensions",
+    "smartDim": "Smart",
+    "linear": "Linear",
+    "aligned": "Aligned",
+    "angular": "Angular",
+    "radius": "Radius",
+    "diameter": "Diameter",
+    "arcLength": "Arc Length",
+    "joggedRadius": "Jogged Radius",
+    "ordinate": "Ordinate",
+    "baseline": "Baseline",
+    "continued": "Continued"
+  },
+  "contextualTab": {
+    "title": "Dimension",
+    "style": "Style",
+    "override": "Override",
+    "textGroup": "Text",
+    "properties": "Properties"
+  },
+  "contextMenu": {
+    "precision": "Precision",
+    "flipArrows": "Flip Arrows",
+    "resetTextPosition": "Reset Text Position",
+    "overrideText": "Override Text",
+    "applyStyle": "Apply Style",
+    "reassociate": "Reassociate",
+    "explode": "Explode",
+    "properties": "Properties"
+  },
+  "arrowheads": {
+    "none": "None",
+    "closedFilled": "Closed Filled",
+    "closedBlank": "Closed Blank",
+    "closed": "Closed",
+    "dot": "Dot",
+    "dotSmall": "Small Dot",
+    "dotBlank": "Dot Blank",
+    "dotSmallBlank": "Small Dot Blank",
+    "architecturalTick": "Architectural Tick",
+    "oblique": "Oblique",
+    "open": "Open",
+    "openRightAngle": "Open Right Angle",
+    "openSlanted": "Open Slanted",
+    "origin": "Origin",
+    "origin2": "Origin 2",
+    "box": "Box",
+    "boxFilled": "Box Filled",
+    "datumTriangle": "Datum Triangle",
+    "datumTriangleFilled": "Datum Triangle Filled",
+    "integral": "Integral"
+  },
+  "units": {
+    "scientific": "Scientific",
+    "decimal": "Decimal",
+    "engineering": "Engineering",
+    "architectural": "Architectural",
+    "fractional": "Fractional"
+  },
+  "angularUnits": {
+    "decimalDegrees": "Decimal Degrees",
+    "degMinSec": "Degrees Minutes Seconds",
+    "gradians": "Gradians",
+    "radians": "Radians",
+    "surveyorUnits": "Surveyor Units"
+  },
+  "errors": {
+    "styleNotFound": "Style not found",
+    "builtInReadonly": "Built-in styles cannot be deleted",
+    "nameRequired": "Name is required"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "panel": {
+    "title": "Διαστάσεις",
+    "styleList": "Λίστα Στυλ",
+    "activeStyle": "Ενεργό Στυλ",
+    "newStyle": "Νέο Στυλ",
+    "duplicate": "Διπλασιασμός",
+    "rename": "Μετονομασία",
+    "delete": "Διαγραφή",
+    "preview": "Προεπισκόπηση",
+    "sections": {
+      "lines": "Γραμμές & Επεκτάσεις",
+      "symbols": "Σύμβολα & Βελάκια",
+      "text": "Κείμενο",
+      "fit": "Προσαρμογή",
+      "primaryUnits": "Πρωτεύουσες Μονάδες",
+      "altUnits": "Δευτερεύουσες Μονάδες",
+      "tolerances": "Ανοχές"
+    }
+  },
+  "templates": {
+    "iso129": "ISO 129",
+    "asmeY14_5": "ASME Y14.5",
+    "architecturalUs": "Αρχιτεκτονικό ΗΠΑ"
+  },
+  "ribbon": {
+    "groupTitle": "Διαστάσεις",
+    "smartDim": "Έξυπνη",
+    "linear": "Γραμμική",
+    "aligned": "Παράλληλη",
+    "angular": "Γωνιακή",
+    "radius": "Ακτίνα",
+    "diameter": "Διάμετρος",
+    "arcLength": "Μήκος Τόξου",
+    "joggedRadius": "Σπασμένη Ακτίνα",
+    "ordinate": "Συντεταγμένη",
+    "baseline": "Από Βάση",
+    "continued": "Συνεχόμενη"
+  },
+  "contextualTab": {
+    "title": "Διάσταση",
+    "style": "Στυλ",
+    "override": "Παράκαμψη",
+    "textGroup": "Κείμενο",
+    "properties": "Ιδιότητες"
+  },
+  "contextMenu": {
+    "precision": "Ακρίβεια",
+    "flipArrows": "Αναστροφή Βελών",
+    "resetTextPosition": "Επαναφορά Θέσης Κειμένου",
+    "overrideText": "Παράκαμψη Κειμένου",
+    "applyStyle": "Εφαρμογή Στυλ",
+    "reassociate": "Επανασύνδεση",
+    "explode": "Σπάσιμο σε Γραμμές",
+    "properties": "Ιδιότητες"
+  },
+  "arrowheads": {
+    "none": "Κανένα",
+    "closedFilled": "Κλειστό Γεμάτο",
+    "closedBlank": "Κλειστό Κενό",
+    "closed": "Κλειστό",
+    "dot": "Κουκίδα",
+    "dotSmall": "Μικρή Κουκίδα",
+    "dotBlank": "Κενή Κουκίδα",
+    "dotSmallBlank": "Μικρή Κενή Κουκίδα",
+    "architecturalTick": "Αρχιτεκτονική Παύλα",
+    "oblique": "Πλάγια Παύλα",
+    "open": "Ανοιχτό",
+    "openRightAngle": "Ανοιχτό Ορθή Γωνία",
+    "openSlanted": "Ανοιχτό Λοξό",
+    "origin": "Αρχή",
+    "origin2": "Αρχή 2",
+    "box": "Πλαίσιο",
+    "boxFilled": "Γεμάτο Πλαίσιο",
+    "datumTriangle": "Τρίγωνο Αναφοράς",
+    "datumTriangleFilled": "Γεμάτο Τρίγωνο Αναφοράς",
+    "integral": "Ολοκλήρωμα"
+  },
+  "units": {
+    "scientific": "Επιστημονικές",
+    "decimal": "Δεκαδικές",
+    "engineering": "Μηχανολογικές",
+    "architectural": "Αρχιτεκτονικές",
+    "fractional": "Κλασματικές"
+  },
+  "angularUnits": {
+    "decimalDegrees": "Δεκαδικές Μοίρες",
+    "degMinSec": "Μοίρες Λεπτά Δευτερόλεπτα",
+    "gradians": "Βαθμίδες",
+    "radians": "Ακτίνια",
+    "surveyorUnits": "Τοπογραφικές"
+  },
+  "errors": {
+    "styleNotFound": "Το στυλ δεν βρέθηκε",
+    "builtInReadonly": "Δεν μπορείτε να διαγράψετε ενσωματωμένο στυλ",
+    "nameRequired": "Απαιτείται όνομα"
+  }
+}
