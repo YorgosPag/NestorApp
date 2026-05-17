@@ -651,6 +651,10 @@
     "title": "Προηγμένες Ιδιότητες Κλίμακας",
     "closeAriaLabel": "Κλείσιμο πάνελ",
     "sections": {
+      "treadLabelSize": {
+        "title": "Μέγεθος Αρίθμησης",
+        "height": "Ύψος"
+      },
       "persistence": {
         "title": "Αποθήκευση",
         "saveButton": "Αποθήκευση τώρα",

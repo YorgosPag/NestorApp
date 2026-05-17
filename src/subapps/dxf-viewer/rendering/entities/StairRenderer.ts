@@ -98,6 +98,7 @@ export class StairRenderer extends BaseEntityRenderer {
       geometry.arrowSymbol.end,
       geometry.arrowSymbol.label,
     );
+    this.drawTreadLabels(stair);
 
     // Grips (selected only, mirrors `renderWithPhases` behaviour).
     if (options.grips) {
@@ -278,6 +279,54 @@ export class StairRenderer extends BaseEntityRenderer {
     if (handrails.outer) {
       const extended = extendPolylineEnds(stringers.outer, topExtMm, bottomExtMm);
       this.drawPolyline3D(extended);
+    }
+
+    this.ctx.restore();
+  }
+
+  /**
+   * ADR-358 G21 — tread numbering labels (Phase 5b carryover, brought
+   * forward 2026-05-17). Reads `params.treadLabelDisplay` ('all' / 'nth'
+   * / 'none'), `params.treadNumberStart`, `params.treadLabelEveryN` to
+   * decide which treads carry a number, then renders the digit at each
+   * tread polygon centroid. `fillStyle` inherits the upstream phase style
+   * (normal entity color / hover glow) so the labels track the same SSoT
+   * as the rest of the stair.
+   */
+  private drawTreadLabels(stair: StairEntity): void {
+    const params = stair.params;
+    const display = params.treadLabelDisplay;
+    if (display === 'none') return;
+    const treads = stair.geometry.treadsBelowCut;
+    if (treads.length === 0) return;
+
+    const start = params.treadNumberStart ?? 1;
+    const everyN = display === 'nth' ? Math.max(1, params.treadLabelEveryN ?? 1) : 1;
+
+    // World-units text height (industry pattern AutoCAD MTEXT / Revit
+    // annotative). `treadLabelHeight` is in scene units → multiply by
+    // viewport scale for the pixel size. Clamp so the label stays
+    // readable both at zoomed-out and zoomed-in extremes.
+    const heightWorld = params.treadLabelHeight ?? 0.08; // safe fallback ~80 mm in m
+    const fontPx = Math.max(8, Math.min(64, heightWorld * this.transform.scale));
+
+    this.ctx.save();
+    this.ctx.font = `${fontPx}px sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    // Inherit strokeStyle as fill so labels match the current phase colour.
+    this.ctx.fillStyle = this.ctx.strokeStyle;
+
+    for (let i = 0; i < treads.length; i++) {
+      if (display === 'nth' && (i + 1) % everyN !== 0) continue;
+      const tread = treads[i];
+      if (tread.length === 0) continue;
+      let cx = 0, cy = 0;
+      for (const p of tread) { cx += p.x; cy += p.y; }
+      cx /= tread.length;
+      cy /= tread.length;
+      const screen = this.worldToScreen({ x: cx, y: cy });
+      this.ctx.fillText(String(start + i), screen.x, screen.y);
     }
 
     this.ctx.restore();

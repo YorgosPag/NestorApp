@@ -42,6 +42,7 @@ const DEFAULT_NOSING_MM = 20;
 const DEFAULT_STEP_COUNT = 12;
 const DEFAULT_HANDRAIL_HEIGHT_MM = 900;
 const DEFAULT_WALKLINE_OFFSET_MM = 600;
+const DEFAULT_TREAD_LABEL_HEIGHT_MM = 80;
 const RAD_TO_DEG = 180 / Math.PI;
 
 // ─── Scene units → mm scale (Phase 8 unit-aware builder) ────────────────────
@@ -161,6 +162,8 @@ export function buildDefaultStairParams(
     treadNumberStart: 1,
     treadLabelDisplay: 'all',
     treadLabelRestartPerFlight: false,
+    // Default tread label height ≈ readable size (80 mm scaled to scene units).
+    treadLabelHeight: DEFAULT_TREAD_LABEL_HEIGHT_MM * s,
     codeProfile,
     nokSubType: overrides.nokSubType ?? (codeProfile === 'nok' ? 'main' : undefined),
     ...(overrides.occupancyLoad !== undefined

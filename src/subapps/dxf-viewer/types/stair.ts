@@ -264,6 +264,13 @@ export interface StairParams {
   readonly treadLabelDisplay: StairTreadLabelDisplay;
   readonly treadLabelEveryN?: number;
   readonly treadLabelRestartPerFlight: boolean;
+  /**
+   * ADR-358 G21 — tread label text height in scene-units (world-scaled).
+   * Default 80 mm scaled to scene units (≈ 0.08 m / 8 cm / 80 mm).
+   * Override per-stair via the floating panel. Industry-aligned with AutoCAD
+   * MTEXT (world-units text), Revit annotative scale.
+   */
+  readonly treadLabelHeight?: number;
 
   /** Project default (Q27, can inherit); per-stair override optional. */
   readonly occupancyLoad?: number;

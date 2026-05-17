@@ -651,6 +651,10 @@
     "title": "Stair Advanced Properties",
     "closeAriaLabel": "Close panel",
     "sections": {
+      "treadLabelSize": {
+        "title": "Number Size",
+        "height": "Height"
+      },
       "persistence": {
         "title": "Persistence",
         "saveButton": "Save now",

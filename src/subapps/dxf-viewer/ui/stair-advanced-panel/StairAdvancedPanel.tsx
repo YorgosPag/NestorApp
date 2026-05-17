@@ -32,6 +32,7 @@ import { StairMaterialsSection } from './sections/StairMaterialsSection';
 import { StairPerTreadOverrideSection } from './sections/StairPerTreadOverrideSection';
 import { StairCutPlaneSection } from './sections/StairCutPlaneSection';
 import { StairTreadNumberingSection } from './sections/StairTreadNumberingSection';
+import { StairTreadLabelSizeSection } from './sections/StairTreadLabelSizeSection';
 import { StairNosingSection } from './sections/StairNosingSection';
 import type { DispatchStairParamPatch } from './commands/dispatchStairParamPatch';
 
@@ -91,6 +92,7 @@ export function StairAdvancedPanel({
       <StairPerTreadOverrideSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairCutPlaneSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairTreadNumberingSection stair={stair} dispatchPatch={dispatchPatch} />
+      <StairTreadLabelSizeSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairNosingSection stair={stair} dispatchPatch={dispatchPatch} />
     </aside>
   );
