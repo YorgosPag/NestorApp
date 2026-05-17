@@ -111,10 +111,31 @@ export class BoundsCalculator {
         return this.calculatePointBounds(entity, tolerance);
       case 'angle-measurement':
         return this.calculateAngleMeasurementBounds(entity, tolerance);
+      case 'stair':
+        return this.calculateStairBounds(entity, tolerance);
       default:
         console.warn(`BoundsCalculator: Unknown entity type: ${entity.type}`);
         return null;
     }
+  }
+
+  /**
+   * 🪜 ADR-358 Phase 8 — StairEntity bounds via pre-computed `geometry.bbox`.
+   * `computeStairGeometry()` populates an axis-aligned 3D bbox at construction
+   * time; we project to 2D (XY plane) for hit testing here. Without this case
+   * the stair fell through to the `default:` branch and was excluded from the
+   * hit-test pre-filter → unselectable on canvas.
+   */
+  private static calculateStairBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
+    const stair = entity as { geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } } };
+    const bbox = stair.geometry?.bbox;
+    if (!bbox || !bbox.min || !bbox.max) return null;
+    return this.createBoundingBox(
+      bbox.min.x - tolerance,
+      bbox.min.y - tolerance,
+      bbox.max.x + tolerance,
+      bbox.max.y + tolerance,
+    );
   }
 
   /**
