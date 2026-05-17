@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | 🟡 IN PROGRESS — Groups A-F done (F3 pending commit), Group G next |
+| **Status** | 🟡 IN PROGRESS — Groups A-F done (F3 pending commit), G1 done (pending commit), G2/G3 next |
 | **Date** | 2026-05-17 |
 | **Last Updated** | 2026-05-17 |
 | **Category** | DXF Viewer — Annotation / Dimensions |
@@ -658,6 +658,20 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 ---
 
 ## 7. Changelog
+
+- **2026-05-17 (Phase G1 DONE — Dimension Text Override dialog + inline editor; ribbon action wired; 15 unit tests PASS.)** — `userText` field exposed via a dedicated dialog (module-scoped external store pattern, zero Zustand). Three editing modes: measured (userText=undefined/`<>`), prefix/suffix (`PREFIX<>SUFFIX`), free text. Ribbon "Παράκαμψη Κειμένου" button in contextual Dimension tab Panel C dispatches to `openDimTextOverride(entityId)` via `wrappedHandleAction`. Dialog reads entity from `getCurrentScene()` and writes via `updateEntity()`.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/DimTextOverrideStore.ts` (~54 LOC) — hand-rolled module-scoped external store (`openDimTextOverride` / `closeDimTextOverride` / `getDimTextOverrideState` / `subscribeDimTextOverride` / `__resetDimTextOverrideStoreForTests`). Idempotent open (no re-notify if same entityId already open). Mirrors `DimensionCreateStore` + `HoverStore` pattern.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/TextOverrideEditor.tsx` (~164 LOC) — pure UI component. `detectMode(userText)` determines initial radio selection. Prefix/suffix inputs appear only in `prefixSuffix` mode; free-text input only in `free` mode. Live preview shows formatted result. `readOnly` prop disables all inputs. `useTranslation('dxf-viewer-panels')` with prefix `panels.dimensions.textOverride.*`. No stores, no Firestore.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/TextOverrideDialog.tsx` (~95 LOC) — connected dialog consuming `DimTextOverrideStore` via `useSyncExternalStore`. Reads entity via `getCurrentScene()?.entities.find(…)` guarded by `asDimensionEntity()`. On save: `updateEntity(entityId, { userText: localUserText })` then `closeDimTextOverride()`.
+  - **NEW** `src/subapps/dxf-viewer/ui/panels/dimensions/__tests__/TextOverrideEditor.test.tsx` (~160 LOC) — 15 tests in 2 suites: `TextOverrideEditor` (8 tests: measured mode for undefined/`<>`, prefixSuffix mode shows prefix+suffix inputs, free mode, mode change → onChange(undefined), prefix change → composite string, empty free text → onChange(undefined), readOnly disables radios); `DimTextOverrideStore` (7 tests: starts closed, open sets state, idempotent open (1 notify not 2), close resets, close idempotent, unsubscribe removes listener).
+  - **MOD** `src/subapps/dxf-viewer/layout/FloatingPanelsSection.tsx` — import `TextOverrideDialog` + `<TextOverrideDialog />` rendered at end of desktop branch (always mounted, internally hidden when store.isOpen=false).
+  - **MOD** `src/subapps/dxf-viewer/app/useDxfViewerCallbacks.ts` — static import `openDimTextOverride`; action handler for `'dim.text.override'` reads `params.selectedEntityIds[0]` and calls `openDimTextOverride(entityId)`.
+  - **MOD** `src/subapps/dxf-viewer/ui/ribbon/data/contextual-dimension-tab.ts` — added 3rd row to Panel C "Κείμενο": `{ type:'simple', command:{ id:'dim.text.override', labelKey:'ribbon.commands.dimTextOverride', icon:'dim-text-override', commandKey: DIM_RIBBON_KEYS.text.override, action:'dim.text.override' } }`.
+  - **MOD** `src/subapps/dxf-viewer/ui/ribbon/hooks/bridge/dim-command-keys.ts` — added `override: 'dim.text.override'` to `DIM_RIBBON_KEYS.text` group.
+  - **MOD** `src/subapps/dxf-viewer/ui/ribbon/components/buttons/RibbonButtonIcon.tsx` — added `Type` to lucide-react import; added `case 'dim-text-override': return <Type …/>`.
+  - **MOD** `src/i18n/locales/el/dxf-viewer-shell.json` + `en/dxf-viewer-shell.json` — `ribbon.commands.dimTextOverride` key (Παράκαμψη Κειμένου / Text Override).
+  - **MOD** `src/i18n/locales/el/dxf-viewer-panels.json` + `en/dxf-viewer-panels.json` — `panels.dimensions.textOverride` block: dialogTitle, mode.{measured,prefixSuffix,free}, placeholderPrefix, placeholderSuffix, placeholderFree, preview, previewMeasured, previewEmpty, noEntitySelected, cancel, apply.
+  - **Next**: Phase G2 — Tolerance + Limits rendering in `dim-text-formatter.ts` stacking pass + `DimensionRenderer.ts` multi-line text draw.
 
 - **2026-05-17 (Phase F1 DONE — left FloatingPanel 4° tab "Διαστάσεις" skeleton + DIMSTYLE Manager CRUD; 9/9 unit tests PASS.)** — 4th tab added to the left sidebar alongside Levels/Colors/Properties. DIMSTYLE list with active badge, built-in badge, set-active, duplicate, delete (AlertDialog confirm), and "New Style..." create flow. `getSnapshot()` added to `DimStyleRegistry` for stable `useSyncExternalStore` references (prevents infinite render loop). Create/Duplicate dialogs with name uniqueness validation. Edit stub = comingSoon (Phase F2 scope).
   - **MOD** `src/subapps/dxf-viewer/types/panel-types.ts` — `FloatingPanelType` union + `FLOATING_PANEL_TYPES` + `PANEL_METADATA` + `isFloatingPanelType` + `PANEL_LAYOUT.topRow` extended with `'dimensions'`. `PanelMetadata.iconName` extended with `'Ruler'`.
