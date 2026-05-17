@@ -8,6 +8,7 @@ import {
   isStairKind,
   type StairKind,
   type StairMultiStoryConfig,
+  type StairNokSubType,
   type StairNosingSide,
   type StairParams,
   type StairRiserType,
@@ -59,6 +60,19 @@ const VALID_STRUCTURE_TYPES: ReadonlySet<string> = new Set<string>([
 
 const DEFAULT_STORY_HEIGHT_MM = 2700;
 
+/**
+ * ADR-358 Phase 3g — NOK stair scope ∈ Κτιριοδομικός Άρθρο 13 παρ. 2-4.
+ * Legacy `'secondary'` is accepted at read-time for forward compat but the
+ * patch helper rewrites it to `'low-rise'`.
+ */
+const VALID_NOK_SUB_TYPES: ReadonlySet<string> = new Set<string>([
+  'main',
+  'low-rise',
+  'internal',
+  'auxiliary',
+  'secondary',
+]);
+
 // ── Context type ─────────────────────────────────────────────────────────────
 
 /**
@@ -93,6 +107,11 @@ export function readStairStringField(
       return p.variant.kind === 'l-shape' && p.variant.cornerStyle === 'winders'
         ? p.variant.winderMethod
         : null;
+    case STAIR_RIBBON_KEYS.stringParams.nokSubType:
+      // Legacy `'secondary'` shown as `'low-rise'` (hydration alias). Default
+      // to `'main'` for non-NOK profiles so the combobox renders a stable
+      // value (validator gates downstream on `codeProfile === 'nok'` anyway).
+      return p.nokSubType === 'secondary' ? 'low-rise' : (p.nokSubType ?? 'main');
     default: return null;
   }
 }
@@ -175,8 +194,22 @@ export function patchStairStringParam(
       return patchLShapeCornerStyle(prev, value);
     case STAIR_RIBBON_KEYS.stringParams.winderMethod:
       return patchLShapeWinderMethod(prev, value);
+    case STAIR_RIBBON_KEYS.stringParams.nokSubType:
+      return patchNokSubType(prev, value);
     default: return null;
   }
+}
+
+/**
+ * ADR-358 Phase 3g — patch `nokSubType` to one of the 4 scope categories.
+ * Legacy `'secondary'` is normalised to `'low-rise'` on write so existing
+ * docs migrate the next time the user touches the combobox.
+ */
+function patchNokSubType(prev: StairParams, value: string): StairParams | null {
+  if (!VALID_NOK_SUB_TYPES.has(value)) return null;
+  const next: StairNokSubType = value === 'secondary' ? 'low-rise' : (value as StairNokSubType);
+  if (prev.nokSubType === next) return null;
+  return { ...prev, nokSubType: next };
 }
 
 /**
