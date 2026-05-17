@@ -60,6 +60,12 @@ export interface DimensionCreateState {
   readonly hoveredEntity: DetectableEntity | null;
   readonly spacePressCount: number;
   readonly tabPressCount: number;
+  /**
+   * Phase D3 — parent dim id for chained baseline/continued flows. Set via
+   * `setParent` action right after `start('baseline'|'continued')` by the hook
+   * orchestrator. Null for all other dim types.
+   */
+  readonly parentDimensionId: string | null;
 }
 
 export type DimensionCreateAction =
@@ -81,6 +87,7 @@ export type DimensionCreateAction =
     }
   | { readonly kind: 'pressTab' }
   | { readonly kind: 'pressSpace' }
+  | { readonly kind: 'setParent'; readonly parentDimensionId: string }
   | { readonly kind: 'cancel' };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -98,6 +105,7 @@ export const initialDimensionCreateState: DimensionCreateState = Object.freeze({
   hoveredEntity: null,
   spacePressCount: 0,
   tabPressCount: 0,
+  parentDimensionId: null,
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -124,8 +132,8 @@ export function requiredClickCount(type: DimensionType): number {
       return 2;
     case 'baseline':
     case 'continued':
-      // Phase D3 placeholder — chained flows wire keyboard event routing later.
-      return 3;
+      // Phase D3 — 1 click per chained dim (new extOrigin2; extOrigin1 + dimLineRef inherited from parent).
+      return 1;
     default: {
       const _exhaustive: never = type;
       void _exhaustive;
@@ -208,6 +216,8 @@ export function dimensionCreateReducer(
       return handleTab(state);
     case 'pressSpace':
       return handleSpace(state);
+    case 'setParent':
+      return handleSetParent(state, action);
     case 'cancel':
       return initialDimensionCreateState;
     default: {
@@ -268,6 +278,17 @@ function handleClick(
     return state;
   }
 
+  // Phase D3 pre-requisite guard: chained dims need a parent id set BEFORE any
+  // click is registered. Hook orchestrator validates + dispatches setParent at
+  // start() time; this is defensive (programmer-error path, silent no-op).
+  if (
+    state.mode === 'manual' &&
+    (state.manualOverride === 'baseline' || state.manualOverride === 'continued') &&
+    !state.parentDimensionId
+  ) {
+    return state;
+  }
+
   const record: ClickRecord = action.hoveredEntity
     ? { world: action.world, pickedEntity: action.hoveredEntity }
     : { world: action.world };
@@ -316,4 +337,13 @@ function handleSpace(state: DimensionCreateState): DimensionCreateState {
     state.cursorWorld,
   );
   return { ...intermediate, currentType: nextType };
+}
+
+function handleSetParent(
+  state: DimensionCreateState,
+  action: Extract<DimensionCreateAction, { kind: 'setParent' }>,
+): DimensionCreateState {
+  if (state.status !== 'collecting') return state;
+  if (state.parentDimensionId === action.parentDimensionId) return state;
+  return { ...state, parentDimensionId: action.parentDimensionId };
 }
