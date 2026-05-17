@@ -371,6 +371,7 @@
       "arraySpacing": "Spacing",
       "arrayOptions": "Options",
       "arrayActions": "Actions",
+      "stairFloor": "Floor Level",
       "stairStructure": "Structure",
       "stairGeometry": "Geometry",
       "stairMultiStory": "Multi-Story",
@@ -569,7 +570,20 @@
         "flight3TurnDirection": "Flight 3 Turn",
         "turnDirectionLeft": "Left",
         "turnDirectionRight": "Right",
-        "close": "Close"
+        "close": "Close",
+        "floor": {
+          "section": {
+            "title": "Floor Level"
+          },
+          "number": "Number",
+          "name": "Name",
+          "elevation": "Start elevation",
+          "endElevation": "End elevation",
+          "height": "Height",
+          "linkedBadge": "From {name}: {value}",
+          "customBadge": "Custom: {value}",
+          "resetButton": "Reset to floor"
+        }
       },
       "measureAngle": "Angle",
       "measureAngleVariants": {

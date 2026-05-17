@@ -371,6 +371,7 @@
       "arraySpacing": "Αποστάσεις",
       "arrayOptions": "Επιλογές",
       "arrayActions": "Ενέργειες",
+      "stairFloor": "Στάθμη",
       "stairStructure": "Δομή",
       "stairGeometry": "Γεωμετρία",
       "stairMultiStory": "Πολυώροφα",
@@ -569,7 +570,20 @@
         "flight3TurnDirection": "Στροφή Σκέλους 3",
         "turnDirectionLeft": "Αριστερά",
         "turnDirectionRight": "Δεξιά",
-        "close": "Κλείσιμο"
+        "close": "Κλείσιμο",
+        "floor": {
+          "section": {
+            "title": "Στάθμη"
+          },
+          "number": "Αριθμός",
+          "name": "Όνομα",
+          "elevation": "Υψόμετρο αρχής",
+          "endElevation": "Υψόμετρο τέλους",
+          "height": "Ύψος",
+          "linkedBadge": "Από {name}: {value}",
+          "customBadge": "Προσαρμοσμένο: {value}",
+          "resetButton": "Επαναφορά στη στάθμη"
+        }
       },
       "measureAngle": "Γωνία",
       "measureAngleVariants": {
