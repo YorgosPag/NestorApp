@@ -192,12 +192,17 @@ describe('StairGeometryService — L-shape', () => {
     }
   });
 
-  it('Test 10: arrowSymbol.end matches last walkline vertex (flight 2 end)', () => {
+  it('Test 10: arrowSymbol matches first walkline segment (flight 1, industry convention)', () => {
+    // ADR-358 Phase 3d hotfix — arrow on FIRST flight segment, not the
+    // straight diagonal from basePoint to end of flight 2 (AutoCAD/Revit
+    // plan view convention: UP arrow on flight 1, ascent implied by tread
+    // numbering past the landing).
     const g = computeStairGeometry(makeLShapeParams());
-    const last = g.walkline[g.walkline.length - 1];
-    expect(g.arrowSymbol.end.x).toBeCloseTo(last.x, 6);
-    expect(g.arrowSymbol.end.y).toBeCloseTo(last.y, 6);
-    expect(g.arrowSymbol.end.z).toBeCloseTo(last.z, 9);
+    expect(g.arrowSymbol.start.x).toBeCloseTo(g.walkline[0].x, 6);
+    expect(g.arrowSymbol.start.y).toBeCloseTo(g.walkline[0].y, 6);
+    expect(g.arrowSymbol.end.x).toBeCloseTo(g.walkline[1].x, 6);
+    expect(g.arrowSymbol.end.y).toBeCloseTo(g.walkline[1].y, 6);
+    expect(g.arrowSymbol.end.z).toBeCloseTo(g.walkline[1].z, 9);
     expect(g.arrowSymbol.label).toBe('UP');
   });
 
