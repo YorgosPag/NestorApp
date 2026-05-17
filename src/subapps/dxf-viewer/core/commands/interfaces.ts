@@ -355,12 +355,20 @@ export interface ISceneManager {
 
 /**
  * Generic scene entity type
- * Commands work with this abstract type
+ * Commands work with this abstract type.
+ *
+ * ADR-358 Phase 9D-5b-ii — `layer` (name backref) made optional to align with
+ * BaseEntity dual-write window. `layerId` (`lyr_<UUID-v4>`) is the stable id
+ * resolved via `LayerStore.resolveEntityLayerName()`. Both fields collapse to
+ * `layerId` only at end of Phase 9D-5b-iii (schema flip atomic).
  */
 export interface SceneEntity {
   id: string;
   type: string;
-  layer: string;
+  /** @deprecated ADR-358 Phase 9D — transitional name backref. Resolve via `LayerStore.resolveEntityLayerName()`. */
+  layer?: string;
+  /** Stable layer id — `lyr_<UUID-v4>`, mirror of `BaseEntity.layerId`. */
+  layerId?: string;
   visible: boolean;
   [key: string]: unknown;
 }

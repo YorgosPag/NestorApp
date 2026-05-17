@@ -24,7 +24,10 @@ export interface HitTestResult extends SpatialQueryResult<Entity> {
   snapPoint?: Point2D;
   vertexIndex?: number;
   edgeIndex?: number;
-  layer: string;
+  /** @deprecated ADR-358 Phase 9D — transitional name backref. Resolve via `LayerStore.resolveEntityLayerName()`. */
+  layer?: string;
+  /** Stable layer id — `lyr_<UUID-v4>`, mirror of `BaseEntity.layerId`. */
+  layerId?: string;
   selectable: boolean;
   priority: number;
 }

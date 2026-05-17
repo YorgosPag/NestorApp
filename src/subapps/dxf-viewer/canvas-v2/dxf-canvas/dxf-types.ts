@@ -11,10 +11,15 @@ import type { StairEntity } from '../../types/stair';
 export interface DxfEntity {
   id: string;
   type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair';
-  layer: string;
+  /**
+   * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
+   * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
+   * dual-write window. Collapses to `layerId` only at end of Phase 9D-5b-iii.
+   */
+  layer?: string;
   /**
    * ADR-358 Phase 9D-2 — Stable layer id (`lyr_<UUID-v4>`) mirror of `BaseEntity.layerId`.
-   * Optional during transitional Phase 9D window; becomes required at end of Phase 9D-4
+   * Optional during transitional Phase 9D window; becomes required at end of Phase 9D-5b-iii
    * (paired with `BaseEntity.layerId` final flip). Forwarded by `useDxfSceneConversion`
    * so renderer/hit-test can resolve layer via id instead of name lookup.
    */

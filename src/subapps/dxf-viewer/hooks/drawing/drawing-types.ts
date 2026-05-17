@@ -12,13 +12,23 @@ import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, ArcEntit
 
 // ─── Preview Point ──────────────────────────────────────────────────────────
 
+/**
+ * Preview-only point overlay (drawing tools).
+ *
+ * ADR-358 Phase 9D-5b-ii — `layer` (name backref) made optional to align with
+ * BaseEntity dual-write window. `layerId` (`lyr_<UUID-v4>`) is the stable id.
+ * Both fields collapse to `layerId` only at end of Phase 9D-5b-iii.
+ */
 export interface PreviewPoint {
   id: string;
   type: 'point';
   position: Point2D;
   size: number;
   visible: boolean;
-  layer: string;
+  /** @deprecated ADR-358 Phase 9D — transitional name backref. */
+  layer?: string;
+  /** Stable layer id — `lyr_<UUID-v4>`. */
+  layerId?: string;
   preview: boolean;
 }
 
