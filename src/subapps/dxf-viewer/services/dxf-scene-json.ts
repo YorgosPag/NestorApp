@@ -17,20 +17,28 @@
  * vanished after every hard refresh.
  */
 
-import type { SceneModel } from '../types/entities';
+import type { SceneModel, SceneLayer } from '../types/entities';
+import { migrateLayersById } from './dxf-scene-migration';
 
 /**
  * Parse scene JSON text into a validated SceneModel.
  * Returns null if JSON is invalid or scene is empty (placeholder `{}`).
+ *
+ * ADR-358 Phase 14: applies `migrateLayersById` so pre-ADR-358 scenes
+ * (SceneLayer with only 4 legacy fields) are upgraded to the full shape at
+ * load time — idempotent for already-migrated documents.
  */
 export function parseAndValidateScene(text: string): SceneModel | null {
   try {
     const parsed = JSON.parse(text) as Record<string, unknown>;
     const entities = parsed.entities;
     if (!Array.isArray(entities) || entities.length === 0) return null;
+
+    const rawLayers = (parsed.layersById ?? parsed.layers ?? {}) as Record<string, Partial<SceneLayer> & Record<string, unknown>>;
+
     return {
       entities: entities as SceneModel['entities'],
-      layersById: (parsed.layersById ?? parsed.layers ?? {}) as SceneModel['layersById'],
+      layersById: migrateLayersById(rawLayers),
       bounds: (parsed.bounds ?? { minX: 0, minY: 0, maxX: 0, maxY: 0 }) as SceneModel['bounds'],
       units: (parsed.units ?? 'mm') as SceneModel['units'],
     };
