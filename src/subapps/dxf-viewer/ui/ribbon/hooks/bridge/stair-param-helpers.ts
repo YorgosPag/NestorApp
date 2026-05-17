@@ -4,13 +4,15 @@
  * file under the 500-line SRP limit.
  */
 
-import type {
-  StairMultiStoryConfig,
-  StairNosingSide,
-  StairParams,
-  StairRiserType,
-  StairStructureType,
-  StairTurnDirectionLR,
+import {
+  isStairKind,
+  type StairKind,
+  type StairMultiStoryConfig,
+  type StairNosingSide,
+  type StairParams,
+  type StairRiserType,
+  type StairStructureType,
+  type StairTurnDirectionLR,
 } from '../../../../types/stair';
 import {
   STAIR_RIBBON_KEYS,
@@ -22,6 +24,7 @@ import {
   mmFactorFromWidth,
   reconcileLinkedStair,
 } from '../../../../systems/stairs/stair-floor-link';
+import { buildDefaultVariantFor } from '../../../../systems/stairs/stair-variant-defaults';
 
 // ── Module-private constants ─────────────────────────────────────────────────
 
@@ -77,6 +80,8 @@ export function readStairStringField(
       return readFlightTurnDirection(p, 0);
     case STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection:
       return readFlightTurnDirection(p, 1);
+    case STAIR_RIBBON_KEYS.stringParams.variantKind:
+      return p.variant.kind;
     default: return null;
   }
 }
@@ -149,8 +154,23 @@ export function patchStairStringParam(
       return patchFlightTurnDirection(prev, 0, value);
     case STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection:
       return patchFlightTurnDirection(prev, 1, value);
+    case STAIR_RIBBON_KEYS.stringParams.variantKind:
+      return patchVariantKind(prev, value);
     default: return null;
   }
+}
+
+/**
+ * ADR-358 Phase 3d — discriminated variant kind selector patch. Builds a
+ * fresh variant of the target kind via `buildDefaultVariantFor` (factory
+ * seeds kind-specific defaults from `prev` context: stepCount, width,
+ * tread, basePoint). No-op when target kind equals current.
+ */
+function patchVariantKind(prev: StairParams, value: string): StairParams | null {
+  if (!isStairKind(value)) return null;
+  const targetKind = value as StairKind;
+  if (prev.variant.kind === targetKind) return null;
+  return { ...prev, variant: buildDefaultVariantFor(targetKind, prev) };
 }
 
 /**

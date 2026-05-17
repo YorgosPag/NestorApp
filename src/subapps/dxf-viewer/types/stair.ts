@@ -43,7 +43,8 @@ export type StairKind =
   | 'winder'
   | 'triangular-fan'
   | 'triangular-outline'
-  | 'sketch';
+  | 'sketch'
+  | 'v-shape';
 
 // ============================================================================
 // PARAMETRIC SUB-TYPES
@@ -485,5 +486,6 @@ export const isStairKind = (value: unknown): value is StairKind =>
       'triangular-fan',
       'triangular-outline',
       'sketch',
+      'v-shape',
     ] as const
   ).includes(value as StairKind);

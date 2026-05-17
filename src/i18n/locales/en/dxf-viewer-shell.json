@@ -372,6 +372,7 @@
       "arrayOptions": "Options",
       "arrayActions": "Actions",
       "stairFloor": "Floor Level",
+      "stairVariant": "Type",
       "stairStructure": "Structure",
       "stairGeometry": "Geometry",
       "stairDimensions": "Dimensions",
@@ -593,6 +594,23 @@
           },
           "length": "Length",
           "totalRise": "Total rise"
+        },
+        "variantKind": {
+          "section": {
+            "title": "Stair Type"
+          },
+          "straight": "Straight",
+          "lShape": "L-shape",
+          "uShape": "U-shape",
+          "gamma": "Gamma (3 flights)",
+          "vShape": "V-shape",
+          "spiral": "Spiral",
+          "helical": "Helical",
+          "elliptical": "Elliptical",
+          "winder": "Winder",
+          "triangularFan": "Triangular Fan",
+          "triangularOutline": "Triangular Outline",
+          "sketch": "Sketch"
         }
       },
       "measureAngle": "Angle",

@@ -372,6 +372,7 @@
       "arrayOptions": "Επιλογές",
       "arrayActions": "Ενέργειες",
       "stairFloor": "Στάθμη",
+      "stairVariant": "Τύπος",
       "stairStructure": "Δομή",
       "stairGeometry": "Γεωμετρία",
       "stairDimensions": "Διαστάσεις",
@@ -593,6 +594,23 @@
           },
           "length": "Μήκος",
           "totalRise": "Συνολικό ύψος"
+        },
+        "variantKind": {
+          "section": {
+            "title": "Τύπος Σκάλας"
+          },
+          "straight": "Ευθεία",
+          "lShape": "Σχήματος Γ",
+          "uShape": "Σχήματος Π",
+          "gamma": "Γάμμα (3 σκέλη)",
+          "vShape": "Σχήματος Λ",
+          "spiral": "Σπιροειδής",
+          "helical": "Ελικοειδής",
+          "elliptical": "Ελλειπτική",
+          "winder": "Στριφογυριστή",
+          "triangularFan": "Τριγωνική Βεντάλια",
+          "triangularOutline": "Τριγωνική Περιγράμματος",
+          "sketch": "Ελεύθερο Σχέδιο"
         }
       },
       "measureAngle": "Γωνία",

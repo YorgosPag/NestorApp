@@ -22,6 +22,13 @@ export const STAIR_RIBBON_KEYS = {
      * Only applies to `gamma` (`variant.turnSequence[1]`). No-op for other kinds.
      */
     flight3TurnDirection: 'stair.params.flight3TurnDirection',
+    /**
+     * ADR-358 Phase 3d — discriminated variant kind selector. Reads
+     * `variant.kind`; writes a fresh variant of the target kind seeded with
+     * defaults from `buildDefaultVariantFor` (kind-specific previous fields
+     * are discarded — Revit "Family Type" swap convention).
+     */
+    variantKind: 'stair.params.variantKind',
   },
   params: {
     rise: 'stair.params.rise',
@@ -63,7 +70,8 @@ export type StairRibbonStringComboKey =
   | typeof STAIR_RIBBON_KEYS.stringParams.structureType
   | typeof STAIR_RIBBON_KEYS.stringParams.riserType
   | typeof STAIR_RIBBON_KEYS.stringParams.flight2TurnDirection
-  | typeof STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection;
+  | typeof STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection
+  | typeof STAIR_RIBBON_KEYS.stringParams.variantKind;
 
 export type StairRibbonVisibilityKey =
   | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiFlight
@@ -83,6 +91,7 @@ const ALL_STAIR_STRING_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.stringParams.riserType,
   STAIR_RIBBON_KEYS.stringParams.flight2TurnDirection,
   STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection,
+  STAIR_RIBBON_KEYS.stringParams.variantKind,
 ]);
 
 const ALL_STAIR_VISIBILITY_KEYS: ReadonlySet<string> = new Set<string>([

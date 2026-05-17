@@ -25,6 +25,24 @@ import { STAIR_RIBBON_BADGE_KEYS } from '../hooks/useRibbonStairBridge';
 
 export const STAIR_CONTEXTUAL_TRIGGER = 'stair-selected';
 
+// ADR-358 Phase 3d — discriminated `StairVariantParams.kind` selector. Labels
+// route through i18n (`ribbon.commands.stairEditor.variantKind.<key>`) — no
+// literal text per SOS N.11. Order = type-system union order in `types/stair.ts`.
+const VARIANT_KIND_OPTIONS = [
+  { value: 'straight', labelKey: 'ribbon.commands.stairEditor.variantKind.straight', isLiteralLabel: false },
+  { value: 'l-shape', labelKey: 'ribbon.commands.stairEditor.variantKind.lShape', isLiteralLabel: false },
+  { value: 'u-shape', labelKey: 'ribbon.commands.stairEditor.variantKind.uShape', isLiteralLabel: false },
+  { value: 'gamma', labelKey: 'ribbon.commands.stairEditor.variantKind.gamma', isLiteralLabel: false },
+  { value: 'v-shape', labelKey: 'ribbon.commands.stairEditor.variantKind.vShape', isLiteralLabel: false },
+  { value: 'spiral', labelKey: 'ribbon.commands.stairEditor.variantKind.spiral', isLiteralLabel: false },
+  { value: 'helical', labelKey: 'ribbon.commands.stairEditor.variantKind.helical', isLiteralLabel: false },
+  { value: 'elliptical', labelKey: 'ribbon.commands.stairEditor.variantKind.elliptical', isLiteralLabel: false },
+  { value: 'winder', labelKey: 'ribbon.commands.stairEditor.variantKind.winder', isLiteralLabel: false },
+  { value: 'triangular-fan', labelKey: 'ribbon.commands.stairEditor.variantKind.triangularFan', isLiteralLabel: false },
+  { value: 'triangular-outline', labelKey: 'ribbon.commands.stairEditor.variantKind.triangularOutline', isLiteralLabel: false },
+  { value: 'sketch', labelKey: 'ribbon.commands.stairEditor.variantKind.sketch', isLiteralLabel: false },
+] as const;
+
 const STRUCTURE_TYPE_OPTIONS = [
   { value: 'monolithic', labelKey: 'Monolithic', isLiteralLabel: true },
   { value: 'stringer-1side', labelKey: 'Stringer 1-Side', isLiteralLabel: true },
@@ -157,6 +175,36 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 id: 'stair.floorInfo',
                 labelKey: 'ribbon.commands.stairEditor.floor.section.title',
                 commandKey: 'stair.floorInfo',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-358 Phase 3d — Variant kind selector. Mounted between Στάθμη
+      // (floor link) and Δομή (structure) because the discriminated kind
+      // governs which downstream panels are meaningful (l-shape/u-shape/gamma
+      // unlock Multi-Flight; spiral/helical/elliptical have radial-only
+      // geometry; sketch/triangular-outline define free polylines). Industry
+      // convergence: Revit "Family Type" / ArchiCAD "Stair Type" / AutoCAD
+      // Architecture "Shape" — all surface this as the FIRST type-defining
+      // editor field, above per-type detail.
+      id: 'stair-variant',
+      labelKey: 'ribbon.panels.stairVariant',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.variantKind',
+                labelKey: 'ribbon.commands.stairEditor.variantKind.section.title',
+                commandKey: STAIR_RIBBON_KEYS.stringParams.variantKind,
+                comboboxWidthPx: 180,
+                options: VARIANT_KIND_OPTIONS,
               },
             },
           ],

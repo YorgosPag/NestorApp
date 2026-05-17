@@ -123,6 +123,14 @@ function mirrorVariant(
         ...v,
         walklinePath: v.walklinePath.map((p) => mirrorPoint3D(p, axis)),
       };
+    case 'v-shape':
+      // Mirroring flips the divergence direction → negate armAngleDeg.
+      // Arm 0/1 swap so the visual mirror is correct across the axis.
+      return {
+        ...v,
+        armAngleDeg: -v.armAngleDeg,
+        armSplit: [v.armSplit[1], v.armSplit[0]] as const,
+      };
     default: {
       const _exhaustive: never = v;
       return _exhaustive;
@@ -143,6 +151,7 @@ function rotateVariant(
     case 'u-shape':
     case 'gamma':
     case 'winder':
+    case 'v-shape':
       return v;
     case 'spiral':
     case 'helical':
@@ -190,6 +199,7 @@ function copyVariant(
     case 'u-shape':
     case 'gamma':
     case 'winder':
+    case 'v-shape':
       return v;
     case 'spiral':
     case 'helical':
