@@ -739,11 +739,9 @@ export const PREVIEW_DEFAULTS = {
 export const HOVER_HIGHLIGHT = {
   /** Entity hover — double-stroke glow (GPU-free, replaces shadowBlur) */
   ENTITY: {
-    // TEMP debug: magenta to verify stair receives the hover glow pre-pass.
-    // Revert to UI_COLORS.ENTITY_HOVER_GLOW once stair pipeline is verified.
-    glowColor: '#FF00FF',  // was UI_COLORS.ENTITY_HOVER_GLOW — '#FFFF00'
-    glowExtraWidth: 30,  // TEMP wider for stair debug
-    glowOpacity: 1.0,    // TEMP full opaque for stair debug
+    glowColor: UI_COLORS.ENTITY_HOVER_GLOW,  // '#FFFF00' yellow
+    glowExtraWidth: 6,  // extra pixels on top of entity lineWidth for glow layer
+    glowOpacity: 0.35,  // semi-transparent so entity color shows through
     opacity: OPACITY.OPAQUE,
   },
   /** Guide hover — soft glow effect, keeps original guide color (AutoCAD-style) */

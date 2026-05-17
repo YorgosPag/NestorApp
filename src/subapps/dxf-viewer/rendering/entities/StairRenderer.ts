@@ -83,7 +83,7 @@ export class StairRenderer extends BaseEntityRenderer {
       // outermost ring survives. Drawing the bbox once gives a guaranteed
       // continuous magenta halo around the whole stair, identical in
       // perceived weight to the per-line glow of simpler entities.
-      this.drawObbOutline(stair);
+      this.drawPerimeterOutline(stair);
       this.ctx.restore();
     }
 
@@ -128,70 +128,68 @@ export class StairRenderer extends BaseEntityRenderer {
   // ─── Internal drawing helpers ───────────────────────────────────────────
 
   /**
-   * Glow halo for hover/highlight (ADR-358 Phase 8). Draws an Oriented
-   * Bounding Box (OBB) aligned with `params.direction` so the halo follows
-   * the stair's rotation rather than the axis-aligned bbox.
+   * Glow halo for hover/highlight (ADR-358 Phase 8). Computes a tight
+   * Oriented Bounding Box (OBB) by projecting every tread + stringer vertex
+   * into the stair's local frame (rotated by `direction`), taking
+   * `min/max` in that frame, and projecting the four OBB corners back to
+   * world space.
    *
-   * For straight/spiral/elliptical kinds the OBB matches the stair footprint
-   * exactly; for L/U/gamma the OBB encloses the full flight envelope (still
-   * a tighter and more visually correct halo than the AABB).
+   * Why include treads + stringers (not stringers alone): stringers end at
+   * the throat of the top tread — the top riser sticks out beyond the
+   * stringer endpoint. Excluding the tread vertices leaves the top tread
+   * outside the halo (regression observed 2026-05-17). Folding every
+   * vertex into the bbox guarantees the halo wraps the full visible
+   * footprint regardless of variant kind.
    *
-   * Industry pattern (AutoCAD/Revit blocks): hover halo follows the entity's
-   * local frame. A per-primitive glow per tread gets overpainted by the
-   * next tread's fill before it reaches the screen — only the outermost
-   * ring survives — so a single OBB outline gives a guaranteed continuous
-   * magenta halo at the same perceived weight as the per-line glow.
+   * Industry pattern (AutoCAD/Revit blocks): hover halo on composite
+   * entities is a tight OBB along the entity's local frame, not the
+   * axis-aligned bbox.
    */
-  private drawObbOutline(stair: StairEntity): void {
+  private drawPerimeterOutline(stair: StairEntity): void {
     const params = stair.params;
-    const bbox = stair.geometry.bbox;
-    if (!bbox?.min || !bbox?.max) return;
-
-    // Project the AABB into the stair's local frame (rotated by `direction`),
-    // then re-emit the four world-space corners. This handles every variant
-    // kind uniformly without per-kind branching.
     const dirRad = (params.direction * Math.PI) / 180;
     const cos = Math.cos(dirRad);
     const sin = Math.sin(dirRad);
     const bp = params.basePoint;
 
-    // 1) Transform every AABB corner into the local frame (centered on bp).
-    const cornersWorld = [
-      { x: bbox.min.x, y: bbox.min.y },
-      { x: bbox.max.x, y: bbox.min.y },
-      { x: bbox.max.x, y: bbox.max.y },
-      { x: bbox.min.x, y: bbox.max.y },
-    ];
-    const cornersLocal = cornersWorld.map((p) => {
-      const dx = p.x - bp.x;
-      const dy = p.y - bp.y;
-      return { u: cos * dx + sin * dy, v: -sin * dx + cos * dy };
-    });
-    // 2) Re-tighten the bbox in the local frame.
     let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
-    for (const c of cornersLocal) {
-      if (c.u < uMin) uMin = c.u;
-      if (c.u > uMax) uMax = c.u;
-      if (c.v < vMin) vMin = c.v;
-      if (c.v > vMax) vMax = c.v;
+    const fold = (px: number, py: number): void => {
+      const dx = px - bp.x;
+      const dy = py - bp.y;
+      const u = cos * dx + sin * dy;
+      const v = -sin * dx + cos * dy;
+      if (u < uMin) uMin = u;
+      if (u > uMax) uMax = u;
+      if (v < vMin) vMin = v;
+      if (v > vMax) vMax = v;
+    };
+
+    for (const tread of stair.geometry.treadsBelowCut) {
+      for (const p of tread) fold(p.x, p.y);
     }
-    // 3) Project the local-frame OBB corners back to world space.
-    const localCorners: ReadonlyArray<{ u: number; v: number }> = [
+    for (const p of stair.geometry.stringers.outer) fold(p.x, p.y);
+    for (const p of stair.geometry.stringers.inner) fold(p.x, p.y);
+
+    if (uMin === Infinity) return; // no vertices — defensive
+
+    const localCorners = [
       { u: uMin, v: vMin },
       { u: uMax, v: vMin },
       { u: uMax, v: vMax },
       { u: uMin, v: vMax },
     ];
-    const worldCorners = localCorners.map(({ u, v }) => ({
-      x: bp.x + cos * u - sin * v,
-      y: bp.y + sin * u + cos * v,
-    }));
-
     this.ctx.beginPath();
-    const first = this.worldToScreen(worldCorners[0]);
+    const first = this.worldToScreen({
+      x: bp.x + cos * localCorners[0].u - sin * localCorners[0].v,
+      y: bp.y + sin * localCorners[0].u + cos * localCorners[0].v,
+    });
     this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < worldCorners.length; i++) {
-      const s = this.worldToScreen(worldCorners[i]);
+    for (let i = 1; i < localCorners.length; i++) {
+      const c = localCorners[i];
+      const s = this.worldToScreen({
+        x: bp.x + cos * c.u - sin * c.v,
+        y: bp.y + sin * c.u + cos * c.v,
+      });
       this.ctx.lineTo(s.x, s.y);
     }
     this.ctx.closePath();
