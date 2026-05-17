@@ -43,6 +43,25 @@ const VARIANT_KIND_OPTIONS = [
   { value: 'sketch', labelKey: 'ribbon.commands.stairEditor.variantKind.sketch', isLiteralLabel: false },
 ] as const;
 
+// ADR-358 Phase 3f — L-shape corner sub-style options.
+const CORNER_STYLE_OPTIONS = [
+  { value: 'landing', labelKey: 'ribbon.commands.stairEditor.cornerStyle.landing', isLiteralLabel: false },
+  { value: 'winders', labelKey: 'ribbon.commands.stairEditor.cornerStyle.winders', isLiteralLabel: false },
+] as const;
+
+const WINDER_METHOD_OPTIONS = [
+  { value: 'equal-going', labelKey: 'ribbon.commands.stairEditor.winderMethod.equalGoing', isLiteralLabel: false },
+  { value: 'pie', labelKey: 'ribbon.commands.stairEditor.winderMethod.pie', isLiteralLabel: false },
+] as const;
+
+const WINDER_COUNT_OPTIONS = [
+  { value: '1', labelKey: '1', isLiteralLabel: true },
+  { value: '2', labelKey: '2', isLiteralLabel: true },
+  { value: '3', labelKey: '3', isLiteralLabel: true },
+  { value: '4', labelKey: '4', isLiteralLabel: true },
+  { value: '5', labelKey: '5', isLiteralLabel: true },
+] as const;
+
 const STRUCTURE_TYPE_OPTIONS = [
   { value: 'monolithic', labelKey: 'Monolithic', isLiteralLabel: true },
   { value: 'stringer-1side', labelKey: 'Stringer 1-Side', isLiteralLabel: true },
@@ -227,6 +246,71 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.stringParams.riserType,
                 comboboxWidthPx: 90,
                 options: RISER_TYPE_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-358 Phase 3f — Γωνία (Corner) panel for L-shape sub-options.
+      // Visible only when variant.kind === 'l-shape'. Industry convergence:
+      // Revit "Run Type" sub-selector / ArchiCAD "Winder Method" / AutoCAD
+      // Architecture "Winders" toggle — all surface the corner choice as
+      // a contextual L-shape sub-option, not a separate kind.
+      id: 'stair-corner',
+      labelKey: 'ribbon.panels.stairCorner',
+      visibilityKey: STAIR_RIBBON_VISIBILITY_KEYS.lShapeCorner,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.cornerStyle',
+                labelKey: 'ribbon.commands.stairEditor.cornerStyle.section.title',
+                commandKey: STAIR_RIBBON_KEYS.stringParams.cornerStyle,
+                comboboxWidthPx: 130,
+                options: CORNER_STYLE_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-358 Phase 3f — Winders editor (visible only when l-shape +
+      // cornerStyle='winders'). Separate panel because RibbonPanelDef
+      // visibilityKey is panel-scoped, not button-scoped.
+      id: 'stair-corner-winders',
+      labelKey: 'ribbon.panels.stairCornerWinders',
+      visibilityKey: STAIR_RIBBON_VISIBILITY_KEYS.lShapeWindersParams,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.winderCount',
+                labelKey: 'ribbon.commands.stairEditor.winderCount.section.title',
+                commandKey: STAIR_RIBBON_KEYS.params.winderCount,
+                comboboxWidthPx: 70,
+                options: WINDER_COUNT_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.winderMethod',
+                labelKey: 'ribbon.commands.stairEditor.winderMethod.section.title',
+                commandKey: STAIR_RIBBON_KEYS.stringParams.winderMethod,
+                comboboxWidthPx: 140,
+                options: WINDER_METHOD_OPTIONS,
               },
             },
           ],
