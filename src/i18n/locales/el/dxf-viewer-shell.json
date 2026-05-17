@@ -473,7 +473,8 @@
       "cursor": "Δρομέας",
       "developer": "Εργαλεία Ανάπτυξης",
       "ai": "AI",
-      "window": "Παράθυρο"
+      "window": "Παράθυρο",
+      "dimensions": "Διαστάσεις"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -743,6 +744,21 @@
         "manual": "Μέτρηση Εμβαδού Πολυγώνου",
         "auto": "Αυτόματη Εμβαδομέτρηση"
       },
+      "dim": "Διάσταση",
+      "dimVariants": {
+        "smart": "Έξυπνη Διάσταση",
+        "linear": "Γραμμική",
+        "aligned": "Παράλληλη",
+        "angular2L": "Γωνιακή (2 Γραμμές)",
+        "angular3P": "Γωνιακή (3 Σημεία)",
+        "radius": "Ακτίνα",
+        "diameter": "Διάμετρος",
+        "arcLength": "Μήκος Τόξου",
+        "joggedRadius": "Σπασμένη Ακτίνα",
+        "ordinate": "Συντεταγμένη"
+      },
+      "dimBaseline": "Από Βάση",
+      "dimContinued": "Συνεχόμενη",
       "dropdown": {
         "openVariants": "Άνοιγμα παραλλαγών"
       },
