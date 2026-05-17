@@ -11,6 +11,7 @@
 
 import { validateStairParams } from '../stair-validator';
 import type { Entity } from '../../../types/entities';
+import type { SceneLayer } from '../../../types/scene';
 import type {
   StairCodeProfile,
   StairNokSubType,
@@ -73,11 +74,14 @@ function buildParams(overrides: BaseOverrides = {}): StairParams {
   };
 }
 
-function ceilingEntity(elevationMm: number, layer = 'CEILING'): Entity {
+const CEILING_LAYERS: Record<string, SceneLayer> = {
+  lyr_test_default: { id: 'lyr_test_default', name: 'CEILING', color: '#fff' } as SceneLayer,
+};
+
+function ceilingEntity(elevationMm: number): Entity {
   return {
     id: `ceiling-${elevationMm}`,
     type: 'line',
-    layer,
     layerId: 'lyr_test_default',
     startPoint: { x: -1000, y: -1000 },
     endPoint: { x: 1000, y: 1000 },
@@ -267,20 +271,23 @@ describe('validateStairParams — ADA', () => {
 describe('validateStairParams — headroom proxy', () => {
   test('ceiling well above stair top: no headroom violation', () => {
     const params = buildParams({ codeProfile: 'nok', basePointZ: 0, rise: 175, stepCount: 10 });
-    const r = validateStairParams(params, [ceilingEntity(4000)]);
+    const r = validateStairParams(params, [ceilingEntity(4000)], undefined, CEILING_LAYERS);
     expect(r.headroomViolations ?? []).toHaveLength(0);
   });
 
   test('ceiling too close to stair top: emits headroomBelowMin', () => {
     const params = buildParams({ codeProfile: 'nok', basePointZ: 0, rise: 175, stepCount: 10 });
     // stairTopZ = 1750; clearance = 3000 - 1750 = 1250 < 2030 → warn
-    const r = validateStairParams(params, [ceilingEntity(3000)]);
+    const r = validateStairParams(params, [ceilingEntity(3000)], undefined, CEILING_LAYERS);
     expect(r.headroomViolations).toContain('tools.stair.validator.headroomBelowMin');
   });
 
   test('non-ceiling layer ignored', () => {
     const params = buildParams({ codeProfile: 'nok' });
-    const r = validateStairParams(params, [ceilingEntity(3000, 'WALLS')]);
+    const wallsLayers: Record<string, SceneLayer> = {
+      lyr_test_default: { id: 'lyr_test_default', name: 'WALLS', color: '#fff' } as SceneLayer,
+    };
+    const r = validateStairParams(params, [ceilingEntity(3000)], undefined, wallsLayers);
     expect(r.headroomViolations ?? []).toHaveLength(0);
   });
 
@@ -289,22 +296,21 @@ describe('validateStairParams — headroom proxy', () => {
     const noMeta: Entity = {
       id: 'no-meta',
       type: 'line',
-      layer: 'CEILING',
+      layerId: 'lyr_test_default',
       startPoint: { x: 0, y: 0 },
       endPoint: { x: 1, y: 1 },
     } as Entity;
-    const r = validateStairParams(params, [noMeta]);
+    const r = validateStairParams(params, [noMeta], undefined, CEILING_LAYERS);
     expect(r.headroomViolations ?? []).toHaveLength(0);
   });
 
   test('codeProfile none: headroom skipped', () => {
-    const r = validateStairParams(buildParams({ codeProfile: 'none' }), [ceilingEntity(0)]);
+    const r = validateStairParams(buildParams({ codeProfile: 'none' }), [ceilingEntity(0)], undefined, CEILING_LAYERS);
     expect(r.headroomViolations ?? []).toHaveLength(0);
   });
 
-  // ADR-358 Phase 9E-2: id-first name resolution via layersById
-  test('ceiling resolved via layersById when entity.layer absent', () => {
-    // entity has layerId only (no entity.layer) — name must come from layersById
+  // ADR-358 Phase 9E-6e: id-first name resolution via layersById
+  test('ceiling resolved via layersById — id-keyed lookup', () => {
     const ceilingByIdOnly = {
       id: 'c-id-only',
       type: 'line' as const,
@@ -313,18 +319,10 @@ describe('validateStairParams — headroom proxy', () => {
       startPoint: { x: 0, y: 0 },
       endPoint: { x: 1, y: 1 },
     } as unknown as Entity;
-    const layersById = { lyr_ceiling: { id: 'lyr_ceiling', name: 'CEILING', color: '#fff' } } as Record<string, import('../../../types/scene').SceneLayer>;
+    const layersById: Record<string, SceneLayer> = { lyr_ceiling: { id: 'lyr_ceiling', name: 'CEILING', color: '#fff' } as SceneLayer };
     const params = buildParams({ codeProfile: 'nok', basePointZ: 0, rise: 175, stepCount: 10 });
     // stairTopZ = 1750; clearance = 3000 − 1750 = 1250 < 2030 → warn
     const r = validateStairParams(params, [ceilingByIdOnly], undefined, layersById);
-    expect(r.headroomViolations).toContain('tools.stair.validator.headroomBelowMin');
-  });
-
-  test('layersById present but entity.layer fallback still works', () => {
-    const params = buildParams({ codeProfile: 'nok', basePointZ: 0, rise: 175, stepCount: 10 });
-    const layersById = {};
-    // ceilingEntity uses entity.layer = 'CEILING', not resolved via layersById
-    const r = validateStairParams(params, [ceilingEntity(3000)], undefined, layersById);
     expect(r.headroomViolations).toContain('tools.stair.validator.headroomBelowMin');
   });
 });

@@ -15,17 +15,17 @@ import type { LineEntity } from '../../../types/entities';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeLine(id: string, layer = 'Layer0'): LineEntity {
-  return { id, type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 }, layer, layerId: 'lyr_test_default' };
+function makeLine(id: string, _layer = 'Layer0', layerId = 'lyr_test_default'): LineEntity {
+  return { id, type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 }, layerId };
 }
 
 function makeScene(
   entities: LineEntity[],
-  layers: Record<string, Partial<SceneLayer>> = {},
+  layersById: Record<string, Partial<SceneLayer>> = {},
 ): SceneModel {
   return {
     entities,
-    layers: layers as Record<string, SceneLayer>,
+    layersById: layersById as Record<string, SceneLayer>,
   } as SceneModel;
 }
 
@@ -41,13 +41,13 @@ describe('isValidCuttingCandidate', () => {
   });
 
   it('rejects locked layer', () => {
-    const layers = { L1: { locked: true } as SceneLayer };
-    expect(isValidCuttingCandidate({ type: 'line', layer: 'L1' }, layers)).toBe(false);
+    const layers = { lyr_L1: { locked: true } as SceneLayer };
+    expect(isValidCuttingCandidate({ type: 'line', layerId: 'lyr_L1' }, layers)).toBe(false);
   });
 
   it('rejects hidden layer', () => {
-    const layers = { L1: { visible: false } as SceneLayer };
-    expect(isValidCuttingCandidate({ type: 'line', layer: 'L1' }, layers)).toBe(false);
+    const layers = { lyr_L1: { visible: false } as SceneLayer };
+    expect(isValidCuttingCandidate({ type: 'line', layerId: 'lyr_L1' }, layers)).toBe(false);
   });
 
   it('rejects hatch', () => {
@@ -76,11 +76,6 @@ describe('isValidCuttingCandidate', () => {
     expect(isValidCuttingCandidate({ type: 'line', layerId: 'lyr_1' }, layers)).toBe(false);
   });
 
-  it('falls back to entity.layer when layerId has no match in map', () => {
-    const layers = { L1: { locked: true } as SceneLayer };
-    // layerId present but not in the map → fallback to entity.layer
-    expect(isValidCuttingCandidate({ type: 'line', layerId: 'lyr_unknown', layer: 'L1' }, layers)).toBe(false);
-  });
 });
 
 // ── isTrimmable ───────────────────────────────────────────────────────────────
@@ -108,8 +103,8 @@ describe('resolveCuttingEdges — Quick mode', () => {
 
   it('excludes entity on locked layer', () => {
     const scene = makeScene(
-      [makeLine('a', 'L1'), makeLine('b', 'L2')],
-      { L1: { locked: true } as SceneLayer },
+      [makeLine('a', 'L1', 'lyr_L1'), makeLine('b', 'L2', 'lyr_L2')],
+      { lyr_L1: { locked: true } as SceneLayer },
     );
     const edges = resolveCuttingEdges({ mode: 'quick', scene, selectedEdgeIds: [], edgeMode: 'noExtend' });
     expect(edges).toHaveLength(1);
@@ -118,8 +113,8 @@ describe('resolveCuttingEdges — Quick mode', () => {
 
   it('excludes entity on hidden layer', () => {
     const scene = makeScene(
-      [makeLine('a', 'L1'), makeLine('b', 'L2')],
-      { L1: { visible: false } as SceneLayer },
+      [makeLine('a', 'L1', 'lyr_L1'), makeLine('b', 'L2', 'lyr_L2')],
+      { lyr_L1: { visible: false } as SceneLayer },
     );
     const edges = resolveCuttingEdges({ mode: 'quick', scene, selectedEdgeIds: [], edgeMode: 'noExtend' });
     expect(edges).toHaveLength(1);
@@ -157,10 +152,9 @@ describe('resolveCuttingEdges — Standard mode', () => {
 // ── resolveCuttingEdges — Phase 9E-2 layersById ───────────────────────────────
 
 describe('resolveCuttingEdges — layersById (id-keyed, Phase 9E-2)', () => {
-  it('excludes entity on locked layer via layersById when name-keyed layers is empty', () => {
+  it('excludes entity on locked layer via layersById', () => {
     const scene: SceneModel = {
-      entities: [{ ...makeLine('a', 'L1'), layerId: 'lyr_1' }],
-      layers: {},
+      entities: [makeLine('a', 'L1', 'lyr_1')],
       layersById: { lyr_1: { locked: true } as SceneLayer },
     } as SceneModel;
     const edges = resolveCuttingEdges({ mode: 'quick', scene, selectedEdgeIds: [], edgeMode: 'noExtend' });
@@ -169,8 +163,7 @@ describe('resolveCuttingEdges — layersById (id-keyed, Phase 9E-2)', () => {
 
   it('includes entity on unlocked layer via layersById', () => {
     const scene: SceneModel = {
-      entities: [{ ...makeLine('a', 'L1'), layerId: 'lyr_1' }],
-      layers: {},
+      entities: [makeLine('a', 'L1', 'lyr_1')],
       layersById: { lyr_1: { visible: true, locked: false } as SceneLayer },
     } as SceneModel;
     const edges = resolveCuttingEdges({ mode: 'quick', scene, selectedEdgeIds: [], edgeMode: 'noExtend' });

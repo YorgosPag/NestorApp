@@ -13,23 +13,23 @@ import type { SceneLayer, SceneModel } from '../../types/entities';
 import { LayerOperationsService } from '../LayerOperationsService';
 
 function makeScene(layers: SceneLayer[], entityLayers: string[] = []): SceneModel {
-  const layerMap: Record<string, SceneLayer> = {};
-  for (const l of layers) layerMap[l.name] = l;
-  // ADR-358 Phase 9D-1: entities carry BOTH legacy `layer` (name) and stable `layerId`.
-  // Stable id resolves via layer-name → SceneLayer.id lookup at fixture build time.
-  const entities = entityLayers.map((name, i) => ({
-    id: `ent_${i}`,
-    type: 'line' as const,
-    layer: name,
-    layerId: layerMap[name]?.id,
-    visible: true,
-    color: '#ffffff',
-    start: { x: 0, y: 0 },
-    end: { x: 1, y: 1 },
-  })) as unknown as SceneModel['entities'];
+  const layersById: Record<string, SceneLayer> = {};
+  for (const l of layers) layersById[l.id] = l;
+  const entities = entityLayers.map((name, i) => {
+    const matchedLayer = Object.values(layersById).find((l) => l.name === name);
+    return {
+      id: `ent_${i}`,
+      type: 'line' as const,
+      layerId: matchedLayer?.id ?? '',
+      visible: true,
+      color: '#ffffff',
+      start: { x: 0, y: 0 },
+      end: { x: 1, y: 1 },
+    };
+  }) as unknown as SceneModel['entities'];
   return {
     entities,
-    layers: layerMap,
+    layersById,
     bounds: { min: { x: 0, y: 0 }, max: { x: 1, y: 1 } },
     units: 'mm',
   };
@@ -99,11 +99,9 @@ describe('LayerOperationsService.renameLayer — name guard (ADR-358 §5.6 Q9)',
     const r = service.renameLayer('Walls', 'Pareti', scene);
     expect(r.success).toBe(true);
     expect(r.validationError).toBeUndefined();
-    expect(r.updatedScene.layers['Pareti']).toBeDefined();
-    expect(r.updatedScene.layers['Walls']).toBeUndefined();
-    // ADR-358 Phase 9D-5a: entity.layer is NOT updated during rename (stable-id system).
-    // Readers resolve the new name via LayerStore.getLayer(id).name — no entity mutation needed.
-    // ADR-358 Phase 9D-1: entity.layerId MUST stay stable across rename — only name changes.
+    expect(Object.values(r.updatedScene.layersById).find((l) => l.name === 'Pareti')).toBeDefined();
+    expect(Object.values(r.updatedScene.layersById).find((l) => l.name === 'Walls')).toBeUndefined();
+    // ADR-358 Phase 9E-6e: layerId stays stable across rename — only SceneLayer.name changes.
     const wallsIdAfter = r.updatedScene.entities.map((e) => (e as { layerId?: string }).layerId);
     expect(wallsIdAfter).toEqual(wallsIdBefore);
     expect(wallsIdAfter.every((id) => id === 'lyr_a')).toBe(true);
@@ -141,13 +139,14 @@ describe('LayerOperationsService.createLayer — name guard (ADR-358 §5.6 Q9)',
     expect(r.validationError).toBe('INVALID_CHARS');
   });
 
-  it('accepts a valid create — extends scene.layers', () => {
+  it('accepts a valid create — extends scene.layersById', () => {
     const scene = makeScene([layerA()]);
     const r = service.createLayer({ name: 'Roof', color: '#0000ff' }, scene);
     expect(r.success).toBe(true);
     expect(r.validationError).toBeUndefined();
-    expect(r.updatedScene.layers['Roof']).toBeDefined();
-    expect(r.updatedScene.layers['Roof']!.color).toBe('#0000ff');
+    const roofLayer = Object.values(r.updatedScene.layersById).find((l) => l.name === 'Roof');
+    expect(roofLayer).toBeDefined();
+    expect(roofLayer!.color).toBe('#0000ff');
   });
 });
 
@@ -166,8 +165,8 @@ describe('LayerOperationsService.deleteLayer — Layer "0" guard (ADR-358 §5.6 
     const scene = makeScene([layerA(), layerB()], ['Walls', 'Walls', 'Doors']);
     const r = service.deleteLayer('Walls', scene);
     expect(r.success).toBe(true);
-    expect(r.updatedScene.layers['Walls']).toBeUndefined();
-    expect(r.updatedScene.entities.every((e) => e.layer !== 'Walls')).toBe(true);
+    expect(Object.values(r.updatedScene.layersById).find((l) => l.name === 'Walls')).toBeUndefined();
+    expect(r.updatedScene.entities.every((e) => (e as { layerId?: string }).layerId !== 'lyr_a')).toBe(true);
     expect(r.affectedEntityIds?.length).toBe(2);
   });
 
