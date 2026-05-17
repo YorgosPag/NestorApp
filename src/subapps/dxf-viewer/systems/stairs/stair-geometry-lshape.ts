@@ -52,7 +52,12 @@ export function computeLShape(
   const risers: readonly Segment3D[] = [...flight1.risers, ...flight2.risers];
   const walkline = buildLShapeWalkline(basePoint, u1, u2, rise, tread, width, n1, n2);
   const stringers = buildStringersFromWalkline(walkline, width);
-  const arrow = arrowSymbol(basePoint, walkline[walkline.length - 1], upDirection);
+  // ADR-358 Phase 3d hotfix — arrow follows walkline FIRST segment (flight 1
+  // direction) instead of cutting a straight diagonal from basePoint to the
+  // top of flight 2 (industry convention: AutoCAD/Revit plan view show the
+  // UP arrow on flight 1 with the "UP" label — multi-flight ascent is
+  // implied by tread numbering, not by a polyline arrow).
+  const arrow = arrowSymbol(walkline[0], walkline[1], upDirection);
   const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
   const split = splitTreadsByCutPlane(allTreads, cutPlaneHeight);
   const cutLine = buildCutLineForFlights(
