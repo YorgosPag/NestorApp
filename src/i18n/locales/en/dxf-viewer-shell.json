@@ -564,7 +564,7 @@
         "tread": "Tread",
         "width": "Width",
         "stepCount": "Steps",
-        "storyCount": "Floors",
+        "storyCount": "Stories Traversed",
         "storyHeight": "Story Height",
         "flight2TurnDirection": "Flight 2 Turn",
         "flight3TurnDirection": "Flight 3 Turn",
