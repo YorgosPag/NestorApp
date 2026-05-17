@@ -213,6 +213,23 @@
           "datumTriangle": "Τρίγωνο datum",
           "datumTriangleFilled": "Γεμιστό τρίγωνο datum"
         }
+      },
+      "textOverride": {
+        "dialogTitle": "Παράκαμψη Κειμένου Διάστασης",
+        "mode": {
+          "measured": "Μετρούμενη τιμή (<>)",
+          "prefixSuffix": "Πρόθεμα / Επίθεμα",
+          "free": "Ελεύθερο κείμενο"
+        },
+        "placeholderPrefix": "Πρόθεμα",
+        "placeholderSuffix": "Επίθεμα",
+        "placeholderFree": "Κείμενο...",
+        "preview": "Αποτέλεσμα",
+        "previewMeasured": "<Μετρούμενη τιμή>",
+        "previewEmpty": "(κενό)",
+        "noEntitySelected": "Δεν επιλέχθηκε διάσταση.",
+        "cancel": "Άκυρο",
+        "apply": "Εφαρμογή"
       }
     },
     "textProperties": {
