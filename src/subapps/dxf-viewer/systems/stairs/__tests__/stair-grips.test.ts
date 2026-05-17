@@ -29,6 +29,7 @@ describe('stair-grips (Phase 5b)', () => {
       ...base,
       variant: {
         kind: 'l-shape',
+        cornerStyle: 'landing',
         turnDirection: 'right',
         landingDepth: 'auto',
         flightSplit: [6, 6],
@@ -143,7 +144,13 @@ describe('stair-grips (Phase 5b)', () => {
       expect(a).toBeGreaterThanOrEqual(1);
       expect(b).toBeGreaterThanOrEqual(1);
       expect(a).toBeLessThanOrEqual(newParams.stepCount - 1);
-      expect(a + b).toBe(newParams.stepCount);
+      // ADR-358 Phase 3f — l-shape landing: n1 + 1(landing) + n2 = stepCount
+      // ⇒ split sum = stepCount - 1 (γ count conservation, fixes Phase 3e regression).
+      const expectedTotal =
+        newParams.variant.cornerStyle === 'winders'
+          ? newParams.stepCount - newParams.variant.winderCount
+          : newParams.stepCount - 1;
+      expect(a + b).toBe(expectedTotal);
     }
   });
 
