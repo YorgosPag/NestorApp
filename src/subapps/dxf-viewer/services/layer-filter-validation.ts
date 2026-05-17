@@ -42,12 +42,12 @@ export function validateLayerFilterJson(value: unknown): ValidationResult {
   if (value.kind === 'group') {
     if (!Array.isArray(value.layerIds)) return fail('group.layerIds must be array');
     if (!value.layerIds.every((id) => typeof id === 'string')) return fail('group.layerIds[*] must be string');
-    return { ok: true, filter: value as LayerFilter };
+    return { ok: true, filter: value as unknown as LayerFilter };
   }
   if (value.kind === 'properties') {
     const rulesResult = validateRuleSet(value.rules);
     if (!rulesResult.ok) return rulesResult;
-    return { ok: true, filter: value as LayerFilter };
+    return { ok: true, filter: value as unknown as LayerFilter };
   }
   return fail(`unknown kind: ${String(value.kind)}`);
 }
