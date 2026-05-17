@@ -67,6 +67,7 @@ describe('initialDimensionCreateState', () => {
     expect(initialDimensionCreateState.clicks).toEqual([]);
     expect(initialDimensionCreateState.spacePressCount).toBe(0);
     expect(initialDimensionCreateState.tabPressCount).toBe(0);
+    expect(initialDimensionCreateState.parentDimensionId).toBeNull();
   });
 
   it('is frozen — direct mutation is rejected', () => {
@@ -100,9 +101,9 @@ describe('requiredClickCount', () => {
     expect(requiredClickCount('joggedRadius')).toBe(4);
   });
 
-  it('returns 3 for baseline / continued placeholder (Phase D3)', () => {
-    expect(requiredClickCount('baseline')).toBe(3);
-    expect(requiredClickCount('continued')).toBe(3);
+  it('returns 1 for baseline / continued (Phase D3 — 1 click = new extOrigin2; rest inherited from parent)', () => {
+    expect(requiredClickCount('baseline')).toBe(1);
+    expect(requiredClickCount('continued')).toBe(1);
   });
 });
 
@@ -428,5 +429,82 @@ describe('cancel action', () => {
     expect(populated.clicks).toHaveLength(2);
     const next = dimensionCreateReducer(populated, { kind: 'cancel' });
     expect(next).toBe(initialDimensionCreateState);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Phase D3 — setParent + baseline/continued chained flows
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('Phase D3 — setParent action', () => {
+  it('is a no-op while idle (cannot set parent before start)', () => {
+    const next = dimensionCreateReducer(initialDimensionCreateState, {
+      kind: 'setParent', parentDimensionId: 'dim_parent',
+    });
+    expect(next.parentDimensionId).toBeNull();
+  });
+
+  it('stamps parentDimensionId after start (collecting)', () => {
+    const started = dimensionCreateReducer(initialDimensionCreateState, {
+      kind: 'start', mode: 'manual', styleId: STYLE_ID, manualOverride: 'baseline',
+    });
+    const next = dimensionCreateReducer(started, {
+      kind: 'setParent', parentDimensionId: 'dim_parent_A',
+    });
+    expect(next.parentDimensionId).toBe('dim_parent_A');
+  });
+
+  it('is referentially stable when the parent does not change', () => {
+    const started = dispatchMany(initialDimensionCreateState, [
+      { kind: 'start', mode: 'manual', styleId: STYLE_ID, manualOverride: 'continued' },
+      { kind: 'setParent', parentDimensionId: 'dim_p' },
+    ]);
+    const same = dimensionCreateReducer(started, {
+      kind: 'setParent', parentDimensionId: 'dim_p',
+    });
+    expect(same).toBe(started);
+  });
+
+  it('start() resets parentDimensionId (must be re-set after restart)', () => {
+    const flow = dispatchMany(initialDimensionCreateState, [
+      { kind: 'start', mode: 'manual', styleId: STYLE_ID, manualOverride: 'baseline' },
+      { kind: 'setParent', parentDimensionId: 'dim_parent_A' },
+    ]);
+    const restarted = dimensionCreateReducer(flow, {
+      kind: 'start', mode: 'manual', styleId: STYLE_ID, manualOverride: 'baseline',
+    });
+    expect(restarted.parentDimensionId).toBeNull();
+  });
+});
+
+describe('Phase D3 — baseline / continued click guard + commit-ready', () => {
+  it('baseline: click is rejected when no parentDimensionId set (defensive)', () => {
+    const next = dispatchMany(initialDimensionCreateState, [
+      { kind: 'start', mode: 'manual', styleId: STYLE_ID, manualOverride: 'baseline' },
+      { kind: 'click', world: { x: 100, y: 0 } },
+    ]);
+    expect(next.clicks).toEqual([]);
+    expect(next.status).toBe('collecting');
+  });
+
+  it('baseline: 1 click WITH parent transitions to commit-ready', () => {
+    const next = dispatchMany(initialDimensionCreateState, [
+      { kind: 'start', mode: 'manual', styleId: STYLE_ID, manualOverride: 'baseline' },
+      { kind: 'setParent', parentDimensionId: 'dim_parent_A' },
+      { kind: 'click', world: { x: 200, y: 0 } },
+    ]);
+    expect(next.clicks).toHaveLength(1);
+    expect(next.status).toBe('commit-ready');
+    expect(next.parentDimensionId).toBe('dim_parent_A');
+  });
+
+  it('continued: 1 click WITH parent transitions to commit-ready', () => {
+    const next = dispatchMany(initialDimensionCreateState, [
+      { kind: 'start', mode: 'manual', styleId: STYLE_ID, manualOverride: 'continued' },
+      { kind: 'setParent', parentDimensionId: 'dim_parent_B' },
+      { kind: 'click', world: { x: 300, y: 0 } },
+    ]);
+    expect(next.status).toBe('commit-ready');
+    expect(next.parentDimensionId).toBe('dim_parent_B');
   });
 });
