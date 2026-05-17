@@ -290,6 +290,9 @@ export class EnterpriseIdService {
   generateLayerFilterGroupId(): string { return this.generateId(P.LAYER_FILTER_GROUP).id; }
   generateLayerFilterPropertyId(): string { return this.generateId(P.LAYER_FILTER_PROPERTY).id; }
 
+  // DXF Layer States Manager (ADR-358 §5.9 Q12 — Phase 12)
+  generateLayerStateId(): string { return this.generateId(P.LAYER_STATE).id; }
+
   // DXF Enterprise Dimension System (ADR-362)
   generateDimensionId(): string { return this.generateId(P.DIMENSION).id; }
   generateDimStyleId(): string { return this.generateId(P.DIM_STYLE).id; }
