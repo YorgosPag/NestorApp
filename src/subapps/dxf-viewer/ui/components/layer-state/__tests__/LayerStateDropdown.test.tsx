@@ -1,0 +1,155 @@
+/**
+ * LayerStateDropdown — RTL test (ADR-358 Phase 12).
+ *
+ * Two layers:
+ *   1. Shell smoke — `LayerStateDropdown` mounts with the trigger button.
+ *   2. Popover behavior — `LayerStateDropdownPopover` rendered directly,
+ *      bypassing the Radix Popover wrapper. Verifies list rendering,
+ *      save form, delete, rename, and Restore command dispatch.
+ *
+ * Behavioural coverage (store + persistence + command) lives in their own
+ * unit suites; this file only checks the React glue.
+ */
+
+import React from 'react';
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { LayerStateDropdown } from '../LayerStateDropdown';
+import { LayerStateDropdownPopover } from '../LayerStateDropdownPopover';
+import { useLayerStateDropdown } from '../useLayerStateDropdown';
+import {
+  __resetLayerStateStoreForTesting,
+  saveCurrentLayerState,
+  setProjectId,
+} from '../../../../stores/LayerStateStore';
+import { __resetLayerStoreForTesting, setLayers } from '../../../../stores/LayerStore';
+import { __resetLayerStatePersistenceForTesting } from '../../../../services/layer-state-persistence';
+import { createSceneLayer } from '../../../../types/entities';
+import type { ICommand } from '../../../../core/commands/interfaces';
+
+jest.mock('@/i18n', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+beforeEach(() => {
+  __resetLayerStoreForTesting();
+  __resetLayerStatePersistenceForTesting();
+  __resetLayerStateStoreForTesting();
+  try { window.localStorage.clear(); } catch { /* SSR */ }
+});
+
+function makeExecMock(): jest.Mock<void, [ICommand]> {
+  return jest.fn<void, [ICommand]>();
+}
+
+function PopoverHarness({ executeCommand }: { executeCommand: (cmd: ICommand) => void }): React.ReactElement {
+  const { state, actions } = useLayerStateDropdown(executeCommand);
+  return <LayerStateDropdownPopover state={state} actions={actions} onClose={() => {}} />;
+}
+
+describe('LayerStateDropdown shell — smoke', () => {
+  it('renders the status-bar trigger button', () => {
+    const exec = makeExecMock();
+    const { container } = render(
+      <TooltipProvider>
+        <LayerStateDropdown executeCommand={exec} />
+      </TooltipProvider>,
+    );
+    expect(container.querySelector('[data-testid="layer-state-dropdown-trigger"]')).not.toBeNull();
+  });
+});
+
+describe('LayerStateDropdownPopover — list rendering', () => {
+  it('shows empty state when no saved states exist', () => {
+    setLayers([createSceneLayer({ name: 'A' })]);
+    setProjectId('p1');
+    const exec = makeExecMock();
+    render(
+      <TooltipProvider>
+        <PopoverHarness executeCommand={exec} />
+      </TooltipProvider>,
+    );
+    expect(screen.getByTestId('layer-state-list').textContent).toContain('layerState.empty');
+  });
+
+  it('lists saved states after a save', () => {
+    setLayers([createSceneLayer({ name: 'A' })]);
+    setProjectId('p1');
+    saveCurrentLayerState({ name: 'baseline' });
+    const exec = makeExecMock();
+    render(
+      <TooltipProvider>
+        <PopoverHarness executeCommand={exec} />
+      </TooltipProvider>,
+    );
+    expect(screen.getByTestId('layer-state-list').textContent).toContain('baseline');
+  });
+});
+
+describe('LayerStateDropdownPopover — interactions', () => {
+  it('clicking a state row dispatches RestoreLayerStateCommand', () => {
+    setLayers([createSceneLayer({ name: 'A' })]);
+    setProjectId('p1');
+    const saved = saveCurrentLayerState({ name: 's1' })!;
+    const exec = makeExecMock();
+    render(
+      <TooltipProvider>
+        <PopoverHarness executeCommand={exec} />
+      </TooltipProvider>,
+    );
+    const row = screen.getByTestId(`layer-state-row-${saved.id}`);
+    const restoreButton = row.querySelector('button[aria-label*="s1"]') as HTMLButtonElement;
+    fireEvent.click(restoreButton);
+    expect(exec).toHaveBeenCalledTimes(1);
+    const dispatched = exec.mock.calls[0][0];
+    expect(dispatched.type).toBe('layer-state-restore');
+  });
+
+  it('save form persists a state through the confirm button', () => {
+    setLayers([createSceneLayer({ name: 'A' })]);
+    setProjectId('p1');
+    const exec = makeExecMock();
+    render(
+      <TooltipProvider>
+        <PopoverHarness executeCommand={exec} />
+      </TooltipProvider>,
+    );
+    const input = screen.getByTestId('layer-state-save-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'fresh' } });
+    fireEvent.click(screen.getByTestId('layer-state-save-confirm'));
+    expect(screen.getByTestId('layer-state-list').textContent).toContain('fresh');
+  });
+
+  it('delete button removes the state row', () => {
+    setLayers([createSceneLayer({ name: 'A' })]);
+    setProjectId('p1');
+    const saved = saveCurrentLayerState({ name: 'gone' })!;
+    const exec = makeExecMock();
+    render(
+      <TooltipProvider>
+        <PopoverHarness executeCommand={exec} />
+      </TooltipProvider>,
+    );
+    fireEvent.click(screen.getByTestId(`layer-state-delete-${saved.id}`));
+    expect(screen.queryByTestId(`layer-state-row-${saved.id}`)).toBeNull();
+  });
+
+  it('rename inline edit commits via Enter', () => {
+    setLayers([createSceneLayer({ name: 'A' })]);
+    setProjectId('p1');
+    const saved = saveCurrentLayerState({ name: 'old' })!;
+    const exec = makeExecMock();
+    render(
+      <TooltipProvider>
+        <PopoverHarness executeCommand={exec} />
+      </TooltipProvider>,
+    );
+    fireEvent.click(screen.getByTestId(`layer-state-rename-${saved.id}`));
+    const input = screen.getByTestId(`layer-state-rename-input-${saved.id}`) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'new' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(screen.getByTestId('layer-state-list').textContent).toContain('new');
+    expect(screen.getByTestId('layer-state-list').textContent).not.toContain('old');
+  });
+});
