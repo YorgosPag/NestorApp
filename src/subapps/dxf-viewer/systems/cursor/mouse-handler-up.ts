@@ -17,6 +17,8 @@ import { UniversalMarqueeSelector } from '../selection/UniversalMarqueeSelection
 import { EventBus } from '../events/EventBus';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI } from './mouse-handler-types';
+// ADR-358 Phase 9D-5b-ii Sub-D — Entity type bridge for performSelection narrow.
+import type { Entity } from '../../types/entities';
 
 interface MouseUpHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -180,7 +182,8 @@ function processMarqueeSelection(
     marqueeSnap.rect,
     {
       colorLayers: colorLayers ?? [],
-      entities: scene?.entities ?? [],
+      // ADR-358 Phase 9D-5b-ii Sub-D — bridge cast: `SceneModel.entities: DxfEntityUnion[]` vs `Entity[]` expected by performSelection. Resolved at schema flip Phase 9D-5b-iii.
+      entities: (scene?.entities ?? []) as unknown as Entity[],
       tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
       enableDebugLogs: false,
       onLayerSelected: undefined,

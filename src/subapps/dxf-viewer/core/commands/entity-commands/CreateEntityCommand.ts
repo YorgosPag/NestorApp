@@ -39,7 +39,9 @@ export class CreateEntityCommand implements ICommand {
     if (!this.entity) {
       // First execution - reuse caller-provided id when present (ADR-057),
       // otherwise generate a fresh one.
-      const layerName = this.options.layer ?? this.entityData.layer ?? '0';
+      // ADR-358 Phase 9D-5b-ii Sub-D — explicit cast to bypass `SceneEntity` index-signature `[key:string]: unknown` widening on `layer` access.
+      const entityDataLayer = (this.entityData as { layer?: string }).layer;
+      const layerName: string = this.options.layer ?? entityDataLayer ?? '0';
       // ADR-358 Phase 9D-5a — resolve stable id either from caller override, entityData mirror, or layer-name lookup.
       const entityDataLayerId = (this.entityData as { layerId?: string }).layerId;
       const resolvedLayerId = this.options.layerId ?? entityDataLayerId ?? getLayer(layerName)?.id;
