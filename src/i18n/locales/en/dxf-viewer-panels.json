@@ -78,6 +78,39 @@
     "colors": {
       "loading": "Loading..."
     },
+    "dimensions": {
+      "title": "Dimensions",
+      "loading": "Loading dimension styles...",
+      "styleManager": "Style Manager",
+      "newStyle": "New Style...",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "edit": "Edit",
+      "setActive": "Set as active",
+      "activeBadge": "Active",
+      "builtInBadge": "Built-in",
+      "emptyList": "No styles found",
+      "deleteConfirm": {
+        "title": "Delete style",
+        "description": "The style \"{name}\" will be permanently deleted.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      },
+      "createDialog": {
+        "title": "New Dimension Style",
+        "placeholder": "Style name...",
+        "confirm": "Create",
+        "cancel": "Cancel",
+        "errorEmpty": "Name cannot be empty.",
+        "errorDuplicate": "A style with this name already exists."
+      },
+      "duplicateDialog": {
+        "title": "Duplicate style",
+        "placeholder": "Copy name...",
+        "confirm": "Duplicate",
+        "cancel": "Cancel"
+      }
+    },
     "textProperties": {
       "title": "Text Properties",
       "loading": "Loading text properties..."
