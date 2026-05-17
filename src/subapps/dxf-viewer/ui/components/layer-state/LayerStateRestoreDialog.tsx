@@ -12,22 +12,22 @@ import {
 } from '@/components/ui/dialog';
 import { getLayerState } from '../../../stores/LayerStateStore';
 import { getAllLayers } from '../../../stores/LayerStore';
-import { RestoreLayerStateCommand } from '../../../core/commands/layer/RestoreLayerStateCommand';
-import type { ICommand } from '../../../core/commands/interfaces';
+import type { RestoreLayerStateOptions } from '../../../core/commands/layer/RestoreLayerStateCommand';
 import type { LayerState, LayerStateEntry } from '../../../types/layer-state';
 
 export interface LayerStateRestoreDialogProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly stateId: string;
-  readonly executeCommand: (cmd: ICommand) => void;
+  /** Called when user confirms Apply — caller creates + executes the RestoreLayerStateCommand. */
+  readonly onApply: (options: RestoreLayerStateOptions) => void;
 }
 
 export function LayerStateRestoreDialog({
   open,
   onOpenChange,
   stateId,
-  executeCommand,
+  onApply,
 }: LayerStateRestoreDialogProps): React.ReactElement | null {
   const { t } = useTranslation('dxf-viewer-shell');
   const [createMissing, setCreateMissing] = React.useState(false);
@@ -45,11 +45,7 @@ export function LayerStateRestoreDialog({
   );
 
   const handleApply = (): void => {
-    const cmd = new RestoreLayerStateCommand({
-      stateId,
-      options: { createMissingLayers: createMissing },
-    });
-    executeCommand(cmd);
+    onApply({ createMissingLayers: createMissing });
     onOpenChange(false);
   };
 
