@@ -668,6 +668,7 @@
     "sections": {
       "warnings": {
         "title": "Warnings",
+        "errorsTitle": "Errors",
         "autoFix": "Auto-Fix"
       },
       "treadLabelSize": {

@@ -668,6 +668,7 @@
     "sections": {
       "warnings": {
         "title": "Προειδοποιήσεις",
+        "errorsTitle": "Σφάλματα",
         "autoFix": "Αυτόματη Διόρθωση"
       },
       "treadLabelSize": {
