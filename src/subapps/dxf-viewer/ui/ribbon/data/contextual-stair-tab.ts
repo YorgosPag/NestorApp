@@ -78,6 +78,17 @@ const RISER_TYPE_OPTIONS = [
   { value: 'open', labelKey: 'Open', isLiteralLabel: true },
 ] as const;
 
+// ADR-358 Phase 3g — NOK stair scope selector (Άρθρο 13 Κτιριοδομικού).
+// Drives legal + comfort width minima in `gateStairChecker.checkNOK`.
+// Industry pattern: Revit "Stair Usage", ArchiCAD "Stair Function",
+// AutoCAD Architecture "Stair Classification".
+const NOK_SUB_TYPE_OPTIONS = [
+  { value: 'main', labelKey: 'ribbon.commands.stairEditor.nokSubType.main', isLiteralLabel: false },
+  { value: 'low-rise', labelKey: 'ribbon.commands.stairEditor.nokSubType.lowRise', isLiteralLabel: false },
+  { value: 'internal', labelKey: 'ribbon.commands.stairEditor.nokSubType.internal', isLiteralLabel: false },
+  { value: 'auxiliary', labelKey: 'ribbon.commands.stairEditor.nokSubType.auxiliary', isLiteralLabel: false },
+] as const;
+
 const RISE_MM_OPTIONS = [
   { value: '140', labelKey: '140', isLiteralLabel: true },
   { value: '150', labelKey: '150', isLiteralLabel: true },
@@ -246,6 +257,19 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.stringParams.riserType,
                 comboboxWidthPx: 90,
                 options: RISER_TYPE_OPTIONS,
+              },
+            },
+            {
+              // ADR-358 Phase 3g — NOK scope selector (Q3 user choice Β:
+              // inside Δομή/Σχήμα panel, 4 categories per Άρθρο 13 παρ. 2-4).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.nokSubType',
+                labelKey: 'ribbon.commands.stairEditor.nokSubType.section.title',
+                commandKey: STAIR_RIBBON_KEYS.stringParams.nokSubType,
+                comboboxWidthPx: 180,
+                options: NOK_SUB_TYPE_OPTIONS,
               },
             },
           ],
