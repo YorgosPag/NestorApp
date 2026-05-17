@@ -67,7 +67,7 @@ export function SceneInfoSection({ scene, selectedEntityIds }: SceneInfoSectionP
         </div>
         <div className="flex justify-between">
           <span className={colors.text.muted}>{t('sceneInfo.levels')}</span>
-          <span className={`${colors.text.primary} ${PANEL_LAYOUT.TAB.FONT_WEIGHT}`}>{Object.keys(scene.layers).length}</span>
+          <span className={`${colors.text.primary} ${PANEL_LAYOUT.TAB.FONT_WEIGHT}`}>{Object.keys(scene.layersById ?? scene.layers).length}</span>
         </div>
         <div className="flex justify-between">
           <span className={colors.text.muted}>{t('sceneInfo.units')}</span>

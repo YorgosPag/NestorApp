@@ -40,11 +40,11 @@ export const ColorManager: React.FC<ColorManagerProps> = ({
   // ΒΟΗΘΗΤΙΚΟ: βρίσκει/δημιουργεί layer για το συγκεκριμένο χρώμα
   const ensureLayerForColor = React.useCallback((scene: SceneModel, hex: string): { scene: SceneModel, layerName: string } => {
     // 1) αν ήδη υπάρχει layer με αυτό το χρώμα, χρησιμοποίησέ το
-    const existing = Object.entries(scene.layers).find(
-      ([name, l]) => (('colorHex' in l && typeof l.colorHex === 'string' && l.colorHex.toLowerCase?.() === hex.toLowerCase?.()) ||
-                      ('color' in l && typeof l.color === 'string' && l.color.toLowerCase?.() === hex.toLowerCase?.()))
+    const existing = Object.values(scene.layersById ?? scene.layers).find(
+      (l) => (('colorHex' in l && typeof l.colorHex === 'string' && l.colorHex.toLowerCase?.() === hex.toLowerCase?.()) ||
+              ('color' in l && typeof l.color === 'string' && l.color.toLowerCase?.() === hex.toLowerCase?.()))
     );
-    if (existing) return { scene, layerName: existing[0] };
+    if (existing) return { scene, layerName: existing.name };
 
     // 2) αλλιώς, φτιάξε καινούριο
     // ADR-358 Phase 9D-5a + Phase 9C: createSceneLayer factory enforces 14-field shape +

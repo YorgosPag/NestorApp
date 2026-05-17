@@ -7,7 +7,7 @@ import { DEFAULT_LAYER_COLOR } from '../../../../config/color-config';
  * χωρίς να χαθούν οντότητες, κρατώντας χρώμα+όνομα του target
  */
 export function mergeColorGroups(scene: SceneModel, targetGroup: string, sourceGroups: string[]): SceneModel {
-  if (!scene?.layers || sourceGroups.length === 0) return scene;
+  if (!(scene?.layers ?? scene?.layersById) || sourceGroups.length === 0) return scene;
 
   // Helper για parsing του color group name → hex color
   const parseGroupHex = (cg: string) => cg.replace(/^Color\s+/i, '').trim(); // "Color #ffc93c" -> "#ffc93c"

@@ -9,6 +9,7 @@ import type { SceneModel } from '../../types/scene';
 import { DEFAULT_LAYER_COLOR } from '../../config/color-config';
 // 🏢 ENTERPRISE: Import from Single Source of Truth
 import type { FloatingPanelType } from '../../types/panel-types';
+import { getSceneLayerById } from '../../utils/scene-layer-utils';
 
 /**
  * @deprecated Use FloatingPanelType instead
@@ -60,7 +61,7 @@ export function useFloatingPanelHandle({
 
         // Κλειδί 1ου επιπέδου: Color Group (όχι layer name)
         if (ent.layer !== undefined && ent.layer !== null) {
-          const layer = scene.layers[ent.layer as string];
+          const layer = getSceneLayerById(scene, (ent as { layerId?: string }).layerId ?? '') ?? scene.layers[(ent as { layer?: string }).layer ?? ''];
           if (layer) {
             const color = layer.color || DEFAULT_LAYER_COLOR;
             const colorName = `Color ${color}`;

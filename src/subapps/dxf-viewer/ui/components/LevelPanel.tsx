@@ -356,7 +356,7 @@ export function LevelPanel({
           <p>{t('panels.levels.noLevels')}</p>
         </div>
       ))}
-      {scene && scene.layers && Object.keys(scene.layers).length > 0 && (
+      {scene && (scene.layersById ?? scene.layers) && Object.keys(scene.layersById ?? scene.layers).length > 0 && (
         <div className={PANEL_TOKENS.LEVEL_PANEL.SECTIONS_BORDER}>
           <LayersSection
             scene={scene}

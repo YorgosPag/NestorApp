@@ -39,11 +39,11 @@ function collectEntityIdsOfColorGroups(scene: SceneModel | null, groups: string[
 
   // Find all layer names that belong to the specified color groups
   const layerNamesInGroups: string[] = [];
-  if (scene.layers) {
-    Object.entries(scene.layers).forEach(([layerName, layer]) => {
+  if (scene.layersById ?? scene.layers) {
+    Object.entries(scene.layersById ?? scene.layers).forEach(([, layer]) => {
       const colorGroup = `Color ${layer?.color ?? DEFAULT_LAYER_COLOR}`;
       if (groups.includes(colorGroup)) {
-        layerNamesInGroups.push(layerName);
+        layerNamesInGroups.push(layer.name);
       }
     });
   }

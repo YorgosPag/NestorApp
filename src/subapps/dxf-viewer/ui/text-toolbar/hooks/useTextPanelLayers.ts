@@ -20,7 +20,7 @@ export function useTextPanelLayers(): readonly LayerSelectorEntry[] {
   const scene = useCurrentSceneModel();
   return useMemo(() => {
     if (!scene) return EMPTY;
-    return Object.values(scene.layers).map<LayerSelectorEntry>((l) => ({
+    return Object.values(scene.layersById ?? scene.layers).map<LayerSelectorEntry>((l) => ({
       id: l.name,
       name: l.name,
       locked: l.locked,

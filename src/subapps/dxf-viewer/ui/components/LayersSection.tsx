@@ -112,7 +112,7 @@ export function LayersSection({
   });
 
   // Early return for empty scene
-  if (!scene || Object.keys(scene.layers).length === 0) {
+  if (!scene || Object.keys(scene.layersById ?? scene.layers).length === 0) {
     return (
       <div className={PANEL_LAYOUT.SPACING.GAP_MD}>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
