@@ -55,7 +55,15 @@ jest.mock('../useLayerStateTemplates', () => ({
   }),
 }));
 jest.mock('@/i18n', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) => {
+      // Mirror the previous baseline behaviour: interpolate `{name}` into the
+      // returned string so existing selectors keying off `aria-label*="..."`
+      // keep matching after we shut down the real i18n loader.
+      if (opts && typeof opts.name === 'string') return `${key} ${opts.name}`;
+      return key;
+    },
+  }),
 }));
 
 import React from 'react';
