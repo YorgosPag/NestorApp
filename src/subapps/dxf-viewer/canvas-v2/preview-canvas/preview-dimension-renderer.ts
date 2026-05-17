@@ -1,0 +1,296 @@
+/**
+ * ADR-362 Phase C2 — Live dimension preview renderer (PreviewCanvas overlay).
+ *
+ * Pure function `renderPreviewDimension` that draws a dim entity-in-construction
+ * on the PreviewCanvas overlay (ADR-040). Reuses the Phase B geometry builder
+ * + Phase C1 text/arrowhead helpers; overrides styling with preview tokens:
+ *   - solid stroke in `CAD_UI_COLORS.entity.preview` (bright green) — matches
+ *     the convention of `preview-entity-renderers.ts` for line/circle/etc.
+ *   - `globalAlpha = OPACITY.HIGH` (0.9) so the dim still reads as "under
+ *     construction" without losing legibility.
+ *   - text + arrows reuse the Phase C1 pipeline; preview color is injected via
+ *     a temporary DIMSTYLE clone (`dimclrd`/`dimclre`/`dimclrt` → ACI sentinel
+ *     `ByLayer` + `layerColour` override = preview color).
+ *
+ * The geometry builder is called WITHOUT a `DimensionLookup`, so baseline /
+ * continued chains during initial creation fall back to a no-op (their parent
+ * isn't yet committed). The builder throws on missing parent → we swallow and
+ * render nothing (consistent with `DimensionRenderer.resolveFromEntity`).
+ *
+ * Out of scope (later phases):
+ *   - Rubber-band helper line between cursor and dim line offset point — added
+ *     when Phase D1 wires the creation flow (extra `helperPath: Point2D[]`
+ *     param will arrive here with a dashed render path).
+ *   - Snap markers + grips (Phase I).
+ *   - Multi-step previews for baseline/continued chains (Phase D3).
+ */
+
+import type { DimensionEntity, DimStyle } from '../../types/dimension';
+import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import {
+  buildDimensionGeometry,
+  type AngularDimGeometry,
+  type DimGeometry,
+  type DimLineSegment,
+  type RadialDimGeometry,
+} from '../../systems/dimensions/dim-geometry-builder';
+import { renderArrowhead } from '../../rendering/entities/dimension/dim-arrowhead-renderer';
+import { renderDimensionText } from '../../rendering/entities/dimension/dim-text-renderer';
+import { getArrowheadBlock } from '../../systems/dimensions/dim-arrowhead-blocks';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import { CAD_UI_COLORS, OPACITY } from '../../config/color-config';
+import { LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Public types
+// ──────────────────────────────────────────────────────────────────────────────
+
+export interface PreviewDimensionRenderOptions {
+  /** Stroke + arrow + text color. Default = bright green preview token. */
+  readonly color?: string;
+  /** Canvas globalAlpha applied to the whole preview. Default = OPACITY.HIGH. */
+  readonly opacity?: number;
+  /** Optional rubber-band helper polyline (dashed). Phase D1+ supplies this. */
+  readonly helperPath?: readonly Point2D[];
+  /** Color for `helperPath`. Default = same as `color`. */
+  readonly helperColor?: string;
+  /** Alpha for `helperPath`. Default = OPACITY.MEDIUM. */
+  readonly helperOpacity?: number;
+}
+
+export interface PreviewDimensionRenderParams {
+  readonly ctx: CanvasRenderingContext2D;
+  readonly entity: DimensionEntity;
+  readonly style: DimStyle;
+  readonly transform: ViewTransform;
+  readonly viewport: { readonly width: number; readonly height: number };
+  readonly opts?: PreviewDimensionRenderOptions;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Resolved options
+// ──────────────────────────────────────────────────────────────────────────────
+
+interface ResolvedOpts {
+  readonly color: string;
+  readonly opacity: number;
+  readonly helperPath: readonly Point2D[] | null;
+  readonly helperColor: string;
+  readonly helperOpacity: number;
+}
+
+function resolveOpts(o: PreviewDimensionRenderOptions | undefined): ResolvedOpts {
+  const color = o?.color ?? CAD_UI_COLORS.entity.preview;
+  return {
+    color,
+    opacity: o?.opacity ?? OPACITY.HIGH,
+    helperPath: o?.helperPath && o.helperPath.length >= 2 ? o.helperPath : null,
+    helperColor: o?.helperColor ?? color,
+    helperOpacity: o?.helperOpacity ?? OPACITY.MEDIUM,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Entry point
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Render a dim entity-in-construction onto the PreviewCanvas overlay.
+ * Geometry-builder failures (e.g. partial def points, missing chain parent)
+ * are swallowed so a half-built dim doesn't crash the overlay.
+ */
+export function renderPreviewDimension(params: PreviewDimensionRenderParams): void {
+  const opts = resolveOpts(params.opts);
+  const geometry = tryBuildGeometry(params.entity, params.style);
+  if (!geometry) return;
+
+  params.ctx.save();
+  params.ctx.globalAlpha = opts.opacity;
+
+  drawExtensionLines(params, geometry, opts);
+  drawDimLineOrArc(params, geometry, opts);
+  drawArrowheads(params, geometry, opts);
+  drawText(params, geometry, opts);
+
+  if (opts.helperPath) {
+    drawHelperPolyline(params, opts);
+  }
+
+  params.ctx.restore();
+}
+
+function tryBuildGeometry(entity: DimensionEntity, style: DimStyle): DimGeometry | null {
+  try {
+    return buildDimensionGeometry(entity, style);
+  } catch {
+    return null;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Geometry pieces — mirror DimensionRenderer.drawX but with preview styling
+// ──────────────────────────────────────────────────────────────────────────────
+
+function drawExtensionLines(
+  params: PreviewDimensionRenderParams,
+  geometry: DimGeometry,
+  opts: ResolvedOpts,
+): void {
+  const ext1 = readExtLine(geometry, 1);
+  const ext2 = readExtLine(geometry, 2);
+  if (!ext1 && !ext2) return;
+  applySolidStroke(params.ctx, opts.color);
+  if (ext1 && !params.style.suppressExtLine1) strokeSegment(params, ext1);
+  if (ext2 && !params.style.suppressExtLine2) strokeSegment(params, ext2);
+}
+
+function drawDimLineOrArc(
+  params: PreviewDimensionRenderParams,
+  geometry: DimGeometry,
+  opts: ResolvedOpts,
+): void {
+  applySolidStroke(params.ctx, opts.color);
+  switch (geometry.kind) {
+    case 'linear':
+      if (!params.style.suppressDimLine1 && !params.style.suppressDimLine2) {
+        strokeSegment(params, geometry.dimLine);
+      }
+      return;
+    case 'angular':
+      strokeArc(params, geometry);
+      return;
+    case 'radial':
+      strokeLeader(params, geometry);
+      return;
+    default: {
+      const _exhaustive: never = geometry;
+      throw new Error(`[preview-dimension-renderer] Unknown geometry kind: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
+}
+
+function drawArrowheads(
+  params: PreviewDimensionRenderParams,
+  geometry: DimGeometry,
+  opts: ResolvedOpts,
+): void {
+  const block1Name = params.style.dimblk1 || params.style.dimblk;
+  const block2Name = params.style.dimblk2 || params.style.dimblk;
+  const block1 = getArrowheadBlock(block1Name);
+  const block2 = getArrowheadBlock(block2Name);
+  const unitPx = params.style.dimasz * params.style.dimscale * params.transform.scale;
+  const a1 = toScreen(params, geometry.arrowAnchor1);
+  const a2 = toScreen(params, geometry.arrowAnchor2);
+
+  renderArrowhead(params.ctx, block1, {
+    screenAnchor: a1, direction: geometry.arrowDirection1, side: 1,
+    unitPx, strokeColor: opts.color, fillColor: opts.color,
+  });
+  renderArrowhead(params.ctx, block2, {
+    screenAnchor: a2, direction: geometry.arrowDirection2, side: 2,
+    unitPx, strokeColor: opts.color, fillColor: opts.color,
+  });
+}
+
+function drawText(
+  params: PreviewDimensionRenderParams,
+  geometry: DimGeometry,
+  opts: ResolvedOpts,
+): void {
+  // Text renderer reads style.dimclrt for color; force it to the preview
+  // color via the layerColour fallback (DIMSTYLE clone sets clrt = ByLayer).
+  const previewStyle = withPreviewColors(params.style);
+  renderDimensionText(params.ctx, {
+    entity: params.entity,
+    geometry,
+    style: previewStyle,
+    transform: params.transform,
+    viewport: params.viewport,
+    layerColour: opts.color,
+  });
+}
+
+function drawHelperPolyline(
+  params: PreviewDimensionRenderParams,
+  opts: ResolvedOpts,
+): void {
+  if (!opts.helperPath) return;
+  params.ctx.save();
+  params.ctx.globalAlpha = opts.helperOpacity;
+  params.ctx.strokeStyle = opts.helperColor;
+  params.ctx.lineWidth = 1;
+  params.ctx.setLineDash([...LINE_DASH_PATTERNS.DASHED]);
+  params.ctx.beginPath();
+  const first = toScreen(params, opts.helperPath[0]);
+  params.ctx.moveTo(first.x, first.y);
+  for (let i = 1; i < opts.helperPath.length; i++) {
+    const p = toScreen(params, opts.helperPath[i]);
+    params.ctx.lineTo(p.x, p.y);
+  }
+  params.ctx.stroke();
+  params.ctx.restore();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Canvas helpers
+// ──────────────────────────────────────────────────────────────────────────────
+
+const ACI_BYLAYER = 256;
+
+function withPreviewColors(style: DimStyle): DimStyle {
+  // Cheap clone: only the color fields need overriding. ByLayer (256) routes
+  // resolveDimColor() to the `layerColour` fallback which the caller has set
+  // to the preview color.
+  return { ...style, dimclrd: ACI_BYLAYER, dimclre: ACI_BYLAYER, dimclrt: ACI_BYLAYER };
+}
+
+function applySolidStroke(ctx: CanvasRenderingContext2D, color: string): void {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([]);
+  ctx.lineCap = 'butt';
+}
+
+function strokeSegment(params: PreviewDimensionRenderParams, seg: DimLineSegment): void {
+  const a = toScreen(params, seg.start);
+  const b = toScreen(params, seg.end);
+  params.ctx.beginPath();
+  params.ctx.moveTo(a.x, a.y);
+  params.ctx.lineTo(b.x, b.y);
+  params.ctx.stroke();
+}
+
+function strokeArc(params: PreviewDimensionRenderParams, geom: AngularDimGeometry): void {
+  const centre = toScreen(params, geom.arcCenter);
+  const radiusPx = geom.arcRadius * params.transform.scale;
+  // Mirror DimensionRenderer: Y-flip → negate angles + invert orientation.
+  const start = -geom.arcStartAngle;
+  const end = -geom.arcEndAngle;
+  const counterclockwise = (geom.arcEndAngle - geom.arcStartAngle) > 0;
+  params.ctx.beginPath();
+  params.ctx.arc(centre.x, centre.y, radiusPx, start, end, counterclockwise);
+  params.ctx.stroke();
+}
+
+function strokeLeader(params: PreviewDimensionRenderParams, geom: RadialDimGeometry): void {
+  if (geom.leaderPath.length < 2) return;
+  params.ctx.beginPath();
+  const first = toScreen(params, geom.leaderPath[0]);
+  params.ctx.moveTo(first.x, first.y);
+  for (let i = 1; i < geom.leaderPath.length; i++) {
+    const p = toScreen(params, geom.leaderPath[i]);
+    params.ctx.lineTo(p.x, p.y);
+  }
+  params.ctx.stroke();
+}
+
+function toScreen(params: PreviewDimensionRenderParams, p: Point2D): Point2D {
+  return CoordinateTransforms.worldToScreen(p, params.transform, params.viewport);
+}
+
+function readExtLine(geom: DimGeometry, side: 1 | 2): DimLineSegment | null {
+  if (geom.kind === 'linear' || geom.kind === 'angular') {
+    return side === 1 ? geom.extLine1 : geom.extLine2;
+  }
+  return null;
+}
