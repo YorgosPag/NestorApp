@@ -302,6 +302,10 @@ export function validateStairParams(
     ...(headroomViolations.length > 0 ? { headroomViolations } : {}),
     ...(gate.egressViolations.length > 0 ? { egressViolations: gate.egressViolations } : {}),
     ...(gate.adaViolations.length > 0 ? { adaViolations: gate.adaViolations } : {}),
+    // ADR-358 Phase 3g — yellow comfort warnings (NOK width below industry
+    // comfort threshold). Disjoint from `violationKeys`. UI routes to soft
+    // yellow band instead of red.
+    ...(gate.comfortViolations.length > 0 ? { comfortViolations: gate.comfortViolations } : {}),
     lastValidatedAt: Timestamp.now(),
   };
 }
