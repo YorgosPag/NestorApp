@@ -70,7 +70,10 @@ describe('LayerStateDropdownPopover — list rendering', () => {
         <PopoverHarness executeCommand={exec} />
       </TooltipProvider>,
     );
-    expect(screen.getByTestId('layer-state-list').textContent).toContain('layerState.empty');
+    const list = screen.getByTestId('layer-state-list');
+    // No row elements rendered; only the empty placeholder <li>.
+    expect(list.querySelectorAll('[data-testid^="layer-state-row-"]').length).toBe(0);
+    expect(list.querySelectorAll('li').length).toBe(1);
   });
 
   it('lists saved states after a save', () => {
