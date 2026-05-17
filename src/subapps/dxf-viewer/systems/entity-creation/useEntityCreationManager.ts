@@ -116,8 +116,9 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
 
       // Prepare entity data for command (strip 'id' as command generates its own)
       // This follows Command Pattern best practice - command owns entity lifecycle
-      // ADR-358 Phase 9D-5b-i: id-only — fallback to LayerStore "0" lookup if entity has no layerId.
-      const resolvedLayerId = entity.layerId ?? getLayer(DXF_DEFAULT_LAYER)?.id;
+      // ADR-358 Phase 9D-5a: id-only WRITE — CreateEntityCommand resolves legacy `.layer` from options.
+      const resolvedLayerName = entity.layer ?? DXF_DEFAULT_LAYER;
+      const resolvedLayerId = entity.layerId ?? getLayer(resolvedLayerName)?.id;
       const normalizedEntity: SceneEntity = {
         ...entity,
         layerId: resolvedLayerId,
@@ -137,7 +138,8 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
         transparency?: number;
       };
       const options: CreateEntityOptions = {
-        // ADR-358 Phase 9D-5b-i — id-only canonical layer binding (legacy `layer` name option dropped).
+        layer: resolvedLayerName,
+        // ADR-358 Phase 9D-5a — stable `layerId` forward (preferred path; legacy `layer` kept until 9D-5b-iii).
         layerId: resolvedLayerId,
         color: entity.color,
         lineweight: entity.lineweight,
