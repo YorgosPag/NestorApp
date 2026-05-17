@@ -392,7 +392,7 @@ describe('buildDimensionGeometry — orchestrator', () => {
     expect(g.measurementValue).toBeCloseTo(50, 9);
   });
 
-  it('throws for ordinate (not implemented in Phase B2)', () => {
+  it('dispatches to ordinate builder (Phase B3)', () => {
     const entity: OrdinateDimensionEntity = {
       id: 'dim_test',
       type: 'dimension',
@@ -403,8 +403,8 @@ describe('buildDimensionGeometry — orchestrator', () => {
       axis: 'x',
       layerId: 'layer_test',
     } as OrdinateDimensionEntity;
-    expect(() => buildDimensionGeometry(entity, ISO_129_TEMPLATE)).toThrow(
-      /not implemented in Phase B2/,
-    );
+    const g = buildDimensionGeometry(entity, ISO_129_TEMPLATE);
+    expect(g.kind).toBe('linear');
+    expect(g.measurementValue).toBeCloseTo(25, 9);
   });
 });

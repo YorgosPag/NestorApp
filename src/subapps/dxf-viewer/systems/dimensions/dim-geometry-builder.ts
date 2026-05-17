@@ -1,5 +1,5 @@
 /**
- * ADR-362 Phase B1/B2 — Dimension geometry builder (orchestrator).
+ * ADR-362 Phase B1/B2/B3 — Dimension geometry builder (orchestrator).
  *
  * Pure entry-point: maps a `DimensionEntity` + resolved `DimStyle` to the
  * renderer-facing `DimGeometry` (discriminated union). No React, no Firestore,
@@ -9,9 +9,10 @@
  * Phase B2 scope: `angular2L` + `angular3P` (→ `AngularDimGeometry`)
  *                 + `radius` + `diameter` + `arcLength` + `joggedRadius`
  *                 (→ `RadialDimGeometry`).
- *
- * Remaining variants (`ordinate`, `baseline`, `continued`) throw with the
- * sentinel `[dim-geometry-builder]` prefix; Phase B3 will plug them in.
+ * Phase B3 scope: `ordinate` (→ `LinearDimGeometry`, single-arrow leader)
+ *                 + `baseline` + `continued` (→ `LinearDimGeometry` via
+ *                 synthetic linear entity, parent resolved through optional
+ *                 `DimensionLookup` callback). 10/10 variants implemented.
  *
  * Per-variant calc lives in `./builders/*` to keep each file focused (Google
  * SRP, ≤500 LOC).
@@ -33,6 +34,18 @@ import {
   buildJoggedRadiusGeometry,
   buildRadiusGeometry,
 } from './builders/radial-builder';
+import { buildOrdinateGeometry } from './builders/ordinate-builder';
+import {
+  buildBaselineGeometry,
+  buildContinuedGeometry,
+} from './builders/chained-builder';
+
+/**
+ * Lazy parent resolver for baseline/continued chains (Phase B3). Returns
+ * `undefined` when the id is not in the active scene — the chained builder
+ * surfaces this as a "parent not found" error.
+ */
+export type DimensionLookup = (id: string) => DimensionEntity | undefined;
 
 /** A line segment defined by two endpoints. */
 export interface DimLineSegment {
@@ -118,12 +131,15 @@ export type DimGeometry =
   | RadialDimGeometry;
 
 /**
- * Dispatch to the per-variant builder. Throws for variants not yet implemented
- * (Phase B3 will extend the switch for ordinate/baseline/continued).
+ * Dispatch to the per-variant builder. `lookup` is required only for
+ * `baseline` / `continued` (Phase B3 chained variants); other variants ignore
+ * it. The exhaustive `never` default guards against future variants being
+ * added to the union without a matching case here.
  */
 export function buildDimensionGeometry(
   entity: DimensionEntity,
   style: DimStyle,
+  lookup?: DimensionLookup,
 ): DimGeometry {
   switch (entity.dimensionType) {
     case 'linear':
@@ -142,9 +158,17 @@ export function buildDimensionGeometry(
       return buildArcLengthGeometry(entity, style);
     case 'joggedRadius':
       return buildJoggedRadiusGeometry(entity, style);
-    default:
+    case 'ordinate':
+      return buildOrdinateGeometry(entity, style);
+    case 'baseline':
+      return buildBaselineGeometry(entity, style, lookup);
+    case 'continued':
+      return buildContinuedGeometry(entity, style, lookup);
+    default: {
+      const _exhaustive: never = entity;
       throw new Error(
-        `[dim-geometry-builder] dimensionType '${entity.dimensionType}' not implemented in Phase B2 (chained/ordinate land in Phase B3).`,
+        `[dim-geometry-builder] Unknown dimensionType on entity '${(_exhaustive as DimensionEntity).id}'.`,
       );
+    }
   }
 }
