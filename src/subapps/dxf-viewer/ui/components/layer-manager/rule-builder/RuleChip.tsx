@@ -42,7 +42,7 @@ export function RuleChip({ rule, onChange, onRemove }: RuleChipProps): React.Rea
 
   return (
     <fieldset
-      className={`${colors.bg.hover} ${getStatusBorder('muted')} ${PANEL_LAYOUT.PADDING.X_SM} ${PANEL_LAYOUT.PADDING.Y_XS} ${PANEL_LAYOUT.SPACING.GAP_XS}`}
+      className={`${colors.bg.hover} ${getStatusBorder('muted')} ${PANEL_LAYOUT.PADDING.LEFT_SM} ${PANEL_LAYOUT.PADDING.RIGHT_SM} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} ${PANEL_LAYOUT.SPACING.GAP_XS}`}
       aria-label={t('layerFilters.aria.ruleChip')}
     >
       <RuleFieldSelector value={rule.field} onChange={handleFieldChange} />
