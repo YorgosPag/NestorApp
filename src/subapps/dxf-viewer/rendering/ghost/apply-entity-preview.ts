@@ -23,6 +23,15 @@
 import type { Point2D } from '../types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
+// ADR-358 Phase 5d — parametric stair drag preview rebuilds full geometry
+// from new params; reuse the SSoT helpers so the ghost matches what the
+// commit adapter eventually persists.
+import {
+  applyStairGripDrag,
+  type StairGripKind,
+} from '../../systems/stairs/stair-grips';
+import { computeStairGeometry } from '../../systems/stairs/StairGeometryService';
+import type { StairEntity } from '../../types/stair';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,6 +51,14 @@ export interface EntityPreviewTransform {
   readonly delta: Point2D;
   readonly movesEntity: boolean;
   readonly edgeVertexIndices?: readonly [number, number];
+  /**
+   * ADR-358 Phase 5d — parametric stair discriminator + anchor. When set,
+   * `applyEntityPreview` routes through `applyStairGripDrag` to compute new
+   * `StairParams`, recomputes `StairGeometry`, and returns a wrapped stair
+   * ghost. Anchor is the grip world position captured at mouseDown.
+   */
+  readonly stairGripKind?: StairGripKind;
+  readonly anchorPos?: Point2D;
 }
 
 // ── Helpers (private) ────────────────────────────────────────────────────────
@@ -87,8 +104,37 @@ export function applyEntityPreview(
   preview: EntityPreviewTransform | undefined,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, anchorPos } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
+
+  // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────
+  // Stair grips mutate `StairParams`; geometry is fully derived. Route
+  // through the same SSoT pure helper the commit adapter uses, then re-derive
+  // geometry. We expose the resulting entity in the same `DxfStair` wrapper
+  // shape the canvas pipeline uses (`type: 'stair', stairEntity: {...}`),
+  // so `drawGhostEntity` can find it via `entity.stairEntity.geometry`.
+  if (stairGripKind && anchorPos) {
+    const stair = unwrapStair(entity);
+    if (!stair) return entity;
+    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const newParams = applyStairGripDrag(stairGripKind, {
+      originalParams: stair.params,
+      delta,
+      currentPos,
+    });
+    if (newParams === stair.params) return entity;
+    const newGeometry = computeStairGeometry(newParams);
+    const ghostStair: StairEntity = {
+      ...stair,
+      params: newParams,
+      geometry: newGeometry,
+    };
+    return {
+      ...(entity as object),
+      type: 'stair',
+      stairEntity: ghostStair,
+    } as unknown as DxfEntityUnion;
+  }
 
   const offsetPoint = (p: Point2D): Point2D => ({ x: p.x + delta.x, y: p.y + delta.y });
 
@@ -183,4 +229,20 @@ export function applyEntityPreview(
  */
 export function makeTranslationPreview(entityId: string, delta: Point2D): EntityPreviewTransform {
   return { entityId, gripIndex: -1, delta, movesEntity: true };
+}
+
+/**
+ * Resolve a `DxfStair`-wrapper entity OR raw `StairEntity` to a `StairEntity`.
+ * Returns `null` for non-stair entities. Mirror of the dual-shape lookup in
+ * `HitTestingService.convertToEntityModel` + `Bounds.calculateStairBounds`.
+ */
+function unwrapStair(entity: DxfEntityUnion): StairEntity | null {
+  const e = entity as Partial<StairEntity> & {
+    stairEntity?: Partial<StairEntity>;
+  };
+  if (e.params && e.geometry) return entity as unknown as StairEntity;
+  if (e.stairEntity?.params && e.stairEntity?.geometry) {
+    return e.stairEntity as StairEntity;
+  }
+  return null;
 }

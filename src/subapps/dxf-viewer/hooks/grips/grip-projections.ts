@@ -41,6 +41,11 @@ export function buildDxfDragPreview(
     },
     movesEntity: activeGrip.movesEntity,
     edgeVertexIndices: activeGrip.edgeVertexIndices,
+    // ADR-358 Phase 5d — propagate parametric stair discriminator + anchor
+    // so `applyEntityPreview` can reach `applyStairGripDrag` with the same
+    // inputs the commit adapter uses (origin/delta/currentPos).
+    ...(activeGrip.stairGripKind ? { stairGripKind: activeGrip.stairGripKind } : {}),
+    ...(activeGrip.stairGripKind ? { anchorPos } : {}),
   };
 }
 

@@ -102,6 +102,9 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       delta: dragPreview.delta,
       movesEntity: dragPreview.movesEntity,
       edgeVertexIndices: dragPreview.edgeVertexIndices,
+      // ADR-358 Phase 5d — stair parametric ghost discriminator pass-through.
+      ...(dragPreview.stairGripKind ? { stairGripKind: dragPreview.stairGripKind } : {}),
+      ...(dragPreview.anchorPos ? { anchorPos: dragPreview.anchorPos } : {}),
     };
 
     const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);

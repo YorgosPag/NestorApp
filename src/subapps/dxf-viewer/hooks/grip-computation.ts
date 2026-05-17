@@ -35,6 +35,16 @@ export interface DxfGripDragPreview {
   delta: Point2D;
   movesEntity: boolean;
   edgeVertexIndices?: [number, number];
+  /**
+   * ADR-358 Phase 5d — parametric stair drag-preview discriminator. Set when
+   * the active grip is a `stair-*` kind; consumed by `applyEntityPreview` to
+   * route through `applyStairGripDrag` + `computeStairGeometry` for the live
+   * ghost. `anchorPos` carries the grip world position captured at mouseDown
+   * so the preview can reconstruct `currentPos = anchorPos + delta` (the same
+   * value the commit path uses).
+   */
+  stairGripKind?: import('../systems/stairs/stair-grips').StairGripKind;
+  anchorPos?: Point2D;
 }
 
 /** Grip interaction state for rendering pipeline */

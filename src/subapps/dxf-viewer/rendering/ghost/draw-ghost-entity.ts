@@ -122,6 +122,41 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-358 Phase 5d — parametric stair ghost. Renders the stringer
+    // perimeter (closed polygon: outer forward + inner reversed) so the
+    // ghost matches the perceived silhouette during grip drag. Treads /
+    // walkline / arrow are intentionally skipped — for a fast RAF loop the
+    // perimeter alone delivers the AutoCAD-style "I see where it lands"
+    // feedback without per-frame full re-render.
+    case 'stair': {
+      const stair = (entity as unknown as {
+        stairEntity?: {
+          geometry?: {
+            stringers?: { inner: Array<Point2D>; outer: Array<Point2D> };
+          };
+        };
+        geometry?: {
+          stringers?: { inner: Array<Point2D>; outer: Array<Point2D> };
+        };
+      });
+      const stringers = stair.stairEntity?.geometry?.stringers ?? stair.geometry?.stringers;
+      if (!stringers || stringers.outer.length < 2 || stringers.inner.length < 2) return;
+      ctx.beginPath();
+      const first = toScreen(stringers.outer[0]);
+      ctx.moveTo(first.x, first.y);
+      for (let i = 1; i < stringers.outer.length; i++) {
+        const p = toScreen(stringers.outer[i]);
+        ctx.lineTo(p.x, p.y);
+      }
+      for (let i = stringers.inner.length - 1; i >= 0; i--) {
+        const p = toScreen(stringers.inner[i]);
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      return;
+    }
+
     default:
       return;
   }
