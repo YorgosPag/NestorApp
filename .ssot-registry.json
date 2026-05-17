@@ -3248,7 +3248,8 @@
     },
     "layer-state-system": {
       "ssotFile": "src/subapps/dxf-viewer/stores/LayerStateStore.ts",
-      "description": "ADR-358 §5.9 Q12 (FULL Enterprise). `LayerStateStore.ts` is the SSoT for saved LayerState runtime state. `layer-state-persistence.ts` owns the localStorage Firestore-shaped pub/sub layer. `types/layer-state.ts` exports `createLayerState` / `createLayerStateEntry` factories — direct `LayerState` literal construction outside this allowlist is forbidden. `RestoreLayerStateCommand` is the ONLY caller of `applyLayerSnapshotEntries`. Phase 13A 2026-05-17: extended with `.las` parser/exporter SSoT — `las-parser.ts` and `las-exporter.ts` are the ONLY modules permitted to parse / serialize `.las` content (forbiddenPatterns `parseLasContent` + `serializeLasContent`).",
+      "_phase13b_note": "Phase 13B.1 added cross-project templates SSoT: types/layer-state-template.ts + services/dxf-layer-state-template.service.ts. Construction factories `createLayerStateTemplate` / `createDxfTemplateCategory` are forbidden outside the types + service + their tests. Phase 13B.2 added the store extension (`saveCurrentAsTemplate` / `importTemplateAsState` / `searchTemplateSummaries`) + service injection (`setLayerStateTemplateService`) + orchestrator hook `useLayerStateTemplates` — these symbols are forbidden outside the store + hook + their tests.",
+      "description": "ADR-358 §5.9 Q12 (FULL Enterprise). `LayerStateStore.ts` is the SSoT for saved LayerState runtime state. `layer-state-persistence.ts` owns the localStorage Firestore-shaped pub/sub layer. `types/layer-state.ts` exports `createLayerState` / `createLayerStateEntry` factories — direct `LayerState` literal construction outside this allowlist is forbidden. `RestoreLayerStateCommand` is the ONLY caller of `applyLayerSnapshotEntries`. Phase 13A 2026-05-17: extended with `.las` parser/exporter SSoT — `las-parser.ts` and `las-exporter.ts` are the ONLY modules permitted to parse / serialize `.las` content (forbiddenPatterns `parseLasContent` + `serializeLasContent`). Phase 13B.2 2026-05-17: the store API additions for cross-project templates (`saveCurrentAsTemplate`, `importTemplateAsState`, `searchTemplateSummaries`, `setLayerStateTemplateService`) are reachable only through `useLayerStateTemplates`.",
       "forbiddenPatterns": [
         "\\bsaveCurrentLayerState\\b",
         "\\brenameLayerState\\b",
@@ -3256,7 +3257,13 @@
         "\\bapplyLayerSnapshotEntries\\b",
         "\\bcaptureCurrentSnapshot\\b",
         "\\bparseLasContent\\b",
-        "\\bserializeLasContent\\b"
+        "\\bserializeLasContent\\b",
+        "\\bcreateLayerStateTemplate\\b",
+        "\\bcreateDxfTemplateCategory\\b",
+        "\\bsaveCurrentAsTemplate\\b",
+        "\\bimportTemplateAsState\\b",
+        "\\bsearchTemplateSummaries\\b",
+        "\\bsetLayerStateTemplateService\\b"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/stores/LayerStateStore.ts",
@@ -3270,12 +3277,17 @@
         "src/subapps/dxf-viewer/services/__tests__/las-parser.test.ts",
         "src/subapps/dxf-viewer/services/__tests__/las-exporter.test.ts",
         "src/subapps/dxf-viewer/types/layer-state.ts",
+        "src/subapps/dxf-viewer/types/layer-state-template.ts",
+        "src/services/dxf-layer-state-template.service.ts",
+        "src/services/__tests__/dxf-layer-state-template.service.test.ts",
         "src/subapps/dxf-viewer/core/commands/layer/RestoreLayerStateCommand.ts",
         "src/subapps/dxf-viewer/core/commands/layer/__tests__/RestoreLayerStateCommand.test.ts",
         "src/subapps/dxf-viewer/ui/components/layer-state/useLayerStateDropdown.ts",
         "src/subapps/dxf-viewer/ui/components/layer-state/LayerStateDropdown.tsx",
         "src/subapps/dxf-viewer/ui/components/layer-state/LayerStateDropdownPopover.tsx",
-        "src/subapps/dxf-viewer/ui/components/layer-state/__tests__/LayerStateDropdown.test.tsx"
+        "src/subapps/dxf-viewer/ui/components/layer-state/useLayerStateTemplates.ts",
+        "src/subapps/dxf-viewer/ui/components/layer-state/__tests__/LayerStateDropdown.test.tsx",
+        "src/subapps/dxf-viewer/ui/components/layer-state/__tests__/useLayerStateTemplates.test.ts"
       ],
       "addedDate": "2026-05-17",
       "addedByAdr": "ADR-358",
