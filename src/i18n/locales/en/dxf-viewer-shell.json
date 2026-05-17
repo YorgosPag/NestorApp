@@ -517,7 +517,8 @@
       "dimStyle": "Style",
       "dimOverride": "Override",
       "dimText": "Text",
-      "dimProperties": "Properties"
+      "dimProperties": "Properties",
+      "bim": "Structural"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -557,6 +558,21 @@
       "polygon": "Polygon",
       "ellipse": "Ellipse",
       "stair": "Stair",
+      "bim": {
+        "wall": "Wall",
+        "opening": "Opening",
+        "openingVariants": {
+          "door": "Door",
+          "window": "Window",
+          "slidingDoor": "Sliding Door",
+          "frenchDoor": "French Door",
+          "fixed": "Fixed Opening"
+        },
+        "slab": "Slab",
+        "slabOpening": "Slab Opening",
+        "column": "Column",
+        "beam": "Beam"
+      },
       "select": "Select",
       "gripEdit": "Grip Edit",
       "move": "Move",
