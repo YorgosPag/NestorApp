@@ -23,9 +23,11 @@ import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import type { Point3D } from '../../rendering/types/Types';
 import type { StairEntity } from '../../types/stair';
+import type { Entity } from '../../types/entities';
 import { isStairEntity } from '../../types/entities';
 import { getStairGrips } from '../../systems/stairs/stair-grips';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { HOVER_HIGHLIGHT } from '../../config/color-config';
 
 const TREAD_FILL_ALPHA = 0.12;
 const WALKLINE_DASH: readonly [number, number] = [6, 4];
@@ -47,34 +49,60 @@ export class StairRenderer extends BaseEntityRenderer {
     // rest of the scene renders normally; the entity is also dropped from
     // hit-testing via the matching guard in HitTestingService.
     if (!stair.geometry || !stair.params) return;
-    // eslint-disable-next-line no-console
-    if (options.hovered || options.selected) {
-      // eslint-disable-next-line no-console
-      console.info('[StairRenderer] render', {
-        id: entity.id,
-        hovered: options.hovered,
-        selected: options.selected,
-        phase: options.phase,
-      });
+    const { geometry } = stair;
+
+    // ADR-358 Phase 8 — manual phase pipeline.
+    // We CANNOT use the SSoT `renderWithPhases` helper as-is: it calls
+    // `renderGeometry()` once during the glow pre-pass and again for the main
+    // pass. For lines/circles that is fine (stroke-only), but the stair
+    // renders multiple FILLED tread polygons in the same callback. The fill
+    // grey rgba painted during the glow pre-pass covers the glow stroke of
+    // adjacent treads, leaving the stair without the hover halo (regression
+    // observed 2026-05-17). Solution: keep the same phase semantics but
+    // suppress the tread fill during the glow pre-pass — only the outlines
+    // are stroked with the hover-glow colour. The main pass restores the
+    // normal style + full fill+stroke, identical to the non-hover render.
+    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
+
+    if (phaseState.phase === 'highlighted') {
+      const entityLineWidth = Math.max(
+        1,
+        (entity as EntityModel & { lineWidth?: number }).lineWidth || 1,
+      );
+      this.ctx.save();
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+      this.ctx.lineWidth = entityLineWidth + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
+      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
+      this.ctx.setLineDash([]);
+      // Industry pattern for composite entities (AutoCAD/Revit blocks &
+      // groups): the hover halo is the bounding-box outline rather than a
+      // per-primitive glow. A per-primitive halo on a stair gets clobbered
+      // by the next tread's fill before it reaches the screen — only the
+      // outermost ring survives. Drawing the bbox once gives a guaranteed
+      // continuous magenta halo around the whole stair, identical in
+      // perceived weight to the per-line glow of simpler entities.
+      this.drawObbOutline(stair);
+      this.ctx.restore();
     }
-    // Route through the SSoT 3-phase template (`renderWithPhases`) so the
-    // stair participates in the same hover/highlight pipeline as every other
-    // entity (yellow glow pre-pass + phase-appropriate setupStyle + grips).
-    // Phase 5b drew everything raw with a manual `ctx.save/restore`, which
-    // bypassed `PhaseManager` and left the stair without the canonical hover
-    // glow. Fixed 2026-05-17.
-    this.renderWithPhases(
-      entity,
-      options,
-      () => {
-        const { geometry } = stair;
-        this.drawTreads(geometry.treadsBelowCut);
-        this.drawStringers(geometry.stringers.inner, geometry.stringers.outer);
-        this.drawHandrails(stair);
-        this.drawWalkline(geometry.walkline);
-        this.drawArrow(geometry.arrowSymbol.start, geometry.arrowSymbol.end, geometry.arrowSymbol.label);
-      },
+
+    // Main pass — phase-appropriate style + full fill+stroke render.
+    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
+    this.drawTreads(geometry.treadsBelowCut);
+    this.drawStringers(geometry.stringers.inner, geometry.stringers.outer);
+    this.drawHandrails(stair);
+    this.drawWalkline(geometry.walkline);
+    this.drawArrow(
+      geometry.arrowSymbol.start,
+      geometry.arrowSymbol.end,
+      geometry.arrowSymbol.label,
     );
+
+    // Grips (selected only, mirrors `renderWithPhases` behaviour).
+    if (options.grips) {
+      this.renderGrips(entity, options);
+    }
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
@@ -99,14 +127,90 @@ export class StairRenderer extends BaseEntityRenderer {
 
   // ─── Internal drawing helpers ───────────────────────────────────────────
 
-  private drawTreads(treads: ReadonlyArray<ReadonlyArray<Point3D>>): void {
+  /**
+   * Glow halo for hover/highlight (ADR-358 Phase 8). Draws an Oriented
+   * Bounding Box (OBB) aligned with `params.direction` so the halo follows
+   * the stair's rotation rather than the axis-aligned bbox.
+   *
+   * For straight/spiral/elliptical kinds the OBB matches the stair footprint
+   * exactly; for L/U/gamma the OBB encloses the full flight envelope (still
+   * a tighter and more visually correct halo than the AABB).
+   *
+   * Industry pattern (AutoCAD/Revit blocks): hover halo follows the entity's
+   * local frame. A per-primitive glow per tread gets overpainted by the
+   * next tread's fill before it reaches the screen — only the outermost
+   * ring survives — so a single OBB outline gives a guaranteed continuous
+   * magenta halo at the same perceived weight as the per-line glow.
+   */
+  private drawObbOutline(stair: StairEntity): void {
+    const params = stair.params;
+    const bbox = stair.geometry.bbox;
+    if (!bbox?.min || !bbox?.max) return;
+
+    // Project the AABB into the stair's local frame (rotated by `direction`),
+    // then re-emit the four world-space corners. This handles every variant
+    // kind uniformly without per-kind branching.
+    const dirRad = (params.direction * Math.PI) / 180;
+    const cos = Math.cos(dirRad);
+    const sin = Math.sin(dirRad);
+    const bp = params.basePoint;
+
+    // 1) Transform every AABB corner into the local frame (centered on bp).
+    const cornersWorld = [
+      { x: bbox.min.x, y: bbox.min.y },
+      { x: bbox.max.x, y: bbox.min.y },
+      { x: bbox.max.x, y: bbox.max.y },
+      { x: bbox.min.x, y: bbox.max.y },
+    ];
+    const cornersLocal = cornersWorld.map((p) => {
+      const dx = p.x - bp.x;
+      const dy = p.y - bp.y;
+      return { u: cos * dx + sin * dy, v: -sin * dx + cos * dy };
+    });
+    // 2) Re-tighten the bbox in the local frame.
+    let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
+    for (const c of cornersLocal) {
+      if (c.u < uMin) uMin = c.u;
+      if (c.u > uMax) uMax = c.u;
+      if (c.v < vMin) vMin = c.v;
+      if (c.v > vMax) vMax = c.v;
+    }
+    // 3) Project the local-frame OBB corners back to world space.
+    const localCorners: ReadonlyArray<{ u: number; v: number }> = [
+      { u: uMin, v: vMin },
+      { u: uMax, v: vMin },
+      { u: uMax, v: vMax },
+      { u: uMin, v: vMax },
+    ];
+    const worldCorners = localCorners.map(({ u, v }) => ({
+      x: bp.x + cos * u - sin * v,
+      y: bp.y + sin * u + cos * v,
+    }));
+
+    this.ctx.beginPath();
+    const first = this.worldToScreen(worldCorners[0]);
+    this.ctx.moveTo(first.x, first.y);
+    for (let i = 1; i < worldCorners.length; i++) {
+      const s = this.worldToScreen(worldCorners[i]);
+      this.ctx.lineTo(s.x, s.y);
+    }
+    this.ctx.closePath();
+    this.ctx.stroke();
+  }
+
+  private drawTreads(
+    treads: ReadonlyArray<ReadonlyArray<Point3D>>,
+    options: { skipFill?: boolean } = {},
+  ): void {
     if (treads.length === 0) return;
     // strokeStyle is set upstream by `renderWithPhases` (hover glow / phase
     // setupStyle SSoT) — DO NOT overwrite here, otherwise the yellow hover
     // pass is lost. Only the stair-specific fill (translucent slate) stays
     // locally because it is not part of the entity style pipeline.
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.ctx.fillStyle = `rgba(120, 144, 156, ${TREAD_FILL_ALPHA})`;
+    if (!options.skipFill) {
+      this.ctx.fillStyle = `rgba(120, 144, 156, ${TREAD_FILL_ALPHA})`;
+    }
 
     for (const tread of treads) {
       if (tread.length < 3) continue;
@@ -118,7 +222,7 @@ export class StairRenderer extends BaseEntityRenderer {
         this.ctx.lineTo(s.x, s.y);
       }
       this.ctx.closePath();
-      this.ctx.fill();
+      if (!options.skipFill) this.ctx.fill();
       this.ctx.stroke();
     }
   }
