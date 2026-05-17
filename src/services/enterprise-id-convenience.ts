@@ -214,6 +214,10 @@ export const generateDictEntryId = () => enterpriseIdService.generateDictEntryId
 export const generateStairId = () => enterpriseIdService.generateStairId();
 export const generateStairPresetId = () => enterpriseIdService.generateStairPresetId();
 
+// DXF Layer Filters Builder (ADR-358 §5.7.bis Q11 — Phase 11)
+export const generateLayerFilterGroupId = () => enterpriseIdService.generateLayerFilterGroupId();
+export const generateLayerFilterPropertyId = () => enterpriseIdService.generateLayerFilterPropertyId();
+
 // DXF Enterprise Dimension System (ADR-362)
 export const generateDimensionId = () => enterpriseIdService.generateDimensionId();
 export const generateDimStyleId = () => enterpriseIdService.generateDimStyleId();
