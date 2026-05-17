@@ -33,7 +33,10 @@ import {
 } from '../../../stores/LayerStateStore';
 import { getAllLayers } from '../../../stores/LayerStore';
 import { buildLasFilename } from '../../../services/las-exporter';
-import { RestoreLayerStateCommand } from '../../../core/commands/layer/RestoreLayerStateCommand';
+import {
+  RestoreLayerStateCommand,
+  type RestoreLayerStateOptions,
+} from '../../../core/commands/layer/RestoreLayerStateCommand';
 import {
   useLayerStateTemplates,
   type UseLayerStateTemplatesResult,
@@ -82,6 +85,8 @@ export interface LayerStateDropdownActions {
   readonly updateCategory: (id: string, category: string) => void;
   /** Smart restore: direct if no unmatched layers, dialog otherwise (D1 policy). */
   readonly smartRestore: (id: string) => void;
+  /** Restore with explicit options — used by LayerStateRestoreDialog after user confirms. */
+  readonly restoreWithOptions: (id: string, options: RestoreLayerStateOptions) => void;
 }
 
 export interface LayerStateDropdownDialogState {
@@ -238,6 +243,14 @@ export function useLayerStateDropdown(
     [executeCommand],
   );
 
+  const restoreWithOptions = useCallback(
+    (id: string, options: RestoreLayerStateOptions): void => {
+      const cmd = new RestoreLayerStateCommand({ stateId: id, options });
+      executeCommand(cmd);
+    },
+    [executeCommand],
+  );
+
   const dialogs = useMemo<LayerStateDropdownDialogState>(
     () => ({
       browserOpen,
@@ -270,6 +283,7 @@ export function useLayerStateDropdown(
       bulkDelete,
       updateCategory,
       smartRestore,
+      restoreWithOptions,
     },
   };
 }
