@@ -3245,6 +3245,30 @@
       "addedDate": "2026-05-17",
       "addedByAdr": "ADR-358",
       "tier": 3
+    },
+    "layer-filter-engine": {
+      "ssotFile": "src/subapps/dxf-viewer/services/layer-filter-engine.ts",
+      "description": "ADR-358 §5.7.bis Q11 (FULL Enterprise Δ + GOL) — `layer-filter-engine.ts` is the SSoT for evaluating `LayerFilter` (group + properties with recursive AND/OR rulesets). `layer-smart-filters.ts` owns the deterministic Smart filter set derived from a LayerStore snapshot. `layer-filter-validation.ts` owns the defensive JSON validation used by both import + Firestore hydrate. Phase 11 ratchet: forbids `applyLayerFilter` / `getSmartFilters` / `validateLayerFilterJson` invocations outside the allowlist files.",
+      "forbiddenPatterns": [
+        "\\bapplyLayerFilter\\b",
+        "\\bgetSmartFilters\\b",
+        "\\bvalidateLayerFilterJson\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/services/layer-filter-engine.ts",
+        "src/subapps/dxf-viewer/services/layer-smart-filters.ts",
+        "src/subapps/dxf-viewer/services/layer-filter-validation.ts",
+        "src/subapps/dxf-viewer/services/layer-filter-io.ts",
+        "src/subapps/dxf-viewer/services/layer-filter-persistence.ts",
+        "src/subapps/dxf-viewer/stores/LayerFiltersStore.ts",
+        "src/subapps/dxf-viewer/services/__tests__/layer-filter-engine.test.ts",
+        "src/subapps/dxf-viewer/services/__tests__/layer-smart-filters.test.ts",
+        "src/subapps/dxf-viewer/services/__tests__/layer-filter-io.test.ts",
+        "src/subapps/dxf-viewer/stores/__tests__/LayerFiltersStore.test.ts"
+      ],
+      "addedDate": "2026-05-17",
+      "addedByAdr": "ADR-358",
+      "tier": 3
     }
   }
 }
