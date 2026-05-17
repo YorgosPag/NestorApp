@@ -473,7 +473,8 @@
       "cursor": "Cursor",
       "developer": "Developer",
       "ai": "AI",
-      "window": "Window"
+      "window": "Window",
+      "dimensions": "Dimensions"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -743,6 +744,21 @@
         "manual": "Measure Area (Polygon)",
         "auto": "Auto Area Detection"
       },
+      "dim": "Dimension",
+      "dimVariants": {
+        "smart": "Smart Dimension",
+        "linear": "Linear",
+        "aligned": "Aligned",
+        "angular2L": "Angular (2 Lines)",
+        "angular3P": "Angular (3 Points)",
+        "radius": "Radius",
+        "diameter": "Diameter",
+        "arcLength": "Arc Length",
+        "joggedRadius": "Jogged Radius",
+        "ordinate": "Ordinate"
+      },
+      "dimBaseline": "Baseline",
+      "dimContinued": "Continued",
       "dropdown": {
         "openVariants": "Open variants"
       },
