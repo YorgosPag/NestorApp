@@ -19,15 +19,19 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   deleteLayerStateById,
+  duplicateLayerState,
   exportLayerStatesAsLas,
+  getLayerState,
   getLayerStateStoreSnapshot,
   importLayerStatesFromLas,
   renameLayerState,
   saveCurrentLayerState,
   subscribeLayerStateStore,
+  updateLayerStateCategory,
   type LasImportSummary,
   type LayerStateStoreSnapshot,
 } from '../../../stores/LayerStateStore';
+import { getAllLayers } from '../../../stores/LayerStore';
 import { buildLasFilename } from '../../../services/las-exporter';
 import { RestoreLayerStateCommand } from '../../../core/commands/layer/RestoreLayerStateCommand';
 import {
@@ -68,12 +72,24 @@ export interface LayerStateDropdownActions {
   readonly openSaveAsTemplate: (sourceStateId?: string) => void;
   readonly closeTemplateBrowser: () => void;
   readonly closeSaveAsTemplate: () => void;
+  // Phase 13C — Manage panel
+  readonly openManagePanel: () => void;
+  readonly closeManagePanel: () => void;
+  readonly openRestoreDialog: (stateId: string) => void;
+  readonly closeRestoreDialog: () => void;
+  readonly duplicate: (id: string, nameSuffix: string) => LayerState | null;
+  readonly bulkDelete: (ids: ReadonlyArray<string>) => void;
+  readonly updateCategory: (id: string, category: string) => void;
+  /** Smart restore: direct if no unmatched layers, dialog otherwise (D1 policy). */
+  readonly smartRestore: (id: string) => void;
 }
 
 export interface LayerStateDropdownDialogState {
   readonly browserOpen: boolean;
   readonly saveAsOpen: boolean;
   readonly saveAsSourceStateId: string | undefined;
+  readonly managePanelOpen: boolean;
+  readonly restoreDialogStateId: string | undefined;
 }
 
 export interface LayerStateDropdownState {
@@ -150,6 +166,8 @@ export function useLayerStateDropdown(
   const [browserOpen, setBrowserOpen] = useState(false);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [saveAsSourceStateId, setSaveAsSourceStateId] = useState<string | undefined>(undefined);
+  const [managePanelOpen, setManagePanelOpen] = useState(false);
+  const [restoreDialogStateId, setRestoreDialogStateId] = useState<string | undefined>(undefined);
 
   const openTemplateBrowser = useCallback((): void => {
     setBrowserOpen(true);
@@ -169,9 +187,66 @@ export function useLayerStateDropdown(
     setSaveAsSourceStateId(undefined);
   }, []);
 
+  const openManagePanel = useCallback((): void => {
+    setManagePanelOpen(true);
+  }, []);
+
+  const closeManagePanel = useCallback((): void => {
+    setManagePanelOpen(false);
+  }, []);
+
+  const openRestoreDialog = useCallback((stateId: string): void => {
+    setRestoreDialogStateId(stateId);
+  }, []);
+
+  const closeRestoreDialog = useCallback((): void => {
+    setRestoreDialogStateId(undefined);
+  }, []);
+
+  const duplicate = useCallback(
+    (id: string, nameSuffix: string): LayerState | null => duplicateLayerState(id, nameSuffix),
+    [],
+  );
+
+  const bulkDelete = useCallback((ids: ReadonlyArray<string>): void => {
+    for (const id of ids) {
+      deleteLayerStateById(id);
+    }
+  }, []);
+
+  const updateCategory = useCallback((id: string, category: string): void => {
+    updateLayerStateCategory(id, category);
+  }, []);
+
+  const smartRestore = useCallback(
+    (id: string): void => {
+      const target = getLayerState(id);
+      if (!target) return;
+      const live = getAllLayers();
+      const liveById = new Set(live.map((l) => l.id));
+      const liveByName = new Set(live.map((l) => l.name.toLowerCase()));
+      const hasUnmatched = target.snapshot.some(
+        (e) => !liveById.has(e.layerId) && !liveByName.has(e.layerName.toLowerCase()),
+      );
+      if (hasUnmatched) {
+        setRestoreDialogStateId(id);
+      } else {
+        const cmd = new RestoreLayerStateCommand({ stateId: id });
+        executeCommand(cmd);
+      }
+    },
+    [executeCommand],
+  );
+
   const dialogs = useMemo<LayerStateDropdownDialogState>(
-    () => ({ browserOpen, saveAsOpen, saveAsSourceStateId }),
-    [browserOpen, saveAsOpen, saveAsSourceStateId],
+    () => ({
+      browserOpen,
+      saveAsOpen,
+      saveAsSourceStateId,
+      managePanelOpen,
+      restoreDialogStateId,
+    }),
+    [browserOpen, saveAsOpen, saveAsSourceStateId, managePanelOpen, restoreDialogStateId],
   );
 
   return {
@@ -187,6 +262,14 @@ export function useLayerStateDropdown(
       openSaveAsTemplate,
       closeTemplateBrowser,
       closeSaveAsTemplate,
+      openManagePanel,
+      closeManagePanel,
+      openRestoreDialog,
+      closeRestoreDialog,
+      duplicate,
+      bulkDelete,
+      updateCategory,
+      smartRestore,
     },
   };
 }
