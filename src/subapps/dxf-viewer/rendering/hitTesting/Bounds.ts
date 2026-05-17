@@ -127,10 +127,20 @@ export class BoundsCalculator {
    * hit-test pre-filter → unselectable on canvas.
    */
   private static calculateStairBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
-    const stair = entity as { id?: string; geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } } };
-    const bbox = stair.geometry?.bbox;
-    // eslint-disable-next-line no-console
-    console.info('[BoundsCalculator] calculateStairBounds', { id: stair.id, bbox });
+    // The stair flows through TWO entity shapes:
+    //   - `DxfStair` wrapper (canvas pipeline): `entity.stairEntity.geometry.bbox`
+    //   - flat `StairEntity` (hit-test pipeline post-convertToEntityModel):
+    //     `entity.geometry.bbox`
+    // Resolve from either shape so both code paths populate the spatial index.
+    type StairLike = {
+      id?: string;
+      geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } };
+      stairEntity?: {
+        geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } };
+      };
+    };
+    const stair = entity as StairLike;
+    const bbox = stair.geometry?.bbox ?? stair.stairEntity?.geometry?.bbox;
     if (!bbox || !bbox.min || !bbox.max) return null;
     return this.createBoundingBox(
       bbox.min.x - tolerance,
