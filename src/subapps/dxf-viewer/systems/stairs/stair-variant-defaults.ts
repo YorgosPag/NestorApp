@@ -22,6 +22,7 @@ import type {
   StairKind,
   StairParams,
   StairVariantParams,
+  StairVariantLShapeWinders,
 } from '../../types/stair';
 
 const DEFAULT_SWEEP_DEG = 360;
@@ -46,6 +47,7 @@ export function buildDefaultVariantFor(
     case 'l-shape':
       return {
         kind: 'l-shape',
+        cornerStyle: 'landing',
         turnDirection: 'right',
         landingDepth: 'auto',
         flightSplit: splitTwoFlightsWithLanding(prev.stepCount),
@@ -186,6 +188,43 @@ export function splitThreeFlightsWithLandings(
   stepCount: number,
 ): readonly [number, number, number] {
   return splitThreeFlights(Math.max(3, stepCount - 2));
+}
+
+/**
+ * ADR-358 Phase 3f — Split for l-shape with winders. Winders at the corner
+ * are walkable steps (z = (n1+i)·rise), so `n1 + winderCount + n2 = stepCount`
+ * ⇒ split (stepCount − winderCount). Clamp ≥1 per flight.
+ */
+export function splitTwoFlightsForWinders(
+  stepCount: number,
+  winderCount: number,
+): readonly [number, number] {
+  return splitTwoFlights(Math.max(2, stepCount - Math.max(1, winderCount)));
+}
+
+const DEFAULT_LSHAPE_WINDER_COUNT = 3;          // NOK quarter-turn standard
+const DEFAULT_LSHAPE_WINDER_METHOD = 'equal-going' as const; // NOK walkline-preserving
+
+/**
+ * ADR-358 Phase 3f — Build a fresh l-shape variant with NOK-compliant
+ * winders at the corner. Used by the ribbon bridge when the user toggles
+ * `cornerStyle` from 'landing' → 'winders'. `turnDirection` preserved from
+ * the previous variant when caller passes one.
+ */
+export function buildLShapeWindersVariant(
+  prev: Readonly<StairParams>,
+): StairVariantLShapeWinders {
+  const prevTurn =
+    prev.variant.kind === 'l-shape' ? prev.variant.turnDirection : 'right';
+  const winderCount = DEFAULT_LSHAPE_WINDER_COUNT;
+  return {
+    kind: 'l-shape',
+    cornerStyle: 'winders',
+    turnDirection: prevTurn,
+    winderCount,
+    winderMethod: DEFAULT_LSHAPE_WINDER_METHOD,
+    flightSplit: splitTwoFlightsForWinders(prev.stepCount, winderCount),
+  };
 }
 
 function clonePoint(p: Readonly<Point3D>): Point3D {
