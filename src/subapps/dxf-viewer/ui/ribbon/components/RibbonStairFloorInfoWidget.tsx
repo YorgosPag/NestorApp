@@ -67,11 +67,21 @@ export function RibbonStairFloorInfoWidget(): React.JSX.Element | null {
   const universalSelection = useUniversalSelection();
   const { execute } = useCommandHistory();
 
-  const floorId =
-    levelManager.saveContext?.entityType === 'floor'
-      ? levelManager.saveContext?.floorId ?? null
-      : null;
+  // ADR-358 Phase 9 — accept any populated floorId in saveContext (entityType
+  // check is documentation, not a gate). Wizard flows that set floorId but
+  // miss entityType (legacy import paths) still surface the floor link.
+  const floorId = levelManager.saveContext?.floorId ?? null;
   const floor = useFloorMetadata(floorId);
+
+  if (typeof window !== 'undefined') {
+    // Diagnostic — remove once Phase 9 UX is validated end-to-end.
+    (window as unknown as Record<string, unknown>).__stairFloorInfoDebug = {
+      saveContext: levelManager.saveContext,
+      floorId,
+      floor,
+      stairId: universalSelection.getPrimaryId(),
+    };
+  }
 
   const stair = useMemo<StairEntity | null>(() => {
     const id = universalSelection.getPrimaryId();
@@ -103,7 +113,37 @@ export function RibbonStairFloorInfoWidget(): React.JSX.Element | null {
     execute(new UpdateStairParamsCommand(stair.id, params, prev, sm, false));
   }, [execute, floor, levelManager, stair]);
 
-  if (!floor || !stair) return null;
+  // ADR-358 Phase 9 debug — surface gating state inline so the user can see
+  // why the panel is empty without opening DevTools. Remove once the wiring
+  // is validated end-to-end.
+  if (!stair) {
+    return (
+      <span className="dxf-ribbon-stair-floor-info">
+        <span className="dxf-ribbon-stair-floor-value">
+          [debug] no stair selected
+        </span>
+      </span>
+    );
+  }
+  if (!floorId) {
+    return (
+      <span className="dxf-ribbon-stair-floor-info">
+        <span className="dxf-ribbon-stair-floor-value">
+          [debug] saveContext.floorId missing — entityType=
+          {String(levelManager.saveContext?.entityType ?? 'undefined')}
+        </span>
+      </span>
+    );
+  }
+  if (!floor) {
+    return (
+      <span className="dxf-ribbon-stair-floor-info">
+        <span className="dxf-ribbon-stair-floor-value">
+          [debug] FLOORS/{floorId} not found or still loading
+        </span>
+      </span>
+    );
+  }
 
   const linked = isLinkedToFloor(stair.params.multiStoryConfig, floor);
   const endElevation =

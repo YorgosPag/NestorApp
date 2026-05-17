@@ -54,7 +54,6 @@ export const ENTERPRISE_LIMITS = {
 // =============================================================================
 // 🚨 SECURITY ERROR TYPES
 // =============================================================================
-
 export enum SecurityErrorType {
   FILE_SIZE_EXCEEDED = 'FILE_SIZE_EXCEEDED',
   ENTITY_COUNT_EXCEEDED = 'ENTITY_COUNT_EXCEEDED',
@@ -65,14 +64,12 @@ export enum SecurityErrorType {
   MEMORY_LIMIT_EXCEEDED = 'MEMORY_LIMIT_EXCEEDED',
   SUSPICIOUS_PATTERNS = 'SUSPICIOUS_PATTERNS'
 }
-
 export enum SecuritySeverity {
   LOW = 'LOW',       // Warning - allow with caution
   MEDIUM = 'MEDIUM', // Error - block but recoverable
   HIGH = 'HIGH',     // Critical - hard block
   CRITICAL = 'CRITICAL' // Security threat - log and block
 }
-
 export interface SecurityValidationResult {
   isValid: boolean;
   severity: SecuritySeverity;
@@ -81,11 +78,9 @@ export interface SecurityValidationResult {
   details?: Record<string, unknown>;
   recommendations?: string[];
 }
-
 // =============================================================================
 // 🛡️ ENTERPRISE DXF SECURITY VALIDATOR CLASS
 // =============================================================================
-
 export class DxfSecurityValidator extends SceneValidator {
   private static readonly MALICIOUS_PATTERNS = [
     // JavaScript injection patterns
@@ -199,7 +194,7 @@ export class DxfSecurityValidator extends SceneValidator {
     }
 
     // Layer count validation
-    const layerCount = Object.keys(scene.layers || {}).length;
+    const layerCount = Object.keys(scene.layersById ?? scene.layers ?? {}).length;
     if (layerCount > ENTERPRISE_LIMITS.MAX_LAYER_COUNT) {
       return {
         isValid: false,

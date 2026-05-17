@@ -182,7 +182,7 @@ export class DxfImportService {
         scene,
         stats: {
           entityCount: scene.entities.length,
-          layerCount: Object.keys(scene.layers).length,
+          layerCount: Object.keys(scene.layersById ?? scene.layers).length,
           parseTimeMs
         }
       };

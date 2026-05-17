@@ -87,16 +87,12 @@ export interface UseSpecialToolsReturn {
 export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsReturn {
   const { activeTool, levelManager } = props;
 
-  // ADR-358 Phase 9 — Q17 floor link source for the stair tool. When the
-  // active save context targets a floor (`entityType === 'floor'`), subscribe
-  // to that floor's `FLOORS/{floorId}` doc so the stair builder can seed
+  // ADR-358 Phase 9 — Q17 floor link source for the stair tool. Any populated
+  // `floorId` on the save context activates the bridge; the builder seeds
   // `multiStoryConfig.storyHeight` (mm) from the floor `height` (m) at commit
-  // time. Building-level / property-level contexts return `null` and the
-  // builder falls back to Phase 7a behavior.
-  const floorIdForStair =
-    levelManager.saveContext?.entityType === 'floor'
-      ? levelManager.saveContext?.floorId ?? null
-      : null;
+  // time. Building-level / property-level contexts have no floorId and the
+  // builder falls back to Phase 7a behavior (no auto-init).
+  const floorIdForStair = levelManager.saveContext?.floorId ?? null;
   const floorForStair = useFloorMetadata(floorIdForStair);
 
   // ============================================================================

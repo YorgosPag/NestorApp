@@ -37,7 +37,7 @@ import type { FileRecord } from '@/types/file-record';
 export function generateSceneChecksum(scene: SceneModel): string {
   const data = {
     entityCount: scene.entities.length,
-    layerCount: Object.keys(scene.layers).length,
+    layerCount: Object.keys(scene.layersById ?? scene.layers).length,
     bounds: scene.bounds,
     units: scene.units,
   };
@@ -398,6 +398,13 @@ export async function loadFromStorageImpl(fileId: string): Promise<DxfFileRecord
       version: metadata.version,
       checksum: metadata.checksum,
       storagePath: metadata.storagePath,
+      // ADR-358 Phase 9 — propagate scope fields from FileRecord so the
+      // resume path can rebuild the full DxfSaveContext (entityType/
+      // entityId/projectId/companyId) instead of leaving floorId undefined.
+      ...(record.companyId ? { companyId: record.companyId } : {}),
+      ...(record.projectId ? { projectId: record.projectId } : {}),
+      ...(record.entityType ? { entityType: record.entityType as string } : {}),
+      ...(record.entityId ? { entityId: record.entityId } : {}),
     };
   } catch (error: unknown) {
     if (error instanceof Error) {

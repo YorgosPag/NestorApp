@@ -17,7 +17,8 @@ export class SceneValidator {
       return false;
     }
 
-    if (!scene.layers || typeof scene.layers !== 'object') {
+    // ADR-358 Phase 9E-6b: accept scenes where layersById is present even if layers is absent.
+    if ((!scene.layers && !scene.layersById) || typeof (scene.layersById ?? scene.layers) !== 'object') {
       dwarn('🎭 Scene missing valid layers object');
       return false;
     }

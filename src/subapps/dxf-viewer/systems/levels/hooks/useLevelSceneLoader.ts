@@ -102,7 +102,7 @@ export function useLevelSceneLoader({
         // Check if this load was cancelled (user switched to another level)
         if (abortController.signal.aborted) return;
 
-        if (fileRecord?.scene && Array.isArray(fileRecord.scene.entities) && fileRecord.scene.layers != null) {
+        if (fileRecord?.scene && Array.isArray(fileRecord.scene.entities) && (fileRecord.scene.layersById != null || fileRecord.scene.layers != null)) {
           sceneManager.setLevelScene(currentLevelId, fileRecord.scene);
           // Set the filename for auto-save context
           if (fileRecord.fileName && sceneManager.setCurrentFileName) {
@@ -112,9 +112,29 @@ export function useLevelSceneLoader({
           // writes to the SAME storage path as the loaded scene (no lookup,
           // no race, no "canonicalScenePath is required" throw on line completion).
           sceneManager.setFileRecordId?.(sceneFileId);
-          if (fileRecord.storagePath) {
+          // ADR-358 Phase 9 — restore the FULL save context (not just the
+          // canonical scene path) so the floor link bridge surfaces the
+          // floor metadata on session resume + the stair builder seeds
+          // `multiStoryConfig` from the bound floor. Without this the
+          // resume path overwrote the Wizard-injected context with a
+          // path-only object and `saveContext.floorId` flipped to
+          // `undefined` immediately after the import.
+          if (fileRecord.storagePath || fileRecord.entityType) {
             sceneManager.setSaveContext?.({
-              canonicalScenePath: DxfFirestoreService.deriveScenePath(fileRecord.storagePath),
+              ...(fileRecord.storagePath
+                ? { canonicalScenePath: DxfFirestoreService.deriveScenePath(fileRecord.storagePath) }
+                : {}),
+              ...(fileRecord.companyId ? { companyId: fileRecord.companyId } : {}),
+              ...(fileRecord.projectId ? { projectId: fileRecord.projectId } : {}),
+              ...(fileRecord.entityType
+                ? { entityType: fileRecord.entityType as 'project' | 'building' | 'floor' | 'property' }
+                : {}),
+              ...(fileRecord.entityType === 'floor' && fileRecord.entityId
+                ? { floorId: fileRecord.entityId }
+                : {}),
+              ...(fileRecord.entityType === 'building' && fileRecord.entityId
+                ? { buildingId: fileRecord.entityId }
+                : {}),
             });
           }
           loadedSceneLevelsRef.current.add(currentLevelId);

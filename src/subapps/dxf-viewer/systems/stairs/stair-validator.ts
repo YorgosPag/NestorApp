@@ -274,12 +274,16 @@ export function validateStairParams(
     ...storyUnderflowViolations,
     ...totalRiseTooLowViolations,
   ];
+  // ADR-358 / SOS N.6 — Firestore rejects `undefined`. Optional arrays are
+  // omitted via conditional spread instead of being set to `undefined`, so
+  // `setDoc()` from the stair persistence service never hits the
+  // "Unsupported field value: undefined" error on writes.
   return {
     hasCodeViolations: violationKeys.length > 0,
     violationKeys,
-    headroomViolations: headroomViolations.length > 0 ? headroomViolations : undefined,
-    egressViolations: gate.egressViolations.length > 0 ? gate.egressViolations : undefined,
-    adaViolations: gate.adaViolations.length > 0 ? gate.adaViolations : undefined,
+    ...(headroomViolations.length > 0 ? { headroomViolations } : {}),
+    ...(gate.egressViolations.length > 0 ? { egressViolations: gate.egressViolations } : {}),
+    ...(gate.adaViolations.length > 0 ? { adaViolations: gate.adaViolations } : {}),
     lastValidatedAt: Timestamp.now(),
   };
 }

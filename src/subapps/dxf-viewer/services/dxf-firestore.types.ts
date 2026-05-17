@@ -85,6 +85,18 @@ export interface DxfFileRecord {
    * a second Firestore round-trip (e.g. injecting DxfSaveContext on load).
    */
   storagePath?: string;
+  /**
+   * ADR-358 Phase 9 — Tenant/scope fields lifted from the underlying
+   * `FileRecord` so `useLevelSceneLoader` can repopulate the full
+   * `DxfSaveContext` (entityType/floorId/projectId/companyId) when a
+   * level resumes from Firestore. Without these the auto-save context
+   * loses the floor binding on session restore and the stair tool /
+   * floor-link widget see `saveContext.floorId === undefined`.
+   */
+  companyId?: string;
+  projectId?: string;
+  entityType?: string;
+  entityId?: string;
 }
 
 // =============================================================================
