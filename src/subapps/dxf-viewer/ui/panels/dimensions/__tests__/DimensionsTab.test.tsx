@@ -60,6 +60,16 @@ jest.mock('@/components/ui/dialog', () => ({
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+jest.mock('../DimStyleAccordion', () => ({
+  DimStyleAccordion: () => null,
+}));
+
+jest.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children, asChild: _a }: { children: React.ReactNode; asChild?: boolean }) => <>{children}</>,
+  TooltipContent: () => null,
+}));
+
 // Mock Radix AlertDialog
 jest.mock('@radix-ui/react-alert-dialog', () => ({
   Root: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
