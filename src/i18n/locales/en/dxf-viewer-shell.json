@@ -828,6 +828,7 @@
       "dimTextPosition": "Text Position",
       "dimTextRotation": "Text Rotation",
       "dimResetTextPosition": "Reset Text Position",
+      "dimTextOverride": "Text Override",
       "dimLayer": "Layer",
       "dimAnnotationScale": "Scale",
       "dimOpenPanel": "Properties...",
