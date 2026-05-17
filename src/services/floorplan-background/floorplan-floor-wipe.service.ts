@@ -13,7 +13,9 @@
  * Wipes (per floor + tenant):
  *   1. floorplan_overlays  (ADR-340 polygons)
  *   2. dxf_overlay_levels/{levelId}/items (legacy DXF polygons)
- *   3. dxf_viewer_levels parent docs (legacy)
+ *   3. dxf_viewer_levels — CONTENT cleared (sceneFileId/sceneFileName → null),
+ *      structure preserved so the active editing session keeps a valid
+ *      `currentLevelId` and the next wizard re-import re-binds the same doc.
  *   4. floorplan_backgrounds docs (ADR-340)
  *   5. files/{fileId} docs (canonical FILES collection, ADR-292)
  *   6. Storage objects (Firebase Storage binaries)
@@ -24,6 +26,7 @@
 
 import 'server-only';
 
+import { FieldValue } from 'firebase-admin/firestore';
 import {
   getAdminFirestore,
   getAdminStorage,
@@ -44,7 +47,13 @@ const logger = createModuleLogger('FloorplanFloorWipeService');
 
 export interface WipeAllForFloorResult {
   floorplanOverlaysDeleted: number;
-  dxfLevelsDeleted: number;
+  /**
+   * Number of `dxf_viewer_levels` docs whose scene binding was cleared
+   * (`sceneFileId` / `sceneFileName` set to `null`). The docs themselves are
+   * NOT deleted — they remain alive so the active DXF viewer session keeps a
+   * valid `currentLevelId` across the wipe → re-import cycle.
+   */
+  dxfLevelsCleared: number;
   floorplanBackgroundsDeleted: number;
   fileRecordsDeleted: number;
   storageObjectsDeleted: number;
@@ -100,6 +109,41 @@ async function deleteRefsInChunks(
     deleted += chunk.length;
   }
   return deleted;
+}
+
+/**
+ * Clear scene binding on `dxf_viewer_levels` docs WITHOUT deleting them.
+ *
+ * Rationale (ADR-340 Phase 9 follow-up, 2026-05-17): the wizard re-import flow
+ * runs this wipe BEFORE the new upload. If the docs were hard-deleted, the
+ * active DXF viewer session's `currentLevelId` becomes orphan — the in-memory
+ * scene set by `useSceneState.handleFileImport` lands on a `levelId` that no
+ * longer exists in Firestore, so `linkSceneToLevel` 404s and the canvas
+ * appears empty. Preserving the doc keeps `currentLevelId` valid; the next
+ * `linkSceneToLevel` simply re-binds `sceneFileId` on the same doc.
+ *
+ * Skips docs that already have `sceneFileId === null` to avoid no-op writes.
+ */
+async function clearDxfLevelsInChunks(
+  db: Firestore,
+  rows: DxfLevelRow[],
+): Promise<number> {
+  const dirty = rows.filter((r) => r.sceneFileId !== null);
+  let cleared = 0;
+  for (let i = 0; i < dirty.length; i += CHUNK) {
+    const chunk = dirty.slice(i, i + CHUNK);
+    const batch = db.batch();
+    for (const row of chunk) {
+      batch.update(row.ref, {
+        sceneFileId: null,
+        sceneFileName: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+    cleared += chunk.length;
+  }
+  return cleared;
 }
 
 async function listBackgrounds(
@@ -387,9 +431,9 @@ async function executeWipe(
     floorId,
   );
 
-  const [dxfLevelsDeleted, floorplanBackgroundsDeleted, fileRecordsDeleted] =
+  const [dxfLevelsCleared, floorplanBackgroundsDeleted, fileRecordsDeleted] =
     await Promise.all([
-      deleteRefsInChunks(db, dxfLevels.map((l) => l.ref)),
+      clearDxfLevelsInChunks(db, dxfLevels),
       deleteRefsInChunks(db, backgrounds.map((b) => b.ref)),
       deleteRefsInChunks(db, fileRows.map((f) => f.ref)),
     ]);
@@ -409,7 +453,7 @@ async function executeWipe(
 
   return {
     floorplanOverlaysDeleted: cascade.floorplanOverlaysDeleted,
-    dxfLevelsDeleted,
+    dxfLevelsCleared,
     floorplanBackgroundsDeleted,
     fileRecordsDeleted,
     storageObjectsDeleted: storage.deleted + sweep.deleted,

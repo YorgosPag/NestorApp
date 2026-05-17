@@ -73,6 +73,7 @@ import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/Cl
 // ✅ ADR-065 SRP: Extracted hooks
 import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
+import { useAutoFitOnFileChange } from './useAutoFitOnFileChange';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 📐 ADR-345/353: contextual tabs config + trigger resolver (SSoT)
@@ -198,18 +199,12 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     const fromSelection = entity ? resolveContextualTrigger(entity) : null;
     return fromSelection ?? (activeTool === 'stair' ? STAIR_CONTEXTUAL_TRIGGER : null);
   }, [primarySelectedId, currentScene, activeTool]);
-  // Auto fit-to-view when a DXF scene loads for the first time (null → SceneModel).
-  // Matches AutoCAD / BricsCAD behaviour: Zoom Extents on file open.
-  // 200ms delay lets the canvas mount and register its EventBus listener before firing.
-  const prevSceneRef = React.useRef<typeof currentScene>(null);
-  React.useEffect(() => {
-    if (currentScene !== null && prevSceneRef.current === null) {
-      const timer = setTimeout(() => handleAction('fit-to-view'), 200);
-      prevSceneRef.current = currentScene;
-      return () => clearTimeout(timer);
-    }
-    prevSceneRef.current = currentScene;
-  }, [currentScene, handleAction]);
+  // Auto fit-to-view on FileRecord transition (extracted hook, ADR-340 Phase 9).
+  useAutoFitOnFileChange({
+    currentScene,
+    fileRecordId: levelManager.fileRecordId,
+    handleAction,
+  });
   // ✅ ADR-065 SRP: Extracted callbacks
   const {
     showCopyableNotification, wrappedHandleAction, handleTransformReady,
@@ -456,6 +451,9 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           onComplete={(file, meta) => {
             setShowImportWizard(false);
             if (meta.format && meta.format !== 'dxf') return;
+            // ADR-340 Phase 9 follow-up: propagate wizard `fileRecordId` so
+            // auto-save reuses the canonical FileRecord instead of racing on
+            // name-based lookup against the cadFiles processor.
             const saveContext = {
               companyId: meta.companyId || undefined,
               projectId: meta.projectId || undefined,
@@ -465,6 +463,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
               filesCategory: 'floorplans' as const,
               purpose: meta.purpose || undefined,
               entityLabel: meta.entityLabel,
+              ...(meta.fileId ? { fileRecordId: meta.fileId } : {}),
             };
             void handleFileImportWithEncoding(file, undefined, saveContext);
           }}
