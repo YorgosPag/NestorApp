@@ -116,6 +116,44 @@
         "working": "Εργασίας",
         "custom": "Προσαρμοσμένο"
       }
+    },
+    "manage": {
+      "title": "Διαχείριση Καταστάσεων Επιπέδων",
+      "searchPlaceholder": "Αναζήτηση…",
+      "categoryFilterAll": "Όλες οι κατηγορίες",
+      "empty": "Δεν υπάρχουν καταστάσεις επιπέδων",
+      "loading": "Φόρτωση…",
+      "column": {
+        "name": "Όνομα",
+        "category": "Κατηγορία",
+        "tags": "Ετικέτες",
+        "updated": "Ενημέρωση",
+        "createdBy": "Δημιουργός",
+        "actions": "Ενέργειες"
+      },
+      "bulkBar": {
+        "selected": "{count} επιλεγμένα",
+        "delete": "Διαγραφή"
+      },
+      "contextMenu": {
+        "rename": "Μετονομασία",
+        "editCategory": "Επεξεργασία κατηγορίας",
+        "duplicate": "Δημιουργία αντιγράφου",
+        "delete": "Διαγραφή"
+      },
+      "restoreDialog": {
+        "title": "Επαναφορά Κατάστασης",
+        "description": "Εφαρμογή αυτής της αποθηκευμένης κατάστασης στο τρέχον σχέδιο.",
+        "createMissingLayersLabel": "Δημιουργία επιπέδων που λείπουν",
+        "createMissingLayersHint": "Τα επίπεδα της κατάστασης που δεν υπάρχουν θα δημιουργηθούν",
+        "unmatchedWarning": "{count} επίπεδο/α δεν υπάρχουν στο τρέχον σχέδιο",
+        "entryCount": "{count} επίπεδα",
+        "apply": "Εφαρμογή",
+        "cancel": "Ακύρωση"
+      },
+      "toastDuplicated": "Αντίγραφο: \"{name}\"",
+      "toastBulkDeleted": "Διαγράφηκαν {count} κατάσταση/εις",
+      "errorBulkDelete": "Αποτυχία διαγραφής ορισμένων καταστάσεων"
     }
   },
   "toolbar": {
@@ -429,7 +467,8 @@
       "textEditor": "Επεξεργαστής Κειμένου",
       "arrayEditor": "Πίνακας",
       "stairProperties": "Ιδιότητες Κλίμακας",
-      "validationBadge": "Παραβίαση κανονισμών"
+      "validationBadge": "Παραβίαση κανονισμών",
+      "dimension": "Διάσταση"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -474,7 +513,11 @@
       "developer": "Εργαλεία Ανάπτυξης",
       "ai": "AI",
       "window": "Παράθυρο",
-      "dimensions": "Διαστάσεις"
+      "dimensions": "Διαστάσεις",
+      "dimStyle": "Στυλ",
+      "dimOverride": "Παράκαμψη",
+      "dimText": "Κείμενο",
+      "dimProperties": "Ιδιότητες"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -759,6 +802,38 @@
       },
       "dimBaseline": "Από Βάση",
       "dimContinued": "Συνεχόμενη",
+      "dimStyleChooser": "Στυλ Διάστασης",
+      "dimApplyStyle": "Εφαρμογή Στυλ",
+      "dimEditStyle": "Επεξεργασία Στυλ...",
+      "dimColorOverride": "Χρώμα",
+      "dimArrowStyle": "Βέλος",
+      "dimResetOverrides": "Επαναφορά Παρακάμψεων",
+      "dimTextHeight": "Ύψος Κειμένου",
+      "dimTextPosition": "Θέση Κειμένου",
+      "dimTextRotation": "Στροφή Κειμένου",
+      "dimResetTextPosition": "Επαναφορά Θέσης",
+      "dimLayer": "Layer",
+      "dimAnnotationScale": "Κλίμακα",
+      "dimOpenPanel": "Ιδιότητες...",
+      "dimContextual": {
+        "styleOptions": {
+          "iso": "ISO 129",
+          "asme": "ASME Y14.5",
+          "architectural": "Αρχιτεκτονικό"
+        },
+        "arrowOptions": {
+          "closedFilled": "Κλειστό (Γεμάτο)",
+          "open": "Ανοιχτό",
+          "dot": "Κουκκίδα",
+          "slash": "Κάθετη",
+          "none": "Χωρίς"
+        },
+        "textPositionOptions": {
+          "above": "Πάνω",
+          "centered": "Κεντρικά",
+          "below": "Κάτω"
+        }
+      },
       "dropdown": {
         "openVariants": "Άνοιγμα παραλλαγών"
       },
